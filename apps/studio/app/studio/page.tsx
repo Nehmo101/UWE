@@ -4,7 +4,10 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** Legacy DM dashboard URL — primary home is /today (IA consolidation). */
+/**
+ * Legacy DM dashboard URL — canonical Studio landing is /today (IA consolidation).
+ * Preserves query string for deep links (e.g. ?world=…).
+ */
 export default async function StudioDashboardRedirect({ searchParams }: Props) {
   const params = await searchParams;
   const qs = new URLSearchParams();

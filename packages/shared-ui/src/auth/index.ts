@@ -9,3 +9,20 @@ export {
   type AuthLinkTargets,
   type UweAuthApp,
 } from "./auth-links";
+export {
+  MaintenanceRecoveryPoller,
+  type MaintenanceAppSurface,
+  type MaintenanceRecoveryPollerProps,
+} from "./MaintenanceRecoveryPoller";
+export { PasswordRequirements, type PasswordRequirementsProps } from "./PasswordRequirements";
+export { PasswordStrengthMeter, type PasswordStrengthMeterProps } from "./PasswordStrengthMeter";
+export {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_REQUIREMENTS,
+  PASSWORD_STRENGTH_LABELS,
+  evaluatePasswordStrength,
+  type PasswordRule,
+  type PasswordStrengthLevel,
+  type PasswordStrengthResult,
+} from "./password-strength";
+export { formatForgotPasswordError } from "./forgot-password-errors";

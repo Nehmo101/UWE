@@ -18,6 +18,10 @@ interface Props {
   params: Promise<{ worldSlug: string; entryId: string }>;
 }
 
+function factDetailHref(worldSlug: string, factId: string) {
+  return `/worlds/${worldSlug}/brain/facts/${factId}`;
+}
+
 export default async function StudioBrainFactPage({ params }: Props) {
   const { worldSlug, entryId } = await params;
   const repo = getAppRepository();
@@ -31,8 +35,15 @@ export default async function StudioBrainFactPage({ params }: Props) {
   const fact = await brain.getFactByIdForWorld(worldSlug, entryId);
   if (!fact) notFound();
 
-  const links = await brain.listLinksForSource(worldSlug, "brain_fact", entryId);
+  const [links, allFacts] = await Promise.all([
+    brain.listLinksForSource(worldSlug, "brain_fact", entryId),
+    brain.listFacts(worldSlug, { factType: fact.factType }),
+  ]);
   await db.$disconnect();
+
+  const similarFacts = allFacts
+    .filter((candidate) => candidate.id !== fact.id)
+    .slice(0, 6);
 
   return (
     <WorldShell
@@ -54,6 +65,43 @@ export default async function StudioBrainFactPage({ params }: Props) {
         title={fact.title}
         summary="Brain-Fakt bearbeiten"
       />
+
+      <section className="uwe-brain-section">
+        <h2>Quellen &amp; Bezüge</h2>
+        <ul className="uwe-linked-list">
+          <li>
+            Quelle: <strong>{BRAIN_SOURCE_LABELS[fact.source]}</strong>
+          </li>
+          {fact.page && (
+            <li>
+              Wiki-Seite:{" "}
+              <Link href={buildPageUrl(worldSlug, fact.page.type, fact.page.slug)}>
+                {fact.page.title}
+              </Link>
+            </li>
+          )}
+          {fact.campaign && (
+            <li>
+              Kampagne:{" "}
+              <Link href={`/worlds/${worldSlug}?campaign=${fact.campaign.slug}`}>
+                {fact.campaign.name}
+              </Link>
+            </li>
+          )}
+          {fact.gameSession && (
+            <li>
+              Session:{" "}
+              <Link href={`/worlds/${worldSlug}/sessions/${fact.gameSession.id}`}>
+                {fact.gameSession.title}
+                {fact.gameSession.sessionNumber != null
+                  ? ` (#${fact.gameSession.sessionNumber})`
+                  : ""}
+              </Link>
+            </li>
+          )}
+        </ul>
+      </section>
+
       <form action={updateBrainFactAction} className="uwe-brain-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="factId" value={fact.id} />
@@ -101,23 +149,28 @@ export default async function StudioBrainFactPage({ params }: Props) {
           </select>
         </label>
 
-        <p className="uwe-brain-meta">
-          Quelle: {BRAIN_SOURCE_LABELS[fact.source]}
-          {fact.page && (
-            <>
-              {" "}
-              · Seite:{" "}
-              <Link href={buildPageUrl(worldSlug, fact.page.type, fact.page.slug)}>
-                {fact.page.title}
-              </Link>
-            </>
-          )}
-        </p>
-
         <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
           Speichern
         </button>
       </form>
+
+      {similarFacts.length > 0 && (
+        <section className="uwe-brain-section">
+          <h2>Ähnliche Fakten</h2>
+          <p className="uwe-hint">
+            Weitere Fakten vom Typ „{BRAIN_FACT_TYPE_LABELS[fact.factType]}“.
+          </p>
+          <ul className="uwe-linked-list">
+            {similarFacts.map((similar) => (
+              <li key={similar.id}>
+                <Link href={factDetailHref(worldSlug, similar.id)}>{similar.title}</Link>
+                {" — "}
+                {BRAIN_STATUS_LABELS[similar.status]}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {links.length > 0 && (
         <section className="uwe-brain-section">
@@ -126,6 +179,7 @@ export default async function StudioBrainFactPage({ params }: Props) {
             {links.map((link) => (
               <li key={link.id}>
                 {link.relationType}: {link.targetType} → {link.targetId}
+                {link.label ? ` (${link.label})` : ""}
               </li>
             ))}
           </ul>

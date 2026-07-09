@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { CreateWorldForm } from "@/src/components/CreateWorldForm";
+import { PortalWorldsHubList } from "@/src/components/PortalWorldsHubList";
 import { getCurrentUser, listAuthWorlds } from "@/src/lib/auth";
 import { buttonVariants } from "@/src/components/ui/button";
 import { cn } from "@/src/components/ui/cn";
@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/states";
 import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
 import { listWorldTemplateOptions } from "@uwe/database/server";
+import Link from "next/link";
 
 export default async function AuthWorldsPage() {
   const user = await getCurrentUser();
@@ -49,24 +50,16 @@ export default async function AuthWorldsPage() {
       <CardContent className="pt-6">
         {canCreateWorld ? <CreateWorldForm templates={templates} /> : null}
 
-        <ul className="divide-y divide-border">
-          {worlds.map((world) => (
-            <li key={world.id}>
-              <Link
-                href={`/auth/worlds/${world.slug}`}
-                className="flex flex-col gap-1 py-4 transition-colors hover:bg-muted/40 -mx-2 px-2 rounded-[var(--radius)]"
-              >
-                <strong className="font-semibold">{world.name}</strong>
-                {world.description ? (
-                  <span className="text-sm text-muted-foreground">{world.description}</span>
-                ) : null}
-                <em className="text-xs text-muted-foreground not-italic">
-                  {world.guestModeEnabled ? "Gastmodus aktiv" : "Login erforderlich"}
-                </em>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <PortalWorldsHubList
+          worlds={worlds.map((world) => ({
+            id: world.id,
+            slug: world.slug,
+            name: world.name,
+            description: world.description,
+            guestModeEnabled: world.guestModeEnabled,
+            updatedAt: world.updatedAt.toISOString(),
+          }))}
+        />
       </CardContent>
     </Card>
   );

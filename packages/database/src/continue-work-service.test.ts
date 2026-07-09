@@ -51,6 +51,33 @@ describe("continue-work service (integration)", () => {
     });
     // A project without a next action must not appear.
     await db.personalProject.create({ data: { name: "Ohne Schritt", status: "active" } });
+    await db.personalProject.create({
+      data: { name: "Erledigt", status: "done", nextAction: "Sollte nicht erscheinen" },
+    });
+    await db.workshopProject.create({
+      data: {
+        title: "Fertige Basis",
+        projectType: "miniature",
+        status: "done",
+        nextAction: "Auch ausblenden",
+      },
+    });
+    await db.captureEntry.create({
+      data: {
+        title: "Archiviert",
+        content: "alt",
+        captureType: "quick_note",
+        status: "archived",
+      },
+    });
+    await db.scanDocument.create({
+      data: {
+        title: "Abgelegt",
+        status: "filed",
+        storageKey: "_scan/y",
+        mimeType: "image/jpeg",
+      },
+    });
     await db.scanDocument.create({
       data: { title: "Stromrechnung", status: "proposal_ready", storageKey: "_scan/x", mimeType: "image/jpeg" },
     });
@@ -68,6 +95,10 @@ describe("continue-work service (integration)", () => {
     assert.ok(kinds.includes("scan"));
     // The action-less project is excluded.
     assert.ok(!items.some((i) => i.title === "Ohne Schritt"));
+    assert.ok(!items.some((i) => i.title === "Erledigt"));
+    assert.ok(!items.some((i) => i.title === "Fertige Basis"));
+    assert.ok(!items.some((i) => i.title === "Archiviert"));
+    assert.ok(!items.some((i) => i.title === "Abgelegt"));
 
     const project = items.find((i) => i.kind === "project");
     assert.equal(project?.hint, "Radar testen");

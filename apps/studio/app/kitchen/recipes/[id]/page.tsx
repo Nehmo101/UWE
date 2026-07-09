@@ -63,17 +63,41 @@ export default async function RecipeDetailPage({ params }: Props) {
         />
       }
     >
+      <style>{`
+        @media print {
+          .recipe-print-hide,
+          nav,
+          form,
+          .uwe-brain-create-form,
+          .uwe-today-quick-chips {
+            display: none !important;
+          }
+          .recipe-print-root {
+            max-width: 100%;
+            color: #000;
+          }
+          .recipe-print-root h2 {
+            margin-top: 1.25rem;
+            page-break-after: avoid;
+          }
+          .recipe-print-root ol,
+          .recipe-print-root ul {
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
+      <div className="recipe-print-root">
       <PageHeader
         title={recipe.title}
-        summary={`${RECIPE_STATUS_LABELS[status]} · ${recipe.ingredients.length} Zutaten · ${recipe.servingsBase} Portionen`}
+        summary={`${RECIPE_STATUS_LABELS[status]} · ${recipe.ingredients.length} Zutaten · ${recipe.servingsBase} Portionen${recipe.durationMinutes ? ` · ${recipe.durationMinutes} Min.` : ""}`}
       />
-      <p className="uwe-dashboard-muted">
+      <p className="uwe-dashboard-muted recipe-print-hide">
         <Link href="/kitchen/recipes">← Alle Rezepte</Link> · Aktualisiert{" "}
         {DATE_FORMAT.format(recipe.updatedAt)}
       </p>
 
       {recipe.tags.length > 0 && (
-        <p className="uwe-today-quick-chips">
+        <p className="uwe-today-quick-chips recipe-print-hide">
           {recipe.tags.map((tag) => (
             <Link
               key={tag.key}
@@ -117,7 +141,7 @@ export default async function RecipeDetailPage({ params }: Props) {
         </section>
       )}
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section recipe-print-hide">
         <h2 className="uwe-v2-section-title">Rezept-Bild</h2>
         {recipe.imageStorageKey ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -141,7 +165,7 @@ export default async function RecipeDetailPage({ params }: Props) {
         </form>
       </section>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section recipe-print-hide">
         <h2 className="uwe-v2-section-title">Rezept bearbeiten</h2>
         <form action={updateRecipeAction} className="uwe-brain-create-form">
           <input type="hidden" name="id" value={recipe.id} />
@@ -221,13 +245,14 @@ export default async function RecipeDetailPage({ params }: Props) {
       </section>
 
       {status !== "archived" && (
-        <form action={archiveRecipeAction}>
+        <form action={archiveRecipeAction} className="recipe-print-hide">
           <input type="hidden" name="id" value={recipe.id} />
           <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
             Rezept archivieren
           </button>
         </form>
       )}
+      </div>
     </StudioShell>
   );
 }

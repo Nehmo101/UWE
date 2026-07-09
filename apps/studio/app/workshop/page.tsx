@@ -63,12 +63,16 @@ export default async function WorkshopPage({ searchParams }: Props) {
           ? ("done" as const)
           : undefined;
 
-  const [workshops, filterCounts] = await Promise.all([
+  const [workshops, filterCounts, activeWorkshops] = await Promise.all([
     service.listWorkshopProjects({
       status: statusFilter,
       limit: 200,
     }),
     service.getWorkshopFilterCounts(),
+    service.listWorkshopProjects({
+      status: ["in_progress", "planned", "material_missing", "idea"],
+      limit: 3,
+    }),
   ]);
 
   const visibleWorkshops =
@@ -91,11 +95,39 @@ export default async function WorkshopPage({ searchParams }: Props) {
       />
 
       <nav className="uwe-inline-actions uwe-v2-section">
-        <Link href="/workshop/recipes">Paint-Rezepte</Link>
+        <Link href="/workshop/recipes">Paint-Anleitungen</Link>
         <Link href="/workshop/print-profiles">Druck-Profile</Link>
         <Link href="/workshop/rental">Terrain-Verleih</Link>
         <Link href="/miniatures">Miniaturen-Sammlung</Link>
       </nav>
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">
+          Aktive Projekte ({filterCounts.active})
+        </h2>
+        {activeWorkshops.length === 0 ? (
+          <p className="uwe-dashboard-muted">Keine aktiven Werkstatt-Projekte.</p>
+        ) : (
+          <ul className="uwe-today-card-list">
+            {activeWorkshops.map((workshop) => (
+              <li key={workshop.id} className="uwe-today-card">
+                <h3>
+                  <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
+                </h3>
+                <p className="uwe-dashboard-muted">
+                  {WORKSHOP_STATUS_LABELS[workshop.status]}
+                  {workshop.nextAction ? ` · ${workshop.nextAction}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        {filterCounts.active > activeWorkshops.length ? (
+          <p className="uwe-dashboard-muted">
+            <Link href="/workshop?filter=active">Alle aktiven Projekte anzeigen →</Link>
+          </p>
+        ) : null}
+      </section>
 
       <AdminCreateCard title="Neues Werkstatt-Projekt">
         <AdminEntityForm

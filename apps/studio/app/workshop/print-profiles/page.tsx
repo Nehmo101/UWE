@@ -3,8 +3,14 @@ import { EmptyState } from "@uwe/shared-ui";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { createPrintProfileAction, deletePrintProfileAction } from "../../workshop-actions";
+import { PrintProfileJsonTools } from "../PrintProfileJsonTools";
 
-export default async function WorkshopPrintProfilesPage() {
+interface Props {
+  searchParams: Promise<{ imported?: string; error?: string }>;
+}
+
+export default async function WorkshopPrintProfilesPage({ searchParams }: Props) {
+  const { imported, error } = await searchParams;
   const profiles = await createLifeAdminService(prisma).listWorkshopPrintProfiles({ limit: 200 });
 
   return (
@@ -25,6 +31,37 @@ export default async function WorkshopPrintProfilesPage() {
       <p className="uwe-dashboard-muted">
         <Link href="/workshop">← Werkstatt</Link>
       </p>
+
+      {imported ? (
+        <p className="uwe-inspector-ok" role="status">
+          ✓ {imported} Profil(e) importiert.
+        </p>
+      ) : null}
+      {error === "parse" ? (
+        <p className="uwe-form-error" role="alert">
+          JSON konnte nicht gelesen werden.
+        </p>
+      ) : null}
+      {error === "empty" ? (
+        <p className="uwe-form-error" role="alert">
+          Keine JSON-Daten zum Importieren.
+        </p>
+      ) : null}
+
+      <PrintProfileJsonTools
+        profiles={profiles.map((profile) => ({
+          name: profile.name,
+          printer: profile.printer,
+          nozzle: profile.nozzle,
+          filament: profile.filament,
+          layerHeight: profile.layerHeight,
+          supports: profile.supports,
+          result: profile.result,
+          errors: profile.errors,
+          improvements: profile.improvements,
+          notes: profile.notes,
+        }))}
+      />
 
       <section className="uwe-v2-card uwe-v2-section">
         <h2 className="uwe-v2-section-title">Neues Druckprofil</h2>

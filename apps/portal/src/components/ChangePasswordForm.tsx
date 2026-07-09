@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { PasswordStrengthMeter } from "@uwe/shared-ui";
 import { Alert } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -99,6 +100,7 @@ export function ChangePasswordForm({
           minLength={8}
           required
         />
+        <PasswordStrengthMeter password={newPassword} />
       </div>
 
       <div className="space-y-2">

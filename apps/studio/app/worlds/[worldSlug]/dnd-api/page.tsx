@@ -14,6 +14,7 @@ import { searchAllDndApis } from "@uwe/dnd-api";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { DndApiEncounterPanel } from "@/components/DndApiEncounterPanel";
+import { DndApiBrowseCacheNotice } from "@/src/components/world/DndApiBrowseCache";
 import { addDndBeyondReferenceAction } from "../../../integration-actions";
 
 interface Props {
@@ -62,6 +63,7 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
             Suchen
           </button>
         </form>
+        <DndApiBrowseCacheNotice query={q ?? ""} results={results} />
       </section>
 
       <DndApiEncounterPanel

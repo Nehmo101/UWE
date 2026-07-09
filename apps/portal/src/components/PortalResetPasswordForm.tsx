@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { PasswordRequirements } from "@uwe/shared-ui";
 import { Alert, LoadingState } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -94,9 +95,15 @@ function PortalResetPasswordFormInner() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
+                autoFocus
               />
             </div>
           ) : null}
+
+          <p className="text-sm text-muted-foreground">
+            Mindestens 8 Zeichen. Verwende eine Mischung aus Buchstaben, Zahlen und Sonderzeichen für
+            ein sicheres Passwort.
+          </p>
 
           <div className="space-y-2">
             <Label htmlFor="reset-password">Neues Passwort</Label>
@@ -110,6 +117,7 @@ function PortalResetPasswordFormInner() {
               minLength={8}
               required
             />
+            <PasswordRequirements password={newPassword} />
           </div>
 
           <div className="space-y-2">

@@ -107,6 +107,8 @@ export interface AiSettings {
   providerKeyPlaceholders: AiProviderKeyPlaceholder[];
   /** Encrypted provider API keys stored in DB. Never sent to clients. */
   cloudApiKeys?: AiProviderStoredKey[] | null;
+  /** Active owner-edited system prompt for general chat (empty = built-in default). */
+  generalChatSystemPrompt?: string | null;
 }
 
 export interface StorageSettings {
@@ -232,7 +234,7 @@ export type UweSystemSettingsUpdate = {
   worlds?: Partial<WorldSettings>;
   campaigns?: Partial<CampaignSettings>;
   portal?: Partial<PortalSettings>;
-  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "cloudApiKeys">>;
+  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "cloudApiKeys" | "generalChatSystemPrompt">>;
   mail?: Partial<
     Pick<
       MailSettings,
@@ -446,6 +448,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     enabled: true,
     providerKeyPlaceholders: buildProviderKeyPlaceholders(),
     cloudApiKeys: null,
+    generalChatSystemPrompt: null,
   },
   mail: buildMailSettings(),
   imageStudio: buildImageStudioSettings(),
@@ -577,6 +580,10 @@ function mergeSettings(
             cloudApiKeys: Array.isArray((stored.ai as unknown as AiSettings).cloudApiKeys)
               ? ((stored.ai as unknown as AiSettings).cloudApiKeys as AiProviderStoredKey[])
               : null,
+            generalChatSystemPrompt:
+              typeof (stored.ai as unknown as AiSettings).generalChatSystemPrompt === "string"
+                ? (stored.ai as unknown as AiSettings).generalChatSystemPrompt
+                : null,
           }
         : {}),
       providerKeyPlaceholders: buildProviderKeyPlaceholders(

@@ -977,3 +977,77 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Password strength meter (auth forms) */
+.uwe-password-strength {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.uwe-password-strength-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-password-strength-bar {
+  position: relative;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--uwe-border-muted) 70%, transparent);
+  overflow: hidden;
+}
+
+.uwe-password-strength-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.uwe-password-strength-weak .uwe-password-strength-fill {
+  background: #c24141;
+}
+
+.uwe-password-strength-fair .uwe-password-strength-fill {
+  background: #c27b1d;
+}
+
+.uwe-password-strength-good .uwe-password-strength-fill {
+  background: #2f8f4e;
+}
+
+.uwe-password-strength-strong .uwe-password-strength-fill {
+  background: #1f7a3f;
+}
+
+.uwe-password-requirements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-password-requirement {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.uwe-password-requirement-met {
+  color: var(--uwe-fg);
+}
+
+.uwe-password-requirement-marker {
+  flex: 0 0 auto;
+  width: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+

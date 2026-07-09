@@ -61,6 +61,7 @@ export interface PortalTreasuryView {
   currencies: unknown;
   notes: string;
   items: PlayerSafeInventoryItemView[];
+  updatedAt: string | null;
 }
 
 export interface MovePartyItemForViewerInput {
@@ -201,10 +202,21 @@ export class PartyTreasuryService {
         currencies: DEFAULT_CURRENCIES,
         notes: "",
         items: [],
+        updatedAt: null,
       };
     }
 
     const items = staff ? treasury.items : await this.filterItemsForPlayer(ctx, treasury.items);
+
+    const itemUpdatedAt = items.reduce<Date | null>((latest, item) => {
+      if (!latest || item.updatedAt > latest) {
+        return item.updatedAt;
+      }
+      return latest;
+    }, null);
+    const updatedAt = itemUpdatedAt && itemUpdatedAt > treasury.updatedAt
+      ? itemUpdatedAt
+      : treasury.updatedAt;
 
     return {
       id: treasury.id,
@@ -212,6 +224,7 @@ export class PartyTreasuryService {
       currencies: treasury.currencies,
       notes: treasury.notes,
       items: items.map(toPlayerSafeInventoryItemView),
+      updatedAt: updatedAt.toISOString(),
     };
   }
 

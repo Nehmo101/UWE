@@ -18,14 +18,16 @@ const SOURCE_LABEL: Record<KnowHowDoc["source"], string> = {
 
 export function KnowHowBrowser({ docs }: KnowHowBrowserProps) {
   const [query, setQuery] = React.useState("");
+  const [sourceFilter, setSourceFilter] = React.useState<"all" | KnowHowDoc["source"]>("all");
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return docs;
-    return docs.filter((doc) =>
-      `${doc.title} ${doc.path} ${doc.excerpt}`.toLowerCase().includes(q),
-    );
-  }, [docs, query]);
+    return docs.filter((doc) => {
+      if (sourceFilter !== "all" && doc.source !== sourceFilter) return false;
+      if (!q) return true;
+      return `${doc.title} ${doc.path} ${doc.excerpt}`.toLowerCase().includes(q);
+    });
+  }, [docs, query, sourceFilter]);
 
   if (docs.length === 0) {
     return (
@@ -39,12 +41,30 @@ export function KnowHowBrowser({ docs }: KnowHowBrowserProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="UWE-Doku durchsuchen (Titel, Pfad, Text)…"
-        className="max-w-md"
-      />
+      <div className="flex flex-col gap-3">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="UWE-Doku durchsuchen (Titel, Pfad, Text)…"
+          className="max-w-md"
+          type="search"
+          aria-label="Dokumentation durchsuchen"
+        />
+        <div className="flex flex-wrap gap-2">
+          {(["all", "README", "CHANGELOG", "docs"] as const).map((source) => (
+            <button
+              key={source}
+              type="button"
+              className={`uwe-v2-btn uwe-v2-btn-sm ${
+                sourceFilter === source ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"
+              }`}
+              onClick={() => setSourceFilter(source)}
+            >
+              {source === "all" ? "Alle" : SOURCE_LABEL[source]}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="text-xs text-muted-foreground">
         {filtered.length} von {docs.length} Dokumenten
       </p>
@@ -55,7 +75,16 @@ export function KnowHowBrowser({ docs }: KnowHowBrowserProps) {
             className={cn("rounded-[var(--radius)] border border-border p-3")}
           >
             <div className="flex items-baseline justify-between gap-2">
-              <span className="font-medium">{doc.title}</span>
+              <button
+                type="button"
+                className="text-left font-medium hover:underline"
+                onClick={() => {
+                  setSourceFilter(doc.source);
+                  setQuery(doc.title);
+                }}
+              >
+                {doc.title}
+              </button>
               <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
                 {SOURCE_LABEL[doc.source]}
               </span>

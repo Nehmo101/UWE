@@ -24,6 +24,7 @@ import {
 import { simulateAllFactionsAction } from "@/app/worlds/[worldSlug]/faction-state-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { ChronicleTimeline } from "@/src/components/world/ChronicleTimeline";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -225,52 +226,32 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
 
       <section className="uwe-v2-card">
         <h2 style={{ marginTop: 0 }}>Ereignisse ({sortedEvents.length})</h2>
-        {sortedEvents.length === 0 ? (
-          <p className="uwe-hint">Noch keine Ereignisse erfasst.</p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {sortedEvents.map((event) => {
-              const inGameDate = parseInGameDate(event.inGameDate);
-              return (
-                <li
-                  key={event.id}
-                  style={{
-                    marginBottom: "1rem",
-                    padding: "1rem",
-                    border: "1px solid rgba(148,163,184,0.12)",
-                    borderRadius: "0.65rem",
-                  }}
-                >
-                  <p style={{ margin: "0 0 0.35rem" }}>
-                    <strong>{formatInGameDate(inGameDate, months)}</strong> — {event.title}
-                  </p>
-                  {event.summaryPlayer && (
-                    <p style={{ margin: "0 0 0.35rem", fontSize: "0.875rem" }}>{event.summaryPlayer}</p>
-                  )}
-                  {event.summaryDm && (
-                    <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", opacity: 0.85 }}>
-                      <em>DM:</em> {event.summaryDm}
-                    </p>
-                  )}
-                  {event.entityLinks.length > 0 && (
-                    <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem" }}>
-                      Verknüpft:{" "}
-                      {event.entityLinks.map((link) => link.page.title).join(", ")}
-                    </p>
-                  )}
-                  <form action={deleteWorldEventAction}>
-                    <input type="hidden" name="worldSlug" value={worldSlug} />
-                    <input type="hidden" name="eventId" value={event.id} />
-                    <input type="hidden" name="returnTo" value="chronicle" />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger">
-                      Löschen
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <ChronicleTimeline
+          events={sortedEvents.map((event) => {
+            const inGameDate = parseInGameDate(event.inGameDate);
+            return {
+              id: event.id,
+              dateLabel: formatInGameDate(inGameDate, months),
+              title: event.title,
+              summaryPlayer: event.summaryPlayer,
+              summaryDm: event.summaryDm,
+              entityLinks:
+                event.entityLinks.length > 0
+                  ? `Verknüpft: ${event.entityLinks.map((link) => link.page.title).join(", ")}`
+                  : "",
+              deleteForm: (
+                <form action={deleteWorldEventAction}>
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <input type="hidden" name="returnTo" value="chronicle" />
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger">
+                    Löschen
+                  </button>
+                </form>
+              ),
+            };
+          })}
+        />
       </section>
     </WorldShell>
   );

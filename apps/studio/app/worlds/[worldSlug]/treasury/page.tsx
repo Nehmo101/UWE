@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SidebarSection } from "@uwe/shared-ui";
 import {
@@ -108,6 +109,22 @@ export default async function WorldTreasuryPage({ params, searchParams }: Props)
         title="Gruppenschatz"
         summary="Verwalte Gruppenwährung und gemeinsames Inventar dieser Welt."
       />
+
+      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ marginTop: 0 }}>Loot &amp; Zufall</h2>
+        <p className="uwe-hint" style={{ margin: "0 0 0.75rem" }}>
+          Ein integrierter Loot-Generator ist geplant. Bis dahin kannst du Beute über
+          Zufallstabellen würfeln und Gegenstände manuell oder per Import erfassen.
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+          <Link href={`/worlds/${worldSlug}/roll-tables`} className="uwe-v2-btn uwe-v2-btn-primary">
+            Zufallstabellen öffnen
+          </Link>
+          <Link href={`/worlds/${worldSlug}/magic-items`} className="uwe-v2-btn">
+            Magic-Item-Werkbank
+          </Link>
+        </div>
+      </section>
 
       {saved === "1" && (
         <p className="uwe-banner uwe-banner-success" role="status">

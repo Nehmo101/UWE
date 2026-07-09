@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import {
+  GlobalSearchForm,
   PlayerNoteStatusBadge,
   SidebarSection,
 } from "@uwe/shared-ui";
@@ -21,12 +22,12 @@ import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; view?: string }>;
+  searchParams: Promise<{ campaign?: string; view?: string; q?: string }>;
 }
 
 export default async function StudioPlayerNotesPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, view } = await searchParams;
+  const { campaign: campaignSlug, view, q } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -60,6 +61,23 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
 
   const notesBase = `/worlds/${worldSlug}/notes`;
   const viewAllSuffix = view === "all" ? "?view=all" : "";
+  const searchQuery = q?.trim().toLowerCase() ?? "";
+
+  const filteredNotes = searchQuery
+    ? allNotes.filter((note) => {
+        const haystack = [
+          note.content,
+          note.authorDisplayName,
+          note.campaignName,
+          note.pageTitle,
+          note.sessionTitle,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(searchQuery);
+      })
+    : allNotes;
 
   return (
     <WorldShell
@@ -117,13 +135,30 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
             : "Notizen, die Spieler an den GM gesendet haben — übernehmen, verbergen oder löschen."
         }
       />
-      {allNotes.length === 0 ? (
+
+      <GlobalSearchForm
+        action={notesBase}
+        query={q}
+        placeholder="Notizen durchsuchen (Inhalt, Autor, Seite, Session)…"
+        extraFields={
+          <>
+            {view === "all" ? <input type="hidden" name="view" value="all" /> : null}
+            {campaignSlug ? <input type="hidden" name="campaign" value={campaignSlug} /> : null}
+          </>
+        }
+      />
+
+      {filteredNotes.length === 0 ? (
         <p className="uwe-v2-empty">
-          {view === "all" ? "Keine Spielernotizen vorhanden." : "Keine Notizen in der Review Queue."}
+          {searchQuery
+            ? "Keine Notizen passen zur Suche."
+            : view === "all"
+              ? "Keine Spielernotizen vorhanden."
+              : "Keine Notizen in der Review Queue."}
         </p>
       ) : (
         <div className="uwe-notes-queue">
-          {allNotes.map((note) => (
+          {filteredNotes.map((note) => (
             <article key={note.id} className="uwe-note-card">
               <header className="uwe-note-card-header">
                 <div>

@@ -11,6 +11,7 @@ import {
   createManualLabelAction,
 } from "@/app/label-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { LabelTemplatePreviewPicker } from "@/src/components/labels/LabelTemplatePreviewPicker";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -28,6 +29,20 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
   if (!world) notFound();
 
   const templates = await labelService.listTemplates(world.id);
+  const templatePreviewOptions = templates.map((template) => {
+    const layout =
+      template.layoutSettings && typeof template.layoutSettings === "object"
+        ? (template.layoutSettings as { mode?: string; widthInches?: number; heightInches?: number })
+        : {};
+    return {
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      widthInches: layout.widthInches ?? 6,
+      heightInches: layout.heightInches ?? 4,
+      mode: layout.mode ?? "image_text",
+    };
+  });
   const pages = await labelService.listSourcePagesForLabels(worldSlug);
   const roomPages = pages.filter((page) => page.type === "room");
   const handoutPages = pages.filter((page) =>
@@ -120,16 +135,10 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
             </select>
           </label>
 
-          <label>
-            Vorlage
-            <select name="templateId" defaultValue={templates[0]?.id} required>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <LabelTemplatePreviewPicker
+            templates={templatePreviewOptions}
+            defaultTemplateId={templates[0]?.id}
+          />
 
           <label>
             Titel (optional)

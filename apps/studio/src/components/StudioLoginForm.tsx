@@ -243,12 +243,21 @@ function StudioLoginFormInner({
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
+            autoFocus
             aria-invalid={error ? true : undefined}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="login-password">Passwort</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="login-password">Passwort</Label>
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Passwort vergessen?
+            </Link>
+          </div>
           <Input
             id="login-password"
             name="password"
@@ -286,9 +295,6 @@ function StudioLoginFormInner({
           <Button type="submit" disabled={loading || (turnstileEnabled && !turnstileToken)}>
             {loading ? "Anmelden…" : "Anmelden"}
           </Button>
-          <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-            Passwort vergessen?
-          </Link>
         </div>
       </form>
 

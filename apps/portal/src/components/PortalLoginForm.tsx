@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { TurnstileWidget } from "@uwe/shared-ui";
 import { readFormFieldValue, redirectAfterAuth } from "@/src/lib/auth-form-utils";
+import { sanitizePortalRedirectPath } from "@/src/lib/portal-redirect";
 import { Alert } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -35,7 +36,10 @@ function PortalLoginFormInner({
   turnstileSiteKey,
 }: PortalLoginFormProps) {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? defaultRedirect;
+  const redirectTo = sanitizePortalRedirectPath(
+    searchParams.get("redirect"),
+    defaultRedirect,
+  );
   const forbidden = searchParams.get("error") === "forbidden";
   const resetSuccess = searchParams.get("reset") === "success";
   // Optional prefill forwarded from the uweanddragons.org landing page.
@@ -244,12 +248,21 @@ function PortalLoginFormInner({
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
+            autoFocus
             aria-invalid={error ? true : undefined}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="login-password">Passwort</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="login-password">Passwort</Label>
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Passwort vergessen?
+            </Link>
+          </div>
           <Input
             id="login-password"
             name="password"
@@ -287,9 +300,6 @@ function PortalLoginFormInner({
           <Button type="submit" disabled={loading || (turnstileEnabled && !turnstileToken)}>
             {loading ? "Anmelden…" : "Anmelden"}
           </Button>
-          <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-            Passwort vergessen?
-          </Link>
         </div>
       </form>
 

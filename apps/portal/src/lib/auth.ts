@@ -28,7 +28,7 @@ export const getPreviewUserId = cache(async (): Promise<string | null> => {
   return cookieStore.get(PREVIEW_COOKIE_NAME)?.value ?? null;
 });
 
-export const getCurrentUser = cache(async () => {
+export const getCurrentSession = cache(async () => {
   const token = await getSessionToken();
   if (!token) {
     return null;
@@ -38,10 +38,21 @@ export const getCurrentUser = cache(async () => {
   const auth = createAuthService(db);
   try {
     const session = await auth.getSessionByToken(token);
-    return session?.user ?? null;
+    if (!session) {
+      return null;
+    }
+    return {
+      id: session.id,
+      user: session.user,
+    };
   } finally {
     await disconnectPrismaClientIfOwned(db);
   }
+});
+
+export const getCurrentUser = cache(async () => {
+  const session = await getCurrentSession();
+  return session?.user ?? null;
 });
 
 export async function getUserFromRequestCookieHeader(

@@ -31,6 +31,15 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
 
   const { fact, tags, linkedCaptures } = detail;
 
+  const similarQuery = [fact.title, fact.content].filter(Boolean).join(" ").slice(0, 200);
+  const similarFacts =
+    similarQuery.length > 0
+      ? (await service.searchPersonalBrain({ query: similarQuery, limit: 6 })).facts
+          .map((hit) => hit.item)
+          .filter((item) => item.id !== fact.id)
+          .slice(0, 5)
+      : [];
+
   return (
     <StudioShell
       breadcrumb={
@@ -93,6 +102,25 @@ export default async function LifeBrainFactDetailPage({ params }: Props) {
                     </p>
                   )}
                   <Link href="/capture">Capture-Inbox</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {similarFacts.length > 0 && (
+          <section className="uwe-v2-section">
+            <h2 className="uwe-v2-section-title">Ähnliche Fakten</h2>
+            <ul className="uwe-linked-list">
+              {similarFacts.map((similar) => (
+                <li key={similar.id}>
+                  <Link href={`/life-brain/facts/${similar.id}`}>{similar.title}</Link>
+                  {similar.content ? (
+                    <p className="uwe-dashboard-muted" style={{ marginTop: "0.25rem" }}>
+                      {similar.content.slice(0, 160)}
+                      {similar.content.length > 160 ? "…" : ""}
+                    </p>
+                  ) : null}
                 </li>
               ))}
             </ul>

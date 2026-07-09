@@ -8,10 +8,12 @@ import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import type { BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
 import {
+  AtlasNodeDetailPanel,
   AtlasStudioWorkspace,
   buildPaletteIdMap,
   buildStudioAtlasDoc,
 } from "@/src/components/atlas";
+import { buildPageUrl, type PageType } from "@uwe/database/server";
 import type {
   BuildStudioAtlasDocInput,
   RegionDescribeTarget,
@@ -45,6 +47,8 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
   let nodeVisibility = "dm_only";
   let tileLayer: unknown = null;
   let parentChain: StudioAtlasNodeInput[] = [];
+  let parentNode: { id: string; title: string } | null = null;
+  let linkedPage: { title: string; type: string; slug: string } | null = null;
 
   try {
     const hierarchy = await atlas.getNodeWithHierarchy(nodeId);
@@ -71,6 +75,16 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
       title: a.title,
       level: a.level,
     }));
+    const directParent = hierarchy.parentChain[hierarchy.parentChain.length - 1];
+    parentNode = directParent ? { id: directParent.id, title: directParent.title } : null;
+
+    if (node.pageId) {
+      const page = await db.page.findUnique({
+        where: { id: node.pageId },
+        select: { title: true, type: true, slug: true },
+      });
+      linkedPage = page;
+    }
   } finally {
     await db.$disconnect();
   }
@@ -159,6 +173,22 @@ export default async function AtlasNodeEditorPage({ params }: Props) {
       worldName={world.name}
       breadcrumb={<BreadcrumbTrail items={hierarchyBreadcrumb} />}
     >
+      <AtlasNodeDetailPanel
+        worldSlug={worldSlug}
+        nodeId={nodeId}
+        title={node.title}
+        level={node.level}
+        visibility={nodeVisibility}
+        sortOrder={node.sortOrder}
+        featureCount={features.length}
+        objectCount={objects.length}
+        parentTitle={parentNode?.title}
+        parentId={parentNode?.id}
+        linkedPageTitle={linkedPage?.title}
+        linkedPageHref={
+          linkedPage ? buildPageUrl(worldSlug, linkedPage.type as PageType, linkedPage.slug) : undefined
+        }
+      />
       <AtlasStudioWorkspace
         worldSlug={worldSlug}
         nodeId={nodeId}

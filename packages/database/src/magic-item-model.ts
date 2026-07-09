@@ -56,6 +56,8 @@ export interface MagicItemData {
   dmSecret?: string;
   /** Nur-DM: Fluch / Nachteil. */
   curse?: string;
+  /** Wiki-Seite des aktuellen Besitzers (Spieler-Charakter, NPC, Fraktion …). */
+  ownerPageId?: string;
 }
 
 export function rarityLabel(rarity: string | undefined): string {
@@ -169,5 +171,6 @@ export function parseMagicItemData(raw: unknown): MagicItemData {
     properties,
     dmSecret: typeof record.dmSecret === "string" ? record.dmSecret : undefined,
     curse: typeof record.curse === "string" ? record.curse : undefined,
+    ownerPageId: typeof record.ownerPageId === "string" ? record.ownerPageId : undefined,
   };
 }

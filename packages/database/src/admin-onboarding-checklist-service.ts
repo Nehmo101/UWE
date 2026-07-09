@@ -2,6 +2,8 @@ import type { PrismaClient } from "./client";
 import { getBackupFreshnessStatus } from "./production-safety";
 import { getMigrationStatus } from "./migration-status";
 import { getOwnerSetupSnapshot, type OwnerSetupSectionId } from "./owner-setup-service";
+import { createConnectorService } from "./connector-service";
+import { SettingsService } from "./settings-service";
 
 export type ChecklistItemStatus = "done" | "open" | "optional" | "warning";
 
@@ -12,6 +14,8 @@ export interface AdminChecklistItem {
   description: string;
   status: ChecklistItemStatus;
   href?: string;
+  /** True when status is derived from live system checks, not manual toggles. */
+  autoDetected?: boolean;
 }
 
 export interface AdminOnboardingChecklist {
@@ -50,11 +54,15 @@ export async function getAdminOnboardingChecklist(
 ): Promise<AdminOnboardingChecklist> {
   const env = options.env ?? process.env;
 
-  const [setup, migration, worldCount, backup] = await Promise.all([
+  const [setup, migration, worldCount, backup, mailSettings, connectorSummary, userCount] =
+    await Promise.all([
     getOwnerSetupSnapshot(db, { env, role: options.role ?? "owner", canEdit: false }),
     getMigrationStatus(db),
     db.world.count(),
     Promise.resolve(getBackupFreshnessStatus()),
+    new SettingsService(db).getSettings(),
+    createConnectorService(db).summarize(),
+    db.user.count(),
   ]);
 
   const items: AdminChecklistItem[] = [];
@@ -78,6 +86,31 @@ export async function getAdminOnboardingChecklist(
     description: migration.message,
     status: migration.ok ? "done" : migration.failedMigrations.length > 0 ? "warning" : "open",
     href: "/admin/migrations",
+    autoDetected: true,
+  });
+
+  items.push({
+    id: "smtp-configured",
+    category: "Mail",
+    title: "SMTP für Mail Center",
+    description: mailSettings.mail.smtp.configured
+      ? "SMTP ist konfiguriert."
+      : "SMTP-Host und Zugangsdaten in den Einstellungen hinterlegen.",
+    status: mailSettings.mail.smtp.configured ? "done" : "open",
+    href: "/settings?tab=mail",
+    autoDetected: true,
+  });
+
+  items.push({
+    id: "rtx-connector-online",
+    category: "RTX & Hardware",
+    title: "RTX Connector erreichbar",
+    description: connectorSummary.anyOnline
+      ? `${connectorSummary.onlineCount} Connector online.`
+      : "Optional — lokale KI/Druck-Funktionen benötigen den RTX Connector.",
+    status: connectorSummary.anyOnline ? "done" : "optional",
+    href: "/system/rtx-connector",
+    autoDetected: true,
   });
 
   items.push({
@@ -90,6 +123,7 @@ export async function getAdminOnboardingChecklist(
         : "Lege eine Welt an, um DnD-Inhalte und Portal zu nutzen.",
     status: worldCount > 0 ? "done" : "open",
     href: "/worlds",
+    autoDetected: true,
   });
 
   const backupFresh =
@@ -109,6 +143,18 @@ export async function getAdminOnboardingChecklist(
           : "Backup-Verzeichnis nicht lesbar.",
     status: backupFresh ? "done" : backup.backupCount > 0 ? "optional" : "open",
     href: "/backup",
+    autoDetected: true,
+  });
+
+  items.push({
+    id: "admin-user-present",
+    category: "Zugriff",
+    title: "Mindestens ein Benutzerkonto",
+    description:
+      userCount > 0 ? `${userCount} Benutzer im System.` : "Lege einen Owner-Account an.",
+    status: userCount > 0 ? "done" : "warning",
+    href: "/admin/users",
+    autoDetected: true,
   });
 
   const completedCount = items.filter((item) => countForProgress(item.status)).length;

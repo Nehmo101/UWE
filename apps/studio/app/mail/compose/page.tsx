@@ -125,6 +125,7 @@ export default async function MailComposePage({ searchParams }: Props) {
         initialBodyHtml={draft.bodyHtml}
         sourceType={draft.sourceType}
         sourceId={draft.sourceId}
+        draftStorageKey={`uwe-mail-compose:${kind}:${draft.sourceId}`}
         recipients={recipientOptions}
         warnings={draft.warnings}
         containsDmOnlyHint={draft.containsDmOnlyHint}

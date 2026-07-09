@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
     }
 
-    const session = await auth.createSession(user.id);
+    const session = await auth.createSession(user.id, { ipAddress: ip });
     await auth.recordSuccessfulLogin(user.id);
     const cookieStore = await cookies();
 

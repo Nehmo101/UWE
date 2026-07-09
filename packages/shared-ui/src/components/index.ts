@@ -25,3 +25,7 @@ export { SidebarItem, type SidebarItemProps } from "./SidebarItem";
 export { RailButton, type RailButtonProps } from "./RailButton";
 export { BackLink, type BackLinkProps } from "./BackLink";
 export { ContextActions, type ContextActionsProps } from "./ContextActions";
+export {
+  CopyToClipboardButton,
+  type CopyToClipboardButtonProps,
+} from "./CopyToClipboardButton";

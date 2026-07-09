@@ -16,6 +16,7 @@ import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell"
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { QuickCreateSessionDialog } from "@/src/components/world/QuickCreateSessionDialog";
 
 const PAGE_SIZE = 20;
 
@@ -101,9 +102,16 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
         title="Sessions"
         summary="Vorbereiten, spielen und nachbereiten — Recaps fürs Portal veröffentlichen."
         actions={
-          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/sessions/new`}>
-            Neue Session
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <QuickCreateSessionDialog
+              worldSlug={worldSlug}
+              campaigns={campaigns.map((c) => ({ slug: c.slug, name: c.name }))}
+              defaultCampaignSlug={campaignSlug}
+            />
+            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/sessions/new${campaignSlug ? `?campaign=${campaignSlug}` : ""}`}>
+              Vollständiges Formular
+            </Link>
+          </div>
         }
       />
 

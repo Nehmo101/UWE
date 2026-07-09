@@ -13,8 +13,43 @@ import { requireStudioAccess } from "@/src/lib/auth";
 import { createRecipeAction } from "../../kitchen-actions";
 
 type Props = {
-  searchParams: Promise<{ status?: string; tag?: string; new?: string }>;
+  searchParams: Promise<{ status?: string; tag?: string; new?: string; sort?: string }>;
 };
+
+type RecipeSort = "duration" | "rating";
+
+function resolveSort(value: string | undefined): RecipeSort | undefined {
+  return value === "duration" || value === "rating" ? value : undefined;
+}
+
+function sortRecipes<T extends { title: string; durationMinutes: number | null; tasteRating: number | null }>(
+  recipes: T[],
+  sort: RecipeSort | undefined,
+): T[] {
+  if (!sort) {
+    return [...recipes].sort((a, b) => a.title.localeCompare(b.title, "de"));
+  }
+  if (sort === "duration") {
+    return [...recipes].sort((a, b) => {
+      const aDuration = a.durationMinutes ?? Number.POSITIVE_INFINITY;
+      const bDuration = b.durationMinutes ?? Number.POSITIVE_INFINITY;
+      return aDuration - bDuration || a.title.localeCompare(b.title, "de");
+    });
+  }
+  return [...recipes].sort((a, b) => {
+    const aRating = a.tasteRating ?? -1;
+    const bRating = b.tasteRating ?? -1;
+    return bRating - aRating || a.title.localeCompare(b.title, "de");
+  });
+}
+
+function sortHref(status: string | undefined, tag: string | undefined, sort: RecipeSort): string {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (tag) params.set("tag", tag);
+  params.set("sort", sort);
+  return `/kitchen/recipes?${params.toString()}`;
+}
 
 function resolveStatus(value: string | undefined): RecipeStatus | undefined {
   return RECIPE_STATUSES.includes(value as RecipeStatus)
@@ -25,14 +60,16 @@ function resolveStatus(value: string | undefined): RecipeStatus | undefined {
 export default async function RecipesPage({ searchParams }: Props) {
   await requireStudioAccess();
 
-  const { status: statusParam, tag, new: showNew } = await searchParams;
+  const { status: statusParam, tag, new: showNew, sort: sortParam } = await searchParams;
   const status = resolveStatus(statusParam);
+  const sort = resolveSort(sortParam);
 
   const kitchen = createKitchenService(prisma);
-  const [recipes, tags] = await Promise.all([
+  const [recipesRaw, tags] = await Promise.all([
     kitchen.listRecipes({ status, tag }),
     kitchen.listRecipeTags(),
   ]);
+  const recipes = sortRecipes(recipesRaw, sort);
 
   const showForm = showNew === "1";
 
@@ -83,6 +120,25 @@ export default async function RecipesPage({ searchParams }: Props) {
             ))}
           </div>
         )}
+        <div className="uwe-today-quick-chips" style={{ marginTop: "0.5rem" }}>
+          <span className="uwe-dashboard-muted" style={{ marginRight: "0.5rem" }}>
+            Sortierung:
+          </span>
+          <Link
+            href={sortHref(status, tag, "duration")}
+            className="uwe-today-quick-chip"
+            data-severity={sort === "duration" ? "info" : undefined}
+          >
+            Dauer
+          </Link>
+          <Link
+            href={sortHref(status, tag, "rating")}
+            className="uwe-today-quick-chip"
+            data-severity={sort === "rating" ? "info" : undefined}
+          >
+            Bewertung
+          </Link>
+        </div>
         <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem" }}>
           {showForm ? (
             <Link href="/kitchen/recipes">Formular schließen</Link>
@@ -161,6 +217,7 @@ export default async function RecipesPage({ searchParams }: Props) {
                   {recipe.ingredients.length}{" "}
                   {recipe.ingredients.length === 1 ? "Zutat" : "Zutaten"}
                   {recipe.durationMinutes ? ` · ${recipe.durationMinutes} Min.` : ""}
+                  {recipe.tasteRating ? ` · ★ ${recipe.tasteRating}` : ""}
                 </p>
                 {recipe.description && <p>{recipe.description}</p>}
                 {recipe.ingredients.length > 0 && (

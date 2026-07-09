@@ -137,6 +137,19 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
       {added && <p className="uwe-flash uwe-flash-success">Eintrag hinzugefügt.</p>}
       {assetLinked && <p className="uwe-flash uwe-flash-success">Asset verknüpft.</p>}
 
+      <section className="uwe-v2-section">
+        <h2>Werkzeuge</h2>
+        <p className="uwe-hint">Schnellzugriff für Beute und magische Gegenstände am Tisch.</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+          <Link href={`/worlds/${worldSlug}/roll-tables`} className="uwe-v2-btn">
+            Zufallstabellen
+          </Link>
+          <Link href={`/worlds/${worldSlug}/magic-items`} className="uwe-v2-btn">
+            Magic-Item-Werkbank
+          </Link>
+        </div>
+      </section>
+
       <form action={updateRoomContentAction} className="uwe-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="dungeonSlug" value={dungeonSlug} />

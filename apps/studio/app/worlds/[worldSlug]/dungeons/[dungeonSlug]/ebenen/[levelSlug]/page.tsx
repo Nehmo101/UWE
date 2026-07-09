@@ -62,6 +62,41 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
       {created && <p className="uwe-flash uwe-flash-success">Raum erstellt.</p>}
 
       <section className="uwe-v2-section">
+        <h2>Raum-Übersicht</h2>
+        {overview.rooms.length === 0 ? (
+          <p className="uwe-v2-empty">Noch keine Räume auf dieser Ebene.</p>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 12rem), 1fr))",
+              gap: "0.75rem",
+              marginBottom: "1rem",
+            }}
+          >
+            {overview.rooms.map((room) => (
+              <Link
+                key={room.id}
+                href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}/raeume/${room.slug}`}
+                className="uwe-v2-card"
+                style={{ display: "block", textDecoration: "none", color: "inherit" }}
+              >
+                <strong>{room.title}</strong>
+                <div style={{ marginTop: "0.35rem" }}>
+                  <DungeonPrepStatusBadge status={room.prepStatus} />
+                </div>
+                {room.summary && (
+                  <p className="uwe-hint" style={{ margin: "0.35rem 0 0", fontSize: "0.85rem" }}>
+                    {room.summary}
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="uwe-v2-section">
         <h2>Räume</h2>
         <table className="uwe-page-table">
           <thead>

@@ -10,6 +10,7 @@ import {
   parseInGameDate,
   parseWorldCalendarMonths,
 } from "@uwe/database/server";
+import { parseWorldCalendarSettings } from "@uwe/database/world-calendar-settings";
 import { updateWorldCalendarAction, advanceWorldCalendarAction } from "@/app/world-calendar-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -40,6 +41,8 @@ export default async function WorldCalendarPage({ params, searchParams }: Props)
   const currentDate = parseInGameDate(calendar.currentDate);
   const dayNames = parseDayNames(calendar.dayNames);
   const formattedDate = formatInGameDate(currentDate, months);
+  const calendarSettings = parseWorldCalendarSettings(calendar.settings);
+  const holidays = calendarSettings.holidays;
 
   return (
     <WorldShell
@@ -197,6 +200,78 @@ export default async function WorldCalendarPage({ params, searchParams }: Props)
             </label>
           ))}
         </fieldset>
+
+        <fieldset>
+          <legend>Feiertage &amp; Weltevents</legend>
+          <p className="uwe-hint">
+            Wiederkehrende Festtage im In-Game-Kalender (Monat = Index wie oben, Tag im Monat).
+          </p>
+          <input type="hidden" name="holidayCount" value={Math.max(holidays.length, 3)} />
+          {Array.from({ length: Math.max(holidays.length, 3) }, (_, index) => {
+            const holiday = holidays[index];
+            return (
+              <div
+                key={index}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1fr 1fr",
+                  gap: "0.75rem",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                <label>
+                  Name
+                  <input
+                    name={`holiday_${index}_name`}
+                    defaultValue={holiday?.name ?? ""}
+                    placeholder="z. B. Erntedank"
+                  />
+                </label>
+                <label>
+                  Monat
+                  <input
+                    name={`holiday_${index}_month`}
+                    type="number"
+                    min={1}
+                    max={months.length}
+                    defaultValue={holiday?.month ?? ""}
+                  />
+                </label>
+                <label>
+                  Tag
+                  <input
+                    name={`holiday_${index}_day`}
+                    type="number"
+                    min={1}
+                    defaultValue={holiday?.day ?? ""}
+                  />
+                </label>
+                <label style={{ gridColumn: "1 / -1" }}>
+                  Notizen (optional)
+                  <input
+                    name={`holiday_${index}_notes`}
+                    defaultValue={holiday?.notes ?? ""}
+                    placeholder="Kurzbeschreibung für die Chronik"
+                  />
+                </label>
+              </div>
+            );
+          })}
+        </fieldset>
+
+        {holidays.length > 0 && (
+          <section className="uwe-v2-section">
+            <h3 className="uwe-v2-section-title">Gespeicherte Feiertage</h3>
+            <ul className="uwe-linked-list">
+              {holidays.map((holiday) => (
+                <li key={`${holiday.month}-${holiday.day}-${holiday.name}`}>
+                  <strong>{holiday.name}</strong> — Tag {holiday.day}, Monat {holiday.month}
+                  {holiday.notes ? ` (${holiday.notes})` : ""}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
           Kalender speichern

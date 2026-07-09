@@ -26,6 +26,11 @@ const CURRENCY_LABELS: Record<keyof typeof DEFAULT_CURRENCIES, string> = {
   pp: "Platin",
 };
 
+const UPDATED_AT_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 function parseCurrencyLedger(raw: unknown): CurrencyLedger {
   const currencies = { ...DEFAULT_CURRENCIES };
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -122,6 +127,11 @@ export default async function PortalTreasuryPage({ params }: Props) {
     <section className="portal-content-card">
       <h1>{view.name}</h1>
       <p className="auth-lead">Gemeinsame Währung und Gegenstände eurer Gruppe.</p>
+      {view.updatedAt ? (
+        <p className="auth-muted">
+          Zuletzt aktualisiert: {UPDATED_AT_FORMAT.format(new Date(view.updatedAt))}
+        </p>
+      ) : null}
 
       <section className="auth-block">
         <h2>Währung</h2>

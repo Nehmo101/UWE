@@ -1,17 +1,10 @@
 import { redirect } from "next/navigation";
-import { resolvePortalPublicBaseUrl, resolveUweAppUrls } from "@uwe/auth";
+import { prisma } from "@uwe/database/server";
+import { requireStudioAccess } from "@/src/lib/auth";
+import { resolveStudioPortalWorldHref } from "@/src/lib/portal-world-redirect";
 
-/** Defensive shim: Studio `/portal` must never 404 — redirect to configured Portal URL. */
-export default function StudioPortalRedirectPage() {
-  const urls = resolveUweAppUrls();
-
-  if (urls.deploymentModel === "split-hostname") {
-    redirect(resolvePortalPublicBaseUrl());
-  }
-
-  if (urls.portalPath === "/") {
-    redirect(resolvePortalPublicBaseUrl());
-  }
-
-  redirect(urls.portalPath);
+/** Studio `/portal` → Portal-URL der zuletzt aktiven (oder favorisierten) Welt. */
+export default async function StudioPortalRedirectPage() {
+  await requireStudioAccess();
+  redirect(await resolveStudioPortalWorldHref(prisma));
 }

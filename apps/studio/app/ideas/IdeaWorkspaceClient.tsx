@@ -15,6 +15,7 @@ import { IdeaClaudeHandover } from "./IdeaClaudeHandover";
 import {
   createIdeaAction,
   deleteIdeaAction,
+  convertIdeaToCaptureAction,
   syncFeatureMatrixAction,
   updateIdeaAction,
   updateIdeaStatusAction,
@@ -308,13 +309,22 @@ function ChatColumn({
       <div className="uwe-idea-detail">
         <div className="uwe-idea-detail-head">
           <h3 className="uwe-idea-detail-title">{idea.title}</h3>
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
-            onClick={() => setEditing((value) => !value)}
-          >
-            {editing ? "Schließen" : "Bearbeiten"}
-          </button>
+          <div className="uwe-inline-actions">
+            <form action={convertIdeaToCaptureAction}>
+              <WorkspaceContextFields {...workspaceContext} />
+              <input type="hidden" name="id" value={idea.id} />
+              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+                In Capture umwandeln
+              </button>
+            </form>
+            <button
+              type="button"
+              className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
+              onClick={() => setEditing((value) => !value)}
+            >
+              {editing ? "Schließen" : "Bearbeiten"}
+            </button>
+          </div>
         </div>
         {editing ? (
           <form action={updateIdeaAction} className="uwe-brain-create-form">

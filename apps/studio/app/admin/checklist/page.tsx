@@ -74,6 +74,7 @@ export default async function AdminChecklistPage() {
         <p className="uwe-hint">
           Basierend auf{" "}
           <Link href="/admin/setup">Owner-Einrichtung</Link>, Migrationen, Welten und Backup-Status.
+          Punkte mit „Auto“ werden live aus der Datenbank bzw. Systemstatus ermittelt.
         </p>
       </section>
 
@@ -88,6 +89,11 @@ export default async function AdminChecklistPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
                     <div>
                       <strong>{item.title}</strong>
+                      {item.autoDetected ? (
+                        <span className="uwe-badge uwe-badge-draft" style={{ marginLeft: "0.5rem" }}>
+                          Auto
+                        </span>
+                      ) : null}
                       <p className="uwe-dashboard-muted" style={{ marginTop: "0.35rem" }}>
                         {item.description}
                       </p>

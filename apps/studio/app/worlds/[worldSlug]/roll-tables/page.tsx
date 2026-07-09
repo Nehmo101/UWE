@@ -9,9 +9,12 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
+  RollHistoryPanel,
+  RollTableRollButton,
+} from "@/src/components/world/RollTableRollPanel";
+import {
   createRollTableAction,
   deleteRollTableAction,
-  rollOnTableAction,
   seedRollTablePresetsAction,
   updateRollTableAction,
 } from "@/app/worlds/[worldSlug]/roll-table-actions";
@@ -22,14 +25,12 @@ interface Props {
     saved?: string;
     deleted?: string;
     seeded?: string;
-    rolled?: string;
-    rolledTable?: string;
   }>;
 }
 
 export default async function RollTablesPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { saved, deleted, seeded, rolled, rolledTable } = await searchParams;
+  const { saved, deleted, seeded } = await searchParams;
 
   const world = await getAppRepository().getWorldBySlug(worldSlug);
   if (!world) {
@@ -55,8 +56,13 @@ export default async function RollTablesPage({ params, searchParams }: Props) {
     >
       <PageHeader
         title="Zufallstabellen"
-        summary="Loot, Zufalls-Encounter und Namen — gewichtete Tabellen mit Würfeln-Button für den Spieltisch."
+        summary="Loot, Zufalls-Encounter und Namen — gewichtete Tabellen mit Würfeln-Button und Roll-Verlauf."
       />
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Roll-Verlauf</h2>
+        <RollHistoryPanel worldSlug={worldSlug} />
+      </section>
 
       {saved === "1" && (
         <p className="uwe-banner uwe-banner-success" role="status">
@@ -100,20 +106,13 @@ export default async function RollTablesPage({ params, searchParams }: Props) {
           </h2>
           {table.notes && <p className="uwe-dashboard-muted">{table.notes}</p>}
 
-          {rolledTable === table.id && rolled && (
-            <p className="uwe-banner uwe-banner-success" role="status">
-              🎲 Ergebnis: <strong>{rolled}</strong>
-            </p>
-          )}
-
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <form action={rollOnTableAction}>
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="tableId" value={table.id} />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                🎲 Würfeln
-              </button>
-            </form>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+            <RollTableRollButton
+              worldSlug={worldSlug}
+              tableId={table.id}
+              tableName={table.name}
+              entries={table.entries}
+            />
             <form action={deleteRollTableAction}>
               <input type="hidden" name="worldSlug" value={worldSlug} />
               <input type="hidden" name="tableId" value={table.id} />

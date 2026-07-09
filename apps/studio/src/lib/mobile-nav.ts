@@ -129,7 +129,7 @@ export function studioWorldBottomNav(
   const base = `/worlds/${worldSlug}`;
   return [
     { label: "Übersicht", href: `${base}/dashboard`, icon: "⌂", active: active === "overview" },
-    { label: "Inhalte", href: base, icon: "📄", active: active === "content" },
+    { label: "Inhalte", href: `${base}/wiki`, icon: "📄", active: active === "content" },
     { label: "Sessions", href: `${base}/sessions`, icon: "▣", active: active === "sessions" },
     { label: "Tools", href: `${base}/brain`, icon: "⚙", active: active === "tools" },
     { label: "Mehr", icon: "☰", action: "open-sidebar", active: active === "more" },

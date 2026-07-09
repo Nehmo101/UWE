@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import {
   classifyDue,
@@ -47,6 +48,16 @@ export default async function HouseholdPage() {
         title="Haushalts-Cockpit"
         summary="Wiederkehrende Haushalts- und Wartungsaufgaben — Mülltermine, Rauchmelder, Auto, Heizung, Filter. Erinnerungen sind aus dem nächsten Fälligkeitsdatum abgeleitet."
       />
+
+      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Einkaufslisten</h2>
+        <p className="uwe-dashboard-muted">
+          Einkaufslisten werden zentral in der Küche verwaltet — nicht hier doppelt.
+        </p>
+        <Link href="/kitchen/shopping" className="uwe-v2-btn uwe-v2-btn-secondary">
+          Einkaufslisten in der Küche öffnen
+        </Link>
+      </section>
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Demnächst / überfällig</h2>

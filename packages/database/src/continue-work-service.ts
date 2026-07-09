@@ -62,13 +62,17 @@ export class ContinueWorkService {
         select: { id: true, title: true, nextAction: true, updatedAt: true },
       }),
       this.db.captureEntry.findMany({
-        where: { status: "inbox" },
+        where: { status: { notIn: ["archived", "linked"] } },
         orderBy: [{ capturedAt: "desc" }],
         take: perSource,
         select: { id: true, title: true, content: true, capturedAt: true },
       }),
       this.db.scanDocument.findMany({
-        where: { status: { in: ["proposal_ready", "uncertain", "waiting_for_rtx"] } },
+        where: {
+          status: {
+            notIn: ["filed", "rejected", "archived", "unanalyzed", "analyzing"],
+          },
+        },
         orderBy: [{ updatedAt: "desc" }],
         take: perSource,
         select: { id: true, title: true, updatedAt: true, status: true },

@@ -69,6 +69,8 @@ export async function GET(
         character,
         inventoryItems,
         worldName: world.name,
+      }, {
+        layout: parsed.data.layout ?? "full",
       });
 
       return new NextResponse(html, {

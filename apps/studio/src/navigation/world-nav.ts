@@ -48,7 +48,7 @@ export function worldNav(worldSlug: string, openReviewCount?: number): NavGroup[
       id: "world-wiki",
       title: "Wiki",
       items: [
-        item("world-pages", "Wiki / Seiten", base, "book-open", "Wiki", ["wiki", "seiten", "pages"]),
+        item("world-pages", "Wiki / Seiten", `${base}/wiki`, "book-open", "Wiki", ["wiki", "seiten", "pages"]),
         item(
           "world-page-review",
           reviewLabel,

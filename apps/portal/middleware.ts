@@ -8,6 +8,7 @@ import {
   resolveLegacyPathRedirect,
 } from "@uwe/auth";
 import { isMaintenanceMiddlewareBypassPath } from "@uwe/database/maintenance-gate";
+import { portalReturnPath } from "@/src/lib/portal-redirect";
 
 function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null {
   if (!request.nextUrl.pathname.startsWith("/api/")) {
@@ -115,7 +116,10 @@ export async function middleware(request: NextRequest) {
   if (decision.action === "redirect-login") {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = decision.redirectPath ?? "/login";
-    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    loginUrl.searchParams.set(
+      "redirect",
+      portalReturnPath(request.nextUrl.pathname, request.nextUrl.search),
+    );
     return applySecurityHeaders(
       NextResponse.redirect(loginUrl),
       process.env,

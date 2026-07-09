@@ -31,6 +31,7 @@ export async function saveMagicItemAction(formData: FormData): Promise<void> {
     properties: parseLines(formData.get("properties")),
     dmSecret: String(formData.get("dmSecret") || "").trim() || undefined,
     curse: String(formData.get("curse") || "").trim() || undefined,
+    ownerPageId: String(formData.get("ownerPageId") || "").trim() || undefined,
   };
 
   await createMagicItemService(prisma).upsertForPage({ worldId, pageId, data });

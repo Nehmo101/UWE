@@ -44,14 +44,14 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
     >
       <PageHeader
         title="Neue Session"
-        summary="Session für Vorbereitung und Spielabend anlegen."
+        summary="Schnellanlage mit Titel, Kampagne und Datum — weitere Felder optional."
       />
       <form action={createGameSessionAction} className="uwe-edit-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
 
         <label>
           Titel
-          <input name="title" required placeholder="Session 3 — Der Turm" />
+          <input name="title" required placeholder="Session 3 — Der Turm" autoFocus />
         </label>
 
         <label>
@@ -69,41 +69,48 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
           <input type="date" name="date" />
         </label>
 
-        <label>
-          Status
-          <select name="status" defaultValue="planned">
-            {Object.values(GameSessionStatusEnum).map((status) => (
-              <option key={status} value={status}>
-                {GAME_SESSION_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <details className="uwe-v2-section">
+          <summary className="uwe-v2-section-title" style={{ cursor: "pointer" }}>
+            Erweiterte Felder (optional)
+          </summary>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "0.75rem" }}>
+            <label>
+              Status
+              <select name="status" defaultValue="planned">
+                {Object.values(GameSessionStatusEnum).map((status) => (
+                  <option key={status} value={status}>
+                    {GAME_SESSION_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label>
-          DM-Notizen (Vorbereitung)
-          <textarea name="summaryDm" rows={4} placeholder="Was plant der DM?" />
-        </label>
+            <label>
+              DM-Notizen (Vorbereitung)
+              <textarea name="summaryDm" rows={3} placeholder="Was plant der DM?" />
+            </label>
 
-        <label>
-          Spieler-Recap (Entwurf)
-          <textarea name="summaryPlayer" rows={4} placeholder="Was erfahren die Spieler?" />
-        </label>
+            <label>
+              Spieler-Recap (Entwurf)
+              <textarea name="summaryPlayer" rows={3} placeholder="Was erfahren die Spieler?" />
+            </label>
 
-        <label>
-          Notizen
-          <textarea name="notes" rows={3} />
-        </label>
+            <label>
+              Notizen
+              <textarea name="notes" rows={2} />
+            </label>
 
-        <label>
-          Offene Plots
-          <textarea name="openPlots" rows={3} placeholder="Welche Handlungsstränge sind offen?" />
-        </label>
+            <label>
+              Offene Plots
+              <textarea name="openPlots" rows={2} placeholder="Welche Handlungsstränge sind offen?" />
+            </label>
 
-        <label>
-          Spielerentscheidungen
-          <textarea name="playerDecisions" rows={3} placeholder="Was haben die Spieler entschieden?" />
-        </label>
+            <label>
+              Spielerentscheidungen
+              <textarea name="playerDecisions" rows={2} placeholder="Was haben die Spieler entschieden?" />
+            </label>
+          </div>
+        </details>
 
         <div className="uwe-form-actions">
           <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Session erstellen</button>

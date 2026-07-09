@@ -11,6 +11,10 @@ import {
   parseWorldCalendarMonths,
   type WorldCalendarMonth,
 } from "@uwe/database/server";
+import {
+  parseHolidayRows,
+  serializeWorldCalendarSettings,
+} from "@uwe/database/world-calendar-settings";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -78,6 +82,8 @@ export async function updateWorldCalendarAction(formData: FormData) {
     }
 
     const calendars = createWorldCalendarService(db);
+    const holidays = parseHolidayRows(formData);
+
     await calendars.upsertForWorld({
       worldId: world.id,
       name,
@@ -90,6 +96,7 @@ export async function updateWorldCalendarAction(formData: FormData) {
         month: Math.floor(month),
         day: Math.floor(day),
       },
+      settings: serializeWorldCalendarSettings({ holidays }),
     });
   } finally {
     await db.$disconnect();

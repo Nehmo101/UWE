@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { formatForgotPasswordError } from "@uwe/shared-ui";
 import { Alert } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -33,7 +34,7 @@ export function PortalForgotPasswordForm() {
 
     if (!response.ok) {
       const payload = (await response.json()) as { error?: string };
-      setError(payload.error ?? "Anfrage fehlgeschlagen. Bitte versuche es später erneut.");
+      setError(formatForgotPasswordError(response, payload));
       return;
     }
 
@@ -46,6 +47,11 @@ export function PortalForgotPasswordForm() {
       description="Gib deine E-Mail-Adresse ein. Du erhältst einen Link zum Zurücksetzen, falls ein Konto existiert."
       footer={<Link href="/login">← Zurück zur Anmeldung</Link>}
     >
+      <p className="text-sm text-muted-foreground">
+        Dein Spieler-Konto wird von deinem DM verwaltet. Wenn du keinen Reset-Link erhältst oder
+        Fragen hast, wende dich direkt an deinen DM.
+      </p>
+
       {success ? (
         <Alert tone="success">{SUCCESS_MESSAGE}</Alert>
       ) : (
@@ -61,6 +67,7 @@ export function PortalForgotPasswordForm() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
+              autoFocus
             />
           </div>
 

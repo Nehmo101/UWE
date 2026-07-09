@@ -59,7 +59,7 @@ const APP_KEYS = new Set([
 const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
-const AI_KEYS = new Set(["localOnlyMode", "enabled"]);
+const AI_KEYS = new Set(["localOnlyMode", "enabled", "generalChatSystemPrompt"]);
 const MAIL_KEYS = new Set([
   "enabled",
   "fromDisplayName",
@@ -363,6 +363,13 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       if (key === "localOnlyMode" || key === "enabled") {
         requireBoolean(value, `settings.ai.${key}`, sectionErrors);
       }
+      if (key === "generalChatSystemPrompt") {
+        if (value !== null && typeof value !== "string") {
+          sectionErrors.push("settings.ai.generalChatSystemPrompt muss ein String oder null sein.");
+        } else if (typeof value === "string" && value.length > 12000) {
+          sectionErrors.push("settings.ai.generalChatSystemPrompt ist zu lang (max. 12000 Zeichen).");
+        }
+      }
     });
     errors.push(...sectionErrors);
     if (sectionErrors.length === 0 && isRecord(body.ai)) {
@@ -372,6 +379,12 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       }
       if (body.ai.enabled !== undefined) {
         ai.enabled = body.ai.enabled as boolean;
+      }
+      if (body.ai.generalChatSystemPrompt !== undefined) {
+        ai.generalChatSystemPrompt =
+          typeof body.ai.generalChatSystemPrompt === "string"
+            ? body.ai.generalChatSystemPrompt
+            : null;
       }
       if (Object.keys(ai).length > 0) {
         update.ai = ai;

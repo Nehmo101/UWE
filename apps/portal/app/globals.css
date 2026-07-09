@@ -363,6 +363,113 @@ body {
   margin-top: 0.15rem;
 }
 
+.portal-new-badge {
+  background: color-mix(in srgb, var(--uwe-accent) 18%, transparent);
+  color: color-mix(in srgb, var(--uwe-accent) 40%, var(--uwe-fg) 60%);
+  border-color: color-mix(in srgb, var(--uwe-accent) 28%, transparent);
+}
+
+.portal-character-own {
+  border-color: color-mix(in srgb, var(--uwe-accent) 45%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-accent) 8%, var(--uwe-panel));
+}
+
+.auth-page-list > li > .portal-character-own {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.95rem 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 133%, var(--uwe-muted) 0%);
+}
+
+.portal-character-own-badge {
+  background: color-mix(in srgb, var(--uwe-player-visible) 14%, transparent);
+  color: var(--uwe-player-visible);
+  border-color: color-mix(in srgb, var(--uwe-player-visible) 24%, transparent);
+}
+
+.portal-sessions-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-top: 1.5rem;
+}
+
+.portal-sessions-filter h2 {
+  margin: 0;
+}
+
+.portal-sessions-filter-control {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--uwe-muted);
+}
+
+.portal-sessions-filter-control select {
+  min-width: 10rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-input-bg, var(--uwe-panel));
+  color: var(--uwe-fg);
+}
+
+.portal-security-stack {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.portal-active-sessions-list {
+  margin-top: 1rem;
+}
+
+.portal-active-session-row {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.95rem 1.1rem;
+  border-radius: 0.75rem;
+  background: var(--uwe-panel);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 133%, var(--uwe-muted) 0%);
+}
+
+.portal-soundboard-page .uwe-soundboard {
+  margin-top: 1.25rem;
+}
+
+.portal-soundboard-hints {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.portal-soundboard-hint {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 133%, var(--uwe-muted) 0%);
+  background: color-mix(in srgb, var(--uwe-panel) 100%, var(--uwe-bg) 10%);
+  color: var(--uwe-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.portal-soundboard-hint strong {
+  color: var(--uwe-fg);
+}
+
+.portal-soundboard-hint-vision {
+  border-color: color-mix(in srgb, var(--uwe-info) 28%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-info) 8%, var(--uwe-panel));
+}
+
+.portal-soundboard-summary {
+  margin: 1rem 0 0;
+}
+
 .portal-story-timeline {
   position: relative;
   margin-top: 1.5rem;

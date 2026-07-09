@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { formatForgotPasswordError } from "@uwe/shared-ui";
 import { Alert } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -33,7 +34,7 @@ export function StudioForgotPasswordForm() {
 
     if (!response.ok) {
       const payload = (await response.json()) as { error?: string };
-      setError(payload.error ?? "Anfrage fehlgeschlagen. Bitte versuche es später erneut.");
+      setError(formatForgotPasswordError(response, payload));
       return;
     }
 

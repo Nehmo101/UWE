@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 import Link from "next/link";
+import { PasswordStrengthMeter } from "@uwe/shared-ui";
 
 interface ChangePasswordFormProps {
   backHref?: string;
@@ -96,6 +97,7 @@ export function ChangePasswordForm({
         minLength={8}
         required
       />
+      <PasswordStrengthMeter password={newPassword} />
 
       <label htmlFor="confirm-password">Neues Passwort bestätigen</label>
       <input

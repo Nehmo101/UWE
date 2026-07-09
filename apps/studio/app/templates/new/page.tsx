@@ -1,5 +1,5 @@
 import { createTemplateAction } from "../../template-actions";
-import { TemplateForm } from "../TemplateForm";
+import { TemplateEditorClient } from "../TemplateEditorClient";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 interface Props {
@@ -22,11 +22,15 @@ export default async function NewTemplatePage({ searchParams }: Props) {
     >
       <PageHeader
         title="Neues Template"
-        summary="Eigene Quick-Create-Vorlage mit Standard-Blöcken anlegen."
+        summary="Eigene Quick-Create-Vorlage mit Standard-Blöcken anlegen — Live-Vorschau rechts."
       />
       {error && <p className="uwe-form-error" role="alert">{error}</p>}
 
-      <TemplateForm template={null} action={createTemplateAction} submitLabel="Template erstellen" />
+      <TemplateEditorClient
+        template={null}
+        action={createTemplateAction}
+        submitLabel="Template erstellen"
+      />
     </StudioShell>
   );
 }

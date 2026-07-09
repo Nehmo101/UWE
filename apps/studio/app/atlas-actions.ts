@@ -116,12 +116,18 @@ export async function updateAtlasNodeAction(formData: FormData) {
 
   const nodeId = String(formData.get("nodeId"));
   const title = String(formData.get("title") || "").trim() || undefined;
+  const sortOrderRaw = formData.get("sortOrder");
+  const sortOrder =
+    typeof sortOrderRaw === "string" && sortOrderRaw.trim() !== ""
+      ? Math.max(0, Math.floor(Number(sortOrderRaw)))
+      : undefined;
 
   const { db, atlas } = getAtlasDeps();
 
   try {
     await atlas.updateNode(nodeId, {
       title,
+      sortOrder,
     } satisfies UpdateAtlasNodeInput);
   } finally {
     await db.$disconnect();

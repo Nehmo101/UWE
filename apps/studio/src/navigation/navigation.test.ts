@@ -12,6 +12,10 @@ import {
   studioNavItems,
   studioSidebar,
 } from "./studio-nav";
+import {
+  STUDIO_PALETTE_EXTRA,
+  studioCommandPaletteCommands,
+} from "../lib/studio-navigation";
 import { worldNav, worldNavConflicts, worldNavItems, worldSidebar } from "./world-nav";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -94,6 +98,18 @@ describe("studio navigation", () => {
     assert.ok(commands.some((cmd) => cmd.href === "/capture"));
     assert.ok(commands.some((cmd) => cmd.href === "/system"));
     assert.ok(commands.every((cmd) => cmd.group.includes(" / ")));
+  });
+
+  it("includes STUDIO_PALETTE_EXTRA shortcuts in command palette output", () => {
+    const commands = studioCommandPaletteCommands({ worlds: [] });
+    const hrefs = commands.map((cmd) => cmd.href.split("?")[0]);
+    for (const shortcut of STUDIO_PALETTE_EXTRA) {
+      const normalized = shortcut.href.split("?")[0];
+      assert.ok(
+        hrefs.includes(normalized),
+        `missing palette shortcut: ${shortcut.href}`,
+      );
+    }
   });
 
   it("marks system hub active for /system/* routes and admin hub for /admin/*", () => {

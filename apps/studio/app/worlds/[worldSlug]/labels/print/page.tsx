@@ -21,6 +21,51 @@ export default async function WorldLabelsPrintPage({ params }: { params: Promise
       }
     >
       <PageHeader title="RTX-Druck" summary="Drucklisten an lokale Drucker senden." />
+
+      <section className="uwe-v2-card" style={{ marginBottom: "1rem" }}>
+        <h2 style={{ marginTop: 0, fontSize: "1rem" }}>Druckwege im Überblick</h2>
+        <table className="uwe-page-table">
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Zweck</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <Link href={`/worlds/${worldSlug}/labels`}>Label-Bibliothek</Link>
+              </td>
+              <td>Einzelne Labels bearbeiten, Status setzen, zur Druckliste hinzufügen</td>
+            </tr>
+            <tr>
+              <td>
+                <code>/labels/[id]/preview</code>
+              </td>
+              <td>Interaktive Browser-Vorschau mit DM-only-Warnung (kein Queue-Job)</td>
+            </tr>
+            <tr>
+              <td>
+                <code>/api/…/export?format=print</code>
+              </td>
+              <td>Druckoptimiertes HTML/PDF für Browser-Druck oder Download</td>
+            </tr>
+            <tr>
+              <td>
+                <Link href={`/worlds/${worldSlug}/labels?tab=print-lists`}>Drucklisten</Link>
+              </td>
+              <td>Mehrere Labels bündeln, Kopienanzahl festlegen</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Diese Seite (RTX-Druck)</strong>
+              </td>
+              <td>Drucklisten an den lokalen RTX-Connector / Netzwerkdrucker senden</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <Card><CardHeader><CardTitle>Drucklisten</CardTitle></CardHeader><CardContent>
         {lists.length===0 ? <EmptyState title="Keine Listen"/> : lists.map(l=><p key={l.id}><Link href={`/worlds/${worldSlug}/labels/print-lists/${l.id}`}>{l.name}</Link></p>)}
       </CardContent></Card>

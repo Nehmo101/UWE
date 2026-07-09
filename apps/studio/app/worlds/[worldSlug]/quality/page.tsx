@@ -8,6 +8,7 @@ import {
   type WikiQualityFinding,
   type WikiQualityFindingCode,
 } from "@uwe/database/server";
+import { computeWikiQualityInsights } from "@uwe/database/wiki-quality";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { runBulkAutoLinkAction } from "../quality-actions";
@@ -87,6 +88,8 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
   const report = await createWikiQualityService(prisma).inspectWorld(worldSlug);
   if (!report) notFound();
 
+  const insights = computeWikiQualityInsights(worldSlug, report);
+
   const byCode = new Map<WikiQualityFindingCode, WikiQualityFinding[]>();
   for (const finding of report.findings) {
     const bucket = byCode.get(finding.code);
@@ -142,11 +145,44 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
 
       <StatGrid
         stats={[
+          { label: "Pflege-Score", value: `${insights.score}/100` },
+          { label: "Bewertung", value: insights.grade },
           { label: "Offene Punkte", value: openTotal },
           { label: "Warnungen", value: warningCount },
-          { label: "Seiten geprüft", value: report.findings.length === 0 ? "✓" : openTotal },
         ]}
       />
+
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Score-Erklärung</h2>
+        <p className="uwe-dashboard-muted">{insights.explanation}</p>
+        <ul className="uwe-dashboard-muted" style={{ margin: "0.5rem 0 0", paddingLeft: "1.25rem" }}>
+          <li>Unverlinkte Begriffe: −2 Punkte je Fundstelle</li>
+          <li>Dünne Seiten: −3 · NPCs ohne Ort/Fraktion: −4 · Quests ohne Status: −4</li>
+          <li>Orte ohne Karte: −3 · Mehrdeutige Aliase: −5</li>
+        </ul>
+      </section>
+
+      {insights.recommendations.length > 0 && (
+        <section className="uwe-v2-section">
+          <h2 className="uwe-v2-section-title">Empfohlene nächste Schritte</h2>
+          <ol className="uwe-linked-list">
+            {insights.recommendations.map((item) => (
+              <li key={item.priority}>
+                <strong>{item.priority}. {item.title}</strong>
+                <p className="uwe-dashboard-muted" style={{ margin: "0.25rem 0 0" }}>
+                  {item.description}
+                  {item.href ? (
+                    <>
+                      {" "}
+                      <Link href={item.href}>Jetzt bearbeiten →</Link>
+                    </>
+                  ) : null}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {CHECK_GROUPS.map((group) => (
         <section className="uwe-v2-section" key={group.code}>

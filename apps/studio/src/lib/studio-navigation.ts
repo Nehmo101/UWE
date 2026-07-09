@@ -103,7 +103,7 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
       id: "content",
       title: "Inhalte",
       items: [
-        { key: "pages", label: "Seiten", href: base },
+        { key: "pages", label: "Seiten", href: `${base}/wiki` },
         { key: "new-page", label: "Neue Seite", href: `${base}/pages/new` },
       ],
     },
@@ -277,7 +277,7 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
 
   if (normalized === `${base}/radar`) return "radar";
   if (normalized === `${base}/dashboard`) return "overview";
-  if (normalized === base) return "pages";
+  if (normalized === `${base}/wiki`) return "pages";
   const sessionDetailMatch = normalized.match(new RegExp(`^${base}/sessions/([^/]+)$`));
   if (sessionDetailMatch) {
     const segment = sessionDetailMatch[1] ?? "";
@@ -323,6 +323,28 @@ export interface StudioPaletteCommand {
   group: string;
   keywords?: string[];
 }
+
+/** Sub-routes and deep links missing from the main Studio sidebar IA. */
+export const STUDIO_PALETTE_EXTRA: {
+  id: string;
+  label: string;
+  href: string;
+  group: string;
+  keywords?: string[];
+}[] = [
+  { id: "kitchen-pantry", label: "Vorratskammer", href: "/kitchen/pantry", group: "Werkzeuge / Küche", keywords: ["pantry", "vorrat"] },
+  { id: "kitchen-plan", label: "Essensplan", href: "/kitchen/plan", group: "Werkzeuge / Küche", keywords: ["plan", "meal"] },
+  { id: "kitchen-shopping", label: "Einkaufsliste", href: "/kitchen/shopping", group: "Werkzeuge / Küche", keywords: ["shopping", "einkauf"] },
+  { id: "workshop-rental", label: "Terrain-Verleih", href: "/workshop/rental", group: "Organisation / Werkstatt", keywords: ["rental", "verleih"] },
+  { id: "workshop-print-profiles", label: "Druckprofile", href: "/workshop/print-profiles", group: "Organisation / Werkstatt", keywords: ["print", "3d"] },
+  { id: "admin-audit-log", label: "Audit Log", href: "/admin/audit-log", group: "System / Sicherheit", keywords: ["audit", "security"] },
+  { id: "system-health", label: "Health-Ampel", href: "/system/health", group: "System / Betrieb", keywords: ["health", "performance"] },
+  { id: "system-version", label: "Version & Updates", href: "/system/version", group: "System / Betrieb", keywords: ["version", "build"] },
+  { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },
+  { id: "mail-compose", label: "E-Mail verfassen", href: "/mail/compose", group: "AI & Generatoren / Mail", keywords: ["mail", "compose", "email"] },
+  { id: "life-brain", label: "Life Brain", href: "/life-brain", group: "Knowledge & Brain", keywords: ["life", "personal", "brain"] },
+  { id: "brain-store", label: "Brain Store", href: "/brain", group: "Knowledge & Brain", keywords: ["brain", "wissen", "canon"] },
+];
 
 const PAGE_TEMPLATE_SHORTCUTS: {
   id: string;
@@ -410,6 +432,20 @@ export function studioCommandPaletteCommands(options: {
       href: command.href,
       group: command.group,
       keywords: command.keywords,
+    });
+  }
+
+  const seenHrefs = new Set(list.map((entry) => entry.href.split("?")[0]));
+  for (const shortcut of STUDIO_PALETTE_EXTRA) {
+    const normalizedHref = shortcut.href.split("?")[0];
+    if (seenHrefs.has(normalizedHref)) continue;
+    seenHrefs.add(normalizedHref);
+    list.push({
+      id: shortcut.id,
+      label: `${shortcut.label} öffnen`,
+      href: shortcut.href,
+      group: shortcut.group,
+      keywords: shortcut.keywords,
     });
   }
 

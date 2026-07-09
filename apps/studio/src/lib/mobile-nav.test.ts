@@ -55,7 +55,7 @@ describe("studio mobile nav", () => {
     );
     assert.equal(nav.length, 5);
     assert.equal(nav[0]?.href, "/worlds/terra/dashboard");
-    assert.equal(nav[1]?.href, "/worlds/terra");
+    assert.equal(nav[1]?.href, "/worlds/terra/wiki");
     assert.equal(nav[2]?.href, "/worlds/terra/sessions");
     assert.equal(nav[3]?.href, "/worlds/terra/brain");
     assert.equal(nav[4]?.action, "open-sidebar");

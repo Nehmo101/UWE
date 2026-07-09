@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAppRepository } from "@uwe/database/server";
+import { CharacterPrintFormatPicker } from "@/src/components/characters/CharacterPrintFormatPicker";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 
 interface Props {
@@ -36,26 +37,11 @@ export default async function CharacterPrintPage({ params, searchParams }: Props
     );
   }
 
-  const printUrl = `/api/worlds/${worldSlug}/characters/print?characterId=${encodeURIComponent(characterId)}`;
-  const markdownUrl = `${printUrl}&format=markdown`;
-
   return (
-    <main className="uwe-v2-page">
-      <h1>Charakterbogen — Druck / Export</h1>
-      <p className="uwe-hint">Welt: {world.name}</p>
-      <p>
-        <a href={printUrl} target="_blank" rel="noreferrer" className="uwe-v2-btn uwe-v2-btn-primary">
-          Druckansicht öffnen
-        </a>{" "}
-        <a href={markdownUrl} target="_blank" rel="noreferrer" className="uwe-v2-btn">
-          Markdown exportieren
-        </a>
-      </p>
-      <iframe
-        title="Charakterbogen Druckvorschau"
-        src={printUrl}
-        style={{ width: "100%", minHeight: "80vh", border: "1px solid #ccc", marginTop: "1rem" }}
-      />
-    </main>
+    <CharacterPrintFormatPicker
+      worldSlug={worldSlug}
+      characterId={characterId}
+      worldName={world.name}
+    />
   );
 }

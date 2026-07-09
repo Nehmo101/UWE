@@ -22,9 +22,10 @@ export default async function SystemWhatsNewPage() {
         <header className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">Was ist neu</h1>
           <p className="text-sm text-muted-foreground">
-            Release Notes aus <code>CHANGELOG.md</code> — nach einem Update siehst du hier, was sich
+            Release Notes aus{" "}
+            <code>CHANGELOG.md</code> im Repository-Root — nach einem Update siehst du hier, was sich
             geändert hat. Installierte Version: <strong>v{info.version}</strong>.
-            {" "}
+            {" · "}
             <Link href="/system/version" className="text-primary hover:underline">
               Build-Metadaten →
             </Link>

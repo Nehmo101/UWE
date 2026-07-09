@@ -1,19 +1,58 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { createSettingsService, prisma } from "@uwe/database/server";
+import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
+import { requireAdminAccess } from "@/src/lib/auth";
+import { AiPromptEditorClient } from "./AiPromptEditorClient";
 
 interface Props {
   searchParams: Promise<{
     world?: string;
     page?: string;
     title?: string;
+    activated?: string;
   }>;
 }
 
 export default async function AdminAiPromptPage({ searchParams }: Props) {
-  const { world, page, title } = await searchParams;
-  const params = new URLSearchParams();
-  if (world) params.set("world", world);
-  if (page) params.set("page", page);
-  if (title) params.set("title", title);
-  const qs = params.toString();
-  redirect(qs ? `/ai?${qs}` : "/ai");
+  await requireAdminAccess();
+  const { world, page, title, activated } = await searchParams;
+
+  const settings = await createSettingsService(prisma).getSettings();
+  const activePrompt = settings.ai.generalChatSystemPrompt ?? "";
+
+  const legacyParams = new URLSearchParams();
+  if (world) legacyParams.set("world", world);
+  if (page) legacyParams.set("page", page);
+  if (title) legacyParams.set("title", title);
+  const legacyQs = legacyParams.toString();
+  const legacyAiHref = legacyQs ? `/ai?${legacyQs}` : "/ai";
+
+  return (
+    <SystemShell
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Admin", href: "/admin" },
+            { label: "KI-System-Prompt" },
+          ]}
+        />
+      }
+    >
+      <PageHeader
+        title="KI-System-Prompt"
+        summary="System-Prompt für den allgemeinen Chat — Entwurf lokal, explizites Aktivieren verhindert versehentliche Übernahme."
+        actions={
+          <Link href="/admin/ai-gateway" className="uwe-v2-btn uwe-v2-btn-secondary">
+            AI Gateway →
+          </Link>
+        }
+      />
+
+      <AiPromptEditorClient
+        activePrompt={activePrompt}
+        activated={activated === "1"}
+        legacyAiHref={legacyAiHref}
+      />
+    </SystemShell>
+  );
 }

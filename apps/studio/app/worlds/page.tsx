@@ -6,6 +6,13 @@ import { StudioShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell
 import { CreateWorldForm } from "@/components/CreateWorldForm";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { getStudioWorldList } from "@/src/lib/world-list-cache";
+
+const UPDATED_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
 export default async function WorldsPage() {
   const [worlds, user, templates] = await Promise.all([
     getStudioWorldList(),
@@ -36,6 +43,9 @@ export default async function WorldsPage() {
                   ) : null}
                 </h2>
             {world.description ? <p className="text-sm text-muted-foreground">{world.description}</p> : null}
+            <p className="text-xs text-muted-foreground">
+              Zuletzt bearbeitet: {UPDATED_FORMAT.format(new Date(world.updatedAt))}
+            </p>
             <div className="mt-auto flex flex-wrap gap-2">
               <Link className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground" href={`/worlds/${world.slug}/dashboard`}>Welt verwalten</Link>
             </div>

@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { SystemShell } from "@/src/components/shell/SystemShell";
 import { BuildVersionFooter } from "@/src/components/system/BuildVersion";
+import { VersionActions } from "@/src/components/system/VersionActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { getBuildInfo } from "@/src/lib/build-info";
 
@@ -27,14 +27,12 @@ export default async function SystemVersionPage() {
       footer={<BuildVersionFooter info={info} />}
     >
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <header className="flex flex-col gap-1">
+        <header className="flex flex-col gap-2">
           <h1 className="text-xl font-semibold">Version &amp; Updates</h1>
           <p className="text-sm text-muted-foreground">
-            Aktuelle Build- und Deploy-Metadaten dieser UWE-Instanz.{" "}
-            <Link href="/system/whats-new" className="text-primary hover:underline">
-              Was ist neu →
-            </Link>
+            Aktuelle Build- und Deploy-Metadaten dieser UWE-Instanz.
           </p>
+          <VersionActions info={info} />
         </header>
 
         <Card>

@@ -10,6 +10,7 @@ import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell
 import { requireStudioAccess } from "@/src/lib/auth";
 import { deletePromptAction, updatePromptAction } from "@/app/prompt-actions";
 import { PromptFillClient } from "@/app/prompts/PromptFillClient";
+import { PromptBodyField } from "@/app/prompts/PromptBodyField";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -74,10 +75,7 @@ export default async function PromptDetailPage({ params, searchParams }: Props) 
             Beschreibung
             <input type="text" name="description" defaultValue={prompt.description} />
           </label>
-          <label>
-            Body
-            <textarea name="body" rows={8} defaultValue={prompt.body} required />
-          </label>
+          <PromptBodyField initialBody={prompt.body} initialVariables={prompt.variables} />
           <label>
             Tags (Komma-getrennt)
             <input type="text" name="tags" defaultValue={prompt.tags.join(", ")} />

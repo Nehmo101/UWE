@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getAppRepository } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { DungeonQuickStartPresets } from "@/src/components/dungeon/DungeonQuickStartPresets";
 import { createDungeonAction } from "../../../../dungeon-actions";
 
 interface Props {
@@ -43,7 +44,8 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
         title="Neuer Dungeon"
         summary="Dungeon mit Ebenen und Räumen anlegen."
       />
-      <form action={createDungeonAction} className="uwe-v2-form">
+      <DungeonQuickStartPresets formId="new-dungeon-form" />
+      <form id="new-dungeon-form" action={createDungeonAction} className="uwe-v2-form">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         {selectedCampaign && (
           <input type="hidden" name="campaignId" value={selectedCampaign.id} />

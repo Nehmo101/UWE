@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getSessionCookieOptionsForRequest, SESSION_COOKIE_NAME } from "@uwe/auth";
+import { requireSameOriginMutation } from "@uwe/security";
 
 export async function POST(request: Request) {
+  const csrfError = requireSameOriginMutation(request);
+  if (csrfError) {
+    return csrfError;
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const cookieOptions = getSessionCookieOptionsForRequest(request);

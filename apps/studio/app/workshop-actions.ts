@@ -19,6 +19,7 @@ import {
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { encodeRentalReturnDue } from "@/src/lib/workshop-rental-due";
 
 function lifeAdmin() {
   return createLifeAdminService(prisma);
@@ -29,6 +30,12 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null {
   if (!raw) return null;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function readRentalNotes(formData: FormData): string {
+  const returnDueAt = String(formData.get("returnDueAt") || "").trim() || null;
+  const notes = String(formData.get("notes") || "");
+  return encodeRentalReturnDue(notes, returnDueAt);
 }
 
 function revalidateWorkshopPaths(projectId?: string) {
@@ -215,7 +222,7 @@ export async function createTerrainRentalAction(formData: FormData) {
     damages: String(formData.get("damages") || ""),
     handoverChecklist: parseChecklistFromForm(String(formData.get("handoverChecklist") || "")),
     returnChecklist: parseChecklistFromForm(String(formData.get("returnChecklist") || "")),
-    notes: String(formData.get("notes") || ""),
+    notes: readRentalNotes(formData),
     workshopProjectId: String(formData.get("workshopProjectId") || "").trim() || null,
   });
 
@@ -237,7 +244,7 @@ export async function updateTerrainRentalAction(formData: FormData) {
     damages: String(formData.get("damages") || ""),
     handoverChecklist: parseChecklistFromForm(String(formData.get("handoverChecklist") || "")),
     returnChecklist: parseChecklistFromForm(String(formData.get("returnChecklist") || "")),
-    notes: String(formData.get("notes") || ""),
+    notes: readRentalNotes(formData),
     workshopProjectId: String(formData.get("workshopProjectId") || "").trim() || null,
   });
 

@@ -86,3 +86,26 @@ export async function syncFeatureMatrixAction(formData: FormData): Promise<void>
   if (moduleFilter && (DEV_IDEA_MODULES as readonly string[]).includes(moduleFilter)) params.set("module", moduleFilter);
   redirect(`/ideas?${params.toString()}`);
 }
+
+export async function convertIdeaToCaptureAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
+  await requireOwner();
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Idee-ID fehlt.");
+
+  const idea = await ideas().getIdea(id);
+  if (!idea) throw new Error("Idee nicht gefunden.");
+
+  const { createLifeAdminService } = await import("@uwe/database/server");
+  const capture = await createLifeAdminService(prisma).createCapture({
+    title: idea.title,
+    content: [idea.body.trim(), idea.generatedPrompt?.trim()].filter(Boolean).join("\n\n") || idea.title,
+    captureType: "quick_note",
+    metadata: { source: "idea", ideaId: idea.id },
+  });
+
+  revalidatePath("/ideas");
+  revalidatePath("/capture");
+  redirect(`/capture/${capture.id}`);
+}

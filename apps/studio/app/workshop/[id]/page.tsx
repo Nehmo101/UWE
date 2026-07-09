@@ -29,6 +29,7 @@ import {
   deleteWorkshopAction,
   updateWorkshopAction,
 } from "../../workshop-actions";
+import { WorkshopPhotoUploadField } from "../WorkshopPhotoUploadField";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -155,30 +156,27 @@ export default async function WorkshopDetailPage({ params }: Props) {
             STL / Shop / Referenz (Label | URL | stl/shop/reference)
             <textarea name="stlLinks" rows={3} defaultValue={formatLinksForForm(workshop.stlLinks)} />
           </label>
-          <label>
-            Referenzbilder (URL | Beschriftung)
-            <textarea
-              name="referenceImages"
-              rows={3}
-              defaultValue={formatPhotosForForm(workshop.referenceImages)}
-            />
-          </label>
-          <label>
-            Fortschrittsfotos
-            <textarea
-              name="progressPhotos"
-              rows={3}
-              defaultValue={formatPhotosForForm(workshop.progressPhotos)}
-            />
-          </label>
-          <label>
-            Ergebnisfotos
-            <textarea
-              name="resultPhotos"
-              rows={3}
-              defaultValue={formatPhotosForForm(workshop.resultPhotos)}
-            />
-          </label>
+          <WorkshopPhotoUploadField
+            workshopId={workshop.id}
+            category="reference"
+            label="Referenzbilder (URL | Beschriftung)"
+            textareaName="referenceImages"
+            defaultValue={formatPhotosForForm(workshop.referenceImages)}
+          />
+          <WorkshopPhotoUploadField
+            workshopId={workshop.id}
+            category="progress"
+            label="Fortschrittsfotos"
+            textareaName="progressPhotos"
+            defaultValue={formatPhotosForForm(workshop.progressPhotos)}
+          />
+          <WorkshopPhotoUploadField
+            workshopId={workshop.id}
+            category="result"
+            label="Ergebnisfotos"
+            textareaName="resultPhotos"
+            defaultValue={formatPhotosForForm(workshop.resultPhotos)}
+          />
           <label>
             Galerie
             <textarea

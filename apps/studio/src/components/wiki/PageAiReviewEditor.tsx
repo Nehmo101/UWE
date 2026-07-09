@@ -11,6 +11,7 @@ import {
 } from "@/app/worlds/[worldSlug]/page-ai-review-actions";
 import type { PageReviewDetail } from "@uwe/page-ai-review";
 import type { AiBrainSettings, AiProviderId } from "@uwe/ai-brain";
+import { PageReviewDiffView } from "./PageReviewDiffView";
 
 interface Props {
   worldSlug: string;
@@ -31,6 +32,16 @@ export function PageAiReviewEditor({ worldSlug, pageId, initialDetail }: Props) 
   const [providerId, setProviderId] = useState<AiProviderId>("ollama");
   const [model, setModel] = useState("");
   const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [compareMode, setCompareMode] = useState<"side-by-side" | "diff">(() => {
+    const originalLen = initialDetail.originalContent?.length ?? 0;
+    const lineCount = initialDetail.originalContent?.split("\n").length ?? 0;
+    return originalLen + initialDetail.editedContent.length > 4000 || lineCount > 80
+      ? "diff"
+      : "side-by-side";
+  });
+  const isLongDiff =
+    (detail.originalContent?.length ?? 0) + editedContent.length > 4000 ||
+    (detail.originalContent?.split("\n").length ?? 0) > 80;
 
   const availableProviders = useMemo(() => {
     if (!settings) return [];
@@ -193,22 +204,58 @@ export function PageAiReviewEditor({ worldSlug, pageId, initialDetail }: Props) 
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Original</h3>
-          <pre className="min-h-[320px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
-            {detail.originalContent || "—"}
-          </pre>
-        </div>
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">KI-Text (bearbeitbar)</h3>
-          <textarea
-            className="min-h-[320px] w-full rounded-md border border-border bg-background p-3 text-sm"
-            value={editedContent}
-            onChange={(event) => setEditedContent(event.target.value)}
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Ansicht:</span>
+        <button
+          type="button"
+          className={`inline-flex h-8 items-center rounded-md border px-3 text-sm ${
+            compareMode === "side-by-side" ? "border-primary bg-primary/10" : "border-border"
+          }`}
+          onClick={() => setCompareMode("side-by-side")}
+        >
+          Seite an Seite
+        </button>
+        <button
+          type="button"
+          className={`inline-flex h-8 items-center rounded-md border px-3 text-sm ${
+            compareMode === "diff" ? "border-primary bg-primary/10" : "border-border"
+          }`}
+          onClick={() => setCompareMode("diff")}
+        >
+          Diff {isLongDiff ? "(empfohlen)" : ""}
+        </button>
       </div>
+
+      {compareMode === "diff" ? (
+        <>
+          <PageReviewDiffView original={detail.originalContent} edited={editedContent} />
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">KI-Text bearbeiten</h3>
+            <textarea
+              className="max-h-[320px] min-h-[160px] w-full overflow-auto rounded-md border border-border bg-background p-3 text-sm"
+              value={editedContent}
+              onChange={(event) => setEditedContent(event.target.value)}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Original</h3>
+            <pre className="max-h-[480px] min-h-[320px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+              {detail.originalContent || "—"}
+            </pre>
+          </div>
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">KI-Text (bearbeitbar)</h3>
+            <textarea
+              className="max-h-[480px] min-h-[320px] w-full overflow-auto rounded-md border border-border bg-background p-3 text-sm"
+              value={editedContent}
+              onChange={(event) => setEditedContent(event.target.value)}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="rounded-md border border-border p-4">
         <h3 className="mb-2 text-sm font-medium">KI-Chat — Änderungen anfordern</h3>

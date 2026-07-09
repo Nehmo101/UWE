@@ -197,6 +197,19 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
       ))}
 
       <section className="uwe-panel">
+        <h2>Druckvorbereitung</h2>
+        <p className="uwe-table-sub">
+          Vorschau im Druckformat (6×4 Zoll) — prüfe Safe Area und Kürzung vor dem Export.
+        </p>
+        <iframe
+          title="Label Druckvorbereitung"
+          src={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
+          className="uwe-label-preview-iframe"
+          style={{ minHeight: "14rem" }}
+        />
+      </section>
+
+      <section className="uwe-panel">
         <h2>Visueller Label-Editor</h2>
         <form action={updateLabelAction} className="uwe-form-grid">
           <input type="hidden" name="worldSlug" value={worldSlug} />

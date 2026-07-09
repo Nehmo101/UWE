@@ -36,6 +36,7 @@ export default async function KitchenPantryPage() {
   ]);
 
   const pantryNames = items.map((item) => item.normalizedName);
+  const expiringIds = new Set(expiring.map((item) => item.id));
   const matches = rankRecipesByPantry(
     recipes.map((recipe) => ({
       id: recipe.id,
@@ -166,7 +167,10 @@ export default async function KitchenPantryPage() {
           <section className="uwe-v2-section" key={location}>
             <h2 className="uwe-v2-section-title">{PANTRY_LOCATION_LABELS[location]}</h2>
             <ul className="uwe-linked-list">
-              {bucket.map((item) => (
+              {bucket.map((item) => {
+                const expired = item.expiresAt != null && item.expiresAt.getTime() < now.getTime();
+                const expiringSoon = expiringIds.has(item.id) && !expired;
+                return (
                 <li
                   key={item.id}
                   style={{ display: "flex", gap: "0.5rem", alignItems: "baseline", flexWrap: "wrap" }}
@@ -178,6 +182,11 @@ export default async function KitchenPantryPage() {
                     {item.lowStock ? " — knapp" : ""}
                     {item.expiresAt ? ` — bis ${DATE_FORMAT.format(item.expiresAt)}` : ""}
                   </span>
+                  {expired ? (
+                    <span className="uwe-v2-badge uwe-v2-badge-danger">abgelaufen</span>
+                  ) : expiringSoon ? (
+                    <span className="uwe-v2-badge uwe-v2-badge-warning">bald MHD</span>
+                  ) : null}
                   <form action={markPantryLowStockAction} style={{ display: "inline" }}>
                     <input type="hidden" name="id" value={item.id} />
                     <input type="hidden" name="lowStock" value={item.lowStock ? "0" : "1"} />
@@ -192,7 +201,8 @@ export default async function KitchenPantryPage() {
                     </button>
                   </form>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </section>
         );

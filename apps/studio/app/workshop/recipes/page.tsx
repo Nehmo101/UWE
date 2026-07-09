@@ -25,21 +25,21 @@ export default async function WorkshopRecipesPage() {
         <BreadcrumbTrail
           items={[
             { label: "Werkstatt", href: "/workshop" },
-            { label: "Paint-Rezepte" },
+            { label: "Paint-Anleitungen" },
           ]}
         />
       }
     >
       <PageHeader
-        title="Paint-Rezepte"
-        summary="Wiederverwendbare Rezepte für Miniaturen, Terrain und Dioramen."
+        title="Paint-Anleitungen"
+        summary="Wiederverwendbare Anleitungen für Miniaturen, Terrain und Dioramen."
       />
       <p className="uwe-dashboard-muted">
         <Link href="/workshop">← Werkstatt</Link>
       </p>
 
       <section className="uwe-v2-card uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neues Rezept</h2>
+        <h2 className="uwe-v2-section-title">Neue Anleitung</h2>
         <form action={createPaintRecipeAction} className="uwe-brain-create-form">
           <label>
             Name
@@ -88,7 +88,7 @@ export default async function WorkshopRecipesPage() {
             <textarea name="notes" rows={2} />
           </label>
           <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Rezept anlegen
+            Anleitung anlegen
           </button>
         </form>
       </section>
@@ -97,7 +97,7 @@ export default async function WorkshopRecipesPage() {
         <h2 className="uwe-v2-section-title">Bibliothek ({recipes.length})</h2>
         {recipes.length === 0 ? (
           <EmptyState
-            title="Noch keine Paint-Rezepte"
+            title="Noch keine Paint-Anleitungen"
             description="Speichere erfolgreiche Farbabläufe für spätere Projekte."
           />
         ) : (

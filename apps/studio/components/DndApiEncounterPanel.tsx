@@ -1,6 +1,7 @@
 "use client";
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { worldWikiPath } from "@/src/lib/world-last-route";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -360,7 +361,7 @@ export function DndApiEncounterPanel({ worldSlug, results }: DndApiEncounterPane
       {message && <p className="uwe-notice">{message}</p>}
       <p className="uwe-hint">
         Statblocks werden als UWE-Seiten mit Markdown-Inhalt angelegt. Bearbeiten unter{" "}
-        <Link href={`/worlds/${worldSlug}`}>Seitenliste</Link>.
+        <Link href={worldWikiPath(worldSlug)}>Seitenliste</Link>.
       </p>
     </section>
   );

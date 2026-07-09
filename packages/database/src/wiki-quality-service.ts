@@ -380,3 +380,97 @@ export class WikiQualityService {
 export function createWikiQualityService(db: PrismaClient): WikiQualityService {
   return new WikiQualityService(db);
 }
+
+export interface WikiQualityRecommendation {
+  priority: number;
+  title: string;
+  description: string;
+  href?: string;
+}
+
+export interface WikiQualityInsights {
+  score: number;
+  grade: string;
+  explanation: string;
+  recommendations: WikiQualityRecommendation[];
+}
+
+const SCORE_WEIGHTS: Record<WikiQualityFindingCode, number> = {
+  unlinked_term: 2,
+  thin_page: 3,
+  npc_missing_relations: 4,
+  location_missing_map: 3,
+  quest_missing_status: 4,
+  duplicate_alias: 5,
+};
+
+const RECOMMENDATION_META: Record<
+  WikiQualityFindingCode,
+  { title: string; description: string; pathSuffix: string }
+> = {
+  unlinked_term: {
+    title: "Unverlinkte Begriffe verlinken",
+    description: "Erwähnungen bekannter Seiten im Fließtext verlinken — per Bulk-Auto-Link oder Import.",
+    pathSuffix: "/import",
+  },
+  thin_page: {
+    title: "Dünne Seiten ausbauen",
+    description: "Seiten mit wenig Inhalt ergänzen oder mit anderen Einträgen zusammenführen.",
+    pathSuffix: "/quality",
+  },
+  npc_missing_relations: {
+    title: "NPCs verorten",
+    description: "NPCs mit einer Fraktion oder einem Ort verknüpfen.",
+    pathSuffix: "/quality",
+  },
+  location_missing_map: {
+    title: "Karten für Orte hinterlegen",
+    description: "Orte und Regionen mit einer Karte im Atlas verknüpfen.",
+    pathSuffix: "/atlas",
+  },
+  quest_missing_status: {
+    title: "Quest-Status setzen",
+    description: "Offene Quests mit einem Lebenszyklus-Status versehen.",
+    pathSuffix: "/quality",
+  },
+  duplicate_alias: {
+    title: "Mehrdeutige Aliase bereinigen",
+    description: "Doppelte oder kollidierende Aliase umbenennen oder entfernen.",
+    pathSuffix: "/quality",
+  },
+};
+
+/** Derives a transparent maintenance score and prioritized recommendations (#688). */
+export function computeWikiQualityInsights(
+  worldSlug: string,
+  report: WikiQualityReport,
+): WikiQualityInsights {
+  const penalty = report.findings.reduce((sum, finding) => sum + (SCORE_WEIGHTS[finding.code] ?? 2), 0);
+  const score = Math.max(0, Math.min(100, 100 - penalty));
+
+  let grade = "Ausgezeichnet";
+  if (score < 40) grade = "Verbesserungsbedarf";
+  else if (score < 70) grade = "Gut — Lücken vorhanden";
+  else if (score < 90) grade = "Sehr gut";
+
+  const explanation =
+    report.findings.length === 0
+      ? "Keine offenen Pflegepunkte — das Wiki ist vollständig verknüpft und gepflegt."
+      : `Der Score startet bei 100 und sinkt pro Fundstelle (2–5 Punkte je nach Schweregrad). ` +
+        `Aktuell ${report.findings.length} offene Punkt(e), Abzug ${penalty} → ${score}/100 (${grade}).`;
+
+  const recommendations = (Object.keys(report.counts) as WikiQualityFindingCode[])
+    .filter((code) => report.counts[code] > 0)
+    .sort((a, b) => report.counts[b] - report.counts[a])
+    .map((code, index) => {
+      const meta = RECOMMENDATION_META[code];
+      return {
+        priority: index + 1,
+        title: meta.title,
+        description: `${meta.description} (${report.counts[code]} offen)`,
+        href: `/worlds/${worldSlug}${meta.pathSuffix}`,
+      };
+    });
+
+  return { score, grade, explanation, recommendations };
+}

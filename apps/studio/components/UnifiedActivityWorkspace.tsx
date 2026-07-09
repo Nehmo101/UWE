@@ -32,16 +32,23 @@ const SOURCE_LABELS: Record<UnifiedEntry["source"], string> = {
   ai_usage: "KI-Nutzung",
 };
 
+const PAGE_SIZE = 25;
+
 export function UnifiedActivityWorkspace() {
   const [entries, setEntries] = useState<UnifiedEntry[]>([]);
   const [worlds, setWorlds] = useState<WorldOption[]>([]);
   const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState("");
   const [worldSlug, setWorldSlug] = useState("");
   const [severity, setSeverity] = useState("");
   const [sinceDays, setSinceDays] = useState("30");
+
+  useEffect(() => {
+    setOffset(0);
+  }, [source, worldSlug, severity, sinceDays]);
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
@@ -52,7 +59,8 @@ export function UnifiedActivityWorkspace() {
     if (worldSlug) params.set("worldSlug", worldSlug);
     if (severity) params.set("severity", severity);
     if (sinceDays) params.set("sinceDays", sinceDays);
-    params.set("limit", "100");
+    params.set("limit", String(PAGE_SIZE));
+    params.set("offset", String(offset));
 
     try {
       const response = await fetch(studioApiUrl(`/api/admin/activity?${params.toString()}`));
@@ -72,11 +80,14 @@ export function UnifiedActivityWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, [source, worldSlug, severity, sinceDays]);
+  }, [source, worldSlug, severity, sinceDays, offset]);
 
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  const page = Math.floor(offset / PAGE_SIZE) + 1;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <>
@@ -138,8 +149,7 @@ export function UnifiedActivityWorkspace() {
       {!loading && !error && (
         <section className="uwe-v2-card uwe-v2-section">
           <h2 className="uwe-v2-section-title">
-            Einträge ({entries.length}
-            {total > entries.length ? ` von ${total}` : ""})
+            Einträge ({entries.length} von {total})
           </h2>
           {entries.length === 0 ? (
             <p className="uwe-dashboard-muted">Keine Einträge gefunden.</p>
@@ -174,6 +184,34 @@ export function UnifiedActivityWorkspace() {
               ))}
             </div>
           )}
+          {total > PAGE_SIZE ? (
+            <div
+              className="uwe-dashboard-muted"
+              style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}
+            >
+              <span>
+                Seite {page} von {pageCount}
+              </span>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+                  disabled={offset === 0}
+                  onClick={() => setOffset((value) => Math.max(0, value - PAGE_SIZE))}
+                >
+                  Zurück
+                </button>
+                <button
+                  type="button"
+                  className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+                  disabled={offset + PAGE_SIZE >= total}
+                  onClick={() => setOffset((value) => value + PAGE_SIZE)}
+                >
+                  Weiter
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
       )}
     </>

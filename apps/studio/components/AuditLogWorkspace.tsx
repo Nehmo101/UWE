@@ -25,6 +25,8 @@ interface AuditLogResponse {
   loginReasonLabels?: Record<string, string>;
 }
 
+const PAGE_SIZE = 25;
+
 function formatAuditMetadata(
   metadata: unknown,
   loginReasonLabels: Record<string, string>,
@@ -65,9 +67,56 @@ function formatAuditMetadata(
   return serialized.length > 160 ? `${serialized.slice(0, 160)}…` : serialized;
 }
 
+function escapeCsvCell(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function downloadAuditCsv(entries: AuditEntry[]): void {
+  const header = [
+    "timestamp",
+    "action",
+    "actionLabel",
+    "actorUserId",
+    "targetType",
+    "targetId",
+    "worldId",
+    "ipHash",
+    "userAgentHash",
+    "metadata",
+  ];
+  const rows = entries.map((entry) =>
+    [
+      entry.timestamp,
+      entry.action,
+      entry.actionLabel,
+      entry.actorUserId ?? "",
+      entry.targetType,
+      entry.targetId ?? "",
+      entry.worldId ?? "",
+      entry.ipHash ?? "",
+      entry.userAgentHash ?? "",
+      JSON.stringify(entry.metadataJson ?? ""),
+    ]
+      .map((cell) => escapeCsvCell(cell))
+      .join(","),
+  );
+  const csv = [header.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `uwe-audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function AuditLogWorkspace() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +128,10 @@ export function AuditLogWorkspace() {
   const [actionLabels, setActionLabels] = useState<Record<string, string>>({});
   const [loginReasonLabels, setLoginReasonLabels] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    setOffset(0);
+  }, [action, actorUserId, worldId, from, to]);
+
   const loadEntries = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -89,7 +142,8 @@ export function AuditLogWorkspace() {
     if (worldId) params.set("worldId", worldId);
     if (from) params.set("from", new Date(from).toISOString());
     if (to) params.set("to", new Date(to).toISOString());
-    params.set("limit", "100");
+    params.set("limit", String(PAGE_SIZE));
+    params.set("offset", String(offset));
 
     try {
       const response = await fetch(studioApiUrl(`/api/admin/audit-log?${params.toString()}`));
@@ -110,11 +164,14 @@ export function AuditLogWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, [action, actorUserId, worldId, from, to]);
+  }, [action, actorUserId, worldId, from, to, offset]);
 
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  const page = Math.floor(offset / PAGE_SIZE) + 1;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <>
@@ -159,16 +216,26 @@ export function AuditLogWorkspace() {
             <input type="datetime-local" value={to} onChange={(event) => setTo(event.target.value)} />
           </label>
         </div>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void loadEntries()}>
-          Filtern
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void loadEntries()}>
+            Filtern
+          </button>
+          <button
+            type="button"
+            className="uwe-v2-btn uwe-v2-btn-secondary"
+            disabled={entries.length === 0}
+            onClick={() => downloadAuditCsv(entries)}
+          >
+            CSV exportieren
+          </button>
+        </div>
       </section>
 
       {error && <p className="uwe-notice uwe-notice-warn">{error}</p>}
 
       <section className="uwe-v2-card">
         <h2>
-          Einträge {loading ? "…" : `(${entries.length} / ${total})`}
+          Einträge {loading ? "…" : `(${entries.length} von ${total})`}
         </h2>
         {entries.length === 0 && !loading ? (
           <p className="uwe-dashboard-muted">Keine Audit-Einträge für die gewählten Filter.</p>
@@ -207,6 +274,34 @@ export function AuditLogWorkspace() {
             </table>
           </div>
         )}
+        {total > PAGE_SIZE ? (
+          <div
+            className="uwe-dashboard-muted"
+            style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}
+          >
+            <span>
+              Seite {page} von {pageCount}
+            </span>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+                disabled={offset === 0}
+                onClick={() => setOffset((value) => Math.max(0, value - PAGE_SIZE))}
+              >
+                Zurück
+              </button>
+              <button
+                type="button"
+                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+                disabled={offset + PAGE_SIZE >= total}
+                onClick={() => setOffset((value) => value + PAGE_SIZE)}
+              >
+                Weiter
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </>
   );

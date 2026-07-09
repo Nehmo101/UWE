@@ -3,6 +3,7 @@ import {
   PortalAuthChrome,
   PortalShell,
 } from "@/src/components/shell";
+import { PortalWorldVisitTracker } from "@/src/components/PortalWorldVisitTracker";
 import { getCurrentUser } from "@/src/lib/auth";
 import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
 import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
@@ -22,12 +23,16 @@ export default async function AuthWorldLayout({ children, params }: Props) {
 
   const db = createPrismaClient();
   let worldName = worldSlug;
+  let worldId: string | null = null;
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { name: true },
+      select: { id: true, name: true },
     });
-    if (world) worldName = world.name;
+    if (world) {
+      worldName = world.name;
+      worldId = world.id;
+    }
   } finally {
     await db.$disconnect();
   }
@@ -52,6 +57,7 @@ export default async function AuthWorldLayout({ children, params }: Props) {
         />
       }
     >
+      {worldId ? <PortalWorldVisitTracker worldId={worldId} /> : null}
       {children}
     </PortalShell>
   );

@@ -188,12 +188,14 @@ export function buildCharacterSheetMarkdown(input: CharacterSheetExportInput): s
 
 export function buildCharacterSheetPrintHtml(
   input: CharacterSheetExportInput,
-  options?: { includeToolbar?: boolean; markdownExport?: boolean },
+  options?: { includeToolbar?: boolean; markdownExport?: boolean; layout?: "full" | "compact" },
 ): string {
   const { character, inventoryItems = [], worldName } = input;
   const { sheet, spells, spellSlots } = character;
   const includeToolbar = options?.includeToolbar ?? true;
   const markdownExport = options?.markdownExport ?? true;
+  const layout = options?.layout ?? "full";
+  const compact = layout === "compact";
   const markdown = buildCharacterSheetMarkdown(input);
 
   const abilityRows = Object.entries(ABILITY_LABELS)
@@ -266,7 +268,10 @@ export function buildCharacterSheetPrintHtml(
       </table>
     </section>
 
-    <section class="cs-section">
+    ${
+      compact
+        ? ""
+        : `<section class="cs-section">
       <h2>Zauberplätze</h2>
       ${slotHtml}
     </section>
@@ -285,6 +290,7 @@ export function buildCharacterSheetPrintHtml(
       character.notes.trim()
         ? `<section class="cs-section"><h2>Notizen</h2><p>${escapeHtml(character.notes.trim())}</p></section>`
         : ""
+    }`
     }
 
     ${markdownBlock}

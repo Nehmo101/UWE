@@ -487,6 +487,7 @@ export const studioApplySrdEquipmentSchema = z.object({
 export const characterSheetPrintQuerySchema = z.object({
   characterId: idSchema,
   format: z.enum(["html", "markdown"]).optional(),
+  layout: z.enum(["full", "compact"]).optional(),
 });
 
 /** Portal: Treasury-Item einem eigenen Charakter zuweisen. */

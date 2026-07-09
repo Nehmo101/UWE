@@ -567,6 +567,7 @@ export class AuthService {
         slug: true,
         description: true,
         guestModeEnabled: true,
+        updatedAt: true,
       },
     });
 
@@ -640,7 +641,7 @@ export class AuthService {
     return toSafeUser(user);
   }
 
-  async createSession(userId: string) {
+  async createSession(userId: string, options: { ipAddress?: string | null } = {}) {
     const token = generateSessionToken();
     const tokenHash = hashOpaqueToken(token);
     const session = await this.db.session.create({
@@ -648,6 +649,7 @@ export class AuthService {
         userId,
         tokenHash,
         expiresAt: sessionExpiresAt(),
+        ...(options.ipAddress ? { ipAddress: options.ipAddress } : {}),
       },
       include: {
         user: {

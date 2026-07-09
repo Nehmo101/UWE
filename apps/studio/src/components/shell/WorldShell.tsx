@@ -4,6 +4,7 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import type { ResolvedNavGroup } from "@uwe/shared-utils/navigation";
+import { persistWorldLastRoute } from "@/src/lib/world-last-route";
 import { worldCommands, worldLiveNav, worldSidebar } from "../../navigation/world-nav";
 import { readHiddenNavIds } from "../../lib/nav-visibility-prefs";
 import { AppShell } from "./AppShell";
@@ -43,6 +44,12 @@ export function WorldShell({
 }: WorldShellProps) {
   const pathname = usePathname() ?? `/worlds/${worldSlug}/dashboard`;
   const [hiddenNavIds, setHiddenNavIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (pathname) {
+      persistWorldLastRoute(worldSlug, pathname);
+    }
+  }, [pathname, worldSlug]);
 
   useEffect(() => {
     setHiddenNavIds(readHiddenNavIds());

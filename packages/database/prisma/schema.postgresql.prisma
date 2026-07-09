@@ -587,6 +587,7 @@ model Session {
   tokenHash    String   @unique @map("token_hash")
   expiresAt    DateTime @map("expires_at")
   lastActiveAt DateTime @default(now()) @map("last_active_at")
+  ipAddress    String?  @map("ip_address")
   createdAt    DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -2,7 +2,7 @@
 
 import { sanitizeHtml } from "@/src/lib/sanitize-html";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface RecipientOption {
   email: string;
@@ -19,6 +19,8 @@ interface MailSendFormProps {
   recipients: RecipientOption[];
   warnings?: string[];
   containsDmOnlyHint?: boolean;
+  /** When set, subject/body are auto-saved to localStorage under this key. */
+  draftStorageKey?: string;
 }
 
 export function MailSendForm({
@@ -31,9 +33,12 @@ export function MailSendForm({
   recipients,
   warnings = [],
   containsDmOnlyHint = false,
+  draftStorageKey,
 }: MailSendFormProps) {
   const [subject, setSubject] = useState(initialSubject);
   const [bodyText, setBodyText] = useState(initialBodyText);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const dirtyRef = useRef(false);
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(recipients.map((recipient) => recipient.email)),
   );
@@ -44,6 +49,55 @@ export function MailSendForm({
     () => (initialBodyHtml ? sanitizeHtml(initialBodyHtml) : ""),
     [initialBodyHtml],
   );
+
+  useEffect(() => {
+    if (!draftStorageKey) return;
+    try {
+      const raw = window.localStorage.getItem(draftStorageKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as { subject?: string; bodyText?: string };
+      if (typeof draft.subject === "string") setSubject(draft.subject);
+      if (typeof draft.bodyText === "string") setBodyText(draft.bodyText);
+    } catch {
+      // ignore corrupt draft
+    }
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey) return;
+    dirtyRef.current =
+      subject !== initialSubject.trim() || bodyText !== initialBodyText.trim();
+  }, [draftStorageKey, subject, bodyText, initialSubject, initialBodyText]);
+
+  useEffect(() => {
+    if (!draftStorageKey) return;
+
+    const saveDraft = () => {
+      try {
+        window.localStorage.setItem(
+          draftStorageKey,
+          JSON.stringify({ subject, bodyText, savedAt: new Date().toISOString() }),
+        );
+        setDraftSavedAt(new Date().toLocaleTimeString("de-DE"));
+      } catch {
+        // ignore quota errors
+      }
+    };
+
+    const interval = window.setInterval(saveDraft, 30_000);
+    return () => window.clearInterval(interval);
+  }, [draftStorageKey, subject, bodyText]);
+
+  useEffect(() => {
+    if (!draftStorageKey) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [draftStorageKey]);
 
   function toggleRecipient(email: string) {
     setSelected((current) => {
@@ -105,6 +159,12 @@ export function MailSendForm({
           ))}
         </div>
       )}
+
+      {draftStorageKey ? (
+        <p className="uwe-hint">
+          Entwurf wird lokal gespeichert{draftSavedAt ? ` (zuletzt ${draftSavedAt})` : ""}.
+        </p>
+      ) : null}
 
       <label>
         Betreff
