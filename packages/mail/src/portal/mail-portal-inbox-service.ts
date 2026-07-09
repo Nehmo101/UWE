@@ -311,6 +311,18 @@ export class MailPortalInboxService {
     });
   }
 
+  /** Sets/clears the local read state; marking read mirrors \Seen to the server (best-effort). */
+  async setMessageRead(messageId: string, read: boolean, actorUserId?: string | null) {
+    await this.db.mailInboxMessage.update({ where: { id: messageId }, data: { isRead: read } });
+    if (read) void this.markMessageSeenOnServer(messageId);
+    await this.logAudit({
+      action: "read",
+      messageId,
+      userId: actorUserId,
+      detail: read ? "als gelesen markiert" : "als ungelesen markiert",
+    }).catch(() => undefined);
+  }
+
   /** Sets/clears the local star and mirrors the \Flagged flag to the server (best-effort). */
   async setMessageStarred(messageId: string, starred: boolean, actorUserId?: string | null) {
     await this.db.mailInboxMessage.update({ where: { id: messageId }, data: { isStarred: starred } });

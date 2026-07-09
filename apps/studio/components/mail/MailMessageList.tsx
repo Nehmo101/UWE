@@ -9,6 +9,16 @@ import {
   formatMailTime,
   type MailMessageVM,
 } from "./mail-types";
+import {
+  MailSearchInput,
+  MailFilterMenu,
+  MailBulkBar,
+  DEFAULT_SORT,
+  DEFAULT_FACETS,
+  type MailSort,
+  type MailFacets,
+} from "./MailListControls";
+import type { MailBulkAction } from "./use-mail-actions";
 
 export type MailListFilter = "alle" | "ungelesen" | "markiert";
 
@@ -23,10 +33,44 @@ interface MailMessageListProps {
   title: string;
   searchQuery?: string;
   onSearch?: (query: string) => void;
+  // Multi-select (owned by MailCenter so bulk actions can reach the action hook).
+  selectedIds: Set<string>;
+  selectionMode: boolean;
+  busy: boolean;
+  onToggleSelectionMode: () => void;
+  onToggleSelect: (id: string) => void;
+  onSelectVisible: (ids: string[]) => void;
+  onClearSelection: () => void;
+  onBulkAction: (action: MailBulkAction) => void;
 }
 
 function isMarked(message: MailMessageVM): boolean {
   return (message.priority?.priority ?? 0) >= 70;
+}
+
+function receivedTime(message: MailMessageVM): number {
+  return new Date(message.receivedAt).getTime();
+}
+
+function sortMessages(list: MailMessageVM[], sort: MailSort): MailMessageVM[] {
+  const copy = [...list];
+  switch (sort) {
+    case "oldest":
+      return copy.sort((a, b) => receivedTime(a) - receivedTime(b));
+    case "unread":
+      return copy.sort(
+        (a, b) => Number(a.isRead) - Number(b.isRead) || receivedTime(b) - receivedTime(a),
+      );
+    case "sender":
+      return copy.sort(
+        (a, b) =>
+          a.senderName.localeCompare(b.senderName, "de", { sensitivity: "base" }) ||
+          receivedTime(b) - receivedTime(a),
+      );
+    case "newest":
+    default:
+      return copy.sort((a, b) => receivedTime(b) - receivedTime(a));
+  }
 }
 
 export function MailMessageList({
@@ -40,13 +84,36 @@ export function MailMessageList({
   title,
   searchQuery = "",
   onSearch,
+  selectedIds,
+  selectionMode,
+  busy,
+  onToggleSelectionMode,
+  onToggleSelect,
+  onSelectVisible,
+  onClearSelection,
+  onBulkAction,
 }: MailMessageListProps) {
+  const [sort, setSort] = React.useState<MailSort>(DEFAULT_SORT);
+  const [facets, setFacets] = React.useState<MailFacets>(DEFAULT_FACETS);
+
   const unreadCount = messages.filter((m) => !m.isRead).length;
-  const filtered = messages.filter((message) => {
-    if (filter === "ungelesen") return !message.isRead;
-    if (filter === "markiert") return isMarked(message);
-    return true;
-  });
+
+  const filtered = React.useMemo(() => {
+    let list = messages.filter((message) => {
+      if (filter === "ungelesen") return !message.isRead;
+      if (filter === "markiert") return isMarked(message);
+      return true;
+    });
+    if (facets.withAttachment) list = list.filter((m) => m.hasAttachments);
+    if (facets.newsletter) list = list.filter((m) => m.hasUnsubscribeTarget);
+    return sortMessages(list, sort);
+  }, [messages, filter, facets, sort]);
+
+  const filteredIds = React.useMemo(() => filtered.map((m) => m.id), [filtered]);
+  const selectionCount = selectedIds.size;
+  const showChecks = selectionMode || selectionCount > 0;
+  const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
+  const hasNewsletterSelected = filtered.some((m) => selectedIds.has(m.id) && m.hasUnsubscribeTarget);
 
   const tabs: Array<{ key: MailListFilter; label: string }> = [
     { key: "alle", label: "Alle" },
@@ -90,6 +157,14 @@ export function MailMessageList({
         </span>
         <span style={{ flex: 1 }} />
         <IconButton
+          icon="list-checks"
+          size={15}
+          title="Mehrfachauswahl"
+          tone={showChecks ? "accent" : "muted"}
+          onClick={onToggleSelectionMode}
+          style={showChecks ? { background: "color-mix(in srgb, var(--uwe-accent) 14%, transparent)" } : undefined}
+        />
+        <IconButton
           icon="refresh-cw"
           size={15}
           title="IMAP synchronisieren"
@@ -97,69 +172,69 @@ export function MailMessageList({
           disabled={syncing}
           style={syncing ? { opacity: 0.5, cursor: "wait" } : undefined}
         />
-        <IconButton icon="sliders-horizontal" size={15} title="Filter" />
+        <MailFilterMenu sort={sort} onSort={setSort} facets={facets} onFacets={setFacets} />
       </div>
 
       {onSearch ? (
         <div style={{ padding: "0 12px 10px", borderBottom: "1px solid var(--uwe-border-muted)" }}>
-          <input
-            type="search"
-            data-mail-search
-            className="uwe-v2-input"
-            placeholder="Betreff, Absender, Inhalt, from: has:attachment…"
-            defaultValue={searchQuery}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                onSearch((event.currentTarget as HTMLInputElement).value.trim());
-              }
-            }}
-            aria-label="Mail durchsuchen"
-          />
+          <MailSearchInput initialValue={searchQuery} onSearch={onSearch} />
         </div>
       ) : null}
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "9px 14px",
-          borderBottom: "1px solid var(--uwe-border-muted)",
-        }}
-      >
+      {showChecks && selectionCount > 0 ? (
+        <MailBulkBar
+          count={selectionCount}
+          allSelected={allSelected}
+          hasNewsletter={hasNewsletterSelected}
+          busy={busy}
+          onSelectAll={() => (allSelected ? onClearSelection() : onSelectVisible(filteredIds))}
+          onClear={onClearSelection}
+          onAction={onBulkAction}
+        />
+      ) : (
         <div
           style={{
-            display: "inline-flex",
-            gap: 2,
-            background: "color-mix(in srgb, var(--uwe-fg) 6%, transparent)",
-            borderRadius: 8,
-            padding: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "9px 14px",
+            borderBottom: "1px solid var(--uwe-border-muted)",
           }}
         >
-          {tabs.map((tab) => {
-            const active = filter === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => onFilter(tab.key)}
-                style={{
-                  padding: "3px 11px",
-                  borderRadius: 6,
-                  fontSize: 11.5,
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: active ? 700 : 400,
-                  background: active ? "var(--uwe-card-bg)" : "transparent",
-                  color: active ? "var(--uwe-fg)" : "var(--uwe-fg-muted)",
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
+          <div
+            style={{
+              display: "inline-flex",
+              gap: 2,
+              background: "color-mix(in srgb, var(--uwe-fg) 6%, transparent)",
+              borderRadius: 8,
+              padding: 2,
+            }}
+          >
+            {tabs.map((tab) => {
+              const active = filter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => onFilter(tab.key)}
+                  style={{
+                    padding: "3px 11px",
+                    borderRadius: 6,
+                    fontSize: 11.5,
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: active ? 700 : 400,
+                    background: active ? "var(--uwe-card-bg)" : "transparent",
+                    color: active ? "var(--uwe-fg)" : "var(--uwe-fg-muted)",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {filtered.length === 0 ? (
@@ -171,13 +246,22 @@ export function MailMessageList({
         ) : (
           filtered.map((message) => {
             const selected = selectedId === message.id;
+            const checked = selectedIds.has(message.id);
             const labelColor = message.priority ? CATEGORY_COLORS[message.priority.category] : "var(--uwe-fg-subtle)";
             const labelName = message.priority ? CATEGORY_LABELS[message.priority.category] : message.accountLabel;
+            const highlighted = selected || checked;
             return (
-              <button
+              <div
                 key={message.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelect(message.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(message.id);
+                  }
+                }}
                 style={{
                   display: "flex",
                   width: "100%",
@@ -188,10 +272,39 @@ export function MailMessageList({
                   borderBottom: "1px solid var(--uwe-border-muted)",
                   borderLeft: `3px solid ${selected ? "var(--uwe-accent)" : "transparent"}`,
                   cursor: "pointer",
-                  background: selected ? "color-mix(in srgb, var(--uwe-accent) 10%, var(--uwe-bg))" : "transparent",
+                  background: highlighted
+                    ? "color-mix(in srgb, var(--uwe-accent) 10%, var(--uwe-bg))"
+                    : "transparent",
                 }}
               >
-                <Avatar initials={message.senderName.slice(0, 2).toUpperCase()} color={labelColor} size={34} />
+                {showChecks ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleSelect(message.id);
+                    }}
+                    aria-label={checked ? "Auswahl entfernen" : "Auswählen"}
+                    aria-pressed={checked}
+                    style={{
+                      flex: "none",
+                      width: 34,
+                      height: 34,
+                      borderRadius: 8,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "none",
+                      background: "transparent",
+                      color: checked ? "var(--uwe-accent)" : "var(--uwe-fg-subtle)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <NavIcon name={checked ? "square-check-big" : "square"} width={20} height={20} />
+                  </button>
+                ) : (
+                  <Avatar initials={message.senderName.slice(0, 2).toUpperCase()} color={labelColor} size={34} />
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span
@@ -279,7 +392,7 @@ export function MailMessageList({
                     ) : null}
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })
         )}

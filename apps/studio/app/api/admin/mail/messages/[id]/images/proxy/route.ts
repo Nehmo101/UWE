@@ -34,10 +34,19 @@ export async function GET(request: Request, context: RouteContext) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
+    // Many marketing/CDN image hosts reject header-less server-side fetches with
+    // 403/406. Presenting a normal browser-like Accept/User-Agent and a Referer
+    // rooted at the image's own origin gets the common cases through.
     const response = await fetch(parsed.toString(), {
       signal: controller.signal,
       redirect: "follow",
-      headers: { Accept: "image/*" },
+      headers: {
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Accept-Language": "de,en;q=0.8",
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        Referer: parsed.origin + "/",
+      },
     });
     if (!response.ok) {
       return mailApiError(`Bild konnte nicht geladen werden (HTTP ${response.status}).`, 502);

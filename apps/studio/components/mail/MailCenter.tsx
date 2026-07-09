@@ -120,6 +120,24 @@ export function MailCenter({ data }: { data: MailCenterData }) {
   const [compose, setCompose] = React.useState<ComposeContext | null>(null);
   const [chatOpen, setChatOpen] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => new Set());
+  const [selectionMode, setSelectionMode] = React.useState(false);
+
+  const clearSelection = React.useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }, []);
+  const toggleSelect = React.useCallback((id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const selectVisible = React.useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids));
+  }, []);
 
   const flash = React.useCallback((message: string) => {
     setToast(message);
@@ -210,8 +228,17 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     captureMessage,
     taskMessage,
     toggleStar,
+    bulkAction,
     openDraft,
   } = actions;
+
+  const runBulk = React.useCallback(
+    (action: Parameters<typeof bulkAction>[0]) => {
+      const ids = [...selectedIds];
+      void bulkAction(action, ids).then(() => clearSelection());
+    },
+    [bulkAction, selectedIds, clearSelection],
+  );
 
   function forwardMessage(message: MailMessageDetailVM) {
     const quoted = message.bodyText?.trim() || message.snippet?.trim() || "";
@@ -259,11 +286,13 @@ export function MailCenter({ data }: { data: MailCenterData }) {
     setView(folder === "drafts" ? "drafts" : folder === "sent" ? "sent" : "inbox");
     setSelectedId(null);
     setDetail(null);
+    clearSelection();
     pushNav({ folder, account: selectedAccountId });
   }
 
   function handleSelectAccount(accountId: string | null) {
     setSelectedAccountId(accountId);
+    clearSelection();
     pushNav({ folder: activeFolder, account: accountId });
   }
 
@@ -341,7 +370,12 @@ export function MailCenter({ data }: { data: MailCenterData }) {
               color: "var(--uwe-fg-muted)",
             }}
           >
-            {syncProgress.label}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ flex: 1 }}>{syncProgress.label}</span>
+              {syncProgress.total > 0 && syncProgress.processed > 0 ? (
+                <span style={{ fontVariantNumeric: "tabular-nums" }}>{syncProgress.processed}%</span>
+              ) : null}
+            </div>
             <div
               style={{
                 marginTop: 6,
@@ -354,9 +388,16 @@ export function MailCenter({ data }: { data: MailCenterData }) {
               <div
                 style={{
                   height: "100%",
-                  width: "40%",
+                  width:
+                    syncProgress.total > 0 && syncProgress.processed > 0
+                      ? `${Math.min(100, syncProgress.processed)}%`
+                      : "40%",
                   background: "var(--uwe-accent)",
-                  animation: "pulse 1.2s ease-in-out infinite",
+                  transition: "width .3s ease",
+                  animation:
+                    syncProgress.total > 0 && syncProgress.processed > 0
+                      ? undefined
+                      : "pulse 1.2s ease-in-out infinite",
                 }}
               />
             </div>
@@ -380,6 +421,19 @@ export function MailCenter({ data }: { data: MailCenterData }) {
               title={listTitle}
               searchQuery={data.query}
               onSearch={(q) => pushNav({ folder: activeFolder, account: selectedAccountId, q: q || null })}
+              selectedIds={selectedIds}
+              selectionMode={selectionMode}
+              busy={busy}
+              onToggleSelectionMode={() => {
+                setSelectionMode((value) => {
+                  if (value) setSelectedIds(new Set());
+                  return !value;
+                });
+              }}
+              onToggleSelect={toggleSelect}
+              onSelectVisible={selectVisible}
+              onClearSelection={clearSelection}
+              onBulkAction={runBulk}
             />
           </div>
           <div
@@ -402,6 +456,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
               onTask={() => detail && void taskMessage(detail.id)}
               onArchive={() => void archiveMessage()}
               onDelete={() => void trashMessage()}
+              onUnsubscribe={() => detail && void unsubscribe(detail.id)}
               onToggleStar={() => detail && void toggleStar(detail)}
               onOpenChat={() => setChatOpen(true)}
             />

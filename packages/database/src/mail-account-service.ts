@@ -196,6 +196,10 @@ export class MailAccountService {
       select: { lastSeenUid: true, uidValidity: true },
     });
 
+    // Persist each batch as it arrives (see fetchImapMessages `onBatch`) so the
+    // Mail Center can show messages appear progressively during a long sync.
+    let imported = 0;
+    const createdIds: string[] = [];
     const result = await fetchImapMessages(
       {
         host: account.imapHost,
@@ -211,19 +215,18 @@ export class MailAccountService {
         sinceUid: folderBefore?.lastSeenUid ?? 0,
         storedUidValidity: folderBefore?.uidValidity ?? null,
         onProgress: options?.onProgress,
+        onBatch: async (batch) => {
+          for (const message of batch) {
+            const { saved, created } = await this.persistFetchedMessage(accountId, message, mailbox, {
+              reconcileLocal: isPrimaryInbox,
+              folderRole,
+            });
+            if (created) createdIds.push(saved.id);
+            imported += 1;
+          }
+        },
       },
     );
-
-    let imported = 0;
-    const createdIds: string[] = [];
-    for (const message of result.messages) {
-      const { saved, created } = await this.persistFetchedMessage(accountId, message, mailbox, {
-        reconcileLocal: isPrimaryInbox,
-        folderRole,
-      });
-      if (created) createdIds.push(saved.id);
-      imported += 1;
-    }
 
     // Persist the new watermark on the folder for the next incremental run.
     await this.db.mailFolder.update({

@@ -103,6 +103,7 @@ export class MailPortalService {
     this.archiveMessage = this.inbox.archiveMessage.bind(this.inbox);
     this.trashMessage = this.inbox.trashMessage.bind(this.inbox);
     this.setMessageStarred = this.inbox.setMessageStarred.bind(this.inbox);
+    this.setMessageRead = this.inbox.setMessageRead.bind(this.inbox);
     this.getThreadForMessage = this.inbox.getThreadForMessage.bind(this.inbox);
     this.deleteMessagesBySender = this.inbox.deleteMessagesBySender.bind(this.inbox);
   }
@@ -113,6 +114,7 @@ export class MailPortalService {
   archiveMessage: MailPortalInboxService["archiveMessage"];
   trashMessage: MailPortalInboxService["trashMessage"];
   setMessageStarred: MailPortalInboxService["setMessageStarred"];
+  setMessageRead: MailPortalInboxService["setMessageRead"];
   getThreadForMessage: MailPortalInboxService["getThreadForMessage"];
   deleteMessagesBySender: MailPortalInboxService["deleteMessagesBySender"];
 

@@ -110,6 +110,13 @@ export interface FetchImapOptions {
   /** UIDVALIDITY stored from the last sync; a mismatch forces a full resync. */
   storedUidValidity?: string | null;
   onProgress?: (progress: ImapSyncProgress) => void | Promise<void>;
+  /**
+   * Invoked with each fetched batch of messages as soon as it is parsed, before
+   * the whole mailbox finishes downloading. Lets callers persist incrementally
+   * so a live UI can show messages "flutter in" during a long sync instead of
+   * appearing all at once at the end.
+   */
+  onBatch?: (messages: FetchedInboxMessage[]) => void | Promise<void>;
 }
 
 /**
@@ -334,15 +341,22 @@ export async function fetchImapMessages(
       const chunks = buildUidFetchChunks(plan.uidsToFetch, batchSize);
       let processed = 0;
       for (const range of chunks) {
+        const batch: FetchedInboxMessage[] = [];
         for await (const message of client.fetch(
           range,
           { uid: true, envelope: true, source: true, flags: true, internalDate: true },
           { uid: true },
         )) {
           const parsed = await parseImapMessage(message as RawFetchedMessage);
-          if (parsed) messages.push(parsed);
+          if (parsed) {
+            messages.push(parsed);
+            batch.push(parsed);
+          }
           processed += 1;
         }
+        // Persist this batch before the next network round-trip so the inbox
+        // fills incrementally rather than in one burst at the very end.
+        if (batch.length > 0) await options?.onBatch?.(batch);
         await options?.onProgress?.({
           processed,
           total,

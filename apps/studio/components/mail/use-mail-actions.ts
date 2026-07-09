@@ -21,6 +21,8 @@ interface MailActionsDeps {
   loadDetail: (id: string) => Promise<void>;
 }
 
+export type MailBulkAction = "read" | "unread" | "archive" | "trash" | "star" | "unstar" | "unsubscribe";
+
 export interface MailActions {
   busy: boolean;
   syncing: boolean;
@@ -34,6 +36,7 @@ export interface MailActions {
   captureMessage: (message: MailMessageDetailVM) => Promise<void>;
   taskMessage: (messageId: string) => Promise<void>;
   toggleStar: (message: MailMessageDetailVM) => Promise<void>;
+  bulkAction: (action: MailBulkAction, ids: string[]) => Promise<void>;
   openDraft: (draftId: string) => Promise<void>;
 }
 
@@ -89,7 +92,14 @@ export function useMailActions(deps: MailActionsDeps): MailActions {
       }
       syncingRef.current = true;
       setSyncing(true);
-      if (!silent) setSyncProgress({ processed: 0, total: 0, label: "Sync wird gestartet…" });
+      if (!silent) setSyncProgress({ processed: 0, total: 100, label: "Sync wird gestartet…" });
+
+      // While a manual sync runs, refresh the inbox on a short cadence so messages
+      // persisted batch-by-batch on the server appear progressively ("reinflattern")
+      // instead of in one burst when the job finally completes.
+      let refreshTimer: number | null = null;
+      if (!silent) refreshTimer = window.setInterval(() => router.refresh(), 1600);
+
       try {
         const response = await fetch(studioApiUrl("/api/admin/mail/sync"), {
           method: "POST",
@@ -109,8 +119,25 @@ export function useMailActions(deps: MailActionsDeps): MailActions {
             ? [payload.jobId]
             : [];
         if (jobIds.length > 0) {
+          // Aggregate live progress across all account jobs into a single 0–100 bar.
+          const progressByJob: Record<string, number> = {};
+          const surfaceProgress = (job: { id: string; progress?: number | null; progressLabel?: string | null }) => {
+            if (silent) return;
+            if (typeof job.progress === "number") progressByJob[job.id] = job.progress;
+            const pct = Math.round(
+              jobIds.reduce((sum, id) => sum + (progressByJob[id] ?? 0), 0) / jobIds.length,
+            );
+            const phase = job.progressLabel ?? "Synchronisiere…";
+            setSyncProgress({
+              processed: pct,
+              total: 100,
+              label: jobIds.length > 1 ? `${phase} · ${jobIds.length} Konten` : phase,
+            });
+          };
           const jobs = await Promise.all(
-            jobIds.map((jobId) => waitForJob(jobId, { timeoutMs: 600_000, intervalMs: 800 })),
+            jobIds.map((jobId) =>
+              waitForJob(jobId, { timeoutMs: 600_000, intervalMs: 800, onPoll: surfaceProgress }),
+            ),
           );
           const imported = jobs.reduce(
             (sum, job) => sum + ((job.result as { imported?: number } | undefined)?.imported ?? 0),
@@ -124,6 +151,7 @@ export function useMailActions(deps: MailActionsDeps): MailActions {
       } catch (error) {
         if (!silent) flash(error instanceof Error ? error.message : "Sync fehlgeschlagen.");
       } finally {
+        if (refreshTimer !== null) window.clearInterval(refreshTimer);
         syncingRef.current = false;
         setSyncing(false);
         setSyncProgress(null);
@@ -242,6 +270,38 @@ export function useMailActions(deps: MailActionsDeps): MailActions {
     [detail, flash, postJson, router, setDetail],
   );
 
+  const bulkAction = React.useCallback(
+    async (action: MailBulkAction, ids: string[]) => {
+      if (ids.length === 0) return;
+      setBusy(true);
+      let ok = 0;
+      for (const id of ids) {
+        const done = await postJson("/api/admin/mail/actions", { action, messageId: id });
+        if (done) ok += 1;
+      }
+      setBusy(false);
+      const labels: Record<MailBulkAction, string> = {
+        read: "als gelesen markiert",
+        unread: "als ungelesen markiert",
+        archive: "archiviert",
+        trash: "in den Papierkorb verschoben",
+        star: "markiert",
+        unstar: "entmarkiert",
+        unsubscribe: "abgemeldet",
+      };
+      flash(`${ok}/${ids.length} Nachricht(en) ${labels[action]}.`);
+      // A trashed/archived message might be the one open in the reader.
+      if (action === "trash" || action === "archive") {
+        if (detail && ids.includes(detail.id)) {
+          setDetail(null);
+          setSelectedId(null);
+        }
+      }
+      router.refresh();
+    },
+    [detail, flash, postJson, router, setDetail, setSelectedId],
+  );
+
   const openDraft = React.useCallback(
     async (draftId: string) => {
       setBusy(true);
@@ -293,6 +353,7 @@ export function useMailActions(deps: MailActionsDeps): MailActions {
     captureMessage,
     taskMessage,
     toggleStar,
+    bulkAction,
     openDraft,
   };
 }

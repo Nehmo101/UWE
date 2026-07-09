@@ -6,6 +6,10 @@ export interface PollableJob {
   status: string;
   errorMessage?: string | null;
   result?: unknown;
+  /** 0–100 completion, when the runner reports it via updateProgress(). */
+  progress?: number | null;
+  /** Human-readable phase label, when the runner reports it. */
+  progressLabel?: string | null;
 }
 
 export async function fetchJob(jobId: string): Promise<PollableJob | null> {
@@ -17,7 +21,13 @@ export async function fetchJob(jobId: string): Promise<PollableJob | null> {
 
 export async function waitForJob(
   jobId: string,
-  options: { intervalMs?: number; timeoutMs?: number } = {},
+  options: {
+    intervalMs?: number;
+    timeoutMs?: number;
+    /** Invoked after every poll (including the terminal one) with the latest job
+     * snapshot — lets callers surface live progress/progressLabel to the UI. */
+    onPoll?: (job: PollableJob) => void;
+  } = {},
 ): Promise<PollableJob> {
   const intervalMs = options.intervalMs ?? 500;
   const timeoutMs = options.timeoutMs ?? 120_000;
@@ -28,6 +38,8 @@ export async function waitForJob(
     if (!job) {
       throw new Error("Job nicht gefunden.");
     }
+
+    options.onPoll?.(job);
 
     if (job.status === "completed") {
       return job;

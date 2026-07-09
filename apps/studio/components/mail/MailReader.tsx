@@ -26,6 +26,7 @@ interface MailReaderProps {
   onTask: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onUnsubscribe?: () => void;
   onToggleStar?: () => void;
   onOpenChat?: () => void;
   /** Mobil (< lg) füllt der Reader den Screen — zurück zur Nachrichtenliste. */
@@ -45,6 +46,7 @@ export function MailReader({
   onTask,
   onArchive,
   onDelete,
+  onUnsubscribe,
   onToggleStar,
   onOpenChat,
 }: MailReaderProps) {
@@ -221,6 +223,11 @@ export function MailReader({
           {onOpenChat ? (
             <MailButton variant="subtle" size="sm" icon="message-circle" onClick={onOpenChat} disabled={busy}>
               RTX fragen
+            </MailButton>
+          ) : null}
+          {message.hasUnsubscribeTarget && onUnsubscribe ? (
+            <MailButton variant="subtle" size="sm" icon="mail-x" onClick={onUnsubscribe} disabled={busy}>
+              Newsletter abmelden
             </MailButton>
           ) : null}
           <span style={{ flex: 1 }} />
