@@ -114,6 +114,18 @@ export const SYSTEM_NAV: NavGroup[] = [
         keywords: ["checklist", "aufgaben", "onboarding", "fortschritt"],
       },
       {
+        id: "system-command-center-host",
+        label: "Kommandozentrale",
+        href: "/system/command-center",
+        icon: "gauge",
+        group: "Setup & Host",
+        section: SECTION,
+        permission: ["owner"],
+        status: "active",
+        source: "system",
+        keywords: ["host", "kommandozentrale", "command center", "uptime", "cpu", "ram", "systemd", "sicherheit", "live"],
+      },
+      {
         id: "system-host-control",
         label: "Host Control",
         href: "/system/host-control",

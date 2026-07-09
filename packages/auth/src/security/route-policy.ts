@@ -103,6 +103,8 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/admin/*",
   "/api/admin",
   "/api/admin/*",
+  "/api/system",
+  "/api/system/*",
   "/api/import",
   "/api/import/*",
   "/api/media/upload",

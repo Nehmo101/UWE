@@ -1,0 +1,21 @@
+{
+  "name": "@uwe/host-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Read-only Linux host telemetry (uptime, CPU, RAM, disk, systemd, host security) for the UWE Command Center",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test 'src/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}
