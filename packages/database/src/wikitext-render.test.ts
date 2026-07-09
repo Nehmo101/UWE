@@ -61,6 +61,40 @@ test("returns empty string for empty content", () => {
   assert.equal(renderContentHtml("\n\n", NO_LINKS), "");
 });
 
+test("renders authored HTML (TipTap) instead of escaping it", () => {
+  const content = "<p>Aenir</p><p>Kategorie: <strong>NPC</strong></p>";
+  assert.equal(
+    renderContentHtml(content, NO_LINKS),
+    "<p>Aenir</p><p>Kategorie: <strong>NPC</strong></p>",
+  );
+});
+
+test("keeps <br> soft breaks in authored HTML", () => {
+  const content = "<p>Zeile eins<br />Zeile zwei</p>";
+  assert.equal(renderContentHtml(content, NO_LINKS), "<p>Zeile eins<br>Zeile zwei</p>");
+});
+
+test("resolves wikilinks inside authored HTML without escaping the markup", () => {
+  const content = "<p>Diener von [[Verborgen]].</p>";
+  const links: PageViewLink[] = [{ displayText: "Verborgen", status: "hidden" }];
+  assert.equal(
+    renderContentHtml(content, links),
+    '<p>Diener von <span class="wiki-link-hidden" title="Inhalt nicht verfügbar">Verborgen</span>.</p>',
+  );
+});
+
+test("strips dangerous tags and attributes from authored HTML", () => {
+  const content = '<p onclick="steal()">Hi</p><script>alert(1)</script>';
+  const rendered = renderContentHtml(content, NO_LINKS);
+  assert.ok(!rendered.includes("<script"), "script tag must be removed");
+  assert.ok(!rendered.includes("onclick"), "event handler must be removed");
+  assert.ok(rendered.includes("<p>Hi</p>"));
+});
+
+test("does not treat plaintext comparisons as HTML", () => {
+  assert.equal(renderContentHtml("2 < 3 und a < b", NO_LINKS), "<p>2 &lt; 3 und a &lt; b</p>");
+});
+
 test("combines headings, lists and paragraphs with wikilinks", () => {
   const content = "# Beziehungen\n\n- Freund: [[Aman]]\n- Gegner: Imperium\n\nEnde.";
   const links: PageViewLink[] = [{ displayText: "Aman", href: "/a", status: "resolved" }];

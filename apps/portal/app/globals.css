@@ -562,6 +562,25 @@ body {
   line-height: 1.8;
 }
 
+.uwe-wiki-image {
+  margin: 0;
+}
+
+.uwe-wiki-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 14%, transparent);
+}
+
+.uwe-wiki-image figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--uwe-fg) 65%, transparent);
+  text-align: center;
+}
+
 .auth-asset-list {
   list-style: none;
   margin: 1.5rem 0 0;

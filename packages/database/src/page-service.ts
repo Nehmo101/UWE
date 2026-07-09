@@ -7,6 +7,7 @@ import { buildPageUrl } from "./page-types";
 import { parseStringArray } from "./json-utils";
 import { normalizeLookupKey } from "./queries";
 import { parseWikiLinks } from "./wikilink-utils";
+import { sanitizeWikiHtml } from "./html-sanitize";
 import {
   filterBlocksForContext,
   isPageAccessible,
@@ -242,8 +243,51 @@ function renderWikiLinkHtml(link: PageViewLink): string {
  * (Überschriften, Aufzählungen, Absätze mit weichen Zeilenumbrüchen) in Blöcke —
  * damit konvertierte Seiten nicht mehr als ein einziger Fließtext erscheinen.
  */
+/**
+ * Heuristik: Enthält der Inhalt bereits HTML-Markup (z. B. aus dem TipTap-Rich-
+ * Text-Editor oder einem Import)? Solcher Inhalt darf nicht wie Klartext
+ * escapt werden, sonst erscheinen die rohen `<p>`/`<br>`-Tags im Portal.
+ */
+const HTML_MARKUP_PATTERN =
+  /<(?:p|br|div|span|ul|ol|li|h[1-6]|strong|em|b|i|u|s|a|blockquote|pre|code|img|hr|figure|figcaption|table|thead|tbody|tr|td|th)\b[^>]*>|<\/(?:p|div|span|ul|ol|li|h[1-6]|strong|em|blockquote|pre|figure|figcaption|table|thead|tbody|tr|td|th)>/i;
+
+function looksLikeHtml(content: string): boolean {
+  return HTML_MARKUP_PATTERN.test(content);
+}
+
+/**
+ * Rendert bereits als HTML vorliegenden Inhalt: die [[Wikilinks]] werden an
+ * ihren Positionen durch aufgelöste Anker ersetzt, der umgebende HTML-Text
+ * bleibt unangetastet (nicht escapt). Das Ergebnis wird sanitisiert, damit
+ * gefährliche Tags/Attribute (script, style, event-handler, javascript:-URLs)
+ * nicht ins Portal gelangen.
+ */
+function renderRichHtml(content: string, links: PageViewLink[]): string {
+  const wikilinks = parseWikiLinks(content);
+
+  let out = "";
+  let cursor = 0;
+  for (let i = 0; i < wikilinks.length; i += 1) {
+    const raw = wikilinks[i];
+    if (raw.start < cursor) continue;
+    out += content.slice(cursor, raw.start);
+    const link = links[i];
+    out += link
+      ? renderWikiLinkHtml(link)
+      : escapeHtml(content.slice(raw.start, raw.end));
+    cursor = raw.end;
+  }
+  out += content.slice(cursor);
+
+  return sanitizeWikiHtml(out);
+}
+
 export function renderContentHtml(content: string, links: PageViewLink[]): string {
   if (!content) return "";
+
+  if (looksLikeHtml(content)) {
+    return renderRichHtml(content, links);
+  }
 
   const wikilinks = parseWikiLinks(content);
 

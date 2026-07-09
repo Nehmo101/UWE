@@ -152,7 +152,19 @@ export default async function AuthWorldPageDetail({ params }: Props) {
               <VisibilityBadge visibility={block.visibility} />
             </div>
             <div className="auth-block-content">
-              <WikiContent html={blockHtml[index] ?? ""} />
+              {block.type === "image" && block.assetId ? (
+                <figure className="uwe-wiki-image">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/assets/${block.assetId}/file?world=${encodeURIComponent(worldSlug)}`}
+                    alt={block.content?.trim() || page.title}
+                    loading="lazy"
+                  />
+                  {block.content?.trim() && <figcaption>{block.content}</figcaption>}
+                </figure>
+              ) : (
+                <WikiContent html={blockHtml[index] ?? ""} />
+              )}
             </div>
           </section>
         ))}

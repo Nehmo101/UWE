@@ -14,7 +14,7 @@ import {
   SecretReveal,
 } from "@uwe/shared-ui";
 import { EditPageStickyBar } from "../../../../../../components/EditPageStickyBar";
-import { ContentBlockContentField } from "../../../../../../components/ContentBlockContentField";
+import { ContentBlockBody } from "../../../../../../components/ContentBlockBody";
 import { ContextualGeneratorPanel } from "../../../../../../components/ContextualGeneratorPanel";
 import { getGeneratorPanelData } from "@/src/lib/generator-handlers";
 import {
@@ -74,6 +74,14 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
   const aliases = parseStringArray(page.aliases);
   const generatorPanel = await getGeneratorPanelData(worldSlug, slug);
   const pageHref = buildPageUrl(worldSlug, page.type, slug);
+
+  const imageAssets = (await repo.listAssetsByWorld(worldSlug, { type: "image" })).map(
+    (asset) => ({ id: asset.id, title: asset.title }),
+  );
+  const blockTypeOptions = Object.values(ContentBlockTypeEnum).map((type) => ({
+    value: type,
+    label: BLOCK_TYPE_LABELS[type],
+  }));
 
   return (
     <WorldShell
@@ -254,14 +262,15 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               <input type="hidden" name="category" value={category} />
               <input type="hidden" name="sortOrder" value={block.sortOrder} />
 
-              <label>
-                Block-Typ
-                <select name="type" defaultValue={block.type}>
-                  {Object.values(ContentBlockTypeEnum).map((t) => (
-                    <option key={t} value={t}>{BLOCK_TYPE_LABELS[t]}</option>
-                  ))}
-                </select>
-              </label>
+              <ContentBlockBody
+                worldSlug={worldSlug}
+                typeOptions={blockTypeOptions}
+                imageAssets={imageAssets}
+                defaultType={block.type}
+                defaultContent={block.content}
+                defaultAssetId={block.assetId}
+                rows={6}
+              />
 
               <label>
                 Sichtbarkeit
@@ -301,12 +310,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                   </small>
                 </label>
               </fieldset>
-
-              <ContentBlockContentField
-                blockType={block.type}
-                defaultValue={block.content}
-                rows={6}
-              />
 
               {block.secretLevel !== "none" && (
                 <div className="uwe-field-hint" style={{ marginTop: "0.5rem" }}>
@@ -351,14 +354,13 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
 
             <h3 style={{ margin: 0, fontSize: "0.95rem" }}>Neuer Block</h3>
 
-            <label>
-              Block-Typ
-              <select name="type" defaultValue="rich_text">
-                {Object.values(ContentBlockTypeEnum).map((t) => (
-                  <option key={t} value={t}>{BLOCK_TYPE_LABELS[t]}</option>
-                ))}
-              </select>
-            </label>
+            <ContentBlockBody
+              worldSlug={worldSlug}
+              typeOptions={blockTypeOptions}
+              imageAssets={imageAssets}
+              defaultType="rich_text"
+              rows={4}
+            />
 
             <label>
               Sichtbarkeit
@@ -386,8 +388,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                 ))}
               </select>
             </label>
-
-            <ContentBlockContentField blockType="rich_text" rows={4} />
 
             <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Block hinzufügen</button>
           </form>

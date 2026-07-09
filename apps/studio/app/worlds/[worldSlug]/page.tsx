@@ -25,7 +25,12 @@ import {
 } from "@uwe/database/server";
 import { createPageAiReviewService } from "@uwe/page-ai-review";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
-import { CampaignSidebar, WikiPageTable, type WikiPageRow } from "@/src/components/wiki";
+import {
+  CampaignSidebar,
+  WikiPageTable,
+  WorldReleaseControl,
+  type WikiPageRow,
+} from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldRootBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -140,12 +145,15 @@ export default async function StudioWorldPage({ params, searchParams }: Props) {
         title={world.name}
         summary={world.description}
         actions={
-          <Link
-            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            href={newPageHref}
-          >
-            Seite erstellen
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <WorldReleaseControl worldSlug={worldSlug} />
+            <Link
+              className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              href={newPageHref}
+            >
+              Seite erstellen
+            </Link>
+          </div>
         }
       />
 

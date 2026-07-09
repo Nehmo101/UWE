@@ -243,14 +243,20 @@ export async function updateContentBlockAction(formData: FormData) {
   const newVisibility = formData.get("visibility") as Visibility;
   const newSecretLevel = parseSecretLevel(formData.get("secretLevel"));
   const newRevealState = parseRevealState(formData.get("revealState"));
+  const newType = formData.get("type") as ContentBlockType;
+  // Nur Bild-Blöcke verweisen auf ein Asset; beim Wechsel weg vom Bild-Typ wird
+  // die Verknüpfung wieder gelöst.
+  const assetId =
+    newType === "image" ? String(formData.get("assetId") || "") || null : null;
 
   await repo().updateContentBlock(blockId, {
-    type: formData.get("type") as ContentBlockType,
+    type: newType,
     sortOrder: Number(formData.get("sortOrder")),
     content: String(formData.get("content") || ""),
     visibility: newVisibility,
     secretLevel: newSecretLevel,
     revealState: newRevealState,
+    assetId,
   });
 
   const editHref = `/worlds/${worldSlug}/${category}/${pageSlug}/edit`;
@@ -305,13 +311,18 @@ export async function createContentBlockAction(formData: FormData) {
   const page = await repo().getPageBySlug(worldSlug, pageSlug);
   const nextOrder = page?.contentBlocks.length ?? 0;
 
+  const newType = (formData.get("type") as ContentBlockType) ?? "rich_text";
+  const assetId =
+    newType === "image" ? String(formData.get("assetId") || "") || null : null;
+
   await repo().createContentBlock(pageId, {
-    type: (formData.get("type") as ContentBlockType) ?? "rich_text",
+    type: newType,
     sortOrder: nextOrder,
     content: String(formData.get("content") || ""),
     visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
     secretLevel: parseSecretLevel(formData.get("secretLevel")),
     revealState: parseRevealState(formData.get("revealState")),
+    assetId,
   });
 
   revalidatePath(`/worlds/${worldSlug}/${category}/${pageSlug}/edit`);
