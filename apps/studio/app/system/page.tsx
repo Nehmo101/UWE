@@ -73,6 +73,53 @@ export default async function SystemHubPage({ searchParams }: Props) {
         {system.commit ? ` · ${system.commit.slice(0, 7)}` : ""}
       </p>
 
+      <section
+        className="uwe-v2-card uwe-v2-card-padded"
+        style={{ marginBottom: "1rem" }}
+        aria-label="System-Kurzstatus"
+      >
+        <p className="uwe-dashboard-muted" style={{ margin: "0 0 0.75rem" }}>
+          <strong>System</strong> = Infrastruktur &amp; Host (RTX, Cloudflare, Diagnose).{" "}
+          <strong>Admin</strong> = Nutzer, Rollen, Sicherheit &amp; KI-Governance.{" "}
+          <Link href="/admin">Admin-Übersicht →</Link>
+        </p>
+        <p
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+            alignItems: "center",
+            margin: 0,
+          }}
+        >
+          <HealthBadge
+            status={status.rtx.ready ? "ok" : "degraded"}
+            label={status.rtx.ready ? "RTX bereit" : "RTX offline"}
+          />
+          <HealthBadge
+            status={status.ok ? "ok" : "degraded"}
+            label={status.ok ? "Health OK" : "Health eingeschränkt"}
+          />
+          <HealthBadge
+            status={
+              system.proxy.cloudflare.tunnelConfigured || !system.proxy.publicExposureConfigured
+                ? "ok"
+                : "degraded"
+            }
+            label={
+              system.proxy.cloudflare.tunnelConfigured
+                ? "Cloudflare Tunnel"
+                : system.proxy.publicExposureConfigured
+                  ? "Öffentlich (ohne Tunnel-Flag)"
+                  : "Nur lokal"
+            }
+          />
+          <Link href="/system/health">Health-Ampel →</Link>
+          <Link href="/system/rtx-connector">RTX Connector →</Link>
+          <Link href="/system?tab=cloudflare">Cloudflare →</Link>
+        </p>
+      </section>
+
       <nav className="uwe-settings-tabs" aria-label="System-Bereiche">
         {TABS.map((tab) => (
           <Link

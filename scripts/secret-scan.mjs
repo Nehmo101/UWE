@@ -73,8 +73,9 @@ const PATTERNS = [
     // password set directly on an env line. Requiring the tight `key=value` form
     // avoids matching TS `const password = …`; excluding `<>` skips `<placeholder>`
     // templates. `envOnly` keeps it off prose (markdown docs use example values).
+    // Exclude JSX expression props (`password={value}`) — only flag literal env-style assignments.
     name: "Hardcoded password assignment (env)",
-    regex: /(?:password|passwd|api[_-]?key|client[_-]?secret)=[^'"\s<>]{8,}/gi,
+    regex: /(?:password|passwd|api[_-]?key|client[_-]?secret)=[^'"\s<>{][^'"\s<>]{7,}/gi,
     envOnly: true,
   },
   {

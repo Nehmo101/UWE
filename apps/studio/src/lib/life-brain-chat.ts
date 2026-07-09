@@ -91,7 +91,8 @@ export async function executeLifeBrainChat(
     },
     {
       user,
-      providerMode: body.providerMode ?? "auto",
+      // personal_brain is permanently local-only — never honor auto/cloud routing.
+      providerMode: "local_rtx",
       contextMode: "personal_brain",
       taskType: "answer_life_question",
       userPrompt,

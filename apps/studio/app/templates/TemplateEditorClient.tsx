@@ -10,8 +10,8 @@ import {
   ContentBlockTypeEnum,
   PageTypeEnum,
   VisibilityEnum,
-  type PageTemplateView,
-} from "@uwe/database/server";
+} from "@uwe/database/enums";
+import type { PageTemplateView } from "@uwe/database/server";
 import { TemplateLivePreview, type TemplatePreviewBlock } from "./TemplateLivePreview";
 
 interface Props {

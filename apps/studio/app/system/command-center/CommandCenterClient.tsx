@@ -445,8 +445,12 @@ export function CommandCenterClient({ initial }: { initial: CommandCenterData })
       <header className="flex flex-col gap-1">
         <h1 className="font-serif text-2xl font-semibold">Kommandozentrale</h1>
         <p className="text-sm text-muted-foreground">
-          Live-Überblick des UWE-Linux-Hosts: Uptime, Systemlast, Dienste und Sicherheit. Read-only,
-          ohne geheime Werte. Aktualisiert sich alle 10&nbsp;Sekunden automatisch.
+          Live-Überblick des UWE-Linux-Hosts: Uptime, Systemlast, Dienste und Sicherheit. Read-only
+          Monitoring — keine destruktiven Aktionen. Host-Neustart und Wartung:{" "}
+          <Link href="/system/host-control" className="underline decoration-dotted underline-offset-2">
+            Host Control
+          </Link>
+          . Aktualisiert sich alle 10&nbsp;Sekunden automatisch.
         </p>
         <p className="text-sm text-muted-foreground">
           <Link href="/system" className="underline decoration-dotted underline-offset-2">

@@ -1,0 +1,1 @@
+-- AuditAction enum extension: secret_status_viewed (SQLite stores action as TEXT; no DDL required).

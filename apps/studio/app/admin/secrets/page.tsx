@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import { getSecretsStatusSnapshot, prisma } from "@uwe/database/server";
+import { getSecretsStatusSnapshot, logAuditEvent, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { formatStudioDateTime } from "@/src/lib/format";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import type {
   SecretItemStatus,
   SecretSource,
@@ -46,7 +47,13 @@ function sectionSummary(items: SecretsStatusItem[]): string {
   return parts.join(" · ");
 }
 
-function SecretsSectionTable({ section }: { section: SecretsStatusSection }) {
+function SecretsSectionTable({
+  section,
+  rotationDueIds,
+}: {
+  section: SecretsStatusSection;
+  rotationDueIds: Set<string>;
+}) {
   const hasIssues = section.items.some(
     (item) => item.status === "missing" || item.status === "decrypt_failed",
   );
@@ -89,6 +96,11 @@ function SecretsSectionTable({ section }: { section: SecretsStatusSection }) {
                 <td>{sourceLabel(item.source)}</td>
                 <td>
                   <HealthBadge status={statusBadgeStatus(item.status)} label={statusLabel(item.status)} />
+                  {rotationDueIds.has(item.id) ? (
+                    <p className="uwe-dashboard-muted" style={{ margin: "0.25rem 0 0" }}>
+                      Rotation empfohlen
+                    </p>
+                  ) : null}
                 </td>
                 <td>{item.maskedHint ?? (item.bootstrap ? "nur ENV" : "—")}</td>
                 <td>{item.updatedAt ? formatStudioDateTime(new Date(item.updatedAt)) : "—"}</td>
@@ -129,8 +141,24 @@ function SecretsSectionTable({ section }: { section: SecretsStatusSection }) {
 }
 
 export default async function AdminSecretsPage() {
+  const user = await getCurrentAuthUser();
   const snapshot = await getSecretsStatusSnapshot(prisma);
   const criticalWarnings = snapshot.warnings.filter((warning) => warning.severity === "critical");
+  const rotationDueIds = new Set(snapshot.rotationDueSecretIds);
+
+  if (user) {
+    await logAuditEvent(prisma, {
+      actorUserId: user.id,
+      action: "secret_status_viewed",
+      targetType: "settings",
+      targetId: "secrets-status",
+      metadata: {
+        authMethod: "session",
+        rotationDueCount: snapshot.rotationDueSecretIds.length,
+        criticalWarnings: criticalWarnings.length,
+      },
+    });
+  }
 
   return (
     <SystemShell
@@ -208,12 +236,13 @@ export default async function AdminSecretsPage() {
       )}
 
       {snapshot.sections.map((section) => (
-        <SecretsSectionTable key={section.id} section={section} />
+        <SecretsSectionTable key={section.id} section={section} rotationDueIds={rotationDueIds} />
       ))}
 
       <p className="uwe-hint">
         Bootstrap-Secrets (<code>AUTH_SECRET</code>, <code>DATABASE_URL</code>,{" "}
-        <code>STUDIO_API_TOKEN</code>) werden nur als ENV-Status angezeigt. Details:{" "}
+        <code>STUDIO_API_TOKEN</code>) werden nur als ENV-Status angezeigt. Zugriffe werden im{" "}
+        <Link href="/admin/audit-log">Audit-Log</Link> protokolliert. Details:{" "}
         <Link href="/admin/setup">Einrichtung</Link> ·{" "}
         <Link href="/admin/security">Security Dashboard</Link>
       </p>

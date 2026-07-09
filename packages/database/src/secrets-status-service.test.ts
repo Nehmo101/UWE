@@ -5,7 +5,9 @@ import { createTestDatabaseUrl } from "./test-helpers";
 import { encryptSecret } from "./token-crypto";
 import {
   assertSecretsStatusHasNoSecrets,
+  collectRotationDueSecretIds,
   getSecretsStatusSnapshot,
+  type SecretsStatusSection,
 } from "./secrets-status-service";
 
 describe("secrets status service", () => {
@@ -95,5 +97,39 @@ describe("secrets status service", () => {
     } finally {
       await db.$disconnect();
     }
+  });
+
+  it("flags DB secrets older than rotation reminder threshold", () => {
+    const staleUpdatedAt = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
+    const sections: SecretsStatusSection[] = [
+      {
+        id: "db-encrypted",
+        title: "Test",
+        description: "Test",
+        items: [
+          {
+            id: "inference-endpoint:stale",
+            label: "Stale endpoint",
+            source: "db-encrypted",
+            status: "set",
+            maskedHint: "••••••1234",
+            bootstrap: false,
+            updatedAt: staleUpdatedAt,
+          },
+          {
+            id: "inference-endpoint:fresh",
+            label: "Fresh endpoint",
+            source: "db-encrypted",
+            status: "set",
+            maskedHint: "••••••5678",
+            bootstrap: false,
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ];
+
+    const rotationDueSecretIds = collectRotationDueSecretIds(sections, 90);
+    assert.deepEqual(rotationDueSecretIds, ["inference-endpoint:stale"]);
   });
 });

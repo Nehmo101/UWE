@@ -1530,6 +1530,7 @@ enum AuditAction {
   host_update_completed
   host_update_failed
   host_restart_started
+  secret_status_viewed
 }
 
 enum AuditTargetType {

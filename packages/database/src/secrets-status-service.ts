@@ -1,8 +1,13 @@
-import { isWeakAuthSecret } from "./production-safety";
 import type { PrismaClient } from "./client";
 import { SettingsService } from "./settings-service";
 import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 import { getSystemStatus } from "./system-status";
+import {
+  buildSecretsStatusWarnings,
+  collectRotationDueSecretIds,
+} from "./secrets-status-warnings";
+
+export { collectRotationDueSecretIds } from "./secrets-status-warnings";
 
 export type SecretSource = "env" | "db-encrypted" | "db-hashed";
 
@@ -47,10 +52,14 @@ export interface SecretsStatusSnapshot {
   warnings: SecretsStatusWarning[];
   /** Secret item ids that failed decryption — likely after AUTH_SECRET rotation. */
   affectedByAuthSecretRotation: string[];
+  /** DB-encrypted secrets older than the rotation reminder threshold (days). */
+  rotationDueSecretIds: string[];
 }
 
 export interface SecretsStatusOptions {
   env?: NodeJS.ProcessEnv;
+  /** Days after which configured DB secrets trigger a rotation reminder. */
+  rotationReminderDays?: number;
 }
 
 function resolveSessionSecretKey(env: NodeJS.ProcessEnv): string {
@@ -534,69 +543,12 @@ async function buildDbHashedSection(db: PrismaClient): Promise<SecretsStatusSect
   };
 }
 
-function buildWarnings(
-  env: NodeJS.ProcessEnv,
-  sections: SecretsStatusSection[],
-  affectedByRotation: string[],
-): SecretsStatusWarning[] {
-  const warnings: SecretsStatusWarning[] = [];
-  const sessionValue = resolveSessionSecretValue(env);
-  const sessionKey = resolveSessionSecretKey(env);
-
-  if (!sessionValue) {
-    warnings.push({
-      id: "secrets:encryption-key-missing",
-      severity: "critical",
-      title: `${sessionKey} fehlt`,
-      description:
-        "Ohne Session-/Auth-Secret können verschlüsselte DB-Felder weder geschrieben noch gelesen werden.",
-    });
-  } else if (isWeakAuthSecret(sessionValue)) {
-    warnings.push({
-      id: "secrets:encryption-key-weak",
-      severity: "critical",
-      title: `${sessionKey} ist unsicher`,
-      description: "Platzhalter oder zu kurze Werte sind in Production nicht zulässig.",
-    });
-  }
-
-  if (affectedByRotation.length > 0) {
-    warnings.push({
-      id: "secrets:auth-secret-rotation",
-      severity: "critical",
-      title: "AUTH_SECRET-Rotation — verschlüsselte Secrets betroffen",
-      description: `${affectedByRotation.length} DB-Secret(s) können nicht entschlüsselt werden. Betroffene Integrationen (Spotify, SMTP in DB, Provider-Keys) müssen neu eingegeben werden — siehe Liste unten.`,
-    });
-  } else if (sessionValue) {
-    warnings.push({
-      id: "secrets:auth-secret-rotation-info",
-      severity: "info",
-      title: "Hinweis: AUTH_SECRET-Rotation",
-      description:
-        "Eine Änderung von SESSION_SECRET/AUTH_SECRET macht alle DB-verschlüsselten Secrets unlesbar. Plane Re-Konfiguration der betroffenen Dienste vor einer Rotation.",
-    });
-  }
-
-  const missingBootstrap = sections
-    .find((section) => section.id === "bootstrap")
-    ?.items.filter((item) => item.status === "missing");
-  if (missingBootstrap && missingBootstrap.length > 0) {
-    warnings.push({
-      id: "secrets:bootstrap-missing",
-      severity: "warning",
-      title: "Bootstrap-Secrets unvollständig",
-      description: `Fehlend: ${missingBootstrap.map((item) => item.label).join(", ")}`,
-    });
-  }
-
-  return warnings;
-}
-
 export async function getSecretsStatusSnapshot(
   db: PrismaClient,
   options: SecretsStatusOptions = {},
 ): Promise<SecretsStatusSnapshot> {
   const env = options.env ?? process.env;
+  const rotationReminderDays = options.rotationReminderDays ?? 90;
   const encryptionKeyEnvKey = resolveSessionSecretKey(env);
   const encryptionSecret = resolveTokenEncryptionSecret();
   const encryptionKeyConfigured = Boolean(resolveSessionSecretValue(env));
@@ -618,7 +570,15 @@ export async function getSecretsStatusSnapshot(
     .filter((item) => item.status === "decrypt_failed")
     .map((item) => item.id);
 
-  const warnings = buildWarnings(env, sections, affectedByAuthSecretRotation);
+  const rotationDueSecretIds = collectRotationDueSecretIds(sections, rotationReminderDays);
+
+  const warnings = buildSecretsStatusWarnings(
+    env,
+    sections,
+    affectedByAuthSecretRotation,
+    rotationDueSecretIds,
+    rotationReminderDays,
+  );
 
   const criticalCount = warnings.filter((warning) => warning.severity === "critical").length;
   const ok = criticalCount === 0 && affectedByAuthSecretRotation.length === 0;
@@ -631,6 +591,7 @@ export async function getSecretsStatusSnapshot(
     sections,
     warnings,
     affectedByAuthSecretRotation,
+    rotationDueSecretIds,
   };
 }
 

@@ -461,7 +461,11 @@ export function computeWikiQualityInsights(
 
   const recommendations = (Object.keys(report.counts) as WikiQualityFindingCode[])
     .filter((code) => report.counts[code] > 0)
-    .sort((a, b) => report.counts[b] - report.counts[a])
+    .sort((a, b) => {
+      const countDiff = report.counts[b] - report.counts[a];
+      if (countDiff !== 0) return countDiff;
+      return (SCORE_WEIGHTS[b] ?? 2) - (SCORE_WEIGHTS[a] ?? 2);
+    })
     .map((code, index) => {
       const meta = RECOMMENDATION_META[code];
       return {

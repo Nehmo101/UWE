@@ -166,27 +166,6 @@ describe("UWE player notes", () => {
     await db.$disconnect();
   });
 
-  it("DM can adopt a note as content block", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const auth = createAuthService(db);
-    const notes = createPlayerNoteService(databaseUrl);
-
-    const result = await notes.adoptAsContentBlock(submittedNoteId, pageId);
-    assert.ok(result.contentBlockId);
-    assert.equal(result.note.status, "accepted");
-    assert.equal(result.note.visibility, "party");
-
-    const otherCtx = await auth.buildAccessContextForWorld(worldSlug, {
-      userId: otherPlayerUserId,
-    });
-    assert.ok(otherCtx);
-
-    const pageNotes = await auth.listPlayerNotesForViewer(worldSlug, otherCtx, { pageId });
-    assert.ok(pageNotes.some((note) => note.id === submittedNoteId));
-
-    await db.$disconnect();
-  });
-
   it("world-level list includes accepted party notes for other players", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
@@ -210,6 +189,27 @@ describe("UWE player notes", () => {
     assert.ok(worldNotes.some((note) => note.id === partyNote.id));
     assert.ok(!worldNotes.some((note) => note.id === privateNoteId));
     assert.ok(!worldNotes.some((note) => note.id === submittedNoteId));
+
+    await db.$disconnect();
+  });
+
+  it("DM can adopt a note as content block", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const notes = createPlayerNoteService(databaseUrl);
+
+    const result = await notes.adoptAsContentBlock(submittedNoteId, pageId);
+    assert.ok(result.contentBlockId);
+    assert.equal(result.note.status, "accepted");
+    assert.equal(result.note.visibility, "party");
+
+    const otherCtx = await auth.buildAccessContextForWorld(worldSlug, {
+      userId: otherPlayerUserId,
+    });
+    assert.ok(otherCtx);
+
+    const pageNotes = await auth.listPlayerNotesForViewer(worldSlug, otherCtx, { pageId });
+    assert.ok(pageNotes.some((note) => note.id === submittedNoteId));
 
     await db.$disconnect();
   });

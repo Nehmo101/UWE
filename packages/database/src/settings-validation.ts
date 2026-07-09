@@ -1,14 +1,19 @@
 import type { CanonicalStatus, Visibility } from "./generated/prisma/client";
-import type { BackgroundPattern, ThemeAppearance, UweSystemSettingsUpdate } from "./settings-service";
-import { BACKGROUND_PATTERN_VALUES, STUDIO_LANDING_PAGE_PATHS } from "./settings-service";
+import type { UweSystemSettingsUpdate } from "./settings-service";
 import {
   MAIL_INBOX_LIMIT_MAX,
   MAIL_INBOX_LIMIT_MIN,
   normalizeMailSyncInterval,
 } from "./mail-settings";
-
-const THEME_VALUES = new Set<ThemeAppearance>(["dark", "light", "system"]);
-const BACKGROUND_PATTERN_SET = new Set<BackgroundPattern>(BACKGROUND_PATTERN_VALUES);
+import { validateAppSettingsSection } from "./settings-validation-app";
+import {
+  collectUnknownKeys,
+  isRecord,
+  requireBoolean,
+  requireEnum,
+  requireSafePathString,
+  validateSection,
+} from "./settings-validation-helpers";
 
 const VISIBILITY_VALUES = new Set<Visibility>([
   "private",
@@ -48,17 +53,6 @@ const TOP_LEVEL_KEYS = new Set([
   "maintenance",
 ]);
 
-const STUDIO_LANDING_PAGE_PATH_SET = new Set<string>(STUDIO_LANDING_PAGE_PATHS);
-
-const APP_KEYS = new Set([
-  "theme",
-  "backgroundPattern",
-  "frostedGlass",
-  "motionEnabled",
-  "defaultLandingPage",
-  "favoriteWorldSlug",
-  "lastActiveWorldSlug",
-]);
 const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
@@ -85,17 +79,6 @@ const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
 const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes"]);
 const MAINTENANCE_KEYS = new Set(["maintenanceMode", "lockPortal", "lockStudio", "message"]);
 
-const UNSAFE_PATH_PATTERNS = [
-  /\0/,
-  /\.\./,
-  /[<>"|*?]/,
-  /^\s*\/etc\b/i,
-  /^\s*\/proc\b/i,
-  /^\s*\/sys\b/i,
-  /^\s*\/dev\b/i,
-  /^\s*C:\\Windows\b/i,
-];
-
 export interface SettingsValidationResult {
   ok: true;
   value: UweSystemSettingsUpdate;
@@ -107,89 +90,6 @@ export interface SettingsValidationError {
 }
 
 export type ValidateSettingsUpdateResult = SettingsValidationResult | SettingsValidationError;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function collectUnknownKeys(
-  obj: Record<string, unknown>,
-  allowed: Set<string>,
-  path: string,
-): string[] {
-  const errors: string[] = [];
-  for (const key of Object.keys(obj)) {
-    if (!allowed.has(key)) {
-      errors.push(`Unbekannter Schlüssel: ${path}.${key}`);
-    }
-  }
-  return errors;
-}
-
-function requireBoolean(
-  value: unknown,
-  path: string,
-  errors: string[],
-): value is boolean {
-  if (typeof value !== "boolean") {
-    errors.push(`${path} muss ein Boolean sein.`);
-    return false;
-  }
-  return true;
-}
-
-function requireEnum<T extends string>(
-  value: unknown,
-  allowed: Set<T>,
-  path: string,
-  errors: string[],
-): value is T {
-  if (typeof value !== "string" || !allowed.has(value as T)) {
-    const options = [...allowed].join(", ");
-    errors.push(`${path} muss einer der Werte sein: ${options}.`);
-    return false;
-  }
-  return true;
-}
-
-function requireSafePathString(
-  value: unknown,
-  path: string,
-  errors: string[],
-): value is string {
-  if (typeof value !== "string") {
-    errors.push(`${path} muss ein String sein.`);
-    return false;
-  }
-
-  for (const pattern of UNSAFE_PATH_PATTERNS) {
-    if (pattern.test(value)) {
-      errors.push(`${path} enthält einen nicht zulässigen Pfadwert.`);
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function validateSection(
-  section: unknown,
-  allowedKeys: Set<string>,
-  path: string,
-  validateField: (key: string, value: unknown, errors: string[]) => void,
-): string[] {
-  if (!isRecord(section)) {
-    return [`${path} muss ein Objekt sein.`];
-  }
-
-  const errors = collectUnknownKeys(section, allowedKeys, path);
-  for (const [key, value] of Object.entries(section)) {
-    if (allowedKeys.has(key)) {
-      validateField(key, value, errors);
-    }
-  }
-  return errors;
-}
 
 /**
  * Runtime validation for partial system-settings updates.
@@ -205,102 +105,10 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
   const update: UweSystemSettingsUpdate = {};
 
   if ("app" in body) {
-    const sectionErrors = validateSection(body.app, APP_KEYS, "settings.app", (key, value, sectionErrors) => {
-      if (key === "theme") {
-        requireEnum(value, THEME_VALUES, "settings.app.theme", sectionErrors);
-      }
-      if (key === "backgroundPattern") {
-        requireEnum(value, BACKGROUND_PATTERN_SET, "settings.app.backgroundPattern", sectionErrors);
-      }
-      if (key === "frostedGlass" || key === "motionEnabled") {
-        requireBoolean(value, `settings.app.${key}`, sectionErrors);
-      }
-    });
-    errors.push(...sectionErrors);
-    if (isRecord(body.app)) {
-      const appErrors: string[] = [];
-      const app: NonNullable<UweSystemSettingsUpdate["app"]> = {};
-      if (body.app.theme !== undefined) {
-        if (!requireEnum(body.app.theme, THEME_VALUES, "settings.app.theme", appErrors)) {
-          // recorded in appErrors
-        } else {
-          app.theme = body.app.theme as ThemeAppearance;
-        }
-      }
-      if (body.app.backgroundPattern !== undefined) {
-        if (
-          !requireEnum(
-            body.app.backgroundPattern,
-            BACKGROUND_PATTERN_SET,
-            "settings.app.backgroundPattern",
-            appErrors,
-          )
-        ) {
-          // recorded in appErrors
-        } else {
-          app.backgroundPattern = body.app.backgroundPattern as BackgroundPattern;
-        }
-      }
-      if (body.app.frostedGlass !== undefined) {
-        if (requireBoolean(body.app.frostedGlass, "settings.app.frostedGlass", appErrors)) {
-          app.frostedGlass = body.app.frostedGlass;
-        }
-      }
-      if (body.app.motionEnabled !== undefined) {
-        if (requireBoolean(body.app.motionEnabled, "settings.app.motionEnabled", appErrors)) {
-          app.motionEnabled = body.app.motionEnabled;
-        }
-      }
-      if (body.app.defaultLandingPage !== undefined) {
-        if (
-          body.app.defaultLandingPage !== null &&
-          typeof body.app.defaultLandingPage !== "string"
-        ) {
-          appErrors.push("settings.app.defaultLandingPage muss ein String oder null sein.");
-        } else {
-          const trimmed =
-            typeof body.app.defaultLandingPage === "string"
-              ? body.app.defaultLandingPage.trim()
-              : "";
-          if (trimmed && !STUDIO_LANDING_PAGE_PATH_SET.has(trimmed)) {
-            appErrors.push(
-              "settings.app.defaultLandingPage muss /today, /worlds, /continue oder /capture sein.",
-            );
-          } else {
-            app.defaultLandingPage = trimmed || "/today";
-          }
-        }
-      }
-      if (body.app.favoriteWorldSlug !== undefined) {
-        if (
-          body.app.favoriteWorldSlug !== null &&
-          typeof body.app.favoriteWorldSlug !== "string"
-        ) {
-          appErrors.push("settings.app.favoriteWorldSlug muss ein String oder null sein.");
-        } else {
-          app.favoriteWorldSlug =
-            typeof body.app.favoriteWorldSlug === "string"
-              ? body.app.favoriteWorldSlug.trim() || null
-              : null;
-        }
-      }
-      if (body.app.lastActiveWorldSlug !== undefined) {
-        if (
-          body.app.lastActiveWorldSlug !== null &&
-          typeof body.app.lastActiveWorldSlug !== "string"
-        ) {
-          appErrors.push("settings.app.lastActiveWorldSlug muss ein String oder null sein.");
-        } else {
-          app.lastActiveWorldSlug =
-            typeof body.app.lastActiveWorldSlug === "string"
-              ? body.app.lastActiveWorldSlug.trim() || null
-              : null;
-        }
-      }
-      errors.push(...appErrors);
-      if (appErrors.length === 0 && sectionErrors.length === 0 && Object.keys(app).length > 0) {
-        update.app = app;
-      }
+    const appResult = validateAppSettingsSection(body.app);
+    errors.push(...appResult.errors);
+    if (appResult.app) {
+      update.app = appResult.app;
     }
   }
 

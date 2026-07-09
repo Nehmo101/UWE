@@ -190,8 +190,9 @@ describe("integration smoke — minimal app access paths", () => {
     assert.match(middleware, /"\/forgot-password"/);
     assert.match(middleware, /"\/reset-password"/);
     assert.match(home, /getCurrentUser/);
-    assert.match(home, /redirect\("\/auth\/worlds"\)/);
-    assert.match(home, /redirect\("\/login\?redirect=\/auth\/worlds"\)/);
+    assert.match(home, /buildPortalLoginUrl/);
+    assert.match(home, /sanitizePortalRedirectPath/);
+    assert.match(home, /redirect\(/);
     assert.doesNotMatch(home, /UweLandingPage/);
     assert.ok(exists("apps/portal/app/login/page.tsx"));
     assert.ok(exists("apps/portal/app/forgot-password/page.tsx"));
@@ -201,7 +202,7 @@ describe("integration smoke — minimal app access paths", () => {
   it("keeps Studio /portal shim redirecting to configured Portal URL", () => {
     assert.ok(exists("apps/studio/app/portal/page.tsx"));
     const portalShim = read("apps/studio/app/portal/page.tsx");
-    assert.match(portalShim, /resolvePortalPublicBaseUrl|resolveUweAppUrls/);
+    assert.match(portalShim, /resolveStudioPortalWorldHref/);
     assert.match(portalShim, /redirect\(/);
   });
 
