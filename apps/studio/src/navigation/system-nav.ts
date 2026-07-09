@@ -131,7 +131,7 @@ export const SYSTEM_NAV: NavGroup[] = [
     items: [
       {
         id: "system-setup",
-        label: "Einrichtung",
+        label: "Owner-Einrichtung",
         href: "/admin/setup",
         icon: "sliders-horizontal",
         group: "Setup & Host",

@@ -29,6 +29,12 @@ function parseSeverity(value: string | undefined): BugReportSeverity | undefined
     : undefined;
 }
 
+function githubIssueFromMetadata(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const url = (metadata as { githubIssueUrl?: unknown }).githubIssueUrl;
+  return typeof url === "string" && url.trim() ? url.trim() : null;
+}
+
 function toDto(row: {
   id: string;
   title: string;
@@ -38,6 +44,7 @@ function toDto(row: {
   module: string | null;
   screenshotAssetId: string | null;
   reporterUserId: string | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
 }): BugReportDto {
@@ -50,6 +57,7 @@ function toDto(row: {
     module: row.module,
     screenshotAssetId: row.screenshotAssetId,
     reporterUserId: row.reporterUserId,
+    githubIssueUrl: githubIssueFromMetadata(row.metadata),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

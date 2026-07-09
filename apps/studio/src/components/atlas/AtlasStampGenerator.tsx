@@ -329,6 +329,8 @@ export function AtlasStampGenerator({
                     <img
                       src={`data:${v.mimeType};base64,${v.imageBase64}`}
                       alt={`${keyword} Variante ${idx + 1}`}
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         width: "100%",
                         height: "100%",

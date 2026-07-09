@@ -16,6 +16,7 @@ import {
   removeShoppingItemAction,
   toggleShoppingItemAction,
 } from "@/app/kitchen-actions";
+import { ShoppingListOfflinePanel } from "@/components/ShoppingListOfflinePanel";
 import {
   connectBringAction,
   disconnectBringAction,
@@ -228,6 +229,14 @@ export default async function KitchenShoppingPage({ searchParams }: Props) {
                 </>
               ) : undefined
             }
+          />
+          <ShoppingListOfflinePanel
+            listId={active.id}
+            items={active.items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              checked: item.checked,
+            }))}
           />
           {[...grouped.entries()].map(([category, items]) => (
             <section className="uwe-v2-section" key={category}>

@@ -48,11 +48,11 @@ function parseVisibilities(value: string | string[] | undefined): Visibility[] |
   return visibilities.length ? visibilities : undefined;
 }
 
-function parseMode(value: string | undefined): GraphViewMode {
+function parseMode(value: string | undefined, focusPageId?: string): GraphViewMode {
   if (value === "focus" || value === "neighbors" || value === "backlinks" || value === "full") {
     return value;
   }
-  return "full";
+  return focusPageId ? "focus" : "neighbors";
 }
 
 export default async function StudioGraphPage({ params, searchParams }: Props) {
@@ -73,7 +73,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
   const categories = parseCategories(query.category);
   const visibilities = parseVisibilities(query.visibility);
   const tags = query.tag?.trim() ? [query.tag.trim()] : undefined;
-  const mode = parseMode(query.mode);
+  const mode = parseMode(query.mode, query.focusPageId);
 
   const graph = await buildWorldGraph(repo, worldSlug, context, {
     campaignId: selectedCampaign?.id,
@@ -81,7 +81,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
     tags,
     visibilities,
     focusPageId: query.focusPageId,
-    mode: query.focusPageId ? mode : "full",
+    mode,
   });
 
   const focusOptions = await repo.listPagesByWorld(worldSlug, {

@@ -81,6 +81,31 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
       />
 
       <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Privacy-Guard</h2>
+        <ul className="uwe-dashboard-muted" style={{ margin: 0, paddingLeft: "1.1rem" }}>
+          <li>
+            <strong>Life Brain:</strong> strikt lokal über RTX — kein Cloud-Fallback, nicht
+            konfigurierbar.
+          </li>
+          <li>
+            <strong>Cloud-AI Fallback:</strong>{" "}
+            {hostConfig.cloudFallbackAllowed
+              ? "erlaubt, wenn lokale Modelle offline sind"
+              : "deaktiviert — nur RTX/Connector"}
+          </li>
+          <li>
+            <strong>Connector-Warteschlange:</strong>{" "}
+            {hostConfig.queueEnabled ? "aktiv" : "pausiert (UWE_HOST_QUEUE_DISABLED)"}
+          </li>
+          <li>
+            <strong>DnD/Welt-Kontext:</strong> Cloud nur wenn{" "}
+            <Link href="/admin/ai-gateway">AI-Gateway-Policy</Link> es erlaubt (Standard: RTX
+            bevorzugt).
+          </li>
+        </ul>
+      </section>
+
+      <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Einrichtung</h2>
         <ol className="uwe-homelab-checklist">
           <li>

@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { SECURITY_ROLE_LABELS } from "@uwe/auth";
+import { SettingsCollapsiblePanel } from "./SettingsCollapsiblePanel";
 
 type RoutingMode = "LOCAL_ONLY" | "LOCAL_THEN_CLOUD" | "CLOUD_ONLY" | "DISABLED";
 type PrivacyLevel = "CLOUD_ALLOWED" | "CLOUD_FORBIDDEN" | "LOCAL_REQUIRED";
@@ -525,8 +526,11 @@ export function AiGatewayWizard() {
       )}
 
       {step === 4 && (
-        <section className="uwe-v2-card uwe-v2-section">
-          <h2>Modell pro Feature</h2>
+        <SettingsCollapsiblePanel
+          title="Modell pro Feature"
+          summary="Optionale Provider-/Modell-Overrides"
+          defaultOpen
+        >
           <p className="uwe-muted">
             Optional: Provider und Modell pro Feature überschreiben. Leer = Gateway-Standard.
           </p>
@@ -588,12 +592,15 @@ export function AiGatewayWizard() {
               })}
             </tbody>
           </table>
-        </section>
+        </SettingsCollapsiblePanel>
       )}
 
       {step === 5 && (
-        <section className="uwe-v2-card uwe-v2-section">
-          <h2>Privacy-Regeln</h2>
+        <SettingsCollapsiblePanel
+          title="Privacy-Regeln"
+          summary="Cloud-Freigaben pro Datenkategorie"
+          defaultOpen
+        >
           <p className="uwe-muted">
             Legt fest, welche Inhalte an Cloud-Provider gesendet werden dürfen.
             RTX wird immer bevorzugt — Cloud ist optionaler Fallback.
@@ -631,12 +638,11 @@ export function AiGatewayWizard() {
               </label>
             );
           })}
-        </section>
+        </SettingsCollapsiblePanel>
       )}
 
       {step === 6 && (
-        <section className="uwe-v2-card uwe-v2-section">
-          <h2>Budgets</h2>
+        <SettingsCollapsiblePanel title="Budgets" summary="Tages- und Monatslimits" defaultOpen>
           <p>
             Heute: ${data.budget.dailySpentUsd.toFixed(4)} /{" "}
             {data.budget.dailyLimitUsd != null ? `$${data.budget.dailyLimitUsd}` : "∞"}
@@ -679,12 +685,11 @@ export function AiGatewayWizard() {
               />
             </label>
           </div>
-        </section>
+        </SettingsCollapsiblePanel>
       )}
 
       {step === 7 && (
-        <section className="uwe-v2-card uwe-v2-section">
-          <h2>User-Freigaben</h2>
+        <SettingsCollapsiblePanel title="User-Freigaben" summary="Rollen und Cloud-Fallback pro Nutzer" defaultOpen>
           <p className="uwe-muted">
             Beispiel: Carina für KI-Chat freischalten — ohne Provider- oder Key-Zugriff.
           </p>
@@ -758,7 +763,7 @@ export function AiGatewayWizard() {
               </li>
             ))}
           </ul>
-        </section>
+        </SettingsCollapsiblePanel>
       )}
 
       {step === 8 && (

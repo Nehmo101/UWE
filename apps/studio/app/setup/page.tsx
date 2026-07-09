@@ -69,6 +69,10 @@ export default function SetupPage() {
               Zur Anmeldung
             </Link>
             {" · "}
+            <Link href="/admin/setup" className="text-primary hover:underline">
+              Owner-Einrichtung (nach Login)
+            </Link>
+            {" · "}
             <Link href="/forgot-password" className="text-primary hover:underline">
               Passwort vergessen?
             </Link>

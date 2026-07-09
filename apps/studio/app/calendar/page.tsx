@@ -18,6 +18,7 @@ import {
   createCalendarEventAction,
   createCalendarFeedAction,
   deleteCalendarEventAction,
+  syncCalendarFeedAction,
   updateCalendarEventAction,
 } from "../integration-actions";
 import {
@@ -237,6 +238,12 @@ export default async function CalendarPage({ searchParams }: Props) {
                       </span>
                     )}
                     {feed.syncError && <span className="uwe-notice-warn">{feed.syncError}</span>}
+                    <form action={syncCalendarFeedAction} style={{ marginTop: "0.5rem" }}>
+                      <input type="hidden" name="feedId" value={feed.id} />
+                      <button type="submit" className="uwe-v2-btn uwe-v2-btn-sm">
+                        Jetzt synchronisieren
+                      </button>
+                    </form>
                   </li>
                 ))}
               </ul>

@@ -36,6 +36,15 @@ function parseOptionalText(value: FormDataEntryValue | null): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function parseGithubIssueUrl(value: FormDataEntryValue | null): string | null {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return null;
+  if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/\d+/.test(trimmed)) {
+    throw new Error("GitHub-Issue-URL muss https://github.com/owner/repo/issues/123 sein.");
+  }
+  return trimmed;
+}
+
 function buildRedirectPath(
   bugId?: string,
   filters?: { status?: string | null; severity?: string | null },
@@ -72,6 +81,8 @@ export async function createBugReportAction(formData: FormData): Promise<void> {
   const user = await getCurrentAuthUser();
   const filters = readFilters(formData);
 
+  const githubIssueUrl = parseGithubIssueUrl(formData.get("githubIssueUrl"));
+
   const report = await bugs().createReport({
     title,
     description: String(formData.get("description") ?? ""),
@@ -79,6 +90,7 @@ export async function createBugReportAction(formData: FormData): Promise<void> {
     module: parseOptionalText(formData.get("module")),
     screenshotAssetId: parseOptionalText(formData.get("screenshotAssetId")),
     reporterUserId: user?.id ?? null,
+    metadata: githubIssueUrl ? { githubIssueUrl } : null,
   });
 
   revalidatePath("/bugs");
@@ -94,6 +106,7 @@ export async function updateBugReportAction(formData: FormData): Promise<void> {
   }
 
   const filters = readFilters(formData);
+  const githubIssueUrl = parseGithubIssueUrl(formData.get("githubIssueUrl"));
 
   await bugs().updateReport(id, {
     title: String(formData.get("title") ?? "").trim(),
@@ -101,6 +114,7 @@ export async function updateBugReportAction(formData: FormData): Promise<void> {
     severity: parseSeverity(formData.get("severity")),
     module: parseOptionalText(formData.get("module")),
     screenshotAssetId: parseOptionalText(formData.get("screenshotAssetId")),
+    metadata: { githubIssueUrl },
   });
 
   revalidatePath("/bugs");

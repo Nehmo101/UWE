@@ -263,8 +263,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
         <>
           <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
             Vollständige Diagnose für UWE, Datenbank, Storage, Auth, Mail, Brain, RTX-Inference,
-            Embeddings und Jobs — ohne Secrets.{" "}
-            <Link href="/admin/status">Erweiterte Karten (RTX, Mail, Brain) →</Link>
+            Embeddings und Jobs — ohne Secrets.
           </p>
 
           <div className="uwe-dashboard-grid">

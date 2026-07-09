@@ -41,8 +41,23 @@ export default async function KnowledgePage({ searchParams }: Props) {
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Wissensassistent" }]} />}>
       <PageHeader
         title="Wissensassistent"
-        summary={`Fragt dein Life-Brain — mit Quellenpflicht: jede Antwort zeigt Quellen und Unsicherheit („das weiß ich nicht sicher“, „stammt aus alter Notiz“). Nur lokal, nie Cloud.`}
+        summary="Life Brain, DnD-Brain und lokaler Q&A-Assistent — drei Einstiege, ein Knowledge-Bereich."
       />
+
+      <section className="uwe-stat-grid" style={{ marginBottom: "1.5rem" }}>
+        <Link href="/life-brain" className="uwe-stat-card" style={{ textDecoration: "none" }}>
+          <span className="uwe-stat-label">Life Brain</span>
+          <span className="uwe-dashboard-muted">Persönliche Dokumente & Fakten (RTX-only)</span>
+        </Link>
+        <Link href="/brain" className="uwe-stat-card" style={{ textDecoration: "none" }}>
+          <span className="uwe-stat-label">DnD Brain</span>
+          <span className="uwe-dashboard-muted">Kampagnen-Wissen pro Welt</span>
+        </Link>
+        <div className="uwe-stat-card">
+          <span className="uwe-stat-label">Wissensassistent</span>
+          <span className="uwe-dashboard-muted">Frage & Antwort mit Quellen (unten)</span>
+        </div>
+      </section>
 
       <section className="uwe-v2-section">
         <form method="get" style={{ display: "flex", gap: "0.5rem" }}>

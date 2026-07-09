@@ -67,7 +67,7 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
     >
       <PageHeader
         title="Einrichtung (Host & Owner)"
-        summary="Checkliste für Self-Hosting: Status, Secrets, Tests und Diagnose. Für Theme, Welten und erweiterte App-Optionen → Einstellungen."
+        summary="Checkliste für Self-Hosting: Status, Secrets, Tests und Diagnose. Laufende Betriebs-Konfiguration hier; einmaliges Erst-Setup unter /setup. Theme, Welten und erweiterte App-Optionen → Einstellungen."
         actions={
           <HealthBadge
             status={snapshot.ok ? "ok" : "degraded"}

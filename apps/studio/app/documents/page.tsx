@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   createDocumentTemplateService,
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
@@ -14,6 +15,8 @@ import {
   DocumentGeneratorPanel,
   type DocumentTemplateDto,
 } from "@/components/documents/DocumentGeneratorPanel";
+import { AdminListSearch } from "@/components/AdminListSearch";
+import { matchesAdminListQuery } from "@/src/lib/admin-list-search";
 import {
   createDocumentTemplateAction,
   deleteDocumentTemplateAction,
@@ -52,13 +55,21 @@ function groupTemplatesByCategory(
   return grouped;
 }
 
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   await requireStudioAccess();
+  const { q } = await searchParams;
 
   const service = createDocumentTemplateService(prisma);
   const templates = await service.listTemplates();
-  const templateDtos = templates.map(toDto);
-  const grouped = groupTemplatesByCategory(templates);
+  const filteredTemplates = templates.filter((template) =>
+    matchesAdminListQuery(q, [template.name, template.body, template.category]),
+  );
+  const templateDtos = filteredTemplates.map(toDto);
+  const grouped = groupTemplatesByCategory(filteredTemplates);
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Dokumente" }]} />}>
@@ -66,6 +77,14 @@ export default async function DocumentsPage() {
         title="Dokumentengenerator"
         summary="Vorlagen für Verträge, Anleitungen und Checklisten — mit Platzhaltern füllen und Text erzeugen."
       />
+
+      <Suspense fallback={null}>
+        <AdminListSearch placeholder="Vorlagen nach Name oder Inhalt filtern…" />
+      </Suspense>
+
+      {q?.trim() && filteredTemplates.length === 0 ? (
+        <p className="uwe-dashboard-muted">Keine Vorlagen für „{q.trim()}“.</p>
+      ) : null}
 
       <DocumentGeneratorPanel templates={templateDtos} />
 

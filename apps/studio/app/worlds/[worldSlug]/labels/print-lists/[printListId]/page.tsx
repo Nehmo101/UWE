@@ -14,6 +14,7 @@ import {
   summarizePrintList,
 } from "@uwe/database/server";
 import { PrintListEditor } from "@/components/PrintListEditor";
+import { PrintListPreviewPanel } from "@/components/PrintListPreviewPanel";
 import {
   deletePrintListAction,
   setPrintListStatusAction,
@@ -161,6 +162,10 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
           Diese Druckliste enthält Labels mit DM-only Inhalten.
         </p>
       )}
+
+      <PrintListPreviewPanel
+        exportUrl={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=html`}
+      />
 
       <section className="uwe-panel">
         <h2>RTX Label-Druck</h2>

@@ -29,7 +29,7 @@ export interface HomelabCockpitData {
   alerts: HomelabTodayAlerts;
 }
 
-async function probePortalHealth(env: NodeJS.ProcessEnv = process.env): Promise<{
+export async function probePortalHealth(env: NodeJS.ProcessEnv = process.env): Promise<{
   ok: boolean;
   message: string;
 }> {
@@ -137,5 +137,3 @@ export async function getHomelabCockpitData(
     alerts,
   };
 }
-
-export { probePortalHealth };

@@ -1345,7 +1345,7 @@ export class AuthService {
     } else if (options?.gameSessionId) {
       notes = await this.playerNotes.listForGameSession(worldSlug, options.gameSessionId);
     } else if (ctx.user && ctx.effectiveRole === "player") {
-      notes = await this.playerNotes.listByUser(worldSlug, ctx.user.id, {
+      notes = await this.playerNotes.listByWorld(worldSlug, {
         campaignId: options?.campaignId,
       });
     } else {

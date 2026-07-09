@@ -137,8 +137,9 @@ export default async function AgentJobsPage() {
           </button>
         </form>
         <p className="uwe-hint">
-          Workflow: <code>.github/workflows/cursor-agent.yml</code> · Fortschritt unter{" "}
-          <Link href="/jobs">Jobs</Link>
+          Workflow: <code>.github/workflows/cursor-agent.yml</code> · Dispatch-Status auch in der{" "}
+          <Link href="/jobs">Hintergrund-Job-Warteschlange</Link> (Typ Agent-Job) · Verwaltung und
+          Presets auf dieser Seite.
         </p>
         <p className="uwe-notice uwe-notice-warn" style={{ marginTop: "0.75rem" }}>
           Sicherheit: Prompts werden an GitHub Actions oder Cursor Cloud gesendet. Keine

@@ -182,6 +182,14 @@ export function RtxConnectorClient({
     await loadWorkflow();
   }, [loadWorkflow]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void reload();
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [reload]);
+
   const createConnector = useCallback(async () => {
     setBusy(true);
     setError(null);

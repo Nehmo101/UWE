@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
+import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import { canCreatePlayerNote } from "@uwe/auth";
 import { PlayerNoteStatusBadge } from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
@@ -30,11 +31,13 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { name: true, guestCommentsEnabled: true },
+      select: { id: true, name: true, guestCommentsEnabled: true },
     });
     if (!world) {
       notFound();
     }
+
+    assertPortalCanReadWorld(ctx, world.id);
 
     notes = await auth.listPlayerNotesForViewer(worldSlug, ctx);
     canComment = canCreatePlayerNote(ctx, world.guestCommentsEnabled);

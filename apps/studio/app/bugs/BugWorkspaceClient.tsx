@@ -22,6 +22,7 @@ export interface BugReportDto {
   module: string | null;
   screenshotAssetId: string | null;
   reporterUserId: string | null;
+  githubIssueUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -120,6 +121,15 @@ function BugDetailPanel({
           </p>
         ) : null}
 
+        {report.githubIssueUrl ? (
+          <p className="uwe-dashboard-muted">
+            GitHub:{" "}
+            <Link href={report.githubIssueUrl} target="_blank" rel="noreferrer">
+              Issue öffnen
+            </Link>
+          </p>
+        ) : null}
+
         {report.description ? (
           <p className="uwe-idea-detail-body">{report.description}</p>
         ) : (
@@ -177,6 +187,15 @@ function BugDetailPanel({
         <label>
           Modul / Bereich
           <input name="module" defaultValue={report.module ?? ""} />
+        </label>
+        <label>
+          GitHub Issue
+          <input
+            name="githubIssueUrl"
+            type="url"
+            defaultValue={report.githubIssueUrl ?? ""}
+            placeholder="https://github.com/owner/repo/issues/123"
+          />
         </label>
         <BugScreenshotUpload initialAssetId={report.screenshotAssetId} />
         <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">

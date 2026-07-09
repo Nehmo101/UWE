@@ -242,8 +242,15 @@ export default async function ContractsPage({ searchParams }: Props) {
           />
         ) : (
           <div className="uwe-today-card-list">
-            {contracts.map((contract) => (
+            {contracts.map((contract) => {
+              const contractAlerts = buildContractAlerts([contract]);
+              return (
               <article key={contract.id} className="uwe-today-card">
+                {contractAlerts.length > 0 ? (
+                  <p className="uwe-notice uwe-notice-warn" style={{ marginBottom: "0.5rem" }}>
+                    {contractAlerts.map((alert) => alert.message).join(" · ")}
+                  </p>
+                ) : null}
                 <form action={updateContractAction} className="uwe-brain-create-form">
                   <input type="hidden" name="id" value={contract.id} />
                   <label>
@@ -296,6 +303,18 @@ export default async function ContractsPage({ searchParams }: Props) {
                     />
                   </label>
                   <label>
+                    Kündigen bis
+                    <input
+                      name="cancelByDate"
+                      type="date"
+                      defaultValue={
+                        contract.cancelByDate
+                          ? contract.cancelByDate.toISOString().slice(0, 10)
+                          : ""
+                      }
+                    />
+                  </label>
+                  <label>
                     Notizen
                     <textarea name="notes" rows={2} defaultValue={contract.notes} />
                   </label>
@@ -315,7 +334,8 @@ export default async function ContractsPage({ searchParams }: Props) {
                   </button>
                 </form>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

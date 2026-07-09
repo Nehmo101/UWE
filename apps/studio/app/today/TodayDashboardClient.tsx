@@ -122,7 +122,7 @@ export function TodayDashboardClient({
               </div>
             )}
             <p className="uwe-dashboard-muted">
-              <Link href="/system?tab=diagnose">Details im Systemstatus →</Link>
+              <Link href="/system?tab=diagnose">Details in der System-Diagnose →</Link>
             </p>
           </section>
         );

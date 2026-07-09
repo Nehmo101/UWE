@@ -17,6 +17,7 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { applyInspectorFixAction } from "../../../inspector-actions";
+import { InspectorDiagnosePanel } from "@/components/InspectorDiagnosePanel";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -151,6 +152,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
           { label: "Aktive Share-Links", value: activeShareLinks.length },
         ]}
       />
+
+      <InspectorDiagnosePanel worldSlug={worldSlug} />
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Portal-Sicherheit</h2>

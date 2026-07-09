@@ -100,6 +100,19 @@ describe("security leaks — atlas portal visibility (three-tier: map + node + f
     assert.match(nodePage, /["']portal["']/);
   });
 
+  it("fetches portal atlas index through the portal filter", () => {
+    const indexPage = read("apps/portal/app/auth/worlds/[worldSlug]/atlas/page.tsx");
+    assert.match(indexPage, /getAtlasForContext/);
+    assert.match(indexPage, /["']portal["']/);
+  });
+
+  it("portal graph API builds viewer-filtered graph data", () => {
+    const graphRoute = read("apps/portal/app/api/worlds/[worldSlug]/graph/route.ts");
+    assert.match(graphRoute, /buildWorldGraphForViewer/);
+    const graphPage = read("apps/portal/app/auth/worlds/[worldSlug]/graph/page.tsx");
+    assert.match(graphPage, /assertPortalCanReadWorld/);
+  });
+
   it("single-file runtime never renders local/demo data in view mode (only server-injected, filtered docs)", () => {
     const runtime = read("packages/static-export/static/atlas.html");
     // View mode must short-circuit to an empty world BEFORE any localStorage/demo read …

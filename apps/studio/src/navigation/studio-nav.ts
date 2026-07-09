@@ -354,7 +354,7 @@ export const TOOLS_NAV: NavGroup[] = [
       },
       {
         id: "tools-agent-jobs",
-        label: "Agent Jobs",
+        label: "Cursor Agent Jobs",
         href: "/admin/agent-jobs",
         icon: "bot",
         group: TOOLS_AUTOMATION,
@@ -366,7 +366,7 @@ export const TOOLS_NAV: NavGroup[] = [
       },
       {
         id: "tools-jobs",
-        label: "Jobs",
+        label: "Hintergrund-Jobs",
         href: "/jobs",
         icon: "list-checks",
         group: TOOLS_AUTOMATION,

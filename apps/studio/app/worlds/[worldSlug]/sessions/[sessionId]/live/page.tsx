@@ -10,6 +10,8 @@ import {
   sessionLiveKindLabel,
 } from "@uwe/database/server";
 import { SessionLivePanel } from "@/components/SessionLivePanel";
+import { SessionLiveSoundboard } from "@/components/SessionLiveSoundboard";
+import type { SoundboardButtonView } from "@uwe/shared-ui";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
@@ -33,6 +35,22 @@ export default async function SessionLivePage({ params }: Props) {
   const session = await auth.getGameSessionForDm(worldSlug, sessionId);
   const liveEntries = session
     ? await createSessionLiveService(db).listEntries(sessionId)
+    : [];
+  const soundboardButtons: SoundboardButtonView[] = session
+    ? (await auth.listSoundboardForDm(worldSlug)).map((button) => ({
+        id: button.id,
+        title: button.title,
+        sourceType: button.sourceType,
+        sourceUrl: button.sourceUrl,
+        assetId: button.assetId,
+        assetFileUrl: button.assetId ? `/api/assets/${button.assetId}/file` : null,
+        thumbnail: button.thumbnail,
+        volume: button.volume,
+        loop: button.loop,
+        tags: button.tags,
+        visibility: button.visibility,
+        linkedPages: button.linkedPages.map((page) => ({ title: page.title })),
+      }))
     : [];
   await db.$disconnect();
 
@@ -98,6 +116,8 @@ export default async function SessionLivePage({ params }: Props) {
         linkedPages={linkedPages}
         entries={entryViews}
       />
+
+      <SessionLiveSoundboard worldSlug={worldSlug} buttons={soundboardButtons} />
     </WorldShell>
   );
 }

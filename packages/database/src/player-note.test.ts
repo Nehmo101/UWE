@@ -187,6 +187,33 @@ describe("UWE player notes", () => {
     await db.$disconnect();
   });
 
+  it("world-level list includes accepted party notes for other players", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const notes = createPlayerNoteService(databaseUrl);
+
+    const partyNote = await notes.create({
+      worldId: (await createUweRepository(databaseUrl).getWorldBySlug(worldSlug))!.id,
+      campaignId,
+      userId: playerUserId,
+      content: "Party-visible scouting report.",
+      status: "accepted",
+      visibility: "party",
+    });
+
+    const otherCtx = await auth.buildAccessContextForWorld(worldSlug, {
+      userId: otherPlayerUserId,
+    });
+    assert.ok(otherCtx);
+
+    const worldNotes = await auth.listPlayerNotesForViewer(worldSlug, otherCtx);
+    assert.ok(worldNotes.some((note) => note.id === partyNote.id));
+    assert.ok(!worldNotes.some((note) => note.id === privateNoteId));
+    assert.ok(!worldNotes.some((note) => note.id === submittedNoteId));
+
+    await db.$disconnect();
+  });
+
   it("deleted notes do not appear in lists", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);

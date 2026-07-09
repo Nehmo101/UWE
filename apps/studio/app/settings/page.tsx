@@ -977,8 +977,8 @@ export default async function SettingsPage({ searchParams }: Props) {
                 <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system?tab=diagnose">
                   System-Diagnose
                 </Link>
-                <Link className="uwe-v2-btn" href="/admin/status">
-                  Erweiterte Karten
+                <Link className="uwe-v2-btn" href="/system">
+                  System-Hub
                 </Link>
                 <Link className="uwe-v2-btn" href="/system/rtx-connector">
                   RTX Connector

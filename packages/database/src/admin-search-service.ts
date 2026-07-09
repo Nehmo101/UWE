@@ -11,6 +11,12 @@ export const ADMIN_SEARCH_ENTITY_TYPES = [
   "personal_brain_document",
   "personal_brain_fact",
   "dev_idea",
+  "document_template",
+  "scan_document",
+  "prompt_template",
+  "bug_report",
+  "shopping_list",
+  "mail_template",
 ] as const;
 
 export type AdminSearchEntityType = (typeof ADMIN_SEARCH_ENTITY_TYPES)[number];
@@ -24,6 +30,12 @@ export const ADMIN_SEARCH_ENTITY_LABELS: Record<AdminSearchEntityType, string> =
   personal_brain_document: "Life Brain",
   personal_brain_fact: "Life Brain Fakt",
   dev_idea: "Dev-Idee",
+  document_template: "Dokumentenvorlage",
+  scan_document: "Scan Inbox",
+  prompt_template: "Prompt",
+  bug_report: "Bug",
+  shopping_list: "Einkaufsliste",
+  mail_template: "Mail-Vorlage",
 };
 
 export interface AdminSearchOptions {
@@ -89,6 +101,18 @@ function hrefFor(type: AdminSearchEntityType, id: string): string {
       return `/life-brain/facts/${id}`;
     case "dev_idea":
       return `/ideas?idea=${id}`;
+    case "document_template":
+      return "/documents";
+    case "scan_document":
+      return `/scan-inbox/${id}`;
+    case "prompt_template":
+      return `/prompts/${id}`;
+    case "bug_report":
+      return "/bugs";
+    case "shopping_list":
+      return `/kitchen/shopping?list=${id}`;
+    case "mail_template":
+      return "/mail";
   }
 }
 
@@ -272,6 +296,172 @@ export async function searchAdminEntities(
         snippet: snippetFrom(idea.body, query),
         href: hrefFor("dev_idea", idea.id),
         group: "Persönlich · Dev-Ideen",
+        score,
+      });
+    }
+  }
+
+  if (!entityFilter || entityFilter === "document_template") {
+    const templates = await db.documentTemplate.findMany({
+      where: {
+        OR: [
+          { name: { contains: query } },
+          { body: { contains: query } },
+        ],
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: perTypeLimit,
+    });
+    for (const template of templates) {
+      const score = bestScore([template.name, template.body], query);
+      if (score <= 0) continue;
+      results.push({
+        id: template.id,
+        entityType: "document_template",
+        title: template.name,
+        snippet: snippetFrom(template.body, query),
+        href: hrefFor("document_template", template.id),
+        group: "Organisation · Dokumente",
+        score,
+      });
+    }
+  }
+
+  if (!entityFilter || entityFilter === "scan_document") {
+    const scans = await db.scanDocument.findMany({
+      where: {
+        OR: [
+          { title: { contains: query } },
+          { ocrText: { contains: query } },
+          { storageKey: { contains: query } },
+        ],
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: perTypeLimit,
+    });
+    for (const scan of scans) {
+      const score = bestScore([scan.title, scan.ocrText, scan.storageKey], query);
+      if (score <= 0) continue;
+      results.push({
+        id: scan.id,
+        entityType: "scan_document",
+        title: scan.title || "Scan",
+        snippet: snippetFrom(scan.ocrText, query),
+        href: hrefFor("scan_document", scan.id),
+        group: "Organisation · Scan Inbox",
+        score,
+      });
+    }
+  }
+
+  if (!entityFilter || entityFilter === "prompt_template") {
+    const prompts = await db.promptTemplate.findMany({
+      where: {
+        OR: [
+          { title: { contains: query } },
+          { description: { contains: query } },
+          { body: { contains: query } },
+        ],
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: perTypeLimit,
+    });
+    for (const prompt of prompts) {
+      const score = bestScore([prompt.title, prompt.description, prompt.body], query);
+      if (score <= 0) continue;
+      results.push({
+        id: prompt.id,
+        entityType: "prompt_template",
+        title: prompt.title,
+        snippet: snippetFrom(prompt.description || prompt.body, query),
+        href: hrefFor("prompt_template", prompt.id),
+        group: "AI · Prompt-Bibliothek",
+        score,
+      });
+    }
+  }
+
+  if (!entityFilter || entityFilter === "bug_report") {
+    const bugs = await db.bugReport.findMany({
+      where: {
+        OR: [
+          { title: { contains: query } },
+          { description: { contains: query } },
+          { module: { contains: query } },
+        ],
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: perTypeLimit,
+    });
+    for (const bug of bugs) {
+      const score = bestScore([bug.title, bug.description, bug.module], query);
+      if (score <= 0) continue;
+      results.push({
+        id: bug.id,
+        entityType: "bug_report",
+        title: bug.title,
+        snippet: snippetFrom(bug.description, query),
+        href: hrefFor("bug_report", bug.id),
+        group: "System · Bugs",
+        score,
+      });
+    }
+  }
+
+  if (!entityFilter || entityFilter === "shopping_list") {
+    const lists = await db.shoppingList.findMany({
+      where: {
+        OR: [
+          { title: { contains: query } },
+          { items: { some: { name: { contains: query } } } },
+        ],
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: perTypeLimit,
+      include: { items: { take: 3, orderBy: { sortIndex: "asc" } } },
+    });
+    for (const list of lists) {
+      const itemNames = list.items.map((item) => item.name);
+      const score = bestScore([list.title, ...itemNames], query);
+      if (score <= 0) continue;
+      results.push({
+        id: list.id,
+        entityType: "shopping_list",
+        title: list.title,
+        snippet: itemNames.length > 0 ? `Enthält: ${itemNames.join(", ")}` : null,
+        href: hrefFor("shopping_list", list.id),
+        group: "Werkzeuge · Küche",
+        score,
+      });
+    }
+  }
+
+  if (!entityFilter || entityFilter === "mail_template") {
+    const mailTemplates = await db.mailTemplate.findMany({
+      where: {
+        OR: [
+          { name: { contains: query } },
+          { description: { contains: query } },
+          { subject: { contains: query } },
+          { bodyText: { contains: query } },
+        ],
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: perTypeLimit,
+    });
+    for (const template of mailTemplates) {
+      const score = bestScore(
+        [template.name, template.description, template.subject, template.bodyText],
+        query,
+      );
+      if (score <= 0) continue;
+      results.push({
+        id: template.id,
+        entityType: "mail_template",
+        title: template.name,
+        snippet: snippetFrom(template.subject || template.description, query),
+        href: hrefFor("mail_template", template.id),
+        group: "Organisation · Mail",
         score,
       });
     }

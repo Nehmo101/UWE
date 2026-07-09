@@ -519,6 +519,29 @@ export async function deleteCalendarEventAction(formData: FormData) {
   revalidatePath("/calendar");
 }
 
+export async function syncCalendarFeedAction(formData: FormData) {
+  const calConfig = resolveCalendarConfig();
+  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
+
+  await requireStudioActionAuth();
+
+  const feedId = String(formData.get("feedId") ?? "");
+  if (!feedId) throw new Error("Feed-ID fehlt.");
+
+  const calendar = createCalendarService(prisma);
+  const feed = await calendar.getFeed(feedId);
+  if (!feed) throw new Error("Feed nicht gefunden.");
+
+  const jobs = createJobService(prisma);
+  const job = await jobs.enqueue({
+    type: "calendar_sync",
+    title: `Kalender-Sync: ${feed.name}`,
+    payload: { feedId: feed.id },
+  });
+  void dispatchJob(job.id);
+  revalidatePath("/calendar");
+}
+
 export async function addDndBeyondReferenceAction(formData: FormData) {
   await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug") ?? "");

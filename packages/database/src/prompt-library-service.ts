@@ -96,12 +96,35 @@ function toRecord(row: {
 export class PromptLibraryService {
   constructor(private readonly db: PrismaClient) {}
 
-  async list(category?: PromptTemplateCategory): Promise<PromptTemplateRecord[]> {
+  async list(options?: {
+    category?: PromptTemplateCategory;
+    search?: string;
+    tag?: string;
+  }): Promise<PromptTemplateRecord[]> {
     const rows = await this.db.promptTemplate.findMany({
-      where: category ? { category } : undefined,
-      orderBy: [{ updatedAt: "desc" }],
+      where: {
+        ...(options?.category ? { category: options.category } : {}),
+        ...(options?.search
+          ? {
+              OR: [
+                { title: { contains: options.search } },
+                { description: { contains: options.search } },
+                { body: { contains: options.search } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ title: "asc" }, { updatedAt: "desc" }],
     });
-    return rows.map(toRecord);
+
+    let records = rows.map(toRecord);
+    if (options?.tag) {
+      const needle = options.tag.trim().toLowerCase();
+      records = records.filter((record) =>
+        record.tags.some((tag) => tag.toLowerCase().includes(needle)),
+      );
+    }
+    return records;
   }
 
   async get(id: string): Promise<PromptTemplateRecord | null> {

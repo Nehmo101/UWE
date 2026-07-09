@@ -310,6 +310,28 @@ export function TagAdminWorkspace() {
           </section>
 
           <section className="uwe-v2-card uwe-v2-section">
+            <h2 className="uwe-v2-section-title">
+              Ohne Referenzen ({data.inventory.filter((entry) => entry.count === 0).length})
+            </h2>
+            <p className="uwe-dashboard-muted">
+              Tags im Inventar ohne EntityTag-Verknüpfungen — Kandidaten zum Entfernen nach manuellem
+              Review.
+            </p>
+            {data.inventory.filter((entry) => entry.count === 0).length > 0 && (
+              <ul>
+                {data.inventory
+                  .filter((entry) => entry.count === 0)
+                  .slice(0, 30)
+                  .map((entry) => (
+                    <li key={`orphan-${entry.tag}`}>
+                      <strong>{entry.tag}</strong>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="uwe-v2-card uwe-v2-section">
             <h2 className="uwe-v2-section-title">Tag-Inventar ({data.inventory.length})</h2>
             <table className="uwe-table">
               <thead>

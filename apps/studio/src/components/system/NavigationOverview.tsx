@@ -4,6 +4,7 @@ import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { NavItem } from "@uwe/shared-utils/navigation";
 import type { NavAudit, NavAuditEntry } from "../../navigation/inspect-navigation";
+import { readHiddenNavIds, toggleHiddenNavId } from "../../lib/nav-visibility-prefs";
 import { DataTable } from "../ui/data-table";
 import { NavIcon } from "../ui/icon";
 import { Alert, EmptyState } from "../ui/states";
@@ -20,7 +21,11 @@ const STATUS_LABEL: Record<NavItem["status"], string> = {
   hidden: "Versteckt",
 };
 
-const columns: ColumnDef<NavItem>[] = [
+function buildColumns(
+  hiddenIds: Set<string>,
+  onToggle: (id: string, hidden: boolean) => void,
+): ColumnDef<NavItem>[] {
+  return [
   {
     accessorKey: "icon",
     header: "",
@@ -45,10 +50,44 @@ const columns: ColumnDef<NavItem>[] = [
     header: "Status",
     cell: ({ row }) => STATUS_LABEL[row.original.status],
   },
+  {
+    id: "sidebar",
+    header: "Sidebar",
+    enableSorting: false,
+    cell: ({ row }) => {
+      const hidden = hiddenIds.has(row.original.id);
+      return (
+        <label className="inline-flex items-center gap-1 text-xs">
+          <input
+            type="checkbox"
+            checked={!hidden}
+            onChange={(event) => onToggle(row.original.id, !event.target.checked)}
+          />
+          {hidden ? "Ausgeblendet" : "Sichtbar"}
+        </label>
+      );
+    },
+  },
   { accessorKey: "source", header: "Quelle" },
-];
+  ];
+}
 
 export function NavigationOverview({ items, audit }: NavigationOverviewProps) {
+  const [hiddenIds, setHiddenIds] = React.useState<Set<string>>(() => new Set());
+
+  React.useEffect(() => {
+    setHiddenIds(readHiddenNavIds());
+    const onChange = () => setHiddenIds(readHiddenNavIds());
+    window.addEventListener("uwe:nav-visibility-changed", onChange);
+    return () => window.removeEventListener("uwe:nav-visibility-changed", onChange);
+  }, []);
+
+  const handleToggle = React.useCallback((id: string, hidden: boolean) => {
+    setHiddenIds(toggleHiddenNavId(id, hidden));
+  }, []);
+
+  const columns = React.useMemo(() => buildColumns(hiddenIds, handleToggle), [hiddenIds, handleToggle]);
+  const visibleCount = items.filter((item) => !hiddenIds.has(item.id)).length;
   const hasWarnings =
     audit.deadLinks.length > 0 ||
     audit.promotable.length > 0 ||
@@ -63,6 +102,11 @@ export function NavigationOverview({ items, audit }: NavigationOverviewProps) {
         <p className="text-sm text-muted-foreground">
           Zentrale Navigation als Quelle für Sidebar, Mobile-Nav, Breadcrumbs und Command-Palette.
           Warnungen zeigen tote Links, geplante Routen, fehlende Nav-Einträge und Duplikate.
+          Ausgeblendete Einträge werden in der Sidebar ausgeblendet (lokal im Browser gespeichert).
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Live-Vorschau: <strong>{visibleCount}</strong> von {items.length} Einträgen sichtbar in der
+          Sidebar.
         </p>
       </header>
 

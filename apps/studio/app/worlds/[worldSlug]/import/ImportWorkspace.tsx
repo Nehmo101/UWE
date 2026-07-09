@@ -10,6 +10,7 @@ import type {
   ImportStatus,
 } from "@uwe/knoteforge-import";
 import { waitForJob } from "@/src/lib/poll-job";
+import { JobProgressBar } from "@/components/JobProgressBar";
 import {
   completeImportCentralJobAction,
   failImportCentralJobAction,
@@ -120,6 +121,10 @@ export function ImportWorkspace({
   const [result, setResult] = useState<ImportExecuteResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<{
+    progress: number | null;
+    label: string | null;
+  } | null>(null);
   const [autoResolveSlugConflicts, setAutoResolveSlugConflicts] = useState(true);
   const [allowUpdates, setAllowUpdates] = useState(true);
 
@@ -237,6 +242,7 @@ export function ImportWorkspace({
 
     setLoading(true);
     setError(null);
+    setImportProgress(null);
 
     try {
       if (jobId) {
@@ -271,7 +277,14 @@ export function ImportWorkspace({
       }
 
       if (response.status === 202 && data.job?.id) {
-        const job = await waitForJob(data.job.id);
+        const job = await waitForJob(data.job.id, {
+          onPoll: (snapshot) => {
+            setImportProgress({
+              progress: snapshot.progress ?? null,
+              label: snapshot.progressLabel ?? "Import läuft…",
+            });
+          },
+        });
         const jobPayload = job.result as
           | { result?: ImportExecuteResult; undoEntryId?: string | null }
           | ImportExecuteResult
@@ -346,6 +359,7 @@ export function ImportWorkspace({
       setError(message);
     } finally {
       setLoading(false);
+      setImportProgress(null);
     }
   }, [
     allowUpdates,
@@ -602,6 +616,13 @@ export function ImportWorkspace({
               <a href="/backup">Backup erstellen</a>. Ein Rollback ist sonst nur über ein
               vorhandenes Backup möglich.
             </p>
+
+            {loading && importProgress ? (
+              <JobProgressBar
+                progress={importProgress.progress ?? 5}
+                label={importProgress.label}
+              />
+            ) : null}
 
             <div className="uwe-form-actions">
               <button

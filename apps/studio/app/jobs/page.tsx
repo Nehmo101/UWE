@@ -72,7 +72,7 @@ export default async function JobsPage() {
     >
       <PageHeader
         title="Job-Warteschlange"
-        summary="Mail, KI, Embeddings, Import und Backup laufen als Hintergrund-Jobs — die UI bleibt reaktionsfähig."
+        summary="Mail, KI, Embeddings, Import, Backup und Agent-Dispatch — alle Hintergrund-Jobs an einem Ort. Cursor-Agent-Verwaltung: /admin/agent-jobs."
       />
 
       <CampaignJobPresetsPanel

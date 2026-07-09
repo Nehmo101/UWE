@@ -1,13 +1,18 @@
 import {
+  buildHomelabServiceStatuses,
   buildNextActions,
   createSettingsService,
   getMigrationStatus,
+  getSecurityDashboardStatus,
   prisma,
   UWE_VERSION,
+  type HomelabServiceStatus,
   type NextActionItem,
 } from "@uwe/database/server";
 import { validateUweEnvironment, type EnvValidationIssue } from "@uwe/auth";
 import { getChangelogReleases, type ChangelogRelease } from "./changelog";
+import { getAdminDashboardStatus } from "./admin-dashboard-status";
+import { probePortalHealth } from "./homelab-dashboard";
 
 export interface StartklarData {
   currentVersion: string;
@@ -26,6 +31,7 @@ export interface StartklarData {
     actions: NextActionItem[];
   };
   otherActions: NextActionItem[];
+  dependencies: HomelabServiceStatus[];
 }
 
 /**
@@ -58,10 +64,42 @@ export async function getStartklarData(): Promise<StartklarData> {
   const settings = await createSettingsService(prisma).getSettings();
   const seenVersion = settings.app.startklarSeenVersion ?? null;
 
-  const [migration, nextActions] = await Promise.all([
+  const [migration, nextActions, adminStatus, securityStatus, portalProbe] = await Promise.all([
     getMigrationStatus(prisma),
     buildNextActions(prisma),
+    getAdminDashboardStatus(prisma, { useMockInference: true }),
+    getSecurityDashboardStatus(prisma),
+    probePortalHealth(),
   ]);
+
+  const dependencies = buildHomelabServiceStatuses({
+    system: adminStatus.system,
+    studioSecurity: adminStatus.studioSecurity,
+    rtxExposure: adminStatus.rtxExposure,
+    rtx: {
+      ready: adminStatus.rtx.ready,
+      online: adminStatus.rtx.online,
+      message: adminStatus.rtx.message,
+      urlAllowed: adminStatus.rtx.urlAllowed,
+      source: adminStatus.rtx.source,
+      connectorDegraded: adminStatus.rtx.connectorDegraded,
+      connectorOnlineCount: adminStatus.rtx.connectorOnlineCount,
+    },
+    inference: {
+      enabled: adminStatus.inference.enabled,
+      online: adminStatus.inference.online,
+      message: adminStatus.inference.message,
+      provider: adminStatus.inference.provider,
+    },
+    backup: {
+      writable: adminStatus.system.storage.backupsWritable,
+      count: securityStatus.backup.backupCount,
+      lastAt: securityStatus.backup.lastBackupAt,
+      message: securityStatus.backup.message,
+    },
+    portalProbe,
+    timestamp: new Date().toISOString(),
+  });
 
   const newReleases = selectNewReleases(getChangelogReleases(), seenVersion);
   const backupActions = nextActions.filter((action) => action.id.includes("backup"));
@@ -86,6 +124,7 @@ export async function getStartklarData(): Promise<StartklarData> {
       actions: backupActions,
     },
     otherActions,
+    dependencies,
   };
 }
 

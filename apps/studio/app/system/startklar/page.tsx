@@ -76,6 +76,44 @@ export default async function SystemStartklarPage() {
         </section>
 
         <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">Abhängigkeiten</h2>
+          <ul className="flex flex-col gap-2 text-sm">
+            {data.dependencies.map((service) => (
+              <li key={service.id} className="flex flex-wrap items-baseline gap-2">
+                <span aria-hidden>{service.ok ? "✓" : service.severity === "warn" ? "⚠" : "✗"}</span>
+                <strong>{service.label}:</strong>
+                <span className="text-muted-foreground">{service.message}</span>
+                {service.id === "portal" ? (
+                  <Link href="/system/health" className="text-primary hover:underline">
+                    Health →
+                  </Link>
+                ) : null}
+                {service.id === "rtx_connector" || service.id === "ollama" ? (
+                  <Link href="/system/rtx-connector" className="text-primary hover:underline">
+                    RTX →
+                  </Link>
+                ) : null}
+                {service.id === "cloudflare_tunnel" ? (
+                  <Link href="/system/cloudflare" className="text-primary hover:underline">
+                    Cloudflare →
+                  </Link>
+                ) : null}
+                {service.id === "backup" ? (
+                  <Link href="/backup" className="text-primary hover:underline">
+                    Backup →
+                  </Link>
+                ) : null}
+                {service.id === "database" ? (
+                  <Link href="/admin/migrations" className="text-primary hover:underline">
+                    Migrationen →
+                  </Link>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="flex flex-col gap-2">
           <h2 className="text-lg font-semibold">Migrationsstatus</h2>
           {hasMigrationWork ? (
             <div className="text-sm">

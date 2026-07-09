@@ -9,6 +9,7 @@ import {
   createPrismaClient,
   createShareLinkService,
   getAppRepository,
+  isShareLinkActive,
 } from "@uwe/database/server";
 import { SharePasswordForm } from "@/src/components/SharePasswordForm";
 import { ShareGateMessage } from "@/src/components/ShareGateMessage";
@@ -37,6 +38,12 @@ async function resolveSharePageView(token: string, pageSlug: string) {
 
     if (!link) {
       return { kind: "not_found" as const };
+    }
+
+    if (!isShareLinkActive(link)) {
+      return link.enabled
+        ? { kind: "expired" as const, expiresAt: link.expiresAt }
+        : { kind: "disabled_link" as const };
     }
 
     if (isShareLinkPasswordRequired(link)) {
@@ -103,6 +110,27 @@ export default async function ShareLinkedPageView({ params }: Props) {
       <ShareGateMessage
         title="Freigabe deaktiviert"
         description="Öffentliche Freigaben sind derzeit systemweit deaktiviert."
+      />
+    );
+  }
+
+  if (result.kind === "expired") {
+    const expiryHint = result.expiresAt
+      ? ` Der Link war bis ${result.expiresAt.toLocaleDateString("de-DE")} gültig.`
+      : "";
+    return (
+      <ShareGateMessage
+        title="Link abgelaufen"
+        description={`Dieser Freigabe-Link ist nicht mehr gültig.${expiryHint} Bitte den Spielleiter um einen neuen Link.`}
+      />
+    );
+  }
+
+  if (result.kind === "disabled_link") {
+    return (
+      <ShareGateMessage
+        title="Link deaktiviert"
+        description="Der Spielleiter hat diesen Freigabe-Link deaktiviert. Bitte um einen neuen Link."
       />
     );
   }

@@ -117,7 +117,7 @@ export default async function AdminOverviewPage() {
           <Link className="uwe-v2-btn" href="/system/cloudflare">
             Cloudflare
           </Link>
-          <Link className="uwe-v2-btn" href="/admin/status">
+          <Link className="uwe-v2-btn" href="/system?tab=diagnose">
             Erweiterte Karten
           </Link>
         </div>

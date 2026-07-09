@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AI_TASK_LABELS } from "@uwe/ai-brain";
 import {
@@ -8,10 +7,10 @@ import {
   getAppRepository,
   type AiRunStatus,
 } from "@uwe/database/server";
+import { AiRunsTable } from "@/components/AiRunsTable";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
-import { formatStudioDate } from "@/src/lib/format";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -37,12 +36,25 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
 
   const statusFilters = [
     { label: "Alle", value: undefined },
+    { label: "Ausstehend", value: "pending" },
+    { label: "Läuft", value: "running" },
     { label: "Abgeschlossen", value: "completed" },
     { label: "Fehlgeschlagen", value: "failed" },
     { label: "Übernommen", value: "applied" },
     { label: "Verworfen", value: "discarded" },
   ];
   const runsBase = `/worlds/${worldSlug}/ai-runs`;
+
+  const serializedRuns = runs.map((run) => ({
+    id: run.id,
+    taskType: run.taskType,
+    status: run.status,
+    provider: run.provider,
+    model: run.model,
+    pageTitle: run.pageTitle,
+    durationMs: run.durationMs,
+    createdAt: run.createdAt.toISOString(),
+  }));
 
   return (
     <WorldShell
@@ -66,46 +78,14 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
     >
       <PageHeader
         title="AI Run History"
-        summary={`${total} gespeicherte KI-Läufe. Ergebnisse sind Vorschläge — nichts wird automatisch als Kanon übernommen.`}
+        summary={`${total} gespeicherte KI-Läufe. Ergebnisse sind Vorschläge — nichts wird automatisch als Kanon übernommen. Laufende Jobs aktualisieren sich automatisch.`}
       />
-      {runs.length === 0 ? (
-        <p className="uwe-v2-empty">Noch keine AI Runs für diese Welt.</p>
-      ) : (
-        <table className="uwe-page-table">
-          <thead>
-            <tr>
-              <th>Zeit</th>
-              <th>Aufgabe</th>
-              <th>Status</th>
-              <th>Provider / Modell</th>
-              <th>Seite</th>
-              <th>Dauer</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {runs.map((run) => (
-              <tr key={run.id}>
-                <td>{formatStudioDate(run.createdAt, "short")}</td>
-                <td>
-                  {AI_TASK_LABELS[run.taskType as keyof typeof AI_TASK_LABELS] ?? run.taskType}
-                </td>
-                <td>{AI_RUN_STATUS_LABELS[run.status]}</td>
-                <td>
-                  {run.provider}
-                  <br />
-                  <span className="uwe-meta">{run.model}</span>
-                </td>
-                <td>{run.pageTitle ?? "—"}</td>
-                <td>{run.durationMs != null ? `${run.durationMs} ms` : "—"}</td>
-                <td>
-                  <Link href={`/worlds/${worldSlug}/ai-runs/${run.id}`}>Details</Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <AiRunsTable
+        worldSlug={worldSlug}
+        initialRuns={serializedRuns}
+        taskLabels={AI_TASK_LABELS as Record<string, string>}
+        statusLabels={AI_RUN_STATUS_LABELS as Record<string, string>}
+      />
     </WorldShell>
   );
 }

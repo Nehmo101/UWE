@@ -43,6 +43,14 @@ export function BugReportForm({ filterStatus, filterSeverity }: BugReportFormPro
           <option value="Database" />
         </datalist>
       </label>
+      <label>
+        GitHub Issue (optional)
+        <input
+          name="githubIssueUrl"
+          type="url"
+          placeholder="https://github.com/owner/repo/issues/123"
+        />
+      </label>
       <BugScreenshotUpload />
       <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
         Bug melden

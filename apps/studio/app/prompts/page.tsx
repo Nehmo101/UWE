@@ -11,7 +11,7 @@ import { requireStudioAccess } from "@/src/lib/auth";
 import { createPromptAction } from "@/app/prompt-actions";
 
 interface Props {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; q?: string; tag?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -22,27 +22,66 @@ function isCategory(value: string | undefined): value is PromptTemplateCategory 
 
 export default async function PromptsPage({ searchParams }: Props) {
   await requireStudioAccess();
-  const { category } = await searchParams;
+  const { category, q, tag } = await searchParams;
   const filter = isCategory(category) ? category : undefined;
+  const search = q?.trim() || undefined;
+  const tagFilter = tag?.trim() || undefined;
 
-  const prompts = await createPromptLibraryService(prisma).list(filter);
+  const prompts = await createPromptLibraryService(prisma).list({
+    category: filter,
+    search,
+    tag: tagFilter,
+  });
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Prompt-Bibliothek" }]} />}>
       <PageHeader
         title="Prompt-Bibliothek"
-        summary="Prompts als eigene Objekte mit Kategorie und Variablen — ausfüllen, als Cursor/Claude-Prompt kopieren oder als Agent Job starten."
+        summary="Prompts als eigene Objekte mit Kategorie, Tags und Variablen — durchsuchbar und als Agent Job startbar."
       />
+
+      <form method="get" className="uwe-form" style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Suche</span>
+          <input
+            name="q"
+            defaultValue={search ?? ""}
+            placeholder="Titel, Beschreibung, Body…"
+            className="rounded border border-input bg-background px-3 py-2 text-sm"
+            style={{ minWidth: "14rem" }}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Tag</span>
+          <input
+            name="tag"
+            defaultValue={tagFilter ?? ""}
+            placeholder="z. B. refactor"
+            className="rounded border border-input bg-background px-3 py-2 text-sm"
+          />
+        </label>
+        {filter ? <input type="hidden" name="category" value={filter} /> : null}
+        <div className="flex items-end gap-2">
+          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+            Filtern
+          </button>
+          {(search || tagFilter || filter) && (
+            <Link href="/prompts" className="uwe-v2-btn">
+              Zurücksetzen
+            </Link>
+          )}
+        </div>
+      </form>
 
       <section className="uwe-v2-section">
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          <Link href="/prompts" className="uwe-v2-btn uwe-v2-btn-small">
+          <Link href="/prompts" className="uwe-v2-btn uwe-v2-btn-small" aria-current={!filter ? "true" : undefined}>
             Alle
           </Link>
           {PROMPT_CATEGORIES.map((cat) => (
             <Link
               key={cat}
-              href={`/prompts?category=${cat}`}
+              href={`/prompts?category=${cat}${search ? `&q=${encodeURIComponent(search)}` : ""}${tagFilter ? `&tag=${encodeURIComponent(tagFilter)}` : ""}`}
               className="uwe-v2-btn uwe-v2-btn-small"
               aria-current={filter === cat ? "true" : undefined}
             >
@@ -54,7 +93,7 @@ export default async function PromptsPage({ searchParams }: Props) {
 
       <section className="uwe-v2-section">
         {prompts.length === 0 ? (
-          <p className="uwe-dashboard-muted">Noch keine Prompts in dieser Kategorie.</p>
+          <p className="uwe-dashboard-muted">Keine Prompts für diesen Filter.</p>
         ) : (
           <ul className="uwe-today-card-list">
             {prompts.map((prompt) => (
@@ -65,6 +104,7 @@ export default async function PromptsPage({ searchParams }: Props) {
                 <p className="uwe-dashboard-muted">
                   <span className="uwe-badge">{PROMPT_CATEGORY_LABELS[prompt.category]}</span>{" "}
                   {prompt.variables.length > 0 ? `${prompt.variables.length} Variablen` : "keine Variablen"}
+                  {prompt.tags.length > 0 ? ` · Tags: ${prompt.tags.join(", ")}` : ""}
                   {prompt.description ? ` · ${prompt.description}` : ""}
                 </p>
               </li>

@@ -20,6 +20,8 @@ import {
   applyQuestStatusFromReviewAction,
   saveSessionRecapDraftAction,
 } from "@/app/session-live-actions";
+import { getInferenceStatus } from "@uwe/ai-brain";
+import { SessionRecapAiButton } from "@/components/SessionRecapAiButton";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
@@ -133,6 +135,7 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
   };
 
   const recapSuggestion = session.summaryDm?.trim() || buildRecapDraft(entries);
+  const inference = await getInferenceStatus();
 
   return (
     <WorldShell
@@ -243,6 +246,13 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
           </div>
         </form>
       </section>
+
+      <SessionRecapAiButton
+        worldSlug={worldSlug}
+        sessionId={sessionId}
+        rtxReady={inference.online}
+        rtxEnabled={inference.enabled}
+      />
     </WorldShell>
   );
 }

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  createLabelPrintQueueService,
   createLabelService,
   createPrintListService,
   getAppRepository,
+  LABEL_PRINT_QUEUE_STATUS_LABELS,
   LABEL_PRINT_STATUS_LABELS,
   PRINT_CENTER_TEMPLATE_SLUGS,
 } from "@uwe/database/server";
+import { PrintQueuePanel } from "@/components/PrintQueuePanel";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -23,10 +26,11 @@ export default async function PrintCenterPage({ params }: Props) {
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const [labels, templates, printLists] = await Promise.all([
+  const [labels, templates, printLists, jobs] = await Promise.all([
     labelService.listLabelsByWorld(worldSlug),
     labelService.listTemplates(world.id),
     printListService.listByWorld(worldSlug),
+    createLabelPrintQueueService().listRecent({ worldId: world.id, limit: 20 }),
   ]);
 
   const systemTemplates = templates.filter((template) => template.isSystem || !template.worldId);
@@ -34,6 +38,15 @@ export default async function PrintCenterPage({ params }: Props) {
   const featuredTemplates = systemTemplates.filter((template) => featuredSlugs.has(template.slug));
 
   const openPrintLists = printLists.filter((list) => list.status === "open");
+  const labelsHref = `/worlds/${worldSlug}/labels/print`;
+  const initialJobs = jobs.map((job) => ({
+    id: job.id,
+    title: job.title,
+    status: job.status,
+    statusLabel: LABEL_PRINT_QUEUE_STATUS_LABELS[job.status],
+    connectorName: job.connectorName ?? null,
+    createdAt: job.createdAt.toISOString(),
+  }));
 
   return (
     <WorldShell
@@ -70,9 +83,17 @@ export default async function PrintCenterPage({ params }: Props) {
           <span className="uwe-stat-label">Offene Drucklisten</span>
         </div>
         <div className="uwe-stat-card">
-          <span className="uwe-stat-value">{featuredTemplates.length}</span>
-          <span className="uwe-stat-label">Karten-Vorlagen</span>
+          <span className="uwe-stat-value">{jobs.length}</span>
+          <span className="uwe-stat-label">Jobs in Queue</span>
         </div>
+      </section>
+
+      <section className="uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Druckwarteschlange</h2>
+        <p className="uwe-dashboard-muted" style={{ marginBottom: "0.75rem" }}>
+          Laufende RTX-Druckjobs aktualisieren sich automatisch.
+        </p>
+        <PrintQueuePanel worldSlug={worldSlug} initialJobs={initialJobs} labelsHref={labelsHref} />
       </section>
 
       <section className="uwe-v2-section">
@@ -84,8 +105,8 @@ export default async function PrintCenterPage({ params }: Props) {
           <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/labels?tab=print-lists`}>
             Drucklisten
           </Link>
-          <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/labels?tab=templates`}>
-            Alle Vorlagen
+          <Link className="uwe-v2-btn" href={labelsHref}>
+            RTX-Druck
           </Link>
           <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/prepare-session`}>
             Session vorbereiten
