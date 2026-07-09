@@ -42,6 +42,23 @@ export const LABEL_PRINT_QUEUE_STATUS_LABELS: Record<LabelPrintQueueStatus, stri
   expired: "Abgelaufen",
 };
 
+/** Simplified batch-progress phase for print-list detail UI (#751). */
+export type PrintListBatchJobPhase = "queued" | "printing" | "done" | "failed";
+
+export const PRINT_LIST_BATCH_JOB_PHASE_LABELS: Record<PrintListBatchJobPhase, string> = {
+  queued: "In Warteschlange",
+  printing: "Druckt",
+  done: "Fertig",
+  failed: "Fehler",
+};
+
+export function toPrintListBatchJobPhase(status: LabelPrintQueueStatus): PrintListBatchJobPhase {
+  if (status === "pending") return "queued";
+  if (status === "claimed" || status === "running") return "printing";
+  if (status === "completed") return "done";
+  return "failed";
+}
+
 export interface LabelPrintQueueItem {
   id: string;
   type: "label_print" | "printer_discover";
@@ -182,6 +199,28 @@ export class LabelPrintQueueService {
       include: { claimedBy: { select: { id: true, name: true } } },
     });
     return jobs.map((job) => toQueueItem(job, job.claimedBy?.name));
+  }
+
+  /** Recent label_print jobs for one print list (batch progress on detail page). */
+  async listByPrintList(
+    printListId: string,
+    options: { worldId?: string; limit?: number } = {},
+  ): Promise<LabelPrintQueueItem[]> {
+    const limit = options.limit ?? 20;
+    const jobs = await this.db.connectorJob.findMany({
+      where: {
+        type: "label_print",
+        ...(options.worldId ? { worldId: options.worldId } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: Math.max(limit * 5, 50),
+      include: { claimedBy: { select: { id: true, name: true } } },
+    });
+
+    return jobs
+      .filter((job) => parseLabelPrintJobPayload(job.payload)?.printListId === printListId)
+      .slice(0, limit)
+      .map((job) => toQueueItem(job, job.claimedBy?.name));
   }
 
   async getJob(jobId: string): Promise<LabelPrintQueueItem | null> {

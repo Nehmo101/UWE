@@ -13,14 +13,19 @@ import {
   prisma,
   summarizePrintList,
 } from "@uwe/database/server";
+import {
+  PRINT_LIST_BATCH_JOB_PHASE_LABELS,
+  toPrintListBatchJobPhase,
+} from "@uwe/database/label-print-queue";
 import { PrintListEditor } from "@/components/PrintListEditor";
+import { PrintListJobPanel } from "@/components/PrintListJobPanel";
 import { PrintListPreviewPanel } from "@/components/PrintListPreviewPanel";
+import { PrintListRtxForm } from "@/components/PrintListRtxForm";
 import {
   deletePrintListAction,
   setPrintListStatusAction,
   updatePrintListAction,
 } from "@/app/label-actions";
-import { enqueueLabelPrintAction } from "@/app/label-print-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -45,9 +50,10 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
   if (!list || list.worldId !== world.id) notFound();
 
   const summary = summarizePrintList(list);
-  const [connectorSummary, printerGroups] = await Promise.all([
+  const [connectorSummary, printerGroups, listJobs] = await Promise.all([
     connectorService.summarize(),
     printQueue.listPrinters(),
+    printQueue.listByPrintList(printListId, { worldId: world.id, limit: 20 }),
   ]);
   const flatPrinters = printerGroups.flatMap((g) =>
     g.printers.map((p) => ({ ...p, connectorId: g.connectorId, connectorName: g.connectorName })),
@@ -56,6 +62,10 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
     const p = flatPrinters.find((x) => x.isDefault) ?? flatPrinters[0];
     return p ? `${p.connectorId}::${p.id}::${p.name}` : undefined;
   })();
+  const printerOptions = flatPrinters.map((p) => ({ key: `${p.connectorId}::${p.id}::${p.name}`, label: `${p.name} (${p.connectorName})` }));
+  const initialListJobs = listJobs.map((job) => { const phase = toPrintListBatchJobPhase(job.status); return { id: job.id, title: job.title, phase, phaseLabel: PRINT_LIST_BATCH_JOB_PHASE_LABELS[phase], connectorName: job.connectorName ?? null, printerName: job.printerName ?? null, failedReason: job.failedReason ?? null, createdAt: job.createdAt.toISOString(), completedAt: job.completedAt?.toISOString() ?? null }; });
+  const printCenterHref = `/worlds/${worldSlug}/print-center`;
+  const returnTo = `/worlds/${worldSlug}/labels/print-lists/${printListId}`;
   const editorItems = list.items.map((item) => {
     const parsed = normalizeLabel(item.label);
     return {
@@ -174,22 +184,14 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
         ) : flatPrinters.length === 0 ? (
           <p className="uwe-hint">Keine Drucker. <a href="/system/printers">Suchen</a></p>
         ) : (
-          <form action={enqueueLabelPrintAction} className="uwe-form-grid">
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="printListId" value={printListId} />
-            <input type="hidden" name="returnTo" value={`/worlds/${worldSlug}/labels/print-lists/${printListId}`} />
-            <label>Drucker
-              <select name="printerKey" required defaultValue={defaultKey}>
-                {flatPrinters.map((p) => (
-                  <option key={`${p.connectorId}-${p.id}`} value={`${p.connectorId}::${p.id}::${p.name}`}>{p.name} ({p.connectorName})</option>
-                ))}
-              </select>
-            </label>
-            <label>Format<select name="format" defaultValue="pdf"><option value="pdf">PDF</option><option value="html">HTML</option></select></label>
-            <label className="uwe-checkbox"><input type="checkbox" name="includeDmOnly" /> DM-only</label>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">An RTX-Drucker senden</button>
-          </form>
+          <PrintListRtxForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} hasDmOnly={summary.hasDmOnly} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />
         )}
+      </section>
+
+      <section className="uwe-panel">
+        <h2>Batch-Fortschritt</h2>
+        <p className="uwe-table-sub" style={{ marginBottom: "0.75rem" }}>Status der RTX-Jobs für diese Druckliste — aktualisiert sich automatisch bei laufenden Jobs.</p>
+        <PrintListJobPanel worldSlug={worldSlug} printListId={printListId} initialJobs={initialListJobs} printCenterHref={printCenterHref} />
       </section>
 
       <section className="uwe-panel">

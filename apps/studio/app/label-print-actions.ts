@@ -1,7 +1,13 @@
 "use server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { capabilityOfflineMessage, type LabelPrintFormat } from "@uwe/connector";
-import { createConnectorService, createLabelPrintQueueService, prisma } from "@uwe/database/server";
+import {
+  createConnectorService,
+  createLabelPrintQueueService,
+  createPrintListService,
+  prisma,
+  summarizePrintList,
+} from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentAuthUser } from "@/src/lib/auth";
@@ -34,6 +40,14 @@ export async function enqueueLabelPrintAction(formData: FormData) {
   if (!(await createConnectorService(prisma).summarize()).availableCapabilities.includes("label_printing")) {
     redirect(`${returnTo}?error=${encodeURIComponent(capabilityOfflineMessage("label_printing"))}`);
   }
+
+  const list = await createPrintListService().getById(printListId);
+  if (!list) redirect(`${returnTo}?error=${encodeURIComponent("Druckliste nicht gefunden.")}`);
+  const summary = summarizePrintList(list);
+  if (summary.hasDmOnly && formData.get("confirmDmOnlyBatch") !== "on") {
+    redirect(`${returnTo}?error=${encodeURIComponent("DM-only Bestätigung fehlt.")}`);
+  }
+
   try {
     await createLabelPrintQueueService().enqueuePrintList({
       worldSlug, printListId, printerId, printerName: nameParts.join("::") || undefined,
@@ -42,5 +56,6 @@ export async function enqueueLabelPrintAction(formData: FormData) {
     });
   } catch (e) { redirect(`${returnTo}?error=${encodeURIComponent(e instanceof Error ? e.message : "Fehler")}`); }
   revalidatePath("/system/printers");
+  revalidatePath(returnTo);
   redirect(`${returnTo}?queued=1`);
 }

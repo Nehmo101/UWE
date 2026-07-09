@@ -5,6 +5,7 @@ import { createConnectorService } from "./connector-service";
 import {
   createLabelPrintQueueService,
   LabelPrintDocumentAccessError,
+  toPrintListBatchJobPhase,
 } from "./label-print-queue-service";
 import { createPrintListService } from "./label-print-list-service";
 import { createTestDatabaseUrl } from "./test-helpers";
@@ -76,4 +77,33 @@ describe("LabelPrintQueueService", () => {
       },
     );
   });
+  it("lists label_print jobs for a print list", async () => {
+    const dbUrl = createTestDatabaseUrl();
+    const isolatedDb = createPrismaClient(dbUrl);
+    const connectorService = createConnectorService(isolatedDb);
+    const queue = createLabelPrintQueueService(dbUrl);
+    const printLists = createPrintListService(dbUrl);
+    const world = await isolatedDb.world.create({ data: { slug: `print-list-jobs-${Date.now()}`, name: "Test" } });
+    const listA = await printLists.create({ worldId: world.id, name: "Pack A" });
+    const listB = await printLists.create({ worldId: world.id, name: "Pack B" });
+    const { connector } = await connectorService.createConnector("RTX List");
+    await queue.enqueuePrintList({
+      worldSlug: world.slug,
+      printListId: listA.id,
+      printerId: "p1",
+      targetConnectorId: connector.id,
+    });
+    await queue.enqueuePrintList({
+      worldSlug: world.slug,
+      printListId: listB.id,
+      printerId: "p2",
+      targetConnectorId: connector.id,
+    });
+
+    const jobsForA = await queue.listByPrintList(listA.id, { worldId: world.id });
+    assert.equal(jobsForA.length, 1);
+    assert.equal(jobsForA[0]?.printListId, listA.id);
+    assert.equal(toPrintListBatchJobPhase(jobsForA[0]!.status), "queued");
+  });
+
 });
