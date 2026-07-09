@@ -36,6 +36,7 @@ describe("buildVineLayout / edge cases", () => {
       assert.equal(layout.widths.length, 0);
       assert.equal(layout.coil.length, 0);
       assert.equal(layout.tendrils.length, 0);
+      assert.equal(layout.leaves.length, 0);
       assert.equal(layout.shadow.length, 0);
       assert.equal(layout.aura.clouds.length, 0);
     }
@@ -55,10 +56,11 @@ describe("buildVineLayout / structure", () => {
     assert.equal(layout.shadow.length, layout.spine.length);
   });
 
-  it("emits exactly the requested number of tendrils", () => {
+  it("emits exactly the requested number of tendrils and matching leaves", () => {
     for (const tendrils of [0, 1, 3, 8]) {
       const layout = buildVineLayout(STALK, { tendrils, seed: 5 });
       assert.equal(layout.tendrils.length, tendrils);
+      assert.equal(layout.leaves.length, tendrils);
     }
   });
 
@@ -77,6 +79,7 @@ describe("buildVineLayout / structure", () => {
     assertInBounds(layout.shadow, "shadow");
     assertInBounds(layout.aura.clouds, "aura.clouds");
     for (const t of layout.tendrils) assertInBounds(t, "tendril");
+    for (const lf of layout.leaves) assertInBounds([lf.center], "leaf");
   });
 });
 

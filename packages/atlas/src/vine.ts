@@ -49,6 +49,16 @@ export interface VineAura {
   clouds: Coordinate[];
 }
 
+/** A single heart-shaped leaf placed along the trunk. */
+export interface VineLeaf {
+  /** Leaf centre in normalised space. */
+  center: Coordinate;
+  /** Outward angle in radians (from the spine normal). */
+  angle: number;
+  /** Relative size (∝ local trunk width at attachment). */
+  size: number;
+}
+
 export interface VineLayout {
   /** Densified centre line (base → tip). */
   spine: Coordinate[];
@@ -56,8 +66,10 @@ export interface VineLayout {
   widths: number[];
   /** Helix polyline winding around the spine (same length as `spine`). */
   coil: Coordinate[];
-  /** Side tendrils, each a short curl polyline. */
+  /** Side tendrils, each a short outward arc (attach → leaf tip). */
   tendrils: Coordinate[][];
+  /** Leaf placements derived from tendril tips. */
+  leaves: VineLeaf[];
   /** Cast-shadow spine, offset south-east (same length as `spine`). */
   shadow: Coordinate[];
   /** Height aura at the tip. */
@@ -69,9 +81,9 @@ export interface VineLayout {
 // ---------------------------------------------------------------------------
 
 /** Coil amplitude scale — perpendicular wiggle as a fraction of local width. */
-const COIL_AMP = 0.022;
-/** Number of full helix turns along the whole trunk. */
-const COIL_TURNS = 6;
+const COIL_AMP = 0.012;
+/** Number of full helix turns along the whole trunk (kept for layout compat). */
+const COIL_TURNS = 2;
 /** Cast-shadow offset (SE) at height=1. */
 const SHADOW_OFFSET = 0.05;
 /** Tip aura radius at height=1. */
@@ -128,6 +140,7 @@ export function buildVineLayout(
       widths: [],
       coil: [],
       tendrils: [],
+      leaves: [],
       shadow: [],
       aura: { center: [0, 0], radius: 0, clouds: [] },
     };
@@ -164,28 +177,39 @@ export function buildVineLayout(
     (c): Coordinate => clampCoord([c[0] + off, c[1] + off]),
   );
 
-  // Side tendrils: short outward-curling polylines at evenly spaced arc
-  // fractions, deterministic side/length via the seeded PRNG.
+  // Side tendrils + leaves: gentle outward arcs at evenly spaced spine
+  // fractions — deterministic side/length via the seeded PRNG.
   const rng = mulberry32(seed);
   const tendrils: Coordinate[][] = [];
+  const leaves: VineLeaf[] = [];
   for (let k = 0; k < tendrilCount; k++) {
     const t = (k + 1) / (tendrilCount + 1);
     const idx = Math.min(n - 1, Math.max(0, Math.round(t * (n - 1))));
     const [px, py] = perpendicularAt(spine, idx);
     const side = rng() < 0.5 ? 1 : -1;
-    let step = widths[idx]! * (0.02 + rng() * 0.02) + 0.008;
-    let a = Math.atan2(py * side, px * side);
-    let cx = spine[idx]![0];
-    let cy = spine[idx]![1];
-    const curl: Coordinate[] = [clampCoord([cx, cy])];
-    for (let j = 0; j < 6; j++) {
-      a += side * 0.5;
-      cx += Math.cos(a) * step;
-      cy += Math.sin(a) * step;
-      step *= 0.8;
-      curl.push(clampCoord([cx, cy]));
+    const reach = widths[idx]! * (0.028 + rng() * 0.022) + 0.014;
+    const attach = spine[idx]!;
+    const outward: Coordinate = [px * side, py * side];
+    const arc: Coordinate[] = [clampCoord(attach)];
+    for (let j = 1; j <= 3; j++) {
+      const frac = j / 3;
+      const curl = side * frac * 0.35;
+      const ox = outward[0] * Math.cos(curl) - outward[1] * Math.sin(curl);
+      const oy = outward[0] * Math.sin(curl) + outward[1] * Math.cos(curl);
+      arc.push(
+        clampCoord([
+          attach[0] + ox * reach * frac,
+          attach[1] + oy * reach * frac,
+        ]),
+      );
     }
-    tendrils.push(curl);
+    tendrils.push(arc);
+    const tip = arc[arc.length - 1]!;
+    leaves.push({
+      center: tip,
+      angle: Math.atan2(tip[1] - attach[1], tip[0] - attach[0]),
+      size: widths[idx]! * (0.55 + rng() * 0.25),
+    });
   }
 
   // Tip aura: rings + cloud placements around the last spine point.
@@ -203,6 +227,7 @@ export function buildVineLayout(
     widths,
     coil: coilLine,
     tendrils,
+    leaves,
     shadow,
     aura: { center: clampCoord(tip), radius, clouds },
   };

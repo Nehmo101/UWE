@@ -1658,8 +1658,7 @@ function drawFeature(ctx, f) {
   ctx.restore();
 }
 
-// Ranke/Weltenwurzel: geteiltes Pseudo-3D-Rendering aus @uwe/atlas (vine.ts) —
-// buildVineLayout glättet selbst, daher rohe Koordinaten übergeben.
+// Ranke/Weltenwurzel: weiße Bohnenranke mit Tusche-Kontur (@uwe/atlas vine.ts).
 function drawVineFeature(ctx, f, sel) {
   const s = f.style || {};
   const layout = engine.buildVineLayout(f.geometry.coordinates || [], {
@@ -1667,18 +1666,16 @@ function drawVineFeature(ctx, f, sel) {
     tendrils: s.tendrils, height: s.height, seed: s.seed,
   });
   if (layout.spine.length < 2) return;
-  // Gouache-Ranke: gefüllter, getaperter Stamm + Blattwerk (fill-Modus in drawVine).
   engine.drawVine(ctx, layout, {
     project: (c) => n2c(c[0], c[1]), zoom: state.zoom,
-    trunk: "#6f9a4d", coil: "#33531f",
+    trunk: "#ffffff", coil: "#ffffff", outline: "#241a10",
     thickness: s.thickness != null ? s.thickness : VINE_DEFAULTS.thickness,
     shadow: "rgba(26,16,8,0.18)", selected: sel,
-    fill: { trunk: "#6f9a4d", trunkEdge: "#33531f", leaf: "#74ad55", leafEdge: "#2f4a1c" },
   });
   for (const pt of layout.aura.clouds) {
     const [px, py] = n2c(pt[0], pt[1]);
-    ctx.save(); ctx.globalAlpha = 0.75;
-    engine.drawGouacheAsset(ctx, "g_cloud", { x: px, y: py + 6 * state.zoom, size: 15 * state.zoom, lineWidth: Math.max(0.4, 0.9 * state.zoom), seed: (Math.round(pt[0] * 4096) * 31 + Math.round(pt[1] * 4096)) >>> 0 });
+    ctx.save(); ctx.globalAlpha = 0.55;
+    engine.drawGouacheAsset(ctx, "g_cloud", { x: px, y: py + 6 * state.zoom, size: 13 * state.zoom, lineWidth: Math.max(0.4, 0.8 * state.zoom), seed: (Math.round(pt[0] * 4096) * 31 + Math.round(pt[1] * 4096)) >>> 0 });
     ctx.restore();
   }
 }
@@ -2313,7 +2310,7 @@ function finishPath() {
   const k = nextKey();
   // Ranke: Pseudo-3D-Parameter reiten im style-JSON (siehe @uwe/atlas vine.ts).
   const style = isVine
-    ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, thickness: 1, seed: engine.hashStringToSeed(k) }
+    ? { smooth: true, taperStart: 0.9, taperEnd: 0.15, coil: 0.25, tendrils: 4, height: 0.7, thickness: 1, seed: engine.hashStringToSeed(k) }
     : isRoad ? undefined : { smooth: true };
   const f = { _key: k, id: nextKey(), nodeId: state.nodeId, kind: isVine ? "vine" : isRoad ? "road" : "river", geometry: { type: "Path", coordinates: [...drawingPoints] }, style, layer: isVine ? 45 : isRoad ? 40 : 30, visibility: "dm_only" };
   tagUnderworld(f);
@@ -2372,7 +2369,7 @@ function autoPlaceBridges(f) {
 }
 
 // ---- Ranke/Weltenwurzel: Panel-Defaults + Slider-Markup ----
-const VINE_DEFAULTS = { taperStart: 0.9, taperEnd: 0.15, coil: 0.6, tendrils: 3, height: 0.7, thickness: 1 };
+const VINE_DEFAULTS = { taperStart: 0.9, taperEnd: 0.15, coil: 0.25, tendrils: 4, height: 0.7, thickness: 1 };
 const VINE_SLIDERS = [
   ["taperStart", "Basisbreite", 0.3, 1.5, 0.05],
   ["taperEnd", "Spitzenbreite", 0.05, 0.6, 0.05],

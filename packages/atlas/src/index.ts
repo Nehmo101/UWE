@@ -197,7 +197,7 @@ export type {
 
 // Vine / giant-root layout engine — deterministic pseudo-3D beanstalk
 export { buildVineLayout } from "./vine";
-export type { VineOptions, VineLayout, VineAura } from "./vine";
+export type { VineOptions, VineLayout, VineAura, VineLeaf } from "./vine";
 
 // Roadmap Welle 3/4 engine slices
 export type { CoastStyleOptions } from "./coastline";

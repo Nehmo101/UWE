@@ -3244,117 +3244,89 @@ function strokeTaperedTrunk(ctx, pts, widths, base, extraPx) {
     ctx.stroke();
   }
 }
+function buildTrunkRibbon(spinePts, widths, base) {
+  const left = [];
+  const right = [];
+  const n = spinePts.length;
+  for (let i = 0; i < n; i++) {
+    const prev = spinePts[Math.max(0, i - 1)];
+    const next = spinePts[Math.min(n - 1, i + 1)];
+    const tx = next[0] - prev[0];
+    const ty = next[1] - prev[1];
+    const len = Math.hypot(tx, ty) || 1;
+    const nx = -ty / len;
+    const ny = tx / len;
+    const half = Math.max(0.5, (widths[i] ?? 0.2) * base) / 2;
+    left.push([spinePts[i][0] + nx * half, spinePts[i][1] + ny * half]);
+    right.push([spinePts[i][0] - nx * half, spinePts[i][1] - ny * half]);
+  }
+  return { left, right };
+}
+function traceRibbonPath(ctx, left, right) {
+  ctx.beginPath();
+  ctx.moveTo(left[0][0], left[0][1]);
+  for (let i = 1; i < left.length; i++) ctx.lineTo(left[i][0], left[i][1]);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
+  ctx.closePath();
+}
+function drawVineLeaf(ctx, center, angle, radius, body, edge) {
+  ctx.save();
+  ctx.translate(center[0], center[1]);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.ellipse(radius * 0.85, 0, radius, radius * 0.52, 0, 0, Math.PI * 2);
+  ctx.fillStyle = body;
+  ctx.fill();
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = Math.max(0.8, radius * 0.22);
+  ctx.stroke();
+  ctx.restore();
+}
 function drawVine(ctx, layout, opts) {
-  const { spine, widths, coil, tendrils, shadow: shadow2, aura } = layout;
+  const { spine, widths, leaves, shadow: shadow2 } = layout;
   if (spine.length < 2) return;
   const { project, zoom, selected } = opts;
   const p = (pts) => pts.map(project);
   const base = VINE_TRUNK_BASE_PX * (opts.thickness ?? 1) * zoom * (selected ? 1.15 : 1);
+  const trunkBody = opts.fill?.trunk ?? opts.trunk;
+  const trunkEdge = selected ? "#c2622b" : opts.fill?.trunkEdge ?? opts.outline ?? "#241a10";
+  const leafBody = opts.fill?.leaf ?? opts.trunk;
+  const leafEdge = opts.fill?.leafEdge ?? opts.outline ?? "rgba(33,29,23,0.35)";
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+  const spinePts = p(spine);
+  const { left, right } = buildTrunkRibbon(spinePts, widths, base);
   const shadowPts = p(shadow2);
   ctx.strokeStyle = opts.shadow;
-  ctx.lineWidth = Math.max(1, base * 0.75);
-  strokePolyline(ctx, shadowPts);
-  const spinePts = p(spine);
-  if (opts.fill) {
-    const f = opts.fill;
-    const left = [];
-    const right = [];
-    const n = spinePts.length;
-    for (let i = 0; i < n; i++) {
-      const prev = spinePts[Math.max(0, i - 1)];
-      const next = spinePts[Math.min(n - 1, i + 1)];
-      const tx = next[0] - prev[0];
-      const ty = next[1] - prev[1];
-      const len = Math.hypot(tx, ty) || 1;
-      const nx = -ty / len;
-      const ny = tx / len;
-      const half = Math.max(0.5, (widths[i] ?? 0.2) * base) / 2;
-      left.push([spinePts[i][0] + nx * half, spinePts[i][1] + ny * half]);
-      right.push([spinePts[i][0] - nx * half, spinePts[i][1] - ny * half]);
-    }
-    ctx.beginPath();
-    ctx.moveTo(left[0][0], left[0][1]);
-    for (let i = 1; i < n; i++) ctx.lineTo(left[i][0], left[i][1]);
-    for (let i = n - 1; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
-    ctx.closePath();
-    ctx.fillStyle = f.trunk;
-    ctx.fill();
-    ctx.strokeStyle = selected ? "#c2622b" : f.trunkEdge;
-    ctx.lineWidth = Math.max(0.8, 1.3 * zoom);
-    ctx.stroke();
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = Math.max(0.8, base * 0.14);
-    strokePolyline(ctx, left.filter((_, i) => i % 2 === 0));
-    ctx.restore();
-    ctx.strokeStyle = f.trunkEdge;
-    ctx.globalAlpha = 0.55;
-    ctx.lineWidth = Math.max(0.8, 1.2 * zoom);
-    strokePolyline(ctx, p(coil));
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = f.leafEdge;
-    ctx.lineWidth = Math.max(0.8, 1.2 * zoom);
-    for (const t of tendrils) {
-      const tp = p(t);
-      strokePolyline(ctx, tp);
-      const tip = tp[tp.length - 1];
-      if (tip) {
-        const r = Math.max(1.6, base * 0.34);
-        ctx.beginPath();
-        ctx.ellipse(tip[0], tip[1], r, r * 0.62, 0.5, 0, Math.PI * 2);
-        ctx.fillStyle = f.leaf;
-        ctx.fill();
-        ctx.stroke();
-      }
-    }
-    const cA = project(aura.center);
-    const eA = project([aura.center[0] + aura.radius, aura.center[1]]);
-    const prA = Math.hypot(eA[0] - cA[0], eA[1] - cA[1]);
-    if (prA > 1) {
-      ctx.strokeStyle = f.leafEdge;
-      ctx.globalAlpha = 0.28;
-      ctx.lineWidth = Math.max(0.6, 1 * zoom);
-      for (const fr of [1, 0.66]) {
-        ctx.beginPath();
-        ctx.arc(cA[0], cA[1], prA * fr, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    }
-    ctx.restore();
-    return;
-  }
+  ctx.lineWidth = Math.max(1, base * 0.7);
+  strokeTaperedTrunk(ctx, shadowPts, widths, base, 0);
   if (opts.outline) {
-    const outlinePx = VINE_OUTLINE_PX * zoom;
+    const haloPx = VINE_OUTLINE_PX * zoom;
     ctx.strokeStyle = opts.outline;
-    strokeTaperedTrunk(ctx, spinePts, widths, base, outlinePx);
-    ctx.lineWidth = Math.max(0.8, 1.4 * zoom) + outlinePx;
-    strokePolyline(ctx, p(coil));
-    for (const t of tendrils) strokePolyline(ctx, p(t));
-  }
-  ctx.strokeStyle = opts.trunk;
-  strokeTaperedTrunk(ctx, spinePts, widths, base, 0);
-  ctx.strokeStyle = opts.coil;
-  ctx.lineWidth = Math.max(0.8, 1.4 * zoom);
-  strokePolyline(ctx, p(coil));
-  for (const t of tendrils) strokePolyline(ctx, p(t));
-  const c = project(aura.center);
-  const edge = project([aura.center[0] + aura.radius, aura.center[1]]);
-  const pr = Math.hypot(edge[0] - c[0], edge[1] - c[1]);
-  if (pr > 1) {
-    ctx.strokeStyle = opts.coil;
-    ctx.globalAlpha = 0.28;
-    ctx.lineWidth = Math.max(0.6, 1 * zoom);
-    for (const f of [1, 0.66]) {
-      ctx.beginPath();
-      ctx.arc(c[0], c[1], pr * f, 0, Math.PI * 2);
-      ctx.stroke();
-    }
+    ctx.globalAlpha = 0.34;
+    ctx.lineWidth = Math.max(1.2, base * 0.22) + haloPx;
+    strokeTaperedTrunk(ctx, spinePts, widths, base, haloPx);
     ctx.globalAlpha = 1;
+  }
+  traceRibbonPath(ctx, left, right);
+  ctx.fillStyle = trunkBody;
+  ctx.fill();
+  ctx.strokeStyle = trunkEdge;
+  ctx.lineWidth = Math.max(0.8, 1.2 * zoom);
+  ctx.stroke();
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = Math.max(0.6, base * 0.12);
+  strokePolyline(ctx, left.filter((_, i) => i % 3 === 0));
+  ctx.restore();
+  for (const leaf of leaves) {
+    const c = project(leaf.center);
+    const edge = project([leaf.center[0] + leaf.size * 0.02, leaf.center[1]]);
+    const pr = Math.hypot(edge[0] - c[0], edge[1] - c[1]);
+    const r = Math.max(2.2, pr * 3.2 * base * 0.18);
+    drawVineLeaf(ctx, c, leaf.angle, r, leafBody, leafEdge);
   }
   ctx.restore();
 }
@@ -3482,8 +3454,8 @@ function sampleTaperedWidths(points, startWidth, endWidth) {
 }
 
 // ../atlas/src/vine.ts
-var COIL_AMP = 0.022;
-var COIL_TURNS = 6;
+var COIL_AMP = 0.012;
+var COIL_TURNS = 2;
 var SHADOW_OFFSET = 0.05;
 var AURA_RADIUS = 0.09;
 var AURA_CLOUDS = 5;
@@ -3510,6 +3482,7 @@ function buildVineLayout(points, options = {}) {
       widths: [],
       coil: [],
       tendrils: [],
+      leaves: [],
       shadow: [],
       aura: { center: [0, 0], radius: 0, clouds: [] }
     };
@@ -3538,24 +3511,35 @@ function buildVineLayout(points, options = {}) {
   );
   const rng = mulberry32(seed);
   const tendrils = [];
+  const leaves = [];
   for (let k = 0; k < tendrilCount; k++) {
     const t = (k + 1) / (tendrilCount + 1);
     const idx = Math.min(n - 1, Math.max(0, Math.round(t * (n - 1))));
     const [px, py] = perpendicularAt(spine, idx);
     const side = rng() < 0.5 ? 1 : -1;
-    let step = widths[idx] * (0.02 + rng() * 0.02) + 8e-3;
-    let a = Math.atan2(py * side, px * side);
-    let cx = spine[idx][0];
-    let cy = spine[idx][1];
-    const curl = [clampCoord([cx, cy])];
-    for (let j = 0; j < 6; j++) {
-      a += side * 0.5;
-      cx += Math.cos(a) * step;
-      cy += Math.sin(a) * step;
-      step *= 0.8;
-      curl.push(clampCoord([cx, cy]));
+    const reach = widths[idx] * (0.028 + rng() * 0.022) + 0.014;
+    const attach = spine[idx];
+    const outward = [px * side, py * side];
+    const arc = [clampCoord(attach)];
+    for (let j = 1; j <= 3; j++) {
+      const frac = j / 3;
+      const curl = side * frac * 0.35;
+      const ox = outward[0] * Math.cos(curl) - outward[1] * Math.sin(curl);
+      const oy = outward[0] * Math.sin(curl) + outward[1] * Math.cos(curl);
+      arc.push(
+        clampCoord([
+          attach[0] + ox * reach * frac,
+          attach[1] + oy * reach * frac
+        ])
+      );
     }
-    tendrils.push(curl);
+    tendrils.push(arc);
+    const tip2 = arc[arc.length - 1];
+    leaves.push({
+      center: tip2,
+      angle: Math.atan2(tip2[1] - attach[1], tip2[0] - attach[0]),
+      size: widths[idx] * (0.55 + rng() * 0.25)
+    });
   }
   const tip = spine[n - 1];
   const radius = AURA_RADIUS * (0.4 + height * 0.6);
@@ -3570,6 +3554,7 @@ function buildVineLayout(points, options = {}) {
     widths,
     coil: coilLine,
     tendrils,
+    leaves,
     shadow: shadow2,
     aura: { center: clampCoord(tip), radius, clouds }
   };

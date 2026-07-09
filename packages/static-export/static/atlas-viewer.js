@@ -994,7 +994,6 @@
                     outline: "#241a10",
                     thickness: vs.thickness != null ? vs.thickness : 1,
                     shadow: "rgba(26,16,8,0.18)",
-                    fill: { trunk: "#6f9a4d", trunkEdge: "#33531f", leaf: "#74ad55", leafEdge: "#2f4a1c" },
                   });
                   // Aura clouds — painted gouache when the engine maps them,
                   // ink stroke as last-resort fallback.
