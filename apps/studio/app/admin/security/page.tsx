@@ -21,6 +21,15 @@ function severityLevel(severity: "ok" | "warning" | "critical"): StatusLevel {
   return "error";
 }
 
+function networkProtectionLevel(
+  studioSecurity: Awaited<ReturnType<typeof getSecurityDashboardStatus>>["studioSecurity"],
+): StatusLevel {
+  if (!studioSecurity.publicExposureConfigured) {
+    return "ok";
+  }
+  return studioSecurity.proxyIndicators.networkProtectionLikely ? "ok" : "degraded";
+}
+
 export default async function AdminSecurityPage() {
   const access = await resolveSecurityDashboardAccess(prisma);
 
@@ -121,8 +130,13 @@ export default async function AdminSecurityPage() {
 
         <StatusCard
           title="Netzwerk-Schutz"
-          level="degraded"
-          statusLabel="Manuell prüfen"
+          level={networkProtectionLevel(status.studioSecurity)}
+          statusLabel={
+            status.studioSecurity.publicExposureConfigured &&
+            !status.studioSecurity.proxyIndicators.networkProtectionLikely
+              ? "Prüfen"
+              : "OK"
+          }
           message={status.networkProtection.note}
           details={status.networkProtection.checklist.map((item, index) => ({
             label: `Check ${index + 1}`,

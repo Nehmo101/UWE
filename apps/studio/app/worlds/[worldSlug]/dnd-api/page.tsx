@@ -4,6 +4,7 @@ import {
   EmptyState,
 } from "@uwe/shared-ui";
 import {
+  buildPageUrl,
   createDndApiService,
   getAppRepository,
   prisma,
@@ -138,7 +139,7 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
                   D&amp;D Beyond öffnen
                 </a>
                 {ref.page && (
-                  <Link href={`/worlds/${worldSlug}/${ref.page.slug}`}>
+                  <Link href={buildPageUrl(worldSlug, ref.page.type, ref.page.slug)}>
                     UWE-Seite: {ref.page.title}
                   </Link>
                 )}

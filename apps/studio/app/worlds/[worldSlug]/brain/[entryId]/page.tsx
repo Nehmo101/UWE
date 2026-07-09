@@ -5,6 +5,7 @@ import {
   BRAIN_SOURCE_LABELS,
   BRAIN_STATUS_LABELS,
   BRAIN_VISIBILITY_LABELS,
+  buildPageUrl,
   createBrainStoreService,
   createPrismaClient,
   getAppRepository,
@@ -112,7 +113,9 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
             <>
               {" "}
               · Seite:{" "}
-              <Link href={`/worlds/${worldSlug}/pages/${document.page.slug}`}>
+              <Link
+                href={buildPageUrl(worldSlug, document.page.type, document.page.slug)}
+              >
                 {document.page.title}
               </Link>
             </>

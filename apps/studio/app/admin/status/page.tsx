@@ -18,12 +18,8 @@ function overallLevel(ok: boolean): StatusLevel {
 function studioSecurityLevel(
   studioSecurity: Awaited<ReturnType<typeof getAdminDashboardStatus>>["studioSecurity"],
 ): StatusLevel {
-  if (studioSecurity.severity === "ok") {
-    return studioSecurity.level === "local_only" ? "ok" : "ok";
-  }
-  if (studioSecurity.severity === "warning") {
-    return "degraded";
-  }
+  if (studioSecurity.severity === "ok") return "ok";
+  if (studioSecurity.severity === "warning") return "degraded";
   return "error";
 }
 

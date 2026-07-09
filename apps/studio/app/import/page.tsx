@@ -8,12 +8,14 @@ import {
 } from "@uwe/database/server";
 import { importSourceRegistry } from "@uwe/knoteforge-import";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { requireStudioAccess } from "@/src/lib/auth";
 import {
   ImportCentralWorkspace,
   type ImportCentralJobRow,
 } from "./ImportCentralWorkspace";
 
 export default async function ImportCentralPage() {
+  await requireStudioAccess();
   const [worlds, jobs] = await Promise.all([
     getAppRepository().listWorlds(),
     createImportJobService(prisma).listJobs({ limit: 50 }),

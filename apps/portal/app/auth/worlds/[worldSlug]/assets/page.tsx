@@ -75,12 +75,20 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
             </div>
             <div className="auth-asset-preview">
               {isPreviewable(asset.mimeType) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`/api/assets/${asset.id}/file?world=${encodeURIComponent(worldSlug)}`}
-                  alt={asset.title}
-                  className="auth-asset-thumb"
-                />
+                asset.mimeType?.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/assets/${asset.id}/file?world=${encodeURIComponent(worldSlug)}`}
+                    alt={asset.title}
+                    className="auth-asset-thumb"
+                  />
+                ) : (
+                  <iframe
+                    src={`/api/assets/${asset.id}/file?world=${encodeURIComponent(worldSlug)}`}
+                    title={asset.title}
+                    className="auth-asset-thumb"
+                  />
+                )
               ) : (
                 <a
                   href={`/api/assets/${asset.id}/file?world=${encodeURIComponent(worldSlug)}`}

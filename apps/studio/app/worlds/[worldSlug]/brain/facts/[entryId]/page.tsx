@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   BRAIN_FACT_TYPE_LABELS,
   BRAIN_SOURCE_LABELS,
   BRAIN_STATUS_LABELS,
   BRAIN_VISIBILITY_LABELS,
+  buildPageUrl,
   createBrainStoreService,
   createPrismaClient,
   getAppRepository,
@@ -104,7 +106,10 @@ export default async function StudioBrainFactPage({ params }: Props) {
           {fact.page && (
             <>
               {" "}
-              · Seite: {fact.page.title}
+              · Seite:{" "}
+              <Link href={buildPageUrl(worldSlug, fact.page.type, fact.page.slug)}>
+                {fact.page.title}
+              </Link>
             </>
           )}
         </p>

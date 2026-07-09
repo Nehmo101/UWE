@@ -247,7 +247,7 @@ export class DndApiService {
     return this.db.dndBeyondReference.findMany({
       where: { worldId },
       orderBy: { title: "asc" },
-      include: { page: { select: { id: true, title: true, slug: true } } },
+      include: { page: { select: { id: true, title: true, slug: true, type: true } } },
     });
   }
 

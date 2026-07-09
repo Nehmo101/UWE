@@ -101,7 +101,7 @@ function documentInclude() {
   return {
     campaign: { select: { id: true, name: true, slug: true } },
     gameSession: { select: { id: true, title: true, sessionNumber: true } },
-    page: { select: { id: true, title: true, slug: true } },
+    page: { select: { id: true, title: true, slug: true, type: true } },
     chunks: { orderBy: { chunkIndex: "asc" as const } },
   } as const;
 }
@@ -110,7 +110,7 @@ function factInclude() {
   return {
     campaign: { select: { id: true, name: true, slug: true } },
     gameSession: { select: { id: true, title: true, sessionNumber: true } },
-    page: { select: { id: true, title: true, slug: true } },
+    page: { select: { id: true, title: true, slug: true, type: true } },
   } as const;
 }
 

@@ -118,6 +118,7 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
         <iframe
           title="Label Vorschau"
           srcDoc={html}
+          sandbox=""
           className="uwe-label-preview-iframe"
         />
       </section>

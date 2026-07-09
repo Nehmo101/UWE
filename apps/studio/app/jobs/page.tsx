@@ -9,8 +9,10 @@ import {
 import { CampaignJobPresetsPanel } from "@/components/CampaignJobPresetsPanel";
 import { JobsWorkspace } from "@/components/JobsWorkspace";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { requireStudioAccess } from "@/src/lib/auth";
 
 export default async function JobsPage() {
+  await requireStudioAccess();
   const jobs = createJobService(prisma);
   const [jobList, summary, worlds, sessions] = await Promise.all([
     jobs.list({ limit: 100 }),

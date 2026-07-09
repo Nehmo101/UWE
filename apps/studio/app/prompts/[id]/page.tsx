@@ -38,7 +38,7 @@ export default async function PromptDetailPage({ params, searchParams }: Props) 
         title={prompt.title}
         summary={PROMPT_CATEGORY_LABELS[prompt.category]}
         actions={
-          <Link href="/agent-jobs" className="uwe-v2-btn">
+          <Link href="/admin/agent-jobs" className="uwe-v2-btn">
             Als Agent Job starten →
           </Link>
         }
