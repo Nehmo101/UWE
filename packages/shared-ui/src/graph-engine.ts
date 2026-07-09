@@ -10,6 +10,7 @@
 
 import type { GraphEdge, GraphNode, GraphNodeCategory } from "@uwe/database/graph-types";
 import { GRAPH_NODE_CATEGORIES } from "@uwe/database/graph-types";
+import { resolveNodeCollisions } from "./graph-collision";
 
 // --- Physik-Parameter (aus dem Design-Handoff, unverändert) -------------------
 const REP = 2900; // Abstoßungsstärke (Basis, skaliert mit √n)
@@ -20,6 +21,8 @@ const REST = 0.045; // Schwelle "in Ruhe"
 const HL_LERP = 0.16; // Fokus-/Sichtbarkeits-Interpolation pro Frame
 const EDGE_BEND = 0.12; // Kantenbiegung
 const MIN_DIST = 2.4; // Mindestabstand in der Abstoßung (verhindert Kraft-Spitzen)
+const COLLIDE_PAD = 4; // "Nicht berühren": harter Mindestabstand zwischen Bubble-Rändern (Weltkoordinaten)
+const COLLIDE_MAX_ITERS = 32; // Obergrenze der Kollisions-Iterationen pro Schritt (adaptiv, bricht früh ab)
 const MAX_FORCE = 42; // Obergrenze pro Knoten und Schritt
 const MAX_VEL = 24; // Obergrenze für Geschwindigkeit pro Schritt
 const PREWARM_BASE = 40; // Vorab-Schritte vor dem ersten Frame
@@ -473,7 +476,17 @@ export class GraphEngine {
       a.y += a.vy;
       ke += a.vx * a.vx + a.vy * a.vy;
     });
-    return ke / Math.max(ns.length, 1);
+    // "Nicht berühren": Überlappungen nach der Integration hart auflösen, damit
+    // sich Bubbles nie überdecken (Abstoßung allein garantiert das nicht). Die
+    // (bereits pro Knoten normierte) Kollisions-Energie hält den Graph wach,
+    // solange noch etwas entzerrt werden muss.
+    return ke / Math.max(ns.length, 1) + this.resolveCollisions();
+  }
+
+  // "Nicht berühren": Bubble-Überlappungen hart auflösen (Details + Algorithmus in
+  // `graph-collision.ts`). Rückgabe fließt in die Ruhe-Erkennung ein.
+  private resolveCollisions(): number {
+    return resolveNodeCollisions(this.nodes, COLLIDE_PAD, COLLIDE_MAX_ITERS);
   }
 
   private byId(id: string): SimNode | undefined {
@@ -483,9 +496,16 @@ export class GraphEngine {
   // --- Frame ------------------------------------------------------------------
   private frame(): void {
     let moving = false;
-    if (this.awake && !this.locked && !this.drag) {
-      const ke = this.step();
-      moving = ke > REST;
+    if (this.awake && !this.locked) {
+      if (this.drag) {
+        // Während des Ziehens läuft nur die Kollisionsauflösung: der gezogene
+        // Knoten ist fixiert und schiebt überlappende Nachbarn beiseite, ohne
+        // dass die volle Physik das Layout unter dem Cursor verrutschen lässt.
+        moving = this.resolveCollisions() > REST;
+      } else {
+        const ke = this.step();
+        moving = ke > REST;
+      }
     }
     const focus = this.focusSet();
     let transitioning = false;

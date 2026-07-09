@@ -191,6 +191,58 @@ test("Physik bleibt bei großen Graphen stabil (Ketten- und Mesh-Layout)", () =>
   }
 });
 
+function minOverlap(engine: GraphEngine): number {
+  // Größte Überlappung zweier Knoten (positiv = sie überdecken sich).
+  let worst = 0;
+  const ns = engine.nodes;
+  for (let i = 0; i < ns.length; i++) {
+    for (let j = i + 1; j < ns.length; j++) {
+      const dx = ns[i].x - ns[j].x;
+      const dy = ns[i].y - ns[j].y;
+      const dist = Math.hypot(dx, dy);
+      const overlap = ns[i].r + ns[j].r - dist;
+      if (overlap > worst) worst = overlap;
+    }
+  }
+  return worst;
+}
+
+test("Bubbles überlappen sich nach dem Setzen nicht (Kollisionsauflösung)", () => {
+  for (const [n, mesh] of [
+    [60, true],
+    [120, true],
+    [120, false],
+  ] as const) {
+    const canvas = makeCanvas();
+    const { nodes, edges } = makeStressGraph(n, mesh);
+    const engine = new GraphEngine(canvas, { nodes, edges });
+    for (let i = 0; i < 220; i++) engine["step"]();
+    assert.ok(
+      minOverlap(engine) <= 0.5,
+      `Graph n=${n} mesh=${mesh}: Bubbles überlappen (maxOverlap=${minOverlap(engine).toFixed(2)})`,
+    );
+  }
+});
+
+test("Fixierter (gezogener) Knoten bleibt stehen und schiebt Nachbarn weg", () => {
+  const { engine } = setup();
+  const [a, b] = engine.nodes;
+  // Beide exakt aufeinander legen; a wird fixiert (wie beim Ziehen/Auswahl).
+  a.x = 0;
+  a.y = 0;
+  a.fixed = true;
+  b.x = 0;
+  b.y = 0;
+  b.fixed = false;
+
+  engine["resolveCollisions"]();
+
+  assert.equal(a.x, 0, "fixierter Knoten darf sich nicht bewegen (x)");
+  assert.equal(a.y, 0, "fixierter Knoten darf sich nicht bewegen (y)");
+  const dist = Math.hypot(a.x - b.x, a.y - b.y);
+  assert.ok(dist >= a.r + b.r, `Nachbar muss beiseite geschoben werden (dist=${dist.toFixed(2)})`);
+});
+
 test("Remount-Positionscache wird verworfen wenn Koordinaten aus dem Ruder laufen", () => {
   const cache = {
     a: { x: 120, y: 40 },
