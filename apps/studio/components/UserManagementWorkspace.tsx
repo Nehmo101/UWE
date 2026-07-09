@@ -90,8 +90,15 @@ export function UserManagementWorkspace() {
   const [portalAccess, setPortalAccess] = useState<PortalAccessEvaluationView | null>(null);
   const [portalAccessLoading, setPortalAccessLoading] = useState(false);
   const [portalAccessError, setPortalAccessError] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? null;
+  const filteredUsers = users.filter((user) => {
+    if (roleFilter && user.role !== roleFilter) return false;
+    if (statusFilter && (user.status ?? "active") !== statusFilter) return false;
+    return true;
+  });
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -359,10 +366,34 @@ export function UserManagementWorkspace() {
 
       <section className="uwe-v2-card uwe-v2-card-padded" style={{ marginBottom: "1.5rem" }}>
         <h2>Benutzer</h2>
+        <div className="uwe-form-grid" style={{ marginBottom: "1rem" }}>
+          <label>
+            Rolle filtern
+            <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+              <option value="">Alle Rollen</option>
+              {USER_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {SECURITY_ROLE_LABELS[role] ?? role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Status filtern
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="">Alle Status</option>
+              {USER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {loading ? (
           <p>Lade Benutzer…</p>
-        ) : users.length === 0 ? (
-          <p>Noch keine Benutzer angelegt.</p>
+        ) : filteredUsers.length === 0 ? (
+          <p>Keine Benutzer für diesen Filter.</p>
         ) : (
           <table className="uwe-table">
             <thead>
@@ -377,7 +408,7 @@ export function UserManagementWorkspace() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <tr key={user.id}>
                   <td>{user.displayName}</td>
                   <td>{user.email ?? "—"}</td>

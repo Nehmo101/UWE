@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import { createLifeAdminService, prisma } from "@uwe/database/server";
+import {
+  createDashboardLayoutService,
+  createLifeAdminService,
+  prisma,
+  STUDIO_TODAY_PAGE_KEY,
+} from "@uwe/database/server";
+import { getUweRuntimeConfig } from "@uwe/auth";
 import { StudioShell, PageHeader } from "@/src/components/shell";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 import { generateMorningBriefingAction } from "../briefing-actions";
@@ -22,18 +28,28 @@ async function getLatestBriefing() {
 
 export default async function TodayPage() {
   const useMockInference = process.env.AI_USE_MOCK === "true";
-  const [data, briefing, currentUser] = await Promise.all([
+  const currentUser = await getCurrentAuthUser();
+  const layoutUserId =
+    currentUser?.id ?? (!getUweRuntimeConfig().authRequired ? "dev-bypass" : null);
+
+  const [data, briefing, chatAccess, todayLayout] = await Promise.all([
     getTodayDashboardData(prisma, { useMockInference }),
     getLatestBriefing(),
-    getCurrentAuthUser(),
+    resolveAiKnowledgeAccess(currentUser),
+    layoutUserId
+      ? createDashboardLayoutService(prisma).getDashboardLayout(layoutUserId, STUDIO_TODAY_PAGE_KEY)
+      : Promise.resolve(null),
   ]);
-  const chatAccess = await resolveAiKnowledgeAccess(currentUser);
 
   return (
     <StudioShell breadcrumb={<span>Heute</span>}>
-      <PageHeader title="Heute" summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick." actions={<Link href="/capture?quick=1" className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">+ Capture</Link>} />
+      <PageHeader title="Heute" summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick." actions={<><Link href="/settings?tab=general" className="uwe-v2-btn uwe-v2-btn-secondary">Widgets</Link><Link href="/capture?quick=1" className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">+ Capture</Link></>} />
       <TodayQuickCapture />
-      <TodayDashboardClient data={data} />
+      <TodayDashboardClient
+        data={data}
+        initialWidgets={todayLayout?.widgets}
+        initialIsDefault={todayLayout?.isDefault}
+      />
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Morning Briefing</h2>

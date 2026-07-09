@@ -4,6 +4,7 @@ import {
   GameSessionStatusBadge,
 } from "@uwe/shared-ui";
 import {
+  createAiRunService,
   createAuthService,
   createPrismaClient,
   getAppRepository,
@@ -15,6 +16,7 @@ import {
   serializePrepareNextSessionOutline,
 } from "@uwe/ai-brain";
 import { PrepareSessionPanel } from "@/components/PrepareSessionPanel";
+import { SettingsCollapsiblePanel } from "@/components/SettingsCollapsiblePanel";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -58,9 +60,16 @@ export default async function PrepareSessionPage({ params }: Props) {
 
   const db = createPrismaClient();
   const auth = createAuthService(db);
-  const [sessions, inference] = await Promise.all([
+  const aiRuns = createAiRunService();
+  const [sessions, inference, latestPrepRun] = await Promise.all([
     auth.listGameSessionsForDm(worldSlug),
     getInferenceStatus({ useMock: process.env.AI_USE_MOCK === "true" }),
+    aiRuns.list({
+      worldId: world.id,
+      taskType: "next_session_prep",
+      status: "completed",
+      limit: 1,
+    }),
   ]);
   await db.$disconnect();
 
@@ -109,8 +118,11 @@ export default async function PrepareSessionPage({ params }: Props) {
         }
       />
 
-      <section className="uwe-v2-card uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Kommende Sessions</h2>
+      <SettingsCollapsiblePanel
+        title="Kommende Sessions"
+        summary={`${upcomingSessions.length} geplant`}
+        defaultOpen
+      >
         {upcomingSessions.length === 0 ? (
           <p className="uwe-hint">
             Keine geplanten Sessions.{" "}
@@ -146,11 +158,35 @@ export default async function PrepareSessionPage({ params }: Props) {
             </tbody>
           </table>
         )}
-      </section>
+      </SettingsCollapsiblePanel>
+
+      {latestPrepRun.runs[0]?.resultText ? (
+        <SettingsCollapsiblePanel
+          title="Letztes Session-Paket (Brain)"
+          summary="SSR aus letztem abgeschlossenen KI-Lauf"
+          defaultOpen
+        >
+          <p className="uwe-dashboard-muted">
+            Abgeschlossen {latestPrepRun.runs[0].updatedAt.toLocaleString("de-DE")} — Review vor
+            Übernahme.
+          </p>
+          <pre className="uwe-pre-block" style={{ whiteSpace: "pre-wrap" }}>
+            {latestPrepRun.runs[0].resultText}
+          </pre>
+          <p>
+            <Link href={`/worlds/${worldSlug}/ai-runs/${latestPrepRun.runs[0].id}`}>
+              AI Run öffnen →
+            </Link>
+          </p>
+        </SettingsCollapsiblePanel>
+      ) : null}
 
       {outlineText && referenceSession && (
-        <section className="uwe-v2-card uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Heuristische Outline-Vorschau</h2>
+        <SettingsCollapsiblePanel
+          title="Heuristische Outline-Vorschau"
+          summary={`Aus Session #${referenceSession.sessionNumber}`}
+          defaultOpen={false}
+        >
           <p className="uwe-dashboard-muted">
             Deterministische Vorschau aus Session #{referenceSession.sessionNumber} „
             {referenceSession.title}“ — kein KI-Ersatz, nur Orientierung vor dem Generator-Lauf.
@@ -158,20 +194,26 @@ export default async function PrepareSessionPage({ params }: Props) {
           <pre className="uwe-pre-block" style={{ whiteSpace: "pre-wrap" }}>
             {outlineText}
           </pre>
-        </section>
+        </SettingsCollapsiblePanel>
       )}
 
-      <PrepareSessionPanel
-        worldSlug={worldSlug}
-        sessions={sessions.map((session) => ({
-          id: session.id,
-          title: session.title,
-          sessionNumber: session.sessionNumber,
-        }))}
-        defaultSessionId={defaultSessionId}
-        rtxReady={inference.online}
-        rtxEnabled={inference.enabled}
-      />
+      <SettingsCollapsiblePanel
+        title="KI Session-Paket generieren"
+        summary="RTX-only — Review vor Übernahme"
+        defaultOpen
+      >
+        <PrepareSessionPanel
+          worldSlug={worldSlug}
+          sessions={sessions.map((session) => ({
+            id: session.id,
+            title: session.title,
+            sessionNumber: session.sessionNumber,
+          }))}
+          defaultSessionId={defaultSessionId}
+          rtxReady={inference.online}
+          rtxEnabled={inference.enabled}
+        />
+      </SettingsCollapsiblePanel>
     </WorldShell>
   );
 }

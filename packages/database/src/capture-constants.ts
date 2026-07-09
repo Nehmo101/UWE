@@ -1,4 +1,6 @@
-import type { CaptureType } from "./generated/prisma/client";
+import type { CaptureStatus, CaptureType } from "./generated/prisma/client";
+
+export type { CaptureStatus, CaptureType } from "./generated/prisma/client";
 
 export const CAPTURE_TYPE_LABELS: Record<CaptureType, string> = {
   quick_note: "Schnelle Notiz",
@@ -107,3 +109,10 @@ export const QUICK_CAPTURE_TYPE_OPTIONS: Array<{
     showFile: false,
   },
 ];
+
+export const CAPTURE_STATUS_LABELS: Record<CaptureStatus, string> = {
+  inbox: "Inbox",
+  triaged: "Sortiert",
+  linked: "Verknüpft",
+  archived: "Archiviert",
+};

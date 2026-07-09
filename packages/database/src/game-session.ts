@@ -201,18 +201,32 @@ export class GameSessionService {
 
   async listByWorld(
     worldSlug: string,
-    options?: { campaignId?: string | null },
+    options?: {
+      campaignId?: string | null;
+      status?: GameSessionStatus | GameSessionStatus[];
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<GameSessionWithLinks[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
+
+    const statusFilter = options?.status
+      ? Array.isArray(options.status)
+        ? { in: options.status }
+        : options.status
+      : undefined;
 
     return this.db.gameSession.findMany({
       where: {
         worldId: world.id,
         ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
+        ...(statusFilter ? { status: statusFilter } : {}),
       },
       include: this.sessionInclude(),
       orderBy: [{ sessionNumber: "desc" }, { date: "desc" }],
+      take: options?.limit,
+      skip: options?.offset,
     });
   }
 

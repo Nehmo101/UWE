@@ -25,11 +25,23 @@ export default async function PortalSessionDetailPage({ params }: Props) {
   let notes;
   let newlyUnlocked;
   let canComment = false;
+  let prevSessionId: string | null = null;
+  let nextSessionId: string | null = null;
 
   try {
+    const allSessions = await auth.listGameSessionsForViewer(worldSlug, ctx);
+    const index = allSessions.findIndex((entry) => entry.id === sessionId);
+
     session = await auth.getGameSessionForViewer(worldSlug, sessionId, ctx);
     if (!session) {
       notFound();
+    }
+
+    if (index > 0) {
+      prevSessionId = allSessions[index - 1]?.id ?? null;
+    }
+    if (index >= 0 && index < allSessions.length - 1) {
+      nextSessionId = allSessions[index + 1]?.id ?? null;
     }
 
     newlyUnlocked = await auth.listNewlyUnlockedPagesForSession(worldSlug, sessionId, ctx);
@@ -65,6 +77,16 @@ export default async function PortalSessionDetailPage({ params }: Props) {
           Session {session.sessionNumber}: {session.title}
         </h1>
         {session.date && <p className="auth-lead">{session.date.toLocaleDateString("de-DE")}</p>}
+        {(prevSessionId || nextSessionId) && (
+          <nav className="uwe-inline-actions" aria-label="Session-Navigation" style={{ marginTop: "0.5rem" }}>
+            {prevSessionId ? (
+              <a href={`/auth/worlds/${worldSlug}/sessions/${prevSessionId}`}>← Vorherige Session</a>
+            ) : null}
+            {nextSessionId ? (
+              <a href={`/auth/worlds/${worldSlug}/sessions/${nextSessionId}`}>Nächste Session →</a>
+            ) : null}
+          </nav>
+        )}
       </header>
 
       <SessionRecapFeed

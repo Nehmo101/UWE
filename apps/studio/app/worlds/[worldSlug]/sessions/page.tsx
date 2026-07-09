@@ -6,24 +6,38 @@ import {
 } from "@uwe/shared-ui";
 import {
   createAuthService,
+  createGameSessionService,
   createPrismaClient,
+  GameSessionStatusEnum,
   getAppRepository,
+  GAME_SESSION_STATUS_LABELS,
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
+const PAGE_SIZE = 20;
+
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string }>;
+  searchParams: Promise<{ campaign?: string; status?: string; page?: string }>;
+}
+
+function parseStatus(raw: string | undefined) {
+  if (raw && Object.values(GameSessionStatusEnum).includes(raw as (typeof GameSessionStatusEnum)[keyof typeof GameSessionStatusEnum])) {
+    return raw as (typeof GameSessionStatusEnum)[keyof typeof GameSessionStatusEnum];
+  }
+  return undefined;
 }
 
 export default async function StudioSessionsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug } = await searchParams;
-  const repo = getAppRepository();
+  const { campaign: campaignSlug, status: statusRaw, page: pageRaw } = await searchParams;
+  const page = Math.max(1, Number(pageRaw ?? "1") || 1);
+  const statusFilter = parseStatus(statusRaw);
 
+  const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
@@ -34,11 +48,31 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
 
   const db = createPrismaClient();
   const auth = createAuthService(db);
-  const sessions = await auth.listGameSessionsForDm(
-    worldSlug,
-    selectedCampaign?.id ?? undefined,
-  );
+  const gameSessions = createGameSessionService();
+
+  const [sessions, totalCount] = await Promise.all([
+    auth.listGameSessionsForDm(worldSlug, selectedCampaign?.id ?? undefined, {
+      status: statusFilter,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
+    gameSessions.listByWorld(worldSlug, {
+      campaignId: selectedCampaign?.id,
+      status: statusFilter,
+    }).then((rows) => rows.length),
+  ]);
   await db.$disconnect();
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  function pageHref(nextPage: number): string {
+    const paramsObj = new URLSearchParams();
+    if (campaignSlug) paramsObj.set("campaign", campaignSlug);
+    if (statusFilter) paramsObj.set("status", statusFilter);
+    if (nextPage > 1) paramsObj.set("page", String(nextPage));
+    const qs = paramsObj.toString();
+    return `/worlds/${worldSlug}/sessions${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <WorldShell
@@ -56,7 +90,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
           />
           <SidebarSection title="Kontext">
             <p className="uwe-hint" style={{ margin: 0 }}>
-              {sessions.length} Sessions
+              {totalCount} Sessions
               {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
             </p>
           </SidebarSection>
@@ -72,6 +106,28 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
           </Link>
         }
       />
+
+      <nav className="uwe-today-quick-chips uwe-v2-section" aria-label="Status-Filter">
+        <Link href={pageHref(1).replace(/\?page=\d+/, "").replace(/&page=\d+/, "")} className="uwe-today-quick-chip" data-severity={!statusFilter ? "warn" : "info"}>
+          Alle
+        </Link>
+        {Object.values(GameSessionStatusEnum).map((status) => {
+          const paramsObj = new URLSearchParams();
+          if (campaignSlug) paramsObj.set("campaign", campaignSlug);
+          paramsObj.set("status", status);
+          return (
+            <Link
+              key={status}
+              href={`/worlds/${worldSlug}/sessions?${paramsObj}`}
+              className="uwe-today-quick-chip"
+              data-severity={statusFilter === status ? "warn" : "info"}
+            >
+              {GAME_SESSION_STATUS_LABELS[status]}
+            </Link>
+          );
+        })}
+      </nav>
+
       <table className="uwe-page-table">
         <thead>
           <tr>
@@ -111,6 +167,16 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
 
       {sessions.length === 0 && (
         <p className="uwe-v2-empty">Noch keine Sessions. Erstelle die erste Session für diese Kampagne.</p>
+      )}
+
+      {totalPages > 1 && (
+        <nav className="uwe-inline-actions uwe-v2-section" aria-label="Pagination">
+          {page > 1 ? <Link href={pageHref(page - 1)}>← Zurück</Link> : null}
+          <span className="uwe-dashboard-muted">
+            Seite {page} / {totalPages}
+          </span>
+          {page < totalPages ? <Link href={pageHref(page + 1)}>Weiter →</Link> : null}
+        </nav>
       )}
     </WorldShell>
   );

@@ -13,8 +13,8 @@ import {
   assessStudioSecurity,
   type ProductionSafetyWarning,
 } from "@uwe/database/server";
-import { resolveUweAppUrls } from "@uwe/auth";
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
+import { ADMIN_HUB_SECTIONS } from "@/src/navigation/system-nav";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 
 export default async function AdminOverviewPage() {
@@ -27,7 +27,6 @@ export default async function AdminOverviewPage() {
   ]);
 
   const studioSecurity = assessStudioSecurity(system);
-  const appUrls = resolveUweAppUrls();
   const criticalWarnings = productionWarnings.filter(
     (w: ProductionSafetyWarning) => w.severity === "critical",
   );
@@ -78,64 +77,28 @@ export default async function AdminOverviewPage() {
           )}
 
           <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Schnellaktionen</h2>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-              <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/worlds">
-                Welten verwalten
-              </Link>
-              <Link className="uwe-v2-btn" href="/backup">
-                Backup erstellen
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/setup">
-                Einrichtung
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/checklist">
-                Aufgabenliste
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/roles">
-                Rollen & Rechte
-              </Link>
-              <Link className="uwe-v2-btn" href="/settings">
-                Einstellungen
-              </Link>
-              <Link className="uwe-v2-btn" href="/mail">
-                Mail Center
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/secrets">
-                Secrets-Status
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/cockpit">
-                Owner Cockpit
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/activity">
-                Verlauf
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/status">
-                Systemstatus
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/reviews">
-                Reviews
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/ai-gateway">
-                KI-Gateway
-              </Link>
-              <Link className="uwe-v2-btn" href="/admin/agent-jobs">
-                Agent Jobs
-              </Link>
-              {appUrls.portalUrl ? (
-                <a className="uwe-v2-btn" href={appUrls.portalUrl} target="_blank" rel="noreferrer">
-                  Portal öffnen
-                </a>
-              ) : (
-                <Link className="uwe-v2-btn" href="/settings?tab=portal">
-                  Portal konfigurieren
-                </Link>
-              )}
-              {appUrls.studioUrl ? (
-                <a className="uwe-v2-btn" href={appUrls.studioUrl}>
-                  Studio öffnen
-                </a>
-              ) : null}
+            <h2 className="uwe-v2-section-title">Bereiche</h2>
+            <div className="uwe-admin-hub-sections">
+              {ADMIN_HUB_SECTIONS.map((section) => (
+                <div key={section.title} className="uwe-v2-card uwe-v2-card-padded">
+                  <h3 className="uwe-section-subtitle">{section.title}</h3>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
+                    {section.links.map((link) => (
+                      <Link
+                        key={link.href}
+                        className={
+                          "primary" in link && link.primary
+                            ? "uwe-v2-btn uwe-v2-btn-primary"
+                            : "uwe-v2-btn"
+                        }
+                        href={link.href}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 

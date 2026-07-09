@@ -18,6 +18,7 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { NewPageAiPanel } from "@/components/NewPageAiPanel";
+import { SlugDuplicateChecker } from "@/src/components/ux/SlugDuplicateChecker";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createPageAction } from "../../../../actions";
 
@@ -126,10 +127,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
           </label>
         )}
 
-        <label>
-          Slug (optional)
-          <input name="slug" placeholder="leer lassen für automatischen Slug" />
-        </label>
+        <SlugDuplicateChecker worldSlug={worldSlug} />
 
         <label>
           Typ

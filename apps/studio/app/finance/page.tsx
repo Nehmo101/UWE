@@ -1,16 +1,37 @@
 import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import { prisma } from "@uwe/database/server";
-import { createFinanceOverviewService } from "@uwe/database/finance-overview";
+import {
+  createFinanceOverviewService,
+  type FinancePeriod,
+} from "@uwe/database/finance-overview";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function FinancePage() {
-  await requireStudioAccess();
+const PERIOD_LABELS: Record<FinancePeriod, string> = {
+  all: "Alle",
+  month: "Dieser Monat",
+  quarter: "Dieses Quartal",
+  year: "Dieses Jahr",
+};
 
-  const overview = await createFinanceOverviewService(prisma).getOverview();
+function parsePeriod(raw: string | undefined): FinancePeriod {
+  if (raw === "month" || raw === "quarter" || raw === "year") return raw;
+  return "all";
+}
+
+interface Props {
+  searchParams: Promise<{ period?: string }>;
+}
+
+export default async function FinancePage({ searchParams }: Props) {
+  await requireStudioAccess();
+  const { period: periodRaw } = await searchParams;
+  const period = parsePeriod(periodRaw);
+
+  const overview = await createFinanceOverviewService(prisma).getOverview(new Date(), { period });
   const { totals, alerts, reviewCandidates, aiCosts, byCategory, byInterval } = overview;
 
   return (
@@ -19,6 +40,20 @@ export default async function FinancePage() {
         title="Finanz- & Abo-Übersicht"
         summary="Laufende Kosten, Kündigungsfristen und „lohnt sich noch?“ auf einen Blick — reine Auswertung der Verträge, kein Banking."
       />
+
+      <nav className="uwe-today-quick-chips uwe-v2-section" aria-label="Zeitraum">
+        {(Object.keys(PERIOD_LABELS) as FinancePeriod[]).map((key) => (
+          <Link
+            key={key}
+            href={key === "all" ? "/finance" : `/finance?period=${key}`}
+            className="uwe-today-quick-chip"
+            data-severity={period === key ? "warn" : "info"}
+            aria-current={period === key ? "page" : undefined}
+          >
+            {PERIOD_LABELS[key]}
+          </Link>
+        ))}
+      </nav>
 
       <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
         <h2 className="uwe-v2-section-title">Gesamtkosten</h2>

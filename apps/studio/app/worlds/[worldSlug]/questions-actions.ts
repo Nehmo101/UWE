@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createPrismaClient } from "@uwe/database/server";
 import { createPlayerQuestionService } from "@uwe/database/player-questions";
+import { notifyPlayerQuestionAnswered } from "@uwe/database/player-question-notify";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -35,7 +36,22 @@ export async function answerPlayerQuestionAction(formData: FormData) {
   const db = createPrismaClient();
   try {
     const service = createPlayerQuestionService(db);
-    await service.answer(questionId, answer);
+    const updated = await service.answer(questionId, answer);
+
+    const world = await db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { name: true },
+    });
+    if (world) {
+      await notifyPlayerQuestionAnswered(db, {
+        questionId,
+        worldName: world.name,
+        worldSlug,
+        answer,
+      });
+    }
+
+    void updated;
   } finally {
     await db.$disconnect();
   }

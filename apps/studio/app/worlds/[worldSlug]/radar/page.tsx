@@ -4,6 +4,7 @@ import { getAppRepository, prisma } from "@uwe/database/server";
 import { createCampaignRadarService } from "@uwe/database/campaign-radar";
 import { notFound } from "next/navigation";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { updateQuestStatusAction } from "../quest-status-actions";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -115,8 +116,18 @@ export default async function CampaignRadarPage({ params }: Props) {
         ) : (
           <ul className="uwe-linked-list">
             {radar.openQuests.map((quest) => (
-              <li key={quest.href}>
+              <li key={quest.href} className="uwe-inline-actions">
                 <Link href={quest.href}>{quest.title}</Link>
+                <form action={updateQuestStatusAction} style={{ display: "inline" }}>
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="pageId" value={quest.id} />
+                  <input type="hidden" name="pageSlug" value={quest.slug} />
+                  <input type="hidden" name="category" value="quests" />
+                  <input type="hidden" name="questStatus" value="completed" />
+                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
+                    Abschließen
+                  </button>
+                </form>
               </li>
             ))}
           </ul>

@@ -67,9 +67,12 @@ export interface CreateImageStudioVersionInput {
 export class ImageStudioService {
   constructor(private readonly db: PrismaClient) {}
 
-  async listProjects(worldId?: string) {
+  async listProjects(worldId?: string, options?: { status?: ImageStudioStatus }) {
     return this.db.imageStudioProject.findMany({
-      where: worldId ? { worldId } : undefined,
+      where: {
+        ...(worldId ? { worldId } : {}),
+        ...(options?.status ? { status: options.status } : {}),
+      },
       orderBy: { updatedAt: "desc" },
       include: {
         versions: { orderBy: { versionNumber: "desc" }, take: 1 },

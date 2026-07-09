@@ -123,6 +123,22 @@ export async function updateCaptureStatusAction(formData: FormData) {
   revalidateCapturePaths();
 }
 
+export async function bulkArchiveCapturesAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const raw = String(formData.get("ids") || "");
+  const ids = raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (ids.length === 0) {
+    throw new Error("Keine Captures ausgewählt.");
+  }
+
+  await lifeAdmin().archiveCaptures(ids);
+  revalidateCapturePaths();
+}
+
 export async function deleteCaptureAction(formData: FormData) {
   await requireStudioActionAuth();
 

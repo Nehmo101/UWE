@@ -302,7 +302,10 @@ export class PageAiReviewService {
     return { ok: result.ok, message: result.message };
   }
 
-  async rejectReview(proposalId: string): Promise<{ ok: boolean; message: string }> {
+  async rejectReview(
+    proposalId: string,
+    reason?: string,
+  ): Promise<{ ok: boolean; message: string }> {
     const proposal = await this.db.aiProposal.findUnique({
       where: { id: proposalId },
       include: { aiRun: { include: { page: true } } },
@@ -324,7 +327,11 @@ export class PageAiReviewService {
         sourceId: proposalId,
         status: "pending",
       },
-      data: { status: "rejected", reviewedAt: new Date(), rejectReason: "Review abgelehnt" },
+      data: {
+        status: "rejected",
+        reviewedAt: new Date(),
+        rejectReason: reason?.trim() || "Review abgelehnt",
+      },
     });
 
     await this.db.page.update({

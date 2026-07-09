@@ -50,6 +50,7 @@ import { MagicItemBuilderSection } from "@/components/wiki/MagicItemBuilderSecti
 import { QuestBuilderSection } from "@/components/wiki/QuestBuilderSection";
 import { StructuredGeneratorSection } from "@/components/wiki/StructuredGeneratorSection";
 import { StatblockStudioSection } from "@/components/wiki/StatblockStudioSection";
+import { PageEditAutosave } from "@/src/components/ux/PageEditAutosave";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -121,10 +122,16 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           </>
         }
       />
+      {page.visibility === "dm_only" && (
+        <p className="uwe-form-error uwe-v2-section" role="note">
+          <strong>Nur GM (dm_only)</strong> — diese Seite erscheint niemals im Portal oder in Spieler-Exports.
+        </p>
+      )}
       <div className="uwe-has-sticky-actions">
         {saved && (
           <p className="uwe-flash uwe-flash-success" role="status">Änderungen gespeichert.</p>
         )}
+        <PageEditAutosave formId="uwe-edit-page-form" storageKey={`uwe:page-edit:${page.id}`} />
 
         <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-v2-form">
           <input type="hidden" name="pageId" value={page.id} />

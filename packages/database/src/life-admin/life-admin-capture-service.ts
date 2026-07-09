@@ -10,11 +10,38 @@ import type { LifeAdminLinksService } from "./life-admin-links-service";
 import type { LifeAdminProjectService } from "./life-admin-project-service";
 import type { LifeAdminWorkshopService } from "./life-admin-workshop-service";
 import type {
+  CaptureSourceGroup,
   CreateCaptureInput,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
   ListCapturesOptions,
 } from "./life-admin-types";
+import type { CaptureEntry } from "../generated/prisma/client";
+
+function readMetadataSource(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const source = (metadata as Record<string, unknown>).source;
+  return typeof source === "string" ? source : null;
+}
+
+export function matchesCaptureSourceGroup(
+  capture: Pick<CaptureEntry, "captureType" | "metadata" | "storageKey">,
+  group: CaptureSourceGroup,
+): boolean {
+  const metaSource = readMetadataSource(capture.metadata);
+  if (group === "mail") {
+    return metaSource === "mail";
+  }
+  if (group === "scan") {
+    return (
+      capture.captureType === "file_image" ||
+      capture.captureType === "voice_memo" ||
+      metaSource === "scan" ||
+      Boolean(capture.storageKey)
+    );
+  }
+  return metaSource !== "mail" && capture.captureType !== "file_image" && capture.captureType !== "voice_memo";
+}
 
 export interface LifeAdminCaptureDeps {
   links: LifeAdminLinksService;
@@ -35,15 +62,31 @@ export class LifeAdminCaptureService {
         : options.status
       : undefined;
 
-    return this.db.captureEntry.findMany({
+    const rows = await this.db.captureEntry.findMany({
       where: {
         status: statusFilter,
         captureType: options.captureType,
       },
       orderBy: [{ capturedAt: "desc" }],
-      take: options.limit ?? 50,
+      take: options.sourceGroup ? (options.limit ?? 100) * 3 : (options.limit ?? 50),
       skip: options.offset ?? 0,
     });
+
+    if (!options.sourceGroup) {
+      return rows.slice(0, options.limit ?? 50);
+    }
+
+    const filtered = rows.filter((row) => matchesCaptureSourceGroup(row, options.sourceGroup!));
+    return filtered.slice(0, options.limit ?? 100);
+  }
+
+  async archiveCaptures(ids: string[]) {
+    if (ids.length === 0) return 0;
+    const result = await this.db.captureEntry.updateMany({
+      where: { id: { in: ids } },
+      data: { status: "archived" },
+    });
+    return result.count;
   }
 
   async getCapture(id: string) {

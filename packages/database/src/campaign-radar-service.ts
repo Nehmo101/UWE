@@ -17,8 +17,10 @@ export interface RadarFaction {
 }
 
 export interface RadarQuest {
+  id: string;
   title: string;
   href: string;
+  slug: string;
   status: string;
 }
 
@@ -99,7 +101,7 @@ export class CampaignRadarService {
           type: "quest",
           OR: [{ questStatus: null }, { questStatus: "open" }],
         },
-        select: { title: true, slug: true, type: true, questStatus: true },
+        select: { id: true, title: true, slug: true, type: true, questStatus: true },
         orderBy: { title: "asc" },
       }),
       this.db.worldEvent.findMany({
@@ -136,8 +138,10 @@ export class CampaignRadarService {
         powerLevel: faction.powerLevel,
       })),
       openQuests: openQuests.map((quest) => ({
+        id: quest.id,
         title: quest.title,
         href: buildPageUrl(worldSlug, quest.type, quest.slug),
+        slug: quest.slug,
         status: quest.questStatus ?? "open",
       })),
       recentEvents: recentEvents.map((event) => ({

@@ -331,7 +331,10 @@ export async function getRun(runId: string) {
   return NextResponse.json({ run: serializeRun(run) });
 }
 
-export async function patchRun(runId: string, body: { status: "applied" | "discarded" | "cancelled" }) {
+export async function patchRun(
+  runId: string,
+  body: { status: "applied" | "discarded" | "cancelled"; rejectionComment?: string },
+) {
   const runs = aiRuns();
   const existing = await runs.getById(runId);
   if (!existing) {
@@ -342,7 +345,9 @@ export async function patchRun(runId: string, body: { status: "applied" | "disca
     case "applied":
       return NextResponse.json({ run: serializeRun(await runs.markApplied(runId)) });
     case "discarded":
-      return NextResponse.json({ run: serializeRun(await runs.markDiscarded(runId)) });
+      return NextResponse.json({
+        run: serializeRun(await runs.markDiscarded(runId, body.rejectionComment)),
+      });
     case "cancelled":
       return NextResponse.json({ run: serializeRun(await runs.markCancelled(runId)) });
     default:

@@ -19,6 +19,7 @@ import {
   updateHardwareAction,
 } from "../life-admin-actions";
 import { getHomelabCockpitData } from "@/src/lib/homelab-dashboard";
+import { AutoRefreshPanel } from "@/src/components/ux/AutoRefreshPanel";
 
 function severityStatus(severity: string, ok: boolean): "ok" | "warn" | "error" {
   if (severity === "ok" || ok) return "ok";
@@ -62,6 +63,7 @@ export default async function HardwarePage() {
         </section>
       )}
 
+      <AutoRefreshPanel intervalMs={30_000} label="Service-Status wird alle 30 Sekunden aktualisiert.">
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Service-Status</h2>
         <p className="uwe-dashboard-muted">
@@ -81,6 +83,7 @@ export default async function HardwarePage() {
           ))}
         </div>
       </section>
+      </AutoRefreshPanel>
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Security Checklist</h2>

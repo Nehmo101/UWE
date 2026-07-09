@@ -386,6 +386,35 @@ export async function createLifeBrainFactAction(formData: FormData) {
   redirect("/life-brain");
 }
 
+export async function updateLifeBrainDocumentAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const id = String(formData.get("id"));
+  const title = String(formData.get("title") || "").trim();
+  if (!title) {
+    throw new Error("Titel erforderlich.");
+  }
+
+  const document = await lifeAdmin().updatePersonalBrainDocument(id, {
+    title,
+    content: String(formData.get("content") || ""),
+  });
+
+  await enqueueAndDispatch({
+    type: "embedding",
+    title: `Life Brain Index · ${document.title}`,
+    payload: {
+      personalBrainDocumentId: document.id,
+      useMock: process.env.AI_USE_MOCK === "true",
+    },
+    relatedType: "personal_brain_document",
+    relatedId: document.id,
+  });
+
+  revalidateAdminPaths();
+  revalidatePath(`/life-brain/documents/${id}`);
+}
+
 export async function updateLifeBrainDocumentTagsAction(formData: FormData) {
   await requireStudioActionAuth();
 

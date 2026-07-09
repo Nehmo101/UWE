@@ -7,6 +7,7 @@ const runIdParamSchema = z.object({ runId: idSchema });
 
 const aiRunPatchBodySchema = z.object({
   status: z.enum(["applied", "discarded", "cancelled"]),
+  rejectionComment: z.string().max(2000).optional(),
 });
 
 interface RouteContext {

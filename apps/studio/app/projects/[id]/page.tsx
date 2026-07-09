@@ -24,6 +24,7 @@ import {
   updateProjectStatusAction,
 } from "../../life-admin-actions";
 import { ProjectMediaLibrary } from "./ProjectMediaLibrary";
+import { QuickCaptureForm } from "@/components/capture/QuickCaptureForm";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -69,6 +70,12 @@ export default async function ProjectDetailPage({ params }: Props) {
         </Link>{" "}
         · <a href="#projekt-bearbeiten">Projekt bearbeiten ↓</a>
       </p>
+
+      <section className="uwe-v2-card uwe-v2-section">
+        <h2 className="uwe-v2-section-title">Schnell erfassen</h2>
+        <p className="uwe-dashboard-muted">Idee oder Notiz direkt ins Capture — mit Rückkehr zu diesem Projekt.</p>
+        <QuickCaptureForm returnTo={`/projects/${project.id}`} compact />
+      </section>
 
       <section className="uwe-v2-card uwe-v2-section">
         <h2 className="uwe-v2-section-title">Domänen-Module</h2>

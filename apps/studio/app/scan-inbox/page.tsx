@@ -2,14 +2,13 @@ import Link from "next/link";
 import { prisma } from "@uwe/database/server";
 import {
   createScanInboxService,
-  SCAN_KIND_LABELS,
-  SCAN_STATUS_LABELS,
   type ScanDocumentRecord,
   type ScanDocumentStatus,
 } from "@uwe/scan-inbox";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { ScanUpload } from "./ScanUpload";
+import { ScanInboxBoard } from "@/components/scan-inbox/ScanInboxBoard";
 
 const STATUS_ORDER: ScanDocumentStatus[] = [
   "unanalyzed",
@@ -21,11 +20,6 @@ const STATUS_ORDER: ScanDocumentStatus[] = [
   "rejected",
   "archived",
 ];
-
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 export default async function ScanInboxPage() {
   await requireStudioAccess();
@@ -52,38 +46,11 @@ export default async function ScanInboxPage() {
         <ScanUpload />
       </section>
 
-      <section className="uwe-v2-section">
-        <div className="uwe-dashboard-grid">
-          {STATUS_ORDER.map((status) => {
-            const list = byStatus.get(status) ?? [];
-            return (
-              <article key={status} className="uwe-v2-card uwe-v2-card-padded">
-                <h3 className="uwe-v2-section-title">
-                  {SCAN_STATUS_LABELS[status]} ({list.length})
-                </h3>
-                {list.length === 0 ? (
-                  <p className="uwe-dashboard-muted">—</p>
-                ) : (
-                  <div className="uwe-today-card-list">
-                    {list.map((doc) => (
-                      <Link
-                        key={doc.id}
-                        href={`/scan-inbox/${doc.id}`}
-                        className="uwe-v2-card uwe-v2-card-padded uwe-capture-inbox-link"
-                      >
-                        <strong>{doc.title || "Ohne Titel"}</strong>
-                        <span className="uwe-dashboard-muted">
-                          {SCAN_KIND_LABELS[doc.detectedKind]} · {DATE_FORMAT.format(doc.createdAt)}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      </section>
+      <ScanInboxBoard
+        docs={docs}
+        statusOrder={STATUS_ORDER}
+        byStatus={Object.fromEntries(STATUS_ORDER.map((status) => [status, byStatus.get(status) ?? []])) as Record<ScanDocumentStatus, ScanDocumentRecord[]>}
+      />
 
       <p className="uwe-dashboard-muted">
         <Link href="/today">← Zurück zu Heute</Link>

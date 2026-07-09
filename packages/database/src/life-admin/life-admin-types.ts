@@ -200,9 +200,12 @@ export const HARDWARE_STATUS_LABELS: Record<HardwareStatus, string> = {
   archived: "Archiviert",
 };
 
+export type CaptureSourceGroup = "manual" | "mail" | "scan";
+
 export interface ListCapturesOptions {
   status?: CaptureStatus | CaptureStatus[];
   captureType?: CaptureType;
+  sourceGroup?: CaptureSourceGroup;
   limit?: number;
   offset?: number;
 }

@@ -8,6 +8,8 @@ import {
   WORLD_OPEN_ITEM_CATEGORY_LABELS,
   type WorldOpenItemCategory,
 } from "@uwe/database/server";
+import { OpenItemsBulkClose } from "@/components/worlds/OpenItemsBulkClose";
+import { bulkCloseOpenQuestsAction } from "../open-items-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 
 interface Props {
@@ -60,29 +62,40 @@ export default async function WorldOpenItemsPage({ params }: Props) {
       {items.length === 0 ? (
         <p className="uwe-hint">Keine offenen Punkte gefunden — alles sieht erledigt aus.</p>
       ) : (
-        CATEGORY_ORDER.map((category) => {
-          const section = grouped[category];
-          if (section.length === 0) {
-            return null;
-          }
+        <>
+          <OpenItemsBulkClose
+            worldSlug={worldSlug}
+            items={items.map((item) => ({
+              id: item.id,
+              title: item.title,
+              category: item.category,
+            }))}
+            action={bulkCloseOpenQuestsAction}
+          />
+          {CATEGORY_ORDER.map((category) => {
+            const section = grouped[category];
+            if (section.length === 0) {
+              return null;
+            }
 
-          return (
-            <section key={category} className="uwe-v2-card uwe-v2-section">
-              <h2 className="uwe-v2-section-title">{WORLD_OPEN_ITEM_CATEGORY_LABELS[category]}</h2>
-              <ul className="auth-page-list">
-                {section.map((item) => (
-                  <li key={item.id}>
-                    <Link href={item.href}>
-                      <strong>{item.title}</strong>
-                      <span className="auth-muted">{item.meta}</span>
-                      {item.summary && <p className="portal-dash-summary">{item.summary}</p>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })
+            return (
+              <section key={category} className="uwe-v2-card uwe-v2-section">
+                <h2 className="uwe-v2-section-title">{WORLD_OPEN_ITEM_CATEGORY_LABELS[category]}</h2>
+                <ul className="auth-page-list">
+                  {section.map((item) => (
+                    <li key={item.id}>
+                      <Link href={item.href}>
+                        <strong>{item.title}</strong>
+                        <span className="auth-muted">{item.meta}</span>
+                        {item.summary && <p className="portal-dash-summary">{item.summary}</p>}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </>
       )}
     </WorldShell>
   );

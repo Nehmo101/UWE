@@ -1,33 +1,22 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  GAME_SESSION_STATUS_LABELS,
   GameSessionStatusBadge,
-  PageTypeBadge,
   SidebarSection,
 } from "@uwe/shared-ui";
 import {
-  buildPageUrl as dbBuildPageUrl,
   createAuthService,
   createPrismaClient,
-  GameSessionStatusEnum,
   getAppRepository,
   navCategoryForPageType,
 } from "@uwe/database/server";
-import {
-  linkPageToSessionAction,
-  publishSessionRecapAction,
-  unlinkPageFromSessionAction,
-  updateGameSessionAction,
-} from "../../../../session-actions";
+import { publishSessionRecapAction } from "../../../../session-actions";
 import {
   AVAILABILITY_LABELS,
   createSessionAvailabilityService,
 } from "@uwe/player-hub";
 import { AiContextPanel } from "@/components/AiContextPanel";
+import { SessionDetailClient } from "@/components/sessions/SessionDetailClient";
 import { StudioWikiPageView } from "@/components/StudioWikiPageView";
-import { preparePrintListFromSessionAction } from "@/app/label-actions";
-import { pageLabelNewHref } from "@/src/lib/label-links";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -187,167 +176,18 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         </section>
       )}
 
-      <form action={updateGameSessionAction} className="uwe-edit-form">
-        <input type="hidden" name="worldSlug" value={worldSlug} />
-        <input type="hidden" name="sessionId" value={sessionId} />
-
-        <label>
-          Titel
-          <input name="title" defaultValue={session.title} required />
-        </label>
-
-        <label>
-          Session-Nummer
-          <input name="sessionNumber" type="number" min={1} defaultValue={session.sessionNumber} required />
-        </label>
-
-        <label>
-          Datum
-          <input
-            type="date"
-            name="date"
-            defaultValue={session.date ? session.date.toISOString().slice(0, 10) : ""}
-          />
-        </label>
-
-        <label>
-          Status
-          <select name="status" defaultValue={session.status}>
-            {Object.values(GameSessionStatusEnum).map((status) => (
-              <option key={status} value={status}>
-                {GAME_SESSION_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <fieldset className="uwe-fieldset">
-          <legend>DM-Notizen (nur Studio)</legend>
-          <label>
-            DM-Zusammenfassung
-            <textarea name="summaryDm" rows={5} defaultValue={session.summaryDm ?? ""} />
-          </label>
-          <label>
-            Vorbereitungsnotizen
-            <textarea name="notes" rows={4} defaultValue={session.notes ?? ""} />
-          </label>
-        </fieldset>
-
-        <label className="uwe-checkbox" style={{ marginTop: "1rem" }}>
-          <input
-            type="checkbox"
-            name="playerVisibleSchedule"
-            defaultChecked={session.playerVisibleSchedule}
-          />
-          Termin für Spieler im Portal ankündigen (nur Datum/Titel — kein Recap/Prep)
-        </label>
-
-        <fieldset className="uwe-fieldset">
-          <legend>Spieler-Recap</legend>
-          <label>
-            Recap für Spieler
-            <textarea name="summaryPlayer" rows={5} defaultValue={session.summaryPlayer ?? ""} />
-          </label>
-          <p className="uwe-hint">
-            <Link
-              href={`/mail/compose?kind=session_recap&worldSlug=${worldSlug}&sourceId=${sessionId}`}
-            >
-              Mail aus Spieler-Recap vorbereiten
-            </Link>
-            {" "}(nur player-sichtbarer Text — DM-only wird nicht übernommen)
-          </p>
-        </fieldset>
-
-        <fieldset className="uwe-fieldset">
-          <legend>Nachbereitung</legend>
-          <label>
-            Offene Plots
-            <textarea name="openPlots" rows={4} defaultValue={session.openPlots ?? ""} />
-          </label>
-          <label>
-            Spielerentscheidungen
-            <textarea name="playerDecisions" rows={4} defaultValue={session.playerDecisions ?? ""} />
-          </label>
-        </fieldset>
-
-        <div className="uwe-form-actions">
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
-              <Link
-                href={`/worlds/${worldSlug}/sessions/${sessionId}/live`}
-                className="uwe-v2-btn uwe-v2-btn-secondary"
-              >
-                Live-Modus
-              </Link>
-            </div>
-      </form>
-
-      <section style={{ marginTop: "2rem" }}>
-        <h2 className="uwe-dashboard-muted" style={{ fontSize: "1rem" }}>Labels für nächste Session</h2>
-        {session.linkedPages.length > 0 ? (
-          <form action={preparePrintListFromSessionAction} className="uwe-form-inline">
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="sessionId" value={sessionId} />
-            <input type="hidden" name="name" value={`${session.title} — Handouts`} />
-            <label className="uwe-checkbox">
-              <input type="checkbox" name="forNextSession" defaultChecked />
-              Für nächste Session markieren
-            </label>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Druckliste aus Session vorbereiten
-            </button>
-          </form>
-        ) : (
-          <p className="uwe-v2-empty">Verknüpfe Seiten, um Labels vorzubereiten.</p>
-        )}
-      </section>
-
-      <section style={{ marginTop: "2rem" }}>
-        <h2 className="uwe-dashboard-muted" style={{ fontSize: "1rem" }}>Verknüpfte Seiten</h2>
-        {session.linkedPages.length > 0 ? (
-          <ul className="uwe-linked-list">
-            {session.linkedPages.map((page) => (
-              <li key={page.id}>
-                <Link href={dbBuildPageUrl(worldSlug, page.type, page.slug)}>
-                  {page.title}
-                </Link>
-                <PageTypeBadge type={page.type} />
-                <Link
-                  className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
-                  href={pageLabelNewHref(worldSlug, page.type, page.id)}
-                >
-                  Label
-                </Link>
-                <form action={unlinkPageFromSessionAction} style={{ display: "inline" }}>
-                  <input type="hidden" name="worldSlug" value={worldSlug} />
-                  <input type="hidden" name="sessionId" value={sessionId} />
-                  <input type="hidden" name="pageId" value={page.id} />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
-                    Entfernen
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="uwe-v2-empty">Noch keine verknüpften Seiten.</p>
-        )}
-
-        {linkablePages.length > 0 && (
-          <form action={linkPageToSessionAction} className="uwe-inline-form" style={{ marginTop: "1rem" }}>
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <input type="hidden" name="sessionId" value={sessionId} />
-            <select name="pageId" required>
-              <option value="">Seite verknüpfen…</option>
-              {linkablePages.map((page) => (
-                <option key={page.id} value={page.id}>
-                  {page.title} ({page.type})
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">Verknüpfen</button>
-          </form>
-        )}
-      </section>
+      <SessionDetailClient
+        worldSlug={worldSlug}
+        sessionId={sessionId}
+        session={session}
+        linkablePages={linkablePages.map((page) => ({
+          id: page.id,
+          title: page.title,
+          type: page.type,
+          slug: page.slug,
+        }))}
+        flash={{ saved, published, linked, unlinked }}
+      />
     </WorldShell>
   );
 }

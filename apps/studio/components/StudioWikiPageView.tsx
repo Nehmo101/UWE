@@ -328,6 +328,12 @@ export async function StudioWikiPageView({
           />
 
           <div className="uwe-v2-reader uwe-v2-wiki">
+            {view.links.some((link) => link.status === "broken") && (
+              <p className="uwe-notice uwe-notice-warn" role="note">
+                Diese Seite enthält {view.links.filter((link) => link.status === "broken").length}{" "}
+                defekte Wikilinks — siehe Seitenleiste „Ausgehende Links“.
+              </p>
+            )}
             <WikiContent html={view.html} />
 
             <section className="wiki-graph-section uwe-v2-wiki-aside mt-8">

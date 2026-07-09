@@ -14,6 +14,7 @@ export function AiRunActions({ runId, worldSlug, status, resultText }: Props) {
   const [currentStatus, setCurrentStatus] = useState(status);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rejectComment, setRejectComment] = useState("");
 
   async function updateStatus(newStatus: "applied" | "discarded" | "cancelled") {
     setLoading(true);
@@ -22,7 +23,12 @@ export function AiRunActions({ runId, worldSlug, status, resultText }: Props) {
       const response = await fetch(studioApiUrl(`/api/ai/runs/${runId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          status: newStatus,
+          ...(newStatus === "discarded" && rejectComment.trim()
+            ? { rejectionComment: rejectComment.trim() }
+            : {}),
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -55,6 +61,16 @@ export function AiRunActions({ runId, worldSlug, status, resultText }: Props) {
         )}
         {canReview && (
           <>
+            <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              Ablehnungskommentar (optional)
+              <input
+                type="text"
+                value={rejectComment}
+                onChange={(event) => setRejectComment(event.target.value)}
+                placeholder="Grund für Verwerfen…"
+                disabled={loading}
+              />
+            </label>
             <button type="button" onClick={() => void updateStatus("applied")} disabled={loading}>
               Als übernommen markieren
             </button>

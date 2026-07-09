@@ -42,7 +42,7 @@ export function AgentJobsPoller({ runningJobIds }: AgentJobsPollerProps) {
           startTransition(() => router.refresh());
         }
       });
-    }, 5000);
+    }, 10_000);
 
     return () => window.clearInterval(timer);
   }, [activeIds, router, startTransition]);
@@ -51,7 +51,7 @@ export function AgentJobsPoller({ runningJobIds }: AgentJobsPollerProps) {
 
   return (
     <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
-      {activeIds.length} Agent-Job(s) laufen — Status wird alle 5 Sekunden aktualisiert.
+      {activeIds.length} Agent-Job(s) laufen — Status wird alle 10 Sekunden aktualisiert.
     </p>
   );
 }

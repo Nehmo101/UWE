@@ -118,6 +118,8 @@ export {
   type PageListItem,
 } from "./MobileComponents";
 
+export { ViewEditToggle, type ViewEditToggleProps } from "./ViewEditToggle";
+
 export {
   ErrorAlert,
   LoadingPage,

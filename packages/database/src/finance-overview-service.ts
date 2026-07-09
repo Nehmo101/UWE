@@ -107,6 +107,39 @@ export interface FinanceOverview {
   aiCosts: FinanceAiCosts;
   reviewCandidates: FinanceReviewCandidate[];
   generatedAt: Date;
+  period: FinancePeriod;
+}
+
+export type FinancePeriod = "all" | "month" | "quarter" | "year";
+
+export function resolveFinancePeriodBounds(
+  period: FinancePeriod,
+  now: Date = new Date(),
+): { start: Date; end: Date } | null {
+  if (period === "all") return null;
+
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  if (period === "year") {
+    return {
+      start: new Date(year, 0, 1),
+      end: new Date(year, 11, 31, 23, 59, 59, 999),
+    };
+  }
+
+  if (period === "quarter") {
+    const quarterStartMonth = Math.floor(month / 3) * 3;
+    return {
+      start: new Date(year, quarterStartMonth, 1),
+      end: new Date(year, quarterStartMonth + 3, 0, 23, 59, 59, 999),
+    };
+  }
+
+  return {
+    start: new Date(year, month, 1),
+    end: new Date(year, month + 1, 0, 23, 59, 59, 999),
+  };
 }
 
 function formatDateLabel(date: Date | null): string | null {
@@ -246,9 +279,27 @@ export function rankReviewCandidates(
 export class FinanceOverviewService {
   constructor(private readonly db: PrismaClient) {}
 
-  async getOverview(now: Date = new Date()): Promise<FinanceOverview> {
+  async getOverview(
+    now: Date = new Date(),
+    options?: { period?: FinancePeriod },
+  ): Promise<FinanceOverview> {
+    const period = options?.period ?? "all";
+    const bounds = resolveFinancePeriodBounds(period, now);
+
     const contracts = await this.db.contractExpense.findMany({
-      where: { status: { in: FINANCE_ACTIVE_STATUSES } },
+      where: {
+        status: { in: FINANCE_ACTIVE_STATUSES },
+        ...(bounds
+          ? {
+              OR: [
+                { nextPaymentDate: { gte: bounds.start, lte: bounds.end } },
+                { renewalDate: { gte: bounds.start, lte: bounds.end } },
+                { cancelByDate: { gte: bounds.start, lte: bounds.end } },
+                { updatedAt: { gte: bounds.start, lte: bounds.end } },
+              ],
+            }
+          : {}),
+      },
       orderBy: [{ renewalDate: "asc" }, { updatedAt: "desc" }],
     });
 
@@ -285,6 +336,7 @@ export class FinanceOverviewService {
       },
       reviewCandidates: rankReviewCandidates(contracts),
       generatedAt: now,
+      period,
     };
   }
 }
