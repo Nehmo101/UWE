@@ -79,7 +79,15 @@ function StudioResetPasswordFormInner() {
       footer={<Link href="/login">← Zurück zur Anmeldung</Link>}
     >
       {!token ? (
-        <Alert tone="danger">{error}</Alert>
+        <div className="space-y-3">
+          <Alert tone="danger">{error}</Alert>
+          <p className="text-sm text-muted-foreground">
+            Fordere einen neuen Link an:{" "}
+            <Link href="/forgot-password" className="text-primary hover:underline">
+              Passwort vergessen
+            </Link>
+          </p>
+        </div>
       ) : (
         <form className="space-y-4" onSubmit={handleSubmit}>
           {!emailFromUrl ? (

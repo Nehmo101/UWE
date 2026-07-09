@@ -1,7 +1,8 @@
 import { generateSessionToken, hashPassword, verifyPassword } from "@uwe/auth/server";
 import type { PrismaClient } from "./client";
-import type { Asset, Page, ShareLink, ShareTargetType } from "./generated/prisma/client";
-import { filterBlocksForContext, type ShareAccessGrant } from "./permissions";
+import type { Asset, Page, PublishStatus, ShareLink, ShareTargetType } from "./generated/prisma/client";
+import { filterBlocksForContext, isPublishedForPortal, type ShareAccessGrant } from "./permissions";
+import { isPlayerPortalVisibility } from "./content-access";
 import type { PageWithBlocks } from "./repository";
 
 export type { ShareLink, ShareTargetType };
@@ -60,6 +61,22 @@ export function buildShareUrl(token: string, portalBaseUrl?: string): string {
   return `${base}/share/${token}`;
 }
 
+function isShareablePortalVisibility(
+  visibility: Page["visibility"] | Asset["visibility"],
+): boolean {
+  return isPlayerPortalVisibility(visibility);
+}
+
+function isShareablePortalPage(
+  visibility: Page["visibility"],
+  publishStatus: PublishStatus,
+): boolean {
+  if (!isPlayerPortalVisibility(visibility)) {
+    return false;
+  }
+  return isPublishedForPortal(publishStatus);
+}
+
 function addTargetToGrant(
   grant: ShareAccessGrant,
   targetType: ShareTargetType,
@@ -86,6 +103,9 @@ export class ShareLinkService {
       if (!page) {
         throw new Error("Seite nicht gefunden");
       }
+      if (!isShareablePortalPage(page.visibility, page.publishStatus)) {
+        throw new Error("Nur veröffentlichte, für Spieler freigegebene Seiten können geteilt werden");
+      }
       return;
     }
 
@@ -94,16 +114,25 @@ export class ShareLinkService {
       if (!asset) {
         throw new Error("Asset nicht gefunden");
       }
+      if (!isShareablePortalVisibility(asset.visibility)) {
+        throw new Error("Nur für Spieler freigegebene Assets können geteilt werden");
+      }
       return;
     }
 
     const page = await this.db.page.findFirst({ where: { id: targetId, worldId, type: "handout" } });
     if (page) {
+      if (!isShareablePortalPage(page.visibility, page.publishStatus)) {
+        throw new Error("Nur veröffentlichte Handouts können geteilt werden");
+      }
       return;
     }
 
     const asset = await this.db.asset.findFirst({ where: { id: targetId, worldId, type: "handout" } });
     if (asset) {
+      if (!isShareablePortalVisibility(asset.visibility)) {
+        throw new Error("Nur für Spieler freigegebene Handouts können geteilt werden");
+      }
       return;
     }
 
@@ -298,6 +327,20 @@ export class ShareLinkService {
 
     const target = await this.resolveShareTarget(link);
     if (!target) {
+      return null;
+    }
+
+    if (
+      target.kind === "page" &&
+      !isShareablePortalPage(target.page.visibility, target.page.publishStatus)
+    ) {
+      return null;
+    }
+
+    if (
+      target.kind === "asset" &&
+      !isShareablePortalVisibility(target.asset.visibility)
+    ) {
       return null;
     }
 

@@ -6,5 +6,5 @@ interface Props {
 
 export default async function LegacyWorldGraphPage({ params }: Props) {
   const { worldSlug } = await params;
-  await redirectLegacyWorldPath(worldSlug);
+  await redirectLegacyWorldPath(worldSlug, "/graph");
 }

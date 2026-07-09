@@ -277,6 +277,23 @@ describe("Label editor extensions", () => {
     assert.match(String(pdf).slice(0, 8), /%PDF/);
   });
 
+  it("renders PDF labels with German umlauts without throwing", async () => {
+    const pdf = await renderLabelExportAsync("pdf", {
+      content: { title: "Tränke", text: "Größe: 50 ml — Übung für Ärzte" },
+      layoutSettings: {
+        mode: "text_only",
+        truncateToPage: true,
+        truncateLongWords: true,
+        widthInches: 4,
+        heightInches: 2,
+      },
+      title: "Tränke",
+    });
+
+    assert.equal(pdf.contentType, "application/pdf");
+    assert.ok(pdf.body.length > 100);
+  });
+
   it("async PDF export works for text labels", async () => {
     const result = await renderLabelExportAsync("pdf", {
       content: { title: "PDF Test", text: "Exportierbarer Text." },

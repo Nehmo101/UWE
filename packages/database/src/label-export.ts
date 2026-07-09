@@ -8,6 +8,31 @@ import {
   type LabelElement,
 } from "./label-elements";
 
+const LABEL_PDF_WIN_ANSI: Record<string, string> = {
+  "\u00e4": "\xE4",
+  "\u00f6": "\xF6",
+  "\u00fc": "\xFC",
+  "\u00c4": "\xC4",
+  "\u00d6": "\xD6",
+  "\u00dc": "\xDC",
+  "\u00df": "\xDF",
+  "\u20ac": "\x80",
+};
+
+/** Standard PDF fonts only support WinAnsi; map common German chars, replace the rest. */
+export function sanitizeLabelPdfText(text: string): string {
+  return [...text]
+    .map((char) => {
+      const mapped = LABEL_PDF_WIN_ANSI[char];
+      if (mapped) {
+        return mapped;
+      }
+      const code = char.codePointAt(0) ?? 0;
+      return code >= 0x20 && code <= 0xff ? char : "?";
+    })
+    .join("");
+}
+
 export interface LabelExportOptions {
   content: LabelContentData;
   layoutSettings: LabelLayoutSettings;
@@ -431,7 +456,7 @@ export async function renderLabelPdfAsync(
       let lineY = y + elH - fontSize;
       for (const line of lines) {
         if (lineY < y) break;
-        page.drawText(line.slice(0, 120), {
+        page.drawText(sanitizeLabelPdfText(line).slice(0, 120), {
           x: x + 2,
           y: lineY,
           size: fontSize,

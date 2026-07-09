@@ -99,7 +99,7 @@ export function BackupWorkspace({
   const [uploadBase64, setUploadBase64] = useState<string>("");
   const [uploadFilename, setUploadFilename] = useState<string>("");
   const [permissions, setPermissions] = useState<BackupPermissions | null>(null);
-  const [restoreConfirmed, setRestoreConfirmed] = useState(false);
+  const [restoreConfirmText, setRestoreConfirmText] = useState("");
   const [sendPasswordSetupEmails, setSendPasswordSetupEmails] = useState(false);
   const [showRestoreWarning, setShowRestoreWarning] = useState(false);
   const [schedule, setSchedule] = useState<BackupSchedule | null>(null);
@@ -251,7 +251,7 @@ export function BackupWorkspace({
       return;
     }
 
-    if (!restoreConfirmed) {
+    if (restoreConfirmText.trim() !== "RESTORE") {
       setShowRestoreWarning(true);
       return;
     }
@@ -284,7 +284,7 @@ export function BackupWorkspace({
       } else {
         setResult(data.result);
       }
-      setRestoreConfirmed(false);
+      setRestoreConfirmText("");
     } catch (restoreError) {
       setError(restoreError instanceof Error ? restoreError.message : "Restore fehlgeschlagen.");
     } finally {
@@ -443,7 +443,7 @@ export function BackupWorkspace({
                           setUploadFilename("");
                           setPreview(null);
                           setResult(null);
-                          setRestoreConfirmed(false);
+                          setRestoreConfirmText("");
                         }}
                       >
                         Für Restore wählen
@@ -568,13 +568,17 @@ export function BackupWorkspace({
               Dieser Vorgang kann bestehende Welten, Seiten und Medien verändern. Eine
               Sicherheitskopie wird vorab erstellt, trotzdem solltest du dir sicher sein.
             </p>
-            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "1rem" }}>
+            <label style={{ display: "block", margin: "0.75rem 0" }}>
+              Zur Bestätigung <strong>RESTORE</strong> eingeben
               <input
-                type="checkbox"
-                checked={restoreConfirmed}
-                onChange={(event) => setRestoreConfirmed(event.target.checked)}
+                type="text"
+                value={restoreConfirmText}
+                onChange={(event) => setRestoreConfirmText(event.target.value)}
+                placeholder="RESTORE"
+                autoComplete="off"
+                spellCheck={false}
+                style={{ display: "block", width: "100%", marginTop: "0.35rem" }}
               />
-              Ich verstehe die Risiken und möchte den Restore ausführen.
             </label>
             <label style={{ display: "block", margin: "0.75rem 0" }}>
               <input
@@ -588,7 +592,7 @@ export function BackupWorkspace({
               <button
                 type="button"
                 className="uwe-v2-btn uwe-v2-btn-primary"
-                disabled={!restoreConfirmed || busy === "restore"}
+                disabled={restoreConfirmText.trim() !== "RESTORE" || busy === "restore"}
                 onClick={runRestore}
               >
                 Restore endgültig starten
@@ -598,7 +602,7 @@ export function BackupWorkspace({
                 className="uwe-v2-btn"
                 onClick={() => {
                   setShowRestoreWarning(false);
-                  setRestoreConfirmed(false);
+                  setRestoreConfirmText("");
                 }}
               >
                 Abbrechen

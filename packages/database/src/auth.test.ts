@@ -6,6 +6,7 @@ import { seedAuthDemoContent, seedAuthUsers } from "./auth-seed";
 import { createPrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { createUweRepository } from "./repository";
+import { createWorldEventService } from "./world-event-service";
 
 describe("UWE auth and permissions", () => {
   let databaseUrl: string;
@@ -276,6 +277,70 @@ describe("UWE auth and permissions", () => {
 
     assert.equal(await auth.touchSession(session.token), true);
     assert.ok(await auth.getSessionByToken(session.token));
+
+    await db.$disconnect();
+  });
+
+  it("hides dm_only handouts, npcs and timeline events from players", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const repo = createUweRepository(databaseUrl);
+    const world = await repo.getWorldBySlug(worldSlug);
+    assert.ok(world);
+
+    await repo.createPage({
+      worldId: world.id,
+      title: "Geheimer NPC",
+      slug: "geheimer-npc",
+      type: "npc",
+      visibility: "dm_only",
+      publishStatus: "published",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "dm_only",
+          content: "Nur für den GM.",
+        },
+      ],
+    });
+
+    await repo.createPage({
+      worldId: world.id,
+      title: "Geheimes Handout",
+      slug: "geheimes-handout",
+      type: "handout",
+      visibility: "dm_only",
+      publishStatus: "published",
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "dm_only",
+          content: "Nur für den GM.",
+        },
+      ],
+    });
+
+    const events = createWorldEventService(db);
+    await events.create({
+      worldId: world.id,
+      inGameDate: { year: 1, month: 1, day: 1 },
+      title: "GM Geheimnis",
+      summaryPlayer: "Nur GM",
+      visibility: "dm_only",
+    });
+
+    const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
+    assert.ok(ctx);
+
+    const pages = await auth.listPagesForViewer(worldSlug, ctx);
+    const slugs = pages.map((page) => page.slug);
+    assert.ok(!slugs.includes("geheimer-npc"));
+    assert.ok(!slugs.includes("geheimes-handout"));
+
+    const timeline = await auth.listWorldEventsForViewer(worldSlug, ctx);
+    assert.ok(!timeline.some((event) => event.title === "GM Geheimnis"));
 
     await db.$disconnect();
   });

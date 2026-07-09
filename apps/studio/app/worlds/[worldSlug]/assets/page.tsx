@@ -33,6 +33,7 @@ interface Props {
   params: Promise<{ worldSlug: string }>;
   searchParams: Promise<{
     type?: string;
+    visibility?: string;
     uploaded?: string;
     linked?: string;
     saved?: string;
@@ -48,7 +49,7 @@ function isPreviewable(mimeType: string | null): boolean {
 
 export default async function StudioAssetsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { type: typeFilter, uploaded, linked, saved, tagged, album: albumFilter } =
+  const { type: typeFilter, visibility: visibilityFilter, uploaded, linked, saved, tagged, album: albumFilter } =
     await searchParams;
   const repo = getAppRepository();
 
@@ -62,7 +63,10 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
 
   const assets = (await repo.listAssetsByWorld(worldSlug, {
     type: typeFilter as AssetType | undefined,
-  })).filter((asset) => !albumAssetIds || albumAssetIds.includes(asset.id));
+  }))
+    .filter((asset) => !albumAssetIds || albumAssetIds.includes(asset.id))
+    .filter((asset) => !visibilityFilter || asset.visibility === visibilityFilter);
+  const dmOnlyCount = assets.filter((asset) => asset.visibility === "dm_only").length;
   const pages = await repo.listPagesByWorld(worldSlug);
   const shareService = createShareLinkService(db);
   const assetShareData = await Promise.all(
@@ -112,6 +116,13 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
         title="Asset-Bibliothek"
         summary="Bilder, Karten, Handouts und Medien zentral verwalten."
       />
+      {dmOnlyCount > 0 && !visibilityFilter && (
+        <p className="uwe-notice uwe-notice-warn" role="status">
+          <strong>{dmOnlyCount}</strong> Asset{dmOnlyCount === 1 ? "" : "s"} sind nur für den GM
+          sichtbar — erscheinen nicht im Portal, bis du die Sichtbarkeit auf „Spieler“ oder „Öffentlich“
+          setzt.
+        </p>
+      )}
       {(uploaded || linked || saved || tagged) && (
         <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
       )}
@@ -223,7 +234,28 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
 
           <div className="uwe-filter-bar">
             <Link
-              href={`/worlds/${worldSlug}/assets`}
+              href={`/worlds/${worldSlug}/assets${typeFilter ? `?type=${typeFilter}` : ""}`}
+              className={!visibilityFilter ? "active" : undefined}
+            >
+              Alle Sichtbarkeiten
+            </Link>
+            <Link
+              href={`/worlds/${worldSlug}/assets?visibility=dm_only${typeFilter ? `&type=${typeFilter}` : ""}`}
+              className={visibilityFilter === "dm_only" ? "active" : undefined}
+            >
+              Nur GM
+            </Link>
+            <Link
+              href={`/worlds/${worldSlug}/assets?visibility=player_visible${typeFilter ? `&type=${typeFilter}` : ""}`}
+              className={visibilityFilter === "player_visible" ? "active" : undefined}
+            >
+              Portal-freigegeben
+            </Link>
+          </div>
+
+          <div className="uwe-filter-bar">
+            <Link
+              href={`/worlds/${worldSlug}/assets${visibilityFilter ? `?visibility=${visibilityFilter}` : ""}`}
               className={!typeFilter ? "active" : undefined}
             >
               Alle Typen
@@ -231,7 +263,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
             {ASSET_TYPES.map((type) => (
               <Link
                 key={type}
-                href={`/worlds/${worldSlug}/assets?type=${type}`}
+                href={`/worlds/${worldSlug}/assets?type=${type}${visibilityFilter ? `&visibility=${visibilityFilter}` : ""}`}
                 className={typeFilter === type ? "active" : undefined}
               >
                 {ASSET_TYPE_LABELS[type]}
@@ -253,7 +285,17 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
             </thead>
             <tbody>
               {assets.map((asset) => (
-                <tr key={asset.id}>
+                <tr
+                  key={asset.id}
+                  style={
+                    asset.visibility === "dm_only"
+                      ? {
+                          background:
+                            "color-mix(in srgb, var(--uwe-danger) 10%, transparent)",
+                        }
+                      : undefined
+                  }
+                >
                   <td>
                     <strong>{asset.title}</strong>
                     {asset.description && (

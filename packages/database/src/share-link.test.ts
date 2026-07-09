@@ -35,8 +35,8 @@ describe("ShareLinkService", () => {
         title: `Geheime Festung ${suffix}`,
         slug: `festung-${suffix}`,
         type: "location",
-        visibility: "dm_only",
-        publishStatus: "draft",
+        visibility: "player_visible",
+        publishStatus: "published",
         contentBlocks: [
           {
             type: "rich_text",
@@ -233,7 +233,8 @@ describe("ShareLinkService", () => {
         title: "Geteiltes Versteck",
         slug: "geteiltes-versteck",
         type: "secret",
-        visibility: "dm_only",
+        visibility: "player_visible",
+        publishStatus: "published",
         contentBlocks: [
           {
             type: "rich_text",
@@ -315,6 +316,8 @@ describe("ShareLinkService", () => {
         title: "Geteilt",
         slug: "geteilt",
         type: "location",
+        visibility: "player_visible",
+        publishStatus: "published",
         contentBlocks: [
           {
             type: "rich_text",
@@ -380,6 +383,8 @@ describe("ShareLinkService", () => {
         title: "Seite A",
         slug: "seite-a",
         type: "location",
+        visibility: "player_visible",
+        publishStatus: "published",
         contentBlocks: [
           { type: "rich_text", sortOrder: 0, visibility: "public", content: "Inhalt A." },
         ],
@@ -393,6 +398,8 @@ describe("ShareLinkService", () => {
         title: "Seite B — passwortgeschützt",
         slug: "seite-b",
         type: "secret",
+        visibility: "player_visible",
+        publishStatus: "published",
         contentBlocks: [
           { type: "rich_text", sortOrder: 0, visibility: "public", content: "Inhalt B." },
         ],
@@ -408,7 +415,7 @@ describe("ShareLinkService", () => {
         type: "image",
         storageKey: "images/andere.png",
         mimeType: "image/png",
-        visibility: "dm_only",
+        visibility: "player_visible",
       },
     });
 
@@ -462,7 +469,7 @@ describe("ShareLinkService", () => {
         type: "image",
         storageKey: "images/shared.png",
         mimeType: "image/png",
-        visibility: "dm_only",
+        visibility: "player_visible",
       },
     });
 
@@ -473,7 +480,7 @@ describe("ShareLinkService", () => {
         type: "image",
         storageKey: "images/other.png",
         mimeType: "image/png",
-        visibility: "dm_only",
+        visibility: "player_visible",
       },
     });
 
@@ -505,7 +512,8 @@ describe("ShareLinkService", () => {
         type: "handout",
         storageKey: "handouts/quest.pdf",
         mimeType: "application/pdf",
-        visibility: "dm_only",
+        visibility: "player_visible",
+        publishStatus: "published",
       },
     });
 
@@ -519,5 +527,56 @@ describe("ShareLinkService", () => {
     assert.ok(access);
     assert.equal(access.target.kind, "asset");
     assert.equal(access.target.asset.id, asset.id);
+  });
+
+  it("rejects share access for dm_only page targets even with a valid token", async () => {
+    const world = await createWorld(
+      { name: "DM Only Share", slug: "dm-only-share", description: "Test" },
+      databaseUrl,
+    );
+
+    const page = await createPage(
+      {
+        worldId: world.id,
+        title: "Geheime Karte",
+        slug: "geheime-karte",
+        type: "location",
+        visibility: "dm_only",
+        publishStatus: "published",
+        contentBlocks: [
+          {
+            type: "rich_text",
+            sortOrder: 0,
+            visibility: "player_visible",
+            content: "Sollte nicht öffentlich erreichbar sein.",
+          },
+        ],
+      },
+      databaseUrl,
+    );
+
+    const db = createPrismaClient(databaseUrl);
+    const link = await db.shareLink.create({
+      data: {
+        worldId: world.id,
+        targetType: "page",
+        targetId: page.id,
+        token: "legacy-dm-only-token",
+        enabled: true,
+      },
+    });
+
+    const access = await shareService.validateShareAccess(link.token, { passwordVerified: true });
+    assert.equal(access, null);
+
+    await assert.rejects(
+      () =>
+        shareService.createShareLink({
+          worldId: world.id,
+          targetType: "page",
+          targetId: page.id,
+        }),
+      /freigegebene Seiten/,
+    );
   });
 });

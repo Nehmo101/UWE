@@ -100,6 +100,13 @@ export default function SetupPage() {
         </Alert>
       ) : null}
 
+      <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
+        Für laufende Host- und Owner-Konfiguration nach der Erstinstallation:{" "}
+        <Link href="/admin/setup">Einrichtung (Admin)</Link>
+        {" · "}
+        <Link href="/settings">Einstellungen</Link>
+      </p>
+
       <div className="rounded-[var(--radius)] border border-border bg-muted/30 p-3 text-sm">
         <p className="font-medium">Produktions-Checkliste</p>
         <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">

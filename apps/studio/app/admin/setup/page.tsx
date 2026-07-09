@@ -89,6 +89,11 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
       )}
 
       <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
+        <strong>Erstinstallation:</strong> einmaliges Owner-Setup über <Link href="/setup">/setup</Link>.
+        Diese Seite ist für nachträgliche Host-Konfiguration (SMTP, Cloudflare, RTX, Pfade).
+      </p>
+
+      <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
         Für Theme, Welten und erweiterte App-Optionen:{" "}
         <Link href="/settings">Einstellungen</Link>
         {" · "}
