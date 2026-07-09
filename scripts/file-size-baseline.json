@@ -1,7 +1,7 @@
 {
   "packages/database/src/server.ts": 2185,
   "packages/database/src/auth.ts": 1627,
-  "packages/database/src/nl-command-service.ts": 1461,
+  "packages/database/src/nl-command-service.ts": 1416,
   "packages/database/src/ai-review-service.ts": 1167,
   "packages/backup/src/restore.ts": 1100,
   "packages/database/src/tag-service.ts": 1082,
@@ -9,7 +9,6 @@
   "apps/studio/app/atlas-actions.ts": 1026,
   "packages/database/src/repository.ts": 985,
   "packages/database/src/settings-service.ts": 982,
-  "apps/studio/components/AiGatewayWizard.tsx": 928,
   "apps/studio/app/settings/page.tsx": 905,
   "packages/backup/src/collect.ts": 888,
   "packages/shared-ui/src/graph-engine.ts": 883,
@@ -24,7 +23,7 @@
   "packages/database/src/label-export.ts": 753,
   "apps/studio/app/ideas/IdeaWorkspaceClient.tsx": 752,
   "packages/database/src/admin-status.ts": 746,
-  "packages/database/src/homelab-cockpit.ts": 733,
   "packages/database/src/capture-triage-service.ts": 732,
+  "packages/database/src/homelab-cockpit.ts": 725,
   "packages/security/src/schemas/actions.ts": 711
 }
