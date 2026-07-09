@@ -115,7 +115,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
       />
       <div className="uwe-has-sticky-actions">
         {saved && (
-          <p className="uwe-flash-success" style={{ fontSize: "0.875rem" }}>Änderungen gespeichert.</p>
+          <p className="uwe-flash uwe-flash-success" role="status">Änderungen gespeichert.</p>
         )}
 
         <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-v2-form">
@@ -457,64 +457,70 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           />
         )}
 
-        {page.type === PageTypeEnum.quest ? (
-          <QuestBuilderSection
-            worldSlug={worldSlug}
-            pageSlug={slug}
-            pageTitle={page.title}
-            pageType={page.type}
-            pageId={page.id}
-            worldId={world.id}
-            rtxReady={generatorPanel?.rtxReady ?? false}
-            rtxEnabled={generatorPanel?.rtxEnabled ?? false}
-          />
-        ) : page.type === PageTypeEnum.item ? (
-          <MagicItemBuilderSection
-            worldSlug={worldSlug}
-            pageSlug={slug}
-            pageTitle={page.title}
-            pageType={page.type}
-            pageId={page.id}
-            worldId={world.id}
-            rtxReady={generatorPanel?.rtxReady ?? false}
-            rtxEnabled={generatorPanel?.rtxEnabled ?? false}
-          />
-        ) : (
-          <StructuredGeneratorSection
-            worldSlug={worldSlug}
-            pageSlug={slug}
-            pageTitle={page.title}
-            pageType={page.type}
-            pageId={page.id}
-            worldId={world.id}
-            rtxReady={generatorPanel?.rtxReady ?? false}
-            rtxEnabled={generatorPanel?.rtxEnabled ?? false}
-          />
-        )}
+        <CollapsibleSection
+          title="Erweiterte Werkzeuge (KI & Statblock)"
+          summary="KI-Generator · Statblock Studio · Kontext-Generator"
+          defaultOpen={false}
+        >
+          {page.type === PageTypeEnum.quest ? (
+            <QuestBuilderSection
+              worldSlug={worldSlug}
+              pageSlug={slug}
+              pageTitle={page.title}
+              pageType={page.type}
+              pageId={page.id}
+              worldId={world.id}
+              rtxReady={generatorPanel?.rtxReady ?? false}
+              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+            />
+          ) : page.type === PageTypeEnum.item ? (
+            <MagicItemBuilderSection
+              worldSlug={worldSlug}
+              pageSlug={slug}
+              pageTitle={page.title}
+              pageType={page.type}
+              pageId={page.id}
+              worldId={world.id}
+              rtxReady={generatorPanel?.rtxReady ?? false}
+              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+            />
+          ) : (
+            <StructuredGeneratorSection
+              worldSlug={worldSlug}
+              pageSlug={slug}
+              pageTitle={page.title}
+              pageType={page.type}
+              pageId={page.id}
+              worldId={world.id}
+              rtxReady={generatorPanel?.rtxReady ?? false}
+              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+            />
+          )}
 
-        <StatblockStudioSection
-          worldSlug={worldSlug}
-          pageId={page.id}
-          pageSlug={slug}
-          category={category}
-          pageType={page.type}
-        />
-
-        {generatorPanel && (
-          <ContextualGeneratorPanel
+          <StatblockStudioSection
             worldSlug={worldSlug}
+            pageId={page.id}
             pageSlug={slug}
-            pageTitle={page.title}
-            actions={
-              page.type === PageTypeEnum.faction
-                ? generatorPanel.actions.filter((action) => action.id !== "simulate_faction")
-                : generatorPanel.actions
-            }
-            missingHints={generatorPanel.missingHints}
-            rtxReady={generatorPanel.rtxReady}
-            rtxEnabled={generatorPanel.rtxEnabled}
+            category={category}
+            pageType={page.type}
           />
-        )}
+
+          {generatorPanel && (
+            <ContextualGeneratorPanel
+              worldSlug={worldSlug}
+              pageSlug={slug}
+              pageTitle={page.title}
+              actions={
+                page.type === PageTypeEnum.faction
+                  ? generatorPanel.actions.filter((action) => action.id !== "simulate_faction")
+                  : generatorPanel.actions
+              }
+              missingHints={generatorPanel.missingHints}
+              rtxReady={generatorPanel.rtxReady}
+              rtxEnabled={generatorPanel.rtxEnabled}
+            />
+          )}
+        </CollapsibleSection>
 
         <EditPageStickyBar previewHref={pagePreviewHref(worldSlug, page.type, slug)} />
       </div>

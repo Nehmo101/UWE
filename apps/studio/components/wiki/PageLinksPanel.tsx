@@ -131,7 +131,7 @@ export async function PageLinksPanel({ worldSlug, pageId, pageSlug, category }: 
     <CollapsibleSection
       title="Typisierte Verknüpfungen"
       summary={`${totalLinks} Relation${totalLinks === 1 ? "" : "en"}`}
-      defaultOpen={totalLinks <= 3}
+      defaultOpen={false}
     >
       <p className="uwe-field-hint" style={{ marginTop: 0 }}>
         Strukturierte Beziehungen zwischen Wiki-Seiten — ergänzen Wikilinks in Fließtext.
