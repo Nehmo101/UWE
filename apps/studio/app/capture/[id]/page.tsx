@@ -5,7 +5,7 @@ import {
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
-import { CaptureTriagePanel } from "@/components/capture/CaptureTriagePanel";
+import { CaptureDetailClient } from "@/components/capture/CaptureDetailClient";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 interface Props {
@@ -34,15 +34,15 @@ export default async function CaptureDetailPage({ params }: Props) {
         title="Capture sortieren"
         summary="Vorschlag prüfen und in Projekte, Werkstatt, DnD, Hardware, Verträge oder Life Brain überführen."
       />
-      <CaptureTriagePanel
-            capture={refreshed}
-            worlds={worlds.map((world) => ({
-              id: world.id,
-              slug: world.slug,
-              name: world.name,
-            }))}
-            hardwareDevices={hardwareDevices}
-          />
+      <CaptureDetailClient
+        capture={refreshed}
+        worlds={worlds.map((world) => ({
+          id: world.id,
+          slug: world.slug,
+          name: world.name,
+        }))}
+        hardwareDevices={hardwareDevices}
+      />
     </StudioShell>
   );
 }

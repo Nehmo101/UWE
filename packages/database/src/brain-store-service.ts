@@ -34,37 +34,12 @@ export {
   BrainVisibility as BrainVisibilityEnum,
 } from "./generated/prisma/client";
 
-export const BRAIN_VISIBILITY_LABELS: Record<BrainVisibility, string> = {
-  dm_only: "Nur GM",
-  player_visible: "Spieler sichtbar",
-  public: "Öffentlich",
-};
-
-export const BRAIN_STATUS_LABELS: Record<BrainStatus, string> = {
-  draft: "Entwurf",
-  reviewed: "Geprüft",
-  canonical: "Kanon",
-  deprecated: "Veraltet",
-};
-
-export const BRAIN_SOURCE_LABELS: Record<BrainSource, string> = {
-  manual: "Manuell",
-  ai_generated: "KI-generiert",
-  import: "Importiert",
-  session_summary: "Session-Zusammenfassung",
-};
-
-export const BRAIN_DOCUMENT_TYPE_LABELS: Record<BrainDocumentType, string> = {
-  world_knowledge: "Weltwissen",
-  campaign_knowledge: "Kampagnenwissen",
-  session_summary: "Session-Zusammenfassung",
-  npc_facts: "NPC-Fakten",
-  location_facts: "Orts-Fakten",
-  faction_facts: "Fraktions-Fakten",
-  canon_facts: "Kanon-Fakten",
-  general: "Allgemein",
-  ai_summary: "KI-Zusammenfassung",
-};
+export {
+  BRAIN_DOCUMENT_TYPE_LABELS,
+  BRAIN_SOURCE_LABELS,
+  BRAIN_STATUS_LABELS,
+  BRAIN_VISIBILITY_LABELS,
+} from "./brain-constants";
 
 export const BRAIN_FACT_TYPE_LABELS: Record<BrainFactType, string> = {
   npc: "NPC",
@@ -207,6 +182,8 @@ export interface ListBrainDocumentsOptions {
   visibility?: BrainVisibility;
   includeArchived?: boolean;
   accessContext?: BrainAccessContext;
+  limit?: number;
+  offset?: number;
 }
 
 export interface SearchableBrainChunk {
@@ -234,6 +211,8 @@ export interface ListBrainFactsOptions {
   visibility?: BrainVisibility;
   includeArchived?: boolean;
   accessContext?: BrainAccessContext;
+  limit?: number;
+  offset?: number;
 }
 
 export class BrainStoreService {
@@ -280,6 +259,8 @@ export class BrainStoreService {
       },
       include: documentInclude(),
       orderBy: [{ updatedAt: "desc" }],
+      take: options?.limit,
+      skip: options?.offset,
     });
 
     return filterBrainByVisibility(documents, options?.accessContext ?? "dm");
@@ -389,6 +370,8 @@ export class BrainStoreService {
       },
       include: factInclude(),
       orderBy: [{ updatedAt: "desc" }],
+      take: options?.limit,
+      skip: options?.offset,
     });
 
     return filterBrainByVisibility(facts, options?.accessContext ?? "dm");

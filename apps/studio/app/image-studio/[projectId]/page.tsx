@@ -10,6 +10,7 @@ import {
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { ImageStudioProjectReview } from "@/components/ImageStudioProjectReview";
+import { ImageStudioBulkDownload } from "@/components/ImageStudioBulkDownload";
 import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
 import { ImageStudioRetryButton } from "@/components/ImageStudioRetryButton";
@@ -17,10 +18,12 @@ import { createImageStudioJobAction } from "@/app/integration-actions";
 
 interface Props {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ versionStatus?: string }>;
 }
 
-export default async function ImageStudioProjectPage({ params }: Props) {
+export default async function ImageStudioProjectPage({ params, searchParams }: Props) {
   const { projectId } = await params;
+  const { versionStatus } = await searchParams;
   const imageStudio = createImageStudioService(prisma);
   const project = await imageStudio.getProject(projectId);
   if (!project) notFound();
@@ -38,6 +41,13 @@ export default async function ImageStudioProjectPage({ params }: Props) {
     ? `/api/assets/${latestWithAsset.assetId}/file`
     : null;
 
+  const filteredVersions = project.versions.filter((version) => {
+    if (!versionStatus || versionStatus === "all") return true;
+    if (versionStatus === "with_asset") return Boolean(version.assetId);
+    if (versionStatus === "without_asset") return !version.assetId;
+    return true;
+  });
+
   return (
     <StudioShell
       breadcrumb={
@@ -54,6 +64,14 @@ export default async function ImageStudioProjectPage({ params }: Props) {
         summary="Versionen prüfen, Entwurf speichern, Asset übernehmen oder im Canvas bearbeiten."
         actions={
           <>
+            <ImageStudioBulkDownload
+              projectId={project.id}
+              versions={project.versions.map((version) => ({
+                id: version.id,
+                versionNumber: version.versionNumber,
+                assetId: version.assetId,
+              }))}
+            />
             {world?.slug ? (
               <Link
                 href={`/worlds/${world.slug}/assets`}
@@ -98,6 +116,27 @@ export default async function ImageStudioProjectPage({ params }: Props) {
         </section>
       ) : null}
 
+      <nav className="uwe-today-quick-chips uwe-v2-section" aria-label="Versions-Filter">
+        {[
+          { value: "all", label: "Alle Versionen" },
+          { value: "with_asset", label: "Mit Asset" },
+          { value: "without_asset", label: "Ohne Asset" },
+        ].map((tab) => (
+          <Link
+            key={tab.value}
+            href={
+              tab.value === "all"
+                ? `/image-studio/${projectId}`
+                : `/image-studio/${projectId}?versionStatus=${tab.value}`
+            }
+            className="uwe-today-quick-chip"
+            data-severity={(versionStatus ?? "all") === tab.value ? "warn" : "info"}
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
+
       <ImageStudioProjectReview
         projectId={project.id}
         title={project.title}
@@ -105,7 +144,7 @@ export default async function ImageStudioProjectPage({ params }: Props) {
         status={project.status}
         statusLabel={IMAGE_STUDIO_STATUS_LABELS[project.status]}
         worldSlug={world?.slug ?? null}
-        versions={project.versions.map((version) => ({
+        versions={filteredVersions.map((version) => ({
           id: version.id,
           versionNumber: version.versionNumber,
           operation: version.operation,

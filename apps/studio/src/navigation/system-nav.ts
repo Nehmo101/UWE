@@ -6,6 +6,46 @@ import type { NavGroup } from "./types";
 
 const SECTION = "System";
 
+export const ADMIN_HUB_SECTIONS = [
+  {
+    title: "Setup & Host",
+    links: [
+      { href: "/admin/setup", label: "Einrichtung" },
+      { href: "/admin/checklist", label: "Aufgabenliste" },
+      { href: "/admin/status", label: "Systemstatus" },
+      { href: "/system", label: "System-Hub" },
+    ],
+  },
+  {
+    title: "Nutzer & Sicherheit",
+    links: [
+      { href: "/admin/users", label: "Benutzer" },
+      { href: "/admin/roles", label: "Rollen & Rechte" },
+      { href: "/admin/security", label: "Security" },
+      { href: "/admin/secrets", label: "Secrets-Status" },
+    ],
+  },
+  {
+    title: "Content & KI",
+    links: [
+      { href: "/admin/reviews", label: "Reviews" },
+      { href: "/admin/ai-gateway", label: "KI-Gateway" },
+      { href: "/admin/agent-jobs", label: "Agent Jobs" },
+      { href: "/admin/ai-prompt", label: "AI-Prompt" },
+    ],
+  },
+  {
+    title: "Betrieb",
+    links: [
+      { href: "/admin/cockpit", label: "Owner Cockpit" },
+      { href: "/admin/activity", label: "Verlauf" },
+      { href: "/backup", label: "Backup" },
+      { href: "/mail", label: "Mail Center" },
+      { href: "/worlds", label: "Welten verwalten", primary: true },
+    ],
+  },
+] as const;
+
 export const SYSTEM_NAV: NavGroup[] = [
   {
     id: "system-overview",

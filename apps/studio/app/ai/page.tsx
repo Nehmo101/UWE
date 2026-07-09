@@ -3,6 +3,7 @@ import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell
 import { resolveAiChatAccess } from "@/src/lib/ai-gateway-access";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
+import { AiHubShortcuts } from "@/components/ai/AiHubShortcuts";
 
 export default async function AiPage() {
   const user = await getCurrentAuthUser();
@@ -28,6 +29,7 @@ export default async function AiPage() {
         title="KI"
         summary="Allgemeiner Chat ohne lokalen Brain-/Objekt-Kontext. DnD-Kontext nur in Welten verfügbar."
       />
+      <AiHubShortcuts />
       <MobileAiPromptPanel useMock={useMock} pollIntervalMs={30_000} />
     </StudioShell>
   );

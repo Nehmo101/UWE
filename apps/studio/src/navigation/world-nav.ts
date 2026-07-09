@@ -254,6 +254,36 @@ function item(
   };
 }
 
+/** Minimal navigation for live session mode — core tools only. */
+export function worldLiveNav(
+  worldSlug: string,
+  sessionId: string,
+  pathname: string,
+): ResolvedNavGroup[] {
+  const base = `/worlds/${worldSlug}`;
+  const groups: NavGroup[] = [
+    {
+      id: "live-core",
+      title: "Live-Session",
+      items: [
+        item("live-panel", "Live", `${base}/sessions/${sessionId}/live`, "radio", "Live", [
+          "live",
+          "session",
+        ]),
+        item("live-session", "Session-Detail", `${base}/sessions/${sessionId}`, "calendar", "Live", [
+          "session",
+          "notizen",
+        ]),
+        item("live-roll", "Würfeln", `${base}/roll-tables`, "dice-5", "Live", ["roll", "würfel"]),
+        item("live-prepare", "Vorbereitung", `${base}/prepare-session`, "clipboard-list", "Live", [
+          "prep",
+        ]),
+      ],
+    },
+  ];
+  return resolveNavGroups(groups, pathname);
+}
+
 /** World sidebar groups with active flags resolved for the current path. */
 export function worldSidebar(
   worldSlug: string,

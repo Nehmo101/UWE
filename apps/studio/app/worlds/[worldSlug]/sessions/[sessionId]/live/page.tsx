@@ -63,6 +63,8 @@ export default async function SessionLivePage({ params }: Props) {
     <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
+      navMode="live"
+      liveSessionId={sessionId}
       breadcrumb={
         <BreadcrumbTrail
           items={[

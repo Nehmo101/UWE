@@ -20,6 +20,7 @@ import {
   linkAssetToDungeonPageAction,
   updateDungeonEntityAction,
 } from "../../../../dungeon-actions";
+import { DungeonLevelLayout } from "@/components/worlds/DungeonLevelLayout";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -74,6 +75,17 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
       />
       {saved && <p className="uwe-flash uwe-flash-success">Dungeon gespeichert.</p>}
       {assetLinked && <p className="uwe-flash uwe-flash-success">Asset verknüpft.</p>}
+
+      <DungeonLevelLayout
+        worldSlug={worldSlug}
+        dungeonSlug={dungeonSlug}
+        levels={overview.levels.map((level) => ({
+          id: level.id,
+          title: level.title,
+          slug: level.slug,
+          prepStatus: level.prepStatus,
+        }))}
+      />
 
       <section className="uwe-v2-section">
         <h2>Ebenen</h2>

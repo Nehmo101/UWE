@@ -1121,8 +1121,21 @@ export class AuthService {
     return this.toPortalSessionViewForViewer(session, ctx);
   }
 
-  async listGameSessionsForDm(worldSlug: string, campaignId?: string | null): Promise<DmGameSessionView[]> {
-    const sessions = await this.gameSessions.listByWorld(worldSlug, { campaignId });
+  async listGameSessionsForDm(
+    worldSlug: string,
+    campaignId?: string | null,
+    options?: {
+      status?: import("./generated/prisma/client").GameSessionStatus;
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<DmGameSessionView[]> {
+    const sessions = await this.gameSessions.listByWorld(worldSlug, {
+      campaignId,
+      status: options?.status,
+      limit: options?.limit,
+      offset: options?.offset,
+    });
     return sessions.map(toDmGameSessionView);
   }
 

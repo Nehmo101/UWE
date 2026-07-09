@@ -61,6 +61,11 @@ export default async function StudioPlayerQuestionsPage({ params }: Props) {
       <PageHeader
         title="Fragen an den DM"
         summary="Fragen, die deine Spieler im Portal gestellt haben — beantworte sie hier oder archiviere sie."
+        meta={
+          open.length > 0 ? (
+            <span className="uwe-badge uwe-badge-warning">{open.length} neu</span>
+          ) : undefined
+        }
       />
 
       <section className="uwe-block">

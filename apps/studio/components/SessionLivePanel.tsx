@@ -39,12 +39,38 @@ interface Props {
 
 const ENTRY_KINDS: { value: LiveEntryKind; label: string; needsRef: boolean }[] = [
   { value: "note", label: "Notiz", needsRef: false },
-  { value: "loot", label: "Beute", needsRef: true },
-  { value: "quest_update", label: "Quest-Update", needsRef: true },
   { value: "npc_update", label: "NPC-Update", needsRef: true },
   { value: "initiative", label: "Initiative", needsRef: false },
-  { value: "bookmark", label: "Lesezeichen", needsRef: false },
 ];
+
+function liveTimerStorageKey(sessionId: string): string {
+  return `uwe:live-timer:${sessionId}`;
+}
+
+function readLiveTimerStart(sessionId: string): number {
+  if (typeof window === "undefined") return Date.now();
+  try {
+    const raw = localStorage.getItem(liveTimerStorageKey(sessionId));
+    if (raw) {
+      const parsed = JSON.parse(raw) as { startedAt?: number };
+      if (typeof parsed.startedAt === "number") return parsed.startedAt;
+    }
+  } catch {
+    /* ignore corrupt storage */
+  }
+  const startedAt = Date.now();
+  localStorage.setItem(liveTimerStorageKey(sessionId), JSON.stringify({ startedAt }));
+  return startedAt;
+}
+
+function clearLiveTimer(sessionId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(liveTimerStorageKey(sessionId));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function SessionLivePanel({
   worldSlug,
@@ -61,8 +87,10 @@ export function SessionLivePanel({
   const [kind, setKind] = useState<LiveEntryKind>("note");
   const [content, setContent] = useState("");
   const [refPageId, setRefPageId] = useState("");
-  const [startedAt] = useState(() => Date.now());
-  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [startedAt] = useState(() => readLiveTimerStart(sessionId));
+  const [elapsedMinutes, setElapsedMinutes] = useState(() =>
+    Math.floor((Date.now() - startedAt) / 60_000),
+  );
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -256,11 +284,37 @@ export function SessionLivePanel({
         </p>
       ) : null}
 
+      {linkedPages.length > 0 ? (
+        <section className="uwe-v2-section">
+          <h2 className="uwe-v2-section-title">NPC-Schnellzugriff</h2>
+          <ul className="uwe-linked-list">
+            {linkedPages.slice(0, 8).map((page) => (
+              <li key={page.id}>
+                <Link href={page.href}>{page.title}</Link>
+              </li>
+            ))}
+          </ul>
+          {linkedPages.length > 8 ? (
+            <p className="uwe-dashboard-muted">
+              {linkedPages.length - 8} weitere verknüpfte Seiten im Session-Detail.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="uwe-form-actions">
+        <Link href={`/worlds/${worldSlug}/roll-tables`} className="uwe-v2-btn">
+          Würfeln
+        </Link>
         <Link href={`/worlds/${worldSlug}/sessions/${sessionId}`} className="uwe-v2-btn">
           Session-Detail
         </Link>
-        <form action={endSessionLiveModeAction}>
+        <form
+          action={endSessionLiveModeAction}
+          onSubmit={() => {
+            clearLiveTimer(sessionId);
+          }}
+        >
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="sessionId" value={sessionId} />
           <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
@@ -268,19 +322,6 @@ export function SessionLivePanel({
           </button>
         </form>
       </div>
-
-      {linkedPages.length > 0 ? (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Schnellzugriff</h2>
-          <ul className="uwe-linked-list">
-            {linkedPages.map((page) => (
-              <li key={page.id}>
-                <Link href={page.href}>{page.title}</Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
     </div>
   );
 }

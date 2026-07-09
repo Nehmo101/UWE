@@ -9,6 +9,7 @@ import {
   PROJECT_CATEGORY_LABELS,
   PROJECT_STATUS_LABELS,
   type PersonalProjectCategory,
+  type PersonalProjectStatus,
 } from "@uwe/database/server";
 import { AdminCreateCard, AdminEntityForm, AdminFilterChips, AdminModulePage, BreadcrumbTrail } from "@/src/components/admin";
 import { formatStudioDate } from "@/src/lib/format";
@@ -20,7 +21,14 @@ function formatProjectBudget(cents: number | null | undefined): string {
 }
 
 interface Props {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; status?: string }>;
+}
+
+function resolveStatus(raw: string | undefined): PersonalProjectStatus | null {
+  if (raw && Object.values(PersonalProjectStatusEnum).includes(raw as PersonalProjectStatus)) {
+    return raw as PersonalProjectStatus;
+  }
+  return null;
 }
 
 function resolveCategory(raw: string | undefined): PersonalProjectCategory | null {
@@ -31,13 +39,15 @@ function resolveCategory(raw: string | undefined): PersonalProjectCategory | nul
 }
 
 export default async function ProjectsPage({ searchParams }: Props) {
-  const { category: categoryRaw } = await searchParams;
+  const { category: categoryRaw, status: statusRaw } = await searchParams;
   const categoryFilter = resolveCategory(categoryRaw);
+  const statusFilter = resolveStatus(statusRaw);
   const service = createLifeAdminService(prisma);
 
   const [projects, dashboard] = await Promise.all([
     service.listPersonalProjects({
       category: categoryFilter ?? undefined,
+      status: statusFilter ?? undefined,
       limit: 200,
     }),
     service.getPersonalProjectDashboardStats(),
@@ -140,6 +150,34 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   </ul>
                 )}
               </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="uwe-v2-section" aria-label="Status-Filter">
+        <h2 className="uwe-v2-section-title">Nach Status filtern</h2>
+        <div className="uwe-today-quick-chips">
+          <Link
+            href={categoryFilter ? `/projects?category=${categoryFilter}` : "/projects"}
+            className="uwe-today-quick-chip"
+            data-severity={!statusFilter ? "warn" : "info"}
+          >
+            Alle Status
+          </Link>
+          {Object.values(PersonalProjectStatusEnum).map((status) => {
+            const params = new URLSearchParams();
+            if (categoryFilter) params.set("category", categoryFilter);
+            params.set("status", status);
+            return (
+              <Link
+                key={status}
+                href={`/projects?${params}`}
+                className="uwe-today-quick-chip"
+                data-severity={statusFilter === status ? "warn" : "info"}
+              >
+                {PROJECT_STATUS_LABELS[status]} ({dashboard.byStatus[status]})
+              </Link>
             );
           })}
         </div>

@@ -46,6 +46,8 @@ export function ReviewWorkspace() {
     Array<{ id: string; userDisplayName: string; content: string; createdAt: string }>
   >([]);
   const [commentText, setCommentText] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const loadReviews = useCallback(async () => {
@@ -99,7 +101,10 @@ export function ReviewWorkspace() {
     const response = await fetch(studioApiUrl(`/api/admin/reviews/${selectedId}`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({
+        action,
+        ...(action === "reject" && rejectReason.trim() ? { reason: rejectReason.trim() } : {}),
+      }),
     });
     const data = (await response.json()) as { ok?: boolean; message?: string; error?: string };
     if (!response.ok) {
@@ -107,9 +112,39 @@ export function ReviewWorkspace() {
       return;
     }
     setActionMessage(data.message ?? "Erfolgreich.");
+    setRejectReason("");
     setSelectedId(null);
     setDetail(null);
     void loadReviews();
+  }
+
+  async function bulkApprove() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setActionMessage(null);
+    let okCount = 0;
+    for (const id of ids) {
+      const response = await fetch(studioApiUrl(`/api/admin/reviews/${id}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      });
+      if (response.ok) okCount += 1;
+    }
+    setActionMessage(`${okCount} von ${ids.length} Reviews freigegeben.`);
+    setSelectedIds(new Set());
+    setSelectedId(null);
+    setDetail(null);
+    void loadReviews();
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function submitComment() {
@@ -146,7 +181,7 @@ export function ReviewWorkspace() {
             </select>
           </label>
           <label>
-            Quelle
+            Typ / Quelle
             <select value={sourceType} onChange={(event) => setSourceType(event.target.value)}>
               <option value="">Alle</option>
               {Object.entries(sourceLabels).map(([value, label]) => (
@@ -176,10 +211,18 @@ export function ReviewWorkspace() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 24rem), 1fr))", gap: "1.5rem" }}>
         <section className="uwe-v2-card">
-          <h2>Liste</h2>
+          <div className="uwe-inline-actions" style={{ marginBottom: "0.75rem" }}>
+            <h2 style={{ margin: 0 }}>Liste</h2>
+            {status === "pending" && selectedIds.size > 0 ? (
+              <button type="button" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm" onClick={() => void bulkApprove()}>
+                {selectedIds.size} ausgewählte freigeben
+              </button>
+            ) : null}
+          </div>
           <table className="uwe-table">
             <thead>
               <tr>
+                {status === "pending" ? <th aria-label="Auswahl" /> : null}
                 <th>Typ</th>
                 <th>Titel</th>
                 <th>Status</th>
@@ -193,6 +236,16 @@ export function ReviewWorkspace() {
                   onClick={() => void loadDetail(entry.id)}
                   style={{ cursor: "pointer", background: selectedId === entry.id ? "var(--uwe-surface-2)" : undefined }}
                 >
+                  {status === "pending" ? (
+                    <td onClick={(event) => event.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(entry.id)}
+                        onChange={() => toggleSelected(entry.id)}
+                        aria-label={`Review ${entry.title} auswählen`}
+                      />
+                    </td>
+                  ) : null}
                   <td>{sourceLabels[entry.sourceType] ?? entry.sourceType}</td>
                   <td>{entry.title}</td>
                   <td>{statusLabels[entry.status] ?? entry.status}</td>
@@ -226,13 +279,24 @@ export function ReviewWorkspace() {
                 </p>
               ) : null}
               {detail.status === "pending" ? (
-                <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                  <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void runAction("approve")}>
-                    Freigeben
-                  </button>
-                  <button type="button" className="uwe-v2-btn" onClick={() => void runAction("reject")}>
-                    Ablehnen
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}>
+                  <label>
+                    Ablehnungsgrund (optional)
+                    <input
+                      type="text"
+                      value={rejectReason}
+                      onChange={(event) => setRejectReason(event.target.value)}
+                      placeholder="Grund für Ablehnung…"
+                    />
+                  </label>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void runAction("approve")}>
+                      Freigeben
+                    </button>
+                    <button type="button" className="uwe-v2-btn" onClick={() => void runAction("reject")}>
+                      Ablehnen
+                    </button>
+                  </div>
                 </div>
               ) : null}
               {actionMessage ? <p>{actionMessage}</p> : null}

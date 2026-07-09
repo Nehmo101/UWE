@@ -90,6 +90,17 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
         </p>
       )}
 
+      <details className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
+        <summary className="uwe-v2-section-title" style={{ cursor: "pointer" }}>
+          Druck-Workflow — Kurzanleitung
+        </summary>
+        <ol className="uwe-hint" style={{ paddingLeft: "1.25rem" }}>
+          <li>Label erstellen oder aus Seite/Handout generieren</li>
+          <li>Druckliste anlegen und Labels hinzufügen</li>
+          <li>PDF exportieren oder über RTX-Druck senden</li>
+        </ol>
+      </details>
+
       <nav className="uwe-tabs" aria-label="Label-Bereiche">
         <Link
           href={`/worlds/${worldSlug}/labels`}

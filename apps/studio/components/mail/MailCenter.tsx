@@ -512,6 +512,9 @@ export function MailCenter({ data }: { data: MailCenterData }) {
       </div>
 
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <p className="uwe-dashboard-muted uwe-mail-keyboard-hint" style={{ padding: "0.35rem 1rem", margin: 0, fontSize: "0.85rem" }}>
+          Tastatur: j/k Navigation · Enter öffnen · e Archiv · # Papierkorb · r Antwort · s Stern · / Suche
+        </p>
         {/* Mobile Navigation: die Rail ist < lg ausgeblendet — Ordner, Triage und
             Konto-Wechsel laufen hier über eine kompakte Chip-Leiste. */}
         <div className={selectedId && view === "inbox" ? "hidden" : "lg:hidden"}>

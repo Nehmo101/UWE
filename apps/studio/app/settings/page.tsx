@@ -10,19 +10,25 @@ import {
   VisualThemePreview,
 } from "@uwe/shared-ui";
 import { SettingsCollapsiblePanel } from "../../components/SettingsCollapsiblePanel";
+import { SettingsGeneralTab } from "./SettingsGeneralTab";
 import {
   BACKGROUND_PATTERN_VALUES,
   CanonicalStatusEnum,
+  createDashboardLayoutService,
   getAppRepository,
   getPersistentPathConfiguration,
+  prisma,
   resolveEffectiveBackupsPath,
   resolveEffectiveExportsPath,
   resolveEffectiveUploadsPath,
   resolveAgentJobsConfig,
   resolveCalendarConfig,
   resolveDndApiConfig,
+  STUDIO_TODAY_PAGE_KEY,
   VisibilityEnum,
 } from "@uwe/database/server";
+import { getUweRuntimeConfig } from "@uwe/auth";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
 import { DesignAssistantWizard } from "../../components/DesignAssistantWizard";
@@ -64,9 +70,15 @@ export default async function SettingsPage({ searchParams }: Props) {
   const activeTab: TabId = isTabId(tabParam) ? tabParam : "general";
 
   const repo = getAppRepository();
-  const [settings, worlds] = await Promise.all([
+  const currentUser = await getCurrentAuthUser();
+  const layoutUserId =
+    currentUser?.id ?? (!getUweRuntimeConfig().authRequired ? "dev-bypass" : null);
+  const [settings, worlds, todayLayout] = await Promise.all([
     repo.getSystemSettings(),
     repo.listWorldsWithGuestMode(),
+    layoutUserId
+      ? createDashboardLayoutService(prisma).getDashboardLayout(layoutUserId, STUDIO_TODAY_PAGE_KEY)
+      : Promise.resolve(null),
   ]);
 
   const uploadsPath = resolveEffectiveUploadsPath(settings);
@@ -115,16 +127,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           </p>
 
           {activeTab === "general" && (
-            <section className="uwe-form">
-              <h2>App Settings</h2>
-              <p className="uwe-hint">
-                Visuelle Themes, Schrift, UI-Dichte und Hintergrundmuster konfigurierst du
-                unter{" "}
-                <Link href="/settings?tab=appearance">Design &amp; Theme</Link>. Einstellungen
-                werden automatisch mit dem Server synchronisiert (
-                <code>settings.app.themePreferences</code>).
-              </p>
-            </section>
+            <SettingsGeneralTab todayWidgets={todayLayout?.widgets ?? []} />
           )}
 
           {activeTab === "appearance" && (

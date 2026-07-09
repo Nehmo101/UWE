@@ -1,16 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  BRAIN_DOCUMENT_TYPE_LABELS,
-  BRAIN_SOURCE_LABELS,
-  BRAIN_STATUS_LABELS,
-  BRAIN_VISIBILITY_LABELS,
-  buildPageUrl,
   createBrainStoreService,
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
-import { updateBrainDocumentAction } from "../../../../brain-actions";
+import { BrainDocumentClient } from "@/components/brain/BrainDocumentClient";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -54,78 +48,20 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
         title={document.title}
         summary="Brain-Dokument bearbeiten"
       />
-      <form action={updateBrainDocumentAction} className="uwe-brain-edit-form">
-        <input type="hidden" name="worldSlug" value={worldSlug} />
-        <input type="hidden" name="documentId" value={document.id} />
-
-        <label>
-          Titel
-          <input name="title" defaultValue={document.title} required className="uwe-input" />
-        </label>
-
-        <label>
-          Inhalt
-          <textarea
-            name="content"
-            defaultValue={document.content}
-            className="uwe-input"
-            rows={12}
-          />
-        </label>
-
-        <label>
-          Typ
-          <select name="documentType" defaultValue={document.documentType} className="uwe-input">
-            {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Sichtbarkeit
-          <select name="visibility" defaultValue={document.visibility} className="uwe-input">
-            {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Status
-          <select name="status" defaultValue={document.status} className="uwe-input">
-            {Object.entries(BRAIN_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <p className="uwe-brain-meta">
-          Quelle: {BRAIN_SOURCE_LABELS[document.source]} ·{" "}
-          {document.chunks.length} Chunks
-          {document.page && (
-            <>
-              {" "}
-              · Seite:{" "}
-              <Link
-                href={buildPageUrl(worldSlug, document.page.type, document.page.slug)}
-              >
-                {document.page.title}
-              </Link>
-            </>
-          )}
-        </p>
-
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-          Speichern
-        </button>
-      </form>
+      <BrainDocumentClient
+        worldSlug={worldSlug}
+        document={{
+          id: document.id,
+          title: document.title,
+          content: document.content,
+          documentType: document.documentType,
+          visibility: document.visibility,
+          status: document.status,
+          source: document.source,
+          chunks: document.chunks,
+          page: document.page,
+        }}
+      />
 
       {links.length > 0 && (
         <section className="uwe-brain-section">

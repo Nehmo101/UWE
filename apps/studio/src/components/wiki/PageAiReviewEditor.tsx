@@ -24,8 +24,9 @@ export function PageAiReviewEditor({ worldSlug, pageId, initialDetail }: Props) 
   const [editedContent, setEditedContent] = useState(initialDetail.editedContent);
   const [chatPrompt, setChatPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [rejectComment, setRejectComment] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [settings, setSettings] = useState<AiBrainSettings | null>(null);
   const [providerId, setProviderId] = useState<AiProviderId>("ollama");
   const [model, setModel] = useState("");
@@ -98,7 +99,11 @@ export function PageAiReviewEditor({ worldSlug, pageId, initialDetail }: Props) 
     setLoading(true);
     setError(null);
     try {
-      const result = await rejectPageReviewAction(worldSlug, detail.proposalId);
+      const result = await rejectPageReviewAction(
+        worldSlug,
+        detail.proposalId,
+        rejectComment.trim() || undefined,
+      );
       if (!result.ok) {
         setError(result.message);
         return;
@@ -110,7 +115,7 @@ export function PageAiReviewEditor({ worldSlug, pageId, initialDetail }: Props) 
     } finally {
       setLoading(false);
     }
-  }, [worldSlug, detail.proposalId, router]);
+  }, [worldSlug, detail.proposalId, rejectComment, router]);
 
   const handleRefine = useCallback(async () => {
     if (!chatPrompt.trim() || !model) {
@@ -159,9 +164,19 @@ export function PageAiReviewEditor({ worldSlug, pageId, initialDetail }: Props) 
           )}
         </div>
         <div className="flex gap-2">
+          <label className="flex flex-col gap-1 text-sm" style={{ flex: 1 }}>
+            Ablehnungskommentar (optional)
+            <input
+              type="text"
+              value={rejectComment}
+              onChange={(event) => setRejectComment(event.target.value)}
+              placeholder="Grund für Ablehnung…"
+              disabled={loading}
+            />
+          </label>
           <button
             type="button"
-            className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted disabled:opacity-60"
+            className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted disabled:opacity-60 self-end"
             onClick={() => void handleReject()}
             disabled={loading}
           >
@@ -169,7 +184,7 @@ export function PageAiReviewEditor({ worldSlug, pageId, initialDetail }: Props) 
           </button>
           <button
             type="button"
-            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60 self-end"
             onClick={() => void handleAccept()}
             disabled={loading}
           >

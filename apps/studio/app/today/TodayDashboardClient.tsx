@@ -16,6 +16,7 @@ import { formatEuroFromCents } from "@uwe/database/contract-expense-utils";
 import { STUDIO_TODAY_PAGE_KEY, mergeMissingDefaultWidgets } from "@uwe/database/dashboard-layout";
 import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
 import type { TodayDashboardData } from "@/src/lib/today-dashboard";
+import { isTodayDashboardAllClear } from "@/src/lib/today-empty-state";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -44,10 +45,20 @@ const AMPEL_DOT: Record<"ok" | "warn" | "error", string> = {
 
 interface TodayDashboardClientProps {
   data: TodayDashboardData;
+  initialWidgets?: DashboardWidgetConfig[];
+  initialIsDefault?: boolean;
 }
 
-export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
-  const layout = useDashboardLayout({ pageKey: STUDIO_TODAY_PAGE_KEY });
+export function TodayDashboardClient({
+  data,
+  initialWidgets,
+  initialIsDefault,
+}: TodayDashboardClientProps) {
+  const layout = useDashboardLayout({
+    pageKey: STUDIO_TODAY_PAGE_KEY,
+    initialWidgets,
+    initialIsDefault,
+  });
   const widgets = useMemo(
     () => mergeMissingDefaultWidgets(STUDIO_TODAY_PAGE_KEY, layout.widgets),
     [layout.widgets],
@@ -517,6 +528,8 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
     return <p className="uwe-dashboard-muted">Dashboard-Layout wird geladen…</p>;
   }
 
+  const allClear = isTodayDashboardAllClear(data, widgets);
+
   return (
     <LayoutEditorProvider initialWidgets={widgets}>
       <LayoutEditToolbar
@@ -526,6 +539,13 @@ export function TodayDashboardClient({ data }: TodayDashboardClientProps) {
         saving={layout.saving}
         error={layout.error}
       />
+      {allClear ? (
+        <EmptyState
+          title="Alles erledigt — guter Start!"
+          description="Keine dringenden Aufgaben in deinen sichtbaren Widgets. Zeit für kreatives DnD oder einfach durchatmen."
+          action={<Link href="/capture?quick=1">Neue Idee erfassen</Link>}
+        />
+      ) : null}
       <SortableWidgetGrid renderWidget={renderWidget} />
     </LayoutEditorProvider>
   );

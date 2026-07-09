@@ -32,6 +32,8 @@ export interface WorldDashboardClientProps {
   worldName: string;
   worldDescription: string | null;
   cockpitTabs: CockpitTabItem[];
+  initialWidgets?: DashboardWidgetConfig[];
+  initialIsDefault?: boolean;
   overview: {
     counts: {
       pages: number;
@@ -82,10 +84,12 @@ export function WorldDashboardClient({
   worldName,
   worldDescription,
   cockpitTabs,
+  initialWidgets,
+  initialIsDefault,
   overview,
 }: WorldDashboardClientProps) {
   const pageKey = studioWorldDashboardPageKey(worldSlug);
-  const layout = useDashboardLayout({ pageKey });
+  const layout = useDashboardLayout({ pageKey, initialWidgets, initialIsDefault });
 
   const renderWidget = (widget: DashboardWidgetConfig) => {
     switch (widget.widgetType) {
@@ -199,42 +203,45 @@ export function WorldDashboardClient({
           </WorldCockpitCard>
         );
       case "recent-pages":
-        if (overview.recentPages.length === 0) return null;
         return (
           <section className="uwe-v2-card uwe-v2-card-padded uwe-cockpit-recent">
             <h2 className="uwe-v2-section-title">Zuletzt bearbeitet</h2>
-            <table className="uwe-page-table">
-              <thead>
-                <tr>
-                  <th>Titel</th>
-                  <th>Typ</th>
-                  <th>Sichtbarkeit</th>
-                  <th>Publish</th>
-                  <th>Geändert</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overview.recentPages.map((page) => (
-                  <tr key={page.id}>
-                    <td>
-                      <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
-                    </td>
-                    <td>
-                      <PageTypeBadge type={page.type} />
-                    </td>
-                    <td>
-                      <VisibilityBadge visibility={page.visibility} />
-                    </td>
-                    <td>
-                      <PublishBadge status={page.publishStatus} />
-                    </td>
-                    <td className="uwe-dashboard-muted">
-                      {RELATIVE_FORMAT.format(new Date(page.updatedAt))}
-                    </td>
+            {overview.recentPages.length === 0 ? (
+              <p className="uwe-dashboard-muted">Noch keine kürzlichen Wiki-Änderungen.</p>
+            ) : (
+              <table className="uwe-page-table">
+                <thead>
+                  <tr>
+                    <th>Titel</th>
+                    <th>Typ</th>
+                    <th>Sichtbarkeit</th>
+                    <th>Publish</th>
+                    <th>Geändert</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {overview.recentPages.map((page) => (
+                    <tr key={page.id}>
+                      <td>
+                        <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
+                      </td>
+                      <td>
+                        <PageTypeBadge type={page.type} />
+                      </td>
+                      <td>
+                        <VisibilityBadge visibility={page.visibility} />
+                      </td>
+                      <td>
+                        <PublishBadge status={page.publishStatus} />
+                      </td>
+                      <td className="uwe-dashboard-muted">
+                        {RELATIVE_FORMAT.format(new Date(page.updatedAt))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </section>
         );
       default:
@@ -245,6 +252,10 @@ export function WorldDashboardClient({
   if (layout.loading && layout.widgets.length === 0) {
     return <p className="uwe-dashboard-muted">Dashboard-Layout wird geladen…</p>;
   }
+
+  const secondaryWidgets = layout.widgets.filter(
+    (widget) => !["next-session", "open-plots", "recent-pages"].includes(widget.widgetType),
+  );
 
   return (
     <div className="uwe-v2-dashboard">
@@ -270,10 +281,19 @@ export function WorldDashboardClient({
 
       <WorldCockpitTabs items={cockpitTabs} />
 
-      <LayoutEditorProvider initialWidgets={layout.widgets}>
+      <section className="uwe-cockpit-hero-row" aria-label="Priorität">
+        {renderWidget({ id: "hero-next-session", widgetType: "next-session", order: 0, column: 1, visible: true })}
+        {renderWidget({ id: "hero-open-plots", widgetType: "open-plots", order: 1, column: 2, visible: true })}
+        {renderWidget({ id: "hero-recent-pages", widgetType: "recent-pages", order: 2, column: 3, visible: true })}
+      </section>
+
+      <LayoutEditorProvider initialWidgets={secondaryWidgets}>
         <LayoutEditToolbar
           onApply={async (widgets) => {
-            await layout.save(widgets);
+            const heroWidgets = layout.widgets.filter((widget) =>
+              ["next-session", "open-plots", "recent-pages"].includes(widget.widgetType),
+            );
+            await layout.save([...heroWidgets, ...widgets]);
           }}
           saving={layout.saving}
           error={layout.error}

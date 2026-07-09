@@ -23,12 +23,15 @@ import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string }>;
+  searchParams: Promise<{ campaign?: string; page?: string }>;
 }
+
+const BRAIN_PAGE_SIZE = 25;
 
 export default async function StudioBrainPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug } = await searchParams;
+  const { campaign: campaignSlug, page: pageRaw } = await searchParams;
+  const page = Math.max(1, Number(pageRaw ?? "1") || 1);
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -46,6 +49,8 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
     brain.listDocuments(worldSlug, {
       campaignId: selectedCampaign?.id,
       accessContext: "dm",
+      limit: BRAIN_PAGE_SIZE,
+      offset: (page - 1) * BRAIN_PAGE_SIZE,
     }),
     brain.listFacts(worldSlug, {
       campaignId: selectedCampaign?.id,
@@ -55,6 +60,17 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
   ]);
 
   await db.$disconnect();
+
+  const documentTotal = summary?.documentCount ?? documents.length;
+  const totalPages = Math.max(1, Math.ceil(documentTotal / BRAIN_PAGE_SIZE));
+
+  function brainPageHref(nextPage: number): string {
+    const paramsObj = new URLSearchParams();
+    if (campaignSlug) paramsObj.set("campaign", campaignSlug);
+    if (nextPage > 1) paramsObj.set("page", String(nextPage));
+    const qs = paramsObj.toString();
+    return `/worlds/${worldSlug}/brain${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <WorldShell
@@ -121,6 +137,15 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
               ))}
             </tbody>
           </table>
+        )}
+        {totalPages > 1 && (
+          <nav className="uwe-inline-actions" aria-label="Brain-Dokumente Pagination">
+            {page > 1 ? <Link href={brainPageHref(page - 1)}>← Zurück</Link> : null}
+            <span className="uwe-dashboard-muted">
+              Seite {page} / {totalPages}
+            </span>
+            {page < totalPages ? <Link href={brainPageHref(page + 1)}>Weiter →</Link> : null}
+          </nav>
         )}
       </section>
 

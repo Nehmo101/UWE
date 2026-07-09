@@ -44,6 +44,9 @@ export default async function LifeBrainPage() {
       <p className="uwe-form-error" role="note">
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
       </p>
+      <p className="uwe-inline-actions uwe-v2-section">
+        <span className="uwe-badge uwe-badge-muted">RTX-only · Kein Cloud-Fallback</span>
+      </p>
 
       <LifeBrainIndexPanel />
       <LifeBrainSearchPanel />
@@ -95,8 +98,14 @@ export default async function LifeBrainPage() {
       {documents.length === 0 && facts.length === 0 ? (
         <EmptyState
           title="Noch keine Life-Brain-Einträge"
-          description="Speichere persönliches Wissen lokal — getrennt vom DnD Brain."
-          action={<Link href="/capture">Capture öffnen</Link>}
+          description="Speichere persönliches Wissen lokal — getrennt vom DnD Brain. Starte mit einem Dokument oben, erfasse per Capture oder nutze den Life-Brain Chat."
+          action={
+            <>
+              <Link href="/capture">Capture öffnen</Link>
+              {" · "}
+              <Link href="/life-brain/chat">Life-Brain Chat</Link>
+            </>
+          }
         />
       ) : (
         <>

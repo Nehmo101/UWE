@@ -6,6 +6,7 @@ import {
   getAppRepository,
   IMAGE_STUDIO_OPERATION_LABELS,
   IMAGE_STUDIO_STATUS_LABELS,
+  ImageStudioStatusEnum,
   prisma,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
@@ -15,20 +16,25 @@ import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
 import { createImageStudioJobAction } from "../integration-actions";
 
 interface Props {
-  searchParams: Promise<{ pageId?: string; project?: string }>;
+  searchParams: Promise<{ pageId?: string; project?: string; status?: string }>;
 }
 
 export default async function ImageStudioPage({ searchParams }: Props) {
-  const { pageId, project } = await searchParams;
+  const { pageId, project, status: statusRaw } = await searchParams;
   if (project?.trim()) {
     redirect(`/image-studio/${project.trim()}`);
   }
   const repo = getAppRepository();
   const settings = await repo.getSystemSettings();
   const config = settings.imageStudio;
+  const statusFilter =
+    statusRaw && Object.values(ImageStudioStatusEnum).includes(statusRaw as (typeof ImageStudioStatusEnum)[keyof typeof ImageStudioStatusEnum])
+      ? (statusRaw as (typeof ImageStudioStatusEnum)[keyof typeof ImageStudioStatusEnum])
+      : undefined;
+
   const imageStudio = createImageStudioService(prisma);
   const [projects, worlds] = await Promise.all([
-    imageStudio.listProjects(),
+    imageStudio.listProjects(undefined, { status: statusFilter }),
     repo.listWorldsWithGuestMode(),
   ]);
 
@@ -73,6 +79,25 @@ export default async function ImageStudioPage({ searchParams }: Props) {
 
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Projekte</h2>
+        <nav className="uwe-today-quick-chips" aria-label="Status-Filter">
+          <Link
+            href="/image-studio"
+            className="uwe-today-quick-chip"
+            data-severity={!statusFilter ? "warn" : "info"}
+          >
+            Alle
+          </Link>
+          {Object.values(ImageStudioStatusEnum).map((status) => (
+            <Link
+              key={status}
+              href={`/image-studio?status=${status}`}
+              className="uwe-today-quick-chip"
+              data-severity={statusFilter === status ? "warn" : "info"}
+            >
+              {IMAGE_STUDIO_STATUS_LABELS[status]}
+            </Link>
+          ))}
+        </nav>
         {projects.length === 0 ? (
           <EmptyState
             title="Noch keine Image-Studio-Projekte"

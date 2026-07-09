@@ -24,8 +24,8 @@ export default async function BrainOverviewPage() {
   const worldSummaries = await Promise.all(
     worlds.map(async (world) => {
       const [documents, facts, summary] = await Promise.all([
-        brain.listDocuments(world.slug, { accessContext: "dm", includeArchived: true }),
-        brain.listFacts(world.slug, { accessContext: "dm", includeArchived: true }),
+        brain.listDocuments(world.slug, { accessContext: "dm", includeArchived: true, limit: 6 }),
+        brain.listFacts(world.slug, { accessContext: "dm", includeArchived: true, limit: 6 }),
         brain.getWorldSummary(world.slug),
       ]);
       return { world, documents, facts, summary };

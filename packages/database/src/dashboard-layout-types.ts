@@ -33,6 +33,20 @@ export const STUDIO_TODAY_WIDGET_TYPES = [
 
 export type StudioTodayWidgetType = (typeof STUDIO_TODAY_WIDGET_TYPES)[number];
 
+export const STUDIO_TODAY_WIDGET_LABELS: Record<StudioTodayWidgetType, string> = {
+  "system-ampel": "System-Ampel",
+  "dnd-favorite": "DnD / Welten",
+  "capture-inbox": "Capture Inbox",
+  projects: "Projekte",
+  contracts: "Verträge & Ausgaben",
+  homelab: "Hardware / Homelab",
+  agenda: "Was steht heute an",
+  "prioritized-mail": "Wichtige Mails",
+  household: "Haushalt & Vorräte",
+  "jobs-queue": "Automatisierung",
+  "projects-by-domain": "Projekte nach Domäne",
+};
+
 export const STUDIO_DASHBOARD_WIDGET_TYPES = [
   "stats",
   "next-actions",
@@ -111,11 +125,11 @@ export const DEFAULT_STUDIO_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
 export const DEFAULT_STUDIO_WORLD_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
   widget("next-session", "next-session", 0, 1),
   widget("open-plots", "open-plots", 0, 2),
-  widget("wiki-pages", "wiki-pages", 0, 3),
-  widget("portal-sharing", "portal-sharing", 1, 1),
-  widget("media-assets", "media-assets", 1, 2),
-  widget("ai-brain", "ai-brain", 1, 3),
-  widget("recent-pages", "recent-pages", 2, 1),
+  widget("recent-pages", "recent-pages", 0, 3),
+  widget("wiki-pages", "wiki-pages", 1, 1, false),
+  widget("portal-sharing", "portal-sharing", 1, 2, false),
+  widget("media-assets", "media-assets", 1, 3, false),
+  widget("ai-brain", "ai-brain", 2, 1, false),
 ];
 
 export const DEFAULT_PORTAL_WORLD_LAYOUT: DashboardWidgetConfig[] = [

@@ -62,11 +62,12 @@ export async function acceptPageReviewAction(
 export async function rejectPageReviewAction(
   worldSlug: string,
   proposalId: string,
+  reason?: string,
 ): Promise<{ ok: boolean; message: string }> {
   await requireStudioActionAuth();
   await requireStudioWorldEdit(worldSlug);
 
-  const result = await createPageAiReviewService(prisma).rejectReview(proposalId);
+  const result = await createPageAiReviewService(prisma).rejectReview(proposalId, reason);
 
   revalidatePath(`/worlds/${worldSlug}`);
   revalidatePath(`/worlds/${worldSlug}/page-review`);

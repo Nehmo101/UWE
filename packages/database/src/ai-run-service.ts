@@ -59,6 +59,7 @@ export interface ListAiRunsOptions {
   worldId?: string;
   pageId?: string;
   gameSessionId?: string;
+  taskType?: string;
   status?: AiRunStatus | AiRunStatus[];
   limit?: number;
   offset?: number;
@@ -231,12 +232,26 @@ export class AiRunService {
     return toView(run);
   }
 
-  async markDiscarded(id: string): Promise<AiRunView> {
+  async markDiscarded(id: string, rejectionComment?: string): Promise<AiRunView> {
+    const existing = await this.db.aiRun.findUnique({ where: { id }, select: { resultMeta: true } });
+    const priorMeta =
+      existing?.resultMeta && typeof existing.resultMeta === "object" && !Array.isArray(existing.resultMeta)
+        ? (existing.resultMeta as Record<string, unknown>)
+        : {};
+
     const run = await this.db.aiRun.update({
       where: { id },
       data: {
         status: "discarded",
         discardedAt: new Date(),
+        ...(rejectionComment?.trim()
+          ? {
+              resultMeta: toPrismaJsonValue({
+                ...priorMeta,
+                rejectionComment: rejectionComment.trim(),
+              }),
+            }
+          : {}),
       },
       include: runInclude(),
     });
@@ -268,6 +283,7 @@ export class AiRunService {
     if (options.worldId) where.worldId = options.worldId;
     if (options.pageId) where.pageId = options.pageId;
     if (options.gameSessionId) where.gameSessionId = options.gameSessionId;
+    if (options.taskType) where.taskType = options.taskType;
     if (options.status) {
       where.status = Array.isArray(options.status) ? { in: options.status } : options.status;
     }

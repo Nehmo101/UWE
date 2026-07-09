@@ -6,6 +6,8 @@ import type { DashboardLayoutResult, DashboardWidgetConfig } from "@uwe/database
 export interface UseDashboardLayoutOptions {
   pageKey: string;
   apiBasePath?: string;
+  initialWidgets?: DashboardWidgetConfig[];
+  initialIsDefault?: boolean;
 }
 
 export interface UseDashboardLayoutState {
@@ -21,10 +23,12 @@ export interface UseDashboardLayoutState {
 export function useDashboardLayout({
   pageKey,
   apiBasePath = "/api/dashboard-layout",
+  initialWidgets,
+  initialIsDefault = true,
 }: UseDashboardLayoutOptions): UseDashboardLayoutState {
-  const [widgets, setWidgets] = useState<DashboardWidgetConfig[]>([]);
-  const [isDefault, setIsDefault] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [widgets, setWidgets] = useState<DashboardWidgetConfig[]>(initialWidgets ?? []);
+  const [isDefault, setIsDefault] = useState(initialIsDefault);
+  const [loading, setLoading] = useState(initialWidgets === undefined);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,8 +53,14 @@ export function useDashboardLayout({
   }, [apiBasePath, pageKey]);
 
   useEffect(() => {
+    if (initialWidgets !== undefined) {
+      setWidgets(initialWidgets);
+      setIsDefault(initialIsDefault);
+      setLoading(false);
+      return;
+    }
     void reload();
-  }, [reload]);
+  }, [initialIsDefault, initialWidgets, reload]);
 
   const save = useCallback(
     async (nextWidgets: DashboardWidgetConfig[]) => {

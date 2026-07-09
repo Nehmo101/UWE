@@ -33,6 +33,7 @@ export type {
   WorkshopPaintTarget,
   WorkshopRentalStatus,
   ListCapturesOptions,
+  CaptureSourceGroup,
   CreateCaptureInput,
   CreatePersonalProjectInput,
   CreateWorkshopProjectInput,
@@ -130,6 +131,9 @@ export class LifeAdminService {
   }
   deleteCapture(...args: Parameters<LifeAdminSubServices["capture"]["deleteCapture"]>) {
     return this.capture.deleteCapture(...args);
+  }
+  archiveCaptures(...args: Parameters<LifeAdminSubServices["capture"]["archiveCaptures"]>) {
+    return this.capture.archiveCaptures(...args);
   }
   getCaptureStatusCounts(...args: Parameters<LifeAdminSubServices["capture"]["getCaptureStatusCounts"]>) {
     return this.capture.getCaptureStatusCounts(...args);

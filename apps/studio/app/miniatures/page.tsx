@@ -95,6 +95,21 @@ export default async function MiniaturesPage({ searchParams }: Props) {
         summary="Sammlung verwalten, Fortschritt tracken und Referenz- mit Vergleichsfotos gegenüberstellen."
       />
 
+      <section className="uwe-stat-grid uwe-v2-section" aria-label="Fortschritt">
+        {Object.values(MiniatureCollectionStatusEnum).map((status) => {
+          const count = statusCounts[status];
+          const percent = allItems.length > 0 ? Math.round((count / allItems.length) * 100) : 0;
+          return (
+            <div key={status} className="uwe-stat">
+              <span className="uwe-stat-value">{count}</span>
+              <span className="uwe-stat-label">
+                {MINIATURE_COLLECTION_STATUS_LABELS[status]} ({percent}%)
+              </span>
+            </div>
+          );
+        })}
+      </section>
+
       <nav className="uwe-inline-actions uwe-v2-section">
         <Link href="/workshop">Werkstatt</Link>
         <Link href="/workshop/recipes">Paint-Rezepte</Link>

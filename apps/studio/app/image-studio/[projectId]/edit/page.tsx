@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createImageStudioService, prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { ImageStudioCanvasEditor } from "@/components/ImageStudioCanvasEditor";
+import { ImageStudioPromptHistory } from "@/src/components/ux/ImageStudioPromptHistory";
 import { saveImageStudioCanvasAction } from "@/app/integration-actions";
 
 interface Props {
@@ -41,6 +42,7 @@ export default async function ImageStudioEditPage({ params }: Props) {
           </Link>
         }
       />
+      <ImageStudioPromptHistory projectId={projectId} />
       <ImageStudioCanvasEditor
         projectId={projectId}
         sourceImageUrl={`/api/assets/${latestVersion.assetId}/file`}

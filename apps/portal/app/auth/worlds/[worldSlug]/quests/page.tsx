@@ -26,7 +26,7 @@ import { setQuestPriorityAction } from "@/app/player-hub-actions";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; priority?: string }>;
 }
 
 type StatusFilter = "all" | "open" | QuestLifecycleStatus;
@@ -56,7 +56,7 @@ function matchesStatusFilter(
 
 export default async function AuthWorldQuestsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { q, status: statusParam } = await searchParams;
+  const { q, status: statusParam, priority: priorityParam } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
@@ -88,9 +88,15 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
 
   const priorityRank: Record<QuestPriority, number> = { high: 0, normal: 1, low: 2 };
 
+  const priorityOnly = priorityParam === "high";
+
   const query = q?.trim().toLocaleLowerCase("de") ?? "";
   const filtered = quests
     .filter((page) => matchesStatusFilter(page.questStatus, statusFilter))
+    .filter((page) => {
+      if (!priorityOnly) return true;
+      return flags.get(page.id)?.priority === "high";
+    })
     .filter((page) => {
       if (!query) {
         return true;
@@ -124,17 +130,21 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
             { value: "open", label: "Offen" },
             { value: "completed", label: QUEST_LIFECYCLE_LABELS.completed },
             { value: "failed", label: QUEST_LIFECYCLE_LABELS.failed },
+            { value: "priority", label: "Meine Priorität", param: "priority=high" },
           ] as const
         ).map((tab, index) => {
           const params = new URLSearchParams();
-          if (tab.value !== "all") {
+          if ("param" in tab && tab.param) {
+            params.set("priority", "high");
+          } else if (tab.value !== "all") {
             params.set("status", tab.value);
           }
           if (query) {
             params.set("q", query);
           }
           const href = params.size > 0 ? `${basePath}?${params}` : basePath;
-          const active = statusFilter === tab.value;
+          const active =
+            ("param" in tab && tab.param ? priorityOnly : statusFilter === tab.value);
 
           return (
             <span key={tab.value}>
@@ -154,9 +164,12 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
         query={q ?? ""}
         placeholder="Quests durchsuchen…"
         extraFields={
-          statusFilter !== "all" ? (
-            <input type="hidden" name="status" value={statusFilter} />
-          ) : undefined
+          <>
+            {statusFilter !== "all" ? (
+              <input type="hidden" name="status" value={statusFilter} />
+            ) : null}
+            {priorityOnly ? <input type="hidden" name="priority" value="high" /> : null}
+          </>
         }
       />
 
