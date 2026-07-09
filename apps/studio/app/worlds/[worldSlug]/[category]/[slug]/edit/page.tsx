@@ -93,7 +93,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
       contextPanel={
         <CampaignSidebar
           items={[
-            { label: "\u2190 Seitenansicht", href: pageHref, active: true },
+            { label: "← Seitenansicht", href: pageHref, active: true },
             { label: "Seitenliste", href: `/worlds/${worldSlug}` },
           ]}
         />
@@ -115,7 +115,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
       />
       <div className="uwe-has-sticky-actions">
         {saved && (
-          <p className="uwe-flash-success" style={{ fontSize: "0.875rem" }}>\u00c4nderungen gespeichert.</p>
+          <p className="uwe-flash-success" style={{ fontSize: "0.875rem" }}>Änderungen gespeichert.</p>
         )}
 
         <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-v2-form">
@@ -157,9 +157,9 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               ))}
             </select>
             <small className="uwe-field-hint">
-              \u201ePortal sichtbar\u201c und \u201eShare-Link\u201c sind nach dem
-              Ver\u00f6ffentlichen f\u00fcr angemeldete Spieler im Portal sichtbar.
-              \u201eNur GM\u201c erscheint dort niemals.
+              „Portal sichtbar“ und „Share-Link“ sind nach dem
+              Veröffentlichen für angemeldete Spieler im Portal sichtbar.
+              „Nur GM“ erscheint dort niemals.
             </small>
           </label>
 
@@ -173,12 +173,12 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           </label>
 
           <fieldset className="uwe-fieldset">
-            <legend>Geheimnis &amp; Enth\u00fcllung</legend>
+            <legend>Geheimnis &amp; Enthüllung</legend>
             <p className="uwe-field-hint" style={{ marginTop: 0 }}>
               Aktuell:{" "}
               <SecretLevelBadge secretLevel={page.secretLevel} />
               {page.secretLevel !== "none" && (
-                <> \u00b7 <RevealStateBadge revealState={page.revealState} /></>
+                <> · <RevealStateBadge revealState={page.revealState} /></>
               )}
             </p>
 
@@ -192,13 +192,13 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                 ))}
               </select>
               <small className="uwe-field-hint">
-                Steuert zus\u00e4tzlichen Schutz f\u00fcr ver\u00f6ffentlichte Spieler-Inhalte.
-                \u201eKein Geheimnis\u201c bedeutet: nur Sichtbarkeit und Publish-Status gelten.
+                Steuert zusätzlichen Schutz für veröffentlichte Spieler-Inhalte.
+                „Kein Geheimnis“ bedeutet: nur Sichtbarkeit und Publish-Status gelten.
               </small>
             </label>
 
             <label>
-              Enth\u00fcllungs-Status
+              Enthüllungs-Status
               <select name="revealState" defaultValue={page.revealState}>
                 {Object.values(RevealStateEnum).map((state) => (
                   <option key={state} value={state}>
@@ -208,7 +208,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               </select>
               <small className="uwe-field-hint">
                 Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen die Seite im Portal
-                erst bei \u201eEnth\u00fcllt\u201c \u2014 \u201eVorschau\u201c bleibt wie \u201eVerborgen\u201c f\u00fcr Portal-Zugriff.
+                erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für Portal-Zugriff.
               </small>
             </label>
           </fieldset>
@@ -243,7 +243,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
 
         <CollapsibleSection
           title="ContentBlocks"
-          summary={`${page.contentBlocks.length} Bl\u00f6cke`}
+          summary={`${page.contentBlocks.length} Blöcke`}
           defaultOpen={page.contentBlocks.length <= 3}
         >
           {page.contentBlocks.map((block) => (
@@ -273,11 +273,11 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               </label>
 
               <fieldset className="uwe-fieldset">
-                <legend>Geheimnis &amp; Enth\u00fcllung</legend>
+                <legend>Geheimnis &amp; Enthüllung</legend>
                 <p className="uwe-field-hint" style={{ marginTop: 0 }}>
                   Aktuell: <SecretLevelBadge secretLevel={block.secretLevel} />
                   {block.secretLevel !== "none" && (
-                    <> \u00b7 <RevealStateBadge revealState={block.revealState} /></>
+                    <> · <RevealStateBadge revealState={block.revealState} /></>
                   )}
                 </p>
                 <label>
@@ -289,7 +289,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                   </select>
                 </label>
                 <label>
-                  Enth\u00fcllungs-Status
+                  Enthüllungs-Status
                   <select name="revealState" defaultValue={block.revealState}>
                     {Object.values(RevealStateEnum).map((state) => (
                       <option key={state} value={state}>{REVEAL_STATE_LABELS[state]}</option>
@@ -297,7 +297,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                   </select>
                   <small className="uwe-field-hint">
                     Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen den Block im Portal
-                    erst bei \u201eEnth\u00fcllt\u201c \u2014 \u201eVorschau\u201c bleibt wie \u201eVerborgen\u201c f\u00fcr Portal-Zugriff.
+                    erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für Portal-Zugriff.
                   </small>
                 </label>
               </fieldset>
@@ -338,7 +338,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               <input type="hidden" name="pageSlug" value={slug} />
               <input type="hidden" name="category" value={category} />
               <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger">
-                Block \u201e{BLOCK_TYPE_LABELS[block.type]}\u201c l\u00f6schen
+                Block „{BLOCK_TYPE_LABELS[block.type]}“ löschen
               </button>
             </form>
           ))}
@@ -379,7 +379,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             </label>
 
             <label>
-              Enth\u00fcllungs-Status
+              Enthüllungs-Status
               <select name="revealState" defaultValue="hidden">
                 {Object.values(RevealStateEnum).map((state) => (
                   <option key={state} value={state}>{REVEAL_STATE_LABELS[state]}</option>
@@ -389,7 +389,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
 
             <ContentBlockContentField blockType="rich_text" rows={4} />
 
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Block hinzuf\u00fcgen</button>
+            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Block hinzufügen</button>
           </form>
         </CollapsibleSection>
 

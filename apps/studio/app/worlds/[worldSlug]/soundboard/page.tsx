@@ -110,7 +110,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
           <SidebarSection title="Kontext">
             <p className="uwe-hint" style={{ margin: 0 }}>
               {buttons.length} Buttons
-              {selectedCampaign ? ` in \u201e${selectedCampaign.name}\u201c` : ""}
+              {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
             </p>
           </SidebarSection>
         </>
@@ -118,7 +118,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
     >
       <PageHeader
         title="Soundboard"
-        summary="Ambient, Musik und Effekte pro Welt/Kampagne \u2014 lokale Dateien, YouTube und Spotify (Web API)."
+        summary="Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (Web API)."
       />
       <SpotifyConnectionPanel worldSlug={worldSlug} />
 
@@ -126,18 +126,18 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
         <h2>RTX-Audioausgabe</h2>
         {rtxAudioOnline ? (
           <p className="uwe-flash uwe-flash-success">
-            RTX Connector online \u2014 Sounds k\u00f6nnen lokal \u00fcber den RTX-PC ausgegeben werden.
+            RTX Connector online — Sounds können lokal über den RTX-PC ausgegeben werden.
           </p>
         ) : (
           <p className="uwe-hint" style={{ margin: 0 }}>
-            {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verf\u00fcgbar.{" "}
-            <Link href="/system/rtx-connector">RTX Connector einrichten \u2192</Link>
+            {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verfügbar.{" "}
+            <Link href="/system/rtx-connector">RTX Connector einrichten →</Link>
           </p>
         )}
       </section>
 
       {(created || saved || deleted || linked) && (
-        <p className="uwe-flash uwe-flash-success">\u00c4nderungen gespeichert.</p>
+        <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
       )}
 
       {spotifyConnected && (
@@ -165,7 +165,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
         <p className="uwe-table-sub">
           Audio-Assets zuerst unter{" "}
           <Link href={`/worlds/${worldSlug}/assets`}>Assets</Link> hochladen.
-          Spotify-Wiedergabe erfordert Premium, OAuth und ein aktives Spotify Connect-Ger\u00e4t.
+          Spotify-Wiedergabe erfordert Premium, OAuth und ein aktives Spotify Connect-Gerät.
         </p>
       </section>
 
@@ -221,7 +221,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                         <input type="hidden" name="worldSlug" value={worldSlug} />
                         <input type="hidden" name="buttonId" value={button.id} />
                         <button type="submit" className="uwe-v2-btn" style={{ marginTop: "0.5rem" }}>
-                          L\u00f6schen
+                          Löschen
                         </button>
                       </form>
                     </details>
@@ -235,7 +235,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
 
       {buttons.length > 0 && linkablePages.length > 0 && (
         <section className="uwe-panel">
-          <h2>Seite verkn\u00fcpfen</h2>
+          <h2>Seite verknüpfen</h2>
           <form action={linkPageToSoundboardButtonAction} className="uwe-form-grid">
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <label>
@@ -249,7 +249,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
               </select>
             </label>
             <label>
-              Seite (Ort, Dungeon, Raum, \u2026)
+              Seite (Ort, Dungeon, Raum, …)
               <select name="pageId" required>
                 {linkablePages.map((page) => (
                   <option key={page.id} value={page.id}>
@@ -259,7 +259,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
               </select>
             </label>
             <button type="submit" className="uwe-v2-btn">
-              Verkn\u00fcpfen
+              Verknüpfen
             </button>
           </form>
         </section>

@@ -70,7 +70,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
       contextPanel={
         <CampaignSidebar
           items={[
-            { label: "\u2190 \u00dcbersicht", href: `/worlds/${worldSlug}/dashboard` },
+            { label: "← Übersicht", href: `/worlds/${worldSlug}/dashboard` },
             { label: "Seitenliste", href: `/worlds/${worldSlug}` },
           ]}
         />
@@ -78,7 +78,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
     >
       <PageHeader
         title="Neue Seite"
-        summary="W\u00e4hle eine Vorlage und lege los \u2014 Slug und DM-Notizbl\u00f6cke werden automatisch angelegt."
+        summary="Wähle eine Vorlage und lege los — Slug und DM-Notizblöcke werden automatisch angelegt."
       />
       <div className="uwe-template-grid" role="group" aria-label="Seitenvorlagen">
         {templates.map((entry) => (
@@ -100,7 +100,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
       />
 
       <p className="uwe-form-hint">
-        <Link href="/templates">Templates verwalten \u2192</Link>
+        <Link href="/templates">Templates verwalten →</Link>
       </p>
 
       <form action={createPageAction} className="uwe-v2-form" key={template.id}>
@@ -128,7 +128,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
         <label>
           Slug (optional)
-          <input name="slug" placeholder="leer lassen f\u00fcr automatischen Slug" />
+          <input name="slug" placeholder="leer lassen für automatischen Slug" />
         </label>
 
         <label>
@@ -162,9 +162,9 @@ export default async function NewPageForm({ params, searchParams }: Props) {
             ))}
           </select>
           <small className="uwe-field-hint">
-            \u201ePortal sichtbar\u201c und \u201eShare-Link\u201c sind nach dem
-              Ver\u00f6ffentlichen f\u00fcr angemeldete Spieler im Portal sichtbar.
-              \u201eNur GM\u201c erscheint dort niemals.
+            „Portal sichtbar“ und „Share-Link“ sind nach dem
+              Veröffentlichen für angemeldete Spieler im Portal sichtbar.
+              „Nur GM“ erscheint dort niemals.
           </small>
         </label>
 
@@ -201,17 +201,17 @@ export default async function NewPageForm({ params, searchParams }: Props) {
             name="initialContent"
             rows={template.slug === "blank" ? 6 : 12}
             defaultValue={template.blocks[0]?.content ?? ""}
-            placeholder="[[Wikilinks]] unterst\u00fctzt"
+            placeholder="[[Wikilinks]] unterstützt"
           />
         </label>
 
         {extraBlocks.length > 0 && (
           <p className="uwe-form-hint">
-            Diese Vorlage legt zus\u00e4tzlich {extraBlocks.length}{" "}
-            {extraBlocks.length === 1 ? "Block" : "Bl\u00f6cke"} an:{" "}
+            Diese Vorlage legt zusätzlich {extraBlocks.length}{" "}
+            {extraBlocks.length === 1 ? "Block" : "Blöcke"} an:{" "}
             {extraBlocks
               .map((block) =>
-                block.type === "gm_note" ? "DM-Notiz (nur f\u00fcr dich)" : "Inhaltsblock",
+                block.type === "gm_note" ? "DM-Notiz (nur für dich)" : "Inhaltsblock",
               )
               .join(", ")}
             .
