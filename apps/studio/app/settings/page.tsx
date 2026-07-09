@@ -25,6 +25,8 @@ import {
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
+import { DesignAssistantWizard } from "../../components/DesignAssistantWizard";
+import { CustomThemesManager } from "../../components/CustomThemesManager";
 import { IntegrationsSetupPanel } from "../../components/IntegrationsSetupPanel";
 import { BreadcrumbTrail, SettingsShell, SystemShell } from "@/src/components/shell";
 import { resolveThemePreferencesForScope } from "@uwe/database/server";
@@ -123,6 +125,22 @@ export default async function SettingsPage({ searchParams }: Props) {
           {activeTab === "appearance" && (
             <div className="uwe-settings-stack">
               <ThemeSettingsPanel />
+              <SettingsCollapsiblePanel
+                title="Neues Design mit KI erstellen"
+                summary="Farbpalette per Fragebogen-Chat mit dem lokalen RTX-Assistenten"
+                defaultOpen={false}
+              >
+                <DesignAssistantWizard />
+              </SettingsCollapsiblePanel>
+              {(settings.app.customThemes?.length ?? 0) > 0 && (
+                <SettingsCollapsiblePanel
+                  title="Eigene Designs verwalten"
+                  summary={`${settings.app.customThemes?.length} gespeicherte(s) Custom-Design(s)`}
+                  defaultOpen={false}
+                >
+                  <CustomThemesManager themes={settings.app.customThemes ?? []} />
+                </SettingsCollapsiblePanel>
+              )}
               <SettingsCollapsiblePanel
                 title="Portal-Design"
                 summary="Separates Theme für das Spieler-Portal"

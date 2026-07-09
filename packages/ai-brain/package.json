@@ -15,7 +15,8 @@
     "./types": "./src/types.ts",
     "./router": "./src/router/index.ts",
     "./cookbook-bridge": "./src/cookbook-bridge.ts",
-    "./gateway": "./src/gateway/index.ts"
+    "./gateway": "./src/gateway/index.ts",
+    "./theme-generator": "./src/theme-generator/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -25,7 +26,8 @@
     "@uwe/atlas": "workspace:*",
     "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
-    "@uwe/image-studio": "workspace:*"
+    "@uwe/image-studio": "workspace:*",
+    "@uwe/theme-studio": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

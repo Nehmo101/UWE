@@ -35,6 +35,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   prioritize_mail: "Mail priorisieren",
   answer_mail_question: "Mail-Assistent",
   generate_briefing: "Morning Briefing erstellen",
+  generate_theme_palette: "Design/Theme erstellen",
 };
 
 const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
@@ -105,6 +106,8 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Beantworte Fragen zur E-Mail und schlage verwaltbare Aktionen vor (löschen, abmelden, archivieren). Führe nichts automatisch aus.",
   generate_briefing:
     "Erstelle ein kompaktes Morning Briefing auf Deutsch (Markdown): 1. Das Wichtigste heute (2–3 Sätze), 2. Termine & Fristen, 3. Offene Aufgaben & Warnungen, 4. Nachrichtenlage in 3–4 Stichpunkten. Nutze nur die mitgelieferten Fakten und News-Schlagzeilen — erfinde nichts.",
+  generate_theme_palette:
+    "Entwirf UI-Farbpaletten als striktes JSON. Stelle bei Bedarf kurze Rückfragen; sonst liefere Paletten-Kandidaten. Antworte NUR mit dem vereinbarten JSON-Objekt.",
 };
 
 /** Tasks that run on personal Life-Brain context — prompt heading differs from campaigns. */

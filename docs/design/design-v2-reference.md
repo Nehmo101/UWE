@@ -43,9 +43,9 @@ Referenzbilder: `docs/design/scraps/today-desktop.png`, `today-mobile.png`
 2. `/auth/worlds/terra` — Spieler-Dashboard
 3. `/login` — Auth-Flow
 
-### Theme-Presets (alle 9)
+### Theme-Presets (alle 10)
 
-`uwe-parchment-os`, `uwe-default`, `uwe-dark-fantasy`, `uwe-charcoal-desk`, `uwe-night-observatory`, `uwe-parchment-study`, `uwe-phosphor-console`, `terra`, `hells`
+`uwe-parchment-os`, `uwe-parchment-teal`, `uwe-default`, `uwe-dark-fantasy`, `uwe-charcoal-desk`, `uwe-night-observatory`, `uwe-parchment-study`, `uwe-phosphor-console`, `terra`, `hells`
 
 Automatisiert: `packages/shared-ui/src/design-v2/design-v2.test.ts`
 

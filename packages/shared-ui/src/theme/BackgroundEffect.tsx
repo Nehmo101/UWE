@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import type { BackgroundPatternId } from "./tokens";
-import { getTheme, type ThemeId } from "./themes";
+import { getTheme } from "./themes";
 
 function readEffectColor(
   explicit: string | undefined,
-  themeId: ThemeId,
+  themeId: string,
 ): string {
   if (explicit) return explicit;
   const theme = getTheme(themeId);
@@ -23,7 +23,7 @@ export function BackgroundEffect({
   pattern: BackgroundPatternId;
   effectColor?: string;
   intensity: number;
-  themeId: ThemeId;
+  themeId: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const color = readEffectColor(effectColor, themeId);

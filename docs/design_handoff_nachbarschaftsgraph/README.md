@@ -195,7 +195,7 @@ Tinten-Kontur `#211d17` (Auswahl voll, sonst @0.35 alpha), Label-Halo
 Sichtbarkeits-Dot (dm_only/private) terracotta `#c2622b`, radialer Akzent-Wash
 `rgba(194,98,43,0.05)` → `rgba(33,29,23,0.05)`, Punkteraster `rgba(33,29,23,0.08)`.
 **Empfehlung:** diese Werte zur Laufzeit aus den `--uwe-*`-Tokens lesen
-(`getComputedStyle`), damit der Graph über alle 9 Themes hinweg korrekt umskint.
+(`getComputedStyle`), damit der Graph über alle 10 Themes hinweg korrekt umskint.
 
 **Physik-Parameter:** REP 2900 · SPRING 0.018 · GRAV 0.0065 · DAMP 0.86 ·
 REST-Schwelle 0.045 · L 96 (compact 78) · hl-Lerp 0.16 · Kantenbiegung 0.12.

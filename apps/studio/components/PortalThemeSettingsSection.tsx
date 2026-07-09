@@ -18,6 +18,7 @@ export function PortalThemeSettingsSection({
       title="Portal-Standard"
       description="Standard-Erscheinungsbild für das UWE Portal. Wird beim ersten Besuch auf neuen Geräten übernommen und mit localStorage synchronisiert."
       preferences={toUweThemePreferences(initialPreferences, "portal")}
+      scope="portal"
       onPersist={async (preferences) =>
         saveThemePreferencesAction("portal", fromUweThemePreferences(preferences))
       }

@@ -168,7 +168,7 @@ help glyph). Stroke style, ~2px weight, 16px default in UI, currentColor stroke.
 - `fonts.css` — Google-Fonts import + font-family vars (Space Mono, Newsreader).
 - `typography.css` — family tokens, type scale, weights, tracking.
 - `spacing.css` — spacing, radius, shadow, shell layout, motion.
-- `colors.css` — Parchment OS on `:root` + all 9 themes as `[data-uwe-theme]` scopes + Portal scope.
+- `colors.css` — Parchment OS on `:root` + all 10 themes as `[data-uwe-theme]` scopes + Portal scope.
 - `base.css` — element resets + primitive defaults.
 
 **`components/`** (React; `window.UWEDesignSystem_f43eab`)

@@ -124,7 +124,7 @@ Hinweis: Die TSX-Inline-Farben wurden bereits weitgehend migriert (nur noch Einz
 
 ## 3. Zielbild (Definition of Done für „Ansicht")
 
-1. **Theme-Treue:** Jede sichtbare Fläche reagiert korrekt auf Theme-Wechsel. Unter Parchment OS keine dunklen „Fremdkörper". Verifiziert über alle 9 Presets.
+1. **Theme-Treue:** Jede sichtbare Fläche reagiert korrekt auf Theme-Wechsel. Unter Parchment OS keine dunklen „Fremdkörper". Verifiziert über alle 10 Presets.
 2. **Nicht überladen:** Klare Trennung **Wissen** (links/Inhalt) vs. **Verwaltung** (Freigabe/KI in eingeklappten Sektionen oder eigenem Tab). Rechte Spalte priorisiert wissensrelevanten Kontext.
 3. **Wissen schnell sichtbar:** Backlinks, verwandte Seiten, Tags, Beziehungs-Graph **above the fold** und kompakt (Liste statt überdimensioniertem SVG).
 4. **Lesbarkeit:** Konsistente Lesebreite (~46–52 rem) für Fließtext; begrenzte, vorhersehbare Höhen für eingebettete Visuals.
@@ -185,7 +185,7 @@ WS-1, WS-2, WS-3 können **parallel** starten (WS-1 sollte WS-2s Token-Namen mit
 > - Keine neuen hartcodierten Hex-/RGBA-Werte in `apps/*/app/**` oder `packages/shared-ui/src/*.css` — nur `--uwe-*`-Tokens (oder `color-mix()` darauf). Ausnahme dokumentieren (z. B. Label-Editor-Canvas `#fff` ist gewollt).
 > - GM-only-Badges müssen sichtbar/rot bleiben (Safety-Semantik).
 > - Keine Änderung an Wiki-HTML-Sanitizing, Share-Gate, Command-Palette-Keyboard-Logik, Label-Print-Canvas (siehe „Nicht anfassen", `uwe-current-design-audit.md` §9.4).
-> - Visuelle Verifikation gegen **alle 9 Presets**, mindestens aber Parchment OS (hell), uwe-default (dunkel), terra, hells.
+> - Visuelle Verifikation gegen **alle 10 Presets**, mindestens aber Parchment OS (hell), uwe-default (dunkel), terra, hells.
 > - Mobile (390 px) + Desktop prüfen.
 >
 > **Quality Gate je PR:** `pnpm install --frozen-lockfile && pnpm quality`. Bei CSS-Änderungen zusätzlich Smoke-Test: Studio-Dashboard, eine Wiki-Session-Seite (mit Graph), Portal-Welt, Login — in hell + dunkel.

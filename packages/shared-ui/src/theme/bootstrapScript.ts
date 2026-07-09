@@ -1,4 +1,4 @@
-import { LEGACY_THEME_ID_MAP, UWE_THEMES } from "./themes";
+import { LEGACY_THEME_ID_MAP, UWE_THEMES, type CustomThemeDefinition } from "./themes";
 import { CSS_VARS, LAYOUT_TOKENS } from "./tokens";
 import { resolveThemeColorTokens } from "./resolveColorTokens";
 import type { UweThemePreferences } from "./storage";
@@ -6,6 +6,8 @@ import type { UweThemePreferences } from "./storage";
 export interface ThemeBootstrapOptions {
   serverPreferences?: UweThemePreferences | null;
   serverUpdatedAt?: string | null;
+  /** Custom palettes to bake into the flash-prevention color map (this scope). */
+  customThemes?: readonly CustomThemeDefinition[];
 }
 
 /** Minimal inline bootstrap to prevent theme flash before React hydrates. */
@@ -19,10 +21,11 @@ export function buildThemeBootstrapScript(
       : "uwe-theme-preferences-studio";
   const defaultTheme = "uwe-parchment-os";
 
-  const colorMap: Record<string, Record<string, string>> = {};
-  for (const theme of Object.values(UWE_THEMES)) {
-    const resolved = resolveThemeColorTokens(theme.colors);
-    colorMap[theme.id] = {
+  const toColorEntry = (
+    colors: Parameters<typeof resolveThemeColorTokens>[0],
+  ): Record<string, string> => {
+    const resolved = resolveThemeColorTokens(colors);
+    return {
       bg: resolved.bg,
       bgElevated: resolved.bgElevated,
       surface: resolved.surface,
@@ -56,6 +59,16 @@ export function buildThemeBootstrapScript(
       focusRing: resolved.focusRing,
       focusShadow: resolved.focusShadow,
     };
+  };
+
+  const colorMap: Record<string, Record<string, string>> = {};
+  for (const theme of Object.values(UWE_THEMES)) {
+    colorMap[theme.id] = toColorEntry(theme.colors);
+  }
+  for (const theme of options?.customThemes ?? []) {
+    if (theme && typeof theme.id === "string" && theme.id) {
+      colorMap[theme.id] = toColorEntry(theme.colors);
+    }
   }
 
   const cssVarKeys = Object.entries({

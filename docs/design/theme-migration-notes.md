@@ -70,6 +70,6 @@ None intended. `LEGACY_THEME_ID_MAP` migrates old draft theme IDs.
 |---------|----------|-----------|
 | Custom theme editor | Full | Not yet |
 | Server sync | Yes | Partial (`data-uwe-*` + localStorage) |
-| Theme count | 15+ presets + custom | 9 presets |
+| Theme count | 15+ presets + custom | 10 presets |
 | Background FX | 8+ | 6 (2 animated) |
 | AGPL code reuse | N/A | None |

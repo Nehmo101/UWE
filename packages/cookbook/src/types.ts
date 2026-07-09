@@ -15,7 +15,8 @@ export type CookbookUseCaseId =
   | "image_prompting"
   | "session_prep"
   | "canon_check"
-  | "player_safe_rewrite";
+  | "player_safe_rewrite"
+  | "theme_design";
 
 export type ModelFitLevel = "excellent" | "good" | "marginal" | "poor" | "unsupported";
 

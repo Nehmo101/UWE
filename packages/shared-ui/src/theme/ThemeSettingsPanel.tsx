@@ -4,7 +4,8 @@ import { useUweTheme } from "./ThemeProvider";
 import { ThemePreferencesFields } from "./ThemeScopeSettingsPanel";
 
 export function ThemeSettingsPanel() {
-  const { preferences, updatePreferences, resetPreferences, syncState } = useUweTheme();
+  const { preferences, updatePreferences, resetPreferences, syncState, scope } =
+    useUweTheme();
 
   return (
     <section className="uwe-theme-settings" aria-labelledby="uwe-theme-settings-title">
@@ -33,6 +34,7 @@ export function ThemeSettingsPanel() {
         preferences={preferences}
         updatePreferences={updatePreferences}
         onReset={() => resetPreferences()}
+        scope={scope}
       />
     </section>
   );

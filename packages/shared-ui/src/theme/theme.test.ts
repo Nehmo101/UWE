@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isThemeId, LEGACY_THEME_ID_MAP, resolveThemeId, UWE_THEMES, THEME_LIST } from "./themes";
+import {
+  isThemeId,
+  LEGACY_THEME_ID_MAP,
+  resolveThemeId,
+  UWE_THEMES,
+  THEME_LIST,
+  type ThemeId,
+} from "./themes";
 import { defaultPreferences, getStorageKey } from "./storage";
 import { buildThemeBootstrapScript } from "./bootstrapScript";
 
 describe("uwe theme system", () => {
   it("defines all required theme presets", () => {
-    const required = [
+    const required: ThemeId[] = [
       "uwe-default",
       "uwe-dark-fantasy",
       "uwe-charcoal-desk",
@@ -62,6 +69,45 @@ describe("uwe theme system", () => {
     assert.match(script, /uwe-cockpit-red/);
     assert.match(script, /uwe-portal-purple/);
     assert.match(script, /odysseus-dark-inspired/);
+  });
+
+  it("resolves and lists registered custom themes; drops them when cleared", async () => {
+    const { setCustomThemes, getTheme, isThemeId, getCustomThemesForScope } =
+      await import("./themes");
+    const base = UWE_THEMES["uwe-parchment-teal"].colors;
+    setCustomThemes([
+      { id: "custom-abc", label: "Mein Design", description: "", scope: "studio", colors: base },
+      { id: "custom-portal", label: "Portal-Only", description: "", scope: "portal", colors: base },
+      { id: "custom-both", label: "Beide", description: "", scope: "both", colors: base },
+    ]);
+
+    assert.equal(isThemeId("custom-abc"), true);
+    assert.equal(getTheme("custom-abc").colors.accent, base.accent);
+    // Unknown ids no longer collapse to the fallback in resolveThemeId.
+    assert.equal(resolveThemeId("custom-abc", "uwe-default"), "custom-abc");
+    // Scope filtering: studio sees studio + both, not portal-only.
+    const studio = getCustomThemesForScope("studio").map((t) => t.id).sort();
+    assert.deepEqual(studio, ["custom-abc", "custom-both"]);
+    const portal = getCustomThemesForScope("portal").map((t) => t.id).sort();
+    assert.deepEqual(portal, ["custom-both", "custom-portal"]);
+    // Unknown id still falls back safely in getTheme.
+    assert.ok(getTheme("does-not-exist").colors.bg.startsWith("#"));
+
+    setCustomThemes([]);
+    assert.equal(isThemeId("custom-abc"), false);
+    assert.equal(resolveThemeId("custom-abc", "uwe-default"), "uwe-default");
+  });
+
+  it("bakes custom palettes into the bootstrap color map (anti-flash)", () => {
+    const base = UWE_THEMES["uwe-parchment-teal"].colors;
+    const script = buildThemeBootstrapScript("studio", {
+      customThemes: [
+        { id: "custom-xyz", label: "X", description: "", scope: "both", colors: base },
+      ],
+    });
+    // The custom id + its accent must be inlined so first paint matches.
+    assert.match(script, /custom-xyz/);
+    assert.match(script, new RegExp(base.accent));
   });
 
   it("portal bootstrap uses portal-scoped storage keys", () => {

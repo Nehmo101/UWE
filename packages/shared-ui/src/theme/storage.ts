@@ -14,11 +14,11 @@ import {
   DEFAULT_PORTAL_THEME_ID,
   DEFAULT_STUDIO_THEME_ID,
   resolveThemeId,
-  type ThemeId,
 } from "./themes";
 
 export interface UweThemePreferences {
-  themeId: ThemeId;
+  /** Built-in `ThemeId` or a registered custom theme id (`custom-…`). */
+  themeId: string;
   font: FontFamilyId;
   density: DensityId;
   background: BackgroundPatternId;

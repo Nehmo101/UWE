@@ -7,6 +7,7 @@ import {
   ThemeBootstrapScript,
   ThemeDocumentSync,
   buildVisualThemeHtmlAttributes,
+  toCustomThemeDefinitions,
   toUweThemePreferences,
   type ThemeAppearance,
 } from "@uwe/shared-ui";
@@ -75,6 +76,7 @@ export default async function RootLayout({
     resolveThemePreferencesForScope(settings.app, "portal"),
     "portal",
   );
+  const customThemes = toCustomThemeDefinitions(settings.app.customThemes);
   const serverTheme: ThemeAppearance = settings.app.theme;
 
   return (
@@ -84,10 +86,12 @@ export default async function RootLayout({
           scope="portal"
           serverPreferences={serverThemePreferences}
           serverUpdatedAt={updatedAt}
+          customThemes={customThemes}
         />
         <PortalThemeSyncProvider
           serverPreferences={serverThemePreferences}
           serverUpdatedAt={updatedAt}
+          customThemes={customThemes}
         >
           <ThemeDocumentSync theme={serverTheme} />
           {portalEnabled ? (

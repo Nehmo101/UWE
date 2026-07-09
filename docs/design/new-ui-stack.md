@@ -78,7 +78,7 @@ Tailwind's theme is mapped onto the existing `--uwe-*` variables so both systems
 | `--color-sidebar-foreground` | `--uwe-sidebar-fg` |
 | `--radius` | `--uwe-radius-md` |
 
-Because tokens reference the existing theme variables, all 9 existing theme presets keep working without per-component theming.
+Because tokens reference the existing theme variables, all 10 existing theme presets keep working without per-component theming.
 
 ## Migration rules
 

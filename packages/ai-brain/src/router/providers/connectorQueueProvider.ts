@@ -320,6 +320,7 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   prioritize_mail: "analysis",
   answer_mail_question: "chat",
   generate_briefing: "analysis",
+  generate_theme_palette: "chat",
 };
 
 export function workflowSlotForTask(taskType: AiTaskType): ConnectorWorkflowSlot {

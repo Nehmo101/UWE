@@ -1,0 +1,22 @@
+{
+  "name": "@uwe/theme-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UWE Theme Studio — palette schema, validation, WCAG-contrast gate and LLM parse/repair for the conversational design creator",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

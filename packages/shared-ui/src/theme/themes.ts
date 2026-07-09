@@ -381,12 +381,101 @@ export const THEME_LIST = Object.values(UWE_THEMES);
 export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-parchment-os";
 export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-parchment-os";
 
-export function isThemeId(value: string): value is ThemeId {
+export type CustomThemeScope = "studio" | "portal" | "both";
+
+/**
+ * A user-authored theme registered at runtime from server settings. It carries
+ * the same palette shape as a built-in theme plus a `scope` that decides which
+ * app picker(s) show it. Custom themes render via the generic token-driven path
+ * (no bespoke `uwe.css` chrome block — those are reserved for fixed ids).
+ */
+export interface CustomThemeDefinition extends Omit<UweThemeDefinition, "id"> {
+  /** Arbitrary custom id (`custom-…`), not constrained to the built-in union. */
+  id: string;
+  scope: CustomThemeScope;
+}
+
+/** A theme resolvable at runtime — a built-in or a custom palette (id widened). */
+export type ResolvedThemeDefinition = Omit<UweThemeDefinition, "id"> & { id: string };
+
+const CUSTOM_THEMES = new Map<string, CustomThemeDefinition>();
+
+/**
+ * Replace the runtime custom-theme registry. Must run before theme resolution
+ * (preference parsing / apply) so a stored custom id is not sanitized back to a
+ * built-in fallback — the ThemeProvider does this synchronously on first render.
+ */
+export function setCustomThemes(themes: readonly CustomThemeDefinition[]): void {
+  CUSTOM_THEMES.clear();
+  for (const theme of themes) {
+    if (theme && typeof theme.id === "string" && theme.id) {
+      CUSTOM_THEMES.set(theme.id, theme);
+    }
+  }
+}
+
+export function getCustomThemes(): CustomThemeDefinition[] {
+  return [...CUSTOM_THEMES.values()];
+}
+
+export function getCustomThemesForScope(
+  scope: "studio" | "portal",
+): CustomThemeDefinition[] {
+  return getCustomThemes().filter(
+    (theme) => theme.scope === "both" || theme.scope === scope,
+  );
+}
+
+/** Loose shape of a stored custom theme (mirrors `@uwe/database` CustomThemeRecord). */
+export interface CustomThemeInput {
+  id: string;
+  label: string;
+  description?: string;
+  scope: CustomThemeScope;
+  colors: Record<string, string>;
+  defaults?: {
+    font?: string;
+    density?: string;
+    background?: string;
+    frostedGlass?: boolean;
+  };
+}
+
+/** Map a stored custom-theme record to a runtime `CustomThemeDefinition`. */
+export function toCustomThemeDefinition(input: CustomThemeInput): CustomThemeDefinition {
+  return {
+    id: input.id,
+    label: input.label,
+    description: input.description ?? "",
+    scope: input.scope,
+    colors: input.colors as unknown as ThemeColorTokens,
+    defaults: input.defaults as UweThemeDefinition["defaults"],
+  };
+}
+
+export function toCustomThemeDefinitions(
+  inputs: readonly CustomThemeInput[] | undefined,
+): CustomThemeDefinition[] {
+  return (inputs ?? []).map(toCustomThemeDefinition);
+}
+
+/** True for any resolvable theme id — built-in or registered custom. */
+export function isThemeId(value: string): boolean {
+  return value in UWE_THEMES || CUSTOM_THEMES.has(value);
+}
+
+/** True only for the fixed built-in ids (narrows to `ThemeId`). */
+export function isBuiltInThemeId(value: string): value is ThemeId {
   return value in UWE_THEMES;
 }
 
-export function getTheme(id: ThemeId): UweThemeDefinition {
-  return UWE_THEMES[id];
+/** Resolve a theme id to its definition; falls back to the default when unknown. */
+export function getTheme(id: string): ResolvedThemeDefinition {
+  return (
+    (UWE_THEMES as Record<string, UweThemeDefinition>)[id] ??
+    CUSTOM_THEMES.get(id) ??
+    UWE_THEMES[DEFAULT_STUDIO_THEME_ID]
+  );
 }
 
 /**
@@ -403,7 +492,7 @@ export const LEGACY_THEME_ID_MAP: Record<string, ThemeId> = {
   "uwe-portal-purple": "uwe-parchment-os",
 };
 
-export function resolveThemeId(value: string, fallback: ThemeId): ThemeId {
+export function resolveThemeId(value: string, fallback: string): string {
   if (isThemeId(value)) return value;
   return LEGACY_THEME_ID_MAP[value] ?? fallback;
 }

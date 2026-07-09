@@ -40,7 +40,29 @@ export const USE_CASE_LABELS: Record<CookbookUseCaseId, { label: string; descrip
     label: "Player-safe Rewrite",
     description: "Spieler-Handouts und Recaps ohne DM-Leaks.",
   },
+  theme_design: {
+    label: "Design-Assistent",
+    description: "Farbpaletten/Themes im Fragebogen-Chat als striktes JSON erzeugen.",
+  },
 };
+
+/**
+ * Models suited to the conversational design creator: strong instruction-
+ * following + reliable structured JSON + solid German. Deliberately excludes
+ * tiny (<7B) and reasoning/RAG-tuned models that produce unreliable JSON.
+ */
+const THEME_DESIGN_MODEL_IDS = new Set<string>([
+  "qwen2.5:7b",
+  "qwen2.5:14b",
+  "qwen2.5:32b",
+  "qwen2.5:72b",
+  "qwen2.5-coder:32b",
+  "llama3.1:8b",
+  "mistral-small:24b",
+  "gemma2:27b",
+  "llama3.3:70b",
+  "mixtral:8x7b",
+]);
 
 /**
  * Curated UWE model catalog — native registry, not copied from Odysseus (AGPL).
@@ -368,6 +390,14 @@ export const COOKBOOK_MODEL_REGISTRY: CookbookModelEntry[] = [
     summary: "Multimodal (Bild + Text) — versteht Bilder und hilft bei Bild-Prompts.",
   },
 ];
+
+// Tag the design-suited models with the `theme_design` use case in one place,
+// keeping the curated selection above the per-model entries.
+for (const model of COOKBOOK_MODEL_REGISTRY) {
+  if (THEME_DESIGN_MODEL_IDS.has(model.id) && !model.useCases.includes("theme_design")) {
+    model.useCases = [...model.useCases, "theme_design"];
+  }
+}
 
 export interface ModelStrength {
   /** 1 (leicht) … 5 (Spitzenklasse). */

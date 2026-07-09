@@ -257,3 +257,60 @@ html[data-uwe-theme="hells"] {
   --uwe-shell-gradient-start: rgba(239, 68, 68, 0.2); --uwe-shell-gradient-mid: rgba(251, 146, 60, 0.1); --uwe-shell-gradient-end: #0a0404;
   color-scheme: dark;
 }
+
+/* ============================================================================
+ * Parchment Teal — the Parchment OS chrome (warm paper + dark ink sidebar +
+ * serif headings) with a teal player-visible accent instead of terracotta.
+ * Terracotta is reserved for the "Nur GM" / PageType marker only.
+ * ==========================================================================*/
+html[data-uwe-theme="uwe-parchment-teal"] {
+  /* Core surfaces */
+  --uwe-bg: #f1e8d4;                       /* warm sand paper */
+  --uwe-bg-elevated: #fbf6ea;              /* raised paper */
+  --uwe-surface: rgba(251, 246, 234, 0.95);
+  --uwe-panel: #ece1c9;                    /* topbar / chrome */
+  --uwe-card-bg: #fbf6ea;
+  --uwe-input-bg: #fbf6ea;
+
+  /* Lines */
+  --uwe-border: #e0d4ba;
+  --uwe-border-muted: rgba(224, 212, 186, 0.7);
+
+  /* Text — ink on paper */
+  --uwe-fg: #211d17;                       /* near-black ink */
+  --uwe-fg-muted: #574e40;
+  --uwe-fg-subtle: #665d4f;
+
+  /* Accent — teal (player-visible) */
+  --uwe-accent: #2f6f63;
+  --uwe-accent-hover: #3a8878;
+  --uwe-accent-muted: rgba(47, 111, 99, 0.16);
+  --uwe-on-accent: #fbf6ea;
+
+  /* Links + wiki cross-links — teal */
+  --uwe-link: #2f6f63;
+  --uwe-wiki-link: #2f6f63;
+  --uwe-wiki-link-hover: #3a8878;
+
+  /* Semantic */
+  --uwe-danger: #c2622b;
+  --uwe-warning: #e0b15a;
+  --uwe-success: #2f6f63;
+  --uwe-info: #2f6f63;
+
+  /* Domain: visibility signalling — terracotta stays the GM marker */
+  --uwe-dm-only: #c2622b;                  /* "Nur GM" — DM-only content */
+  --uwe-player-visible: #2f6f63;           /* "Portal sichtbar" — player-safe */
+
+  /* Dark ink sidebar (shared Parchment signature) */
+  --uwe-sidebar-bg: #211d17;
+  --uwe-sidebar-fg: #f1e8d4;
+  --uwe-sidebar-fg-muted: #b6ab92;
+
+  /* Shell background wash (kept subtle on paper) */
+  --uwe-shell-gradient-start: rgba(47, 111, 99, 0.03);
+  --uwe-shell-gradient-mid: rgba(241, 232, 212, 0.05);
+  --uwe-shell-gradient-end: #f1e8d4;
+
+  color-scheme: light;
+}

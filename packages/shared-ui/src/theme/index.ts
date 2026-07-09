@@ -25,10 +25,19 @@ export {
   DEFAULT_STUDIO_THEME_ID,
   getTheme,
   isThemeId,
+  isBuiltInThemeId,
   resolveThemeId,
+  setCustomThemes,
+  getCustomThemes,
+  getCustomThemesForScope,
+  toCustomThemeDefinition,
+  toCustomThemeDefinitions,
   LEGACY_THEME_ID_MAP,
   type ThemeId,
   type UweThemeDefinition,
+  type CustomThemeDefinition,
+  type CustomThemeScope,
+  type CustomThemeInput,
 } from "./themes";
 
 export {

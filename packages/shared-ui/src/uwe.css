@@ -5331,3 +5331,189 @@ textarea.uwe-idea-prompt-text {
   border: 1px solid var(--uwe-border, #d9d2c2);
   border-radius: var(--uwe-radius-md, 8px);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Design-Assistent (KI-Theme-Wizard, Studio-Einstellungen)
+   ═══════════════════════════════════════════════════════════ */
+.uwe-design-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.uwe-design-assistant-scope {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-design-assistant-scope select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: var(--uwe-radius-sm, 6px);
+  background: var(--uwe-input-bg, var(--uwe-bg-elevated));
+  color: var(--uwe-fg);
+}
+
+.uwe-design-assistant-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 0.6rem;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: var(--uwe-radius-md, 8px);
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 60%, transparent);
+}
+
+.uwe-design-assistant-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.uwe-design-assistant-msg-who {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--uwe-fg-subtle);
+}
+
+.uwe-design-assistant-msg-body {
+  white-space: pre-wrap;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--uwe-radius-sm, 6px);
+  background: var(--uwe-card-bg, var(--uwe-surface));
+  border: 1px solid var(--uwe-border-muted);
+}
+
+.uwe-design-assistant-msg-user .uwe-design-assistant-msg-body {
+  background: color-mix(in srgb, var(--uwe-accent) 12%, var(--uwe-card-bg, transparent));
+  border-color: color-mix(in srgb, var(--uwe-accent) 30%, var(--uwe-border));
+}
+
+.uwe-design-assistant-palettes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.uwe-design-assistant-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.uwe-design-assistant-swatch {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  height: 36px;
+  border-radius: var(--uwe-radius-sm, 6px);
+  overflow: hidden;
+  border: 1px solid var(--uwe-border);
+}
+
+.uwe-design-assistant-palette-label {
+  font-weight: 600;
+}
+
+.uwe-design-assistant-palette-desc {
+  font-size: 0.8rem;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-design-assistant-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.uwe-design-assistant-name {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: var(--uwe-radius-sm, 6px);
+  background: var(--uwe-input-bg, var(--uwe-bg-elevated));
+  color: var(--uwe-fg);
+  font: inherit;
+}
+
+.uwe-design-assistant-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.uwe-design-assistant-actions .uwe-btn {
+  flex: 1;
+}
+
+.uwe-design-assistant-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 35%, var(--uwe-border));
+  border-radius: var(--uwe-radius-md, 8px);
+  background: color-mix(in srgb, var(--uwe-accent) 8%, transparent);
+  font-size: 0.85rem;
+}
+
+.uwe-design-assistant-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.uwe-design-assistant-input input {
+  flex: 1;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: var(--uwe-radius-sm, 6px);
+  background: var(--uwe-input-bg, var(--uwe-bg-elevated));
+  color: var(--uwe-fg);
+  font: inherit;
+}
+
+/* Custom-Designs verwalten (Studio-Einstellungen) */
+.uwe-custom-themes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.uwe-custom-themes-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: var(--uwe-radius-md, 8px);
+  background: var(--uwe-card-bg, var(--uwe-surface));
+}
+
+.uwe-custom-themes-item .uwe-design-assistant-swatch {
+  width: 72px;
+  height: 28px;
+  flex: none;
+}
+
+.uwe-custom-themes-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.uwe-custom-themes-desc {
+  width: 100%;
+  font-size: 0.78rem;
+  color: var(--uwe-fg-muted);
+}

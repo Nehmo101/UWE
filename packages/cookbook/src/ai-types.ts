@@ -42,7 +42,8 @@ export type CookbookAiTaskType =
   | "summarize_mail"
   | "prioritize_mail"
   | "answer_mail_question"
-  | "generate_briefing";
+  | "generate_briefing"
+  | "generate_theme_palette";
 
 /**
  * Context modes that are permanently local-only in the cookbook routing layer.

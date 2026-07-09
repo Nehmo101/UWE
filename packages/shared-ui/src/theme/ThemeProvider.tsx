@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { applyThemePreferences } from "./applyTheme";
+import { setCustomThemes, type CustomThemeDefinition } from "./themes";
 import {
   defaultPreferences,
   loadPreferences,
@@ -42,14 +43,21 @@ export function ThemeProvider({
   children,
   serverPreferences = null,
   serverUpdatedAt = null,
+  customThemes,
   onPersist,
 }: {
   scope: AppScope;
   children: ReactNode;
   serverPreferences?: UweThemePreferences | null;
   serverUpdatedAt?: string | null;
+  customThemes?: readonly CustomThemeDefinition[];
   onPersist?: (preferences: UweThemePreferences) => Promise<string | void>;
 }) {
+  // Register custom palettes into the runtime registry BEFORE the state
+  // initializer below calls loadPreferences() → resolveThemeId(), otherwise a
+  // stored custom id would be sanitized back to a built-in fallback.
+  setCustomThemes(customThemes ?? []);
+
   const [preferences, setPreferencesState] = useState<UweThemePreferences>(() =>
     typeof window === "undefined"
       ? (serverPreferences ?? defaultPreferences(scope))

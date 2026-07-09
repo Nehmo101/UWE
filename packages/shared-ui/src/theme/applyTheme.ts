@@ -15,7 +15,7 @@ import {
 } from "./tokens";
 import { resolveThemeColorTokens } from "./resolveColorTokens";
 import type { UweThemePreferences } from "./storage";
-import { getTheme, type ThemeId } from "./themes";
+import { getTheme } from "./themes";
 
 const BG_PATTERN_CLASSES = [
   "uwe-bg-none",
@@ -217,7 +217,7 @@ export function mergeWithThemeDefaults(
   };
 }
 
-export function applyThemeById(themeId: ThemeId): void {
+export function applyThemeById(themeId: string): void {
   applyColorTokens(getTheme(themeId).colors);
   if (typeof document !== "undefined") {
     document.documentElement.dataset.uweTheme = themeId;

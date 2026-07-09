@@ -41,7 +41,8 @@ export type AiTaskType =
   | "summarize_mail"
   | "prioritize_mail"
   | "generate_briefing"
-  | "answer_mail_question";
+  | "answer_mail_question"
+  | "generate_theme_palette";
 
 /** Tasks that require or benefit from session context. */
 export const SESSION_AWARE_TASKS: AiTaskType[] = [

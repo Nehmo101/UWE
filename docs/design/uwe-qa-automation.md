@@ -123,7 +123,7 @@ Reihenfolge: Studio IA → Design-V2-Presets → A11y E2E (wenn vorhanden) → `
 
 ## 2. Manuelle Browser-Matrix (9 Presets × Kern-Routen)
 
-**Quelle Presets:** `design-v2-reference.md` — alle 9 Themes in Settings → Erscheinungsbild wählen.
+**Quelle Presets:** `design-v2-reference.md` — alle 10 Themes in Settings → Erscheinungsbild wählen.
 
 | # | Preset-ID | Kurzname |
 |---|-----------|----------|

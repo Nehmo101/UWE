@@ -16,6 +16,7 @@ const USE_CASE_CONTEXT: Record<CookbookUseCaseId, number> = {
   session_prep: 8192,
   canon_check: 12288,
   player_safe_rewrite: 4096,
+  theme_design: 8192,
 };
 
 const USE_CASE_MIN_SCORE: Record<CookbookUseCaseId, number> = {
@@ -26,6 +27,8 @@ const USE_CASE_MIN_SCORE: Record<CookbookUseCaseId, number> = {
   session_prep: 55,
   canon_check: 60,
   player_safe_rewrite: 50,
+  // Reliable structured JSON needs a capable model — on par with generation.
+  theme_design: 55,
 };
 
 function scoreToLevel(score: number): ModelFitLevel {

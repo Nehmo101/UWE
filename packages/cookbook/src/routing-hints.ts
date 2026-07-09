@@ -32,6 +32,7 @@ const TASK_TO_USE_CASE: Partial<Record<CookbookAiTaskType, CookbookUseCaseId>> =
   generate_structured_npc: "dnd_generator",
   generate_structured_quest: "dnd_generator",
   generate_structured_item: "dnd_generator",
+  generate_theme_palette: "theme_design",
 };
 
 export function mapTaskToUseCase(taskType: CookbookAiTaskType): CookbookUseCaseId {

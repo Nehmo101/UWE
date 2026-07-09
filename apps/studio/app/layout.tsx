@@ -8,6 +8,7 @@ import {
   ThemeDocumentSync,
   TopBarSessionMount,
   buildVisualThemeHtmlAttributes,
+  toCustomThemeDefinitions,
   toUweThemePreferences,
   type ThemeAppearance,
 } from "@uwe/shared-ui";
@@ -77,6 +78,7 @@ export default async function RootLayout({
     resolveThemePreferencesForScope(settings.app, "studio"),
     "studio",
   );
+  const customThemes = toCustomThemeDefinitions(settings.app.customThemes);
   const visualThemeAttrs = buildVisualThemeHtmlAttributes(settings.app, {
     appVariant: "studio",
   });
@@ -108,10 +110,12 @@ export default async function RootLayout({
           scope="studio"
           serverPreferences={serverThemePreferences}
           serverUpdatedAt={updatedAt}
+          customThemes={customThemes}
         />
         <StudioThemeSyncProvider
           serverPreferences={serverThemePreferences}
           serverUpdatedAt={updatedAt}
+          customThemes={customThemes}
         >
           <ThemeDocumentSync theme={serverTheme} />
           {children}

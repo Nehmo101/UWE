@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { THEME_LIST } from "./themes";
+import {
+  THEME_LIST,
+  getTheme,
+  getCustomThemes,
+  getCustomThemesForScope,
+} from "./themes";
 import type {
+  AppScope,
   BackgroundPatternId,
   DensityId,
   ElementOverrideTokens,
@@ -154,8 +160,7 @@ function ElementOverrideFields({
 }
 
 function Swatch({ themeId }: { themeId: string }) {
-  const theme = THEME_LIST.find((t) => t.id === themeId);
-  if (!theme) return null;
+  const theme = getTheme(themeId);
   const c = theme.colors;
   return (
     <span className="uwe-theme-swatch-colors" aria-hidden="true">
@@ -171,17 +176,22 @@ export function ThemePreferencesFields({
   preferences,
   updatePreferences,
   onReset,
+  scope,
 }: {
   preferences: UweThemePreferences;
   updatePreferences: (patch: Partial<UweThemePreferences>) => void;
   onReset?: () => void;
+  /** Filters custom themes to this app scope; shows all custom themes when omitted. */
+  scope?: AppScope;
 }) {
+  const customThemes = scope ? getCustomThemesForScope(scope) : getCustomThemes();
+  const themeItems = [...THEME_LIST, ...customThemes];
   return (
     <>
       <fieldset className="uwe-fieldset">
         <legend>Theme</legend>
         <div className="uwe-theme-grid" role="listbox" aria-label="Theme auswählen">
-          {THEME_LIST.map((theme) => {
+          {themeItems.map((theme) => {
             const active = preferences.themeId === theme.id;
             return (
               <button
@@ -320,11 +330,13 @@ export function ThemeScopeSettingsPanel({
   description,
   preferences,
   onPersist,
+  scope,
 }: {
   title: string;
   description: string;
   preferences: UweThemePreferences;
   onPersist: (preferences: UweThemePreferences) => Promise<string | void>;
+  scope?: AppScope;
 }) {
   const [localPreferences, setLocalPreferences] = useState(preferences);
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "synced" | "error">("idle");
@@ -386,6 +398,7 @@ export function ThemeScopeSettingsPanel({
       <ThemePreferencesFields
         preferences={localPreferences}
         updatePreferences={updatePreferences}
+        scope={scope}
       />
     </section>
   );

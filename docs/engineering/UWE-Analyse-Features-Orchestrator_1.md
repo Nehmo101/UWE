@@ -144,7 +144,7 @@
 ### Final — QA-Vollabnahme
 
 **Subagent:** qa-engineer  
-**Checkliste:** `docs/design/uwe-qa-urls.md` (alle URLs, Mobile 390px, 9 Themes)
+**Checkliste:** `docs/design/uwe-qa-urls.md` (alle URLs, Mobile 390px, 10 Themes)
 
 ---
 

@@ -29,6 +29,10 @@ import {
   type ThemePreferencesRecord,
   type ThemePreferencesScope,
 } from "./theme-preferences";
+import {
+  normalizeCustomThemes,
+  type CustomThemeRecord,
+} from "./custom-theme-preferences";
 
 export type ThemeAppearance = "dark" | "light" | "system";
 
@@ -59,6 +63,8 @@ export interface AppSettings {
   motionEnabled: boolean;
   /** Full client theme preferences synced from Studio (per app scope). */
   themePreferences?: AppThemePreferences;
+  /** User-authored custom theme palettes, selectable in Studio/Portal pickers. */
+  customThemes?: CustomThemeRecord[];
   /** Preferred DnD world slug for /today — never hardcoded; set in settings or env. */
   favoriteWorldSlug?: string | null;
   /** Last actively opened world slug (optional UX hint). */
@@ -388,6 +394,7 @@ function normalizeAppSettings(app: AppSettings): AppSettings {
     frostedGlass: app.frostedGlass !== false,
     motionEnabled: app.motionEnabled !== false,
     themePreferences: normalizeAppThemePreferences(app.themePreferences),
+    customThemes: normalizeCustomThemes(app.customThemes),
   };
 }
 
@@ -400,6 +407,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
     startklarSeenVersion: null,
+    customThemes: [],
     themePreferences: {
       studio: {
         themeId: "uwe-parchment-os",
