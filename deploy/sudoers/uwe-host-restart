@@ -1,0 +1,7 @@
+# UWE host restart — allow the service user to restart ONLY uwe.service.
+# Installed by deploy/scripts/setup-uwe-host.sh as /etc/sudoers.d/uwe-host-restart
+#
+# Security: scoped to the fixed systemctl binary and a single unit restart.
+# Validate after install: visudo -cf /etc/sudoers.d/uwe-host-restart
+Defaults!/usr/bin/systemctl !requiretty
+uwe ALL=(root) NOPASSWD: /usr/bin/systemctl restart uwe.service

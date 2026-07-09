@@ -39,6 +39,11 @@ export async function updateSettingsAction(formData: FormData) {
   const update: UweSystemSettingsUpdate = {};
 
   switch (tab) {
+    case "landing":
+      update.app = {
+        defaultLandingPage: String(formData.get("defaultLandingPage") || "/today").trim() || "/today",
+      };
+      break;
     case "general": {
       const current = await repo().getSystemSettings();
       const backgroundPattern = String(
@@ -239,6 +244,10 @@ export async function updateSettingsAction(formData: FormData) {
 
   await repo().updateSystemSettings(update);
 
+  if (update.app?.defaultLandingPage !== undefined) {
+    revalidatePath("/");
+  }
+
   if (update.backup) {
     const settings = await repo().getSystemSettings();
     syncBackupScheduleFromSettings(settings.backup);
@@ -255,7 +264,8 @@ export async function updateSettingsAction(formData: FormData) {
   }
 
   revalidatePath("/settings");
-  redirect(`/settings?tab=${tab}&saved=1`);
+  const redirectTab = tab === "landing" ? "general" : tab;
+  redirect(`/settings?tab=${redirectTab}&saved=1`);
 }
 
 export async function setWorldGuestModeAction(formData: FormData) {

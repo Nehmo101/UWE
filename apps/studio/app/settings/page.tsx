@@ -11,6 +11,7 @@ import {
 } from "@uwe/shared-ui";
 import { SettingsCollapsiblePanel } from "../../components/SettingsCollapsiblePanel";
 import { SettingsGeneralTab } from "./SettingsGeneralTab";
+import { SettingsStatusTab } from "./SettingsStatusTab";
 import {
   BACKGROUND_PATTERN_VALUES,
   CanonicalStatusEnum,
@@ -127,7 +128,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           </p>
 
           {activeTab === "general" && (
-            <SettingsGeneralTab todayWidgets={todayLayout?.widgets ?? []} />
+            <SettingsGeneralTab todayWidgets={todayLayout?.widgets ?? []} defaultLandingPage={settings.app.defaultLandingPage} />
           )}
 
           {activeTab === "appearance" && (
@@ -966,29 +967,7 @@ export default async function SettingsPage({ searchParams }: Props) {
             </section>
           )}
 
-          {activeTab === "status" && (
-            <section className="uwe-form">
-              <h2>Systemstatus</h2>
-              <p>
-                Vollständige Diagnose für UWE, Datenbank, Storage, Cloudflare, Auth, Mail,
-                Brain, RTX-Inference, Embeddings und Jobs — ohne Secrets.
-              </p>
-              <p style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-                <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system?tab=diagnose">
-                  System-Diagnose
-                </Link>
-                <Link className="uwe-v2-btn" href="/system">
-                  System-Hub
-                </Link>
-                <Link className="uwe-v2-btn" href="/system/rtx-connector">
-                  RTX Connector
-                </Link>
-                <Link className="uwe-v2-btn" href="/ai">
-                  KI
-                </Link>
-              </p>
-            </section>
-          )}
+          {activeTab === "status" && <SettingsStatusTab />}
       </SettingsShell>
     </SystemShell>
   );

@@ -32,6 +32,8 @@ source "$LIB_DIR/uwe-host-deps.sh"
 source "$LIB_DIR/uwe-host-ai-diagnostics.sh"
 # shellcheck source=lib/uwe-host-update-install.sh
 source "$LIB_DIR/uwe-host-update-install.sh"
+# shellcheck source=lib/uwe-host-restart-install.sh
+source "$LIB_DIR/uwe-host-restart-install.sh"
 
 MODE="default"
 
@@ -693,6 +695,7 @@ main() {
   verify_service_node_access
   write_systemd_unit
   install_host_update_assets
+  install_host_restart_assets
   start_or_restart_service
 
   sleep 8

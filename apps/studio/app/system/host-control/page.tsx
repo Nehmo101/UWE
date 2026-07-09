@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { requireOwner } from "@/src/lib/auth";
+import { getCurrentAuthUser, requireOwner } from "@/src/lib/auth";
 import { getSystemStatus, prisma } from "@uwe/database/server";
 import { SystemShell } from "@/src/components/shell/SystemShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Alert } from "@/src/components/ui/states";
+import { HostRestartPanel } from "@/components/HostRestartPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,8 @@ const yn = (v: boolean) => (v ? "Ja" : "Nein");
 
 export default async function SystemHostControlPage() {
   await requireOwner();
-  const status = await getSystemStatus(prisma);
+  const [status, user] = await Promise.all([getSystemStatus(prisma), getCurrentAuthUser()]);
+  const canTriggerHostRestart = user?.role === "owner";
 
   const overview = [
     { label: "Gesamtstatus", value: status.ok ? "OK" : "Aufmerksamkeit nötig" },
@@ -59,9 +61,9 @@ export default async function SystemHostControlPage() {
         <header className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">Host Control</h1>
           <p className="text-sm text-muted-foreground">
-            Owner-Übersicht des Systemzustands. Read-only, ohne geheime Werte — fehlende
-            Konfiguration wird als Status angezeigt. Aktionen (Backup/Restore, Migrationen) laufen
-            über die jeweiligen Fachbereiche und werden im Audit-Log protokolliert.
+            Owner-Übersicht des Systemzustands. Status ohne geheime Werte — fehlende Konfiguration
+            wird angezeigt. Kritische Aktionen (Backup/Restore, Migrationen, Host-Neustart) erfordern
+            Bestätigung und werden im Audit-Log protokolliert.
           </p>
         </header>
 
@@ -87,6 +89,8 @@ export default async function SystemHostControlPage() {
         <StatusCard title="Storage" rows={storage} />
         <StatusCard title="Sicherheit" rows={security} />
         <StatusCard title="Dienste" rows={services} />
+
+        <HostRestartPanel canTrigger={canTriggerHostRestart} />
 
         <Card>
           <CardHeader>

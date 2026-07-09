@@ -160,6 +160,8 @@ describe("ShareLinkService", () => {
         title: "Alt",
         slug: "alt",
         type: "note",
+        visibility: "player_visible",
+        publishStatus: "published",
         contentBlocks: [
           { type: "rich_text", sortOrder: 0, visibility: "public", content: "Alt." },
         ],
@@ -193,6 +195,8 @@ describe("ShareLinkService", () => {
         title: "Vault",
         slug: "vault",
         type: "secret",
+        visibility: "player_visible",
+        publishStatus: "published",
         contentBlocks: [
           { type: "rich_text", sortOrder: 0, visibility: "public", content: "Vault content." },
         ],
@@ -513,7 +517,6 @@ describe("ShareLinkService", () => {
         storageKey: "handouts/quest.pdf",
         mimeType: "application/pdf",
         visibility: "player_visible",
-        publishStatus: "published",
       },
     });
 
@@ -542,7 +545,6 @@ describe("ShareLinkService", () => {
         slug: "geheime-karte",
         type: "location",
         visibility: "dm_only",
-        publishStatus: "published",
         contentBlocks: [
           {
             type: "rich_text",

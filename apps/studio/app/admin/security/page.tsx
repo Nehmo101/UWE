@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import { SECURITY_ROLE_LABELS } from "@uwe/auth";
+import { SECURITY_ROLE_LABELS, analyzeCspLooseningRisks, buildContentSecurityPolicy } from "@uwe/auth";
 import { getSecurityDashboardStatus, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
 import { resolveSecurityDashboardAccess } from "@/src/lib/security-dashboard-access";
 import { formatStudioDateTime } from "@/src/lib/format";
+import { CspReviewPanel } from "@/components/admin/CspReviewPanel";
 
 function boolLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
@@ -64,6 +65,9 @@ export default async function AdminSecurityPage() {
 
   const status = await getSecurityDashboardStatus(prisma);
   const criticalWarnings = status.warnings.filter((w) => w.severity === "critical").length;
+  const effectiveCsp = buildContentSecurityPolicy({ allowYouTubeEmbeds: true });
+  const cspFindings = analyzeCspLooseningRisks(effectiveCsp);
+  const isProduction = process.env.NODE_ENV === "production";
 
   return (
     <SystemShell
@@ -243,6 +247,15 @@ export default async function AdminSecurityPage() {
           ]}
         />
       </div>
+
+      <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
+        <h2 className="uwe-v2-section-title">CSP &amp; Header-Review</h2>
+        <CspReviewPanel
+          effectivePolicy={effectiveCsp}
+          effectiveFindings={cspFindings}
+          isProduction={isProduction}
+        />
+      </section>
 
       {status.auditLog.length > 0 && (
         <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>

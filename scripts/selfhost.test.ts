@@ -120,12 +120,16 @@ describe("self-hosting setup", () => {
       "deploy/systemd/uwe-host-update.service",
       "deploy/sudoers/uwe-host-update",
       "deploy/scripts/lib/uwe-host-update-install.sh",
+      "deploy/scripts/uwe-host-restart-trigger.sh",
+      "deploy/sudoers/uwe-host-restart",
+      "deploy/scripts/lib/uwe-host-restart-install.sh",
     ]) {
       assert.ok(fs.existsSync(path.join(root, file)), `missing ${file}`);
     }
 
     const setup = fs.readFileSync(path.join(root, "deploy/scripts/setup-uwe-host.sh"), "utf8");
     assert.match(setup, /install_host_update_assets/);
+    assert.match(setup, /install_host_restart_assets/);
     const update = fs.readFileSync(path.join(root, "deploy/scripts/uwe-host-update.sh"), "utf8");
     assert.match(update, /setup-uwe-host\.sh --quick/);
     assert.doesNotMatch(update, /--fresh/);

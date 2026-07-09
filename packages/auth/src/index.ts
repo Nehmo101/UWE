@@ -218,6 +218,13 @@ export {
   wantsStrictTransportSecurity,
 } from "./security-headers";
 
+export type { CspReviewFinding, CspReviewSeverity } from "./csp-review";
+export {
+  analyzeCspLooseningRisks,
+  reviewCspPolicy,
+  validateCspPolicyInput,
+} from "./csp-review";
+
 export { resolveClientIp } from "./proxy";
 
 export type { TurnstileConfig, TurnstileVerifyResult, VerifyTurnstileOptions } from "./turnstile";

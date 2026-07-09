@@ -1,0 +1,1 @@
+-- AuditAction enum extension: host_restart_started (SQLite stores action as TEXT; no DDL required).

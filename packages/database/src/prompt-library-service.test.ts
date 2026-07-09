@@ -47,9 +47,9 @@ describe("prompt library service (integration)", () => {
     });
     assert.deepEqual(created.variables, ["package", "aspect"]);
 
-    const byCategory = await service.list("repo_audit");
+    const byCategory = await service.list({ category: "repo_audit" });
     assert.ok(byCategory.some((p) => p.id === created.id));
-    assert.equal((await service.list("ui_fix")).length, 0);
+    assert.equal((await service.list({ category: "ui_fix" })).length, 0);
 
     const updated = await service.update(created.id, {
       title: "Repo-Audit v2",

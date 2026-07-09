@@ -53,6 +53,7 @@
     "./personal-brain-constants": "./src/personal-brain-constants.ts",
     "./dev-idea-constants": "./src/dev-idea-constants.ts",
     "./dashboard-layout": "./src/dashboard-layout-types.ts",
+    "./host-restart": "./src/host-restart-service.ts",
     "./test-helpers": "./src/test-helpers.ts"
   },
   "scripts": {

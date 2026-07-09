@@ -93,6 +93,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   host_update_started: "Host-Update gestartet",
   host_update_completed: "Host-Update abgeschlossen",
   host_update_failed: "Host-Update fehlgeschlagen",
+  host_restart_started: "Host-Neustart ausgelöst",
 };
 
 export interface AuditRequestContext {

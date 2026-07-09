@@ -1,6 +1,6 @@
 import type { CanonicalStatus, Visibility } from "./generated/prisma/client";
 import type { BackgroundPattern, ThemeAppearance, UweSystemSettingsUpdate } from "./settings-service";
-import { BACKGROUND_PATTERN_VALUES } from "./settings-service";
+import { BACKGROUND_PATTERN_VALUES, STUDIO_LANDING_PAGE_PATHS } from "./settings-service";
 import {
   MAIL_INBOX_LIMIT_MAX,
   MAIL_INBOX_LIMIT_MIN,
@@ -48,11 +48,14 @@ const TOP_LEVEL_KEYS = new Set([
   "maintenance",
 ]);
 
+const STUDIO_LANDING_PAGE_PATH_SET = new Set<string>(STUDIO_LANDING_PAGE_PATHS);
+
 const APP_KEYS = new Set([
   "theme",
   "backgroundPattern",
   "frostedGlass",
   "motionEnabled",
+  "defaultLandingPage",
   "favoriteWorldSlug",
   "lastActiveWorldSlug",
 ]);
@@ -246,6 +249,26 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       if (body.app.motionEnabled !== undefined) {
         if (requireBoolean(body.app.motionEnabled, "settings.app.motionEnabled", appErrors)) {
           app.motionEnabled = body.app.motionEnabled;
+        }
+      }
+      if (body.app.defaultLandingPage !== undefined) {
+        if (
+          body.app.defaultLandingPage !== null &&
+          typeof body.app.defaultLandingPage !== "string"
+        ) {
+          appErrors.push("settings.app.defaultLandingPage muss ein String oder null sein.");
+        } else {
+          const trimmed =
+            typeof body.app.defaultLandingPage === "string"
+              ? body.app.defaultLandingPage.trim()
+              : "";
+          if (trimmed && !STUDIO_LANDING_PAGE_PATH_SET.has(trimmed)) {
+            appErrors.push(
+              "settings.app.defaultLandingPage muss /today, /worlds, /continue oder /capture sein.",
+            );
+          } else {
+            app.defaultLandingPage = trimmed || "/today";
+          }
         }
       }
       if (body.app.favoriteWorldSlug !== undefined) {

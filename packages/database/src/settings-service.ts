@@ -53,6 +53,12 @@ export const BACKGROUND_PATTERN_VALUES: readonly BackgroundPattern[] = [
   "subtle-noise",
 ] as const;
 
+export const STUDIO_LANDING_PAGE_PATHS = ["/today", "/worlds", "/continue", "/capture"] as const;
+
+export type StudioLandingPagePath = (typeof STUDIO_LANDING_PAGE_PATHS)[number];
+
+const STUDIO_LANDING_PAGE_PATH_SET = new Set<string>(STUDIO_LANDING_PAGE_PATHS);
+
 export interface AppSettings {
   theme: ThemeAppearance;
   /** Decorative shell background pattern (CSS-only, performance-safe). */
@@ -65,6 +71,8 @@ export interface AppSettings {
   themePreferences?: AppThemePreferences;
   /** User-authored custom theme palettes, selectable in Studio/Portal pickers. */
   customThemes?: CustomThemeRecord[];
+  /** Studio start page for authenticated users visiting `/` (Settings → General). */
+  defaultLandingPage?: string | null;
   /** Preferred DnD world slug for /today — never hardcoded; set in settings or env. */
   favoriteWorldSlug?: string | null;
   /** Last actively opened world slug (optional UX hint). */
@@ -389,12 +397,23 @@ function normalizeBackgroundPattern(value: unknown): BackgroundPattern {
   return "none";
 }
 
+function normalizeDefaultLandingPage(value: unknown): StudioLandingPagePath {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (STUDIO_LANDING_PAGE_PATH_SET.has(trimmed)) {
+      return trimmed as StudioLandingPagePath;
+    }
+  }
+  return "/today";
+}
+
 function normalizeAppSettings(app: AppSettings): AppSettings {
   return {
     ...app,
     backgroundPattern: normalizeBackgroundPattern(app.backgroundPattern),
     frostedGlass: app.frostedGlass !== false,
     motionEnabled: app.motionEnabled !== false,
+    defaultLandingPage: normalizeDefaultLandingPage(app.defaultLandingPage),
     themePreferences: normalizeAppThemePreferences(app.themePreferences),
     customThemes: normalizeCustomThemes(app.customThemes),
   };
@@ -406,6 +425,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     backgroundPattern: "none",
     frostedGlass: false,
     motionEnabled: true,
+    defaultLandingPage: "/today",
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
     startklarSeenVersion: null,
