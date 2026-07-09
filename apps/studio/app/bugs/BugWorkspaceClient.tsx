@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { updateBugReportAction } from "../bug-actions";
 import { BugReportForm } from "./BugReportForm";
 import { BugScreenshotUpload } from "./BugScreenshotUpload";
@@ -27,11 +29,18 @@ export interface BugReportDto {
   updatedAt: string;
 }
 
+export interface BugGithubIssueSyncConfig {
+  canCreate: boolean;
+  tokenConfigured: boolean;
+  githubRepo: string | null;
+}
+
 interface BugWorkspaceClientProps {
   reports: BugReportDto[];
   initialSelectedId: string | null;
   filterStatus?: string;
   filterSeverity?: string;
+  githubIssueSync: BugGithubIssueSyncConfig;
 }
 
 export function BugWorkspaceClient({
@@ -39,6 +48,7 @@ export function BugWorkspaceClient({
   initialSelectedId,
   filterStatus,
   filterSeverity,
+  githubIssueSync,
 }: BugWorkspaceClientProps) {
   const [reports, setReports] = useState(initialReports);
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -76,6 +86,7 @@ export function BugWorkspaceClient({
         report={selected}
         filterStatus={filterStatus}
         filterSeverity={filterSeverity}
+        githubIssueSync={githubIssueSync}
       />
     </div>
   );
@@ -85,10 +96,12 @@ function BugDetailPanel({
   report,
   filterStatus,
   filterSeverity,
+  githubIssueSync,
 }: {
   report: BugReportDto | null;
   filterStatus?: string;
   filterSeverity?: string;
+  githubIssueSync: BugGithubIssueSyncConfig;
 }) {
   if (!report) {
     return (
@@ -128,7 +141,9 @@ function BugDetailPanel({
               Issue öffnen
             </Link>
           </p>
-        ) : null}
+        ) : (
+          <CreateBugGithubIssueButton reportId={report.id} githubIssueSync={githubIssueSync} />
+        )}
 
         {report.description ? (
           <p className="uwe-idea-detail-body">{report.description}</p>
@@ -203,5 +218,76 @@ function BugDetailPanel({
         </button>
       </form>
     </section>
+  );
+}
+
+function CreateBugGithubIssueButton({
+  reportId,
+  githubIssueSync,
+}: {
+  reportId: string;
+  githubIssueSync: BugGithubIssueSyncConfig;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!githubIssueSync.canCreate) {
+    return null;
+  }
+
+  const ready = githubIssueSync.tokenConfigured && Boolean(githubIssueSync.githubRepo);
+  const disabled = busy || !ready;
+
+  const title = !githubIssueSync.tokenConfigured
+    ? "GITHUB_TOKEN oder AGENT_JOBS_GITHUB_TOKEN fehlt."
+    : !githubIssueSync.githubRepo
+      ? "AGENT_JOBS_GITHUB_REPO fehlt (Format: owner/repo)."
+      : undefined;
+
+  async function createIssue() {
+    if (disabled) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(studioApiUrl(`/api/bugs/${reportId}/github-issue`), {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as { githubIssueUrl?: string; error?: string };
+      if (!response.ok || !payload.githubIssueUrl) {
+        throw new Error(payload.error ?? "GitHub-Issue konnte nicht erstellt werden.");
+      }
+      router.refresh();
+    } catch (createError) {
+      setError(
+        createError instanceof Error ? createError.message : "GitHub-Issue konnte nicht erstellt werden.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="uwe-bug-github-sync">
+      <button
+        type="button"
+        className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+        onClick={() => void createIssue()}
+        disabled={disabled}
+        title={title}
+      >
+        {busy ? "Erstellt GitHub-Issue…" : "Als GitHub-Issue erstellen"}
+      </button>
+      {!ready ? (
+        <p className="uwe-hint">
+          GitHub-Sync nicht konfiguriert — setze{" "}
+          <code>AGENT_JOBS_GITHUB_REPO=owner/repo</code> und einen Server-Token (
+          <code>GITHUB_TOKEN</code> oder <code>AGENT_JOBS_GITHUB_TOKEN</code>).{" "}
+          <Link href="/admin/agent-jobs">Agent Jobs</Link>
+        </p>
+      ) : null}
+      {error ? <p className="uwe-hint uwe-hint-error">{error}</p> : null}
+    </div>
   );
 }

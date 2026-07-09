@@ -8,6 +8,11 @@ import { fetchWorkflowRunStatus } from "./github-status";
 
 export { fetchWorkflowRunStatus, fetchPullRequestForBranch, type WorkflowRunStatus, type PullRequestSummary } from "./github-status";
 export {
+  createGitHubIssue,
+  type CreateGitHubIssueInput,
+  type CreateGitHubIssueResult,
+} from "./github-issue";
+export {
   fetchCursorAgentStatus,
   mapCursorStatusToDevAgentStatus,
   type CursorAgentStatus,

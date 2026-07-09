@@ -4,11 +4,12 @@ import {
   BugReportStatusEnum,
   createBugReportService,
   prisma,
+  resolveAgentJobsConfig,
   type BugReportSeverity,
   type BugReportStatus,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
-import { requireStudioAccess } from "@/src/lib/auth";
+import { getCurrentAuthUser, requireStudioAccess } from "@/src/lib/auth";
 import { BugWorkspaceClient, type BugReportDto } from "./BugWorkspaceClient";
 
 interface BugsPageProps {
@@ -79,6 +80,14 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
 
   const reports: BugReportDto[] = reportRows.map(toDto);
 
+  const user = await getCurrentAuthUser();
+  const agentJobsConfig = resolveAgentJobsConfig();
+  const githubIssueSync = {
+    canCreate: user?.role === "owner",
+    tokenConfigured: agentJobsConfig.githubTokenConfigured,
+    githubRepo: agentJobsConfig.githubRepo,
+  };
+
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Bug-Center" }]} />}>
       <PageHeader
@@ -90,6 +99,7 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
         initialSelectedId={selectedParam ?? reports[0]?.id ?? null}
         filterStatus={statusFilter}
         filterSeverity={severityFilter}
+        githubIssueSync={githubIssueSync}
       />
       <p className="uwe-dashboard-muted">
         <Link href="/today">← Heute</Link>
