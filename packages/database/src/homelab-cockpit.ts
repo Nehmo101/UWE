@@ -325,7 +325,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         {
           order: 3,
           instruction: "Studio Admin Status im Browser",
-          command: "/admin/status",
+          command: "/system?tab=diagnose",
         },
         {
           order: 4,
@@ -417,7 +417,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         {
           order: 4,
           instruction: "Admin-Status: RTX / Lokale KI",
-          command: "/admin/status",
+          command: "/system?tab=diagnose",
         },
       ],
     },

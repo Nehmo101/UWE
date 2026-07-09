@@ -66,8 +66,8 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
       }
     >
       <PageHeader
-        title="Einrichtung"
-        summary="Zentrale Owner-Einrichtung — System, Zugriff, Cloudflare, Mail, RTX, Drucker und Diagnose ohne Secrets im Klartext."
+        title="Einrichtung (Host & Owner)"
+        summary="Checkliste für Self-Hosting: Status, Secrets, Tests und Diagnose. Für Theme, Welten und erweiterte App-Optionen → Einstellungen."
         actions={
           <HealthBadge
             status={snapshot.ok ? "ok" : "degraded"}
@@ -84,9 +84,16 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
 
       {saved === "1" && (
         <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
-          Einstellungen gespeichert.
+          Einrichtung gespeichert.
         </p>
       )}
+
+      <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
+        Für Theme, Welten und erweiterte App-Optionen:{" "}
+        <Link href="/settings">Einstellungen</Link>
+        {" · "}
+        <Link href="/admin/checklist">Aufgabenliste</Link>
+      </p>
 
       <nav className="uwe-settings-tabs" aria-label="Einrichtungsbereiche">
         {TABS.map((tab) => (
@@ -278,8 +285,11 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
 
           {activeTab === "diagnose" && (
             <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-              <Link href="/admin/status" className="uwe-v2-btn uwe-v2-btn-primary">
+              <Link href="/system?tab=diagnose" className="uwe-v2-btn uwe-v2-btn-primary">
                 Vollständige Diagnose
+              </Link>
+              <Link href="/admin/status" className="uwe-v2-btn">
+                Erweiterte Karten
               </Link>
               <Link href="/admin/secrets" className="uwe-v2-btn">
                 Secrets-Status

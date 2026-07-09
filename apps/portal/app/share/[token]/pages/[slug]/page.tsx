@@ -12,7 +12,7 @@ import {
 } from "@uwe/database/server";
 import { SharePasswordForm } from "@/src/components/SharePasswordForm";
 import { ShareGateMessage } from "@/src/components/ShareGateMessage";
-import { PageHeader, PortalShell } from "@/src/components/shell";
+import { PageHeader, PortalShell, BreadcrumbTrail } from "@/src/components/shell";
 import { shareNavGroups } from "@/src/navigation/portal-nav";
 import { isShareFeatureEnabled, isShareLinkPasswordRequired } from "@/src/lib/share-access";
 import { isSharePasswordVerified } from "@/src/lib/share-auth";
@@ -118,6 +118,14 @@ export default async function ShareLinkedPageView({ params }: Props) {
       brandLabel="UWE Freigabe"
       brandHref={`/share/${token}`}
       navGroups={shareNavGroups(token)}
+      breadcrumb={
+        <BreadcrumbTrail
+          items={[
+            { label: "Freigabe", href: `/share/${token}` },
+            { label: view.page.title },
+          ]}
+        />
+      }
       contextPanel={
         <WikiSidebar backlinks={view.backlinks} relatedPages={view.relatedPages} />
       }

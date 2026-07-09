@@ -170,9 +170,10 @@ function buildBootstrapSection(env: NodeJS.ProcessEnv, system: Awaited<ReturnTyp
       description: "Verschlüsselt DB-Secrets (Spotify, SMTP in DB, Provider-Keys). Rotation invalidiert verschlüsselte Felder.",
       source: "env",
       status: sessionConfigured ? "set" : "missing",
-      maskedHint: null,
+      maskedHint: sessionConfigured ? "nur ENV" : null,
       envKey: sessionKey,
       bootstrap: true,
+      href: "/admin/setup?tab=access",
     },
     {
       id: "database-url",
@@ -180,9 +181,10 @@ function buildBootstrapSection(env: NodeJS.ProcessEnv, system: Awaited<ReturnTyp
       description: "Datenbankverbindung — muss vor App-Start gesetzt sein.",
       source: "env",
       status: databaseUrl ? "set" : "missing",
-      maskedHint: null,
+      maskedHint: "nur ENV",
       envKey: "DATABASE_URL",
       bootstrap: true,
+      href: "/admin/setup?tab=system",
     },
     {
       id: "studio-api-token",
@@ -278,12 +280,14 @@ function buildHostEnvSection(env: NodeJS.ProcessEnv): SecretsStatusSection {
       label: "SPOTIFY_CLIENT_SECRET",
       envKey: "SPOTIFY_CLIENT_SECRET",
       env,
+      href: "/settings?tab=integrations",
     }),
     assessEnvSecret({
       id: "ai-inference-api-key",
       label: "AI_INFERENCE_API_KEY",
       envKey: "AI_INFERENCE_API_KEY",
       env,
+      href: "/settings?tab=inference",
     }),
     assessEnvSecret({
       id: "restore-owner-token",

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CharacterSheetPanel } from "@/src/components/CharacterSheetPanel";
 import { PortalPageNeighborhoodGraph } from "@/src/components/PortalPageNeighborhoodGraph";
@@ -126,9 +127,9 @@ export default async function AuthWorldPageDetail({ params }: Props) {
 
   return (
     <article className="portal-content-card">
-      <a href={`/auth/worlds/${worldSlug}`} className="uwe-back-link">
+      <Link href={`/auth/worlds/${worldSlug}`} className="uwe-back-link">
         ← Zurück zur Übersicht
-      </a>
+      </Link>
 
       <header className="auth-page-header">
         <h1>{page.title}</h1>

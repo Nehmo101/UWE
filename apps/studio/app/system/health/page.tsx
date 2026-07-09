@@ -147,7 +147,7 @@ export default async function SystemHealthPage() {
 
         <p className="text-sm text-muted-foreground">
           Weitere Betriebsansichten:{" "}
-          <Link href="/admin/status" className="text-primary hover:underline">
+          <Link href="/system?tab=diagnose" className="text-primary hover:underline">
             System-Status
           </Link>{" "}
           ·{" "}

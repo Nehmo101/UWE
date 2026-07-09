@@ -68,7 +68,7 @@ export default async function HardwarePage() {
         <h2 className="uwe-v2-section-title">Service-Status</h2>
         <p className="uwe-dashboard-muted">
           Stand: {formatStudioDateTime(cockpit.timestamp)} ·{" "}
-          <Link href="/admin/status">Admin Status →</Link>
+          <Link href="/system?tab=diagnose">System-Diagnose →</Link>
         </p>
         <div className="uwe-homelab-service-grid">
           {cockpit.serviceStatuses.map((service) => (

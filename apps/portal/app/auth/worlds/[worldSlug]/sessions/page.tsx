@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import {
   AVAILABILITY_LABELS,
   AVAILABILITY_STATUSES,
@@ -125,21 +126,31 @@ export default async function PortalSessionsPage({ params }: Props) {
         </>
       )}
 
-      <h2>Session-Recaps</h2>
-      <ul className="auth-page-list">
-        {recaps.map((session) => (
-          <li key={session.id}>
-            <Link href={`/auth/worlds/${worldSlug}/sessions/${session.id}`}>
-              <strong>
-                Session {session.sessionNumber}: {session.title}
-              </strong>
-              {session.date && <span>{session.date.toLocaleDateString("de-DE")}</span>}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {upcoming.length === 0 && recaps.length === 0 && (
+        <PortalEmptyState
+          title="Keine Sessions veröffentlicht"
+          description="Kommende Termine und Recaps erscheinen hier, sobald dein Spielleiter sie freigibt."
+          icon="calendar"
+        />
+      )}
 
-      {recaps.length === 0 && <p>Derzeit sind keine Session-Recaps veröffentlicht.</p>}
+      {recaps.length > 0 && (
+        <>
+          <h2>Session-Recaps</h2>
+          <ul className="auth-page-list">
+            {recaps.map((session) => (
+              <li key={session.id}>
+                <Link href={`/auth/worlds/${worldSlug}/sessions/${session.id}`}>
+                  <strong>
+                    Session {session.sessionNumber}: {session.title}
+                  </strong>
+                  {session.date && <span>{session.date.toLocaleDateString("de-DE")}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }

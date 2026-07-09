@@ -5,6 +5,7 @@ import {
   loadPortalTimelineData,
 } from "@/src/lib/portal-timeline-data";
 import { PortalStoryTimeline } from "@/src/components/PortalStoryTimeline";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -34,7 +35,7 @@ export default async function PortalTimelinePage({ params }: Props) {
       </p>
 
       {groups.length === 0 ? (
-        <p className="auth-muted">Noch keine sichtbaren Ereignisse in der Timeline.</p>
+        <PortalEmptyState title="Noch keine Timeline-Ereignisse" icon="clock" />
       ) : (
         <PortalStoryTimeline
           worldSlug={worldSlug}

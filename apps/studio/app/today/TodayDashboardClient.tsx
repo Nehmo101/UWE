@@ -72,7 +72,7 @@ export function TodayDashboardClient({
             <h2 className="uwe-v2-section-title">System-Ampel</h2>
             <div className="uwe-system-ampel">
               {[
-                { href: "/admin/status", status: statusDot(data.systemOk), label: `UWE ${data.systemLabel}` },
+                { href: "/system?tab=diagnose", status: statusDot(data.systemOk), label: `UWE ${data.systemLabel}` },
                 { href: "/hardware", status: statusDot(data.dbOk), label: `DB ${data.dbOk ? "OK" : "Fehler"}` },
                 { href: "/hardware", status: statusDot(data.backupOk, true), label: `Backup ${data.backupOk ? "OK" : "prüfen"}` },
                 {
@@ -122,7 +122,7 @@ export function TodayDashboardClient({
               </div>
             )}
             <p className="uwe-dashboard-muted">
-              <Link href="/admin/status">Details im Systemstatus →</Link>
+              <Link href="/system?tab=diagnose">Details im Systemstatus →</Link>
             </p>
           </section>
         );

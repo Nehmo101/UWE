@@ -28,21 +28,6 @@ function overallLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
 }
 
-function studioSecurityLevel(
-  studioSecurity: Awaited<ReturnType<typeof getAdminDashboardStatus>>["studioSecurity"],
-): StatusLevel {
-  if (studioSecurity.severity === "ok") return "ok";
-  if (studioSecurity.severity === "warning") return "degraded";
-  return "error";
-}
-
-function rtxExposureLevel(
-  rtxExposure: Awaited<ReturnType<typeof getAdminDashboardStatus>>["rtxExposure"],
-): StatusLevel {
-  if (rtxExposure.ok) return "ok";
-  return rtxExposure.severity === "warning" ? "degraded" : "error";
-}
-
 function severityStatus(severity: string, ok: boolean): "ok" | "warn" | "error" {
   if (severity === "ok" || ok) return "ok";
   if (severity === "warn" || severity === "unknown") return "warn";
@@ -62,7 +47,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
     getHomelabCockpitData(prisma, { useMockInference }),
   ]);
 
-  const { system, jobs, auth, studioSecurity, rtxExposure, envValidation, publicLeaks } = status;
+  const { system, jobs, auth, studioSecurity, envValidation, publicLeaks } = status;
   const overallBadge = status.ok ? "ok" : "degraded";
 
   return (
@@ -180,6 +165,9 @@ export default async function SystemHubPage({ searchParams }: Props) {
               <Link className="uwe-v2-btn" href="/system/printers">
                 Drucker
               </Link>
+              <Link className="uwe-v2-btn" href="/system/command-center">
+                Kommandozentrale
+              </Link>
               <Link className="uwe-v2-btn" href="/settings?tab=status">
                 Einstellungen → Status
               </Link>
@@ -276,7 +264,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
           <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
             Vollständige Diagnose für UWE, Datenbank, Storage, Auth, Mail, Brain, RTX-Inference,
             Embeddings und Jobs — ohne Secrets.{" "}
-            <Link href="/admin/status">Admin Status Dashboard →</Link>
+            <Link href="/admin/status">Erweiterte Karten (RTX, Mail, Brain) →</Link>
           </p>
 
           <div className="uwe-dashboard-grid">
@@ -383,99 +371,56 @@ export default async function SystemHubPage({ searchParams }: Props) {
             <code>uweandragons.org</code>.
           </p>
 
-          <div className="uwe-dashboard-grid">
-            <StatusCard
-              title="Studio Security"
-              level={studioSecurityLevel(studioSecurity)}
-              statusLabel={studioSecurity.label}
-              message={studioSecurity.message}
-              details={[
-                { label: "Öffentliche Exposition", value: studioSecurity.publicExposureConfigured },
-                { label: "TRUST_PROXY", value: studioSecurity.proxyIndicators.trustProxy },
-                { label: "CLOUDFLARE_TUNNEL", value: studioSecurity.proxyIndicators.cloudflareTunnel },
-                {
-                  label: "Netzwerk-Schutz (Heuristik)",
-                  value: studioSecurity.proxyIndicators.networkProtectionLikely,
-                },
-                { label: "Public Base URL", value: system.proxy.publicAppUrl ?? "—" },
-                { label: "Studio URL", value: system.proxy.studioUrl ?? "—" },
-                { label: "Portal URL", value: system.proxy.portalUrl ?? "—" },
-                { label: "Deployment", value: system.proxy.deploymentModel },
-              ]}
-              nextSteps={studioSecurity.nextSteps}
-              wide
-            />
+          <StatusCard
+            title="Cloudflare / Proxy"
+            level={
+              system.proxy.publicExposureConfigured && !system.proxy.trustProxy
+                ? "degraded"
+                : system.proxy.cloudflare.tunnelConfigured || !system.proxy.publicExposureConfigured
+                  ? "ok"
+                  : "degraded"
+            }
+            statusLabel={
+              system.proxy.cloudflare.tunnelConfigured
+                ? "Tunnel aktiv"
+                : system.proxy.publicExposureConfigured
+                  ? "Öffentlich ohne Tunnel-Flag"
+                  : "Lokal"
+            }
+            message={
+              system.proxy.deploymentModel === "split-hostname"
+                ? "Split-Hostnames: Portal und Studio auf getrennten Subdomains."
+                : system.proxy.cloudflareTunnel
+                  ? "Cloudflare Tunnel ist konfiguriert."
+                  : system.proxy.publicAppUrl
+                    ? `Öffentliche URL: ${system.proxy.publicAppUrl}`
+                    : "Keine öffentliche URL konfiguriert — UWE nur lokal erreichbar."
+            }
+            details={[
+              { label: "TRUST_PROXY", value: system.proxy.trustProxy },
+              { label: "CLOUDFLARE_TUNNEL", value: system.proxy.cloudflareTunnel },
+              { label: "Netzwerk-Schutz", value: studioSecurity.proxyIndicators.networkProtectionLikely },
+              { label: "Public Base URL", value: system.proxy.publicAppUrl ?? "—" },
+            ]}
+            nextSteps={
+              system.proxy.publicExposureConfigured && !system.proxy.trustProxy
+                ? ["Setze TRUST_PROXY=true hinter Cloudflare oder Reverse-Proxy."]
+                : []
+            }
+            wide
+          />
 
-            <StatusCard
-              title="Cloudflare / Proxy"
-              level={
-                system.proxy.publicExposureConfigured && !system.proxy.trustProxy
-                  ? "degraded"
-                  : system.proxy.cloudflare.tunnelConfigured || !system.proxy.publicExposureConfigured
-                    ? "ok"
-                    : "degraded"
-              }
-              statusLabel={
-                system.proxy.cloudflare.tunnelConfigured
-                  ? "Tunnel aktiv"
-                  : system.proxy.publicExposureConfigured
-                    ? "Öffentlich ohne Tunnel-Flag"
-                    : "Lokal"
-              }
-              message={
-                system.proxy.deploymentModel === "split-hostname"
-                  ? "Split-Hostnames: Portal und Studio auf getrennten Subdomains."
-                  : system.proxy.cloudflareTunnel
-                    ? "Cloudflare Tunnel ist konfiguriert."
-                    : system.proxy.publicAppUrl
-                      ? `Öffentliche URL: ${system.proxy.publicAppUrl}`
-                      : "Keine öffentliche URL konfiguriert — UWE nur lokal erreichbar."
-              }
-              details={[
-                { label: "PUBLIC_APP_URL", value: system.proxy.publicAppUrl },
-                { label: "TRUST_PROXY", value: system.proxy.trustProxy },
-                { label: "CLOUDFLARE_TUNNEL", value: system.proxy.cloudflareTunnel },
-                { label: "Tunnel konfiguriert", value: system.proxy.cloudflare.tunnelConfigured },
-                { label: "Portal-URL gesetzt", value: system.proxy.cloudflare.portalUrlConfigured },
-                { label: "Studio-URL gesetzt", value: system.proxy.cloudflare.studioUrlConfigured },
-                {
-                  label: "Portal = Public Base",
-                  value: system.proxy.cloudflare.portalUrlMatchesPublicBase,
-                },
-                {
-                  label: "Studio eigener Host",
-                  value: system.proxy.cloudflare.studioOnSeparateHost,
-                },
-                { label: "Cookie Secure", value: system.proxy.sessionCookieSecure },
-              ]}
-              nextSteps={
-                system.proxy.publicExposureConfigured && !system.proxy.trustProxy
-                  ? ["Setze TRUST_PROXY=true hinter Cloudflare oder Reverse-Proxy."]
-                  : system.proxy.deploymentModel !== "split-hostname" &&
-                      system.proxy.publicExposureConfigured
-                    ? [
-                        "Empfohlen: NEXT_PUBLIC_PORTAL_URL + NEXT_PUBLIC_STUDIO_URL auf getrennten Hostnames setzen.",
-                      ]
-                    : []
-              }
-              wide
-            />
-
-            <StatusCard
-              title="RTX Exposure"
-              level={rtxExposureLevel(rtxExposure)}
-              statusLabel={rtxExposure.ok ? "Privates Netz" : "Öffentlich blockiert"}
-              message={rtxExposure.message}
-              details={rtxExposure.endpoints
-                .filter((endpoint) => endpoint.configured)
-                .map((endpoint) => ({
-                  label: endpoint.envKey,
-                  value: `${endpoint.endpointLabel} (${endpoint.urlKind}${endpoint.privateNetworkOk ? ", OK" : ", blockiert"})`,
-                }))}
-              nextSteps={rtxExposure.nextSteps}
-              wide
-            />
-          </div>
+          <p style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
+            <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system/cloudflare">
+              Cloudflare & Deployment bearbeiten
+            </Link>
+            <Link className="uwe-v2-btn" href="/admin/setup?tab=cloudflare">
+              Einrichtung → Cloudflare
+            </Link>
+            <Link className="uwe-v2-btn" href="/system?tab=diagnose">
+              System-Diagnose
+            </Link>
+          </p>
         </>
       )}
     </SystemShell>

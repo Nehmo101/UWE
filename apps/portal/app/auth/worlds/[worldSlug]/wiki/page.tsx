@@ -4,6 +4,7 @@ import { GlobalSearchForm, PageTypeBadge, VisibilityBadge } from "@uwe/shared-ui
 import { NAV_CATEGORY_LABELS, navCategoryForPageType, type NavCategory } from "@uwe/database/server";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -98,11 +99,15 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
       })}
 
       {filtered.length === 0 && (
-        <p>
-          {query
-            ? "Keine passenden Wiki-Seiten gefunden."
-            : "Für deine Rolle sind derzeit keine Wiki-Seiten freigegeben."}
-        </p>
+        <PortalEmptyState
+          title={query ? "Keine passenden Wiki-Seiten gefunden" : "Keine Wiki-Seiten freigegeben"}
+          description={
+            query
+              ? "Probiere einen anderen Suchbegriff."
+              : undefined
+          }
+          icon="book-open"
+        />
       )}
     </section>
   );

@@ -34,7 +34,7 @@ describe("secrets status service", () => {
       const authItem = bootstrap.items.find((item) => item.id === "auth-secret");
       assert.ok(authItem);
       assert.equal(authItem.bootstrap, true);
-      assert.equal(authItem.maskedHint, null);
+      assert.equal(authItem.maskedHint, "nur ENV");
       assert.equal(authItem.status, "set");
 
       const openAi = snapshot.sections

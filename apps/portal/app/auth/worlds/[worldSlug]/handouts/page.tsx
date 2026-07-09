@@ -4,6 +4,7 @@ import { PageTypeBadge } from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { buildHandoutInbox } from "@uwe/player-hub";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -83,7 +84,7 @@ export default async function PortalHandoutsPage({ params }: Props) {
       </ul>
 
       {inbox.length === 0 && (
-        <p>Noch keine Handouts für dich freigeschaltet.</p>
+        <PortalEmptyState title="Keine Handouts freigeschaltet" icon="mail" />
       )}
 
       <p className="auth-muted">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GlobalSearchForm, PageTypeBadge, VisibilityBadge } from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 
 interface Props {
@@ -69,11 +70,11 @@ export default async function AuthWorldNpcsPage({ params, searchParams }: Props)
       </ul>
 
       {filtered.length === 0 && (
-        <p>
-          {query
-            ? "Keine passenden NPCs gefunden."
-            : "Noch keine NPCs für deine Rolle freigeschaltet."}
-        </p>
+        <PortalEmptyState
+          title={query ? "Keine passenden NPCs gefunden" : "Keine NPCs freigeschaltet"}
+          description={query ? "Probiere einen anderen Suchbegriff." : undefined}
+          icon="users"
+        />
       )}
     </section>
   );

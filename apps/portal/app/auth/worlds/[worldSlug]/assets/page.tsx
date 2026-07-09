@@ -4,6 +4,7 @@ import { ASSET_TYPE_LABELS, AssetTypeBadge, VisibilityBadge } from "@uwe/shared-
 import { ASSET_TYPES } from "@uwe/assets";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import type { AssetType } from "@uwe/database/server";
 
 interface Props {
@@ -102,7 +103,9 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
         ))}
       </ul>
 
-      {assets.length === 0 && <p>Für deine Rolle sind derzeit keine Assets freigegeben.</p>}
+      {assets.length === 0 && (
+        <PortalEmptyState title="Keine Assets freigegeben" icon="image" />
+      )}
     </section>
   );
 }

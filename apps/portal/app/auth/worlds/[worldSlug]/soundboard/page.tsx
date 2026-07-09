@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SoundboardWorkspace, type SoundboardButtonView } from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -52,13 +53,13 @@ export default async function PortalSoundboardPage({ params }: Props) {
         Ambient, Musik und Effekte für deine Rolle ({ctx.effectiveRole}) — nur freigegebene Sounds.
       </p>
 
-      <SoundboardWorkspace
-        buttons={buttonViews}
-        spotifyPlaybackHint="Spotify-Wiedergabe wird nur im Studio gesteuert (Spotify Connect / Web API). Im Portal sind Spotify-Buttons nur zur Anzeige."
-      />
-
-      {buttonViews.length === 0 && (
-        <p>Für deine Rolle sind derzeit keine Soundboard-Buttons freigegeben.</p>
+      {buttonViews.length === 0 ? (
+        <PortalEmptyState title="Keine Soundboard-Buttons freigegeben" icon="volume-2" />
+      ) : (
+        <SoundboardWorkspace
+          buttons={buttonViews}
+          spotifyPlaybackHint="Spotify-Wiedergabe wird nur im Studio gesteuert (Spotify Connect / Web API). Im Portal sind Spotify-Buttons nur zur Anzeige."
+        />
       )}
     </section>
   );

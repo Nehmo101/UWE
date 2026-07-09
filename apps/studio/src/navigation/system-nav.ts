@@ -101,7 +101,7 @@ export const SYSTEM_NAV: NavGroup[] = [
       },
       {
         id: "system-command-center",
-        label: "Command Center",
+        label: "NL-Befehle",
         href: "/command",
         icon: "terminal",
         group: "Übersicht",
@@ -109,7 +109,7 @@ export const SYSTEM_NAV: NavGroup[] = [
         permission: ["owner", "admin"],
         status: "active",
         source: "system",
-        keywords: ["command", "nl", "befehl", "intent", "admin"],
+        keywords: ["command", "nl", "befehl", "intent", "admin", "nl-befehle"],
       },
       {
         id: "system-navigation",
@@ -368,6 +368,18 @@ export const SYSTEM_NAV: NavGroup[] = [
         status: "active",
         source: "system",
         keywords: ["health", "performance", "langsam", "db-größe", "ampel", "tabellen"],
+      },
+      {
+        id: "system-diagnose",
+        label: "Diagnose",
+        href: "/system?tab=diagnose",
+        icon: "stethoscope",
+        group: "Betrieb",
+        section: SECTION,
+        permission: ["owner", "admin"],
+        status: "active",
+        source: "system",
+        keywords: ["diagnose", "status", "leak", "env", "systemstatus"],
       },
       {
         id: "system-knowhow",

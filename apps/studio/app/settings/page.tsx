@@ -107,7 +107,7 @@ export default async function SettingsPage({ searchParams }: Props) {
     >
       <SettingsShell
         title="Admin- & Systemeinstellungen"
-        description="Zentrale Konfiguration für App, Portal, Speicher, KI und Datenschutz."
+        description="Laufende App-Konfiguration für Design, Welten, KI und Mail Center. Host-Setup, Secrets und Verbindungstests: Einrichtung."
         tabs={TABS.map((tab) => ({
           id: tab.id,
           label: tab.label,
@@ -120,6 +120,11 @@ export default async function SettingsPage({ searchParams }: Props) {
               Einstellungen gespeichert.
             </p>
           )}
+
+          <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
+            Host-Setup, Secrets und Verbindungstests findest du in der{" "}
+            <Link href="/admin/setup">Einrichtung</Link>.
+          </p>
 
           {activeTab === "general" && (
             <SettingsGeneralTab todayWidgets={todayLayout?.widgets ?? []} />
@@ -842,7 +847,7 @@ export default async function SettingsPage({ searchParams }: Props) {
                   Empfohlen: <code>RTX_USE_CONNECTOR_IMAGE=true</code> und Connector unter{" "}
                   <Link href="/system/rtx-connector">System → RTX Connector</Link>. Legacy-Fallback:{" "}
                   <code>RTX_BASE_URL</code> / <code>RTX_SERVICE_TOKEN</code>. Diagnose unter{" "}
-                  <Link href="/admin/status">Systemstatus</Link>.
+                  <Link href="/system?tab=diagnose">System-Diagnose</Link>.
                 </p>
                 <p>
                   <Link href="/image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
@@ -969,11 +974,11 @@ export default async function SettingsPage({ searchParams }: Props) {
                 Brain, RTX-Inference, Embeddings und Jobs — ohne Secrets.
               </p>
               <p style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-                <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system">
-                  System-Hub öffnen
+                <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system?tab=diagnose">
+                  System-Diagnose
                 </Link>
                 <Link className="uwe-v2-btn" href="/admin/status">
-                  Admin Status Dashboard
+                  Erweiterte Karten
                 </Link>
                 <Link className="uwe-v2-btn" href="/system/rtx-connector">
                   RTX Connector

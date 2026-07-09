@@ -227,7 +227,7 @@ export async function getProductionSafetyWarnings(
               ? "Studio-Konfiguration widersprüchlich"
               : "Studio möglicherweise ungeschützt",
       description: studioSecurity.message,
-      href: "/admin/status",
+      href: "/system?tab=diagnose",
     });
   } else if (studioSecurity.level === "protected" && studioSecurity.severity === "ok") {
     warnings.push({
@@ -235,7 +235,7 @@ export async function getProductionSafetyWarnings(
       severity: "info",
       title: "Studio geschützt",
       description: studioSecurity.message,
-      href: "/admin/status",
+      href: "/system?tab=diagnose",
     });
   }
 
