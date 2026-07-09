@@ -118,7 +118,11 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
     >
       <PageHeader
         title="Soundboard"
-        summary="Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (Web API)."
+        summary={
+          selectedCampaign
+            ? `Ambient, Musik und Effekte für „${selectedCampaign.name}“ — in der Live-Session dieser Kampagne verfügbar.`
+            : "Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (Web API)."
+        }
       />
       <SpotifyConnectionPanel worldSlug={worldSlug} />
 

@@ -48,6 +48,8 @@ interface Props {
   spotifyReturnPath?: string;
   /** Shown for Spotify sounds when OAuth is unavailable (Portal). */
   spotifyPlaybackHint?: string;
+  /** Called after a button starts playback (e.g. live-session status). */
+  onButtonPlay?: (button: SoundboardButtonView) => void;
 }
 
 function worldSpotifyEndpoint(worldSlug: string, action: string): string {
@@ -107,6 +109,7 @@ export function SoundboardWorkspace({
   worldSlug,
   spotifyReturnPath,
   spotifyPlaybackHint = "Spotify-Wiedergabe wird nur im Studio gesteuert (Spotify Connect / Web API). Im Portal sind Spotify-Buttons nur zur Anzeige.",
+  onButtonPlay,
 }: Props) {
   const spotifyOAuthEnabled = Boolean(worldSlug) || Boolean(spotifyReturnPath);
   const useWorldScopedSpotify = Boolean(worldSlug);
@@ -288,8 +291,11 @@ export function SoundboardWorkspace({
       const ok = await syncSpotifyPlayback(nextSound, "play");
       if (!ok) {
         setActiveSounds((prev) => stopSound({ sounds: prev }, nextSound!.instanceId).sounds);
+        return;
       }
     }
+
+    onButtonPlay?.(button);
   };
 
   const handlePause = async (sound: ActiveSound) => {

@@ -3,6 +3,7 @@ import { jsonError } from "@/src/lib/api-response";
 import { cookies } from "next/headers";
 import { timingSafeEqual } from "node:crypto";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { getFirstRunSetupStatus } from "@uwe/database/first-run-setup";
 import {
   getSessionCookieOptionsForRequest,
   getUweRuntimeConfig,
@@ -31,9 +32,12 @@ export async function GET() {
     }
 
     const config = getUweRuntimeConfig();
+    const firstRun = await getFirstRunSetupStatus(db);
     return NextResponse.json({
       setupAvailable: true,
       setupConfigured: Boolean(config.setupToken),
+      prerequisites: firstRun.prerequisites,
+      productionHints: firstRun.productionHints,
     });
   } finally {
     await db.$disconnect();

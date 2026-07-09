@@ -4,9 +4,11 @@ import { GameSessionStatusBadge } from "@uwe/shared-ui";
 import {
   buildPageUrl,
   createAuthService,
+  createConnectorService,
   createPrismaClient,
   createSessionLiveService,
   getAppRepository,
+  prisma,
   sessionLiveKindLabel,
 } from "@uwe/database/server";
 import { SessionLivePanel } from "@/components/SessionLivePanel";
@@ -33,11 +35,15 @@ export default async function SessionLivePage({ params }: Props) {
   const db = createPrismaClient();
   const auth = createAuthService(db);
   const session = await auth.getGameSessionForDm(worldSlug, sessionId);
+  const campaigns = await repo.listCampaignsByWorld(worldSlug);
+  const sessionCampaign = session?.campaignId
+    ? campaigns.find((campaign) => campaign.id === session.campaignId)
+    : null;
   const liveEntries = session
     ? await createSessionLiveService(db).listEntries(sessionId)
     : [];
   const soundboardButtons: SoundboardButtonView[] = session
-    ? (await auth.listSoundboardForDm(worldSlug)).map((button) => ({
+    ? (await auth.listSoundboardForDm(worldSlug, session.campaignId)).map((button) => ({
         id: button.id,
         title: button.title,
         sourceType: button.sourceType,
@@ -53,6 +59,9 @@ export default async function SessionLivePage({ params }: Props) {
       }))
     : [];
   await db.$disconnect();
+
+  const connectorSummary = await createConnectorService(prisma).summarize();
+  const rtxAudioOnline = connectorSummary.availableCapabilities.includes("audio_local");
 
   if (!session) notFound();
 
@@ -117,7 +126,13 @@ export default async function SessionLivePage({ params }: Props) {
         entries={entryViews}
       />
 
-      <SessionLiveSoundboard worldSlug={worldSlug} buttons={soundboardButtons} />
+      <SessionLiveSoundboard
+        worldSlug={worldSlug}
+        sessionId={sessionId}
+        buttons={soundboardButtons}
+        campaignSlug={sessionCampaign?.slug ?? null}
+        rtxAudioOnline={rtxAudioOnline}
+      />
     </WorldShell>
   );
 }
