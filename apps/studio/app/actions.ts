@@ -23,6 +23,7 @@ import {
   type SecretLevel,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { redirect } from "next/navigation";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -121,7 +122,7 @@ export async function updatePageAction(formData: FormData) {
     });
   }
 
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
   if (oldPage) {
     revalidatePath(buildPageUrl(worldSlug, oldPage.type, oldPage.slug));
   }
@@ -214,7 +215,7 @@ export async function createPageAction(formData: FormData) {
   }
 
   const category = navCategoryForPageType(type);
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
   redirect(`/worlds/${worldSlug}/${category}/${slug}/edit`);
 }
 

@@ -16,6 +16,7 @@ import {
   CanonicalStatusEnum,
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { worldWikiPath } from "@/src/lib/world-last-route";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { NewPageAiPanel } from "@/components/NewPageAiPanel";
 import { SlugDuplicateChecker } from "@/src/components/ux/SlugDuplicateChecker";
@@ -72,7 +73,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
         <CampaignSidebar
           items={[
             { label: "← Übersicht", href: `/worlds/${worldSlug}/dashboard` },
-            { label: "Seitenliste", href: `/worlds/${worldSlug}` },
+            { label: "Seitenliste", href: worldWikiPath(worldSlug) },
           ]}
         />
       }
@@ -218,7 +219,7 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Seite erstellen</button>
-          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}`}>Abbrechen</Link>
+          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={worldWikiPath(worldSlug)}>Abbrechen</Link>
         </div>
       </form>
     </WorldShell>

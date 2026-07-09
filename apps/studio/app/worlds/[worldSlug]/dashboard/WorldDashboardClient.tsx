@@ -1,5 +1,6 @@
 "use client";
 
+import { worldWikiPath } from "@/src/lib/world-last-route";
 import Link from "next/link";
 import {
   EmptyState,
@@ -153,7 +154,7 @@ export function WorldDashboardClient({
               {overview.counts.byCategory.npcs} NPCs · {overview.counts.byCategory.orte} Orte ·{" "}
               {overview.counts.drafts} Entwürfe
             </p>
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}`}>
+            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={worldWikiPath(worldSlug)}>
               Seitenliste →
             </Link>
           </WorldCockpitCard>

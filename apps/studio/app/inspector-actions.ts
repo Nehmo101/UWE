@@ -9,6 +9,7 @@ import {
   type InspectorFixAction,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { redirect } from "next/navigation";
 import {
   requireStudioContentEdit,
@@ -49,7 +50,7 @@ export async function applyInspectorFixAction(formData: FormData) {
   });
 
   revalidatePath(`/worlds/${worldSlug}/inspector`);
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
   revalidatePath("/");
 
   const param = result.ok

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { redirect } from "next/navigation";
 import {
   createUweRepositoryFromClient,
@@ -50,6 +50,6 @@ export async function saveOneShotDraftAction(formData: FormData): Promise<void> 
     ],
   });
 
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
   redirect(`/worlds/${worldSlug}/quest/${page.slug}/edit`);
 }

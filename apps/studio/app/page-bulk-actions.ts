@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { prisma } from "@uwe/database/server";
 import {
   createPageBulkService,
@@ -32,7 +33,7 @@ export async function bulkUpdatePagesAction(
   const result = await createPageBulkService(prisma).apply(worldSlug, pageIds, operation);
 
   if (result.changedCount > 0) {
-    revalidatePath(`/worlds/${worldSlug}`);
+    revalidateWorldRootAndWiki(worldSlug);
     revalidatePath(`/worlds/${worldSlug}/graph`);
   }
 
@@ -94,7 +95,7 @@ export async function releaseAllWorldPagesAction(
     failedCount += result.failedCount;
   }
 
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
   revalidatePath(`/worlds/${worldSlug}/graph`);
 
   const message =

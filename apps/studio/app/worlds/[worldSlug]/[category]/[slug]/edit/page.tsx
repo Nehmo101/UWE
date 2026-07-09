@@ -38,6 +38,7 @@ import {
 } from "../../../../../actions";
 import { pagePreviewHref } from "@/src/lib/page-preview";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { worldWikiPath } from "@/src/lib/world-last-route";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { PageLinksPanel } from "@/components/wiki/PageLinksPanel";
 import { PageChroniclePanel } from "@/components/wiki/PageChroniclePanel";
@@ -103,7 +104,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
         <CampaignSidebar
           items={[
             { label: "← Seitenansicht", href: pageHref, active: true },
-            { label: "Seitenliste", href: `/worlds/${worldSlug}` },
+            { label: "Seitenliste", href: worldWikiPath(worldSlug) },
           ]}
         />
       }

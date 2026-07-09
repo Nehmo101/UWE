@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { prisma } from "@uwe/database/server";
 import {
   createPageAiReviewService,
@@ -36,7 +37,7 @@ export async function startPageAiReviewBulkAction(
   }
 
   if (result.ok) {
-    revalidatePath(`/worlds/${worldSlug}`);
+    revalidateWorldRootAndWiki(worldSlug);
     revalidatePath(`/worlds/${worldSlug}/page-review`);
   }
 
@@ -53,7 +54,7 @@ export async function acceptPageReviewAction(
 
   const result = await createPageAiReviewService(prisma).acceptReview(proposalId, editedText);
 
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
   revalidatePath(`/worlds/${worldSlug}/page-review`);
 
   return result;
@@ -69,7 +70,7 @@ export async function rejectPageReviewAction(
 
   const result = await createPageAiReviewService(prisma).rejectReview(proposalId, reason);
 
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
   revalidatePath(`/worlds/${worldSlug}/page-review`);
 
   return result;

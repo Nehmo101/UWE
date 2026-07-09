@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { worldWikiPath } from "@/src/lib/world-last-route";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@uwe/shared-ui";
 import { getAppRepository, prisma } from "@uwe/database/server";
@@ -49,7 +50,7 @@ export default async function PageReviewListPage({ params }: Props) {
           title="Keine offenen Reviews"
           description="Wähle Seiten in Wiki / Seiten aus und starte eine KI-Aktion — die Ergebnisse erscheinen hier."
           action={
-            <Link className="text-primary hover:underline" href={`/worlds/${worldSlug}`}>
+            <Link className="text-primary hover:underline" href={worldWikiPath(worldSlug)}>
               Zur Seitenübersicht
             </Link>
           }

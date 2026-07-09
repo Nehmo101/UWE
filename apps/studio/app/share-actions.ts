@@ -7,6 +7,7 @@ import {
   type ShareTargetType,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import {
   assertStudioTrusted,
   requireStudioWorldEdit,
@@ -44,7 +45,7 @@ export async function createShareLinkAction(formData: FormData) {
   }
 
   revalidatePath(returnPath);
-  revalidatePath(`/worlds/${worldSlug}`);
+  revalidateWorldRootAndWiki(worldSlug);
 }
 
 export async function updateShareLinkAction(formData: FormData) {

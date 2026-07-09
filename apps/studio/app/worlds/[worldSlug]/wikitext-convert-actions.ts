@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import {
   createWikitextConvertService,
   prisma,
@@ -110,7 +111,7 @@ export async function applyWikitextConversionAction(
   );
 
   if (result.ok && result.changedBlockCount > 0) {
-    revalidatePath(`/worlds/${worldSlug}`);
+    revalidateWorldRootAndWiki(worldSlug);
     revalidatePath(`/worlds/${worldSlug}/import`);
     revalidatePath(`/worlds/${worldSlug}/graph`);
   }

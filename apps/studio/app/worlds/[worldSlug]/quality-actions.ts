@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { redirect } from "next/navigation";
 import { createWikitextConvertService, prisma } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
@@ -22,7 +23,7 @@ export async function runBulkAutoLinkAction(formData: FormData): Promise<void> {
   );
 
   if (result.ok && result.changedBlockCount > 0) {
-    revalidatePath(`/worlds/${worldSlug}`);
+    revalidateWorldRootAndWiki(worldSlug);
     revalidatePath(`/worlds/${worldSlug}/quality`);
     revalidatePath(`/worlds/${worldSlug}/import`);
     revalidatePath(`/worlds/${worldSlug}/graph`);
