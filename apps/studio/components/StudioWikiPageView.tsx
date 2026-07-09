@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Collapsible,
+  EmptyState,
   GraphView,
   MetaPanel,
   SidebarSection,
@@ -24,17 +25,36 @@ import {
   NAV_CATEGORY_LABELS,
   parseStringArray,
   type NavCategory,
+  type PageWithBlocks,
   type ShareTargetType,
 } from "@uwe/database/server";
 import { buildPageGraphForViewer } from "@uwe/database/graph-service";
 import { buildPageViewForViewer } from "@uwe/database/page-viewer-service";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "@/src/lib/page-preview";
+import { describePreviewVisibilityGate } from "@/src/lib/preview-visibility-reason";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { PreviewAsPlayerControls } from "@/src/components/PreviewAsPlayerControls";
 import { WikiContextPanel } from "@/src/components/wiki";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { canUsePreview, getAccessContextForWorld, getPreviewUserId, getWorldPlayers } from "@/src/lib/auth";
+
+function renderPreviewNotVisible(worldSlug: string, page: PageWithBlocks) {
+  const pageHref = buildPageUrl(worldSlug, page.type, page.slug);
+  return (
+    <div className="page">
+      <EmptyState
+        title="Für Spieler noch nicht sichtbar"
+        description={`Diese Seite existiert, ist aktuell aber nicht für Spieler sichtbar. ${describePreviewVisibilityGate(page)}`}
+        action={
+          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={pageHref}>
+            Zurück zur DM-Ansicht
+          </Link>
+        }
+      />
+    </div>
+  );
+}
 
 export interface StudioWikiPageViewProps {
   worldSlug: string;
@@ -91,7 +111,7 @@ export async function StudioWikiPageView({
       const accessCtx = await getAccessContextForWorld(worldSlug);
       if (accessCtx?.previewAsUserId) {
         view = await buildPageViewForViewer(auth, repo, worldSlug, slug, accessCtx);
-        if (!view) notFound();
+        if (!view) return renderPreviewNotVisible(worldSlug, rawPage);
         pageGraph = await buildPageGraphForViewer(
           repo,
           worldSlug,
@@ -101,7 +121,7 @@ export async function StudioWikiPageView({
         );
       } else {
         view = await buildPageView(repo, worldSlug, slug, "preview");
-        if (!view) notFound();
+        if (!view) return renderPreviewNotVisible(worldSlug, rawPage);
         pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "preview", "neighbors");
       }
     } else {
