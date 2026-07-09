@@ -5,6 +5,7 @@ import {
 import type { ApiAuthContext, StudioGuardOptions } from "@uwe/security";
 import { requireAdminApiAuth, requireStudioRoleApiAuth } from "@uwe/security";
 import { isApiTokenFormat, parseBearerToken } from "@uwe/auth";
+import { createDevBypassAuthUser, studioAuthRequired } from "./auth";
 import { getUserFromRequestCookieHeader } from "./auth-session";
 
 export async function resolveStudioApiAuthContext(request: Request): Promise<ApiAuthContext> {
@@ -54,6 +55,17 @@ export async function resolveStudioApiAuthContext(request: Request): Promise<Api
   if (user) {
     return {
       user,
+      apiTokenId: null,
+      apiTokenScopes: null,
+      authMethod: "session",
+    };
+  }
+
+  // Mirror page auth: when AUTH_REQUIRED=false, treat the operator as owner so
+  // browser fetch() to /api/admin/* works without a session cookie (Mail Center sync, etc.).
+  if (!studioAuthRequired()) {
+    return {
+      user: createDevBypassAuthUser(),
       apiTokenId: null,
       apiTokenScopes: null,
       authMethod: "session",

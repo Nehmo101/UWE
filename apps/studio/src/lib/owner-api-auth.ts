@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentAuthUser, studioAuthRequired } from "./auth";
+import { createDevBypassAuthUser, getCurrentAuthUser, studioAuthRequired } from "./auth";
 
 export interface OwnerApiUser {
   userId: string;
@@ -21,7 +21,8 @@ export async function resolveOwnerApiUser(): Promise<OwnerApiUser | null> {
   }
 
   if (!studioAuthRequired()) {
-    return { userId: "dev-bypass", role: "owner" };
+    const bypass = createDevBypassAuthUser();
+    return { userId: bypass.id, role: bypass.role };
   }
   return null;
 }

@@ -110,14 +110,19 @@ export function studioAuthRequired(): boolean {
   return getUweRuntimeConfig().authRequired;
 }
 
+/** Synthetic owner used when Studio auth is disabled (trusted-network dev mode). */
+export function createDevBypassAuthUser(): AuthUser {
+  return {
+    id: "dev-bypass",
+    displayName: "Dev Bypass",
+    email: null,
+    role: "owner",
+  };
+}
+
 export async function requireUser(): Promise<AuthUser> {
   if (!studioAuthRequired()) {
-    return {
-      id: "dev-bypass",
-      displayName: "Dev Bypass",
-      email: null,
-      role: "owner",
-    };
+    return createDevBypassAuthUser();
   }
 
   const user = await getCurrentAuthUser();
