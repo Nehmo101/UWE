@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { loadClientRuntimeConfig, type ClientRuntimeConfig } from "./client-config-store";
-import { printFileWindows } from "./label-printing";
+import { printFileCups, printFileWindows } from "./label-printing";
 import {
   buildAuthorizationUrl,
   clearSpotifySession,
@@ -137,50 +137,49 @@ export async function cmdTestPrint(dataDir: string, printerId?: string): Promise
     return;
   }
 
-  if (process.platform === "win32") {
-    const trimmed = printerId?.trim();
-    if (!trimmed) {
-      process.stdout.write(
-        `${JSON.stringify({
-          ok: false,
-          message: "Kein Drucker ausgewählt (Drucker-Panel im RTX-Client).",
-        })}\n`,
-      );
-      return;
-    }
-
-    const dir = await mkdtemp(join(tmpdir(), "uwe-print-test-"));
-    const filePath = join(dir, "uwe-testdruck.html");
-    try {
-      await writeFile(
-        filePath,
-        "<html><body><h1>UWE RTX Connector — Testdruck</h1></body></html>",
-        "utf8",
-      );
-      await printFileWindows(filePath, trimmed);
-      process.stdout.write(
-        `${JSON.stringify({ ok: true, via: "windows", message: `Testdruck an "${trimmed}" gesendet.` })}\n`,
-      );
-    } catch (error) {
-      process.stdout.write(
-        `${JSON.stringify({
-          ok: false,
-          via: "windows",
-          message: error instanceof Error ? error.message : String(error),
-        })}\n`,
-      );
-    } finally {
-      await rm(dir, { recursive: true, force: true }).catch(() => undefined);
-    }
+  const trimmed = printerId?.trim();
+  if (!trimmed) {
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        message: "Kein Drucker ausgewählt (Drucker-Panel im RTX-Client).",
+      })}\n`,
+    );
     return;
   }
 
-  process.stdout.write(
-    `${JSON.stringify({
-      ok: false,
-      message: "Kein Print-Kommando konfiguriert (Drucker-Panel im RTX-Client).",
-    })}\n`,
-  );
+  // Without a custom print command the OS print path is used directly:
+  // ShellExecute "print to" on Windows, CUPS `lp` elsewhere. Windows gets an
+  // HTML page (rendered by the associated app); CUPS gets plain text so its
+  // text filter prints it as-is instead of raw markup.
+  const isWindows = process.platform === "win32";
+  const via = isWindows ? "windows" : "cups";
+  const dir = await mkdtemp(join(tmpdir(), "uwe-print-test-"));
+  const filePath = join(dir, isWindows ? "uwe-testdruck.html" : "uwe-testdruck.txt");
+  const contents = isWindows
+    ? "<html><body><h1>UWE RTX Connector — Testdruck</h1></body></html>"
+    : "UWE RTX Connector — Testdruck\n";
+  try {
+    await writeFile(filePath, contents, "utf8");
+    if (isWindows) {
+      await printFileWindows(filePath, trimmed);
+    } else {
+      await printFileCups(filePath, trimmed);
+    }
+    process.stdout.write(
+      `${JSON.stringify({ ok: true, via, message: `Testdruck an "${trimmed}" gesendet.` })}\n`,
+    );
+  } catch (error) {
+    process.stdout.write(
+      `${JSON.stringify({
+        ok: false,
+        via,
+        message: error instanceof Error ? error.message : String(error),
+      })}\n`,
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+  }
 }
 
 export async function cmdTestImage(dataDir: string, prompt?: string): Promise<void> {

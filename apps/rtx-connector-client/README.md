@@ -1,11 +1,12 @@
 # UWE RTX Connector Client
 
-Windows-focused **Tauri 2** desktop app for the local **UWE RTX Connector**.
+**Tauri 2** desktop app (Windows & Linux) for the local **UWE RTX Connector**.
 
 ## Scope in P1
 
 - React 19 + TypeScript + Vite frontend in UWE Parchment style (`@uwe/shared-ui`)
 - Tauri 2 shell with local JSON config in `%LOCALAPPDATA%/UWE/rtx-connector-client/`
+  (Windows) bzw. `~/.local/share/UWE/rtx-connector-client/` (Linux)
 - **Übersicht**, **Verbindung**, **Einstellungen** + 8-step **Erststart-Wizard**
 - Starts/stops the same Connector Core as `pnpm connector:start` via `desktop-launcher.ts`
 - Real host connection test: `GET /api/connectors/config` with Bearer token
@@ -18,13 +19,15 @@ Windows-focused **Tauri 2** desktop app for the local **UWE RTX Connector**.
   (`buildCookbookRecommendations`) und Modell-Katalog mit Fit-Scores aus
   `@uwe/cookbook`; Buttons für Ollama-Pull und „Für UWE aktivieren“.
 - **Runner**: Status von Ollama (`/api/tags`), LM Studio und llama.cpp
-  (`/v1/models`), „Ollama starten“ (nur Windows) und „Verbindung testen“.
+  (`/v1/models`), „Ollama starten“ (Windows & Linux) und „Verbindung testen“.
   LM-Studio-Ausführung ist in P2 nur Sichtbarkeit.
 - **Sicherheit**: statische Outbound-only-Aussagen plus **Privacy Mode**-Schalter.
   Privacy Mode wird beim Start als `UWE_CONNECTOR_PRIVACY_MODE` an den
   Connector-Prozess übergeben.
-- **Windows-Shell**: Tray-Icon mit Öffnen/Beenden, Start im Tray/minimierter Start
-  und Windows-Autostart über `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
+- **Desktop-Shell**: Tray-Icon mit Öffnen/Beenden, Start im Tray/minimierter Start
+  und Autostart beim Login — unter Windows über
+  `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, unter Linux über einen
+  XDG-Autostart-Eintrag (`~/.config/autostart/uwe-rtx-connector-client.desktop`).
 - Neue `client-cli`-Befehle: `cookbook-dashboard`, `probe-runners`,
   `start-ollama`, `test-runner`.
 
@@ -50,6 +53,34 @@ Windows-focused **Tauri 2** desktop app for the local **UWE RTX Connector**.
   embedding, vision → `{ connectorId, modelId }`). Heartbeat-Modelle tragen dafür
   jetzt eine stabile Profil-`id`. Das alte `/admin/cookbook` leitet auf die
   RTX-Connector-Seite um; Online-/Cloud-KI bleibt in Einstellungen + AI Gateway.
+
+## Linux
+
+Der Client läuft vollständig unter Linux; alle OS-Integrationen haben einen
+Linux-Pfad:
+
+- **Autostart**: XDG-Autostart-Eintrag in
+  `~/.config/autostart/uwe-rtx-connector-client.desktop` (Toggle in den
+  Einstellungen, gleiches Feld wie der Windows-Autostart).
+- **Drucken**: Drucker-Erkennung über CUPS (`lpstat -p` / `lpstat -d`),
+  Testdruck und `label_print`-Jobs über `lp -d <drucker>`.
+- **„Ollama starten“**: sucht `ollama` im `PATH` sowie unter
+  `/usr/local/bin`, `/usr/bin` und `~/.local/bin` und startet `ollama serve`
+  (alternativ läuft Ollama als systemd-Dienst weiter: `systemctl start ollama`).
+- **Config/Daten**: `~/.local/share/UWE/rtx-connector-client/` (config.json,
+  model-store.json, Hugging-Face-Downloads, Logs).
+
+Build-Voraussetzungen (Tauri 2, Ubuntu/Debian-Paketnamen):
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+```
+
+`pnpm connector:client:build` erzeugt auf einem Linux-Host `deb`- und
+`AppImage`-Bundles (siehe `tauri.conf.json` → `bundle.targets`). Das Tray-Icon
+benötigt zur Laufzeit `libayatana-appindicator3`; ohne Tray-Unterstützung der
+Desktop-Umgebung bleibt die App über das Fenster bedienbar.
 
 ## Commands
 
@@ -79,7 +110,8 @@ The headless CLI (`pnpm connector:start`) remains unchanged.
 
 ## Local config / data dir
 
-- `config.json` in Windows local app data. Shape defined in `@uwe/connector-client-config`.
+- `config.json` in local app data (Windows: `%LOCALAPPDATA%`, Linux:
+  `~/.local/share`). Shape defined in `@uwe/connector-client-config`.
 - `model-store.json`, `job-history.json`, Hugging-Face downloads and Connector-Logs
   liegen daneben im selben Tauri-AppData-Verzeichnis.
 

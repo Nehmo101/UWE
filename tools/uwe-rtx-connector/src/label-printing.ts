@@ -152,6 +152,14 @@ export async function printFileWindows(filePath: string, printerName: string): P
     { timeout: 60_000, windowsHide: true },
   );
 }
+
+/**
+ * Print a file to a named CUPS destination (Linux / macOS) via `lp -d`. Both
+ * values are passed as separate argv entries, so neither can inject options.
+ */
+export async function printFileCups(filePath: string, printerId: string): Promise<void> {
+  await execFileAsync("lp", ["-d", printerId, filePath], { timeout: 60_000 });
+}
 export async function runLabelPrintJob(payload: Record<string, unknown>, ctx: { hostUrl: string; connectorToken: string; printCommand?: string; requestTimeoutMs: number; jobId: string }) {
   const parsed = parseLabelPrintJobPayload(payload);
   if (!parsed) throw new Error("label_print: invalid payload");
@@ -173,7 +181,7 @@ export async function runLabelPrintJob(payload: Record<string, unknown>, ctx: { 
       await printFileWindows(filePath, parsed.printerId);
       return { printed: true, via: "windows", printerId: parsed.printerId };
     }
-    await execFileAsync("lp", ["-d", parsed.printerId, filePath], { timeout: 60_000 });
+    await printFileCups(filePath, parsed.printerId);
     return { printed: true, via: "cups", printerId: parsed.printerId };
   } catch (error) {
     if (!ctx.printCommand && /ENOENT|not found/i.test(String(error))) throw new Error("CUPS lp unavailable");

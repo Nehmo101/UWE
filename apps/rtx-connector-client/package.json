@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Windows-focused Tauri desktop client for the UWE RTX Connector",
+  "description": "Tauri desktop client (Windows & Linux) for the UWE RTX Connector",
   "scripts": {
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",

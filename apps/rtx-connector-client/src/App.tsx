@@ -451,7 +451,7 @@ export default function App() {
                 checked={config.autostartWindows}
                 onChange={(event) => updateConfig("autostartWindows", event.target.checked)}
               />
-              <span>Autostart bei Windows-Start</span>
+              <span>Autostart bei Systemstart (Windows &amp; Linux)</span>
             </label>
 
             <label className="connector-field connector-field-full">
@@ -625,7 +625,7 @@ export default function App() {
       groups={navGroups}
       brandLabel="RTX Connector"
       brandKicker="UWE · Outbound Connector"
-      brandDescription="Lokale Desktop-App für den RTX Connector auf Windows."
+      brandDescription="Lokale Desktop-App für den RTX Connector (Windows & Linux)."
       onNavigate={(path) => {
         setActivePath(path as ConnectorPath);
         setNotice(null);

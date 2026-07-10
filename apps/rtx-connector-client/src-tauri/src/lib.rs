@@ -456,7 +456,7 @@ fn autostart_command_line() -> Result<String, String> {
 }
 
 #[cfg(target_os = "windows")]
-fn sync_windows_autostart(enabled: bool) -> Result<(), String> {
+fn sync_autostart(enabled: bool) -> Result<(), String> {
     if enabled {
         let command_line = autostart_command_line()?;
         let output = run_reg(&[
@@ -501,8 +501,52 @@ fn sync_windows_autostart(enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(not(target_os = "windows"))]
-fn sync_windows_autostart(_enabled: bool) -> Result<(), String> {
+/// XDG autostart entry written for the current user on Linux. Desktop
+/// environments following the freedesktop autostart spec (GNOME, KDE, XFCE, …)
+/// launch every `.desktop` file in `~/.config/autostart/` on login.
+#[cfg(target_os = "linux")]
+const AUTOSTART_DESKTOP_FILE: &str = "uwe-rtx-connector-client.desktop";
+
+#[cfg(target_os = "linux")]
+fn linux_autostart_path() -> Result<PathBuf, String> {
+    let base = dirs::config_dir().ok_or_else(|| {
+        "Konfigurationsverzeichnis (~/.config) konnte nicht ermittelt werden.".to_string()
+    })?;
+    Ok(base.join("autostart").join(AUTOSTART_DESKTOP_FILE))
+}
+
+#[cfg(target_os = "linux")]
+fn sync_autostart(enabled: bool) -> Result<(), String> {
+    let path = linux_autostart_path()?;
+
+    if enabled {
+        let exe = std::env::current_exe()
+            .map_err(|error| format!("App-Pfad fuer Autostart konnte nicht ermittelt werden: {error}"))?;
+        ensure_parent_dir(&path)?;
+        let entry = format!(
+            "[Desktop Entry]\n\
+             Type=Application\n\
+             Name=UWE RTX Connector Client\n\
+             Comment=Startet den UWE RTX Connector Client beim Login\n\
+             Exec=\"{}\" --minimized\n\
+             Terminal=false\n\
+             X-GNOME-Autostart-enabled=true\n",
+            exe.display()
+        );
+        fs::write(&path, entry)
+            .map_err(|error| format!("Autostart-Eintrag konnte nicht geschrieben werden: {error}"))?;
+        return Ok(());
+    }
+
+    match fs::remove_file(&path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("Autostart-Eintrag konnte nicht entfernt werden: {error}")),
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn sync_autostart(_enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
@@ -913,7 +957,7 @@ fn read_config() -> Result<ConnectorClientConfig, String> {
 #[tauri::command]
 fn write_config(config: ConnectorClientConfig, app_state: State<'_, AppState>) -> Result<ConnectorClientConfig, String> {
     let normalized = normalize_config(config)?;
-    sync_windows_autostart(normalized.autostart_windows)?;
+    sync_autostart(normalized.autostart_windows)?;
     write_config_to_disk(&normalized)?;
 
     let mut runtime = app_state

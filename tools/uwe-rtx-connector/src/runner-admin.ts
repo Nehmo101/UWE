@@ -5,7 +5,7 @@
  * "Runner" page (P2 visibility):
  *
  *   • `probeRunners`            — health-check Ollama, LM Studio, llama.cpp.
- *   • `startOllamaOnWindows`    — try to launch the local Ollama service.
+ *   • `startOllama`             — try to launch the local Ollama service (Windows & Linux).
  *   • `measureOllamaTokensPerSecond` — rough throughput sample for one model.
  *
  * Everything is local to the connector machine: only model metadata exposed by
@@ -14,6 +14,7 @@
 
 import { spawn, type SpawnOptions } from "node:child_process";
 import { existsSync } from "node:fs";
+import { delimiter, join } from "node:path";
 
 export type RunnerId = "ollama" | "lm_studio" | "llama_cpp";
 
@@ -208,7 +209,7 @@ export interface StartOllamaResult {
   started: boolean;
   alreadyRunning: boolean;
   message: string;
-  /** Executable paths that were attempted (Windows only). */
+  /** Executable paths that were attempted (Windows / Linux). */
   triedPaths: string[];
 }
 
@@ -250,6 +251,26 @@ function windowsOllamaCandidates(env: NodeJS.ProcessEnv): Array<{ path: string; 
   return candidates;
 }
 
+/**
+ * Common Linux install locations for the Ollama executable: every PATH entry
+ * (the desktop shell may spawn us with a trimmed PATH, so the fixed install
+ * locations of the official install script, distro packages and `~/.local/bin`
+ * are appended as fallbacks). Duplicates are removed, order is preserved.
+ */
+function linuxOllamaCandidates(env: NodeJS.ProcessEnv): Array<{ path: string; args: string[] }> {
+  const pathDirs = (env.PATH ?? "").split(delimiter).map((dir) => dir.trim()).filter(Boolean);
+  const home = env.HOME?.trim();
+
+  const paths = [
+    ...pathDirs.map((dir) => join(dir, "ollama")),
+    "/usr/local/bin/ollama",
+    "/usr/bin/ollama",
+    ...(home ? [join(home, ".local", "bin", "ollama")] : []),
+  ];
+
+  return [...new Set(paths)].map((path) => ({ path, args: ["serve"] }));
+}
+
 function defaultSpawn(command: string, args: string[]): boolean {
   try {
     const options: SpawnOptions = { detached: true, stdio: "ignore", windowsHide: true };
@@ -265,11 +286,12 @@ function defaultSpawn(command: string, args: string[]): boolean {
 }
 
 /**
- * Try to start the local Ollama service on Windows. No-op (with a friendly
- * message) on other platforms. When Ollama already answers on its endpoint the
- * call short-circuits and reports `alreadyRunning`.
+ * Try to start the local Ollama service. Supported on Windows (installer
+ * locations) and Linux (PATH + common install locations); no-op with a friendly
+ * message elsewhere. When Ollama already answers on its endpoint the call
+ * short-circuits and reports `alreadyRunning`.
  */
-export async function startOllamaOnWindows(
+export async function startOllama(
   options: StartOllamaOptions = {},
 ): Promise<StartOllamaResult> {
   const platform = options.platform ?? process.platform;
@@ -279,7 +301,7 @@ export async function startOllamaOnWindows(
   const existsImpl = options.existsImpl ?? existsSync;
   const spawnImpl = options.spawnImpl ?? defaultSpawn;
 
-  // Already running anywhere (Windows or not)? Nothing to do.
+  // Already running (whatever the platform)? Nothing to do.
   const probe = await probeRunner("ollama", config, fetchImpl);
   if (probe.status === "online") {
     return {
@@ -291,18 +313,19 @@ export async function startOllamaOnWindows(
     };
   }
 
-  if (platform !== "win32") {
+  if (platform !== "win32" && platform !== "linux") {
     return {
       ok: false,
       started: false,
       alreadyRunning: false,
       message:
-        "Automatischer Start ist nur unter Windows verfügbar. Starte Ollama manuell mit `ollama serve`.",
+        "Automatischer Start ist nur unter Windows und Linux verfügbar. Starte Ollama manuell mit `ollama serve`.",
       triedPaths: [],
     };
   }
 
-  const candidates = windowsOllamaCandidates(env);
+  const candidates =
+    platform === "win32" ? windowsOllamaCandidates(env) : linuxOllamaCandidates(env);
   const triedPaths: string[] = [];
 
   for (const candidate of candidates) {
@@ -327,7 +350,9 @@ export async function startOllamaOnWindows(
     started: false,
     alreadyRunning: false,
     message:
-      "Ollama-Programm nicht gefunden. Bitte von https://ollama.com/download installieren oder manuell starten.",
+      platform === "linux"
+        ? "Ollama-Programm nicht gefunden. Bitte installieren (https://ollama.com/download) oder den Dienst manuell starten (`ollama serve` bzw. `systemctl start ollama`)."
+        : "Ollama-Programm nicht gefunden. Bitte von https://ollama.com/download installieren oder manuell starten.",
     triedPaths,
   };
 }

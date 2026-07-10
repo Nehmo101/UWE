@@ -128,7 +128,7 @@ export function RunnersPanel({ onProbeRunners, onStartOllama, onTestRunner }: Pr
         <div className="connector-stack">
           <p className="connector-muted">
             Erkennt Ollama (<code>/api/tags</code>), LM Studio und llama.cpp (<code>/v1/models</code>).
-            „Ollama starten“ funktioniert nur auf dem RTX-PC (Windows).
+            „Ollama starten“ startet den lokalen Ollama-Dienst auf dem RTX-PC (Windows &amp; Linux).
           </p>
 
           {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}

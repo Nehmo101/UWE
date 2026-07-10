@@ -6,7 +6,7 @@ import {
   probeRunner,
   probeRunners,
   resolveRunnerConfig,
-  startOllamaOnWindows,
+  startOllama,
 } from "./runner-admin";
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -75,27 +75,27 @@ describe("probeRunners", () => {
   });
 });
 
-describe("startOllamaOnWindows", () => {
+describe("startOllama", () => {
   it("short-circuits when Ollama already answers", async () => {
     const fetchImpl = fetchRouter({ "/api/tags": () => jsonResponse({ models: [] }) });
-    const result = await startOllamaOnWindows({ platform: "win32", fetchImpl });
+    const result = await startOllama({ platform: "win32", fetchImpl });
     assert.equal(result.alreadyRunning, true);
     assert.equal(result.started, false);
     assert.equal(result.ok, true);
   });
 
-  it("returns a friendly no-op on non-Windows platforms", async () => {
+  it("returns a friendly no-op on unsupported platforms", async () => {
     const fetchImpl = fetchRouter({});
-    const result = await startOllamaOnWindows({ platform: "linux", fetchImpl });
+    const result = await startOllama({ platform: "darwin", fetchImpl });
     assert.equal(result.ok, false);
     assert.equal(result.started, false);
-    assert.match(result.message, /Windows/);
+    assert.match(result.message, /Windows und Linux/);
   });
 
   it("spawns the first existing Windows executable", async () => {
     const fetchImpl = fetchRouter({});
     const spawned: Array<{ command: string; args: string[] }> = [];
-    const result = await startOllamaOnWindows({
+    const result = await startOllama({
       platform: "win32",
       env: { ProgramFiles: "C:\\Program Files", LOCALAPPDATA: "C:\\Users\\x\\AppData\\Local" },
       fetchImpl,
@@ -113,9 +113,36 @@ describe("startOllamaOnWindows", () => {
     assert.deepEqual(spawned[0].args, ["serve"]);
   });
 
+  it("spawns the first existing Linux executable from PATH and fallbacks", async () => {
+    const fetchImpl = fetchRouter({});
+    const spawned: Array<{ command: string; args: string[] }> = [];
+    const result = await startOllama({
+      platform: "linux",
+      env: { PATH: "/opt/tools/bin:/usr/local/bin", HOME: "/home/rtx" },
+      fetchImpl,
+      existsImpl: (path) => path === "/home/rtx/.local/bin/ollama",
+      spawnImpl: (command, args) => {
+        spawned.push({ command, args });
+        return true;
+      },
+    });
+
+    assert.equal(result.started, true);
+    assert.equal(result.ok, true);
+    assert.equal(spawned.length, 1);
+    assert.equal(spawned[0].command, "/home/rtx/.local/bin/ollama");
+    assert.deepEqual(spawned[0].args, ["serve"]);
+    // PATH entries and the fixed install locations are tried first.
+    assert.ok(result.triedPaths.includes("/opt/tools/bin/ollama"));
+    assert.ok(result.triedPaths.includes("/usr/local/bin/ollama"));
+    assert.ok(result.triedPaths.includes("/usr/bin/ollama"));
+    // Deduped: /usr/local/bin comes from PATH and the fixed fallback list.
+    assert.equal(result.triedPaths.filter((path) => path === "/usr/local/bin/ollama").length, 1);
+  });
+
   it("reports a clear message when no executable is found", async () => {
     const fetchImpl = fetchRouter({});
-    const result = await startOllamaOnWindows({
+    const result = await startOllama({
       platform: "win32",
       env: { ProgramFiles: "C:\\Program Files" },
       fetchImpl,
@@ -127,6 +154,21 @@ describe("startOllamaOnWindows", () => {
     assert.equal(result.started, false);
     assert.match(result.message, /nicht gefunden/);
     assert.ok(result.triedPaths.length > 0);
+  });
+
+  it("points Linux users at the systemd service when nothing is found", async () => {
+    const fetchImpl = fetchRouter({});
+    const result = await startOllama({
+      platform: "linux",
+      env: { PATH: "/usr/bin" },
+      fetchImpl,
+      existsImpl: () => false,
+      spawnImpl: () => true,
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.started, false);
+    assert.match(result.message, /systemctl start ollama/);
   });
 });
 

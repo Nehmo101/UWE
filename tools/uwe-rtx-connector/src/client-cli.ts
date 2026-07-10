@@ -54,7 +54,7 @@ import {
   probeRunner,
   probeRunners,
   resolveRunnerConfig,
-  startOllamaOnWindows,
+  startOllama,
   type RunnerId,
 } from "./runner-admin";
 
@@ -354,7 +354,7 @@ async function cmdProbeRunners(): Promise<void> {
 }
 
 async function cmdStartOllama(): Promise<void> {
-  const result = await startOllamaOnWindows();
+  const result = await startOllama();
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

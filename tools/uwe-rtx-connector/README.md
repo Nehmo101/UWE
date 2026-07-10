@@ -51,7 +51,7 @@ helpers it provides runner/cookbook admin commands:
 - `probe-runners` — health-check Ollama (`/api/tags`), LM Studio and llama.cpp
   (`/v1/models`).
 - `start-ollama` — best-effort start of the local Ollama service on Windows
-  (no-op with a friendly message elsewhere).
+  and Linux (no-op with a friendly message elsewhere).
 - `test-runner [ollama|lm_studio|llama_cpp]` — quick health probe of one runner
   (Ollama also returns a best-effort tokens/s sample).
 
