@@ -1,11 +1,11 @@
 import {
   createMailAccountService,
   createMailLogService,
-  createMailPortalService,
   createMailService,
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
+import { createMailPortalService } from "@uwe/mail/portal";
 import type { RtxConnectorState } from "@uwe/shared-ui";
 import { loadStudioRtxDisplayState } from "@/src/lib/rtx-display-state";
 import { MAIL_PRIORITY_CATEGORIES, MAIL_PRIORITY_LABELS } from "@uwe/mail/portal-types";

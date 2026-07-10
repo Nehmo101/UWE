@@ -1,10 +1,10 @@
 import type { MailAuditAction, MailPriorityCategory } from "@uwe/database/mail-prisma-types";
 import type { PrismaClient } from "@uwe/database/client";
-import { mailBodyForProcessing, type MailReplyTone } from "../mail-portal-types";
-import { createMailTransport } from "../transport";
+import { mailBodyForProcessing, type MailReplyTone } from "@uwe/mail-core";
+import { createMailTransport } from "@uwe/mail-core";
 import { decryptSecret } from "@uwe/database/token-crypto";
 import { createMailLogService } from "@uwe/database/mail-log-service";
-import { scoreMailPriority } from "../priority";
+import { scoreMailPriority } from "@uwe/mail-core";
 
 type LogAuditFn = (input: {
   action: MailAuditAction;

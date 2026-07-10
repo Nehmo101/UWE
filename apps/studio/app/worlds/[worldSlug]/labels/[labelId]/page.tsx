@@ -17,7 +17,6 @@ import {
 import { isLabelAiShortenAvailable } from "@/src/lib/label-ai-shorten";
 import { LabelEditWorkspace } from "@/components/LabelEditWorkspace";
 import {
-  addLabelToPrintListAction,
   deleteLabelAction,
   duplicateLabelAction,
   resetLabelToTemplateAction,
@@ -25,6 +24,7 @@ import {
   setLabelPrintStatusAction,
   updateLabelAction,
 } from "@/app/label-actions";
+import { addLabelToPrintListAction } from "@/app/print-list-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 

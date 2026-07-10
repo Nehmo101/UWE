@@ -9,6 +9,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOwner } from "@/src/lib/auth";
+import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 
 function parseOverride(value: FormDataEntryValue | null): DeploymentOverride {
   return value === "on" || value === "off" ? value : "env";
@@ -23,6 +24,7 @@ function parseCheckbox(value: FormDataEntryValue | null): boolean {
 }
 
 export async function updateDeploymentConfigAction(formData: FormData): Promise<void> {
+  await requireStudioActionAuth();
   await requireOwner();
 
   const service = new SettingsService(prisma);

@@ -135,19 +135,20 @@ export type AssetAccessRecord = Pick<
   "id" | "visibility" | "secretLevel" | "revealState"
 > & { publishStatus?: PublishStatus };
 
-export function isAssetAccessible(
-  asset: AssetAccessRecord,
+/**
+ * Player-facing accessibility predicate for a single asset, excluding the
+ * DM-context bypass and the share-grant membership shortcut. Both
+ * {@link isAssetAccessible} and {@link filterAssetsForContext} route their
+ * non-DM path through this helper so the single-asset check and the list
+ * filter can never diverge again (M8): visibility, publish status AND the
+ * secret/reveal rule are enforced identically. Secret fields are optional
+ * and default to a fully exposable asset (`secretLevel: "none"`).
+ */
+function isAssetExposableToPlayers(
+  asset: Pick<AssetAccessRecord, "visibility" | "secretLevel" | "revealState" | "publishStatus">,
   context: AccessContext,
   options?: PageAccessOptions,
 ): boolean {
-  if (context === "share" && options?.shareGrant) {
-    return options.shareGrant.sharedAssetIds.has(asset.id);
-  }
-
-  if (context === "dm") {
-    return true;
-  }
-
   if (isDmOnlyVisibility(asset.visibility)) {
     return false;
   }
@@ -172,17 +173,35 @@ export function isAssetAccessible(
   return isPublicVisibilityAllowed(asset.visibility, context, options);
 }
 
+export function isAssetAccessible(
+  asset: AssetAccessRecord,
+  context: AccessContext,
+  options?: PageAccessOptions,
+): boolean {
+  if (context === "share" && options?.shareGrant) {
+    return options.shareGrant.sharedAssetIds.has(asset.id);
+  }
+
+  if (context === "dm") {
+    return true;
+  }
+
+  return isAssetExposableToPlayers(asset, context, options);
+}
+
 export function filterAssetsForContext<
-  T extends Pick<{ visibility: Visibility }, "visibility">,
+  T extends Pick<AssetAccessRecord, "visibility"> &
+    Partial<Pick<AssetAccessRecord, "secretLevel" | "revealState" | "publishStatus">>,
 >(
   assets: T[],
   context: AccessContext,
+  options?: PageAccessOptions,
 ): T[] {
   if (context === "dm") {
     return assets;
   }
 
-  return assets.filter((asset) => isPortalAssetVisibility(asset.visibility));
+  return assets.filter((asset) => isAssetExposableToPlayers(asset, context, options));
 }
 
 export function shouldHidePageTitle(

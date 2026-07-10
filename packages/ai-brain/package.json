@@ -28,6 +28,7 @@
     "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/image-studio": "workspace:*",
+    "@uwe/security": "workspace:*",
     "@uwe/theme-studio": "workspace:*"
   },
   "devDependencies": {

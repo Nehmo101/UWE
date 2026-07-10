@@ -12,9 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs"
   },
-  "dependencies": {
-    "@uwe/env": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.15.32",
     "@uwe/config": "workspace:*",

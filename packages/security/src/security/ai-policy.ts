@@ -1,11 +1,11 @@
 import type { UweRole } from "@uwe/auth";
+
+import { AiAccessDeniedError, AiPolicyViolationError } from "./errors";
 import {
   resolveServerAllowDmOnly,
   sanitizeContextForCloud,
-} from "@uwe/ai-brain/privacy";
-import type { AiContext } from "@uwe/ai-brain/types";
-
-import { AiAccessDeniedError, AiPolicyViolationError } from "./errors";
+} from "./inference/privacy";
+import type { AiContext } from "./inference/ai-context-types";
 import { rejectClientWorkerUrl } from "./rtx-boundary";
 
 export type AiAuthorizedRole = "owner" | "admin" | "dm";

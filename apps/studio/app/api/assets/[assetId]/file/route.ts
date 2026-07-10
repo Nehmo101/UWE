@@ -36,7 +36,7 @@ export async function GET(request: Request, context: RouteContext) {
     return jsonError("File missing on disk", 404);
   }
 
-  const data = fs.readFileSync(filePath);
+  const data = await fs.promises.readFile(filePath);
   return new NextResponse(data, {
     // buildAssetDownloadHeaders serves non-image MIME types (svg/html) as a
     // sandboxed attachment with `Content-Security-Policy: default-src 'none';

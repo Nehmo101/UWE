@@ -18,7 +18,7 @@ export async function GET(request: Request, context: RouteContext) {
     return jsonError("Rezeptbild nicht gefunden", 404);
   }
 
-  const bytes = fs.readFileSync(data.filePath);
+  const bytes = await fs.promises.readFile(data.filePath);
   return new NextResponse(bytes, {
     headers: {
       "Content-Type": data.mimeType,

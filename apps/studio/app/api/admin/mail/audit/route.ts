@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createMailPortalService, prisma } from "@uwe/database/server";
+import { prisma } from "@uwe/database/server";
+import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailApi } from "@/src/lib/admin-mail-api";
 
 export async function GET(request: Request) {

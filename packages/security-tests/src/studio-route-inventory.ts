@@ -1,5 +1,10 @@
-import fs from "node:fs";
 import path from "node:path";
+import fs from "node:fs";
+import {
+  assertRouteProtected,
+  listApiRouteFiles,
+  type RouteProtectionPolicy,
+} from "./route-inventory-core";
 
 export const STUDIO_API_ROOT = "apps/studio/app/api";
 
@@ -36,35 +41,26 @@ export const STUDIO_AUTH_GUARD_PATTERN =
   /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth|requireAdminMailApi|requireAdminMailMutation|requireAgentJobCallbackAuth|authenticateConnector/;
 
 export function listStudioApiRouteFiles(repoRoot: string): string[] {
-  const studioApiRoot = path.join(repoRoot, STUDIO_API_ROOT);
-  return listRouteFiles(studioApiRoot).sort();
+  return listApiRouteFiles(path.join(repoRoot, STUDIO_API_ROOT));
 }
 
 export function listStudioApiRoutePaths(repoRoot: string): string[] {
   return listStudioApiRouteFiles(repoRoot).map((relative) => `/api/${relative.replace(/\/route\.ts$/, "")}`);
 }
 
-function listRouteFiles(dir: string, prefix = ""): string[] {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files: string[] = [];
-
-  for (const entry of entries) {
-    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...listRouteFiles(full, relative));
-      continue;
-    }
-    if (entry.name === "route.ts") {
-      files.push(relative);
-    }
-  }
-
-  return files;
-}
-
 export function readStudioRouteSource(repoRoot: string, relativeRoute: string): string {
   return fs.readFileSync(path.join(repoRoot, STUDIO_API_ROOT, relativeRoute), "utf8");
+}
+
+function studioPolicy(twoFactorHelperPath: string): RouteProtectionPolicy {
+  return {
+    guardPattern: STUDIO_AUTH_GUARD_PATTERN,
+    publicAllowlist: STUDIO_PUBLIC_API_ALLOWLIST,
+    delegated: {
+      routes: STUDIO_DELEGATED_GUARD_ROUTES,
+      helperPath: twoFactorHelperPath,
+    },
+  };
 }
 
 export function assertStudioRouteProtected(
@@ -72,28 +68,11 @@ export function assertStudioRouteProtected(
   relativeRoute: string,
   twoFactorHelperPath: string,
 ): void {
-  const content = readStudioRouteSource(repoRoot, relativeRoute);
-
-  if (STUDIO_PUBLIC_API_ALLOWLIST.has(relativeRoute)) {
-    if (STUDIO_AUTH_GUARD_PATTERN.test(content)) {
-      throw new Error(`${relativeRoute} is public allowlist — must not import auth guard`);
-    }
-    return;
-  }
-
-  if (STUDIO_DELEGATED_GUARD_ROUTES.has(relativeRoute)) {
-    const helperContent = fs.readFileSync(twoFactorHelperPath, "utf8");
-    if (!STUDIO_AUTH_GUARD_PATTERN.test(helperContent)) {
-      throw new Error(
-        `${relativeRoute} delegates to two-factor-routes.ts which must call an auth guard`,
-      );
-    }
-    return;
-  }
-
-  if (!STUDIO_AUTH_GUARD_PATTERN.test(content)) {
-    throw new Error(`${relativeRoute} must call a Studio auth guard`);
-  }
+  assertRouteProtected(
+    path.join(repoRoot, STUDIO_API_ROOT),
+    relativeRoute,
+    studioPolicy(twoFactorHelperPath),
+  );
 }
 
 export function listProtectedStudioApiRoutes(repoRoot: string): string[] {

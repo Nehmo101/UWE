@@ -10,12 +10,13 @@ import {
   buildPageUrl,
 } from "@uwe/database/server";
 import {
-  analyzeEncounterXp,
-  buildEncounterMarkdown,
-  formatOpen5eMonsterAsMarkdown,
+  createEncounterPage,
+  gatherEncounterCandidates,
   getOpen5eMonster,
+  importOpen5eStatblockPage,
   listOpen5eMonstersByChallengeRating,
   searchAllDndApis,
+  serializeEncounterComposition,
   suggestCandidateChallengeRatings,
   suggestEncounterComposition,
   type EncounterCandidate,
@@ -82,18 +83,6 @@ const dndApiPostSchema = z.discriminatedUnion("action", [
   createEncounterSchema,
   generateEncounterSchema,
 ]);
-
-async function resolveUniquePageSlug(worldSlug: string, title: string, suffix?: string) {
-  const repo = getAppRepository();
-  const base = slugifyPageTitle(suffix ? `${title}-${suffix}` : title);
-  let candidate = base;
-  let counter = 2;
-  while (await repo.getPageBySlug(worldSlug, candidate)) {
-    candidate = `${base}-${counter}`;
-    counter += 1;
-  }
-  return candidate;
-}
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
@@ -194,29 +183,14 @@ export async function POST(request: Request) {
       open5eEnabled: config.open5eEnabled,
       dnd5eSrdEnabled: config.dnd5eSrdEnabled,
     });
-    const monsterRecord = monster as Record<string, unknown>;
-    const title =
-      parsed.data.title?.trim() ||
-      (typeof monsterRecord.name === "string" ? monsterRecord.name : parsed.data.slug);
-    const markdown = formatOpen5eMonsterAsMarkdown(monster);
-    const pageSlug = await resolveUniquePageSlug(world.slug, title, parsed.data.slug);
 
-    const page = await repo.createPage({
+    const page = await importOpen5eStatblockPage(repo, {
       worldId: world.id,
-      title,
-      slug: pageSlug,
-      type: "monster",
-      visibility: "dm_only",
-      publishStatus: "draft",
-      summary: `Open5e Statblock (${parsed.data.slug})`,
-      contentBlocks: [
-        {
-          type: "statblock",
-          sortOrder: 0,
-          content: markdown,
-          visibility: "dm_only",
-        },
-      ],
+      worldSlug: world.slug,
+      open5eSlug: parsed.data.slug,
+      title: parsed.data.title,
+      monster,
+      slugify: slugifyPageTitle,
     });
 
     return NextResponse.json(
@@ -238,22 +212,18 @@ export async function POST(request: Request) {
     const crBuckets = suggestCandidateChallengeRatings(partyLevel, partySize, difficulty);
     const dndApi = createDndApiService(prisma);
 
-    const candidates: EncounterCandidate[] = (
-      await Promise.all(
-        crBuckets.map(async (cr) => {
-          const cacheKey = `monsters-cr:${cr}`;
-          const cached = await dndApi.getCached("open5e", cacheKey);
-          if (Array.isArray(cached)) {
-            return cached as unknown as EncounterCandidate[];
-          }
-          const monsters = await listOpen5eMonstersByChallengeRating(cr, {
-            open5eEnabled: config.open5eEnabled,
-          });
-          await dndApi.setCached("open5e", cacheKey, monsters, config.cacheTtlSeconds);
-          return monsters;
-        }),
-      )
-    ).flat();
+    const candidates = await gatherEncounterCandidates(crBuckets, async (cr) => {
+      const cacheKey = `monsters-cr:${cr}`;
+      const cached = await dndApi.getCached("open5e", cacheKey);
+      if (Array.isArray(cached)) {
+        return cached as unknown as EncounterCandidate[];
+      }
+      const monsters = await listOpen5eMonstersByChallengeRating(cr, {
+        open5eEnabled: config.open5eEnabled,
+      });
+      await dndApi.setCached("open5e", cacheKey, monsters, config.cacheTtlSeconds);
+      return monsters;
+    });
 
     const composition = suggestEncounterComposition({
       partyLevel,
@@ -263,53 +233,17 @@ export async function POST(request: Request) {
       candidates,
     });
 
-    return NextResponse.json({
-      composition: {
-        style: composition.style,
-        targetXp: composition.targetXp,
-        capXp: composition.capXp,
-        analysis: composition.analysis,
-        monsters: composition.entries.map((entry) => ({
-          name: entry.monster.name,
-          slug: entry.monster.slug,
-          cr: entry.monster.cr,
-          count: entry.count,
-        })),
-      },
-    });
+    return NextResponse.json({ composition: serializeEncounterComposition(composition) });
   }
 
-  const title = parsed.data.title?.trim() || "Encounter";
-  const analysis =
-    parsed.data.partyLevel && parsed.data.partySize
-      ? analyzeEncounterXp({
-          partyLevel: parsed.data.partyLevel,
-          partySize: parsed.data.partySize,
-          monsters: parsed.data.monsters.map((monster) => ({
-            cr: monster.cr,
-            count: monster.count ?? 1,
-          })),
-        })
-      : undefined;
-  const markdown = buildEncounterMarkdown(parsed.data.monsters, analysis);
-  const pageSlug = await resolveUniquePageSlug(world.slug, title, "encounter");
-
-  const page = await repo.createPage({
+  const page = await createEncounterPage(repo, {
     worldId: world.id,
-    title,
-    slug: pageSlug,
-    type: "encounter",
-    visibility: "dm_only",
-    publishStatus: "draft",
-    summary: `${parsed.data.monsters.reduce((sum, monster) => sum + (monster.count ?? 1), 0)} Monster`,
-    contentBlocks: [
-      {
-        type: "rich_text",
-        sortOrder: 0,
-        content: markdown,
-        visibility: "dm_only",
-      },
-    ],
+    worldSlug: world.slug,
+    title: parsed.data.title,
+    partyLevel: parsed.data.partyLevel,
+    partySize: parsed.data.partySize,
+    monsters: parsed.data.monsters,
+    slugify: slugifyPageTitle,
   });
 
   return NextResponse.json(

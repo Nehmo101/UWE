@@ -168,6 +168,39 @@ export class ShareLinkService {
     });
   }
 
+  /**
+   * Bulk variant of {@link listShareLinksForTarget}: fetches share links for
+   * many targets of the same type in a single query and groups them by
+   * `targetId`. Each group preserves the same `createdAt desc` ordering as the
+   * single-target method. Avoids one `findMany` per target (N+1) on list pages.
+   */
+  async listShareLinksForTargets(
+    worldId: string,
+    targetType: ShareTargetType,
+    targetIds: string[],
+  ): Promise<Map<string, ShareLink[]>> {
+    const grouped = new Map<string, ShareLink[]>();
+    if (targetIds.length === 0) {
+      return grouped;
+    }
+
+    const links = await this.db.shareLink.findMany({
+      where: { worldId, targetType, targetId: { in: targetIds } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    for (const link of links) {
+      const existing = grouped.get(link.targetId);
+      if (existing) {
+        existing.push(link);
+      } else {
+        grouped.set(link.targetId, [link]);
+      }
+    }
+
+    return grouped;
+  }
+
   async getShareLinkById(id: string): Promise<ShareLink | null> {
     return this.db.shareLink.findUnique({ where: { id } });
   }

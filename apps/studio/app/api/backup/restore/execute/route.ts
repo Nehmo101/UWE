@@ -4,9 +4,11 @@ import {
   parseBody,
   requireRestoreOwnerAuth,
 } from "@uwe/security";
+import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
 
 export async function POST(request: Request) {
-  const authError = requireRestoreOwnerAuth(request);
+  const context = await resolveStudioApiAuthContext(request);
+  const authError = requireRestoreOwnerAuth(request, context);
   if (authError) return authError;
 
   const parsed = await parseBody(request, passthroughBodySchema);

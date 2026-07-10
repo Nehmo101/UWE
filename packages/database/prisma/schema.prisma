@@ -1481,6 +1481,7 @@ model ActivityLog {
   @@index([worldId, createdAt])
   @@index([createdAt])
   @@index([undoEntryId])
+  @@index([action, createdAt])
   @@map("activity_logs")
 }
 

@@ -1,4 +1,4 @@
-import type { ContentBlock, Page } from "./generated/prisma/client";
+import type { ContentBlock, Page, PageType } from "./generated/prisma/client";
 import {
   detectPrivateReferences,
   formatPrivateReferenceWarning,
@@ -541,4 +541,130 @@ export function renderPageContentHtml(
   const index = buildLookupIndex(wikiIndex, context, allPages, accessOptions);
   const links = resolveLinksInContent(content, index, context, allPages, accessOptions);
   return renderContentHtml(content, links);
+}
+
+// ---------------------------------------------------------------------------
+// World wiki-link graph cache (H2)
+//
+// Wiki page views used to load the ENTIRE world (all pages + all content
+// blocks) and regex-parse every page on every request, just to compute
+// backlinks and the neighbour graph. PageLink rows are NOT a mirror of content
+// wikilinks (they hold manually curated DM relations only), so the parsed
+// content stays the source of truth. Instead we cache the loaded world plus the
+// parsed+resolved wikilink graph per world, keyed on a cheap content-version
+// stamp, so repeated views reuse it without re-loading or re-parsing.
+// ---------------------------------------------------------------------------
+
+export interface WorldWikiGraph {
+  /** All pages of the world with all content blocks (unfiltered, title-sorted). */
+  pages: PageWithBlocks[];
+  /** Page summaries used for wikilink target resolution (first-match order). */
+  pageIndex: PageSummary[];
+  /**
+   * blockId → resolved wikilink target page ids for that block's raw content,
+   * resolved by first match over {@link pageIndex} exactly like
+   * `resolveViewerLinks`/`resolveLinksInContent`. Block filtering only
+   * includes/excludes whole blocks (never rewrites content), so a per-block
+   * lookup reproduces parsing the combined visible content.
+   */
+  blockTargets: Map<string, string[]>;
+}
+
+interface WorldWikiGraphCacheEntry {
+  version: string;
+  graph: WorldWikiGraph;
+}
+
+const WORLD_WIKI_GRAPH_CACHE_MAX = 16;
+const worldWikiGraphCache = new Map<string, WorldWikiGraphCacheEntry>();
+
+function resolveWikiTargetId(
+  target: string,
+  pageIndex: PageSummary[],
+): string | undefined {
+  const key = normalizeLookupKey(target);
+  const match = pageIndex.find(
+    (page) =>
+      normalizeLookupKey(page.title) === key ||
+      normalizeLookupKey(page.slug) === key ||
+      parseStringArray(page.aliases).some((alias) => normalizeLookupKey(alias) === key),
+  );
+  return match?.id;
+}
+
+function buildBlockTargets(
+  pages: PageWithBlocks[],
+  pageIndex: PageSummary[],
+): Map<string, string[]> {
+  const blockTargets = new Map<string, string[]>();
+  for (const page of pages) {
+    for (const block of page.contentBlocks) {
+      const targets: string[] = [];
+      for (const raw of parseWikiLinks(block.content)) {
+        const id = resolveWikiTargetId(raw.target, pageIndex);
+        if (id) targets.push(id);
+      }
+      blockTargets.set(block.id, targets);
+    }
+  }
+  return blockTargets;
+}
+
+/**
+ * Load the world's pages + parsed wikilink graph, reusing a cached snapshot when
+ * the content has not changed. The version stamp folds in page AND content-block
+ * counts + max updatedAt (content-block edits do not bump page.updatedAt), so any
+ * content edit invalidates the cache and the returned graph is always consistent
+ * with the current DB state.
+ */
+export async function getWorldWikiGraph(
+  repo: UweRepository,
+  worldSlug: string,
+): Promise<WorldWikiGraph> {
+  const version = await repo.getWorldGraphVersion(worldSlug);
+  const cached = worldWikiGraphCache.get(worldSlug);
+  if (cached && cached.version === version) {
+    // Refresh LRU recency.
+    worldWikiGraphCache.delete(worldSlug);
+    worldWikiGraphCache.set(worldSlug, cached);
+    return cached.graph;
+  }
+
+  const [pages, pageIndex] = await Promise.all([
+    repo.listPagesWithBlocksForGraphUnfiltered(worldSlug, {}),
+    repo.getWorldPageIndex(worldSlug),
+  ]);
+  const graph: WorldWikiGraph = {
+    pages,
+    pageIndex,
+    blockTargets: buildBlockTargets(pages, pageIndex),
+  };
+
+  worldWikiGraphCache.set(worldSlug, { version, graph });
+  if (worldWikiGraphCache.size > WORLD_WIKI_GRAPH_CACHE_MAX) {
+    const oldest = worldWikiGraphCache.keys().next().value;
+    if (oldest !== undefined) worldWikiGraphCache.delete(oldest);
+  }
+  return graph;
+}
+
+/**
+ * Apply the campaign/type narrowing identically to the WHERE clause of
+ * `listPagesWithBlocksForGraphUnfiltered`, so a cached full-world snapshot can
+ * stand in for the DB-filtered query without changing which pages are returned
+ * or their (title-asc) order.
+ */
+export function filterGraphPages(
+  pages: PageWithBlocks[],
+  options: { campaignId?: string | null; types?: PageType[] },
+): PageWithBlocks[] {
+  const { campaignId, types } = options;
+  if (!campaignId && !(types && types.length > 0)) {
+    return pages;
+  }
+  return pages.filter(
+    (page) =>
+      (!campaignId || page.campaignId === campaignId) &&
+      (!types || types.length === 0 || types.includes(page.type)),
+  );
 }

@@ -88,7 +88,7 @@ export async function POST(request: Request) {
   const uploadWorldId = world?.id ?? "capture";
   ensureUploadDirectory(uploadWorldId, undefined, uploadsRoot);
   const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
-  fs.writeFileSync(filePath, buffer);
+  await fs.promises.writeFile(filePath, buffer);
 
   const lifeAdmin = createLifeAdminService(prisma);
   const defaultContent =

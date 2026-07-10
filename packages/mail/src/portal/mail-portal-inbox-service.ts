@@ -2,8 +2,8 @@ import type { MailPriorityCategory, MailAuditAction, Prisma } from "@uwe/databas
 import type { PrismaClient } from "@uwe/database/client";
 import { decryptSecret } from "@uwe/database/token-crypto";
 import type { MailAccountService } from "@uwe/database/mail-account-service";
-import type { ImapCredentials } from "../imap-sync";
-import { markImapMessageSeen, moveImapMessage, type ImapWritebackTarget } from "../imap-writeback";
+import type { ImapCredentials } from "@uwe/mail-core";
+import { markImapMessageSeen, moveImapMessage, type ImapWritebackTarget } from "@uwe/mail-core";
 
 export type MailFolderKey = "inbox" | "marked" | "drafts" | "sent" | "archive" | "trash";
 
@@ -329,7 +329,7 @@ export class MailPortalInboxService {
     try {
       const context = await this.imapWritebackContext(messageId);
       if (context?.imap) {
-        const { setImapMessageFlagged } = await import("../imap-writeback");
+        const { setImapMessageFlagged } = await import("@uwe/mail-core");
         await setImapMessageFlagged(context.imap.credentials, {
           mailbox: context.imap.mailbox,
           imapUid: context.imap.imapUid,
@@ -401,7 +401,7 @@ export class MailPortalInboxService {
     if (!imapHost) throw new Error("IMAP-Host fehlt.");
     const password = decryptSecret(account.passwordEnc, this.encryptionSecret);
     const mailbox = attachment.message.folder?.imapPath ?? account.imapMailbox ?? "INBOX";
-    const { fetchImapAttachmentContent } = await import("../imap-sync");
+    const { fetchImapAttachmentContent } = await import("@uwe/mail-core");
     const fetched = await fetchImapAttachmentContent(
       {
         host: imapHost,

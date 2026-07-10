@@ -18,5 +18,13 @@ export async function register() {
     } catch {
       // Boot-time DB not ready — first layout load uses safe fallbacks.
     }
+    // Boot-time job recovery: the runner keeps in-flight jobs in an in-memory Set,
+    // so after a restart any job left "running" is orphaned and any "pending" job
+    // was never dispatched. Sweep once (skipped during `next build`). The recovery
+    // function is idempotent and swallows its own errors, so it never crashes boot.
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      const { recoverInterruptedJobsAtBoot } = await import("./src/lib/job-executor");
+      await recoverInterruptedJobsAtBoot();
+    }
   }
 }

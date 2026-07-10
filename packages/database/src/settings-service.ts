@@ -1,18 +1,9 @@
-import path from "node:path";
 import type { CanonicalStatus, Prisma, PrismaClient, Visibility } from "./generated/prisma/client";
-import {
-  resolveBackupsDirFromEnv,
-  resolveDataDir,
-  resolveDatabaseFilePath,
-  resolveExportsDirFromEnv,
-  resolveUploadsDirFromEnv,
-} from "@uwe/assets";
-import { getMailConfigStatus, getMailConfigStatusFromSmtpConfig, mergeSmtpConfig } from "@uwe/mail";
+import { getMailConfigStatus, getMailConfigStatusFromSmtpConfig, mergeSmtpConfig } from "@uwe/mail-core";
 import { resolveImageStudioConfigStatus } from "./integrations-service";
 import { prisma } from "./client";
 import {
   decryptSecret,
-  encryptSecret,
   resolveTokenEncryptionSecret,
 } from "./token-crypto";
 import {
@@ -34,6 +25,24 @@ import {
   type CustomThemeRecord,
 } from "./custom-theme-preferences";
 import { normalizeHiddenNavIds } from "./settings-validation-helpers";
+import { buildProviderKeyPlaceholders } from "./settings-service-providers";
+
+// Abwärtskompatible öffentliche API: extrahierte Helfer über dieses Modul re-exportieren.
+export {
+  buildAiProviderKeyUpdate,
+  resolveDecryptedProviderKeys,
+} from "./settings-service-providers";
+export {
+  getPersistentPathConfiguration,
+  resolveEffectiveBackupsPath,
+  resolveEffectiveExportsPath,
+  resolveEffectiveUploadsPath,
+} from "./settings-service-paths";
+export type {
+  PersistentPathConfiguration,
+  PersistentPathEntry,
+  PersistentPathSource,
+} from "./settings-service-paths";
 
 export type ThemeAppearance = "dark" | "light" | "system";
 
@@ -506,70 +515,6 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   deployment: DEFAULT_DEPLOYMENT_SETTINGS,
 };
 
-function buildProviderKeyPlaceholders(
-  storedKeys?: AiProviderStoredKey[] | null,
-): AiProviderKeyPlaceholder[] {
-  const providers: Array<{ id: string; label: string; envKey: string }> = [
-    { id: "openai", label: "OpenAI", envKey: "OPENAI_API_KEY" },
-    { id: "anthropic", label: "Anthropic", envKey: "ANTHROPIC_API_KEY" },
-    { id: "gemini", label: "Google Gemini", envKey: "GEMINI_API_KEY" },
-    { id: "openrouter", label: "OpenRouter", envKey: "OPENROUTER_API_KEY" },
-  ];
-
-  return providers.map((provider) => {
-    const fromEnv = Boolean(process.env[provider.envKey]?.trim());
-    if (fromEnv) {
-      return { id: provider.id, label: provider.label, configured: true, source: "env" as const };
-    }
-    const fromDb = storedKeys?.some((k) => k.providerId === provider.id && k.keyEnc);
-    if (fromDb) {
-      return { id: provider.id, label: provider.label, configured: true, source: "db" as const };
-    }
-    return { id: provider.id, label: provider.label, configured: false, source: "none" as const };
-  });
-}
-
-/** Encrypts or replaces a single provider key in the stored list. Pass key=undefined to remove. */
-export function buildAiProviderKeyUpdate(
-  providerId: string,
-  key: string | undefined,
-  existing: AiProviderStoredKey[] | null | undefined,
-): AiProviderStoredKey[] {
-  const current = existing ?? [];
-  if (!key || !key.trim()) {
-    return current.filter((k) => k.providerId !== providerId);
-  }
-  const keyEnc = encryptSecret(key.trim(), resolveTokenEncryptionSecret());
-  return [
-    ...current.filter((k) => k.providerId !== providerId),
-    { providerId, keyEnc },
-  ];
-}
-
-/** Returns decrypted API keys from settings (env takes precedence, then DB). */
-export function resolveDecryptedProviderKeys(
-  settings: UweSystemSettings,
-): Record<string, string> {
-  const result: Record<string, string> = {};
-  const stored = settings.ai.cloudApiKeys;
-  if (!stored?.length) return result;
-
-  const secret = resolveTokenEncryptionSecret();
-  for (const storedKey of stored) {
-    if (storedKey.keyEnc) {
-      try {
-        const decrypted = decryptSecret(storedKey.keyEnc, secret);
-        if (decrypted) {
-          result[storedKey.providerId] = decrypted;
-        }
-      } catch {
-        // ignore individual decrypt failures
-      }
-    }
-  }
-  return result;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -749,114 +694,6 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
       cloudApiKeys: undefined,
     },
     deployment: sanitizeDeploymentSettingsForClient(normalized.deployment),
-  };
-}
-
-export function resolveEffectiveUploadsPath(
-  settings: UweSystemSettings,
-  baseDir?: string,
-): string {
-  const configured = settings.storage.uploadsPath.trim();
-  if (configured) {
-    return path.isAbsolute(configured)
-      ? configured
-      : path.resolve(baseDir ?? process.cwd(), configured);
-  }
-
-  if (process.env.UWE_UPLOADS_ROOT) {
-    return process.env.UWE_UPLOADS_ROOT;
-  }
-
-  return resolveUploadsDirFromEnv(baseDir);
-}
-
-export function resolveEffectiveBackupsPath(
-  settings: UweSystemSettings,
-  baseDir?: string,
-): string {
-  const configured = settings.backup.backupsPath.trim();
-  if (configured) {
-    return path.isAbsolute(configured)
-      ? configured
-      : path.resolve(baseDir ?? process.cwd(), configured);
-  }
-
-  return resolveBackupsDirFromEnv(baseDir);
-}
-
-export function resolveEffectiveExportsPath(
-  settings: UweSystemSettings,
-  baseDir?: string,
-): string {
-  const configured = settings.storage.exportsPath.trim();
-  if (configured) {
-    return path.isAbsolute(configured)
-      ? configured
-      : path.resolve(baseDir ?? process.cwd(), configured);
-  }
-
-  return resolveExportsDirFromEnv(baseDir);
-}
-
-export type PersistentPathSource = "settings" | "env" | "default";
-
-export interface PersistentPathEntry {
-  effectivePath: string;
-  source: PersistentPathSource;
-  settingsValue: string;
-}
-
-export interface PersistentPathConfiguration {
-  dataDir: string;
-  databaseFile: string | null;
-  uploads: PersistentPathEntry;
-  backups: PersistentPathEntry;
-  exports: PersistentPathEntry;
-}
-
-function resolvePathSource(settingsValue: string, envKeys: readonly string[]): PersistentPathSource {
-  if (settingsValue.trim()) {
-    return "settings";
-  }
-
-  for (const key of envKeys) {
-    if (process.env[key]?.trim()) {
-      return "env";
-    }
-  }
-
-  return "default";
-}
-
-/** Effective persistent paths for Studio settings UI and diagnostics. */
-export function getPersistentPathConfiguration(
-  settings: UweSystemSettings,
-  baseDir?: string,
-): PersistentPathConfiguration {
-  const base = baseDir ?? process.cwd();
-
-  return {
-    dataDir: resolveDataDir(base),
-    databaseFile: resolveDatabaseFilePath(base),
-    uploads: {
-      settingsValue: settings.storage.uploadsPath,
-      effectivePath: resolveEffectiveUploadsPath(settings, base),
-      source: resolvePathSource(settings.storage.uploadsPath, [
-        "UWE_UPLOADS_DIR",
-        "UWE_UPLOADS_ROOT",
-        "UPLOADS_DIR",
-      ]),
-    },
-    backups: {
-      settingsValue: settings.backup.backupsPath,
-      effectivePath: resolveEffectiveBackupsPath(settings, base),
-      source: resolvePathSource(settings.backup.backupsPath, ["UWE_BACKUP_DIR", "BACKUPS_DIR"]),
-    },
-    exports: {
-      settingsValue: settings.storage.exportsPath,
-      effectivePath: resolveEffectiveExportsPath(settings, base),
-      source: resolvePathSource(settings.storage.exportsPath, ["UWE_EXPORT_DIR", "EXPORTS_DIR"]),
-    },
   };
 }
 

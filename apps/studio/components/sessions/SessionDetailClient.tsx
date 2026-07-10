@@ -17,7 +17,7 @@ import {
   unlinkPageFromSessionAction,
   updateGameSessionAction,
 } from "@/app/session-actions";
-import { preparePrintListFromSessionAction } from "@/app/label-actions";
+import { preparePrintListFromSessionAction } from "@/app/print-list-actions";
 
 interface LinkablePage {
   id: string;

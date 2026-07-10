@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { Prisma } from "./generated/prisma/client";
 import type { AccessContext, AuthUser, PreviewOptions, WorldMemberRole } from "@uwe/auth";
 import {
   buildAccessContext,
@@ -858,29 +859,61 @@ export class AuthService {
       return [];
     }
 
+    // WS3 (perf): pre-narrow the SQL for non-staff viewers to the only
+    // publishStatus/visibility combinations canViewPage can ever admit for a
+    // player/guest, so the portal wiki index no longer materialises every row.
+    // This is a CONSERVATIVE SUPERSET: it drops only rows canViewPage always
+    // rejects for a non-staff viewer (unpublished, or visibility archived/
+    // private/dm_only). Secret/reveal state is left to the JS filter. Staff
+    // (DM/owner/co-DM) still load everything, exactly as before.
+    const nonStaffNarrowing: Prisma.PageWhereInput = isWorldStaff(ctx)
+      ? {}
+      : {
+          publishStatus: "published",
+          visibility: {
+            in: ["player_visible", "public", "specific_players", "unlock_after_session"],
+          },
+        };
+
     const pages = await this.db.page.findMany({
       where: {
         world: { slug: worldSlug },
+        ...nonStaffNarrowing,
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        type: true,
+        summary: true,
+        visibility: true,
+        publishStatus: true,
+        secretLevel: true,
+        revealState: true,
+        questStatus: true,
+        updatedAt: true,
       },
       orderBy: [{ title: "asc" }],
     });
 
+    // filterPagesForViewer stays authoritative (defense in depth): the SQL only
+    // pre-narrows; this JS filter still decides every page and is unchanged.
     return filterPagesForViewer(ctx, pages);
   }
 
   /**
-   * Renders block content as HTML with resolved wikilinks for the
-   * authenticated portal. Links to pages the viewer cannot see are shown as
-   * "Verborgen" and never expose the target title or slug.
+   * Builds the wikilink lookup + access scope for a world exactly once, so a
+   * page view can render all its blocks without re-querying the page index per
+   * block. Pass the result into {@link renderBlockContentForViewer} as
+   * `renderCtx`. Returns null when the world does not exist.
    */
-  async renderBlockContentForViewer(
-    worldSlug: string,
-    content: string,
-    ctx: AccessContext,
-  ): Promise<string> {
-    const parsed = parseWikiLinks(content);
-    if (parsed.length === 0) {
-      return renderContentHtml(content, []);
+  async buildViewerRenderContext(worldSlug: string, ctx: AccessContext) {
+    const world = await this.db.world.findUnique({
+      where: { slug: worldSlug },
+      select: { id: true },
+    });
+    if (!world) {
+      return null;
     }
 
     const allPages = await this.db.page.findMany({
@@ -909,25 +942,42 @@ export class AuthService {
       }
     }
 
-    const world = await this.db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world) {
+    return { lookup, scope: scopeFromAccessContext(ctx, world.id) };
+  }
+
+  /**
+   * Renders block content as HTML with resolved wikilinks for the
+   * authenticated portal. Links to pages the viewer cannot see are shown as
+   * "Verborgen" and never expose the target title or slug. Pass a `renderCtx`
+   * from {@link buildViewerRenderContext} to reuse one page-index query across
+   * all blocks; omit it to build the lookup for this block only.
+   */
+  async renderBlockContentForViewer(
+    worldSlug: string,
+    content: string,
+    ctx: AccessContext,
+    renderCtx?: Awaited<ReturnType<AuthService["buildViewerRenderContext"]>>,
+  ): Promise<string> {
+    const parsed = parseWikiLinks(content);
+    if (parsed.length === 0) {
       return renderContentHtml(content, []);
     }
 
-    const scope = scopeFromAccessContext(ctx, world.id);
+    const context =
+      renderCtx === undefined ? await this.buildViewerRenderContext(worldSlug, ctx) : renderCtx;
+    if (!context) {
+      return renderContentHtml(content, []);
+    }
 
     const links: PageViewLink[] = parsed.map((raw) => {
       const displayText = raw.label ?? raw.target;
-      const target = lookup.get(normalizeLookupKey(raw.target));
+      const target = context.lookup.get(normalizeLookupKey(raw.target));
 
       if (!target) {
         return { displayText, status: "broken" as const };
       }
 
-      if (!canReadContent(ctx.user, target, scope.world, scope)) {
+      if (!canReadContent(ctx.user, target, context.scope.world, context.scope)) {
         return { displayText: raw.label ?? "Verborgen", status: "hidden" as const };
       }
 

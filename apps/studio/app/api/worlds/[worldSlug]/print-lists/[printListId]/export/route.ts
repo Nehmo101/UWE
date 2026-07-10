@@ -10,7 +10,7 @@ import {
   renderMultiLabelPdfAsync,
   stripDmOnlyForPlayer,
 } from "@uwe/database/server";
-import { logPrintListExportActivity } from "@/app/label-actions";
+import { logPrintListExportActivity } from "@/app/print-list-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
 import { idSchema, parseParams, worldSlugParamSchema } from "@uwe/security";
 

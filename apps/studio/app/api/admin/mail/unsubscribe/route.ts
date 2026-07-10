@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { createMailPortalService, prisma } from "@uwe/database/server";
+import { prisma } from "@uwe/database/server";
+import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 
 export async function POST(request: Request) {

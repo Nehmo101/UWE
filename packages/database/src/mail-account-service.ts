@@ -7,7 +7,7 @@ import {
   resolveThreadId,
   type FetchedInboxMessage,
   type ImapSyncProgress,
-} from "@uwe/mail";
+} from "@uwe/mail-core";
 
 export interface CreateMailAccountInput {
   label: string;
@@ -262,7 +262,7 @@ export class MailAccountService {
       username: account.username,
       password,
     };
-    const { listImapMailboxes } = await import("@uwe/mail");
+    const { listImapMailboxes } = await import("@uwe/mail-core");
     const mailboxes = await listImapMailboxes(credentials);
     const sent =
       mailboxes.find((box) => box.specialUse === "\\Sent") ??

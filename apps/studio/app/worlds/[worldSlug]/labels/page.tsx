@@ -13,12 +13,12 @@ import {
   summarizePrintList,
 } from "@uwe/database/server";
 import {
-  createPrintListAction,
   deleteTemplateAction,
   duplicateLabelAction,
   duplicateTemplateAction,
   renameTemplateAction,
 } from "@/app/label-actions";
+import { createPrintListAction } from "@/app/print-list-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 

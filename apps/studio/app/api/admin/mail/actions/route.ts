@@ -3,9 +3,9 @@ import { jsonError } from "@/src/lib/api-response";
 import {
   createCaptureTriageService,
   createLifeAdminService,
-  createMailPortalService,
   prisma,
 } from "@uwe/database/server";
+import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 
 export async function POST(request: Request) {

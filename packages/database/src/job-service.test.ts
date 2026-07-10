@@ -88,4 +88,41 @@ describe("JobService", () => {
     assert.equal(typeof summary.failed, "number");
     assert.ok(Array.isArray(summary.recentFailed));
   });
+
+  it("recovers jobs interrupted by a process restart", async () => {
+    const jobs = createJobService(db);
+
+    // A job left "running" when the previous process died — orphaned, cannot resume.
+    const stuck = await jobs.enqueue({ type: "backup", title: "Unterbrochenes Backup" });
+    await jobs.markRunning(stuck.id);
+
+    // A job still waiting in the queue that was never dispatched.
+    const waiting = await jobs.enqueue({ type: "import", title: "Wartender Import" });
+
+    const result = await jobs.recoverInterruptedJobs();
+
+    // The running job is reported as failed with the restart message and retryable.
+    const recovered = result.failedRunning.find((job) => job.id === stuck.id);
+    assert.ok(recovered, "stuck running job should be reported as failed");
+    assert.equal(recovered!.status, "failed");
+    assert.equal(recovered!.errorMessage, "Prozess neu gestartet – Job abgebrochen");
+    assert.equal(recovered!.canRetry, true);
+
+    const stuckAfter = await jobs.getById(stuck.id);
+    assert.equal(stuckAfter!.status, "failed");
+    assert.equal(stuckAfter!.canRetry, true);
+
+    // The pending job is returned for re-dispatch and left in "pending".
+    const dispatchable = result.pendingToDispatch.find((job) => job.id === waiting.id);
+    assert.ok(dispatchable, "pending job should be returned for re-dispatch");
+    assert.equal(dispatchable!.status, "pending");
+    assert.equal((await jobs.getById(waiting.id))!.status, "pending");
+
+    // Idempotent: a second sweep no longer re-fails the already-failed job.
+    const second = await jobs.recoverInterruptedJobs();
+    assert.equal(
+      second.failedRunning.some((job) => job.id === stuck.id),
+      false,
+    );
+  });
 });

@@ -105,8 +105,6 @@ classes under that marker.
   - `PortalPublicShell` deleted (ref=0).
   - `PortalAppShell` / `PortalGuestShell` always use `PortalShellV2`.
 
-**Done (Studio app shells):** shared logic in `apps/studio/src/lib/studio-shell-utils.tsx`.
-
 **Remaining (Wave 3 C1/C2):** migrate `/settings`, `/admin` overview, Portal auth/share
 off app-level wrappers onto AppShell-based shells, then delete the three remaining wrappers.
 
@@ -153,6 +151,28 @@ Do not delete files only because they lack importers — CLI scripts and seeds m
 | `tag-service.ts` | Merge, unused, suggestions |
 | `perf-smoke.test.ts` | CI performance gate |
 | `migration-check.mjs` | Prisma migration folder sanity |
+
+## UI primitives duplicated-by-design (guarded)
+
+`apps/studio/src/components/ui/` and `apps/portal/src/components/ui/` each keep
+their own copy of ~19 shadcn-style primitives. **16 are byte-identical**
+(`button`, `card`, `cn`, `command-palette`, `dialog`, `form`, `icon`, `input`,
+`label`, `scroll-area`, `select`, `sheet`, `states`, `tabs`, `toaster`,
+`tooltip`) and must be hand-synced; the rest are knowingly divergent
+(`data-table.tsx`, `dropdown-menu.tsx`, the `index.ts` barrel) or single-app
+(`badge.tsx`, `icon.test.ts` — Studio only).
+
+We chose **not** to move these into `@uwe/shared-ui` yet (that would rewrite
+hundreds of imports = high build risk). Instead the drift is guarded by
+`scripts/ui-primitive-sync.test.ts` (wired into `test` / `test:ci` /
+`test:ci:affected`): it asserts the synced set stays byte-identical, documents
+the intentional divergences in an allowlist, and fails if a new primitive
+appears in both apps without being registered. To fix a shared primitive, edit
+**both** copies; to diverge on purpose, add the file to `INTENTIONALLY_DIVERGENT`
+with a reason.
+
+**Future option:** consolidate the synced primitives into `@uwe/shared-ui` and
+retire the guard once the import churn is deemed safe.
 
 ## Related
 

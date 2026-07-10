@@ -128,343 +128,420 @@ export async function searchAdminEntities(
   const limit = Math.min(Math.max(options.limit ?? 20, 1), 50);
   const perTypeLimit = Math.max(limit, 12);
   const entityFilter = options.entityType;
-  const results: AdminSearchResultItem[] = [];
+
+  // Each per-type block runs independently and concurrently; results are merged
+  // in a deterministic order (task registration order) before scoring/sorting,
+  // so the final result set is identical to a sequential scan — only the total
+  // latency changes from sum-of-scans to max-of-scans on the hot path.
+  const tasks: Array<Promise<AdminSearchResultItem[]>> = [];
 
   if (!entityFilter || entityFilter === "capture") {
-    const captures = await db.captureEntry.findMany({
-      where: {
-        OR: [
-          { title: { contains: query } },
-          { content: { contains: query } },
-          { url: { contains: query } },
-        ],
-      },
-      orderBy: [{ capturedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const capture of captures) {
-      const score = bestScore([capture.title, capture.content, capture.url], query);
-      if (score <= 0) continue;
-      results.push({
-        id: capture.id,
-        entityType: "capture",
-        title: capture.title || "Capture",
-        snippet: snippetFrom(capture.content || capture.url, query),
-        href: hrefFor("capture", capture.id),
-        group: "Persönlich · Capture",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const captures = await db.captureEntry.findMany({
+          where: {
+            OR: [
+              { title: { contains: query } },
+              { content: { contains: query } },
+              { url: { contains: query } },
+            ],
+          },
+          orderBy: [{ capturedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const capture of captures) {
+          const score = bestScore([capture.title, capture.content, capture.url], query);
+          if (score <= 0) continue;
+          items.push({
+            id: capture.id,
+            entityType: "capture",
+            title: capture.title || "Capture",
+            snippet: snippetFrom(capture.content || capture.url, query),
+            href: hrefFor("capture", capture.id),
+            group: "Persönlich · Capture",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "personal_project") {
-    const projects = await db.personalProject.findMany({
-      where: {
-        OR: [
-          { name: { contains: query } },
-          { description: { contains: query } },
-          { nextAction: { contains: query } },
-          { notes: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const project of projects) {
-      const score = bestScore([project.name, project.description, project.nextAction, project.notes], query);
-      if (score <= 0) continue;
-      results.push({
-        id: project.id,
-        entityType: "personal_project",
-        title: project.name,
-        snippet: snippetFrom(project.nextAction || project.description, query),
-        href: hrefFor("personal_project", project.id),
-        group: "Persönlich · Projekte",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const projects = await db.personalProject.findMany({
+          where: {
+            OR: [
+              { name: { contains: query } },
+              { description: { contains: query } },
+              { nextAction: { contains: query } },
+              { notes: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const project of projects) {
+          const score = bestScore([project.name, project.description, project.nextAction, project.notes], query);
+          if (score <= 0) continue;
+          items.push({
+            id: project.id,
+            entityType: "personal_project",
+            title: project.name,
+            snippet: snippetFrom(project.nextAction || project.description, query),
+            href: hrefFor("personal_project", project.id),
+            group: "Persönlich · Projekte",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "workshop_project") {
-    const workshops = await db.workshopProject.findMany({
-      where: {
-        OR: [
-          { title: { contains: query } },
-          { description: { contains: query } },
-          { nextAction: { contains: query } },
-          { notes: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const workshop of workshops) {
-      const score = bestScore([workshop.title, workshop.description, workshop.nextAction, workshop.notes], query);
-      if (score <= 0) continue;
-      results.push({
-        id: workshop.id,
-        entityType: "workshop_project",
-        title: workshop.title,
-        snippet: snippetFrom(workshop.nextAction || workshop.description, query),
-        href: hrefFor("workshop_project", workshop.id),
-        group: "Persönlich · Werkstatt",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const workshops = await db.workshopProject.findMany({
+          where: {
+            OR: [
+              { title: { contains: query } },
+              { description: { contains: query } },
+              { nextAction: { contains: query } },
+              { notes: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const workshop of workshops) {
+          const score = bestScore([workshop.title, workshop.description, workshop.nextAction, workshop.notes], query);
+          if (score <= 0) continue;
+          items.push({
+            id: workshop.id,
+            entityType: "workshop_project",
+            title: workshop.title,
+            snippet: snippetFrom(workshop.nextAction || workshop.description, query),
+            href: hrefFor("workshop_project", workshop.id),
+            group: "Persönlich · Werkstatt",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "contract_expense") {
-    const contracts = await db.contractExpense.findMany({
-      where: {
-        OR: [
-          { name: { contains: query } },
-          { vendor: { contains: query } },
-          { notes: { contains: query } },
-          { categoryLabel: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const contract of contracts) {
-      const score = bestScore([contract.name, contract.vendor, contract.notes, contract.categoryLabel], query);
-      if (score <= 0) continue;
-      results.push({
-        id: contract.id,
-        entityType: "contract_expense",
-        title: contract.name,
-        snippet: snippetFrom(contract.vendor || contract.notes, query),
-        href: hrefFor("contract_expense", contract.id),
-        group: "Persönlich · Verträge",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const contracts = await db.contractExpense.findMany({
+          where: {
+            OR: [
+              { name: { contains: query } },
+              { vendor: { contains: query } },
+              { notes: { contains: query } },
+              { categoryLabel: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const contract of contracts) {
+          const score = bestScore([contract.name, contract.vendor, contract.notes, contract.categoryLabel], query);
+          if (score <= 0) continue;
+          items.push({
+            id: contract.id,
+            entityType: "contract_expense",
+            title: contract.name,
+            snippet: snippetFrom(contract.vendor || contract.notes, query),
+            href: hrefFor("contract_expense", contract.id),
+            group: "Persönlich · Verträge",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "hardware_device") {
-    const devices = await db.hardwareDevice.findMany({
-      where: {
-        OR: [
-          { name: { contains: query } },
-          { role: { contains: query } },
-          { notes: { contains: query } },
-          { errorNotes: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const device of devices) {
-      const score = bestScore([device.name, device.role, device.notes, device.errorNotes], query);
-      if (score <= 0) continue;
-      results.push({
-        id: device.id,
-        entityType: "hardware_device",
-        title: device.name,
-        snippet: snippetFrom(device.notes || device.errorNotes, query),
-        href: hrefFor("hardware_device", device.id),
-        group: "Persönlich · Hardware",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const devices = await db.hardwareDevice.findMany({
+          where: {
+            OR: [
+              { name: { contains: query } },
+              { role: { contains: query } },
+              { notes: { contains: query } },
+              { errorNotes: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const device of devices) {
+          const score = bestScore([device.name, device.role, device.notes, device.errorNotes], query);
+          if (score <= 0) continue;
+          items.push({
+            id: device.id,
+            entityType: "hardware_device",
+            title: device.name,
+            snippet: snippetFrom(device.notes || device.errorNotes, query),
+            href: hrefFor("hardware_device", device.id),
+            group: "Persönlich · Hardware",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "dev_idea") {
-    const ideas = await db.devIdea.findMany({
-      where: {
-        OR: [
-          { title: { contains: query } },
-          { body: { contains: query } },
-          { module: { contains: query } },
-          { generatedPrompt: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const idea of ideas) {
-      const metadataTags = parseTagsFromMetadata(idea.metadata);
-      const score = bestScore(
-        [idea.title, idea.body, idea.module, idea.generatedPrompt, ...metadataTags],
-        query,
-      );
-      if (score <= 0) continue;
-      results.push({
-        id: idea.id,
-        entityType: "dev_idea",
-        title: idea.title,
-        snippet: snippetFrom(idea.body, query),
-        href: hrefFor("dev_idea", idea.id),
-        group: "Persönlich · Dev-Ideen",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const ideas = await db.devIdea.findMany({
+          where: {
+            OR: [
+              { title: { contains: query } },
+              { body: { contains: query } },
+              { module: { contains: query } },
+              { generatedPrompt: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const idea of ideas) {
+          const metadataTags = parseTagsFromMetadata(idea.metadata);
+          const score = bestScore(
+            [idea.title, idea.body, idea.module, idea.generatedPrompt, ...metadataTags],
+            query,
+          );
+          if (score <= 0) continue;
+          items.push({
+            id: idea.id,
+            entityType: "dev_idea",
+            title: idea.title,
+            snippet: snippetFrom(idea.body, query),
+            href: hrefFor("dev_idea", idea.id),
+            group: "Persönlich · Dev-Ideen",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "document_template") {
-    const templates = await db.documentTemplate.findMany({
-      where: {
-        OR: [
-          { name: { contains: query } },
-          { body: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const template of templates) {
-      const score = bestScore([template.name, template.body], query);
-      if (score <= 0) continue;
-      results.push({
-        id: template.id,
-        entityType: "document_template",
-        title: template.name,
-        snippet: snippetFrom(template.body, query),
-        href: hrefFor("document_template", template.id),
-        group: "Organisation · Dokumente",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const templates = await db.documentTemplate.findMany({
+          where: {
+            OR: [
+              { name: { contains: query } },
+              { body: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const template of templates) {
+          const score = bestScore([template.name, template.body], query);
+          if (score <= 0) continue;
+          items.push({
+            id: template.id,
+            entityType: "document_template",
+            title: template.name,
+            snippet: snippetFrom(template.body, query),
+            href: hrefFor("document_template", template.id),
+            group: "Organisation · Dokumente",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "scan_document") {
-    const scans = await db.scanDocument.findMany({
-      where: {
-        OR: [
-          { title: { contains: query } },
-          { ocrText: { contains: query } },
-          { storageKey: { contains: query } },
-        ],
-      },
-      orderBy: [{ createdAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const scan of scans) {
-      const score = bestScore([scan.title, scan.ocrText, scan.storageKey], query);
-      if (score <= 0) continue;
-      results.push({
-        id: scan.id,
-        entityType: "scan_document",
-        title: scan.title || "Scan",
-        snippet: snippetFrom(scan.ocrText, query),
-        href: hrefFor("scan_document", scan.id),
-        group: "Organisation · Scan Inbox",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const scans = await db.scanDocument.findMany({
+          where: {
+            OR: [
+              { title: { contains: query } },
+              { ocrText: { contains: query } },
+              { storageKey: { contains: query } },
+            ],
+          },
+          orderBy: [{ createdAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const scan of scans) {
+          const score = bestScore([scan.title, scan.ocrText, scan.storageKey], query);
+          if (score <= 0) continue;
+          items.push({
+            id: scan.id,
+            entityType: "scan_document",
+            title: scan.title || "Scan",
+            snippet: snippetFrom(scan.ocrText, query),
+            href: hrefFor("scan_document", scan.id),
+            group: "Organisation · Scan Inbox",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "prompt_template") {
-    const prompts = await db.promptTemplate.findMany({
-      where: {
-        OR: [
-          { title: { contains: query } },
-          { description: { contains: query } },
-          { body: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const prompt of prompts) {
-      const score = bestScore([prompt.title, prompt.description, prompt.body], query);
-      if (score <= 0) continue;
-      results.push({
-        id: prompt.id,
-        entityType: "prompt_template",
-        title: prompt.title,
-        snippet: snippetFrom(prompt.description || prompt.body, query),
-        href: hrefFor("prompt_template", prompt.id),
-        group: "AI · Prompt-Bibliothek",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const prompts = await db.promptTemplate.findMany({
+          where: {
+            OR: [
+              { title: { contains: query } },
+              { description: { contains: query } },
+              { body: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const prompt of prompts) {
+          const score = bestScore([prompt.title, prompt.description, prompt.body], query);
+          if (score <= 0) continue;
+          items.push({
+            id: prompt.id,
+            entityType: "prompt_template",
+            title: prompt.title,
+            snippet: snippetFrom(prompt.description || prompt.body, query),
+            href: hrefFor("prompt_template", prompt.id),
+            group: "AI · Prompt-Bibliothek",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "bug_report") {
-    const bugs = await db.bugReport.findMany({
-      where: {
-        OR: [
-          { title: { contains: query } },
-          { description: { contains: query } },
-          { module: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const bug of bugs) {
-      const score = bestScore([bug.title, bug.description, bug.module], query);
-      if (score <= 0) continue;
-      results.push({
-        id: bug.id,
-        entityType: "bug_report",
-        title: bug.title,
-        snippet: snippetFrom(bug.description, query),
-        href: hrefFor("bug_report", bug.id),
-        group: "System · Bugs",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const bugs = await db.bugReport.findMany({
+          where: {
+            OR: [
+              { title: { contains: query } },
+              { description: { contains: query } },
+              { module: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const bug of bugs) {
+          const score = bestScore([bug.title, bug.description, bug.module], query);
+          if (score <= 0) continue;
+          items.push({
+            id: bug.id,
+            entityType: "bug_report",
+            title: bug.title,
+            snippet: snippetFrom(bug.description, query),
+            href: hrefFor("bug_report", bug.id),
+            group: "System · Bugs",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "shopping_list") {
-    const lists = await db.shoppingList.findMany({
-      where: {
-        OR: [
-          { title: { contains: query } },
-          { items: { some: { name: { contains: query } } } },
-        ],
-      },
-      orderBy: [{ createdAt: "desc" }],
-      take: perTypeLimit,
-      include: { items: { take: 3, orderBy: { sortIndex: "asc" } } },
-    });
-    for (const list of lists) {
-      const itemNames = list.items.map((item) => item.name);
-      const score = bestScore([list.title, ...itemNames], query);
-      if (score <= 0) continue;
-      results.push({
-        id: list.id,
-        entityType: "shopping_list",
-        title: list.title,
-        snippet: itemNames.length > 0 ? `Enthält: ${itemNames.join(", ")}` : null,
-        href: hrefFor("shopping_list", list.id),
-        group: "Werkzeuge · Küche",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const lists = await db.shoppingList.findMany({
+          where: {
+            OR: [
+              { title: { contains: query } },
+              { items: { some: { name: { contains: query } } } },
+            ],
+          },
+          orderBy: [{ createdAt: "desc" }],
+          take: perTypeLimit,
+          include: { items: { take: 3, orderBy: { sortIndex: "asc" } } },
+        });
+        for (const list of lists) {
+          const itemNames = list.items.map((item) => item.name);
+          const score = bestScore([list.title, ...itemNames], query);
+          if (score <= 0) continue;
+          items.push({
+            id: list.id,
+            entityType: "shopping_list",
+            title: list.title,
+            snippet: itemNames.length > 0 ? `Enthält: ${itemNames.join(", ")}` : null,
+            href: hrefFor("shopping_list", list.id),
+            group: "Werkzeuge · Küche",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (!entityFilter || entityFilter === "mail_template") {
-    const mailTemplates = await db.mailTemplate.findMany({
-      where: {
-        OR: [
-          { name: { contains: query } },
-          { description: { contains: query } },
-          { subject: { contains: query } },
-          { bodyText: { contains: query } },
-        ],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: perTypeLimit,
-    });
-    for (const template of mailTemplates) {
-      const score = bestScore(
-        [template.name, template.description, template.subject, template.bodyText],
-        query,
-      );
-      if (score <= 0) continue;
-      results.push({
-        id: template.id,
-        entityType: "mail_template",
-        title: template.name,
-        snippet: snippetFrom(template.subject || template.description, query),
-        href: hrefFor("mail_template", template.id),
-        group: "Organisation · Mail",
-        score,
-      });
-    }
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const mailTemplates = await db.mailTemplate.findMany({
+          where: {
+            OR: [
+              { name: { contains: query } },
+              { description: { contains: query } },
+              { subject: { contains: query } },
+              { bodyText: { contains: query } },
+            ],
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          take: perTypeLimit,
+        });
+        for (const template of mailTemplates) {
+          const score = bestScore(
+            [template.name, template.description, template.subject, template.bodyText],
+            query,
+          );
+          if (score <= 0) continue;
+          items.push({
+            id: template.id,
+            entityType: "mail_template",
+            title: template.name,
+            snippet: snippetFrom(template.subject || template.description, query),
+            href: hrefFor("mail_template", template.id),
+            group: "Organisation · Mail",
+            score,
+          });
+        }
+        return items;
+      })(),
+    );
   }
 
   if (
@@ -472,41 +549,49 @@ export async function searchAdminEntities(
     entityFilter === "personal_brain_document" ||
     entityFilter === "personal_brain_fact"
   ) {
-    const lifeAdmin = createLifeAdminService(db);
-    const brainSearch = await lifeAdmin.searchPersonalBrain({ query, limit: perTypeLimit });
+    tasks.push(
+      (async (): Promise<AdminSearchResultItem[]> => {
+        const items: AdminSearchResultItem[] = [];
+        const lifeAdmin = createLifeAdminService(db);
+        const brainSearch = await lifeAdmin.searchPersonalBrain({ query, limit: perTypeLimit });
 
-    if (!entityFilter || entityFilter === "personal_brain_document") {
-      for (const hit of brainSearch.documents) {
-        const score = Math.round(hit.score * 100);
-        if (score <= 0) continue;
-        results.push({
-          id: hit.item.id,
-          entityType: "personal_brain_document",
-          title: hit.item.title,
-          snippet: snippetFrom(hit.item.content, query),
-          href: hrefFor("personal_brain_document", hit.item.id),
-          group: "Persönlich · Life Brain",
-          score,
-        });
-      }
-    }
+        if (!entityFilter || entityFilter === "personal_brain_document") {
+          for (const hit of brainSearch.documents) {
+            const score = Math.round(hit.score * 100);
+            if (score <= 0) continue;
+            items.push({
+              id: hit.item.id,
+              entityType: "personal_brain_document",
+              title: hit.item.title,
+              snippet: snippetFrom(hit.item.content, query),
+              href: hrefFor("personal_brain_document", hit.item.id),
+              group: "Persönlich · Life Brain",
+              score,
+            });
+          }
+        }
 
-    if (!entityFilter || entityFilter === "personal_brain_fact") {
-      for (const hit of brainSearch.facts) {
-        const score = Math.round(hit.score * 100);
-        if (score <= 0) continue;
-        results.push({
-          id: hit.item.id,
-          entityType: "personal_brain_fact",
-          title: hit.item.title,
-          snippet: snippetFrom(hit.item.content, query),
-          href: hrefFor("personal_brain_fact", hit.item.id),
-          group: "Persönlich · Life Brain",
-          score,
-        });
-      }
-    }
+        if (!entityFilter || entityFilter === "personal_brain_fact") {
+          for (const hit of brainSearch.facts) {
+            const score = Math.round(hit.score * 100);
+            if (score <= 0) continue;
+            items.push({
+              id: hit.item.id,
+              entityType: "personal_brain_fact",
+              title: hit.item.title,
+              snippet: snippetFrom(hit.item.content, query),
+              href: hrefFor("personal_brain_fact", hit.item.id),
+              group: "Persönlich · Life Brain",
+              score,
+            });
+          }
+        }
+        return items;
+      })(),
+    );
   }
+
+  const results = (await Promise.all(tasks)).flat();
 
   return results.sort((left, right) => right.score - left.score || left.title.localeCompare(right.title)).slice(0, limit);
 }

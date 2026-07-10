@@ -7,7 +7,7 @@ import {
   type RtxExposureAssessment,
   type StudioSecurityAssessment,
 } from "./studio-security";
-import type { MailConfigStatus } from "@uwe/mail";
+import type { MailConfigStatus } from "@uwe/mail-core";
 import { createMailLogService } from "./mail-log-service";
 import { createMailService } from "./mail-service";
 import { createJobService, type JobSummary } from "./job-service";

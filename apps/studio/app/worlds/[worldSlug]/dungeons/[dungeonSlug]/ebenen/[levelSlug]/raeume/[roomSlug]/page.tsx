@@ -9,7 +9,7 @@ import {
 } from "@uwe/shared-ui";
 import { DungeonEntityList } from "@/components/DungeonEntityList";
 import { AiContextPanel } from "@/components/AiContextPanel";
-import { preparePrintListFromRoomAction } from "@/app/label-actions";
+import { preparePrintListFromRoomAction } from "@/app/print-list-actions";
 import { labelNewHref } from "@/src/lib/label-links";
 import {
   buildWorldWikiIndex,

@@ -5,8 +5,8 @@ import {
   type MailProviderPreset,
   type MailReplyTone,
   sanitizeMailHtml,
-} from "../mail-portal-types";
-import { describeImapError } from "../imap-sync";
+} from "@uwe/mail-core";
+import { describeImapError } from "@uwe/mail-core";
 import { resolveTokenEncryptionSecret } from "@uwe/database/token-crypto";
 import {
   createMailAccountService,

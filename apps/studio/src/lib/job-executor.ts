@@ -9,8 +9,46 @@ import { executeJobRunners } from "./job-runners";
 
 const activeJobs = new Set<string>();
 
+let recoveryDone = false;
+
 function getJobs() {
   return createJobService(prisma);
+}
+
+/**
+ * Boot-time sweep for the in-memory job runner: fail jobs orphaned by a process
+ * restart (left in "running") so they become retryable, and re-dispatch jobs still
+ * "pending" through the normal path so they resume. Safe to call from
+ * instrumentation — it runs at most once per process and never throws.
+ */
+export async function recoverInterruptedJobsAtBoot(): Promise<void> {
+  if (recoveryDone) {
+    return;
+  }
+  recoveryDone = true;
+
+  try {
+    const { failedRunning, pendingToDispatch } = await getJobs().recoverInterruptedJobs();
+
+    if (failedRunning.length > 0) {
+      console.warn(
+        `[uwe/job-executor] Boot-Recovery: ${failedRunning.length} unterbrochene(r) Job(s) als fehlgeschlagen markiert`,
+      );
+    }
+
+    for (const job of pendingToDispatch) {
+      dispatchJob(job.id);
+    }
+
+    if (pendingToDispatch.length > 0) {
+      console.info(
+        `[uwe/job-executor] Boot-Recovery: ${pendingToDispatch.length} wartende(r) Job(s) erneut eingereiht`,
+      );
+    }
+  } catch (error) {
+    // Recovery is best-effort and must never crash boot.
+    console.error("[uwe/job-executor] Boot-Recovery fehlgeschlagen", error);
+  }
 }
 
 export function dispatchJob(jobId: string): void {

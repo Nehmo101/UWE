@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it, beforeEach } from "node:test";
 
-import type { AiContext } from "@uwe/ai-brain/types";
+import type { AiContext } from "./inference/ai-context-types";
 
 import {
   assertFetchUrlAllowed,

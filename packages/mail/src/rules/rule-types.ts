@@ -1,4 +1,4 @@
-import type { MailPriorityCategory } from "../mail-portal-types";
+import type { MailPriorityCategory } from "@uwe/mail-core";
 
 /** A single condition on an incoming message. All conditions of a rule must match (AND). */
 export type MailRuleCondition =

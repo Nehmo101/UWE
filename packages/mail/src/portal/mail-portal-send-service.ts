@@ -2,7 +2,7 @@ import type { PrismaClient } from "@uwe/database/client";
 import { decryptSecret } from "@uwe/database/token-crypto";
 import { createMailLogService } from "@uwe/database/mail-log-service";
 import type { MailAuditAction } from "@uwe/database/mail-prisma-types";
-import { createMailTransport } from "../transport";
+import { createMailTransport } from "@uwe/mail-core";
 
 type AuditFn = (input: {
   action: MailAuditAction;

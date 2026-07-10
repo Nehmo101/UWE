@@ -202,6 +202,62 @@ describe("user management and login hardening", () => {
     await db.$disconnect();
   });
 
+  it("refuses to let a user delete themselves", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createUserService(db);
+    const auth = createAuthService(db);
+
+    const created = await auth.createUser({
+      displayName: "Self Delete",
+      email: "self-delete@uwe.local",
+      password: TEST_PASSWORD,
+      role: "player",
+      status: "active",
+    });
+
+    await assert.rejects(
+      () => service.deleteUser(created.id, created.id),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message, "CANNOT_DELETE_SELF");
+        return true;
+      },
+    );
+
+    // Der Benutzer darf nach dem abgelehnten Selbst-Löschen weiter existieren.
+    const stillThere = await auth.findUserById(created.id);
+    assert.equal(stillThere?.id, created.id);
+    await db.$disconnect();
+  });
+
+  it("refuses to delete the sole remaining active owner", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createUserService(db);
+    const auth = createAuthService(db);
+
+    const owner = await auth.createUser({
+      displayName: "Sole Owner",
+      email: "sole-owner@uwe.local",
+      password: TEST_PASSWORD,
+      role: "owner",
+      status: "active",
+    });
+
+    // adminUserId ist Admin (kein Owner) und zählt daher nicht als aktiver Owner.
+    await assert.rejects(
+      () => service.deleteUser(owner.id, adminUserId),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message, "LAST_OWNER");
+        return true;
+      },
+    );
+
+    const stillThere = await auth.findUserById(owner.id);
+    assert.equal(stillThere?.id, owner.id);
+    await db.$disconnect();
+  });
+
   it("hides worlds without membership from players", async () => {
     const db = createPrismaClient(databaseUrl);
     const service = createAuthService(db);

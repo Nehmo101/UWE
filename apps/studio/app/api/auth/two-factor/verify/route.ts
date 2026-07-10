@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { cookies } from "next/headers";
 import {
@@ -8,6 +7,7 @@ import {
 } from "@uwe/database/server";
 import {
   canAccessStudio,
+  completeTwoFactorLogin,
   getSessionCookieOptionsForRequest,
   SESSION_COOKIE_NAME,
   sessionExpiresAt,
@@ -27,45 +27,25 @@ export async function POST(request: Request) {
     return jsonError("Challenge-Token und Code sind erforderlich.", 400);
   }
 
-  const ip = clientIpFromHeaders(request.headers);
-  const rateKey = `studio-2fa:${ip}:${challengeToken.slice(0, 8)}`;
-  const rate = await checkRateLimitAsync(rateKey, RATE_LIMIT_PRESETS.login);
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { error: "Zu viele Versuche. Bitte warte einen Moment." },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
-    );
-  }
-
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
-  const twoFactor = createTwoFactorService(db);
-
-  try {
-    const verified = await twoFactor.verifyLoginChallenge(challengeToken, code);
-    if (!verified) {
-      return jsonError("Ungültiger oder abgelaufener 2FA-Code.", 401);
-    }
-
-    const user = await db.user.findUnique({ where: { id: verified.userId } });
-    if (!user || !canAccessStudio(auth.toAuthUser(user))) {
-      return jsonError("Ungültige Anmeldedaten.", 401);
-    }
-
-    const session = await auth.createSession(user.id);
-    await auth.recordSuccessfulLogin(user.id);
-    const cookieStore = await cookies();
-
-    cookieStore.set(SESSION_COOKIE_NAME, session.token, {
-      ...getSessionCookieOptionsForRequest(request),
-      expires: sessionExpiresAt(),
-    });
-
-    return NextResponse.json({
-      user: auth.toAuthUser(user),
-      forcePasswordChange: user.forcePasswordChange ?? false,
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  return completeTwoFactorLogin({
+    request,
+    challengeToken,
+    code,
+    rateKeyPrefix: "studio-2fa",
+    createDb: createPrismaClient,
+    createAuthService,
+    createTwoFactorService,
+    findUserById: (db, userId) => db.user.findUnique({ where: { id: userId } }),
+    hasAccess: canAccessStudio,
+    clientIpFromHeaders,
+    rateLimitOptions: RATE_LIMIT_PRESETS.login,
+    checkRateLimitAsync,
+    setSessionCookie: async (token) => {
+      const cookieStore = await cookies();
+      cookieStore.set(SESSION_COOKIE_NAME, token, {
+        ...getSessionCookieOptionsForRequest(request),
+        expires: sessionExpiresAt(),
+      });
+    },
+  });
 }

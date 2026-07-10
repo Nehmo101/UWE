@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
-import { getMailConfigStatus } from "@uwe/mail";
+import { getMailConfigStatus } from "@uwe/mail-core";
 import { createPrismaClient, type PrismaClient } from "./client";
 import {
   assertAdminStatusHasNoSecrets,

@@ -97,7 +97,7 @@ export async function POST(request: Request) {
   const uploadsRoot = resolveEffectiveUploadsPath(settings);
   ensureUploadDirectory(world.id, undefined, uploadsRoot);
   const filePath = resolveAssetFilePath(validated.storageKey, undefined, uploadsRoot);
-  fs.writeFileSync(filePath, buffer);
+  await fs.promises.writeFile(filePath, buffer);
 
   const asset = await repo.createAsset({
     worldId: world.id,

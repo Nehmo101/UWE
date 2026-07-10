@@ -64,9 +64,10 @@ export default async function AuthWorldPageDetail({ params }: Props) {
 
     const visiblePage = page;
 
+    const renderCtx = await auth.buildViewerRenderContext(worldSlug, ctx);
     blockHtml = await Promise.all(
       visiblePage.contentBlocks.map((block) =>
-        auth.renderBlockContentForViewer(worldSlug, block.content, ctx),
+        auth.renderBlockContentForViewer(worldSlug, block.content, ctx, renderCtx),
       ),
     );
 

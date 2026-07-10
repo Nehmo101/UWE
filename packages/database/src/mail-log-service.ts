@@ -1,6 +1,6 @@
 import type { PrismaClient } from "./client";
 import type { MailMessageStatus } from "./generated/prisma/client";
-import { truncateBodyPreview } from "@uwe/mail";
+import { truncateBodyPreview } from "@uwe/mail-core";
 
 export interface MailLogEntry {
   id: string;

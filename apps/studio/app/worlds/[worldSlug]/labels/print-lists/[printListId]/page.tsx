@@ -25,7 +25,7 @@ import {
   deletePrintListAction,
   setPrintListStatusAction,
   updatePrintListAction,
-} from "@/app/label-actions";
+} from "@/app/print-list-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 

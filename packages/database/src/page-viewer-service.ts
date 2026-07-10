@@ -9,6 +9,7 @@ import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
 import {
   combineBlockContent,
+  getWorldWikiGraph,
   normalizeLookupKey,
   pageToWikiNode,
   parseWikiLinks,
@@ -124,19 +125,20 @@ export async function buildPageViewForViewer(
     return null;
   }
 
+  const renderCtx = await auth.buildViewerRenderContext(worldSlug, ctx);
   const blockHtmlParts = await Promise.all(
     page.contentBlocks.map((block) =>
-      auth.renderBlockContentForViewer(worldSlug, block.content, ctx),
+      auth.renderBlockContentForViewer(worldSlug, block.content, ctx, renderCtx),
     ),
   );
   const html = blockHtmlParts.filter(Boolean).join("\n\n");
 
-  const allPages = await repo.getWorldPageIndex(worldSlug);
+  const { pages: indexedPages, pageIndex: allPages, blockTargets } =
+    await getWorldWikiGraph(repo, worldSlug);
   const scope = scopeFromAccessContext(ctx, page.worldId);
   const combinedContent = combineBlockContent(page.contentBlocks);
   const links = resolveViewerLinks(combinedContent, worldSlug, ctx, allPages, scope);
 
-  const indexedPages = await repo.listPagesWithBlocksForGraphUnfiltered(worldSlug, {});
   const viewerPages: PageWithBlocks[] = indexedPages
     .filter((candidate) => canViewPage(ctx, candidate))
     .map((candidate) => ({
@@ -146,31 +148,30 @@ export async function buildPageViewForViewer(
 
   const visibleNodes = viewerPages.map((candidate) => pageToWikiNode(worldSlug, candidate, "preview"));
   const node = pageToWikiNode(worldSlug, page, "preview");
-  const targetHref = node.href;
+
+  // Backlinks from the cached, pre-parsed wikilink graph (H2). A page is a
+  // backlink of the focus page iff one of its viewer-visible blocks contains a
+  // wikilink that resolves — by the same first-match over the world page index
+  // as resolveViewerLinks — to the focus page, AND the focus page is itself
+  // readable by the viewer (the gate resolveViewerLinks applies before marking a
+  // link "resolved"; it is constant across candidates here). Slugs are unique per
+  // world, so "resolves to focus page id" is exactly the original href match.
+  const focusEntry = allPages.find((candidate) => candidate.id === page.id) ?? page;
+  const focusReadable = canReadContent(ctx.user, focusEntry, scope.world, scope);
 
   const backlinks: PageViewBacklink[] = [];
-  for (const candidate of visibleNodes) {
-    if (candidate.id === node.id) continue;
-
-    const candidateLinks = resolveViewerLinks(
-      candidate.content,
-      worldSlug,
-      ctx,
-      allPages,
-      scope,
-    );
-    const parsed = parseWikiLinks(candidate.content);
-
-    const linksToTarget = parsed.some((raw, index) => {
-      const resolved = candidateLinks[index];
-      return resolved.status === "resolved" && resolved.href === targetHref;
-    });
-
-    if (linksToTarget) {
-      backlinks.push({
-        title: candidate.title,
-        href: candidate.href,
-      });
+  if (focusReadable) {
+    for (const candidate of viewerPages) {
+      if (candidate.id === node.id) continue;
+      const linksToTarget = candidate.contentBlocks.some((block) =>
+        blockTargets.get(block.id)?.includes(page.id),
+      );
+      if (linksToTarget) {
+        backlinks.push({
+          title: candidate.title,
+          href: buildPageUrl(worldSlug, candidate.type, candidate.slug),
+        });
+      }
     }
   }
 

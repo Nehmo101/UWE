@@ -3,13 +3,13 @@ import {
   createCalendarAggregationService,
   createLifeAdminService,
   createMailLogService,
-  createMailPortalService,
   createWorldOverviewService,
   getAppRepository,
   getSystemSettings,
   PersonalProjectDashboardStats,
   type AggregatedCalendarItem,
 } from "@uwe/database/server";
+import { createMailPortalService } from "@uwe/mail/portal";
 import { createMaintenanceService } from "@uwe/database/maintenance";
 import { createPantryService } from "@uwe/kitchen";
 import { getAdminDashboardStatus } from "./admin-dashboard-status";
@@ -126,6 +126,22 @@ export async function getTodayDashboardData(
     }
   }
 
+  // Compute the life-admin summary and admin status once, then feed them into
+  // getHomelabCockpitData so the expensive leak scan, AI/RTX probes and the
+  // ~15-query life-admin summary run only once per /today render (H4).
+  const lifeSummaryPromise = lifeAdmin.getTodaySummary();
+  const adminStatusPromise = getAdminDashboardStatus(db, {
+    useMockInference: options.useMockInference,
+  });
+  const homelabPromise = Promise.all([lifeSummaryPromise, adminStatusPromise]).then(
+    ([lifeSummary, adminStatus]) =>
+      getHomelabCockpitData(db, {
+        useMockInference: options.useMockInference,
+        adminStatus,
+        lifeSummary,
+      }),
+  );
+
   const [
     lifeSummary,
     adminStatus,
@@ -138,9 +154,9 @@ export async function getTodayDashboardData(
     prioritizedMail,
     projectDomains,
   ] = await Promise.all([
-    lifeAdmin.getTodaySummary(),
-    getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
-    getHomelabCockpitData(db, { useMockInference: options.useMockInference }),
+    lifeSummaryPromise,
+    adminStatusPromise,
+    homelabPromise,
     calendarAggregation.getTodaySummary({
       worldId: preferredWorld?.id,
       worldSlug: preferredSlug ?? undefined,

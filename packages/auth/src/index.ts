@@ -310,4 +310,39 @@ export type { MaintenanceMiddlewareDecision } from "./security/maintenance-middl
 export type { LegacyPathRedirect } from "./legacy-path-redirects";
 export { resolveLegacyPathRedirect } from "./legacy-path-redirects";
 
+export type {
+  TwoFactorAuditAction,
+  TwoFactorAuditEvent,
+  TwoFactorAuditRequestContext,
+  TwoFactorDbHandle,
+  TwoFactorRateLimitOptions,
+  TwoFactorRateLimitResult,
+  TwoFactorRouteDeps,
+  TwoFactorRouteHandlers,
+  TwoFactorRouteUser,
+  TwoFactorServicePort,
+} from "./two-factor-routes";
+export { createTwoFactorRouteHandlers } from "./two-factor-routes";
+
+export type {
+  CompleteTwoFactorLoginDeps,
+  ExistingLoginUser,
+  LoginAttemptAuditInput,
+  LoginAuditRequestContext,
+  LoginAuthServicePort,
+  LoginDbHandle,
+  LoginFlowFailureReason,
+  LoginFlowSurface,
+  LoginFlowUser,
+  LoginRateLimitOptions,
+  LoginRateLimitResult,
+  LoginTurnstileResult,
+  LoginTwoFactorServicePort,
+  PerformLoginFlowDeps,
+  ResolveLoginFailureInput,
+  SessionIssuingAuthPort,
+  TwoFactorSuccessContext,
+} from "./login-flow";
+export { completeTwoFactorLogin, performLoginFlow } from "./login-flow";
+
 export const AUTH_PACKAGE_VERSION = "0.2.0";

@@ -59,38 +59,45 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
   const db = createPrismaClient();
   const albumService = createAssetAlbumService(db);
   const albums = await albumService.listAlbumsByWorld(world.id);
-  const albumAssetIds = albumFilter ? await albumService.listAssetIdsInAlbum(albumFilter) : null;
+  const albumAssetIds = albumFilter
+    ? new Set(await albumService.listAssetIdsInAlbum(albumFilter))
+    : null;
 
   const assets = (await repo.listAssetsByWorld(worldSlug, {
     type: typeFilter as AssetType | undefined,
   }))
-    .filter((asset) => !albumAssetIds || albumAssetIds.includes(asset.id))
+    .filter((asset) => !albumAssetIds || albumAssetIds.has(asset.id))
     .filter((asset) => !visibilityFilter || asset.visibility === visibilityFilter);
   const dmOnlyCount = assets.filter((asset) => asset.visibility === "dm_only").length;
   const pages = await repo.listPagesByWorld(worldSlug);
   const shareService = createShareLinkService(db);
-  const assetShareData = await Promise.all(
-    assets.map(async (asset) => {
-      const targetType: ShareTargetType = asset.type === "handout" ? "handout" : "asset";
-      const links = await shareService.listShareLinksForTarget(world.id, targetType, asset.id);
-      const activeLink = links.find((link) => link.enabled);
-      return {
-        assetId: asset.id,
-        targetType,
-        links: links.map((link) => ({
-          id: link.id,
-          token: link.token,
-          enabled: link.enabled,
-          expiresAt: link.expiresAt?.toISOString() ?? null,
-          readOnly: link.readOnly,
-          logAccess: link.logAccess,
-          hasPassword: Boolean(link.passwordHash),
-          createdAt: link.createdAt.toISOString(),
-        })),
-        previewHref: activeLink ? getShareLinkPublicUrl(activeLink.token) : undefined,
-      };
-    }),
-  );
+  const handoutAssetIds = assets.filter((asset) => asset.type === "handout").map((asset) => asset.id);
+  const plainAssetIds = assets.filter((asset) => asset.type !== "handout").map((asset) => asset.id);
+  const [handoutLinksByTarget, assetLinksByTarget] = await Promise.all([
+    shareService.listShareLinksForTargets(world.id, "handout", handoutAssetIds),
+    shareService.listShareLinksForTargets(world.id, "asset", plainAssetIds),
+  ]);
+  const assetShareData = assets.map((asset) => {
+    const targetType: ShareTargetType = asset.type === "handout" ? "handout" : "asset";
+    const links =
+      (targetType === "handout" ? handoutLinksByTarget : assetLinksByTarget).get(asset.id) ?? [];
+    const activeLink = links.find((link) => link.enabled);
+    return {
+      assetId: asset.id,
+      targetType,
+      links: links.map((link) => ({
+        id: link.id,
+        token: link.token,
+        enabled: link.enabled,
+        expiresAt: link.expiresAt?.toISOString() ?? null,
+        readOnly: link.readOnly,
+        logAccess: link.logAccess,
+        hasPassword: Boolean(link.passwordHash),
+        createdAt: link.createdAt.toISOString(),
+      })),
+      previewHref: activeLink ? getShareLinkPublicUrl(activeLink.token) : undefined,
+    };
+  });
   await db.$disconnect();
 
   const shareByAssetId = new Map(assetShareData.map((item) => [item.assetId, item]));

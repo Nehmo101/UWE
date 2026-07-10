@@ -90,7 +90,7 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "File missing on disk" }, { status: 404 });
     }
 
-    const data = fs.readFileSync(filePath);
+    const data = await fs.promises.readFile(filePath);
     return new NextResponse(data, {
       // Sandboxed, nosniff headers; non-image MIME types (svg/html) are served
       // as an attachment so a stored asset cannot execute in this origin.

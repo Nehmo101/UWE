@@ -7,6 +7,24 @@ import type { ClaimedJob, HostClient } from "./host-client";
 import type { DetectedCapabilities } from "./local-capabilities";
 import { ConnectorRunner } from "./runner";
 
+/**
+ * Poll `predicate` until it holds, then resolve — or throw after `timeoutMs`.
+ * Replaces fixed sleeps so tests settle as soon as the async dispatch reports
+ * completion/failure instead of racing a hard-coded macrotask delay on CI.
+ */
+async function waitUntil(
+  predicate: () => boolean,
+  { timeoutMs = 2000, intervalMs = 5 }: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) {
+      throw new Error(`waitUntil: condition not met within ${timeoutMs}ms`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
 const baseConfig: ConnectorRuntimeConfig = {
   hostUrl: "https://host.test",
   token: "uwec_test",
@@ -86,7 +104,7 @@ test("claims a job, runs it and reports completion", async () => {
   const claimed = await runner.pollOnce();
   assert.equal(claimed?.id, "j1");
   // wait for the async dispatch to finish
-  await new Promise((r) => setTimeout(r, 20));
+  await waitUntil(() => client.completed.length === 1);
   assert.equal(client.completed.length, 1);
   assert.equal(client.completed[0].id, "j1");
 });
@@ -119,7 +137,7 @@ test("audio lane stays available while a GPU job runs (overtaking)", async () =>
   assert.ok(lastLanes.includes("audio"), "audio lane remains available");
 
   releaseGpu();
-  await new Promise((r) => setTimeout(r, 20));
+  await waitUntil(() => client.completed.length === 2);
   assert.equal(client.completed.length, 2);
 });
 
@@ -132,7 +150,7 @@ test("reports failure when the executor throws", async () => {
   await runner.refresh();
 
   await runner.pollOnce();
-  await new Promise((r) => setTimeout(r, 20));
+  await waitUntil(() => client.failed.length === 1);
   assert.equal(client.failed.length, 1);
   assert.equal(client.failed[0].reason, "no image backend");
 });

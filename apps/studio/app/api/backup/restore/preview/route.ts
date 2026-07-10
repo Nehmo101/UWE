@@ -1,9 +1,10 @@
 import { postRestorePreview } from "../../../../../src/lib/backup-handlers";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
-import { passthroughBodySchema, parseBody } from "@uwe/security";
+import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
+import { passthroughBodySchema, parseBody, requireOwnerApiAuth } from "@uwe/security";
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "setup" });
+  const context = await resolveStudioApiAuthContext(request);
+  const authError = requireOwnerApiAuth(request, context, { rateLimit: "setup" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, passthroughBodySchema);

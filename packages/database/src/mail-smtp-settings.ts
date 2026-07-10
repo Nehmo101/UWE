@@ -1,11 +1,11 @@
-import { mergeSmtpConfig } from "@uwe/mail";
+import { mergeSmtpConfig } from "@uwe/mail-core";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 import type { MailSmtpStoredCredentials, UweSystemSettings } from "./settings-service";
 
 export function resolveEffectiveSmtpConfig(
   settings: UweSystemSettings,
   env: NodeJS.ProcessEnv = process.env,
-): import("@uwe/mail").SmtpConfig {
+): import("@uwe/mail-core").SmtpConfig {
   const creds = settings.mail.smtpCredentials;
   const portalConfig = creds?.host
     ? {

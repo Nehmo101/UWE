@@ -1,6 +1,21 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { requireRestoreOwnerAuth, requireStudioApiAuth } from "./studio-api-auth";
+import type { ApiAuthContext } from "@uwe/security";
+
+const OWNER_CONTEXT: ApiAuthContext = {
+  user: { id: "1", displayName: "Owner", email: null, role: "owner" },
+  apiTokenId: null,
+  apiTokenScopes: null,
+  authMethod: "session",
+};
+
+const DM_CONTEXT: ApiAuthContext = {
+  user: { id: "2", displayName: "DM", email: null, role: "dm" },
+  apiTokenId: null,
+  apiTokenScopes: null,
+  authMethod: "session",
+};
 
 function makeRequest(headers: Record<string, string> = {}): Request {
   return new Request("http://studio.local/api/backup", {
@@ -99,9 +114,30 @@ describe("restore owner auth guard", () => {
     delete process.env.RESTORE_OWNER_TOKEN;
   });
 
-  it("allows same-origin restore without owner token configured", () => {
+  it("denies same-origin restore without an owner session or token (audit C1)", () => {
+    // A same-origin browser request is no longer sufficient: restore is
+    // owner-only, so an unauthenticated caller must be rejected even when
+    // RESTORE_OWNER_TOKEN is unset.
     const result = requireRestoreOwnerAuth(
       makeRequest({ "sec-fetch-site": "same-origin", host: "studio.local" }),
+    );
+    assert.ok(result);
+    assert.equal(result.status, 403);
+  });
+
+  it("denies a same-origin restore for a logged-in non-owner (dm)", () => {
+    const result = requireRestoreOwnerAuth(
+      makeRequest({ "sec-fetch-site": "same-origin", host: "studio.local" }),
+      DM_CONTEXT,
+    );
+    assert.ok(result);
+    assert.equal(result.status, 403);
+  });
+
+  it("allows a same-origin restore for an authenticated owner session", () => {
+    const result = requireRestoreOwnerAuth(
+      makeRequest({ "sec-fetch-site": "same-origin", host: "studio.local" }),
+      OWNER_CONTEXT,
     );
     assert.equal(result, null);
   });

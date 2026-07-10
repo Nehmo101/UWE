@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createMailPortalService, getSystemSettings, prisma } from "@uwe/database/server";
+import { getSystemSettings, prisma } from "@uwe/database/server";
+import { createMailPortalService } from "@uwe/mail/portal";
 import type { MailPriorityCategory } from "@uwe/mail/portal-types";
 import type { MailFolderKey, MailSearchCursor } from "@uwe/mail/portal";
 import { requireAdminMailApi } from "@/src/lib/admin-mail-api";

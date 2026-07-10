@@ -12,7 +12,7 @@ import {
   type MailDraft,
   type SessionRecapSource,
   type ShareLinkSource,
-} from "@uwe/mail";
+} from "@uwe/mail-core";
 import type { PrismaClient } from "./client";
 import { buildShareUrl } from "./share-link-service";
 import { BACKUP_CHECK_INTERVAL_DAYS } from "./calendar-aggregation-service";

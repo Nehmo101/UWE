@@ -12,6 +12,8 @@ import {
 import {
   buildLookupIndex,
   combineBlockContent,
+  filterGraphPages,
+  getWorldWikiGraph,
   normalizeLookupKey,
   pageToWikiNode,
   parseWikiLinks,
@@ -307,12 +309,26 @@ export async function buildWorldGraph(
   filters: GraphFilters = {},
 ): Promise<WorldGraphData> {
   const mode = filters.mode ?? (filters.focusPageId ? "neighbors" : "full");
-  const pages = await repo.listPagesWithBlocksForGraph(worldSlug, context, {
+  // Reuse the cached world snapshot instead of re-loading + re-parsing the whole
+  // world per view (H2), then reproduce listPagesWithBlocksForGraph's context
+  // filtering (isPageAccessible + filterBlocksForContext) exactly on it.
+  const graph = await getWorldWikiGraph(repo, worldSlug);
+  const queriedPages = filterGraphPages(graph.pages, {
     campaignId: filters.campaignId,
     types: filters.categories?.length
       ? pageTypesForGraphCategories(filters.categories)
       : undefined,
   });
+  const portalOptions =
+    context === "portal" || context === "preview"
+      ? { publicSharingEnabled: (await repo.getSystemSettings()).portal.publicSharingEnabled }
+      : undefined;
+  const pages = queriedPages
+    .filter((page) => isPageAccessible(page, context, portalOptions))
+    .map((page) => ({
+      ...page,
+      contentBlocks: filterBlocksForContext(page.contentBlocks, context, portalOptions),
+    }));
 
   const allPages = context === "dm"
     ? pages
@@ -473,7 +489,10 @@ export async function buildWorldGraphForViewer(
   filters: GraphFilters = {},
 ): Promise<WorldGraphData> {
   const mode = filters.mode ?? (filters.focusPageId ? "neighbors" : "full");
-  const pages = await repo.listPagesWithBlocksForGraphUnfiltered(worldSlug, {
+  // Reuse the cached world snapshot (H2); viewer visibility is still applied
+  // below via canViewPage/filterBlocksForViewer, so output is unchanged.
+  const graph = await getWorldWikiGraph(repo, worldSlug);
+  const pages = filterGraphPages(graph.pages, {
     campaignId: filters.campaignId,
     types: filters.categories?.length
       ? pageTypesForGraphCategories(filters.categories)

@@ -22,6 +22,7 @@
     "@uwe/assets": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
+    "@uwe/mail-core": "workspace:*",
     "imapflow": "^1.0.187",
     "mailparser": "^3.9.12",
     "nodemailer": "^9.0.1"

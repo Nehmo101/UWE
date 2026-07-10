@@ -3,11 +3,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   assertInferenceUrlAllowed,
   classifyInferenceUrl,
-} from "@uwe/ai-brain/inference-url-guard";
+} from "./inference/inference-url-guard";
 import {
   resolveRtxWorkerConfig,
   type RtxWorkerConfig,
-} from "@uwe/ai-brain/rtx-worker-config";
+} from "./inference/rtx-worker-config";
 
 export class RtxBoundaryError extends Error {
   constructor(message: string) {

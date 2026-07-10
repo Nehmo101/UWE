@@ -2,9 +2,14 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
+import type { PrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { createUweRepository } from "./repository";
-import { searchForAuthContext, searchForWikiContext } from "./search-service";
+import {
+  searchForAuthContext,
+  searchForWikiContext,
+  searchGlobalForDm,
+} from "./search-service";
 
 describe("UWE global search", () => {
   let databaseUrl: string;
@@ -454,6 +459,124 @@ describe("UWE global search", () => {
     });
     assert.ok(canonOnly.some((result) => result.slug === "geheime-verschwoerung"));
     assert.ok(canonOnly.every((result) => result.canonicalStatus === "canon"));
+
+    await db.$disconnect();
+  });
+});
+
+describe("search index memoization", () => {
+  let databaseUrl: string;
+  let worldSlug: string;
+  let blockId: string;
+
+  before(async () => {
+    databaseUrl = createTestDatabaseUrl();
+    const repo = createUweRepository(databaseUrl);
+
+    const world = await repo.createWorld({
+      name: "Cache-Welt",
+      slug: "cache-welt",
+      description: "Memoization tests",
+    });
+    worldSlug = world.slug;
+
+    await repo.createPage({
+      worldId: world.id,
+      title: "Drachenhort",
+      slug: "drachenhort",
+      type: "location",
+      summary: "Ein Hort voller Gold.",
+      visibility: "public",
+      publishStatus: "published",
+      tags: ["drache"],
+      contentBlocks: [
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          visibility: "public",
+          content: "Ursprünglicher Blocktext über einen Wächter.",
+        },
+      ],
+    });
+
+    const page = await repo.getPageBySlug(worldSlug, "drachenhort");
+    assert.ok(page);
+    const block = page!.contentBlocks[0];
+    assert.ok(block);
+    blockId = block!.id;
+  });
+
+  after(async () => {
+    await createPrismaClient(databaseUrl).$disconnect();
+  });
+
+  it("reuses loaded pages across searches and reloads after a content-block edit", async () => {
+    const db = createPrismaClient(databaseUrl);
+
+    let pageLoads = 0;
+    let blockLoads = 0;
+    // Count only the expensive load path (findMany). The freshness key uses
+    // aggregate() and is deliberately not counted — it must run on every call.
+    const spied = db.$extends({
+      query: {
+        page: {
+          findMany({ args, query }) {
+            pageLoads += 1;
+            return query(args);
+          },
+        },
+        contentBlock: {
+          findMany({ args, query }) {
+            blockLoads += 1;
+            return query(args);
+          },
+        },
+      },
+    }) as unknown as PrismaClient;
+
+    // Cold cache: the whole scope must be materialized once.
+    const cold = await searchGlobalForDm(spied, { query: "Drachenhort", worldSlug });
+    assert.ok(cold.some((result) => result.slug === "drachenhort"));
+    assert.ok(pageLoads >= 1, "cold search must load pages");
+    assert.ok(blockLoads >= 1, "cold search must load content blocks");
+
+    // Warm cache, identical DB state and scope: a different query must NOT touch
+    // the page/block tables — the loaded set is reused. Block text stays fully
+    // searchable, proving the cached content is intact.
+    pageLoads = 0;
+    blockLoads = 0;
+    const warm = await searchGlobalForDm(spied, { query: "Wächter", worldSlug });
+    assert.equal(pageLoads, 0, "warm search must not reload pages");
+    assert.equal(blockLoads, 0, "warm search must not reload content blocks");
+    assert.ok(warm.some((result) => result.slug === "drachenhort"));
+
+    // A content-block edit bumps ContentBlock.updated_at only (never the owning
+    // page), yet the freshness key must still change and invalidate the cache.
+    const repo = createUweRepository(databaseUrl);
+    await repo.updateContentBlock(blockId, {
+      content: "Neuer Blocktext über einen Zauberstab.",
+    });
+
+    pageLoads = 0;
+    blockLoads = 0;
+    const afterEdit = await searchGlobalForDm(spied, { query: "Zauberstab", worldSlug });
+    assert.ok(pageLoads >= 1, "a block edit must invalidate the cache and reload");
+    assert.ok(blockLoads >= 1, "a block edit must reload content blocks");
+    assert.ok(
+      afterEdit.some((result) => result.slug === "drachenhort"),
+      "search must return the freshly edited block content, not a stale cache",
+    );
+
+    // The old block text must no longer match — no stale results survive.
+    const staleQuery = await searchGlobalForDm(spied, {
+      query: "Ursprünglicher",
+      worldSlug,
+    });
+    assert.equal(
+      staleQuery.some((result) => result.slug === "drachenhort"),
+      false,
+      "stale block text must be gone after invalidation",
+    );
 
     await db.$disconnect();
   });

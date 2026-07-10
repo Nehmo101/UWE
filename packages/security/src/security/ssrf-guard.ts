@@ -1,4 +1,4 @@
-import { classifyInferenceUrl, isInferenceUrlAllowed } from "@uwe/ai-brain/inference-url-guard";
+import { classifyInferenceUrl, isInferenceUrlAllowed } from "./inference/inference-url-guard";
 
 export class SsrfBlockedError extends Error {
   constructor(

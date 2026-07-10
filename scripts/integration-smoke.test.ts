@@ -515,9 +515,14 @@ describe("integration smoke — agent CI quality gate", () => {
 
 describe("integration smoke — RTX public URL guard", () => {
   it("blocks public inference URLs by default", () => {
-    const guard = read("packages/ai-brain/src/inference-url-guard.ts");
+    // The implementation moved to the low-level @uwe/security layer; ai-brain
+    // re-exports it. Assert the guard logic at its real home, and that the
+    // ai-brain shim still surfaces the public API.
+    const guard = read("packages/security/src/security/inference/inference-url-guard.ts");
     assert.match(guard, /isInferenceUrlAllowed/);
     assert.match(guard, /allowPublicUrl/);
+    const shim = read("packages/ai-brain/src/inference-url-guard.ts");
+    assert.match(shim, /isInferenceUrlAllowed/);
   });
 
   it("tests public URL blocking", () => {

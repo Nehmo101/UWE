@@ -8,7 +8,7 @@ import {
   type MailSendResult,
   type MailTransport,
   type SmtpConfig,
-} from "@uwe/mail";
+} from "@uwe/mail-core";
 import type { PrismaClient } from "./client";
 import { createMailLogService, type MailLogEntry } from "./mail-log-service";
 import { createSettingsService } from "./settings-service";

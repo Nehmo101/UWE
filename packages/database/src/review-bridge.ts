@@ -195,32 +195,3 @@ export async function createPortalUnlockReview(
     targetHref: input.targetHref,
   });
 }
-
-export async function createCoDmChangeReview(
-  db: PrismaClient,
-  input: {
-    worldId: string;
-    worldSlug?: string | null;
-    proposedByUserId: string;
-    title: string;
-    summary: string;
-    payload: Record<string, unknown>;
-    diff?: Record<string, unknown> | null;
-    targetHref?: string | null;
-  },
-): Promise<ContentReviewView> {
-  const reviews = createReviewService(db);
-  const sourceId = `codm-${Date.now()}-${input.proposedByUserId}`;
-  return reviews.upsertPending({
-    worldId: input.worldId,
-    worldSlug: input.worldSlug,
-    sourceType: "co_dm_change",
-    sourceId,
-    title: input.title,
-    summary: input.summary,
-    payload: input.payload,
-    diff: input.diff,
-    proposedByUserId: input.proposedByUserId,
-    targetHref: input.targetHref,
-  });
-}

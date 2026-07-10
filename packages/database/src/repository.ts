@@ -480,6 +480,33 @@ export class UweRepository {
     return pages.map((page) => withParsedArrays(page));
   }
 
+  /**
+   * Cheap freshness stamp for the per-world wiki-link graph cache (H2). Combines
+   * page and content-block counts + max updatedAt: content-block edits do not
+   * bump page.updatedAt, so both aggregates are required to invalidate a cached
+   * parsed graph on any content change. Consumed by getWorldWikiGraph.
+   */
+  async getWorldGraphVersion(worldSlug: string): Promise<string> {
+    const [pageAgg, blockAgg] = await Promise.all([
+      this.db.page.aggregate({
+        where: { world: { slug: worldSlug } },
+        _count: { _all: true },
+        _max: { updatedAt: true },
+      }),
+      this.db.contentBlock.aggregate({
+        where: { page: { world: { slug: worldSlug } } },
+        _count: { _all: true },
+        _max: { updatedAt: true },
+      }),
+    ]);
+    return [
+      pageAgg._count._all,
+      pageAgg._max.updatedAt?.getTime() ?? 0,
+      blockAgg._count._all,
+      blockAgg._max.updatedAt?.getTime() ?? 0,
+    ].join(":");
+  }
+
   async listPagesWithBlocksForGraph(
     worldSlug: string,
     context: AccessContext,

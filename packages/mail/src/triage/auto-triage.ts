@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@uwe/database/client";
-import { scoreMailPriority } from "../priority";
+import { scoreMailPriority } from "@uwe/mail-core";
 
 export interface AutoTriageOptions {
   vipSenders?: string[];

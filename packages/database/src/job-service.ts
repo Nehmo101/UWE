@@ -34,6 +34,13 @@ export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   cancelled: "Abgebrochen",
 };
 
+/**
+ * Failure message applied to jobs orphaned by a process restart. The single-process
+ * runner keeps in-flight jobs in memory, so a "running" job at boot can never make
+ * progress again — mark it failed so retryable types become retryable.
+ */
+export const JOB_INTERRUPTED_MESSAGE = "Prozess neu gestartet – Job abgebrochen";
+
 /** Job types that may be retried safely after failure. */
 export const RETRYABLE_JOB_TYPES = new Set<JobType>([
   "mail_send",
@@ -115,6 +122,13 @@ export interface JobSummary {
   completed: number;
   cancelled: number;
   recentFailed: JobView[];
+}
+
+export interface JobRecoveryResult {
+  /** Jobs that were stuck in "running" at boot and are now marked failed. */
+  failedRunning: JobView[];
+  /** Jobs still "pending" that the caller should re-dispatch. */
+  pendingToDispatch: JobView[];
 }
 
 type JobRecord = Prisma.JobGetPayload<{ include: { logs: true } }> | Prisma.JobGetPayload<object>;
@@ -418,6 +432,68 @@ export class JobService {
       select: { status: true },
     });
     return job?.status === "cancelled";
+  }
+
+  /**
+   * Boot-time recovery for the single-process, in-memory job runner. Any job left
+   * in "running" when the process starts is orphaned — the runner that owned it
+   * died with the previous process and no timer will ever resume it — so mark it
+   * failed (which makes retryable types retryable again) and return jobs still in
+   * "pending" so the caller can re-dispatch them through the normal path.
+   *
+   * Idempotent: every state transition is guarded on the current status, so a
+   * repeated sweep (or a job that legitimately finished between read and write)
+   * changes nothing.
+   *
+   * @param options.runningOlderThanMs When > 0, only fail "running" jobs whose
+   *   startedAt is null or older than this many milliseconds. Defaults to 0, i.e.
+   *   fail every running job — correct for a single-process runner where no other
+   *   worker can own a running job at boot.
+   */
+  async recoverInterruptedJobs(
+    options: { runningOlderThanMs?: number } = {},
+  ): Promise<JobRecoveryResult> {
+    const runningOlderThanMs = options.runningOlderThanMs ?? 0;
+
+    const runningWhere: Prisma.JobWhereInput = { status: "running" };
+    if (runningOlderThanMs > 0) {
+      const staleBefore = new Date(Date.now() - runningOlderThanMs);
+      runningWhere.OR = [{ startedAt: null }, { startedAt: { lt: staleBefore } }];
+    }
+
+    const stuckRunning = await this.db.job.findMany({
+      where: runningWhere,
+      orderBy: { createdAt: "asc" },
+    });
+
+    const failedRunning: JobView[] = [];
+    for (const stuck of stuckRunning) {
+      // Guard on status so a job that finished between read and write is not
+      // clobbered and a repeated sweep stays a no-op.
+      const updated = await this.db.job.updateMany({
+        where: { id: stuck.id, status: "running" },
+        data: {
+          status: "failed",
+          errorMessage: JOB_INTERRUPTED_MESSAGE,
+          completedAt: new Date(),
+        },
+      });
+      if (updated.count === 0) continue;
+
+      await this.appendLog(stuck.id, "error", JOB_INTERRUPTED_MESSAGE);
+      const refreshed = await this.db.job.findUnique({ where: { id: stuck.id } });
+      if (refreshed) failedRunning.push(toJobView(refreshed));
+    }
+
+    const pending = await this.db.job.findMany({
+      where: { status: "pending" },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return {
+      failedRunning,
+      pendingToDispatch: pending.map((job) => toJobView(job)),
+    };
   }
 }
 

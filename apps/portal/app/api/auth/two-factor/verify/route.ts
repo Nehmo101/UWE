@@ -8,8 +8,17 @@ import {
   createTwoFactorService,
   logAuditEvent,
 } from "@uwe/database/server";
-import { getSessionCookieOptionsForRequest, SESSION_COOKIE_NAME, sessionExpiresAt } from "@uwe/auth";
-import { checkRateLimitAsync, clientIpFromHeaders } from "@/src/lib/rate-limit";
+import {
+  completeTwoFactorLogin,
+  getSessionCookieOptionsForRequest,
+  SESSION_COOKIE_NAME,
+  sessionExpiresAt,
+} from "@uwe/auth";
+import {
+  checkRateLimitAsync,
+  clientIpFromHeaders,
+  RATE_LIMIT_PRESETS,
+} from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
   const authError = await requirePortalApiAuth(request);
@@ -23,60 +32,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Challenge-Token und Code sind erforderlich." }, { status: 400 });
   }
 
-  const ip = clientIpFromHeaders(request.headers);
-  const rateKey = `portal-2fa:${ip}:${challengeToken.slice(0, 8)}`;
-  const rate = await checkRateLimitAsync(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { error: "Zu viele Versuche. Bitte warte einen Moment." },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
-    );
-  }
-
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
-  const twoFactor = createTwoFactorService(db);
   const auditRequest = auditRequestFromHeaders(request.headers);
 
-  try {
-    const verified = await twoFactor.verifyLoginChallenge(challengeToken, code);
-    if (!verified) {
-      return NextResponse.json({ error: "Ungültiger oder abgelaufener 2FA-Code." }, { status: 401 });
-    }
-
-    const user = await db.user.findUnique({ where: { id: verified.userId } });
-    if (!user) {
-      return NextResponse.json({ error: "Ungültige Anmeldedaten." }, { status: 401 });
-    }
-
-    const session = await auth.createSession(user.id, { ipAddress: ip });
-    await auth.recordSuccessfulLogin(user.id);
-    const cookieStore = await cookies();
-
-    cookieStore.set(SESSION_COOKIE_NAME, session.token, {
-      ...getSessionCookieOptionsForRequest(request),
-      expires: sessionExpiresAt(),
-    });
-
-    await logAuditEvent(db, {
-      actorUserId: user.id,
-      action: "login_success",
-      targetType: "session",
-      targetId: session.id,
-      request: auditRequest,
-      metadata: { email: user.email, twoFactor: true },
-    });
-
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        displayName: user.displayName,
-        email: user.email,
-        role: user.role,
-      },
-      forcePasswordChange: user.forcePasswordChange ?? false,
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  return completeTwoFactorLogin({
+    request,
+    challengeToken,
+    code,
+    rateKeyPrefix: "portal-2fa",
+    createDb: createPrismaClient,
+    createAuthService,
+    createTwoFactorService,
+    findUserById: (db, userId) => db.user.findUnique({ where: { id: userId } }),
+    // Portal 2FA login accepts any active user; access is not role-gated.
+    clientIpFromHeaders,
+    rateLimitOptions: RATE_LIMIT_PRESETS.login,
+    checkRateLimitAsync,
+    setSessionCookie: async (token) => {
+      const cookieStore = await cookies();
+      cookieStore.set(SESSION_COOKIE_NAME, token, {
+        ...getSessionCookieOptionsForRequest(request),
+        expires: sessionExpiresAt(),
+      });
+    },
+    onSuccessAudit: async ({ db, user, session }) => {
+      await logAuditEvent(db, {
+        actorUserId: user.id,
+        action: "login_success",
+        targetType: "session",
+        targetId: session.id,
+        request: auditRequest,
+        metadata: { email: user.email, twoFactor: true },
+      });
+    },
+  });
 }

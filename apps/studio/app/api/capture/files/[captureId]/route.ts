@@ -49,7 +49,7 @@ export async function GET(request: Request, context: RouteContext) {
     typeof metadata.mimeType === "string" ? metadata.mimeType : "application/octet-stream";
   const originalFilename =
     typeof metadata.originalFilename === "string" ? metadata.originalFilename : capture.title;
-  const data = fs.readFileSync(filePath);
+  const data = await fs.promises.readFile(filePath);
 
   return new NextResponse(data, {
     headers: {

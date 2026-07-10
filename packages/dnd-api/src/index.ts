@@ -263,6 +263,20 @@ export {
 export { formatOpen5eMonsterAsMarkdown } from "./statblock-format";
 export { buildEncounterMarkdown, type EncounterMonsterInput } from "./encounter-builder";
 export {
+  buildEncounterPageInput,
+  buildStatblockPageInput,
+  createEncounterPage,
+  gatherEncounterCandidates,
+  importOpen5eStatblockPage,
+  resolveUniquePageSlug,
+  serializeEncounterComposition,
+  type CreateEncounterPageInput,
+  type DndCreatePageInput,
+  type DndPageRepository,
+  type ImportStatblockInput,
+  type PageSlugLookup,
+} from "./encounter-page";
+export {
   challengeRatingForXp,
   ORDERED_CHALLENGE_RATINGS,
   suggestCandidateChallengeRatings,

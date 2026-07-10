@@ -16,6 +16,10 @@ export function buildAssetDownloadHeaders(input: {
     "X-Content-Type-Options": "nosniff",
     "Content-Security-Policy": "default-src 'none'; sandbox",
     "X-Frame-Options": "DENY",
+    // Assets are content-addressed by storageKey and effectively immutable, so a
+    // private hour-long cache lets browsers reuse them across navigations without
+    // re-downloading. `private` keeps them out of shared/proxy caches.
+    "Cache-Control": "private, max-age=3600",
   };
 }
 

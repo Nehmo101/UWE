@@ -64,12 +64,27 @@ export async function probePortalHealth(env: NodeJS.ProcessEnv = process.env): P
 
 export async function getHomelabCockpitData(
   db: PrismaClient,
-  options: { useMockInference?: boolean; env?: NodeJS.ProcessEnv } = {},
+  options: {
+    useMockInference?: boolean;
+    env?: NodeJS.ProcessEnv;
+    /**
+     * Pre-computed admin dashboard status. When provided it is reused instead of
+     * re-running the (expensive) leak scan and AI/RTX probes. Falls back to an
+     * internal computation for standalone callers.
+     */
+    adminStatus?: Awaited<ReturnType<typeof getAdminDashboardStatus>>;
+    /**
+     * Pre-computed life-admin today summary. When provided it is reused instead
+     * of re-running the ~15-query summary. Falls back to an internal computation.
+     */
+    lifeSummary?: Awaited<ReturnType<ReturnType<typeof createLifeAdminService>["getTodaySummary"]>>;
+  } = {},
 ): Promise<HomelabCockpitData> {
   const env = options.env ?? process.env;
   const lifeAdmin = createLifeAdminService(db);
   const [adminStatus, securityStatus, roleCounts, devices, portalProbe] = await Promise.all([
-    getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
+    options.adminStatus ??
+      getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
     getSecurityDashboardStatus(db, { env }),
     getUserRoleCounts(db),
     lifeAdmin.listHardwareDevices({ limit: 200 }),
@@ -117,7 +132,7 @@ export async function getHomelabCockpitData(
     env,
   });
 
-  const lifeSummary = await lifeAdmin.getTodaySummary();
+  const lifeSummary = options.lifeSummary ?? (await lifeAdmin.getTodaySummary());
   const alerts = aggregateHomelabTodayAlerts({
     hardwareIssues: lifeSummary.hardwareIssues,
     hardwareUrlWarnings: urlWarnings,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createMailPortalService, getSystemSettings, prisma } from "@uwe/database/server";
+import { getSystemSettings, prisma } from "@uwe/database/server";
+import { createMailPortalService } from "@uwe/mail/portal";
 import { requirePrivateHealthAuth } from "@/src/lib/private-health-auth";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
 

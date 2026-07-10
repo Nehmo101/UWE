@@ -1,10 +1,4 @@
 export {
-  PortalNavByType,
-  PortalWorldHero,
-  type PortalNavItem,
-} from "./PortalNav";
-
-export {
   WikiContent,
   WikiSidebar,
 } from "./WikiComponents";
@@ -136,7 +130,6 @@ export {
   SessionIdleGuard,
   TurnstileWidget,
   UweLandingPage,
-  UweSessionChrome,
   PASSWORD_MIN_LENGTH,
   PASSWORD_REQUIREMENTS,
   PASSWORD_STRENGTH_LABELS,
@@ -244,11 +237,6 @@ export {
   type GraphViewProps,
   type GraphRelationListProps,
 } from "./GraphView";
-
-export {
-  ResizableGraphView,
-  type ResizableGraphViewProps,
-} from "./ResizableGraphView";
 
 export { CATEGORY_LABELS, WikiPageList, type WikiNavItem } from "./WikiComponents";
 

@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
   ensureUploadDirectory(SCAN_UPLOAD_NAMESPACE, undefined, uploadsRoot);
   const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
-  fs.writeFileSync(filePath, buffer);
+  await fs.promises.writeFile(filePath, buffer);
 
   const scan = await createScanInboxService(prisma).create({
     storageKey,

@@ -48,7 +48,7 @@ export async function GET(request: Request, context: RouteContext) {
     return jsonError("Datei fehlt", 404);
   }
 
-  const data = fs.readFileSync(filePath);
+  const data = await fs.promises.readFile(filePath);
   return new NextResponse(data, {
     headers: {
       "Content-Type": image.mimeType || "application/octet-stream",

@@ -148,23 +148,46 @@ export function guardStudioMutation(
   return requireStudioApiAuth(request, options);
 }
 
-/** Stricter guard for restore execute — optional RESTORE_OWNER_TOKEN on top of studio auth. */
-export function requireRestoreOwnerAuth(request: Request): Response | null {
+/**
+ * Owner gate for the destructive backup restore routes.
+ *
+ * Restore can overwrite the entire database and recreate user accounts (a
+ * privilege-escalation vector), so it must never be reachable below OWNER.
+ * Access requires an authenticated OWNER session, or — for headless automation
+ * — an explicit RESTORE_OWNER_TOKEN bearer. A logged-in non-owner (dm/admin) is
+ * always rejected; an absent RESTORE_OWNER_TOKEN must NOT open the route.
+ *
+ * The caller must resolve and pass the request's auth context so the OWNER role
+ * can be checked; without it only the bearer-token path can succeed.
+ */
+export function requireRestoreOwnerAuth(
+  request: Request,
+  context?: ApiAuthContext,
+): Response | null {
   const base = requireStudioApiAuth(request);
   if (base) {
     return base;
   }
 
+  // An authenticated OWNER session (browser or session-authenticated) is always sufficient.
+  if (context?.user?.role === "owner") {
+    return null;
+  }
+
+  // Headless automation may authenticate with an explicit owner token.
   const restoreToken = process.env.RESTORE_OWNER_TOKEN?.trim();
-  if (!restoreToken) {
+  if (restoreToken && hasValidBearerToken(request, restoreToken)) {
     return null;
   }
 
-  if (isSameOriginBrowserRequest(request) || hasValidBearerToken(request, restoreToken)) {
-    return null;
+  // A logged-in non-owner (dm/admin) must never restore.
+  if (context?.user) {
+    return forbidden("Restore ist nur für Owner erlaubt.");
   }
 
-  return forbidden("Restore erfordert Owner-Token (Authorization: Bearer …).");
+  return forbidden(
+    "Restore erfordert eine Owner-Anmeldung oder ein Owner-Token (Authorization: Bearer …).",
+  );
 }
 
 /**

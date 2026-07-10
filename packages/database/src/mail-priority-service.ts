@@ -2,4 +2,4 @@ export {
   scoreMailPriority,
   type MailPriorityInput,
   type MailPriorityResult,
-} from "@uwe/mail/priority";
+} from "@uwe/mail-core";

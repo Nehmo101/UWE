@@ -1,6 +1,6 @@
 import type { MailUnsubscribeMethod, MailUnsubscribeStatus } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
-import { createMailTransport, executeHttpOneClickUnsubscribe, parseMailtoTarget } from "@uwe/mail";
+import { createMailTransport, executeHttpOneClickUnsubscribe, parseMailtoTarget } from "@uwe/mail-core";
 import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 
 export interface UnsubscribeOutcome {
