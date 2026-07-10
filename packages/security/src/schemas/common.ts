@@ -351,6 +351,16 @@ export const studioCharacterSheetUpdateSchema = characterSheetUpdateSchema.exten
   category: slugSchema,
 });
 
+export const studioCharacterSheetCreateSchema = z.object({
+  worldSlug: slugSchema,
+  pageId: idSchema,
+  pageSlug: slugSchema,
+  category: slugSchema,
+  displayName: z.string().trim().min(1).max(200),
+  ownerUserId: idSchema,
+  level: z.coerce.number().int().min(1).max(30).optional(),
+});
+
 const spellLevelField = z.coerce.number().int().min(0).max(9);
 
 export const characterSpellAddSchema = z.object({

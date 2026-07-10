@@ -7,6 +7,8 @@ import {
   filterBlocksForViewer,
   filterPagesForViewer,
   isDmOrOwner,
+  isWorldStaff,
+  resolveEffectiveRole,
 } from "./permissions";
 
 const dmCtx = buildAccessContext({
@@ -199,6 +201,50 @@ describe("permissions", () => {
         visibility: "unlock_after_session",
         publishStatus: "published",
       }),
+    );
+  });
+
+  it("global owner keeps owner role even with player world membership", () => {
+    assert.equal(
+      resolveEffectiveRole({
+        user: { id: "owner-1", displayName: "Owner", email: "owner@test", role: "owner" },
+        worldMembership: {
+          userId: "owner-1",
+          worldId: "w1",
+          role: "player",
+          characterName: "Testchar",
+        },
+      }),
+      "owner",
+    );
+
+    const ctx = buildAccessContext({
+      user: { id: "owner-1", displayName: "Owner", email: "owner@test", role: "owner" },
+      worldMembership: {
+        userId: "owner-1",
+        worldId: "w1",
+        role: "player",
+        characterName: "Testchar",
+      },
+      guestModeEnabled: true,
+    });
+    assert.equal(isWorldStaff(ctx), true);
+    assert.equal(isDmOrOwner(ctx), true);
+  });
+
+  it("global owner preview-as-player still downgrades to player visibility", () => {
+    assert.equal(
+      resolveEffectiveRole({
+        user: { id: "owner-1", displayName: "Owner", email: "owner@test", role: "owner" },
+        worldMembership: {
+          userId: "owner-1",
+          worldId: "w1",
+          role: "player",
+          characterName: "Testchar",
+        },
+        previewAsUserId: "owner-1",
+      }),
+      "player",
     );
   });
 

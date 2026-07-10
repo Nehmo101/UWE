@@ -68,12 +68,21 @@ export function resolveEffectiveRole(input: {
   worldMembership: WorldMembership | null;
   previewAsUserId?: string | null;
 }): UweRole {
-  if (
-    input.previewAsUserId &&
-    input.worldMembership &&
-    WORLD_DM_ROLES.has(input.worldMembership.role)
-  ) {
-    return "player";
+  if (input.previewAsUserId) {
+    const canPreviewAsPlayer =
+      input.user?.role === "owner" ||
+      input.user?.role === "admin" ||
+      input.user?.role === "dm" ||
+      (input.worldMembership !== null && WORLD_DM_ROLES.has(input.worldMembership.role));
+    if (canPreviewAsPlayer) {
+      return "player";
+    }
+  }
+
+  // Global system owner keeps full owner privileges in every world context,
+  // even when they also hold a player world membership for playtesting.
+  if (input.user?.role === "owner") {
+    return "owner";
   }
 
   if (input.worldMembership) {
@@ -83,7 +92,7 @@ export function resolveEffectiveRole(input: {
     return "player";
   }
 
-  if (input.user?.role === "owner" || input.user?.role === "admin" || input.user?.role === "dm") {
+  if (input.user?.role === "admin" || input.user?.role === "dm") {
     return input.user.role === "admin" ? "dm" : input.user.role;
   }
 

@@ -124,6 +124,36 @@ describe("character sheet permissions (portal)", () => {
     await db.$disconnect();
   });
 
+  it("global owner with player world membership sees all characters as staff", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const globalOwner = await auth.createUser({
+      displayName: "Global Owner",
+      email: "global-owner-char-perm@test.local",
+      password: "test",
+      role: "owner",
+    });
+
+    await auth.createWorldMembership({
+      userId: globalOwner.id,
+      worldId,
+      role: "player",
+      characterName: "Owner PC",
+    });
+
+    const ownerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: globalOwner.id });
+    assert.ok(ownerCtx);
+    assert.equal(ownerCtx.effectiveRole, "owner");
+
+    const listed = await auth.listCharactersForViewer(worldSlug, ownerCtx);
+    const listedIds = listed.map((entry) => entry.id);
+    assert.ok(listedIds.includes(playerOneCharacterId));
+    assert.ok(listedIds.includes(playerTwoCharacterId));
+    assert.ok(listedIds.includes(dmOnlyCharacterId));
+    await db.$disconnect();
+  });
+
   it("world staff sees all characters of the world", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);

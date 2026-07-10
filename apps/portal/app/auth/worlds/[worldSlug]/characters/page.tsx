@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isWorldStaff } from "@uwe/auth";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
@@ -45,6 +46,7 @@ export default async function PortalCharactersPage({ params }: Props) {
   }
 
   const membershipCharacterName = ctx.worldMembership?.characterName ?? null;
+  const staffView = isWorldStaff(ctx);
 
   return (
     <section className="portal-content-card">
@@ -100,7 +102,15 @@ export default async function PortalCharactersPage({ params }: Props) {
       </ul>
 
       {characters.length === 0 && (
-        <PortalEmptyState title="Keine Charakterbögen verfügbar" icon="user" />
+        <PortalEmptyState
+          title={staffView ? "Noch keine Charakterbögen angelegt" : "Keine Charakterbögen verfügbar"}
+          description={
+            staffView
+              ? "Als Owner/DM siehst du hier alle Charakterbögen der Welt. Lege sie im Studio auf einer Spielercharakter-Seite unter „Charakterbogen erstellen“ an."
+              : undefined
+          }
+          icon="user"
+        />
       )}
     </section>
   );

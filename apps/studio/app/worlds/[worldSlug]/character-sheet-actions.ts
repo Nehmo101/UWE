@@ -23,6 +23,7 @@ import {
 import { searchOpen5eSpells, listOpen5eSpellsByLevel } from "@uwe/dnd-api";
 import {
   parseFormDataOrThrow,
+  studioCharacterSheetCreateSchema,
   studioCharacterSheetUpdateSchema,
   studioCharacterLevelUpApplySchema,
   studioCharacterSpellAddSchema,
@@ -70,6 +71,61 @@ function buildUpdateInput(parsed: StudioCharacterSheetForm): UpdateCharacterInpu
     ...extractCharacterProficiencyFormInput(parsed),
     ...(parsed.notes !== undefined ? { notes: parsed.notes } : {}),
   };
+}
+
+export async function createStudioCharacterSheetAction(formData: FormData) {
+  await requireStudioActionAuth();
+
+  const parsed = parseFormDataOrThrow(formData, studioCharacterSheetCreateSchema);
+  const { worldSlug, pageId, pageSlug, category, displayName, ownerUserId } = parsed;
+
+  await requireStudioContentEdit(worldSlug, pageId);
+
+  const db = createPrismaClient();
+  try {
+    const repo = getAppRepository();
+    const world = await repo.getWorldBySlug(worldSlug);
+    if (!world) {
+      throw new Error("Welt nicht gefunden.");
+    }
+
+    const page = await repo.getPageById(pageId);
+    if (!page || page.type !== "player_character") {
+      throw new Error("Charakterbogen ist nur für Spielercharakter-Seiten verfügbar.");
+    }
+
+    const characters = createCharacterService(db);
+    const existing = await characters.getByPageId(pageId);
+    if (existing) {
+      throw new Error("Für diese Seite existiert bereits ein Charakterbogen.");
+    }
+
+    const ownerMembership = await db.worldMembership.findUnique({
+      where: {
+        userId_worldId: {
+          userId: ownerUserId,
+          worldId: world.id,
+        },
+      },
+      select: { userId: true },
+    });
+    if (!ownerMembership) {
+      throw new Error("Der gewählte Besitzer ist kein Mitglied dieser Welt.");
+    }
+
+    await characters.create({
+      worldId: world.id,
+      ownerUserId,
+      displayName,
+      pageId,
+      level: parsed.level ?? 1,
+    });
+  } finally {
+    await db.$disconnect();
+  }
+
+  revalidatePath(editPath(worldSlug, category, pageSlug));
+  redirect(`${editPath(worldSlug, category, pageSlug)}?created=1`);
 }
 
 export async function updateStudioCharacterSheetAction(formData: FormData) {

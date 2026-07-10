@@ -7,9 +7,11 @@ import {
 } from "@uwe/shared-ui";
 import {
   buildLevelUpSuggestions,
+  createAuthService,
   createCharacterService,
   createPartyTreasuryService,
   createPrismaClient,
+  getAppRepository,
   getInventoryItemDmNotes,
   isInventoryItemDmOnly,
   type PortalCharacterView,
@@ -20,6 +22,7 @@ import {
   addHomebrewSpellAction,
   addSpellAction,
   applyStudioLevelUpAction,
+  createStudioCharacterSheetAction,
   importSpellsByLevelAction,
   removeSpellAction,
   togglePreparedAction,
@@ -48,20 +51,73 @@ function formatModifier(value: number): string {
 
 export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, category }: Props) {
   const db = createPrismaClient();
+  const repo = getAppRepository();
+  const auth = createAuthService(db);
   const characters = createCharacterService(db);
+  const page = await repo.getPageById(pageId);
   const characterRecord = await characters.getByPageId(pageId);
+  const worldPlayers = characterRecord ? [] : await auth.listWorldPlayers(worldSlug);
   const inventoryItems = characterRecord
     ? await createPartyTreasuryService(db).listItemsForCharacter(characterRecord.id)
     : [];
   await db.$disconnect();
 
+  if (!page) {
+    return null;
+  }
+
   if (!characterRecord) {
     return (
       <CollapsibleSection title="Charakterbogen">
         <p className="uwe-hint">
-          Für diese Seite ist noch kein strukturierter Charakterbogen verknüpft. Lege einen
-          Character-Datensatz mit pageId an (Wave C0b).
+          Für diese Spielercharakter-Seite ist noch kein strukturierter Charakterbogen verknüpft.
         </p>
+        <form action={createStudioCharacterSheetAction} className="uwe-v2-form">
+          <input type="hidden" name="worldSlug" value={worldSlug} />
+          <input type="hidden" name="pageId" value={pageId} />
+          <input type="hidden" name="pageSlug" value={pageSlug} />
+          <input type="hidden" name="category" value={category} />
+
+          <label>
+            Anzeigename
+            <input name="displayName" defaultValue={page.title} required />
+          </label>
+
+          <label>
+            Besitzer (Spieler)
+            <select name="ownerUserId" required defaultValue={worldPlayers[0]?.userId ?? ""}>
+              {worldPlayers.length === 0 ? (
+                <option value="">Keine Spieler in dieser Welt</option>
+              ) : (
+                worldPlayers.map((membership) => (
+                  <option key={membership.userId} value={membership.userId}>
+                    {membership.user.displayName}
+                    {membership.characterName ? ` (${membership.characterName})` : ""}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+
+          <label>
+            Startstufe
+            <input name="level" type="number" min={1} max={30} defaultValue={1} required />
+          </label>
+
+          <button
+            type="submit"
+            className="uwe-v2-btn uwe-v2-btn-primary"
+            disabled={worldPlayers.length === 0}
+          >
+            Charakterbogen erstellen
+          </button>
+        </form>
+        {worldPlayers.length === 0 ? (
+          <p className="uwe-hint">
+            Lege zuerst einen Spieler mit Welt-Mitgliedschaft an, bevor du einen Charakterbogen
+            verknüpfst.
+          </p>
+        ) : null}
       </CollapsibleSection>
     );
   }
