@@ -1,8 +1,10 @@
 import Link from "next/link";
 import {
   CAPTURE_STATUS_LABELS,
-  CAPTURE_TRIAGE_ACTION_LABELS,
   CAPTURE_TYPE_LABELS,
+} from "@uwe/database/capture-constants";
+import {
+  CAPTURE_TRIAGE_ACTION_LABELS,
   parseCaptureAiProposal,
   PROJECT_CATEGORY_LABELS,
   WORKSHOP_TYPE_LABELS,
@@ -11,7 +13,7 @@ import {
   type HardwareDevice,
   type PersonalProjectCategory,
   type WorkshopProjectType,
-} from "@uwe/database/server";
+} from "@uwe/database/capture-triage-ui";
 import {
   generateCaptureProposalAction,
   reviewCaptureProposalAction,

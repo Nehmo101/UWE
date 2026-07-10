@@ -7,10 +7,8 @@ import { RtxStatusBadge } from "@uwe/shared-ui";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import {
   rtxReadinessSourceLabelDe,
-  loadStudioRtxDisplayState,
-} from "@/src/lib/rtx-display-state";
-
-type StudioRtxDisplayState = Awaited<ReturnType<typeof loadStudioRtxDisplayState>>;
+  type StudioRtxDisplayState,
+} from "@/src/lib/rtx-display-ui";
 
 const LIGHT_LABEL: Record<HealthLight, string> = {
   green: "Grün — alles im grünen Bereich",

@@ -14,42 +14,27 @@ import {
   WORKSHOP_TYPE_LABELS,
   type LifeAdminService,
 } from "./life-admin-service";
+import {
+  parseCaptureAiProposal,
+  type CaptureAiProposal,
+  type CaptureProposalStatus,
+  type CaptureProposalTarget,
+  type CaptureTriageAction,
+} from "./capture-triage-ui";
+
+export {
+  CAPTURE_TRIAGE_ACTION_LABELS,
+  parseCaptureAiProposal,
+  PROJECT_CATEGORY_LABELS,
+  WORKSHOP_TYPE_LABELS,
+  type CaptureAiProposal,
+  type CaptureProposalStatus,
+  type CaptureProposalTarget,
+  type CaptureTriageAction,
+} from "./capture-triage-ui";
 
 /** Namespace for capture inbox file uploads (not tied to a DnD world). */
 export const CAPTURE_UPLOAD_NAMESPACE = "_capture";
-
-export type CaptureTriageAction =
-  | "to_personal_project"
-  | "to_workshop_project"
-  | "to_dnd_page"
-  | "to_hardware_device"
-  | "to_contract"
-  | "to_life_brain"
-  | "to_image_studio"
-  | "archive"
-  | "delete";
-
-export type CaptureProposalTarget =
-  | "personal_project"
-  | "workshop_project"
-  | "dnd_page"
-  | "hardware_device"
-  | "contract_expense"
-  | "life_brain"
-  | "inbox";
-
-export type CaptureProposalStatus = "draft" | "accepted" | "rejected";
-
-export interface CaptureAiProposal {
-  status: CaptureProposalStatus;
-  generatedAt: string;
-  source: "heuristic" | "rtx";
-  suggestedCategory: string;
-  suggestedTags: string[];
-  suggestedTarget: CaptureProposalTarget;
-  suggestedNextAction: string;
-  confidence: "low" | "medium" | "high";
-}
 
 export interface CaptureTriageResult {
   action: CaptureTriageAction;
@@ -78,53 +63,6 @@ function readMetadata(capture: CaptureEntry): Record<string, unknown> {
 function readCaptureIntent(capture: CaptureEntry): string | null {
   const intent = readMetadata(capture).captureIntent;
   return typeof intent === "string" ? intent : null;
-}
-
-export function parseCaptureAiProposal(capture: CaptureEntry): CaptureAiProposal | null {
-  const raw = readMetadata(capture).aiProposal;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return null;
-  }
-  const proposal = raw as Partial<CaptureAiProposal>;
-  if (
-    proposal.status !== "draft" &&
-    proposal.status !== "accepted" &&
-    proposal.status !== "rejected"
-  ) {
-    return null;
-  }
-  if (typeof proposal.generatedAt !== "string") {
-    return null;
-  }
-  return {
-    status: proposal.status,
-    generatedAt: proposal.generatedAt,
-    source: "heuristic",
-    suggestedCategory: String(proposal.suggestedCategory ?? ""),
-    suggestedTags: Array.isArray(proposal.suggestedTags)
-      ? proposal.suggestedTags.filter((tag): tag is string => typeof tag === "string")
-      : [],
-    suggestedTarget: isProposalTarget(proposal.suggestedTarget)
-      ? proposal.suggestedTarget
-      : "inbox",
-    suggestedNextAction: String(proposal.suggestedNextAction ?? ""),
-    confidence:
-      proposal.confidence === "low" || proposal.confidence === "high"
-        ? proposal.confidence
-        : "medium",
-  };
-}
-
-function isProposalTarget(value: unknown): value is CaptureProposalTarget {
-  return (
-    value === "personal_project" ||
-    value === "workshop_project" ||
-    value === "dnd_page" ||
-    value === "hardware_device" ||
-    value === "contract_expense" ||
-    value === "life_brain" ||
-    value === "inbox"
-  );
 }
 
 function tokenize(text: string): string[] {
@@ -715,17 +653,5 @@ export class CaptureTriageService {
 export function createCaptureTriageService(db: PrismaClient): CaptureTriageService {
   return new CaptureTriageService(db);
 }
-
-export const CAPTURE_TRIAGE_ACTION_LABELS: Record<CaptureTriageAction, string> = {
-  to_personal_project: "Zu Projekt machen",
-  to_workshop_project: "Zu Werkstatt-Projekt machen",
-  to_dnd_page: "Zu DnD-Seite machen",
-  to_hardware_device: "Zu Hardware-Gerät hängen",
-  to_contract: "Zu Vertrag machen",
-  to_life_brain: "Ins Life Brain übernehmen",
-  to_image_studio: "In Image Studio öffnen",
-  archive: "Archivieren",
-  delete: "Löschen",
-};
 
 export { QUICK_CAPTURE_TYPE_OPTIONS } from "./capture-constants";

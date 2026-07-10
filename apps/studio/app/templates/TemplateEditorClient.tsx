@@ -6,21 +6,29 @@ import {
   PAGE_TYPE_LABELS,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
-import {
-  ContentBlockTypeEnum,
-  PageTypeEnum,
-  VisibilityEnum,
-} from "@uwe/database/enums";
-import type { PageTemplateView } from "@uwe/database/server";
 import { TemplateLivePreview, type TemplatePreviewBlock } from "./TemplateLivePreview";
 
+type TemplatePageType = keyof typeof PAGE_TYPE_LABELS;
+type TemplateVisibility = keyof typeof VISIBILITY_LABELS;
+type TemplateBlockType = keyof typeof BLOCK_TYPE_LABELS;
+
+interface PageTemplateEditorModel {
+  id: string;
+  name: string;
+  description: string;
+  pageType: TemplatePageType;
+  defaultVisibility: TemplateVisibility;
+  titlePlaceholder: string;
+  blocks: Array<{ type: TemplateBlockType; visibility: TemplateVisibility; content: string }>;
+}
+
 interface Props {
-  template: PageTemplateView | null;
+  template: PageTemplateEditorModel | null;
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
 }
 
-function initialBlocks(template: PageTemplateView | null): TemplatePreviewBlock[] {
+function initialBlocks(template: PageTemplateEditorModel | null): TemplatePreviewBlock[] {
   const existing =
     template?.blocks.map((block) => ({
       type: block.type,
@@ -82,9 +90,9 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
           <select
             name="pageType"
             value={pageType}
-            onChange={(e) => setPageType(e.target.value as PageTemplateView["pageType"])}
+            onChange={(e) => setPageType(e.target.value as TemplatePageType)}
           >
-            {Object.values(PageTypeEnum).map((type) => (
+            {(Object.keys(PAGE_TYPE_LABELS) as TemplatePageType[]).map((type) => (
               <option key={type} value={type}>
                 {PAGE_TYPE_LABELS[type]}
               </option>
@@ -98,10 +106,10 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
             name="defaultVisibility"
             value={defaultVisibility}
             onChange={(e) =>
-              setDefaultVisibility(e.target.value as PageTemplateView["defaultVisibility"])
+              setDefaultVisibility(e.target.value as TemplateVisibility)
             }
           >
-            {Object.values(VisibilityEnum).map((v) => (
+            {(Object.keys(VISIBILITY_LABELS) as TemplateVisibility[]).map((v) => (
               <option key={v} value={v}>
                 {VISIBILITY_LABELS[v]}
               </option>
@@ -130,9 +138,9 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
                 value={block.type}
                 onChange={(e) => updateBlock(index, { type: e.target.value })}
               >
-                {Object.values(ContentBlockTypeEnum).map((type) => (
+                {Object.keys(BLOCK_TYPE_LABELS).map((type) => (
                   <option key={type} value={type}>
-                    {BLOCK_TYPE_LABELS[type]}
+                    {BLOCK_TYPE_LABELS[type as TemplateBlockType]}
                   </option>
                 ))}
               </select>
@@ -144,7 +152,7 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
                 value={block.visibility}
                 onChange={(e) => updateBlock(index, { visibility: e.target.value })}
               >
-                {Object.values(VisibilityEnum).map((v) => (
+                {(Object.keys(VISIBILITY_LABELS) as TemplateVisibility[]).map((v) => (
                   <option key={v} value={v}>
                     {VISIBILITY_LABELS[v]}
                   </option>

@@ -7,6 +7,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { LifeBrainDocumentClient } from "@/components/life-brain/LifeBrainDocumentClient";
+import { AdminEntityLinksPanel } from "@/components/admin/AdminEntityLinksPanel";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 
 interface Props {
@@ -59,6 +60,7 @@ export default async function LifeBrainDocumentDetailPage({ params }: Props) {
         linkedCaptures={linkedCaptures}
         captureTypeLabels={CAPTURE_TYPE_LABELS}
       />
+      <AdminEntityLinksPanel sourceType="personal_brain_document" sourceId={document.id} />
     </StudioShell>
   );
 }

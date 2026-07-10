@@ -16,7 +16,8 @@
     "./router": "./src/router/index.ts",
     "./cookbook-bridge": "./src/cookbook-bridge.ts",
     "./gateway": "./src/gateway/index.ts",
-    "./theme-generator": "./src/theme-generator/index.ts"
+    "./theme-generator": "./src/theme-generator/index.ts",
+    "./one-shot": "./src/dnd-generator/one-shot.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { ViewEditToggle } from "@uwe/shared-ui";
 import { CaptureTriagePanel } from "@/components/capture/CaptureTriagePanel";
 import { CAPTURE_STATUS_LABELS, CAPTURE_TYPE_LABELS } from "@uwe/database/capture-constants";
-import type { CaptureEntry, HardwareDevice } from "@uwe/database/server";
+import type { CaptureEntry, HardwareDevice } from "@uwe/database/capture-triage-ui";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",

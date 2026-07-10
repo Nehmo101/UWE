@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ViewEditToggle } from "@uwe/shared-ui";
-import { AdminEntityLinksPanel } from "@/components/admin/AdminEntityLinksPanel";
 import {
   updateLifeBrainDocumentAction,
   deleteLifeBrainDocumentAction,
@@ -122,7 +121,6 @@ export function LifeBrainDocumentClient({
           </ul>
         </section>
       )}
-      <AdminEntityLinksPanel sourceType="personal_brain_document" sourceId={document.id} />
       <section className="uwe-v2-section">
         <h2 className="uwe-v2-section-title">Indexierung</h2>
         <form action={indexLifeBrainDocumentAction}>

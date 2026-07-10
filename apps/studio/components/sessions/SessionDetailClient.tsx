@@ -9,7 +9,6 @@ import {
   GameSessionStatusBadge,
   PageTypeBadge,
 } from "@uwe/shared-ui";
-import { GameSessionStatusEnum } from "@uwe/database/enums";
 import { buildPageUrl as dbBuildPageUrl } from "@uwe/database/page-types";
 import type { DmGameSessionView } from "@uwe/database/server";
 import {
@@ -126,11 +125,13 @@ export function SessionDetailClient({
         <label>
           Status
           <select name="status" defaultValue={session.status}>
-            {Object.values(GameSessionStatusEnum).map((status) => (
+            {(Object.keys(GAME_SESSION_STATUS_LABELS) as Array<keyof typeof GAME_SESSION_STATUS_LABELS>).map(
+              (status) => (
               <option key={status} value={status}>
                 {GAME_SESSION_STATUS_LABELS[status]}
               </option>
-            ))}
+            ),
+            )}
           </select>
         </label>
         <fieldset className="uwe-fieldset">

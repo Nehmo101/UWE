@@ -1,6 +1,7 @@
 import type { PrismaClient } from "./client";
 import type { PromptTemplateCategory } from "./generated/prisma/client";
 import { toPrismaJsonValue } from "./json-utils";
+import { extractVariables } from "./prompt-library-utils";
 
 /**
  * Prompt-/Agenten-Bibliothek: Prompts als eigene Objekte mit Kategorie und
@@ -10,39 +11,7 @@ import { toPrismaJsonValue } from "./json-utils";
 
 export type { PromptTemplateCategory };
 
-export const PROMPT_CATEGORIES: PromptTemplateCategory[] = [
-  "repo_audit",
-  "ui_fix",
-  "dnd_generator",
-  "import",
-  "refactor",
-  "other",
-];
-
-export const PROMPT_CATEGORY_LABELS: Record<PromptTemplateCategory, string> = {
-  repo_audit: "Repo-Audit",
-  ui_fix: "UI-Fix",
-  dnd_generator: "DnD-Generator",
-  import: "Import",
-  refactor: "Refactor",
-  other: "Sonstiges",
-};
-
-/** Alle eindeutigen `{{variable}}`-Platzhalter im Body (Reihenfolge des Auftretens). */
-export function extractVariables(body: string): string[] {
-  const result: string[] = [];
-  const seen = new Set<string>();
-  const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(body)) !== null) {
-    const name = match[1];
-    if (!seen.has(name)) {
-      seen.add(name);
-      result.push(name);
-    }
-  }
-  return result;
-}
+export { extractVariables, PROMPT_CATEGORIES, PROMPT_CATEGORY_LABELS } from "./prompt-library-utils";
 
 /** Ersetzt `{{name}}` durch die Werte; unbekannte Platzhalter bleiben leer. */
 export function fillPrompt(body: string, values: Record<string, string>): string {

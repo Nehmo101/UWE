@@ -115,6 +115,26 @@ export interface ScanFilingProposal {
   rationale: string;
 }
 
+/** Persisted scan row shape passed to Studio UI (server-fetched, client-rendered). */
+export interface ScanDocumentRecord {
+  id: string;
+  title: string;
+  status: string;
+  privacyLevel: ScanPrivacyLevel;
+  mimeType: string;
+  ocrText: string;
+  ocrEngine: string | null;
+  detectedKind: ScanDocumentKind;
+  detectionConfidence: string | null;
+  extractedFields: ExtractedFields | null;
+  proposal: ScanFilingProposal | null;
+  uncertainties: string[];
+  worldId: string | null;
+  filedTargetType: string | null;
+  filedTargetId: string | null;
+  createdAt: Date;
+}
+
 export const ACTIVE_SCAN_STATUSES: ScanDocumentStatus[] = [
   "unanalyzed",
   "analyzing",

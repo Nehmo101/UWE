@@ -16,11 +16,14 @@ import { parseRecipeText } from "./parse-recipe";
 import type {
   ExtractedFields,
   ScanDocumentKind,
+  ScanDocumentRecord,
   ScanDocumentStatus,
   ScanFilingProposal,
   ScanFilingTarget,
   ScanPrivacyLevel,
 } from "./scan-types";
+
+export type { ScanDocumentRecord } from "./scan-types";
 
 export interface CreateScanInput {
   storageKey: string;
@@ -29,25 +32,6 @@ export interface CreateScanInput {
   title?: string;
   privacyLevel?: ScanPrivacyLevel;
   worldId?: string | null;
-}
-
-export interface ScanDocumentRecord {
-  id: string;
-  title: string;
-  status: string;
-  privacyLevel: ScanPrivacyLevel;
-  mimeType: string;
-  ocrText: string;
-  ocrEngine: string | null;
-  detectedKind: ScanDocumentKind;
-  detectionConfidence: string | null;
-  extractedFields: ExtractedFields | null;
-  proposal: ScanFilingProposal | null;
-  uncertainties: string[];
-  worldId: string | null;
-  filedTargetType: string | null;
-  filedTargetId: string | null;
-  createdAt: Date;
 }
 
 function toRecord(row: {

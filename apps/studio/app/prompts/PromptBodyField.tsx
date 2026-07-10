@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { extractVariables } from "@uwe/database/prompt-library";
+import { extractVariables } from "@uwe/database/prompt-library-utils";
 import { PromptBodyEditor } from "./PromptBodyEditor";
 
 interface Props {

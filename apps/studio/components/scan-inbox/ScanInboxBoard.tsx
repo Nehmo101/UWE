@@ -8,7 +8,7 @@ import {
   SCAN_STATUS_LABELS,
   type ScanDocumentRecord,
   type ScanDocumentStatus,
-} from "@uwe/scan-inbox";
+} from "@uwe/scan-inbox/scan-types";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import { ONE_SHOT_TONE_LABELS, type OneShotTone } from "@uwe/ai-brain";
+import { ONE_SHOT_TONE_LABELS, type OneShotTone } from "@uwe/ai-brain/one-shot";
 
 interface LocationOption {
   title: string;
