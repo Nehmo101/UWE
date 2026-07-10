@@ -38,9 +38,8 @@ describe("route policy", () => {
     assert.equal(classifyRoute("/api/worlds", "portal").access, "protected-session");
   });
 
-  it("treats dashboard, graph, print and asset portal APIs as session-protected", () => {
+  it("treats graph, print and asset portal APIs as session-protected", () => {
     for (const path of [
-      "/api/dashboard-layout/portal:world:terra",
       "/api/worlds/terra/graph",
       "/api/worlds/terra/characters/print",
       "/api/assets/asset-123/file",
@@ -61,10 +60,8 @@ describe("route policy", () => {
     assert.equal(classifyRoute("/api/auth/two-factor", "studio").access, "protected-session");
     assert.equal(classifyRoute("/api/auth/two-factor/setup", "studio").access, "protected-session");
     assert.equal(classifyRoute("/api/auth/change-password", "studio").access, "protected-session");
-    assert.equal(classifyRoute("/api/dashboard-layout/studio:today", "studio").access, "protected-session");
     assert.equal(classifyRoute("/api/worlds", "studio").access, "protected-session");
     assert.equal(isUnknownProtectedApi("/api/auth/two-factor", "studio"), false);
-    assert.equal(isUnknownProtectedApi("/api/dashboard-layout/studio:today", "studio"), false);
   });
 
   it("treats studio auth pages as public", () => {

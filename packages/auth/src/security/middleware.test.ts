@@ -51,7 +51,6 @@ describe("middleware evaluation", () => {
 
   it("blocks session-protected portal APIs without a session", () => {
     for (const path of [
-      "/api/dashboard-layout/portal:world:terra",
       "/api/worlds/terra/graph",
       "/api/assets/asset-123/file",
     ]) {
@@ -63,7 +62,6 @@ describe("middleware evaluation", () => {
 
   it("allows session-protected portal APIs with a session", () => {
     for (const path of [
-      "/api/dashboard-layout/portal:world:terra",
       "/api/worlds/terra/graph",
       "/api/worlds/terra/characters/print",
       "/api/assets/asset-123/file",
@@ -94,19 +92,6 @@ describe("middleware evaluation", () => {
     });
     assert.equal(decision.action, "block");
     assert.equal(decision.status, 404);
-  });
-
-  it("allows known studio dashboard layout API through middleware classification", () => {
-    const decision = evaluateStudioMiddleware(makeRequest("/api/dashboard-layout/studio:today", {
-      headers: { host: "127.0.0.1:3000", "sec-fetch-site": "same-origin" },
-    }), {
-      ...process.env,
-      NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
-      CLOUDFLARE_TUNNEL: "true",
-      STUDIO_API_TOKEN: "secret",
-    });
-    assert.equal(decision.action, "allow");
   });
 
   it("allows studio health endpoint", () => {

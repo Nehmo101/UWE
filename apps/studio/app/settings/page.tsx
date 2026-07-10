@@ -15,21 +15,16 @@ import { SettingsStatusTab } from "./SettingsStatusTab";
 import {
   BACKGROUND_PATTERN_VALUES,
   CanonicalStatusEnum,
-  createDashboardLayoutService,
   getAppRepository,
   getPersistentPathConfiguration,
-  prisma,
   resolveEffectiveBackupsPath,
   resolveEffectiveExportsPath,
   resolveEffectiveUploadsPath,
   resolveAgentJobsConfig,
   resolveCalendarConfig,
   resolveDndApiConfig,
-  STUDIO_TODAY_PAGE_KEY,
   VisibilityEnum,
 } from "@uwe/database/server";
-import { getUweRuntimeConfig } from "@uwe/auth";
-import { getCurrentAuthUser } from "@/src/lib/auth";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
 import { DesignAssistantWizard } from "../../components/DesignAssistantWizard";
@@ -71,15 +66,9 @@ export default async function SettingsPage({ searchParams }: Props) {
   const activeTab: TabId = isTabId(tabParam) ? tabParam : "general";
 
   const repo = getAppRepository();
-  const currentUser = await getCurrentAuthUser();
-  const layoutUserId =
-    currentUser?.id ?? (!getUweRuntimeConfig().authRequired ? "dev-bypass" : null);
-  const [settings, worlds, todayLayout] = await Promise.all([
+  const [settings, worlds] = await Promise.all([
     repo.getSystemSettings(),
     repo.listWorldsWithGuestMode(),
-    layoutUserId
-      ? createDashboardLayoutService(prisma).getDashboardLayout(layoutUserId, STUDIO_TODAY_PAGE_KEY)
-      : Promise.resolve(null),
   ]);
 
   const uploadsPath = resolveEffectiveUploadsPath(settings);
@@ -128,7 +117,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           </p>
 
           {activeTab === "general" && (
-            <SettingsGeneralTab todayWidgets={todayLayout?.widgets ?? []} defaultLandingPage={settings.app.defaultLandingPage} />
+            <SettingsGeneralTab defaultLandingPage={settings.app.defaultLandingPage} />
           )}
 
           {activeTab === "appearance" && (

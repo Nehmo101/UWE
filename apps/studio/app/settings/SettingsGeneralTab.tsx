@@ -1,16 +1,13 @@
 import Link from "next/link";
-import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
 import { SettingsCollapsiblePanel } from "@/components/SettingsCollapsiblePanel";
-import { TodayDashboardSettings } from "@/components/today/TodayDashboardSettings";
 import { updateSettingsAction } from "../settings-actions";
 import { normalizeStudioLandingPage, STUDIO_LANDING_PAGE_OPTIONS } from "@/src/lib/studio-landing";
 
 interface SettingsGeneralTabProps {
-  todayWidgets: DashboardWidgetConfig[];
   defaultLandingPage?: string | null;
 }
 
-export function SettingsGeneralTab({ todayWidgets, defaultLandingPage }: SettingsGeneralTabProps) {
+export function SettingsGeneralTab({ defaultLandingPage }: SettingsGeneralTabProps) {
   const landingPage = normalizeStudioLandingPage(defaultLandingPage);
   return (
     <div className="uwe-settings-stack">
@@ -48,13 +45,6 @@ export function SettingsGeneralTab({ todayWidgets, defaultLandingPage }: Setting
         </form>
       </SettingsCollapsiblePanel>
 
-      <SettingsCollapsiblePanel
-        title="Heute-Dashboard Widgets"
-        summary="Sichtbarkeit der Widgets auf /today"
-        defaultOpen
-      >
-        <TodayDashboardSettings initialWidgets={todayWidgets} />
-      </SettingsCollapsiblePanel>
       <SettingsCollapsiblePanel
         title="Abgrenzung zu Admin"
         summary="Settings vs. /admin — was gehört wohin"

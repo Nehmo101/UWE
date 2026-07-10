@@ -290,17 +290,9 @@ export {
 } from "./theme";
 
 export {
-  LayoutEditorProvider,
-  LayoutEditToolbar,
-  SortableWidgetGrid,
-  useDashboardLayout,
-  useLayoutEditor,
-  type LayoutEditToolbarProps,
-  type LayoutEditorProviderProps,
-  type SortableWidgetGridProps,
-  type UseDashboardLayoutOptions,
-  type UseDashboardLayoutState,
-} from "./layout-editor";
+  DashboardWidgetGrid,
+  type DashboardWidgetGridProps,
+} from "./dashboard-widget-grid";
 
 export {
   CharacterLevelUpPanel,

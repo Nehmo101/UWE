@@ -17,6 +17,8 @@ import {
 import {
   createAuthService,
   createPrismaClient,
+  getDefaultDashboardLayout,
+  portalWorldPageKey,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
   type SearchEntityFilter,
@@ -78,6 +80,7 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
   const previewEnabled = await canUsePreview(worldSlug);
   const previewUserId = await getPreviewUserId();
   const players = previewEnabled ? await getWorldPlayers(worldSlug) : [];
+  const dashboardWidgets = getDefaultDashboardLayout(portalWorldPageKey(worldSlug));
 
   return (
     <section className="portal-content-card">
@@ -125,7 +128,11 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
           <SearchResultsList results={searchResults} query={q} />
         </>
       ) : dashboard ? (
-        <PortalWorldDashboardClient worldSlug={worldSlug} dashboard={dashboard} />
+        <PortalWorldDashboardClient
+          worldSlug={worldSlug}
+          dashboard={dashboard}
+          widgets={dashboardWidgets}
+        />
       ) : (
         <EmptyState
           title="Keine Inhalte freigegeben"

@@ -2,17 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SidebarSection } from "@uwe/shared-ui";
 import {
-  createDashboardLayoutService,
   createWorldOverviewService,
   getAppRepository,
+  getDefaultDashboardLayout,
   prisma,
   studioWorldDashboardPageKey,
 } from "@uwe/database/server";
-import { getUweRuntimeConfig } from "@uwe/auth";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldRootBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { worldCockpitTabItems, worldDmToolQuickLinks } from "@/src/lib/studio-navigation";
-import { getCurrentAuthUser } from "@/src/lib/auth";
 import { WorldDashboardClient } from "./WorldDashboardClient";
 
 interface Props {
@@ -26,20 +24,10 @@ export default async function WorldDashboardPage({ params }: Props) {
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const currentUser = await getCurrentAuthUser();
-  const layoutUserId =
-    currentUser?.id ?? (!getUweRuntimeConfig().authRequired ? "dev-bypass" : null);
-
-  const [overview, dashboardLayout] = await Promise.all([
-    createWorldOverviewService(prisma).getWorldOverview(worldSlug),
-    layoutUserId
-      ? createDashboardLayoutService(prisma).getDashboardLayout(
-          layoutUserId,
-          studioWorldDashboardPageKey(worldSlug),
-        )
-      : Promise.resolve(null),
-  ]);
+  const overview = await createWorldOverviewService(prisma).getWorldOverview(worldSlug);
   if (!overview) notFound();
+
+  const dashboardWidgets = getDefaultDashboardLayout(studioWorldDashboardPageKey(worldSlug));
 
   const quickCreate = [
     { label: "+ NPC", href: `/worlds/${worldSlug}/pages/new?template=npc` },
@@ -136,8 +124,7 @@ export default async function WorldDashboardPage({ params }: Props) {
         worldName={world.name}
         worldDescription={world.description}
         cockpitTabs={cockpitTabs}
-        initialWidgets={dashboardLayout?.widgets}
-        initialIsDefault={dashboardLayout?.isDefault}
+        widgets={dashboardWidgets}
         overview={{
           counts: overview.counts,
           portal: overview.portal,

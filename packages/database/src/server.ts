@@ -1355,16 +1355,12 @@ export type {
 } from "./player-note-service";
 
 export {
-  createDashboardLayoutService,
-  type DashboardLayoutService,
-} from "./dashboard-layout-service";
-
-export {
   DEFAULT_PORTAL_WORLD_LAYOUT,
   DEFAULT_STUDIO_TODAY_LAYOUT,
   DEFAULT_STUDIO_DASHBOARD_LAYOUT,
   DEFAULT_STUDIO_WORLD_DASHBOARD_LAYOUT,
   getDefaultDashboardLayout,
+  mergeMissingDefaultWidgets,
   normalizeDashboardWidgets,
   parseDashboardWidgets,
   portalWorldPageKey,

@@ -2,21 +2,18 @@
 
 import Link from "next/link";
 import {
-  LayoutEditToolbar,
-  LayoutEditorProvider,
+  DashboardWidgetGrid,
   PageTypeBadge,
   PlayerNoteStatusBadge,
-  SortableWidgetGrid,
-  useDashboardLayout,
 } from "@uwe/shared-ui";
 import type { PageType } from "@uwe/database/enums";
 import type { DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
-import { portalWorldPageKey } from "@uwe/database/dashboard-layout";
 import type { PortalDashboardData } from "@uwe/database/server";
 
 interface PortalWorldDashboardClientProps {
   worldSlug: string;
   dashboard: PortalDashboardData;
+  widgets: DashboardWidgetConfig[];
 }
 
 function DashboardSection({
@@ -74,9 +71,11 @@ function PageLinks({
   );
 }
 
-export function PortalWorldDashboardClient({ worldSlug, dashboard }: PortalWorldDashboardClientProps) {
-  const pageKey = portalWorldPageKey(worldSlug);
-  const layout = useDashboardLayout({ pageKey });
+export function PortalWorldDashboardClient({
+  worldSlug,
+  dashboard,
+  widgets,
+}: PortalWorldDashboardClientProps) {
 
   const renderWidget = (widget: DashboardWidgetConfig) => {
     switch (widget.widgetType) {
@@ -216,10 +215,6 @@ export function PortalWorldDashboardClient({ worldSlug, dashboard }: PortalWorld
     }
   };
 
-  if (layout.loading && layout.widgets.length === 0) {
-    return <p className="auth-muted">Dashboard-Layout wird geladen…</p>;
-  }
-
   return (
     <div className="portal-dashboard">
       {dashboard.characterName && (
@@ -228,16 +223,7 @@ export function PortalWorldDashboardClient({ worldSlug, dashboard }: PortalWorld
         </p>
       )}
 
-      <LayoutEditorProvider initialWidgets={layout.widgets}>
-        <LayoutEditToolbar
-          onApply={async (widgets) => {
-            await layout.save(widgets);
-          }}
-          saving={layout.saving}
-          error={layout.error}
-        />
-        <SortableWidgetGrid renderWidget={renderWidget} />
-      </LayoutEditorProvider>
+      <DashboardWidgetGrid widgets={widgets} renderWidget={renderWidget} />
     </div>
   );
 }

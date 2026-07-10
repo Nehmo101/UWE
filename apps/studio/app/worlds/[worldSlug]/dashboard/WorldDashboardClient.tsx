@@ -5,19 +5,16 @@ import Link from "next/link";
 import {
   EmptyState,
   GAME_SESSION_STATUS_LABELS,
-  LayoutEditToolbar,
-  LayoutEditorProvider,
+  DashboardWidgetGrid,
   PageTypeBadge,
   PublishBadge,
-  SortableWidgetGrid,
-  useDashboardLayout,
   VisibilityBadge,
   WorldCockpitCard,
   WorldCockpitHeader,
   WorldCockpitTabs,
   WorldCockpitTag,
 } from "@uwe/shared-ui";
-import { studioWorldDashboardPageKey, type DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
+import { type DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
 import type { GameSessionStatus, PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 import { buildPageUrl } from "@uwe/database/page-types";
 
@@ -33,8 +30,7 @@ export interface WorldDashboardClientProps {
   worldName: string;
   worldDescription: string | null;
   cockpitTabs: CockpitTabItem[];
-  initialWidgets?: DashboardWidgetConfig[];
-  initialIsDefault?: boolean;
+  widgets: DashboardWidgetConfig[];
   overview: {
     counts: {
       pages: number;
@@ -85,12 +81,9 @@ export function WorldDashboardClient({
   worldName,
   worldDescription,
   cockpitTabs,
-  initialWidgets,
-  initialIsDefault,
+  widgets,
   overview,
 }: WorldDashboardClientProps) {
-  const pageKey = studioWorldDashboardPageKey(worldSlug);
-  const layout = useDashboardLayout({ pageKey, initialWidgets, initialIsDefault });
 
   const renderWidget = (widget: DashboardWidgetConfig) => {
     switch (widget.widgetType) {
@@ -250,11 +243,7 @@ export function WorldDashboardClient({
     }
   };
 
-  if (layout.loading && layout.widgets.length === 0) {
-    return <p className="uwe-dashboard-muted">Dashboard-Layout wird geladen…</p>;
-  }
-
-  const secondaryWidgets = layout.widgets.filter(
+  const secondaryWidgets = widgets.filter(
     (widget) => !["next-session", "open-plots", "recent-pages"].includes(widget.widgetType),
   );
 
@@ -288,19 +277,7 @@ export function WorldDashboardClient({
         {renderWidget({ id: "hero-recent-pages", widgetType: "recent-pages", order: 2, column: 3, visible: true })}
       </section>
 
-      <LayoutEditorProvider initialWidgets={secondaryWidgets}>
-        <LayoutEditToolbar
-          onApply={async (widgets) => {
-            const heroWidgets = layout.widgets.filter((widget) =>
-              ["next-session", "open-plots", "recent-pages"].includes(widget.widgetType),
-            );
-            await layout.save([...heroWidgets, ...widgets]);
-          }}
-          saving={layout.saving}
-          error={layout.error}
-        />
-        <SortableWidgetGrid renderWidget={renderWidget} />
-      </LayoutEditorProvider>
+      <DashboardWidgetGrid widgets={secondaryWidgets} renderWidget={renderWidget} />
     </div>
   );
 }

@@ -75,7 +75,6 @@ export const PORTAL_SESSION_API_ROUTES = [
   "/api/auth/two-factor/activate",
   "/api/auth/two-factor/disable",
   "/api/assets/*/file",
-  "/api/dashboard-layout/*",
   "/api/worlds",
   "/api/worlds/*/graph",
   "/api/worlds/*/characters/print",
@@ -89,7 +88,6 @@ export const STUDIO_SESSION_API_ROUTES = [
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
   "/api/auth/two-factor/disable",
-  "/api/dashboard-layout/*",
   "/api/worlds",
 ] as const;
 
