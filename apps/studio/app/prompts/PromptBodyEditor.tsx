@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle, Label } from "@/src/components/ui";
 
 const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 
@@ -20,7 +21,11 @@ function highlightPromptBody(body: string, knownVariables: string[]): React.Reac
     parts.push(
       <mark
         key={`${name}-${start}`}
-        className={known.has(name) ? "uwe-prompt-var-known" : "uwe-prompt-var-unknown"}
+        className={
+          known.has(name)
+            ? "rounded bg-primary/15 px-0.5 text-foreground"
+            : "rounded bg-destructive/15 px-0.5 text-destructive"
+        }
         title={known.has(name) ? `Variable: ${name}` : `Unbekannte Variable: ${name}`}
       >
         {match[0]}
@@ -45,39 +50,32 @@ export function PromptBodyEditor({ body, variables }: Props) {
   const highlighted = useMemo(() => highlightPromptBody(body, variables), [body, variables]);
 
   return (
-    <div className="uwe-v2-section">
+    <div className="mb-6 flex flex-col gap-4">
       {variables.length > 0 ? (
-        <section className="uwe-v2-card uwe-v2-card-padded" style={{ marginBottom: "0.75rem" }}>
-          <h3 className="uwe-v2-section-title">Variablen</h3>
-          <ul className="uwe-linked-list">
-            {variables.map((name) => (
-              <li key={name}>
-                <code>{`{{${name}}}`}</code>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card className="mb-3">
+          <CardHeader>
+            <CardTitle>Variablen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
+              {variables.map((name) => (
+                <li key={name}>
+                  <code>{`{{${name}}}`}</code>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       ) : (
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Keine dokumentierten Variablen — <code>{`{{name}}`}</code> im Body werden trotzdem hervorgehoben.
         </p>
       )}
 
-      <label>
-        Body (Vorschau)
-        <pre
-          className="uwe-prompt-body-preview"
-          style={{
-            whiteSpace: "pre-wrap",
-            padding: "0.75rem",
-            borderRadius: "6px",
-            background: "var(--uwe-code-bg, rgba(0,0,0,0.05))",
-            minHeight: "6rem",
-          }}
-        >
-          {highlighted}
-        </pre>
-      </label>
+      <div className="flex flex-col gap-1.5">
+        <Label>Body (Vorschau)</Label>
+        <pre className="min-h-24 whitespace-pre-wrap rounded-md bg-muted p-3">{highlighted}</pre>
+      </div>
     </div>
   );
 }

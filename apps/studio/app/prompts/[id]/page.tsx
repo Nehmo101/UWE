@@ -11,6 +11,22 @@ import { requireStudioAccess } from "@/src/lib/auth";
 import { deletePromptAction, updatePromptAction } from "@/app/prompt-actions";
 import { PromptFillClient } from "@/app/prompts/PromptFillClient";
 import { PromptBodyField } from "@/app/prompts/PromptBodyField";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -39,63 +55,69 @@ export default async function PromptDetailPage({ params, searchParams }: Props) 
         title={prompt.title}
         summary={PROMPT_CATEGORY_LABELS[prompt.category]}
         actions={
-          <Link href="/admin/agent-jobs" className="uwe-v2-btn">
+          <Link href="/admin/agent-jobs" className={buttonVariants({ variant: "secondary" })}>
             Als Agent Job starten →
           </Link>
         }
       />
 
-      {saved ? (
-        <p className="uwe-inspector-ok" role="status">
-          ✓ Gespeichert.
-        </p>
-      ) : null}
+      {saved ? <Alert tone="success" icon="check" title="Gespeichert." className="mb-4" /> : null}
 
       <PromptFillClient body={prompt.body} variables={prompt.variables} />
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Bearbeiten</h2>
-        <form action={updatePromptAction} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <input type="hidden" name="id" value={prompt.id} />
-          <label>
-            Titel
-            <input type="text" name="title" defaultValue={prompt.title} required />
-          </label>
-          <label>
-            Kategorie
-            <select name="category" defaultValue={prompt.category}>
-              {PROMPT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {PROMPT_CATEGORY_LABELS[cat]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Beschreibung
-            <input type="text" name="description" defaultValue={prompt.description} />
-          </label>
-          <PromptBodyField initialBody={prompt.body} initialVariables={prompt.variables} />
-          <label>
-            Tags (Komma-getrennt)
-            <input type="text" name="tags" defaultValue={prompt.tags.join(", ")} />
-          </label>
-          <div className="uwe-form-actions">
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Speichern
-            </button>
-          </div>
-        </form>
-      </section>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Bearbeiten</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={updatePromptAction} className="flex flex-col gap-3">
+            <input type="hidden" name="id" value={prompt.id} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-edit-title">Titel</Label>
+              <Input id="prompt-edit-title" type="text" name="title" defaultValue={prompt.title} required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-edit-category">Kategorie</Label>
+              <Select name="category" defaultValue={prompt.category}>
+                <SelectTrigger id="prompt-edit-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROMPT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {PROMPT_CATEGORY_LABELS[cat]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-edit-description">Beschreibung</Label>
+              <Input
+                id="prompt-edit-description"
+                type="text"
+                name="description"
+                defaultValue={prompt.description}
+              />
+            </div>
+            <PromptBodyField initialBody={prompt.body} initialVariables={prompt.variables} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-edit-tags">Tags (Komma-getrennt)</Label>
+              <Input id="prompt-edit-tags" type="text" name="tags" defaultValue={prompt.tags.join(", ")} />
+            </div>
+            <div>
+              <Button type="submit">Speichern</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
-      <section className="uwe-v2-section">
-        <form action={deletePromptAction}>
-          <input type="hidden" name="id" value={prompt.id} />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-            Prompt löschen
-          </button>
-        </form>
-      </section>
+      <form action={deletePromptAction} className="mt-4">
+        <input type="hidden" name="id" value={prompt.id} />
+        <Button type="submit" variant="secondary" size="sm">
+          Prompt löschen
+        </Button>
+      </form>
     </StudioShell>
   );
 }

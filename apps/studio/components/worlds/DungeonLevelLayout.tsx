@@ -15,26 +15,20 @@ export function DungeonLevelLayout({ worldSlug, dungeonSlug, levels }: Props) {
   if (levels.length === 0) return null;
 
   return (
-    <section className="uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Ebenen-Layout</h2>
-      <div
-        className="uwe-dungeon-level-layout"
-        role="list"
-        aria-label="Dungeon-Ebenen"
-        style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
-      >
+    <section className="mb-8 flex flex-col gap-3">
+      <h2 className="m-0 text-lg font-semibold tracking-tight">Ebenen-Layout</h2>
+      <div className="flex flex-wrap gap-3" role="list" aria-label="Dungeon-Ebenen">
         {levels.map((level, index) => (
           <a
             key={level.id}
             role="listitem"
             href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${level.slug}`}
-            className="uwe-v2-card uwe-v2-card-padded"
+            className="flex min-w-32 flex-col items-center gap-1 rounded-[var(--radius)] border border-border bg-card p-4 text-center text-card-foreground transition-colors hover:border-primary/60"
             data-status={level.prepStatus}
-            style={{ minWidth: "8rem", textAlign: "center" }}
           >
-            <span className="uwe-dungeon-level-index">{index + 1}</span>
+            <span className="text-sm font-semibold text-muted-foreground">{index + 1}</span>
             <strong>{level.title}</strong>
-            <span className="uwe-dashboard-muted">{level.prepStatus}</span>
+            <span className="text-sm text-muted-foreground">{level.prepStatus}</span>
           </a>
         ))}
       </div>

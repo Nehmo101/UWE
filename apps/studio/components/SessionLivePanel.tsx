@@ -9,6 +9,19 @@ import {
   endSessionLiveModeAction,
   updateSessionLiveNotesAction,
 } from "@/app/session-live-actions";
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface LinkedPage {
   id: string;
@@ -71,6 +84,12 @@ function clearLiveTimer(sessionId: string): void {
     /* ignore */
   }
 }
+
+/** Native select styling — beide Selects sind Client-State-gesteuert (kind,
+ * refPageId) bzw. brauchen einen echten Leerwert; Kit-Select (Radix) passt
+ * hier nicht ohne Zusatz-Wiring. Siehe TODO(design-kit) unten. */
+const SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function SessionLivePanel({
   worldSlug,
@@ -163,44 +182,70 @@ export function SessionLivePanel({
   }
 
   return (
-    <div className="uwe-session-live">
-      <div className="uwe-stat-grid" style={{ marginBottom: "1rem" }}>
-        <div className="uwe-stat-card">
-          <span className="uwe-stat-value">{elapsedLabel}</span>
-          <span className="uwe-stat-label">Live-Dauer</span>
-        </div>
-        <div className="uwe-stat-card">
-          <span className="uwe-stat-value">{entries.length}</span>
-          <span className="uwe-stat-label">Vorgemerkte Einträge</span>
-        </div>
-        <div className="uwe-stat-card">
-          <span className="uwe-stat-value">{linkedPages.length}</span>
-          <span className="uwe-stat-label">Verknüpfte Seiten</span>
-        </div>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-muted-foreground">Live-Dauer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{elapsedLabel}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-muted-foreground">Vorgemerkte Einträge</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{entries.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-muted-foreground">Verknüpfte Seiten</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{linkedPages.length}</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <p className="uwe-dashboard-muted">
+      <p className="text-sm text-muted-foreground">
         Live-Modus für {sessionTitle} — Einträge werden nur vorgemerkt. Am Ende
         („Live beenden“) prüfst du sie und übernimmst sie bewusst in den Kanon.
       </p>
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Ereignis vormerken</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "flex-end" }}>
-          <label>
-            Typ
-            <select value={kind} onChange={(event) => setKind(event.target.value as LiveEntryKind)}>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold text-foreground">Ereignis vormerken</h2>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-live-kind">Typ</Label>
+            {/* TODO(design-kit): natives Select statt Kit-Select — Client-State (kind)
+                ohne FormData-Bindung, siehe SELECT_CLASS oben. */}
+            <select
+              id="session-live-kind"
+              value={kind}
+              onChange={(event) => setKind(event.target.value as LiveEntryKind)}
+              className={SELECT_CLASS}
+            >
               {ENTRY_KINDS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
-          </label>
+          </div>
           {activeKind?.needsRef && linkedPages.length > 0 ? (
-            <label>
-              Seite
-              <select value={refPageId} onChange={(event) => setRefPageId(event.target.value)}>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="session-live-ref-page">Seite</Label>
+              {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value=""
+                  für "— keine —" ohne Zusatz-Wiring — natives Select beibehalten. */}
+              <select
+                id="session-live-ref-page"
+                value={refPageId}
+                onChange={(event) => setRefPageId(event.target.value)}
+                className={SELECT_CLASS}
+              >
                 <option value="">— keine —</option>
                 {linkedPages.map((page) => (
                   <option key={page.id} value={page.id}>
@@ -208,11 +253,12 @@ export function SessionLivePanel({
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
           ) : null}
-          <label style={{ flex: "1 1 16rem" }}>
-            Inhalt
-            <input
+          <div className="flex min-w-64 flex-1 flex-col gap-1.5">
+            <Label htmlFor="session-live-content">Inhalt</Label>
+            <Input
+              id="session-live-content"
               type="text"
               value={content}
               onChange={(event) => setContent(event.target.value)}
@@ -224,24 +270,19 @@ export function SessionLivePanel({
               }}
               placeholder="Was ist passiert?"
             />
-          </label>
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            disabled={busy || !content.trim()}
-            onClick={() => void handleAddEntry()}
-          >
+          </div>
+          <Button type="button" disabled={busy || !content.trim()} onClick={() => void handleAddEntry()}>
             + Vormerken
-          </button>
+          </Button>
         </div>
 
         {entries.length > 0 ? (
-          <ul className="uwe-linked-list" style={{ marginTop: "1rem" }}>
+          <ul className="mt-4 flex flex-col gap-2">
             {entries.map((entry) => (
-              <li key={entry.id} style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
-                <span className="uwe-dashboard-muted">{entry.time}</span>
-                <span className="uwe-badge">{entry.kindLabel}</span>
-                <span style={{ flex: 1 }}>
+              <li key={entry.id} className="flex items-baseline gap-2">
+                <span className="text-sm text-muted-foreground">{entry.time}</span>
+                <Badge>{entry.kindLabel}</Badge>
+                <span className="flex-1">
                   {entry.content}
                   {entry.refHref ? (
                     <>
@@ -250,44 +291,40 @@ export function SessionLivePanel({
                     </>
                   ) : null}
                 </span>
-                <button
+                <Button
                   type="button"
-                  className="uwe-v2-btn uwe-v2-btn-small"
+                  variant="outline"
+                  size="sm"
                   disabled={busy}
                   onClick={() => void handleDeleteEntry(entry.id)}
                 >
                   ✕
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="uwe-dashboard-muted" style={{ marginTop: "0.75rem" }}>
-            Noch keine Einträge vorgemerkt.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">Noch keine Einträge vorgemerkt.</p>
         )}
       </section>
 
-      <label>
-        Freie Live-Notizen
-        <textarea
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="session-live-notes">Freie Live-Notizen</Label>
+        <Textarea
+          id="session-live-notes"
           rows={10}
           value={notes}
           onChange={(event) => handleNotesChange(event.target.value)}
           placeholder="Fließtext, der nicht in einen Eintrag passt …"
         />
-      </label>
+      </div>
 
-      {status ? (
-        <p className="uwe-notice" role="status">
-          {status}
-        </p>
-      ) : null}
+      {status ? <Alert tone="success">{status}</Alert> : null}
 
       {linkedPages.length > 0 ? (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">NPC-Schnellzugriff</h2>
-          <ul className="uwe-linked-list">
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold text-foreground">NPC-Schnellzugriff</h2>
+          <ul className="flex flex-col gap-2 text-sm">
             {linkedPages.slice(0, 8).map((page) => (
               <li key={page.id}>
                 <Link href={page.href}>{page.title}</Link>
@@ -295,18 +332,21 @@ export function SessionLivePanel({
             ))}
           </ul>
           {linkedPages.length > 8 ? (
-            <p className="uwe-dashboard-muted">
+            <p className="text-sm text-muted-foreground">
               {linkedPages.length - 8} weitere verknüpfte Seiten im Session-Detail.
             </p>
           ) : null}
         </section>
       ) : null}
 
-      <div className="uwe-form-actions">
-        <Link href={`/worlds/${worldSlug}/roll-tables`} className="uwe-v2-btn">
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href={`/worlds/${worldSlug}/roll-tables`} className={buttonVariants({ variant: "outline" })}>
           Würfeln
         </Link>
-        <Link href={`/worlds/${worldSlug}/sessions/${sessionId}`} className="uwe-v2-btn">
+        <Link
+          href={`/worlds/${worldSlug}/sessions/${sessionId}`}
+          className={buttonVariants({ variant: "outline" })}
+        >
           Session-Detail
         </Link>
         <form
@@ -317,9 +357,7 @@ export function SessionLivePanel({
         >
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="sessionId" value={sessionId} />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Live beenden → Review
-          </button>
+          <Button type="submit">Live beenden → Review</Button>
         </form>
       </div>
     </div>

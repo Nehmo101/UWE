@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { EmptyState } from "@uwe/shared-ui";
 import {
   createImageStudioService,
   getAppRepository,
@@ -14,9 +13,17 @@ import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
 import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
 import { createImageStudioJobAction } from "../integration-actions";
+import { Alert, badgeVariants, buttonVariants, cn, EmptyState } from "@/src/components/ui";
 
 interface Props {
   searchParams: Promise<{ pageId?: string; project?: string; status?: string }>;
+}
+
+function chipLinkClass(active: boolean): string {
+  return cn(
+    badgeVariants({ variant: active ? "accent" : "default" }),
+    "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+  );
 }
 
 export default async function ImageStudioPage({ searchParams }: Props) {
@@ -57,75 +64,92 @@ export default async function ImageStudioPage({ searchParams }: Props) {
         title="Image Studio"
         summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
         actions={
-          <Link href="/settings?tab=image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
+          <Link href="/settings?tab=image-studio" className={buttonVariants({ variant: "secondary" })}>
             Einstellungen
           </Link>
         }
       />
-      {!config.enabled && (
-        <p className="uwe-notice uwe-notice-warn">
-          Image Studio ist deaktiviert. Aktiviere unter{" "}
-          <Link href="/settings?tab=image-studio">Einstellungen → Image Studio</Link>.
-        </p>
-      )}
 
-      {pageId && (
-        <p className="uwe-notice">
-          Verknüpft mit Seite <code>{pageId}</code> — Ergebnis wird automatisch verlinkt.
-        </p>
-      )}
-
-      <ImageStudioWorkspace inlineForm={jobForm} disabled={!config.enabled} />
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Projekte</h2>
-        <nav className="uwe-today-quick-chips" aria-label="Status-Filter">
-          <Link
-            href="/image-studio"
-            className="uwe-today-quick-chip"
-            data-severity={!statusFilter ? "warn" : "info"}
-          >
-            Alle
-          </Link>
-          {Object.values(ImageStudioStatusEnum).map((status) => (
-            <Link
-              key={status}
-              href={`/image-studio?status=${status}`}
-              className="uwe-today-quick-chip"
-              data-severity={statusFilter === status ? "warn" : "info"}
-            >
-              {IMAGE_STUDIO_STATUS_LABELS[status]}
-            </Link>
-          ))}
-        </nav>
-        {projects.length === 0 ? (
-          <EmptyState
-            title="Noch keine Image-Studio-Projekte"
-            description="Starte oben mit einem Prompt."
-          />
-        ) : (
-          <ul className="uwe-list-cards">
-            {projects.map((project) => (
-              <li key={project.id} className="uwe-list-card">
-                <strong>{project.title}</strong>
-                <ImageStudioStatusBadge
-                  status={project.status}
-                  label={IMAGE_STUDIO_STATUS_LABELS[project.status]}
-                />
-                {project.prompt && (
-                  <p className="uwe-dashboard-muted">{project.prompt.slice(0, 120)}</p>
-                )}
-                {project.versions[0]?.assetId && (
-                  <Link href={`/api/assets/${project.versions[0].assetId}/file`} target="_blank">
-                    Vorschau
-                  </Link>
-                )}
-                <Link href={`/image-studio/${project.id}`}>Projekt öffnen</Link>
-              </li>
-            ))}
-          </ul>
+      <div className="flex flex-col gap-6">
+        {!config.enabled && (
+          <Alert tone="warning">
+            Image Studio ist deaktiviert. Aktiviere unter{" "}
+            <Link href="/settings?tab=image-studio">Einstellungen → Image Studio</Link>.
+          </Alert>
         )}
-      </section>
+
+        {pageId && (
+          <Alert tone="info">
+            Verknüpft mit Seite <code>{pageId}</code> — Ergebnis wird automatisch verlinkt.
+          </Alert>
+        )}
+
+        <ImageStudioWorkspace inlineForm={jobForm} disabled={!config.enabled} />
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Projekte</h2>
+          <nav className="flex flex-wrap gap-2" aria-label="Status-Filter">
+            <Link
+              href="/image-studio"
+              aria-current={!statusFilter ? "page" : undefined}
+              className={chipLinkClass(!statusFilter)}
+            >
+              Alle
+            </Link>
+            {Object.values(ImageStudioStatusEnum).map((status) => (
+              <Link
+                key={status}
+                href={`/image-studio?status=${status}`}
+                aria-current={statusFilter === status ? "page" : undefined}
+                className={chipLinkClass(statusFilter === status)}
+              >
+                {IMAGE_STUDIO_STATUS_LABELS[status]}
+              </Link>
+            ))}
+          </nav>
+          {projects.length === 0 ? (
+            <EmptyState
+              title="Noch keine Image-Studio-Projekte"
+              description="Starte oben mit einem Prompt."
+            />
+          ) : (
+            <ul className="grid gap-2">
+              {projects.map((project) => (
+                <li
+                  key={project.id}
+                  className="flex flex-col gap-2 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong>{project.title}</strong>
+                    <ImageStudioStatusBadge
+                      status={project.status}
+                      label={IMAGE_STUDIO_STATUS_LABELS[project.status]}
+                    />
+                  </div>
+                  {project.prompt && (
+                    <p className="text-sm text-muted-foreground">{project.prompt.slice(0, 120)}</p>
+                  )}
+                  {project.versions[0]?.assetId && (
+                    <Link
+                      href={`/api/assets/${project.versions[0].assetId}/file`}
+                      target="_blank"
+                      className={buttonVariants({ variant: "link", size: "sm" })}
+                    >
+                      Vorschau
+                    </Link>
+                  )}
+                  <Link
+                    href={`/image-studio/${project.id}`}
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
+                  >
+                    Projekt öffnen
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </StudioShell>
   );
 }

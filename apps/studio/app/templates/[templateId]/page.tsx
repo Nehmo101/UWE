@@ -9,6 +9,7 @@ import { createPageTemplateService, prisma } from "@uwe/database/server";
 import { updateTemplateAction } from "../../template-actions";
 import { TemplateEditorClient } from "../TemplateEditorClient";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { Alert, buttonVariants, Card, CardContent } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ templateId: string }>;
@@ -44,50 +45,65 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
         }
         actions={
           isEditMode ? (
-            <Link href={`/templates/${template.id}`} className="uwe-v2-btn uwe-v2-btn-secondary">
+            <Link href={`/templates/${template.id}`} className={buttonVariants({ variant: "secondary" })}>
               Lesemodus
             </Link>
           ) : (
-            <Link href={`/templates/${template.id}?edit=1`} className="uwe-v2-btn uwe-v2-btn-primary">
+            <Link href={`/templates/${template.id}?edit=1`} className={buttonVariants({ variant: "default" })}>
               Bearbeiten
             </Link>
           )
         }
       />
-      {saved && <p className="uwe-inspector-ok" role="status">✓ Gespeichert.</p>}
-      {error && <p className="uwe-form-error" role="alert">{error}</p>}
 
-      {isEditMode ? (
-        <TemplateEditorClient
-          template={template}
-          action={updateTemplateAction}
-          submitLabel="Template speichern"
-        />
-      ) : (
-        <article className="uwe-v2-card uwe-v2-section">
-          <p className="uwe-dashboard-muted">
-            {template.description || "Keine Beschreibung"}
-            {" · "}
-            {PAGE_TYPE_LABELS[template.pageType]}
-            {" · "}
-            Standard: {VISIBILITY_LABELS[template.defaultVisibility]}
+      <div className="flex flex-col gap-6">
+        {saved && <Alert tone="success">Gespeichert.</Alert>}
+        {error && (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
           </p>
-          {template.titlePlaceholder ? (
-            <p className="uwe-hint">Titel-Platzhalter: {template.titlePlaceholder}</p>
-          ) : null}
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Blöcke ({template.blocks.length})</h2>
-            {template.blocks.map((block, index) => (
-              <section key={index} className="uwe-v2-section">
-                <p className="uwe-dashboard-muted">
-                  {BLOCK_TYPE_LABELS[block.type]} · {VISIBILITY_LABELS[block.visibility]}
+        )}
+
+        {isEditMode ? (
+          <TemplateEditorClient
+            template={template}
+            action={updateTemplateAction}
+            submitLabel="Template speichern"
+          />
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col gap-4 pt-6">
+              <p className="text-sm text-muted-foreground">
+                {template.description || "Keine Beschreibung"}
+                {" · "}
+                {PAGE_TYPE_LABELS[template.pageType]}
+                {" · "}
+                Standard: {VISIBILITY_LABELS[template.defaultVisibility]}
+              </p>
+              {template.titlePlaceholder ? (
+                <p className="text-sm text-muted-foreground">
+                  Titel-Platzhalter: {template.titlePlaceholder}
                 </p>
-                <div style={{ whiteSpace: "pre-wrap" }}>{block.content}</div>
+              ) : null}
+              <section className="flex flex-col gap-3">
+                <h2 className="text-lg font-semibold tracking-tight">
+                  Blöcke ({template.blocks.length})
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {template.blocks.map((block, index) => (
+                    <section key={index} className="rounded-[var(--radius)] border border-border p-4">
+                      <p className="text-sm text-muted-foreground">
+                        {BLOCK_TYPE_LABELS[block.type]} · {VISIBILITY_LABELS[block.visibility]}
+                      </p>
+                      <div className="whitespace-pre-wrap">{block.content}</div>
+                    </section>
+                  ))}
+                </div>
               </section>
-            ))}
-          </section>
-        </article>
-      )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </StudioShell>
   );
 }

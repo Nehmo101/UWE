@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { HealthBadge } from "@uwe/shared-ui";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface ProbeResult {
   label: string;
@@ -54,41 +55,36 @@ export function CloudflareTunnelHealthPanel() {
   }, [runProbe]);
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded" aria-label="Tunnel-Health-Probe">
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.65rem" }}>
-        <h3 className="uwe-v2-section-title" style={{ margin: 0, flex: "1 1 12rem" }}>
-          Erreichbarkeits-Probe
-        </h3>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
-          disabled={loading}
-          onClick={() => void runProbe()}
-        >
+    <Card aria-label="Tunnel-Health-Probe">
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+        <CardTitle>Erreichbarkeits-Probe</CardTitle>
+        <Button type="button" variant="ghost" disabled={loading} onClick={() => void runProbe()}>
           {loading ? "Prüfe…" : "Jetzt prüfen"}
-        </button>
-      </div>
-      <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem" }}>
-        Prüft <code>/api/health/public</code> auf den konfigurierten Studio- und Portal-URLs — nicht
-        nur Config-Flags. Aktualisiert sich alle 60&nbsp;Sekunden.
-      </p>
-      {error ? (
-        <p className="uwe-form-error" role="alert">
-          {error}
+        </Button>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          Prüft <code>/api/health/public</code> auf den konfigurierten Studio- und Portal-URLs — nicht
+          nur Config-Flags. Aktualisiert sich alle 60&nbsp;Sekunden.
         </p>
-      ) : null}
-      {message ? <p className="uwe-dashboard-muted">{message}</p> : null}
-      {results && results.length > 0 ? (
-        <ul className="uwe-dashboard-list" style={{ marginTop: "0.75rem" }}>
-          {results.map((result) => (
-            <li key={result.label}>
-              <HealthBadge status={result.ok ? "ok" : "error"} label={result.label} />{" "}
-              <code style={{ fontSize: "0.85em" }}>{result.url}</code>
-              <span className="uwe-dashboard-muted"> — {result.message}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </section>
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+        {results && results.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {results.map((result) => (
+              <li key={result.label}>
+                <HealthBadge status={result.ok ? "ok" : "error"} label={result.label} />{" "}
+                <code className="text-xs">{result.url}</code>
+                <span className="text-sm text-muted-foreground"> — {result.message}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

@@ -2,6 +2,7 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
+import { Button, Input, Textarea } from "@/src/components/ui";
 
 interface WorldOption {
   slug: string;
@@ -11,6 +12,13 @@ interface WorldOption {
 interface CaptureImageUploadProps {
   worlds: WorldOption[];
 }
+
+const FIELD_CLASS = "flex flex-col gap-1.5 text-sm";
+
+/** TODO(design-kit): natives Select bleibt — Server-Action-Formular (FormData) braucht
+    name-Attribut ohne Client-State, siehe gleiches Muster in QuickCaptureForm.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function CaptureImageUpload({ worlds }: CaptureImageUploadProps) {
   const [status, setStatus] = useState<string | null>(null);
@@ -49,10 +57,10 @@ export function CaptureImageUpload({ worlds }: CaptureImageUploadProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="uwe-brain-create-form" encType="multipart/form-data">
-      <label className="uwe-capture-field">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3" encType="multipart/form-data">
+      <label className={FIELD_CLASS}>
         Welt (optional — erstellt Asset in Medienbibliothek)
-        <select name="worldSlug" defaultValue="">
+        <select name="worldSlug" defaultValue="" className={NATIVE_SELECT_CLASS}>
           <option value="">Nur Capture (ohne Asset)</option>
           {worlds.map((world) => (
             <option key={world.slug} value={world.slug}>
@@ -61,23 +69,31 @@ export function CaptureImageUpload({ worlds }: CaptureImageUploadProps) {
           ))}
         </select>
       </label>
-      <label className="uwe-capture-field">
+      <label className={FIELD_CLASS}>
         Titel
-        <input name="title" type="text" placeholder="Miniatur Foto / Terrain Scan" />
+        <Input name="title" type="text" placeholder="Miniatur Foto / Terrain Scan" />
       </label>
-      <label className="uwe-capture-field">
+      <label className={FIELD_CLASS}>
         Notiz (optional)
-        <textarea name="content" rows={2} placeholder="Kontext zum Bild" />
+        <Textarea name="content" rows={2} placeholder="Kontext zum Bild" />
       </label>
-      <label className="uwe-capture-field">
+      <label className={FIELD_CLASS}>
         Bild
-        <input name="file" type="file" accept="image/*" capture="environment" required />
+        {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
+        <input
+          name="file"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          required
+          className="text-sm text-foreground"
+        />
       </label>
       <input type="hidden" name="captureType" value="file_image" />
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={uploading}>
+      <Button type="submit" disabled={uploading}>
         {uploading ? "Lädt hoch…" : "Bild erfassen"}
-      </button>
-      {status && <p className="uwe-hint">{status}</p>}
+      </Button>
+      {status && <p className="text-sm text-muted-foreground">{status}</p>}
     </form>
   );
 }

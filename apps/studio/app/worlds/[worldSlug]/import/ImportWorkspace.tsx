@@ -17,6 +17,19 @@ import {
   markImportCentralExecutingAction,
   previewImportCentralJobAction,
 } from "@/app/import-central-actions";
+import {
+  Alert,
+  Badge,
+  type BadgeProps,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
   new: "Neu",
@@ -27,14 +40,28 @@ const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
   error: "Fehler",
 };
 
-const IMPORT_STATUS_CLASS: Record<ImportStatus, string> = {
-  new: "uwe-badge uwe-badge-published",
-  update: "uwe-badge uwe-badge-player",
-  duplicate: "uwe-badge uwe-badge-draft",
-  conflict: "uwe-badge",
-  skipped: "uwe-badge uwe-badge-draft",
-  error: "uwe-badge uwe-badge-secret",
-};
+function statusVariant(status: ImportStatus): BadgeProps["variant"] {
+  switch (status) {
+    case "new":
+      return "success";
+    case "update":
+      return "info";
+    case "duplicate":
+    case "skipped":
+      return "warning";
+    case "error":
+      return "danger";
+    default:
+      return "default";
+  }
+}
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+
+/** Native select — fester, nicht-leerer Wertebereich, siehe Muster in UserManagementWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 interface Props {
   worldSlug: string;
@@ -404,91 +431,80 @@ export function ImportWorkspace({
   }, [preview, selectedIds]);
 
   return (
-    <div className="uwe-import-workspace">
-      <section className="uwe-panel">
-        <h2>Import-Quelle</h2>
-        <p className="uwe-panel-intro">
-          KnoteForge-Export als JSON — entweder das UWE-Importformat (Objekt mit{" "}
-          <code>entities</code>) oder einen Eingang-Export (<code>eingang_export.json</code>).
-          Alternativ mehrere unstrukturierte Texte als Markdown/TXT: getrennt durch{" "}
-          <code>---</code> in einer Datei oder als Mehrfachauswahl.
-        </p>
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Import-Quelle</CardTitle>
+          <CardDescription>
+            KnoteForge-Export als JSON — entweder das UWE-Importformat (Objekt mit{" "}
+            <code>entities</code>) oder einen Eingang-Export (<code>eingang_export.json</code>).
+            Alternativ mehrere unstrukturierte Texte als Markdown/TXT: getrennt durch{" "}
+            <code>---</code> in einer Datei oder als Mehrfachauswahl.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="import-format">Format</Label>
+              {/* TODO(design-kit): natives Select — fester Wertebereich, kein Leerwert, siehe Muster in UserManagementWorkspace.tsx. */}
+              <select id="import-format" value={format} onChange={(event) => setFormat(event.target.value as ImportFormat)} className={NATIVE_SELECT_CLASS}>
+                {supportedFormats.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {entry === "markdown" ? "MARKDOWN / TEXT" : entry.toUpperCase()}
+                  </option>
+                ))}
+                {plannedFormats.map((entry) => (
+                  <option key={entry} value={entry} disabled>
+                    {entry.toUpperCase()} (geplant)
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="uwe-form-grid">
-          <label>
-            Format
-            <select
-              value={format}
-              onChange={(event) => setFormat(event.target.value as ImportFormat)}
-            >
-              {supportedFormats.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry === "markdown" ? "MARKDOWN / TEXT" : entry.toUpperCase()}
-                </option>
-              ))}
-              {plannedFormats.map((entry) => (
-                <option key={entry} value={entry} disabled>
-                  {entry.toUpperCase()} (geplant)
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="import-files">Datei(en)</Label>
+              <input id="import-files" type="file" accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" multiple onChange={handleFileChange} className="text-sm text-foreground" />
+            </div>
+          </div>
 
-          <label>
-            Datei(en)
-            <input
-              type="file"
-              accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain"
-              multiple
-              onChange={handleFileChange}
-            />
-          </label>
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="import-content">Text einfügen (optional)</Label>
+            <Textarea id="import-content" rows={8} value={content} onChange={handleContentChange} placeholder={`# Lore-Fragment\n\nUnstrukturierter Text mit [[Wikilinks]].\n\n---\n\n# Zweites Fragment\n\nWeiterer Text …`} />
+          </div>
 
-        <label>
-          Text einfügen (optional)
-          <textarea
-            rows={8}
-            value={content}
-            onChange={handleContentChange}
-            placeholder={`# Lore-Fragment\n\nUnstrukturierter Text mit [[Wikilinks]].\n\n---\n\n# Zweites Fragment\n\nWeiterer Text …`}
-          />
-        </label>
+          {fileName && (
+            <p className="text-sm text-muted-foreground">
+              Ausgewählt: {fileName}
+              {fileCount > 1 ? ` (${fileCount} Dateien)` : ""} ({Math.round(content.length / 1024)} KB)
+            </p>
+          )}
 
-        {fileName && (
-          <p className="uwe-table-sub">
-            Ausgewählt: {fileName}
-            {fileCount > 1 ? ` (${fileCount} Dateien)` : ""} ({Math.round(content.length / 1024)} KB)
-          </p>
-        )}
-
-        <div className="uwe-form-actions">
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            onClick={handlePreview}
-            disabled={loading || !content.trim()}
-          >
+          <Button type="button" disabled={loading || !content.trim()} onClick={handlePreview} className="self-start">
             {loading && !result ? "Lädt…" : "Vorschau anzeigen"}
-          </button>
-        </div>
-      </section>
+          </Button>
+        </CardContent>
+      </Card>
 
-      {error && <p className="uwe-flash uwe-flash-error">{error}</p>}
+      {error && (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      )}
 
       {preview && (
-        <>
-          <section className="uwe-panel">
-            <h2>Vorschau</h2>
-            <p className="uwe-panel-intro">
+        <Card>
+          <CardHeader>
+            <CardTitle>Vorschau</CardTitle>
+            <CardDescription>
               {preview.totalEntities} Einträge erkannt. Die Vorschau ändert keine Daten in der
               Datenbank.
-            </p>
-
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
             {preview.errors.length > 0 && (
-              <div className="uwe-import-alerts">
-                <h3>Hinweise</h3>
-                <ul>
+              <div className="flex flex-col gap-1.5">
+                <h3 className="text-sm font-semibold">Hinweise</h3>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
                   {preview.errors.map((entry) => (
                     <li key={entry}>{entry}</li>
                   ))}
@@ -497,180 +513,158 @@ export function ImportWorkspace({
             )}
 
             {summaryEntries.length > 0 && (
-              <div className="uwe-import-summary">
+              <div className="flex flex-wrap gap-2">
                 {summaryEntries.map(([status, count]) => (
-                  <span key={status} className={IMPORT_STATUS_CLASS[status as ImportStatus]}>
+                  <Badge key={status} variant={statusVariant(status as ImportStatus)}>
                     {IMPORT_STATUS_LABELS[status as ImportStatus]}: {count}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}
 
-            <div className="uwe-form-actions">
-              <label className="uwe-checkbox-inline">
-                <input
-                  type="checkbox"
-                  checked={autoResolveSlugConflicts}
-                  onChange={(event) => setAutoResolveSlugConflicts(event.target.checked)}
-                />
+            <div className="flex flex-wrap gap-4">
+              {/* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */}
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={autoResolveSlugConflicts} onChange={(event) => setAutoResolveSlugConflicts(event.target.checked)} className="h-4 w-4 rounded border-input" />
                 Slug-Konflikte automatisch auflösen
               </label>
-              <label className="uwe-checkbox-inline">
-                <input
-                  type="checkbox"
-                  checked={allowUpdates}
-                  onChange={(event) => setAllowUpdates(event.target.checked)}
-                />
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={allowUpdates} onChange={(event) => setAllowUpdates(event.target.checked)} className="h-4 w-4 rounded border-input" />
                 Bestehende Einträge aktualisieren (gleiche KnoteForge-ID)
               </label>
             </div>
 
-            <table className="uwe-page-table">
-              <thead>
-                <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Alle auswählen"
-                      onChange={toggleAll}
-                      checked={
-                        preview.items.filter((item) => isSelectable(item.status)).length > 0 &&
-                        preview.items
-                          .filter((item) => isSelectable(item.status))
-                          .every((item) => selectedIds.has(item.itemId))
-                      }
-                    />
-                  </th>
-                  <th>Titel</th>
-                  <th>Typ</th>
-                  <th>Status</th>
-                  <th>Slug</th>
-                  <th>Konflikte</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.items.map((item) => (
-                  <tr key={item.itemId}>
-                    <td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>
                       <input
                         type="checkbox"
-                        checked={selectedIds.has(item.itemId)}
-                        disabled={!isSelectable(item.status)}
-                        onChange={() => toggleItem(item.itemId, item.status)}
-                        aria-label={`${item.title} importieren`}
+                        aria-label="Alle auswählen"
+                        onChange={toggleAll}
+                        checked={
+                          preview.items.filter((item) => isSelectable(item.status)).length > 0 &&
+                          preview.items.filter((item) => isSelectable(item.status)).every((item) => selectedIds.has(item.itemId))
+                        }
+                        className="h-4 w-4 rounded border-input"
                       />
-                    </td>
-                    <td>
-                      <strong>{item.title}</strong>
-                      {item.warnings.length > 0 && (
-                        <ul className="uwe-import-warnings">
-                          {item.warnings.map((warning) => (
-                            <li key={warning}>{warning}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                    <td>
-                      <code>{item.knoteforgeType}</code>
-                      <span className="uwe-table-sub"> → {item.pageType}</span>
-                    </td>
-                    <td>
-                      <span className={IMPORT_STATUS_CLASS[item.status]}>
-                        {IMPORT_STATUS_LABELS[item.status]}
-                      </span>
-                    </td>
-                    <td>
-                      {item.resolvedSlug !== item.slug ? (
-                        <>
-                          <span className="uwe-table-sub">{item.slug}</span>
-                          <br />
-                          → {item.resolvedSlug}
-                        </>
-                      ) : (
-                        item.slug
-                      )}
-                    </td>
-                    <td>
-                      {item.conflicts.length > 0 ? (
-                        <ul className="uwe-import-conflicts">
-                          {item.conflicts.map((conflict, index) => (
-                            <li key={`${conflict.kind}-${index}`}>{conflict.message}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
+                    </th>
+                    <th className={TH_CLASS}>Titel</th>
+                    <th className={TH_CLASS}>Typ</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS}>Slug</th>
+                    <th className={TH_CLASS}>Konflikte</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {preview.items.map((item) => (
+                    <tr key={item.itemId}>
+                      <td className={TD_CLASS}>
+                        <input type="checkbox" checked={selectedIds.has(item.itemId)} disabled={!isSelectable(item.status)} onChange={() => toggleItem(item.itemId, item.status)} aria-label={`${item.title} importieren`} className="h-4 w-4 rounded border-input" />
+                      </td>
+                      <td className={TD_CLASS}>
+                        <strong>{item.title}</strong>
+                        {item.warnings.length > 0 && (
+                          <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                            {item.warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
+                      <td className={TD_CLASS}>
+                        <code>{item.knoteforgeType}</code>
+                        <span className="text-xs text-muted-foreground"> → {item.pageType}</span>
+                      </td>
+                      <td className={TD_CLASS}>
+                        <Badge variant={statusVariant(item.status)}>{IMPORT_STATUS_LABELS[item.status]}</Badge>
+                      </td>
+                      <td className={TD_CLASS}>
+                        {item.resolvedSlug !== item.slug ? (
+                          <>
+                            <span className="text-xs text-muted-foreground">{item.slug}</span>
+                            <br />
+                            → {item.resolvedSlug}
+                          </>
+                        ) : (
+                          item.slug
+                        )}
+                      </td>
+                      <td className={TD_CLASS}>
+                        {item.conflicts.length > 0 ? (
+                          <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                            {item.conflicts.map((conflict, index) => (
+                              <li key={`${conflict.kind}-${index}`}>{conflict.message}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {preview.items.length === 0 && (
-              <p className="uwe-v2-empty">Keine importierbaren Einträge gefunden.</p>
+              <p className="text-sm text-muted-foreground">Keine importierbaren Einträge gefunden.</p>
             )}
 
-            <p className="uwe-flash uwe-flash-warning">
-              ⚠️ Dieser Import kann aktuell <strong>nicht automatisch zurückgerollt</strong>{" "}
-              werden. Erstelle vorher ein Backup —{" "}
-              <a href="/backup">Backup erstellen</a>. Ein Rollback ist sonst nur über ein
-              vorhandenes Backup möglich.
-            </p>
+            <Alert tone="warning">
+              Dieser Import kann aktuell <strong>nicht automatisch zurückgerollt</strong> werden.
+              Erstelle vorher ein Backup — <a href="/backup">Backup erstellen</a>. Ein Rollback ist
+              sonst nur über ein vorhandenes Backup möglich.
+            </Alert>
 
             {loading && importProgress ? (
-              <JobProgressBar
-                progress={importProgress.progress ?? 5}
-                label={importProgress.label}
-              />
+              <JobProgressBar progress={importProgress.progress ?? 5} label={importProgress.label} />
             ) : null}
 
-            <div className="uwe-form-actions">
-              <button
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-primary"
-                onClick={handleExecute}
-                disabled={loading || !preview.canExecute || selectedCount === 0}
-              >
-                {loading && preview ? "Importiert…" : `Import bestätigen (${selectedCount})`}
-              </button>
-            </div>
-          </section>
-        </>
+            <Button type="button" disabled={loading || !preview.canExecute || selectedCount === 0} onClick={handleExecute} className="self-start">
+              {loading && preview ? "Importiert…" : `Import bestätigen (${selectedCount})`}
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {result && (
-        <section className="uwe-panel">
-          <h2>Import-Protokoll</h2>
-          <p className="uwe-panel-intro">
-            {result.created} erstellt, {result.updated} aktualisiert, {result.skipped}{" "}
-            übersprungen, {result.failed} fehlgeschlagen.
-          </p>
-
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>Zeit</th>
-                <th>Status</th>
-                <th>Eintrag</th>
-                <th>Meldung</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.log.map((entry, index) => (
-                <tr key={`${entry.timestamp}-${index}`}>
-                  <td>{new Date(entry.timestamp).toLocaleTimeString("de-DE")}</td>
-                  <td>
-                    <span className={IMPORT_STATUS_CLASS[entry.status]}>
-                      {IMPORT_STATUS_LABELS[entry.status]}
-                    </span>
-                  </td>
-                  <td>{entry.title ?? entry.itemId ?? "—"}</td>
-                  <td>{entry.message}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Import-Protokoll</CardTitle>
+            <CardDescription>
+              {result.created} erstellt, {result.updated} aktualisiert, {result.skipped}{" "}
+              übersprungen, {result.failed} fehlgeschlagen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Zeit</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS}>Eintrag</th>
+                    <th className={TH_CLASS}>Meldung</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.log.map((entry, index) => (
+                    <tr key={`${entry.timestamp}-${index}`}>
+                      <td className={TD_CLASS}>{new Date(entry.timestamp).toLocaleTimeString("de-DE")}</td>
+                      <td className={TD_CLASS}>
+                        <Badge variant={statusVariant(entry.status)}>{IMPORT_STATUS_LABELS[entry.status]}</Badge>
+                      </td>
+                      <td className={TD_CLASS}>{entry.title ?? entry.itemId ?? "—"}</td>
+                      <td className={TD_CLASS}>{entry.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

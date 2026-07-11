@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import {
   createAtlasService,
   createPrismaClient,
@@ -47,28 +49,21 @@ export default async function PortalAtlasNodePage({ params }: Props) {
     });
     if (!world) notFound();
 
-    // Members-only worlds must not be reachable by non-member players via a
-    // direct URL — enforce world membership before loading any content.
     try {
       assertPortalCanReadWorld(ctx, world.id);
     } catch {
       notFound();
     }
 
-    // Fetch atlas with portal context — this filters dm_only nodes/features/objects
     const atlasData = await atlas.getAtlasForContext(worldSlug, "portal");
     if (!atlasData) notFound();
 
-    // Verify the requested node exists and is portal-visible
     const nodeRecord = atlasData.nodes.find((n) => n.id === nodeId);
     if (!nodeRecord) notFound();
 
     nodeTitle = nodeRecord.title;
     nodeLevel = nodeRecord.level;
 
-    // Get the atlas map style preset + terrain tile layer. The map itself is
-    // already portal-gated: getAtlasForContext returned non-null above, which
-    // requires the AtlasMap to be portal-visible.
     const map = await db.atlasMap.findUnique({ where: { id: nodeRecord.mapId } });
     mapStylePreset = map?.stylePreset ?? null;
     const rawTileLayer = map?.tileLayer as {
@@ -106,18 +101,14 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       };
     }
 
-    // Get hierarchy for breadcrumb + parent silhouette
     const hierarchy = await atlas.getNodeWithHierarchy(nodeId);
     if (!hierarchy) notFound();
 
-    // Filter parent chain to only portal-visible ancestors
     const visibleNodeIds = new Set(atlasData.nodes.map((n) => n.id));
     parentChainItems = hierarchy.parentChain
       .filter((a) => visibleNodeIds.has(a.id))
       .map((a) => ({ id: a.id, title: a.title, level: a.level }));
 
-    // Parent silhouette from parent feature geometry — only when the parent
-    // feature is portal-visible, so dm_only parent geometry never leaks.
     if (
       hierarchy.parentFeature &&
       isAtlasEntityAccessible(hierarchy.parentFeature, "portal")
@@ -131,7 +122,6 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       }
     }
 
-    // Filter features and objects to those belonging to this node
     const rawFeatures = atlasData.features.filter((f) => f.nodeId === nodeId);
     const rawObjects = atlasData.objects.filter((o) => o.nodeId === nodeId);
 
@@ -161,15 +151,11 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       _key: nextKey(),
     }));
 
-    // Resolve the palette items referenced by the visible objects so the viewer
-    // can render builtin glyphs (by builtinGlyphKey) and AI/upload image stamps.
     const paletteItemIds = [
       ...new Set(viewerObjects.map((o) => o.paletteItemId)),
     ];
 
     if (paletteItemIds.length > 0) {
-      // Approved-only: pending AI/upload stamps and pending RTX assets must
-      // never reach the player portal (same gate as the static export).
       const items = await db.atlasPaletteItem.findMany({
         where: { id: { in: paletteItemIds }, reviewStatus: "approved" },
         select: {
@@ -186,8 +172,6 @@ export default async function PortalAtlasNodePage({ params }: Props) {
           rtxAssetProposal?: unknown;
         };
         if (tags.rtxAssetProposal !== undefined) {
-          // RTX asset: re-validate the stored proposal and pass ONLY the
-          // validated recipe to the client — never raw styleTags metadata.
           const validation = validateRtxAtlasAssetProposal(tags.rtxAssetProposal);
           if (!validation.ok || validation.proposal.outputType !== "json-recipe") continue;
           paletteItems[item.id] = {
@@ -206,7 +190,6 @@ export default async function PortalAtlasNodePage({ params }: Props) {
       }
     }
 
-    // Resolve linkedPageIds → portal page slugs for wiki links
     const pageIds = [
       ...new Set([
         ...rawFeatures.map((f) => f.linkedPageId).filter(Boolean) as string[],
@@ -240,13 +223,15 @@ export default async function PortalAtlasNodePage({ params }: Props) {
 
   const preset = resolveStylePreset(mapStylePreset);
 
-  // Shell (sidebar, top bar, mobile bottom nav) comes from the world layout;
-  // the AtlasViewer renders its own hierarchy breadcrumb from parentChainItems.
   return (
-    <section className="portal-content-card">
-      <a href={`/auth/worlds/${worldSlug}/atlas`} className="uwe-back-link">
-        ← Zurück zum Atlas
-      </a>
+    <section className="grid gap-4">
+      <Link
+        href={`/auth/worlds/${worldSlug}/atlas`}
+        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        Zurück zum Atlas
+      </Link>
 
       <AtlasViewer
         worldSlug={worldSlug}

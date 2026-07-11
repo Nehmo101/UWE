@@ -1,7 +1,8 @@
 "use client";
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { Button, Label, Textarea } from "@/src/components/ui";
 
 type PhotoCategory = "reference" | "progress" | "result";
 
@@ -20,6 +21,7 @@ export function WorkshopPhotoUploadField({
   textareaName,
   defaultValue,
 }: Props) {
+  const fieldId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -44,7 +46,11 @@ export function WorkshopPhotoUploadField({
         body: formData,
         headers: { Accept: "application/json" },
       });
-      const data = (await response.json()) as { error?: string; url?: string; caption?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        url?: string;
+        caption?: string;
+      };
       if (!response.ok || !data.url) {
         setError(data.error ?? "Upload fehlgeschlagen.");
         return;
@@ -65,9 +71,10 @@ export function WorkshopPhotoUploadField({
   }
 
   return (
-    <label>
-      {label}
-      <textarea
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={fieldId}>{label}</Label>
+      <Textarea
+        id={fieldId}
         ref={textareaRef}
         name={textareaName}
         rows={3}
@@ -79,22 +86,27 @@ export function WorkshopPhotoUploadField({
         type="file"
         accept="image/*"
         capture="environment"
-        className="uwe-miniature-photo-upload-input"
+        className="sr-only"
         onChange={handleFileChange}
         disabled={uploading}
         aria-hidden
         tabIndex={-1}
       />
-      <button
+      <Button
         type="button"
-        className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+        variant="secondary"
+        size="sm"
+        className="mt-1 self-start"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        style={{ marginTop: "0.35rem" }}
       >
         {uploading ? "Lädt hoch…" : "Foto hochladen"}
-      </button>
-      {error ? <p className="uwe-hint">{error}</p> : null}
-    </label>
+      </Button>
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

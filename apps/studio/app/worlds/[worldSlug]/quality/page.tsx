@@ -5,6 +5,7 @@ import {
   createWikiQualityService,
   getAppRepository,
   prisma,
+  type InspectorSeverity,
   type WikiQualityFinding,
   type WikiQualityFindingCode,
 } from "@uwe/database/server";
@@ -12,6 +13,7 @@ import { computeWikiQualityInsights } from "@uwe/database/wiki-quality";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { runBulkAutoLinkAction } from "../quality-actions";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, NavIcon } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -58,16 +60,43 @@ const CHECK_GROUPS: CheckGroup[] = [
   },
 ];
 
+const SEVERITY_LABELS: Record<InspectorSeverity, string> = {
+  critical: "Kritisch",
+  warning: "Warnung",
+  info: "Hinweis",
+};
+
+const SEVERITY_BADGE_VARIANT: Record<InspectorSeverity, "danger" | "warning" | "info"> = {
+  critical: "danger",
+  warning: "warning",
+  info: "info",
+};
+
+function OkNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="status" className="flex items-center gap-2 text-sm text-success">
+      <NavIcon name="check" width={16} height={16} />
+      <span>{children}</span>
+    </p>
+  );
+}
+
 function FindingList({ findings, emptyText }: { findings: WikiQualityFinding[]; emptyText: string }) {
   if (findings.length === 0) {
-    return <p className="uwe-inspector-ok">✓ {emptyText}</p>;
+    return <OkNote>{emptyText}</OkNote>;
   }
 
   return (
-    <ul className="uwe-inspector-findings">
+    <ul className="flex flex-col gap-2">
       {findings.map((finding) => (
-        <li key={finding.id} data-severity={finding.severity}>
-          <span className="uwe-inspector-message">
+        <li
+          key={finding.id}
+          className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-border p-3 text-sm"
+        >
+          <Badge variant={SEVERITY_BADGE_VARIANT[finding.severity]}>
+            {SEVERITY_LABELS[finding.severity]}
+          </Badge>
+          <span className="min-w-0 flex-1">
             {finding.href ? <Link href={finding.href}>{finding.message}</Link> : finding.message}
           </span>
         </li>
@@ -116,7 +145,7 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
       }
       contextPanel={
         <SidebarSection title="Pflege">
-          <ul className="uwe-sidebar-links">
+          <ul className="flex flex-col gap-2 text-sm">
             <li>
               <Link href={`/worlds/${worldSlug}/inspector`}>Freigaben / Kanon (Inspektor) →</Link>
             </li>
@@ -136,11 +165,11 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
       />
 
       {linkedCount !== null && !Number.isNaN(linkedCount) ? (
-        <p className="uwe-inspector-ok" role="status">
+        <OkNote>
           {linkedCount > 0
-            ? `✓ ${linkedCount} Verlinkung(en) ergänzt — rückgängig machbar über die Auto-Verlinkung.`
-            : "✓ Keine unverlinkten Begriffe gefunden — nichts zu tun."}
-        </p>
+            ? `${linkedCount} Verlinkung(en) ergänzt — rückgängig machbar über die Auto-Verlinkung.`
+            : "Keine unverlinkten Begriffe gefunden — nichts zu tun."}
+        </OkNote>
       ) : null}
 
       <StatGrid
@@ -152,71 +181,91 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
         ]}
       />
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Score-Erklärung</h2>
-        <p className="uwe-dashboard-muted">{insights.explanation}</p>
-        <ul className="uwe-dashboard-muted" style={{ margin: "0.5rem 0 0", paddingLeft: "1.25rem" }}>
-          <li>Unverlinkte Begriffe: −2 Punkte je Fundstelle</li>
-          <li>Dünne Seiten: −3 · NPCs ohne Ort/Fraktion: −4 · Quests ohne Status: −4</li>
-          <li>Orte ohne Karte: −3 · Mehrdeutige Aliase: −5</li>
-        </ul>
-      </section>
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Score-Erklärung</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">{insights.explanation}</p>
+            <ul className="list-disc pl-5 text-sm text-muted-foreground">
+              <li>Unverlinkte Begriffe: −2 Punkte je Fundstelle</li>
+              <li>Dünne Seiten: −3 · NPCs ohne Ort/Fraktion: −4 · Quests ohne Status: −4</li>
+              <li>Orte ohne Karte: −3 · Mehrdeutige Aliase: −5</li>
+            </ul>
+          </CardContent>
+        </Card>
 
-      {insights.recommendations.length > 0 && (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Empfohlene nächste Schritte</h2>
-          <ol className="uwe-linked-list">
-            {insights.recommendations.map((item) => (
-              <li key={item.priority}>
-                <strong>{item.priority}. {item.title}</strong>
-                <p className="uwe-dashboard-muted" style={{ margin: "0.25rem 0 0" }}>
-                  {item.description}
-                  {item.href ? (
-                    <>
-                      {" "}
-                      <Link href={item.href}>Jetzt bearbeiten →</Link>
-                    </>
-                  ) : null}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+        {insights.recommendations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Empfohlene nächste Schritte</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ol className="flex list-none flex-col gap-3">
+                {insights.recommendations.map((item) => (
+                  <li key={item.priority} className="text-sm">
+                    <strong>
+                      {item.priority}. {item.title}
+                    </strong>
+                    <p className="mt-1 text-muted-foreground">
+                      {item.description}
+                      {item.href ? (
+                        <>
+                          {" "}
+                          <Link href={item.href}>Jetzt bearbeiten →</Link>
+                        </>
+                      ) : null}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </CardContent>
+          </Card>
+        )}
 
-      {CHECK_GROUPS.map((group) => (
-        <section className="uwe-v2-section" key={group.code}>
-          <h2 className="uwe-v2-section-title">
-            {group.title}
-            {report.counts[group.code] > 0 ? ` (${report.counts[group.code]})` : ""}
-          </h2>
-          <FindingList findings={byCode.get(group.code) ?? []} emptyText={group.emptyText} />
-        </section>
-      ))}
+        {CHECK_GROUPS.map((group) => (
+          <Card key={group.code}>
+            <CardHeader>
+              <CardTitle>
+                {group.title}
+                {report.counts[group.code] > 0 ? ` (${report.counts[group.code]})` : ""}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FindingList findings={byCode.get(group.code) ?? []} emptyText={group.emptyText} />
+            </CardContent>
+          </Card>
+        ))}
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Bulk-Auto-Link</h2>
-        <p className="uwe-dashboard-muted">
-          Verlinkt alle unverlinkten Begriffe der Welt in einem Durchgang (nur
-          Auto-Verlinkung, keine Struktur-Änderung). Der Vorgang wird protokolliert
-          und ist über die Auto-Verlinkung rückgängig machbar.
-        </p>
-        <form action={runBulkAutoLinkAction} className="uwe-form-actions">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Alle unverlinkten Begriffe automatisch verlinken
-          </button>
-        </form>
-      </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Bulk-Auto-Link</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Verlinkt alle unverlinkten Begriffe der Welt in einem Durchgang (nur
+              Auto-Verlinkung, keine Struktur-Änderung). Der Vorgang wird protokolliert
+              und ist über die Auto-Verlinkung rückgängig machbar.
+            </p>
+            <form action={runBulkAutoLinkAction}>
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <Button type="submit">Alle unverlinkten Begriffe automatisch verlinken</Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      <section className="uwe-v2-section">
-        <p className="uwe-dashboard-muted">
-          Tipp: Unverlinkte Begriffe lassen sich gebündelt über die{" "}
-          <Link href={`/worlds/${worldSlug}/import`}>Auto-Verlinkung</Link> mit Vorschau und
-          Undo beheben. Portal-Leaks und Kanon-Konflikte prüft der{" "}
-          <Link href={`/worlds/${worldSlug}/inspector`}>Inspektor</Link>.
-        </p>
-      </section>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">
+              Tipp: Unverlinkte Begriffe lassen sich gebündelt über die{" "}
+              <Link href={`/worlds/${worldSlug}/import`}>Auto-Verlinkung</Link> mit Vorschau und
+              Undo beheben. Portal-Leaks und Kanon-Konflikte prüft der{" "}
+              <Link href={`/worlds/${worldSlug}/inspector`}>Inspektor</Link>.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </WorldShell>
   );
 }

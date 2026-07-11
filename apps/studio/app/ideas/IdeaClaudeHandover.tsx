@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Alert, Button, buttonVariants, cn, Textarea } from "@/src/components/ui";
 import {
   ideaAttachmentAbsoluteUrl,
   ideaAttachmentUrl,
@@ -64,10 +65,9 @@ export function IdeaClaudeHandover({ title, body, prompt, attachments }: IdeaCla
   const disabled = handover.trim().length === 0;
 
   return (
-    <div className="uwe-idea-claude-handover">
-      <button
+    <div className="flex flex-col gap-2">
+      <Button
         type="button"
-        className="uwe-v2-btn uwe-v2-btn-primary"
         onClick={() => {
           setOpen((value) => !value);
           if (!open) void copy();
@@ -76,27 +76,27 @@ export function IdeaClaudeHandover({ title, body, prompt, attachments }: IdeaCla
         title="Prompt + Bilder Claude-fertig aufbereiten"
       >
         {open ? "Handover schließen" : "An Claude übergeben"}
-      </button>
+      </Button>
 
       {open ? (
-        <div className="uwe-idea-claude-panel">
-          <p className="uwe-dashboard-muted">
+        <div className="flex flex-col gap-3 border-t border-border pt-3">
+          <p className="text-sm text-muted-foreground">
             Prompt {copied ? "in Zwischenablage kopiert" : "unten"} — in Claude einfügen. Bilder per
             Download in die Unterhaltung ziehen.
           </p>
-          <textarea
-            className="uwe-idea-prompt-text"
+          <Textarea
+            className="font-mono text-sm"
             value={handover}
             readOnly
             rows={10}
             aria-label="Claude-Handover-Text"
           />
-          <div className="uwe-idea-prompt-actions">
-            <button type="button" className="uwe-v2-btn uwe-v2-btn-ghost" onClick={() => void copy()}>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="ghost" onClick={() => void copy()}>
               {copied ? "Kopiert!" : "Prompt kopieren"}
-            </button>
+            </Button>
             <a
-              className="uwe-v2-btn uwe-v2-btn-primary"
+              className={cn(buttonVariants())}
               href={CLAUDE_URL}
               target="_blank"
               rel="noopener noreferrer"
@@ -104,19 +104,19 @@ export function IdeaClaudeHandover({ title, body, prompt, attachments }: IdeaCla
               In Claude öffnen ↗
             </a>
           </div>
-          {error ? <p className="uwe-notice-warn">{error}</p> : null}
+          {error ? <Alert tone="danger">{error}</Alert> : null}
           {attachments.length > 0 ? (
-            <ul className="uwe-idea-attachment-grid">
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2">
               {attachments.map((attachment, index) => (
-                <li key={attachment.assetId} className="uwe-idea-attachment">
+                <li key={attachment.assetId} className="flex flex-col items-start gap-1.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={ideaAttachmentUrl(attachment.assetId)}
                     alt={attachment.title ?? `Anhang ${index + 1}`}
-                    className="uwe-idea-attachment-image"
+                    className="block max-h-40 w-full rounded-[var(--radius)] border border-border object-cover"
                   />
                   <a
-                    className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
+                    className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
                     href={ideaAttachmentUrl(attachment.assetId)}
                     download
                     target="_blank"

@@ -182,7 +182,7 @@ export function MobileAiPromptPanel({
       <div className="mobile-ai-send-desktop">
         <button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary mobile-ai-send-btn"
+          className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 mobile-ai-send-btn"
           disabled={sendDisabled}
           title={ui.sendBlockedReason}
           onClick={() => void handleSend()}
@@ -195,7 +195,7 @@ export function MobileAiPromptPanel({
         <StickyActionBar>
           <button
             type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary mobile-ai-send-btn"
+            className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 mobile-ai-send-btn"
             disabled={sendDisabled}
             title={ui.sendBlockedReason}
             onClick={() => void handleSend()}

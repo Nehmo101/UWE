@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle, badgeVariants, cn } from "@/src/components/ui";
+
 export interface CalendarGridEvent {
   id: string;
   title: string;
@@ -43,48 +45,42 @@ export function CalendarMonthGrid({ month, events }: CalendarMonthGridProps) {
   const monthLabel = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" }).format(month);
 
   return (
-    <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
-      <h2 className="uwe-v2-section-title">{monthLabel}</h2>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-          gap: "0.35rem",
-        }}
-      >
-        {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="uwe-dashboard-muted" style={{ fontWeight: 600, textAlign: "center" }}>
-            {label}
-          </div>
-        ))}
-        {cells.map((cell, index) => (
-          <div
-            key={`${cell.day ?? "empty"}-${index}`}
-            style={{
-              minHeight: "4.5rem",
-              border: "1px solid var(--uwe-border)",
-              borderRadius: "6px",
-              padding: "0.25rem",
-              opacity: cell.day ? 1 : 0.35,
-            }}
-          >
-            {cell.day && <div style={{ fontWeight: 600 }}>{cell.day}</div>}
-            {cell.events.slice(0, 2).map((event) => (
-              <a
-                key={event.id}
-                href={`#event-${event.id}`}
-                className="uwe-badge"
-                style={{ display: "block", marginTop: "0.15rem", textDecoration: "none" }}
-              >
-                {event.title}
-              </a>
-            ))}
-            {cell.events.length > 2 && (
-              <div className="uwe-dashboard-muted">+{cell.events.length - 2}</div>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>{monthLabel}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-7 gap-1.5">
+          {WEEKDAY_LABELS.map((label) => (
+            <div key={label} className="text-center text-sm font-semibold text-muted-foreground">
+              {label}
+            </div>
+          ))}
+          {cells.map((cell, index) => (
+            <div
+              key={`${cell.day ?? "empty"}-${index}`}
+              className={cn(
+                "min-h-[4.5rem] rounded-md border border-border p-1",
+                cell.day ? "opacity-100" : "opacity-[0.35]",
+              )}
+            >
+              {cell.day && <div className="font-semibold">{cell.day}</div>}
+              {cell.events.slice(0, 2).map((event) => (
+                <a
+                  key={event.id}
+                  href={`#event-${event.id}`}
+                  className={cn(badgeVariants(), "mt-1 block no-underline")}
+                >
+                  {event.title}
+                </a>
+              ))}
+              {cell.events.length > 2 && (
+                <div className="text-sm text-muted-foreground">+{cell.events.length - 2}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

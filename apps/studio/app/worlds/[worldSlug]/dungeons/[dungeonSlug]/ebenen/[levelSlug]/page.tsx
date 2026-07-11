@@ -13,11 +13,28 @@ import { createDungeonRoomAction } from "../../../../../../dungeon-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Alert,
+  Button,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; dungeonSlug: string; levelSlug: string }>;
   searchParams: Promise<{ created?: string }>;
 }
+
+const SECTION_CLASS = "mb-8 flex flex-col gap-3";
+const FIELD_CLASS = "flex flex-col gap-1.5";
+const HEADING_CLASS = "m-0 text-lg font-semibold tracking-tight";
 
 export default async function StudioDungeonLevelPage({ params, searchParams }: Props) {
   const { worldSlug, dungeonSlug, levelSlug } = await params;
@@ -59,36 +76,26 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
         summary={`Ebene in „${overview.dungeon.title}“`}
         meta={<DungeonPrepStatusBadge status={overview.level.prepStatus} />}
       />
-      {created && <p className="uwe-flash uwe-flash-success">Raum erstellt.</p>}
+      {created && <Alert tone="success" className="mb-4">Raum erstellt.</Alert>}
 
-      <section className="uwe-v2-section">
-        <h2>Raum-Übersicht</h2>
+      <section className={SECTION_CLASS}>
+        <h2 className={HEADING_CLASS}>Raum-Übersicht</h2>
         {overview.rooms.length === 0 ? (
-          <p className="uwe-v2-empty">Noch keine Räume auf dieser Ebene.</p>
+          <EmptyState title="Noch keine Räume auf dieser Ebene" />
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 12rem), 1fr))",
-              gap: "0.75rem",
-              marginBottom: "1rem",
-            }}
-          >
+          <div className="mb-4 grid grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-3">
             {overview.rooms.map((room) => (
               <Link
                 key={room.id}
                 href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}/raeume/${room.slug}`}
-                className="uwe-v2-card"
-                style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                className="block rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
               >
                 <strong>{room.title}</strong>
-                <div style={{ marginTop: "0.35rem" }}>
+                <div className="mt-1.5">
                   <DungeonPrepStatusBadge status={room.prepStatus} />
                 </div>
                 {room.summary && (
-                  <p className="uwe-hint" style={{ margin: "0.35rem 0 0", fontSize: "0.85rem" }}>
-                    {room.summary}
-                  </p>
+                  <p className="mt-1.5 text-sm text-muted-foreground">{room.summary}</p>
                 )}
               </Link>
             ))}
@@ -96,74 +103,67 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
         )}
       </section>
 
-      <section className="uwe-v2-section">
-        <h2>Räume</h2>
-        <table className="uwe-page-table">
-          <thead>
-            <tr>
-              <th>Raum</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {overview.rooms.map((room) => (
-              <tr key={room.id}>
-                <td>
-                  <Link
-                    href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}/raeume/${room.slug}`}
-                  >
-                    {room.title}
-                  </Link>
-                </td>
-                <td><DungeonPrepStatusBadge status={room.prepStatus} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {overview.rooms.length === 0 && (
-          <p className="uwe-v2-empty">Noch keine Räume auf dieser Ebene.</p>
-        )}
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2>Neuer Raum</h2>
-        <form action={createDungeonRoomAction} className="uwe-v2-form">
+      <section className={SECTION_CLASS}>
+        <h2 className={HEADING_CLASS}>Neuer Raum</h2>
+        <form action={createDungeonRoomAction} className="flex flex-col gap-4">
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
           <input type="hidden" name="levelSlug" value={levelSlug} />
 
-          <label>
-            Titel
-            <input name="title" required placeholder="Raum A — Vorhalle" />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="new-room-title">Titel</Label>
+            <Input id="new-room-title" name="title" required placeholder="Raum A — Vorhalle" />
+          </div>
 
-          <label>
-            Status
-            <select name="prepStatus" defaultValue="unprepared">
-              {Object.values(DungeonPrepStatusEnum).map((status) => (
-                <option key={status} value={status}>
-                  {DUNGEON_PREP_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="new-room-status">Status</Label>
+            <Select name="prepStatus" defaultValue="unprepared">
+              <SelectTrigger id="new-room-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(DungeonPrepStatusEnum).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {DUNGEON_PREP_STATUS_LABELS[status]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label>
-            Vorlesetext (Spieler)
-            <textarea name="readAloud" rows={3} placeholder="Ihr betretet einen staubigen Saal…" />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="new-room-read-aloud">Vorlesetext (Spieler)</Label>
+            <Textarea
+              id="new-room-read-aloud"
+              name="readAloud"
+              rows={3}
+              placeholder="Ihr betretet einen staubigen Saal…"
+            />
+          </div>
 
-          <label>
-            Spieler-sichtbare Beschreibung
-            <textarea name="playerDescription" rows={4} placeholder="Was die Spieler sehen…" />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="new-room-player-description">Spieler-sichtbare Beschreibung</Label>
+            <Textarea
+              id="new-room-player-description"
+              name="playerDescription"
+              rows={4}
+              placeholder="Was die Spieler sehen…"
+            />
+          </div>
 
-          <label>
-            DM-Notizen
-            <textarea name="dmNotes" rows={4} placeholder="Geheime Hinweise, DCs, Trigger…" />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="new-room-dm-notes">DM-Notizen</Label>
+            <Textarea
+              id="new-room-dm-notes"
+              name="dmNotes"
+              rows={4}
+              placeholder="Geheime Hinweise, DCs, Trigger…"
+            />
+          </div>
 
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Raum anlegen</button>
+          <div>
+            <Button type="submit">Raum anlegen</Button>
+          </div>
         </form>
       </section>
     </WorldShell>

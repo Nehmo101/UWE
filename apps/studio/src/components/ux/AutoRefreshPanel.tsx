@@ -27,7 +27,7 @@ export function AutoRefreshPanel({
   return (
     <>
       {label ? (
-        <p className="uwe-dashboard-muted" style={{ marginBottom: "0.75rem" }}>
+        <p className="text-sm text-muted-foreground" style={{ marginBottom: "0.75rem" }}>
           {label}
         </p>
       ) : null}

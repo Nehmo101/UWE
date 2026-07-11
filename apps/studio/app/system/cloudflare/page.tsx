@@ -5,6 +5,7 @@ import { SystemShell } from "@/src/components/shell/SystemShell";
 import { CloudflareStatusAutoRefresh } from "@/components/CloudflareStatusAutoRefresh";
 import { CloudflareTunnelHealthPanel } from "@/components/CloudflareTunnelHealthPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { Button } from "@/src/components/ui/button";
 import { Alert } from "@/src/components/ui/states";
 import { updateDeploymentConfigAction } from "./actions";
 
@@ -257,9 +258,9 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
           </Card>
 
           <div>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+            <Button type="submit">
               Einstellungen speichern
-            </button>
+            </Button>
           </div>
         </form>
       </div>

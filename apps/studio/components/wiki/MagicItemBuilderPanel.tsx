@@ -12,6 +12,18 @@ import {
   equipmentKindLabel,
   type EquipmentSearchResult,
 } from "@/components/wiki/EquipmentSearchBox";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 export interface MagicItemPresetOption {
   id: string;
@@ -41,6 +53,11 @@ function formatSrdBase(result: EquipmentSearchResult): string {
   const url = result.url ? `, ${result.url}` : "";
   return `${head}${summary} [Quelle: ${source}${url}]`;
 }
+
+/** TODO(design-kit): natives select bleibt — controlled Preset-Wahl mit Leerwert
+    ("Alle Felder"), siehe gleiches Muster in ReviewWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function MagicItemBuilderPanel({
   worldSlug,
@@ -150,112 +167,125 @@ export function MagicItemBuilderPanel({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Magic-Item-Builder (strukturiert)</h2>
-      <p className="uwe-dashboard-muted">
-        Template wählen, SRD/Open5e-Gegenstand als Basis übernehmen und Seltenheit,
-        Einstimmung &amp; Eigenschaften für {pageTitle} generieren — RTX-only, Ergebnis
-        läuft als Review-Vorschlag (nie automatisch übernehmen).
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Magic-Item-Builder (strukturiert)</CardTitle>
+        <CardDescription>
+          Template wählen, SRD/Open5e-Gegenstand als Basis übernehmen und Seltenheit,
+          Einstimmung &amp; Eigenschaften für {pageTitle} generieren — RTX-only, Ergebnis
+          läuft als Review-Vorschlag (nie automatisch übernehmen).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {!rtxEnabled && (
+          <Alert tone="danger" role="alert">
+            RTX-Inference ist deaktiviert.
+          </Alert>
+        )}
 
-      {!rtxEnabled && (
-        <p className="uwe-form-error" role="alert">
-          RTX-Inference ist deaktiviert.
+        {rtxEnabled && !rtxReady && (
+          <p className="text-sm text-muted-foreground">
+            RTX offline — wird als Job vorgemerkt (kein Cloud-Fallback).
+          </p>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="magic-item-preset">Template (GeneratorPreset)</Label>
+          <select
+            id="magic-item-preset"
+            value={presetId}
+            onChange={(event) => selectPreset(event.target.value)}
+            className={NATIVE_SELECT_CLASS}
+          >
+            <option value="">Alle Felder (Standard)</option>
+            {presets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+                {preset.description ? ` — ${preset.description}` : null}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <EquipmentSearchBox
+          searchEquipmentUrl={searchEquipmentUrl}
+          label="SRD / Open5e Basisgegenstand"
+          renderResult={(result) => {
+            const label = equipmentKindLabel(result.kind);
+            return (
+              <Button type="button" variant="outline" size="sm" onClick={() => applyEquipment(result)}>
+                {result.name}
+                {label ? ` · ${label}` : null}
+                {result.summary ? ` — ${result.summary}` : null}
+              </Button>
+            );
+          }}
+        />
+        <p className="text-sm text-muted-foreground">
+          Open5e-Inhalte sind CC-BY — SRD/Open5e-Attribution bei Veröffentlichung beachten.
         </p>
-      )}
 
-      {rtxEnabled && !rtxReady && (
-        <p className="uwe-hint">RTX offline — wird als Job vorgemerkt (kein Cloud-Fallback).</p>
-      )}
-
-      <label>
-        Template (GeneratorPreset)
-        <select value={presetId} onChange={(event) => selectPreset(event.target.value)}>
-          <option value="">Alle Felder (Standard)</option>
-          {presets.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.name}
-              {preset.description ? ` — ${preset.description}` : null}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <EquipmentSearchBox
-        searchEquipmentUrl={searchEquipmentUrl}
-        label="SRD / Open5e Basisgegenstand"
-        renderResult={(result) => {
-          const label = equipmentKindLabel(result.kind);
-          return (
-            <button
-              type="button"
-              className="auth-btn auth-btn-small"
-              onClick={() => applyEquipment(result)}
-            >
-              {result.name}
-              {label ? ` · ${label}` : null}
-              {result.summary ? ` — ${result.summary}` : null}
-            </button>
-          );
-        }}
-      />
-      <p className="uwe-hint">
-        Open5e-Inhalte sind CC-BY — SRD/Open5e-Attribution bei Veröffentlichung beachten.
-      </p>
-
-      <form
-        className="uwe-v2-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void runItemGenerator();
-        }}
-      >
-        {visibleFields.map((field) => (
-          <label key={field.id}>
-            {field.label}
-            {field.required ? " *" : null}
-            {field.kind === "textarea" ? (
-              <textarea
-                rows={3}
-                value={values[field.id] ?? ""}
-                placeholder={field.placeholder}
-                required={field.required}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, [field.id]: event.target.value }))
-                }
-              />
-            ) : (
-              <input
-                type="text"
-                value={values[field.id] ?? ""}
-                placeholder={field.placeholder}
-                required={field.required}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, [field.id]: event.target.value }))
-                }
-              />
-            )}
-          </label>
-        ))}
-
-        <button
-          type="submit"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          disabled={!rtxEnabled || busy}
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void runItemGenerator();
+          }}
         >
-          {busy ? "Läuft…" : action.label}
-        </button>
-      </form>
+          {visibleFields.map((field) => (
+            <div key={field.id} className="flex flex-col gap-1.5">
+              <Label htmlFor={`magic-item-field-${field.id}`}>
+                {field.label}
+                {field.required ? " *" : null}
+              </Label>
+              {field.kind === "textarea" ? (
+                <Textarea
+                  id={`magic-item-field-${field.id}`}
+                  rows={3}
+                  value={values[field.id] ?? ""}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, [field.id]: event.target.value }))
+                  }
+                />
+              ) : (
+                <Input
+                  id={`magic-item-field-${field.id}`}
+                  type="text"
+                  value={values[field.id] ?? ""}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, [field.id]: event.target.value }))
+                  }
+                />
+              )}
+            </div>
+          ))}
 
-      {status && <p className="uwe-hint">{status}</p>}
-      {jobId && (
-        <p>
-          <Link href="/jobs">Job {jobId.slice(0, 8)}… anzeigen →</Link>
+          <Button type="submit" disabled={!rtxEnabled || busy} className="self-start">
+            {busy ? "Läuft…" : action.label}
+          </Button>
+        </form>
+
+        {status && <p className="text-sm text-muted-foreground">{status}</p>}
+        {jobId && (
+          <p className="text-sm">
+            <Link href="/jobs" className="text-primary underline-offset-4 hover:underline">
+              Job {jobId.slice(0, 8)}… anzeigen →
+            </Link>
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          <Link
+            href={`/worlds/${worldSlug}/ai-runs`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            AI Runs & Review →
+          </Link>
         </p>
-      )}
-      <p className="uwe-dashboard-muted">
-        <Link href={`/worlds/${worldSlug}/ai-runs`}>AI Runs & Review →</Link>
-      </p>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

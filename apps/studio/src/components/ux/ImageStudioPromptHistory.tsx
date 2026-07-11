@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "@/src/components/ui";
 
 const STORAGE_PREFIX = "uwe:image-studio:prompts:";
 
@@ -42,54 +43,58 @@ export function ImageStudioPromptHistory({ projectId }: { projectId: string }) {
 
   if (history.length === 0) {
     return (
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Prompt-Verlauf (lokal)</h2>
-        <p className="uwe-dashboard-muted">Noch keine Prompts gespeichert — füge einen hinzu.</p>
-        <div className="uwe-inline-actions">
-          <input
-            type="text"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Prompt merken…"
-            style={{ flex: 1 }}
-          />
-          <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm" onClick={saveDraft}>
-            Speichern
-          </button>
-        </div>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Prompt-Verlauf (lokal)</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">Noch keine Prompts gespeichert — füge einen hinzu.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="text"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Prompt merken…"
+              className="flex-1"
+            />
+            <Button type="button" variant="secondary" size="sm" onClick={saveDraft}>
+              Speichern
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Prompt-Verlauf (lokal)</h2>
-      <ul className="uwe-dashboard-list">
-        {history.map((entry) => (
-          <li key={entry} className="uwe-inline-actions">
-            <code style={{ flex: 1, whiteSpace: "pre-wrap" }}>{entry}</code>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
-              onClick={() => removeEntry(entry)}
-            >
-              Entfernen
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="uwe-inline-actions" style={{ marginTop: "0.5rem" }}>
-        <input
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Prompt merken…"
-          style={{ flex: 1 }}
-        />
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm" onClick={saveDraft}>
-          Speichern
-        </button>
-      </div>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Prompt-Verlauf (lokal)</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-2">
+          {history.map((entry) => (
+            <li key={entry} className="flex flex-wrap items-center gap-2">
+              <code className="flex-1 whitespace-pre-wrap text-sm">{entry}</code>
+              <Button type="button" variant="ghost" size="sm" onClick={() => removeEntry(entry)}>
+                Entfernen
+              </Button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="text"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Prompt merken…"
+            className="flex-1"
+          />
+          <Button type="button" variant="secondary" size="sm" onClick={saveDraft}>
+            Speichern
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

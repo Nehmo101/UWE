@@ -10,6 +10,23 @@ import {
   type DevIdeaLifecycleId, type DevIdeaMaturityLevelId, type DevIdeaModuleId, type DevIdeaTypeId, type IdeaWorkspaceView,
 } from "@uwe/database/dev-idea-constants";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import {
+  Alert,
+  Badge,
+  type BadgeProps,
+  badgeVariants,
+  Button,
+  Card,
+  cn,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 import { IdeaAttachments, type IdeaAttachment } from "./IdeaAttachments";
 import { IdeaClaudeHandover } from "./IdeaClaudeHandover";
 import {
@@ -105,28 +122,46 @@ const JOB_STATUS_LABELS: Record<string, string> = {
 
 const RUNNING_JOB_STATUSES = new Set(["pending", "dispatched", "running"]);
 
-function statusBadgeClass(status: IdeaStatus): string {
+/** Native select styling used where Kit-Select (Radix) cannot be used — see TODO(design-kit) comments below. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+type BadgeVariant = NonNullable<BadgeProps["variant"]>;
+
+function statusBadgeVariant(status: IdeaStatus): BadgeVariant {
   switch (status) {
     case "implemented":
-      return "uwe-badge uwe-badge-success";
+      return "success";
     case "rejected":
-      return "uwe-badge uwe-badge-danger";
+      return "danger";
     default:
-      return "uwe-badge uwe-badge-warning";
+      return "warning";
   }
 }
 
-
-function lifecycleBadgeClass(lifecycle: DevIdeaLifecycleId): string { switch (lifecycle) { case "existing": return "uwe-badge uwe-badge-success"; case "broken": return "uwe-badge uwe-badge-danger"; case "deprecated": return "uwe-badge uwe-badge-draft"; default: return "uwe-badge uwe-badge-warning"; } }
+function lifecycleBadgeVariant(lifecycle: DevIdeaLifecycleId): BadgeVariant {
+  switch (lifecycle) {
+    case "existing":
+      return "success";
+    case "broken":
+      return "danger";
+    // TODO(design-kit): Kit-Badge hat keine eigene "draft"-Tonalität — "secondary" hält
+    // "deprecated" von "planned" (warning) unterscheidbar.
+    case "deprecated":
+      return "secondary";
+    default:
+      return "warning";
+  }
+}
 function moduleLabel(module: string | null): string | null { if (!module) return null; return DEV_IDEA_MODULE_LABELS[module as DevIdeaModuleId] ?? module; }
 function maturityLabel(maturity: string | null): string | null { if (!maturity) return null; return DEV_IDEA_MATURITY_LABELS[maturity as DevIdeaMaturityLevelId] ?? maturity; }
 function truncatePrompt(text: string, max = 120): string { const trimmed = text.trim(); return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`; }
 function buildIdeasHref(options: { view: IdeaWorkspaceView; lifecycle?: string | null; module?: string | null; idea?: string | null; }): string { const params = new URLSearchParams(); if (options.view !== "all") params.set("view", options.view); if (options.lifecycle) params.set("lifecycle", options.lifecycle); if (options.module) params.set("module", options.module); if (options.idea) params.set("idea", options.idea); const q = params.toString(); return q ? `/ideas?${q}` : "/ideas"; }
 
-function jobBadgeClass(status: string): string {
-  if (status === "completed") return "uwe-badge uwe-badge-success";
-  if (status === "failed" || status === "cancelled") return "uwe-badge uwe-badge-danger";
-  return "uwe-badge uwe-badge-warning";
+function jobBadgeVariant(status: string): BadgeVariant {
+  if (status === "completed") return "success";
+  if (status === "failed" || status === "cancelled") return "danger";
+  return "warning";
 }
 
 export function IdeaWorkspaceClient({
@@ -165,7 +200,7 @@ export function IdeaWorkspaceClient({
   }
 
   return (
-    <div className="uwe-v2-dashboard-grid" data-columns="3">
+    <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3" data-columns="3">
       <IdeaListColumn ideas={filteredIdeas} selectedId={selected?.id ?? null} onSelect={setSelectedId} view={view} lifecycleFilter={lifecycleFilter} moduleFilter={moduleFilter} workspaceContext={workspaceContext} />
       <ChatColumn key={`chat-${selected?.id ?? "none"}`} idea={selected} workspaceContext={workspaceContext} onTranscript={(transcript) => selected && patchIdea(selected.id, { transcript })} onAttachments={(attachments) => selected && patchIdea(selected.id, { attachments })} />
       <PromptColumn key={`prompt-${selected?.id ?? "none"}`} idea={selected} highlightPrompt={view === "prompts"} job={selected?.devAgentJobId ? (jobs[selected.devAgentJobId] ?? null) : null} agentJobs={agentJobs} onPrompt={(p) => selected && patchIdea(selected.id, { generatedPrompt: p })} onDispatched={(job) => { if (!selected) return; patchIdea(selected.id, { devAgentJobId: job.id }); setJobs((c) => ({ ...c, [job.id]: job })); }} onJobUpdate={(job) => setJobs((c) => ({ ...c, [job.id]: job }))} onRefresh={() => router.refresh()} />
@@ -174,12 +209,41 @@ export function IdeaWorkspaceClient({
 }
 
 function IdeaRegistryFields({ ideaTypeDefault = "feature", lifecycleDefault = "planned", moduleDefault = "", maturityDefault = "" }: { ideaTypeDefault?: DevIdeaTypeId; lifecycleDefault?: DevIdeaLifecycleId; moduleDefault?: string; maturityDefault?: string; }) {
-  return (<>
-    <label>Typ<select name="ideaType" defaultValue={ideaTypeDefault}>{DEV_IDEA_TYPES.map((type) => (<option key={type} value={type}>{DEV_IDEA_TYPE_LABELS[type]}</option>))}</select></label>
-    <label>Lifecycle<select name="lifecycle" defaultValue={lifecycleDefault}>{DEV_IDEA_LIFECYCLES.map((l) => (<option key={l} value={l}>{DEV_IDEA_LIFECYCLE_LABELS[l]}</option>))}</select></label>
-    <label>Modul<select name="module" defaultValue={moduleDefault}><option value="">— keins —</option>{DEV_IDEA_MODULES.map((m) => (<option key={m} value={m}>{DEV_IDEA_MODULE_LABELS[m]}</option>))}</select></label>
-    <label>Reifegrad<select name="maturityLevel" defaultValue={maturityDefault}><option value="">— keiner —</option>{DEV_IDEA_MATURITY_LEVELS.map((l) => (<option key={l} value={l}>{DEV_IDEA_MATURITY_LABELS[l]}</option>))}</select></label>
-  </>);
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <Label>Typ</Label>
+        <Select name="ideaType" defaultValue={ideaTypeDefault}>
+          <SelectTrigger aria-label="Typ"><SelectValue /></SelectTrigger>
+          <SelectContent>{DEV_IDEA_TYPES.map((type) => (<SelectItem key={type} value={type}>{DEV_IDEA_TYPE_LABELS[type]}</SelectItem>))}</SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>Lifecycle</Label>
+        <Select name="lifecycle" defaultValue={lifecycleDefault}>
+          <SelectTrigger aria-label="Lifecycle"><SelectValue /></SelectTrigger>
+          <SelectContent>{DEV_IDEA_LIFECYCLES.map((l) => (<SelectItem key={l} value={l}>{DEV_IDEA_LIFECYCLE_LABELS[l]}</SelectItem>))}</SelectContent>
+        </Select>
+      </div>
+      {/* TODO(design-kit): Modul/Reifegrad bleiben natives Select — Kit-Select (Radix) erlaubt keinen
+          leeren value="" für "— keins —"/"— keiner —"; aria-label statt Label-Kopplung, da dieses
+          Feld über mehrere gleichzeitig gerenderte Formulare (Anlegen + Bearbeiten) wiederverwendet wird. */}
+      <div className="flex flex-col gap-1.5">
+        <Label>Modul</Label>
+        <select name="module" defaultValue={moduleDefault} aria-label="Modul" className={NATIVE_SELECT_CLASS}>
+          <option value="">— keins —</option>
+          {DEV_IDEA_MODULES.map((m) => (<option key={m} value={m}>{DEV_IDEA_MODULE_LABELS[m]}</option>))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>Reifegrad</Label>
+        <select name="maturityLevel" defaultValue={maturityDefault} aria-label="Reifegrad" className={NATIVE_SELECT_CLASS}>
+          <option value="">— keiner —</option>
+          {DEV_IDEA_MATURITY_LEVELS.map((l) => (<option key={l} value={l}>{DEV_IDEA_MATURITY_LABELS[l]}</option>))}
+        </select>
+      </div>
+    </>
+  );
 }
 
 function WorkspaceContextFields({ view, lifecycle, module }: WorkspaceContext) {
@@ -190,53 +254,96 @@ function IdeaListColumn({ ideas, selectedId, onSelect, view, lifecycleFilter, mo
   const createIdeaTypeDefault: DevIdeaTypeId = view === "prompts" ? "prompt" : "feature";
   const createLifecycleDefault: DevIdeaLifecycleId = view === "prompts" ? "existing" : "planned";
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <div className="uwe-idea-workspace-head">
-        <h2 className="uwe-v2-section-title">{IDEA_WORKSPACE_VIEW_LABELS[view]} ({ideas.length})</h2>
-        <div className="uwe-capture-filter-tabs uwe-idea-workspace-tabs">
-          {IDEA_WORKSPACE_VIEWS.map((tab) => (<Link key={tab} href={buildIdeasHref({ view: tab, lifecycle: lifecycleFilter, module: moduleFilter })} data-active={view === tab ? "true" : "false"}>{IDEA_WORKSPACE_VIEW_LABELS[tab]}</Link>))}
+    <Card className="flex flex-col gap-4 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-semibold tracking-tight">{IDEA_WORKSPACE_VIEW_LABELS[view]} ({ideas.length})</h2>
+        <div className="flex flex-wrap gap-1.5">
+          {IDEA_WORKSPACE_VIEWS.map((tab) => (
+            <Link key={tab} href={buildIdeasHref({ view: tab, lifecycle: lifecycleFilter, module: moduleFilter })} data-active={view === tab ? "true" : "false"}
+              className={cn(badgeVariants({ variant: view === tab ? "accent" : "default" }), "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}>
+              {IDEA_WORKSPACE_VIEW_LABELS[tab]}
+            </Link>
+          ))}
         </div>
       </div>
-      <div className="uwe-idea-workspace-filters">
-        <label>Lifecycle<select value={lifecycleFilter ?? ""} onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: e.target.value || null, module: moduleFilter, idea: selectedId }); }} aria-label="Lifecycle filtern"><option value="">Alle</option>{DEV_IDEA_LIFECYCLES.map((l) => (<option key={l} value={l}>{DEV_IDEA_LIFECYCLE_LABELS[l]}</option>))}</select></label>
-        {(view === "all" || view === "features") && (<label>Modul<select value={moduleFilter ?? ""} onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: lifecycleFilter, module: e.target.value || null, idea: selectedId }); }} aria-label="Modul filtern"><option value="">Alle</option>{DEV_IDEA_MODULES.map((m) => (<option key={m} value={m}>{DEV_IDEA_MODULE_LABELS[m]}</option>))}</select></label>)}
+      {/* TODO(design-kit): Lifecycle-/Modul-Filter bleiben natives Select — controlliert
+          (value+onChange, navigiert per window.location.href), daher kein Kit-Select. */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="idea-filter-lifecycle" className="text-xs">Lifecycle</Label>
+          <select id="idea-filter-lifecycle" value={lifecycleFilter ?? ""} aria-label="Lifecycle filtern" className={NATIVE_SELECT_CLASS}
+            onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: e.target.value || null, module: moduleFilter, idea: selectedId }); }}>
+            <option value="">Alle</option>
+            {DEV_IDEA_LIFECYCLES.map((l) => (<option key={l} value={l}>{DEV_IDEA_LIFECYCLE_LABELS[l]}</option>))}
+          </select>
+        </div>
+        {(view === "all" || view === "features") && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="idea-filter-module" className="text-xs">Modul</Label>
+            <select id="idea-filter-module" value={moduleFilter ?? ""} aria-label="Modul filtern" className={NATIVE_SELECT_CLASS}
+              onChange={(e) => { window.location.href = buildIdeasHref({ view, lifecycle: lifecycleFilter, module: e.target.value || null, idea: selectedId }); }}>
+              <option value="">Alle</option>
+              {DEV_IDEA_MODULES.map((m) => (<option key={m} value={m}>{DEV_IDEA_MODULE_LABELS[m]}</option>))}
+            </select>
+          </div>
+        )}
         {view === "features" && (
-          <form action={syncFeatureMatrixAction} className="uwe-idea-matrix-sync-form">
+          <form action={syncFeatureMatrixAction}>
             <WorkspaceContextFields {...workspaceContext} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-              Aus Reifegrad-Matrix synchronisieren
-            </button>
+            <Button type="submit" variant="secondary" size="sm">Aus Reifegrad-Matrix synchronisieren</Button>
           </form>
         )}
       </div>
-      <form action={createIdeaAction} className="uwe-brain-create-form">
+      <form action={createIdeaAction} className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
         <WorkspaceContextFields {...workspaceContext} />
-        <label>{view === "prompts" ? "Neuer Prompt (Titel)" : "Neue Idee (Überschrift)"}<input name="title" required placeholder={view === "prompts" ? "z. B. Atlas-Orchestrator Subagent" : "z. B. Dark-Mode für Portal"} /></label>
-        <label>Beschreibung<textarea name="body" rows={2} placeholder="Worum geht es?" /></label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="idea-create-title">{view === "prompts" ? "Neuer Prompt (Titel)" : "Neue Idee (Überschrift)"}</Label>
+          <Input id="idea-create-title" name="title" required placeholder={view === "prompts" ? "z. B. Atlas-Orchestrator Subagent" : "z. B. Dark-Mode für Portal"} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="idea-create-body">Beschreibung</Label>
+          <Textarea id="idea-create-body" name="body" rows={2} placeholder="Worum geht es?" />
+        </div>
         <IdeaRegistryFields ideaTypeDefault={createIdeaTypeDefault} lifecycleDefault={createLifecycleDefault} />
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">{view === "prompts" ? "Prompt anlegen" : "Idee anlegen"}</button>
+        <Button type="submit" size="sm">{view === "prompts" ? "Prompt anlegen" : "Idee anlegen"}</Button>
       </form>
-      {ideas.length === 0 ? (<p className="uwe-dashboard-muted">{view === "prompts" ? "Noch keine Prompt-Einträge." : view === "features" ? "Keine Features in dieser Ansicht." : "Noch keine Ideen."}</p>) : (
-        <ul className="uwe-idea-list">{ideas.map((idea) => (
-          <li key={idea.id} className={`uwe-idea-list-item${idea.id === selectedId ? " is-active" : ""}${view === "prompts" && idea.generatedPrompt ? " has-prompt" : ""}`}>
-            <button type="button" className="uwe-idea-list-select" aria-pressed={idea.id === selectedId} onClick={() => onSelect(idea.id)}>
-              <span className="uwe-idea-list-title">{idea.title}</span>
-              <span className="uwe-idea-list-badges">
-                {(view === "features" || idea.ideaType === "feature") ? <span className={lifecycleBadgeClass(idea.lifecycle)}>{DEV_IDEA_LIFECYCLE_LABELS[idea.lifecycle]}</span> : null}
-                {view === "all" ? <span className="uwe-badge uwe-badge-type">{DEV_IDEA_TYPE_LABELS[idea.ideaType]}</span> : null}
-                <span className={statusBadgeClass(idea.status)}>{STATUS_LABELS[idea.status]}</span>
+      {ideas.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{view === "prompts" ? "Noch keine Prompt-Einträge." : view === "features" ? "Keine Features in dieser Ansicht." : "Noch keine Ideen."}</p>
+      ) : (
+        <ul className="flex flex-col gap-2">{ideas.map((idea) => (
+          <li key={idea.id} className={cn("rounded-[var(--radius)] border border-border p-2.5", view === "prompts" && idea.generatedPrompt && "border-primary/45", idea.id === selectedId && "border-primary ring-1 ring-primary")}>
+            <button type="button" className="flex w-full flex-col items-start gap-1.5 text-left" aria-pressed={idea.id === selectedId} onClick={() => onSelect(idea.id)}>
+              <span className="font-semibold">{idea.title}</span>
+              <span className="flex flex-wrap items-center gap-1.5">
+                {(view === "features" || idea.ideaType === "feature") ? <Badge variant={lifecycleBadgeVariant(idea.lifecycle)}>{DEV_IDEA_LIFECYCLE_LABELS[idea.lifecycle]}</Badge> : null}
+                {view === "all" ? <Badge>{DEV_IDEA_TYPE_LABELS[idea.ideaType]}</Badge> : null}
+                <Badge variant={statusBadgeVariant(idea.status)}>{STATUS_LABELS[idea.status]}</Badge>
               </span>
-              {(view === "features" || view === "all") && (idea.module || idea.maturityLevel) ? <span className="uwe-idea-list-meta">{[moduleLabel(idea.module), maturityLabel(idea.maturityLevel)].filter(Boolean).join(" · ")}</span> : null}
-              {view === "prompts" && idea.generatedPrompt ? <span className="uwe-idea-prompt-snippet">{truncatePrompt(idea.generatedPrompt)}</span> : null}
+              {(view === "features" || view === "all") && (idea.module || idea.maturityLevel) ? <span className="text-xs text-muted-foreground">{[moduleLabel(idea.module), maturityLabel(idea.maturityLevel)].filter(Boolean).join(" · ")}</span> : null}
+              {view === "prompts" && idea.generatedPrompt ? (
+                <span className="block w-full whitespace-pre-wrap rounded-r-[var(--radius)] border-l-2 border-primary bg-primary/10 px-2 py-1 text-xs">{truncatePrompt(idea.generatedPrompt)}</span>
+              ) : null}
             </button>
-            <div className="uwe-idea-list-actions">
-              <form action={updateIdeaStatusAction} className="uwe-idea-status-form"><WorkspaceContextFields {...workspaceContext} /><input type="hidden" name="id" value={idea.id} /><select name="status" defaultValue={idea.status} aria-label="Status">{STATUS_ORDER.map((s) => (<option key={s} value={s}>{STATUS_LABELS[s]}</option>))}</select><button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">Setzen</button></form>
-              <form action={deleteIdeaAction}><WorkspaceContextFields {...workspaceContext} /><input type="hidden" name="id" value={idea.id} /><button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">Löschen</button></form>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <form action={updateIdeaStatusAction} className="flex items-center gap-1.5">
+                <WorkspaceContextFields {...workspaceContext} />
+                <input type="hidden" name="id" value={idea.id} />
+                <Select name="status" defaultValue={idea.status}>
+                  <SelectTrigger className="h-8 w-auto gap-1 px-2 text-xs" aria-label="Status"><SelectValue /></SelectTrigger>
+                  <SelectContent>{STATUS_ORDER.map((s) => (<SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>))}</SelectContent>
+                </Select>
+                <Button type="submit" variant="ghost" size="sm">Setzen</Button>
+              </form>
+              <form action={deleteIdeaAction}>
+                <WorkspaceContextFields {...workspaceContext} />
+                <input type="hidden" name="id" value={idea.id} />
+                <Button type="submit" variant="ghost" size="sm">Löschen</Button>
+              </form>
             </div>
           </li>
         ))}</ul>
       )}
-    </section>
+    </Card>
   );
 }
 function ChatColumn({
@@ -259,10 +366,10 @@ function ChatColumn({
 
   if (!idea) {
     return (
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">KI-Chat</h2>
-        <p className="uwe-dashboard-muted">Wähle links eine Idee aus, um sie zu besprechen.</p>
-      </section>
+      <Card className="flex flex-col gap-4 p-4">
+        <h2 className="text-base font-semibold tracking-tight">KI-Chat</h2>
+        <p className="text-sm text-muted-foreground">Wähle links eine Idee aus, um sie zu besprechen.</p>
+      </Card>
     );
   }
 
@@ -303,130 +410,84 @@ function ChatColumn({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">KI-Chat</h2>
-
-      <div className="uwe-idea-detail">
-        <div className="uwe-idea-detail-head">
-          <h3 className="uwe-idea-detail-title">{idea.title}</h3>
-          <div className="uwe-inline-actions">
+    <Card className="flex flex-col gap-4 p-4">
+      <h2 className="text-base font-semibold tracking-tight">KI-Chat</h2>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base font-semibold">{idea.title}</h3>
+          <div className="flex flex-wrap items-center gap-2">
             <form action={convertIdeaToCaptureAction}>
               <WorkspaceContextFields {...workspaceContext} />
               <input type="hidden" name="id" value={idea.id} />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-                In Capture umwandeln
-              </button>
+              <Button type="submit" variant="secondary" size="sm">In Capture umwandeln</Button>
             </form>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
-              onClick={() => setEditing((value) => !value)}
-            >
-              {editing ? "Schließen" : "Bearbeiten"}
-            </button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setEditing((value) => !value)}>{editing ? "Schließen" : "Bearbeiten"}</Button>
           </div>
         </div>
         {editing ? (
-          <form action={updateIdeaAction} className="uwe-brain-create-form">
+          <form action={updateIdeaAction} className="flex flex-col gap-3">
             <WorkspaceContextFields {...workspaceContext} />
             <input type="hidden" name="id" value={idea.id} />
-            <label>
-              Überschrift
-              <input name="title" defaultValue={idea.title} required />
-            </label>
-            <label>Beschreibung (Fließtext)<textarea name="body" rows={4} defaultValue={idea.body} /></label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="idea-edit-title">Überschrift</Label>
+              <Input id="idea-edit-title" name="title" defaultValue={idea.title} required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="idea-edit-body">Beschreibung (Fließtext)</Label>
+              <Textarea id="idea-edit-body" name="body" rows={4} defaultValue={idea.body} />
+            </div>
             <IdeaRegistryFields ideaTypeDefault={idea.ideaType} lifecycleDefault={idea.lifecycle} moduleDefault={idea.module ?? ""} maturityDefault={idea.maturityLevel ?? ""} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-              Speichern
-            </button>
+            <Button type="submit" variant="secondary" size="sm">Speichern</Button>
           </form>
         ) : (
           <>
-            <div className="uwe-idea-detail-meta">
-              <span className="uwe-badge uwe-badge-type">{DEV_IDEA_TYPE_LABELS[idea.ideaType]}</span>
-              <span className={lifecycleBadgeClass(idea.lifecycle)}>{DEV_IDEA_LIFECYCLE_LABELS[idea.lifecycle]}</span>
-              {idea.module ? <span className="uwe-dashboard-muted">{moduleLabel(idea.module)}</span> : null}
-              {idea.maturityLevel ? <span className="uwe-dashboard-muted">{maturityLabel(idea.maturityLevel)}</span> : null}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge>{DEV_IDEA_TYPE_LABELS[idea.ideaType]}</Badge>
+              <Badge variant={lifecycleBadgeVariant(idea.lifecycle)}>{DEV_IDEA_LIFECYCLE_LABELS[idea.lifecycle]}</Badge>
+              {idea.module ? <span className="text-sm text-muted-foreground">{moduleLabel(idea.module)}</span> : null}
+              {idea.maturityLevel ? <span className="text-sm text-muted-foreground">{maturityLabel(idea.maturityLevel)}</span> : null}
             </div>
-            {idea.body ? <p className="uwe-idea-detail-body">{idea.body}</p> : null}
+            {idea.body ? <p className="whitespace-pre-wrap text-sm text-muted-foreground">{idea.body}</p> : null}
           </>
         )}
       </div>
-
-      <div className="uwe-idea-attachments-section">
-        <h3 className="uwe-v2-section-title">Anhänge (Bilder)</h3>
+      <div className="flex flex-col gap-2 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold">Anhänge (Bilder)</h3>
         <IdeaAttachments ideaId={idea.id} attachments={idea.attachments} onChange={onAttachments} />
       </div>
-
-      <div className="uwe-idea-chat-log" aria-label="Chatverlauf">
+      <div className="flex max-h-[22rem] flex-col gap-2 overflow-y-auto" aria-label="Chatverlauf">
         {idea.transcript.length === 0 ? (
-          <p className="uwe-dashboard-muted">
-            Noch kein Verlauf. Übernimm die Idee als Fließtext und lass die KI nachfragen.
-          </p>
+          <p className="text-sm text-muted-foreground">Noch kein Verlauf. Übernimm die Idee als Fließtext und lass die KI nachfragen.</p>
         ) : (
           idea.transcript.map((msg, index) => (
-            <div
-              key={`${msg.role}-${index}`}
-              className={`uwe-idea-chat-msg uwe-idea-chat-msg-${msg.role}`}
-            >
-              <span className="uwe-idea-chat-role">
+            <div key={`${msg.role}-${index}`} className={cn("rounded-[var(--radius)] p-2.5", msg.role === "user" ? "bg-primary/15" : "bg-primary/10")}>
+              <span className="mb-0.5 block text-xs font-semibold opacity-70">
                 {msg.role === "user" ? "Du" : "KI"}
                 {msg.via ? ` · ${msg.via === "local_rtx" ? "RTX" : "Cloud"}` : ""}
               </span>
-              <p className="uwe-idea-chat-text">{msg.content}</p>
+              <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
             </div>
           ))
         )}
       </div>
-
-      <div className="uwe-idea-chat-controls">
-        <label className="uwe-idea-provider">
-          KI-Quelle
-          <select
-            value={providerMode}
-            onChange={(event) => setProviderMode(event.target.value as ProviderMode)}
-            disabled={busy}
-          >
-            {(Object.keys(PROVIDER_LABELS) as ProviderMode[]).map((mode) => (
-              <option key={mode} value={mode}>
-                {PROVIDER_LABELS[mode]}
-              </option>
-            ))}
+      {/* TODO(design-kit): controlliertes Select (value+onChange) — bleibt nativ mit Tailwind-Styling. */}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="chat-provider" className="text-xs">KI-Quelle</Label>
+          <select id="chat-provider" value={providerMode} onChange={(event) => setProviderMode(event.target.value as ProviderMode)} disabled={busy} className={NATIVE_SELECT_CLASS}>
+            {(Object.keys(PROVIDER_LABELS) as ProviderMode[]).map((mode) => (<option key={mode} value={mode}>{PROVIDER_LABELS[mode]}</option>))}
           </select>
-        </label>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
-          onClick={() => setMessage(idea.body || idea.title)}
-          disabled={busy}
-        >
-          Idee als Fließtext übernehmen
-        </button>
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setMessage(idea.body || idea.title)} disabled={busy}>Idee als Fließtext übernehmen</Button>
       </div>
-
-      <label className="uwe-idea-chat-field">
-        Nachricht an die KI
-        <textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          rows={4}
-          placeholder="Frage stellen, Idee einfügen oder Anweisung geben…"
-          disabled={busy}
-        />
-      </label>
-
-      {info && <p className="uwe-notice-warn">{info}</p>}
-      {error && <p className="uwe-notice-warn">{error}</p>}
-
-      <button
-        type="button"
-        className="uwe-v2-btn uwe-v2-btn-primary"
-        onClick={() => void send()}
-        disabled={busy || message.trim().length === 0}
-      >
-        {busy ? "KI antwortet…" : "Senden"}
-      </button>
-    </section>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="chat-message">Nachricht an die KI</Label>
+        <Textarea id="chat-message" value={message} onChange={(event) => setMessage(event.target.value)} rows={4} placeholder="Frage stellen, Idee einfügen oder Anweisung geben…" disabled={busy} />
+      </div>
+      {info && <Alert tone="info">{info}</Alert>}
+      {error && <Alert tone="danger">{error}</Alert>}
+      <Button type="button" onClick={() => void send()} disabled={busy || message.trim().length === 0}>{busy ? "KI antwortet…" : "Senden"}</Button>
+    </Card>
   );
 }
 
@@ -502,10 +563,10 @@ function PromptColumn({
 
   if (!idea) {
     return (
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Aktueller Prompt</h2>
-        <p className="uwe-dashboard-muted">Wähle eine Idee, um einen Cursor-Prompt zu erstellen.</p>
-      </section>
+      <Card className="flex flex-col gap-4 p-4">
+        <h2 className="text-base font-semibold tracking-tight">Aktueller Prompt</h2>
+        <p className="text-sm text-muted-foreground">Wähle eine Idee, um einen Cursor-Prompt zu erstellen.</p>
+      </Card>
     );
   }
 
@@ -607,173 +668,87 @@ function PromptColumn({
         : undefined;
 
   return (
-    <section className={`uwe-v2-card uwe-v2-card-padded uwe-v2-section${highlightPrompt && draft.trim().length > 0 ? " uwe-idea-prompt-highlight" : ""}`}>
-      <h2 className="uwe-v2-section-title">{highlightPrompt ? "Prompt-Bibliothek" : "Aktueller Prompt"}</h2>
-
+    <Card className={cn("flex flex-col gap-4 p-4", highlightPrompt && draft.trim().length > 0 && "ring-1 ring-inset ring-primary/40")}>
+      <h2 className="text-base font-semibold tracking-tight">{highlightPrompt ? "Prompt-Bibliothek" : "Aktueller Prompt"}</h2>
       {agentJobs.enabled && (
-        <p className="uwe-dashboard-muted uwe-idea-cursor-target">
+        <p className="text-sm text-muted-foreground">
           Cursor-Ziel:{" "}
           {agentJobs.githubRepo ? (
-            <>
-              <code>
-                github.com/{agentJobs.githubRepo}
-              </code>
-              {" · Branch "}
-              <code>{agentJobs.defaultBranch}</code>
-            </>
+            <><code>github.com/{agentJobs.githubRepo}</code>{" · Branch "}<code>{agentJobs.defaultBranch}</code></>
           ) : (
-            <>
-              GitHub-Repo nicht konfiguriert
-              {" — setze "}
-              <code>AGENT_JOBS_GITHUB_REPO=owner/repo</code>
-            </>
+            <>GitHub-Repo nicht konfiguriert{" — setze "}<code>AGENT_JOBS_GITHUB_REPO=owner/repo</code></>
           )}
           {agentJobs.githubRepo && (
-            <>
-              {" · "}
-              <a
-                href="https://cursor.com/docs/integrations/github"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Cursor GitHub App
-              </a>
-              {" muss auf diesem Repo installiert sein."}
-            </>
+            <>{" · "}<a href="https://cursor.com/docs/integrations/github" target="_blank" rel="noopener noreferrer">Cursor GitHub App</a>{" muss auf diesem Repo installiert sein."}</>
           )}
         </p>
       )}
-
-      <div className="uwe-idea-chat-controls">
-        <label className="uwe-idea-provider">
-          KI-Quelle
-          <select
-            value={providerMode}
-            onChange={(event) => setProviderMode(event.target.value as ProviderMode)}
-            disabled={genBusy}
-          >
-            {(Object.keys(PROVIDER_LABELS) as ProviderMode[]).map((mode) => (
-              <option key={mode} value={mode}>
-                {PROVIDER_LABELS[mode]}
-              </option>
-            ))}
+      {/* TODO(design-kit): controlliertes Select (value+onChange) — bleibt nativ mit Tailwind-Styling. */}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="prompt-provider" className="text-xs">KI-Quelle</Label>
+          <select id="prompt-provider" value={providerMode} onChange={(event) => setProviderMode(event.target.value as ProviderMode)} disabled={genBusy} className={NATIVE_SELECT_CLASS}>
+            {(Object.keys(PROVIDER_LABELS) as ProviderMode[]).map((mode) => (<option key={mode} value={mode}>{PROVIDER_LABELS[mode]}</option>))}
           </select>
-        </label>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-          onClick={() => void generate()}
-          disabled={genBusy}
-        >
-          {genBusy ? "Erstelle…" : "Prompt erstellen"}
-        </button>
+        </div>
+        <Button type="button" variant="secondary" size="sm" onClick={() => void generate()} disabled={genBusy}>{genBusy ? "Erstelle…" : "Prompt erstellen"}</Button>
       </div>
-
-      <textarea className={`uwe-idea-prompt-text${highlightPrompt ? " uwe-idea-prompt-text-library" : ""}`} value={draft}
+      <Textarea
+        className={cn("font-mono text-sm", highlightPrompt && "border-primary/40 bg-primary/5")}
+        value={draft}
         onChange={(event) => setDraft(event.target.value)}
         rows={10}
         placeholder="Hier erscheint der aus dem KI-Chat erzeugte Cursor-Prompt. Du kannst ihn vor der Übergabe anpassen."
       />
-
-      <div className="uwe-idea-prompt-actions">
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
-          onClick={() => void savePrompt()}
-          disabled={saveBusy || draft.trim().length === 0}
-        >
-          {saveBusy ? "Speichere…" : "Prompt speichern"}
-        </button>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
-          onClick={() => void copy()}
-          disabled={draft.trim().length === 0}
-        >
-          {copied ? "Kopiert!" : "Kopieren"}
-        </button>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          onClick={() => void dispatch()}
-          disabled={dispatchDisabled}
-          title={dispatchTitle}
-        >
-          {dispatchBusy ? "Übergebe…" : "An Cursor übergeben"}
-        </button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="ghost" onClick={() => void savePrompt()} disabled={saveBusy || draft.trim().length === 0}>{saveBusy ? "Speichere…" : "Prompt speichern"}</Button>
+        <Button type="button" variant="ghost" onClick={() => void copy()} disabled={draft.trim().length === 0}>{copied ? "Kopiert!" : "Kopieren"}</Button>
+        <Button type="button" onClick={() => void dispatch()} disabled={dispatchDisabled} title={dispatchTitle}>{dispatchBusy ? "Übergebe…" : "An Cursor übergeben"}</Button>
       </div>
-
-      <IdeaClaudeHandover
-        title={idea.title}
-        body={idea.body}
-        prompt={draft}
-        attachments={idea.attachments}
-      />
-
+      <IdeaClaudeHandover title={idea.title} body={idea.body} prompt={draft} attachments={idea.attachments} />
       {!agentJobs.enabled && (
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Cursor-Übergabe inaktiv — setze <code>AGENT_JOBS_ENABLED=true</code>,
           <code> AGENT_JOBS_GITHUB_REPO=owner/repo</code> und
           <code> CURSOR_CLOUD_API_KEY</code>. Der Prompt kann trotzdem kopiert werden.
         </p>
       )}
       {agentJobs.enabled && !agentJobs.cursorConfigured && (
-        <p className="uwe-dashboard-muted">
-          Hinweis: <code>CURSOR_CLOUD_API_KEY</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.
-        </p>
+        <p className="text-sm text-muted-foreground">Hinweis: <code>CURSOR_CLOUD_API_KEY</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.</p>
       )}
       {agentJobs.enabled && agentJobs.cursorConfigured && !agentJobs.githubRepo && (
-        <p className="uwe-dashboard-muted">
-          Hinweis: <code>AGENT_JOBS_GITHUB_REPO</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.
-        </p>
+        <p className="text-sm text-muted-foreground">Hinweis: <code>AGENT_JOBS_GITHUB_REPO</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.</p>
       )}
-      {error && <p className="uwe-notice-warn">{error}</p>}
-
+      {error && <Alert tone="danger">{error}</Alert>}
       <CursorStatusPanel job={job} />
-    </section>
+    </Card>
   );
 }
 
 function CursorStatusPanel({ job }: { job: IdeaAgentJobDto | null }) {
   if (!job) {
     return (
-      <div className="uwe-idea-cursor-status">
-        <h3 className="uwe-v2-section-title">Cursor-Status</h3>
-        <p className="uwe-dashboard-muted">Noch nicht an Cursor übergeben.</p>
+      <div className="flex flex-col gap-2 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold">Cursor-Status</h3>
+        <p className="text-sm text-muted-foreground">Noch nicht an Cursor übergeben.</p>
       </div>
     );
   }
 
   return (
-    <div className="uwe-idea-cursor-status">
-      <h3 className="uwe-v2-section-title">Cursor-Status</h3>
-      <p>
-        <span className={jobBadgeClass(job.status)}>
-          {JOB_STATUS_LABELS[job.status] ?? job.status}
-        </span>
-        {RUNNING_JOB_STATUSES.has(job.status) && (
-          <span className="uwe-dashboard-muted"> · Aktualisierung alle 5 s</span>
-        )}
+    <div className="flex flex-col gap-2 border-t border-border pt-4">
+      <h3 className="text-sm font-semibold">Cursor-Status</h3>
+      <p className="flex flex-wrap items-center gap-2">
+        <Badge variant={jobBadgeVariant(job.status)}>{JOB_STATUS_LABELS[job.status] ?? job.status}</Badge>
+        {RUNNING_JOB_STATUSES.has(job.status) && <span className="text-sm text-muted-foreground"> · Aktualisierung alle 5 s</span>}
       </p>
-      {job.summary && <p className="uwe-idea-cursor-summary">{job.summary}</p>}
-      <ul className="uwe-idea-cursor-links">
-        {job.url && (
-          <li>
-            <a href={job.url} target="_blank" rel="noreferrer">
-              Agent in Cursor öffnen
-            </a>
-          </li>
-        )}
+      {job.summary && <p className="whitespace-pre-wrap text-sm">{job.summary}</p>}
+      <ul className="flex flex-col gap-1 text-sm">
+        {job.url && (<li><a href={job.url} target="_blank" rel="noreferrer">Agent in Cursor öffnen</a></li>)}
         {job.branchName && <li>Branch: <code>{job.branchName}</code></li>}
-        {job.prUrl && (
-          <li>
-            <a href={job.prUrl} target="_blank" rel="noreferrer">
-              Pull Request
-            </a>
-          </li>
-        )}
+        {job.prUrl && (<li><a href={job.prUrl} target="_blank" rel="noreferrer">Pull Request</a></li>)}
       </ul>
-      {job.errorMessage && <p className="uwe-notice-warn">{job.errorMessage}</p>}
+      {job.errorMessage && <Alert tone="danger">{job.errorMessage}</Alert>}
     </div>
   );
 }

@@ -2,6 +2,25 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  LoadingState,
+} from "@/src/components/ui";
+
+// Radix Select erlaubt keinen Item-Wert value="" — das Welt-Filterfeld mit
+// echtem Leerwert ("Alle Welten") bleibt natives <select>, gestylt wie Kit-Input.
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 interface TagReference {
   entityType: string;
@@ -174,12 +193,21 @@ export function TagAdminWorkspace() {
 
   return (
     <>
-      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
-        <h2>Filter</h2>
-        <div className="uwe-form-grid">
-          <label>
-            Welt (optional)
-            <select value={worldId} onChange={(event) => setWorldId(event.target.value)}>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filter</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="tag-admin-world">Welt (optional)</Label>
+            {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+                "Alle Welten" — natives Select beibehalten. */}
+            <select
+              id="tag-admin-world"
+              value={worldId}
+              onChange={(event) => setWorldId(event.target.value)}
+              className={NATIVE_SELECT_CLASS}
+            >
               <option value="">Alle Welten</option>
               {data?.worlds.map((world) => (
                 <option key={world.id} value={world.id}>
@@ -187,179 +215,214 @@ export function TagAdminWorkspace() {
                 </option>
               ))}
             </select>
-          </label>
-          <div style={{ alignSelf: "end" }}>
-            <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={() => void loadTags()}>
-              Aktualisieren
-            </button>
           </div>
-        </div>
-      </section>
+          <Button type="button" variant="secondary" onClick={() => void loadTags()}>
+            Aktualisieren
+          </Button>
+        </CardContent>
+      </Card>
 
-      {loading && <p>Lade Tag-Inventar…</p>}
-      {error && <p className="uwe-form-error">{error}</p>}
+      {loading && <LoadingState title="Lade Tag-Inventar…" />}
+      {error && (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      )}
 
       {data && !loading && (
-        <>
+        <div className="flex flex-col gap-6">
           {data.coverage && (
-            <section className="uwe-v2-card uwe-v2-section">
-              <h2 className="uwe-v2-section-title">EntityTag-Abdeckung</h2>
-              <p className="uwe-dashboard-muted">
-                {data.coverage.totalTags} zentrale Tags · {data.coverage.totalEntityTags}{" "}
-                EntityTag-Verknüpfungen. Inventar und Merge nutzen EntityTag als Primärquelle;
-                Legacy-Json nur für noch nicht backgefillte Entitäten.
-              </p>
-              <div className="uwe-today-card-list">
-                {data.coverage.types.map((entry) => (
-                  <article key={entry.entityType} className="uwe-today-card">
-                    <h3>{data.entityTypeLabels?.[entry.entityType] ?? entry.entityType}</h3>
-                    <p className="uwe-dashboard-muted">
-                      Quelle: {entry.jsonTagged}/{entry.totalEntities} · EntityTag:{" "}
-                      {entry.entityTagTagged}/{entry.totalEntities}
-                    </p>
-                  </article>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-secondary"
-                disabled={backfilling}
-                onClick={() => void handleBackfill()}
-              >
-                {backfilling ? "Backfill läuft…" : "Legacy-Tags → EntityTag backfillen"}
-              </button>
-              {backfillStatus && <p className="uwe-hint">{backfillStatus}</p>}
-            </section>
+            <Card>
+              <CardHeader>
+                <CardTitle>EntityTag-Abdeckung</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {data.coverage.totalTags} zentrale Tags · {data.coverage.totalEntityTags}{" "}
+                  EntityTag-Verknüpfungen. Inventar und Merge nutzen EntityTag als Primärquelle;
+                  Legacy-Json nur für noch nicht backgefillte Entitäten.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {data.coverage.types.map((entry) => (
+                    <Card key={entry.entityType} className="p-3.5">
+                      <h3 className="text-sm font-medium">
+                        {data.entityTypeLabels?.[entry.entityType] ?? entry.entityType}
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Quelle: {entry.jsonTagged}/{entry.totalEntities} · EntityTag:{" "}
+                        {entry.entityTagTagged}/{entry.totalEntities}
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+                <div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={backfilling}
+                    onClick={() => void handleBackfill()}
+                  >
+                    {backfilling ? "Backfill läuft…" : "Legacy-Tags → EntityTag backfillen"}
+                  </Button>
+                </div>
+                {backfillStatus && <p className="text-sm text-muted-foreground">{backfillStatus}</p>}
+              </CardContent>
+            </Card>
           )}
 
-          <section className="uwe-v2-card uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Merge-Vorschläge ({data.suggestions.length})</h2>
-            {data.suggestions.length === 0 ? (
-              <p className="uwe-dashboard-muted">Keine ähnlichen Tags gefunden.</p>
-            ) : (
-              <div className="uwe-today-card-list">
-                {data.suggestions.slice(0, 20).map((suggestion) => (
-                  <article key={`${suggestion.targetTag}-${suggestion.sourceTags.join("-")}`} className="uwe-today-card">
-                    <h3>
-                      {suggestion.sourceTags.join(", ")} → {suggestion.targetTag}
-                    </h3>
-                    <p className="uwe-dashboard-muted">
-                      {suggestion.reason} · {suggestion.totalReferences} Referenzen
-                    </p>
-                    <button
-                      type="button"
-                      className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                      onClick={() => applySuggestion(suggestion)}
+          <Card>
+            <CardHeader>
+              <CardTitle>Merge-Vorschläge ({data.suggestions.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {data.suggestions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Keine ähnlichen Tags gefunden.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {data.suggestions.slice(0, 20).map((suggestion) => (
+                    <Card
+                      key={`${suggestion.targetTag}-${suggestion.sourceTags.join("-")}`}
+                      className="p-3.5"
                     >
-                      In Merge-Formular übernehmen
-                    </button>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+                      <h3 className="text-sm font-medium">
+                        {suggestion.sourceTags.join(", ")} → {suggestion.targetTag}
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {suggestion.reason} · {suggestion.totalReferences} Referenzen
+                      </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => applySuggestion(suggestion)}
+                      >
+                        In Merge-Formular übernehmen
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          <section className="uwe-v2-card uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Tags zusammenführen</h2>
-            <form className="uwe-form-grid" onSubmit={handleMerge}>
-              <label>
-                Ziel-Tag
-                <input
-                  value={mergeToTag}
-                  onChange={(event) => setMergeToTag(event.target.value)}
-                  placeholder="stadt"
-                  required
-                />
-              </label>
-              <label>
-                Quell-Tags (kommagetrennt)
-                <input
-                  value={mergeFromTags}
-                  onChange={(event) => setMergeFromTags(event.target.value)}
-                  placeholder="Stadt, STADT"
-                  required
-                />
-              </label>
-              <div style={{ alignSelf: "end" }}>
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={merging}>
-                  {merging ? "Merge läuft…" : "Tags mergen"}
-                </button>
-              </div>
-            </form>
-            {mergeStatus && <p className="uwe-dashboard-muted">{mergeStatus}</p>}
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Tags zusammenführen</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleMerge}>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tag-admin-merge-to">Ziel-Tag</Label>
+                  <Input
+                    id="tag-admin-merge-to"
+                    value={mergeToTag}
+                    onChange={(event) => setMergeToTag(event.target.value)}
+                    placeholder="stadt"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tag-admin-merge-from">Quell-Tags (kommagetrennt)</Label>
+                  <Input
+                    id="tag-admin-merge-from"
+                    value={mergeFromTags}
+                    onChange={(event) => setMergeFromTags(event.target.value)}
+                    placeholder="Stadt, STADT"
+                    required
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Button type="submit" disabled={merging}>
+                    {merging ? "Merge läuft…" : "Tags mergen"}
+                  </Button>
+                </div>
+              </form>
+              {mergeStatus && <p className="mt-3 text-sm text-muted-foreground">{mergeStatus}</p>}
+            </CardContent>
+          </Card>
 
-          <section className="uwe-v2-card uwe-v2-section">
-            <h2 className="uwe-v2-section-title">
-              Unbenutzte Kandidaten ({data.unused.length})
-            </h2>
-            <p className="uwe-dashboard-muted">
-              Tags nur auf Drafts oder nur dm_only — Kandidaten zum Aufräumen.
-            </p>
-            {data.unused.length > 0 && (
-              <ul>
-                {data.unused.slice(0, 30).map((entry) => (
-                  <li key={entry.tag}>
-                    <strong>{entry.tag}</strong> ({entry.count}×)
-                    {entry.onlyOnDrafts && " · nur Drafts"}
-                    {entry.onlyDmOnly && " · nur dm_only"}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="uwe-v2-card uwe-v2-section">
-            <h2 className="uwe-v2-section-title">
-              Ohne Referenzen ({data.inventory.filter((entry) => entry.count === 0).length})
-            </h2>
-            <p className="uwe-dashboard-muted">
-              Tags im Inventar ohne EntityTag-Verknüpfungen — Kandidaten zum Entfernen nach manuellem
-              Review.
-            </p>
-            {data.inventory.filter((entry) => entry.count === 0).length > 0 && (
-              <ul>
-                {data.inventory
-                  .filter((entry) => entry.count === 0)
-                  .slice(0, 30)
-                  .map((entry) => (
-                    <li key={`orphan-${entry.tag}`}>
-                      <strong>{entry.tag}</strong>
+          <Card>
+            <CardHeader>
+              <CardTitle>Unbenutzte Kandidaten ({data.unused.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                Tags nur auf Drafts oder nur dm_only — Kandidaten zum Aufräumen.
+              </p>
+              {data.unused.length > 0 && (
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {data.unused.slice(0, 30).map((entry) => (
+                    <li key={entry.tag}>
+                      <strong>{entry.tag}</strong> ({entry.count}×)
+                      {entry.onlyOnDrafts && " · nur Drafts"}
+                      {entry.onlyDmOnly && " · nur dm_only"}
                     </li>
                   ))}
-              </ul>
-            )}
-          </section>
+                </ul>
+              )}
+            </CardContent>
+          </Card>
 
-          <section className="uwe-v2-card uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Tag-Inventar ({data.inventory.length})</h2>
-            <table className="uwe-table">
-              <thead>
-                <tr>
-                  <th>Tag</th>
-                  <th>Normalisiert</th>
-                  <th>Referenzen</th>
-                  <th>Hinweise</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.inventory.slice(0, 100).map((entry) => (
-                  <tr key={entry.tag}>
-                    <td>
-                      <strong>{entry.tag}</strong>
-                    </td>
-                    <td>{entry.normalizedKey}</td>
-                    <td>{entry.count}</td>
-                    <td>
-                      {entry.onlyOnDrafts && <span className="uwe-badge">Draft</span>}{" "}
-                      {entry.onlyDmOnly && <span className="uwe-badge">dm_only</span>}
-                    </td>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Ohne Referenzen ({data.inventory.filter((entry) => entry.count === 0).length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                Tags im Inventar ohne EntityTag-Verknüpfungen — Kandidaten zum Entfernen nach manuellem
+                Review.
+              </p>
+              {data.inventory.filter((entry) => entry.count === 0).length > 0 && (
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {data.inventory
+                    .filter((entry) => entry.count === 0)
+                    .slice(0, 30)
+                    .map((entry) => (
+                      <li key={`orphan-${entry.tag}`}>
+                        <strong>{entry.tag}</strong>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tag-Inventar ({data.inventory.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Tag</th>
+                    <th className={TH_CLASS}>Normalisiert</th>
+                    <th className={TH_CLASS}>Referenzen</th>
+                    <th className={TH_CLASS}>Hinweise</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        </>
+                </thead>
+                <tbody>
+                  {data.inventory.slice(0, 100).map((entry) => (
+                    <tr key={entry.tag}>
+                      <td className={TD_CLASS}>
+                        <strong>{entry.tag}</strong>
+                      </td>
+                      <td className={TD_CLASS}>{entry.normalizedKey}</td>
+                      <td className={TD_CLASS}>{entry.count}</td>
+                      <td className={TD_CLASS}>
+                        {entry.onlyOnDrafts && <Badge variant="warning">Draft</Badge>}{" "}
+                        {entry.onlyDmOnly && <Badge variant="secondary">dm_only</Badge>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </>
   );

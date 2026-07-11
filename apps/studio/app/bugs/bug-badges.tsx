@@ -1,3 +1,4 @@
+import { Badge, type BadgeProps } from "@/src/components/ui";
 import {
   BUG_REPORT_SEVERITY_LABELS,
   BUG_REPORT_STATUS_LABELS,
@@ -5,43 +6,43 @@ import {
   type BugReportStatus,
 } from "./bug-constants";
 
-export function bugStatusBadgeClass(status: BugReportStatus): string {
+type BadgeVariant = NonNullable<BadgeProps["variant"]>;
+
+export function bugStatusBadgeVariant(status: BugReportStatus): BadgeVariant {
   switch (status) {
     case "resolved":
-      return "uwe-badge uwe-badge-success";
+      return "success";
+    // TODO(design-kit): Kit-Badge hat keine eigene "draft"-Tonalität — "secondary" hält
+    // "wont_fix" von "in_progress" (warning) unterscheidbar.
     case "wont_fix":
-      return "uwe-badge uwe-badge-draft";
+      return "secondary";
     case "in_progress":
-      return "uwe-badge uwe-badge-warning";
+      return "warning";
     default:
-      return "uwe-badge uwe-badge-danger";
+      return "danger";
   }
 }
 
-export function bugSeverityBadgeClass(severity: BugReportSeverity): string {
+export function bugSeverityBadgeVariant(severity: BugReportSeverity): BadgeVariant {
   switch (severity) {
     case "critical":
-      return "uwe-badge uwe-badge-danger";
+      return "danger";
     case "high":
-      return "uwe-badge uwe-badge-warning";
+      return "warning";
     case "low":
-      return "uwe-badge uwe-badge-type";
+      return "default";
     default:
-      return "uwe-badge";
+      return "default";
   }
 }
 
 export function BugStatusBadge({ status }: { status: BugReportStatus }) {
-  return (
-    <span className={bugStatusBadgeClass(status)}>{BUG_REPORT_STATUS_LABELS[status]}</span>
-  );
+  return <Badge variant={bugStatusBadgeVariant(status)}>{BUG_REPORT_STATUS_LABELS[status]}</Badge>;
 }
 
 export function BugSeverityBadge({ severity }: { severity: BugReportSeverity }) {
   return (
-    <span className={bugSeverityBadgeClass(severity)}>
-      {BUG_REPORT_SEVERITY_LABELS[severity]}
-    </span>
+    <Badge variant={bugSeverityBadgeVariant(severity)}>{BUG_REPORT_SEVERITY_LABELS[severity]}</Badge>
   );
 }
 

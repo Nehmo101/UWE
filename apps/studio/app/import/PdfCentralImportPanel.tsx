@@ -7,6 +7,19 @@ import {
   executeImportCentralPdfJobAction,
   previewImportCentralPdfJobAction,
 } from "../import-central-actions";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Label,
+} from "@/src/components/ui";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 interface Props {
   jobId: string;
@@ -121,105 +134,118 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
   }, [resultSummary]);
 
   return (
-    <div className="uwe-import-workspace">
-      <section className="uwe-panel">
-        <h3>PDF-Import</h3>
-        <p className="uwe-panel-intro">
-          Text wird aus der PDF extrahiert und wie Markdown importiert. Gescannte PDFs ohne Textlayer
-          benötigen OCR vorab.
-        </p>
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>PDF-Import</CardTitle>
+          <CardDescription>
+            Text wird aus der PDF extrahiert und wie Markdown importiert. Gescannte PDFs ohne Textlayer
+            benötigen OCR vorab.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="pdf-import-file">PDF-Datei</Label>
+            {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
+            <input
+              id="pdf-import-file"
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={handleFileChange}
+              className="text-sm text-foreground"
+            />
+          </div>
 
-        <label>
-          PDF-Datei
-          <input type="file" accept=".pdf,application/pdf" onChange={handleFileChange} />
-        </label>
+          {fileName ? <p className="text-sm text-muted-foreground">Ausgewählt: {fileName}</p> : null}
 
-        {fileName ? <p className="uwe-table-sub">Ausgewählt: {fileName}</p> : null}
-
-        <div className="uwe-form-actions">
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            onClick={handlePreview}
-            disabled={loading || !contentBase64}
-          >
+          <Button type="button" onClick={handlePreview} disabled={loading || !contentBase64} className="self-start">
             {loading && !resultSummary ? "Lädt…" : "Vorschau anzeigen"}
-          </button>
-        </div>
-      </section>
+          </Button>
+        </CardContent>
+      </Card>
 
-      {error ? <p className="uwe-flash uwe-flash-error">{error}</p> : null}
+      {error ? (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      ) : null}
       {resultLabel ? (
-        <p className="uwe-flash uwe-flash-success">
+        <Alert tone="success">
           {resultLabel}
           {undoToken
             ? " — der Import kann im Import-Verlauf über „Zurückrollen“ rückgängig gemacht werden."
             : ""}
-        </p>
+        </Alert>
       ) : null}
 
       {preview ? (
-        <section className="uwe-panel">
-          <h3>Vorschau</h3>
-          <p className="uwe-panel-intro">
-            {preview.totalDocuments} Abschnitt{preview.totalDocuments === 1 ? "" : "e"} erkannt.
-          </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Vorschau</CardTitle>
+            <CardDescription>
+              {preview.totalDocuments} Abschnitt{preview.totalDocuments === 1 ? "" : "e"} erkannt.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    {!singleTarget ? (
+                      <th className={TH_CLASS}>
+                        {/* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */}
+                        <input
+                          type="checkbox"
+                          aria-label="Alle auswählen"
+                          onChange={toggleAll}
+                          checked={
+                            preview.items.length > 0 &&
+                            preview.items.every((item) => selectedIds.has(item.itemId))
+                          }
+                          className="h-4 w-4 rounded border-input"
+                        />
+                      </th>
+                    ) : null}
+                    <th className={TH_CLASS}>Titel</th>
+                    <th className={TH_CLASS}>Auszug</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.items.map((item) => (
+                    <tr key={item.itemId}>
+                      {!singleTarget ? (
+                        <td className={TD_CLASS}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(item.itemId)}
+                            onChange={() => toggleItem(item.itemId)}
+                            className="h-4 w-4 rounded border-input"
+                          />
+                        </td>
+                      ) : null}
+                      <td className={TD_CLASS}>{item.title}</td>
+                      <td className={TD_CLASS}>{item.excerpt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                {!singleTarget ? (
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Alle auswählen"
-                      onChange={toggleAll}
-                      checked={
-                        preview.items.length > 0 &&
-                        preview.items.every((item) => selectedIds.has(item.itemId))
-                      }
-                    />
-                  </th>
-                ) : null}
-                <th>Titel</th>
-                <th>Auszug</th>
-              </tr>
-            </thead>
-            <tbody>
-              {preview.items.map((item) => (
-                <tr key={item.itemId}>
-                  {!singleTarget ? (
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(item.itemId)}
-                        onChange={() => toggleItem(item.itemId)}
-                      />
-                    </td>
-                  ) : null}
-                  <td>{item.title}</td>
-                  <td>{item.excerpt}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <p className="text-sm text-muted-foreground">
+              Die Vorschau ändert keine Daten. Nach dem Import kannst du den Job im Import-Verlauf
+              über „Zurückrollen“ rückgängig machen.
+            </p>
 
-          <p className="uwe-table-sub">
-            Die Vorschau ändert keine Daten. Nach dem Import kannst du den Job im Import-Verlauf
-            über „Zurückrollen“ rückgängig machen.
-          </p>
-
-          <div className="uwe-form-actions">
-            <button
+            <Button
               type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary"
               onClick={handleExecute}
               disabled={loading || !preview.canExecute || (!singleTarget && selectedCount === 0)}
+              className="self-start"
             >
               Import ausführen
-            </button>
-          </div>
-        </section>
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
     </div>
   );

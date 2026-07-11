@@ -3,6 +3,7 @@ import {
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
   DocumentTemplateCategoryEnum,
 } from "@uwe/database/server";
+import { Button, Input, Label, Textarea } from "@/src/components/ui";
 
 interface DocumentTemplateEditorProps {
   templateId?: string;
@@ -14,6 +15,11 @@ interface DocumentTemplateEditorProps {
   deleteAction?: (formData: FormData) => void | Promise<void>;
 }
 
+/** TODO(design-kit): natives select bleibt — Server-Action-Formular (FormData)
+    braucht name/defaultValue ohne Client-State, siehe SessionDetailClient.tsx. */
+const SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 export function DocumentTemplateEditor({
   templateId,
   name = "",
@@ -23,48 +29,60 @@ export function DocumentTemplateEditor({
   submitLabel,
   deleteAction,
 }: DocumentTemplateEditorProps) {
+  const fieldIdSuffix = templateId ?? "new";
   return (
-    <div className="uwe-brain-create-form">
-      <form action={action} className="uwe-brain-create-form">
+    <div className="flex flex-col gap-4">
+      <form action={action} className="flex flex-col gap-4">
         {templateId ? <input type="hidden" name="id" value={templateId} /> : null}
-        <label>
-          Name
-          <input name="name" defaultValue={name} required />
-        </label>
-        <label>
-          Kategorie
-          <select name="category" defaultValue={category}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`document-template-name-${fieldIdSuffix}`}>Name</Label>
+          <Input
+            id={`document-template-name-${fieldIdSuffix}`}
+            name="name"
+            defaultValue={name}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`document-template-category-${fieldIdSuffix}`}>Kategorie</Label>
+          <select
+            id={`document-template-category-${fieldIdSuffix}`}
+            name="category"
+            defaultValue={category}
+            className={SELECT_CLASS}
+          >
             {Object.values(DocumentTemplateCategoryEnum).map((entry) => (
               <option key={entry} value={entry}>
                 {DOCUMENT_TEMPLATE_CATEGORY_LABELS[entry]}
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          Vorlagentext
-          <textarea
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`document-template-body-${fieldIdSuffix}`}>Vorlagentext</Label>
+          <Textarea
+            id={`document-template-body-${fieldIdSuffix}`}
             name="body"
             rows={8}
             defaultValue={body}
             placeholder="z. B. Vertrag zwischen {{partei_a}} und {{partei_b}} …"
             spellCheck={false}
           />
-        </label>
-        <p className="uwe-dashboard-muted">
+        </div>
+        <p className="text-sm text-muted-foreground">
           Platzhalter als <code>{`{{variable}}`}</code> — beim Speichern werden Variablen automatisch
           erkannt.
         </p>
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+        <Button type="submit" size="sm" className="self-start">
           {submitLabel}
-        </button>
+        </Button>
       </form>
       {templateId && deleteAction ? (
         <form action={deleteAction}>
           <input type="hidden" name="id" value={templateId} />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+          <Button type="submit" variant="secondary" size="sm">
             Löschen
-          </button>
+          </Button>
         </form>
       ) : null}
     </div>

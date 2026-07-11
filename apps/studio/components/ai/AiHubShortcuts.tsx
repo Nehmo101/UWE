@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle, buttonVariants } from "@/src/components/ui";
 
 const SECTIONS = [
   {
@@ -27,22 +28,28 @@ const SECTIONS = [
 
 export function AiHubShortcuts() {
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Schnellstart</h2>
-      <div className="uwe-ai-hub-sections">
+    <Card>
+      <CardHeader>
+        <CardTitle>Schnellstart</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
         {SECTIONS.map((section) => (
-          <div key={section.title} className="uwe-ai-hub-section">
-            <h3 className="uwe-section-subtitle">{section.title}</h3>
-            <div className="uwe-inline-actions">
+          <div key={section.title} className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium text-muted-foreground">{section.title}</h3>
+            <div className="flex flex-wrap items-center gap-2">
               {section.links.map((link) => (
-                <Link key={link.href} href={link.href} className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={buttonVariants({ variant: "secondary", size: "sm" })}
+                >
                   {link.label}
                 </Link>
               ))}
             </div>
           </div>
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

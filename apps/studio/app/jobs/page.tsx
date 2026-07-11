@@ -59,11 +59,11 @@ export default async function JobsPage() {
       breadcrumb={<BreadcrumbTrail items={[{ label: "Jobs" }]} />}
       contextPanel={
         <SidebarSection title="Hinweise">
-          <ul className="uwe-hint" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            <li style={{ marginBottom: "0.5rem" }}>
+          <ul className="flex list-none flex-col gap-2 text-sm text-muted-foreground">
+            <li>
               Kampagnen-Presets starten Kanonprüfung, Brain-Aktionen und Reindex mit einem Klick.
             </li>
-            <li style={{ marginBottom: "0.5rem" }}>
+            <li>
               Fehlgeschlagene Jobs können erneut versucht werden, wenn der Typ Retry unterstützt.
             </li>
             <li>Restore-Jobs werden aus Sicherheitsgründen nicht automatisch wiederholt.</li>

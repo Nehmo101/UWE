@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDateTime } from "@/src/lib/format";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
 
 interface NlCommandIntentPayload {
   intent:
@@ -197,142 +198,139 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
   }
 
   return (
-    <div className="uwe-v2-stack">
-      <section className="uwe-v2-card">
-        <h2 className="uwe-v2-section-title">Admin-Befehl</h2>
-        <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
-          Whitelist-basierte Befehle — strukturierter Intent, Klartext-Bestätigung vor Mutationen
-          (Wartungsmodus, Portal-/Studio-Sperre), Ausführung über bestehende Services. Lesen: Benutzer,
-          Welten, offene Bugs, Secrets-Status, Migrationen. Kein freies LLM-Tool-Calling.
-        </p>
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Admin-Befehl</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Whitelist-basierte Befehle — strukturierter Intent, Klartext-Bestätigung vor Mutationen
+            (Wartungsmodus, Portal-/Studio-Sperre), Ausführung über bestehende Services. Lesen: Benutzer,
+            Welten, offene Bugs, Secrets-Status, Migrationen. Kein freies LLM-Tool-Calling.
+          </p>
 
-        <form onSubmit={handleParse} className="uwe-v2-stack">
-          <label className="uwe-v2-label" htmlFor="nl-command-input">
-            Befehl (Deutsch oder Englisch)
-          </label>
-          <input
-            id="nl-command-input"
-            className="uwe-v2-input"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="z. B. Zeige alle Benutzer"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            <button
-              type="submit"
-              className="uwe-v2-btn uwe-v2-btn-primary"
-              disabled={parsing || !text.trim()}
-            >
-              {parsing ? "Analysiere…" : "Intent parsen"}
-            </button>
+          <form onSubmit={handleParse} className="flex flex-col gap-3">
+            <Label htmlFor="nl-command-input">Befehl (Deutsch oder Englisch)</Label>
+            <Input
+              id="nl-command-input"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="z. B. Zeige alle Benutzer"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={parsing || !text.trim()}>
+                {parsing ? "Analysiere…" : "Intent parsen"}
+              </Button>
+            </div>
+          </form>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">Beispiele:</p>
+            <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+              {EXAMPLE_COMMANDS.map((example) => (
+                <li key={example}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setText(example)}>
+                    {example}
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
-        </form>
-
-        <div style={{ marginTop: "1rem" }}>
-          <p className="uwe-dashboard-muted">Beispiele:</p>
-          <ul className="uwe-dashboard-list">
-            {EXAMPLE_COMMANDS.map((example) => (
-              <li key={example}>
-                <button
-                  type="button"
-                  className="uwe-v2-btn uwe-v2-btn-ghost"
-                  onClick={() => setText(example)}
-                >
-                  {example}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       {error ? (
-        <div className="uwe-form-error" role="alert">
+        <Alert tone="danger" role="alert">
           {error}
-        </div>
+        </Alert>
       ) : null}
 
       {parsed ? (
-        <section className="uwe-v2-card">
-          <h2 className="uwe-v2-section-title">Bestätigung</h2>
-          <dl className="uwe-dl">
-            <div>
-              <dt>Intent</dt>
-              <dd>
-                <code>{parsed.intent.intent}</code>
-              </dd>
-            </div>
-            {parsed.intent.intent === "set_maintenance_mode" ||
-            parsed.intent.intent === "set_lock_portal" ||
-            parsed.intent.intent === "set_lock_studio" ? (
-              <div>
-                <dt>Aktion</dt>
-                <dd>
-                  {parsed.intent.intent === "set_maintenance_mode"
-                    ? "Wartungsmodus"
-                    : parsed.intent.intent === "set_lock_portal"
-                      ? "Portal-Sperre"
-                      : "Studio-Sperre"}
-                  {": "}
-                  {parsed.intent.enabled ? "aktivieren" : "deaktivieren"}
+        <Card>
+          <CardHeader>
+            <CardTitle>Bestätigung</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <dl className="flex flex-col gap-2.5">
+              <div className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-3 gap-y-1">
+                <dt className="m-0 font-semibold text-muted-foreground">Intent</dt>
+                <dd className="m-0 break-words">
+                  <code>{parsed.intent.intent}</code>
                 </dd>
               </div>
-            ) : null}
-          </dl>
-          <p>{parsed.confirmationMessage}</p>
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            onClick={() => void handleExecute()}
-            disabled={executing}
-          >
-            {executing
-              ? "Führe aus…"
-              : parsed.requiresConfirmation
-                ? "Bestätigen und ausführen"
-                : "Ausführen"}
-          </button>
-        </section>
+              {parsed.intent.intent === "set_maintenance_mode" ||
+              parsed.intent.intent === "set_lock_portal" ||
+              parsed.intent.intent === "set_lock_studio" ? (
+                <div className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-3 gap-y-1">
+                  <dt className="m-0 font-semibold text-muted-foreground">Aktion</dt>
+                  <dd className="m-0 break-words">
+                    {parsed.intent.intent === "set_maintenance_mode"
+                      ? "Wartungsmodus"
+                      : parsed.intent.intent === "set_lock_portal"
+                        ? "Portal-Sperre"
+                        : "Studio-Sperre"}
+                    {": "}
+                    {parsed.intent.enabled ? "aktivieren" : "deaktivieren"}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+            <p>{parsed.confirmationMessage}</p>
+            <Button type="button" onClick={() => void handleExecute()} disabled={executing} className="self-start">
+              {executing
+                ? "Führe aus…"
+                : parsed.requiresConfirmation
+                  ? "Bestätigen und ausführen"
+                  : "Ausführen"}
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
 
       {result ? (
-        <section className="uwe-v2-card">
-          <h2 className="uwe-v2-section-title">Ergebnis</h2>
-          <p>{result.summary}</p>
-          {result.data ? (
-            <pre
-              className="uwe-v2-code-block"
-              style={{ marginTop: "0.75rem", overflow: "auto", maxHeight: "24rem" }}
-            >
-              {JSON.stringify(result.data, null, 2)}
-            </pre>
-          ) : null}
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Ergebnis</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p>{result.summary}</p>
+            {result.data ? (
+              <pre className="max-h-96 overflow-auto rounded-[var(--radius)] border border-border bg-muted p-3 font-mono text-xs">
+                {JSON.stringify(result.data, null, 2)}
+              </pre>
+            ) : null}
+          </CardContent>
+        </Card>
       ) : null}
 
-      <section className="uwe-v2-card">
-        <h2 className="uwe-v2-section-title">Letzte NL-Befehle (Audit)</h2>
-        {auditLoading ? (
-          <p className="uwe-dashboard-muted">Lade Audit-Einträge…</p>
-        ) : auditEntries.length === 0 ? (
-          <p className="uwe-dashboard-muted">Noch keine NL-Befehle ausgeführt.</p>
-        ) : (
-          <ul className="uwe-dashboard-list">
-            {auditEntries.map((entry) => (
-              <li key={entry.id}>
-                <strong>{entry.intent ?? entry.actionLabel}</strong>
-                {entry.readOnly ? " · lesen" : " · Mutation"}
-                <p>
-                  {formatStudioDateTime(new Date(entry.timestamp))}
-                  {entry.summary ? ` · ${entry.summary}` : ""}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Letzte NL-Befehle (Audit)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {auditLoading ? (
+            <p className="text-sm text-muted-foreground">Lade Audit-Einträge…</p>
+          ) : auditEntries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine NL-Befehle ausgeführt.</p>
+          ) : (
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {auditEntries.map((entry) => (
+                <li key={entry.id}>
+                  <strong>{entry.intent ?? entry.actionLabel}</strong>
+                  {entry.readOnly ? " · lesen" : " · Mutation"}
+                  <p className="mt-0.5 whitespace-pre-line text-sm">
+                    {formatStudioDateTime(new Date(entry.timestamp))}
+                    {entry.summary ? ` · ${entry.summary}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

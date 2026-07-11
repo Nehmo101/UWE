@@ -7,6 +7,13 @@ import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashbo
 import { resolveSecurityDashboardAccess } from "@/src/lib/security-dashboard-access";
 import { formatStudioDateTime } from "@/src/lib/format";
 import { CspReviewPanel } from "@/components/admin/CspReviewPanel";
+import { Alert, Badge, type BadgeProps, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
+
+function warningBadgeVariant(severity: "info" | "warning" | "critical"): BadgeProps["variant"] {
+  if (severity === "critical") return "danger";
+  if (severity === "warning") return "warning";
+  return "info";
+}
 
 function boolLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
@@ -47,18 +54,22 @@ export default async function AdminSecurityPage() {
           title="Security"
           summary="Sicherheitsübersicht für UWE Admins"
         />
-        <section className="uwe-v2-card">
-          <h2 className="uwe-v2-section-title">Zugriff verweigert</h2>
-          <p className="uwe-notice uwe-notice-warn">{access.reason}</p>
-          {access.userRole && (
-            <p className="uwe-dashboard-muted">
-              Angemeldet als {access.displayName} ({SECURITY_ROLE_LABELS[access.userRole] ?? access.userRole})
+        <Card>
+          <CardHeader>
+            <CardTitle>Zugriff verweigert</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Alert tone="warning">{access.reason}</Alert>
+            {access.userRole && (
+              <p className="text-sm text-muted-foreground">
+                Angemeldet als {access.displayName} ({SECURITY_ROLE_LABELS[access.userRole] ?? access.userRole})
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Melde dich im Portal mit einem OWNER- oder ADMIN-Account an und öffne diese Seite erneut.
             </p>
-          )}
-          <p className="uwe-dashboard-muted" style={{ marginTop: "1rem" }}>
-            Melde dich im Portal mit einem OWNER- oder ADMIN-Account an und öffne diese Seite erneut.
-          </p>
-        </section>
+          </CardContent>
+        </Card>
       </SystemShell>
     );
   }
@@ -87,27 +98,31 @@ export default async function AdminSecurityPage() {
           />
         }
       />
-      <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
+      <p className="mb-4 text-sm text-muted-foreground">
         Stand: {formatStudioDateTime(new Date(status.timestamp))} · Angemeldet: {access.displayName} (
         {SECURITY_ROLE_LABELS[access.userRole ?? ""] ?? access.userRole})
       </p>
 
       {status.warnings.length > 0 && (
-        <section className="uwe-v2-card" style={{ marginBottom: "1rem" }}>
-          <h2 className="uwe-v2-section-title">Warnungen</h2>
-          <ul className="uwe-dashboard-list">
-            {status.warnings.map((warning) => (
-              <li key={warning.id}>
-                <strong>{warning.title}</strong>
-                <span className="uwe-badge">{warning.severity}</span>
-                <p>{warning.description}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Warnungen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2 text-sm">
+              {status.warnings.map((warning) => (
+                <li key={warning.id}>
+                  <strong>{warning.title}</strong>{" "}
+                  <Badge variant={warningBadgeVariant(warning.severity)}>{warning.severity}</Badge>
+                  <p className="mt-1">{warning.description}</p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="uwe-dashboard-grid">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <StatusCard
           title="Auth"
           level={boolLevel(status.auth.active)}
@@ -248,35 +263,43 @@ export default async function AdminSecurityPage() {
         />
       </div>
 
-      <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
-        <h2 className="uwe-v2-section-title">CSP &amp; Header-Review</h2>
-        <CspReviewPanel
-          effectivePolicy={effectiveCsp}
-          effectiveFindings={cspFindings}
-          isProduction={isProduction}
-        />
-      </section>
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>CSP &amp; Header-Review</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CspReviewPanel
+            effectivePolicy={effectiveCsp}
+            effectiveFindings={cspFindings}
+            isProduction={isProduction}
+          />
+        </CardContent>
+      </Card>
 
       {status.auditLog.length > 0 && (
-        <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
-          <h2 className="uwe-v2-section-title">Audit Log (Sicherheit)</h2>
-          <ul className="uwe-dashboard-list">
-            {status.auditLog.map((entry) => (
-              <li key={entry.id}>
-                <strong>{entry.action}</strong>
-                {entry.worldSlug ? ` · ${entry.worldSlug}` : ""}
-                <p>
-                  {formatStudioDateTime(new Date(entry.createdAt))}
-                  {" — "}
-                  {entry.summary}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Audit Log (Sicherheit)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2 text-sm">
+              {status.auditLog.map((entry) => (
+                <li key={entry.id}>
+                  <strong>{entry.action}</strong>
+                  {entry.worldSlug ? ` · ${entry.worldSlug}` : ""}
+                  <p className="mt-1">
+                    {formatStudioDateTime(new Date(entry.createdAt))}
+                    {" — "}
+                    {entry.summary}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
-      <p className="uwe-dashboard-muted" style={{ marginTop: "1.5rem" }}>
+      <p className="mt-6 text-sm text-muted-foreground">
         JSON-API: <Link href="/api/admin/security">/api/admin/security</Link>
       </p>
     </SystemShell>

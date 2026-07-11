@@ -2,6 +2,7 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRef, useState } from "react";
+import { Button } from "@/src/components/ui";
 
 interface Props {
   label: string;
@@ -60,23 +61,29 @@ export function MiniaturePhotoUploadField({
   }
 
   return (
-    <div className="uwe-miniature-photo-upload">
-      <p className="uwe-dashboard-muted">{label}</p>
-      <div className="uwe-miniature-photo-slot">
+    <div className="grid gap-2">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="grid gap-1.5">
         {assetId ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={assetPreviewUrl(assetId)} alt="" />
-            <button
+            <img
+              src={assetPreviewUrl(assetId)}
+              alt=""
+              className="max-h-40 w-full rounded-[var(--radius)] bg-muted/20 object-cover"
+            />
+            <Button
               type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+              variant="secondary"
+              size="sm"
+              className="justify-self-start"
               onClick={() => onAssetChange(null)}
             >
               Entfernen
-            </button>
+            </Button>
           </>
         ) : (
-          <p className="uwe-dashboard-muted">Noch kein Foto hochgeladen.</p>
+          <p className="text-sm text-muted-foreground">Noch kein Foto hochgeladen.</p>
         )}
       </div>
       <input
@@ -84,21 +91,22 @@ export function MiniaturePhotoUploadField({
         type="file"
         accept="image/*"
         capture="environment"
-        className="uwe-miniature-photo-upload-input"
+        className="sr-only"
         onChange={handleFileChange}
         disabled={uploading}
         aria-hidden
         tabIndex={-1}
       />
-      <button
+      <Button
         type="button"
-        className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm"
+        size="sm"
+        className="justify-self-start"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
       >
         {uploading ? "Lädt hoch…" : assetId ? "Foto ersetzen" : "Foto hochladen"}
-      </button>
-      {error ? <p className="uwe-hint">{error}</p> : null}
+      </Button>
+      {error ? <p className="text-sm text-muted-foreground">{error}</p> : null}
     </div>
   );
 }

@@ -59,15 +59,15 @@ export function SlugDuplicateChecker({
           onChange={(event) => setSlug(event.target.value)}
         />
         {status === "checking" ? (
-          <small className="uwe-field-hint">Slug wird geprüft…</small>
+          <small className="text-xs text-muted-foreground">Slug wird geprüft…</small>
         ) : null}
         {status === "free" ? (
-          <small className="uwe-field-hint" style={{ color: "var(--uwe-success, #16a34a)" }}>
+          <small className="text-xs text-muted-foreground" style={{ color: "var(--uwe-success, #16a34a)" }}>
             Slug ist verfügbar.
           </small>
         ) : null}
         {status === "taken" ? (
-          <small className="uwe-form-error">Slug bereits vergeben — bitte anderen wählen.</small>
+          <small className="text-sm text-destructive">Slug bereits vergeben — bitte anderen wählen.</small>
         ) : null}
       </label>
     </>

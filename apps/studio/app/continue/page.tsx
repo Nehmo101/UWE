@@ -28,22 +28,22 @@ export default async function ContinuePage() {
         summary="Deine wahrscheinlich relevanten Fortsetzungen: offene Projekte mit nächstem Schritt, Werkstatt-Aufgaben, unbearbeitete Captures und wartende Scans."
       />
 
-      <section className="uwe-v2-section">
+      <section className="flex flex-col gap-3">
         {continuations.length === 0 ? (
-          <p className="uwe-dashboard-muted">
+          <p className="text-sm text-muted-foreground">
             Nichts Offenes gefunden — alles erledigt oder noch nichts angefangen.
           </p>
         ) : (
-          <ul className="uwe-today-card-list">
+          <ul className="grid gap-2">
             {continuations.map((item) => (
-              <li key={`${item.kind}-${item.id}`} className="uwe-today-card">
+              <li key={`${item.kind}-${item.id}`} className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
                 <h3>
                   <Link href={item.href}>
                     {KIND_ICON[item.kind]} {item.title}
                   </Link>
                 </h3>
-                <p className="uwe-dashboard-muted">
-                  <span className="uwe-badge">{continuationKindLabel(item.kind)}</span> {item.hint}
+                <p className="mt-1 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{continuationKindLabel(item.kind)}</span> {item.hint}
                 </p>
               </li>
             ))}
@@ -51,7 +51,7 @@ export default async function ContinuePage() {
         )}
       </section>
 
-      <p className="uwe-dashboard-muted">
+      <p className="text-sm text-muted-foreground">
         Mehr Kontext im{" "}
         <Link href="/today">Heute-Dashboard</Link> oder in der{" "}
         <Link href="/capture">Capture-Inbox</Link>.

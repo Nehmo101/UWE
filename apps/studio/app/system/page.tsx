@@ -6,6 +6,14 @@ import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashbo
 import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
 import { formatStudioDateTime } from "@/src/lib/format";
 import { getHomelabCockpitData } from "@/src/lib/homelab-dashboard";
+import {
+  Alert,
+  badgeVariants,
+  buttonVariants,
+  Card,
+  CardContent,
+  cn,
+} from "@/src/components/ui";
 
 const TABS = [
   { id: "overview", label: "Übersicht" },
@@ -20,6 +28,20 @@ interface Props {
   searchParams: Promise<{ tab?: string }>;
 }
 
+type Severity = "ok" | "warn" | "error";
+
+const STATUS_DOT_CLASS: Record<Severity, string> = {
+  ok: "bg-success",
+  warn: "bg-warning",
+  error: "bg-destructive",
+};
+
+const STATUS_BORDER_CLASS: Record<Severity, string> = {
+  ok: "border-success/40",
+  warn: "border-warning/40",
+  error: "border-destructive/40",
+};
+
 function isSystemTabId(value: string | undefined): value is SystemTabId {
   return TABS.some((tab) => tab.id === value);
 }
@@ -28,7 +50,7 @@ function overallLevel(ok: boolean): StatusLevel {
   return ok ? "ok" : "error";
 }
 
-function severityStatus(severity: string, ok: boolean): "ok" | "warn" | "error" {
+function severityStatus(severity: string, ok: boolean): Severity {
   if (severity === "ok" || ok) return "ok";
   if (severity === "warn" || severity === "unknown") return "warn";
   return "error";
@@ -68,64 +90,58 @@ export default async function SystemHubPage({ searchParams }: Props) {
           />
         }
       />
-      <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
+      <p className="mb-4 text-sm text-muted-foreground">
         Stand: {formatStudioDateTime(new Date(status.timestamp))} · UWE {UWE_VERSION}
         {system.commit ? ` · ${system.commit.slice(0, 7)}` : ""}
       </p>
 
-      <section
-        className="uwe-v2-card uwe-v2-card-padded"
-        style={{ marginBottom: "1rem" }}
-        aria-label="System-Kurzstatus"
-      >
-        <p className="uwe-dashboard-muted" style={{ margin: "0 0 0.75rem" }}>
-          <strong>System</strong> = Infrastruktur &amp; Host (RTX, Cloudflare, Diagnose).{" "}
-          <strong>Admin</strong> = Nutzer, Rollen, Sicherheit &amp; KI-Governance.{" "}
-          <Link href="/admin">Admin-Übersicht →</Link>
-        </p>
-        <p
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-            alignItems: "center",
-            margin: 0,
-          }}
-        >
-          <HealthBadge
-            status={status.rtx.ready ? "ok" : "degraded"}
-            label={status.rtx.ready ? "RTX bereit" : "RTX offline"}
-          />
-          <HealthBadge
-            status={status.ok ? "ok" : "degraded"}
-            label={status.ok ? "Health OK" : "Health eingeschränkt"}
-          />
-          <HealthBadge
-            status={
-              system.proxy.cloudflare.tunnelConfigured || !system.proxy.publicExposureConfigured
-                ? "ok"
-                : "degraded"
-            }
-            label={
-              system.proxy.cloudflare.tunnelConfigured
-                ? "Cloudflare Tunnel"
-                : system.proxy.publicExposureConfigured
-                  ? "Öffentlich (ohne Tunnel-Flag)"
-                  : "Nur lokal"
-            }
-          />
-          <Link href="/system/health">Health-Ampel →</Link>
-          <Link href="/system/rtx-connector">RTX Connector →</Link>
-          <Link href="/system?tab=cloudflare">Cloudflare →</Link>
-        </p>
-      </section>
+      <Card className="mb-4" aria-label="System-Kurzstatus">
+        <CardContent className="flex flex-col gap-3 pt-6">
+          <p className="m-0 text-sm text-muted-foreground">
+            <strong>System</strong> = Infrastruktur &amp; Host (RTX, Cloudflare, Diagnose).{" "}
+            <strong>Admin</strong> = Nutzer, Rollen, Sicherheit &amp; KI-Governance.{" "}
+            <Link href="/admin">Admin-Übersicht →</Link>
+          </p>
+          <p className="m-0 flex flex-wrap items-center gap-3">
+            <HealthBadge
+              status={status.rtx.ready ? "ok" : "degraded"}
+              label={status.rtx.ready ? "RTX bereit" : "RTX offline"}
+            />
+            <HealthBadge
+              status={status.ok ? "ok" : "degraded"}
+              label={status.ok ? "Health OK" : "Health eingeschränkt"}
+            />
+            <HealthBadge
+              status={
+                system.proxy.cloudflare.tunnelConfigured || !system.proxy.publicExposureConfigured
+                  ? "ok"
+                  : "degraded"
+              }
+              label={
+                system.proxy.cloudflare.tunnelConfigured
+                  ? "Cloudflare Tunnel"
+                  : system.proxy.publicExposureConfigured
+                    ? "Öffentlich (ohne Tunnel-Flag)"
+                    : "Nur lokal"
+              }
+            />
+            <Link href="/system/health">Health-Ampel →</Link>
+            <Link href="/system/rtx-connector">RTX Connector →</Link>
+            <Link href="/system?tab=cloudflare">Cloudflare →</Link>
+          </p>
+        </CardContent>
+      </Card>
 
-      <nav className="uwe-settings-tabs" aria-label="System-Bereiche">
+      <nav className="mb-4 flex flex-wrap gap-2" aria-label="System-Bereiche">
         {TABS.map((tab) => (
           <Link
             key={tab.id}
             href={tab.id === "overview" ? "/system" : `/system?tab=${tab.id}`}
-            className={activeTab === tab.id ? "active" : undefined}
+            aria-current={activeTab === tab.id ? "page" : undefined}
+            className={cn(
+              badgeVariants({ variant: activeTab === tab.id ? "accent" : "default" }),
+              "px-3 py-1.5 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
           >
             {tab.label}
           </Link>
@@ -134,7 +150,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
 
       {activeTab === "overview" && (
         <>
-          <div className="uwe-dashboard-grid" style={{ marginTop: "1rem" }}>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatusCard
               title="UWE App"
               level={overallLevel(system.app.ok && system.database.ok)}
@@ -179,52 +195,54 @@ export default async function SystemHubPage({ searchParams }: Props) {
             />
           </div>
 
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Homelab — Kurzüberblick</h2>
-            <div className="uwe-homelab-service-grid">
-              {cockpit.serviceStatuses.slice(0, 6).map((service) => (
-                <article
-                  key={service.id}
-                  className="uwe-homelab-service-card"
-                  data-status={severityStatus(service.severity, service.ok)}
-                >
-                  <h3>{service.label}</h3>
-                  <p>{service.message}</p>
-                </article>
-              ))}
+          <section className="mt-6 flex flex-col gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">Homelab — Kurzüberblick</h2>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-3">
+              {cockpit.serviceStatuses.slice(0, 6).map((service) => {
+                const severity = severityStatus(service.severity, service.ok);
+                return (
+                  <Card key={service.id} className={cn("p-3", STATUS_BORDER_CLASS[severity])}>
+                    <h3 className="mb-1 flex items-center gap-2 text-sm font-medium">
+                      <span className={cn("size-2 shrink-0 rounded-full", STATUS_DOT_CLASS[severity])} />
+                      {service.label}
+                    </h3>
+                    <p className="m-0 text-xs text-muted-foreground">{service.message}</p>
+                  </Card>
+                );
+              })}
             </div>
-            <p style={{ marginTop: "0.75rem" }}>
+            <p className="text-sm text-muted-foreground">
               <Link href="/system?tab=homelab">Homelab-Details →</Link>
               {" · "}
               <Link href="/hardware">Hardware verwalten →</Link>
             </p>
           </section>
 
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Schnellzugriff</h2>
-            <p style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-              <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system?tab=diagnose">
+          <section className="mt-6 flex flex-col gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">Schnellzugriff</h2>
+            <p className="m-0 flex flex-wrap gap-2">
+              <Link className={buttonVariants({ variant: "default" })} href="/system?tab=diagnose">
                 Vollständige Diagnose
               </Link>
-              <Link className="uwe-v2-btn" href="/system/rtx-connector">
+              <Link className={buttonVariants({ variant: "outline" })} href="/system/rtx-connector">
                 RTX Connector
               </Link>
-              <Link className="uwe-v2-btn" href="/system/printers">
+              <Link className={buttonVariants({ variant: "outline" })} href="/system/printers">
                 Drucker
               </Link>
-              <Link className="uwe-v2-btn" href="/system/command-center">
+              <Link className={buttonVariants({ variant: "outline" })} href="/system/command-center">
                 Kommandozentrale
               </Link>
-              <Link className="uwe-v2-btn" href="/settings?tab=status">
+              <Link className={buttonVariants({ variant: "outline" })} href="/settings?tab=status">
                 Einstellungen → Status
               </Link>
-              <Link className="uwe-v2-btn" href="/jobs">
+              <Link className={buttonVariants({ variant: "outline" })} href="/jobs">
                 Jobs
               </Link>
-              <Link className="uwe-v2-btn" href="/backup">
+              <Link className={buttonVariants({ variant: "outline" })} href="/backup">
                 Backup
               </Link>
-              <Link className="uwe-v2-btn" href="/settings">
+              <Link className={buttonVariants({ variant: "outline" })} href="/settings">
                 Einstellungen
               </Link>
             </p>
@@ -235,61 +253,81 @@ export default async function SystemHubPage({ searchParams }: Props) {
       {activeTab === "homelab" && (
         <>
           {cockpit.urlWarnings.length > 0 && (
-            <section className="uwe-form-error uwe-v2-section" role="alert">
-              <strong>Sicherheitswarnungen (RTX niemals öffentlich):</strong>
-              <ul>
+            <Alert
+              tone="danger"
+              role="alert"
+              className="mb-4"
+              title="Sicherheitswarnungen (RTX niemals öffentlich):"
+            >
+              <ul className="mt-1 list-disc pl-5">
                 {cockpit.urlWarnings.map((warning) => (
                   <li key={`${warning.deviceId}-${warning.field}`}>
                     {warning.deviceName}: {warning.message}
                   </li>
                 ))}
               </ul>
-            </section>
+            </Alert>
           )}
 
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Service-Status</h2>
-            <div className="uwe-homelab-service-grid">
-              {cockpit.serviceStatuses.map((service) => (
-                <article
-                  key={service.id}
-                  className="uwe-homelab-service-card"
-                  data-status={severityStatus(service.severity, service.ok)}
-                >
-                  <h3>{service.label}</h3>
-                  <p>{service.message}</p>
-                </article>
-              ))}
+          <section className="mb-6 flex flex-col gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">Service-Status</h2>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-3">
+              {cockpit.serviceStatuses.map((service) => {
+                const severity = severityStatus(service.severity, service.ok);
+                return (
+                  <Card key={service.id} className={cn("p-3", STATUS_BORDER_CLASS[severity])}>
+                    <h3 className="mb-1 flex items-center gap-2 text-sm font-medium">
+                      <span className={cn("size-2 shrink-0 rounded-full", STATUS_DOT_CLASS[severity])} />
+                      {service.label}
+                    </h3>
+                    <p className="m-0 text-xs text-muted-foreground">{service.message}</p>
+                  </Card>
+                );
+              })}
             </div>
           </section>
 
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Security Checklist</h2>
-            <ul className="uwe-homelab-checklist">
-              {cockpit.securityChecks.map((check) => (
-                <li key={check.id} data-status={severityStatus(check.severity, check.ok)}>
-                  <strong>{check.label}</strong>
-                  {check.manual ? " (manuell)" : ""}
-                  <span>{check.message}</span>
-                </li>
-              ))}
+          <section className="mb-6 flex flex-col gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">Security Checklist</h2>
+            <ul className="grid gap-2">
+              {cockpit.securityChecks.map((check) => {
+                const severity = severityStatus(check.severity, check.ok);
+                return (
+                  <li
+                    key={check.id}
+                    className={cn("rounded-[var(--radius)] border p-3 text-sm", STATUS_BORDER_CLASS[severity])}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={cn("size-2 shrink-0 rounded-full", STATUS_DOT_CLASS[severity])} />
+                      <strong>{check.label}</strong>
+                      {check.manual ? " (manuell)" : ""}
+                    </span>
+                    <span className="mt-1 block text-muted-foreground">{check.message}</span>
+                  </li>
+                );
+              })}
             </ul>
           </section>
 
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Runbooks</h2>
-            <div className="uwe-homelab-runbook-list">
+          <section className="mb-6 flex flex-col gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">Runbooks</h2>
+            <div className="grid gap-2">
               {cockpit.runbooks.map((runbook) => (
-                <details key={runbook.id} className="uwe-v2-card uwe-homelab-runbook">
-                  <summary>
+                <details
+                  key={runbook.id}
+                  className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                >
+                  <summary className="cursor-pointer">
                     <strong>{runbook.title}</strong> — {runbook.summary}
                   </summary>
-                  <ol>
+                  <ol className="mt-2 list-decimal pl-5 text-sm">
                     {runbook.steps.map((step) => (
                       <li key={`${runbook.id}-${step.order}`}>
                         {step.instruction}
                         {step.command ? (
-                          <code className="uwe-homelab-command">{step.command}</code>
+                          <code className="mt-1 block rounded bg-muted px-2 py-1 text-xs">
+                            {step.command}
+                          </code>
                         ) : null}
                       </li>
                     ))}
@@ -299,7 +337,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
             </div>
           </section>
 
-          <p className="uwe-dashboard-muted">
+          <p className="text-sm text-muted-foreground">
             Geräte, Fehlerhistorie und Setup:{" "}
             <Link href="/hardware">Hardware / Homelab →</Link>
           </p>
@@ -308,12 +346,12 @@ export default async function SystemHubPage({ searchParams }: Props) {
 
       {activeTab === "diagnose" && (
         <>
-          <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
+          <p className="mb-4 text-sm text-muted-foreground">
             Vollständige Diagnose für UWE, Datenbank, Storage, Auth, Mail, Brain, RTX-Inference,
             Embeddings und Jobs — ohne Secrets.
           </p>
 
-          <div className="uwe-dashboard-grid">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatusCard
               title="Public Leak Scanner"
               level={
@@ -404,7 +442,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
             />
           </div>
 
-          <p className="uwe-dashboard-muted" style={{ marginTop: "1.5rem" }}>
+          <p className="mt-6 text-sm text-muted-foreground">
             JSON-API: <Link href="/api/admin/status">/api/admin/status</Link>
           </p>
         </>
@@ -412,7 +450,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
 
       {activeTab === "cloudflare" && (
         <>
-          <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
+          <p className="mb-4 text-sm text-muted-foreground">
             Cloudflare Tunnel, Proxy-Header und Netzwerk-Schutz — relevant für Selfhosting auf{" "}
             <code>uweandragons.org</code>.
           </p>
@@ -456,14 +494,14 @@ export default async function SystemHubPage({ searchParams }: Props) {
             wide
           />
 
-          <p style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-            <Link className="uwe-v2-btn uwe-v2-btn-primary" href="/system/cloudflare">
+          <p className="mt-4 flex flex-wrap gap-2">
+            <Link className={buttonVariants({ variant: "default" })} href="/system/cloudflare">
               Cloudflare & Deployment bearbeiten
             </Link>
-            <Link className="uwe-v2-btn" href="/admin/setup?tab=cloudflare">
+            <Link className={buttonVariants({ variant: "outline" })} href="/admin/setup?tab=cloudflare">
               Einrichtung → Cloudflare
             </Link>
-            <Link className="uwe-v2-btn" href="/system?tab=diagnose">
+            <Link className={buttonVariants({ variant: "outline" })} href="/system?tab=diagnose">
               System-Diagnose
             </Link>
           </p>

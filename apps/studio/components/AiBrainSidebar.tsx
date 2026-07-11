@@ -381,13 +381,13 @@ export function AiBrainSidebar({
       {!isStoreVariant && <h3>UWE Brain</h3>}
 
       {isStoreVariant && !statusLoading && statusKind === "unavailable" && unavailableHint && (
-        <p className="uwe-dashboard-muted" role="note">
+        <p className="text-sm text-muted-foreground" role="note">
           {unavailableHint}
         </p>
       )}
 
       {isStoreVariant && !statusLoading && !rtxReady && statusKind !== "unavailable" && (
-        <p className="uwe-form-error" role="note">
+        <p className="text-sm text-destructive" role="note">
           {HINT_LOCAL_NOT_READY}
         </p>
       )}

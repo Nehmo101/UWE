@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/src/components/ui/button";
 import { revalidatePath } from "next/cache";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { assertStudioTrusted } from "@/src/lib/authz";
@@ -45,12 +46,12 @@ export default async function SystemStartklarPage() {
           </p>
           {!data.isUpToDate ? (
             <form action={markSeenAction}>
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+              <Button type="submit">
                 Als gelesen markieren (v{data.currentVersion})
-              </button>
+              </Button>
             </form>
           ) : (
-            <p className="text-sm" style={{ color: "var(--uwe-success, green)" }}>
+            <p className="text-sm text-[var(--uwe-success)]">
               ✓ Du bist auf dem aktuellen Stand.
             </p>
           )}

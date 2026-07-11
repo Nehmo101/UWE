@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { Badge } from "@/src/components/ui";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 interface PrintListJobRow {
   id: string;
@@ -46,7 +50,7 @@ export function PrintListJobPanel({ worldSlug, printListId, initialJobs, printCe
 
   if (jobs.length === 0) {
     return (
-      <p className="uwe-table-sub">
+      <p className="text-sm text-muted-foreground">
         Noch keine RTX-Jobs für diese Liste.{" "}
         <Link href={printCenterHref}>Print Center →</Link>
       </p>
@@ -54,32 +58,34 @@ export function PrintListJobPanel({ worldSlug, printListId, initialJobs, printCe
   }
 
   return (
-    <table className="uwe-page-table">
-      <thead>
-        <tr>
-          <th>Job</th>
-          <th>Status</th>
-          <th>Drucker</th>
-          <th>Connector</th>
-          <th>Erstellt</th>
-        </tr>
-      </thead>
-      <tbody>
-        {jobs.map((job) => (
-          <tr key={job.id}>
-            <td>{job.title}</td>
-            <td>
-              <span className={`uwe-badge${job.phase === "failed" ? " uwe-badge-danger" : job.phase === "done" ? " uwe-badge-player" : ""}`}>
-                {job.phaseLabel}
-              </span>
-              {job.failedReason ? <p className="uwe-table-sub uwe-text-warning">{job.failedReason}</p> : null}
-            </td>
-            <td>{job.printerName ?? "—"}</td>
-            <td>{job.connectorName ?? "—"}</td>
-            <td>{new Date(job.createdAt).toLocaleString("de-DE")}</td>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr>
+            <th className={TH_CLASS}>Job</th>
+            <th className={TH_CLASS}>Status</th>
+            <th className={TH_CLASS}>Drucker</th>
+            <th className={TH_CLASS}>Connector</th>
+            <th className={TH_CLASS}>Erstellt</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {jobs.map((job) => (
+            <tr key={job.id}>
+              <td className={TD_CLASS}>{job.title}</td>
+              <td className={TD_CLASS}>
+                <Badge variant={job.phase === "failed" ? "danger" : job.phase === "done" ? "success" : "default"}>
+                  {job.phaseLabel}
+                </Badge>
+                {job.failedReason ? <p className="text-sm text-warning">{job.failedReason}</p> : null}
+              </td>
+              <td className={TD_CLASS}>{job.printerName ?? "—"}</td>
+              <td className={TD_CLASS}>{job.connectorName ?? "—"}</td>
+              <td className={TD_CLASS}>{new Date(job.createdAt).toLocaleString("de-DE")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

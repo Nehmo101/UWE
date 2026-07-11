@@ -12,6 +12,15 @@ import {
 import { PrintQueuePanel } from "@/components/PrintQueuePanel";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Badge,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -67,93 +76,120 @@ export default async function PrintCenterPage({ params }: Props) {
         title="Print Center"
         summary="6×4 Handouts, NPC- und Item-Karten, Drucklisten und Label-Vorlagen — zentral für die Session."
         actions={
-          <Link href={`/worlds/${worldSlug}/labels/new`} className="uwe-v2-btn uwe-v2-btn-primary">
+          <Link href={`/worlds/${worldSlug}/labels/new`} className={buttonVariants()}>
             Neues Label
           </Link>
         }
       />
 
-      <section className="uwe-stat-grid" style={{ marginBottom: "1.5rem" }}>
-        <div className="uwe-stat-card">
-          <span className="uwe-stat-value">{labels.length}</span>
-          <span className="uwe-stat-label">Labels</span>
+      <div className="flex flex-col gap-6">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Labels</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">{labels.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Offene Drucklisten</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">{openPrintLists.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Jobs in Queue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">{jobs.length}</p>
+            </CardContent>
+          </Card>
         </div>
-        <div className="uwe-stat-card">
-          <span className="uwe-stat-value">{openPrintLists.length}</span>
-          <span className="uwe-stat-label">Offene Drucklisten</span>
-        </div>
-        <div className="uwe-stat-card">
-          <span className="uwe-stat-value">{jobs.length}</span>
-          <span className="uwe-stat-label">Jobs in Queue</span>
-        </div>
-      </section>
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Druckwarteschlange</h2>
-        <p className="uwe-dashboard-muted" style={{ marginBottom: "0.75rem" }}>
-          Laufende RTX-Druckjobs aktualisieren sich automatisch.
-        </p>
-        <PrintQueuePanel worldSlug={worldSlug} initialJobs={initialJobs} labelsHref={labelsHref} />
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Schnellaktionen</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-          <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/labels`}>
-            Label-Bibliothek
-          </Link>
-          <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/labels?tab=print-lists`}>
-            Drucklisten
-          </Link>
-          <Link className="uwe-v2-btn" href={labelsHref}>
-            RTX-Druck
-          </Link>
-          <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/prepare-session`}>
-            Session vorbereiten
-          </Link>
-        </div>
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Karten-Vorlagen (NPC / Item / Handout)</h2>
-        {featuredTemplates.length === 0 ? (
-          <p className="uwe-v2-empty">Keine Print-Center-Vorlagen gefunden — Migration prüfen.</p>
-        ) : (
-          <ul className="uwe-list-cards">
-            {featuredTemplates.map((template) => (
-              <li key={template.id} className="uwe-list-card">
-                <strong>{template.name}</strong>
-                <p className="uwe-dashboard-muted">{template.description ?? template.slug}</p>
-                <Link href={`/worlds/${worldSlug}/labels/new?template=${template.slug}`}>
-                  Label mit Vorlage erstellen →
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Offene Drucklisten</h2>
-        {openPrintLists.length === 0 ? (
-          <p className="uwe-v2-empty">
-            Keine offenen Drucklisten. Erstelle eine aus einer Session oder unter Labels.
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Druckwarteschlange</h2>
+          <p className="text-sm text-muted-foreground">
+            Laufende RTX-Druckjobs aktualisieren sich automatisch.
           </p>
-        ) : (
-          <ul className="uwe-list-cards">
-            {openPrintLists.slice(0, 8).map((list) => (
-              <li key={list.id} className="uwe-list-card">
-                <strong>{list.name}</strong>
-                <span className="uwe-badge">{LABEL_PRINT_STATUS_LABELS[list.status]}</span>
-                {list.forNextSession ? (
-                  <span className="uwe-badge uwe-badge-player">Nächste Session</span>
-                ) : null}
-                <Link href={`/worlds/${worldSlug}/labels/print-lists/${list.id}`}>Öffnen →</Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <PrintQueuePanel worldSlug={worldSlug} initialJobs={initialJobs} labelsHref={labelsHref} />
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Schnellaktionen</h2>
+          <div className="flex flex-wrap gap-2">
+            <Link className={buttonVariants({ variant: "outline" })} href={`/worlds/${worldSlug}/labels`}>
+              Label-Bibliothek
+            </Link>
+            <Link
+              className={buttonVariants({ variant: "outline" })}
+              href={`/worlds/${worldSlug}/labels?tab=print-lists`}
+            >
+              Drucklisten
+            </Link>
+            <Link className={buttonVariants({ variant: "outline" })} href={labelsHref}>
+              RTX-Druck
+            </Link>
+            <Link
+              className={buttonVariants({ variant: "outline" })}
+              href={`/worlds/${worldSlug}/prepare-session`}
+            >
+              Session vorbereiten
+            </Link>
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Karten-Vorlagen (NPC / Item / Handout)</h2>
+          {featuredTemplates.length === 0 ? (
+            <EmptyState title="Keine Print-Center-Vorlagen gefunden" description="Migration prüfen." />
+          ) : (
+            <ul className="grid gap-2">
+              {featuredTemplates.map((template) => (
+                <li
+                  key={template.id}
+                  className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                >
+                  <strong>{template.name}</strong>
+                  <p className="text-sm text-muted-foreground">{template.description ?? template.slug}</p>
+                  <Link href={`/worlds/${worldSlug}/labels/new?template=${template.slug}`}>
+                    Label mit Vorlage erstellen →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Offene Drucklisten</h2>
+          {openPrintLists.length === 0 ? (
+            <EmptyState
+              title="Keine offenen Drucklisten"
+              description="Erstelle eine aus einer Session oder unter Labels."
+            />
+          ) : (
+            <ul className="grid gap-2">
+              {openPrintLists.slice(0, 8).map((list) => (
+                <li
+                  key={list.id}
+                  className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong>{list.name}</strong>
+                    <Badge>{LABEL_PRINT_STATUS_LABELS[list.status]}</Badge>
+                    {list.forNextSession ? <Badge variant="info">Nächste Session</Badge> : null}
+                  </div>
+                  <Link href={`/worlds/${worldSlug}/labels/print-lists/${list.id}`}>Öffnen →</Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </WorldShell>
   );
 }

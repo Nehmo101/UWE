@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+} from "@/src/components/ui";
 
 interface WorldOption {
   id: string;
@@ -33,6 +43,11 @@ interface Props {
   worlds: WorldOption[];
   sessionsByWorld: Record<string, SessionOption[]>;
 }
+
+/** TODO(design-kit): natives select bleibt — controlled Welt-/Session-Auswahl ohne Kit-Select,
+    siehe gleiches Muster in ReviewWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 function resolvePresetHref(preset: CampaignJobPresetView, worldSlug: string): string | undefined {
   if (!preset.href) return undefined;
@@ -125,100 +140,121 @@ export function CampaignJobPresetsPanel({ presets, worlds, sessionsByWorld }: Pr
 
   if (worlds.length === 0) {
     return (
-      <section className="uwe-v2-card uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Kampagnen-Presets</h2>
-        <p className="uwe-dashboard-muted">
-          Lege zuerst eine Welt an, um 1-Klick-Jobs zu starten.{" "}
-          <Link href="/worlds">Welten →</Link>
-        </p>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Kampagnen-Presets</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Lege zuerst eine Welt an, um 1-Klick-Jobs zu starten.{" "}
+            <Link href="/worlds" className="text-primary underline-offset-4 hover:underline">
+              Welten →
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Kampagnen-Presets</h2>
-      <p className="uwe-dashboard-muted">
-        1-Klick-Jobs für Kanonprüfung, Session-Vorbereitung und Brain-Reindex — laufen in der
-        Warteschlange unten.
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Kampagnen-Presets</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          1-Klick-Jobs für Kanonprüfung, Session-Vorbereitung und Brain-Reindex — laufen in der
+          Warteschlange unten.
+        </p>
 
-      <div className="uwe-form" style={{ marginBottom: "1rem" }}>
-        <label>
-          Welt
-          <select
-            value={worldSlug}
-            onChange={(event) => {
-              setWorldSlug(event.target.value);
-              setSessionId("");
-            }}
-          >
-            {worlds.map((world) => (
-              <option key={world.id} value={world.slug}>
-                {world.name} ({world.slug})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {sessions.length > 0 ? (
-          <label>
-            Session (optional)
-            <select value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
-              <option value="">— keine —</option>
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  #{session.sessionNumber} {session.title}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="campaign-presets-world">Welt</Label>
+            <select
+              id="campaign-presets-world"
+              value={worldSlug}
+              onChange={(event) => {
+                setWorldSlug(event.target.value);
+                setSessionId("");
+              }}
+              className={NATIVE_SELECT_CLASS}
+            >
+              {worlds.map((world) => (
+                <option key={world.id} value={world.slug}>
+                  {world.name} ({world.slug})
                 </option>
               ))}
             </select>
-          </label>
+          </div>
+
+          {sessions.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="campaign-presets-session">Session (optional)</Label>
+              <select
+                id="campaign-presets-session"
+                value={sessionId}
+                onChange={(event) => setSessionId(event.target.value)}
+                className={NATIVE_SELECT_CLASS}
+              >
+                <option value="">— keine —</option>
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    #{session.sessionNumber} {session.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="campaign-presets-page-slug">Seiten-Slug (für Handout-Preset)</Label>
+            <Input
+              id="campaign-presets-page-slug"
+              value={pageSlug}
+              onChange={(event) => setPageSlug(event.target.value)}
+              placeholder="z. B. lore/aldoria"
+            />
+          </div>
+        </div>
+
+        {error ? (
+          <Alert tone="danger" role="alert">
+            {error}
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert tone="success" role="status">
+            {message}
+          </Alert>
         ) : null}
 
-        <label>
-          Seiten-Slug (für Handout-Preset)
-          <input
-            value={pageSlug}
-            onChange={(event) => setPageSlug(event.target.value)}
-            placeholder="z. B. lore/aldoria"
-          />
-        </label>
-      </div>
-
-      {error ? (
-        <p className="uwe-form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {message ? (
-        <p className="uwe-notice" role="status">
-          {message}
-        </p>
-      ) : null}
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-        {presets.map((preset) => {
-          const href = worldSlug ? resolvePresetHref(preset, worldSlug) : undefined;
-          return (
-            <div key={preset.id} style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <button
-                type="button"
-                className="uwe-v2-btn"
-                disabled={busyId === preset.id}
-                onClick={() => void runPreset(preset)}
-                title={preset.description}
-              >
-                {busyId === preset.id ? "Startet…" : preset.label}
-              </button>
-              {href ? (
-                <Link href={href} className="uwe-hint" style={{ fontSize: "0.85rem" }}>
-                  Detail-UI →
-                </Link>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </section>
+        <div className="flex flex-wrap gap-3">
+          {presets.map((preset) => {
+            const href = worldSlug ? resolvePresetHref(preset, worldSlug) : undefined;
+            return (
+              <div key={preset.id} className="flex flex-col gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busyId === preset.id}
+                  onClick={() => void runPreset(preset)}
+                  title={preset.description}
+                >
+                  {busyId === preset.id ? "Startet…" : preset.label}
+                </Button>
+                {href ? (
+                  <Link
+                    href={href}
+                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    Detail-UI →
+                  </Link>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

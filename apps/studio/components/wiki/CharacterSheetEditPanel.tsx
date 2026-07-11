@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   CharacterDerivedStatsSection,
   CharacterLevelUpPanel,
@@ -28,6 +29,7 @@ import {
   togglePreparedAction,
   updateStudioCharacterSheetAction,
 } from "@/app/worlds/[worldSlug]/character-sheet-actions";
+import { Button, buttonVariants, Input, Label, Textarea } from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -69,7 +71,7 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
   if (!characterRecord) {
     return (
       <CollapsibleSection title="Charakterbogen">
-        <p className="uwe-hint">
+        <p className="text-sm text-muted-foreground">
           Für diese Spielercharakter-Seite ist noch kein strukturierter Charakterbogen verknüpft.
         </p>
         <form action={createStudioCharacterSheetAction} className="uwe-v2-form">
@@ -134,52 +136,62 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
 
   return (
     <CollapsibleSection title="Charakterbogen" defaultOpen>
-      <p className="uwe-hint">
+      <p className="text-sm text-muted-foreground">
         Strukturierte D&amp;D-2024-Werte — Modifikatoren, Übungsbonus und Initiative werden
         automatisch berechnet.
       </p>
       <p>
-        <a href={printUrl} className="uwe-v2-btn uwe-v2-btn-small" target="_blank" rel="noreferrer">
+        <Link href={printUrl} className={buttonVariants({ size: "sm" })} target="_blank" rel="noreferrer">
           Druck / Export
-        </a>
+        </Link>
       </p>
 
-      <dl className="auth-character-sheet-summary">
-        <div>
-          <dt>Übungsbonus</dt>
-          <dd>{formatModifier(sheet.proficiencyBonus)}</dd>
-        </div>
-        <div>
-          <dt>Initiative (berechnet)</dt>
-          <dd>{formatModifier(sheet.initiative)}</dd>
-        </div>
+      <dl className="grid grid-cols-[minmax(6rem,10rem)_1fr] gap-x-4 gap-y-1 text-sm [&>dt]:text-muted-foreground [&>dd]:m-0">
+        <dt>Übungsbonus</dt>
+        <dd>{formatModifier(sheet.proficiencyBonus)}</dd>
+        <dt>Initiative (berechnet)</dt>
+        <dd>{formatModifier(sheet.initiative)}</dd>
       </dl>
 
       <CharacterDerivedStatsSection derived={sheet.derived} />
 
-      <form action={updateStudioCharacterSheetAction} className="uwe-v2-form">
+      <form action={updateStudioCharacterSheetAction} className="flex flex-col gap-4">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="pageId" value={pageId} />
         <input type="hidden" name="pageSlug" value={pageSlug} />
         <input type="hidden" name="category" value={category} />
         <input type="hidden" name="characterId" value={character.id} />
 
-        <label>
-          Anzeigename
-          <input name="displayName" defaultValue={character.displayName} required />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-display-name">Anzeigename</Label>
+          <Input
+            id="character-sheet-display-name"
+            name="displayName"
+            defaultValue={character.displayName}
+            required
+          />
+        </div>
 
-        <label>
-          Stufe
-          <input name="level" type="number" min={1} max={30} defaultValue={sheet.level} required />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-level">Stufe</Label>
+          <Input
+            id="character-sheet-level"
+            name="level"
+            type="number"
+            min={1}
+            max={30}
+            defaultValue={sheet.level}
+            required
+          />
+        </div>
 
         {Object.entries(ABILITY_LABELS).map(([key, label]) => {
           const abilityKey = key as keyof typeof sheet.abilities;
           return (
-            <label key={key}>
-              {label}
-              <input
+            <div key={key} className="flex flex-col gap-1.5">
+              <Label htmlFor={`character-sheet-ability-${key}`}>{label}</Label>
+              <Input
+                id={`character-sheet-ability-${key}`}
                 name={key}
                 type="number"
                 min={1}
@@ -187,51 +199,53 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
                 defaultValue={sheet.abilities[abilityKey]}
                 required
               />
-              <span className="uwe-hint">Mod: {formatModifier(sheet.modifiers[abilityKey])}</span>
-            </label>
+              <span className="text-sm text-muted-foreground">
+                Mod: {formatModifier(sheet.modifiers[abilityKey])}
+              </span>
+            </div>
           );
         })}
 
-        <label>
-          Rüstungsklasse (RK)
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-armor-class">Rüstungsklasse (RK)</Label>
+          <Input
+            id="character-sheet-armor-class"
             name="armorClass"
             type="number"
             min={1}
             max={99}
             defaultValue={sheet.combat.armorClass ?? ""}
           />
-        </label>
+        </div>
 
-        <label>
-          Initiativ-Bonus (zusätzlich zu GES)
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-initiative-bonus">Initiativ-Bonus (zusätzlich zu GES)</Label>
+          <Input
+            id="character-sheet-initiative-bonus"
             name="initiativeBonus"
             type="number"
             min={-10}
             max={20}
             defaultValue={sheet.combat.initiativeBonus ?? 0}
           />
-        </label>
+        </div>
 
-        <label>
-          Notizen
-          <textarea name="notes" rows={3} defaultValue={character.notes} />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-notes">Notizen</Label>
+          <Textarea id="character-sheet-notes" name="notes" rows={3} defaultValue={character.notes} />
+        </div>
 
         <CharacterProficiencyFields derived={sheet.derived} />
 
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-          Charakterbogen speichern
-        </button>
+        <Button type="submit">Charakterbogen speichern</Button>
       </form>
 
-      <section style={{ marginTop: "1rem" }}>
-        <h4 style={{ marginBottom: "0.35rem" }}>Inventar ({inventoryItems.length})</h4>
+      <section className="mt-4 flex flex-col gap-2">
+        <h4 className="font-medium">Inventar ({inventoryItems.length})</h4>
         {inventoryItems.length === 0 ? (
-          <p className="uwe-hint">Keine Gegenstände im Inventar.</p>
+          <p className="text-sm text-muted-foreground">Keine Gegenstände im Inventar.</p>
         ) : (
-          <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+          <ul className="m-0 list-disc pl-5 text-sm">
             {inventoryItems.map((item) => {
               const dmNotes = getInventoryItemDmNotes(item);
               return (
@@ -245,7 +259,7 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
             })}
           </ul>
         )}
-        <p className="uwe-hint">
+        <p className="text-sm text-muted-foreground">
           Items zuweisen/zurücklegen:{" "}
           <a href={`/worlds/${worldSlug}/treasury`}>Gruppenschatz</a>
         </p>

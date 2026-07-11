@@ -3,6 +3,7 @@ import { HealthBadge } from "@uwe/shared-ui";
 import { getAdminOnboardingChecklist, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { requireAdminAccess } from "@/src/lib/auth";
+import { Badge, type BadgeProps, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 function statusLabel(status: string): string {
   switch (status) {
@@ -17,16 +18,16 @@ function statusLabel(status: string): string {
   }
 }
 
-function statusClass(status: string): string {
+function statusVariant(status: string): BadgeProps["variant"] {
   switch (status) {
     case "done":
-      return "uwe-badge uwe-badge-published";
+      return "success";
     case "optional":
-      return "uwe-badge uwe-badge-draft";
+      return "secondary";
     case "warning":
-      return "uwe-badge uwe-badge-secret";
+      return "warning";
     default:
-      return "uwe-badge uwe-badge-player";
+      return "default";
   }
 }
 
@@ -58,50 +59,58 @@ export default async function AdminChecklistPage() {
         }
       />
 
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <h2 className="uwe-v2-section-title">Fortschritt</h2>
-        <div className="uwe-jobs-progress" style={{ marginBottom: "0.75rem" }}>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">Fortschritt</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
           <div
-            className="uwe-jobs-progress-bar"
-            style={{ width: `${checklist.progressPercent}%` }}
-          />
-        </div>
-        <p className="uwe-dashboard-muted">
-          {checklist.completedCount} von {checklist.totalCount} Punkten erledigt ·{" "}
-          {checklist.openCount} offen
-          {checklist.warningCount > 0 ? ` · ${checklist.warningCount} mit Warnung` : ""}
-        </p>
-        <p className="uwe-hint">
-          Basierend auf{" "}
-          <Link href="/admin/setup">Owner-Einrichtung</Link>, Migrationen, Welten und Backup-Status.
-          Punkte mit „Auto“ werden live aus der Datenbank bzw. Systemstatus ermittelt.
-        </p>
-      </section>
+            className="h-2 w-full overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-valuenow={checklist.progressPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div className="h-full rounded-full bg-primary" style={{ width: `${checklist.progressPercent}%` }} />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {checklist.completedCount} von {checklist.totalCount} Punkten erledigt ·{" "}
+            {checklist.openCount} offen
+            {checklist.warningCount > 0 ? ` · ${checklist.warningCount} mit Warnung` : ""}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Basierend auf{" "}
+            <Link href="/admin/setup">Owner-Einrichtung</Link>, Migrationen, Welten und Backup-Status.
+            Punkte mit „Auto“ werden live aus der Datenbank bzw. Systemstatus ermittelt.
+          </p>
+        </CardContent>
+      </Card>
 
       {categories.map((category) => (
-        <section key={category} className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">{category}</h2>
-          <ul className="uwe-list-cards">
+        <section key={category} className="mb-6 flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">{category}</h2>
+          <ul className="grid gap-2">
             {checklist.items
               .filter((item) => item.category === category)
               .map((item) => (
-                <li key={item.id} className="uwe-list-card">
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                <li
+                  key={item.id}
+                  className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                >
+                  <div className="flex justify-between gap-4">
                     <div>
                       <strong>{item.title}</strong>
                       {item.autoDetected ? (
-                        <span className="uwe-badge uwe-badge-draft" style={{ marginLeft: "0.5rem" }}>
+                        <Badge variant="secondary" className="ml-2">
                           Auto
-                        </span>
+                        </Badge>
                       ) : null}
-                      <p className="uwe-dashboard-muted" style={{ marginTop: "0.35rem" }}>
-                        {item.description}
-                      </p>
+                      <p className="mt-1.5 text-sm text-muted-foreground">{item.description}</p>
                     </div>
-                    <span className={statusClass(item.status)}>{statusLabel(item.status)}</span>
+                    <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
                   </div>
                   {item.href ? (
-                    <p style={{ marginTop: "0.5rem" }}>
+                    <p className="mt-2">
                       <Link href={item.href}>Öffnen →</Link>
                     </p>
                   ) : null}

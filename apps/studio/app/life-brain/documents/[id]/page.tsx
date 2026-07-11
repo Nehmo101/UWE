@@ -9,6 +9,7 @@ import {
 import { LifeBrainDocumentClient } from "@/components/life-brain/LifeBrainDocumentClient";
 import { AdminEntityLinksPanel } from "@/components/admin/AdminEntityLinksPanel";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { Alert, buttonVariants } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -40,14 +41,14 @@ export default async function LifeBrainDocumentDetailPage({ params }: Props) {
         title={document.title}
         summary="Life-Brain-Dokument — nur lokal, nicht für Cloud-KI."
         actions={
-          <Link href="/life-brain" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+          <Link href="/life-brain" className={buttonVariants({ variant: "secondary", size: "sm" })}>
             Zurück zur Suche
           </Link>
         }
       />
-      <p className="uwe-form-error" role="note">
+      <Alert tone="warning" className="mb-6">
         Privates Brain wird nur lokal gespeichert und darf nicht an Cloud-KI gesendet werden.
-      </p>
+      </Alert>
 
       <LifeBrainDocumentClient
         document={document}

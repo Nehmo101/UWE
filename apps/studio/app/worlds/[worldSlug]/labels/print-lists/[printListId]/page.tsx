@@ -28,6 +28,18 @@ import {
 } from "@/app/print-list-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; printListId: string }>;
@@ -95,7 +107,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
       }
       contextPanel={
         <SidebarSection title="Export">
-          <ul className="uwe-sidebar-links">
+          <ul className="flex flex-col gap-2 text-sm">
             <li>
               <a href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=html`}>
                 HTML exportieren
@@ -112,7 +124,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
               </a>
             </li>
           </ul>
-          <p className="uwe-table-sub" style={{ marginTop: "0.75rem" }}>
+          <p className="mt-3 text-xs text-muted-foreground">
             Bei PDF-Fehlern liefert der Export Print-HTML mit Header{" "}
             <code>X-UWE-Export-Fallback: 1</code>.
           </p>
@@ -127,7 +139,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
             primary={
               <a
                 href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=print`}
-                className="uwe-v2-btn uwe-v2-btn-primary"
+                className={buttonVariants()}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -138,99 +150,129 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
               <>
                 <a
                   href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=pdf`}
-                  className="uwe-v2-btn"
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   PDF exportieren
                 </a>
                 <a
                   href={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=png`}
-                  className="uwe-v2-btn"
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   PNG exportieren
                 </a>
               </>
             }
             danger={
-              <form action={deletePrintListAction} style={{ display: "inline" }}>
+              <form action={deletePrintListAction} className="inline">
                 <input type="hidden" name="worldSlug" value={worldSlug} />
                 <input type="hidden" name="printListId" value={printListId} />
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-danger">Löschen</button>
+                <Button type="submit" variant="destructive">Löschen</Button>
               </form>
             }
           />
         }
       />
-      {(saved || created || added || status || queued) && (
-        <p className="uwe-flash uwe-flash-success">
-          {queued ? "RTX-Druckjob in Warteschlange." : created ? "Druckliste erstellt." : added ? "Label hinzugefügt." : status ? `Status: ${LABEL_PRINT_STATUS_LABELS[status as keyof typeof LABEL_PRINT_STATUS_LABELS]}` : "Gespeichert."}
-        </p>
-      )}
-      {error && <p className="uwe-flash uwe-flash-warning">{decodeURIComponent(error)}</p>}
 
-      {summary.hasDmOnly && (
-        <p className="uwe-flash uwe-flash-warning">
-          Diese Druckliste enthält Labels mit DM-only Inhalten.
-        </p>
-      )}
-
-      <PrintListPreviewPanel
-        exportUrl={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=html`}
-      />
-
-      <section className="uwe-panel">
-        <h2>RTX Label-Druck</h2>
-        {!connectorSummary.availableCapabilities.includes("label_printing") ? (
-          <p className="uwe-hint">RTX Label-Druck offline. <a href="/system/rtx-connector">Connector</a></p>
-        ) : flatPrinters.length === 0 ? (
-          <p className="uwe-hint">Keine Drucker. <a href="/system/printers">Suchen</a></p>
-        ) : (
-          <PrintListRtxForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} hasDmOnly={summary.hasDmOnly} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />
+      <div className="flex flex-col gap-6">
+        {(saved || created || added || status || queued) && (
+          <Alert tone="success">
+            {queued ? "RTX-Druckjob in Warteschlange." : created ? "Druckliste erstellt." : added ? "Label hinzugefügt." : status ? `Status: ${LABEL_PRINT_STATUS_LABELS[status as keyof typeof LABEL_PRINT_STATUS_LABELS]}` : "Gespeichert."}
+          </Alert>
         )}
-      </section>
+        {error && <Alert tone="warning">{decodeURIComponent(error)}</Alert>}
 
-      <section className="uwe-panel">
-        <h2>Batch-Fortschritt</h2>
-        <p className="uwe-table-sub" style={{ marginBottom: "0.75rem" }}>Status der RTX-Jobs für diese Druckliste — aktualisiert sich automatisch bei laufenden Jobs.</p>
-        <PrintListJobPanel worldSlug={worldSlug} printListId={printListId} initialJobs={initialListJobs} printCenterHref={printCenterHref} />
-      </section>
+        {summary.hasDmOnly && (
+          <Alert tone="warning">Diese Druckliste enthält Labels mit DM-only Inhalten.</Alert>
+        )}
 
-      <section className="uwe-panel">
-        <h2>Druckliste bearbeiten</h2>
-        <p className="uwe-table-sub">
-          Reihenfolge per Drag &amp; Drop ändern, Kopien direkt editieren, dann speichern.
-        </p>
-        <form action={updatePrintListAction} className="uwe-form-grid">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          <input type="hidden" name="printListId" value={printListId} />
+        <PrintListPreviewPanel
+          exportUrl={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=html`}
+        />
 
-          <label>
-            Name
-            <input type="text" name="name" defaultValue={list.name} required />
-          </label>
-          <label>
-            Beschreibung
-            <textarea name="description" rows={2} defaultValue={list.description ?? ""} />
-          </label>
-          <label className="uwe-checkbox">
-            <input type="checkbox" name="forNextSession" defaultChecked={list.forNextSession} />
-            Für nächste Session vorbereitet
-          </label>
+        <Card>
+          <CardHeader>
+            <CardTitle>RTX Label-Druck</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!connectorSummary.availableCapabilities.includes("label_printing") ? (
+              <p className="text-sm text-muted-foreground">
+                RTX Label-Druck offline. <a href="/system/rtx-connector">Connector</a>
+              </p>
+            ) : flatPrinters.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Keine Drucker. <a href="/system/printers">Suchen</a>
+              </p>
+            ) : (
+              <PrintListRtxForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} hasDmOnly={summary.hasDmOnly} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />
+            )}
+          </CardContent>
+        </Card>
 
-          <PrintListEditor items={editorItems} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Batch-Fortschritt</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Status der RTX-Jobs für diese Druckliste — aktualisiert sich automatisch bei laufenden Jobs.
+            </p>
+            <PrintListJobPanel worldSlug={worldSlug} printListId={printListId} initialJobs={initialListJobs} printCenterHref={printCenterHref} />
+          </CardContent>
+        </Card>
 
-          <div className="uwe-form-actions">
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
-          </div>
-        </form>
-      </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Druckliste bearbeiten</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              Reihenfolge per Drag &amp; Drop ändern, Kopien direkt editieren, dann speichern.
+            </p>
+            <form action={updatePrintListAction} className="flex flex-col gap-4">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <input type="hidden" name="printListId" value={printListId} />
 
-      <div className="uwe-form-actions">
-        <form action={setPrintListStatusAction} style={{ display: "inline" }}>
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          <input type="hidden" name="printListId" value={printListId} />
-          <input type="hidden" name="status" value="printed" />
-          <button type="submit" className="uwe-v2-btn">Als gedruckt markieren</button>
-        </form>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="print-list-name">Name</Label>
+                <Input id="print-list-name" type="text" name="name" defaultValue={list.name} required />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="print-list-description">Beschreibung</Label>
+                <Textarea
+                  id="print-list-description"
+                  name="description"
+                  rows={2}
+                  defaultValue={list.description ?? ""}
+                />
+              </div>
+              {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="forNextSession"
+                  defaultChecked={list.forNextSession}
+                  className="size-4 rounded border-input"
+                />
+                Für nächste Session vorbereitet
+              </label>
+
+              <PrintListEditor items={editorItems} />
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit">Speichern</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-wrap gap-2">
+          <form action={setPrintListStatusAction} className="inline">
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="printListId" value={printListId} />
+            <input type="hidden" name="status" value="printed" />
+            <Button type="submit" variant="outline">Als gedruckt markieren</Button>
+          </form>
+        </div>
       </div>
     </WorldShell>
   );

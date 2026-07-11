@@ -8,6 +8,17 @@ import {
 } from "@uwe/database/knowledge-assistant";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
+import {
+  Badge,
+  type BadgeProps,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+} from "@/src/components/ui";
 
 interface Props {
   searchParams: Promise<{ q?: string; synth?: string }>;
@@ -15,11 +26,11 @@ interface Props {
 
 export const dynamic = "force-dynamic";
 
-const CONFIDENCE_COLOR: Record<ConfidenceLevel, string> = {
-  high: "#2e7d32",
-  medium: "#b7791f",
-  low: "#b7791f",
-  none: "#c62828",
+const CONFIDENCE_BADGE_VARIANT: Record<ConfidenceLevel, NonNullable<BadgeProps["variant"]>> = {
+  high: "success",
+  medium: "warning",
+  low: "warning",
+  none: "danger",
 };
 
 const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
@@ -44,101 +55,130 @@ export default async function KnowledgePage({ searchParams }: Props) {
         summary="Life Brain, DnD-Brain und lokaler Q&A-Assistent — drei Einstiege, ein Knowledge-Bereich."
       />
 
-      <section className="uwe-stat-grid" style={{ marginBottom: "1.5rem" }}>
-        <Link href="/life-brain" className="uwe-stat-card" style={{ textDecoration: "none" }}>
-          <span className="uwe-stat-label">Life Brain</span>
-          <span className="uwe-dashboard-muted">Persönliche Dokumente & Fakten (RTX-only)</span>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <Link href="/life-brain" className="block no-underline">
+          <Card className="h-full transition-colors hover:border-primary/40">
+            <CardHeader>
+              <CardTitle>Life Brain</CardTitle>
+              <CardDescription>Persönliche Dokumente &amp; Fakten (RTX-only)</CardDescription>
+            </CardHeader>
+          </Card>
         </Link>
-        <Link href="/brain" className="uwe-stat-card" style={{ textDecoration: "none" }}>
-          <span className="uwe-stat-label">DnD Brain</span>
-          <span className="uwe-dashboard-muted">Kampagnen-Wissen pro Welt</span>
+        <Link href="/brain" className="block no-underline">
+          <Card className="h-full transition-colors hover:border-primary/40">
+            <CardHeader>
+              <CardTitle>DnD Brain</CardTitle>
+              <CardDescription>Kampagnen-Wissen pro Welt</CardDescription>
+            </CardHeader>
+          </Card>
         </Link>
-        <div className="uwe-stat-card">
-          <span className="uwe-stat-label">Wissensassistent</span>
-          <span className="uwe-dashboard-muted">Frage & Antwort mit Quellen (unten)</span>
-        </div>
-      </section>
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle>Wissensassistent</CardTitle>
+            <CardDescription>Frage &amp; Antwort mit Quellen (unten)</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
 
-      <section className="uwe-v2-section">
-        <form method="get" style={{ display: "flex", gap: "0.5rem" }}>
-          <input
-            type="text"
-            name="q"
-            defaultValue={query}
-            placeholder="Was möchtest du wissen?"
-            style={{ flex: 1 }}
-          />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Fragen
-          </button>
-        </form>
-      </section>
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <form method="get" className="flex gap-2">
+            <Input
+              type="text"
+              name="q"
+              defaultValue={query}
+              placeholder="Was möchtest du wissen?"
+              className="flex-1"
+            />
+            <Button type="submit">Fragen</Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {answer ? (
-        <>
-          <section className="uwe-v2-section">
-            <p style={{ color: CONFIDENCE_COLOR[answer.confidence], fontWeight: 600 }}>
-              ● {CONFIDENCE_LABEL[answer.confidence]}
-            </p>
-            <p>{answer.note}</p>
-          </section>
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardContent className="flex flex-col gap-2 pt-6">
+              <Badge variant={CONFIDENCE_BADGE_VARIANT[answer.confidence]} className="w-fit">
+                {CONFIDENCE_LABEL[answer.confidence]}
+              </Badge>
+              <p className="text-sm">{answer.note}</p>
+            </CardContent>
+          </Card>
 
           {answer.citations.length > 0 ? (
-            <section className="uwe-v2-section">
-              <h2 className="uwe-v2-section-title">KI-Antwort (lokal, geerdet)</h2>
-              {synthesis?.status === "ok" ? (
-                <>
-                  <p style={{ whiteSpace: "pre-wrap" }}>{synthesis.text}</p>
-                  <p className="uwe-hint">
-                    Lokal formuliert (RTX), erdet auf den Quellen unten — die Quellen
-                    bleiben maßgeblich.
+            <Card>
+              <CardHeader>
+                <CardTitle>KI-Antwort (lokal, geerdet)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {synthesis?.status === "ok" ? (
+                  <>
+                    <p className="whitespace-pre-wrap text-sm">{synthesis.text}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Lokal formuliert (RTX), erdet auf den Quellen unten — die Quellen bleiben
+                      maßgeblich.
+                    </p>
+                  </>
+                ) : synthesis ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {synthesis.error}
                   </p>
-                </>
-              ) : synthesis ? (
-                <p className="uwe-notice-warn">{synthesis.error}</p>
-              ) : (
-                <form method="get" className="uwe-inline-actions">
-                  <input type="hidden" name="q" value={query} />
-                  <input type="hidden" name="synth" value="1" />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                    KI-Antwort formulieren (RTX-lokal)
-                  </button>
-                </form>
-              )}
-            </section>
+                ) : (
+                  <form method="get" className="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="q" value={query} />
+                    <input type="hidden" name="synth" value="1" />
+                    <Button type="submit" variant="secondary">
+                      KI-Antwort formulieren (RTX-lokal)
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
           ) : null}
 
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Quellen</h2>
-            {answer.citations.length === 0 ? (
-              <p className="uwe-dashboard-muted">
-                Keine passenden Quellen im Life-Brain. Vielleicht als{" "}
-                <Link href="/capture">Capture</Link> festhalten?
-              </p>
-            ) : (
-              <ul className="uwe-linked-list">
-                {answer.citations.map((cite) => {
-                  const href =
-                    cite.kind === "document"
-                      ? `/life-brain/documents/${cite.id}`
-                      : `/life-brain/facts/${cite.id}`;
-                  return (
-                    <li key={`${cite.kind}-${cite.id}`}>
-                      <Link href={href}>{cite.title}</Link>{" "}
-                      <span className="uwe-badge">{cite.sourceType}</span>
-                      {cite.ageNote ? (
-                        <span className="uwe-dashboard-muted"> · {cite.ageNote}</span>
-                      ) : null}
-                      <p className="uwe-dashboard-muted">{cite.snippet}</p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        </>
+          <Card>
+            <CardHeader>
+              <CardTitle>Quellen</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {answer.citations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Keine passenden Quellen im Life-Brain. Vielleicht als{" "}
+                  <Link href="/capture">Capture</Link> festhalten?
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {answer.citations.map((cite) => {
+                    const href =
+                      cite.kind === "document"
+                        ? `/life-brain/documents/${cite.id}`
+                        : `/life-brain/facts/${cite.id}`;
+                    return (
+                      <li
+                        key={`${cite.kind}-${cite.id}`}
+                        className="border-b border-border/60 pb-3 last:border-0 last:pb-0"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link href={href} className="font-medium">
+                            {cite.title}
+                          </Link>
+                          <Badge>{cite.sourceType}</Badge>
+                          {cite.ageNote ? (
+                            <span className="text-sm text-muted-foreground">{cite.ageNote}</span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">{cite.snippet}</p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Stell eine Frage — die Antwort kommt ausschließlich aus deinem lokalen Life-Brain.
         </p>
       )}

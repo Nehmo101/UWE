@@ -7,6 +7,16 @@ import {
   type SoundSourceType,
   type SoundboardValidationError,
 } from "@uwe/soundboard";
+import { Button, Input, Label } from "@/src/components/ui";
+
+/** TODO(design-kit): natives select bleibt — unkontrolliertes/gemischtes Formular
+    (Server-Action + lokaler sourceType-State), Kit-Select (Radix) unterstützt zudem
+    kein natives multiple-Select für die Seitenverknüpfung. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+// Multi-Select (size-Attribut) braucht Auto-Höhe statt der fixen h-9 aus NATIVE_SELECT_CLASS.
+const NATIVE_MULTI_SELECT_CLASS =
+  "w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export interface SoundboardButtonFormValues {
   title: string;
@@ -145,7 +155,7 @@ export function SoundboardButtonForm({
   return (
     <form
       action={action}
-      className="uwe-form-grid"
+      className="flex flex-col gap-4"
       onSubmit={handleSubmit}
       onChange={handleFieldChange}
       noValidate
@@ -154,29 +164,44 @@ export function SoundboardButtonForm({
       {campaignSlug && <input type="hidden" name="campaignSlug" value={campaignSlug} />}
       {buttonId && <input type="hidden" name="buttonId" value={buttonId} />}
 
-      <label>
-        Titel
-        <input type="text" name="title" required defaultValue={defaults.title} />
-        {titleError && <span className="uwe-form-error">{titleError}</span>}
-      </label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-title">Titel</Label>
+        <Input id="soundboard-button-title" type="text" name="title" required defaultValue={defaults.title} />
+        {titleError && (
+          <p role="alert" className="text-sm text-destructive">
+            {titleError}
+          </p>
+        )}
+      </div>
 
-      <label>
-        Quelle
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-sourceType">Quelle</Label>
         <select
+          id="soundboard-button-sourceType"
           name="sourceType"
           value={sourceType}
           onChange={(event) => setSourceType(event.target.value as SoundSourceType)}
+          className={NATIVE_SELECT_CLASS}
         >
           <option value="local">Lokale Audiodatei</option>
           <option value="youtube">YouTube-Link</option>
           <option value="spotify">Spotify-Link</option>
         </select>
-        {sourceTypeError && <span className="uwe-form-error">{sourceTypeError}</span>}
-      </label>
+        {sourceTypeError && (
+          <p role="alert" className="text-sm text-destructive">
+            {sourceTypeError}
+          </p>
+        )}
+      </div>
 
-      <label>
-        Asset (lokal)
-        <select name="assetId" defaultValue={defaults.assetId}>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-assetId">Asset (lokal)</Label>
+        <select
+          id="soundboard-button-assetId"
+          name="assetId"
+          defaultValue={defaults.assetId}
+          className={NATIVE_SELECT_CLASS}
+        >
           <option value="">— Keins —</option>
           {audioAssets.map((asset) => (
             <option key={asset.id} value={asset.id}>
@@ -185,44 +210,53 @@ export function SoundboardButtonForm({
           ))}
         </select>
         {sourceType === "local" && assetIdError && (
-          <span className="uwe-form-error">{assetIdError}</span>
+          <p role="alert" className="text-sm text-destructive">
+            {assetIdError}
+          </p>
         )}
-      </label>
+      </div>
 
-      <label>
-        URL (YouTube / Spotify)
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-sourceUrl">URL (YouTube / Spotify)</Label>
+        <Input
+          id="soundboard-button-sourceUrl"
           type="url"
           name="sourceUrl"
           placeholder="https://…"
           defaultValue={defaults.sourceUrl}
         />
         {sourceType === "youtube" && sourceUrlError && (
-          <span className="uwe-form-error">{sourceUrlError}</span>
+          <p role="alert" className="text-sm text-destructive">
+            {sourceUrlError}
+          </p>
         )}
         {sourceType === "spotify" && sourceUrlError && (
-          <span className="uwe-form-error">{sourceUrlError}</span>
+          <p role="alert" className="text-sm text-destructive">
+            {sourceUrlError}
+          </p>
         )}
-      </label>
+      </div>
 
-      <label>
-        Thumbnail-URL (optional)
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-thumbnail">Thumbnail-URL (optional)</Label>
+        <Input
+          id="soundboard-button-thumbnail"
           type="url"
           name="thumbnail"
           placeholder={sourceType === "spotify" ? "Manuelles Cover für Spotify" : "https://…"}
           defaultValue={defaults.thumbnail}
         />
         {sourceType === "spotify" && (
-          <span className="uwe-table-sub">
+          <span className="text-xs text-muted-foreground">
             Cover wird automatisch von Spotify geladen; optional kann ein eigenes Bild gesetzt werden.
           </span>
         )}
-      </label>
+      </div>
 
-      <label>
-        Lautstärke
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-volume">Lautstärke</Label>
+        <Input
+          id="soundboard-button-volume"
           type="number"
           name="volume"
           min={0}
@@ -230,39 +264,66 @@ export function SoundboardButtonForm({
           step={0.05}
           defaultValue={defaults.volume}
         />
-        {volumeError && <span className="uwe-form-error">{volumeError}</span>}
+        {volumeError && (
+          <p role="alert" className="text-sm text-destructive">
+            {volumeError}
+          </p>
+        )}
+      </div>
+
+      {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox]
+          + Tailwind verwendet, siehe gleiches Muster in CreateWorldForm.tsx. */}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="loop"
+          defaultChecked={defaults.loop}
+          className="size-4 rounded border-input"
+        />
+        Loop
       </label>
 
-      <label>
-        <input type="checkbox" name="loop" defaultChecked={defaults.loop} /> Loop
-      </label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-tags">Tags (kommagetrennt)</Label>
+        <Input
+          id="soundboard-button-tags"
+          type="text"
+          name="tags"
+          placeholder="ambient, kampf"
+          defaultValue={defaults.tags}
+        />
+      </div>
 
-      <label>
-        Tags (kommagetrennt)
-        <input type="text" name="tags" placeholder="ambient, kampf" defaultValue={defaults.tags} />
-      </label>
-
-      <label>
-        Sichtbarkeit
-        <select name="visibility" defaultValue={defaults.visibility}>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-visibility">Sichtbarkeit</Label>
+        <select
+          id="soundboard-button-visibility"
+          name="visibility"
+          defaultValue={defaults.visibility}
+          className={NATIVE_SELECT_CLASS}
+        >
           {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
         </select>
-        <span className="uwe-form-hint">
+        <span className="text-xs text-muted-foreground">
           „Portal sichtbar“ ist im Spielerportal für angemeldete Spieler sichtbar. DM-only Sounds erscheinen dort nicht — Playback-Steuerung (insbesondere Spotify) bleibt Studio-seitig.
         </span>
-      </label>
+      </div>
 
-      <label>
-        Seiten verknüpfen (Mehrfachauswahl mit Strg/Cmd)
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="soundboard-button-linkedPageIds">
+          Seiten verknüpfen (Mehrfachauswahl mit Strg/Cmd)
+        </Label>
         <select
+          id="soundboard-button-linkedPageIds"
           name="linkedPageIds"
           multiple
           size={Math.min(pageOptions.length, 5) || 1}
           defaultValue={defaults.linkedPageIds}
+          className={NATIVE_MULTI_SELECT_CLASS}
         >
           {pageOptions.map((page) => (
             <option key={page.id} value={page.id}>
@@ -270,11 +331,11 @@ export function SoundboardButtonForm({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+      <Button type="submit" className="self-start">
         {submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

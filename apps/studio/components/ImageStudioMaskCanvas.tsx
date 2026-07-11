@@ -121,14 +121,14 @@ export function ImageStudioMaskCanvas({
 
   if (!sourcePreview) {
     return (
-      <p className="uwe-hint">
+      <p className="text-sm text-muted-foreground">
         Lade zuerst ein Quellbild hoch — die Maske wird darüber gezeichnet.
       </p>
     );
   }
 
   return (
-    <div className="uwe-form" style={{ gap: "0.5rem" }}>
+    <div className="flex flex-col gap-3" style={{ gap: "0.5rem" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
         <label>
           Pinsel
@@ -145,7 +145,7 @@ export function ImageStudioMaskCanvas({
           Maske löschen
         </Button>
       </div>
-      <p className="uwe-hint">Rot markierte Bereiche werden für Inpainting verwendet.</p>
+      <p className="text-sm text-muted-foreground">Rot markierte Bereiche werden für Inpainting verwendet.</p>
       <canvas
         ref={displayRef}
         style={{

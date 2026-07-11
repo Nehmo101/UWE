@@ -3,6 +3,7 @@ import { DungeonPrepStatusBadge } from "@uwe/shared-ui";
 import type { DungeonPrepStatus, PageType } from "@uwe/database/enums";
 import { buildPageUrl } from "@uwe/database/server";
 import { pageLabelNewHref } from "@/src/lib/label-links";
+import { buttonVariants } from "@/src/components/ui";
 
 interface EntityItem {
   id: string;
@@ -20,6 +21,8 @@ interface Props {
   isSecretSection?: boolean;
 }
 
+const LABEL_LINK_CLASS = buttonVariants({ variant: "ghost", size: "sm" });
+
 export function DungeonEntityList({
   title,
   worldSlug,
@@ -28,28 +31,28 @@ export function DungeonEntityList({
 }: Props) {
   if (items.length === 0) {
     return (
-      <section className="uwe-v2-section">
-        <h3>{title}</h3>
-        <p className="uwe-v2-empty">Keine Einträge.</p>
+      <section className="flex flex-col gap-3">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <p className="text-sm italic text-muted-foreground">Keine Einträge.</p>
       </section>
     );
   }
 
   return (
-    <section className="uwe-v2-section">
-      <h3>{title}</h3>
-      <ul className="uwe-linked-list">
+    <section className="flex flex-col gap-3">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <ul className="flex flex-col gap-2">
         {items.map((item) => (
-          <li key={item.id} className="uwe-linked-list-item-with-actions">
+          <li key={item.id} className="flex flex-wrap items-center gap-2">
             <Link href={buildPageUrl(worldSlug, item.type, item.slug)}>
               {item.title}
             </Link>
             <DungeonPrepStatusBadge status={item.prepStatus} />
-            <span className="uwe-inline-actions">
+            <span className="flex flex-wrap items-center gap-2">
               {isSecretSection ? (
                 <>
                   <Link
-                    className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
+                    className={LABEL_LINK_CLASS}
                     href={pageLabelNewHref(worldSlug, item.type, item.id, {
                       includeDmOnly: true,
                     })}
@@ -57,7 +60,7 @@ export function DungeonEntityList({
                     DM-Label
                   </Link>
                   <Link
-                    className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
+                    className={LABEL_LINK_CLASS}
                     href={pageLabelNewHref(worldSlug, item.type, item.id)}
                   >
                     Spieler-Label
@@ -65,7 +68,7 @@ export function DungeonEntityList({
                 </>
               ) : (
                 <Link
-                  className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
+                  className={LABEL_LINK_CLASS}
                   href={pageLabelNewHref(worldSlug, item.type, item.id)}
                 >
                   Label

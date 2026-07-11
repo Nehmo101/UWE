@@ -3,6 +3,17 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  buttonVariants,
+} from "@/src/components/ui";
 
 interface HostRestartAvailability {
   enabled: boolean;
@@ -76,115 +87,121 @@ export function HostRestartPanel({ canTrigger }: Props) {
 
   if (loading && !availability) {
     return (
-      <CardShell>
-        <p className="text-sm text-muted-foreground">Neustart-Status wird geladen…</p>
-      </CardShell>
+      <Card>
+        <CardHeader>
+          <CardTitle>Dienst neu starten</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Neustart-Status wird geladen…</p>
+        </CardContent>
+      </Card>
     );
   }
 
   const confirmReady = confirmText.trim() === "RESTART";
 
   return (
-    <CardShell>
-      <h2 className="text-base font-semibold">Dienst neu starten</h2>
-      <p className="text-sm text-muted-foreground">
-        Startet <code>uwe.service</code> neu — Studio und Portal sind kurz offline. Nur auf dem
-        Linux-Production-Host verfügbar, wenn <code>UWE_HOST_RESTART_ENABLED=true</code> gesetzt ist.
-      </p>
-
-      {error && (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
+    <Card>
+      <CardHeader>
+        <CardTitle>Dienst neu starten</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          Startet <code>uwe.service</code> neu — Studio und Portal sind kurz offline. Nur auf dem
+          Linux-Production-Host verfügbar, wenn <code>UWE_HOST_RESTART_ENABLED=true</code> gesetzt ist.
         </p>
-      )}
 
-      <dl className="mt-4 grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2 text-sm">
-        <dt className="text-muted-foreground">Aktivierung</dt>
-        <dd>{availability?.enabled ? "UWE_HOST_RESTART_ENABLED=true" : "deaktiviert"}</dd>
-        <dt className="text-muted-foreground">Verfügbarkeit</dt>
-        <dd>{availability?.available ? "bereit" : availability?.reason ?? "—"}</dd>
-      </dl>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {canTrigger ? (
-          <>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary"
-              disabled={!availability?.available || triggering}
-              onClick={() => setConfirmOpen(true)}
-            >
-              {triggering ? "Neustart läuft…" : "UWE neu starten"}
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-ghost"
-              disabled={loading}
-              onClick={() => {
-                setLoading(true);
-                void loadAvailability();
-              }}
-            >
-              Status aktualisieren
-            </button>
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">Nur der Owner kann den Host-Neustart auslösen.</p>
+        {error && (
+          <Alert tone="danger" role="alert">
+            {error}
+          </Alert>
         )}
-        <Link className="uwe-v2-btn uwe-v2-btn-ghost" href="/backup">
-          Backup vor Neustart
-        </Link>
-        <Link className="uwe-v2-btn uwe-v2-btn-ghost" href="/admin/audit-log">
-          Audit-Log
-        </Link>
-      </div>
 
-      {confirmOpen && (
-        <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm" role="dialog">
-          <p className="font-medium">Host-Neustart wirklich ausführen?</p>
-          <p className="mt-1 text-muted-foreground">
-            Alle aktiven Sessions werden kurz unterbrochen. Offene Arbeiten vorher speichern.
-          </p>
-          <label className="mt-3 block">
-            Zur Bestätigung <strong>RESTART</strong> eingeben
-            <input
-              type="text"
-              value={confirmText}
-              onChange={(event) => setConfirmText(event.target.value)}
-              placeholder="RESTART"
-              autoComplete="off"
-              spellCheck={false}
-              className="mt-1 block w-full rounded border bg-background px-2 py-1 font-mono"
-            />
-          </label>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary"
-              disabled={!confirmReady || triggering}
-              onClick={() => void handleTrigger()}
-            >
-              Ja, jetzt neu starten
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-ghost"
-              onClick={() => {
-                setConfirmOpen(false);
-                setConfirmText("");
-              }}
-            >
-              Abbrechen
-            </button>
-          </div>
+        <dl className="grid grid-cols-[12rem_1fr] gap-x-4 gap-y-2 text-sm">
+          <dt className="text-muted-foreground">Aktivierung</dt>
+          <dd>{availability?.enabled ? "UWE_HOST_RESTART_ENABLED=true" : "deaktiviert"}</dd>
+          <dt className="text-muted-foreground">Verfügbarkeit</dt>
+          <dd>{availability?.available ? "bereit" : availability?.reason ?? "—"}</dd>
+        </dl>
+
+        <div className="flex flex-wrap gap-2">
+          {canTrigger ? (
+            <>
+              <Button
+                type="button"
+                disabled={!availability?.available || triggering}
+                onClick={() => setConfirmOpen(true)}
+              >
+                {triggering ? "Neustart läuft…" : "UWE neu starten"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={loading}
+                onClick={() => {
+                  setLoading(true);
+                  void loadAvailability();
+                }}
+              >
+                Status aktualisieren
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nur der Owner kann den Host-Neustart auslösen.</p>
+          )}
+          <Link href="/backup" className={buttonVariants({ variant: "ghost" })}>
+            Backup vor Neustart
+          </Link>
+          <Link href="/admin/audit-log" className={buttonVariants({ variant: "ghost" })}>
+            Audit-Log
+          </Link>
         </div>
-      )}
-    </CardShell>
-  );
-}
 
-function CardShell({ children }: { children: React.ReactNode }) {
-  return (
-    <section className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">{children}</section>
+        {confirmOpen && (
+          <div
+            className="flex flex-col gap-3 rounded-[var(--radius)] border border-destructive/40 bg-destructive/10 p-4"
+            role="dialog"
+            aria-labelledby="host-restart-confirm-title"
+          >
+            <p id="host-restart-confirm-title" className="font-medium">
+              Host-Neustart wirklich ausführen?
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Alle aktiven Sessions werden kurz unterbrochen. Offene Arbeiten vorher speichern.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="host-restart-confirm-text">
+                Zur Bestätigung <strong>RESTART</strong> eingeben
+              </Label>
+              <Input
+                id="host-restart-confirm-text"
+                type="text"
+                value={confirmText}
+                onChange={(event) => setConfirmText(event.target.value)}
+                placeholder="RESTART"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" disabled={!confirmReady || triggering} onClick={() => void handleTrigger()}>
+                Ja, jetzt neu starten
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  setConfirmText("");
+                }}
+              >
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

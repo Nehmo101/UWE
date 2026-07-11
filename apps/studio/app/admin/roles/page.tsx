@@ -2,6 +2,10 @@ import { buildRoleCapabilityMatrix, ROLE_CAPABILITY_LABELS } from "@uwe/auth";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { requireAdminAccess } from "@/src/lib/auth";
 import { groupCapabilityRows } from "@/src/lib/role-capability-groups";
+import { Alert } from "@/src/components/ui";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 const GLOBAL_ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
@@ -31,29 +35,36 @@ function CapabilityTable({
   groups: ReturnType<typeof groupCapabilityRows>;
 }) {
   return (
-    <section className="uwe-v2-section">
-      <h2 className="uwe-v2-section-title">{title}</h2>
+    <section className="mb-6 flex flex-col gap-3">
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       {groups.map((group) => (
-        <details key={group.id} className="uwe-v2-card uwe-v2-section" open={group.id === "system"}>
-          <summary style={{ cursor: "pointer", fontWeight: 600, marginBottom: "0.5rem" }}>
+        <details
+          key={group.id}
+          className="flex flex-col gap-2 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+          open={group.id === "system"}
+        >
+          {/* TODO(design-kit): Card hat kein natives <details>-Äquivalent; Radix Collapsible wäre die kit-konforme Lösung für aufklappbare Sections. */}
+          <summary className="cursor-pointer list-none font-semibold leading-none tracking-tight">
             {group.title} ({group.rows.length})
           </summary>
-          <div style={{ overflowX: "auto" }}>
-            <table className="uwe-page-table">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th>Capability</th>
+                  <th className={TH_CLASS}>Capability</th>
                   {roles.map((role) => (
-                    <th key={role}>{roleLabels[role]}</th>
+                    <th key={role} className={TH_CLASS}>
+                      {roleLabels[role]}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {group.rows.map((row) => (
                   <tr key={row.capability}>
-                    <td>{row.label}</td>
+                    <td className={TD_CLASS}>{row.label}</td>
                     {roles.map((role) => (
-                      <td key={role}>
+                      <td key={role} className={TD_CLASS}>
                         {title.includes("Globale")
                           ? row.global[role as keyof typeof row.global]
                             ? "✓"
@@ -94,10 +105,10 @@ export default async function AdminRolesPage() {
         summary="Read-only Matrix der feingranularen Capabilities — gruppiert nach Bereich. Co-DM nutzt Proposal-Workflow statt direkter Kanon-Edits."
       />
 
-      <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
+      <Alert tone="info" className="mb-4">
         Diese Übersicht ist schreibgeschützt. Benutzer-Rollen änderst du unter{" "}
         <a href="/admin/users">Benutzer & Rollen</a>.
-      </p>
+      </Alert>
 
       <CapabilityTable
         title="Globale Studio-Rollen"
@@ -113,13 +124,13 @@ export default async function AdminRolesPage() {
         groups={groups}
       />
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Capability-Referenz</h2>
-        <dl className="uwe-dl">
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">Capability-Referenz</h2>
+        <dl className="grid gap-2.5">
           {Object.entries(ROLE_CAPABILITY_LABELS).map(([key, label]) => (
-            <div key={key}>
-              <dt>{label}</dt>
-              <dd>
+            <div key={key} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] items-start gap-x-3 gap-y-1">
+              <dt className="font-semibold text-muted-foreground">{label}</dt>
+              <dd className="break-words">
                 <code>{key}</code>
               </dd>
             </div>

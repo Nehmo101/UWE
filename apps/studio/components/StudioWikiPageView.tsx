@@ -13,6 +13,7 @@ import {
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
 import { ShareLinkPanel } from "@/components/ShareLinkPanel";
+import { Alert, buttonVariants } from "@/src/components/ui";
 import {
   buildPageGraph,
   buildPageView,
@@ -47,7 +48,7 @@ function renderPreviewNotVisible(worldSlug: string, page: PageWithBlocks) {
         title="Für Spieler noch nicht sichtbar"
         description={`Diese Seite existiert, ist aktuell aber nicht für Spieler sichtbar. ${describePreviewVisibilityGate(page)}`}
         action={
-          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={pageHref}>
+          <Link className={buttonVariants({ variant: "default" })} href={pageHref}>
             Zurück zur DM-Ansicht
           </Link>
         }
@@ -178,10 +179,13 @@ export async function StudioWikiPageView({
     return (
       <>
         {isPlayerPreview && (
-          <div className="uwe-preview-banner">
+          <div
+            className="border-b border-border bg-[color-mix(in_srgb,var(--uwe-warning)_15%,transparent)] px-4 py-2 text-center text-sm font-medium"
+            role="status"
+          >
             Spieler-Vorschau — DM-only Inhalte sind ausgeblendet
             {previewUserId && previewPlayers.length > 0 && (
-              <p style={{ margin: "0.5rem 0 0", fontWeight: 600 }}>
+              <p className="mt-2 font-semibold">
                 Perspektive:{" "}
                 {previewPlayers.find((player) => player.id === previewUserId)?.characterName ??
                   previewPlayers.find((player) => player.id === previewUserId)?.displayName ??
@@ -189,7 +193,7 @@ export async function StudioWikiPageView({
               </p>
             )}
             {view.privateReferenceWarning && (
-              <p style={{ margin: "0.5rem 0 0", fontWeight: 600 }}>
+              <p className="mt-2 font-semibold">
                 {view.privateReferenceWarning}
               </p>
             )}
@@ -269,7 +273,7 @@ export async function StudioWikiPageView({
                     />
                   </Collapsible>
                   <Collapsible variant="sidebar" title="Brain-Aktionen" defaultOpen={false}>
-                    <p className="uwe-hint" style={{ marginTop: 0 }}>
+                    <p className="mt-0 text-sm text-muted-foreground">
                       Strukturierte Brain-Aktionen mit Review-Proposal — läuft über RTX Connector.
                     </p>
                     <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} variant="store" />
@@ -327,12 +331,12 @@ export async function StudioWikiPageView({
             }
           />
 
-          <div className="uwe-v2-reader uwe-v2-wiki">
+          <div className="max-w-[52rem] uwe-v2-wiki">
             {view.links.some((link) => link.status === "broken") && (
-              <p className="uwe-notice uwe-notice-warn" role="note">
+              <Alert tone="warning" role="note">
                 Diese Seite enthält {view.links.filter((link) => link.status === "broken").length}{" "}
                 defekte Wikilinks — siehe Seitenleiste „Ausgehende Links“.
-              </p>
+              </Alert>
             )}
             <WikiContent html={view.html} />
 

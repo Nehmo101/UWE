@@ -12,9 +12,9 @@ export default async function BackupPage() {
       breadcrumb={<BreadcrumbTrail items={[{ label: "Backup & Restore" }]} />}
       contextPanel={
         <SidebarSection title="Hinweise">
-          <ul className="uwe-hint" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            <li style={{ marginBottom: "0.5rem" }}>ZIP-Backups enthalten JSON-Daten und Asset-Dateien.</li>
-            <li style={{ marginBottom: "0.5rem" }}>Passwörter, Tokens und API-Keys werden ausgeschlossen.</li>
+          <ul className="flex list-none flex-col gap-2 text-sm text-muted-foreground">
+            <li>ZIP-Backups enthalten JSON-Daten und Asset-Dateien.</li>
+            <li>Passwörter, Tokens und API-Keys werden ausgeschlossen.</li>
             <li>
               <Link href="/worlds">Welt-Backups auch pro Welt verfügbar</Link>
             </li>

@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { Button, Input, Label } from "@/src/components/ui";
 
 interface Props {
   placeholder?: string;
@@ -42,16 +43,16 @@ export function AdminListSearch({
 
   return (
     <form
-      className="uwe-v2-form"
-      style={{ marginBottom: "1rem" }}
+      className="mb-4 flex flex-wrap items-end gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         applyQuery(query);
       }}
     >
-      <label style={{ flex: 1 }}>
-        Suche
-        <input
+      <div className="flex flex-1 flex-col gap-1.5">
+        <Label htmlFor="admin-list-search-q">Suche</Label>
+        <Input
+          id="admin-list-search-q"
           type="search"
           value={query}
           placeholder={placeholder}
@@ -63,21 +64,21 @@ export function AdminListSearch({
             }
           }}
         />
-      </label>
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+      </div>
+      <Button type="submit" variant="secondary">
         Filtern
-      </button>
+      </Button>
       {initial ? (
-        <button
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
+          variant="ghost"
           onClick={() => {
             setQuery("");
             applyQuery("");
           }}
         >
           Zurücksetzen
-        </button>
+        </Button>
       ) : null}
     </form>
   );

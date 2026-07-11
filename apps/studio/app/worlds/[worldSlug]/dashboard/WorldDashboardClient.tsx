@@ -17,6 +17,17 @@ import {
 import { type DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
 import type { GameSessionStatus, PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 import { buildPageUrl } from "@uwe/database/page-types";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  buttonVariants,
+  cn,
+} from "@/src/components/ui";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 type CockpitTabItem = {
   key: string;
@@ -92,12 +103,12 @@ export function WorldDashboardClient({
           <WorldCockpitCard title="Nächste Session">
             {overview.nextSession ? (
               <>
-                <p className="uwe-dashboard-highlight">
+                <p className="text-base font-semibold">
                   <Link href={`/worlds/${worldSlug}/sessions/${overview.nextSession.id}`}>
                     #{overview.nextSession.sessionNumber} — {overview.nextSession.title}
                   </Link>
                 </p>
-                <p className="uwe-dashboard-muted">
+                <p className="text-sm text-muted-foreground">
                   {overview.nextSession.date
                     ? DATE_FORMAT.format(new Date(overview.nextSession.date))
                     : "Noch kein Termin"}{" "}
@@ -108,7 +119,10 @@ export function WorldDashboardClient({
               <EmptyState
                 title="Keine Session geplant"
                 action={
-                  <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/sessions/new`}>
+                  <Link
+                    className={cn(buttonVariants({ variant: "default" }))}
+                    href={`/worlds/${worldSlug}/sessions/new`}
+                  >
                     Session planen
                   </Link>
                 }
@@ -120,17 +134,17 @@ export function WorldDashboardClient({
         return (
           <WorldCockpitCard title="Offene Plots">
             {overview.openPlots.length === 0 ? (
-              <p className="uwe-dashboard-muted">
+              <p className="text-sm text-muted-foreground">
                 Keine offenen Plots notiert. Pflege sie in deinen Sessions unter „Offene Plots“.
               </p>
             ) : (
-              <ul className="uwe-dashboard-list">
+              <ul className="flex list-none flex-col gap-3 p-0">
                 {overview.openPlots.map((plot) => (
                   <li key={plot.sessionId}>
-                    <Link href={`/worlds/${worldSlug}/sessions/${plot.sessionId}`}>
+                    <Link className="text-sm" href={`/worlds/${worldSlug}/sessions/${plot.sessionId}`}>
                       Session #{plot.sessionNumber}
                     </Link>
-                    <p>{plot.openPlots}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm">{plot.openPlots}</p>
                   </li>
                 ))}
               </ul>
@@ -140,14 +154,14 @@ export function WorldDashboardClient({
       case "wiki-pages":
         return (
           <WorldCockpitCard title="Wiki & Seiten">
-            <p className="uwe-cockpit-stat-line">
+            <p className="text-base">
               <strong>{overview.counts.pages}</strong> Seiten gesamt
             </p>
-            <p className="uwe-dashboard-muted">
+            <p className="text-sm text-muted-foreground">
               {overview.counts.byCategory.npcs} NPCs · {overview.counts.byCategory.orte} Orte ·{" "}
               {overview.counts.drafts} Entwürfe
             </p>
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={worldWikiPath(worldSlug)}>
+            <Link className={cn(buttonVariants({ variant: "ghost" }))} href={worldWikiPath(worldSlug)}>
               Seitenliste →
             </Link>
           </WorldCockpitCard>
@@ -155,14 +169,14 @@ export function WorldDashboardClient({
       case "portal-sharing":
         return (
           <WorldCockpitCard title="Portal & Sharing">
-            <p className="uwe-cockpit-stat-line">
+            <p className="text-base">
               <strong>{overview.portal.visiblePageCount}</strong> sichtbare Seiten
             </p>
-            <p className="uwe-dashboard-muted">
+            <p className="text-sm text-muted-foreground">
               {overview.portal.activeShareLinkCount} Share-Links · Portal{" "}
               {overview.portal.portalEnabled ? "aktiv" : "aus"}
             </p>
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/inspector`}>
+            <Link className={cn(buttonVariants({ variant: "ghost" }))} href={`/worlds/${worldSlug}/inspector`}>
               Inspektor →
             </Link>
           </WorldCockpitCard>
@@ -170,11 +184,11 @@ export function WorldDashboardClient({
       case "media-assets":
         return (
           <WorldCockpitCard title="Medien & Assets">
-            <p className="uwe-cockpit-stat-line">
+            <p className="text-base">
               <strong>{overview.counts.assets}</strong> Assets
             </p>
-            <p className="uwe-dashboard-muted">Karten, Handouts und Uploads für diese Welt.</p>
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/assets`}>
+            <p className="text-sm text-muted-foreground">Karten, Handouts und Uploads für diese Welt.</p>
+            <Link className={cn(buttonVariants({ variant: "ghost" }))} href={`/worlds/${worldSlug}/assets`}>
               Medien öffnen →
             </Link>
           </WorldCockpitCard>
@@ -182,15 +196,15 @@ export function WorldDashboardClient({
       case "ai-brain":
         return (
           <WorldCockpitCard title="KI & Brain">
-            <p className="uwe-cockpit-stat-line">
+            <p className="text-base">
               <strong>{overview.counts.gameSessions}</strong> Sessions
             </p>
-            <p className="uwe-dashboard-muted">Brain Store, KI-Läufe und Generator-Werkzeuge.</p>
-            <div className="uwe-cockpit-card-actions">
-              <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/brain`}>
+            <p className="text-sm text-muted-foreground">Brain Store, KI-Läufe und Generator-Werkzeuge.</p>
+            <div className="flex flex-wrap gap-1.5">
+              <Link className={cn(buttonVariants({ variant: "ghost" }))} href={`/worlds/${worldSlug}/brain`}>
                 Brain →
               </Link>
-              <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/ai-runs`}>
+              <Link className={cn(buttonVariants({ variant: "ghost" }))} href={`/worlds/${worldSlug}/ai-runs`}>
                 KI-Läufe →
               </Link>
             </div>
@@ -198,45 +212,51 @@ export function WorldDashboardClient({
         );
       case "recent-pages":
         return (
-          <section className="uwe-v2-card uwe-v2-card-padded uwe-cockpit-recent">
-            <h2 className="uwe-v2-section-title">Zuletzt bearbeitet</h2>
-            {overview.recentPages.length === 0 ? (
-              <p className="uwe-dashboard-muted">Noch keine kürzlichen Wiki-Änderungen.</p>
-            ) : (
-              <table className="uwe-page-table">
-                <thead>
-                  <tr>
-                    <th>Titel</th>
-                    <th>Typ</th>
-                    <th>Sichtbarkeit</th>
-                    <th>Publish</th>
-                    <th>Geändert</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overview.recentPages.map((page) => (
-                    <tr key={page.id}>
-                      <td>
-                        <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
-                      </td>
-                      <td>
-                        <PageTypeBadge type={page.type} />
-                      </td>
-                      <td>
-                        <VisibilityBadge visibility={page.visibility} />
-                      </td>
-                      <td>
-                        <PublishBadge status={page.publishStatus} />
-                      </td>
-                      <td className="uwe-dashboard-muted">
-                        {RELATIVE_FORMAT.format(new Date(page.updatedAt))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Zuletzt bearbeitet</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {overview.recentPages.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Noch keine kürzlichen Wiki-Änderungen.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className={TH_CLASS}>Titel</th>
+                        <th className={TH_CLASS}>Typ</th>
+                        <th className={TH_CLASS}>Sichtbarkeit</th>
+                        <th className={TH_CLASS}>Publish</th>
+                        <th className={TH_CLASS}>Geändert</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {overview.recentPages.map((page) => (
+                        <tr key={page.id}>
+                          <td className={TD_CLASS}>
+                            <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
+                          </td>
+                          <td className={TD_CLASS}>
+                            <PageTypeBadge type={page.type} />
+                          </td>
+                          <td className={TD_CLASS}>
+                            <VisibilityBadge visibility={page.visibility} />
+                          </td>
+                          <td className={TD_CLASS}>
+                            <PublishBadge status={page.publishStatus} />
+                          </td>
+                          <td className={cn(TD_CLASS, "text-muted-foreground")}>
+                            {RELATIVE_FORMAT.format(new Date(page.updatedAt))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         );
       default:
         return null;
@@ -248,7 +268,7 @@ export function WorldDashboardClient({
   );
 
   return (
-    <div className="uwe-v2-dashboard">
+    <div className="flex flex-col gap-6">
       <WorldCockpitHeader
         title={worldName}
         summary={worldDescription}
@@ -263,7 +283,7 @@ export function WorldDashboardClient({
           </>
         }
         actions={
-          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/pages/new`}>
+          <Link className={cn(buttonVariants({ variant: "default" }))} href={`/worlds/${worldSlug}/pages/new`}>
             Seite erstellen
           </Link>
         }
@@ -271,7 +291,7 @@ export function WorldDashboardClient({
 
       <WorldCockpitTabs items={cockpitTabs} />
 
-      <section className="uwe-cockpit-hero-row" aria-label="Priorität">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="Priorität">
         {renderWidget({ id: "hero-next-session", widgetType: "next-session", order: 0, column: 1, visible: true })}
         {renderWidget({ id: "hero-open-plots", widgetType: "open-plots", order: 1, column: 2, visible: true })}
         {renderWidget({ id: "hero-recent-pages", widgetType: "recent-pages", order: 2, column: 3, visible: true })}

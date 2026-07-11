@@ -25,7 +25,7 @@ export function ChronicleTimeline({ events }: ChronicleTimelineProps) {
   const remaining = events.length - visible.length;
 
   if (events.length === 0) {
-    return <p className="uwe-hint">Noch keine Ereignisse erfasst.</p>;
+    return <p className="text-sm text-muted-foreground">Noch keine Ereignisse erfasst.</p>;
   }
 
   return (
@@ -62,7 +62,7 @@ export function ChronicleTimeline({ events }: ChronicleTimelineProps) {
       {remaining > 0 && (
         <button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-secondary"
+          className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80"
           onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
         >
           Ältere Ereignisse laden ({remaining} verbleibend)

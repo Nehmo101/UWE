@@ -38,6 +38,7 @@ const PORTAL_UI = path.join(root, "apps/portal/src/components/ui");
  * must be mirrored in the other — that is exactly what this test enforces.
  */
 const SYNCED_PRIMITIVES = [
+  "badge.tsx",
   "button.tsx",
   "card.tsx",
   "cn.ts",
@@ -68,9 +69,7 @@ const INTENTIONALLY_DIVERGENT: Record<string, string> = {
   "dropdown-menu.tsx":
     "Studio adds admin-only menu affordances that the Portal deliberately does not render.",
   "index.ts":
-    "Barrels differ on purpose: Studio also re-exports the studio-only badge primitive.",
-  "badge.tsx":
-    "Studio-only admin UI primitive; the Portal has no badge and does not need one.",
+    "Barrels differ on purpose: Studio re-exports additional admin-only primitives.",
   "icon.test.ts":
     "Studio-only co-located unit test for icon.tsx; not a shipped primitive.",
 };

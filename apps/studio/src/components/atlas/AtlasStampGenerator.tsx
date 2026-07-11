@@ -20,6 +20,7 @@ import {
   saveAtlasStampVariantsAction,
 } from "@/app/atlas-actions";
 import type { StampVariantResult } from "@/app/atlas-actions";
+import { Alert, Button, cn, Input, Label, NavIcon } from "@/src/components/ui";
 
 export interface AtlasStampGeneratorProps {
   worldSlug: string;
@@ -140,131 +141,65 @@ export function AtlasStampGenerator({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1200,
-      }}
+      className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/50"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        style={{
-          background: "var(--uwe-bg)",
-          border: "1px solid var(--uwe-border)",
-          borderRadius: "var(--uwe-radius)",
-          padding: "1.5rem",
-          minWidth: "min(480px, calc(100vw - 2rem))",
-          maxWidth: "min(760px, calc(100vw - 2rem))",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
+        className="flex max-h-[90vh] min-w-[min(480px,calc(100vw-2rem))] max-w-[min(760px,calc(100vw-2rem))] flex-col gap-4 overflow-y-auto rounded-[var(--radius)] border border-border bg-background p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>KI-Stempel generieren</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 18,
-              color: "var(--uwe-muted)",
-            }}
-            aria-label="Schließen"
-          >
-            ×
-          </button>
+        <div className="flex items-center justify-between">
+          <h2 className="m-0 text-lg font-semibold">KI-Stempel generieren</h2>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Schließen">
+            <NavIcon name="x" width={18} height={18} />
+          </Button>
         </div>
 
         {/* Keyword input */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <label
-            htmlFor="stamp-keyword"
-            style={{ fontSize: 13, color: "var(--uwe-muted)" }}
-          >
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="stamp-keyword" className="text-sm font-normal text-muted-foreground">
             Stichwort (z.B. &quot;Kirche&quot;, &quot;Hafen&quot;, &quot;Drachenhöhle&quot;)
-          </label>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <input
+          </Label>
+          <div className="flex gap-2">
+            <Input
               id="stamp-keyword"
-              className="uwe-input"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && keyword.trim()) handleGenerate();
               }}
               placeholder="z.B. Kirche"
-              style={{ flex: 1 }}
+              className="flex-1"
               autoFocus
             />
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary"
-              onClick={handleGenerate}
-              disabled={isGenerating || !keyword.trim()}
-            >
+            <Button type="button" onClick={handleGenerate} disabled={isGenerating || !keyword.trim()}>
               {isGenerating ? "Generiere…" : "Generieren"}
-            </button>
+            </Button>
           </div>
-          <p style={{ margin: 0, fontSize: 11, color: "var(--uwe-muted)" }}>
+          <p className="m-0 text-xs text-muted-foreground">
             Gouache-Malstil (deckend, Pigmentkante) · transparent · Karten-Stempel-Stil
           </p>
         </div>
 
         {/* Error */}
         {generateError && (
-          <p
-            style={{
-              margin: 0,
-              fontSize: 13,
-              color: "var(--uwe-danger)",
-              padding: "0.5rem",
-              background: "var(--uwe-danger-10, rgba(220,38,38,0.08))",
-              borderRadius: 4,
-            }}
-          >
+          <Alert tone="danger" role="alert">
             {generateError}
-          </p>
+          </Alert>
         )}
 
         {/* Loading state */}
         {isGenerating && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gap: "0.5rem",
-            }}
-          >
+          <div className="grid grid-cols-5 gap-2">
             {Array.from({ length: 5 }, (_, i) => (
               <div
                 key={i}
-                style={{
-                  aspectRatio: "1",
-                  background: "var(--uwe-surface)",
-                  border: "1px solid var(--uwe-border)",
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--uwe-muted)",
-                  fontSize: 11,
-                  animation: "pulse 1.5s ease-in-out infinite",
-                }}
+                className="flex aspect-square animate-pulse items-center justify-center rounded border border-border bg-muted text-xs text-muted-foreground"
               >
-                ✦
+                <NavIcon name="sparkles" width={14} height={14} />
               </div>
             ))}
           </div>
@@ -272,37 +207,25 @@ export function AtlasStampGenerator({
 
         {/* Variants grid */}
         {hasVariants && !isGenerating && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontSize: 13,
-              }}
-            >
-              <span style={{ color: "var(--uwe-muted)" }}>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
                 {variants.length} Varianten · Klicken zum Auswählen
               </span>
-              <button
+              <Button
                 type="button"
-                className="uwe-v2-btn uwe-v2-btn-secondary"
+                variant="secondary"
+                size="sm"
                 onClick={handleReload}
                 disabled={isGenerating}
                 title="Neue Varianten mit demselben Stichwort generieren"
-                style={{ fontSize: 12 }}
               >
-                ↻ Neu generieren
-              </button>
+                <NavIcon name="rotate-cw" width={14} height={14} />
+                Neu generieren
+              </Button>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
-                gap: "0.5rem",
-              }}
-            >
+            <div className="grid grid-cols-5 gap-2">
               {variants.map((v, idx) => {
                 const isSelected = selectedIndices.has(idx);
                 return (
@@ -312,18 +235,10 @@ export function AtlasStampGenerator({
                     onClick={() => toggleSelect(idx)}
                     title={isSelected ? "Abwählen" : "Auswählen"}
                     aria-pressed={isSelected}
-                    style={{
-                      padding: 0,
-                      border: isSelected
-                        ? "2px solid var(--uwe-accent)"
-                        : "2px solid var(--uwe-border)",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      background: "var(--uwe-surface)",
-                      position: "relative",
-                      overflow: "hidden",
-                      aspectRatio: "1",
-                    }}
+                    className={cn(
+                      "relative aspect-square overflow-hidden rounded-sm border-2 bg-muted p-0",
+                      isSelected ? "border-primary" : "border-border",
+                    )}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -331,32 +246,11 @@ export function AtlasStampGenerator({
                       alt={`${keyword} Variante ${idx + 1}`}
                       loading="lazy"
                       decoding="async"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        display: "block",
-                      }}
+                      className="block h-full w-full object-contain"
                     />
                     {isSelected && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 4,
-                          right: 4,
-                          width: 18,
-                          height: 18,
-                          borderRadius: "50%",
-                          background: "var(--uwe-accent)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 11,
-                          color: "#fff",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        ✓
+                      <div className="absolute right-1 top-1 flex size-[18px] items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <NavIcon name="check" width={12} height={12} />
                       </div>
                     )}
                   </button>
@@ -364,35 +258,24 @@ export function AtlasStampGenerator({
               })}
             </div>
 
-            <p style={{ margin: 0, fontSize: 11, color: "var(--uwe-muted)" }}>
+            <p className="m-0 text-xs text-muted-foreground">
               Provider: {variants[0]?.providerUsed ?? "–"} · Prompt: {variants[0]?.prompt.slice(0, 80)}…
             </p>
           </div>
         )}
 
         {/* Save feedback */}
-        {saveError && (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--uwe-danger)" }}>{saveError}</p>
-        )}
-        {saveSuccess && (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--uwe-success, #16a34a)" }}>
-            {saveSuccess}
-          </p>
-        )}
+        {saveError && <p className="m-0 text-sm text-destructive">{saveError}</p>}
+        {saveSuccess && <p className="m-0 text-sm text-success">{saveSuccess}</p>}
 
         {/* Footer actions */}
-        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-secondary"
-            onClick={onClose}
-          >
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
             Schließen
-          </button>
+          </Button>
           {hasVariants && (
-            <button
+            <Button
               type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary"
               onClick={handleSave}
               disabled={isSaving || selectedCount === 0}
               title={
@@ -404,7 +287,7 @@ export function AtlasStampGenerator({
               {isSaving
                 ? "Speichere…"
                 : `${selectedCount > 0 ? selectedCount : ""} Stempel speichern`}
-            </button>
+            </Button>
           )}
         </div>
       </div>

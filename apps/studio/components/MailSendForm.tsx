@@ -3,6 +3,11 @@
 import { sanitizeHtml } from "@/src/lib/sanitize-html";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Button, Input, Label, Textarea } from "@/src/components/ui";
+
+/** TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */
+const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
+const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 interface RecipientOption {
   email: string;
@@ -151,57 +156,64 @@ export function MailSendForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="uwe-form">
+    <form onSubmit={handleSubmit} className="flex w-full max-w-2xl flex-col gap-4">
       {warnings.length > 0 && (
-        <div className="uwe-notice" role="alert">
+        <Alert tone="warning" role="alert">
           {warnings.map((warning) => (
             <p key={warning}>{warning}</p>
           ))}
-        </div>
+        </Alert>
       )}
 
       {draftStorageKey ? (
-        <p className="uwe-hint">
+        <p className="text-sm text-muted-foreground">
           Entwurf wird lokal gespeichert{draftSavedAt ? ` (zuletzt ${draftSavedAt})` : ""}.
         </p>
       ) : null}
 
-      <label>
-        Betreff
-        <input value={subject} onChange={(event) => setSubject(event.target.value)} required />
-      </label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="mail-send-subject">Betreff</Label>
+        <Input
+          id="mail-send-subject"
+          value={subject}
+          onChange={(event) => setSubject(event.target.value)}
+          required
+        />
+      </div>
 
-      <label>
-        Nachricht (Text)
-        <textarea
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="mail-send-body">Nachricht (Text)</Label>
+        <Textarea
+          id="mail-send-body"
           rows={10}
           value={bodyText}
           onChange={(event) => setBodyText(event.target.value)}
           required
         />
-      </label>
+      </div>
 
       {previewHtml && (
-        <details className="uwe-fieldset">
-          <summary>HTML-Vorschau</summary>
+        <details className="rounded-[var(--radius)] border border-border bg-card px-3 py-2">
+          <summary className="cursor-pointer font-semibold">HTML-Vorschau</summary>
           <div
-            className="uwe-mail-preview"
+            className="mt-3 rounded-[var(--radius)] border border-border p-3 text-sm"
             dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
         </details>
       )}
 
-      <fieldset className="uwe-fieldset">
-        <legend>Empfänger</legend>
+      <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
+        <legend className="px-1 text-sm text-muted-foreground">Empfänger</legend>
         {recipients.length === 0 ? (
-          <p className="uwe-v2-empty">Keine Empfänger mit E-Mail-Adresse gefunden.</p>
+          <p className="text-sm italic text-muted-foreground">Keine Empfänger mit E-Mail-Adresse gefunden.</p>
         ) : (
           recipients.map((recipient) => (
-            <label key={recipient.email} className="uwe-checkbox">
+            <label key={recipient.email} className={CHECKBOX_ROW_CLASS}>
               <input
                 type="checkbox"
                 checked={selected.has(recipient.email)}
                 onChange={() => toggleRecipient(recipient.email)}
+                className={CHECKBOX_CLASS}
               />
               {recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email}
             </label>
@@ -210,25 +222,22 @@ export function MailSendForm({
       </fieldset>
 
       {containsDmOnlyHint && (
-        <label className="uwe-checkbox">
+        <label className={CHECKBOX_ROW_CLASS}>
           <input
             type="checkbox"
             checked={confirmDmOnly}
             onChange={(event) => setConfirmDmOnly(event.target.checked)}
+            className={CHECKBOX_CLASS}
           />
           Ich bestätige, dass DM-only Inhalte bewusst an die ausgewählten Empfänger gehen dürfen.
         </label>
       )}
 
-      <button
-        type="submit"
-        className="uwe-v2-btn uwe-v2-btn-primary"
-        disabled={loading || selected.size === 0}
-      >
+      <Button type="submit" disabled={loading || selected.size === 0} className="self-start">
         {loading ? "Sende…" : "Mail jetzt senden"}
-      </button>
+      </Button>
 
-      {status && <p className="uwe-notice">{status}</p>}
+      {status && <Alert tone="success">{status}</Alert>}
     </form>
   );
 }

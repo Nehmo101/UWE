@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  EmptyState,
-} from "@uwe/shared-ui";
-import {
   buildPageUrl,
   createDndApiService,
   getAppRepository,
@@ -16,6 +13,18 @@ import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { DndApiEncounterPanel } from "@/components/DndApiEncounterPanel";
 import { DndApiBrowseCacheNotice } from "@/src/components/world/DndApiBrowseCache";
 import { addDndBeyondReferenceAction } from "../../../integration-actions";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -40,6 +49,8 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
       dnd5eSrdEnabled: config.dnd5eSrdEnabled,
     });
   }
+  // Open5e-Treffer zeigt bereits das Encounter-Panel als Karten — hier nur der Rest.
+  const additionalResults = results.filter((item) => item.provider !== "open5e");
 
   return (
     <WorldShell
@@ -55,101 +66,128 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
         title="DnD API"
         summary="Open5e + D&amp;D 5e SRD API. D&amp;D Beyond nur als manuelle Link-Referenz — kein Scraping."
       />
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-form" style={{ marginBottom: "1rem" }}>
-        <h2>Suche (Open5e / SRD)</h2>
-        <form method="get" className="uwe-v2-form uwe-form-inline">
-          <input name="q" defaultValue={q ?? ""} placeholder="Goblin, Fireball …" />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Suchen
-          </button>
-        </form>
-        <DndApiBrowseCacheNotice query={q ?? ""} results={results} />
-      </section>
 
-      <DndApiEncounterPanel
-        worldSlug={worldSlug}
-        results={results.map((item) => ({
-          provider: item.provider,
-          id: item.id,
-          name: item.name,
-          url: item.url,
-          summary: item.summary,
-        }))}
-      />
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Suche (Open5e / SRD)</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <form method="get" className="flex flex-wrap gap-2">
+              <Input name="q" defaultValue={q ?? ""} placeholder="Goblin, Fireball …" className="max-w-xs" />
+              <Button type="submit">Suchen</Button>
+            </form>
+            <DndApiBrowseCacheNotice query={q ?? ""} results={results} />
+          </CardContent>
+        </Card>
 
-      {q && (
-        <>
-          <section style={{ marginBottom: "1.5rem" }}>
-            <h2 className="uwe-v2-section-title">{`Alle Ergebnisse für „${q}“`}</h2>
-            {results.length === 0 ? (
-              <EmptyState title="Keine Treffer" description="Andere Schreibweise oder API deaktiviert?" />
-            ) : (
-              <ul className="uwe-list-cards">
-                {results.map((item) => (
-                  <li key={`${item.provider}-${item.id}`} className="uwe-list-card">
-                    <strong>{item.name}</strong>
-                    <span className="uwe-badge">{item.provider}</span>
-                    {item.summary && <p className="uwe-dashboard-muted">{item.summary}</p>}
-                    <a href={item.url} target="_blank" rel="noreferrer">
-                      API / Quelle
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
+        <DndApiEncounterPanel
+          worldSlug={worldSlug}
+          results={results.map((item) => ({
+            provider: item.provider,
+            id: item.id,
+            name: item.name,
+            url: item.url,
+            summary: item.summary,
+          }))}
+        />
+
+        {q && results.length === 0 && (
+          <section>
+            <h2 className="mb-3 text-lg font-semibold tracking-tight">{`Ergebnisse für „${q}“`}</h2>
+            <EmptyState title="Keine Treffer" description="Andere Schreibweise oder API deaktiviert?" />
           </section>
-        </>
-      )}
-
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-form" style={{ marginBottom: "1.5rem" }}>
-        <h2>D&amp;D Beyond Referenz (manuell)</h2>
-        <form action={addDndBeyondReferenceAction} className="uwe-v2-form">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          <label>
-            Titel
-            <input name="title" required />
-          </label>
-          <label>
-            D&amp;D Beyond URL
-            <input name="url" type="url" required placeholder="https://www.dndbeyond.com/…" />
-          </label>
-          <label>
-            Typ (optional)
-            <input name="entityType" placeholder="monster, spell, …" />
-          </label>
-          <label>
-            Notizen
-            <textarea name="notes" rows={2} />
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Referenz speichern
-          </button>
-        </form>
-      </section>
-
-      <section>
-        <h2 className="uwe-v2-section-title">Gespeicherte D&amp;D Beyond Links</h2>
-        {beyondReferences.length === 0 ? (
-          <EmptyState title="Keine Referenzen" description="Füge manuelle D&D Beyond Links hinzu." />
-        ) : (
-          <ul className="uwe-list-cards">
-            {beyondReferences.map((ref) => (
-              <li key={ref.id} className="uwe-list-card">
-                <strong>{ref.title}</strong>
-                {ref.entityType && <span className="uwe-badge">{ref.entityType}</span>}
-                <a href={ref.url} target="_blank" rel="noreferrer">
-                  D&amp;D Beyond öffnen
-                </a>
-                {ref.page && (
-                  <Link href={buildPageUrl(worldSlug, ref.page.type, ref.page.slug)}>
-                    UWE-Seite: {ref.page.title}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
         )}
-      </section>
+
+        {q && additionalResults.length > 0 && (
+          <section>
+            <h2 className="mb-3 text-lg font-semibold tracking-tight">{`Weitere Ergebnisse für „${q}“ (andere Quellen)`}</h2>
+            <ul className="grid gap-2">
+              {additionalResults.map((item) => (
+                <li
+                  key={`${item.provider}-${item.id}`}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                >
+                  <strong>{item.name}</strong>
+                  <Badge variant="secondary">{item.provider}</Badge>
+                  {item.summary && <p className="basis-full text-sm text-muted-foreground">{item.summary}</p>}
+                  <a href={item.url} target="_blank" rel="noreferrer" className="text-sm text-primary underline-offset-4 hover:underline">
+                    API / Quelle
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>D&amp;D Beyond Referenz (manuell)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={addDndBeyondReferenceAction} className="flex flex-col gap-4">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="dndbeyond-title">Titel</Label>
+                <Input id="dndbeyond-title" name="title" required />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="dndbeyond-url">D&amp;D Beyond URL</Label>
+                <Input
+                  id="dndbeyond-url"
+                  name="url"
+                  type="url"
+                  required
+                  placeholder="https://www.dndbeyond.com/…"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="dndbeyond-entity-type">Typ (optional)</Label>
+                <Input id="dndbeyond-entity-type" name="entityType" placeholder="monster, spell, …" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="dndbeyond-notes">Notizen</Label>
+                <Textarea id="dndbeyond-notes" name="notes" rows={2} />
+              </div>
+
+              <div>
+                <Button type="submit">Referenz speichern</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <section>
+          <h2 className="mb-3 text-lg font-semibold tracking-tight">Gespeicherte D&amp;D Beyond Links</h2>
+          {beyondReferences.length === 0 ? (
+            <EmptyState title="Keine Referenzen" description="Füge manuelle D&D Beyond Links hinzu." />
+          ) : (
+            <ul className="grid gap-2">
+              {beyondReferences.map((ref) => (
+                <li
+                  key={ref.id}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                >
+                  <strong>{ref.title}</strong>
+                  {ref.entityType && <Badge variant="secondary">{ref.entityType}</Badge>}
+                  <a href={ref.url} target="_blank" rel="noreferrer" className="text-sm text-primary underline-offset-4 hover:underline">
+                    D&amp;D Beyond öffnen
+                  </a>
+                  {ref.page && (
+                    <Link href={buildPageUrl(worldSlug, ref.page.type, ref.page.slug)} className="text-sm">
+                      UWE-Seite: {ref.page.title}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </WorldShell>
   );
 }

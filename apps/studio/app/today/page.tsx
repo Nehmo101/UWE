@@ -8,6 +8,7 @@ import {
   STUDIO_TODAY_PAGE_KEY,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader } from "@/src/components/shell";
+import { Button, Card, CardContent, CardHeader, CardTitle, NavIcon } from "@/src/components/ui";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 import { generateMorningBriefingAction } from "../briefing-actions";
 import { TodayDashboardClient } from "./TodayDashboardClient";
@@ -43,120 +44,145 @@ export default async function TodayPage() {
 
   return (
     <StudioShell breadcrumb={<span>Heute</span>}>
-      <PageHeader title="Heute" summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick." actions={<Link href="/capture?quick=1" className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">+ Capture</Link>} />
-      <TodayQuickCapture />
-      <TodayDashboardClient
-        data={data}
-        widgets={todayWidgets}
+      <PageHeader
+        title="Heute"
+        summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick."
+        actions={
+          <Link
+            href="/capture?quick=1"
+            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            + Capture
+          </Link>
+        }
       />
+      <div className="flex flex-col gap-6">
+        <TodayQuickCapture />
+        <TodayDashboardClient data={data} widgets={todayWidgets} />
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Morning Briefing</h2>
-        {briefing ? (
-          <>
-            <p className="uwe-dashboard-muted">
-              {briefing.title} · aktualisiert {DATE_FORMAT.format(briefing.updatedAt)}
-            </p>
-            <p style={{ whiteSpace: "pre-wrap" }}>{briefing.content}</p>
-          </>
-        ) : (
-          <p className="uwe-dashboard-muted">
-            Noch kein Briefing erstellt. Fasst Termine, Fristen, Aufgaben und die Nachrichtenlage
-            lokal per KI zusammen.
-          </p>
-        )}
-        <form action={generateMorningBriefingAction}>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-            {briefing ? "Briefing neu erstellen" : "Briefing jetzt erstellen"}
-          </button>
-        </form>
-        <p className="uwe-dashboard-muted">
-          Läuft als Job auf der lokalen RTX — Fortschritt unter{" "}
-          <Link href="/jobs">Jobs</Link>.
-        </p>
-      </section>
-
-      {chatAccess.allowed && (
-        <details className="uwe-v2-section">
-          <summary className="uwe-v2-section-title">
-            💬 Nachfragen zum Briefing (Life-Brain)
-          </summary>
-          <LifeBrainChatPanel useMock={useMockInference} pollIntervalMs={30_000} />
-        </details>
-      )}
-
-      <div className="uwe-v2-stat-grid">
-        <section className="uwe-v2-card uwe-v2-card-padded">
-          <h2 className="uwe-v2-section-title">Mail Center</h2>
-          {data.mailSummary.recentFailed > 0 ? (
-            <p className="uwe-form-error">
-              {data.mailSummary.recentFailed} fehlgeschlagenen Sendung(en)
-              {data.mailSummary.latestFailedSubject
-                ? `: ${data.mailSummary.latestFailedSubject}`
-                : ""}
-            </p>
-          ) : (
-            <p className="uwe-dashboard-muted">Keine fehlgeschlagenen Mails.</p>
-          )}
-          {data.mailSummary.pendingCount > 0 && (
-            <p className="uwe-dashboard-muted">
-              {data.mailSummary.pendingCount} ausstehende Log-Einträge
-            </p>
-          )}
-          <div className="uwe-today-card-list">
-            {data.nextSession && data.nextSession.date && (
-              <p>
-                <Link
-                  href={`/mail/compose?kind=session_reminder&worldSlug=${data.nextSession.worldSlug}&sourceId=${data.nextSession.id}`}
-                >
-                  Session-Erinnerung vorbereiten
-                </Link>
+        <Card>
+          <CardHeader>
+            <CardTitle>Morning Briefing</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {briefing ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {briefing.title} · aktualisiert {DATE_FORMAT.format(briefing.updatedAt)}
+                </p>
+                <p className="whitespace-pre-wrap">{briefing.content}</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Noch kein Briefing erstellt. Fasst Termine, Fristen, Aufgaben und die Nachrichtenlage
+                lokal per KI zusammen.
               </p>
             )}
-            <p>
-              <Link href="/mail/compose?kind=backup_warning">Backup-Warnung vorbereiten</Link>
+            <form action={generateMorningBriefingAction}>
+              <Button type="submit" variant="secondary">
+                {briefing ? "Briefing neu erstellen" : "Briefing jetzt erstellen"}
+              </Button>
+            </form>
+            <p className="text-sm text-muted-foreground">
+              Läuft als Job auf der lokalen RTX — Fortschritt unter{" "}
+              <Link href="/jobs">Jobs</Link>.
             </p>
-          </div>
-          <p>
-            <Link href="/mail">Mail Center →</Link>
-          </p>
-        </section>
+          </CardContent>
+        </Card>
 
-        <section className="uwe-v2-card uwe-v2-card-padded">
-          <h2 className="uwe-v2-section-title">Werkstatt</h2>
-          <p>{data.lifeAdmin.activeWorkshopCount} in Arbeit / geplant</p>
-          {data.lifeAdmin.workshopOpenTasks.length > 0 ? (
-            <div className="uwe-today-card-list">
-              {data.lifeAdmin.workshopOpenTasks.map((task) => (
-                <article key={task.id} className="uwe-today-card">
-                  <h3>
-                    <Link href={task.href}>{task.title}</Link>
-                  </h3>
-                  <p>{task.nextAction}</p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="uwe-today-card-list">
-              {data.lifeAdmin.activeWorkshops.map((workshop) => (
-                <article key={workshop.id} className="uwe-today-card">
-                  <h3>
-                    <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
-                  </h3>
-                  <p>{workshop.nextAction || workshop.status}</p>
-                </article>
-              ))}
-            </div>
-          )}
-          <p>
-            <Link href="/workshop">Werkstatt öffnen →</Link>
-          </p>
-        </section>
+        {chatAccess.allowed && (
+          <details className="flex flex-col gap-3">
+            <summary className="flex cursor-pointer items-center gap-2 text-lg font-semibold tracking-tight">
+              <NavIcon name="message-circle" width={18} height={18} />
+              Nachfragen zum Briefing (Life-Brain)
+            </summary>
+            <LifeBrainChatPanel useMock={useMockInference} pollIntervalMs={30_000} />
+          </details>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mail Center</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {data.mailSummary.recentFailed > 0 ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {data.mailSummary.recentFailed} fehlgeschlagenen Sendung(en)
+                  {data.mailSummary.latestFailedSubject
+                    ? `: ${data.mailSummary.latestFailedSubject}`
+                    : ""}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Keine fehlgeschlagenen Mails.</p>
+              )}
+              {data.mailSummary.pendingCount > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {data.mailSummary.pendingCount} ausstehende Log-Einträge
+                </p>
+              )}
+              <div className="flex flex-col gap-3">
+                {data.nextSession && data.nextSession.date && (
+                  <p>
+                    <Link
+                      href={`/mail/compose?kind=session_reminder&worldSlug=${data.nextSession.worldSlug}&sourceId=${data.nextSession.id}`}
+                    >
+                      Session-Erinnerung vorbereiten
+                    </Link>
+                  </p>
+                )}
+                <p>
+                  <Link href="/mail/compose?kind=backup_warning">Backup-Warnung vorbereiten</Link>
+                </p>
+              </div>
+              <p>
+                <Link href="/mail">Mail Center →</Link>
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Werkstatt</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <p className="text-sm">{data.lifeAdmin.activeWorkshopCount} in Arbeit / geplant</p>
+              {data.lifeAdmin.workshopOpenTasks.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {data.lifeAdmin.workshopOpenTasks.map((task) => (
+                    <Card key={task.id} className="p-3.5">
+                      <h3 className="text-sm font-medium">
+                        <Link href={task.href}>{task.title}</Link>
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{task.nextAction}</p>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {data.lifeAdmin.activeWorkshops.map((workshop) => (
+                    <Card key={workshop.id} className="p-3.5">
+                      <h3 className="text-sm font-medium">
+                        <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {workshop.nextAction || workshop.status}
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              <p>
+                <Link href="/workshop">Werkstatt öffnen →</Link>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          <HealthBadge status={data.systemOk ? "ok" : "degraded"} label={data.systemLabel} />
+        </p>
       </div>
-
-      <p className="uwe-dashboard-muted">
-        <HealthBadge status={data.systemOk ? "ok" : "degraded"} label={data.systemLabel} />
-      </p>
     </StudioShell>
   );
 }

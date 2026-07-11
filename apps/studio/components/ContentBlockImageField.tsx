@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Input, Label } from "@/src/components/ui";
 
 export interface BlockImageAsset {
   id: string;
@@ -18,10 +19,15 @@ interface ContentBlockImageFieldProps {
   defaultCaption?: string;
 }
 
+/** TODO(design-kit): natives select bleibt — Leerwert-Option ("kein Bild") ist mit
+    dem Kit-Select (Radix) nicht abbildbar. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
 /**
  * Bild-Block-Editor: lädt ein neues Bild hoch ODER wählt ein vorhandenes
  * Welt-Asset und verknüpft es über `assetId` mit dem ContentBlock. Der Upload
- * setzt die Asset-Sichtbarkeit auf „Portal sichtbar“, damit das Bild dort
+ * setzt die Asset-Sichtbarkeit auf „Portal sichtbar", damit das Bild dort
  * angezeigt werden kann — ob der Block im Portal erscheint, steuert weiterhin
  * die Block-Sichtbarkeit.
  */
@@ -78,7 +84,7 @@ export function ContentBlockImageField({
   }
 
   return (
-    <div className="uwe-v2-form" style={{ gap: "0.5rem" }}>
+    <div className="flex flex-col gap-2">
       <input type="hidden" name={assetIdName} value={assetId} />
 
       {previewSrc ? (
@@ -86,17 +92,16 @@ export function ContentBlockImageField({
         <img
           src={previewSrc}
           alt="Vorschau"
-          style={{ maxWidth: "100%", maxHeight: "16rem", borderRadius: "0.5rem", objectFit: "contain" }}
+          className="max-h-64 max-w-full rounded-lg object-contain"
         />
       ) : (
-        <p className="uwe-field-hint" style={{ margin: 0 }}>
-          Noch kein Bild gewählt.
-        </p>
+        <p className="m-0 text-xs text-muted-foreground">Noch kein Bild gewählt.</p>
       )}
 
-      <label>
-        Bild hochladen
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="content-block-image-upload">Bild hochladen</Label>
+        <Input
+          id="content-block-image-upload"
           ref={fileRef}
           type="file"
           accept="image/*"
@@ -106,12 +111,17 @@ export function ContentBlockImageField({
             if (file) void handleUpload(file);
           }}
         />
-      </label>
+      </div>
 
       {options.length > 0 && (
-        <label>
-          Oder vorhandenes Bild wählen
-          <select value={assetId} onChange={(event) => setAssetId(event.target.value)}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="content-block-image-select">Oder vorhandenes Bild wählen</Label>
+          <select
+            id="content-block-image-select"
+            value={assetId}
+            onChange={(event) => setAssetId(event.target.value)}
+            className={NATIVE_SELECT_CLASS}
+          >
             <option value="">— kein Bild —</option>
             {options.map((option) => (
               <option key={option.id} value={option.id}>
@@ -119,16 +129,21 @@ export function ContentBlockImageField({
               </option>
             ))}
           </select>
-        </label>
+        </div>
       )}
 
-      <label>
-        Bildunterschrift (optional)
-        <input name={captionName} defaultValue={defaultCaption} placeholder="Beschreibung / Quelle" />
-      </label>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="content-block-image-caption">Bildunterschrift (optional)</Label>
+        <Input
+          id="content-block-image-caption"
+          name={captionName}
+          defaultValue={defaultCaption}
+          placeholder="Beschreibung / Quelle"
+        />
+      </div>
 
-      {uploading && <p className="uwe-field-hint" style={{ margin: 0 }}>Wird hochgeladen…</p>}
-      {error && <p className="uwe-flash-error" style={{ margin: 0 }}>{error}</p>}
+      {uploading && <p className="m-0 text-xs text-muted-foreground">Wird hochgeladen…</p>}
+      {error && <p className="m-0 text-sm text-destructive">{error}</p>}
     </div>
   );
 }

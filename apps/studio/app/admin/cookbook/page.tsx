@@ -6,7 +6,11 @@ import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashbo
 import { getStudioCookbookDashboard } from "@/src/lib/cookbook-dashboard";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { requireAdminAccess } from "@/src/lib/auth";
+import { Alert, buttonVariants, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 import { CookbookRecommendationsPanel } from "./CookbookRecommendationsPanel";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 function runtimeLevel(ok: boolean, localOnly: boolean): StatusLevel {
   if (ok) return "ok";
@@ -37,129 +41,146 @@ export default async function CookbookAdminPage() {
         title="UWE Cookbook"
         summary="Lokale Modell-Empfehlungen nach Use Case — filterbar nach Bereich. RTX-Setup: System → RTX Connector."
         actions={
-          <Link href="/system/rtx-connector" className="uwe-v2-btn uwe-v2-btn-secondary">
+          <Link href="/system/rtx-connector" className={buttonVariants({ variant: "secondary" })}>
             RTX Connector →
           </Link>
         }
       />
 
-      <p className="uwe-hint">
-        Lokales Modell-Management auf dem Host läuft primär über den{" "}
-        <Link href="/system/rtx-connector">RTX Connector</Link>. Diese Seite zeigt Hardware-Fit und
-        Empfehlungen aus dem Cookbook-Katalog.
-      </p>
+      <div className="flex flex-col gap-6">
+        <p className="text-sm text-muted-foreground">
+          Lokales Modell-Management auf dem Host läuft primär über den{" "}
+          <Link href="/system/rtx-connector">RTX Connector</Link>. Diese Seite zeigt Hardware-Fit und
+          Empfehlungen aus dem Cookbook-Katalog.
+        </p>
 
-      {runtime.warnings.length > 0 && (
-        <section className="uwe-form-error uwe-v2-section" role="alert">
-          <strong>Datenschutz / Routing:</strong>
-          <ul>
-            {runtime.warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <div className="uwe-dashboard-grid">
-        <StatusCard
-          title="Hardware-Profil"
-          level={hardware.gpuVramGb > 0 || hardware.ramGb > 0 ? "ok" : "degraded"}
-          statusLabel={hardware.gpuName ?? "CPU-only"}
-          message={hardware.probeMessage}
-          details={[
-            { label: "RAM", value: `${hardware.ramGb} GB` },
-            { label: "GPU VRAM", value: hardware.gpuVramGb > 0 ? `${hardware.gpuVramGb} GB` : "—" },
-            { label: "Backend", value: hardware.backend },
-          ]}
-        />
-        <StatusCard
-          title="Lokale Runtime"
-          level={runtimeLevel(runtime.ok, runtime.localOnlyMode)}
-          statusLabel={runtime.ok ? "Bereit" : "Offline"}
-          message={runtime.ollama.message}
-          details={[
-            { label: "Ollama", value: runtime.ollama.reachable },
-            { label: "Modelle", value: runtime.ollama.modelCount },
-          ]}
-          nextSteps={runtime.nextSteps}
-        />
-      </div>
-
-      <CookbookRecommendationsPanel recommendations={recommendations} />
-
-      <section className="uwe-v2-card uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Engine-Status</h2>
-        <div className="uwe-dashboard-grid">
-          {engines.map((engineDef) => {
-            const status = runtime.engines.find((e) => e.engineId === engineDef.id);
-            return (
-              <article key={engineDef.id} className="uwe-v2-card uwe-dashboard-card">
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
-                  <h3 className="uwe-v2-section-title" style={{ fontSize: "1rem" }}>
-                    {engineDef.label}
-                  </h3>
-                  <HealthBadge
-                    status={status?.online ? "ok" : "error"}
-                    label={status?.online ? "Online" : "Offline"}
-                  />
-                </div>
-                <p className="uwe-dashboard-muted">{engineDef.description}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="uwe-v2-card uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Installierte Modelle</h2>
-        {installedModels.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine Modelle erkannt.</p>
-        ) : (
-          <ul>
-            {installedModels.map((model) => (
-              <li key={model}>
-                <code>{model}</code>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="uwe-v2-card uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Setup-Hinweise</h2>
-        {setupHints.map((entry) => (
-          <article key={entry.engineId} style={{ marginBottom: "1rem" }}>
-            <h3 className="uwe-v2-section-title" style={{ fontSize: "1rem" }}>
-              {entry.label}
-            </h3>
-            <ol>
-              {entry.hints.map((hint) => (
-                <li key={hint}>{hint}</li>
+        {runtime.warnings.length > 0 && (
+          <Alert tone="danger" role="alert" title="Datenschutz / Routing:">
+            <ul className="list-disc space-y-1 pl-5">
+              {runtime.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
               ))}
-            </ol>
-          </article>
-        ))}
-      </section>
+            </ul>
+          </Alert>
+        )}
 
-      <section className="uwe-v2-card uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Modell-Katalog (Auszug)</h2>
-        <table className="uwe-table" style={{ width: "100%", fontSize: "0.85rem" }}>
-          <thead>
-            <tr>
-              <th>Modell</th>
-              <th>Use Cases</th>
-            </tr>
-          </thead>
-          <tbody>
-            {registry.map((model) => (
-              <tr key={model.id}>
-                <td>{model.label}</td>
-                <td>{model.useCases.join(", ")}</td>
-              </tr>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <StatusCard
+            title="Hardware-Profil"
+            level={hardware.gpuVramGb > 0 || hardware.ramGb > 0 ? "ok" : "degraded"}
+            statusLabel={hardware.gpuName ?? "CPU-only"}
+            message={hardware.probeMessage}
+            details={[
+              { label: "RAM", value: `${hardware.ramGb} GB` },
+              { label: "GPU VRAM", value: hardware.gpuVramGb > 0 ? `${hardware.gpuVramGb} GB` : "—" },
+              { label: "Backend", value: hardware.backend },
+            ]}
+          />
+          <StatusCard
+            title="Lokale Runtime"
+            level={runtimeLevel(runtime.ok, runtime.localOnlyMode)}
+            statusLabel={runtime.ok ? "Bereit" : "Offline"}
+            message={runtime.ollama.message}
+            details={[
+              { label: "Ollama", value: runtime.ollama.reachable },
+              { label: "Modelle", value: runtime.ollama.modelCount },
+            ]}
+            nextSteps={runtime.nextSteps}
+          />
+        </div>
+
+        <CookbookRecommendationsPanel recommendations={recommendations} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Engine-Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {engines.map((engineDef) => {
+                const status = runtime.engines.find((e) => e.engineId === engineDef.id);
+                return (
+                  <Card key={engineDef.id}>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2">
+                      <CardTitle className="text-base">{engineDef.label}</CardTitle>
+                      <HealthBadge
+                        status={status?.online ? "ok" : "error"}
+                        label={status?.online ? "Online" : "Offline"}
+                      />
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{engineDef.description}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Installierte Modelle</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {installedModels.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Modelle erkannt.</p>
+            ) : (
+              <ul className="list-disc space-y-1 pl-5 text-sm">
+                {installedModels.map((model) => (
+                  <li key={model}>
+                    <code>{model}</code>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Setup-Hinweise</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {setupHints.map((entry) => (
+              <div key={entry.engineId}>
+                <h3 className="text-base font-semibold tracking-tight">{entry.label}</h3>
+                <ol className="list-decimal space-y-1 pl-5 text-sm">
+                  {entry.hints.map((hint) => (
+                    <li key={hint}>{hint}</li>
+                  ))}
+                </ol>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </section>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Modell-Katalog (Auszug)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Modell</th>
+                    <th className={TH_CLASS}>Use Cases</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registry.map((model) => (
+                    <tr key={model.id}>
+                      <td className={TD_CLASS}>{model.label}</td>
+                      <td className={TD_CLASS}>{model.useCases.join(", ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </SystemShell>
   );
 }

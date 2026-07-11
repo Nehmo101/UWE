@@ -4,6 +4,14 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useMemo, useState, useTransition } from "react";
 import { QUICK_CAPTURE_TYPE_OPTIONS } from "@uwe/database/capture-constants";
 import { createCaptureAction } from "@/app/capture-actions";
+import { Button, Input, Textarea } from "@/src/components/ui";
+
+const FIELD_CLASS = "flex flex-col gap-1.5 text-sm";
+
+/** TODO(design-kit): Segmented Typ-Auswahl (role=listbox/option) — kein Kit-Äquivalent
+ * (ToggleGroup) vorhanden; natives button + Tailwind + data-active verwendet. */
+const TYPE_CHIP_CLASS =
+  "min-h-11 rounded-[var(--radius)] border border-border bg-muted/40 px-3 py-2 text-left text-xs leading-tight text-foreground data-[active=true]:border-primary data-[active=true]:bg-primary/10";
 
 interface Props {
   returnTo?: string;
@@ -86,7 +94,7 @@ export function QuickCaptureForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="uwe-capture-quick-form">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <input type="hidden" name="returnTo" value={returnTo} />
       <input type="hidden" name="captureType" value={selected.captureType} />
       {selected.captureIntent ? (
@@ -94,14 +102,18 @@ export function QuickCaptureForm({
       ) : null}
       {storageKey ? <input type="hidden" name="storageKey" value={storageKey} /> : null}
 
-      <div className="uwe-capture-type-grid" role="listbox" aria-label="Capture-Typ">
+      <div
+        className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2"
+        role="listbox"
+        aria-label="Capture-Typ"
+      >
         {QUICK_CAPTURE_TYPE_OPTIONS.map((option) => (
           <button
             key={option.id}
             type="button"
             role="option"
             aria-selected={option.id === selectedId}
-            className="uwe-capture-type-chip"
+            className={TYPE_CHIP_CLASS}
             data-active={option.id === selectedId ? "true" : "false"}
             onClick={() => {
               setSelectedId(option.id);
@@ -116,14 +128,14 @@ export function QuickCaptureForm({
         ))}
       </div>
 
-      <label className="uwe-capture-field">
+      <label className={FIELD_CLASS}>
         Titel (optional)
-        <input name="title" type="text" placeholder="Kurzer Titel" autoComplete="off" />
+        <Input name="title" type="text" placeholder="Kurzer Titel" autoComplete="off" />
       </label>
 
-      <label className="uwe-capture-field">
+      <label className={FIELD_CLASS}>
         {selected.captureType === "link" ? "Notiz zum Link" : "Inhalt"}
-        <textarea
+        <Textarea
           name="content"
           rows={compact ? 3 : 4}
           required={
@@ -137,9 +149,9 @@ export function QuickCaptureForm({
       </label>
 
       {selected.showUrl ? (
-        <label className="uwe-capture-field">
+        <label className={FIELD_CLASS}>
           Link {selected.captureType === "link" ? "" : "(optional)"}
-          <input
+          <Input
             name="url"
             type="url"
             placeholder="https://…"
@@ -149,7 +161,7 @@ export function QuickCaptureForm({
       ) : null}
 
       {selected.showFile ? (
-        <div className="uwe-capture-field">
+        <div className={FIELD_CLASS}>
           <span>{selected.captureType === "voice_memo" ? "Audio" : "Datei"}</span>
           <input
             type="file"
@@ -159,21 +171,18 @@ export function QuickCaptureForm({
             }
             onChange={handleFileChange}
             disabled={isUploading}
+            className="text-sm text-foreground"
           />
-          {uploadName ? <p className="uwe-capture-upload-status">✓ {uploadName}</p> : null}
-          {isUploading ? <p className="uwe-capture-upload-status">Upload läuft …</p> : null}
+          {uploadName ? <p className="mt-1 text-sm text-muted-foreground">✓ {uploadName}</p> : null}
+          {isUploading ? <p className="mt-1 text-sm text-muted-foreground">Upload läuft …</p> : null}
         </div>
       ) : null}
 
-      {uploadError ? <p className="uwe-capture-error">{uploadError}</p> : null}
+      {uploadError ? <p className="text-sm text-destructive">{uploadError}</p> : null}
 
-      <button
-        type="submit"
-        className="uwe-v2-btn uwe-v2-btn-primary uwe-capture-submit"
-        disabled={isSubmitting || isUploading}
-      >
+      <Button type="submit" disabled={isSubmitting || isUploading} className="h-11 w-full">
         {isSubmitting ? "Speichern …" : "Erfassen"}
-      </button>
+      </Button>
     </form>
   );
 }

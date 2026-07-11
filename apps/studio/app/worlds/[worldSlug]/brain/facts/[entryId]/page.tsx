@@ -13,6 +13,21 @@ import {
 import { updateBrainFactAction } from "../../../../../brain-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; entryId: string }>;
@@ -66,125 +81,161 @@ export default async function StudioBrainFactPage({ params }: Props) {
         summary="Brain-Fakt bearbeiten"
       />
 
-      <section className="uwe-brain-section">
-        <h2>Quellen &amp; Bezüge</h2>
-        <ul className="uwe-linked-list">
-          <li>
-            Quelle: <strong>{BRAIN_SOURCE_LABELS[fact.source]}</strong>
-          </li>
-          {fact.page && (
-            <li>
-              Wiki-Seite:{" "}
-              <Link href={buildPageUrl(worldSlug, fact.page.type, fact.page.slug)}>
-                {fact.page.title}
-              </Link>
-            </li>
-          )}
-          {fact.campaign && (
-            <li>
-              Kampagne:{" "}
-              <Link href={`/worlds/${worldSlug}?campaign=${fact.campaign.slug}`}>
-                {fact.campaign.name}
-              </Link>
-            </li>
-          )}
-          {fact.gameSession && (
-            <li>
-              Session:{" "}
-              <Link href={`/worlds/${worldSlug}/sessions/${fact.gameSession.id}`}>
-                {fact.gameSession.title}
-                {fact.gameSession.sessionNumber != null
-                  ? ` (#${fact.gameSession.sessionNumber})`
-                  : ""}
-              </Link>
-            </li>
-          )}
-        </ul>
-      </section>
-
-      <form action={updateBrainFactAction} className="uwe-brain-edit-form">
-        <input type="hidden" name="worldSlug" value={worldSlug} />
-        <input type="hidden" name="factId" value={fact.id} />
-
-        <label>
-          Titel
-          <input name="title" defaultValue={fact.title} required className="uwe-input" />
-        </label>
-
-        <label>
-          Inhalt
-          <textarea name="content" defaultValue={fact.content} className="uwe-input" rows={8} />
-        </label>
-
-        <label>
-          Typ
-          <select name="factType" defaultValue={fact.factType} className="uwe-input">
-            {Object.entries(BRAIN_FACT_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Sichtbarkeit
-          <select name="visibility" defaultValue={fact.visibility} className="uwe-input">
-            {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Status
-          <select name="status" defaultValue={fact.status} className="uwe-input">
-            {Object.entries(BRAIN_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-          Speichern
-        </button>
-      </form>
-
-      {similarFacts.length > 0 && (
-        <section className="uwe-brain-section">
-          <h2>Ähnliche Fakten</h2>
-          <p className="uwe-hint">
-            Weitere Fakten vom Typ „{BRAIN_FACT_TYPE_LABELS[fact.factType]}“.
-          </p>
-          <ul className="uwe-linked-list">
-            {similarFacts.map((similar) => (
-              <li key={similar.id}>
-                <Link href={factDetailHref(worldSlug, similar.id)}>{similar.title}</Link>
-                {" — "}
-                {BRAIN_STATUS_LABELS[similar.status]}
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Quellen &amp; Bezüge</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2 text-sm">
+              <li>
+                Quelle: <strong className="font-semibold text-foreground">{BRAIN_SOURCE_LABELS[fact.source]}</strong>
               </li>
-            ))}
-          </ul>
-        </section>
-      )}
+              {fact.page && (
+                <li>
+                  Wiki-Seite:{" "}
+                  <Link href={buildPageUrl(worldSlug, fact.page.type, fact.page.slug)}>
+                    {fact.page.title}
+                  </Link>
+                </li>
+              )}
+              {fact.campaign && (
+                <li>
+                  Kampagne:{" "}
+                  <Link href={`/worlds/${worldSlug}?campaign=${fact.campaign.slug}`}>
+                    {fact.campaign.name}
+                  </Link>
+                </li>
+              )}
+              {fact.gameSession && (
+                <li>
+                  Session:{" "}
+                  <Link href={`/worlds/${worldSlug}/sessions/${fact.gameSession.id}`}>
+                    {fact.gameSession.title}
+                    {fact.gameSession.sessionNumber != null
+                      ? ` (#${fact.gameSession.sessionNumber})`
+                      : ""}
+                  </Link>
+                </li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
 
-      {links.length > 0 && (
-        <section className="uwe-brain-section">
-          <h2>Links</h2>
-          <ul>
-            {links.map((link) => (
-              <li key={link.id}>
-                {link.relationType}: {link.targetType} → {link.targetId}
-                {link.label ? ` (${link.label})` : ""}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Bearbeiten</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={updateBrainFactAction} className="flex flex-col gap-4">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <input type="hidden" name="factId" value={fact.id} />
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="fact-title">Titel</Label>
+                <Input id="fact-title" name="title" defaultValue={fact.title} required />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="fact-content">Inhalt</Label>
+                <Textarea id="fact-content" name="content" defaultValue={fact.content} rows={8} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="fact-type">Typ</Label>
+                <Select name="factType" defaultValue={fact.factType}>
+                  <SelectTrigger id="fact-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(BRAIN_FACT_TYPE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="fact-visibility">Sichtbarkeit</Label>
+                <Select name="visibility" defaultValue={fact.visibility}>
+                  <SelectTrigger id="fact-visibility">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="fact-status">Status</Label>
+                <Select name="status" defaultValue={fact.status}>
+                  <SelectTrigger id="fact-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(BRAIN_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Button type="submit">Speichern</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {similarFacts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ähnliche Fakten</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <p className="text-sm text-muted-foreground">
+                Weitere Fakten vom Typ „{BRAIN_FACT_TYPE_LABELS[fact.factType]}“.
+              </p>
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {similarFacts.map((similar) => (
+                  <li key={similar.id}>
+                    <Link href={factDetailHref(worldSlug, similar.id)}>{similar.title}</Link>
+                    {" — "}
+                    {BRAIN_STATUS_LABELS[similar.status]}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {links.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Links</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {links.map((link) => (
+                  <li key={link.id}>
+                    {link.relationType}: {link.targetType} → {link.targetId}
+                    {link.label ? ` (${link.label})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </WorldShell>
   );
 }

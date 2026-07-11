@@ -14,6 +14,20 @@ import {
   previewImportCentralJobAction,
   previewImportCentralObsidianVaultAction,
 } from "../import-central-actions";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 interface Props {
   jobId: string;
@@ -267,157 +281,193 @@ export function MarkdownCentralImportPanel({
   }, [resultSummary]);
 
   return (
-    <div className="uwe-import-workspace">
-      <section className="uwe-panel">
-        <h3>{isObsidian ? "Obsidian-Import" : "Markdown-Import"}</h3>
-        <p className="uwe-panel-intro">
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{isObsidian ? "Obsidian-Import" : "Markdown-Import"}</CardTitle>
+          <CardDescription>
+            {isObsidian ? (
+              <>
+                Vault-Export als ZIP, kompletter Vault-Ordner oder einzelne Markdown-Dateien.
+                Wikilinks <code>[[…]]</code> bleiben unverändert als Text erhalten;{" "}
+                <code>.obsidian/</code> und Anhänge werden übersprungen.
+              </>
+            ) : (
+              <>
+                Mehrere Texte getrennt durch <code>---</code> oder als Mehrfachauswahl.
+              </>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="markdown-import-files">
+              {isObsidian ? "Vault-ZIP oder Markdown-Datei(en)" : "Datei(en)"}
+            </Label>
+            <input
+              id="markdown-import-files"
+              type="file"
+              accept={fileAccept}
+              multiple
+              onChange={handleFileChange}
+              className="text-sm text-foreground"
+            />
+          </div>
+
           {isObsidian ? (
-            <>
-              Vault-Export als ZIP, kompletter Vault-Ordner oder einzelne Markdown-Dateien.
-              Wikilinks <code>[[…]]</code> bleiben unverändert als Text erhalten;{" "}
-              <code>.obsidian/</code> und Anhänge werden übersprungen.
-            </>
-          ) : (
-            <>
-              Mehrere Texte getrennt durch <code>---</code> oder als Mehrfachauswahl.
-            </>
-          )}
-        </p>
-
-        <label>
-          {isObsidian ? "Vault-ZIP oder Markdown-Datei(en)" : "Datei(en)"}
-          <input type="file" accept={fileAccept} multiple onChange={handleFileChange} />
-        </label>
-
-        {isObsidian ? (
-          <label>
-            Vault-Ordner auswählen (alternativ)
-            <input type="file" multiple onChange={handleFileChange} {...DIRECTORY_INPUT_PROPS} />
-          </label>
-        ) : null}
-
-        <label>
-          Text einfügen (optional)
-          <textarea
-            rows={8}
-            value={content}
-            onChange={handleContentChange}
-            placeholder={`# Erstes Fragment\n\nInhalt …\n\n---\n\n# Zweites Fragment\n\nWeiterer Text …`}
-          />
-        </label>
-
-        {fileName ? (
-          <p className="uwe-table-sub">
-            Ausgewählt: {fileName}
-            {fileCount > 1 ? ` (${fileCount} Dateien)` : ""}
-            {zipMode ? " — Vault-ZIP wird serverseitig entpackt" : ` (${Math.round(content.length / 1024)} KB)`}
-          </p>
-        ) : null}
-
-        <div className="uwe-form-actions">
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            onClick={handlePreview}
-            disabled={loading || (!zipMode && !content.trim())}
-          >
-            {loading && !resultSummary ? "Lädt…" : "Vorschau anzeigen"}
-          </button>
-        </div>
-      </section>
-
-      {error ? <p className="uwe-flash uwe-flash-error">{error}</p> : null}
-
-      {preview ? (
-        <section className="uwe-panel">
-          <h3>Vorschau</h3>
-          <p className="uwe-panel-intro">
-            {preview.totalDocuments} Dokument{preview.totalDocuments === 1 ? "" : "e"} erkannt.
-            {vaultFileCount !== null
-              ? ` ${vaultFileCount} Markdown-Datei${vaultFileCount === 1 ? "" : "en"} im Vault gefunden.`
-              : ""}
-          </p>
-
-          {preview.errors.length > 0 ? (
-            <ul className="uwe-import-alerts">
-              {preview.errors.map((entry) => (
-                <li key={entry}>{entry}</li>
-              ))}
-            </ul>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="markdown-import-vault-folder">Vault-Ordner auswählen (alternativ)</Label>
+              <input
+                id="markdown-import-vault-folder"
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                {...DIRECTORY_INPUT_PROPS}
+                className="text-sm text-foreground"
+              />
+            </div>
           ) : null}
 
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                {!singleTarget ? (
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Alle auswählen"
-                      onChange={toggleAll}
-                      checked={
-                        preview.items.length > 0 &&
-                        preview.items.every((item) => selectedIds.has(item.itemId))
-                      }
-                    />
-                  </th>
-                ) : null}
-                <th>Titel</th>
-                <th>Auszug</th>
-                {targetType === "dnd_page" ? <th>Seitentyp</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {preview.items.map((item) => (
-                <tr key={item.itemId}>
-                  {!singleTarget ? (
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(item.itemId)}
-                        onChange={() => toggleItem(item.itemId)}
-                        aria-label={`${item.title} importieren`}
-                      />
-                    </td>
-                  ) : null}
-                  <td>
-                    <strong>{item.title}</strong>
-                  </td>
-                  <td>{item.excerpt}</td>
-                  {targetType === "dnd_page" ? <td>{item.pageType ?? "lore"}</td> : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="markdown-import-content">Text einfügen (optional)</Label>
+            <Textarea
+              id="markdown-import-content"
+              rows={8}
+              value={content}
+              onChange={handleContentChange}
+              placeholder={`# Erstes Fragment\n\nInhalt …\n\n---\n\n# Zweites Fragment\n\nWeiterer Text …`}
+            />
+          </div>
 
-          <p className="uwe-table-sub">
-            Die Vorschau ändert keine Daten. Nach dem Import kannst du den Job im Import-Verlauf
-            über „Zurückrollen“ rückgängig machen.
-          </p>
+          {fileName ? (
+            <p className="text-sm text-muted-foreground">
+              Ausgewählt: {fileName}
+              {fileCount > 1 ? ` (${fileCount} Dateien)` : ""}
+              {zipMode ? " — Vault-ZIP wird serverseitig entpackt" : ` (${Math.round(content.length / 1024)} KB)`}
+            </p>
+          ) : null}
 
-          <div className="uwe-form-actions">
-            <button
+          <Button
+            type="button"
+            onClick={handlePreview}
+            disabled={loading || (!zipMode && !content.trim())}
+            className="self-start"
+          >
+            {loading && !resultSummary ? "Lädt…" : "Vorschau anzeigen"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {error ? (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      ) : null}
+
+      {preview ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Vorschau</CardTitle>
+            <CardDescription>
+              {preview.totalDocuments} Dokument{preview.totalDocuments === 1 ? "" : "e"} erkannt.
+              {vaultFileCount !== null
+                ? ` ${vaultFileCount} Markdown-Datei${vaultFileCount === 1 ? "" : "en"} im Vault gefunden.`
+                : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {preview.errors.length > 0 ? (
+              <Alert tone="warning">
+                <ul className="list-disc space-y-1 pl-5">
+                  {preview.errors.map((entry) => (
+                    <li key={entry}>{entry}</li>
+                  ))}
+                </ul>
+              </Alert>
+            ) : null}
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    {!singleTarget ? (
+                      <th className={TH_CLASS}>
+                        {/* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */}
+                        <input
+                          type="checkbox"
+                          aria-label="Alle auswählen"
+                          onChange={toggleAll}
+                          checked={
+                            preview.items.length > 0 &&
+                            preview.items.every((item) => selectedIds.has(item.itemId))
+                          }
+                          className="h-4 w-4 rounded border-input"
+                        />
+                      </th>
+                    ) : null}
+                    <th className={TH_CLASS}>Titel</th>
+                    <th className={TH_CLASS}>Auszug</th>
+                    {targetType === "dnd_page" ? <th className={TH_CLASS}>Seitentyp</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.items.map((item) => (
+                    <tr key={item.itemId}>
+                      {!singleTarget ? (
+                        <td className={TD_CLASS}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(item.itemId)}
+                            onChange={() => toggleItem(item.itemId)}
+                            aria-label={`${item.title} importieren`}
+                            className="h-4 w-4 rounded border-input"
+                          />
+                        </td>
+                      ) : null}
+                      <td className={TD_CLASS}>
+                        <strong>{item.title}</strong>
+                      </td>
+                      <td className={TD_CLASS}>{item.excerpt}</td>
+                      {targetType === "dnd_page" ? (
+                        <td className={TD_CLASS}>{item.pageType ?? "lore"}</td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Die Vorschau ändert keine Daten. Nach dem Import kannst du den Job im Import-Verlauf
+              über „Zurückrollen“ rückgängig machen.
+            </p>
+
+            <Button
               type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary"
               onClick={handleExecute}
               disabled={loading || !preview.canExecute || (!singleTarget && selectedCount === 0)}
+              className="self-start"
             >
               {loading ? "Importiert…" : singleTarget ? "Import bestätigen" : `Import bestätigen (${selectedCount})`}
-            </button>
-          </div>
-        </section>
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
 
       {resultLabel ? (
-        <section className="uwe-panel">
-          <h3>Import-Protokoll</h3>
-          <p className="uwe-panel-intro">{resultLabel}</p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Import-Protokoll</CardTitle>
+            <CardDescription>{resultLabel}</CardDescription>
+          </CardHeader>
           {undoToken ? (
-            <p className="uwe-table-sub">
-              Dieser Import kann im Import-Verlauf über „Zurückrollen“ rückgängig gemacht werden.
-            </p>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Dieser Import kann im Import-Verlauf über „Zurückrollen“ rückgängig gemacht werden.
+              </p>
+            </CardContent>
           ) : null}
-        </section>
+        </Card>
       ) : null}
     </div>
   );

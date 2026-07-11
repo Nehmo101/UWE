@@ -5,6 +5,9 @@ import { ASSET_TYPES } from "@uwe/assets";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
+import { PageHeader } from "@/src/components/shell";
+import { buttonVariants } from "@/src/components/ui/button";
+import { cn } from "@/src/components/ui/cn";
 import type { AssetType } from "@uwe/database/server";
 
 interface Props {
@@ -39,16 +42,18 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
   }
 
   return (
-    <section className="portal-content-card">
-      <h1>Handouts & Medien</h1>
-      <p className="auth-lead">
-        Medien und Handouts, die für deine Rolle ({ctx.effectiveRole}) sichtbar sind.
-      </p>
+    <>
+      <PageHeader
+        title="Handouts & Medien"
+        summary={`Medien und Handouts, die für deine Rolle (${ctx.effectiveRole}) sichtbar sind.`}
+      />
 
-      <div className="uwe-filter-bar">
+      <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href={`/auth/worlds/${worldSlug}/assets`}
-          className={!typeFilter ? "active" : undefined}
+          className={cn(
+            buttonVariants({ variant: !typeFilter ? "default" : "outline", size: "sm" }),
+          )}
         >
           Alle Typen
         </Link>
@@ -56,44 +61,49 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
           <Link
             key={type}
             href={`/auth/worlds/${worldSlug}/assets?type=${type}`}
-            className={typeFilter === type ? "active" : undefined}
+            className={cn(
+              buttonVariants({ variant: typeFilter === type ? "default" : "outline", size: "sm" }),
+            )}
           >
             {ASSET_TYPE_LABELS[type as AssetType]}
           </Link>
         ))}
       </div>
 
-      <ul className="auth-asset-list">
+      <ul className="grid gap-3">
         {assets.map((asset) => (
-          <li key={asset.id} className="auth-asset-item">
-            <div className="auth-asset-meta">
+          <li
+            key={asset.id}
+            className="grid gap-4 rounded-[var(--radius)] border border-border p-4 sm:grid-cols-[1fr_min(100%,280px)]"
+          >
+            <div className="min-w-0 space-y-2">
               <strong>{asset.title}</strong>
-              <div className="auth-asset-badges">
+              <div className="flex flex-wrap gap-2">
                 <AssetTypeBadge type={asset.type} />
                 <VisibilityBadge visibility={asset.visibility} />
               </div>
-              {asset.description && <p>{asset.description}</p>}
+              {asset.description ? <p className="text-sm text-muted-foreground">{asset.description}</p> : null}
             </div>
-            <div className="auth-asset-preview">
+            <div className="overflow-hidden rounded-[var(--radius)] border border-border">
               {isPreviewable(asset.mimeType) ? (
                 asset.mimeType?.startsWith("image/") ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`/api/assets/${asset.id}/file?world=${encodeURIComponent(worldSlug)}`}
                     alt={asset.title}
-                    className="auth-asset-thumb"
+                    className="h-auto max-h-48 w-full object-contain"
                   />
                 ) : (
                   <iframe
                     src={`/api/assets/${asset.id}/file?world=${encodeURIComponent(worldSlug)}`}
                     title={asset.title}
-                    className="auth-asset-thumb"
+                    className="h-48 w-full"
                   />
                 )
               ) : (
                 <a
                   href={`/api/assets/${asset.id}/file?world=${encodeURIComponent(worldSlug)}`}
-                  className="uwe-link"
+                  className="flex h-24 items-center justify-center p-4 text-sm text-primary hover:underline"
                 >
                   {asset.mimeType ?? "Datei"} herunterladen
                 </a>
@@ -103,9 +113,9 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
         ))}
       </ul>
 
-      {assets.length === 0 && (
+      {assets.length === 0 ? (
         <PortalEmptyState title="Keine Assets freigegeben" icon="image" />
-      )}
-    </section>
+      ) : null}
+    </>
   );
 }

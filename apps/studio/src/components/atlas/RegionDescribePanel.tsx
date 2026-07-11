@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { Button, Input, Label, NavIcon } from "@/src/components/ui";
 
 /** Minimal region shape the describe panel needs (decoupled from the editor). */
 export interface RegionDescribeTarget {
@@ -22,6 +23,11 @@ export interface RegionDescribePanelProps {
   feature: RegionDescribeTarget;
   onClose: () => void;
 }
+
+/** TODO(design-kit): natives select bleibt — controlled Provider-Auswahl (State + onChange),
+    siehe gleiches Muster in ReviewWorkspace.tsx / AuditLogWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-8 rounded-[var(--radius)] border border-input bg-transparent px-2 text-xs text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function RegionDescribePanel({
   worldSlug,
@@ -94,155 +100,124 @@ export function RegionDescribePanel({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1100,
-      }}
+      className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        style={{
-          background: "var(--uwe-bg)",
-          border: "1px solid var(--uwe-border)",
-          borderRadius: "var(--uwe-radius)",
-          padding: "1.5rem",
-          minWidth: "min(380px, calc(100vw - 2rem))",
-          maxWidth: "min(640px, calc(100vw - 2rem))",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
+        className="flex max-h-[90vh] min-w-[min(380px,calc(100vw-2rem))] max-w-[min(640px,calc(100vw-2rem))] flex-col gap-4 overflow-y-auto rounded-[var(--radius)] border border-border bg-background p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Region beschreiben — KI-Entwurf</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--uwe-muted)" }}
-            aria-label="Schließen"
-          >
-            ×
-          </button>
+        <div className="flex items-center justify-between">
+          <h2 className="m-0 text-lg font-semibold">Region beschreiben — KI-Entwurf</h2>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Schließen">
+            <NavIcon name="x" width={18} height={18} />
+          </Button>
         </div>
 
-        <p style={{ margin: 0, fontSize: 13, color: "var(--uwe-muted)" }}>
+        <p className="m-0 text-sm text-muted-foreground">
           Region: <strong>{regionLabel}</strong> — Beschreibungsvorschlag (nie automatisch im Kanon)
         </p>
 
         {/* Config */}
-        <details style={{ fontSize: 12 }}>
-          <summary style={{ cursor: "pointer", color: "var(--uwe-muted)" }}>
-            KI konfigurieren
-          </summary>
-          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.4rem", flexWrap: "wrap" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-              Provider
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground">KI konfigurieren</summary>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="region-describe-provider" className="text-xs font-normal">
+                Provider
+              </Label>
               <select
-                className="uwe-input"
+                id="region-describe-provider"
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                style={{ fontSize: 12 }}
+                className={NATIVE_SELECT_CLASS}
               >
                 <option value="ollama">Ollama (lokal)</option>
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
                 <option value="openrouter">OpenRouter</option>
               </select>
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-              Modell
-              <input
-                className="uwe-input"
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="region-describe-model" className="text-xs font-normal">
+                Modell
+              </Label>
+              <Input
+                id="region-describe-model"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="z.B. gemma3:4b"
-                style={{ fontSize: 12, width: 160 }}
+                className="h-8 w-40 text-xs"
               />
-            </label>
+            </div>
           </div>
         </details>
 
         {/* Context hint */}
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: 13 }}>
-          Zusätzlicher Kontext (optional)
-          <input
-            className="uwe-input"
+        <div className="flex flex-col gap-1.5 text-sm">
+          <Label htmlFor="region-describe-context">Zusätzlicher Kontext (optional)</Label>
+          <Input
+            id="region-describe-context"
             value={contextHint}
             onChange={(e) => setContextHint(e.target.value)}
             placeholder="z.B. Eisige Tundra, Hauptsitz der Ork-Stämme"
           />
-        </label>
+        </div>
 
         {/* Run button */}
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
+        <div className="flex gap-2">
+          <Button
             type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
             onClick={() => void handleDescribe()}
             disabled={status === "running"}
-            style={{ flex: 1 }}
+            className="flex-1"
           >
-            {status === "running" ? "Beschreibe…" : "✦ Beschreibung generieren"}
-          </button>
+            {status === "running" ? (
+              "Beschreibe…"
+            ) : (
+              <>
+                <NavIcon name="sparkles" width={16} height={16} />
+                Beschreibung generieren
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Error */}
-        {status === "error" && errorMsg && (
-          <p style={{ color: "var(--uwe-danger)", fontSize: 13, margin: 0 }}>{errorMsg}</p>
-        )}
+        {status === "error" && errorMsg && <p className="m-0 text-sm text-destructive">{errorMsg}</p>}
 
         {/* Result */}
         {status === "done" && resultText && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <strong style={{ fontSize: 13 }}>Vorschlag (Entwurf)</strong>
-              <button
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-secondary"
-                style={{ fontSize: 12, padding: "0.15rem 0.5rem" }}
-                onClick={() => void handleCopy()}
-              >
-                {copied ? "Kopiert ✓" : "Kopieren"}
-              </button>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <strong className="text-sm">Vorschlag (Entwurf)</strong>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopy()}>
+                {copied ? (
+                  <>
+                    <NavIcon name="check" width={14} height={14} />
+                    Kopiert
+                  </>
+                ) : (
+                  "Kopieren"
+                )}
+              </Button>
             </div>
-            <pre
-              style={{
-                background: "var(--uwe-surface)",
-                border: "1px solid var(--uwe-border)",
-                borderRadius: 4,
-                padding: "0.75rem",
-                fontSize: 13,
-                lineHeight: 1.6,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                maxHeight: 320,
-                overflowY: "auto",
-                margin: 0,
-              }}
-            >
+            <pre className="m-0 max-h-80 overflow-y-auto whitespace-pre-wrap break-words rounded border border-border bg-muted p-3 text-sm leading-relaxed">
               {resultText}
             </pre>
-            <p style={{ fontSize: 11, color: "var(--uwe-muted)", margin: 0 }}>
+            <p className="m-0 text-xs text-muted-foreground">
               Dies ist ein KI-Vorschlag — kein Kanon. Kopieren und manuell in eine Wiki-Seite einfügen.
             </p>
           </div>
         )}
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={onClose}>
+        <div className="flex justify-end">
+          <Button type="button" variant="secondary" onClick={onClose}>
             Schließen
-          </button>
+          </Button>
         </div>
       </div>
     </div>

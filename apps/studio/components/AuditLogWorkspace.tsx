@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
 
 interface AuditEntry {
   id: string;
@@ -26,6 +27,14 @@ interface AuditLogResponse {
 }
 
 const PAGE_SIZE = 25;
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+
+/** TODO(design-kit): Native select bleibt — controlled Filter mit Leerwert ("Alle"),
+    siehe gleiches Muster in JobsWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 function formatAuditMetadata(
   metadata: unknown,
@@ -175,134 +184,162 @@ export function AuditLogWorkspace() {
 
   return (
     <>
-      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
-        <h2>Filter</h2>
-        <div className="uwe-form-grid">
-          <label>
-            Action
-            <select value={action} onChange={(event) => setAction(event.target.value)}>
-              <option value="">Alle</option>
-              {Object.entries(actionLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            User-ID
-            <input
-              type="text"
-              value={actorUserId}
-              onChange={(event) => setActorUserId(event.target.value)}
-              placeholder="actorUserId"
-            />
-          </label>
-          <label>
-            World-ID
-            <input
-              type="text"
-              value={worldId}
-              onChange={(event) => setWorldId(event.target.value)}
-              placeholder="worldId"
-            />
-          </label>
-          <label>
-            Von
-            <input type="datetime-local" value={from} onChange={(event) => setFrom(event.target.value)} />
-          </label>
-          <label>
-            Bis
-            <input type="datetime-local" value={to} onChange={(event) => setTo(event.target.value)} />
-          </label>
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void loadEntries()}>
-            Filtern
-          </button>
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-secondary"
-            disabled={entries.length === 0}
-            onClick={() => downloadAuditCsv(entries)}
-          >
-            CSV exportieren
-          </button>
-        </div>
-      </section>
-
-      {error && <p className="uwe-notice uwe-notice-warn">{error}</p>}
-
-      <section className="uwe-v2-card">
-        <h2>
-          Einträge {loading ? "…" : `(${entries.length} von ${total})`}
-        </h2>
-        {entries.length === 0 && !loading ? (
-          <p className="uwe-dashboard-muted">Keine Audit-Einträge für die gewählten Filter.</p>
-        ) : (
-          <div className="uwe-page-table-wrap">
-            <table className="uwe-page-table">
-              <thead>
-                <tr>
-                  <th>Zeit</th>
-                  <th>Action</th>
-                  <th>Actor</th>
-                  <th>Target</th>
-                  <th>World</th>
-                  <th>IP-Hash</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => (
-                  <tr key={entry.id}>
-                    <td>{formatStudioDate(entry.timestamp)}</td>
-                    <td>{entry.actionLabel}</td>
-                    <td>{entry.actorUserId ?? "—"}</td>
-                    <td>
-                      {entry.targetType}
-                      {entry.targetId ? ` · ${entry.targetId}` : ""}
-                    </td>
-                    <td>{entry.worldId ?? "—"}</td>
-                    <td>
-                      <code>{entry.ipHash ? entry.ipHash.slice(0, 12) : "—"}</code>
-                    </td>
-                    <td>{formatAuditMetadata(entry.metadataJson, loginReasonLabels)}</td>
-                  </tr>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filter</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="audit-filter-action">Action</Label>
+              <select
+                id="audit-filter-action"
+                value={action}
+                onChange={(event) => setAction(event.target.value)}
+                className={NATIVE_SELECT_CLASS}
+              >
+                <option value="">Alle</option>
+                {Object.entries(actionLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {total > PAGE_SIZE ? (
-          <div
-            className="uwe-dashboard-muted"
-            style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}
-          >
-            <span>
-              Seite {page} von {pageCount}
-            </span>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                disabled={offset === 0}
-                onClick={() => setOffset((value) => Math.max(0, value - PAGE_SIZE))}
-              >
-                Zurück
-              </button>
-              <button
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                disabled={offset + PAGE_SIZE >= total}
-                onClick={() => setOffset((value) => value + PAGE_SIZE)}
-              >
-                Weiter
-              </button>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="audit-filter-actor">User-ID</Label>
+              <Input
+                id="audit-filter-actor"
+                type="text"
+                value={actorUserId}
+                onChange={(event) => setActorUserId(event.target.value)}
+                placeholder="actorUserId"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="audit-filter-world">World-ID</Label>
+              <Input
+                id="audit-filter-world"
+                type="text"
+                value={worldId}
+                onChange={(event) => setWorldId(event.target.value)}
+                placeholder="worldId"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="audit-filter-from">Von</Label>
+              <Input
+                id="audit-filter-from"
+                type="datetime-local"
+                value={from}
+                onChange={(event) => setFrom(event.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="audit-filter-to">Bis</Label>
+              <Input
+                id="audit-filter-to"
+                type="datetime-local"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+              />
             </div>
           </div>
-        ) : null}
-      </section>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => void loadEntries()}>
+              Filtern
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={entries.length === 0}
+              onClick={() => downloadAuditCsv(entries)}
+            >
+              CSV exportieren
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {error && (
+        <Alert tone="warning" role="alert" className="mb-6">
+          {error}
+        </Alert>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Einträge {loading ? "…" : `(${entries.length} von ${total})`}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {entries.length === 0 && !loading ? (
+            <p className="text-sm text-muted-foreground">Keine Audit-Einträge für die gewählten Filter.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Zeit</th>
+                    <th className={TH_CLASS}>Action</th>
+                    <th className={TH_CLASS}>Actor</th>
+                    <th className={TH_CLASS}>Target</th>
+                    <th className={TH_CLASS}>World</th>
+                    <th className={TH_CLASS}>IP-Hash</th>
+                    <th className={TH_CLASS}>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((entry) => (
+                    <tr key={entry.id}>
+                      <td className={TD_CLASS}>{formatStudioDate(entry.timestamp)}</td>
+                      <td className={TD_CLASS}>{entry.actionLabel}</td>
+                      <td className={TD_CLASS}>{entry.actorUserId ?? "—"}</td>
+                      <td className={TD_CLASS}>
+                        {entry.targetType}
+                        {entry.targetId ? ` · ${entry.targetId}` : ""}
+                      </td>
+                      <td className={TD_CLASS}>{entry.worldId ?? "—"}</td>
+                      <td className={TD_CLASS}>
+                        <code>{entry.ipHash ? entry.ipHash.slice(0, 12) : "—"}</code>
+                      </td>
+                      <td className={TD_CLASS}>{formatAuditMetadata(entry.metadataJson, loginReasonLabels)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {total > PAGE_SIZE ? (
+            <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                Seite {page} von {pageCount}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={offset === 0}
+                  onClick={() => setOffset((value) => Math.max(0, value - PAGE_SIZE))}
+                >
+                  Zurück
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={offset + PAGE_SIZE >= total}
+                  onClick={() => setOffset((value) => value + PAGE_SIZE)}
+                >
+                  Weiter
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
     </>
   );
 }

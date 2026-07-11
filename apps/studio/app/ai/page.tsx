@@ -14,7 +14,7 @@ export default async function AiPage() {
     return (
       <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "KI" }]} />}>
         <PageHeader title="KI" summary={access.message} />
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Master-Admin:{" "}
           <Link href="/admin/ai-gateway">KI-Gateway</Link> → User-Freigaben →{" "}
           <code>AI_CHAT_USE</code> vergeben.

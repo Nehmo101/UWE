@@ -65,14 +65,14 @@ export function DndApiBrowseCacheNotice({ query, results }: DndApiBrowseCacheNot
 
   if (!query.trim()) {
     return (
-      <p className="uwe-hint" style={{ marginTop: "0.5rem" }}>
+      <p className="text-sm text-muted-foreground" style={{ marginTop: "0.5rem" }}>
         Suchergebnisse werden lokal zwischengespeichert (24 h) — wiederholte Suchen laden schneller.
       </p>
     );
   }
 
   return (
-    <p className="uwe-hint" style={{ marginTop: "0.5rem" }}>
+    <p className="text-sm text-muted-foreground" style={{ marginTop: "0.5rem" }}>
       {fromCache
         ? "Keine frischen API-Treffer — zuletzt zwischengespeicherte Ergebnisse werden angezeigt."
         : `${results.length} Treffer — lokal zwischengespeichert für schnellere Wiederholung.`}

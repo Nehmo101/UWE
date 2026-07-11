@@ -57,7 +57,7 @@ export default async function ImportCentralPage() {
       breadcrumb={<BreadcrumbTrail items={[{ label: "Import-Zentrale" }]} />}
       contextPanel={
         <SidebarSection title="Hinweise">
-          <ul className="uwe-import-context-list">
+          <ul className="flex list-disc flex-col gap-1 pl-4 text-sm text-muted-foreground">
             <li>
               Unterstützt: KnoteForge JSON → Welt; Markdown/Obsidian/PDF → Life Brain, Capture oder
               DnD-Seite. Obsidian auch als Vault-ZIP oder Ordner-Upload.

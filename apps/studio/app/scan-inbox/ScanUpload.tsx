@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { Button, Input } from "@/src/components/ui";
+
+const FIELD_CLASS = "flex flex-col gap-1.5 text-sm";
 
 export function ScanUpload() {
   const router = useRouter();
@@ -38,25 +41,27 @@ export function ScanUpload() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="uwe-brain-create-form" encType="multipart/form-data">
-      <label className="uwe-capture-field">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3" encType="multipart/form-data">
+      <label className={FIELD_CLASS}>
         Titel (optional)
-        <input name="title" type="text" placeholder="z. B. Stromvertrag 2026" />
+        <Input name="title" type="text" placeholder="z. B. Stromvertrag 2026" />
       </label>
-      <label className="uwe-capture-field">
+      <label className={FIELD_CLASS}>
         Datei (Foto oder PDF)
+        {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
         <input
           name="file"
           type="file"
           accept="image/*,application/pdf"
           capture="environment"
           required
+          className="text-sm text-foreground"
         />
       </label>
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={uploading}>
+      <Button type="submit" disabled={uploading}>
         {uploading ? "Lädt hoch…" : "Hochladen"}
-      </button>
-      {status && <p className="uwe-hint">{status}</p>}
+      </Button>
+      {status && <p className="text-sm text-muted-foreground">{status}</p>}
     </form>
   );
 }

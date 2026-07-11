@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonVariants } from "@/src/components/ui/button";
 import { STUDIO_SESSION_ENTRY_PATH } from "@uwe/auth";
 import { AiGatewayWizard } from "@/components/AiGatewayWizard";
 import { requireOwner } from "@/src/lib/auth";
@@ -23,7 +24,7 @@ export default async function AiGatewayAdminPage() {
         title="KI & RTX Fallback"
         summary="Master-Admin-Wizard: RTX bevorzugen, Cloud-Fallback optional, Privacy-Regeln, Budgets und User-Freigaben."
         actions={
-          <Link href="/system/rtx-connector" className="uwe-v2-btn uwe-v2-btn-ghost">
+          <Link href="/system/rtx-connector" className={buttonVariants({ variant: "ghost" })}>
             RTX Connector
           </Link>
         }

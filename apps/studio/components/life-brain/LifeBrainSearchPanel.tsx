@@ -6,6 +6,7 @@ import {
   PERSONAL_BRAIN_CATEGORIES,
   PERSONAL_BRAIN_CATEGORY_LABELS,
 } from "@uwe/database/personal-brain-constants";
+import { Alert, Badge, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
 
 interface SearchDocumentHit {
   id: string;
@@ -52,6 +53,10 @@ function truncate(text: string, maxLength = 140): string {
 function formatScore(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
+
+/** Native select styling — siehe TODO(design-kit) bei der ersten Verwendung unten. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function LifeBrainSearchPanel() {
   const [query, setQuery] = useState("");
@@ -125,124 +130,143 @@ export function LifeBrainSearchPanel() {
     chunkCount === 0;
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Suche</h2>
-      <div className="uwe-brain-create-form">
-        <label>
-          Stichwort
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="homelab, netzwerk, filament…"
-            autoComplete="off"
-          />
-        </label>
-        <label>
-          Kategorie
-          <select value={category} onChange={(event) => setCategory(event.target.value)}>
-            <option value="">Alle Kategorien</option>
-            {PERSONAL_BRAIN_CATEGORIES.map((entry) => (
-              <option key={entry} value={entry}>
-                {PERSONAL_BRAIN_CATEGORY_LABELS[entry]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {loading && <p className="uwe-dashboard-muted">Suche läuft…</p>}
-      {results?.matchMode && query.trim().length >= 2 && (
-        <p className="uwe-dashboard-muted">
-          Modus:{" "}
-          {results.matchMode === "semantic"
-            ? "Semantisch (RTX/Embeddings)"
-            : results.matchMode === "keyword"
-              ? "Stichwort-Fallback"
-              : "Filter"}
-        </p>
-      )}
-      {error && (
-        <p className="uwe-form-error" role="alert">
-          {error}
-        </p>
-      )}
-      {showEmpty && <p className="uwe-dashboard-muted">Keine Treffer für „{query.trim()}“.</p>}
-      {hasHits && (
-        <div className="uwe-v2-section">
-          {chunkCount > 0 && (
-            <>
-              <h3 className="uwe-section-subtitle">Chunks ({chunkCount})</h3>
-              <div className="uwe-today-card-list">
-                {results.chunks!.map((chunk) => (
-                  <article key={chunk.chunkId} className="uwe-today-card">
-                    <h4>
-                      <Link href={`/life-brain/documents/${chunk.documentId}`}>
-                        {chunk.documentTitle}
-                      </Link>{" "}
-                      <span className="uwe-badge">{formatScore(chunk.score)}</span>
-                    </h4>
-                    <p className="uwe-dashboard-muted">
-                      {chunk.category
-                        ? (PERSONAL_BRAIN_CATEGORY_LABELS[
-                            chunk.category as (typeof PERSONAL_BRAIN_CATEGORIES)[number]
-                          ] ?? chunk.category)
-                        : "Allgemein"}
-                    </p>
-                    {chunk.content && <p>{truncate(chunk.content)}</p>}
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-          {results.documents.length > 0 && (
-            <>
-              <h3 className="uwe-section-subtitle">Dokumente ({results.documents.length})</h3>
-              <div className="uwe-today-card-list">
-                {results.documents.map((document) => (
-                  <article key={document.id} className="uwe-today-card">
-                    <h4>
-                      <Link href={`/life-brain/documents/${document.id}`}>{document.title}</Link>{" "}
-                      {document.score > 0 ? (
-                        <span className="uwe-badge">{formatScore(document.score)}</span>
-                      ) : null}
-                    </h4>
-                    <p className="uwe-dashboard-muted">
-                      {document.category
-                        ? (PERSONAL_BRAIN_CATEGORY_LABELS[
-                            document.category as (typeof PERSONAL_BRAIN_CATEGORIES)[number]
-                          ] ?? document.category)
-                        : "Allgemein"}
-                    </p>
-                    {document.content && <p>{truncate(document.content)}</p>}
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-          {results.facts.length > 0 && (
-            <>
-              <h3 className="uwe-section-subtitle">Fakten ({results.facts.length})</h3>
-              <div className="uwe-today-card-list">
-                {results.facts.map((fact) => (
-                  <article key={fact.id} className="uwe-today-card">
-                    <h4>
-                      <Link href={`/life-brain/facts/${fact.id}`}>{fact.title}</Link>{" "}
-                      {fact.score > 0 ? (
-                        <span className="uwe-badge">{formatScore(fact.score)}</span>
-                      ) : null}
-                    </h4>
-                    <p className="uwe-dashboard-muted">{fact.factType}</p>
-                    {fact.content && <p>{truncate(fact.content)}</p>}
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
+    <Card>
+      <CardHeader>
+        <CardTitle>Suche</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="life-brain-search-query">Stichwort</Label>
+            <Input
+              id="life-brain-search-query"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="homelab, netzwerk, filament…"
+              autoComplete="off"
+            />
+          </div>
+          {/* TODO(design-kit): Controlled Select mit Leerwert-Option ("Alle Kategorien") —
+              Kit-Select (Radix) unterstützt das nicht; native <select> bleibt. */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="life-brain-search-category">Kategorie</Label>
+            <select
+              id="life-brain-search-category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className={NATIVE_SELECT_CLASS}
+            >
+              <option value="">Alle Kategorien</option>
+              {PERSONAL_BRAIN_CATEGORIES.map((entry) => (
+                <option key={entry} value={entry}>
+                  {PERSONAL_BRAIN_CATEGORY_LABELS[entry]}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      )}
-      {query.trim().length === 1 && (
-        <p className="uwe-dashboard-muted">Mindestens 2 Zeichen für die Stichwortsuche.</p>
-      )}
-    </section>
+
+        {loading && <p className="text-sm text-muted-foreground">Suche läuft…</p>}
+        {results?.matchMode && query.trim().length >= 2 && (
+          <p className="text-sm text-muted-foreground">
+            Modus:{" "}
+            {results.matchMode === "semantic"
+              ? "Semantisch (RTX/Embeddings)"
+              : results.matchMode === "keyword"
+                ? "Stichwort-Fallback"
+                : "Filter"}
+          </p>
+        )}
+        {error && (
+          <Alert tone="danger" role="alert">
+            {error}
+          </Alert>
+        )}
+        {showEmpty && (
+          <p className="text-sm text-muted-foreground">Keine Treffer für „{query.trim()}“.</p>
+        )}
+
+        {hasHits && (
+          <div className="flex flex-col gap-6">
+            {chunkCount > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold">Chunks ({chunkCount})</h3>
+                <div className="grid gap-2">
+                  {results.chunks!.map((chunk) => (
+                    <Card key={chunk.chunkId}>
+                      <CardContent className="flex flex-col gap-1 pt-6">
+                        <h4 className="font-medium">
+                          <Link href={`/life-brain/documents/${chunk.documentId}`}>
+                            {chunk.documentTitle}
+                          </Link>{" "}
+                          <Badge>{formatScore(chunk.score)}</Badge>
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {chunk.category
+                            ? (PERSONAL_BRAIN_CATEGORY_LABELS[
+                                chunk.category as (typeof PERSONAL_BRAIN_CATEGORIES)[number]
+                              ] ?? chunk.category)
+                            : "Allgemein"}
+                        </p>
+                        {chunk.content && <p className="text-sm">{truncate(chunk.content)}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            {results.documents.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold">Dokumente ({results.documents.length})</h3>
+                <div className="grid gap-2">
+                  {results.documents.map((document) => (
+                    <Card key={document.id}>
+                      <CardContent className="flex flex-col gap-1 pt-6">
+                        <h4 className="font-medium">
+                          <Link href={`/life-brain/documents/${document.id}`}>{document.title}</Link>{" "}
+                          {document.score > 0 ? <Badge>{formatScore(document.score)}</Badge> : null}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {document.category
+                            ? (PERSONAL_BRAIN_CATEGORY_LABELS[
+                                document.category as (typeof PERSONAL_BRAIN_CATEGORIES)[number]
+                              ] ?? document.category)
+                            : "Allgemein"}
+                        </p>
+                        {document.content && <p className="text-sm">{truncate(document.content)}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            {results.facts.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold">Fakten ({results.facts.length})</h3>
+                <div className="grid gap-2">
+                  {results.facts.map((fact) => (
+                    <Card key={fact.id}>
+                      <CardContent className="flex flex-col gap-1 pt-6">
+                        <h4 className="font-medium">
+                          <Link href={`/life-brain/facts/${fact.id}`}>{fact.title}</Link>{" "}
+                          {fact.score > 0 ? <Badge>{formatScore(fact.score)}</Badge> : null}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{fact.factType}</p>
+                        {fact.content && <p className="text-sm">{truncate(fact.content)}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {query.trim().length === 1 && (
+          <p className="text-sm text-muted-foreground">Mindestens 2 Zeichen für die Stichwortsuche.</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

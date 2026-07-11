@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
 
 interface ApiTokenView {
   id: string;
@@ -21,6 +22,14 @@ interface ScopeOption {
 }
 
 type ExpiryPreset = "30" | "90" | "365" | "never";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+
+/** TODO(design-kit): Native select bleibt — kontrollierte Preset-Auswahl,
+    siehe gleiches Muster in AuditLogWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 function resolveExpiresAt(preset: ExpiryPreset): string | null {
   if (preset === "never") return null;
@@ -124,105 +133,140 @@ export function ApiTokenWorkspace() {
 
   return (
     <>
-      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
-        <h2>Neuen API-Token erstellen</h2>
-        <label>
-          Name
-          <input type="text" value={name} onChange={(event) => setName(event.target.value)} placeholder="z.B. n8n Integration" />
-        </label>
-        <label>
-          Ablauf
-          <select
-            value={expiryPreset}
-            onChange={(event) => setExpiryPreset(event.target.value as ExpiryPreset)}
-          >
-            <option value="30">30 Tage</option>
-            <option value="90">90 Tage</option>
-            <option value="365">1 Jahr</option>
-            <option value="never">Kein Ablauf</option>
-          </select>
-        </label>
-        <fieldset>
-          <legend>Scopes (eng halten)</legend>
-          <div className="uwe-form-grid">
-            {scopes.map((scope) => (
-              <label key={scope.value} className="uwe-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={selectedScopes.includes(scope.value)}
-                  onChange={() => toggleScope(scope.value)}
-                />
-                {scope.label}
-              </label>
-            ))}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Neuen API-Token erstellen</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="api-token-name">Name</Label>
+            <Input
+              id="api-token-name"
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="z.B. n8n Integration"
+            />
           </div>
-        </fieldset>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void createToken()}>
-          Token erstellen
-        </button>
-        {createdToken && (
-          <div className="uwe-notice uwe-notice-warn" style={{ marginTop: "1rem" }}>
-            <p>
-              <strong>Token (nur einmal sichtbar):</strong> <code>{createdToken}</code>
-            </p>
-            <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => void copyCreatedToken()}>
-              {copied ? "Kopiert" : "In Zwischenablage kopieren"}
-            </button>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="api-token-expiry">Ablauf</Label>
+            <select
+              id="api-token-expiry"
+              value={expiryPreset}
+              onChange={(event) => setExpiryPreset(event.target.value as ExpiryPreset)}
+              className={NATIVE_SELECT_CLASS}
+            >
+              <option value="30">30 Tage</option>
+              <option value="90">90 Tage</option>
+              <option value="365">1 Jahr</option>
+              <option value="never">Kein Ablauf</option>
+            </select>
           </div>
-        )}
-      </section>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-foreground">Scopes (eng halten)</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {scopes.map((scope) => (
+                <label key={scope.value} className="flex items-center gap-2 text-sm text-foreground">
+                  {/* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */}
+                  <input
+                    type="checkbox"
+                    checked={selectedScopes.includes(scope.value)}
+                    onChange={() => toggleScope(scope.value)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  {scope.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <Button type="button" onClick={() => void createToken()} className="self-start">
+            Token erstellen
+          </Button>
+          {createdToken && (
+            <Alert tone="warning">
+              <p>
+                <strong>Token (nur einmal sichtbar):</strong> <code>{createdToken}</code>
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="mt-2"
+                onClick={() => void copyCreatedToken()}
+              >
+                {copied ? "Kopiert" : "In Zwischenablage kopieren"}
+              </Button>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
-      {error && <p className="uwe-notice uwe-notice-error">{error}</p>}
+      {error && (
+        <Alert tone="danger" role="alert" className="mb-6">
+          {error}
+        </Alert>
+      )}
 
-      <section className="uwe-v2-card">
-        <h2>Aktive Tokens ({tokens.length})</h2>
-        {loading ? (
-          <p className="uwe-dashboard-muted">Lade…</p>
-        ) : tokens.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine API-Tokens vorhanden.</p>
-        ) : (
-          <table className="uwe-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Prefix</th>
-                <th>Scopes</th>
-                <th>Ablauf</th>
-                <th>Letzte Nutzung</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {tokens.map((token) => {
-                const expired =
-                  token.expiresAt != null && new Date(token.expiresAt).getTime() <= Date.now();
-                return (
-                  <tr key={token.id}>
-                    <td>{token.name}</td>
-                    <td>
-                      <code>{token.tokenPrefix}…</code>
-                    </td>
-                    <td>{token.scopes.join(", ")}</td>
-                    <td>{tokenExpiryLabel(token)}</td>
-                    <td>{token.lastUsedAt ? formatStudioDate(token.lastUsedAt) : "—"}</td>
-                    <td>
-                      {!token.isActive ? "widerrufen" : expired ? "abgelaufen" : "aktiv"}
-                    </td>
-                    <td>
-                      {token.isActive && (
-                        <button type="button" className="uwe-v2-btn uwe-v2-btn-ghost" onClick={() => void revokeToken(token.id)}>
-                          Widerrufen
-                        </button>
-                      )}
-                    </td>
+      <Card>
+        <CardHeader>
+          <CardTitle>Aktive Tokens ({tokens.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Lade…</p>
+          ) : tokens.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Keine API-Tokens vorhanden.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Name</th>
+                    <th className={TH_CLASS}>Prefix</th>
+                    <th className={TH_CLASS}>Scopes</th>
+                    <th className={TH_CLASS}>Ablauf</th>
+                    <th className={TH_CLASS}>Letzte Nutzung</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS} />
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {tokens.map((token) => {
+                    const expired =
+                      token.expiresAt != null && new Date(token.expiresAt).getTime() <= Date.now();
+                    return (
+                      <tr key={token.id}>
+                        <td className={TD_CLASS}>{token.name}</td>
+                        <td className={TD_CLASS}>
+                          <code>{token.tokenPrefix}…</code>
+                        </td>
+                        <td className={TD_CLASS}>{token.scopes.join(", ")}</td>
+                        <td className={TD_CLASS}>{tokenExpiryLabel(token)}</td>
+                        <td className={TD_CLASS}>{token.lastUsedAt ? formatStudioDate(token.lastUsedAt) : "—"}</td>
+                        <td className={TD_CLASS}>
+                          {!token.isActive ? "widerrufen" : expired ? "abgelaufen" : "aktiv"}
+                        </td>
+                        <td className={TD_CLASS}>
+                          {token.isActive && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void revokeToken(token.id)}
+                            >
+                              Widerrufen
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }

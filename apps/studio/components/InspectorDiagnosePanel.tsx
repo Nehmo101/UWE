@@ -6,6 +6,7 @@ import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { waitForJob } from "@/src/lib/poll-job";
 import { JobProgressBar } from "./JobProgressBar";
+import { Button, buttonVariants, Card, CardContent, CardHeader, CardTitle, NavIcon } from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -80,36 +81,36 @@ export function InspectorDiagnosePanel({ worldSlug }: Props) {
   }
 
   return (
-    <section className="uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Async-Diagnose</h2>
-      <p className="uwe-dashboard-muted">
-        Startet eine Hintergrund-Kanonprüfung und aktualisiert die Befunde, wenn der Job
-        fertig ist.
-      </p>
-      <div className="uwe-form-actions">
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          disabled={busy}
-          onClick={() => void runDiagnose()}
-        >
-          {busy ? "Prüft…" : "Vollständige Diagnose starten"}
-        </button>
-        {jobId ? (
-          <Link href="/jobs" className="uwe-v2-btn">
-            Job {jobId.slice(0, 8)}…
-          </Link>
+    <Card>
+      <CardHeader>
+        <CardTitle>Async-Diagnose</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          Startet eine Hintergrund-Kanonprüfung und aktualisiert die Befunde, wenn der Job
+          fertig ist.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" disabled={busy} onClick={() => void runDiagnose()}>
+            {busy ? "Prüft…" : "Vollständige Diagnose starten"}
+          </Button>
+          {jobId ? (
+            <Link href="/jobs" className={buttonVariants()}>
+              Job {jobId.slice(0, 8)}…
+            </Link>
+          ) : null}
+        </div>
+        {busy ? (
+          <JobProgressBar progress={progress ?? 10} label={progressLabel ?? "Welt analysieren…"} />
         ) : null}
-      </div>
-      {busy ? (
-        <JobProgressBar
-          progress={progress ?? 10}
-          label={progressLabel ?? "Welt analysieren…"}
-          className="uwe-jobs-progress"
-        />
-      ) : null}
-      {status ? <p className="uwe-hint">{status}</p> : null}
-      {summary ? <p className="uwe-inspector-ok">{summary}</p> : null}
-    </section>
+        {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+        {summary ? (
+          <p role="status" className="flex items-center gap-2 text-sm text-success">
+            <NavIcon name="check" width={16} height={16} />
+            <span>{summary}</span>
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

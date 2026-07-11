@@ -12,6 +12,20 @@ import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { saveOneShotDraftAction } from "@/app/worlds/[worldSlug]/one-shot-actions";
 import { getInferenceStatus } from "@uwe/ai-brain";
 import { OneShotQuickAssistant } from "@/components/OneShotQuickAssistant";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -21,6 +35,9 @@ interface Props {
 function isTone(value: string | undefined): value is OneShotTone {
   return !!value && (ONE_SHOT_TONES as string[]).includes(value);
 }
+
+const NATIVE_SELECT_CLASS =
+  "flex h-9 w-full min-w-40 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default async function OneShotPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
@@ -71,101 +88,128 @@ export default async function OneShotPage({ params, searchParams }: Props) {
         rtxEnabled={inference.enabled}
       />
 
-      <section className="uwe-v2-section">
-        <form method="get" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "flex-end" }}>
-            <label>
-              Ort
-              <select name="location" defaultValue={location ?? ""}>
-                <option value="">— wählen —</option>
-                {locations.map((loc) => (
-                  <option key={loc.title} value={loc.title}>
-                    {loc.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Ton
-              <select name="tone" defaultValue={tone ?? "mystery"}>
-                {ONE_SHOT_TONES.map((t) => (
-                  <option key={t} value={t}>
-                    {ONE_SHOT_TONE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Generieren
-            </button>
-          </div>
-          {npcs.length > 0 ? (
-            <fieldset style={{ border: "none", padding: 0 }}>
-              <legend>NPCs einbeziehen</legend>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                {npcs.slice(0, 16).map((n) => (
-                  <label key={n.title} style={{ display: "inline-flex", gap: "0.25rem" }}>
-                    <input type="checkbox" name="npc" value={n.title} defaultChecked={selectedNpcs.includes(n.title)} />
-                    {n.title}
-                  </label>
-                ))}
+      <Card>
+        <CardHeader>
+          <CardTitle>Generator</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form method="get" className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="one-shot-location">Ort</Label>
+                {/* TODO(design-kit): natives Select statt Kit-Select — "— wählen —"
+                    braucht einen Leerwert, den Radix Select nicht unterstützt. */}
+                <select
+                  id="one-shot-location"
+                  name="location"
+                  defaultValue={location ?? ""}
+                  className={NATIVE_SELECT_CLASS}
+                >
+                  <option value="">— wählen —</option>
+                  {locations.map((loc) => (
+                    <option key={loc.title} value={loc.title}>
+                      {loc.title}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </fieldset>
-          ) : null}
-        </form>
-      </section>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="one-shot-tone">Ton</Label>
+                <Select name="tone" defaultValue={tone ?? "mystery"}>
+                  <SelectTrigger id="one-shot-tone" className="min-w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ONE_SHOT_TONES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {ONE_SHOT_TONE_LABELS[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit">Generieren</Button>
+            </div>
+            {npcs.length > 0 ? (
+              <fieldset className="border-0 p-0">
+                <legend className="text-sm font-medium text-foreground">NPCs einbeziehen</legend>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {npcs.slice(0, 16).map((n) => (
+                    <label key={n.title} className="inline-flex items-center gap-1.5 text-sm text-foreground">
+                      <input type="checkbox" name="npc" value={n.title} defaultChecked={selectedNpcs.includes(n.title)} />
+                      {n.title}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
+          </form>
+        </CardContent>
+      </Card>
 
       {outline ? (
         <>
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">{outline.title}</h2>
-            <p className="uwe-dashboard-muted">
-              {ONE_SHOT_TONE_LABELS[outline.tone]} — {outline.atmosphere}
-            </p>
-            <h3>Spieler-Brief</h3>
-            <p>{outline.playerBrief}</p>
-            <h3>Szenen</h3>
-            <ol>
-              {outline.scenes.map((scene, index) => (
-                <li key={index}>{scene}</li>
-              ))}
-            </ol>
-            <h3>DM-Geheimnisse</h3>
-            <ul>
-              {outline.dmSecrets.map((secret, index) => (
-                <li key={index}>{secret}</li>
-              ))}
-            </ul>
-            <h3>Kanon-Warnungen</h3>
-            <ul>
-              {outline.canonWarnings.map((warning, index) => (
-                <li key={index}>{warning}</li>
-              ))}
-            </ul>
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>{outline.title}</CardTitle>
+              <CardDescription>
+                {ONE_SHOT_TONE_LABELS[outline.tone]} — {outline.atmosphere}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Spieler-Brief</h3>
+                <p className="text-sm text-muted-foreground">{outline.playerBrief}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Szenen</h3>
+                <ol className="list-decimal pl-5 text-sm text-muted-foreground">
+                  {outline.scenes.map((scene, index) => (
+                    <li key={index}>{scene}</li>
+                  ))}
+                </ol>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">DM-Geheimnisse</h3>
+                <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                  {outline.dmSecrets.map((secret, index) => (
+                    <li key={index}>{secret}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Kanon-Warnungen</h3>
+                <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                  {outline.canonWarnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
 
-          <section className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">Markdown</h2>
-            <pre style={{ whiteSpace: "pre-wrap", padding: "0.75rem", borderRadius: "6px", background: "var(--uwe-code-bg, rgba(0,0,0,0.05))", overflowX: "auto" }}>
-              {serializeOneShotOutline(outline)}
-            </pre>
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Markdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="overflow-x-auto whitespace-pre-wrap rounded-[var(--radius)] bg-muted p-3 text-sm">
+                {serializeOneShotOutline(outline)}
+              </pre>
+            </CardContent>
+          </Card>
 
-          <section className="uwe-v2-section">
-            <form action={saveOneShotDraftAction}>
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="worldId" value={world.id} />
-              <input type="hidden" name="worldName" value={world.name} />
-              <input type="hidden" name="location" value={location} />
-              <input type="hidden" name="tone" value={tone} />
-              {selectedNpcs.map((name) => (
-                <input key={name} type="hidden" name="npc" value={name} />
-              ))}
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                Als Quest-Entwurf speichern (Draft)
-              </button>
-            </form>
-          </section>
+          <form action={saveOneShotDraftAction} className="flex flex-wrap items-center gap-3">
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="worldId" value={world.id} />
+            <input type="hidden" name="worldName" value={world.name} />
+            <input type="hidden" name="location" value={location} />
+            <input type="hidden" name="tone" value={tone} />
+            {selectedNpcs.map((name) => (
+              <input key={name} type="hidden" name="npc" value={name} />
+            ))}
+            <Button type="submit">Als Quest-Entwurf speichern (Draft)</Button>
+          </form>
         </>
       ) : null}
     </WorldShell>

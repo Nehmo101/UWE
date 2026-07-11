@@ -30,10 +30,10 @@ const POLL_INTERVAL_MS = 10_000;
 const HISTORY_LENGTH = 30;
 
 const DOT_CLASS: Record<HostSeverity, string> = {
-  ok: "uwe-dot-success",
-  warn: "uwe-dot-warning",
-  error: "uwe-dot-danger",
-  unknown: "",
+  ok: "bg-success",
+  warn: "bg-warning",
+  error: "bg-destructive",
+  unknown: "bg-muted-foreground/40",
 };
 
 const SEVERITY_LABEL: Record<HostSeverity, string> = {
@@ -44,7 +44,7 @@ const SEVERITY_LABEL: Record<HostSeverity, string> = {
 };
 
 function SeverityDot({ severity }: { severity: HostSeverity }) {
-  return <span className={`uwe-dot ${DOT_CLASS[severity]}`} aria-hidden />;
+  return <span className={`inline-block size-2 flex-none rounded-full ${DOT_CLASS[severity]}`} aria-hidden />;
 }
 
 /** A labelled row with a leading severity dot — the Command Center's list idiom. */
@@ -91,13 +91,13 @@ function StatCard({
   sparklineMax?: number;
 }) {
   return (
-    <div className="uwe-v2-card uwe-v2-stat-card">
+    <div className="rounded-[var(--radius)] border border-border bg-card p-3 text-card-foreground shadow-sm">
       <div className="flex items-center gap-2">
         {severity ? <SeverityDot severity={severity} /> : null}
-        <span className="uwe-v2-stat-label">{label}</span>
+        <span className="block text-sm text-muted-foreground">{label}</span>
       </div>
-      <span className="uwe-v2-stat-value">{value}</span>
-      {hint ? <span className="uwe-v2-stat-label">{hint}</span> : null}
+      <span className="block text-xl font-bold leading-tight">{value}</span>
+      {hint ? <span className="mt-1 block text-sm text-muted-foreground">{hint}</span> : null}
       {sparkline ? <Sparkline values={sparkline} max={sparklineMax} /> : null}
     </div>
   );
@@ -121,7 +121,7 @@ function HostMetricsBlock({
         <CardTitle>Host-Metriken</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="uwe-v2-stat-grid">
+        <div className="mb-2 grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
           <StatCard label="Host-Uptime" value={formatDuration(m.hostUptimeSeconds)} hint={`Boot ${formatClock(m.hostBootTime)}`} />
           <StatCard label="UWE-Uptime" value={formatDuration(m.appUptimeSeconds)} hint={`Start ${formatClock(m.appStartTime)}`} />
           <StatCard
@@ -154,7 +154,7 @@ function HostMetricsBlock({
           />
         </div>
 
-        <div className="uwe-v2-stat-grid">
+        <div className="mb-2 grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
           {disks.map((disk: DiskUsage) => (
             <StatCard
               key={disk.path}
@@ -270,7 +270,7 @@ function OperationsBlock({ operations }: { operations: CommandCenterOperations }
           </Alert>
         )}
 
-        <div className="uwe-v2-stat-grid">
+        <div className="mb-2 grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-3">
           <StatCard label="Health-Ampel" value={SEVERITY_LABEL[healthSeverity]} severity={healthSeverity} />
           <StatCard label="DB-Größe" value={health.dbSizeLabel} />
           <StatCard label="Uploads" value={health.uploads.totalLabel} hint={`${health.uploads.count} Dateien`} />

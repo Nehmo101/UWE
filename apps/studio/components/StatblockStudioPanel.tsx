@@ -19,6 +19,18 @@ import {
   createStatblockLabelAction,
   upsertStatblockAction,
 } from "@/app/worlds/[worldSlug]/statblock-studio-actions";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -52,6 +64,10 @@ const ABILITY_LABELS: Record<StatblockAbilityKey, string> = {
   wis: "WIS",
   cha: "CHA",
 };
+
+/** TODO(design-kit): Controlled Select ohne Leerwert (Regelwerk) — Kit-Select folgt später. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 function parseInitial(initialJson: string) {
   try {
@@ -191,280 +207,199 @@ export function StatblockStudioPanel({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Statblock Studio</h2>
-      <p className="uwe-hint">
-        Strukturierter Statblock — Export nach Homebrewery, 5e.tools-JSON oder Roh-JSON.
-        SRD/Open5e-Attribution bei externen Quellen beachten.
-      </p>
-
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-        <button
-          type="button"
-          className={mode === "form" ? "uwe-v2-btn uwe-v2-btn-primary" : "uwe-v2-btn uwe-v2-btn-secondary"}
-          onClick={() => switchMode("form")}
-        >
-          Formular
-        </button>
-        <button
-          type="button"
-          className={mode === "json" ? "uwe-v2-btn uwe-v2-btn-primary" : "uwe-v2-btn uwe-v2-btn-secondary"}
-          onClick={() => switchMode("json")}
-        >
-          JSON
-        </button>
-        <label style={{ marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          Regelwerk
-          <select value={edition} onChange={(event) => setEdition(event.target.value)}>
-            <option value="dnd5e_2024">D&amp;D 5e (2024)</option>
-            <option value="dnd5e_2014">D&amp;D 5e (2014)</option>
-          </select>
-        </label>
-      </div>
-
-      {mode === "form" ? (
-        <>
-          <div className="uwe-form-grid">
-            <label>
-              Name
-              <input
-                type="text"
-                value={draft.name}
-                onChange={(event) => updateDraft({ name: event.target.value })}
-                placeholder="z. B. Goblin"
-              />
-            </label>
-            <label>
-              Größe
-              <input
-                type="text"
-                value={draft.size}
-                onChange={(event) => updateDraft({ size: event.target.value })}
-                placeholder="z. B. Small"
-              />
-            </label>
-            <label>
-              Typ
-              <input
-                type="text"
-                value={draft.type}
-                onChange={(event) => updateDraft({ type: event.target.value })}
-                placeholder="z. B. humanoid"
-              />
-            </label>
-            <label>
-              Gesinnung
-              <input
-                type="text"
-                value={draft.alignment}
-                onChange={(event) => updateDraft({ alignment: event.target.value })}
-                placeholder="z. B. neutral evil"
-              />
-            </label>
-            <label>
-              Rüstungsklasse (AC)
-              <input
-                type="text"
-                value={draft.ac}
-                onChange={(event) => updateDraft({ ac: event.target.value })}
-                placeholder="z. B. 15 oder 15 (natural armor)"
-              />
-            </label>
-            <label>
-              Trefferpunkte (HP)
-              <input
-                type="text"
-                value={draft.hp}
-                onChange={(event) => updateDraft({ hp: event.target.value })}
-                placeholder="z. B. 22"
-              />
-            </label>
-            <label>
-              Trefferwürfel
-              <input
-                type="text"
-                value={draft.hitDice}
-                onChange={(event) => updateDraft({ hitDice: event.target.value })}
-                placeholder="z. B. 5d8"
-              />
-            </label>
-            <label>
-              Geschwindigkeit
-              <input
-                type="text"
-                value={draft.speed}
-                onChange={(event) => updateDraft({ speed: event.target.value })}
-                placeholder="z. B. 30 ft., fly 60 ft."
-              />
-            </label>
-            <label>
-              Herausforderungsgrad (CR)
-              <input
-                type="text"
-                value={draft.cr}
-                onChange={(event) => updateDraft({ cr: event.target.value })}
-                placeholder="z. B. 1/4"
-              />
-            </label>
-          </div>
-
-          <fieldset className="uwe-fieldset">
-            <legend>Attributswerte</legend>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
-                gap: "0.75rem",
-              }}
+    <Card>
+      <CardHeader>
+        <CardTitle>Statblock Studio</CardTitle>
+        <CardDescription>
+          Strukturierter Statblock — Export nach Homebrewery, 5e.tools-JSON oder Roh-JSON.
+          SRD/Open5e-Attribution bei externen Quellen beachten.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={mode === "form" ? "default" : "secondary"}
+            onClick={() => switchMode("form")}
+          >
+            Formular
+          </Button>
+          <Button
+            type="button"
+            variant={mode === "json" ? "default" : "secondary"}
+            onClick={() => switchMode("json")}
+          >
+            JSON
+          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Label htmlFor="statblock-edition">Regelwerk</Label>
+            <select
+              id="statblock-edition"
+              value={edition}
+              onChange={(event) => setEdition(event.target.value)}
+              className={NATIVE_SELECT_CLASS}
             >
-              {STATBLOCK_ABILITY_KEYS.map((key) => (
-                <label key={key}>
-                  {ABILITY_LABELS[key]}
-                  <input
-                    type="number"
-                    min={0}
-                    max={40}
-                    value={draft.abilities[key]}
-                    onChange={(event) => updateAbility(key, event.target.value)}
-                  />
-                  <small className="uwe-field-hint">
-                    Mod {formatAbilityModifier(draft.abilities[key])}
-                  </small>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="uwe-form-grid">
-            <label>
-              Rettungswürfe
-              <input
-                type="text"
-                value={draft.saves}
-                onChange={(event) => updateDraft({ saves: event.target.value })}
-                placeholder="z. B. Dex +4, Con +2"
-              />
-            </label>
-            <label>
-              Fertigkeiten
-              <input
-                type="text"
-                value={draft.skills}
-                onChange={(event) => updateDraft({ skills: event.target.value })}
-                placeholder="z. B. Stealth +6, Perception +3"
-              />
-            </label>
-            <label>
-              Sinne
-              <input
-                type="text"
-                value={draft.senses}
-                onChange={(event) => updateDraft({ senses: event.target.value })}
-                placeholder="z. B. darkvision 60 ft., passive Perception 9"
-              />
-            </label>
-            <label>
-              Sprachen
-              <input
-                type="text"
-                value={draft.languages}
-                onChange={(event) => updateDraft({ languages: event.target.value })}
-                placeholder="z. B. Common, Goblin"
-              />
-            </label>
+              <option value="dnd5e_2024">D&amp;D 5e (2024)</option>
+              <option value="dnd5e_2014">D&amp;D 5e (2014)</option>
+            </select>
           </div>
+        </div>
 
-          {ENTRY_SECTIONS.map((section) => (
-            <EntrySectionEditor
-              key={section.key}
-              config={section}
-              entries={draft[section.key]}
-              onChange={(entries) => updateEntries(section.key, entries)}
-            />
-          ))}
-
-          {extrasCount > 0 && (
-            <p className="uwe-field-hint">
-              {extrasCount} zusätzliche{extrasCount === 1 ? "s" : ""} JSON-Feld
-              {extrasCount === 1 ? "" : "er"} (z. B. aus Import) bleib
-              {extrasCount === 1 ? "t" : "en"} beim Speichern erhalten — bearbeitbar im
-              JSON-Modus.
-            </p>
-          )}
-
-          {formErrors.length > 0 && (
-            <ul className="uwe-form-error" role="alert" style={{ margin: 0, paddingLeft: "1.25rem" }}>
-              {formErrors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          )}
-        </>
-      ) : (
-        <>
-          <label>
-            Statblock JSON
-            <textarea
-              rows={16}
-              value={jsonText}
-              onChange={(event) => setJsonText(event.target.value)}
-              spellCheck={false}
-            />
-          </label>
-          {jsonParsed == null && (
-            <p className="uwe-form-error" role="alert">
-              Ungültiges JSON — Speichern und Export sind deaktiviert.
-            </p>
-          )}
-        </>
-      )}
-
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          disabled={!canSave || busy}
-          onClick={() => void saveStatblock()}
-        >
-          {busy ? "Speichere…" : "Statblock speichern"}
-        </button>
-        {exports && (
+        {mode === "form" ? (
           <>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary"
-              onClick={() => void copyExport("JSON", exports.json)}
-            >
-              JSON kopieren
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary"
-              onClick={() => void copyExport("Homebrewery", exports.homebrewery)}
-            >
-              Homebrewery kopieren
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary"
-              onClick={() => void copyExport("5e.tools JSON", exports.fiveTools)}
-            >
-              5e.tools JSON kopieren
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary"
-              disabled={busy}
-              onClick={() => void createStatblockLabel()}
-            >
-              {busy ? "Erstelle Label…" : "6×4-Label erstellen"}
-            </button>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-name">Name</Label>
+                <Input id="statblock-name" type="text" value={draft.name} onChange={(event) => updateDraft({ name: event.target.value })} placeholder="z. B. Goblin" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-size">Größe</Label>
+                <Input id="statblock-size" type="text" value={draft.size} onChange={(event) => updateDraft({ size: event.target.value })} placeholder="z. B. Small" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-type">Typ</Label>
+                <Input id="statblock-type" type="text" value={draft.type} onChange={(event) => updateDraft({ type: event.target.value })} placeholder="z. B. humanoid" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-alignment">Gesinnung</Label>
+                <Input id="statblock-alignment" type="text" value={draft.alignment} onChange={(event) => updateDraft({ alignment: event.target.value })} placeholder="z. B. neutral evil" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-ac">Rüstungsklasse (AC)</Label>
+                <Input id="statblock-ac" type="text" value={draft.ac} onChange={(event) => updateDraft({ ac: event.target.value })} placeholder="z. B. 15 oder 15 (natural armor)" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-hp">Trefferpunkte (HP)</Label>
+                <Input id="statblock-hp" type="text" value={draft.hp} onChange={(event) => updateDraft({ hp: event.target.value })} placeholder="z. B. 22" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-hit-dice">Trefferwürfel</Label>
+                <Input id="statblock-hit-dice" type="text" value={draft.hitDice} onChange={(event) => updateDraft({ hitDice: event.target.value })} placeholder="z. B. 5d8" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-speed">Geschwindigkeit</Label>
+                <Input id="statblock-speed" type="text" value={draft.speed} onChange={(event) => updateDraft({ speed: event.target.value })} placeholder="z. B. 30 ft., fly 60 ft." />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-cr">Herausforderungsgrad (CR)</Label>
+                <Input id="statblock-cr" type="text" value={draft.cr} onChange={(event) => updateDraft({ cr: event.target.value })} placeholder="z. B. 1/4" />
+              </div>
+            </div>
+
+            <fieldset className="rounded-[var(--radius)] border border-border p-4">
+              <legend className="px-1 text-sm font-medium">Attributswerte</legend>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(90px,1fr))] gap-3">
+                {STATBLOCK_ABILITY_KEYS.map((key) => (
+                  <div key={key} className="flex flex-col gap-1">
+                    <Label htmlFor={`statblock-ability-${key}`}>{ABILITY_LABELS[key]}</Label>
+                    <Input
+                      id={`statblock-ability-${key}`}
+                      type="number"
+                      min={0}
+                      max={40}
+                      value={draft.abilities[key]}
+                      onChange={(event) => updateAbility(key, event.target.value)}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Mod {formatAbilityModifier(draft.abilities[key])}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-saves">Rettungswürfe</Label>
+                <Input id="statblock-saves" type="text" value={draft.saves} onChange={(event) => updateDraft({ saves: event.target.value })} placeholder="z. B. Dex +4, Con +2" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-skills">Fertigkeiten</Label>
+                <Input id="statblock-skills" type="text" value={draft.skills} onChange={(event) => updateDraft({ skills: event.target.value })} placeholder="z. B. Stealth +6, Perception +3" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-senses">Sinne</Label>
+                <Input id="statblock-senses" type="text" value={draft.senses} onChange={(event) => updateDraft({ senses: event.target.value })} placeholder="z. B. darkvision 60 ft., passive Perception 9" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="statblock-languages">Sprachen</Label>
+                <Input id="statblock-languages" type="text" value={draft.languages} onChange={(event) => updateDraft({ languages: event.target.value })} placeholder="z. B. Common, Goblin" />
+              </div>
+            </div>
+
+            {ENTRY_SECTIONS.map((section) => (
+              <EntrySectionEditor
+                key={section.key}
+                config={section}
+                entries={draft[section.key]}
+                onChange={(entries) => updateEntries(section.key, entries)}
+              />
+            ))}
+
+            {extrasCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {extrasCount} zusätzliche{extrasCount === 1 ? "s" : ""} JSON-Feld
+                {extrasCount === 1 ? "" : "er"} (z. B. aus Import) bleib
+                {extrasCount === 1 ? "t" : "en"} beim Speichern erhalten — bearbeitbar im
+                JSON-Modus.
+              </p>
+            )}
+
+            {formErrors.length > 0 && (
+              <Alert tone="danger" role="alert">
+                <ul className="list-disc pl-5">
+                  {formErrors.map((error) => (
+                    <li key={error}>{error}</li>
+                  ))}
+                </ul>
+              </Alert>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="statblock-json">Statblock JSON</Label>
+              <Textarea
+                id="statblock-json"
+                rows={16}
+                value={jsonText}
+                onChange={(event) => setJsonText(event.target.value)}
+                spellCheck={false}
+              />
+            </div>
+            {jsonParsed == null && (
+              <Alert tone="danger" role="alert">
+                Ungültiges JSON — Speichern und Export sind deaktiviert.
+              </Alert>
+            )}
           </>
         )}
-      </div>
 
-      {status && <p className="uwe-hint">{status}</p>}
-    </section>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" disabled={!canSave || busy} onClick={() => void saveStatblock()}>
+            {busy ? "Speichere…" : "Statblock speichern"}
+          </Button>
+          {exports && (
+            <>
+              <Button type="button" variant="secondary" onClick={() => void copyExport("JSON", exports.json)}>
+                JSON kopieren
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => void copyExport("Homebrewery", exports.homebrewery)}>
+                Homebrewery kopieren
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => void copyExport("5e.tools JSON", exports.fiveTools)}>
+                5e.tools JSON kopieren
+              </Button>
+              <Button type="button" variant="secondary" disabled={busy} onClick={() => void createStatblockLabel()}>
+                {busy ? "Erstelle Label…" : "6×4-Label erstellen"}
+              </Button>
+            </>
+          )}
+        </div>
+
+        {status && <p className="text-sm text-muted-foreground">{status}</p>}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -486,51 +421,47 @@ function EntrySectionEditor({
   }
 
   return (
-    <fieldset className="uwe-fieldset">
-      <legend>{config.title}</legend>
-      {entries.length === 0 && (
-        <p className="uwe-field-hint" style={{ margin: 0 }}>
-          Keine Einträge.
-        </p>
-      )}
-      {entries.map((entry, index) => (
-        <div
-          key={index}
-          style={{ display: "grid", gap: "0.5rem", gridTemplateColumns: "1fr auto" }}
-        >
-          <input
-            type="text"
-            value={entry.name}
-            onChange={(event) => updateEntry(index, { name: event.target.value })}
-            placeholder="Name"
-            aria-label={`${config.title} — Name`}
-          />
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-secondary"
-            onClick={() => removeEntry(index)}
-            aria-label={`${config.title} — Eintrag entfernen`}
-          >
-            Entfernen
-          </button>
-          <textarea
-            rows={2}
-            value={entry.desc}
-            onChange={(event) => updateEntry(index, { desc: event.target.value })}
-            placeholder="Beschreibung"
-            aria-label={`${config.title} — Beschreibung`}
-            style={{ gridColumn: "1 / -1" }}
-          />
-        </div>
-      ))}
-      <div>
-        <button
+    <fieldset className="rounded-[var(--radius)] border border-border p-4">
+      <legend className="px-1 text-sm font-medium">{config.title}</legend>
+      <div className="flex flex-col gap-3">
+        {entries.length === 0 && (
+          <p className="text-xs text-muted-foreground">Keine Einträge.</p>
+        )}
+        {entries.map((entry, index) => (
+          <div key={index} className="grid grid-cols-[1fr_auto] gap-2">
+            <Input
+              type="text"
+              value={entry.name}
+              onChange={(event) => updateEntry(index, { name: event.target.value })}
+              placeholder="Name"
+              aria-label={`${config.title} — Name`}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => removeEntry(index)}
+              aria-label={`${config.title} — Eintrag entfernen`}
+            >
+              Entfernen
+            </Button>
+            <Textarea
+              rows={2}
+              value={entry.desc}
+              onChange={(event) => updateEntry(index, { desc: event.target.value })}
+              placeholder="Beschreibung"
+              aria-label={`${config.title} — Beschreibung`}
+              className="col-span-2"
+            />
+          </div>
+        ))}
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-secondary"
+          variant="secondary"
           onClick={() => onChange([...entries, { name: "", desc: "" }])}
+          className="self-start"
         >
           {config.addLabel}
-        </button>
+        </Button>
       </div>
     </fieldset>
   );

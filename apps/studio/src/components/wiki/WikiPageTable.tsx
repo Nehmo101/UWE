@@ -34,7 +34,7 @@ export interface WikiPageRow {
   aiReviewedAt?: string | null;
 }
 
-const WIKI_TABLE_COLUMN_VISIBILITY_KEY = "uwe-wiki-page-table-columns";
+const WIKI_TABLE_COLUMN_VISIBILITY_KEY = "grid gap-4 md:grid-cols-2";
 
 const DATE_FMT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 

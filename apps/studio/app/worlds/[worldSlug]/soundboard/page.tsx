@@ -15,7 +15,6 @@ import {
 import {
   createSoundboardButtonAction,
   deleteSoundboardButtonAction,
-  linkPageToSoundboardButtonAction,
   updateSoundboardButtonAction,
 } from "@/app/soundboard-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
@@ -25,6 +24,7 @@ import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { SoundboardButtonForm } from "./SoundboardButtonForm";
 import { SpotifyConnectionPanel } from "./SpotifyConnectionPanel";
 import { SoundboardWorkspace, type SoundboardButtonView } from "./SoundboardWorkspace";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -108,7 +108,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
             items={campaignNavItems(`/worlds/${worldSlug}/soundboard`, campaigns, campaignSlug)}
           />
           <SidebarSection title="Kontext">
-            <p className="uwe-hint" style={{ margin: 0 }}>
+            <p className="text-sm text-muted-foreground">
               {buttons.length} Buttons
               {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
             </p>
@@ -124,77 +124,52 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
             : "Ambient, Musik und Effekte pro Welt/Kampagne — lokale Dateien, YouTube und Spotify (Web API)."
         }
       />
-      <SpotifyConnectionPanel worldSlug={worldSlug} />
 
-      <section className="uwe-panel">
-        <h2>RTX-Audioausgabe</h2>
-        {rtxAudioOnline ? (
-          <p className="uwe-flash uwe-flash-success">
-            RTX Connector online — Sounds können lokal über den RTX-PC ausgegeben werden.
-          </p>
-        ) : (
-          <p className="uwe-hint" style={{ margin: 0 }}>
-            {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verfügbar.{" "}
-            <Link href="/system/rtx-connector">RTX Connector einrichten →</Link>
-          </p>
+      <div className="flex flex-col gap-6">
+        {(created || saved || deleted || linked) && (
+          <Alert tone="success">
+            {created
+              ? "Sound angelegt."
+              : deleted
+                ? "Sound gelöscht."
+                : "Änderungen gespeichert."}
+          </Alert>
         )}
-      </section>
 
-      {(created || saved || deleted || linked) && (
-        <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
-      )}
+        {spotifyConnected && <Alert tone="success">Spotify erfolgreich verbunden.</Alert>}
 
-      {spotifyConnected && (
-        <p className="uwe-flash uwe-flash-success">Spotify erfolgreich verbunden.</p>
-      )}
+        {(error || spotifyError) && (
+          <Alert tone="danger" role="alert">
+            {error ?? spotifyError}
+          </Alert>
+        )}
 
-      {(error || spotifyError) && (
-        <p className="uwe-flash uwe-flash-error" role="alert">
-          {error ?? spotifyError}
-        </p>
-      )}
-
-      <SoundboardWorkspace buttons={buttonViews} worldSlug={worldSlug} />
-
-      <section className="uwe-panel">
-        <h2>Neuer Soundboard-Button</h2>
-        <SoundboardButtonForm
-          action={createSoundboardButtonAction}
-          worldSlug={worldSlug}
-          campaignSlug={campaignSlug}
-          audioAssets={audioAssets}
-          linkablePages={linkablePages}
-          submitLabel="Button erstellen"
-        />
-        <p className="uwe-table-sub">
-          Audio-Assets zuerst unter{" "}
-          <Link href={`/worlds/${worldSlug}/assets`}>Assets</Link> hochladen.
-          Spotify-Wiedergabe erfordert Premium, OAuth und ein aktives Spotify Connect-Gerät.
-        </p>
-      </section>
-
-      {buttons.length > 0 && (
-        <section className="uwe-panel">
-          <h2>Buttons verwalten</h2>
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>Titel</th>
-                <th>Quelle</th>
-                <th>Sichtbarkeit</th>
-                <th>Aktionen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {buttons.map((button) => (
-                <tr key={button.id}>
-                  <td>{button.title}</td>
-                  <td>{button.sourceType}</td>
-                  <td>
+        {buttons.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Buttons verwalten</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="grid gap-2">
+                {buttons.map((button) => (
+                  <li
+                    key={button.id}
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-2 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+                  >
+                    <strong>{button.title}</strong>
+                    <span className="text-sm text-muted-foreground">{button.sourceType}</span>
                     <VisibilityBadge visibility={button.visibility} />
-                  </td>
-                  <td>
                     <details>
+                      <summary>Löschen</summary>
+                      <form action={deleteSoundboardButtonAction}>
+                        <input type="hidden" name="worldSlug" value={worldSlug} />
+                        <input type="hidden" name="buttonId" value={button.id} />
+                        <Button type="submit" variant="destructive" size="sm" className="mt-2">
+                          Endgültig löschen
+                        </Button>
+                      </form>
+                    </details>
+                    <details className="basis-full">
                       <summary>Bearbeiten</summary>
                       <SoundboardButtonForm
                         action={updateSoundboardButtonAction}
@@ -221,53 +196,57 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                         }))}
                         submitLabel="Speichern"
                       />
-                      <form action={deleteSoundboardButtonAction}>
-                        <input type="hidden" name="worldSlug" value={worldSlug} />
-                        <input type="hidden" name="buttonId" value={button.id} />
-                        <button type="submit" className="uwe-v2-btn" style={{ marginTop: "0.5rem" }}>
-                          Löschen
-                        </button>
-                      </form>
                     </details>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
-      {buttons.length > 0 && linkablePages.length > 0 && (
-        <section className="uwe-panel">
-          <h2>Seite verknüpfen</h2>
-          <form action={linkPageToSoundboardButtonAction} className="uwe-form-grid">
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <label>
-              Button
-              <select name="buttonId" required>
-                {buttons.map((button) => (
-                  <option key={button.id} value={button.id}>
-                    {button.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Seite (Ort, Dungeon, Raum, …)
-              <select name="pageId" required>
-                {linkablePages.map((page) => (
-                  <option key={page.id} value={page.id}>
-                    {page.title} ({page.type})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="uwe-v2-btn">
-              Verknüpfen
-            </button>
-          </form>
-        </section>
-      )}
+        <Card>
+          <CardContent className="pt-6">
+            <details open={buttons.length === 0}>
+              <summary>+ Neuer Sound</summary>
+              <SoundboardButtonForm
+                action={createSoundboardButtonAction}
+                worldSlug={worldSlug}
+                campaignSlug={campaignSlug}
+                audioAssets={audioAssets}
+                linkablePages={linkablePages}
+                submitLabel="Button erstellen"
+              />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Audio-Assets zuerst unter{" "}
+                <Link href={`/worlds/${worldSlug}/assets`}>Assets</Link> hochladen.
+                Spotify-Wiedergabe erfordert Premium, OAuth und ein aktives Spotify Connect-Gerät.
+              </p>
+            </details>
+          </CardContent>
+        </Card>
+
+        <SoundboardWorkspace buttons={buttonViews} worldSlug={worldSlug} />
+
+        <SpotifyConnectionPanel worldSlug={worldSlug} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>RTX-Audioausgabe</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {rtxAudioOnline ? (
+              <Alert tone="success">
+                RTX Connector online — Sounds können lokal über den RTX-PC ausgegeben werden.
+              </Alert>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verfügbar.{" "}
+                <Link href="/system/rtx-connector">RTX Connector einrichten →</Link>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </WorldShell>
   );
 }

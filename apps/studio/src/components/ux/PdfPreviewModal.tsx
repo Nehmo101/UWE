@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/src/components/ui";
 
 interface PdfPreviewModalProps {
   fileUrl: string;
@@ -23,32 +24,28 @@ export function PdfPreviewModal({ fileUrl, title }: PdfPreviewModalProps) {
 
   return (
     <>
-      <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm" onClick={() => setOpen(true)}>
+      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
         PDF-Vorschau
-      </button>
+      </Button>
       {open ? (
         <div
-          className="uwe-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
           aria-label={title}
           onClick={close}
         >
           <div
-            className="uwe-modal uwe-modal-lg"
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col gap-3 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-lg"
             onClick={(event) => event.stopPropagation()}
           >
-            <header className="uwe-modal-header">
+            <header className="flex items-center justify-between gap-3">
               <strong>{title}</strong>
-              <button type="button" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm" onClick={close}>
+              <Button type="button" variant="ghost" size="sm" onClick={close}>
                 Schließen
-              </button>
+              </Button>
             </header>
-            <iframe
-              src={fileUrl}
-              title={title}
-              style={{ width: "100%", height: "min(80vh, 720px)", border: "none" }}
-            />
+            <iframe src={fileUrl} title={title} className="h-[min(80vh,720px)] w-full border-0" />
           </div>
         </div>
       ) : null}

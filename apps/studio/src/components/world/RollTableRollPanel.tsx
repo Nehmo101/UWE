@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { rollOnTable, type RollTableEntry } from "@uwe/roll-tables/roll";
+import { Button, NavIcon } from "@/src/components/ui";
 
 const HISTORY_LIMIT = 10;
 
@@ -65,12 +66,13 @@ export function RollTableRollButton({
   }
 
   return (
-    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-      <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={handleRoll}>
-        🎲 Würfeln
-      </button>
+    <div className="flex flex-wrap items-center gap-2">
+      <Button type="button" onClick={handleRoll}>
+        <NavIcon name="dices" width={16} height={16} />
+        Würfeln
+      </Button>
       {lastResult && (
-        <span className="uwe-banner uwe-banner-success" role="status" style={{ margin: 0 }}>
+        <span role="status" className="text-sm text-success">
           Ergebnis: <strong>{lastResult}</strong>
         </span>
       )}
@@ -95,24 +97,18 @@ export function RollHistoryPanel({ worldSlug }: { worldSlug: string }) {
 
   if (history.length === 0) {
     return (
-      <p className="uwe-dashboard-muted" style={{ margin: 0 }}>
+      <p className="m-0 text-sm text-muted-foreground">
         Noch keine Würfe in dieser Sitzung — der Verlauf der letzten {HISTORY_LIMIT} Ergebnisse erscheint hier.
       </p>
     );
   }
 
   return (
-    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+    <ul className="m-0 list-none p-0">
       {history.map((entry, index) => (
-        <li
-          key={`${entry.rolledAt}-${index}`}
-          style={{
-            padding: "0.5rem 0",
-            borderBottom: "1px solid rgba(148,163,184,0.12)",
-          }}
-        >
+        <li key={`${entry.rolledAt}-${index}`} className="border-b border-border/60 py-2">
           <strong>{entry.tableName}</strong>
-          <span className="uwe-dashboard-muted">
+          <span className="text-sm text-muted-foreground">
             {" "}
             — {entry.result} ·{" "}
             {new Date(entry.rolledAt).toLocaleTimeString("de-DE", {

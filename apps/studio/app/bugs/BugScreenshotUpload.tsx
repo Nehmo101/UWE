@@ -2,6 +2,7 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useEffect, useState } from "react";
+import { Alert, Button, Input, Label } from "@/src/components/ui";
 
 interface BugScreenshotUploadProps {
   name?: string;
@@ -78,31 +79,32 @@ export function BugScreenshotUpload({
   }
 
   return (
-    <div className="uwe-bug-screenshot-upload">
+    <div className="flex flex-col gap-2">
       <input type="hidden" name={name} value={assetId} />
-      <label className="uwe-capture-field">
+      {/* TODO(design-kit): Label umschließt den Input implizit (kein htmlFor/id) — die
+          Komponente wird in Anlegen- und Bearbeiten-Formular gleichzeitig gerendert. */}
+      <Label className="flex flex-col items-start gap-1.5">
         Screenshot (optional)
-        <input
+        <Input
           type="file"
           accept="image/png,image/jpeg,image/gif,image/webp"
           onChange={(event) => void handleFileChange(event)}
           disabled={uploading}
         />
-      </label>
-      {uploading ? <p className="uwe-hint">Lädt hoch…</p> : null}
-      {error ? <p className="uwe-hint uwe-hint-error">{error}</p> : null}
+      </Label>
+      {uploading ? <p className="text-sm text-muted-foreground">Lädt hoch…</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
       {previewUrl ? (
-        <div className="uwe-bug-screenshot">
+        <div className="flex flex-col items-start gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="Screenshot-Vorschau" className="uwe-bug-screenshot-image" />
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-            onClick={handleClear}
-            disabled={uploading}
-          >
+          <img
+            src={previewUrl}
+            alt="Screenshot-Vorschau"
+            className="mt-2 block max-h-80 max-w-full rounded-[var(--radius)] border border-border"
+          />
+          <Button type="button" variant="secondary" size="sm" onClick={handleClear} disabled={uploading}>
             Screenshot entfernen
-          </button>
+          </Button>
         </div>
       ) : null}
     </div>

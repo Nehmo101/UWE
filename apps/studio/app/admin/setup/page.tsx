@@ -13,6 +13,7 @@ import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell
 import { OwnerSetupSectionView } from "@/components/owner-setup/OwnerSetupSectionView";
 import { OwnerSetupTestPanel } from "@/components/owner-setup/OwnerSetupTestPanel";
 import { getCurrentAuthUser, requireAdminAccess } from "@/src/lib/auth";
+import { Alert, badgeVariants, Button, buttonVariants, cn, Input, Label } from "@/src/components/ui";
 import { updateOwnerSetupAction } from "../../owner-setup-actions";
 
 const TABS = [
@@ -76,36 +77,40 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
         }
       />
       {!canEdit && (
-        <p className="uwe-notice" role="status" style={{ marginBottom: "1rem" }}>
+        <Alert tone="info" className="mb-4">
           Du siehst die Einrichtung im Lesemodus. Nur <strong>OWNER</strong> darf speichern und
           Tests ausführen.
-        </p>
+        </Alert>
       )}
 
       {saved === "1" && (
-        <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
+        <Alert tone="success" className="mb-4">
           Einrichtung gespeichert.
-        </p>
+        </Alert>
       )}
 
-      <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
-        <strong>Erstinstallation:</strong> einmaliges Owner-Setup über <Link href="/setup">/setup</Link>.
-        Diese Seite ist für nachträgliche Host-Konfiguration (SMTP, Cloudflare, RTX, Pfade).
-      </p>
+      <Alert tone="info" className="mb-4">
+        <strong>Erstinstallation:</strong> einmaliges Owner-Setup über{" "}
+        <Link href="/setup">/setup</Link>. Diese Seite ist für nachträgliche Host-Konfiguration
+        (SMTP, Cloudflare, RTX, Pfade).
+      </Alert>
 
-      <p className="uwe-notice" style={{ marginBottom: "1rem" }}>
-        Für Theme, Welten und erweiterte App-Optionen:{" "}
-        <Link href="/settings">Einstellungen</Link>
+      <Alert tone="info" className="mb-4">
+        Für Theme, Welten und erweiterte App-Optionen: <Link href="/settings">Einstellungen</Link>
         {" · "}
         <Link href="/admin/checklist">Aufgabenliste</Link>
-      </p>
+      </Alert>
 
-      <nav className="uwe-settings-tabs" aria-label="Einrichtungsbereiche">
+      <nav className="flex flex-wrap gap-2" aria-label="Einrichtungsbereiche">
         {TABS.map((tab) => (
           <Link
             key={tab.id}
             href={tab.id === "system" ? "/admin/setup" : `/admin/setup?tab=${tab.id}`}
-            className={activeTab === tab.id ? "active" : undefined}
+            aria-current={activeTab === tab.id ? "page" : undefined}
+            className={cn(
+              badgeVariants({ variant: activeTab === tab.id ? "accent" : "default" }),
+              "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
           >
             {tab.label}
           </Link>
@@ -115,79 +120,90 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
       {section && (
         <OwnerSetupSectionView section={section}>
           {activeTab === "system" && canEdit && (
-            <form action={updateOwnerSetupAction} className="uwe-form uwe-settings-stack" id="paths">
+            <form action={updateOwnerSetupAction} className="flex flex-col gap-4" id="paths">
               <input type="hidden" name="tab" value="system" />
-              <h3 className="uwe-v2-section-title">Speicher & Backup (Datenbank)</h3>
-              <p className="uwe-hint">
+              <h3 className="text-lg font-semibold tracking-tight">Speicher & Backup (Datenbank)</h3>
+              <p className="text-sm text-muted-foreground">
                 Pfade werden in der Datenbank gespeichert — keine manuelle Host-Datei nötig.
               </p>
-              <label>
-                Uploads-Pfad
-                <input name="uploadsPath" defaultValue={uploadsPath} />
-              </label>
-              <label>
-                Exports-Pfad
-                <input name="exportsPath" defaultValue={exportsPath} />
-              </label>
-              <label>
-                Backup-Pfad
-                <input name="backupsPath" defaultValue={backupsPath} />
-              </label>
-              <label className="uwe-checkbox">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="setup-system-uploads">Uploads-Pfad</Label>
+                <Input id="setup-system-uploads" name="uploadsPath" defaultValue={uploadsPath} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="setup-system-exports">Exports-Pfad</Label>
+                <Input id="setup-system-exports" name="exportsPath" defaultValue={exportsPath} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="setup-system-backups">Backup-Pfad</Label>
+                <Input id="setup-system-backups" name="backupsPath" defaultValue={backupsPath} />
+              </div>
+              {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   name="autoBackupEnabled"
                   defaultChecked={settings.backup.autoBackupEnabled}
+                  className="size-4 rounded border-input"
                 />
                 Automatisches Backup aktivieren
               </label>
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                Speichern
-              </button>
+              <div>
+                <Button type="submit">Speichern</Button>
+              </div>
             </form>
           )}
 
           {activeTab === "access" && canEdit && (
-            <form action={updateOwnerSetupAction} className="uwe-form uwe-settings-stack" id="portal">
+            <form action={updateOwnerSetupAction} className="flex flex-col gap-4" id="portal">
               <input type="hidden" name="tab" value="access" />
-              <h3 className="uwe-v2-section-title">Portal & Session</h3>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="portalEnabled" defaultChecked={settings.portal.portalEnabled} />
+              <h3 className="text-lg font-semibold tracking-tight">Portal & Session</h3>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="portalEnabled"
+                  defaultChecked={settings.portal.portalEnabled}
+                  className="size-4 rounded border-input"
+                />
                 Portal aktiv
               </label>
-              <label className="uwe-checkbox">
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   name="guestAccessEnabled"
                   defaultChecked={settings.portal.guestAccessEnabled}
+                  className="size-4 rounded border-input"
                 />
                 Gastzugang
               </label>
-              <label className="uwe-checkbox">
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   name="publicSharingEnabled"
                   defaultChecked={settings.portal.publicSharingEnabled}
+                  className="size-4 rounded border-input"
                 />
                 Öffentliche Freigabe
               </label>
-              <label id="session">
-                Session-Timeout (Minuten, 0 = aus)
-                <input
+              <div className="flex flex-col gap-1.5" id="session">
+                <Label htmlFor="setup-access-session-timeout">
+                  Session-Timeout (Minuten, 0 = aus)
+                </Label>
+                <Input
+                  id="setup-access-session-timeout"
                   type="number"
                   name="sessionInactivityTimeoutMinutes"
                   min={0}
                   max={1440}
                   defaultValue={settings.auth.sessionInactivityTimeoutMinutes}
                 />
-              </label>
-              <p className="uwe-hint">
-                Benutzer und Rollen:{" "}
-                <Link href="/admin/users">Benutzerverwaltung</Link>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Benutzer und Rollen: <Link href="/admin/users">Benutzerverwaltung</Link>
               </p>
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                Speichern
-              </button>
+              <div>
+                <Button type="submit">Speichern</Button>
+              </div>
             </form>
           )}
 
@@ -196,42 +212,66 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
           )}
 
           {activeTab === "mail" && canEdit && (
-            <form action={updateOwnerSetupAction} className="uwe-form uwe-settings-stack" id="smtp">
+            <form action={updateOwnerSetupAction} className="flex flex-col gap-4" id="smtp">
               <input type="hidden" name="tab" value="mail" />
-              <h3 className="uwe-v2-section-title">SMTP (Datenbank, verschlüsselt)</h3>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="mailEnabled" defaultChecked={settings.mail.enabled} />
+              <h3 className="text-lg font-semibold tracking-tight">SMTP (Datenbank, verschlüsselt)</h3>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="mailEnabled"
+                  defaultChecked={settings.mail.enabled}
+                  className="size-4 rounded border-input"
+                />
                 Mail Center aktiv
               </label>
-              <label>
-                Absender-Anzeigename
-                <input name="fromDisplayName" defaultValue={settings.mail.fromDisplayName} />
-              </label>
-              <label>
-                SMTP-Host
-                <input name="smtpHost" defaultValue={settings.mail.smtp.host ?? ""} />
-              </label>
-              <div className="uwe-form-row uwe-form-row-2">
-                <label>
-                  Port
-                  <input
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="setup-mail-from-name">Absender-Anzeigename</Label>
+                <Input
+                  id="setup-mail-from-name"
+                  name="fromDisplayName"
+                  defaultValue={settings.mail.fromDisplayName}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="setup-mail-smtp-host">SMTP-Host</Label>
+                <Input
+                  id="setup-mail-smtp-host"
+                  name="smtpHost"
+                  defaultValue={settings.mail.smtp.host ?? ""}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="setup-mail-smtp-port">Port</Label>
+                  <Input
+                    id="setup-mail-smtp-port"
                     name="smtpPort"
                     type="number"
                     defaultValue={settings.mail.smtp.port ?? 587}
                   />
-                </label>
-                <label>
-                  Absender (MAIL_FROM)
-                  <input name="mailFrom" defaultValue={settings.mail.smtp.fromAddress ?? ""} />
-                </label>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="setup-mail-from-address">Absender (MAIL_FROM)</Label>
+                  <Input
+                    id="setup-mail-from-address"
+                    name="mailFrom"
+                    defaultValue={settings.mail.smtp.fromAddress ?? ""}
+                  />
+                </div>
               </div>
-              <label>
-                SMTP-Benutzer
-                <input name="smtpUser" defaultValue={settings.mail.smtp.username ?? ""} autoComplete="off" />
-              </label>
-              <label>
-                SMTP-Passwort
-                <input
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="setup-mail-smtp-user">SMTP-Benutzer</Label>
+                <Input
+                  id="setup-mail-smtp-user"
+                  name="smtpUser"
+                  defaultValue={settings.mail.smtp.username ?? ""}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="setup-mail-smtp-password">SMTP-Passwort</Label>
+                <Input
+                  id="setup-mail-smtp-password"
                   name="smtpPassword"
                   type="password"
                   placeholder={
@@ -241,22 +281,32 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
                   }
                   autoComplete="new-password"
                 />
-              </label>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="smtpSecure" defaultChecked={settings.mail.smtp.secure} />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="smtpSecure"
+                  defaultChecked={settings.mail.smtp.secure}
+                  className="size-4 rounded border-input"
+                />
                 TLS/SSL
               </label>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="smtpUseMock" defaultChecked={settings.mail.smtp.useMock} />
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="smtpUseMock"
+                  defaultChecked={settings.mail.smtp.useMock}
+                  className="size-4 rounded border-input"
+                />
                 Mock-Modus
               </label>
-              <label className="uwe-checkbox">
-                <input type="checkbox" name="clearPortalSmtp" />
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="clearPortalSmtp" className="size-4 rounded border-input" />
                 Portal-SMTP löschen (.env-Fallback)
               </label>
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                Speichern
-              </button>
+              <div>
+                <Button type="submit">Speichern</Button>
+              </div>
             </form>
           )}
 
@@ -270,14 +320,14 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
 
           {activeTab === "rtx" && (
             <>
-              <p style={{ marginTop: "1rem" }}>
-                <Link href="/system/rtx-connector" className="uwe-v2-btn uwe-v2-btn-secondary">
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href="/system/rtx-connector" className={buttonVariants({ variant: "secondary" })}>
                   RTX Host Connector verwalten
-                </Link>{" "}
-                <Link href="/hardware" className="uwe-v2-btn uwe-v2-btn-secondary">
+                </Link>
+                <Link href="/hardware" className={buttonVariants({ variant: "secondary" })}>
                   Hardware-Cockpit
                 </Link>
-              </p>
+              </div>
               {section.testAction && (
                 <OwnerSetupTestPanel action={section.testAction} canEdit={canEdit} />
               )}
@@ -289,20 +339,20 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
           )}
 
           {activeTab === "diagnose" && (
-            <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
-              <Link href="/system?tab=diagnose" className="uwe-v2-btn uwe-v2-btn-primary">
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/system?tab=diagnose" className={buttonVariants()}>
                 Vollständige Diagnose
               </Link>
-              <Link href="/admin/status" className="uwe-v2-btn">
+              <Link href="/admin/status" className={buttonVariants({ variant: "outline" })}>
                 Erweiterte Karten
               </Link>
-              <Link href="/admin/secrets" className="uwe-v2-btn">
+              <Link href="/admin/secrets" className={buttonVariants({ variant: "outline" })}>
                 Secrets-Status
               </Link>
-              <Link href="/system?tab=diagnose" className="uwe-v2-btn">
+              <Link href="/system?tab=diagnose" className={buttonVariants({ variant: "outline" })}>
                 System-Hub Diagnose
               </Link>
-              <Link href="/api/admin/status" className="uwe-v2-btn">
+              <Link href="/api/admin/status" className={buttonVariants({ variant: "outline" })}>
                 Status JSON
               </Link>
             </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonVariants } from "@/src/components/ui/button";
 import { createSettingsService, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { requireAdminAccess } from "@/src/lib/auth";
@@ -42,7 +43,7 @@ export default async function AdminAiPromptPage({ searchParams }: Props) {
         title="KI-System-Prompt"
         summary="System-Prompt für den allgemeinen Chat — Entwurf lokal, explizites Aktivieren verhindert versehentliche Übernahme."
         actions={
-          <Link href="/admin/ai-gateway" className="uwe-v2-btn uwe-v2-btn-secondary">
+          <Link href="/admin/ai-gateway" className={buttonVariants({ variant: "secondary" })}>
             AI Gateway →
           </Link>
         }

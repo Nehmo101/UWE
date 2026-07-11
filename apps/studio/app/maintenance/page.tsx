@@ -14,13 +14,13 @@ export default async function MaintenancePage() {
     >
       <MaintenanceRecoveryPoller surface="studio" />
       <PageHeader title="Wartungsmodus" summary="Studio vorübergehend gesperrt" />
-      <section className="uwe-card uwe-card-padded">
+      <section className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm flex flex-col gap-2">
         <p>{message}</p>
-        <p className="uwe-hint">
+        <p className="text-sm text-muted-foreground">
           Diese Seite prüft alle 30 Sekunden, ob der Wartungsmodus beendet wurde, und lädt dann
           automatisch neu.
         </p>
-        <p className="uwe-hint">
+        <p className="text-sm text-muted-foreground">
           Owner-Konten können Studio weiterhin nutzen, um den Notfallmodus in den{" "}
           <a href="/settings?tab=maintenance">Einstellungen</a> zu deaktivieren.
         </p>

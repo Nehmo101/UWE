@@ -25,6 +25,22 @@ import { simulateAllFactionsAction } from "@/app/worlds/[worldSlug]/faction-stat
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { ChronicleTimeline } from "@/src/components/world/ChronicleTimeline";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -85,16 +101,16 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
         <SidebarSection title="Weltuhr">
           {calendar ? (
             <>
-              <p style={{ margin: 0 }}>
+              <p className="text-sm">
                 Aktuelles Datum:{" "}
                 <strong>{formatInGameDate(parseInGameDate(calendar.currentDate), months)}</strong>
               </p>
-              <p style={{ margin: "0.75rem 0 0" }}>
+              <p className="mt-3 text-sm">
                 <Link href={`/worlds/${worldSlug}/calendar`}>Kalender bearbeiten</Link>
               </p>
             </>
           ) : (
-            <p className="uwe-hint" style={{ margin: 0 }}>
+            <p className="text-sm text-muted-foreground">
               <Link href={`/worlds/${worldSlug}/calendar`}>Weltuhr einrichten</Link>
             </p>
           )}
@@ -106,153 +122,176 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
         summary="Datierte Ereignisse der Kampagne — Grundlage für die Spieler-Timeline im Portal."
       />
 
-      {saved === "1" && (
-        <p className="uwe-banner uwe-banner-success" role="status">
-          Chronik-Eintrag gespeichert.
-        </p>
-      )}
-      {deleted === "1" && (
-        <p className="uwe-banner uwe-banner-success" role="status">
-          Chronik-Eintrag gelöscht.
-        </p>
-      )}
+      {saved === "1" && <Alert tone="success">Chronik-Eintrag gespeichert.</Alert>}
+      {deleted === "1" && <Alert tone="success">Chronik-Eintrag gelöscht.</Alert>}
       {factionTick !== undefined && (
-        <p className="uwe-banner uwe-banner-success" role="status">
+        <Alert tone="success">
           Fraktions-Tick gestartet: {factionTick} von {factionTotal ?? factionTick} Simulationen
           laufen. Vorschläge erscheinen unter{" "}
           <Link href={`/worlds/${worldSlug}/ai-runs`}>AI Runs</Link> zur Review.
-        </p>
+        </Alert>
       )}
 
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Fraktions-Simulation (Zwischen-Session-Tick)</h2>
-        {factionPages.length === 0 ? (
-          <p className="uwe-hint">
-            Keine Fraktions-Seiten in dieser Welt — lege Seiten vom Typ „Fraktion“ an, um die
-            Simulation zu nutzen.
-          </p>
-        ) : (
-          <>
-            <p className="uwe-dashboard-muted">
-              Simuliert für alle {factionPages.length} Fraktion(en), was seit der letzten Session
-              passiert ist (Weltuhr:{" "}
-              {calendar
-                ? formatInGameDate(parseInGameDate(calendar.currentDate), months)
-                : "nicht gesetzt"}
-              ). Ergebnisse werden als Vorschläge erzeugt und erst nach Review in die Chronik
-              übernommen.
-            </p>
-            <p className="uwe-dashboard-muted">
-              {factionPages.map((page, index) => (
-                <span key={page.id}>
-                  {index > 0 && " · "}
-                  <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
-                </span>
-              ))}
-            </p>
-            <form action={simulateAllFactionsAction}>
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                Alle Fraktionen simulieren
-              </button>
-            </form>
-          </>
-        )}
-      </section>
-
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Neues Ereignis</h2>
-        <form action={createWorldEventAction} className="uwe-v2-form">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          <input type="hidden" name="returnTo" value="chronicle" />
-
-          <label>
-            Titel
-            <input name="title" required />
-          </label>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 11rem), 1fr))", gap: "1rem" }}>
-            <label>
-              Jahr
-              <input name="inGameYear" type="number" defaultValue={currentDate.year} required />
-            </label>
-            <label>
-              Monat
-              <input name="inGameMonth" type="number" min={1} defaultValue={currentDate.month} required />
-            </label>
-            <label>
-              Tag
-              <input name="inGameDay" type="number" min={1} defaultValue={currentDate.day} required />
-            </label>
-          </div>
-
-          <label>
-            Spieler-Zusammenfassung
-            <textarea name="summaryPlayer" rows={3} />
-          </label>
-
-          <label>
-            DM-Notiz
-            <textarea name="summaryDm" rows={2} />
-          </label>
-
-          <label>
-            Sichtbarkeit
-            <select name="visibility" defaultValue="private">
-              {Object.values(VisibilityEnum).map((value) => (
-                <option key={value} value={value}>
-                  {VISIBILITY_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Geheimnis-Stufe
-            <select name="secretLevel" defaultValue="none">
-              {Object.values(SecretLevelEnum).map((value) => (
-                <option key={value} value={value}>
-                  {SECRET_LEVEL_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Ereignis anlegen
-          </button>
-        </form>
-      </section>
-
-      <section className="uwe-v2-card">
-        <h2 style={{ marginTop: 0 }}>Ereignisse ({sortedEvents.length})</h2>
-        <ChronicleTimeline
-          events={sortedEvents.map((event) => {
-            const inGameDate = parseInGameDate(event.inGameDate);
-            return {
-              id: event.id,
-              dateLabel: formatInGameDate(inGameDate, months),
-              title: event.title,
-              summaryPlayer: event.summaryPlayer,
-              summaryDm: event.summaryDm,
-              entityLinks:
-                event.entityLinks.length > 0
-                  ? `Verknüpft: ${event.entityLinks.map((link) => link.page.title).join(", ")}`
-                  : "",
-              deleteForm: (
-                <form action={deleteWorldEventAction}>
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Fraktions-Simulation (Zwischen-Session-Tick)</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {factionPages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Keine Fraktions-Seiten in dieser Welt — lege Seiten vom Typ „Fraktion“ an, um die
+                Simulation zu nutzen.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Simuliert für alle {factionPages.length} Fraktion(en), was seit der letzten Session
+                  passiert ist (Weltuhr:{" "}
+                  {calendar
+                    ? formatInGameDate(parseInGameDate(calendar.currentDate), months)
+                    : "nicht gesetzt"}
+                  ). Ergebnisse werden als Vorschläge erzeugt und erst nach Review in die Chronik
+                  übernommen.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {factionPages.map((page, index) => (
+                    <span key={page.id}>
+                      {index > 0 && " · "}
+                      <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
+                    </span>
+                  ))}
+                </p>
+                <form action={simulateAllFactionsAction}>
                   <input type="hidden" name="worldSlug" value={worldSlug} />
-                  <input type="hidden" name="eventId" value={event.id} />
-                  <input type="hidden" name="returnTo" value="chronicle" />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger">
-                    Löschen
-                  </button>
+                  <Button type="submit" variant="secondary">
+                    Alle Fraktionen simulieren
+                  </Button>
                 </form>
-              ),
-            };
-          })}
-        />
-      </section>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Neues Ereignis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createWorldEventAction} className="flex flex-col gap-4">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <input type="hidden" name="returnTo" value="chronicle" />
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="event-title">Titel</Label>
+                <Input id="event-title" name="title" required />
+              </div>
+
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,11rem),1fr))] gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="event-year">Jahr</Label>
+                  <Input id="event-year" name="inGameYear" type="number" defaultValue={currentDate.year} required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="event-month">Monat</Label>
+                  <Input
+                    id="event-month"
+                    name="inGameMonth"
+                    type="number"
+                    min={1}
+                    defaultValue={currentDate.month}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="event-day">Tag</Label>
+                  <Input id="event-day" name="inGameDay" type="number" min={1} defaultValue={currentDate.day} required />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="event-summary-player">Spieler-Zusammenfassung</Label>
+                <Textarea id="event-summary-player" name="summaryPlayer" rows={3} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="event-summary-dm">DM-Notiz</Label>
+                <Textarea id="event-summary-dm" name="summaryDm" rows={2} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="event-visibility">Sichtbarkeit</Label>
+                <Select name="visibility" defaultValue="private">
+                  <SelectTrigger id="event-visibility">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(VisibilityEnum).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {VISIBILITY_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="event-secret-level">Geheimnis-Stufe</Label>
+                <Select name="secretLevel" defaultValue="none">
+                  <SelectTrigger id="event-secret-level">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(SecretLevelEnum).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {SECRET_LEVEL_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Button type="submit">Ereignis anlegen</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Ereignisse ({sortedEvents.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChronicleTimeline
+              events={sortedEvents.map((event) => {
+                const inGameDate = parseInGameDate(event.inGameDate);
+                return {
+                  id: event.id,
+                  dateLabel: formatInGameDate(inGameDate, months),
+                  title: event.title,
+                  summaryPlayer: event.summaryPlayer,
+                  summaryDm: event.summaryDm,
+                  entityLinks:
+                    event.entityLinks.length > 0
+                      ? `Verknüpft: ${event.entityLinks.map((link) => link.page.title).join(", ")}`
+                      : "",
+                  deleteForm: (
+                    <form action={deleteWorldEventAction}>
+                      <input type="hidden" name="worldSlug" value={worldSlug} />
+                      <input type="hidden" name="eventId" value={event.id} />
+                      <input type="hidden" name="returnTo" value="chronicle" />
+                      <Button type="submit" variant="destructive" size="sm">
+                        Löschen
+                      </Button>
+                    </form>
+                  ),
+                };
+              })}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </WorldShell>
   );
 }

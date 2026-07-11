@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { updateQuestStatusAction } from "../quest-status-actions";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -38,7 +39,7 @@ export default async function CampaignRadarPage({ params }: Props) {
       }
       contextPanel={
         <SidebarSection title="Welt">
-          <ul className="uwe-sidebar-links">
+          <ul className="flex flex-col gap-2 text-sm">
             {radar.clockLabel ? (
               <li>
                 <strong>{radar.clockLabel}</strong>
@@ -72,92 +73,110 @@ export default async function CampaignRadarPage({ params }: Props) {
         ]}
       />
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Letzte Session</h2>
-        {radar.lastSession ? (
-          <p>
-            <Link href={radar.lastSession.href}>
-              Session {radar.lastSession.sessionNumber}: {radar.lastSession.title}
-            </Link>
-            {radar.lastSession.date ? (
-              <span className="uwe-dashboard-muted"> · {DATE_FORMAT.format(radar.lastSession.date)}</span>
-            ) : null}
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Letzte Session</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {radar.lastSession ? (
+              <p className="text-sm">
+                <Link href={radar.lastSession.href}>
+                  Session {radar.lastSession.sessionNumber}: {radar.lastSession.title}
+                </Link>
+                {radar.lastSession.date ? (
+                  <span className="text-muted-foreground"> · {DATE_FORMAT.format(radar.lastSession.date)}</span>
+                ) : null}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Noch keine gespielte Session.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Fraktionen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {radar.factions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Fraktionen mit Zustand hinterlegt.</p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {radar.factions.map((faction) => (
+                  <li key={faction.href} className="flex flex-wrap items-center gap-2">
+                    <Link href={faction.href}>{faction.title}</Link>
+                    {faction.powerLevel != null ? (
+                      <Badge variant="secondary">Macht {faction.powerLevel}</Badge>
+                    ) : null}
+                    {faction.agenda ? (
+                      <span className="text-muted-foreground"> — {faction.agenda}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Offene Quests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {radar.openQuests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine offenen Quests.</p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {radar.openQuests.map((quest) => (
+                  <li key={quest.href} className="flex flex-wrap items-center gap-3">
+                    <Link href={quest.href}>{quest.title}</Link>
+                    <form action={updateQuestStatusAction} className="inline-flex">
+                      <input type="hidden" name="worldSlug" value={worldSlug} />
+                      <input type="hidden" name="pageId" value={quest.id} />
+                      <input type="hidden" name="pageSlug" value={quest.slug} />
+                      <input type="hidden" name="category" value="quests" />
+                      <input type="hidden" name="questStatus" value="completed" />
+                      <Button type="submit" variant="ghost" size="sm">
+                        Abschließen
+                      </Button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Jüngste Ereignisse</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {radar.recentEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Welt-Ereignisse erfasst.</p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {radar.recentEvents.map((event) => (
+                  <li key={event.id}>
+                    <strong>{event.title}</strong>
+                    {event.summary ? (
+                      <span className="text-muted-foreground"> — {event.summary}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {radar.canonConflicts > 0 ? (
+          <p role="alert" className="text-sm text-destructive">
+            {radar.canonConflicts} widersprüchliche Seite(n) —{" "}
+            <Link href={`/worlds/${worldSlug}/inspector`}>im Inspektor prüfen</Link>.
           </p>
-        ) : (
-          <p className="uwe-dashboard-muted">Noch keine gespielte Session.</p>
-        )}
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Fraktionen</h2>
-        {radar.factions.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine Fraktionen mit Zustand hinterlegt.</p>
-        ) : (
-          <ul className="uwe-linked-list">
-            {radar.factions.map((faction) => (
-              <li key={faction.href}>
-                <Link href={faction.href}>{faction.title}</Link>
-                {faction.powerLevel != null ? (
-                  <span className="uwe-badge"> Macht {faction.powerLevel}</span>
-                ) : null}
-                {faction.agenda ? (
-                  <span className="uwe-dashboard-muted"> — {faction.agenda}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Offene Quests</h2>
-        {radar.openQuests.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine offenen Quests.</p>
-        ) : (
-          <ul className="uwe-linked-list">
-            {radar.openQuests.map((quest) => (
-              <li key={quest.href} className="uwe-inline-actions">
-                <Link href={quest.href}>{quest.title}</Link>
-                <form action={updateQuestStatusAction} style={{ display: "inline" }}>
-                  <input type="hidden" name="worldSlug" value={worldSlug} />
-                  <input type="hidden" name="pageId" value={quest.id} />
-                  <input type="hidden" name="pageSlug" value={quest.slug} />
-                  <input type="hidden" name="category" value="quests" />
-                  <input type="hidden" name="questStatus" value="completed" />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
-                    Abschließen
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Jüngste Ereignisse</h2>
-        {radar.recentEvents.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine Welt-Ereignisse erfasst.</p>
-        ) : (
-          <ul className="uwe-linked-list">
-            {radar.recentEvents.map((event) => (
-              <li key={event.id}>
-                <strong>{event.title}</strong>
-                {event.summary ? (
-                  <span className="uwe-dashboard-muted"> — {event.summary}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {radar.canonConflicts > 0 ? (
-        <p className="uwe-form-error">
-          {radar.canonConflicts} widersprüchliche Seite(n) —{" "}
-          <Link href={`/worlds/${worldSlug}/inspector`}>im Inspektor prüfen</Link>.
-        </p>
-      ) : null}
+        ) : null}
+      </div>
     </WorldShell>
   );
 }

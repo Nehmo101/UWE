@@ -7,6 +7,15 @@ import {
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import { TemplateLivePreview, type TemplatePreviewBlock } from "./TemplateLivePreview";
+import { Button, Input, Label, Textarea } from "@/src/components/ui";
+
+/** TODO(design-kit): natives select bleibt — controlled Feldwahl (Seitentyp,
+    Sichtbarkeit, Block-Typ), siehe gleiches Muster in ReviewWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+/** TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */
+const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
+const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 type TemplatePageType = keyof typeof PAGE_TYPE_LABELS;
 type TemplateVisibility = keyof typeof VISIBILITY_LABELS;
@@ -67,30 +76,39 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
   }
 
   return (
-    <div className="uwe-template-editor-split" style={{ display: "grid", gap: "1.5rem", gridTemplateColumns: "minmax(0, 1fr) minmax(16rem, 22rem)" }}>
-      <form action={action} className="uwe-form" style={{ maxWidth: "48rem" }}>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)] gap-6">
+      <form action={action} className="flex max-w-3xl flex-col gap-4">
         {template ? <input type="hidden" name="templateId" value={template.id} /> : null}
 
-        <label>
-          Name
-          <input name="name" required value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="template-editor-name">Name</Label>
+          <Input
+            id="template-editor-name"
+            name="name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
 
-        <label>
-          Beschreibung
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="template-editor-description">Beschreibung</Label>
+          <Input
+            id="template-editor-description"
             name="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-        </label>
+        </div>
 
-        <label>
-          Seitentyp
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="template-editor-page-type">Seitentyp</Label>
           <select
+            id="template-editor-page-type"
             name="pageType"
             value={pageType}
             onChange={(e) => setPageType(e.target.value as TemplatePageType)}
+            className={NATIVE_SELECT_CLASS}
           >
             {(Object.keys(PAGE_TYPE_LABELS) as TemplatePageType[]).map((type) => (
               <option key={type} value={type}>
@@ -98,16 +116,18 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          Standard-Sichtbarkeit
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="template-editor-default-visibility">Standard-Sichtbarkeit</Label>
           <select
+            id="template-editor-default-visibility"
             name="defaultVisibility"
             value={defaultVisibility}
             onChange={(e) =>
               setDefaultVisibility(e.target.value as TemplateVisibility)
             }
+            className={NATIVE_SELECT_CLASS}
           >
             {(Object.keys(VISIBILITY_LABELS) as TemplateVisibility[]).map((v) => (
               <option key={v} value={v}>
@@ -115,28 +135,31 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          Titel-Platzhalter
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="template-editor-title-placeholder">Titel-Platzhalter</Label>
+          <Input
+            id="template-editor-title-placeholder"
             name="titlePlaceholder"
             value={titlePlaceholder}
             onChange={(e) => setTitlePlaceholder(e.target.value)}
           />
-        </label>
+        </div>
 
-        <h2 style={{ fontSize: "1rem", margin: "0.5rem 0 0" }}>Blöcke</h2>
+        <h2 className="mt-2 text-base font-semibold tracking-tight">Blöcke</h2>
 
         {blocks.map((block, index) => (
-          <fieldset key={index} className="uwe-template-block-fieldset">
-            <legend>Block {index + 1}</legend>
-            <label>
-              Typ
+          <fieldset key={index} className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
+            <legend className="px-1 text-sm text-muted-foreground">Block {index + 1}</legend>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`template-editor-block-${index}-type`}>Typ</Label>
               <select
+                id={`template-editor-block-${index}-type`}
                 name={`blockType_${index}`}
                 value={block.type}
                 onChange={(e) => updateBlock(index, { type: e.target.value })}
+                className={NATIVE_SELECT_CLASS}
               >
                 {Object.keys(BLOCK_TYPE_LABELS).map((type) => (
                   <option key={type} value={type}>
@@ -144,13 +167,15 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
                   </option>
                 ))}
               </select>
-            </label>
-            <label>
-              Sichtbarkeit
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`template-editor-block-${index}-visibility`}>Sichtbarkeit</Label>
               <select
+                id={`template-editor-block-${index}-visibility`}
                 name={`blockVisibility_${index}`}
                 value={block.visibility}
                 onChange={(e) => updateBlock(index, { visibility: e.target.value })}
+                className={NATIVE_SELECT_CLASS}
               >
                 {(Object.keys(VISIBILITY_LABELS) as TemplateVisibility[]).map((v) => (
                   <option key={v} value={v}>
@@ -158,19 +183,20 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
                   </option>
                 ))}
               </select>
-            </label>
-            <label>
-              Inhalt
-              <textarea
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`template-editor-block-${index}-content`}>Inhalt</Label>
+              <Textarea
+                id={`template-editor-block-${index}-content`}
                 name={`blockContent_${index}`}
                 rows={6}
                 value={block.content}
                 onChange={(e) => updateBlock(index, { content: e.target.value })}
               />
-            </label>
+            </div>
             {template && index < (template.blocks.length ?? 0) ? (
-              <label style={{ flexDirection: "row", display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                <input type="checkbox" name={`blockRemove_${index}`} />
+              <label className={CHECKBOX_ROW_CLASS}>
+                <input type="checkbox" name={`blockRemove_${index}`} className={CHECKBOX_CLASS} />
                 Block entfernen
               </label>
             ) : index === blocks.length - 1 && !block.content.trim() ? (
@@ -179,13 +205,13 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
           </fieldset>
         ))}
 
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={addBlock}>
+        <Button type="button" variant="secondary" onClick={addBlock} className="self-start">
           + Block
-        </button>
+        </Button>
 
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" style={{ marginTop: "1rem" }}>
+        <Button type="submit" className="mt-4 self-start">
           {submitLabel}
-        </button>
+        </Button>
       </form>
 
       <TemplateLivePreview

@@ -4,6 +4,7 @@ import {
   prisma,
   type AdminLinkSourceType,
 } from "@uwe/database/server";
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
   sourceType: AdminLinkSourceType;
@@ -18,22 +19,26 @@ export async function AdminEntityLinksPanel({ sourceType, sourceId }: Props) {
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Verknüpfungen</h2>
-      <ul className="uwe-today-card-list">
-        {links.map((link) => (
-          <li key={link.id} className="uwe-today-card">
-            <p className="uwe-dashboard-muted">
-              {link.relationLabel} · {link.entityType}
-            </p>
-            {link.href ? (
-              <Link href={link.href}>{link.title}</Link>
-            ) : (
-              <span>{link.title}</span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Verknüpfungen</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col gap-2">
+          {links.map((link) => (
+            <li key={link.id} className="rounded-[var(--radius)] border border-border p-3">
+              <p className="text-sm text-muted-foreground">
+                {link.relationLabel} · {link.entityType}
+              </p>
+              {link.href ? (
+                <Link href={link.href}>{link.title}</Link>
+              ) : (
+                <span>{link.title}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }

@@ -4,6 +4,7 @@ import { GlobalSearchForm, PageTypeBadge, VisibilityBadge } from "@uwe/shared-ui
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -41,12 +42,11 @@ export default async function AuthWorldNpcsPage({ params, searchParams }: Props)
     : npcs;
 
   return (
-    <section className="portal-content-card">
-      <h1>NPCs</h1>
-      <p className="auth-lead">
-        Bekannte Nicht-Spieler-Charaktere, die für deine Rolle ({ctx.effectiveRole}) freigeschaltet
-        sind.
-      </p>
+    <>
+      <PageHeader
+        title="NPCs"
+        summary={`Bekannte Nicht-Spieler-Charaktere, die für deine Rolle (${ctx.effectiveRole}) freigeschaltet sind.`}
+      />
 
       <GlobalSearchForm
         action={`/auth/worlds/${worldSlug}/npcs`}
@@ -54,28 +54,33 @@ export default async function AuthWorldNpcsPage({ params, searchParams }: Props)
         placeholder="NPCs durchsuchen…"
       />
 
-      <ul className="auth-page-list">
+      <ul className="mt-4 grid gap-2">
         {filtered.map((page) => (
           <li key={page.id}>
-            <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
+            <Link
+              href={`/auth/worlds/${worldSlug}/${page.slug}`}
+              className="block rounded-[var(--radius)] border border-border p-4 transition-colors hover:bg-muted/50"
+            >
               <strong>{page.title}</strong>
-              <span className="auth-page-list-badges">
+              <div className="mt-1 flex flex-wrap gap-2">
                 <PageTypeBadge type={page.type} />
                 <VisibilityBadge visibility={page.visibility} />
-              </span>
-              {page.summary && <p className="portal-dash-summary">{page.summary}</p>}
+              </div>
+              {page.summary ? (
+                <p className="mt-2 text-sm text-muted-foreground">{page.summary}</p>
+              ) : null}
             </Link>
           </li>
         ))}
       </ul>
 
-      {filtered.length === 0 && (
+      {filtered.length === 0 ? (
         <PortalEmptyState
           title={query ? "Keine passenden NPCs gefunden" : "Keine NPCs freigeschaltet"}
           description={query ? "Probiere einen anderen Suchbegriff." : undefined}
           icon="users"
         />
-      )}
-    </section>
+      ) : null}
+    </>
   );
 }

@@ -49,7 +49,7 @@ export function DeleteAtlasNodeButton({
   return (
     <button
       type="button"
-      className="uwe-v2-btn uwe-v2-btn-danger uwe-v2-btn-sm"
+      className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3 text-xs"
       onClick={handleClick}
       disabled={pending}
       aria-label={`Knoten „${title}" löschen`}

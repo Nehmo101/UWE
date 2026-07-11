@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { PortalActiveSessionsList } from "@/src/components/PortalActiveSessionsList";
 import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
 import { PageHeader } from "@/src/components/shell";
-import { Card, CardContent } from "@/src/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { getCurrentSession } from "@/src/lib/auth";
 import {
   createPrismaClient,
@@ -34,7 +34,7 @@ export default async function PortalAccountSecurityPage() {
         summary={`Angemeldet als ${user.displayName}${user.email ? ` (${user.email})` : ""}.`}
       />
 
-      <div className="portal-security-stack">
+      <div className="mt-4 grid gap-5">
         <Card className="max-w-2xl">
           <CardContent className="pt-6">
             <TwoFactorSetupForm backHref="/auth/account/password" />
@@ -46,14 +46,18 @@ export default async function PortalAccountSecurityPage() {
           </CardContent>
         </Card>
 
-        <section className="portal-content-card max-w-2xl">
-          <h2>Aktive Sitzungen</h2>
-          <p className="auth-lead">
-            Geräte und Browser, mit denen du aktuell angemeldet bist. Beim Passwort ändern werden
-            alle anderen Sitzungen beendet.
-          </p>
-          <PortalActiveSessionsList sessions={activeSessions} />
-        </section>
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>Aktive Sitzungen</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Geräte und Browser, mit denen du aktuell angemeldet bist. Beim Passwort ändern werden
+              alle anderen Sitzungen beendet.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PortalActiveSessionsList sessions={activeSessions} />
+          </CardContent>
+        </Card>
       </div>
     </>
   );

@@ -5,6 +5,9 @@ import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell"
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { DungeonQuickStartPresets } from "@/src/components/dungeon/DungeonQuickStartPresets";
 import { createDungeonAction } from "../../../../dungeon-actions";
+import { Button, buttonVariants, Input, Label, Textarea } from "@/src/components/ui";
+
+const FIELD_CLASS = "flex flex-col gap-1.5";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -45,30 +48,42 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
         summary="Dungeon mit Ebenen und Räumen anlegen."
       />
       <DungeonQuickStartPresets formId="new-dungeon-form" />
-      <form id="new-dungeon-form" action={createDungeonAction} className="uwe-v2-form">
+      <form id="new-dungeon-form" action={createDungeonAction} className="flex flex-col gap-4">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         {selectedCampaign && (
           <input type="hidden" name="campaignId" value={selectedCampaign.id} />
         )}
 
-        <label>
-          Titel
-          <input name="title" required placeholder="Verlassener Tempel" />
-        </label>
+        <div className={FIELD_CLASS}>
+          <Label htmlFor="new-dungeon-title">Titel</Label>
+          <Input id="new-dungeon-title" name="title" required placeholder="Verlassener Tempel" />
+        </div>
 
-        <label>
-          Zusammenfassung
-          <textarea name="summary" rows={2} placeholder="Kurzbeschreibung für die Übersicht" />
-        </label>
+        <div className={FIELD_CLASS}>
+          <Label htmlFor="new-dungeon-summary">Zusammenfassung</Label>
+          <Textarea
+            id="new-dungeon-summary"
+            name="summary"
+            rows={2}
+            placeholder="Kurzbeschreibung für die Übersicht"
+          />
+        </div>
 
-        <label>
-          Beschreibung (DM)
-          <textarea name="description" rows={6} placeholder="Dungeon-Überblick mit [[Wiki-Links]]…" />
-        </label>
+        <div className={FIELD_CLASS}>
+          <Label htmlFor="new-dungeon-description">Beschreibung (DM)</Label>
+          <Textarea
+            id="new-dungeon-description"
+            name="description"
+            rows={6}
+            placeholder="Dungeon-Überblick mit [[Wiki-Links]]…"
+          />
+        </div>
 
-        <div className="uwe-form-actions">
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Dungeon erstellen</button>
-          <Link className="uwe-v2-btn" href={`/worlds/${worldSlug}/dungeons`}>Abbrechen</Link>
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit">Dungeon erstellen</Button>
+          <Link className={buttonVariants({ variant: "outline" })} href={`/worlds/${worldSlug}/dungeons`}>
+            Abbrechen
+          </Link>
         </div>
       </form>
     </WorldShell>

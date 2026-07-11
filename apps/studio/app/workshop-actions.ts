@@ -25,6 +25,14 @@ function lifeAdmin() {
   return createLifeAdminService(prisma);
 }
 
+/** Euro-Eingabe ("9,99" oder "9.99") in Cents; akzeptiert Komma als Dezimaltrenner. */
+function parseOptionalEuroToCents(value: FormDataEntryValue | null): number | null {
+  const raw = String(value ?? "").trim().replace(",", ".");
+  if (!raw) return null;
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) : null;
+}
+
 function parseOptionalInt(value: FormDataEntryValue | null): number | null {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -215,9 +223,9 @@ export async function createTerrainRentalAction(formData: FormData) {
   await lifeAdmin().createWorkshopTerrainRental({
     terrainSetName: String(formData.get("terrainSetName") || "").trim(),
     boxLabel: String(formData.get("boxLabel") || ""),
-    replacementValueCents: parseOptionalInt(formData.get("replacementValueCents")),
-    rentalPriceCents: parseOptionalInt(formData.get("rentalPriceCents")),
-    depositCents: parseOptionalInt(formData.get("depositCents")),
+    replacementValueCents: parseOptionalEuroToCents(formData.get("replacementValueEuros")),
+    rentalPriceCents: parseOptionalEuroToCents(formData.get("rentalPriceEuros")),
+    depositCents: parseOptionalEuroToCents(formData.get("depositEuros")),
     status: (String(formData.get("status") || "available") as WorkshopRentalStatus) || "available",
     damages: String(formData.get("damages") || ""),
     handoverChecklist: parseChecklistFromForm(String(formData.get("handoverChecklist") || "")),
@@ -237,9 +245,9 @@ export async function updateTerrainRentalAction(formData: FormData) {
   await lifeAdmin().updateWorkshopTerrainRental(id, {
     terrainSetName: String(formData.get("terrainSetName") || "").trim(),
     boxLabel: String(formData.get("boxLabel") || ""),
-    replacementValueCents: parseOptionalInt(formData.get("replacementValueCents")),
-    rentalPriceCents: parseOptionalInt(formData.get("rentalPriceCents")),
-    depositCents: parseOptionalInt(formData.get("depositCents")),
+    replacementValueCents: parseOptionalEuroToCents(formData.get("replacementValueEuros")),
+    rentalPriceCents: parseOptionalEuroToCents(formData.get("rentalPriceEuros")),
+    depositCents: parseOptionalEuroToCents(formData.get("depositEuros")),
     status: String(formData.get("status")) as WorkshopRentalStatus,
     damages: String(formData.get("damages") || ""),
     handoverChecklist: parseChecklistFromForm(String(formData.get("handoverChecklist") || "")),

@@ -9,6 +9,23 @@ import {
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { createPromptAction } from "@/app/prompt-actions";
+import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   searchParams: Promise<{ category?: string; q?: string; tag?: string }>;
@@ -40,115 +57,123 @@ export default async function PromptsPage({ searchParams }: Props) {
         summary="Prompts als eigene Objekte mit Kategorie, Tags und Variablen — durchsuchbar und als Agent Job startbar."
       />
 
-      <form method="get" className="uwe-form" style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Suche</span>
-          <input
+      <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="prompts-search">Suche</Label>
+          <Input
+            id="prompts-search"
             name="q"
             defaultValue={search ?? ""}
             placeholder="Titel, Beschreibung, Body…"
-            className="rounded border border-input bg-background px-3 py-2 text-sm"
-            style={{ minWidth: "14rem" }}
+            className="min-w-[14rem]"
           />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Tag</span>
-          <input
-            name="tag"
-            defaultValue={tagFilter ?? ""}
-            placeholder="z. B. refactor"
-            className="rounded border border-input bg-background px-3 py-2 text-sm"
-          />
-        </label>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="prompts-tag">Tag</Label>
+          <Input id="prompts-tag" name="tag" defaultValue={tagFilter ?? ""} placeholder="z. B. refactor" />
+        </div>
         {filter ? <input type="hidden" name="category" value={filter} /> : null}
-        <div className="flex items-end gap-2">
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Filtern
-          </button>
+        <div className="flex gap-2">
+          <Button type="submit">Filtern</Button>
           {(search || tagFilter || filter) && (
-            <Link href="/prompts" className="uwe-v2-btn">
+            <Link href="/prompts" className={buttonVariants({ variant: "outline" })}>
               Zurücksetzen
             </Link>
           )}
         </div>
       </form>
 
-      <section className="uwe-v2-section">
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          <Link href="/prompts" className="uwe-v2-btn uwe-v2-btn-small" aria-current={!filter ? "true" : undefined}>
-            Alle
+      <nav className="mb-6 flex flex-wrap gap-2" aria-label="Kategorie">
+        <Link
+          href="/prompts"
+          aria-current={!filter ? "page" : undefined}
+          className={buttonVariants({ variant: !filter ? "default" : "secondary", size: "sm" })}
+        >
+          Alle
+        </Link>
+        {PROMPT_CATEGORIES.map((cat) => (
+          <Link
+            key={cat}
+            href={`/prompts?category=${cat}${search ? `&q=${encodeURIComponent(search)}` : ""}${tagFilter ? `&tag=${encodeURIComponent(tagFilter)}` : ""}`}
+            aria-current={filter === cat ? "page" : undefined}
+            className={buttonVariants({ variant: filter === cat ? "default" : "secondary", size: "sm" })}
+          >
+            {PROMPT_CATEGORY_LABELS[cat]}
           </Link>
-          {PROMPT_CATEGORIES.map((cat) => (
-            <Link
-              key={cat}
-              href={`/prompts?category=${cat}${search ? `&q=${encodeURIComponent(search)}` : ""}${tagFilter ? `&tag=${encodeURIComponent(tagFilter)}` : ""}`}
-              className="uwe-v2-btn uwe-v2-btn-small"
-              aria-current={filter === cat ? "true" : undefined}
-            >
-              {PROMPT_CATEGORY_LABELS[cat]}
-            </Link>
+        ))}
+      </nav>
+
+      {prompts.length === 0 ? (
+        <p className="mb-6 text-sm text-muted-foreground">Keine Prompts für diesen Filter.</p>
+      ) : (
+        <ul className="mb-6 flex flex-col gap-2">
+          {prompts.map((prompt) => (
+            <li key={prompt.id}>
+              <Card>
+                <CardContent className="flex flex-col gap-1 pt-6">
+                  <h3 className="text-base font-semibold">
+                    <Link href={`/prompts/${prompt.id}`}>{prompt.title}</Link>
+                  </h3>
+                  <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <Badge>{PROMPT_CATEGORY_LABELS[prompt.category]}</Badge>
+                    <span>
+                      {prompt.variables.length > 0
+                        ? `${prompt.variables.length} Variablen`
+                        : "keine Variablen"}
+                      {prompt.tags.length > 0 ? ` · Tags: ${prompt.tags.join(", ")}` : ""}
+                      {prompt.description ? ` · ${prompt.description}` : ""}
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+            </li>
           ))}
-        </div>
-      </section>
+        </ul>
+      )}
 
-      <section className="uwe-v2-section">
-        {prompts.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine Prompts für diesen Filter.</p>
-        ) : (
-          <ul className="uwe-today-card-list">
-            {prompts.map((prompt) => (
-              <li key={prompt.id} className="uwe-today-card">
-                <h3>
-                  <Link href={`/prompts/${prompt.id}`}>{prompt.title}</Link>
-                </h3>
-                <p className="uwe-dashboard-muted">
-                  <span className="uwe-badge">{PROMPT_CATEGORY_LABELS[prompt.category]}</span>{" "}
-                  {prompt.variables.length > 0 ? `${prompt.variables.length} Variablen` : "keine Variablen"}
-                  {prompt.tags.length > 0 ? ` · Tags: ${prompt.tags.join(", ")}` : ""}
-                  {prompt.description ? ` · ${prompt.description}` : ""}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neuer Prompt</h2>
-        <form action={createPromptAction} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <label>
-            Titel
-            <input type="text" name="title" required />
-          </label>
-          <label>
-            Kategorie
-            <select name="category" defaultValue="other">
-              {PROMPT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {PROMPT_CATEGORY_LABELS[cat]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Beschreibung
-            <input type="text" name="description" />
-          </label>
-          <label>
-            Body (Variablen als {"{{name}}"})
-            <textarea name="body" rows={6} required />
-          </label>
-          <label>
-            Tags (Komma-getrennt)
-            <input type="text" name="tags" />
-          </label>
-          <div className="uwe-form-actions">
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Anlegen
-            </button>
-          </div>
-        </form>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Neuer Prompt</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={createPromptAction} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-new-title">Titel</Label>
+              <Input id="prompt-new-title" type="text" name="title" required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-new-category">Kategorie</Label>
+              <Select name="category" defaultValue="other">
+                <SelectTrigger id="prompt-new-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROMPT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {PROMPT_CATEGORY_LABELS[cat]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-new-description">Beschreibung</Label>
+              <Input id="prompt-new-description" type="text" name="description" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-new-body">Body (Variablen als {"{{name}}"})</Label>
+              <Textarea id="prompt-new-body" name="body" rows={6} required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prompt-new-tags">Tags (Komma-getrennt)</Label>
+              <Input id="prompt-new-tags" type="text" name="tags" />
+            </div>
+            <div>
+              <Button type="submit">Anlegen</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </StudioShell>
   );
 }

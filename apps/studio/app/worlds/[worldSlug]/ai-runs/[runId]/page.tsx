@@ -64,7 +64,7 @@ export default async function AiRunDetailPage({ params }: Props) {
         title={AI_TASK_LABELS[run.taskType as keyof typeof AI_TASK_LABELS] ?? run.taskType}
         summary={`${AI_RUN_STATUS_LABELS[run.status]} · ${formatStudioDate(run.createdAt, "medium")}`}
       />
-      <dl className="uwe-detail-grid">
+      <dl className="grid grid-cols-[minmax(6rem,10rem)_1fr] gap-x-4 gap-y-1 text-sm [&>dt]:text-muted-foreground [&>dd]:m-0">
         <dt>Provider</dt>
         <dd>{run.provider}</dd>
         <dt>Modell</dt>

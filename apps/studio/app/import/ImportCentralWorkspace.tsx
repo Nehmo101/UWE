@@ -23,6 +23,26 @@ import { createImportCentralJobAction, rollbackImportCentralJobAction } from "..
 import { ImportWorkspace } from "../worlds/[worldSlug]/import/ImportWorkspace";
 import { MarkdownCentralImportPanel } from "./MarkdownCentralImportPanel";
 import { PdfCentralImportPanel } from "./PdfCentralImportPanel";
+import {
+  Alert,
+  Badge,
+  type BadgeProps,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Label,
+  buttonVariants,
+  cn,
+} from "@/src/components/ui";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+
+/** Native select — fester, nicht-leerer Wertebereich, siehe Muster in UserManagementWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 interface WorldOption {
   id: string;
@@ -54,14 +74,21 @@ interface Props {
   plannedFormats: ImportFormat[];
 }
 
-const JOB_STATUS_CLASS: Record<string, string> = {
-  pending: "uwe-badge",
-  preview: "uwe-badge uwe-badge-player",
-  executing: "uwe-badge uwe-badge-player",
-  completed: "uwe-badge uwe-badge-published",
-  failed: "uwe-badge uwe-badge-secret",
-  rolled_back: "uwe-badge uwe-badge-draft",
-};
+function jobStatusVariant(status: string): BadgeProps["variant"] {
+  switch (status) {
+    case "preview":
+    case "executing":
+      return "info";
+    case "completed":
+      return "success";
+    case "failed":
+      return "danger";
+    case "rolled_back":
+      return "warning";
+    default:
+      return "default";
+  }
+}
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "medium" }).format(
@@ -187,7 +214,7 @@ export function ImportCentralWorkspace({
       activeJob.targetWorldSlug
     ) {
       return (
-        <p className="uwe-panel-intro">
+        <p className="text-sm text-muted-foreground">
           Vollständiger Import:{" "}
           <Link href={`/worlds/${activeJob.targetWorldSlug}/import`}>Welt-Import öffnen</Link>
         </p>
@@ -232,207 +259,228 @@ export function ImportCentralWorkspace({
     }
 
     return (
-      <p className="uwe-v2-empty">
+      <p className="text-sm text-muted-foreground">
         Für diese Quelle/Ziel-Kombination ist noch kein direkter Import implementiert.
       </p>
     );
   };
 
   return (
-    <div className="uwe-import-workspace">
-      <section className="uwe-panel">
-        <h2>Neuer Import</h2>
-        <p className="uwe-panel-intro">
-          Wähle Quelle und Ziel und lege einen Import-Job an. Markdown, Obsidian (einzelne Dateien,
-          Vault-Ordner oder Vault-ZIP) und PDF können in Life Brain, Capture oder DnD-Seiten
-          importiert werden. KnoteForge-JSON importiert nur in Welten. Jeder Import zeigt zuerst
-          eine Vorschau und kann nach der Ausführung über den Verlauf zurückgerollt werden.
-        </p>
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Neuer Import</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Wähle Quelle und Ziel und lege einen Import-Job an. Markdown, Obsidian (einzelne Dateien,
+            Vault-Ordner oder Vault-ZIP) und PDF können in Life Brain, Capture oder DnD-Seiten
+            importiert werden. KnoteForge-JSON importiert nur in Welten. Jeder Import zeigt zuerst
+            eine Vorschau und kann nach der Ausführung über den Verlauf zurückgerollt werden.
+          </p>
 
-        <div className="uwe-form-grid">
-          <label>
-            Quelle
-            <select
-              value={sourceType}
-              onChange={(event) => setSourceType(event.target.value as ImportSourceType)}
-            >
-              {(["knoteforge", "markdown", "obsidian", "pdf"] as ImportSourceType[]).map((entry) => (
-                <option key={entry} value={entry}>
-                  {IMPORT_SOURCE_TYPE_LABELS[entry]}
-                  {isImportCentralSourceComingSoon(entry) ? " (demnächst)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Ziel
-            <select
-              value={targetType}
-              onChange={(event) => setTargetType(event.target.value as ImportTargetType)}
-            >
-              {(["world", "personal_brain", "capture", "dnd_page"] as ImportTargetType[]).map(
-                (entry) => (
-                  <option key={entry} value={entry}>
-                    {IMPORT_TARGET_TYPE_LABELS[entry]}
-                    {isImportCentralTargetComingSoon(entry) ? " (demnächst)" : ""}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-
-          {needsWorld ? (
-            <label>
-              Welt
+          {/* TODO(design-kit): Alle Selects hier sind controlled (value+onChange), Kit-Select
+              (Radix) unterstützt das noch nicht direkt — native <select> bleibt, siehe Muster in
+              UserManagementWorkspace.tsx. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="import-central-source">Quelle</Label>
               <select
-                value={targetWorldId}
-                onChange={(event) => setTargetWorldId(event.target.value)}
-                disabled={worlds.length === 0}
+                id="import-central-source"
+                value={sourceType}
+                onChange={(event) => setSourceType(event.target.value as ImportSourceType)}
+                className={NATIVE_SELECT_CLASS}
               >
-                {worlds.length === 0 ? (
-                  <option value="">Keine Welten vorhanden</option>
-                ) : (
-                  worlds.map((world) => (
-                    <option key={world.id} value={world.id}>
-                      {world.name}
+                {(["knoteforge", "markdown", "obsidian", "pdf"] as ImportSourceType[]).map((entry) => (
+                  <option key={entry} value={entry}>
+                    {IMPORT_SOURCE_TYPE_LABELS[entry]}
+                    {isImportCentralSourceComingSoon(entry) ? " (demnächst)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="import-central-target">Ziel</Label>
+              <select
+                id="import-central-target"
+                value={targetType}
+                onChange={(event) => setTargetType(event.target.value as ImportTargetType)}
+                className={NATIVE_SELECT_CLASS}
+              >
+                {(["world", "personal_brain", "capture", "dnd_page"] as ImportTargetType[]).map(
+                  (entry) => (
+                    <option key={entry} value={entry}>
+                      {IMPORT_TARGET_TYPE_LABELS[entry]}
+                      {isImportCentralTargetComingSoon(entry) ? " (demnächst)" : ""}
                     </option>
-                  ))
+                  ),
                 )}
               </select>
-            </label>
-          ) : null}
-        </div>
+            </div>
 
-        {showComingSoon ? (
-          <p className="uwe-flash uwe-flash-warning">
-            Diese Quelle/Ziel-Kombination ist noch nicht verfügbar.
-          </p>
-        ) : null}
-
-        {comboSupported ? (
-          <label>
-            Dateiname (optional)
-            <input
-              type="file"
-              accept={importCentralSourceAccept(sourceType)}
-              onChange={(event) => setFileName(event.target.files?.[0]?.name ?? null)}
-            />
-          </label>
-        ) : null}
-
-        <div className="uwe-form-actions">
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            onClick={handleCreateJob}
-            disabled={pending || (needsWorld && !targetWorldId) || !comboSupported}
-          >
-            {pending ? "Wird angelegt…" : "Import-Job starten"}
-          </button>
-        </div>
-      </section>
-
-      {activeJob ? (
-        <section className="uwe-panel">
-          <h2>Aktiver Job</h2>
-          <div className="uwe-import-summary">
-            <span className={JOB_STATUS_CLASS[activeJob.status] ?? "uwe-badge"}>
-              {IMPORT_JOB_STATUS_LABELS[activeJob.status as keyof typeof IMPORT_JOB_STATUS_LABELS] ??
-                activeJob.status}
-            </span>
-            <span className="uwe-table-sub">
-              {IMPORT_SOURCE_TYPE_LABELS[activeJob.sourceType]} →{" "}
-              {IMPORT_TARGET_TYPE_LABELS[activeJob.targetType]}
-              {activeJob.targetWorldName ? ` (${activeJob.targetWorldName})` : ""}
-            </span>
+            {needsWorld ? (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="import-central-world">Welt</Label>
+                <select
+                  id="import-central-world"
+                  value={targetWorldId}
+                  onChange={(event) => setTargetWorldId(event.target.value)}
+                  disabled={worlds.length === 0}
+                  className={NATIVE_SELECT_CLASS}
+                >
+                  {worlds.length === 0 ? (
+                    <option value="">Keine Welten vorhanden</option>
+                  ) : (
+                    worlds.map((world) => (
+                      <option key={world.id} value={world.id}>
+                        {world.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            ) : null}
           </div>
 
-          {renderActiveJobImport()}
-        </section>
+          {showComingSoon ? (
+            <Alert tone="warning">Diese Quelle/Ziel-Kombination ist noch nicht verfügbar.</Alert>
+          ) : null}
+
+          {comboSupported ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="import-central-file">Dateiname (optional)</Label>
+              <input
+                id="import-central-file"
+                type="file"
+                accept={importCentralSourceAccept(sourceType)}
+                onChange={(event) => setFileName(event.target.files?.[0]?.name ?? null)}
+                className="text-sm text-foreground"
+              />
+            </div>
+          ) : null}
+
+          <Button
+            type="button"
+            onClick={handleCreateJob}
+            disabled={pending || (needsWorld && !targetWorldId) || !comboSupported}
+            className="self-start"
+          >
+            {pending ? "Wird angelegt…" : "Import-Job starten"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {activeJob ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Aktiver Job</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={jobStatusVariant(activeJob.status)}>
+                {IMPORT_JOB_STATUS_LABELS[activeJob.status as keyof typeof IMPORT_JOB_STATUS_LABELS] ??
+                  activeJob.status}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {IMPORT_SOURCE_TYPE_LABELS[activeJob.sourceType]} →{" "}
+                {IMPORT_TARGET_TYPE_LABELS[activeJob.targetType]}
+                {activeJob.targetWorldName ? ` (${activeJob.targetWorldName})` : ""}
+              </span>
+            </div>
+
+            {renderActiveJobImport()}
+          </CardContent>
+        </Card>
       ) : null}
 
-      {error ? <p className="uwe-flash uwe-flash-error">{error}</p> : null}
+      {error ? (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      ) : null}
 
-      <section className="uwe-panel">
-        <h2>Import-Verlauf</h2>
-        {jobs.length === 0 ? (
-          <p className="uwe-v2-empty">Noch keine Import-Jobs.</p>
-        ) : (
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>Zeit</th>
-                <th>Quelle</th>
-                <th>Ziel</th>
-                <th>Welt</th>
-                <th>Status</th>
-                <th>Details</th>
-                <th>Aktionen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td>{formatDate(job.createdAt)}</td>
-                  <td>{IMPORT_SOURCE_TYPE_LABELS[job.sourceType]}</td>
-                  <td>{IMPORT_TARGET_TYPE_LABELS[job.targetType]}</td>
-                  <td>{job.targetWorldName ?? "—"}</td>
-                  <td>
-                    <span className={JOB_STATUS_CLASS[job.status] ?? "uwe-badge"}>
-                      {IMPORT_JOB_STATUS_LABELS[
-                        job.status as keyof typeof IMPORT_JOB_STATUS_LABELS
-                      ] ?? job.status}
-                    </span>
-                  </td>
-                  <td>
-                    {job.errorMessage ? (
-                      <span className="uwe-table-sub">{job.errorMessage}</span>
-                    ) : readResultSummary(job.resultSummary) ? (
-                      readResultSummary(job.resultSummary)
-                    ) : readPreviewSummary(job.previewPayload) ? (
-                      readPreviewSummary(job.previewPayload)
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td>
-                    <div className="uwe-form-actions">
-                      <button
-                        type="button"
-                        className="uwe-v2-btn"
-                        onClick={() => setActiveJobId(job.id)}
-                      >
-                        Öffnen
-                      </button>
-                      {job.status === "completed" && job.undoToken ? (
-                        <button
-                          type="button"
-                          className="uwe-v2-btn"
-                          onClick={() => handleRollback(job.id)}
-                          disabled={pending}
-                        >
-                          Zurückrollen
-                        </button>
-                      ) : null}
-                      {job.sourceType === "knoteforge" &&
-                      job.targetType === "world" &&
-                      job.targetWorldSlug ? (
-                        <Link
-                          className="uwe-v2-btn"
-                          href={`/worlds/${job.targetWorldSlug}/import`}
-                        >
-                          Welt-Import
-                        </Link>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Import-Verlauf</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {jobs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Import-Jobs.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Zeit</th>
+                    <th className={TH_CLASS}>Quelle</th>
+                    <th className={TH_CLASS}>Ziel</th>
+                    <th className={TH_CLASS}>Welt</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS}>Details</th>
+                    <th className={TH_CLASS}>Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobs.map((job) => (
+                    <tr key={job.id}>
+                      <td className={TD_CLASS}>{formatDate(job.createdAt)}</td>
+                      <td className={TD_CLASS}>{IMPORT_SOURCE_TYPE_LABELS[job.sourceType]}</td>
+                      <td className={TD_CLASS}>{IMPORT_TARGET_TYPE_LABELS[job.targetType]}</td>
+                      <td className={TD_CLASS}>{job.targetWorldName ?? "—"}</td>
+                      <td className={TD_CLASS}>
+                        <Badge variant={jobStatusVariant(job.status)}>
+                          {IMPORT_JOB_STATUS_LABELS[
+                            job.status as keyof typeof IMPORT_JOB_STATUS_LABELS
+                          ] ?? job.status}
+                        </Badge>
+                      </td>
+                      <td className={TD_CLASS}>
+                        {job.errorMessage ? (
+                          <span className="text-xs text-muted-foreground">{job.errorMessage}</span>
+                        ) : readResultSummary(job.resultSummary) ? (
+                          readResultSummary(job.resultSummary)
+                        ) : readPreviewSummary(job.previewPayload) ? (
+                          readPreviewSummary(job.previewPayload)
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className={TD_CLASS}>
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" variant="outline" onClick={() => setActiveJobId(job.id)}>
+                            Öffnen
+                          </Button>
+                          {job.status === "completed" && job.undoToken ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleRollback(job.id)}
+                              disabled={pending}
+                            >
+                              Zurückrollen
+                            </Button>
+                          ) : null}
+                          {job.sourceType === "knoteforge" &&
+                          job.targetType === "world" &&
+                          job.targetWorldSlug ? (
+                            <Link
+                              className={cn(buttonVariants({ variant: "outline" }))}
+                              href={`/worlds/${job.targetWorldSlug}/import`}
+                            >
+                              Welt-Import
+                            </Link>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

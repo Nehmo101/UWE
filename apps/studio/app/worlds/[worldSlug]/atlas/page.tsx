@@ -18,6 +18,23 @@ import {
   ensureAtlasAction,
   createAtlasNodeAction,
 } from "../../../atlas-actions";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+  Label,
+  NavIcon,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui";
 
 // ---------------------------------------------------------------------------
 // Level display helpers
@@ -30,11 +47,12 @@ const LEVEL_LABELS: Record<string, string> = {
   city: "Stadt",
 };
 
-const LEVEL_ICONS: Record<string, string> = {
-  globe: "🌍",
-  continent: "🗺️",
-  landscape: "🏔️",
-  city: "🏙️",
+/** Lucide icon names (kebab-case, resolved via NavIcon) for each atlas level. */
+const LEVEL_ICON_NAMES: Record<string, string> = {
+  globe: "globe",
+  continent: "map",
+  landscape: "mountain",
+  city: "building-2",
 };
 
 const LEVEL_ORDER = ["globe", "continent", "landscape", "city"];
@@ -98,32 +116,28 @@ function NodeTreeRow({
   depth?: number;
 }) {
   const { node, children } = item;
-  const icon = LEVEL_ICONS[node.level] ?? "📍";
+  const iconName = LEVEL_ICON_NAMES[node.level] ?? "map-pin";
   const levelLabel = LEVEL_LABELS[node.level] ?? node.level;
+  const isPlayerVisible = node.visibility === "player_visible" || node.visibility === "public";
 
   return (
     <>
-      <li
-        className="uwe-atlas-node-item"
-        style={{ paddingLeft: depth * 20, display: "flex", alignItems: "center", gap: "0.5rem" }}
-      >
+      {/* Indentation is the only genuinely dynamic style left (per tree depth). */}
+      <li className="flex items-center gap-2" style={{ paddingLeft: depth * 20 }}>
         <a
           href={`/worlds/${worldSlug}/atlas/${node.id}`}
-          className="uwe-atlas-node-link"
-          style={{ flex: 1, minWidth: 0 }}
+          className="flex min-w-0 flex-1 items-center gap-2 text-sm"
         >
-          <span className="uwe-atlas-node-icon">{icon}</span>
-          <span className="uwe-atlas-node-title">{node.title}</span>
-          <span className="uwe-atlas-node-level" style={{ opacity: 0.6, fontSize: "0.8em" }}>
-            {levelLabel}
-          </span>
-          {node.visibility === "player_visible" || node.visibility === "public" ? (
-            <span style={{ fontSize: "0.7em", color: "var(--uwe-success, #16a34a)", marginLeft: 4 }}>
-              ✓ Spieler
+          <NavIcon name={iconName} width={16} height={16} className="shrink-0 text-muted-foreground" />
+          <span className="truncate">{node.title}</span>
+          <span className="text-xs text-muted-foreground">{levelLabel}</span>
+          {isPlayerVisible ? (
+            <span className="inline-flex items-center gap-1 text-xs text-success">
+              <NavIcon name="check" width={12} height={12} /> Spieler
             </span>
           ) : (
-            <span style={{ fontSize: "0.7em", color: "var(--uwe-muted)", marginLeft: 4 }}>
-              🔒 DM
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <NavIcon name="lock" width={12} height={12} /> DM
             </span>
           )}
         </a>
@@ -247,118 +261,92 @@ export default async function AtlasIndexPage({ params }: Props) {
         summary="Zeichne Kontinente, Regionen, Flüsse und Ortschaften im Tolkien-Ink-Stil."
       />
 
-      {nodes.length === 0 ? (
-        <section className="uwe-atlas-empty">
-          <p className="uwe-hint">
-            Noch kein Atlas für diese Welt. Erstelle jetzt den ersten Kontinent-Knoten.
-          </p>
-          <form action={ensureAtlasAction}>
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Atlas erstellen &amp; Editor öffnen
-            </button>
-          </form>
-        </section>
-      ) : (
-        <section className="uwe-atlas-nodes">
-          {/* Level summary */}
-          <div style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.5rem",
-            marginBottom: "1rem",
-          }}>
-            {LEVEL_ORDER.filter((lvl) => countByLevel[lvl]).map((lvl) => (
-              <span
-                key={lvl}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                  padding: "0.2rem 0.6rem",
-                  background: "var(--uwe-surface)",
-                  border: "1px solid var(--uwe-border)",
-                  borderRadius: "var(--uwe-radius)",
-                  fontSize: 13,
-                }}
-              >
-                {LEVEL_ICONS[lvl]} {LEVEL_LABELS[lvl]}
-                <strong>{countByLevel[lvl]}</strong>
-              </span>
-            ))}
-          </div>
-
-          {/* Node tree */}
-          <ul
-            className="uwe-atlas-node-list"
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: "0 0 1.5rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.25rem",
-            }}
-          >
-            {tree.map((item) => (
-              <NodeTreeRow key={item.node.id} item={item} worldSlug={worldSlug} />
-            ))}
-          </ul>
-
-          {/* Create new top-level node form */}
-          {mapId && (
-            <details className="uwe-atlas-create-details" style={{ marginTop: "0.5rem" }}>
-              <summary
-                style={{ cursor: "pointer", fontSize: 14, color: "var(--uwe-accent)" }}
-              >
-                + Neuen Knoten anlegen
-              </summary>
-              <form action={createAtlasNodeAction} className="uwe-atlas-create-form" style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "0.5rem",
-                marginTop: "0.75rem",
-                alignItems: "flex-end",
-              }}>
+      <div className="flex flex-col gap-6">
+        {nodes.length === 0 ? (
+          <EmptyState
+            title="Noch kein Atlas für diese Welt"
+            description="Erstelle jetzt den ersten Kontinent-Knoten."
+            action={
+              <form action={ensureAtlasAction}>
                 <input type="hidden" name="worldSlug" value={worldSlug} />
-                <label style={{ display: "flex", flexDirection: "column", gap: "0.2rem", fontSize: 13 }}>
-                  Name
-                  <input
-                    name="title"
-                    className="uwe-input"
-                    placeholder="Knotenname"
-                    required
-                    style={{ minWidth: 180 }}
-                  />
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: "0.2rem", fontSize: 13 }}>
-                  Ebene
-                  <select name="level" className="uwe-input">
-                    {LEVEL_ORDER.map((lvl) => (
-                      <option key={lvl} value={lvl}>{LEVEL_LABELS[lvl]}</option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                  Knoten anlegen
-                </button>
+                <Button type="submit">Atlas erstellen &amp; Editor öffnen</Button>
               </form>
-            </details>
-          )}
-        </section>
-      )}
+            }
+          />
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col gap-4 pt-6">
+              {/* Level summary */}
+              <div className="flex flex-wrap gap-2">
+                {LEVEL_ORDER.filter((lvl) => countByLevel[lvl]).map((lvl) => (
+                  <Badge key={lvl} variant="secondary" className="gap-1.5">
+                    <NavIcon name={LEVEL_ICON_NAMES[lvl] ?? "map-pin"} width={14} height={14} />
+                    {LEVEL_LABELS[lvl]}
+                    <strong>{countByLevel[lvl]}</strong>
+                  </Badge>
+                ))}
+              </div>
 
-      {/* Pending RTX asset review — approve/delete via existing actions */}
-      {rtxReviewItems.length > 0 && (
-        <section className="uwe-atlas-rtx-review" style={{ marginTop: "2rem" }}>
-          <h2 style={{ fontSize: 16, margin: "0 0 0.25rem" }}>Ausstehende RTX-Assets</h2>
-          <p className="uwe-hint" style={{ margin: "0 0 0.75rem" }}>
-            KI-generierte Gouache-Asset-Proposals warten auf Genehmigung. Genehmigen
-            schaltet nur das Palette-Item frei — es entstehen keine Kartenobjekte.
-          </p>
-          <RtxAssetReviewList worldSlug={worldSlug} items={rtxReviewItems} />
-        </section>
-      )}
+              {/* Node tree */}
+              <ul className="flex flex-col gap-1">
+                {tree.map((item) => (
+                  <NodeTreeRow key={item.node.id} item={item} worldSlug={worldSlug} />
+                ))}
+              </ul>
+
+              {/* Create new top-level node form */}
+              {mapId && (
+                <details>
+                  <summary className="cursor-pointer text-sm text-primary">
+                    + Neuen Knoten anlegen
+                  </summary>
+                  <form action={createAtlasNodeAction} className="mt-3 flex flex-wrap items-end gap-3">
+                    <input type="hidden" name="worldSlug" value={worldSlug} />
+                    <div className="flex min-w-[180px] flex-col gap-1.5">
+                      <Label htmlFor="atlas-new-node-title">Name</Label>
+                      <Input id="atlas-new-node-title" name="title" placeholder="Knotenname" required />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="atlas-new-node-level">Ebene</Label>
+                      <Select name="level" defaultValue={LEVEL_ORDER[0]}>
+                        <SelectTrigger id="atlas-new-node-level" className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LEVEL_ORDER.map((lvl) => (
+                            <SelectItem key={lvl} value={lvl}>
+                              {LEVEL_LABELS[lvl]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" variant="secondary">
+                      Knoten anlegen
+                    </Button>
+                  </form>
+                </details>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pending RTX asset review — approve/delete via existing actions */}
+        {rtxReviewItems.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ausstehende RTX-Assets</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                KI-generierte Gouache-Asset-Proposals warten auf Genehmigung. Genehmigen
+                schaltet nur das Palette-Item frei — es entstehen keine Kartenobjekte.
+              </p>
+              <RtxAssetReviewList worldSlug={worldSlug} items={rtxReviewItems} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </WorldShell>
   );
 }

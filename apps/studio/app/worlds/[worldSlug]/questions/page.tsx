@@ -11,6 +11,16 @@ import {
 } from "../questions-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  EmptyState,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -61,91 +71,87 @@ export default async function StudioPlayerQuestionsPage({ params }: Props) {
       <PageHeader
         title="Fragen an den DM"
         summary="Fragen, die deine Spieler im Portal gestellt haben — beantworte sie hier oder archiviere sie."
-        meta={
-          open.length > 0 ? (
-            <span className="uwe-badge uwe-badge-warning">{open.length} neu</span>
-          ) : undefined
-        }
+        meta={open.length > 0 ? <Badge variant="warning">{open.length} neu</Badge> : undefined}
       />
 
-      <section className="uwe-block">
-        <h2>Offen ({open.length})</h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">Offen ({open.length})</h2>
         {open.length === 0 ? (
-          <p className="uwe-v2-empty">Keine offenen Fragen.</p>
+          <EmptyState title="Keine offenen Fragen." />
         ) : (
-          <div className="uwe-notes-queue">
+          <div className="flex flex-col gap-4">
             {open.map((question) => (
-              <article key={question.id} className="uwe-note-card">
-                <header className="uwe-note-card-header">
-                  <div>
-                    <strong>{question.authorName}</strong>
-                    <span className="uwe-note-meta">{formatDate(question.createdAt)}</span>
-                  </div>
-                </header>
-                <p className="uwe-note-card-content">{question.question}</p>
-                <footer className="uwe-note-card-actions">
-                  <form action={answerPlayerQuestionAction} className="uwe-note-adopt-page">
+              <Card key={question.id}>
+                <CardHeader>
+                  <strong>{question.authorName}</strong>
+                  <span className="text-sm text-muted-foreground">{formatDate(question.createdAt)}</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{question.question}</p>
+                </CardContent>
+                <CardFooter className="flex flex-wrap items-center gap-2">
+                  <form action={answerPlayerQuestionAction} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="questionId" value={question.id} />
-                    <textarea
+                    <Textarea
                       name="answer"
                       rows={2}
                       required
                       maxLength={4000}
                       placeholder="Antwort an die Gruppe…"
-                      className="uwe-input-inline"
+                      className="min-h-9 w-64"
                     />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+                    <Button type="submit" size="sm">
                       Antworten
-                    </button>
+                    </Button>
                   </form>
                   <form action={archivePlayerQuestionAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="questionId" value={question.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
+                    <Button type="submit" variant="ghost" size="sm">
                       Archivieren
-                    </button>
+                    </Button>
                   </form>
-                </footer>
-              </article>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         )}
       </section>
 
-      <section className="uwe-block">
-        <h2>Beantwortet ({answered.length})</h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">Beantwortet ({answered.length})</h2>
         {answered.length === 0 ? (
-          <p className="uwe-v2-empty">Noch keine beantworteten Fragen.</p>
+          <EmptyState title="Noch keine beantworteten Fragen." />
         ) : (
-          <div className="uwe-notes-queue">
+          <div className="flex flex-col gap-4">
             {answered.map((question) => (
-              <article key={question.id} className="uwe-note-card">
-                <header className="uwe-note-card-header">
-                  <div>
-                    <strong>{question.authorName}</strong>
-                    <span className="uwe-note-meta">
-                      {PLAYER_QUESTION_STATUS_LABELS[question.status]}
-                      {question.answeredAt ? ` · ${formatDate(question.answeredAt)}` : ""}
-                    </span>
-                  </div>
-                </header>
-                <p className="uwe-note-card-content">{question.question}</p>
-                {question.answer && (
-                  <p className="uwe-note-card-content">
-                    <strong>Antwort:</strong> {question.answer}
-                  </p>
-                )}
-                <footer className="uwe-note-card-actions">
+              <Card key={question.id}>
+                <CardHeader>
+                  <strong>{question.authorName}</strong>
+                  <span className="text-sm text-muted-foreground">
+                    {PLAYER_QUESTION_STATUS_LABELS[question.status]}
+                    {question.answeredAt ? ` · ${formatDate(question.answeredAt)}` : ""}
+                  </span>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{question.question}</p>
+                  {question.answer && (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                      <strong>Antwort:</strong> {question.answer}
+                    </p>
+                  )}
+                </CardContent>
+                <CardFooter>
                   <form action={archivePlayerQuestionAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="questionId" value={question.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
+                    <Button type="submit" variant="ghost" size="sm">
                       Archivieren
-                    </button>
+                    </Button>
                   </form>
-                </footer>
-              </article>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         )}

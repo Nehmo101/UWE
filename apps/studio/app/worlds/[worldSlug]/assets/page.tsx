@@ -28,6 +28,22 @@ import {
 import { AssetBatchToolbar, AssetTagProposalPanel } from "@/components/assets/AssetBatchToolbar";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+  badgeVariants,
+  cn,
+  EmptyState,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -46,6 +62,13 @@ function isPreviewable(mimeType: string | null): boolean {
   if (!mimeType) return false;
   return mimeType.startsWith("image/") || mimeType === "application/pdf";
 }
+
+const NATIVE_SELECT_CLASS =
+  "flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+const FILTER_LINK_CLASS = cn(
+  "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+);
 
 export default async function StudioAssetsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
@@ -113,9 +136,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
       }
       contextPanel={
         <SidebarSection title="Kontext">
-          <p className="uwe-hint" style={{ margin: 0 }}>
-            {assets.length} Assets
-          </p>
+          <p className="text-sm text-muted-foreground">{assets.length} Assets</p>
         </SidebarSection>
       }
     >
@@ -123,208 +144,135 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
         title="Asset-Bibliothek"
         summary="Bilder, Karten, Handouts und Medien zentral verwalten."
       />
-      {dmOnlyCount > 0 && !visibilityFilter && (
-        <p className="uwe-notice uwe-notice-warn" role="status">
-          <strong>{dmOnlyCount}</strong> Asset{dmOnlyCount === 1 ? "" : "s"} sind nur für den GM
-          sichtbar — erscheinen nicht im Portal, bis du die Sichtbarkeit auf „Spieler“ oder „Öffentlich“
-          setzt.
-        </p>
-      )}
-      {(uploaded || linked || saved || tagged) && (
-        <p className="uwe-flash uwe-flash-success">Änderungen gespeichert.</p>
-      )}
 
-          <section className="uwe-panel">
-            <h2>Alben</h2>
-            <form action={createAssetAlbumAction} className="uwe-form-grid">
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <label>
-                Neues Album
-                <input type="text" name="title" placeholder="Session 12 — Karten" required />
-              </label>
-              <label>
-                Beschreibung
-                <input type="text" name="description" placeholder="Optional" />
-              </label>
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                Album anlegen
-              </button>
-            </form>
-            {albums.length > 0 && (
-              <div className="uwe-filter-bar" style={{ marginTop: "1rem" }}>
-                <Link
-                  href={`/worlds/${worldSlug}/assets`}
-                  className={!albumFilter ? "active" : undefined}
-                >
-                  Alle Assets
-                </Link>
-                {albums.map((album) => (
-                  <Link
-                    key={album.id}
-                    href={`/worlds/${worldSlug}/assets?album=${album.id}`}
-                    className={albumFilter === album.id ? "active" : undefined}
-                  >
-                    {album.title} ({album._count.items})
-                  </Link>
-                ))}
-              </div>
+      <div className="flex flex-col gap-6">
+        {dmOnlyCount > 0 && !visibilityFilter && (
+          <Alert tone="warning">
+            <strong>{dmOnlyCount}</strong> Asset{dmOnlyCount === 1 ? "" : "s"} sind nur für den GM
+            sichtbar — erscheinen nicht im Portal, bis du die Sichtbarkeit auf „Spieler“ oder
+            „Öffentlich“ setzt.
+          </Alert>
+        )}
+        {(uploaded || linked || saved || tagged) && <Alert tone="success">Änderungen gespeichert.</Alert>}
+
+        <nav className="flex flex-wrap gap-2" aria-label="Sichtbarkeit">
+          <Link
+            href={`/worlds/${worldSlug}/assets${typeFilter ? `?type=${typeFilter}` : ""}`}
+            aria-current={!visibilityFilter ? "page" : undefined}
+            className={cn(badgeVariants({ variant: !visibilityFilter ? "accent" : "default" }), FILTER_LINK_CLASS)}
+          >
+            Alle Sichtbarkeiten
+          </Link>
+          <Link
+            href={`/worlds/${worldSlug}/assets?visibility=dm_only${typeFilter ? `&type=${typeFilter}` : ""}`}
+            aria-current={visibilityFilter === "dm_only" ? "page" : undefined}
+            className={cn(
+              badgeVariants({ variant: visibilityFilter === "dm_only" ? "accent" : "default" }),
+              FILTER_LINK_CLASS,
             )}
-          </section>
+          >
+            Nur GM
+          </Link>
+          <Link
+            href={`/worlds/${worldSlug}/assets?visibility=player_visible${typeFilter ? `&type=${typeFilter}` : ""}`}
+            aria-current={visibilityFilter === "player_visible" ? "page" : undefined}
+            className={cn(
+              badgeVariants({ variant: visibilityFilter === "player_visible" ? "accent" : "default" }),
+              FILTER_LINK_CLASS,
+            )}
+          >
+            Portal-freigegeben
+          </Link>
+        </nav>
 
-          <AssetBatchToolbar
-            worldSlug={worldSlug}
-            albums={albums.map((album) => ({
-              id: album.id,
-              title: album.title,
-              count: album._count.items,
-            }))}
-            assetIds={assets.map((asset) => asset.id)}
-          />
+        <nav className="flex flex-wrap gap-2" aria-label="Asset-Typ">
+          <Link
+            href={`/worlds/${worldSlug}/assets${visibilityFilter ? `?visibility=${visibilityFilter}` : ""}`}
+            aria-current={!typeFilter ? "page" : undefined}
+            className={cn(badgeVariants({ variant: !typeFilter ? "accent" : "default" }), FILTER_LINK_CLASS)}
+          >
+            Alle Typen
+          </Link>
+          {ASSET_TYPES.map((type) => (
+            <Link
+              key={type}
+              href={`/worlds/${worldSlug}/assets?type=${type}${visibilityFilter ? `&visibility=${visibilityFilter}` : ""}`}
+              aria-current={typeFilter === type ? "page" : undefined}
+              className={cn(badgeVariants({ variant: typeFilter === type ? "accent" : "default" }), FILTER_LINK_CLASS)}
+            >
+              {ASSET_TYPE_LABELS[type]}
+            </Link>
+          ))}
+        </nav>
 
-          <section className="uwe-panel">
-            <h2>Asset hochladen</h2>
-            <form
-              className="uwe-form-grid"
-              action={`/api/worlds/${worldSlug}/assets/upload`}
-              method="post"
-              encType="multipart/form-data"
-            >
-              <label>
-                Datei
-                <input type="file" name="file" required />
-              </label>
-              <label>
-                Titel
-                <input type="text" name="title" placeholder="Anzeigename" />
-              </label>
-              <label>
-                Beschreibung
-                <textarea name="description" rows={2} />
-              </label>
-              <label>
-                Typ
-                <select name="type" defaultValue="">
-                  <option value="">Automatisch erkennen</option>
-                  {ASSET_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {ASSET_TYPE_LABELS[type]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Sichtbarkeit
-                <select name="visibility" defaultValue="dm_only">
-                  {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Seite zuordnen (optional)
-                <select name="pageId" defaultValue="">
-                  <option value="">— Keine —</option>
-                  {pages.map((page) => (
-                    <option key={page.id} value={page.id}>
-                      {page.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                Hochladen
-              </button>
-            </form>
-          </section>
-
-          <div className="uwe-filter-bar">
+        {albums.length > 0 && (
+          <nav className="flex flex-wrap gap-2" aria-label="Album">
             <Link
-              href={`/worlds/${worldSlug}/assets${typeFilter ? `?type=${typeFilter}` : ""}`}
-              className={!visibilityFilter ? "active" : undefined}
+              href={`/worlds/${worldSlug}/assets`}
+              aria-current={!albumFilter ? "page" : undefined}
+              className={cn(badgeVariants({ variant: !albumFilter ? "accent" : "default" }), FILTER_LINK_CLASS)}
             >
-              Alle Sichtbarkeiten
+              Alle Assets
             </Link>
-            <Link
-              href={`/worlds/${worldSlug}/assets?visibility=dm_only${typeFilter ? `&type=${typeFilter}` : ""}`}
-              className={visibilityFilter === "dm_only" ? "active" : undefined}
-            >
-              Nur GM
-            </Link>
-            <Link
-              href={`/worlds/${worldSlug}/assets?visibility=player_visible${typeFilter ? `&type=${typeFilter}` : ""}`}
-              className={visibilityFilter === "player_visible" ? "active" : undefined}
-            >
-              Portal-freigegeben
-            </Link>
-          </div>
-
-          <div className="uwe-filter-bar">
-            <Link
-              href={`/worlds/${worldSlug}/assets${visibilityFilter ? `?visibility=${visibilityFilter}` : ""}`}
-              className={!typeFilter ? "active" : undefined}
-            >
-              Alle Typen
-            </Link>
-            {ASSET_TYPES.map((type) => (
+            {albums.map((album) => (
               <Link
-                key={type}
-                href={`/worlds/${worldSlug}/assets?type=${type}${visibilityFilter ? `&visibility=${visibilityFilter}` : ""}`}
-                className={typeFilter === type ? "active" : undefined}
+                key={album.id}
+                href={`/worlds/${worldSlug}/assets?album=${album.id}`}
+                aria-current={albumFilter === album.id ? "page" : undefined}
+                className={cn(badgeVariants({ variant: albumFilter === album.id ? "accent" : "default" }), FILTER_LINK_CLASS)}
               >
-                {ASSET_TYPE_LABELS[type]}
+                {album.title} ({album._count.items})
               </Link>
             ))}
-          </div>
+          </nav>
+        )}
 
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>Titel</th>
-                <th>Typ</th>
-                <th>Sichtbarkeit</th>
-                <th>Größe</th>
-                <th>Seiten</th>
-                <th>Vorschau</th>
-                <th>Label</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assets.map((asset) => (
-                <tr
+        {assets.length > 0 ? (
+          <ul className="grid gap-2">
+            {assets.map((asset) => {
+              const metadata =
+                asset.metadata &&
+                typeof asset.metadata === "object" &&
+                !Array.isArray(asset.metadata)
+                  ? (asset.metadata as Record<string, unknown>)
+                  : {};
+              const proposal = metadata.aiTagProposal;
+              const proposedTags =
+                proposal &&
+                typeof proposal === "object" &&
+                !Array.isArray(proposal) &&
+                Array.isArray((proposal as Record<string, unknown>).tags)
+                  ? ((proposal as Record<string, unknown>).tags as unknown[]).filter(
+                      (entry): entry is string => typeof entry === "string",
+                    )
+                  : [];
+              const share = shareByAssetId.get(asset.id);
+              const dmOnly = asset.visibility === "dm_only";
+
+              return (
+                <li
                   key={asset.id}
-                  style={
-                    asset.visibility === "dm_only"
-                      ? {
-                          background:
-                            "color-mix(in srgb, var(--uwe-danger) 10%, transparent)",
-                        }
-                      : undefined
-                  }
+                  className={cn(
+                    "flex flex-col gap-2 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm",
+                    dmOnly && "bg-[color-mix(in_srgb,var(--uwe-danger)_10%,transparent)]",
+                  )}
                 >
-                  <td>
+                  <div className="flex flex-wrap items-center gap-2">
                     <strong>{asset.title}</strong>
-                    {asset.description && (
-                      <p className="uwe-table-sub">{asset.description}</p>
-                    )}
-                  </td>
-                  <td>
                     <AssetTypeBadge type={asset.type} />
-                  </td>
-                  <td>
                     <VisibilityBadge visibility={asset.visibility} />
-                  </td>
-                  <td>{formatBytes(asset.size)}</td>
-                  <td>
-                    {asset.pageLinks.length > 0
-                      ? asset.pageLinks.map((link) => link.page.title).join(", ")
-                      : "—"}
-                  </td>
-                  <td>
+                    <span className="text-sm text-muted-foreground">{formatBytes(asset.size)}</span>
+                  </div>
+                  {asset.description && <p className="text-sm">{asset.description}</p>}
+                  {asset.pageLinks.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Seiten: {asset.pageLinks.map((link) => link.page.title).join(", ")}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-1">
                     {isPreviewable(asset.mimeType) ? (
                       <a
-                        className="uwe-link"
+                        className={buttonVariants({ variant: "link", size: "sm" })}
                         href={`/api/assets/${asset.id}/file`}
                         target="_blank"
                         rel="noreferrer"
@@ -333,177 +281,258 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                       </a>
                     ) : (
                       <a
-                        className="uwe-link"
+                        className={buttonVariants({ variant: "link", size: "sm" })}
                         href={`/api/assets/${asset.id}/file`}
                         download
                       >
                         Download
                       </a>
                     )}
-                  </td>
-                  <td>
-                    {asset.mimeType?.startsWith("image/") ? (
-                      <div className="uwe-inline-actions">
+                    {asset.mimeType?.startsWith("image/") && (
+                      <>
                         <a
-                          className="uwe-link"
+                          className={buttonVariants({ variant: "link", size: "sm" })}
                           href={`/worlds/${worldSlug}/labels/new?sourceRef=asset:${asset.id}`}
                         >
                           Als Label
                         </a>
-                        <form action={openAssetInImageStudioAction} style={{ display: "inline" }}>
+                        <form action={openAssetInImageStudioAction} className="inline-flex">
                           <input type="hidden" name="worldSlug" value={worldSlug} />
                           <input type="hidden" name="assetId" value={asset.id} />
-                          <button type="submit" className="uwe-link-button">
+                          <Button type="submit" variant="link" size="sm">
                             Image Studio
-                          </button>
+                          </Button>
                         </form>
-                      </div>
-                    ) : (
-                      "—"
+                      </>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {assets.length === 0 && (
-            <p className="uwe-v2-empty">Noch keine Assets für diesen Filter.</p>
-          )}
-
-          {assets.length > 0 && (
-            <section className="uwe-panel">
-              <h2>Asset bearbeiten</h2>
-              {assets.map((asset) => {
-                const metadata =
-                  asset.metadata &&
-                  typeof asset.metadata === "object" &&
-                  !Array.isArray(asset.metadata)
-                    ? (asset.metadata as Record<string, unknown>)
-                    : {};
-                const proposal = metadata.aiTagProposal;
-                const proposedTags =
-                  proposal &&
-                  typeof proposal === "object" &&
-                  !Array.isArray(proposal) &&
-                  Array.isArray((proposal as Record<string, unknown>).tags)
-                    ? ((proposal as Record<string, unknown>).tags as unknown[]).filter(
-                        (entry): entry is string => typeof entry === "string",
-                      )
-                    : [];
-
-                return (
-                <details key={asset.id} className="share-asset-details">
-                  <summary>{asset.title}</summary>
-                  <form action={updateAssetAction} className="uwe-form-grid">
-                    <input type="hidden" name="worldSlug" value={worldSlug} />
-                    <input type="hidden" name="assetId" value={asset.id} />
-                    <label>
-                      Titel
-                      <input type="text" name="title" defaultValue={asset.title} required />
-                    </label>
-                    <label>
-                      Beschreibung
-                      <textarea name="description" rows={2} defaultValue={asset.description ?? ""} />
-                    </label>
-                    <label>
-                      Typ
-                      <select name="type" defaultValue={asset.type}>
-                        {ASSET_TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {ASSET_TYPE_LABELS[type]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Sichtbarkeit
-                      <select name="visibility" defaultValue={asset.visibility}>
-                        {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Tags (kommagetrennt)
-                      <input
-                        name="tags"
-                        defaultValue={parseStringArray(asset.tags).join(", ")}
-                        placeholder="karte, handout"
-                      />
-                    </label>
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                      Speichern
-                    </button>
-                  </form>
-                  <AssetTagProposalPanel
-                    worldSlug={worldSlug}
-                    assetId={asset.id}
-                    proposedTags={proposedTags}
-                  />
-                </details>
-                );
-              })}
-            </section>
-          )}
-
-          {assets.length > 0 && (
-            <section className="uwe-panel">
-              <h2>Freigabe-Links</h2>
-              {assets.map((asset) => {
-                const share = shareByAssetId.get(asset.id);
-                if (!share) return null;
-                return (
-                  <details key={asset.id} className="share-asset-details">
-                    <summary>{asset.title}</summary>
-                    <ShareLinkPanel
-                      worldId={world.id}
+                  </div>
+                  <details>
+                    <summary className="cursor-pointer text-sm font-medium">Bearbeiten &amp; Freigabe</summary>
+                    <form action={updateAssetAction} className="mt-3 flex flex-col gap-4">
+                      <input type="hidden" name="worldSlug" value={worldSlug} />
+                      <input type="hidden" name="assetId" value={asset.id} />
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`asset-${asset.id}-title`}>Titel</Label>
+                        <Input id={`asset-${asset.id}-title`} name="title" defaultValue={asset.title} required />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`asset-${asset.id}-description`}>Beschreibung</Label>
+                        <Textarea
+                          id={`asset-${asset.id}-description`}
+                          name="description"
+                          rows={2}
+                          defaultValue={asset.description ?? ""}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`asset-${asset.id}-type`}>Typ</Label>
+                        <Select name="type" defaultValue={asset.type}>
+                          <SelectTrigger id={`asset-${asset.id}-type`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ASSET_TYPES.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {ASSET_TYPE_LABELS[type]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`asset-${asset.id}-visibility`}>Sichtbarkeit</Label>
+                        <Select name="visibility" defaultValue={asset.visibility}>
+                          <SelectTrigger id={`asset-${asset.id}-visibility`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
+                              <SelectItem key={value} value={value}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`asset-${asset.id}-tags`}>Tags (kommagetrennt)</Label>
+                        <Input
+                          id={`asset-${asset.id}-tags`}
+                          name="tags"
+                          defaultValue={parseStringArray(asset.tags).join(", ")}
+                          placeholder="karte, handout"
+                        />
+                      </div>
+                      <div>
+                        <Button type="submit">Speichern</Button>
+                      </div>
+                    </form>
+                    <AssetTagProposalPanel
                       worldSlug={worldSlug}
-                      targetType={share.targetType}
-                      targetId={asset.id}
-                      returnPath={`/worlds/${worldSlug}/assets`}
-                      links={share.links}
-                      previewHref={share.previewHref}
+                      assetId={asset.id}
+                      proposedTags={proposedTags}
                     />
+                    {share && (
+                      <ShareLinkPanel
+                        worldId={world.id}
+                        worldSlug={worldSlug}
+                        targetType={share.targetType}
+                        targetId={asset.id}
+                        returnPath={`/worlds/${worldSlug}/assets`}
+                        links={share.links}
+                        previewHref={share.previewHref}
+                      />
+                    )}
                   </details>
-                );
-              })}
-            </section>
-          )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState title="Noch keine Assets für diesen Filter." />
+        )}
 
-          {assets.length > 0 && pages.length > 0 && (
-            <section className="uwe-panel">
-              <h2>Asset einer Seite zuordnen</h2>
-              <form action={linkAssetToPageAction} className="uwe-form-grid">
-                <input type="hidden" name="worldSlug" value={worldSlug} />
-                <label>
-                  Asset
-                  <select name="assetId" required>
+        <details className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
+          <summary className="cursor-pointer font-medium">Asset hochladen</summary>
+          <form
+            className="mt-4 grid gap-3 sm:grid-cols-2"
+            action={`/api/worlds/${worldSlug}/assets/upload`}
+            method="post"
+            encType="multipart/form-data"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="upload-file">Datei</Label>
+              <Input id="upload-file" type="file" name="file" required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="upload-title">Titel</Label>
+              <Input id="upload-title" type="text" name="title" placeholder="Anzeigename" />
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label htmlFor="upload-description">Beschreibung</Label>
+              <Textarea id="upload-description" name="description" rows={2} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+                  "automatisch erkennen" — natives Select beibehalten. */}
+              <Label htmlFor="upload-type">Typ</Label>
+              <select id="upload-type" name="type" defaultValue="" className={NATIVE_SELECT_CLASS}>
+                <option value="">Automatisch erkennen</option>
+                {ASSET_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {ASSET_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="upload-visibility">Sichtbarkeit</Label>
+              <Select name="visibility" defaultValue="dm_only">
+                <SelectTrigger id="upload-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+                  "keine Seite" — natives Select beibehalten. */}
+              <Label htmlFor="upload-page">Seite zuordnen (optional)</Label>
+              <select id="upload-page" name="pageId" defaultValue="" className={NATIVE_SELECT_CLASS}>
+                <option value="">— Keine —</option>
+                {pages.map((page) => (
+                  <option key={page.id} value={page.id}>
+                    {page.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Button type="submit">Hochladen</Button>
+            </div>
+          </form>
+        </details>
+
+        <AssetBatchToolbar
+          worldSlug={worldSlug}
+          albums={albums.map((album) => ({
+            id: album.id,
+            title: album.title,
+            count: album._count.items,
+          }))}
+          assets={assets.map((asset) => ({ id: asset.id, title: asset.title }))}
+        />
+
+        <details className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
+          <summary className="cursor-pointer font-medium">Album anlegen</summary>
+          <form action={createAssetAlbumAction} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="album-title">Neues Album</Label>
+              <Input id="album-title" type="text" name="title" placeholder="Session 12 — Karten" required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="album-description">Beschreibung</Label>
+              <Input id="album-description" type="text" name="description" placeholder="Optional" />
+            </div>
+            <div>
+              <Button type="submit" variant="secondary">
+                Album anlegen
+              </Button>
+            </div>
+          </form>
+        </details>
+
+        {assets.length > 0 && pages.length > 0 && (
+          <details className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
+            <summary className="cursor-pointer font-medium">Asset einer Seite zuordnen</summary>
+            <form action={linkAssetToPageAction} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="link-asset">Asset</Label>
+                <Select name="assetId" defaultValue={assets[0]?.id} required>
+                  <SelectTrigger id="link-asset">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {assets.map((asset) => (
-                      <option key={asset.id} value={asset.id}>
+                      <SelectItem key={asset.id} value={asset.id}>
                         {asset.title}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                </label>
-                <label>
-                  Seite
-                  <select name="pageId" required>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="link-page">Seite</Label>
+                <Select name="pageId" defaultValue={pages[0]?.id} required>
+                  <SelectTrigger id="link-page">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {pages.map((page) => (
-                      <option key={page.id} value={page.id}>
+                      <SelectItem key={page.id} value={page.id}>
                         {page.title}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                </label>
-                <button type="submit" className="uwe-v2-btn">
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Button type="submit" variant="outline">
                   Verknüpfen
-                </button>
-              </form>
-            </section>
-          )}
+                </Button>
+              </div>
+            </form>
+          </details>
+        )}
+      </div>
     </WorldShell>
   );
 }

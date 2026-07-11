@@ -10,6 +10,17 @@ import {
   renderDocumentTemplate,
   type DocumentTemplateCategoryKey,
 } from "@/src/lib/document-template-utils";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 export type DocumentTemplateDto = {
   id: string;
@@ -27,6 +38,11 @@ interface SavedDocument {
   id: string;
   title: string;
 }
+
+/** TODO(design-kit): Native select bleibt — kontrolliertes Formularfeld (value+onChange),
+    siehe gleiches Muster in JobsWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProps) {
   const [selectedId, setSelectedId] = useState(templates[0]?.id ?? "");
@@ -117,119 +133,126 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
 
   if (templates.length === 0) {
     return (
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Dokument erzeugen</h2>
-        <p className="uwe-dashboard-muted">
-          Lege zuerst eine Vorlage an, um Variablen auszufüllen und Text zu erzeugen.
-        </p>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Dokument erzeugen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Lege zuerst eine Vorlage an, um Variablen auszufüllen und Text zu erzeugen.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Dokument erzeugen</h2>
-      <p className="uwe-dashboard-muted">
-        Vorlage wählen, Platzhalter ausfüllen, Vorschau prüfen — dann speichern
-        (Life Brain), drucken oder kopieren.
-      </p>
-
-      <label>
-        Vorlage
-        <select
-          value={selectedId}
-          onChange={(event) => handleTemplateChange(event.target.value)}
-        >
-          {templates.map((template) => (
-            <option key={template.id} value={template.id}>
-              {template.name} ({DOCUMENT_TEMPLATE_CATEGORY_LABELS[template.category]})
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {selectedTemplate ? (
-        <p className="uwe-dashboard-muted">
-          Kategorie: {DOCUMENT_TEMPLATE_CATEGORY_LABELS[selectedTemplate.category]}
-        </p>
-      ) : null}
-
-      {variableKeys.length > 0 ? (
-        <div className="uwe-brain-create-form">
-          {variableKeys.map((key) => (
-            <label key={key}>
-              {key} *
-              <input
-                value={values[key] ?? ""}
-                onChange={(event) => handleValueChange(key, event.target.value)}
-                placeholder={`{{${key}}}`}
-                required
-              />
-            </label>
-          ))}
-        </div>
-      ) : (
-        <p className="uwe-dashboard-muted">Diese Vorlage enthält keine Platzhalter.</p>
-      )}
-
-      {missingKeys.length > 0 ? (
-        <p className="uwe-dashboard-muted">
-          Alle Platzhalter sind Pflichtfelder — noch offen:{" "}
-          {missingKeys.map((key) => `{{${key}}}`).join(", ")}
-        </p>
-      ) : null}
-
-      <label>
-        Titel des Dokuments (optional)
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder={
-            selectedTemplate ? `${selectedTemplate.name} — ${new Date().toISOString().slice(0, 10)}` : ""
-          }
-        />
-      </label>
-
-      <label>
-        Vorschau
-        <textarea rows={12} readOnly value={rendered} spellCheck={false} />
-      </label>
-
-      <div className="uwe-brain-create-form">
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm"
-          onClick={saveDocument}
-          disabled={isSaving || missingKeys.length > 0}
-        >
-          {isSaving ? "Speichert …" : "Dokument speichern"}
-        </button>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-sm"
-          onClick={() => void copyRendered()}
-        >
-          In Zwischenablage kopieren
-        </button>
-      </div>
-
-      {status ? <p className="uwe-dashboard-muted">{status}</p> : null}
-
-      {savedDocument ? (
-        <p>
-          <Link href={`/life-brain/documents/${savedDocument.id}`}>
-            Im Life Brain öffnen
-          </Link>{" "}
-          ·{" "}
-          <a
-            href={`/api/documents/print?documentId=${encodeURIComponent(savedDocument.id)}`}
-            target="_blank"
-            rel="noreferrer"
+    <Card>
+      <CardHeader>
+        <CardTitle>Dokument erzeugen</CardTitle>
+        <CardDescription>
+          Vorlage wählen, Platzhalter ausfüllen, Vorschau prüfen — dann speichern
+          (Life Brain), drucken oder kopieren.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="document-generator-template">Vorlage</Label>
+          <select
+            id="document-generator-template"
+            value={selectedId}
+            onChange={(event) => handleTemplateChange(event.target.value)}
+            className={NATIVE_SELECT_CLASS}
           >
-            Druckansicht öffnen
-          </a>
-        </p>
-      ) : null}
-    </section>
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name} ({DOCUMENT_TEMPLATE_CATEGORY_LABELS[template.category]})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectedTemplate ? (
+          <p className="text-sm text-muted-foreground">
+            Kategorie: {DOCUMENT_TEMPLATE_CATEGORY_LABELS[selectedTemplate.category]}
+          </p>
+        ) : null}
+
+        {variableKeys.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {variableKeys.map((key) => (
+              <div key={key} className="flex flex-col gap-1.5">
+                <Label htmlFor={`document-generator-var-${key}`}>{key} *</Label>
+                <Input
+                  id={`document-generator-var-${key}`}
+                  value={values[key] ?? ""}
+                  onChange={(event) => handleValueChange(key, event.target.value)}
+                  placeholder={`{{${key}}}`}
+                  required
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Diese Vorlage enthält keine Platzhalter.</p>
+        )}
+
+        {missingKeys.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Alle Platzhalter sind Pflichtfelder — noch offen:{" "}
+            {missingKeys.map((key) => `{{${key}}}`).join(", ")}
+          </p>
+        ) : null}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="document-generator-title">Titel des Dokuments (optional)</Label>
+          <Input
+            id="document-generator-title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder={
+              selectedTemplate ? `${selectedTemplate.name} — ${new Date().toISOString().slice(0, 10)}` : ""
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="document-generator-preview">Vorschau</Label>
+          <Textarea id="document-generator-preview" rows={12} readOnly value={rendered} spellCheck={false} />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={saveDocument}
+            disabled={isSaving || missingKeys.length > 0}
+          >
+            {isSaving ? "Speichert …" : "Dokument speichern"}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => void copyRendered()}>
+            In Zwischenablage kopieren
+          </Button>
+        </div>
+
+        {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+
+        {savedDocument ? (
+          <p>
+            <Link href={`/life-brain/documents/${savedDocument.id}`}>
+              Im Life Brain öffnen
+            </Link>{" "}
+            ·{" "}
+            <a
+              href={`/api/documents/print?documentId=${encodeURIComponent(savedDocument.id)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Druckansicht öffnen
+            </a>
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

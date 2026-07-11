@@ -4,6 +4,17 @@ import { CopyToClipboardButton } from "@uwe/shared-ui";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+} from "@/src/components/ui";
 
 interface WebhookEndpoint {
   id: string;
@@ -26,6 +37,11 @@ interface WebhookDelivery {
   createdAt: string;
   completedAt: string | null;
 }
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
+const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 export function WebhookWorkspace() {
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
@@ -123,125 +139,158 @@ export function WebhookWorkspace() {
   }
 
   return (
-    <>
-      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
-        <h2>Webhook-Endpunkt</h2>
-        <p className="uwe-dashboard-muted">
-          Outbound-Webhooks mit HMAC-Signatur. Private/localhost URLs werden blockiert (SSRF-Schutz).
-          Das Signing Secret wird nur einmal nach der Erstellung angezeigt.
-        </p>
-        <label>
-          Name
-          <input type="text" value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          URL (https)
-          <input type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://example.com/hooks/uwe" />
-        </label>
-        <fieldset>
-          <legend>Events</legend>
-          {events.map((event) => (
-            <label key={event} className="uwe-checkbox-label">
-              <input type="checkbox" checked={selectedEvents.includes(event)} onChange={() => toggleEvent(event)} />
-              {event}
-            </label>
-          ))}
-        </fieldset>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void createWebhook()}>
-          Webhook erstellen
-        </button>
-        {createdSecret && (
-          <div className="uwe-notice uwe-notice-warn" style={{ marginTop: "1rem" }}>
-            <p>
-              <strong>Signing Secret (nur einmal):</strong> <code>{createdSecret}</code>
-            </p>
-            <CopyToClipboardButton text={createdSecret} label="Secret kopieren" />
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Webhook-Endpunkt</CardTitle>
+          <CardDescription>
+            Outbound-Webhooks mit HMAC-Signatur. Private/localhost URLs werden blockiert (SSRF-Schutz).
+            Das Signing Secret wird nur einmal nach der Erstellung angezeigt.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="webhook-name">Name</Label>
+            <Input id="webhook-name" type="text" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
-        )}
-      </section>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="webhook-url">URL (https)</Label>
+            <Input
+              id="webhook-url"
+              type="url"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://example.com/hooks/uwe"
+            />
+          </div>
+          {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+          <fieldset className="flex flex-col gap-2 rounded-[var(--radius)] border border-border p-4">
+            <legend className="px-1 text-sm font-medium text-foreground">Events</legend>
+            {events.map((event) => (
+              <label key={event} className={CHECKBOX_ROW_CLASS}>
+                <input
+                  type="checkbox"
+                  checked={selectedEvents.includes(event)}
+                  onChange={() => toggleEvent(event)}
+                  className={CHECKBOX_CLASS}
+                />
+                {event}
+              </label>
+            ))}
+          </fieldset>
+          <Button type="button" onClick={() => void createWebhook()} className="self-start">
+            Webhook erstellen
+          </Button>
+          {createdSecret && (
+            <Alert tone="warning">
+              <p>
+                <strong>Signing Secret (nur einmal):</strong> <code>{createdSecret}</code>
+              </p>
+              <CopyToClipboardButton text={createdSecret} label="Secret kopieren" />
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
-      {error && <p className="uwe-notice uwe-notice-error">{error}</p>}
+      {error && (
+        <Alert tone="danger" role="alert">
+          {error}
+        </Alert>
+      )}
 
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <h2>Endpunkte ({endpoints.length})</h2>
-        {loading ? (
-          <p className="uwe-dashboard-muted">Lade…</p>
-        ) : endpoints.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine Webhooks konfiguriert.</p>
-        ) : (
-          <table className="uwe-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>URL</th>
-                <th>Secret</th>
-                <th>Events</th>
-                <th>Zuletzt</th>
-              </tr>
-            </thead>
-            <tbody>
-              {endpoints.map((endpoint) => (
-                <tr key={endpoint.id}>
-                  <td>{endpoint.name}</td>
-                  <td>{endpoint.url}</td>
-                  <td>
-                    <code>{endpoint.secretPrefix}…</code>
-                  </td>
-                  <td>{endpoint.events.join(", ")}</td>
-                  <td>{endpoint.lastTriggeredAt ? formatStudioDate(endpoint.lastTriggeredAt) : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Endpunkte ({endpoints.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Lade…</p>
+          ) : endpoints.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Keine Webhooks konfiguriert.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Name</th>
+                    <th className={TH_CLASS}>URL</th>
+                    <th className={TH_CLASS}>Secret</th>
+                    <th className={TH_CLASS}>Events</th>
+                    <th className={TH_CLASS}>Zuletzt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {endpoints.map((endpoint) => (
+                    <tr key={endpoint.id}>
+                      <td className={TD_CLASS}>{endpoint.name}</td>
+                      <td className={TD_CLASS}>{endpoint.url}</td>
+                      <td className={TD_CLASS}>
+                        <code>{endpoint.secretPrefix}…</code>
+                      </td>
+                      <td className={TD_CLASS}>{endpoint.events.join(", ")}</td>
+                      <td className={TD_CLASS}>{endpoint.lastTriggeredAt ? formatStudioDate(endpoint.lastTriggeredAt) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      <section className="uwe-v2-card">
-        <h2>Delivery-Log ({deliveryTotal})</h2>
-        {deliveries.length === 0 ? (
-          <p className="uwe-dashboard-muted">Noch keine Deliveries protokolliert.</p>
-        ) : (
-          <table className="uwe-table">
-            <thead>
-              <tr>
-                <th>Zeit</th>
-                <th>Endpunkt</th>
-                <th>Event</th>
-                <th>Status</th>
-                <th>Fehler</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {deliveries.map((delivery) => (
-                <tr key={delivery.id}>
-                  <td>{formatStudioDate(delivery.createdAt)}</td>
-                  <td>{delivery.endpointName}</td>
-                  <td>{delivery.event}</td>
-                  <td>
-                    {delivery.success
-                      ? `OK${delivery.statusCode ? ` (${delivery.statusCode})` : ""}`
-                      : "Fehlgeschlagen"}
-                  </td>
-                  <td>{delivery.errorMessage ?? "—"}</td>
-                  <td>
-                    {!delivery.success ? (
-                      <button
-                        type="button"
-                        className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                        disabled={retryingId === delivery.id}
-                        onClick={() => void retryDelivery(delivery.id)}
-                      >
-                        {retryingId === delivery.id ? "…" : "Retry"}
-                      </button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    </>
+      <Card>
+        <CardHeader>
+          <CardTitle>Delivery-Log ({deliveryTotal})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {deliveries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Deliveries protokolliert.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Zeit</th>
+                    <th className={TH_CLASS}>Endpunkt</th>
+                    <th className={TH_CLASS}>Event</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS}>Fehler</th>
+                    <th className={TH_CLASS} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {deliveries.map((delivery) => (
+                    <tr key={delivery.id}>
+                      <td className={TD_CLASS}>{formatStudioDate(delivery.createdAt)}</td>
+                      <td className={TD_CLASS}>{delivery.endpointName}</td>
+                      <td className={TD_CLASS}>{delivery.event}</td>
+                      <td className={TD_CLASS}>
+                        {delivery.success
+                          ? `OK${delivery.statusCode ? ` (${delivery.statusCode})` : ""}`
+                          : "Fehlgeschlagen"}
+                      </td>
+                      <td className={TD_CLASS}>{delivery.errorMessage ?? "—"}</td>
+                      <td className={TD_CLASS}>
+                        {!delivery.success ? (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={retryingId === delivery.id}
+                            onClick={() => void retryDelivery(delivery.id)}
+                          >
+                            {retryingId === delivery.id ? "…" : "Retry"}
+                          </Button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

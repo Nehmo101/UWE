@@ -32,6 +32,14 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/** Euro-Eingabe ("9,99" oder "9.99") in Cents; akzeptiert Komma als Dezimaltrenner. */
+function parseOptionalEuroToCents(value: FormDataEntryValue | null): number | null {
+  const raw = String(value ?? "").trim().replace(",", ".");
+  if (!raw) return null;
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) : null;
+}
+
 function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -166,7 +174,7 @@ export async function createContractAction(formData: FormData) {
     billingInterval:
       (String(formData.get("billingInterval") || "monthly") as ContractBillingInterval) || "monthly",
     categoryLabel: String(formData.get("categoryLabel") || ""),
-    amountCents: parseOptionalInt(formData.get("amountCents")),
+    amountCents: parseOptionalEuroToCents(formData.get("amountEuros")),
     billingDay: parseOptionalInt(formData.get("billingDay")),
     startDate: parseOptionalDate(formData.get("startDate")),
     nextPaymentDate: parseOptionalDate(formData.get("nextPaymentDate")),
@@ -189,7 +197,7 @@ export async function updateContractAction(formData: FormData) {
     status: String(formData.get("status")) as ContractStatus,
     billingInterval: String(formData.get("billingInterval")) as ContractBillingInterval,
     categoryLabel: String(formData.get("categoryLabel") || ""),
-    amountCents: parseOptionalInt(formData.get("amountCents")),
+    amountCents: parseOptionalEuroToCents(formData.get("amountEuros")),
     billingDay: parseOptionalInt(formData.get("billingDay")),
     nextPaymentDate: parseOptionalDate(formData.get("nextPaymentDate")),
     cancelByDate: parseOptionalDate(formData.get("cancelByDate")),

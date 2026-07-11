@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { ONE_SHOT_TONE_LABELS, type OneShotTone } from "@uwe/ai-brain/one-shot";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface LocationOption {
   title: string;
@@ -23,6 +34,11 @@ const QUICK_PRESETS: Array<{ label: string; tone: OneShotTone }> = [
   { label: "Düster", tone: "duester" },
   { label: "Lustig", tone: "lustig" },
 ];
+
+/** TODO(design-kit): natives select bleibt — controlled Ort-/Ton-Auswahl ohne Kit-Select,
+    siehe gleiches Muster in ReviewWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function OneShotQuickAssistant({
   worldSlug,
@@ -98,93 +114,106 @@ export function OneShotQuickAssistant({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Schnell-Assistent</h2>
-      <p className="uwe-dashboard-muted">
-        Ort und Ton wählen, sofort das Regel-Gerüst erzeugen — optional mit RTX-KI
-        ausbauen.
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Schnell-Assistent</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          Ort und Ton wählen, sofort das Regel-Gerüst erzeugen — optional mit RTX-KI
+          ausbauen.
+        </p>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "flex-end" }}>
-        <label>
-          Ort
-          <select value={location} onChange={(event) => setLocation(event.target.value)}>
-            <option value="">— wählen —</option>
-            {locations.map((loc) => (
-              <option key={loc.title} value={loc.title}>
-                {loc.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Ton
-          <select value={tone} onChange={(event) => setTone(event.target.value as OneShotTone)}>
-            {QUICK_PRESETS.map((preset) => (
-              <option key={preset.tone} value={preset.tone}>
-                {ONE_SHOT_TONE_LABELS[preset.tone]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          disabled={!location}
-          onClick={() => navigateGenerate(location, tone)}
-        >
-          Gerüst generieren
-        </button>
-      </div>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.75rem" }}>
-        {QUICK_PRESETS.map((preset) => (
-          <button
-            key={preset.tone}
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-small"
-            disabled={!location}
-            onClick={() => navigateGenerate(location, preset.tone)}
-          >
-            {preset.label}
-          </button>
-        ))}
-      </div>
-
-      <details style={{ marginTop: "1rem" }}>
-        <summary style={{ cursor: "pointer" }}>KI-Ausbau (RTX, optional)</summary>
-        <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          {!rtxEnabled ? (
-            <p className="uwe-form-error">RTX-Inference ist deaktiviert.</p>
-          ) : rtxEnabled && !rtxReady ? (
-            <p className="uwe-hint">RTX offline — wird als Job vorgemerkt.</p>
-          ) : null}
-          <label>
-            Zusätzliche Anweisungen
-            <textarea
-              rows={2}
-              value={aiPrompt}
-              placeholder="z. B. mehr Sozial-Szenen, ein Twist mit Verräter …"
-              onChange={(event) => setAiPrompt(event.target.value)}
-            />
-          </label>
-          <div className="uwe-form-actions">
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary"
-              disabled={!rtxEnabled || busy || !location}
-              onClick={() => void runAiAssist()}
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="one-shot-location">Ort</Label>
+            <select
+              id="one-shot-location"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              className={NATIVE_SELECT_CLASS}
             >
-              {busy ? "Läuft…" : "Mit KI ausbauen"}
-            </button>
-            <Link href={`/worlds/${worldSlug}/ai-runs`} className="uwe-v2-btn">
-              AI Runs →
-            </Link>
+              <option value="">— wählen —</option>
+              {locations.map((loc) => (
+                <option key={loc.title} value={loc.title}>
+                  {loc.title}
+                </option>
+              ))}
+            </select>
           </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="one-shot-tone">Ton</Label>
+            <select
+              id="one-shot-tone"
+              value={tone}
+              onChange={(event) => setTone(event.target.value as OneShotTone)}
+              className={NATIVE_SELECT_CLASS}
+            >
+              {QUICK_PRESETS.map((preset) => (
+                <option key={preset.tone} value={preset.tone}>
+                  {ONE_SHOT_TONE_LABELS[preset.tone]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button type="button" disabled={!location} onClick={() => navigateGenerate(location, tone)}>
+            Gerüst generieren
+          </Button>
         </div>
-      </details>
 
-      {status ? <p className="uwe-hint">{status}</p> : null}
-    </section>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_PRESETS.map((preset) => (
+            <Button
+              key={preset.tone}
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!location}
+              onClick={() => navigateGenerate(location, preset.tone)}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+
+        <details>
+          <summary className="cursor-pointer text-sm font-medium">KI-Ausbau (RTX, optional)</summary>
+          <div className="mt-3 flex flex-col gap-2">
+            {!rtxEnabled ? (
+              <Alert tone="danger" role="alert">
+                RTX-Inference ist deaktiviert.
+              </Alert>
+            ) : rtxEnabled && !rtxReady ? (
+              <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+            ) : null}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="one-shot-ai-prompt">Zusätzliche Anweisungen</Label>
+              <Textarea
+                id="one-shot-ai-prompt"
+                rows={2}
+                value={aiPrompt}
+                placeholder="z. B. mehr Sozial-Szenen, ein Twist mit Verräter …"
+                onChange={(event) => setAiPrompt(event.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!rtxEnabled || busy || !location}
+                onClick={() => void runAiAssist()}
+              >
+                {busy ? "Läuft…" : "Mit KI ausbauen"}
+              </Button>
+              <Link href={`/worlds/${worldSlug}/ai-runs`} className={buttonVariants({ variant: "outline" })}>
+                AI Runs →
+              </Link>
+            </div>
+          </div>
+        </details>
+
+        {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+      </CardContent>
+    </Card>
   );
 }

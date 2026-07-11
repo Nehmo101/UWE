@@ -6,6 +6,7 @@ import { ViewEditToggle } from "@uwe/shared-ui";
 import { CaptureTriagePanel } from "@/components/capture/CaptureTriagePanel";
 import { CAPTURE_STATUS_LABELS, CAPTURE_TYPE_LABELS } from "@uwe/database/capture-constants";
 import type { CaptureEntry, HardwareDevice } from "@uwe/database/capture-triage-ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -29,28 +30,42 @@ export function CaptureDetailClient({ capture, worlds, hardwareDevices }: Props)
 
   const readView = useMemo(
     () => (
-      <article className="uwe-v2-card uwe-v2-card-padded">
-        <p className="uwe-dashboard-muted">
-          {typeLabel} · {CAPTURE_STATUS_LABELS[capture.status]} ·{" "}
-          {DATE_FORMAT.format(capture.capturedAt)}
-        </p>
-        <h2 className="uwe-v2-section-title">{capture.title}</h2>
-        {capture.content ? <p style={{ whiteSpace: "pre-wrap" }}>{capture.content}</p> : null}
-        {capture.url ? (
-          <p>
-            <a href={capture.url} target="_blank" rel="noreferrer">
-              {capture.url}
-            </a>
-          </p>
-        ) : null}
-        {capture.storageKey ? (
-          <p>
-            <a href={`/api/capture/files/${capture.id}`} target="_blank" rel="noreferrer">
-              Anhang öffnen
-            </a>
-          </p>
-        ) : null}
-      </article>
+      <Card>
+        <CardHeader>
+          <CardDescription>
+            {typeLabel} · {CAPTURE_STATUS_LABELS[capture.status]} ·{" "}
+            {DATE_FORMAT.format(capture.capturedAt)}
+          </CardDescription>
+          <CardTitle>{capture.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {capture.content ? <p className="whitespace-pre-wrap">{capture.content}</p> : null}
+          {capture.url ? (
+            <p>
+              <a
+                href={capture.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                {capture.url}
+              </a>
+            </p>
+          ) : null}
+          {capture.storageKey ? (
+            <p>
+              <a
+                href={`/api/capture/files/${capture.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Anhang öffnen
+              </a>
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
     ),
     [capture, typeLabel],
   );
@@ -61,7 +76,7 @@ export function CaptureDetailClient({ capture, worlds, hardwareDevices }: Props)
         view={readView}
         edit={<CaptureTriagePanel capture={capture} worlds={worlds} hardwareDevices={hardwareDevices} />}
       />
-      <p className="uwe-dashboard-muted">
+      <p className="text-sm text-muted-foreground">
         <Link href="/capture">← Zurück zur Inbox</Link>
       </p>
     </>

@@ -36,8 +36,8 @@ export function PreviewAsPlayerControls({
   }
 
   return (
-    <div className="uwe-preview-controls">
-      <label className="uwe-preview-controls-label" htmlFor="preview-as-player">
+    <div className="flex items-center gap-2 text-sm">
+      <label className="text-xs font-medium" htmlFor="preview-as-player">
         Spieler-Perspektive
       </label>
       <div className="auth-preview-controls">

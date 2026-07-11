@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { KnowHowDoc } from "@/src/lib/uwe-knowhow";
+import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { EmptyState } from "../ui/states";
 import { cn } from "../ui/cn";
@@ -52,16 +53,15 @@ export function KnowHowBrowser({ docs }: KnowHowBrowserProps) {
         />
         <div className="flex flex-wrap gap-2">
           {(["all", "README", "CHANGELOG", "docs"] as const).map((source) => (
-            <button
+            <Button
               key={source}
               type="button"
-              className={`uwe-v2-btn uwe-v2-btn-sm ${
-                sourceFilter === source ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"
-              }`}
+              size="sm"
+              variant={sourceFilter === source ? "default" : "secondary"}
               onClick={() => setSourceFilter(source)}
             >
               {source === "all" ? "Alle" : SOURCE_LABEL[source]}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

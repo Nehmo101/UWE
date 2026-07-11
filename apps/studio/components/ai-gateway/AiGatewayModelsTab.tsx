@@ -1,5 +1,14 @@
+import { Card, CardContent, CardHeader, CardTitle, Input } from "@/src/components/ui";
 import { FEATURE_MODEL_KEYS, FEATURE_MODEL_LABELS } from "./constants";
 import type { GatewayDashboard } from "./types";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+
+/** TODO(design-kit): Controlled Select bleibt nativ — direkt an Server-Config gebunden,
+    siehe gleiches Muster in AiGatewayRoutingTab.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function AiGatewayModelsTab({
   data,
@@ -12,64 +21,69 @@ export function AiGatewayModelsTab({
   ) => Promise<void>;
 }) {
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h3>Modell pro Feature</h3>
-      <table className="uwe-table">
-        <thead>
-          <tr>
-            <th>Feature</th>
-            <th>Provider</th>
-            <th>Modell</th>
-          </tr>
-        </thead>
-        <tbody>
-          {FEATURE_MODEL_KEYS.map((featureKey) => {
-            const override = data.config.featureModels?.[featureKey] ?? {};
-            const isLocalOnly = featureKey === "personal_brain";
-            return (
-              <tr key={featureKey}>
-                <td>{FEATURE_MODEL_LABELS[featureKey] ?? featureKey}</td>
-                <td>
-                  {isLocalOnly ? (
-                    <span className="uwe-muted">RTX (fest)</span>
-                  ) : (
-                    <select
-                      className="uwe-input"
-                      value={override.providerId ?? ""}
-                      onChange={(e) =>
-                        void patchFeatureModel(featureKey, { providerId: e.target.value || null })
-                      }
-                    >
-                      <option value="">— Standard —</option>
-                      <option value="local_rtx">RTX (lokal)</option>
-                      {data.providers
-                        .filter((p) => p.isEnabled)
-                        .map((p) => (
-                          <option key={p.providerId} value={p.providerId}>
-                            {p.label}
-                          </option>
-                        ))}
-                    </select>
-                  )}
-                </td>
-                <td>
-                  <input
-                    className="uwe-input"
-                    defaultValue={override.model ?? ""}
-                    disabled={isLocalOnly}
-                    onBlur={(e) => {
-                      const model = e.target.value.trim() || null;
-                      if (model !== (override.model ?? null)) {
-                        void patchFeatureModel(featureKey, { model });
-                      }
-                    }}
-                  />
-                </td>
+    <Card>
+      <CardHeader>
+        <CardTitle>Modell pro Feature</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className={TH_CLASS}>Feature</th>
+                <th className={TH_CLASS}>Provider</th>
+                <th className={TH_CLASS}>Modell</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </section>
+            </thead>
+            <tbody>
+              {FEATURE_MODEL_KEYS.map((featureKey) => {
+                const override = data.config.featureModels?.[featureKey] ?? {};
+                const isLocalOnly = featureKey === "personal_brain";
+                return (
+                  <tr key={featureKey}>
+                    <td className={TD_CLASS}>{FEATURE_MODEL_LABELS[featureKey] ?? featureKey}</td>
+                    <td className={TD_CLASS}>
+                      {isLocalOnly ? (
+                        <span className="text-muted-foreground">RTX (fest)</span>
+                      ) : (
+                        <select
+                          className={NATIVE_SELECT_CLASS}
+                          value={override.providerId ?? ""}
+                          onChange={(e) =>
+                            void patchFeatureModel(featureKey, { providerId: e.target.value || null })
+                          }
+                        >
+                          <option value="">— Standard —</option>
+                          <option value="local_rtx">RTX (lokal)</option>
+                          {data.providers
+                            .filter((p) => p.isEnabled)
+                            .map((p) => (
+                              <option key={p.providerId} value={p.providerId}>
+                                {p.label}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                    </td>
+                    <td className={TD_CLASS}>
+                      <Input
+                        defaultValue={override.model ?? ""}
+                        disabled={isLocalOnly}
+                        onBlur={(e) => {
+                          const model = e.target.value.trim() || null;
+                          if (model !== (override.model ?? null)) {
+                            void patchFeatureModel(featureKey, { model });
+                          }
+                        }}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

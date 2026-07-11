@@ -18,6 +18,16 @@ import {
   updateGameSessionAction,
 } from "@/app/session-actions";
 import { preparePrintListFromSessionAction } from "@/app/print-list-actions";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Card,
+  cn,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface LinkablePage {
   id: string;
@@ -39,6 +49,15 @@ interface Props {
   };
 }
 
+/** Native select styling — Kit-Select (Radix) needs onValueChange/hidden-input
+ * wiring to work inside a FormData Server Action; these two selects stay
+ * native (see TODO(design-kit) comments below), consistent with
+ * app/worlds/[worldSlug]/sessions/new/page.tsx. */
+const SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
+const CHECKBOX_CLASS = "size-4 rounded border-input";
+
 export function SessionDetailClient({
   worldSlug,
   sessionId,
@@ -50,48 +69,48 @@ export function SessionDetailClient({
   const [savedHint, setSavedHint] = useState<string | null>(null);
 
   const readView = (
-    <article className="uwe-v2-card uwe-v2-card-padded">
+    <Card className="flex flex-col gap-4 p-4">
       <p>
         <GameSessionStatusBadge status={session.status} />
         {session.date ? (
-          <span className="uwe-dashboard-muted" style={{ marginLeft: "0.5rem" }}>
+          <span className="ml-2 text-sm text-muted-foreground">
             {session.date.toLocaleDateString("de-DE")}
           </span>
         ) : null}
       </p>
       {session.summaryPlayer ? (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Spieler-Recap</h2>
-          <p style={{ whiteSpace: "pre-wrap" }}>{session.summaryPlayer}</p>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold text-foreground">Spieler-Recap</h2>
+          <p className="whitespace-pre-wrap">{session.summaryPlayer}</p>
         </section>
       ) : null}
       {session.summaryDm ? (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">DM-Zusammenfassung</h2>
-          <p style={{ whiteSpace: "pre-wrap" }}>{session.summaryDm}</p>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold text-foreground">DM-Zusammenfassung</h2>
+          <p className="whitespace-pre-wrap">{session.summaryDm}</p>
         </section>
       ) : null}
       {session.notes ? (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Vorbereitungsnotizen</h2>
-          <p style={{ whiteSpace: "pre-wrap" }}>{session.notes}</p>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold text-foreground">Vorbereitungsnotizen</h2>
+          <p className="whitespace-pre-wrap">{session.notes}</p>
         </section>
       ) : null}
-      <div className="uwe-inline-actions uwe-v2-section">
+      <div className="flex flex-wrap gap-2">
         <Link
           href={`/worlds/${worldSlug}/prepare-session?sessionId=${sessionId}`}
-          className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           Session vorbereiten →
         </Link>
         <Link
           href={`/worlds/${worldSlug}/sessions/${sessionId}/live`}
-          className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           Live-Modus
         </Link>
       </div>
-    </article>
+    </Card>
   );
 
   const editView = (
@@ -102,29 +121,44 @@ export function SessionDetailClient({
           setSavedHint("Gespeichert.");
           router.refresh();
         }}
-        className="uwe-edit-form"
+        className="flex flex-col gap-4"
       >
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="sessionId" value={sessionId} />
-        <label>
-          Titel
-          <input name="title" defaultValue={session.title} required />
-        </label>
-        <label>
-          Session-Nummer
-          <input name="sessionNumber" type="number" min={1} defaultValue={session.sessionNumber} required />
-        </label>
-        <label>
-          Datum
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-detail-title">Titel</Label>
+          <Input id="session-detail-title" name="title" defaultValue={session.title} required />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-detail-number">Session-Nummer</Label>
+          <Input
+            id="session-detail-number"
+            name="sessionNumber"
+            type="number"
+            min={1}
+            defaultValue={session.sessionNumber}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-detail-date">Datum</Label>
+          <Input
+            id="session-detail-date"
             type="date"
             name="date"
             defaultValue={session.date ? session.date.toISOString().slice(0, 10) : ""}
           />
-        </label>
-        <label>
-          Status
-          <select name="status" defaultValue={session.status}>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-detail-status">Status</Label>
+          {/* TODO(design-kit): natives Select statt Kit-Select — Server-Action-Formular
+              (FormData) braucht name/defaultValue ohne Client-State. */}
+          <select
+            id="session-detail-status"
+            name="status"
+            defaultValue={session.status}
+            className={cn(SELECT_CLASS, "w-full")}
+          >
             {(Object.keys(GAME_SESSION_STATUS_LABELS) as Array<keyof typeof GAME_SESSION_STATUS_LABELS>).map(
               (status) => (
               <option key={status} value={status}>
@@ -133,79 +167,102 @@ export function SessionDetailClient({
             ),
             )}
           </select>
-        </label>
-        <fieldset className="uwe-fieldset">
-          <legend>DM-Notizen (nur Studio)</legend>
-          <label>
-            DM-Zusammenfassung
-            <textarea name="summaryDm" rows={5} defaultValue={session.summaryDm ?? ""} />
-          </label>
-          <label>
-            Vorbereitungsnotizen
-            <textarea name="notes" rows={4} defaultValue={session.notes ?? ""} />
-          </label>
+        </div>
+        <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
+          <legend className="px-1 text-sm font-medium text-foreground">DM-Notizen (nur Studio)</legend>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-detail-summary-dm">DM-Zusammenfassung</Label>
+            <Textarea
+              id="session-detail-summary-dm"
+              name="summaryDm"
+              rows={5}
+              defaultValue={session.summaryDm ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-detail-notes">Vorbereitungsnotizen</Label>
+            <Textarea id="session-detail-notes" name="notes" rows={4} defaultValue={session.notes ?? ""} />
+          </div>
         </fieldset>
-        <label className="uwe-checkbox" style={{ marginTop: "1rem" }}>
+        {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+        <label className={cn(CHECKBOX_ROW_CLASS, "mt-4")}>
           <input
             type="checkbox"
             name="playerVisibleSchedule"
             defaultChecked={session.playerVisibleSchedule}
+            className={CHECKBOX_CLASS}
           />
           Termin für Spieler im Portal ankündigen
         </label>
-        <fieldset className="uwe-fieldset">
-          <legend>Spieler-Recap</legend>
-          <label>
-            Recap für Spieler
-            <textarea name="summaryPlayer" rows={5} defaultValue={session.summaryPlayer ?? ""} />
-          </label>
+        <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
+          <legend className="px-1 text-sm font-medium text-foreground">Spieler-Recap</legend>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-detail-summary-player">Recap für Spieler</Label>
+            <Textarea
+              id="session-detail-summary-player"
+              name="summaryPlayer"
+              rows={5}
+              defaultValue={session.summaryPlayer ?? ""}
+            />
+          </div>
         </fieldset>
-        <fieldset className="uwe-fieldset">
-          <legend>Nachbereitung</legend>
-          <label>
-            Offene Plots
-            <textarea name="openPlots" rows={4} defaultValue={session.openPlots ?? ""} />
-          </label>
-          <label>
-            Spielerentscheidungen
-            <textarea name="playerDecisions" rows={4} defaultValue={session.playerDecisions ?? ""} />
-          </label>
+        <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
+          <legend className="px-1 text-sm font-medium text-foreground">Nachbereitung</legend>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-detail-open-plots">Offene Plots</Label>
+            <Textarea
+              id="session-detail-open-plots"
+              name="openPlots"
+              rows={4}
+              defaultValue={session.openPlots ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-detail-player-decisions">Spielerentscheidungen</Label>
+            <Textarea
+              id="session-detail-player-decisions"
+              name="playerDecisions"
+              rows={4}
+              defaultValue={session.playerDecisions ?? ""}
+            />
+          </div>
         </fieldset>
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-          Speichern
-        </button>
-        {savedHint ? <p className="uwe-dashboard-muted">{savedHint}</p> : null}
+        <Button type="submit">Speichern</Button>
+        {savedHint ? <p className="text-sm text-muted-foreground">{savedHint}</p> : null}
       </form>
 
-      <section style={{ marginTop: "2rem" }}>
-        <h2 className="uwe-dashboard-muted" style={{ fontSize: "1rem" }}>
-          Verknüpfte Seiten
-        </h2>
+      <section className="mt-8 flex flex-col gap-3">
+        <h2 className="text-base text-muted-foreground">Verknüpfte Seiten</h2>
         {session.linkedPages.length > 0 ? (
-          <ul className="uwe-linked-list">
+          <ul className="flex flex-col gap-3 text-sm">
             {session.linkedPages.map((page) => (
-              <li key={page.id}>
+              <li
+                key={page.id}
+                className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
+              >
                 <Link href={dbBuildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
                 <PageTypeBadge type={page.type} />
-                <form action={unlinkPageFromSessionAction} style={{ display: "inline" }}>
+                <form action={unlinkPageFromSessionAction} className="inline">
                   <input type="hidden" name="worldSlug" value={worldSlug} />
                   <input type="hidden" name="sessionId" value={sessionId} />
                   <input type="hidden" name="pageId" value={page.id} />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
+                  <Button type="submit" variant="ghost" size="sm">
                     Entfernen
-                  </button>
+                  </Button>
                 </form>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="uwe-v2-empty">Noch keine verknüpften Seiten.</p>
+          <p className="text-sm italic text-muted-foreground">Noch keine verknüpften Seiten.</p>
         )}
         {linkablePages.length > 0 && (
-          <form action={linkPageToSessionAction} className="uwe-inline-form" style={{ marginTop: "1rem" }}>
+          <form action={linkPageToSessionAction} className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="sessionId" value={sessionId} />
-            <select name="pageId" required>
+            {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+                "Seite verknüpfen…" — natives Select beibehalten. */}
+            <select name="pageId" required className={SELECT_CLASS}>
               <option value="">Seite verknüpfen…</option>
               {linkablePages.map((page) => (
                 <option key={page.id} value={page.id}>
@@ -213,9 +270,9 @@ export function SessionDetailClient({
                 </option>
               ))}
             </select>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
+            <Button type="submit" variant="ghost">
               Verknüpfen
-            </button>
+            </Button>
           </form>
         )}
       </section>
@@ -224,35 +281,39 @@ export function SessionDetailClient({
 
   return (
     <>
-      {flash?.saved && <p className="uwe-flash uwe-flash-success">Session gespeichert.</p>}
-      {flash?.published && <p className="uwe-flash uwe-flash-success">Recap fürs Portal veröffentlicht.</p>}
-      {flash?.linked && <p className="uwe-flash uwe-flash-success">Seite verknüpft.</p>}
-      {flash?.unlinked && <p className="uwe-flash uwe-flash-success">Verknüpfung entfernt.</p>}
+      {flash?.saved && <Alert tone="success">Session gespeichert.</Alert>}
+      {flash?.published && <Alert tone="success">Recap fürs Portal veröffentlicht.</Alert>}
+      {flash?.linked && <Alert tone="success">Seite verknüpft.</Alert>}
+      {flash?.unlinked && <Alert tone="success">Verknüpfung entfernt.</Alert>}
 
       {!session.recapPublished ? (
-        <form action={publishSessionRecapAction} style={{ marginBottom: "1rem" }}>
+        <form action={publishSessionRecapAction} className="mb-4">
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="sessionId" value={sessionId} />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+          <Button type="submit" size="sm">
             Fürs Portal veröffentlichen
-          </button>
+          </Button>
         </form>
       ) : null}
 
       <ViewEditToggle view={readView} edit={editView} />
 
       {session.linkedPages.length > 0 ? (
-        <form action={preparePrintListFromSessionAction} className="uwe-form-inline uwe-v2-section">
+        <form
+          action={preparePrintListFromSessionAction}
+          className="mt-4 flex flex-wrap items-center gap-3"
+        >
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="sessionId" value={sessionId} />
           <input type="hidden" name="name" value={`${session.title} — Handouts`} />
-          <label className="uwe-checkbox">
-            <input type="checkbox" name="forNextSession" defaultChecked />
+          {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+          <label className={CHECKBOX_ROW_CLASS}>
+            <input type="checkbox" name="forNextSession" defaultChecked className={CHECKBOX_CLASS} />
             Für nächste Session markieren
           </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+          <Button type="submit" variant="secondary" size="sm">
             Druckliste vorbereiten
-          </button>
+          </Button>
         </form>
       ) : null}
     </>

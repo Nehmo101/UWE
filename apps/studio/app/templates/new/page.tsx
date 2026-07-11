@@ -24,7 +24,11 @@ export default async function NewTemplatePage({ searchParams }: Props) {
         title="Neues Template"
         summary="Eigene Quick-Create-Vorlage mit Standard-Blöcken anlegen — Live-Vorschau rechts."
       />
-      {error && <p className="uwe-form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      )}
 
       <TemplateEditorClient
         template={null}

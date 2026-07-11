@@ -39,17 +39,17 @@ export function NewPageAiPanel({ worldSlug, pageType, campaignSlug: _campaignSlu
   }, [loadGenerator]);
 
   return (
-    <section className="uwe-ai-context-panel" style={{ marginTop: "1.5rem" }}>
+    <section className="flex flex-col gap-2" style={{ marginTop: "1.5rem" }}>
       <h2 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>KI-Vorschläge</h2>
-      <p className="uwe-hint" style={{ marginTop: 0 }}>
+      <p className="text-sm text-muted-foreground" style={{ marginTop: 0 }}>
         KI-Vorschläge vor dem Anlegen — Ergebnisse als Review-Proposal.
       </p>
 
-      {loadError && <p className="uwe-notice uwe-notice-warn">{loadError}</p>}
+      {loadError && <p className="rounded-[var(--radius)] border border-warning/30 bg-warning/10 p-3 text-sm">{loadError}</p>}
 
       {generator && (
         <section style={{ marginBottom: "1rem" }}>
-          <h3 className="uwe-dashboard-muted" style={{ fontSize: "0.9rem" }}>
+          <h3 className="text-sm text-muted-foreground" style={{ fontSize: "0.9rem" }}>
             Kontext: {generator.context.title ?? generator.context.kind}
           </h3>
           {generator.missingContent.length > 0 && (
@@ -59,7 +59,7 @@ export function NewPageAiPanel({ worldSlug, pageType, campaignSlug: _campaignSlu
                 {generator.missingContent.map((hint) => (
                   <li key={hint.field}>
                     {hint.label}
-                    <span className="uwe-hint"> → {hint.suggestedActionId}</span>
+                    <span className="text-sm text-muted-foreground"> → {hint.suggestedActionId}</span>
                   </li>
                 ))}
               </ul>
@@ -76,7 +76,7 @@ export function NewPageAiPanel({ worldSlug, pageType, campaignSlug: _campaignSlu
             </div>
           )}
           {generator.actions.length > 0 && (
-            <p className="uwe-hint" style={{ marginTop: "0.5rem" }}>
+            <p className="text-sm text-muted-foreground" style={{ marginTop: "0.5rem" }}>
               {generator.actions.length} kontextuelle KI-Aktionen verfügbar.
             </p>
           )}

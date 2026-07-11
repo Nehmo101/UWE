@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Button, Input, Label } from "@/src/components/ui";
 
 interface Props {
   body: string;
@@ -29,40 +30,31 @@ export function PromptFillClient({ body, variables }: Props) {
   }
 
   return (
-    <div className="uwe-v2-section">
+    <div className="flex flex-col gap-4">
       {variables.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "0.75rem" }}>
+        <div className="flex flex-col gap-2">
           {variables.map((name) => (
-            <label key={name}>
-              {name}
-              <input
+            <div key={name} className="flex flex-col gap-1.5">
+              <Label htmlFor={`prompt-fill-${name}`}>{name}</Label>
+              <Input
+                id={`prompt-fill-${name}`}
                 type="text"
                 value={values[name] ?? ""}
                 onChange={(event) => setValues((prev) => ({ ...prev, [name]: event.target.value }))}
               />
-            </label>
+            </div>
           ))}
         </div>
       ) : (
-        <p className="uwe-dashboard-muted">Keine Variablen — direkt kopierbar.</p>
+        <p className="text-sm text-muted-foreground">Keine Variablen — direkt kopierbar.</p>
       )}
 
-      <pre
-        style={{
-          whiteSpace: "pre-wrap",
-          padding: "0.75rem",
-          borderRadius: "6px",
-          background: "var(--uwe-code-bg, rgba(0,0,0,0.05))",
-          overflowX: "auto",
-        }}
-      >
-        {filled}
-      </pre>
+      <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted p-3">{filled}</pre>
 
-      <div className="uwe-form-actions">
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void copy()}>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="button" onClick={() => void copy()}>
           {copied ? "✓ Kopiert" : "Als Prompt kopieren"}
-        </button>
+        </Button>
       </div>
     </div>
   );

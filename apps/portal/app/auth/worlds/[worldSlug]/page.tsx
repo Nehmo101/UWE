@@ -24,6 +24,7 @@ import {
   type SearchEntityFilter,
   type SearchResultItem,
 } from "@uwe/database/server";
+import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -83,12 +84,11 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
   const dashboardWidgets = getDefaultDashboardLayout(portalWorldPageKey(worldSlug));
 
   return (
-    <section className="portal-content-card">
-      <h1>{worldName}</h1>
-      <p className="auth-lead">
-        Kampagnen-Übersicht
-        {ctx.previewAsUserId ? " (Preview-as-Player aktiv)" : ""}
-      </p>
+    <>
+      <PageHeader
+        title={worldName}
+        summary={`Kampagnen-Übersicht${ctx.previewAsUserId ? " (Preview-as-Player aktiv)" : ""}`}
+      />
 
       <GlobalSearchForm
         action={`/auth/worlds/${worldSlug}`}
@@ -96,17 +96,19 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
         placeholder="Erlaubte Inhalte durchsuchen…"
       />
 
-      {previewEnabled && (
-        <PreviewAsPlayerForm
-          worldSlug={worldSlug}
-          players={players.map((entry) => ({
-            id: entry.user.id,
-            displayName: entry.user.displayName,
-            characterName: entry.characterName,
-          }))}
-          currentPreviewUserId={previewUserId}
-        />
-      )}
+      {previewEnabled ? (
+        <div className="my-4">
+          <PreviewAsPlayerForm
+            worldSlug={worldSlug}
+            players={players.map((entry) => ({
+              id: entry.user.id,
+              displayName: entry.user.displayName,
+              characterName: entry.characterName,
+            }))}
+            currentPreviewUserId={previewUserId}
+          />
+        </div>
+      ) : null}
 
       {isSearching ? (
         <>
@@ -139,6 +141,6 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
           description="Für deine Rolle sind derzeit keine Inhalte sichtbar. Wende dich an deinen Spielleiter."
         />
       )}
-    </section>
+    </>
   );
 }

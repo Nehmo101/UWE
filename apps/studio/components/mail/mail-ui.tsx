@@ -3,9 +3,18 @@
 import * as React from "react";
 import { NavIcon } from "@/src/components/ui/icon";
 
-/** Button variants mirror the design-v2 `uwe-v2-btn-*` classes (terracotta accent
- * with a 2px ink border, ink-fill primary, etc.) so buttons stay theme-consistent. */
 export type MailButtonVariant = "accent" | "primary" | "secondary" | "subtle" | "danger";
+
+const BTN_BASE =
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
+
+const BTN_VARIANT: Record<MailButtonVariant, string> = {
+  accent: "bg-primary text-primary-foreground hover:bg-primary/90",
+  primary: "bg-foreground text-background hover:bg-foreground/90",
+  secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+  subtle: "border border-input bg-transparent hover:bg-muted",
+  danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+};
 
 export interface MailButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: MailButtonVariant;
@@ -24,9 +33,9 @@ export function MailButton({
   ...rest
 }: MailButtonProps) {
   const classes = [
-    "uwe-v2-btn",
-    `uwe-v2-btn-${variant}`,
-    size === "sm" ? "uwe-v2-btn-sm" : "",
+    BTN_BASE,
+    BTN_VARIANT[variant],
+    size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 py-2 text-sm",
     className ?? "",
   ]
     .filter(Boolean)

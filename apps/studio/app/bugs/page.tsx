@@ -101,7 +101,7 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
         filterSeverity={severityFilter}
         githubIssueSync={githubIssueSync}
       />
-      <p className="uwe-dashboard-muted">
+      <p className="text-sm text-muted-foreground">
         <Link href="/today">← Heute</Link>
       </p>
     </StudioShell>

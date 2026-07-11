@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Alert, Button, Input, Label, Textarea, cn } from "@/src/components/ui";
 
 export interface WorldTemplateChoice {
   id: string;
@@ -81,20 +82,28 @@ export function CreateWorldForm({ templates = [] }: Props) {
   }
 
   return (
-    <form className="uwe-v2-form studio-create-world-form" onSubmit={handleSubmit}>
-      <h2 className="uwe-v2-section-title">Neue Welt erstellen</h2>
-      <p className="uwe-hint">
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      <h2 className="text-lg font-semibold tracking-tight">Neue Welt erstellen</h2>
+      <p className="text-sm text-muted-foreground">
         Nur für Owner/Admin. Wähle eine Vorlage für den Startaufbau — Sandbox-Welten sind von
         Backup, Export und Portal ausgeschlossen.
       </p>
 
       {templates.length > 0 ? (
-        <fieldset className="uwe-template-grid" aria-label="Welt-Vorlage">
+        <fieldset
+          className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-2"
+          aria-label="Welt-Vorlage"
+        >
           <legend className="sr-only">Welt-Vorlage</legend>
+          {/* TODO(design-kit): kein Auswahlkarten-Kit-Component vorhanden — natives radio +
+              Tailwind verwendet, analog Checkbox-Pattern in settings/page.tsx. */}
           {templates.map((template) => (
             <label
               key={template.id}
-              className={`uwe-template-card${template.id === templateId ? " active" : ""}`}
+              className={cn(
+                "flex cursor-pointer flex-col gap-1 rounded-[var(--radius)] border border-border bg-card p-3 text-sm text-card-foreground transition-colors hover:border-primary/60",
+                template.id === templateId && "border-primary bg-muted",
+              )}
             >
               <input
                 type="radio"
@@ -104,8 +113,8 @@ export function CreateWorldForm({ templates = [] }: Props) {
                 onChange={() => setTemplateId(template.id)}
                 className="sr-only"
               />
-              <strong>{template.name}</strong>
-              <span>{template.description}</span>
+              <strong className="text-sm font-semibold">{template.name}</strong>
+              <span className="text-xs text-muted-foreground">{template.description}</span>
             </label>
           ))}
         </fieldset>
@@ -114,12 +123,13 @@ export function CreateWorldForm({ templates = [] }: Props) {
       {(() => {
         const selected = templates.find((entry) => entry.id === templateId);
         const hint = selected ? formatTemplateHint(selected) : null;
-        return hint ? <p className="uwe-hint">{hint}</p> : null;
+        return hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null;
       })()}
 
-      <label>
-        Name
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="create-world-name">Name</Label>
+        <Input
+          id="create-world-name"
           name="name"
           required
           minLength={2}
@@ -128,11 +138,12 @@ export function CreateWorldForm({ templates = [] }: Props) {
           onChange={(event) => setName(event.target.value)}
           placeholder="z. B. Terra"
         />
-      </label>
+      </div>
 
-      <label>
-        Beschreibung (optional)
-        <textarea
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="create-world-description">Beschreibung (optional)</Label>
+        <Textarea
+          id="create-world-description"
           name="description"
           rows={3}
           maxLength={500}
@@ -140,36 +151,40 @@ export function CreateWorldForm({ templates = [] }: Props) {
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Kurzbeschreibung für Spieler"
         />
-      </label>
+      </div>
 
-      <label className="uwe-checkbox-row">
+      {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox]
+          + Tailwind verwendet, siehe gleiches Muster in settings/page.tsx. */}
+      <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={isSandbox}
           onChange={(event) => setIsSandbox(event.target.checked)}
+          className="size-4 rounded border-input"
         />
         Sandbox-Testwelt — nur im Studio sichtbar, kein Backup/Export/Portal
       </label>
 
-      <label className={`uwe-checkbox-row${isSandbox ? " uwe-muted" : ""}`}>
+      <label className={cn("flex items-center gap-2 text-sm", isSandbox && "text-muted-foreground")}>
         <input
           type="checkbox"
           checked={guestModeEnabled}
           disabled={isSandbox}
           onChange={(event) => setGuestModeEnabled(event.target.checked)}
+          className="size-4 rounded border-input"
         />
         Gastmodus aktiv — für Spieler freigegebene Inhalte ohne Login im Portal lesbar
       </label>
 
       {error ? (
-        <p className="uwe-form-error" role="alert">
+        <Alert tone="danger" role="alert">
           {error}
-        </p>
+        </Alert>
       ) : null}
 
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={submitting}>
+      <Button type="submit" disabled={submitting} className="self-start">
         {submitting ? "Erstelle…" : "Welt erstellen"}
-      </button>
+      </Button>
     </form>
   );
 }

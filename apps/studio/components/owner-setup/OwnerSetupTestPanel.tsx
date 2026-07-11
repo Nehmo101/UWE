@@ -2,6 +2,7 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
+import { Alert, Button, Input, Label } from "@/src/components/ui";
 
 export type OwnerSetupTestAction = "mail" | "urls" | "rtx" | "printer";
 
@@ -29,7 +30,7 @@ export function OwnerSetupTestPanel({
 
   if (!canEdit) {
     return (
-      <p className="uwe-hint">
+      <p className="text-sm text-muted-foreground">
         Nur OWNER darf Tests ausführen und Einstellungen speichern.
       </p>
     );
@@ -64,23 +65,24 @@ export function OwnerSetupTestPanel({
   }
 
   return (
-    <form onSubmit={runTest} className="uwe-form" style={{ marginTop: "1rem" }}>
+    <form onSubmit={runTest} className="mt-4 flex flex-col gap-4">
       {action === "mail" && (
-        <label>
-          Empfänger
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="owner-setup-test-email">Empfänger</Label>
+          <Input
+            id="owner-setup-test-email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
             placeholder="owner@example.org"
           />
-        </label>
+        </div>
       )}
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary" disabled={loading}>
+      <Button type="submit" variant="secondary" disabled={loading}>
         {loading ? "Teste…" : ACTION_LABELS[action]}
-      </button>
-      {status && <p className="uwe-notice">{status}</p>}
+      </Button>
+      {status && <Alert>{status}</Alert>}
     </form>
   );
 }

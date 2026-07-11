@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { Button, Input, Label, Textarea } from "@/src/components/ui";
 import { ImageStudioMaskCanvas } from "./ImageStudioMaskCanvas";
 
 interface WorldOption {
@@ -25,6 +26,14 @@ interface ImageStudioJobFormProps {
 
 const INPAINT_TASKS = new Set(["inpaint", "edit", "remove_background", "variant"]);
 const LOCAL_ONLY_TASKS = new Set(["inpaint", "edit", "remove_background"]);
+
+const FIELD_CLASS = "flex flex-col gap-1.5 text-sm";
+
+/** TODO(design-kit): native Selects bleiben — Server-Action-Formular (FormData) braucht
+    name-Attribut, teils zusätzlich an lokalen State gebunden (Welt/Operation/Provider steuern
+    abhängige Felder), siehe gleiches Muster in SessionDetailClient.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
@@ -173,7 +182,7 @@ export function ImageStudioJobForm({
   }
 
   return (
-    <form ref={formRef} action={action} className="uwe-form" onSubmit={handleSubmit}>
+    <form ref={formRef} action={action} className="flex flex-col gap-4" onSubmit={handleSubmit}>
       {pageId && <input type="hidden" name="pageId" value={pageId} />}
       {projectId && <input type="hidden" name="projectId" value={projectId} />}
       {pageId && <input type="hidden" name="linkTargetType" value={linkTargetType} />}
@@ -182,26 +191,27 @@ export function ImageStudioJobForm({
 
       {pageId && <input type="hidden" name="linkTargetId" value={pageId} />}
 
-      <label>
+      <label className={FIELD_CLASS}>
         Prompt-Kontext
-        <select name="contextMode" defaultValue="prompt_only">
+        <select name="contextMode" defaultValue="prompt_only" className={NATIVE_SELECT_CLASS}>
           <option value="prompt_only">Nur Prompt (Cloud-sicher)</option>
           <option value="page_context">Seiten-Kontext (nur RTX)</option>
           <option value="brain_context">Brain/Welt-Kontext (nur RTX)</option>
           <option value="object_context">Aktuelles Objekt (nur RTX)</option>
         </select>
       </label>
-      <p className="uwe-hint">
+      <p className="text-sm text-muted-foreground">
         Privater Welt-/Brain-/Objekt-Kontext wird nicht an Cloud-Provider gesendet.
       </p>
 
-      <label>
+      <label className={FIELD_CLASS}>
         Welt
         <select
           name="worldSlug"
           required
           value={worldSlug}
           onChange={(event) => setWorldSlug(event.target.value)}
+          className={NATIVE_SELECT_CLASS}
         >
           {worlds.map((world) => (
             <option key={world.slug} value={world.slug}>
@@ -211,9 +221,14 @@ export function ImageStudioJobForm({
         </select>
       </label>
 
-      <label>
+      <label className={FIELD_CLASS}>
         Operation
-        <select name="task" value={task} onChange={(event) => setTask(event.target.value)}>
+        <select
+          name="task"
+          value={task}
+          onChange={(event) => setTask(event.target.value)}
+          className={NATIVE_SELECT_CLASS}
+        >
           {Object.entries(operationLabels).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -222,12 +237,13 @@ export function ImageStudioJobForm({
         </select>
       </label>
 
-      <label>
+      <label className={FIELD_CLASS}>
         Provider
         <select
           name="providerMode"
           defaultValue={requiresLocalProvider ? "local_rtx" : defaultProviderMode}
           key={task}
+          className={NATIVE_SELECT_CLASS}
         >
           <option value="auto" disabled={requiresLocalProvider}>
             Auto (RTX → Cloud)
@@ -239,41 +255,58 @@ export function ImageStudioJobForm({
         </select>
       </label>
       {requiresLocalProvider && (
-        <p className="uwe-hint">Inpaint/Edit erfordert RTX — Cloud ist für diese Operation deaktiviert.</p>
+        <p className="text-sm text-muted-foreground">
+          Inpaint/Edit erfordert RTX — Cloud ist für diese Operation deaktiviert.
+        </p>
       )}
 
       {showVariantCount && (
-        <label>
+        <label className={FIELD_CLASS}>
           Varianten (1–4)
-          <input name="variantCount" type="number" min={1} max={4} defaultValue={2} />
+          <Input name="variantCount" type="number" min={1} max={4} defaultValue={2} />
         </label>
       )}
 
       {showInpaintFields && (
         <>
-          <label className="uwe-checkbox-row">
+          {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+          <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={layerMode}
               onChange={(event) => setLayerMode(event.target.checked)}
+              className="size-4 rounded border-input"
             />
             Layering-Modus (mehrere Bilder übereinander legen)
           </label>
           {layerMode ? (
-            <label>
+            <label className={FIELD_CLASS}>
               Layer-Bilder (Reihenfolge = Stapel von unten nach oben)
-              <input type="file" accept="image/*" multiple onChange={(event) => void handleLayerFilesChange(event)} />
+              {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => void handleLayerFilesChange(event)}
+                className="text-sm text-foreground"
+              />
             </label>
           ) : (
-            <label>
+            <label className={FIELD_CLASS}>
               Quellbild
-              <input type="file" accept="image/*" onChange={handleSourceFileChange} />
+              {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleSourceFileChange}
+                className="text-sm text-foreground"
+              />
             </label>
           )}
-          {layerStatus && <p className="uwe-hint">{layerStatus}</p>}
+          {layerStatus && <p className="text-sm text-muted-foreground">{layerStatus}</p>}
           {(task === "inpaint" || task === "edit") && (
-            <div>
-              <p className="uwe-label">Maske zeichnen (Inpaint-Bereich)</p>
+            <div className="flex flex-col gap-2">
+              <Label>Maske zeichnen (Inpaint-Bereich)</Label>
               <ImageStudioMaskCanvas
                 sourcePreview={sourcePreview}
                 sourceBase64={sourceBase64}
@@ -285,14 +318,14 @@ export function ImageStudioJobForm({
         </>
       )}
 
-      <label>
+      <label className={FIELD_CLASS}>
         Titel (optional)
-        <input name="title" type="text" placeholder="NPC-Portrait Gandalf" defaultValue={defaultTitle} />
+        <Input name="title" type="text" placeholder="NPC-Portrait Gandalf" defaultValue={defaultTitle} />
       </label>
 
-      <label>
+      <label className={FIELD_CLASS}>
         Prompt
-        <textarea
+        <Textarea
           name="prompt"
           required
           rows={4}
@@ -301,9 +334,9 @@ export function ImageStudioJobForm({
         />
       </label>
 
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={!enabled}>
+      <Button type="submit" disabled={!enabled}>
         Generieren (Job)
-      </button>
+      </Button>
     </form>
   );
 }

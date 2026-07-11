@@ -9,9 +9,9 @@ interface Props {
 
 export function BrainAiGeneratePanel({ worldSlug, campaignId: _campaignId }: Props) {
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section uwe-brain-ai-panel">
-      <h2 className="uwe-v2-section-title">KI-Wissensgenerierung</h2>
-      <p className="uwe-hint" style={{ marginTop: 0 }}>
+    <section className="flex flex-col gap-3 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
+      <h2 className="text-lg font-semibold tracking-tight">KI-Wissensgenerierung</h2>
+      <p className="text-sm text-muted-foreground" style={{ marginTop: 0 }}>
         Brain-Aktionen für diese Welt — Ergebnisse immer als Review-Proposal übernehmen. Läuft über
         den RTX Connector (lokal), nicht über veraltete Ollama-Direktauswahl.
       </p>

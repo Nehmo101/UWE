@@ -53,11 +53,28 @@ import { StructuredGeneratorSection } from "@/components/wiki/StructuredGenerato
 import { StatblockStudioSection } from "@/components/wiki/StatblockStudioSection";
 import { PageEditAutosave } from "@/src/components/ux/PageEditAutosave";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; category: string; slug: string }>;
   searchParams: Promise<{ saved?: string }>;
 }
+
+const FIELD_CLASS = "flex flex-col gap-1.5";
 
 export default async function StudioPageEdit({ params, searchParams }: Props) {
   const { worldSlug, category, slug } = await params;
@@ -114,146 +131,172 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
         summary="Seite bearbeiten"
         actions={
           <>
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={pagePreviewHref(worldSlug, page.type, slug)}>
+            <Link className={buttonVariants({ variant: "ghost" })} href={pagePreviewHref(worldSlug, page.type, slug)}>
               Vorschau als Spieler
             </Link>
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/image-studio?pageId=${page.id}`}>
+            <Link className={buttonVariants({ variant: "ghost" })} href={`/image-studio?pageId=${page.id}`}>
               Image Studio
             </Link>
           </>
         }
       />
       {page.visibility === "dm_only" && (
-        <p className="uwe-form-error uwe-v2-section" role="note">
+        <Alert tone="danger" role="note" className="mb-4">
           <strong>Nur GM (dm_only)</strong> — diese Seite erscheint niemals im Portal oder in Spieler-Exports.
-        </p>
+        </Alert>
       )}
-      <div className="uwe-has-sticky-actions">
-        {saved && (
-          <p className="uwe-flash uwe-flash-success" role="status">Änderungen gespeichert.</p>
-        )}
-        <PageEditAutosave formId="uwe-edit-page-form" storageKey={`uwe:page-edit:${page.id}`} />
+      <div className="pb-24">
+        {saved && <Alert tone="success" className="mb-4">Änderungen gespeichert.</Alert>}
+        <PageEditAutosave formId="world-page-edit-form" storageKey={`uwe:page-edit:${page.id}`} />
 
-        <form id="uwe-edit-page-form" action={updatePageAction} className="uwe-v2-form">
+        <form id="world-page-edit-form" action={updatePageAction} className="flex flex-col gap-4">
           <input type="hidden" name="pageId" value={page.id} />
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="pageSlug" value={slug} />
 
-          <label>
-            Titel
-            <input name="title" defaultValue={page.title} required />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-title">Titel</Label>
+            <Input id="edit-title" name="title" defaultValue={page.title} required />
+          </div>
 
-          <label>
-            Slug
-            <input name="slug" defaultValue={page.slug} required />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-slug">Slug</Label>
+            <Input id="edit-slug" name="slug" defaultValue={page.slug} required />
+          </div>
 
-          <label>
-            Typ
-            <select name="type" defaultValue={page.type}>
-              {Object.values(PageTypeEnum).map((type) => (
-                <option key={type} value={type}>
-                  {PAGE_TYPE_LABELS[type]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-type">Typ</Label>
+            <Select name="type" defaultValue={page.type}>
+              <SelectTrigger id="edit-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(PageTypeEnum).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {PAGE_TYPE_LABELS[type]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label>
-            Zusammenfassung
-            <textarea name="summary" defaultValue={page.summary ?? ""} />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-summary">Zusammenfassung</Label>
+            <Textarea id="edit-summary" name="summary" defaultValue={page.summary ?? ""} />
+          </div>
 
-          <label>
-            Sichtbarkeit
-            <select name="visibility" defaultValue={page.visibility}>
-              {Object.values(VisibilityEnum).map((v) => (
-                <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
-              ))}
-            </select>
-            <small className="uwe-field-hint">
-              „Portal sichtbar“ und „Share-Link“ sind nach dem
-              Veröffentlichen für angemeldete Spieler im Portal sichtbar.
-              „Nur GM“ erscheint dort niemals.
-            </small>
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-visibility">Sichtbarkeit</Label>
+            <Select name="visibility" defaultValue={page.visibility}>
+              <SelectTrigger id="edit-visibility">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(VisibilityEnum).map((v) => (
+                  <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="m-0 text-xs text-muted-foreground">
+              „Portal sichtbar“ und „Share-Link“ sind nach dem Veröffentlichen für angemeldete
+              Spieler im Portal sichtbar. „Nur GM“ erscheint dort niemals.
+            </p>
+          </div>
 
-          <label>
-            Publish Status
-            <select name="publishStatus" defaultValue={page.publishStatus}>
-              {Object.values(PublishStatusEnum).map((v) => (
-                <option key={v} value={v}>{PUBLISH_LABELS[v]}</option>
-              ))}
-            </select>
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-publish-status">Publish Status</Label>
+            <Select name="publishStatus" defaultValue={page.publishStatus}>
+              <SelectTrigger id="edit-publish-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(PublishStatusEnum).map((v) => (
+                  <SelectItem key={v} value={v}>{PUBLISH_LABELS[v]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <fieldset className="uwe-fieldset">
-            <legend>Geheimnis &amp; Enthüllung</legend>
-            <p className="uwe-field-hint" style={{ marginTop: 0 }}>
-              Aktuell:{" "}
-              <SecretLevelBadge secretLevel={page.secretLevel} />
+          <fieldset className="grid gap-3 rounded-[var(--radius)] border border-border p-4">
+            <legend className="px-1 text-xs text-muted-foreground">Geheimnis &amp; Enthüllung</legend>
+            <p className="m-0 text-xs text-muted-foreground">
+              Aktuell: <SecretLevelBadge secretLevel={page.secretLevel} />
               {page.secretLevel !== "none" && (
                 <> · <RevealStateBadge revealState={page.revealState} /></>
               )}
             </p>
 
-            <label>
-              Geheimnis-Level
-              <select name="secretLevel" defaultValue={page.secretLevel}>
-                {Object.values(SecretLevelEnum).map((level) => (
-                  <option key={level} value={level}>
-                    {SECRET_LEVEL_LABELS[level]}
-                  </option>
-                ))}
-              </select>
-              <small className="uwe-field-hint">
-                Steuert zusätzlichen Schutz für veröffentlichte Spieler-Inhalte.
-                „Kein Geheimnis“ bedeutet: nur Sichtbarkeit und Publish-Status gelten.
-              </small>
-            </label>
+            <div className={FIELD_CLASS}>
+              <Label htmlFor="edit-secret-level">Geheimnis-Level</Label>
+              <Select name="secretLevel" defaultValue={page.secretLevel}>
+                <SelectTrigger id="edit-secret-level">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(SecretLevelEnum).map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {SECRET_LEVEL_LABELS[level]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="m-0 text-xs text-muted-foreground">
+                Steuert zusätzlichen Schutz für veröffentlichte Spieler-Inhalte. „Kein Geheimnis“
+                bedeutet: nur Sichtbarkeit und Publish-Status gelten.
+              </p>
+            </div>
 
-            <label>
-              Enthüllungs-Status
-              <select name="revealState" defaultValue={page.revealState}>
-                {Object.values(RevealStateEnum).map((state) => (
-                  <option key={state} value={state}>
-                    {REVEAL_STATE_LABELS[state]}
-                  </option>
-                ))}
-              </select>
-              <small className="uwe-field-hint">
+            <div className={FIELD_CLASS}>
+              <Label htmlFor="edit-reveal-state">Enthüllungs-Status</Label>
+              <Select name="revealState" defaultValue={page.revealState}>
+                <SelectTrigger id="edit-reveal-state">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(RevealStateEnum).map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {REVEAL_STATE_LABELS[state]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="m-0 text-xs text-muted-foreground">
                 Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen die Seite im Portal
                 erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für Portal-Zugriff.
-              </small>
-            </label>
+              </p>
+            </div>
           </fieldset>
 
-          <label>
-            Kanon-Status
-            <select name="canonicalStatus" defaultValue={page.canonicalStatus}>
-              {Object.values(CanonicalStatusEnum).map((v) => (
-                <option key={v} value={v}>{CANONICAL_LABELS[v]}</option>
-              ))}
-            </select>
-            <small className="uwe-field-hint">
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-canonical-status">Kanon-Status</Label>
+            <Select name="canonicalStatus" defaultValue={page.canonicalStatus}>
+              <SelectTrigger id="edit-canonical-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(CanonicalStatusEnum).map((v) => (
+                  <SelectItem key={v} value={v}>{CANONICAL_LABELS[v]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="m-0 text-xs text-muted-foreground">
               Steuert den Kanon-Lebenszyklus: von Idee über Vorbereitung bis etabliertem Kanon
               oder verworfenen Inhalten.
-            </small>
-          </label>
+            </p>
+          </div>
 
-          <label>
-            Tags (kommagetrennt)
-            <input name="tags" defaultValue={tags.join(", ")} />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-tags">Tags (kommagetrennt)</Label>
+            <Input id="edit-tags" name="tags" defaultValue={tags.join(", ")} />
+          </div>
 
-          <label>
-            Aliase (kommagetrennt)
-            <input name="aliases" defaultValue={aliases.join(", ")} />
-          </label>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-aliases">Aliase (kommagetrennt)</Label>
+            <Input id="edit-aliases" name="aliases" defaultValue={aliases.join(", ")} />
+          </div>
 
-          <div className="uwe-form-actions">
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Seite speichern</button>
+          <div>
+            <Button type="submit">Seite speichern</Button>
           </div>
         </form>
 
@@ -263,104 +306,127 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           defaultOpen={page.contentBlocks.length <= 3}
         >
           {page.contentBlocks.map((block) => (
-            <form key={block.id} action={updateContentBlockAction} className="uwe-v2-form" style={{ marginBottom: "1.5rem", padding: "1rem", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "0.65rem" }}>
-              <input type="hidden" name="blockId" value={block.id} />
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="pageSlug" value={slug} />
-              <input type="hidden" name="category" value={category} />
-              <input type="hidden" name="sortOrder" value={block.sortOrder} />
+            <Card key={block.id} className="mb-6">
+              <CardContent className="flex flex-col gap-4 pt-6">
+                <form action={updateContentBlockAction} className="flex flex-col gap-4">
+                  <input type="hidden" name="blockId" value={block.id} />
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="pageSlug" value={slug} />
+                  <input type="hidden" name="category" value={category} />
+                  <input type="hidden" name="sortOrder" value={block.sortOrder} />
 
-              <ContentBlockBody
-                worldSlug={worldSlug}
-                typeOptions={blockTypeOptions}
-                imageAssets={imageAssets}
-                defaultType={block.type}
-                defaultContent={block.content}
-                defaultAssetId={block.assetId}
-                rows={6}
-              />
-
-              <label>
-                Sichtbarkeit
-                <select name="visibility" defaultValue={block.visibility}>
-                  {Object.values(VisibilityEnum).map((v) => (
-                    <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
-                  ))}
-                </select>
-              </label>
-
-              <fieldset className="uwe-fieldset">
-                <legend>Geheimnis &amp; Enthüllung</legend>
-                <p className="uwe-field-hint" style={{ marginTop: 0 }}>
-                  Aktuell: <SecretLevelBadge secretLevel={block.secretLevel} />
-                  {block.secretLevel !== "none" && (
-                    <> · <RevealStateBadge revealState={block.revealState} /></>
-                  )}
-                </p>
-                <label>
-                  Geheimnis-Level
-                  <select name="secretLevel" defaultValue={block.secretLevel}>
-                    {Object.values(SecretLevelEnum).map((level) => (
-                      <option key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Enthüllungs-Status
-                  <select name="revealState" defaultValue={block.revealState}>
-                    {Object.values(RevealStateEnum).map((state) => (
-                      <option key={state} value={state}>{REVEAL_STATE_LABELS[state]}</option>
-                    ))}
-                  </select>
-                  <small className="uwe-field-hint">
-                    Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen den Block im Portal
-                    erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für Portal-Zugriff.
-                  </small>
-                </label>
-              </fieldset>
-
-              {block.secretLevel !== "none" && (
-                <div className="uwe-field-hint" style={{ marginTop: "0.5rem" }}>
-                  <strong>Spieler-Vorschau:</strong>
-                  <SecretReveal
-                    content={block.content}
-                    secretLevel={block.secretLevel}
-                    revealState={block.revealState}
+                  {/* TODO(design-kit): ContentBlockBody (apps/studio/components/**) bleibt
+                      unmigriert und rendert eigene <label>/<select> ohne Kit-Styling — außerhalb
+                      dieses Auftrags (S4). */}
+                  <ContentBlockBody
+                    worldSlug={worldSlug}
+                    typeOptions={blockTypeOptions}
+                    imageAssets={imageAssets}
+                    defaultType={block.type}
+                    defaultContent={block.content}
+                    defaultAssetId={block.assetId}
+                    rows={6}
                   />
-                </div>
-              )}
 
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                <button type="submit" className="uwe-v2-btn">Block speichern</button>
-                <Link
-                  className="uwe-v2-btn uwe-v2-btn-ghost"
-                  href={`/worlds/${worldSlug}/labels/new?sourceRef=content_block:${block.id}`}
-                >
-                  Aus Block Label erstellen
-                </Link>
-              </div>
-            </form>
+                  <div className={FIELD_CLASS}>
+                    <Label htmlFor={`block-${block.id}-visibility`}>Sichtbarkeit</Label>
+                    <Select name="visibility" defaultValue={block.visibility}>
+                      <SelectTrigger id={`block-${block.id}-visibility`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(VisibilityEnum).map((v) => (
+                          <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <fieldset className="grid gap-3 rounded-[var(--radius)] border border-border p-4">
+                    <legend className="px-1 text-xs text-muted-foreground">Geheimnis &amp; Enthüllung</legend>
+                    <p className="m-0 text-xs text-muted-foreground">
+                      Aktuell: <SecretLevelBadge secretLevel={block.secretLevel} />
+                      {block.secretLevel !== "none" && (
+                        <> · <RevealStateBadge revealState={block.revealState} /></>
+                      )}
+                    </p>
+                    <div className={FIELD_CLASS}>
+                      <Label htmlFor={`block-${block.id}-secret-level`}>Geheimnis-Level</Label>
+                      <Select name="secretLevel" defaultValue={block.secretLevel}>
+                        <SelectTrigger id={`block-${block.id}-secret-level`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(SecretLevelEnum).map((level) => (
+                            <SelectItem key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className={FIELD_CLASS}>
+                      <Label htmlFor={`block-${block.id}-reveal-state`}>Enthüllungs-Status</Label>
+                      <Select name="revealState" defaultValue={block.revealState}>
+                        <SelectTrigger id={`block-${block.id}-reveal-state`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(RevealStateEnum).map((state) => (
+                            <SelectItem key={state} value={state}>{REVEAL_STATE_LABELS[state]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="m-0 text-xs text-muted-foreground">
+                        Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen den Block im
+                        Portal erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für
+                        Portal-Zugriff.
+                      </p>
+                    </div>
+                  </fieldset>
+
+                  {block.secretLevel !== "none" && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <strong>Spieler-Vorschau:</strong>
+                      <SecretReveal
+                        content={block.content}
+                        secretLevel={block.secretLevel}
+                        revealState={block.revealState}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="submit" variant="secondary">Block speichern</Button>
+                    <Link
+                      className={buttonVariants({ variant: "ghost" })}
+                      href={`/worlds/${worldSlug}/labels/new?sourceRef=content_block:${block.id}`}
+                    >
+                      Aus Block Label erstellen
+                    </Link>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           ))}
 
           {page.contentBlocks.map((block) => (
-            <form key={`del-${block.id}`} action={deleteContentBlockAction} style={{ marginTop: "-1rem", marginBottom: "1.5rem" }}>
+            <form key={`del-${block.id}`} action={deleteContentBlockAction} className="mb-3">
               <input type="hidden" name="blockId" value={block.id} />
               <input type="hidden" name="worldSlug" value={worldSlug} />
               <input type="hidden" name="pageSlug" value={slug} />
               <input type="hidden" name="category" value={category} />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger">
+              <Button type="submit" variant="destructive">
                 Block „{BLOCK_TYPE_LABELS[block.type]}“ löschen
-              </button>
+              </Button>
             </form>
           ))}
 
-          <form action={createContentBlockAction} className="uwe-v2-form">
+          <form action={createContentBlockAction} className="flex flex-col gap-4">
             <input type="hidden" name="pageId" value={page.id} />
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="pageSlug" value={slug} />
             <input type="hidden" name="category" value={category} />
 
-            <h3 style={{ margin: 0, fontSize: "0.95rem" }}>Neuer Block</h3>
+            <h3 className="m-0 text-sm font-semibold">Neuer Block</h3>
 
             <ContentBlockBody
               worldSlug={worldSlug}
@@ -370,34 +436,51 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               rows={4}
             />
 
-            <label>
-              Sichtbarkeit
-              <select name="visibility" defaultValue="dm_only">
-                {Object.values(VisibilityEnum).map((v) => (
-                  <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
-                ))}
-              </select>
-            </label>
+            <div className={FIELD_CLASS}>
+              <Label htmlFor="new-block-visibility">Sichtbarkeit</Label>
+              <Select name="visibility" defaultValue="dm_only">
+                <SelectTrigger id="new-block-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(VisibilityEnum).map((v) => (
+                    <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label>
-              Geheimnis-Level
-              <select name="secretLevel" defaultValue="none">
-                {Object.values(SecretLevelEnum).map((level) => (
-                  <option key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</option>
-                ))}
-              </select>
-            </label>
+            <div className={FIELD_CLASS}>
+              <Label htmlFor="new-block-secret-level">Geheimnis-Level</Label>
+              <Select name="secretLevel" defaultValue="none">
+                <SelectTrigger id="new-block-secret-level">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(SecretLevelEnum).map((level) => (
+                    <SelectItem key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label>
-              Enthüllungs-Status
-              <select name="revealState" defaultValue="hidden">
-                {Object.values(RevealStateEnum).map((state) => (
-                  <option key={state} value={state}>{REVEAL_STATE_LABELS[state]}</option>
-                ))}
-              </select>
-            </label>
+            <div className={FIELD_CLASS}>
+              <Label htmlFor="new-block-reveal-state">Enthüllungs-Status</Label>
+              <Select name="revealState" defaultValue="hidden">
+                <SelectTrigger id="new-block-reveal-state">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(RevealStateEnum).map((state) => (
+                    <SelectItem key={state} value={state}>{REVEAL_STATE_LABELS[state]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Block hinzufügen</button>
+            <div>
+              <Button type="submit">Block hinzufügen</Button>
+            </div>
           </form>
         </CollapsibleSection>
 
@@ -530,7 +613,10 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           )}
         </CollapsibleSection>
 
-        <EditPageStickyBar previewHref={pagePreviewHref(worldSlug, page.type, slug)} />
+        <EditPageStickyBar
+          previewHref={pagePreviewHref(worldSlug, page.type, slug)}
+          formId="world-page-edit-form"
+        />
       </div>
     </WorldShell>
   );

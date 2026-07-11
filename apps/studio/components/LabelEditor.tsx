@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { LabelElement, LabelElementType } from "@uwe/database/label-elements";
+import { Button } from "@/src/components/ui";
 
 const CANVAS_W = 6;
 const CANVAS_H = 4;
@@ -298,7 +299,7 @@ export function LabelEditor({
   };
 
   return (
-    <div className="uwe-label-editor">
+    <div>
       <input
         type="hidden"
         name={hiddenInputName}
@@ -306,61 +307,65 @@ export function LabelEditor({
         readOnly
       />
 
-      <div className="uwe-label-editor-toolbar">
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("title")}>
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+        <Button type="button" variant="outline" size="sm" onClick={() => addElement("title")}>
           + Titel
-        </button>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("text")}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => addElement("text")}>
           + Text
-        </button>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("image")}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => addElement("image")}>
           + Bild
-        </button>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("box")}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => addElement("box")}>
           + Box
-        </button>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("divider")}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => addElement("divider")}>
           + Linie
-        </button>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" onClick={() => addElement("qr")}>
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => addElement("qr")}>
           + QR
-        </button>
-        <span className="uwe-label-editor-sep" />
-        <button
+        </Button>
+        <span className="mx-1 h-5 w-px bg-border" />
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-sm"
+          variant="outline"
+          size="sm"
           disabled={state.past.length === 0}
           onClick={() => dispatch({ type: "undo" })}
         >
           ↶ Undo
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-sm"
+          variant="outline"
+          size="sm"
           disabled={state.future.length === 0}
           onClick={() => dispatch({ type: "redo" })}
         >
           ↷ Redo
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-sm"
+          variant="outline"
+          size="sm"
           disabled={!state.selectedId}
           onClick={() => dispatch({ type: "duplicate_selected" })}
         >
           Duplizieren
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-sm uwe-v2-btn-danger"
+          variant="destructive"
+          size="sm"
           disabled={!state.selectedId}
           onClick={() => dispatch({ type: "delete_selected" })}
         >
           Löschen
-        </button>
+        </Button>
       </div>
 
-      <div className="uwe-label-editor-workspace">
+      <div className="grid items-start gap-4 md:grid-cols-[1fr_280px]">
         <div
           ref={canvasRef}
           className="uwe-label-editor-canvas"
@@ -466,11 +471,11 @@ export function LabelEditor({
             })}
         </div>
 
-        <aside className="uwe-label-editor-props">
-          <h3>Eigenschaften</h3>
-          {!selected && <p className="uwe-table-sub">Element auswählen</p>}
+        <aside className="rounded-[var(--radius)] border border-border bg-card p-3 text-card-foreground">
+          <h3 className="mb-3 text-sm font-semibold">Eigenschaften</h3>
+          {!selected && <p className="text-xs text-muted-foreground">Element auswählen</p>}
           {selected && (
-            <div className="uwe-form-grid uwe-form-grid-compact">
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <label>
                 Typ
                 <input type="text" value={selected.type} readOnly />
@@ -537,7 +542,7 @@ export function LabelEditor({
               </label>
               {(selected.type === "title" || selected.type === "text") && (
                 <>
-                  <label className="uwe-span-2">
+                  <label className="col-span-2">
                     Text
                     <textarea
                       rows={4}
@@ -569,6 +574,9 @@ export function LabelEditor({
                       }
                     />
                   </label>
+                  {/* TODO(design-kit): natives Select statt Kit-Select — kontrollierter
+                      Reducer-State (value/onChange direkt an dispatch gebunden); reines
+                      className/Markup-Update ohne Event-Shape-Änderung im Scope dieser Migration. */}
                   <label>
                     Ausrichtung
                     <select
@@ -591,7 +599,7 @@ export function LabelEditor({
                       <option value="right">Rechts</option>
                     </select>
                   </label>
-                  <label className="uwe-checkbox">
+                  <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={selected.style?.fontWeight === "bold"}
@@ -610,7 +618,7 @@ export function LabelEditor({
                     />
                     Fett
                   </label>
-                  <label className="uwe-checkbox">
+                  <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={selected.style?.fontStyle === "italic"}
@@ -633,7 +641,10 @@ export function LabelEditor({
               )}
               {selected.type === "image" && (
                 <>
-                  <label className="uwe-span-2">
+                  {/* TODO(design-kit): natives Select statt Kit-Select — kontrollierter
+                      Reducer-State (value/onChange direkt an dispatch gebunden); reines
+                      className/Markup-Update ohne Event-Shape-Änderung im Scope dieser Migration. */}
+                  <label className="col-span-2">
                     Bild
                     <select
                       value={selected.imageAssetId ?? ""}
@@ -655,7 +666,7 @@ export function LabelEditor({
                     </select>
                   </label>
                   {worldSlug && (
-                    <label className="uwe-span-2">
+                    <label className="col-span-2">
                       Bild hochladen
                       <input
                         type="file"
@@ -669,8 +680,8 @@ export function LabelEditor({
                     </label>
                   )}
                   {selected.imageAssetId && assetUrl(selected.imageAssetId) && (
-                    <div className="uwe-span-2">
-                      <p className="uwe-table-sub">Thumbnail</p>
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Thumbnail</p>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={assetUrl(selected.imageAssetId)!}
@@ -685,12 +696,12 @@ export function LabelEditor({
                       />
                       {localAssets.find((a) => a.id === selected.imageAssetId)?.visibility ===
                         "dm_only" && (
-                        <p className="uwe-text-warning uwe-table-sub">
+                        <p className="mt-0.5 text-xs text-warning">
                           DM-only Asset — nicht in Spieler-Labels exportieren.
                         </p>
                       )}
                       {!selected.visible && (
-                        <p className="uwe-text-warning uwe-table-sub">
+                        <p className="mt-0.5 text-xs text-warning">
                           Element ist ausgeblendet — erscheint nicht im Export.
                         </p>
                       )}
@@ -759,7 +770,7 @@ export function LabelEditor({
                       }
                     />
                   </label>
-                  <label className="uwe-span-2">
+                  <label className="col-span-2">
                     Alt-Text
                     <input
                       type="text"
@@ -776,7 +787,7 @@ export function LabelEditor({
                 </>
               )}
               {selected.type === "qr" && (
-                <label className="uwe-span-2">
+                <label className="col-span-2">
                   URL
                   <input
                     type="url"
@@ -791,7 +802,7 @@ export function LabelEditor({
                   />
                 </label>
               )}
-              <label className="uwe-checkbox">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={selected.visible}
@@ -805,7 +816,7 @@ export function LabelEditor({
                 />
                 Sichtbar
               </label>
-              <label className="uwe-checkbox uwe-text-warning">
+              <label className="flex items-center gap-2 text-warning">
                 <input
                   type="checkbox"
                   checked={selected.dmOnly ?? false}

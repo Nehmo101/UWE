@@ -7,6 +7,7 @@ import {
   type SessionAvailabilitySummary,
 } from "@uwe/player-hub";
 import { setSessionAvailabilityAction } from "@/app/player-hub-actions";
+import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -48,11 +49,11 @@ export default async function PortalSessionsPage({ params }: Props) {
   const availabilityRecord = Object.fromEntries(availability.entries());
 
   return (
-    <section className="portal-content-card">
-      <h1>Sessions</h1>
-      <p className="auth-lead">
-        Kommende Spieltermine mit Verfügbarkeits-Abfrage und veröffentlichte Recaps.
-      </p>
+    <>
+      <PageHeader
+        title="Sessions"
+        summary="Kommende Spieltermine mit Verfügbarkeits-Abfrage und veröffentlichte Recaps."
+      />
 
       <PortalSessionsList
         worldSlug={worldSlug}
@@ -75,6 +76,6 @@ export default async function PortalSessionsPage({ params }: Props) {
         canVote={canVote}
         setAvailabilityAction={setSessionAvailabilityAction}
       />
-    </section>
+    </>
   );
 }

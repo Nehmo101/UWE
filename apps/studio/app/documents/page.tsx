@@ -8,6 +8,7 @@ import {
   type DocumentTemplateCategory,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { Card, CardHeader, CardTitle, CardContent } from "@/src/components/ui";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { normalizeTemplateVariables } from "@/src/lib/document-template-utils";
 import { DocumentTemplateEditor } from "@/components/documents/DocumentTemplateEditor";
@@ -83,18 +84,22 @@ export default async function DocumentsPage({
       </Suspense>
 
       {q?.trim() && filteredTemplates.length === 0 ? (
-        <p className="uwe-dashboard-muted">Keine Vorlagen für „{q.trim()}“.</p>
+        <p className="text-sm text-muted-foreground">Keine Vorlagen für „{q.trim()}“.</p>
       ) : null}
 
       <DocumentGeneratorPanel templates={templateDtos} />
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neue Vorlage</h2>
-        <DocumentTemplateEditor
-          action={createDocumentTemplateAction}
-          submitLabel="Vorlage anlegen"
-        />
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Neue Vorlage</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DocumentTemplateEditor
+            action={createDocumentTemplateAction}
+            submitLabel="Vorlage anlegen"
+          />
+        </CardContent>
+      </Card>
 
       {CATEGORY_ORDER.map((category) => {
         const items = grouped.get(category) ?? [];
@@ -102,23 +107,25 @@ export default async function DocumentsPage({
           return null;
         }
         return (
-          <section key={category} className="uwe-v2-section">
-            <h2 className="uwe-v2-section-title">
+          <section key={category} className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">
               {DOCUMENT_TEMPLATE_CATEGORY_LABELS[category]} ({items.length})
             </h2>
-            <div className="uwe-today-card-list">
+            <div className="flex flex-col gap-2">
               {items.map((template) => (
-                <article key={template.id} className="uwe-today-card uwe-v2-card-padded">
-                  <DocumentTemplateEditor
-                    templateId={template.id}
-                    name={template.name}
-                    category={template.category}
-                    body={template.body}
-                    action={updateDocumentTemplateAction}
-                    submitLabel="Speichern"
-                    deleteAction={deleteDocumentTemplateAction}
-                  />
-                </article>
+                <Card key={template.id}>
+                  <CardContent className="pt-6">
+                    <DocumentTemplateEditor
+                      templateId={template.id}
+                      name={template.name}
+                      category={template.category}
+                      body={template.body}
+                      action={updateDocumentTemplateAction}
+                      submitLabel="Speichern"
+                      deleteAction={deleteDocumentTemplateAction}
+                    />
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </section>
@@ -126,7 +133,7 @@ export default async function DocumentsPage({
       })}
 
       {templates.length === 0 ? (
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Noch keine Vorlagen — lege oben die erste an (z. B. Mietvertrag mit{" "}
           <code>{`{{mieter}}`}</code> und <code>{`{{vermieter}}`}</code>).
         </p>

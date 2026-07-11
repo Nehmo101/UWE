@@ -42,28 +42,21 @@ export function DungeonQuickStartPresets({ formId }: Props) {
   }
 
   return (
-    <section className="uwe-v2-section">
-      <h2>Schnellstart-Vorlagen</h2>
-      <p className="uwe-hint">Vorlage wählen — Felder werden vorausgefüllt, du kannst alles anpassen.</p>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))",
-          gap: "0.75rem",
-        }}
-      >
+    <section className="mb-6 flex flex-col gap-4">
+      <h2 className="text-lg font-semibold tracking-tight">Schnellstart-Vorlagen</h2>
+      <p className="text-sm text-muted-foreground">
+        Vorlage wählen — Felder werden vorausgefüllt, du kannst alles anpassen.
+      </p>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-3">
         {PRESETS.map((preset) => (
           <button
             key={preset.id}
             type="button"
-            className="uwe-v2-card"
-            style={{ textAlign: "left", cursor: "pointer" }}
             onClick={() => applyPreset(preset)}
+            className="cursor-pointer rounded-[var(--radius)] border border-border bg-card p-4 text-left text-card-foreground shadow-sm hover:bg-muted"
           >
             <strong>{preset.title}</strong>
-            <p className="uwe-hint" style={{ margin: "0.35rem 0 0" }}>
-              {preset.summary}
-            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{preset.summary}</p>
           </button>
         ))}
       </div>

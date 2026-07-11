@@ -8,6 +8,11 @@ import {
 } from "@/app/share-actions";
 import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { formatStudioDateOrDash } from "@/src/lib/format";
+import { Badge, Button, buttonVariants, Input, Label, cn } from "@/src/components/ui";
+
+/** Kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind. TODO(design-kit). */
+const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
+const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 interface ShareLinkRecord {
   id: string;
@@ -56,116 +61,150 @@ export function ShareLinkPanel({
   }
 
   return (
-    <section className="share-link-panel">
-      <h3>Freigabe-Link</h3>
+    <section className="flex flex-col gap-3">
+      <h3 className="text-sm font-semibold">Freigabe-Link</h3>
 
-      <form action={createShareLinkAction} className="uwe-form share-link-form">
+      <form action={createShareLinkAction} className="flex flex-col gap-3">
         <input type="hidden" name="worldId" value={worldId} />
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="targetType" value={targetType} />
         <input type="hidden" name="targetId" value={targetId} />
         <input type="hidden" name="returnPath" value={returnPath} />
 
-        <label>
-          Ablaufdatum (optional)
-          <input type="datetime-local" name="expiresAt" />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="share-link-create-expires-at">Ablaufdatum (optional)</Label>
+          <Input id="share-link-create-expires-at" type="datetime-local" name="expiresAt" />
+        </div>
 
-        <label>
-          Passwort (optional)
-          <input type="password" name="password" autoComplete="new-password" />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="share-link-create-password">Passwort (optional)</Label>
+          <Input
+            id="share-link-create-password"
+            type="password"
+            name="password"
+            autoComplete="new-password"
+          />
+        </div>
 
-        <label className="uwe-checkbox">
-          <input type="checkbox" name="readOnly" defaultChecked />
+        <label className={CHECKBOX_ROW_CLASS}>
+          <input type="checkbox" name="readOnly" defaultChecked className={CHECKBOX_CLASS} />
           Nur-Lesen-Link
         </label>
 
-        <label className="uwe-checkbox">
-          <input type="checkbox" name="logAccess" />
+        <label className={CHECKBOX_ROW_CLASS}>
+          <input type="checkbox" name="logAccess" className={CHECKBOX_CLASS} />
           Zugriff protokollieren
         </label>
 
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-          Link erstellen
-        </button>
+        <Button type="submit">Link erstellen</Button>
       </form>
 
       {previewHref && (
-        <p className="share-link-preview">
-          <a href={previewHref} target="_blank" rel="noreferrer" className="uwe-v2-btn uwe-v2-btn-ghost">
+        <p>
+          <a
+            href={previewHref}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({ variant: "ghost" })}
+          >
             Vorschau anzeigen
           </a>
         </p>
       )}
 
       {links.length > 0 && (
-        <ul className="share-link-list">
+        <ul className="flex flex-col gap-4">
           {links.map((link) => (
-            <li key={link.id} className={link.enabled ? "" : "share-link-disabled"}>
-              <div className="share-link-meta">
-                <code>{getShareLinkPublicUrl(link.token)}</code>
-                <span>
-                  {link.enabled ? "Aktiv" : "Deaktiviert"} · Erstellt {formatStudioDateOrDash(link.createdAt)}
-                </span>
-                <span>
-                  Ablauf: {formatStudioDateOrDash(link.expiresAt)} · {link.hasPassword ? "Passwort" : "Kein Passwort"} ·{" "}
-                  {link.readOnly ? "Nur-Lesen" : "Bearbeitbar"} ·{" "}
-                  {link.logAccess ? "Protokoll an" : "Protokoll aus"}
-                </span>
+            <li
+              key={link.id}
+              className={cn(
+                "flex flex-col gap-2 rounded-[var(--radius)] border border-border bg-card p-4 text-sm text-card-foreground shadow-sm",
+                !link.enabled && "opacity-60",
+              )}
+            >
+              <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+                <code className="text-xs break-all">{getShareLinkPublicUrl(link.token)}</code>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={link.enabled ? "success" : "default"}>
+                    {link.enabled ? "Aktiv" : "Deaktiviert"}
+                  </Badge>
+                  <span>Erstellt {formatStudioDateOrDash(link.createdAt)}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>Ablauf: {formatStudioDateOrDash(link.expiresAt)}</span>
+                  <Badge variant={link.hasPassword ? "info" : "default"}>
+                    {link.hasPassword ? "Passwort" : "Kein Passwort"}
+                  </Badge>
+                  <Badge variant="default">{link.readOnly ? "Nur-Lesen" : "Bearbeitbar"}</Badge>
+                  <Badge variant={link.logAccess ? "info" : "default"}>
+                    {link.logAccess ? "Protokoll an" : "Protokoll aus"}
+                  </Badge>
+                </div>
               </div>
 
-              <div className="share-link-actions">
-                <button
-                  type="button"
-                  className="uwe-v2-btn uwe-v2-btn-ghost"
-                  onClick={() => copyLink(link.token)}
-                >
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => copyLink(link.token)}>
                   {copiedToken === link.token ? "Kopiert!" : "Link kopieren"}
-                </button>
+                </Button>
 
                 {link.enabled && (
                   <form action={disableShareLinkAction}>
                     <input type="hidden" name="linkId" value={link.id} />
                     <input type="hidden" name="returnPath" value={returnPath} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
+                    <Button type="submit" variant="ghost" size="sm">
                       Deaktivieren
-                    </button>
+                    </Button>
                   </form>
                 )}
 
-                <form action={updateShareLinkAction} className="share-link-update-form">
+                <form action={updateShareLinkAction} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="linkId" value={link.id} />
                   <input type="hidden" name="returnPath" value={returnPath} />
-                  <label>
-                    Ablaufdatum
-                    <input
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`share-link-${link.id}-expires-at`}>Ablaufdatum</Label>
+                    <Input
+                      id={`share-link-${link.id}-expires-at`}
                       type="datetime-local"
                       name="expiresAt"
                       defaultValue={toDateTimeLocal(link.expiresAt)}
                     />
-                  </label>
-                  <label>
-                    Neues Passwort
-                    <input type="password" name="password" autoComplete="new-password" />
-                  </label>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`share-link-${link.id}-password`}>Neues Passwort</Label>
+                    <Input
+                      id={`share-link-${link.id}-password`}
+                      type="password"
+                      name="password"
+                      autoComplete="new-password"
+                    />
+                  </div>
                   {link.hasPassword && (
-                    <label className="uwe-checkbox">
-                      <input type="checkbox" name="clearPassword" />
+                    <label className={CHECKBOX_ROW_CLASS}>
+                      <input type="checkbox" name="clearPassword" className={CHECKBOX_CLASS} />
                       Passwort entfernen
                     </label>
                   )}
-                  <label className="uwe-checkbox">
-                    <input type="checkbox" name="readOnly" defaultChecked={link.readOnly} />
+                  <label className={CHECKBOX_ROW_CLASS}>
+                    <input
+                      type="checkbox"
+                      name="readOnly"
+                      defaultChecked={link.readOnly}
+                      className={CHECKBOX_CLASS}
+                    />
                     Nur-Lesen
                   </label>
-                  <label className="uwe-checkbox">
-                    <input type="checkbox" name="logAccess" defaultChecked={link.logAccess} />
+                  <label className={CHECKBOX_ROW_CLASS}>
+                    <input
+                      type="checkbox"
+                      name="logAccess"
+                      defaultChecked={link.logAccess}
+                      className={CHECKBOX_CLASS}
+                    />
                     Zugriff protokollieren
                   </label>
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
+                  <Button type="submit" variant="ghost" size="sm">
                     Einstellungen speichern
-                  </button>
+                  </Button>
                 </form>
               </div>
             </li>

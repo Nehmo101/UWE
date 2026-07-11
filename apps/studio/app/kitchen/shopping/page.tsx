@@ -9,6 +9,22 @@ import {
 } from "@uwe/kitchen";
 import { prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  cn,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui";
 import { requireStudioAccess } from "@/src/lib/auth";
 import {
   addShoppingItemAction,
@@ -70,234 +86,235 @@ export default async function KitchenShoppingPage({ searchParams }: Props) {
         summary="Aus dem Wochenplan erzeugte, konsolidierte Listen — nach Kategorie sortiert, zum Abhaken. Optional per Bring! aufs Handy."
       />
 
-      {bringFlag ? (
-        <p
-          role="status"
-          className="uwe-dashboard-muted"
-          style={{
-            padding: "0.5rem 0.75rem",
-            borderRadius: "0.5rem",
-            borderLeft: `3px solid ${bringFlag === "ok" ? "var(--uwe-ok, #2e7d32)" : "var(--uwe-error, #c62828)"}`,
-            background: "var(--uwe-surface-muted, rgba(127,127,127,0.08))",
-          }}
-        >
-          {msg ?? (bringFlag === "ok" ? "Bring!: erledigt." : "Bring!: Fehler.")}
-        </p>
-      ) : null}
+      <div className="flex flex-col gap-6">
+        {bringFlag ? (
+          <Alert tone={bringFlag === "ok" ? "success" : "danger"}>
+            {msg ?? (bringFlag === "ok" ? "Bring!: erledigt." : "Bring!: Fehler.")}
+          </Alert>
+        ) : null}
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Bring!-Sync</h2>
-        {bringStatus.connected ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <p className="uwe-dashboard-muted">
-              Verbunden als {bringStatus.maskedEmail}
-              {bringStatus.lastSyncedAt
-                ? ` · zuletzt gesendet ${DATETIME_FORMAT.format(new Date(bringStatus.lastSyncedAt))}`
-                : ""}
-            </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Bring!-Sync</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {bringStatus.connected ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Verbunden als {bringStatus.maskedEmail}
+                  {bringStatus.lastSyncedAt
+                    ? ` · zuletzt gesendet ${DATETIME_FORMAT.format(new Date(bringStatus.lastSyncedAt))}`
+                    : ""}
+                </p>
 
-            {bringStatus.availableLists.length > 0 ? (
-              <form action={setBringListAction} style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  Zielliste
-                  <select name="listUuid" defaultValue={bringStatus.defaultListUuid ?? ""}>
-                    <option value="" disabled>
-                      — wählen —
-                    </option>
-                    {bringStatus.availableLists.map((entry) => (
-                      <option key={entry.listUuid} value={entry.listUuid}>
-                        {entry.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                  Speichern
-                </button>
-              </form>
+                {bringStatus.availableLists.length > 0 ? (
+                  <form action={setBringListAction} className="flex flex-wrap items-center gap-2">
+                    <Label htmlFor="bring-list-uuid">Zielliste</Label>
+                    <Select name="listUuid" defaultValue={bringStatus.defaultListUuid ?? ""}>
+                      <SelectTrigger id="bring-list-uuid" className="w-auto min-w-48">
+                        <SelectValue placeholder="— wählen —" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bringStatus.availableLists.map((entry) => (
+                          <SelectItem key={entry.listUuid} value={entry.listUuid}>
+                            {entry.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="submit" size="sm">
+                      Speichern
+                    </Button>
+                  </form>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Keine Listen im Cache — lade sie neu.
+                  </p>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  <form action={refreshBringListsAction}>
+                    <Button type="submit" size="sm">
+                      Listen aktualisieren
+                    </Button>
+                  </form>
+                  <form action={disconnectBringAction}>
+                    <Button type="submit" size="sm">
+                      Bring! trennen
+                    </Button>
+                  </form>
+                </div>
+              </div>
             ) : (
-              <p className="uwe-dashboard-muted">
-                Keine Listen im Cache — lade sie neu.
-              </p>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Einkaufslisten direkt in die Bring!-App pushen. Melde dich mit deinem
+                  Bring!-Konto an — E-Mail und Passwort werden verschlüsselt gespeichert
+                  und nur zum Anmelden an die (inoffizielle) Bring!-API genutzt.
+                </p>
+                <form action={connectBringAction} className="flex flex-wrap gap-2">
+                  <Input
+                    type="email"
+                    name="email"
+                    placeholder="Bring!-E-Mail"
+                    autoComplete="off"
+                    required
+                    className="min-w-48 flex-1"
+                  />
+                  <Input
+                    type="password"
+                    name="password"
+                    placeholder="Passwort"
+                    autoComplete="off"
+                    required
+                    className="min-w-40 flex-1"
+                  />
+                  <Button type="submit" variant="secondary">
+                    Verbinden
+                  </Button>
+                </form>
+              </div>
             )}
+          </CardContent>
+        </Card>
 
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <form action={refreshBringListsAction} style={{ display: "inline" }}>
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                  Listen aktualisieren
-                </button>
-              </form>
-              <form action={disconnectBringAction} style={{ display: "inline" }}>
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                  Bring! trennen
-                </button>
-              </form>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <p className="uwe-dashboard-muted">
-              Einkaufslisten direkt in die Bring!-App pushen. Melde dich mit deinem
-              Bring!-Konto an — E-Mail und Passwort werden verschlüsselt gespeichert
-              und nur zum Anmelden an die (inoffizielle) Bring!-API genutzt.
-            </p>
-            <form
-              action={connectBringAction}
-              style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
-            >
-              <input
-                type="email"
-                name="email"
-                placeholder="Bring!-E-Mail"
-                autoComplete="off"
-                required
-                style={{ flex: "1 1 12rem" }}
+        <Card>
+          <CardHeader>
+            <CardTitle>Listen</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <form action={createManualListAction} className="flex flex-wrap gap-2">
+              <Input
+                type="text"
+                name="title"
+                placeholder="Neue Liste (z. B. Wocheneinkauf) …"
+                className="min-w-56 flex-1"
               />
-              <input
-                type="password"
-                name="password"
-                placeholder="Passwort"
-                autoComplete="off"
-                required
-                style={{ flex: "1 1 10rem" }}
-              />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                Verbinden
-              </button>
+              <Button type="submit" variant="secondary">
+                + Neue Liste
+              </Button>
             </form>
-          </div>
-        )}
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Listen</h2>
-        <form
-          action={createManualListAction}
-          style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}
-        >
-          <input
-            type="text"
-            name="title"
-            placeholder="Neue Liste (z. B. Wocheneinkauf) …"
-            style={{ flex: "1 1 14rem" }}
-          />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-            + Neue Liste
-          </button>
-        </form>
-        {lists.length === 0 ? (
-          <p className="uwe-dashboard-muted">
-            Noch keine Listen. Lege oben eine manuelle Liste an oder erzeuge eine
-            im <Link href="/kitchen/plan">Wochenplan</Link>.
-          </p>
-        ) : (
-          <ul className="uwe-linked-list">
-            {lists.map((entry) => (
-              <li key={entry.id}>
-                <Link href={`/kitchen/shopping?list=${entry.id}`}>
-                  {entry.title}
-                </Link>{" "}
-                <span className="uwe-dashboard-muted">
-                  {DATE_FORMAT.format(entry.createdAt)}
-                  {entry.done ? " · erledigt" : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {active ? (
-        <>
-          <PageHeader
-            title={active.title}
-            actions={
-              canPush ? (
-                <>
-                  <form action={syncListWithBringAction} style={{ display: "inline" }}>
-                    <input type="hidden" name="listId" value={active.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                      ↔ Mit Bring! abgleichen
-                    </button>
-                  </form>
-                  <form action={pushListToBringAction} style={{ display: "inline" }}>
-                    <input type="hidden" name="listId" value={active.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                      Nur senden
-                    </button>
-                  </form>
-                </>
-              ) : undefined
-            }
-          />
-          <ShoppingListOfflinePanel
-            listId={active.id}
-            items={active.items.map((item) => ({
-              id: item.id,
-              name: item.name,
-              checked: item.checked,
-            }))}
-          />
-          {[...grouped.entries()].map(([category, items]) => (
-            <section className="uwe-v2-section" key={category}>
-              <h2 className="uwe-v2-section-title">{SHOPPING_CATEGORY_LABELS[category]}</h2>
-              <ul className="uwe-linked-list">
-                {items.map((item) => (
-                  <li key={item.id} style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
-                    <form action={toggleShoppingItemAction} style={{ display: "inline" }}>
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <input type="hidden" name="listId" value={active.id} />
-                      <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                        {item.checked ? "☑" : "☐"}
-                      </button>
-                    </form>
-                    <span style={{ flex: 1, textDecoration: item.checked ? "line-through" : "none" }}>
-                      {item.name}
-                      {item.amount != null
-                        ? ` — ${formatAmount(item.amount, item.unit as IngredientUnit, item.unitLabel)}`
-                        : item.unitLabel
-                          ? ` — ${item.unitLabel}`
-                          : ""}
-                      {item.recurring ? " (Grundausstattung)" : ""}
+            {lists.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Noch keine Listen. Lege oben eine manuelle Liste an oder erzeuge eine
+                im <Link href="/kitchen/plan">Wochenplan</Link>.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1 text-sm">
+                {lists.map((entry) => (
+                  <li key={entry.id}>
+                    <Link href={`/kitchen/shopping?list=${entry.id}`}>
+                      {entry.title}
+                    </Link>{" "}
+                    <span className="text-muted-foreground">
+                      {DATE_FORMAT.format(entry.createdAt)}
+                      {entry.done ? " · erledigt" : ""}
                     </span>
-                    <form action={removeShoppingItemAction} style={{ display: "inline" }}>
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <input type="hidden" name="listId" value={active.id} />
-                      <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                        ✕
-                      </button>
-                    </form>
                   </li>
                 ))}
               </ul>
-            </section>
-          ))}
+            )}
+          </CardContent>
+        </Card>
 
-          <section className="uwe-v2-section">
-            <form action={addShoppingItemAction} style={{ display: "flex", gap: "0.5rem" }}>
-              <input type="hidden" name="listId" value={active.id} />
-              <input
-                type="text"
-                name="name"
-                placeholder="Weitere Position …"
-                list="uwe-item-suggestions"
-                autoComplete="off"
-                style={{ flex: 1 }}
-              />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                + Hinzufügen
-              </button>
-            </form>
-            {suggestions.length > 0 ? (
-              <datalist id="uwe-item-suggestions">
-                {suggestions.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            ) : null}
-          </section>
-        </>
-      ) : null}
+        {active ? (
+          <>
+            <PageHeader
+              title={active.title}
+              actions={
+                canPush ? (
+                  <>
+                    <form action={syncListWithBringAction}>
+                      <input type="hidden" name="listId" value={active.id} />
+                      <Button type="submit" variant="secondary">
+                        ↔ Mit Bring! abgleichen
+                      </Button>
+                    </form>
+                    <form action={pushListToBringAction}>
+                      <input type="hidden" name="listId" value={active.id} />
+                      <Button type="submit" size="sm">
+                        Nur senden
+                      </Button>
+                    </form>
+                  </>
+                ) : undefined
+              }
+            />
+            <ShoppingListOfflinePanel
+              listId={active.id}
+              items={active.items.map((item) => ({
+                id: item.id,
+                name: item.name,
+                checked: item.checked,
+              }))}
+            />
+            {[...grouped.entries()].map(([category, items]) => (
+              <Card key={category}>
+                <CardHeader>
+                  <CardTitle>{SHOPPING_CATEGORY_LABELS[category]}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="flex flex-col gap-2">
+                    {items.map((item) => (
+                      <li key={item.id} className="flex items-baseline gap-2">
+                        <form action={toggleShoppingItemAction}>
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <input type="hidden" name="listId" value={active.id} />
+                          <Button type="submit" size="sm">
+                            {item.checked ? "☑" : "☐"}
+                          </Button>
+                        </form>
+                        <span className={cn("flex-1 text-sm", item.checked && "line-through")}>
+                          {item.name}
+                          {item.amount != null
+                            ? ` — ${formatAmount(item.amount, item.unit as IngredientUnit, item.unitLabel)}`
+                            : item.unitLabel
+                              ? ` — ${item.unitLabel}`
+                              : ""}
+                          {item.recurring ? " (Grundausstattung)" : ""}
+                        </span>
+                        <form action={removeShoppingItemAction}>
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <input type="hidden" name="listId" value={active.id} />
+                          <Button type="submit" size="sm">
+                            ✕
+                          </Button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+
+            <Card>
+              <CardContent className="flex flex-col gap-2 pt-6">
+                <form action={addShoppingItemAction} className="flex gap-2">
+                  <input type="hidden" name="listId" value={active.id} />
+                  <Input
+                    type="text"
+                    name="name"
+                    placeholder="Weitere Position …"
+                    list="kitchen-item-suggestions"
+                    autoComplete="off"
+                    className="flex-1"
+                  />
+                  <Button type="submit" variant="secondary">
+                    + Hinzufügen
+                  </Button>
+                </form>
+                {suggestions.length > 0 ? (
+                  <datalist id="kitchen-item-suggestions">
+                    {suggestions.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                ) : null}
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
+      </div>
     </StudioShell>
   );
 }

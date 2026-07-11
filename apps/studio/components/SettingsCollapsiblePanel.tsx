@@ -18,7 +18,7 @@ export function SettingsCollapsiblePanel({
   children,
 }: SettingsCollapsiblePanelProps) {
   return (
-    <Collapsible title={title} summary={summary} defaultOpen={defaultOpen} className="uwe-settings-panel">
+    <Collapsible title={title} summary={summary} defaultOpen={defaultOpen} className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
       {children}
     </Collapsible>
   );

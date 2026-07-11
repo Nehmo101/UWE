@@ -15,10 +15,27 @@ import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
 import { ImageStudioRetryButton } from "@/components/ImageStudioRetryButton";
 import { createImageStudioJobAction } from "@/app/integration-actions";
+import {
+  Alert,
+  badgeVariants,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  cn,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ projectId: string }>;
   searchParams: Promise<{ versionStatus?: string }>;
+}
+
+function chipLinkClass(active: boolean): string {
+  return cn(
+    badgeVariants({ variant: active ? "accent" : "default" }),
+    "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+  );
 }
 
 export default async function ImageStudioProjectPage({ params, searchParams }: Props) {
@@ -48,6 +65,12 @@ export default async function ImageStudioProjectPage({ params, searchParams }: P
     return true;
   });
 
+  const versionTabs = [
+    { value: "all", label: "Alle Versionen" },
+    { value: "with_asset", label: "Mit Asset" },
+    { value: "without_asset", label: "Ohne Asset" },
+  ];
+
   return (
     <StudioShell
       breadcrumb={
@@ -75,88 +98,94 @@ export default async function ImageStudioProjectPage({ params, searchParams }: P
             {world?.slug ? (
               <Link
                 href={`/worlds/${world.slug}/assets`}
-                className="uwe-v2-btn uwe-v2-btn-secondary"
+                className={buttonVariants({ variant: "secondary" })}
               >
                 Medienbibliothek
               </Link>
             ) : null}
-            <Link href="/image-studio" className="uwe-v2-btn uwe-v2-btn-secondary">
+            <Link href="/image-studio" className={buttonVariants({ variant: "secondary" })}>
               ← Alle Projekte
             </Link>
           </>
         }
       />
-      <ImageStudioStatusBadge
-        status={project.status}
-        label={IMAGE_STUDIO_STATUS_LABELS[project.status]}
-      />
 
-      {project.status === "failed" && errorMessage ? (
-        <div className="uwe-notice uwe-notice-error">
-          <p>{errorMessage}</p>
-          <ImageStudioRetryButton projectId={project.id} />
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-6">
+        <ImageStudioStatusBadge
+          status={project.status}
+          label={IMAGE_STUDIO_STATUS_LABELS[project.status]}
+        />
 
-      {world?.slug && config.enabled ? (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Weitere Operation</h2>
-          <ImageStudioJobForm
-            action={createImageStudioJobAction}
-            worlds={worlds.map((entry) => ({ slug: entry.slug, name: entry.name }))}
-            operationLabels={IMAGE_STUDIO_OPERATION_LABELS}
-            defaultWorldSlug={world.slug}
-            defaultProviderMode={config.defaultProviderMode}
-            enabled={config.enabled}
-            projectId={project.id}
-            defaultPrompt={project.prompt ?? ""}
-            defaultTitle={project.title}
-            sourceAssetUrl={sourceAssetUrl}
-          />
-        </section>
-      ) : null}
+        {project.status === "failed" && errorMessage ? (
+          <Alert tone="danger">
+            <p>{errorMessage}</p>
+            <ImageStudioRetryButton projectId={project.id} />
+          </Alert>
+        ) : null}
 
-      <nav className="uwe-today-quick-chips uwe-v2-section" aria-label="Versions-Filter">
-        {[
-          { value: "all", label: "Alle Versionen" },
-          { value: "with_asset", label: "Mit Asset" },
-          { value: "without_asset", label: "Ohne Asset" },
-        ].map((tab) => (
-          <Link
-            key={tab.value}
-            href={
-              tab.value === "all"
-                ? `/image-studio/${projectId}`
-                : `/image-studio/${projectId}?versionStatus=${tab.value}`
-            }
-            className="uwe-today-quick-chip"
-            data-severity={(versionStatus ?? "all") === tab.value ? "warn" : "info"}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
+        {world?.slug && config.enabled ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Weitere Operation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ImageStudioJobForm
+                action={createImageStudioJobAction}
+                worlds={worlds.map((entry) => ({ slug: entry.slug, name: entry.name }))}
+                operationLabels={IMAGE_STUDIO_OPERATION_LABELS}
+                defaultWorldSlug={world.slug}
+                defaultProviderMode={config.defaultProviderMode}
+                enabled={config.enabled}
+                projectId={project.id}
+                defaultPrompt={project.prompt ?? ""}
+                defaultTitle={project.title}
+                sourceAssetUrl={sourceAssetUrl}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
 
-      <ImageStudioProjectReview
-        projectId={project.id}
-        title={project.title}
-        prompt={project.prompt}
-        status={project.status}
-        statusLabel={IMAGE_STUDIO_STATUS_LABELS[project.status]}
-        worldSlug={world?.slug ?? null}
-        versions={filteredVersions.map((version) => ({
-          id: version.id,
-          versionNumber: version.versionNumber,
-          operation: version.operation,
-          prompt: version.prompt,
-          assetId: version.assetId,
-          providerMode: version.providerMode,
-        }))}
-        links={project.links.map((link) => ({
-          targetType: link.targetType,
-          targetId: link.targetId,
-        }))}
-      />
+        <nav className="flex flex-wrap gap-2" aria-label="Versions-Filter">
+          {versionTabs.map((tab) => {
+            const active = (versionStatus ?? "all") === tab.value;
+            return (
+              <Link
+                key={tab.value}
+                href={
+                  tab.value === "all"
+                    ? `/image-studio/${projectId}`
+                    : `/image-studio/${projectId}?versionStatus=${tab.value}`
+                }
+                aria-current={active ? "page" : undefined}
+                className={chipLinkClass(active)}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <ImageStudioProjectReview
+          projectId={project.id}
+          title={project.title}
+          prompt={project.prompt}
+          status={project.status}
+          statusLabel={IMAGE_STUDIO_STATUS_LABELS[project.status]}
+          worldSlug={world?.slug ?? null}
+          versions={filteredVersions.map((version) => ({
+            id: version.id,
+            versionNumber: version.versionNumber,
+            operation: version.operation,
+            prompt: version.prompt,
+            assetId: version.assetId,
+            providerMode: version.providerMode,
+          }))}
+          links={project.links.map((link) => ({
+            targetType: link.targetType,
+            targetId: link.targetId,
+          }))}
+        />
+      </div>
     </StudioShell>
   );
 }

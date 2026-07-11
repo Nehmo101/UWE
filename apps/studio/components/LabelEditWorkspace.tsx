@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import type { LabelElement } from "@uwe/database/label-elements";
 import { LabelEditor, type LabelEditorAsset } from "./LabelEditor";
+import { Badge, type BadgeProps, Button, Label, Textarea } from "@/src/components/ui";
 
 export type LabelFitStatus = "fits" | "tight" | "overflow";
 
@@ -26,10 +27,10 @@ const FIT_LABELS: Record<LabelFitStatus, string> = {
   overflow: "Zu lang",
 };
 
-const FIT_CLASS: Record<LabelFitStatus, string> = {
-  fits: "uwe-badge-success",
-  tight: "uwe-badge-warning",
-  overflow: "uwe-badge-danger",
+const FIT_VARIANT: Record<LabelFitStatus, BadgeProps["variant"]> = {
+  fits: "success",
+  tight: "warning",
+  overflow: "danger",
 };
 
 export function LabelEditWorkspace({
@@ -53,48 +54,49 @@ export function LabelEditWorkspace({
   }, []);
 
   return (
-    <div className="uwe-label-edit-workspace">
-      <div className="uwe-label-fit-bar">
-        <span className={`uwe-badge ${FIT_CLASS[fitStatus]}`}>
-          {FIT_LABELS[fitStatus]}
-        </span>
-        {fitApplied && <span className="uwe-table-sub">Auto-Fit / Kürzung angewendet</span>}
-        <button type="submit" name="action" value="auto_fit" className="uwe-v2-btn uwe-v2-btn-sm">
-          Automatisch passend machen
-        </button>
-        <button type="submit" name="action" value="restore_original" className="uwe-v2-btn uwe-v2-btn-sm">
-          Original wiederherstellen
-        </button>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Badge variant={FIT_VARIANT[fitStatus]}>{FIT_LABELS[fitStatus]}</Badge>
         {fitApplied && (
-          <button
+          <span className="text-xs text-muted-foreground">Auto-Fit / Kürzung angewendet</span>
+        )}
+        <Button type="submit" name="action" value="auto_fit" variant="outline" size="sm">
+          Automatisch passend machen
+        </Button>
+        <Button type="submit" name="action" value="restore_original" variant="outline" size="sm">
+          Original wiederherstellen
+        </Button>
+        {fitApplied && (
+          <Button
             type="button"
-            className="uwe-v2-btn uwe-v2-btn-sm"
+            variant="outline"
+            size="sm"
             onClick={() => setShowCompare((value) => !value)}
           >
             {showCompare ? "Vergleich ausblenden" : "Vorher/Nachher"}
-          </button>
+          </Button>
         )}
         {aiAvailable ? (
-          <button type="submit" name="action" value="ai_shorten" className="uwe-v2-btn uwe-v2-btn-sm">
+          <Button type="submit" name="action" value="ai_shorten" variant="outline" size="sm">
             KI-kürzen
-          </button>
+          </Button>
         ) : (
-          <button type="button" className="uwe-v2-btn uwe-v2-btn-sm" disabled title="AI Brain nicht konfiguriert">
+          <Button type="button" variant="outline" size="sm" disabled title="AI Brain nicht konfiguriert">
             KI-kürzen (nicht verfügbar)
-          </button>
+          </Button>
         )}
       </div>
 
       {showCompare && fitApplied && (
-        <div className="uwe-label-compare uwe-form-row uwe-form-row-2">
-          <label>
-            Original
-            <textarea rows={4} readOnly value={originalText} />
-          </label>
-          <label>
-            Aktuell (editierbar beim Speichern)
-            <textarea rows={4} readOnly value={currentText} />
-          </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="label-compare-original">Original</Label>
+            <Textarea id="label-compare-original" rows={4} readOnly value={originalText} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="label-compare-current">Aktuell (editierbar beim Speichern)</Label>
+            <Textarea id="label-compare-current" rows={4} readOnly value={currentText} />
+          </div>
         </div>
       )}
 

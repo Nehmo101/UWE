@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { EmptyState } from "@uwe/shared-ui";
 import {
   countMaterialsNeeded,
   createLifeAdminService,
@@ -13,13 +12,26 @@ import {
   WorkshopStatusEnum,
   type WorkshopStatus,
 } from "@uwe/database/server";
+import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
-  AdminCreateCard,
-  AdminEntityForm,
-  AdminFilterChips,
-  AdminModulePage,
-  BreadcrumbTrail,
-} from "@/src/components/admin";
+  badgeVariants,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  cn,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 import { advanceWorkshopStatusAction } from "../life-admin-actions";
 import { createWorkshopAction } from "../workshop-actions";
 
@@ -79,187 +91,232 @@ export default async function WorkshopPage({ searchParams }: Props) {
     filter === "dnd" ? workshops.filter((item) => Boolean(item.worldId)) : workshops;
 
   return (
-    <AdminModulePage
-      breadcrumb={<BreadcrumbTrail items={[{ label: "Werkstatt" }]} />}
-      title="Werkstatt"
-      summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
-    >
-      <AdminFilterChips
-        ariaLabel="Werkstatt-Filter"
-        chips={WORKSHOP_FILTERS.map((item) => ({
-          href: item.value === "all" ? "/workshop" : `/workshop?filter=${item.value}`,
-          label: item.label,
-          count: filterCounts[item.value],
-          active: filter === item.value,
-        }))}
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Werkstatt" }]} />}>
+      <PageHeader
+        title="Werkstatt"
+        summary="Hobby-Cockpit für Miniaturen, Terrain, 3D-Druck, Dioramen und Kunst — mit Status-Workflow."
       />
 
-      <nav className="uwe-inline-actions uwe-v2-section">
-        <Link href="/workshop/recipes">Paint-Anleitungen</Link>
-        <Link href="/workshop/print-profiles">Druck-Profile</Link>
-        <Link href="/workshop/rental">Terrain-Verleih</Link>
-        <Link href="/miniatures">Miniaturen-Sammlung</Link>
-      </nav>
+      <div className="flex flex-col gap-6">
+        <nav className="flex flex-wrap gap-2" aria-label="Werkstatt-Filter">
+          {WORKSHOP_FILTERS.map((item) => (
+            <Link
+              key={item.value}
+              href={item.value === "all" ? "/workshop" : `/workshop?filter=${item.value}`}
+              aria-current={filter === item.value ? "page" : undefined}
+              className={cn(
+                badgeVariants({ variant: filter === item.value ? "accent" : "default" }),
+                "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              )}
+            >
+              {item.label} ({filterCounts[item.value]})
+            </Link>
+          ))}
+        </nav>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">
-          Aktive Projekte ({filterCounts.active})
-        </h2>
-        {activeWorkshops.length === 0 ? (
-          <p className="uwe-dashboard-muted">Keine aktiven Werkstatt-Projekte.</p>
-        ) : (
-          <ul className="uwe-today-card-list">
-            {activeWorkshops.map((workshop) => (
-              <li key={workshop.id} className="uwe-today-card">
-                <h3>
-                  <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
-                </h3>
-                <p className="uwe-dashboard-muted">
-                  {WORKSHOP_STATUS_LABELS[workshop.status]}
-                  {workshop.nextAction ? ` · ${workshop.nextAction}` : ""}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-        {filterCounts.active > activeWorkshops.length ? (
-          <p className="uwe-dashboard-muted">
-            <Link href="/workshop?filter=active">Alle aktiven Projekte anzeigen →</Link>
-          </p>
-        ) : null}
-      </section>
+        <nav className="flex flex-wrap gap-3 text-sm" aria-label="Werkstatt-Werkzeuge">
+          <Link href="/workshop/recipes">Paint-Anleitungen</Link>
+          <Link href="/workshop/print-profiles">Druck-Profile</Link>
+          <Link href="/workshop/rental">Terrain-Verleih</Link>
+          <Link href="/miniatures">Miniaturen-Sammlung</Link>
+        </nav>
 
-      <AdminCreateCard title="Neues Werkstatt-Projekt">
-        <AdminEntityForm
-          action={createWorkshopAction}
-          submitLabel="Werkstatt-Projekt anlegen"
-          fields={[
-            { name: "title", label: "Titel", required: true },
-            {
-              name: "projectType",
-              label: "Typ",
-              type: "select",
-              defaultValue: "dnd_terrain",
-              options: Object.values(WorkshopProjectTypeEnum).map((type) => ({
-                value: type,
-                label: WORKSHOP_TYPE_LABELS[type],
-              })),
-            },
-            {
-              name: "status",
-              label: "Status",
-              type: "select",
-              defaultValue: "idea",
-              options: Object.values(WorkshopStatusEnum).map((status) => ({
-                value: status,
-                label: WORKSHOP_STATUS_LABELS[status],
-              })),
-            },
-            {
-              name: "nextAction",
-              label: "Nächster Schritt",
-              placeholder: "z. B. Grundierung auftragen",
-            },
-            {
-              name: "materialsNeeded",
-              label: "Materialien (Name | Menge | ja/nein)",
-              type: "textarea",
-              rows: 3,
-              placeholder: "XPS-Schaum | 2 Platten | nein\nCitadel Abaddon Black | 1 Flasche | ja",
-            },
-            { name: "description", label: "Beschreibung", type: "textarea", rows: 3 },
-          ]}
-        />
-      </AdminCreateCard>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Projekte ({visibleWorkshops.length})</h2>
-        {visibleWorkshops.length === 0 ? (
-          <EmptyState
-            title="Noch keine Werkstatt-Projekte"
-            description="Erfasse kreative Projekte per Capture oder lege hier direkt eines an."
-            action={<Link href="/capture">Capture öffnen</Link>}
-          />
-        ) : (
-          <div className="uwe-today-card-list">
-            {visibleWorkshops.map((workshop) => {
-              const nextStatus = getNextWorkshopStatus(workshop.status);
-              const thumb = firstPhotoUrl(
-                workshop.resultPhotos,
-                workshop.progressPhotos,
-                workshop.referenceImages,
-                workshop.imageGallery,
-              );
-              const materials = countMaterialsNeeded(workshop.materialsNeeded);
-              const world = "world" in workshop ? workshop.world : null;
-
-              return (
-                <article key={workshop.id} className="uwe-today-card">
-                  <div className="uwe-inline-actions">
-                    <h3>
-                      <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
-                    </h3>
-                  </div>
-                  {thumb && (
-                    <p>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={thumb}
-                        alt=""
-                        style={{ maxWidth: "100%", maxHeight: 140, borderRadius: 8 }}
-                      />
-                    </p>
-                  )}
-                  <p className="uwe-dashboard-muted">
-                    {WORKSHOP_TYPE_LABELS[workshop.projectType]} ·{" "}
-                    {WORKSHOP_STATUS_LABELS[workshop.status]}
-                    {world ? (
-                      <>
-                        {" "}
-                        · <Link href={`/worlds/${world.slug}/dashboard`}>{world.name}</Link>
-                      </>
-                    ) : workshop.worldId ? (
-                      " · DnD-verknüpft"
-                    ) : null}
-                    {workshop.costCents != null ? ` · ${formatCost(workshop.costCents)}` : ""}
-                  </p>
-                  {workshop.nextAction && (
-                    <p>
-                      <strong>Nächster Schritt:</strong> {workshop.nextAction}
-                    </p>
-                  )}
-                  {materials.total > 0 && (
-                    <p className="uwe-dashboard-muted">
-                      Material: {materials.total - materials.missing}/{materials.total} bereit
-                      {materials.missing > 0 ? ` · ${materials.missing} fehlen` : ""}
-                    </p>
-                  )}
-                  {workshop.description && <p>{workshop.description}</p>}
-                  <div className="uwe-inline-actions">
-                    <Link href={`/workshop/${workshop.id}`} className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-                      Cockpit öffnen
+        <Card>
+          <CardHeader>
+            <CardTitle>Aktive Projekte ({filterCounts.active})</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {activeWorkshops.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine aktiven Werkstatt-Projekte.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {activeWorkshops.map((workshop) => (
+                  <li key={workshop.id} className="flex flex-col gap-0.5">
+                    <Link href={`/workshop/${workshop.id}`} className="font-medium">
+                      {workshop.title}
                     </Link>
-                    {nextStatus && (
-                      <form action={advanceWorkshopStatusAction}>
-                        <input type="hidden" name="id" value={workshop.id} />
-                        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
-                          → {WORKSHOP_STATUS_LABELS[nextStatus]}
-                        </button>
-                      </form>
-                    )}
-                    <Link
-                      href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}
-                      className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                    >
-                      Terrain-Mail
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-    </AdminModulePage>
+                    <span className="text-sm text-muted-foreground">
+                      {WORKSHOP_STATUS_LABELS[workshop.status]}
+                      {workshop.nextAction ? ` · ${workshop.nextAction}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {filterCounts.active > activeWorkshops.length ? (
+              <p className="text-sm text-muted-foreground">
+                <Link href="/workshop?filter=active">Alle aktiven Projekte anzeigen →</Link>
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Neues Werkstatt-Projekt</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createWorkshopAction} className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="workshop-new-title">Titel</Label>
+                <Input id="workshop-new-title" name="title" required />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="workshop-new-project-type">Typ</Label>
+                <Select name="projectType" defaultValue="dnd_terrain">
+                  <SelectTrigger id="workshop-new-project-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(WorkshopProjectTypeEnum).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {WORKSHOP_TYPE_LABELS[type]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="workshop-new-status">Status</Label>
+                <Select name="status" defaultValue="idea">
+                  <SelectTrigger id="workshop-new-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(WorkshopStatusEnum).map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {WORKSHOP_STATUS_LABELS[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="workshop-new-next-action">Nächster Schritt</Label>
+                <Input
+                  id="workshop-new-next-action"
+                  name="nextAction"
+                  placeholder="z. B. Grundierung auftragen"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <Label htmlFor="workshop-new-materials-needed">
+                  Materialien (Name | Menge | ja/nein)
+                </Label>
+                <Textarea
+                  id="workshop-new-materials-needed"
+                  name="materialsNeeded"
+                  rows={3}
+                  placeholder={"XPS-Schaum | 2 Platten | nein\nCitadel Abaddon Black | 1 Flasche | ja"}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <Label htmlFor="workshop-new-description">Beschreibung</Label>
+                <Textarea id="workshop-new-description" name="description" rows={3} />
+              </div>
+              <div className="sm:col-span-2">
+                <Button type="submit">Werkstatt-Projekt anlegen</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Projekte ({visibleWorkshops.length})</h2>
+          {visibleWorkshops.length === 0 ? (
+            <EmptyState
+              title="Noch keine Werkstatt-Projekte"
+              description="Erfasse kreative Projekte per Capture oder lege hier direkt eines an."
+              action={
+                <Link href="/capture" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  Capture öffnen
+                </Link>
+              }
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {visibleWorkshops.map((workshop) => {
+                const nextStatus = getNextWorkshopStatus(workshop.status);
+                const thumb = firstPhotoUrl(
+                  workshop.resultPhotos,
+                  workshop.progressPhotos,
+                  workshop.referenceImages,
+                  workshop.imageGallery,
+                );
+                const materials = countMaterialsNeeded(workshop.materialsNeeded);
+                const world = "world" in workshop ? workshop.world : null;
+
+                return (
+                  <Card key={workshop.id}>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        <Link href={`/workshop/${workshop.id}`}>{workshop.title}</Link>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-2">
+                      {thumb && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumb} alt="" className="max-h-[140px] max-w-full rounded-lg" />
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        {WORKSHOP_TYPE_LABELS[workshop.projectType]} ·{" "}
+                        {WORKSHOP_STATUS_LABELS[workshop.status]}
+                        {world ? (
+                          <>
+                            {" "}
+                            · <Link href={`/worlds/${world.slug}/dashboard`}>{world.name}</Link>
+                          </>
+                        ) : workshop.worldId ? (
+                          " · DnD-verknüpft"
+                        ) : null}
+                        {workshop.costCents != null ? ` · ${formatCost(workshop.costCents)}` : ""}
+                      </p>
+                      {workshop.nextAction && (
+                        <p className="text-sm">
+                          <strong>Nächster Schritt:</strong> {workshop.nextAction}
+                        </p>
+                      )}
+                      {materials.total > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Material: {materials.total - materials.missing}/{materials.total} bereit
+                          {materials.missing > 0 ? ` · ${materials.missing} fehlen` : ""}
+                        </p>
+                      )}
+                      {workshop.description && <p className="text-sm">{workshop.description}</p>}
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/workshop/${workshop.id}`}
+                          className={buttonVariants({ variant: "secondary", size: "sm" })}
+                        >
+                          Cockpit öffnen
+                        </Link>
+                        {nextStatus && (
+                          <form action={advanceWorkshopStatusAction}>
+                            <input type="hidden" name="id" value={workshop.id} />
+                            <Button type="submit" size="sm">
+                              → {WORKSHOP_STATUS_LABELS[nextStatus]}
+                            </Button>
+                          </form>
+                        )}
+                        <Link
+                          href={`/mail/compose?kind=terrain_rental&sourceId=${workshop.id}`}
+                          className={buttonVariants({ variant: "secondary", size: "sm" })}
+                        >
+                          Terrain-Mail
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <p className="text-sm text-muted-foreground">
+          <Link href="/today">← Heute</Link>
+        </p>
+      </div>
+    </StudioShell>
   );
 }

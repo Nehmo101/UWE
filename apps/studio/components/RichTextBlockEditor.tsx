@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useRef } from "react";
+import { Button } from "@/src/components/ui";
 
 interface RichTextBlockEditorProps {
   name: string;
@@ -29,6 +30,7 @@ export function RichTextBlockEditor({
   placeholder = "Rich Text…",
 }: RichTextBlockEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  // Editor-Konfiguration (Extensions/editorProps) bewusst unverändert — nur Toolbar/Hülle migriert.
   const editor = useEditor({
     extensions: [StarterKit],
     content: toEditorHtml(defaultValue),
@@ -54,37 +56,39 @@ export function RichTextBlockEditor({
   const minHeight = Math.max(rows * 1.4, 6);
 
   return (
-    <div className="uwe-rich-text-editor" style={{ minHeight: `${minHeight}rem` }}>
+    <div
+      className="flex flex-col gap-2 rounded-[var(--radius)] border border-input bg-muted/30 p-2"
+      style={{ minHeight: `${minHeight}rem` }}
+    >
       <input ref={inputRef} type="hidden" name={name} defaultValue={toEditorHtml(defaultValue)} />
-      <div className="uwe-rich-text-editor__toolbar">
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-        >
+      <div className="flex flex-wrap gap-1.5">
+        <Button type="button" variant="ghost" size="sm" onClick={() => editor?.chain().focus().toggleBold().run()}>
           B
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
+          variant="ghost"
+          size="sm"
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
           I
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
+          variant="ghost"
+          size="sm"
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
           •
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-ghost"
+          variant="ghost"
+          size="sm"
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
         >
           1.
-        </button>
+        </Button>
       </div>
       <EditorContent editor={editor} />
     </div>

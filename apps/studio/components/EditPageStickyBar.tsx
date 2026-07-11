@@ -1,20 +1,21 @@
 "use client";
 
 import { StickyActionBar } from "@uwe/shared-ui";
+import { Button, buttonVariants } from "@/src/components/ui";
 
 export function EditPageStickyBar({
   previewHref,
-  formId = "uwe-edit-page-form",
+  formId = "world-page-edit-form",
 }: {
   previewHref: string;
   formId?: string;
 }) {
   return (
     <StickyActionBar>
-      <button type="submit" form={formId} className="uwe-v2-btn uwe-v2-btn-primary">
+      <Button type="submit" form={formId}>
         Speichern
-      </button>
-      <a href={previewHref} className="uwe-v2-btn uwe-v2-btn-secondary">
+      </Button>
+      <a href={previewHref} className={buttonVariants({ variant: "secondary" })}>
         Vorschau
       </a>
     </StickyActionBar>

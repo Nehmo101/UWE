@@ -47,11 +47,11 @@ export function AiRunsTable({ worldSlug, initialRuns, taskLabels, statusLabels }
   }, [runs, refresh]);
 
   if (runs.length === 0) {
-    return <p className="uwe-v2-empty">Noch keine AI Runs für diese Welt.</p>;
+    return <p className="text-sm text-muted-foreground">Noch keine AI Runs für diese Welt.</p>;
   }
 
   return (
-    <table className="uwe-page-table">
+    <table className="w-full border-collapse text-sm [&_td]:border-b [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium [&_th]:text-muted-foreground">
       <thead>
         <tr>
           <th>Zeit</th>
@@ -72,7 +72,7 @@ export function AiRunsTable({ worldSlug, initialRuns, taskLabels, statusLabels }
             <td>
               {run.provider}
               <br />
-              <span className="uwe-meta">{run.model}</span>
+              <span className="text-xs text-muted-foreground">{run.model}</span>
             </td>
             <td>{run.pageTitle ?? "—"}</td>
             <td>{run.durationMs != null ? `${run.durationMs} ms` : "—"}</td>

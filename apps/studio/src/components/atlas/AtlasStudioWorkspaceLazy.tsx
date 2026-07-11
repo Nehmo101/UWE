@@ -6,7 +6,7 @@ const AtlasStudioWorkspace = dynamic(
   () => import("./AtlasStudioWorkspace").then((module) => module.AtlasStudioWorkspace),
   {
     loading: () => (
-      <p className="uwe-dashboard-muted" role="status">
+      <p className="text-sm text-muted-foreground" role="status">
         Atlas-Editor wird geladen…
       </p>
     ),

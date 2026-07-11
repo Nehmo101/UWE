@@ -70,18 +70,18 @@ export default async function AccountSecurityPage() {
           {loginEvents.length === 0 ? (
             <p className="text-sm text-muted-foreground">Noch keine Login-Ereignisse protokolliert.</p>
           ) : (
-            <table className="uwe-page-table">
+            <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th>Zeit</th>
-                  <th>Ereignis</th>
+                  <th className="border-b border-border px-3 py-2 text-left font-medium text-muted-foreground">Zeit</th>
+                  <th className="border-b border-border px-3 py-2 text-left font-medium text-muted-foreground">Ereignis</th>
                 </tr>
               </thead>
               <tbody>
                 {loginEvents.map((entry) => (
                   <tr key={entry.id}>
-                    <td>{formatStudioDateTime(entry.timestamp)}</td>
-                    <td>{AUDIT_ACTION_LABELS[entry.action] ?? entry.action}</td>
+                    <td className="border-b border-border px-3 py-2">{formatStudioDateTime(entry.timestamp)}</td>
+                    <td className="border-b border-border px-3 py-2">{AUDIT_ACTION_LABELS[entry.action] ?? entry.action}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { EmptyState } from "@uwe/shared-ui";
 import {
   createLifeAdminService,
   createMiniatureCollectionService,
@@ -9,6 +8,16 @@ import {
   type MiniatureCollectionStatus,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import {
+  badgeVariants,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  cn,
+  EmptyState,
+} from "@/src/components/ui";
 import { MiniatureCollectionPanel } from "@/components/miniatures/MiniatureCollectionPanel";
 
 const FILTER_ALL = "all";
@@ -95,34 +104,36 @@ export default async function MiniaturesPage({ searchParams }: Props) {
         summary="Sammlung verwalten, Fortschritt tracken und Referenz- mit Vergleichsfotos gegenüberstellen."
       />
 
-      <section className="uwe-stat-grid uwe-v2-section" aria-label="Fortschritt">
-        {Object.values(MiniatureCollectionStatusEnum).map((status) => {
-          const count = statusCounts[status];
-          const percent = allItems.length > 0 ? Math.round((count / allItems.length) * 100) : 0;
-          return (
-            <div key={status} className="uwe-stat">
-              <span className="uwe-stat-value">{count}</span>
-              <span className="uwe-stat-label">
-                {MINIATURE_COLLECTION_STATUS_LABELS[status]} ({percent}%)
-              </span>
-            </div>
-          );
-        })}
-      </section>
+      <div className="flex flex-col gap-6">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Fortschritt">
+          {Object.values(MiniatureCollectionStatusEnum).map((status) => {
+            const count = statusCounts[status];
+            const percent = allItems.length > 0 ? Math.round((count / allItems.length) * 100) : 0;
+            return (
+              <div key={status} className="rounded-[var(--radius)] border border-border p-4">
+                <div className="text-2xl font-semibold">{count}</div>
+                <div className="text-sm text-muted-foreground">
+                  {MINIATURE_COLLECTION_STATUS_LABELS[status]} ({percent}%)
+                </div>
+              </div>
+            );
+          })}
+        </section>
 
-      <nav className="uwe-inline-actions uwe-v2-section">
-        <Link href="/workshop">Werkstatt</Link>
-        <Link href="/workshop/recipes">Paint-Rezepte</Link>
-        <Link href="/workshop/print-profiles">Druck-Profile</Link>
-      </nav>
+        <nav className="flex flex-wrap gap-3 text-sm" aria-label="Werkstatt-Bereiche">
+          <Link href="/workshop">Werkstatt</Link>
+          <Link href="/workshop/recipes">Paint-Rezepte</Link>
+          <Link href="/workshop/print-profiles">Druck-Profile</Link>
+        </nav>
 
-      <section className="uwe-today-attention" aria-label="Status-Filter">
-        <div className="uwe-today-quick-chips">
+        <nav className="flex flex-wrap gap-2" aria-label="Status-Filter">
           <Link
             href={buildFilterHref(filterState, { status: FILTER_ALL })}
-            className="uwe-today-quick-chip"
-            data-severity={statusFilter === FILTER_ALL ? "warn" : "info"}
             aria-current={statusFilter === FILTER_ALL ? "page" : undefined}
+            className={cn(
+              badgeVariants({ variant: statusFilter === FILTER_ALL ? "accent" : "default" }),
+              "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
           >
             Alle ({allItems.length})
           </Link>
@@ -132,116 +143,134 @@ export default async function MiniaturesPage({ searchParams }: Props) {
               <Link
                 key={status}
                 href={buildFilterHref(filterState, { status })}
-                className="uwe-today-quick-chip"
-                data-severity={active ? "warn" : "info"}
                 aria-current={active ? "page" : undefined}
+                className={cn(
+                  badgeVariants({ variant: active ? "accent" : "default" }),
+                  "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                )}
               >
                 {MINIATURE_COLLECTION_STATUS_LABELS[status]} ({statusCounts[status]})
               </Link>
             );
           })}
-        </div>
-      </section>
+        </nav>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Filter</h2>
-        {manufacturers.length > 0 ? (
-          <div className="uwe-v2-section">
-            <p className="uwe-dashboard-muted">Hersteller</p>
-            <div className="uwe-inline-actions">
+        <Card>
+          <CardHeader>
+            <CardTitle>Filter</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {manufacturers.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">Hersteller</p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={buildFilterHref(filterState, { manufacturer: FILTER_ALL })}
+                    aria-current={manufacturerFilter === FILTER_ALL ? "page" : undefined}
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
+                  >
+                    Alle
+                  </Link>
+                  {manufacturers.map((manufacturer) => (
+                    <Link
+                      key={manufacturer}
+                      href={buildFilterHref(filterState, { manufacturer })}
+                      aria-current={manufacturerFilter === manufacturer ? "page" : undefined}
+                      className={buttonVariants({ variant: "secondary", size: "sm" })}
+                    >
+                      {manufacturer}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {gameSystems.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">Spielsystem</p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={buildFilterHref(filterState, { gameSystem: FILTER_ALL })}
+                    aria-current={gameSystemFilter === FILTER_ALL ? "page" : undefined}
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
+                  >
+                    Alle
+                  </Link>
+                  {gameSystems.map((gameSystem) => (
+                    <Link
+                      key={gameSystem}
+                      href={buildFilterHref(filterState, { gameSystem })}
+                      aria-current={gameSystemFilter === gameSystem ? "page" : undefined}
+                      className={buttonVariants({ variant: "secondary", size: "sm" })}
+                    >
+                      {gameSystem}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {(manufacturerFilter !== FILTER_ALL || gameSystemFilter !== FILTER_ALL) && (
               <Link
-                href={buildFilterHref(filterState, { manufacturer: FILTER_ALL })}
-                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                aria-current={manufacturerFilter === FILTER_ALL ? "page" : undefined}
+                href={buildFilterHref(filterState, { manufacturer: FILTER_ALL, gameSystem: FILTER_ALL })}
+                className="text-sm text-muted-foreground hover:text-foreground"
               >
-                Alle
+                Hersteller- und Systemfilter zurücksetzen
               </Link>
-              {manufacturers.map((manufacturer) => (
-                <Link
-                  key={manufacturer}
-                  href={buildFilterHref(filterState, { manufacturer })}
-                  className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                  aria-current={manufacturerFilter === manufacturer ? "page" : undefined}
-                >
-                  {manufacturer}
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Neue Miniatur</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MiniatureCollectionPanel mode="create" workshopProjects={workshopProjects} />
+          </CardContent>
+        </Card>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Sammlung ({filteredItems.length})</h2>
+          {filteredItems.length === 0 ? (
+            <EmptyState
+              title="Noch keine Miniaturen"
+              description="Lege die erste Miniatur an oder passe die Filter an."
+              action={
+                <Link href="/workshop" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  Zur Werkstatt
                 </Link>
+              }
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {filteredItems.map((item) => (
+                <Card
+                  key={item.id}
+                  id={item.id}
+                  data-selected={params.selected === item.id ? "true" : undefined}
+                >
+                  <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+                    <CardTitle className="text-base">{item.name}</CardTitle>
+                    <span className="text-sm text-muted-foreground">
+                      {MINIATURE_COLLECTION_STATUS_LABELS[item.status]}
+                      {item.quantity > 1 ? ` · ×${item.quantity}` : ""}
+                    </span>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {[item.manufacturer, item.gameSystem, item.faction].filter(Boolean).join(" · ") || "—"}
+                    </p>
+                    <MiniatureCollectionPanel
+                      mode="edit"
+                      item={item}
+                      workshopProjects={workshopProjects}
+                    />
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          </div>
-        ) : null}
-        {gameSystems.length > 0 ? (
-          <div className="uwe-v2-section">
-            <p className="uwe-dashboard-muted">Spielsystem</p>
-            <div className="uwe-inline-actions">
-              <Link
-                href={buildFilterHref(filterState, { gameSystem: FILTER_ALL })}
-                className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                aria-current={gameSystemFilter === FILTER_ALL ? "page" : undefined}
-              >
-                Alle
-              </Link>
-              {gameSystems.map((gameSystem) => (
-                <Link
-                  key={gameSystem}
-                  href={buildFilterHref(filterState, { gameSystem })}
-                  className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-                  aria-current={gameSystemFilter === gameSystem ? "page" : undefined}
-                >
-                  {gameSystem}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        {(manufacturerFilter !== FILTER_ALL || gameSystemFilter !== FILTER_ALL) && (
-          <Link href={buildFilterHref(filterState, { manufacturer: FILTER_ALL, gameSystem: FILTER_ALL })}>
-            Hersteller- und Systemfilter zurücksetzen
-          </Link>
-        )}
-      </section>
-
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Neue Miniatur</h2>
-        <MiniatureCollectionPanel mode="create" workshopProjects={workshopProjects} />
-      </section>
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Sammlung ({filteredItems.length})</h2>
-        {filteredItems.length === 0 ? (
-          <EmptyState
-            title="Noch keine Miniaturen"
-            description="Lege die erste Miniatur an oder passe die Filter an."
-            action={<Link href="/workshop">Zur Werkstatt</Link>}
-          />
-        ) : (
-          <div className="uwe-today-card-list">
-            {filteredItems.map((item) => (
-              <article
-                key={item.id}
-                id={item.id}
-                className="uwe-today-card uwe-v2-card uwe-v2-card-padded"
-                data-selected={params.selected === item.id ? "true" : undefined}
-              >
-                <header className="uwe-inline-actions">
-                  <h3>{item.name}</h3>
-                  <span className="uwe-dashboard-muted">
-                    {MINIATURE_COLLECTION_STATUS_LABELS[item.status]}
-                    {item.quantity > 1 ? ` · ×${item.quantity}` : ""}
-                  </span>
-                </header>
-                <p className="uwe-dashboard-muted">
-                  {[item.manufacturer, item.gameSystem, item.faction].filter(Boolean).join(" · ") || "—"}
-                </p>
-                <MiniatureCollectionPanel
-                  mode="edit"
-                  item={item}
-                  workshopProjects={workshopProjects}
-                />
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      </div>
     </StudioShell>
   );
 }

@@ -54,13 +54,13 @@ export function AiContextPanel({
   }, [loadGenerator]);
 
   return (
-    <div className="uwe-ai-context-panel">
-      {loadError && <p className="uwe-notice uwe-notice-warn">{loadError}</p>}
+    <div className="flex flex-col gap-2">
+      {loadError && <p className="rounded-[var(--radius)] border border-warning/30 bg-warning/10 p-3 text-sm">{loadError}</p>}
 
       {generator && (
         <>
           <section style={{ marginBottom: "1rem" }}>
-            <h3 className="uwe-dashboard-muted" style={{ fontSize: "0.9rem" }}>
+            <h3 className="text-sm text-muted-foreground" style={{ fontSize: "0.9rem" }}>
               Kontext: {generator.context.title ?? generator.context.kind}
             </h3>
             {generator.missingContent.length > 0 && (
@@ -70,7 +70,7 @@ export function AiContextPanel({
                   {generator.missingContent.map((hint) => (
                     <li key={hint.field}>
                       {hint.label}
-                      <span className="uwe-hint"> → {hint.suggestedActionId}</span>
+                      <span className="text-sm text-muted-foreground"> → {hint.suggestedActionId}</span>
                     </li>
                   ))}
                 </ul>
@@ -89,7 +89,7 @@ export function AiContextPanel({
               </div>
             )}
             {generator.actions.length > 0 && (
-              <p className="uwe-hint" style={{ marginTop: "0.5rem" }}>
+              <p className="text-sm text-muted-foreground" style={{ marginTop: "0.5rem" }}>
                 {generator.actions.length} kontextuelle KI-Aktionen verfügbar — Ergebnisse immer als
                 Review-Proposal.
               </p>

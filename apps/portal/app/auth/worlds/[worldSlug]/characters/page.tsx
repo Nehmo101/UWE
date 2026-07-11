@@ -4,6 +4,9 @@ import { isWorldStaff } from "@uwe/auth";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
+import { PageHeader } from "@/src/components/shell";
+import { Badge } from "@/src/components/ui/badge";
+import { cn } from "@/src/components/ui/cn";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -49,25 +52,36 @@ export default async function PortalCharactersPage({ params }: Props) {
   const staffView = isWorldStaff(ctx);
 
   return (
-    <section className="portal-content-card">
-      <h1>Meine Charaktere</h1>
-      <p className="auth-lead">
-        Strukturierte Charakterbögen in dieser Welt — mit automatisch berechneten Modifikatoren und
-        Initiative.
-      </p>
+    <>
+      <PageHeader
+        title="Meine Charaktere"
+        summary="Strukturierte Charakterbögen in dieser Welt — mit automatisch berechneten Modifikatoren und Initiative."
+      />
 
-      <ul className="auth-page-list">
+      <ul className="grid gap-2">
         {characters.map((character) => {
           const isOwnCharacter = isOwnMembershipCharacter(
             character.displayName,
             membershipCharacterName,
           );
           const stats = (
-            <span className="auth-muted">
+            <span className="mt-1 block text-sm text-muted-foreground">
               Stufe {character.sheet.level} · RK {character.sheet.armorClass ?? "—"} · Init{" "}
               {formatModifier(character.sheet.initiative)} · Passive Wahrnehmung{" "}
               {character.sheet.derived.passivePerception}
             </span>
+          );
+
+          const content = (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <strong>{character.displayName}</strong>
+                {isOwnCharacter ? (
+                  <Badge variant="accent">Dein Charakter</Badge>
+                ) : null}
+              </div>
+              {stats}
+            </>
           );
 
           return (
@@ -75,25 +89,21 @@ export default async function PortalCharactersPage({ params }: Props) {
               {character.pageSlug ? (
                 <Link
                   href={`/auth/worlds/${worldSlug}/${character.pageSlug}`}
-                  className={isOwnCharacter ? "portal-character-own" : undefined}
+                  className={cn(
+                    "block rounded-[var(--radius)] border border-border p-4 transition-colors hover:bg-muted/50",
+                    isOwnCharacter && "border-primary/40 bg-primary/5",
+                  )}
                 >
-                  <strong>{character.displayName}</strong>
-                  {isOwnCharacter ? (
-                    <span className="auth-page-list-badges">
-                      <span className="uwe-badge portal-character-own-badge">Dein Charakter</span>
-                    </span>
-                  ) : null}
-                  {stats}
+                  {content}
                 </Link>
               ) : (
-                <div className={isOwnCharacter ? "portal-character-own" : undefined}>
-                  <strong>{character.displayName}</strong>
-                  {isOwnCharacter ? (
-                    <span className="auth-page-list-badges">
-                      <span className="uwe-badge portal-character-own-badge">Dein Charakter</span>
-                    </span>
-                  ) : null}
-                  {stats}
+                <div
+                  className={cn(
+                    "rounded-[var(--radius)] border border-border p-4",
+                    isOwnCharacter && "border-primary/40 bg-primary/5",
+                  )}
+                >
+                  {content}
                 </div>
               )}
             </li>
@@ -101,7 +111,7 @@ export default async function PortalCharactersPage({ params }: Props) {
         })}
       </ul>
 
-      {characters.length === 0 && (
+      {characters.length === 0 ? (
         <PortalEmptyState
           title={staffView ? "Noch keine Charakterbögen angelegt" : "Keine Charakterbögen verfügbar"}
           description={
@@ -111,7 +121,7 @@ export default async function PortalCharactersPage({ params }: Props) {
           }
           icon="user"
         />
-      )}
-    </section>
+      ) : null}
+    </>
   );
 }

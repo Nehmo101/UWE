@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { CharacterSheetPanel } from "@/src/components/CharacterSheetPanel";
 import { PortalPageNeighborhoodGraph } from "@/src/components/PortalPageNeighborhoodGraph";
 import { PortalPageChronicleSection } from "@/src/components/PortalPageChronicleSection";
@@ -27,6 +28,12 @@ import {
   type LevelUpSuggestions,
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
+import { Badge } from "@/src/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+} from "@/src/components/ui/card";
 
 interface Props {
   params: Promise<{ worldSlug: string; slug: string }>;
@@ -127,48 +134,59 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   const returnPath = `/auth/worlds/${worldSlug}/${slug}`;
 
   return (
-    <article className="portal-content-card">
-      <Link href={`/auth/worlds/${worldSlug}`} className="uwe-back-link">
-        ← Zurück zur Übersicht
+    <article className="grid gap-6">
+      <Link
+        href={`/auth/worlds/${worldSlug}`}
+        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        Zurück zur Übersicht
       </Link>
 
-      <header className="auth-page-header">
-        <h1>{page.title}</h1>
-        <div className="auth-page-list-badges">
+      <header className="space-y-3 border-b border-border pb-4">
+        <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>
+        <div className="flex flex-wrap items-center gap-2">
           <PageTypeBadge type={page.type} />
           <VisibilityBadge visibility={page.visibility} />
-          {page.type === "quest" && (
-            <span className="uwe-badge">
+          {page.type === "quest" ? (
+            <Badge variant="default">
               {QUEST_LIFECYCLE_LABELS[(page.questStatus ?? "open") as QuestLifecycleStatus]}
-            </span>
-          )}
+            </Badge>
+          ) : null}
         </div>
-        {page.summary && <p className="auth-lead">{page.summary}</p>}
+        {page.summary ? <p className="text-sm text-muted-foreground">{page.summary}</p> : null}
       </header>
 
-      <div className="auth-blocks">
+      <div className="grid gap-4">
         {page.contentBlocks.map((block, index) => (
-          <section key={block.id} className="auth-block">
-            <div className="auth-block-meta">
-              <span className="uwe-badge uwe-badge-type">{BLOCK_TYPE_LABELS[block.type]}</span>
-              <VisibilityBadge visibility={block.visibility} />
-            </div>
-            <div className="auth-block-content">
+          <Card key={block.id}>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{BLOCK_TYPE_LABELS[block.type]}</Badge>
+                <VisibilityBadge visibility={block.visibility} />
+              </div>
+            </CardHeader>
+            <CardContent>
               {block.type === "image" && block.assetId ? (
-                <figure className="uwe-wiki-image">
+                <figure className="overflow-hidden rounded-[var(--radius)] border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`/api/assets/${block.assetId}/file?world=${encodeURIComponent(worldSlug)}`}
                     alt={block.content?.trim() || page.title}
                     loading="lazy"
+                    className="h-auto w-full"
                   />
-                  {block.content?.trim() && <figcaption>{block.content}</figcaption>}
+                  {block.content?.trim() ? (
+                    <figcaption className="border-t border-border px-3 py-2 text-sm text-muted-foreground">
+                      {block.content}
+                    </figcaption>
+                  ) : null}
                 </figure>
               ) : (
                 <WikiContent html={blockHtml[index] ?? ""} />
               )}
-            </div>
-          </section>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -176,7 +194,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
 
       <PortalPageChronicleSection worldSlug={worldSlug} pageId={page.id} ctx={ctx} />
 
-      {characterSheet && (
+      {characterSheet ? (
         <CharacterSheetPanel
           worldSlug={worldSlug}
           pageSlug={slug}
@@ -186,13 +204,13 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           levelUpSuggestions={levelUpSuggestions}
           inventoryItems={characterInventory}
         />
-      )}
+      ) : null}
 
-      {canEditCharacter && (
+      {canEditCharacter ? (
         <PlayerCharacterEditPanel worldSlug={worldSlug} page={page} returnPath={returnPath} />
-      )}
+      ) : null}
 
-      {campaignId && (
+      {campaignId ? (
         <PlayerNotesPanel
           worldSlug={worldSlug}
           campaignId={campaignId}
@@ -202,7 +220,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           pageId={page.id}
           returnPath={returnPath}
         />
-      )}
+      ) : null}
     </article>
   );
 }

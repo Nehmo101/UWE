@@ -5,6 +5,7 @@ import { NAV_CATEGORY_LABELS, navCategoryForPageType, type NavCategory } from "@
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
+import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -59,11 +60,11 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
   }
 
   return (
-    <section className="portal-content-card">
-      <h1>Wiki</h1>
-      <p className="auth-lead">
-        Alle Wiki-Seiten, die für deine Rolle ({ctx.effectiveRole}) sichtbar sind.
-      </p>
+    <>
+      <PageHeader
+        title="Wiki"
+        summary={`Alle Wiki-Seiten, die für deine Rolle (${ctx.effectiveRole}) sichtbar sind.`}
+      />
 
       <GlobalSearchForm
         action={`/auth/worlds/${worldSlug}/wiki`}
@@ -76,20 +77,25 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
         if (!items?.length) return null;
 
         return (
-          <section key={category} className="portal-dash-section">
-            <header className="portal-dash-section-header">
-              <h2>{NAV_CATEGORY_LABELS[category]}</h2>
+          <section key={category} className="mt-6">
+            <header className="mb-3 border-b border-border pb-2">
+              <h2 className="text-lg font-semibold">{NAV_CATEGORY_LABELS[category]}</h2>
             </header>
-            <ul className="auth-page-list">
+            <ul className="grid gap-2">
               {items.map((page) => (
                 <li key={page.id}>
-                  <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
+                  <Link
+                    href={`/auth/worlds/${worldSlug}/${page.slug}`}
+                    className="block rounded-[var(--radius)] border border-border p-4 transition-colors hover:bg-muted/50"
+                  >
                     <strong>{page.title}</strong>
-                    <span className="auth-page-list-badges">
+                    <div className="mt-1 flex flex-wrap gap-2">
                       <PageTypeBadge type={page.type} />
                       <VisibilityBadge visibility={page.visibility} />
-                    </span>
-                    {page.summary && <p className="portal-dash-summary">{page.summary}</p>}
+                    </div>
+                    {page.summary ? (
+                      <p className="mt-2 text-sm text-muted-foreground">{page.summary}</p>
+                    ) : null}
                   </Link>
                 </li>
               ))}
@@ -98,17 +104,13 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
         );
       })}
 
-      {filtered.length === 0 && (
+      {filtered.length === 0 ? (
         <PortalEmptyState
           title={query ? "Keine passenden Wiki-Seiten gefunden" : "Keine Wiki-Seiten freigegeben"}
-          description={
-            query
-              ? "Probiere einen anderen Suchbegriff."
-              : undefined
-          }
+          description={query ? "Probiere einen anderen Suchbegriff." : undefined}
           icon="book-open"
         />
-      )}
-    </section>
+      ) : null}
+    </>
   );
 }

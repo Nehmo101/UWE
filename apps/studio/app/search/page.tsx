@@ -26,6 +26,7 @@ import {
   type CanonicalStatus,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { Badge, Card, CardContent } from "@/src/components/ui";
 
 type SearchScope = "admin" | "worlds" | "all";
 
@@ -122,22 +123,25 @@ export default async function StudioSearchPage({ searchParams }: Props) {
       breadcrumb={<BreadcrumbTrail items={[{ label: "Globale Suche" }]} />}
       contextPanel={
         <SidebarSection title="Suchbereiche">
-          <ul className="uwe-dashboard-muted" style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.8rem" }}>
+          <ul className="m-0 list-none p-0 text-[0.8rem] text-muted-foreground">
             {SEARCH_ENTITY_FILTERS.map((filter) => (
-              <li key={filter} style={{ marginBottom: "0.35rem" }}>
+              <li key={filter} className="mb-[0.35rem]">
                 {SEARCH_ENTITY_FILTER_LABELS[filter]}
               </li>
             ))}
           </ul>
-          <p className="uwe-dashboard-muted" style={{ fontSize: "0.75rem", marginTop: "1rem" }}>
+          <p className="mt-4 text-xs text-muted-foreground">
             Persönliche Admin-Daten (Capture, Projekte, Verträge, …) erscheinen im Bereich
             „Studio-only“.
           </p>
-          <p className="uwe-dashboard-muted" style={{ fontSize: "0.75rem", marginTop: "0.5rem" }}>
+          <p className="mt-2 text-xs text-muted-foreground">
             Als DM siehst du alle Inhalte inkl. Entwürfe und GM-only Seiten.
           </p>
           {!worldSlug && (
-            <Link href="/search" className="uwe-dashboard-list" style={{ fontSize: "0.8rem" }}>
+            <Link
+              href="/search"
+              className="mt-2 inline-block text-[0.8rem] text-muted-foreground hover:text-foreground hover:underline"
+            >
               Weltfilter zurücksetzen
             </Link>
           )}
@@ -242,9 +246,9 @@ export default async function StudioSearchPage({ searchParams }: Props) {
       {!trimmedQuery ? (
         <SearchResultsList results={[]} query={q} showWorld={!worldSlug} showVisibility showLabelActions />
       ) : !hasAnyResults ? (
-        <p className="uwe-dashboard-muted">Keine Treffer für „{trimmedQuery}“.</p>
+        <p className="text-sm text-muted-foreground">Keine Treffer für „{trimmedQuery}“.</p>
       ) : (
-        <>
+        <div className="flex flex-col gap-6">
           {hasWikiResults && scope !== "admin" && (
             <SearchResultsList
               results={results}
@@ -256,34 +260,30 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           )}
 
           {hasMediaResults && scope !== "admin" && (
-            <section className="uwe-v2-section">
-              <h2 className="uwe-v2-section-title">Medien & Soundboard</h2>
-              <p className="uwe-search-count">
+            <section className="flex flex-col gap-3">
+              <h2 className="text-lg font-semibold tracking-tight">Medien & Soundboard</h2>
+              <p className="text-sm text-muted-foreground">
                 {mediaResults.length} Treffer für „{trimmedQuery}&ldquo;
               </p>
-              <ul className="uwe-search-results">
+              <ul className="grid gap-2">
                 {mediaResults.map((item) => (
-                  <li key={`${item.entityType}-${item.id}`} className="uwe-search-result">
-                    <article>
-                      <header className="uwe-search-result-header">
-                        <h2>
-                          <Link href={item.href}>{item.title}</Link>
-                        </h2>
-                        <div className="uwe-search-result-badges">
-                          <span className="uwe-badge uwe-badge-muted">
-                            {item.entityType === "asset" ? "Asset" : "Soundboard"}
+                  <li key={`${item.entityType}-${item.id}`}>
+                    <Card>
+                      <CardContent className="flex flex-col gap-2 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <h3 className="text-base font-semibold">
+                            <Link href={item.href}>{item.title}</Link>
+                          </h3>
+                          <Badge>{item.entityType === "asset" ? "Asset" : "Soundboard"}</Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                          <span>
+                            {item.worldName} ({item.worldSlug})
                           </span>
                         </div>
-                      </header>
-                      <div className="uwe-search-result-meta">
-                        <span>
-                          {item.worldName} ({item.worldSlug})
-                        </span>
-                      </div>
-                      {item.snippet && (
-                        <p className="uwe-search-result-snippet">{item.snippet}</p>
-                      )}
-                    </article>
+                        {item.snippet && <p className="text-sm">{item.snippet}</p>}
+                      </CardContent>
+                    </Card>
                   </li>
                 ))}
               </ul>
@@ -291,33 +291,29 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           )}
 
           {hasTagResults && (
-            <section className="uwe-v2-section">
-              <h2 className="uwe-v2-section-title">Tag-Treffer</h2>
-              <p className="uwe-search-count">
+            <section className="flex flex-col gap-3">
+              <h2 className="text-lg font-semibold tracking-tight">Tag-Treffer</h2>
+              <p className="text-sm text-muted-foreground">
                 {tagResults.length} Entitäten mit passenden Tags für „{trimmedQuery}&ldquo;
               </p>
-              <ul className="uwe-search-results">
+              <ul className="grid gap-2">
                 {tagResults.map((item) => (
-                  <li key={`tag-${item.entityType}-${item.id}`} className="uwe-search-result">
-                    <article>
-                      <header className="uwe-search-result-header">
-                        <h2>
-                          <Link href={item.href}>{item.title}</Link>
-                        </h2>
-                        <div className="uwe-search-result-badges">
-                          <span className="uwe-badge uwe-badge-muted">
-                            {ENTITY_TAG_ENTITY_TYPE_LABELS[item.entityType] ?? item.entityType}
-                          </span>
+                  <li key={`tag-${item.entityType}-${item.id}`}>
+                    <Card>
+                      <CardContent className="flex flex-col gap-2 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <h3 className="text-base font-semibold">
+                            <Link href={item.href}>{item.title}</Link>
+                          </h3>
+                          <Badge>{ENTITY_TAG_ENTITY_TYPE_LABELS[item.entityType] ?? item.entityType}</Badge>
                         </div>
-                      </header>
-                      <div className="uwe-search-result-meta">
-                        <span>{item.group}</span>
-                        {item.worldName && <span> · {item.worldName}</span>}
-                      </div>
-                      <p className="uwe-search-result-snippet">
-                        Tags: {item.matchedTags.join(", ")}
-                      </p>
-                    </article>
+                        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                          <span>{item.group}</span>
+                          {item.worldName && <span> · {item.worldName}</span>}
+                        </div>
+                        <p className="text-sm">Tags: {item.matchedTags.join(", ")}</p>
+                      </CardContent>
+                    </Card>
                   </li>
                 ))}
               </ul>
@@ -325,43 +321,36 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           )}
 
           {hasAdminResults && scope !== "worlds" && (
-            <section className="uwe-v2-section">
-              <h2 className="uwe-v2-section-title">
-                Daily Admin OS{" "}
-                <span className="uwe-badge uwe-badge-muted" style={{ fontSize: "0.75rem" }}>
-                  Studio-only
-                </span>
+            <section className="flex flex-col gap-3">
+              <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight">
+                Daily Admin OS <Badge>Studio-only</Badge>
               </h2>
-              <p className="uwe-search-count">
+              <p className="text-sm text-muted-foreground">
                 {adminResults.length} Treffer für „{trimmedQuery}&ldquo;
               </p>
-              <ul className="uwe-search-results">
+              <ul className="grid gap-2">
                 {adminResults.map((item) => (
-                  <li key={`${item.entityType}-${item.id}`} className="uwe-search-result">
-                    <article>
-                      <header className="uwe-search-result-header">
-                        <h2>
-                          <Link href={item.href}>{item.title}</Link>
-                        </h2>
-                        <div className="uwe-search-result-badges">
-                          <span className="uwe-badge uwe-badge-muted">
-                            {ADMIN_SEARCH_ENTITY_LABELS[item.entityType]}
-                          </span>
+                  <li key={`${item.entityType}-${item.id}`}>
+                    <Card>
+                      <CardContent className="flex flex-col gap-2 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <h3 className="text-base font-semibold">
+                            <Link href={item.href}>{item.title}</Link>
+                          </h3>
+                          <Badge>{ADMIN_SEARCH_ENTITY_LABELS[item.entityType]}</Badge>
                         </div>
-                      </header>
-                      <div className="uwe-search-result-meta">
-                        <span>{item.group}</span>
-                      </div>
-                      {item.snippet && (
-                        <p className="uwe-search-result-snippet">{item.snippet}</p>
-                      )}
-                    </article>
+                        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                          <span>{item.group}</span>
+                        </div>
+                        {item.snippet && <p className="text-sm">{item.snippet}</p>}
+                      </CardContent>
+                    </Card>
                   </li>
                 ))}
               </ul>
             </section>
           )}
-        </>
+        </div>
       )}
     </StudioShell>
   );

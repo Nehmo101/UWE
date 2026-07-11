@@ -34,7 +34,7 @@ export default async function StudioImportPage({ params }: Props) {
       }
       contextPanel={
         <SidebarSection title="Hinweise">
-          <ul className="uwe-import-context-list">
+          <ul className="flex list-disc flex-col gap-1 pl-4 text-sm text-muted-foreground">
             <li>Import ist einseitig (KnoteForge → UWE).</li>
             <li>Die Vorschau schreibt keine Daten.</li>
             <li>Konflikte und Duplikate werden vor dem Import angezeigt.</li>

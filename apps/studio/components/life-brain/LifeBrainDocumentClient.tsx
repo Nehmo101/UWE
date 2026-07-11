@@ -8,6 +8,7 @@ import {
   updateLifeBrainDocumentTagsAction,
 } from "@/app/life-admin-actions";
 import { indexLifeBrainDocumentAction } from "@/app/life-brain-actions";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Textarea } from "@/src/components/ui";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -46,90 +47,119 @@ export function LifeBrainDocumentClient({
   captureTypeLabels,
 }: Props) {
   const readView = (
-    <article className="uwe-v2-card uwe-v2-section">
-      <p className="uwe-dashboard-muted">
-        Kategorie: {categoryLabel} · Tags: {tags.length > 0 ? tags.join(", ") : "—"} · Aktualisiert:{" "}
-        {DATE_FORMAT.format(document.updatedAt)}
-      </p>
-      {document.content ? (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Inhalt</h2>
-          <p style={{ whiteSpace: "pre-wrap" }}>{document.content}</p>
-        </section>
-      ) : null}
-    </article>
+    <Card>
+      <CardContent className="flex flex-col gap-4 pt-6">
+        <p className="text-sm text-muted-foreground">
+          Kategorie: {categoryLabel} · Tags: {tags.length > 0 ? tags.join(", ") : "—"} · Aktualisiert:{" "}
+          {DATE_FORMAT.format(document.updatedAt)}
+        </p>
+        {document.content ? (
+          <div>
+            <h2 className="text-sm font-semibold">Inhalt</h2>
+            <p className="whitespace-pre-wrap">{document.content}</p>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 
   const editView = (
-    <>
-      <form action={updateLifeBrainDocumentAction} className="uwe-form-grid uwe-v2-section">
-        <input type="hidden" name="id" value={document.id} />
-        <label>
-          Titel
-          <input name="title" defaultValue={document.title} required />
-        </label>
-        <label>
-          Inhalt
-          <textarea name="content" rows={12} defaultValue={document.content ?? ""} />
-        </label>
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
-          Speichern
-        </button>
-      </form>
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Tags bearbeiten</h2>
-        <form action={updateLifeBrainDocumentTagsAction} className="uwe-form-grid">
-          <input type="hidden" name="id" value={document.id} />
-          <label>
-            Tags (kommagetrennt)
-            <input name="tags" defaultValue={tags.join(", ")} placeholder="recht, vertrag" />
-          </label>
-          <div style={{ alignSelf: "end" }}>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardContent className="flex flex-col gap-4 pt-6">
+          <form action={updateLifeBrainDocumentAction} className="flex flex-col gap-4">
+            <input type="hidden" name="id" value={document.id} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="life-brain-document-title">Titel</Label>
+              <Input id="life-brain-document-title" name="title" defaultValue={document.title} required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="life-brain-document-content">Inhalt</Label>
+              <Textarea
+                id="life-brain-document-content"
+                name="content"
+                rows={12}
+                defaultValue={document.content ?? ""}
+              />
+            </div>
+            <Button type="submit" size="sm" className="self-start">
+              Speichern
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tags bearbeiten</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={updateLifeBrainDocumentTagsAction} className="flex flex-col gap-4">
+            <input type="hidden" name="id" value={document.id} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="life-brain-document-tags">Tags (kommagetrennt)</Label>
+              <Input
+                id="life-brain-document-tags"
+                name="tags"
+                defaultValue={tags.join(", ")}
+                placeholder="recht, vertrag"
+              />
+            </div>
+            <Button type="submit" size="sm" className="self-end">
               Tags speichern
-            </button>
-          </div>
-        </form>
-      </section>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
       <form action={deleteLifeBrainDocumentAction}>
         <input type="hidden" name="id" value={document.id} />
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+        <Button type="submit" variant="secondary" size="sm">
           Dokument löschen
-        </button>
+        </Button>
       </form>
-    </>
+    </div>
   );
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <ViewEditToggle view={readView} edit={editView} />
       {linkedCaptures.length > 0 && (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Quellen / Captures</h2>
-          <ul className="uwe-today-card-list">
-            {linkedCaptures.map((capture) => (
-              <li key={capture.id} className="uwe-today-card">
-                <strong>
-                  <Link href={`/capture/${capture.id}`}>{capture.title || "Capture"}</Link>
-                </strong>
-                <p className="uwe-dashboard-muted">
-                  {captureTypeLabels[capture.captureType] ?? capture.captureType} ·{" "}
-                  {DATE_FORMAT.format(capture.capturedAt)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Quellen / Captures</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {linkedCaptures.map((capture) => (
+                <li key={capture.id} className="rounded-[var(--radius)] border border-border bg-card p-3.5">
+                  <strong>
+                    <Link href={`/capture/${capture.id}`}>{capture.title || "Capture"}</Link>
+                  </strong>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {captureTypeLabels[capture.captureType] ?? capture.captureType} ·{" "}
+                    {DATE_FORMAT.format(capture.capturedAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Indexierung</h2>
-        <form action={indexLifeBrainDocumentAction}>
-          <input type="hidden" name="documentId" value={document.id} />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
-            Embedding neu erzeugen
-          </button>
-        </form>
-      </section>
-    </>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Indexierung</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={indexLifeBrainDocumentAction}>
+            <input type="hidden" name="documentId" value={document.id} />
+            <Button type="submit" variant="secondary" size="sm">
+              Embedding neu erzeugen
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

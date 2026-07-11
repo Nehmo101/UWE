@@ -23,7 +23,7 @@ export function Sparkline({
   height?: number;
 }) {
   if (values.length < 2) {
-    return <span className="uwe-v2-stat-label">sammelt Verlauf…</span>;
+    return <span className="text-xs text-muted-foreground">sammelt Verlauf…</span>;
   }
   const peak = Math.max(max ?? Math.max(...values), 1);
   const step = width / (values.length - 1);
@@ -139,7 +139,7 @@ export function FailedLoginsPanel({ data }: { data: FailedLoginsResult }) {
                 className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5 last:border-0"
               >
                 <span className="flex items-center gap-2">
-                  <span className="uwe-dot uwe-dot-warning" aria-hidden />
+                  <span className="inline-block size-2 rounded-full bg-warning" aria-hidden />
                   <span className="font-mono">{login.user ?? "—"}</span>
                   <span className="text-muted-foreground">von {login.from ?? "—"}</span>
                 </span>

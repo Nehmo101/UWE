@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 import type { CookbookRecommendation, CookbookUseCaseId } from "@uwe/cookbook";
+import { Card, CardContent, CardHeader, CardTitle, Label } from "@/src/components/ui";
+
+/** TODO(design-kit): natives select bleibt — controlled Kategorie-Filter mit festem Default ("all"). */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 const CATEGORY_OPTIONS: Array<{ id: "all" | CookbookUseCaseId; label: string }> = [
   { id: "all", label: "Alle Bereiche" },
@@ -45,51 +50,50 @@ export function CookbookRecommendationsPanel({ recommendations }: Props) {
   );
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-        <h2 className="uwe-v2-section-title">Empfehlungen pro Use Case</h2>
-        <label>
-          Kategorie
-          <select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-4">
+        <CardTitle>Empfehlungen pro Use Case</CardTitle>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="cookbook-category">Kategorie</Label>
+          <select
+            id="cookbook-category"
+            value={category}
+            onChange={(event) => setCategory(event.target.value as typeof category)}
+            className={NATIVE_SELECT_CLASS}
+          >
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.label}
               </option>
             ))}
           </select>
-        </label>
-      </div>
-      <div className="uwe-dashboard-grid">
-        {filtered.map((rec) => (
-          <article key={rec.useCase} className="uwe-v2-card uwe-dashboard-card">
-            <h3 className="uwe-v2-section-title" style={{ fontSize: "1rem" }}>
-              {rec.label}
-            </h3>
-            <p className="uwe-dashboard-muted">{rec.description}</p>
-            <dl
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(7rem, auto) 1fr",
-                gap: "0.25rem 0.75rem",
-                fontSize: "0.85rem",
-                marginTop: "0.5rem",
-              }}
-            >
-              <dt className="uwe-dashboard-muted">Modell</dt>
-              <dd style={{ margin: 0 }}>{rec.modelLabel}</dd>
-              <dt className="uwe-dashboard-muted">Engine</dt>
-              <dd style={{ margin: 0 }}>{rec.engineId}</dd>
-              <dt className="uwe-dashboard-muted">Hardware-Fit</dt>
-              <dd style={{ margin: 0 }}>
-                {rec.fit.score}/100 — {fitLevelLabel(rec.fit.level)}
-              </dd>
-            </dl>
-            <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem", fontSize: "0.8rem" }}>
-              {rec.privacyNote}
-            </p>
-          </article>
-        ))}
-      </div>
-    </section>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {filtered.map((rec) => (
+            <Card key={rec.useCase}>
+              <CardHeader>
+                <CardTitle className="text-base">{rec.label}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">{rec.description}</p>
+                <dl className="grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-3 gap-y-1 text-sm">
+                  <dt className="text-muted-foreground">Modell</dt>
+                  <dd>{rec.modelLabel}</dd>
+                  <dt className="text-muted-foreground">Engine</dt>
+                  <dd>{rec.engineId}</dd>
+                  <dt className="text-muted-foreground">Hardware-Fit</dt>
+                  <dd>
+                    {rec.fit.score}/100 — {fitLevelLabel(rec.fit.level)}
+                  </dd>
+                </dl>
+                <p className="text-xs text-muted-foreground">{rec.privacyNote}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

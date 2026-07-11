@@ -3,6 +3,18 @@
 import Link from "next/link";
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 export interface PrepareSessionOption {
   id: string;
@@ -17,6 +29,11 @@ interface Props {
   rtxReady: boolean;
   rtxEnabled: boolean;
 }
+
+/** TODO(design-kit): natives select bleibt — controlled Session-Auswahl ohne Kit-Select,
+    siehe gleiches Muster in ReviewWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function PrepareSessionPanel({
   worldSlug,
@@ -94,80 +111,97 @@ export function PrepareSessionPanel({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Session vorbereiten</h2>
-      <p className="uwe-dashboard-muted">
-        KI-gestütztes Session-Paket (Recap, Plots, NPCs, Encounters) — RTX-only, Review vor
-        Übernahme.
-      </p>
-
-      {!rtxEnabled && (
-        <p className="uwe-form-error" role="alert">
-          RTX-Inference ist deaktiviert.
+    <Card>
+      <CardHeader>
+        <CardTitle>Session vorbereiten</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          KI-gestütztes Session-Paket (Recap, Plots, NPCs, Encounters) — RTX-only, Review vor
+          Übernahme.
         </p>
-      )}
 
-      {rtxEnabled && !rtxReady && (
-        <p className="uwe-hint">RTX offline — wird als Job vorgemerkt.</p>
-      )}
+        {!rtxEnabled && (
+          <Alert tone="danger" role="alert">
+            RTX-Inference ist deaktiviert.
+          </Alert>
+        )}
 
-      {sessions.length === 0 ? (
-        <p className="uwe-v2-empty">
-          Noch keine Sessions vorhanden.{" "}
-          <Link href={`/worlds/${worldSlug}/sessions/new`}>Erste Session anlegen →</Link>
-        </p>
-      ) : (
-        <form
-          className="uwe-v2-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void runPrepareNextSession();
-          }}
-        >
-          <label>
-            Bezugs-Session
-            <select
-              value={sessionId}
-              onChange={(event) => setSessionId(event.target.value)}
-              required
-            >
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  #{session.sessionNumber} — {session.title}
-                </option>
-              ))}
-            </select>
-          </label>
+        {rtxEnabled && !rtxReady && (
+          <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+        )}
 
-          <label>
-            Zusätzliche Anweisungen (optional)
-            <textarea
-              rows={3}
-              value={userPrompt}
-              placeholder="z. B. Fokus auf Nepurga-Plot, mehr Sozial-Encounters …"
-              onChange={(event) => setUserPrompt(event.target.value)}
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            disabled={!rtxEnabled || busy || !sessionId}
+        {sessions.length === 0 ? (
+          <EmptyState
+            title="Noch keine Sessions vorhanden."
+            action={
+              <Link
+                href={`/worlds/${worldSlug}/sessions/new`}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Erste Session anlegen →
+              </Link>
+            }
+          />
+        ) : (
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void runPrepareNextSession();
+            }}
           >
-            {busy ? "Läuft…" : "Nächste Session vorbereiten"}
-          </button>
-        </form>
-      )}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prepare-session-id">Bezugs-Session</Label>
+              <select
+                id="prepare-session-id"
+                value={sessionId}
+                onChange={(event) => setSessionId(event.target.value)}
+                required
+                className={NATIVE_SELECT_CLASS}
+              >
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    #{session.sessionNumber} — {session.title}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {status && <p className="uwe-hint">{status}</p>}
-      {jobId && (
-        <p>
-          <Link href="/jobs">Job {jobId.slice(0, 8)}… anzeigen →</Link>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prepare-session-prompt">Zusätzliche Anweisungen (optional)</Label>
+              <Textarea
+                id="prepare-session-prompt"
+                rows={3}
+                value={userPrompt}
+                placeholder="z. B. Fokus auf Nepurga-Plot, mehr Sozial-Encounters …"
+                onChange={(event) => setUserPrompt(event.target.value)}
+              />
+            </div>
+
+            <Button type="submit" disabled={!rtxEnabled || busy || !sessionId} className="self-start">
+              {busy ? "Läuft…" : "Nächste Session vorbereiten"}
+            </Button>
+          </form>
+        )}
+
+        {status && <p className="text-sm text-muted-foreground">{status}</p>}
+        {jobId && (
+          <p>
+            <Link href="/jobs" className="text-primary underline-offset-4 hover:underline">
+              Job {jobId.slice(0, 8)}… anzeigen →
+            </Link>
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          <Link
+            href={`/worlds/${worldSlug}/ai-runs`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            AI Runs & Review →
+          </Link>
         </p>
-      )}
-      <p className="uwe-dashboard-muted">
-        <Link href={`/worlds/${worldSlug}/ai-runs`}>AI Runs & Review →</Link>
-      </p>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

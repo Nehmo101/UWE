@@ -6,6 +6,13 @@ import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import { canCreatePlayerNote } from "@uwe/auth";
 import { PlayerNoteStatusBadge } from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { PageHeader } from "@/src/components/shell";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -60,61 +67,88 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
   const returnPath = `/auth/worlds/${worldSlug}/notes`;
 
   return (
-    <section className="portal-content-card">
-      <h1>Meine Notizen</h1>
-      <p className="auth-lead">
-        Entwürfe, an den GM gesendete Notizen und vom Spielleiter freigegebene Gruppennotizen.
-      </p>
+    <>
+      <PageHeader
+        title="Meine Notizen"
+        summary="Entwürfe, an den GM gesendete Notizen und vom Spielleiter freigegebene Gruppennotizen."
+      />
 
-      <section className="auth-block">
-        <h2>Eigene Notizen</h2>
-        {myNotes.length === 0 ? (
-          <p className="auth-muted">Noch keine Notizen.</p>
-        ) : (
-          <ul className="auth-notes-list">
-            {myNotes.map((note) => (
-              <li key={note.id} className="auth-note-item">
-                <header className="auth-note-header">
-                  <PlayerNoteStatusBadge status={note.status} />
-                  <span className="auth-muted">{note.updatedAt.toLocaleDateString("de-DE")}</span>
-                </header>
-                <p className="auth-note-content">{note.content}</p>
-                {note.pageSlug && (
-                  <Link href={`/auth/worlds/${worldSlug}/${note.pageSlug}`}>{note.pageTitle}</Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {partyNotes.length > 0 && (
-        <section className="auth-block">
-          <h2>Gruppennotizen</h2>
-          <ul className="auth-notes-list">
-            {partyNotes.map((note) => (
-              <li key={note.id} className="auth-note-item">
-                <header className="auth-note-header">
-                  <strong>{note.authorDisplayName}</strong>
-                  <PlayerNoteStatusBadge status={note.status} />
-                </header>
-                <p className="auth-note-content">{note.content}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {campaignId && (
+      {campaignId ? (
         <PlayerNotesPanel
           worldSlug={worldSlug}
           campaignId={campaignId}
-          notes={[]}
+          notes={myNotes}
           currentUserId={userId}
           canComment={canComment}
           returnPath={returnPath}
         />
+      ) : (
+        myNotes.length > 0 && (
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>Eigene Notizen</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="grid gap-3">
+                {myNotes.map((note) => (
+                  <li
+                    key={note.id}
+                    className="rounded-[var(--radius)] border border-border p-4"
+                  >
+                    <header className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <PlayerNoteStatusBadge status={note.status} />
+                      <span className="text-sm text-muted-foreground">
+                        {note.updatedAt.toLocaleDateString("de-DE")}
+                      </span>
+                    </header>
+                    <p className="whitespace-pre-wrap text-sm">{note.content}</p>
+                    {note.pageSlug ? (
+                      <Link
+                        href={`/auth/worlds/${worldSlug}/${note.pageSlug}`}
+                        className="mt-2 inline-block text-sm text-primary hover:underline"
+                      >
+                        {note.pageTitle}
+                      </Link>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )
       )}
-    </section>
+
+      {partyNotes.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gruppennotizen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid gap-3">
+              {partyNotes.map((note) => (
+                <li
+                  key={note.id}
+                  className="rounded-[var(--radius)] border border-border p-4"
+                >
+                  <header className="mb-2 flex flex-wrap items-center gap-2">
+                    <strong>{note.authorDisplayName}</strong>
+                    <PlayerNoteStatusBadge status={note.status} />
+                  </header>
+                  <p className="whitespace-pre-wrap text-sm">{note.content}</p>
+                  {note.pageSlug ? (
+                    <Link
+                      href={`/auth/worlds/${worldSlug}/${note.pageSlug}`}
+                      className="mt-2 inline-block text-sm text-primary hover:underline"
+                    >
+                      {note.pageTitle}
+                    </Link>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+    </>
   );
 }

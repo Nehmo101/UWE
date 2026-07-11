@@ -5,6 +5,7 @@ import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell
 import { ImageStudioCanvasEditor } from "@/components/ImageStudioCanvasEditor";
 import { ImageStudioPromptHistory } from "@/src/components/ux/ImageStudioPromptHistory";
 import { saveImageStudioCanvasAction } from "@/app/integration-actions";
+import { buttonVariants } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ projectId: string }>;
@@ -37,7 +38,7 @@ export default async function ImageStudioEditPage({ params }: Props) {
         title={`Bearbeiten — ${project.title}`}
         summary="Drehen und als neue Version speichern (Odysseus-Gallery-Editor, vereinfacht)."
         actions={
-          <Link href={`/image-studio/${projectId}`} className="uwe-v2-btn uwe-v2-btn-secondary">
+          <Link href={`/image-studio/${projectId}`} className={buttonVariants({ variant: "secondary" })}>
             ← Projekt
           </Link>
         }

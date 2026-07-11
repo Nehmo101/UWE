@@ -23,6 +23,7 @@ import {
   type AtlasAssetProposalIssueView,
 } from "@/app/atlas-asset-actions";
 import { RtxAssetRecipePreview } from "./RtxAssetRecipePreview";
+import { Alert, Button, Input, Label, NavIcon, Textarea, cn } from "@/src/components/ui";
 
 export interface AtlasAssetProposalStudioProps {
   worldSlug: string;
@@ -33,20 +34,10 @@ export interface AtlasAssetProposalStudioProps {
 
 const MAX_PROMPT_LENGTH = 500;
 
-const sectionLabel: React.CSSProperties = {
-  fontSize: 13,
-  color: "var(--uwe-muted)",
-};
+const SECTION_LABEL_CLASS = "text-[13px] text-muted-foreground";
 
-const chip: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  padding: "0.1rem 0.5rem",
-  border: "1px solid var(--uwe-border)",
-  borderRadius: 999,
-  fontSize: 11,
-  background: "var(--uwe-surface)",
-};
+const CHIP_CLASS =
+  "inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[11px]";
 
 export function AtlasAssetProposalStudio({ worldSlug, onClose, initialPrompt = "" }: AtlasAssetProposalStudioProps) {
   const router = useRouter();
@@ -142,136 +133,107 @@ export function AtlasAssetProposalStudio({ worldSlug, onClose, initialPrompt = "
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1200,
-      }}
+      className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/50"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        style={{
-          background: "var(--uwe-bg)",
-          border: "1px solid var(--uwe-border)",
-          borderRadius: "var(--uwe-radius)",
-          padding: "1.5rem",
-          minWidth: "min(480px, calc(100vw - 2rem))",
-          maxWidth: "min(760px, calc(100vw - 2rem))",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
+        className="flex max-h-[90vh] min-w-[min(480px,calc(100vw-2rem))] max-w-[min(760px,calc(100vw-2rem))] flex-col gap-4 overflow-y-auto rounded-[var(--radius)] border border-border bg-background p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>RTX-Asset-Studio — Gouache-Asset vorschlagen</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--uwe-muted)" }}
-            aria-label="Schließen"
-          >
-            ×
-          </button>
+        <div className="flex items-center justify-between">
+          <h2 className="m-0 text-lg font-semibold">RTX-Asset-Studio — Gouache-Asset vorschlagen</h2>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Schließen">
+            <NavIcon name="x" className="size-[18px]" />
+          </Button>
         </div>
 
-        <p style={{ margin: 0, fontSize: 12, color: "var(--uwe-muted)" }}>
+        <p className="m-0 text-xs text-muted-foreground">
           Styleguide (<code>docs/prompts/atlas-pictogram-styleguide.md</code>) und Asset-Katalog
           werden serverseitig in den Prompt injiziert. Das Ergebnis ist ein validiertes
           Review-Proposal — nie Auto-Apply, kein Code.
         </p>
 
         {/* Prompt */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          <label htmlFor="rtx-asset-prompt" style={sectionLabel}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="rtx-asset-prompt" className={SECTION_LABEL_CLASS}>
             Asset-Beschreibung (z.B. „verwunschener Leuchtturm auf Klippe, Landmarke“)
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="rtx-asset-prompt"
-            className="uwe-input"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
             rows={3}
             placeholder="Beschreibe das gewünschte Gouache-Asset…"
             autoFocus
-            style={{ resize: "vertical" }}
+            className="resize-y"
           />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--uwe-muted)" }}>
+          <div className="flex justify-between text-[11px] text-muted-foreground">
             <span>Gouache-Stil · gedämpfte Kartenpalette · Base-centre-Anker</span>
             <span>{prompt.length}/{MAX_PROMPT_LENGTH}</span>
           </div>
         </div>
 
         {/* Provider config — local/RTX only */}
-        <details style={{ fontSize: 12 }}>
-          <summary style={{ cursor: "pointer", color: "var(--uwe-muted)" }}>
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground">
             KI konfigurieren (nur lokal/RTX)
           </summary>
-          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.4rem", flexWrap: "wrap" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-              Provider
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="rtx-asset-provider" className="text-xs">
+                Provider
+              </Label>
+              {/* TODO(design-kit): natives select bleibt — controlled Provider-Wahl, konsistent mit
+                  gleichem Muster in DesignAssistantWizard.tsx. */}
               <select
-                className="uwe-input"
+                id="rtx-asset-provider"
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                style={{ fontSize: 12 }}
+                className="h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-xs text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="ollama">Ollama (lokal)</option>
                 <option value="openai_compatible">OpenAI-kompatibel (lokal/RTX)</option>
               </select>
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-              Modell
-              <input
-                className="uwe-input"
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="rtx-asset-model" className="text-xs">
+                Modell
+              </Label>
+              <Input
+                id="rtx-asset-model"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="z.B. gemma3:4b"
-                style={{ fontSize: 12, width: 160 }}
+                className="w-40 text-xs"
               />
-            </label>
+            </div>
           </div>
         </details>
 
         {/* Generate */}
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
+        <div className="flex gap-2">
+          <Button
             type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
             onClick={handleGenerate}
             disabled={isGenerating || !prompt.trim()}
-            style={{ flex: 1 }}
+            className="flex-1"
           >
-            {isGenerating ? "Generiere Proposal…" : "✦ Asset-Proposal generieren"}
-          </button>
+            <NavIcon name="sparkles" className="size-4" />
+            {isGenerating ? "Generiere Proposal…" : "Asset-Proposal generieren"}
+          </Button>
         </div>
 
         {/* Validation failure: error + issues + raw output */}
         {generateError && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 13,
-                color: "var(--uwe-danger)",
-                padding: "0.5rem",
-                background: "var(--uwe-danger-10, rgba(220,38,38,0.08))",
-                borderRadius: 4,
-              }}
-            >
-              ✕ {generateError}
-            </p>
+          <div className="flex flex-col gap-1.5">
+            <Alert tone="danger" role="alert" className="text-[13px]">
+              {generateError}
+            </Alert>
             {issues.length > 0 && (
-              <ul style={{ margin: 0, paddingLeft: "1.2rem", fontSize: 12, color: "var(--uwe-danger)" }}>
+              <ul className="m-0 list-none space-y-0.5 pl-0 text-xs text-destructive">
                 {issues.map((issue, index) => (
                   <li key={index}>
                     <code>{issue.path}</code>: {issue.message}
@@ -280,24 +242,11 @@ export function AtlasAssetProposalStudio({ worldSlug, onClose, initialPrompt = "
               </ul>
             )}
             {rawText && (
-              <details style={{ fontSize: 12 }}>
-                <summary style={{ cursor: "pointer", color: "var(--uwe-muted)" }}>
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted-foreground">
                   Rohausgabe anzeigen (verworfen)
                 </summary>
-                <pre
-                  style={{
-                    background: "var(--uwe-surface)",
-                    border: "1px solid var(--uwe-border)",
-                    borderRadius: 4,
-                    padding: "0.5rem",
-                    fontSize: 11,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    maxHeight: 180,
-                    overflowY: "auto",
-                    margin: "0.4rem 0 0",
-                  }}
-                >
+                <pre className="mt-1.5 max-h-[180px] overflow-y-auto whitespace-pre-wrap break-words rounded border border-border bg-muted p-2 text-[11px]">
                   {rawText}
                 </pre>
               </details>
@@ -307,75 +256,56 @@ export function AtlasAssetProposalStudio({ worldSlug, onClose, initialPrompt = "
 
         {/* Validated proposal preview */}
         {proposal && proposalJson && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--uwe-success, #16a34a)" }}>
-              ✓ Serverseitig validiert ({proposal.outputType})
+          <div className="flex flex-col gap-2.5">
+            <p className="m-0 flex items-center gap-1.5 text-[13px] text-success">
+              <NavIcon name="check" className="size-4" />
+              Serverseitig validiert ({proposal.outputType})
               {providerUsed ? ` · Provider: ${providerUsed}` : ""}
             </p>
             {warnings.length > 0 && (
-              <ul style={{ margin: 0, paddingLeft: "1.2rem", fontSize: 12, color: "var(--uwe-muted)" }}>
+              <ul className="m-0 list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
                 {warnings.map((warning, index) => (
                   <li key={index}>{warning}</li>
                 ))}
               </ul>
             )}
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", alignItems: "center" }}>
-              <strong style={{ fontSize: 14 }}>{proposal.name}</strong>
-              <span style={chip}>{proposal.category}</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <strong className="text-sm">{proposal.name}</strong>
+              <span className={CHIP_CLASS}>{proposal.category}</span>
               {proposal.engineTags.map((tag) => (
-                <span key={tag} style={chip}>{tag}</span>
+                <span key={tag} className={CHIP_CLASS}>{tag}</span>
               ))}
               {proposal.tags.map((tag) => (
-                <span key={tag} style={{ ...chip, opacity: 0.75 }}>{tag}</span>
+                <span key={tag} className={cn(CHIP_CLASS, "opacity-75")}>{tag}</span>
               ))}
             </div>
 
             {proposal.palette.length > 0 && (
-              <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "var(--uwe-muted)" }}>Palette:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground">Palette:</span>
                 {proposal.palette.map((color) => (
                   <span
                     key={color}
                     title={color}
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      border: "1px solid var(--uwe-border)",
-                      background: color,
-                      display: "inline-block",
-                    }}
+                    className="inline-block size-[18px] rounded border border-border"
+                    style={{ background: color }}
                   />
                 ))}
               </div>
             )}
 
             {proposal.outputType === "json-recipe" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                <span style={sectionLabel}>Rezept-Preview (deterministisch gezeichnet, kein Code)</span>
+              <div className="flex flex-col gap-1">
+                <span className={SECTION_LABEL_CLASS}>Rezept-Preview (deterministisch gezeichnet, kein Code)</span>
                 <RtxAssetRecipePreview recipe={proposal.recipe} size={160} />
               </div>
             )}
 
-            <pre
-              style={{
-                background: "var(--uwe-surface)",
-                border: "1px solid var(--uwe-border)",
-                borderRadius: 4,
-                padding: "0.75rem",
-                fontSize: 12,
-                lineHeight: 1.5,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                maxHeight: 280,
-                overflowY: "auto",
-                margin: 0,
-              }}
-            >
+            <pre className="m-0 max-h-[280px] overflow-y-auto whitespace-pre-wrap break-words rounded border border-border bg-muted p-3 text-xs leading-relaxed">
               {proposalJson}
             </pre>
-            <p style={{ margin: 0, fontSize: 11, color: "var(--uwe-muted)" }}>
+            <p className="m-0 text-[11px] text-muted-foreground">
               Speichern legt nur ein Pending-Palette-Item an — kein Kartenobjekt, keine
               Builtin-Übernahme. Sichtbar wird es erst nach Genehmigung.
             </p>
@@ -383,39 +313,28 @@ export function AtlasAssetProposalStudio({ worldSlug, onClose, initialPrompt = "
         )}
 
         {/* Save feedback */}
-        {saveError && (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--uwe-danger)" }}>{saveError}</p>
-        )}
-        {saveSuccess && (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--uwe-success, #16a34a)" }}>
-            {saveSuccess}
-          </p>
-        )}
+        {saveError && <p className="m-0 text-[13px] text-destructive">{saveError}</p>}
+        {saveSuccess && <p className="m-0 text-[13px] text-success">{saveSuccess}</p>}
 
         {/* Footer */}
-        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-          <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={onClose}>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
             Schließen
-          </button>
+          </Button>
           {proposal && !saveSuccess && (
             <>
-              <button
+              <Button
                 type="button"
-                className="uwe-v2-btn uwe-v2-btn-secondary"
+                variant="secondary"
                 onClick={resetResult}
                 disabled={isSaving}
                 title="Proposal verwerfen — nichts wird gespeichert"
               >
                 Verwerfen
-              </button>
-              <button
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-primary"
-                onClick={handleSave}
-                disabled={isSaving}
-              >
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? "Speichere…" : "Als Pending-Asset speichern"}
-              </button>
+              </Button>
             </>
           )}
         </div>

@@ -6,6 +6,10 @@ import {
   CONNECTOR_CAPABILITY_LABELS,
   type ConnectorCapability,
 } from "@uwe/connector/client";
+import { Button } from "@/src/components/ui";
+
+const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
+const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 interface Props {
   connectorId: string;
@@ -44,21 +48,22 @@ export function ConnectorCapabilityGovernance({
 
   if (reportedCapabilities.length === 0) {
     return (
-      <p className="uwe-dashboard-muted" style={{ marginTop: "0.35rem" }}>
+      <p className="mt-1.5 text-sm text-muted-foreground">
         Host-Freigabe: wartet auf ersten Heartbeat mit Fähigkeiten.
       </p>
     );
   }
 
   return (
-    <div style={{ marginTop: "0.5rem" }}>
-      <p style={{ margin: "0 0 0.35rem", fontSize: 13 }}>
+    <div className="mt-2">
+      <p className="mb-1.5 text-sm">
         <strong>Host-Freigabe:</strong> {formatAllowlist(allowedCapabilities)}
       </p>
       {!editing ? (
-        <button
+        <Button
           type="button"
-          className="uwe-v2-btn uwe-v2-btn-sm"
+          variant="secondary"
+          size="sm"
           disabled={busy || disabled}
           onClick={() => {
             setDraft(allowedCapabilities ?? reportedCapabilities);
@@ -66,21 +71,21 @@ export function ConnectorCapabilityGovernance({
           }}
         >
           Freigaben bearbeiten
-        </button>
+        </Button>
       ) : (
         <fieldset
-          className="uwe-form"
-          style={{ marginTop: "0.35rem", padding: "0.65rem", border: "1px solid var(--uwe-border-muted)" }}
+          className="mt-1.5 rounded-[var(--radius)] border border-border p-2.5"
           aria-label={`Host-Freigaben für Connector ${connectorId}`}
         >
-          <legend style={{ fontSize: 12.5, padding: "0 0.25rem" }}>Erlaubte Fähigkeiten</legend>
+          <legend className="px-1 text-xs">Erlaubte Fähigkeiten</legend>
           {editableCaps.length === 0 ? (
-            <p className="uwe-dashboard-muted">Keine gemeldeten Fähigkeiten.</p>
+            <p className="text-sm text-muted-foreground">Keine gemeldeten Fähigkeiten.</p>
           ) : (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.35rem" }}>
+            <ul className="m-0 grid list-none gap-1.5 p-0">
               {editableCaps.map((cap) => (
                 <li key={cap}>
-                  <label className="uwe-checkbox" style={{ fontSize: 13 }}>
+                  {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+                  <label className={CHECKBOX_ROW_CLASS}>
                     <input
                       type="checkbox"
                       checked={draft.includes(cap)}
@@ -91,6 +96,7 @@ export function ConnectorCapabilityGovernance({
                             : current.filter((entry) => entry !== cap),
                         );
                       }}
+                      className={CHECKBOX_CLASS}
                     />
                     {CONNECTOR_CAPABILITY_LABELS[cap]}
                   </label>
@@ -98,10 +104,10 @@ export function ConnectorCapabilityGovernance({
               ))}
             </ul>
           )}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.5rem" }}>
-            <button
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
               type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm"
+              size="sm"
               disabled={busy}
               onClick={async () => {
                 await onSave(draft);
@@ -109,10 +115,11 @@ export function ConnectorCapabilityGovernance({
               }}
             >
               Speichern
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="uwe-v2-btn uwe-v2-btn-sm"
+              variant="secondary"
+              size="sm"
               disabled={busy}
               onClick={async () => {
                 await onSave(null);
@@ -120,15 +127,16 @@ export function ConnectorCapabilityGovernance({
               }}
             >
               Uneingeschränkt
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="uwe-v2-btn uwe-v2-btn-sm"
+              variant="secondary"
+              size="sm"
               disabled={busy}
               onClick={() => setEditing(false)}
             >
               Abbrechen
-            </button>
+            </Button>
           </div>
         </fieldset>
       )}

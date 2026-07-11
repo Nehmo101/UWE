@@ -86,8 +86,8 @@ export function ImageStudioCanvasEditor({
   }
 
   return (
-    <div className="uwe-image-canvas-editor">
-      <p className="uwe-hint">
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
         Basis-Editor: Drehen und als neue Version speichern. Für KI-Inpainting den Generator auf der
         Projektseite nutzen.
       </p>
@@ -96,12 +96,11 @@ export function ImageStudioCanvasEditor({
       <img
         src={sourceImageUrl}
         alt="Quellbild"
-        className="uwe-image-canvas-source"
-        style={{ display: "none" }}
+        className="hidden"
         onLoad={(event) => handleImageLoad(event.currentTarget)}
       />
 
-      <div className="uwe-image-canvas-toolbar uwe-inline-actions">
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="secondary" onClick={rotateLeft} disabled={!loaded}>
           ↺ 90°
         </Button>
@@ -113,9 +112,9 @@ export function ImageStudioCanvasEditor({
         </Button>
       </div>
 
-      <canvas ref={canvasRef} className="uwe-image-canvas-surface" />
+      <canvas ref={canvasRef} className="max-w-full rounded-[var(--radius)] border border-border" />
 
-      {status ? <p className="uwe-notice">{status}</p> : null}
+      {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
     </div>
   );
 }

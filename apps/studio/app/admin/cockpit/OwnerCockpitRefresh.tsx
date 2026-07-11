@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Button } from "@/src/components/ui";
 
 const REFRESH_MS = 30_000;
 
@@ -15,11 +16,11 @@ export function OwnerCockpitRefresh() {
   }, [router]);
 
   return (
-    <p className="uwe-dashboard-muted">
+    <p className="text-sm text-muted-foreground">
       Auto-Refresh alle 30 Sekunden.{" "}
-      <button type="button" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm" onClick={() => router.refresh()}>
+      <Button type="button" variant="ghost" size="sm" onClick={() => router.refresh()}>
         Jetzt aktualisieren
-      </button>
+      </Button>
     </p>
   );
 }

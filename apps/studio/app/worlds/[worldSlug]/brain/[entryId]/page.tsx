@@ -64,9 +64,9 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
       />
 
       {links.length > 0 && (
-        <section className="uwe-brain-section">
-          <h2>Links</h2>
-          <ul>
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold tracking-tight">Links</h2>
+          <ul className="list-disc pl-5 text-sm">
             {links.map((link) => (
               <li key={link.id}>
                 {link.relationType}: {link.targetType} → {link.targetId}

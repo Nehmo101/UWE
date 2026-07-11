@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  EmptyState,
-  SidebarSection,
-  VisibilityBadge,
-} from "@uwe/shared-ui";
+import { SidebarSection, VisibilityBadge } from "@uwe/shared-ui";
 import type { Visibility } from "@uwe/database/enums";
 import {
   BRAIN_STATUS_LABELS,
@@ -13,6 +9,17 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import {
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+} from "@/src/components/ui";
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 export default async function BrainOverviewPage() {
   const repo = getAppRepository();
@@ -39,10 +46,10 @@ export default async function BrainOverviewPage() {
       breadcrumb={<BreadcrumbTrail items={[{ label: "Brain Knowledge Store" }]} />}
       contextPanel={
         <SidebarSection title="Sichtbarkeit">
-          <ul className="uwe-hint" style={{ margin: 0, paddingLeft: "1.1rem" }}>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
               <li key={value}>
-                <strong>{label}</strong>
+                <strong className="text-foreground">{label}</strong>
               </li>
             ))}
           </ul>
@@ -59,72 +66,80 @@ export default async function BrainOverviewPage() {
           description="Lege zuerst eine Welt an, um Brain-Einträge zu speichern."
         />
       ) : (
-        worldSummaries.map(({ world, documents, facts, summary }) => (
-          <section key={world.id} className="uwe-brain-section">
-            <h2>
-              <Link href={`/worlds/${world.slug}/brain`}>{world.name}</Link>
-            </h2>
-            {summary && (
-              <p className="uwe-brain-summary">
-                {summary.documentCount} Dokumente · {summary.factCount} Fakten ·{" "}
-                {summary.chunkCount} Chunks
-              </p>
-            )}
+        <div className="flex flex-col gap-6">
+          {worldSummaries.map(({ world, documents, facts, summary }) => (
+            <Card key={world.id}>
+              <CardHeader>
+                <CardTitle>
+                  <Link href={`/worlds/${world.slug}/brain`}>{world.name}</Link>
+                </CardTitle>
+                {summary && (
+                  <p className="text-sm text-muted-foreground">
+                    {summary.documentCount} Dokumente · {summary.factCount} Fakten ·{" "}
+                    {summary.chunkCount} Chunks
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                {(documents.length > 0 || facts.length > 0) && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr>
+                          <th className={TH_CLASS}>Eintrag</th>
+                          <th className={TH_CLASS}>Art</th>
+                          <th className={TH_CLASS}>Sichtbarkeit</th>
+                          <th className={TH_CLASS}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {documents.slice(0, 5).map((doc) => (
+                          <tr key={doc.id}>
+                            <td className={TD_CLASS}>
+                              <Link href={`/worlds/${world.slug}/brain/${doc.id}`}>{doc.title}</Link>
+                            </td>
+                            <td className={TD_CLASS}>Dokument</td>
+                            <td className={TD_CLASS}>
+                              <VisibilityBadge visibility={doc.visibility as Visibility} />
+                            </td>
+                            <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[doc.status]}</td>
+                          </tr>
+                        ))}
+                        {facts.slice(0, 5).map((fact) => (
+                          <tr key={fact.id}>
+                            <td className={TD_CLASS}>
+                              <Link href={`/worlds/${world.slug}/brain/facts/${fact.id}`}>
+                                {fact.title}
+                              </Link>
+                            </td>
+                            <td className={TD_CLASS}>Fakt</td>
+                            <td className={TD_CLASS}>
+                              <VisibilityBadge visibility={fact.visibility as Visibility} />
+                            </td>
+                            <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[fact.status]}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-            {(documents.length > 0 || facts.length > 0) && (
-              <table className="uwe-page-table">
-                <thead>
-                  <tr>
-                    <th>Eintrag</th>
-                    <th>Art</th>
-                    <th>Sichtbarkeit</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.slice(0, 5).map((doc) => (
-                    <tr key={doc.id}>
-                      <td data-label="Eintrag">
-                        <Link href={`/worlds/${world.slug}/brain/${doc.id}`}>
-                          {doc.title}
-                        </Link>
-                      </td>
-                      <td data-label="Art">Dokument</td>
-                      <td data-label="Sichtbarkeit">
-                        <VisibilityBadge visibility={doc.visibility as Visibility} />
-                      </td>
-                      <td data-label="Status">{BRAIN_STATUS_LABELS[doc.status]}</td>
-                    </tr>
-                  ))}
-                  {facts.slice(0, 5).map((fact) => (
-                    <tr key={fact.id}>
-                      <td data-label="Eintrag">
-                        <Link href={`/worlds/${world.slug}/brain/facts/${fact.id}`}>
-                          {fact.title}
-                        </Link>
-                      </td>
-                      <td data-label="Art">Fakt</td>
-                      <td data-label="Sichtbarkeit">
-                        <VisibilityBadge visibility={fact.visibility as Visibility} />
-                      </td>
-                      <td data-label="Status">{BRAIN_STATUS_LABELS[fact.status]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            <p className="uwe-brain-meta">
-              <Link href={`/worlds/${world.slug}/brain`} className="uwe-v2-btn uwe-v2-btn-secondary">
-                Brain Store öffnen
-              </Link>
-              <span className="uwe-hint" style={{ marginLeft: "0.75rem" }}>
-                KI-Wissensgenerierung pro Welt im{" "}
-                <Link href={`/worlds/${world.slug}/brain`}>Brain Store</Link>.
-              </span>
-            </p>
-          </section>
-        ))
+                <p className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href={`/worlds/${world.slug}/brain`}
+                    className={buttonVariants({ variant: "secondary" })}
+                  >
+                    Brain Store öffnen
+                  </Link>
+                  <span className="text-sm text-muted-foreground">
+                    KI-Wissensgenerierung pro Welt im{" "}
+                    <Link href={`/worlds/${world.slug}/brain`}>Brain Store</Link>.
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </StudioShell>
   );

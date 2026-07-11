@@ -2,6 +2,7 @@
 
 import { Tabs } from "@uwe/shared-ui";
 import { useEffect } from "react";
+import { Alert } from "@/src/components/ui";
 import { AiGatewayBudgetsTab } from "./ai-gateway/AiGatewayBudgetsTab";
 import { AiGatewayGrantsTab } from "./ai-gateway/AiGatewayGrantsTab";
 import { AiGatewayLogsTab } from "./ai-gateway/AiGatewayLogsTab";
@@ -21,14 +22,14 @@ export function AiGatewayWizard() {
   }, [loadAdminUsers]);
 
   if (loading && !data) {
-    return <p className="uwe-muted">KI-Gateway wird geladen…</p>;
+    return <p className="text-sm text-muted-foreground">KI-Gateway wird geladen…</p>;
   }
 
   if (error) {
     return (
-      <section className="uwe-form-error uwe-v2-section" role="alert">
+      <Alert tone="danger" role="alert">
         {error}
-      </section>
+      </Alert>
     );
   }
 
@@ -113,12 +114,12 @@ export function AiGatewayWizard() {
   });
 
   return (
-    <div className="uwe-section-stack">
+    <div className="flex flex-col gap-6">
       <AiGatewayOverviewCard data={data} />
       {message && (
-        <p className="uwe-form-success" role="status">
+        <Alert tone="success" role="status">
           {message}
-        </p>
+        </Alert>
       )}
       <Tabs items={tabItems} defaultTabId="routing" ariaLabel="KI-Gateway Policy" />
     </div>

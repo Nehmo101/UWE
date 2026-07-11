@@ -13,6 +13,20 @@ import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell
 import { requireStudioAccess } from "@/src/lib/auth";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
+import {
   analyzeWithTextAction,
   archiveScanAction,
   autoAnalyzeAction,
@@ -50,6 +64,10 @@ const FILING_TARGETS: ScanFilingTarget[] = [
   "dnd_session_note",
   "dnd_handout",
 ];
+
+// Nativer Select, da hier ein echter Leerwert ("— Welt wählen —") nötig ist.
+const NATIVE_SELECT_CLASS =
+  "flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function formatFieldValue(key: string, value: unknown): string {
   if (key === "amountCents" && typeof value === "number") {
@@ -101,163 +119,206 @@ export default async function ScanDetailPage({ params }: Props) {
         summary={`${SCAN_STATUS_LABELS[scan.status as keyof typeof SCAN_STATUS_LABELS] ?? scan.status} · ${SCAN_KIND_LABELS[scan.detectedKind]}${scan.detectionConfidence ? ` · Konfidenz: ${scan.detectionConfidence}` : ""}`}
       />
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Original</h2>
-        {isImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={fileUrl} alt={scan.title || "Scan"} style={{ maxWidth: "100%", height: "auto" }} />
-        ) : (
-          <p className="uwe-hint">
-            {isPdf ? "PDF-Dokument. " : "Vorschau nicht verfügbar. "}
-            <a href={fileUrl} target="_blank" rel="noreferrer">
-              Original öffnen
-            </a>
-          </p>
-        )}
-      </section>
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Original</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fileUrl} alt={scan.title || "Scan"} className="h-auto max-w-full rounded-[var(--radius)]" />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {isPdf ? "PDF-Dokument. " : "Vorschau nicht verfügbar. "}
+                <a href={fileUrl} target="_blank" rel="noreferrer">
+                  Original öffnen
+                </a>
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">OCR-Text</h2>
-        <form action={analyzeWithTextAction} className="uwe-brain-create-form">
-          <input type="hidden" name="id" value={scan.id} />
-          <textarea
-            name="ocrText"
-            rows={10}
-            defaultValue={scan.ocrText}
-            placeholder="Erkannten oder korrigierten Text hier einfügen und analysieren."
-          />
-          <div className="uwe-inline-actions">
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Text analysieren
-            </button>
-          </div>
-        </form>
-        <form action={autoAnalyzeAction} className="uwe-inline-actions" style={{ marginTop: "0.5rem" }}>
-          <input type="hidden" name="id" value={scan.id} />
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-            Automatisch analysieren (OCR)
-          </button>
-        </form>
-        <p className="uwe-hint">
-          Auto-OCR nutzt den PDF-Textlayer oder einen lokalen RTX-Vision-Connector. Ohne Connector
-          wird der Scan auf „Wartet auf RTX“ gesetzt.
-        </p>
-        {scan.status === "analyzing" ? (
-          <form action={finalizeScanAction} className="uwe-inline-actions" style={{ marginTop: "0.5rem" }}>
-            <input type="hidden" name="id" value={scan.id} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-              Vision-Ergebnis abholen
-            </button>
-          </form>
-        ) : null}
-      </section>
-
-      {entries.length > 0 && (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Erkannte Felder</h2>
-          <dl className="uwe-detail-list">
-            {entries.map(([key, value]) => (
-              <div key={key}>
-                <dt>{FIELD_LABELS[key as keyof ExtractedFields] ?? key}</dt>
-                <dd>{formatFieldValue(key, value)}</dd>
+        <Card>
+          <CardHeader>
+            <CardTitle>OCR-Text</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <form action={analyzeWithTextAction} className="flex flex-col gap-3">
+              <input type="hidden" name="id" value={scan.id} />
+              <Textarea
+                name="ocrText"
+                rows={10}
+                defaultValue={scan.ocrText}
+                placeholder="Erkannten oder korrigierten Text hier einfügen und analysieren."
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit">Text analysieren</Button>
               </div>
-            ))}
-          </dl>
-        </section>
-      )}
-
-      {scan.proposal && (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Vorschlag</h2>
-          <p>
-            <strong>{SCAN_FILING_TARGET_LABELS[scan.proposal.target]}</strong>
-          </p>
-          {scan.proposal.rationale && <p className="uwe-dashboard-muted">{scan.proposal.rationale}</p>}
-          {scan.proposal.reminder && (
-            <p className="uwe-hint">
-              Erinnerung: {scan.proposal.reminder.label} ({scan.proposal.reminder.date})
+            </form>
+            <form action={autoAnalyzeAction} className="flex flex-wrap gap-2">
+              <input type="hidden" name="id" value={scan.id} />
+              <Button type="submit" variant="secondary">
+                Automatisch analysieren (OCR)
+              </Button>
+            </form>
+            <p className="text-sm text-muted-foreground">
+              Auto-OCR nutzt den PDF-Textlayer oder einen lokalen RTX-Vision-Connector. Ohne Connector
+              wird der Scan auf „Wartet auf RTX“ gesetzt.
             </p>
-          )}
-        </section>
-      )}
+            {scan.status === "analyzing" ? (
+              <form action={finalizeScanAction} className="flex flex-wrap gap-2">
+                <input type="hidden" name="id" value={scan.id} />
+                <Button type="submit" variant="secondary">
+                  Vision-Ergebnis abholen
+                </Button>
+              </form>
+            ) : null}
+          </CardContent>
+        </Card>
 
-      {scan.uncertainties.length > 0 && (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Unsicherheiten</h2>
-          <ul>
-            {scan.uncertainties.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">DnD-Modus</h2>
-        {scan.privacyLevel === "dnd" && scan.worldId ? (
-          <p className="uwe-hint">
-            DnD-Modus aktiv — Welt zugeordnet. DnD-Ziele (Sessionnotiz / Handout) legen
-            eine Draft-Seite in der Welt an (kein Auto-Kanon).
-          </p>
-        ) : (
-          <form action={setScanDndWorldAction} className="uwe-brain-create-form">
-            <input type="hidden" name="id" value={scan.id} />
-            <label className="uwe-capture-field">
-              Welt zuordnen (für DnD-Ablage)
-              <select name="worldId" defaultValue="">
-                <option value="">— Welt wählen —</option>
-                {worlds.map((world) => (
-                  <option key={world.id} value={world.id}>
-                    {world.name}
-                  </option>
+        {entries.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Erkannte Felder</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-[minmax(9rem,13rem)_1fr] gap-x-4 gap-y-1.5 text-sm">
+                {entries.map(([key, value]) => (
+                  <div key={key} className="contents">
+                    <dt className="text-muted-foreground">
+                      {FIELD_LABELS[key as keyof ExtractedFields] ?? key}
+                    </dt>
+                    <dd>{formatFieldValue(key, value)}</dd>
+                  </div>
                 ))}
-              </select>
-            </label>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-              DnD-Modus aktivieren
-            </button>
-          </form>
+              </dl>
+            </CardContent>
+          </Card>
         )}
-      </section>
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Aktionen</h2>
-        <form action={fileScanAction} className="uwe-brain-create-form">
-          <input type="hidden" name="id" value={scan.id} />
-          <label className="uwe-capture-field">
-            Ablage-Ziel
-            <select name="target" defaultValue={defaultTarget}>
-              {FILING_TARGETS.map((target) => (
-                <option key={target} value={target}>
-                  {SCAN_FILING_TARGET_LABELS[target]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Bestätigen und ablegen
-          </button>
-        </form>
+        {scan.proposal && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Vorschlag</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1.5 text-sm">
+              <p>
+                <strong>{SCAN_FILING_TARGET_LABELS[scan.proposal.target]}</strong>
+              </p>
+              {scan.proposal.rationale && (
+                <p className="text-muted-foreground">{scan.proposal.rationale}</p>
+              )}
+              {scan.proposal.reminder && (
+                <p className="text-muted-foreground">
+                  Erinnerung: {scan.proposal.reminder.label} ({scan.proposal.reminder.date})
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-        <div className="uwe-inline-actions" style={{ marginTop: "0.75rem" }}>
-          <form action={rejectScanAction}>
-            <input type="hidden" name="id" value={scan.id} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-              Ablehnen
-            </button>
-          </form>
-          <form action={archiveScanAction}>
-            <input type="hidden" name="id" value={scan.id} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-              Archivieren
-            </button>
-          </form>
-        </div>
-      </section>
+        {scan.uncertainties.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Unsicherheiten</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc space-y-1 pl-5 text-sm">
+                {scan.uncertainties.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
-      <p className="uwe-dashboard-muted">
-        <Link href="/scan-inbox">← Zurück zur Scan Inbox</Link>
-      </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>DnD-Modus</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {scan.privacyLevel === "dnd" && scan.worldId ? (
+              <p className="text-sm text-muted-foreground">
+                DnD-Modus aktiv — Welt zugeordnet. DnD-Ziele (Sessionnotiz / Handout) legen
+                eine Draft-Seite in der Welt an (kein Auto-Kanon).
+              </p>
+            ) : (
+              <form action={setScanDndWorldAction} className="flex flex-col gap-3">
+                <input type="hidden" name="id" value={scan.id} />
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="scan-dnd-world">Welt zuordnen (für DnD-Ablage)</Label>
+                  {/* TODO(design-kit): Kit-Select verlangt einen definierten Wert; hier nativ, da ein echter Leerwert ("— Welt wählen —") benötigt wird. */}
+                  <select
+                    id="scan-dnd-world"
+                    name="worldId"
+                    defaultValue=""
+                    className={NATIVE_SELECT_CLASS}
+                  >
+                    <option value="">— Welt wählen —</option>
+                    {worlds.map((world) => (
+                      <option key={world.id} value={world.id}>
+                        {world.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button type="submit" variant="secondary" className="self-start">
+                  DnD-Modus aktivieren
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Aktionen</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <form action={fileScanAction} className="flex flex-col gap-3">
+              <input type="hidden" name="id" value={scan.id} />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="scan-filing-target">Ablage-Ziel</Label>
+                <Select name="target" defaultValue={defaultTarget}>
+                  <SelectTrigger id="scan-filing-target">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FILING_TARGETS.map((target) => (
+                      <SelectItem key={target} value={target}>
+                        {SCAN_FILING_TARGET_LABELS[target]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="self-start">
+                Bestätigen und ablegen
+              </Button>
+            </form>
+
+            <div className="flex flex-wrap gap-2">
+              <form action={rejectScanAction}>
+                <input type="hidden" name="id" value={scan.id} />
+                <Button type="submit" variant="secondary">
+                  Ablehnen
+                </Button>
+              </form>
+              <form action={archiveScanAction}>
+                <input type="hidden" name="id" value={scan.id} />
+                <Button type="submit" variant="secondary">
+                  Archivieren
+                </Button>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="text-sm text-muted-foreground">
+          <Link href="/scan-inbox">← Zurück zur Scan Inbox</Link>
+        </p>
+      </div>
     </StudioShell>
   );
 }

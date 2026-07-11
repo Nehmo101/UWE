@@ -4,6 +4,7 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
 
 interface BackupPermissions {
   role: string;
@@ -68,6 +69,15 @@ interface Props {
   defaultWorldSlug?: string;
   defaultCampaignSlug?: string;
 }
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+const ACTIONS_TD_CLASS = `${TD_CLASS} flex flex-wrap gap-2`;
+const LIST_CLASS = "list-disc space-y-1 pl-5 text-sm";
+
+/** Native select — fester, nicht-leerer Wertebereich, siehe Muster in UserManagementWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -319,9 +329,9 @@ export function BackupWorkspace({
   }
 
   return (
-    <div className="uwe-backup-workspace">
+    <div className="flex flex-col gap-6">
       {permissions && (
-        <p className="uwe-hint" style={{ marginBottom: "1rem" }}>
+        <p className="text-sm text-muted-foreground">
           Rolle: <strong>{permissions.role}</strong> · Aufbewahrung: letzte{" "}
           {permissions.retentionCount} Backups
           {permissions.encryptionConfigured ? " · Verschlüsselung aktiv (ENV)" : ""}
@@ -329,365 +339,316 @@ export function BackupWorkspace({
       )}
 
       {permissions?.canCreate && (
-      <section className="uwe-panel" style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Backup erstellen</h2>
-        <div className="uwe-filter-bar" style={{ marginBottom: "1rem" }}>
-          {(["full", "world", "campaign"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={backupType === type ? "active" : undefined}
-              onClick={() => setBackupType(type)}
-            >
-              {type === "full" ? "Vollständig" : type === "world" ? "Welt" : "Kampagne"}
-            </button>
-          ))}
-        </div>
-
-        {(backupType === "world" || backupType === "campaign") && (
-          <label style={{ display: "block", marginBottom: "0.75rem" }}>
-            Welt-Slug
-            <input
-              className="uwe-input"
-              value={worldSlug}
-              onChange={(event) => setWorldSlug(event.target.value)}
-              placeholder="terra"
-            />
-          </label>
-        )}
-
-        {backupType === "campaign" && (
-          <label style={{ display: "block", marginBottom: "0.75rem" }}>
-            Kampagnen-Slug
-            <input
-              className="uwe-input"
-              value={campaignSlug}
-              onChange={(event) => setCampaignSlug(event.target.value)}
-              placeholder="hauptkampagne"
-            />
-          </label>
-        )}
-
-        <label style={{ display: "block", marginBottom: "1rem" }}>
-          Format
-          <select
-            className="uwe-input"
-            value={format}
-            onChange={(event) => setFormat(event.target.value as "zip" | "json")}
-          >
-            <option value="zip">ZIP (Daten + Assets)</option>
-            <option value="json">JSON (nur Metadaten)</option>
-          </select>
-        </label>
-
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          disabled={busy === "create"}
-          onClick={createBackup}
-        >
-          {busy === "create" ? "Erstelle…" : "Backup erstellen"}
-        </button>
-        {createSuccess && (
-          <p style={{ marginTop: "0.75rem", color: "var(--uwe-success, green)" }} role="status">
-            {createSuccess}
-          </p>
-        )}
-      </section>
-      )}
-
-      <section className="uwe-panel" style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Gespeicherte Backups</h2>
-        {backups.length === 0 ? (
-          <p className="wiki-empty">Noch keine Backups vorhanden.</p>
-        ) : (
-          <div className="uwe-table-wrap">
-            <table className="uwe-table">
-              <thead>
-                <tr>
-                  <th>Datei</th>
-                  <th>Typ</th>
-                  <th>Inhalt</th>
-                  <th>Erstellt</th>
-                  <th>Aktionen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {backups.map((backup) => (
-                  <tr key={backup.id}>
-                    <td>{backup.filename}</td>
-                    <td>{backup.manifest.type}</td>
-                    <td>
-                      {backup.manifest.stats.worlds} Welten · {backup.manifest.stats.pages} Seiten ·{" "}
-                      {backup.manifest.stats.assets} Assets
-                    </td>
-                    <td>{formatStudioDate(backup.manifest.createdAt)}</td>
-                    <td style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      {permissions?.canDownload && (
-                        <button
-                          type="button"
-                          className="uwe-v2-btn"
-                          disabled={busy === "download"}
-                          onClick={() => downloadBackup(backup.id, backup.filename)}
-                        >
-                          Download
-                        </button>
-                      )}
-                      {permissions?.canPreview && (
-                      <button
-                        type="button"
-                        className="uwe-v2-btn"
-                        onClick={() => {
-                          setSelectedBackupId(backup.id);
-                          setUploadBase64("");
-                          setUploadFilename("");
-                          setPreview(null);
-                          setResult(null);
-                          setRestoreConfirmText("");
-                        }}
-                      >
-                        Für Restore wählen
-                      </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {schedule && permissions?.role === "owner" && (
-        <section className="uwe-panel" style={{ marginBottom: "1.5rem" }}>
-          <h2 style={{ marginTop: 0 }}>Automatische Backups</h2>
-          <label style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "1rem" }}>
-            <input
-              type="checkbox"
-              checked={schedule.enabled}
-              onChange={(event) => setSchedule({ ...schedule, enabled: event.target.checked })}
-            />
-            Automatische Backups aktiviert
-          </label>
-
-          <label style={{ display: "block", marginBottom: "1rem" }}>
-            Häufigkeit
-            <select
-              className="uwe-input"
-              value={schedule.frequency}
-              disabled={!schedule.enabled}
-              onChange={(event) =>
-                setSchedule({ ...schedule, frequency: event.target.value as BackupSchedule["frequency"] })
-              }
-            >
-              <option value="daily">Täglich</option>
-              <option value="weekly">Wöchentlich</option>
-              <option value="monthly">Monatlich</option>
-            </select>
-          </label>
-
-          <p className="uwe-hint" style={{ marginBottom: "1rem" }}>
-            Der Systemd-Timer läuft täglich um 03:15 Uhr und prüft diese Einstellung.
-            Bei wöchentlichem oder monatlichem Plan wird ein Backup nur erstellt, wenn
-            die letzte Sicherung älter als 7 bzw. 30 Tage ist.
-          </p>
-
-          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-primary"
-              disabled={scheduleBusy}
-              onClick={saveSchedule}
-            >
-              {scheduleBusy ? "Speichere…" : "Zeitplan speichern"}
-            </button>
-            {scheduleSaved && <span style={{ color: "var(--uwe-success, green)" }}>Gespeichert.</span>}
-          </div>
-          {scheduleError && (
-            <p className="uwe-error-alert" role="alert" style={{ marginTop: "0.75rem" }}>
-              {scheduleError}
-            </p>
-          )}
-        </section>
-      )}
-
-      {permissions?.canPreview && (
-      <section className="uwe-panel">
-        <h2 style={{ marginTop: 0 }}>Backup importieren &amp; wiederherstellen</h2>
-        <p className="uwe-import-alerts" style={{ marginTop: 0, padding: 0, background: "none", border: "none" }}>
-          <strong style={{ color: "var(--uwe-warning)" }}>Warnung:</strong> Ein Restore überschreibt bestehende Daten. Vor jedem Restore wird
-          automatisch eine Sicherheitskopie erstellt. Nur OWNER dürfen Restore ausführen.
-        </p>
-        <p className="uwe-hint">
-          Secrets, Passwörter, Auth-Sessions und API-Keys werden nicht exportiert oder importiert.
-        </p>
-
-        <label style={{ display: "block", marginBottom: "1rem" }}>
-          Backup-Datei hochladen (.zip oder .json)
-          <input
-            type="file"
-            accept=".zip,.json,application/zip,application/json"
-            onChange={(event) => handleUpload(event.target.files?.[0] ?? null)}
-          />
-        </label>
-
-        {selectedBackupId && (
-          <p style={{ marginBottom: "1rem" }}>
-            Ausgewähltes Backup: <strong>{selectedBackupId}</strong>
-          </p>
-        )}
-
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-          <button
-            type="button"
-            className="uwe-v2-btn"
-            disabled={busy === "preview" || (!selectedBackupId && !uploadBase64)}
-            onClick={runPreview}
-          >
-            {busy === "preview" ? "Analysiere…" : "Preview anzeigen"}
-          </button>
-          {permissions?.canRestore && (
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            disabled={busy === "restore" || !preview}
-            onClick={runRestore}
-          >
-            {busy === "restore" ? "Stelle wieder her…" : "Restore bestätigen"}
-          </button>
-          )}
-        </div>
-
-        {showRestoreWarning && (
-          <div
-            className="uwe-import-alerts"
-            style={{ marginBottom: "1rem" }}
-          >
-            <h3 style={{ marginTop: 0 }}>Restore wirklich ausführen?</h3>
-            <p>
-              Dieser Vorgang kann bestehende Welten, Seiten und Medien verändern. Eine
-              Sicherheitskopie wird vorab erstellt, trotzdem solltest du dir sicher sein.
-            </p>
-            <label style={{ display: "block", margin: "0.75rem 0" }}>
-              Zur Bestätigung <strong>RESTORE</strong> eingeben
-              <input
-                type="text"
-                value={restoreConfirmText}
-                onChange={(event) => setRestoreConfirmText(event.target.value)}
-                placeholder="RESTORE"
-                autoComplete="off"
-                spellCheck={false}
-                style={{ display: "block", width: "100%", marginTop: "0.35rem" }}
-              />
-            </label>
-            <label style={{ display: "block", margin: "0.75rem 0" }}>
-              <input
-                type="checkbox"
-                checked={sendPasswordSetupEmails}
-                onChange={(event) => setSendPasswordSetupEmails(event.target.checked)}
-              />
-              Passwort-Setup-Mails an wiederhergestellte Benutzer senden (SMTP erforderlich)
-            </label>
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button
-                type="button"
-                className="uwe-v2-btn uwe-v2-btn-primary"
-                disabled={restoreConfirmText.trim() !== "RESTORE" || busy === "restore"}
-                onClick={runRestore}
-              >
-                Restore endgültig starten
-              </button>
-              <button
-                type="button"
-                className="uwe-v2-btn"
-                onClick={() => {
-                  setShowRestoreWarning(false);
-                  setRestoreConfirmText("");
-                }}
-              >
-                Abbrechen
-              </button>
+        <Card>
+          <CardHeader>
+            <CardTitle>Backup erstellen</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-wrap gap-2">
+              {(["full", "world", "campaign"] as const).map((type) => (
+                <Button key={type} type="button" variant={backupType === type ? "default" : "secondary"} onClick={() => setBackupType(type)}>
+                  {type === "full" ? "Vollständig" : type === "world" ? "Welt" : "Kampagne"}
+                </Button>
+              ))}
             </div>
-          </div>
-        )}
 
-        {preview && (
-          <div style={{ marginBottom: "1rem" }}>
-            <h3>Vorschau</h3>
-            <p>{previewSummary}</p>
-            {preview.warnings.length > 0 && (
-              <ul>
-                {preview.warnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
+            {(backupType === "world" || backupType === "campaign") && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="backup-world-slug">Welt-Slug</Label>
+                <Input id="backup-world-slug" value={worldSlug} onChange={(event) => setWorldSlug(event.target.value)} placeholder="terra" />
+              </div>
             )}
-            <div className="uwe-table-wrap">
-              <table className="uwe-table">
+
+            {backupType === "campaign" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="backup-campaign-slug">Kampagnen-Slug</Label>
+                <Input id="backup-campaign-slug" value={campaignSlug} onChange={(event) => setCampaignSlug(event.target.value)} placeholder="hauptkampagne" />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="backup-format">Format</Label>
+              {/* TODO(design-kit): natives Select — fester Wertebereich, kein Leerwert, siehe Muster in UserManagementWorkspace.tsx. */}
+              <select id="backup-format" value={format} onChange={(event) => setFormat(event.target.value as "zip" | "json")} className={NATIVE_SELECT_CLASS}>
+                <option value="zip">ZIP (Daten + Assets)</option>
+                <option value="json">JSON (nur Metadaten)</option>
+              </select>
+            </div>
+
+            <Button type="button" disabled={busy === "create"} onClick={createBackup} className="self-start">
+              {busy === "create" ? "Erstelle…" : "Backup erstellen"}
+            </Button>
+            {createSuccess && (
+              <Alert tone="success" role="status">
+                {createSuccess}
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gespeicherte Backups</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {backups.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Backups vorhanden.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
                 <thead>
                   <tr>
-                    <th>Typ</th>
-                    <th>Bezeichner</th>
-                    <th>Status</th>
-                    <th>Hinweis</th>
+                    <th className={TH_CLASS}>Datei</th>
+                    <th className={TH_CLASS}>Typ</th>
+                    <th className={TH_CLASS}>Inhalt</th>
+                    <th className={TH_CLASS}>Erstellt</th>
+                    <th className={TH_CLASS}>Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.items.slice(0, 50).map((item) => (
-                    <tr key={`${item.entityType}-${item.identifier}-${item.status}`}>
-                      <td>{item.entityType}</td>
-                      <td>{item.identifier}</td>
-                      <td>{item.status}</td>
-                      <td>{item.message ?? "—"}</td>
+                  {backups.map((backup) => (
+                    <tr key={backup.id}>
+                      <td className={TD_CLASS}>{backup.filename}</td>
+                      <td className={TD_CLASS}>{backup.manifest.type}</td>
+                      <td className={TD_CLASS}>
+                        {backup.manifest.stats.worlds} Welten · {backup.manifest.stats.pages} Seiten ·{" "}
+                        {backup.manifest.stats.assets} Assets
+                      </td>
+                      <td className={TD_CLASS}>{formatStudioDate(backup.manifest.createdAt)}</td>
+                      <td className={ACTIONS_TD_CLASS}>
+                        {permissions?.canDownload && (
+                          <Button type="button" variant="secondary" size="sm" disabled={busy === "download"} onClick={() => downloadBackup(backup.id, backup.filename)}>
+                            Download
+                          </Button>
+                        )}
+                        {permissions?.canPreview && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedBackupId(backup.id);
+                              setUploadBase64("");
+                              setUploadFilename("");
+                              setPreview(null);
+                              setResult(null);
+                              setRestoreConfirmText("");
+                            }}
+                          >
+                            Für Restore wählen
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
+        </CardContent>
+      </Card>
 
-        {result && (
-          <div>
-            <h3>Ergebnis</h3>
-            <p>
-              {result.created} erstellt · {result.updated} aktualisiert · {result.skipped} übersprungen ·{" "}
-              {result.failed} fehlgeschlagen
+      {schedule && permissions?.role === "owner" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Automatische Backups</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {/* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */}
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={schedule.enabled} onChange={(event) => setSchedule({ ...schedule, enabled: event.target.checked })} className="h-4 w-4 rounded border-input" />
+              Automatische Backups aktiviert
+            </label>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="backup-schedule-frequency">Häufigkeit</Label>
+              {/* TODO(design-kit): natives Select — fester Wertebereich, kein Leerwert. */}
+              <select
+                id="backup-schedule-frequency"
+                value={schedule.frequency}
+                disabled={!schedule.enabled}
+                onChange={(event) => setSchedule({ ...schedule, frequency: event.target.value as BackupSchedule["frequency"] })}
+                className={NATIVE_SELECT_CLASS}
+              >
+                <option value="daily">Täglich</option>
+                <option value="weekly">Wöchentlich</option>
+                <option value="monthly">Monatlich</option>
+              </select>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Der Systemd-Timer läuft täglich um 03:15 Uhr und prüft diese Einstellung.
+              Bei wöchentlichem oder monatlichem Plan wird ein Backup nur erstellt, wenn
+              die letzte Sicherung älter als 7 bzw. 30 Tage ist.
             </p>
-            {result.errors.length > 0 && (
-              <div>
-                <h4>Fehlerprotokoll</h4>
-                <ul>
-                  {result.errors.map((entry) => (
-                    <li key={entry}>{entry}</li>
-                  ))}
-                </ul>
-              </div>
+
+            <div className="flex items-center gap-3">
+              <Button type="button" disabled={scheduleBusy} onClick={saveSchedule}>
+                {scheduleBusy ? "Speichere…" : "Zeitplan speichern"}
+              </Button>
+              {scheduleSaved && <span className="text-sm text-success">Gespeichert.</span>}
+            </div>
+            {scheduleError && (
+              <Alert tone="danger" role="alert">
+                {scheduleError}
+              </Alert>
             )}
-            {(result.usersNeedingPassword?.length ?? 0) > 0 && (
-              <div>
-                <h4>Benutzer ohne Passwort</h4>
-                <p>
-                  Diese Konten wurden ohne Passwort wiederhergestellt. Nutzer müssen{" "}
-                  <strong>/forgot-password</strong> verwenden oder ein Admin sendet Setup-Mails beim
-                  Restore.
+          </CardContent>
+        </Card>
+      )}
+
+      {permissions?.canPreview && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Backup importieren &amp; wiederherstellen</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Alert tone="warning">
+              <strong className="text-foreground">Warnung:</strong> Ein Restore überschreibt bestehende Daten.
+              Vor jedem Restore wird automatisch eine Sicherheitskopie erstellt. Nur OWNER dürfen Restore
+              ausführen.
+            </Alert>
+            <p className="text-sm text-muted-foreground">
+              Secrets, Passwörter, Auth-Sessions und API-Keys werden nicht exportiert oder importiert.
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="backup-upload">Backup-Datei hochladen (.zip oder .json)</Label>
+              <input id="backup-upload" type="file" accept=".zip,.json,application/zip,application/json" onChange={(event) => handleUpload(event.target.files?.[0] ?? null)} className="text-sm text-foreground" />
+            </div>
+
+            {selectedBackupId && (
+              <p className="text-sm">
+                Ausgewähltes Backup: <strong>{selectedBackupId}</strong>
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" disabled={busy === "preview" || (!selectedBackupId && !uploadBase64)} onClick={runPreview}>
+                {busy === "preview" ? "Analysiere…" : "Preview anzeigen"}
+              </Button>
+              {permissions?.canRestore && (
+                <Button type="button" variant="destructive" disabled={busy === "restore" || !preview} onClick={runRestore}>
+                  {busy === "restore" ? "Stelle wieder her…" : "Restore bestätigen"}
+                </Button>
+              )}
+            </div>
+
+            {showRestoreWarning && (
+              <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-destructive/40 bg-destructive/10 p-4">
+                <h3 className="text-base font-semibold">Restore wirklich ausführen?</h3>
+                <p className="text-sm">
+                  Dieser Vorgang kann bestehende Welten, Seiten und Medien verändern. Eine
+                  Sicherheitskopie wird vorab erstellt, trotzdem solltest du dir sicher sein.
                 </p>
-                <ul>
-                  {result.usersNeedingPassword!.map((email) => (
-                    <li key={email}>{email}</li>
-                  ))}
-                </ul>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="backup-restore-confirm">
+                    Zur Bestätigung <strong>RESTORE</strong> eingeben
+                  </Label>
+                  <Input id="backup-restore-confirm" type="text" value={restoreConfirmText} onChange={(event) => setRestoreConfirmText(event.target.value)} placeholder="RESTORE" autoComplete="off" spellCheck={false} />
+                </div>
+                {/* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */}
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={sendPasswordSetupEmails} onChange={(event) => setSendPasswordSetupEmails(event.target.checked)} className="h-4 w-4 rounded border-input" />
+                  Passwort-Setup-Mails an wiederhergestellte Benutzer senden (SMTP erforderlich)
+                </label>
+                <div className="flex gap-2">
+                  <Button type="button" variant="destructive" disabled={restoreConfirmText.trim() !== "RESTORE" || busy === "restore"} onClick={runRestore}>
+                    Restore endgültig starten
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setShowRestoreWarning(false);
+                      setRestoreConfirmText("");
+                    }}
+                  >
+                    Abbrechen
+                  </Button>
+                </div>
               </div>
             )}
-          </div>
-        )}
-      </section>
+
+            {preview && (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold">Vorschau</h3>
+                <p className="text-sm">{previewSummary}</p>
+                {preview.warnings.length > 0 && (
+                  <ul className={LIST_CLASS}>
+                    {preview.warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className={TH_CLASS}>Typ</th>
+                        <th className={TH_CLASS}>Bezeichner</th>
+                        <th className={TH_CLASS}>Status</th>
+                        <th className={TH_CLASS}>Hinweis</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.items.slice(0, 50).map((item) => (
+                        <tr key={`${item.entityType}-${item.identifier}-${item.status}`}>
+                          <td className={TD_CLASS}>{item.entityType}</td>
+                          <td className={TD_CLASS}>{item.identifier}</td>
+                          <td className={TD_CLASS}>{item.status}</td>
+                          <td className={TD_CLASS}>{item.message ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {result && (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold">Ergebnis</h3>
+                <p className="text-sm">
+                  {result.created} erstellt · {result.updated} aktualisiert · {result.skipped} übersprungen ·{" "}
+                  {result.failed} fehlgeschlagen
+                </p>
+                {result.errors.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold">Fehlerprotokoll</h4>
+                    <ul className={LIST_CLASS}>
+                      {result.errors.map((entry) => (
+                        <li key={entry}>{entry}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(result.usersNeedingPassword?.length ?? 0) > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold">Benutzer ohne Passwort</h4>
+                    <p className="text-sm">
+                      Diese Konten wurden ohne Passwort wiederhergestellt. Nutzer müssen{" "}
+                      <strong>/forgot-password</strong> verwenden oder ein Admin sendet Setup-Mails beim
+                      Restore.
+                    </p>
+                    <ul className={LIST_CLASS}>
+                      {result.usersNeedingPassword!.map((email) => (
+                        <li key={email}>{email}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {error && (
-        <p className="uwe-error-alert" role="alert">
+        <Alert tone="danger" role="alert">
           {error}
-        </p>
+        </Alert>
       )}
     </div>
   );

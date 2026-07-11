@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { Button } from "@/src/components/ui";
 
 interface AgentJobsPollerProps {
   runningJobIds: string[];
@@ -50,7 +51,7 @@ export function AgentJobsPoller({ runningJobIds }: AgentJobsPollerProps) {
   if (activeIds.length === 0) return null;
 
   return (
-    <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
+    <p className="mb-4 text-sm text-muted-foreground">
       {activeIds.length} Agent-Job(s) laufen — Status wird alle 10 Sekunden aktualisiert.
     </p>
   );
@@ -89,15 +90,10 @@ export function AgentJobRetryButton({ jobId, disabled }: AgentJobRetryButtonProp
 
   return (
     <span>
-      <button
-        type="button"
-        className="uwe-v2-btn uwe-v2-btn-ghost"
-        disabled={disabled || busy}
-        onClick={() => void handleRetry()}
-      >
+      <Button type="button" variant="ghost" disabled={disabled || busy} onClick={() => void handleRetry()}>
         {busy ? "Starte…" : "Erneut versuchen"}
-      </button>
-      {error && <span className="uwe-notice-warn">{error}</span>}
+      </Button>
+      {error && <span className="text-sm text-destructive">{error}</span>}
     </span>
   );
 }

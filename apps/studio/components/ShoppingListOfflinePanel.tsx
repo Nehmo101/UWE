@@ -153,7 +153,7 @@ export function ShoppingListOfflinePanel({ listId, items }: Props) {
   }
 
   return (
-    <p className="uwe-dashboard-muted" style={{ fontSize: "0.85rem" }}>
+    <p className="text-sm text-muted-foreground" style={{ fontSize: "0.85rem" }}>
       {!online ? (
         <>
           <strong>Offline-Modus:</strong> Abhaken wird lokal zwischengespeichert und beim
@@ -171,7 +171,7 @@ export function ShoppingListOfflinePanel({ listId, items }: Props) {
           <button
             key={itemId}
             type="button"
-            className="uwe-v2-btn uwe-v2-btn-small"
+            className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-transparent hover:bg-muted h-8 px-3 text-xs"
             style={{ marginLeft: "0.5rem" }}
             onClick={() => void toggleOffline(itemId)}
           >

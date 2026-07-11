@@ -14,6 +14,19 @@ import {
   BUG_SEVERITY_ORDER,
 } from "./bug-badges";
 import { BUG_REPORT_SEVERITY_LABELS, type BugReportSeverity, type BugReportStatus } from "./bug-constants";
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 export interface BugReportDto {
   id: string;
@@ -69,9 +82,9 @@ export function BugWorkspaceClient({
   );
 
   return (
-    <div className="uwe-v2-dashboard-grid" data-columns="2">
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Bug-Meldungen ({reports.length})</h2>
+    <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2" data-columns="2">
+      <Card className="flex flex-col gap-4 p-4">
+        <h2 className="text-base font-semibold tracking-tight">Bug-Meldungen ({reports.length})</h2>
         <BugReportForm filterStatus={filterStatus} filterSeverity={filterSeverity} />
         <BugReportList
           reports={reports}
@@ -80,7 +93,7 @@ export function BugWorkspaceClient({
           filterSeverity={filterSeverity}
           onSelect={setSelectedId}
         />
-      </section>
+      </Card>
 
       <BugDetailPanel
         report={selected}
@@ -105,10 +118,10 @@ function BugDetailPanel({
 }) {
   if (!report) {
     return (
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Details</h2>
-        <p className="uwe-dashboard-muted">Wähle links eine Bug-Meldung aus.</p>
-      </section>
+      <Card className="flex flex-col gap-4 p-4">
+        <h2 className="text-base font-semibold tracking-tight">Details</h2>
+        <p className="text-sm text-muted-foreground">Wähle links eine Bug-Meldung aus.</p>
+      </Card>
     );
   }
 
@@ -116,26 +129,26 @@ function BugDetailPanel({
   const updatedAt = new Date(report.updatedAt).toLocaleString("de-DE");
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Details</h2>
+    <Card className="flex flex-col gap-4 p-4">
+      <h2 className="text-base font-semibold tracking-tight">Details</h2>
 
-      <div className="uwe-idea-detail">
-        <div className="uwe-idea-detail-head">
-          <h3 className="uwe-idea-detail-title">{report.title}</h3>
-          <span className="uwe-bug-list-badges">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base font-semibold">{report.title}</h3>
+          <span className="flex flex-wrap items-center gap-1.5">
             <BugSeverityBadge severity={report.severity} />
             <BugStatusBadge status={report.status} />
           </span>
         </div>
 
         {report.module ? (
-          <p className="uwe-dashboard-muted">
+          <p className="text-sm text-muted-foreground">
             Modul: <strong>{report.module}</strong>
           </p>
         ) : null}
 
         {report.githubIssueUrl ? (
-          <p className="uwe-dashboard-muted">
+          <p className="text-sm text-muted-foreground">
             GitHub:{" "}
             <Link href={report.githubIssueUrl} target="_blank" rel="noreferrer">
               Issue öffnen
@@ -146,14 +159,14 @@ function BugDetailPanel({
         )}
 
         {report.description ? (
-          <p className="uwe-idea-detail-body">{report.description}</p>
+          <p className="whitespace-pre-wrap text-sm text-muted-foreground">{report.description}</p>
         ) : (
-          <p className="uwe-dashboard-muted">Keine Beschreibung.</p>
+          <p className="text-sm text-muted-foreground">Keine Beschreibung.</p>
         )}
 
         {report.screenshotAssetId ? (
-          <div className="uwe-bug-screenshot">
-            <p className="uwe-dashboard-muted">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">
               Screenshot:{" "}
               <Link href={`/api/assets/${report.screenshotAssetId}/file`} target="_blank">
                 Asset anzeigen
@@ -163,61 +176,70 @@ function BugDetailPanel({
             <img
               src={`/api/assets/${report.screenshotAssetId}/file`}
               alt="Bug-Screenshot"
-              className="uwe-bug-screenshot-image"
+              className="block max-h-80 max-w-full rounded-[var(--radius)] border border-border"
             />
           </div>
         ) : null}
 
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Erstellt: {createdAt}
           <br />
           Aktualisiert: {updatedAt}
         </p>
       </div>
 
-      <form action={updateBugReportAction} className="uwe-brain-create-form">
+      <form
+        action={updateBugReportAction}
+        className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4"
+      >
         <input type="hidden" name="id" value={report.id} />
         {filterStatus ? <input type="hidden" name="filterStatus" value={filterStatus} /> : null}
         {filterSeverity ? (
           <input type="hidden" name="filterSeverity" value={filterSeverity} />
         ) : null}
-        <label>
-          Titel
-          <input name="title" defaultValue={report.title} required />
-        </label>
-        <label>
-          Beschreibung
-          <textarea name="description" rows={6} defaultValue={report.description} />
-        </label>
-        <label>
-          Schweregrad
-          <select name="severity" defaultValue={report.severity}>
-            {BUG_SEVERITY_ORDER.map((severity) => (
-              <option key={severity} value={severity}>
-                {BUG_REPORT_SEVERITY_LABELS[severity]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Modul / Bereich
-          <input name="module" defaultValue={report.module ?? ""} />
-        </label>
-        <label>
-          GitHub Issue
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="bug-edit-title">Titel</Label>
+          <Input id="bug-edit-title" name="title" defaultValue={report.title} required />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="bug-edit-description">Beschreibung</Label>
+          <Textarea id="bug-edit-description" name="description" rows={6} defaultValue={report.description} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="bug-edit-severity">Schweregrad</Label>
+          <Select name="severity" defaultValue={report.severity}>
+            <SelectTrigger id="bug-edit-severity" aria-label="Schweregrad">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BUG_SEVERITY_ORDER.map((severity) => (
+                <SelectItem key={severity} value={severity}>
+                  {BUG_REPORT_SEVERITY_LABELS[severity]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="bug-edit-module">Modul / Bereich</Label>
+          <Input id="bug-edit-module" name="module" defaultValue={report.module ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="bug-edit-github">GitHub Issue</Label>
+          <Input
+            id="bug-edit-github"
             name="githubIssueUrl"
             type="url"
             defaultValue={report.githubIssueUrl ?? ""}
             placeholder="https://github.com/owner/repo/issues/123"
           />
-        </label>
+        </div>
         <BugScreenshotUpload initialAssetId={report.screenshotAssetId} />
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+        <Button type="submit" variant="secondary" size="sm">
           Speichern
-        </button>
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -269,25 +291,26 @@ function CreateBugGithubIssueButton({
   }
 
   return (
-    <div className="uwe-bug-github-sync">
-      <button
+    <div className="flex flex-col gap-1.5">
+      <Button
         type="button"
-        className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
+        variant="secondary"
+        size="sm"
         onClick={() => void createIssue()}
         disabled={disabled}
         title={title}
       >
         {busy ? "Erstellt GitHub-Issue…" : "Als GitHub-Issue erstellen"}
-      </button>
+      </Button>
       {!ready ? (
-        <p className="uwe-hint">
+        <p className="text-sm text-muted-foreground">
           GitHub-Sync nicht konfiguriert — setze{" "}
           <code>AGENT_JOBS_GITHUB_REPO=owner/repo</code> und einen Server-Token (
           <code>GITHUB_TOKEN</code> oder <code>AGENT_JOBS_GITHUB_TOKEN</code>).{" "}
           <Link href="/admin/agent-jobs">Agent Jobs</Link>
         </p>
       ) : null}
-      {error ? <p className="uwe-hint uwe-hint-error">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
     </div>
   );
 }

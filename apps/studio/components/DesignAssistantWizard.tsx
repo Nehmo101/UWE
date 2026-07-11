@@ -9,6 +9,7 @@ import type {
 } from "@uwe/ai-brain/theme-generator";
 import { runDesignAssistantTurnAction } from "../app/design-assistant-actions";
 import { saveCustomThemeAction } from "../app/custom-theme-actions";
+import { Alert, Badge, Button, Card, Input, cn } from "@/src/components/ui";
 
 type Scope = "studio" | "portal" | "both";
 
@@ -24,6 +25,10 @@ const SWATCH_KEYS: { key: string; title: string }[] = [
   { key: "fg", title: "Text" },
   { key: "accent", title: "Akzent" },
 ];
+
+/** Natives Select — kontrolliert (value/onChange); Kit-Select (Radix) ist dafür noch nicht verdrahtet. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 function slugify(value: string): string {
   return (
@@ -144,19 +149,21 @@ export function DesignAssistantWizard() {
   const empty = messages.length === 0;
 
   return (
-    <div className="uwe-design-assistant">
-      <p className="uwe-hint">
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
         Beschreibe dein Wunschdesign — der lokale RTX-Assistent stellt Rückfragen,
         schlägt Farbvarianten vor und speichert das gewählte Design als auswählbares
         Theme. Läuft lokal; es werden keine Kampagnen-Inhalte gesendet.
       </p>
 
-      <label className="uwe-design-assistant-scope">
+      <label className="flex items-center gap-2 text-sm text-muted-foreground">
         Ziel
+        {/* TODO(design-kit): kontrolliertes natives Select (value/onChange) — Kit-Select (Radix) noch nicht dafür verdrahtet. */}
         <select
           value={scope}
           onChange={(e) => setScope(e.target.value as Scope)}
           disabled={pending}
+          className={NATIVE_SELECT_CLASS}
         >
           {SCOPE_OPTIONS.map((opt) => (
             <option key={opt.id} value={opt.id}>
@@ -167,29 +174,35 @@ export function DesignAssistantWizard() {
       </label>
 
       {!empty && (
-        <div className="uwe-design-assistant-chat" role="log" aria-live="polite">
+        <Card role="log" aria-live="polite" className="flex max-h-72 flex-col gap-2 overflow-y-auto p-3">
           {messages.map((m, i) => (
-            <div
-              key={i}
-              className={`uwe-design-assistant-msg uwe-design-assistant-msg-${m.role}`}
-            >
-              <span className="uwe-design-assistant-msg-who">
+            <div key={i} className="flex flex-col gap-0.5">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
                 {m.role === "user" ? "Du" : "Assistent"}
               </span>
-              <span className="uwe-design-assistant-msg-body">{m.content}</span>
+              <span
+                className={cn(
+                  "whitespace-pre-wrap rounded-[var(--radius)] border px-2.5 py-1.5 text-sm",
+                  m.role === "user" ? "border-primary/30 bg-primary/10" : "border-border bg-card",
+                )}
+              >
+                {m.content}
+              </span>
             </div>
           ))}
           {pending && (
-            <div className="uwe-design-assistant-msg uwe-design-assistant-msg-assistant">
-              <span className="uwe-design-assistant-msg-who">Assistent</span>
-              <span className="uwe-design-assistant-msg-body">…denkt nach</span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Assistent</span>
+              <span className="whitespace-pre-wrap rounded-[var(--radius)] border border-border bg-card px-2.5 py-1.5 text-sm">
+                …denkt nach
+              </span>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {palettes.length > 0 && (
-        <div className="uwe-design-assistant-palettes">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
           {palettes.map((palette, i) => (
             <PaletteCard
               key={i}
@@ -208,33 +221,33 @@ export function DesignAssistantWizard() {
       )}
 
       {previewing && (
-        <div className="uwe-design-assistant-preview-bar">
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
           <span>Live-Vorschau aktiv.</span>
-          <button type="button" className="uwe-btn uwe-btn-ghost" onClick={resetPreview}>
+          <Button type="button" variant="ghost" size="sm" onClick={resetPreview}>
             Vorschau beenden
-          </button>
+          </Button>
         </div>
       )}
 
       {error && (
-        <p className="uwe-notice" role="status">
+        <Alert tone="danger" role="status">
           {error}
-        </p>
+        </Alert>
       )}
       {saveNote && (
-        <p className="uwe-hint" role="status">
+        <Alert tone="success" role="status">
           {saveNote}
-        </p>
+        </Alert>
       )}
 
       <form
-        className="uwe-design-assistant-input"
+        className="flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           if (canSend) sendMessage(input);
         }}
       >
-        <input
+        <Input
           type="text"
           value={input}
           placeholder={
@@ -244,10 +257,11 @@ export function DesignAssistantWizard() {
           }
           onChange={(e) => setInput(e.target.value)}
           disabled={pending}
+          className="flex-1"
         />
-        <button type="submit" className="uwe-btn uwe-btn-primary" disabled={!canSend}>
+        <Button type="submit" disabled={!canSend}>
           Senden
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -276,55 +290,47 @@ function PaletteCard({
   );
 
   return (
-    <div className="uwe-card uwe-design-assistant-palette">
-      <div className="uwe-design-assistant-swatch" aria-hidden="true">
+    <Card className="flex flex-col gap-2 p-3">
+      <div className="grid h-9 grid-cols-4 overflow-hidden rounded-[var(--radius)] border border-border" aria-hidden="true">
         {swatches.map((s) => (
           <span key={s.key} title={s.title} style={{ background: s.value }} />
         ))}
       </div>
-      <strong className="uwe-design-assistant-palette-label">{palette.label}</strong>
+      <strong className="font-semibold">{palette.label}</strong>
       {palette.description && (
-        <span className="uwe-design-assistant-palette-desc">{palette.description}</span>
+        <span className="text-xs text-muted-foreground">{palette.description}</span>
       )}
 
-      <div className="uwe-design-assistant-status">
+      <div className="flex flex-wrap gap-1.5">
         {blocked ? (
-          <span className="uwe-badge uwe-badge-danger">{errors} Fehler</span>
+          <Badge variant="danger">{errors} Fehler</Badge>
         ) : (
-          <span className="uwe-badge uwe-badge-success">AA ok</span>
+          <Badge variant="success">AA ok</Badge>
         )}
-        {warnings > 0 && (
-          <span className="uwe-badge uwe-badge-warning">{warnings} Hinweis(e)</span>
-        )}
+        {warnings > 0 && <Badge variant="warning">{warnings} Hinweis(e)</Badge>}
       </div>
 
-      <input
+      <Input
         type="text"
         aria-label="Design-Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="uwe-design-assistant-name"
       />
 
-      <div className="uwe-design-assistant-actions">
-        <button type="button" className="uwe-btn uwe-btn-ghost" onClick={onPreview}>
+      <div className="flex gap-2">
+        <Button type="button" variant="ghost" className="flex-1" onClick={onPreview}>
           Vorschau
-        </button>
+        </Button>
         {blocked ? (
-          <button type="button" className="uwe-btn uwe-btn-ghost" onClick={onImprove}>
+          <Button type="button" variant="ghost" className="flex-1" onClick={onImprove}>
             Verbessern
-          </button>
+          </Button>
         ) : (
-          <button
-            type="button"
-            className="uwe-btn uwe-btn-primary"
-            onClick={() => onSave(name)}
-            disabled={saving}
-          >
+          <Button type="button" className="flex-1" onClick={() => onSave(name)} disabled={saving}>
             Speichern
-          </button>
+          </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

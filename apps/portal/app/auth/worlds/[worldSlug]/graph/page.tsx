@@ -40,9 +40,8 @@ export default async function AuthWorldGraphPage({ params, searchParams }: Props
   }
 
   return (
-    <section className="portal-graph-explorer">
-      {/* Sichtbarer Titel liegt als Overlay im Graphen; hier nur für Screenreader. */}
-      <h1 className="uwe-graph-a11y">Beziehungsnetz — {worldName}</h1>
+    <section className="relative min-h-[70vh]">
+      <h1 className="sr-only">Beziehungsnetz — {worldName}</h1>
       <PortalGraphView
         worldSlug={worldSlug}
         worldName={worldName}

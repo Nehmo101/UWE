@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -23,21 +24,28 @@ export function OpenItemsBulkClose({ worldSlug, items, action }: Props) {
   if (items.length === 0) return null;
 
   return (
-    <form action={action} className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Bulk schließen</h2>
-      <p className="uwe-dashboard-muted">Offene Quests als erledigt markieren (nur Quest-Kategorie).</p>
-      <ul className="auth-page-list">
+    <form
+      action={action}
+      className="flex flex-col gap-3 rounded-[var(--radius)] border border-border bg-card p-6 text-card-foreground shadow-sm"
+    >
+      <h2 className="text-base font-semibold tracking-tight">Bulk schließen</h2>
+      <p className="text-sm text-muted-foreground">
+        Offene Quests als erledigt markieren (nur Quest-Kategorie).
+      </p>
+      <ul className="flex flex-col gap-2">
         {items
           .filter((item) => item.category === "open_quest")
           .map((item) => (
             <li key={item.id}>
-              <label className="uwe-checkbox-label">
+              {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   name="itemIds"
                   value={item.id}
                   checked={selected.has(item.id)}
                   onChange={() => toggle(item.id)}
+                  className="size-4 rounded border-input"
                 />
                 {item.title}
               </label>
@@ -45,9 +53,15 @@ export function OpenItemsBulkClose({ worldSlug, items, action }: Props) {
           ))}
       </ul>
       <input type="hidden" name="worldSlug" value={worldSlug} />
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm" disabled={selected.size === 0}>
+      <Button
+        type="submit"
+        variant="secondary"
+        size="sm"
+        disabled={selected.size === 0}
+        className="self-start"
+      >
         Ausgewählte Quests abschließen ({selected.size})
-      </button>
+      </Button>
     </form>
   );
 }

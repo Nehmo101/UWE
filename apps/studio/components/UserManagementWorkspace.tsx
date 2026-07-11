@@ -4,6 +4,7 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { SECURITY_ROLE_LABELS } from "@uwe/auth";
 import { formatStudioDateOrDash } from "@/src/lib/format";
+import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, type BadgeProps } from "@/src/components/ui";
 
 interface WorldRef {
   id: string;
@@ -50,13 +51,22 @@ const STATUS_LABELS: Record<(typeof USER_STATUSES)[number], string> = {
   disabled: "Deaktiviert",
 };
 
-function portalAccessBadge(user: AdminUserView) {
-  if (user.status !== "active") return { label: "Inaktiv", className: "uwe-badge uwe-badge-danger" };
-  if (!user.hasPassword || !user.email?.trim()) return { label: "Login unvollständig", className: "uwe-badge uwe-badge-warning" };
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+
+/** Native select styling — siehe TODO(design-kit) bei der ersten Verwendung unten. */
+const NATIVE_SELECT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+type PortalAccessBadgeVariant = NonNullable<BadgeProps["variant"]>;
+
+function portalAccessBadge(user: AdminUserView): { label: string; variant: PortalAccessBadgeVariant } {
+  if (user.status !== "active") return { label: "Inaktiv", variant: "danger" };
+  if (!user.hasPassword || !user.email?.trim()) return { label: "Login unvollständig", variant: "warning" };
   if (!["owner", "admin", "dm"].includes(user.role) && user.worldMemberships.length === 0) {
-    return { label: "Keine Welten", className: "uwe-badge uwe-badge-warning" };
+    return { label: "Keine Welten", variant: "warning" };
   }
-  return { label: "Portal bereit", className: "uwe-badge uwe-badge-success" };
+  return { label: "Portal bereit", variant: "success" };
 }
 
 export function UserManagementWorkspace() {
@@ -282,348 +292,206 @@ export function UserManagementWorkspace() {
   }
 
   return (
-    <>
-      {error && (
-        <p className="uwe-alert uwe-alert-error" role="alert">
-          {error}
-        </p>
-      )}
+    <div className="flex flex-col gap-6">
+      {error && <Alert tone="danger" role="alert">{error}</Alert>}
 
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-form" style={{ marginBottom: "1.5rem" }}>
-        <h2>Neuen Benutzer anlegen</h2>
-        <div className="uwe-form-grid">
-          <label>
-            Name
-            <input
-              type="text"
-              value={createForm.displayName}
-              onChange={(event) =>
-                setCreateForm((current) => ({ ...current, displayName: event.target.value }))
-              }
-            />
-          </label>
-          <label>
-            E-Mail
-            <input
-              type="email"
-              value={createForm.email}
-              onChange={(event) =>
-                setCreateForm((current) => ({ ...current, email: event.target.value }))
-              }
-            />
-          </label>
-          <label>
-            Passwort
-            <input
-              type="password"
-              value={createForm.password}
-              onChange={(event) =>
-                setCreateForm((current) => ({ ...current, password: event.target.value }))
-              }
-            />
-          </label>
-          <label>
-            Rolle
-            <select
-              value={createForm.role}
-              onChange={(event) =>
-                setCreateForm((current) => ({
-                  ...current,
-                  role: event.target.value as (typeof USER_ROLES)[number],
-                }))
-              }
-            >
-              {USER_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {SECURITY_ROLE_LABELS[role] ?? role}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select
-              value={createForm.status}
-              onChange={(event) =>
-                setCreateForm((current) => ({
-                  ...current,
-                  status: event.target.value as (typeof USER_STATUSES)[number],
-                }))
-              }
-            >
-              {USER_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void createUser()}>
-          Benutzer erstellen
-        </button>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Neuen Benutzer anlegen</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="create-user-name">Name</Label>
+              <Input id="create-user-name" type="text" value={createForm.displayName} onChange={(event) => setCreateForm((current) => ({ ...current, displayName: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="create-user-email">E-Mail</Label>
+              <Input id="create-user-email" type="email" value={createForm.email} onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="create-user-password">Passwort</Label>
+              <Input id="create-user-password" type="password" value={createForm.password} onChange={(event) => setCreateForm((current) => ({ ...current, password: event.target.value }))} />
+            </div>
+            {/* TODO(design-kit): Alle Selects hier sind controlled (value+onChange) bzw. brauchen einen
+                Leerwert ("Welt wählen…") — Kit-Select (Radix) unterstützt das nicht; native <select> bleibt. */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="create-user-role">Rolle</Label>
+              <select id="create-user-role" value={createForm.role} onChange={(event) => setCreateForm((current) => ({ ...current, role: event.target.value as (typeof USER_ROLES)[number] }))} className={NATIVE_SELECT_CLASS}>
+                {USER_ROLES.map((role) => (<option key={role} value={role}>{SECURITY_ROLE_LABELS[role] ?? role}</option>))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="create-user-status">Status</Label>
+              <select id="create-user-status" value={createForm.status} onChange={(event) => setCreateForm((current) => ({ ...current, status: event.target.value as (typeof USER_STATUSES)[number] }))} className={NATIVE_SELECT_CLASS}>
+                {USER_STATUSES.map((status) => (<option key={status} value={status}>{STATUS_LABELS[status]}</option>))}
+              </select>
+            </div>
+          </div>
+          <Button type="button" onClick={() => void createUser()} className="self-start">Benutzer erstellen</Button>
+        </CardContent>
+      </Card>
 
-      <section className="uwe-v2-card uwe-v2-card-padded" style={{ marginBottom: "1.5rem" }}>
-        <h2>Benutzer</h2>
-        <div className="uwe-form-grid" style={{ marginBottom: "1rem" }}>
-          <label>
-            Rolle filtern
-            <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-              <option value="">Alle Rollen</option>
-              {USER_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {SECURITY_ROLE_LABELS[role] ?? role}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status filtern
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="">Alle Status</option>
-              {USER_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {loading ? (
-          <p>Lade Benutzer…</p>
-        ) : filteredUsers.length === 0 ? (
-          <p>Keine Benutzer für diesen Filter.</p>
-        ) : (
-          <table className="uwe-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>E-Mail</th>
-                <th>Rolle</th>
-                <th>Status</th>
-                <th>Portal</th>
-                <th>Letzter Login</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.displayName}</td>
-                  <td>{user.email ?? "—"}</td>
-                  <td>{SECURITY_ROLE_LABELS[user.role] ?? user.role}</td>
-                  <td>{STATUS_LABELS[user.status ?? "active"]}</td>
-                  <td><span className={portalAccessBadge(user).className}>{portalAccessBadge(user).label}</span></td>
-                  <td>{formatStudioDateOrDash(user.lastLoginAt)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="uwe-v2-btn uwe-v2-btn-ghost"
-                      onClick={() => setSelectedUserId(user.id)}
-                    >
-                      Bearbeiten
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Benutzer</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="filter-role">Rolle filtern</Label>
+              <select id="filter-role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className={NATIVE_SELECT_CLASS}>
+                <option value="">Alle Rollen</option>
+                {USER_ROLES.map((role) => (<option key={role} value={role}>{SECURITY_ROLE_LABELS[role] ?? role}</option>))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="filter-status">Status filtern</Label>
+              <select id="filter-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={NATIVE_SELECT_CLASS}>
+                <option value="">Alle Status</option>
+                {USER_STATUSES.map((status) => (<option key={status} value={status}>{STATUS_LABELS[status]}</option>))}
+              </select>
+            </div>
+          </div>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Lade Benutzer…</p>
+          ) : filteredUsers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Keine Benutzer für diesen Filter.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Name</th>
+                    <th className={TH_CLASS}>E-Mail</th>
+                    <th className={TH_CLASS}>Rolle</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS}>Portal</th>
+                    <th className={TH_CLASS}>Letzter Login</th>
+                    <th className={TH_CLASS} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td className={TD_CLASS}>{user.displayName}</td>
+                      <td className={TD_CLASS}>{user.email ?? "—"}</td>
+                      <td className={TD_CLASS}>{SECURITY_ROLE_LABELS[user.role] ?? user.role}</td>
+                      <td className={TD_CLASS}>{STATUS_LABELS[user.status ?? "active"]}</td>
+                      <td className={TD_CLASS}><Badge variant={portalAccessBadge(user).variant}>{portalAccessBadge(user).label}</Badge></td>
+                      <td className={TD_CLASS}>{formatStudioDateOrDash(user.lastLoginAt)}</td>
+                      <td className={TD_CLASS}>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedUserId(user.id)}>Bearbeiten</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {selectedUser && (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-form">
-          <h2>{selectedUser.displayName} bearbeiten</h2>
-          <div className="uwe-form-grid">
-            <label>
-              Name
-              <input
-                type="text"
-                value={editForm.displayName}
-                onChange={(event) =>
-                  setEditForm((current) => ({ ...current, displayName: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              E-Mail
-              <input
-                type="email"
-                value={editForm.email}
-                onChange={(event) =>
-                  setEditForm((current) => ({ ...current, email: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Rolle
-              <select
-                value={editForm.role}
-                onChange={(event) =>
-                  setEditForm((current) => ({
-                    ...current,
-                    role: event.target.value as (typeof USER_ROLES)[number],
-                  }))
-                }
-              >
-                {USER_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {SECURITY_ROLE_LABELS[role] ?? role}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Status
-              <select
-                value={editForm.status}
-                onChange={(event) =>
-                  setEditForm((current) => ({
-                    ...current,
-                    status: event.target.value as (typeof USER_STATUSES)[number],
-                  }))
-                }
-              >
-                {USER_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Neues Passwort (optional)
-              <input
-                type="password"
-                value={editForm.password}
-                onChange={(event) =>
-                  setEditForm((current) => ({ ...current, password: event.target.value }))
-                }
-              />
-            </label>
-          </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>{selectedUser.displayName} bearbeiten</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-user-name">Name</Label>
+                <Input id="edit-user-name" type="text" value={editForm.displayName} onChange={(event) => setEditForm((current) => ({ ...current, displayName: event.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-user-email">E-Mail</Label>
+                <Input id="edit-user-email" type="email" value={editForm.email} onChange={(event) => setEditForm((current) => ({ ...current, email: event.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-user-role">Rolle</Label>
+                <select id="edit-user-role" value={editForm.role} onChange={(event) => setEditForm((current) => ({ ...current, role: event.target.value as (typeof USER_ROLES)[number] }))} className={NATIVE_SELECT_CLASS}>
+                  {USER_ROLES.map((role) => (<option key={role} value={role}>{SECURITY_ROLE_LABELS[role] ?? role}</option>))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-user-status">Status</Label>
+                <select id="edit-user-status" value={editForm.status} onChange={(event) => setEditForm((current) => ({ ...current, status: event.target.value as (typeof USER_STATUSES)[number] }))} className={NATIVE_SELECT_CLASS}>
+                  {USER_STATUSES.map((status) => (<option key={status} value={status}>{STATUS_LABELS[status]}</option>))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-user-password">Neues Passwort (optional)</Label>
+                <Input id="edit-user-password" type="password" value={editForm.password} onChange={(event) => setEditForm((current) => ({ ...current, password: event.target.value }))} />
+              </div>
+            </div>
 
-          <div className="uwe-form-actions">
-            <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void saveUser()}>
-              Speichern
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary"
-              onClick={() => void toggleUserStatus(selectedUser)}
-            >
-              {selectedUser.status === "disabled" ? "Reaktivieren" : "Deaktivieren"}
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-danger"
-              onClick={() => void deleteUser(selectedUser)}
-            >
-              Endgültig löschen
-            </button>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-ghost"
-              onClick={() => setSelectedUserId(null)}
-            >
-              Schließen
-            </button>
-          </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={() => void saveUser()}>Speichern</Button>
+              <Button type="button" variant="secondary" onClick={() => void toggleUserStatus(selectedUser)}>
+                {selectedUser.status === "disabled" ? "Reaktivieren" : "Deaktivieren"}
+              </Button>
+              <Button type="button" variant="destructive" onClick={() => void deleteUser(selectedUser)}>Endgültig löschen</Button>
+              <Button type="button" variant="ghost" onClick={() => setSelectedUserId(null)}>Schließen</Button>
+            </div>
 
-          <h3>Welt-Mitgliedschaften</h3>
-          {selectedUser.worldMemberships.length === 0 ? (
-            <p>Keine Welten zugeordnet.</p>
-          ) : (
-            <ul className="uwe-list">
-              {selectedUser.worldMemberships.map((membership) => (
-                <li key={membership.id}>
-                  <strong>{membership.world.name}</strong> —{" "}
-                  {SECURITY_ROLE_LABELS[membership.role] ?? membership.role}
-                  {membership.characterName ? ` (${membership.characterName})` : ""}
-                  <button
-                    type="button"
-                    className="uwe-v2-btn uwe-v2-btn-ghost"
-                    onClick={() => void removeMembership(membership.worldId)}
-                  >
-                    Entfernen
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+            <div>
+              <h3 className="text-sm font-semibold">Welt-Mitgliedschaften</h3>
+              {selectedUser.worldMemberships.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">Keine Welten zugeordnet.</p>
+              ) : (
+                <ul className="mt-2 flex flex-col gap-2">
+                  {selectedUser.worldMemberships.map((membership) => (
+                    <li key={membership.id} className="flex flex-wrap items-center gap-2 text-sm">
+                      <strong>{membership.world.name}</strong> — {SECURITY_ROLE_LABELS[membership.role] ?? membership.role}
+                      {membership.characterName ? ` (${membership.characterName})` : ""}
+                      <Button type="button" variant="ghost" size="sm" onClick={() => void removeMembership(membership.worldId)}>Entfernen</Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
-          <div className="uwe-form-grid" style={{ marginTop: "1rem" }}>
-            <label>
-              Welt
-              <select
-                value={membershipForm.worldId}
-                onChange={(event) =>
-                  setMembershipForm((current) => ({ ...current, worldId: event.target.value }))
-                }
-              >
-                <option value="">Welt wählen…</option>
-                {worlds.map((world) => (
-                  <option key={world.id} value={world.id}>
-                    {world.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Rollen in der Welt
-              <select
-                value={membershipForm.role}
-                onChange={(event) =>
-                  setMembershipForm((current) => ({
-                    ...current,
-                    role: event.target.value as (typeof WORLD_ROLES)[number],
-                  }))
-                }
-              >
-                {WORLD_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {SECURITY_ROLE_LABELS[role] ?? role}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Charaktername
-              <input
-                type="text"
-                value={membershipForm.characterName}
-                onChange={(event) =>
-                  setMembershipForm((current) => ({
-                    ...current,
-                    characterName: event.target.value,
-                  }))
-                }
-              />
-            </label>
-          </div>
-          <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={() => void addMembership()}>
-            Mitgliedschaft hinzufügen
-          </button>
-          <section style={{ marginTop: "1.5rem" }}>
-            <h3>Portalzugriff</h3>
-            <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" disabled={portalAccessLoading} onClick={() => void checkPortalAccess()}>
-              {portalAccessLoading ? "Prüfe…" : "Portalzugriff prüfen"}
-            </button>
-            {portalAccessError ? <p className="uwe-alert uwe-alert-error" role="alert">{portalAccessError}</p> : null}
-            {portalAccess ? (
-              <ul className="uwe-list" style={{ marginTop: "0.75rem" }}>
-                {portalAccess.checks.map((check) => (
-                  <li key={`${check.id}-${check.label}`}>
-                    <span className={check.pass ? "uwe-badge uwe-badge-success" : "uwe-badge uwe-badge-danger"}>{check.pass ? "OK" : "Fehlt"}</span> {check.label}
-                    {check.detail ? ` — ${check.detail}` : ""}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-        </section>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="membership-world">Welt</Label>
+                <select id="membership-world" value={membershipForm.worldId} onChange={(event) => setMembershipForm((current) => ({ ...current, worldId: event.target.value }))} className={NATIVE_SELECT_CLASS}>
+                  <option value="">Welt wählen…</option>
+                  {worlds.map((world) => (<option key={world.id} value={world.id}>{world.name}</option>))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="membership-role">Rollen in der Welt</Label>
+                <select id="membership-role" value={membershipForm.role} onChange={(event) => setMembershipForm((current) => ({ ...current, role: event.target.value as (typeof WORLD_ROLES)[number] }))} className={NATIVE_SELECT_CLASS}>
+                  {WORLD_ROLES.map((role) => (<option key={role} value={role}>{SECURITY_ROLE_LABELS[role] ?? role}</option>))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="membership-character-name">Charaktername</Label>
+                <Input id="membership-character-name" type="text" value={membershipForm.characterName} onChange={(event) => setMembershipForm((current) => ({ ...current, characterName: event.target.value }))} />
+              </div>
+            </div>
+            <Button type="button" variant="secondary" onClick={() => void addMembership()} className="self-start">Mitgliedschaft hinzufügen</Button>
+
+            <div>
+              <h3 className="text-sm font-semibold">Portalzugriff</h3>
+              <Button type="button" variant="secondary" disabled={portalAccessLoading} onClick={() => void checkPortalAccess()} className="mt-2">
+                {portalAccessLoading ? "Prüfe…" : "Portalzugriff prüfen"}
+              </Button>
+              {portalAccessError ? <Alert tone="danger" role="alert" className="mt-3">{portalAccessError}</Alert> : null}
+              {portalAccess ? (
+                <ul className="mt-3 flex flex-col gap-1.5 text-sm">
+                  {portalAccess.checks.map((check) => (
+                    <li key={`${check.id}-${check.label}`} className="flex items-center gap-2">
+                      <Badge variant={check.pass ? "success" : "danger"}>{check.pass ? "OK" : "Fehlt"}</Badge>
+                      <span>{check.label}{check.detail ? ` — ${check.detail}` : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
       )}
-    </>
+    </div>
   );
 }

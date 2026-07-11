@@ -9,6 +9,24 @@ import {
 } from "@uwe/kitchen";
 import { prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import {
+  badgeVariants,
+  buttonVariants,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  cn,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { createRecipeAction } from "../../kitchen-actions";
 
@@ -57,6 +75,9 @@ function resolveStatus(value: string | undefined): RecipeStatus | undefined {
     : undefined;
 }
 
+const CHIP_CLASS =
+  "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 export default async function RecipesPage({ searchParams }: Props) {
   await requireStudioAccess();
 
@@ -86,158 +107,184 @@ export default async function RecipesPage({ searchParams }: Props) {
         summary="Sammlung eigener Rezepte — filterbar nach Status und Tag."
       />
 
-      <section className="uwe-v2-section">
-        <div className="uwe-today-quick-chips">
-          <Link
-            href="/kitchen/recipes"
-            className="uwe-today-quick-chip"
-            data-severity={!status && !tag ? "info" : undefined}
-          >
-            Alle
-          </Link>
-          {RECIPE_STATUSES.map((value) => (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <nav className="flex flex-wrap gap-2" aria-label="Status-Filter">
             <Link
-              key={value}
-              href={`/kitchen/recipes?status=${value}`}
-              className="uwe-today-quick-chip"
-              data-severity={status === value ? "info" : undefined}
+              href="/kitchen/recipes"
+              className={cn(badgeVariants({ variant: !status && !tag ? "accent" : "default" }), CHIP_CLASS)}
             >
-              {RECIPE_STATUS_LABELS[value]}
+              Alle
             </Link>
-          ))}
-        </div>
-        {tags.length > 0 && (
-          <div className="uwe-today-quick-chips" style={{ marginTop: "0.5rem" }}>
-            {tags.map((entry) => (
+            {RECIPE_STATUSES.map((value) => (
               <Link
-                key={entry.key}
-                href={`/kitchen/recipes?tag=${encodeURIComponent(entry.key)}`}
-                className="uwe-today-quick-chip"
-                data-severity={tag === entry.key ? "info" : undefined}
+                key={value}
+                href={`/kitchen/recipes?status=${value}`}
+                className={cn(badgeVariants({ variant: status === value ? "accent" : "default" }), CHIP_CLASS)}
               >
-                #{entry.label}
+                {RECIPE_STATUS_LABELS[value]}
               </Link>
             ))}
-          </div>
-        )}
-        <div className="uwe-today-quick-chips" style={{ marginTop: "0.5rem" }}>
-          <span className="uwe-dashboard-muted" style={{ marginRight: "0.5rem" }}>
-            Sortierung:
-          </span>
-          <Link
-            href={sortHref(status, tag, "duration")}
-            className="uwe-today-quick-chip"
-            data-severity={sort === "duration" ? "info" : undefined}
-          >
-            Dauer
-          </Link>
-          <Link
-            href={sortHref(status, tag, "rating")}
-            className="uwe-today-quick-chip"
-            data-severity={sort === "rating" ? "info" : undefined}
-          >
-            Bewertung
-          </Link>
-        </div>
-        <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem" }}>
-          {showForm ? (
-            <Link href="/kitchen/recipes">Formular schließen</Link>
-          ) : (
-            <Link href="/kitchen/recipes?new=1">+ Neues Rezept</Link>
+          </nav>
+          {tags.length > 0 && (
+            <nav className="flex flex-wrap gap-2" aria-label="Tag-Filter">
+              {tags.map((entry) => (
+                <Link
+                  key={entry.key}
+                  href={`/kitchen/recipes?tag=${encodeURIComponent(entry.key)}`}
+                  className={cn(badgeVariants({ variant: tag === entry.key ? "accent" : "default" }), CHIP_CLASS)}
+                >
+                  #{entry.label}
+                </Link>
+              ))}
+            </nav>
           )}
-        </p>
-      </section>
+          <nav className="flex flex-wrap items-center gap-2" aria-label="Sortierung">
+            <span className="text-sm text-muted-foreground">Sortierung:</span>
+            <Link
+              href={sortHref(status, tag, "duration")}
+              className={cn(badgeVariants({ variant: sort === "duration" ? "accent" : "default" }), CHIP_CLASS)}
+            >
+              Dauer
+            </Link>
+            <Link
+              href={sortHref(status, tag, "rating")}
+              className={cn(badgeVariants({ variant: sort === "rating" ? "accent" : "default" }), CHIP_CLASS)}
+            >
+              Bewertung
+            </Link>
+          </nav>
+          <p className="text-sm text-muted-foreground">
+            {showForm ? (
+              <Link href="/kitchen/recipes">Formular schließen</Link>
+            ) : (
+              <Link href="/kitchen/recipes?new=1">+ Neues Rezept</Link>
+            )}
+          </p>
+        </div>
 
-      {showForm && (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Neues Rezept</h2>
-          <form action={createRecipeAction} className="uwe-brain-create-form">
-            <label>
-              Titel
-              <input name="title" required />
-            </label>
-            <label>
-              Status
-              <select name="status" defaultValue="active">
-                {RECIPE_STATUSES.map((value) => (
-                  <option key={value} value={value}>
-                    {RECIPE_STATUS_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Beschreibung
-              <textarea name="description" rows={2} />
-            </label>
-            <label>
-              Portionen (Basis)
-              <input name="servingsBase" type="number" min={1} step="0.5" defaultValue={2} />
-            </label>
-            <label>
-              Dauer (Minuten)
-              <input name="durationMinutes" type="number" min={0} />
-            </label>
-            <label>
-              Zutaten (eine pro Zeile: <code>800 g Tomaten</code>)
-              <textarea name="ingredients" rows={5} placeholder={"800 g Tomaten\n2 Stück Zwiebeln\nSalz"} />
-            </label>
-            <label>
-              Zubereitung (ein Schritt pro Zeile)
-              <textarea name="steps" rows={4} />
-            </label>
-            <label>
-              Tags (kommagetrennt)
-              <input name="tags" placeholder="schnell, vegan, kindgerecht" />
-            </label>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Rezept anlegen
-            </button>
-          </form>
-        </section>
-      )}
-
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Rezepte ({recipes.length})</h2>
-        {recipes.length === 0 ? (
-          <EmptyState
-            title="Keine Rezepte gefunden"
-            description="Passe den Filter an oder lege ein neues Rezept an."
-            action={<Link href="/kitchen/recipes?new=1">Neues Rezept</Link>}
-          />
-        ) : (
-          <ul className="uwe-today-card-list">
-            {recipes.map((recipe) => (
-              <li key={recipe.id} className="uwe-today-card">
-                <h3>
-                  <Link href={`/kitchen/recipes/${recipe.id}`}>{recipe.title}</Link>
-                </h3>
-                <p className="uwe-dashboard-muted">
-                  {RECIPE_STATUS_LABELS[recipe.status as RecipeStatus]} ·{" "}
-                  {recipe.ingredients.length}{" "}
-                  {recipe.ingredients.length === 1 ? "Zutat" : "Zutaten"}
-                  {recipe.durationMinutes ? ` · ${recipe.durationMinutes} Min.` : ""}
-                  {recipe.tasteRating ? ` · ★ ${recipe.tasteRating}` : ""}
-                </p>
-                {recipe.description && <p>{recipe.description}</p>}
-                {recipe.ingredients.length > 0 && (
-                  <p className="uwe-dashboard-muted">
-                    {recipe.ingredients
-                      .slice(0, 5)
-                      .map((ing) =>
-                        [formatAmount(ing.amount, ing.unit, ing.unitLabel), ing.name]
-                          .filter(Boolean)
-                          .join(" "),
-                      )
-                      .join(", ")}
-                    {recipe.ingredients.length > 5 ? " …" : ""}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
+        {showForm && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Neues Rezept</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form action={createRecipeAction} className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="recipe-new-title">Titel</Label>
+                  <Input id="recipe-new-title" name="title" required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="recipe-new-status">Status</Label>
+                  <Select name="status" defaultValue="active">
+                    <SelectTrigger id="recipe-new-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RECIPE_STATUSES.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {RECIPE_STATUS_LABELS[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <Label htmlFor="recipe-new-description">Beschreibung</Label>
+                  <Textarea id="recipe-new-description" name="description" rows={2} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="recipe-new-servings">Portionen (Basis)</Label>
+                  <Input
+                    id="recipe-new-servings"
+                    name="servingsBase"
+                    type="number"
+                    min={1}
+                    step="0.5"
+                    defaultValue={2}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="recipe-new-duration">Dauer (Minuten)</Label>
+                  <Input id="recipe-new-duration" name="durationMinutes" type="number" min={0} />
+                </div>
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <Label htmlFor="recipe-new-ingredients">
+                    Zutaten (eine pro Zeile: <code>800 g Tomaten</code>)
+                  </Label>
+                  <Textarea
+                    id="recipe-new-ingredients"
+                    name="ingredients"
+                    rows={5}
+                    placeholder={"800 g Tomaten\n2 Stück Zwiebeln\nSalz"}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <Label htmlFor="recipe-new-steps">Zubereitung (ein Schritt pro Zeile)</Label>
+                  <Textarea id="recipe-new-steps" name="steps" rows={4} />
+                </div>
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <Label htmlFor="recipe-new-tags">Tags (kommagetrennt)</Label>
+                  <Input id="recipe-new-tags" name="tags" placeholder="schnell, vegan, kindgerecht" />
+                </div>
+                <div className="sm:col-span-2">
+                  <Button type="submit">Rezept anlegen</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         )}
-      </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Rezepte ({recipes.length})</h2>
+          {recipes.length === 0 ? (
+            <EmptyState
+              title="Keine Rezepte gefunden"
+              description="Passe den Filter an oder lege ein neues Rezept an."
+              action={
+                <Link href="/kitchen/recipes?new=1" className={buttonVariants({ variant: "secondary" })}>
+                  Neues Rezept
+                </Link>
+              }
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {recipes.map((recipe) => (
+                <Card key={recipe.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      <Link href={`/kitchen/recipes/${recipe.id}`}>{recipe.title}</Link>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {RECIPE_STATUS_LABELS[recipe.status as RecipeStatus]} ·{" "}
+                      {recipe.ingredients.length}{" "}
+                      {recipe.ingredients.length === 1 ? "Zutat" : "Zutaten"}
+                      {recipe.durationMinutes ? ` · ${recipe.durationMinutes} Min.` : ""}
+                      {recipe.tasteRating ? ` · ★ ${recipe.tasteRating}` : ""}
+                    </p>
+                    {recipe.description && <p className="text-sm">{recipe.description}</p>}
+                    {recipe.ingredients.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {recipe.ingredients
+                          .slice(0, 5)
+                          .map((ing) =>
+                            [formatAmount(ing.amount, ing.unit, ing.unitLabel), ing.name]
+                              .filter(Boolean)
+                              .join(" "),
+                          )
+                          .join(", ")}
+                        {recipe.ingredients.length > 5 ? " …" : ""}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </StudioShell>
   );
 }

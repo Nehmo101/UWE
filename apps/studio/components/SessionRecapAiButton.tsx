@@ -3,6 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import {
+  Alert,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -76,53 +87,60 @@ export function SessionRecapAiButton({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-      <h2 className="uwe-v2-section-title">KI-Recap (RTX)</h2>
-      <p className="uwe-dashboard-muted">
-        Strukturierte DM-Zusammenfassung aus Live-Einträgen — als Vorschlag, nicht automatisch
-        Kanon.
-      </p>
-
-      {!rtxEnabled ? (
-        <p className="uwe-form-error" role="alert">
-          RTX-Inference ist deaktiviert.
+    <Card>
+      <CardHeader>
+        <CardTitle>KI-Recap (RTX)</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          Strukturierte DM-Zusammenfassung aus Live-Einträgen — als Vorschlag, nicht automatisch
+          Kanon.
         </p>
-      ) : null}
 
-      {rtxEnabled && !rtxReady ? (
-        <p className="uwe-hint">RTX offline — wird als Job vorgemerkt.</p>
-      ) : null}
+        {!rtxEnabled ? (
+          <Alert tone="danger" role="alert">
+            RTX-Inference ist deaktiviert.
+          </Alert>
+        ) : null}
 
-      <label>
-        Zusätzliche Anweisungen (optional)
-        <textarea
-          rows={2}
-          value={userPrompt}
-          placeholder="z. B. Fokus auf offene Quests, kurz und spielerfreundlich …"
-          onChange={(event) => setUserPrompt(event.target.value)}
-        />
-      </label>
+        {rtxEnabled && !rtxReady ? (
+          <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+        ) : null}
 
-      <div className="uwe-form-actions">
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-secondary"
-          disabled={!rtxEnabled || busy}
-          onClick={() => void runSessionRecap()}
-        >
-          {busy ? "Läuft…" : "KI-Recap erstellen"}
-        </button>
-        <Link href={`/worlds/${worldSlug}/ai-runs`} className="uwe-v2-btn">
-          AI Runs →
-        </Link>
-      </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-recap-prompt">Zusätzliche Anweisungen (optional)</Label>
+          <Textarea
+            id="session-recap-prompt"
+            rows={2}
+            value={userPrompt}
+            placeholder="z. B. Fokus auf offene Quests, kurz und spielerfreundlich …"
+            onChange={(event) => setUserPrompt(event.target.value)}
+          />
+        </div>
 
-      {status ? <p className="uwe-hint">{status}</p> : null}
-      {jobId ? (
-        <p>
-          <Link href="/jobs">Job {jobId.slice(0, 8)}… anzeigen →</Link>
-        </p>
-      ) : null}
-    </section>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!rtxEnabled || busy}
+            onClick={() => void runSessionRecap()}
+          >
+            {busy ? "Läuft…" : "KI-Recap erstellen"}
+          </Button>
+          <Link href={`/worlds/${worldSlug}/ai-runs`} className={buttonVariants({ variant: "outline" })}>
+            AI Runs →
+          </Link>
+        </div>
+
+        {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+        {jobId ? (
+          <p>
+            <Link href="/jobs" className="text-primary underline-offset-4 hover:underline">
+              Job {jobId.slice(0, 8)}… anzeigen →
+            </Link>
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

@@ -15,6 +15,9 @@ import {
   deleteAtlasPaletteItemAction,
 } from "@/app/atlas-actions";
 import { RtxAssetRecipePreview } from "./RtxAssetRecipePreview";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
 
 export interface RtxAssetReviewItemView {
   id: string;
@@ -32,16 +35,6 @@ export interface RtxAssetReviewItemView {
   pngLabel?: string;
 }
 
-const chip: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  padding: "0.1rem 0.5rem",
-  border: "1px solid var(--uwe-border)",
-  borderRadius: 999,
-  fontSize: 11,
-  background: "var(--uwe-surface)",
-};
-
 export function RtxAssetReviewList({
   worldSlug,
   items,
@@ -50,93 +43,61 @@ export function RtxAssetReviewList({
   items: RtxAssetReviewItemView[];
 }) {
   return (
-    <ul
-      style={{
-        listStyle: "none",
-        padding: 0,
-        margin: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.5rem",
-      }}
-    >
+    <ul className="m-0 flex list-none flex-col gap-2 p-0">
       {items.map((item) => (
-        <li
-          key={item.id}
-          style={{
-            display: "flex",
-            gap: "0.75rem",
-            alignItems: "flex-start",
-            padding: "0.6rem",
-            border: "1px solid var(--uwe-border)",
-            borderRadius: "var(--uwe-radius)",
-            background: "var(--uwe-surface)",
-          }}
-        >
-          {item.valid && item.outputType === "json-recipe" && item.recipe ? (
-            <RtxAssetRecipePreview recipe={item.recipe} size={96} />
-          ) : (
-            <div
-              style={{
-                width: 96,
-                height: 96,
-                flexShrink: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1px dashed var(--uwe-border)",
-                borderRadius: 4,
-                fontSize: 11,
-                color: "var(--uwe-muted)",
-                textAlign: "center",
-              }}
-            >
-              {item.valid ? "PNG-Fallback (keine Rezept-Preview)" : "Ungültig"}
-            </div>
-          )}
-
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", alignItems: "center" }}>
-              <strong style={{ fontSize: 14 }}>{item.name}</strong>
-              {item.valid ? (
-                <>
-                  {item.categoryLabel && <span style={chip}>{item.categoryLabel}</span>}
-                  {(item.engineTags ?? []).map((tag) => (
-                    <span key={tag} style={chip}>{tag}</span>
-                  ))}
-                  {(item.tags ?? []).map((tag) => (
-                    <span key={tag} style={{ ...chip, opacity: 0.75 }}>{tag}</span>
-                  ))}
-                </>
+        <li key={item.id}>
+          <Card>
+            <CardContent className="flex items-start gap-3 p-4">
+              {item.valid && item.outputType === "json-recipe" && item.recipe ? (
+                <RtxAssetRecipePreview recipe={item.recipe} size={96} />
               ) : (
-                <span style={{ ...chip, color: "var(--uwe-danger)" }}>
-                  Proposal ungültig — nur Löschen möglich
-                </span>
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded border border-dashed border-border text-center text-[11px] text-muted-foreground">
+                  {item.valid ? "PNG-Fallback (keine Rezept-Preview)" : "Ungültig"}
+                </div>
               )}
-            </div>
-            {item.valid && item.outputType === "png-fallback" && item.pngLabel && (
-              <span style={{ fontSize: 12, color: "var(--uwe-muted)" }}>{item.pngLabel}</span>
-            )}
 
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              {item.valid && (
-                <form action={approveAtlasPaletteItemAction}>
-                  <input type="hidden" name="worldSlug" value={worldSlug} />
-                  <input type="hidden" name="itemId" value={item.id} />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                    Genehmigen
-                  </button>
-                </form>
-              )}
-              <form action={deleteAtlasPaletteItemAction}>
-                <input type="hidden" name="worldSlug" value={worldSlug} />
-                <input type="hidden" name="itemId" value={item.id} />
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                  Löschen
-                </button>
-              </form>
-            </div>
-          </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div className="flex flex-wrap items-center gap-1">
+                  <strong className="text-sm">{item.name}</strong>
+                  {item.valid ? (
+                    <>
+                      {item.categoryLabel && <Badge>{item.categoryLabel}</Badge>}
+                      {(item.engineTags ?? []).map((tag) => (
+                        <Badge key={tag}>{tag}</Badge>
+                      ))}
+                      {(item.tags ?? []).map((tag) => (
+                        <Badge key={tag} className="opacity-75">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </>
+                  ) : (
+                    <Badge variant="danger">Proposal ungültig — nur Löschen möglich</Badge>
+                  )}
+                </div>
+                {item.valid && item.outputType === "png-fallback" && item.pngLabel && (
+                  <span className="text-xs text-muted-foreground">{item.pngLabel}</span>
+                )}
+
+                <div className="flex gap-2">
+                  {item.valid && (
+                    <form action={approveAtlasPaletteItemAction}>
+                      <input type="hidden" name="worldSlug" value={worldSlug} />
+                      <input type="hidden" name="itemId" value={item.id} />
+                      <Button type="submit">Genehmigen</Button>
+                    </form>
+                  )}
+                  <form action={deleteAtlasPaletteItemAction}>
+                    <input type="hidden" name="worldSlug" value={worldSlug} />
+                    <input type="hidden" name="itemId" value={item.id} />
+                    <Button type="submit" variant="secondary">
+                      Löschen
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </li>
       ))}
     </ul>

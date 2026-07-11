@@ -9,6 +9,7 @@ import {
   rtxReadinessSourceLabelDe,
   type StudioRtxDisplayState,
 } from "@/src/lib/rtx-display-ui";
+import { Alert, Button, cn } from "@/src/components/ui";
 
 const LIGHT_LABEL: Record<HealthLight, string> = {
   green: "Grün — alles im grünen Bereich",
@@ -16,10 +17,16 @@ const LIGHT_LABEL: Record<HealthLight, string> = {
   red: "Rot — Handlungsbedarf",
 };
 
-const LIGHT_COLOR: Record<HealthLight, string> = {
-  green: "#2e7d32",
-  yellow: "#b7791f",
-  red: "#c62828",
+const LIGHT_TEXT_CLASS: Record<HealthLight, string> = {
+  green: "text-success",
+  yellow: "text-warning",
+  red: "text-destructive",
+};
+
+const LIGHT_DOT_CLASS: Record<HealthLight, string> = {
+  green: "bg-success",
+  yellow: "bg-warning",
+  red: "bg-destructive",
 };
 
 interface HealthSnapshot {
@@ -94,35 +101,17 @@ export function SystemHealthClient({
               Connector-Erreichbarkeit auf einen Blick — praktisch auf dem eigenen Host.
             </p>
           </div>
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-secondary"
-            onClick={() => void refresh()}
-            disabled={refreshing}
-          >
+          <Button type="button" variant="secondary" onClick={() => void refresh()} disabled={refreshing}>
             {refreshing ? "Aktualisiere…" : "Aktualisieren"}
-          </button>
+          </Button>
         </div>
-        {error ? <p className="uwe-form-error">{error}</p> : null}
-        <p
-          style={{
-            color: LIGHT_COLOR[metrics.light],
-            fontWeight: 600,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.45rem",
-          }}
-        >
-          <span
-            className={`uwe-dot ${
-              metrics.light === "green"
-                ? "uwe-dot-success"
-                : metrics.light === "yellow"
-                  ? "uwe-dot-warning"
-                  : "uwe-dot-danger"
-            }`}
-            aria-hidden
-          />
+        {error ? (
+          <Alert tone="danger" role="alert">
+            {error}
+          </Alert>
+        ) : null}
+        <p className={cn("inline-flex items-center gap-2 font-semibold", LIGHT_TEXT_CLASS[metrics.light])}>
+          <span className={cn("inline-block size-2 flex-none rounded-full", LIGHT_DOT_CLASS[metrics.light])} aria-hidden />
           {LIGHT_LABEL[metrics.light]}
         </p>
       </header>
@@ -134,13 +123,7 @@ export function SystemHealthClient({
             {history.map((entry) => (
               <li key={entry.checkedAt} className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`uwe-dot ${
-                    entry.light === "green"
-                      ? "uwe-dot-success"
-                      : entry.light === "yellow"
-                        ? "uwe-dot-warning"
-                        : "uwe-dot-danger"
-                  }`}
+                  className={cn("inline-block size-2 flex-none rounded-full", LIGHT_DOT_CLASS[entry.light])}
                   aria-hidden
                 />
                 <span>{new Date(entry.checkedAt).toLocaleString("de-DE")}</span>
@@ -177,7 +160,7 @@ export function SystemHealthClient({
               </>
             ) : null}
           </li>
-          <li style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.45rem" }}>
+          <li className="flex flex-wrap items-center gap-2">
             RTX / Lokale KI:{" "}
             {rtxDisplay ? (
               <>
@@ -209,17 +192,12 @@ export function SystemHealthClient({
         ) : (
           <ul className="flex flex-col gap-1 text-sm">
             {metrics.largestTables.map((table) => (
-              <li key={table.label} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                <span style={{ width: "9rem" }}>{table.label}</span>
+              <li key={table.label} className="flex items-center gap-2">
+                <span className="w-36">{table.label}</span>
                 <span
                   aria-hidden
-                  style={{
-                    display: "inline-block",
-                    height: "0.6rem",
-                    width: `${Math.round((table.count / maxCount) * 60) + 2}%`,
-                    background: "var(--uwe-accent, #6b7280)",
-                    borderRadius: "3px",
-                  }}
+                  className="inline-block h-2.5 rounded-sm bg-primary"
+                  style={{ width: `${Math.round((table.count / maxCount) * 60) + 2}%` }}
                 />
                 <strong>{table.count.toLocaleString("de-DE")}</strong>
               </li>

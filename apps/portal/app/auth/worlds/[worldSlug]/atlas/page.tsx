@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Building2, Globe, Map as MapIcon, Mountain } from "lucide-react";
 import {
   createAtlasService,
   createPrismaClient,
@@ -6,10 +8,8 @@ import {
 import type { DbAtlasNode } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
-
-// ---------------------------------------------------------------------------
-// Level display helpers
-// ---------------------------------------------------------------------------
+import { Badge } from "@/src/components/ui/badge";
+import { PageHeader } from "@/src/components/shell";
 
 const LEVEL_LABELS: Record<string, string> = {
   globe: "Globus",
@@ -18,18 +18,14 @@ const LEVEL_LABELS: Record<string, string> = {
   city: "Stadt",
 };
 
-const LEVEL_ICONS: Record<string, string> = {
-  globe: "🌍",
-  continent: "🗺️",
-  landscape: "🏔️",
-  city: "🏙️",
+const LEVEL_ICONS: Record<string, typeof Globe> = {
+  globe: Globe,
+  continent: MapIcon,
+  landscape: Mountain,
+  city: Building2,
 };
 
 const LEVEL_ORDER = ["globe", "continent", "landscape", "city"];
-
-// ---------------------------------------------------------------------------
-// Tree helpers
-// ---------------------------------------------------------------------------
 
 interface NodeTreeItem {
   node: DbAtlasNode;
@@ -72,25 +68,20 @@ function NodeTreeRow({
   depth?: number;
 }) {
   const { node, children } = item;
-  const icon = LEVEL_ICONS[node.level] ?? "📍";
+  const Icon = LEVEL_ICONS[node.level] ?? MapIcon;
   const levelLabel = LEVEL_LABELS[node.level] ?? node.level;
 
   return (
     <>
-      <li
-        className="uwe-atlas-node-item"
-        style={{ paddingLeft: depth * 20 }}
-      >
-        <a
+      <li style={{ paddingLeft: depth * 20 }}>
+        <Link
           href={`/auth/worlds/${worldSlug}/atlas/${node.id}`}
-          className="uwe-atlas-node-link"
+          className="flex items-center gap-2 rounded-[var(--radius)] px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
         >
-          <span className="uwe-atlas-node-icon">{icon}</span>
-          <span className="uwe-atlas-node-title">{node.title}</span>
-          <span className="uwe-atlas-node-level" style={{ opacity: 0.6, fontSize: "0.8em" }}>
-            {levelLabel}
-          </span>
-        </a>
+          <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <span className="min-w-0 flex-1 font-medium">{node.title}</span>
+          <span className="text-xs text-muted-foreground">{levelLabel}</span>
+        </Link>
       </li>
       {children.map((child) => (
         <NodeTreeRow
@@ -103,10 +94,6 @@ function NodeTreeRow({
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -133,8 +120,6 @@ export default async function PortalAtlasIndexPage({ params }: Props) {
     if (!world) notFound();
     worldName = world.name;
 
-    // Members-only worlds must not be reachable by non-member players via a
-    // direct URL — enforce world membership before loading any content.
     try {
       assertPortalCanReadWorld(ctx, world.id);
     } catch {
@@ -142,9 +127,7 @@ export default async function PortalAtlasIndexPage({ params }: Props) {
     }
 
     const result = await atlas.getAtlasForContext(worldSlug, "portal");
-    if (!result) {
-      // Atlas doesn't exist or is not visible to players — show empty state
-    } else {
+    if (result) {
       nodes = result.nodes;
     }
   } finally {
@@ -158,61 +141,44 @@ export default async function PortalAtlasIndexPage({ params }: Props) {
     countByLevel[node.level] = (countByLevel[node.level] ?? 0) + 1;
   }
 
-  // Shell (sidebar, top bar, mobile bottom nav) comes from the world layout —
-  // no nested PortalShell here.
   return (
-    <section className="portal-content-card">
-      <a href={`/auth/worlds/${worldSlug}`} className="uwe-back-link">
-        ← Zurück zur Übersicht
-      </a>
+    <>
+      <Link
+        href={`/auth/worlds/${worldSlug}`}
+        className="mb-4 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        Zurück zur Übersicht
+      </Link>
 
-      <h1>Atlas — {worldName}</h1>
+      <PageHeader title={`Atlas — ${worldName}`} />
 
       {nodes.length === 0 ? (
-        <p className="uwe-hint" style={{ color: "var(--uwe-muted)", marginTop: "1rem" }}>
+        <p className="mt-4 text-sm text-muted-foreground">
           Für diese Welt ist derzeit kein Atlas für Spieler sichtbar.
         </p>
       ) : (
         <>
-          {/* Level summary chips */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
-            {LEVEL_ORDER.filter((lvl) => countByLevel[lvl]).map((lvl) => (
-              <span
-                key={lvl}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                  padding: "0.2rem 0.6rem",
-                  background: "var(--uwe-surface)",
-                  border: "1px solid var(--uwe-border)",
-                  borderRadius: "var(--uwe-radius)",
-                  fontSize: 13,
-                }}
-              >
-                {LEVEL_ICONS[lvl]} {LEVEL_LABELS[lvl]}
-                <strong>{countByLevel[lvl]}</strong>
-              </span>
-            ))}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {LEVEL_ORDER.filter((lvl) => countByLevel[lvl]).map((lvl) => {
+              const Icon = LEVEL_ICONS[lvl] ?? MapIcon;
+              return (
+                <Badge key={lvl} variant="secondary" className="gap-1.5 px-2.5 py-1">
+                  <Icon className="size-3.5" aria-hidden />
+                  {LEVEL_LABELS[lvl]}
+                  <strong>{countByLevel[lvl]}</strong>
+                </Badge>
+              );
+            })}
           </div>
 
-          {/* Node tree */}
-          <ul
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: "0 0 1.5rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.25rem",
-            }}
-          >
+          <ul className="mb-6 flex list-none flex-col gap-1 p-0">
             {tree.map((item) => (
               <NodeTreeRow key={item.node.id} item={item} worldSlug={worldSlug} />
             ))}
           </ul>
         </>
       )}
-    </section>
+    </>
   );
 }

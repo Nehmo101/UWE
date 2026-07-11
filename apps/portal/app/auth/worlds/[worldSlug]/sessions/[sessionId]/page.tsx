@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { SessionRecapFeed } from "@/src/components/SessionRecapFeed";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
@@ -67,26 +69,44 @@ export default async function PortalSessionDetailPage({ params }: Props) {
   const returnPath = `/auth/worlds/${worldSlug}/sessions/${sessionId}`;
 
   return (
-    <article className="portal-content-card">
-      <a href={`/auth/worlds/${worldSlug}/sessions`} className="uwe-back-link">
-        ← Zurück zu Sessions
-      </a>
+    <article className="grid gap-6">
+      <Link
+        href={`/auth/worlds/${worldSlug}/sessions`}
+        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        Zurück zu Sessions
+      </Link>
 
-      <header>
-        <h1>
+      <header className="space-y-2 border-b border-border pb-4">
+        <h1 className="text-2xl font-semibold tracking-tight">
           Session {session.sessionNumber}: {session.title}
         </h1>
-        {session.date && <p className="auth-lead">{session.date.toLocaleDateString("de-DE")}</p>}
-        {(prevSessionId || nextSessionId) && (
-          <nav className="uwe-inline-actions" aria-label="Session-Navigation" style={{ marginTop: "0.5rem" }}>
+        {session.date ? (
+          <p className="text-sm text-muted-foreground">
+            {session.date.toLocaleDateString("de-DE")}
+          </p>
+        ) : null}
+        {prevSessionId || nextSessionId ? (
+          <nav className="mt-2 flex flex-wrap gap-4 text-sm" aria-label="Session-Navigation">
             {prevSessionId ? (
-              <a href={`/auth/worlds/${worldSlug}/sessions/${prevSessionId}`}>← Vorherige Session</a>
+              <Link
+                href={`/auth/worlds/${worldSlug}/sessions/${prevSessionId}`}
+                className="text-primary hover:underline"
+              >
+                ← Vorherige Session
+              </Link>
             ) : null}
             {nextSessionId ? (
-              <a href={`/auth/worlds/${worldSlug}/sessions/${nextSessionId}`}>Nächste Session →</a>
+              <Link
+                href={`/auth/worlds/${worldSlug}/sessions/${nextSessionId}`}
+                className="text-primary hover:underline"
+              >
+                Nächste Session →
+              </Link>
             ) : null}
           </nav>
-        )}
+        ) : null}
       </header>
 
       <SessionRecapFeed
@@ -95,7 +115,7 @@ export default async function PortalSessionDetailPage({ params }: Props) {
         newlyUnlocked={newlyUnlocked}
       />
 
-      {session.campaignId && (
+      {session.campaignId ? (
         <PlayerNotesPanel
           worldSlug={worldSlug}
           campaignId={session.campaignId}
@@ -105,7 +125,7 @@ export default async function PortalSessionDetailPage({ params }: Props) {
           gameSessionId={sessionId}
           returnPath={returnPath}
         />
-      )}
+      ) : null}
     </article>
   );
 }

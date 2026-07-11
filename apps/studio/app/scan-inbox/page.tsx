@@ -7,6 +7,7 @@ import {
   type ScanDocumentStatus,
 } from "@uwe/scan-inbox";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { AdminListSearch } from "@/components/AdminListSearch";
 import { matchesAdminListQuery } from "@/src/lib/admin-list-search";
@@ -53,27 +54,33 @@ export default async function ScanInboxPage({
         summary="Dokument hochladen oder fotografieren, per OCR analysieren und nach Bestätigung ablegen — nie automatisch."
       />
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Dokument hochladen</h2>
-        <p className="uwe-hint">
-          Briefe, Rechnungen, Verträge, Belege oder handschriftliche Notizen — als Foto oder PDF.
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dokument hochladen</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Briefe, Rechnungen, Verträge, Belege oder handschriftliche Notizen — als Foto oder PDF.
+            </p>
+            <ScanUpload />
+          </CardContent>
+        </Card>
+
+        <Suspense fallback={null}>
+          <AdminListSearch placeholder="Scan nach Titel, OCR-Text oder Status filtern…" />
+        </Suspense>
+
+        {q?.trim() && filteredDocs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Keine Scans für „{q.trim()}“.</p>
+        ) : null}
+
+        <ScanInboxBoard docs={filteredDocs} statusOrder={STATUS_ORDER} byStatus={byStatusRecord} />
+
+        <p className="text-sm text-muted-foreground">
+          <Link href="/today">← Zurück zu Heute</Link>
         </p>
-        <ScanUpload />
-      </section>
-
-      <Suspense fallback={null}>
-        <AdminListSearch placeholder="Scan nach Titel, OCR-Text oder Status filtern…" />
-      </Suspense>
-
-      {q?.trim() && filteredDocs.length === 0 ? (
-        <p className="uwe-dashboard-muted">Keine Scans für „{q.trim()}“.</p>
-      ) : null}
-
-      <ScanInboxBoard docs={filteredDocs} statusOrder={STATUS_ORDER} byStatus={byStatusRecord} />
-
-      <p className="uwe-dashboard-muted">
-        <Link href="/today">← Zurück zu Heute</Link>
-      </p>
+      </div>
     </StudioShell>
   );
 }

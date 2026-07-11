@@ -14,6 +14,12 @@ import {
   deletePageLinkAction,
   updatePageLinkAction,
 } from "@/app/worlds/[worldSlug]/page-link-actions";
+import { Button, Input, Label } from "@/src/components/ui";
+
+/** TODO(design-kit): natives select bleibt — Server-Action-Formular mit
+    unkontrolliertem defaultValue, siehe gleiches Muster in sessions/new/page.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 interface Props {
   worldSlug: string;
@@ -48,56 +54,69 @@ function LinkRow({
   const relationText = link.label?.trim() || pageLinkRelationLabel(link.relationType);
 
   return (
-    <li
-      style={{
-        marginBottom: "1rem",
-        padding: "1rem",
-        border: "1px solid rgba(148,163,184,0.12)",
-        borderRadius: "0.65rem",
-      }}
-    >
-      <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem" }}>
+    <li className="mb-4 rounded-[var(--radius)] border border-border p-4">
+      <p className="mb-3 text-sm">
         {direction === "outgoing" ? (
           <>
             <strong>{relationText}</strong>
             {" → "}
-            <Link href={pageHref(worldSlug, relatedPage)}>{relatedPage.title}</Link>
+            <Link
+              href={pageHref(worldSlug, relatedPage)}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              {relatedPage.title}
+            </Link>
           </>
         ) : (
           <>
-            <Link href={pageHref(worldSlug, relatedPage)}>{relatedPage.title}</Link>
+            <Link
+              href={pageHref(worldSlug, relatedPage)}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              {relatedPage.title}
+            </Link>
             {" → "}
             <strong>{relationText}</strong>
           </>
         )}
       </p>
 
-      <form action={updatePageLinkAction} className="uwe-v2-form" style={{ marginBottom: "0.5rem" }}>
+      <form action={updatePageLinkAction} className="mb-2 flex flex-col gap-3">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="pageId" value={pageId} />
         <input type="hidden" name="pageSlug" value={pageSlug} />
         <input type="hidden" name="category" value={category} />
         <input type="hidden" name="linkId" value={link.id} />
 
-        <label>
-          Relationstyp
-          <select name="relationType" defaultValue={link.relationType}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`link-${link.id}-relationType`}>Relationstyp</Label>
+          <select
+            id={`link-${link.id}-relationType`}
+            name="relationType"
+            defaultValue={link.relationType}
+            className={NATIVE_SELECT_CLASS}
+          >
             {PAGE_LINK_RELATION_PRESETS.map((preset) => (
               <option key={preset} value={preset}>
                 {PAGE_LINK_RELATION_LABELS[preset]}
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          Beschriftung (optional)
-          <input name="label" defaultValue={link.label ?? ""} placeholder="Eigene Formulierung" />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`link-${link.id}-label`}>Beschriftung (optional)</Label>
+          <Input
+            id={`link-${link.id}-label`}
+            name="label"
+            defaultValue={link.label ?? ""}
+            placeholder="Eigene Formulierung"
+          />
+        </div>
 
-        <button type="submit" className="uwe-v2-btn">
+        <Button type="submit" size="sm" className="self-start">
           Relation speichern
-        </button>
+        </Button>
       </form>
 
       <form action={deletePageLinkAction}>
@@ -106,9 +125,9 @@ function LinkRow({
         <input type="hidden" name="pageSlug" value={pageSlug} />
         <input type="hidden" name="category" value={category} />
         <input type="hidden" name="linkId" value={link.id} />
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger">
+        <Button type="submit" variant="destructive" size="sm">
           Verknüpfung löschen
-        </button>
+        </Button>
       </form>
     </li>
   );
@@ -133,15 +152,15 @@ export async function PageLinksPanel({ worldSlug, pageId, pageSlug, category }: 
       summary={`${totalLinks} Relation${totalLinks === 1 ? "" : "en"}`}
       defaultOpen={false}
     >
-      <p className="uwe-field-hint" style={{ marginTop: 0 }}>
+      <p className="mt-0 text-sm text-muted-foreground">
         Strukturierte Beziehungen zwischen Wiki-Seiten — ergänzen Wikilinks in Fließtext.
       </p>
 
-      <h3 style={{ margin: "1rem 0 0.5rem", fontSize: "0.95rem" }}>Ausgehend</h3>
+      <h3 className="mb-2 mt-4 text-sm font-semibold tracking-tight">Ausgehend</h3>
       {outgoing.length === 0 ? (
-        <p className="uwe-field-hint">Keine ausgehenden Verknüpfungen.</p>
+        <p className="text-sm text-muted-foreground">Keine ausgehenden Verknüpfungen.</p>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        <ul className="m-0 list-none p-0">
           {outgoing.map((link) => (
             <LinkRow
               key={link.id}
@@ -156,11 +175,11 @@ export async function PageLinksPanel({ worldSlug, pageId, pageSlug, category }: 
         </ul>
       )}
 
-      <h3 style={{ margin: "1.5rem 0 0.5rem", fontSize: "0.95rem" }}>Eingehend</h3>
+      <h3 className="mb-2 mt-6 text-sm font-semibold tracking-tight">Eingehend</h3>
       {incoming.length === 0 ? (
-        <p className="uwe-field-hint">Keine eingehenden Verknüpfungen.</p>
+        <p className="text-sm text-muted-foreground">Keine eingehenden Verknüpfungen.</p>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        <ul className="m-0 list-none p-0">
           {incoming.map((link) => (
             <LinkRow
               key={link.id}
@@ -175,28 +194,40 @@ export async function PageLinksPanel({ worldSlug, pageId, pageSlug, category }: 
         </ul>
       )}
 
-      <form action={createPageLinkAction} className="uwe-v2-form" style={{ marginTop: "1.5rem" }}>
+      <form action={createPageLinkAction} className="mt-6 flex flex-col gap-3">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="pageId" value={pageId} />
         <input type="hidden" name="pageSlug" value={pageSlug} />
         <input type="hidden" name="category" value={category} />
 
-        <h3 style={{ margin: 0, fontSize: "0.95rem" }}>Neue Verknüpfung</h3>
+        <h3 className="m-0 text-sm font-semibold tracking-tight">Neue Verknüpfung</h3>
 
-        <label>
-          Relationstyp
-          <select name="relationType" defaultValue="related" required>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-page-link-relationType">Relationstyp</Label>
+          <select
+            id="new-page-link-relationType"
+            name="relationType"
+            defaultValue="related"
+            required
+            className={NATIVE_SELECT_CLASS}
+          >
             {PAGE_LINK_RELATION_PRESETS.map((preset) => (
               <option key={preset} value={preset}>
                 {PAGE_LINK_RELATION_LABELS[preset]}
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          Zielseite
-          <select name="targetPageId" required defaultValue="">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-page-link-targetPageId">Zielseite</Label>
+          <select
+            id="new-page-link-targetPageId"
+            name="targetPageId"
+            required
+            defaultValue=""
+            className={NATIVE_SELECT_CLASS}
+          >
             <option value="" disabled>
               Seite wählen …
             </option>
@@ -206,16 +237,16 @@ export async function PageLinksPanel({ worldSlug, pageId, pageSlug, category }: 
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          Beschriftung (optional)
-          <input name="label" placeholder="Eigene Formulierung" />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-page-link-label">Beschriftung (optional)</Label>
+          <Input id="new-page-link-label" name="label" placeholder="Eigene Formulierung" />
+        </div>
 
-        <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
+        <Button type="submit" className="self-start">
           Verknüpfung anlegen
-        </button>
+        </Button>
       </form>
     </CollapsibleSection>
   );

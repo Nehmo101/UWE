@@ -19,7 +19,7 @@ export default async function LifeBrainChatPage() {
     return (
       <StudioShell breadcrumb={breadcrumb}>
         <PageHeader title="Life-Brain Chat" summary={access.message} />
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Master-Admin:{" "}
           <Link href="/admin/ai-gateway">KI-Gateway</Link> → User-Freigaben →{" "}
           <code>AI_KNOWLEDGE_USE</code> vergeben. RTX-Setup:{" "}

@@ -60,5 +60,5 @@ export function PageEditAutosave({ formId, storageKey }: Props) {
   }, [formId, storageKey]);
 
   if (!hint) return null;
-  return <p className="uwe-dashboard-muted">{hint}</p>;
+  return <p className="text-sm text-muted-foreground">{hint}</p>;
 }

@@ -6,6 +6,7 @@ import {
 } from "@/src/lib/portal-timeline-data";
 import { PortalStoryTimeline } from "@/src/components/PortalStoryTimeline";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
+import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -27,12 +28,11 @@ export default async function PortalTimelinePage({ params }: Props) {
   const groups = buildPortalTimelineGroups(data.events, data.months, data.epochLabel);
 
   return (
-    <section className="portal-content-card">
-      <h1>Timeline</h1>
-      <p className="auth-lead">
-        Die Geschichte eurer Kampagne — chronologisch, spoilerarm und nur mit freigegebenen
-        Zusammenfassungen.
-      </p>
+    <>
+      <PageHeader
+        title="Timeline"
+        summary="Die Geschichte eurer Kampagne — chronologisch, spoilerarm und nur mit freigegebenen Zusammenfassungen."
+      />
 
       {groups.length === 0 ? (
         <PortalEmptyState title="Noch keine Timeline-Ereignisse" icon="clock" />
@@ -45,6 +45,6 @@ export default async function PortalTimelinePage({ params }: Props) {
           totalEvents={data.events.length}
         />
       )}
-    </section>
+    </>
   );
 }

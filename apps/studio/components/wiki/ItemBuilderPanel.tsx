@@ -6,6 +6,7 @@ import {
   equipmentKindLabel,
   type EquipmentSearchResult,
 } from "@/components/wiki/EquipmentSearchBox";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 export type { EquipmentSearchResult } from "@/components/wiki/EquipmentSearchBox";
 
@@ -42,7 +43,7 @@ export function ItemBuilderPanel({
   function renderResult(result: EquipmentSearchResult) {
     const label = equipmentKindLabel(result.kind);
     return (
-      <form action={applyEquipmentAction} className="auth-character-spell-search-form">
+      <form action={applyEquipmentAction}>
         {Object.entries(hiddenFields).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
@@ -50,37 +51,41 @@ export function ItemBuilderPanel({
         <input type="hidden" name="equipmentId" value={result.id} />
         <input type="hidden" name="name" value={result.name} />
         {result.url ? <input type="hidden" name="sourceUrl" value={result.url} /> : null}
-        <button type="submit" className="auth-btn auth-btn-small">
+        <Button type="submit" variant="outline" size="sm">
           {result.name}
           {label ? ` · ${label}` : null}
           {result.summary ? ` — ${result.summary}` : null}
-        </button>
+        </Button>
       </form>
     );
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Magic Item Builder</h2>
-      <p className="uwe-dashboard-muted">
-        SRD- und Open5e-Ausrüstung suchen, als Basis übernehmen oder im strukturierten
-        Generator weiter ausarbeiten.
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Magic Item Builder</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          SRD- und Open5e-Ausrüstung suchen, als Basis übernehmen oder im strukturierten
+          Generator weiter ausarbeiten.
+        </p>
 
-      <p className="uwe-hint">
-        Aktuell: <strong>{pageTitle}</strong>
-        {pageSummary?.trim() ? <> — {pageSummary.trim()}</> : null}
-      </p>
+        <p className="text-sm text-muted-foreground">
+          Aktuell: <strong>{pageTitle}</strong>
+          {pageSummary?.trim() ? <> — {pageSummary.trim()}</> : null}
+        </p>
 
-      <EquipmentSearchBox
-        searchEquipmentUrl={searchEquipmentUrl}
-        label="SRD / Open5e Ausrüstung"
-        renderResult={renderResult}
-      />
+        <EquipmentSearchBox
+          searchEquipmentUrl={searchEquipmentUrl}
+          label="SRD / Open5e Ausrüstung"
+          renderResult={renderResult}
+        />
 
-      <p className="uwe-dashboard-muted">
-        <Link href={`#${generatorSectionId}`}>Zum strukturierten Item-Generator ↓</Link>
-      </p>
-    </section>
+        <p className="text-sm text-muted-foreground">
+          <Link href={`#${generatorSectionId}`}>Zum strukturierten Item-Generator ↓</Link>
+        </p>
+      </CardContent>
+    </Card>
   );
 }

@@ -13,6 +13,23 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { LabelTemplatePreviewPicker } from "@/src/components/labels/LabelTemplatePreviewPicker";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -68,7 +85,7 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
       }
       contextPanel={
         <SidebarSection title="Hinweis">
-          <p className="uwe-hint" style={{ margin: 0 }}>
+          <p className="m-0 text-sm text-muted-foreground">
             Labels sind 6×4 Zoll. DM-only Inhalte werden standardmäßig ausgeschlossen.
             AI-Bild-/Textgenerierung ist als Platzhalter vorbereitet.
           </p>
@@ -79,151 +96,237 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
         title="Neues Label erstellen"
         summary="Quelle und Vorlage wählen — Inhalt wird aus bestehenden Pages, Räumen, Blöcken oder Assets übernommen."
       />
-      {pages.length === 0 && blocks.length === 0 && assets.length === 0 ? (
-        <section className="uwe-panel">
-          <h2>Aus Seite, Raum, Block oder Asset</h2>
-          <p className="uwe-v2-empty">
-            Noch keine Quellen vorhanden — erstelle zuerst Seiten oder lade Assets hoch.
-            Alternativ kannst du unten ein leeres Label anlegen.
-          </p>
-        </section>
-      ) : (
-      <section className="uwe-panel">
-        <h2>Aus Seite, Raum, Block oder Asset</h2>
-        <form action={createLabelFromSourceAction} className="uwe-form-grid">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
 
-          <label>
-            Quelle
-            <select name="sourceRef" required defaultValue={preselectedSource || (pages[0] ? `page:${pages[0].id}` : "")}>
-              <optgroup label="Seiten">
-                {pages.map((page) => (
-                  <option key={page.id} value={`page:${page.id}`}>
-                    {page.title} ({page.type})
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Dungeon-Räume">
-                {roomPages.map((page) => (
-                  <option key={`room-${page.id}`} value={`dungeon_room:${page.id}`}>
-                    {page.title}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Encounter / Loot / Handouts / Rätsel">
-                {handoutPages.map((page) => (
-                  <option key={`handout-${page.id}`} value={`page:${page.id}`}>
-                    {page.title} ({page.type})
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Inhaltsblöcke">
-                {blocks.map((block) => (
-                  <option key={block.id} value={`content_block:${block.id}`}>
-                    {block.pageTitle} · {block.type}
-                    {block.visibility === "dm_only" ? " (DM)" : ""}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Assets / Bilder">
-                {assets.map((asset) => (
-                  <option key={asset.id} value={`asset:${asset.id}`}>
-                    {asset.title}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
+      <div className="flex flex-col gap-6">
+        {pages.length === 0 && blocks.length === 0 && assets.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Aus Seite, Raum, Block oder Asset</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                title="Noch keine Quellen vorhanden"
+                description="Erstelle zuerst Seiten oder lade Assets hoch. Alternativ kannst du unten ein leeres Label anlegen."
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Aus Seite, Raum, Block oder Asset</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form action={createLabelFromSourceAction} className="flex flex-col gap-4">
+                <input type="hidden" name="worldSlug" value={worldSlug} />
 
-          <LabelTemplatePreviewPicker
-            templates={templatePreviewOptions}
-            defaultTemplateId={templates[0]?.id}
-          />
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="new-label-source">Quelle</Label>
+                  {/* TODO(design-kit): Select-Kit hat keine SelectLabel-Komponente für Optgroups —
+                      Gruppenüberschriften als einfache Divs simuliert. */}
+                  <Select
+                    name="sourceRef"
+                    required
+                    defaultValue={preselectedSource || (pages[0] ? `page:${pages[0].id}` : "")}
+                  >
+                    <SelectTrigger id="new-label-source">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pages.length > 0 && (
+                        <SelectGroup>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Seiten</div>
+                          {pages.map((page) => (
+                            <SelectItem key={page.id} value={`page:${page.id}`}>
+                              {page.title} ({page.type})
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {roomPages.length > 0 && (
+                        <SelectGroup>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            Dungeon-Räume
+                          </div>
+                          {roomPages.map((page) => (
+                            <SelectItem key={`room-${page.id}`} value={`dungeon_room:${page.id}`}>
+                              {page.title}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {handoutPages.length > 0 && (
+                        <SelectGroup>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            Encounter / Loot / Handouts / Rätsel
+                          </div>
+                          {handoutPages.map((page) => (
+                            <SelectItem key={`handout-${page.id}`} value={`page:${page.id}`}>
+                              {page.title} ({page.type})
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {blocks.length > 0 && (
+                        <SelectGroup>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            Inhaltsblöcke
+                          </div>
+                          {blocks.map((block) => (
+                            <SelectItem key={block.id} value={`content_block:${block.id}`}>
+                              {block.pageTitle} · {block.type}
+                              {block.visibility === "dm_only" ? " (DM)" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {assets.length > 0 && (
+                        <SelectGroup>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            Assets / Bilder
+                          </div>
+                          {assets.map((asset) => (
+                            <SelectItem key={asset.id} value={`asset:${asset.id}`}>
+                              {asset.title}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <label>
-            Titel (optional)
-            <input type="text" name="title" placeholder="Automatisch aus Quelle" />
-          </label>
+                <LabelTemplatePreviewPicker
+                  templates={templatePreviewOptions}
+                  defaultTemplateId={templates[0]?.id}
+                />
 
-          <fieldset className="uwe-fieldset">
-            <legend>Layout</legend>
-            <label>
-              Modus
-              <select name="layoutMode" defaultValue="image_text">
-                <option value="image_text">Bild + Text</option>
-                <option value="text_only">Nur Text</option>
-                <option value="image_only">Nur Bild</option>
-              </select>
-            </label>
-            <label className="uwe-checkbox">
-              <input type="checkbox" name="truncateToPage" defaultChecked />
-              Inhalt auf eine Seite kürzen
-            </label>
-            <label className="uwe-checkbox">
-              <input type="checkbox" name="truncateLongWords" defaultChecked />
-              Lange Wörter kürzen
-            </label>
-          </fieldset>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="new-label-title">Titel (optional)</Label>
+                  <Input id="new-label-title" type="text" name="title" placeholder="Automatisch aus Quelle" />
+                </div>
 
-          <label className="uwe-checkbox uwe-text-warning">
-            <input
-              type="checkbox"
-              name="includeDmOnly"
-              defaultChecked={includeDmOnly === "1"}
-            />
-            DM-only Inhalte bewusst einschließen
-          </label>
+                <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
+                  <legend className="px-1 text-sm font-medium text-foreground">Layout</legend>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="new-label-layout-mode">Modus</Label>
+                    <Select name="layoutMode" defaultValue="image_text">
+                      <SelectTrigger id="new-label-layout-mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="image_text">Bild + Text</SelectItem>
+                        <SelectItem value="text_only">Nur Text</SelectItem>
+                        <SelectItem value="image_only">Nur Bild</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="truncateToPage"
+                      defaultChecked
+                      className="size-4 rounded border-input"
+                    />
+                    Inhalt auf eine Seite kürzen
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="truncateLongWords"
+                      defaultChecked
+                      className="size-4 rounded border-input"
+                    />
+                    Lange Wörter kürzen
+                  </label>
+                </fieldset>
 
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Label erstellen
-          </button>
-        </form>
-      </section>
-      )}
+                <label className="flex items-center gap-2 text-sm text-warning">
+                  <input
+                    type="checkbox"
+                    name="includeDmOnly"
+                    defaultChecked={includeDmOnly === "1"}
+                    className="size-4 rounded border-input"
+                  />
+                  DM-only Inhalte bewusst einschließen
+                </label>
 
-      <section className="uwe-panel">
-        <h2>Leeres Label (manuell)</h2>
-        <form action={createManualLabelAction} className="uwe-form-grid">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          <label>
-            Titel
-            <input type="text" name="title" required defaultValue="Neues Label" />
-          </label>
-          <label>
-            Text
-            <textarea name="text" rows={5} placeholder="Label-Inhalt…" />
-          </label>
-          <label>
-            Vorlage
-            <select name="templateId" defaultValue={templates[0]?.id} required>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Modus
-            <select name="layoutMode" defaultValue="text_only">
-              <option value="image_text">Bild + Text</option>
-              <option value="text_only">Nur Text</option>
-              <option value="image_only">Nur Bild</option>
-            </select>
-          </label>
-          <label className="uwe-checkbox">
-            <input type="checkbox" name="truncateToPage" defaultChecked />
-            Inhalt auf eine Seite kürzen
-          </label>
-          <label className="uwe-checkbox">
-            <input type="checkbox" name="truncateLongWords" defaultChecked />
-            Lange Wörter kürzen
-          </label>
-          <button type="submit" className="uwe-v2-btn">
-            Leeres Label speichern
-          </button>
-        </form>
-      </section>
+                <div>
+                  <Button type="submit">Label erstellen</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Leeres Label (manuell)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={createManualLabelAction} className="flex flex-col gap-4">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-label-manual-title">Titel</Label>
+                <Input id="new-label-manual-title" type="text" name="title" required defaultValue="Neues Label" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-label-manual-text">Text</Label>
+                <Textarea id="new-label-manual-text" name="text" rows={5} placeholder="Label-Inhalt…" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-label-manual-template">Vorlage</Label>
+                <Select name="templateId" defaultValue={templates[0]?.id} required>
+                  <SelectTrigger id="new-label-manual-template">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-label-manual-layout-mode">Modus</Label>
+                <Select name="layoutMode" defaultValue="text_only">
+                  <SelectTrigger id="new-label-manual-layout-mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="image_text">Bild + Text</SelectItem>
+                    <SelectItem value="text_only">Nur Text</SelectItem>
+                    <SelectItem value="image_only">Nur Bild</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="truncateToPage"
+                  defaultChecked
+                  className="size-4 rounded border-input"
+                />
+                Inhalt auf eine Seite kürzen
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="truncateLongWords"
+                  defaultChecked
+                  className="size-4 rounded border-input"
+                />
+                Lange Wörter kürzen
+              </label>
+              <div>
+                <Button type="submit" variant="outline">Leeres Label speichern</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </WorldShell>
   );
 }

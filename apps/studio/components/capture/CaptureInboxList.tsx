@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { CAPTURE_STATUS_LABELS, CAPTURE_TYPE_LABELS, type CaptureStatus, type CaptureType } from "@uwe/database/capture-constants";
 import { bulkArchiveCapturesAction, deleteCaptureAction } from "@/app/capture-actions";
 import { formatStudioDateTime } from "@/src/lib/format";
+import { Button, buttonVariants, Card } from "@/src/components/ui";
 
 export interface CaptureInboxItem {
   id: string;
@@ -22,6 +23,10 @@ interface CaptureInboxListProps {
   statusFilter?: string;
   sourceFilter?: "manual" | "mail" | "scan";
 }
+
+/** Native checkbox — kein Checkbox-Kit-Component vorhanden. TODO(design-kit): natives
+ * input[type=checkbox] + Tailwind verwendet, siehe Verwendungen unten. */
+const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 function readIntent(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
@@ -70,12 +75,13 @@ export function CaptureInboxList({ captures, statusFilter, sourceFilter }: Captu
 
   return (
     <>
-      <div className="uwe-capture-source-tabs">
+      <div className="flex flex-wrap items-center gap-2">
         {tabs.map((tab) => (
           <Link
             key={tab.label}
             href={tab.href}
             data-active={(!sourceFilter && !tab.id) || sourceFilter === tab.id ? "true" : "false"}
+            className="text-sm text-muted-foreground data-[active=true]:font-semibold data-[active=true]:text-foreground data-[active=true]:underline"
           >
             {tab.label}
           </Link>
@@ -83,70 +89,68 @@ export function CaptureInboxList({ captures, statusFilter, sourceFilter }: Captu
       </div>
 
       {captures.length > 0 ? (
-        <div className="uwe-capture-bulk-bar">
-          <label className="uwe-checkbox-row">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label className="flex min-h-11 items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={allSelected}
               onChange={() =>
                 setSelected(allSelected ? new Set() : new Set(captures.map((capture) => capture.id)))
               }
+              className={CHECKBOX_CLASS}
             />
             Alle auswählen
           </label>
           {selected.size > 0 ? (
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-              disabled={busy}
-              onClick={() => void bulkArchive()}
-            >
+            <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => void bulkArchive()}>
               {selected.size} archivieren
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}
 
-      <div className="uwe-today-card-list">
+      <div className="flex flex-col gap-3">
         {captures.map((capture) => {
           const intent = readIntent(capture.metadata);
           const typeLabel =
             intent === "life_brain" ? "Life-Brain-Fakt" : CAPTURE_TYPE_LABELS[capture.captureType];
 
           return (
-            <article
-              key={capture.id}
-              className="uwe-today-card uwe-v2-card uwe-v2-card-padded uwe-capture-inbox-card"
-            >
-              <label className="uwe-capture-select">
+            <Card key={capture.id} className="grid grid-cols-[auto_1fr_auto] items-start gap-3 p-4">
+              <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={selected.has(capture.id)}
                   onChange={() => toggleOne(capture.id)}
                   aria-label={`${capture.title} auswählen`}
+                  className={CHECKBOX_CLASS}
                 />
               </label>
-              <Link href={`/capture/${capture.id}`} className="uwe-capture-inbox-link">
-                <h3>{capture.title}</h3>
-                <p>
+              <Link href={`/capture/${capture.id}`} className="flex flex-col gap-1 text-inherit no-underline">
+                <h3 className="text-sm font-semibold">{capture.title}</h3>
+                <p className="text-sm text-muted-foreground">
                   {typeLabel} · {CAPTURE_STATUS_LABELS[capture.status]} ·{" "}
                   {formatStudioDateTime(new Date(capture.capturedAt))}
                 </p>
-                {capture.content ? <p className="uwe-capture-snippet">{capture.content}</p> : null}
-                {capture.storageKey ? <p className="uwe-capture-snippet">📎 Anhang</p> : null}
+                {capture.content ? (
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{capture.content}</p>
+                ) : null}
+                {capture.storageKey ? (
+                  <p className="line-clamp-2 text-sm text-muted-foreground">📎 Anhang</p>
+                ) : null}
               </Link>
-              <div className="uwe-inline-actions">
-                <Link href={`/capture/${capture.id}`} className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+              <div className="flex flex-wrap gap-2">
+                <Link href={`/capture/${capture.id}`} className={buttonVariants({ size: "sm" })}>
                   Triage
                 </Link>
                 <form action={deleteCaptureAction}>
                   <input type="hidden" name="id" value={capture.id} />
-                  <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+                  <Button type="submit" variant="secondary" size="sm">
                     Löschen
-                  </button>
+                  </Button>
                 </form>
               </div>
-            </article>
+            </Card>
           );
         })}
       </div>

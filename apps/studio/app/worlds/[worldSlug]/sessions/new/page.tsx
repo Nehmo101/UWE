@@ -10,6 +10,7 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createGameSessionAction } from "../../../../session-actions";
+import { Button, buttonVariants, Input, Label, Textarea } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -46,75 +47,104 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
         title="Neue Session"
         summary="Schnellanlage mit Titel, Kampagne und Datum — weitere Felder optional."
       />
-      <form action={createGameSessionAction} className="uwe-edit-form">
+      <form action={createGameSessionAction} className="flex flex-col gap-4">
         <input type="hidden" name="worldSlug" value={worldSlug} />
 
-        <label>
-          Titel
-          <input name="title" required placeholder="Session 3 — Der Turm" autoFocus />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-title">Titel</Label>
+          <Input id="session-title" name="title" required placeholder="Session 3 — Der Turm" autoFocus />
+        </div>
 
-        <label>
-          Kampagne
-          <select name="campaignSlug" defaultValue={campaignSlug ?? ""}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-campaign">Kampagne</Label>
+          {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+              "Keine Kampagne" — natives Select beibehalten. */}
+          <select
+            id="session-campaign"
+            name="campaignSlug"
+            defaultValue={campaignSlug ?? ""}
+            className="flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             <option value="">Keine Kampagne</option>
             {campaigns.map((c) => (
               <option key={c.id} value={c.slug}>{c.name}</option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          Datum
-          <input type="date" name="date" />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-date">Datum</Label>
+          <Input id="session-date" type="date" name="date" />
+        </div>
 
-        <details className="uwe-v2-section">
-          <summary className="uwe-v2-section-title" style={{ cursor: "pointer" }}>
+        <details>
+          <summary className="cursor-pointer text-sm font-semibold tracking-tight text-foreground">
             Erweiterte Felder (optional)
           </summary>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "0.75rem" }}>
-            <label>
-              Status
-              <select name="status" defaultValue="planned">
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="session-status">Status</Label>
+              {/* TODO(design-kit): natives Select statt Kit-Select — konsistent mit
+                  Kampagnen-Auswahl oben, kein Leerwert nötig, aber gleiche Formsprache. */}
+              <select
+                id="session-status"
+                name="status"
+                defaultValue="planned"
+                className="flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 {Object.values(GameSessionStatusEnum).map((status) => (
                   <option key={status} value={status}>
                     {GAME_SESSION_STATUS_LABELS[status]}
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
-            <label>
-              DM-Notizen (Vorbereitung)
-              <textarea name="summaryDm" rows={3} placeholder="Was plant der DM?" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="session-summary-dm">DM-Notizen (Vorbereitung)</Label>
+              <Textarea id="session-summary-dm" name="summaryDm" rows={3} placeholder="Was plant der DM?" />
+            </div>
 
-            <label>
-              Spieler-Recap (Entwurf)
-              <textarea name="summaryPlayer" rows={3} placeholder="Was erfahren die Spieler?" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="session-summary-player">Spieler-Recap (Entwurf)</Label>
+              <Textarea
+                id="session-summary-player"
+                name="summaryPlayer"
+                rows={3}
+                placeholder="Was erfahren die Spieler?"
+              />
+            </div>
 
-            <label>
-              Notizen
-              <textarea name="notes" rows={2} />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="session-notes">Notizen</Label>
+              <Textarea id="session-notes" name="notes" rows={2} />
+            </div>
 
-            <label>
-              Offene Plots
-              <textarea name="openPlots" rows={2} placeholder="Welche Handlungsstränge sind offen?" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="session-open-plots">Offene Plots</Label>
+              <Textarea
+                id="session-open-plots"
+                name="openPlots"
+                rows={2}
+                placeholder="Welche Handlungsstränge sind offen?"
+              />
+            </div>
 
-            <label>
-              Spielerentscheidungen
-              <textarea name="playerDecisions" rows={2} placeholder="Was haben die Spieler entschieden?" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="session-player-decisions">Spielerentscheidungen</Label>
+              <Textarea
+                id="session-player-decisions"
+                name="playerDecisions"
+                rows={2}
+                placeholder="Was haben die Spieler entschieden?"
+              />
+            </div>
           </div>
         </details>
 
-        <div className="uwe-form-actions">
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Session erstellen</button>
-          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/sessions`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit">Session erstellen</Button>
+          <Link className={buttonVariants({ variant: "ghost" })} href={`/worlds/${worldSlug}/sessions`}>
             Abbrechen
           </Link>
         </div>

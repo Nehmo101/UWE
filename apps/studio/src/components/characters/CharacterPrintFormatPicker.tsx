@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, Label, buttonVariants } from "@/src/components/ui";
 
 type ExportFormat = "html" | "markdown";
 type SheetLayout = "full" | "compact";
@@ -10,6 +11,10 @@ interface Props {
   characterId: string;
   worldName: string;
 }
+
+/** TODO(design-kit): natives Select bleibt — direkt an lokalen State (format/layout) gebunden. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function CharacterPrintFormatPicker({ worldSlug, characterId, worldName }: Props) {
   const [format, setFormat] = useState<ExportFormat>("html");
@@ -25,47 +30,60 @@ export function CharacterPrintFormatPicker({ worldSlug, characterId, worldName }
   }, [worldSlug, characterId, format, layout]);
 
   return (
-    <div className="uwe-v2-page">
-      <h1>Charakterbogen — Druck / Export</h1>
-      <p className="uwe-hint">Welt: {worldName}</p>
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Charakterbogen — Druck / Export</h1>
+        <p className="text-sm text-muted-foreground">Welt: {worldName}</p>
+      </div>
 
-      <section className="uwe-v2-card" style={{ marginBottom: "1rem" }}>
-        <h2 style={{ marginTop: 0, fontSize: "1rem" }}>Format</h2>
-        <div className="uwe-form-row uwe-form-row-2">
-          <label>
-            Ausgabe
-            <select value={format} onChange={(event) => setFormat(event.target.value as ExportFormat)}>
-              <option value="html">Druck-HTML (Browser/PDF)</option>
-              <option value="markdown">Markdown-Export</option>
-            </select>
-          </label>
-          <label>
-            Layout
-            <select
-              value={layout}
-              onChange={(event) => setLayout(event.target.value as SheetLayout)}
-              disabled={format === "markdown"}
-            >
-              <option value="full">Vollständig (Zauber, Inventar, Notizen)</option>
-              <option value="compact">Kompakt (Kernwerte)</option>
-            </select>
-          </label>
-        </div>
-        <p className="uwe-hint" style={{ margin: "0.5rem 0 0" }}>
-          Kompakt blendet Zauberliste, Inventar und Notizen aus — ideal für Tischreferenz.
-        </p>
-        <p style={{ marginTop: "0.75rem" }}>
-          <a href={exportUrl} target="_blank" rel="noreferrer" className="uwe-v2-btn uwe-v2-btn-primary">
-            {format === "markdown" ? "Markdown öffnen" : "Druckansicht öffnen"}
-          </a>
-        </p>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Format</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="character-print-format">Ausgabe</Label>
+              <select
+                id="character-print-format"
+                className={NATIVE_SELECT_CLASS}
+                value={format}
+                onChange={(event) => setFormat(event.target.value as ExportFormat)}
+              >
+                <option value="html">Druck-HTML (Browser/PDF)</option>
+                <option value="markdown">Markdown-Export</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="character-print-layout">Layout</Label>
+              <select
+                id="character-print-layout"
+                className={NATIVE_SELECT_CLASS}
+                value={layout}
+                onChange={(event) => setLayout(event.target.value as SheetLayout)}
+                disabled={format === "markdown"}
+              >
+                <option value="full">Vollständig (Zauber, Inventar, Notizen)</option>
+                <option value="compact">Kompakt (Kernwerte)</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Kompakt blendet Zauberliste, Inventar und Notizen aus — ideal für Tischreferenz.
+          </p>
+          <p className="mt-3">
+            <a href={exportUrl} target="_blank" rel="noreferrer" className={buttonVariants()}>
+              {format === "markdown" ? "Markdown öffnen" : "Druckansicht öffnen"}
+            </a>
+          </p>
+        </CardContent>
+      </Card>
 
       {format === "html" && (
         <iframe
           title="Charakterbogen Druckvorschau"
           src={exportUrl}
-          style={{ width: "100%", minHeight: "80vh", border: "1px solid #ccc" }}
+          className="min-h-[80vh] w-full border border-border"
         />
       )}
     </div>

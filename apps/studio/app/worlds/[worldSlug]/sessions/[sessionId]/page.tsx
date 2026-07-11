@@ -20,6 +20,7 @@ import { StudioWikiPageView } from "@/components/StudioWikiPageView";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
@@ -95,7 +96,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
             sessionId={sessionId}
           />
           <SidebarSection title="Workflow">
-            <ol className="uwe-hint" style={{ paddingLeft: "1.25rem" }}>
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
               <li>Geplant → Vorbereiten (DM-Notizen)</li>
               <li>Gespielt → Nachbereiten</li>
               <li>Recap schreiben → Portal veröffentlichen</li>
@@ -109,20 +110,10 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         meta={
           <>
             <GameSessionStatusBadge status={session.status} />
-            {session.date && (
-              <span style={{ marginLeft: "0.5rem" }}>
-                {session.date.toLocaleDateString("de-DE")}
-              </span>
-            )}
-            {session.recapPublished && (
-              <span className="uwe-badge uwe-badge-published" style={{ marginLeft: "0.5rem" }}>
-                Im Portal sichtbar
-              </span>
-            )}
+            {session.date && <span>{session.date.toLocaleDateString("de-DE")}</span>}
+            {session.recapPublished && <Badge variant="success">Im Portal sichtbar</Badge>}
             {session.playerVisibleSchedule && !session.recapPublished && (
-              <span className="uwe-badge" style={{ marginLeft: "0.5rem" }}>
-                Termin im Portal angekündigt
-              </span>
+              <Badge variant="secondary">Termin im Portal angekündigt</Badge>
             )}
           </>
         }
@@ -130,50 +121,52 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           <form action={publishSessionRecapAction}>
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="sessionId" value={sessionId} />
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Fürs Portal veröffentlichen
-            </button>
+            <Button type="submit">Fürs Portal veröffentlichen</Button>
           </form>
         ) : undefined}
       />
-      {saved && <p className="uwe-flash uwe-flash-success">Session gespeichert.</p>}
-      {published && <p className="uwe-flash uwe-flash-success">Recap fürs Portal veröffentlicht.</p>}
-      {linked && <p className="uwe-flash uwe-flash-success">Seite verknüpft.</p>}
-      {unlinked && <p className="uwe-flash uwe-flash-success">Verknüpfung entfernt.</p>}
+      {saved && <Alert tone="success">Session gespeichert.</Alert>}
+      {published && <Alert tone="success">Recap fürs Portal veröffentlicht.</Alert>}
+      {linked && <Alert tone="success">Seite verknüpft.</Alert>}
+      {unlinked && <Alert tone="success">Verknüpfung entfernt.</Alert>}
 
       {(session.status === "planned" || session.status === "prepared") &&
         !session.playerVisibleSchedule &&
         !session.recapPublished && (
-          <p className="uwe-notice uwe-notice-warn">
+          <Alert tone="warning">
             Diese Session ist für Spieler im Portal noch unsichtbar. Aktiviere unten
             „Termin für Spieler im Portal ankündigen“, damit Datum und Titel im
             Spieler-Dashboard erscheinen — ohne DM-Prep oder Recap preiszugeben.
-          </p>
+          </Alert>
         )}
 
       {availability && (
-        <section className="uwe-v2-card uwe-v2-card-padded" style={{ marginBottom: "1rem" }}>
-          <h2 className="uwe-v2-section-title">Spieler-Verfügbarkeit</h2>
-          <p>
-            Zusagen: <strong>{availability.counts.yes}</strong> · Vielleicht:{" "}
-            <strong>{availability.counts.maybe}</strong> · Absagen:{" "}
-            <strong>{availability.counts.no}</strong>
-          </p>
-          {availability.votes.length > 0 ? (
-            <ul className="uwe-hint" style={{ paddingLeft: "1.25rem" }}>
-              {availability.votes.map((vote) => (
-                <li key={vote.userId}>
-                  {vote.displayName}: {AVAILABILITY_LABELS[vote.status]}
-                  {vote.note ? ` — ${vote.note}` : ""}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="uwe-dashboard-muted">
-              Noch keine Rückmeldungen — Spieler stimmen im Portal unter „Sessions“ ab.
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Spieler-Verfügbarkeit</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-sm">
+              Zusagen: <strong>{availability.counts.yes}</strong> · Vielleicht:{" "}
+              <strong>{availability.counts.maybe}</strong> · Absagen:{" "}
+              <strong>{availability.counts.no}</strong>
             </p>
-          )}
-        </section>
+            {availability.votes.length > 0 ? (
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {availability.votes.map((vote) => (
+                  <li key={vote.userId}>
+                    {vote.displayName}: {AVAILABILITY_LABELS[vote.status]}
+                    {vote.note ? ` — ${vote.note}` : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Noch keine Rückmeldungen — Spieler stimmen im Portal unter „Sessions“ ab.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <SessionDetailClient

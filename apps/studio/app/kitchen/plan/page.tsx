@@ -22,6 +22,22 @@ import {
   suggestWeekAction,
   toggleMealCookedAction,
 } from "@/app/kitchen-actions";
+import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  cn,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui";
 
 interface Props {
   searchParams: Promise<{ y?: string; w?: string; ai?: string }>;
@@ -84,150 +100,174 @@ export default async function KitchenPlanPage({ searchParams }: Props) {
         title={`Wochenplan · KW ${isoWeek}/${isoYear}`}
         summary="Plane Mahlzeiten pro Tag und erzeuge daraus eine konsolidierte Einkaufsliste."
         actions={
-          <div className="uwe-inline-actions">
+          <>
             <form action={suggestWeekAction}>
               <input type="hidden" name="isoYear" value={isoYear} />
               <input type="hidden" name="isoWeek" value={isoWeek} />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
+              <Button type="submit" variant="secondary">
                 KI-Wochenvorschlag
-              </button>
+              </Button>
             </form>
             {hasEntries ? (
               <form action={generateShoppingListAction}>
                 <input type="hidden" name="weekId" value={week!.id} />
-                <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-                  Einkaufsliste erzeugen
-                </button>
+                <Button type="submit">Einkaufsliste erzeugen</Button>
               </form>
             ) : null}
-          </div>
+          </>
         }
       />
 
-      {aiMessage ? (
-        <p className={ai === "ok" ? "uwe-hint" : "uwe-notice-warn"}>{aiMessage}</p>
-      ) : null}
-
-      {aiDraft && aiDraft.days.length > 0 ? (
-        <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
-            <h2 className="uwe-v2-section-title">KI-Vorschlag (Entwurf)</h2>
-            <form action={dismissWeekDraftAction}>
-              <input type="hidden" name="isoYear" value={isoYear} />
-              <input type="hidden" name="isoWeek" value={isoWeek} />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                Entwurf verwerfen
-              </button>
-            </form>
-          </div>
-          {aiDraft.summary ? <p className="uwe-dashboard-muted">{aiDraft.summary}</p> : null}
-          <p className="uwe-hint">
-            Nichts wird automatisch übernommen — bestätige einzelne Tage.
+      <div className="flex flex-col gap-6">
+        {aiMessage ? (
+          <p className={cn("text-sm", ai === "ok" ? "text-muted-foreground" : "text-warning")}>
+            {aiMessage}
           </p>
-          <ul className="uwe-linked-list">
-            {aiDraft.days.map((day, index) => {
-              const resolved = resolveDraftDate(day.day, days);
-              return (
-                <li key={index} style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
-                  <span className="uwe-badge">{DAY_FORMAT.format(resolved)}</span>
-                  <span className="uwe-badge">{MEAL_SLOT_LABELS[day.slot]}</span>
-                  <span style={{ flex: 1 }}>
-                    {day.title}
-                    {day.note ? ` — ${day.note}` : ""}
-                  </span>
-                  <form action={applyDraftEntryAction} style={{ display: "inline" }}>
-                    <input type="hidden" name="isoYear" value={isoYear} />
-                    <input type="hidden" name="isoWeek" value={isoWeek} />
-                    <input type="hidden" name="date" value={resolved.toISOString()} />
-                    <input type="hidden" name="slot" value={day.slot} />
-                    {day.recipeId ? <input type="hidden" name="recipeId" value={day.recipeId} /> : null}
-                    <input type="hidden" name="title" value={day.title} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                      + übernehmen
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
+        ) : null}
 
-      <div className="uwe-form-actions">
-        <Link href={`/kitchen/plan?y=${prev.isoYear}&w=${prev.isoWeek}`} className="uwe-v2-btn">
-          ← KW {prev.isoWeek}
-        </Link>
-        <Link href="/kitchen/plan" className="uwe-v2-btn">
-          Diese Woche
-        </Link>
-        <Link href={`/kitchen/plan?y=${next.isoYear}&w=${next.isoWeek}`} className="uwe-v2-btn">
-          KW {next.isoWeek} →
-        </Link>
-      </div>
-
-      {days.map((day) => {
-        const key = day.toISOString().slice(0, 10);
-        const entries = entriesByDay.get(key) ?? [];
-        return (
-          <section className="uwe-v2-section" key={key}>
-            <h2 className="uwe-v2-section-title">{DAY_FORMAT.format(day)}</h2>
-            {entries.length > 0 ? (
-              <ul className="uwe-linked-list">
-                {entries.map((entry) => (
-                  <li key={entry.id} style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
-                    <span className="uwe-badge">{MEAL_SLOT_LABELS[entry.slot]}</span>
-                    <span style={{ flex: 1, textDecoration: entry.cooked ? "line-through" : "none" }}>
-                      {entry.recipe ? entry.recipe.title : MEAL_ENTRY_TYPE_LABELS[entry.entryType]}
-                      {entry.note ? ` — ${entry.note}` : ""}
-                    </span>
-                    <form action={toggleMealCookedAction} style={{ display: "inline" }}>
-                      <input type="hidden" name="entryId" value={entry.id} />
-                      <input type="hidden" name="isoYear" value={isoYear} />
-                      <input type="hidden" name="isoWeek" value={isoWeek} />
-                      <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                        {entry.cooked ? "↺" : "✓"}
-                      </button>
-                    </form>
-                    <form action={removeMealEntryAction} style={{ display: "inline" }}>
-                      <input type="hidden" name="entryId" value={entry.id} />
-                      <input type="hidden" name="isoYear" value={isoYear} />
-                      <input type="hidden" name="isoWeek" value={isoWeek} />
-                      <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
-                        ✕
-                      </button>
-                    </form>
-                  </li>
-                ))}
+        {aiDraft && aiDraft.days.length > 0 ? (
+          <Card>
+            <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2">
+              <CardTitle>KI-Vorschlag (Entwurf)</CardTitle>
+              <form action={dismissWeekDraftAction}>
+                <input type="hidden" name="isoYear" value={isoYear} />
+                <input type="hidden" name="isoWeek" value={isoWeek} />
+                <Button type="submit" variant="secondary" size="sm">
+                  Entwurf verwerfen
+                </Button>
+              </form>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {aiDraft.summary ? (
+                <p className="text-sm text-muted-foreground">{aiDraft.summary}</p>
+              ) : null}
+              <p className="text-sm text-muted-foreground">
+                Nichts wird automatisch übernommen — bestätige einzelne Tage.
+              </p>
+              <ul className="flex flex-col gap-2">
+                {aiDraft.days.map((day, index) => {
+                  const resolved = resolveDraftDate(day.day, days);
+                  return (
+                    <li key={index} className="flex flex-wrap items-baseline gap-2 text-sm">
+                      <Badge>{DAY_FORMAT.format(resolved)}</Badge>
+                      <Badge>{MEAL_SLOT_LABELS[day.slot]}</Badge>
+                      <span className="flex-1">
+                        {day.title}
+                        {day.note ? ` — ${day.note}` : ""}
+                      </span>
+                      <form action={applyDraftEntryAction} className="inline">
+                        <input type="hidden" name="isoYear" value={isoYear} />
+                        <input type="hidden" name="isoWeek" value={isoWeek} />
+                        <input type="hidden" name="date" value={resolved.toISOString()} />
+                        <input type="hidden" name="slot" value={day.slot} />
+                        {day.recipeId ? <input type="hidden" name="recipeId" value={day.recipeId} /> : null}
+                        <input type="hidden" name="title" value={day.title} />
+                        <Button type="submit" variant="secondary" size="sm">
+                          + übernehmen
+                        </Button>
+                      </form>
+                    </li>
+                  );
+                })}
               </ul>
-            ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
-            <form action={addMealEntryAction} className="uwe-inline-form" style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
-              <input type="hidden" name="isoYear" value={isoYear} />
-              <input type="hidden" name="isoWeek" value={isoWeek} />
-              <input type="hidden" name="date" value={day.toISOString()} />
-              <select name="slot" defaultValue="dinner" aria-label="Mahlzeit">
-                {MEAL_SLOTS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {MEAL_SLOT_LABELS[slot]}
-                  </option>
-                ))}
-              </select>
-              <select name="recipeId" aria-label="Rezept" style={{ minWidth: "12rem" }}>
-                <option value="">— Rezept wählen —</option>
-                {recipes.map((recipe) => (
-                  <option key={recipe.id} value={recipe.id}>
-                    {recipe.title}
-                  </option>
-                ))}
-              </select>
-              <input type="text" name="note" placeholder="oder Notiz / Reste" />
-              <button type="submit" className="uwe-v2-btn uwe-v2-btn-secondary">
-                + Eintrag
-              </button>
-            </form>
-          </section>
-        );
-      })}
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/kitchen/plan?y=${prev.isoYear}&w=${prev.isoWeek}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            ← KW {prev.isoWeek}
+          </Link>
+          <Link href="/kitchen/plan" className={buttonVariants({ variant: "outline" })}>
+            Diese Woche
+          </Link>
+          <Link
+            href={`/kitchen/plan?y=${next.isoYear}&w=${next.isoWeek}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            KW {next.isoWeek} →
+          </Link>
+        </div>
+
+        {days.map((day) => {
+          const key = day.toISOString().slice(0, 10);
+          const entries = entriesByDay.get(key) ?? [];
+          return (
+            <section className="flex flex-col gap-3" key={key}>
+              <h2 className="text-lg font-semibold tracking-tight">{DAY_FORMAT.format(day)}</h2>
+              {entries.length > 0 ? (
+                <ul className="flex flex-col gap-2">
+                  {entries.map((entry) => (
+                    <li key={entry.id} className="flex flex-wrap items-baseline gap-2 text-sm">
+                      <Badge>{MEAL_SLOT_LABELS[entry.slot]}</Badge>
+                      <span className={cn("flex-1", entry.cooked && "line-through")}>
+                        {entry.recipe ? entry.recipe.title : MEAL_ENTRY_TYPE_LABELS[entry.entryType]}
+                        {entry.note ? ` — ${entry.note}` : ""}
+                      </span>
+                      <form action={toggleMealCookedAction} className="inline">
+                        <input type="hidden" name="entryId" value={entry.id} />
+                        <input type="hidden" name="isoYear" value={isoYear} />
+                        <input type="hidden" name="isoWeek" value={isoWeek} />
+                        <Button type="submit" variant="secondary" size="sm">
+                          {entry.cooked ? "↺" : "✓"}
+                        </Button>
+                      </form>
+                      <form action={removeMealEntryAction} className="inline">
+                        <input type="hidden" name="entryId" value={entry.id} />
+                        <input type="hidden" name="isoYear" value={isoYear} />
+                        <input type="hidden" name="isoWeek" value={isoWeek} />
+                        <Button type="submit" variant="secondary" size="sm">
+                          ✕
+                        </Button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <form action={addMealEntryAction} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="isoYear" value={isoYear} />
+                <input type="hidden" name="isoWeek" value={isoWeek} />
+                <input type="hidden" name="date" value={day.toISOString()} />
+                <Select name="slot" defaultValue="dinner">
+                  <SelectTrigger aria-label="Mahlzeit" className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEAL_SLOTS.map((slot) => (
+                      <SelectItem key={slot} value={slot}>
+                        {MEAL_SLOT_LABELS[slot]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+                    "kein Rezept" — natives Select beibehalten, da addMealEntryAction einen
+                    leeren String als "keine Auswahl" auswertet. */}
+                <select
+                  name="recipeId"
+                  aria-label="Rezept"
+                  className="h-9 w-48 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">— Rezept wählen —</option>
+                  {recipes.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>
+                      {recipe.title}
+                    </option>
+                  ))}
+                </select>
+                <Input type="text" name="note" placeholder="oder Notiz / Reste" className="w-48" />
+                <Button type="submit" variant="secondary">
+                  + Eintrag
+                </Button>
+              </form>
+            </section>
+          );
+        })}
+      </div>
     </StudioShell>
   );
 }

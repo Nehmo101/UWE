@@ -108,7 +108,7 @@ export default async function MailComposePage({ searchParams }: Props) {
         title={`Mail vorbereiten: ${KIND_LABELS[kind]}`}
         summary="Vorschau prüfen, Empfänger wählen und erst nach explizitem Klick senden. Keine automatischen Mails."
       />
-      <p className="uwe-hint">
+      <p className="text-sm text-muted-foreground">
         Quelle: <code>{draft.sourceType}</code> / <code>{draft.sourceId}</code>
         {world ? (
           <>

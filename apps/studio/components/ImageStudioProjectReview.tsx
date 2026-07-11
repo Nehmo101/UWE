@@ -8,6 +8,19 @@ import {
   saveImageStudioDraftAction,
 } from "@/app/integration-actions";
 import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface VersionRow {
   id: string;
@@ -88,111 +101,114 @@ export function ImageStudioProjectReview({
   }
 
   return (
-    <div className="uwe-image-studio-review">
-      <section className="uwe-v2-card">
-        <h2 className="uwe-v2-section-title">Projekt</h2>
-        <dl className="uwe-kv-list">
-          <div>
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Projekt</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <dl className="grid grid-cols-[minmax(6rem,10rem)_1fr] gap-x-4 gap-y-1 text-sm [&>dt]:text-muted-foreground [&>dd]:m-0">
             <dt>Status</dt>
             <dd>
               <ImageStudioStatusBadge status={status} label={statusLabel} />
             </dd>
-          </div>
-          <div>
             <dt>Welt</dt>
             <dd>{worldSlug ?? "—"}</dd>
+          </dl>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="image-studio-review-title">Titel</Label>
+              <Input
+                id="image-studio-review-title"
+                value={draftTitle}
+                onChange={(event) => setDraftTitle(event.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="image-studio-review-prompt">Prompt / Notiz</Label>
+              <Textarea
+                id="image-studio-review-prompt"
+                rows={4}
+                value={draftPrompt}
+                onChange={(event) => setDraftPrompt(event.target.value)}
+              />
+            </div>
+            <Button type="button" variant="secondary" disabled={pending} onClick={() => void saveDraft()}>
+              Entwurf speichern
+            </Button>
           </div>
-        </dl>
+        </CardContent>
+      </Card>
 
-        <div className="uwe-form" style={{ marginTop: "1rem" }}>
-          <label>
-            Titel
-            <input
-              className="uwe-input"
-              value={draftTitle}
-              onChange={(event) => setDraftTitle(event.target.value)}
-            />
-          </label>
-          <label>
-            Prompt / Notiz
-            <textarea
-              className="uwe-input"
-              rows={4}
-              value={draftPrompt}
-              onChange={(event) => setDraftPrompt(event.target.value)}
-            />
-          </label>
-          <button
-            type="button"
-            className="uwe-v2-btn uwe-v2-btn-secondary"
-            disabled={pending}
-            onClick={() => void saveDraft()}
-          >
-            Entwurf speichern
-          </button>
-        </div>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Versionen</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {versions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Versionen.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {versions.map((version) => (
+                <li
+                  key={version.id}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[var(--radius)] border border-border bg-card p-4 text-sm text-card-foreground shadow-sm"
+                >
+                  <strong>v{version.versionNumber}</strong>
+                  <Badge>{version.operation}</Badge>
+                  {version.prompt ? (
+                    <p className="basis-full text-sm text-muted-foreground">{version.prompt.slice(0, 120)}</p>
+                  ) : null}
+                  {version.assetId ? (
+                    <Link href={`/api/assets/${version.assetId}/file`} target="_blank">
+                      Vorschau
+                    </Link>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
 
-      <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
-        <h2 className="uwe-v2-section-title">Versionen</h2>
-        {versions.length === 0 ? (
-          <p className="uwe-v2-empty">Noch keine Versionen.</p>
-        ) : (
-          <ul className="uwe-list-cards">
-            {versions.map((version) => (
-              <li key={version.id} className="uwe-list-card">
-                <strong>v{version.versionNumber}</strong>
-                <span className="uwe-badge">{version.operation}</span>
-                {version.prompt ? (
-                  <p className="uwe-dashboard-muted">{version.prompt.slice(0, 120)}</p>
-                ) : null}
-                {version.assetId ? (
-                  <Link href={`/api/assets/${version.assetId}/file`} target="_blank">
-                    Vorschau
-                  </Link>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {latestWithAsset?.assetId ? (
-          <p style={{ marginTop: "1rem" }}>
-            <Link
-              href={`/image-studio/${projectId}/edit`}
-              className="uwe-v2-btn uwe-v2-btn-primary"
-            >
+          {latestWithAsset?.assetId ? (
+            <Link href={`/image-studio/${projectId}/edit`} className={buttonVariants({ variant: "default" })}>
               Canvas-Editor öffnen
             </Link>
-          </p>
-        ) : null}
-      </section>
+          ) : null}
+        </CardContent>
+      </Card>
 
       {links.length > 0 && latestWithAsset?.assetId ? (
-        <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
-          <h2 className="uwe-v2-section-title">Verknüpfung übernehmen</h2>
-          <ul className="uwe-list-plain">
-            {links.map((link) => (
-              <li key={`${link.targetType}-${link.targetId}`}>
-                {link.targetType}: <code>{link.targetId}</code>
-                {link.targetType === "page" ? (
-                  <button
-                    type="button"
-                    className="uwe-v2-btn uwe-v2-btn-secondary"
-                    style={{ marginLeft: "0.5rem" }}
-                    disabled={pending}
-                    onClick={() => void adoptToPage(link.targetId)}
-                  >
-                    Asset übernehmen
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Verknüpfung übernehmen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2 text-sm">
+              {links.map((link) => (
+                <li key={`${link.targetType}-${link.targetId}`} className="flex flex-wrap items-center gap-2">
+                  <span>
+                    {link.targetType}: <code>{link.targetId}</code>
+                  </span>
+                  {link.targetType === "page" ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => void adoptToPage(link.targetId)}
+                    >
+                      Asset übernehmen
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       ) : null}
 
-      {message ? <p className="uwe-notice">{message}</p> : null}
+      {message ? <Alert tone="success">{message}</Alert> : null}
     </div>
   );
 }

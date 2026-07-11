@@ -1,8 +1,20 @@
 "use client";
 
+import { EmptyState } from "@uwe/shared-ui";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDate } from "@/src/lib/format";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  cn,
+  Input,
+  Label,
+} from "@/src/components/ui";
 
 interface ReviewEntry {
   id: string;
@@ -28,6 +40,105 @@ interface ReviewsResponse {
   pendingCount: number;
   statusLabels?: Record<string, string>;
   sourceLabels?: Record<string, string>;
+}
+
+interface DiffRow {
+  field: string;
+  before: string | null;
+  after: string | null;
+}
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+const CHECKBOX_CLASS = "size-4 rounded border-input";
+
+/** TODO(design-kit): natives select bleibt — controlled Filter mit festem Default
+    ("pending") bzw. Leerwert ("Alle"), siehe gleiches Muster in AuditLogWorkspace.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatDiffValue(value: unknown): string {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return text.length > 200 ? `${text.slice(0, 199)}…` : text;
+}
+
+function buildDiffRows(diff: unknown): DiffRow[] | null {
+  if (!isRecord(diff)) return null;
+  if ("before" in diff || "after" in diff) {
+    const before = diff.before;
+    const after = diff.after;
+    if (isRecord(before) && isRecord(after)) {
+      const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+      const rows: DiffRow[] = [];
+      for (const field of fields) {
+        const inBefore = field in before;
+        const inAfter = field in after;
+        if (inBefore && inAfter && JSON.stringify(before[field]) === JSON.stringify(after[field])) {
+          continue;
+        }
+        rows.push({
+          field,
+          before: inBefore ? formatDiffValue(before[field]) : null,
+          after: inAfter ? formatDiffValue(after[field]) : null,
+        });
+      }
+      return rows;
+    }
+    return [
+      {
+        field: "Inhalt",
+        before: before === undefined || before === "" ? null : formatDiffValue(before),
+        after: after === undefined || after === "" ? null : formatDiffValue(after),
+      },
+    ];
+  }
+  return Object.entries(diff).map(([field, value]) => ({
+    field,
+    before: null,
+    after: formatDiffValue(value),
+  }));
+}
+
+function ReviewDiff({ diff }: { diff: unknown }) {
+  const rows = buildDiffRows(diff);
+  const raw = <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(diff, null, 2)}</pre>;
+  if (!rows) return raw;
+  return (
+    <>
+      {rows.length === 0 ? (
+        <p>
+          <small>Keine geänderten Felder erkannt.</small>
+        </p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className={TH_CLASS}>Feld</th>
+              <th className={TH_CLASS}>Vorher</th>
+              <th className={TH_CLASS}>Nachher</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.field}>
+                <td className={TD_CLASS}>{row.field}</td>
+                <td className={cn(TD_CLASS, "break-words")}>{row.before ?? "—"}</td>
+                <td className={cn(TD_CLASS, "break-words")}>{row.after ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <details>
+        <summary>Rohdaten</summary>
+        {raw}
+      </details>
+    </>
+  );
 }
 
 export function ReviewWorkspace() {
@@ -138,6 +249,13 @@ export function ReviewWorkspace() {
     void loadReviews();
   }
 
+  function describeActiveFilter(): string {
+    const parts = [`Status „${status ? statusLabels[status] ?? status : "Alle"}“`];
+    if (sourceType) parts.push(`Typ „${sourceLabels[sourceType] ?? sourceType}“`);
+    if (worldId) parts.push(`Welt „${worldId}“`);
+    return parts.join(", ");
+  }
+
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -162,167 +280,203 @@ export function ReviewWorkspace() {
 
   return (
     <>
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <p>
-          <strong>{pendingCount}</strong> offene Reviews
-        </p>
-      </section>
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <p>
+            <strong>{pendingCount}</strong> offene Reviews
+          </p>
+        </CardContent>
+      </Card>
 
-      <section className="uwe-v2-card uwe-form" style={{ marginBottom: "1.5rem" }}>
-        <h2>Filter</h2>
-        <div className="uwe-form-grid">
-          <label>
-            Status
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="pending">Offen</option>
-              <option value="approved">Freigegeben</option>
-              <option value="rejected">Abgelehnt</option>
-              <option value="">Alle</option>
-            </select>
-          </label>
-          <label>
-            Typ / Quelle
-            <select value={sourceType} onChange={(event) => setSourceType(event.target.value)}>
-              <option value="">Alle</option>
-              {Object.entries(sourceLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            World-ID
-            <input
-              type="text"
-              value={worldId}
-              onChange={(event) => setWorldId(event.target.value)}
-              placeholder="worldId"
-            />
-          </label>
-        </div>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void loadReviews()}>
-          Filtern
-        </button>
-      </section>
-
-      {error ? <p className="uwe-error">{error}</p> : null}
-      {loading ? <p>Lade Reviews…</p> : null}
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 24rem), 1fr))", gap: "1.5rem" }}>
-        <section className="uwe-v2-card">
-          <div className="uwe-inline-actions" style={{ marginBottom: "0.75rem" }}>
-            <h2 style={{ margin: 0 }}>Liste</h2>
-            {status === "pending" && selectedIds.size > 0 ? (
-              <button type="button" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm" onClick={() => void bulkApprove()}>
-                {selectedIds.size} ausgewählte freigeben
-              </button>
-            ) : null}
-          </div>
-          <table className="uwe-table">
-            <thead>
-              <tr>
-                {status === "pending" ? <th aria-label="Auswahl" /> : null}
-                <th>Typ</th>
-                <th>Titel</th>
-                <th>Status</th>
-                <th>Datum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr
-                  key={entry.id}
-                  onClick={() => void loadDetail(entry.id)}
-                  style={{ cursor: "pointer", background: selectedId === entry.id ? "var(--uwe-surface-2)" : undefined }}
-                >
-                  {status === "pending" ? (
-                    <td onClick={(event) => event.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(entry.id)}
-                        onChange={() => toggleSelected(entry.id)}
-                        aria-label={`Review ${entry.title} auswählen`}
-                      />
-                    </td>
-                  ) : null}
-                  <td>{sourceLabels[entry.sourceType] ?? entry.sourceType}</td>
-                  <td>{entry.title}</td>
-                  <td>{statusLabels[entry.status] ?? entry.status}</td>
-                  <td>{formatStudioDate(entry.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
-        <section className="uwe-v2-card">
-          <h2>Detail & Vorschau</h2>
-          {!detail ? <p>Review auswählen.</p> : null}
-          {detail ? (
-            <>
-              <h3>{detail.title}</h3>
-              <p>{detail.summary}</p>
-              {detail.proposedByDisplayName ? (
-                <p>
-                  <small>Vorgeschlagen von: {detail.proposedByDisplayName}</small>
-                </p>
-              ) : null}
-              {detail.diff ? (
-                <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem" }}>
-                  {JSON.stringify(detail.diff, null, 2)}
-                </pre>
-              ) : null}
-              {detail.targetHref ? (
-                <p>
-                  <a href={detail.targetHref}>Zum Ziel</a>
-                </p>
-              ) : null}
-              {detail.status === "pending" ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}>
-                  <label>
-                    Ablehnungsgrund (optional)
-                    <input
-                      type="text"
-                      value={rejectReason}
-                      onChange={(event) => setRejectReason(event.target.value)}
-                      placeholder="Grund für Ablehnung…"
-                    />
-                  </label>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button type="button" className="uwe-v2-btn uwe-v2-btn-primary" onClick={() => void runAction("approve")}>
-                      Freigeben
-                    </button>
-                    <button type="button" className="uwe-v2-btn" onClick={() => void runAction("reject")}>
-                      Ablehnen
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-              {actionMessage ? <p>{actionMessage}</p> : null}
-              <h4>Kommentare ({comments.length})</h4>
-              <ul>
-                {comments.map((comment) => (
-                  <li key={comment.id}>
-                    <strong>{comment.userDisplayName}</strong> ({formatStudioDate(comment.createdAt)}): {comment.content}
-                  </li>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filter</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="review-filter-status">Status</Label>
+              <select
+                id="review-filter-status"
+                value={status}
+                onChange={(event) => setStatus(event.target.value)}
+                className={NATIVE_SELECT_CLASS}
+              >
+                <option value="pending">Offen</option>
+                <option value="approved">Freigegeben</option>
+                <option value="rejected">Abgelehnt</option>
+                <option value="">Alle</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="review-filter-source">Typ / Quelle</Label>
+              <select
+                id="review-filter-source"
+                value={sourceType}
+                onChange={(event) => setSourceType(event.target.value)}
+                className={NATIVE_SELECT_CLASS}
+              >
+                <option value="">Alle</option>
+                {Object.entries(sourceLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
-              </ul>
-              <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <input
-                  type="text"
-                  value={commentText}
-                  onChange={(event) => setCommentText(event.target.value)}
-                  placeholder="Kommentar…"
-                  style={{ flex: 1 }}
-                />
-                <button type="button" className="uwe-v2-btn" onClick={() => void submitComment()}>
-                  Senden
-                </button>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="review-filter-world">World-ID</Label>
+              <Input
+                id="review-filter-world"
+                type="text"
+                value={worldId}
+                onChange={(event) => setWorldId(event.target.value)}
+                placeholder="worldId"
+              />
+            </div>
+          </div>
+          <Button type="button" onClick={() => void loadReviews()} className="self-start">
+            Filtern
+          </Button>
+        </CardContent>
+      </Card>
+
+      {error ? (
+        <Alert tone="danger" role="alert" className="mb-6">
+          {error}
+        </Alert>
+      ) : null}
+      {loading ? <p className="mb-6 text-sm text-muted-foreground">Lade Reviews…</p> : null}
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] gap-6">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-3">
+            <CardTitle>Liste</CardTitle>
+            {status === "pending" && selectedIds.size > 0 ? (
+              <Button type="button" size="sm" onClick={() => void bulkApprove()}>
+                {selectedIds.size} ausgewählte freigeben
+              </Button>
+            ) : null}
+          </CardHeader>
+          <CardContent>
+            {!loading && !error && entries.length === 0 ? (
+              <EmptyState
+                title="Keine Reviews"
+                description={`Für den aktiven Filter (${describeActiveFilter()}) wurden keine Reviews gefunden.`}
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      {status === "pending" ? <th className={TH_CLASS} aria-label="Auswahl" /> : null}
+                      <th className={TH_CLASS}>Typ</th>
+                      <th className={TH_CLASS}>Titel</th>
+                      <th className={TH_CLASS}>Status</th>
+                      <th className={TH_CLASS}>Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.map((entry) => (
+                      <tr
+                        key={entry.id}
+                        onClick={() => void loadDetail(entry.id)}
+                        className={cn("cursor-pointer", selectedId === entry.id && "bg-muted")}
+                      >
+                        {status === "pending" ? (
+                          <td className={TD_CLASS} onClick={(event) => event.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(entry.id)}
+                              onChange={() => toggleSelected(entry.id)}
+                              aria-label={`Review ${entry.title} auswählen`}
+                              className={CHECKBOX_CLASS}
+                            />
+                          </td>
+                        ) : null}
+                        <td className={TD_CLASS}>{sourceLabels[entry.sourceType] ?? entry.sourceType}</td>
+                        <td className={TD_CLASS}>{entry.title}</td>
+                        <td className={TD_CLASS}>{statusLabels[entry.status] ?? entry.status}</td>
+                        <td className={TD_CLASS}>{formatStudioDate(entry.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </>
-          ) : null}
-        </section>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Detail & Vorschau</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {!detail ? <p className="text-sm text-muted-foreground">Review auswählen.</p> : null}
+            {detail ? (
+              <>
+                <h3 className="font-semibold tracking-tight">{detail.title}</h3>
+                <p>{detail.summary}</p>
+                {detail.proposedByDisplayName ? (
+                  <p className="text-sm text-muted-foreground">
+                    Vorgeschlagen von: {detail.proposedByDisplayName}
+                  </p>
+                ) : null}
+                {detail.diff ? <ReviewDiff diff={detail.diff} /> : null}
+                {detail.targetHref ? (
+                  <p>
+                    <a href={detail.targetHref} className="text-primary underline-offset-4 hover:underline">
+                      Zum Ziel
+                    </a>
+                  </p>
+                ) : null}
+                {detail.status === "pending" ? (
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="review-reject-reason">Ablehnungsgrund (optional)</Label>
+                      <Input
+                        id="review-reject-reason"
+                        type="text"
+                        value={rejectReason}
+                        onChange={(event) => setRejectReason(event.target.value)}
+                        placeholder="Grund für Ablehnung…"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" onClick={() => void runAction("approve")}>
+                        Freigeben
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => void runAction("reject")}>
+                        Ablehnen
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                {actionMessage ? <p className="text-sm text-muted-foreground">{actionMessage}</p> : null}
+                <h4 className="font-medium">Kommentare ({comments.length})</h4>
+                <ul className="flex flex-col gap-1 text-sm">
+                  {comments.map((comment) => (
+                    <li key={comment.id}>
+                      <strong>{comment.userDisplayName}</strong> ({formatStudioDate(comment.createdAt)}): {comment.content}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={commentText}
+                    onChange={(event) => setCommentText(event.target.value)}
+                    placeholder="Kommentar…"
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" onClick={() => void submitComment()}>
+                    Senden
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </CardContent>
+        </Card>
       </div>
     </>
   );

@@ -4,6 +4,7 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 import Link from "next/link";
 import type { GeneratorActionDefinition, MissingContentHint } from "@uwe/database/generator-types";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface ContextualGeneratorPanelProps {
   worldSlug: string;
@@ -82,63 +83,78 @@ export function ContextualGeneratorPanel({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Kontext-Generator</h2>
-      <p className="uwe-dashboard-muted">
-        KI-Aktionen für {pageTitle} — alle Vorschläge erfordern Review vor Übernahme.
-      </p>
-
-      {!rtxEnabled && (
-        <p className="uwe-form-error" role="alert">
-          RTX-Inference ist deaktiviert. Generator-Aktionen sind nicht verfügbar.
+    <Card>
+      <CardHeader>
+        <CardTitle>Kontext-Generator</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          KI-Aktionen für {pageTitle} — alle Vorschläge erfordern Review vor Übernahme.
         </p>
-      )}
 
-      {rtxEnabled && !rtxReady && (
-        <p className="uwe-hint">
-          RTX ist offline — Aktionen werden als Job vorgemerkt (kein Cloud-Fallback).
-        </p>
-      )}
+        {!rtxEnabled && (
+          <Alert tone="danger" role="alert">
+            RTX-Inference ist deaktiviert. Generator-Aktionen sind nicht verfügbar.
+          </Alert>
+        )}
 
-      {missingHints.length > 0 && (
-        <div className="uwe-v2-section">
-          <h3 className="uwe-v2-section-title">Fehlende Inhalte</h3>
-          <ul>
-            {missingHints.map((hint) => (
-              <li key={hint.field} data-severity={hint.severity}>
-                {hint.label}
-              </li>
-            ))}
-          </ul>
+        {rtxEnabled && !rtxReady && (
+          <p className="text-sm text-muted-foreground">
+            RTX ist offline — Aktionen werden als Job vorgemerkt (kein Cloud-Fallback).
+          </p>
+        )}
+
+        {missingHints.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <h3 className="font-semibold tracking-tight">Fehlende Inhalte</h3>
+            <ul className="list-disc pl-5 text-sm">
+              {missingHints.map((hint) => (
+                <li key={hint.field} data-severity={hint.severity}>
+                  {hint.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {actions.map((action) => (
+            <Card key={action.id}>
+              <CardContent className="flex flex-col gap-2 pt-6">
+                <h3 className="font-semibold tracking-tight">{action.label}</h3>
+                <p className="text-sm text-muted-foreground">{action.description}</p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!rtxEnabled || busyAction !== null}
+                  onClick={() => void runAction(action)}
+                  className="self-start"
+                >
+                  {busyAction === action.id ? "Läuft…" : "Ausführen"}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      )}
 
-      <div className="uwe-today-card-list">
-        {actions.map((action) => (
-          <article key={action.id} className="uwe-today-card">
-            <h3>{action.label}</h3>
-            <p className="uwe-dashboard-muted">{action.description}</p>
-            <button
-              type="button"
-              className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm"
-              disabled={!rtxEnabled || busyAction !== null}
-              onClick={() => void runAction(action)}
-            >
-              {busyAction === action.id ? "Läuft…" : "Ausführen"}
-            </button>
-          </article>
-        ))}
-      </div>
-
-      {status && <p className="uwe-hint">{status}</p>}
-      {jobId && (
-        <p>
-          <Link href={`/jobs`}>Job {jobId.slice(0, 8)}… anzeigen →</Link>
+        {status && <p className="text-sm text-muted-foreground">{status}</p>}
+        {jobId && (
+          <p>
+            <Link href={`/jobs`} className="text-primary underline-offset-4 hover:underline">
+              Job {jobId.slice(0, 8)}… anzeigen →
+            </Link>
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          <Link
+            href={`/worlds/${worldSlug}/ai-runs`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            AI Runs & Review →
+          </Link>
         </p>
-      )}
-      <p className="uwe-dashboard-muted">
-        <Link href={`/worlds/${worldSlug}/ai-runs`}>AI Runs & Review →</Link>
-      </p>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

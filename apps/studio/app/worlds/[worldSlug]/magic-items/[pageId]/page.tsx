@@ -18,25 +18,21 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { saveMagicItemAction } from "@/app/magic-item-actions";
+import { Alert, Button, buttonVariants, Input, Label, Textarea } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; pageId: string }>;
   searchParams: Promise<{ saved?: string }>;
 }
 
+const NATIVE_SELECT_CLASS =
+  "flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 function ExportBlock({ title, content }: { title: string; content: string }) {
   return (
-    <section className="uwe-v2-section">
-      <h2 className="uwe-v2-section-title">{title}</h2>
-      <pre
-        style={{
-          whiteSpace: "pre-wrap",
-          padding: "0.75rem",
-          borderRadius: "6px",
-          background: "var(--uwe-code-bg, rgba(0,0,0,0.05))",
-          overflowX: "auto",
-        }}
-      >
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <pre className="overflow-x-auto whitespace-pre-wrap rounded-[var(--radius)] border border-border bg-muted p-3 text-sm">
         {content}
       </pre>
     </section>
@@ -91,24 +87,33 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
         summary="Werkbank für diesen Gegenstand. DM-Felder (Fluch, Geheimnis) erscheinen nie im Spieler-Handout."
       />
 
-      {saved ? (
-        <p className="uwe-inspector-ok" role="status">
-          ✓ Gespeichert.
-        </p>
-      ) : null}
+      {saved ? <Alert tone="success" icon="circle-check" title="Gespeichert." /> : null}
 
-      <form action={saveMagicItemAction} className="uwe-v2-section" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <form action={saveMagicItemAction} className="flex flex-col gap-4">
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="worldId" value={world.id} />
         <input type="hidden" name="pageId" value={pageId} />
 
-        <label>
-          Typ
-          <input type="text" name="itemType" defaultValue={data.itemType ?? ""} placeholder="z. B. Wundersamer Gegenstand" />
-        </label>
-        <label>
-          Seltenheit
-          <select name="rarity" defaultValue={data.rarity ?? ""}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-type">Typ</Label>
+          <Input
+            id="item-type"
+            name="itemType"
+            defaultValue={data.itemType ?? ""}
+            placeholder="z. B. Wundersamer Gegenstand"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-rarity">Seltenheit</Label>
+          {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+              "—" (keine Seltenheit) — natives Select beibehalten. */}
+          <select
+            id="item-rarity"
+            name="rarity"
+            defaultValue={data.rarity ?? ""}
+            className={NATIVE_SELECT_CLASS}
+          >
             <option value="">—</option>
             {ITEM_RARITIES.map((rarity: ItemRarity) => (
               <option key={rarity} value={rarity}>
@@ -116,10 +121,18 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          Besitzer (Wiki-Seite)
-          <select name="ownerPageId" defaultValue={data.ownerPageId ?? ""}>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-owner">Besitzer (Wiki-Seite)</Label>
+          {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+              "kein Besitzer" — natives Select beibehalten. */}
+          <select
+            id="item-owner"
+            name="ownerPageId"
+            defaultValue={data.ownerPageId ?? ""}
+            className={NATIVE_SELECT_CLASS}
+          >
             <option value="">— kein Besitzer —</option>
             {ownerPages.map((entry) => (
               <option key={entry.id} value={entry.id}>
@@ -127,43 +140,70 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
               </option>
             ))}
           </select>
-        </label>
+        </div>
         {ownerPage ? (
-          <p className="uwe-hint" style={{ margin: 0 }}>
+          <p className="text-sm text-muted-foreground">
             Wiki-Seite des Besitzers:{" "}
             <Link href={buildPageUrl(worldSlug, ownerPage.type, ownerPage.slug)}>
               {ownerPage.title}
             </Link>
           </p>
         ) : null}
-        <label>
-          <input type="checkbox" name="requiresAttunement" defaultChecked={data.requiresAttunement ?? false} /> Erfordert Einstimmung
+
+        {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="requiresAttunement"
+            defaultChecked={data.requiresAttunement ?? false}
+            className="size-4 rounded border-input"
+          />
+          Erfordert Einstimmung
         </label>
-        <label>
-          Einstimmungs-Zusatz
-          <input type="text" name="attunementNote" defaultValue={data.attunementNote ?? ""} placeholder="z. B. durch einen Zauberwirker" />
-        </label>
-        <label>
-          Sichtbare Beschreibung (Spieler)
-          <textarea name="visibleDescription" rows={4} defaultValue={data.visibleDescription ?? ""} />
-        </label>
-        <label>
-          Eigenschaften (eine pro Zeile)
-          <textarea name="properties" rows={3} defaultValue={(data.properties ?? []).join("\n")} />
-        </label>
-        <label>
-          DM-Geheimnis (nur GM)
-          <textarea name="dmSecret" rows={3} defaultValue={data.dmSecret ?? ""} />
-        </label>
-        <label>
-          Fluch / Nachteil (nur GM)
-          <textarea name="curse" rows={2} defaultValue={data.curse ?? ""} />
-        </label>
-        <div className="uwe-form-actions">
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Speichern
-          </button>
-          <Link href={`/worlds/${worldSlug}/magic-items`} className="uwe-v2-btn">
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-attunement-note">Einstimmungs-Zusatz</Label>
+          <Input
+            id="item-attunement-note"
+            name="attunementNote"
+            defaultValue={data.attunementNote ?? ""}
+            placeholder="z. B. durch einen Zauberwirker"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-visible-description">Sichtbare Beschreibung (Spieler)</Label>
+          <Textarea
+            id="item-visible-description"
+            name="visibleDescription"
+            rows={4}
+            defaultValue={data.visibleDescription ?? ""}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-properties">Eigenschaften (eine pro Zeile)</Label>
+          <Textarea
+            id="item-properties"
+            name="properties"
+            rows={3}
+            defaultValue={(data.properties ?? []).join("\n")}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-dm-secret">DM-Geheimnis (nur GM)</Label>
+          <Textarea id="item-dm-secret" name="dmSecret" rows={3} defaultValue={data.dmSecret ?? ""} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-curse">Fluch / Nachteil (nur GM)</Label>
+          <Textarea id="item-curse" name="curse" rows={2} defaultValue={data.curse ?? ""} />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit">Speichern</Button>
+          <Link href={`/worlds/${worldSlug}/magic-items`} className={buttonVariants({ variant: "outline" })}>
             Zurück
           </Link>
         </div>

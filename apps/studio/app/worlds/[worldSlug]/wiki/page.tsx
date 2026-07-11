@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { badgeVariants } from "@/src/components/ui/badge";
 import { notFound } from "next/navigation";
 import {
   EmptyState,
@@ -162,10 +163,10 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
         }
       />
 
-      <div className="uwe-filter-bar">
+      <div className="flex flex-wrap gap-2">
         <Link
           href={`${wikiBase}${campaignSlug ? `?campaign=${campaignSlug}` : ""}`}
-          className={!typeFilter ? "active" : undefined}
+          className={badgeVariants({ variant: !typeFilter ? "accent" : "default" })}
         >
           Alle Typen
         </Link>
@@ -176,7 +177,7 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
               ...(campaignSlug ? { campaign: campaignSlug } : {}),
               type: cat,
             }).toString()}`}
-            className={typeFilter === cat ? "active" : undefined}
+            className={badgeVariants({ variant: typeFilter === cat ? "accent" : "default" })}
           >
             {NAV_CATEGORY_LABELS[cat]}
           </Link>

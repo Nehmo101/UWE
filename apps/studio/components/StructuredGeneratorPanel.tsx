@@ -8,6 +8,17 @@ import type {
   StructuredGeneratorField,
   StructuredGeneratorSchema,
 } from "@uwe/database/generator-types";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -96,71 +107,82 @@ export function StructuredGeneratorPanel({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">{schema.label}</h2>
-      <p className="uwe-dashboard-muted">
-        {schema.description} Für {pageTitle} — RTX-only, Review vor Übernahme.
-      </p>
-
-      {!rtxEnabled && (
-        <p className="uwe-form-error" role="alert">
-          RTX-Inference ist deaktiviert.
+    <Card>
+      <CardHeader>
+        <CardTitle>{schema.label}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          {schema.description} Für {pageTitle} — RTX-only, Review vor Übernahme.
         </p>
-      )}
 
-      {rtxEnabled && !rtxReady && (
-        <p className="uwe-hint">RTX offline — wird als Job vorgemerkt.</p>
-      )}
+        {!rtxEnabled && (
+          <Alert tone="danger" role="alert">
+            RTX-Inference ist deaktiviert.
+          </Alert>
+        )}
 
-      <form
-        className="uwe-v2-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void runStructuredGenerator();
-        }}
-      >
-        {schema.fields.map((field) => (
-          <label key={field.id}>
-            {field.label}
-            {field.required ? " *" : null}
-            {field.kind === "textarea" ? (
-              <textarea
-                rows={3}
-                value={values[field.id] ?? ""}
-                placeholder={field.placeholder}
-                required={field.required}
-                onChange={(event) => updateField(field, event.target.value)}
-              />
-            ) : (
-              <input
-                type="text"
-                value={values[field.id] ?? ""}
-                placeholder={field.placeholder}
-                required={field.required}
-                onChange={(event) => updateField(field, event.target.value)}
-              />
-            )}
-          </label>
-        ))}
+        {rtxEnabled && !rtxReady && (
+          <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+        )}
 
-        <button
-          type="submit"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          disabled={!rtxEnabled || busy}
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void runStructuredGenerator();
+          }}
         >
-          {busy ? "Läuft…" : action.label}
-        </button>
-      </form>
+          {schema.fields.map((field) => (
+            <div key={field.id} className="flex flex-col gap-1.5">
+              <Label htmlFor={`structured-generator-${field.id}`}>
+                {field.label}
+                {field.required ? " *" : null}
+              </Label>
+              {field.kind === "textarea" ? (
+                <Textarea
+                  id={`structured-generator-${field.id}`}
+                  rows={3}
+                  value={values[field.id] ?? ""}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                  onChange={(event) => updateField(field, event.target.value)}
+                />
+              ) : (
+                <Input
+                  id={`structured-generator-${field.id}`}
+                  type="text"
+                  value={values[field.id] ?? ""}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                  onChange={(event) => updateField(field, event.target.value)}
+                />
+              )}
+            </div>
+          ))}
 
-      {status && <p className="uwe-hint">{status}</p>}
-      {jobId && (
-        <p>
-          <Link href="/jobs">Job {jobId.slice(0, 8)}… anzeigen →</Link>
+          <Button type="submit" disabled={!rtxEnabled || busy} className="self-start">
+            {busy ? "Läuft…" : action.label}
+          </Button>
+        </form>
+
+        {status && <p className="text-sm text-muted-foreground">{status}</p>}
+        {jobId && (
+          <p>
+            <Link href="/jobs" className="text-primary underline-offset-4 hover:underline">
+              Job {jobId.slice(0, 8)}… anzeigen →
+            </Link>
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          <Link
+            href={`/worlds/${worldSlug}/ai-runs`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            AI Runs & Review →
+          </Link>
         </p>
-      )}
-      <p className="uwe-dashboard-muted">
-        <Link href={`/worlds/${worldSlug}/ai-runs`}>AI Runs & Review →</Link>
-      </p>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

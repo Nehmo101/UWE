@@ -4,6 +4,7 @@ import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useState } from "react";
 import Link from "next/link";
 import { PasswordStrengthMeter } from "@uwe/shared-ui";
+import { Alert, Button, Input, Label } from "@/src/components/ui";
 
 interface ChangePasswordFormProps {
   backHref?: string;
@@ -62,9 +63,9 @@ export function ChangePasswordForm({
   }
 
   return (
-    <form className="studio-auth-form" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       {(forcePasswordChange || initialPasswordOnly) && (
-        <p className="studio-auth-lead">
+        <p className="text-sm text-muted-foreground">
           {initialPasswordOnly
             ? "Lege dein erstes Passwort fest, um dein Konto zu aktivieren."
             : "Du musst dein Passwort ändern, bevor du fortfahren kannst."}
@@ -72,9 +73,9 @@ export function ChangePasswordForm({
       )}
 
       {!initialPasswordOnly && (
-        <>
-          <label htmlFor="current-password">Aktuelles Passwort</label>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="current-password">Aktuelles Passwort</Label>
+          <Input
             id="current-password"
             name="currentPassword"
             type="password"
@@ -83,51 +84,55 @@ export function ChangePasswordForm({
             onChange={(event) => setCurrentPassword(event.target.value)}
             required
           />
-        </>
+        </div>
       )}
 
-      <label htmlFor="new-password">Neues Passwort</label>
-      <input
-        id="new-password"
-        name="newPassword"
-        type="password"
-        autoComplete="new-password"
-        value={newPassword}
-        onChange={(event) => setNewPassword(event.target.value)}
-        minLength={8}
-        required
-      />
-      <PasswordStrengthMeter password={newPassword} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="new-password">Neues Passwort</Label>
+        <Input
+          id="new-password"
+          name="newPassword"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(event) => setNewPassword(event.target.value)}
+          minLength={8}
+          required
+        />
+        <PasswordStrengthMeter password={newPassword} />
+      </div>
 
-      <label htmlFor="confirm-password">Neues Passwort bestätigen</label>
-      <input
-        id="confirm-password"
-        name="confirmPassword"
-        type="password"
-        autoComplete="new-password"
-        value={confirmPassword}
-        onChange={(event) => setConfirmPassword(event.target.value)}
-        minLength={8}
-        required
-      />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="confirm-password">Neues Passwort bestätigen</Label>
+        <Input
+          id="confirm-password"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          minLength={8}
+          required
+        />
+      </div>
 
-      {error && <p className="studio-auth-error uwe-auth-message uwe-auth-message-error">{error}</p>}
-      {success && (
-        <p className="studio-auth-success uwe-auth-message uwe-auth-message-success" role="status">
-          {success}
-        </p>
-      )}
+      {error && <Alert tone="danger" role="alert">{error}</Alert>}
+      {success && <Alert tone="success" role="status">{success}</Alert>}
 
-      <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary" disabled={loading}>
+      <Button type="submit" disabled={loading} className="self-start">
         {loading ? "Speichern…" : initialPasswordOnly ? "Passwort festlegen" : "Passwort ändern"}
-      </button>
+      </Button>
 
-      <p className="studio-auth-footer">
-        <Link href={backHref}>Zurück</Link>
+      <p className="text-sm">
+        <Link href={backHref} className="text-primary underline-offset-4 hover:underline">
+          Zurück
+        </Link>
         {initialPasswordOnly && (
           <>
             {" · "}
-            <Link href="/forgot-password">Passwort-Reset anfordern</Link>
+            <Link href="/forgot-password" className="text-primary underline-offset-4 hover:underline">
+              Passwort-Reset anfordern
+            </Link>
           </>
         )}
       </p>

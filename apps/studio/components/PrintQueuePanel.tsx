@@ -42,7 +42,7 @@ export function PrintQueuePanel({ worldSlug, initialJobs, labelsHref }: Props) {
 
   if (jobs.length === 0) {
     return (
-      <p className="uwe-v2-empty">
+      <p className="text-sm text-muted-foreground">
         Keine Druckjobs in der Warteschlange.{" "}
         <Link href={labelsHref}>RTX-Druck öffnen →</Link>
       </p>
@@ -50,7 +50,7 @@ export function PrintQueuePanel({ worldSlug, initialJobs, labelsHref }: Props) {
   }
 
   return (
-    <table className="uwe-page-table">
+    <table className="w-full border-collapse text-sm [&_td]:border-b [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium [&_th]:text-muted-foreground">
       <thead>
         <tr>
           <th>Job</th>
@@ -64,7 +64,7 @@ export function PrintQueuePanel({ worldSlug, initialJobs, labelsHref }: Props) {
           <tr key={job.id}>
             <td>{job.title}</td>
             <td>
-              <span className="uwe-badge">{job.statusLabel}</span>
+              <span className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{job.statusLabel}</span>
             </td>
             <td>{job.connectorName ?? "—"}</td>
             <td>{new Date(job.createdAt).toLocaleString("de-DE")}</td>

@@ -100,7 +100,7 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
   return (
     <>
       {isPlayerPreview && (
-        <div className="uwe-preview-banner">
+        <div className="border-b border-border bg-[color-mix(in_srgb,var(--uwe-warning)_15%,transparent)] px-4 py-2 text-center text-sm font-medium" role="status">
           Spieler-Vorschau — DM-only Inhalte sind ausgeblendet
         </div>
       )}

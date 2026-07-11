@@ -7,11 +7,27 @@ import type {
   GeneratorActionDefinition,
   StructuredGeneratorSchema,
 } from "@uwe/database/generator-types";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+} from "@/src/components/ui";
 
 export interface QuestPatronOption {
   title: string;
   slug: string;
 }
+
+/** TODO(design-kit): natives select bleibt — controlled Auftraggeber-Wahl mit
+    Pflicht-Leerwert ("NPC wählen…"), siehe gleiches Muster in MagicItemBuilderPanel.tsx. */
+const NATIVE_SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 interface Props {
   worldSlug: string;
@@ -106,108 +122,123 @@ export function QuestBuilderPanel({
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section" id="quest-builder">
-      <h2 className="uwe-v2-section-title">Quest-Builder</h2>
-      <p className="uwe-dashboard-muted">
-        Strukturierte Quest für {pageTitle}: Auftraggeber, Ziel, Twist und Konsequenz —
-        RTX-only, Ergebnis läuft als Review-Vorschlag (nie automatisch übernehmen).
-      </p>
-
-      {!rtxEnabled && (
-        <p className="uwe-form-error" role="alert">
-          RTX-Inference ist deaktiviert.
+    <Card id="quest-builder">
+      <CardHeader>
+        <CardTitle>Quest-Builder</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Strukturierte Quest für {pageTitle}: Auftraggeber, Ziel, Twist und Konsequenz —
+          RTX-only, Ergebnis läuft als Review-Vorschlag (nie automatisch übernehmen).
         </p>
-      )}
-
-      {rtxEnabled && !rtxReady && (
-        <p className="uwe-hint">RTX offline — wird als Job vorgemerkt (kein Cloud-Fallback).</p>
-      )}
-
-      <form
-        className="uwe-v2-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void runQuestGenerator();
-        }}
-      >
-        <label>
-          Auftraggeber (NPC der Welt) *
-          <select
-            value={patronChoice}
-            onChange={(event) => setPatronChoice(event.target.value)}
-            required
-          >
-            <option value="" disabled>
-              NPC wählen…
-            </option>
-            {npcOptions.map((npc) => (
-              <option key={npc.slug} value={npc.title}>
-                {npc.title}
-              </option>
-            ))}
-            <option value={CUSTOM_PATRON}>Eigener Auftraggeber (Freitext)…</option>
-          </select>
-        </label>
-
-        {patronChoice === CUSTOM_PATRON && (
-          <label>
-            Auftraggeber (Freitext) *
-            <input
-              type="text"
-              value={patronCustom}
-              onChange={(event) => setPatronCustom(event.target.value)}
-              placeholder="z. B. Die Bürgermeisterin von Phandalin"
-              required
-            />
-          </label>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {!rtxEnabled && (
+          <Alert tone="danger" role="alert">
+            RTX-Inference ist deaktiviert.
+          </Alert>
         )}
 
-        {detailFields.map((field) => (
-          <label key={field.id}>
-            {field.label}
-            {field.required ? " *" : null}
-            {field.kind === "textarea" ? (
-              <textarea
-                rows={3}
-                value={values[field.id] ?? ""}
-                placeholder={field.placeholder}
-                required={field.required}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, [field.id]: event.target.value }))
-                }
-              />
-            ) : (
-              <input
-                type="text"
-                value={values[field.id] ?? ""}
-                placeholder={field.placeholder}
-                required={field.required}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, [field.id]: event.target.value }))
-                }
-              />
-            )}
-          </label>
-        ))}
+        {rtxEnabled && !rtxReady && (
+          <p className="text-sm text-muted-foreground">
+            RTX offline — wird als Job vorgemerkt (kein Cloud-Fallback).
+          </p>
+        )}
 
-        <button
-          type="submit"
-          className="uwe-v2-btn uwe-v2-btn-primary"
-          disabled={!rtxEnabled || busy}
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void runQuestGenerator();
+          }}
         >
-          {busy ? "Läuft…" : action.label}
-        </button>
-      </form>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="quest-builder-patron">Auftraggeber (NPC der Welt) *</Label>
+            <select
+              id="quest-builder-patron"
+              value={patronChoice}
+              onChange={(event) => setPatronChoice(event.target.value)}
+              required
+              className={NATIVE_SELECT_CLASS}
+            >
+              <option value="" disabled>
+                NPC wählen…
+              </option>
+              {npcOptions.map((npc) => (
+                <option key={npc.slug} value={npc.title}>
+                  {npc.title}
+                </option>
+              ))}
+              <option value={CUSTOM_PATRON}>Eigener Auftraggeber (Freitext)…</option>
+            </select>
+          </div>
 
-      {status && <p className="uwe-hint">{status}</p>}
-      {jobId && (
-        <p>
-          <Link href="/jobs">Job {jobId.slice(0, 8)}… anzeigen →</Link>
+          {patronChoice === CUSTOM_PATRON && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="quest-builder-patron-custom">Auftraggeber (Freitext) *</Label>
+              <Input
+                id="quest-builder-patron-custom"
+                type="text"
+                value={patronCustom}
+                onChange={(event) => setPatronCustom(event.target.value)}
+                placeholder="z. B. Die Bürgermeisterin von Phandalin"
+                required
+              />
+            </div>
+          )}
+
+          {detailFields.map((field) => (
+            <div key={field.id} className="flex flex-col gap-1.5">
+              <Label htmlFor={`quest-builder-field-${field.id}`}>
+                {field.label}
+                {field.required ? " *" : null}
+              </Label>
+              {field.kind === "textarea" ? (
+                <Textarea
+                  id={`quest-builder-field-${field.id}`}
+                  rows={3}
+                  value={values[field.id] ?? ""}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, [field.id]: event.target.value }))
+                  }
+                />
+              ) : (
+                <Input
+                  id={`quest-builder-field-${field.id}`}
+                  type="text"
+                  value={values[field.id] ?? ""}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, [field.id]: event.target.value }))
+                  }
+                />
+              )}
+            </div>
+          ))}
+
+          <Button type="submit" disabled={!rtxEnabled || busy} className="self-start">
+            {busy ? "Läuft…" : action.label}
+          </Button>
+        </form>
+
+        {status && <p className="text-sm text-muted-foreground">{status}</p>}
+        {jobId && (
+          <p className="text-sm">
+            <Link href="/jobs" className="text-primary underline-offset-4 hover:underline">
+              Job {jobId.slice(0, 8)}… anzeigen →
+            </Link>
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          <Link
+            href={`/worlds/${worldSlug}/ai-runs`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            AI Runs & Review →
+          </Link>
         </p>
-      )}
-      <p className="uwe-dashboard-muted">
-        <Link href={`/worlds/${worldSlug}/ai-runs`}>AI Runs & Review →</Link>
-      </p>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

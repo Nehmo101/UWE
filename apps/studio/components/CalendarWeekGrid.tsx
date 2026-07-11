@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle, badgeVariants, cn } from "@/src/components/ui";
 import type { CalendarGridEvent } from "./CalendarMonthGrid";
 
 interface CalendarWeekGridProps {
@@ -35,57 +36,46 @@ export function CalendarWeekGrid({ weekStart, events }: CalendarWeekGridProps) {
   }).format(days[6]);
 
   return (
-    <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
-      <h2 className="uwe-v2-section-title">{`${weekLabel} – ${weekEndLabel}`}</h2>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-          gap: "0.35rem",
-        }}
-      >
-        {days.map((day, index) => {
-          const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
-          const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
-          const dayEvents = events.filter((event) => {
-            const eventStart = new Date(event.startAt);
-            return eventStart >= dayStart && eventStart < dayEnd;
-          });
-          const dayNumber = day.getDate();
-          const monthShort = new Intl.DateTimeFormat("de-DE", { month: "short" }).format(day);
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>{`${weekLabel} – ${weekEndLabel}`}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-7 gap-1.5">
+          {days.map((day, index) => {
+            const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+            const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+            const dayEvents = events.filter((event) => {
+              const eventStart = new Date(event.startAt);
+              return eventStart >= dayStart && eventStart < dayEnd;
+            });
+            const dayNumber = day.getDate();
+            const monthShort = new Intl.DateTimeFormat("de-DE", { month: "short" }).format(day);
 
-          return (
-            <div key={day.toISOString()}>
-              <div className="uwe-dashboard-muted" style={{ fontWeight: 600, textAlign: "center" }}>
-                {WEEKDAY_LABELS[index]}
-              </div>
-              <div
-                style={{
-                  minHeight: "8rem",
-                  border: "1px solid var(--uwe-border)",
-                  borderRadius: "6px",
-                  padding: "0.35rem",
-                  marginTop: "0.25rem",
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>
-                  {dayNumber}. {monthShort}
+            return (
+              <div key={day.toISOString()}>
+                <div className="text-center text-sm font-semibold text-muted-foreground">
+                  {WEEKDAY_LABELS[index]}
                 </div>
-                {dayEvents.map((event) => (
-                  <a
-                    key={event.id}
-                    href={`#event-${event.id}`}
-                    className="uwe-badge"
-                    style={{ display: "block", marginTop: "0.2rem", textDecoration: "none" }}
-                  >
-                    {event.title}
-                  </a>
-                ))}
+                <div className="mt-1 min-h-32 rounded-md border border-border p-1.5">
+                  <div className="font-semibold">
+                    {dayNumber}. {monthShort}
+                  </div>
+                  {dayEvents.map((event) => (
+                    <a
+                      key={event.id}
+                      href={`#event-${event.id}`}
+                      className={cn(badgeVariants(), "mt-1 block no-underline")}
+                    >
+                      {event.title}
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

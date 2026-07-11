@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Star } from "lucide-react";
 import {
   GlobalSearchForm,
   PageTypeBadge,
@@ -23,6 +24,9 @@ import {
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { setQuestPriorityAction } from "@/app/player-hub-actions";
+import { PageHeader } from "@/src/components/shell";
+import { Button } from "@/src/components/ui/button";
+import { Label } from "@/src/components/ui/label";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -30,6 +34,9 @@ interface Props {
 }
 
 type StatusFilter = "all" | "open" | QuestLifecycleStatus;
+
+const selectClassName =
+  "ml-1 inline-flex h-8 rounded-[var(--radius)] border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function parseStatusFilter(raw: string | undefined): StatusFilter {
   if (!raw || raw === "all") {
@@ -115,14 +122,13 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
   const basePath = `/auth/worlds/${worldSlug}/quests`;
 
   return (
-    <section className="portal-content-card">
-      <h1>Questlog</h1>
-      <p className="auth-lead">
-        Quests, die für deine Rolle ({ctx.effectiveRole}) freigeschaltet sind — filterbar nach
-        Status.
-      </p>
+    <>
+      <PageHeader
+        title="Questlog"
+        summary={`Quests, die für deine Rolle (${ctx.effectiveRole}) freigeschaltet sind — filterbar nach Status.`}
+      />
 
-      <p className="auth-muted">
+      <p className="mb-4 text-sm text-muted-foreground">
         Status:{" "}
         {(
           [
@@ -152,7 +158,9 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
               {active ? (
                 <strong>{tab.label}</strong>
               ) : (
-                <Link href={href}>{tab.label}</Link>
+                <Link href={href} className="text-primary hover:underline">
+                  {tab.label}
+                </Link>
               )}
             </span>
           );
@@ -173,55 +181,65 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
         }
       />
 
-      <ul className="auth-page-list">
+      <ul className="mt-4 grid gap-2">
         {filtered.map((page) => {
           const flag = flags.get(page.id);
           const priority = flag?.priority ?? "normal";
           return (
-            <li key={page.id}>
-              <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>
-                <strong>
-                  {priority === "high" && <span aria-label="Wichtig">⭐ </span>}
+            <li
+              key={page.id}
+              className="rounded-[var(--radius)] border border-border p-4"
+            >
+              <Link
+                href={`/auth/worlds/${worldSlug}/${page.slug}`}
+                className="block transition-colors hover:text-primary"
+              >
+                <div className="flex flex-wrap items-center gap-2 font-semibold">
+                  {priority === "high" ? (
+                    <Star className="size-4 fill-current text-warning" aria-label="Wichtig" />
+                  ) : null}
                   {page.title}
-                </strong>
-                <span className="auth-page-list-badges">
+                </div>
+                <div className="mt-1 flex flex-wrap gap-2">
                   <PageTypeBadge type={page.type} />
                   <VisibilityBadge visibility={page.visibility} />
                   <QuestStatusBadge status={page.questStatus ?? null} />
-                </span>
-                {page.summary && <p className="portal-dash-summary">{page.summary}</p>}
+                </div>
+                {page.summary ? (
+                  <p className="mt-2 text-sm text-muted-foreground">{page.summary}</p>
+                ) : null}
               </Link>
-              {canFlag && (
-                <form action={setQuestPriorityAction} className="auth-inline-form">
+              {canFlag ? (
+                <form action={setQuestPriorityAction} className="mt-3 flex flex-wrap items-center gap-2">
                   <input type="hidden" name="worldSlug" value={worldSlug} />
                   <input type="hidden" name="pageId" value={page.id} />
-                  <label className="auth-muted">
+                  <Label className="text-muted-foreground">
                     Meine Priorität:{" "}
-                    <select name="priority" defaultValue={priority}>
+                    <select name="priority" defaultValue={priority} className={selectClassName}>
                       {QUEST_PRIORITIES.map((value) => (
                         <option key={value} value={value}>
                           {QUEST_PRIORITY_LABELS[value]}
                         </option>
                       ))}
                     </select>
-                  </label>{" "}
-                  <button type="submit" className="auth-inline-button">
+                  </Label>
+                  <Button type="submit" size="sm" variant="secondary">
                     Speichern
-                  </button>
+                  </Button>
                 </form>
-              )}
+              ) : null}
             </li>
           );
         })}
       </ul>
 
-      {filtered.length === 0 && (
+      {filtered.length === 0 ? (
         <PortalEmptyState
           title={query ? "Keine passenden Quests gefunden" : "Keine Quests freigeschaltet"}
           description={query ? "Probiere einen anderen Suchbegriff." : undefined}
           icon="scroll"
         />
-      )}
-    </section>
+      ) : null}
+    </>
   );
 }

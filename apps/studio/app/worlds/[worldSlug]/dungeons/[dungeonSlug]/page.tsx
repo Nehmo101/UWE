@@ -24,11 +24,34 @@ import { DungeonLevelLayout } from "@/components/worlds/DungeonLevelLayout";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; dungeonSlug: string }>;
   searchParams: Promise<{ saved?: string; assetLinked?: string }>;
 }
+
+const SECTION_CLASS = "mb-8 flex flex-col gap-3";
+const FIELD_CLASS = "flex flex-col gap-1.5";
+const HEADING_CLASS = "m-0 text-lg font-semibold tracking-tight";
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 export default async function StudioDungeonDetailPage({ params, searchParams }: Props) {
   const { worldSlug, dungeonSlug } = await params;
@@ -73,8 +96,8 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
         summary={overview.dungeon.summary ?? undefined}
         meta={<DungeonPrepStatusBadge status={overview.dungeon.prepStatus} />}
       />
-      {saved && <p className="uwe-flash uwe-flash-success">Dungeon gespeichert.</p>}
-      {assetLinked && <p className="uwe-flash uwe-flash-success">Asset verknüpft.</p>}
+      {saved && <Alert tone="success" className="mb-4">Dungeon gespeichert.</Alert>}
+      {assetLinked && <Alert tone="success" className="mb-4">Asset verknüpft.</Alert>}
 
       <DungeonLevelLayout
         worldSlug={worldSlug}
@@ -87,129 +110,181 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
         }))}
       />
 
-      <section className="uwe-v2-section">
-        <h2>Ebenen</h2>
-        <table className="uwe-page-table">
-          <thead>
-            <tr>
-              <th>Ebene</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {overview.levels.map((level) => (
-              <tr key={level.id}>
-                <td>
-                  <Link href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${level.slug}`}>
-                    {level.title}
-                  </Link>
-                </td>
-                <td><DungeonPrepStatusBadge status={level.prepStatus} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {overview.levels.length === 0 && (
-          <p className="uwe-v2-empty">Noch keine Ebenen.</p>
+      <section className={SECTION_CLASS}>
+        <h2 className={HEADING_CLASS}>Ebenen</h2>
+        {overview.levels.length === 0 ? (
+          <EmptyState title="Noch keine Ebenen" />
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className={TH_CLASS}>Ebene</th>
+                      <th className={TH_CLASS}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overview.levels.map((level) => (
+                      <tr key={level.id}>
+                        <td className={TD_CLASS}>
+                          <Link href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${level.slug}`}>
+                            {level.title}
+                          </Link>
+                        </td>
+                        <td className={TD_CLASS}>
+                          <DungeonPrepStatusBadge status={level.prepStatus} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </section>
 
-      <section className="uwe-v2-section">
-        <h2>Neue Ebene</h2>
-        <form action={createDungeonLevelAction} className="uwe-v2-form uwe-form-inline">
+      <section className={SECTION_CLASS}>
+        <h2 className={HEADING_CLASS}>Neue Ebene</h2>
+        <form action={createDungeonLevelAction} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
-          <label>
-            Titel
-            <input name="title" required placeholder="Ebene 1 — Eingangshalle" />
-          </label>
-          <label>
-            Status
-            <select name="prepStatus" defaultValue="unprepared">
-              {Object.values(DungeonPrepStatusEnum).map((status) => (
-                <option key={status} value={status}>
-                  {DUNGEON_PREP_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Ebene anlegen</button>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="new-level-title">Titel</Label>
+            <Input id="new-level-title" name="title" required placeholder="Ebene 1 — Eingangshalle" />
+          </div>
+          <div className={FIELD_CLASS}>
+            <Label htmlFor="new-level-status">Status</Label>
+            <Select name="prepStatus" defaultValue="unprepared">
+              <SelectTrigger id="new-level-status" className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(DungeonPrepStatusEnum).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {DUNGEON_PREP_STATUS_LABELS[status]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit">Ebene anlegen</Button>
         </form>
       </section>
 
-      <section className="uwe-v2-section">
-        <h2>Beschreibung</h2>
+      <section className={SECTION_CLASS}>
+        <h2 className={HEADING_CLASS}>Beschreibung</h2>
         <WikiContent html={overview.html} />
       </section>
 
-      <section className="uwe-v2-section">
-        <h2>Assets &amp; Karten</h2>
+      <section className={SECTION_CLASS}>
+        <h2 className={HEADING_CLASS}>Assets &amp; Karten</h2>
         {overview.assets.length > 0 && (
-          <ul>
+          <ul className="flex flex-col gap-2">
             {overview.assets.map((asset) => (
-              <li key={asset.id}>{asset.title} ({asset.type})</li>
+              <li key={asset.id} className="text-sm">
+                {asset.title} ({asset.type})
+              </li>
             ))}
           </ul>
         )}
         {linkableAssets.length > 0 && (
-          <form action={linkAssetToDungeonPageAction} className="uwe-v2-form uwe-form-inline">
+          <form action={linkAssetToDungeonPageAction} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="pageId" value={overview.dungeon.id} />
             <input type="hidden" name="redirectTo" value={redirectTo} />
-            <label>
-              Asset verknüpfen
-              <select name="assetId" required>
+            <div className={FIELD_CLASS}>
+              <Label htmlFor="dungeon-link-asset">Asset verknüpfen</Label>
+              {/* TODO(design-kit): natives select statt Kit-Select — Radix Select erlaubt
+                  keinen leeren value="" für den Platzhalter "— wählen —". */}
+              <select
+                id="dungeon-link-asset"
+                name="assetId"
+                required
+                className="h-9 w-56 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <option value="">— wählen —</option>
                 {linkableAssets.map((asset) => (
                   <option key={asset.id} value={asset.id}>{asset.title}</option>
                 ))}
               </select>
-            </label>
-            <button type="submit" className="uwe-v2-btn">Verknüpfen</button>
+            </div>
+            <Button type="submit" variant="secondary">Verknüpfen</Button>
           </form>
         )}
       </section>
 
-      <section className="uwe-v2-section">
-        <h2>Metadaten</h2>
-        <form action={updateDungeonEntityAction} className="uwe-edit-form">
-          <input type="hidden" name="pageId" value={overview.dungeon.id} />
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-          <label>
-            Titel
-            <input name="title" defaultValue={overview.dungeon.title} required />
-          </label>
-          <label>
-            Zusammenfassung
-            <textarea name="summary" rows={2} defaultValue={overview.dungeon.summary ?? ""} />
-          </label>
-          <label>
-            Status
-            <select name="prepStatus" defaultValue={overview.dungeon.prepStatus ?? "unprepared"}>
-              {Object.values(DungeonPrepStatusEnum).map((status) => (
-                <option key={status} value={status}>
-                  {DUNGEON_PREP_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Sichtbarkeit
-            <select name="visibility" defaultValue={overview.dungeon.visibility}>
-              {Object.values(VisibilityEnum).map((v) => (
-                <option key={v} value={v}>{VISIBILITY_LABELS[v]}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Publish
-            <select name="publishStatus" defaultValue={overview.dungeon.publishStatus}>
-              {Object.values(PublishStatusEnum).map((s) => (
-                <option key={s} value={s}>{PUBLISH_LABELS[s]}</option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">Speichern</button>
-        </form>
+      <section className={SECTION_CLASS}>
+        <h2 className={HEADING_CLASS}>Metadaten</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Dungeon-Metadaten bearbeiten</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={updateDungeonEntityAction} className="flex flex-col gap-4">
+              <input type="hidden" name="pageId" value={overview.dungeon.id} />
+              <input type="hidden" name="redirectTo" value={redirectTo} />
+              <div className={FIELD_CLASS}>
+                <Label htmlFor="dungeon-meta-title">Titel</Label>
+                <Input id="dungeon-meta-title" name="title" defaultValue={overview.dungeon.title} required />
+              </div>
+              <div className={FIELD_CLASS}>
+                <Label htmlFor="dungeon-meta-summary">Zusammenfassung</Label>
+                <Textarea
+                  id="dungeon-meta-summary"
+                  name="summary"
+                  rows={2}
+                  defaultValue={overview.dungeon.summary ?? ""}
+                />
+              </div>
+              <div className={FIELD_CLASS}>
+                <Label htmlFor="dungeon-meta-status">Status</Label>
+                <Select name="prepStatus" defaultValue={overview.dungeon.prepStatus ?? "unprepared"}>
+                  <SelectTrigger id="dungeon-meta-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(DungeonPrepStatusEnum).map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {DUNGEON_PREP_STATUS_LABELS[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={FIELD_CLASS}>
+                <Label htmlFor="dungeon-meta-visibility">Sichtbarkeit</Label>
+                <Select name="visibility" defaultValue={overview.dungeon.visibility}>
+                  <SelectTrigger id="dungeon-meta-visibility">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(VisibilityEnum).map((v) => (
+                      <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={FIELD_CLASS}>
+                <Label htmlFor="dungeon-meta-publish">Publish</Label>
+                <Select name="publishStatus" defaultValue={overview.dungeon.publishStatus}>
+                  <SelectTrigger id="dungeon-meta-publish">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(PublishStatusEnum).map((s) => (
+                      <SelectItem key={s} value={s}>{PUBLISH_LABELS[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Button type="submit">Speichern</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </section>
     </WorldShell>
   );

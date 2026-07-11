@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Card, ToolWindow } from "@uwe/shared-ui";
-import { Button } from "@/src/components/ui/button";
+import { ToolWindow } from "@uwe/shared-ui";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface ImageStudioWorkspaceProps {
   inlineForm: ReactNode;
@@ -18,26 +18,32 @@ export function ImageStudioWorkspace({
 
   return (
     <>
-      <Card title="Neues Bild" className="uwe-image-studio-launcher">
-        <p className="uwe-dashboard-muted">
-          Generierung und Inpainting in einem Arbeitsfenster — ohne die Projektliste zu verlassen.
-        </p>
-        <div className="uwe-image-studio-launcher-actions">
+      <Card className="hidden lg:block">
+        <CardHeader>
+          <CardTitle>Neues Bild</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            Generierung und Inpainting in einem Arbeitsfenster — ohne die Projektliste zu verlassen.
+          </p>
           <Button
             type="button"
             variant="default"
             disabled={disabled}
             onClick={() => setOpen(true)}
+            className="self-start"
           >
             Generator öffnen
           </Button>
-        </div>
+        </CardContent>
       </Card>
 
-      <section className="uwe-v2-card uwe-form uwe-image-studio-inline" aria-label="Neues Bild">
-        <h2>Neues Bild</h2>
-        {inlineForm}
-      </section>
+      <Card className="lg:hidden" aria-label="Neues Bild">
+        <CardHeader>
+          <CardTitle>Neues Bild</CardTitle>
+        </CardHeader>
+        <CardContent>{inlineForm}</CardContent>
+      </Card>
 
       <ToolWindow
         open={open}

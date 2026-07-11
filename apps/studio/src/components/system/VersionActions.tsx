@@ -15,7 +15,7 @@ export function VersionActions({ info }: { info: BuildInfo }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <CopyToClipboardButton text={versionLabel} label="Version kopieren" />
-      <Link href="/system/whats-new" className="uwe-v2-btn uwe-v2-btn-secondary uwe-v2-btn-sm">
+      <Link href="/system/whats-new" className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-8 px-3 text-xs">
         Changelog öffnen
       </Link>
     </div>

@@ -1,4 +1,5 @@
 import { HealthBadge } from "@uwe/shared-ui";
+import { Card, CardContent, CardTitle, cn } from "@/src/components/ui";
 
 export type StatusLevel = "ok" | "degraded" | "error" | "disabled";
 
@@ -42,54 +43,45 @@ export function StatusCard({
   wide = false,
 }: StatusCardProps) {
   const badgeStatus = level === "disabled" ? "ok" : levelToBadge(level);
+  const headingId = `status-${title.replace(/\s+/g, "-").toLowerCase()}`;
 
   return (
-    <section
-      className={`uwe-v2-card uwe-dashboard-card${wide ? " uwe-dashboard-card-wide" : ""}`}
-      aria-labelledby={`status-${title.replace(/\s+/g, "-").toLowerCase()}`}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.5rem" }}>
-        <h2 className="uwe-v2-section-title" id={`status-${title.replace(/\s+/g, "-").toLowerCase()}`}>
-          {title}
-        </h2>
-        <HealthBadge status={badgeStatus} label={statusLabel} />
-      </div>
-
-      <p className="uwe-dashboard-muted" style={{ marginBottom: details.length > 0 ? "0.75rem" : 0 }}>
-        {message}
-      </p>
-
-      {details.length > 0 && (
-        <dl
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(8rem, auto) 1fr",
-            gap: "0.35rem 1rem",
-            margin: "0 0 0.75rem",
-            fontSize: "0.85rem",
-          }}
-        >
-          {details.map((item) => (
-            <div key={item.label} style={{ display: "contents" }}>
-              <dt className="uwe-dashboard-muted">{item.label}</dt>
-              <dd style={{ margin: 0, color: "var(--uwe-fg)" }}>{formatDetailValue(item.value)}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {nextSteps.length > 0 && (
-        <div>
-          <p className="uwe-dashboard-muted" style={{ marginBottom: "0.35rem" }}>
-            Nächste Schritte:
-          </p>
-          <ul className="uwe-inspector-findings" style={{ margin: 0 }}>
-            {nextSteps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ul>
+    <Card className={cn(wide && "col-span-full")} aria-labelledby={headingId}>
+      <CardContent className="flex flex-col gap-3 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle id={headingId}>{title}</CardTitle>
+          <HealthBadge status={badgeStatus} label={statusLabel} />
         </div>
-      )}
-    </section>
+
+        <p className="text-sm text-muted-foreground">{message}</p>
+
+        {details.length > 0 && (
+          <dl className="grid grid-cols-[minmax(8rem,auto)_1fr] gap-x-4 gap-y-1.5 text-[0.85rem]">
+            {details.map((item) => (
+              <div key={item.label} className="contents">
+                <dt className="text-sm text-muted-foreground">{item.label}</dt>
+                <dd className="m-0 text-foreground">{formatDetailValue(item.value)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {nextSteps.length > 0 && (
+          <div>
+            <p className="mb-1.5 text-sm text-muted-foreground">Nächste Schritte:</p>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {nextSteps.map((step) => (
+                <li
+                  key={step}
+                  className="rounded-[0.55rem] border border-border bg-card px-[0.8rem] py-[0.55rem] text-[0.88rem]"
+                >
+                  {step}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

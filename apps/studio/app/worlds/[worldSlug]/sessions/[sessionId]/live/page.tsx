@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonVariants } from "@/src/components/ui/button";
 import { notFound } from "next/navigation";
 import { GameSessionStatusBadge } from "@uwe/shared-ui";
 import {
@@ -111,7 +112,7 @@ export default async function SessionLivePage({ params }: Props) {
         title={`Live · Session ${session.sessionNumber}`}
         meta={<GameSessionStatusBadge status={session.status} />}
         actions={
-          <Link href={`/worlds/${worldSlug}/prepare-session`} className="uwe-v2-btn">
+          <Link href={`/worlds/${worldSlug}/prepare-session`} className={buttonVariants({ variant: "outline" })}>
             Session vorbereiten
           </Link>
         }

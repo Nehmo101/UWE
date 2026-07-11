@@ -3,6 +3,7 @@ import { HealthBadge } from "@uwe/shared-ui";
 import { getMigrationStatus, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { StatusCard } from "@/src/components/AdminStatusDashboard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 function formatMigrationTimestamp(value: string | null): string {
   if (!value) return "—";
@@ -42,7 +43,7 @@ export default async function AdminMigrationsPage() {
         }
       />
 
-      <div className="uwe-dashboard-grid">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <StatusCard
           title="Migration-Status"
           level={level}
@@ -67,45 +68,54 @@ export default async function AdminMigrationsPage() {
       </div>
 
       {status.pendingMigrations.length > 0 && (
-        <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
-          <h2 className="uwe-v2-section-title">Ausstehende Migrationen</h2>
-          <ul className="uwe-dashboard-list">
-            {status.pendingMigrations.map((name) => (
-              <li key={name}>
-                <code>{name}</code>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Ausstehende Migrationen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2 text-sm">
+              {status.pendingMigrations.map((name) => (
+                <li key={name}>
+                  <code>{name}</code>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
       {status.failedDetails.length > 0 && (
-        <section className="uwe-v2-card" style={{ marginTop: "1rem" }}>
-          <h2 className="uwe-v2-section-title">Fehlerhafte Migrationen</h2>
-          <ul className="uwe-dashboard-list">
-            {status.failedDetails.map((entry) => (
-              <li key={entry.name}>
-                <code>{entry.name}</code>
-                <p className="uwe-dashboard-muted">
-                  Gestartet: {formatMigrationTimestamp(entry.startedAt)} — Migration nicht
-                  abgeschlossen; Datenbank kann inkonsistent sein.
-                </p>
-              </li>
-            ))}
-          </ul>
-          <p className="uwe-dashboard-muted">
-            Deploy-Befehl:{" "}
-            <code>pnpm --filter @uwe/database db:deploy</code>
-          </p>
-        </section>
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>Fehlerhafte Migrationen</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2 text-sm">
+              {status.failedDetails.map((entry) => (
+                <li key={entry.name}>
+                  <code>{entry.name}</code>
+                  <p className="text-sm text-muted-foreground">
+                    Gestartet: {formatMigrationTimestamp(entry.startedAt)} — Migration nicht
+                    abgeschlossen; Datenbank kann inkonsistent sein.
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-muted-foreground">
+              Deploy-Befehl:{" "}
+              <code>pnpm --filter @uwe/database db:deploy</code>
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {status.appliedMigrations.length > 0 && (
-        <details className="uwe-v2-card" style={{ marginTop: "1rem" }}>
-          <summary className="uwe-v2-section-title" style={{ cursor: "pointer" }}>
+        <details className="mt-4 rounded-[var(--radius)] border border-border bg-card p-6 text-card-foreground shadow-sm">
+          {/* TODO(design-kit): Card hat kein natives <details>-Äquivalent; Radix Collapsible wäre die kit-konforme Lösung für aufklappbare Sections. */}
+          <summary className="cursor-pointer list-none font-semibold leading-none tracking-tight">
             Angewendete Migrationen ({status.appliedMigrations.length})
           </summary>
-          <ul className="uwe-dashboard-list" style={{ marginTop: "0.75rem" }}>
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
             {status.appliedMigrations.map((name) => (
               <li key={name}>
                 <code>{name}</code>
@@ -115,7 +125,7 @@ export default async function AdminMigrationsPage() {
         </details>
       )}
 
-      <p className="uwe-dashboard-muted" style={{ marginTop: "1.5rem" }}>
+      <p className="mt-6 text-sm text-muted-foreground">
         Nur für Owner/Admin im geschützten Studio. Siehe auch{" "}
         <Link href="/system?tab=diagnose">System-Diagnose</Link> und{" "}
         <Link href="/admin/setup?tab=diagnose">Einrichtung → Diagnose</Link>.

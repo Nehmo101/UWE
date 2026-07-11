@@ -15,7 +15,7 @@ export default function AuditLogPage() {
         title="Audit Log"
         summary="Sicherheitsrelevante Aktionen — ohne Secrets, mit gehashten IP/User-Agent-Werten."
       />
-      <p className="uwe-dashboard-muted" style={{ marginBottom: "1rem" }}>
+      <p className="mb-4 text-sm text-muted-foreground">
         Tipp: Der{" "}
         <Link href="/admin/activity?source=audit">einheitliche Verlauf</Link> bündelt Audit,
         Aktivität und KI-Nutzung chronologisch.

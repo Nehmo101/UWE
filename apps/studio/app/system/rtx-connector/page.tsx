@@ -6,6 +6,7 @@ import { HealthBadge } from "@uwe/shared-ui";
 
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { resolveHostConnectorConfig } from "@/src/lib/connector-config";
+import { Alert } from "@/src/components/ui";
 import { RtxConnectorClient } from "./RtxConnectorClient";
 import { RtxInferenceTestPanel } from "./RtxInferenceTestPanel";
 
@@ -49,29 +50,19 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
         }
       />
       {from === "cookbook" && (
-        <section className="uwe-v2-section" role="status">
-          <div className="uwe-v2-card" style={{ padding: "1rem", borderColor: "var(--uwe-accent, #888)" }}>
-            <strong>Das Cookbook ist umgezogen.</strong>
-            <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem" }}>
-              Lokales Modell-Management läuft jetzt über den RTX Connector: aktivierte Modelle werden
-              vom Connector gemeldet, Workflow-Standards stellst du hier ein. Online-/Cloud-KI bleibt
-              in den <Link href="/settings">Einstellungen</Link> und im{" "}
-              <Link href="/admin/ai-gateway">AI Gateway</Link>.
-            </p>
-          </div>
-        </section>
+        <Alert tone="info" icon="book-open" title="Das Cookbook ist umgezogen." className="mb-4">
+          Lokales Modell-Management läuft jetzt über den RTX Connector: aktivierte Modelle werden
+          vom Connector gemeldet, Workflow-Standards stellst du hier ein. Online-/Cloud-KI bleibt
+          in den <Link href="/settings">Einstellungen</Link> und im{" "}
+          <Link href="/admin/ai-gateway">AI Gateway</Link>.
+        </Alert>
       )}
 
       {!summary.anyOnline && (
-        <section className="uwe-v2-section" role="status">
-          <div className="uwe-v2-card" style={{ padding: "1rem" }}>
-            <strong>{CONNECTOR_OFFLINE_MESSAGE}</strong>
-            <p className="uwe-dashboard-muted" style={{ marginTop: "0.5rem" }}>
-              Das ist ein normaler Zustand. Website, Studio und Portal laufen unabhängig vom RTX
-              Connector. Sobald der Connector startet, werden lokale Funktionen automatisch aktiv.
-            </p>
-          </div>
-        </section>
+        <Alert tone="info" icon="server-off" title={CONNECTOR_OFFLINE_MESSAGE} className="mb-4">
+          Das ist ein normaler Zustand. Website, Studio und Portal laufen unabhängig vom RTX
+          Connector. Sobald der Connector startet, werden lokale Funktionen automatisch aktiv.
+        </Alert>
       )}
 
       <RtxConnectorClient
@@ -83,9 +74,9 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
 
       <RtxInferenceTestPanel useMock={process.env.AI_USE_MOCK === "true"} />
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Privacy-Guard</h2>
-        <ul className="uwe-dashboard-muted" style={{ margin: 0, paddingLeft: "1.1rem" }}>
+      <section className="mt-6 flex flex-col gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">Privacy-Guard</h2>
+        <ul className="m-0 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
           <li>
             <strong>Life Brain:</strong> strikt lokal über RTX — kein Cloud-Fallback, nicht
             konfigurierbar.
@@ -108,29 +99,31 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
         </ul>
       </section>
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Einrichtung</h2>
-        <ol className="uwe-homelab-checklist">
-          <li>
-            <strong>Token erzeugen</strong>
-            <span>Oben „Connector hinzufügen“ — das Token wird nur einmal angezeigt.</span>
+      <section className="mt-6 flex flex-col gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">Einrichtung</h2>
+        <ol className="grid gap-2">
+          <li className="rounded-[var(--radius)] border border-border p-3 text-sm">
+            <strong className="block">Token erzeugen</strong>
+            <span className="mt-1 block text-muted-foreground">
+              Oben „Connector hinzufügen“ — das Token wird nur einmal angezeigt.
+            </span>
           </li>
-          <li>
-            <strong>Auf dem RTX-PC</strong>
-            <span>
+          <li className="rounded-[var(--radius)] border border-border p-3 text-sm">
+            <strong className="block">Auf dem RTX-PC</strong>
+            <span className="mt-1 block text-muted-foreground">
               Repo + <code>pnpm install</code>, dann{" "}
               <code>cp tools/uwe-rtx-connector/.env.example tools/uwe-rtx-connector/.env</code>,
               <code>UWE_HOST_URL</code> und <code>UWE_CONNECTOR_TOKEN</code> eintragen.
             </span>
           </li>
-          <li>
-            <strong>Starten</strong>
-            <span>
+          <li className="rounded-[var(--radius)] border border-border p-3 text-sm">
+            <strong className="block">Starten</strong>
+            <span className="mt-1 block text-muted-foreground">
               <code>pnpm connector:start</code> — der Connector verbindet sich ausgehend zum Host.
             </span>
           </li>
         </ol>
-        <p className="uwe-dashboard-muted" style={{ marginTop: "0.75rem" }}>
+        <p className="text-sm text-muted-foreground">
           Details: <Link href="/system">System-Übersicht →</Link> · Doku{" "}
           <code>docs/rtx-connector.md</code> und <code>docs/connector-security.md</code>.
         </p>

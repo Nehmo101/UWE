@@ -5,6 +5,7 @@ import { capabilityOfflineMessage } from "@uwe/connector/client";
 import type { SoundboardButtonView } from "@uwe/shared-ui";
 import { SoundboardWorkspace } from "@uwe/shared-ui";
 import { useCallback, useEffect, useState } from "react";
+import { Button, buttonVariants } from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -67,9 +68,9 @@ export function SessionLiveSoundboard({
 
   if (buttons.length === 0) {
     return (
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Soundboard</h2>
-        <p className="uwe-dashboard-muted">
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold text-foreground">Soundboard</h2>
+        <p className="text-sm text-muted-foreground">
           Keine Soundboard-Buttons für diese Session —{" "}
           <Link href={setupHref}>Button für diese Session vorbereiten →</Link>
         </p>
@@ -78,23 +79,24 @@ export function SessionLiveSoundboard({
   }
 
   return (
-    <section className="uwe-v2-section">
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-        <h2 className="uwe-v2-section-title" style={{ margin: 0 }}>
-          Soundboard
-        </h2>
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-small" onClick={() => setOpen((v) => !v)}>
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-base font-semibold text-foreground">Soundboard</h2>
+        <Button type="button" variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
           {open ? "Einklappen" : "Steuerung öffnen"}
-        </button>
-        <Link href={setupHref} className="uwe-v2-btn uwe-v2-btn-small">
+        </Button>
+        <Link href={setupHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
           Button vorbereiten →
         </Link>
-        <Link href={`/worlds/${worldSlug}/soundboard`} className="uwe-v2-btn uwe-v2-btn-small uwe-v2-btn-ghost">
+        <Link
+          href={`/worlds/${worldSlug}/soundboard`}
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
           Verwalten
         </Link>
       </div>
 
-      <div className="uwe-dashboard-muted" style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
         <span>{buttons.length} Button(s) — direkt während der Live-Session abspielen.</span>
         {lastPlayedTitle ? <span>Zuletzt: „{lastPlayedTitle}“</span> : null}
         {!rtxAudioOnline ? (
@@ -107,7 +109,7 @@ export function SessionLiveSoundboard({
       </div>
 
       {open ? (
-        <div style={{ marginTop: "0.75rem" }}>
+        <div>
           <SoundboardWorkspace
             buttons={buttons}
             worldSlug={worldSlug}

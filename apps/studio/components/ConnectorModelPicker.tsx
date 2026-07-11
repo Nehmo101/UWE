@@ -97,7 +97,7 @@ export function ConnectorModelPicker({
   }
 
   return (
-    <label className="ai-brain-field uwe-connector-model-picker">
+    <label className="ai-brain-field flex flex-col gap-2">
       {label && <span>{label}</span>}
       <select
         id={id}
@@ -117,7 +117,7 @@ export function ConnectorModelPicker({
         ))}
       </select>
       {selected?.description && (
-        <span className="uwe-dashboard-muted" style={{ fontSize: "0.8rem" }}>
+        <span className="text-sm text-muted-foreground" style={{ fontSize: "0.8rem" }}>
           {selected.description}
         </span>
       )}

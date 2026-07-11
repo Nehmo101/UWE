@@ -20,6 +20,25 @@ import {
 } from "@/app/worlds/[worldSlug]/treasury-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -98,7 +117,7 @@ export default async function WorldTreasuryPage({ params, searchParams }: Props)
       }
       contextPanel={
         <SidebarSection title="Gruppenschatz">
-          <p className="uwe-hint" style={{ margin: 0 }}>
+          <p className="text-sm text-muted-foreground">
             Gemeinsame Währung und Gegenstände der Gruppe — im Portal für Spieler sichtbar.
             &bdquo;Nur DM&ldquo;-Items und DM-Notizen bleiben im Studio.
           </p>
@@ -110,266 +129,246 @@ export default async function WorldTreasuryPage({ params, searchParams }: Props)
         summary="Verwalte Gruppenwährung und gemeinsames Inventar dieser Welt."
       />
 
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Loot &amp; Zufall</h2>
-        <p className="uwe-hint" style={{ margin: "0 0 0.75rem" }}>
-          Ein integrierter Loot-Generator ist geplant. Bis dahin kannst du Beute über
-          Zufallstabellen würfeln und Gegenstände manuell oder per Import erfassen.
-        </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-          <Link href={`/worlds/${worldSlug}/roll-tables`} className="uwe-v2-btn uwe-v2-btn-primary">
-            Zufallstabellen öffnen
-          </Link>
-          <Link href={`/worlds/${worldSlug}/magic-items`} className="uwe-v2-btn">
-            Magic-Item-Werkbank
-          </Link>
-        </div>
-      </section>
-
-      {saved === "1" && (
-        <p className="uwe-banner uwe-banner-success" role="status">
-          Gruppenschatz gespeichert.
-        </p>
-      )}
-      {added === "1" && (
-        <p className="uwe-banner uwe-banner-success" role="status">
-          Gegenstand hinzugefügt.
-        </p>
-      )}
-      {deleted === "1" && (
-        <p className="uwe-banner uwe-banner-success" role="status">
-          Gegenstand entfernt.
-        </p>
-      )}
-      {moved === "1" && (
-        <p className="uwe-banner uwe-banner-success" role="status">
-          Gegenstand verschoben.
-        </p>
-      )}
-
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Währung & Notizen</h2>
-        <form action={updatePartyTreasuryAction} className="uwe-v2-form">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-
-          <label>
-            Bezeichnung
-            <input name="name" defaultValue={treasury.name} required />
-          </label>
-
-          <fieldset>
-            <legend>Währung</legend>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(8rem, 1fr))",
-                gap: "1rem",
-              }}
-            >
-              {(Object.keys(DEFAULT_CURRENCIES) as (keyof typeof DEFAULT_CURRENCIES)[]).map((key) => (
-                <label key={key}>
-                  {CURRENCY_LABELS[key]}
-                  <input
-                    name={`currency_${key}`}
-                    type="number"
-                    min={0}
-                    step={1}
-                    defaultValue={currencies[key]}
-                    required
-                  />
-                </label>
-              ))}
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loot &amp; Zufall</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Ein integrierter Loot-Generator ist geplant. Bis dahin kannst du Beute über
+              Zufallstabellen würfeln und Gegenstände manuell oder per Import erfassen.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link href={`/worlds/${worldSlug}/roll-tables`} className={buttonVariants({ variant: "default" })}>
+                Zufallstabellen öffnen
+              </Link>
+              <Link href={`/worlds/${worldSlug}/magic-items`} className={buttonVariants({ variant: "outline" })}>
+                Magic-Item-Werkbank
+              </Link>
             </div>
-          </fieldset>
+          </CardContent>
+        </Card>
 
-          <label>
-            Notizen
-            <textarea name="notes" rows={3} defaultValue={treasury.notes} />
-          </label>
+        {saved === "1" && <Alert tone="success">Gruppenschatz gespeichert.</Alert>}
+        {added === "1" && <Alert tone="success">Gegenstand hinzugefügt.</Alert>}
+        {deleted === "1" && <Alert tone="success">Gegenstand entfernt.</Alert>}
+        {moved === "1" && <Alert tone="success">Gegenstand verschoben.</Alert>}
 
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Speichern
-          </button>
-        </form>
-      </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Währung &amp; Notizen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={updatePartyTreasuryAction} className="flex flex-col gap-4">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
 
-      <section className="uwe-v2-card" style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Gegenstand hinzufügen</h2>
-        <form action={addPartyInventoryItemAction} className="uwe-v2-form">
-          <input type="hidden" name="worldSlug" value={worldSlug} />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="treasury-name">Bezeichnung</Label>
+                <Input id="treasury-name" name="name" defaultValue={treasury.name} required />
+              </div>
 
-          <label>
-            Name
-            <input name="name" required />
-          </label>
+              <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
+                <legend className="px-1 text-sm font-medium text-foreground">Währung</legend>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-4">
+                  {(Object.keys(DEFAULT_CURRENCIES) as (keyof typeof DEFAULT_CURRENCIES)[]).map((key) => (
+                    <div key={key} className="flex flex-col gap-1.5">
+                      <Label htmlFor={`treasury-currency-${key}`}>{CURRENCY_LABELS[key]}</Label>
+                      <Input
+                        id={`treasury-currency-${key}`}
+                        name={`currency_${key}`}
+                        type="number"
+                        min={0}
+                        step={1}
+                        defaultValue={currencies[key]}
+                        required
+                      />
+                    </div>
+                  ))}
+                </div>
+              </fieldset>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 11rem), 1fr))", gap: "1rem" }}>
-            <label>
-              Anzahl
-              <input name="quantity" type="number" min={1} defaultValue={1} required />
-            </label>
-            <label>
-              Gewicht (optional)
-              <input name="weight" type="number" min={0} step={0.1} />
-            </label>
-            <label>
-              Wert in GP (optional)
-              <input name="valueGp" type="number" min={0} step={1} />
-            </label>
-          </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="treasury-notes">Notizen</Label>
+                <Textarea id="treasury-notes" name="notes" rows={3} defaultValue={treasury.notes} />
+              </div>
 
-          <label>
-            Notizen (für Spieler sichtbar)
-            <textarea name="notes" rows={2} />
-          </label>
+              <div>
+                <Button type="submit">Speichern</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
-          <label>
-            DM-Notizen (nie im Portal sichtbar)
-            <textarea name="dmNotes" rows={2} />
-          </label>
+        <Card>
+          <CardHeader>
+            <CardTitle>Gegenstand hinzufügen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={addPartyInventoryItemAction} className="flex flex-col gap-4">
+              <input type="hidden" name="worldSlug" value={worldSlug} />
 
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <input type="checkbox" name="dmOnly" />
-            Nur für DM sichtbar (verstecktes Artefakt)
-          </label>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="item-name">Name</Label>
+                <Input id="item-name" name="name" required />
+              </div>
 
-          <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-            Hinzufügen
-          </button>
-        </form>
-      </section>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,11rem),1fr))] gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="item-quantity">Anzahl</Label>
+                  <Input id="item-quantity" name="quantity" type="number" min={1} defaultValue={1} required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="item-weight">Gewicht (optional)</Label>
+                  <Input id="item-weight" name="weight" type="number" min={0} step={0.1} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="item-value">Wert in GP (optional)</Label>
+                  <Input id="item-value" name="valueGp" type="number" min={0} step={1} />
+                </div>
+              </div>
 
-      <section className="uwe-v2-card">
-        <h2 style={{ marginTop: 0 }}>Inventar ({items.length})</h2>
-        {items.length === 0 ? (
-          <p className="uwe-hint">Noch keine Gruppengegenstände erfasst.</p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {items.map((item) => {
-              const valueLabel = formatItemValue(item.value);
-              const dmNotes = getInventoryItemDmNotes(item);
-              return (
-                <li
-                  key={item.id}
-                  style={{
-                    marginBottom: "1rem",
-                    padding: "1rem",
-                    border: "1px solid rgba(148,163,184,0.12)",
-                    borderRadius: "0.65rem",
-                  }}
-                >
-                  <p style={{ margin: "0 0 0.35rem" }}>
-                    <strong>{item.name}</strong>
-                    {item.quantity > 1 ? ` × ${item.quantity}` : null}
-                    {isInventoryItemDmOnly(item) && (
-                      <span className="uwe-badge" style={{ marginLeft: "0.5rem" }}>
-                        Nur DM
-                      </span>
-                    )}
-                  </p>
-                  {(valueLabel || item.weight != null) && (
-                    <p style={{ margin: "0 0 0.35rem", fontSize: "0.875rem" }}>
-                      {valueLabel ? `Wert: ${valueLabel}` : null}
-                      {valueLabel && item.weight != null ? " · " : null}
-                      {item.weight != null ? `Gewicht: ${item.weight}` : null}
-                    </p>
-                  )}
-                  {item.notes && (
-                    <p style={{ margin: "0 0 0.35rem", fontSize: "0.875rem" }}>{item.notes}</p>
-                  )}
-                  {dmNotes && (
-                    <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem" }} className="uwe-hint">
-                      DM-Notizen: {dmNotes}
-                    </p>
-                  )}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-                    {characters.length > 0 && (
-                      <form
-                        action={assignPartyItemToCharacterAction}
-                        style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
-                      >
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="item-notes">Notizen (für Spieler sichtbar)</Label>
+                <Textarea id="item-notes" name="notes" rows={2} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="item-dm-notes">DM-Notizen (nie im Portal sichtbar)</Label>
+                <Textarea id="item-dm-notes" name="dmNotes" rows={2} />
+              </div>
+
+              {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="dmOnly" className="size-4 rounded border-input" />
+                Nur für DM sichtbar (verstecktes Artefakt)
+              </label>
+
+              <div>
+                <Button type="submit">Hinzufügen</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Inventar ({items.length})</h2>
+          {items.length === 0 ? (
+            <EmptyState title="Noch keine Gegenstände" description="Noch keine Gruppengegenstände erfasst." />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {items.map((item) => {
+                const valueLabel = formatItemValue(item.value);
+                const dmNotes = getInventoryItemDmNotes(item);
+                return (
+                  <Card key={item.id}>
+                    <CardHeader>
+                      <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                        {item.name}
+                        {item.quantity > 1 ? (
+                          <span className="font-normal text-muted-foreground">× {item.quantity}</span>
+                        ) : null}
+                        {isInventoryItemDmOnly(item) && <Badge variant="warning">Nur DM</Badge>}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-2">
+                      {(valueLabel || item.weight != null) && (
+                        <p className="text-sm text-muted-foreground">
+                          {valueLabel ? `Wert: ${valueLabel}` : null}
+                          {valueLabel && item.weight != null ? " · " : null}
+                          {item.weight != null ? `Gewicht: ${item.weight}` : null}
+                        </p>
+                      )}
+                      {item.notes && <p className="text-sm">{item.notes}</p>}
+                      {dmNotes && (
+                        <p className="text-sm text-muted-foreground">DM-Notizen: {dmNotes}</p>
+                      )}
+                      <div className="flex flex-wrap gap-3">
+                        {characters.length > 0 && (
+                          <form
+                            action={assignPartyItemToCharacterAction}
+                            className="flex items-center gap-2"
+                          >
+                            <input type="hidden" name="worldSlug" value={worldSlug} />
+                            <input type="hidden" name="itemId" value={item.id} />
+                            <Select name="characterId" defaultValue={characters[0]?.id}>
+                              <SelectTrigger className="h-8 w-48">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {characters.map((character) => (
+                                  <SelectItem key={character.id} value={character.id}>
+                                    {character.displayName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button type="submit" variant="ghost" size="sm">
+                              Charakter zuweisen
+                            </Button>
+                          </form>
+                        )}
+                        <form action={deletePartyInventoryItemAction}>
+                          <input type="hidden" name="worldSlug" value={worldSlug} />
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <Button type="submit" variant="destructive" size="sm">
+                            Entfernen
+                          </Button>
+                        </form>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Bei Charakteren ({characterItems.length})</h2>
+          {characterItems.length === 0 ? (
+            <EmptyState
+              title="Keine Gegenstände bei Charakteren"
+              description="Aktuell trägt kein Charakter Gegenstände aus der Schatzkammer."
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {characterItems.map((item) => {
+                const dmNotes = getInventoryItemDmNotes(item);
+                return (
+                  <Card key={item.id}>
+                    <CardHeader>
+                      <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                        {item.name}
+                        {item.quantity > 1 ? (
+                          <span className="font-normal text-muted-foreground">× {item.quantity}</span>
+                        ) : null}
+                        <span className="font-normal text-muted-foreground">
+                          — {item.character?.displayName ?? "Unbekannter Charakter"}
+                        </span>
+                        {isInventoryItemDmOnly(item) && <Badge variant="warning">Nur DM</Badge>}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-2">
+                      {item.notes && <p className="text-sm">{item.notes}</p>}
+                      {dmNotes && (
+                        <p className="text-sm text-muted-foreground">DM-Notizen: {dmNotes}</p>
+                      )}
+                      <form action={returnPartyItemToTreasuryAction}>
                         <input type="hidden" name="worldSlug" value={worldSlug} />
                         <input type="hidden" name="itemId" value={item.id} />
-                        <select name="characterId" defaultValue={characters[0]?.id}>
-                          {characters.map((character) => (
-                            <option key={character.id} value={character.id}>
-                              {character.displayName}
-                            </option>
-                          ))}
-                        </select>
-                        <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
-                          Charakter zuweisen
-                        </button>
+                        <Button type="submit" variant="ghost" size="sm">
+                          Zurück in die Schatzkammer
+                        </Button>
                       </form>
-                    )}
-                    <form action={deletePartyInventoryItemAction}>
-                      <input type="hidden" name="worldSlug" value={worldSlug} />
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <button
-                        type="submit"
-                        className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-danger"
-                      >
-                        Entfernen
-                      </button>
-                    </form>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section className="uwe-v2-card" style={{ marginTop: "1.5rem" }}>
-        <h2 style={{ marginTop: 0 }}>Bei Charakteren ({characterItems.length})</h2>
-        {characterItems.length === 0 ? (
-          <p className="uwe-hint">Aktuell trägt kein Charakter Gegenstände aus der Schatzkammer.</p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {characterItems.map((item) => {
-              const dmNotes = getInventoryItemDmNotes(item);
-              return (
-                <li
-                  key={item.id}
-                  style={{
-                    marginBottom: "1rem",
-                    padding: "1rem",
-                    border: "1px solid rgba(148,163,184,0.12)",
-                    borderRadius: "0.65rem",
-                  }}
-                >
-                  <p style={{ margin: "0 0 0.35rem" }}>
-                    <strong>{item.name}</strong>
-                    {item.quantity > 1 ? ` × ${item.quantity}` : null}
-                    {" — "}
-                    {item.character?.displayName ?? "Unbekannter Charakter"}
-                    {isInventoryItemDmOnly(item) && (
-                      <span className="uwe-badge" style={{ marginLeft: "0.5rem" }}>
-                        Nur DM
-                      </span>
-                    )}
-                  </p>
-                  {item.notes && (
-                    <p style={{ margin: "0 0 0.35rem", fontSize: "0.875rem" }}>{item.notes}</p>
-                  )}
-                  {dmNotes && (
-                    <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem" }} className="uwe-hint">
-                      DM-Notizen: {dmNotes}
-                    </p>
-                  )}
-                  <form action={returnPartyItemToTreasuryAction}>
-                    <input type="hidden" name="worldSlug" value={worldSlug} />
-                    <input type="hidden" name="itemId" value={item.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost">
-                      Zurück in die Schatzkammer
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
     </WorldShell>
   );
 }

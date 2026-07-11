@@ -22,6 +22,18 @@ import {
 } from "@/app/session-live-actions";
 import { getInferenceStatus } from "@uwe/ai-brain";
 import { SessionRecapAiButton } from "@/components/SessionRecapAiButton";
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
@@ -40,24 +52,24 @@ function QuestStatusButtons({
   pageId: string;
 }) {
   return (
-    <span className="uwe-inline-forms">
-      <form action={applyQuestStatusFromReviewAction} className="uwe-inline-form">
+    <span className="inline-flex flex-wrap gap-2">
+      <form action={applyQuestStatusFromReviewAction}>
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="sessionId" value={sessionId} />
         <input type="hidden" name="pageId" value={pageId} />
         <input type="hidden" name="status" value="completed" />
-        <button type="submit" className="uwe-v2-btn">
+        <Button type="submit" variant="outline" size="sm">
           Als erledigt markieren
-        </button>
+        </Button>
       </form>
-      <form action={applyQuestStatusFromReviewAction} className="uwe-inline-form">
+      <form action={applyQuestStatusFromReviewAction}>
         <input type="hidden" name="worldSlug" value={worldSlug} />
         <input type="hidden" name="sessionId" value={sessionId} />
         <input type="hidden" name="pageId" value={pageId} />
         <input type="hidden" name="status" value="failed" />
-        <button type="submit" className="uwe-v2-btn">
+        <Button type="submit" variant="outline" size="sm">
           Als gescheitert markieren
-        </button>
+        </Button>
       </form>
     </span>
   );
@@ -78,30 +90,36 @@ function ActionableList({
 }) {
   if (entries.length === 0) return null;
   return (
-    <section className="uwe-v2-section">
-      <h2 className="uwe-v2-section-title">
-        {title} ({entries.length})
-      </h2>
-      <p className="uwe-dashboard-muted">{hint}</p>
-      <ul className="uwe-linked-list">
-        {entries.map((entry) => {
-          const href = hrefFor(entry);
-          return (
-            <li key={entry.id}>
-              <span className="uwe-dashboard-muted">{TIME_FORMAT.format(entry.createdAt)}</span>{" "}
-              {entry.content}
-              {href ? (
-                <>
-                  {" — "}
-                  <Link href={href}>betroffene Seite öffnen →</Link>
-                </>
-              ) : null}
-              {renderActions ? renderActions(entry) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          {title} ({entries.length})
+        </CardTitle>
+        <CardDescription>{hint}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col gap-3 text-sm">
+          {entries.map((entry) => {
+            const href = hrefFor(entry);
+            return (
+              <li key={entry.id} className="border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
+                <span className="text-muted-foreground">{TIME_FORMAT.format(entry.createdAt)}</span>{" "}
+                {entry.content}
+                {href ? (
+                  <>
+                    {" — "}
+                    <Link href={href} className="underline-offset-4 hover:underline">
+                      betroffene Seite öffnen →
+                    </Link>
+                  </>
+                ) : null}
+                {renderActions ? <div className="mt-2">{renderActions(entry)}</div> : null}
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -161,26 +179,20 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
         summary="Vorgemerkte Ereignisse aus dem Live-Modus. Prüfe und übernimm sie bewusst — nichts wird automatisch Kanon."
         meta={<GameSessionStatusBadge status={session.status} />}
         actions={
-          <Link href={`/worlds/${worldSlug}/sessions/${sessionId}`} className="uwe-v2-btn">
+          <Link href={`/worlds/${worldSlug}/sessions/${sessionId}`} className={buttonVariants({ variant: "outline" })}>
             Zur Session
           </Link>
         }
       />
 
-      {saved ? (
-        <p className="uwe-inspector-ok" role="status">
-          ✓ Recap-Entwurf gespeichert.
-        </p>
-      ) : null}
+      {saved ? <Alert tone="success" icon="check">Recap-Entwurf gespeichert.</Alert> : null}
 
       {applied ? (
-        <p className="uwe-inspector-ok" role="status">
-          ✓ Quest-Status auf der referenzierten Seite gesetzt.
-        </p>
+        <Alert tone="success" icon="check">Quest-Status auf der referenzierten Seite gesetzt.</Alert>
       ) : null}
 
       {draft.total === 0 ? (
-        <p className="uwe-dashboard-muted">
+        <p className="text-sm text-muted-foreground">
           Für diese Session wurden keine Live-Einträge vorgemerkt.
         </p>
       ) : null}
@@ -216,36 +228,42 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
       />
 
       {draft.bookmarks.length > 0 || draft.notes.length > 0 ? (
-        <section className="uwe-v2-section">
-          <h2 className="uwe-v2-section-title">Verlauf & Lesezeichen</h2>
-          <ul className="uwe-linked-list">
-            {[...draft.notes, ...draft.bookmarks].map((entry) => (
-              <li key={entry.id}>
-                <span className="uwe-dashboard-muted">{TIME_FORMAT.format(entry.createdAt)}</span>{" "}
-                <span className="uwe-badge">{sessionLiveKindLabel(entry.kind)}</span> {entry.content}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Verlauf &amp; Lesezeichen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-3 text-sm">
+              {[...draft.notes, ...draft.bookmarks].map((entry) => (
+                <li key={entry.id} className="border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
+                  <span className="text-muted-foreground">{TIME_FORMAT.format(entry.createdAt)}</span>{" "}
+                  <Badge>{sessionLiveKindLabel(entry.kind)}</Badge> {entry.content}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       ) : null}
 
-      <section className="uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Recap-Entwurf (DM)</h2>
-        <p className="uwe-dashboard-muted">
-          Aus den Einträgen vorgeschlagen. Bearbeiten und als DM-Zusammenfassung der
-          Session speichern.
-        </p>
-        <form action={saveSessionRecapDraftAction}>
-          <input type="hidden" name="worldSlug" value={worldSlug} />
-          <input type="hidden" name="sessionId" value={sessionId} />
-          <textarea name="summaryDm" rows={12} defaultValue={recapSuggestion} />
-          <div className="uwe-form-actions">
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Recap-Entwurf speichern
-            </button>
-          </div>
-        </form>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recap-Entwurf (DM)</CardTitle>
+          <CardDescription>
+            Aus den Einträgen vorgeschlagen. Bearbeiten und als DM-Zusammenfassung der
+            Session speichern.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={saveSessionRecapDraftAction} className="flex flex-col gap-3">
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="sessionId" value={sessionId} />
+            <Textarea name="summaryDm" rows={12} defaultValue={recapSuggestion} />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit">Recap-Entwurf speichern</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       <SessionRecapAiButton
         worldSlug={worldSlug}

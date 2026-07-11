@@ -20,6 +20,23 @@ import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell"
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -27,6 +44,9 @@ interface Props {
 }
 
 const BRAIN_PAGE_SIZE = 25;
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 export default async function StudioBrainPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
@@ -63,6 +83,8 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
 
   const documentTotal = summary?.documentCount ?? documents.length;
   const totalPages = Math.max(1, Math.ceil(documentTotal / BRAIN_PAGE_SIZE));
+  const documentTypeKeys = Object.keys(BRAIN_DOCUMENT_TYPE_LABELS);
+  const factTypeKeys = Object.keys(BRAIN_FACT_TYPE_LABELS);
 
   function brainPageHref(nextPage: number): string {
     const paramsObj = new URLSearchParams();
@@ -87,7 +109,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
             items={campaignNavItems(`/worlds/${worldSlug}/brain`, campaigns, campaignSlug)}
           />
           <SidebarSection title="Kontext">
-            <p className="uwe-hint" style={{ margin: 0 }}>
+            <p className="text-sm text-muted-foreground">
               Brain-Wissen wird dauerhaft in UWE gespeichert — getrennt vom privaten Life-Brain.
               KI-Generierung läuft über den RTX Connector (lokal, kein Cloud-Fallback für Weltwissen).
             </p>
@@ -100,171 +122,223 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
         summary="Dauerhaftes Welt- und Kampagnenwissen in UWE — Sichtbarkeit dm_only, player_visible und public."
       />
       {summary && (
-        <p className="uwe-brain-summary">
+        <p className="text-sm text-muted-foreground">
           {summary.documentCount} Dokumente · {summary.factCount} Fakten ·{" "}
           {summary.chunkCount} Chunks · {summary.linkCount} Links
         </p>
       )}
 
-      <section className="uwe-brain-section">
-        <h2>Dokumente</h2>
-        {documents.length === 0 ? (
-          <p className="uwe-v2-empty">Noch keine Brain-Dokumente.</p>
-        ) : (
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>Titel</th>
-                <th>Typ</th>
-                <th>Sichtbarkeit</th>
-                <th>Status</th>
-                <th>Quelle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((doc) => (
-                <tr key={doc.id}>
-                  <td data-label="Titel">
-                    <Link href={`/worlds/${worldSlug}/brain/${doc.id}`}>{doc.title}</Link>
-                  </td>
-                  <td data-label="Typ">{BRAIN_DOCUMENT_TYPE_LABELS[doc.documentType]}</td>
-                  <td data-label="Sichtbarkeit">
-                    <VisibilityBadge visibility={doc.visibility as Visibility} />
-                  </td>
-                  <td data-label="Status">{BRAIN_STATUS_LABELS[doc.status]}</td>
-                  <td data-label="Quelle">{doc.source}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {totalPages > 1 && (
-          <nav className="uwe-inline-actions" aria-label="Brain-Dokumente Pagination">
-            {page > 1 ? <Link href={brainPageHref(page - 1)}>← Zurück</Link> : null}
-            <span className="uwe-dashboard-muted">
-              Seite {page} / {totalPages}
-            </span>
-            {page < totalPages ? <Link href={brainPageHref(page + 1)}>Weiter →</Link> : null}
-          </nav>
-        )}
-      </section>
-
-      <section className="uwe-brain-section">
-        <h2>Fakten</h2>
-        {facts.length === 0 ? (
-          <p className="uwe-v2-empty">Noch keine Brain-Fakten.</p>
-        ) : (
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>Titel</th>
-                <th>Typ</th>
-                <th>Sichtbarkeit</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {facts.map((fact) => (
-                <tr key={fact.id}>
-                  <td data-label="Titel">
-                    <Link href={`/worlds/${worldSlug}/brain/facts/${fact.id}`}>
-                      {fact.title}
-                    </Link>
-                  </td>
-                  <td data-label="Typ">{BRAIN_FACT_TYPE_LABELS[fact.factType]}</td>
-                  <td data-label="Sichtbarkeit">
-                    <VisibilityBadge visibility={fact.visibility as Visibility} />
-                  </td>
-                  <td data-label="Status">{BRAIN_STATUS_LABELS[fact.status]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="uwe-v2-card uwe-v2-card-padded uwe-v2-section">
-        <h2 className="uwe-v2-section-title">Manuell anlegen</h2>
-        <div className="uwe-brain-create-grid">
-          <form action={createBrainDocumentAction} className="uwe-brain-create-form">
-            <h3>Neues Dokument</h3>
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            {selectedCampaign && (
-              <input type="hidden" name="campaignId" value={selectedCampaign.id} />
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dokumente</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {documents.length === 0 ? (
+              <EmptyState title="Noch keine Brain-Dokumente." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className={TH_CLASS}>Titel</th>
+                      <th className={TH_CLASS}>Typ</th>
+                      <th className={TH_CLASS}>Sichtbarkeit</th>
+                      <th className={TH_CLASS}>Status</th>
+                      <th className={TH_CLASS}>Quelle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.map((doc) => (
+                      <tr key={doc.id}>
+                        <td className={TD_CLASS}>
+                          <Link href={`/worlds/${worldSlug}/brain/${doc.id}`}>{doc.title}</Link>
+                        </td>
+                        <td className={TD_CLASS}>{BRAIN_DOCUMENT_TYPE_LABELS[doc.documentType]}</td>
+                        <td className={TD_CLASS}>
+                          <VisibilityBadge visibility={doc.visibility as Visibility} />
+                        </td>
+                        <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[doc.status]}</td>
+                        <td className={TD_CLASS}>{doc.source}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-            <label>
-              Titel
-              <input name="title" required className="uwe-input" placeholder="Dokumenttitel" />
-            </label>
-            <label>
-              Inhalt
-              <textarea name="content" className="uwe-input" rows={3} placeholder="Wissenstext…" />
-            </label>
-            <label>
-              Typ
-              <select name="documentType" className="uwe-input">
-                {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Sichtbarkeit
-              <select name="visibility" className="uwe-input" defaultValue="dm_only">
-                {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Dokument anlegen
-            </button>
-          </form>
-
-          <form action={createBrainFactAction} className="uwe-brain-create-form">
-            <h3>Neuer Fakt</h3>
-            <input type="hidden" name="worldSlug" value={worldSlug} />
-            {selectedCampaign && (
-              <input type="hidden" name="campaignId" value={selectedCampaign.id} />
+            {totalPages > 1 && (
+              <nav className="flex flex-wrap items-center gap-3" aria-label="Brain-Dokumente Pagination">
+                {page > 1 ? (
+                  <Link
+                    href={brainPageHref(page - 1)}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    ← Zurück
+                  </Link>
+                ) : null}
+                <span className="text-sm text-muted-foreground">
+                  Seite {page} / {totalPages}
+                </span>
+                {page < totalPages ? (
+                  <Link
+                    href={brainPageHref(page + 1)}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    Weiter →
+                  </Link>
+                ) : null}
+              </nav>
             )}
-            <label>
-              Titel
-              <input name="title" required className="uwe-input" placeholder="Fakt-Titel" />
-            </label>
-            <label>
-              Inhalt
-              <textarea name="content" className="uwe-input" rows={3} placeholder="Fakt-Inhalt…" />
-            </label>
-            <label>
-              Typ
-              <select name="factType" className="uwe-input">
-                {Object.entries(BRAIN_FACT_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Sichtbarkeit
-              <select name="visibility" className="uwe-input" defaultValue="dm_only">
-                {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary">
-              Fakt anlegen
-            </button>
-          </form>
-        </div>
-      </section>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Fakten</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {facts.length === 0 ? (
+              <EmptyState title="Noch keine Brain-Fakten." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className={TH_CLASS}>Titel</th>
+                      <th className={TH_CLASS}>Typ</th>
+                      <th className={TH_CLASS}>Sichtbarkeit</th>
+                      <th className={TH_CLASS}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {facts.map((fact) => (
+                      <tr key={fact.id}>
+                        <td className={TD_CLASS}>
+                          <Link href={`/worlds/${worldSlug}/brain/facts/${fact.id}`}>
+                            {fact.title}
+                          </Link>
+                        </td>
+                        <td className={TD_CLASS}>{BRAIN_FACT_TYPE_LABELS[fact.factType]}</td>
+                        <td className={TD_CLASS}>
+                          <VisibilityBadge visibility={fact.visibility as Visibility} />
+                        </td>
+                        <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[fact.status]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Manuell anlegen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              <form action={createBrainDocumentAction} className="flex flex-col gap-4">
+                <h3 className="text-sm font-semibold text-foreground">Neues Dokument</h3>
+                <input type="hidden" name="worldSlug" value={worldSlug} />
+                {selectedCampaign && (
+                  <input type="hidden" name="campaignId" value={selectedCampaign.id} />
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-doc-title">Titel</Label>
+                  <Input id="brain-doc-title" name="title" required placeholder="Dokumenttitel" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-doc-content">Inhalt</Label>
+                  <Textarea id="brain-doc-content" name="content" rows={3} placeholder="Wissenstext…" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-doc-type">Typ</Label>
+                  <Select name="documentType" defaultValue={documentTypeKeys[0]}>
+                    <SelectTrigger id="brain-doc-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-doc-visibility">Sichtbarkeit</Label>
+                  <Select name="visibility" defaultValue="dm_only">
+                    <SelectTrigger id="brain-doc-visibility">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Button type="submit">Dokument anlegen</Button>
+                </div>
+              </form>
+
+              <form action={createBrainFactAction} className="flex flex-col gap-4">
+                <h3 className="text-sm font-semibold text-foreground">Neuer Fakt</h3>
+                <input type="hidden" name="worldSlug" value={worldSlug} />
+                {selectedCampaign && (
+                  <input type="hidden" name="campaignId" value={selectedCampaign.id} />
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-fact-title">Titel</Label>
+                  <Input id="brain-fact-title" name="title" required placeholder="Fakt-Titel" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-fact-content">Inhalt</Label>
+                  <Textarea id="brain-fact-content" name="content" rows={3} placeholder="Fakt-Inhalt…" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-fact-type">Typ</Label>
+                  <Select name="factType" defaultValue={factTypeKeys[0]}>
+                    <SelectTrigger id="brain-fact-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(BRAIN_FACT_TYPE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="brain-fact-visibility">Sichtbarkeit</Label>
+                  <Select name="visibility" defaultValue="dm_only">
+                    <SelectTrigger id="brain-fact-visibility">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Button type="submit">Fakt anlegen</Button>
+                </div>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <BrainAiGeneratePanel worldSlug={worldSlug} campaignId={selectedCampaign?.id} />
     </WorldShell>

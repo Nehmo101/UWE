@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { importPrintProfilesAction } from "./print-profile-actions";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface ExportProfile {
   name: string | null;
@@ -56,29 +57,27 @@ export function PrintProfileJsonTools({ profiles }: Props) {
   }
 
   return (
-    <section className="uwe-v2-card uwe-v2-section">
-      <h2 className="uwe-v2-section-title">Import / Export</h2>
-      <div className="uwe-inline-actions">
-        <button type="button" className="uwe-v2-btn uwe-v2-btn-secondary" onClick={exportJson}>
+    <Card>
+      <CardHeader>
+        <CardTitle>Import / Export</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-wrap items-center gap-3">
+        <Button type="button" variant="secondary" onClick={exportJson}>
           Als JSON exportieren
-        </button>
+        </Button>
         <input
           ref={fileRef}
           type="file"
           accept="application/json,.json"
-          className="uwe-miniature-photo-upload-input"
+          className="sr-only"
           onChange={importFile}
           aria-hidden
           tabIndex={-1}
         />
-        <button
-          type="button"
-          className="uwe-v2-btn uwe-v2-btn-secondary"
-          onClick={() => fileRef.current?.click()}
-        >
+        <Button type="button" variant="secondary" onClick={() => fileRef.current?.click()}>
           JSON importieren
-        </button>
-      </div>
-    </section>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

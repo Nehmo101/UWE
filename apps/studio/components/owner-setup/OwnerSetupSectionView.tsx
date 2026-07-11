@@ -4,43 +4,54 @@ import type {
   SetupSettingItem,
   SetupSettingSource,
 } from "@uwe/database/server";
+import {
+  Alert,
+  Badge,
+  type BadgeProps,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui";
 
-function sourceBadgeClass(source: SetupSettingSource): string {
-  if (source === "host-secret") return "uwe-badge uwe-badge-error";
-  if (source === "db") return "uwe-badge uwe-badge-ok";
-  return "uwe-badge";
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
+
+function sourceBadgeVariant(source: SetupSettingSource): BadgeProps["variant"] {
+  if (source === "host-secret") return "danger";
+  if (source === "db") return "success";
+  return "default";
 }
 
 function SourceBadge({ source }: { source: SetupSettingSource }) {
   const label =
     source === "db" ? "Datenbank" : source === "env" ? "Umgebung" : "Host-Secret";
-  return <span className={sourceBadgeClass(source)}>{label}</span>;
+  return <Badge variant={sourceBadgeVariant(source)}>{label}</Badge>;
 }
 
 function SettingRow({ item }: { item: SetupSettingItem }) {
   return (
     <tr>
-      <td>
+      <td className={TD_CLASS}>
         <strong>{item.label}</strong>
         {item.hostSecretRequired && (
-          <span className="uwe-badge uwe-badge-error" style={{ marginLeft: "0.5rem" }}>
+          <Badge variant="danger" className="ml-2">
             Host-Secret erforderlich
-          </span>
+          </Badge>
         )}
         {item.description && (
-          <p className="uwe-hint" style={{ margin: "0.25rem 0 0" }}>
-            {item.description}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
         )}
       </td>
-      <td>{item.configured ? "✓" : "—"}</td>
-      <td>{item.displayValue}</td>
-      <td>
+      <td className={TD_CLASS}>{item.configured ? "✓" : "—"}</td>
+      <td className={TD_CLASS}>{item.displayValue}</td>
+      <td className={TD_CLASS}>
         <SourceBadge source={item.source} />
       </td>
-      <td>
+      <td className={TD_CLASS}>
         {item.href ? (
-          <Link href={item.href} className="uwe-v2-btn uwe-v2-btn-ghost">
+          <Link href={item.href} className={buttonVariants({ variant: "ghost", size: "sm" })}>
             Öffnen
           </Link>
         ) : item.editable ? (
@@ -59,15 +70,15 @@ interface OwnerSetupSettingsTableProps {
 
 export function OwnerSetupSettingsTable({ settings }: OwnerSetupSettingsTableProps) {
   return (
-    <div className="uwe-page-table-wrap">
-      <table className="uwe-page-table">
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
         <thead>
           <tr>
-            <th>Prüfpunkt</th>
-            <th>Status</th>
-            <th>Wert</th>
-            <th>Quelle</th>
-            <th>Aktion</th>
+            <th className={TH_CLASS}>Prüfpunkt</th>
+            <th className={TH_CLASS}>Status</th>
+            <th className={TH_CLASS}>Wert</th>
+            <th className={TH_CLASS}>Quelle</th>
+            <th className={TH_CLASS}>Aktion</th>
           </tr>
         </thead>
         <tbody>
@@ -80,6 +91,12 @@ export function OwnerSetupSettingsTable({ settings }: OwnerSetupSettingsTablePro
   );
 }
 
+function sectionBadgeVariant(level: SetupSectionStatus["level"]): BadgeProps["variant"] {
+  if (level === "ok") return "success";
+  if (level === "disabled") return "default";
+  return "warning";
+}
+
 interface OwnerSetupSectionViewProps {
   section: SetupSectionStatus;
   children?: React.ReactNode;
@@ -87,39 +104,28 @@ interface OwnerSetupSectionViewProps {
 
 export function OwnerSetupSectionView({ section, children }: OwnerSetupSectionViewProps) {
   return (
-    <section className="uwe-v2-section">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "0.75rem",
-          marginBottom: "0.75rem",
-        }}
-      >
-        <h2 className="uwe-v2-section-title">{section.title}</h2>
-        <span className={`uwe-badge uwe-badge-${section.level === "ok" ? "ok" : section.level === "disabled" ? "muted" : "warn"}`}>
-          {section.statusLabel}
-        </span>
-      </div>
-      <p className="uwe-dashboard-muted">{section.message}</p>
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardTitle>{section.title}</CardTitle>
+        <Badge variant={sectionBadgeVariant(section.level)}>{section.statusLabel}</Badge>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">{section.message}</p>
 
-      {section.nextSteps.length > 0 && (
-        <div className="uwe-notice" style={{ marginTop: "0.75rem" }}>
-          <strong>Nächste Schritte</strong>
-          <ul className="uwe-inspector-findings">
-            {section.nextSteps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {section.nextSteps.length > 0 && (
+          <Alert tone="info" title="Nächste Schritte">
+            <ul className="list-disc pl-5">
+              {section.nextSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+          </Alert>
+        )}
 
-      <div style={{ marginTop: "1rem" }}>
         <OwnerSetupSettingsTable settings={section.settings} />
-      </div>
 
-      {children}
-    </section>
+        {children}
+      </CardContent>
+    </Card>
   );
 }

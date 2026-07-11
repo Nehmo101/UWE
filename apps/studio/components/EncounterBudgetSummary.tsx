@@ -6,6 +6,7 @@ import {
   ENCOUNTER_DIFFICULTY_LABELS,
   getEncounterBudgetThresholds,
 } from "@uwe/dnd-api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
   partyLevel: number;
@@ -25,7 +26,7 @@ export function EncounterBudgetSummary({ partyLevel, partySize, monsters }: Prop
 
   if (monsters.length === 0) {
     return (
-      <div className="uwe-hint">
+      <div className="text-sm text-muted-foreground">
         Party-Budget (Lv {partyLevel}, {partySize} Spieler): leicht {thresholds.easy} · mittel{" "}
         {thresholds.medium} · schwer {thresholds.hard} · tödlich {thresholds.deadly} XP
       </div>
@@ -33,17 +34,21 @@ export function EncounterBudgetSummary({ partyLevel, partySize, monsters }: Prop
   }
 
   return (
-    <div className="uwe-v2-card uwe-v2-card-padded" style={{ marginTop: "1rem" }}>
-      <h3>CR/XP-Budget</h3>
-      <p>
-        Roh-XP: {analysis.rawXp} · Multiplikator ×{analysis.multiplier} · Angepasst:{" "}
-        <strong>{analysis.adjustedXp} XP</strong> —{" "}
-        <strong>{ENCOUNTER_DIFFICULTY_LABELS[analysis.difficulty]}</strong>
-      </p>
-      <p className="uwe-hint">
-        Budget: leicht {thresholds.easy} · mittel {thresholds.medium} · schwer {thresholds.hard} ·
-        tödlich {thresholds.deadly} XP
-      </p>
-    </div>
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle>CR/XP-Budget</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <p>
+          Roh-XP: {analysis.rawXp} · Multiplikator ×{analysis.multiplier} · Angepasst:{" "}
+          <strong>{analysis.adjustedXp} XP</strong> —{" "}
+          <strong>{ENCOUNTER_DIFFICULTY_LABELS[analysis.difficulty]}</strong>
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Budget: leicht {thresholds.easy} · mittel {thresholds.medium} · schwer {thresholds.hard} ·
+          tödlich {thresholds.deadly} XP
+        </p>
+      </CardContent>
+    </Card>
   );
 }

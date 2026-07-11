@@ -19,6 +19,15 @@ import {
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  EmptyState,
+  Input,
+} from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -120,9 +129,7 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
             ]}
           />
           <SidebarSection title="Kontext">
-            <p className="uwe-hint" style={{ margin: 0 }}>
-              {reviewQueue.length} in Review Queue
-            </p>
+            <p className="text-sm text-muted-foreground">{reviewQueue.length} in Review Queue</p>
           </SidebarSection>
         </>
       }
@@ -149,37 +156,41 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
       />
 
       {filteredNotes.length === 0 ? (
-        <p className="uwe-v2-empty">
-          {searchQuery
-            ? "Keine Notizen passen zur Suche."
-            : view === "all"
-              ? "Keine Spielernotizen vorhanden."
-              : "Keine Notizen in der Review Queue."}
-        </p>
+        <EmptyState
+          title={
+            searchQuery
+              ? "Keine Notizen passen zur Suche."
+              : view === "all"
+                ? "Keine Spielernotizen vorhanden."
+                : "Keine Notizen in der Review Queue."
+          }
+        />
       ) : (
-        <div className="uwe-notes-queue">
+        <div className="flex flex-col gap-4">
           {filteredNotes.map((note) => (
-            <article key={note.id} className="uwe-note-card">
-              <header className="uwe-note-card-header">
+            <Card key={note.id}>
+              <CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0">
                 <div>
                   <strong>{note.authorDisplayName}</strong>
-                  <span className="uwe-note-meta">
+                  <span className="mt-1 block text-sm text-muted-foreground">
                     {note.campaignName}
                     {note.pageTitle ? ` · Seite: ${note.pageTitle}` : ""}
                     {note.sessionTitle ? ` · Session ${note.sessionNumber}: ${note.sessionTitle}` : ""}
                   </span>
                 </div>
                 <PlayerNoteStatusBadge status={note.status} />
-              </header>
-              <p className="uwe-note-card-content">{note.content}</p>
-              <footer className="uwe-note-card-actions">
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{note.content}</p>
+              </CardContent>
+              <CardFooter className="flex flex-wrap items-center gap-2">
                 {note.status === "visible_to_dm" && (
                   <form action={acceptPlayerNoteAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-primary uwe-v2-btn-sm">
+                    <Button type="submit" size="sm">
                       Freigeben
-                    </button>
+                    </Button>
                   </form>
                 )}
                 {note.status === "visible_to_dm" && note.pageId && (
@@ -187,31 +198,43 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
                     <input type="hidden" name="targetPageId" value={note.pageId} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
+                    <Button type="submit" variant="outline" size="sm">
                       Als ContentBlock übernehmen
-                    </button>
+                    </Button>
                   </form>
                 )}
                 {note.status === "visible_to_dm" && (
-                  <form action={adoptPlayerNoteAsPageAction} className="uwe-note-adopt-page">
+                  <form
+                    action={adoptPlayerNoteAsPageAction}
+                    className="flex flex-wrap items-center gap-2"
+                  >
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <input
+                    <Input
                       type="text"
                       name="title"
                       placeholder="Seitentitel (optional)"
-                      className="uwe-input-inline"
+                      className="h-8 w-48"
                     />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
+                    <Button type="submit" variant="outline" size="sm">
                       Als Seite übernehmen
-                    </button>
+                    </Button>
                   </form>
                 )}
                 {note.status === "visible_to_dm" && !note.pageId && pages.length > 0 && (
-                  <form action={adoptPlayerNoteAsContentBlockAction} className="uwe-note-adopt-block">
+                  <form
+                    action={adoptPlayerNoteAsContentBlockAction}
+                    className="flex flex-wrap items-center gap-2"
+                  >
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <select name="targetPageId" required className="uwe-input-inline">
+                    {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
+                        "Zielseite wählen…" — natives Select beibehalten. */}
+                    <select
+                      name="targetPageId"
+                      required
+                      className="h-8 w-48 rounded-[var(--radius)] border border-input bg-transparent px-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       <option value="">Zielseite wählen…</option>
                       {pages.map((page) => (
                         <option key={page.id} value={page.id}>
@@ -219,31 +242,31 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-small">
+                    <Button type="submit" variant="outline" size="sm">
                       Als ContentBlock übernehmen
-                    </button>
+                    </Button>
                   </form>
                 )}
                 {note.status !== "hidden" && note.status !== "deleted" && (
                   <form action={hidePlayerNoteAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm">
+                    <Button type="submit" variant="ghost" size="sm">
                       Verbergen
-                    </button>
+                    </Button>
                   </form>
                 )}
                 {note.status !== "deleted" && (
                   <form action={deletePlayerNoteAction}>
                     <input type="hidden" name="worldSlug" value={worldSlug} />
                     <input type="hidden" name="noteId" value={note.id} />
-                    <button type="submit" className="uwe-v2-btn uwe-v2-btn-danger uwe-v2-btn-sm">
+                    <Button type="submit" variant="destructive" size="sm">
                       Löschen
-                    </button>
+                    </Button>
                   </form>
                 )}
-              </footer>
-            </article>
+              </CardFooter>
+            </Card>
           ))}
         </div>
       )}

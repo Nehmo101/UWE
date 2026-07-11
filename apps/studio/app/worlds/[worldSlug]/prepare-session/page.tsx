@@ -19,10 +19,16 @@ import { PrepareSessionPanel } from "@/components/PrepareSessionPanel";
 import { SettingsCollapsiblePanel } from "@/components/SettingsCollapsiblePanel";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { buttonVariants } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
 }
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2";
+const PRE_CLASS =
+  "whitespace-pre-wrap overflow-x-auto rounded-[var(--radius)] border border-border bg-muted p-3 text-sm";
 
 function isUpcomingSession(session: DmGameSessionView): boolean {
   return session.status === "planned" || session.status === "prepared";
@@ -112,7 +118,7 @@ export default async function PrepareSessionPage({ params }: Props) {
         title="Session vorbereiten"
         summary="Kommende Sessions im Blick, heuristische Outline-Vorschau und KI-Generator für das nächste Spielabend-Paket."
         actions={
-          <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/sessions`}>
+          <Link className={buttonVariants({ variant: "ghost" })} href={`/worlds/${worldSlug}/sessions`}>
             Alle Sessions
           </Link>
         }
@@ -124,39 +130,41 @@ export default async function PrepareSessionPage({ params }: Props) {
         defaultOpen
       >
         {upcomingSessions.length === 0 ? (
-          <p className="uwe-hint">
+          <p className="text-sm text-muted-foreground">
             Keine geplanten Sessions.{" "}
             <Link href={`/worlds/${worldSlug}/sessions/new`}>Neue Session anlegen →</Link>
           </p>
         ) : (
-          <table className="uwe-page-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Titel</th>
-                <th>Datum</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {upcomingSessions.map((session) => (
-                <tr key={session.id}>
-                  <td data-label="#">{session.sessionNumber}</td>
-                  <td data-label="Titel">
-                    <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
-                      {session.title}
-                    </Link>
-                  </td>
-                  <td data-label="Datum">
-                    {session.date ? session.date.toLocaleDateString("de-DE") : "—"}
-                  </td>
-                  <td data-label="Status">
-                    <GameSessionStatusBadge status={session.status} />
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className={TH_CLASS}>#</th>
+                  <th className={TH_CLASS}>Titel</th>
+                  <th className={TH_CLASS}>Datum</th>
+                  <th className={TH_CLASS}>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {upcomingSessions.map((session) => (
+                  <tr key={session.id}>
+                    <td className={TD_CLASS}>{session.sessionNumber}</td>
+                    <td className={TD_CLASS}>
+                      <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
+                        {session.title}
+                      </Link>
+                    </td>
+                    <td className={TD_CLASS}>
+                      {session.date ? session.date.toLocaleDateString("de-DE") : "—"}
+                    </td>
+                    <td className={TD_CLASS}>
+                      <GameSessionStatusBadge status={session.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </SettingsCollapsiblePanel>
 
@@ -166,13 +174,11 @@ export default async function PrepareSessionPage({ params }: Props) {
           summary="SSR aus letztem abgeschlossenen KI-Lauf"
           defaultOpen
         >
-          <p className="uwe-dashboard-muted">
+          <p className="text-sm text-muted-foreground">
             Abgeschlossen {latestPrepRun.runs[0].updatedAt.toLocaleString("de-DE")} — Review vor
             Übernahme.
           </p>
-          <pre className="uwe-pre-block" style={{ whiteSpace: "pre-wrap" }}>
-            {latestPrepRun.runs[0].resultText}
-          </pre>
+          <pre className={PRE_CLASS}>{latestPrepRun.runs[0].resultText}</pre>
           <p>
             <Link href={`/worlds/${worldSlug}/ai-runs/${latestPrepRun.runs[0].id}`}>
               AI Run öffnen →
@@ -187,13 +193,11 @@ export default async function PrepareSessionPage({ params }: Props) {
           summary={`Aus Session #${referenceSession.sessionNumber}`}
           defaultOpen={false}
         >
-          <p className="uwe-dashboard-muted">
+          <p className="text-sm text-muted-foreground">
             Deterministische Vorschau aus Session #{referenceSession.sessionNumber} „
             {referenceSession.title}“ — kein KI-Ersatz, nur Orientierung vor dem Generator-Lauf.
           </p>
-          <pre className="uwe-pre-block" style={{ whiteSpace: "pre-wrap" }}>
-            {outlineText}
-          </pre>
+          <pre className={PRE_CLASS}>{outlineText}</pre>
         </SettingsCollapsiblePanel>
       )}
 

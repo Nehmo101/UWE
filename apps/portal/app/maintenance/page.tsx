@@ -1,5 +1,12 @@
 import { getSystemSettingsSnapshot } from "@uwe/database/server";
 import { MaintenanceRecoveryPoller } from "@uwe/shared-ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 
 export default async function MaintenancePage() {
   const { settings } = await getSystemSettingsSnapshot();
@@ -8,16 +15,20 @@ export default async function MaintenancePage() {
     "Das UWE Portal ist vorübergehend nicht verfügbar. Bitte später erneut versuchen.";
 
   return (
-    <main className="uwe-page uwe-page-centered">
+    <main className="flex min-h-[60vh] items-center justify-center p-6">
       <MaintenanceRecoveryPoller surface="portal" />
-      <section className="uwe-card uwe-card-padded">
-        <h1>Wartungsmodus</h1>
-        <p>{message}</p>
-        <p className="uwe-hint">
-          Diese Seite prüft alle 30 Sekunden, ob der Wartungsmodus beendet wurde, und lädt dann
-          automatisch neu.
-        </p>
-      </section>
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle>Wartungsmodus</CardTitle>
+          <CardDescription>{message}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Diese Seite prüft alle 30 Sekunden, ob der Wartungsmodus beendet wurde, und lädt dann
+            automatisch neu.
+          </p>
+        </CardContent>
+      </Card>
     </main>
   );
 }

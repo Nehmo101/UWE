@@ -13,11 +13,15 @@ import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell"
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { buttonVariants, Card, CardContent, EmptyState } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
   searchParams: Promise<{ campaign?: string; status?: string }>;
 }
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 function parsePrepStatus(raw: string | undefined) {
   if (raw && Object.values(DungeonPrepStatusEnum).includes(raw as (typeof DungeonPrepStatusEnum)[keyof typeof DungeonPrepStatusEnum])) {
@@ -68,16 +72,15 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
         title="Dungeon Cockpit"
         summary="Dungeons, Ebenen und Räume strukturiert vorbereiten — mit Vorlesetext, GM-Notizen und zugeordneten Assets."
         actions={
-          <Link className="uwe-v2-btn uwe-v2-btn-primary" href={`/worlds/${worldSlug}/dungeons/new`}>
+          <Link className={buttonVariants({ variant: "default" })} href={`/worlds/${worldSlug}/dungeons/new`}>
             Neuer Dungeon
           </Link>
         }
       />
-      <nav className="uwe-today-quick-chips uwe-v2-section" aria-label="Status-Filter">
+      <nav className="mb-4 flex flex-wrap gap-2" aria-label="Status-Filter">
         <Link
           href={`/worlds/${worldSlug}/dungeons${campaignSlug ? `?campaign=${campaignSlug}` : ""}`}
-          className="uwe-today-quick-chip"
-          data-severity={!statusFilter ? "warn" : "info"}
+          className={buttonVariants({ variant: !statusFilter ? "default" : "outline", size: "sm" })}
         >
           Alle
         </Link>
@@ -89,39 +92,50 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
             <Link
               key={status}
               href={`/worlds/${worldSlug}/dungeons?${paramsObj}`}
-              className="uwe-today-quick-chip"
-              data-severity={statusFilter === status ? "warn" : "info"}
+              className={buttonVariants({ variant: statusFilter === status ? "default" : "outline", size: "sm" })}
             >
               {DUNGEON_PREP_STATUS_LABELS[status]}
             </Link>
           );
         })}
       </nav>
-      <table className="uwe-page-table">
-        <thead>
-          <tr>
-            <th>Titel</th>
-            <th>Status</th>
-            <th>Zusammenfassung</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredDungeons.map((dungeon) => (
-            <tr key={dungeon.id}>
-              <td>
-                <Link href={`/worlds/${worldSlug}/dungeons/${dungeon.slug}`}>
-                  {dungeon.title}
-                </Link>
-              </td>
-              <td><DungeonPrepStatusBadge status={dungeon.prepStatus} /></td>
-              <td>{dungeon.summary ?? "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
 
-      {filteredDungeons.length === 0 && (
-        <p className="uwe-v2-empty">Noch keine Dungeons. Erstelle den ersten Dungeon für diese Welt.</p>
+      {filteredDungeons.length === 0 ? (
+        <EmptyState
+          title="Noch keine Dungeons"
+          description="Erstelle den ersten Dungeon für diese Welt."
+        />
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>Titel</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS}>Zusammenfassung</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDungeons.map((dungeon) => (
+                    <tr key={dungeon.id}>
+                      <td className={TD_CLASS}>
+                        <Link href={`/worlds/${worldSlug}/dungeons/${dungeon.slug}`}>
+                          {dungeon.title}
+                        </Link>
+                      </td>
+                      <td className={TD_CLASS}>
+                        <DungeonPrepStatusBadge status={dungeon.prepStatus} />
+                      </td>
+                      <td className={TD_CLASS}>{dungeon.summary ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </WorldShell>
   );

@@ -17,8 +17,11 @@ import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { QuickCreateSessionDialog } from "@/src/components/world/QuickCreateSessionDialog";
+import { Badge, buttonVariants, Card, CardContent, EmptyState } from "@/src/components/ui";
 
 const PAGE_SIZE = 20;
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -90,7 +93,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
             items={campaignNavItems(`/worlds/${worldSlug}/sessions`, campaigns, campaignSlug)}
           />
           <SidebarSection title="Kontext">
-            <p className="uwe-hint" style={{ margin: 0 }}>
+            <p className="text-sm text-muted-foreground">
               {totalCount} Sessions
               {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
             </p>
@@ -108,15 +111,21 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
               campaigns={campaigns.map((c) => ({ slug: c.slug, name: c.name }))}
               defaultCampaignSlug={campaignSlug}
             />
-            <Link className="uwe-v2-btn uwe-v2-btn-ghost" href={`/worlds/${worldSlug}/sessions/new${campaignSlug ? `?campaign=${campaignSlug}` : ""}`}>
+            <Link
+              className={buttonVariants({ variant: "ghost" })}
+              href={`/worlds/${worldSlug}/sessions/new${campaignSlug ? `?campaign=${campaignSlug}` : ""}`}
+            >
               Vollständiges Formular
             </Link>
           </div>
         }
       />
 
-      <nav className="uwe-today-quick-chips uwe-v2-section" aria-label="Status-Filter">
-        <Link href={pageHref(1).replace(/\?page=\d+/, "").replace(/&page=\d+/, "")} className="uwe-today-quick-chip" data-severity={!statusFilter ? "warn" : "info"}>
+      <nav className="mb-4 flex flex-wrap gap-2" aria-label="Status-Filter">
+        <Link
+          href={pageHref(1).replace(/\?page=\d+/, "").replace(/&page=\d+/, "")}
+          className={buttonVariants({ variant: !statusFilter ? "default" : "outline", size: "sm" })}
+        >
           Alle
         </Link>
         {Object.values(GameSessionStatusEnum).map((status) => {
@@ -127,8 +136,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
             <Link
               key={status}
               href={`/worlds/${worldSlug}/sessions?${paramsObj}`}
-              className="uwe-today-quick-chip"
-              data-severity={statusFilter === status ? "warn" : "info"}
+              className={buttonVariants({ variant: statusFilter === status ? "default" : "outline", size: "sm" })}
             >
               {GAME_SESSION_STATUS_LABELS[status]}
             </Link>
@@ -136,54 +144,71 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
         })}
       </nav>
 
-      <table className="uwe-page-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Titel</th>
-            <th>Datum</th>
-            <th>Status</th>
-            <th>Portal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.map((session) => (
-            <tr key={session.id}>
-              <td data-label="#">{session.sessionNumber}</td>
-              <td data-label="Titel">
-                <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
-                  {session.title}
-                </Link>
-              </td>
-              <td data-label="Datum">
-                {session.date
-                  ? session.date.toLocaleDateString("de-DE")
-                  : "—"}
-              </td>
-              <td data-label="Status"><GameSessionStatusBadge status={session.status} /></td>
-              <td data-label="Portal">
-                {session.recapPublished ? (
-                  <span className="uwe-badge uwe-badge-published">Veröffentlicht</span>
-                ) : (
-                  <span className="uwe-badge uwe-badge-draft">Entwurf</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {sessions.length === 0 && (
-        <p className="uwe-v2-empty">Noch keine Sessions. Erstelle die erste Session für diese Kampagne.</p>
+      {sessions.length === 0 ? (
+        <EmptyState
+          title="Noch keine Sessions"
+          description="Erstelle die erste Session für diese Kampagne."
+        />
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={TH_CLASS}>#</th>
+                    <th className={TH_CLASS}>Titel</th>
+                    <th className={TH_CLASS}>Datum</th>
+                    <th className={TH_CLASS}>Status</th>
+                    <th className={TH_CLASS}>Portal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.map((session) => (
+                    <tr key={session.id}>
+                      <td className={TD_CLASS}>{session.sessionNumber}</td>
+                      <td className={TD_CLASS}>
+                        <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
+                          {session.title}
+                        </Link>
+                      </td>
+                      <td className={TD_CLASS}>
+                        {session.date
+                          ? session.date.toLocaleDateString("de-DE")
+                          : "—"}
+                      </td>
+                      <td className={TD_CLASS}><GameSessionStatusBadge status={session.status} /></td>
+                      <td className={TD_CLASS}>
+                        {session.recapPublished ? (
+                          <Badge variant="success">Veröffentlicht</Badge>
+                        ) : (
+                          <Badge variant="secondary">Entwurf</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {totalPages > 1 && (
-        <nav className="uwe-inline-actions uwe-v2-section" aria-label="Pagination">
-          {page > 1 ? <Link href={pageHref(page - 1)}>← Zurück</Link> : null}
-          <span className="uwe-dashboard-muted">
+        <nav className="mt-4 flex flex-wrap items-center gap-3" aria-label="Pagination">
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              ← Zurück
+            </Link>
+          ) : null}
+          <span className="text-sm text-muted-foreground">
             Seite {page} / {totalPages}
           </span>
-          {page < totalPages ? <Link href={pageHref(page + 1)}>Weiter →</Link> : null}
+          {page < totalPages ? (
+            <Link href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              Weiter →
+            </Link>
+          ) : null}
         </nav>
       )}
     </WorldShell>

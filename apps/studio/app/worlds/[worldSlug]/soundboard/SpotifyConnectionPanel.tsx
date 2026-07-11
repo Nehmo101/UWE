@@ -2,6 +2,17 @@
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  cn,
+} from "@/src/components/ui";
 
 interface SpotifyDevice {
   id: string;
@@ -25,6 +36,9 @@ interface SpotifyStatusResponse {
 interface Props {
   worldSlug: string;
 }
+
+const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
+const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 export function SpotifyConnectionPanel({ worldSlug }: Props) {
   const [status, setStatus] = useState<SpotifyStatusResponse | null>(null);
@@ -159,174 +173,177 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
   const connectorActive = status?.via === "rtx-connector";
 
   return (
-    <section className="uwe-panel">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
-          <h2>Spotify</h2>
-          <p className="uwe-table-sub" style={{ margin: 0 }}>
+          <CardTitle>Spotify</CardTitle>
+          <CardDescription>
             Spotify wird im RTX Connector Client eingerichtet — das Soundboard sendet die
             Wiedergabe als Connector-Job an den RTX-PC.
-          </p>
+          </CardDescription>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div className="flex flex-wrap gap-2">
           {!loading && !connectorActive && status?.configured && status.connected && (
             <>
-              <button
+              <Button
                 type="button"
-                className="uwe-v2-btn"
+                variant="secondary"
                 onClick={() => void handleOpenDevicePicker()}
                 disabled={showDevicePicker}
               >
                 Gerät wählen
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="uwe-v2-btn"
+                variant="secondary"
                 onClick={() => void handleDisconnect()}
                 disabled={disconnecting}
               >
                 {disconnecting ? "Trenne …" : "Verbindung trennen"}
-              </button>
+              </Button>
             </>
           )}
         </div>
-      </div>
+      </CardHeader>
 
-      {loading && <p className="uwe-table-sub">Spotify-Status wird geladen …</p>}
+      <CardContent className="flex flex-col gap-4">
+        {loading && <p className="text-sm text-muted-foreground">Spotify-Status wird geladen …</p>}
 
-      {!loading && connectorActive && (
-        <p className="uwe-flash uwe-flash-success">
-          Spotify läuft über den <strong>RTX Connector Client</strong>. Anmeldung und Ausgabegerät
-          werden dort im Spotify-Panel verwaltet — der Host hält keine Spotify-Tokens.
-        </p>
-      )}
+        {!loading && connectorActive && (
+          <Alert tone="success">
+            Spotify läuft über den <strong>RTX Connector Client</strong>. Anmeldung und Ausgabegerät
+            werden dort im Spotify-Panel verwaltet — der Host hält keine Spotify-Tokens.
+          </Alert>
+        )}
 
-      {!loading && !connectorActive && status && !status.configured && (
-        <div className="uwe-flash uwe-flash-error" role="alert">
-          <p style={{ margin: 0 }}>
-            {status.message ??
-              "Spotify wird im RTX Connector Client eingerichtet (Client-ID/Secret hinterlegen und anmelden)."}
-          </p>
-          <p className="uwe-table-sub" style={{ margin: "0.5rem 0 0" }}>
-            Öffne den RTX Connector Client → Spotify, hinterlege Client-ID/Secret, melde dich an und
-            wähle das Ausgabegerät. Sobald der Connector online ist, wird er hier automatisch als
-            Spotify-Backend erkannt.
-          </p>
-        </div>
-      )}
-
-      {!loading && !connectorActive && status?.configured && status.connected && (
-        <p className="uwe-flash uwe-flash-success">
-          Verbunden als {status.spotifyDisplayName ?? "Spotify-Nutzer"}.
-          {status.preferredDeviceName && (
-            <> Ausgabegerät: <strong>{status.preferredDeviceName}</strong>.</>
-          )}
-          {!status.preferredDeviceName && (
-            <> Kein Ausgabegerät gewählt — Wiedergabe läuft auf dem aktuell aktiven Gerät.</>
-          )}
-        </p>
-      )}
-
-      {!loading && !connectorActive && status?.configured && !status.connected && (
-        <p className="uwe-table-sub">
-          Noch nicht verbunden. Spotify Premium und ein aktives Wiedergabegerät (App oder Webplayer) sind nötig.
-        </p>
-      )}
-
-      {error && (
-        <p className="uwe-flash uwe-flash-error" role="alert">
-          {error}
-        </p>
-      )}
-
-      {showDevicePicker && (
-        <div style={{ marginTop: "1rem", border: "1px solid var(--uwe-border, #ddd)", borderRadius: "6px", padding: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <strong>Ausgabegerät wählen (RTX-Host oder anderes Spotify-Connect-Gerät)</strong>
-            <button
-              type="button"
-              className="uwe-v2-btn"
-              onClick={() => setShowDevicePicker(false)}
-              disabled={savingDevice}
-            >
-              Schließen
-            </button>
-          </div>
-
-          {loadingDevices && <p className="uwe-table-sub">Geräteliste wird geladen …</p>}
-
-          {deviceError && (
-            <p className="uwe-flash uwe-flash-error" role="alert">
-              {deviceError}
+        {!loading && !connectorActive && status && !status.configured && (
+          <Alert tone="danger" role="alert">
+            <p>
+              {status.message ??
+                "Spotify wird im RTX Connector Client eingerichtet (Client-ID/Secret hinterlegen und anmelden)."}
             </p>
-          )}
-
-          {!loadingDevices && devices.length === 0 && !deviceError && (
-            <p className="uwe-table-sub">
-              Keine aktiven Spotify-Connect-Geräte gefunden. Spotify-App auf dem RTX-Host oder einem anderen Gerät starten.
+            <p className="mt-2 text-sm text-muted-foreground">
+              Öffne den RTX Connector Client → Spotify, hinterlege Client-ID/Secret, melde dich an und
+              wähle das Ausgabegerät. Sobald der Connector online ist, wird er hier automatisch als
+              Spotify-Backend erkannt.
             </p>
-          )}
+          </Alert>
+        )}
 
-          {!loadingDevices && devices.length > 0 && (
-            <table className="uwe-page-table" style={{ marginBottom: "0.75rem" }}>
-              <thead>
-                <tr>
-                  <th>Gerätename</th>
-                  <th>Typ</th>
-                  <th>Lautstärke</th>
-                  <th>Status</th>
-                  <th>Auswählen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {devices.map((device) => (
-                  <tr
-                    key={device.id}
-                    style={
-                      status?.preferredDeviceId === device.id
-                        ? { background: "var(--uwe-highlight, #f0f8ff)" }
-                        : undefined
-                    }
-                  >
-                    <td>
-                      {device.name}
-                      {status?.preferredDeviceId === device.id && (
-                        <span style={{ marginLeft: "0.5rem", color: "var(--uwe-accent, #1db954)", fontSize: "0.8em" }}>
-                          ✓ bevorzugt
-                        </span>
-                      )}
-                    </td>
-                    <td>{deviceTypeLabel(device.type)}</td>
-                    <td>{device.volumePercent !== null ? `${device.volumePercent}%` : "—"}</td>
-                    <td>{device.isActive ? "Aktiv" : "Inaktiv"}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="uwe-v2-btn"
-                        onClick={() => void handleSelectDevice(device)}
-                        disabled={savingDevice || status?.preferredDeviceId === device.id}
-                      >
-                        {savingDevice ? "Speichere …" : "Auswählen"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        {!loading && !connectorActive && status?.configured && status.connected && (
+          <Alert tone="success">
+            Verbunden als {status.spotifyDisplayName ?? "Spotify-Nutzer"}.
+            {status.preferredDeviceName && (
+              <> Ausgabegerät: <strong>{status.preferredDeviceName}</strong>.</>
+            )}
+            {!status.preferredDeviceName && (
+              <> Kein Ausgabegerät gewählt — Wiedergabe läuft auf dem aktuell aktiven Gerät.</>
+            )}
+          </Alert>
+        )}
 
-          {status?.preferredDeviceId && (
-            <button
-              type="button"
-              className="uwe-v2-btn"
-              onClick={() => void handleSelectDevice(null)}
-              disabled={savingDevice}
-            >
-              Gerät zurücksetzen (aktives Gerät verwenden)
-            </button>
-          )}
-        </div>
-      )}
-    </section>
+        {!loading && !connectorActive && status?.configured && !status.connected && (
+          <p className="text-sm text-muted-foreground">
+            Noch nicht verbunden. Spotify Premium und ein aktives Wiedergabegerät (App oder Webplayer) sind nötig.
+          </p>
+        )}
+
+        {error && (
+          <Alert tone="danger" role="alert">
+            {error}
+          </Alert>
+        )}
+
+        {showDevicePicker && (
+          <Card>
+            <CardContent className="flex flex-col gap-3 pt-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <strong>Ausgabegerät wählen (RTX-Host oder anderes Spotify-Connect-Gerät)</strong>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowDevicePicker(false)}
+                  disabled={savingDevice}
+                >
+                  Schließen
+                </Button>
+              </div>
+
+              {loadingDevices && <p className="text-sm text-muted-foreground">Geräteliste wird geladen …</p>}
+
+              {deviceError && (
+                <Alert tone="danger" role="alert">
+                  {deviceError}
+                </Alert>
+              )}
+
+              {!loadingDevices && devices.length === 0 && !deviceError && (
+                <p className="text-sm text-muted-foreground">
+                  Keine aktiven Spotify-Connect-Geräte gefunden. Spotify-App auf dem RTX-Host oder einem anderen Gerät starten.
+                </p>
+              )}
+
+              {!loadingDevices && devices.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className={TH_CLASS}>Gerätename</th>
+                        <th className={TH_CLASS}>Typ</th>
+                        <th className={TH_CLASS}>Lautstärke</th>
+                        <th className={TH_CLASS}>Status</th>
+                        <th className={TH_CLASS}>Auswählen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {devices.map((device) => (
+                        <tr
+                          key={device.id}
+                          className={cn(status?.preferredDeviceId === device.id && "bg-muted")}
+                        >
+                          <td className={TD_CLASS}>
+                            {device.name}
+                            {status?.preferredDeviceId === device.id && (
+                              <Badge variant="success" className="ml-2">
+                                Bevorzugt
+                              </Badge>
+                            )}
+                          </td>
+                          <td className={TD_CLASS}>{deviceTypeLabel(device.type)}</td>
+                          <td className={TD_CLASS}>{device.volumePercent !== null ? `${device.volumePercent}%` : "—"}</td>
+                          <td className={TD_CLASS}>{device.isActive ? "Aktiv" : "Inaktiv"}</td>
+                          <td className={TD_CLASS}>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => void handleSelectDevice(device)}
+                              disabled={savingDevice || status?.preferredDeviceId === device.id}
+                            >
+                              {savingDevice ? "Speichere …" : "Auswählen"}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {status?.preferredDeviceId && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleSelectDevice(null)}
+                  disabled={savingDevice}
+                >
+                  Gerät zurücksetzen (aktives Gerät verwenden)
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -11,6 +11,7 @@ import {
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { Alert, buttonVariants, Card, CardContent } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; labelId: string }>;
@@ -73,7 +74,7 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
       }
       contextPanel={
         <SidebarSection title="Export">
-          <ul className="uwe-sidebar-links">
+          <ul className="flex flex-col gap-2 text-sm">
             <li>
               <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=html`}>
                 HTML herunterladen
@@ -95,33 +96,41 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
           <>
             <a
               href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`}
-              className="uwe-v2-btn uwe-v2-btn-primary"
+              className={buttonVariants()}
               target="_blank"
               rel="noreferrer"
             >
               Drucken
             </a>
-            <Link href={`/worlds/${worldSlug}/labels/${labelId}`} className="uwe-v2-btn">
+            <Link href={`/worlds/${worldSlug}/labels/${labelId}`} className={buttonVariants({ variant: "outline" })}>
               Bearbeiten
             </Link>
           </>
         }
       />
-      {parsed.content.containsDmOnly && includeDmOnly !== "1" && (
-        <p className="uwe-flash uwe-flash-warning">
-          Enthält DM-only Inhalte.{" "}
-          <Link href={`?includeDmOnly=1`}>In Vorschau anzeigen</Link>
-        </p>
-      )}
 
-      <section className="uwe-panel">
-        <iframe
-          title="Label Vorschau"
-          srcDoc={html}
-          sandbox=""
-          className="uwe-label-preview-iframe"
-        />
-      </section>
+      <div className="flex flex-col gap-6">
+        {parsed.content.containsDmOnly && includeDmOnly !== "1" && (
+          <Alert tone="warning">
+            Enthält DM-only Inhalte. <Link href={`?includeDmOnly=1`}>In Vorschau anzeigen</Link>
+          </Alert>
+        )}
+
+        <Card>
+          <CardContent className="p-6">
+            {/* Label-Print-Ausnahme (Theme-Policy, Kopf von packages/shared-ui/src/uwe.css):
+                die WYSIWYG-Druckvorschau bleibt auf fixer Papierfarbe und wird bewusst nicht
+                auf Tokens umgestellt — migriert ist nur die Card-Hülle drumherum, analog zu
+                labels/[labelId]/page.tsx. */}
+            <iframe
+              title="Label Vorschau"
+              srcDoc={html}
+              sandbox=""
+              className="uwe-label-preview-iframe"
+            />
+          </CardContent>
+        </Card>
+      </div>
     </WorldShell>
   );
 }

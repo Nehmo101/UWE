@@ -4,6 +4,16 @@ import {
   assignTreasuryItemToCharacterAction,
   returnTreasuryItemFromCharacterAction,
 } from "@/app/treasury-actions";
+import { PageHeader } from "@/src/components/shell";
+import { Button } from "@/src/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
+import { Label } from "@/src/components/ui/label";
 import {
   createAuthService,
   createPartyTreasuryService,
@@ -30,6 +40,9 @@ const UPDATED_AT_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+const selectClassName =
+  "flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function parseCurrencyLedger(raw: unknown): CurrencyLedger {
   const currencies = { ...DEFAULT_CURRENCIES };
@@ -124,128 +137,164 @@ export default async function PortalTreasuryPage({ params }: Props) {
   const returnPath = `/auth/worlds/${worldSlug}/treasury`;
 
   return (
-    <section className="portal-content-card">
-      <h1>{view.name}</h1>
-      <p className="auth-lead">Gemeinsame Währung und Gegenstände eurer Gruppe.</p>
-      {view.updatedAt ? (
-        <p className="auth-muted">
-          Zuletzt aktualisiert: {UPDATED_AT_FORMAT.format(new Date(view.updatedAt))}
-        </p>
-      ) : null}
+    <>
+      <PageHeader
+        title={view.name}
+        summary="Gemeinsame Währung und Gegenstände eurer Gruppe."
+        meta={
+          view.updatedAt ? (
+            <span className="text-sm text-muted-foreground">
+              Zuletzt aktualisiert: {UPDATED_AT_FORMAT.format(new Date(view.updatedAt))}
+            </span>
+          ) : null
+        }
+      />
 
-      <section className="auth-block">
-        <h2>Währung</h2>
-        {currencyEntries.length === 0 ? (
-          <p className="auth-muted">Keine Währung erfasst.</p>
-        ) : (
-          <ul className="auth-page-list">
-            {currencyEntries.map((entry) => (
-              <li key={entry.key}>
-                <strong>{entry.label}</strong>
-                <span>{entry.amount.toLocaleString("de-DE")}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Währung</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {currencyEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Währung erfasst.</p>
+            ) : (
+              <ul className="divide-y divide-border rounded-[var(--radius)] border border-border">
+                {currencyEntries.map((entry) => (
+                  <li
+                    key={entry.key}
+                    className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                  >
+                    <strong>{entry.label}</strong>
+                    <span>{entry.amount.toLocaleString("de-DE")}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
-      {notes && (
-        <section className="auth-block">
-          <h2>Notizen</h2>
-          <p className="auth-note-content">{notes}</p>
-        </section>
-      )}
+        {notes ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Notizen</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap text-sm">{notes}</p>
+            </CardContent>
+          </Card>
+        ) : null}
 
-      <section className="auth-block">
-        <h2>Inventar ({items.length})</h2>
-        {items.length === 0 ? (
-          <p className="auth-muted">Noch keine Gruppengegenstände.</p>
-        ) : (
-          <ul className="auth-notes-list">
-            {items.map((item) => {
-              const valueLabel = formatItemValue(item.value);
-              return (
-                <li key={item.id} className="auth-note-item">
-                  <header className="auth-note-header">
-                    <strong>
-                      {item.name}
-                      {item.quantity > 1 ? ` × ${item.quantity}` : ""}
-                    </strong>
-                  </header>
-                  {(valueLabel || item.weight != null) && (
-                    <p className="auth-muted" style={{ margin: "0.35rem 0" }}>
-                      {valueLabel ? `Wert: ${valueLabel}` : null}
-                      {valueLabel && item.weight != null ? " · " : null}
-                      {item.weight != null ? `Gewicht: ${item.weight}` : null}
-                    </p>
-                  )}
-                  {item.notes && <p className="auth-note-content">{item.notes}</p>}
-                  {canMoveItems && ownCharacters.length > 0 && (
-                    <form
-                      action={assignTreasuryItemToCharacterAction}
-                      className="auth-note-form"
-                      style={{ marginTop: "0.5rem" }}
+        <Card>
+          <CardHeader>
+            <CardTitle>Inventar ({items.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Noch keine Gruppengegenstände.</p>
+            ) : (
+              <ul className="grid gap-3">
+                {items.map((item) => {
+                  const valueLabel = formatItemValue(item.value);
+                  return (
+                    <li
+                      key={item.id}
+                      className="rounded-[var(--radius)] border border-border p-4"
                     >
-                      <input type="hidden" name="worldSlug" value={worldSlug} />
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <input type="hidden" name="returnPath" value={returnPath} />
-                      <label>
-                        An Charakter übergeben
-                        <select name="characterId" defaultValue={ownCharacters[0]?.id}>
-                          {ownCharacters.map((character) => (
-                            <option key={character.id} value={character.id}>
-                              {character.displayName}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <button type="submit" className="auth-btn auth-btn-small">
-                        Übernehmen
-                      </button>
-                    </form>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      {canMoveItems && ownCharacters.length > 0 && (
-        <section className="auth-block">
-          <h2>Meine Charaktere</h2>
-          {ownCharacters.map((character) => (
-            <div key={character.id} style={{ marginBottom: "1rem" }}>
-              <h3 style={{ marginBottom: "0.35rem" }}>{character.displayName}</h3>
-              {character.items.length === 0 ? (
-                <p className="auth-muted">Kein Inventar.</p>
-              ) : (
-                <ul className="auth-notes-list">
-                  {character.items.map((item) => (
-                    <li key={item.id} className="auth-note-item">
-                      <header className="auth-note-header">
-                        <strong>
-                          {item.name}
-                          {item.quantity > 1 ? ` × ${item.quantity}` : ""}
-                        </strong>
-                      </header>
-                      {item.notes && <p className="auth-note-content">{item.notes}</p>}
-                      <form action={returnTreasuryItemFromCharacterAction}>
-                        <input type="hidden" name="worldSlug" value={worldSlug} />
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <input type="hidden" name="returnPath" value={returnPath} />
-                        <button type="submit" className="auth-btn auth-btn-small">
-                          Zurück in die Schatzkammer
-                        </button>
-                      </form>
+                      <div className="font-semibold">
+                        {item.name}
+                        {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                      </div>
+                      {(valueLabel || item.weight != null) && (
+                        <p className="my-1.5 text-sm text-muted-foreground">
+                          {valueLabel ? `Wert: ${valueLabel}` : null}
+                          {valueLabel && item.weight != null ? " · " : null}
+                          {item.weight != null ? `Gewicht: ${item.weight}` : null}
+                        </p>
+                      )}
+                      {item.notes ? (
+                        <p className="whitespace-pre-wrap text-sm">{item.notes}</p>
+                      ) : null}
+                      {canMoveItems && ownCharacters.length > 0 ? (
+                        <form
+                          action={assignTreasuryItemToCharacterAction}
+                          className="mt-2 flex flex-wrap items-end gap-3"
+                        >
+                          <input type="hidden" name="worldSlug" value={worldSlug} />
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <input type="hidden" name="returnPath" value={returnPath} />
+                          <div className="grid min-w-48 gap-1.5">
+                            <Label htmlFor={`character-${item.id}`}>An Charakter übergeben</Label>
+                            <select
+                              id={`character-${item.id}`}
+                              name="characterId"
+                              defaultValue={ownCharacters[0]?.id}
+                              className={selectClassName}
+                            >
+                              {ownCharacters.map((character) => (
+                                <option key={character.id} value={character.id}>
+                                  {character.displayName}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <Button type="submit" size="sm">
+                            Übernehmen
+                          </Button>
+                        </form>
+                      ) : null}
                     </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </section>
-      )}
-    </section>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {canMoveItems && ownCharacters.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Meine Charaktere</CardTitle>
+              <CardDescription>Inventar deiner Charaktere und Rückgabe in die Schatzkammer.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              {ownCharacters.map((character) => (
+                <div key={character.id}>
+                  <h3 className="mb-1.5 font-medium">{character.displayName}</h3>
+                  {character.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Kein Inventar.</p>
+                  ) : (
+                    <ul className="grid gap-3">
+                      {character.items.map((item) => (
+                        <li
+                          key={item.id}
+                          className="rounded-[var(--radius)] border border-border p-4"
+                        >
+                          <div className="font-semibold">
+                            {item.name}
+                            {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                          </div>
+                          {item.notes ? (
+                            <p className="mt-1 whitespace-pre-wrap text-sm">{item.notes}</p>
+                          ) : null}
+                          <form action={returnTreasuryItemFromCharacterAction} className="mt-2">
+                            <input type="hidden" name="worldSlug" value={worldSlug} />
+                            <input type="hidden" name="itemId" value={item.id} />
+                            <input type="hidden" name="returnPath" value={returnPath} />
+                            <Button type="submit" size="sm" variant="secondary">
+                              Zurück in die Schatzkammer
+                            </Button>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
+    </>
   );
 }

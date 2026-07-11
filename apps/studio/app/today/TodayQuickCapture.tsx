@@ -10,9 +10,15 @@ import { QuickCaptureForm } from "@/components/capture/QuickCaptureForm";
  */
 export function TodayQuickCapture() {
   return (
-    <details className="uwe-v2-card uwe-v2-card-padded uwe-today-quick-capture">
-      <summary className="uwe-v2-section-title">➕ Schnell erfassen</summary>
-      <QuickCaptureForm returnTo="/today" compact />
+    <details className="rounded-[var(--radius)] border border-border bg-card p-6 text-card-foreground shadow-sm">
+      {/* TODO(design-kit): Card hat kein natives <details>-Äquivalent; Radix Collapsible wäre die
+          kit-konforme Lösung für aufklappbare Sections, siehe gleiches Muster in admin/migrations/page.tsx. */}
+      <summary className="cursor-pointer list-none font-semibold leading-none tracking-tight">
+        ➕ Schnell erfassen
+      </summary>
+      <div className="mt-4">
+        <QuickCaptureForm returnTo="/today" compact />
+      </div>
     </details>
   );
 }

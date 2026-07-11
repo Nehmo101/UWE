@@ -55,7 +55,7 @@ export function MailSearchInput({
       <input
         type="search"
         data-mail-search
-        className="uwe-v2-input"
+        className="h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm"
         placeholder="Betreff, Absender, Inhalt, from: has:attachment…"
         value={text}
         onFocus={() => {
