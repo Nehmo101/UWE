@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { getDirectConnectorRegistry } from "@uwe/connector/direct";
 import {
   buildKitchenAiContext,
   parseWeekSuggestion,
   resolveDraftDate,
+  suggestWeek,
   type KitchenAiPantryItem,
   type KitchenAiRecipe,
 } from "./ai-suggest";
@@ -18,6 +20,19 @@ const PANTRY: KitchenAiPantryItem[] = [
   { name: "Tomaten", location: "fridge" },
   { name: "Nudeln", location: "pantry", lowStock: true },
 ];
+
+async function readDirectRequest(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): Promise<Record<string, unknown>> {
+  const decoder = new TextDecoder();
+  while (true) {
+    const { value, done } = await reader.read();
+    assert.equal(done, false, "Direct stream closed before receiving a request");
+    if (!value) continue;
+    const frame = JSON.parse(decoder.decode(value)) as Record<string, unknown>;
+    if (frame.kind === "request") return frame;
+  }
+}
 
 describe("buildKitchenAiContext (pure)", () => {
   it("includes recipes, pantry, and goals with counts", () => {
@@ -109,5 +124,51 @@ describe("resolveDraftDate (pure)", () => {
   it("falls back to Monday for unresolvable labels", () => {
     assert.equal(resolveDraftDate("", week).toISOString().slice(0, 10), "2026-06-29");
     assert.equal(resolveDraftDate("irgendwann", week).toISOString().slice(0, 10), "2026-06-29");
+  });
+});
+
+describe("suggestWeek (Direct)", () => {
+  it("completes without touching the queue database", async () => {
+    const registry = getDirectConnectorRegistry();
+    const connectorId = "kitchen-direct-test";
+    const session = registry.openSession({ connectorId, capabilities: ["llm_local"] });
+    const reader = session.stream.getReader();
+    const db = new Proxy({}, {
+      get() {
+        throw new Error("Direct execution must not access the database");
+      },
+    }) as Parameters<typeof suggestWeek>[0];
+
+    try {
+      const suggestion = suggestWeek(db, {
+        recipes: RECIPES,
+        pantry: PANTRY,
+        goals: { dinnersOnly: true },
+      });
+      const request = await readDirectRequest(reader);
+      assert.equal(request.type, "llm_generate");
+      assert.equal(typeof request.requestId, "string");
+      const requestId = request.requestId as string;
+      registry.handleEvent(connectorId, {
+        version: 1,
+        kind: "accepted",
+        requestId,
+      });
+      registry.handleEvent(connectorId, {
+        version: 1,
+        kind: "result",
+        requestId,
+        result: { text: '{"summary":"Direkt","days":[{"day":"Montag","slot":"dinner","title":"Pasta"}]}' },
+      });
+
+      const completed = await suggestion;
+      assert.equal(completed.status, "ok");
+      if (completed.status !== "ok") return;
+      assert.equal(completed.draft.summary, "Direkt");
+      assert.equal(completed.draft.days.length, 1);
+    } finally {
+      session.close();
+      reader.releaseLock();
+    }
   });
 });

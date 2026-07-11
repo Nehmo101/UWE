@@ -12,11 +12,16 @@
 
 import {
   CONNECTOR_LANES,
+  DIRECT_PROTOCOL_VERSION,
   LANE_CONCURRENCY,
+  laneForJobType,
   type ConnectorLane,
   type ConnectorRuntimeConfig,
+  type DirectConnectorEvent,
+  type DirectRequestFrame,
 } from "@uwe/connector";
 
+import { DirectStreamClient } from "./direct-stream-client";
 import { executeJob, type ExecutorContext, type JobResult } from "./executors";
 import { HostClient, HostClientError, type ClaimedJob, type HostConfig } from "./host-client";
 import type { JobHistory } from "./job-history";
@@ -25,6 +30,7 @@ import { log } from "./logging";
 
 export interface RunnerOptions {
   client: HostClient;
+  directClient?: DirectStreamClient;
   config: ConnectorRuntimeConfig;
   version: string;
   discover: () => Promise<DetectedCapabilities>;
@@ -36,6 +42,7 @@ export interface RunnerOptions {
 
 export class ConnectorRunner {
   private readonly client: HostClient;
+  private readonly directClient: DirectStreamClient | undefined;
   private readonly config: ConnectorRuntimeConfig;
   private snapshot: DetectedCapabilities = { capabilities: [], models: [], printers: [] };
   private readonly laneCounts: Record<ConnectorLane, number> = {
@@ -58,6 +65,7 @@ export class ConnectorRunner {
 
   constructor(private readonly options: RunnerOptions) {
     this.client = options.client;
+    this.directClient = options.directClient;
     this.config = options.config;
   }
 
@@ -72,6 +80,10 @@ export class ConnectorRunner {
       return [];
     }
     return CONNECTOR_LANES.filter((lane) => this.laneCounts[lane] < LANE_CONCURRENCY[lane]);
+  }
+
+  private canReserveDirectLane(lane: ConnectorLane): boolean {
+    return this.accepting && this.laneCounts[lane] < LANE_CONCURRENCY[lane];
   }
 
   get activeJobCount(): number {
@@ -192,6 +204,125 @@ export class ConnectorRunner {
     this.active.add(promise);
     void promise.finally(() => this.active.delete(promise));
   }
+  /** Reserve a lane and execute one request received on the persistent direct stream. */
+  async dispatchDirect(request: DirectRequestFrame): Promise<boolean> {
+    if (!this.directClient) {
+      return false;
+    }
+    const reject = async (message: string, code: string, retryable: boolean): Promise<false> => {
+      try {
+        await this.sendDirectEvent({
+          version: DIRECT_PROTOCOL_VERSION,
+          kind: "error",
+          requestId: request.requestId,
+          message,
+          code,
+          retryable,
+        });
+      } catch (error) {
+        this.handleHostError(error, "Direct-Ablehnung");
+      }
+      return false;
+    };
+
+    if (laneForJobType(request.type) !== request.lane) {
+      return reject("Job-Typ und Lane passen nicht zusammen.", "invalid_lane", false);
+    }
+    if (request.expiresAt) {
+      const expiresAt = Date.parse(request.expiresAt);
+      if (!Number.isFinite(expiresAt)) {
+        return reject("Request enthält keinen gültigen Ablaufzeitpunkt.", "invalid_expiry", false);
+      }
+      if (expiresAt <= Date.now()) {
+        return reject("Request ist bereits abgelaufen.", "request_expired", false);
+      }
+    }
+    if (!this.canReserveDirectLane(request.lane)) {
+      return reject(`Lane ${request.lane} ist ausgelastet.`, "lane_busy", true);
+    }
+
+    const job: ClaimedJob = {
+      id: request.requestId,
+      type: request.type,
+      lane: request.lane,
+      priority: request.priority,
+      payload:
+        request.payload && typeof request.payload === "object" && !Array.isArray(request.payload)
+          ? (request.payload as Record<string, unknown>)
+          : {},
+      worldId: request.worldId ?? null,
+      expiresAt: request.expiresAt ?? null,
+    };
+    this.laneCounts[job.lane] += 1;
+
+    try {
+      await this.sendDirectEvent({
+        version: DIRECT_PROTOCOL_VERSION,
+        kind: "accepted",
+        requestId: request.requestId,
+        acceptedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      this.laneCounts[job.lane] = Math.max(0, this.laneCounts[job.lane] - 1);
+      this.handleHostError(error, "Direct-Annahme");
+      return false;
+    }
+
+    log.event("jobs", "info", `Direct-Job angenommen: ${job.type}`, {
+      jobId: job.id,
+      lane: job.lane,
+    });
+    const ctx: ExecutorContext = {
+      ...this.options.executorBase,
+      refreshModels: () => this.refresh(),
+    };
+    const exec = this.options.execute ?? executeJob;
+    const startedAt = Date.now();
+
+    const promise = (async () => {
+      try {
+        const result = await exec(job, ctx);
+        await this.sendDirectEvent({
+          version: DIRECT_PROTOCOL_VERSION,
+          kind: "result",
+          requestId: request.requestId,
+          result,
+        });
+        log.event("jobs", "info", `Direct-Job abgeschlossen: ${job.type}`, { jobId: job.id });
+        this.recordHistory(job, "completed", Date.now() - startedAt);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        try {
+          await this.sendDirectEvent({
+            version: DIRECT_PROTOCOL_VERSION,
+            kind: "error",
+            requestId: request.requestId,
+            message: reason,
+          });
+        } catch (eventError) {
+          this.handleHostError(eventError, "Direct-Fehlermeldung");
+        }
+        log.event("jobs", "warn", `Direct-Job fehlgeschlagen: ${job.type}`, {
+          jobId: job.id,
+          reason,
+        });
+        this.recordHistory(job, "failed", Date.now() - startedAt, reason);
+      } finally {
+        this.laneCounts[job.lane] = Math.max(0, this.laneCounts[job.lane] - 1);
+      }
+    })();
+
+    this.active.add(promise);
+    void promise.finally(() => this.active.delete(promise));
+    return true;
+  }
+
+  private sendDirectEvent(event: DirectConnectorEvent): Promise<void> {
+    if (!this.directClient) {
+      return Promise.reject(new Error("Direct-Client ist nicht konfiguriert."));
+    }
+    return this.directClient.sendEvent(event);
+  }
 
   private recordHistory(
     job: ClaimedJob,
@@ -239,9 +370,20 @@ export class ConnectorRunner {
       void this.tick();
     }, this.config.heartbeatIntervalMs);
 
-    this.pollTimer = setInterval(() => {
-      void this.pollOnce();
-    }, this.config.pollIntervalMs);
+    if (this.config.transportMode !== "direct") {
+      this.pollTimer = setInterval(() => {
+        void this.pollOnce();
+      }, this.config.pollIntervalMs);
+    }
+
+    if (this.config.transportMode !== "queue") {
+      if (!this.directClient) {
+        throw new Error("Direct- oder Hybrid-Modus erfordert einen DirectStreamClient.");
+      }
+      this.directClient.start(async (request) => {
+        await this.dispatchDirect(request);
+      });
+    }
 
     this.installSignalHandlers();
   }
@@ -272,6 +414,11 @@ export class ConnectorRunner {
         new Promise((resolve) => setTimeout(resolve, drainTimeoutMs)),
       ]);
     }
+
+    // Keep the Direct event channel alive while accepted jobs drain so their
+    // terminal result reaches the host. New requests are rejected because
+    // accepting=false above.
+    await this.directClient?.stop();
 
     try {
       await this.client.heartbeat({

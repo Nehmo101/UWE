@@ -6,6 +6,9 @@
 export const CONNECTOR_TRAY_MODES = ["normal", "minimize_to_tray", "start_in_tray"] as const;
 export type ConnectorTrayMode = (typeof CONNECTOR_TRAY_MODES)[number];
 
+export const CONNECTOR_TRANSPORT_MODES = ["queue", "direct", "hybrid"] as const;
+export type ConnectorTransportMode = (typeof CONNECTOR_TRANSPORT_MODES)[number];
+
 export interface ConnectorClientConfig {
   /** UWE Host base URL (http/https, no trailing slash). */
   hostUrl: string;
@@ -13,7 +16,9 @@ export interface ConnectorClientConfig {
   token: string;
   /** Friendly label shown in the host UI. */
   name: string;
-  /** Whether this client claims jobs from the host queue. */
+  /** Preferred delivery transport. Missing persisted values migrate to queue. */
+  transportMode: ConnectorTransportMode;
+  /** Compatibility projection. Prefer `transportMode` in new code. */
   queueEnabled: boolean;
   /** First-run setup wizard has been completed. */
   wizardCompleted: boolean;

@@ -420,13 +420,22 @@ export default function App() {
           </CardHeader>
           <CardContent>
           <div className="connector-form-grid">
-            <label className="connector-checkbox">
-              <input
-                type="checkbox"
-                checked={config.queueEnabled}
-                onChange={(event) => updateConfig("queueEnabled", event.target.checked)}
-              />
-              <span>Queue-Jobs lokal claimen</span>
+            <label className="connector-field">
+              <span>Transport</span>
+              <select
+                className="connector-select"
+                value={config.transportMode}
+                onChange={(event) =>
+                  updateConfig(
+                    "transportMode",
+                    event.target.value as ConnectorClientConfig["transportMode"],
+                  )
+                }
+              >
+                <option value="queue">Warteschlange</option>
+                <option value="direct">Direktverbindung</option>
+                <option value="hybrid">Direkt mit Queue-Fallback</option>
+              </select>
             </label>
 
             <label className="connector-checkbox">

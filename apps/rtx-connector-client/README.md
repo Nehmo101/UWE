@@ -99,19 +99,22 @@ Set `UWE_MONOREPO_ROOT` if the app cannot auto-detect the repo (e.g. packaged bu
 ```text
 Tauri UI  →  start/stop  →  node --import tsx tools/uwe-rtx-connector/src/desktop-launcher.ts
                                       ↓
-                              ConnectorRunner (outbound heartbeat + job poll)
+                              ConnectorRunner (outbound heartbeat + queue/direct/hybrid transport)
 
 Tauri UI  →  downloads   →  node --import tsx tools/uwe-rtx-connector/src/huggingface-cli.ts
                                       ↓
                               AppData model cache + model-store.json
 ```
 
-The headless CLI (`pnpm connector:start`) remains unchanged.
+The headless CLI (`pnpm connector:start`) uses the same transport core. Set
+`UWE_CONNECTOR_TRANSPORT=queue|direct|hybrid`; every mode remains outbound-only
+and opens no listening port on the RTX machine.
 
 ## Local config / data dir
 
 - `config.json` in local app data (Windows: `%LOCALAPPDATA%`, Linux:
-  `~/.local/share`). Shape defined in `@uwe/connector-client-config`.
+  `~/.local/share`). Shape defined in `@uwe/connector-client-config`; its
+  `transportMode` is `queue`, `direct`, or `hybrid`.
 - `model-store.json`, `job-history.json`, Hugging-Face downloads and Connector-Logs
   liegen daneben im selben Tauri-AppData-Verzeichnis.
 

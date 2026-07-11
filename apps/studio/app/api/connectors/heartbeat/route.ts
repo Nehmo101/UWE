@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { CONNECTOR_CAPABILITIES, CONNECTOR_MODEL_TYPES, normalizeLocalPrinters } from "@uwe/connector";
+import { getDirectConnectorRegistry } from "@uwe/connector/direct";
 import { createConnectorService, prisma } from "@uwe/database/server";
 import { parseBody } from "@uwe/security";
 
@@ -36,18 +37,6 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.response;
 
   const hostConfig = resolveHostConnectorConfig();
-  if (!hostConfig.queueEnabled) {
-    return NextResponse.json({
-      connector: {
-        id: auth.connector.id,
-        name: auth.connector.name,
-        status: "offline",
-        queueEnabled: false,
-      },
-      config: hostConfig,
-      activeJobIds: [],
-    });
-  }
 
   const parsed = await parseBody(request, heartbeatSchema);
   if (!parsed.success) return parsed.response;
@@ -62,6 +51,7 @@ export async function POST(request: Request) {
     currentJobs: parsed.data.currentJobs,
     lastError: parsed.data.lastError,
   });
+  getDirectConnectorRegistry().updateCapabilities(view.id, view.capabilities);
 
   const activeJobs = await service.listActiveJobs(auth.connector.id);
 

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { capabilityOfflineMessage } from "@uwe/connector";
 import {
   createConnectorService,
   createLabelPrintQueueService,
@@ -7,6 +6,11 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import {
+  hasQueueLabelPrintingConnector,
+  LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE,
+  queueLabelPrintingConnectorIds,
+} from "@/src/lib/label-print-availability";
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
@@ -15,11 +19,13 @@ export async function GET(request: Request) {
   const summary = await createConnectorService(prisma).summarize();
   const queue = createLabelPrintQueueService();
   const [groups, jobs] = await Promise.all([queue.listPrinters(), queue.listRecent({ limit: 30 })]);
+  const queueConnectorIds = queueLabelPrintingConnectorIds(summary);
+  const queueGroups = groups.filter((group) => queueConnectorIds.has(group.connectorId));
 
   return NextResponse.json({
-    ok: summary.availableCapabilities.includes("label_printing"),
-    offlineMessage: capabilityOfflineMessage("label_printing"),
-    printers: groups.flatMap((group) =>
+    ok: hasQueueLabelPrintingConnector(summary),
+    offlineMessage: LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE,
+    printers: queueGroups.flatMap((group) =>
       group.printers.map((printer) => ({
         id: printer.id,
         name: printer.name,

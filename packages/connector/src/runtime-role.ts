@@ -35,10 +35,35 @@ export function isConnectorRole(env: NodeJS.ProcessEnv = process.env): boolean {
 export const DEFAULT_POLL_INTERVAL_MS = 2000;
 export const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
 
+export const CONNECTOR_TRANSPORT_MODES = ["queue", "direct", "hybrid"] as const;
+export type ConnectorTransportMode = (typeof CONNECTOR_TRANSPORT_MODES)[number];
+
+const CONNECTOR_TRANSPORT_MODE_SET = new Set<string>(CONNECTOR_TRANSPORT_MODES);
+
+export function isConnectorTransportMode(value: unknown): value is ConnectorTransportMode {
+  return typeof value === "string" && CONNECTOR_TRANSPORT_MODE_SET.has(value);
+}
+
+function isLoopbackHost(url: URL): boolean {
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (hostname === "localhost" || hostname === "::1") {
+    return true;
+  }
+
+  const octets = hostname.split(".");
+  return (
+    octets.length === 4 &&
+    octets[0] === "127" &&
+    octets.slice(1).every((octet) => /^(?:0|[1-9]\d{0,2})$/.test(octet) && Number(octet) <= 255)
+  );
+}
+
 export interface ConnectorRuntimeConfig {
   hostUrl: string;
   token: string;
   name: string;
+  transportMode: ConnectorTransportMode;
+  /** Compatibility projection. Prefer `transportMode` in new code. */
   queueEnabled: boolean;
   pollIntervalMs: number;
   heartbeatIntervalMs: number;
@@ -94,7 +119,20 @@ export function resolveConnectorRuntimeConfig(
   }
 
   const name = env.UWE_CONNECTOR_NAME?.trim() || "RTX Host Connector";
-  const queueEnabled = env.UWE_CONNECTOR_QUEUE_ENABLED?.trim().toLowerCase() !== "false";
+  const rawTransportMode = env.UWE_CONNECTOR_TRANSPORT?.trim().toLowerCase();
+  const legacyQueueDisabled = env.UWE_CONNECTOR_QUEUE_ENABLED?.trim().toLowerCase() === "false";
+  const transportMode: ConnectorTransportMode = isConnectorTransportMode(rawTransportMode)
+    ? rawTransportMode
+    : "queue";
+  const queueEnabled = rawTransportMode
+    ? transportMode !== "direct"
+    : !legacyQueueDisabled;
+  if (parsedHost.protocol === "http:" && !isLoopbackHost(parsedHost)) {
+    return {
+      ok: false,
+      reason: "Remote Host-URLs must use https://; http:// is allowed only for loopback.",
+    };
+  }
   const forcedCapabilities = normalizeCapabilities(
     (env.UWE_CONNECTOR_CAPABILITIES?.trim() ?? "")
       .split(",")
@@ -108,6 +146,7 @@ export function resolveConnectorRuntimeConfig(
       hostUrl: hostUrl.replace(/\/$/, ""),
       token,
       name,
+      transportMode,
       queueEnabled,
       pollIntervalMs: parsePositiveInt(env.UWE_CONNECTOR_POLL_MS, DEFAULT_POLL_INTERVAL_MS),
       heartbeatIntervalMs: parsePositiveInt(

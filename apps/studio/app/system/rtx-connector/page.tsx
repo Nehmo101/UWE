@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { CONNECTOR_OFFLINE_MESSAGE } from "@uwe/connector";
+import { getDirectConnectorRegistry } from "@uwe/connector/direct";
 import { createConnectorService, prisma } from "@uwe/database/server";
 import { HealthBadge } from "@uwe/shared-ui";
 
@@ -19,11 +20,20 @@ interface PageProps {
 export default async function RtxConnectorPage({ searchParams }: PageProps) {
   const { from } = await searchParams;
   const service = createConnectorService(prisma);
+  const registry = getDirectConnectorRegistry();
   const [summary, pendingByLane] = await Promise.all([
     service.summarize(),
     service.countPendingByLane(),
   ]);
   const hostConfig = resolveHostConnectorConfig();
+  const directSessions = registry.listSessions();
+  const connectorSummary = {
+    ...summary,
+    connectors: summary.connectors.map((connector) => ({
+      ...connector,
+      directConnected: registry.isConnected(connector.id),
+    })),
+  };
 
   const badge = summary.anyOnline ? "ok" : "degraded";
 
@@ -66,9 +76,11 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
       )}
 
       <RtxConnectorClient
-        initialSummary={summary}
+        initialSummary={connectorSummary}
         initialPendingByLane={pendingByLane}
         hostQueueEnabled={hostConfig.queueEnabled}
+        hostDirectEnabled={hostConfig.directEnabled}
+        initialDirectSessions={directSessions}
         cloudFallbackAllowed={hostConfig.cloudFallbackAllowed}
       />
 
@@ -86,6 +98,11 @@ export default async function RtxConnectorPage({ searchParams }: PageProps) {
             {hostConfig.cloudFallbackAllowed
               ? "erlaubt, wenn lokale Modelle offline sind"
               : "deaktiviert — nur RTX/Connector"}
+          </li>
+          <li>
+            <strong>Host-Direct:</strong>
+            {hostConfig.directEnabled ? "aktiv" : "deaktiviert"} · Live-Sessions:{" "}
+            {directSessions.length}
           </li>
           <li>
             <strong>Connector-Warteschlange:</strong>{" "}

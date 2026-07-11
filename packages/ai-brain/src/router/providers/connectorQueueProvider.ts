@@ -13,12 +13,24 @@
  */
 
 import {
+  ConnectorJobWaitError,
   createConnectorService,
   createConnectorWorkflowService,
   waitForConnectorJob,
   type ConnectorWorkflowSlot,
   type PrismaClient,
 } from "@uwe/database/server";
+
+import {
+  capabilityForJobType,
+  type ConnectorCapability,
+  type ConnectorJobType,
+} from "@uwe/connector";
+
+import {
+  DirectConnectorDispatchError,
+  getDirectConnectorRegistry,
+} from "@uwe/connector/direct";
 
 import type { ImageStudioRequest, ImageStudioResult } from "@uwe/image-studio";
 
@@ -27,6 +39,84 @@ import type { AiProviderId, AiTaskType, GenerateTextResult } from "../../types";
 const CONNECTOR_LLM_TIMEOUT_MS = 120_000;
 const CONNECTOR_IMAGE_TIMEOUT_MS = 300_000;
 const CONNECTOR_POLL_INTERVAL_MS = 500;
+
+type ConnectorDelivery = "direct" | "queue";
+
+interface ConnectorDispatchOutcome {
+  operationId: string;
+  result: unknown;
+  delivery: ConnectorDelivery;
+  connectorId?: string;
+}
+
+interface ConnectorDispatchInput {
+  type: ConnectorJobType;
+  payload: Record<string, unknown>;
+  worldId?: string;
+  timeoutMs: number;
+}
+
+function canFallBackToQueue(error: unknown): boolean {
+  // Once accepted, execution may already have side effects and must never be queued.
+  return error instanceof DirectConnectorDispatchError && !error.accepted;
+}
+
+async function isQueueCapabilityAvailable(
+  prisma: PrismaClient,
+  capability: ConnectorCapability,
+): Promise<boolean> {
+  const summary = await createConnectorService(prisma).summarize();
+  return summary.connectors.some(
+    (connector) =>
+      connector.queueEnabled &&
+      (connector.status === "online" || connector.status === "degraded") &&
+      connector.capabilities.includes(capability),
+  );
+}
+
+async function dispatchConnectorRequest(
+  prisma: PrismaClient,
+  input: ConnectorDispatchInput,
+): Promise<ConnectorDispatchOutcome> {
+  try {
+    const direct = await getDirectConnectorRegistry().dispatch({
+      type: input.type,
+      payload: input.payload,
+      worldId: input.worldId,
+      timeoutMs: input.timeoutMs,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    return {
+      operationId: direct.requestId,
+      result: direct.result,
+      delivery: "direct",
+      connectorId: direct.connectorId,
+    };
+  } catch (error) {
+    if (!canFallBackToQueue(error)) {
+      throw error;
+    }
+
+    const capability = capabilityForJobType(input.type);
+    if (!(await isQueueCapabilityAvailable(prisma, capability))) {
+      // Direct-only connectors must fail fast instead of leaving an unclaimable
+      // job behind. Preserve the direct error and its accepted/request metadata.
+      throw error;
+    }
+  }
+
+  const service = createConnectorService(prisma);
+  const job = await service.enqueueJob({
+    type: input.type,
+    payload: input.payload,
+    worldId: input.worldId ?? null,
+  });
+  const completed = await waitForConnectorJob(prisma, job.id, {
+    timeoutMs: input.timeoutMs,
+    intervalMs: CONNECTOR_POLL_INTERVAL_MS,
+  });
+  return { operationId: job.id, result: completed.result, delivery: "queue" };
+}
 
 export interface ConnectorLlmInput {
   prompt: string;
@@ -41,6 +131,7 @@ export interface ConnectorLlmResult {
   text: string;
   model: string;
   jobId: string;
+  delivery: ConnectorDelivery;
 }
 
 export interface ConnectorEmbeddingInput {
@@ -54,6 +145,7 @@ export interface ConnectorEmbeddingResult {
   embedding: number[];
   model: string;
   jobId: string;
+  delivery: ConnectorDelivery;
 }
 
 function resultRecord(value: unknown): Record<string, unknown> {
@@ -62,8 +154,10 @@ function resultRecord(value: unknown): Record<string, unknown> {
 
 /** True when an online (or degraded) connector advertises local vision inference. */
 export async function isConnectorVisionAvailable(prisma: PrismaClient): Promise<boolean> {
-  const summary = await createConnectorService(prisma).summarize();
-  return summary.availableCapabilities.includes("vision_local");
+  return (
+    getDirectConnectorRegistry().hasCapability("vision_local") ||
+    (await isQueueCapabilityAvailable(prisma, "vision_local"))
+  );
 }
 
 export interface ConnectorVisionInput {
@@ -81,6 +175,7 @@ export interface ConnectorVisionResult {
   text: string;
   model: string;
   jobId: string;
+  delivery: ConnectorDelivery;
 }
 
 /**
@@ -91,7 +186,6 @@ export async function runConnectorVisionExtract(
   prisma: PrismaClient,
   input: ConnectorVisionInput,
 ): Promise<ConnectorVisionResult> {
-  const service = createConnectorService(prisma);
   const payload: Record<string, unknown> = {
     prompt: input.prompt,
     images: input.images,
@@ -101,42 +195,44 @@ export async function runConnectorVisionExtract(
   if (input.mimeType?.trim()) payload.mimeType = input.mimeType.trim();
   if (input.maxTokens != null) payload.maxTokens = input.maxTokens;
 
-  const job = await service.enqueueJob({
+  const dispatched = await dispatchConnectorRequest(prisma, {
     type: "vision_extract",
     payload,
-    worldId: input.worldId ?? null,
-  });
-
-  const completed = await waitForConnectorJob(prisma, job.id, {
+    worldId: input.worldId,
     timeoutMs: input.timeoutMs ?? CONNECTOR_LLM_TIMEOUT_MS,
-    intervalMs: CONNECTOR_POLL_INTERVAL_MS,
   });
 
-  const result = resultRecord(completed.result);
+  const result = resultRecord(dispatched.result);
   const text = typeof result.text === "string" ? result.text : "";
   const model =
     typeof result.model === "string" && result.model.trim()
       ? result.model
       : (input.model?.trim() ?? "");
-  return { text, model, jobId: job.id };
+  return { text, model, jobId: dispatched.operationId, delivery: dispatched.delivery };
 }
 
 /** True when an online (or degraded) connector advertises local LLM inference. */
 export async function isConnectorLlmAvailable(prisma: PrismaClient): Promise<boolean> {
-  const summary = await createConnectorService(prisma).summarize();
-  return summary.availableCapabilities.includes("llm_local");
+  return (
+    getDirectConnectorRegistry().hasCapability("llm_local") ||
+    (await isQueueCapabilityAvailable(prisma, "llm_local"))
+  );
 }
 
 /** True when an online (or degraded) connector advertises local embeddings. */
 export async function isConnectorEmbeddingAvailable(prisma: PrismaClient): Promise<boolean> {
-  const summary = await createConnectorService(prisma).summarize();
-  return summary.availableCapabilities.includes("embedding_local");
+  return (
+    getDirectConnectorRegistry().hasCapability("embedding_local") ||
+    (await isQueueCapabilityAvailable(prisma, "embedding_local"))
+  );
 }
 
 /** True when an online (or degraded) connector advertises local image generation. */
 export async function isConnectorImageAvailable(prisma: PrismaClient): Promise<boolean> {
-  const summary = await createConnectorService(prisma).summarize();
-  return summary.availableCapabilities.includes("image_generation");
+  return (
+    getDirectConnectorRegistry().hasCapability("image_generation") ||
+    (await isQueueCapabilityAvailable(prisma, "image_generation"))
+  );
 }
 
 /**
@@ -147,30 +243,25 @@ export async function runConnectorLlmGenerate(
   prisma: PrismaClient,
   input: ConnectorLlmInput,
 ): Promise<ConnectorLlmResult> {
-  const service = createConnectorService(prisma);
   const payload: Record<string, unknown> = { prompt: input.prompt };
   if (input.system?.trim()) payload.system = input.system;
   if (input.model?.trim()) payload.model = input.model.trim();
   if (input.maxTokens != null) payload.maxTokens = input.maxTokens;
 
-  const job = await service.enqueueJob({
+  const dispatched = await dispatchConnectorRequest(prisma, {
     type: "llm_generate",
     payload,
-    worldId: input.worldId ?? null,
-  });
-
-  const completed = await waitForConnectorJob(prisma, job.id, {
+    worldId: input.worldId,
     timeoutMs: input.timeoutMs ?? CONNECTOR_LLM_TIMEOUT_MS,
-    intervalMs: CONNECTOR_POLL_INTERVAL_MS,
   });
 
-  const result = resultRecord(completed.result);
+  const result = resultRecord(dispatched.result);
   const text = typeof result.text === "string" ? result.text : "";
   const model =
     typeof result.model === "string" && result.model.trim()
       ? result.model
       : (input.model?.trim() ?? "");
-  return { text, model, jobId: job.id };
+  return { text, model, jobId: dispatched.operationId, delivery: dispatched.delivery };
 }
 
 /**
@@ -181,22 +272,17 @@ export async function runConnectorEmbeddingGenerate(
   prisma: PrismaClient,
   input: ConnectorEmbeddingInput,
 ): Promise<ConnectorEmbeddingResult> {
-  const service = createConnectorService(prisma);
   const payload: Record<string, unknown> = { input: input.input };
   if (input.model?.trim()) payload.model = input.model.trim();
 
-  const job = await service.enqueueJob({
+  const dispatched = await dispatchConnectorRequest(prisma, {
     type: "embedding_generate",
     payload,
-    worldId: input.worldId ?? null,
-  });
-
-  const completed = await waitForConnectorJob(prisma, job.id, {
+    worldId: input.worldId,
     timeoutMs: input.timeoutMs ?? CONNECTOR_LLM_TIMEOUT_MS,
-    intervalMs: CONNECTOR_POLL_INTERVAL_MS,
   });
 
-  const result = resultRecord(completed.result);
+  const result = resultRecord(dispatched.result);
   const embedding = Array.isArray(result.embedding)
     ? result.embedding.filter((value): value is number => typeof value === "number")
     : [];
@@ -204,7 +290,12 @@ export async function runConnectorEmbeddingGenerate(
     typeof result.model === "string" && result.model.trim()
       ? result.model
       : (input.model?.trim() ?? "");
-  return { embedding, model, jobId: job.id };
+  return {
+    embedding,
+    model,
+    jobId: dispatched.operationId,
+    delivery: dispatched.delivery,
+  };
 }
 
 function parseConnectorImageResult(result: Record<string, unknown>): {
@@ -236,7 +327,6 @@ export async function runConnectorImageGenerate(
   prisma: PrismaClient,
   request: ImageStudioRequest,
 ): Promise<ImageStudioResult> {
-  const service = createConnectorService(prisma);
   const payload: Record<string, unknown> = {
     task: request.task,
     prompt: request.prompt,
@@ -246,23 +336,26 @@ export async function runConnectorImageGenerate(
   if (request.sourceImageBase64) payload.source_image = request.sourceImageBase64;
   if (request.maskBase64) payload.mask = request.maskBase64;
 
-  const job = await service.enqueueJob({
-    type: "image_generate",
-    payload,
-  });
-
   try {
-    const completed = await waitForConnectorJob(prisma, job.id, {
+    const dispatched = await dispatchConnectorRequest(prisma, {
+      type: "image_generate",
+      payload,
       timeoutMs: CONNECTOR_IMAGE_TIMEOUT_MS,
-      intervalMs: CONNECTOR_POLL_INTERVAL_MS,
     });
-    const { imageBase64, mimeType } = parseConnectorImageResult(resultRecord(completed.result));
+    const { imageBase64, mimeType } = parseConnectorImageResult(resultRecord(dispatched.result));
+    const metadata = {
+      jobId: dispatched.operationId,
+      operationId: dispatched.operationId,
+      via: dispatched.delivery === "direct" ? "direct" : "connector",
+      delivery: dispatched.delivery,
+      ...(dispatched.connectorId ? { connectorId: dispatched.connectorId } : {}),
+    };
     if (!imageBase64) {
       return {
         success: false,
         providerUsed: "local_rtx",
         error: "Connector lieferte kein Bild (image_generate ohne image/imageBase64).",
-        metadata: { jobId: job.id },
+        metadata,
       };
     }
     return {
@@ -270,9 +363,25 @@ export async function runConnectorImageGenerate(
       providerUsed: "local_rtx",
       imageBase64,
       mimeType,
-      metadata: { jobId: job.id, via: "connector" },
+      metadata,
     };
   } catch (error) {
+    const metadata =
+      error instanceof DirectConnectorDispatchError && error.requestId
+        ? {
+            jobId: error.requestId,
+            operationId: error.requestId,
+            via: "direct",
+            delivery: "direct",
+          }
+        : error instanceof ConnectorJobWaitError
+          ? {
+              jobId: error.jobId,
+              operationId: error.jobId,
+              via: "connector",
+              delivery: "queue",
+            }
+          : undefined;
     return {
       success: false,
       providerUsed: "local_rtx",
@@ -280,7 +389,7 @@ export async function runConnectorImageGenerate(
         error instanceof Error
           ? error.message
           : "Bildgenerierung über RTX Host Connector fehlgeschlagen.",
-      metadata: { jobId: job.id },
+      metadata,
     };
   }
 }

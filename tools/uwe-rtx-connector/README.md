@@ -1,8 +1,8 @@
 # UWE RTX Host Connector
 
 Optional **outbound** worker for the RTX PC (Windows or Linux). It connects to
-the UWE Host, claims jobs from the host queue, runs them locally (AI, audio,
-spotify) and reports results.
+the UWE Host, receives work through the queue, a direct stream, or both, runs it
+locally (AI, audio, spotify) and reports results.
 
 The connector is **never required** for UWE to be online. The website, Studio
 and Portal run entirely on the host. When the connector is offline, local
@@ -14,8 +14,9 @@ AI/audio simply show "RTX Connector offline".
 RTX Connector  ───────▶  UWE Host        (correct: outbound only)
 ```
 
-The connector **polls** the host. The host never connects to the RTX machine,
-so no public port, SSH or HTTP server is opened on the RTX side.
+The connector either polls the host or opens a persistent outbound
+Streaming-HTTP response carrying NDJSON frames. The host never connects to the
+RTX machine, so no public port, SSH or HTTP server is opened on the RTX side.
 
 ## Quick start
 
@@ -29,14 +30,21 @@ so no public port, SSH or HTTP server is opened on the RTX side.
    ```
 
 The connector detects local providers (Ollama / LM Studio / llama.cpp), reports
-its capabilities, then claims and runs jobs.
+its capabilities, then receives and runs jobs. Select the transport with
+`UWE_CONNECTOR_TRANSPORT=queue|direct|hybrid` (default: `queue`).
 
 ## What it does
 
 - Sends a heartbeat with capabilities, models and version.
-- Polls for jobs by **lane** so audio/spotify controls overtake long GPU jobs
-  (only one GPU job runs at a time).
-- Executes jobs and reports `complete` / `fail`.
+- `queue`: polls and persists work as `ConnectorJob` rows.
+- `direct`: receives NDJSON requests immediately; successful direct requests do
+  not create `ConnectorJob` rows.
+- `hybrid`: prefers direct and falls back to the queue only before the connector
+  reports `accepted`. After acceptance, work is never duplicated in the queue.
+- Applies the same **lane** concurrency to queue and direct work, so
+  audio/spotify controls can overtake long GPU jobs.
+- Reports queue jobs as `complete`/`fail` and direct jobs as
+  `accepted`/`result`/`error`.
 - Reconnects after transient host/network errors; exits if the token is rejected.
 - Shuts down gracefully on SIGINT/SIGTERM (drains active jobs, final heartbeat).
 

@@ -7,6 +7,10 @@
  * Connector online, degradiert die Funktion sauber („RTX offline"), die reine
  * Retrieval-Antwort bleibt unverändert nutzbar. Muster: `ai-suggest.ts`.
  */
+import {
+  DirectConnectorDispatchError,
+  getDirectConnectorRegistry,
+} from "@uwe/connector/direct";
 import { createConnectorService, waitForConnectorJob } from "./connector-service";
 import type { PrismaClient } from "./client";
 import type { KnowledgeAnswer, KnowledgeCitation } from "./knowledge-assistant-service";
@@ -64,25 +68,56 @@ export async function synthesizeKnowledgeAnswer(
     };
   }
 
-  const service = createConnectorService(db);
-  const summary = await service.summarize();
-  if (!summary.availableCapabilities.includes(LLM_LOCAL_CAPABILITY)) {
-    return {
-      status: "rtx_offline",
-      error: "Kein lokaler KI-Connector (RTX) online — Synthese nicht verfügbar.",
-    };
-  }
-
   const payload: Record<string, unknown> = {
     prompt: buildSynthesisPrompt(answer.query, answer.citations),
     system: SYNTHESIS_SYSTEM_PROMPT,
   };
   if (options.model?.trim()) payload.model = options.model.trim();
 
+  const timeoutMs = options.timeoutMs ?? SYNTHESIS_TIMEOUT_MS;
+  try {
+    const direct = await getDirectConnectorRegistry().dispatch({
+      type: "llm_generate",
+      payload,
+      timeoutMs,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    const result =
+      direct.result && typeof direct.result === "object"
+        ? (direct.result as Record<string, unknown>)
+        : {};
+    const text = typeof result.text === "string" ? result.text.trim() : "";
+    return text
+      ? { status: "ok", text }
+      : { status: "error", error: "Leere Antwort vom Connector." };
+  } catch (error) {
+    if (!(error instanceof DirectConnectorDispatchError) || error.accepted) {
+      return {
+        status: "error",
+        error: error instanceof Error ? error.message : "Synthese fehlgeschlagen.",
+      };
+    }
+  }
+
+  const service = createConnectorService(db);
+  const summary = await service.summarize();
+  const queueAvailable = summary.connectors.some(
+    (connector) =>
+      connector.queueEnabled &&
+      (connector.status === "online" || connector.status === "degraded") &&
+      connector.capabilities.includes(LLM_LOCAL_CAPABILITY),
+  );
+  if (!queueAvailable) {
+    return {
+      status: "rtx_offline",
+      error: "Kein lokaler KI-Connector (RTX) online — Synthese nicht verfügbar.",
+    };
+  }
+
   try {
     const job = await service.enqueueJob({ type: "llm_generate", payload });
     const completed = await waitForConnectorJob(db, job.id, {
-      timeoutMs: options.timeoutMs ?? SYNTHESIS_TIMEOUT_MS,
+      timeoutMs,
       intervalMs: SYNTHESIS_POLL_INTERVAL_MS,
     });
     const result =

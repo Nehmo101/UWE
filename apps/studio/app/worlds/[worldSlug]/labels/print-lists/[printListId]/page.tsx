@@ -40,6 +40,10 @@ import {
   Label,
   Textarea,
 } from "@/src/components/ui";
+import {
+  hasQueueLabelPrintingConnector,
+  queueLabelPrintingConnectorIds,
+} from "@/src/lib/label-print-availability";
 
 interface Props {
   params: Promise<{ worldSlug: string; printListId: string }>;
@@ -67,7 +71,8 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
     printQueue.listPrinters(),
     printQueue.listByPrintList(printListId, { worldId: world.id, limit: 20 }),
   ]);
-  const flatPrinters = printerGroups.flatMap((g) =>
+  const queueConnectorIds = queueLabelPrintingConnectorIds(connectorSummary);
+  const flatPrinters = printerGroups.filter((group) => queueConnectorIds.has(group.connectorId)).flatMap((g) =>
     g.printers.map((p) => ({ ...p, connectorId: g.connectorId, connectorName: g.connectorName })),
   );
   const defaultKey = (() => {
@@ -194,9 +199,10 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
             <CardTitle>RTX Label-Druck</CardTitle>
           </CardHeader>
           <CardContent>
-            {!connectorSummary.availableCapabilities.includes("label_printing") ? (
+            {!hasQueueLabelPrintingConnector(connectorSummary) ? (
               <p className="text-sm text-muted-foreground">
-                RTX Label-Druck offline. <a href="/system/rtx-connector">Connector</a>
+                RTX Label-Druck benötigt Queue- oder Hybrid-Modus.{" "}
+                <a href="/system/rtx-connector">Connector</a>
               </p>
             ) : flatPrinters.length === 0 ? (
               <p className="text-sm text-muted-foreground">

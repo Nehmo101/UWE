@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+import { getDirectConnectorRegistry } from "@uwe/connector/direct";
 import {
   assessConfidence,
   buildCitations,
@@ -28,6 +29,20 @@ function result(docScores: number[], factScores: number[] = []): PersonalBrainSe
       matchMode: "keyword",
     })),
   };
+}
+async function readDirectRequest(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): Promise<Record<string, unknown>> {
+  const decoder = new TextDecoder();
+  while (true) {
+    const { value, done } = await reader.read();
+    assert.equal(done, false, "Direct stream closed before receiving a request");
+    if (!value) continue;
+    const frame = JSON.parse(decoder.decode(value)) as Record<string, unknown>;
+    if (frame.kind === "request") {
+      return frame;
+    }
+  }
 }
 
 describe("knowledge assistant (pure)", () => {
@@ -83,9 +98,54 @@ describe("knowledge synthesis (graceful degradation)", () => {
     assert.equal(noSources.status, "no_sources");
 
     const withSources = buildKnowledgeAnswer("x", result([0.9]), NOW);
+    const jobsBefore = await db.connectorJob.count();
     const offline = await synthesizeKnowledgeAnswer(db, withSources);
     // No llm_local connector registered in the test DB → clean offline state.
     assert.equal(offline.status, "rtx_offline");
+    assert.equal(await db.connectorJob.count(), jobsBefore);
+  });
+
+  it("uses a Direct session without creating a ConnectorJob", async () => {
+    const registry = getDirectConnectorRegistry();
+    const connectorId = "knowledge-direct-test";
+    const session = registry.openSession({ connectorId, capabilities: ["llm_local"] });
+    const reader = session.stream.getReader();
+    const answer = buildKnowledgeAnswer("Gare?", result([0.9]), NOW);
+    const jobsBefore = await db.connectorJob.count();
+
+    try {
+      const synthesis = synthesizeKnowledgeAnswer(db, answer);
+      const request = await readDirectRequest(reader);
+      assert.equal(request.type, "llm_generate");
+      assert.equal(typeof request.requestId, "string");
+      const requestId = request.requestId as string;
+      assert.equal(
+        registry.handleEvent(connectorId, {
+          version: 1,
+          kind: "accepted",
+          requestId,
+        }).ok,
+        true,
+      );
+      assert.equal(
+        registry.handleEvent(connectorId, {
+          version: 1,
+          kind: "result",
+          requestId,
+          result: { text: "Sauerteig braucht Zeit [1]." },
+        }).ok,
+        true,
+      );
+
+      assert.deepEqual(await synthesis, {
+        status: "ok",
+        text: "Sauerteig braucht Zeit [1].",
+      });
+      assert.equal(await db.connectorJob.count(), jobsBefore);
+    } finally {
+      session.close();
+      reader.releaseLock();
+    }
   });
 });
 

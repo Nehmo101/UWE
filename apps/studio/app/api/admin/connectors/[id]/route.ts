@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { z } from "zod";
 
+import { getDirectConnectorRegistry } from "@uwe/connector/direct";
 import { createConnectorService, prisma } from "@uwe/database/server";
 import { idSchema, parseBody, parseParams, requireAdminApiAuth } from "@uwe/security";
 
@@ -33,6 +34,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!parsed.success) return parsed.response;
 
   const service = createConnectorService(prisma);
+  const registry = getDirectConnectorRegistry();
   const existing = await service.getConnector(parsedParams.data.id);
   if (!existing) {
     return jsonError("Connector nicht gefunden.", 404);
@@ -40,6 +42,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (parsed.data.action === "rotate-token") {
     const { token } = await service.rotateToken(existing.id);
+    registry.disconnect(existing.id, "Connector token was rotated.");
     return NextResponse.json({
       token,
       warning:
@@ -61,10 +64,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!connector) {
       return NextResponse.json({ error: "Connector nicht gefunden." }, { status: 404 });
     }
+    registry.disconnect(existing.id, "Connector capability policy changed.");
     return NextResponse.json({ connector });
   }
 
-  await service.setDisabled(existing.id, parsed.data.action === "disable");
+  const disabled = parsed.data.action === "disable";
+  await service.setDisabled(existing.id, disabled);
+  if (disabled) {
+    registry.disconnect(existing.id, "Connector was disabled.");
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -85,6 +93,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return jsonError("Connector nicht gefunden.", 404);
   }
 
+  getDirectConnectorRegistry().disconnect(existing.id, "Connector was deleted.");
   await service.deleteConnector(existing.id);
   return NextResponse.json({ ok: true });
 }

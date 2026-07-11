@@ -7,6 +7,12 @@ import {
   type ConnectorJobType,
 } from "@uwe/connector";
 import {
+  DirectConnectorDispatchError,
+  getDirectConnectorRegistry,
+  type DirectDispatchInput,
+  type DirectDispatchResult,
+} from "@uwe/connector/direct";
+import {
   createConnectorService,
   getDbWorldBySlug,
   prisma,
@@ -15,24 +21,9 @@ import {
   type EnqueueConnectorJobInput,
 } from "@uwe/database/server";
 
-/**
- * Spotify → connector queue bridge.
- *
- * Spotify OAuth lives only on the RTX Connector Client (never the Studio host).
- * The Studio soundboard still triggers playback, but instead of calling the
- * Spotify Web API with host-held tokens it enqueues a connector job that the RTX
- * Host Connector — which holds the Spotify session and an active Spotify Connect
- * device — claims and executes locally.
- *
- * When no connector advertises `spotify_connect`, callers fall back to the
- * legacy host path (see `spotify-handlers.ts`); the world DB tokens remain in the
- * schema but are unused on this path.
- */
-
 export type SpotifyConnectorAction = "play" | "resume" | "pause" | "stop" | "volume";
 
 const ACTION_JOB_TYPES: Record<SpotifyConnectorAction, ConnectorJobType> = {
-  // Resume is a play with no body; stop maps to pause (Spotify has no stop).
   play: "spotify_play",
   resume: "spotify_play",
   pause: "spotify_pause",
@@ -46,15 +37,14 @@ export interface SpotifyConnectorInput {
   volume?: number;
 }
 
-/**
- * Minimal connector surface used by the Spotify bridge. Injectable so the
- * dispatch logic can be unit-tested without a database.
- */
 export interface SpotifyConnectorDeps {
   service: {
     summarize: () => Promise<ConnectorSummary>;
-    capabilityAvailable: (summary: ConnectorSummary, capability: ConnectorCapability) => boolean;
     enqueueJob: (input: EnqueueConnectorJobInput) => Promise<ConnectorJob>;
+  };
+  registry: {
+    hasCapability: (capability: ConnectorCapability) => boolean;
+    dispatch: (input: DirectDispatchInput) => Promise<DirectDispatchResult>;
   };
   resolveWorld: (worldSlug: string) => Promise<{ id: string } | null>;
 }
@@ -62,61 +52,102 @@ export interface SpotifyConnectorDeps {
 function defaultDeps(): SpotifyConnectorDeps {
   return {
     service: createConnectorService(prisma),
+    registry: getDirectConnectorRegistry(),
     resolveWorld: (worldSlug) => getDbWorldBySlug(worldSlug),
   };
 }
 
-/** True when at least one online connector advertises `spotify_connect`. */
+function hasQueueCapability(summary: ConnectorSummary, capability: ConnectorCapability): boolean {
+  return summary.connectors.some(
+    (connector) =>
+      !connector.disabled &&
+      connector.queueEnabled &&
+      (connector.status === "online" || connector.status === "degraded") &&
+      connector.capabilities.includes(capability),
+  );
+}
+
+/** True when Spotify is currently reachable through Direct or the queue. */
 export async function isSpotifyConnectAvailable(
   deps: SpotifyConnectorDeps = defaultDeps(),
 ): Promise<boolean> {
-  const summary = await deps.service.summarize();
-  return deps.service.capabilityAvailable(summary, "spotify_connect");
+  if (deps.registry.hasCapability("spotify_connect")) return true;
+  return hasQueueCapability(await deps.service.summarize(), "spotify_connect");
 }
 
 /**
- * Enqueue a Spotify connector job when `spotify_connect` is online.
- *
- * Returns `null` when no connector advertises the capability, so the caller can
- * fall back to the legacy host path. When the capability is online it always
- * returns a `NextResponse` (queued, world-not-found, or a calm degraded notice).
+ * Prefer Direct delivery and use the queue only before a Direct request was
+ * accepted. Returns null only when no connector delivery path is available so
+ * callers may use the legacy host-side Spotify fallback.
  */
 export async function tryDispatchSpotifyConnector(
   worldSlug: string,
   input: SpotifyConnectorInput,
   deps: SpotifyConnectorDeps = defaultDeps(),
 ): Promise<NextResponse | null> {
-  const summary = await deps.service.summarize();
-
-  if (!deps.service.capabilityAvailable(summary, "spotify_connect")) {
-    // Connector path inactive — let the caller decide on a fallback.
-    return null;
-  }
-
-  const world = await deps.resolveWorld(worldSlug);
-  if (!world) {
-    return jsonError("Welt nicht gefunden.", 404);
-  }
-
+  const type = ACTION_JOB_TYPES[input.action];
   const payload: Record<string, unknown> = {};
-  if (input.uri?.trim()) {
-    payload.uri = input.uri.trim();
+  if (input.uri?.trim()) payload.uri = input.uri.trim();
+  if (typeof input.volume === "number") payload.volume = input.volume;
+
+  let world: { id: string } | null = null;
+  const resolveWorld = async () => {
+    world ??= await deps.resolveWorld(worldSlug);
+    return world;
+  };
+
+  if (deps.registry.hasCapability("spotify_connect")) {
+    const directWorld = await resolveWorld();
+    if (!directWorld) return jsonError("Welt nicht gefunden.", 404);
+
+    try {
+      const direct = await deps.registry.dispatch({
+        type,
+        worldId: directWorld.id,
+        payload,
+      });
+      return NextResponse.json({
+        queued: false,
+        delivery: "direct",
+        requestId: direct.requestId,
+        via: "rtx-connector",
+        message: "Spotify-Aktion direkt an den RTX Connector übergeben.",
+      });
+    } catch (error) {
+      if (!(error instanceof DirectConnectorDispatchError)) throw error;
+      if (error.accepted) {
+        return NextResponse.json({
+          queued: false,
+          delivery: "direct",
+          requestId: error.requestId ?? null,
+          via: "rtx-connector",
+          degraded: true,
+          uncertain: true,
+          message:
+            "Der RTX Connector hat die Spotify-Aktion angenommen, aber das Ergebnis konnte nicht bestätigt werden. Sie wird nicht erneut ausgeführt.",
+        });
+      }
+    }
   }
-  if (typeof input.volume === "number") {
-    payload.volume = input.volume;
-  }
+
+  const summary = await deps.service.summarize();
+  if (!hasQueueCapability(summary, "spotify_connect")) return null;
+
+  const queueWorld = await resolveWorld();
+  if (!queueWorld) return jsonError("Welt nicht gefunden.", 404);
 
   const job = await deps.service.enqueueJob({
-    type: ACTION_JOB_TYPES[input.action],
-    worldId: world.id,
+    type,
+    worldId: queueWorld.id,
     payload,
   });
 
   return NextResponse.json({
     queued: true,
+    delivery: "queue",
     jobId: job.id,
     via: "rtx-connector",
-    message: "Spotify-Aktion an den RTX Connector übergeben.",
+    message: "Spotify-Aktion an die RTX Connector Queue übergeben.",
   });
 }
 

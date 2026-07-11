@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { getDirectConnectorRegistry } from "@uwe/connector/direct";
 import { createConnectorService, prisma } from "@uwe/database/server";
 import { parseBody, requireAdminApiAuth } from "@uwe/security";
 
@@ -20,14 +21,20 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   const service = createConnectorService(prisma);
+  const registry = getDirectConnectorRegistry();
   const [connectors, recentJobs, pendingByLane] = await Promise.all([
     service.listConnectors(),
     service.listJobs({ limit: 25 }),
     service.countPendingByLane(),
   ]);
+  const directSessions = registry.listSessions();
 
   return NextResponse.json({
-    connectors,
+    connectors: connectors.map((connector) => ({
+      ...connector,
+      directConnected: registry.isConnected(connector.id),
+    })),
+    directSessions,
     recentJobs,
     pendingByLane,
     hostConfig: resolveHostConnectorConfig(),

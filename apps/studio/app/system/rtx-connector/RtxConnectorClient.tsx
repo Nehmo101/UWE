@@ -51,6 +51,7 @@ interface ConnectorView {
   status: "online" | "offline" | "degraded" | "disabled";
   disabled: boolean;
   queueEnabled: boolean;
+  directConnected: boolean;
   capabilities: ConnectorCapability[];
   reportedCapabilities: ConnectorCapability[];
   allowedCapabilities: ConnectorCapability[] | null;
@@ -59,6 +60,12 @@ interface ConnectorView {
   currentJobs: number;
   lastError: string | null;
   lastHeartbeatAt: string | Date | null;
+}
+
+interface DirectSessionView {
+  connectorId: string;
+  capabilities: ConnectorCapability[];
+  laneUsage: Record<string, number>;
 }
 
 interface ConnectorSummaryView {
@@ -73,6 +80,8 @@ interface Props {
   initialSummary: ConnectorSummaryView;
   initialPendingByLane: Record<string, number>;
   hostQueueEnabled: boolean;
+  hostDirectEnabled: boolean;
+  initialDirectSessions: DirectSessionView[];
   cloudFallbackAllowed: boolean;
 }
 
@@ -123,10 +132,13 @@ export function RtxConnectorClient({
   initialSummary,
   initialPendingByLane,
   hostQueueEnabled,
+  hostDirectEnabled,
+  initialDirectSessions,
   cloudFallbackAllowed,
 }: Props) {
   const [summary, setSummary] = useState(initialSummary);
   const [pendingByLane, setPendingByLane] = useState(initialPendingByLane);
+  const [directSessions, setDirectSessions] = useState(initialDirectSessions);
   const [newName, setNewName] = useState("RTX Laptop");
   const [issuedToken, setIssuedToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -185,6 +197,7 @@ export function RtxConnectorClient({
     const data = (await response.json()) as {
       connectors: ConnectorView[];
       pendingByLane: Record<string, number>;
+      directSessions: DirectSessionView[];
     };
     setSummary((prev) => ({
       ...prev,
@@ -195,6 +208,7 @@ export function RtxConnectorClient({
       anyOnline: data.connectors.some((c) => c.status === "online" || c.status === "degraded"),
     }));
     setPendingByLane(data.pendingByLane);
+    setDirectSessions(data.directSessions);
     await loadWorkflow();
   }, [loadWorkflow]);
 
@@ -294,7 +308,14 @@ export function RtxConnectorClient({
             }
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Card className="p-4">
+            <h3 className="text-sm font-medium">Host-Direct</h3>
+            <p className="mt-1 text-sm">{hostDirectEnabled ? "Aktiv" : "Deaktiviert"}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Live-Sessions: {directSessions.length}
+            </p>
+          </Card>
           <Card className="p-4">
             <h3 className="text-sm font-medium">Host-Queue</h3>
             <p className="mt-1 text-sm">
@@ -401,6 +422,10 @@ export function RtxConnectorClient({
                     Letzter Heartbeat: {formatWhen(connector.lastHeartbeatAt)}
                     {connector.version ? ` · v${connector.version}` : ""} · Jobs:{" "}
                     {connector.currentJobs}
+                  </p>
+                  <p className="mt-1 text-sm">
+                    Direct: {connector.directConnected ? "live" : "getrennt"} · Queue:{" "}
+                    {connector.queueEnabled ? "bereit" : "aus"}
                   </p>
                   <p className="mt-1 text-sm">
                     Fähigkeiten (effektiv):{" "}

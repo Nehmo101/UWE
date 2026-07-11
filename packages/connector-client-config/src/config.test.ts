@@ -17,6 +17,7 @@ describe("defaultConnectorClientConfig", () => {
     assert.equal(config.hostUrl, "");
     assert.equal(config.token, "");
     assert.equal(config.name, "RTX Host Connector");
+    assert.equal(config.transportMode, "queue");
     assert.equal(config.queueEnabled, true);
     assert.equal(config.wizardCompleted, false);
     assert.equal(config.autoConnect, true);
@@ -49,10 +50,74 @@ describe("parseConnectorClientConfig", () => {
     assert.equal(config.hostUrl, "https://uweanddragons.org");
     assert.equal(config.token, "uwec_secret");
     assert.equal(config.name, "RTX Laptop");
+    assert.equal(config.transportMode, "queue");
     assert.equal(config.queueEnabled, false);
     assert.equal(config.wizardCompleted, false);
     assert.equal(config.autoConnect, true);
   });
+
+  it("parses transport modes and derives queueEnabled", () => {
+    const direct = parseConnectorClientConfig({ transportMode: "DIRECT", queueEnabled: true });
+    assert.equal(direct.transportMode, "direct");
+    assert.equal(direct.queueEnabled, false);
+
+    const hybrid = parseConnectorClientConfig({ transportMode: "hybrid", queueEnabled: false });
+    assert.equal(hybrid.transportMode, "hybrid");
+    assert.equal(hybrid.queueEnabled, true);
+  });
+
+  it("preserves legacy disabled queue settings without enabling Direct", () => {
+    const config = parseConnectorClientConfig({ queueEnabled: false });
+    assert.equal(config.transportMode, "queue");
+    assert.equal(config.queueEnabled, false);
+  });
+
+  it("requires https for remote hosts in every transport mode", () => {
+    for (const transportMode of ["queue", "direct", "hybrid"] as const) {
+      assert.throws(
+        () =>
+          parseConnectorClientConfig({
+            hostUrl: "http://192.168.1.20:3000",
+            transportMode,
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof ConnectorClientConfigError);
+          assert.match(error.message, /https/);
+          return true;
+        },
+      );
+      assert.equal(
+        parseConnectorClientConfig({
+          hostUrl: "https://uweanddragons.org",
+          transportMode,
+        }).transportMode,
+        transportMode,
+      );
+    }
+  });
+
+  it("allows Direct over explicit loopback http hosts", () => {
+    for (const hostUrl of [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "http://[::1]:3000",
+    ]) {
+      assert.equal(
+        parseConnectorClientConfig({ hostUrl, transportMode: "direct" }).transportMode,
+        "direct",
+      );
+    }
+  });
+
+  it("rejects remote plaintext http for queue-only legacy settings", () => {
+    assert.throws(() =>
+      parseConnectorClientConfig({
+        hostUrl: "http://192.168.1.20:3000",
+        queueEnabled: false,
+      }),
+    );
+  });
+
 
   it("rejects non-object JSON", () => {
     assert.throws(
@@ -154,21 +219,30 @@ describe("maskToken", () => {
 });
 
 describe("validateHostUrl", () => {
-  it("accepts http/https and strips trailing slashes", () => {
+  it("accepts https and loopback http while stripping trailing slashes", () => {
     assert.deepEqual(validateHostUrl("https://host.test/"), {
       ok: true,
       normalized: "https://host.test",
     });
-    assert.deepEqual(validateHostUrl("http://192.168.1.10:3000"), {
+    assert.deepEqual(validateHostUrl("http://127.0.0.2:3000"), {
       ok: true,
-      normalized: "http://192.168.1.10:3000",
+      normalized: "http://127.0.0.2:3000",
+    });
+    assert.deepEqual(validateHostUrl("http://[::1]:3000/"), {
+      ok: true,
+      normalized: "http://[::1]:3000",
+    });
+    assert.deepEqual(validateHostUrl("http://localhost:3000/"), {
+      ok: true,
+      normalized: "http://localhost:3000",
     });
   });
 
-  it("rejects empty, malformed, and non-http URLs", () => {
+  it("rejects empty, malformed, non-http, and remote plaintext URLs", () => {
     assert.equal(validateHostUrl("").ok, false);
     assert.equal(validateHostUrl("not-a-url").ok, false);
     assert.equal(validateHostUrl("ftp://files.test").ok, false);
+    assert.equal(validateHostUrl("http://192.168.1.10:3000").ok, false);
   });
 });
 

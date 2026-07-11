@@ -9,6 +9,8 @@ import {
 } from "@uwe/database/server";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 
+import { getDirectConnectorRegistry } from "@uwe/connector/direct";
+
 import {
   isConnectorEmbeddingAvailable,
   isConnectorImageAvailable,
@@ -68,6 +70,51 @@ async function simulateConnectorCompletion(
   throw new Error(`No pending ${type} job appeared to simulate.`);
 }
 
+async function simulateDirectCompletion(
+  stream: ReadableStream<Uint8Array>,
+  connectorId: string,
+  result: Record<string, unknown>,
+): Promise<string> {
+  const registry = getDirectConnectorRegistry();
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) throw new Error("Direct stream closed before a request arrived.");
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const frame = JSON.parse(line) as Record<string, unknown>;
+        if (frame.kind !== "request" || typeof frame.requestId !== "string") continue;
+        assert.equal(
+          registry.handleEvent(connectorId, {
+            version: 1,
+            kind: "accepted",
+            requestId: frame.requestId,
+          }).ok,
+          true,
+        );
+        assert.equal(
+          registry.handleEvent(connectorId, {
+            version: 1,
+            kind: "result",
+            requestId: frame.requestId,
+            result,
+          }).ok,
+          true,
+        );
+        return frame.requestId;
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 describe("connectorQueueProvider", () => {
   it("reports llm/embedding/image availability only when a connector advertises it", async () => {
     const isolated = createPrismaClient(createTestDatabaseUrl());
@@ -82,6 +129,35 @@ describe("connectorQueueProvider", () => {
 
     await onlineLlmConnector(isolated, "Image Test", [], ["image_generation"]);
     assert.equal(await isConnectorImageAvailable(isolated), true);
+  });
+
+  it("dispatches LLM inference directly without creating a ConnectorJob", async () => {
+    const isolated = createPrismaClient(createTestDatabaseUrl());
+    const registry = getDirectConnectorRegistry();
+    const connectorId = "direct-ai-test";
+    const session = registry.openSession({ connectorId, capabilities: ["llm_local"] });
+    const completion = simulateDirectCompletion(session.stream, connectorId, {
+      text: "Direct result",
+      model: "llama3.2",
+      provider: "ollama",
+    });
+
+    try {
+      const result = await runConnectorLlmGenerate(isolated, {
+        prompt: "Answer directly",
+        model: "llama3.2",
+      });
+      const requestId = await completion;
+
+      assert.equal(result.text, "Direct result");
+      assert.equal(result.model, "llama3.2");
+      assert.equal(result.jobId, requestId);
+      assert.equal(result.delivery, "direct");
+      assert.equal(await isolated.connectorJob.count(), 0);
+    } finally {
+      session.close();
+      await completion.catch(() => undefined);
+    }
   });
 
   it("enqueues a vision_extract job and returns OCR text", async () => {
@@ -106,7 +182,7 @@ describe("connectorQueueProvider", () => {
     assert.ok(result.jobId);
   });
 
-  it("enqueues an llm_generate job and returns the connector result", async () => {
+  it("falls back to the queue when no Direct Connector session is available", async () => {
     const isolated = createPrismaClient(createTestDatabaseUrl());
     const connector = await onlineLlmConnector(isolated, "LLM Run");
 
@@ -121,6 +197,7 @@ describe("connectorQueueProvider", () => {
 
     assert.equal(result.text, "Es war einmal …");
     assert.equal(result.model, "llama3.2");
+    assert.equal(result.delivery, "queue");
     assert.ok(result.jobId);
 
     const job = await isolated.connectorJob.findUnique({ where: { id: result.jobId } });

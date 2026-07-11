@@ -22,6 +22,7 @@ import {
 } from "@uwe/connector";
 
 import { loadClientRuntimeConfig } from "./client-config-store";
+import { DirectStreamClient } from "./direct-stream-client";
 import { HostClient } from "./host-client";
 import { JobHistory, jobHistoryPath } from "./job-history";
 import {
@@ -230,8 +231,16 @@ export function createConnectorRunner(
   };
 
   const client = new HostClient(config.hostUrl, config.token);
+  const directClient =
+    config.transportMode === "queue"
+      ? undefined
+      : new DirectStreamClient({
+          hostUrl: config.hostUrl,
+          token: config.token,
+        });
   const runner = new ConnectorRunner({
     client,
+    directClient,
     config,
     version: CONNECTOR_VERSION,
     discover,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { DirectConnectorDispatchError } from "@uwe/connector/direct";
 import type {
   ConnectorJob,
   ConnectorSummary,
@@ -13,19 +14,28 @@ import {
   type SpotifyConnectorDeps,
 } from "./spotify-connector";
 
-function summaryWith(capabilities: string[]): ConnectorSummary {
+function summaryWith(capabilities: string[], queueEnabled = true): ConnectorSummary {
   return {
     anyOnline: capabilities.length > 0,
     onlineCount: capabilities.length > 0 ? 1 : 0,
     totalCount: 1,
     availableCapabilities: capabilities as ConnectorSummary["availableCapabilities"],
-    connectors: [],
+    connectors: [{
+      id: "connector-1",
+      status: capabilities.length > 0 ? "online" : "offline",
+      disabled: false,
+      queueEnabled,
+      capabilities,
+    } as ConnectorSummary["connectors"][number]],
   };
 }
 
 interface StubOptions {
   capabilities?: string[];
   world?: { id: string } | null;
+  direct?: boolean;
+  queueEnabled?: boolean;
+  dispatch?: SpotifyConnectorDeps["registry"]["dispatch"];
 }
 
 function makeDeps(options: StubOptions = {}): {
@@ -38,13 +48,19 @@ function makeDeps(options: StubOptions = {}): {
 
   const deps: SpotifyConnectorDeps = {
     service: {
-      summarize: async () => summaryWith(capabilities),
-      capabilityAvailable: (summary, capability) =>
-        summary.availableCapabilities.includes(capability),
+      summarize: async () => summaryWith(capabilities, options.queueEnabled ?? true),
       enqueueJob: async (input) => {
         enqueued.push(input);
         return { id: "job-1", type: input.type } as ConnectorJob;
       },
+    },
+    registry: {
+      hasCapability: () => options.direct ?? false,
+      dispatch: options.dispatch ?? (async () => ({
+        requestId: "request-1",
+        result: { ok: true },
+        connectorId: "connector-1",
+      })),
     },
     resolveWorld: async () => world,
   };
@@ -53,19 +69,24 @@ function makeDeps(options: StubOptions = {}): {
 }
 
 describe("isSpotifyConnectAvailable", () => {
-  it("is true when a connector advertises spotify_connect", async () => {
+  it("is true when the queue advertises spotify_connect", async () => {
     const { deps } = makeDeps({ capabilities: ["spotify_connect"] });
     assert.equal(await isSpotifyConnectAvailable(deps), true);
   });
 
-  it("is false when no connector advertises spotify_connect", async () => {
+  it("is true when a Direct session advertises spotify_connect", async () => {
+    const { deps } = makeDeps({ capabilities: [], queueEnabled: false, direct: true });
+    assert.equal(await isSpotifyConnectAvailable(deps), true);
+  });
+
+  it("is false when neither delivery path advertises spotify_connect", async () => {
     const { deps } = makeDeps({ capabilities: ["audio_local"] });
     assert.equal(await isSpotifyConnectAvailable(deps), false);
   });
 });
 
 describe("tryDispatchSpotifyConnector", () => {
-  it("returns null (caller falls back) when spotify_connect is offline", async () => {
+  it("returns null when spotify_connect is unavailable", async () => {
     const { deps, enqueued } = makeDeps({ capabilities: [] });
     const result = await tryDispatchSpotifyConnector(
       "terra",
@@ -73,6 +94,55 @@ describe("tryDispatchSpotifyConnector", () => {
       deps,
     );
     assert.equal(result, null);
+    assert.equal(enqueued.length, 0);
+  });
+
+  it("dispatches directly without enqueueing", async () => {
+    const { deps, enqueued } = makeDeps({ direct: true });
+    const result = await tryDispatchSpotifyConnector(
+      "terra",
+      { action: "play", uri: " spotify:track:abc ", volume: 50 },
+      deps,
+    );
+    assert.ok(result);
+    const body = (await result.json()) as { delivery: string; requestId: string };
+    assert.equal(body.delivery, "direct");
+    assert.equal(body.requestId, "request-1");
+    assert.equal(enqueued.length, 0);
+  });
+
+  it("falls back to the queue before Direct acceptance", async () => {
+    const { deps, enqueued } = makeDeps({
+      direct: true,
+      dispatch: async () => {
+        throw new DirectConnectorDispatchError("stream closed", false, "request-1");
+      },
+    });
+    const result = await tryDispatchSpotifyConnector("terra", { action: "pause" }, deps);
+    assert.ok(result);
+    const body = (await result.json()) as { delivery: string; jobId: string };
+    assert.equal(body.delivery, "queue");
+    assert.equal(body.jobId, "job-1");
+    assert.equal(enqueued.length, 1);
+  });
+
+  it("never enqueues after Direct acceptance", async () => {
+    const { deps, enqueued } = makeDeps({
+      direct: true,
+      dispatch: async () => {
+        throw new DirectConnectorDispatchError("result lost", true, "request-1");
+      },
+    });
+    const result = await tryDispatchSpotifyConnector("terra", { action: "pause" }, deps);
+    assert.ok(result);
+    const body = (await result.json()) as {
+      delivery: string;
+      uncertain: boolean;
+      degraded: boolean;
+    };
+    assert.equal(body.delivery, "direct");
+    assert.equal(body.uncertain, true);
+    assert.equal(body.degraded, true);
     assert.equal(enqueued.length, 0);
   });
 
@@ -84,19 +154,16 @@ describe("tryDispatchSpotifyConnector", () => {
       deps,
     );
     assert.ok(result);
-    assert.equal(result.status, 200);
-    const body = (await result.json()) as { queued: boolean; jobId: string; via: string };
+    const body = (await result.json()) as { queued: boolean; delivery: string; jobId: string };
     assert.equal(body.queued, true);
+    assert.equal(body.delivery, "queue");
     assert.equal(body.jobId, "job-1");
-    assert.equal(body.via, "rtx-connector");
-
-    assert.equal(enqueued.length, 1);
     assert.equal(enqueued[0].type, "spotify_play");
     assert.equal(enqueued[0].worldId, "world-1");
     assert.deepEqual(enqueued[0].payload, { uri: "spotify:track:abc", volume: 50 });
   });
 
-  it("maps stop and resume to pause/play job types", async () => {
+  it("maps stop, resume, and volume to queue job types", async () => {
     const stop = makeDeps();
     await tryDispatchSpotifyConnector("terra", { action: "stop" }, stop.deps);
     assert.equal(stop.enqueued[0].type, "spotify_pause");
@@ -104,17 +171,14 @@ describe("tryDispatchSpotifyConnector", () => {
     const resume = makeDeps();
     await tryDispatchSpotifyConnector("terra", { action: "resume" }, resume.deps);
     assert.equal(resume.enqueued[0].type, "spotify_play");
-    assert.deepEqual(resume.enqueued[0].payload, {});
+
+    const volume = makeDeps();
+    await tryDispatchSpotifyConnector("terra", { action: "volume", volume: 30 }, volume.deps);
+    assert.equal(volume.enqueued[0].type, "spotify_volume");
+    assert.deepEqual(volume.enqueued[0].payload, { volume: 30 });
   });
 
-  it("maps volume to a spotify_volume job", async () => {
-    const { deps, enqueued } = makeDeps();
-    await tryDispatchSpotifyConnector("terra", { action: "volume", volume: 30 }, deps);
-    assert.equal(enqueued[0].type, "spotify_volume");
-    assert.deepEqual(enqueued[0].payload, { volume: 30 });
-  });
-
-  it("returns 404 when the world is missing but the capability is online", async () => {
+  it("returns 404 when the world is missing but a connector path is available", async () => {
     const { deps, enqueued } = makeDeps({ world: null });
     const result = await tryDispatchSpotifyConnector("ghost", { action: "pause" }, deps);
     assert.ok(result);

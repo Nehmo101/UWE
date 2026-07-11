@@ -7,12 +7,14 @@
 export {
   CONNECTOR_PROCESS_STATUSES,
   CONNECTOR_TRAY_MODES,
+  CONNECTOR_TRANSPORT_MODES,
   ConnectorConnectionStatus,
   DEFAULT_SPOTIFY_REDIRECT_URI,
   type ConnectorClientConfig,
   type ConnectorProcessState,
   type ConnectorProcessStatus,
   type ConnectorTrayMode,
+  type ConnectorTransportMode,
 } from "./types";
 
 export {

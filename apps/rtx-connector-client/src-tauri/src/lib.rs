@@ -52,6 +52,8 @@ struct ConnectorClientConfig {
     host_url: String,
     token: String,
     name: String,
+    #[serde(default = "default_transport_mode")]
+    transport_mode: String,
     queue_enabled: bool,
     wizard_completed: bool,
     auto_connect: bool,
@@ -85,6 +87,10 @@ fn default_spotify_redirect_uri() -> String {
     "http://127.0.0.1:8742/callback".to_string()
 }
 
+fn default_transport_mode() -> String {
+    "queue".to_string()
+}
+
 impl Default for ConnectorClientConfig {
     fn default() -> Self {
         Self {
@@ -92,6 +98,7 @@ impl Default for ConnectorClientConfig {
             token: String::new(),
             name: "RTX Host Connector".to_string(),
             queue_enabled: true,
+            transport_mode: default_transport_mode(),
             wizard_completed: false,
             auto_connect: true,
             minimized_start: false,
@@ -254,9 +261,12 @@ fn describe_spawn_error(error: &std::io::Error) -> String {
 }
 
 fn run_client_cli(args: &[&str]) -> Result<String, String> {
-    let output = build_client_cli_command(args)?
-        .output()
-        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
+    let output = build_client_cli_command(args)?.output().map_err(|error| {
+        format!(
+            "client-cli konnte nicht gestartet werden: {}",
+            describe_spawn_error(&error)
+        )
+    })?;
 
     client_cli_output_to_string(&args.join(" "), output)
 }
@@ -280,9 +290,12 @@ fn run_client_cli_streaming(
     let mut command = build_client_cli_command(args)?;
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
 
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
+    let mut child = command.spawn().map_err(|error| {
+        format!(
+            "client-cli konnte nicht gestartet werden: {}",
+            describe_spawn_error(&error)
+        )
+    })?;
 
     let stdout = child
         .stdout
@@ -301,11 +314,15 @@ fn run_client_cli_streaming(
 
     let mut collected = String::new();
     for line in BufReader::new(stdout).lines() {
-        let line = line.map_err(|error| format!("client-cli-Ausgabe konnte nicht gelesen werden: {error}"))?;
+        let line = line
+            .map_err(|error| format!("client-cli-Ausgabe konnte nicht gelesen werden: {error}"))?;
         if let Ok(mut value) = serde_json::from_str::<serde_json::Value>(&line) {
             if let Some((key, tag_value)) = tag {
                 if let Some(object) = value.as_object_mut() {
-                    object.insert(key.to_string(), serde_json::Value::String(tag_value.to_string()));
+                    object.insert(
+                        key.to_string(),
+                        serde_json::Value::String(tag_value.to_string()),
+                    );
                 }
             }
             let _ = app.emit(event_name, &value);
@@ -327,7 +344,11 @@ fn run_client_cli_streaming(
         } else {
             "Kein Fehlertext ausgegeben.".to_string()
         };
-        return Err(format!("client-cli {} fehlgeschlagen: {}", args.join(" "), detail));
+        return Err(format!(
+            "client-cli {} fehlgeschlagen: {}",
+            args.join(" "),
+            detail
+        ));
     }
 
     Ok(collected.trim().to_string())
@@ -336,23 +357,34 @@ fn run_client_cli_streaming(
 fn run_node_script(script_rel: &str, args: &[&str]) -> Result<String, String> {
     let output = build_node_script_command(script_rel, args)?
         .output()
-        .map_err(|error| format!("{script_rel} konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
+        .map_err(|error| {
+            format!(
+                "{script_rel} konnte nicht gestartet werden: {}",
+                describe_spawn_error(&error)
+            )
+        })?;
 
     client_cli_output_to_string(&format!("{script_rel} {}", args.join(" ")), output)
 }
 
 fn run_client_cli_with_stdin(args: &[&str], stdin_payload: &str) -> Result<String, String> {
     let mut command = build_client_cli_command(args)?;
-    command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("client-cli konnte nicht gestartet werden: {}", describe_spawn_error(&error)))?;
+    let mut child = command.spawn().map_err(|error| {
+        format!(
+            "client-cli konnte nicht gestartet werden: {}",
+            describe_spawn_error(&error)
+        )
+    })?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(stdin_payload.as_bytes())
-            .map_err(|error| format!("client-cli stdin konnte nicht geschrieben werden: {error}"))?;
+        stdin.write_all(stdin_payload.as_bytes()).map_err(|error| {
+            format!("client-cli stdin konnte nicht geschrieben werden: {error}")
+        })?;
     }
 
     let output = child
@@ -363,7 +395,8 @@ fn run_client_cli_with_stdin(args: &[&str], stdin_payload: &str) -> Result<Strin
 }
 
 fn parse_client_cli_json<T: DeserializeOwned>(raw: &str, label: &str) -> Result<T, String> {
-    serde_json::from_str(raw).map_err(|error| format!("{label} konnte nicht geparst werden: {error}"))
+    serde_json::from_str(raw)
+        .map_err(|error| format!("{label} konnte nicht geparst werden: {error}"))
 }
 
 fn parse_model_download_output(raw: &str, label: &str) -> Result<PullOllamaResult, String> {
@@ -381,9 +414,8 @@ fn parse_model_download_output(raw: &str, label: &str) -> Result<PullOllamaResul
         }
     }
 
-    let store = store.ok_or_else(|| {
-        format!("{label} lieferte keinen aktualisierten Model-Store zurueck.")
-    })?;
+    let store = store
+        .ok_or_else(|| format!("{label} lieferte keinen aktualisierten Model-Store zurueck."))?;
 
     Ok(PullOllamaResult { events, store })
 }
@@ -401,8 +433,9 @@ fn sync_runtime_with_child(child_slot: &mut Option<Child>, runtime: &mut Connect
                     .code()
                     .map(|value| value.to_string())
                     .unwrap_or_else(|| "unbekannt".to_string());
-                runtime.message =
-                    Some(format!("Connector-Prozess wurde beendet (Exit-Code {code})."));
+                runtime.message = Some(format!(
+                    "Connector-Prozess wurde beendet (Exit-Code {code})."
+                ));
             }
             Ok(None) => {
                 runtime.running = true;
@@ -410,8 +443,7 @@ fn sync_runtime_with_child(child_slot: &mut Option<Child>, runtime: &mut Connect
             Err(error) => {
                 *child_slot = None;
                 runtime.running = false;
-                runtime.message =
-                    Some(format!("Connector-Prozessstatus nicht lesbar: {error}"));
+                runtime.message = Some(format!("Connector-Prozessstatus nicht lesbar: {error}"));
             }
         },
         None => {
@@ -450,8 +482,9 @@ fn run_reg(args: &[&str]) -> Result<Output, String> {
 
 #[cfg(target_os = "windows")]
 fn autostart_command_line() -> Result<String, String> {
-    let exe = std::env::current_exe()
-        .map_err(|error| format!("App-Pfad fuer Autostart konnte nicht ermittelt werden: {error}"))?;
+    let exe = std::env::current_exe().map_err(|error| {
+        format!("App-Pfad fuer Autostart konnte nicht ermittelt werden: {error}")
+    })?;
     Ok(format!("\"{}\" --minimized", exe.display()))
 }
 
@@ -474,7 +507,11 @@ fn sync_autostart(enabled: bool) -> Result<(), String> {
             let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
             return Err(format!(
                 "Windows-Autostart konnte nicht aktiviert werden: {}",
-                if stderr.is_empty() { "Registry-Fehler" } else { &stderr }
+                if stderr.is_empty() {
+                    "Registry-Fehler"
+                } else {
+                    &stderr
+                }
             ));
         }
         return Ok(());
@@ -492,7 +529,10 @@ fn sync_autostart(enabled: bool) -> Result<(), String> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
         let text = format!("{stdout}\n{stderr}").to_lowercase();
-        if text.contains("unable to find") || text.contains("nicht gefunden") || text.contains("system was unable") {
+        if text.contains("unable to find")
+            || text.contains("nicht gefunden")
+            || text.contains("system was unable")
+        {
             return Ok(());
         }
         return Err("Windows-Autostart konnte nicht deaktiviert werden.".to_string());
@@ -520,8 +560,9 @@ fn sync_autostart(enabled: bool) -> Result<(), String> {
     let path = linux_autostart_path()?;
 
     if enabled {
-        let exe = std::env::current_exe()
-            .map_err(|error| format!("App-Pfad fuer Autostart konnte nicht ermittelt werden: {error}"))?;
+        let exe = std::env::current_exe().map_err(|error| {
+            format!("App-Pfad fuer Autostart konnte nicht ermittelt werden: {error}")
+        })?;
         ensure_parent_dir(&path)?;
         let entry = format!(
             "[Desktop Entry]\n\
@@ -533,15 +574,18 @@ fn sync_autostart(enabled: bool) -> Result<(), String> {
              X-GNOME-Autostart-enabled=true\n",
             exe.display()
         );
-        fs::write(&path, entry)
-            .map_err(|error| format!("Autostart-Eintrag konnte nicht geschrieben werden: {error}"))?;
+        fs::write(&path, entry).map_err(|error| {
+            format!("Autostart-Eintrag konnte nicht geschrieben werden: {error}")
+        })?;
         return Ok(());
     }
 
     match fs::remove_file(&path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(format!("Autostart-Eintrag konnte nicht entfernt werden: {error}")),
+        Err(error) => Err(format!(
+            "Autostart-Eintrag konnte nicht entfernt werden: {error}"
+        )),
     }
 }
 
@@ -566,15 +610,18 @@ struct SpotifySessionFile {
 /// Best-effort read of the persisted Spotify session. A missing or corrupt file
 /// is fine — Spotify is optional and the connector stays online without it.
 fn read_spotify_session() -> Option<SpotifySessionFile> {
-    let path = connector_app_data_dir().ok()?.join(SPOTIFY_SESSION_FILE_NAME);
+    let path = connector_app_data_dir()
+        .ok()?
+        .join(SPOTIFY_SESSION_FILE_NAME);
     let raw = fs::read_to_string(path).ok()?;
     serde_json::from_str::<SpotifySessionFile>(&raw).ok()
 }
 
 fn ensure_parent_dir(path: &Path) -> Result<(), String> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("Konfigurationsordner konnte nicht angelegt werden: {error}"))?;
+        fs::create_dir_all(parent).map_err(|error| {
+            format!("Konfigurationsordner konnte nicht angelegt werden: {error}")
+        })?;
     }
 
     Ok(())
@@ -592,6 +639,17 @@ fn normalize_host_url(value: &str) -> Result<String, String> {
     if scheme != "http" && scheme != "https" {
         return Err("Host-URL muss http:// oder https:// verwenden.".to_string());
     }
+    let loopback = parsed.host_str().is_some_and(|host| {
+        host.eq_ignore_ascii_case("localhost")
+            || host == "::1"
+            || host.split('.').next().is_some_and(|first| first == "127")
+    });
+    if scheme == "http" && !loopback {
+        return Err(
+            "Remote Host-URLs muessen https:// verwenden; http:// ist nur fuer Loopback erlaubt."
+                .to_string(),
+        );
+    }
 
     Ok(trimmed.trim_end_matches('/').to_string())
 }
@@ -600,6 +658,13 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     config.host_url = normalize_host_url(&config.host_url)?;
     config.token = config.token.trim().to_string();
     config.name = config.name.trim().to_string();
+
+    config.transport_mode = match config.transport_mode.trim().to_lowercase().as_str() {
+        "direct" => "direct".to_string(),
+        "hybrid" => "hybrid".to_string(),
+        _ => default_transport_mode(),
+    };
+    config.queue_enabled = config.transport_mode != "direct";
 
     if config.name.is_empty() {
         config.name = "RTX Host Connector".to_string();
@@ -623,6 +688,21 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     Ok(config)
 }
 
+fn parse_config_json(raw: &str) -> Result<ConnectorClientConfig, String> {
+    let value = serde_json::from_str::<serde_json::Value>(raw)
+        .map_err(|error| format!("Konfiguration ist kein gueltiges JSON: {error}"))?;
+    let has_transport_mode = value.get("transportMode").is_some();
+    let parsed = serde_json::from_value::<ConnectorClientConfig>(value)
+        .map_err(|error| format!("Konfiguration ist kein gueltiges JSON: {error}"))?;
+    let legacy_queue_enabled = parsed.queue_enabled;
+    let mut normalized = normalize_config(parsed)?;
+    if !has_transport_mode {
+        normalized.transport_mode = default_transport_mode();
+        normalized.queue_enabled = legacy_queue_enabled;
+    }
+    Ok(normalized)
+}
+
 fn read_config_from_disk() -> Result<ConnectorClientConfig, String> {
     let path = connector_config_path()?;
 
@@ -632,10 +712,7 @@ fn read_config_from_disk() -> Result<ConnectorClientConfig, String> {
 
     let raw = fs::read_to_string(&path)
         .map_err(|error| format!("Konfiguration konnte nicht gelesen werden: {error}"))?;
-    let parsed = serde_json::from_str::<ConnectorClientConfig>(&raw)
-        .map_err(|error| format!("Konfiguration ist kein gueltiges JSON: {error}"))?;
-
-    normalize_config(parsed)
+    parse_config_json(&raw)
 }
 
 fn write_config_to_disk(config: &ConnectorClientConfig) -> Result<(), String> {
@@ -771,7 +848,10 @@ fn scan_printers() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-async fn pull_ollama_model(name: String, app: tauri::AppHandle) -> Result<PullOllamaResult, String> {
+async fn pull_ollama_model(
+    name: String,
+    app: tauri::AppHandle,
+) -> Result<PullOllamaResult, String> {
     let trimmed = name.trim().to_string();
     if trimmed.is_empty() {
         return Err("Ollama-Modellname darf nicht leer sein.".to_string());
@@ -814,7 +894,10 @@ fn pull_huggingface_model(
 ) -> Result<PullOllamaResult, String> {
     let repo_id = repo_id.trim();
     let filename = filename.trim();
-    let revision = revision.as_deref().map(str::trim).filter(|value| !value.is_empty());
+    let revision = revision
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
 
     if repo_id.is_empty() {
         return Err("Hugging-Face-Repository darf nicht leer sein.".to_string());
@@ -840,7 +923,11 @@ fn list_connector_jobs() -> Result<Vec<serde_json::Value>, String> {
 
 #[tauri::command]
 fn list_connector_logs(category: Option<String>) -> Result<Vec<String>, String> {
-    let raw = match category.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    let raw = match category
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         Some(value) => run_client_cli(&["logs", value])?,
         None => run_client_cli(&["logs"])?,
     };
@@ -868,7 +955,11 @@ fn start_ollama() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 fn test_runner(runner: Option<String>) -> Result<serde_json::Value, String> {
-    let raw = match runner.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    let raw = match runner
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         Some(value) => run_client_cli(&["test-runner", value])?,
         None => run_client_cli(&["test-runner"])?,
     };
@@ -900,7 +991,11 @@ fn spotify_devices() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 fn spotify_set_device(device_id: Option<String>) -> Result<serde_json::Value, String> {
-    let raw = match device_id.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    let raw = match device_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         Some(value) => run_client_cli(&["spotify-set-device", value])?,
         None => run_client_cli(&["spotify-set-device"])?,
     };
@@ -909,7 +1004,11 @@ fn spotify_set_device(device_id: Option<String>) -> Result<serde_json::Value, St
 
 #[tauri::command]
 fn spotify_test(action: Option<String>) -> Result<serde_json::Value, String> {
-    let raw = match action.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    let raw = match action
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         Some(value) => run_client_cli(&["spotify-test", value])?,
         None => run_client_cli(&["spotify-test"])?,
     };
@@ -924,7 +1023,11 @@ fn spotify_disconnect() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 fn test_audio(source: Option<String>) -> Result<serde_json::Value, String> {
-    let raw = match source.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    let raw = match source
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         Some(value) => run_client_cli(&["test-audio", value])?,
         None => run_client_cli(&["test-audio"])?,
     };
@@ -933,7 +1036,11 @@ fn test_audio(source: Option<String>) -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 fn test_image(prompt: Option<String>) -> Result<serde_json::Value, String> {
-    let raw = match prompt.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+    let raw = match prompt
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         Some(value) => run_client_cli(&["test-image", value])?,
         None => run_client_cli(&["test-image"])?,
     };
@@ -955,7 +1062,10 @@ fn read_config() -> Result<ConnectorClientConfig, String> {
 }
 
 #[tauri::command]
-fn write_config(config: ConnectorClientConfig, app_state: State<'_, AppState>) -> Result<ConnectorClientConfig, String> {
+fn write_config(
+    config: ConnectorClientConfig,
+    app_state: State<'_, AppState>,
+) -> Result<ConnectorClientConfig, String> {
     let normalized = normalize_config(config)?;
     sync_autostart(normalized.autostart_windows)?;
     write_config_to_disk(&normalized)?;
@@ -967,7 +1077,8 @@ fn write_config(config: ConnectorClientConfig, app_state: State<'_, AppState>) -
 
     if !runtime.running {
         runtime.last_heartbeat_at = None;
-        runtime.message = Some("Konfiguration gespeichert. Connector-Prozess ist gestoppt.".to_string());
+        runtime.message =
+            Some("Konfiguration gespeichert. Connector-Prozess ist gestoppt.".to_string());
     }
 
     Ok(normalized)
@@ -1006,9 +1117,8 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
         terminate_child(&mut child_slot);
         runtime.running = false;
         runtime.last_heartbeat_at = None;
-        runtime.message = Some(
-            "Host-URL und Connector-Token muessen zuerst gespeichert werden.".to_string(),
-        );
+        runtime.message =
+            Some("Host-URL und Connector-Token muessen zuerst gespeichert werden.".to_string());
 
         return Ok(status_snapshot(&runtime, &config));
     }
@@ -1058,9 +1168,14 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
         .env("UWE_CONNECTOR_TOKEN", &config.token)
         .env("UWE_CONNECTOR_NAME", &config.name)
         .env("UWE_CONNECTOR_CLIENT_DATA_DIR", &data_dir)
+        .env("UWE_CONNECTOR_TRANSPORT", &config.transport_mode)
         .env(
             "UWE_CONNECTOR_QUEUE_ENABLED",
-            if config.queue_enabled { "true" } else { "false" },
+            if config.queue_enabled {
+                "true"
+            } else {
+                "false"
+            },
         )
         .env(
             "UWE_CONNECTOR_PRIVACY_MODE",
@@ -1096,7 +1211,12 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
         if !session.access_token.is_empty() {
             command.env("UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN", &session.access_token);
         }
-        if let Some(device_id) = session.device_id.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
+        if let Some(device_id) = session
+            .device_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+        {
             command.env("SPOTIFY_DEVICE_ID", device_id);
         }
     }
@@ -1187,9 +1307,8 @@ async fn test_host_connection(
             return Ok(HostConnectionTestResult {
                 ok: false,
                 status: "not_configured".to_string(),
-                message:
-                    "Connector-Token fehlt. Token speichern oder im Test-Dialog eingeben."
-                        .to_string(),
+                message: "Connector-Token fehlt. Token speichern oder im Test-Dialog eingeben."
+                    .to_string(),
                 checked_at,
             });
         }
@@ -1337,4 +1456,51 @@ pub fn run() {
                 }
             }
         });
+}
+
+#[cfg(test)]
+mod transport_config_tests {
+    use super::parse_config_json;
+
+    const LEGACY_CONFIG: &str = r#"{
+        "hostUrl": "https://host.test",
+        "token": "uwec_test",
+        "name": "RTX",
+        "queueEnabled": false,
+        "wizardCompleted": true,
+        "autoConnect": true,
+        "minimizedStart": false,
+        "autostartWindows": false,
+        "trayMode": "normal"
+    }"#;
+
+    #[test]
+    fn preserves_legacy_disabled_queue_without_enabling_direct() {
+        let config = parse_config_json(LEGACY_CONFIG).expect("legacy config should parse");
+        assert_eq!(config.transport_mode, "queue");
+        assert!(!config.queue_enabled);
+    }
+
+    #[test]
+    fn enables_direct_only_from_explicit_transport_mode() {
+        let raw = LEGACY_CONFIG.replace(
+            "\"queueEnabled\": false,",
+            "\"transportMode\": \"direct\",\n        \"queueEnabled\": true,",
+        );
+        let config = parse_config_json(&raw).expect("explicit Direct config should parse");
+        assert_eq!(config.transport_mode, "direct");
+        assert!(!config.queue_enabled);
+    }
+
+    #[test]
+    fn rejects_remote_http_for_direct_and_legacy_queue() {
+        let legacy_remote = LEGACY_CONFIG.replace("https://host.test", "http://192.168.1.20:3000");
+        assert!(parse_config_json(&legacy_remote).is_err());
+
+        let direct_remote = legacy_remote.replace(
+            "\"queueEnabled\": false,",
+            "\"transportMode\": \"direct\",\n        \"queueEnabled\": false,",
+        );
+        assert!(parse_config_json(&direct_remote).is_err());
+    }
 }

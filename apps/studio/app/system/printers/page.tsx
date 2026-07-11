@@ -1,7 +1,11 @@
-import { capabilityOfflineMessage } from "@uwe/connector";
 import { createConnectorService, createLabelPrintQueueService, LABEL_PRINT_QUEUE_STATUS_LABELS, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { SystemPrintersClient } from "./SystemPrintersClient";
+import {
+  hasQueueLabelPrintingConnector,
+  LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE,
+  queueLabelPrintingConnectorIds,
+} from "@/src/lib/label-print-availability";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +18,13 @@ export default async function SystemPrintersPage({
   const summary = await createConnectorService(prisma).summarize();
   const queue = createLabelPrintQueueService();
   const [groups, jobs] = await Promise.all([queue.listPrinters(), queue.listRecent({ limit: 30 })]);
+  const queueConnectorIds = queueLabelPrintingConnectorIds(summary);
+  const queueGroups = groups.filter((group) => queueConnectorIds.has(group.connectorId));
 
   const initial = {
-    ok: summary.availableCapabilities.includes("label_printing"),
-    offlineMessage: capabilityOfflineMessage("label_printing"),
-    printers: groups.flatMap((group) =>
+    ok: hasQueueLabelPrintingConnector(summary),
+    offlineMessage: LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE,
+    printers: queueGroups.flatMap((group) =>
       group.printers.map((printer) => ({
         id: printer.id,
         name: printer.name,

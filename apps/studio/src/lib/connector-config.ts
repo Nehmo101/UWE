@@ -15,6 +15,8 @@ export interface HostConnectorConfig {
   heartbeatIntervalMs: number;
   /** Host-wide kill switch. When false, connectors should stop claiming jobs. */
   queueEnabled: boolean;
+  /** Host-wide kill switch for the process-local direct transport. */
+  directEnabled: boolean;
   /** Whether the host permits cloud AI fallback when local LLMs are unavailable. */
   cloudFallbackAllowed: boolean;
   capabilities: readonly string[];
@@ -36,6 +38,7 @@ export function resolveHostConnectorConfig(
       DEFAULT_HEARTBEAT_INTERVAL_MS,
     ),
     queueEnabled: env.UWE_HOST_QUEUE_DISABLED?.trim().toLowerCase() !== "true",
+    directEnabled: env.UWE_HOST_CONNECTOR_DIRECT_DISABLED?.trim().toLowerCase() !== "true",
     cloudFallbackAllowed: env.UWE_AI_CLOUD_FALLBACK?.trim().toLowerCase() === "true",
     capabilities: CONNECTOR_CAPABILITIES,
     jobTypes: CONNECTOR_JOB_TYPES,

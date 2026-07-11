@@ -1,7 +1,7 @@
 # AI Brain -> RTX Connector migration notes
 
 Date: 2026-06-27
-Status: connector queue provider implemented and wired (P6)
+Status: connector queue provider implemented; direct/hybrid transport available
 
 ## Current state
 
@@ -20,6 +20,20 @@ the RTX connector.
 `image_generate` can run through an explicitly configured local command via
 `UWE_CONNECTOR_IMAGE_CMD`. There is no bundled first-party image backend yet, so
 `image_generation` is not advertised unless that command is configured.
+
+## Queue, direct, and hybrid delivery
+
+The connector transport is selected with
+`UWE_CONNECTOR_TRANSPORT=queue|direct|hybrid`. `queue` preserves the existing
+database-backed `ConnectorJob` flow. `direct` sends inference work immediately
+over the connector's outbound Streaming-HTTP/NDJSON channel and creates no
+`ConnectorJob` row. `hybrid` may fall back to the queue only when direct
+delivery fails before `accepted`; after acceptance it must surface the direct
+result/error and never duplicate the work.
+
+The direct registry is process-local and currently assumes one Studio process.
+A multi-process Studio deployment needs a shared broker/session registry or
+equivalent connection affinity before relying on direct delivery.
 
 ## Connector queue provider (implemented)
 

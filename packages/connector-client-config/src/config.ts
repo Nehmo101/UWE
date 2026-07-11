@@ -3,20 +3,24 @@ import { z } from "zod";
 import { validateHostUrl } from "./validate-host-url";
 import {
   CONNECTOR_TRAY_MODES,
+  CONNECTOR_TRANSPORT_MODES,
   DEFAULT_SPOTIFY_REDIRECT_URI,
   type ConnectorClientConfig,
   type ConnectorTrayMode,
+  type ConnectorTransportMode,
 } from "./types";
 
 const DEFAULT_CONNECTOR_NAME = "RTX Host Connector";
 
 const trayModeSchema = z.enum(CONNECTOR_TRAY_MODES);
+const transportModeSchema = z.enum(CONNECTOR_TRANSPORT_MODES);
 
 const connectorClientConfigSchema = z.object({
   hostUrl: z.string(),
   token: z.string(),
   name: z.string().trim().min(1, "Name darf nicht leer sein."),
   queueEnabled: z.boolean(),
+  transportMode: transportModeSchema,
   wizardCompleted: z.boolean(),
   autoConnect: z.boolean(),
   minimizedStart: z.boolean(),
@@ -51,6 +55,7 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     token: "",
     name: DEFAULT_CONNECTOR_NAME,
     queueEnabled: true,
+    transportMode: "queue",
     wizardCompleted: false,
     autoConnect: true,
     minimizedStart: false,
@@ -75,6 +80,14 @@ function normalizeTrayMode(value: unknown): ConnectorTrayMode | undefined {
   return parsed.success ? parsed.data : undefined;
 }
 
+function normalizeTransportMode(value: unknown): ConnectorTransportMode | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const parsed = transportModeSchema.safeParse(value.trim().toLowerCase());
+  return parsed.success ? parsed.data : undefined;
+}
+
 function mergeWithDefaults(json: unknown): Record<string, unknown> {
   const defaults = defaultConnectorClientConfig();
 
@@ -89,12 +102,19 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
   const input = json as Record<string, unknown>;
   const trayMode = normalizeTrayMode(input.trayMode);
 
+  const normalizedTransportMode = normalizeTransportMode(input.transportMode);
+  const transportMode = normalizedTransportMode ?? defaults.transportMode;
+  const queueEnabled = normalizedTransportMode
+    ? transportMode !== "direct"
+    : typeof input.queueEnabled === "boolean"
+      ? input.queueEnabled
+      : defaults.queueEnabled;
   return {
     hostUrl: typeof input.hostUrl === "string" ? input.hostUrl.trim() : defaults.hostUrl,
     token: typeof input.token === "string" ? input.token.trim() : defaults.token,
     name: typeof input.name === "string" ? input.name.trim() : defaults.name,
-    queueEnabled:
-      typeof input.queueEnabled === "boolean" ? input.queueEnabled : defaults.queueEnabled,
+    transportMode,
+    queueEnabled,
     wizardCompleted:
       typeof input.wizardCompleted === "boolean"
         ? input.wizardCompleted
@@ -162,6 +182,16 @@ export function parseConnectorClientConfig(json: unknown): ConnectorClientConfig
       throw new ConnectorClientConfigError([hostResult.reason]);
     }
     config.hostUrl = hostResult.normalized;
+    const parsedHost = new URL(config.hostUrl);
+    const loopback =
+      parsedHost.hostname === "localhost" ||
+      parsedHost.hostname === "127.0.0.1" ||
+      parsedHost.hostname === "[::1]";
+    if (config.transportMode !== "queue" && parsedHost.protocol !== "https:" && !loopback) {
+      throw new ConnectorClientConfigError([
+        "Direct- und Hybrid-Transport erfordern remote https://; http:// ist nur für localhost, 127.0.0.1 oder [::1] erlaubt.",
+      ]);
+    }
   }
 
   return config;

@@ -13,6 +13,10 @@ import {
   waitForConnectorJob,
   type PrismaClient,
 } from "@uwe/database/server";
+import {
+  DirectConnectorDispatchError,
+  getDirectConnectorRegistry,
+} from "@uwe/connector/direct";
 import type { MealPlanGoals, MealSlot } from "./kitchen-types";
 import { MEAL_SLOTS } from "./kitchen-types";
 
@@ -247,15 +251,6 @@ export async function suggestWeek(
   db: PrismaClient,
   input: SuggestWeekInput,
 ): Promise<WeekSuggestionResult> {
-  const service = createConnectorService(db);
-  const summary = await service.summarize();
-  if (!summary.availableCapabilities.includes(LLM_LOCAL_CAPABILITY)) {
-    return {
-      status: "rtx_offline",
-      error: "Kein lokaler KI-Connector (RTX) online — Wochenvorschlag nicht verfügbar.",
-    };
-  }
-
   const context = buildKitchenAiContext(input.recipes, input.pantry, input.goals ?? {});
   const payload: Record<string, unknown> = {
     prompt: context.text,
@@ -263,10 +258,44 @@ export async function suggestWeek(
   };
   if (input.model?.trim()) payload.model = input.model.trim();
 
+  const timeoutMs = input.timeoutMs ?? SUGGEST_TIMEOUT_MS;
+  try {
+    const direct = await getDirectConnectorRegistry().dispatch({
+      type: "llm_generate",
+      payload,
+      timeoutMs,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    const result =
+      direct.result && typeof direct.result === "object"
+        ? (direct.result as Record<string, unknown>)
+        : {};
+    return parseWeekSuggestion(typeof result.text === "string" ? result.text : "");
+  } catch (error) {
+    if (!(error instanceof DirectConnectorDispatchError) || error.accepted) {
+      throw error;
+    }
+  }
+
+  const service = createConnectorService(db);
+  const summary = await service.summarize();
+  const queueAvailable = summary.connectors.some(
+    (connector) =>
+      connector.queueEnabled &&
+      (connector.status === "online" || connector.status === "degraded") &&
+      connector.capabilities.includes(LLM_LOCAL_CAPABILITY),
+  );
+  if (!queueAvailable) {
+    return {
+      status: "rtx_offline",
+      error: "Kein lokaler KI-Connector (RTX) online — Wochenvorschlag nicht verfügbar.",
+    };
+  }
+
   const job = await service.enqueueJob({ type: "llm_generate", payload });
 
   const completed = await waitForConnectorJob(db, job.id, {
-    timeoutMs: input.timeoutMs ?? SUGGEST_TIMEOUT_MS,
+    timeoutMs,
     intervalMs: SUGGEST_POLL_INTERVAL_MS,
   });
 

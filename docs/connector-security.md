@@ -17,21 +17,27 @@ narrow.
 
 ## Separation from user auth
 
-- Connector endpoints (`/api/connectors/*`) authenticate **only** via the
+- Connector endpoints (`/api/connectors/*`), including the direct stream and
+  event endpoint, authenticate **only** via the
   connector token — never via user sessions or the Studio API token. A worker
   cannot log in as a user.
-- A connector receives **only job-specific context** in `claim-job` (job type,
-  payload, world id). It cannot read admin or user data, and `/api/connectors/config`
-  returns only operating parameters (poll/heartbeat timing, queue flag, cloud
-  fallback policy).
+- A connector receives **only job-specific context** through `claim-job` or a
+  direct request frame (job type, payload, optional world id). It cannot read
+  admin or user data, and `/api/connectors/config` returns only operating
+  parameters and host transport policy.
 
 ## Network posture
 
-- Communication is **outbound only**: the connector connects to the host. No
-  public port, SSH, or HTTP server is opened on the RTX machine.
+- Communication is **outbound only**: the connector connects to the host. In
+  direct/hybrid mode it keeps an outbound Streaming-HTTP/NDJSON channel open.
+  No public port, SSH, or HTTP server is opened on the RTX machine.
 - There is no public RTX API and no Cloudflare Tunnel to the RTX as a required
   path.
-- No DB replication between host and RTX. The host stays the source of truth.
+- No DB replication between host and RTX. Queue jobs remain host-owned database
+  rows; direct requests create no `ConnectorJob` row.
+- The direct session registry is process-local and assumes one Studio process.
+  Horizontal Studio deployment requires a shared broker/session registry or
+  equivalent connection affinity before enabling distributed direct dispatch.
 
 ## Capability policy
 
@@ -45,10 +51,12 @@ narrow.
 
 ## Rate limiting & abuse
 
-- Connector endpoints use a dedicated rate-limit bucket (`connector`).
-- Job claims are capability- and lane-checked server-side; a connector can only
-  claim jobs matching its effective capabilities.
+- Connector endpoints use connector-specific authentication and request limits.
+- Queue claims and direct dispatch are capability- and lane-checked; a connector
+  receives only work matching its effective capabilities.
 - Claims are optimistic and atomic — two connectors cannot run the same job.
+- Hybrid fallback is permitted only before `accepted`. Once accepted, a direct
+  request is never also enqueued, preventing duplicate execution.
 
 ## Logging
 

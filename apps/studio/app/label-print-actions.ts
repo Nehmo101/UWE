@@ -1,6 +1,6 @@
 "use server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
-import { capabilityOfflineMessage, type LabelPrintFormat } from "@uwe/connector";
+import { type LabelPrintFormat } from "@uwe/connector";
 import {
   createConnectorService,
   createLabelPrintQueueService,
@@ -12,14 +12,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
+import {
+  hasQueueLabelPrintingConnector,
+  LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE,
+} from "@/src/lib/label-print-availability";
 
 export async function refreshPrintersAction(formData: FormData) {
   await requireStudioActionAuth();
   const user = await getCurrentAuthUser();
   if (!user) redirect("/login");
   const returnTo = String(formData.get("returnTo") || "/system/printers");
-  if (!(await createConnectorService(prisma).summarize()).availableCapabilities.includes("label_printing")) {
-    redirect(`${returnTo}?error=${encodeURIComponent(capabilityOfflineMessage("label_printing"))}`);
+  if (!hasQueueLabelPrintingConnector(await createConnectorService(prisma).summarize())) {
+    redirect(`${returnTo}?error=${encodeURIComponent(LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE)}`);
   }
   await createLabelPrintQueueService().enqueuePrinterDiscover({ createdByUserId: user.id });
   revalidatePath("/system/printers");
@@ -37,8 +41,13 @@ export async function enqueueLabelPrintAction(formData: FormData) {
   await requireStudioWorldEdit(worldSlug);
   const user = await getCurrentAuthUser();
   if (!user) redirect("/login");
-  if (!(await createConnectorService(prisma).summarize()).availableCapabilities.includes("label_printing")) {
-    redirect(`${returnTo}?error=${encodeURIComponent(capabilityOfflineMessage("label_printing"))}`);
+  if (
+    !hasQueueLabelPrintingConnector(
+      await createConnectorService(prisma).summarize(),
+      connectorId,
+    )
+  ) {
+    redirect(`${returnTo}?error=${encodeURIComponent(LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE)}`);
   }
 
   const list = await createPrintListService().getById(printListId);

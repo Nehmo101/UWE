@@ -64,18 +64,37 @@ export {
 } from "./token";
 
 export {
+  CONNECTOR_TRANSPORT_MODES,
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   DEFAULT_POLL_INTERVAL_MS,
   DEFAULT_RUNTIME_ROLE,
   UWE_RUNTIME_ROLES,
   isConnectorRole,
+  isConnectorTransportMode,
   isHostRole,
   resolveConnectorRuntimeConfig,
   resolveRuntimeRole,
   type ConnectorRuntimeConfig,
   type ConnectorRuntimeConfigResult,
+  type ConnectorTransportMode,
   type UweRuntimeRole,
 } from "./runtime-role";
+
+export {
+  DIRECT_PROTOCOL_VERSION,
+  isDirectProtocolFrame,
+  parseDirectProtocolFrame,
+  type DirectAcceptedFrame,
+  type DirectCancelFrame,
+  type DirectConnectorEvent,
+  type DirectErrorFrame,
+  type DirectHostFrame,
+  type DirectPingFrame,
+  type DirectProgressFrame,
+  type DirectProtocolFrame,
+  type DirectRequestFrame,
+  type DirectResultFrame,
+} from "./direct-protocol";
 
 export {
   CONNECTOR_JOB_STATUSES,

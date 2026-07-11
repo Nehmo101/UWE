@@ -1,8 +1,8 @@
 # RTX Host Connector
 
 The **RTX Host Connector** is an optional local worker for the RTX PC (Windows or
-Linux). It connects **outbound** to the UWE Host, claims jobs from the host queue,
-runs them locally where an executor really exists, and reports results.
+Linux). It connects **outbound** to the UWE Host, receives queue or direct work,
+runs it locally where an executor really exists, and reports results.
 
 It is **never required** for UWE to be online.
 
@@ -12,9 +12,10 @@ It is **never required** for UWE to be online.
 RTX Connector  ----->  UWE Host        (correct: outbound only)
 ```
 
-The connector **polls** the host. The host never connects to the RTX machine, so
-**no public port, SSH or HTTP server** is opened on the RTX side. There is no
-public RTX API and no DB replication.
+The connector either polls the host or holds an outbound Streaming-HTTP response
+whose frames are NDJSON. The host never connects to the RTX machine, so **no
+public port, SSH or HTTP server** is opened on the RTX side. There is no public
+RTX API and no DB replication.
 
 ## Setup
 
@@ -28,7 +29,8 @@ public RTX API and no DB replication.
    pnpm connector:start
    ```
 
-See `tools/uwe-rtx-connector/.env.example` for all options.
+See `tools/uwe-rtx-connector/.env.example` for all options. Transport is
+selected with `UWE_CONNECTOR_TRANSPORT=queue|direct|hybrid`.
 
 For the Windows desktop client use:
 
@@ -37,12 +39,30 @@ pnpm connector:client:dev
 pnpm connector:client:build
 ```
 
+## Transport modes
+
+| Mode | Delivery | Persistence and fallback |
+|---|---|---|
+| `queue` | Connector polls and claims by available lane. | Work is stored as a `ConnectorJob`. |
+| `direct` | Host writes request frames to the connector's outbound NDJSON stream. | No `ConnectorJob` row is created. If no direct session is available, the request fails. |
+| `hybrid` | Direct is attempted first. | Queue fallback is allowed only before the connector sends `accepted`; accepted work is never enqueued again. |
+
+Both transports use the same capability policy and lane concurrency. The host
+stream endpoint is `GET /api/connectors/direct/stream`; connector events
+(`accepted`, `progress`, `result`, `error`) use
+`POST /api/connectors/direct/events`, authenticated with the same bearer token.
+
+The direct registry is process-local. Production therefore runs one Studio
+process for this transport. Multiple Studio processes would require a shared
+broker/session registry (or equivalent connection affinity) before direct
+dispatch can safely be distributed.
+
 ## What works today
 
 - **Heartbeat** with normalized, policy-filtered capabilities, discovered models
   and version.
-- **Lane-aware outbound polling**: audio/spotify controls can overtake long GPU
-  jobs, while the GPU lane remains concurrency-limited.
+- **Lane-aware queue and direct delivery**: audio/spotify controls can overtake
+  long GPU jobs, while the GPU lane remains concurrency-limited.
 - **Soundboard play jobs** via `sound_play` when `UWE_CONNECTOR_AUDIO_CMD` is set.
   The host queues the official `sourceUrl` field; the connector also accepts the
   legacy aliases `url`, `path` and `source`.
@@ -137,6 +157,11 @@ The connector supports local label printing via the `label_printing` capability.
 When a Studio user sends a label to a connected printer, the host queues a
 `label_print` job; the connector fetches the rendered document (PDF or HTML)
 and forwards it to the local print backend.
+
+Label printing and printer discovery currently require `queue` or `hybrid`
+mode. A Direct-only connector is deliberately not offered as a print target:
+the protected document download and print progress are tied to the persisted
+`ConnectorJob`. Native Direct printing remains a follow-up.
 
 ### Environment variables
 
