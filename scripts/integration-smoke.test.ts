@@ -404,7 +404,7 @@ describe("integration smoke — mobile navigation", () => {
   it("includes MobileBottomNav component", () => {
     const mobile = read("packages/shared-ui/src/MobileComponents.tsx");
     assert.match(mobile, /MobileBottomNav/);
-    assert.match(mobile, /PageListCards/);
+    assert.match(mobile, /StickyActionBar/);
   });
 });
 

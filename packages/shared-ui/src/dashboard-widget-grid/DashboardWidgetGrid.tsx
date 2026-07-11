@@ -18,11 +18,19 @@ export interface DashboardWidgetGridProps {
 
 export function DashboardWidgetGrid({ widgets, renderWidget }: DashboardWidgetGridProps) {
   return (
+    // TODO(design-kit): uwe-layout-grid kept — ".portal-dashboard .uwe-layout-grid"
+    // (uwe.css) sets a different margin-top when nested under Portal's
+    // PortalWorldDashboardClient.tsx (apps/portal, out of scope), and the grid's
+    // 1100px/760px column-count breakpoints back the widget.column (1|2|3) contract.
     <div className="uwe-layout-grid">
       {COLUMNS.map((column) => (
-        <div key={column} className="uwe-layout-column" data-column={column}>
+        <div
+          key={column}
+          className="flex min-h-16 flex-col gap-3"
+          data-column={column}
+        >
           {widgetsForColumn(widgets, column).map((widget) => (
-            <article key={widget.id} className="uwe-layout-widget" data-widget-type={widget.widgetType}>
+            <article key={widget.id} className="relative" data-widget-type={widget.widgetType}>
               {renderWidget(widget)}
             </article>
           ))}

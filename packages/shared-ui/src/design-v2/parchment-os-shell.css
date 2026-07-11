@@ -18,41 +18,8 @@ html[data-uwe-theme="uwe-parchment-os"] {
   --uwe-v2-wiki-link-strong: color-mix(in srgb, var(--uwe-wiki-link) 70%, var(--uwe-fg) 30%);
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar {
-  min-height: var(--uwe-v2-topbar-height);
-  height: var(--uwe-v2-topbar-height);
-  padding-top: 0;
-  padding-bottom: 0;
-  background: var(--uwe-v2-topbar-bg);
-  border-bottom: 2px solid var(--uwe-v2-topbar-border);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar {
-  width: var(--uwe-v2-sidebar-width);
-  background: var(--uwe-sidebar-bg);
-  border-right: none;
-  scrollbar-color: var(--uwe-v2-sidebar-scrollbar) transparent;
-  /* The sidebar is dark ink. Generic descendants (hints, plain links)
-     otherwise inherit the light-theme's dark content tokens and fail AA on the
-     dark surface — point them at the light sidebar-fg tokens instead. */
-  --uwe-muted: var(--uwe-sidebar-fg-muted);
-  --uwe-fg-muted: var(--uwe-sidebar-fg-muted);
-  --uwe-link: var(--uwe-sidebar-fg);
-}
-
 html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-section h3 {
   color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-muted));
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a {
-  color: var(--uwe-sidebar-fg-muted);
-  border-left: 3px solid transparent;
-  border-radius: 0;
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a:hover {
-  color: var(--uwe-sidebar-fg);
-  background: var(--uwe-v2-sidebar-hover-bg);
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a.active {
@@ -62,70 +29,11 @@ html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-sidebar-nav a.activ
   font-weight: 700;
 }
 
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-nav-badge {
-  background: var(--uwe-v2-nav-badge-bg);
-  color: var(--uwe-v2-nav-badge-fg);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-main {
-  background: var(--uwe-bg);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-main h1,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-main h2,
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-page-header-main h1 {
-  font-family: var(--uwe-font-newsreader, Georgia, serif);
-  font-weight: 600;
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-card {
-  border-color: var(--uwe-border);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-btn-primary {
-  background: var(--uwe-fg);
-  color: var(--uwe-v2-on-ink);
-  border-color: var(--uwe-fg);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-btn-primary:hover {
-  background: var(--uwe-v2-ink-hover);
-  border-color: var(--uwe-v2-ink-hover);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-btn-accent {
-  border-width: 2px;
-  border-color: var(--uwe-fg);
-}
-
 /* WCAG AA contrast on sand topbar + status footer (axe smoke: Studio /today) */
 html[data-uwe-theme="uwe-parchment-os"] .uwe-topbar .uwe-brand small,
 html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-brand small,
 html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-v2-brand small {
   color: var(--uwe-v2-topbar-muted-fg);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-topbar .uwe-cockpit-beta-badge {
-  color: var(--uwe-v2-beta-fg);
-  border-color: var(--uwe-v2-beta-fg);
-  background: color-mix(in srgb, var(--uwe-v2-beta-fg) 14%, var(--uwe-v2-topbar-bg));
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-status-footer-item {
-  color: var(--uwe-fg-muted);
-}
-
-/* Portal guest wiki — axe smoke /worlds/* (Parchment OS) */
-html[data-uwe-theme="uwe-parchment-os"] .uwe-sidebar-back-link {
-  color: var(--uwe-sidebar-fg-muted);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-portal-nav-section ul a {
-  color: var(--uwe-sidebar-fg-muted);
-}
-
-html[data-uwe-theme="uwe-parchment-os"] .uwe-v2-sidebar .uwe-portal-nav-section h3 a {
-  color: var(--uwe-sidebar-fg);
 }
 
 html[data-uwe-theme="uwe-parchment-os"] .wiki-page-list h2 a {

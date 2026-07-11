@@ -12,6 +12,7 @@ import {
   stopSound,
   type ActiveSound,
 } from "@uwe/soundboard";
+import { cn } from "./components/cn";
 
 export interface SoundboardLinkedPage {
   title: string;
@@ -86,7 +87,7 @@ function renderLinkedPages(pages: SoundboardLinkedPage[]): ReactNode {
   }
 
   return (
-    <span className="uwe-table-sub">
+    <span className="mt-1 text-sm text-muted-foreground">
       ↗{" "}
       {pages.map((page, index) => (
         <span key={`${page.title}-${index}`}>
@@ -347,12 +348,14 @@ export function SoundboardWorkspace({
   const spotifyConnectHref = worldSlug ? worldSpotifyEndpoint(worldSlug, "connect") : null;
 
   return (
+    // uwe-soundboard: no own CSS rule, but kept as an external selector hook —
+    // apps/portal/app/globals.css targets `.portal-soundboard-page .uwe-soundboard`.
     <div className="uwe-soundboard">
       {spotifyOAuthEnabled && !useWorldScopedSpotify && hasSpotifyButtons && (
-        <section className="uwe-panel" style={{ marginBottom: "1rem" }}>
+        <section className="mb-4 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
           <h2>Spotify</h2>
           {!spotifyStatus?.configured && (
-            <p className="uwe-table-sub">
+            <p className="mt-1 text-sm text-muted-foreground">
               Spotify OAuth ist nicht konfiguriert —{" "}
               <code>SPOTIFY_CLIENT_ID</code> und <code>SPOTIFY_CLIENT_SECRET</code> in{" "}
               <code>.env</code> setzen.
@@ -360,54 +363,64 @@ export function SoundboardWorkspace({
           )}
           {spotifyStatus?.configured && !spotifyStatus.connected && (spotifyAuthHref || spotifyConnectHref) && (
             <>
-              <p className="uwe-table-sub">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Spotify-Wiedergabe benötigt Premium, OAuth und ein aktives Spotify Connect-Gerät.
               </p>
-              <a className="uwe-btn" href={spotifyConnectHref ?? spotifyAuthHref ?? "#"}>
+              <a
+                className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] border border-input bg-transparent px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                href={spotifyConnectHref ?? spotifyAuthHref ?? "#"}
+              >
                 Mit Spotify verbinden
               </a>
             </>
           )}
           {spotifyStatus?.connected && (
-            <p className="uwe-flash uwe-flash-success" style={{ margin: 0 }}>
+            <p className="rounded-[var(--radius)] border border-success/35 bg-success/15 px-4 py-3 text-success">
               Spotify verbunden — Wiedergabe über Spotify Connect (Premium erforderlich).
             </p>
           )}
         </section>
       )}
 
-      <section className="uwe-panel">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <section className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm">
+        <div className="flex items-center justify-between">
           <h2>Aktive Sounds</h2>
           {activeSounds.length > 0 && (
-            <button type="button" className="uwe-btn" onClick={() => void handleStopAll()}>
+            <button
+              type="button"
+              className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] border border-input bg-transparent px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => void handleStopAll()}
+            >
               Alle stoppen
             </button>
           )}
         </div>
 
         {activeSounds.length === 0 && (
-          <p className="uwe-empty">Keine aktiven Sounds — Button anklicken zum Abspielen.</p>
+          <p className="text-sm italic text-muted-foreground">Keine aktiven Sounds — Button anklicken zum Abspielen.</p>
         )}
 
-        <ul className="uwe-soundboard-active-list">
+        <ul className="m-0 grid list-none gap-3 p-0">
           {activeSounds.map((sound) => (
-            <li key={sound.instanceId} className="uwe-soundboard-active-item">
+            <li key={sound.instanceId} className="rounded-lg border border-border bg-card/40 p-3">
               <div>
                 <strong>{sound.title}</strong>
-                <span className="uwe-badge" style={{ marginLeft: "0.5rem" }}>
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-xs font-medium">
                   {sound.sourceType}
                 </span>
                 {sound.sourceType === "spotify" && spotifyOAuthEnabled && spotifyErrors[sound.instanceId] && (
-                  <p className="uwe-flash uwe-flash-error" role="alert">
+                  <p
+                    className="rounded-[var(--radius)] border border-destructive/35 bg-destructive/15 px-4 py-3 text-destructive"
+                    role="alert"
+                  >
                     {spotifyErrors[sound.instanceId]}
                   </p>
                 )}
                 {sound.sourceType === "spotify" && !spotifyOAuthEnabled && (
-                  <p className="uwe-table-sub">{spotifyPlaybackHint}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{spotifyPlaybackHint}</p>
                 )}
               </div>
-              <div className="uwe-soundboard-controls">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
                 <label>
                   Lautstärke
                   <input
@@ -424,7 +437,7 @@ export function SoundboardWorkspace({
                 {sound.status === "playing" ? (
                   <button
                     type="button"
-                    className="uwe-btn"
+                    className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] border border-input bg-transparent px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => void handlePause(sound)}
                   >
                     Pause
@@ -432,7 +445,7 @@ export function SoundboardWorkspace({
                 ) : (
                   <button
                     type="button"
-                    className="uwe-btn"
+                    className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] border border-input bg-transparent px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => void handleResume(sound)}
                   >
                     Weiter
@@ -440,18 +453,19 @@ export function SoundboardWorkspace({
                 )}
                 <button
                   type="button"
-                  className="uwe-btn"
+                  className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] border border-input bg-transparent px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => void handleStop(sound)}
                 >
                   Stop
                 </button>
               </div>
               {sound.sourceType === "youtube" && sound.sourceUrl && (
-                <div className="uwe-soundboard-youtube">
+                <div>
                   <iframe
                     title={sound.title}
                     src={`https://www.youtube.com/embed/${extractYouTubeVideoId(sound.sourceUrl) ?? ""}?autoplay=${sound.status === "playing" ? 1 : 0}&loop=${sound.loop ? 1 : 0}`}
                     allow="autoplay; encrypted-media"
+                    className="mt-2 h-[180px] w-full max-w-[320px] rounded-[0.35rem] border-0"
                   />
                 </div>
               )}
@@ -461,10 +475,14 @@ export function SoundboardWorkspace({
       </section>
 
       {allTags.length > 0 && (
-        <div className="uwe-filter-bar">
+        <div className="mb-4 flex flex-wrap gap-2">
           <button
             type="button"
-            className={!tagFilter ? "active" : undefined}
+            className={cn(
+              "rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-[color-mix(in_srgb,var(--uwe-accent)_35%,transparent)] hover:bg-[color-mix(in_srgb,var(--uwe-accent)_15%,transparent)] hover:text-foreground",
+              !tagFilter &&
+                "border-[color-mix(in_srgb,var(--uwe-accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--uwe-accent)_15%,transparent)] text-foreground",
+            )}
             onClick={() => setTagFilter("")}
           >
             Alle Tags
@@ -473,7 +491,11 @@ export function SoundboardWorkspace({
             <button
               key={tag}
               type="button"
-              className={tagFilter === tag ? "active" : undefined}
+              className={cn(
+                "rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-[color-mix(in_srgb,var(--uwe-accent)_35%,transparent)] hover:bg-[color-mix(in_srgb,var(--uwe-accent)_15%,transparent)] hover:text-foreground",
+                tagFilter === tag &&
+                  "border-[color-mix(in_srgb,var(--uwe-accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--uwe-accent)_15%,transparent)] text-foreground",
+              )}
               onClick={() => setTagFilter(tag)}
             >
               {tag}
@@ -482,25 +504,25 @@ export function SoundboardWorkspace({
         </div>
       )}
 
-      <div className="uwe-soundboard-grid">
+      <div className="mt-4 mb-8 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 max-[960px]:grid-cols-[repeat(auto-fill,minmax(120px,1fr))]">
         {filteredButtons.map((button) => (
           <button
             key={button.id}
             type="button"
-            className="uwe-soundboard-button"
+            className="flex cursor-pointer flex-col items-stretch gap-1.5 rounded-lg border border-border bg-card/60 p-2 text-left text-[inherit] hover:border-[color-mix(in_srgb,var(--uwe-accent)_50%,white_15%)]"
             onClick={() => void handlePlay(button)}
           >
             {button.thumbnail ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={button.thumbnail} alt="" className="uwe-soundboard-thumb" />
+              <img src={button.thumbnail} alt="" className="aspect-square w-full rounded-[0.35rem] object-cover" />
             ) : (
-              <div className="uwe-soundboard-thumb uwe-soundboard-thumb-placeholder">
+              <div className="flex aspect-square w-full items-center justify-center rounded-[0.35rem] bg-[color-mix(in_srgb,var(--uwe-bg-elevated)_60%,transparent)] text-xs text-muted-foreground">
                 {sourceTypeLabel(button.sourceType)}
               </div>
             )}
-            <span className="uwe-soundboard-button-title">{button.title}</span>
+            <span className="text-sm font-semibold">{button.title}</span>
             {button.tags.length > 0 && (
-              <span className="uwe-soundboard-tags">{button.tags.join(" · ")}</span>
+              <span className="text-xs text-muted-foreground">{button.tags.join(" · ")}</span>
             )}
             {renderLinkedPages(button.linkedPages)}
           </button>
@@ -508,7 +530,7 @@ export function SoundboardWorkspace({
       </div>
 
       {filteredButtons.length === 0 && (
-        <p className="uwe-empty">Keine Soundboard-Buttons für diesen Filter.</p>
+        <p className="text-sm italic text-muted-foreground">Keine Soundboard-Buttons für diesen Filter.</p>
       )}
     </div>
   );

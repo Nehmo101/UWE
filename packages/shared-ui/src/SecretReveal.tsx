@@ -33,11 +33,11 @@ export function SecretReveal({ content, secretLevel, revealState, placeholder }:
   }
 
   return (
-    <div className="uwe-secret-reveal">
+    <div className="flex flex-col items-start gap-2">
       <p style={{ whiteSpace: "pre-wrap" }}>{revealed ? content : masked.content}</p>
       <button
         type="button"
-        className="uwe-v2-btn uwe-v2-btn-ghost uwe-v2-btn-sm"
+        className="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] bg-transparent px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
         aria-expanded={revealed}
         onClick={() => setRevealed((value) => !value)}
       >

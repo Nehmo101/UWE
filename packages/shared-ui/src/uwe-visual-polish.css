@@ -58,35 +58,28 @@ html[data-uwe-theme="light"] {
   }
 }
 
-/* ── Shell + background patterns (CSS-only, no canvas) ── */
+/* ── Hintergrund-Muster (CSS-only, kein Canvas) ──
+   Seit dem Kit-Shell (PR 766) existiert .uwe-shell nicht mehr im App-DOM;
+   der Muster-Layer hängt daher an body::before (fixed, z-index -1 —
+   malt über dem body-Hintergrund, aber hinter allem Inhalt). */
 
-.uwe-shell {
-  position: relative;
-  isolation: isolate;
-}
-
-.uwe-shell > * {
-  position: relative;
-  z-index: 1;
-}
-
-.uwe-shell::before {
+body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--uwe-transition-surface);
 }
 
-html[data-uwe-bg-pattern="dots"] .uwe-shell::before {
+html[data-uwe-bg-pattern="dots"] body::before {
   opacity: 1;
   background-image: radial-gradient(circle, color-mix(in srgb, var(--uwe-fg-muted) 14%, transparent) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 
-html[data-uwe-bg-pattern="constellation"] .uwe-shell::before {
+html[data-uwe-bg-pattern="constellation"] body::before {
   opacity: 1;
   background-image:
     radial-gradient(1px 1px at 12% 18%, color-mix(in srgb, var(--uwe-fg) 55%, transparent), transparent),
@@ -110,7 +103,7 @@ html[data-uwe-bg-pattern="constellation"] .uwe-shell::before {
   background-size: 100% 100%;
 }
 
-html[data-uwe-bg-pattern="synapse"] .uwe-shell::before {
+html[data-uwe-bg-pattern="synapse"] body::before {
   opacity: 1;
   background-image:
     repeating-linear-gradient(
@@ -130,7 +123,7 @@ html[data-uwe-bg-pattern="synapse"] .uwe-shell::before {
     radial-gradient(ellipse 50% 40% at 50% 0%, var(--uwe-accent-muted), transparent 70%);
 }
 
-html[data-uwe-bg-pattern="parchment"] .uwe-shell::before {
+html[data-uwe-bg-pattern="parchment"] body::before {
   opacity: 1;
   background-color: color-mix(in srgb, var(--uwe-dm-only) 6%, transparent);
   background-image:
@@ -151,7 +144,7 @@ html[data-uwe-bg-pattern="parchment"] .uwe-shell::before {
     radial-gradient(ellipse 90% 70% at 50% 100%, color-mix(in srgb, var(--uwe-warning) 10%, transparent), transparent 65%);
 }
 
-html[data-uwe-bg-pattern="subtle-noise"] .uwe-shell::before {
+html[data-uwe-bg-pattern="subtle-noise"] body::before {
   opacity: 1;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   background-size: 180px 180px;
@@ -159,13 +152,8 @@ html[data-uwe-bg-pattern="subtle-noise"] .uwe-shell::before {
   opacity: 0.35;
 }
 
-html[data-uwe-theme="light"] .uwe-shell,
-html[data-uwe-theme="system"] .uwe-shell {
-  /* dark default preserved on shell; light overrides below */
-}
-
 @media (prefers-color-scheme: light) {
-  html[data-uwe-theme="system"] .uwe-shell {
+  html[data-uwe-theme="system"] body {
     color: var(--uwe-text-primary);
     background:
       radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99, 102, 241, 0.1), transparent 50%),
@@ -174,7 +162,7 @@ html[data-uwe-theme="system"] .uwe-shell {
   }
 }
 
-html[data-uwe-theme="light"] .uwe-shell {
+html[data-uwe-theme="light"] body {
   color: var(--uwe-text-primary);
   background:
     radial-gradient(ellipse 80% 50% at 20% -10%, color-mix(in srgb, var(--uwe-accent) 10%, transparent), transparent 50%),
@@ -184,11 +172,11 @@ html[data-uwe-theme="light"] .uwe-shell {
 
 /* Very subtle constellation drift — desktop only, motion on */
 @media (min-width: 961px) {
-  html[data-uwe-motion="on"]:not([data-uwe-bg-pattern="none"]) .uwe-shell::before {
+  html[data-uwe-motion="on"]:not([data-uwe-bg-pattern="none"]) body::before {
     will-change: opacity;
   }
 
-  html[data-uwe-motion="on"][data-uwe-bg-pattern="constellation"] .uwe-shell::before {
+  html[data-uwe-motion="on"][data-uwe-bg-pattern="constellation"] body::before {
     animation: uwe-constellation-drift 48s ease-in-out infinite alternate;
   }
 }
@@ -227,42 +215,11 @@ html[data-uwe-glass="off"] .uwe-form-actions {
   background: var(--uwe-surface-glass-strong);
 }
 
-html[data-uwe-glass="off"] .uwe-card,
-html[data-uwe-glass="off"] .uwe-panel {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: var(--uwe-surface-elevated);
-}
-
-html[data-uwe-glass="off"] .uwe-palette-overlay {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
 html[data-uwe-glass="off"] .uwe-palette,
 html[data-uwe-glass="off"] .uwe-filter-sheet-panel {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   background: var(--uwe-surface-elevated);
-}
-
-html[data-uwe-glass="on"] .uwe-palette-overlay {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-/* ── Panel surface (shared by Studio sections) ── */
-
-.uwe-panel {
-  padding: var(--uwe-spacing-lg);
-  border-radius: var(--uwe-radius-lg);
-  border: 1px solid var(--uwe-border-muted);
-  background: var(--uwe-surface-glass);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--uwe-fg) 3%, transparent);
-}
-
-.uwe-panel + .uwe-panel {
-  margin-top: var(--uwe-spacing-lg);
 }
 
 /* ── Scrollbars (theme accent, unobtrusive) ── */
@@ -317,20 +274,9 @@ html[data-uwe-glass="on"] .uwe-palette-overlay {
   background-color: var(--uwe-accent);
 }
 
-/* ── Motion utilities + reduced motion ── */
-
-.uwe-palette-overlay,
-.uwe-filter-sheet-backdrop {
-  animation: uwe-overlay-in var(--uwe-transition-surface) ease both;
-}
-
 .uwe-palette,
 .uwe-filter-sheet-panel[role="dialog"]:not([hidden]) {
   animation: uwe-panel-in var(--uwe-transition-surface) ease both;
-}
-
-.uwe-sidebar-backdrop {
-  transition: opacity var(--uwe-transition-fast);
 }
 
 .uwe-sidebar {
@@ -379,7 +325,7 @@ html[data-uwe-motion="off"] .uwe-palette-overlay,
 html[data-uwe-motion="off"] .uwe-filter-sheet-backdrop,
 html[data-uwe-motion="off"] .uwe-palette,
 html[data-uwe-motion="off"] .uwe-filter-sheet-panel,
-html[data-uwe-motion="off"] .uwe-shell::before {
+html[data-uwe-motion="off"] body::before {
   animation: none !important;
   transition: none !important;
 }
@@ -394,262 +340,12 @@ html[data-uwe-motion="off"] .uwe-shell::before {
     scroll-behavior: auto !important;
   }
 
-  .uwe-shell::before {
+  body::before {
     animation: none !important;
   }
-
-  .uwe-stat-card:hover,
-  .uwe-card:hover {
-    transform: none !important;
-  }
-}
-
-/* ── Modal / overlay polish ── */
-
-.uwe-palette-overlay {
-  background: color-mix(in srgb, var(--uwe-bg) 62%, transparent);
-}
-
-.uwe-palette {
-  border-color: var(--uwe-border-accent);
-  box-shadow: var(--uwe-shadow-modal);
-}
-
-.uwe-filter-sheet-backdrop {
-  background: color-mix(in srgb, var(--uwe-bg) 55%, transparent);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-html[data-uwe-glass="off"] .uwe-filter-sheet-backdrop {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .uwe-filter-sheet-panel {
   border-top: 1px solid var(--uwe-border-subtle);
   box-shadow: var(--uwe-shadow-sheet);
-}
-
-@media (max-width: 960px) {
-  .uwe-palette {
-    border-bottom: none;
-    box-shadow: var(--uwe-shadow-sheet);
-  }
-}
-
-/* ── Settings theme preview mini shell ── */
-
-.uwe-theme-preview-wrap {
-  margin: 1.25rem 0 0.5rem;
-}
-
-.uwe-theme-preview {
-  border-radius: 0.85rem;
-  border: 1px solid var(--uwe-border-subtle);
-  overflow: hidden;
-  background: var(--uwe-surface-base);
-}
-
-.uwe-theme-preview-shell {
-  min-height: 11rem;
-  max-height: 14rem;
-  overflow: auto;
-  border-radius: 0;
-}
-
-.uwe-theme-preview-topbar {
-  padding: 0.55rem 0.85rem;
-  border-bottom: 1px solid var(--uwe-border-subtle);
-  background: var(--uwe-surface-glass);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--uwe-text-primary);
-}
-
-html[data-uwe-glass="on"] .uwe-theme-preview-topbar {
-  backdrop-filter: blur(var(--uwe-glass-blur));
-  -webkit-backdrop-filter: blur(var(--uwe-glass-blur));
-}
-
-.uwe-theme-preview-body {
-  display: grid;
-  gap: 0.65rem;
-  padding: 0.85rem;
-}
-
-.uwe-theme-preview-card,
-.uwe-theme-preview-panel {
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.55rem;
-  border: 1px solid var(--uwe-border-subtle);
-  background: var(--uwe-surface-glass);
-  color: var(--uwe-text-primary);
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-html[data-uwe-glass="on"] .uwe-theme-preview-card,
-html[data-uwe-glass="on"] .uwe-theme-preview-panel {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-html[data-uwe-glass="off"] .uwe-theme-preview-card,
-html[data-uwe-glass="off"] .uwe-theme-preview-panel,
-html[data-uwe-glass="off"] .uwe-theme-preview-topbar {
-  background: var(--uwe-surface-elevated);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.uwe-theme-preview-card strong {
-  display: block;
-  margin-bottom: 0.2rem;
-  color: var(--uwe-text-primary);
-}
-
-.uwe-theme-preview-card span {
-  color: var(--uwe-text-muted);
-}
-
-.uwe-theme-preview-panel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.uwe-theme-preview-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
-  background: var(--uwe-accent-muted);
-  color: var(--uwe-text-primary);
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
-.uwe-visual-settings-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-@media (min-width: 720px) {
-  .uwe-visual-settings-grid {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-}
-
-.uwe-checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: var(--uwe-touch-min, 2.75rem);
-}
-
-.uwe-checkbox-row input[type="checkbox"] {
-  width: 1.1rem;
-  height: 1.1rem;
-  accent-color: var(--uwe-accent);
-}
-
-.uwe-settings-toggle-group {
-  margin: 1rem 0 1.5rem;
-}
-
-.uwe-settings-toggle-group-title {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-}
-
-.uwe-settings-toggle-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.uwe-setting-toggle-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--uwe-spacing-lg);
-  padding: var(--uwe-spacing-md) var(--uwe-spacing-lg);
-  border-radius: var(--uwe-radius-lg);
-  border: 1px solid var(--uwe-border-muted);
-  background: var(--uwe-card-bg);
-}
-
-.uwe-setting-toggle-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.uwe-setting-toggle-label {
-  font-weight: 600;
-  font-size: 0.92rem;
-  color: var(--uwe-fg);
-}
-
-.uwe-setting-toggle-hint {
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--uwe-fg-subtle);
-}
-
-.uwe-setting-toggle-control {
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  min-height: var(--uwe-touch-min, 2.75rem);
-}
-
-.uwe-setting-toggle-control input {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  cursor: pointer;
-}
-
-.uwe-setting-toggle-track {
-  display: block;
-  width: 2.75rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--uwe-muted) 35%, transparent);
-  transition: background 0.15s ease;
-  position: relative;
-}
-
-.uwe-setting-toggle-track::after {
-  content: "";
-  position: absolute;
-  top: 0.15rem;
-  left: 0.15rem;
-  width: 1.2rem;
-  height: 1.2rem;
-  border-radius: 999px;
-  background: var(--uwe-bg-elevated);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s ease;
-}
-
-.uwe-setting-toggle-control input:checked + .uwe-setting-toggle-track {
-  background: var(--uwe-accent);
-}
-
-.uwe-setting-toggle-control input:checked + .uwe-setting-toggle-track::after {
-  transform: translateX(1.25rem);
-}
-
-.uwe-setting-toggle-control input:focus-visible + .uwe-setting-toggle-track {
-  outline: 2px solid var(--uwe-focus-ring);
-  outline-offset: 2px;
 }

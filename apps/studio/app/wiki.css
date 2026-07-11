@@ -20,12 +20,6 @@
   border-bottom-style: solid;
 }
 
-.wiki-sidebar-stack {
-  border-left: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
-  background: color-mix(in srgb, var(--uwe-card) 64%, transparent);
-  overflow-y: auto;
-}
-
 .wiki-sidebar-stack .wiki-sidebar {
   border-left: none;
 }
@@ -269,18 +263,6 @@
   color: var(--uwe-danger);
 }
 
-.uwe-detail-grid {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.35rem 1.5rem;
-  margin: 1rem 0 1.5rem;
-  font-size: 0.9rem;
-}
-
-.uwe-detail-grid dt {
-  color: var(--uwe-muted);
-}
-
 .ai-run-actions {
   margin: 1rem 0 1.5rem;
 }
@@ -333,17 +315,6 @@
 
 .mobile-ai-prompt-page .mobile-ai-send-desktop {
   display: block;
-}
-
-.mobile-ai-page-hint {
-  font-size: 0.85rem;
-  color: var(--uwe-muted);
-  margin: 0 0 0.5rem;
-  line-height: 1.5;
-}
-
-.mobile-ai-page-hint code {
-  font-size: 0.8rem;
 }
 
 .mobile-ai-chips {
@@ -435,28 +406,6 @@
 .mobile-ai-active-value {
   color: color-mix(in srgb, var(--uwe-accent) 25%, var(--uwe-fg) 75%);
   font-weight: 600;
-}
-
-.mobile-ai-context-section {
-  margin-bottom: 0.5rem;
-}
-
-.mobile-ai-context-section > summary {
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--uwe-fg);
-  margin-bottom: 0.65rem;
-}
-
-.mobile-ai-context-section[open] > summary {
-  margin-bottom: 0.85rem;
-}
-
-.mobile-ai-brain-divider {
-  margin: 1.25rem 0 0.75rem;
-  border: none;
-  border-top: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .mobile-ai-segment-fieldset {

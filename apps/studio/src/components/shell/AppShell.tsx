@@ -5,7 +5,6 @@ import Link from "next/link";
 import type { NavCommand, ResolvedNavGroup } from "@uwe/shared-utils/navigation";
 import { MobileBottomNav, SidebarContextProvider, type BottomNavItem } from "@uwe/shared-ui";
 import { NavIcon } from "../ui/icon";
-import { CommandPalette } from "../ui/command-palette";
 import { Sheet, SheetContent, SheetClose, SheetTrigger } from "../ui/sheet";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "../ui/cn";
@@ -89,7 +88,11 @@ export function AppShell({
           ) : null}
         </div>
 
-        {commands.length > 0 ? <CommandPalette commands={commands} /> : null}
+        {/*
+         * The Cmd/Ctrl+K palette is intentionally NOT mounted here. It lives once
+         * globally in app/layout.tsx (StudioCommandPalette) so a single listener and
+         * a single palette serve the whole app. `commands` still drives the ⌘K hint.
+         */}
       </div>
     </SidebarContextProvider>
   );

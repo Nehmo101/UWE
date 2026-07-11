@@ -10,6 +10,7 @@
 @source "../app";
 @source "../components";
 @source "../src";
+@source "../../../packages/shared-ui/src";
 
 @theme {
   --color-background: var(--uwe-bg);

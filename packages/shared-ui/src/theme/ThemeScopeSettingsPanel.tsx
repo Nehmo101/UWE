@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { cn } from "../components/cn";
 import {
   THEME_LIST,
   getTheme,
@@ -50,6 +51,15 @@ const ELEMENT_OVERRIDE_FIELDS: {
   { key: "cardBorder", label: "Karten-Rahmen", kind: "color" },
 ];
 
+/** Native form-control idiom shared by every select/text input in this panel. */
+const SELECT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+const TEXT_INPUT_CLASS =
+  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+const COLOR_INPUT_CLASS =
+  "h-9 w-9 rounded-[var(--radius)] border border-input bg-transparent p-1 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+const FIELD_LABEL_CLASS = "grid gap-[0.35rem] text-[0.85rem] text-muted-foreground";
+
 function ElementOverrideFields({
   overrides,
   updateOverrides,
@@ -60,18 +70,21 @@ function ElementOverrideFields({
   const current = overrides ?? {};
 
   return (
-    <fieldset className="uwe-fieldset">
-      <legend>Zonen-Farben (Design v2)</legend>
-      <p className="uwe-hint">
+    <fieldset className="grid gap-3 rounded-lg border border-border px-4 py-3">
+      <legend className="px-[0.35rem] text-[0.85rem] text-muted-foreground">
+        Zonen-Farben (Design v2)
+      </legend>
+      <p className="text-sm text-muted-foreground">
         Optionale Feinanpassung für Chrome, Überschriften und Karten. Leer lassen für Theme-Standard.
       </p>
-      <div className="uwe-form uwe-theme-options">
+      <div className="mt-5 grid w-full max-w-[40rem] gap-4">
         {ELEMENT_OVERRIDE_FIELDS.map(({ key, label, kind }) => {
           if (kind === "font") {
             return (
-              <label key={key}>
+              <label key={key} className={FIELD_LABEL_CLASS}>
                 {label}
                 <select
+                  className={SELECT_CLASS}
                   value={
                     current.headingFont === "mono" ||
                     current.headingFont === "sans" ||
@@ -104,18 +117,12 @@ function ElementOverrideFields({
             current[key]?.startsWith("#") ? current[key]! : "#000000";
 
           return (
-            <label key={key}>
+            <label key={key} className={FIELD_LABEL_CLASS}>
               {label}
-              <span
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "0.5rem",
-                  alignItems: "center",
-                }}
-              >
+              <span className="flex flex-wrap items-center gap-2">
                 <input
                   type="color"
+                  className={COLOR_INPUT_CLASS}
                   value={current[key]?.startsWith("#") ? current[key]! : colorValue}
                   onChange={(e) =>
                     updateOverrides({ ...current, [key]: e.target.value })
@@ -124,6 +131,7 @@ function ElementOverrideFields({
                 />
                 <input
                   type="text"
+                  className={TEXT_INPUT_CLASS}
                   value={current[key] ?? ""}
                   placeholder="Theme-Standard"
                   onChange={(e) => {
@@ -140,7 +148,7 @@ function ElementOverrideFields({
                 {current[key] && (
                   <button
                     type="button"
-                    className="uwe-btn uwe-btn-ghost uwe-btn-sm"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                     onClick={() => {
                       const next = { ...current };
                       delete next[key];
@@ -163,11 +171,14 @@ function Swatch({ themeId }: { themeId: string }) {
   const theme = getTheme(themeId);
   const c = theme.colors;
   return (
-    <span className="uwe-theme-swatch-colors" aria-hidden="true">
-      <span style={{ background: c.bg }} />
-      <span style={{ background: c.panel }} />
-      <span style={{ background: c.fg }} />
-      <span style={{ background: c.accent }} />
+    <span
+      className="grid h-5 grid-cols-4 gap-[3px] overflow-hidden rounded-[0.35rem]"
+      aria-hidden="true"
+    >
+      <span className="block h-full" style={{ background: c.bg }} />
+      <span className="block h-full" style={{ background: c.panel }} />
+      <span className="block h-full" style={{ background: c.fg }} />
+      <span className="block h-full" style={{ background: c.accent }} />
     </span>
   );
 }
@@ -188,9 +199,13 @@ export function ThemePreferencesFields({
   const themeItems = [...THEME_LIST, ...customThemes];
   return (
     <>
-      <fieldset className="uwe-fieldset">
-        <legend>Theme</legend>
-        <div className="uwe-theme-grid" role="listbox" aria-label="Theme auswählen">
+      <fieldset className="grid gap-3 rounded-lg border border-border px-4 py-3">
+        <legend className="px-[0.35rem] text-[0.85rem] text-muted-foreground">Theme</legend>
+        <div
+          className="mt-3 grid grid-cols-2 gap-[0.65rem] sm:grid-cols-3 lg:grid-cols-4"
+          role="listbox"
+          aria-label="Theme auswählen"
+        >
           {themeItems.map((theme) => {
             const active = preferences.themeId === theme.id;
             return (
@@ -199,22 +214,28 @@ export function ThemePreferencesFields({
                 type="button"
                 role="option"
                 aria-selected={active}
-                className={`uwe-theme-swatch${active ? " active" : ""}`}
+                className={cn(
+                  "flex cursor-pointer flex-col gap-[0.35rem] rounded-[0.65rem] border border-border bg-[var(--uwe-surface)] px-[0.65rem] py-[0.65rem] text-left text-foreground transition-colors hover:border-primary hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--uwe-accent)_35%,transparent)]",
+                  active && "border-primary shadow-[0_0_0_1px_color-mix(in_srgb,var(--uwe-accent)_35%,transparent)]",
+                )}
                 onClick={() => updatePreferences({ themeId: theme.id })}
               >
                 <Swatch themeId={theme.id} />
-                <span className="uwe-theme-swatch-label">{theme.label}</span>
-                <span className="uwe-theme-swatch-desc">{theme.description}</span>
+                <span className="text-[0.82rem] font-semibold text-foreground">{theme.label}</span>
+                <span className="text-[0.68rem] leading-[1.35] text-[var(--uwe-fg-subtle)]">
+                  {theme.description}
+                </span>
               </button>
             );
           })}
         </div>
       </fieldset>
 
-      <div className="uwe-form uwe-theme-options">
-        <label>
+      <div className="mt-5 grid w-full max-w-[40rem] gap-4">
+        <label className={FIELD_LABEL_CLASS}>
           Schrift
           <select
+            className={SELECT_CLASS}
             value={preferences.font}
             onChange={(e) =>
               updatePreferences({ font: e.target.value as FontFamilyId })
@@ -228,9 +249,10 @@ export function ThemePreferencesFields({
           </select>
         </label>
 
-        <label>
+        <label className={FIELD_LABEL_CLASS}>
           UI-Dichte
           <select
+            className={SELECT_CLASS}
             value={preferences.density}
             onChange={(e) =>
               updatePreferences({ density: e.target.value as DensityId })
@@ -244,9 +266,10 @@ export function ThemePreferencesFields({
           </select>
         </label>
 
-        <label>
+        <label className={FIELD_LABEL_CLASS}>
           Hintergrund
           <select
+            className={SELECT_CLASS}
             value={preferences.background}
             onChange={(e) =>
               updatePreferences({
@@ -262,7 +285,7 @@ export function ThemePreferencesFields({
           </select>
         </label>
 
-        <label className="uwe-checkbox">
+        <label className="flex flex-wrap items-center gap-2">
           <input
             type="checkbox"
             checked={preferences.frostedGlass}
@@ -273,7 +296,7 @@ export function ThemePreferencesFields({
           Frosted Glass (Panels &amp; Karten)
         </label>
 
-        <label>
+        <label className={FIELD_LABEL_CLASS}>
           Hintergrund-Intensität
           <input
             type="range"
@@ -288,7 +311,7 @@ export function ThemePreferencesFields({
           />
         </label>
 
-        <label>
+        <label className={FIELD_LABEL_CLASS}>
           UI-Skalierung (experimentell)
           <input
             type="range"
@@ -299,7 +322,7 @@ export function ThemePreferencesFields({
               updatePreferences({ uiScale: Number(e.target.value) / 100 })
             }
           />
-          <span className="uwe-field-hint">
+          <span className="text-[0.74rem] leading-[1.4] text-muted-foreground">
             {Math.round(preferences.uiScale * 100)}% — Layout sollte stabil bleiben.
           </span>
         </label>
@@ -313,8 +336,15 @@ export function ThemePreferencesFields({
       />
 
       {onReset && (
+        // TODO(design-kit): uwe-form-actions kept — its mobile media query
+        // (uwe.css) turns this into a sticky safe-area-aware bottom action bar;
+        // no utility equivalent is established yet for that behavior.
         <div className="uwe-form-actions">
-          <button type="button" className="uwe-btn uwe-btn-ghost" onClick={onReset}>
+          <button
+            type="button"
+            className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            onClick={onReset}
+          >
             Auf Standard zurücksetzen
           </button>
         </div>
@@ -377,21 +407,24 @@ export function ThemeScopeSettingsPanel({
   };
 
   return (
-    <section className="uwe-theme-settings" aria-labelledby={`${title}-title`}>
+    <section className="max-w-3xl" aria-labelledby={`${title}-title`}>
       <h3 id={`${title}-title`}>{title}</h3>
-      <p className="uwe-hint">{description}</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
       {syncState === "syncing" && (
-        <p className="uwe-hint" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           Synchronisiere mit Server…
         </p>
       )}
       {syncState === "synced" && (
-        <p className="uwe-hint" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           Mit Server synchronisiert.
         </p>
       )}
       {syncState === "error" && (
-        <p className="uwe-notice" role="status">
+        <p
+          className="rounded-[0.5rem] border border-[color-mix(in_srgb,var(--uwe-success)_25%,transparent)] bg-[color-mix(in_srgb,var(--uwe-success)_12%,transparent)] px-4 py-3 text-[color-mix(in_srgb,var(--uwe-success)_70%,white_30%)]"
+          role="status"
+        >
           Server-Sync fehlgeschlagen.
         </p>
       )}

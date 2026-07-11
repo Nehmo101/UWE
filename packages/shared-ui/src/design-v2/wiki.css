@@ -96,21 +96,6 @@
   margin-bottom: 0.35rem;
 }
 
-.uwe-v2-wiki-link-hidden {
-  color: var(--uwe-fg-muted);
-  text-decoration: line-through;
-  opacity: 0.75;
-}
-
-.uwe-v2-wiki-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: var(--uwe-v2-content-gap);
-  font-size: 0.82rem;
-  color: var(--uwe-fg-muted);
-}
-
 .uwe-v2-wiki-aside {
   margin-top: var(--uwe-v2-section-gap);
   padding: var(--uwe-v2-content-gap);

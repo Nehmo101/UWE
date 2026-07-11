@@ -1,15 +1,7 @@
 import type { ReactNode } from "react";
-import { VisibilityBadge } from "./StatusBadges";
 
 export type PageCategory = "lore" | "locations" | "npcs" | "dungeons";
 export type PageVisibility = "dm_only" | "player_visible" | "public";
-
-export const CATEGORY_LABELS: Record<PageCategory, string> = {
-  lore: "Lore",
-  locations: "Orte",
-  npcs: "NPCs",
-  dungeons: "Dungeons",
-};
 
 export interface WikiNavItem {
   title: string;
@@ -98,44 +90,6 @@ export function WikiContent({ html, readMode = true }: { html: string; readMode?
         }
         dangerouslySetInnerHTML={{ __html: html }}
       />
-    </div>
-  );
-}
-
-export function WikiPageList({ pages }: { pages: WikiNavItem[] }) {
-  if (pages.length === 0) {
-    return <p className="wiki-empty">Keine Seiten in dieser Welt.</p>;
-  }
-
-  const grouped = pages.reduce<Record<PageCategory, WikiNavItem[]>>(
-    (acc, page) => {
-      acc[page.category] = acc[page.category] ?? [];
-      acc[page.category].push(page);
-      return acc;
-    },
-    {} as Record<PageCategory, WikiNavItem[]>,
-  );
-
-  return (
-    <div className="wiki-page-list">
-      {(Object.keys(CATEGORY_LABELS) as PageCategory[]).map((category) => {
-        const items = grouped[category];
-        if (!items?.length) return null;
-
-        return (
-          <section key={category} className="wiki-list-section">
-            <h3>{CATEGORY_LABELS[category]}</h3>
-            <ul>
-              {items.map((page) => (
-                <li key={page.href}>
-                  <a href={page.href}>{page.title}</a>
-                  {page.visibility && <VisibilityBadge visibility={page.visibility} />}
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
     </div>
   );
 }

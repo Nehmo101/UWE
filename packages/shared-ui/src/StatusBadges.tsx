@@ -11,14 +11,47 @@ import type {
   SecretLevel,
   Visibility,
 } from "@uwe/database/enums";
-import { EmptyState } from "./AppShell";
+
+/** Shared shape for every status/type badge in this file. */
+const BADGE_BASE =
+  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+
+/**
+ * Semantic color tones reused across the badge components below. Each tone
+ * ports the background/text/border intent of the former `.uwe-badge-*`
+ * classes onto the shared token palette.
+ */
+const BADGE_TONE = {
+  plain: "border-transparent",
+  secret:
+    "border-[color-mix(in_srgb,var(--uwe-danger)_25%,transparent)] bg-[color-mix(in_srgb,var(--uwe-danger)_15%,transparent)] text-destructive",
+  danger:
+    "border-transparent bg-[color-mix(in_srgb,var(--uwe-danger)_20%,transparent)] text-destructive",
+  player:
+    "border-[color-mix(in_srgb,var(--uwe-player-visible)_20%,transparent)] bg-[color-mix(in_srgb,var(--uwe-player-visible)_12%,transparent)] text-[var(--uwe-player-visible)]",
+  public:
+    "border-transparent bg-[color-mix(in_srgb,var(--uwe-info)_12%,transparent)] text-info",
+  published:
+    "border-transparent bg-[color-mix(in_srgb,var(--uwe-accent)_15%,transparent)] text-[color-mix(in_srgb,var(--uwe-accent)_35%,var(--uwe-fg)_65%)]",
+  canon:
+    "border-transparent bg-[color-mix(in_srgb,var(--uwe-accent)_12%,transparent)] text-[color-mix(in_srgb,var(--uwe-accent)_35%,var(--uwe-fg)_65%)]",
+  draft:
+    "border-transparent bg-[color-mix(in_srgb,var(--uwe-warning)_12%,transparent)] text-warning",
+  warning:
+    "border-transparent bg-[color-mix(in_srgb,var(--uwe-warning)_20%,transparent)] text-warning",
+  type: "border-transparent bg-border text-foreground",
+} as const;
 
 /**
  * Freeform wiki tags carry no color in the data model, so give each a stable,
  * deterministic swatch color from the semantic palette — the Parchment-OS
  * "bunte Pünktchen" applied to tags.
  */
-const TAG_SWATCHES = ["uwe-dot-success", "uwe-dot-warning", "uwe-dot-accent"] as const;
+const TAG_SWATCHES = [
+  "bg-[var(--uwe-success)]",
+  "bg-[var(--uwe-warning)]",
+  "bg-primary",
+] as const;
 
 function tagSwatchClass(tag: string): string {
   let hash = 0;
@@ -31,8 +64,8 @@ function tagSwatchClass(tag: string): string {
 /** A wiki tag/label chip with a colored square swatch. */
 export function TagChip({ tag }: { tag: string }) {
   return (
-    <span className="uwe-tag">
-      <span className={`uwe-dot uwe-dot-square ${tagSwatchClass(tag)}`} aria-hidden />
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs bg-[color-mix(in_srgb,var(--uwe-accent)_15%,transparent)] text-[color-mix(in_srgb,var(--uwe-accent)_35%,var(--uwe-fg)_65%)]">
+      <span className={`inline-block h-2 w-2 rounded-[2px] ${tagSwatchClass(tag)}`} aria-hidden />
       {tag}
     </span>
   );
@@ -217,14 +250,15 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
 };
 
 export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
-  const className =
+  const className = `${BADGE_BASE} ${
     visibility === "dm_only"
-      ? "uwe-badge uwe-badge-secret"
+      ? BADGE_TONE.secret
       : visibility === "player_visible"
-        ? "uwe-badge uwe-badge-player"
+        ? BADGE_TONE.player
         : visibility === "public"
-          ? "uwe-badge uwe-badge-public"
-          : "uwe-badge";
+          ? BADGE_TONE.public
+          : BADGE_TONE.plain
+  }`;
 
   return (
     <span
@@ -238,14 +272,15 @@ export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
 }
 
 export function PublishBadge({ status }: { status: PublishStatus }) {
-  const className =
+  const className = `${BADGE_BASE} ${
     status === "published"
-      ? "uwe-badge uwe-badge-published"
+      ? BADGE_TONE.published
       : status === "draft"
-        ? "uwe-badge uwe-badge-draft"
+        ? BADGE_TONE.draft
         : status === "review"
-          ? "uwe-badge uwe-badge-warning"
-          : "uwe-badge";
+          ? BADGE_TONE.warning
+          : BADGE_TONE.plain
+  }`;
 
   return <span className={className}>{PUBLISH_LABELS[status]}</span>;
 }
@@ -253,7 +288,10 @@ export function PublishBadge({ status }: { status: PublishStatus }) {
 /** Shown after a page passed through the KI review workflow. */
 export function AiReviewedBadge() {
   return (
-    <span className="uwe-badge uwe-badge-accent" title="Diese Seite wurde per KI-Review bearbeitet und freigegeben.">
+    <span
+      className={`${BADGE_BASE} ${BADGE_TONE.plain}`}
+      title="Diese Seite wurde per KI-Review bearbeitet und freigegeben."
+    >
       KI-Reviewd
     </span>
   );
@@ -261,13 +299,12 @@ export function AiReviewedBadge() {
 
 export function SecretLevelBadge({ secretLevel }: { secretLevel: SecretLevel }) {
   if (secretLevel === "none") {
-    return <span className="uwe-badge">—</span>;
+    return <span className={`${BADGE_BASE} ${BADGE_TONE.plain}`}>—</span>;
   }
 
-  const className =
-    secretLevel === "dm_secret"
-      ? "uwe-badge uwe-badge-secret"
-      : "uwe-badge uwe-badge-draft";
+  const className = `${BADGE_BASE} ${
+    secretLevel === "dm_secret" ? BADGE_TONE.secret : BADGE_TONE.draft
+  }`;
 
   return (
     <span
@@ -281,12 +318,13 @@ export function SecretLevelBadge({ secretLevel }: { secretLevel: SecretLevel }) 
 }
 
 export function RevealStateBadge({ revealState }: { revealState: RevealState }) {
-  const className =
+  const className = `${BADGE_BASE} ${
     revealState === "revealed"
-      ? "uwe-badge uwe-badge-published"
+      ? BADGE_TONE.published
       : revealState === "preview"
-        ? "uwe-badge uwe-badge-player"
-        : "uwe-badge uwe-badge-secret";
+        ? BADGE_TONE.player
+        : BADGE_TONE.secret
+  }`;
 
   return (
     <span
@@ -300,20 +338,21 @@ export function RevealStateBadge({ revealState }: { revealState: RevealState }) 
 }
 
 export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
-  const className =
+  const className = `${BADGE_BASE} ${
     status === "canon"
-      ? "uwe-badge uwe-badge-canon"
+      ? BADGE_TONE.canon
       : status === "played"
-        ? "uwe-badge uwe-badge-published"
+        ? BADGE_TONE.published
         : status === "prepared"
-          ? "uwe-badge uwe-badge-player"
+          ? BADGE_TONE.player
           : status === "idea" || status === "draft"
-            ? "uwe-badge uwe-badge-draft"
+            ? BADGE_TONE.draft
             : status === "contradictory"
-              ? "uwe-badge uwe-badge-danger"
+              ? BADGE_TONE.danger
               : status === "non_canon"
-                ? "uwe-badge uwe-badge-warning"
-                : "uwe-badge";
+                ? BADGE_TONE.warning
+                : BADGE_TONE.plain
+  }`;
 
   return (
     <span
@@ -327,11 +366,15 @@ export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
 }
 
 export function PageTypeBadge({ type }: { type: PageType }) {
-  return <span className="uwe-badge uwe-badge-type">{PAGE_TYPE_LABELS[type]}</span>;
+  return (
+    <span className={`${BADGE_BASE} ${BADGE_TONE.type}`}>{PAGE_TYPE_LABELS[type]}</span>
+  );
 }
 
 export function AssetTypeBadge({ type }: { type: AssetType }) {
-  return <span className="uwe-badge uwe-badge-type">{ASSET_TYPE_LABELS[type]}</span>;
+  return (
+    <span className={`${BADGE_BASE} ${BADGE_TONE.type}`}>{ASSET_TYPE_LABELS[type]}</span>
+  );
 }
 
 /** Connector / local-AI runtime state shown in the RTX status badge. */
@@ -354,6 +397,34 @@ export const RTX_STATE_DESCRIPTIONS: Record<RtxConnectorState, string> = {
   error: "RTX Connector meldet einen Fehler. Prüfe den Systemstatus.",
 };
 
+/** Per-state tone for the RTX status badge (badge chrome + dot fill). */
+const RTX_TONE: Record<RtxConnectorState, { badge: string; dot: string }> = {
+  online: {
+    badge:
+      "border-[color-mix(in_srgb,var(--uwe-success)_30%,transparent)] bg-[color-mix(in_srgb,var(--uwe-success)_14%,transparent)] text-[color-mix(in_srgb,var(--uwe-success)_72%,var(--uwe-fg)_28%)]",
+    dot: "bg-[var(--uwe-success)]",
+  },
+  starting: {
+    badge:
+      "border-[color-mix(in_srgb,var(--uwe-warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--uwe-warning)_14%,transparent)] text-warning",
+    dot: "bg-[var(--uwe-warning)]",
+  },
+  offline: {
+    badge:
+      "border-[color-mix(in_srgb,var(--uwe-danger)_28%,transparent)] bg-[color-mix(in_srgb,var(--uwe-danger)_14%,transparent)] text-[color-mix(in_srgb,var(--uwe-danger)_72%,var(--uwe-fg)_28%)]",
+    dot: "bg-[var(--uwe-danger)]",
+  },
+  error: {
+    badge:
+      "border-[color-mix(in_srgb,var(--uwe-danger)_28%,transparent)] bg-[color-mix(in_srgb,var(--uwe-danger)_14%,transparent)] text-[color-mix(in_srgb,var(--uwe-danger)_72%,var(--uwe-fg)_28%)]",
+    dot: "bg-[var(--uwe-danger)]",
+  },
+  disabled: {
+    badge: "border-border bg-[color-mix(in_srgb,var(--uwe-fg-muted)_12%,transparent)] text-muted-foreground",
+    dot: "bg-muted-foreground",
+  },
+};
+
 /**
  * Consistent RTX/local-AI status indicator. Uses a colored dot + label and a
  * tooltip so the technical RTX state stays understandable across Studio.
@@ -367,41 +438,44 @@ export function RtxStatusBadge({
   label?: string;
   className?: string;
 }) {
+  const tone = RTX_TONE[state];
   return (
     <span
-      className={`uwe-badge uwe-rtx-badge${className ? ` ${className}` : ""}`}
+      className={`${BADGE_BASE} ${tone.badge}${className ? ` ${className}` : ""}`}
       data-rtx-state={state}
       title={RTX_STATE_DESCRIPTIONS[state]}
       aria-label={`RTX-Status: ${RTX_STATE_LABELS[state]}. ${RTX_STATE_DESCRIPTIONS[state]}`}
     >
-      <span className="uwe-rtx-badge-dot" aria-hidden />
+      <span className={`inline-block h-2 w-2 rounded-full ${tone.dot}`} aria-hidden />
       {label ?? RTX_STATE_LABELS[state]}
     </span>
   );
 }
 
 export function GameSessionStatusBadge({ status }: { status: GameSessionStatus }) {
-  const className =
+  const className = `${BADGE_BASE} ${
     status === "summarized"
-      ? "uwe-badge uwe-badge-published"
+      ? BADGE_TONE.published
       : status === "archived"
-        ? "uwe-badge"
+        ? BADGE_TONE.plain
         : status === "played"
-          ? "uwe-badge uwe-badge-player"
-          : "uwe-badge uwe-badge-draft";
+          ? BADGE_TONE.player
+          : BADGE_TONE.draft
+  }`;
 
   return <span className={className}>{GAME_SESSION_STATUS_LABELS[status]}</span>;
 }
 
 export function PlayerNoteStatusBadge({ status }: { status: PlayerNoteStatus }) {
-  const className =
+  const className = `${BADGE_BASE} ${
     status === "accepted"
-      ? "uwe-badge uwe-badge-published"
+      ? BADGE_TONE.published
       : status === "visible_to_dm"
-        ? "uwe-badge uwe-badge-player"
+        ? BADGE_TONE.player
         : status === "hidden" || status === "deleted"
-          ? "uwe-badge"
-          : "uwe-badge uwe-badge-draft";
+          ? BADGE_TONE.plain
+          : BADGE_TONE.draft
+  }`;
 
   return <span className={className}>{PLAYER_NOTE_STATUS_LABELS[status]}</span>;
 }
@@ -412,12 +486,13 @@ export function PlayerNoteStatusBadge({ status }: { status: PlayerNoteStatus }) 
  */
 export function QuestStatusBadge({ status }: { status: QuestLifecycleStatus | null | undefined }) {
   const effective: QuestLifecycleStatus = status ?? "open";
-  const className =
+  const className = `${BADGE_BASE} ${
     effective === "completed"
-      ? "uwe-badge uwe-badge-published"
+      ? BADGE_TONE.published
       : effective === "failed"
-        ? "uwe-badge uwe-badge-danger"
-        : "uwe-badge uwe-badge-player";
+        ? BADGE_TONE.danger
+        : BADGE_TONE.player
+  }`;
 
   return (
     <span
@@ -431,225 +506,17 @@ export function QuestStatusBadge({ status }: { status: QuestLifecycleStatus | nu
 }
 
 export function DungeonPrepStatusBadge({ status }: { status: DungeonPrepStatus | null }) {
-  if (!status) return <span className="uwe-badge">—</span>;
+  if (!status) return <span className={`${BADGE_BASE} ${BADGE_TONE.plain}`}>—</span>;
 
-  const className =
+  const className = `${BADGE_BASE} ${
     status === "played"
-      ? "uwe-badge uwe-badge-player"
+      ? BADGE_TONE.player
       : status === "ready"
-        ? "uwe-badge uwe-badge-published"
+        ? BADGE_TONE.published
         : status === "skipped"
-          ? "uwe-badge"
-          : "uwe-badge uwe-badge-draft";
+          ? BADGE_TONE.plain
+          : BADGE_TONE.draft
+  }`;
 
   return <span className={className}>{DUNGEON_PREP_STATUS_LABELS[status]}</span>;
-}
-
-export interface ContentBlockViewModel {
-  id: string;
-  type: ContentBlockType;
-  sortOrder: number;
-  content: string;
-  visibility: Visibility;
-  assetId?: string | null;
-  metadata?: Record<string, unknown> | null;
-}
-
-function readAssetIdsFromBlock(block: ContentBlockViewModel): string[] {
-  const ids: string[] = [];
-  if (block.assetId) {
-    ids.push(block.assetId);
-  }
-  const metadata = block.metadata;
-  if (metadata && Array.isArray(metadata.assetIds)) {
-    for (const entry of metadata.assetIds) {
-      if (typeof entry === "string" && entry.trim() && !ids.includes(entry)) {
-        ids.push(entry);
-      }
-    }
-  }
-  return ids;
-}
-
-function renderGalleryBlock(block: ContentBlockViewModel) {
-  const assetIds = readAssetIdsFromBlock(block);
-  if (assetIds.length > 0) {
-    return (
-      <div
-        className="uwe-gallery-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-          gap: "0.5rem",
-        }}
-      >
-        {assetIds.map((assetId) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={assetId}
-            src={`/api/assets/${assetId}/file`}
-            alt=""
-            style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "6px" }}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  const urls = block.content
-    .split(/\n|,/)
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.startsWith("http") || entry.startsWith("/"));
-  if (urls.length > 0) {
-    return (
-      <div
-        className="uwe-gallery-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-          gap: "0.5rem",
-        }}
-      >
-        {urls.map((url) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={url}
-            src={url}
-            alt=""
-            style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: "6px" }}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  return null;
-}
-
-export function ContentBlockList({
-  blocks,
-  showVisibility = false,
-}: {
-  blocks: ContentBlockViewModel[];
-  showVisibility?: boolean;
-}) {
-  if (blocks.length === 0) {
-    return (
-      <EmptyState
-        title="Keine Inhaltsblöcke"
-        description="Diese Seite hat noch keine Inhaltsblöcke."
-      />
-    );
-  }
-
-  return (
-    <div className="uwe-block-list">
-      {blocks.map((block) => (
-        <article key={block.id} className="uwe-block-card">
-          <header className="uwe-block-header">
-            <span className="uwe-block-type">{BLOCK_TYPE_LABELS[block.type]}</span>
-            {showVisibility && <VisibilityBadge visibility={block.visibility} />}
-          </header>
-          {renderBlockBody(block)}
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function renderBlockBody(block: ContentBlockViewModel) {
-  if (block.type === "image") {
-    const src = block.content.trim();
-    if (src.startsWith("http") || src.startsWith("/")) {
-      return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt=""
-          className="uwe-block-image"
-          style={{ maxWidth: "100%", height: "auto", borderRadius: "6px" }}
-        />
-      );
-    }
-  }
-
-  if (block.type === "gallery") {
-    const gallery = renderGalleryBlock(block);
-    if (gallery) {
-      return gallery;
-    }
-  }
-
-  return <pre className="uwe-block-content">{block.content}</pre>;
-}
-
-export function MetaPanel({
-  visibility,
-  publishStatus,
-  canonicalStatus,
-  type,
-  tags,
-  aliases,
-  secretLevel,
-  revealState,
-}: {
-  visibility: Visibility;
-  publishStatus: PublishStatus;
-  canonicalStatus: CanonicalStatus;
-  type: PageType;
-  tags: string[];
-  aliases: string[];
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
-}) {
-  return (
-    <div className="uwe-meta-panel">
-      <dl>
-        <div>
-          <dt>Typ</dt>
-          <dd><PageTypeBadge type={type} /></dd>
-        </div>
-        <div>
-          <dt>Sichtbarkeit</dt>
-          <dd><VisibilityBadge visibility={visibility} /></dd>
-        </div>
-        <div>
-          <dt>Publish</dt>
-          <dd><PublishBadge status={publishStatus} /></dd>
-        </div>
-        {secretLevel !== undefined && (
-          <div>
-            <dt>Geheimnis</dt>
-            <dd><SecretLevelBadge secretLevel={secretLevel} /></dd>
-          </div>
-        )}
-        {revealState !== undefined && secretLevel !== undefined && secretLevel !== "none" && (
-          <div>
-            <dt>Enthüllung</dt>
-            <dd><RevealStateBadge revealState={revealState} /></dd>
-          </div>
-        )}
-        <div>
-          <dt>Kanon</dt>
-          <dd><CanonicalBadge status={canonicalStatus} /></dd>
-        </div>
-        {tags.length > 0 && (
-          <div>
-            <dt>Tags</dt>
-            <dd className="uwe-tag-list">
-              {tags.map((tag) => (
-                <TagChip key={tag} tag={tag} />
-              ))}
-            </dd>
-          </div>
-        )}
-        {aliases.length > 0 && (
-          <div>
-            <dt>Aliase</dt>
-            <dd>{aliases.join(", ")}</dd>
-          </div>
-        )}
-      </dl>
-    </div>
-  );
 }

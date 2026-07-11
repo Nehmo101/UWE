@@ -14,18 +14,19 @@ export interface PasswordStrengthMeterProps {
   className?: string;
 }
 
-function strengthClass(level: PasswordStrengthLevel): string {
+/** Füllfarbe pro Stärke-Stufe (Hex-Werte aus dem früheren uwe-components.css). */
+function strengthFillClass(level: PasswordStrengthLevel): string {
   switch (level) {
     case "strong":
-      return "uwe-password-strength-strong";
+      return "bg-[#1f7a3f]";
     case "good":
-      return "uwe-password-strength-good";
+      return "bg-[#2f8f4e]";
     case "fair":
-      return "uwe-password-strength-fair";
+      return "bg-[#c27b1d]";
     case "weak":
-      return "uwe-password-strength-weak";
+      return "bg-[#c24141]";
     default:
-      return "uwe-password-strength-empty";
+      return "bg-transparent";
   }
 }
 
@@ -33,7 +34,7 @@ export function PasswordStrengthMeter({
   password,
   showRequirements = true,
   requirementsProps,
-  className = "uwe-password-strength",
+  className = "grid gap-2",
 }: PasswordStrengthMeterProps) {
   const { level, score } = evaluatePasswordStrength(password);
   const maxScore = 4;
@@ -42,16 +43,16 @@ export function PasswordStrengthMeter({
 
   return (
     <div className={className}>
-      <div className="uwe-password-strength-header">
-        <span className="uwe-password-strength-label">{label}</span>
+      <div className="flex items-center justify-between gap-2 text-[0.8125rem] text-muted-foreground">
+        <span>{label}</span>
         {level !== "empty" ? (
-          <span className="uwe-password-strength-score" aria-hidden="true">
+          <span aria-hidden="true">
             {score}/{maxScore}
           </span>
         ) : null}
       </div>
       <div
-        className={`uwe-password-strength-bar ${strengthClass(level)}`}
+        className="relative h-[0.35rem] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--uwe-border-muted)_70%,transparent)]"
         role="meter"
         aria-valuemin={0}
         aria-valuemax={maxScore}
@@ -59,7 +60,7 @@ export function PasswordStrengthMeter({
         aria-label={`Passwortstärke: ${label}`}
       >
         <span
-          className="uwe-password-strength-fill"
+          className={`block h-full rounded-[inherit] transition-[width,background-color] duration-200 ${strengthFillClass(level)}`}
           style={{ width: `${(score / maxScore) * 100}%` }}
         />
       </div>

@@ -8,25 +8,28 @@ export function ThemeSettingsPanel() {
     useUweTheme();
 
   return (
-    <section className="uwe-theme-settings" aria-labelledby="uwe-theme-settings-title">
+    <section className="max-w-3xl" aria-labelledby="uwe-theme-settings-title">
       <h2 id="uwe-theme-settings-title">Studio-Design</h2>
-      <p className="uwe-hint">
+      <p className="text-sm text-muted-foreground">
         Theme-Einstellungen werden in diesem Browser gespeichert und mit den
         Server-Standards synchronisiert (geräteübergreifend). Änderungen gelten
         sofort.
       </p>
       {syncState === "syncing" && (
-        <p className="uwe-hint" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           Synchronisiere mit Server…
         </p>
       )}
       {syncState === "synced" && (
-        <p className="uwe-hint" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           Mit Server synchronisiert.
         </p>
       )}
       {syncState === "error" && (
-        <p className="uwe-notice" role="status">
+        <p
+          className="rounded-[0.5rem] border border-[color-mix(in_srgb,var(--uwe-success)_25%,transparent)] bg-[color-mix(in_srgb,var(--uwe-success)_12%,transparent)] px-4 py-3 text-[color-mix(in_srgb,var(--uwe-success)_70%,white_30%)]"
+          role="status"
+        >
           Server-Sync fehlgeschlagen — lokale Einstellungen bleiben aktiv.
         </p>
       )}

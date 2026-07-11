@@ -74,7 +74,7 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
         <p className="text-sm text-muted-foreground">
           Für diese Spielercharakter-Seite ist noch kein strukturierter Charakterbogen verknüpft.
         </p>
-        <form action={createStudioCharacterSheetAction} className="uwe-v2-form">
+        <form action={createStudioCharacterSheetAction} className="grid gap-3">
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="pageId" value={pageId} />
           <input type="hidden" name="pageSlug" value={pageSlug} />
@@ -106,16 +106,12 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
             <input name="level" type="number" min={1} max={30} defaultValue={1} required />
           </label>
 
-          <button
-            type="submit"
-            className="uwe-v2-btn uwe-v2-btn-primary"
-            disabled={worldPlayers.length === 0}
-          >
+          <Button type="submit" disabled={worldPlayers.length === 0}>
             Charakterbogen erstellen
-          </button>
+          </Button>
         </form>
         {worldPlayers.length === 0 ? (
-          <p className="uwe-hint">
+          <p className="text-sm text-muted-foreground">
             Lege zuerst einen Spieler mit Welt-Mitgliedschaft an, bevor du einen Charakterbogen
             verknüpfst.
           </p>

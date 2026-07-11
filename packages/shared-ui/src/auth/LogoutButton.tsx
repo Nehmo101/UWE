@@ -11,7 +11,7 @@ interface LogoutButtonProps {
 
 export function LogoutButton({
   displayName,
-  className = "uwe-btn uwe-btn-ghost",
+  className = "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
   redirectTo = "/",
 }: LogoutButtonProps) {
   const router = useRouter();

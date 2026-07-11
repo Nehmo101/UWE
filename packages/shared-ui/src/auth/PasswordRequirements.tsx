@@ -14,7 +14,7 @@ export interface PasswordRequirementsProps {
 export function PasswordRequirements({
   password,
   rules = PASSWORD_REQUIREMENTS,
-  className = "uwe-password-requirements",
+  className = "m-0 grid list-none gap-1 p-0 text-[0.8125rem] text-muted-foreground",
 }: PasswordRequirementsProps) {
   return (
     <ul className={className} aria-label="Passwortanforderungen">
@@ -23,10 +23,10 @@ export function PasswordRequirements({
         return (
           <li
             key={rule.id}
-            className={met ? "uwe-password-requirement uwe-password-requirement-met" : "uwe-password-requirement"}
+            className={met ? "flex items-start gap-1.5 text-foreground" : "flex items-start gap-1.5"}
             data-required={rule.required ? "true" : "false"}
           >
-            <span className="uwe-password-requirement-marker" aria-hidden="true">
+            <span className="w-4 flex-none text-center font-semibold" aria-hidden="true">
               {met ? "✓" : "○"}
             </span>
             <span>

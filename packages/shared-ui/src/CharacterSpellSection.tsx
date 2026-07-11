@@ -12,6 +12,14 @@ export interface SpellSearchResult {
   description?: string;
 }
 
+const BTN_SMALL_PRIMARY =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
+
+const FIELD_LABEL = "flex flex-col gap-1 text-sm font-medium text-foreground";
+
+const NATIVE_INPUT_CLASS =
+  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
 export interface CharacterSpellSectionProps {
   spells: CharacterSpellView[];
   spellSlots: SpellSlotSummary;
@@ -28,7 +36,11 @@ export interface CharacterSpellSectionProps {
 
 
 function SpellLevelBadge({ level }: { level: number }) {
-  return <span className="uwe-badge uwe-badge-type">{level === 0 ? "Zaubertrick" : `Grad ${level}`}</span>;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-transparent bg-border px-2 py-0.5 text-xs font-medium text-foreground">
+      {level === 0 ? "Zaubertrick" : `Grad ${level}`}
+    </span>
+  );
 }
 
 export function CharacterSpellSection({
@@ -100,60 +112,78 @@ export function CharacterSpellSection({
   }
 
   return (
-    <section className="auth-character-spells">
-      <h3>Zauber</h3>
-      <p className="auth-muted">
+    <section className="flex flex-col gap-3">
+      <h3 className="m-0 text-lg font-semibold tracking-tight">Zauber</h3>
+      <p className="m-0 text-sm text-muted-foreground">
         {preparedCount} vorbereitet · Zaubergrad-Slots (Caster-Level {spellSlots.casterLevel})
       </p>
 
       {slotLevels.length > 0 ? (
-        <dl className="auth-character-sheet-summary">
+        <dl className="m-0 flex flex-wrap gap-2">
           {slotLevels.map((level) => (
-            <div key={level}>
-              <dt>Grad {level}</dt>
-              <dd>{spellSlots.byLevel[level]}</dd>
+            <div
+              key={level}
+              className="flex items-baseline gap-1.5 rounded-[var(--radius)] border border-border bg-card px-3 py-1.5 text-sm"
+            >
+              <dt className="text-xs text-muted-foreground">Grad {level}</dt>
+              <dd className="m-0 font-semibold">{spellSlots.byLevel[level]}</dd>
             </div>
           ))}
         </dl>
       ) : (
-        <p className="auth-muted">Keine Zauberplätze (noch kein Zauberer-Level erkannt).</p>
+        <p className="m-0 text-sm text-muted-foreground">Keine Zauberplätze (noch kein Zauberer-Level erkannt).</p>
       )}
 
       {spells.length === 0 ? (
-        <p className="auth-muted">Noch keine Zauber eingetragen.</p>
+        <p className="m-0 text-sm text-muted-foreground">Noch keine Zauber eingetragen.</p>
       ) : (
-        <ul className="auth-character-spell-list">
+        <ul className="m-0 grid list-none gap-2 p-0">
           {spells.map((spell) => (
-            <li key={spell.id} className="auth-character-spell-item">
-              <div className="auth-character-spell-main">
+            <li
+              key={spell.id}
+              className="rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm"
+            >
+              <div className="flex flex-wrap items-center gap-2">
                 <strong>{spell.displayName}</strong>
                 <SpellLevelBadge level={spell.spellLevel} />
-                {spell.school && <span className="uwe-badge">{spell.school}</span>}
-                {spell.source === "homebrew" && (
-                  <span className="uwe-badge uwe-badge-visibility">Homebrew</span>
+                {spell.school && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-xs font-medium">
+                    {spell.school}
+                  </span>
                 )}
-                {spell.prepared && <span className="uwe-badge">Vorbereitet</span>}
+                {spell.source === "homebrew" && (
+                  /* uwe-badge-visibility had no CSS rule anywhere in the repo (dead modifier) —
+                     rendered identically to a plain uwe-badge, so it maps to the same utility. */
+                  <span className="inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-xs font-medium">
+                    Homebrew
+                  </span>
+                )}
+                {spell.prepared && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-xs font-medium">
+                    Vorbereitet
+                  </span>
+                )}
               </div>
               {spell.description.trim() && (
-                <details className="auth-character-spell-description">
-                  <summary>Beschreibung</summary>
-                  <p className="auth-muted">{spell.description}</p>
+                <details className="mt-2 text-sm">
+                  <summary className="cursor-pointer text-primary">Beschreibung</summary>
+                  <p className="m-0 mt-1 text-sm text-muted-foreground">{spell.description}</p>
                 </details>
               )}
               {canEdit && (
-                <div className="auth-character-spell-actions">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <form action={togglePreparedAction}>
                     {renderHiddenFields()}
                     <input type="hidden" name="spellKey" value={spell.spellKey} />
                     <input type="hidden" name="prepared" value={spell.prepared ? "false" : "true"} />
-                    <button type="submit" className="auth-btn auth-btn-small">
+                    <button type="submit" className={BTN_SMALL_PRIMARY}>
                       {spell.prepared ? "Nicht vorbereitet" : "Vorbereiten"}
                     </button>
                   </form>
                   <form action={removeSpellAction}>
                     {renderHiddenFields()}
                     <input type="hidden" name="spellKey" value={spell.spellKey} />
-                    <button type="submit" className="auth-btn auth-btn-small">
+                    <button type="submit" className={BTN_SMALL_PRIMARY}>
                       Entfernen
                     </button>
                   </form>
@@ -166,29 +196,34 @@ export function CharacterSpellSection({
 
       {canEdit && (
         <>
-          <div className="auth-character-spell-search">
-            <h4>Open5e / SRD suchen</h4>
-            <p className="auth-muted">
+          <div className="mt-2 flex flex-col gap-2">
+            <h4 className="m-0 text-base font-semibold">Open5e / SRD suchen</h4>
+            <p className="m-0 text-sm text-muted-foreground">
               Zauberdaten aus der Open5e-API (open5e.com, SRD-Inhalte). SRD/Open5e-Attribution
               bei externen Quellen beachten.
             </p>
-            <label>
+            <label className={FIELD_LABEL}>
               Zaubername
               <input
                 type="search"
+                className={NATIVE_INPUT_CLASS}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="z. B. Fireball"
                 autoComplete="off"
               />
             </label>
-            {searchBusy && <p className="auth-muted">Suche…</p>}
-            {searchError && <p className="auth-error">{searchError}</p>}
+            {searchBusy && <p className="m-0 text-sm text-muted-foreground">Suche…</p>}
+            {searchError && (
+              <p className="m-0 rounded-[var(--radius)] border border-[color-mix(in_srgb,var(--uwe-danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--uwe-danger)_12%,transparent)] px-3.5 py-2.5 text-sm text-destructive">
+                {searchError}
+              </p>
+            )}
             {results.length > 0 && (
-              <ul className="auth-character-spell-search-results">
+              <ul className="m-0 grid list-none gap-1.5 p-0">
                 {results.map((result) => (
                   <li key={result.id}>
-                    <form action={addSpellAction} className="auth-character-spell-search-form">
+                    <form action={addSpellAction}>
                       {renderHiddenFields()}
                       <input type="hidden" name="spellKey" value={result.id} />
                       <input type="hidden" name="spellLevel" value={result.spellLevel} />
@@ -199,7 +234,7 @@ export function CharacterSpellSection({
                       {result.description && (
                         <input type="hidden" name="description" value={result.description} />
                       )}
-                      <button type="submit" className="auth-btn auth-btn-small">
+                      <button type="submit" className={BTN_SMALL_PRIMARY}>
                         {result.name} · Grad {result.spellLevel}
                         {result.school ? ` · ${result.school}` : ""}
                       </button>
@@ -211,15 +246,16 @@ export function CharacterSpellSection({
           </div>
 
           {importSpellsByLevelAction ? (
-            <form action={importSpellsByLevelAction} className="auth-note-form auth-character-spell-homebrew">
-              <h4>Katalog-Import (Open5e / SRD)</h4>
-              <p className="auth-muted">
+            <form action={importSpellsByLevelAction} className="mt-4 grid gap-2">
+              <h4 className="m-0 text-base font-semibold">Katalog-Import (Open5e / SRD)</h4>
+              <p className="m-0 text-sm text-muted-foreground">
                 Alle Zauber eines Grads aus dem Open5e-Katalog auf einmal hinzufügen (z. B. alle
                 Zaubertricks oder Grad-1-Zauber).
               </p>
-              <label>
+              <label className={FIELD_LABEL}>
                 Zaubergrad
-                <select name="spellLevel" defaultValue={1}>
+                {/* TODO(design-kit): natives Select bleibt — unkontrolliertes FormData-Feld. */}
+                <select name="spellLevel" defaultValue={1} className={NATIVE_INPUT_CLASS}>
                   <option value={0}>Zaubertrick (Grad 0)</option>
                   {Array.from({ length: 9 }, (_, index) => index + 1).map((level) => (
                     <option key={level} value={level}>
@@ -228,41 +264,46 @@ export function CharacterSpellSection({
                   ))}
                 </select>
               </label>
-              <label className="auth-checkbox-label">
+              <label className="flex items-center gap-2 text-sm font-medium">
                 <input name="prepared" type="checkbox" />
                 Als vorbereitet markieren
               </label>
               {renderHiddenFields()}
-              <button type="submit" className="auth-btn auth-btn-small">
+              <button type="submit" className={BTN_SMALL_PRIMARY}>
                 Grad importieren
               </button>
             </form>
           ) : null}
 
-          <form action={addHomebrewSpellAction} className="auth-note-form auth-character-spell-homebrew">
-            <h4>Homebrew-Zauber</h4>
-            <label>
+          <form action={addHomebrewSpellAction} className="mt-4 grid gap-2">
+            <h4 className="m-0 text-base font-semibold">Homebrew-Zauber</h4>
+            <label className={FIELD_LABEL}>
               Name
-              <input name="name" required maxLength={200} placeholder="z. B. Frostschlag" />
+              <input name="name" required maxLength={200} placeholder="z. B. Frostschlag" className={NATIVE_INPUT_CLASS} />
             </label>
-            <label>
+            <label className={FIELD_LABEL}>
               Grad
-              <input name="spellLevel" type="number" min={0} max={9} defaultValue={0} />
+              <input name="spellLevel" type="number" min={0} max={9} defaultValue={0} className={NATIVE_INPUT_CLASS} />
             </label>
-            <label>
+            <label className={FIELD_LABEL}>
               Schule
-              <input name="school" maxLength={100} placeholder="z. B. Hervorrufung" />
+              <input name="school" maxLength={100} placeholder="z. B. Hervorrufung" className={NATIVE_INPUT_CLASS} />
             </label>
-            <label>
+            <label className={FIELD_LABEL}>
               Beschreibung
-              <textarea name="description" rows={3} maxLength={5000} />
+              <textarea
+                name="description"
+                rows={3}
+                maxLength={5000}
+                className="w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              />
             </label>
-            <label className="auth-checkbox-label">
+            <label className="flex items-center gap-2 text-sm font-medium">
               <input name="prepared" type="checkbox" defaultChecked />
               Vorbereitet
             </label>
             {renderHiddenFields()}
-            <button type="submit" className="auth-btn auth-btn-small">
+            <button type="submit" className={BTN_SMALL_PRIMARY}>
               Homebrew hinzufügen
             </button>
           </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { cn } from "./components/cn";
 
 export interface ViewEditToggleProps {
   /** Label for read-only mode (default: "Ansicht") */
@@ -13,6 +14,9 @@ export interface ViewEditToggleProps {
   edit: ReactNode;
   className?: string;
 }
+
+const TOGGLE_BUTTON_BASE =
+  "inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] px-3 text-xs font-medium transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
 
 /** Toggle between read-only view and edit UI — default is read-only. */
 export function ViewEditToggle({
@@ -27,10 +31,13 @@ export function ViewEditToggle({
 
   return (
     <div className={className}>
-      <div className="uwe-inline-actions" style={{ marginBottom: "0.75rem" }}>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className={`uwe-v2-btn uwe-v2-btn-sm ${!editing ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+          className={cn(
+            TOGGLE_BUTTON_BASE,
+            !editing ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+          )}
           aria-pressed={!editing}
           onClick={() => setEditing(false)}
         >
@@ -38,7 +45,10 @@ export function ViewEditToggle({
         </button>
         <button
           type="button"
-          className={`uwe-v2-btn uwe-v2-btn-sm ${editing ? "uwe-v2-btn-primary" : "uwe-v2-btn-secondary"}`}
+          className={cn(
+            TOGGLE_BUTTON_BASE,
+            editing ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+          )}
           aria-pressed={editing}
           onClick={() => setEditing(true)}
         >

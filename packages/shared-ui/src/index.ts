@@ -4,96 +4,34 @@ export {
 } from "./WikiComponents";
 
 export {
-  AppShell,
-  Breadcrumb,
   EmptyState,
-  PageHeader,
-  SearchField,
-  SidebarNav,
   SidebarSection,
   StatGrid,
-  TopBarBrand,
 } from "./AppShell";
 
 export { TopBarSessionMount } from "./TopBarSessionMount";
 
 export {
-  NavSidebarSections,
-  CollapsibleNavSidebar,
-  SectionHeader,
-  type BreadcrumbItem,
-  type NavSection,
-  type SectionHeaderProps,
-} from "./navigation";
-
-export {
-  Button,
-  Card,
-  Input,
-  Textarea,
-  Select,
-  Badge,
   Tabs,
-  Dialog,
   ToolWindow,
   Collapsible,
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  ToastProvider,
-  useToast,
-  ErrorState,
   LoadingState,
-  SidebarItem,
-  RailButton,
-  BackLink,
   ContextActions,
   CopyToClipboardButton,
   cn,
-  type BackLinkProps,
-  type ButtonProps,
-  type ButtonVariant,
   type ContextActionsProps,
   type CopyToClipboardButtonProps,
-  type CardProps,
-  type InputProps,
-  type BadgeVariant,
   type TabItem,
-  type DialogProps,
   type CollapsibleProps,
   type ToolWindowProps,
-  type ToastMessage,
 } from "./components";
-
-export {
-  ButtonV2,
-  CardV2,
-  PageHeaderV2,
-  type ButtonV2Props,
-  type ButtonV2Size,
-  type ButtonV2Variant,
-  type CardV2Props,
-  type PageHeaderV2Props,
-} from "./components-v2";
-
-/** Package export path for design v2 CSS (import in app layouts). */
-export const UWE_DESIGN_V2_CSS = "@uwe/shared-ui/uwe-v2.css";
 
 /** @deprecated Legacy shared-ui shell widgets — new product code uses app-local shells. */
 export {
-  AdminStatusCard,
-  AdminStatusGrid,
-  StudioStatusFooter,
   WorldCockpitTabs,
   WorldCockpitCard,
   WorldCockpitHeader,
   WorldCockpitTag,
-  type CockpitStatusItem,
-  type CockpitStatusLevel,
 } from "./shells";
 
 export {
@@ -104,14 +42,9 @@ export {
 export {
   CollapsibleSection,
   MobileBottomNav,
-  MobileContextPanel,
-  MobileFilterSheet,
-  MobileSidebarContent,
-  PageListCards,
   SidebarContextProvider,
   StickyActionBar,
   type BottomNavItem,
-  type PageListItem,
 } from "./MobileComponents";
 
 export { ViewEditToggle, type ViewEditToggleProps } from "./ViewEditToggle";
@@ -162,10 +95,8 @@ export {
   BLOCK_TYPE_LABELS,
   CANONICAL_LABELS,
   CANONICAL_DESCRIPTIONS,
-  ContentBlockList,
   DUNGEON_PREP_STATUS_LABELS,
   GAME_SESSION_STATUS_LABELS,
-  MetaPanel,
   PAGE_TYPE_LABELS,
   PLAYER_NOTE_STATUS_LABELS,
   PUBLISH_LABELS,
@@ -193,19 +124,16 @@ export {
   SecretLevelBadge,
   TagChip,
   VisibilityBadge,
-  type ContentBlockViewModel,
   type RtxConnectorState,
 } from "./StatusBadges";
 
-export { SecretReveal, type SecretRevealProps } from "./SecretReveal";
-
 export {
-  CommandPalette,
-  filterPaletteCommands,
-  type CommandPaletteCommand,
-  type CommandPaletteProps,
-  type CommandPaletteSearchResult,
-} from "./CommandPalette";
+  ContentBlockList,
+  MetaPanel,
+  type ContentBlockViewModel,
+} from "./ContentBlocks";
+
+export { SecretReveal, type SecretRevealProps } from "./SecretReveal";
 
 export {
   ThemePicker,
@@ -213,7 +141,6 @@ export {
   type ThemePickerProps,
 } from "./ThemePicker";
 
-export { BrandHeader } from "./BrandHeader";
 export { HealthBadge } from "./HealthBadge";
 
 export {
@@ -238,7 +165,6 @@ export {
   type GraphRelationListProps,
 } from "./GraphView";
 
-export { CATEGORY_LABELS, WikiPageList, type WikiNavItem } from "./WikiComponents";
 
 export {
   SoundboardWorkspace,

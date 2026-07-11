@@ -170,9 +170,12 @@ export function BackgroundEffect({
   }
 
   return (
+    // uwe-bg-canvas class fully converted: no other selector in the repo
+    // combines it with a theme/body modifier (only its own rule in uwe.css),
+    // so porting to utilities here is safe.
     <canvas
       ref={canvasRef}
-      className="uwe-bg-canvas"
+      className="pointer-events-none fixed inset-0 z-0 opacity-[var(--uwe-bg-effect-intensity,1)]"
       aria-hidden="true"
     />
   );

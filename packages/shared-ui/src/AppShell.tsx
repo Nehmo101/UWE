@@ -1,190 +1,16 @@
-"use client";
+import type { ReactNode } from "react";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { useFocusTrap } from "./useFocusTrap";
-import {
-  MobileBottomNav,
-  MobileContextPanel,
-  MobileSidebarContent,
-  SidebarContextProvider,
-  type BottomNavItem,
-} from "./MobileComponents";
-import { SidebarItem } from "./components/SidebarItem";
-
-export interface AppShellProps {
-  sidebar?: ReactNode;
-  main: ReactNode;
-  context?: ReactNode;
-  topBar?: ReactNode;
-  /** Optional desktop icon rail (left of sidebar) */
-  rail?: ReactNode;
-  /** Optional AI/system status strip below main content */
-  statusFooter?: ReactNode;
-  /** Optional bottom navigation bar (shown on mobile only) */
-  bottomNav?: BottomNavItem[];
-  /** Title for collapsible context panel on mobile */
-  contextTitle?: string;
-}
-
-export function AppShell({
-  sidebar,
-  main,
-  context,
-  topBar,
-  rail,
-  statusFooter,
-  bottomNav,
-  contextTitle = "Details & Kontext",
-}: AppShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const hasSidebar = Boolean(sidebar);
-  const hasContext = Boolean(context);
-  const hasRail = Boolean(rail);
-  const hasBottomNav = Boolean(bottomNav && bottomNav.length > 0);
-
-  const sidebarRef = useRef<HTMLElement>(null);
-  const sidebarBackdropRef = useRef<HTMLButtonElement>(null);
-  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
-
-  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
-  const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), []);
-
-  useFocusTrap({
-    active: sidebarOpen,
-    containerRef: sidebarRef,
-    extraFocusablesRef: sidebarBackdropRef,
-    returnFocusRef: sidebarToggleRef,
-    onEscape: closeSidebar,
-  });
-
-  useEffect(() => {
-    function onToggleSidebar() {
-      toggleSidebar();
-    }
-    document.addEventListener("uwe:toggle-sidebar", onToggleSidebar);
-    return () => document.removeEventListener("uwe:toggle-sidebar", onToggleSidebar);
-  }, [toggleSidebar]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem("uwe:sidebar-collapsed");
-    if (stored === "true") {
-      setSidebarCollapsed(true);
-    }
-  }, []);
-
-  const toggleSidebarCollapsed = useCallback(() => {
-    setSidebarCollapsed((collapsed) => {
-      const next = !collapsed;
-      try {
-        window.localStorage.setItem("uwe:sidebar-collapsed", next ? "true" : "false");
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
-
-  /* Lock body scroll when mobile drawer is open */
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [sidebarOpen]);
-
-  return (
-    <SidebarContextProvider closeSidebar={closeSidebar}>
-      <a href="#uwe-main-content" className="uwe-skip-link">
-        Zum Inhalt springen
-      </a>
-      <div
-        className="uwe-shell"
-        data-sidebar-open={sidebarOpen ? "true" : "false"}
-        data-sidebar-collapsed={sidebarCollapsed ? "true" : "false"}
-        data-has-bottom-nav={hasBottomNav ? "true" : "false"}
-      >
-        {topBar && (
-          <header className="uwe-topbar">
-            {hasSidebar && (
-              <>
-                <button
-                  ref={sidebarToggleRef}
-                  type="button"
-                  className="uwe-mobile-nav-toggle"
-                  aria-label={sidebarOpen ? "Navigation schließen" : "Navigation öffnen"}
-                  aria-expanded={sidebarOpen}
-                  aria-controls="uwe-sidebar"
-                  onClick={toggleSidebar}
-                >
-                  <span className="uwe-mobile-nav-icon" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className="uwe-sidebar-collapse-toggle"
-                  aria-label={sidebarCollapsed ? "Menüband einblenden" : "Menüband einklappen"}
-                  aria-pressed={sidebarCollapsed}
-                  onClick={toggleSidebarCollapsed}
-                  title={sidebarCollapsed ? "Menüband einblenden" : "Menüband einklappen"}
-                >
-                  <span className="uwe-sidebar-collapse-icon" aria-hidden />
-                </button>
-              </>
-            )}
-            <div className="uwe-topbar-inner">
-              {topBar}
-              <div id="uwe-topbar-end" className="uwe-topbar-end" />
-            </div>
-          </header>
-        )}
-        <div
-          className="uwe-shell-body"
-          data-has-sidebar={hasSidebar ? "true" : "false"}
-          data-has-context={hasContext ? "true" : "false"}
-          data-has-rail={hasRail ? "true" : "false"}
-          data-sidebar-collapsed={sidebarCollapsed ? "true" : "false"}
-        >
-          {hasRail && <div className="uwe-icon-rail-wrap">{rail}</div>}
-          {hasSidebar && (
-            <>
-              <button
-                ref={sidebarBackdropRef}
-                type="button"
-                className="uwe-sidebar-backdrop"
-                aria-label="Navigation schließen"
-                tabIndex={sidebarOpen ? 0 : -1}
-                onClick={closeSidebar}
-              />
-              <aside id="uwe-sidebar" ref={sidebarRef} className="uwe-sidebar">
-                <MobileSidebarContent>{sidebar}</MobileSidebarContent>
-              </aside>
-            </>
-          )}
-          <main id="uwe-main-content" className="uwe-main" tabIndex={-1}>
-            {main}
-          </main>
-          {hasContext && (
-            <>
-              <aside className="uwe-context uwe-context-desktop">{context}</aside>
-              <MobileContextPanel title={contextTitle}>{context}</MobileContextPanel>
-            </>
-          )}
-        </div>
-        {statusFooter}
-        {hasBottomNav && bottomNav && <MobileBottomNav items={bottomNav} />}
-      </div>
-    </SidebarContextProvider>
-  );
-}
+/*
+ * Hinweis Shell-Phase (2026-07): Der Legacy-App-Rahmen (AppShell, SidebarNav,
+ * TopBarBrand, SearchField, Breadcrumb, PageHeader) wurde entfernt — beide
+ * Apps rendern seit der Design-Konsolidierung ihren eigenen Kit-Shell unter
+ * apps/&lt;app&gt;/src/components/shell/. Übrig bleiben die weiterhin genutzten
+ * Inhalts-Bausteine SidebarSection, StatGrid und EmptyState.
+ *
+ * uwe-sidebar-section bleibt Legacy-Klasse: Parchment-Theme-Skins stylen
+ * `.uwe-sidebar-section h3` gezielt (uwe.css); Migration erst mit dem
+ * Theme-Rebuild (docs/design/new-ui-stack.md).
+ */
 
 export function SidebarSection({
   title,
@@ -201,79 +27,22 @@ export function SidebarSection({
   );
 }
 
-export function SidebarNav({
-  items,
-}: {
-  items: { label: string; href: string; active?: boolean; badge?: string }[];
-}) {
-  return (
-    <nav className="uwe-sidebar-nav" aria-label="Seitennavigation">
-      <ul>
-        {items.map((item) => (
-          <SidebarItem key={item.href} {...item} />
-        ))}
-      </ul>
-    </nav>
-  );
-}
-
-export function TopBarBrand({
-  appName,
-  subtitle,
-  href = "/",
-}: {
-  appName: string;
-  subtitle?: string;
-  href?: string;
-}) {
-  return (
-    <a href={href} className="uwe-brand">
-      <span className="uwe-brand-mark">◆</span>
-      <span>
-        <strong>{appName}</strong>
-        {subtitle && <small>{subtitle}</small>}
-      </span>
-    </a>
-  );
-}
-
-export function SearchField({
-  action,
-  placeholder = "Suchen…",
-  defaultValue = "",
-  name = "q",
-}: {
-  action: string;
-  placeholder?: string;
-  defaultValue?: string;
-  name?: string;
-}) {
-  return (
-    <form className="uwe-search" action={action} method="get">
-      <input
-        type="search"
-        name={name}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        aria-label="Suche"
-        enterKeyHint="search"
-      />
-    </form>
-  );
-}
-
 export function StatGrid({
   stats,
 }: {
   stats: { label: string; value: string | number; hint?: string }[];
 }) {
   return (
-    <div className="uwe-stat-grid">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-4">
       {stats.map((stat) => (
-        <div key={stat.label} className="uwe-stat-card">
-          <span className="uwe-stat-value">{stat.value}</span>
-          <span className="uwe-stat-label">{stat.label}</span>
-          {stat.hint && <span className="uwe-stat-hint">{stat.hint}</span>}
+        <div
+          key={stat.label}
+          /* uwe-glass-surface: reiner Theme-Hook für body.uwe-theme-frosted (uwe.css) */
+          className="uwe-glass-surface rounded-[var(--radius)] border border-border bg-card px-5 py-4 transition-colors hover:border-[color-mix(in_srgb,var(--uwe-accent)_22%,var(--uwe-border-muted))]"
+        >
+          <span className="block text-2xl font-semibold leading-tight text-foreground">{stat.value}</span>
+          <span className="block text-xs text-muted-foreground">{stat.label}</span>
+          {stat.hint && <span className="mt-1 block text-[0.72rem] text-muted-foreground">{stat.hint}</span>}
         </div>
       ))}
     </div>
@@ -292,47 +61,11 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="uwe-empty-state">
-      {icon && <div className="uwe-empty-icon">{icon}</div>}
-      <h3>{title}</h3>
-      {description && <p>{description}</p>}
-      {action && <div className="uwe-empty-action">{action}</div>}
+    <div className="rounded-[var(--radius)] border border-border bg-[color-mix(in_srgb,var(--uwe-card-bg)_55%,transparent)] px-8 py-12 text-center">
+      {icon && <div className="mb-3 text-3xl opacity-65">{icon}</div>}
+      <h3 className="m-0 mb-2 text-[1.05rem] not-italic text-foreground">{title}</h3>
+      {description && <p className="mx-auto my-0 max-w-md leading-relaxed text-muted-foreground">{description}</p>}
+      {action && <div className="mt-6 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
-  );
-}
-
-export function PageHeader({
-  title,
-  summary,
-  meta,
-  actions,
-}: {
-  title: string;
-  summary?: string | null;
-  meta?: ReactNode;
-  actions?: ReactNode;
-}) {
-  return (
-    <header className="uwe-page-header">
-      <div className="uwe-page-header-main">
-        <h1>{title}</h1>
-        {summary && <p className="uwe-page-summary">{summary}</p>}
-        {meta && <div className="uwe-page-meta">{meta}</div>}
-      </div>
-      {actions && <div className="uwe-page-actions">{actions}</div>}
-    </header>
-  );
-}
-
-export function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
-  return (
-    <nav className="uwe-breadcrumb" aria-label="Brotkrumen">
-      {items.map((item, index) => (
-        <span key={`${item.label}-${index}`}>
-          {item.href ? <a href={item.href}>{item.label}</a> : item.label}
-          {index < items.length - 1 && <span className="uwe-breadcrumb-sep">/</span>}
-        </span>
-      ))}
-    </nav>
   );
 }

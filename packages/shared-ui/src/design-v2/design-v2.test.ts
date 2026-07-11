@@ -10,16 +10,10 @@ const designV2Dir = path.join(__dirname);
 
 describe("design v2 CSS bundle", () => {
   it("includes all required design-v2 stylesheets", () => {
-    const required = [
-      "tokens.css",
-      "shell.css",
-      "components.css",
-      "layouts.css",
-      "mobile.css",
-      "wiki.css",
-      "parchment-os-shell.css",
-      "index.css",
-    ];
+    // Nach dem V2-Abriss (Paket E) verbleiben nur die lebenden Teile:
+    // tokens.css (Theme-Engine-Kopplung), wiki.css (uwe-v2-wiki-Render),
+    // parchment-os-shell.css (Theme-Skin) und das index.css-Bundle.
+    const required = ["tokens.css", "wiki.css", "parchment-os-shell.css", "index.css"];
     for (const file of required) {
       const content = readFileSync(path.join(designV2Dir, file), "utf8");
       assert.ok(content.length > 50, `missing or empty ${file}`);
@@ -58,9 +52,6 @@ describe("design v2 CSS bundle", () => {
     const tokens = readFileSync(path.join(designV2Dir, "tokens.css"), "utf8");
     assert.match(tokens, /14\.75rem.*236px/);
     assert.match(tokens, /3\.375rem.*54px/);
-    const components = readFileSync(path.join(designV2Dir, "components.css"), "utf8");
-    assert.match(components, /\.uwe-v2-btn-accent/);
-    assert.match(components, /\.uwe-v2-btn-primary/);
   });
 });
 

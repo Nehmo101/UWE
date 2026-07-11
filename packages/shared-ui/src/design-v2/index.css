@@ -1,7 +1,10 @@
+/*
+ * Design-v2-Bundle — Rest nach dem V2-Abriss (2026-07, Paket E):
+ * tokens.css bleibt wegen der Theme-Engine-Kopplung (elementOverrides mappen
+ * auf --uwe-zone-*); wiki.css + parchment-os-shell.css stylen die lebenden
+ * Wiki-Render-Klassen (uwe-v2-wiki*) und Theme-Skins. shell/components/
+ * layouts/mobile.css wurden mit ButtonV2/CardV2 entfernt.
+ */
 @import "./tokens.css";
-@import "./shell.css";
-@import "./components.css";
-@import "./layouts.css";
-@import "./mobile.css";
 @import "./wiki.css";
 @import "./parchment-os-shell.css";

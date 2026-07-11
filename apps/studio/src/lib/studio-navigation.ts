@@ -322,6 +322,8 @@ export interface StudioPaletteCommand {
   href: string;
   group: string;
   keywords?: string[];
+  /** Lucide icon name (kebab-case) for the command palette; optional for legacy callers. */
+  icon?: string;
 }
 
 /** Sub-routes and deep links missing from the main Studio sidebar IA. */
@@ -383,6 +385,7 @@ export function studioCommandPaletteCommands(options: {
     label: "Schnell erfassen",
     href: "/capture?quick=1",
     group: "Aktionen",
+    icon: "zap",
     keywords: ["capture", "notiz", "erfassen", "todo", "idee", "inbox", "quick"],
   });
 
@@ -397,6 +400,7 @@ export function studioCommandPaletteCommands(options: {
         label: `${item.label} öffnen`,
         href: item.href,
         group: `${fallbackGroup} / ${item.group}`,
+        icon: item.icon,
         keywords: item.keywords,
       });
     }
@@ -407,6 +411,7 @@ export function studioCommandPaletteCommands(options: {
         label: shortcut.label,
         href: `${base}/pages/new?template=${shortcut.template}`,
         group: `${fallbackGroup} / Inhalte`,
+        icon: "file-plus",
         keywords: shortcut.keywords,
       });
     }
@@ -420,6 +425,7 @@ export function studioCommandPaletteCommands(options: {
         label: "Label aus aktueller Seite",
         href: `${base}/labels/new`,
         group: `${fallbackGroup} / Medien`,
+        icon: "tag",
         keywords: ["label", "quelle"],
       });
     }
@@ -431,6 +437,7 @@ export function studioCommandPaletteCommands(options: {
       label: `${command.label} öffnen`,
       href: command.href,
       group: command.group,
+      icon: command.icon,
       keywords: command.keywords,
     });
   }
@@ -445,6 +452,7 @@ export function studioCommandPaletteCommands(options: {
       label: `${shortcut.label} öffnen`,
       href: shortcut.href,
       group: shortcut.group,
+      icon: "arrow-up-right",
       keywords: shortcut.keywords,
     });
   }
@@ -456,6 +464,7 @@ export function studioCommandPaletteCommands(options: {
       label: `Welt öffnen: ${world.name}`,
       href: `/worlds/${world.slug}/dashboard`,
       group: "Welten",
+      icon: "globe",
       keywords: [world.slug],
     });
   }
