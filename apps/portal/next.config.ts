@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   basePath,
   ...standalone,
-  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env"],
+  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env", "@uwe/atlas-3d"],
   async headers() {
     return [
       {

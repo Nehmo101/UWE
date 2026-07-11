@@ -39,6 +39,7 @@
   .atlas-app *, .atlas-app *::before, .atlas-app *::after { box-sizing: border-box; }
   .atlas-app button { font-family: var(--mono); cursor: pointer; }
   .atlas-app canvas { display: block; touch-action: none; image-rendering: pixelated; }
+  #atlas-canvas-3d { position: absolute; inset: 0; width: 100%; height: 100%; display: none; image-rendering: auto; }
   .atlas-app ::selection { background: rgba(194, 98, 43, 0.22); }
 
   .tool-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: var(--uwe-sidebar-fg); font-size: 13px; text-align: left; transition: background .12s ease, border-color .12s ease; min-width: 0; }
@@ -121,6 +122,7 @@
       </div>
       <button id="btn-undo" class="tb-btn editor-only" title="Rückgängig (Strg+Z)" disabled>↶</button>
       <button id="btn-redo" class="tb-btn editor-only" title="Wiederholen (Strg+Y / Strg+Umschalt+Z)" disabled>↷</button>
+      <button id="btn-3d" class="tb-btn" title="Zwischen 2D und 3D wechseln">3D Ansicht</button>
       <button id="btn-grid" class="tb-btn on" title="Gitter ein/aus">▦ Gitter</button>
       <input type="range" id="grid-size" min="12" max="72" step="4" value="32" title="Rastergröße" style="width:70px; accent-color:var(--uwe-accent);" />
       <span id="grid-size-val" style="font-family:var(--mono); font-size:10px; color:var(--uwe-fg-muted); min-width:28px;">32px</span>
@@ -152,6 +154,7 @@
     <!-- ===================== CANVAS STAGE ===================== -->
     <main style="flex:1; position:relative; min-width:0; background:#d8ccae;">
       <canvas id="atlas-canvas" style="width:100%; height:100%;"></canvas>
+      <canvas id="atlas-canvas-3d" aria-label="Atlas 3D"></canvas>
 
       <!-- Ebenen-Panel (Roadmap W3 #12): Sichtbarkeit pro Ebenen-Gruppe -->
       <div id="layer-panel" style="position:absolute; left:12px; bottom:34px; display:none; flex-direction:column; gap:3px; padding:8px 10px; background:var(--uwe-surface); border:1.5px solid var(--uwe-border); border-radius:8px; font-size:10.5px; box-shadow:0 2px 8px rgba(0,0,0,.22); backdrop-filter:blur(10px);"></div>
@@ -495,6 +498,9 @@ let exportPickStart = null;  // [nx,ny] während des Rechteck-Aufziehens
 const el = (id) => document.getElementById(id);
 const root = el("atlas-root");
 const canvas = el("atlas-canvas");
+const canvas3d = el("atlas-canvas-3d");
+let atlas3d = null, atlas3dModule = null, atlas3dActive = false, baking3d = false;
+let lastWorldN = null;
 let dpr = 1, cssW = 0, cssH = 0, fitted = false;
 let panning = false, moving = false, paintingTiles = false, erasingTiles = false;
 let spraying = null;      // { rng } — aktiver Streu-Pinsel-Strich (W3 #9)
@@ -522,6 +528,91 @@ function elevationVisuals(tl) {
 }
 let last = { x: 0, y: 0 }, clickStart = null;
 let msgTimer = null, toastTimer = null, coordRaf = null, pendingCoord = null;
+function drawAtlas3DSprite(ctx, object, x, y, size) {
+  const style = object.style || {};
+  const glyph = style.gouache ? null : engine.getGlyphByKey(object.paletteItemId);
+  const gouacheKey = style.gouache && engine.isGouacheAsset(style.gouache)
+    ? style.gouache
+    : (glyph && engine.gouacheKeyForGlyph ? engine.gouacheKeyForGlyph(glyph.key) : null);
+  ctx.save();
+  if (gouacheKey) {
+    engine.drawGouacheAsset(ctx, gouacheKey, {
+      x, y, size, scale: object.scale || 1,
+      rotation: ((object.rotation || 0) * Math.PI) / 180,
+      lineWidth: Math.max(0.8, Number(style.lineWidth || 1.4)),
+      seed: engine.hashStringToSeed(String(object._key || object.id || object.paletteItemId)),
+      tint: style.tint,
+    });
+  } else {
+    ctx.fillStyle = preset.colors.ink;
+    ctx.beginPath(); ctx.arc(x, y - size * 0.18, size * 0.17, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function bakeAtlas3DGround(size) {
+  const off = document.createElement("canvas");
+  off.width = Math.max(256, Math.min(4096, Math.round(size)));
+  off.height = Math.max(256, Math.round(off.width * WORLD_H / WORLD_W));
+  const ctx = off.getContext("2d");
+  const saved = { zoom: state.zoom, panX: state.panX, panY: state.panY, objects: layerVis.objects };
+  const selected = [...selection];
+  state.zoom = off.width / WORLD_W; state.panX = 0; state.panY = 0;
+  layerVis.objects = false; selection.clear(); baking3d = true;
+  try { drawScene(ctx, off.width, off.height, false); }
+  finally {
+    baking3d = false; layerVis.objects = saved.objects;
+    state.zoom = saved.zoom; state.panX = saved.panX; state.panY = saved.panY;
+    for (const key of selected) selection.add(key);
+  }
+  return off;
+}
+
+function currentAtlas3DPreview() {
+  if (drawingPoints && drawingPoints.length > 1) {
+    return { points: drawingPoints, closed: state.tool === "region" || state.tool === "biome" || state.tool === "plot" };
+  }
+  const selected = selectedEditableFeature();
+  if (selected && selected.pts && selected.pts.length > 1) return { points: selected.pts, closed: selected.closed };
+  return null;
+}
+
+async function setAtlas3DMode(active) {
+  const button = el("btn-3d");
+  if (!active) {
+    atlas3dActive = false;
+    canvas3d.style.display = "none"; canvas.style.visibility = "visible";
+    button.classList.remove("on"); button.textContent = "3D Ansicht";
+    requestAnimationFrame(draw); return;
+  }
+  try {
+    if (!atlas3dModule) atlas3dModule = await import("./atlas-3d.js");
+    if (!atlas3d) {
+      atlas3d = atlas3dModule.createAtlas3D(canvas3d, {
+        getGrid: () => doc.tileLayer,
+        getObjects: () => nodeObjects(),
+        bakeGround: bakeAtlas3DGround,
+        drawObjectSprite: drawAtlas3DSprite,
+        getLightDirection: () => doc.tileLayer && doc.tileLayer.lightDir,
+        onCameraChange: () => {
+          if (atlas3d) state.zoom = atlas3d.effectiveZoom();
+          refreshChrome(); scheduleMinimap();
+        },
+      }, { leftPan: isView(), groundBakeSize: 2048 });
+    }
+    atlas3dActive = true;
+    canvas.style.visibility = "hidden"; canvas3d.style.display = "block";
+    button.classList.add("on"); button.textContent = "2D Ansicht";
+    atlas3d.resize(); atlas3d.updateHeights(); atlas3d.syncObjects(); atlas3d.invalidateGround(true);
+    window.__atlas3dReady = true;
+    requestAnimationFrame(draw);
+  } catch (error) {
+    console.error("Atlas 3D konnte nicht geladen werden", error);
+    atlas3dActive = false; canvas3d.style.display = "none"; canvas.style.visibility = "visible";
+    button.classList.remove("on"); button.textContent = "3D nicht verfuegbar";
+    flash("3D konnte nicht geladen werden - 2D bleibt aktiv.");
+  }
+}
 
 function setState(patch) { Object.assign(state, patch); refreshChrome(); }
 
@@ -1179,14 +1270,24 @@ function resize() {
     state.zoom = z; state.panX = (r.width - WORLD_W * z) / 2; state.panY = (r.height - WORLD_H * z) / 2;
     fitted = true; refreshChrome();
   }
+  if (atlas3d) atlas3d.resize();
   draw();
 }
 function w2c(wx, wy) { return [wx * state.zoom + state.panX, wy * state.zoom + state.panY]; }
 function c2w(cx, cy) { return [(cx - state.panX) / state.zoom, (cy - state.panY) / state.zoom]; }
 function n2w(nx, ny) { return [nx * WORLD_W, ny * WORLD_H]; }
-function n2c(nx, ny) { const [wx, wy] = n2w(nx, ny); return w2c(wx, wy); }
-function c2n(cx, cy) { const [wx, wy] = c2w(cx, cy); return [Math.max(0, Math.min(1, wx / WORLD_W)), Math.max(0, Math.min(1, wy / WORLD_H))]; }
-function tileAt(cx, cy) { const [wx, wy] = c2w(cx, cy); return [Math.floor(wx / TILE), Math.floor(wy / TILE)]; }
+function n2c(nx, ny) {
+  if (atlas3dActive && atlas3d && !baking3d) return atlas3d.worldNToScreen(nx, ny) || [-9999, -9999];
+  const [wx, wy] = n2w(nx, ny); return w2c(wx, wy);
+}
+function c2n(cx, cy) {
+  if (atlas3dActive && atlas3d && !baking3d) return atlas3d.screenToWorldN(cx, cy) || [0, 0];
+  const [wx, wy] = c2w(cx, cy); return [Math.max(0, Math.min(1, wx / WORLD_W)), Math.max(0, Math.min(1, wy / WORLD_H))];
+}
+function tileAt(cx, cy) {
+  if (atlas3dActive && atlas3d && !baking3d) { const [nx, ny] = c2n(cx, cy); return [Math.floor(nx * COLS), Math.floor(ny * ROWS)]; }
+  const [wx, wy] = c2w(cx, cy); return [Math.floor(wx / TILE), Math.floor(wy / TILE)];
+}
 
 // ===========================================================================
 // Rendering
@@ -1204,6 +1305,15 @@ function layerGroupOf(f) {
 
 function draw() {
   const c = canvas; if (!c || !doc) return;
+  if (atlas3dActive && (aiDraftFeatures || plotFillReview || settlementReview || territoryReview)) {
+    void setAtlas3DMode(false); flash("Review-Vorschauen sind nur in 2D verfuegbar."); return;
+  }
+  if (atlas3dActive && atlas3d) {
+    state.zoom = atlas3d.effectiveZoom();
+    atlas3d.updateHeights(); atlas3d.syncObjects(); atlas3d.setSelection([...selection]);
+    atlas3d.setPreview(currentAtlas3DPreview()); atlas3d.invalidateGround(); atlas3d.invalidate();
+    scheduleMinimap(); updateMiniToolbar(); refreshChrome(); return;
+  }
   const ctx = c.getContext("2d"); if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawScene(ctx, cssW, cssH, true);
@@ -1321,7 +1431,7 @@ function drawScene(ctx, W, H, chrome) {
 
   // Höhen-Simulation (2.5D): Hillshade gestreckt über das Karten-Rect (der
   // Bilinear-Filter des Browsers glättet das Zellraster) + optionale Höhenlinien.
-  if (sceneElevOn) {
+  if (sceneElevOn && !baking3d) {
     const ev = elevationVisuals(tl);
     if (ev.shade) {
       ctx.save();
@@ -1872,14 +1982,15 @@ function scatterInPolygon(ctx, rings, bk, density, keySeed) {
 // ===========================================================================
 // Pointer / Interaktion
 // ===========================================================================
-function posOf(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+function posOf(e) { const r = (atlas3dActive ? canvas3d : canvas).getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 
 function onPointerDown(e) {
-  const [cx, cy] = posOf(e); canvas.setPointerCapture(e.pointerId);
+  if (atlas3dActive && (e.button === 1 || e.button === 2 || e.altKey)) return;
+  const [cx, cy] = posOf(e); e.currentTarget.setPointerCapture(e.pointerId);
   last = { x: cx, y: cy }; clickStart = { x: cx, y: cy, t: Date.now() };
   if (isView()) { panning = true; return; }
 
-  const [nx, ny] = c2n(cx, cy); const tool = state.tool;
+  const [nx, ny] = c2n(cx, cy); lastWorldN = [nx, ny]; const tool = state.tool;
   const rightOrMiddle = e.button === 1 || e.button === 2;
   if (e.button === 1) { panning = true; return; }
 
@@ -1997,7 +2108,7 @@ function onPointerMove(e) {
     return;
   }
   if (marquee) { marquee.x1 = nx; marquee.y1 = ny; draw(); return; }
-  if (panning) { const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
+  if (panning) { if (atlas3dActive) return; const dx = cx - last.x, dy = cy - last.y; last = { x: cx, y: cy }; state.panX += dx; state.panY += dy; draw(); return; }
   if (paintingTiles) { paintTiles(cx, cy, false); return; }
   if (erasingTiles) { paintTiles(cx, cy, true); return; }
   if (spraying) {
@@ -2012,7 +2123,7 @@ function onPointerMove(e) {
   if (paintingLand) { paintLandmass(cx, cy, landWater); return; }
   if (moving && selection.size) {
     if (!moveUndoPushed) { pushUndo(); moveUndoPushed = true; }
-    let dx = (cx - last.x) / (WORLD_W * state.zoom), dy = (cy - last.y) / (WORLD_H * state.zoom);
+    const previousWorld = lastWorldN || c2n(last.x, last.y); let dx = nx - previousWorld[0], dy = ny - previousWorld[1]; lastWorldN = [nx, ny];
     // Shift hält die dominante Achse (Roadmap W3 #2) — bezogen auf den Drag-Start.
     if (e.shiftKey && dragAxisStart) {
       if (Math.abs(cx - dragAxisStart[0]) >= Math.abs(cy - dragAxisStart[1])) dy = 0; else dx = 0;
@@ -2023,7 +2134,7 @@ function onPointerMove(e) {
 }
 
 function onPointerUp(e) {
-  try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
   if (isView()) {
     const [cx, cy] = posOf(e);
     const movedDist = clickStart ? Math.hypot(cx - clickStart.x, cy - clickStart.y) : 99;
@@ -2070,13 +2181,15 @@ function onPointerUp(e) {
   dragAxisStart = null;
   if (paintingTiles || erasingTiles || paintingHeight || paintingLand) markDirty();
   panning = moving = paintingTiles = erasingTiles = paintingHeight = paintingLand = false;
-  spraying = null;
+  spraying = null; lastWorldN = null;
+  if (atlas3dActive && atlas3d) { atlas3d.updateHeights(); atlas3d.invalidateGround(true); }
 }
 function handleViewClick(entity) {
   if (entity.childNodeId) { navTo(entity.childNodeId); return; }
   if (entity.linkedPageId) { flash("↗ Wiki-Verknüpfung: " + entity.linkedPageId); }
 }
 function onWheel(e) {
+  if (atlas3dActive) return;
   e.preventDefault(); const [cx, cy] = posOf(e); const f = e.deltaY < 0 ? 1.1 : 0.9;
   const nz = Math.max(0.25, Math.min(8, state.zoom * f));
   const panX = cx - (cx - state.panX) * (nz / state.zoom); const panY = cy - (cy - state.panY) * (nz / state.zoom);
@@ -2722,6 +2835,7 @@ function resolveExportRectWorld() {
   return { x, y, w: Math.max(1, Math.min(WORLD_W, wx1) - x), h: Math.max(1, Math.min(WORLD_H, wy1) - y) };
 }
 function startExportRectPick() {
+  if (atlas3dActive) { void setAtlas3DMode(false); flash("Export-Rechteck ist nur in 2D verfuegbar."); }
   el("export-dialog").style.display = "none";
   exp.area = "rect"; exp.rect = null; exp.picking = true;
   flash("Export-Rechteck auf der Karte aufziehen (Esc bricht ab)");
@@ -2802,7 +2916,7 @@ function clearAll() {
 // ===========================================================================
 // Tool-Auswahl
 // ===========================================================================
-function pickTool(t) { drawingPoints = []; measurePoints = []; setState({ tool: t, selectedKey: null }); requestAnimationFrame(draw); }
+function pickTool(t) { if (atlas3dActive && t === "curve") { void setAtlas3DMode(false); flash("Gebogene Labels werden in 2D bearbeitet."); } drawingPoints = []; measurePoints = []; setState({ tool: t, selectedKey: null }); requestAnimationFrame(draw); }
 function pickTerrain(b) { setState({ tool: "terrain", brush: b }); }
 function pickGlyph(k) { setState({ tool: "stamp", glyphKey: k, gouacheKey: null, rtxKey: null }); }
 function pickGouache(k) { noteAssetUsed(k); setState({ tool: "stamp", gouacheKey: k, rtxKey: null, glyphKey: state.glyphKey || "tree" }); }
@@ -3419,6 +3533,7 @@ function wire() {
   el("brush-s").addEventListener("click", () => setState({ brushSize: 0 }));
   el("brush-m").addEventListener("click", () => setState({ brushSize: 1 }));
   el("brush-l").addEventListener("click", () => setState({ brushSize: 2 }));
+  el("btn-3d").addEventListener("click", () => { void setAtlas3DMode(!atlas3dActive); });
   el("btn-grid").addEventListener("click", () => { setState({ showGrid: !state.showGrid }); requestAnimationFrame(draw); });
   el("grid-size").addEventListener("input", (e) => { setState({ gridCell: Number(e.target.value) }); requestAnimationFrame(draw); });
   el("btn-vis").addEventListener("click", toggleNodeVis);
@@ -3643,11 +3758,13 @@ function wire() {
   el("exp-go").addEventListener("click", doExport);
   el("export-dialog").addEventListener("click", (e) => { if (e.target === el("export-dialog")) closeExportDialog(); });
 
-  canvas.addEventListener("pointerdown", onPointerDown);
-  canvas.addEventListener("pointermove", onPointerMove);
-  canvas.addEventListener("pointerup", onPointerUp);
-  canvas.addEventListener("wheel", onWheel, { passive: false });
-  canvas.addEventListener("dblclick", onDblClick);
+  for (const inputCanvas of [canvas, canvas3d]) {
+    inputCanvas.addEventListener("pointerdown", onPointerDown);
+    inputCanvas.addEventListener("pointermove", onPointerMove);
+    inputCanvas.addEventListener("pointerup", onPointerUp);
+    inputCanvas.addEventListener("wheel", onWheel, { passive: false });
+    inputCanvas.addEventListener("dblclick", onDblClick);
+  }
 
   const lpanel = el("layer-panel");
   const LAYER_GROUPS = [["terrain", "Terrain"], ["regions", "Politik"], ["routes", "Routen"], ["objects", "Objekte"], ["labels", "Labels"]];
@@ -3681,7 +3798,7 @@ function wire() {
   mm.addEventListener("pointerdown", (e) => { minimapDragging = true; mm.setPointerCapture(e.pointerId); minimapPanTo(e); });
   mm.addEventListener("pointermove", (e) => { if (minimapDragging) minimapPanTo(e); });
   mm.addEventListener("pointerup", () => { minimapDragging = false; });
-  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault()); canvas3d.addEventListener("contextmenu", (e) => e.preventDefault());
   window.addEventListener("keydown", onKeyDown);
   // Bridge is opt-in only via ?embed=1 (README §6) — never listen in the plain
   // portal/standalone runtime, so a host can't inject a doc/draft into view mode.
@@ -3715,6 +3832,10 @@ window.__atlasDebug = {
   get state() { return state; },
   get scaleHandlePt() { return scaleHandlePt; },
   get drawingPoints() { return drawingPoints; },
+  get atlas3dActive() { return atlas3dActive; },
+  setAtlas3DMode,
+  worldNToScreen: (x, y) => atlas3d ? atlas3d.worldNToScreen(x, y) : null,
+  screenToWorldN: (x, y) => atlas3d ? atlas3d.screenToWorldN(x, y) : null,
   selectOnly,
   draw,
 };

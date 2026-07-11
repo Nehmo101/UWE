@@ -384,7 +384,9 @@ describe("static export", () => {
     assert.ok(files.includes("atlas/data.json"));
     assert.ok(files.includes("atlas/index.html"));
     assert.ok(files.includes("atlas/atlas-viewer.js"));
+    assert.ok(files.includes("atlas/atlas-viewer-3d.js"));
     assert.ok(files.includes("atlas/atlas-engine.js"));
+    assert.ok(files.includes("atlas/atlas-3d.js"));
 
     const atlasJson = JSON.parse(
       fs.readFileSync(path.join(exportRoot, "atlas/data.json"), "utf8"),
@@ -457,6 +459,7 @@ describe("static export", () => {
     assert.match(indexHtml, /Atlas \/ Karte öffnen/);
     const atlasHtml = fs.readFileSync(path.join(exportRoot, "atlas/index.html"), "utf8");
     assert.match(atlasHtml, /\.atlas-static-legend/);
+    assert.match(atlasHtml, /atlas-viewer-3d\.js/);
   });
 
   it("exports approved RTX assets as validated recipe-only palette items", async () => {

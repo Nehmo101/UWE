@@ -1303,7 +1303,8 @@
           return;
         }
         const atlasEngine = await loadAtlasEngine();
-        new AtlasStaticViewer(mount, data, atlasEngine);
+        window.__uweAtlasStaticViewer = new AtlasStaticViewer(mount, data, atlasEngine);
+        window.dispatchEvent(new CustomEvent("uwe-atlas-static-ready"));
       })
       .catch(() => {
         mount.innerHTML = "<p class=\"atlas-static-empty\">Atlas konnte nicht geladen werden.</p>";

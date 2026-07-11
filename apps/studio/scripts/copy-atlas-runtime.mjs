@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const srcDir = resolve(here, "../../../packages/static-export/static");
 const outDir = resolve(here, "../public/atlas");
-const files = ["atlas.html", "atlas-engine.js"];
+const files = ["atlas.html", "atlas-engine.js", "atlas-3d.js"];
 
 await mkdir(outDir, { recursive: true });
 for (const file of files) {

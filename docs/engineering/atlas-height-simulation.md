@@ -1,4 +1,11 @@
 # Atlas — Höhen-Simulation (2.5D auf Canvas 2D)
+> **Owner-Entscheidung 2026-07-11:** WebGL-Sperre aufgehoben.
+
+Die ursprüngliche Entscheidung „kein WebGL“ in diesem historischen 2.5D-Plan ist aufgehoben.
+Das bestehende v3-Höhenfeld bleibt kanonisch; `@uwe/atlas-3d` projiziert es nun optional
+mit Three.js. 2D bleibt Default sowie PNG-/Minimap-Pfad. Aktuelle Architektur:
+[atlas-3d.md](atlas-3d.md).
+
 
 > Status: **Umgesetzt (Phasen A–F).** Elevation-Engine
 > `packages/atlas/src/elevation.ts` (Sampling, Hillshade, Marching-Squares-
@@ -25,7 +32,7 @@
 
 ## 0 · Kernidee
 
-Atlas bleibt strikt 2D (Canvas 2D, keine neue Dependency, kein WebGL).
+Historischer Stand: Atlas blieb in dieser Ausbaustufe strikt 2D. Seit der Owner-Entscheidung vom 2026-07-11 ist diese Leitplanke für den optionalen 3D-Modus aufgehoben; Datenmodell und 2D-Renderer bleiben bestehen.
 „Höhe" wird als **skalares Höhenfeld auf dem bestehenden Tile-Layer**
 gespeichert und rein visuell simuliert — genau wie im Referenz-Video:
 das Auge liest Licht/Schatten, Konturen und Bewegungs-Parallax als Relief.
@@ -82,7 +89,7 @@ Video-Standbild), **D** liefert den eigentlichen Wow-Effekt in Bewegung,
 - **Alle Berechnungen pur in `@uwe/atlas`** (`elevation.ts` neu, < 300 Zeilen
   Ziel): Sampling, Hillshade-Raster, Marching Squares, Parallax-Offset-Formel.
   Canvas-Aufrufe nur in `canvas-render.ts` bzw. den drei Render-Pfaden.
-- **Keine neue Dependency, kein WebGL.** Hillshade in Grid-Auflösung
+- **Historisch (aufgehoben 2026-07-11): keine neue Dependency, kein WebGL.** Hillshade in Grid-Auflösung
   (64×40 default) ist trivial billig; Offscreen-Canvas cachen und nur bei
   Höhenfeld-Änderung neu rechnen (Parallax braucht kein Re-Rendering des
   Shadings, nur Draw-Offsets).

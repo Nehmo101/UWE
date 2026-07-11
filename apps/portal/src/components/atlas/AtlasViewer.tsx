@@ -136,6 +136,8 @@ export interface AtlasViewerProps {
   paletteItems?: PaletteItemMap;
   /** Terrain tile layer of the map (server-gated via getAtlasForContext). */
   tileLayer?: ViewerTileLayer | null;
+  /** Internal 3D bake mode: render terrain/features/labels, but no stamp objects or UI interaction. */
+  groundOnly?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -357,6 +359,7 @@ export function AtlasViewer({
   pageLinkMap = {},
   paletteItems = {},
   tileLayer = null,
+  groundOnly = false,
 }: AtlasViewerProps) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -746,7 +749,8 @@ export function AtlasViewer({
     }
 
     // Draw stamp objects
-    for (const obj of objects) {
+    if (!groundOnly) {
+      for (const obj of objects) {
       const st = obj.style as { gouache?: string; lineWidth?: number; blur?: number; tint?: { hue?: number; saturate?: number } } | null | undefined;
       // Gouache style override: painted filled asset in canvas-pixel space,
       // rendered instead of (and before) the glyph/image stamp path.
@@ -835,10 +839,11 @@ export function AtlasViewer({
       }
 
       ctx.restore();
+      }
     }
 
     ctx.restore();
-  }, [features, objects, viewport, preset, parentSilhouette, hovered, pageLinkMap, paletteItems, stampImagesVersion, tileLayer]);
+  }, [features, objects, viewport, preset, parentSilhouette, hovered, pageLinkMap, paletteItems, stampImagesVersion, tileLayer, groundOnly]);
 
   useEffect(() => {
     render();

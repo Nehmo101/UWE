@@ -103,6 +103,16 @@ Empfohlene Checks:
 Bitte Roadmap danach aktualisieren, PR erstellen und erst nach grünen Checks mergen.
 ```
 
+## Atlas 3D — Follow-ups (MVP 2026-07-11)
+
+- Rotate-Gizmo und vollständig screen-anchored Resize-Handles im 3D-Editor.
+- Curve-Label-Editing und Ghost-Review-Flows direkt als 3D-/Screen-Space-Overlays.
+- Screen-Space-Labels für extreme Kamerawinkel.
+- Optionale Shadow-Map mit messbarem Performance-Budget.
+- Persistierbare Kamera-Lesezeichen pro Atlas-Node.
+- Dedizierter 3D-Screenshot-Export; PNG-Print bleibt bewusst 2D.
+- Portal-Bodenrenderer als reines Shared-Modul extrahieren, sobald weitere Hosts ihn benötigen.
+
 ## Bewusst zurückgestellt
 
 ### Cursor / Agent-Job als Text-Provider

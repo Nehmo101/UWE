@@ -9,7 +9,7 @@ import {
 import { filterPagesForViewer } from "@uwe/auth";
 import { resolveStylePreset } from "@uwe/atlas/style-presets";
 import { validateRtxAtlasAssetProposal } from "@uwe/atlas/rtx-asset-proposal";
-import { AtlasViewer } from "@/src/components/atlas/AtlasViewer";
+import { AtlasViewerShell } from "@/src/components/atlas/AtlasViewerShell";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import type { ViewerFeature, ViewerObject, NodeAncestorItem, PageLinkMap, PaletteItemMap, ViewerTileLayer } from "@/src/components/atlas/AtlasViewer";
@@ -233,7 +233,7 @@ export default async function PortalAtlasNodePage({ params }: Props) {
         Zurück zum Atlas
       </Link>
 
-      <AtlasViewer
+      <AtlasViewerShell
         worldSlug={worldSlug}
         nodeId={nodeId}
         nodeTitle={nodeTitle}

@@ -239,12 +239,13 @@ export function renderAtlasViewerPage(input: {
     </main>
   </div>
   <script src="atlas-viewer.js" defer></script>
+  <script src="atlas-viewer-3d.js" defer></script>
 </body>
 </html>`;
 }
 
 export function copyAtlasViewerScripts(atlasDir: string): string[] {
-  const files = ["atlas-viewer.js", "atlas-engine.js"];
+  const files = ["atlas-viewer.js", "atlas-viewer-3d.js", "atlas-engine.js", "atlas-3d.js"];
   for (const file of files) {
     const source = path.resolve(packageRoot, "../static", file);
     const target = path.join(atlasDir, file);

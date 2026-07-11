@@ -1,0 +1,31 @@
+{
+  "name": "@uwe/atlas-3d",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UWE Atlas WebGL heightfield renderer and 3D projection bridge",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./camera-math": "./src/camera-math.ts",
+    "./heightfield": "./src/heightfield.ts",
+    "./picking": "./src/picking.ts",
+    "./sprite-atlas": "./src/sprite-atlas.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "@uwe/atlas": "workspace:*",
+    "three": "0.178.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@types/three": "0.178.1",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

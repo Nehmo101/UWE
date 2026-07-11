@@ -22,6 +22,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@uwe/assets": "workspace:*",
     "@uwe/atlas": "workspace:*",
+    "@uwe/atlas-3d": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/player-hub": "workspace:*",

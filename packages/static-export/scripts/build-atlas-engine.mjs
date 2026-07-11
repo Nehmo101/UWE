@@ -17,23 +17,27 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkgRoot = resolve(here, "..");
-const entry = resolve(pkgRoot, "../atlas/src/index.ts");
-const outfile = resolve(pkgRoot, "static/atlas-engine.js");
+const bundles = [
+  { name: "engine", entry: resolve(pkgRoot, "../atlas/src/index.ts"), outfile: resolve(pkgRoot, "static/atlas-engine.js") },
+  { name: "3d", entry: resolve(pkgRoot, "../atlas-3d/src/index.ts"), outfile: resolve(pkgRoot, "static/atlas-3d.js") },
+];
 
-await build({
-  entryPoints: [entry],
-  bundle: true,
-  format: "esm",
-  platform: "browser",
-  target: ["es2020"],
-  outfile,
-  charset: "utf8",
-  legalComments: "none",
-  banner: {
-    js:
-      "/* AUTO-GENERATED from @uwe/atlas — do not edit by hand.\n" +
-      "   Regenerate: pnpm --filter @uwe/static-export build:atlas-engine */",
-  },
-});
-
-console.log("[atlas] engine bundled →", outfile);
+for (const bundle of bundles) {
+  await build({
+    entryPoints: [bundle.entry],
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    target: ["es2020"],
+    outfile: bundle.outfile,
+    minify: bundle.name === "3d",
+    charset: "utf8",
+    legalComments: "none",
+    banner: {
+      js:
+        `/* AUTO-GENERATED from @uwe/atlas${bundle.name === "3d" ? "-3d" : ""} — do not edit by hand.\n` +
+        "   Regenerate: pnpm --filter @uwe/static-export build:atlas-engine */",
+    },
+  });
+  console.log(`[atlas] ${bundle.name} bundled →`, bundle.outfile);
+}

@@ -31,6 +31,8 @@ const config = [
       "**/src-tauri/target/**",
       "packages/database/src/generated/**",
       "design-system/_ds_bundle.js",
+      // Committed/generated browser bundles are verified by their source packages.
+      "**/atlas-3d.js",
       "data/**",
       "exports/**",
       "**/*.d.ts",
