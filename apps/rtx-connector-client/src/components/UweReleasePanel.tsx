@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
 import type { ConnectorModelProfileStore } from "@uwe/connector-model-profile";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 type Props = {
   loaded: boolean;
@@ -122,16 +125,11 @@ export function UweReleasePanel({ loaded, store, onLoadStore, onSaveStore }: Pro
   );
 
   return (
-    <CardV2
-      title="UWE-Freigaben"
-      footer={
-        <div className="connector-actions">
-          <ButtonV2 variant="primary" onClick={saveReleaseConfig} disabled={busy}>
-            Freigaben speichern
-          </ButtonV2>
-        </div>
-      }
-    >
+    <Card>
+      <CardHeader>
+        <CardTitle>UWE-Freigaben</CardTitle>
+      </CardHeader>
+      <CardContent>
       <div className="connector-stack">
         <div className="connector-stats-row">
           <div className="connector-stat-pill">Profile: {draft.profiles.length}</div>
@@ -221,6 +219,14 @@ export function UweReleasePanel({ loaded, store, onLoadStore, onSaveStore }: Pro
           </div>
         )}
       </div>
-    </CardV2>
+      </CardContent>
+      <CardFooter>
+        <div className="connector-actions">
+          <Button variant="primary" onClick={saveReleaseConfig} disabled={busy}>
+            Freigaben speichern
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

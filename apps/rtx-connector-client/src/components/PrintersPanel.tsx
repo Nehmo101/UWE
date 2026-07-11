@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
 import type { ConnectorClientConfig } from "@uwe/connector-client-config";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 import type { CommandTestResult, ConnectorPrinterStore } from "../lib/tauri";
 
@@ -176,23 +179,11 @@ export function PrintersPanel({
 
   return (
     <div className="connector-stack">
-      <CardV2
-        title="Lokaler Druckbefehl"
-        footer={
-          <div className="connector-actions">
-            <ButtonV2 variant="primary" onClick={handleSavePrintCommand} disabled={printCmdDisabled}>
-              Speichern
-            </ButtonV2>
-            <ButtonV2
-              variant="secondary"
-              onClick={handleTestPrintCommand}
-              disabled={printCmdDisabled || (!config.printCommand && !config.defaultPrinterId)}
-            >
-              Testdruck senden
-            </ButtonV2>
-          </div>
-        }
-      >
+      <Card>
+        <CardHeader>
+          <CardTitle>Lokaler Druckbefehl</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Optionaler Druckbefehl für <code>label_print</code>-Jobs. Der Connector ruft ihn mit{" "}
@@ -236,21 +227,28 @@ export function PrintersPanel({
             />
           </label>
         </div>
-      </CardV2>
-
-      <CardV2
-        title="Drucker für UWE"
-        footer={
+        </CardContent>
+        <CardFooter>
           <div className="connector-actions">
-            <ButtonV2 variant="secondary" onClick={scanPrinters} disabled={busyAction !== null}>
-              Drucker suchen
-            </ButtonV2>
-            <ButtonV2 variant="primary" onClick={savePrinters} disabled={busyAction !== null}>
-              Auswahl speichern
-            </ButtonV2>
+            <Button variant="primary" onClick={handleSavePrintCommand} disabled={printCmdDisabled}>
+              Speichern
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleTestPrintCommand}
+              disabled={printCmdDisabled || (!config.printCommand && !config.defaultPrinterId)}
+            >
+              Testdruck senden
+            </Button>
           </div>
-        }
-      >
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Drucker für UWE</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Erkennt die auf dem RTX-Host installierten Drucker (Windows-Spooler bzw. CUPS)
@@ -306,7 +304,18 @@ export function PrintersPanel({
             </div>
           )}
         </div>
-      </CardV2>
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button variant="secondary" onClick={scanPrinters} disabled={busyAction !== null}>
+              Drucker suchen
+            </Button>
+            <Button variant="primary" onClick={savePrinters} disabled={busyAction !== null}>
+              Auswahl speichern
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
 
       <div className="connector-panel">
         <h3>Alternativ: Drucker über Umgebungsvariable konfigurieren</h3>

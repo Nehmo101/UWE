@@ -1,7 +1,10 @@
 import { useState } from "react";
 
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
 import type { ConnectorClientConfig } from "@uwe/connector-client-config";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 import type {
   SpotifyAuthUrlResult,
@@ -153,16 +156,11 @@ export function SpotifyPanel({
 
   return (
     <div className="connector-stack">
-      <CardV2
-        title="Spotify-Zugangsdaten"
-        footer={
-          <div className="connector-actions">
-            <ButtonV2 variant="primary" onClick={handleSave} disabled={disabled}>
-              Zugangsdaten speichern
-            </ButtonV2>
-          </div>
-        }
-      >
+      <Card>
+        <CardHeader>
+          <CardTitle>Spotify-Zugangsdaten</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Spotify OAuth läuft ausschließlich hier auf dem RTX-PC — der UWE-Host sieht die
@@ -205,26 +203,21 @@ export function SpotifyPanel({
             </label>
           </div>
         </div>
-      </CardV2>
-
-      <CardV2
-        title="Anmeldung"
-        footer={
+        </CardContent>
+        <CardFooter>
           <div className="connector-actions">
-            <ButtonV2 variant="secondary" onClick={handleAuthUrl} disabled={disabled}>
-              Login öffnen
-            </ButtonV2>
-            <ButtonV2 variant="primary" onClick={handleExchange} disabled={disabled}>
-              Code eintauschen
-            </ButtonV2>
-            {connected ? (
-              <ButtonV2 variant="ghost" onClick={handleDisconnect} disabled={disabled}>
-                Trennen
-              </ButtonV2>
-            ) : null}
+            <Button variant="primary" onClick={handleSave} disabled={disabled}>
+              Zugangsdaten speichern
+            </Button>
           </div>
-        }
-      >
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Anmeldung</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <HealthBadge
             status={connected ? "ok" : "degraded"}
@@ -252,24 +245,29 @@ export function SpotifyPanel({
             />
           </label>
         </div>
-      </CardV2>
-
-      <CardV2
-        title="Ausgabegerät & Test"
-        footer={
+        </CardContent>
+        <CardFooter>
           <div className="connector-actions">
-            <ButtonV2 variant="ghost" onClick={handleLoadDevices} disabled={disabled}>
-              Geräte laden
-            </ButtonV2>
-            <ButtonV2 variant="secondary" onClick={() => handleTest("play")} disabled={disabled}>
-              Test: Play
-            </ButtonV2>
-            <ButtonV2 variant="secondary" onClick={() => handleTest("pause")} disabled={disabled}>
-              Test: Pause
-            </ButtonV2>
+            <Button variant="secondary" onClick={handleAuthUrl} disabled={disabled}>
+              Login öffnen
+            </Button>
+            <Button variant="primary" onClick={handleExchange} disabled={disabled}>
+              Code eintauschen
+            </Button>
+            {connected ? (
+              <Button variant="ghost" onClick={handleDisconnect} disabled={disabled}>
+                Trennen
+              </Button>
+            ) : null}
           </div>
-        }
-      >
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ausgabegerät & Test</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Wähle das Spotify-Connect-Gerät auf dem RTX-PC (z. B. die laufende Spotify-App). Spotify
@@ -302,26 +300,40 @@ export function SpotifyPanel({
                           {device.isActive ? " · aktiv" : ""}
                         </p>
                       </div>
-                      <ButtonV2
+                      <Button
                         variant={isPreferred ? "ghost" : "secondary"}
                         onClick={() => handleSetDevice(device.id)}
                         disabled={disabled || isPreferred}
                       >
                         Auswählen
-                      </ButtonV2>
+                      </Button>
                     </div>
                   </div>
                 );
               })}
               {devicesResult.deviceId ? (
-                <ButtonV2 variant="ghost" onClick={() => handleSetDevice(null)} disabled={disabled}>
+                <Button variant="ghost" onClick={() => handleSetDevice(null)} disabled={disabled}>
                   Gerät zurücksetzen
-                </ButtonV2>
+                </Button>
               ) : null}
             </div>
           ) : null}
         </div>
-      </CardV2>
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button variant="ghost" onClick={handleLoadDevices} disabled={disabled}>
+              Geräte laden
+            </Button>
+            <Button variant="secondary" onClick={() => handleTest("play")} disabled={disabled}>
+              Test: Play
+            </Button>
+            <Button variant="secondary" onClick={() => handleTest("pause")} disabled={disabled}>
+              Test: Pause
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

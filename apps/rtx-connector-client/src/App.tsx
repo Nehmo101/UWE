@@ -10,7 +10,10 @@ import {
   defaultModelProfileStore,
   type ConnectorModelProfileStore,
 } from "@uwe/connector-model-profile";
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
+
+import { Button } from "./components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
 
 import { AudioPanel } from "./components/AudioPanel";
 import { CookbookPanel } from "./components/CookbookPanel";
@@ -297,19 +300,11 @@ export default function App() {
     return (
       <>
         <div className="connector-grid connector-grid-2">
-          <CardV2
-            title="Host und Connector-Token"
-            footer={
-              <div className="connector-actions">
-                <ButtonV2 variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
-                  Speichern
-                </ButtonV2>
-                <ButtonV2 variant="secondary" onClick={runHostTest} disabled={busyAction !== null}>
-                  Verbindung testen
-                </ButtonV2>
-              </div>
-            }
-          >
+          <Card>
+            <CardHeader>
+              <CardTitle>Host und Connector-Token</CardTitle>
+            </CardHeader>
+            <CardContent>
             <div className="connector-form-grid">
               <label className="connector-field">
                 <span>Connector-Name</span>
@@ -342,27 +337,24 @@ export default function App() {
                 />
               </label>
             </div>
-          </CardV2>
-
-          <CardV2
-            title="Outbound-Laufzeit"
-            footer={
+            </CardContent>
+            <CardFooter>
               <div className="connector-actions">
-                {isRunning ? (
-                  <ButtonV2 variant="accent" onClick={runStopConnector} disabled={busyAction !== null}>
-                    Verbindung stoppen
-                  </ButtonV2>
-                ) : (
-                  <ButtonV2 variant="primary" onClick={runStartConnector} disabled={busyAction !== null}>
-                    Verbindung starten
-                  </ButtonV2>
-                )}
-                <ButtonV2 variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
-                  Status aktualisieren
-                </ButtonV2>
+                <Button variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
+                  Speichern
+                </Button>
+                <Button variant="secondary" onClick={runHostTest} disabled={busyAction !== null}>
+                  Verbindung testen
+                </Button>
               </div>
-            }
-          >
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Outbound-Laufzeit</CardTitle>
+            </CardHeader>
+            <CardContent>
             <div className="connector-stack">
               <HealthBadge
                 status={toHealthBadgeStatus(runtimeStatus)}
@@ -384,10 +376,31 @@ export default function App() {
                 </div>
               </dl>
             </div>
-          </CardV2>
+            </CardContent>
+            <CardFooter>
+              <div className="connector-actions">
+                {isRunning ? (
+                  <Button variant="accent" onClick={runStopConnector} disabled={busyAction !== null}>
+                    Verbindung stoppen
+                  </Button>
+                ) : (
+                  <Button variant="primary" onClick={runStartConnector} disabled={busyAction !== null}>
+                    Verbindung starten
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
+                  Status aktualisieren
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
 
           {testResult ? (
-            <CardV2 title="Letzter Verbindungstest" className="connector-grid-span-2">
+            <Card className="connector-grid-span-2">
+              <CardHeader>
+                <CardTitle>Letzter Verbindungstest</CardTitle>
+              </CardHeader>
+              <CardContent>
               <div className="connector-stack">
                 <HealthBadge
                   status={testResult.ok ? "ok" : "error"}
@@ -396,27 +409,16 @@ export default function App() {
                 <p className="connector-muted">{testResult.message}</p>
                 <p className="connector-muted">Geprüft: {testResult.checkedAt}</p>
               </div>
-            </CardV2>
+              </CardContent>
+            </Card>
           ) : null}
         </div>
 
-        <CardV2
-          title="Client-Optionen"
-          footer={
-            <div className="connector-actions">
-              <ButtonV2 variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
-                Einstellungen speichern
-              </ButtonV2>
-              <ButtonV2
-                variant="ghost"
-                onClick={() => setShowWizard(true)}
-                disabled={busyAction !== null}
-              >
-                Setup-Wizard erneut öffnen
-              </ButtonV2>
-            </div>
-          }
-        >
+        <Card>
+          <CardHeader>
+            <CardTitle>Client-Optionen</CardTitle>
+          </CardHeader>
+          <CardContent>
           <div className="connector-form-grid">
             <label className="connector-checkbox">
               <input
@@ -469,7 +471,18 @@ export default function App() {
               </select>
             </label>
           </div>
-        </CardV2>
+          </CardContent>
+          <CardFooter>
+            <div className="connector-actions">
+              <Button variant="primary" onClick={persistConfig} disabled={busyAction !== null}>
+                Einstellungen speichern
+              </Button>
+              <Button variant="ghost" onClick={() => setShowWizard(true)} disabled={busyAction !== null}>
+                Setup-Wizard erneut öffnen
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
       </>
     );
   }
@@ -593,9 +606,9 @@ export default function App() {
         status={toHealthBadgeStatus(runtimeStatus)}
         label={`${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
       />
-      <ButtonV2 variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
+      <Button variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
         Neu laden
-      </ButtonV2>
+      </Button>
     </>
   );
 

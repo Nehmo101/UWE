@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
 import type { ConnectorModelProfileStore } from "@uwe/connector-model-profile";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 type Props = {
   loaded: boolean;
@@ -178,22 +181,11 @@ export function ModelLibraryPanel({
 
   return (
     <div className="connector-grid connector-grid-2">
-      <CardV2
-        title="Scan-Pfade"
-        footer={
-          <div className="connector-actions">
-            <ButtonV2 variant="secondary" onClick={addScanPath} disabled={busyAction !== null}>
-              Pfad hinzufügen
-            </ButtonV2>
-            <ButtonV2 variant="ghost" onClick={savePaths} disabled={busyAction !== null}>
-              Speichern
-            </ButtonV2>
-            <ButtonV2 variant="primary" onClick={saveAndScan} disabled={busyAction !== null}>
-              Jetzt scannen
-            </ButtonV2>
-          </div>
-        }
-      >
+      <Card>
+        <CardHeader>
+          <CardTitle>Scan-Pfade</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             GGUF-Verzeichnisse werden lokal auf dem RTX-PC gescannt und nie über den Host geladen.
@@ -214,13 +206,13 @@ export function ModelLibraryPanel({
                       status={scanPath.enabled ? "ok" : "degraded"}
                       label={scanPath.enabled ? "Aktiv" : "Pausiert"}
                     />
-                    <ButtonV2
+                    <Button
                       variant="ghost"
                       onClick={() => removeScanPath(scanPath.id)}
                       disabled={busyAction !== null}
                     >
                       Entfernen
-                    </ButtonV2>
+                    </Button>
                   </div>
 
                   <div className="connector-form-grid">
@@ -258,9 +250,27 @@ export function ModelLibraryPanel({
             </div>
           )}
         </div>
-      </CardV2>
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button variant="secondary" onClick={addScanPath} disabled={busyAction !== null}>
+              Pfad hinzufügen
+            </Button>
+            <Button variant="ghost" onClick={savePaths} disabled={busyAction !== null}>
+              Speichern
+            </Button>
+            <Button variant="primary" onClick={saveAndScan} disabled={busyAction !== null}>
+              Jetzt scannen
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
 
-      <CardV2 title="Gefundene Profile">
+      <Card>
+        <CardHeader>
+          <CardTitle>Gefundene Profile</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <div className="connector-stats-row">
             <div className="connector-stat-pill">Profile: {stats.total}</div>
@@ -306,13 +316,13 @@ export function ModelLibraryPanel({
 
                   {profile.provider === "ollama" ? (
                     <div className="connector-actions">
-                      <ButtonV2
+                      <Button
                         variant="ghost"
                         onClick={() => void deleteProfile(profile.name, profile.displayName)}
                         disabled={deletingId !== null}
                       >
                         {deletingId === profile.name ? "Löscht …" : "Löschen"}
-                      </ButtonV2>
+                      </Button>
                     </div>
                   ) : null}
                 </div>
@@ -320,7 +330,8 @@ export function ModelLibraryPanel({
             </div>
           )}
         </div>
-      </CardV2>
+        </CardContent>
+      </Card>
     </div>
   );
 }

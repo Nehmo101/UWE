@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 import type {
   RunnerId,
@@ -108,23 +111,11 @@ export function RunnersPanel({ onProbeRunners, onStartOllama, onTestRunner }: Pr
 
   return (
     <div className="connector-stack">
-      <CardV2
-        title="Lokale Runner"
-        footer={
-          <div className="connector-actions">
-            <ButtonV2 variant="ghost" onClick={loadRunners} disabled={busy || activeAction !== null}>
-              Status aktualisieren
-            </ButtonV2>
-            <ButtonV2
-              variant="primary"
-              onClick={runStartOllama}
-              disabled={activeAction !== null}
-            >
-              Ollama starten
-            </ButtonV2>
-          </div>
-        }
-      >
+      <Card>
+        <CardHeader>
+          <CardTitle>Lokale Runner</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Erkennt Ollama (<code>/api/tags</code>), LM Studio und llama.cpp (<code>/v1/models</code>).
@@ -170,13 +161,13 @@ export function RunnersPanel({ onProbeRunners, onStartOllama, onTestRunner }: Pr
                     ) : null}
 
                     <div className="connector-actions">
-                      <ButtonV2
+                      <Button
                         variant="secondary"
                         onClick={() => runTest(runner.id)}
                         disabled={activeAction !== null}
                       >
                         Verbindung testen
-                      </ButtonV2>
+                      </Button>
                     </div>
 
                     {test ? (
@@ -193,7 +184,18 @@ export function RunnersPanel({ onProbeRunners, onStartOllama, onTestRunner }: Pr
             </div>
           )}
         </div>
-      </CardV2>
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button variant="ghost" onClick={loadRunners} disabled={busy || activeAction !== null}>
+              Status aktualisieren
+            </Button>
+            <Button variant="primary" onClick={runStartOllama} disabled={activeAction !== null}>
+              Ollama starten
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

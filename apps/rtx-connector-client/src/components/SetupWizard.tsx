@@ -7,7 +7,10 @@ import {
   type ConnectorClientConfig,
 } from "@uwe/connector-client-config";
 import type { ConnectorModelProfileStore } from "@uwe/connector-model-profile";
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 import {
   getConnectorStatus,
@@ -353,9 +356,9 @@ export function SetupWizard({
               <strong>{maskToken(config.token) || "—"}</strong>
             </p>
             <div className="connector-actions">
-              <ButtonV2 variant="secondary" onClick={runConnectionTest} disabled={busy}>
+              <Button variant="secondary" onClick={runConnectionTest} disabled={busy}>
                 Verbindung testen
-              </ButtonV2>
+              </Button>
             </div>
             {testResult ? (
               <HealthBadge
@@ -386,9 +389,9 @@ export function SetupWizard({
               Suche nach laufenden Providern und lokalen Modellpfaden. Das Ergebnis landet im lokalen Model-Store.
             </p>
             <div className="connector-actions">
-              <ButtonV2 variant="secondary" onClick={runModelScan} disabled={busy}>
+              <Button variant="secondary" onClick={runModelScan} disabled={busy}>
                 Modelle scannen
-              </ButtonV2>
+              </Button>
             </div>
             <div className="connector-stats-row">
               <div className="connector-stat-pill">Profile: {modelStore.profiles.length}</div>
@@ -420,13 +423,13 @@ export function SetupWizard({
                       />
                     </div>
                     {!profile.enabledForUwe ? (
-                      <ButtonV2
+                      <Button
                         variant="primary"
                         onClick={() => void enableProfileForUwe(profile.id)}
                         disabled={busy}
                       >
                         Für UWE aktivieren
-                      </ButtonV2>
+                      </Button>
                     ) : null}
                   </div>
                 ))}
@@ -469,35 +472,11 @@ export function SetupWizard({
 
   return (
     <div className="connector-wizard-overlay" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
-      <CardV2
-        title={`Erststart — Schritt ${step.id} von ${WIZARD_STEPS.length}`}
-        className="connector-wizard-card"
-        footer={
-          <div className="connector-actions">
-            <ButtonV2 variant="ghost" onClick={() => void handleDismiss()} disabled={busy}>
-              Später
-            </ButtonV2>
-            {stepIndex > 0 ? (
-              <ButtonV2 variant="secondary" onClick={() => setStepIndex((value) => value - 1)} disabled={busy}>
-                Zurück
-              </ButtonV2>
-            ) : null}
-            {isLastStep ? (
-              <ButtonV2 variant="primary" onClick={finishWizard} disabled={busy}>
-                Fertig
-              </ButtonV2>
-            ) : (
-              <ButtonV2
-                variant="primary"
-                onClick={() => void goNext()}
-                disabled={busy || !canAdvance}
-              >
-                Weiter
-              </ButtonV2>
-            )}
-          </div>
-        }
-      >
+      <Card className="connector-wizard-card">
+        <CardHeader>
+          <CardTitle>{`Erststart — Schritt ${step.id} von ${WIZARD_STEPS.length}`}</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p id="wizard-title" className="connector-lead">
             {step.title}
@@ -507,7 +486,29 @@ export function SetupWizard({
           {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
           {renderStepBody()}
         </div>
-      </CardV2>
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button variant="ghost" onClick={() => void handleDismiss()} disabled={busy}>
+              Später
+            </Button>
+            {stepIndex > 0 ? (
+              <Button variant="secondary" onClick={() => setStepIndex((value) => value - 1)} disabled={busy}>
+                Zurück
+              </Button>
+            ) : null}
+            {isLastStep ? (
+              <Button variant="primary" onClick={finishWizard} disabled={busy}>
+                Fertig
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={() => void goNext()} disabled={busy || !canAdvance}>
+                Weiter
+              </Button>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

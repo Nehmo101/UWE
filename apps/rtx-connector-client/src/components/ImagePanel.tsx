@@ -1,8 +1,9 @@
 import { useState } from "react";
 
-import { ButtonV2, CardV2 } from "@uwe/shared-ui";
 import type { ConnectorClientConfig } from "@uwe/connector-client-config";
 
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import type { CommandTestResult } from "../lib/tauri";
 
 type Props = {
@@ -72,56 +73,59 @@ export function ImagePanel({ config, busy, onChange, onSave, onTest }: Props) {
   }
 
   return (
-    <CardV2
-      title="Lokale Bildgenerierung"
-      footer={
-        <div className="connector-actions">
-          <ButtonV2 variant="primary" onClick={handleSave} disabled={disabled}>
-            Speichern
-          </ButtonV2>
-          <ButtonV2 variant="secondary" onClick={handleTest} disabled={disabled || !config.imageCommand}>
-            Test-Job starten
-          </ButtonV2>
-        </div>
-      }
-    >
-      <div className="connector-stack">
-        <p className="connector-muted">
-          Befehl für lokale Bildgenerierung. Der Job-Payload wird als JSON auf <code>stdin</code>{" "}
-          übergeben; die Ausgabe (JSON) wird als Ergebnis übernommen. Aktiviert die Capability{" "}
-          <code>image_generation</code>.
-        </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Lokale Bildgenerierung</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="connector-stack">
+          <p className="connector-muted">
+            Befehl für lokale Bildgenerierung. Der Job-Payload wird als JSON auf <code>stdin</code>{" "}
+            übergeben; die Ausgabe (JSON) wird als Ergebnis übernommen. Aktiviert die Capability{" "}
+            <code>image_generation</code>.
+          </p>
 
-        {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
-        {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
+          {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
+          {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
 
-        <label className="connector-field connector-field-full">
-          <span>Image-Kommando</span>
-          <input
-            className="connector-input"
-            value={config.imageCommand}
-            onChange={(event) => onChange("imageCommand", event.target.value)}
-            placeholder="python tools/generate_image.py"
-          />
-        </label>
-
-        <label className="connector-field connector-field-full">
-          <span>Test-Prompt (optional)</span>
-          <input
-            className="connector-input"
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            placeholder=" a wizard in a misty forest"
-          />
-        </label>
-
-        {output ? (
           <label className="connector-field connector-field-full">
-            <span>Letzte Ausgabe</span>
-            <textarea className="connector-input" value={output} readOnly rows={4} />
+            <span>Image-Kommando</span>
+            <input
+              className="connector-input"
+              value={config.imageCommand}
+              onChange={(event) => onChange("imageCommand", event.target.value)}
+              placeholder="python tools/generate_image.py"
+            />
           </label>
-        ) : null}
-      </div>
-    </CardV2>
+
+          <label className="connector-field connector-field-full">
+            <span>Test-Prompt (optional)</span>
+            <input
+              className="connector-input"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder=" a wizard in a misty forest"
+            />
+          </label>
+
+          {output ? (
+            <label className="connector-field connector-field-full">
+              <span>Letzte Ausgabe</span>
+              <textarea className="connector-input" value={output} readOnly rows={4} />
+            </label>
+          ) : null}
+        </div>
+      </CardContent>
+      <CardFooter>
+        <div className="connector-actions">
+          <Button variant="primary" onClick={handleSave} disabled={disabled}>
+            Speichern
+          </Button>
+          <Button variant="secondary" onClick={handleTest} disabled={disabled || !config.imageCommand}>
+            Test-Job starten
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

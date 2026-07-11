@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
 
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import type { ConnectorJobHistoryEntry } from "../lib/tauri";
 
 type Props = {
@@ -55,61 +57,64 @@ export function JobsPanel({ onLoadJobs }: Props) {
   }, [loadJobs]);
 
   return (
-    <CardV2
-      title="Letzte Connector-Jobs"
-      footer={
-        <div className="connector-actions">
-          <ButtonV2 variant="ghost" onClick={loadJobs} disabled={busy}>
-            Neu laden
-          </ButtonV2>
-        </div>
-      }
-    >
-      <div className="connector-stack">
-        <p className="connector-muted">
-          Privacy-safe Historie: nur Job-ID, Lane, Status, Dauer und ggf. gekürzter Fehlergrund.
-        </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Letzte Connector-Jobs</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="connector-stack">
+          <p className="connector-muted">
+            Privacy-safe Historie: nur Job-ID, Lane, Status, Dauer und ggf. gekürzter Fehlergrund.
+          </p>
 
-        {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
+          {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
 
-        {jobs.length === 0 ? (
-          <div className="connector-empty-state">Noch keine lokalen Jobs aufgezeichnet.</div>
-        ) : (
-          <div className="connector-table-wrap">
-            <table className="connector-table">
-              <thead>
-                <tr>
-                  <th>Job</th>
-                  <th>Lane</th>
-                  <th>Status</th>
-                  <th>Dauer</th>
-                  <th>Fertig</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map((job) => (
-                  <tr key={job.id}>
-                    <td>
-                      <div className="connector-table-primary">{job.type}</div>
-                      <div className="connector-table-secondary">{job.id}</div>
-                      {job.reason ? <div className="connector-table-secondary">{job.reason}</div> : null}
-                    </td>
-                    <td>{job.lane}</td>
-                    <td>
-                      <HealthBadge
-                        status={job.status === "completed" ? "ok" : "error"}
-                        label={job.status === "completed" ? "completed" : "failed"}
-                      />
-                    </td>
-                    <td>{formatDuration(job.durationMs)}</td>
-                    <td>{job.finishedAt}</td>
+          {jobs.length === 0 ? (
+            <div className="connector-empty-state">Noch keine lokalen Jobs aufgezeichnet.</div>
+          ) : (
+            <div className="connector-table-wrap">
+              <table className="connector-table">
+                <thead>
+                  <tr>
+                    <th>Job</th>
+                    <th>Lane</th>
+                    <th>Status</th>
+                    <th>Dauer</th>
+                    <th>Fertig</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </CardV2>
+                </thead>
+                <tbody>
+                  {jobs.map((job) => (
+                    <tr key={job.id}>
+                      <td>
+                        <div className="connector-table-primary">{job.type}</div>
+                        <div className="connector-table-secondary">{job.id}</div>
+                        {job.reason ? <div className="connector-table-secondary">{job.reason}</div> : null}
+                      </td>
+                      <td>{job.lane}</td>
+                      <td>
+                        <HealthBadge
+                          status={job.status === "completed" ? "ok" : "error"}
+                          label={job.status === "completed" ? "completed" : "failed"}
+                        />
+                      </td>
+                      <td>{formatDuration(job.durationMs)}</td>
+                      <td>{job.finishedAt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter>
+        <div className="connector-actions">
+          <Button variant="ghost" onClick={loadJobs} disabled={busy}>
+            Neu laden
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 import type {
   CookbookDashboardView,
@@ -168,16 +171,11 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
 
   return (
     <div className="connector-stack">
-      <CardV2
-        title="Hardware-Profil"
-        footer={
-          <div className="connector-actions">
-            <ButtonV2 variant="ghost" onClick={loadDashboard} disabled={busy}>
-              Neu erkennen
-            </ButtonV2>
-          </div>
-        }
-      >
+      <Card>
+        <CardHeader>
+          <CardTitle>Hardware-Profil</CardTitle>
+        </CardHeader>
+        <CardContent>
         {hardware ? (
           <div className="connector-stack">
             <div className="connector-stats-row">
@@ -204,7 +202,15 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
             {busy ? "Hardware wird erkannt …" : "Noch kein Hardware-Profil geladen."}
           </div>
         )}
-      </CardV2>
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button variant="ghost" onClick={loadDashboard} disabled={busy}>
+              Neu erkennen
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
 
       {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
       {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
@@ -221,7 +227,11 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
         </div>
       ) : null}
 
-      <CardV2 title="Empfehlungen nach Anwendungsfall">
+      <Card>
+        <CardHeader>
+          <CardTitle>Empfehlungen nach Anwendungsfall</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Hardware-bewusste Modellvorschläge aus <code>@uwe/cookbook</code>. Lokale Inferenz
@@ -247,20 +257,20 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
                   </p>
                   <p className="connector-muted">{rec.privacyNote}</p>
                   <div className="connector-actions">
-                    <ButtonV2
+                    <Button
                       variant="secondary"
                       onClick={() => runPull(rec.modelId)}
                       disabled={activeModel !== null}
                     >
                       Pull via Ollama
-                    </ButtonV2>
-                    <ButtonV2
+                    </Button>
+                    <Button
                       variant="primary"
                       onClick={() => runEnable(rec.modelId)}
                       disabled={activeModel !== null}
                     >
                       Für UWE aktivieren
-                    </ButtonV2>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -269,21 +279,26 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
             <div className="connector-empty-state">Keine Empfehlungen verfügbar.</div>
           )}
         </div>
-      </CardV2>
+        </CardContent>
+      </Card>
 
-      <CardV2 title="Modell-Katalog mit Fit-Scores">
+      <Card>
+        <CardHeader>
+          <CardTitle>Modell-Katalog mit Fit-Scores</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <div className="connector-catalog-controls">
             <div className="connector-sort-group">
               <span className="connector-muted">Sortieren:</span>
               {(Object.keys(SORT_LABELS) as CatalogSort[]).map((key) => (
-                <ButtonV2
+                <Button
                   key={key}
                   variant={sortBy === key ? "primary" : "ghost"}
                   onClick={() => setSortBy(key)}
                 >
                   {SORT_LABELS[key]}
-                </ButtonV2>
+                </Button>
               ))}
             </div>
             <label className="connector-checkbox">
@@ -346,20 +361,20 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
                       <td>{model.installed ? "Installiert" : "Nicht installiert"}</td>
                       <td>
                         <div className="connector-actions">
-                          <ButtonV2
+                          <Button
                             variant="ghost"
                             onClick={() => runPull(model.id)}
                             disabled={activeModel !== null}
                           >
                             Pull
-                          </ButtonV2>
-                          <ButtonV2
+                          </Button>
+                          <Button
                             variant="secondary"
                             onClick={() => runEnable(model.id)}
                             disabled={activeModel !== null}
                           >
                             Für UWE
-                          </ButtonV2>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -377,7 +392,8 @@ export function CookbookPanel({ onLoadDashboard, onPullModel, onEnableForUwe }: 
             </div>
           )}
         </div>
-      </CardV2>
+        </CardContent>
+      </Card>
     </div>
   );
 }

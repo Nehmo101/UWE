@@ -6,7 +6,10 @@ import {
   parseModelProfileStore,
   type ConnectorModelProfileStore,
 } from "@uwe/connector-model-profile";
-import { ButtonV2, CardV2, HealthBadge } from "@uwe/shared-ui";
+import { HealthBadge } from "@uwe/shared-ui";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 import type { OllamaPullEvent, PullOllamaModelResult } from "../lib/tauri";
 import { useOllamaMultiPullProgress } from "../lib/useOllamaMultiPullProgress";
@@ -310,24 +313,11 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
 
   return (
     <div className="connector-grid connector-grid-2">
-      <CardV2
-        title="Ollama pull"
-        footer={
-          <div className="connector-actions">
-            <ButtonV2
-              variant="primary"
-              onClick={runPull}
-              disabled={busy || parsedModelNames.length === 0}
-            >
-              {busy
-                ? "Lädt …"
-                : parsedModelNames.length > 1
-                  ? `${parsedModelNames.length} Modelle laden`
-                  : "Modell laden"}
-            </ButtonV2>
-          </div>
-        }
-      >
+      <Card>
+        <CardHeader>
+          <CardTitle>Ollama pull</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Zieht Modelle direkt über den lokalen Ollama-Daemon. Mehrere Namen (pro Zeile oder
@@ -390,22 +380,29 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
             <div className="connector-empty-state">Noch kein Pull ausgeführt.</div>
           )}
         </div>
-      </CardV2>
-
-      <CardV2
-        title="Hugging Face"
-        footer={
+        </CardContent>
+        <CardFooter>
           <div className="connector-actions">
-            <ButtonV2
+            <Button
               variant="primary"
-              onClick={runHuggingFacePull}
-              disabled={hfBusy || hfRepoId.trim().length === 0 || hfFilename.trim().length === 0}
+              onClick={runPull}
+              disabled={busy || parsedModelNames.length === 0}
             >
-              Datei laden
-            </ButtonV2>
+              {busy
+                ? "Lädt …"
+                : parsedModelNames.length > 1
+                  ? `${parsedModelNames.length} Modelle laden`
+                  : "Modell laden"}
+            </Button>
           </div>
-        }
-      >
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Hugging Face</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <p className="connector-muted">
             Lädt Modell-Dateien direkt vom Hugging-Face-Hub in den lokalen Connector-Speicher und legt ein Profil im Model-Store an.
@@ -450,9 +447,25 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
             <div className="connector-empty-state">Noch kein Hugging-Face-Download ausgeführt.</div>
           )}
         </div>
-      </CardV2>
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button
+              variant="primary"
+              onClick={runHuggingFacePull}
+              disabled={hfBusy || hfRepoId.trim().length === 0 || hfFilename.trim().length === 0}
+            >
+              Datei laden
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
 
-      <CardV2 title="Lokale Modell-Profile" className="connector-grid-span-2">
+      <Card className="connector-grid-span-2">
+        <CardHeader>
+          <CardTitle>Lokale Modell-Profile</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="connector-stack">
           <div className="connector-stats-row">
             <div className="connector-stat-pill">Ollama: {ollamaProfiles.length}</div>
@@ -487,13 +500,13 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
 
                   {profile.provider === "ollama" ? (
                     <div className="connector-actions">
-                      <ButtonV2
+                      <Button
                         variant="ghost"
                         onClick={() => void deleteModel(profile.name)}
                         disabled={deletingName !== null}
                       >
                         {deletingName === profile.name ? "Löscht …" : "Löschen"}
-                      </ButtonV2>
+                      </Button>
                     </div>
                   ) : null}
                 </div>
@@ -505,7 +518,8 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
             <div className="connector-banner connector-banner-error">{deleteError}</div>
           ) : null}
         </div>
-      </CardV2>
+        </CardContent>
+      </Card>
     </div>
   );
 }

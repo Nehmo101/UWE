@@ -1,0 +1,70 @@
+/*
+ * Parchment OS — static token snapshot for the RTX Connector Client.
+ * Values match html[data-uwe-theme="uwe-parchment-os"] as resolved by
+ * applyThemePreferences (mono font, comfortable density, no background effect).
+ */
+:root {
+  color-scheme: light;
+
+  /* Core palette */
+  --uwe-bg: #f1e8d4;
+  --uwe-bg-elevated: #fbf6ea;
+  --uwe-surface: rgba(251, 246, 234, 0.95);
+  --uwe-panel: #ece1c9;
+  --uwe-border: #e0d4ba;
+  --uwe-border-muted: rgba(224, 212, 186, 0.7);
+  --uwe-fg: #211d17;
+  --uwe-fg-muted: #574e40;
+  --uwe-fg-subtle: #665d4f;
+  --uwe-accent: #c2622b;
+  --uwe-accent-hover: #d47030;
+  --uwe-accent-muted: rgba(194, 98, 43, 0.12);
+  --uwe-on-accent: #000000;
+  --uwe-link: #1a5c4f;
+  --uwe-danger: #c2622b;
+  --uwe-warning: #e0b15a;
+  --uwe-success: #2f6f63;
+  --uwe-info: #2f6f63;
+  --uwe-wiki-link: #2f6f63;
+  --uwe-wiki-link-hover: #3a8878;
+  --uwe-dm-only: #c2622b;
+  --uwe-player-visible: #2f6f63;
+
+  /* Legacy aliases (Parchment OS html block) */
+  --uwe-muted: #574e40;
+  --uwe-card: rgba(251, 246, 234, 0.95);
+  --uwe-card-bg: #fbf6ea;
+
+  /* Shell / sidebar */
+  --uwe-shell-gradient-start: rgba(194, 98, 43, 0.03);
+  --uwe-shell-gradient-mid: rgba(241, 232, 212, 0.05);
+  --uwe-shell-gradient-end: #f1e8d4;
+  --uwe-sidebar-bg: #211d17;
+  --uwe-sidebar-fg: #f1e8d4;
+  --uwe-sidebar-fg-muted: #b6ab92;
+
+  /* Surfaces / focus */
+  --uwe-input-bg: #fbf6ea;
+  --uwe-focus-ring: color-mix(in srgb, #c2622b 55%, transparent);
+  --uwe-focus-shadow: color-mix(in srgb, #c2622b 22%, transparent);
+
+  /* Typography */
+  --uwe-font-family: ui-monospace, "Cascadia Code", "Fira Code", "SF Mono", Consolas, monospace;
+
+  /* Layout rhythm */
+  --uwe-density-scale: 1;
+  --uwe-ui-scale: 1;
+  --uwe-touch-min: 2.75rem;
+  --uwe-spacing-xs: 0.25rem;
+  --uwe-spacing-sm: 0.5rem;
+  --uwe-spacing-md: 0.75rem;
+  --uwe-spacing-lg: 1rem;
+  --uwe-spacing-xl: 1.5rem;
+  --uwe-spacing-2xl: 2rem;
+  --uwe-radius-sm: 0.375rem;
+  --uwe-radius-md: 0.5rem;
+  --uwe-radius-lg: 0.75rem;
+  --uwe-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --uwe-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
+  --uwe-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.38);
+}

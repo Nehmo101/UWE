@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ButtonV2, CardV2 } from "@uwe/shared-ui";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 type Props = {
   onLoadLogs: (category?: string) => Promise<string[]>;
@@ -65,9 +66,27 @@ export function LogsPanel({ onLoadLogs }: Props) {
   );
 
   return (
-    <CardV2
-      title="Connector-Logs"
-      footer={
+    <Card>
+      <CardHeader>
+        <CardTitle>Connector-Logs</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="connector-stack">
+          <p className="connector-muted">
+            {title}. Es werden nur redigierte lokale Connector-Logs angezeigt, nie Tokens oder Payloads.
+          </p>
+
+          {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
+          {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
+
+          {lines.length === 0 ? (
+            <div className="connector-empty-state">Keine Logs für den aktuellen Filter gefunden.</div>
+          ) : (
+            <pre className="connector-log-output">{lines.join("\n")}</pre>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter>
         <div className="connector-actions">
           <label className="connector-field">
             <span>Kategorie</span>
@@ -83,29 +102,14 @@ export function LogsPanel({ onLoadLogs }: Props) {
               ))}
             </select>
           </label>
-          <ButtonV2 variant="ghost" onClick={() => void loadLogs()} disabled={busy}>
+          <Button variant="ghost" onClick={() => void loadLogs()} disabled={busy}>
             Filtern
-          </ButtonV2>
-          <ButtonV2 variant="secondary" onClick={copyLogs} disabled={busy || lines.length === 0}>
+          </Button>
+          <Button variant="secondary" onClick={copyLogs} disabled={busy || lines.length === 0}>
             Kopieren
-          </ButtonV2>
+          </Button>
         </div>
-      }
-    >
-      <div className="connector-stack">
-        <p className="connector-muted">
-          {title}. Es werden nur redigierte lokale Connector-Logs angezeigt, nie Tokens oder Payloads.
-        </p>
-
-        {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
-        {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
-
-        {lines.length === 0 ? (
-          <div className="connector-empty-state">Keine Logs für den aktuellen Filter gefunden.</div>
-        ) : (
-          <pre className="connector-log-output">{lines.join("\n")}</pre>
-        )}
-      </div>
-    </CardV2>
+      </CardFooter>
+    </Card>
   );
 }

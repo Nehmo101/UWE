@@ -1,8 +1,9 @@
 import { useState } from "react";
 
-import { ButtonV2, CardV2 } from "@uwe/shared-ui";
 import type { ConnectorClientConfig } from "@uwe/connector-client-config";
 
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import type { CommandTestResult } from "../lib/tauri";
 
 type Props = {
@@ -69,50 +70,53 @@ export function AudioPanel({ config, busy, onChange, onSave, onTest }: Props) {
   }
 
   return (
-    <CardV2
-      title="Lokale Audioausgabe"
-      footer={
-        <div className="connector-actions">
-          <ButtonV2 variant="primary" onClick={handleSave} disabled={disabled}>
-            Speichern
-          </ButtonV2>
-          <ButtonV2 variant="secondary" onClick={handleTest} disabled={disabled || !config.audioCommand}>
-            Test abspielen
-          </ButtonV2>
+    <Card>
+      <CardHeader>
+        <CardTitle>Lokale Audioausgabe</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="connector-stack">
+          <p className="connector-muted">
+            Befehl zum Abspielen von Soundboard-Sounds auf dem RTX-PC. Die Audioquelle (URL/Pfad)
+            wird als letztes Argument angehängt — z. B. <code>mpv --no-video</code> oder{" "}
+            <code>ffplay -nodisp -autoexit</code>. Aktiviert die Capability{" "}
+            <code>audio_local</code>.
+          </p>
+
+          {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
+          {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
+
+          <label className="connector-field connector-field-full">
+            <span>Audio-Kommando</span>
+            <input
+              className="connector-input"
+              value={config.audioCommand}
+              onChange={(event) => onChange("audioCommand", event.target.value)}
+              placeholder="mpv --no-video"
+            />
+          </label>
+
+          <label className="connector-field connector-field-full">
+            <span>Test-Audioquelle (optional)</span>
+            <input
+              className="connector-input"
+              value={source}
+              onChange={(event) => setSource(event.target.value)}
+              placeholder="https://… oder lokaler Pfad zu einer Audiodatei"
+            />
+          </label>
         </div>
-      }
-    >
-      <div className="connector-stack">
-        <p className="connector-muted">
-          Befehl zum Abspielen von Soundboard-Sounds auf dem RTX-PC. Die Audioquelle (URL/Pfad)
-          wird als letztes Argument angehängt — z. B. <code>mpv --no-video</code> oder{" "}
-          <code>ffplay -nodisp -autoexit</code>. Aktiviert die Capability{" "}
-          <code>audio_local</code>.
-        </p>
-
-        {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
-        {notice ? <div className="connector-banner connector-banner-success">{notice}</div> : null}
-
-        <label className="connector-field connector-field-full">
-          <span>Audio-Kommando</span>
-          <input
-            className="connector-input"
-            value={config.audioCommand}
-            onChange={(event) => onChange("audioCommand", event.target.value)}
-            placeholder="mpv --no-video"
-          />
-        </label>
-
-        <label className="connector-field connector-field-full">
-          <span>Test-Audioquelle (optional)</span>
-          <input
-            className="connector-input"
-            value={source}
-            onChange={(event) => setSource(event.target.value)}
-            placeholder="https://… oder lokaler Pfad zu einer Audiodatei"
-          />
-        </label>
-      </div>
-    </CardV2>
+      </CardContent>
+      <CardFooter>
+        <div className="connector-actions">
+          <Button variant="primary" onClick={handleSave} disabled={disabled}>
+            Speichern
+          </Button>
+          <Button variant="secondary" onClick={handleTest} disabled={disabled || !config.audioCommand}>
+            Test abspielen
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }
