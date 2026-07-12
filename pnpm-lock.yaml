@@ -1225,6 +1225,25 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  tools/uwe-host-command-center:
+    dependencies:
+      '@uwe/host-monitor':
+        specifier: workspace:*
+        version: link:../../packages/host-monitor
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.21
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   tools/uwe-rtx-connector:
     dependencies:
       '@uwe/connector':

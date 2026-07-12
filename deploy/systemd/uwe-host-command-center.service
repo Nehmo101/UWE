@@ -1,0 +1,45 @@
+[Unit]
+Description=UWE Host Command Center — lokaler Telemetrie-Client
+Documentation=file:///opt/uwe/docs/host-linux.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=uwe
+Group=uwe
+WorkingDirectory=/opt/uwe
+Environment=UWE_HOME=/opt/uwe
+Environment=UWE_ENV=/etc/uwe/uwe.env
+Environment=HOST_COMMAND_CENTER_BIND=127.0.0.1
+Environment=HOST_COMMAND_CENTER_PORT=3099
+Environment=NODE_ENV=production
+EnvironmentFile=-/etc/uwe/uwe.env
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=/opt/uwe/node_modules/.bin/tsx /opt/uwe/tools/uwe-host-command-center/src/index.ts
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+
+# NoNewPrivileges is intentionally omitted: scoped control actions (restart UWE,
+# trigger backup/healthcheck) use passwordless sudo via deploy/sudoers/uwe-host-command-center.
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/uwe /var/backups/uwe /var/log/uwe
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uwe-host-command-center
+
+[Install]
+WantedBy=multi-user.target

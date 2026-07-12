@@ -1,0 +1,24 @@
+{
+  "name": "@uwe/host-command-center",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone local host telemetry client for the UWE Linux Command Center",
+  "type": "module",
+  "bin": {
+    "uwe-host-command-center": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/server.test.ts src/modules.test.ts src/control.test.ts src/host-update-progress.test.ts"
+  },
+  "dependencies": {
+    "@uwe/host-monitor": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

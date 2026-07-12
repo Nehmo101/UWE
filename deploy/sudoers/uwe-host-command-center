@@ -1,0 +1,10 @@
+# UWE Host Command Center — scoped control actions for the service user.
+# Installed by deploy/scripts/install-systemd-units.sh as /etc/sudoers.d/uwe-host-command-center
+#
+# Security: only fixed systemctl invocations on known UWE units — never sudo on
+# repo-writable scripts. Validate after install: visudo -cf /etc/sudoers.d/uwe-host-command-center
+Defaults!/usr/bin/systemctl !requiretty
+uwe ALL=(root) NOPASSWD: /usr/bin/systemctl restart uwe.service
+uwe ALL=(root) NOPASSWD: /usr/bin/systemctl start uwe-backup.service
+uwe ALL=(root) NOPASSWD: /usr/bin/systemctl start uwe-healthcheck.service
+uwe ALL=(root) NOPASSWD: /usr/bin/systemctl show uwe.service

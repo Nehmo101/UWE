@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UWE Host Command Center</title>
+  <style>
+    :root {
+      --bg: #f4efe4;
+      --card: #fffdf8;
+      --border: #d8cfc0;
+      --row-border: rgba(216, 207, 192, 0.6);
+      --text: #2c2416;
+      --muted: #6b5f4d;
+      --ok: #2d6a4f;
+      --warn: #b08900;
+      --error: #9b2226;
+      --unknown: #8a8175;
+      --accent: #5c4a32;
+      --error-bg: #fde8e8;
+      --toggle-bg: var(--card);
+      --toggle-hover: rgba(92, 74, 50, 0.08);
+    }
+    :root[data-theme="dark"] {
+      --bg: #141210;
+      --card: #1e1b17;
+      --border: #3a342c;
+      --row-border: rgba(58, 52, 44, 0.8);
+      --text: #e8e2d8;
+      --muted: #9a9185;
+      --ok: #52b788;
+      --warn: #e9c46a;
+      --error: #f4a3a8;
+      --unknown: #7a7268;
+      --accent: #c9b99a;
+      --error-bg: #2a1818;
+      --toggle-bg: #2a2520;
+      --toggle-hover: rgba(201, 185, 154, 0.12);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #141210;
+        --card: #1e1b17;
+        --border: #3a342c;
+        --row-border: rgba(58, 52, 44, 0.8);
+        --text: #e8e2d8;
+        --muted: #9a9185;
+        --ok: #52b788;
+        --warn: #e9c46a;
+        --error: #f4a3a8;
+        --unknown: #7a7268;
+        --accent: #c9b99a;
+        --error-bg: #2a1818;
+        --toggle-bg: #2a2520;
+        --toggle-hover: rgba(201, 185, 154, 0.12);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 { margin: 0; font-size: 1.5rem; }
+    .meta { color: var(--muted); font-size: 0.9rem; }
+    .ampel {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+    }
+    .dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 50%;
+      background: var(--unknown);
+      flex-shrink: 0;
+    }
+    .dot.ok { background: var(--ok); }
+    .dot.warn { background: var(--warn); }
+    .dot.error { background: var(--error); }
+    main { padding: 1.25rem 1.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-bottom: 1rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+    .card h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+    .stat-label { color: var(--muted); font-size: 0.85rem; }
+    .stat-value { font-size: 1.35rem; font-weight: 600; margin: 0.15rem 0; }
+    .stat-hint { color: var(--muted); font-size: 0.8rem; }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid var(--row-border);
+      font-size: 0.9rem;
+    }
+    .row:last-child { border-bottom: 0; }
+    .row .value { font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--muted); text-align: right; }
+    .error-banner {
+      display: none;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--error);
+      border-radius: 0.5rem;
+      background: var(--error-bg);
+      color: var(--error);
+    }
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--toggle-bg);
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .theme-toggle:hover {
+      background: var(--toggle-hover);
+      color: var(--text);
+    }
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .error-banner.visible { display: block; }
+    footer {
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      padding: 0.45rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .tab.active {
+      color: var(--text);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .link-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .quick-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--accent);
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .quick-link:hover { background: var(--toggle-hover); }
+    .journal-line {
+      font-family: ui-monospace, monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--row-border);
+      word-break: break-word;
+    }
+    .journal-line:last-child { border-bottom: 0; }
+    .action-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--card);
+      color: var(--text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .action-btn:hover:not(:disabled) { background: var(--toggle-hover); }
+    .action-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .action-btn.dangerous { border-color: var(--error); }
+    .action-btn strong { font-size: 0.95rem; }
+    .action-btn span { font-size: 0.8rem; color: var(--muted); }
+    .control-status {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .control-status.ok { border-color: var(--ok); color: var(--ok); }
+    .control-status.error { border-color: var(--error); color: var(--error); background: var(--error-bg); }
+    .update-progress {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--card);
+    }
+    .update-progress.visible { display: block; }
+    .update-progress-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.5rem;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .update-progress-header h3 {
+      margin: 0;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+    .update-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .update-stats strong { color: var(--text); }
+    .progress-bar {
+      height: 0.55rem;
+      border-radius: 999px;
+      background: var(--row-border);
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--ok);
+      transition: width 0.4s ease;
+      min-width: 0;
+    }
+    .progress-bar-fill.failed { background: var(--error); }
+    .progress-bar-fill.done { background: var(--ok); }
+    .update-phase {
+      font-size: 0.9rem;
+      margin-bottom: 0.35rem;
+    }
+    .update-activity {
+      font-family: ui-monospace, monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      word-break: break-word;
+      margin-bottom: 0.75rem;
+    }
+    .update-log {
+      max-height: 14rem;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.35rem;
+      padding: 0.5rem 0.65rem;
+      background: var(--bg);
+    }
+    details summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>UWE Host Command Center</h1>
+      <div class="meta">Lokaler Host-Client · Aktualisierung alle 10&nbsp;s</div>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="theme-toggle" id="theme-toggle" title="Theme wechseln" aria-label="Theme wechseln">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-label">Dunkel</span>
+      </button>
+      <div class="ampel">
+        <span class="dot" id="overall-dot"></span>
+        <span id="overall-label">Lade …</span>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="error-banner" id="error-banner"></div>
+    <nav class="tabs" aria-label="Bereiche">
+      <button type="button" class="tab active" data-panel="monitor">Monitor</button>
+      <button type="button" class="tab" data-panel="uwe">UWE &amp; Links</button>
+      <button type="button" class="tab" data-panel="control">Steuerung</button>
+    </nav>
+
+    <div class="panel active" id="panel-monitor">
+      <section class="grid" id="stats"></section>
+      <section class="card" style="margin-bottom:1rem">
+        <h2>systemd Dienste &amp; Timer</h2>
+        <div id="services"></div>
+      </section>
+      <section class="grid">
+        <div class="card">
+          <h2>Host-Sicherheit</h2>
+          <div id="security"></div>
+        </div>
+        <div class="card">
+          <h2>Offene Ports</h2>
+          <div id="ports"></div>
+        </div>
+        <div class="card">
+          <h2>Letzte Fehler</h2>
+          <div id="errors"></div>
+        </div>
+        <div class="card">
+          <h2>Fehlgeschlagene Anmeldungen</h2>
+          <div id="logins"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="panel" id="panel-uwe">
+      <section class="card" style="margin-bottom:1rem">
+        <h2>UWE Erreichbarkeit</h2>
+        <div id="uwe-health"></div>
+        <div class="link-grid" id="quick-links"></div>
+      </section>
+      <section class="grid">
+        <div class="card">
+          <h2>UWE Journal (Auszug)</h2>
+          <div id="uwe-journal"></div>
+        </div>
+        <div class="card">
+          <details>
+            <summary>Konfiguration (ohne Secrets)</summary>
+            <div id="config-facts"></div>
+          </details>
+        </div>
+      </section>
+    </div>
+
+    <div class="panel" id="panel-control">
+      <section class="card">
+        <h2>Host-Steuerung</h2>
+        <p class="meta" id="control-meta">Lade Steuerungsstatus …</p>
+        <div class="action-grid" id="control-actions"></div>
+        <div class="control-status" id="control-result" hidden></div>
+        <div class="update-progress" id="update-progress" aria-live="polite">
+          <div class="update-progress-header">
+            <h3>Update-Fortschritt</h3>
+            <span class="meta" id="update-job-id"></span>
+          </div>
+          <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="update-progress-bar">
+            <div class="progress-bar-fill" id="update-progress-fill" style="width:0%"></div>
+          </div>
+          <div class="update-stats">
+            <span>Fortschritt: <strong id="update-percent">—</strong></span>
+            <span>Laufzeit: <strong id="update-elapsed">—</strong></span>
+            <span>Status: <strong id="update-status-label">—</strong></span>
+          </div>
+          <div class="update-phase" id="update-phase"></div>
+          <div class="update-activity" id="update-activity"></div>
+          <details open>
+            <summary>Live-Log</summary>
+            <div class="update-log" id="update-log"></div>
+          </details>
+        </div>
+      </section>
+    </div>
+
+    <footer id="footer">—</footer>
+  </main>
+  <script>
+    (function initTheme() {
+      const STORAGE_KEY = "uwe-hcc-theme";
+      const root = document.documentElement;
+      const toggle = document.getElementById("theme-toggle");
+      const icon = document.getElementById("theme-icon");
+      const label = document.getElementById("theme-label");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+      function effectiveTheme() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored === "light" || stored === "dark") return stored;
+        return prefersDark.matches ? "dark" : "light";
+      }
+
+      function applyTheme(theme) {
+        root.setAttribute("data-theme", theme);
+        icon.textContent = theme === "dark" ? "☀️" : "🌙";
+        label.textContent = theme === "dark" ? "Hell" : "Dunkel";
+      }
+
+      applyTheme(effectiveTheme());
+
+      toggle.addEventListener("click", function () {
+        const next = effectiveTheme() === "dark" ? "light" : "dark";
+        localStorage.setItem(STORAGE_KEY, next);
+        applyTheme(next);
+      });
+
+      prefersDark.addEventListener("change", function () {
+        if (!localStorage.getItem(STORAGE_KEY)) applyTheme(effectiveTheme());
+      });
+    })();
+
+    (function initTabs() {
+      const tabs = document.querySelectorAll(".tab");
+      const panels = document.querySelectorAll(".panel");
+      tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          const id = tab.getAttribute("data-panel");
+          tabs.forEach(function (t) { t.classList.toggle("active", t === tab); });
+          panels.forEach(function (p) {
+            p.classList.toggle("active", p.id === "panel-" + id);
+          });
+        });
+      });
+    })();
+
+    const POLL_MS = 10_000;
+    const UPDATE_POLL_MS = 3_000;
+    const SEVERITY_LABEL = { ok: "OK", warn: "Achtung", error: "Kritisch", unknown: "Unbekannt" };
+    let prevNet = null;
+    let controlToken = null;
+    let controlBusy = false;
+    let updatePollTimer = null;
+    let lastHostUpdate = null;
+
+    function formatBytes(bytes) {
+      if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return "—";
+      if (bytes < 1024) return bytes + " B";
+      const units = ["KB", "MB", "GB", "TB"];
+      let value = bytes / 1024;
+      let i = 0;
+      while (value >= 1024 && i < units.length - 1) { value /= 1024; i++; }
+      return (Math.round(value * 10) / 10).toString().replace(".", ",") + " " + units[i];
+    }
+
+    function formatDuration(seconds) {
+      if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return "—";
+      const total = Math.floor(seconds);
+      const days = Math.floor(total / 86400);
+      const hours = String(Math.floor((total % 86400) / 3600)).padStart(2, "0");
+      const minutes = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+      return days > 0 ? days + "d " + hours + ":" + minutes : hours + ":" + minutes;
+    }
+
+    function formatClock(iso) {
+      if (!iso) return "—";
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return "—";
+      return date.toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
+    }
+
+    function formatRate(bytesPerSecond) {
+      if (bytesPerSecond == null || !Number.isFinite(bytesPerSecond)) return "—";
+      return formatBytes(Math.round(bytesPerSecond)) + "/s";
+    }
+
+    function dotClass(severity) {
+      return "dot " + (severity || "unknown");
+    }
+
+    function row(severity, label, value) {
+      return '<div class="row"><span><span class="' + dotClass(severity) + '"></span> ' + label + '</span><span class="value">' + value + '</span></div>';
+    }
+
+    function statCard(label, value, hint, severity) {
+      return '<div class="card"><div class="stat-label">' + (severity ? '<span class="' + dotClass(severity) + '"></span> ' : '') + label + '</div><div class="stat-value">' + value + '</div>' + (hint ? '<div class="stat-hint">' + hint + '</div>' : '') + '</div>';
+    }
+
+    function netThroughput(net) {
+      if (!net.available || !prevNet) { prevNet = net; return { rx: null, tx: null }; }
+      const dt = (net.sampledAtMs - prevNet.sampledAtMs) / 1000;
+      prevNet = net;
+      if (dt <= 0) return { rx: null, tx: null };
+      return {
+        rx: (net.rxBytes - prevNet.rxBytes) / dt,
+        tx: (net.txBytes - prevNet.txBytes) / dt,
+      };
+    }
+
+    function renderUwePanel(snapshot) {
+      const uwe = snapshot.uwe || {};
+      const probes = [uwe.studio, uwe.portal, uwe.studioHealth].filter(Boolean);
+      document.getElementById("uwe-health").innerHTML = probes.map(function (p) {
+        return row(p.severity, p.label, p.message);
+      }).join("") + (uwe.cloudflared ? row(uwe.cloudflared.severity, uwe.cloudflared.label, uwe.cloudflared.message) : "");
+
+      const links = uwe.links || [];
+      document.getElementById("quick-links").innerHTML = links.map(function (link) {
+        const attrs = link.external ? ' target="_blank" rel="noopener noreferrer"' : "";
+        return '<a class="quick-link" href="' + link.href + '"' + attrs + ">" + link.label + " ↗</a>";
+      }).join("");
+
+      const journal = snapshot.journal || { available: false, lines: [], message: "—" };
+      document.getElementById("uwe-journal").innerHTML = journal.available
+        ? (journal.lines.length ? journal.lines.map(function (line) {
+            const prefix = line.timestamp ? formatClock(line.timestamp) + " · " : "";
+            return '<div class="journal-line">' + prefix + line.message + "</div>";
+          }).join("") : '<div class="journal-line">Keine Einträge</div>')
+        : row("unknown", journal.message, "—");
+
+      const config = snapshot.config || { available: false, facts: [], message: "—" };
+      document.getElementById("config-facts").innerHTML = config.available
+        ? (config.facts.length ? config.facts.map(function (fact) {
+            return row(fact.redacted ? "warn" : "ok", fact.key, fact.value);
+          }).join("") : row("ok", config.message, "—"))
+        : row("unknown", config.message, "—");
+    }
+
+    function formatElapsed(seconds) {
+      if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return "—";
+      const total = Math.floor(seconds);
+      const hours = Math.floor(total / 3600);
+      const minutes = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+      const secs = String(total % 60).padStart(2, "0");
+      return hours > 0 ? hours + ":" + minutes + ":" + secs : minutes + ":" + secs;
+    }
+
+    function statusLabel(status) {
+      switch (status) {
+        case "pending": return "Wartet";
+        case "running": return "Läuft";
+        case "succeeded": return "Erfolgreich";
+        case "failed": return "Fehlgeschlagen";
+        default: return "Bereit";
+      }
+    }
+
+    function renderHostUpdateProgress(hostUpdate) {
+      lastHostUpdate = hostUpdate;
+      const panel = document.getElementById("update-progress");
+      if (!hostUpdate) {
+        panel.classList.remove("visible");
+        return;
+      }
+
+      const state = hostUpdate.state || {};
+      const show = hostUpdate.active
+        || state.status === "succeeded"
+        || state.status === "failed";
+      panel.classList.toggle("visible", show);
+      if (!show) return;
+
+      const percent = hostUpdate.progressPercent ?? 0;
+      const fill = document.getElementById("update-progress-fill");
+      const bar = document.getElementById("update-progress-bar");
+      fill.style.width = percent + "%";
+      fill.className = "progress-bar-fill"
+        + (state.status === "failed" ? " failed" : "")
+        + (state.status === "succeeded" ? " done" : "");
+      bar.setAttribute("aria-valuenow", String(percent));
+      bar.setAttribute("aria-valuetext", percent + " Prozent");
+
+      document.getElementById("update-percent").textContent = "~" + percent + " %";
+      document.getElementById("update-elapsed").textContent = formatElapsed(hostUpdate.elapsedSeconds);
+      document.getElementById("update-status-label").textContent = statusLabel(state.status);
+      document.getElementById("update-phase").textContent = hostUpdate.phaseLabel || "—";
+      document.getElementById("update-activity").textContent = hostUpdate.currentActivity
+        ? "Aktuell: " + hostUpdate.currentActivity
+        : "";
+      document.getElementById("update-job-id").textContent = state.jobId ? "Job " + state.jobId : "";
+
+      const logEl = document.getElementById("update-log");
+      const lines = hostUpdate.logLines || [];
+      logEl.innerHTML = lines.length
+        ? lines.map(function (line) {
+            const prefix = line.timestamp ? formatClock(line.timestamp) + " · " : "";
+            return '<div class="journal-line">' + prefix + line.message + "</div>";
+          }).join("")
+        : '<div class="journal-line">Noch keine Log-Einträge</div>';
+
+      if (hostUpdate.active) {
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+    }
+
+    function scheduleUpdatePolling(active) {
+      if (updatePollTimer) {
+        clearInterval(updatePollTimer);
+        updatePollTimer = null;
+      }
+      if (!active) return;
+      updatePollTimer = setInterval(function () {
+        fetch("/api/host-update", { cache: "no-store" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            renderHostUpdateProgress(data);
+            if (!data.active) {
+              scheduleUpdatePolling(false);
+              refresh();
+            }
+          })
+          .catch(function () {});
+      }, UPDATE_POLL_MS);
+    }
+
+    function renderControlPanel(control) {
+      const metaEl = document.getElementById("control-meta");
+      const actionsEl = document.getElementById("control-actions");
+      if (!control) {
+        metaEl.textContent = "Steuerungsstatus nicht verfügbar";
+        actionsEl.innerHTML = "";
+        return;
+      }
+      metaEl.textContent = control.message;
+      actionsEl.innerHTML = (control.actions || []).map(function (action) {
+        const unavailable = action.available === false;
+        const disabled = !control.enabled || controlBusy || unavailable;
+        const cls = "action-btn" + (action.dangerous ? " dangerous" : "");
+        const hint = unavailable && action.unavailableReason
+          ? action.unavailableReason
+          : action.description;
+        return '<button type="button" class="' + cls + '" data-action="' + action.id + '"' +
+          (disabled ? " disabled" : "") + "><strong>" + action.label + "</strong><span>" +
+          hint + "</span></button>";
+      }).join("");
+
+      actionsEl.querySelectorAll("[data-action]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          runControlAction(btn.getAttribute("data-action"), btn.textContent.trim().split("\n")[0]);
+        });
+      });
+    }
+
+    async function ensureControlBootstrap() {
+      if (controlToken) return controlToken;
+      const response = await fetch("/api/control/bootstrap", { cache: "no-store" });
+      if (!response.ok) throw new Error("Steuerung nicht verfügbar");
+      const body = await response.json();
+      controlToken = body.token;
+      renderControlPanel(body);
+      return controlToken;
+    }
+
+    async function runControlAction(actionId, label) {
+      if (controlBusy) return;
+      const actionLabel = label || actionId;
+      let confirmText = actionLabel + " wirklich ausführen?";
+      if (actionId === "update-uwe") {
+        confirmText = "Update UWE starten?\n\nDie CD-Pipeline synchronisiert origin/main, baut neu und startet UWE danach wieder. Studio und Portal sind dabei ca. 10–30 Minuten offline.";
+      }
+      if (!confirm(confirmText)) return;
+      controlBusy = true;
+      const resultEl = document.getElementById("control-result");
+      resultEl.hidden = false;
+      resultEl.className = "control-status";
+      resultEl.textContent = "Führe aus …";
+      try {
+        const token = await ensureControlBootstrap();
+        const response = await fetch("/api/control/action", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: actionId, token: token }),
+        });
+        const body = await response.json();
+        resultEl.textContent = body.message || (body.ok ? "OK" : "Fehler");
+        resultEl.classList.add(body.ok ? "ok" : "error");
+        if (body.ok) {
+          if (actionId === "update-uwe") {
+            document.querySelector('.tab[data-panel="control"]').click();
+            fetch("/api/host-update", { cache: "no-store" })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                renderHostUpdateProgress(data);
+                scheduleUpdatePolling(data.active);
+              })
+              .catch(function () {});
+          }
+          setTimeout(refresh, 1500);
+        }
+      } catch (error) {
+        resultEl.textContent = "Fehler: " + (error && error.message ? error.message : error);
+        resultEl.classList.add("error");
+      } finally {
+        controlBusy = false;
+        const snapshot = await fetch("/api/snapshot", { cache: "no-store" }).then(function (r) { return r.json(); }).catch(function () { return null; });
+        if (snapshot && snapshot.control) renderControlPanel(snapshot.control);
+      }
+    }
+
+    function render(snapshot) {
+      const m = snapshot.host;
+      const overallDot = document.getElementById("overall-dot");
+      const overallLabel = document.getElementById("overall-label");
+      overallDot.className = dotClass(snapshot.overall);
+      overallLabel.textContent = "Gesamt: " + (SEVERITY_LABEL[snapshot.overall] || snapshot.overall);
+
+      const tp = netThroughput(snapshot.network);
+      const stats = [
+        statCard("Host-Uptime", formatDuration(m.hostUptimeSeconds), "Boot " + formatClock(m.hostBootTime), "ok"),
+        statCard("Client-Uptime", formatDuration(m.appUptimeSeconds), "Gestartet " + formatClock(m.appStartTime), "ok"),
+        statCard("CPU-Last", (m.cpu.loadPercent ?? "—") + (m.cpu.loadPercent != null ? " %" : ""), m.cpu.model, m.cpu.severity),
+        statCard("RAM", m.memory.usedPercent + " %", formatBytes(m.memory.usedBytes) + " / " + formatBytes(m.memory.totalBytes), m.memory.severity),
+        statCard("Netzwerk RX", formatRate(tp.rx), "kumuliert " + formatBytes(snapshot.network.rxBytes), "ok"),
+        statCard("Netzwerk TX", formatRate(tp.tx), "kumuliert " + formatBytes(snapshot.network.txBytes), "ok"),
+      ];
+      for (const disk of snapshot.disks) {
+        stats.push(statCard(disk.label, disk.usedPercent != null ? disk.usedPercent + " %" : "—", disk.message, disk.severity));
+      }
+      document.getElementById("stats").innerHTML = stats.join("");
+
+      document.getElementById("services").innerHTML = snapshot.services.map(function (s) {
+        const value = s.kind === "timer" && s.nextElapse
+          ? s.message + " · nächste " + formatClock(s.nextElapse)
+          : s.message;
+        return row(s.severity, s.label, value);
+      }).join("");
+
+      document.getElementById("security").innerHTML = snapshot.security.map(function (s) {
+        return row(s.severity, s.label + (s.manual ? " (manuell)" : ""), s.message);
+      }).join("");
+
+      const ports = snapshot.openPorts;
+      document.getElementById("ports").innerHTML = ports.available
+        ? (ports.ports.length ? ports.ports.map(function (p) {
+            return row("ok", p.proto + " " + p.address + ":" + p.port, p.process || "—");
+          }).join("") : row("ok", "Keine offenen Ports", "—"))
+        : row("unknown", ports.message, "—");
+
+      const errors = snapshot.recentErrors;
+      document.getElementById("errors").innerHTML = errors.available
+        ? (errors.entries.length ? errors.entries.slice(0, 8).map(function (e) {
+            return row("warn", formatClock(e.timestamp), e.message.slice(0, 80));
+          }).join("") : row("ok", "Keine Fehler", "—"))
+        : row("unknown", errors.message, "—");
+
+      const logins = snapshot.failedLogins;
+      document.getElementById("logins").innerHTML = logins.available
+        ? (logins.recent.length ? logins.recent.slice(0, 8).map(function (l) {
+            return row("warn", (l.user || "?") + " von " + (l.from || "?"), formatClock(l.when));
+          }).join("") : row("ok", "Keine fehlgeschlagenen Anmeldungen", "—"))
+        : row("unknown", logins.message, "—");
+
+      renderUwePanel(snapshot);
+      renderControlPanel(snapshot.control);
+      renderHostUpdateProgress(snapshot.hostUpdate);
+      scheduleUpdatePolling(snapshot.hostUpdate && snapshot.hostUpdate.active);
+
+      document.getElementById("footer").textContent =
+        "Letzte Messung: " + formatClock(snapshot.collectedAt) +
+        " · " + m.hostname + " · " + (m.primaryIpv4 || "keine LAN-IP") +
+        " · Node " + m.nodeVersion;
+    }
+
+    async function refresh() {
+      const banner = document.getElementById("error-banner");
+      try {
+        const response = await fetch("/api/snapshot", { cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const snapshot = await response.json();
+        banner.classList.remove("visible");
+        render(snapshot);
+      } catch (error) {
+        banner.textContent = "Aktualisierung fehlgeschlagen: " + (error && error.message ? error.message : error);
+        banner.classList.add("visible");
+      }
+    }
+
+    refresh();
+    setInterval(refresh, POLL_MS);
+    ensureControlBootstrap().catch(function () {
+      renderControlPanel({ enabled: false, message: "Steuerung nicht geladen", actions: [] });
+    });
+  </script>
+</body>
+</html>
