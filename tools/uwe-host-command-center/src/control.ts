@@ -26,8 +26,10 @@ export interface ControlActionResult {
   message: string;
 }
 
-const TOKEN_FILE = process.env.HOST_COMMAND_CENTER_TOKEN_FILE
-  ?? "/var/log/uwe/host-command-center.token";
+function getTokenFile(): string {
+  return process.env.HOST_COMMAND_CENTER_TOKEN_FILE
+    ?? "/var/log/uwe/host-command-center.token";
+}
 
 const UWE_HOME = process.env.UWE_HOME?.trim() || "/opt/uwe";
 const UWE_DATA_DIR = process.env.UWE_DATA_DIR?.trim() || "/var/lib/uwe";
@@ -70,9 +72,14 @@ const SUDO_COMMANDS: Record<string, readonly string[]> = {
 
 let cachedToken: string | null = null;
 
+/** Test-only: clears the in-memory token cache between cases. */
+export function resetControlTokenCacheForTests(): void {
+  cachedToken = null;
+}
+
 async function readTokenFile(): Promise<string | null> {
   try {
-    const raw = await fs.readFile(TOKEN_FILE, "utf8");
+    const raw = await fs.readFile(getTokenFile(), "utf8");
     const token = raw.trim();
     return token || null;
   } catch {
@@ -80,10 +87,17 @@ async function readTokenFile(): Promise<string | null> {
   }
 }
 
-async function writeTokenFile(token: string): Promise<void> {
-  const dir = path.dirname(TOKEN_FILE);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(TOKEN_FILE, `${token}\n`, { mode: 0o600 });
+async function persistTokenFile(token: string): Promise<boolean> {
+  try {
+    const tokenFile = getTokenFile();
+    const dir = path.dirname(tokenFile);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(tokenFile, `${token}\n`, { mode: 0o600 });
+    return true;
+  } catch {
+    // CI/dev often lacks /var/log/uwe — keep an in-memory token for this process.
+    return false;
+  }
 }
 
 export async function resolveControlToken(): Promise<string> {
@@ -99,7 +113,7 @@ export async function resolveControlToken(): Promise<string> {
     return fromFile;
   }
   const generated = randomBytes(24).toString("base64url");
-  await writeTokenFile(generated);
+  await persistTokenFile(generated);
   cachedToken = generated;
   return generated;
 }
