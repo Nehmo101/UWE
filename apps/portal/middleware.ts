@@ -33,8 +33,11 @@ function rejectCrossOriginApiRequest(request: NextRequest): NextResponse | null 
 export async function middleware(request: NextRequest) {
   const legacyRedirect = resolveLegacyPathRedirect(request.nextUrl.pathname, "portal", process.env);
   if (legacyRedirect) {
+    // Preserve the original query string on both same-origin and cross-origin
+    // (Studio subdomain) legacy redirects so navigation state like `?tab=brain`
+    // survives the redirect.
     const target = legacyRedirect.external
-      ? legacyRedirect.destination
+      ? `${legacyRedirect.destination}${request.nextUrl.search}`
       : (() => {
           const url = request.nextUrl.clone();
           url.pathname = legacyRedirect.destination;
