@@ -30,7 +30,14 @@ RTX API and no DB replication.
    ```
 
 See `tools/uwe-rtx-connector/.env.example` for all options. Transport is
-selected with `UWE_CONNECTOR_TRANSPORT=queue|direct|hybrid`.
+selected with `UWE_CONNECTOR_TRANSPORT=queue|direct|hybrid`. On a production
+Linux host, `setup-uwe-host.sh` also installs `uwe-rtx-connector.service`; it is only
+enabled after the copied `.env` contains a real host URL and connector token.
+The system unit is intended for headless workloads such as Ollama over HTTP, image
+workers and printing. Audio executors that depend on a logged-in PipeWire session
+should run as that desktop user instead. A worker that opens GPU device nodes directly
+may also require the `uwe` user in the host's `video`/`render` groups; Ollama's
+own service does not require that for the connector itself.
 
 For the Windows desktop client use:
 
@@ -194,7 +201,8 @@ Set this when you need a custom print pipeline instead of bare CUPS `lp`:
 
 ### CUPS integration (Linux / macOS)
 
-1. Install CUPS: `sudo apt install cups` (Debian/Ubuntu).
+1. Install CUPS: `sudo apt install cups` (Debian/Ubuntu) or
+   `sudo dnf install cups` (Fedora).
 2. Add the printer via the CUPS web UI (`http://localhost:631`) or `lpadmin`.
 3. Verify with `lpstat -p` — the connector will auto-discover from there.
 

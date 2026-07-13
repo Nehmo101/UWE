@@ -9,11 +9,13 @@ export interface SystemdUnitSpec {
   unit: string;
   label: string;
   kind: SystemdUnitKind;
+  optional?: boolean;
 }
 
 /** The UWE units and timers the Command Center watches by default. */
 export const DEFAULT_UWE_UNITS: SystemdUnitSpec[] = [
   { unit: "uwe.service", label: "UWE Dienst", kind: "service" },
+  { unit: "uwe-rtx-connector.service", label: "RTX Connector", kind: "service", optional: true },
   { unit: "uwe-healthcheck.timer", label: "Healthcheck", kind: "timer" },
   { unit: "uwe-backup.timer", label: "Backup", kind: "timer" },
   { unit: "uwe-briefing.timer", label: "Auto-Briefing", kind: "timer" },
@@ -77,9 +79,12 @@ function evaluateUnit(spec: SystemdUnitSpec, props: Record<string, string>): Sys
     message = "Fehlgeschlagen";
   } else {
     // A service that is not active is a real problem; a timer that is merely
-    // inactive is a soft warning (may be disabled on purpose).
-    severity = spec.kind === "service" ? "error" : "warn";
-    message = `Inaktiv (${activeState})`;
+    // inactive is a soft warning (may be disabled on purpose). Optional
+    // services such as the RTX connector do not degrade the host ampel.
+    severity = spec.optional ? "unknown" : spec.kind === "service" ? "error" : "warn";
+    message = spec.optional
+      ? `Optional, inaktiv (${activeState})`
+      : `Inaktiv (${activeState})`;
   }
 
   return {

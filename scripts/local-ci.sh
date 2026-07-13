@@ -159,7 +159,7 @@ stage_shellcheck() {
     return 0
   fi
   _run_stage "shellcheck" \
-    "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/start-uwe.sh"
+    "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/fedora-host-smoke.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/lib/uwe-host-platform.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-connector-install.sh deploy/scripts/start-uwe.sh"
 }
 
 ALL_STAGES=(install db:generate lockfile-sync lint secret:scan typecheck test:ci test test:security audit:prod build:release docs:check)

@@ -19,16 +19,18 @@ run_preflight() {
   preflight_check_disk
   preflight_check_ram
   preflight_check_network
-  preflight_check_apt
-  preflight_check_tool curl
-  preflight_check_tool ca-certificates
-  preflight_check_tool gnupg
-  preflight_check_tool git
+  preflight_check_package_manager
+  preflight_check_tool curl curl
+  preflight_check_tool ca-certificates ca-certificates
+  preflight_check_tool gpg "$( [[ "$UWE_PACKAGE_FAMILY" == "dnf" ]] && echo gnupg2 || echo gnupg )"
+  preflight_check_tool git git
   preflight_check_node
   preflight_check_tool npm
   preflight_check_pnpm
   preflight_check_tool corepack
   preflight_check_systemd
+  preflight_check_firewall
+  preflight_check_selinux
   preflight_check_uwe_env
   preflight_check_uwe_home
 
@@ -45,22 +47,14 @@ run_preflight() {
 
 preflight_check_os() {
   if [[ -f /etc/os-release ]]; then
-    local pretty
-    pretty="$(grep '^PRETTY_NAME=' /etc/os-release | cut -d= -f2- | tr -d '"' || true)"
-    ok "Betriebssystem: ${pretty:-$(. /etc/os-release; echo "$ID $VERSION_ID")}"
+    ok "Betriebssystem: ${UWE_OS_PRETTY_NAME} (Paketmanager: $(host_package_manager_name))"
   else
     warn "Betriebssystem: /etc/os-release nicht gefunden"
   fi
 }
 
 preflight_check_arch() {
-  if command -v dpkg >/dev/null 2>&1; then
-    ok "Architektur: $(dpkg --print-architecture)"
-  elif command -v uname >/dev/null 2>&1; then
-    ok "Architektur: $(uname -m)"
-  else
-    warn "Architektur: unbekannt"
-  fi
+  ok "Architektur: $(host_architecture)"
 }
 
 preflight_check_user() {
@@ -120,7 +114,7 @@ preflight_check_ram() {
 
 preflight_check_network() {
   local host
-  for host in github.com deb.nodesource.com registry.npmjs.org; do
+  for host in github.com "$(host_dependency_dns_name)" registry.npmjs.org; do
     if getent hosts "$host" >/dev/null 2>&1 || host "$host" >/dev/null 2>&1; then
       ok "DNS: $host erreichbar"
     else
@@ -129,22 +123,47 @@ preflight_check_network() {
   done
 }
 
-preflight_check_apt() {
-  if command -v apt-get >/dev/null 2>&1; then
-    ok "apt: verfügbar"
+preflight_check_package_manager() {
+  local manager
+  manager="$(host_package_manager_name)"
+  if command -v "$manager" >/dev/null 2>&1; then
+    ok "$manager: verfügbar"
   else
-    fail "apt: nicht verfügbar — Debian/Ubuntu erforderlich"
+    fail "$manager: nicht verfügbar"
   fi
 }
 
 preflight_check_tool() {
   local tool="$1"
+  local package="${2:-$tool}"
   if command -v "$tool" >/dev/null 2>&1; then
     ok "$tool: verfügbar ($(command -v "$tool"))"
-  elif dpkg -s "$tool" >/dev/null 2>&1; then
-    ok "$tool: installiert (Paket)"
+  elif host_package_installed "$package"; then
+    ok "$tool: installiert (Paket $package)"
   else
-    fix "$tool: fehlt — wird installiert"
+    fix "$tool: fehlt — Paket $package wird installiert"
+  fi
+}
+
+preflight_check_firewall() {
+  if command -v firewall-cmd >/dev/null 2>&1; then
+    if firewall-cmd --state >/dev/null 2>&1; then
+      ok "Firewall: firewalld aktiv"
+    else
+      warn "Firewall: firewalld installiert, aber inaktiv"
+    fi
+  elif command -v ufw >/dev/null 2>&1; then
+    ok "Firewall: UFW verfügbar"
+  else
+    warn "Firewall: weder firewalld noch UFW gefunden"
+  fi
+}
+
+preflight_check_selinux() {
+  if command -v getenforce >/dev/null 2>&1; then
+    local state
+    state="$(getenforce 2>/dev/null || echo unknown)"
+    ok "SELinux: $state (wird vom Setup nicht deaktiviert)"
   fi
 }
 

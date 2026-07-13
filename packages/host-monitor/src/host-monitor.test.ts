@@ -7,7 +7,13 @@ import {
   parseNextElapse,
   parseSystemctlShow,
 } from "./systemd";
-import { collectHostSecurity } from "./host-security";
+import {
+  collectHostSecurity,
+  countDnfUpdates,
+  dnfAutomaticAppliesUpdates,
+  parseDnfRebootRequired,
+  parseHostDistro,
+} from "./host-security";
 import { collectNetworkCounters, parseProcNetDev } from "./network";
 import { collectOpenPorts, parseSsOutput, splitAddressPort } from "./ports";
 import {
@@ -174,6 +180,21 @@ describe("systemd parsing", () => {
 });
 
 describe("collectHostSecurity", () => {
+  it("parses Fedora identity and DNF update rows", () => {
+    assert.equal(parseHostDistro('NAME="Fedora Linux"\nID=fedora\n'), "fedora");
+    assert.equal(
+      countDnfUpdates("bash.x86_64 5.3.0 updates\nnodejs22.x86_64 22.22.2 updates\n"),
+      2,
+    );
+    assert.equal(
+      parseDnfRebootRequired('[{"type":"reboot","reboot_required":false,"packages":[]}]'),
+      false,
+    );
+    assert.equal(parseDnfRebootRequired("plugin unavailable"), null);
+    assert.equal(dnfAutomaticAppliesUpdates("[commands]\napply_updates = True\n"), true);
+    assert.equal(dnfAutomaticAppliesUpdates("[commands]\napply_updates = False\n"), false);
+  });
+
   it("reports ok firewall + hardened ssh from fakes", async () => {
     const checks = await collectHostSecurity({
       run: fakeRun({
@@ -200,6 +221,43 @@ describe("collectHostSecurity", () => {
     assert.equal(byId.reboot_required.severity, "ok");
     assert.equal(byId.unattended_upgrades.severity, "ok");
     assert.equal(byId.disk_encryption.severity, "ok");
+  });
+
+  it("reads firewalld, cached DNF updates, automatic updates and SELinux on Fedora", async () => {
+    const checks = await collectHostSecurity({
+      run: fakeRun({
+        "firewall-cmd --state": { stdout: "running\n", code: 0 },
+        "dnf --cacheonly --quiet check-upgrade": {
+          stdout: "bash.x86_64 5.3.0 updates\nnodejs22.x86_64 22.22.2 updates\n",
+          code: 100,
+        },
+        "dnf --cacheonly needs-restarting --json": {
+          stdout: '[{"type":"reboot","reboot_required":false,"packages":[]}]',
+          code: 0,
+        },
+        "systemctl is-enabled dnf5-automatic.timer": { stdout: "enabled\n", code: 0 },
+        lsblk: { stdout: "disk\ncrypt\npart", code: 0 },
+        getenforce: { stdout: "Enforcing\n", code: 0 },
+      }),
+      readFile: async (path) => {
+        if (path === "/etc/os-release") return 'NAME="Fedora Linux"\nID=fedora\n';
+        if (path === "/etc/dnf/automatic.conf") {
+          return "[commands]\napply_updates = True\nupgrade_type = security\n";
+        }
+        if (path === "/etc/ssh/sshd_config") {
+          return "PermitRootLogin no\nPasswordAuthentication no";
+        }
+        return null;
+      },
+      fileExists: async () => false,
+    });
+    const byId = Object.fromEntries(checks.map((check) => [check.id, check]));
+    assert.equal(byId.firewall.message, "firewalld aktiv");
+    assert.equal(byId.os_updates.severity, "warn");
+    assert.match(byId.os_updates.message, /2 DNF-Update/);
+    assert.equal(byId.reboot_required.severity, "ok");
+    assert.equal(byId.unattended_upgrades.severity, "ok");
+    assert.equal(byId.selinux.severity, "ok");
   });
 
   it("degrades to unknown/manual when tools unavailable", async () => {

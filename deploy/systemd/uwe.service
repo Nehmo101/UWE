@@ -14,6 +14,7 @@ WorkingDirectory=/opt/uwe
 Environment=UWE_HOME=/opt/uwe
 Environment=UWE_ENV=/etc/uwe/uwe.env
 Environment=NODE_ENV=production
+Environment=XDG_CACHE_HOME=/var/lib/uwe/cache
 Environment=HOST=0.0.0.0
 Environment=HOSTNAME=0.0.0.0
 Environment=PORT=3000

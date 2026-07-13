@@ -9,7 +9,7 @@ The host must boot and serve **without** any RTX connector.
 
 ## Requirements
 
-- Linux (Debian/Ubuntu-like), Node.js 22, `pnpm` (`packageManager` pinned in
+- Linux (Debian/Ubuntu or Fedora 44), Node.js 22, `pnpm` (`packageManager` pinned in
   `package.json`).
 - A persistent data directory for SQLite, uploads, backups and exports.
 
@@ -46,8 +46,9 @@ The checks target the Linux Host + outbound RTX Connector path.
 
 ## Production (systemd, recommended)
 
-A one-shot setup script provisions Node, dependencies, the database, the
-`uwe.service` systemd unit and (optionally) host-update assets:
+A one-shot setup script detects `/etc/os-release` and provisions Node, dependencies,
+the database, `uwe.service`, firewall rules and optional host-update/RTX Connector
+assets:
 
 ```bash
 sudo bash deploy/scripts/setup-uwe-host.sh            # full
@@ -55,8 +56,22 @@ sudo bash deploy/scripts/setup-uwe-host.sh --quick    # update existing host
 sudo bash deploy/scripts/uwe-host-status.sh --healthcheck
 ```
 
-The reference unit is `deploy/systemd/uwe.service` (restart limits, pinned Node
-path, `EnvironmentFile=-/etc/uwe/uwe.env`). Autostart:
+On Fedora, the setup uses `dnf`, the versioned Fedora 44 Node.js 22 packages
+(`nodejs22`, `nodejs22-bin`, `nodejs22-npm`, `nodejs22-npm-bin`) and Firewalld.
+SELinux stays enabled; the setup reapplies standard contexts instead of weakening
+host policy. Enable Firewalld before setup when it is not already running:
+
+```bash
+sudo systemctl enable --now firewalld
+sudo bash deploy/scripts/setup-uwe-host.sh
+```
+
+The main reference unit is `deploy/systemd/uwe.service` (restart limits, pinned Node
+path, `EnvironmentFile=-/etc/uwe/uwe.env`). The optional outbound connector unit is
+`deploy/systemd/uwe-rtx-connector.service`; setup only enables it when its `.env`
+contains a real host URL and token. Fedora also installs the DNF5 plugins used for
+reboot hints and automatic-update status; automatic updates remain operator-controlled.
+Main-service autostart:
 
 ```bash
 sudo systemctl enable uwe.service

@@ -13,8 +13,11 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "docs/deployment-hardening.md")));
     assert.ok(fs.existsSync(path.join(root, "docs/UWE_HOST_LINUX_STARTUP.md")));
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe-rtx-connector.service")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/setup-uwe-host.sh")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/lib/uwe-host-constants.sh")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/scripts/lib/uwe-host-platform.sh")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/scripts/fedora-host-smoke.sh")));
     // Legacy uwe-host.service unit is archived as docs only — production uses uwe.service
     assert.ok(fs.existsSync(path.join(root, "docs/archive/legacy-uwe-host-service.md")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
@@ -27,11 +30,16 @@ describe("self-hosting setup", () => {
   it("setup-uwe-host.sh supports production modes and lib modules", () => {
     const setup = fs.readFileSync(path.join(root, "deploy/scripts/setup-uwe-host.sh"), "utf8");
     const deps = fs.readFileSync(path.join(root, "deploy/scripts/lib/uwe-host-deps.sh"), "utf8");
+    const connectorInstall = fs.readFileSync(
+      path.join(root, "deploy/scripts/lib/uwe-host-connector-install.sh"),
+      "utf8",
+    );
     for (const flag of ["--quick", "--repair", "--fresh", "--healthcheck"]) {
       assert.match(setup, new RegExp(flag.replace("-", "\\-")));
     }
     assert.match(setup, /source "\$LIB_DIR\/uwe-host-preflight\.sh"/);
     assert.match(setup, /source "\$LIB_DIR\/uwe-host-deps\.sh"/);
+    assert.match(setup, /source "\$LIB_DIR\/uwe-host-platform\.sh"/);
     assert.match(setup, /run_preflight/);
     assert.match(setup, /StartLimitIntervalSec=300/);
     assert.match(setup, /StartLimitBurst=5/);
@@ -44,12 +52,18 @@ describe("self-hosting setup", () => {
       "deploy/scripts/lib/uwe-host-common.sh",
       "deploy/scripts/lib/uwe-host-preflight.sh",
       "deploy/scripts/lib/uwe-host-deps.sh",
+      "deploy/scripts/lib/uwe-host-platform.sh",
+      "deploy/scripts/lib/uwe-host-connector-install.sh",
       "deploy/scripts/lib/uwe-host-ai-diagnostics.sh",
     ]) {
       assert.ok(fs.existsSync(path.join(root, lib)), `missing ${lib}`);
     }
 
     assert.match(deps, /install_node_from_nodesource/);
+    assert.match(deps, /install_node_from_fedora/);
+    assert.match(deps, /nodejs22-bin nodejs22-npm-bin/);
+    assert.match(setup, /install_rtx_connector_unit/);
+    assert.match(connectorInstall, /systemctl disable --now/);
     assert.match(deps, /diagnose_node_install_failure/);
     assert.match(deps, /pnpm --filter '\$DATABASE_WORKSPACE_FILTER' db:generate/);
     assert.match(deps, /pnpm --filter '\$DATABASE_WORKSPACE_FILTER' db:deploy/);
@@ -79,9 +93,29 @@ describe("self-hosting setup", () => {
     assert.match(unit, /EnvironmentFile=-\/etc\/uwe\/uwe\.env/);
     assert.match(unit, /Environment=PATH=/);
     assert.match(unit, /Environment=NODE_BIN=/);
+    assert.match(unit, /Environment=XDG_CACHE_HOME=\/var\/lib\/uwe\/cache/);
     const envFileIndex = unit.indexOf("EnvironmentFile=-/etc/uwe/uwe.env");
     const pathIndex = unit.indexOf("Environment=PATH=");
     assert.ok(envFileIndex >= 0 && pathIndex > envFileIndex, "PATH must come after EnvironmentFile");
+  });
+
+  it("RTX connector systemd unit is optional, outbound and host-hardened", () => {
+    const unit = fs.readFileSync(
+      path.join(root, "deploy/systemd/uwe-rtx-connector.service"),
+      "utf8",
+    );
+    assert.match(unit, /ConditionPathExists=\/opt\/uwe\/tools\/uwe-rtx-connector\/\.env/);
+    assert.match(unit, /ExecStart=\/usr\/bin\/node --import tsx/);
+    assert.match(unit, /RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6/);
+    assert.doesNotMatch(unit, /ListenStream|IPAddressAllow/);
+  });
+  it("Host Command Center keeps Fedora DNF cache in the writable data directory", () => {
+    const unit = fs.readFileSync(
+      path.join(root, "deploy/systemd/uwe-host-command-center.service"),
+      "utf8",
+    );
+    assert.match(unit, /Environment=XDG_CACHE_HOME=\/var\/lib\/uwe\/cache/);
+    assert.match(unit, /ReadWritePaths=.*\/var\/lib\/uwe/);
   });
 
   it("includes standalone Prisma runtime scripts and next tracing config", () => {
@@ -120,6 +154,7 @@ describe("self-hosting setup", () => {
       "deploy/systemd/uwe-host-update.service",
       "deploy/sudoers/uwe-host-update",
       "deploy/scripts/lib/uwe-host-update-install.sh",
+      "deploy/scripts/lib/uwe-host-connector-install.sh",
       "deploy/scripts/uwe-host-restart-trigger.sh",
       "deploy/sudoers/uwe-host-restart",
       "deploy/scripts/lib/uwe-host-restart-install.sh",
@@ -183,7 +218,7 @@ describe("self-hosting setup", () => {
     }
 
     execSync(
-      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/start-uwe.sh deploy/scripts/uwe-host-update.sh deploy/scripts/uwe-host-update-trigger.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/lib/uwe-host-common.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-ai-diagnostics.sh deploy/scripts/lib/uwe-host-update-install.sh",
+      "shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/start-uwe.sh deploy/scripts/uwe-host-update.sh deploy/scripts/uwe-host-update-trigger.sh deploy/scripts/fedora-host-smoke.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/lib/uwe-host-platform.sh deploy/scripts/lib/uwe-host-common.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-ai-diagnostics.sh deploy/scripts/lib/uwe-host-update-install.sh deploy/scripts/lib/uwe-host-connector-install.sh",
       { cwd: root, stdio: "pipe" },
     );
   });

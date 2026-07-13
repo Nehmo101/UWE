@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       db: ${{ steps.filter.outputs.db }}
+      host_deploy: ${{ steps.filter.outputs.host_deploy }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,6 +32,28 @@ jobs:
             db:
               - 'packages/database/**'
               - '**/*postgres*'
+            host_deploy:
+              - 'deploy/scripts/**'
+              - 'deploy/systemd/**'
+              - 'packages/host-monitor/**'
+              - 'scripts/uwe-host-*.sh'
+              - '.github/workflows/ci.yml'
+
+  fedora-host-smoke:
+    needs: detect-changes
+    if: >-
+      needs.detect-changes.outputs.host_deploy == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container: fedora:44
+    steps:
+      - name: Prepare Fedora action container
+        run: dnf install -y git tar gzip
+      - uses: actions/checkout@v4
+      - name: Fedora 44 host setup smoke
+        run: bash deploy/scripts/fedora-host-smoke.sh
 
   quality:
     runs-on: ubuntu-latest
@@ -144,7 +167,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/start-uwe.sh
+          shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/fedora-host-smoke.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/lib/uwe-host-platform.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-connector-install.sh deploy/scripts/start-uwe.sh
 
   e2e:
     # Only run on manual trigger or schedule — not on every push to main.

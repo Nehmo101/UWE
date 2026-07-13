@@ -2,7 +2,8 @@
 
 **GitHub Cloud CI is the authoritative gate.** A pull request is ready to merge when
 its GitHub checks are green — `pr-check.yml` (file-size budget check, `pnpm lint`, the
-affected-package `pnpm ci:light:pr:gate`, and a conditional Studio production build)
+affected-package `pnpm ci:light:pr:gate`, a conditional Studio production build, and a
+conditional Fedora 44 host smoke for host/deploy changes)
 on every PR, and the full `pnpm quality` gate on `main`. Agents (cloud, Cursor, Codex,
 Claude) run only in the GitHub Cloud; there is no required local or self-hosted gate.
 
