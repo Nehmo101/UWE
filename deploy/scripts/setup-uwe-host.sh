@@ -24,6 +24,8 @@ LIB_DIR="$SCRIPT_DIR/lib"
 
 # shellcheck source=lib/uwe-host-common.sh
 source "$LIB_DIR/uwe-host-common.sh"
+# shellcheck source=lib/uwe-host-platform.sh
+source "$LIB_DIR/uwe-host-platform.sh"
 # shellcheck source=lib/uwe-host-preflight.sh
 source "$LIB_DIR/uwe-host-preflight.sh"
 # shellcheck source=lib/uwe-host-deps.sh
@@ -34,6 +36,8 @@ source "$LIB_DIR/uwe-host-ai-diagnostics.sh"
 source "$LIB_DIR/uwe-host-update-install.sh"
 # shellcheck source=lib/uwe-host-restart-install.sh
 source "$LIB_DIR/uwe-host-restart-install.sh"
+# shellcheck source=lib/uwe-host-connector-install.sh
+source "$LIB_DIR/uwe-host-connector-install.sh"
 
 MODE="default"
 
@@ -118,7 +122,7 @@ ensure_service_user() {
 ensure_directories() {
   log "Erstelle Verzeichnisse und setze Rechte …"
   install -d -m 750 -o root -g "$SERVICE_GROUP" "$UWE_ENV_DIR"
-  install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_DATA_DIR"/{uploads,exports}
+  install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_DATA_DIR"/{uploads,exports,cache}
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_LOG_DIR"
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$UWE_BACKUP_DIR"
   install -d -m 750 -o root -g "$SERVICE_GROUP" "$UWE_DIAG_DIR" 2>/dev/null || install -d -m 755 "$UWE_DIAG_DIR"
@@ -316,6 +320,7 @@ WorkingDirectory=${UWE_HOME}
 Environment=UWE_HOME=${UWE_HOME}
 Environment=UWE_ENV=${UWE_ENV_FILE}
 Environment=NODE_ENV=production
+Environment=XDG_CACHE_HOME=${UWE_DATA_DIR}/cache
 Environment=HOST=0.0.0.0
 Environment=HOSTNAME=0.0.0.0
 Environment=PORT=${STUDIO_PORT}
@@ -347,20 +352,6 @@ SyslogIdentifier=uwe
 [Install]
 WantedBy=multi-user.target
 EOF
-}
-
-configure_firewall() {
-  if ! command -v ufw >/dev/null 2>&1; then
-    return 0
-  fi
-
-  if ufw status 2>/dev/null | grep -qi 'Status: active'; then
-    log "UFW ist aktiv — erlaube Port ${STUDIO_PORT}/tcp und ${PORTAL_PORT}/tcp …"
-    ufw allow "${STUDIO_PORT}/tcp" >/dev/null 2>&1 || ufw allow "${STUDIO_PORT}/tcp"
-    ufw allow "${PORTAL_PORT}/tcp" >/dev/null 2>&1 || ufw allow "${PORTAL_PORT}/tcp"
-  else
-    ok "UFW ist nicht aktiv — überspringe Firewall-Regel."
-  fi
 }
 
 confirm_fresh_reset() {
@@ -634,6 +625,8 @@ main() {
   require_root
   UWE_HOME="$(detect_uwe_home "$SCRIPT_DIR")"
   export UWE_HOME
+  detect_host_platform || true
+  require_supported_host_platform
 
   if [[ "$MODE" == "healthcheck" ]]; then
     run_preflight 1
@@ -696,7 +689,10 @@ main() {
   write_systemd_unit
   install_host_update_assets
   install_host_restart_assets
+  install_rtx_connector_unit
+  restore_selinux_contexts
   start_or_restart_service
+  start_or_restart_rtx_connector
 
   sleep 8
   verify_http_healthchecks

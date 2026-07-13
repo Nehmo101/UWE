@@ -19,6 +19,7 @@ PR gate runs **`file-size:check`** first (~5 s, no install), then a single **`fa
 | `e2e` (scheduled/manual) | 30 min | ~15–25 min |
 | `security-*` | 20 min | ~5–10 min |
 | `shellcheck` | 5 min | ~1 min (deploy scripts only) |
+| `fedora-host-smoke` | 10 min | ~1–3 min (only host/deploy changes; also scheduled/manual on main) |
 
 ## Cost strategy
 
@@ -26,7 +27,7 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 
 | Event | Workflow | Gate |
 |-------|----------|------|
-| **Pull request** | `pr-check.yml` | `file-size:check` + lint + `ci:light:pr:gate` (affected typecheck/test, secret scan, docs) + optional Studio build |
+| **Pull request** | `pr-check.yml` | `file-size:check` + lint + `ci:light:pr:gate` (affected typecheck/test, secret scan, docs) + optional Studio build + Fedora 44 smoke for host/deploy changes |
 | **Push `main`** | `ci.yml` | Full `pnpm quality` + PostgreSQL smoke (when DB paths change) |
 | **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
@@ -73,8 +74,9 @@ Configure in GitHub: **Settings → Branches → Branch protection rules → `ma
 
 The only automatic workflow on pull requests:
 
-1. **`detect-changes`** — path filter (docs-only vs code; Studio build scope)
-2. **`fast-checks`** — single job (one `pnpm install`); skipped for docs-only PRs; else:
+1. **`detect-changes`** — path filter (docs-only vs code; Studio build and host/deploy scope)
+2. **`fedora-host-smoke`** — Fedora 44 container validates OS/package mapping, exact Node.js 22 RPM names and Bash syntax when host/deploy paths change
+3. **`fast-checks`** — single job (one `pnpm install`); skipped for docs-only PRs; else:
    - `node scripts/file-size-budget-check.mjs` — fail in ~5 s before install
    - Restore pnpm store + Turbo caches
    - `pnpm lint` then `pnpm ci:light:pr:gate` — db:generate, **affected** typecheck/test, secret scan, docs:check
@@ -88,9 +90,10 @@ No `pnpm quality`, no E2E, no security tests, no release build on PRs.
 
 Runs on push to `main`, weekly schedule (Sunday 03:00 UTC), or `workflow_dispatch`:
 
-1. `file-size:check` (no install)
-2. Install with frozen lockfile; restore pnpm store + Turbo + Next.js build caches
-3. `pnpm quality` — full gate:
+1. Fedora 44 host smoke when host/deploy paths changed (and on schedule/manual)
+2. `file-size:check` (no install)
+3. Install with frozen lockfile; restore pnpm store + Turbo + Next.js build caches
+4. `pnpm quality` — full gate:
    - Prisma client generate
    - Lint (zero warnings)
    - Secret scan
@@ -99,8 +102,8 @@ Runs on push to `main`, weekly schedule (Sunday 03:00 UTC), or `workflow_dispatc
    - Security tests
    - Production dependency audit (high+)
    - Release build
-3. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + smoke tests against a Postgres 16 service container; runs after quality when `packages/database/**` or `**/*postgres*` changed, or on schedule / manual dispatch
-4. **E2E tests + performance budget** (`pnpm test:e2e`, `pnpm test:e2e:perf`, `perf-budget-check.mjs`) — Playwright; runs only on `workflow_dispatch` or `schedule`, **not** on every push to `main`
+5. **PostgreSQL smoke** (`pnpm test:postgres-smoke`) — migrate deploy + smoke tests against a Postgres 16 service container; runs after quality when `packages/database/**` or `**/*postgres*` changed, or on schedule / manual dispatch
+6. **E2E tests + performance budget** (`pnpm test:e2e`, `pnpm test:e2e:perf`, `perf-budget-check.mjs`) — Playwright; runs only on `workflow_dispatch` or `schedule`, **not** on every push to `main`
 
 Concurrency cancels superseded `main` pushes to avoid duplicate full-gate runs.
 

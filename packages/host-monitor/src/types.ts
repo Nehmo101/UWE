@@ -64,6 +64,8 @@ export interface SystemdUnitStatus {
   unit: string;
   label: string;
   kind: SystemdUnitKind;
+  /** Optional services do not degrade the overall host status when disabled. */
+  optional?: boolean;
   loadState: string;
   activeState: string;
   subState: string;

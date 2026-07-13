@@ -16,6 +16,7 @@ Environment=UWE_ENV=/etc/uwe/uwe.env
 Environment=HOST_COMMAND_CENTER_BIND=127.0.0.1
 Environment=HOST_COMMAND_CENTER_PORT=3099
 Environment=NODE_ENV=production
+Environment=XDG_CACHE_HOME=/var/lib/uwe/cache
 EnvironmentFile=-/etc/uwe/uwe.env
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 

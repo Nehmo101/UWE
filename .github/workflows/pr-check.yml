@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.changes.outputs.code }}
-      studio_build: ${{ steps.changes.outputs.studio_build }}
+      studio_build: ${{ steps.scoped_changes.outputs.studio_build }}
+      host_deploy: ${{ steps.scoped_changes.outputs.host_deploy }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,11 +34,37 @@ jobs:
               - '!**/*.md'
               - '!docs/**'
               - '!.cursor/**'
+
+      # Scoped filters are alternatives (OR), so keep the default `some`
+      # quantifier instead of the docs-only filter's `every` quantifier.
+      - uses: dorny/paths-filter@v3
+        id: scoped_changes
+        with:
+          filters: |
             studio_build:
               - 'apps/studio/**'
               - 'packages/**'
               - 'pnpm-lock.yaml'
               - 'turbo.json'
+            host_deploy:
+              - 'deploy/scripts/**'
+              - 'deploy/systemd/**'
+              - 'packages/host-monitor/**'
+              - 'scripts/uwe-host-*.sh'
+              - '.github/workflows/pr-check.yml'
+
+  fedora-host-smoke:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.host_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container: fedora:44
+    steps:
+      - name: Prepare Fedora action container
+        run: dnf install -y git tar gzip
+      - uses: actions/checkout@v4
+      - name: Fedora 44 host setup smoke
+        run: bash deploy/scripts/fedora-host-smoke.sh
 
   fast-checks:
     needs: detect-changes

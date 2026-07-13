@@ -2,43 +2,8 @@
 # Dependency installation and repair for UWE Linux host setup.
 # shellcheck shell=bash
 
-UWE_APT_UPDATE_LOG="/tmp/uwe-apt-update.log"
+UWE_PACKAGE_UPDATE_LOG="/tmp/uwe-package-update.log"
 UWE_NODE_INSTALL_LOG="/tmp/uwe-node-install.log"
-
-ensure_apt_packages() {
-  local packages=("$@")
-  export DEBIAN_FRONTEND=noninteractive
-
-  local missing=()
-  local pkg
-  for pkg in "${packages[@]}"; do
-    if ! dpkg -s "$pkg" >/dev/null 2>&1; then
-      missing+=("$pkg")
-    fi
-  done
-
-  if [[ ${#missing[@]} -eq 0 ]]; then
-    return 0
-  fi
-
-  log "Installiere APT-Pakete: ${missing[*]}"
-  apt-get update 2>&1 | tee "$UWE_APT_UPDATE_LOG" || true
-  apt-get install -y "${missing[@]}"
-}
-
-ensure_base_system_packages() {
-  ensure_apt_packages \
-    ca-certificates \
-    curl \
-    gnupg \
-    git \
-    iproute2 \
-    openssl \
-    sqlite3 \
-    build-essential \
-    python3 \
-    apt-transport-https
-}
 
 remove_stale_nodesource_artifacts() {
   rm -f /etc/apt/sources.list.d/nodesource.list
@@ -50,11 +15,9 @@ remove_stale_nodesource_artifacts() {
 
 remove_stale_node_binaries() {
   log "Entferne alte Node/npm/pnpm/corepack-Binaries …"
-  local bin path
+  local bin
   for bin in node npm npx pnpm corepack yarn yarnpkg; do
-    for path in "/usr/local/bin/$bin" "/usr/bin/$bin" "/bin/$bin"; do
-      remove_path_if_present "$path"
-    done
+    remove_path_if_present "/usr/local/bin/$bin"
   done
 
   remove_path_if_present "/usr/local/lib/node_modules/pnpm"
@@ -104,31 +67,42 @@ diagnose_node_install_failure() {
   cat /etc/os-release 2>/dev/null || true
   echo ""
   echo "--- Architektur ---"
-  dpkg --print-architecture 2>/dev/null || uname -m || true
+  host_architecture || true
   echo ""
-  echo "--- apt-cache policy nodejs ---"
-  apt-cache policy nodejs 2>/dev/null || true
-  echo ""
-  echo "--- /etc/apt/sources.list.d/ ---"
-  ls -la /etc/apt/sources.list.d/ 2>/dev/null || true
-  echo ""
-  if [[ -f /etc/apt/sources.list.d/nodesource.sources ]]; then
-    echo "--- nodesource.sources ---"
-    cat /etc/apt/sources.list.d/nodesource.sources 2>/dev/null || true
+  if [[ "$UWE_PACKAGE_FAMILY" == "apt" ]]; then
+    echo "--- apt-cache policy nodejs ---"
+    apt-cache policy nodejs 2>/dev/null || true
+    echo ""
+    echo "--- /etc/apt/sources.list.d/ ---"
+    ls -la /etc/apt/sources.list.d/ 2>/dev/null || true
+    echo ""
+    if [[ -f /etc/apt/sources.list.d/nodesource.sources ]]; then
+      echo "--- nodesource.sources ---"
+      cat /etc/apt/sources.list.d/nodesource.sources 2>/dev/null || true
+      echo ""
+    fi
+  else
+    echo "--- DNF Node.js Pakete ---"
+    dnf list --installed 'nodejs*' 2>/dev/null || true
+    dnf info nodejs22 nodejs22-bin nodejs22-npm-bin 2>/dev/null || true
     echo ""
   fi
-  echo "--- apt-get update (letzte Zeilen) ---"
-  tail -n 30 "$UWE_APT_UPDATE_LOG" 2>/dev/null || true
+  echo "--- Paketmanager (letzte Zeilen) ---"
+  tail -n 30 "$UWE_PACKAGE_UPDATE_LOG" 2>/dev/null || true
   echo ""
-  echo "--- NodeSource Erreichbarkeit ---"
-  curl -fsSI --max-time 15 "https://deb.nodesource.com/node_${NODE_MAJOR}.x/dists/nodistro/InRelease" 2>&1 || true
-  curl -fsSI --max-time 15 "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key" 2>&1 || true
+  echo "--- Paketquelle Erreichbarkeit ---"
+  if [[ "$UWE_PACKAGE_FAMILY" == "apt" ]]; then
+    curl -fsSI --max-time 15 "https://deb.nodesource.com/node_${NODE_MAJOR}.x/dists/nodistro/InRelease" 2>&1 || true
+    curl -fsSI --max-time 15 "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key" 2>&1 || true
+  else
+    getent hosts "$(host_dependency_dns_name)" 2>&1 || true
+  fi
   echo ""
   echo "--- Empfehlung ---"
-  echo "  1. Internet/DNS prüfen (github.com, deb.nodesource.com, registry.npmjs.org)"
-  echo "  2. apt-get update manuell testen"
+  echo "  1. Internet/DNS prüfen (github.com, $(host_dependency_dns_name), registry.npmjs.org)"
+  echo "  2. $(host_package_manager_name) manuell testen"
   echo "  3. Erneut ausführen: sudo bash $UWE_HOME/deploy/scripts/setup-uwe-host.sh --repair"
-  echo "  4. Bei ARM/Exotic-Arch: Debian/Ubuntu amd64/arm64 mit NodeSource-Unterstützung verwenden"
+  echo "  4. Unterstützte Plattform verwenden: Debian/Ubuntu oder Fedora auf x86_64/aarch64"
   echo "========================================"
   echo ""
 
@@ -164,12 +138,25 @@ Components: main
 Signed-By: ${nodesource_gpg}
 EOF
 
-  if ! apt-get update 2>&1 | tee "$UWE_APT_UPDATE_LOG"; then
+  if ! apt-get update 2>&1 | tee "$UWE_PACKAGE_UPDATE_LOG"; then
     diagnose_node_install_failure "apt-get update nach NodeSource-Repo fehlgeschlagen"
   fi
 
   if ! apt-get install -y nodejs 2>&1 | tee -a "$UWE_NODE_INSTALL_LOG"; then
     diagnose_node_install_failure "apt-get install nodejs fehlgeschlagen"
+  fi
+
+  hash -r || true
+  validate_node_installation
+}
+
+install_node_from_fedora() {
+  log "Installiere Node.js ${NODE_MAJOR}.x aus den Fedora-Paketen …"
+
+  if ! dnf install -y --allowerasing \
+    nodejs22 nodejs22-npm nodejs22-bin nodejs22-npm-bin \
+    2>&1 | tee "$UWE_NODE_INSTALL_LOG"; then
+    diagnose_node_install_failure "Fedora-Pakete für Node.js ${NODE_MAJOR}.x konnten nicht installiert werden"
   fi
 
   hash -r || true
@@ -228,13 +215,15 @@ ensure_nodejs() {
   fi
 
   if [[ "$force" -eq 1 ]]; then
-    apt-get remove -y nodejs npm 2>/dev/null || true
-    apt-get purge -y nodejs npm 2>/dev/null || true
-    apt-get autoremove -y || true
+    remove_managed_node_packages
     remove_stale_node_binaries
   fi
 
-  install_node_from_nodesource
+  case "$UWE_PACKAGE_FAMILY" in
+    apt) install_node_from_nodesource ;;
+    dnf) install_node_from_fedora ;;
+    *) die "Node.js-Installation für ${UWE_OS_PRETTY_NAME} wird nicht unterstützt." ;;
+  esac
 }
 
 ensure_pnpm() {

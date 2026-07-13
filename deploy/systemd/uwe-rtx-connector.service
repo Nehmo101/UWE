@@ -1,0 +1,43 @@
+[Unit]
+Description=UWE RTX Host Connector (optional outbound worker)
+Documentation=file:///opt/uwe/docs/rtx-connector.md
+After=network-online.target uwe.service ollama.service
+Wants=network-online.target
+ConditionPathExists=/opt/uwe/tools/uwe-rtx-connector/.env
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=uwe
+Group=uwe
+WorkingDirectory=/opt/uwe
+Environment=HOME=/var/lib/uwe/rtx-connector
+Environment=UWE_HOME=/opt/uwe
+Environment=UWE_RUNTIME_ROLE=rtx-connector
+Environment=UWE_CONNECTOR_CLIENT_DATA_DIR=/var/lib/uwe/rtx-connector
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/node --import tsx /opt/uwe/tools/uwe-rtx-connector/src/index.ts start
+
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=45
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/uwe/rtx-connector
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uwe-rtx-connector
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,6 @@
 # UWE auf Linux — Production Host (systemd)
 
-Offizielle Anleitung für den **UWE Production Host** unter Linux (Ubuntu, Debian, Lubuntu, …).
+Offizielle Anleitung für den **UWE Production Host** unter Linux (Ubuntu, Debian und Fedora 44).
 
 UWE besteht aus zwei Web-Apps:
 
@@ -22,7 +22,8 @@ Nach dem Setup sind beide im **Heimnetz** erreichbar (`HOST=0.0.0.0`).
 | `/var/lib/uwe` | SQLite-Datenbank, Uploads, Exports |
 | `/var/log/uwe` | Anwendungslogs |
 | `/var/backups/uwe` | Backups |
-| `uwe.service` | **Einziger** offizieller systemd-Dienst |
+| `uwe.service` | Offizieller Studio-/Portal-Dienst |
+| `uwe-rtx-connector.service` | Optionaler outbound RTX Connector; nur mit gültiger Connector-`.env` aktiviert |
 
 Es gibt **keinen** parallelen Legacy-Flow mehr (`uwe-host.service`, `.uwe-host`, repo-lokale `.env` für Production).
 
@@ -52,9 +53,9 @@ Alle Befehle im Repository unter `/opt/uwe` (oder Ihrem Klone) ausführen.
 
 | Voraussetzung | Hinweis |
 |---------------|---------|
-| Linux mit systemd | Ubuntu 22.04/24.04 oder Debian 12 empfohlen |
+| Linux mit systemd | Ubuntu 22.04/24.04, Debian 12 oder Fedora 44 |
 | Node.js 22 | Wird vom Setup-Script automatisch installiert (systemweit unter `/usr/bin/node`) |
-| git, curl, apt | Werden vom Setup-Script installiert, falls fehlend |
+| git, curl, apt/dnf | Werden vom Setup-Script passend zu `/etc/os-release` installiert |
 | root/sudo | Setup-Script muss als root laufen |
 
 **Sie müssen Node, pnpm, Prisma oder systemd nicht manuell installieren.** Ein Befehl reicht:
@@ -62,6 +63,29 @@ Alle Befehle im Repository unter `/opt/uwe` (oder Ihrem Klone) ausführen.
 ```bash
 sudo bash ./deploy/scripts/setup-uwe-host.sh
 ```
+
+### Fedora 44
+
+Auf Fedora verwendet das Setup ausschließlich `dnf` und die versionierten
+Fedora-Pakete für Node.js 22. Firewalld-Regeln für `3000/tcp` und `3001/tcp`
+werden in der aktiven Standardzone sofort und permanent gesetzt. Das Setup
+aktiviert Firewalld nicht ungefragt; auf einem Minimal-System daher vorher:
+
+```bash
+sudo systemctl enable --now firewalld
+sudo bash ./deploy/scripts/setup-uwe-host.sh
+```
+
+SELinux bleibt **Enforcing**. Das Setup führt `restorecon` für die UWE-Pfade aus;
+SELinux nicht deaktivieren. Bei einer echten AVC-Blockade zuerst
+`sudo ausearch -m AVC -ts recent` prüfen und nur eine eng begrenzte lokale Policy
+erstellen.
+
+`dnf5-plugins` und `dnf5-plugin-automatic` werden mitinstalliert. Automatische
+Updates werden nicht ungefragt aktiviert. In `/etc/dnf/automatic.conf` mindestens
+`apply_updates = True` setzen (optional `upgrade_type = security`) und danach den
+Timer mit `sudo systemctl enable --now dnf5-automatic.timer` aktivieren. Das Host
+Command Center prüft sowohl den Timer als auch `apply_updates`.
 
 ### Einmaliger Befehl
 
@@ -126,8 +150,8 @@ Jeder Setup-Lauf beginnt mit einer **Preflight-Phase**. Das Script prüft und pr
 
 - Betriebssystem, Architektur, User, Root-Status
 - Repository-Pfad, Git-Branch, letzter Commit
-- Disk Space, RAM, DNS (github.com, deb.nodesource.com, registry.npmjs.org)
-- apt, curl, ca-certificates, gnupg, git
+- Disk Space, RAM, DNS (GitHub, npm und die distributionsspezifische Paketquelle)
+- apt/dnf, curl, ca-certificates, GnuPG, git, Firewalld/UFW und SELinux
 - node/npm/pnpm/corepack/systemd
 - `/etc/uwe/uwe.env`, `/opt/uwe`
 
@@ -221,7 +245,9 @@ Implementierung: `deploy/scripts/lib/uwe-host-ai-diagnostics.sh`
 
 ## Autostart nach Neustart
 
-`setup-uwe-host.sh` aktiviert `uwe.service` automatisch (`systemctl enable`).
+`setup-uwe-host.sh` aktiviert `uwe.service` automatisch (`systemctl enable`). Die
+optionale `uwe-rtx-connector.service` wird installiert, aber erst bei einer gültig
+konfigurierten `tools/uwe-rtx-connector/.env` aktiviert und gestartet.
 
 Nach Reboot prüfen:
 
@@ -444,6 +470,7 @@ Datei-Logs (falls konfiguriert): `/var/log/uwe/`
 - Für öffentlichen Zugriff: Cloudflare Tunnel + Access — siehe [deployment-hardening.md](./deployment-hardening.md)
 - Secrets nur in `/etc/uwe/uwe.env` — nie ins Git committen
 - Normale Setup-Läufe löschen **niemals** Daten oder Secrets
+- Fedora: SELinux bleibt aktiv; Firewalld-Regeln werden runtime + permanent gesetzt
 
 ---
 
@@ -453,10 +480,12 @@ Datei-Logs (falls konfiguriert): `/var/log/uwe/`
 |-------|-------|
 | `deploy/scripts/setup-uwe-host.sh` | Offizieller Einstiegspunkt (Setup/Update/Repair) |
 | `deploy/scripts/lib/uwe-host-preflight.sh` | Preflight/Doctor-Checks |
+| `deploy/scripts/lib/uwe-host-platform.sh` | OS-, apt/dnf-, Firewalld/UFW- und SELinux-Abstraktion |
 | `deploy/scripts/lib/uwe-host-deps.sh` | Node/pnpm/Prisma/Build-Dependencies |
 | `deploy/scripts/lib/uwe-host-ai-diagnostics.sh` | Optionale AI-Fehleranalyse |
 | `deploy/scripts/start-uwe.sh` | Startet Studio + Portal (von systemd aufgerufen) |
 | `deploy/systemd/uwe.service` | Referenz-Unit (wird vom Setup-Script nach `/etc/systemd/system/` geschrieben) |
+| `deploy/systemd/uwe-rtx-connector.service` | Optionale outbound Connector-Unit |
 | `docs/archive/legacy-uwe-host-service.md` | **Deprecated** — archivierter `uwe-host.service`-Verlauf (nur Migration) |
 | `scripts/uwe-host-*.sh` | Convenience-Wrapper um `uwe.service` |
 
