@@ -76,7 +76,9 @@ The only automatic workflow on pull requests:
 
 1. **`detect-changes`** — path filter (docs-only vs code; Studio build and host/deploy scope)
 2. **`fedora-host-smoke`** — Fedora 44 container validates OS/package mapping, exact Node.js 22 RPM names and Bash syntax when host/deploy paths change
-3. **`fast-checks`** — single job (one `pnpm install`); skipped for docs-only PRs; else:
+3. **`fast-checks`** — required aggregation job; fails when change detection or the
+   conditional Fedora smoke fails. Docs-only PRs run `node scripts/docs-check.mjs`
+   without installing dependencies; code PRs then run:
    - `node scripts/file-size-budget-check.mjs` — fail in ~5 s before install
    - Restore pnpm store + Turbo caches
    - `pnpm lint` then `pnpm ci:light:pr:gate` — db:generate, **affected** typecheck/test, secret scan, docs:check
