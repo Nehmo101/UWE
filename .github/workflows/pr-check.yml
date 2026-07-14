@@ -67,7 +67,7 @@ jobs:
         run: bash deploy/scripts/fedora-host-smoke.sh
 
   fast-checks:
-    needs: detect-changes
+    needs: [detect-changes, fedora-host-smoke]
     if: always()
     runs-on: ubuntu-latest
     # Single job: lint + affected gate + optional Studio build (~6–18 min warm).
@@ -77,9 +77,28 @@ jobs:
       # 4-vCPU/16-GB runner once the Turbo cache is cold ("Killed" in logs).
       TURBO_CONCURRENCY: 4
     steps:
-      - name: Docs-only PR — skip heavy gate
+      - name: Verify prerequisite jobs
+        id: prerequisites
+        shell: bash
+        env:
+          DETECT_CHANGES_RESULT: ${{ needs.detect-changes.result }}
+          FEDORA_HOST_SMOKE_RESULT: ${{ needs.fedora-host-smoke.result }}
+        run: |
+          if [[ "$DETECT_CHANGES_RESULT" != "success" ]]; then
+            echo "detect-changes did not succeed: $DETECT_CHANGES_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$FEDORA_HOST_SMOKE_RESULT" != "success" && "$FEDORA_HOST_SMOKE_RESULT" != "skipped" ]]; then
+            echo "fedora-host-smoke did not succeed: $FEDORA_HOST_SMOKE_RESULT" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
         if: needs.detect-changes.outputs.code != 'true'
-        run: echo "Docs-only changes; fast-checks satisfied without ci:light."
+
+      - name: Docs-only PR — validate documentation
+        if: needs.detect-changes.outputs.code != 'true'
+        run: node scripts/docs-check.mjs
 
       - uses: actions/checkout@v4
         if: needs.detect-changes.outputs.code == 'true'
@@ -154,14 +173,14 @@ jobs:
       # (post-step of actions/cache is skipped on cancellation), which loops
       # every subsequent run back into the same timeout.
       - name: Save Turbo cache
-        if: always() && needs.detect-changes.outputs.code == 'true'
+        if: always() && steps.prerequisites.outcome == 'success' && needs.detect-changes.outputs.code == 'true'
         uses: actions/cache/save@v4
         with:
           path: .turbo
           key: turbo-pr-${{ runner.os }}-${{ steps.lockfile.outputs.hash }}
 
       - name: Save pnpm store cache
-        if: always() && needs.detect-changes.outputs.code == 'true'
+        if: always() && steps.prerequisites.outcome == 'success' && needs.detect-changes.outputs.code == 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ steps.pnpm-cache.outputs.path }}
