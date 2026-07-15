@@ -190,6 +190,11 @@ Enforced server-side by the AI router / privacy guard (`packages/ai-brain`):
 Admin gateway policy (`DEFAULT_PRIVACY_RULES.dnd_world = CLOUD_ALLOWED`) allows DnD world context to reach cloud providers when RTX is offline. This is intentional and owner-approved behaviour (W0 Atlas policy).
 
 Details: [SECURITY_NOTES.md](SECURITY_NOTES.md), [docs/ai-privacy-and-cloud-fallback.md](docs/ai-privacy-and-cloud-fallback.md).
+Architekturentscheidungen: [ADR 005 — Session-Audiences](docs/adr/005-session-audiences.md),
+[ADR 006 — KI-/Privacy-Policy](docs/adr/006-ai-privacy-policy.md) und
+[ADR 007 — Deployment/Exposure](docs/adr/007-deployment-exposure.md). Diese ADRs
+beschreiben Zielzustände; Cookie- und Runtime-Verhalten bleiben in der aktuellen
+Foundation-Welle unverändert.
 
 ---
 

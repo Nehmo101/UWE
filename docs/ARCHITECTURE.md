@@ -10,6 +10,8 @@ Diese Datei beschreibt UWE auf drei Ebenen:
 
 UWE ist ein selbst gehostetes Kampagnen-Brain und Welt-Wiki für DnD/Tabletop. Der Kern ist bewusst getrennt in **DM-Bearbeitung**, **Player-Ausgabe**, **persistente Daten** und **optionale Inferenz/Integrationen**.
 
+Zielbild für die Trennung von Portal, Studio und dem künftigen owner-only Brain-Produkt: [Drei-Produkte-Split-Masterplan](rework/uwe-portal-studio-brain-masterplan.md) (Foundation-Welle, noch keine Migration).
+
 ---
 
 ## 1. Produkt-Hierarchie
