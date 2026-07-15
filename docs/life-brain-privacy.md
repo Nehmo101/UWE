@@ -20,12 +20,19 @@ Captures aus `/capture` können per „Ins Life Brain“ als Dokument übernomme
 
 ## Regeln
 
+Maßgeblich ist die
+[Cloud-AI-Policy in `SECURITY.md`](../SECURITY.md#cloud-ai-context-boundaries),
+architektonisch fixiert durch
+[ADR 006](adr/006-ai-privacy-policy.md). D&D-Kontext ist nach der
+administrativen Gateway-Policy konfigurierbar; ausschließlich persönlicher
+Brain-Kontext bleibt unabhängig von Konfiguration hart local-only.
+
 | Kontextmodus | Cloud erlaubt | RTX erforderlich |
 |--------------|---------------|------------------|
 | `general_chat` | Ja | Nein (Auto fällt auf Cloud zurück) |
-| `brain` (DnD) | Nein | Ja |
-| `current_object` | Nein | Ja |
-| `current_object_plus_brain` | Nein | Ja |
+| `brain` (DnD) | **Konfigurierbar**, Default `CLOUD_ALLOWED` | Nein (lokal bevorzugt; Cloud-Fallback nach Policy) |
+| `current_object` | **Konfigurierbar**, Default `CLOUD_ALLOWED` | Nein (lokal bevorzugt; Cloud-Fallback nach Policy) |
+| `current_object_plus_brain` | **Konfigurierbar**, Default `CLOUD_ALLOWED` | Nein (lokal bevorzugt; Cloud-Fallback nach Policy) |
 | `personal_brain` | **Nein** | **Ja** |
 | Mail-KI (Triage/Entwürfe) | Nein (nur Allgemeiner Chat-Fallback optional) | Ja |
 
@@ -42,12 +49,16 @@ Mail Center nutzt lokale RTX für Triage und Entwürfe; Cloud-Fallback gilt nur 
 
 ## RTX offline
 
-Wenn RTX offline und ein lokaler Kontextmodus gewählt ist:
+Wenn RTX offline und `personal_brain` gewählt ist:
 
 1. Anfrage wird als `ai_run`-Job mit `deferredAiPrompt: true` vorgemerkt
 2. Antwort HTTP 202 mit `jobId`
 3. **Kein** Cloud-Fallback
 4. Ausführung beim nächsten Job-Lauf, sobald RTX erreichbar ist
+
+Für D&D-Kontext im Auto-Modus ist dagegen ein Cloud-Fallback zulässig, wenn die
+Gateway-Policy `CLOUD_ALLOWED` gilt. `dm_only` wird davor immer entfernt; der
+Datenschutzmodus oder eine restriktivere Policy blockiert den Cloud-Pfad.
 
 ## Was nicht passiert
 

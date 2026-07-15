@@ -93,3 +93,8 @@ voller Secret-Vault, semantische Suche (Embeddings).
 - **Performance** — keine Browser-LCP-Gates, nur CI-Smoke + Bundle-Budget.
 - **Capture Bild-Upload** — implementiert (`/api/capture/upload`, Quick Capture); UI auf `/capture`.
 - **Agent Jobs** — Dispatch + Polling funktional; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](SECURITY_SETTINGS.md)).
+- **Drei-Produkte-Split (Portal/Studio/Brain)** — Foundation-Welle (Inventar, ADRs,
+  Masterplan, Domain-Contracts, Guards-/Testpläne) abgeschlossen; siehe
+  [rework/three-product-split/README.md](rework/three-product-split/README.md).
+  Kein `apps/brain`, keine Migration, keine Schema-/Cookie-Änderung — Runtime bleibt
+  wie oben beschrieben unverändert.
