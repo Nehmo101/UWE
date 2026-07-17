@@ -176,7 +176,7 @@ _list_stages() {
   echo "  test:ci        — unit + integration subset (PR gate)"
   echo "  test           — full unit + integration tests"
   echo "  test:security  — authz, leaks, route guards"
-  echo "  audit:prod     — pnpm audit --prod --audit-level high"
+  echo "  audit:prod     — pnpm audit:prod (pnpm 11 bulk advisory endpoint)"
   echo "  build:release  — production build (studio + portal)"
   echo "  docs:check     — required docs + markdown scan"
   echo "  e2e            — Playwright E2E (needs running server)"

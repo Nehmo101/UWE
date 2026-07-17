@@ -31,7 +31,7 @@
     "test:authz": "pnpm --filter @uwe/security-tests test:authz && node --import tsx --test scripts/studio-route-auth.test.ts",
     "test:leaks": "pnpm --filter @uwe/security-tests test:leaks && node --import tsx --test scripts/security-leaks.test.ts",
     "secret:scan": "node scripts/secret-scan.mjs",
-    "audit:prod": "pnpm audit --prod --audit-level high",
+    "audit:prod": "pnpm --config.minimumReleaseAge=0 dlx pnpm@11.14.0 --pm-on-fail=ignore audit --prod --audit-level high",
     "release:check": "node --import tsx --test scripts/release.test.ts",
     "dev:studio": "pnpm --filter @uwe/studio dev",
     "dev:portal": "pnpm --filter @uwe/portal dev",

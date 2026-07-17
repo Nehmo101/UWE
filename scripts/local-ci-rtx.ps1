@@ -80,7 +80,7 @@ pnpm test:security
 
 if (-not $SkipAudit) {
 Step "Production Audit" {
-pnpm audit --prod --audit-level high
+pnpm audit:prod
 }
 }
 
