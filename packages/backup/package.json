@@ -16,7 +16,7 @@
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
-    "adm-zip": "^0.5.16"
+    "adm-zip": "^0.6.0"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",
