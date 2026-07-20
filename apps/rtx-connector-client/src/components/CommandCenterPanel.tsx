@@ -5,6 +5,7 @@ import { HealthBadge } from "@uwe/shared-ui";
 
 import {
   backupHost,
+  checkHostUpdate,
   getHostLogs,
   getHostStatus,
   openHostTarget,
@@ -13,11 +14,13 @@ import {
   setupHost,
   startHost,
   stopHost,
+  updateHost,
   writeConfig,
   type ConnectorRuntimeStatus,
   type LocalHostActionResult,
   type LocalHostLogsResult,
   type LocalHostStatus,
+  type LocalHostUpdateInfo,
 } from "../lib/tauri";
 import { humanizeConnectionStatus, toHealthBadgeStatus } from "../lib/connector-runtime-labels";
 import { Button } from "./ui/button";
@@ -81,11 +84,12 @@ export function CommandCenterPanel({
   const [root, setRoot] = useState(config.localHostRoot);
   const [autoStartHost, setAutoStartHost] = useState(config.autoStartHost);
   const [autostartApp, setAutostartApp] = useState(config.autostartWindows);
-  const [busy, setBusy] = useState<HostAction | "refresh" | "settings" | "all" | null>(null);
+  const [busy, setBusy] = useState<HostAction | "refresh" | "settings" | "all" | "check-update" | "update" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logTarget, setLogTarget] = useState<LocalHostLogsResult["target"]>("command-center");
   const [logs, setLogs] = useState<string[]>([]);
+  const [updateInfo, setUpdateInfo] = useState<LocalHostUpdateInfo | null>(null);
 
   const refresh = useCallback(async (requestedRoot = root) => {
     setBusy((current) => current ?? "refresh");
@@ -203,6 +207,51 @@ export function CommandCenterPanel({
     }
   }
 
+  async function runCheckUpdate() {
+    setBusy("check-update");
+    setError(null);
+    setMessage("Suche nach UWE-Releases …");
+    try {
+      const result = await checkHostUpdate(root || undefined);
+      setUpdateInfo(result);
+      setStatus(result.status);
+      if (!result.ok) {
+        setError(result.message);
+        setMessage(null);
+        return;
+      }
+      setMessage(result.message);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setMessage(null);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runInstallUpdate() {
+    setBusy("update");
+    setError(null);
+    setMessage("Update wird installiert: Code synchronisieren, Abhängigkeiten, Migration und Build. Das kann mehrere Minuten dauern.");
+    try {
+      const result = await updateHost(root || undefined);
+      setStatus(result.status);
+      if (result.ok) {
+        setMessage(result.message);
+        const refreshed = await checkHostUpdate(root || undefined);
+        setUpdateInfo(refreshed);
+      } else {
+        setError(result.message);
+        setMessage(null);
+      }
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setMessage(null);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const hostOnline = status?.services.every((service) => service.healthy) ?? false;
   const connectorConfigured = Boolean(config.hostUrl && config.token);
   const installChecks = status ? [
@@ -234,8 +283,54 @@ export function CommandCenterPanel({
         <Button variant="primary" onClick={startEverything} disabled={busy !== null || hostOnline}>Alles starten</Button>
         <Button variant="secondary" onClick={stopEverything} disabled={busy !== null || (!hostOnline && connectorStatus.status !== "running")}>Alles stoppen</Button>
         <Button variant="accent" onClick={() => runAction("setup")} disabled={busy !== null}>{status?.installation.buildReady ? "Reparieren / neu bauen" : "UWE einrichten"}</Button>
+        <Button
+          variant={updateInfo?.updateAvailable ? "primary" : "secondary"}
+          onClick={() => (updateInfo?.updateAvailable ? runInstallUpdate() : runCheckUpdate())}
+          disabled={busy !== null}
+        >
+          {busy === "update"
+            ? "Update läuft …"
+            : busy === "check-update"
+              ? "Prüfe …"
+              : updateInfo?.updateAvailable
+                ? "Update installieren"
+                : "Nach Updates suchen"}
+        </Button>
         <Button variant="ghost" onClick={() => refresh()} disabled={busy !== null}>Status neu laden</Button>
       </div>
+
+      {updateInfo ? (
+        <Card>
+          <CardHeader><CardTitle>UWE Releases</CardTitle></CardHeader>
+          <CardContent>
+            <div className="connector-stack">
+              <HealthBadge
+                status={updateInfo.updateAvailable ? "degraded" : "ok"}
+                label={updateInfo.updateAvailable ? "Update verfügbar" : "Aktuell"}
+              />
+              <dl className="connector-kv">
+                <div><dt>Installiert</dt><dd>{updateInfo.currentVersion ?? "–"} · {updateInfo.currentRevision ?? "–"}</dd></div>
+                <div><dt>Neueste</dt><dd>{updateInfo.latestVersion ?? "–"} · {updateInfo.latestTag ?? "–"}</dd></div>
+              </dl>
+              <p className="connector-muted">
+                Update installiert den Release-Stand per Git, baut Studio/Portal neu
+                {updateInfo.commandCenterUpdateAvailable
+                  ? " und öffnet den Windows-Installer für das Command Center."
+                  : "."}
+                {updateInfo.dirtyWorktree ? " Lokale Änderungen werden vorher per git stash gesichert." : ""}
+              </p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <div className="connector-actions">
+              <Button variant="ghost" onClick={runCheckUpdate} disabled={busy !== null}>Erneut prüfen</Button>
+              <Button variant="primary" onClick={runInstallUpdate} disabled={busy !== null || !updateInfo.updateAvailable}>
+                Update installieren
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      ) : null}
 
       <div className="connector-grid connector-grid-3">
         {status?.services.map((service) => (

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **UWE Windows Releases** — GitHub Actions workflow publishes Command Center NSIS/MSI under tag `uwe-vX.Y.Z`; Command Center **Update** button syncs the checkout to the release, rebuilds Studio/Portal, and opens the Windows installer when the desktop app is behind
 - **UWE Daily Admin OS** — private admin cockpit: `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain`
 - **Studio Security Step 1** — URL classification, RTX exposure assessment, admin status cards
 - **Life Admin data models** — Capture, PersonalProject, WorkshopProject, ContractExpense, HardwareDevice, PersonalBrain, Generator presets/outputs

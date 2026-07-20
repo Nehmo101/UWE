@@ -45,7 +45,7 @@
     "updater": {
       "active": false,
       "endpoints": [
-        "https://github.com/Nehmo101/UWE/releases/download/rtx-connector-v{{version}}/latest.json"
+        "https://github.com/Nehmo101/UWE/releases/download/uwe-v{{version}}/latest.json"
       ],
       "dialog": true,
       "pubkey": ""

@@ -45,10 +45,11 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Docs Check** | `.github/workflows/docs-check.yml` | Push `main` (docs paths), manual | Supplemental link scan | No |
 | **Cursor Agent** | `.github/workflows/cursor-agent.yml` | Manual | Agent jobs from Studio admin | No |
 | **Deploy** | `.github/workflows/deploy.yml` | `workflow_run` after CI success on `main` | Self-hosted runner (`uwe-deploy`) on the host → `uwe-cd-trigger.sh` → git pull + setup --quick | No |
+| **UWE Windows Release** | `.github/workflows/uwe-windows-release.yml` | Manual | Build Command Center NSIS/MSI + publish GitHub Release `uwe-v*` | No |
 
-> The former `windows-installer.yml` workflow was removed together with the
-> Docker + Windows-installer runtime (see
-> [removed-legacy-runtime.md](../removed-legacy-runtime.md)).
+> The former `windows-installer.yml` workflow (Docker/one-click path) was removed
+> (see [removed-legacy-runtime.md](../removed-legacy-runtime.md)). Active Windows
+> releases are the Command Center installers from **UWE Windows Release**.
 
 ### Branch protection (recommended)
 

@@ -65,7 +65,7 @@ See `docs/BACKUP.md`, `docs/backup-restore.md`. Production backups: `/var/backup
 ## Windows UWE Command Center
 
 - Active desktop app: `apps/rtx-connector-client/` (technical path retained for compatibility)
-- Host orchestrator: `tools/uwe-host-command-center/src/desktop-host.ts`
+- Host orchestrator: `tools/uwe-host-command-center/src/desktop-host-cli.ts`
 - `pnpm command-center:dev` / `pnpm command-center:build`
 - Persistent data: `%LOCALAPPDATA%\UWE\rtx-connector-client\host`
 - The removed `tools/windows-installer/` path must not be restored.

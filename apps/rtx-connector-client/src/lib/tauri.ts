@@ -191,3 +191,11 @@ export async function getHostLogs(
 export async function openHostTarget(root: string | undefined, target: "studio" | "portal") {
   return invokeCommand<{ ok: boolean; message: string }>("open_host_target", { root, target });
 }
+
+export async function checkHostUpdate(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostUpdateInfo>("check_host_update", { root });
+}
+
+export async function updateHost(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("update_host", { root });
+}

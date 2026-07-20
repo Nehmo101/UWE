@@ -109,7 +109,7 @@ Set `UWE_MONOREPO_ROOT` if the app cannot auto-detect the repo (e.g. packaged bu
 ```text
 ## Architecture
 
-Tauri UI  →  Host-Aktionen → node tools/uwe-host-command-center/src/desktop-host.ts
+Tauri UI  →  Host-Aktionen → node tools/uwe-host-command-center/src/desktop-host-cli.ts
                                       ↓
                               Studio + Portal + SQLite + Backups + Logs
 

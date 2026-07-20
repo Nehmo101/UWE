@@ -66,4 +66,32 @@ describe("release packaging", () => {
     const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
     assert.match(changelog, new RegExp(`\\[${version.replace(".", "\\.")}\\]`));
   });
+
+  it("ships a Windows GitHub Release workflow and manifest builder", () => {
+    const workflow = fs.readFileSync(
+      path.join(root, ".github/workflows/uwe-windows-release.yml"),
+      "utf8",
+    );
+    assert.match(workflow, /UWE Windows Release/);
+    assert.match(workflow, /uwe-v/);
+    assert.match(workflow, /softprops\/action-gh-release/);
+    assert.match(workflow, /tauri:build/);
+    assert.ok(fs.existsSync(path.join(root, "scripts/build-uwe-release-manifest.mjs")));
+    assert.ok(
+      fs.existsSync(path.join(root, "tools/uwe-host-command-center/src/desktop-host-update.ts")),
+    );
+    assert.ok(
+      fs.existsSync(path.join(root, "tools/uwe-host-command-center/src/desktop-host-cli.ts")),
+    );
+  });
+
+  it("keeps Command Center update docs aligned with release tags", () => {
+    const docs = fs.readFileSync(
+      path.join(root, "docs/engineering/rtx-connector-release.md"),
+      "utf8",
+    );
+    assert.match(docs, /uwe-vX\.Y\.Z/);
+    assert.match(docs, /Update installieren/);
+    assert.match(docs, /uwe-windows-release\.yml/);
+  });
 });

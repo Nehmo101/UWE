@@ -1,4 +1,4 @@
-import type { LocalHostActionResult, LocalHostStatus } from "./tauri-types";
+import type { LocalHostActionResult, LocalHostStatus, LocalHostUpdateInfo } from "./tauri-types";
 
 export function buildMockHostStatus(running = false): LocalHostStatus {
   return {
@@ -45,4 +45,26 @@ export function buildMockHostStatus(running = false): LocalHostStatus {
 
 export function buildMockHostAction(message: string, running = false): LocalHostActionResult {
   return { ok: true, message, status: buildMockHostStatus(running) };
+}
+
+export function buildMockHostUpdate(updateAvailable = false): LocalHostUpdateInfo {
+  const status = buildMockHostStatus(false);
+  return {
+    ok: true,
+    updateAvailable,
+    currentVersion: "0.1.0",
+    currentRevision: "preview",
+    latestVersion: updateAvailable ? "0.1.1" : "0.1.0",
+    latestTag: updateAvailable ? "uwe-v0.1.1" : "uwe-v0.1.0",
+    latestRevision: updateAvailable ? "next" : "preview",
+    releaseUrl: "https://github.com/Nehmo101/UWE/releases/tag/uwe-v0.1.0",
+    windowsInstallerUrl:
+      "https://github.com/Nehmo101/UWE/releases/download/uwe-v0.1.0/UWE_Command_Center_0.1.0_x64-setup.exe",
+    commandCenterUpdateAvailable: updateAvailable,
+    dirtyWorktree: false,
+    message: updateAvailable
+      ? "Browser-Vorschau: Update verfügbar (uwe-v0.1.1)."
+      : "Browser-Vorschau: UWE ist aktuell.",
+    status,
+  };
 }

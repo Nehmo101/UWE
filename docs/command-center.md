@@ -33,9 +33,14 @@ UWE Command Center
   └─ RTX verbinden         → ausgehender Connector zum lokalen Studio
 ```
 
-Das Command Center führt absichtlich kein automatisches `git pull` aus. Ein
-Quellcode-Update darf keine lokalen Änderungen überschreiben. Nach einem bewusst
-ausgeführten Pull baut „Reparieren / neu bauen“ den aktuellen Checkout neu.
+Das Command Center führt absichtlich **kein stilles** `git pull` aus. Updates
+laufen nur über den expliziten Button **Nach Updates suchen** /
+**Update installieren** (oder die CLI-Aktionen `check-update` / `update`). Dabei
+wird der Checkout auf den neuesten GitHub-Release-Tag `uwe-v*` synchronisiert,
+Studio/Portal neu gebaut, und bei Bedarf der Windows-Installer für das Command
+Center geöffnet. Lokale Arbeitsbaum-Änderungen werden vorher per `git stash`
+gesichert — nie still überschrieben. „Reparieren / neu bauen“ baut weiterhin den
+aktuellen Checkout ohne Remote-Sync.
 
 ## Lokale Pfade (Windows)
 
@@ -76,12 +81,18 @@ pnpm --filter @uwe/rtx-connector-client typecheck
 Die Host-Steuerung kann separat geprüft werden (Node 22.18+ bzw. Node 24):
 
 ```powershell
-node tools/uwe-host-command-center/src/desktop-host.ts status --root C:\git\UWE
-node tools/uwe-host-command-center/src/desktop-host.ts setup --root C:\git\UWE
-node tools/uwe-host-command-center/src/desktop-host.ts start --root C:\git\UWE
-node tools/uwe-host-command-center/src/desktop-host.ts backup --root C:\git\UWE
-node tools/uwe-host-command-center/src/desktop-host.ts stop --root C:\git\UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts status --root C:\git\UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts setup --root C:\git\UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts start --root C:\git\UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts backup --root C:\git\UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts stop --root C:\git\UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts check-update --root C:\git\UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts update --root C:\git\UWE
 ```
+
+Windows-Releases werden über GitHub Actions
+(`.github/workflows/uwe-windows-release.yml`) als Tag `uwe-vX.Y.Z` veröffentlicht.
+Details: [docs/engineering/rtx-connector-release.md](./engineering/rtx-connector-release.md).
 
 ## Sicherheit
 
@@ -110,7 +121,8 @@ mit Linux-spezifischer Komplexität zu belasten.
    Portbelegungen und fehlerhafte Healthchecks werden getrennt gemeldet.
 3. **Daten außerhalb des Repos:** Updates und Builds berühren keine Nutzdaten.
 4. **Kompatible technische IDs:** keine erzwungene Token-/Modellmigration.
-5. **Explizite Updates:** lokale Änderungen werden niemals still überschrieben.
+5. **Explizite Updates:** nur der Update-Button/CLI rollt Releases aus; lokale
+   Änderungen werden per Stash gesichert, nie still überschrieben.
 6. **Checkout statt Runtime-Duplikat:** Produktionsprozesse nutzen den
    installierten Workspace gezielt; große doppelte Standalone-Bäume entfallen.
 7. **Linux bleibt optional:** All-in-one und Split-Hosting teilen Kern und
