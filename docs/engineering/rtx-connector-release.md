@@ -16,12 +16,14 @@ git checkout is synced to the release tag and Studio/Portal are rebuilt.
 ### Publish a Windows release
 
 1. Ensure `VERSION`, root `package.json`, and
-   `apps/rtx-connector-client/src-tauri/tauri.conf.json` share the same semver.
-2. In GitHub Actions run **UWE Windows Release**.
-3. Optional input `version` overrides `VERSION` for the build metadata; prefer
-   bumping `VERSION` in a PR first so the tagged commit matches.
-4. The workflow builds on `windows-latest`, uploads installers, and creates the
+   `apps/rtx-connector-client/src-tauri/tauri.conf.json` share the same semver
+   on the commit you want to tag.
+2. In GitHub Actions run **UWE Windows Release** (optional `version` input must
+   match `VERSION` when set).
+3. The workflow installs Rust, builds on `windows-latest`, uploads installers
+   (including the stable NSIS name), writes `uwe-release.json`, and creates the
    GitHub Release for tag `uwe-vX.Y.Z`.
+4. Open the repo **Releases** page and confirm the assets are listed.
 
 Optional signing secrets (recommended before enabling the Tauri auto-updater):
 

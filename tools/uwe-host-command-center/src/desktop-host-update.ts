@@ -125,6 +125,30 @@ function resolveGithubRepoSlug(root: string): string | null {
   return null;
 }
 
+function resolveInstallerAssetName(root: string, tag: string, version: string): string {
+  const viaGh = spawnSync(
+    "gh",
+    ["release", "view", tag, "--json", "assets", "--jq", ".assets[].name"],
+    {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    },
+  );
+  if (viaGh.status === 0) {
+    const names = (viaGh.stdout ?? "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const stable = names.find((name) => name === `UWE_Command_Center_${version}_x64-setup.exe`);
+    if (stable) return stable;
+    const setup = names.find((name) => /setup\.exe$/i.test(name) || /\.exe$/i.test(name));
+    if (setup) return setup;
+  }
+  return `UWE_Command_Center_${version}_x64-setup.exe`;
+}
+
 function buildReleaseUrls(
   root: string,
   tag: string,
@@ -135,10 +159,10 @@ function buildReleaseUrls(
     return { releaseUrl: null, windowsInstallerUrl: null };
   }
   const releaseUrl = `https://github.com/${slug}/releases/tag/${tag}`;
-  const installerName = `UWE_Command_Center_${version}_x64-setup.exe`;
+  const installerName = resolveInstallerAssetName(root, tag, version);
   return {
     releaseUrl,
-    windowsInstallerUrl: `https://github.com/${slug}/releases/download/${tag}/${installerName}`,
+    windowsInstallerUrl: `https://github.com/${slug}/releases/download/${tag}/${installerName.split("/").pop()}`,
   };
 }
 

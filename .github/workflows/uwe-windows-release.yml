@@ -33,14 +33,26 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "apps/rtx-connector-client/src-tauri -> target"
+
       - name: Resolve version and tag
         id: meta
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ inputs.version }}"
+          FILE_VERSION="$(tr -d '[:space:]' < VERSION)"
           if [[ -z "$VERSION" ]]; then
-            VERSION="$(tr -d '[:space:]' < VERSION)"
+            VERSION="$FILE_VERSION"
+          elif [[ "$VERSION" != "$FILE_VERSION" ]]; then
+            echo "Input version ($VERSION) must match VERSION file ($FILE_VERSION). Bump VERSION in a PR first." >&2
+            exit 1
           fi
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version: $VERSION" >&2
@@ -51,7 +63,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Publishing $TAG (sha=$(git rev-parse --short HEAD))"
 
-      - name: Sync package versions
+      - name: Sync package versions for the build
         shell: bash
         run: |
           set -euo pipefail
@@ -68,7 +80,6 @@ jobs:
             const tauri = JSON.parse(fs.readFileSync(tauriPath, 'utf8'));
             tauri.version = version;
             fs.writeFileSync(tauriPath, JSON.stringify(tauri, null, 2) + '\n');
-            fs.writeFileSync('VERSION', version + '\n');
           "
         env:
           VERSION: ${{ steps.meta.outputs.version }}
