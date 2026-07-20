@@ -1,6 +1,18 @@
-# UWE RTX Connector Client
+# UWE Command Center
 
-**Tauri 2** desktop app (Windows & Linux) for the local **UWE RTX Connector**.
+**Tauri 2** Desktop-App für lokales UWE-Hosting und den **UWE RTX Connector**.
+Der technische Paketname und der AppData-Pfad bleiben für Updates kompatibel.
+
+## All-in-one Scope
+
+- UWE installieren/reparieren: pnpm, Prisma, Migration, Seed und Release-Build
+- Studio und Portal gemeinsam starten, stoppen und per Healthcheck überwachen
+- CPU, RAM, Datenträger, NVIDIA-GPU, Branch und Revision anzeigen
+- SQLite-Backups und gebündelte Host-Logs aus der Oberfläche
+- Windows-Anmelde-Autostart für App und optional UWE-Dienste
+- bestehende RTX-, Modell-, Download-, Drucker- und Runner-Funktionen
+
+Details: [`../../docs/command-center.md`](../../docs/command-center.md).
 
 ## Scope in P1
 
@@ -87,16 +99,20 @@ Desktop-Umgebung bleibt die App über das Fenster bedienbar.
 From the repo root:
 
 ```bash
-pnpm connector:client:dev
-pnpm connector:client:build
+pnpm command-center:dev
+pnpm command-center:build
 pnpm --filter @uwe/rtx-connector-client typecheck
 ```
 
 Set `UWE_MONOREPO_ROOT` if the app cannot auto-detect the repo (e.g. packaged builds later).
 
+```text
 ## Architecture
 
-```text
+Tauri UI  →  Host-Aktionen → node tools/uwe-host-command-center/src/desktop-host.ts
+                                      ↓
+                              Studio + Portal + SQLite + Backups + Logs
+
 Tauri UI  →  start/stop  →  node --import tsx tools/uwe-rtx-connector/src/desktop-launcher.ts
                                       ↓
                               ConnectorRunner (outbound heartbeat + queue/direct/hybrid transport)

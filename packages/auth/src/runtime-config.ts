@@ -349,6 +349,16 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
   };
 }
 
+function isLoopbackUrl(value: string | null): boolean {
+  if (!value) return false;
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
 export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRuntimeConfig {
   env = withRuntimeEnvOverrides(env);
   const isProduction = isProductionEnv(env);
@@ -356,8 +366,12 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     env.PUBLIC_BASE_URL ?? env.PUBLIC_APP_URL,
   );
   const publicHttps = publicAppUrl?.startsWith("https://") ?? false;
+  const publicLoopback = isLoopbackUrl(publicAppUrl);
 
-  const trustProxy = parseBoolEnv(env.TRUST_PROXY, isProduction && Boolean(publicAppUrl));
+  const trustProxy = parseBoolEnv(
+    env.TRUST_PROXY,
+    isProduction && Boolean(publicAppUrl) && !publicLoopback,
+  );
   const cloudflareTunnel = parseBoolEnv(env.CLOUDFLARE_TUNNEL, trustProxy);
 
   const sessionCookieSecure = parseBoolEnv(
@@ -388,7 +402,7 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
 
 export function isPublicExposureConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
   const config = getUweRuntimeConfig(env);
-  return Boolean(config.publicAppUrl) || config.cloudflareTunnel;
+  return config.cloudflareTunnel || Boolean(config.publicAppUrl && !isLoopbackUrl(config.publicAppUrl));
 }
 
 export function getSessionCookieOptions(

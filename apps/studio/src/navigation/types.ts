@@ -2,7 +2,7 @@
  * Re-export of the framework-agnostic navigation contract.
  *
  * The contract lives in `@uwe/shared-utils` so that Studio, Portal, and the
- * RTX Connector Client can all consume the same types/helpers without
+ * UWE Command Center can consume the same types/helpers without
  * cross-app imports. Studio navigation modules import from `./types`.
  */
 export {

@@ -1,3 +1,10 @@
+mod command_center;
+
+use command_center::{
+    backup_host, get_host_logs, get_host_status, open_host_target, restart_host, setup_host,
+    start_host, stop_host,
+};
+
 use std::{
     fs,
     io::{BufRead, BufReader, Read, Write},
@@ -44,7 +51,9 @@ fn configure_hidden_process(command: &mut Command) {
 #[cfg(target_os = "windows")]
 const AUTOSTART_RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 #[cfg(target_os = "windows")]
-const AUTOSTART_VALUE_NAME: &str = "UWE RTX Connector Client";
+const AUTOSTART_VALUE_NAME: &str = "UWE Command Center";
+#[cfg(target_os = "windows")]
+const LEGACY_AUTOSTART_VALUE_NAME: &str = "UWE RTX Connector Client";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -81,6 +90,12 @@ struct ConnectorClientConfig {
     print_command: String,
     #[serde(default)]
     default_printer_id: String,
+    /// Checkout used by the all-in-one local host controller.
+    #[serde(default)]
+    local_host_root: String,
+    /// Start Studio + Portal when the Command Center starts.
+    #[serde(default)]
+    auto_start_host: bool,
 }
 
 fn default_spotify_redirect_uri() -> String {
@@ -112,6 +127,8 @@ impl Default for ConnectorClientConfig {
             image_command: String::new(),
             print_command: String::new(),
             default_printer_id: String::new(),
+            local_host_root: String::new(),
+            auto_start_host: false,
         }
     }
 }
@@ -162,8 +179,9 @@ fn now_timestamp() -> String {
 }
 
 /// Resolve the UWE monorepo root used as the working directory for the Node
-/// connector process. Prefers the `UWE_MONOREPO_ROOT` env override, otherwise
-/// walks up from the current working directory looking for `pnpm-workspace.yaml`.
+/// connector process. Prefers the `UWE_MONOREPO_ROOT` env override, then the
+/// Command Center's persisted local host root, and finally walks up from the
+/// current working directory looking for `pnpm-workspace.yaml`.
 fn resolve_monorepo_root() -> PathBuf {
     if let Ok(root) = std::env::var("UWE_MONOREPO_ROOT") {
         let trimmed = root.trim();
@@ -179,6 +197,16 @@ fn resolve_monorepo_root() -> PathBuf {
     }
 
     if let Ok(cwd) = std::env::current_dir() {
+        if let Ok(config) = read_config_from_disk() {
+            let trimmed = config.local_host_root.trim();
+            if !trimmed.is_empty() {
+                let path = PathBuf::from(trimmed);
+                if path.is_dir() {
+                    return path;
+                }
+            }
+        }
+
         let mut current: &Path = cwd.as_path();
         loop {
             if current.join("pnpm-workspace.yaml").exists() {
@@ -487,6 +515,25 @@ fn autostart_command_line() -> Result<String, String> {
     })?;
     Ok(format!("\"{}\" --minimized", exe.display()))
 }
+#[cfg(target_os = "windows")]
+fn remove_windows_autostart_value(value_name: &str) -> Result<(), String> {
+    let output = run_reg(&["delete", AUTOSTART_RUN_KEY, "/v", value_name, "/f"])?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let text = format!("{stdout}\n{stderr}").to_lowercase();
+    if text.contains("unable to find")
+        || text.contains("nicht gefunden")
+        || text.contains("system was unable")
+    {
+        return Ok(());
+    }
+    Err(format!(
+        "Windows-Autostart-Eintrag {value_name} konnte nicht entfernt werden."
+    ))
+}
 
 #[cfg(target_os = "windows")]
 fn sync_autostart(enabled: bool) -> Result<(), String> {
@@ -514,31 +561,12 @@ fn sync_autostart(enabled: bool) -> Result<(), String> {
                 }
             ));
         }
+        remove_windows_autostart_value(LEGACY_AUTOSTART_VALUE_NAME)?;
         return Ok(());
     }
 
-    let output = run_reg(&[
-        "delete",
-        AUTOSTART_RUN_KEY,
-        "/v",
-        AUTOSTART_VALUE_NAME,
-        "/f",
-    ])?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let text = format!("{stdout}\n{stderr}").to_lowercase();
-        if text.contains("unable to find")
-            || text.contains("nicht gefunden")
-            || text.contains("system was unable")
-        {
-            return Ok(());
-        }
-        return Err("Windows-Autostart konnte nicht deaktiviert werden.".to_string());
-    }
-
-    Ok(())
+    remove_windows_autostart_value(AUTOSTART_VALUE_NAME)?;
+    remove_windows_autostart_value(LEGACY_AUTOSTART_VALUE_NAME)
 }
 
 /// XDG autostart entry written for the current user on Linux. Desktop
@@ -567,8 +595,8 @@ fn sync_autostart(enabled: bool) -> Result<(), String> {
         let entry = format!(
             "[Desktop Entry]\n\
              Type=Application\n\
-             Name=UWE RTX Connector Client\n\
-             Comment=Startet den UWE RTX Connector Client beim Login\n\
+             Name=UWE Command Center\n\
+             Comment=Startet das UWE Command Center beim Login\n\
              Exec=\"{}\" --minimized\n\
              Terminal=false\n\
              X-GNOME-Autostart-enabled=true\n",
@@ -684,6 +712,7 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     config.image_command = config.image_command.trim().to_string();
     config.print_command = config.print_command.trim().to_string();
     config.default_printer_id = config.default_printer_id.trim().to_string();
+    config.local_host_root = config.local_host_root.trim().to_string();
 
     Ok(config)
 }
@@ -780,7 +809,7 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let menu = Menu::with_items(app, &[&open_item, &quit_item])?;
 
     let mut builder = TrayIconBuilder::new()
-        .tooltip("UWE RTX Connector Client")
+        .tooltip("UWE Command Center")
         .menu(&menu)
         .menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -1442,7 +1471,15 @@ pub fn run() {
             spotify_disconnect,
             test_audio,
             test_image,
-            test_print
+            test_print,
+            get_host_status,
+            setup_host,
+            start_host,
+            stop_host,
+            restart_host,
+            backup_host,
+            get_host_logs,
+            open_host_target
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

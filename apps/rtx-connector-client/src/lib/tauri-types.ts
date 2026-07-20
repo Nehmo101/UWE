@@ -203,3 +203,62 @@ export interface ConnectorPrinterStore {
   version: number;
   printers: ConnectorPrinterProfile[];
 }
+
+export interface LocalHostService {
+  id: "studio" | "portal";
+  label: string;
+  state: "online" | "starting" | "stopped" | "error";
+  healthy: boolean;
+  pid: number | null;
+  url: string;
+  message: string;
+}
+
+export interface LocalHostStatus {
+  collectedAt: string;
+  overall: "ready" | "attention" | "error";
+  root: string;
+  revision: string | null;
+  branch: string | null;
+  installation: {
+    repoReady: boolean;
+    dependenciesReady: boolean;
+    envReady: boolean;
+    databaseReady: boolean;
+    buildReady: boolean;
+    message: string;
+  };
+  host: {
+    hostname: string;
+    platform: string;
+    release: string;
+    uptimeSeconds: number;
+    cpuModel: string;
+    cpuCores: number;
+    ramTotalBytes: number;
+    ramUsedBytes: number;
+    diskTotalBytes: number | null;
+    diskUsedBytes: number | null;
+  };
+  gpu: {
+    available: boolean;
+    name: string | null;
+    vramTotalMb: number | null;
+    utilizationPercent: number | null;
+    temperatureC: number | null;
+  };
+  services: LocalHostService[];
+  dataDir: string;
+  logsDir: string;
+}
+
+export interface LocalHostActionResult {
+  ok: boolean;
+  message: string;
+  status: LocalHostStatus;
+}
+
+export interface LocalHostLogsResult {
+  target: "studio" | "portal" | "command-center";
+  lines: string[];
+}

@@ -5,6 +5,8 @@
   "description": "Universeller Welten-Editor — self-hosted campaign brain and world wiki",
   "scripts": {
     "dev": "turbo run dev",
+    "command-center:dev": "pnpm --filter @uwe/rtx-connector-client tauri:dev",
+    "command-center:build": "pnpm --filter @uwe/rtx-connector-client tauri:build",
     "connector:client:dev": "pnpm --filter @uwe/rtx-connector-client tauri:dev",
     "connector:client:build": "pnpm --filter @uwe/rtx-connector-client tauri:build",
     "build": "turbo run build && node scripts/materialize-standalone-prisma-deps.mjs",

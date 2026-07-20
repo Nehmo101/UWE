@@ -1,4 +1,4 @@
-# RTX Connector Client — release & auto-updater
+# UWE Command Center — release & auto-updater
 
 The Tauri desktop client ships multi-target bundles (`msi`, `nsis`, `deb`, `appimage`, `dmg`, `app`).
 Auto-updates stay **disabled** until code signing and a release feed are configured.

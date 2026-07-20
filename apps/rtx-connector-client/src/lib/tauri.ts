@@ -153,3 +153,41 @@ export async function testImage(prompt?: string) {
 export async function testPrint(printerId?: string) {
   return parseCommandTest(await invokeCommand<unknown>("test_print", { printerId }));
 }
+
+export async function getHostStatus(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostStatus>("get_host_status", { root });
+}
+
+export async function setupHost(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("setup_host", { root });
+}
+
+export async function startHost(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("start_host", { root });
+}
+
+export async function stopHost(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("stop_host", { root });
+}
+
+export async function restartHost(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("restart_host", { root });
+}
+
+export async function backupHost(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("backup_host", { root });
+}
+
+export async function getHostLogs(
+  root?: string,
+  target: "studio" | "portal" | "command-center" = "command-center",
+) {
+  return invokeCommand<import("./tauri-types").LocalHostLogsResult>("get_host_logs", {
+    root,
+    target,
+  });
+}
+
+export async function openHostTarget(root: string | undefined, target: "studio" | "portal") {
+  return invokeCommand<{ ok: boolean; message: string }>("open_host_target", { root, target });
+}

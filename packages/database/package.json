@@ -12,6 +12,7 @@
     "./graph-service": "./src/graph-service.ts",
     "./page-viewer-service": "./src/page-viewer-service.ts",
     "./client": "./src/client.ts",
+    "./connector-service": "./src/connector-service.ts",
     "./server": "./src/server.ts",
     "./campaign-radar": "./src/campaign-radar-service.ts",
     "./player-questions": "./src/player-question-service.ts",

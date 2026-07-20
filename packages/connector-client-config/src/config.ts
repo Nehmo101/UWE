@@ -34,6 +34,8 @@ const connectorClientConfigSchema = z.object({
   imageCommand: z.string(),
   printCommand: z.string(),
   defaultPrinterId: z.string(),
+  localHostRoot: z.string(),
+  autoStartHost: z.boolean(),
 });
 
 const partialConnectorClientConfigSchema = connectorClientConfigSchema.partial();
@@ -69,6 +71,8 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     imageCommand: "",
     printCommand: "",
     defaultPrinterId: "",
+    localHostRoot: "",
+    autoStartHost: false,
   };
 }
 
@@ -154,6 +158,10 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
       typeof input.defaultPrinterId === "string"
         ? input.defaultPrinterId.trim()
         : defaults.defaultPrinterId,
+    localHostRoot:
+      typeof input.localHostRoot === "string" ? input.localHostRoot.trim() : defaults.localHostRoot,
+    autoStartHost:
+      typeof input.autoStartHost === "boolean" ? input.autoStartHost : defaults.autoStartHost,
   };
 }
 

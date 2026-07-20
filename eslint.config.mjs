@@ -26,6 +26,9 @@ const config = [
       // design-system/_ds_bundle.js don't match their copies.
       ".claude/**",
       ".worktrees/**",
+      ".orca-worktrees/**",
+      ".codex-worktrees/**",
+      ".vertragus-worktrees/**",
       "**/dist/**",
       "**/.turbo/**",
       "**/src-tauri/target/**",

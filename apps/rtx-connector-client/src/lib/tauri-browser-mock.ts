@@ -5,6 +5,7 @@ import {
 import { validateHostUrl, type ConnectorClientConfig } from "@uwe/connector-client-config";
 
 import { buildMockCookbookDashboard, buildMockRunners, buildMockRuntimeStatus } from "./tauri-mock-fixtures";
+import { buildMockHostAction, buildMockHostStatus } from "./tauri-mock-host";
 import {
   appendMockLog,
   nowTimestamp,
@@ -243,6 +244,28 @@ export async function invokeBrowserMock<T>(command: string, args?: Record<string
           : "Kein Print-Kommando konfiguriert.",
       } as T;
     }
+    case "get_host_status":
+      return buildMockHostStatus(false) as T;
+    case "setup_host":
+      return buildMockHostAction("Browser-Vorschau: Einrichtung simuliert.") as T;
+    case "start_host":
+      return buildMockHostAction("Browser-Vorschau: UWE gestartet.", true) as T;
+    case "stop_host":
+      return buildMockHostAction("Browser-Vorschau: UWE gestoppt.") as T;
+    case "restart_host":
+      return buildMockHostAction("Browser-Vorschau: UWE neu gestartet.", true) as T;
+    case "backup_host":
+      return buildMockHostAction("Browser-Vorschau: Backup erstellt.") as T;
+    case "get_host_logs":
+      return {
+        target: typeof args?.target === "string" ? args.target : "command-center",
+        lines: ["[preview] UWE Command Center Browser-Vorschau."],
+      } as T;
+    case "open_host_target":
+      return {
+        ok: true,
+        message: `Browser-Vorschau: ${args?.target === "portal" ? "Portal" : "Studio"} geöffnet.`,
+      } as T;
     default:
       throw new Error(`Unbekannter Mock-Befehl: ${command}`);
   }

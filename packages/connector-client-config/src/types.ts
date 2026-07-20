@@ -77,6 +77,13 @@ export interface ConnectorClientConfig {
    * `label_print` jobs always carry their own explicit printer id from Studio.
    */
   defaultPrinterId: string;
+  /** UWE checkout used by the integrated local host controller. */
+  localHostRoot: string;
+  /**
+   * Start local Studio and Portal automatically with the Command Center.
+   * Opt-in keeps existing remote-host connector installations safe.
+   */
+  autoStartHost: boolean;
 }
 
 /** Default Spotify OAuth redirect URI for the connector-local loopback flow. */
