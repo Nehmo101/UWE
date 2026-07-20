@@ -13,6 +13,7 @@ import type { ImportFormat } from "@uwe/knoteforge-import";
 import {
   importCentralSourceAccept,
   importCentralUsesWorldTarget,
+  isImportCampaignTarget,
   isImportCentralComboSupported,
   isImportCentralMarkdownTarget,
   isImportCentralPdfSource,
@@ -21,6 +22,7 @@ import {
 } from "@/src/lib/import-central-utils";
 import { createImportCentralJobAction, rollbackImportCentralJobAction } from "../import-central-actions";
 import { ImportWorkspace } from "../worlds/[worldSlug]/import/ImportWorkspace";
+import { CampaignPdfImportPanel } from "./CampaignPdfImportPanel";
 import { MarkdownCentralImportPanel } from "./MarkdownCentralImportPanel";
 import { PdfCentralImportPanel } from "./PdfCentralImportPanel";
 import {
@@ -48,6 +50,7 @@ interface WorldOption {
   id: string;
   name: string;
   slug: string;
+  campaigns: { id: string; name: string; slug: string }[];
 }
 
 export interface ImportCentralJobRow {
@@ -136,6 +139,7 @@ export function ImportCentralWorkspace({
   const [sourceType, setSourceType] = useState<ImportSourceType>("knoteforge");
   const [targetType, setTargetType] = useState<ImportTargetType>("world");
   const [targetWorldId, setTargetWorldId] = useState(worlds[0]?.id ?? "");
+  const [campaignSlug, setCampaignSlug] = useState(worlds[0]?.campaigns[0]?.slug ?? "");
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -154,7 +158,15 @@ export function ImportCentralWorkspace({
   const comboSupported = isImportCentralComboSupported(sourceType, targetType);
   const showComingSoon = isImportCentralSourceComingSoon(sourceType);
   const selectedWorld = worlds.find((world) => world.id === targetWorldId) ?? null;
+  const campaignTarget = isImportCampaignTarget(targetType);
   const embedWorldSlug = activeJob?.targetWorldSlug ?? selectedWorld?.slug ?? null;
+
+  useEffect(() => {
+    const campaigns = selectedWorld?.campaigns ?? [];
+    if (!campaigns.some((campaign) => campaign.slug === campaignSlug)) {
+      setCampaignSlug(campaigns[0]?.slug ?? "");
+    }
+  }, [campaignSlug, selectedWorld]);
 
   const handleCreateJob = useCallback(() => {
     startTransition(async () => {
@@ -166,6 +178,9 @@ export function ImportCentralWorkspace({
         formData.set("targetType", targetType);
         if (needsWorld) {
           formData.set("targetWorldId", targetWorldId);
+        }
+        if (campaignTarget) {
+          formData.set("campaignSlug", campaignSlug);
         }
         if (fileName) {
           formData.set("fileName", fileName);
@@ -180,7 +195,7 @@ export function ImportCentralWorkspace({
         );
       }
     });
-  }, [fileName, needsWorld, router, sourceType, targetType, targetWorldId]);
+  }, [campaignSlug, campaignTarget, fileName, needsWorld, router, sourceType, targetType, targetWorldId]);
 
   const handleRollback = useCallback(
     (jobId: string) => {
@@ -236,6 +251,13 @@ export function ImportCentralWorkspace({
       );
     }
 
+    if (
+      isImportCampaignTarget(activeJob.targetType) &&
+      isImportCentralPdfSource(activeJob.sourceType)
+    ) {
+      return <CampaignPdfImportPanel jobId={activeJob.id} onComplete={handleImportComplete} />;
+    }
+
     if (isImportCentralPdfSource(activeJob.sourceType) && isImportCentralMarkdownTarget(activeJob.targetType)) {
       return (
         <PdfCentralImportPanel
@@ -274,7 +296,7 @@ export function ImportCentralWorkspace({
         <CardContent className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
             Wähle Quelle und Ziel und lege einen Import-Job an. Markdown, Obsidian (einzelne Dateien,
-            Vault-Ordner oder Vault-ZIP) und PDF können in Life Brain, Capture oder DnD-Seiten
+            Vault-Ordner oder Vault-ZIP) und PDF können in Life Brain, Capture, DnD-Seiten oder Kampagnen
             importiert werden. KnoteForge-JSON importiert nur in Welten. Jeder Import zeigt zuerst
             eine Vorschau und kann nach der Ausführung über den Verlauf zurückgerollt werden.
           </p>
@@ -308,7 +330,7 @@ export function ImportCentralWorkspace({
                 onChange={(event) => setTargetType(event.target.value as ImportTargetType)}
                 className={NATIVE_SELECT_CLASS}
               >
-                {(["world", "personal_brain", "capture", "dnd_page"] as ImportTargetType[]).map(
+                {(["world", "personal_brain", "capture", "dnd_page", "campaign"] as ImportTargetType[]).map(
                   (entry) => (
                     <option key={entry} value={entry}>
                       {IMPORT_TARGET_TYPE_LABELS[entry]}
@@ -341,6 +363,27 @@ export function ImportCentralWorkspace({
                 </select>
               </div>
             ) : null}
+
+            {campaignTarget ? (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="import-central-campaign">Kampagne</Label>
+                <select
+                  id="import-central-campaign"
+                  value={campaignSlug}
+                  onChange={(event) => setCampaignSlug(event.target.value)}
+                  disabled={!selectedWorld || selectedWorld.campaigns.length === 0}
+                  className={NATIVE_SELECT_CLASS}
+                >
+                  {selectedWorld?.campaigns.length ? (
+                    selectedWorld.campaigns.map((campaign) => (
+                      <option key={campaign.id} value={campaign.slug}>{campaign.name}</option>
+                    ))
+                  ) : (
+                    <option value="">Keine Kampagnen vorhanden</option>
+                  )}
+                </select>
+              </div>
+            ) : null}
           </div>
 
           {showComingSoon ? (
@@ -359,11 +402,16 @@ export function ImportCentralWorkspace({
               />
             </div>
           ) : null}
+          {campaignTarget && selectedWorld?.campaigns.length === 0 ? (
+            <Alert tone="warning">Erst eine Kampagne in der Welt anlegen.</Alert>
+          ) : null}
 
           <Button
             type="button"
             onClick={handleCreateJob}
-            disabled={pending || (needsWorld && !targetWorldId) || !comboSupported}
+            disabled={
+              pending || (needsWorld && !targetWorldId) || (campaignTarget && !campaignSlug) || !comboSupported
+            }
             className="self-start"
           >
             {pending ? "Wird angelegt…" : "Import-Job starten"}

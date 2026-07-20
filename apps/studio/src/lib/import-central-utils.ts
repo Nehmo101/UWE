@@ -25,7 +25,7 @@ export function isImportCentralComboSupported(
   targetType: ImportTargetType,
 ): boolean {
   if (sourceType === "pdf") {
-    return MARKDOWN_TARGET_TYPES.has(targetType);
+    return MARKDOWN_TARGET_TYPES.has(targetType) || targetType === "campaign";
   }
 
   if (sourceType === "knoteforge") {
@@ -74,8 +74,12 @@ export function importCentralSourceAccept(sourceType: ImportSourceType): string 
   }
 }
 
+export function isImportCampaignTarget(targetType: ImportTargetType): boolean {
+  return targetType === "campaign";
+}
+
 export function importCentralUsesWorldTarget(targetType: ImportTargetType): boolean {
-  return targetType === "world" || targetType === "dnd_page";
+  return targetType === "world" || targetType === "dnd_page" || targetType === "campaign";
 }
 
 export { sourceTypeToFormat as importCentralSourceFormat };

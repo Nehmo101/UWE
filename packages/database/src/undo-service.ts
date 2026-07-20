@@ -115,7 +115,7 @@ interface ImportExecuteSnapshot {
 
 interface ImportCentralExecuteSnapshot {
   kind: "import_central_execute";
-  targetType: "personal_brain" | "capture" | "dnd_page";
+  targetType: "personal_brain" | "capture" | "dnd_page" | "campaign";
   worldId?: string | null;
   jobId?: string;
   createdPersonalBrainDocumentIds: string[];
@@ -377,7 +377,7 @@ export class UndoService {
 
   /** Batch snapshot for a completed Import-Zentrale markdown job. */
   async captureImportCentralExecute(input: {
-    targetType: "personal_brain" | "capture" | "dnd_page";
+    targetType: "personal_brain" | "capture" | "dnd_page" | "campaign";
     worldId?: string | null;
     jobId?: string;
     createdPersonalBrainDocumentIds?: string[];

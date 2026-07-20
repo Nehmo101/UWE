@@ -1,0 +1,51 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { entityToCreatePageInput } from "./page-mapper";
+
+describe("entityToCreatePageInput", () => {
+  it("maps type, tags and provenance with dm_only visibility", () => {
+    const input = entityToCreatePageInput(
+      {
+        kind: "quest",
+        title: "Der verlorene Schlüssel",
+        summary: "Suche im Nordturm",
+        body: "## Auftrag\nFinde den Schlüssel.",
+        tags: ["Nordturm", "Schlüssel"],
+      },
+      {
+        worldId: "world-1",
+        campaignId: "campaign-1",
+        slug: "der-verlorene-schluessel",
+        importJobId: "job-1",
+        sourceFile: "abenteuer.pdf",
+      },
+    );
+
+    assert.equal(input.type, "quest");
+    assert.equal(input.visibility, "dm_only");
+    assert.deepEqual(input.tags, ["Nordturm", "Schlüssel"]);
+    assert.equal(input.contentBlocks?.[0]?.visibility, "dm_only");
+    assert.deepEqual(input.contentBlocks?.[0]?.metadata, {
+      source: "pdf-campaign-import",
+      importJobId: "job-1",
+      sourceFile: "abenteuer.pdf",
+      extractedKind: "quest",
+      aiRoute: "local_rtx",
+    });
+  });
+
+  it("falls back to lore for an unknown runtime kind", () => {
+    const input = entityToCreatePageInput(
+      { kind: "unknown" as never, title: "Fund", body: "Unklar" },
+      {
+        worldId: "w",
+        campaignId: "c",
+        slug: "fund",
+        importJobId: "j",
+        sourceFile: "f.pdf",
+      },
+    );
+
+    assert.equal(input.type, "lore");
+  });
+});

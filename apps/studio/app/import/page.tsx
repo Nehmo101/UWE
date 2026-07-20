@@ -16,10 +16,22 @@ import {
 
 export default async function ImportCentralPage() {
   await requireStudioAccess();
+  const repo = getAppRepository();
   const [worlds, jobs] = await Promise.all([
-    getAppRepository().listWorlds(),
+    repo.listWorlds(),
     createImportJobService(prisma).listJobs({ limit: 50 }),
   ]);
+  const worldOptions = await Promise.all(
+    worlds.map(async (world) => {
+      const campaigns = await repo.listCampaignsByWorld(world.slug);
+      return {
+        id: world.id,
+        name: world.name,
+        slug: world.slug,
+        campaigns: campaigns.map(({ id, name, slug }) => ({ id, name, slug })),
+      };
+    }),
+  );
 
   const worldById = new Map(worlds.map((world) => [world.id, world]));
 
@@ -59,8 +71,7 @@ export default async function ImportCentralPage() {
         <SidebarSection title="Hinweise">
           <ul className="flex list-disc flex-col gap-1 pl-4 text-sm text-muted-foreground">
             <li>
-              Unterstützt: KnoteForge JSON → Welt; Markdown/Obsidian/PDF → Life Brain, Capture oder
-              DnD-Seite. Obsidian auch als Vault-ZIP oder Ordner-Upload.
+              Unterstützt: KnoteForge JSON → Welt; Markdown/Obsidian → Life Brain, Capture oder DnD-Seite; PDF zusätzlich → Kampagne. Obsidian auch als Vault-ZIP oder Ordner-Upload.
             </li>
             <li>
               Jeder Import wird als Job protokolliert — Status:{" "}
@@ -79,10 +90,10 @@ export default async function ImportCentralPage() {
     >
       <PageHeader
         title="Import-Zentrale"
-        summary="Zentraler Einstieg für Importe in Welten, Life Brain, Capture und DnD-Seiten — mit Job-Verlauf, Vorschau und Status."
+        summary="Zentraler Einstieg für Importe in Welten, Life Brain, Capture, DnD-Seiten und Kampagnen — mit Job-Verlauf, Vorschau und Status."
       />
       <ImportCentralWorkspace
-        worlds={worlds.map((world) => ({ id: world.id, name: world.name, slug: world.slug }))}
+        worlds={worldOptions}
         initialJobs={initialJobs}
         supportedFormats={supportedFormats}
         plannedFormats={plannedFormats}

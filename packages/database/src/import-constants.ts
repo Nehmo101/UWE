@@ -32,6 +32,7 @@ export const IMPORT_TARGET_TYPE_LABELS: Record<ImportTargetType, string> = {
   personal_brain: "Life Brain",
   capture: "Capture",
   dnd_page: "DnD-Seite",
+  campaign: "Kampagne",
 };
 
 /** Client-safe preview shapes for Import Central panels. */
