@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { CampaignImportPreview } from "@uwe/pdf-campaign-import";
+import {
+  MAX_CAMPAIGN_CONTEXT_CHARACTERS,
+  type CampaignImportPreview,
+} from "@uwe/pdf-campaign-import";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
 import { arrayBufferToBase64 } from "@/src/lib/file-base64";
 import {
@@ -17,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
   Label,
+  Textarea,
 } from "@/src/components/ui";
 
 const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
@@ -37,6 +41,7 @@ function pageTypeLabel(pageType: string | undefined): string {
 export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [contentBase64, setContentBase64] = useState<string | null>(null);
+  const [campaignContext, setCampaignContext] = useState("");
   const [preview, setPreview] = useState<CampaignImportPreview | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [resultSummary, setResultSummary] = useState<Record<string, unknown> | null>(null);
@@ -70,7 +75,11 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
     setResultSummary(null);
 
     try {
-      const response = await previewImportCampaignPdfJobAction(jobId, contentBase64);
+      const response = await previewImportCampaignPdfJobAction(
+        jobId,
+        contentBase64,
+        campaignContext,
+      );
       setPreview(response.preview);
       setSelectedIds(new Set(response.preview.items.map((item) => item.itemId)));
     } catch (previewError) {
@@ -80,7 +89,7 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
     } finally {
       setLoading(null);
     }
-  }, [contentBase64, jobId]);
+  }, [campaignContext, contentBase64, jobId]);
 
   const handleExecute = useCallback(async () => {
     if (!preview) {
@@ -155,6 +164,27 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
           </div>
 
           {fileName ? <p className="text-sm text-muted-foreground">Ausgewählt: {fileName}</p> : null}
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="campaign-pdf-import-context">Kampagnen-Kontext in der Welt</Label>
+            <Textarea
+              id="campaign-pdf-import-context"
+              value={campaignContext}
+              onChange={(event) => setCampaignContext(event.target.value)}
+              rows={5}
+              maxLength={MAX_CAMPAIGN_CONTEXT_CHARACTERS}
+              disabled={preview !== null}
+              placeholder={
+                "Die Kampagne spielt w\u00e4hrend des Thronfolgekriegs im Norden Validors."
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              {
+                "Optional. Dieser Text hilft der lokalen KI bei der Einordnung; es wird kein zus\u00e4tzlicher Welt- oder Brain-Kontext geladen. "
+              }
+              {campaignContext.length}/{MAX_CAMPAIGN_CONTEXT_CHARACTERS} Zeichen
+            </p>
+          </div>
 
           <Button
             type="button"

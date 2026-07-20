@@ -17,6 +17,7 @@ import {
   chunkPdfText,
   dedupeEntitiesByTitle,
   entityToCreatePageInput,
+  MAX_CAMPAIGN_CONTEXT_CHARACTERS,
   MAX_CHUNKS,
   parseCampaignEntities,
   type CampaignImportPreview,
@@ -133,6 +134,7 @@ async function markPreviewFailed(
 export async function previewImportCampaignPdfJobAction(
   jobId: string,
   contentBase64: string,
+  campaignContext = "",
 ): Promise<{ preview: CampaignImportPreview }> {
   await requireStudioActionAuth();
 
@@ -140,6 +142,13 @@ export async function previewImportCampaignPdfJobAction(
   const storedPreview = readStoredPreview(job.previewPayload);
   if (storedPreview) {
     return { preview: storedPreview };
+  }
+
+  const normalizedCampaignContext = campaignContext.trim();
+  if (normalizedCampaignContext.length > MAX_CAMPAIGN_CONTEXT_CHARACTERS) {
+    throw new Error(
+      `Der Kampagnen-Kontext darf h\u00f6chstens ${MAX_CAMPAIGN_CONTEXT_CHARACTERS} Zeichen lang sein.`,
+    );
   }
 
   const buffer = Buffer.from(contentBase64, "base64");
@@ -161,7 +170,7 @@ export async function previewImportCampaignPdfJobAction(
           providerMode: "local_rtx",
           contextMode: "general_chat",
           taskType: "create_knowledge_text",
-          userPrompt: buildCampaignExtractionPrompt(chunk),
+          userPrompt: buildCampaignExtractionPrompt(chunk, normalizedCampaignContext),
           useMock,
           maxTokens: 4_096,
         },
@@ -193,6 +202,7 @@ export async function previewImportCampaignPdfJobAction(
       processedCharacters,
       truncated: chunks.length === MAX_CHUNKS && processedCharacters < text.trim().length,
       useMock,
+      campaignContext: normalizedCampaignContext || null,
     };
 
     await importJobs().updateJob(jobId, {
