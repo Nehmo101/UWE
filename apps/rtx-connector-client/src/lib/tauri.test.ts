@@ -9,12 +9,14 @@
  */
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
-
 import {
   getConnectorStatus,
   getCookbookDashboard,
+  getHostLogs,
+  getHostStatus,
   listConnectorJobs,
   listConnectorLogs,
+  startHost,
   probeRunners,
   pullOllamaModel,
   readConfig,
@@ -25,6 +27,7 @@ import {
   testRunner,
   writeConfig,
 } from "./tauri";
+import { buildMockHostAction, buildMockHostStatus } from "./tauri-mock-host";
 import { defaultConnectorClientConfig } from "@uwe/connector-client-config";
 
 type FakeInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -81,6 +84,25 @@ beforeEach(() => {
 afterEach(() => {
   delete mutableGlobal.window;
   delete mutableGlobal.localStorage;
+});
+
+it("routes local host lifecycle commands through the desktop bridge", async () => {
+  const status = buildMockHostStatus(true);
+  const action = buildMockHostAction("UWE läuft.", true);
+  const calls = installFakeTauri({
+    get_host_status: status,
+    start_host: action,
+    get_host_logs: { target: "studio", lines: ["healthy"] },
+  });
+
+  const receivedStatus = await getHostStatus("C:\\git\\UWE");
+  const receivedAction = await startHost("C:\\git\\UWE");
+  const receivedLogs = await getHostLogs("C:\\git\\UWE", "studio");
+
+  assert.equal(receivedStatus.services.every((service) => service.healthy), true);
+  assert.equal(receivedAction.message, "UWE läuft.");
+  assert.deepEqual(receivedLogs, { target: "studio", lines: ["healthy"] });
+  assert.deepEqual(calls, ["get_host_status", "start_host", "get_host_logs"]);
 });
 
 describe("parsing layer (fake Tauri runtime)", () => {

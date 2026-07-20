@@ -44,7 +44,7 @@ function getSpotifyService() {
 }
 
 export async function getSpotifyStatus(worldSlug: string) {
-  // Spotify auth now lives on the RTX Connector Client. When a connector
+  // Spotify auth now lives in the UWE Command Center. When a connector
   // advertises `spotify_connect`, report it as the active, connected backend.
   if (await isSpotifyConnectAvailable()) {
     return NextResponse.json({
@@ -62,7 +62,7 @@ export async function getSpotifyStatus(worldSlug: string) {
       configured: false,
       connected: false,
       message:
-        "Spotify wird im RTX Connector Client eingerichtet — dort Client-ID/Secret hinterlegen und anmelden.",
+        "Spotify wird im UWE Command Center eingerichtet — dort Client-ID/Secret hinterlegen und anmelden.",
     });
   }
 
@@ -79,7 +79,7 @@ export async function getSpotifyStatus(worldSlug: string) {
 
 export async function startSpotifyConnect(_worldSlug: string) {
   // Host-side Spotify OAuth is retired. Spotify is connected exclusively in the
-  // RTX Connector Client (Spotify panel), which holds the OAuth credentials and
+  // UWE Command Center (Spotify panel), which holds the OAuth credentials and
   // the active Spotify Connect device. Point the user there instead of starting
   // a host OAuth redirect.
   return NextResponse.json(
@@ -87,7 +87,7 @@ export async function startSpotifyConnect(_worldSlug: string) {
       ok: false,
       setup: "rtx-connector-client",
       message:
-        "Spotify wird jetzt im RTX Connector Client eingerichtet: dort Client-ID/Secret hinterlegen, anmelden und das Ausgabegerät wählen.",
+        "Spotify wird jetzt im UWE Command Center eingerichtet: dort Client-ID/Secret hinterlegen, anmelden und das Ausgabegerät wählen.",
     },
     { status: 410 },
   );

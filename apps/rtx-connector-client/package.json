@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Tauri desktop client (Windows & Linux) for the UWE RTX Connector",
+  "description": "UWE Command Center for local hosting, setup, operations, and RTX workloads",
   "scripts": {
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",

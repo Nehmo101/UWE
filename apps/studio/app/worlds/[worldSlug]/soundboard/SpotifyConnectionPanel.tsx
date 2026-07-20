@@ -25,7 +25,7 @@ interface SpotifyDevice {
 interface SpotifyStatusResponse {
   configured: boolean;
   connected: boolean;
-  /** "rtx-connector" when Spotify is served by the RTX Connector Client. */
+  /** "rtx-connector" when Spotify is served by the UWE Command Center. */
   via?: string | null;
   spotifyDisplayName?: string | null;
   preferredDeviceId?: string | null;
@@ -178,7 +178,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
         <div>
           <CardTitle>Spotify</CardTitle>
           <CardDescription>
-            Spotify wird im RTX Connector Client eingerichtet — das Soundboard sendet die
+            Spotify wird im UWE Command Center eingerichtet — das Soundboard sendet die
             Wiedergabe als Connector-Job an den RTX-PC.
           </CardDescription>
         </div>
@@ -211,7 +211,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
 
         {!loading && connectorActive && (
           <Alert tone="success">
-            Spotify läuft über den <strong>RTX Connector Client</strong>. Anmeldung und Ausgabegerät
+            Spotify läuft über das <strong>UWE Command Center</strong>. Anmeldung und Ausgabegerät
             werden dort im Spotify-Panel verwaltet — der Host hält keine Spotify-Tokens.
           </Alert>
         )}
@@ -220,10 +220,10 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
           <Alert tone="danger" role="alert">
             <p>
               {status.message ??
-                "Spotify wird im RTX Connector Client eingerichtet (Client-ID/Secret hinterlegen und anmelden)."}
+                "Spotify wird im UWE Command Center eingerichtet (Client-ID/Secret hinterlegen und anmelden)."}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Öffne den RTX Connector Client → Spotify, hinterlege Client-ID/Secret, melde dich an und
+              Öffne das UWE Command Center → Spotify, hinterlege Client-ID/Secret, melde dich an und
               wähle das Ausgabegerät. Sobald der Connector online ist, wird er hier automatisch als
               Spotify-Backend erkannt.
             </p>

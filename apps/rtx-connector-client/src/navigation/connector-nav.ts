@@ -1,5 +1,5 @@
 /**
- * RTX Connector Client navigation — desktop client IA.
+ * UWE Command Center navigation — all-in-one desktop operations.
  * Part of the central navigation contract (`@uwe/shared-utils/navigation`).
  */
 import {
@@ -12,14 +12,15 @@ import {
   type ResolvedNavGroup,
 } from "@uwe/shared-utils/navigation";
 
-const SECTION = "Connector";
+const SECTION = "Command Center";
 
 export const CONNECTOR_NAV: NavGroup[] = [
   {
     id: "connector-main",
-    title: "Connector",
+    title: "UWE Command Center",
     items: [
-      connectorItem("connector-host", "Host-Verbindung", "/", "plug", ["host", "verbindung", "token"]),
+      connectorItem("command-center", "Command Center", "/", "layout-dashboard", ["start", "host", "hosting", "status", "setup"]),
+      connectorItem("connector-host", "RTX-Verbindung", "/connector", "plug", ["rtx", "verbindung", "token"]),
       connectorItem("connector-runner", "Runner / Ollama", "/runner", "cpu", ["runner", "ollama", "llm"]),
       connectorItem("connector-models", "Modelle", "/models", "boxes", ["modelle", "models"]),
       connectorItem("connector-printers", "Drucker", "/printers", "printer", ["drucker", "printer", "label"]),
@@ -42,7 +43,7 @@ function connectorItem(
     label,
     href,
     icon,
-    group: "Connector",
+    group: "Command Center",
     section: SECTION,
     permission: ["owner"],
     status: "active",

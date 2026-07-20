@@ -506,3 +506,118 @@
   flex-direction: column;
   gap: 0.35rem;
 }
+
+.command-center-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.command-center-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  min-height: 12rem;
+  padding: 2rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 85% 20%, color-mix(in srgb, var(--uwe-accent) 26%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--uwe-panel) 96%, transparent), color-mix(in srgb, var(--uwe-bg) 86%, var(--uwe-accent-muted)));
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--uwe-fg) 9%, transparent);
+}
+
+.command-center-hero::after {
+  content: "";
+  position: absolute;
+  right: -5rem;
+  bottom: -7rem;
+  width: 18rem;
+  height: 18rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 34%, transparent);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.command-center-hero h3 {
+  max-width: 46rem;
+  margin: 0.5rem 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+.command-center-hero p {
+  max-width: 46rem;
+  margin: 0;
+  color: var(--uwe-fg-muted);
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+
+.command-center-hero-status {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+
+.command-center-hero-status small {
+  color: var(--uwe-fg-subtle);
+}
+
+.command-center-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.35rem 0;
+}
+
+.command-center-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.command-center-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 78%, transparent);
+}
+
+.command-center-checklist .is-ok span {
+  color: var(--uwe-success);
+}
+
+.command-center-checklist .is-missing span {
+  color: var(--uwe-warning);
+}
+
+@media (max-width: 760px) {
+  .command-center-hero {
+    flex-direction: column;
+    padding: 1.35rem;
+  }
+
+  .command-center-hero-status {
+    align-items: flex-start;
+  }
+
+  .command-center-checklist {
+    grid-template-columns: 1fr;
+  }
+}

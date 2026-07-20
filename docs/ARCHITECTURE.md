@@ -116,7 +116,7 @@ graph TD
   Repo --> Apps["apps/"]
   Apps --> StudioApp["apps/studio<br/>@uwe/studio"]
   Apps --> PortalApp["apps/portal<br/>@uwe/portal"]
-  Apps --> RtxClient["apps/rtx-connector-client<br/>@uwe/rtx-connector-client<br/>Tauri Desktop App"]
+  Apps --> RtxClient["UWE Command Center<br/>apps/rtx-connector-client<br/>Tauri Desktop App + lokaler Host-Orchestrator"]
 
   Repo --> Packages["packages/"]
   Packages --> Config["config<br/>TypeScript / Shared Config"]
@@ -164,13 +164,19 @@ graph TD
 
 ## 6. Deployment-Flow
 
-Der **einzige aktive Produktpfad** ist ein Linux Host mit `pnpm` und `systemd`.
-Es gibt **keinen** Docker-Pfad und **keinen** Windows-One-Click-Installer mehr
-(siehe [removed-legacy-runtime.md](./removed-legacy-runtime.md)).
+Es gibt zwei aktive, bewusst getrennte Betriebsmodelle: Das **UWE Command
+Center** betreibt Hosting und RTX auf einem Windows-PC; der **Linux-Split-Host**
+bleibt für Always-on- und öffentliche Installationen erhalten. Beide verwenden
+dieselben Apps, Datenregeln und den outbound-only RTX Connector.
 
 ```mermaid
 flowchart TD
-  Start["Start / Installation"] --> Setup["sudo bash deploy/scripts/setup-uwe-host.sh<br/>(Node 22 + pnpm + Prisma + Build)"]
+  Start["Start / Installation"] --> Mode{"Betriebsmodell"}
+  Mode -->|All-in-one Windows| CommandCenter["UWE Command Center<br/>Einrichten / Reparieren / Starten"]
+  Mode -->|Linux Split-Host| Setup["sudo bash deploy/scripts/setup-uwe-host.sh<br/>(Node 22 + pnpm + Prisma + Build)"]
+
+  CommandCenter --> LocalService["Studio :3000 + Portal :3001<br/>AppData: DB, Backups, Logs"]
+  LocalService -.->|lokal, outbound| Connector
 
   Setup --> Service["systemd: uwe.service<br/>start-uwe.sh → Studio :3000 + Portal :3001"]
 
@@ -196,7 +202,7 @@ Neue Features sollten möglichst klar einer dieser Schichten zugeordnet werden:
 2. **Portal Feature** — alles, was Spieler sehen oder nutzen sollen. Immer mit Sichtbarkeits- und Leak-Tests denken.
 3. **Core Package** — wiederverwendbare Logik, die nicht direkt UI-spezifisch ist.
 4. **Integration Package** — externe APIs, Agenten, Mail, Kalender, Spotify, DnD-APIs.
-5. **Host-Tooling/Deploy** — `deploy/scripts/setup-uwe-host.sh`, systemd-Units, Start/Update/Backup/Restore/Repair, Release. Kein Docker-/Windows-Installer-Pfad mehr.
+5. **Host-Tooling/Deploy** — Command-Center-Orchestrator für Windows oder `deploy/scripts/setup-uwe-host.sh` + systemd für Linux. Keine duplizierte Geschäftslogik in den Oberflächen.
 
 Faustregel: Wenn ein Feature sowohl Studio als auch Portal betrifft, gehört die gemeinsame Logik in ein Package; Studio und Portal sollten dann nur ihre jeweilige UI und Route-Logik besitzen.
 
@@ -214,7 +220,7 @@ Jede App definiert ihre Navigation in einer eigenen `*-nav.ts`-Datei:
 |---|---|
 | Studio | `apps/studio/src/navigation/studio-nav.ts` |
 | Portal | `apps/portal/src/navigation/portal-nav.ts` |
-| RTX Connector | `apps/rtx-connector-client/src/navigation/connector-nav.ts` |
+| UWE Command Center | `apps/rtx-connector-client/src/navigation/connector-nav.ts` |
 
 Alle drei nutzen `@uwe/shared-utils/navigation` für die Nav-Typen und `resolveNavGroups()`.
 
@@ -228,7 +234,7 @@ Alle drei nutzen `@uwe/shared-utils/navigation` für die Nav-Typen und `resolveN
 | `SystemShell` | Studio | Admin + System-Verwaltung |
 | `SettingsShell` | Studio | Tab-Layout innerhalb von StudioShell (Einstellungen) |
 | `PortalShell` | Portal | Login-first Portal-Navigation (`apps/portal/src/components/shell/`) |
-| `ConnectorShell` | RTX Connector Client | Tauri/Vite-Desktop-Shell mit Connector-IA |
+| `ConnectorShell` | UWE Command Center | Tauri/Vite-Desktop-Shell mit Host- und Connector-IA |
 
 Design V2 (`NEXT_PUBLIC_UWE_DESIGN_V2`, default **on**) setzt `data-uwe-design-v2="true"` auf
 `<body>` und aktiviert `packages/shared-ui` `*V2`-Shells plus `legacy-bridge.css` für verbleibende
@@ -239,7 +245,7 @@ Design V2 (`NEXT_PUBLIC_UWE_DESIGN_V2`, default **on**) setzt `data-uwe-design-v
 
 - **Tailwind CSS v4** — utility-first, direkt in Studio und Portal
 - **shadcn-style Primitives** — `@uwe/shared-ui`: `ButtonV2`, `CardV2`, `HealthBadge`, etc.
-- **Lucide React** — Icon-Bibliothek (Studio, Portal, RTX Client)
+- **Lucide React** — Icon-Bibliothek (Studio, Portal, Command Center)
 - **CSS Custom Properties** — `--uwe-accent`, `--uwe-bg`, `--uwe-fg`, etc.
 
 Kanonischer visueller Style Guide (Tokens, 9 Themes, Komponenten, Studio/Portal-Nachbauten): [`design-system/`](../design-system/README.md).

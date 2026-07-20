@@ -12,9 +12,9 @@ describe("connectorNavItems", () => {
   it("flattens all groups into a single owner-only connector list", () => {
     const items = connectorNavItems();
 
-    assert.equal(items.length, 7);
+    assert.equal(items.length, 8);
     for (const item of items) {
-      assert.equal(item.section, "Connector");
+      assert.equal(item.section, "Command Center");
       assert.equal(item.source, "connector");
       assert.deepEqual(item.permission, ["owner"]);
       assert.equal(item.status, "active");
@@ -22,11 +22,14 @@ describe("connectorNavItems", () => {
     }
   });
 
-  it("keeps the host connection entry point on the root route", () => {
+  it("keeps the command center at root and RTX settings on a dedicated route", () => {
     const host = connectorNavItems().find((item) => item.id === "connector-host");
 
+    const center = connectorNavItems().find((item) => item.id === "command-center");
     assert.ok(host, "connector-host item exists");
-    assert.equal(host.href, "/");
+    assert.equal(host.href, "/connector");
+    assert.ok(center, "command-center item exists");
+    assert.equal(center.href, "/");
   });
 });
 
@@ -63,7 +66,7 @@ describe("connectorSidebar", () => {
       .flatMap((group) => group.items)
       .filter((item) => item.active)
       .map((item) => item.id);
-    assert.deepEqual(activeOnRoot, ["connector-host"]);
+    assert.deepEqual(activeOnRoot, ["command-center"]);
   });
 
   it("marks parents active for nested child routes", () => {

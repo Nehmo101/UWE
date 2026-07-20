@@ -30,6 +30,8 @@ describe("defaultConnectorClientConfig", () => {
     assert.equal(config.spotifyRedirectUri, "http://127.0.0.1:8742/callback");
     assert.equal(config.audioCommand, "");
     assert.equal(config.imageCommand, "");
+    assert.equal(config.localHostRoot, "");
+    assert.equal(config.autoStartHost, false);
   });
 });
 
@@ -54,7 +56,16 @@ describe("parseConnectorClientConfig", () => {
     assert.equal(config.queueEnabled, false);
     assert.equal(config.wizardCompleted, false);
     assert.equal(config.autoConnect, true);
+    assert.equal(config.localHostRoot, "");
+    assert.equal(config.autoStartHost, false);
   });
+
+  it("normalizes all-in-one host settings", () => {
+    const config = parseConnectorClientConfig({ localHostRoot: "  C:\\git\\UWE  ", autoStartHost: true });
+    assert.equal(config.localHostRoot, "C:\\git\\UWE");
+    assert.equal(config.autoStartHost, true);
+  });
+
 
   it("parses transport modes and derives queueEnabled", () => {
     const direct = parseConnectorClientConfig({ transportMode: "DIRECT", queueEnabled: true });

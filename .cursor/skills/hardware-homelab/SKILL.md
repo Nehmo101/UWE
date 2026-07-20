@@ -37,14 +37,9 @@ Docs: `docs/UWE_HOST_LINUX_STARTUP.md`, `docs/PRODUCTION.md`.
 
 **Deprecated:** `uwe-host.service`, repo-local `.env` for production, `.uwe-host` state dir.
 
-## Docker
+## Docker (historical, not an active product path)
 
-```bash
-pnpm docker:build
-pnpm docker:up
-```
-
-`docker-compose.yml` — Studio + Portal + SQLite volume. RTX runs **outside** compose on gaming PC.
+Do not build a new deployment around Docker. Active paths are the Windows UWE Command Center and the Linux systemd host.
 
 ## RTX inference (outbound connector)
 
@@ -67,10 +62,14 @@ See `docs/BACKUP.md`, `docs/backup-restore.md`. Production backups: `/var/backup
 
 `docs/engineering/self-hosted-ci.md` — GitHub runner on homelab, billing alternatives. Not required for local dev — use `pnpm quality`.
 
-## Windows installer
+## Windows UWE Command Center
 
-- `tools/windows-installer/` — one-click setup for DM PCs
-- `pnpm doctor`, `pnpm repair` for maintenance
+- Active desktop app: `apps/rtx-connector-client/` (technical path retained for compatibility)
+- Host orchestrator: `tools/uwe-host-command-center/src/desktop-host.ts`
+- `pnpm command-center:dev` / `pnpm command-center:build`
+- Persistent data: `%LOCALAPPDATA%\UWE\rtx-connector-client\host`
+- The removed `tools/windows-installer/` path must not be restored.
+- Full workflow: `docs/command-center.md`
 
 ## Security on homelab
 

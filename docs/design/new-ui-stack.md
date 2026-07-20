@@ -26,9 +26,9 @@ The Hard UI/UX Reset introduces a single, modern component system. This document
 - **Tiptap** — kept (already integrated); embedded cleanly into the new page editor with wiki-link UX.
 - **TanStack Query** — client-side fetch/mutate where it is currently ad-hoc: RTX status, Cloudflare status, printer queue, jobs, health checks, layout save.
 
-### RTX Connector Client
+### UWE Command Center
 
-The **RTX Connector Client** (Tauri/Vite desktop app) uses `ConnectorShell`
+The **UWE Command Center** (Tauri/Vite desktop app) uses `ConnectorShell`
 (`apps/rtx-connector-client/src/components/shell/ConnectorShell.tsx`) — a
 Tauri-friendly shell driven by `connector-nav.ts`. Uses the same
 `@uwe/shared-utils/navigation` contract. Navigation is state-based (no router),

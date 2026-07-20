@@ -1227,6 +1227,12 @@ importers:
 
   tools/uwe-host-command-center:
     dependencies:
+      '@uwe/connector-client-config':
+        specifier: workspace:*
+        version: link:../../packages/connector-client-config
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@uwe/host-monitor':
         specifier: workspace:*
         version: link:../../packages/host-monitor

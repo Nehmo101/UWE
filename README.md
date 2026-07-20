@@ -10,6 +10,7 @@
 | Export | **Static Export** | Player-safe HTML export for simple hosting |
 | Backend | **UWE Core** | Shared data layer, auth, wiki engine (packages) |
 | Integrations | **RTX Connector, Mail, Calendar, …** | Optional outbound local worker, SMTP, calendar feeds, DnD APIs |
+| Desktop Control | **UWE Command Center** | All-in-one setup, hosting operations, backups and RTX control |
 
 > Self-hosted Daily Admin OS and campaign brain — no cloud required for core data.
 
@@ -66,9 +67,26 @@ Details: [docs/daily-admin-os.md](docs/daily-admin-os.md) · Reifegrad: [docs/FE
 
 ---
 
-## Zielmodell: UWE Host (Linux) + RTX Connector
+## Betriebsmodelle: All-in-one Command Center oder Linux-Split-Host
 
-UWE besteht aus zwei klaren Rollen:
+Für einen einzelnen leistungsfähigen Windows-PC ist das **UWE Command Center**
+der empfohlene Rundum-sorglos-Pfad. Es richtet UWE ein, startet und überwacht
+Studio und Portal, erstellt Backups und verwaltet den lokalen RTX Connector.
+
+```powershell
+pnpm command-center:dev    # Entwicklung
+pnpm command-center:build  # Windows-Installer
+```
+
+Im Command Center: Projektordner wählen → **UWE einrichten** → **Alles starten**.
+Details: [docs/command-center.md](docs/command-center.md).
+
+```text
+UWE Command Center ──▶ Studio + Portal + SQLite
+         └───────────▶ lokaler RTX Connector / Ollama / Geräte
+```
+
+Alternativ besteht UWE im bewährten Split-Modell aus zwei klaren Rollen:
 
 | Rolle | Läuft auf | Verantwortlich für |
 |-------|-----------|--------------------|
@@ -85,11 +103,7 @@ eine Capability nicht, zeigen lokale KI-/Audio-/Bild-Funktionen einen ehrlichen 
 
 Capabilities werden nur gemeldet, wenn ein echter Executor konfiguriert ist: `audio_local` braucht `UWE_CONNECTOR_AUDIO_CMD`, `spotify_connect` braucht Spotify-Token plus Device-ID, lokale LLMs bleiben im Connector vorerst Ollama-only, und `image_generation` braucht `UWE_CONNECTOR_IMAGE_CMD`. Cloud-KI wird über das UWE-Interface/Gateway angebunden, nicht über falsche Connector-Capabilities.
 
-> **Hinweis:** Docker und der Windows-One-Click-Installer sind **kein** aktiver Produktpfad
-> mehr. Der Zielweg ist Linux-Host + pnpm + systemd (+ optional Cloudflare Tunnel) und der
-> optionale RTX Connector. Siehe [docs/removed-legacy-runtime.md](docs/removed-legacy-runtime.md).
-
-## Quick start (Linux Host)
+## Quick start (Linux-Split-Host)
 
 ```bash
 git clone https://github.com/nehmo101/uwe
@@ -111,7 +125,7 @@ Status prüfen: `pnpm host:status` · `curl http://localhost:3000/api/health`.
 Für einen produktiven, dauerhaft laufenden Host (systemd, Cloudflare Tunnel) siehe das
 **One-Shot Setup** unten und [docs/host-linux.md](docs/host-linux.md).
 
-## RTX Connector starten (optional)
+## Headless RTX Connector starten (optional)
 
 Auf dem RTX-PC, nachdem im Studio unter **System → RTX Connector** ein Token erzeugt wurde:
 

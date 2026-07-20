@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "UWE RTX Connector Client",
+  "productName": "UWE Command Center",
   "version": "0.1.0",
   "identifier": "local.uwe.rtx-connector-client",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "UWE RTX Connector Client",
+        "title": "UWE Command Center",
         "width": 1440,
         "height": 960,
         "minWidth": 1120,
@@ -38,8 +38,8 @@
       "icons/icon.ico",
       "icons/icon.icns"
     ],
-    "shortDescription": "Local desktop client for the UWE RTX Host Connector",
-    "longDescription": "Desktop client for the optional outbound UWE RTX Host Connector. Windows (MSI/NSIS), Linux (deb/AppImage), and macOS (dmg/app) bundles are supported when built on the matching host OS."
+    "shortDescription": "All-in-one control center for UWE hosting and RTX workloads",
+    "longDescription": "UWE Command Center installs, configures, starts, monitors, backs up, and connects a local UWE host with RTX workloads from one desktop application."
   },
   "plugins": {
     "updater": {

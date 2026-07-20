@@ -16,6 +16,7 @@ import { Button } from "./components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
 
 import { AudioPanel } from "./components/AudioPanel";
+import { CommandCenterPanel } from "./components/CommandCenterPanel";
 import { CookbookPanel } from "./components/CookbookPanel";
 import { DownloadsPanel } from "./components/DownloadsPanel";
 import { ImagePanel } from "./components/ImagePanel";
@@ -51,6 +52,7 @@ import {
   savePrinterStore,
   scanModels,
   scanPrinters,
+  startHost,
   spotifyAuthUrl,
   spotifyDevices,
   spotifyDisconnect,
@@ -72,7 +74,7 @@ import {
   type RunnerId,
 } from "./lib/tauri";
 
-type ConnectorPath = "/" | "/runner" | "/models" | "/printers" | "/jobs" | "/logs" | "/diagnostics";
+type ConnectorPath = "/" | "/connector" | "/runner" | "/models" | "/printers" | "/jobs" | "/logs" | "/diagnostics";
 
 const INITIAL_RUNTIME_STATUS: ConnectorRuntimeStatus = {
   status: "stopped",
@@ -209,8 +211,20 @@ export default function App() {
     void (async () => {
       const result = await refreshFromBackend();
       setBootstrapped(true);
-      if (result && !result.nextConfig.wizardCompleted) {
-        setShowWizard(true);
+      if (!result) return;
+      const { nextConfig, nextRuntimeStatus } = result;
+      if (nextConfig.autoStartHost) {
+        void startHost(nextConfig.localHostRoot || undefined).catch((nextError) => {
+          setError(toMessage(nextError));
+        });
+      }
+      if (
+        nextConfig.autoConnect && nextConfig.hostUrl && nextConfig.token &&
+        nextRuntimeStatus.status === "stopped"
+      ) {
+        void startConnector()
+          .then(setRuntimeStatus)
+          .catch((nextError) => setError(toMessage(nextError)));
       }
     })();
   }, [refreshFromBackend]);
@@ -570,6 +584,19 @@ export default function App() {
 
   function renderContent() {
     switch (activePath) {
+      case "/":
+        return (
+          <CommandCenterPanel
+            config={config}
+            connectorStatus={runtimeStatus}
+            onConfigSaved={setConfig}
+            onStartConnector={runStartConnector}
+            onStopConnector={runStopConnector}
+            onOpenConnector={() => setActivePath("/connector")}
+          />
+        );
+      case "/connector":
+        return renderHost();
       case "/runner":
         return (
           <RunnersPanel
@@ -597,8 +624,7 @@ export default function App() {
       case "/jobs": return <JobsPanel onLoadJobs={loadConnectorJobs} />;
       case "/logs": return <LogsPanel onLoadLogs={loadConnectorLogs} />;
       case "/diagnostics": return renderDiagnostics();
-      case "/":
-      default: return renderHost();
+      default: return null;
     }
   }
 
@@ -645,9 +671,9 @@ export default function App() {
   return (
     <ConnectorShell
       groups={navGroups}
-      brandLabel="RTX Connector"
-      brandKicker="UWE · Outbound Connector"
-      brandDescription="Lokale Desktop-App für den RTX Connector (Windows & Linux)."
+      brandLabel="UWE Command Center"
+      brandKicker="UWE · HOSTING · RTX"
+      brandDescription="Die zentrale Anlaufstation für UWE auf diesem Rechner."
       onNavigate={(path) => {
         setActivePath(path as ConnectorPath);
         setNotice(null);

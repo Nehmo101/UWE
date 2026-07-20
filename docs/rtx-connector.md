@@ -39,11 +39,11 @@ should run as that desktop user instead. A worker that opens GPU device nodes di
 may also require the `uwe` user in the host's `video`/`render` groups; Ollama's
 own service does not require that for the connector itself.
 
-For the Windows desktop client use:
+Für das UWE Command Center auf Windows:
 
 ```bash
-pnpm connector:client:dev
-pnpm connector:client:build
+pnpm command-center:dev
+pnpm command-center:build
 ```
 
 ## Transport modes
@@ -85,11 +85,11 @@ dispatch can safely be distributed.
   desktop client's SecurityPanel): heartbeats send only minimal model metadata
   (model ids, provider, capabilities) and omit display names, descriptions,
   best-for hints, context length and local paths.
-- **Hugging Face file downloads** in the Windows desktop client. Downloaded files
+- **Hugging Face file downloads** im UWE Command Center. Downloaded files
   are stored under the connector client data directory and registered as local
   `huggingface` model profiles. Private/gated repos use `HF_TOKEN` or
   `HUGGINGFACE_HUB_TOKEN` from the RTX machine environment.
-- **Windows tray and autostart** in the desktop client. The tray can re-open or
+- **Windows tray and autostart** im UWE Command Center. The tray can re-open or
   exit the app; `start_in_tray` / `minimize_to_tray` hide the window as configured;
   Windows autostart is written to the current user's Run key.
 - **Reconnect** after transient host/network errors; **exit** if the token is

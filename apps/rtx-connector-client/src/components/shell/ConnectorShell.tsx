@@ -23,7 +23,7 @@ export interface ConnectorShellProps {
 }
 
 /**
- * RTX Connector Client shell: sidebar driven by connector-nav IA +
+ * UWE Command Center shell: sidebar driven by connector-nav IA +
  * top header + main content area. Tauri/Vite-friendly (no Next.js Link).
  */
 export function ConnectorShell({
@@ -36,7 +36,7 @@ export function ConnectorShell({
   banner,
   overlay,
   loading = false,
-  loadingLabel = "Lade RTX Connector Client …",
+  loadingLabel = "Lade UWE Command Center …",
   children,
 }: ConnectorShellProps) {
   if (loading) {
@@ -72,7 +72,7 @@ export function ConnectorShell({
                   aria-current={item.active ? "page" : undefined}
                 >
                   <span className="connector-nav-item-inner">
-                    <NavIcon name={item.icon} width={16} height={16} />
+                    <NavIcon name={item.icon} size={16} />
                     <span>{item.label}</span>
                   </span>
                   {item.status === "planned" ? (

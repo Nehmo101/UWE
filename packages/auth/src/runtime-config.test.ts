@@ -196,6 +196,21 @@ describe("runtime config", () => {
       isPublicExposureConfigured({ PUBLIC_APP_URL: "https://example.com" }),
       true,
     );
+    assert.equal(
+      isPublicExposureConfigured({ PUBLIC_BASE_URL: "http://127.0.0.1:3000" }),
+      false,
+    );
+    assert.equal(
+      isPublicExposureConfigured({ PUBLIC_BASE_URL: "http://localhost:3000" }),
+      false,
+    );
+    assert.equal(
+      getUweRuntimeConfig({
+        NODE_ENV: "production",
+        PUBLIC_BASE_URL: "http://127.0.0.1:3000",
+      }).trustProxy,
+      false,
+    );
   });
 
   it("matches trusted origins including PUBLIC_APP_URL host", () => {
