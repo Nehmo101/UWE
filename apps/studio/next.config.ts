@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
     ...standalone.serverExternalPackages,
     "jsdom",
     "isomorphic-dompurify",
+    "pdf-parse",
   ],
   experimental: {
     // Import-Zentrale: PDF- und Obsidian-Vault-ZIP-Uploads laufen als Base64

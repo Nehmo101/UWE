@@ -2990,6 +2990,7 @@ enum ImportTargetType {
   personal_brain
   capture
   dnd_page
+  campaign
 }
 
 enum DocumentTemplateCategory {

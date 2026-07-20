@@ -43,6 +43,7 @@ const VALID_TARGET_TYPES = new Set<ImportTargetType>([
   "personal_brain",
   "capture",
   "dnd_page",
+  "campaign",
 ]);
 
 function importJobs() {
@@ -140,6 +141,7 @@ export async function createImportCentralJobAction(formData: FormData): Promise<
   const targetTypeRaw = String(formData.get("targetType") || "").trim();
   const targetWorldId = String(formData.get("targetWorldId") || "").trim() || null;
   const fileName = String(formData.get("fileName") || "").trim() || null;
+  const campaignSlug = String(formData.get("campaignSlug") || "").trim();
 
   if (!VALID_SOURCE_TYPES.has(sourceTypeRaw as ImportSourceType)) {
     throw new Error("Ungültiger Quelltyp.");
@@ -166,6 +168,25 @@ export async function createImportCentralJobAction(formData: FormData): Promise<
     worldSlug = world.worldSlug;
   }
 
+  let metadata: Record<string, string> | null = worldSlug ? { worldSlug } : null;
+  if (targetType === "campaign") {
+    if (!campaignSlug) {
+      throw new Error("Bitte eine Kampagne auswählen.");
+    }
+    if (!worldSlug) {
+      throw new Error("Welt-Kontext fehlt für den Kampagnen-Import.");
+    }
+    const campaign = await createUweRepository().getCampaignBySlug(worldSlug, campaignSlug);
+    if (!campaign) {
+      throw new Error("Kampagne gehört nicht zur ausgewählten Welt oder wurde nicht gefunden.");
+    }
+    metadata = {
+      worldSlug,
+      campaignSlug,
+      campaignId: campaign.id,
+    };
+  }
+
   const user = await getCurrentUser();
   const job = await importJobs().createJob({
     sourceType,
@@ -173,7 +194,7 @@ export async function createImportCentralJobAction(formData: FormData): Promise<
     targetWorldId,
     fileName,
     createdByUserId: user?.id ?? null,
-    metadata: worldSlug ? { worldSlug } : null,
+    metadata,
   });
 
   revalidateImportCentral();
