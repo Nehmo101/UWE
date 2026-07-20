@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use super::{configure_hidden_process, connector_app_data_dir, resolve_monorepo_root};
 
-const DESKTOP_HOST_CLI_REL: &str = "tools/uwe-host-command-center/src/desktop-host.ts";
+const DESKTOP_HOST_CLI_REL: &str = "tools/uwe-host-command-center/src/desktop-host-cli.ts";
 
 fn resolve_requested_root(root: Option<String>) -> Result<PathBuf, String> {
     if let Some(value) = root
@@ -125,4 +125,14 @@ pub async fn open_host_target(
     target: Option<String>,
 ) -> Result<Value, String> {
     run_host_command_async("open", root, target).await
+}
+
+#[tauri::command]
+pub async fn check_host_update(root: Option<String>) -> Result<Value, String> {
+    run_host_command_async("check-update", root, None).await
+}
+
+#[tauri::command]
+pub async fn update_host(root: Option<String>) -> Result<Value, String> {
+    run_host_command_async("update", root, None).await
 }

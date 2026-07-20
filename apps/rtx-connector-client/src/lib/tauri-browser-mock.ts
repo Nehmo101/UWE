@@ -5,7 +5,7 @@ import {
 import { validateHostUrl, type ConnectorClientConfig } from "@uwe/connector-client-config";
 
 import { buildMockCookbookDashboard, buildMockRunners, buildMockRuntimeStatus } from "./tauri-mock-fixtures";
-import { buildMockHostAction, buildMockHostStatus } from "./tauri-mock-host";
+import { buildMockHostAction, buildMockHostStatus, buildMockHostUpdate } from "./tauri-mock-host";
 import {
   appendMockLog,
   nowTimestamp,
@@ -256,6 +256,10 @@ export async function invokeBrowserMock<T>(command: string, args?: Record<string
       return buildMockHostAction("Browser-Vorschau: UWE neu gestartet.", true) as T;
     case "backup_host":
       return buildMockHostAction("Browser-Vorschau: Backup erstellt.") as T;
+    case "check_host_update":
+      return buildMockHostUpdate(false) as T;
+    case "update_host":
+      return buildMockHostAction("Browser-Vorschau: Update simuliert — UWE neu gebaut.") as T;
     case "get_host_logs":
       return {
         target: typeof args?.target === "string" ? args.target : "command-center",

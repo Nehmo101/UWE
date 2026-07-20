@@ -1,0 +1,154 @@
+name: UWE Windows Release
+
+# Publishes a GitHub Release with the Windows Command Center installers (NSIS/MSI)
+# and a uwe-release.json manifest. Tags use uwe-vX.Y.Z so the Command Center
+# Update button can sync the checkout to the release and rebuild Studio/Portal.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semver without prefix (reads VERSION when empty)
+        required: false
+        default: ""
+      draft:
+        description: Create draft release
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Resolve version and tag
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
+          if [[ -z "$VERSION" ]]; then
+            VERSION="$(tr -d '[:space:]' < VERSION)"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version: $VERSION" >&2
+            exit 1
+          fi
+          TAG="uwe-v${VERSION}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Publishing $TAG (sha=$(git rev-parse --short HEAD))"
+
+      - name: Sync package versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.version }}"
+          node -e "
+            const fs = require('node:fs');
+            const version = process.env.VERSION;
+            for (const file of ['package.json', 'apps/rtx-connector-client/package.json']) {
+              const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+              json.version = version;
+              fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
+            }
+            const tauriPath = 'apps/rtx-connector-client/src-tauri/tauri.conf.json';
+            const tauri = JSON.parse(fs.readFileSync(tauriPath, 'utf8'));
+            tauri.version = version;
+            fs.writeFileSync(tauriPath, JSON.stringify(tauri, null, 2) + '\n');
+            fs.writeFileSync('VERSION', version + '\n');
+          "
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter @uwe/database db:generate
+
+      - name: Build Windows Command Center
+        run: pnpm --filter @uwe/rtx-connector-client tauri:build -- --bundles nsis,msi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Collect bundle artifacts
+        id: artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE_ROOT="apps/rtx-connector-client/src-tauri/target/release/bundle"
+          mkdir -p release-assets
+          NSIS="$(find "$BUNDLE_ROOT/nsis" -type f \( -name '*.exe' -o -name '*-setup.exe' \) | head -n 1 || true)"
+          MSI="$(find "$BUNDLE_ROOT/msi" -type f -name '*.msi' | head -n 1 || true)"
+          if [[ -z "$NSIS" && -z "$MSI" ]]; then
+            echo "No Windows installer artifacts found under $BUNDLE_ROOT" >&2
+            find "$BUNDLE_ROOT" -type f | head -n 50 >&2 || true
+            exit 1
+          fi
+          if [[ -n "$NSIS" ]]; then
+            cp "$NSIS" "release-assets/$(basename "$NSIS")"
+            echo "nsis=release-assets/$(basename "$NSIS")" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -n "$MSI" ]]; then
+            cp "$MSI" "release-assets/$(basename "$MSI")"
+            echo "msi=release-assets/$(basename "$MSI")" >> "$GITHUB_OUTPUT"
+          fi
+          # Prefer a stable installer filename for the Command Center update button.
+          VERSION="${{ steps.meta.outputs.version }}"
+          STABLE="release-assets/UWE_Command_Center_${VERSION}_x64-setup.exe"
+          if [[ -n "$NSIS" ]]; then
+            cp "$NSIS" "$STABLE"
+            echo "stable_nsis=$STABLE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          NSIS_PATH="${{ steps.artifacts.outputs.stable_nsis }}"
+          if [[ -z "$NSIS_PATH" ]]; then
+            NSIS_PATH="${{ steps.artifacts.outputs.nsis }}"
+          fi
+          node scripts/build-uwe-release-manifest.mjs \
+            --version "${{ steps.meta.outputs.version }}" \
+            --tag "${{ steps.meta.outputs.tag }}" \
+            --sha "${{ github.sha }}" \
+            --nsis "$NSIS_PATH" \
+            --msi "${{ steps.artifacts.outputs.msi }}" \
+            --notes "UWE Windows release ${{ steps.meta.outputs.version }} — Command Center installers + git tag for host updates." \
+            --out release-assets/uwe-release.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: UWE ${{ steps.meta.outputs.version }}
+          draft: ${{ inputs.draft }}
+          generate_release_notes: true
+          body: |
+            ## UWE ${{ steps.meta.outputs.version }} (Windows)
+
+            Dieses Release enthält:
+            - **UWE Command Center** Windows-Installer (NSIS/MSI)
+            - `uwe-release.json` Manifest für den Update-Button
+            - Git-Tag `${{ steps.meta.outputs.tag }}` — der Command-Center-Update-Button synchronisiert den lokalen Checkout auf diesen Stand und baut Studio/Portal neu
+
+            ### Installation / Update
+            1. Im Command Center **Nach Updates suchen** → **Update installieren**
+            2. Oder Installer manuell aus den Assets laden
+          files: |
+            release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

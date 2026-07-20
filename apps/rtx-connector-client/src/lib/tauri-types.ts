@@ -258,6 +258,22 @@ export interface LocalHostActionResult {
   status: LocalHostStatus;
 }
 
+export interface LocalHostUpdateInfo {
+  ok: boolean;
+  updateAvailable: boolean;
+  currentVersion: string | null;
+  currentRevision: string | null;
+  latestVersion: string | null;
+  latestTag: string | null;
+  latestRevision: string | null;
+  releaseUrl: string | null;
+  windowsInstallerUrl: string | null;
+  commandCenterUpdateAvailable: boolean;
+  dirtyWorktree: boolean;
+  message: string;
+  status: LocalHostStatus;
+}
+
 export interface LocalHostLogsResult {
   target: "studio" | "portal" | "command-center";
   lines: string[];

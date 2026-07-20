@@ -4,7 +4,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-type HostAction = "status" | "setup" | "start" | "stop" | "restart" | "backup" | "logs" | "open";
 type ServiceState = "online" | "starting" | "stopped" | "error";
 
 export interface DesktopHostService {
@@ -93,12 +92,12 @@ function serviceDefinitions(paths: HostPaths): ServiceDefinition[] {
   ];
 }
 
-function argumentValue(argv: string[], name: string): string | undefined {
+export function argumentValue(argv: string[], name: string): string | undefined {
   const index = argv.indexOf(name);
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
-function commandCenterDataRoot(): string {
+export function commandCenterDataRoot(): string {
   const configured = process.env.UWE_COMMAND_CENTER_DATA_DIR?.trim();
   if (configured) return path.resolve(configured);
   if (process.platform === "win32" && process.env.LOCALAPPDATA) {
@@ -501,7 +500,7 @@ function runWorkspaceCommand(paths: HostPaths, label: string, args: string[], ex
   appendOperationLog(paths, `${label} abgeschlossen.`);
 }
 
-async function setupHost(rootInput?: string): Promise<DesktopHostActionResult> {
+export async function setupHost(rootInput?: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
   if (!validateRepo(root)) {
@@ -571,7 +570,7 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   return child.pid;
 }
 
-async function startHost(rootInput?: string): Promise<DesktopHostActionResult> {
+export async function startHost(rootInput?: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
   const before = await collectDesktopHostStatus(root);
@@ -607,7 +606,7 @@ function stopProcess(pid: number): void {
   }
 }
 
-async function stopHost(rootInput?: string): Promise<DesktopHostActionResult> {
+export async function stopHost(rootInput?: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
   for (const service of serviceDefinitions(paths)) {
@@ -620,7 +619,7 @@ async function stopHost(rootInput?: string): Promise<DesktopHostActionResult> {
   return { ok: true, message: "Studio und Portal wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
-async function backupHost(rootInput?: string): Promise<DesktopHostActionResult> {
+export async function backupHost(rootInput?: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
   if (!validateRepo(root)) return { ok: false, message: "UWE-Repository nicht gefunden.", status: await collectDesktopHostStatus(root) };
@@ -629,7 +628,7 @@ async function backupHost(rootInput?: string): Promise<DesktopHostActionResult> 
   return { ok: true, message: `Backup wurde unter ${paths.backups} erstellt.`, status: await collectDesktopHostStatus(root) };
 }
 
-function readLogs(rootInput: string | undefined, target: string | undefined): { target: string; lines: string[] } {
+export function readLogs(rootInput: string | undefined, target: string | undefined): { target: string; lines: string[] } {
   const paths = pathsFor(resolveDesktopHostRoot(rootInput));
   const safeTarget = target === "studio" || target === "portal" ? target : "command-center";
   const file = path.join(paths.logs, `${safeTarget}.log`);
@@ -646,7 +645,7 @@ export function desktopHostTargetUrl(rootInput: string | undefined, target: stri
   return `http://127.0.0.1:${port}`;
 }
 
-function openTarget(rootInput: string | undefined, target: string | undefined): void {
+export function openTarget(rootInput: string | undefined, target: string | undefined): void {
   const url = desktopHostTargetUrl(rootInput, target);
   if (process.platform === "win32") {
     spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "start", "", url], { detached: true, windowsHide: true, stdio: "ignore" }).unref();
@@ -656,32 +655,3 @@ function openTarget(rootInput: string | undefined, target: string | undefined): 
     spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
   }
 }
-
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
-  const action = (argv[0] || "status") as HostAction;
-  const root = argumentValue(argv, "--root");
-  const target = argumentValue(argv, "--target");
-  let result: unknown;
-  try {
-    switch (action) {
-      case "setup": result = await setupHost(root); break;
-      case "start": result = await startHost(root); break;
-      case "stop": result = await stopHost(root); break;
-      case "restart": await stopHost(root); result = await startHost(root); break;
-      case "backup": result = await backupHost(root); break;
-      case "logs": result = readLogs(root, target); break;
-      case "open": openTarget(root, target); result = { ok: true, message: `${target === "portal" ? "Portal" : "Studio"} wurde geöffnet.` }; break;
-      case "status": result = await collectDesktopHostStatus(root); break;
-      default: throw new Error(`Unbekannte Host-Aktion: ${action}`);
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    result = { ok: false, message, status: await collectDesktopHostStatus(root) };
-  }
-  process.stdout.write(`${JSON.stringify(result)}\n`);
-}
-
-const entrypoint = process.argv[1] ? path.resolve(process.argv[1]) : "";
-const currentModule = path.resolve(new URL(import.meta.url).pathname.replace(/^\/(.:)/, "$1"));
-if (entrypoint === currentModule) void main();

@@ -13,10 +13,12 @@ import {
   getConnectorStatus,
   getCookbookDashboard,
   getHostLogs,
+  checkHostUpdate,
   getHostStatus,
   listConnectorJobs,
   listConnectorLogs,
   startHost,
+  updateHost,
   probeRunners,
   pullOllamaModel,
   readConfig,
@@ -27,7 +29,7 @@ import {
   testRunner,
   writeConfig,
 } from "./tauri";
-import { buildMockHostAction, buildMockHostStatus } from "./tauri-mock-host";
+import { buildMockHostAction, buildMockHostStatus, buildMockHostUpdate } from "./tauri-mock-host";
 import { defaultConnectorClientConfig } from "@uwe/connector-client-config";
 
 type FakeInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -89,20 +91,33 @@ afterEach(() => {
 it("routes local host lifecycle commands through the desktop bridge", async () => {
   const status = buildMockHostStatus(true);
   const action = buildMockHostAction("UWE läuft.", true);
+  const update = buildMockHostUpdate(true);
   const calls = installFakeTauri({
     get_host_status: status,
     start_host: action,
     get_host_logs: { target: "studio", lines: ["healthy"] },
+    check_host_update: update,
+    update_host: buildMockHostAction("UWE aktualisiert.", true),
   });
 
   const receivedStatus = await getHostStatus("C:\\git\\UWE");
   const receivedAction = await startHost("C:\\git\\UWE");
   const receivedLogs = await getHostLogs("C:\\git\\UWE", "studio");
+  const receivedUpdateCheck = await checkHostUpdate("C:\\git\\UWE");
+  const receivedUpdate = await updateHost("C:\\git\\UWE");
 
   assert.equal(receivedStatus.services.every((service) => service.healthy), true);
   assert.equal(receivedAction.message, "UWE läuft.");
   assert.deepEqual(receivedLogs, { target: "studio", lines: ["healthy"] });
-  assert.deepEqual(calls, ["get_host_status", "start_host", "get_host_logs"]);
+  assert.equal(receivedUpdateCheck.updateAvailable, true);
+  assert.equal(receivedUpdate.message, "UWE aktualisiert.");
+  assert.deepEqual(calls, [
+    "get_host_status",
+    "start_host",
+    "get_host_logs",
+    "check_host_update",
+    "update_host",
+  ]);
 });
 
 describe("parsing layer (fake Tauri runtime)", () => {
