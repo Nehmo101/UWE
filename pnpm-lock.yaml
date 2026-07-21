@@ -520,6 +520,9 @@ importers:
       '@uwe/atlas':
         specifier: workspace:*
         version: link:../atlas
+      '@uwe/atlas-editor':
+        specifier: workspace:*
+        version: link:../atlas-editor
       three:
         specifier: 0.178.0
         version: 0.178.0

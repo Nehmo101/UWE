@@ -11,7 +11,13 @@
     "./camera-math": "./src/camera-math.ts",
     "./heightfield": "./src/heightfield.ts",
     "./picking": "./src/picking.ts",
-    "./sprite-atlas": "./src/sprite-atlas.ts"
+    "./sprite-atlas": "./src/sprite-atlas.ts",
+    "./planet-field": "./src/planet-field.ts",
+    "./surface-nets": "./src/surface-nets.ts",
+    "./planet-mesh": "./src/planet-mesh.ts",
+    "./ink-style": "./src/ink-style.ts",
+    "./world-root": "./src/world-root.ts",
+    "./editor-app": "./src/editor-app.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -19,7 +25,8 @@
   },
   "dependencies": {
     "@uwe/atlas": "workspace:*",
-    "three": "0.178.0"
+    "three": "0.178.0",
+    "@uwe/atlas-editor": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",
