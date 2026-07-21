@@ -31,7 +31,7 @@ test.describe("Studio Atlas 3D (neuer Editor)", () => {
     // KI describe panel opens and closes without side effects.
     await page.getByTestId("atlas3d-describe").click();
     await expect(page.getByTestId("atlas3d-describe-panel")).toBeVisible();
-    await page.getByRole("button", { name: "Schließen", exact: true }).click();
+    await page.getByTestId("atlas3d-describe-close").click();
     await expect(page.getByTestId("atlas3d-describe-panel")).toHaveCount(0);
   });
 
@@ -82,9 +82,9 @@ test.describe("Studio Atlas 3D (neuer Editor)", () => {
       await expect(undo).toBeDisabled();
     }
 
-    // breadcrumb leads back up to the globe
-    await page.getByRole("link", { name: "Atlas 3D" }).first().click();
-    await expect(page.getByTestId("atlas3d-editor")).toHaveAttribute("data-mode", "globe");
+    // breadcrumb leads back up to the globe (index route redirects onto the root node)
+    await page.getByRole("navigation", { name: "Brotkrumen" }).getByRole("link", { name: "Atlas 3D" }).click();
+    await expect(page.getByTestId("atlas3d-editor")).toHaveAttribute("data-mode", "globe", { timeout: 15000 });
   });
 
   test("asset placement commits an undoable object step with tint choice", async ({ page }) => {

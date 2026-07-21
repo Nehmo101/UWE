@@ -207,7 +207,7 @@ export function Atlas3DDescribePanel({ worldSlug, nodeTitle, levelLabel, onClose
         )}
 
         <div className="flex justify-end">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} data-testid="atlas3d-describe-close">
             Schließen
           </Button>
         </div>
