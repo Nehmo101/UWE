@@ -25,6 +25,24 @@ Every finding below has been implemented and verified (typecheck, lint, `file-si
 
 ---
 
+## Nachtrag — Audit der 4 restlichen Kategorien (Code-Qualität · Test-Coverage · Dependencies · Architektur)
+
+Die vier Kategorien, deren Auditoren zuvor am Spend-Limit gestorben waren, wurden als vollständiger, adversarisch verifizierter Workflow nachgeholt (18/18 Agenten erfolgreich). Ergebnis: **6 bestätigte Findings** (5× LOW, 1× MEDIUM), **8 Kandidaten als False Positive verworfen** — der neue Code ist im Kern sauber (keine `any`/`@ts-ignore`, keine verwaisten Dateien oder ungenutzten Deps, kein Zyklus im Paketgraph, keine Domänen-Logik in Route-Handlern, `pnpm audit --prod` moderate = 0).
+
+**Sofort umgesetzt (3 triviale LOW-Quick-Wins, alle verifiziert):**
+- **Q1** (Code-Qualität) — `CommandCenterPanel` nutzte 8× inline `nextError instanceof Error ? … : String(nextError)` statt des geteilten `toMessage`-Helpers (den alle 13 anderen Panels verwenden) und zeigte für Nicht-Error-Objekte `[object Object]` statt der freundlichen Fallback-Meldung. → jetzt `toMessage(nextError)`.
+- **Q2** (Code-Qualität) — `DirectConnectorEvent` war byte-identisch in `direct-protocol.ts:74` **und** `direct/registry.ts:23` deklariert. → Redeklaration entfernt, Single Source of Truth per Re-Export; ungenutzte Frame-Importe bereinigt.
+- **Q3** (Test-Coverage) — `preview.ts` (`buildCampaignPreview`/`toCampaignPreviewSummary`, das M3-Kernstück) hatte keine Tests. → `preview.test.ts` mit 6 Fällen inkl. der „entities werden aus dem Client-Payload gestrippt"-Invariante (schützt den M3-Fix vor Regression).
+
+**Dokumentiert, bewusst als Follow-up zurückgestellt (größerer Umfang / eigene Design-Entscheidung nötig):**
+- **A1 · MEDIUM (Architektur)** — Das Host-Update-Dateiprotokoll ist **dreifach** implementiert: kanonisch in `packages/database/src/host-update-service.ts` plus zwei eigenständige Reimplementierungen in `tools/uwe-host-command-center/src/control.ts` (Konstanten `:36-38`, `isHostUpdateEnvEnabled` `:144`, `readHostUpdateStatus` `:158`, `resolveHostUpdateAvailability` `:168`, `writeHostUpdateRequest` `:195`) und `host-update-progress.ts` (`HostUpdateState` `:6`). Bereits driftend (jobId-Format, Pending-State) → Studio und Command Center können über den Update-Status uneinig sein. **Fix:** gemeinsame Quelle in ein `@uwe/host-update`-Leaf-Package extrahieren oder die bestehenden `@uwe/database`-Helper im Command Center konsumieren. **Aufwand:** 2h–1d. *(Refactor mit Verhaltensrisiko — verdient eine eigene, getestete Änderung statt Beifang im PR.)*
+- **A2 · LOW (Test-Coverage)** — Die Server-Action-Guards in `import-central-actions.ts` (Kampagnen-Ownership `getCampaignBySlug` `:179`, Combo-Gate, 10-MB-Cap, PDF-Routing) sind nur auf Service-Ebene getestet, nicht auf Action-Ebene. Alle hinter `requireStudioActionAuth`, DM-only → LOW. **Fix:** `import-central-actions.test.ts` mit gemocktem Repo. **Aufwand:** 2h–1d.
+- **A3 · LOW (Dependencies)** — Die im Windows-Release ausgelieferte Rust/Tauri-Crate-Kette hat **keine** Supply-Chain-Prüfung in CI (nur `pnpm security:audit` für den npm-Graph; kein `cargo-audit`/RUSTSEC). **Fix:** `cargo-audit`/`cargo-deny`-Gate gegen `apps/rtx-connector-client/src-tauri/Cargo.lock` in `security.yml`. **Aufwand:** 30min–2h. *(CI/Infra-Änderung außerhalb des Code-Diffs.)*
+
+Verworfene False Positives (Auszug): `import-job-summary.ts` untested (nur eine reine Reduktion der bereits getesteten Payloads), `as unknown as`-Casts in `import-central-actions.ts` (funktional korrekt), unbounded `ImportJob`-Tabelle (dieselbe Retention-Lücke wie M4 der vorherigen Runde, kein neues Finding), Tauri-`2.0.0`-Pins (Hygiene, kein aktives CVE), `--audit-level high` (dokumentiertes, gewolltes Verhalten laut AGENTS.md).
+
+---
+
 ## Context — this is a delta audit over PR #764
 
 A full audit ran **2026-07-10** and **all 35 of its findings were fixed and merged** (previous report content is superseded by this file). This audit re-verified that those fixes still hold and concentrated scrutiny on the code that landed since: the **PDF-campaign importer** (`packages/pdf-campaign-import`, `apps/studio/app/import*`), the **UWE Command Center** (`apps/rtx-connector-client` Tauri app + `tools/uwe-host-command-center` host server + `packages/connector*`), and the **Windows release/update workflow**.

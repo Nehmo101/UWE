@@ -1,12 +1,9 @@
 import { type ConnectorCapability } from "../capabilities";
 import {
   DIRECT_PROTOCOL_VERSION,
-  type DirectAcceptedFrame,
-  type DirectErrorFrame,
-  type DirectProgressFrame,
+  type DirectConnectorEvent,
   type DirectProtocolFrame,
   type DirectRequestFrame,
-  type DirectResultFrame,
 } from "../direct-protocol";
 import {
   LANE_CONCURRENCY,
@@ -20,11 +17,9 @@ export const DIRECT_MAX_FRAME_BYTES = 16 * 1024 * 1024;
 export const DIRECT_KEEPALIVE_INTERVAL_MS = 15_000;
 export const DIRECT_MAX_TIMEOUT_MS = 10 * 60_000;
 
-export type DirectConnectorEvent =
-  | DirectAcceptedFrame
-  | DirectProgressFrame
-  | DirectResultFrame
-  | DirectErrorFrame;
+// Re-exported from the single definition in ../direct-protocol so the
+// @uwe/connector/direct subpath keeps exposing it (no second declaration).
+export type { DirectConnectorEvent };
 
 export interface DirectDispatchInput {
   type: ConnectorJobType;

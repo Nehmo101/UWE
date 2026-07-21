@@ -22,7 +22,7 @@ import {
   type LocalHostStatus,
   type LocalHostUpdateInfo,
 } from "../lib/tauri";
-import { humanizeConnectionStatus, toHealthBadgeStatus } from "../lib/connector-runtime-labels";
+import { humanizeConnectionStatus, toHealthBadgeStatus, toMessage } from "../lib/connector-runtime-labels";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
@@ -119,7 +119,7 @@ export function CommandCenterPanel({
         return next;
       } catch (nextError) {
         if (seq === requestSeqRef.current) {
-          setError(nextError instanceof Error ? nextError.message : String(nextError));
+          setError(toMessage(nextError));
         }
         return null;
       } finally {
@@ -158,7 +158,7 @@ export function CommandCenterPanel({
       setMessage("Command-Center-Einstellungen gespeichert.");
       await refresh(saved.localHostRoot);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(toMessage(nextError));
     } finally {
       setBusy(null);
     }
@@ -179,7 +179,7 @@ export function CommandCenterPanel({
       }
       return result;
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(toMessage(nextError));
       return null;
     } finally {
       setBusy(null);
@@ -200,7 +200,7 @@ export function CommandCenterPanel({
       if (config.hostUrl && config.token) await onStartConnector();
       setMessage(config.hostUrl && config.token ? "UWE und RTX-Verbindung laufen." : "UWE läuft. Für RTX fehlt noch der Connector-Token.");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(toMessage(nextError));
     } finally {
       setBusy(null);
     }
@@ -215,7 +215,7 @@ export function CommandCenterPanel({
       setStatus(result.status);
       setMessage("UWE und RTX-Verbindung wurden gestoppt.");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(toMessage(nextError));
     } finally {
       setBusy(null);
     }
@@ -227,7 +227,7 @@ export function CommandCenterPanel({
       const result = await getHostLogs(root || undefined, target);
       setLogs(result.lines);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(toMessage(nextError));
     }
   }
 
@@ -246,7 +246,7 @@ export function CommandCenterPanel({
       }
       setMessage(result.message);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(toMessage(nextError));
       setMessage(null);
     } finally {
       setBusy(null);
@@ -269,7 +269,7 @@ export function CommandCenterPanel({
         setMessage(null);
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(toMessage(nextError));
       setMessage(null);
     } finally {
       setBusy(null);
