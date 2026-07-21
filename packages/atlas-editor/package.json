@@ -2,7 +2,7 @@
   "name": "@uwe/atlas-editor",
   "version": "1.0.0",
   "private": true,
-  "description": "UWE Atlas 3D — framework-agnostic editor core (document, undo/redo commands, inheritance, carve operations)",
+  "description": "UWE Atlas 3D \u2014 framework-agnostic editor core (document, undo/redo commands, inheritance, carve operations)",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -10,7 +10,11 @@
     "./doc": "./src/doc.ts",
     "./inheritance": "./src/inheritance.ts",
     "./commands": "./src/commands.ts",
-    "./carve": "./src/carve.ts"
+    "./carve": "./src/carve.ts",
+    "./geometry": "./src/geometry.ts",
+    "./splat": "./src/splat.ts",
+    "./terrain-field": "./src/terrain-field.ts",
+    "./terrain-mesh": "./src/terrain-mesh.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

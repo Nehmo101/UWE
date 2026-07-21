@@ -17,7 +17,10 @@
     "./planet-mesh": "./src/planet-mesh.ts",
     "./ink-style": "./src/ink-style.ts",
     "./world-root": "./src/world-root.ts",
-    "./editor-app": "./src/editor-app.ts"
+    "./editor-app": "./src/editor-app.ts",
+    "./splat": "./src/splat.ts",
+    "./terrain-field": "./src/terrain-field.ts",
+    "./terrain-mesh": "./src/terrain-mesh.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

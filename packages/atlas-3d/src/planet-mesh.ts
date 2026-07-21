@@ -9,7 +9,8 @@
  */
 
 import type { Vec3 } from "@uwe/atlas-editor/carve";
-import type { PlanetField } from "./planet-field";
+import { dirToUv, type PlanetField } from "./planet-field";
+import { biomeColorRgb, sampleSplat, type SplatGrid } from "./splat";
 import { surfaceNets, type SurfaceNetsResult } from "./surface-nets";
 
 export interface PlanetMeshData extends SurfaceNetsResult {
@@ -68,6 +69,8 @@ export interface BuildPlanetMeshOptions {
   resolution: number;
   /** Bounds half-extent as multiple of planet radius. */
   boundsScale?: number;
+  /** Painted biome layer (equirect) — overrides elevation bands where set. */
+  splat?: SplatGrid | null;
 }
 
 export function buildPlanetMeshData(field: PlanetField, options: BuildPlanetMeshOptions): PlanetMeshData {
@@ -93,7 +96,13 @@ export function buildPlanetMeshData(field: PlanetField, options: BuildPlanetMesh
     if (carveIndex >= 0) {
       rgb = cutFaceColorFor(len / radius);
     } else {
-      rgb = surfaceColorFor(field.elevation(dir), dir[1]);
+      let biome = 0;
+      if (options.splat) {
+        const [u, uvV] = dirToUv(dir);
+        biome = sampleSplat(options.splat, u, uvV);
+      }
+      const biomeRgb = biome > 0 ? biomeColorRgb(biome) : null;
+      rgb = biomeRgb ?? surfaceColorFor(field.elevation(dir), dir[1]);
     }
     colors[v * 3] = rgb[0];
     colors[v * 3 + 1] = rgb[1];
