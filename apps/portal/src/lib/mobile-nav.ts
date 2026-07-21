@@ -62,7 +62,7 @@ const WORLD_DRAWER_SECTIONS = new Set([
   "timeline",
   "treasury",
   "soundboard",
-  "atlas",
+  "atlas3d",
 ]);
 
 /** Resolve bottom-nav active tab from the current authenticated portal pathname. */

@@ -24,15 +24,10 @@ import {
   rewriteViewForStatic,
   type StaticNavItem,
 } from "./templates";
-import { writeAtlasStaticBundle } from "./export-atlas";
-import { createPrismaClient } from "@uwe/database/server";
-
 export interface StaticExportOptions {
   worldSlug: string;
   outputDir: string;
   uploadsDir?: string;
-  /** When set, also exports portal-filtered Atlas JSON to atlas/data.json */
-  databaseUrl?: string;
 }
 
 export interface StaticExportResult {
@@ -125,34 +120,12 @@ export async function exportWorldStatic(
     };
   });
 
-  let atlasHref: string | undefined;
-
-  if (options.databaseUrl) {
-    const db = createPrismaClient(options.databaseUrl);
-    try {
-      const atlasBundle = await writeAtlasStaticBundle(
-        db,
-        repo,
-        options.worldSlug,
-        outputDir,
-        world.name,
-      );
-      if (atlasBundle) {
-        writtenFiles.push(...atlasBundle.files);
-        atlasHref = "atlas/";
-      }
-    } finally {
-      await db.$disconnect();
-    }
-  }
-
   const indexHtml = renderWorldIndexPage({
     worldName: world.name,
     worldDescription: world.description,
     pages: indexPages,
     navItems,
     worldSlug: options.worldSlug,
-    atlasHref,
   });
 
   const indexFile = path.join(outputDir, "index.html");

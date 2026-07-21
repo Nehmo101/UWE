@@ -29,7 +29,7 @@ export function worldDmToolQuickLinks(worldSlug: string): { label: string; href:
     "world-roll-tables",
     "world-print-center",
     "world-ai-runs",
-    "world-atlas",
+    "world-atlas3d",
     "world-magic-items",
   ]);
   return canonicalWorldNavItems(worldSlug)
@@ -139,7 +139,7 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
       items: [
         { key: "brain", label: "Brain Store", href: `${base}/brain` },
         { key: "graph", label: "Wissensgraph", href: `${base}/graph` },
-        { key: "atlas", label: "Atlas", href: `${base}/atlas` },
+        { key: "atlas", label: "Atlas 3D", href: `${base}/atlas3d` },
         { key: "inspector", label: "Kanon & Leaks", href: `${base}/inspector` },
         { key: "quality", label: "Wiki-Pflege", href: `${base}/quality` },
         { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },

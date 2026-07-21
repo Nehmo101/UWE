@@ -4,11 +4,7 @@
   "private": true,
   "description": "UWE Studio \u2014 DM campaign editor and world management",
   "scripts": {
-    "copy:atlas": "node scripts/copy-atlas-runtime.mjs",
-    "postinstall": "node scripts/copy-atlas-runtime.mjs",
-    "predev": "node scripts/copy-atlas-runtime.mjs",
     "dev": "next dev --port 3000",
-    "prebuild": "node scripts/copy-atlas-runtime.mjs",
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",

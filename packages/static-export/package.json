@@ -13,12 +13,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test 'src/**/*.test.ts'",
-    "export": "tsx src/cli.ts",
-    "build:atlas-engine": "node scripts/build-atlas-engine.mjs"
+    "export": "tsx src/cli.ts"
   },
   "dependencies": {
     "@uwe/assets": "workspace:*",
-    "@uwe/atlas": "workspace:*",
     "@uwe/database": "workspace:*",
     "dotenv": "^17.4.2"
   },
