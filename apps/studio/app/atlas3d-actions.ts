@@ -1,8 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createPrismaClient } from "@uwe/database/server";
 import { createAtlas3DService } from "@uwe/database/atlas3d";
 import { parseCarveOps, serializeCarveOps } from "@uwe/atlas-editor/carve";
+import { projectSpherePatch, type Vec2 } from "@uwe/atlas-editor/geometry";
+import type { Atlas3DEnvironment } from "@uwe/atlas-editor/doc";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -51,14 +54,134 @@ export async function saveAtlas3DTerrainAction(formData: FormData): Promise<Save
     const heightmapRaw = String(formData.get("heightmap") || "null");
     const heightmap: unknown = JSON.parse(heightmapRaw);
 
+    const splatRaw = String(formData.get("splat") || "null");
+    const splat: unknown = JSON.parse(splatRaw);
+
     const splitOp = carveOps.find((op) => op.kind === "split");
     await atlas3d.saveTerrain(nodeId, {
       carveOps: JSON.parse(serializeCarveOps(carveOps)),
       meta: {
         heightmap: heightmap ?? null,
+        splat: splat ?? null,
         splitGap: splitOp?.kind === "split" ? splitOp.gap : 0,
       },
     });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Speichern fehlgeschlagen" };
+  }
+}
+
+export interface CreateAtlas3DRegionResult {
+  ok: boolean;
+  childId?: string;
+  error?: string;
+}
+
+/** Child map half-extent used by the terrain editor (see editor-app TERRAIN_SIZE). */
+const CHILD_MAP_SIZE = 2;
+
+function isPointList(value: unknown): value is [number, number, number][] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 3 &&
+    value.every(
+      (p) => Array.isArray(p) && p.length === 3 && p.every((n) => typeof n === "number" && Number.isFinite(n)),
+    )
+  );
+}
+
+/**
+ * Drill-down: a region drawn on the parent becomes a child level. Globe
+ * regions are sphere patches projected into the child's tangent plane;
+ * terrain regions are 2D polygons re-centered on their centroid. The scaled
+ * polygon is stored as the child's locked silhouette.
+ */
+export async function createAtlas3DRegionAction(formData: FormData): Promise<CreateAtlas3DRegionResult> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const parentNodeId = String(formData.get("parentNodeId"));
+  const title = String(formData.get("title") || "").trim();
+  const mode = String(formData.get("mode"));
+  try {
+    if (!title) throw new Error("Bitte einen Namen für die neue Ebene angeben");
+    const points: unknown = JSON.parse(String(formData.get("points") || "[]"));
+    if (!isPointList(points)) throw new Error("Region braucht mindestens 3 Punkte");
+    const { atlas3d, db } = await requireNodeInWorld(worldSlug, parentNodeId);
+
+    let silhouette: Vec2[];
+    let extent: unknown;
+    if (mode === "globe") {
+      const patch = projectSpherePatch(points);
+      if (!patch) throw new Error("Region ist zu klein oder entartet");
+      const scale = (CHILD_MAP_SIZE * 0.85) / Math.max(patch.radius, 1e-6);
+      silhouette = patch.polygon.map(([x, z]): Vec2 => [x * scale, z * scale]);
+      extent = { kind: "sphere-patch", dirs: points, centroid: patch.centroid, arcRadius: patch.radius };
+    } else {
+      const cx = points.reduce((sum, p) => sum + p[0], 0) / points.length;
+      const cz = points.reduce((sum, p) => sum + p[2], 0) / points.length;
+      const centered: Vec2[] = points.map((p): Vec2 => [p[0] - cx, p[2] - cz]);
+      const radius = Math.max(...centered.map(([x, z]) => Math.hypot(x, z)), 1e-6);
+      const scale = (CHILD_MAP_SIZE * 0.85) / radius;
+      silhouette = centered.map(([x, z]): Vec2 => [x * scale, z * scale]);
+      extent = { kind: "map-polygon", points: points.map((p) => [p[0], p[2]]), center: [cx, cz] };
+    }
+
+    const createdFeature = await db.atlas3DFeature.create({
+      data: {
+        nodeId: parentNodeId,
+        kind: "region",
+        geometry: { points } as object,
+        labelText: title,
+      },
+    });
+
+    const child = await atlas3d.createChildNode({
+      parentId: parentNodeId,
+      title,
+      sourceFeatureId: createdFeature.id,
+      extent: extent as object,
+      silhouette: { points: silhouette } as object,
+    });
+    revalidatePath(`/worlds/${worldSlug}/atlas3d/${parentNodeId}`);
+    return { ok: true, childId: child.id };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Ebene anlegen fehlgeschlagen" };
+  }
+}
+
+/**
+ * Inspector environment override. `value` = "inherit" clears the field (the
+ * ancestor chain wins again); otherwise the field is overridden on the node.
+ */
+export async function setAtlas3DEnvironmentAction(formData: FormData): Promise<SaveAtlas3DTerrainResult> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  const field = String(formData.get("field"));
+  const rawValue = String(formData.get("value"));
+  try {
+    if (field !== "waterLevel" && field !== "timeOfDay") throw new Error(`Unbekanntes Umgebungsfeld: ${field}`);
+    const { atlas3d, chain } = await requireNodeInWorld(worldSlug, nodeId);
+    const node = chain.nodes[chain.nodes.length - 1];
+    const environment: Atlas3DEnvironment = { ...((node.environment as Atlas3DEnvironment | null) ?? {}) };
+    if (rawValue === "inherit") {
+      delete environment[field];
+    } else if (field === "waterLevel") {
+      const level = Number(rawValue);
+      if (!Number.isFinite(level)) throw new Error("Ungültiger Wasserstand");
+      environment.waterLevel = level;
+    } else {
+      if (!["morning", "noon", "evening", "night"].includes(rawValue)) throw new Error("Ungültige Tageszeit");
+      environment.timeOfDay = rawValue as Atlas3DEnvironment["timeOfDay"];
+    }
+    const hasOverrides = Object.keys(environment).length > 0;
+    await atlas3d.updateNode(nodeId, { environment: hasOverrides ? (environment as object) : null });
+    revalidatePath(`/worlds/${worldSlug}/atlas3d/${nodeId}`);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Speichern fehlgeschlagen" };

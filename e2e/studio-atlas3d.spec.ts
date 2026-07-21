@@ -26,6 +26,45 @@ test.describe("Studio Atlas 3D (neuer Editor)", () => {
     await expect(page.getByTestId("atlas3d-undo")).toBeDisabled();
   });
 
+  test("region drill-down creates a continent in top-down mode", async ({ page }) => {
+    await page.goto("/worlds/terra/atlas3d");
+    await expect(page.getByTestId("atlas3d-editor")).toBeVisible();
+
+    const webgl = await page.evaluate(() => {
+      const probe = document.createElement("canvas");
+      return Boolean(probe.getContext("webgl2") || probe.getContext("webgl"));
+    });
+    test.skip(!webgl, "Chromium has no WebGL/SwiftShader context");
+
+    await page.getByTestId("atlas3d-tool-region").click();
+    const canvas = page.getByTestId("atlas3d-canvas");
+    const box = await canvas.boundingBox();
+    test.skip(!box, "canvas has no layout box");
+    if (!box) return;
+    // three clicks on the front-facing hemisphere of the globe
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await canvas.click({ position: { x: box.width / 2 - 40, y: box.height / 2 - 20 } });
+    await canvas.click({ position: { x: box.width / 2 + 45, y: box.height / 2 - 25 } });
+    await canvas.click({ position: { x: box.width / 2, y: box.height / 2 + 45 } });
+    void cx;
+    void cy;
+    await expect(page.getByTestId("atlas3d-region-panel")).toContainText("3 Punkte");
+
+    await page.getByTestId("atlas3d-region-title").fill("Velthara");
+    await page.getByTestId("atlas3d-region-create").click();
+
+    // navigates onto the freshly created continent — terrain mode, water slider, inherit badge
+    await expect(page).toHaveURL(/\/worlds\/terra\/atlas3d\/[a-z0-9]+/i);
+    await expect(page.getByTestId("atlas3d-editor")).toHaveAttribute("data-mode", "terrain");
+    await expect(page.getByTestId("atlas3d-water-level")).toBeVisible();
+    await expect(page.getByTestId("atlas3d-water-badge")).toContainText("geerbt");
+
+    // breadcrumb leads back up to the globe
+    await page.getByRole("link", { name: "Atlas 3D" }).first().click();
+    await expect(page.getByTestId("atlas3d-editor")).toHaveAttribute("data-mode", "globe");
+  });
+
   test("split slider commits an undoable Welt-teilen step", async ({ page }) => {
     await page.goto("/worlds/terra/atlas3d");
     await expect(page.getByTestId("atlas3d-editor")).toBeVisible();

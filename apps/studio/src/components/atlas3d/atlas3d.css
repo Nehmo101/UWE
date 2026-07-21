@@ -153,3 +153,103 @@
   font-size: 0.82rem;
   color: var(--uwe-fg-muted);
 }
+
+.atlas3d-biomes {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.atlas3d-biome {
+  border: 2px solid var(--uwe-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.atlas3d-biome span {
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 82%, transparent);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  color: var(--uwe-fg);
+}
+
+.atlas3d-biome.on {
+  border-color: var(--uwe-accent);
+  outline: 2px solid var(--uwe-accent-muted);
+}
+
+.atlas3d-region {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}
+
+.atlas3d-region input[type="text"] {
+  background: var(--uwe-input-bg);
+  border: 1px solid var(--uwe-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  color: var(--uwe-fg);
+  min-width: 220px;
+}
+
+.atlas3d-error {
+  color: var(--uwe-danger);
+  font-style: normal;
+}
+
+.atlas3d-badge {
+  font-size: 0.72rem;
+  color: var(--uwe-info);
+}
+
+.atlas3d-inherit {
+  background: none;
+  border: none;
+  color: var(--uwe-link);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.72rem;
+  text-decoration: underline;
+}
+
+.atlas3d-inspector select {
+  background: var(--uwe-input-bg);
+  border: 1px solid var(--uwe-border);
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+  color: var(--uwe-fg);
+}
+
+.atlas3d-children {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}
+
+.atlas3d-child {
+  border: 1px solid var(--uwe-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  color: var(--uwe-fg);
+  text-decoration: none;
+  background: var(--uwe-bg-elevated);
+}
+
+.atlas3d-child:hover {
+  border-color: var(--uwe-accent);
+}
+
+.atlas3d-child em {
+  font-style: normal;
+  color: var(--uwe-fg-muted);
+  font-size: 0.72rem;
+}

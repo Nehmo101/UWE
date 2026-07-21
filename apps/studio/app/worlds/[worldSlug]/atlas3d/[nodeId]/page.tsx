@@ -55,7 +55,10 @@ export default async function Atlas3DNodePage({ params }: Props) {
   ];
   const effective = resolveEffectiveNodeSettings(chainEntries);
 
-  const terrainMeta = (node.terrain?.meta ?? null) as { heightmap?: unknown } | null;
+  const titleByEntryId = new Map(chainEntries.map((entry) => [entry.id, entry.title]));
+  const originTitle = (entryId: string) => (entryId === "default" ? "Standard" : (titleByEntryId.get(entryId) ?? "Standard"));
+
+  const terrainMeta = (node.terrain?.meta ?? null) as { heightmap?: unknown; splat?: unknown } | null;
 
   const breadcrumb: BreadcrumbItem[] = [
     ...worldSectionBreadcrumb(world.name, worldSlug, "Atlas 3D", `/worlds/${worldSlug}/atlas3d`),
@@ -87,9 +90,27 @@ export default async function Atlas3DNodePage({ params }: Props) {
         worldSlug={worldSlug}
         nodeId={node.id}
         nodeTitle={node.title}
+        mode={node.level === "globe" ? "globe" : "terrain"}
         seed={node.seed}
         initialCarveOps={node.terrain?.carveOps ?? []}
         initialHeightmap={terrainMeta?.heightmap ?? null}
+        initialSplat={terrainMeta?.splat ?? null}
+        silhouette={node.silhouette ?? null}
+        waterLevel={{
+          value: effective.environment.waterLevel,
+          fromTitle: originTitle(effective.origins.environment.waterLevel),
+          overridden: effective.origins.environment.waterLevel === node.id,
+        }}
+        timeOfDay={{
+          value: effective.environment.timeOfDay,
+          fromTitle: originTitle(effective.origins.environment.timeOfDay),
+          overridden: effective.origins.environment.timeOfDay === node.id,
+        }}
+        children3d={node.children.map((child) => ({
+          id: child.id,
+          title: child.title,
+          levelLabel: LEVEL_LABELS[child.level] ?? child.level,
+        }))}
       />
     </WorldShell>
   );
