@@ -15,6 +15,7 @@ import { ATLAS3D_BIOMES } from "@uwe/atlas-3d/splat";
 import { INK_ASSET_KINDS, INK_ASSET_LABELS, INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "@uwe/atlas-3d/assets-ink";
 import {
   createAtlas3DRegionAction,
+  saveAtlas3DBookmarksAction,
   saveAtlas3DTerrainAction,
   setAtlas3DEnvironmentAction,
 } from "@/app/atlas3d-actions";
@@ -52,6 +53,8 @@ export interface Atlas3DEditorShellProps {
   silhouette: unknown;
   waterLevel: Atlas3DInheritedNumber;
   timeOfDay: Atlas3DInheritedText;
+  fogDensity: Atlas3DInheritedNumber;
+  bookmarks: { id: string; name: string; pose: unknown }[];
   children3d: Atlas3DChildLink[];
 }
 
@@ -112,6 +115,8 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [saveState, setSaveState] = useState<SaveState>("gespeichert");
   const [webgl, setWebgl] = useState(true);
   const [waterDraft, setWaterDraft] = useState(props.waterLevel.value);
+  const [fogDraft, setFogDraft] = useState(props.fogDensity.value);
+  const [bookmarkName, setBookmarkName] = useState("");
 
   const stack = useMemo(
     () =>
@@ -159,6 +164,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       features: props.initialFeatures,
       silhouette: props.silhouette,
       waterLevel: props.waterLevel.value,
+      environment: { timeOfDay: props.timeOfDay.value, fogDensity: props.fogDensity.value },
       onReady: (info) => setWebgl(info.webgl),
       onRegionDraftChange: (count) => setRegionPointCount(count),
       onSelectionChange: (count) => setSelectionCount(count),
@@ -237,7 +243,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       .finally(() => setRegionBusy(false));
   };
 
-  const setEnvironment = (field: "waterLevel" | "timeOfDay", value: string) => {
+  const setEnvironment = (field: "waterLevel" | "timeOfDay" | "fogDensity", value: string) => {
     const form = new FormData();
     form.set("worldSlug", props.worldSlug);
     form.set("nodeId", props.nodeId);
@@ -498,11 +504,43 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
           </label>
         )}
         <label>
+          Nebel
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(fogDraft * 100)}
+            data-testid="atlas3d-fog"
+            onChange={(event) => {
+              const density = Number(event.target.value) / 100;
+              setFogDraft(density);
+              appRef.current?.setEnvironmentVisuals({ fogDensity: density });
+            }}
+            onPointerUp={() => setEnvironment("fogDensity", String(fogDraft))}
+          />
+          <em>{fogDraft.toFixed(2)}</em>
+          <span className="atlas3d-badge">
+            {props.fogDensity.overridden ? (
+              <>
+                überschrieben ·{" "}
+                <button type="button" className="atlas3d-inherit" onClick={() => setEnvironment("fogDensity", "inherit")}>
+                  ⤓ wieder erben
+                </button>
+              </>
+            ) : (
+              <>⤓ geerbt von {props.fogDensity.fromTitle}</>
+            )}
+          </span>
+        </label>
+        <label>
           Tageszeit
           <select
             value={props.timeOfDay.value}
             data-testid="atlas3d-time-select"
-            onChange={(event) => setEnvironment("timeOfDay", event.target.value)}
+            onChange={(event) => {
+              appRef.current?.setEnvironmentVisuals({ timeOfDay: event.target.value });
+              setEnvironment("timeOfDay", event.target.value);
+            }}
           >
             {TIME_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -523,6 +561,55 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             )}
           </span>
         </label>
+      </div>
+
+      <div className="atlas3d-region" data-testid="atlas3d-bookmarks">
+        <span>📷 Kamera-Lesezeichen:</span>
+        {props.bookmarks.map((bookmark) => (
+          <button
+            key={bookmark.id}
+            type="button"
+            className="atlas3d-tool"
+            onClick={() => {
+              const pose = bookmark.pose as { theta?: number; phi?: number; distance?: number; target?: [number, number, number] };
+              appRef.current?.flyTo(pose);
+            }}
+          >
+            {bookmark.name}
+          </button>
+        ))}
+        <input
+          type="text"
+          placeholder="Name"
+          value={bookmarkName}
+          data-testid="atlas3d-bookmark-name"
+          onChange={(event) => setBookmarkName(event.target.value)}
+        />
+        <button
+          type="button"
+          className="atlas3d-tool"
+          data-testid="atlas3d-bookmark-add"
+          disabled={bookmarkName.trim().length === 0}
+          onClick={() => {
+            const pose = appRef.current?.getCameraPose();
+            if (!pose) return;
+            const form = new FormData();
+            form.set("worldSlug", props.worldSlug);
+            form.set("nodeId", props.nodeId);
+            form.set(
+              "bookmarks",
+              JSON.stringify([...props.bookmarks.map((b) => ({ name: b.name, pose: b.pose })), { name: bookmarkName.trim(), pose }]),
+            );
+            saveAtlas3DBookmarksAction(form).then((result) => {
+              if (result.ok) {
+                setBookmarkName("");
+                router.refresh();
+              }
+            });
+          }}
+        >
+          + Blick merken
+        </button>
       </div>
 
       {props.children3d.length > 0 ? (

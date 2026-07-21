@@ -1,0 +1,75 @@
+.atlas3d-portal-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.atlas3d-portal-canvas {
+  position: relative;
+  min-height: 520px;
+  border: 1px solid var(--uwe-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, var(--uwe-panel) 0%, var(--uwe-bg) 80%);
+}
+
+.atlas3d-portal-canvas canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.atlas3d-portal-hint {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 85%, transparent);
+  border: 1px solid var(--uwe-border);
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--uwe-fg-muted);
+  pointer-events: none;
+}
+
+.atlas3d-portal-nogl {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--uwe-fg-muted);
+  padding: 2rem;
+  text-align: center;
+}
+
+.atlas3d-portal-bookmarks {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}
+
+.atlas3d-portal-bookmarks button {
+  background: var(--uwe-bg-elevated);
+  border: 1px solid var(--uwe-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  color: var(--uwe-fg);
+  cursor: pointer;
+}
+
+.atlas3d-portal-bookmarks button:hover {
+  border-color: var(--uwe-accent);
+}
+
+.atlas3d-portal-loading {
+  display: grid;
+  place-items: center;
+  min-height: 520px;
+  color: var(--uwe-fg-muted);
+}

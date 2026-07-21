@@ -25,26 +25,35 @@ const VERTEX = /* glsl */ `
   varying vec3 vColor;
   varying vec3 vNormalObject;
   varying vec3 vNormalWorld;
+  varying float vViewDist;
   void main() {
     vColor = color;
     vNormalObject = normalize(normal);
     vNormalWorld = normalize(mat3(modelMatrix) * normal);
     vec3 p = position + aAnim.xyz * sin(uTime + aAnim.w);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+    vViewDist = -mvPosition.z;
+    gl_Position = projectionMatrix * mvPosition;
   }
 `;
 
 const FRAGMENT = /* glsl */ `
   uniform vec3 uLightDir;
   uniform float uObjectSpaceLight;
+  uniform vec3 uTint;
+  uniform vec3 uFogColor;
+  uniform float uFogDensity;
   varying vec3 vColor;
   varying vec3 vNormalObject;
   varying vec3 vNormalWorld;
+  varying float vViewDist;
   void main() {
     vec3 n = normalize(mix(vNormalWorld, vNormalObject, uObjectSpaceLight));
     float d = max(dot(n, normalize(uLightDir)), 0.0);
     d = d > 0.72 ? 1.0 : (d > 0.38 ? 0.62 : 0.34);
-    gl_FragColor = vec4(vColor * (0.45 + 0.55 * d), 1.0);
+    vec3 lit = vColor * (0.45 + 0.55 * d) * uTint;
+    float fog = 1.0 - exp(-uFogDensity * uFogDensity * vViewDist * vViewDist * 0.35);
+    gl_FragColor = vec4(mix(lit, uFogColor, clamp(fog, 0.0, 0.92)), 1.0);
   }
 `;
 
@@ -73,8 +82,30 @@ export function createInkMaterial(options: InkMaterialOptions): THREE.ShaderMate
       uLightDir: { value: options.lightDirection?.clone() ?? new THREE.Vector3(0.5, 0.85, 0.55) },
       uObjectSpaceLight: { value: options.objectSpaceLight },
       uTime: { value: 0 },
+      uTint: { value: new THREE.Color(1, 1, 1) },
+      uFogColor: { value: new THREE.Color("#e8dec6") },
+      uFogDensity: { value: 0 },
     },
   });
+}
+
+/** Apply time-of-day light/tint + fog to a set of ink materials. */
+export function applyInkEnvironment(
+  materials: readonly THREE.ShaderMaterial[],
+  environment: {
+    lightDir: readonly [number, number, number];
+    tint: readonly [number, number, number];
+    fogColor: string;
+    fogDensity: number;
+  },
+): void {
+  for (const material of materials) {
+    const u = material.uniforms;
+    if (u.uLightDir) (u.uLightDir.value as THREE.Vector3).set(...environment.lightDir);
+    if (u.uTint) (u.uTint.value as THREE.Color).setRGB(...environment.tint);
+    if (u.uFogColor) (u.uFogColor.value as THREE.Color).set(environment.fogColor);
+    if (u.uFogDensity) u.uFogDensity.value = environment.fogDensity;
+  }
 }
 
 export function createOutlineMaterial(width: number): THREE.ShaderMaterial {

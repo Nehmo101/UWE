@@ -2,7 +2,7 @@
   "name": "@uwe/portal",
   "version": "0.1.0",
   "private": true,
-  "description": "UWE Portal — player-facing campaign wiki and handouts",
+  "description": "UWE Portal \u2014 player-facing campaign wiki and handouts",
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build",
@@ -43,7 +43,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@uwe/atlas-editor": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

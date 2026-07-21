@@ -188,6 +188,31 @@ export async function createAtlas3DRegionAction(formData: FormData): Promise<Cre
   }
 }
 
+/** Replace-all save of the node's camera bookmarks. */
+export async function saveAtlas3DBookmarksAction(formData: FormData): Promise<SaveAtlas3DTerrainResult> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  try {
+    const { atlas3d } = await requireNodeInWorld(worldSlug, nodeId);
+    const raw: unknown = JSON.parse(String(formData.get("bookmarks") || "[]"));
+    if (!Array.isArray(raw)) throw new Error("Ungültige Lesezeichen");
+    await atlas3d.saveBookmarks(
+      nodeId,
+      raw
+        .filter((b): b is Record<string, unknown> => typeof b === "object" && b !== null)
+        .filter((b) => typeof b.name === "string" && typeof b.pose === "object" && b.pose !== null)
+        .map((b) => ({ name: (b.name as string).slice(0, 80), pose: b.pose as object })),
+    );
+    revalidatePath(`/worlds/${worldSlug}/atlas3d/${nodeId}`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Speichern fehlgeschlagen" };
+  }
+}
+
 /**
  * Inspector environment override. `value` = "inherit" clears the field (the
  * ancestor chain wins again); otherwise the field is overridden on the node.
@@ -201,16 +226,18 @@ export async function setAtlas3DEnvironmentAction(formData: FormData): Promise<S
   const field = String(formData.get("field"));
   const rawValue = String(formData.get("value"));
   try {
-    if (field !== "waterLevel" && field !== "timeOfDay") throw new Error(`Unbekanntes Umgebungsfeld: ${field}`);
+    if (field !== "waterLevel" && field !== "timeOfDay" && field !== "fogDensity") {
+      throw new Error(`Unbekanntes Umgebungsfeld: ${field}`);
+    }
     const { atlas3d, chain } = await requireNodeInWorld(worldSlug, nodeId);
     const node = chain.nodes[chain.nodes.length - 1];
     const environment: Atlas3DEnvironment = { ...((node.environment as Atlas3DEnvironment | null) ?? {}) };
     if (rawValue === "inherit") {
       delete environment[field];
-    } else if (field === "waterLevel") {
-      const level = Number(rawValue);
-      if (!Number.isFinite(level)) throw new Error("Ungültiger Wasserstand");
-      environment.waterLevel = level;
+    } else if (field === "waterLevel" || field === "fogDensity") {
+      const value = Number(rawValue);
+      if (!Number.isFinite(value)) throw new Error("Ungültiger Wert");
+      environment[field] = field === "fogDensity" ? Math.min(1, Math.max(0, value)) : value;
     } else {
       if (!["morning", "noon", "evening", "night"].includes(rawValue)) throw new Error("Ungültige Tageszeit");
       environment.timeOfDay = rawValue as Atlas3DEnvironment["timeOfDay"];

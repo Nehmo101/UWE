@@ -6,10 +6,8 @@
  *  - "terrain": top-down 3D over a flat level (pan/zoom, shift = tilt,
  *    map-fixed lighting) with the inherited silhouette as locked underlay.
  *
- * The React shell owns undo/redo and persistence; committed edits are
- * emitted via `onCommit` with a serializable document snapshot, undo/redo
- * re-enters through `applyExternal`. Region drafts (drill-down) are read by
- * the shell via `getRegionDraft` once the user confirms a title.
+ * The React shell owns undo/redo and persistence; committed edits arrive via
+ * `onCommit` as serializable snapshots, undo/redo re-enters via `applyExternal`.
  */
 
 import * as THREE from "three";
@@ -26,10 +24,10 @@ import {
   type HeightmapJson,
 } from "./planet-field";
 import { buildPlanetMeshData } from "./planet-mesh";
-import { applyPlanarBrush, createTerrainField } from "./terrain-field";
+import { applyPlanarBrush, createTerrainField, type TerrainField } from "./terrain-field";
 import { buildTerrainMeshData } from "./terrain-mesh";
 import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGrid, type SplatJson } from "./splat";
-import { buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
+import { applyInkEnvironment, buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
 import { buildWorldRootBridge } from "./world-root";
 import { INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "./assets-ink";
 import { findTerrainPath, type PathKind } from "./terrain-path";
@@ -40,8 +38,9 @@ import {
   type DocFeatureState,
   type DocObjectState,
 } from "./scene-objects";
-import type { TerrainField } from "./terrain-field";
 import { EditorDecor } from "./editor-decor";
+import { environmentPreset } from "./environment-presets";
+import { OrbitRig } from "./viewport-rig";
 
 export type Atlas3DEditorMode = "globe" | "terrain";
 
@@ -89,6 +88,10 @@ export interface Atlas3DEditorAppOptions {
   /** Terrain mode: inherited parent silhouette (2D polygon json) + water level. */
   silhouette?: unknown;
   waterLevel?: number;
+  /** Inherited atmosphere: time-of-day key + fog density [0..1]. */
+  environment?: { timeOfDay?: string; fogDensity?: number };
+  /** Portal viewer: orbit/pan only, no editing tools, no commits. */
+  readOnly?: boolean;
   resolution?: number;
   editResolution?: number;
   worldRootCount?: number;
@@ -112,6 +115,10 @@ export interface Atlas3DEditorApp {
   commitSplit(): void;
   /** Visual water level (inherited/overridden via inspector — not undoable here). */
   setWaterLevel(level: number): void;
+  /** Live atmosphere preview (inherited/overridden via inspector). */
+  setEnvironmentVisuals(environment: { timeOfDay?: string; fogDensity?: number }): void;
+  getCameraPose(): { theta: number; phi: number; distance: number; target: [number, number, number] };
+  flyTo(pose: { theta?: number; phi?: number; distance?: number; target?: [number, number, number] }, durationMs?: number): void;
   getRegionDraft(): Atlas3DRegionDraft | null;
   clearRegionDraft(): void;
   /** Fresh render → PNG data URL (null without WebGL). */
@@ -122,12 +129,9 @@ export interface Atlas3DEditorApp {
 }
 
 const SPLIT_OP_ID = "welt-spalt";
-const HEIGHTMAP_WIDTH = 128;
-const HEIGHTMAP_HEIGHT = 64;
-const PLANAR_HEIGHTMAP = 128;
-const SPLAT_WIDTH = 128;
-const SPLAT_HEIGHT = 64;
-const PLANAR_SPLAT = 128;
+// grid sizes: globe heightmap/splat are equirect 128×64, flat levels 128×128
+const GLOBE_GRID = [128, 64] as const;
+const PLANAR_GRID = [128, 128] as const;
 const TERRAIN_SIZE = 2;
 
 function splitGapOf(ops: readonly CarveOp[]): number {
@@ -145,10 +149,10 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   let carveOps: CarveOp[] = parseCarveOps(options.carveOps ?? []);
   let heightmap: HeightmapGrid =
     heightmapFromJson(options.heightmap ?? null) ??
-    (mode === "globe" ? createHeightmap(HEIGHTMAP_WIDTH, HEIGHTMAP_HEIGHT) : createHeightmap(PLANAR_HEIGHTMAP, PLANAR_HEIGHTMAP));
+    (mode === "globe" ? createHeightmap(...GLOBE_GRID) : createHeightmap(...PLANAR_GRID));
   let splat: SplatGrid =
     splatFromJson(options.splat ?? null) ??
-    (mode === "globe" ? createSplat(SPLAT_WIDTH, SPLAT_HEIGHT) : createSplat(PLANAR_SPLAT, PLANAR_SPLAT));
+    (mode === "globe" ? createSplat(...GLOBE_GRID) : createSplat(...PLANAR_GRID));
   let waterLevel = options.waterLevel ?? 0;
   const seed = options.seed;
 
@@ -180,26 +184,39 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
-  const orbit = mode === "globe" ? { theta: 0.6, phi: 1.15, distance: 3.4 } : { theta: 0, phi: 0.5, distance: 3.6 };
-  const panTarget = new THREE.Vector3(0, 0, 0);
+  const rig = new OrbitRig(mode === "globe" ? { theta: 0.6, phi: 1.15, distance: 3.4 } : { theta: 0, phi: 0.5, distance: 3.6 });
   const raycaster = new THREE.Raycaster();
 
   let planet: InkMeshGroup | null = null;
   let roots: { group: THREE.Group; dispose(): void } | null = null;
   let disposed = false;
   const decor = new EditorDecor(scene, mode, TERRAIN_SIZE);
+  const readOnly = options.readOnly === true;
+  let envTimeOfDay: string = options.environment?.timeOfDay ?? "noon";
+  let envFogDensity: number = options.environment?.fogDensity ?? 0;
+
+  function applyEnvironment(): void {
+    const preset = environmentPreset(envTimeOfDay);
+    scene.background = new THREE.Color(preset.sky);
+    scene.fog = envFogDensity > 0.01 ? new THREE.FogExp2(new THREE.Color(preset.fogColor).getHex(), envFogDensity * 0.28) : null;
+    const materials: THREE.ShaderMaterial[] = [];
+    scene.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.isMesh && mesh.material instanceof THREE.ShaderMaterial) materials.push(mesh.material);
+    });
+    applyInkEnvironment(materials, {
+      lightDir: preset.lightDir,
+      tint: preset.tint,
+      fogColor: preset.fogColor,
+      fogDensity: envFogDensity,
+    });
+  }
 
   // region draft (drill-down)
   const regionPoints: THREE.Vector3[] = [];
 
   function updateCamera(): void {
-    const sinPhi = Math.sin(orbit.phi);
-    camera.position.set(
-      panTarget.x + Math.cos(orbit.theta) * sinPhi * orbit.distance,
-      panTarget.y + Math.cos(orbit.phi) * orbit.distance,
-      panTarget.z + Math.sin(orbit.theta) * sinPhi * orbit.distance,
-    );
-    camera.lookAt(panTarget);
+    rig.apply(camera);
   }
 
   const objectLayer = new SceneObjectLayer({
@@ -215,6 +232,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     objectLayer.setSelection(selection);
     objectLayer.sync(objects, features, performance.now() / 1000);
     options.onSelectionChange?.(selection.size);
+    applyEnvironment();
   }
 
   function rebuild(resolution: number): void {
@@ -255,6 +273,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       });
       scene.add(roots.group);
     }
+    applyEnvironment();
   }
 
   function snapshot(): Atlas3DEditorDocState {
@@ -468,7 +487,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   function onPointerDown(event: PointerEvent): void {
     canvas.setPointerCapture(event.pointerId);
-    const usedByTool = event.button === 0 && !event.shiftKey && handleToolPointerDown(event);
+    const usedByTool = !readOnly && event.button === 0 && !event.shiftKey && handleToolPointerDown(event);
     if (!usedByTool) {
       dragging = true;
       lastX = event.clientX;
@@ -494,19 +513,9 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     lastY = event.clientY;
     if (mode === "terrain" && !event.shiftKey) {
       // top-down standard view: primary drag pans the map
-      const panScale = orbit.distance * 0.0016;
-      const sin = Math.sin(orbit.theta);
-      const cos = Math.cos(orbit.theta);
-      panTarget.x -= (dx * -sin + dy * -cos) * panScale;
-      panTarget.z -= (dx * cos + dy * -sin) * panScale;
-      const limit = TERRAIN_SIZE * 1.2;
-      panTarget.x = Math.min(limit, Math.max(-limit, panTarget.x));
-      panTarget.z = Math.min(limit, Math.max(-limit, panTarget.z));
+      rig.pan(dx, dy, TERRAIN_SIZE * 1.2);
     } else {
-      orbit.theta += dx * 0.006;
-      const minPhi = mode === "terrain" ? 0.2 : 0.15;
-      const maxPhi = mode === "terrain" ? 1.1 : Math.PI - 0.15;
-      orbit.phi = Math.min(maxPhi, Math.max(minPhi, orbit.phi + dy * 0.006));
+      rig.rotate(dx, dy, mode === "terrain" ? 0.2 : 0.15, mode === "terrain" ? 1.1 : Math.PI - 0.15);
     }
     updateCamera();
   }
@@ -526,8 +535,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   function onWheel(event: WheelEvent): void {
     event.preventDefault();
-    const min = mode === "terrain" ? 1.0 : 1.6;
-    orbit.distance = Math.min(8, Math.max(min, orbit.distance * (1 + Math.sign(event.deltaY) * 0.08)));
+    rig.zoom(Math.sign(event.deltaY), mode === "terrain" ? 1.0 : 1.6);
     updateCamera();
   }
 
@@ -552,6 +560,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   let frame = 0;
   function loop(time: number): void {
     if (disposed) return;
+    if (rig.tick(time)) updateCamera();
     objectLayer.updateTime(time / 1000);
     renderer?.render(scene, camera);
     frame = requestAnimationFrame(loop);
@@ -562,6 +571,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   syncObjects();
   decor.updateWater(waterLevel);
   decor.updateSilhouette(silhouette, waterLevel);
+  applyEnvironment();
   updateCamera();
   resize();
   if (webglAvailable) frame = requestAnimationFrame(loop);
@@ -618,6 +628,20 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       decor.updateWater(waterLevel);
       decor.updateSilhouette(silhouette, waterLevel);
       if (mode === "terrain") rebuild(restResolution);
+      applyEnvironment();
+    },
+    setEnvironmentVisuals(environment) {
+      if (environment.timeOfDay !== undefined) envTimeOfDay = environment.timeOfDay;
+      if (environment.fogDensity !== undefined) envFogDensity = environment.fogDensity;
+      applyEnvironment();
+    },
+    getCameraPose() {
+      return rig.pose();
+    },
+    flyTo(pose, durationMs = 700) {
+      // without WebGL there is no render loop — jump straight to the pose
+      rig.flyTo(pose, durationMs, !webglAvailable);
+      if (!webglAvailable) updateCamera();
     },
     getRegionDraft() {
       if (regionPoints.length < 3) return null;
@@ -638,10 +662,10 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       carveOps = parseCarveOps(doc.carveOps);
       heightmap =
         heightmapFromJson(doc.heightmap) ??
-        (mode === "globe" ? createHeightmap(HEIGHTMAP_WIDTH, HEIGHTMAP_HEIGHT) : createHeightmap(PLANAR_HEIGHTMAP, PLANAR_HEIGHTMAP));
+        (mode === "globe" ? createHeightmap(...GLOBE_GRID) : createHeightmap(...PLANAR_GRID));
       splat =
         splatFromJson(doc.splat) ??
-        (mode === "globe" ? createSplat(SPLAT_WIDTH, SPLAT_HEIGHT) : createSplat(PLANAR_SPLAT, PLANAR_SPLAT));
+        (mode === "globe" ? createSplat(...GLOBE_GRID) : createSplat(...PLANAR_GRID));
       objects = parseDocObjects(doc.objects);
       features = parseDocFeatures(doc.features);
       selection.clear();

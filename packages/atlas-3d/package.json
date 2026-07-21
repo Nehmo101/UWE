@@ -23,7 +23,9 @@
     "./terrain-mesh": "./src/terrain-mesh.ts",
     "./assets-ink": "./src/assets-ink.ts",
     "./terrain-path": "./src/terrain-path.ts",
-    "./scene-objects": "./src/scene-objects.ts"
+    "./scene-objects": "./src/scene-objects.ts",
+    "./environment-presets": "./src/environment-presets.ts",
+    "./editor-decor": "./src/editor-decor.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

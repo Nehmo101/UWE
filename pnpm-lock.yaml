@@ -76,6 +76,9 @@ importers:
       '@uwe/atlas-3d':
         specifier: workspace:*
         version: link:../../packages/atlas-3d
+      '@uwe/atlas-editor':
+        specifier: workspace:*
+        version: link:../../packages/atlas-editor
       '@uwe/auth':
         specifier: workspace:*
         version: link:../../packages/auth
