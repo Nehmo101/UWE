@@ -713,6 +713,7 @@ model World {
   researchSessions    ResearchSession[]
   contentReviews      ContentReview[]
   atlasMap            AtlasMap?
+  atlas3d             Atlas3DWorld?
   atlasPaletteItems   AtlasPaletteItem[] @relation("AtlasPaletteWorld")
   worldCalendar       WorldCalendar?
   worldEvents         WorldEvent[]
@@ -803,6 +804,8 @@ model Page {
   atlasNodes             AtlasNode[]    @relation("AtlasNodePage")
   atlasFeatures          AtlasFeature[] @relation("AtlasFeaturePage")
   atlasObjects           AtlasObject[]  @relation("AtlasObjectPage")
+  atlas3dNodes           Atlas3DNode[]    @relation("Atlas3DNodePage")
+  atlas3dFeatures        Atlas3DFeature[] @relation("Atlas3DFeaturePage")
   worldEventLinks        WorldEventEntityLink[]
   factionState           FactionState?
   character              Character?
@@ -1102,6 +1105,8 @@ model Asset {
   imageStudioVersions ImageStudioVersion[]
   atlasNodeBackgrounds AtlasNode[]        @relation("AtlasNodeBackground")
   atlasPaletteItems    AtlasPaletteItem[] @relation("AtlasPaletteAsset")
+  atlas3dHeightmaps    Atlas3DTerrain[]   @relation("Atlas3DTerrainHeightmap")
+  atlas3dSplatmaps     Atlas3DTerrain[]   @relation("Atlas3DTerrainSplatmap")
   albumItems           AssetAlbumItem[]
 
   @@index([worldId, type])
@@ -3536,6 +3541,146 @@ model AtlasPaletteItem {
   @@index([worldId, kind])
   @@index([reviewStatus])
   @@map("atlas_palette_items")
+}
+
+
+// --- Atlas 3D (fresh 3D world-builder; replaces the 2D Atlas at end of phase 5) ---
+// Owner decision 2026-07-21: Atlas 3D content is entirely player-visible.
+// There are intentionally NO visibility columns here — nothing dm_only exists
+// in Atlas 3D, so the "dm_only never reaches the Portal" invariant holds trivially.
+
+model Atlas3DWorld {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  title       String   @default("Atlas 3D")
+  stylePreset String   @default("pergament") @map("style_preset")
+  /// Root environment defaults inherited down the node chain (light, fog, waterLevel, atmosphere).
+  environment Json?
+  /// Planet metadata: { radius, axisTilt, splitGap, splitAxis } — the globe may be torn into halves.
+  projection  Json?
+  seed        Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world World         @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  nodes Atlas3DNode[]
+
+  @@unique([worldId])
+  @@map("atlas3d_worlds")
+}
+
+model Atlas3DNode {
+  id                  String         @id @default(cuid())
+  atlasWorldId        String         @map("atlas_world_id")
+  parentId            String?        @map("parent_id")
+  level               AtlasNodeLevel
+  title               String
+  slug                String
+  /// Region outline on the PARENT level that this node drills down from (polygon or sphere patch).
+  extent              Json?
+  /// Inherited boundary silhouette drawn as locked underlay on this level.
+  silhouette          Json?
+  seed                Int            @default(1)
+  /// Per-node environment overrides; null fields inherit from the ancestor chain.
+  environment         Json?
+  stylePresetOverride String?        @map("style_preset_override")
+  pageId              String?        @map("page_id")
+  sortOrder           Int            @default(0) @map("sort_order")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  atlasWorld          Atlas3DWorld            @relation(fields: [atlasWorldId], references: [id], onDelete: Cascade)
+  parent              Atlas3DNode?            @relation("Atlas3DNodeHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children            Atlas3DNode[]           @relation("Atlas3DNodeHierarchy")
+  linkedPage          Page?                   @relation("Atlas3DNodePage", fields: [pageId], references: [id], onDelete: SetNull)
+  terrain             Atlas3DTerrain?
+  features            Atlas3DFeature[]
+  drillSourceFeatures Atlas3DFeature[]        @relation("Atlas3DFeatureChildNode")
+  objects             Atlas3DObject[]
+  bookmarks           Atlas3DCameraBookmark[]
+
+  @@unique([atlasWorldId, slug])
+  @@index([parentId])
+  @@map("atlas3d_nodes")
+}
+
+model Atlas3DTerrain {
+  id               String   @id @default(cuid())
+  nodeId           String   @map("node_id")
+  heightmapAssetId String?  @map("heightmap_asset_id")
+  splatmapAssetId  String?  @map("splatmap_asset_id")
+  /// Ordered, deterministic carve operations (bite/wedge/cave/tunnel/split) incl. cut-face paint layers.
+  carveOps         Json?    @map("carve_ops")
+  /// { resolution, verticalScale, seaLevel, faces } — continuous fields, no tile grid.
+  meta             Json?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  node      Atlas3DNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  heightmap Asset?      @relation("Atlas3DTerrainHeightmap", fields: [heightmapAssetId], references: [id], onDelete: SetNull)
+  splatmap  Asset?      @relation("Atlas3DTerrainSplatmap", fields: [splatmapAssetId], references: [id], onDelete: SetNull)
+
+  @@unique([nodeId])
+  @@map("atlas3d_terrains")
+}
+
+model Atlas3DFeature {
+  id           String   @id @default(cuid())
+  nodeId       String   @map("node_id")
+  /// Free-form feature kind (region | river | road | label | pin …) — string, not enum, for 3D rethink freedom.
+  kind         String
+  geometry     Json
+  style        Json?
+  labelText    String?  @map("label_text")
+  childNodeId  String?  @map("child_node_id")
+  linkedPageId String?  @map("linked_page_id")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  node       Atlas3DNode  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  childNode  Atlas3DNode? @relation("Atlas3DFeatureChildNode", fields: [childNodeId], references: [id], onDelete: SetNull)
+  linkedPage Page?        @relation("Atlas3DFeaturePage", fields: [linkedPageId], references: [id], onDelete: SetNull)
+
+  @@index([nodeId, kind])
+  @@map("atlas3d_features")
+}
+
+model Atlas3DObject {
+  id          String   @id @default(cuid())
+  nodeId      String   @map("node_id")
+  /// Procedural ink-style asset type (tree | house | tower | worldroot | asteroid …).
+  assetKind   String   @map("asset_kind")
+  /// Recipe parameters (seed, sizes); tint is the per-instance palette hue chosen in the inspector.
+  assetParams Json?    @map("asset_params")
+  /// Surface position { x, z } / globe { lat, lon } / orbit { radius, inclination, phase, speed }.
+  position    Json
+  scale       Float    @default(1)
+  rotation    Float    @default(0)
+  tint        String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  node Atlas3DNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId, assetKind])
+  @@map("atlas3d_objects")
+}
+
+model Atlas3DCameraBookmark {
+  id        String   @id @default(cuid())
+  nodeId    String   @map("node_id")
+  name      String
+  /// { position, target, fov } in node space.
+  pose      Json
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  node Atlas3DNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@map("atlas3d_camera_bookmarks")
 }
 
 // --- AI Gateway (RTX fallback, permissions, budgets, usage logs) ---
