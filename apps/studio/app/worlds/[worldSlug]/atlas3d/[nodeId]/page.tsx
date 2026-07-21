@@ -1,0 +1,96 @@
+import { notFound } from "next/navigation";
+import { createPrismaClient, getAppRepository } from "@uwe/database/server";
+import { createAtlas3DService } from "@uwe/database/atlas3d";
+import { resolveEffectiveNodeSettings } from "@uwe/atlas-editor/inheritance";
+import type { Atlas3DChainEntry, Atlas3DEnvironment } from "@uwe/atlas-editor/doc";
+import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
+import { worldSectionBreadcrumb, type BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
+import { Atlas3DEditorLazy } from "@/src/components/atlas3d";
+
+interface Props {
+  params: Promise<{ worldSlug: string; nodeId: string }>;
+}
+
+const LEVEL_LABELS: Record<string, string> = {
+  globe: "Globus",
+  continent: "Kontinent",
+  landscape: "Landschaft",
+  city: "Stadt",
+};
+
+export default async function Atlas3DNodePage({ params }: Props) {
+  const { worldSlug, nodeId } = await params;
+  const repo = getAppRepository();
+  const world = await repo.getWorldBySlug(worldSlug);
+  if (!world) notFound();
+
+  const db = createPrismaClient();
+  const atlas3d = createAtlas3DService(db);
+  const chain = await atlas3d.getNodeChain(nodeId);
+  if (!chain || chain.atlasWorld.worldId !== world.id) notFound();
+
+  const node = await atlas3d.getNode(nodeId);
+  if (!node) notFound();
+
+  // Effective settings via the shared inheritance resolver (world → … → node).
+  const chainEntries: Atlas3DChainEntry[] = [
+    {
+      id: chain.atlasWorld.id,
+      title: chain.atlasWorld.title,
+      level: "world",
+      stylePreset: chain.atlasWorld.stylePreset,
+      environment: (chain.atlasWorld.environment as Atlas3DEnvironment | null) ?? null,
+      seed: chain.atlasWorld.seed,
+    },
+    ...chain.nodes.map(
+      (entry): Atlas3DChainEntry => ({
+        id: entry.id,
+        title: entry.title,
+        level: entry.level,
+        stylePreset: entry.stylePresetOverride,
+        environment: (entry.environment as Atlas3DEnvironment | null) ?? null,
+        seed: entry.seed,
+      }),
+    ),
+  ];
+  const effective = resolveEffectiveNodeSettings(chainEntries);
+
+  const terrainMeta = (node.terrain?.meta ?? null) as { heightmap?: unknown } | null;
+
+  const breadcrumb: BreadcrumbItem[] = [
+    ...worldSectionBreadcrumb(world.name, worldSlug, "Atlas 3D", `/worlds/${worldSlug}/atlas3d`),
+    ...chain.nodes.slice(0, -1).map(
+      (entry): BreadcrumbItem => ({
+        label: entry.title,
+        href: `/worlds/${worldSlug}/atlas3d/${entry.id}`,
+      }),
+    ),
+    { label: node.title },
+  ];
+
+  return (
+    <WorldShell
+      worldSlug={worldSlug}
+      worldName={world.name}
+      breadcrumb={<BreadcrumbTrail items={breadcrumb} />}
+    >
+      <div className="atlas3d-page-head">
+        <h1>
+          {node.title}{" "}
+          <span className="atlas3d-level">{LEVEL_LABELS[node.level] ?? node.level}</span>
+        </h1>
+        <p className="atlas3d-effective">
+          Stil: {effective.stylePreset} · Licht: {effective.environment.timeOfDay} · Seed: {effective.seed}
+        </p>
+      </div>
+      <Atlas3DEditorLazy
+        worldSlug={worldSlug}
+        nodeId={node.id}
+        nodeTitle={node.title}
+        seed={node.seed}
+        initialCarveOps={node.terrain?.carveOps ?? []}
+        initialHeightmap={terrainMeta?.heightmap ?? null}
+      />
+    </WorldShell>
+  );
+}

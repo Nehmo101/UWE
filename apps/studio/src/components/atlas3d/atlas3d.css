@@ -1,0 +1,155 @@
+/* Atlas 3D editor shell — Parchment OS tokens throughout. */
+
+.atlas3d-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 70vh;
+}
+
+.atlas3d-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.atlas3d-tool {
+  background: var(--uwe-bg-elevated);
+  border: 1px solid var(--uwe-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  color: var(--uwe-fg);
+  cursor: pointer;
+}
+
+.atlas3d-tool:hover:not(:disabled) {
+  border-color: var(--uwe-fg-muted);
+}
+
+.atlas3d-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.atlas3d-tool.on {
+  border-color: var(--uwe-accent);
+  background: var(--uwe-accent-muted);
+  color: var(--uwe-accent);
+}
+
+.atlas3d-spacer {
+  flex: 1;
+}
+
+.atlas3d-save {
+  font-size: 0.78rem;
+  color: var(--uwe-success);
+}
+
+.atlas3d-save[data-state="Fehler"] {
+  color: var(--uwe-danger);
+}
+
+.atlas3d-save[data-state="ungespeichert"],
+.atlas3d-save[data-state="speichert …"] {
+  color: var(--uwe-warning);
+}
+
+.atlas3d-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 480px;
+  border: 1px solid var(--uwe-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, var(--uwe-panel) 0%, var(--uwe-bg) 80%);
+}
+
+.atlas3d-viewport canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.atlas3d-hint {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 85%, transparent);
+  border: 1px solid var(--uwe-border);
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--uwe-fg-muted);
+  pointer-events: none;
+}
+
+.atlas3d-nogl {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--uwe-fg-muted);
+  font-size: 0.9rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.atlas3d-inspector {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.atlas3d-inspector label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}
+
+.atlas3d-inspector input[type="range"] {
+  accent-color: var(--uwe-accent);
+  min-width: 140px;
+}
+
+.atlas3d-inspector em {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: var(--uwe-fg);
+}
+
+.atlas3d-loading {
+  display: grid;
+  place-items: center;
+  min-height: 480px;
+  color: var(--uwe-fg-muted);
+}
+
+.atlas3d-page-head h1 {
+  margin: 0 0 0.15rem;
+  font-size: 1.4rem;
+}
+
+.atlas3d-level {
+  font-size: 0.8rem;
+  color: var(--uwe-accent);
+  border: 1px solid var(--uwe-accent-muted);
+  background: var(--uwe-accent-muted);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  vertical-align: middle;
+}
+
+.atlas3d-effective {
+  margin: 0 0 0.6rem;
+  font-size: 0.82rem;
+  color: var(--uwe-fg-muted);
+}

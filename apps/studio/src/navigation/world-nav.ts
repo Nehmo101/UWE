@@ -73,6 +73,13 @@ export function worldNav(worldSlug: string, openReviewCount?: number): NavGroup[
           "map",
           "weltkarte",
         ]),
+        item("world-atlas3d", "Atlas 3D", `${base}/atlas3d`, "globe", "Wiki", [
+          "atlas 3d",
+          "globus",
+          "planet",
+          "3d",
+          "weltenbau",
+        ]),
         item("world-magic-items", "Magic-Item-Werkbank", `${base}/magic-items`, "gem", "Wiki", [
           "item",
           "magic item",
