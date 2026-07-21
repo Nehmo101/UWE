@@ -73,15 +73,7 @@ import {
   type HostConnectionTestResult,
   type RunnerId,
 } from "./lib/tauri";
-
-type ConnectorPath = "/" | "/connector" | "/runner" | "/models" | "/printers" | "/jobs" | "/logs" | "/diagnostics";
-
-const INITIAL_RUNTIME_STATUS: ConnectorRuntimeStatus = {
-  status: "stopped",
-  message: "Connector ist gestoppt.",
-  connectionStatus: "not_configured",
-  lastHeartbeatAt: null,
-};
+import { INITIAL_RUNTIME_STATUS, type ConnectorPath } from "./app-runtime";
 
 export default function App() {
   const [activePath, setActivePath] = useState<ConnectorPath>("/");

@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="uwe-hcc-control-token" content="__UWE_HCC_CONTROL_TOKEN__" />
   <title>UWE Host Command Center</title>
   <style>
     :root {
@@ -682,13 +683,22 @@
       });
     }
 
+    function readInjectedControlToken() {
+      const meta = document.querySelector('meta[name="uwe-hcc-control-token"]');
+      const value = meta ? meta.getAttribute("content") : null;
+      return value && value !== "__UWE_HCC_CONTROL_TOKEN__" ? value : null;
+    }
+
     async function ensureControlBootstrap() {
       if (controlToken) return controlToken;
+      // The token is injected into this page server-side; it is never fetched from
+      // a JSON endpoint (so a cross-site/DNS-rebound request cannot read it).
+      controlToken = readInjectedControlToken();
       const response = await fetch("/api/control/bootstrap", { cache: "no-store" });
       if (!response.ok) throw new Error("Steuerung nicht verfügbar");
       const body = await response.json();
-      controlToken = body.token;
       renderControlPanel(body);
+      if (!controlToken) throw new Error("Steuerungs-Token nicht verfügbar");
       return controlToken;
     }
 

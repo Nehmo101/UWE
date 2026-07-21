@@ -1,191 +1,109 @@
 # UWE — Full Codebase Audit & Prioritized Remediation Report
 
 **Codebase:** UWE (Universeller Welten-Editor) — self-hosted campaign-brain / world-wiki / daily-admin OS
-**Stack:** pnpm 10 + Turborepo monorepo · TypeScript (strict) · Next.js 15 (App Router) · Prisma 7 + SQLite (libsql) · Node 22 · Playwright + node:test
-**Scale:** ~2,900 tracked files · ~2,180 TS/TSX · 33 packages · 2 Next.js apps (studio, portal) + Tauri connector client
-**Audit date:** 2026-07-10 · **Branch:** `claude/new-session-1vt2cs`
-**Method:** 6 parallel audit agents (security, performance, code quality, test coverage, dependencies, architecture), each finding adversarially re-verified against the current source. Findings below were confirmed directly in this session; unverifiable or already-mitigated candidates were dropped.
+**Stack:** pnpm 10 (`pnpm@10.12.1`) + Turborepo monorepo · TypeScript (strict) · Next.js 15 (App Router) · Prisma 7 + SQLite/libsql · Node 22 · Tauri 2 desktop (UWE Command Center) · Playwright + node:test
+**Scale:** ~2,900 tracked files · ~1,990 TS/TSX · ~35 packages · 2 Next.js apps (studio, portal) + Tauri connector client + `uwe-host-command-center` host tool
+**Audit date:** 2026-07-21 · **Branch:** `claude/session-mz18sa`
+**Method:** 6-agent parallel audit (security, performance, code quality, test coverage, dependencies, architecture), each finding adversarially re-verified. See the *Method note* at the end for how a mid-run account spend-limit was handled — every finding below was re-confirmed by direct source read in this session; unverifiable or already-mitigated candidates were dropped.
 
 ---
 
-## Remediation Status (PR #764)
+## Remediation Status — all 10 findings fixed on `claude/session-mz18sa`
 
-**All 35 findings fixed and verified** (full `pnpm ci:light` green: lint, typecheck, all package tests, migration-check, file-size budget, server-barrel-freeze, secret-scan, docs-check). `pnpm audit --prod` now reports **no known vulnerabilities**, and Turborepo no longer detects any circular package dependency.
+Every finding below has been implemented and verified (typecheck, lint, `file-size-budget-check`, and the affected node:test suites all green: host-command-center 12/12, pdf-campaign-import 14/14, release 9/9, connector-client 22/22, client-server-boundary + server-barrel-freeze 3/3). The two studio integration tests that fail (`studio-auth.integration`, `today-dashboard.integration`) fail at a `sqlite3` DB-setup hook because the dev DB is unseeded in this environment — unrelated to these changes.
 
-Fixed — security & correctness: **C1** (restore execute owner-gated + regression tests) · **M1** (restore preview owner-gated) · **M8** (asset secret-filter alignment) · **M13** (viewer visibility pushed into SQL with the JS filter kept authoritative, proven equivalent).
-Fixed — performance: **H1** (search index memoized behind a page+block freshness key) · **H2** (wiki page views reuse a cached link graph instead of loading the whole world) · **H3** (renderBlock N+1) · **H4** (/today double-compute) · **M2** (auth hot path uses the shared Prisma singleton) · **M12** (async file serving + cache headers) · **M14** (share-link N+1) · **L7** (admin search parallelized) · **L8** (ActivityLog index + migration).
-Fixed — architecture: **H5** (`@uwe/database ↔ @uwe/mail` cycle broken via a new `@uwe/mail-core` leaf + removing the `mail-portal-service` back-edge — turbo is now cycle-free) · **M6** (login/2FA-challenge orchestration extracted into `@uwe/auth`, session-IP recording unified) · **M15** (three near-cap monoliths split — `settings-service.ts`, `graph-engine.ts`, `label-actions.ts` — baseline ratcheted down) · **M4** (opt-in log retention) · **M5** (job recovery on boot) · **M11** (dnd-api domain extraction) · **L4** (2FA route-helper dedup → `@uwe/auth` factory) · **L6** (`@uwe/security → @uwe/ai-brain` layering inversion removed).
-Fixed — tests & hygiene: **M3** (AST-based Server-Action guard enforcement) · **M7** (portal route auth inventory) · **M9** (deleteUser lockout tests) · **M10** (backup schedule tests) · **H6** (backup-encryption tests) · **L12** (2FA negative + TOTP RFC vectors) · **L13** (connector test de-flake) · **L3** (CI sync guard for duplicated UI primitives) · **L1** (9 orphaned modules + dead co-DM flow) · **L2** (5 unused deps) · **L5** (dead shared-ui exports) · **L9/L10** (hono + postcss overrides) · **L11** (@next/env).
+- **H1** — Command Center server now rejects non-loopback `Host` headers (DNS-rebinding defense), adds an `Origin`/`Sec-Fetch-Site` check on `POST /api/control/action`, and injects the control token into the dashboard HTML server-side instead of vending it from the unauthenticated `GET /api/control/bootstrap` (which now returns metadata only). New regression tests cover Host rejection and token non-leakage.
+- **M1** — `write_config_to_disk` (Tauri) now `chmod 0o600`s the config on Unix, matching the Node provisioner, so the connector token / Spotify secret are owner-only.
+- **M2** — `refresh` is now a stable callback that reads the project root from a ref (typing no longer re-fires the host-status probe) with a monotonic request id that drops stale responses.
+- **M3** — the `/import` page precomputes lean summary strings server-side (new `import-job-summary.ts`); full preview/result payloads no longer cross the RSC boundary, and the preview action returns `CampaignImportPreviewSummary` (entities stripped).
+- **L1** — the three new import actions use `createUweRepositoryFromClient(prisma)` instead of throwaway `createUweRepository()` clients.
+- **L2** — the Command Center webview now sets an explicit restrictive CSP (was `null`).
+- **L3** — the release manifest now records SHA-256 of each installer (fails the build if a given installer path is missing); a `release.test.ts` invariant fails the build if the updater is active with an empty pubkey, and asserts the CSP stays non-null.
+- **L4** — background status polls no longer set `busy`, so the action buttons stay enabled during polling.
+- **L5** — host logs are tail-read (last ~64 KB) and size-rotated at 5 MB instead of read/grown whole.
+- **L6** — added Host-header/Origin unit + integration tests on the server; extracted `app-runtime.ts` from `App.tsx` (690 → 682 lines) for headroom. (A full React-hook test for the panel needs test infra not present in this package — the M2/L4 logic is covered by review, not a renderer test.)
 
-All findings from every severity tier are now resolved on this branch. The work landed in five verified waves (each gated by `pnpm ci:light`): the CRITICAL restore-authz fix, then quick-wins + tests, then scaling-perf + architecture, then the login/mail/monolith refactors. The two largest architectural changes — H5 (breaking the mail cycle, ~74 files) and M15 (monolith splits) — were done as pure, behavior-preserving moves with re-exports, whole-repo typecheck, and baseline ratcheting.
+---
 
-One nuance surfaced during M3: two allowlisted admin/owner Server Actions (`activateAiGeneralPromptAction`, `updateDeploymentConfigAction`) gate on `requireAdminAccess`/`requireOwner`, which enforce auth+role but not the extra Origin check `requireStudioActionAuth` layers on top of Next.js' built-in Server-Action CSRF — low risk, but a candidate for hardening.
+## Nachtrag — Audit der 4 restlichen Kategorien (Code-Qualität · Test-Coverage · Dependencies · Architektur)
+
+Die vier Kategorien, deren Auditoren zuvor am Spend-Limit gestorben waren, wurden als vollständiger, adversarisch verifizierter Workflow nachgeholt (18/18 Agenten erfolgreich). Ergebnis: **6 bestätigte Findings** (5× LOW, 1× MEDIUM), **8 Kandidaten als False Positive verworfen** — der neue Code ist im Kern sauber (keine `any`/`@ts-ignore`, keine verwaisten Dateien oder ungenutzten Deps, kein Zyklus im Paketgraph, keine Domänen-Logik in Route-Handlern, `pnpm audit --prod` moderate = 0).
+
+**Sofort umgesetzt (3 triviale LOW-Quick-Wins, alle verifiziert):**
+- **Q1** (Code-Qualität) — `CommandCenterPanel` nutzte 8× inline `nextError instanceof Error ? … : String(nextError)` statt des geteilten `toMessage`-Helpers (den alle 13 anderen Panels verwenden) und zeigte für Nicht-Error-Objekte `[object Object]` statt der freundlichen Fallback-Meldung. → jetzt `toMessage(nextError)`.
+- **Q2** (Code-Qualität) — `DirectConnectorEvent` war byte-identisch in `direct-protocol.ts:74` **und** `direct/registry.ts:23` deklariert. → Redeklaration entfernt, Single Source of Truth per Re-Export; ungenutzte Frame-Importe bereinigt.
+- **Q3** (Test-Coverage) — `preview.ts` (`buildCampaignPreview`/`toCampaignPreviewSummary`, das M3-Kernstück) hatte keine Tests. → `preview.test.ts` mit 6 Fällen inkl. der „entities werden aus dem Client-Payload gestrippt"-Invariante (schützt den M3-Fix vor Regression).
+
+**Dokumentiert, bewusst als Follow-up zurückgestellt (größerer Umfang / eigene Design-Entscheidung nötig):**
+- **A1 · MEDIUM (Architektur)** — Das Host-Update-Dateiprotokoll ist **dreifach** implementiert: kanonisch in `packages/database/src/host-update-service.ts` plus zwei eigenständige Reimplementierungen in `tools/uwe-host-command-center/src/control.ts` (Konstanten `:36-38`, `isHostUpdateEnvEnabled` `:144`, `readHostUpdateStatus` `:158`, `resolveHostUpdateAvailability` `:168`, `writeHostUpdateRequest` `:195`) und `host-update-progress.ts` (`HostUpdateState` `:6`). Bereits driftend (jobId-Format, Pending-State) → Studio und Command Center können über den Update-Status uneinig sein. **Fix:** gemeinsame Quelle in ein `@uwe/host-update`-Leaf-Package extrahieren oder die bestehenden `@uwe/database`-Helper im Command Center konsumieren. **Aufwand:** 2h–1d. *(Refactor mit Verhaltensrisiko — verdient eine eigene, getestete Änderung statt Beifang im PR.)*
+- **A2 · LOW (Test-Coverage)** — Die Server-Action-Guards in `import-central-actions.ts` (Kampagnen-Ownership `getCampaignBySlug` `:179`, Combo-Gate, 10-MB-Cap, PDF-Routing) sind nur auf Service-Ebene getestet, nicht auf Action-Ebene. Alle hinter `requireStudioActionAuth`, DM-only → LOW. **Fix:** `import-central-actions.test.ts` mit gemocktem Repo. **Aufwand:** 2h–1d.
+- **A3 · LOW (Dependencies)** — Die im Windows-Release ausgelieferte Rust/Tauri-Crate-Kette hat **keine** Supply-Chain-Prüfung in CI (nur `pnpm security:audit` für den npm-Graph; kein `cargo-audit`/RUSTSEC). **Fix:** `cargo-audit`/`cargo-deny`-Gate gegen `apps/rtx-connector-client/src-tauri/Cargo.lock` in `security.yml`. **Aufwand:** 30min–2h. *(CI/Infra-Änderung außerhalb des Code-Diffs.)*
+
+Verworfene False Positives (Auszug): `import-job-summary.ts` untested (nur eine reine Reduktion der bereits getesteten Payloads), `as unknown as`-Casts in `import-central-actions.ts` (funktional korrekt), unbounded `ImportJob`-Tabelle (dieselbe Retention-Lücke wie M4 der vorherigen Runde, kein neues Finding), Tauri-`2.0.0`-Pins (Hygiene, kein aktives CVE), `--audit-level high` (dokumentiertes, gewolltes Verhalten laut AGENTS.md).
+
+---
+
+## Context — this is a delta audit over PR #764
+
+A full audit ran **2026-07-10** and **all 35 of its findings were fixed and merged** (previous report content is superseded by this file). This audit re-verified that those fixes still hold and concentrated scrutiny on the code that landed since: the **PDF-campaign importer** (`packages/pdf-campaign-import`, `apps/studio/app/import*`), the **UWE Command Center** (`apps/rtx-connector-client` Tauri app + `tools/uwe-host-command-center` host server + `packages/connector*`), and the **Windows release/update workflow**.
+
+**Verified still-healthy from the prior audit:** the search-index memoization, the cached wikilink graph (`page-viewer-service.ts:152`), the shared block-render context, the `/today` dedup (`today-dashboard.ts:129-143`), and the `listPagesForViewer` SQL narrowing all remain in place. The two previously-flagged allowlisted Server Actions (`activateAiGeneralPromptAction`, `updateDeploymentConfigAction`) **now both call `requireStudioActionAuth()`** before their role gate — that leftover is closed. `pnpm audit --prod` at **moderate** level reports **no known vulnerabilities**.
 
 ---
 
 ## Executive Summary
 
-**Overall health: STRONG (7.5 / 10) — one CRITICAL authorization gap, otherwise a disciplined, well-defended codebase.**
+**Overall health: STRONG (8.0 / 10) — 0 CRITICAL, 1 HIGH. The core web platform is in good shape; essentially all new debt is on the new host-control / desktop surface.**
 
-UWE is unusually well-engineered for a self-hosted hobby project: Studio API routes are uniformly guarded (enforced by a static route-inventory test), CSRF is applied to mutating routes, all raw SQL uses constant strings, wiki/mail HTML is DOMPurify-sanitized, no secrets are tracked, the `dm_only`/secret-visibility invariant is enforced at the data layer with regression tests, and framework/dependency hygiene is current (Next 15.5.19, React 19.2.7, Prisma 7.8.0, TS 5.9.3) with a clean license profile and only 2 low-impact transitive advisories. Test coverage is broad (449 test files, all green with zero skips) and the anti-monolith budget system is real and enforced.
+The Studio/Portal web platform remains disciplined and well-defended: Studio API routes are auth-guarded and the guard is enforced by a *dynamic* route-inventory test (`scripts/studio-route-auth.test.ts` via `listStudioApiRouteFiles`, so new routes are auto-covered), the new PDF importer forces local-only AI routing with size/MIME guards and does **no** third-party PDF byte parsing (it operates on already-extracted text and ships real unit tests for its chunker/parser/dedupe/page-mapper), no Prisma calls leaked into the new route handlers, dependencies are clean at moderate level, and the prior 35 fixes hold. The single **HIGH** finding is on the new host-control tool: the UWE Command Center HTTP server (systemd, port 3099, backed by scoped passwordless `sudo`) performs no `Host`/`Origin` validation and vends its control token from an unauthenticated `GET /api/control/bootstrap`, making its token gate bypassable via DNS-rebinding from a browser running on the host. The remaining debt is a cluster of **MEDIUM/LOW** hardening and hygiene items concentrated in the Tauri client and Command Center UI (world-readable secret file, disabled CSP, empty updater pubkey, a keystroke-triggered process-spawning status probe, an over-serialized `/import` RSC payload, and a re-introduction of the previously-fixed throwaway-`PrismaClient` anti-pattern in the new import actions).
 
-The health score is held back by **one CRITICAL finding**: the destructive full-database restore endpoint is not owner-gated in the way SECURITY.md claims — a lower-privileged `dm` Studio user can trigger a full DB overwrite (and, via the restore bundle, inject an owner account). Beyond that, the debt is concentrated in **two systemic performance/architecture patterns** — an unmemoized per-request search/wiki index that hydrates the whole world DB on hot paths, and ~160 call sites that create throwaway per-request PrismaClients against the single SQLite file, contradicting the codebase's own documented singleton — plus a confirmed `@uwe/database ↔ @uwe/mail` circular dependency and a handful of high-value test gaps (backup encryption has zero tests; ~280 Server Actions have no guard-enforcement test).
-
-**Finding count:** 1 CRITICAL · 6 HIGH · 15 MEDIUM · 8 LOW (30 total, all HIGH-confidence).
+**Finding count:** 0 CRITICAL · 1 HIGH · 3 MEDIUM · 6 LOW (10 total, all HIGH/MEDIUM-confidence).
 
 ---
 
 ## Prioritized Findings
 
-### 🔴 CRITICAL
-
----
-
-#### C1 · Full-database restore is not owner-gated — any Studio `dm` user can overwrite the entire DB
-- **Category:** Security (authorization / RBAC)
-- **Location:** `apps/studio/app/api/backup/restore/execute/route.ts:9` · guard `packages/security/src/security/guards.ts:152-168`
-- **Confidence:** HIGH
-- **Description:** `POST /api/backup/restore/execute` performs a destructive full-database restore but never checks the caller's role. Its only guard, `requireRestoreOwnerAuth`, calls `requireStudioApiAuth` (which admits `owner`, `admin`, **and `dm`** per `STUDIO_ACCESS_ROLES`) and then: `const restoreToken = process.env.RESTORE_OWNER_TOKEN?.trim(); if (!restoreToken) return null;` — i.e. it **allows the request when `RESTORE_OWNER_TOKEN` is unset**, which is the shipped default (`.env.example:49` has it commented out). Even when the token is set, `isSameOriginBrowserRequest()` bypasses it for any logged-in Studio browser session. The intended control `canRestoreBackup` (owner-only, `packages/backup/src/permissions.ts:25`) is imported **only** for the UI-facing `getBackupPermissions` (`backup-handlers.ts:47`) and is never enforced on the mutating path. Because restore recreates `User` rows from the uploaded bundle, a `dm` can also inject an owner account — a privilege-escalation path, not just data loss. This directly contradicts SECURITY.md's stated "OWNER-only restore" invariant.
-- **Evidence:** Route guard is `requireRestoreOwnerAuth(request)`; guard body returns `null` (allow) when `RESTORE_OWNER_TOKEN` is unset; `grep canRestoreBackup` shows it is only ever called in `backup-handlers.ts:47` (UI permissions), never in `postRestoreExecute`.
-- **Recommended fix:** In the execute handler, resolve the session auth context (`resolveStudioApiAuthContext`) and enforce owner via `requireOwnerApiAuth` (already defined at `guards.ts:173`) **or** an explicit `canRestoreBackup(context.user.role)` check — in addition to, not instead of, `requireRestoreOwnerAuth`. Do the same in the preview route (see M1). Do not rely on `RESTORE_OWNER_TOKEN` being set or on the client hiding the button.
-- **Effort:** 30 min · **Quick win:** ✅
-
----
-
 ### 🟠 HIGH
 
 ---
 
-#### H1 · Global command-palette search rebuilds a full in-memory index of ALL pages + content blocks on every request
-- **Category:** Performance
-- **Location:** `packages/database/src/search-service.ts:429` (index build) · caller `apps/studio/app/api/command/search/route.ts:23`
+#### H1 · UWE Command Center control server has no `Host`/`Origin` validation and serves its control token unauthenticated — DNS-rebinding reaches scoped-sudo host actions
+- **Category:** Security (CSRF / DNS-rebinding → privileged host control)
+- **Location:** `tools/uwe-host-command-center/src/server.ts:84` (bootstrap) · `:45,:51` (bind + URL base) · gate `tools/uwe-host-command-center/src/control.ts:291` · `deploy/sudoers/uwe-host-command-center`
 - **Confidence:** HIGH
-- **Description:** Every `/api/command/search` call (fired per keystroke from the command palette) runs `searchStudioCrossDomain → searchGlobalForDm → loadPagesForSearch` with no `worldSlug`, loading **every** page in the DB plus **all** content blocks, merging entity tags, building a fresh in-memory search index, scoring in JS, and discarding it. There is zero memoization — the index is rebuilt per request. Perf budgets (`searchIndexBuild` 1200 ms) are only validated at ~60-page CI scale; at the documented `mega` scale (10k pages / 40k blocks) every keystroke materializes the whole world DB in RAM. The gap is documented in `docs/engineering/performance-improvement-plan.md` (WS4, status "proposed", unimplemented).
-- **Recommended fix:** Memoize the per-world/global index keyed on `worldId + max(page.updatedAt)` (or `unstable_cache` with a mutation-invalidated tag); longer term move ranking into SQLite FTS5 so only matched rows are hydrated.
-- **Effort:** 1–2 days · **Quick win:** ❌
-
-#### H2 · Every wiki page view loads the ENTIRE world (all pages + all blocks) to compute backlinks and the neighbor graph
-- **Category:** Performance
-- **Location:** `packages/database/src/page-viewer-service.ts:139` · studio dup at `page-service.ts:424` + `graph-service.ts:310`
-- **Confidence:** HIGH
-- **Description:** `buildPageViewForViewer` (portal + studio player-preview wiki route) calls `repo.listPagesWithBlocksForGraphUnfiltered(worldSlug, {})` — an unbounded `findMany` with `include:{contentBlocks, campaign}` over every page — then regex-parses the combined content of every visible page to find backlinks to one page, per request. The studio DM route does the equivalent **twice** per view (backlink loop over all `visibleNodes` + `buildPageGraph → buildWorldGraph` reloading the full world with blocks). At stress scale (500–10k pages) this is O(world content) hydration + O(pages × links) regex work on the hottest content route.
-- **Recommended fix:** Compute backlinks from the persisted `PageLink` table instead of re-parsing all content per view; restrict the neighbor graph to the focus page's 1-hop neighbors; cache the parsed link graph per world keyed on `max(updatedAt)`.
-- **Effort:** 1–2 days · **Quick win:** ❌
-
-#### H3 · N+1: `renderBlockContentForViewer` re-loads all pages of the world once per content block on portal page views
-- **Category:** Performance
-- **Location:** `packages/database/src/auth.ts:886` · callers `apps/portal/app/auth/worlds/[worldSlug]/[slug]/page.tsx:67` and `page-viewer-service.ts:127`
-- **Confidence:** HIGH
-- **Description:** `AuthService.renderBlockContentForViewer` runs `db.page.findMany` for ALL pages of the world (to build a wikilink lookup map) plus a `world.findUnique` on **every call**. Both callers invoke it inside `contentBlocks.map(...)` per block, so a 20-block portal wiki page issues 20 full-world page queries and rebuilds the same lookup Map 20×, serialized on the single SQLite connection.
-- **Recommended fix:** Build the page-lookup index once per request (e.g. `renderBlocksForViewer(worldSlug, blocks[], ctx)` or accept a preloaded lookup), then render all blocks against it. Behavior-identical; removes N−1 full-table queries per page view.
-- **Effort:** 2–3 h · **Quick win:** ❌
-
-#### H4 · `/today` dashboard computes admin status, homelab status, leak scan, AI/RTX probes and life-admin summary TWICE per request
-- **Category:** Performance
-- **Location:** `apps/studio/src/lib/today-dashboard.ts:141-144` · `apps/studio/src/lib/homelab-dashboard.ts:72,120`
-- **Confidence:** HIGH
-- **Description:** `getTodayDashboardData` awaits `getAdminDashboardStatus(db)` **and** `getHomelabCockpitData(db)` in the same `Promise.all` — but `getHomelabCockpitData` internally re-calls `getAdminDashboardStatus` (`homelab-dashboard.ts:72`) and `lifeAdmin.getTodaySummary()` (`:120`), both already computed directly. `getAdminDashboardStatus` includes `scanPublicContentLeaks` (loads all published pages + blocks + assets + soundboard rows for every world, sequentially) plus live `getInferenceStatus`/`checkRtxReadiness` network probes. So one `/today` render performs 2× full-content leak scans, 2× inference/RTX HTTP probes, and 2× ~15-query life-admin summaries. `/today` is CI-budgeted (LCP 3000 ms, `todaySummary` 1500 ms) — doubled here. **Confirmed:** `homelab-dashboard.ts` lines 72 and 120 re-invoke both.
-- **Recommended fix:** Pass the already-computed `adminStatus` and `lifeSummary` into `getHomelabCockpitData` as parameters (or wrap both in React `cache()` for per-request dedup). Separately, cache `scanPublicContentLeaks` for a few minutes instead of scanning all published content per render.
-- **Effort:** 30 min · **Quick win:** ✅
-
-#### H5 · Circular package dependency: `@uwe/database` ↔ `@uwe/mail` (confirmed by Turborepo)
-- **Category:** Architecture
-- **Location:** `packages/mail/package.json:23` ↔ `packages/database/package.json:83`
-- **Confidence:** HIGH
-- **Description:** The mail domain is split across two packages that import each other at runtime in both directions. `packages/database` holds 8+ mail-domain services (`mail-account-service`, `mail-compose-service`, `mail-unsubscribe-service`, …) importing runtime functions from `@uwe/mail`, while `@uwe/mail` services import back from `@uwe/database` (`resolveTokenEncryptionSecret` via `@uwe/database/token-crypto`, `mail-account-service`, `mail-unsubscribe-service`). Both `package.json` files declare each other as deps. This is exactly the failure mode CLAUDE.md's "Neue Domänen-Services gehören NICHT in `packages/database`" rule exists to prevent. **Confirmed:** both `package.json` cross-dependencies present.
-- **Recommended fix:** Consolidate the mail domain in `@uwe/mail` — move the DB-bound `mail-*` services out of `packages/database` (they already take `PrismaClient` as a param, so it's mechanical), keep only the generic token-crypto primitive in database (or move to `@uwe/auth`/`@uwe/security`), and drop `@uwe/mail` from `packages/database` deps. Temporary `@uwe/database` subpath re-exports preserve back-compat.
-- **Effort:** 1–2 days · **Quick win:** ❌
-
-#### H6 · Backup encryption/decryption module has ZERO test coverage
-- **Category:** Test coverage
-- **Location:** `packages/backup/src/encrypt.ts:45` (sole consumer: `export.ts:87,122`)
-- **Confidence:** HIGH
-- **Description:** The AES-256-GCM backup encryption module (`encryptBackupPayload`, `decryptBackupPayload`, `isEncryptedBackupPayload`, `resolveBackupEncryptionKey` with dual env-key/scrypt-password derivation) has no test anywhere in the repo. `backup.test.ts` (431 lines) exercises only **unencrypted** export/restore. A regression in the encrypt/decrypt round-trip, key-derivation precedence (hex env key vs sha256-of-string vs scrypt password), or payload format would make encrypted backups silently **unrestorable** — discovered only at disaster-recovery time, the worst moment for the project's primary data-loss safety net. **Confirmed:** `grep encryptBackupPayload --include=*.test.ts` → 0 hits.
-- **Recommended fix:** Add `packages/backup/src/encrypt.test.ts` with round-trip tests for both key forms (64-hex + passphrase), the scrypt path, wrong-password → error, tampered `authTag`/`iv` → error, `isEncryptedBackupPayload` true/false, and env-key-over-password precedence. Optionally one encrypted export→restore case in `backup.test.ts`.
-- **Effort:** 30 min · **Quick win:** ✅
-
----
-
-> **Note — the "~160 per-request `createPrismaClient()`" pattern** was surfaced by both the performance and architecture auditors (`packages/database/src/client.ts:93` vs the documented singleton at `:74`; hottest site `apps/studio/src/lib/auth-session.ts:22` on every authenticated request). It carries a HIGH severity from both. It is consolidated as **M2** below to avoid double-counting; treat it with HIGH-tier priority.
+- **Description:** `uwe-host-command-center.service` runs an HTTP server bound to `127.0.0.1:3099` (`server.ts:45`) whose sudoers file grants passwordless `systemctl restart uwe.service`, `start uwe-backup.service`, `start uwe-healthcheck.service`, plus a host-update trigger. Access is nominally gated by a control token, but `GET /api/control/bootstrap` returns that token **unconditionally** to any requester (`server.ts:84-93`: `sendJson(res, 200, { ...meta, token })`), and `executeControlAction` accepts exactly that token (`control.ts:291`). The server builds its URL base from a **fixed** host string (`new URL(req.url, `http://${host}:${port}`)`, `:51`) and never inspects the request `Host` or `Origin` header anywhere. Because 127.0.0.1-binding is the only real access control, a malicious web page opened in a browser *on the host* can use DNS rebinding (`evil.com → 127.0.0.1`) to make same-origin requests: `fetch('/api/control/bootstrap')` to read the token, then `POST /api/control/action {action, token}` to restart UWE, force a backup, or trigger a full host git-sync + rebuild (`update-uwe`). `server.test.ts` even asserts bootstrap returns a token with no auth. **Verified:** bootstrap handler and bind address read in full; sudoers grants confirmed; no `Host`/`Origin` check exists in `createHostCommandCenterServer`. Impact is bounded by the *scoped* sudoers allowlist (fixed `systemctl` invocations only — no arbitrary command execution), which is why this is HIGH, not CRITICAL.
+- **Recommended fix:** Reject requests whose `Host` header is not exactly `127.0.0.1:3099` / `localhost:3099` (defeats DNS rebinding) and add an `Origin`/`Sec-Fetch-Site` check on `POST /api/control/action`. Stop serving the control token from an unauthenticated GET — inject it into the dashboard HTML server-side (same origin) or bind a per-request CSRF token to the session so the token is never retrievable by a cross-site `fetch`.
+- **Effort:** 30min–2h · **Quick win:** ⚠️ (small, high-value)
 
 ---
 
 ### 🟡 MEDIUM
 
-#### M1 · Restore **preview** accessible to non-owner Studio users (`dm`/`admin`) despite owner-only policy
-- **Category:** Security · **Location:** `apps/studio/app/api/backup/restore/preview/route.ts:6` · `backup-handlers.ts:196`
-- **Confidence:** HIGH · **Effort:** 30 min · **Quick win:** ✅
-- Guarded only by `guardStudioApiMutation` (admits `owner`/`admin`/`dm`) + CSRF. `postRestorePreview` runs `previewRestoreOnly` on any uploaded bundle with no role check, despite `canPreviewRestore` being owner-only. Lets a `dm`/`admin` enumerate any backup's full contents summary (worlds, campaigns, **user list**, memberships) — data outside their scope. Same client-side-only enforcement bug as C1. **Fix:** enforce `canPreviewRestore` server-side using the resolved session role; align `/api/backup` create/download guards with `canCreateBackup`/`canDownloadBackup` so `admin` isn't implicitly granted excluded backup capabilities.
+---
 
-#### M2 · ~160 per-request `createPrismaClient()` call sites contradict the documented shared-singleton pattern (incl. the auth hot path)
-- **Category:** Architecture / Performance · **Location:** `apps/studio/src/lib/auth-session.ts:22` · `packages/database/src/client.ts:74` vs `:93`
-- **Confidence:** HIGH · **Effort:** 1–2 days · **Quick win:** ❌
-- `client.ts:74` documents `getSharedPrismaClient()` as "Process-wide SQLite singleton — avoids lock storms from per-request clients," yet 99 files in studio + 61 in portal call `createPrismaClient()` per request, opening a fresh libsql connection to the same SQLite file each time. Worst case: `getUserFromRequestCookieHeader()` creates+tears down a client on **every** cookie-authenticated Studio API request. `applySqlitePragmas()` sets `busy_timeout=5000` **fire-and-forget**, so short-lived connections can run queries before the timeout is applied and fail with `SQLITE_BUSY` under concurrent write load — the exact "lock storm" the comment warns about. `apps/portal/src/lib/auth.ts` already uses the singleton correctly, so the codebase is split. **Fix:** switch auth hot paths to `getSharedPrismaClient()` immediately, migrate the rest mechanically, add an ESLint rule against arg-less `createPrismaClient()` in `apps/**`.
+#### M1 · Tauri Command Center writes the connector token and Spotify client secret world-readable (no `0600`), unlike the Node provisioner for the same file
+- **Category:** Security (local secret exposure)
+- **Location:** `apps/rtx-connector-client/src-tauri/src/lib.rs:747` (`write_config_to_disk`) · contrast `tools/uwe-host-command-center/src/provision-local-connector.ts:64`
+- **Confidence:** HIGH
+- **Description:** `write_config_to_disk` serializes `ConnectorClientConfig` — which includes the connector bearer `token` and `spotify_client_secret` — and writes it with a plain `fs::write` and **no** permission tightening (`lib.rs:747-758`; no `chmod`/`set_permissions`/`0o600` anywhere in `lib.rs`). On Linux/macOS the file at `~/.local/share/UWE/rtx-connector-client/config.json` is created with the process umask (typically `0644`, world-readable). The Node writer for the **same file** explicitly does `fs.chmodSync(configPath, 0o600)` on non-Windows (`provision-local-connector.ts:64`), so whichever path runs last determines the mode — and the Rust path leaves the secrets readable by any other local user on a shared/multi-user host.
+- **Recommended fix:** After writing `config.json` (and any Spotify session file) set mode `0o600` on Unix, matching the Node provisioner; ideally write to a temp file and rename to avoid a world-readable window.
+- **Effort:** <30min · **Quick win:** ✅
 
-#### M3 · No test enforces that every Server Action calls its auth guard (only the `"use server"` directive is checked)
-- **Category:** Test coverage · **Location:** `apps/studio/src/lib/server-actions.test.ts:28`
-- **Confidence:** HIGH · **Effort:** 2 h · **Quick win:** ❌
-- ~280 exported Studio actions + 6 portal action modules; every one currently calls `requireStudioActionAuth()`/`requirePortalActionAuth()`, and the guard helper documents "middleware alone is not sufficient." Yet the only test asserts nothing but `firstLine === '"use server";'`. The equivalent API-route surface has a full static auth-inventory test (`scripts/studio-route-auth.test.ts`); the strictly-more-exposed action surface has no such net, so one forgotten guard in a new action file ships silently. **Fix:** extend the test (and add a portal twin) to statically assert each exported action awaits its guard as the first statement, with an explicit allowlist for intentionally-public actions.
+#### M2 · Command Center: every keystroke in the project-root input triggers a full host-status probe (node CLI spawn + git + nvidia-smi + health fetches), with no cancellation
+- **Category:** Performance (new desktop UI)
+- **Location:** `apps/rtx-connector-client/src/components/CommandCenterPanel.tsx:94-112` · input `:400`
+- **Confidence:** HIGH
+- **Description:** `refresh` is a `useCallback` with dependency `[root]` (`:94-108`), and the mount effect `useEffect(() => { void refresh(config.localHostRoot); }, [config.localHostRoot, refresh])` (`:110-112`) re-runs whenever `refresh`'s identity changes. The project-folder input does `onChange={e => setRoot(e.target.value)}`, so **every keystroke** recreates `refresh` and re-fires the effect → invokes the Tauri `get_host_status` command, which spawns a fresh `node` process running `desktop-host-cli.ts`, which runs `git rev-parse` + `git branch`, `nvidia-smi`, `statfs`, and two HTTP health probes (2.5 s AbortSignal timeouts). Typing a path spawns ~10 overlapping process trees; responses have no cancellation token, so a stale probe can overwrite a newer `setStatus`. The same keystroke also clears and re-arms the 15 s poll interval.
+- **Recommended fix:** Decouple the mount effect from the typed input — give `refresh` empty deps and read the latest `root` from a ref, or depend only on `[config.localHostRoot]`; alternatively debounce. Add a monotonic request counter so stale `getHostStatus` responses are dropped.
+- **Effort:** <30min · **Quick win:** ✅
 
-#### M4 · No retention/pruning for any log, audit, version, or delivery table — unbounded SQLite growth
-- **Category:** Architecture (scaling) · **Location:** `packages/database/prisma/schema.prisma` (AuditLog:1578, ActivityLog:1465, JobLog:1869, MailMessageLog:2079, PageVersion:3292, …)
-- **Confidence:** HIGH · **Effort:** 1 day · **Quick win:** ❌
-- ≥12 append-only tables; repo-wide search finds **no** time-filtered `deleteMany` outside backups (`retention.ts`) and calendar events. UWE is always-on, audits every login/rate-limit hit, logs every job line, versions every page save — on one SQLite file that is also zipped into every backup. Over months the DB and backup sizes grow without bound and hot-table scans degrade. **Confirmed:** `grep "createdAt: { lt"` → 0 matches outside generated code. **Fix:** add a retention sweep to the existing maintenance/job path with per-table max-age/max-rows settings via the established settings-service + systemd-timer self-service pattern.
-
-#### M5 · In-process fire-and-forget job execution has no recovery after process restart
-- **Category:** Architecture · **Location:** `apps/studio/src/lib/job-executor.ts:10-22` · `instrumentation.ts` (no sweep)
-- **Confidence:** HIGH · **Effort:** 2–4 h · **Quick win:** ❌
-- Jobs are DB-persisted but executed via `dispatchJob()`'s fire-and-forget promise inside the Next process, deduped by an in-memory `Set`. No startup sweeper, no poller. The app itself makes restarts routine (`/api/admin/host-restart`, `/api/admin/host-update`, systemd deploys). On restart mid-job, `running` jobs stay `running` forever and `pending` jobs are never re-dispatched; `retry()` rejects both states, so the only escape is manual per-job cancel. **Fix:** in `instrumentation.ts register()`, add a boot sweep that fails stuck `running` jobs ("process restarted") and re-dispatches `pending` ones; optionally a periodic pending-job poll.
-
-#### M6 · Login/2FA orchestration hand-rolled in 5 route handlers with observable behavioral drift
-- **Category:** Architecture / Security · **Location:** `apps/portal/app/api/auth/login/route.ts:160` vs `apps/studio/.../login/route.ts:164`, `.../enter/route.ts:104`
-- **Confidence:** HIGH · **Effort:** 1 day · **Quick win:** ❌
-- The security-critical login state machine (rate-limit → Turnstile → authenticate → 2FA challenge → `createSession` + cookie → audit) is duplicated across 5 handlers. Already drifted: Portal records session IP (`createSession(user.id, { ipAddress: ip })`) while Studio login/enter/2FA-verify call `createSession(user.id)` without it; Portal uses an inline `{ maxAttempts: 8, windowMs: 5*60_000 }` instead of `RATE_LIMIT_PRESETS.login`. Business logic in route handlers (golden-rule violation); any future hardening must touch 5 places. **Fix:** extract `performLoginFlow()`/`completeTwoFactorLogin()` into `@uwe/auth`, parameterized by surface + access predicate; unify the `createSession` signature so session IP is always recorded.
-
-#### M7 · No per-route auth inventory test for the 25 Portal API routes (Studio has one, Portal does not)
-- **Category:** Test coverage · **Location:** `packages/security-tests/src/route-authz.test.ts:252` · `find apps/portal/app/api -name route.ts` → 25
-- **Confidence:** HIGH · **Effort:** 1–2 h · **Quick win:** ❌
-- Every Studio route is enumerated and asserted protected-or-allowlisted; the Portal — whose entire purpose is showing only filtered content — has only two spot checks (graph viewer-context regex + a middleware regex). A new/modified Portal route (admin/audit-log, session touch, asset-file signature) skipping the guard pattern wouldn't be caught statically. **Fix:** generalize `studio-route-inventory.ts` into a shared helper, define `PORTAL_PUBLIC_API_ALLOWLIST` + a portal guard pattern, assert every portal `route.ts` is guarded or allowlisted.
-
-#### M8 · `filterAssetsForContext` ignores `secretLevel`/`revealState`, diverging from `isAssetAccessible` — and is untested
-- **Category:** Security / Test coverage · **Location:** `packages/database/src/permissions.ts:175` (dup in `packages/assets/src/permissions.ts:28`)
-- **Confidence:** HIGH · **Effort:** 45 min · **Quick win:** ✅
-- `filterAssetsForContext` filters non-DM contexts by **visibility only**, while sibling `isAssetAccessible` additionally rejects unrevealed secrets (`isPlayerExposableContent` with `secretLevel`/`revealState`). A `player_visible` asset marked `dm_secret`+`hidden` passes the list filter but fails the single-asset check. **Currently latent** — no app code calls `listAssetsForContext` today (portal serving goes through the tested `getAssetForViewer`) — but both functions are exported through the frozen `@uwe/database/server` barrel, so a future portal/share caller would leak hidden-secret asset metadata in listings. No test calls it. **Fix:** align `filterAssetsForContext` with `isAssetAccessible`; add `dm_secret`+`hidden` tests for both list and single-asset paths in `visibility-security.test.ts`.
-
-#### M9 · Owner-lockout guards in `deleteUser` (`CANNOT_DELETE_SELF`, `LAST_OWNER`) are untested
-- **Category:** Test coverage · **Location:** `packages/database/src/user-service.ts:308,316`
-- **Confidence:** HIGH · **Effort:** 20 min · **Quick win:** ✅
-- These guards prevent bricking the single-admin self-hosted instance, but no test exercises either branch (only the non-owner happy path at `user-management.test.ts:184`). `deleteUser` is reachable from the admin UI/API **and** the NL command center ("delete user X"), so a regression lets an owner lock themselves out with one confirmed command. **Confirmed:** `grep CANNOT_DELETE_SELF|LAST_OWNER --include=*.test.ts` → 0 hits. **Fix:** add two tests — self-delete rejects `CANNOT_DELETE_SELF`, deleting the sole active owner rejects `LAST_OWNER`.
-
-#### M10 · Self-service backup schedule contract (TS writer ↔ shell grep parser) is completely untested
-- **Category:** Test coverage · **Location:** `deploy/scripts/uwe-backup.sh:25` · `packages/backup/src/schedule.ts`
-- **Confidence:** HIGH · **Effort:** 1–2 h · **Quick win:** ❌
-- The reference implementation of CLAUDE.md's DB-setting → host-JSON → systemd pattern is untested on both sides: `schedule.ts` (`read/writeBackupScheduleConfig`) has no unit test, and `uwe-backup.sh` parses `schedule.json` with brittle `grep -o` extraction plus untested weekly/monthly skip logic. A JSON-format change in the writer or an off-by-one in the threshold would silently skip scheduled backups; same untested pattern in `uwe-briefing.sh`/`uwe-mail-sync.sh`. **Fix:** add `schedule.test.ts` (write→read round-trip, invalid-frequency fallback, enabled coercion) and a `selfhost.test.ts`-style test running the shell parsing block against a written config.
-
-#### M11 · D&D page-creation workflow and slug-uniqueness logic implemented directly in an API route
-- **Category:** Architecture · **Location:** `apps/studio/app/api/dnd-api/route.ts:86` (319-line route)
-- **Confidence:** HIGH · **Effort:** 2–4 h · **Quick win:** ❌
-- Genuine domain logic in a route handler (golden-rule violation): `resolveUniquePageSlug()` implements slug-collision resolution as a `while`-loop over `repo.getPageBySlug` (this logic exists nowhere in packages — other page-creation paths can't reuse it), and the `import_statblock`/`create_encounter` branches assemble `Page`+`ContentBlock` records with inline `dm_only` visibility defaults. **Fix:** move slug-uniqueness into the repository (`createPageWithUniqueSlug`) and extract the statblock/encounter workflows into `@uwe/dnd-api` service functions; leave the route as parse→call→respond.
-
-#### M12 · Asset/file-serving routes use blocking `fs.readFileSync` with full in-memory buffering and no HTTP caching headers
-- **Category:** Performance · **Location:** `apps/studio/app/api/assets/[assetId]/file/route.ts:39` (+ portal/share/capture/scan/project/kitchen routes) · `packages/assets/src/download-headers.ts:12`
-- **Confidence:** HIGH · **Effort:** 2–3 h · **Quick win:** ❌
-- All binary-serving routes read the whole file synchronously on the request path (`readFileSync` blocks the event loop for the entire disk read; upload routes use `writeFileSync`). An image-heavy wiki page serializes every other request in the process. `buildAssetDownloadHeaders` sets **no** `Cache-Control`/`ETag`/`Last-Modified`, so browsers re-download every wiki image on every navigation. **Fix:** switch to `fs.promises.readFile`/`writeFile` (or stream), and add `Cache-Control: private, max-age=3600` + `Last-Modified`/`ETag` (assets are immutable per `storageKey`).
-
-#### M13 · `listPagesForViewer` hydrates every column of every page in the world, then filters visibility in JS
-- **Category:** Performance · **Location:** `packages/database/src/auth.ts:861`
-- **Confidence:** HIGH · **Effort:** 3–4 h · **Quick win:** ❌
-- `page.findMany({ where: { world: { slug } } })` with no `select`, no `take`, no visibility predicate, then `filterPagesForViewer` in JS — backing the portal wiki index, dashboards, NPC/place lists that slice to 6–8 items after loading everything. At mega scale this materializes 10k full rows per portal view. This is WS3 of the (proposed) perf plan; the JS filter should stay as defense-in-depth. **Fix:** push visibility/`publishStatus`/`secretLevel` predicates into the Prisma `where`, `select` only listed fields, `take` the small slices in SQL; keep `filterPagesForViewer` as a post-check and keep the authz suites green.
-
-#### M14 · N+1 share-link query per asset on the studio asset-library page
-- **Category:** Performance · **Location:** `apps/studio/app/worlds/[worldSlug]/assets/page.tsx:73`
-- **Confidence:** HIGH · **Effort:** 30 min · **Quick win:** ✅
-- The page maps over all assets and calls `shareService.listShareLinksForTarget(...)` per asset — one `shareLink.findMany` each. The stress seed has 200 assets/world → 200+ queries serialized on the single SQLite connection per view. **Confirmed:** loop at `:72-76`. **Fix:** one `shareLink.findMany({ where: { worldId, targetId: { in: assetIds } } })` grouped by `targetId` in JS (or a bulk `listShareLinksForTargets` method); convert `albumAssetIds` to a `Set`.
-
-#### M15 · Budget-discipline erosion — frozen monoliths + new files consuming their headroom instead of shrinking
-- **Category:** Code quality · **Location:** `scripts/file-size-baseline.json` · `packages/database/src/server.ts` (2245/2245) · `apps/studio/app/label-actions.ts` (699/700)
-- **Confidence:** HIGH · **Effort:** 2–4 h (server.ts) / 0.5–1 day per monolith · **Quick win:** ❌
-- The frozen `server.ts` barrel sits at **exactly** its hard ceiling (2245/2245, confirmed by `wc -l` and `SERVER_BARREL_MAX_LINES=2245`) — the next added line fails `pnpm test`. `label-actions.ts` is at exactly the 700-line new-file cap. 18 of ~28 baseline-frozen files have grown since the freeze (`settings-service.ts` +9.5%, `graph-engine.ts` +9.1%), against the CLAUDE.md rule to extract rather than add. The +10% tolerance is being consumed as growth budget; the two hottest files fail CI on the next routine edit. **Fix:** proactively extract export groups from `server.ts` (subpath exports exist), split `settings-service.ts`/`graph-engine.ts`/`label-actions.ts`, then `--ratchet` to lock lower sizes; flag any baseline-growing PR in review.
+#### M3 · `/import` page serializes full preview payloads (all AI-extracted entity bodies) for up to 50 jobs into a client component that only renders a count
+- **Category:** Performance (RSC payload bloat)
+- **Location:** `apps/studio/app/import/page.tsx:55-56` · client consumer `apps/studio/app/import/ImportCentralWorkspace.tsx:102-114` · payload shape `apps/studio/app/import-campaign-actions.ts:71-85`
+- **Confidence:** HIGH
+- **Description:** The Import-Zentrale server component loads up to 50 `ImportJob` rows (`listJobs({ limit: 50 })`) and passes `previewPayload: job.previewPayload` and `resultSummary: job.resultSummary` **wholesale** into the client component. For campaign-PDF jobs the stored `previewPayload` is `{ kind: "campaign_entities", entities: [...] }` — the **full** AI-extracted entity array (bodies derived from up to 20×6000 chars of PDF text per job). The client uses none of it beyond a count: `readPreviewSummary` reads only `totalDocuments`/`totalEntities` (`ImportCentralWorkspace.tsx:102-114`). So every `/import` visit ships potentially multiple MB of dead JSON in the RSC payload. Relatedly, `previewImportCampaignPdfJobAction` returns the full `entities` to the browser although `CampaignPdfImportPanel` renders only `items`/`errors`/`canExecute`.
+- **Recommended fix:** Map jobs to a lean row server-side — replace `previewPayload`/`resultSummary` with precomputed summary strings/counts (`previewSummary`, `resultLabel`). Strip `entities` from the preview action's return (the execute action re-reads them from the stored job anyway).
+- **Effort:** <30min · **Quick win:** ✅
 
 ---
 
@@ -193,53 +111,44 @@ The health score is held back by **one CRITICAL finding**: the destructive full-
 
 | # | Category | Finding | Location | Effort | Quick win |
 |---|----------|---------|----------|--------|-----------|
-| L1 | Code quality | **Nine orphaned modules (~725 lines)** never imported anywhere, including a dead `"use server"` file (`review-actions.ts` → `submitCoDmChangeAction`, making the whole co-DM change-review submit flow + its `review-bridge.ts` service + `server.ts` export dead). Also `PlayerDashboard.tsx`, `portal-navigation.ts`, `TemplateForm.tsx`, `MailTestForm.tsx`, `StudioCockpitStatusFooter.tsx`, `studio-shell-utils.tsx`, `agentJobTextProvider.ts`, `SectionPlaceholder.tsx`. Stale doc: `cleanup-inventory.md:108`. | `apps/studio/app/review-actions.ts:20` | 30–45 min | ✅ |
-| L2 | Code quality | **Five unused dependencies:** `@tanstack/react-query` (studio+portal), `@hookform/resolvers` (studio+portal), `@xyflow/react` (studio — large graph lib, unused), `@uwe/soundboard` (portal), `@uwe/env` (web-search). Zero imports repo-wide (false positives like `@tiptap/pm`, `@libsql/client` excluded). | `apps/studio/package.json:27` | 15 min | ✅ |
-| L3 | Code quality | **16 byte-identical UI primitive files (~740 lines)** duplicated between `apps/studio/src/components/ui/` and `apps/portal/src/components/ui/` (button, card, dialog, form, …), already diverging (`dropdown-menu.tsx` differs, `badge.tsx` studio-only). `@uwe/shared-ui` is the sanctioned home. | `apps/portal/src/components/ui/button.tsx:1` | 3–5 h | ❌ |
-| L4 | Code quality | **~155 lines of 2FA activate/verify route logic duplicated** near-identically across both apps (`two-factor-routes.ts`); only guard + rate-key prefix differ — security-sensitive core copy-pasted. | `apps/portal/src/lib/two-factor-routes.ts:13` | 2–3 h | ❌ |
-| L5 | Code quality | **Dead `@uwe/shared-ui` barrel exports** (no `@deprecated` marker, read as live API): `PortalNavByType`/`PortalWorldHero`, `ResizableGraphView`, `UweSessionChrome`, 3 `MobileComponents` exports (~250 lines). | `packages/shared-ui/src/PortalNav.tsx:10` | 30 min | ✅ |
-| L6 | Architecture | **Layering inversion:** low-level `@uwe/security` (CSRF/guards/rate-limit, consumed everywhere) imports from feature package `@uwe/ai-brain` in 3 modules (`ai-policy.ts`, `ssrf-guard.ts`, `rtx-boundary.ts`), pulling the whole AI package into everything that wants a rate limiter. Imported subpaths are pure leaves — coupling is a graph artifact. | `packages/security/src/security/ai-policy.ts:5` | 2–4 h | ❌ |
-| L7 | Performance | **Admin cross-domain search runs ~14 table scans sequentially** on the command-palette hot path (one `contains`-LIKE `findMany` per entity type, awaited in series → latency is the sum, not the max). | `packages/database/src/admin-search-service.ts:134` | 1 h | ❌ |
-| L8 | Performance | **`ActivityLog` lacks an index on `action`** though three request-path sites (incl. every `/today` render) run `findFirst({ where: { action: "backup_created" }, orderBy: { createdAt: desc } })`, degrading to a partial table scan on fresh/old-backup hosts. **Confirmed:** only `[worldId,createdAt]`, `[createdAt]`, `[undoEntryId]` indexes exist. | `packages/database/prisma/schema.prisma:1481` | 15 min | ✅ |
-| L9 | Dependencies | **Moderate advisory GHSA-92pp-h63x-v22m** (`@hono/node-server` <1.19.13, middleware bypass via repeated slashes) — installed 1.19.11, pinned by `@prisma/dev` via `prisma`. Only runs inside `prisma dev`, never in production; invisible to CI gate (`--audit-level high`). **Confirmed** via `pnpm audit --prod`. | `packages/database/package.json:77` | 15 min | ✅ |
-| L10 | Dependencies | **Moderate advisory GHSA-qx2v-qp2m-jg93** (`postcss` <8.5.10, XSS via unescaped `</style>`) — 8.4.31 pinned exactly inside `next@15.5.19`; only processes first-party build-time CSS. **Confirmed** via `pnpm audit --prod`. | `apps/portal/package.json:40` | 30 min | ✅ |
-| L11 | Dependencies | **Unused `@next/env ^16.2.9` devDependency in portal** while `next` is major 15 (ships its own matched `@next/env@15.5.19`) — a version-consistency trap. | `apps/portal/package.json:51` | 10 min | ✅ |
-| L12 | Test coverage | **2FA login-challenge negative paths untested** (expiry branch, wrong code) and TOTP lacks RFC 6238 vectors / window-boundary tests. Deterministic (injectable `nowMs`), so depth-of-coverage rather than an active defect. | `packages/database/src/two-factor-service.ts:115` | 45 min | ✅ |
-| L13 | Test coverage | **Fixed 20 ms sleeps in connector runner tests** (`setTimeout(r, 20)` as a dispatch-finished proxy) — CI-flake risk on loaded runners. The only real-time coupling found in the unit suites. | `tools/uwe-rtx-connector/src/runner.test.ts:89` | 20 min | ✅ |
-| L14 | Architecture | **Frozen `server.ts` barrel 4 lines below its hard cap** (2246 vs ~2250 budget, 61 lines added post-freeze) — same tolerance-consumption pattern as M15, on the single most-imported module (~440 importers). *(Overlaps M15; listed for the architecture lens.)* | `packages/database/src/server.ts:1` | 1–2 h | ❌ |
+| L1 | Performance / architecture | **M2-anti-pattern re-introduced:** the new import Server Actions call `createUweRepository()` (→ `new UweRepository(createPrismaClient())`), opening a throwaway libsql connection to the single SQLite file per invocation and never `$disconnect()`-ing — in a file that already imports the shared `prisma` singleton. Same doc'd "lock-storm" pattern the prior M2 fix removed, reintroduced in code that landed after it. **Fix:** use the already-exported `createUweRepositoryFromClient(prisma)` at all three sites (one line each). | `apps/studio/app/import-campaign-actions.ts:163,247` · `apps/studio/app/import-central-actions.ts:179` | <30min | ✅ |
+| L2 | Security | **Tauri webview CSP disabled** (`"csp": null`). No `dangerouslySetInnerHTML` today (React escaping is the only defense), so defense-in-depth — but the window renders untrusted external strings (model names, job payloads, host command output) and exposes ~40 IPC handlers incl. host control, so a future/dependency-introduced sink would have no backstop. **Fix:** set an explicit restrictive CSP for the desktop window. | `apps/rtx-connector-client/src-tauri/tauri.conf.json:25` | 30min–2h | ⚠️ |
+| L3 | Security | **Updater plugin has an empty `pubkey`** while a `latest.json` endpoint is configured. Currently `"active": false`, so no auto-update runs — but an empty pubkey means an enabled updater would accept **unsigned** artifacts. Separately, the release manifest (`build-uwe-release-manifest.mjs`) records only installer basenames — no SHA-256/signature — so installer integrity rests entirely on GitHub HTTPS. **Fix:** keep the updater inactive until a real pubkey is provisioned; add per-installer SHA-256 to the manifest and verify on download; fail the release build if `pubkey` is empty while `updater.active` is true. | `apps/rtx-connector-client/src-tauri/tauri.conf.json:46,51` | 30min–2h | ❌ |
+| L4 | Performance | **Command Center 15 s status poll disables every action button** for the probe's duration. `refresh` sets `busy` and every primary button is `disabled={busy !== null}`; when Studio/Portal are stopped, each health probe runs to its 2.5 s timeout, so exactly when the user wants to click "Alles starten" the UI is disabled ~2.5–3 s of every 15 s and buttons flicker. **Fix:** don't set `busy` for background polls — reserve `busy` for user-initiated actions; let the periodic refresh update `status` silently. | `apps/rtx-connector-client/src/components/CommandCenterPanel.tsx:95,114-118,283` | <30min | ✅ |
+| L5 | Performance / scaling | **Command Center host logs grow without bound; every log view reads the whole file into memory** to keep the last 200 lines (`fs.readFileSync(file).split(/\r?\n/).slice(-200)`). `command-center.log`/`studio.log`/`portal.log` are append-only and never rotated (full `pnpm install`/`db:deploy`/`build` transcripts + piped Next stdio), reaching tens/hundreds of MB on a 24/7 host. **Fix:** read only the file tail (fd + fstat + last ~64 KB) and add size-based rotation on append. | `tools/uwe-host-command-center/src/desktop-host.ts:636` (+ append sites `:487-495,:553-564`) | 30min–2h | ❌ |
+| L6 | Test coverage / code quality | **New Command Center UI logic is untested and `App.tsx` is at the size cap.** `CommandCenterPanel.tsx` (430 lines — the keystroke/stale-response bug in M2, the poll-lockout in L4) has no component test; `import-campaign-actions.ts` (the PDF-import Server-Action wrappers) has no test although the underlying `@uwe/pdf-campaign-import` package is well-covered. Separately, `apps/rtx-connector-client/src/App.tsx` sits at **690/700** lines — one refactor from tripping the new-file size budget. **Fix:** add a focused test for the panel's refresh/poll effects (would have caught M2/L4); extract a module from `App.tsx` before it grows. | `apps/rtx-connector-client/src/components/CommandCenterPanel.tsx:1` · `apps/rtx-connector-client/src/App.tsx:1` | 1–2h | ❌ |
 
 ---
 
 ## Quick Wins (fixable in under 30 minutes each)
 
-Ordered by value. Together these close the CRITICAL, two MEDIUM security gaps, several test gaps, and two dependency advisories.
+Ordered by value.
 
-1. **C1 — Owner-gate the restore-execute route** (30 min) — the single highest-value fix. Add a server-side `canRestoreBackup(role)` / `requireOwnerApiAuth` check.
-2. **M1 — Owner-gate the restore-preview route** (30 min) — same pattern; stops `dm`/`admin` enumerating backup contents.
-3. **H4 — De-duplicate `/today` dashboard compute** (30 min) — pass `adminStatus`/`lifeSummary` into `getHomelabCockpitData`; halves the budgeted hot path.
-4. **H6 — Add `encrypt.test.ts` for backup encryption** (30 min) — protects the primary data-loss safety net from silent unrestorability.
-5. **M14 — Batch the asset-library share-link N+1** (30 min) — one `findMany … targetId: { in: … }` replaces 200+ queries.
-6. **M9 — Test `deleteUser` owner-lockout guards** (20 min) — two tests for `CANNOT_DELETE_SELF` / `LAST_OWNER`.
-7. **L8 — Add `@@index([action, createdAt])` to `ActivityLog`** (15 min) — index-seek for `/today` backup lookups (needs a migration per the `uwe-database-migrations` skill).
-8. **L2 — Remove five unused dependencies** (15 min) — smaller install + audit surface.
-9. **L9 / L10 — Add `pnpm.overrides` for `@hono/node-server >=1.19.13` and `postcss >=8.5.10`** (15–30 min) — clears both moderate advisories.
-10. **L11 — Remove the stray `@next/env ^16.2.9` from portal** (10 min).
-11. **L5 — Delete unmarked dead `@uwe/shared-ui` exports** (30 min) and **L1 — delete the nine orphaned modules** (30–45 min).
+1. **M1 — `chmod 0o600` the Tauri config write** (<30min) — matches the Node provisioner; stops the connector token + Spotify secret being world-readable on multi-user hosts.
+2. **M2 — Debounce / ref-decouple the Command Center status probe** (<30min) — stops every keystroke spawning ~10 process trees and prevents stale-response overwrites.
+3. **M3 — Lean `/import` job rows** (<30min) — replace the full `previewPayload`/`resultSummary` passthrough with precomputed summaries; drops multi-MB of dead JSON from the RSC payload.
+4. **L1 — Swap the three new import actions to `createUweRepositoryFromClient(prisma)`** (<30min) — closes the re-introduced throwaway-`PrismaClient` leak (one line per site).
+5. **L4 — Don't set `busy` on background polls** (<30min) — stops the action buttons flickering/disabling ~20% of the time.
+6. **H1 (partial) — Add a `Host`-header allowlist to the Command Center server** (~30min) — the core DNS-rebinding defense; pair with the unauthenticated-bootstrap fix for the full remediation.
 
 ---
 
 ## What is healthy (verified, not flagged)
 
-- **Studio API authz** — every route enumerated and asserted guarded by `scripts/studio-route-auth.test.ts`; CSRF enforced on mutating routes.
-- **Injection** — all `$queryRawUnsafe` calls use constant strings; wiki/mail HTML is DOMPurify-sanitized before `dangerouslySetInnerHTML`; asset paths are traversal-checked.
-- **Secrets** — none tracked; `.env.example` ships placeholders; `secret:scan` runs in CI.
-- **`dm_only` / secret visibility** — centralized in `packages/database/src/permissions.ts`, enforced at the data layer, with regression tests (`visibility-leak`, share-link `dm_only`-bypass, static-export exclusion, public-leak-scanner) across Portal and static export.
-- **Dependency & license hygiene** — all key frameworks on current majors; clean license profile (no GPL/AGPL in production); no duplicated majors of significant libs; the `nodemailer ^9.0.1` override is still needed and consistent.
-- **Test breadth** — 449 test files, all green with zero skips across every workspace package.
-- **Module discipline** — a real, enforced file-size budget + baseline-freeze system (the erosion in M15 is *within* tolerance today, caught early by this audit).
+- **Studio API authz** — every route enumerated **dynamically** and asserted guarded-or-allowlisted by `scripts/studio-route-auth.test.ts` (`listStudioApiRouteFiles`), so the new `connectors/direct/*`, `bugs/upload`, and `import*` routes are automatically in scope; the new routes apply connector-token / Studio admin+mutation guards + CSRF. The prior allowlisted-action Origin-check leftover is closed.
+- **New PDF importer** — `@uwe/pdf-campaign-import` does **no** third-party PDF *byte* parsing (it operates on extracted text; only workspace dep is `@uwe/database`), forces local-only AI routing (`local_rtx`, no cloud fallback) with size/MIME guards, and ships unit tests for chunker, parser, dedupe, page-mapper, and prompt.
+- **No business logic in the new route handlers** — no `prisma`/`findMany`/`.create()` in the new `import*` / `connector*` route files; domain logic lives in packages per the golden rule.
+- **Dependencies** — `pnpm audit --prod` clean at **moderate** level; no new circular package dependency (the new packages are leaves); `pnpm@10.12.1` still reads the `pnpm.overrides` security pins.
+- **Deploy-script injection** — `deploy/scripts/*.sh` parsing the DB-synced `schedule.json` validate extracted values (numeric/regex) and use them only in quoted comparisons — no injection.
+- **Prior 35 findings** — the 2026-07-10 remediation (search/wiki-graph memoization, `/today` dedup, `listPagesForViewer` SQL narrowing, mail-cycle break, monolith splits) was spot-checked and still holds.
 
 ---
 
 ## Method note & completeness
 
-This report was produced by a 6-agent parallel audit (one per category) with per-finding adversarial verification. The verification phase was interrupted partway by an account spend limit; the auditor findings were recovered from the workflow journal and **each surfaced finding was re-verified directly in this session** against the current source (guard code read in full for C1/M1; circular dep confirmed in both `package.json`s; `/today` double-compute confirmed at `homelab-dashboard.ts:72,120`; `pnpm audit --prod` re-run to confirm L9/L10; file-size ceilings, missing indexes, N+1 loops, and zero-test claims each confirmed by direct grep/read). No finding is speculative; all are HIGH-confidence. Findings that could not be confirmed were dropped rather than padded.
+This report was produced by a 6-agent parallel workflow (one auditor per category, each finding routed to an adversarial verifier). **A mid-run account monthly-spend-limit halted the workflow after the security and performance auditors completed** — the code-quality, test-coverage, dependencies, and architecture auditors, and all verifier agents, were terminated before finishing. To keep the audit honest and complete:
+
+- The **9 security + performance findings** were recovered from the workflow journal and **each was re-verified by direct source read in this session** (bootstrap handler + bind address + sudoers for H1; `write_config_to_disk` vs the Node `chmod` for M1; the `useCallback`/effect deps for M2; the `previewPayload` passthrough vs the count-only client consumer for M3; `createUweRepository` call sites for L1; `csp:null`, empty `pubkey`, and `readLogs` for L2/L3/L5). None are speculative.
+- The **four categories whose auditors were killed** were covered by a **lighter-touch inline sweep focused on the new code** (not a full agent-driven pass): `pnpm audit --prod` (moderate), dependency graph of the new packages, dynamic-vs-static analysis of the route-auth inventory test, presence of Prisma calls in new route handlers, new-package test presence, and file-size headroom of the new files. That sweep surfaced only **L6** and confirmed the "healthy" items above. A full re-run of those four auditors is advisable once the spend limit resets, but the delta scope (new code only, over a codebase whose prior 35 findings are fixed) makes a large miss unlikely.
+
+Findings that could not be confirmed against current source were dropped rather than padded.

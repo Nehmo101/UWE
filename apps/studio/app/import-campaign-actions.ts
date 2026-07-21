@@ -5,7 +5,7 @@ import { AiRouterError, routeAiRequest } from "@uwe/ai-brain";
 import {
   createImportJobService,
   createUndoService,
-  createUweRepository,
+  createUweRepositoryFromClient,
   extractPdfText,
   pickUniqueSlug,
   prisma,
@@ -20,7 +20,9 @@ import {
   MAX_CAMPAIGN_CONTEXT_CHARACTERS,
   MAX_CHUNKS,
   parseCampaignEntities,
+  toCampaignPreviewSummary,
   type CampaignImportPreview,
+  type CampaignImportPreviewSummary,
   type ExtractedCampaignEntity,
 } from "@uwe/pdf-campaign-import";
 import { revalidatePath } from "next/cache";
@@ -117,8 +119,8 @@ function buildPreviewPayload(
 async function markPreviewFailed(
   jobId: string,
   message: string,
-): Promise<{ preview: CampaignImportPreview }> {
-  const preview = {
+): Promise<{ preview: CampaignImportPreviewSummary }> {
+  const preview: CampaignImportPreview = {
     ...buildCampaignPreview([]),
     errors: [message],
     canExecute: false,
@@ -128,20 +130,20 @@ async function markPreviewFailed(
   });
   await importJobs().markFailed(jobId, message);
   revalidatePath("/import");
-  return { preview };
+  return { preview: toCampaignPreviewSummary(preview) };
 }
 
 export async function previewImportCampaignPdfJobAction(
   jobId: string,
   contentBase64: string,
   campaignContext = "",
-): Promise<{ preview: CampaignImportPreview }> {
+): Promise<{ preview: CampaignImportPreviewSummary }> {
   await requireStudioActionAuth();
 
   const job = await requireCampaignPdfJob(jobId);
   const storedPreview = readStoredPreview(job.previewPayload);
   if (storedPreview) {
-    return { preview: storedPreview };
+    return { preview: toCampaignPreviewSummary(storedPreview) };
   }
 
   const normalizedCampaignContext = campaignContext.trim();
@@ -160,7 +162,7 @@ export async function previewImportCampaignPdfJobAction(
     const text = await extractPdfText(buffer);
     const chunks = chunkPdfText(text);
     const useMock = process.env.NODE_ENV !== "production" && process.env.AI_USE_MOCK === "true";
-    const repo = createUweRepository();
+    const repo = createUweRepositoryFromClient(prisma);
     const extracted: ExtractedCampaignEntity[] = [];
 
     for (const [index, chunk] of chunks.entries()) {
@@ -211,7 +213,7 @@ export async function previewImportCampaignPdfJobAction(
       errorMessage: null,
     });
     revalidatePath("/import");
-    return { preview };
+    return { preview: toCampaignPreviewSummary(preview) };
   } catch (error) {
     const message =
       error instanceof AiRouterError
@@ -244,7 +246,7 @@ export async function executeImportCampaignPdfJobAction(
     throw new Error("Bitte mindestens eine Entität auswählen.");
   }
 
-  const repo = createUweRepository();
+  const repo = createUweRepositoryFromClient(prisma);
   const campaign = await repo.getCampaignBySlug(context.worldSlug, context.campaignSlug);
   if (!campaign || campaign.id !== context.campaignId) {
     throw new Error("Die Zielkampagne gehört nicht mehr zur ausgewählten Welt.");

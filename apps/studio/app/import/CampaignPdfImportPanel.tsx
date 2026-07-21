@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   MAX_CAMPAIGN_CONTEXT_CHARACTERS,
-  type CampaignImportPreview,
+  type CampaignImportPreviewSummary,
 } from "@uwe/pdf-campaign-import";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
 import { arrayBufferToBase64 } from "@/src/lib/file-base64";
@@ -42,7 +42,7 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [contentBase64, setContentBase64] = useState<string | null>(null);
   const [campaignContext, setCampaignContext] = useState("");
-  const [preview, setPreview] = useState<CampaignImportPreview | null>(null);
+  const [preview, setPreview] = useState<CampaignImportPreviewSummary | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [resultSummary, setResultSummary] = useState<Record<string, unknown> | null>(null);
   const [undoToken, setUndoToken] = useState<string | null>(null);

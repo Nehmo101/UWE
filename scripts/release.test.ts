@@ -21,6 +21,28 @@ describe("release packaging", () => {
     assert.equal(versionFile, packageJson.version);
   });
 
+  it("never ships an active Command Center updater without a signing pubkey", () => {
+    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
+    const updater = ((tauriConf.plugins as Record<string, unknown> | undefined)?.updater ??
+      {}) as { active?: boolean; pubkey?: string };
+    if (updater.active === true) {
+      assert.ok(
+        typeof updater.pubkey === "string" && updater.pubkey.trim().length > 0,
+        "updater.active is true but pubkey is empty — unsigned updates would be accepted",
+      );
+    }
+  });
+
+  it("keeps a non-null CSP on the Command Center webview", () => {
+    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
+    const security = ((tauriConf.app as Record<string, unknown> | undefined)?.security ??
+      {}) as { csp?: unknown };
+    assert.ok(
+      typeof security.csp === "string" && security.csp.length > 0,
+      "Command Center webview must define an explicit CSP (not null)",
+    );
+  });
+
   it("includes release documentation files", () => {
     assert.ok(fs.existsSync(path.join(root, "CHANGELOG.md")));
     assert.ok(fs.existsSync(path.join(root, "SECURITY.md")));

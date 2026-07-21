@@ -11,6 +11,7 @@
  *     --msi path/to/app.msi \
  *     --out uwe-release.json
  */
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -38,6 +39,20 @@ function basenameOrNull(value) {
   return path.basename(value);
 }
 
+/**
+ * SHA-256 of an installer, so the update flow can verify integrity independently
+ * of GitHub HTTPS. A path that is provided but missing fails the build rather
+ * than silently publishing a manifest with no checksum.
+ */
+function sha256OrNull(value) {
+  if (!value) return null;
+  if (!fs.existsSync(value)) {
+    console.error(`Installer not found for checksum: ${value}`);
+    process.exit(1);
+  }
+  return crypto.createHash("sha256").update(fs.readFileSync(value)).digest("hex");
+}
+
 const manifest = {
   schemaVersion: 1,
   product: "uwe",
@@ -50,6 +65,8 @@ const manifest = {
   windows: {
     nsis: basenameOrNull(nsis),
     msi: basenameOrNull(msi),
+    nsisSha256: sha256OrNull(nsis),
+    msiSha256: sha256OrNull(msi),
   },
 };
 
