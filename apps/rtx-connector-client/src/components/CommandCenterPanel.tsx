@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { parseConnectorClientConfig, type ConnectorClientConfig } from "@uwe/connector-client-config";
 import { HealthBadge } from "@uwe/shared-ui";
@@ -91,29 +91,53 @@ export function CommandCenterPanel({
   const [logs, setLogs] = useState<string[]>([]);
   const [updateInfo, setUpdateInfo] = useState<LocalHostUpdateInfo | null>(null);
 
-  const refresh = useCallback(async (requestedRoot = root) => {
-    setBusy((current) => current ?? "refresh");
-    setError(null);
-    try {
-      const next = await getHostStatus(requestedRoot || undefined);
-      setStatus(next);
-      if (!requestedRoot) setRoot(next.root);
-      return next;
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-      return null;
-    } finally {
-      setBusy((current) => current === "refresh" ? null : current);
-    }
+  // Latest typed project root, read inside the stable `refresh` callback so that
+  // typing in the folder input does not recreate `refresh` (which would otherwise
+  // re-fire the status probe — a node-process spawn — on every keystroke).
+  const rootRef = useRef(root);
+  useEffect(() => {
+    rootRef.current = root;
   }, [root]);
+  // Monotonic request id so a slower, older probe cannot overwrite a newer result.
+  const requestSeqRef = useRef(0);
+
+  const refresh = useCallback(
+    async (
+      requestedRoot?: string,
+      options?: { background?: boolean },
+    ): Promise<LocalHostStatus | null> => {
+      const targetRoot = requestedRoot ?? rootRef.current;
+      const background = options?.background ?? false;
+      const seq = (requestSeqRef.current += 1);
+      if (!background) setBusy((current) => current ?? "refresh");
+      setError(null);
+      try {
+        const next = await getHostStatus(targetRoot || undefined);
+        if (seq !== requestSeqRef.current) return next; // stale response — drop it
+        setStatus(next);
+        if (!targetRoot) setRoot(next.root);
+        return next;
+      } catch (nextError) {
+        if (seq === requestSeqRef.current) {
+          setError(nextError instanceof Error ? nextError.message : String(nextError));
+        }
+        return null;
+      } finally {
+        if (!background) setBusy((current) => (current === "refresh" ? null : current));
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     void refresh(config.localHostRoot);
   }, [config.localHostRoot, refresh]);
 
   useEffect(() => {
+    // While a user-initiated action is running, skip the poll. Otherwise poll in
+    // the background: it must NOT set `busy`, so the action buttons stay enabled.
     if (busy) return;
-    const timer = window.setInterval(() => void refresh(), 15_000);
+    const timer = window.setInterval(() => void refresh(undefined, { background: true }), 15_000);
     return () => window.clearInterval(timer);
   }, [busy, refresh]);
 

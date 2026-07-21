@@ -10,6 +10,20 @@ export interface CampaignImportPreview {
   canExecute: boolean;
 }
 
+/**
+ * Client-facing shape of a preview: the full AI-extracted entity bodies are
+ * dropped, since the UI renders only `items` (240-char excerpts). Execute paths
+ * re-read the entities from the stored job payload, never from the client.
+ */
+export type CampaignImportPreviewSummary = Omit<CampaignImportPreview, "entities">;
+
+export function toCampaignPreviewSummary(
+  preview: CampaignImportPreview,
+): CampaignImportPreviewSummary {
+  const { entities: _entities, ...summary } = preview;
+  return summary;
+}
+
 function excerpt(entity: ExtractedCampaignEntity): string {
   const value = entity.summary?.trim() || entity.body.trim();
   return value.replace(/\s+/g, " ").slice(0, 240);

@@ -443,9 +443,45 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
   };
 }
 
+const MAX_LOG_BYTES = 5 * 1024 * 1024;
+
+/** Rename a log to `.1` (keeping one prior generation) once it exceeds the cap. */
+function rotateLogIfLarge(file: string): void {
+  try {
+    if (fs.statSync(file).size > MAX_LOG_BYTES) {
+      fs.renameSync(file, `${file}.1`);
+    }
+  } catch {
+    // Missing/not-yet-created log — nothing to rotate.
+  }
+}
+
+/** Append to a host log, rotating first so append-only logs cannot grow unbounded. */
+function appendToLog(file: string, text: string): void {
+  rotateLogIfLarge(file);
+  fs.appendFileSync(file, text, "utf8");
+}
+
+/** Read only the tail of a log (last ~64 KB) instead of loading the whole file. */
+function readLogTail(file: string, maxLines: number): string[] {
+  const CHUNK = 64 * 1024;
+  const fd = fs.openSync(file, "r");
+  try {
+    const size = fs.fstatSync(fd).size;
+    const readLength = Math.min(CHUNK, size);
+    const buffer = Buffer.alloc(readLength);
+    if (readLength > 0) fs.readSync(fd, buffer, 0, readLength, size - readLength);
+    const lines = buffer.toString("utf8").split(/\r?\n/);
+    if (size > readLength && lines.length > 0) lines.shift(); // drop the partial first line
+    return lines.filter(Boolean).slice(-maxLines);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 function appendOperationLog(paths: HostPaths, line: string): void {
   ensureHostDirectories(paths);
-  fs.appendFileSync(path.join(paths.logs, "command-center.log"), `[${new Date().toISOString()}] ${line}\n`, "utf8");
+  appendToLog(path.join(paths.logs, "command-center.log"), `[${new Date().toISOString()}] ${line}\n`);
 }
 
 function pnpmCommand(args: string[]): { command: string; args: string[] } {
@@ -492,7 +528,7 @@ function runWorkspaceCommand(paths: HostPaths, label: string, args: string[], ex
     maxBuffer: 32 * 1024 * 1024,
   });
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
-  if (output) fs.appendFileSync(path.join(paths.logs, "command-center.log"), `${output}\n`, "utf8");
+  if (output) appendToLog(path.join(paths.logs, "command-center.log"), `${output}\n`);
   if (result.status !== 0) {
     const tail = output.split(/\r?\n/).slice(-12).join("\n");
     throw new Error(`${label} fehlgeschlagen.${tail ? `\n${tail}` : ""}`);
@@ -551,6 +587,7 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   const nextCli = path.join(appRoot, "node_modules", "next", "dist", "bin", "next");
   if (!fs.existsSync(nextCli)) throw new Error(`Next.js-Startdatei für ${service.label} fehlt.`);
   const logFile = path.join(paths.logs, `${service.id}.log`);
+  rotateLogIfLarge(logFile);
   fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${service.label} wird gestartet.\n`, "utf8");
   const output = fs.openSync(logFile, "a");
   const env = readEnvFile(paths.envFile);
@@ -633,7 +670,7 @@ export function readLogs(rootInput: string | undefined, target: string | undefin
   const safeTarget = target === "studio" || target === "portal" ? target : "command-center";
   const file = path.join(paths.logs, `${safeTarget}.log`);
   if (!fs.existsSync(file)) return { target: safeTarget, lines: [] };
-  return { target: safeTarget, lines: fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean).slice(-200) };
+  return { target: safeTarget, lines: readLogTail(file, 200) };
 }
 
 export function desktopHostTargetUrl(rootInput: string | undefined, target: string | undefined): string {

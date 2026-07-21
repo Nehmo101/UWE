@@ -13,6 +13,7 @@ import {
   ImportCentralWorkspace,
   type ImportCentralJobRow,
 } from "./ImportCentralWorkspace";
+import { readPreviewSummary, readResultSummary } from "./import-job-summary";
 
 export default async function ImportCentralPage() {
   await requireStudioAccess();
@@ -52,8 +53,8 @@ export default async function ImportCentralPage() {
       targetWorldId: job.targetWorldId,
       targetWorldName: world?.name ?? null,
       targetWorldSlug: world?.slug ?? metadataSlug,
-      previewPayload: job.previewPayload,
-      resultSummary: job.resultSummary,
+      previewSummary: readPreviewSummary(job.previewPayload),
+      resultLabel: readResultSummary(job.resultSummary),
       undoToken: job.undoToken,
       errorMessage: job.errorMessage,
       createdAt: job.createdAt.toISOString(),

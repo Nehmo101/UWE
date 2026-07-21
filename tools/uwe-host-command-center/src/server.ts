@@ -39,6 +39,52 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
   res.end(JSON.stringify(body));
 }
 
+const LOCAL_HOSTNAMES = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
+
+/**
+ * Reject requests whose Host header is not a loopback name. This is the primary
+ * defense against DNS-rebinding: the server binds to 127.0.0.1, so the only way a
+ * remote page reaches it is by rebinding its own hostname (e.g. evil.com) to
+ * 127.0.0.1 — in which case the browser still sends `Host: evil.com`, which we
+ * refuse here. Direct localhost access (browser on the host, curl) carries a
+ * loopback Host and passes.
+ */
+export function isAllowedHostHeader(hostHeader: string | undefined): boolean {
+  if (!hostHeader) return false;
+  const trimmed = hostHeader.trim().toLowerCase();
+  // Strip an optional trailing port (":3099"), keeping bracketed IPv6 intact.
+  // The hostname allowlist is the DNS-rebinding defense; the port is not pinned
+  // because the server may be bound to an ephemeral port (e.g. in tests).
+  const withoutPort = trimmed.replace(/:\d+$/, "");
+  return LOCAL_HOSTNAMES.has(withoutPort);
+}
+
+/**
+ * For state-changing requests, additionally require that any Origin/Sec-Fetch-Site
+ * signals indicate a same-origin (loopback) caller. Cross-site fetches carry a
+ * remote Origin and are refused even before the token is checked.
+ */
+export function isAllowedControlOrigin(req: http.IncomingMessage): boolean {
+  const site = req.headers["sec-fetch-site"];
+  if (typeof site === "string" && site !== "same-origin" && site !== "same-site" && site !== "none") {
+    return false;
+  }
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && origin.length > 0) {
+    try {
+      return LOCAL_HOSTNAMES.has(new URL(origin).hostname.toLowerCase());
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+function injectControlToken(html: string, token: string): string {
+  // Token is base64url (A-Za-z0-9_-) so it is safe inside an HTML attribute value.
+  return html.replace(/__UWE_HCC_CONTROL_TOKEN__/g, token);
+}
+
 export function createHostCommandCenterServer(
   options: HostCommandCenterServerOptions = {},
 ): http.Server {
@@ -49,6 +95,11 @@ export function createHostCommandCenterServer(
 
   return http.createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://${host}:${port}`);
+
+    if (!isAllowedHostHeader(req.headers.host)) {
+      sendJson(res, 403, { error: "Ungültiger Host-Header" });
+      return;
+    }
 
     if (req.method === "GET" && url.pathname === "/health") {
       sendJson(res, 200, { ok: true, service: "uwe-host-command-center" });
@@ -83,8 +134,11 @@ export function createHostCommandCenterServer(
 
     if (req.method === "GET" && url.pathname === "/api/control/bootstrap") {
       try {
-        const [meta, token] = await Promise.all([getControlMeta(), resolveControlToken()]);
-        sendJson(res, 200, { ...meta, token });
+        // The control token is no longer served here — it is injected into the
+        // dashboard HTML server-side (see the "/" handler). This endpoint returns
+        // only the control metadata (available actions / enabled state).
+        const meta = await getControlMeta();
+        sendJson(res, 200, meta);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Control bootstrap failed";
         sendJson(res, 500, { error: message });
@@ -94,6 +148,10 @@ export function createHostCommandCenterServer(
 
     if (req.method === "POST" && url.pathname === "/api/control/action") {
       try {
+        if (!isAllowedControlOrigin(req)) {
+          sendJson(res, 403, { ok: false, message: "Ungültige Herkunft" });
+          return;
+        }
         const body = (await readJsonBody(req)) as { action?: string; token?: string };
         const result = await executeControlAction(body.action ?? "", body.token);
         sendJson(res, result.ok ? 200 : 400, result);
@@ -104,8 +162,14 @@ export function createHostCommandCenterServer(
     }
 
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-      res.end(dashboardHtml);
+      try {
+        const token = await resolveControlToken();
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(injectControlToken(dashboardHtml, token));
+      } catch {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(injectControlToken(dashboardHtml, ""));
+      }
       return;
     }
 

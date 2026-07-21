@@ -754,8 +754,22 @@ fn write_config_to_disk(config: &ConnectorClientConfig) -> Result<(), String> {
     fs::write(&path, json)
         .map_err(|error| format!("Konfiguration konnte nicht gespeichert werden: {error}"))?;
 
+    // The config holds the connector bearer token and the Spotify client secret,
+    // so restrict it to the owner on Unix — matching the Node provisioner
+    // (provision-local-connector.ts chmods the same file to 0o600).
+    restrict_config_permissions(&path);
+
     Ok(())
 }
+
+#[cfg(unix)]
+fn restrict_config_permissions(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
+}
+
+#[cfg(not(unix))]
+fn restrict_config_permissions(_path: &Path) {}
 
 fn derive_connection_status(config: &ConnectorClientConfig, running: bool) -> &'static str {
     if config.host_url.is_empty() || config.token.is_empty() {

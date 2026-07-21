@@ -8,6 +8,23 @@
 
 ---
 
+## Remediation Status — all 10 findings fixed on `claude/session-mz18sa`
+
+Every finding below has been implemented and verified (typecheck, lint, `file-size-budget-check`, and the affected node:test suites all green: host-command-center 12/12, pdf-campaign-import 14/14, release 9/9, connector-client 22/22, client-server-boundary + server-barrel-freeze 3/3). The two studio integration tests that fail (`studio-auth.integration`, `today-dashboard.integration`) fail at a `sqlite3` DB-setup hook because the dev DB is unseeded in this environment — unrelated to these changes.
+
+- **H1** — Command Center server now rejects non-loopback `Host` headers (DNS-rebinding defense), adds an `Origin`/`Sec-Fetch-Site` check on `POST /api/control/action`, and injects the control token into the dashboard HTML server-side instead of vending it from the unauthenticated `GET /api/control/bootstrap` (which now returns metadata only). New regression tests cover Host rejection and token non-leakage.
+- **M1** — `write_config_to_disk` (Tauri) now `chmod 0o600`s the config on Unix, matching the Node provisioner, so the connector token / Spotify secret are owner-only.
+- **M2** — `refresh` is now a stable callback that reads the project root from a ref (typing no longer re-fires the host-status probe) with a monotonic request id that drops stale responses.
+- **M3** — the `/import` page precomputes lean summary strings server-side (new `import-job-summary.ts`); full preview/result payloads no longer cross the RSC boundary, and the preview action returns `CampaignImportPreviewSummary` (entities stripped).
+- **L1** — the three new import actions use `createUweRepositoryFromClient(prisma)` instead of throwaway `createUweRepository()` clients.
+- **L2** — the Command Center webview now sets an explicit restrictive CSP (was `null`).
+- **L3** — the release manifest now records SHA-256 of each installer (fails the build if a given installer path is missing); a `release.test.ts` invariant fails the build if the updater is active with an empty pubkey, and asserts the CSP stays non-null.
+- **L4** — background status polls no longer set `busy`, so the action buttons stay enabled during polling.
+- **L5** — host logs are tail-read (last ~64 KB) and size-rotated at 5 MB instead of read/grown whole.
+- **L6** — added Host-header/Origin unit + integration tests on the server; extracted `app-runtime.ts` from `App.tsx` (690 → 682 lines) for headroom. (A full React-hook test for the panel needs test infra not present in this package — the M2/L4 logic is covered by review, not a renderer test.)
+
+---
+
 ## Context — this is a delta audit over PR #764
 
 A full audit ran **2026-07-10** and **all 35 of its findings were fixed and merged** (previous report content is superseded by this file). This audit re-verified that those fixes still hold and concentrated scrutiny on the code that landed since: the **PDF-campaign importer** (`packages/pdf-campaign-import`, `apps/studio/app/import*`), the **UWE Command Center** (`apps/rtx-connector-client` Tauri app + `tools/uwe-host-command-center` host server + `packages/connector*`), and the **Windows release/update workflow**.

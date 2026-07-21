@@ -4,7 +4,7 @@ import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createImportJobService,
   createUndoService,
-  createUweRepository,
+  createUweRepositoryFromClient,
   executeMarkdownImport,
   extractObsidianVaultMarkdown,
   previewMarkdownImport,
@@ -176,7 +176,7 @@ export async function createImportCentralJobAction(formData: FormData): Promise<
     if (!worldSlug) {
       throw new Error("Welt-Kontext fehlt für den Kampagnen-Import.");
     }
-    const campaign = await createUweRepository().getCampaignBySlug(worldSlug, campaignSlug);
+    const campaign = await createUweRepositoryFromClient(prisma).getCampaignBySlug(worldSlug, campaignSlug);
     if (!campaign) {
       throw new Error("Kampagne gehört nicht zur ausgewählten Welt oder wurde nicht gefunden.");
     }
@@ -254,7 +254,7 @@ export async function previewImportCentralJobAction(
     );
   }
 
-  const repo = createUweRepository();
+  const repo = createUweRepositoryFromClient(prisma);
   const preview = await previewFromContent(repo, format, content, worldSlug);
 
   await importJobs().updateJob(jobId, {

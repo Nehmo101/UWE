@@ -62,8 +62,8 @@ export interface ImportCentralJobRow {
   targetWorldId: string | null;
   targetWorldName: string | null;
   targetWorldSlug: string | null;
-  previewPayload: unknown;
-  resultSummary: unknown;
+  previewSummary: string | null;
+  resultLabel: string | null;
   undoToken: string | null;
   errorMessage: string | null;
   createdAt: string;
@@ -97,35 +97,6 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "medium" }).format(
     new Date(value),
   );
-}
-
-function readPreviewSummary(previewPayload: unknown): string | null {
-  if (!previewPayload || typeof previewPayload !== "object" || Array.isArray(previewPayload)) {
-    return null;
-  }
-
-  const markdownPreview = previewPayload as { totalDocuments?: unknown; items?: unknown[] };
-  if (typeof markdownPreview.totalDocuments === "number") {
-    return `${markdownPreview.totalDocuments} Dokument(e) in Vorschau`;
-  }
-
-  const total = (previewPayload as { totalEntities?: unknown }).totalEntities;
-  return typeof total === "number" ? `${total} Einträge in Vorschau` : null;
-}
-
-function readResultSummary(resultSummary: unknown): string | null {
-  if (!resultSummary || typeof resultSummary !== "object" || Array.isArray(resultSummary)) {
-    return null;
-  }
-  const summary = resultSummary as { created?: number; updated?: number; failed?: number };
-  if (
-    typeof summary.created !== "number" &&
-    typeof summary.updated !== "number" &&
-    typeof summary.failed !== "number"
-  ) {
-    return null;
-  }
-  return `${summary.created ?? 0} erstellt, ${summary.updated ?? 0} aktualisiert, ${summary.failed ?? 0} fehlgeschlagen`;
 }
 
 export function ImportCentralWorkspace({
@@ -486,12 +457,8 @@ export function ImportCentralWorkspace({
                       <td className={TD_CLASS}>
                         {job.errorMessage ? (
                           <span className="text-xs text-muted-foreground">{job.errorMessage}</span>
-                        ) : readResultSummary(job.resultSummary) ? (
-                          readResultSummary(job.resultSummary)
-                        ) : readPreviewSummary(job.previewPayload) ? (
-                          readPreviewSummary(job.previewPayload)
                         ) : (
-                          "—"
+                          job.resultLabel ?? job.previewSummary ?? "—"
                         )}
                       </td>
                       <td className={TD_CLASS}>
