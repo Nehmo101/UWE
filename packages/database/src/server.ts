@@ -2207,33 +2207,4 @@ export type {
   UpsertUserGrantInput,
 } from "./ai-gateway-service";
 
-export {
-  createAtlasService,
-  isAtlasEntityAccessible,
-  type AtlasService,
-  type AtlasEntityAccessRecord,
-  type CreateAtlasMapInput,
-  type UpdateAtlasMapInput,
-  type CreateAtlasNodeInput,
-  type UpdateAtlasNodeInput,
-  type CreateAtlasFeatureInput,
-  type UpdateAtlasFeatureInput,
-  type CreateAtlasObjectInput,
-  type UpdateAtlasObjectInput,
-  type CreateAtlasPaletteItemInput,
-  type NodeAncestor,
-  type NodeWithHierarchy,
-} from "./atlas-service";
-
-export type {
-  AtlasMap as DbAtlasMap,
-  AtlasNode as DbAtlasNode,
-  AtlasFeature as DbAtlasFeature,
-  AtlasObject as DbAtlasObject,
-  AtlasPaletteItem as DbAtlasPaletteItem,
-  AtlasNodeLevel,
-  AtlasFeatureKind,
-  AtlasLabelColor,
-  AtlasPaletteSource,
-  AtlasPaletteReviewStatus,
-} from "./generated/prisma/client";
+export type { AtlasNodeLevel } from "./generated/prisma/client";

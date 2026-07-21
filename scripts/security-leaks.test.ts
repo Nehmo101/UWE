@@ -24,7 +24,6 @@ describe("security leaks — visibility and portal filtering", () => {
     "packages/auth/src/permissions.test.ts",
     "apps/portal/src/lib/share-access.test.ts",
     "apps/portal/src/navigation/portal-nav.test.ts",
-    "packages/database/src/atlas-service.test.ts",
   ];
 
   for (const testFile of leakTests) {
