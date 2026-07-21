@@ -100,6 +100,28 @@ describe("createAtlas3DService", () => {
     assert.ok((root?.objects.length ?? 0) >= 1);
   });
 
+  it("saveFeatures with kinds restriction never touches region features", async () => {
+    const { rootNode } = await atlas3d.getOrCreateForWorld("atlas3d-test");
+    const region = await db.atlas3DFeature.create({
+      data: { nodeId: rootNode.id, kind: "region", geometry: { points: [[0, 0, 1], [1, 0, 0], [0, 1, 0]] } },
+    });
+    await atlas3d.saveFeatures(
+      rootNode.id,
+      [{ kind: "river", geometry: { points: [{ x: 0, z: 0 }, { x: 1, z: 1 }] } }],
+      { kinds: ["river", "road", "label"] },
+    );
+    const regionsBefore = await db.atlas3DFeature.count({ where: { nodeId: rootNode.id, kind: "region" } });
+    // replace-all within the restricted kinds: river replaced, regions untouched
+    await atlas3d.saveFeatures(rootNode.id, [{ kind: "road", geometry: { points: [{ x: 0, z: 0 }, { x: -1, z: 0 }] } }], {
+      kinds: ["river", "road", "label"],
+    });
+    const after = await db.atlas3DFeature.findMany({ where: { nodeId: rootNode.id } });
+    assert.equal(after.filter((f) => f.kind === "region").length, regionsBefore, "regions untouched");
+    assert.equal(after.filter((f) => f.kind === "river").length, 0, "river replaced away");
+    assert.equal(after.filter((f) => f.kind === "road").length, 1, "road saved");
+    assert.ok(await db.atlas3DFeature.findUnique({ where: { id: region.id } }), "region survives editor saves");
+  });
+
   it("subtree delete removes descendants leaf-first", async () => {
     const { rootNode } = await atlas3d.getOrCreateForWorld("atlas3d-test");
     const cont = await atlas3d.createChildNode({ parentId: rootNode.id, title: "Löschland" });

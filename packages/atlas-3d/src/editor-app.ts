@@ -114,6 +114,8 @@ export interface Atlas3DEditorApp {
   setWaterLevel(level: number): void;
   getRegionDraft(): Atlas3DRegionDraft | null;
   clearRegionDraft(): void;
+  /** Fresh render → PNG data URL (null without WebGL). */
+  exportImage(): string | null;
   applyExternal(doc: Atlas3DEditorDocState): void;
   getDocSnapshot(): Atlas3DEditorDocState;
   dispose(): void;
@@ -625,6 +627,12 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       regionPoints.length = 0;
       decor.updateRegionMarkers(regionPoints);
       options.onRegionDraftChange?.(0);
+    },
+    exportImage() {
+      if (!renderer) return null;
+      // render right before reading — the drawing buffer is not preserved
+      renderer.render(scene, camera);
+      return canvas.toDataURL("image/png");
     },
     applyExternal(doc) {
       carveOps = parseCarveOps(doc.carveOps);

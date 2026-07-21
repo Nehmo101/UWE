@@ -95,6 +95,24 @@ export default async function Atlas3DNodePage({ params }: Props) {
         initialCarveOps={node.terrain?.carveOps ?? []}
         initialHeightmap={terrainMeta?.heightmap ?? null}
         initialSplat={terrainMeta?.splat ?? null}
+        initialObjects={node.objects.map((object) => ({
+          localId: object.id,
+          id: object.id,
+          assetKind: object.assetKind,
+          tint: object.tint,
+          position: object.position,
+          scale: object.scale,
+          rotation: object.rotation,
+        }))}
+        initialFeatures={node.features
+          .filter((feature) => feature.kind === "river" || feature.kind === "road" || feature.kind === "label")
+          .map((feature) => ({
+            localId: feature.id,
+            id: feature.id,
+            kind: feature.kind,
+            points: (feature.geometry as { points?: unknown })?.points ?? [],
+            labelText: feature.labelText ?? undefined,
+          }))}
         silhouette={node.silhouette ?? null}
         waterLevel={{
           value: effective.environment.waterLevel,

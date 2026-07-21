@@ -12,6 +12,7 @@ import {
   type Atlas3DEditorTool,
 } from "@uwe/atlas-3d/editor-app";
 import { ATLAS3D_BIOMES } from "@uwe/atlas-3d/splat";
+import { INK_ASSET_KINDS, INK_ASSET_LABELS, INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "@uwe/atlas-3d/assets-ink";
 import {
   createAtlas3DRegionAction,
   saveAtlas3DTerrainAction,
@@ -46,11 +47,21 @@ export interface Atlas3DEditorShellProps {
   initialCarveOps: unknown;
   initialHeightmap: unknown;
   initialSplat: unknown;
+  initialObjects: unknown;
+  initialFeatures: unknown;
   silhouette: unknown;
   waterLevel: Atlas3DInheritedNumber;
   timeOfDay: Atlas3DInheritedText;
   children3d: Atlas3DChildLink[];
 }
+
+const TINTS: { key: InkTint; color: string; label: string }[] = [
+  { key: "paper", color: "#f1e8d4", label: "Papier" },
+  { key: "sepia", color: "#7a5a3a", label: "Sepia" },
+  { key: "terra", color: "#c2622b", label: "Terrakotta" },
+  { key: "teal", color: "#2f6f63", label: "Teal" },
+  { key: "blue", color: "#35597e", label: "Tintenblau" },
+];
 
 const BASE_TOOLS: { id: Atlas3DEditorTool; label: string; hint: string }[] = [
   { id: "orbit", label: "🧭 Orbit", hint: "Ziehen = Drehen · Rad = Zoom" },
@@ -61,6 +72,11 @@ const BASE_TOOLS: { id: Atlas3DEditorTool; label: string; hint: string }[] = [
   { id: "region", label: "▱ Region", hint: "Punkte klicken (mind. 3), dann Ebene anlegen — Drill-Down" },
   { id: "bite", label: "◔ Biss", hint: "Klick beißt ein Stück heraus (Apfel-Prinzip)" },
   { id: "tunnel", label: "◎ Tunnel", hint: "Zwei Klicks bohren einen Tunnel" },
+  { id: "asset", label: "♜ Asset", hint: "Klick platziert das gewählte Tusche-Asset" },
+  { id: "select", label: "⬚ Auswahl", hint: "Klick wählt aus · Shift erweitert · Entf löscht" },
+  { id: "river", label: "↝ Fluss", hint: "Zwei Klicks — der A*-Assistent sucht den Lauf bergab" },
+  { id: "road", label: "═ Straße", hint: "Zwei Klicks — der A*-Assistent umgeht Steigungen" },
+  { id: "label", label: "A Label", hint: "Text eingeben, dann Klick platziert das Label" },
 ];
 
 const TIME_OPTIONS = [
@@ -82,6 +98,10 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [tool, setTool] = useState<Atlas3DEditorTool>("orbit");
   const [brushRadius, setBrushRadius] = useState(0.28);
   const [activeBiome, setActiveBiome] = useState(1);
+  const [assetKind, setAssetKind] = useState<InkAssetKind>("tree");
+  const [assetTint, setAssetTint] = useState<InkTint>(INK_ASSET_DEFAULT_TINT.tree);
+  const [labelDraft, setLabelDraft] = useState("");
+  const [selectionCount, setSelectionCount] = useState(0);
   const [splitGap, setSplitGap] = useState(0);
   const [regionPointCount, setRegionPointCount] = useState(0);
   const [regionTitle, setRegionTitle] = useState("");
@@ -116,6 +136,8 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         form.set("carveOps", JSON.stringify(doc.carveOps));
         form.set("heightmap", JSON.stringify(doc.heightmap));
         form.set("splat", JSON.stringify(doc.splat));
+        form.set("objects", JSON.stringify(doc.objects));
+        form.set("features", JSON.stringify(doc.features));
         saveAtlas3DTerrainAction(form)
           .then((result) => setSaveState(result.ok ? "gespeichert" : "Fehler"))
           .catch(() => setSaveState("Fehler"));
@@ -133,10 +155,13 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       carveOps: props.initialCarveOps,
       heightmap: props.initialHeightmap,
       splat: props.initialSplat,
+      objects: props.initialObjects,
+      features: props.initialFeatures,
       silhouette: props.silhouette,
       waterLevel: props.waterLevel.value,
       onReady: (info) => setWebgl(info.webgl),
       onRegionDraftChange: (count) => setRegionPointCount(count),
+      onSelectionChange: (count) => setSelectionCount(count),
       onCommit: (kind, nextDoc) => {
         const prevDoc = lastDocRef.current;
         lastDocRef.current = nextDoc;
@@ -148,7 +173,11 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
                 ? "Welt teilen"
                 : kind === "biome"
                   ? "Biom malen"
-                  : "Herausschneiden",
+                  : kind === "objects"
+                    ? "Objekte ändern"
+                    : kind === "features"
+                      ? "Pfad/Label ändern"
+                      : "Herausschneiden",
           coalesceKey: kind === "split" ? "split" : undefined,
           apply: () => {
             appRef.current?.applyExternal(nextDoc);
@@ -219,7 +248,28 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
     });
   };
 
-  const tools = BASE_TOOLS;
+  const exportPng = () => {
+    const dataUrl = appRef.current?.exportImage();
+    if (!dataUrl) return;
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `atlas3d-${props.nodeTitle.replace(/[^a-z0-9äöüß-]+/gi, "-").toLowerCase()}.png`;
+    link.click();
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      appRef.current?.deleteSelection();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // rivers/roads route on flat levels only; everything else works in both modes
+  const tools = props.mode === "globe" ? BASE_TOOLS.filter((t) => t.id !== "river" && t.id !== "road") : BASE_TOOLS;
   const activeHint = BASE_TOOLS.find((t) => t.id === tool)?.hint ?? "";
 
   return (
@@ -250,10 +300,77 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         <button type="button" className="atlas3d-tool" disabled={redoDepth === 0} onClick={() => stack.redo()}>
           ↪ Wiederholen
         </button>
+        <button type="button" className="atlas3d-tool" onClick={exportPng} data-testid="atlas3d-export" disabled={!webgl}>
+          🖼 PNG
+        </button>
         <span className="atlas3d-save" data-state={saveState} data-testid="atlas3d-save-state">
           ● {saveState}
         </span>
       </div>
+
+      {tool === "asset" ? (
+        <div className="atlas3d-biomes" role="group" aria-label="Asset und Farbe wählen" data-testid="atlas3d-asset-panel">
+          {INK_ASSET_KINDS.filter((kind) => kind !== "asteroid" || props.mode === "globe").map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className={assetKind === kind ? "atlas3d-tool on" : "atlas3d-tool"}
+              data-testid={`atlas3d-asset-${kind}`}
+              aria-pressed={assetKind === kind}
+              onClick={() => {
+                setAssetKind(kind);
+                setAssetTint(INK_ASSET_DEFAULT_TINT[kind]);
+                appRef.current?.setAsset({ kind });
+              }}
+            >
+              {INK_ASSET_LABELS[kind]}
+            </button>
+          ))}
+          <span className="atlas3d-spacer" />
+          {TINTS.map((tint) => (
+            <button
+              key={tint.key}
+              type="button"
+              className={assetTint === tint.key ? "atlas3d-swatch on" : "atlas3d-swatch"}
+              style={{ backgroundColor: tint.color }}
+              title={tint.label}
+              aria-pressed={assetTint === tint.key}
+              aria-label={`Farbe ${tint.label}`}
+              onClick={() => {
+                setAssetTint(tint.key);
+                appRef.current?.setAsset({ tint: tint.key });
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {tool === "label" ? (
+        <div className="atlas3d-region">
+          <input
+            type="text"
+            placeholder="Label-Text"
+            value={labelDraft}
+            data-testid="atlas3d-label-text"
+            onChange={(event) => {
+              setLabelDraft(event.target.value);
+              appRef.current?.setLabelText(event.target.value);
+            }}
+          />
+          <span>Dann auf die Karte klicken.</span>
+        </div>
+      ) : null}
+
+      {tool === "select" && selectionCount > 0 ? (
+        <div className="atlas3d-region" data-testid="atlas3d-selection-bar">
+          <span>
+            {selectionCount} Objekt{selectionCount === 1 ? "" : "e"} ausgewählt
+          </span>
+          <button type="button" className="atlas3d-tool" onClick={() => appRef.current?.deleteSelection()}>
+            🗑 Löschen (Entf)
+          </button>
+        </div>
+      ) : null}
 
       {tool === "biome" ? (
         <div className="atlas3d-biomes" role="group" aria-label="Biom wählen">

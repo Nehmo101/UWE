@@ -253,3 +253,17 @@
   color: var(--uwe-fg-muted);
   font-size: 0.72rem;
 }
+
+.atlas3d-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--uwe-border);
+  cursor: pointer;
+  padding: 0;
+}
+
+.atlas3d-swatch.on {
+  outline: 2px solid var(--uwe-fg);
+  outline-offset: 1px;
+}

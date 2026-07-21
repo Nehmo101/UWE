@@ -66,6 +66,42 @@ export async function saveAtlas3DTerrainAction(formData: FormData): Promise<Save
         splitGap: splitOp?.kind === "split" ? splitOp.gap : 0,
       },
     });
+
+    // placed assets + drawn paths/labels (drill-down "region" features stay untouched)
+    const objectsRaw: unknown = JSON.parse(String(formData.get("objects") || "[]"));
+    if (Array.isArray(objectsRaw)) {
+      await atlas3d.saveObjects(
+        nodeId,
+        objectsRaw
+          .filter((o): o is Record<string, unknown> => typeof o === "object" && o !== null)
+          .filter((o) => typeof o.assetKind === "string" && typeof o.position === "object" && o.position !== null)
+          .map((o) => ({
+            id: typeof o.id === "string" ? o.id : undefined,
+            assetKind: o.assetKind as string,
+            position: o.position as object,
+            scale: typeof o.scale === "number" ? o.scale : 1,
+            rotation: typeof o.rotation === "number" ? o.rotation : 0,
+            tint: typeof o.tint === "string" ? o.tint : null,
+          })),
+      );
+    }
+    const featuresRaw: unknown = JSON.parse(String(formData.get("features") || "[]"));
+    if (Array.isArray(featuresRaw)) {
+      const editorKinds = ["river", "road", "label"] as const;
+      await atlas3d.saveFeatures(
+        nodeId,
+        featuresRaw
+          .filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
+          .filter((f) => (editorKinds as readonly string[]).includes(f.kind as string) && Array.isArray(f.points))
+          .map((f) => ({
+            id: typeof f.id === "string" ? f.id : undefined,
+            kind: f.kind as string,
+            geometry: { points: f.points } as object,
+            labelText: typeof f.labelText === "string" ? f.labelText : null,
+          })),
+        { kinds: editorKinds },
+      );
+    }
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Speichern fehlgeschlagen" };

@@ -284,12 +284,24 @@ export function createAtlas3DService(db: PrismaClient) {
     });
   }
 
-  /** Replace-all save of a node's features. */
-  async function saveFeatures(nodeId: string, features: readonly Atlas3DFeatureInput[]) {
+  /**
+   * Replace-all save of a node's features. With `options.kinds` the replace
+   * scope is restricted to those kinds — e.g. the editor saves
+   * river/road/label without touching drill-down "region" features.
+   */
+  async function saveFeatures(
+    nodeId: string,
+    features: readonly Atlas3DFeatureInput[],
+    options?: { kinds?: readonly string[] },
+  ) {
     return db.$transaction(async (tx) => {
       const keepIds = features.filter((f) => f.id).map((f) => f.id as string);
       await tx.atlas3DFeature.deleteMany({
-        where: keepIds.length > 0 ? { nodeId, id: { notIn: keepIds } } : { nodeId },
+        where: {
+          nodeId,
+          ...(options?.kinds ? { kind: { in: [...options.kinds] } } : {}),
+          ...(keepIds.length > 0 ? { id: { notIn: keepIds } } : {}),
+        },
       });
       const saved = [];
       for (const [index, feature] of features.entries()) {
