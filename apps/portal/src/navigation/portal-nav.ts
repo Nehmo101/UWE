@@ -118,7 +118,15 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "questions",
         ]),
         worldItem("portal-world-soundboard", "Soundboard", `${base}/soundboard`, "music", ["soundboard", "audio"]),
-        worldItem("portal-world-atlas", "Atlas", `${base}/atlas`, "map", ["atlas", "karte", "weltkarte"]),
+        worldItem("portal-world-atlas3d", "Atlas 3D", `${base}/atlas3d`, "globe", [
+          "atlas 3d",
+          "atlas",
+          "karte",
+          "weltkarte",
+          "globus",
+          "planet",
+          "3d",
+        ]),
       ],
     },
   ];

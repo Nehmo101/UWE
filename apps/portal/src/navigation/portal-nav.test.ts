@@ -67,7 +67,7 @@ describe("portal navigation (login-first)", () => {
     assert.equal(items.find((item) => item.id === "portal-world-handouts")?.href, "/auth/worlds/terra/handouts");
     assert.equal(items.find((item) => item.id === "portal-world-gallery")?.href, "/auth/worlds/terra/assets");
     assert.equal(items.find((item) => item.id === "portal-world-soundboard")?.href, "/auth/worlds/terra/soundboard");
-    assert.equal(items.find((item) => item.id === "portal-world-atlas")?.href, "/auth/worlds/terra/atlas");
+    assert.equal(items.find((item) => item.id === "portal-world-atlas3d")?.href, "/auth/worlds/terra/atlas3d");
   });
 
   it("resolves active world nav from pathname", () => {
@@ -92,11 +92,11 @@ describe("portal navigation (login-first)", () => {
         .some((item) => item.id === "portal-world-handouts" && item.active),
     );
 
-    const atlasSidebar = portalSidebar("/auth/worlds/terra/atlas", "terra");
+    const atlasSidebar = portalSidebar("/auth/worlds/terra/atlas3d", "terra");
     assert.ok(
       atlasSidebar
         .flatMap((group) => group.items)
-        .some((item) => item.id === "portal-world-atlas" && item.active),
+        .some((item) => item.id === "portal-world-atlas3d" && item.active),
     );
 
     const wikiSidebar = portalSidebar("/auth/worlds/terra/wiki", "terra");

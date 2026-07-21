@@ -5,10 +5,7 @@
   "packages/database/src/ai-review-service.ts": 1167,
   "packages/backup/src/restore.ts": 1100,
   "packages/database/src/tag-service.ts": 1082,
-  "apps/portal/src/components/atlas/AtlasViewer.tsx": 1060,
-  "apps/studio/app/atlas-actions.ts": 1026,
   "packages/database/src/repository.ts": 985,
-  "apps/studio/components/AiGatewayWizard.tsx": 928,
   "packages/database/src/settings-service.ts": 912,
   "apps/studio/app/settings/page.tsx": 905,
   "packages/backup/src/collect.ts": 888,
@@ -24,7 +21,6 @@
   "packages/database/src/label-export.ts": 753,
   "apps/studio/app/ideas/IdeaWorkspaceClient.tsx": 752,
   "packages/database/src/admin-status.ts": 746,
-  "packages/database/src/capture-triage-service.ts": 732,
   "packages/database/src/homelab-cockpit.ts": 725,
   "packages/security/src/schemas/actions.ts": 711
 }

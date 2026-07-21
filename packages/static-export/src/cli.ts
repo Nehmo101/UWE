@@ -61,7 +61,6 @@ async function main() {
     worldSlug,
     outputDir,
     uploadsDir,
-    databaseUrl,
   });
 
   console.log(`Done. ${result.pageCount} pages, ${result.assetCount} bundled assets.`);

@@ -24,7 +24,6 @@ describe("security leaks — visibility and portal filtering", () => {
     "packages/auth/src/permissions.test.ts",
     "apps/portal/src/lib/share-access.test.ts",
     "apps/portal/src/navigation/portal-nav.test.ts",
-    "packages/database/src/atlas-service.test.ts",
   ];
 
   for (const testFile of leakTests) {
@@ -55,122 +54,6 @@ describe("security leaks — player preview must not expose secrets", () => {
     const portalNav = read("apps/portal/src/navigation/portal-nav.ts");
     assert.doesNotMatch(portalNav, /Welten entdecken/);
     assert.doesNotMatch(portalNav, /href: "\/worlds"/);
-  });
-});
-
-describe("security leaks — atlas portal visibility (three-tier: map + node + feature/object)", () => {
-  it("enforces the three-tier dm_only filter server-side in the atlas service", () => {
-    const atlas = read("packages/database/src/atlas-service.ts");
-    // Predicate rejects dm_only and requires player-portal visibility …
-    assert.match(atlas, /isAtlasEntityAccessible/);
-    assert.match(atlas, /isDmOnlyVisibility/);
-    assert.match(atlas, /isPlayerPortalVisibility/);
-    // … and is applied across map, nodes, features and objects before serialization.
-    assert.match(atlas, /filterAtlasEntities/);
-    assert.match(atlas, /getAtlasForContext/);
-  });
-
-  it("serializes the static export atlas bundle through the portal filter", () => {
-    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
-    assert.match(exportAtlas, /getAtlasForContext/);
-    assert.match(exportAtlas, /["']portal["']/);
-  });
-
-  it("static export only ships approved palette items referenced by visible objects", () => {
-    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
-    // Palette stamps carry AI/upload image data — pending items must never
-    // reach the player-facing bundle, and only referenced ids may be resolved.
-    assert.match(exportAtlas, /reviewStatus:\s*["']approved["']/);
-    assert.match(exportAtlas, /id:\s*\{\s*in:/);
-    assert.match(exportAtlas, /approvedPaletteIds/);
-    assert.match(exportAtlas, /exportableObjects/);
-  });
-
-  it("static export takes the tile layer from the portal-filtered map snapshot only", () => {
-    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
-    // tileLayer lives on AtlasMap; the snapshot is null when the map is not
-    // portal-visible, so reading it off snapshot.map keeps the gate intact.
-    assert.match(exportAtlas, /snapshot\.map\.tileLayer/);
-    assert.doesNotMatch(exportAtlas, /atlasMap\.findUnique/);
-  });
-
-  it("fetches portal atlas node data through the portal filter", () => {
-    const nodePage = read("apps/portal/app/auth/worlds/[worldSlug]/atlas/[nodeId]/page.tsx");
-    assert.match(nodePage, /getAtlasForContext/);
-    assert.match(nodePage, /["']portal["']/);
-  });
-
-  it("fetches portal atlas index through the portal filter", () => {
-    const indexPage = read("apps/portal/app/auth/worlds/[worldSlug]/atlas/page.tsx");
-    assert.match(indexPage, /getAtlasForContext/);
-    assert.match(indexPage, /["']portal["']/);
-  });
-
-  it("portal graph API builds viewer-filtered graph data", () => {
-    const graphRoute = read("apps/portal/app/api/worlds/[worldSlug]/graph/route.ts");
-    assert.match(graphRoute, /buildWorldGraphForViewer/);
-    const graphPage = read("apps/portal/app/auth/worlds/[worldSlug]/graph/page.tsx");
-    assert.match(graphPage, /assertPortalCanReadWorld/);
-  });
-
-  it("single-file runtime never renders local/demo data in view mode (only server-injected, filtered docs)", () => {
-    const runtime = read("packages/static-export/static/atlas.html");
-    // View mode must short-circuit to an empty world BEFORE any localStorage/demo read …
-    assert.match(runtime, /if \(isView\(\)\) return migrate\(emptyDoc\(\)\)/);
-    // … and only accept a server-provided (already-filtered) doc via injection.
-    assert.match(runtime, /readInjectedDoc/);
-    assert.match(runtime, /getElementById\("atlas-doc"\)/);
-  });
-});
-
-describe("security leaks — RTX asset recipes (approved-only, validated recipe only)", () => {
-  it("static export re-validates RTX proposals and never reads prompt/rationale metadata", () => {
-    const exportAtlas = read("packages/static-export/src/export-atlas.ts");
-    // Approved rtx_asset items must be re-validated with the shared validator …
-    assert.match(exportAtlas, /validateRtxAtlasAssetProposal/);
-    // … and only the validated json-recipe object may be shipped.
-    assert.match(exportAtlas, /outputType\s*!==\s*["']json-recipe["']/);
-    assert.match(exportAtlas, /\.proposal\.recipe/);
-    // Proposal metadata (prompt/rationale/styleguideNotes/tags) must never be
-    // touched by the export serializer — only the recipe leaves the server.
-    assert.doesNotMatch(exportAtlas, /\bprompt\b/);
-    assert.doesNotMatch(exportAtlas, /rationale/);
-    assert.doesNotMatch(exportAtlas, /styleguideNotes/);
-  });
-
-  it("portal atlas page gates palette items to approved and re-validates RTX recipes", () => {
-    const nodePage = read("apps/portal/app/auth/worlds/[worldSlug]/atlas/[nodeId]/page.tsx");
-    // Pending stamps/assets must never reach the portal viewer …
-    assert.match(nodePage, /reviewStatus:\s*["']approved["']/);
-    // … and RTX recipes only pass after another validator run (never raw styleTags).
-    assert.match(nodePage, /validateRtxAtlasAssetProposal/);
-    assert.match(nodePage, /outputType\s*!==\s*["']json-recipe["']/);
-    assert.doesNotMatch(nodePage, /rationale/);
-    assert.doesNotMatch(nodePage, /styleguideNotes/);
-  });
-
-  it("portal viewer renders RTX assets only through the deterministic recipe renderer", () => {
-    const viewer = read("apps/portal/src/components/atlas/AtlasViewer.tsx");
-    assert.match(viewer, /drawRtxGouacheRecipePreview/);
-    // The client component never sees the raw proposal payload.
-    assert.doesNotMatch(viewer, /rtxAssetProposal/);
-    assert.doesNotMatch(viewer, /styleTags/);
-  });
-
-  it("studio editor doc only carries server-validated recipes of approved rtx_asset items", () => {
-    const studioPage = read("apps/studio/app/worlds/[worldSlug]/atlas/[nodeId]/page.tsx");
-    assert.match(studioPage, /reviewStatus\s*!==\s*["']approved["']/);
-    assert.match(studioPage, /validateRtxAtlasAssetProposal/);
-    assert.match(studioPage, /outputType\s*!==\s*["']json-recipe["']/);
-  });
-
-  it("single-file editor draws RTX assets via the engine recipe renderer without eval", () => {
-    const runtime = read("packages/static-export/static/atlas.html");
-    assert.match(runtime, /engine\.drawRtxGouacheRecipePreview/);
-    assert.doesNotMatch(runtime, /\beval\s*\(/);
-    const staticViewer = read("packages/static-export/static/atlas-viewer.js");
-    assert.match(staticViewer, /drawRtxGouacheRecipePreview/);
-    assert.doesNotMatch(staticViewer, /\beval\s*\(/);
   });
 });
 

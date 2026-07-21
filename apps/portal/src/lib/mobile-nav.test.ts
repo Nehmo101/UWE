@@ -77,7 +77,7 @@ describe("portal mobile nav (login-first contract)", () => {
       "/auth/worlds/terra/sessions",
       "/auth/worlds/terra/sessions/abc123",
       "/auth/worlds/terra/graph",
-      "/auth/worlds/terra/atlas",
+      "/auth/worlds/terra/atlas3d",
       "/auth/worlds/terra/assets",
     ]) {
       const nav = resolvePortalAuthBottomNav(path, "terra");

@@ -11,7 +11,23 @@
     "./camera-math": "./src/camera-math.ts",
     "./heightfield": "./src/heightfield.ts",
     "./picking": "./src/picking.ts",
-    "./sprite-atlas": "./src/sprite-atlas.ts"
+    "./sprite-atlas": "./src/sprite-atlas.ts",
+    "./planet-field": "./src/planet-field.ts",
+    "./surface-nets": "./src/surface-nets.ts",
+    "./planet-mesh": "./src/planet-mesh.ts",
+    "./ink-style": "./src/ink-style.ts",
+    "./world-root": "./src/world-root.ts",
+    "./editor-app": "./src/editor-app.ts",
+    "./splat": "./src/splat.ts",
+    "./terrain-field": "./src/terrain-field.ts",
+    "./terrain-mesh": "./src/terrain-mesh.ts",
+    "./assets-ink": "./src/assets-ink.ts",
+    "./terrain-path": "./src/terrain-path.ts",
+    "./scene-objects": "./src/scene-objects.ts",
+    "./environment-presets": "./src/environment-presets.ts",
+    "./editor-decor": "./src/editor-decor.ts",
+    "./settlement3d": "./src/settlement3d.ts",
+    "./viewport-rig": "./src/viewport-rig.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -19,7 +35,8 @@
   },
   "dependencies": {
     "@uwe/atlas": "workspace:*",
-    "three": "0.178.0"
+    "three": "0.178.0",
+    "@uwe/atlas-editor": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

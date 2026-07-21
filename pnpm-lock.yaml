@@ -76,6 +76,9 @@ importers:
       '@uwe/atlas-3d':
         specifier: workspace:*
         version: link:../../packages/atlas-3d
+      '@uwe/atlas-editor':
+        specifier: workspace:*
+        version: link:../../packages/atlas-editor
       '@uwe/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -279,6 +282,12 @@ importers:
       '@uwe/atlas':
         specifier: workspace:*
         version: link:../../packages/atlas
+      '@uwe/atlas-3d':
+        specifier: workspace:*
+        version: link:../../packages/atlas-3d
+      '@uwe/atlas-editor':
+        specifier: workspace:*
+        version: link:../../packages/atlas-editor
       '@uwe/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -520,6 +529,9 @@ importers:
       '@uwe/atlas':
         specifier: workspace:*
         version: link:../atlas
+      '@uwe/atlas-editor':
+        specifier: workspace:*
+        version: link:../atlas-editor
       three:
         specifier: 0.178.0
         version: 0.178.0
@@ -535,6 +547,21 @@ importers:
         version: link:../config
       tsx:
         specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/atlas-editor:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
         version: 4.22.4
       typescript:
         specifier: ^5.8.3
