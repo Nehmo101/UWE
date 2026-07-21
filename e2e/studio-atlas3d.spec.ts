@@ -24,6 +24,15 @@ test.describe("Studio Atlas 3D (neuer Editor)", () => {
 
     // Undo starts empty and disabled.
     await expect(page.getByTestId("atlas3d-undo")).toBeDisabled();
+
+    // Settlement needs flat ground — hidden on the globe.
+    await expect(page.getByTestId("atlas3d-tool-settlement")).toHaveCount(0);
+
+    // KI describe panel opens and closes without side effects.
+    await page.getByTestId("atlas3d-describe").click();
+    await expect(page.getByTestId("atlas3d-describe-panel")).toBeVisible();
+    await page.getByRole("button", { name: "Schließen", exact: true }).click();
+    await expect(page.getByTestId("atlas3d-describe-panel")).toHaveCount(0);
   });
 
   test("region drill-down creates a continent in top-down mode", async ({ page }) => {
@@ -59,6 +68,19 @@ test.describe("Studio Atlas 3D (neuer Editor)", () => {
     await expect(page.getByTestId("atlas3d-editor")).toHaveAttribute("data-mode", "terrain");
     await expect(page.getByTestId("atlas3d-water-level")).toBeVisible();
     await expect(page.getByTestId("atlas3d-water-badge")).toContainText("geerbt");
+
+    // one settlement click plants a deterministic hamlet as a single undo step
+    await page.getByTestId("atlas3d-tool-settlement").click();
+    const terrainCanvas = page.getByTestId("atlas3d-canvas");
+    const terrainBox = await terrainCanvas.boundingBox();
+    if (terrainBox) {
+      await terrainCanvas.click({ position: { x: terrainBox.width / 2, y: terrainBox.height / 2 } });
+      const undo = page.getByTestId("atlas3d-undo");
+      await expect(undo).toBeEnabled();
+      await expect(page.getByTestId("atlas3d-save-state")).not.toContainText("Fehler");
+      await undo.click();
+      await expect(undo).toBeDisabled();
+    }
 
     // breadcrumb leads back up to the globe
     await page.getByRole("link", { name: "Atlas 3D" }).first().click();

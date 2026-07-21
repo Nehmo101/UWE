@@ -27,10 +27,11 @@ import { buildPlanetMeshData } from "./planet-mesh";
 import { applyPlanarBrush, createTerrainField, type TerrainField } from "./terrain-field";
 import { buildTerrainMeshData } from "./terrain-mesh";
 import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGrid, type SplatJson } from "./splat";
-import { applyInkEnvironment, buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
+import { applySceneEnvironment, buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
 import { buildWorldRootBridge } from "./world-root";
 import { INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "./assets-ink";
 import { findTerrainPath, type PathKind } from "./terrain-path";
+import { generateSettlement3D } from "./settlement3d";
 import {
   parseDocFeatures,
   parseDocObjects,
@@ -39,7 +40,6 @@ import {
   type DocObjectState,
 } from "./scene-objects";
 import { EditorDecor } from "./editor-decor";
-import { environmentPreset } from "./environment-presets";
 import { OrbitRig } from "./viewport-rig";
 
 export type Atlas3DEditorMode = "globe" | "terrain";
@@ -57,7 +57,8 @@ export type Atlas3DEditorTool =
   | "select"
   | "river"
   | "road"
-  | "label";
+  | "label"
+  | "settlement";
 
 export interface Atlas3DEditorDocState {
   seed: number;
@@ -196,20 +197,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   let envFogDensity: number = options.environment?.fogDensity ?? 0;
 
   function applyEnvironment(): void {
-    const preset = environmentPreset(envTimeOfDay);
-    scene.background = new THREE.Color(preset.sky);
-    scene.fog = envFogDensity > 0.01 ? new THREE.FogExp2(new THREE.Color(preset.fogColor).getHex(), envFogDensity * 0.28) : null;
-    const materials: THREE.ShaderMaterial[] = [];
-    scene.traverse((object) => {
-      const mesh = object as THREE.Mesh;
-      if (mesh.isMesh && mesh.material instanceof THREE.ShaderMaterial) materials.push(mesh.material);
-    });
-    applyInkEnvironment(materials, {
-      lightDir: preset.lightDir,
-      tint: preset.tint,
-      fogColor: preset.fogColor,
-      fogDensity: envFogDensity,
-    });
+    applySceneEnvironment(scene, envTimeOfDay, envFogDensity);
   }
 
   // region draft (drill-down)
@@ -415,6 +403,19 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     }
     if (tool === "river" || tool === "road") {
       handlePathClick(point, tool);
+      return true;
+    }
+    if (tool === "settlement" && mode === "terrain") {
+      const layoutSeed = seed + Math.round(point.x * 997) * 31 + Math.round(point.z * 997);
+      const settlement = generateSettlement3D({
+        center: { x: point.x, z: point.z },
+        seed: layoutSeed,
+        idPrefix: `neu-${localSeq++}`,
+      });
+      objects = [...objects, ...settlement.objects];
+      features = [...features, ...settlement.features];
+      syncObjects();
+      commit("objects");
       return true;
     }
     if (tool === "label") {

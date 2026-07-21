@@ -90,6 +90,7 @@ export default async function Atlas3DNodePage({ params }: Props) {
         worldSlug={worldSlug}
         nodeId={node.id}
         nodeTitle={node.title}
+        levelLabel={LEVEL_LABELS[node.level] ?? node.level}
         mode={node.level === "globe" ? "globe" : "terrain"}
         seed={node.seed}
         initialCarveOps={node.terrain?.carveOps ?? []}

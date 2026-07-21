@@ -25,7 +25,9 @@
     "./terrain-path": "./src/terrain-path.ts",
     "./scene-objects": "./src/scene-objects.ts",
     "./environment-presets": "./src/environment-presets.ts",
-    "./editor-decor": "./src/editor-decor.ts"
+    "./editor-decor": "./src/editor-decor.ts",
+    "./settlement3d": "./src/settlement3d.ts",
+    "./viewport-rig": "./src/viewport-rig.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

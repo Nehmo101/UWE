@@ -19,6 +19,7 @@ import {
   saveAtlas3DTerrainAction,
   setAtlas3DEnvironmentAction,
 } from "@/app/atlas3d-actions";
+import { Atlas3DDescribePanel } from "./Atlas3DDescribePanel";
 import "./atlas3d.css";
 
 export interface Atlas3DInheritedNumber {
@@ -43,6 +44,7 @@ export interface Atlas3DEditorShellProps {
   worldSlug: string;
   nodeId: string;
   nodeTitle: string;
+  levelLabel: string;
   mode: Atlas3DEditorMode;
   seed: number;
   initialCarveOps: unknown;
@@ -79,8 +81,12 @@ const BASE_TOOLS: { id: Atlas3DEditorTool; label: string; hint: string }[] = [
   { id: "select", label: "⬚ Auswahl", hint: "Klick wählt aus · Shift erweitert · Entf löscht" },
   { id: "river", label: "↝ Fluss", hint: "Zwei Klicks — der A*-Assistent sucht den Lauf bergab" },
   { id: "road", label: "═ Straße", hint: "Zwei Klicks — der A*-Assistent umgeht Steigungen" },
+  { id: "settlement", label: "⌂ Siedlung", hint: "Klick pflanzt einen Weiler — deterministisch, ein Undo-Schritt" },
   { id: "label", label: "A Label", hint: "Text eingeben, dann Klick platziert das Label" },
 ];
+
+/** Werkzeuge, die flaches Gelände voraussetzen (A*-Routing bzw. Weiler-Layout). */
+const TERRAIN_ONLY_TOOLS: ReadonlySet<Atlas3DEditorTool> = new Set(["river", "road", "settlement"]);
 
 const TIME_OPTIONS = [
   { value: "morning", label: "Morgen" },
@@ -114,6 +120,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [redoDepth, setRedoDepth] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("gespeichert");
   const [webgl, setWebgl] = useState(true);
+  const [describeOpen, setDescribeOpen] = useState(false);
   const [waterDraft, setWaterDraft] = useState(props.waterLevel.value);
   const [fogDraft, setFogDraft] = useState(props.fogDensity.value);
   const [bookmarkName, setBookmarkName] = useState("");
@@ -274,8 +281,8 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // rivers/roads route on flat levels only; everything else works in both modes
-  const tools = props.mode === "globe" ? BASE_TOOLS.filter((t) => t.id !== "river" && t.id !== "road") : BASE_TOOLS;
+  // rivers/roads/settlements need flat ground; everything else works in both modes
+  const tools = props.mode === "globe" ? BASE_TOOLS.filter((t) => !TERRAIN_ONLY_TOOLS.has(t.id)) : BASE_TOOLS;
   const activeHint = BASE_TOOLS.find((t) => t.id === tool)?.hint ?? "";
 
   return (
@@ -308,6 +315,9 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         </button>
         <button type="button" className="atlas3d-tool" onClick={exportPng} data-testid="atlas3d-export" disabled={!webgl}>
           🖼 PNG
+        </button>
+        <button type="button" className="atlas3d-tool" onClick={() => setDescribeOpen(true)} data-testid="atlas3d-describe">
+          ✦ Beschreiben
         </button>
         <span className="atlas3d-save" data-state={saveState} data-testid="atlas3d-save-state">
           ● {saveState}
@@ -621,6 +631,15 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             </Link>
           ))}
         </div>
+      ) : null}
+
+      {describeOpen ? (
+        <Atlas3DDescribePanel
+          worldSlug={props.worldSlug}
+          nodeTitle={props.nodeTitle}
+          levelLabel={props.levelLabel}
+          onClose={() => setDescribeOpen(false)}
+        />
       ) : null}
     </div>
   );

@@ -7,6 +7,7 @@
  */
 
 import * as THREE from "three";
+import { environmentPreset } from "./environment-presets";
 import type { PlanetMeshData } from "./planet-mesh";
 
 export const INK_COLOR = new THREE.Color("#211d17");
@@ -86,6 +87,24 @@ export function createInkMaterial(options: InkMaterialOptions): THREE.ShaderMate
       uFogColor: { value: new THREE.Color("#e8dec6") },
       uFogDensity: { value: 0 },
     },
+  });
+}
+
+/** Apply a time-of-day preset + fog to a whole scene (ink shaders + basic materials). */
+export function applySceneEnvironment(scene: THREE.Scene, timeOfDay: string, fogDensity: number): void {
+  const preset = environmentPreset(timeOfDay);
+  scene.background = new THREE.Color(preset.sky);
+  scene.fog = fogDensity > 0.01 ? new THREE.FogExp2(new THREE.Color(preset.fogColor).getHex(), fogDensity * 0.28) : null;
+  const materials: THREE.ShaderMaterial[] = [];
+  scene.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (mesh.isMesh && mesh.material instanceof THREE.ShaderMaterial) materials.push(mesh.material);
+  });
+  applyInkEnvironment(materials, {
+    lightDir: preset.lightDir,
+    tint: preset.tint,
+    fogColor: preset.fogColor,
+    fogDensity,
   });
 }
 
