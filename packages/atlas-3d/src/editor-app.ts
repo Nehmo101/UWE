@@ -31,6 +31,17 @@ import { buildTerrainMeshData } from "./terrain-mesh";
 import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGrid, type SplatJson } from "./splat";
 import { buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
 import { buildWorldRootBridge } from "./world-root";
+import { INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "./assets-ink";
+import { findTerrainPath, type PathKind } from "./terrain-path";
+import {
+  parseDocFeatures,
+  parseDocObjects,
+  SceneObjectLayer,
+  type DocFeatureState,
+  type DocObjectState,
+} from "./scene-objects";
+import type { TerrainField } from "./terrain-field";
+import { EditorDecor } from "./editor-decor";
 
 export type Atlas3DEditorMode = "globe" | "terrain";
 
@@ -42,7 +53,12 @@ export type Atlas3DEditorTool =
   | "bite"
   | "tunnel"
   | "biome"
-  | "region";
+  | "region"
+  | "asset"
+  | "select"
+  | "river"
+  | "road"
+  | "label";
 
 export interface Atlas3DEditorDocState {
   seed: number;
@@ -50,9 +66,11 @@ export interface Atlas3DEditorDocState {
   heightmap: HeightmapJson | null;
   splat: SplatJson | null;
   splitGap: number;
+  objects: DocObjectState[];
+  features: DocFeatureState[];
 }
 
-export type Atlas3DCommitKind = "sculpt" | "carve" | "split" | "biome";
+export type Atlas3DCommitKind = "sculpt" | "carve" | "split" | "biome" | "objects" | "features";
 
 export interface Atlas3DRegionDraft {
   /** Globe: unit directions on the sphere. Terrain: [x, 0, z] map points. */
@@ -66,6 +84,8 @@ export interface Atlas3DEditorAppOptions {
   carveOps?: unknown;
   heightmap?: unknown;
   splat?: unknown;
+  objects?: unknown;
+  features?: unknown;
   /** Terrain mode: inherited parent silhouette (2D polygon json) + water level. */
   silhouette?: unknown;
   waterLevel?: number;
@@ -74,6 +94,7 @@ export interface Atlas3DEditorAppOptions {
   worldRootCount?: number;
   onCommit?: (kind: Atlas3DCommitKind, doc: Atlas3DEditorDocState) => void;
   onRegionDraftChange?: (pointCount: number) => void;
+  onSelectionChange?: (count: number) => void;
   onReady?: (info: { webgl: boolean }) => void;
 }
 
@@ -83,6 +104,9 @@ export interface Atlas3DEditorApp {
   setTool(tool: Atlas3DEditorTool): void;
   setBrush(brush: { radius?: number; strength?: number }): void;
   setBiome(biome: number): void;
+  setAsset(asset: { kind?: InkAssetKind; tint?: InkTint }): void;
+  setLabelText(text: string): void;
+  deleteSelection(): void;
   /** Live split preview (slider drag) — call commitSplit() on release. */
   setSplitGap(gap: number): void;
   commitSplit(): void;
@@ -103,8 +127,6 @@ const SPLAT_WIDTH = 128;
 const SPLAT_HEIGHT = 64;
 const PLANAR_SPLAT = 128;
 const TERRAIN_SIZE = 2;
-const INK = new THREE.Color("#211d17");
-const WATER_BLUE = new THREE.Color("#4a76a3");
 
 function splitGapOf(ops: readonly CarveOp[]): number {
   const split = ops.find((op) => op.kind === "split");
@@ -133,6 +155,16 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   let brushStrength = 0.02;
   let activeBiome = 1;
   let tunnelEntry: THREE.Vector3 | null = null;
+  let objects: DocObjectState[] = parseDocObjects(options.objects ?? []);
+  let features: DocFeatureState[] = parseDocFeatures(options.features ?? []);
+  let assetKind: InkAssetKind = "tree";
+  let assetTint: InkTint = INK_ASSET_DEFAULT_TINT.tree;
+  let labelText = "";
+  let pathStart: { x: number; z: number } | null = null;
+  let localSeq = objects.length + features.length + 1;
+  const selection = new Set<string>();
+  let currentTerrainField: TerrainField | null = null;
+  let currentPlanetElevation: ((dir: THREE.Vector3) => number) | null = null;
 
   // --- renderer (graceful without WebGL so e2e/headless can still mount) ---
   let renderer: THREE.WebGLRenderer | null = null;
@@ -152,13 +184,11 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   let planet: InkMeshGroup | null = null;
   let roots: { group: THREE.Group; dispose(): void } | null = null;
-  let waterMesh: THREE.Mesh | null = null;
-  let silhouetteLine: THREE.LineLoop | null = null;
   let disposed = false;
+  const decor = new EditorDecor(scene, mode, TERRAIN_SIZE);
 
   // region draft (drill-down)
   const regionPoints: THREE.Vector3[] = [];
-  let regionMarkers: THREE.Group | null = null;
 
   function updateCamera(): void {
     const sinPhi = Math.sin(orbit.phi);
@@ -170,77 +200,30 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     camera.lookAt(panTarget);
   }
 
-  function rebuildWater(): void {
-    if (waterMesh) {
-      scene.remove(waterMesh);
-      (waterMesh.material as THREE.Material).dispose();
-      waterMesh.geometry.dispose();
-      waterMesh = null;
-    }
-    if (mode !== "terrain") return;
-    const geometry = new THREE.PlaneGeometry(TERRAIN_SIZE * 2.4, TERRAIN_SIZE * 2.4);
-    geometry.rotateX(-Math.PI / 2);
-    const material = new THREE.MeshBasicMaterial({ color: WATER_BLUE, transparent: true, opacity: 0.55 });
-    waterMesh = new THREE.Mesh(geometry, material);
-    waterMesh.position.y = waterLevel;
-    scene.add(waterMesh);
-  }
+  const objectLayer = new SceneObjectLayer({
+    mode,
+    surfaceHeight: (x, z) => currentTerrainField?.height(x, z) ?? 0,
+    globeRadiusAt: (dir) => {
+      const elevation = currentPlanetElevation?.(dir) ?? 0;
+      return 1 + Math.max(0, elevation);
+    },
+  });
 
-  function rebuildSilhouette(): void {
-    if (silhouetteLine) {
-      scene.remove(silhouetteLine);
-      silhouetteLine.geometry.dispose();
-      (silhouetteLine.material as THREE.Material).dispose();
-      silhouetteLine = null;
-    }
-    if (mode !== "terrain" || !silhouette) return;
-    const points = silhouette.map(([x, z]) => new THREE.Vector3(x, waterLevel + 0.03, z));
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.6 });
-    silhouetteLine = new THREE.LineLoop(geometry, material);
-    scene.add(silhouetteLine);
-  }
-
-  function rebuildRegionMarkers(): void {
-    if (regionMarkers) {
-      scene.remove(regionMarkers);
-      regionMarkers.traverse((child) => {
-        if (child instanceof THREE.Mesh || child instanceof THREE.LineLoop) {
-          child.geometry.dispose();
-          (child.material as THREE.Material).dispose();
-        }
-      });
-      regionMarkers = null;
-    }
-    if (regionPoints.length === 0) return;
-    regionMarkers = new THREE.Group();
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color("#c2622b") });
-    for (const point of regionPoints) {
-      const marker = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), markerMaterial.clone());
-      marker.position.copy(point).multiplyScalar(mode === "globe" ? 1.01 : 1);
-      if (mode === "terrain") marker.position.y = point.y + 0.03;
-      regionMarkers.add(marker);
-    }
-    if (regionPoints.length >= 2) {
-      const lifted = regionPoints.map((p) =>
-        mode === "globe" ? p.clone().multiplyScalar(1.012) : new THREE.Vector3(p.x, p.y + 0.03, p.z),
-      );
-      const line = new THREE.LineLoop(
-        new THREE.BufferGeometry().setFromPoints(lifted),
-        new THREE.LineBasicMaterial({ color: new THREE.Color("#c2622b") }),
-      );
-      regionMarkers.add(line);
-    }
-    scene.add(regionMarkers);
+  function syncObjects(): void {
+    objectLayer.setSelection(selection);
+    objectLayer.sync(objects, features, performance.now() / 1000);
+    options.onSelectionChange?.(selection.size);
   }
 
   function rebuild(resolution: number): void {
     let data;
     if (mode === "globe") {
       const field = createPlanetField({ seed, heightmap, carveOps });
+      currentPlanetElevation = (dir) => field.elevation([dir.x, dir.y, dir.z]);
       data = buildPlanetMeshData(field, { resolution, splat });
     } else {
       const field = createTerrainField({ seed, size: TERRAIN_SIZE, heightmap, carveOps, silhouette, waterLevel });
+      currentTerrainField = field;
       data = buildTerrainMeshData(field, { resolution, splat });
     }
     const geometry = buildFlatGeometry(data);
@@ -279,6 +262,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       heightmap: heightmapToJson(heightmap),
       splat: splatToJson(splat),
       splitGap: splitGapOf(carveOps),
+      objects: JSON.parse(JSON.stringify(objects)) as DocObjectState[],
+      features: JSON.parse(JSON.stringify(features)) as DocFeatureState[],
     };
   }
 
@@ -337,10 +322,89 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     throttledRemesh();
   }
 
+  function pickObject(event: PointerEvent): string | null {
+    const rect = canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -(((event.clientY - rect.top) / rect.height) * 2 - 1),
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(objectLayer.pickables as THREE.Object3D[], true);
+    for (const hit of hits) {
+      let walker: THREE.Object3D | null = hit.object;
+      while (walker) {
+        if (typeof walker.userData.localId === "string") return walker.userData.localId;
+        walker = walker.parent;
+      }
+    }
+    return null;
+  }
+
+  function placeAsset(point: THREE.Vector3): void {
+    const localId = `neu-${localSeq++}`;
+    let position: Record<string, unknown>;
+    if (assetKind === "asteroid" && mode === "globe") {
+      const flat = Math.max(1.6, Math.hypot(point.x, point.z) + 0.6);
+      position = { orbit: { radius: flat, inclination: point.y * 0.4, phase: Math.atan2(point.z, point.x), speed: 0.12 } };
+    } else if (mode === "globe") {
+      const dir = point.clone().normalize();
+      position = { dir: [dir.x, dir.y, dir.z] };
+    } else {
+      position = { x: point.x, z: point.z };
+    }
+    objects = [...objects, { localId, assetKind, tint: assetTint, position, scale: 1, rotation: 0 }];
+    syncObjects();
+    commit("objects");
+  }
+
+  function handlePathClick(point: THREE.Vector3, kind: PathKind): void {
+    if (mode !== "terrain" || !currentTerrainField) return;
+    if (!pathStart) {
+      pathStart = { x: point.x, z: point.z };
+      return;
+    }
+    const routed = findTerrainPath(currentTerrainField, pathStart, { x: point.x, z: point.z }, { kind });
+    pathStart = null;
+    if (!routed) return;
+    features = [
+      ...features,
+      { localId: `neu-${localSeq++}`, kind, points: routed.map((p) => ({ x: p.x, z: p.z })) },
+    ];
+    syncObjects();
+    commit("features");
+  }
+
   function handleToolPointerDown(event: PointerEvent): boolean {
     if (tool === "orbit") return false;
+    if (tool === "select") {
+      const hit = pickObject(event);
+      if (!event.shiftKey) selection.clear();
+      if (hit) {
+        if (event.shiftKey && selection.has(hit)) selection.delete(hit);
+        else selection.add(hit);
+      }
+      syncObjects();
+      return hit !== null;
+    }
     const point = pickSurface(event);
     if (!point) return false;
+    if (tool === "asset") {
+      placeAsset(point);
+      return true;
+    }
+    if (tool === "river" || tool === "road") {
+      handlePathClick(point, tool);
+      return true;
+    }
+    if (tool === "label") {
+      features = [
+        ...features,
+        { localId: `neu-${localSeq++}`, kind: "label", points: [{ x: point.x, z: point.z }], labelText },
+      ];
+      syncObjects();
+      commit("features");
+      return true;
+    }
     if (tool === "raise" || tool === "lower" || tool === "smooth") {
       sculpting = true;
       applySculptAt(point, tool);
@@ -354,7 +418,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     if (tool === "region") {
       const stored = mode === "globe" ? point.clone().normalize() : new THREE.Vector3(point.x, point.y, point.z);
       regionPoints.push(stored);
-      rebuildRegionMarkers();
+      decor.updateRegionMarkers(regionPoints);
       options.onRegionDraftChange?.(regionPoints.length);
       return true;
     }
@@ -484,15 +548,18 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   resizeObserver?.observe(canvas);
 
   let frame = 0;
-  function loop(): void {
+  function loop(time: number): void {
     if (disposed) return;
+    objectLayer.updateTime(time / 1000);
     renderer?.render(scene, camera);
     frame = requestAnimationFrame(loop);
   }
 
+  scene.add(objectLayer.group);
   rebuild(restResolution);
-  rebuildWater();
-  rebuildSilhouette();
+  syncObjects();
+  decor.updateWater(waterLevel);
+  decor.updateSilhouette(silhouette, waterLevel);
   updateCamera();
   resize();
   if (webglAvailable) frame = requestAnimationFrame(loop);
@@ -506,7 +573,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       tunnelEntry = null;
       if (next !== "region" && regionPoints.length > 0) {
         regionPoints.length = 0;
-        rebuildRegionMarkers();
+        decor.updateRegionMarkers(regionPoints);
         options.onRegionDraftChange?.(0);
       }
     },
@@ -516,6 +583,24 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     },
     setBiome(biome) {
       activeBiome = Math.max(0, Math.floor(biome));
+    },
+    setAsset(asset) {
+      if (asset.kind !== undefined) {
+        assetKind = asset.kind;
+        assetTint = INK_ASSET_DEFAULT_TINT[asset.kind];
+      }
+      if (asset.tint !== undefined) assetTint = asset.tint;
+    },
+    setLabelText(text) {
+      labelText = text;
+    },
+    deleteSelection() {
+      if (selection.size === 0) return;
+      objects = objects.filter((o) => !selection.has(o.localId));
+      features = features.filter((f) => !selection.has(f.localId));
+      selection.clear();
+      syncObjects();
+      commit("objects");
     },
     setSplitGap(gap) {
       const others = carveOps.filter((op) => op.kind !== "split");
@@ -528,8 +613,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     },
     setWaterLevel(level) {
       waterLevel = level;
-      rebuildWater();
-      rebuildSilhouette();
+      decor.updateWater(waterLevel);
+      decor.updateSilhouette(silhouette, waterLevel);
       if (mode === "terrain") rebuild(restResolution);
     },
     getRegionDraft() {
@@ -538,7 +623,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     },
     clearRegionDraft() {
       regionPoints.length = 0;
-      rebuildRegionMarkers();
+      decor.updateRegionMarkers(regionPoints);
       options.onRegionDraftChange?.(0);
     },
     applyExternal(doc) {
@@ -549,7 +634,11 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       splat =
         splatFromJson(doc.splat) ??
         (mode === "globe" ? createSplat(SPLAT_WIDTH, SPLAT_HEIGHT) : createSplat(PLANAR_SPLAT, PLANAR_SPLAT));
+      objects = parseDocObjects(doc.objects);
+      features = parseDocFeatures(doc.features);
+      selection.clear();
       rebuild(restResolution);
+      syncObjects();
     },
     getDocSnapshot: snapshot,
     dispose() {
@@ -569,6 +658,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
         scene.remove(roots.group);
         roots.dispose();
       }
+      decor.dispose();
+      objectLayer.dispose();
       renderer?.dispose();
     },
   };

@@ -20,7 +20,10 @@
     "./editor-app": "./src/editor-app.ts",
     "./splat": "./src/splat.ts",
     "./terrain-field": "./src/terrain-field.ts",
-    "./terrain-mesh": "./src/terrain-mesh.ts"
+    "./terrain-mesh": "./src/terrain-mesh.ts",
+    "./assets-ink": "./src/assets-ink.ts",
+    "./terrain-path": "./src/terrain-path.ts",
+    "./scene-objects": "./src/scene-objects.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

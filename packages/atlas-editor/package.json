@@ -11,10 +11,7 @@
     "./inheritance": "./src/inheritance.ts",
     "./commands": "./src/commands.ts",
     "./carve": "./src/carve.ts",
-    "./geometry": "./src/geometry.ts",
-    "./splat": "./src/splat.ts",
-    "./terrain-field": "./src/terrain-field.ts",
-    "./terrain-mesh": "./src/terrain-mesh.ts"
+    "./geometry": "./src/geometry.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

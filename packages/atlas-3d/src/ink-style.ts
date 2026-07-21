@@ -20,6 +20,8 @@ export interface InkMaterialOptions {
 
 const VERTEX = /* glsl */ `
   attribute vec3 color;
+  attribute vec4 aAnim;
+  uniform float uTime;
   varying vec3 vColor;
   varying vec3 vNormalObject;
   varying vec3 vNormalWorld;
@@ -27,7 +29,8 @@ const VERTEX = /* glsl */ `
     vColor = color;
     vNormalObject = normalize(normal);
     vNormalWorld = normalize(mat3(modelMatrix) * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec3 p = position + aAnim.xyz * sin(uTime + aAnim.w);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   }
 `;
 
@@ -46,9 +49,11 @@ const FRAGMENT = /* glsl */ `
 `;
 
 const OUTLINE_VERTEX = /* glsl */ `
+  attribute vec4 aAnim;
   uniform float uWidth;
+  uniform float uTime;
   void main() {
-    vec3 p = position + normalize(normal) * uWidth;
+    vec3 p = position + normalize(normal) * uWidth + aAnim.xyz * sin(uTime + aAnim.w);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   }
 `;
@@ -67,6 +72,7 @@ export function createInkMaterial(options: InkMaterialOptions): THREE.ShaderMate
     uniforms: {
       uLightDir: { value: options.lightDirection?.clone() ?? new THREE.Vector3(0.5, 0.85, 0.55) },
       uObjectSpaceLight: { value: options.objectSpaceLight },
+      uTime: { value: 0 },
     },
   });
 }
@@ -78,9 +84,18 @@ export function createOutlineMaterial(width: number): THREE.ShaderMaterial {
     uniforms: {
       uWidth: { value: width },
       uInk: { value: INK_COLOR.clone() },
+      uTime: { value: 0 },
     },
     side: THREE.BackSide,
   });
+}
+
+/** Advance the idle animation clock on ink/outline materials. */
+export function setInkTime(materials: readonly THREE.ShaderMaterial[], seconds: number): void {
+  for (const material of materials) {
+    const uniform = material.uniforms.uTime;
+    if (uniform) uniform.value = seconds;
+  }
 }
 
 /** Buffer geometry with flat facets (non-indexed) — the drawn Tusche look. */
@@ -92,7 +107,16 @@ export function buildFlatGeometry(data: PlanetMeshData): THREE.BufferGeometry {
   const flat = indexed.toNonIndexed();
   indexed.dispose();
   flat.computeVertexNormals();
+  ensureAnimAttribute(flat);
   return flat;
+}
+
+/** ShaderMaterial requires every declared attribute — default aAnim to zeros. */
+export function ensureAnimAttribute(geometry: THREE.BufferGeometry): void {
+  if (!geometry.getAttribute("aAnim")) {
+    const count = geometry.getAttribute("position").count;
+    geometry.setAttribute("aAnim", new THREE.BufferAttribute(new Float32Array(count * 4), 4));
+  }
 }
 
 export interface InkMeshGroup {
