@@ -120,6 +120,16 @@ gepinnt — ein neues Brain-Modell kann nicht stillschweigend entkommen.
   `finance-overview`, `personal-brain`, `research`, `document-template`,
   `miniature-collection` + `life-admin/{brain,capture,contract,hardware,
   project,today,workshop}`. Statement-level leak-verifiziert, Codemod idempotent.
+  Zusätzlich `mail-account-service` (Owner-Inbox, Single-Client).
+- **Zwei-Client-Services (Stufe 6, Teil 2):** `life-admin-links-service`
+  (brainDb: admin-links/captures, coreDb: Generator-Presets/Outputs) inkl.
+  `create-life-admin-sub-services` / `LifeAdminService` /
+  `createLifeAdminService` auf `(brainDb, coreDb)`. `calendar-service`
+  (brainDb: feeds/events/contract-deadlines, coreDb: gameSession) inkl.
+  Auflösung der severierten `session`/`calendarEvents`-Includes.
+- **`apps/brain` (Stufe 6 D):** alle **11** Seiten am Brain-Client
+  (`scripts/repoint-brain-app-pages.mjs` + calendar/mail von Hand). Zwei-Client-
+  Seiten reichen `(brainPrisma, prisma)`, Single-Client `brainPrisma`.
 
 ## Stufe 6 — restliche Service-Repoint-Worklist (Host-geführt)
 
@@ -138,23 +148,29 @@ existieren dann nicht mehr am Core-Client). Reihenfolge:
   `createLifeAdminSubServices` auf **Zwei-Client** umstellen (`brainDb`,
   `coreDb`): Leaf-Subservices an `brainDb`, der gemischte `links`-Resolver an
   beide.
-- **C — 20 Cross-DB-Services (Zwei-Client + opake-ID-Join):** `backup`
-  `collect`/`restore`, `calendar-service`, `calendar-aggregation-service`,
+- **C — restliche Cross-DB-Services (Zwei-Client + opake-ID-Join):** `backup`
+  `collect`/`restore`, `calendar-aggregation-service`,
   `admin-entity-link-resolver`, `admin-search-service`,
   `entity-tag-search-service`, `tag-service`, `asset-link-service`,
-  `life-admin/life-admin-links-service`, `mail-compose-service`,
-  `mail-recipient-service`, `maintenance/log-retention-service`,
-  `undo-service`, `secrets-status-service`, `admin-status`, `stress-seed`,
+  `mail-compose-service`, `mail-recipient-service`,
+  `maintenance/log-retention-service`, `undo-service`,
+  `secrets-status-service`, `admin-status`, `stress-seed`,
   `apps/studio/app/integration-actions.ts`, `kitchen/recipe-service`
   (+`apps/studio/app/kitchen/recipe-image-file.ts`),
   `scan-inbox/scan-service` (+`apps/studio/app/scan-inbox/scan-file.ts`).
-  **Muster:** Brain-Zeilen über `brainPrisma` lesen/schreiben; die referenzierte
-  Core-Entität über die **opake ID** (`worldId`/`pageId`/`userId`/`sessionId`)
-  separat am Core-Client nachladen. Keine DB-übergreifende FK, kein
-  Dual-Store-Client in einer einzelnen Query.
-- **D — `apps/brain`-Seiten:** nach B/C von `prisma` auf `brainPrisma` (bzw.
-  Zwei-Client) umstellen. 11 Seiten: 9 hängen an B (life-admin/personal-brain/
-  documents/miniatures), 2 an C (`mail`, `calendar`).
+  (`life-admin-links-service` und `calendar-service` sind bereits erledigt —
+  Vorlage für das Muster.) **Muster:** Brain-Zeilen über `brainPrisma`
+  lesen/schreiben; die referenzierte Core-Entität über die **opake ID**
+  (`worldId`/`pageId`/`userId`/`sessionId`) separat am Core-Client nachladen.
+  Keine DB-übergreifende FK, kein Dual-Store-Client in einer einzelnen Query.
+- **Call-Site-Ripple (tsc-geführt):** die Zwei-Client-Signaturen brechen ihre
+  Aufrufer. `createLifeAdminService` (67 Sites) und `createCalendarService`
+  (~24 Sites) brauchen `(brainPrisma, prisma)`; Services, die `db` als Parameter
+  bekommen (`knowledge-assistant`, `capture-triage`, `scan-service`,
+  `import-central`, `game-session`), müssen `brainDb` durch ihre **eigene**
+  Signatur reichen. Studio-Brain-Routen, die ohnehin nach `apps/brain` umziehen,
+  werden dabei retired statt durchgereicht.
+- **D — `apps/brain`-Seiten:** **erledigt** — alle 11 Seiten am Brain-Client.
 - **E — Contested Mail-Entscheidung (G2/G3, VOR Mail-Repoint):** Die 5
   campaign-mail-Modelle (`MailTemplate`, `MailRecipientGroup`,
   `MailRecipient`, `MailMessageLog`, `MailDraft`) tragen `world`/`user`-FK und
