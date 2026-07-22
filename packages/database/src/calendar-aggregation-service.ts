@@ -408,7 +408,7 @@ export class CalendarAggregationService {
     const from = startOfDay(now);
     const to = endOfDay(new Date(now.getTime() + horizonDays * MS_PER_DAY));
 
-    const calendar = createCalendarService(this.db);
+    const calendar = createCalendarService(brainPrisma, this.db);
 
     const [
       events,

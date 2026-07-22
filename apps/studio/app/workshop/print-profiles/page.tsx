@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   Alert,
   Button,
   Card,
@@ -22,7 +23,7 @@ interface Props {
 
 export default async function WorkshopPrintProfilesPage({ searchParams }: Props) {
   const { imported, error } = await searchParams;
-  const profiles = await createLifeAdminService(prisma).listWorkshopPrintProfiles({ limit: 200 });
+  const profiles = await createLifeAdminService(brainPrisma, prisma).listWorkshopPrintProfiles({ limit: 200 });
 
   return (
     <StudioShell

@@ -1,4 +1,5 @@
 import type {
+import { brainPrisma } from "./brain-client";
   AdminLinkTargetType,
   CaptureEntry,
   PersonalProjectCategory,
@@ -253,7 +254,7 @@ export function mergeCaptureMetadata(
 export class CaptureTriageService {
   constructor(
     private readonly db: PrismaClient,
-    private readonly lifeAdmin: LifeAdminService = createLifeAdminService(db),
+    private readonly lifeAdmin: LifeAdminService = createLifeAdminService(brainPrisma, db),
   ) {}
 
   async getCaptureOrThrow(id: string) {

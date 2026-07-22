@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   getSystemSettings,
   prisma,
@@ -22,7 +23,7 @@ export async function GET(request: Request, context: RouteContext) {
   const parsed = await parseParams(context.params, captureIdParamSchema);
   if (!parsed.success) return parsed.response;
 
-  const capture = await createLifeAdminService(prisma).getCapture(parsed.data.captureId);
+  const capture = await createLifeAdminService(brainPrisma, prisma).getCapture(parsed.data.captureId);
   if (!capture?.storageKey) {
     return jsonError("Kein Anhang", 404);
   }

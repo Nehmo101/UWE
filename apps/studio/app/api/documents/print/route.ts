@@ -2,6 +2,7 @@ import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   buildDocumentPrintHtml,
   createLifeAdminService,
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     return jsonError("documentId fehlt.", 400);
   }
 
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const document = await service.getPersonalBrainDocument(documentId);
   if (!document) {
     return jsonError("Dokument nicht gefunden.", 404);

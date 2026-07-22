@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createCaptureTriageService,
   createLifeAdminService,
   prisma,
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
       if (!message) {
         return mailApiError("Nachricht nicht gefunden.", 404);
       }
-      const lifeAdmin = createLifeAdminService(prisma);
+      const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
       const capture = await lifeAdmin.createCapture({
         title: message.subject?.trim() || "Mail-Capture",
         content: [
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
       if (!message) {
         return mailApiError("Nachricht nicht gefunden.", 404);
       }
-      const lifeAdmin = createLifeAdminService(prisma);
+      const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
       const snippet = message.bodyText?.trim() || message.snippet?.trim() || "";
       const project = await lifeAdmin.createPersonalProject({
         name: message.subject?.trim() || "Mail-Aufgabe",

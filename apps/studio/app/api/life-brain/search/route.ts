@@ -2,6 +2,7 @@ import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { semanticSearchPersonalBrainChunks } from "@uwe/ai-brain";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   createPersonalBrainService,
   prisma,
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
   const limitRaw = Number.parseInt(searchParams.get("limit") ?? "20", 10);
   const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 20;
 
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const result = await service.searchPersonalBrain({
     query: query || undefined,
     category,

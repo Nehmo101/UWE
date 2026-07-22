@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   Alert,
   Badge,
   Button,
@@ -67,7 +68,7 @@ export default async function CalendarPage({ searchParams }: Props) {
   const nextMonth = shiftCalendarMonth(focusDate, 1);
 
   const config = resolveCalendarConfig();
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const repo = getAppRepository();
   const rangeStart = new Date(focusDate.getFullYear(), focusDate.getMonth(), 1);
   const rangeEnd = new Date(focusDate.getFullYear(), focusDate.getMonth() + 1, 0, 23, 59, 59, 999);

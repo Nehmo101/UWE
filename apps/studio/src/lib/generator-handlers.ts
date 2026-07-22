@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   buildFactionSimulationPrompt,
   createLifeAdminService,
   createUweRepository,
@@ -93,7 +94,7 @@ export async function postGeneratorAction(body: {
     return jsonError("Seite nicht gefunden.", 404);
   }
 
-  const lifeAdmin = createLifeAdminService(prisma);
+  const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
 
   let structuredInput = body.structuredInput;
   let presetId: string | undefined;

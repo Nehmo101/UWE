@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type { CaptureType } from "@uwe/database/server";
@@ -26,7 +27,7 @@ const VALID_CAPTURE_TYPES = new Set<CaptureType>([
 ]);
 
 function lifeAdmin() {
-  return createLifeAdminService(prisma);
+  return createLifeAdminService(brainPrisma, prisma);
 }
 
 function triageService() {

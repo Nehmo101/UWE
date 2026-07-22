@@ -1,6 +1,7 @@
 import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createCalendarService,
   prisma,
 } from "@uwe/database/server";
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   const worldId = url.searchParams.get("worldId") ?? undefined;
   const exportIcs = url.searchParams.get("export") === "ics";
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const events = await calendar.listEvents({
     from: from ? new Date(from) : undefined,
     to: to ? new Date(to) : undefined,
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return parsed.response;
 
   const body = parsed.data;
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const localFeed = await calendar.ensureLocalFeed();
   const event = await calendar.createEvent({
     feedId: localFeed.id,

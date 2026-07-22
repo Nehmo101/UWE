@@ -1,4 +1,5 @@
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   createPrismaClient,
   getStructuredGeneratorSchema,
@@ -53,7 +54,7 @@ export async function MagicItemBuilderSection({
   const schema = getStructuredGeneratorSchema("item");
 
   const db = createPrismaClient();
-  const lifeAdmin = createLifeAdminService(db);
+  const lifeAdmin = createLifeAdminService(brainPrisma, db);
   await lifeAdmin.ensureDefaultGeneratorPresets();
   const [systemPresets, worldPresets] = await Promise.all([
     lifeAdmin.listGeneratorPresets({ worldId: null, targetType: "item" }),

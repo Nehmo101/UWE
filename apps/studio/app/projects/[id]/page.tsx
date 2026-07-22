@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   asLinkList,
   buildPageUrl,
   CAPTURE_TYPE_LABELS,
@@ -54,7 +55,7 @@ interface Props {
 
 export default async function ProjectDetailPage({ params }: Props) {
   const { id } = await params;
-  const detail = await createLifeAdminService(prisma).getPersonalProjectDetail(id);
+  const detail = await createLifeAdminService(brainPrisma, prisma).getPersonalProjectDetail(id);
 
   if (!detail) {
     notFound();

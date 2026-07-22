@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   getAppRepository,
   prisma,
@@ -35,7 +36,7 @@ const FILTER_TABS = [
 
 export default async function CapturePage({ searchParams }: Props) {
   const { quick, status, source } = await searchParams;
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const worlds = await getAppRepository().listWorldsWithGuestMode();
   const statusFilter =
     status === "archived" ? "archived" : status === "all" ? undefined : ("inbox" as const);

@@ -385,7 +385,7 @@ export async function createCalendarEventAction(formData: FormData) {
 
   await requireStudioActionAuth();
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const feedIdInput = String(formData.get("feedId") ?? "");
   const localFeed = await calendar.ensureLocalFeed();
   const feedId = feedIdInput || localFeed.id;
@@ -433,7 +433,7 @@ export async function createCalendarFeedAction(formData: FormData) {
     throw new Error("FamilyWall-Feeds sind deaktiviert.");
   }
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const readWrite = formData.get("readWrite") === "on";
   const feed = await calendar.createFeed({
     name: String(formData.get("name") ?? ""),
@@ -464,7 +464,7 @@ export async function updateCalendarEventAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Event-ID fehlt.");
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const updated = await calendar.updateEvent(id, {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? "") || null,
@@ -498,7 +498,7 @@ export async function deleteCalendarEventAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Event-ID fehlt.");
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const existing = await prisma.calendarEvent.findUnique({
     where: { id },
     include: { feed: true },
@@ -529,7 +529,7 @@ export async function syncCalendarFeedAction(formData: FormData) {
   const feedId = String(formData.get("feedId") ?? "");
   if (!feedId) throw new Error("Feed-ID fehlt.");
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const feed = await calendar.getFeed(feedId);
   if (!feed) throw new Error("Feed nicht gefunden.");
 

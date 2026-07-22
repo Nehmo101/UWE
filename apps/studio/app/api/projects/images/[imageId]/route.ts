@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   getSystemSettings,
   logAuditEvent,
@@ -29,7 +30,7 @@ export async function GET(request: Request, context: RouteContext) {
   const parsed = await parseParams(context.params, paramsSchema);
   if (!parsed.success) return parsed.response;
 
-  const image = await createLifeAdminService(prisma).getProjectImage(parsed.data.imageId);
+  const image = await createLifeAdminService(brainPrisma, prisma).getProjectImage(parsed.data.imageId);
   if (!image) {
     return jsonError("Bild nicht gefunden.", 404);
   }
@@ -66,7 +67,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   const parsed = await parseParams(context.params, paramsSchema);
   if (!parsed.success) return parsed.response;
 
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const image = await service.getProjectImage(parsed.data.imageId);
   if (!image) {
     return jsonError("Bild nicht gefunden.", 404);

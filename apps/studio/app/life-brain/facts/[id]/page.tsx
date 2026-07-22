@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
   prisma,
@@ -33,7 +34,7 @@ interface Props {
 
 export default async function LifeBrainFactDetailPage({ params }: Props) {
   const { id } = await params;
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const detail = await service.getPersonalBrainFactDetail(id);
 
   if (!detail) {

@@ -372,7 +372,7 @@ async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Recor
     throw new Error("captureId fehlt im Capture-Triage-Job.");
   }
 
-  const lifeAdmin = createLifeAdminService(prisma);
+  const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
   const capture = await lifeAdmin.getCapture(captureId);
   if (!capture) {
     throw new Error(`Capture ${captureId} nicht gefunden.`);

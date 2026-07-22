@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type {
@@ -22,7 +23,7 @@ import { redirect } from "next/navigation";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
 
 function lifeAdmin() {
-  return createLifeAdminService(prisma);
+  return createLifeAdminService(brainPrisma, prisma);
 }
 
 function parseOptionalInt(value: FormDataEntryValue | null): number | null {
@@ -182,7 +183,7 @@ export async function createContractAction(formData: FormData) {
     portalUrl: String(formData.get("portalUrl") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
   });
-  await createCalendarService(prisma).syncContractDeadlinesToCalendar();
+  await createCalendarService(brainPrisma, prisma).syncContractDeadlinesToCalendar();
   revalidateAdminPaths();
   redirect("/contracts");
 }
@@ -204,7 +205,7 @@ export async function updateContractAction(formData: FormData) {
     portalUrl: String(formData.get("portalUrl") || "").trim() || null,
     notes: String(formData.get("notes") || ""),
   });
-  await createCalendarService(prisma).syncContractDeadlinesToCalendar();
+  await createCalendarService(brainPrisma, prisma).syncContractDeadlinesToCalendar();
   revalidateAdminPaths();
 }
 
@@ -212,7 +213,7 @@ export async function deleteContractAction(formData: FormData) {
   await requireStudioActionAuth();
 
   await lifeAdmin().deleteContractExpense(String(formData.get("id")));
-  await createCalendarService(prisma).syncContractDeadlinesToCalendar();
+  await createCalendarService(brainPrisma, prisma).syncContractDeadlinesToCalendar();
   revalidateAdminPaths();
 }
 

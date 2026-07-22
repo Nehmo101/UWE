@@ -429,7 +429,7 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
   }
 
   const db = createPrismaClient();
-  const calendar = createCalendarService(db);
+  const calendar = createCalendarService(brainPrisma, db);
   const feed = await calendar.getFeed(payload.feedId);
   if (!feed) {
     await db.$disconnect();

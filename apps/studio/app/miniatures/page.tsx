@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   createMiniatureCollectionService,
   MINIATURE_COLLECTION_STATUS_LABELS,
@@ -59,7 +60,7 @@ export default async function MiniaturesPage({ searchParams }: Props) {
   const gameSystemFilter = params.gameSystem?.trim() || FILTER_ALL;
 
   const miniatureService = createMiniatureCollectionService(prisma);
-  const workshopService = createLifeAdminService(prisma);
+  const workshopService = createLifeAdminService(brainPrisma, prisma);
 
   const [allItems, filteredItems, workshopProjects] = await Promise.all([
     miniatureService.listItems({ limit: 500 }),

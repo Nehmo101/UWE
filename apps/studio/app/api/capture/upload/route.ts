@@ -91,7 +91,7 @@ export async function POST(request: Request) {
   const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
   await fs.promises.writeFile(filePath, buffer);
 
-  const lifeAdmin = createLifeAdminService(prisma);
+  const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
   const defaultContent =
     captureType === "voice_memo" ? `Sprachmemo: ${title}` : `Bild-Upload: ${title}`;
   const capture = await lifeAdmin.createCapture({
