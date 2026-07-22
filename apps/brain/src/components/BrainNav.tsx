@@ -5,6 +5,10 @@ const LINKS = [
   { href: "/today", label: "Heute" },
   { href: "/life-brain", label: "Wissen" },
   { href: "/capture", label: "Capture" },
+  { href: "/projects", label: "Projekte" },
+  { href: "/workshop", label: "Werkstatt" },
+  { href: "/contracts", label: "Verträge" },
+  { href: "/hardware", label: "Hardware" },
 ] as const;
 
 /** Shared top navigation across the owner-only Brain surfaces. */
