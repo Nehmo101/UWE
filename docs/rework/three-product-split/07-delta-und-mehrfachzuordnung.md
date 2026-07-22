@@ -211,8 +211,12 @@ verifiziert — folgende Teilmenge umgesetzt:
 | **`apps/brain`** (Welle 4, vorgezogen) | Bootfähiger owner-only :3002-Prozess (loopback-Default, Exposure-Policy getestet), an `@uwe/product-contracts` verankert. Noch KEINE Routen-/Datenmigration. |
 | **Brain-Sichtbarkeit** | Landing (3. Karte), `/system/cloudflare`, Owner-Setup/Onboarding, Command Center. |
 | **Deploy-Grenze** | `check-cloudflare-tunnel.sh`-Guard gegen :3002/Brain-Hostname; kein systemd/Tunnel/Firewall-Eintrag. |
+| **Audience-Guard** (Welle 3) | `UweAppSurface += brain`, `evaluateBrainMiddleware` (owner-only, deny-by-default; Rolle server-side). Studio/Portal unverändert. |
+| **Routen-Migration** (Welle 4) | `/life-brain`, `/today`, `/capture` als schlanke Brain-Pages (lesen geteilte `@uwe/database`-Services) + Brain-Nav; Resolver/Command Center auf echten :3002. Studio-Routen bleiben (Übergang). |
+| **Daten-Export** (Welle 5, Teil) | `collectBrainExport` (@uwe/backup, read-only, 45 Modelle, an Contracts gepinnt) + Cutover-Runbook. |
 
-Bewusst **nicht** umgesetzt (owner-gated bzw. shared-runtime-riskant): Session-
-Audience-Guards in `@uwe/auth` (berühren Studio/Portal-Runtime), physische
-Datenmigration nach `uwe-brain.db` und Routen-Umzug (Invariante 7 — separate
-Owner-Freigabe). Diese bleiben die nächsten bewussten Entscheidungen.
+Nach Owner-GO umgesetzt (additiv/verifiziert). Der **destruktive Cutover**
+(Alt-Tabellen droppen, Stufe 9 des Runbooks) sowie das valide standalone
+`uwe-brain.db`-Schema (Relation-Auflösung) und die restlichen ~35 Brain-Routen
+bleiben als geordnete, dokumentierte Folgeschritte — mechanisch bzw. je einzeln
+abzunehmen, aber nicht blind in der Sandbox ohne echte Daten auszuführen.
