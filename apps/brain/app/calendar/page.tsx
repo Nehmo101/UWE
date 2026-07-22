@@ -1,4 +1,5 @@
 import { createCalendarService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
@@ -22,7 +23,7 @@ export default async function BrainCalendarPage() {
     );
   }
 
-  const events = await createCalendarService(prisma).listEvents();
+  const events = await createCalendarService(brainPrisma, prisma).listEvents();
 
   return (
     <BrainShell active="/calendar" title="Kalender">
