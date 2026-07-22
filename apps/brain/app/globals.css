@@ -1,0 +1,102 @@
+/*
+ * Tailwind CSS v4 — additive only (theme + utilities, NO preflight reset).
+ * Tokens bridge to the existing --uwe-* theme variables (from @uwe/shared-ui/uwe.css).
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@source "../app";
+@source "../src";
+@source "../../../packages/shared-ui/src";
+
+@theme {
+  --color-background: var(--uwe-bg);
+  --color-foreground: var(--uwe-fg);
+  --color-card: var(--uwe-card, var(--uwe-card-bg));
+  --color-border: var(--uwe-border);
+  --color-primary: var(--uwe-accent);
+  --color-primary-foreground: var(--uwe-on-accent);
+  --radius: var(--uwe-radius-md, 0.625rem);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: var(--uwe-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  background: radial-gradient(circle at top, color-mix(in srgb, #5c5470 30%, var(--uwe-bg) 70%) 0%, var(--uwe-bg) 55%, color-mix(in srgb, var(--uwe-bg) 70%, black 30%) 100%);
+  color: var(--uwe-fg);
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 40rem;
+  padding: 1.75rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--uwe-card, var(--uwe-card-bg)) 100%, transparent 25%);
+  border: 1px solid var(--uwe-border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.card .eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a7fb0;
+  margin-bottom: 0.5rem;
+}
+
+.card h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+  color: var(--uwe-fg);
+}
+
+.card p {
+  margin: 0 0 1rem;
+  line-height: 1.65;
+  color: var(--uwe-fg-muted, var(--uwe-fg));
+}
+
+.card ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--uwe-fg-muted, var(--uwe-fg));
+  line-height: 1.9;
+}
+
+.footer {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  color: var(--uwe-fg-muted, var(--uwe-fg));
+}
+
+.footer a {
+  color: var(--uwe-accent);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}

@@ -1,5 +1,6 @@
 import { validateUweEnvironment } from "@uwe/auth";
 import type { PrismaClient } from "./client";
+import { buildBrainSection } from "./owner-setup-brain-section";
 import { getAdminStatus, type AdminStatus } from "./admin-status";
 import { createConnectorService } from "./connector-service";
 import { scanPublicContentLeaks, type PublicLeakScanResult } from "./public-leak-scanner";
@@ -369,82 +370,6 @@ function buildCloudflareSection(
     nextSteps,
     settings: settingsItems,
     testAction: "urls",
-  };
-}
-
-function buildBrainSection(
-  settings: Awaited<ReturnType<SettingsService["getSettings"]>>,
-): SetupSectionStatus {
-  const d = settings.deployment;
-  const editorHref = "/system/cloudflare";
-  const exposureLabel =
-    d.brainExposure === "lan"
-      ? "LAN (nach Owner-Freigabe)"
-      : d.brainExposure === "off"
-        ? "Deaktiviert"
-        : "Nur lokal (Loopback)";
-
-  const settingsItems: SetupSettingItem[] = [
-    {
-      id: "brain-exposure",
-      label: "Erreichbarkeit",
-      configured: true,
-      displayValue: exposureLabel,
-      source: deploymentOverrideSource(d.brainExposure === "loopback" ? "env" : "on"),
-      editable: true,
-      description: "Owner-only und lokal/LAN — nie im öffentlichen Tunnel (ADR 004/007).",
-      href: editorHref,
-    },
-    {
-      id: "brain-url",
-      label: "Brain-URL (lokal)",
-      configured: true,
-      displayValue: d.brainUrl.trim() || "teilt Studio-Origin",
-      source: deploymentStringSource(d.brainUrl),
-      editable: true,
-      href: editorHref,
-    },
-    {
-      id: "brain-path",
-      label: "Brain-Einstieg",
-      configured: true,
-      displayValue: d.brainPath.trim() || "/life-brain",
-      source: deploymentStringSource(d.brainPath),
-      editable: true,
-      href: editorHref,
-    },
-    {
-      id: "brain-tunnel",
-      label: "Im öffentlichen Tunnel",
-      configured: true,
-      displayValue: "nie (ADR 004/007)",
-      source: "env",
-      editable: false,
-      description: "Der private Brain-Bereich wird nie öffentlich exponiert.",
-    },
-  ];
-
-  const nextSteps: string[] = [];
-  if (d.brainExposure === "off") {
-    nextSteps.push("Brain-Einstieg ist deaktiviert — in System → Cloudflare auf „Nur lokal“ oder „LAN“ stellen.");
-  } else if (d.brainExposure === "lan") {
-    nextSteps.push("Brain ist im LAN erreichbar — nur nach bewusster Owner-Freigabe, nie öffentlich tunneln.");
-  } else {
-    nextSteps.push("Brain bleibt lokal (Loopback) — der sichere Standard.");
-  }
-  nextSteps.push("Privater Alltags- und Wissensbereich öffnen: /life-brain. Einstellungen: System → Cloudflare.");
-
-  const level: SetupSectionLevel = d.brainExposure === "off" ? "disabled" : "ok";
-
-  return {
-    id: "brain",
-    title: "Brain (privat)",
-    level,
-    statusLabel:
-      level === "disabled" ? "Inaktiv" : d.brainExposure === "lan" ? "LAN" : "Lokal",
-    message: "Owner-only Alltags- und Wissensbereich — lokal auf deiner Hardware, nie in der Cloud.",
-    nextSteps,
-    settings: settingsItems,
   };
 }
 

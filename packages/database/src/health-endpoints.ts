@@ -3,7 +3,7 @@ import { databaseHealthCheck } from "./health-server";
 import { getSystemStatus, type SystemStatus } from "./system-status";
 import { UWE_PRODUCT_NAME, UWE_VERSION } from "./version";
 
-export type HealthAppName = "UWE Studio" | "UWE Portal";
+export type HealthAppName = "UWE Studio" | "UWE Portal" | "UWE Brain";
 
 export interface DetailedHealthPayload {
   status: "ok" | "degraded";
