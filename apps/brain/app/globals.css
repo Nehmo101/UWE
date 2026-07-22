@@ -100,3 +100,25 @@ body {
 .footer a:hover {
   text-decoration: underline;
 }
+
+.brain-row {
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-panel, var(--uwe-bg-elevated)) 85%, transparent);
+}
+
+.brain-tag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  border: 1px solid #5c5470;
+  color: #8a7fb0;
+}
+
+.brain-muted {
+  color: var(--uwe-fg-muted, var(--uwe-fg));
+  font-size: 0.8rem;
+}

@@ -36,9 +36,11 @@ export default async function BrainHome() {
               <li>Lokale KI — private Inhalte verlassen den Host nicht</li>
             </ul>
             <p className="footer">
-              Erreichbarkeit: {EXPOSURE_LABEL[exposure]}. Die eigentlichen Brain-Flächen werden in
-              einer späteren Welle aus Studio hierher migriert.
+              Erreichbarkeit: {EXPOSURE_LABEL[exposure]}. Weitere Brain-Flächen folgen aus Studio.
             </p>
+            <div className="footer">
+              <a href="/life-brain">Persönliches Brain öffnen →</a>
+            </div>
           </>
         ) : (
           <p>
