@@ -42,13 +42,28 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
   const proxy = getProxyStatus();
   const cf = proxy.cloudflare;
 
+  const brainExposureLabel: Record<DeploymentSettings["brainExposure"], string> = {
+    loopback: "Nur lokal (Loopback)",
+    lan: "LAN (nach Owner-Freigabe)",
+    off: "Deaktiviert",
+  };
+
+  // Brain is listed alongside Studio and Portal so all three products are visible
+  // as peers. Brain stays owner-only/local (see the dedicated card below); by
+  // default it shares the Studio origin and is reached via /life-brain.
   const routing: { label: string; value: string; source: Source }[] = [
     { label: "Deployment-Modell", value: proxy.deploymentModel, source: "env" },
     { label: "Öffentliche App-URL", value: proxy.publicAppUrl ?? "—", source: stringSource(d.publicAppUrl) },
     { label: "Studio-URL", value: proxy.studioUrl ?? "—", source: stringSource(d.studioUrl) },
     { label: "Portal-URL", value: proxy.portalUrl ?? "—", source: stringSource(d.portalUrl) },
+    {
+      label: "Brain-URL (lokal)",
+      value: d.brainUrl.trim() || `${proxy.studioUrl ?? "Studio-Origin"} · teilt Studio`,
+      source: stringSource(d.brainUrl),
+    },
     { label: "Studio-Pfad", value: proxy.studioPath, source: stringSource(d.studioPath) },
     { label: "Portal-Pfad", value: proxy.portalPath, source: stringSource(d.portalPath) },
+    { label: "Brain-Einstieg", value: d.brainPath.trim() || "/life-brain", source: stringSource(d.brainPath) },
     { label: "Studio auf eigenem Host", value: yesNo(cf.studioOnSeparateHost), source: "env" },
   ];
 
@@ -85,23 +100,13 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
     },
   ];
 
-  const brainExposureLabel: Record<DeploymentSettings["brainExposure"], string> = {
-    loopback: "Nur lokal (Loopback)",
-    lan: "LAN (nach Owner-Freigabe)",
-    off: "Deaktiviert",
-  };
   const brain: { label: string; value: string; source: Source }[] = [
     {
       label: "Erreichbarkeit",
       value: brainExposureLabel[d.brainExposure],
       source: d.brainExposure === "loopback" ? "env" : "db",
     },
-    {
-      label: "Brain-URL",
-      value: d.brainUrl.trim() || "— (teilt Studio-Origin)",
-      source: stringSource(d.brainUrl),
-    },
-    { label: "Brain-Einstieg", value: d.brainPath.trim() || "/life-brain", source: stringSource(d.brainPath) },
+    { label: "Im öffentlichen Tunnel", value: "Nein — nie (ADR 004/007)", source: "env" },
   ];
 
   const healthy = cf.tunnelConfigured && proxy.trustProxy && proxy.authRequired;

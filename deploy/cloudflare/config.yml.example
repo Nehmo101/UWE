@@ -2,6 +2,7 @@
 # Landing: https://uweanddragons.org        -> Studio app (:3000) — public entry + sign-in
 # Studio:  https://studio.uweanddragons.org  -> Studio app (:3000)
 # Portal:  https://portal.uweanddragons.org  -> Portal app (:3001)
+# Brain:   http://brain.lan:3002 (LAN only)  -> Brain app  — owner-only, NEVER in this tunnel (ADR 004/007)
 #
 # One sign-in on the apex landing is valid on both subdomains when
 # SESSION_COOKIE_DOMAIN=.uweanddragons.org is set (see .env.production.example).
