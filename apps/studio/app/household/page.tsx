@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   classifyDue,
   createMaintenanceService,
   MAINTENANCE_INTERVALS,
@@ -52,7 +53,7 @@ function formatDate(value: Date | null): string {
 export default async function HouseholdPage() {
   await requireStudioAccess();
 
-  const service = createMaintenanceService(prisma);
+  const service = createMaintenanceService(brainPrisma, prisma);
   const now = new Date();
   const [tasks, upcoming] = await Promise.all([
     service.list(),

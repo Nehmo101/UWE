@@ -9,7 +9,8 @@
  * eine maskierte E-Mail. Login erfolgt on-demand pro Operation; es werden keine
  * kurzlebigen Access-Tokens persistiert.
  */
-import { toPrismaJsonValue, type PrismaClient } from "@uwe/database/server";
+import { toPrismaJsonValue } from "@uwe/database/server";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import {
   decryptSecret,
   encryptSecret,

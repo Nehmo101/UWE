@@ -2,12 +2,13 @@ import { generateIcalCalendar } from "@uwe/calendar";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { parseRentalReturnDue } from "@/src/lib/workshop-rental-due";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
-  const rentals = await createLifeAdminService(prisma).listWorkshopTerrainRentals({ limit: 500 });
+  const rentals = await createLifeAdminService(brainPrisma, prisma).listWorkshopTerrainRentals({ limit: 500 });
   const events = rentals.flatMap((rental) => {
     const due = parseRentalReturnDue(rental.notes);
     if (!due) return [];

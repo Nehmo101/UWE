@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   asColorList,
   createLifeAdminService,
   formatColorsForForm,
@@ -37,7 +38,7 @@ const LIST_CARD_CLASS =
   "flex flex-col gap-2 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm";
 
 export default async function WorkshopRecipesPage() {
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const recipes = await service.listWorkshopPaintRecipes({ limit: 200 });
 
   return (

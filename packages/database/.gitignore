@@ -4,6 +4,7 @@ node_modules
 
 /src/generated/prisma
 /src/generated/prisma-postgres
+/src/generated/prisma-brain
 # Local dev SQLite database + its WAL/SHM sidecars (regenerated via db:deploy)
 /data/
 *.db-journal

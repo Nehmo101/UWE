@@ -1,9 +1,10 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import type {
   AdminEntityLink,
   AdminLinkSourceType,
   AdminLinkTargetType,
-} from "./generated/prisma/client";
+} from "./generated/prisma-brain/client";
 
 export const ADMIN_LINK_RELATION_LABELS: Record<string, string> = {
   promoted_to: "Übernommen aus",
@@ -79,36 +80,37 @@ function studioHrefForEntity(
 
 async function resolveEntityTitle(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   type: AdminLinkSourceType | AdminLinkTargetType,
   id: string,
 ): Promise<{ title: string; worldSlug?: string | null }> {
   switch (type) {
     case "capture": {
-      const capture = await db.captureEntry.findUnique({ where: { id }, select: { title: true } });
+      const capture = await brainDb.captureEntry.findUnique({ where: { id }, select: { title: true } });
       return { title: capture?.title || "Capture" };
     }
     case "personal_project": {
-      const project = await db.personalProject.findUnique({ where: { id }, select: { name: true } });
+      const project = await brainDb.personalProject.findUnique({ where: { id }, select: { name: true } });
       return { title: project?.name || "Projekt" };
     }
     case "workshop_project": {
-      const workshop = await db.workshopProject.findUnique({ where: { id }, select: { title: true } });
+      const workshop = await brainDb.workshopProject.findUnique({ where: { id }, select: { title: true } });
       return { title: workshop?.title || "Werkstatt" };
     }
     case "contract_expense": {
-      const contract = await db.contractExpense.findUnique({ where: { id }, select: { name: true } });
+      const contract = await brainDb.contractExpense.findUnique({ where: { id }, select: { name: true } });
       return { title: contract?.name || "Vertrag" };
     }
     case "hardware_device": {
-      const device = await db.hardwareDevice.findUnique({ where: { id }, select: { name: true } });
+      const device = await brainDb.hardwareDevice.findUnique({ where: { id }, select: { name: true } });
       return { title: device?.name || "Hardware" };
     }
     case "personal_brain_document": {
-      const doc = await db.personalBrainDocument.findUnique({ where: { id }, select: { title: true } });
+      const doc = await brainDb.personalBrainDocument.findUnique({ where: { id }, select: { title: true } });
       return { title: doc?.title || "Dokument" };
     }
     case "personal_brain_fact": {
-      const fact = await db.personalBrainFact.findUnique({ where: { id }, select: { title: true } });
+      const fact = await brainDb.personalBrainFact.findUnique({ where: { id }, select: { title: true } });
       return { title: fact?.title || "Fakt" };
     }
     case "world": {
@@ -133,6 +135,7 @@ async function resolveEntityTitle(
 
 export async function resolveAdminEntityLinks(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   links: AdminEntityLink[],
   perspective: { sourceType: AdminLinkSourceType; sourceId: string },
 ): Promise<ResolvedAdminEntityLink[]> {
@@ -142,7 +145,7 @@ export async function resolveAdminEntityLinks(
     const outgoing = link.sourceType === perspective.sourceType && link.sourceId === perspective.sourceId;
     const targetType = outgoing ? link.targetType : link.sourceType;
     const targetId = outgoing ? link.targetId : link.sourceId;
-    const { title, worldSlug } = await resolveEntityTitle(db, targetType, targetId);
+    const { title, worldSlug } = await resolveEntityTitle(db, brainDb, targetType, targetId);
 
     resolved.push({
       id: link.id,
@@ -161,21 +164,22 @@ export async function resolveAdminEntityLinks(
 
 export async function listResolvedAdminLinksForEntity(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   sourceType: AdminLinkSourceType,
   sourceId: string,
 ): Promise<ResolvedAdminEntityLink[]> {
   const [outgoing, incoming] = await Promise.all([
-    db.adminEntityLink.findMany({
+    brainDb.adminEntityLink.findMany({
       where: { sourceType, sourceId },
       orderBy: [{ createdAt: "desc" }],
     }),
-    db.adminEntityLink.findMany({
+    brainDb.adminEntityLink.findMany({
       where: { targetType: sourceType as AdminLinkTargetType, targetId: sourceId },
       orderBy: [{ createdAt: "desc" }],
     }),
   ]);
 
-  const outgoingResolved = await resolveAdminEntityLinks(db, outgoing, { sourceType, sourceId });
-  const incomingResolved = await resolveAdminEntityLinks(db, incoming, { sourceType, sourceId });
+  const outgoingResolved = await resolveAdminEntityLinks(db, brainDb, outgoing, { sourceType, sourceId });
+  const incomingResolved = await resolveAdminEntityLinks(db, brainDb, incoming, { sourceType, sourceId });
   return [...outgoingResolved, ...incomingResolved];
 }

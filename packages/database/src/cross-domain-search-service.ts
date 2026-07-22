@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import {
   searchAdminEntities,
   type AdminSearchOptions,
@@ -36,6 +37,7 @@ export interface StudioCrossDomainResult {
 
 export async function searchStudioCrossDomain(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: StudioCrossDomainSearchOptions,
 ): Promise<StudioCrossDomainResult> {
   const scope = options.scope ?? "all";
@@ -56,13 +58,13 @@ export async function searchStudioCrossDomain(
       ? searchGlobalForDm(db, { query, ...options.wiki })
       : Promise.resolve([]),
     includeAdmin
-      ? searchAdminEntities(db, { query, ...options.admin })
+      ? searchAdminEntities(db, brainDb, { query, ...options.admin })
       : Promise.resolve([]),
     includeMedia
       ? searchStudioMedia(db, { query, worldSlug, limit: 24 })
       : Promise.resolve([]),
     includeTags
-      ? searchEntitiesByTagQuery(db, {
+      ? searchEntitiesByTagQuery(db, brainDb, {
           query,
           limit: scope === "admin" ? 30 : 20,
         })

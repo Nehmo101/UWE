@@ -1,5 +1,7 @@
 import { validateUweEnvironment } from "@uwe/auth";
+import { brainPrisma } from "./brain-client";
 import type { PrismaClient } from "./client";
+import { buildBrainSection } from "./owner-setup-brain-section";
 import { getAdminStatus, type AdminStatus } from "./admin-status";
 import { createConnectorService } from "./connector-service";
 import { scanPublicContentLeaks, type PublicLeakScanResult } from "./public-leak-scanner";
@@ -11,6 +13,7 @@ export type OwnerSetupSectionId =
   | "system"
   | "access"
   | "cloudflare"
+  | "brain"
   | "mail"
   | "rtx"
   | "printer"
@@ -745,7 +748,7 @@ export async function getOwnerSetupSnapshot(
   const [system, settings, admin, userCount, publicLeaks, envIssues] = await Promise.all([
     getSystemStatus(db, { env }),
     new SettingsService(db).getSettings(),
-    getAdminStatus(db, { env }),
+    getAdminStatus(db, brainPrisma, { env }),
     db.user.count(),
     scanPublicContentLeaks(db),
     Promise.resolve(validateUweEnvironment(env)),
@@ -755,6 +758,7 @@ export async function getOwnerSetupSnapshot(
     Promise.resolve(buildSystemSection(system, settings)),
     Promise.resolve(buildAccessSection(system, settings, userCount)),
     Promise.resolve(buildCloudflareSection(system, settings)),
+    Promise.resolve(buildBrainSection(settings)),
     Promise.resolve(buildMailSection(system, settings)),
     buildRtxSection(db, admin, settings, env),
     buildPrinterSection(db),

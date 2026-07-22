@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   BILLING_INTERVAL_LABELS,
   buildContractAlerts,
   ContractBillingIntervalEnum,
@@ -65,7 +66,7 @@ export default async function ContractsPage({ searchParams }: Props) {
 
   const { period: periodParam, aiSynced } = await searchParams;
   const aiPeriod = resolveAiPeriod(periodParam);
-  const lifeAdmin = createLifeAdminService(prisma);
+  const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
 
   const [manualContracts, aiUsageContracts, aiRollup] = await Promise.all([
     lifeAdmin.listContractExpenses({ source: "manual", limit: 200 }),

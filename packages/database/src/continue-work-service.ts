@@ -1,4 +1,4 @@
-import type { PrismaClient } from "./client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
 
 /**
  * „Mach weiter wo ich aufgehört habe"-Zentrale: aggregiert die wahrscheinlich

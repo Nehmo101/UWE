@@ -32,6 +32,7 @@ const SECTION_CATEGORY: Record<OwnerSetupSectionId, string> = {
   system: "System",
   access: "Zugriff",
   cloudflare: "Cloudflare & Domains",
+  brain: "Brain (privat)",
   mail: "Mail",
   rtx: "RTX & Hardware",
   printer: "Drucker",

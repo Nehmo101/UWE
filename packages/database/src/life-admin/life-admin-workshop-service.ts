@@ -1,9 +1,5 @@
-import type {
-  WorkshopProjectType,
-  WorkshopRentalStatus,
-  WorkshopStatus,
-} from "../generated/prisma/client";
-import type { PrismaClient } from "../client";
+import type { WorkshopProjectType, WorkshopRentalStatus, WorkshopStatus } from "../generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "../brain-client";
 import { toPrismaJsonValue } from "../json-utils";
 import type { LifeAdminCaptureService } from "./life-admin-capture-service";
 import type { LifeAdminLinksService } from "./life-admin-links-service";

@@ -99,4 +99,37 @@ describe("deployment settings", () => {
     assert.equal(cfg.enabled, true);
     assert.equal(cfg.secretConfigured, true);
   });
+
+  it("Brain exposure defaults to loopback and never to a public value", () => {
+    assert.equal(DEFAULT_DEPLOYMENT_SETTINGS.brainExposure, "loopback");
+    // Anything unrecognised — including a stray "public"/"on" — collapses to loopback.
+    assert.equal(normalizeDeploymentSettings({ brainExposure: "public" }).brainExposure, "loopback");
+    assert.equal(normalizeDeploymentSettings({ brainExposure: "on" }).brainExposure, "loopback");
+    assert.equal(normalizeDeploymentSettings({ brainExposure: "lan" }).brainExposure, "lan");
+    assert.equal(normalizeDeploymentSettings({ brainExposure: "off" }).brainExposure, "off");
+  });
+
+  it("Brain env overrides carry the origin/path but never a tunnel/public key", () => {
+    const overrides = buildDeploymentEnvOverrides(
+      normalizeDeploymentSettings({
+        brainUrl: "http://127.0.0.1:3002",
+        brainPath: "/life-brain",
+        brainExposure: "lan",
+      }),
+    );
+    assert.equal(overrides.NEXT_PUBLIC_BRAIN_URL, "http://127.0.0.1:3002");
+    assert.equal(overrides.BRAIN_PATH, "/life-brain");
+    assert.equal(overrides.BRAIN_EXPOSURE, "lan");
+    // The Brain fields must never turn on public exposure for Brain.
+    assert.equal(overrides.CLOUDFLARE_TUNNEL, undefined);
+    assert.ok(!("BRAIN_TUNNEL" in overrides));
+    assert.ok(!("BRAIN_PUBLIC" in overrides));
+  });
+
+  it("loopback Brain exposure falls through to env (no override emitted)", () => {
+    const overrides = buildDeploymentEnvOverrides(
+      normalizeDeploymentSettings({ brainExposure: "loopback" }),
+    );
+    assert.equal(overrides.BRAIN_EXPOSURE, undefined);
+  });
 });

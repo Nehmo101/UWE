@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
   const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
   await fs.promises.writeFile(filePath, buffer);
 
-  const scan = await createScanInboxService(prisma).create({
+  const scan = await createScanInboxService(brainPrisma, prisma).create({
     storageKey,
     mimeType,
     fileSize: buffer.length,

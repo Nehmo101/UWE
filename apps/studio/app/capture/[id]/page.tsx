@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createCaptureTriageService,
   createLifeAdminService,
   getAppRepository,
@@ -14,7 +15,7 @@ interface Props {
 
 export default async function CaptureDetailPage({ params }: Props) {
   const { id } = await params;
-  const lifeAdmin = createLifeAdminService(prisma);
+  const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
   const capture = await lifeAdmin.getCapture(id);
 
   if (!capture) {

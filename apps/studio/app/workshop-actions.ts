@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type {
@@ -22,7 +23,7 @@ import { redirect } from "next/navigation";
 import { encodeRentalReturnDue } from "@/src/lib/workshop-rental-due";
 
 function lifeAdmin() {
-  return createLifeAdminService(prisma);
+  return createLifeAdminService(brainPrisma, prisma);
 }
 
 /** Euro-Eingabe ("9,99" oder "9.99") in Cents; akzeptiert Komma als Dezimaltrenner. */

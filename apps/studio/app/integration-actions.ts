@@ -25,6 +25,7 @@ import {
   resolveEffectiveUploadsPath,
   syncImageStudioProjectLinksToAsset,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import type { ImageStudioLinkTargetType } from "@uwe/database/server";
 import { fillAgentJobPreset, getAgentJobPreset } from "@uwe/agent-jobs";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
@@ -247,7 +248,7 @@ export async function adoptImageStudioAssetAction(formData: FormData) {
     await requireStudioWorldEdit(worldSlug);
   }
 
-  await adoptAssetToTarget(prisma, {
+  await adoptAssetToTarget(prisma, brainPrisma, {
     assetId,
     targetType,
     targetId,
@@ -315,7 +316,7 @@ export async function saveImageStudioCanvasAction(formData: FormData) {
     metadata: { reviewStatus: "draft", editor: "canvas" },
   });
 
-  await syncImageStudioProjectLinksToAsset(prisma, projectId, asset.id);
+  await syncImageStudioProjectLinksToAsset(prisma, brainPrisma, projectId, asset.id);
   await imageStudio.updateProjectStatus(projectId, "completed");
 
   revalidatePath("/image-studio");
@@ -384,7 +385,7 @@ export async function createCalendarEventAction(formData: FormData) {
 
   await requireStudioActionAuth();
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const feedIdInput = String(formData.get("feedId") ?? "");
   const localFeed = await calendar.ensureLocalFeed();
   const feedId = feedIdInput || localFeed.id;
@@ -432,7 +433,7 @@ export async function createCalendarFeedAction(formData: FormData) {
     throw new Error("FamilyWall-Feeds sind deaktiviert.");
   }
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const readWrite = formData.get("readWrite") === "on";
   const feed = await calendar.createFeed({
     name: String(formData.get("name") ?? ""),
@@ -463,7 +464,7 @@ export async function updateCalendarEventAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Event-ID fehlt.");
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const updated = await calendar.updateEvent(id, {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? "") || null,
@@ -497,8 +498,8 @@ export async function deleteCalendarEventAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Event-ID fehlt.");
 
-  const calendar = createCalendarService(prisma);
-  const existing = await prisma.calendarEvent.findUnique({
+  const calendar = createCalendarService(brainPrisma, prisma);
+  const existing = await brainPrisma.calendarEvent.findUnique({
     where: { id },
     include: { feed: true },
   });
@@ -528,7 +529,7 @@ export async function syncCalendarFeedAction(formData: FormData) {
   const feedId = String(formData.get("feedId") ?? "");
   if (!feedId) throw new Error("Feed-ID fehlt.");
 
-  const calendar = createCalendarService(prisma);
+  const calendar = createCalendarService(brainPrisma, prisma);
   const feed = await calendar.getFeed(feedId);
   if (!feed) throw new Error("Feed nicht gefunden.");
 

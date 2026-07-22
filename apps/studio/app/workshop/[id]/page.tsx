@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   asColorList,
   asLinkList,
   asMaterialList,
@@ -59,7 +60,7 @@ const LIST_CARD_CLASS =
 
 export default async function WorkshopDetailPage({ params }: Props) {
   const { id } = await params;
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const workshop = await service.getWorkshopProject(id);
 
   if (!workshop) notFound();

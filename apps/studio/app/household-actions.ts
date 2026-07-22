@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
@@ -10,7 +11,7 @@ import { prisma } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 
 function household() {
-  return createMaintenanceService(prisma);
+  return createMaintenanceService(brainPrisma, prisma);
 }
 
 function parseInterval(value: FormDataEntryValue | null): MaintenanceInterval {

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@uwe/database/client";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import { scoreMailPriority } from "@uwe/mail-core";
 
 export interface AutoTriageOptions {

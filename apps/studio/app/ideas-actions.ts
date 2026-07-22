@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { revalidatePath } from "next/cache";
@@ -98,7 +99,7 @@ export async function convertIdeaToCaptureAction(formData: FormData): Promise<vo
   if (!idea) throw new Error("Idee nicht gefunden.");
 
   const { createLifeAdminService } = await import("@uwe/database/server");
-  const capture = await createLifeAdminService(prisma).createCapture({
+  const capture = await createLifeAdminService(brainPrisma, prisma).createCapture({
     title: idea.title,
     content: [idea.body.trim(), idea.generatedPrompt?.trim()].filter(Boolean).join("\n\n") || idea.title,
     captureType: "quick_note",

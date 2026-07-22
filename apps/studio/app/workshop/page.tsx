@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   countMaterialsNeeded,
   createLifeAdminService,
   firstPhotoUrl,
@@ -64,7 +65,7 @@ function formatCost(cents: number | null | undefined): string {
 export default async function WorkshopPage({ searchParams }: Props) {
   const { filter: filterRaw } = await searchParams;
   const filter = resolveFilter(filterRaw);
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
 
   const statusFilter =
     filter === "active"

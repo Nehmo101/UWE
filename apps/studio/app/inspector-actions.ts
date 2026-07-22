@@ -66,7 +66,7 @@ export async function undoActivityAction(formData: FormData) {
   const undoEntryId = String(formData.get("undoEntryId"));
   const redirectTo = String(formData.get("redirectTo") || "/");
 
-  const undoService = createUndoService(prisma);
+  const undoService = createUndoService(brainPrisma, prisma);
   const result = await undoService.undo(undoEntryId);
 
   if (result.ok) {

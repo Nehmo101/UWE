@@ -3,7 +3,8 @@
  * kategorisierte Liste erzeugen. Die eigentliche Zusammenführung ist pure Logik
  * in `ingredient-merge.ts`; hier kommt nur die Persistenz + Skalierung dazu.
  */
-import { toPrismaJsonValue, type PrismaClient } from "@uwe/database/server";
+import { toPrismaJsonValue } from "@uwe/database/server";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import type { IngredientUnit, ShoppingCategory } from "./kitchen-types";
 import {
   consolidateIngredients,

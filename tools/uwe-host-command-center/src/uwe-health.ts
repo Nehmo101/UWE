@@ -87,6 +87,18 @@ function resolvePorts(): { studioPort: number; portalPort: number } {
   };
 }
 
+/** Owner-only Brain entry. Brain now runs as its own local app on port 3002, so
+ *  the link points at the Brain origin + the configured Brain path. Hidden when
+ *  BRAIN_EXPOSURE=off. Never a public/tunnel link — local only. */
+function brainQuickLink(): UweQuickLink | null {
+  const exposure = process.env.BRAIN_EXPOSURE?.trim().toLowerCase();
+  if (exposure === "off") return null;
+  const explicit = process.env.NEXT_PUBLIC_BRAIN_URL?.trim().replace(/\/$/, "");
+  const path = process.env.BRAIN_PATH?.trim() || "/life-brain";
+  const base = explicit || "http://127.0.0.1:3002";
+  return { label: "Brain (privat)", href: `${base}${path}`, external: true };
+}
+
 function buildLinks(studioPort: number, portalPort: number, studioUp: boolean): UweQuickLink[] {
   const studioBase = `http://127.0.0.1:${studioPort}`;
   const portalBase = `http://127.0.0.1:${portalPort}`;
@@ -95,6 +107,10 @@ function buildLinks(studioPort: number, portalPort: number, studioUp: boolean): 
     { label: "Portal", href: portalBase, external: true },
   ];
   if (studioUp) {
+    const brain = brainQuickLink();
+    if (brain) {
+      links.push(brain);
+    }
     links.push(
       { label: "Kommandozentrale", href: `${studioBase}/system/command-center`, external: true },
       { label: "Einrichtung", href: `${studioBase}/admin/setup`, external: true },

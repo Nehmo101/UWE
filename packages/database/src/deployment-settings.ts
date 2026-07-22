@@ -21,6 +21,15 @@ import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./to
 /** Tri-state override: `env` = inherit from the host environment, otherwise force on/off. */
 export type DeploymentOverride = "env" | "on" | "off";
 
+/**
+ * How the owner-only Brain surface may be reached. Deliberately has NO "public"
+ * value — per ADR 004/007 Brain is never part of the public Cloudflare tunnel.
+ *   - `loopback` — only from the host itself (127.0.0.1). The safe default.
+ *   - `lan`      — reachable from the local network after explicit owner opt-in.
+ *   - `off`      — Brain entry disabled entirely.
+ */
+export type BrainExposure = "loopback" | "lan" | "off";
+
 export interface DeploymentSettings {
   /** PUBLIC_BASE_URL / PUBLIC_APP_URL — "" inherits from env. */
   publicAppUrl: string;
@@ -50,6 +59,12 @@ export interface DeploymentSettings {
   turnstileSecretConfigured: boolean;
   /** Encrypted Turnstile secret — server-only, stripped before reaching clients. */
   turnstileSecretEnc?: string | null;
+  /** NEXT_PUBLIC_BRAIN_URL — owner-only Brain origin; "" = share the Studio origin. */
+  brainUrl: string;
+  /** BRAIN_PATH — entry path into the Brain surface; "" = default `/life-brain`. */
+  brainPath: string;
+  /** Brain reachability. Never public — see {@link BrainExposure}. Default `loopback`. */
+  brainExposure: BrainExposure;
 }
 
 /** Form/API shape for a deployment settings change. */
@@ -70,6 +85,9 @@ export interface DeploymentSettingsInput {
   turnstileSecret?: string;
   /** When true, removes the stored Turnstile secret (falls back to env). */
   clearTurnstileSecret?: boolean;
+  brainUrl?: string;
+  brainPath?: string;
+  brainExposure?: BrainExposure;
 }
 
 export const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
@@ -87,6 +105,9 @@ export const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
   turnstileSiteKey: "",
   turnstileSecretConfigured: false,
   turnstileSecretEnc: null,
+  brainUrl: "",
+  brainPath: "",
+  brainExposure: "loopback",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -99,6 +120,12 @@ function normalizeOverride(value: unknown): DeploymentOverride {
 
 function normalizeString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/** Coerces an untrusted value into a valid {@link BrainExposure}; default `loopback`.
+ *  Anything unrecognised (including a stray "public"/"on") collapses to `loopback`. */
+function normalizeBrainExposure(value: unknown): BrainExposure {
+  return value === "lan" || value === "off" ? value : "loopback";
 }
 
 /** Coerces an untrusted stored/merged value into a valid {@link DeploymentSettings}. */
@@ -123,6 +150,9 @@ export function normalizeDeploymentSettings(raw: unknown): DeploymentSettings {
     turnstileSiteKey: normalizeString(stored.turnstileSiteKey),
     turnstileSecretConfigured: Boolean(secretEnc),
     turnstileSecretEnc: secretEnc,
+    brainUrl: normalizeString(stored.brainUrl),
+    brainPath: normalizeString(stored.brainPath),
+    brainExposure: normalizeBrainExposure(stored.brainExposure),
   };
 }
 
@@ -163,6 +193,9 @@ export function buildDeploymentSettingsUpdate(
     turnstileEnabled: input.turnstileEnabled ?? existing.turnstileEnabled,
     turnstileSiteKey: input.turnstileSiteKey ?? existing.turnstileSiteKey,
     turnstileSecretEnc,
+    brainUrl: input.brainUrl ?? existing.brainUrl,
+    brainPath: input.brainPath ?? existing.brainPath,
+    brainExposure: input.brainExposure ?? existing.brainExposure,
   });
 }
 
@@ -201,6 +234,17 @@ export function buildDeploymentEnvOverrides(settings: DeploymentSettings): Recor
   setBool("PLAYER_PREVIEW_PUBLIC", settings.playerPreviewPublic);
   setBool("TURNSTILE_ENABLED", settings.turnstileEnabled);
   setString("TURNSTILE_SITE_KEY", settings.turnstileSiteKey);
+
+  // Brain is owner-only and local/LAN — see ADR 004/007. We surface the origin,
+  // entry path and (non-public) exposure for the Studio link + host scripts, but
+  // deliberately never emit a tunnel/public-exposure key for Brain here. Only a
+  // deviation from the safe `loopback` default is emitted (matching the
+  // "explicitly set keys only" contract, so defaults still fall through to env).
+  setString("NEXT_PUBLIC_BRAIN_URL", settings.brainUrl);
+  setString("BRAIN_PATH", settings.brainPath);
+  if (settings.brainExposure !== "loopback") {
+    out.BRAIN_EXPOSURE = settings.brainExposure;
+  }
 
   if (settings.turnstileSecretEnc) {
     try {

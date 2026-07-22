@@ -1,5 +1,5 @@
-import type { MailDraftStatus } from "./generated/prisma/client";
-import type { PrismaClient } from "./client";
+import type { MailDraftStatus } from "./generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 import { toPrismaJsonValue, jsonDbNull } from "./json-utils";
 import {

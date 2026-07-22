@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
@@ -28,19 +29,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function kitchen() {
-  return createKitchenService(prisma);
+  return createKitchenService(brainPrisma, prisma);
 }
 
 function mealPlan() {
-  return createMealPlanService(prisma);
+  return createMealPlanService(brainPrisma, prisma);
 }
 
 function shopping() {
-  return createShoppingService(prisma);
+  return createShoppingService(brainPrisma, prisma);
 }
 
 function pantry() {
-  return createPantryService(prisma);
+  return createPantryService(brainPrisma, prisma);
 }
 
 /** Standard-Grundausstattung, die beim Listen-Erzeugen mitkommt. */

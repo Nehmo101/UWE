@@ -26,6 +26,10 @@ const INTERESTING_KEYS = new Set([
   "TRUST_PROXY",
   "CLOUDFLARE_TUNNEL",
   "AUTH_REQUIRED",
+  // Owner-only Brain surface (local/LAN, never tunneled). NEXT_PUBLIC_BRAIN_URL
+  // already passes via the NEXT_PUBLIC_ prefix; surface path + exposure too.
+  "BRAIN_PATH",
+  "BRAIN_EXPOSURE",
   "UWE_DATA_DIR",
   "UWE_BACKUP_DIR",
   "UWE_EXPORT_DIR",

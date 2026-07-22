@@ -1,5 +1,6 @@
 import { semanticSearchPersonalBrainChunks } from "@uwe/ai-brain";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   createPersonalBrainService,
   loadPersonalBrainPromptContext,
@@ -22,7 +23,7 @@ export async function loadStudioPersonalBrainPromptContext(
   db: PrismaClient,
   options: LoadStudioPersonalBrainContextOptions = {},
 ): Promise<string> {
-  const lifeAdmin = createLifeAdminService(db);
+  const lifeAdmin = createLifeAdminService(brainPrisma, db);
   const personalBrain = createPersonalBrainService(db);
   const query = options.query?.trim() ?? "";
   const retrievalLimit = options.retrievalLimit ?? 8;

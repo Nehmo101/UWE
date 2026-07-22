@@ -1,5 +1,6 @@
 import { executeAiGatewayRequest } from "@uwe/ai-brain";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createBrainStoreService,
   createLifeAdminService,
   createUweRepository,
@@ -146,7 +147,7 @@ export async function generateMorningBriefing(
 
   const text = routed.result.text.trim();
   const title = briefingTitle(now);
-  const lifeAdmin = createLifeAdminService(db);
+  const lifeAdmin = createLifeAdminService(brainPrisma, db);
 
   const existing = (await lifeAdmin.listPersonalBrainDocuments({ limit: 10 })).find(
     (doc) => doc.title === title,

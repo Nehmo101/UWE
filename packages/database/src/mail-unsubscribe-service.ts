@@ -1,5 +1,5 @@
-import type { MailUnsubscribeMethod, MailUnsubscribeStatus } from "./generated/prisma/client";
-import type { PrismaClient } from "./client";
+import type { MailUnsubscribeMethod, MailUnsubscribeStatus } from "./generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
 import { createMailTransport, executeHttpOneClickUnsubscribe, parseMailtoTarget } from "@uwe/mail-core";
 import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 

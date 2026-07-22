@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import { SettingsService } from "./settings-service";
 import { decryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 import { getSystemStatus } from "./system-status";
@@ -317,6 +318,7 @@ function buildHostEnvSection(env: NodeJS.ProcessEnv): SecretsStatusSection {
 
 async function buildDbEncryptedSection(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   settings: Awaited<ReturnType<SettingsService["getSettings"]>>,
   encryptionSecret: string,
 ): Promise<SecretsStatusSection> {
@@ -337,10 +339,10 @@ async function buildDbEncryptedSection(
     db.webhookEndpoint.findMany({
       select: { id: true, name: true, secretEncrypted: true, updatedAt: true },
     }),
-    db.mailAccount.findMany({
+    brainDb.mailAccount.findMany({
       select: { id: true, label: true, passwordEnc: true, updatedAt: true },
     }),
-    db.calendarFeed.findMany({
+    brainDb.calendarFeed.findMany({
       select: { id: true, name: true, credentialsEnc: true, updatedAt: true },
     }),
     db.spotifyConnection.findMany({
@@ -545,6 +547,7 @@ async function buildDbHashedSection(db: PrismaClient): Promise<SecretsStatusSect
 
 export async function getSecretsStatusSnapshot(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: SecretsStatusOptions = {},
 ): Promise<SecretsStatusSnapshot> {
   const env = options.env ?? process.env;
@@ -561,7 +564,7 @@ export async function getSecretsStatusSnapshot(
   const sections = await Promise.all([
     Promise.resolve(buildBootstrapSection(env, system)),
     Promise.resolve(buildHostEnvSection(env)),
-    buildDbEncryptedSection(db, settings, encryptionSecret),
+    buildDbEncryptedSection(db, brainDb, settings, encryptionSecret),
     buildDbHashedSection(db),
   ]);
 

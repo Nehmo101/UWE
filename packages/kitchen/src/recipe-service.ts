@@ -48,7 +48,10 @@ function toIngredientData(input: RecipeIngredientInput, index: number) {
 export class KitchenService {
   private readonly tags: EntityTagService;
 
-  constructor(private readonly db: PrismaClient) {
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly db: PrismaClient,
+  ) {
     this.tags = createEntityTagService(db);
   }
 
@@ -67,7 +70,7 @@ export class KitchenService {
       }
     }
 
-    return this.db.recipe.findMany({
+    return this.brainDb.recipe.findMany({
       where: {
         status: statusFilter,
         ...(idFilter ? { id: { in: idFilter } } : {}),
@@ -79,7 +82,7 @@ export class KitchenService {
 
   /** Rezept inklusive Zutaten und verknüpfter Tags. */
   async getRecipe(id: string) {
-    const recipe = await this.db.recipe.findUnique({
+    const recipe = await this.brainDb.recipe.findUnique({
       where: { id },
       include: RECIPE_INCLUDE,
     });
@@ -91,7 +94,7 @@ export class KitchenService {
   }
 
   async createRecipe(input: RecipeInput) {
-    const recipe = await this.db.recipe.create({
+    const recipe = await this.brainDb.recipe.create({
       data: {
         title: input.title.trim(),
         status: (input.status ?? "active") as RecipeStatus,
@@ -171,12 +174,12 @@ export class KitchenService {
   }
 
   async archiveRecipe(id: string) {
-    await this.db.recipe.update({ where: { id }, data: { status: "archived" } });
+    await this.brainDb.recipe.update({ where: { id }, data: { status: "archived" } });
     return this.getRecipe(id);
   }
 
   async getStatusCounts(): Promise<Record<RecipeStatus, number>> {
-    const rows = await this.db.recipe.groupBy({
+    const rows = await this.brainDb.recipe.groupBy({
       by: ["status"],
       _count: { _all: true },
     });
@@ -204,6 +207,6 @@ export class KitchenService {
   }
 }
 
-export function createKitchenService(db: PrismaClient): KitchenService {
-  return new KitchenService(db);
+export function createKitchenService(brainDb: BrainPrismaClient, db: PrismaClient): KitchenService {
+  return new KitchenService(brainDb, db);
 }

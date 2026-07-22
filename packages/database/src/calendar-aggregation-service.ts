@@ -1,9 +1,6 @@
 import type { PrismaClient } from "./client";
-import type {
-  CalendarEvent,
-  CalendarEventKind,
-  CalendarFeed,
-} from "./generated/prisma/client";
+import type { BrainPrismaClient } from "./brain-client";
+import type { CalendarEvent, CalendarEventKind, CalendarFeed } from "./generated/prisma-brain/client";
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createCalendarService } from "./calendar-service";
 
@@ -394,7 +391,10 @@ export interface CalendarAggregationOptions {
 }
 
 export class CalendarAggregationService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly db: PrismaClient,
+  ) {}
 
   async getAggregatedItems(
     options: CalendarAggregationOptions = {},
@@ -404,7 +404,7 @@ export class CalendarAggregationService {
     const from = startOfDay(now);
     const to = endOfDay(new Date(now.getTime() + horizonDays * MS_PER_DAY));
 
-    const calendar = createCalendarService(this.db);
+    const calendar = createCalendarService(brainPrisma, this.db);
 
     const [
       events,
@@ -421,18 +421,18 @@ export class CalendarAggregationService {
         from,
         to,
       }),
-      this.db.contractExpense.findMany({
+      this.brainDb.contractExpense.findMany({
         where: { status: { in: ["active", "review"] } },
       }),
-      this.db.workshopProject.findMany({
+      this.brainDb.workshopProject.findMany({
         where: { status: { in: ["planned", "in_progress", "material_missing"] } },
         select: { id: true, title: true, metadata: true, nextActionDate: true },
       }),
-      this.db.hardwareDevice.findMany({
+      this.brainDb.hardwareDevice.findMany({
         where: { status: { in: ["active", "planned", "offline"] } },
         select: { id: true, name: true, metadata: true },
       }),
-      this.db.personalProject.findMany({
+      this.brainDb.personalProject.findMany({
         where: { status: { in: ["planned", "active", "blocked"] } },
         select: { id: true, name: true, metadata: true, nextActionDate: true },
       }),
@@ -458,7 +458,7 @@ export class CalendarAggregationService {
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
-      this.db.maintenanceTask.findMany({
+      this.brainDb.maintenanceTask.findMany({
         where: { nextDueAt: { not: null, lte: to } },
         select: { id: true, title: true, nextDueAt: true, category: true },
       }),
@@ -492,7 +492,8 @@ export class CalendarAggregationService {
 }
 
 export function createCalendarAggregationService(
+  brainDb: BrainPrismaClient,
   db: PrismaClient,
 ): CalendarAggregationService {
-  return new CalendarAggregationService(db);
+  return new CalendarAggregationService(brainDb, db);
 }

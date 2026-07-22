@@ -1,10 +1,5 @@
-import type {
-  CaptureStatus,
-  CaptureType,
-  PersonalProjectCategory,
-  WorkshopProjectType,
-} from "../generated/prisma/client";
-import type { PrismaClient } from "../client";
+import type { CaptureStatus, CaptureType, PersonalProjectCategory, WorkshopProjectType } from "../generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "../brain-client";
 import { toPrismaJsonValue } from "../json-utils";
 import type { LifeAdminLinksService } from "./life-admin-links-service";
 import type { LifeAdminProjectService } from "./life-admin-project-service";
@@ -16,7 +11,7 @@ import type {
   CreateWorkshopProjectInput,
   ListCapturesOptions,
 } from "./life-admin-types";
-import type { CaptureEntry } from "../generated/prisma/client";
+import type { CaptureEntry } from "../generated/prisma-brain/client";
 
 function readMetadataSource(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;

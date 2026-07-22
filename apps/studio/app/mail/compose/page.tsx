@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { notFound } from "next/navigation";
 import {
   createMailComposeService,
@@ -69,7 +70,7 @@ export default async function MailComposePage({ searchParams }: Props) {
     notFound();
   }
 
-  const compose = createMailComposeService(prisma);
+  const compose = createMailComposeService(brainPrisma, prisma);
   const draft = await compose.compose(kind, {
     worldSlug,
     sourceId,
@@ -83,7 +84,7 @@ export default async function MailComposePage({ searchParams }: Props) {
   let recipientOptions: Array<{ email: string; name: string }> = [];
 
   if (worldSlug) {
-    const recipients = createMailRecipientService(prisma);
+    const recipients = createMailRecipientService(brainPrisma, prisma);
     const playersGroup = await recipients.ensurePlayersGroup(worldSlug);
     recipientOptions = playersGroup.recipients.map((recipient) => ({
       email: recipient.email,

@@ -1,4 +1,5 @@
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createMailAccountService,
   createMailLogService,
   createMailService,
@@ -42,7 +43,7 @@ export default async function MailCenterPage({
   const selectedAccountId = params.account && params.account !== "all" ? params.account : null;
   const query = params.q?.trim() ?? "";
 
-  const portal = createMailPortalService(prisma);
+  const portal = createMailPortalService(brainPrisma, prisma);
   const accountService = createMailAccountService(prisma);
   const mailService = createMailService(prisma);
   const repo = getAppRepository();
@@ -70,7 +71,7 @@ export default async function MailCenterPage({
         ? portal.listSentMessages({ accountId: selectedAccountId ?? undefined, limit: inboxLimit })
         : Promise.resolve([]),
       accountService.listDrafts(),
-      createMailLogService(prisma).list({ limit: 10 }),
+      createMailLogService(brainPrisma, prisma).list({ limit: 10 }),
       repo.listWorlds(),
       mailService.getConfigStatus(),
       loadStudioRtxDisplayState(prisma).catch(() => null),

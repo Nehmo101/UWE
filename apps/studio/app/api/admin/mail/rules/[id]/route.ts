@@ -3,6 +3,7 @@ import { prisma } from "@uwe/database/server";
 import { createMailRuleService } from "@uwe/mail";
 import type { MailRuleAction, MailRuleCondition } from "@uwe/mail";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const auth = await requireAdminMailMutation(request);
@@ -23,7 +24,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return mailApiError("Ungültiger JSON-Body.");
   }
 
-  const service = createMailRuleService(prisma);
+  const service = createMailRuleService(brainPrisma, prisma);
   const rule = await service.updateRule(id, body);
   return NextResponse.json({ rule });
 }
@@ -33,7 +34,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   if (auth.error) return auth.error;
   const { id } = await context.params;
 
-  const service = createMailRuleService(prisma);
+  const service = createMailRuleService(brainPrisma, prisma);
   await service.deleteRule(id);
   return NextResponse.json({ ok: true });
 }

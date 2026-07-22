@@ -5,7 +5,7 @@ import { TurnstileWidget } from "./TurnstileWidget";
 import { readFormFieldValue, redirectAfterAuth } from "./auth-form-utils";
 import { FONT_MONO, FONT_SERIF, LEADING, TEXT_2XL, TEXT_BASE, TEXT_SM, TEXT_XS, eyebrowStyle } from "./landing-shared";
 
-export type LandingTarget = "studio" | "portal";
+export type LandingTarget = "studio" | "portal" | "brain";
 
 export interface UweLandingLoginCardProps {
   target: LandingTarget;
@@ -46,6 +46,17 @@ const TARGETS: Record<LandingTarget, TargetCopy> = {
     submit: "Anmelden",
     entryPath: "/auth/worlds",
     passwordPath: "/auth/account/password",
+  },
+  // Brain lebt heute im Studio-Origin (Routen liegen im Studio-Baum). Der Login
+  // ist owner/GM-gegated; das Ziel ist der private Alltags-/Wissensbereich.
+  brain: {
+    accent: "#5c5470",
+    eyebrow: "Nur Owner · privat & lokal",
+    title: "UWE Brain",
+    desc: "Melde dich als Owner an, um deinen privaten Alltags- und Wissensbereich zu öffnen.",
+    submit: "Als Owner anmelden",
+    entryPath: "/life-brain",
+    passwordPath: "/account/password",
   },
 };
 

@@ -3,7 +3,8 @@
  * DB); der Service kapselt die Persistenz. Business-Logik lebt hier, nicht in der
  * Route (CLAUDE.md „Goldene Regel").
  */
-import { jsonDbNull, toPrismaJsonValue, type PrismaClient } from "@uwe/database/server";
+import { jsonDbNull, toPrismaJsonValue } from "@uwe/database/server";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import type { WeekSuggestionDraft } from "./ai-suggest";
 import type { MealEntryType, MealPlanGoals, MealSlot } from "./kitchen-types";
 

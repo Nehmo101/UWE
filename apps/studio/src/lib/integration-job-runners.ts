@@ -17,6 +17,7 @@ import {
   syncImageStudioProjectLinksToAsset,
   type JobService,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
 import { fetchIcalFeed, parseIcalEvents, putCalDavEvent, syncCalDavCollection } from "@uwe/calendar";
 import {
@@ -139,7 +140,7 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       },
     });
 
-    await syncImageStudioProjectLinksToAsset(db, activeProjectId, asset.id);
+    await syncImageStudioProjectLinksToAsset(db, brainPrisma, activeProjectId, asset.id);
 
     await imageStudio.updateProjectStatus(activeProjectId, "completed");
 
@@ -252,7 +253,7 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
     if (!payload.mailbox && createdIds.length > 0) {
       try {
         const { createMailRuleService, autoTriageNewMessages } = await import("@uwe/mail");
-        const ruleService = createMailRuleService(db);
+        const ruleService = createMailRuleService(brainPrisma, db);
         const { skipAiTriageIds, movedIds } = await ruleService.applyRules(createdIds);
         ruleMoved = movedIds.length;
         const vipSenders = await ruleService.listVipAddresses();
@@ -428,7 +429,7 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
   }
 
   const db = createPrismaClient();
-  const calendar = createCalendarService(db);
+  const calendar = createCalendarService(brainPrisma, db);
   const feed = await calendar.getFeed(payload.feedId);
   if (!feed) {
     await db.$disconnect();

@@ -1,6 +1,6 @@
-import type { CaptureStatus, CaptureType } from "./generated/prisma/client";
+import type { CaptureStatus, CaptureType } from "./generated/prisma-brain/client";
 
-export type { CaptureStatus, CaptureType } from "./generated/prisma/client";
+export type { CaptureStatus, CaptureType } from "./generated/prisma-brain/client";
 
 export const CAPTURE_TYPE_LABELS: Record<CaptureType, string> = {
   quick_note: "Schnelle Notiz",

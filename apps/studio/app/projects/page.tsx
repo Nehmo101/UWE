@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   formatEuroFromCents,
   PersonalProjectCategoryEnum,
@@ -68,7 +69,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const { category: categoryRaw, status: statusRaw } = await searchParams;
   const categoryFilter = resolveCategory(categoryRaw);
   const statusFilter = resolveStatus(statusRaw);
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
 
   const [projects, dashboard] = await Promise.all([
     service.listPersonalProjects({

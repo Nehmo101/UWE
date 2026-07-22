@@ -31,21 +31,34 @@ import {
  * this authenticates for a chosen target:
  *   - target "studio" → requires Studio access (owner/admin/dm)
  *   - target "portal" → any active user (matches the Portal login)
+ *   - target "brain"  → owner-only private area; role-gated like Studio and
+ *                       today served from the Studio origin (its /life-brain
+ *                       route enforces owner access server-side)
  * and sets the (optionally domain-wide) session cookie so the visitor is signed
  * in when redirected to studio./portal.uweanddragons.org. Reuses the same
  * hardened login state machine as the per-app logins (`@uwe/auth`): rate-limit,
  * Turnstile, 2FA, audit logging.
  */
 
-type Target = "studio" | "portal";
+type Target = "studio" | "portal" | "brain";
+type AuditSurface = "studio" | "portal";
 
 function parseTarget(value: unknown): Target | null {
-  return value === "studio" || value === "portal" ? value : null;
+  return value === "studio" || value === "portal" || value === "brain" ? value : null;
 }
 
-// Portal is open to any authenticated active user; Studio is role-gated.
+// Portal is open to any authenticated active user; Studio and Brain are role-gated.
+// Brain currently rides the Studio origin, so Studio access is the entry gate here;
+// the /life-brain route itself additionally enforces owner-only access.
 function hasTargetAccess(target: Target, user: AuthUser): boolean {
-  return target === "studio" ? canAccessStudio(user) : true;
+  return target === "portal" ? true : canAccessStudio(user);
+}
+
+// The audit/login-flow surface only distinguishes studio vs. portal; Brain rides
+// the Studio origin, so it is logged as "studio". The precise entry target is
+// still returned to the client via responseTarget.
+function auditSurfaceFor(target: Target): AuditSurface {
+  return target === "portal" ? "portal" : "studio";
 }
 
 export async function POST(request: Request) {
@@ -62,6 +75,7 @@ export async function POST(request: Request) {
   if (!target) {
     return jsonError("Ungültiges Ziel.", 400);
   }
+  const auditSurface = auditSurfaceFor(target);
 
   const setSessionCookie = async (token: string): Promise<void> => {
     const cookieStore = await cookies();
@@ -93,7 +107,7 @@ export async function POST(request: Request) {
       onSuccessAudit: async ({ db, user, session }) => {
         await logLoginAttempt({
           db,
-          surface: target,
+          surface: auditSurface,
           request: auditRequest,
           email: user.email,
           actorUserId: user.id,
@@ -104,7 +118,7 @@ export async function POST(request: Request) {
       handleServerError: async (db, error) => {
         await logLoginAttempt({
           db,
-          surface: target,
+          surface: auditSurface,
           request: auditRequest,
           email: body.email,
           reason: "server_error",
@@ -124,7 +138,7 @@ export async function POST(request: Request) {
     email: body.email?.trim(),
     password: body.password,
     turnstileToken: body.turnstileToken,
-    surface: target,
+    surface: auditSurface,
     responseTarget: target,
     serverErrorLogLabel: "enter login",
     createDb: createPrismaClient,

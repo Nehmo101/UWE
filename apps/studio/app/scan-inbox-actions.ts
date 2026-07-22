@@ -21,7 +21,7 @@ const VISION_PROMPT =
   "Gib ausschließlich den erkannten Text zurück, ohne Erklärungen oder Formatierung.";
 
 function service() {
-  return createScanInboxService(prisma);
+  return createScanInboxService(brainPrisma, prisma);
 }
 
 function isFilingTarget(value: string): value is ScanFilingTarget {

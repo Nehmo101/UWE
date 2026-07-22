@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { z } from "zod";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
@@ -84,7 +85,7 @@ export async function createGameSessionAction(formData: FormData) {
   });
 
   // Terminierte Sessions automatisch als Kalender-Event spiegeln.
-  await createCalendarService(prisma).syncSessionToCalendar(session.id);
+  await createCalendarService(brainPrisma, prisma).syncSessionToCalendar(session.id);
 
   revalidatePath(`/worlds/${worldSlug}/sessions`);
   redirect(`/worlds/${worldSlug}/sessions/${session.id}`);
@@ -121,7 +122,7 @@ export async function updateGameSessionAction(formData: FormData) {
   });
 
   // Kalender-Event nachziehen (legt an, verschiebt oder entfernt bei leerem Datum).
-  await createCalendarService(prisma).syncSessionToCalendar(sessionId);
+  await createCalendarService(brainPrisma, prisma).syncSessionToCalendar(sessionId);
 
   revalidatePath(`/worlds/${worldSlug}/sessions`);
   revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);

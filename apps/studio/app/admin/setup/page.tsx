@@ -20,6 +20,7 @@ const TABS = [
   { id: "system", label: "System" },
   { id: "access", label: "Zugriff" },
   { id: "cloudflare", label: "Cloudflare & Domains" },
+  { id: "brain", label: "Brain (privat)" },
   { id: "mail", label: "Mail" },
   { id: "rtx", label: "RTX & Hardware" },
   { id: "printer", label: "Drucker" },
@@ -209,6 +210,24 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
 
           {activeTab === "cloudflare" && section.testAction && (
             <OwnerSetupTestPanel action={section.testAction} canEdit={canEdit} />
+          )}
+
+          {activeTab === "brain" && (
+            <div className="mt-4 flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                Der private Brain-Bereich (Daily Admin OS &amp; Personal Brain) ist owner-only und
+                bleibt lokal bzw. im LAN — nie im öffentlichen Cloudflare-Tunnel. Erreichbarkeit,
+                Brain-URL und Einstiegspfad werden unter System → Cloudflare gepflegt.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/system/cloudflare" className={buttonVariants({ variant: "secondary" })}>
+                  Brain-Einstellungen (System → Cloudflare)
+                </Link>
+                <Link href="/life-brain" className={buttonVariants({ variant: "outline" })}>
+                  Brain öffnen
+                </Link>
+              </div>
+            </div>
           )}
 
           {activeTab === "mail" && canEdit && (

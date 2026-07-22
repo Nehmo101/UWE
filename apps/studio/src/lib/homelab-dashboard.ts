@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@uwe/database/server";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   aggregateAllHardwareErrorHistory,
   aggregateHomelabTodayAlerts,
   buildHomelabRunbooks,
@@ -81,7 +82,7 @@ export async function getHomelabCockpitData(
   } = {},
 ): Promise<HomelabCockpitData> {
   const env = options.env ?? process.env;
-  const lifeAdmin = createLifeAdminService(db);
+  const lifeAdmin = createLifeAdminService(brainPrisma, db);
   const [adminStatus, securityStatus, roleCounts, devices, portalProbe] = await Promise.all([
     options.adminStatus ??
       getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),

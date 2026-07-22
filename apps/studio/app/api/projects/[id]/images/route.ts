@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   getSystemSettings,
   logAuditEvent,
@@ -27,7 +28,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (!parsed.success) return parsed.response;
   const projectId = parsed.data.id;
 
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const project = await service.getPersonalProject(projectId);
   if (!project) {
     return jsonError("Projekt nicht gefunden.", 404);

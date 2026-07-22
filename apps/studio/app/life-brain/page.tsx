@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   parseStringArray,
   PERSONAL_BRAIN_CATEGORIES,
@@ -42,7 +43,7 @@ function truncateContent(text: string, maxLength = 160): string {
 }
 
 export default async function LifeBrainPage() {
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const [documents, facts] = await Promise.all([
     service.listPersonalBrainDocuments({ limit: 100 }),
     service.listPersonalBrainFacts({ limit: 100 }),

@@ -1,5 +1,6 @@
 import type { PageType } from "./generated/prisma/client";
 import type {
+import { brainPrisma } from "./brain-client";
   ImportSourceType,
   ImportTargetType,
   MarkdownImportPreviewItem,
@@ -633,7 +634,7 @@ export async function executeMarkdownImport(
     }
   }
 
-  const lifeAdmin = createLifeAdminService(db);
+  const lifeAdmin = createLifeAdminService(brainPrisma, db);
   const repo = createUweRepositoryFromClient(db);
 
   switch (ctx.targetType) {

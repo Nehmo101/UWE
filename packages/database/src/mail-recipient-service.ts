@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import { slugifyMailKey } from "./mail-utils";
 
 export interface MailRecipientView {
@@ -41,7 +42,10 @@ function toRecipientView(record: {
 }
 
 export class MailRecipientService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly db: PrismaClient,
+  ) {}
 
   async listWorldPlayerContacts(worldSlug: string): Promise<MailPlayerContact[]> {
     const world = await this.db.world.findUnique({
@@ -90,7 +94,7 @@ export class MailRecipientService {
       throw new Error("Welt nicht gefunden.");
     }
 
-    let group = await this.db.mailRecipientGroup.findUnique({
+    let group = await this.brainDb.mailRecipientGroup.findUnique({
       where: {
         worldId_slug: {
           worldId: world.id,
@@ -101,7 +105,7 @@ export class MailRecipientService {
     });
 
     if (!group) {
-      group = await this.db.mailRecipientGroup.create({
+      group = await this.brainDb.mailRecipientGroup.create({
         data: {
           worldId: world.id,
           slug: "players",
@@ -118,7 +122,7 @@ export class MailRecipientService {
 
     for (const contact of contacts) {
       if (!existingEmails.has(contact.email.toLowerCase())) {
-        await this.db.mailRecipient.create({
+        await this.brainDb.mailRecipient.create({
           data: {
             groupId: group.id,
             email: contact.email,
@@ -129,7 +133,7 @@ export class MailRecipientService {
       }
     }
 
-    const refreshed = await this.db.mailRecipientGroup.findUniqueOrThrow({
+    const refreshed = await this.brainDb.mailRecipientGroup.findUniqueOrThrow({
       where: { id: group.id },
       include: { recipients: { orderBy: { name: "asc" } } },
     });
@@ -156,7 +160,7 @@ export class MailRecipientService {
       return [];
     }
 
-    const groups = await this.db.mailRecipientGroup.findMany({
+    const groups = await this.brainDb.mailRecipientGroup.findMany({
       where: { worldId: world.id },
       include: { recipients: { orderBy: { name: "asc" } } },
       orderBy: [{ isSystem: "desc" }, { name: "asc" }],
@@ -188,7 +192,7 @@ export class MailRecipientService {
     }
 
     const slug = input.slug?.trim() || slugifyMailKey(input.name, "group");
-    const group = await this.db.mailRecipientGroup.create({
+    const group = await this.brainDb.mailRecipientGroup.create({
       data: {
         worldId: world.id,
         slug,
@@ -225,7 +229,7 @@ export class MailRecipientService {
       throw new Error("Welt nicht gefunden.");
     }
 
-    const group = await this.db.mailRecipientGroup.findUnique({
+    const group = await this.brainDb.mailRecipientGroup.findUnique({
       where: { worldId_slug: { worldId: world.id, slug: groupSlug } },
     });
 
@@ -238,7 +242,7 @@ export class MailRecipientService {
       throw new Error("Ungültige E-Mail-Adresse.");
     }
 
-    await this.db.mailRecipient.upsert({
+    await this.brainDb.mailRecipient.upsert({
       where: {
         groupId_email: {
           groupId: group.id,
@@ -257,7 +261,7 @@ export class MailRecipientService {
       },
     });
 
-    const refreshed = await this.db.mailRecipientGroup.findUniqueOrThrow({
+    const refreshed = await this.brainDb.mailRecipientGroup.findUniqueOrThrow({
       where: { id: group.id },
       include: { recipients: { orderBy: { name: "asc" } } },
     });
@@ -275,6 +279,6 @@ export class MailRecipientService {
   }
 }
 
-export function createMailRecipientService(db: PrismaClient): MailRecipientService {
-  return new MailRecipientService(db);
+export function createMailRecipientService(brainDb: BrainPrismaClient, db: PrismaClient): MailRecipientService {
+  return new MailRecipientService(brainDb, db);
 }

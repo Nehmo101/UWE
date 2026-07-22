@@ -1,6 +1,7 @@
 import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   assertMailApiResponseHasNoSecrets,
   createMailTemplateService,
   prisma,
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const worldId = url.searchParams.get("worldId") ?? undefined;
-  const templates = await createMailTemplateService(prisma).listTemplates({
+  const templates = await createMailTemplateService(brainPrisma, prisma).listTemplates({
     worldId: worldId ?? null,
   });
 
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, mailTemplateCreateSchema);
   if (!parsed.success) return parsed.response;
 
-  const template = await createMailTemplateService(prisma).createTemplate(parsed.data.worldId, {
+  const template = await createMailTemplateService(brainPrisma, prisma).createTemplate(parsed.data.worldId, {
     name: parsed.data.name,
     subject: parsed.data.subject,
     description: parsed.data.description ?? "",

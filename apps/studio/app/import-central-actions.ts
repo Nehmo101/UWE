@@ -100,7 +100,7 @@ async function finalizeImportCentralMarkdownExecute(
     createdIds: result.createdIds,
   };
 
-  const undo = createUndoService(prisma);
+  const undo = createUndoService(brainPrisma, prisma);
   const undoEntry = await undo.captureImportCentralExecute({
     targetType: job.targetType as "personal_brain" | "capture" | "dnd_page",
     worldId: job.targetWorldId,
@@ -463,7 +463,7 @@ export async function rollbackImportCentralJobAction(jobId: string): Promise<voi
     throw new Error("Für diesen Import ist kein Undo-Token hinterlegt.");
   }
 
-  const undo = createUndoService(prisma);
+  const undo = createUndoService(brainPrisma, prisma);
   const result = await undo.undo(job.undoToken);
   if (!result.ok) {
     throw new Error(result.message);

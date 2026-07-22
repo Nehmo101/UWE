@@ -4,6 +4,7 @@ import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { resolveOutboundAttachmentPath, deleteOutboundAttachment } from "@uwe/mail";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 interface OutboundAttachmentRef {
   key: string;
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     return mailApiError("Ungültiger JSON-Body.");
   }
 
-  const service = createMailPortalService(prisma);
+  const service = createMailPortalService(brainPrisma, prisma);
 
   if (body.draftId) {
     if (body.confirm !== true) {

@@ -1,4 +1,5 @@
 import type {
+import { brainPrisma } from "./brain-client";
   GameSessionStatus,
   Prisma,
 } from "./generated/prisma/client";
@@ -324,12 +325,12 @@ export class GameSessionService {
 
   /** Overridable seam for tests. Performs the actual calendar sync. */
   protected async runCalendarSync(sessionId: string): Promise<void> {
-    await createCalendarService(this.db).syncSessionToCalendar(sessionId);
+    await createCalendarService(brainPrisma, this.db).syncSessionToCalendar(sessionId);
   }
 
   /** Overridable seam for tests. Performs the actual calendar unsync. */
   protected async runCalendarUnsync(sessionId: string): Promise<void> {
-    await createCalendarService(this.db).unsyncSessionFromCalendar(sessionId);
+    await createCalendarService(brainPrisma, this.db).unsyncSessionFromCalendar(sessionId);
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {

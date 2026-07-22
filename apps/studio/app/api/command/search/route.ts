@@ -5,6 +5,7 @@ import {
   prisma,
   searchStudioCrossDomain,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
 import { parseQuery, searchQuerySchema } from "@uwe/security";
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const { wiki: wikiResults, admin: adminResults } = await searchStudioCrossDomain(prisma, {
+  const { wiki: wikiResults, admin: adminResults } = await searchStudioCrossDomain(prisma, brainPrisma, {
     query,
     wiki: { limit: 8, urlMode: "studio" },
     admin: { limit: 6 },

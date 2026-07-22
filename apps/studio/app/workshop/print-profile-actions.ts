@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -34,7 +35,7 @@ export async function importPrintProfilesAction(formData: FormData) {
   }
 
   const rows = Array.isArray(parsed) ? parsed : [parsed];
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   let imported = 0;
 
   for (const row of rows) {

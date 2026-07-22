@@ -1,0 +1,25 @@
+{
+  "name": "@uwe/product-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Framework-agnostic product-boundary contracts (AppAudience, DataDomain, PrivacyClass, access matrix, Prisma model mapping) — the Portal/Studio/Brain split security boundary",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain-boundaries": "./src/domain-boundaries.ts",
+    "./domain-access": "./src/domain-access.ts",
+    "./prisma-model-boundaries": "./src/prisma-model-boundaries.ts",
+    "./job-envelope": "./src/job-envelope.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import type { EntityTagEntityType, PageType } from "./generated/prisma/client";
 import { buildPageUrl } from "./page-types";
 import { ENTITY_TAG_ENTITY_TYPE_LABELS, normalizeTagKey } from "./tag-service";
@@ -94,6 +95,7 @@ function groupForEntityType(entityType: EntityTagEntityType): string {
 
 async function loadEntitySummaries(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   entityType: EntityTagEntityType,
   entityIds: string[],
 ): Promise<Map<string, EntitySummary>> {
@@ -152,7 +154,7 @@ async function loadEntitySummaries(
       break;
     }
     case "capture": {
-      const rows = await db.captureEntry.findMany({
+      const rows = await brainDb.captureEntry.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, title: true },
       });
@@ -162,7 +164,7 @@ async function loadEntitySummaries(
       break;
     }
     case "project": {
-      const rows = await db.personalProject.findMany({
+      const rows = await brainDb.personalProject.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, name: true },
       });
@@ -172,7 +174,7 @@ async function loadEntitySummaries(
       break;
     }
     case "workshop": {
-      const rows = await db.workshopProject.findMany({
+      const rows = await brainDb.workshopProject.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, title: true },
       });
@@ -182,7 +184,7 @@ async function loadEntitySummaries(
       break;
     }
     case "contract": {
-      const rows = await db.contractExpense.findMany({
+      const rows = await brainDb.contractExpense.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, name: true },
       });
@@ -192,7 +194,7 @@ async function loadEntitySummaries(
       break;
     }
     case "hardware": {
-      const rows = await db.hardwareDevice.findMany({
+      const rows = await brainDb.hardwareDevice.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, name: true },
       });
@@ -212,7 +214,7 @@ async function loadEntitySummaries(
       break;
     }
     case "personal_brain_document": {
-      const rows = await db.personalBrainDocument.findMany({
+      const rows = await brainDb.personalBrainDocument.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, title: true },
       });
@@ -222,7 +224,7 @@ async function loadEntitySummaries(
       break;
     }
     case "personal_brain_fact": {
-      const rows = await db.personalBrainFact.findMany({
+      const rows = await brainDb.personalBrainFact.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, title: true },
       });
@@ -238,6 +240,7 @@ async function loadEntitySummaries(
 
 export async function searchEntitiesByTagQuery(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: EntityTagSearchOptions,
 ): Promise<EntityTagSearchResult[]> {
   const query = options.query.trim().toLocaleLowerCase("de");
@@ -306,7 +309,7 @@ export async function searchEntitiesByTagQuery(
 
   const summaries = new Map<string, EntitySummary>();
   for (const [entityType, entityIds] of byType.entries()) {
-    const loaded = await loadEntitySummaries(db, entityType, [...new Set(entityIds)]);
+    const loaded = await loadEntitySummaries(db, brainDb, entityType, [...new Set(entityIds)]);
     for (const [entityId, summary] of loaded.entries()) {
       summaries.set(`${entityType}:${entityId}`, summary);
     }

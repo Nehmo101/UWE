@@ -356,7 +356,7 @@ export function CommandCenterPanel({
         </Card>
       ) : null}
 
-      <div className="connector-grid connector-grid-3">
+      <div className="connector-grid connector-grid-4">
         {status?.services.map((service) => (
           <Card key={service.id}>
             <CardHeader><CardTitle>{service.label}</CardTitle></CardHeader>
@@ -380,6 +380,20 @@ export function CommandCenterPanel({
             </div>
           </CardContent>
           <CardFooter><Button variant="ghost" onClick={onOpenConnector}>RTX einrichten</Button></CardFooter>
+        </Card>
+        {/* Brain now runs as its own owner-only app on :3002 (apps/brain). It is
+            deliberately NOT wired into the host start/stop (start-uwe.sh stays
+            Studio+Portal) and never tunneled — start it locally with dev:brain.
+            This is an informational surface card, not a host-managed service. */}
+        <Card>
+          <CardHeader><CardTitle>UWE Brain</CardTitle></CardHeader>
+          <CardContent>
+            <div className="connector-stack">
+              <HealthBadge status="ok" label="Eigener Prozess · :3002" />
+              <p className="connector-muted">Owner-only · lokal/LAN · nie im öffentlichen Tunnel</p>
+              <p className="connector-muted">http://127.0.0.1:3002/life-brain · Start via <code>pnpm dev:brain</code></p>
+            </div>
+          </CardContent>
         </Card>
       </div>
 

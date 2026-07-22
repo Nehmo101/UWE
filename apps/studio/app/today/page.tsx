@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   createLifeAdminService,
   getDefaultDashboardLayout,
   mergeMissingDefaultWidgets,
@@ -23,7 +24,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
 });
 
 async function getLatestBriefing() {
-  const docs = await createLifeAdminService(prisma).listPersonalBrainDocuments({ limit: 50 });
+  const docs = await createLifeAdminService(brainPrisma, prisma).listPersonalBrainDocuments({ limit: 50 });
   return docs.find((doc) => doc.title.startsWith("Morning Briefing")) ?? null;
 }
 

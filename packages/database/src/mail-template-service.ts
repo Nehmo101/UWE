@@ -1,6 +1,6 @@
-import type { PrismaClient } from "./client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
 import { slugifyMailKey } from "./mail-utils";
-import type { MailTemplateKind } from "./generated/prisma/client";
+import type { MailTemplateKind } from "./generated/prisma-brain/client";
 import { runSeedOnce } from "./seed-tracker";
 
 export const MAIL_TEMPLATE_SEED_KEY = "mail_templates.system";
@@ -272,5 +272,5 @@ export function createMailTemplateService(db: PrismaClient): MailTemplateService
 }
 
 export async function ensureSystemMailTemplates(db: PrismaClient): Promise<{ applied: boolean }> {
-  return createMailTemplateService(db).ensureSystemTemplatesSeeded();
+  return createMailTemplateService(brainPrisma, db).ensureSystemTemplatesSeeded();
 }

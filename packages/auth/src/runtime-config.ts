@@ -147,6 +147,7 @@ function normalizeAppPath(
 
 const DEV_STUDIO_URL = "http://localhost:3000";
 const DEV_PORTAL_URL = "http://localhost:3001";
+const DEV_BRAIN_URL = "http://localhost:3002";
 
 function parsePublicUrlHost(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -224,6 +225,24 @@ export function resolveStudioPublicBaseUrl(env: NodeJS.ProcessEnv = process.env)
 export function resolvePortalPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   const urls = resolveUweAppUrls(env);
   return (urls.portalUrl ?? DEV_PORTAL_URL).replace(/\/$/, "");
+}
+
+/**
+ * Public base URL for the owner-only Brain surface. Brain now runs as its own
+ * local app (`apps/brain`, default `http://localhost:3002`), so it defaults to
+ * that loopback origin. An explicit `NEXT_PUBLIC_BRAIN_URL` can point it at a
+ * chosen LAN address after owner opt-in.
+ *
+ * Per ADR 004/007 Brain is owner-only and local/LAN and is never added to the
+ * public Cloudflare tunnel — a remote visitor's link to the loopback origin is
+ * intentionally not reachable. This resolver only computes a link target.
+ */
+export function resolveBrainPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const explicitBrain = withRuntimeEnvOverrides(env).NEXT_PUBLIC_BRAIN_URL?.trim()?.replace(/\/$/, "");
+  if (explicitBrain) {
+    return explicitBrain;
+  }
+  return DEV_BRAIN_URL;
 }
 
 /** Logged-in Portal entry — relative on Portal, absolute when linked from Studio. */

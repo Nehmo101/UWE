@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createKitchenService,
   createPantryService,
@@ -40,8 +41,8 @@ const EXPIRY_WINDOW_DAYS = 7;
 export default async function KitchenPantryPage() {
   await requireStudioAccess();
 
-  const pantry = createPantryService(prisma);
-  const kitchen = createKitchenService(prisma);
+  const pantry = createPantryService(brainPrisma, prisma);
+  const kitchen = createKitchenService(brainPrisma, prisma);
   const now = new Date();
 
   const [items, expiring, recipes] = await Promise.all([

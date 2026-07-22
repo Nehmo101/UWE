@@ -1,6 +1,7 @@
 import type { PrismaClient } from "./client";
 import { createLifeAdminService } from "./life-admin-service";
 import type {
+import { brainPrisma } from "./brain-client";
   PersonalBrainSearchHit,
   PersonalBrainSearchResult,
   PersonalBrainSearchableDoc,
@@ -125,7 +126,7 @@ export class KnowledgeAssistantService {
     if (!trimmed) {
       return { query: "", confidence: "none", note: CONFIDENCE_NOTES.none, citations: [] };
     }
-    const result = await createLifeAdminService(this.db).searchPersonalBrain({
+    const result = await createLifeAdminService(brainPrisma, this.db).searchPersonalBrain({
       query: trimmed,
       limit: 8,
     });

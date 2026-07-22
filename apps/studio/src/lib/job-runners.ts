@@ -23,6 +23,7 @@ import {
   type JobService,
   type JobView,
 } from "@uwe/database/server";
+import { brainPrisma, createBrainPrismaClient } from "@uwe/database/brain-client";
 import {
   AI_TASK_LABELS,
   generateAiTaskBySlug,
@@ -186,7 +187,7 @@ export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string
 
   let undoEntryId: string | undefined;
   if (result.undo && world && (result.undo.createdPageIds.length > 0 || result.undo.updatedPages.length > 0)) {
-    const undoService = createUndoService(prisma);
+    const undoService = createUndoService(brainPrisma, prisma);
     const undoEntry = await undoService.captureImportExecute({
       worldId: world.id,
       jobId: ctx.jobId,
@@ -371,7 +372,7 @@ async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Recor
     throw new Error("captureId fehlt im Capture-Triage-Job.");
   }
 
-  const lifeAdmin = createLifeAdminService(prisma);
+  const lifeAdmin = createLifeAdminService(brainPrisma, prisma);
   const capture = await lifeAdmin.getCapture(captureId);
   if (!capture) {
     throw new Error(`Capture ${captureId} nicht gefunden.`);
@@ -750,6 +751,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
 
   const { bundle, zipBuffer } = await loadBackupForRestore(payload);
   const db = createPrismaClient();
+  const brainDb = createBrainPrismaClient();
 
   await ctx.jobs.updateProgress(ctx.jobId, 20, "Safety-Backup vor Restore erstellen");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
@@ -766,6 +768,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
   try {
     result = await executeRestore(
       db,
+      brainDb,
       bundle,
       {
         confirmed: true,
@@ -782,6 +785,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
     );
   } finally {
     await db.$disconnect();
+    await brainDb.$disconnect();
   }
 
   await createActivityLogService(prisma).log({

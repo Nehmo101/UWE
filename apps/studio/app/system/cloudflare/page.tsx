@@ -42,13 +42,28 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
   const proxy = getProxyStatus();
   const cf = proxy.cloudflare;
 
+  const brainExposureLabel: Record<DeploymentSettings["brainExposure"], string> = {
+    loopback: "Nur lokal (Loopback)",
+    lan: "LAN (nach Owner-Freigabe)",
+    off: "Deaktiviert",
+  };
+
+  // Brain is listed alongside Studio and Portal so all three products are visible
+  // as peers. Brain stays owner-only/local (see the dedicated card below); by
+  // default it shares the Studio origin and is reached via /life-brain.
   const routing: { label: string; value: string; source: Source }[] = [
     { label: "Deployment-Modell", value: proxy.deploymentModel, source: "env" },
     { label: "Öffentliche App-URL", value: proxy.publicAppUrl ?? "—", source: stringSource(d.publicAppUrl) },
     { label: "Studio-URL", value: proxy.studioUrl ?? "—", source: stringSource(d.studioUrl) },
     { label: "Portal-URL", value: proxy.portalUrl ?? "—", source: stringSource(d.portalUrl) },
+    {
+      label: "Brain-URL (lokal)",
+      value: d.brainUrl.trim() || `${proxy.studioUrl ?? "Studio-Origin"} · teilt Studio`,
+      source: stringSource(d.brainUrl),
+    },
     { label: "Studio-Pfad", value: proxy.studioPath, source: stringSource(d.studioPath) },
     { label: "Portal-Pfad", value: proxy.portalPath, source: stringSource(d.portalPath) },
+    { label: "Brain-Einstieg", value: d.brainPath.trim() || "/life-brain", source: stringSource(d.brainPath) },
     { label: "Studio auf eigenem Host", value: yesNo(cf.studioOnSeparateHost), source: "env" },
   ];
 
@@ -83,6 +98,15 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
       value: yesNo(proxy.playerPreviewPublic),
       source: overrideSource(d.playerPreviewPublic),
     },
+  ];
+
+  const brain: { label: string; value: string; source: Source }[] = [
+    {
+      label: "Erreichbarkeit",
+      value: brainExposureLabel[d.brainExposure],
+      source: d.brainExposure === "loopback" ? "env" : "db",
+    },
+    { label: "Im öffentlichen Tunnel", value: "Nein — nie (ADR 004/007)", source: "env" },
   ];
 
   const healthy = cf.tunnelConfigured && proxy.trustProxy && proxy.authRequired;
@@ -134,6 +158,7 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
           <StatusCard title="Cloudflare" rows={cloudflare} />
           <StatusCard title="„Ich bin ein Mensch“-Prüfung" rows={humanCheck} />
           <StatusCard title="Sicherheit" rows={security} />
+          <StatusCard title="Brain (lokal, owner-only)" rows={brain} />
         </section>
 
         <form action={updateDeploymentConfigAction} className="flex flex-col gap-4">
@@ -253,6 +278,43 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
                 name="playerPreviewPublic"
                 label="Player-Preview öffentlich"
                 value={d.playerPreviewPublic}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Brain (lokal, owner-only)</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-xs text-muted-foreground">
+                Der private Brain-Bereich (Daily Admin OS &amp; Personal Brain) ist owner-only und
+                bleibt <strong>lokal bzw. im LAN</strong>. Er wird <strong>nie</strong> in den
+                öffentlichen Cloudflare-Tunnel aufgenommen — „öffentlich“ ist bewusst keine Option.
+              </p>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">Erreichbarkeit</span>
+                <select
+                  name="brainExposure"
+                  defaultValue={d.brainExposure}
+                  className="rounded border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="loopback">Nur lokal (Loopback)</option>
+                  <option value="lan">LAN (nach Owner-Freigabe)</option>
+                  <option value="off">Deaktiviert</option>
+                </select>
+              </label>
+              <TextField
+                name="brainUrl"
+                label="Brain-URL (optional, eigenes Origin)"
+                defaultValue={d.brainUrl}
+                placeholder="leer = teilt das Studio-Origin"
+              />
+              <TextField
+                name="brainPath"
+                label="Brain-Einstiegspfad"
+                defaultValue={d.brainPath}
+                placeholder="/life-brain"
               />
             </CardContent>
           </Card>

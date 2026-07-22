@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import type {
   PageType,
   Prisma,
@@ -135,7 +136,7 @@ export class PageBulkService {
       return { ok: false, message: "Keine passenden Seiten gefunden.", ...empty };
     }
 
-    const undo = createUndoService(this.db);
+    const undo = createUndoService(brainPrisma, this.db);
     const activity = createActivityLogService(this.db);
     const undoEntryIds: string[] = [];
     let changedCount = 0;

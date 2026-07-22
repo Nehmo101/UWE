@@ -1,5 +1,5 @@
-import type { HardwareStatus } from "../generated/prisma/client";
-import type { PrismaClient } from "../client";
+import type { HardwareStatus } from "../generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "../brain-client";
 import { appendHardwareErrorEntry } from "../homelab-cockpit";
 import { toPrismaJsonValue } from "../json-utils";
 import type { CreateHardwareDeviceInput } from "./life-admin-types";

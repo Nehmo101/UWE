@@ -1,4 +1,5 @@
 import { slugifyDe } from "@uwe/shared-utils";
+import { brainPrisma } from "./brain-client";
 import type { PrismaClient } from "./client";
 import { createActivityLogService } from "./activity-log-service";
 import type {
@@ -90,7 +91,7 @@ export class AiReviewService {
   }
 
   private get undo() {
-    return createUndoService(this.db);
+    return createUndoService(brainPrisma, this.db);
   }
 
   /**

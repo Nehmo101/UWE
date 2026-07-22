@@ -25,6 +25,7 @@ import {
   type Visibility,
   type CanonicalStatus,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { Badge, Card, CardContent } from "@/src/components/ui";
 
@@ -92,7 +93,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
   const trimmedQuery = q?.trim() ?? "";
 
   const { wiki: results, admin: adminResults, media: mediaResults, tags: tagResults } = trimmedQuery
-    ? await searchStudioCrossDomain(prisma, {
+    ? await searchStudioCrossDomain(prisma, brainPrisma, {
         query: trimmedQuery,
         scope,
         wiki: {

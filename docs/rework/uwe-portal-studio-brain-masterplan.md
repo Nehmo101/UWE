@@ -18,6 +18,11 @@ Zielbild und die Reihenfolge.
   Runtime. Zielzustände in diesem Plan sind nicht automatisch implementiert.
 - Bei Abweichungen älterer Architektur- oder Privacy-Texte gelten in dieser
   Reihenfolge Security-Policy, ADRs, dieser Masterplan und das Inventar.
+- [07-delta-und-mehrfachzuordnung.md](three-product-split/07-delta-und-mehrfachzuordnung.md)
+  (Stand 2026-07-22) ergänzt das Repo-Delta seit dem Inventar-Snapshot
+  (Atlas 3D, neue Packages), die kanonische Wellen-Nummerierung, die
+  Mehrfach-Zuordnungs-Matrix (primäre Hoheit + Projektion/Port/Handle) und
+  vier zusätzliche verifizierte Lücken (L-1 bis L-4).
 
 Die aktuelle Welle ist ausschließlich Foundation und Dokumentation. Sie ändert
 keinen Produktionscode, kein Schema, keine Daten, Cookies, Routes, systemd-Units
@@ -186,6 +191,23 @@ Masterplan vorab autorisiert.
 - D&D-Cloud-Nutzung bleibt eine bewusste administrative Policy-Entscheidung;
   Fehlklassifikation oder unvollständiges `dm_only`-Filtering ist ein
   kritisches Testrisiko.
+- Self-Service-Config/Timer (L-1): Die systemd-Timer für Briefing und
+  Mail-Sync feuern heute gegen den Studio-Origin; nach dem Split müssen
+  Setting-Ownership, `schedule.json`-Writer und Trigger-Origin für das
+  loopback-only Brain vor Welle 4 vertraglich geklärt sein.
+- Backup-Vermischung (L-2): Das heutige Full-Backup sammelt `PersonalBrain*`-
+  und `admin_life`-Daten in die gemeinsame Sicherung; Übergangstests und die
+  technische Erzwingung der separaten Brain-Restore-Freigabe sind vor Welle 5
+  fällig.
+- Agent-Jobs-Cloud-Naht (L-3): `@uwe/agent-jobs` dispatcht Prompts an eine
+  Cloud-API und ist von den Privacy-Negativtests bisher nicht erfasst;
+  Negativtest und Envelope-Begrenzung auf `platform_ops`-Inhalte ergänzen.
+- Connector-Ausführungsgrenze (L-4): Der RTX-Connector führt lokale
+  `personal_brain`-Inferenz aus und sieht dabei Klartext-Prompts — Widerspruch
+  zur „Platform sieht nur opaque Handles"-Regel; per ADR-Nachtrag vor Welle 2
+  auflösen.
+  Details zu allen vier Punkten:
+  [07-delta-und-mehrfachzuordnung.md](three-product-split/07-delta-und-mehrfachzuordnung.md) §5.
 
 ## Definition of Done für den Gesamtsplit
 

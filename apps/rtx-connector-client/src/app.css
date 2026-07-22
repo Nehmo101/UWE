@@ -146,6 +146,10 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.connector-grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .connector-grid-span-2 {
   grid-column: span 2;
 }
@@ -451,6 +455,7 @@
 
   .connector-grid-2,
   .connector-grid-3,
+  .connector-grid-4,
   .connector-form-grid {
     grid-template-columns: 1fr;
   }

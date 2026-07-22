@@ -19,6 +19,7 @@ import {
   disconnectPrismaClientIfOwned,
   type PrismaClient,
 } from "../client";
+import { createBrainPrismaClient, type BrainPrismaClient } from "../brain-client";
 
 export const RETENTION_ENABLED_ENV = "UWE_LOG_RETENTION_ENABLED";
 export const RETENTION_DAYS_ENV = "UWE_LOG_RETENTION_DAYS";
@@ -124,7 +125,7 @@ function resolveVersionKeep(option: number | undefined): number {
 }
 
 /** Standard append-only log tables — leaf rows, safe to delete purely by age. */
-function buildAgeTables(prisma: PrismaClient, retentionDays: number): AgeTable[] {
+function buildAgeTables(prisma: PrismaClient, brainDb: BrainPrismaClient, retentionDays: number): AgeTable[] {
   return [
     {
       name: "audit_logs",
@@ -154,16 +155,16 @@ function buildAgeTables(prisma: PrismaClient, retentionDays: number): AgeTable[]
     {
       name: "mail_message_logs",
       defaultDays: retentionDays,
-      count: (c) => prisma.mailMessageLog.count({ where: { createdAt: { lt: c } } }),
+      count: (c) => brainDb.mailMessageLog.count({ where: { createdAt: { lt: c } } }),
       remove: (c) =>
-        prisma.mailMessageLog.deleteMany({ where: { createdAt: { lt: c } } }).then((r) => r.count),
+        brainDb.mailMessageLog.deleteMany({ where: { createdAt: { lt: c } } }).then((r) => r.count),
     },
     {
       name: "mail_audit_log",
       defaultDays: retentionDays,
-      count: (c) => prisma.mailAuditLog.count({ where: { createdAt: { lt: c } } }),
+      count: (c) => brainDb.mailAuditLog.count({ where: { createdAt: { lt: c } } }),
       remove: (c) =>
-        prisma.mailAuditLog.deleteMany({ where: { createdAt: { lt: c } } }).then((r) => r.count),
+        brainDb.mailAuditLog.deleteMany({ where: { createdAt: { lt: c } } }).then((r) => r.count),
     },
     {
       name: "api_token_usage_logs",
@@ -344,6 +345,7 @@ function inertSummary(
  */
 export async function pruneRetentionLogs(
   prisma: PrismaClient,
+  brainDb: BrainPrismaClient,
   options?: RetentionOptions,
 ): Promise<RetentionSummary> {
   const startedAt = options?.now ?? new Date();
@@ -364,7 +366,7 @@ export async function pruneRetentionLogs(
   const tables: RetentionTableResult[] = [];
   const errors: RetentionTableError[] = [];
 
-  const ageTables = buildAgeTables(prisma, retentionDays);
+  const ageTables = buildAgeTables(prisma, brainDb, retentionDays);
   if (includeAiRuns) {
     ageTables.push(buildAiRunTable(prisma));
   }
@@ -453,11 +455,13 @@ export async function runLogRetentionSweep(
 
   const prisma = options?.prisma ?? createPrismaClient();
   const ownsConnection = !options?.prisma;
+  const brainDb = createBrainPrismaClient();
   try {
-    return await pruneRetentionLogs(prisma, { enabled, dryRun });
+    return await pruneRetentionLogs(prisma, brainDb, { enabled, dryRun });
   } finally {
     if (ownsConnection) {
       await disconnectPrismaClientIfOwned(prisma);
     }
+    await brainDb.$disconnect();
   }
 }

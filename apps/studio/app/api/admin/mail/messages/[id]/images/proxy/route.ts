@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailApi, mailApiError } from "@/src/lib/admin-mail-api";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -29,7 +30,7 @@ export async function GET(request: Request, context: RouteContext) {
     return mailApiError("Nur http(s)-URLs erlaubt.", 400);
   }
 
-  const message = await createMailPortalService(prisma).getMessageContent(id);
+  const message = await createMailPortalService(brainPrisma, prisma).getMessageContent(id);
   if (!message) return mailApiError("Nachricht nicht gefunden.", 404);
 
   const controller = new AbortController();

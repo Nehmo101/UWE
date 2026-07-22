@@ -2,15 +2,15 @@ import type {
   MiniatureCollectionItem,
   MiniatureCollectionStatus,
   PrismaClient,
-} from "./generated/prisma/client";
+} from "./generated/prisma-brain/client";
 import { toPrismaJsonValue } from "./json-utils";
 
 export type {
   MiniatureCollectionItem,
   MiniatureCollectionStatus,
-} from "./generated/prisma/client";
+} from "./generated/prisma-brain/client";
 
-export { MiniatureCollectionStatus as MiniatureCollectionStatusEnum } from "./generated/prisma/client";
+export { MiniatureCollectionStatus as MiniatureCollectionStatusEnum } from "./generated/prisma-brain/client";
 
 export const MINIATURE_COLLECTION_STATUS_LABELS: Record<MiniatureCollectionStatus, string> = {
   purchased: "Gekauft",

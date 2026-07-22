@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { canAccessSecurityDashboard } from "@uwe/auth";
 import {
   assertSecretsStatusHasNoSecrets,
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const snapshot = await getSecretsStatusSnapshot(prisma);
+  const snapshot = await getSecretsStatusSnapshot(prisma, brainPrisma);
   assertSecretsStatusHasNoSecrets(snapshot);
 
   await logAuditEvent(prisma, {

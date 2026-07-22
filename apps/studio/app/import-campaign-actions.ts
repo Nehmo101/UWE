@@ -282,7 +282,7 @@ export async function executeImportCampaignPdfJobAction(
       createdIds: createdPageIds,
       campaignId: context.campaignId,
     };
-    const undoEntry = await createUndoService(prisma).captureImportCentralExecute({
+    const undoEntry = await createUndoService(brainPrisma, prisma).captureImportCentralExecute({
       targetType: "campaign",
       worldId: context.worldId,
       jobId,

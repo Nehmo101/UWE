@@ -1,4 +1,5 @@
 import type { UweRole, WorldMemberRole } from "@uwe/auth";
+import { brainPrisma } from "./brain-client";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PrismaClient } from "./client";
 import { logAuditEvent, type AuditRequestContext } from "./audit-log-service";
@@ -986,7 +987,7 @@ export class NlCommandService {
         };
       }
       case "get_secrets_status": {
-        const snapshot = await getSecretsStatusSnapshot(this.db);
+        const snapshot = await getSecretsStatusSnapshot(this.db, brainPrisma);
         const summary = snapshot.ok
           ? "Secrets-Status ist in Ordnung (keine kritischen Probleme)."
           : `${snapshot.warnings.filter((warning) => warning.severity === "critical").length} kritische Secrets-Warnung(en).`;

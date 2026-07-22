@@ -4,6 +4,7 @@ import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { executeMailChat } from "@/src/lib/mail-chat";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function POST(request: Request) {
   const auth = await requireAdminMailMutation(request);
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
   if (!body.messageId) return mailApiError("messageId erforderlich.");
   if (!body.messages?.length) return mailApiError("messages erforderlich.");
 
-  const stored = await createMailPortalService(prisma).getMessageContent(body.messageId);
+  const stored = await createMailPortalService(brainPrisma, prisma).getMessageContent(body.messageId);
   if (!stored) return mailApiError("Nachricht nicht gefunden.", 404);
 
   try {

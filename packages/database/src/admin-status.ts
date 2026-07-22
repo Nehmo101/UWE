@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import { Prisma } from "./generated/prisma/client";
 import { getSystemStatus, type SystemStatus } from "./system-status";
 import {
@@ -210,6 +211,7 @@ function isMailConfigOk(config: MailConfigStatus): boolean {
 
 export async function getMailHealthStatus(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<MailHealthStatus> {
   const mailService = createMailService(db);
@@ -220,10 +222,10 @@ export async function getMailHealthStatus(
   let lastFailure: MailHealthStatus["lastFailure"] = null;
 
   try {
-    const logService = createMailLogService(db);
+    const logService = createMailLogService(brainPrisma, db);
     const [failures, totalFailed] = await Promise.all([
       logService.list({ status: "failed", limit: 1 }),
-      db.mailMessageLog.count({ where: { status: "failed" } }),
+      brainDb.mailMessageLog.count({ where: { status: "failed" } }),
     ]);
     failedLogCount = totalFailed;
     if (failures[0]) {
@@ -670,6 +672,7 @@ export function getAuthHealthStatus(system: SystemStatus): AuthHealthStatus {
 
 export async function getAdminStatus(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: { rateLimiterMode?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<AdminStatus> {
   const env = options.env ?? process.env;
@@ -679,7 +682,7 @@ export async function getAdminStatus(
   });
 
   const [mail, brain, embeddings, aiRuns, jobs] = await Promise.all([
-    getMailHealthStatus(db, env),
+    getMailHealthStatus(db, brainDb, env),
     getBrainStoreHealthStatus(db, env),
     getEmbeddingHealthStatus(db, env),
     getAiRunSummaryStatus(db),

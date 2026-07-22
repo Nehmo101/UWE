@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@uwe/database/server";
+import type { BrainPrismaClient } from "@uwe/database/brain-client";
 import { createSettingsService } from "@uwe/database/server";
 import { sanitizeBackupData, sanitizeSettingsForBackup } from "./sanitize";
 import type {
@@ -73,7 +74,7 @@ function collectStats(data: BackupData): BackupStats {
 
 /** Daily Admin OS data is global (not world-scoped) — collected only for full backups. */
 async function collectDailyAdminData(
-  db: PrismaClient,
+  brainDb: BrainPrismaClient,
 ): Promise<BackupDailyAdminData> {
   const [
     captureEntries,
@@ -89,18 +90,18 @@ async function collectDailyAdminData(
     personalBrainFacts,
     adminEntityLinks,
   ] = await Promise.all([
-    db.captureEntry.findMany(),
-    db.personalProject.findMany(),
-    db.workshopProject.findMany(),
-    db.workshopPaintRecipe.findMany(),
-    db.workshopPrintProfile.findMany(),
-    db.workshopTerrainRental.findMany(),
-    db.contractExpense.findMany(),
-    db.hardwareDevice.findMany(),
-    db.personalBrainDocument.findMany(),
-    db.personalBrainChunk.findMany(),
-    db.personalBrainFact.findMany(),
-    db.adminEntityLink.findMany(),
+    brainDb.captureEntry.findMany(),
+    brainDb.personalProject.findMany(),
+    brainDb.workshopProject.findMany(),
+    brainDb.workshopPaintRecipe.findMany(),
+    brainDb.workshopPrintProfile.findMany(),
+    brainDb.workshopTerrainRental.findMany(),
+    brainDb.contractExpense.findMany(),
+    brainDb.hardwareDevice.findMany(),
+    brainDb.personalBrainDocument.findMany(),
+    brainDb.personalBrainChunk.findMany(),
+    brainDb.personalBrainFact.findMany(),
+    brainDb.adminEntityLink.findMany(),
   ]);
 
   return {
@@ -415,6 +416,7 @@ async function collectPageIds(
 
 export async function collectBackupData(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   scope: CollectScope,
 ): Promise<{ data: BackupData; stats: BackupStats; settings?: BackupSettingsRecord }> {
   const { worldIds, campaignIds } = await resolveScopeIds(db, scope);
@@ -588,7 +590,7 @@ export async function collectBackupData(
   }
 
   const dailyAdmin =
-    scope.type === "full" ? await collectDailyAdminData(db) : undefined;
+    scope.type === "full" ? await collectDailyAdminData(brainDb) : undefined;
 
   const data: BackupData = sanitizeBackupData({
     dailyAdmin,

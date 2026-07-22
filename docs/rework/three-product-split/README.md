@@ -39,10 +39,11 @@ Invarianten, bevor Folgewellen darauf aufbauen.
 | [../../adr/006-ai-privacy-policy.md](../../adr/006-ai-privacy-policy.md) | ADR 006 — Personal Brain hart lokal; D&D folgt der Gateway-Policy mit `dm_only`-Filter vor Cloud-Routing. |
 | [../../adr/007-deployment-exposure.md](../../adr/007-deployment-exposure.md) | ADR 007 — Portal/Studio optional tunnelbar, Brain nie automatisch öffentlich; systemd bleibt in dieser Welle unverändert. |
 | [02-domain-contracts.md](02-domain-contracts.md) | `AppAudience`/`DataDomain`/`PrivacyClass`-Wertelisten, Kompatibilitätsmatrix, vollständiges Prisma-Modell-Mapping (141 Modelle) und Ziel-Storage-Notation. |
-| [03-guards-plan.md](03-guards-plan.md) | Plan für statische/Compile-Guards: Audience-Guard deny-by-default, Cross-App-Import-Verbote, Job-Envelopes, Contract-Tests gegen die Prisma-DMMF. |
+| [03-guards-plan.md](03-guards-plan.md) | Plan für den statischen Boundary-Guard (`product-boundary-check.mjs`): Import-/Datei-/Dependency-Regeln, Route-Audience-Metadaten und Baseline-Ratchet. Job-Envelopes, DMMF-Contract-Tests und die G1-Feld-Allowlist sind in `02-domain-contracts.md` §9 spezifiziert (Welle 2). |
 | [04-privacy-negative-tests-plan.md](04-privacy-negative-tests-plan.md) | Plan für Laufzeit-Negativtests: Portal-/Export-Leak-Scans, Session-/Audience-Zugriffe, Cloud-Routing-Grenzen, Backup-Trennung. |
 | [05-ci-brain-prep.md](05-ci-brain-prep.md) | CI-Vorbereitung für die künftige `apps/brain`-App (Turbo-/Workflow-Anpassungen, Route-Audience-Coverage), ohne die App selbst anzulegen. |
 | [06-security-review.md](06-security-review.md) | Security-/Privacy-Review von O01–O05 gegen die zehn Invarianten-Prüfkriterien; Findings F-1 bis F-4 mit Fix-Vorschlägen für O07. |
+| [07-delta-und-mehrfachzuordnung.md](07-delta-und-mehrfachzuordnung.md) | Plan-Review 2026-07-22: Umsetzungsstand gegenüber `main`, Repo-Delta seit dem Inventar-Snapshot (Atlas 3D, neue Packages), korrigierte Querverweise (K-1–K-6), Mehrfach-Zuordnungs-Matrix (Hoheit + Projektion/Port/Handle) und vier neue verifizierte Lücken (L-1–L-4). |
 
 Zusätzlich wurden im Rahmen von O01 `../../../SECURITY.md`,
 `../../../SECURITY_NOTES.md` und [../../life-brain-privacy.md](../../life-brain-privacy.md)

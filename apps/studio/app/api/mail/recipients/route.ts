@@ -1,4 +1,5 @@
 import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   const parsed = parseQuery(request.url, mailRecipientsQuerySchema);
   if (!parsed.success) return parsed.response;
 
-  const recipients = createMailRecipientService(prisma);
+  const recipients = createMailRecipientService(brainPrisma, prisma);
   const [groups, players] = await Promise.all([
     recipients.listGroups(parsed.data.worldSlug),
     recipients.listWorldPlayerContacts(parsed.data.worldSlug),
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     return jsonError("worldSlug erforderlich.", 400);
   }
 
-  const recipients = createMailRecipientService(prisma);
+  const recipients = createMailRecipientService(brainPrisma, prisma);
 
   if (action === "sync_players") {
     const group = await recipients.ensurePlayersGroup(worldSlug);

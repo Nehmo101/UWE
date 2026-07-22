@@ -73,6 +73,17 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
   if grep -qiE 'ollama|rtx|11434|8787' "$TUNNEL_CONFIG"; then
     report fail "Tunnel-Konfiguration enthält RTX/Ollama-Referenzen"
   fi
+  # Brain is owner-only and local/LAN (ADR 004/007) — it must never appear in the
+  # public tunnel ingress. Port 3002 is the Brain dev/app port; a brain hostname
+  # is likewise forbidden. This mirrors the RTX/Ollama deny-by-default above.
+  # Only ACTIVE (non-comment) lines count, so a commented LAN note doesn't trip it.
+  active_ingress="$(grep -vE '^[[:space:]]*#' "$TUNNEL_CONFIG" || true)"
+  if printf '%s\n' "$active_ingress" | grep -Eq '127\.0\.0\.1:3002'; then
+    report fail "Tunnel-Konfiguration zeigt auf den Brain-Port (:3002) — Brain ist owner-only/lokal und darf nie öffentlich exponiert werden"
+  fi
+  if printf '%s\n' "$active_ingress" | grep -qiE 'hostname:[[:space:]]*brain\.|brain\.uweanddragons\.org'; then
+    report fail "Tunnel-Konfiguration enthält einen Brain-Hostname — Brain nie im öffentlichen Tunnel"
+  fi
   if grep -q 'portal\.uweanddragons\.org' "$TUNNEL_CONFIG" 2>/dev/null; then
     report ok "Split-Hostname-Ingress: portal.uweanddragons.org konfiguriert"
   elif [[ -n "$PORTAL_URL" && "$PORTAL_URL" == *"portal.uweanddragons.org"* ]]; then

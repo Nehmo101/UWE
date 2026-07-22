@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { HealthBadge } from "@uwe/shared-ui";
 import { getSecretsStatusSnapshot, logAuditEvent, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
@@ -159,7 +160,7 @@ function SecretsSectionTable({
 
 export default async function AdminSecretsPage() {
   const user = await getCurrentAuthUser();
-  const snapshot = await getSecretsStatusSnapshot(prisma);
+  const snapshot = await getSecretsStatusSnapshot(prisma, brainPrisma);
   const criticalWarnings = snapshot.warnings.filter((warning) => warning.severity === "critical");
   const rotationDueIds = new Set(snapshot.rotationDueSecretIds);
 

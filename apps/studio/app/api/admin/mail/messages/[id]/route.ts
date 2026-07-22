@@ -3,6 +3,7 @@ import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailApi, mailApiError } from "@/src/lib/admin-mail-api";
 import { sanitizeMailBodyHtml } from "@/src/lib/sanitize-html";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -13,7 +14,7 @@ export async function GET(request: Request, context: RouteContext) {
   if (auth.error) return auth.error;
 
   const { id } = await context.params;
-  const service = createMailPortalService(prisma);
+  const service = createMailPortalService(brainPrisma, prisma);
   const [message, thread] = await Promise.all([
     service.getMessage(id, auth.user?.id),
     service.getThreadForMessage(id),
