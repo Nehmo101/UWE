@@ -356,7 +356,7 @@ export function CommandCenterPanel({
         </Card>
       ) : null}
 
-      <div className="connector-grid connector-grid-3">
+      <div className="connector-grid connector-grid-4">
         {status?.services.map((service) => (
           <Card key={service.id}>
             <CardHeader><CardTitle>{service.label}</CardTitle></CardHeader>
@@ -380,6 +380,32 @@ export function CommandCenterPanel({
             </div>
           </CardContent>
           <CardFooter><Button variant="ghost" onClick={onOpenConnector}>RTX einrichten</Button></CardFooter>
+        </Card>
+        {/* Brain is owner-only and shares the Studio origin today (no own :3002
+            process), so this is a surface card, not a startable service: its
+            health mirrors Studio and "Öffnen" lands on the Studio origin where
+            /life-brain lives. It stays local — never in the public tunnel. */}
+        <Card>
+          <CardHeader><CardTitle>UWE Brain</CardTitle></CardHeader>
+          <CardContent>
+            <div className="connector-stack">
+              <HealthBadge
+                status={status?.services.find((s) => s.id === "studio")?.healthy ? "ok" : "degraded"}
+                label={status?.services.find((s) => s.id === "studio")?.healthy ? "Lokal erreichbar" : "Studio offline"}
+              />
+              <p className="connector-muted">Owner-only · lokal · teilt Studio-Origin</p>
+              <p className="connector-muted">Einstieg /life-brain · nie im öffentlichen Tunnel</p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button
+              variant="ghost"
+              onClick={() => openHostTarget(root || undefined, "studio")}
+              disabled={!status?.services.find((s) => s.id === "studio")?.healthy}
+            >
+              Brain öffnen
+            </Button>
+          </CardFooter>
         </Card>
       </div>
 
