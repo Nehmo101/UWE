@@ -1,4 +1,4 @@
-import type { WorkshopProject, WorkshopProjectType } from "./generated/prisma/client";
+import type { WorkshopProject, WorkshopProjectType } from "./generated/prisma-brain/client";
 import type { LabelContentData, LabelLayoutSettings } from "./label-service";
 import { defaultElementsForMode } from "./label-elements";
 

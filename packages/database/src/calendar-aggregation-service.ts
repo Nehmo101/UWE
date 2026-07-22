@@ -1,10 +1,6 @@
 import type { PrismaClient } from "./client";
 import type { BrainPrismaClient } from "./brain-client";
-import type {
-  CalendarEvent,
-  CalendarEventKind,
-  CalendarFeed,
-} from "./generated/prisma/client";
+import type { CalendarEvent, CalendarEventKind, CalendarFeed } from "./generated/prisma-brain/client";
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createCalendarService } from "./calendar-service";
 

@@ -1,4 +1,4 @@
-import type { CaptureType } from "./generated/prisma/client";
+import type { CaptureType } from "./generated/prisma-brain/client";
 import { PERSONAL_BRAIN_CATEGORIES } from "./life-admin-service";
 
 const CAPTURE_TYPE_TO_BRAIN_CATEGORY: Partial<Record<CaptureType, (typeof PERSONAL_BRAIN_CATEGORIES)[number]>> = {

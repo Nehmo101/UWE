@@ -1,4 +1,4 @@
-import type { WorkshopPaintTarget, WorkshopRentalStatus } from "./generated/prisma/client";
+import type { WorkshopPaintTarget, WorkshopRentalStatus } from "./generated/prisma-brain/client";
 
 export interface WorkshopMaterialEntry {
   name: string;

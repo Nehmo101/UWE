@@ -1,4 +1,5 @@
-import type { AdminLinkSourceType, Asset, Prisma } from "./generated/prisma/client";
+import type { Asset, Prisma } from "./generated/prisma/client";
+import type { AdminLinkSourceType } from "./generated/prisma-brain/client";
 import type { PrismaClient } from "./client";
 import type { BrainPrismaClient } from "./brain-client";
 import { linkAssetToPage, listAssetsForPage } from "./asset-repository";
