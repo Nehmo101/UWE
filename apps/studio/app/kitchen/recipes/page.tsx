@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { EmptyState } from "@uwe/shared-ui";
 import {
   createKitchenService,
@@ -85,7 +86,7 @@ export default async function RecipesPage({ searchParams }: Props) {
   const status = resolveStatus(statusParam);
   const sort = resolveSort(sortParam);
 
-  const kitchen = createKitchenService(prisma);
+  const kitchen = createKitchenService(brainPrisma, prisma);
   const [recipesRaw, tags] = await Promise.all([
     kitchen.listRecipes({ status, tag }),
     kitchen.listRecipeTags(),

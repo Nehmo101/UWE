@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { notFound } from "next/navigation";
 import { prisma } from "@uwe/database/server";
 import {
@@ -91,7 +92,7 @@ export default async function ScanDetailPage({ params }: Props) {
   await requireStudioAccess();
   const { id } = await params;
 
-  const scan = await createScanInboxService(prisma).get(id);
+  const scan = await createScanInboxService(brainPrisma, prisma).get(id);
   if (!scan) notFound();
 
   const worlds = await prisma.world.findMany({

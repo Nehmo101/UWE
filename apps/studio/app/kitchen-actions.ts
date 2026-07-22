@@ -28,7 +28,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function kitchen() {
-  return createKitchenService(prisma);
+  return createKitchenService(brainPrisma, prisma);
 }
 
 function mealPlan() {

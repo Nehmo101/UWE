@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { jsonError } from "@/src/lib/api-response";
 import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import {
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, mailComposeBodySchema);
   if (!parsed.success) return parsed.response;
 
-  const compose = createMailComposeService(prisma);
+  const compose = createMailComposeService(brainPrisma, prisma);
   const draft = await compose.compose(parsed.data.kind as MailComposeKind, {
     worldSlug: parsed.data.worldSlug,
     sourceId: parsed.data.sourceId,

@@ -1,4 +1,5 @@
 import {
+import type { BrainPrismaClient } from "./brain-client";
   composeBackupWarningMail,
   composeContractReminderMail,
   composeHandoutMail,
@@ -26,7 +27,10 @@ const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
 });
 
 export class MailComposeService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly db: PrismaClient,
+  ) {}
 
   async composeSessionRecap(worldSlug: string, sessionId: string): Promise<MailDraft | null> {
     const session = await this.db.gameSession.findFirst({
@@ -165,7 +169,7 @@ export class MailComposeService {
   }
 
   async composeContractReminder(contractId: string): Promise<MailDraft | null> {
-    const contract = await this.db.contractExpense.findUnique({ where: { id: contractId } });
+    const contract = await this.brainDb.contractExpense.findUnique({ where: { id: contractId } });
     if (!contract) {
       return null;
     }
@@ -218,7 +222,7 @@ export class MailComposeService {
   }
 
   async composeTerrainRental(projectId: string, message?: string): Promise<MailDraft | null> {
-    const project = await this.db.workshopProject.findUnique({
+    const project = await this.brainDb.workshopProject.findUnique({
       where: { id: projectId },
       select: {
         id: true,
@@ -331,6 +335,6 @@ export class MailComposeService {
   }
 }
 
-export function createMailComposeService(db: PrismaClient): MailComposeService {
-  return new MailComposeService(db);
+export function createMailComposeService(brainDb: BrainPrismaClient, db: PrismaClient): MailComposeService {
+  return new MailComposeService(brainDb, db);
 }

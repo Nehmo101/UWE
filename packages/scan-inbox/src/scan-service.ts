@@ -73,10 +73,13 @@ function toRecord(row: {
 }
 
 export class ScanInboxService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly db: PrismaClient,
+  ) {}
 
   async create(input: CreateScanInput): Promise<ScanDocumentRecord> {
-    const row = await this.db.scanDocument.create({
+    const row = await this.brainDb.scanDocument.create({
       data: {
         storageKey: input.storageKey,
         mimeType: input.mimeType,
@@ -90,7 +93,7 @@ export class ScanInboxService {
   }
 
   async list(status?: ScanDocumentStatus): Promise<ScanDocumentRecord[]> {
-    const rows = await this.db.scanDocument.findMany({
+    const rows = await this.brainDb.scanDocument.findMany({
       where: status ? { status } : undefined,
       orderBy: { createdAt: "desc" },
     });
@@ -98,7 +101,7 @@ export class ScanInboxService {
   }
 
   async get(id: string): Promise<ScanDocumentRecord | null> {
-    const row = await this.db.scanDocument.findUnique({ where: { id } });
+    const row = await this.brainDb.scanDocument.findUnique({ where: { id } });
     return row ? toRecord(row) : null;
   }
 
@@ -108,7 +111,7 @@ export class ScanInboxService {
     input: { ocrText: string; ocrEngine: string },
   ): Promise<ScanDocumentRecord> {
     const analysis = analyzeScanText(input.ocrText);
-    const row = await this.db.scanDocument.update({
+    const row = await this.brainDb.scanDocument.update({
       where: { id },
       data: {
         ocrText: input.ocrText,
@@ -126,14 +129,14 @@ export class ScanInboxService {
   }
 
   async markWaitingForRtx(id: string, message?: string): Promise<void> {
-    await this.db.scanDocument.update({
+    await this.brainDb.scanDocument.update({
       where: { id },
       data: { status: "waiting_for_rtx", errorMessage: message ?? null },
     });
   }
 
   async setConnectorJob(id: string, jobId: string): Promise<void> {
-    await this.db.scanDocument.update({
+    await this.brainDb.scanDocument.update({
       where: { id },
       data: { status: "analyzing", connectorJobId: jobId },
     });
@@ -145,7 +148,7 @@ export class ScanInboxService {
    * läuft der Job noch, bleibt der Scan auf `analyzing`.
    */
   async applyConnectorJobResult(id: string): Promise<ScanDocumentRecord | null> {
-    const scan = await this.db.scanDocument.findUnique({
+    const scan = await this.brainDb.scanDocument.findUnique({
       where: { id },
       select: { connectorJobId: true },
     });
@@ -156,7 +159,7 @@ export class ScanInboxService {
       select: { status: true, result: true, failedReason: true },
     });
     if (!job) {
-      await this.db.scanDocument.update({
+      await this.brainDb.scanDocument.update({
         where: { id },
         data: { status: "uncertain", errorMessage: "Connector-Job nicht gefunden." },
       });
@@ -171,7 +174,7 @@ export class ScanInboxService {
       if (text.trim()) {
         return this.applyAnalysis(id, { ocrText: text, ocrEngine: "vision_llm" });
       }
-      await this.db.scanDocument.update({
+      await this.brainDb.scanDocument.update({
         where: { id },
         data: { status: "uncertain", errorMessage: "Vision-Job lieferte keinen Text." },
       });
@@ -179,7 +182,7 @@ export class ScanInboxService {
     }
 
     if (job.status === "failed" || job.status === "expired") {
-      await this.db.scanDocument.update({
+      await this.brainDb.scanDocument.update({
         where: { id },
         data: { status: "uncertain", errorMessage: job.failedReason ?? `Vision-Job ${job.status}.` },
       });
@@ -191,19 +194,19 @@ export class ScanInboxService {
   }
 
   async reject(id: string): Promise<void> {
-    await this.db.scanDocument.update({
+    await this.brainDb.scanDocument.update({
       where: { id },
       data: { status: "rejected", rejectedAt: new Date() },
     });
   }
 
   async archive(id: string): Promise<void> {
-    await this.db.scanDocument.update({ where: { id }, data: { status: "archived" } });
+    await this.brainDb.scanDocument.update({ where: { id }, data: { status: "archived" } });
   }
 
   /** Markiert einen Scan als DnD-Modus und ordnet ihn einer Welt zu. */
   async setDndWorld(id: string, worldId: string): Promise<ScanDocumentRecord | null> {
-    await this.db.scanDocument.update({
+    await this.brainDb.scanDocument.update({
       where: { id },
       data: { privacyLevel: "dnd", worldId },
     });
@@ -256,7 +259,7 @@ export class ScanInboxService {
     let targetId: string | null = null;
 
     if (target === "contract") {
-      const contract = await createLifeAdminService(this.db).createContractExpense({
+      const contract = await createLifeAdminService(this.brainDb, this.db).createContractExpense({
         name: scan.proposal?.title || scan.title || "Aus Scan",
         vendor: fields.vendor ?? undefined,
         amountCents: fields.amountCents ?? undefined,
@@ -267,7 +270,7 @@ export class ScanInboxService {
       targetType = "contract_expense";
       targetId = contract.id;
     } else if (target === "capture" || target === "todo") {
-      const capture = await this.db.captureEntry.create({
+      const capture = await this.brainDb.captureEntry.create({
         data: {
           title: scan.title || "Aus Scan",
           content: scan.ocrText,
@@ -278,7 +281,7 @@ export class ScanInboxService {
       targetType = "capture";
       targetId = capture.id;
     } else if (target === "life_brain") {
-      const doc = await this.db.personalBrainDocument.create({
+      const doc = await this.brainDb.personalBrainDocument.create({
         data: {
           title: scan.proposal?.title || scan.title || "Aus Scan",
           content: scan.ocrText,
@@ -290,7 +293,7 @@ export class ScanInboxService {
     } else if (target === "calendar_event") {
       const reminder = scan.proposal?.reminder;
       const startAt = reminder?.date ? new Date(reminder.date) : new Date();
-      const event = await this.db.calendarEvent.create({
+      const event = await this.brainDb.calendarEvent.create({
         data: {
           title: `${reminder?.label ? `${reminder.label}: ` : ""}${scan.proposal?.title || scan.title || "Aus Scan"}`,
           startAt,
@@ -305,7 +308,7 @@ export class ScanInboxService {
       // (S3). Der Parser ist best-effort — ohne erkennbare Abschnitte bleibt der
       // volle OCR-Text als Notiz erhalten. Rezept-Writes gehören zu @uwe/kitchen.
       const parsed = parseRecipeText(scan.ocrText);
-      const recipe = await createKitchenService(this.db).createRecipe({
+      const recipe = await createKitchenService(this.brainDb, this.db).createRecipe({
         title: scan.proposal?.title || scan.title || "Aus Scan",
         status: "draft",
         steps: parsed.steps,
@@ -319,7 +322,7 @@ export class ScanInboxService {
       target === "dnd_session_note" ||
       target === "dnd_handout"
     ) {
-      const scanRow = await this.db.scanDocument.findUnique({
+      const scanRow = await this.brainDb.scanDocument.findUnique({
         where: { id },
         select: { worldId: true, detectedKind: true },
       });
@@ -336,7 +339,7 @@ export class ScanInboxService {
       targetId = result.targetId;
     }
 
-    await this.db.scanDocument.update({
+    await this.brainDb.scanDocument.update({
       where: { id },
       data: { status: "filed", filedAt: new Date(), filedTargetType: targetType, filedTargetId: targetId },
     });
@@ -344,6 +347,6 @@ export class ScanInboxService {
   }
 }
 
-export function createScanInboxService(db: PrismaClient): ScanInboxService {
-  return new ScanInboxService(db);
+export function createScanInboxService(brainDb: BrainPrismaClient, db: PrismaClient): ScanInboxService {
+  return new ScanInboxService(brainDb, db);
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { Suspense } from "react";
 import { prisma } from "@uwe/database/server";
 import {
@@ -33,7 +34,7 @@ export default async function ScanInboxPage({
   await requireStudioAccess();
   const { q } = await searchParams;
 
-  const docs = await createScanInboxService(prisma).list();
+  const docs = await createScanInboxService(brainPrisma, prisma).list();
   const filteredDocs = docs.filter((doc) =>
     matchesAdminListQuery(q, [doc.title, doc.ocrText, doc.detectedKind, doc.status]),
   );

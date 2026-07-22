@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createKitchenService,
   createMealPlanService,
@@ -26,7 +27,7 @@ const PLAN_DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
 export default async function KitchenDashboardPage() {
   await requireStudioAccess();
 
-  const kitchen = createKitchenService(prisma);
+  const kitchen = createKitchenService(brainPrisma, prisma);
   const pantry = createPantryService(prisma);
   const shopping = createShoppingService(prisma);
   const meals = createMealPlanService(prisma);
