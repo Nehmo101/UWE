@@ -1,4 +1,5 @@
-import { createMailAccountService, prisma } from "@uwe/database/server";
+import { createMailAccountService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
@@ -14,7 +15,7 @@ export default async function BrainMailPage() {
     );
   }
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const [accounts, inbox] = await Promise.all([service.listAccounts(), service.listInbox(undefined, 50)]);
 
   return (
