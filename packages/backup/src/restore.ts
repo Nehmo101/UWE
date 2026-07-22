@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { generateSessionToken } from "@uwe/auth/server";
 import type { PrismaClient } from "@uwe/database/server";
+import type { BrainPrismaClient } from "@uwe/database/brain-client";
 import { createSettingsService, pickUniqueSlug } from "@uwe/database/server";
 import { extractBackupAssets } from "./archive";
 import { previewRestore } from "./restore-preview";
@@ -19,6 +20,7 @@ function remapId(idMap: Map<string, string>, oldId: string): string {
 
 export async function executeRestore(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   bundle: BackupBundle,
   options: RestoreExecuteOptions,
   zipBuffer?: Buffer,
@@ -747,10 +749,10 @@ export async function executeRestore(
       oldId ? idMap.get(oldId) ?? null : null;
 
     for (const entry of dailyAdmin.captureEntries ?? []) {
-      const existing = await db.captureEntry.findUnique({ where: { id: entry.id } });
+      const existing = await brainDb.captureEntry.findUnique({ where: { id: entry.id } });
       if (existing) continue;
 
-      await db.captureEntry.create({
+      await brainDb.captureEntry.create({
         data: {
           id: remapId(idMap, entry.id),
           title: entry.title,
@@ -770,10 +772,10 @@ export async function executeRestore(
     }
 
     for (const project of dailyAdmin.personalProjects ?? []) {
-      const existing = await db.personalProject.findUnique({ where: { id: project.id } });
+      const existing = await brainDb.personalProject.findUnique({ where: { id: project.id } });
       if (existing) continue;
 
-      await db.personalProject.create({
+      await brainDb.personalProject.create({
         data: {
           id: remapId(idMap, project.id),
           name: project.name,
@@ -794,13 +796,13 @@ export async function executeRestore(
     }
 
     for (const project of dailyAdmin.workshopProjects ?? []) {
-      const existing = await db.workshopProject.findUnique({ where: { id: project.id } });
+      const existing = await brainDb.workshopProject.findUnique({ where: { id: project.id } });
       if (existing) {
         idMap.set(project.id, existing.id);
         continue;
       }
 
-      await db.workshopProject.create({
+      await brainDb.workshopProject.create({
         data: {
           id: remapId(idMap, project.id),
           title: project.title,
@@ -829,10 +831,10 @@ export async function executeRestore(
     }
 
     for (const recipe of dailyAdmin.workshopPaintRecipes ?? []) {
-      const existing = await db.workshopPaintRecipe.findUnique({ where: { id: recipe.id } });
+      const existing = await brainDb.workshopPaintRecipe.findUnique({ where: { id: recipe.id } });
       if (existing) continue;
 
-      await db.workshopPaintRecipe.create({
+      await brainDb.workshopPaintRecipe.create({
         data: {
           id: remapId(idMap, recipe.id),
           name: recipe.name,
@@ -852,10 +854,10 @@ export async function executeRestore(
     }
 
     for (const profile of dailyAdmin.workshopPrintProfiles ?? []) {
-      const existing = await db.workshopPrintProfile.findUnique({ where: { id: profile.id } });
+      const existing = await brainDb.workshopPrintProfile.findUnique({ where: { id: profile.id } });
       if (existing) continue;
 
-      await db.workshopPrintProfile.create({
+      await brainDb.workshopPrintProfile.create({
         data: {
           id: remapId(idMap, profile.id),
           name: profile.name,
@@ -875,10 +877,10 @@ export async function executeRestore(
     }
 
     for (const rental of dailyAdmin.workshopTerrainRentals ?? []) {
-      const existing = await db.workshopTerrainRental.findUnique({ where: { id: rental.id } });
+      const existing = await brainDb.workshopTerrainRental.findUnique({ where: { id: rental.id } });
       if (existing) continue;
 
-      await db.workshopTerrainRental.create({
+      await brainDb.workshopTerrainRental.create({
         data: {
           id: remapId(idMap, rental.id),
           terrainSetName: rental.terrainSetName,
@@ -898,10 +900,10 @@ export async function executeRestore(
     }
 
     for (const expense of dailyAdmin.contractExpenses ?? []) {
-      const existing = await db.contractExpense.findUnique({ where: { id: expense.id } });
+      const existing = await brainDb.contractExpense.findUnique({ where: { id: expense.id } });
       if (existing) continue;
 
-      await db.contractExpense.create({
+      await brainDb.contractExpense.create({
         data: {
           id: remapId(idMap, expense.id),
           name: expense.name,
@@ -927,10 +929,10 @@ export async function executeRestore(
     }
 
     for (const device of dailyAdmin.hardwareDevices ?? []) {
-      const existing = await db.hardwareDevice.findUnique({ where: { id: device.id } });
+      const existing = await brainDb.hardwareDevice.findUnique({ where: { id: device.id } });
       if (existing) continue;
 
-      await db.hardwareDevice.create({
+      await brainDb.hardwareDevice.create({
         data: {
           id: remapId(idMap, device.id),
           name: device.name,
@@ -952,7 +954,7 @@ export async function executeRestore(
     }
 
     for (const document of dailyAdmin.personalBrainDocuments ?? []) {
-      const existing = await db.personalBrainDocument.findUnique({
+      const existing = await brainDb.personalBrainDocument.findUnique({
         where: { id: document.id },
       });
       if (existing) {
@@ -960,7 +962,7 @@ export async function executeRestore(
         continue;
       }
 
-      await db.personalBrainDocument.create({
+      await brainDb.personalBrainDocument.create({
         data: {
           id: remapId(idMap, document.id),
           title: document.title,
@@ -977,10 +979,10 @@ export async function executeRestore(
       const documentId = idMap.get(chunk.documentId);
       if (!documentId) continue;
 
-      const existing = await db.personalBrainChunk.findUnique({ where: { id: chunk.id } });
+      const existing = await brainDb.personalBrainChunk.findUnique({ where: { id: chunk.id } });
       if (existing) continue;
 
-      await db.personalBrainChunk.create({
+      await brainDb.personalBrainChunk.create({
         data: {
           id: remapId(idMap, chunk.id),
           documentId,
@@ -994,10 +996,10 @@ export async function executeRestore(
     }
 
     for (const fact of dailyAdmin.personalBrainFacts ?? []) {
-      const existing = await db.personalBrainFact.findUnique({ where: { id: fact.id } });
+      const existing = await brainDb.personalBrainFact.findUnique({ where: { id: fact.id } });
       if (existing) continue;
 
-      await db.personalBrainFact.create({
+      await brainDb.personalBrainFact.create({
         data: {
           id: remapId(idMap, fact.id),
           factType: fact.factType,
@@ -1015,7 +1017,7 @@ export async function executeRestore(
       const targetId = idMap.get(link.targetId);
       if (!sourceId || !targetId) continue;
 
-      await db.adminEntityLink.create({
+      await brainDb.adminEntityLink.create({
         data: {
           id: remapId(idMap, link.id),
           sourceType: link.sourceType as never,

@@ -23,6 +23,7 @@ import {
   type JobService,
   type JobView,
 } from "@uwe/database/server";
+import { createBrainPrismaClient } from "@uwe/database/brain-client";
 import {
   AI_TASK_LABELS,
   generateAiTaskBySlug,
@@ -750,6 +751,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
 
   const { bundle, zipBuffer } = await loadBackupForRestore(payload);
   const db = createPrismaClient();
+  const brainDb = createBrainPrismaClient();
 
   await ctx.jobs.updateProgress(ctx.jobId, 20, "Safety-Backup vor Restore erstellen");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
@@ -766,6 +768,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
   try {
     result = await executeRestore(
       db,
+      brainDb,
       bundle,
       {
         confirmed: true,
@@ -782,6 +785,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
     );
   } finally {
     await db.$disconnect();
+    await brainDb.$disconnect();
   }
 
   await createActivityLogService(prisma).log({
