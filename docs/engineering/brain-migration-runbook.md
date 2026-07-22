@@ -32,6 +32,45 @@ gepinnt — ein neues Brain-Modell kann nicht stillschweigend entkommen.
    Links (`AdminEntityLink`, `ScanDocument`-Ziele, Kalender-/Mail-Weltbezug)
    müssen vorher zu opaken IDs/Ports aufgelöst werden (Streitgruppen G2/G3/G9
    aus O02). Erst danach ist ein valides standalone Schema möglich.
+
+   ### 3a — Konkrete Cross-Domain-FK-Auflösung (15 Kanten, autoritativ)
+
+   Ein Scan der 45 Brain-Modelle gegen `schema.prisma` ergibt **genau 15
+   Fremdschlüssel aus Brain in die D&D-Domäne** (und spiegelbildlich 15
+   Rück-Relationen auf `World`/`Page`/`User`/`GameSession`). Jede Kante wird
+   beim DB-Split zu einem **opaken, nullbaren Skalar** (kein `@relation`, keine
+   DB-seitige Referenzintegrität über die DB-Grenze); die Rück-Relation auf der
+   D&D-Seite entfällt. Die Verknüpfung bleibt semantisch erhalten (die ID wird
+   weiter gespeichert), Lookups über die Grenze werden App-seitig aufgelöst.
+
+   | Brain-Modell → Ziel | Auflösung im Brain-Schema |
+   |---|---|
+   | `MailTemplate.world` → `World` | `worldId String?` (opak) |
+   | `MailRecipientGroup.world` → `World` | `worldId String?` (opak) |
+   | `MailMessageLog.world` → `World` | `worldId String?` (opak) |
+   | `MailDraft.world` → `World` | `worldId String?` (opak) |
+   | `MailRecipient.user` → `User` | `userId String?` (opak) |
+   | `CaptureEntry.world` → `World` | `worldId String?` (opak) |
+   | `CaptureEntry.page` → `Page` | `pageId String?` (opak) |
+   | `PersonalProject.world` → `World` | `worldId String?` (opak) |
+   | `PersonalProject.page` → `Page` | `pageId String?` (opak) |
+   | `WorkshopProject.world` → `World` | `worldId String?` (opak) |
+   | `WorkshopProject.page` → `Page` | `pageId String?` (opak) |
+   | `CalendarEvent.world` → `World` | `worldId String?` (opak) |
+   | `CalendarEvent.session` → `GameSession` | `sessionId String?` (opak) |
+   | `ResearchSession.world` → `World` | `worldId String?` (opak) |
+   | `ScanDocument.world` → `World` | `worldId String?` (opak) |
+
+   **Offene Produktentscheidung (nicht rein technisch):** Mail, Capture,
+   Kalender und Research/Scan tragen heute einen echten `World`-Bezug — sie sind
+   damit teilweise D&D-*welt*-skopiert, nicht rein owner-privat. Default unter
+   dem erteilten GO: Sie ziehen **nach Brain** um, `worldId` bleibt als opake
+   Referenz erhalten (Brain besitzt die Zeile; die referenzierte Welt ist
+   informativ). Soll ein Feature stattdessen als *Studio/Welt-*Feature in
+   `uwe.db` bleiben, ist das ein **Ein-Zeilen-Flip** in `BRAIN_MODEL_NAMES`
+   (`@uwe/product-contracts`) plus das Weglassen aus dieser Tabelle — keine
+   Neu-Architektur. Diese Umkehrbarkeit ist der Grund, warum die Auflösung hier
+   deklarativ an die Contracts gepinnt ist.
 4. **Import.** Bundle in `uwe-brain.db` einspielen (Reihenfolge nach
    Abhängigkeiten). Danach `counts` gegen Schritt 2 vergleichen — jede
    Abweichung stoppt die Migration.
