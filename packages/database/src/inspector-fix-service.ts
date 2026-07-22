@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import { createActivityLogService } from "./activity-log-service";
 import { normalizeLookupKey, parseWikiLinks } from "./page-service";
 import { buildPageUrl } from "./page-types";
@@ -35,7 +36,7 @@ export class InspectorFixService {
   constructor(private readonly db: PrismaClient) {}
 
   private get undo() {
-    return createUndoService(this.db);
+    return createUndoService(brainPrisma, this.db);
   }
 
   private get activity() {

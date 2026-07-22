@@ -356,7 +356,7 @@ export async function deleteContentBlockAction(formData: FormData) {
 
   let undoEntryId: string | undefined;
   {
-    const undoEntry = await createUndoService(prisma).captureBlock(blockId, "block.delete");
+    const undoEntry = await createUndoService(brainPrisma, prisma).captureBlock(blockId, "block.delete");
     undoEntryId = undoEntry.id;
   }
 

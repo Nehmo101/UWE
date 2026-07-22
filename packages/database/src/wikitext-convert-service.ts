@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import type { ContentBlockType, PageType } from "./generated/prisma/client";
 import { createActivityLogService } from "./activity-log-service";
 import { createUndoService } from "./undo-service";
@@ -217,7 +218,7 @@ export class WikitextConvertService {
       };
     }
 
-    const undo = createUndoService(this.db);
+    const undo = createUndoService(brainPrisma, this.db);
     const activity = createActivityLogService(this.db);
     const undoEntryIds: string[] = [];
     const changedPageIds = new Set<string>();

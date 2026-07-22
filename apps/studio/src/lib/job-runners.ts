@@ -23,7 +23,7 @@ import {
   type JobService,
   type JobView,
 } from "@uwe/database/server";
-import { createBrainPrismaClient } from "@uwe/database/brain-client";
+import { brainPrisma, createBrainPrismaClient } from "@uwe/database/brain-client";
 import {
   AI_TASK_LABELS,
   generateAiTaskBySlug,
@@ -187,7 +187,7 @@ export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string
 
   let undoEntryId: string | undefined;
   if (result.undo && world && (result.undo.createdPageIds.length > 0 || result.undo.updatedPages.length > 0)) {
-    const undoService = createUndoService(prisma);
+    const undoService = createUndoService(brainPrisma, prisma);
     const undoEntry = await undoService.captureImportExecute({
       worldId: world.id,
       jobId: ctx.jobId,

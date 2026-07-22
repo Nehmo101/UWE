@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import { toPrismaJsonValue } from "./json-utils";
 import {
   capturePageContentReplaceUndo,
@@ -140,7 +141,10 @@ export interface UndoResult {
 }
 
 export class UndoService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly db: PrismaClient,
+  ) {}
 
   /** Snapshot a page's scalar state before an update. */
   async capturePageUpdate(pageId: string, operation: UndoOperation = "page.update") {
@@ -745,13 +749,13 @@ export class UndoService {
     snapshot: ImportCentralExecuteSnapshot,
   ): Promise<UndoResult> {
     if (snapshot.createdPersonalBrainDocumentIds.length > 0) {
-      await this.db.personalBrainDocument.deleteMany({
+      await this.brainDb.personalBrainDocument.deleteMany({
         where: { id: { in: snapshot.createdPersonalBrainDocumentIds } },
       });
     }
 
     if (snapshot.createdCaptureIds.length > 0) {
-      await this.db.captureEntry.deleteMany({
+      await this.brainDb.captureEntry.deleteMany({
         where: { id: { in: snapshot.createdCaptureIds } },
       });
     }
@@ -787,6 +791,6 @@ export class UndoService {
   }
 }
 
-export function createUndoService(db: PrismaClient): UndoService {
-  return new UndoService(db);
+export function createUndoService(brainDb: BrainPrismaClient, db: PrismaClient): UndoService {
+  return new UndoService(brainDb, db);
 }
