@@ -283,6 +283,7 @@ export {
   PUBLIC_PORTAL_API_ROUTES,
   PUBLIC_STUDIO_API_ROUTES,
   PROTECTED_ROUTE_PREFIXES,
+  BRAIN_PUBLIC_ROUTES,
   classifyRoute,
   isApiRoute,
   isGuestWikiPath,
@@ -298,6 +299,7 @@ export type { MiddlewareDecision, MiddlewareRequestLike } from "./security/middl
 export {
   evaluatePortalMiddleware,
   evaluateStudioMiddleware,
+  evaluateBrainMiddleware,
   getMiddlewareMatcher,
 } from "./security/middleware";
 

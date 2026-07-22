@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { applySecurityHeaders, getUweRuntimeConfig, SESSION_COOKIE_NAME } from "@uwe/auth";
+import { applySecurityHeaders, evaluateBrainMiddleware } from "@uwe/auth";
 import { isBrainEntryEnabled, resolveBrainExposure } from "@/src/lib/exposure";
 
-// Loopback is enforced at the bind level (`next start --hostname 127.0.0.1`);
-// this middleware adds the app-level owner/session gate. Every page and API
-// additionally re-checks the owner role server-side (requireBrainOwnerAuth).
-const PUBLIC_PATH_PREFIXES = ["/login", "/api/health"];
-
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
-
+// Loopback is enforced at the bind level (`next start --hostname 127.0.0.1`).
+// The owner/session gate is the shared, path-based, deny-by-default Brain policy
+// (`evaluateBrainMiddleware`); every page and API additionally re-checks the
+// owner role server-side (requireBrainOwnerAuth).
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -30,23 +23,27 @@ export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-uwe-pathname", pathname);
 
-  const config = getUweRuntimeConfig();
-  if (config.authRequired && !isPublicPath(pathname)) {
-    const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
-    if (!hasSession) {
-      if (pathname.startsWith("/api/")) {
-        return applySecurityHeaders(
-          NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 }),
-          process.env,
-          {},
-          request,
-        );
-      }
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      loginUrl.searchParams.set("redirect", pathname);
-      return applySecurityHeaders(NextResponse.redirect(loginUrl), process.env, {}, request);
-    }
+  const decision = evaluateBrainMiddleware({
+    pathname,
+    url: request.url,
+    headers: request.headers,
+    cookies: request.cookies,
+  });
+
+  if (decision.action === "redirect-login") {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = decision.redirectPath ?? "/login";
+    loginUrl.searchParams.set("redirect", pathname);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl), process.env, {}, request);
+  }
+
+  if (decision.action === "block") {
+    return applySecurityHeaders(
+      NextResponse.json({ error: decision.error ?? "Zugriff verweigert." }, { status: decision.status ?? 403 }),
+      process.env,
+      {},
+      request,
+    );
   }
 
   return applySecurityHeaders(

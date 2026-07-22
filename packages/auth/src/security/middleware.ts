@@ -107,6 +107,45 @@ export function evaluateStudioMiddleware(
   return { action: "allow" };
 }
 
+/**
+ * Owner-only Brain surface: path-based, deny-by-default session gate. Pages
+ * without a session redirect to /login; protected APIs return 401 (or 404 for
+ * unknown APIs, hiding their existence). The owner *role* is enforced
+ * server-side by the route handlers (`requireBrainOwnerAuth`) — the middleware
+ * has no user object and therefore never decides the role. In non-production
+ * everything is allowed for local development.
+ */
+export function evaluateBrainMiddleware(
+  request: MiddlewareRequestLike,
+  env: NodeJS.ProcessEnv = process.env,
+): MiddlewareDecision {
+  if (!isProductionEnv(env)) {
+    return { action: "allow" };
+  }
+  const pathname = request.pathname;
+  const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
+  const classification = classifyRoute(pathname, "brain");
+
+  if (classification.access === "public") {
+    return { action: "allow" };
+  }
+
+  if (isApiRoute(pathname)) {
+    if (hasSession) {
+      return { action: "allow" };
+    }
+    if (classification.unknownApi) {
+      return { action: "block", status: 404, error: "API-Route nicht gefunden." };
+    }
+    return { action: "block", status: 401, error: "Anmeldung erforderlich." };
+  }
+
+  if (!hasSession) {
+    return { action: "redirect-login", redirectPath: "/login" };
+  }
+  return { action: "allow" };
+}
+
 export function getMiddlewareMatcher(surface: UweAppSurface): string[] {
   if (surface === "portal") {
     return [
