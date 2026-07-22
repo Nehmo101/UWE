@@ -103,12 +103,76 @@ gepinnt — ein neues Brain-Modell kann nicht stillschweigend entkommen.
   (`brain-export.ts`), read-only, an die Contracts gepinnt.
 - **Modell-Autorität:** `BRAIN_MODEL_NAMES`/`isBrainModelName` in
   `@uwe/product-contracts`.
+- **Schema-Split (Stufe 3), blind geschrieben:**
+  `scripts/generate-brain-schema-split.mjs` (deterministisch, an
+  `BRAIN_MODEL_NAMES` gepinnt) erzeugt `prisma/brain/schema.prisma`
+  (+`.postgresql.prisma`) und schreibt die 45 Brain-Modelle + 15
+  Rück-Relationen aus den Haupt-Schemas heraus. 15 Cross-Domain-FKs → opake,
+  nullbare Skalare (siehe 3a), Enums werden mitkopiert.
+- **Brain-Client:** `packages/database/src/brain-client.ts`
+  (`getSharedBrainPrismaClient`/`brainPrisma`, `uwe-brain.db`, SQLite,
+  loopback-only), Subpath `@uwe/database/brain-client`. `db:generate` erzeugt
+  den `prisma-brain`-Client mit; `db:deploy:brain`/`db:migrate:brain` +
+  `BRAIN_DATABASE_URL` verdrahtet.
+- **Leaf-Service-Repoint (Stufe 6, Teil 1):** `scripts/repoint-brain-services.mjs`
+  (verschiebt nur Import-Quellen, keine Logik) hat 13 eindeutig owner-private
+  Brain-Services auf den Brain-Client umgestellt: `continue-work`,
+  `finance-overview`, `personal-brain`, `research`, `document-template`,
+  `miniature-collection` + `life-admin/{brain,capture,contract,hardware,
+  project,today,workshop}`. Statement-level leak-verifiziert, Codemod idempotent.
+
+## Stufe 6 — restliche Service-Repoint-Worklist (Host-geführt)
+
+Alles Folgende ist **nicht** blind ausgeführt, weil es echte Zwei-Client-
+Design-Entscheidungen (DB-übergreifende Joins) bzw. eine offene
+Produktentscheidung (Mail) enthält. Auf dem Host führt `pnpm typecheck` nach
+`db:generate` **jede** offene Stelle punktgenau auf (Brain-Delegates/-Typen
+existieren dann nicht mehr am Core-Client). Reihenfolge:
+
+- **A — Brain-Modelltyp-Import-Flip:** Jeder `import type { <BrainModel/Enum> }
+  from "@uwe/database/server" | ".../generated/prisma/client"` außerhalb der 13
+  Leaf-Services muss auf `.../generated/prisma-brain/client` zeigen (der
+  `server`-Barrel re-exportiert nur Core-Typen). Mechanisch, tsc-geführt; der
+  Codemod deckt das Muster `generated/prisma/client` bereits ab.
+- **B — Aggregatoren:** `createLifeAdminService` /
+  `createLifeAdminSubServices` auf **Zwei-Client** umstellen (`brainDb`,
+  `coreDb`): Leaf-Subservices an `brainDb`, der gemischte `links`-Resolver an
+  beide.
+- **C — 20 Cross-DB-Services (Zwei-Client + opake-ID-Join):** `backup`
+  `collect`/`restore`, `calendar-service`, `calendar-aggregation-service`,
+  `admin-entity-link-resolver`, `admin-search-service`,
+  `entity-tag-search-service`, `tag-service`, `asset-link-service`,
+  `life-admin/life-admin-links-service`, `mail-compose-service`,
+  `mail-recipient-service`, `maintenance/log-retention-service`,
+  `undo-service`, `secrets-status-service`, `admin-status`, `stress-seed`,
+  `apps/studio/app/integration-actions.ts`, `kitchen/recipe-service`
+  (+`apps/studio/app/kitchen/recipe-image-file.ts`),
+  `scan-inbox/scan-service` (+`apps/studio/app/scan-inbox/scan-file.ts`).
+  **Muster:** Brain-Zeilen über `brainPrisma` lesen/schreiben; die referenzierte
+  Core-Entität über die **opake ID** (`worldId`/`pageId`/`userId`/`sessionId`)
+  separat am Core-Client nachladen. Keine DB-übergreifende FK, kein
+  Dual-Store-Client in einer einzelnen Query.
+- **D — `apps/brain`-Seiten:** nach B/C von `prisma` auf `brainPrisma` (bzw.
+  Zwei-Client) umstellen. 11 Seiten: 9 hängen an B (life-admin/personal-brain/
+  documents/miniatures), 2 an C (`mail`, `calendar`).
+- **E — Contested Mail-Entscheidung (G2/G3, VOR Mail-Repoint):** Die 5
+  campaign-mail-Modelle (`MailTemplate`, `MailRecipientGroup`,
+  `MailRecipient`, `MailMessageLog`, `MailDraft`) tragen `world`/`user`-FK und
+  sind brain-vs-studio zu entscheiden. Der Owner-**Inbox**-Teil (IMAP/SMTP,
+  `mail-account`/`mail-portal-*`) ist Brain. Bleiben die campaign-mail-Modelle
+  **Studio**, aus `BRAIN_MODEL_NAMES` + der 3a-Tabelle entfernen und
+  `generate-brain-schema-split.mjs` neu laufen lassen (Ein-Zeilen-Flip).
+- **F — Erst danach:** Cutover-Drop (Stufe 9) anwenden.
 
 ## Was bewusst NICHT vorab ausgeführt wird
 
 Das standalone `uwe-brain.db`-Schema (Relation-Auflösung), der zweite
-Prisma-Client, der Import und vor allem der **destruktive Drop** (Stufe 9)
-werden hier **nicht** blind ausgeführt: ohne echte Owner-Daten und ohne
-verifizierbare Ziel-DB wäre ein Datenverlust-Schritt in der Sandbox
-unverantwortlich. Sie sind hier als ausführbereite, geordnete Runbook-Schritte
-festgehalten und benötigen die dokumentierte Stufen-für-Stufe-Abnahme.
+Prisma-Client und der Leaf-Service-Repoint **sind** inzwischen blind geschrieben
+(siehe „Was bereits gebaut ist"). Bewusst **nicht** vorab ausgeführt bleiben:
+die DB-übergreifenden Zwei-Client-Services (Stufe 6 C, echte Join-Design-
+Entscheidung), die Mail-Boundary-Entscheidung (6 E, Produktentscheidung) und vor
+allem der **destruktive Drop** (Stufe 9). Ohne generierten Client + `tsc`-Lauf
+auf dem Host sind diese nicht verifizierbar; blind erzwungen würden sie
+Spieler-Mail owner-privat verschieben bzw. Cross-DB-Logik erfinden. Sie sind als
+geordnete, tsc-geführte Worklist festgehalten und benötigen die Stufen-für-
+Stufen-Abnahme.
