@@ -50,6 +50,13 @@ gepinnt — ein neues Brain-Modell kann nicht stillschweigend entkommen.
    wenn 1–8 grün sind und der Owner diesen Schritt einzeln freigibt, werden die
    Alt-Brain-Tabellen aus `uwe.db` entfernt. Vorher bleibt `uwe.db` die
    vollständige, funktionierende Quelle.
+   Die exakte Drop-SQL ist ausführbereit erzeugt:
+   `deploy/migrations/brain-cutover-drop.sql` (45 Tabellen, via
+   `node scripts/generate-brain-cutover-sql.mjs` aus den Contracts abgeleitet).
+   **Warum nicht früher anwenden:** `schema.prisma` deklariert die Tabellen bis
+   Stufe 3–8 weiter; ein Drop davor führt zu `no such table`-Laufzeitfehlern in
+   allen Brain-Services (die 11 migrierten Routen, Studio-Brain, Backup, Export)
+   — Brain wäre gelöscht, nicht verschoben, und nichts zeigt auf `uwe-brain.db`.
 
 ## Was bereits gebaut ist
 
