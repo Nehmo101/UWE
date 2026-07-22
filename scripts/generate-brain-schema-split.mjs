@@ -1,0 +1,193 @@
+/**
+ * Deterministically splits the Prisma schema into the D&D core (`uwe.db`) and
+ * the owner-private Brain (`uwe-brain.db`), derived authoritatively from
+ * `@uwe/product-contracts` (BRAIN_MODEL_NAMES) so it never drifts.
+ *
+ * This is Runbook stage 3 (docs/engineering/brain-migration-runbook.md). It is
+ * a pure schema transform — it writes files but applies NOTHING to a database.
+ *
+ * For every schema (SQLite + PostgreSQL) it produces:
+ *   1. `prisma/brain/<schema>` — a standalone Brain schema (own datasource +
+ *      generated client) with the 45 Brain models. Each of the 15 cross-domain
+ *      foreign keys (Brain → World/Page/User/GameSession) is resolved to an
+ *      opaque, nullable scalar: the `@relation` field is dropped, the scalar
+ *      `xxxId` column is kept (see Runbook 3a). Enums referenced by Brain models
+ *      are copied in (a Prisma schema is standalone).
+ *   2. A rewritten main `<schema>` with the 45 Brain models removed and the 15
+ *      back-relation fields on the D&D side removed (otherwise Prisma errors on a
+ *      missing opposite relation field).
+ *
+ * Run: `node scripts/generate-brain-schema-split.mjs`
+ * Then generate the clients on a host with the toolchain:
+ *   pnpm --filter @uwe/database db:generate
+ *
+ * `--dry` prints the plan (counts, stripped edges) without writing files.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { BRAIN_MODEL_NAMES } from "../packages/product-contracts/src/prisma-model-boundaries.ts";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const dry = process.argv.includes("--dry");
+const brain = new Set(BRAIN_MODEL_NAMES.map(String));
+
+/** Split a schema's top-level blocks into {kind, name, text}. */
+function parseBlocks(src) {
+  const re = /(model|enum|datasource|generator|type)\s+([A-Za-z0-9_]+)?\s*\{[\s\S]*?\n\}/g;
+  const blocks = [];
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    blocks.push({ kind: m[1], name: m[2] ?? m[1], text: m[0] });
+  }
+  return blocks;
+}
+
+/**
+ * A model-typed field line, e.g.
+ *   `world World? @relation(fields: [worldId], references: [id], ...)`
+ *   `mailTemplates MailTemplate[]`
+ * Returns the referenced model name (stripped of `[]`/`?`) or null.
+ */
+function relationTarget(line, modelNames) {
+  const mm = line.match(/^\s*(\w+)\s+([A-Za-z0-9_]+)(\[\])?(\??)\s*(@|$)/);
+  if (!mm) return null;
+  const type = mm[2];
+  return modelNames.has(type) ? type : null;
+}
+
+/** Collect enum type names referenced by a model body. */
+function enumsUsedIn(modelText, enumNames) {
+  const used = new Set();
+  for (const line of modelText.split("\n")) {
+    const mm = line.match(/^\s*\w+\s+([A-Za-z0-9_]+)(\[\])?(\??)/);
+    if (mm && enumNames.has(mm[1])) used.add(mm[1]);
+  }
+  return used;
+}
+
+function processSchema(relPath, brainOutRel) {
+  const abs = path.join(root, relPath);
+  const src = fs.readFileSync(abs, "utf8");
+  const blocks = parseBlocks(src);
+
+  const modelNames = new Set(blocks.filter((b) => b.kind === "model").map((b) => b.name));
+  const enumNames = new Set(blocks.filter((b) => b.kind === "enum").map((b) => b.name));
+  const enumBlocks = Object.fromEntries(
+    blocks.filter((b) => b.kind === "enum").map((b) => [b.name, b.text]),
+  );
+
+  const strippedEdges = [];
+  const requiredCrossFk = [];
+
+  // --- Brain-side model transform: drop cross-domain relation fields. ---
+  function transformBrainModel(text, name) {
+    const out = [];
+    for (const line of text.split("\n")) {
+      const target = relationTarget(line, modelNames);
+      if (target && !brain.has(target)) {
+        strippedEdges.push(`${name}.${line.trim().split(/\s+/)[0]} -> ${target}`);
+        if (/@relation/.test(line) && !/\?/.test(line) && !/\[\]/.test(line)) {
+          requiredCrossFk.push(`${name} -> ${target} (required relation)`);
+        }
+        continue; // drop the cross-domain relation field; scalar FK stays
+      }
+      out.push(line);
+    }
+    return out.join("\n");
+  }
+
+  // --- Main-side model transform: drop back-relation fields pointing to Brain. ---
+  function transformMainModel(text, name) {
+    const out = [];
+    for (const line of text.split("\n")) {
+      const target = relationTarget(line, modelNames);
+      if (target && brain.has(target)) continue; // drop back-relation to Brain
+      out.push(line);
+    }
+    return out.join("\n");
+  }
+
+  const brainModelBlocks = blocks.filter((b) => b.kind === "model" && brain.has(b.name));
+  const usedEnums = new Set();
+  for (const b of brainModelBlocks) {
+    for (const e of enumsUsedIn(b.text, enumNames)) usedEnums.add(e);
+  }
+
+  // Assemble the standalone Brain schema.
+  const isSqlite = !/postgresql/i.test(relPath);
+  const brainClientOut = isSqlite ? "../../src/generated/prisma-brain" : "../../src/generated/prisma-brain-postgres";
+  const provider = isSqlite ? "sqlite" : "postgresql";
+  const brainHeader = `// AUTO-GENERATED by scripts/generate-brain-schema-split.mjs — do not edit by hand.
+// Owner-private Brain data model (uwe-brain.db). Runbook stage 3.
+// Cross-domain FKs (Brain -> World/Page/User/GameSession) are opaque scalars.
+
+generator client {
+  provider = "prisma-client"
+  output   = "${brainClientOut}"
+}
+
+datasource db {
+  provider = "${provider}"
+}
+`;
+  const brainBody = [
+    ...[...usedEnums].sort().map((e) => enumBlocks[e]),
+    ...brainModelBlocks.map((b) => transformBrainModel(b.text, b.name)),
+  ].join("\n\n");
+  const brainSchema = `${brainHeader}\n${brainBody}\n`;
+
+  // Assemble the rewritten main schema (Brain models removed, back-relations removed).
+  const mainOut = blocks
+    .map((b) => {
+      if (b.kind === "model" && brain.has(b.name)) return null; // remove brain model
+      if (b.kind === "model") return transformMainModel(b.text, b.name);
+      return b.text;
+    })
+    .filter((t) => t !== null)
+    .join("\n\n");
+  // Preserve the leading comment header of the original file.
+  const leadComment = src.slice(0, src.indexOf(blocks[0].text)).trimEnd();
+  const mainSchema = `${leadComment}\n\n${mainOut}\n`;
+
+  return {
+    brainOutRel,
+    brainSchema,
+    mainAbs: abs,
+    mainSchema,
+    stats: {
+      brainModels: brainModelBlocks.length,
+      copiedEnums: usedEnums.size,
+      strippedEdges,
+      requiredCrossFk,
+    },
+  };
+}
+
+const jobs = [
+  { in: "packages/database/prisma/schema.prisma", brainOut: "packages/database/prisma/brain/schema.prisma" },
+  {
+    in: "packages/database/prisma/schema.postgresql.prisma",
+    brainOut: "packages/database/prisma/brain/schema.postgresql.prisma",
+  },
+];
+
+for (const job of jobs) {
+  const r = processSchema(job.in, job.brainOut);
+  console.log(`\n# ${job.in}`);
+  console.log(`  brain models:   ${r.stats.brainModels}`);
+  console.log(`  copied enums:   ${r.stats.copiedEnums}`);
+  console.log(`  stripped edges: ${r.stats.strippedEdges.length}`);
+  for (const e of r.stats.strippedEdges) console.log(`    - ${e}`);
+  if (r.stats.requiredCrossFk.length) {
+    console.log(`  ⚠ required cross-domain relations (kept as non-null opaque scalar):`);
+    for (const e of r.stats.requiredCrossFk) console.log(`    - ${e}`);
+  }
+  if (!dry) {
+    fs.mkdirSync(path.join(root, path.dirname(job.brainOut)), { recursive: true });
+    fs.writeFileSync(path.join(root, job.brainOut), r.brainSchema);
+    fs.writeFileSync(r.mainAbs, r.mainSchema);
+    console.log(`  wrote ${job.brainOut} + rewrote ${job.in}`);
+  }
+}
+console.log(dry ? "\n(dry run — no files written)" : "\nDone.");
