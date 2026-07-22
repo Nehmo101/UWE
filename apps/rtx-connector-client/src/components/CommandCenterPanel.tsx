@@ -381,31 +381,19 @@ export function CommandCenterPanel({
           </CardContent>
           <CardFooter><Button variant="ghost" onClick={onOpenConnector}>RTX einrichten</Button></CardFooter>
         </Card>
-        {/* Brain is owner-only and shares the Studio origin today (no own :3002
-            process), so this is a surface card, not a startable service: its
-            health mirrors Studio and "Öffnen" lands on the Studio origin where
-            /life-brain lives. It stays local — never in the public tunnel. */}
+        {/* Brain now runs as its own owner-only app on :3002 (apps/brain). It is
+            deliberately NOT wired into the host start/stop (start-uwe.sh stays
+            Studio+Portal) and never tunneled — start it locally with dev:brain.
+            This is an informational surface card, not a host-managed service. */}
         <Card>
           <CardHeader><CardTitle>UWE Brain</CardTitle></CardHeader>
           <CardContent>
             <div className="connector-stack">
-              <HealthBadge
-                status={status?.services.find((s) => s.id === "studio")?.healthy ? "ok" : "degraded"}
-                label={status?.services.find((s) => s.id === "studio")?.healthy ? "Lokal erreichbar" : "Studio offline"}
-              />
-              <p className="connector-muted">Owner-only · lokal · teilt Studio-Origin</p>
-              <p className="connector-muted">Einstieg /life-brain · nie im öffentlichen Tunnel</p>
+              <HealthBadge status="ok" label="Eigener Prozess · :3002" />
+              <p className="connector-muted">Owner-only · lokal/LAN · nie im öffentlichen Tunnel</p>
+              <p className="connector-muted">http://127.0.0.1:3002/life-brain · Start via <code>pnpm dev:brain</code></p>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button
-              variant="ghost"
-              onClick={() => openHostTarget(root || undefined, "studio")}
-              disabled={!status?.services.find((s) => s.id === "studio")?.healthy}
-            >
-              Brain öffnen
-            </Button>
-          </CardFooter>
         </Card>
       </div>
 

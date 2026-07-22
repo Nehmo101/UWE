@@ -87,15 +87,15 @@ function resolvePorts(): { studioPort: number; portalPort: number } {
   };
 }
 
-/** Owner-only Brain entry. Brain shares the Studio origin today (no own :3002
- *  process), so the link points at the Studio origin + the configured Brain path.
- *  Hidden when BRAIN_EXPOSURE=off. Never a public/tunnel link — local only. */
-function brainQuickLink(studioBase: string): UweQuickLink | null {
+/** Owner-only Brain entry. Brain now runs as its own local app on port 3002, so
+ *  the link points at the Brain origin + the configured Brain path. Hidden when
+ *  BRAIN_EXPOSURE=off. Never a public/tunnel link — local only. */
+function brainQuickLink(): UweQuickLink | null {
   const exposure = process.env.BRAIN_EXPOSURE?.trim().toLowerCase();
   if (exposure === "off") return null;
   const explicit = process.env.NEXT_PUBLIC_BRAIN_URL?.trim().replace(/\/$/, "");
   const path = process.env.BRAIN_PATH?.trim() || "/life-brain";
-  const base = explicit || studioBase;
+  const base = explicit || "http://127.0.0.1:3002";
   return { label: "Brain (privat)", href: `${base}${path}`, external: true };
 }
 
@@ -107,7 +107,7 @@ function buildLinks(studioPort: number, portalPort: number, studioUp: boolean): 
     { label: "Portal", href: portalBase, external: true },
   ];
   if (studioUp) {
-    const brain = brainQuickLink(studioBase);
+    const brain = brainQuickLink();
     if (brain) {
       links.push(brain);
     }
