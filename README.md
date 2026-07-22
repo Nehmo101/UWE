@@ -120,6 +120,7 @@ pnpm host:start                 # startet Studio (3000) + Portal (3001)
 |-----|-----|-------|
 | **UWE Studio** (DM) | http://localhost:3000 | Welten bearbeiten |
 | **UWE Portal** (Spieler) | http://localhost:3001 | Wiki & Handouts |
+| **UWE Brain** (Owner) | http://127.0.0.1:3002 | Privater Alltag & Wissen — owner-only, lokal/LAN, nie öffentlich ([Details](docs/engineering/brain-local-runtime.md)) |
 
 Status prüfen: `pnpm host:status` · `curl http://localhost:3000/api/health`.
 Für einen produktiven, dauerhaft laufenden Host (systemd, Cloudflare Tunnel) siehe das
@@ -180,7 +181,7 @@ Production-Env und Secrets liegen unter **`/etc/uwe/uwe.env`** (nicht im Git). V
 | **Linux systemd (Production)** | `sudo systemctl start uwe.service` — Autostart: `sudo systemctl enable uwe.service` |
 | **Status prüfen** | `sudo bash ./scripts/uwe-host-status.sh --healthcheck` |
 | **Host-Scripts** | `pnpm host:start` / `pnpm host:status` / `pnpm host:stop` |
-| **Entwicklung** | `pnpm dev` (Studio `:3000`, Portal `:3001`) |
+| **Entwicklung** | `pnpm dev` (Studio `:3000`, Portal `:3001`, Brain `:3002`) · `pnpm dev:brain` startet nur Brain |
 
 ### Cloudflare + lokale Services
 

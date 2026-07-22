@@ -87,6 +87,8 @@ The only automatic workflow on pull requests:
 
 `turbo.json` no longer runs `^build` before `typecheck`/`test` (tsc and node tests do not need compiled package outputs). Main-only `build:release` still builds Studio and Portal.
 
+A third app, **Brain** (`@uwe/brain`, port `:3002`, owner-only/local — see [brain-local-runtime.md](brain-local-runtime.md)), participates automatically in `turbo run typecheck`/`test`/`build` via the generic task graph. The static **product-boundary guard** (`node scripts/product-boundary-check.mjs`, wired into `test`/`test:ci`) fails any app→app or package→app import. Deploy, systemd, firewall and Cloudflare stay Studio+Portal only — Brain is never auto-exposed.
+
 No `pnpm quality`, no E2E, no security tests, no release build on PRs.
 
 ### CI (`ci.yml`)

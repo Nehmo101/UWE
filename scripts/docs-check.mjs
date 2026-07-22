@@ -12,6 +12,7 @@ const REQUIRED_FILES = [
   "README.md",
   "AGENTS.md",
   "docs/engineering/ci.md",
+  "docs/engineering/brain-local-runtime.md",
   "docs/engineering/cursor-workflow.md",
   "docs/engineering/migration-from-copilot.md",
   "docs/engineering/self-hosted-ci.md",
