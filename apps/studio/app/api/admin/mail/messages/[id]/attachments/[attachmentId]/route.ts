@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailApi, mailApiError } from "@/src/lib/admin-mail-api";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 interface RouteContext {
   params: Promise<{ id: string; attachmentId: string }>;
@@ -12,7 +13,7 @@ export async function GET(request: Request, context: RouteContext) {
   if (auth.error) return auth.error;
 
   const { id, attachmentId } = await context.params;
-  const service = createMailPortalService(prisma);
+  const service = createMailPortalService(brainPrisma, prisma);
 
   try {
     const fetched = await service.fetchAttachmentContent(id, attachmentId);

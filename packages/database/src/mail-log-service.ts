@@ -1,5 +1,5 @@
-import type { PrismaClient } from "./client";
-import type { MailMessageStatus } from "./generated/prisma/client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
+import type { MailMessageStatus } from "./generated/prisma-brain/client";
 import { truncateBodyPreview } from "@uwe/mail-core";
 
 export interface MailLogEntry {

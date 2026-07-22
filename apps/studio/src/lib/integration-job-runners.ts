@@ -253,7 +253,7 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
     if (!payload.mailbox && createdIds.length > 0) {
       try {
         const { createMailRuleService, autoTriageNewMessages } = await import("@uwe/mail");
-        const ruleService = createMailRuleService(db);
+        const ruleService = createMailRuleService(brainPrisma, db);
         const { skipAiTriageIds, movedIds } = await ruleService.applyRules(createdIds);
         ruleMoved = movedIds.length;
         const vipSenders = await ruleService.listVipAddresses();

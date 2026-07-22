@@ -1,5 +1,5 @@
 import type { MailAuditAction, MailPriorityCategory } from "@uwe/database/mail-prisma-types";
-import type { PrismaClient } from "@uwe/database/client";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import { mailBodyForProcessing, type MailReplyTone } from "@uwe/mail-core";
 import { createMailTransport } from "@uwe/mail-core";
 import { decryptSecret } from "@uwe/database/token-crypto";
@@ -221,7 +221,7 @@ export class MailPortalAiActions {
       useMock: false,
     });
 
-    const logService = createMailLogService(this.db);
+    const logService = createMailLogService(brainPrisma, this.db);
     const toAddresses = recipients.map((r) => r.email);
     const pendingLog = await logService.create({
       worldId: draft.worldId,

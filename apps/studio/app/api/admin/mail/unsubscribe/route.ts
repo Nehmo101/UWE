@@ -3,6 +3,7 @@ import { jsonError } from "@/src/lib/api-response";
 import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function POST(request: Request) {
   const auth = await requireAdminMailMutation(request);
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
 
   if (!body.messageId) return mailApiError("messageId erforderlich.");
 
-  const service = createMailPortalService(prisma);
+  const service = createMailPortalService(brainPrisma, prisma);
   try {
     const outcome = await service.unsubscribeFromMessage(body.messageId, auth.user?.id);
     return NextResponse.json({ outcome });

@@ -301,7 +301,7 @@ export class MailComposeService {
     draft: MailDraft,
     variables: Record<string, string | number | null | undefined>,
   ): Promise<MailDraft> {
-    const template = await createMailTemplateService(this.db).getTemplate(slug);
+    const template = await createMailTemplateService(brainPrisma, this.db).getTemplate(slug);
     if (!template) {
       return draft;
     }

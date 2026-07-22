@@ -1,5 +1,5 @@
 import type { MailPriorityCategory, MailAuditAction, Prisma } from "@uwe/database/mail-prisma-types";
-import type { PrismaClient } from "@uwe/database/client";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import { decryptSecret } from "@uwe/database/token-crypto";
 import type { MailAccountService } from "@uwe/database/mail-account-service";
 import type { ImapCredentials } from "@uwe/mail-core";

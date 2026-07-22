@@ -1,4 +1,5 @@
 "use server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
@@ -32,15 +33,15 @@ function kitchen() {
 }
 
 function mealPlan() {
-  return createMealPlanService(prisma);
+  return createMealPlanService(brainPrisma, prisma);
 }
 
 function shopping() {
-  return createShoppingService(prisma);
+  return createShoppingService(brainPrisma, prisma);
 }
 
 function pantry() {
-  return createPantryService(prisma);
+  return createPantryService(brainPrisma, prisma);
 }
 
 /** Standard-Grundausstattung, die beim Listen-Erzeugen mitkommt. */

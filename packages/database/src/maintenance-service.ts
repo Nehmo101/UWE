@@ -1,4 +1,5 @@
-import { prisma, type PrismaClient } from "./client";
+import { prisma } from "./client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
 
 /**
  * Haushalts-Cockpit: wiederkehrende Wartungs-/Haushaltsaufgaben (Müll, Rauchmelder,

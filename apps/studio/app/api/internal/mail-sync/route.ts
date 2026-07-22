@@ -3,6 +3,7 @@ import { getSystemSettings, prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requirePrivateHealthAuth } from "@/src/lib/private-health-auth";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 /**
  * Internal endpoint for the host mail-sync timer (`deploy/scripts/uwe-mail-sync.sh`).
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: true, reason: "auto_sync_disabled" });
   }
 
-  const portal = createMailPortalService(prisma);
+  const portal = createMailPortalService(brainPrisma, prisma);
   const accounts = await portal.listAccounts();
   const syncAccounts = accounts.filter((account) => account.imapHost);
 

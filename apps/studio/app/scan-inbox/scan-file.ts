@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { resolveAssetFilePath } from "@uwe/assets";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   getSystemSettings,
   prisma,
   resolveEffectiveUploadsPath,
@@ -20,7 +21,7 @@ export interface ScanFileData {
  * `@uwe/scan-inbox`.
  */
 export async function resolveScanFile(id: string): Promise<ScanFileData | null> {
-  const row = await prisma.scanDocument.findUnique({
+  const row = await brainPrisma.scanDocument.findUnique({
     where: { id },
     select: { storageKey: true, mimeType: true, title: true },
   });

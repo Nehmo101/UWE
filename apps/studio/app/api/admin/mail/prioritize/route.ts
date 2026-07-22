@@ -4,6 +4,7 @@ import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { generateMailPriority } from "@/src/lib/mail-portal-ai";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function POST(request: Request) {
   const auth = await requireAdminMailMutation(request);
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
 
   if (!body.messageId) return mailApiError("messageId erforderlich.");
 
-  const service = createMailPortalService(prisma);
+  const service = createMailPortalService(brainPrisma, prisma);
   try {
     // LLM-Priorisierung (lokal-only via Gateway) mit Regel-Fallback.
     const message = await service.getMessageContent(body.messageId);

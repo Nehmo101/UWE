@@ -6,7 +6,7 @@
  * speist zwei Features: Ablauf-Warnungen und „Koche mit meinem Vorrat" — ein
  * reines Ranking bestehender Rezepte nach vorhandenen Zutaten.
  */
-import type { PrismaClient } from "@uwe/database/server";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import type { IngredientUnit, PantryLocation } from "./kitchen-types";
 import { normalizeIngredientName } from "./units";
 

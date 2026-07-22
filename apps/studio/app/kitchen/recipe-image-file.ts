@@ -1,5 +1,6 @@
 import { inferMimeTypeFromFilename, resolveAssetFilePath } from "@uwe/assets";
 import {
+import { brainPrisma } from "@uwe/database/brain-client";
   getSystemSettings,
   prisma,
   resolveEffectiveUploadsPath,
@@ -18,7 +19,7 @@ export interface RecipeImageFileData {
  * Reiner Data-Access — die Küchen-Logik lebt in `@uwe/kitchen`.
  */
 export async function resolveRecipeImageFile(id: string): Promise<RecipeImageFileData | null> {
-  const row = await prisma.recipe.findUnique({
+  const row = await brainPrisma.recipe.findUnique({
     where: { id },
     select: { imageStorageKey: true, title: true },
   });

@@ -3,12 +3,13 @@ import { prisma } from "@uwe/database/server";
 import { createMailRuleService } from "@uwe/mail";
 import type { MailRuleAction, MailRuleCondition } from "@uwe/mail";
 import { requireAdminMailApi, requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function GET(request: Request) {
   const auth = await requireAdminMailApi(request);
   if (auth.error) return auth.error;
 
-  const service = createMailRuleService(prisma);
+  const service = createMailRuleService(brainPrisma, prisma);
   const [rules, vips] = await Promise.all([service.listRules(), service.listVips()]);
   return NextResponse.json({ rules, vips });
 }
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     return mailApiError("Mindestens eine Aktion ist erforderlich.");
   }
 
-  const service = createMailRuleService(prisma);
+  const service = createMailRuleService(brainPrisma, prisma);
   const rule = await service.createRule({
     name: body.name,
     enabled: body.enabled,

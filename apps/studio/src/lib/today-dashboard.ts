@@ -100,10 +100,10 @@ export async function getTodayDashboardData(
   const repo = getAppRepository();
   const lifeAdmin = createLifeAdminService(brainPrisma, db);
   const calendarAggregation = createCalendarAggregationService(brainPrisma, db);
-  const mailLog = createMailLogService(db);
-  const mailPortal = createMailPortalService(db);
-  const maintenance = createMaintenanceService(db);
-  const pantry = createPantryService(db);
+  const mailLog = createMailLogService(brainPrisma, db);
+  const mailPortal = createMailPortalService(brainPrisma, db);
+  const maintenance = createMaintenanceService(brainPrisma, db);
+  const pantry = createPantryService(brainPrisma, db);
 
   const [worlds, settings] = await Promise.all([repo.listWorlds(), getSystemSettings(db)]);
   const preferredSlug = resolvePreferredWorldSlug(worlds, {

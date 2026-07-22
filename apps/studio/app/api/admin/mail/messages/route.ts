@@ -4,6 +4,7 @@ import { createMailPortalService } from "@uwe/mail/portal";
 import type { MailPriorityCategory } from "@uwe/mail/portal-types";
 import type { MailFolderKey, MailSearchCursor } from "@uwe/mail/portal";
 import { requireAdminMailApi } from "@/src/lib/admin-mail-api";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function GET(request: Request) {
   const auth = await requireAdminMailApi(request);
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const service = createMailPortalService(prisma);
+  const service = createMailPortalService(brainPrisma, prisma);
   const { items, nextCursor } = await service.searchMessages(
     {
       accountId,

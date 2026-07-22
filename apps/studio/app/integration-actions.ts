@@ -499,7 +499,7 @@ export async function deleteCalendarEventAction(formData: FormData) {
   if (!id) throw new Error("Event-ID fehlt.");
 
   const calendar = createCalendarService(brainPrisma, prisma);
-  const existing = await prisma.calendarEvent.findUnique({
+  const existing = await brainPrisma.calendarEvent.findUnique({
     where: { id },
     include: { feed: true },
   });

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@uwe/database/client";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import { decryptSecret } from "@uwe/database/token-crypto";
 import { createMailLogService } from "@uwe/database/mail-log-service";
 import type { MailAuditAction } from "@uwe/database/mail-prisma-types";
@@ -43,7 +43,7 @@ export async function sendDirectMail(
     useMock: false,
   });
 
-  const logService = createMailLogService(db);
+  const logService = createMailLogService(brainPrisma, db);
   const pendingLog = await logService.create({
     status: "pending",
     subject: input.subject,

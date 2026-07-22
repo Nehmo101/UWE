@@ -1,5 +1,5 @@
 import type { MailAuditAction, MailPriorityCategory } from "@uwe/database/mail-prisma-types";
-import type { PrismaClient } from "@uwe/database/client";
+import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
 import {
   MAIL_PROVIDER_PRESETS,
   type MailProviderPreset,
@@ -123,7 +123,7 @@ export class MailPortalService {
   }
 
   private unsubscribeService() {
-    return createMailUnsubscribeService(this.db);
+    return createMailUnsubscribeService(brainPrisma, this.db);
   }
 
   async logAudit(input: {

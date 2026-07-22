@@ -222,7 +222,7 @@ export async function getMailHealthStatus(
   let lastFailure: MailHealthStatus["lastFailure"] = null;
 
   try {
-    const logService = createMailLogService(db);
+    const logService = createMailLogService(brainPrisma, db);
     const [failures, totalFailed] = await Promise.all([
       logService.list({ status: "failed", limit: 1 }),
       brainDb.mailMessageLog.count({ where: { status: "failed" } }),
