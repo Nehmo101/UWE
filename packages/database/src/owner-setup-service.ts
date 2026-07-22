@@ -1,4 +1,5 @@
 import { validateUweEnvironment } from "@uwe/auth";
+import { brainPrisma } from "./brain-client";
 import type { PrismaClient } from "./client";
 import { buildBrainSection } from "./owner-setup-brain-section";
 import { getAdminStatus, type AdminStatus } from "./admin-status";
@@ -747,7 +748,7 @@ export async function getOwnerSetupSnapshot(
   const [system, settings, admin, userCount, publicLeaks, envIssues] = await Promise.all([
     getSystemStatus(db, { env }),
     new SettingsService(db).getSettings(),
-    getAdminStatus(db, { env }),
+    getAdminStatus(db, brainPrisma, { env }),
     db.user.count(),
     scanPublicContentLeaks(db),
     Promise.resolve(validateUweEnvironment(env)),

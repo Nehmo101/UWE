@@ -21,7 +21,7 @@ export async function getAdminDashboardStatus(
   options: { rateLimiterMode?: string; useMockInference?: boolean } = {},
 ): Promise<AdminDashboardStatus> {
   const [admin, inference, rtx, publicLeaks] = await Promise.all([
-    getAdminStatus(db, { rateLimiterMode: options.rateLimiterMode }),
+    getAdminStatus(db, brainPrisma, { rateLimiterMode: options.rateLimiterMode }),
     getInferenceStatus({ useMock: options.useMockInference }),
     checkRtxReadiness({ useMock: options.useMockInference, prisma: db }),
     scanPublicContentLeaks(db),

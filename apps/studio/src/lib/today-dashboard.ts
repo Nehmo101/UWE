@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createCalendarAggregationService,
   createLifeAdminService,
@@ -97,8 +98,8 @@ export async function getTodayDashboardData(
   options: { useMockInference?: boolean } = {},
 ): Promise<TodayDashboardData> {
   const repo = getAppRepository();
-  const lifeAdmin = createLifeAdminService(db);
-  const calendarAggregation = createCalendarAggregationService(db);
+  const lifeAdmin = createLifeAdminService(brainPrisma, db);
+  const calendarAggregation = createCalendarAggregationService(brainPrisma, db);
   const mailLog = createMailLogService(db);
   const mailPortal = createMailPortalService(db);
   const maintenance = createMaintenanceService(db);

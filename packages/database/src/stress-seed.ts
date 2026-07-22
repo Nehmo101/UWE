@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import { GameSessionService } from "./game-session";
 import { parseStringArray } from "./json-utils";
 import type { UweRepository } from "./repository";
@@ -92,6 +93,7 @@ export interface StressSeedResult {
 export async function seedStressWorld(
   repo: UweRepository,
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   scale: PerfScale,
 ): Promise<StressSeedResult> {
   const existingWorld = await repo.getWorldBySlug("perf-test");
@@ -121,7 +123,7 @@ export async function seedStressWorld(
     });
   }
 
-  const lifeAdmin = createLifeAdminService(db);
+  const lifeAdmin = createLifeAdminService(brainDb, db);
   const sessions = new GameSessionService(db);
 
   const existingPages = await db.page.findMany({
@@ -207,7 +209,7 @@ export async function seedStressWorld(
     });
   }
 
-  const existingCaptureCount = await db.captureEntry.count({
+  const existingCaptureCount = await brainDb.captureEntry.count({
     where: { title: { startsWith: "Perf Capture " } },
   });
   for (let i = existingCaptureCount; i < scale.captures; i++) {
@@ -221,7 +223,7 @@ export async function seedStressWorld(
     });
   }
 
-  const existingWorkshopCount = await db.workshopProject.count({
+  const existingWorkshopCount = await brainDb.workshopProject.count({
     where: { title: { startsWith: "Perf Workshop " } },
   });
   for (let i = existingWorkshopCount; i < scale.workshopProjects; i++) {
@@ -233,7 +235,7 @@ export async function seedStressWorld(
     });
   }
 
-  const existingBrainDocCount = await db.personalBrainDocument.count({
+  const existingBrainDocCount = await brainDb.personalBrainDocument.count({
     where: { title: { startsWith: "Perf Brain Doc " } },
   });
   for (let i = existingBrainDocCount; i < scale.personalBrainDocs; i++) {

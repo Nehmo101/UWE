@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import { getAdminStatus } from "./admin-status";
 import { createAiUsageRollupService } from "./ai-usage-rollup-service";
 import { BUG_REPORT_SEVERITY_LABELS } from "./bug-report-service";
@@ -103,7 +104,7 @@ export async function getOwnerCockpitSnapshot(
     }),
     getUserRoleCounts(db),
     db.user.count({ where: { status: "disabled" } }),
-    getAdminStatus(db),
+    getAdminStatus(db, brainPrisma),
     listUnifiedActivity(db, { limit: activityLimit }),
     db.bugReport.findMany({
       where: { status: { in: ["open", "in_progress"] } },
