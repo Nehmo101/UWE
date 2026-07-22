@@ -198,3 +198,21 @@ Remote-Provider im `personal_brain`-Pfad).
    F-1-Bypass vorher schließen.
 4. **Laufend bis Welle 2:** Schema-PRs aktualisieren O02 §5 im selben PR
    (Drift-Regel aus Abschnitt 2.2).
+
+## 7. Implementierungsstand (2026-07-22)
+
+Auf dem Analyse-/Planungs-Branch ist inzwischen — additiv, reversibel und grün
+verifiziert — folgende Teilmenge umgesetzt:
+
+| Baustein | Stand |
+|---|---|
+| **`@uwe/product-contracts`** (Welle 2) | `AppAudience`/`DataDomain`/`PrivacyClass`, Zugriffsmatrix, Prisma-Mapping (142 Modelle), Job-Envelope. Schema-Sync-Test erzwingt O02-Drift-Regel automatisch. |
+| **Cross-App-Import-Guard** (Welle 3, Teil) | `scripts/product-boundary-check.mjs` in `test`/`test:ci`; App↔App und Package→App verboten (Invariante 5). |
+| **`apps/brain`** (Welle 4, vorgezogen) | Bootfähiger owner-only :3002-Prozess (loopback-Default, Exposure-Policy getestet), an `@uwe/product-contracts` verankert. Noch KEINE Routen-/Datenmigration. |
+| **Brain-Sichtbarkeit** | Landing (3. Karte), `/system/cloudflare`, Owner-Setup/Onboarding, Command Center. |
+| **Deploy-Grenze** | `check-cloudflare-tunnel.sh`-Guard gegen :3002/Brain-Hostname; kein systemd/Tunnel/Firewall-Eintrag. |
+
+Bewusst **nicht** umgesetzt (owner-gated bzw. shared-runtime-riskant): Session-
+Audience-Guards in `@uwe/auth` (berühren Studio/Portal-Runtime), physische
+Datenmigration nach `uwe-brain.db` und Routen-Umzug (Invariante 7 — separate
+Owner-Freigabe). Diese bleiben die nächsten bewussten Entscheidungen.
