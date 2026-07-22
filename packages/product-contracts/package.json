@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./domain-boundaries": "./src/domain-boundaries.ts",
     "./domain-access": "./src/domain-access.ts",
-    "./prisma-model-boundaries": "./src/prisma-model-boundaries.ts"
+    "./prisma-model-boundaries": "./src/prisma-model-boundaries.ts",
+    "./job-envelope": "./src/job-envelope.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

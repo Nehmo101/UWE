@@ -15,6 +15,7 @@
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
+    "@uwe/product-contracts": "workspace:*",
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "next": "^15.3.4",
