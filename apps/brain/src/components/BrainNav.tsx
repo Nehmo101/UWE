@@ -9,6 +9,9 @@ const LINKS = [
   { href: "/workshop", label: "Werkstatt" },
   { href: "/contracts", label: "Verträge" },
   { href: "/hardware", label: "Hardware" },
+  { href: "/mail", label: "Mail" },
+  { href: "/calendar", label: "Kalender" },
+  { href: "/miniatures", label: "Miniaturen" },
 ] as const;
 
 /** Shared top navigation across the owner-only Brain surfaces. */
