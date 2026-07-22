@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/mail", label: "Mail" },
   { href: "/calendar", label: "Kalender" },
   { href: "/miniatures", label: "Miniaturen" },
+  { href: "/documents", label: "Dokumente" },
 ] as const;
 
 /** Shared top navigation across the owner-only Brain surfaces. */
