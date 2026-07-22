@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { getCurrentUser } from "@/src/lib/auth";
 import { isBrainOwner } from "@/src/lib/owner";
+import { BrainNav } from "@/src/components/BrainNav";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function BrainLifeBrainPage() {
   return (
     <main className="page">
       <div className="card" style={{ maxWidth: "56rem" }}>
+        <BrainNav active="/life-brain" />
         <span className="eyebrow">Owner-only · lokal · nie in der Cloud</span>
         <h1>Persönliches Brain</h1>
         <p>

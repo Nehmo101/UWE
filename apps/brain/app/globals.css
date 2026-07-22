@@ -122,3 +122,54 @@ body {
   color: var(--uwe-fg-muted, var(--uwe-fg));
   font-size: 0.8rem;
 }
+
+.brain-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.brain-nav a {
+  padding: 0.3rem 0.7rem;
+  border-radius: 99px;
+  border: 1px solid var(--uwe-border);
+  color: var(--uwe-fg-muted, var(--uwe-fg));
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.brain-nav a:hover {
+  border-color: #5c5470;
+  color: var(--uwe-fg);
+}
+
+.brain-nav a[aria-current="page"] {
+  border-color: #5c5470;
+  color: #8a7fb0;
+}
+
+.brain-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.brain-kpi {
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-panel, var(--uwe-bg-elevated)) 85%, transparent);
+}
+
+.brain-kpi strong {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.brain-kpi span {
+  font-size: 0.78rem;
+  color: var(--uwe-fg-muted, var(--uwe-fg));
+}

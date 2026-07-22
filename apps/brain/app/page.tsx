@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/src/lib/auth";
 import { isBrainOwner } from "@/src/lib/owner";
 import { resolveBrainExposure } from "@/src/lib/exposure";
+import { BrainNav } from "@/src/components/BrainNav";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function BrainHome() {
   return (
     <main className="page">
       <div className="card">
+        {isBrainOwner(user.role) ? <BrainNav active="/" /> : null}
         <span className="eyebrow">Owner-only · lokal · nie in der Cloud</span>
         <h1>UWE Brain</h1>
         {isBrainOwner(user.role) ? (
