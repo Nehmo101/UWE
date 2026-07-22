@@ -5,13 +5,15 @@ import path from "node:path";
 import {
   collectDesktopHostStatus,
   commandCenterDataRoot,
+  HOST_SETUP_STEP_COUNT,
   resolveDesktopHostRoot,
   setupHost,
   startHost,
   stopHost,
   type DesktopHostActionResult,
   type DesktopHostStatus,
-} from "./desktop-host";
+} from "./desktop-host.ts";
+import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
 
 const RELEASE_TAG_PREFIX = "uwe-v";
 const RELEASE_TAG_PATTERN = /^uwe-v(\d+\.\d+\.\d+)$/;
@@ -335,17 +337,24 @@ export async function applyDesktopHostUpdate(rootInput?: string): Promise<Deskto
 
   try {
     appendUpdateLog(root, `Update gestartet → ${check.latestTag}`);
+    // One continuous progress run across the whole update: optional stop, the
+    // repository sync, all setup build steps, and an optional restart. setupHost
+    // is told not to own progress so its steps extend this same 1..total counter.
+    beginHostProgress((wasRunning ? 1 : 0) + 1 + HOST_SETUP_STEP_COUNT + (wasRunning ? 1 : 0));
     if (wasRunning) {
+      reportHostStep("stop", "Laufende Dienste stoppen");
       await stopHost(root);
     }
+    reportHostStep("sync", "Code synchronisieren");
     syncRepositoryToTarget(root, check.latestTag);
-    const setup = await setupHost(root);
+    const setup = await setupHost(root, { ownProgress: false });
     if (!setup.ok) {
       return setup;
     }
 
     let status = setup.status;
     if (wasRunning) {
+      reportHostStep("start", "Dienste neu starten");
       const started = await startHost(root);
       status = started.status;
       if (!started.ok) {

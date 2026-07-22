@@ -25,8 +25,8 @@ export function createLifeAdminSubServices(
   coreDb: PrismaClient,
 ): LifeAdminSubServices {
   const links = new LifeAdminLinksService(brainDb, coreDb);
-  const project = new LifeAdminProjectService(brainDb, links);
-  const contract = new LifeAdminContractService(brainDb);
+  const project = new LifeAdminProjectService(brainDb, coreDb, links);
+  const contract = new LifeAdminContractService(brainDb, coreDb);
   const hardware = new LifeAdminHardwareService(brainDb);
 
   const captureDeps: LifeAdminCaptureDeps = {
@@ -40,7 +40,7 @@ export function createLifeAdminSubServices(
   };
 
   const capture = new LifeAdminCaptureService(brainDb, captureDeps);
-  const workshop = new LifeAdminWorkshopService(brainDb, workshopDeps);
+  const workshop = new LifeAdminWorkshopService(brainDb, coreDb, workshopDeps);
   captureDeps.workshop = workshop;
   workshopDeps.capture = capture;
 

@@ -1,8 +1,8 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   buildDocumentPrintHtml,
   createLifeAdminService,
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,

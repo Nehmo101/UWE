@@ -1,6 +1,6 @@
 import Link from "next/link";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   createBringService,
   createShoppingService,
   formatAmount,
@@ -8,7 +8,6 @@ import { brainPrisma } from "@uwe/database/brain-client";
   type IngredientUnit,
   type ShoppingCategory,
 } from "@uwe/kitchen";
-import { prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   Alert,
@@ -57,11 +56,11 @@ export default async function KitchenShoppingPage({ searchParams }: Props) {
   await requireStudioAccess();
   const { list: listId, bring: bringFlag, msg } = await searchParams;
 
-  const shopping = createShoppingService(brainPrisma, prisma);
+  const shopping = createShoppingService(brainPrisma);
   const [lists, active, bringStatus, suggestions] = await Promise.all([
     shopping.listLists(),
     listId ? shopping.getList(listId) : Promise.resolve(null),
-    createBringService(brainPrisma, prisma).getStatus(),
+    createBringService(brainPrisma).getStatus(),
     shopping.getItemSuggestions(),
   ]);
 

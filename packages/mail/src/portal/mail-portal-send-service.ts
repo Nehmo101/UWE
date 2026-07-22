@@ -43,7 +43,7 @@ export async function sendDirectMail(
     useMock: false,
   });
 
-  const logService = createMailLogService(brainPrisma, db);
+  const logService = createMailLogService(db);
   const pendingLog = await logService.create({
     status: "pending",
     subject: input.subject,

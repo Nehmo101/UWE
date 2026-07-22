@@ -2,16 +2,16 @@
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type { MiniatureCollectionStatus } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createMiniatureCollectionService,
   MiniatureCollectionStatusEnum,
-  prisma,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function miniatureService() {
-  return createMiniatureCollectionService(prisma);
+  return createMiniatureCollectionService(brainPrisma);
 }
 
 function parseOptionalInt(value: FormDataEntryValue | null): number | null {

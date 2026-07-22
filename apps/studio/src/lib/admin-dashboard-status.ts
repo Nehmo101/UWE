@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   getAdminStatus,
   scanPublicContentLeaks,

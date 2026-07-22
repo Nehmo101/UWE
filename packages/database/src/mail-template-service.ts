@@ -1,4 +1,5 @@
-import type { BrainPrismaClient as PrismaClient } from "./brain-client";
+import type { PrismaClient } from "./client";
+import { brainPrisma, type BrainPrismaClient } from "./brain-client";
 import { slugifyMailKey } from "./mail-utils";
 import type { MailTemplateKind } from "./generated/prisma-brain/client";
 import { runSeedOnce } from "./seed-tracker";
@@ -151,17 +152,20 @@ function toView(record: {
 }
 
 export class MailTemplateService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly db: PrismaClient,
+  ) {}
 
   async ensureSystemTemplatesSeeded(): Promise<{ applied: boolean }> {
     return runSeedOnce(this.db, MAIL_TEMPLATE_SEED_KEY, MAIL_TEMPLATE_SEED_VERSION, async () => {
       for (const template of SYSTEM_TEMPLATES) {
-        const existing = await this.db.mailTemplate.findFirst({
+        const existing = await this.brainDb.mailTemplate.findFirst({
           where: { worldId: null, slug: template.slug },
         });
 
         if (!existing) {
-          await this.db.mailTemplate.create({
+          await this.brainDb.mailTemplate.create({
             data: {
               worldId: null,
               slug: template.slug,
@@ -186,7 +190,7 @@ export class MailTemplateService {
   }): Promise<MailTemplateView[]> {
     await this.ensureSystemTemplatesSeeded();
 
-    const records = await this.db.mailTemplate.findMany({
+    const records = await this.brainDb.mailTemplate.findMany({
       where: {
         ...(options?.includeInactive ? {} : { isActive: true }),
         OR: [
@@ -205,11 +209,11 @@ export class MailTemplateService {
 
     const record =
       (worldId
-        ? await this.db.mailTemplate.findUnique({
+        ? await this.brainDb.mailTemplate.findUnique({
             where: { worldId_slug: { worldId, slug } },
           })
         : null) ??
-      (await this.db.mailTemplate.findFirst({
+      (await this.brainDb.mailTemplate.findFirst({
         where: { worldId: null, slug },
       }));
 
@@ -219,7 +223,7 @@ export class MailTemplateService {
   async createTemplate(worldId: string, input: MailTemplateInput): Promise<MailTemplateView> {
     const slug = input.slug?.trim() || slugifyMailKey(input.name, "template");
 
-    const record = await this.db.mailTemplate.create({
+    const record = await this.brainDb.mailTemplate.create({
       data: {
         worldId,
         slug,
@@ -242,7 +246,7 @@ export class MailTemplateService {
     slug: string,
     input: Partial<MailTemplateInput>,
   ): Promise<MailTemplateView> {
-    const existing = await this.db.mailTemplate.findUnique({
+    const existing = await this.brainDb.mailTemplate.findUnique({
       where: { worldId_slug: { worldId, slug } },
     });
 
@@ -250,7 +254,7 @@ export class MailTemplateService {
       throw new Error("Mail-Template nicht gefunden.");
     }
 
-    const record = await this.db.mailTemplate.update({
+    const record = await this.brainDb.mailTemplate.update({
       where: { id: existing.id },
       data: {
         ...(input.name !== undefined ? { name: input.name.trim() } : {}),
@@ -267,8 +271,11 @@ export class MailTemplateService {
   }
 }
 
-export function createMailTemplateService(db: PrismaClient): MailTemplateService {
-  return new MailTemplateService(db);
+export function createMailTemplateService(
+  brainDb: BrainPrismaClient,
+  db: PrismaClient,
+): MailTemplateService {
+  return new MailTemplateService(brainDb, db);
 }
 
 export async function ensureSystemMailTemplates(db: PrismaClient): Promise<{ applied: boolean }> {

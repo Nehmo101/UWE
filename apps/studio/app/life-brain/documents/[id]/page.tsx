@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   CAPTURE_TYPE_LABELS,
   createLifeAdminService,
   PERSONAL_BRAIN_CATEGORY_LABELS,

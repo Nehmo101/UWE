@@ -1,5 +1,6 @@
 import type { WorkshopProjectType, WorkshopRentalStatus, WorkshopStatus } from "../generated/prisma-brain/client";
-import type { BrainPrismaClient as PrismaClient } from "../brain-client";
+import type { PrismaClient } from "../client";
+import type { BrainPrismaClient } from "../brain-client";
 import { toPrismaJsonValue } from "../json-utils";
 import type { LifeAdminCaptureService } from "./life-admin-capture-service";
 import type { LifeAdminLinksService } from "./life-admin-links-service";
@@ -18,7 +19,8 @@ export interface LifeAdminWorkshopDeps {
 
 export class LifeAdminWorkshopService {
   constructor(
-    private readonly db: PrismaClient,
+    private readonly db: BrainPrismaClient,
+    private readonly coreDb: PrismaClient,
     private readonly deps: LifeAdminWorkshopDeps,
   ) {}
 
@@ -34,7 +36,7 @@ export class LifeAdminWorkshopService {
         : options.status
       : undefined;
 
-    return this.db.workshopProject.findMany({
+    const projects = await this.db.workshopProject.findMany({
       where: {
         status: statusFilter,
         projectType: options.projectType,
@@ -49,10 +51,25 @@ export class LifeAdminWorkshopService {
       },
       orderBy: [{ nextActionDate: "asc" }, { updatedAt: "desc" }],
       take: options.limit ?? 50,
-      include: {
-        world: { select: { slug: true, name: true } },
-      },
     });
+
+    // The `world` relation lives in the D&D core DB (`coreDb`), not the Brain
+    // DB, so it cannot be joined via Prisma include — resolve it by id here.
+    const worldIds = [
+      ...new Set(projects.map((p) => p.worldId).filter((id): id is string => Boolean(id))),
+    ];
+    const worlds = worldIds.length
+      ? await this.coreDb.world.findMany({
+          where: { id: { in: worldIds } },
+          select: { id: true, slug: true, name: true },
+        })
+      : [];
+    const worldById = new Map(worlds.map((w) => [w.id, { slug: w.slug, name: w.name }]));
+
+    return projects.map((project) => ({
+      ...project,
+      world: project.worldId ? worldById.get(project.worldId) ?? null : null,
+    }));
   }
 
   async getWorkshopStatusCounts(): Promise<Record<WorkshopStatus, number>> {

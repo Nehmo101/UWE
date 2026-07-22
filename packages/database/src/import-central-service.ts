@@ -1,6 +1,6 @@
 import type { PageType } from "./generated/prisma/client";
-import type {
 import { brainPrisma } from "./brain-client";
+import type {
   ImportSourceType,
   ImportTargetType,
   MarkdownImportPreviewItem,

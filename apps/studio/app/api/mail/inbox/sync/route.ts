@@ -2,6 +2,7 @@ import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { createMailAccountService, createJobService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function POST(request: Request) {
   const authError = await guardStudioApiRequest(request);
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     return jsonError("accountId ist erforderlich.", 400);
   }
 
-  const account = await createMailAccountService(prisma).getAccount(body.accountId);
+  const account = await createMailAccountService(brainPrisma).getAccount(body.accountId);
   if (!account) {
     return jsonError("Mail-Account nicht gefunden.", 404);
   }

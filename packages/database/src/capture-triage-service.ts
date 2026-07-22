@@ -1,7 +1,7 @@
-import type {
 import { brainPrisma } from "./brain-client";
+import type { CaptureEntry } from "./generated/prisma-brain/client";
+import type {
   AdminLinkTargetType,
-  CaptureEntry,
   PersonalProjectCategory,
   WorkshopProjectType,
 } from "./generated/prisma/client";

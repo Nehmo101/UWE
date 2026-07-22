@@ -1,5 +1,6 @@
 import type { PersonalProjectCategory, PersonalProjectStatus } from "../generated/prisma-brain/client";
-import type { BrainPrismaClient as PrismaClient } from "../brain-client";
+import type { PrismaClient } from "../client";
+import type { BrainPrismaClient } from "../brain-client";
 import { toPrismaJsonValue } from "../json-utils";
 import type { LifeAdminLinksService } from "./life-admin-links-service";
 import {
@@ -20,7 +21,8 @@ export interface PersonalProjectDetail {
 
 export class LifeAdminProjectService {
   constructor(
-    private readonly db: PrismaClient,
+    private readonly db: BrainPrismaClient,
+    private readonly coreDb: PrismaClient,
     private readonly links: LifeAdminLinksService,
   ) {}
 
@@ -74,23 +76,42 @@ export class LifeAdminProjectService {
   }
 
   async getPersonalProject(id: string) {
-    return this.db.personalProject.findUnique({
+    const project = await this.db.personalProject.findUnique({
       where: { id },
       include: {
-        world: { select: { id: true, name: true, slug: true } },
-        page: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            type: true,
-            world: { select: { slug: true } },
-          },
-        },
         steps: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         images: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
       },
     });
+
+    if (!project) {
+      return null;
+    }
+
+    // World/Page live in the D&D core DB (`coreDb`), not the Brain DB, so the
+    // relation cannot be joined via Prisma include — resolve them by id here.
+    const [world, page] = await Promise.all([
+      project.worldId
+        ? this.coreDb.world.findUnique({
+            where: { id: project.worldId },
+            select: { id: true, name: true, slug: true },
+          })
+        : Promise.resolve(null),
+      project.pageId
+        ? this.coreDb.page.findUnique({
+            where: { id: project.pageId },
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              type: true,
+              world: { select: { slug: true } },
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    return { ...project, world, page };
   }
 
   async getPersonalProjectDetail(id: string): Promise<PersonalProjectDetail | null> {

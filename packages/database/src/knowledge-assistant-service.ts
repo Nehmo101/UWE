@@ -1,7 +1,7 @@
 import type { PrismaClient } from "./client";
 import { createLifeAdminService } from "./life-admin-service";
-import type {
 import { brainPrisma } from "./brain-client";
+import type {
   PersonalBrainSearchHit,
   PersonalBrainSearchResult,
   PersonalBrainSearchableDoc,

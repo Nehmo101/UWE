@@ -8,6 +8,7 @@ import {
   prisma,
   type InspectorFixAction,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { revalidatePath } from "next/cache";
 import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { redirect } from "next/navigation";

@@ -23,6 +23,7 @@ import {
   type LocalHostUpdateInfo,
 } from "../lib/tauri";
 import { humanizeConnectionStatus, toHealthBadgeStatus, toMessage } from "../lib/connector-runtime-labels";
+import { useHostActionProgress } from "../lib/useHostActionProgress";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
@@ -72,6 +73,36 @@ function stateLabel(status: LocalHostStatus | null): string {
   return "Bereit zum Start";
 }
 
+type BusyState = HostAction | "refresh" | "settings" | "all" | "check-update" | "update";
+
+/** Human-readable heading for the progress/status bar while an action runs. */
+function busyLabel(busy: BusyState, status: LocalHostStatus | null): string {
+  switch (busy) {
+    case "setup":
+      return status?.installation.buildReady ? "UWE wird repariert und neu gebaut" : "UWE wird eingerichtet";
+    case "update":
+      return "Update wird installiert";
+    case "check-update":
+      return "Suche nach UWE-Updates";
+    case "all":
+      return "UWE-Dienste werden umgeschaltet";
+    case "start":
+      return "Dienst wird gestartet";
+    case "stop":
+      return "Dienst wird gestoppt";
+    case "restart":
+      return "Dienste werden neu gestartet";
+    case "backup":
+      return "Backup wird erstellt";
+    case "settings":
+      return "Einstellungen werden gespeichert";
+    case "refresh":
+      return "Status wird geladen";
+    default:
+      return "Aktion läuft";
+  }
+}
+
 export function CommandCenterPanel({
   config,
   connectorStatus,
@@ -90,6 +121,11 @@ export function CommandCenterPanel({
   const [logTarget, setLogTarget] = useState<LocalHostLogsResult["target"]>("command-center");
   const [logs, setLogs] = useState<string[]>([]);
   const [updateInfo, setUpdateInfo] = useState<LocalHostUpdateInfo | null>(null);
+
+  // Live determinate progress for the long actions (setup/update), streamed from
+  // the host CLI. Quick actions emit no events → the bar falls back to an
+  // indeterminate animation driven purely by `busy`.
+  const { progress: hostProgress, reset: resetHostProgress } = useHostActionProgress();
 
   // Latest typed project root, read inside the stable `refresh` callback so that
   // typing in the folder input does not recreate `refresh` (which would otherwise
@@ -143,6 +179,7 @@ export function CommandCenterPanel({
 
   async function saveSettings() {
     setBusy("settings");
+    resetHostProgress();
     setError(null);
     setMessage(null);
     try {
@@ -166,6 +203,7 @@ export function CommandCenterPanel({
 
   async function runAction(action: HostAction): Promise<LocalHostActionResult | null> {
     setBusy(action);
+    resetHostProgress();
     setMessage(action === "setup" ? "UWE wird eingerichtet. Build und Migration können einige Minuten dauern." : null);
     setError(null);
     try {
@@ -188,6 +226,7 @@ export function CommandCenterPanel({
 
   async function startEverything() {
     setBusy("all");
+    resetHostProgress();
     setError(null);
     setMessage("UWE wird gestartet.");
     try {
@@ -208,6 +247,7 @@ export function CommandCenterPanel({
 
   async function stopEverything() {
     setBusy("all");
+    resetHostProgress();
     setError(null);
     try {
       if (connectorStatus.status === "running") await onStopConnector();
@@ -233,6 +273,7 @@ export function CommandCenterPanel({
 
   async function runCheckUpdate() {
     setBusy("check-update");
+    resetHostProgress();
     setError(null);
     setMessage("Suche nach UWE-Releases …");
     try {
@@ -255,6 +296,7 @@ export function CommandCenterPanel({
 
   async function runInstallUpdate() {
     setBusy("update");
+    resetHostProgress();
     setError(null);
     setMessage("Update wird installiert: Code synchronisieren, Abhängigkeiten, Migration und Build. Das kann mehrere Minuten dauern.");
     try {
@@ -302,6 +344,45 @@ export function CommandCenterPanel({
 
       {message ? <div className="connector-banner connector-banner-success">{message}</div> : null}
       {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
+
+      {busy ? (() => {
+        const determinate =
+          hostProgress != null &&
+          hostProgress.total > 0 &&
+          (busy === "setup" || busy === "update");
+        const percent = determinate
+          ? Math.min(100, Math.round((hostProgress!.step / hostProgress!.total) * 100))
+          : null;
+        return (
+          <div className="command-center-progress" role="status" aria-live="polite">
+            <div className="command-center-progress-head">
+              <span className="command-center-progress-title">{busyLabel(busy, status)}</span>
+              {determinate ? (
+                <span className="command-center-progress-count">
+                  Schritt {hostProgress!.step} von {hostProgress!.total} · {percent}%
+                </span>
+              ) : (
+                <span className="command-center-progress-count">Bitte warten …</span>
+              )}
+            </div>
+            <div
+              className={`command-center-progress-track${determinate ? "" : " is-indeterminate"}`}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={determinate ? percent! : undefined}
+            >
+              <div
+                className="command-center-progress-fill"
+                style={determinate ? { width: `${percent}%` } : undefined}
+              />
+            </div>
+            {determinate ? (
+              <small className="command-center-progress-phase">{hostProgress!.label}</small>
+            ) : null}
+          </div>
+        );
+      })() : null}
 
       <div className="command-center-primary-actions">
         <Button variant="primary" onClick={startEverything} disabled={busy !== null || hostOnline}>Alles starten</Button>

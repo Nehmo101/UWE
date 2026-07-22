@@ -33,15 +33,15 @@ function kitchen() {
 }
 
 function mealPlan() {
-  return createMealPlanService(brainPrisma, prisma);
+  return createMealPlanService(brainPrisma);
 }
 
 function shopping() {
-  return createShoppingService(brainPrisma, prisma);
+  return createShoppingService(brainPrisma);
 }
 
 function pantry() {
-  return createPantryService(brainPrisma, prisma);
+  return createPantryService(brainPrisma);
 }
 
 /** Standard-Grundausstattung, die beim Listen-Erzeugen mitkommt. */

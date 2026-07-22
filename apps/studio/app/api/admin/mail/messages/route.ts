@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const service = createMailPortalService(brainPrisma, prisma);
+  const service = createMailPortalService(brainPrisma);
   const { items, nextCursor } = await service.searchMessages(
     {
       accountId,

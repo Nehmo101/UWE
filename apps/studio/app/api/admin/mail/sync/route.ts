@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
@@ -17,7 +16,7 @@ export async function POST(request: Request) {
     return mailApiError("Ungültiger JSON-Body.");
   }
 
-  const service = createMailPortalService(brainPrisma, prisma);
+  const service = createMailPortalService(brainPrisma);
 
   // accountId "all" (oder weggelassen): alle sync-fähigen Konten als Jobs einreihen —
   // genutzt vom manuellen „Alle Konten"-Sync und vom Hintergrund-Timer im Mail Center.

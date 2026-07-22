@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@uwe/database/server";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   aggregateAllHardwareErrorHistory,
   aggregateHomelabTodayAlerts,
   buildHomelabRunbooks,

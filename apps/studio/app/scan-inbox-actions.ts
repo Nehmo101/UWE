@@ -7,6 +7,7 @@ import {
   extractPdfText,
   prisma,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { runConnectorVisionExtract } from "@uwe/ai-brain/router";
 import { downscaleImageForVision } from "@uwe/assets";
 import {

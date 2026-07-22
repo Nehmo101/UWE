@@ -1,5 +1,5 @@
-import type {
 import { brainPrisma } from "./brain-client";
+import type {
   GameSessionStatus,
   Prisma,
 } from "./generated/prisma/client";

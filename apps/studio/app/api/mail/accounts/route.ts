@@ -1,13 +1,14 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { createMailAccountService, prisma } from "@uwe/database/server";
+import { createMailAccountService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const accounts = await service.listAccounts();
   return NextResponse.json({ accounts });
 }
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     return jsonError("Pflichtfelder fehlen.", 400);
   }
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const account = await service.createAccount({
     label: body.label,
     smtpHost: body.smtpHost,

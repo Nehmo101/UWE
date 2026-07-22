@@ -10,6 +10,7 @@ import {
   type EntityTagService,
   type PrismaClient,
 } from "@uwe/database/server";
+import type { BrainPrismaClient } from "@uwe/database/brain-client";
 import type {
   IngredientUnit,
   RecipeIngredientInput,
@@ -126,7 +127,7 @@ export class KitchenService {
   }
 
   async updateRecipe(id: string, input: Partial<RecipeInput>) {
-    await this.db.$transaction(async (tx) => {
+    await this.brainDb.$transaction(async (tx) => {
       await tx.recipe.update({
         where: { id },
         data: {

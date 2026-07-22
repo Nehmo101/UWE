@@ -3,12 +3,11 @@ import { brainPrisma } from "@uwe/database/brain-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { BringApiError, createBringService } from "@uwe/kitchen";
-import { prisma } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function bring() {
-  return createBringService(brainPrisma, prisma);
+  return createBringService(brainPrisma);
 }
 
 const SHOPPING_PATH = "/kitchen/shopping";

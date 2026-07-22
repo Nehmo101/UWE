@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   createCaptureTriageService,
   createLifeAdminService,
   prisma,
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     return mailApiError("Ungültiger JSON-Body.");
   }
 
-  const service = createMailPortalService(brainPrisma, prisma);
+  const service = createMailPortalService(brainPrisma);
 
   try {
     if (body.action === "archive" && body.messageId) {

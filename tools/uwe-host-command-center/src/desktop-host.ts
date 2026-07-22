@@ -4,6 +4,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
+
+/**
+ * Number of discrete steps `setupHost` reports progress for. Kept as a constant
+ * so `applyDesktopHostUpdate` can size the combined update progress bar (stop →
+ * sync → setup steps → start) without importing the step list itself.
+ */
+export const HOST_SETUP_STEP_COUNT = 7;
+
 type ServiceState = "online" | "starting" | "stopped" | "error";
 
 export interface DesktopHostService {
@@ -541,7 +550,10 @@ function runWorkspaceCommand(paths: HostPaths, label: string, args: string[], ex
   appendOperationLog(paths, `${label} abgeschlossen.`);
 }
 
-export async function setupHost(rootInput?: string): Promise<DesktopHostActionResult> {
+export async function setupHost(
+  rootInput?: string,
+  options: { ownProgress?: boolean } = {},
+): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
   if (!validateRepo(root)) {
@@ -563,27 +575,44 @@ export async function setupHost(rootInput?: string): Promise<DesktopHostActionRe
     fs.writeFileSync(seedPendingFile, new Date().toISOString(), "utf8");
     appendOperationLog(paths, "Leere SQLite-Datei für Prisma unter Windows angelegt.");
   }
-  runWorkspaceCommand(paths, "Abhängigkeiten", ["install", "--frozen-lockfile"]);
-  runWorkspaceCommand(paths, "Prisma Client", ["--filter", "@uwe/database", "db:generate"]);
-  runWorkspaceCommand(paths, "Datenbankmigration", ["--filter", "@uwe/database", "db:deploy"]);
-  if (seedRequired) {
-    runWorkspaceCommand(
-      paths,
-      "Demo-Grundbestand",
-      ["--filter", "@uwe/database", "db:seed"],
-      { UWE_ALLOW_PROD_SEED: "1" },
-    );
-    fs.rmSync(seedPendingFile, { force: true });
+
+  // Ordered, fixed-length step list so the progress bar has a stable total
+  // (HOST_SETUP_STEP_COUNT). The seed step is always present in the sequence but
+  // only runs when a fresh/pending database needs it — the bar still advances so
+  // "how far are we" stays truthful across both first-run and repair setups.
+  const steps: Array<{ phase: string; label: string; run: () => void }> = [
+    { phase: "install", label: "Abhängigkeiten installieren", run: () => runWorkspaceCommand(paths, "Abhängigkeiten", ["install", "--frozen-lockfile"]) },
+    { phase: "prisma", label: "Prisma-Client generieren", run: () => runWorkspaceCommand(paths, "Prisma Client", ["--filter", "@uwe/database", "db:generate"]) },
+    { phase: "migrate", label: "Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Datenbankmigration", ["--filter", "@uwe/database", "db:deploy"]) },
+    {
+      phase: "seed",
+      label: "Demo-Grundbestand einspielen",
+      run: () => {
+        if (!seedRequired) return;
+        runWorkspaceCommand(paths, "Demo-Grundbestand", ["--filter", "@uwe/database", "db:seed"], { UWE_ALLOW_PROD_SEED: "1" });
+        fs.rmSync(seedPendingFile, { force: true });
+      },
+    },
+    {
+      phase: "connector",
+      label: "Lokalen RTX-Connector einrichten",
+      run: () => runWorkspaceCommand(
+        paths,
+        "Lokaler RTX-Connector",
+        ["exec", "tsx", "tools/uwe-host-command-center/src/provision-local-connector.ts", "--root", root],
+        { UWE_COMMAND_CENTER_DATA_DIR: paths.dataRoot },
+      ),
+    },
+    { phase: "studio-build", label: "Studio-Produktions-Build", run: () => runWorkspaceCommand(paths, "Studio Produktions-Build", ["--filter", "@uwe/studio", "build"]) },
+    { phase: "portal-build", label: "Portal-Produktions-Build", run: () => runWorkspaceCommand(paths, "Portal Produktions-Build", ["--filter", "@uwe/portal", "build"]) },
+  ];
+
+  if (options.ownProgress ?? true) beginHostProgress(steps.length);
+  for (const step of steps) {
+    reportHostStep(step.phase, step.label);
+    step.run();
   }
-  runWorkspaceCommand(paths, "Lokaler RTX-Connector", [
-    "exec",
-    "tsx",
-    "tools/uwe-host-command-center/src/provision-local-connector.ts",
-    "--root",
-    root,
-  ], { UWE_COMMAND_CENTER_DATA_DIR: paths.dataRoot });
-  runWorkspaceCommand(paths, "Studio Produktions-Build", ["--filter", "@uwe/studio", "build"]);
-  runWorkspaceCommand(paths, "Portal Produktions-Build", ["--filter", "@uwe/portal", "build"]);
+
   return { ok: true, message: "UWE wurde vollständig eingerichtet und ist startklar.", status: await collectDesktopHostStatus(root) };
 }
 

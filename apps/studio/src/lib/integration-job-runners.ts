@@ -228,7 +228,7 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
   }
 
   const db = createPrismaClient();
-  const mail = createMailAccountService(db);
+  const mail = createMailAccountService(brainPrisma);
 
   await ctx.jobs.updateProgress(ctx.jobId, 5, "IMAP Postfach synchronisieren");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
@@ -253,13 +253,13 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
     if (!payload.mailbox && createdIds.length > 0) {
       try {
         const { createMailRuleService, autoTriageNewMessages } = await import("@uwe/mail");
-        const ruleService = createMailRuleService(brainPrisma, db);
+        const ruleService = createMailRuleService(brainPrisma);
         const { skipAiTriageIds, movedIds } = await ruleService.applyRules(createdIds);
         ruleMoved = movedIds.length;
         const vipSenders = await ruleService.listVipAddresses();
         const trashedSet = new Set(movedIds);
         const triageTargets = createdIds.filter((id) => !trashedSet.has(id));
-        const { scored } = await autoTriageNewMessages(db, triageTargets, {
+        const { scored } = await autoTriageNewMessages(brainPrisma, triageTargets, {
           vipSenders,
           skipIds: skipAiTriageIds,
         });
@@ -298,7 +298,7 @@ export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<stri
   }
 
   const db = createPrismaClient();
-  const research = createResearchService(db);
+  const research = createResearchService(brainPrisma);
   const session = await research.get(payload.sessionId);
   if (!session) {
     await db.$disconnect();

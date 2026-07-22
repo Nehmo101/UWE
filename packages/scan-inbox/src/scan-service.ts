@@ -10,6 +10,7 @@ import {
   toPrismaJsonValue,
   type PrismaClient,
 } from "@uwe/database/server";
+import type { BrainPrismaClient } from "@uwe/database/brain-client";
 import { createKitchenService } from "@uwe/kitchen";
 import { analyzeScanText } from "./analyze";
 import { parseRecipeText } from "./parse-recipe";

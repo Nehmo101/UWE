@@ -3,10 +3,10 @@ import {
   createDocumentTemplateService,
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
   DocumentTemplateCategoryEnum,
-  prisma,
   type DocumentTemplate,
   type DocumentTemplateCategory,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { Card, CardHeader, CardTitle, CardContent } from "@/src/components/ui";
 import { requireStudioAccess } from "@/src/lib/auth";
@@ -64,7 +64,7 @@ export default async function DocumentsPage({
   await requireStudioAccess();
   const { q } = await searchParams;
 
-  const service = createDocumentTemplateService(prisma);
+  const service = createDocumentTemplateService(brainPrisma);
   const templates = await service.listTemplates();
   const filteredTemplates = templates.filter((template) =>
     matchesAdminListQuery(q, [template.name, template.body, template.category]),

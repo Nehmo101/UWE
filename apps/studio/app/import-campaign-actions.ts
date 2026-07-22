@@ -11,6 +11,7 @@ import {
   prisma,
   slugifyPageTitle,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   buildCampaignExtractionPrompt,
   buildCampaignPreview,

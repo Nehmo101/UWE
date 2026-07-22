@@ -2,11 +2,11 @@
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type { DocumentTemplateCategory } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createDocumentTemplateService,
   DocumentTemplateCategoryEnum,
   MissingTemplateVariablesError,
-  prisma,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@/src/lib/document-template-utils";
 
 function documentTemplates() {
-  return createDocumentTemplateService(prisma);
+  return createDocumentTemplateService(brainPrisma);
 }
 
 function revalidateDocumentPaths() {

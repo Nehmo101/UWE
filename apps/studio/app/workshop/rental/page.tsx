@@ -7,6 +7,7 @@ import {
   WORKSHOP_RENTAL_STATUS_LABELS,
   WorkshopRentalStatusEnum,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   StudioShell,
   PageHeader,
@@ -49,6 +50,7 @@ function euroDefault(cents: number | null | undefined): string {
 
 export default async function WorkshopRentalPage() {
   const rentals = await createLifeAdminService(
+    brainPrisma,
     prisma,
   ).listWorkshopTerrainRentals({ limit: 200 });
 

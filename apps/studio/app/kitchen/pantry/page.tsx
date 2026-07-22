@@ -41,7 +41,7 @@ const EXPIRY_WINDOW_DAYS = 7;
 export default async function KitchenPantryPage() {
   await requireStudioAccess();
 
-  const pantry = createPantryService(brainPrisma, prisma);
+  const pantry = createPantryService(brainPrisma);
   const kitchen = createKitchenService(brainPrisma, prisma);
   const now = new Date();
 

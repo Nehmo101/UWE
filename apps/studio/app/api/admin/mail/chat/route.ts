@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { executeMailChat } from "@/src/lib/mail-chat";
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
   if (!body.messageId) return mailApiError("messageId erforderlich.");
   if (!body.messages?.length) return mailApiError("messages erforderlich.");
 
-  const stored = await createMailPortalService(brainPrisma, prisma).getMessageContent(body.messageId);
+  const stored = await createMailPortalService(brainPrisma).getMessageContent(body.messageId);
   if (!stored) return mailApiError("Nachricht nicht gefunden.", 404);
 
   try {

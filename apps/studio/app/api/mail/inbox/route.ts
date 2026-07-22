@@ -1,6 +1,7 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { createMailAccountService, getSystemSettings, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   const requestedLimit = searchParams.get("limit");
   const limit = requestedLimit !== null ? Number(requestedLimit) : settings.mail.inboxLimit;
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const messages = await service.listInbox(
     accountId,
     Number.isFinite(limit) ? limit : settings.mail.inboxLimit,

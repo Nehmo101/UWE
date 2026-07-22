@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createFinanceOverviewService,
   type FinancePeriod,
@@ -43,7 +43,7 @@ export default async function FinancePage({ searchParams }: Props) {
   const { period: periodRaw } = await searchParams;
   const period = parsePeriod(periodRaw);
 
-  const overview = await createFinanceOverviewService(prisma).getOverview(new Date(), { period });
+  const overview = await createFinanceOverviewService(brainPrisma).getOverview(new Date(), { period });
   const { totals, alerts, reviewCandidates, aiCosts, byCategory, byInterval } = overview;
 
   return (

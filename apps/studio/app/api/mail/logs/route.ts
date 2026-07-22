@@ -1,10 +1,9 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   assertMailApiResponseHasNoSecrets,
   createMailLogService,
-  prisma,
 } from "@uwe/database/server";
 
 export async function GET(request: Request) {
@@ -15,7 +14,7 @@ export async function GET(request: Request) {
   const worldId = url.searchParams.get("worldId") ?? undefined;
   const limit = Number.parseInt(url.searchParams.get("limit") ?? "30", 10);
 
-  const logs = await createMailLogService(brainPrisma, prisma).list({
+  const logs = await createMailLogService(brainPrisma).list({
     worldId,
     limit: Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 100) : 30,
   });

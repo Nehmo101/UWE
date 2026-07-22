@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { listen } from "@tauri-apps/api/event";
+
 import {
   defaultConnectorClientConfig,
   maskToken,
@@ -39,6 +41,7 @@ import {
 } from "./lib/connector-runtime-labels";
 import {
   deleteOllamaModel,
+  exitApp,
   getConnectorStatus,
   getCookbookDashboard,
   getModelStore,
@@ -89,6 +92,8 @@ export default function App() {
   const [testResult, setTestResult] = useState<HostConnectionTestResult | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [quitting, setQuitting] = useState(false);
 
   const navGroups = useMemo(() => connectorSidebar(activePath), [activePath]);
 
@@ -220,6 +225,36 @@ export default function App() {
       }
     })();
   }, [refreshFromBackend]);
+
+  // The X button (window close) is intercepted in Rust, which emits
+  // `app-close-requested` and keeps the window open. We ask the user here and
+  // only then fully quit — closing must not silently background the client.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    void listen("app-close-requested", () => setShowQuitConfirm(true)).then((fn) => {
+      if (cancelled) {
+        fn();
+        return;
+      }
+      unlisten = fn;
+    });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
+
+  async function confirmQuit() {
+    setQuitting(true);
+    try {
+      await exitApp();
+    } catch {
+      // If the exit call fails the app stays open; let the user try again.
+      setQuitting(false);
+      setShowQuitConfirm(false);
+    }
+  }
 
   function updateConfig<K extends keyof ConnectorClientConfig>(
     key: K,
@@ -639,7 +674,7 @@ export default function App() {
     </>
   );
 
-  const overlay = showWizard ? (
+  const wizardOverlay = showWizard ? (
     <SetupWizard
       initialConfig={config}
       initialModelStore={modelStore}
@@ -659,6 +694,38 @@ export default function App() {
       }}
     />
   ) : null;
+
+  const quitOverlay = showQuitConfirm ? (
+    <div
+      className="connector-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quit-confirm-title"
+    >
+      <div className="connector-modal">
+        <h2 id="quit-confirm-title">Command Center beenden?</h2>
+        <p className="connector-muted">
+          Die Steuerungs-App wird vollständig geschlossen. Laufende UWE-Dienste (Studio, Portal)
+          bleiben im Hintergrund aktiv; die aktive RTX-Verbindung wird beim Beenden getrennt.
+        </p>
+        <div className="connector-actions connector-modal-actions">
+          <Button variant="ghost" onClick={() => setShowQuitConfirm(false)} disabled={quitting}>
+            Abbrechen
+          </Button>
+          <Button variant="accent" onClick={confirmQuit} disabled={quitting}>
+            {quitting ? "Wird beendet …" : "Beenden"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const overlay = (
+    <>
+      {wizardOverlay}
+      {quitOverlay}
+    </>
+  );
 
   return (
     <ConnectorShell

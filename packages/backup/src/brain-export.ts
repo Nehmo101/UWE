@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@uwe/database/server";
+import type { BrainPrismaClient } from "@uwe/database/brain-client";
 import { BRAIN_MODEL_NAMES } from "@uwe/product-contracts";
 
 /**
@@ -30,7 +30,7 @@ export type BrainExportModelKey = (typeof BRAIN_EXPORT_MODEL_KEYS)[number];
 
 type BrainModelReaders = Record<BrainExportModelKey, () => Promise<unknown[]>>;
 
-function brainModelReaders(db: PrismaClient): BrainModelReaders {
+function brainModelReaders(db: BrainPrismaClient): BrainModelReaders {
   return {
     MailTemplate: () => db.mailTemplate.findMany(),
     MailRecipientGroup: () => db.mailRecipientGroup.findMany(),
@@ -88,7 +88,7 @@ export interface BrainExportBundle {
 }
 
 /** Reads every Brain model into a portable bundle. Read-only on the source. */
-export async function collectBrainExport(db: PrismaClient): Promise<BrainExportBundle> {
+export async function collectBrainExport(db: BrainPrismaClient): Promise<BrainExportBundle> {
   const readers = brainModelReaders(db);
   const models = {} as Record<BrainExportModelKey, unknown[]>;
   const counts = {} as Record<BrainExportModelKey, number>;

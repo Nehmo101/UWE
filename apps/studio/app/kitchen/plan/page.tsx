@@ -66,7 +66,7 @@ export default async function KitchenPlanPage({ searchParams }: Props) {
   const isoYear = Number.parseInt(y || "", 10) || now.isoYear;
   const isoWeek = Number.parseInt(w || "", 10) || now.isoWeek;
 
-  const meals = createMealPlanService(brainPrisma, prisma);
+  const meals = createMealPlanService(brainPrisma);
   const kitchen = createKitchenService(brainPrisma, prisma);
   const [week, recipes] = await Promise.all([
     meals.getWeek(isoYear, isoWeek),

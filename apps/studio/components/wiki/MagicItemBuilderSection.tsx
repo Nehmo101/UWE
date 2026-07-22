@@ -1,5 +1,5 @@
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   createLifeAdminService,
   createPrismaClient,
   getStructuredGeneratorSchema,

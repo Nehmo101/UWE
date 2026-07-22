@@ -1,7 +1,8 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { createResearchService, prisma } from "@uwe/database/server";
+import { createResearchService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function GET(
   request: Request,
@@ -11,7 +12,7 @@ export async function GET(
   if (authError) return authError;
 
   const { id } = await context.params;
-  const service = createResearchService(prisma);
+  const service = createResearchService(brainPrisma);
   const session = await service.get(id);
   if (!session) {
     return jsonError("Nicht gefunden.", 404);
@@ -34,7 +35,7 @@ export async function POST(
   if (authError) return authError;
 
   const { id } = await context.params;
-  const service = createResearchService(prisma);
+  const service = createResearchService(brainPrisma);
   await service.cancel(id);
   return NextResponse.json({ ok: true });
 }

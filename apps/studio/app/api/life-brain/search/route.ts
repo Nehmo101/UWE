@@ -1,8 +1,8 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { semanticSearchPersonalBrainChunks } from "@uwe/ai-brain";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   createLifeAdminService,
   createPersonalBrainService,
   prisma,
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   let matchMode: "semantic" | "keyword" | "filter" = "filter";
 
   if (query.length >= 2 && !factType && !tag) {
-    const personalBrain = createPersonalBrainService(prisma);
+    const personalBrain = createPersonalBrainService(brainPrisma);
     let documentIds: string[] | undefined;
     if (category) {
       const docs = await service.listPersonalBrainDocuments({ category, limit: 200 });

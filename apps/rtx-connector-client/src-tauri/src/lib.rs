@@ -811,12 +811,6 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-fn should_hide_to_tray() -> bool {
-    read_config_from_disk()
-        .map(|config| config.tray_mode == "minimize_to_tray" || config.tray_mode == "start_in_tray")
-        .unwrap_or(true)
-}
-
 fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let open_item = MenuItem::with_id(app, "open", "Oeffnen", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Beenden", true, None::<&str>)?;
@@ -1097,6 +1091,15 @@ fn test_print(printer_id: Option<String>) -> Result<serde_json::Value, String> {
         _ => run_client_cli(&["test-print"])?,
     };
     parse_client_cli_json(&raw, "Print-Test")
+}
+
+/// Fully quit the Command Center. Invoked by the frontend once the user confirms
+/// the close prompt (the X button asks before quitting instead of hiding to the
+/// tray). `app.exit` drives `RunEvent::Exit`, which tears down the spawned Node
+/// connector process too.
+#[tauri::command]
+fn exit_app(app: tauri::AppHandle) {
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -1425,6 +1428,13 @@ async fn test_host_connection(
 
 pub fn run() {
     tauri::Builder::default()
+        // Single-instance guard: only one Command Center may run at a time. A
+        // second launch (desktop icon, autostart) hands off to the running
+        // instance, which surfaces its window instead of starting a rival
+        // process that would fight over ports, the config file, and the tray.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            show_main_window(app);
+        }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState::default())
         .setup(|app| {
@@ -1440,10 +1450,16 @@ pub fn run() {
         })
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {
-                if should_hide_to_tray() {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
+                // The X button must fully quit the client — after asking — rather
+                // than silently hiding to the tray. Intercept the close, bring the
+                // window forward, and let the frontend show its confirm dialog; it
+                // calls `exit_app` on confirm. (Background-to-tray stays available
+                // via minimize and the tray menu.)
+                api.prevent_close();
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+                let _ = window.emit("app-close-requested", ());
             }
             WindowEvent::Resized(_) => {
                 let hide_when_minimized = read_config_from_disk()
@@ -1456,6 +1472,7 @@ pub fn run() {
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
+            exit_app,
             read_config,
             write_config,
             get_connector_status,

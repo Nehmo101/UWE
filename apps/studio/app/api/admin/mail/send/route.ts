@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { resolveOutboundAttachmentPath, deleteOutboundAttachment } from "@uwe/mail";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
     return mailApiError("Ungültiger JSON-Body.");
   }
 
-  const service = createMailPortalService(brainPrisma, prisma);
+  const service = createMailPortalService(brainPrisma);
 
   if (body.draftId) {
     if (body.confirm !== true) {

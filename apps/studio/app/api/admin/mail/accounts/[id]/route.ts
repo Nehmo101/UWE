@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { brainPrisma } from "@uwe/database/brain-client";
@@ -13,7 +12,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (auth.error) return auth.error;
 
   const { id } = await context.params;
-  const service = createMailPortalService(brainPrisma, prisma);
+  const service = createMailPortalService(brainPrisma);
 
   try {
     await service.deleteAccount(id, auth.user?.id);

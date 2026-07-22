@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requireAdminMailApi, requireAdminMailMutation, mailApiError } from "@/src/lib/admin-mail-api";
 import { brainPrisma } from "@uwe/database/brain-client";
@@ -8,7 +7,7 @@ export async function GET(request: Request) {
   const auth = await requireAdminMailApi(request);
   if (auth.error) return auth.error;
 
-  const service = createMailPortalService(brainPrisma, prisma);
+  const service = createMailPortalService(brainPrisma);
   const accounts = await service.listAccounts();
   return NextResponse.json({ accounts });
 }
@@ -38,7 +37,7 @@ export async function POST(request: Request) {
     return mailApiError("label, username und password sind erforderlich.");
   }
 
-  const service = createMailPortalService(brainPrisma, prisma);
+  const service = createMailPortalService(brainPrisma);
   const account = await service.createAccount(
     {
       label: body.label,

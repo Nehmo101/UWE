@@ -2,12 +2,13 @@
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { indexPersonalBrainDocument, reindexPersonalBrain } from "@uwe/ai-brain";
-import { createPersonalBrainService, prisma } from "@uwe/database/server";
+import { createPersonalBrainService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { revalidatePath } from "next/cache";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
 
 function personalBrain() {
-  return createPersonalBrainService(prisma);
+  return createPersonalBrainService(brainPrisma);
 }
 
 export async function reindexLifeBrainAction() {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   createLifeAdminService,
   getDefaultDashboardLayout,
   mergeMissingDefaultWidgets,

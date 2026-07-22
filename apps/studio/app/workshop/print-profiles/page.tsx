@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   Alert,
   Button,
   Card,

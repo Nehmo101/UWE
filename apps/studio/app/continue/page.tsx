@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createContinueWorkService,
   continuationKindLabel,
@@ -19,7 +19,7 @@ const KIND_ICON: Record<ContinuationKind, string> = {
 
 export default async function ContinuePage() {
   await requireStudioAccess();
-  const continuations = await createContinueWorkService(prisma).getContinuations(5);
+  const continuations = await createContinueWorkService(brainPrisma).getContinuations(5);
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Mach weiter" }]} />}>

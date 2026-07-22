@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSystemSettings, prisma } from "@uwe/database/server";
+import { getSystemSettings } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { requirePrivateHealthAuth } from "@/src/lib/private-health-auth";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: true, reason: "auto_sync_disabled" });
   }
 
-  const portal = createMailPortalService(brainPrisma, prisma);
+  const portal = createMailPortalService(brainPrisma);
   const accounts = await portal.listAccounts();
   const syncAccounts = accounts.filter((account) => account.imapHost);
 

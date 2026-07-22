@@ -1,10 +1,11 @@
 import { createConnectorService, createPersonalBrainService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { reindexLifeBrainAction } from "@/app/life-brain-actions";
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 export async function LifeBrainIndexPanel() {
   const [indexStatus, connectorSummary] = await Promise.all([
-    createPersonalBrainService(prisma).getIndexStatusForDocuments(),
+    createPersonalBrainService(brainPrisma).getIndexStatusForDocuments(),
     createConnectorService(prisma).summarize(),
   ]);
   const documentCount = indexStatus.length;

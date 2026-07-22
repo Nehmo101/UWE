@@ -221,7 +221,7 @@ export class MailPortalAiActions {
       useMock: false,
     });
 
-    const logService = createMailLogService(brainPrisma, this.db);
+    const logService = createMailLogService(this.db);
     const toAddresses = recipients.map((r) => r.email);
     const pendingLog = await logService.create({
       worldId: draft.worldId,

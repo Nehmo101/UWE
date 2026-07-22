@@ -1,13 +1,14 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { createMailAccountService, prisma } from "@uwe/database/server";
+import { createMailAccountService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const drafts = await service.listDrafts();
   return NextResponse.json({
     drafts: drafts.map((draft) => ({
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     return jsonError("subject ist erforderlich.", 400);
   }
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const draft = await service.createDraft({
     subject: body.subject,
     bodyText: body.bodyText,

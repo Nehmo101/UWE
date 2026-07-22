@@ -28,9 +28,9 @@ export default async function KitchenDashboardPage() {
   await requireStudioAccess();
 
   const kitchen = createKitchenService(brainPrisma, prisma);
-  const pantry = createPantryService(brainPrisma, prisma);
-  const shopping = createShoppingService(brainPrisma, prisma);
-  const meals = createMealPlanService(brainPrisma, prisma);
+  const pantry = createPantryService(brainPrisma);
+  const shopping = createShoppingService(brainPrisma);
+  const meals = createMealPlanService(brainPrisma);
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());

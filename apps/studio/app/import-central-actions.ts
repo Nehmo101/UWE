@@ -16,6 +16,7 @@ import {
   type MarkdownImportExecuteResult,
   type MarkdownImportPreviewResult,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   importSourceRegistry,
   parseImportContent,

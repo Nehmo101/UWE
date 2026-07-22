@@ -1,7 +1,8 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { createMailAccountService, prisma } from "@uwe/database/server";
+import { createMailAccountService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { idSchema, parseParams } from "@uwe/security";
 import { z } from "zod";
 
@@ -40,7 +41,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const parsedParams = await parseParams(context.params, draftIdParamSchema);
   if (!parsedParams.success) return parsedParams.response;
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const draft = await service.getDraft(parsedParams.data.id);
   if (!draft) {
     return jsonError("Entwurf nicht gefunden.", 404);
@@ -63,7 +64,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return jsonError("Ungültiger JSON-Body.", 400);
   }
 
-  const service = createMailAccountService(prisma);
+  const service = createMailAccountService(brainPrisma);
   const existing = await service.getDraft(parsedParams.data.id);
   if (!existing) {
     return jsonError("Entwurf nicht gefunden.", 404);

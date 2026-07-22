@@ -7,8 +7,9 @@ import {
   setupHost,
   startHost,
   stopHost,
-} from "./desktop-host";
-import { applyDesktopHostUpdate, checkDesktopHostUpdate } from "./desktop-host-update";
+} from "./desktop-host.ts";
+import { applyDesktopHostUpdate, checkDesktopHostUpdate } from "./desktop-host-update.ts";
+import { setHostProgressSink } from "./desktop-host-progress.ts";
 
 type HostAction =
   | "status"
@@ -27,6 +28,13 @@ async function main(): Promise<void> {
   const action = (argv[0] || "status") as HostAction;
   const root = argumentValue(argv, "--root");
   const target = argumentValue(argv, "--target");
+
+  // Stream progress events as NDJSON lines so the Command Center can render a
+  // live, determinate progress bar for the long actions (setup / update). The
+  // Rust host reads stdout line-by-line: `progress` lines are forwarded to the
+  // frontend, the single `result` line is the action's return value.
+  setHostProgressSink((event) => process.stdout.write(`${JSON.stringify(event)}\n`));
+
   let result: unknown;
   try {
     switch (action) {
@@ -72,7 +80,7 @@ async function main(): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     result = { ok: false, message, status: await collectDesktopHostStatus(root) };
   }
-  process.stdout.write(`${JSON.stringify(result)}\n`);
+  process.stdout.write(`${JSON.stringify({ type: "result", payload: result })}\n`);
 }
 
 void main();

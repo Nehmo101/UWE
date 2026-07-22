@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   buildFactionSimulationPrompt,
   createLifeAdminService,
   createUweRepository,

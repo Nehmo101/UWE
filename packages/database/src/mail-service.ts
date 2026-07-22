@@ -1,5 +1,5 @@
-import {
 import { brainPrisma } from "./brain-client";
+import {
   createMailTransport,
   getMailConfigStatus,
   getMailConfigStatusFromSmtpConfig,
@@ -105,7 +105,7 @@ export class MailService {
   async sendMail(input: SendMailInput, env: NodeJS.ProcessEnv = process.env): Promise<SendMailResult> {
     const settings = await createSettingsService(this.db).getSettings();
     const config = resolveEffectiveSmtpConfig(settings, env);
-    const logService = createMailLogService(brainPrisma, this.db);
+    const logService = createMailLogService(brainPrisma);
     const fromAddress = config.from || "unknown@uwe.local";
     const toAddresses = input.to.map((recipient) => recipient.email);
 

@@ -2,6 +2,7 @@ import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { createJobService, createResearchService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const worldId = searchParams.get("worldId") ?? undefined;
-  const service = createResearchService(prisma);
+  const service = createResearchService(brainPrisma);
   const sessions = await service.list(worldId);
   return NextResponse.json({
     sessions: sessions.map((session) => ({
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const service = createResearchService(prisma);
+    const service = createResearchService(brainPrisma);
     const session = await service.start({
       query: body.query,
       worldId: body.worldId,

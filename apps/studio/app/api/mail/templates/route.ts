@@ -1,7 +1,7 @@
 import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   assertMailApiResponseHasNoSecrets,
   createMailTemplateService,
   prisma,

@@ -662,7 +662,7 @@ export async function runEmbeddingJob(ctx: JobRunnerContext): Promise<Record<str
   await ctx.jobs.updateProgress(ctx.jobId, 25, "Chunks und Embeddings berechnen");
 
   if (payload.reindexPersonalBrain) {
-    const personalBrain = createPersonalBrainService(prisma);
+    const personalBrain = createPersonalBrainService(brainPrisma);
     const result = await reindexPersonalBrain(personalBrain, undefined, {
       useMock: payload.useMock,
       force: true,
@@ -671,7 +671,7 @@ export async function runEmbeddingJob(ctx: JobRunnerContext): Promise<Record<str
   }
 
   if (payload.personalBrainDocumentId) {
-    const personalBrain = createPersonalBrainService(prisma);
+    const personalBrain = createPersonalBrainService(brainPrisma);
     const result = await indexPersonalBrainDocument(
       personalBrain,
       payload.personalBrainDocumentId,

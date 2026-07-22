@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
   asColorList,
   asLinkList,
   asMaterialList,

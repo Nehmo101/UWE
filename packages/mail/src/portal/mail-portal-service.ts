@@ -123,7 +123,7 @@ export class MailPortalService {
   }
 
   private unsubscribeService() {
-    return createMailUnsubscribeService(brainPrisma, this.db);
+    return createMailUnsubscribeService(this.db);
   }
 
   async logAudit(input: {

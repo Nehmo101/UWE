@@ -199,3 +199,12 @@ export async function checkHostUpdate(root?: string) {
 export async function updateHost(root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("update_host", { root });
 }
+
+/**
+ * Fully quit the Command Center. Only meaningful inside the Tauri runtime — in
+ * the browser dev mock there is no process to exit, so this is a no-op there.
+ */
+export async function exitApp(): Promise<void> {
+  if (!isTauriRuntime()) return;
+  await invoke("exit_app");
+}
