@@ -191,3 +191,18 @@ export type PrismaModelName = keyof typeof PRISMA_MODEL_BOUNDARIES;
 export function isPrismaModelName(value: unknown): value is PrismaModelName {
   return typeof value === "string" && value in PRISMA_MODEL_BOUNDARIES;
 }
+
+/**
+ * The Prisma models that belong to the owner-private Brain database
+ * (`uwe-brain.db`). This is the authoritative set the Brain data export and the
+ * physical migration must cover — derived from the mapping so it never drifts.
+ */
+export const BRAIN_MODEL_NAMES: readonly PrismaModelName[] = (
+  Object.entries(PRISMA_MODEL_BOUNDARIES) as [PrismaModelName, PrismaModelBoundary][]
+)
+  .filter(([, boundary]) => boundary.targetDatabase === "uwe-brain.db")
+  .map(([name]) => name);
+
+export function isBrainModelName(value: unknown): value is PrismaModelName {
+  return isPrismaModelName(value) && PRISMA_MODEL_BOUNDARIES[value].targetDatabase === "uwe-brain.db";
+}
