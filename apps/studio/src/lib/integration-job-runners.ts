@@ -17,6 +17,7 @@ import {
   syncImageStudioProjectLinksToAsset,
   type JobService,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
 import { fetchIcalFeed, parseIcalEvents, putCalDavEvent, syncCalDavCollection } from "@uwe/calendar";
 import {
@@ -139,7 +140,7 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       },
     });
 
-    await syncImageStudioProjectLinksToAsset(db, activeProjectId, asset.id);
+    await syncImageStudioProjectLinksToAsset(db, brainPrisma, activeProjectId, asset.id);
 
     await imageStudio.updateProjectStatus(activeProjectId, "completed");
 

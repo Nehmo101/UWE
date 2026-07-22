@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import { createLifeAdminService } from "./life-admin-service";
 import { parseTagsFromMetadata } from "./json-utils";
 
@@ -118,6 +119,7 @@ function hrefFor(type: AdminSearchEntityType, id: string): string {
 
 export async function searchAdminEntities(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: AdminSearchOptions,
 ): Promise<AdminSearchResultItem[]> {
   const query = normalizeQuery(options.query);
@@ -139,7 +141,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const captures = await db.captureEntry.findMany({
+        const captures = await brainDb.captureEntry.findMany({
           where: {
             OR: [
               { title: { contains: query } },
@@ -172,7 +174,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const projects = await db.personalProject.findMany({
+        const projects = await brainDb.personalProject.findMany({
           where: {
             OR: [
               { name: { contains: query } },
@@ -206,7 +208,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const workshops = await db.workshopProject.findMany({
+        const workshops = await brainDb.workshopProject.findMany({
           where: {
             OR: [
               { title: { contains: query } },
@@ -240,7 +242,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const contracts = await db.contractExpense.findMany({
+        const contracts = await brainDb.contractExpense.findMany({
           where: {
             OR: [
               { name: { contains: query } },
@@ -274,7 +276,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const devices = await db.hardwareDevice.findMany({
+        const devices = await brainDb.hardwareDevice.findMany({
           where: {
             OR: [
               { name: { contains: query } },
@@ -346,7 +348,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const templates = await db.documentTemplate.findMany({
+        const templates = await brainDb.documentTemplate.findMany({
           where: {
             OR: [
               { name: { contains: query } },
@@ -378,7 +380,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const scans = await db.scanDocument.findMany({
+        const scans = await brainDb.scanDocument.findMany({
           where: {
             OR: [
               { title: { contains: query } },
@@ -477,7 +479,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const lists = await db.shoppingList.findMany({
+        const lists = await brainDb.shoppingList.findMany({
           where: {
             OR: [
               { title: { contains: query } },
@@ -511,7 +513,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const mailTemplates = await db.mailTemplate.findMany({
+        const mailTemplates = await brainDb.mailTemplate.findMany({
           where: {
             OR: [
               { name: { contains: query } },
@@ -552,7 +554,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const lifeAdmin = createLifeAdminService(db);
+        const lifeAdmin = createLifeAdminService(brainDb, db);
         const brainSearch = await lifeAdmin.searchPersonalBrain({ query, limit: perTypeLimit });
 
         if (!entityFilter || entityFilter === "personal_brain_document") {

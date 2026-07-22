@@ -4,6 +4,7 @@ import {
   prisma,
   type AdminLinkSourceType,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 }
 
 export async function AdminEntityLinksPanel({ sourceType, sourceId }: Props) {
-  const links = await listResolvedAdminLinksForEntity(prisma, sourceType, sourceId);
+  const links = await listResolvedAdminLinksForEntity(prisma, brainPrisma, sourceType, sourceId);
 
   if (links.length === 0) {
     return null;

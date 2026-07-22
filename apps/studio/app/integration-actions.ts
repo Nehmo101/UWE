@@ -25,6 +25,7 @@ import {
   resolveEffectiveUploadsPath,
   syncImageStudioProjectLinksToAsset,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import type { ImageStudioLinkTargetType } from "@uwe/database/server";
 import { fillAgentJobPreset, getAgentJobPreset } from "@uwe/agent-jobs";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
@@ -247,7 +248,7 @@ export async function adoptImageStudioAssetAction(formData: FormData) {
     await requireStudioWorldEdit(worldSlug);
   }
 
-  await adoptAssetToTarget(prisma, {
+  await adoptAssetToTarget(prisma, brainPrisma, {
     assetId,
     targetType,
     targetId,
@@ -315,7 +316,7 @@ export async function saveImageStudioCanvasAction(formData: FormData) {
     metadata: { reviewStatus: "draft", editor: "canvas" },
   });
 
-  await syncImageStudioProjectLinksToAsset(prisma, projectId, asset.id);
+  await syncImageStudioProjectLinksToAsset(prisma, brainPrisma, projectId, asset.id);
   await imageStudio.updateProjectStatus(projectId, "completed");
 
   revalidatePath("/image-studio");

@@ -18,6 +18,7 @@ import {
   resolveEffectiveUploadsPath,
   saveCaptureUploadFile,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 
 const ATTACHMENT_CAPTURE_TYPES = new Set(["file_image", "voice_memo"]);
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
     });
     assetId = asset.id;
 
-    await linkAssetToTarget(prisma, {
+    await linkAssetToTarget(prisma, brainPrisma, {
       assetId: asset.id,
       targetType: "capture",
       targetId: capture.id,

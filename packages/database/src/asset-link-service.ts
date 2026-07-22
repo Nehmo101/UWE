@@ -1,5 +1,6 @@
 import type { AdminLinkSourceType, Asset, Prisma } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import { linkAssetToPage, listAssetsForPage } from "./asset-repository";
 
 /** Unified asset link targets across world pages and daily-admin entities. */
@@ -46,13 +47,13 @@ export interface LinkAssetInput {
   label?: string | null;
 }
 
-export async function linkAssetToTarget(db: PrismaClient, input: LinkAssetInput) {
+export async function linkAssetToTarget(db: PrismaClient, brainDb: BrainPrismaClient, input: LinkAssetInput) {
   if (input.targetType === "page") {
     await linkAssetToPage(db, input.assetId, input.targetId);
     return { assetId: input.assetId, targetType: input.targetType, targetId: input.targetId };
   }
 
-  const existing = await db.adminEntityLink.findFirst({
+  const existing = await brainDb.adminEntityLink.findFirst({
     where: {
       sourceType: toAdminSourceType(input.targetType),
       sourceId: input.targetId,
@@ -65,7 +66,7 @@ export async function linkAssetToTarget(db: PrismaClient, input: LinkAssetInput)
     return existing;
   }
 
-  return db.adminEntityLink.create({
+  return brainDb.adminEntityLink.create({
     data: {
       sourceType: toAdminSourceType(input.targetType),
       sourceId: input.targetId,
@@ -79,6 +80,7 @@ export async function linkAssetToTarget(db: PrismaClient, input: LinkAssetInput)
 
 export async function unlinkAssetFromTarget(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   assetId: string,
   targetType: AssetLinkTargetType,
   targetId: string,
@@ -87,7 +89,7 @@ export async function unlinkAssetFromTarget(
     return db.assetPageLink.deleteMany({ where: { assetId, pageId: targetId } });
   }
 
-  return db.adminEntityLink.deleteMany({
+  return brainDb.adminEntityLink.deleteMany({
     where: {
       sourceType: toAdminSourceType(targetType),
       sourceId: targetId,
@@ -99,6 +101,7 @@ export async function unlinkAssetFromTarget(
 
 export async function listAssetsForTarget(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   targetType: AssetLinkTargetType,
   targetId: string,
 ): Promise<Asset[]> {
@@ -106,7 +109,7 @@ export async function listAssetsForTarget(
     return listAssetsForPage(db, targetId);
   }
 
-  const links = await db.adminEntityLink.findMany({
+  const links = await brainDb.adminEntityLink.findMany({
     where: {
       sourceType: toAdminSourceType(targetType),
       sourceId: targetId,
@@ -124,13 +127,13 @@ export async function listAssetsForTarget(
   });
 }
 
-export async function listAssetLinksForAsset(db: PrismaClient, assetId: string): Promise<AssetLinkRecord[]> {
+export async function listAssetLinksForAsset(db: PrismaClient, brainDb: BrainPrismaClient, assetId: string): Promise<AssetLinkRecord[]> {
   const [pageLinks, adminLinks] = await Promise.all([
     db.assetPageLink.findMany({
       where: { assetId },
       orderBy: { createdAt: "desc" },
     }),
-    db.adminEntityLink.findMany({
+    brainDb.adminEntityLink.findMany({
       where: { targetType: "asset", targetId: assetId },
       orderBy: { createdAt: "desc" },
     }),
@@ -162,9 +165,10 @@ export async function listAssetLinksForAsset(db: PrismaClient, assetId: string):
 
 export async function adoptAssetToTarget(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   input: LinkAssetInput & { contentBlockId?: string | null },
 ) {
-  await linkAssetToTarget(db, input);
+  await linkAssetToTarget(db, brainDb, input);
 
   if (input.targetType === "page" && input.contentBlockId) {
     await db.contentBlock.update({
@@ -174,12 +178,12 @@ export async function adoptAssetToTarget(
   }
 
   if (input.targetType === "workshop_project") {
-    const project = await db.workshopProject.findUnique({ where: { id: input.targetId } });
+    const project = await brainDb.workshopProject.findUnique({ where: { id: input.targetId } });
     if (project) {
       const gallery = Array.isArray(project.imageGallery) ? [...(project.imageGallery as string[])] : [];
       if (!gallery.includes(input.assetId)) {
         gallery.unshift(input.assetId);
-        await db.workshopProject.update({
+        await brainDb.workshopProject.update({
           where: { id: input.targetId },
           data: { imageGallery: gallery as Prisma.InputJsonValue },
         });
@@ -188,17 +192,18 @@ export async function adoptAssetToTarget(
   }
 
   if (input.targetType === "capture") {
-    await db.captureEntry.update({
+    await brainDb.captureEntry.update({
       where: { id: input.targetId },
       data: { status: "linked" },
     });
   }
 
-  return listAssetLinksForAsset(db, input.assetId);
+  return listAssetLinksForAsset(db, brainDb, input.assetId);
 }
 
 export async function syncImageStudioProjectLinksToAsset(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   projectId: string,
   assetId: string,
 ) {
@@ -213,7 +218,7 @@ export async function syncImageStudioProjectLinksToAsset(
 
   for (const link of project.links) {
     if (link.targetType === "page" || link.targetType === "handout") {
-      await linkAssetToTarget(db, {
+      await linkAssetToTarget(db, brainDb, {
         assetId,
         targetType: "page",
         targetId: link.targetId,
@@ -225,7 +230,7 @@ export async function syncImageStudioProjectLinksToAsset(
       link.targetType === "hardware_device" ||
       link.targetType === "contract_expense"
     ) {
-      await linkAssetToTarget(db, {
+      await linkAssetToTarget(db, brainDb, {
         assetId,
         targetType: link.targetType,
         targetId: link.targetId,

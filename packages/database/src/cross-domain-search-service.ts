@@ -58,7 +58,7 @@ export async function searchStudioCrossDomain(
       ? searchGlobalForDm(db, { query, ...options.wiki })
       : Promise.resolve([]),
     includeAdmin
-      ? searchAdminEntities(db, { query, ...options.admin })
+      ? searchAdminEntities(db, brainDb, { query, ...options.admin })
       : Promise.resolve([]),
     includeMedia
       ? searchStudioMedia(db, { query, worldSlug, limit: 24 })
