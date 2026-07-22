@@ -148,18 +148,19 @@ existieren dann nicht mehr am Core-Client). Reihenfolge:
   `createLifeAdminSubServices` auf **Zwei-Client** umstellen (`brainDb`,
   `coreDb`): Leaf-Subservices an `brainDb`, der gemischte `links`-Resolver an
   beide.
-- **C — restliche Cross-DB-Services (Zwei-Client + opake-ID-Join):** `backup`
-  `collect`/`restore`, `calendar-aggregation-service`,
-  `admin-entity-link-resolver`, `admin-search-service`,
-  `entity-tag-search-service`, `tag-service`, `asset-link-service`,
-  `mail-compose-service`, `mail-recipient-service`,
+- **C — restliche Cross-DB-Services (Zwei-Client + opake-ID-Join):**
+  `calendar-aggregation-service`, `admin-entity-link-resolver`,
+  `admin-search-service`, `entity-tag-search-service`, `tag-service`,
+  `asset-link-service`, `mail-compose-service`, `mail-recipient-service`,
   `maintenance/log-retention-service`, `undo-service`,
   `secrets-status-service`, `admin-status`, `stress-seed`,
   `apps/studio/app/integration-actions.ts`, `kitchen/recipe-service`
   (+`apps/studio/app/kitchen/recipe-image-file.ts`),
   `scan-inbox/scan-service` (+`apps/studio/app/scan-inbox/scan-file.ts`).
-  (`life-admin-links-service` und `calendar-service` sind bereits erledigt —
-  Vorlage für das Muster.) **Muster:** Brain-Zeilen über `brainPrisma`
+  (`life-admin-links-service`, `calendar-service` und `backup` collect/restore
+  sind bereits erledigt — Vorlage für das Muster; backup zeigt zusätzlich das
+  Dual-Store-Muster mit zwei getrennten Full-Reads.) **Muster:** Brain-Zeilen
+  über `brainPrisma`
   lesen/schreiben; die referenzierte Core-Entität über die **opake ID**
   (`worldId`/`pageId`/`userId`/`sessionId`) separat am Core-Client nachladen.
   Keine DB-übergreifende FK, kein Dual-Store-Client in einer einzelnen Query.
