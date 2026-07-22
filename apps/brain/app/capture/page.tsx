@@ -1,4 +1,5 @@
 import { createLifeAdminService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainNav } from "@/src/components/BrainNav";
 
@@ -27,7 +28,7 @@ export default async function BrainCapturePage() {
     );
   }
 
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const captures = await service.listCaptures();
 
   return (

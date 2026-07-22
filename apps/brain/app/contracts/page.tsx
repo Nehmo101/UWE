@@ -1,4 +1,5 @@
 import { createLifeAdminService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
@@ -23,7 +24,7 @@ export default async function BrainContractsPage() {
     );
   }
 
-  const expenses = await createLifeAdminService(prisma).listContractExpenses();
+  const expenses = await createLifeAdminService(brainPrisma, prisma).listContractExpenses();
 
   return (
     <BrainShell active="/contracts" title="Verträge & Kosten">

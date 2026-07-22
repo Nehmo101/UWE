@@ -1,4 +1,5 @@
 import { createLifeAdminService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
@@ -14,7 +15,7 @@ export default async function BrainWorkshopPage() {
     );
   }
 
-  const projects = await createLifeAdminService(prisma).listWorkshopProjects();
+  const projects = await createLifeAdminService(brainPrisma, prisma).listWorkshopProjects();
 
   return (
     <BrainShell active="/workshop" title="Werkstatt">

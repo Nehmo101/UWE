@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getCurrentUser } from "@/src/lib/auth";
 import { isBrainOwner } from "@/src/lib/owner";
 import { BrainNav } from "@/src/components/BrainNav";
@@ -37,7 +38,7 @@ export default async function BrainLifeBrainPage() {
     );
   }
 
-  const service = createLifeAdminService(prisma);
+  const service = createLifeAdminService(brainPrisma, prisma);
   const [documents, facts] = await Promise.all([
     service.listPersonalBrainDocuments({ limit: 100 }),
     service.listPersonalBrainFacts({ limit: 100 }),

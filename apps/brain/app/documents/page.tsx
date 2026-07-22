@@ -1,4 +1,5 @@
-import { createDocumentTemplateService, prisma } from "@uwe/database/server";
+import { createDocumentTemplateService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
@@ -19,7 +20,7 @@ export default async function BrainDocumentsPage() {
     );
   }
 
-  const templates = await createDocumentTemplateService(prisma).listTemplates();
+  const templates = await createDocumentTemplateService(brainPrisma).listTemplates();
 
   return (
     <BrainShell active="/documents" title="Dokumente & Vorlagen">

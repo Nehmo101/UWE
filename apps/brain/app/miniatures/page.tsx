@@ -1,4 +1,5 @@
-import { createMiniatureCollectionService, prisma } from "@uwe/database/server";
+import { createMiniatureCollectionService } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
@@ -14,7 +15,7 @@ export default async function BrainMiniaturesPage() {
     );
   }
 
-  const items = await createMiniatureCollectionService(prisma).listItems();
+  const items = await createMiniatureCollectionService(brainPrisma).listItems();
 
   return (
     <BrainShell active="/miniatures" title="Miniaturen-Sammlung">

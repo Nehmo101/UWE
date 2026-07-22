@@ -1,5 +1,7 @@
-import type { AdminLinkSourceType, AdminLinkTargetType, Prisma } from "../generated/prisma/client";
+import type { Prisma } from "../generated/prisma/client";
+import type { AdminLinkSourceType, AdminLinkTargetType } from "../generated/prisma-brain/client";
 import type { PrismaClient } from "../client";
+import type { BrainPrismaClient } from "../brain-client";
 import { DEFAULT_GENERATOR_PRESETS } from "../generator-service";
 import { toPrismaJsonValue } from "../json-utils";
 import type {
@@ -8,14 +10,23 @@ import type {
   CreateGeneratorPresetInput,
 } from "./life-admin-types";
 
+/**
+ * Cross-DB resolver: admin-links and their capture rows are owner-private Brain
+ * (`brainDb`, uwe-brain.db); the world-scoped generator presets/outputs are
+ * D&D core (`coreDb`, uwe.db). Each method routes to exactly one store — the
+ * link tables never join across the DB boundary (targets are opaque IDs).
+ */
 export class LifeAdminLinksService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly brainDb: BrainPrismaClient,
+    private readonly coreDb: PrismaClient,
+  ) {}
 
   async listLinkedCapturesForTarget(
     targetType: AdminLinkTargetType,
     targetId: string,
   ) {
-    const links = await this.db.adminEntityLink.findMany({
+    const links = await this.brainDb.adminEntityLink.findMany({
       where: {
         targetType,
         targetId,
@@ -28,14 +39,14 @@ export class LifeAdminLinksService {
       return [];
     }
 
-    return this.db.captureEntry.findMany({
+    return this.brainDb.captureEntry.findMany({
       where: { id: { in: links.map((link) => link.sourceId) } },
       orderBy: [{ capturedAt: "desc" }],
     });
   }
 
   async ensureDefaultGeneratorPresets() {
-    const existing = await this.db.generatorPreset.findMany({
+    const existing = await this.coreDb.generatorPreset.findMany({
       where: { isSystem: true },
       select: { name: true },
     });
@@ -48,7 +59,7 @@ export class LifeAdminLinksService {
       return existing.length;
     }
 
-    await this.db.generatorPreset.createMany({
+    await this.coreDb.generatorPreset.createMany({
       data: missing.map(({ preset, index }) => ({
         name: preset.name,
         description: preset.description,
@@ -63,7 +74,7 @@ export class LifeAdminLinksService {
   }
 
   async createAdminLink(input: CreateAdminLinkInput) {
-    return this.db.adminEntityLink.create({
+    return this.brainDb.adminEntityLink.create({
       data: {
         sourceType: input.sourceType,
         sourceId: input.sourceId,
@@ -76,21 +87,21 @@ export class LifeAdminLinksService {
   }
 
   async listLinksForSource(sourceType: AdminLinkSourceType, sourceId: string) {
-    return this.db.adminEntityLink.findMany({
+    return this.brainDb.adminEntityLink.findMany({
       where: { sourceType, sourceId },
       orderBy: [{ createdAt: "desc" }],
     });
   }
 
   async listLinksForTarget(targetType: AdminLinkTargetType, targetId: string) {
-    return this.db.adminEntityLink.findMany({
+    return this.brainDb.adminEntityLink.findMany({
       where: { targetType, targetId },
       orderBy: [{ createdAt: "desc" }],
     });
   }
 
   async listGeneratorPresets(options: { worldId?: string | null; targetType?: string } = {}) {
-    return this.db.generatorPreset.findMany({
+    return this.coreDb.generatorPreset.findMany({
       where: {
         worldId: options.worldId === null ? null : options.worldId,
         targetType: options.targetType,
@@ -100,11 +111,11 @@ export class LifeAdminLinksService {
   }
 
   async getGeneratorPreset(id: string) {
-    return this.db.generatorPreset.findUnique({ where: { id } });
+    return this.coreDb.generatorPreset.findUnique({ where: { id } });
   }
 
   async createGeneratorPreset(input: CreateGeneratorPresetInput) {
-    return this.db.generatorPreset.create({
+    return this.coreDb.generatorPreset.create({
       data: {
         worldId: input.worldId ?? undefined,
         name: input.name,
@@ -124,7 +135,7 @@ export class LifeAdminLinksService {
     contextId?: string;
     limit?: number;
   } = {}) {
-    return this.db.generatorOutput.findMany({
+    return this.coreDb.generatorOutput.findMany({
       where: {
         worldId: options.worldId,
         pageId: options.pageId,
@@ -137,7 +148,7 @@ export class LifeAdminLinksService {
   }
 
   async createGeneratorOutput(input: CreateGeneratorOutputInput) {
-    return this.db.generatorOutput.create({
+    return this.coreDb.generatorOutput.create({
       data: {
         worldId: input.worldId ?? undefined,
         pageId: input.pageId ?? undefined,
