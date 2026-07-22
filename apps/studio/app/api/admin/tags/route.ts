@@ -9,6 +9,7 @@ import {
   prisma,
   suggestTagMerges,
 } from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
 
@@ -31,12 +32,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const worldId = searchParams.get("worldId") ?? undefined;
 
-  const tags = createTagService(prisma);
+  const tags = createTagService(brainPrisma, prisma);
   const inventory = await tags.collectInventory(worldId ? { worldId } : {});
   const suggestions = suggestTagMerges(inventory);
   const unused = tags.findUnused(inventory);
   const similar = tags.findSimilarGroups(inventory);
-  const coverage = await getTagCoverageStats(prisma, worldId ? { worldId } : {});
+  const coverage = await getTagCoverageStats(prisma, brainPrisma, worldId ? { worldId } : {});
 
   const repo = getAppRepository();
   const worlds = await repo.listWorlds();
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "backfill") {
-    const result = await backfillEntityTagsFromJson(prisma, {
+    const result = await backfillEntityTagsFromJson(prisma, brainPrisma, {
       worldId: body.worldId ?? undefined,
       dryRun: body.dryRun === true,
     });
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     return jsonError("fromTags is required", 400);
   }
 
-  const tags = createTagService(prisma);
+  const tags = createTagService(brainPrisma, prisma);
   const result = await tags.merge({
     worldId: body.worldId ?? undefined,
     fromTags,

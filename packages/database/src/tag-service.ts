@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client";
+import type { BrainPrismaClient } from "./brain-client";
 import type { EntityTagEntityType } from "./generated/prisma/client";
 import { createEntityTagService } from "./entity-tag-service";
 import { asMetadataRecord, parseStringArray, parseTagsFromMetadata, toPrismaJsonValue } from "./json-utils";
@@ -133,6 +134,7 @@ interface JsonTagEntityRow {
 
 async function loadJsonTagEntities(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   entityType: TagBackfillEntityType,
   worldId?: string,
 ): Promise<JsonTagEntityRow[]> {
@@ -166,15 +168,15 @@ async function loadJsonTagEntities(
         select: { id: true, title: true, tags: true, worldId: true },
       });
     case "personal_brain_document":
-      return db.personalBrainDocument.findMany({
+      return brainDb.personalBrainDocument.findMany({
         select: { id: true, title: true, tags: true },
       });
     case "personal_brain_fact":
-      return db.personalBrainFact.findMany({
+      return brainDb.personalBrainFact.findMany({
         select: { id: true, title: true, tags: true },
       });
     case "capture":
-      return db.captureEntry
+      return brainDb.captureEntry
         .findMany({
           where: worldId ? { worldId } : undefined,
           select: { id: true, title: true, metadata: true, worldId: true },
@@ -188,7 +190,7 @@ async function loadJsonTagEntities(
           })),
         );
     case "project":
-      return db.personalProject
+      return brainDb.personalProject
         .findMany({
           where: worldId ? { worldId } : undefined,
           select: { id: true, name: true, metadata: true, worldId: true },
@@ -202,7 +204,7 @@ async function loadJsonTagEntities(
           })),
         );
     case "workshop":
-      return db.workshopProject
+      return brainDb.workshopProject
         .findMany({
           where: worldId ? { worldId } : undefined,
           select: { id: true, title: true, metadata: true, worldId: true },
@@ -216,7 +218,7 @@ async function loadJsonTagEntities(
           })),
         );
     case "contract":
-      return db.contractExpense.findMany({
+      return brainDb.contractExpense.findMany({
         select: { id: true, name: true, metadata: true },
       }).then((rows) =>
         rows.map((row) => ({
@@ -227,7 +229,7 @@ async function loadJsonTagEntities(
         })),
       );
     case "hardware":
-      return db.hardwareDevice.findMany({
+      return brainDb.hardwareDevice.findMany({
         select: { id: true, name: true, metadata: true },
       }).then((rows) =>
         rows.map((row) => ({
@@ -343,6 +345,7 @@ function mergeTagInventories(
 
 async function collectJsonGapTagInventory(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: { worldId?: string } = {},
 ): Promise<TagInventoryEntry[]> {
   const worldId = options.worldId;
@@ -374,7 +377,7 @@ async function collectJsonGapTagInventory(
 
   for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
     const taggedEntityIds = await loadEntityIdsWithEntityTags(db, entityType, worldId);
-    const rows = await loadJsonTagEntities(db, entityType, worldId);
+    const rows = await loadJsonTagEntities(db, brainDb, entityType, worldId);
 
     for (const row of rows) {
       if (taggedEntityIds.has(row.id)) {
@@ -398,6 +401,7 @@ async function collectJsonGapTagInventory(
 
 async function mergeMetadataEntityTags(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   entityType: Extract<
     TagBackfillEntityType,
     "capture" | "project" | "workshop" | "contract" | "hardware" | "dev_idea"
@@ -412,7 +416,7 @@ async function mergeMetadataEntityTags(
   const skipJsonWrite = isEntityTagsPrimaryMode();
 
   if (entityType === "capture") {
-    const rows = await db.captureEntry.findMany({
+    const rows = await brainDb.captureEntry.findMany({
       where: options.worldId ? { worldId: options.worldId } : undefined,
       select: { id: true, metadata: true, worldId: true },
     });
@@ -427,7 +431,7 @@ async function mergeMetadataEntityTags(
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       if (!skipJsonWrite) {
-        await db.captureEntry.update({
+        await brainDb.captureEntry.update({
           where: { id: row.id },
           data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
         });
@@ -439,7 +443,7 @@ async function mergeMetadataEntityTags(
   }
 
   if (entityType === "project") {
-    const rows = await db.personalProject.findMany({
+    const rows = await brainDb.personalProject.findMany({
       where: options.worldId ? { worldId: options.worldId } : undefined,
       select: { id: true, metadata: true, worldId: true },
     });
@@ -454,7 +458,7 @@ async function mergeMetadataEntityTags(
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       if (!skipJsonWrite) {
-        await db.personalProject.update({
+        await brainDb.personalProject.update({
           where: { id: row.id },
           data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
         });
@@ -466,7 +470,7 @@ async function mergeMetadataEntityTags(
   }
 
   if (entityType === "workshop") {
-    const rows = await db.workshopProject.findMany({
+    const rows = await brainDb.workshopProject.findMany({
       where: options.worldId ? { worldId: options.worldId } : undefined,
       select: { id: true, metadata: true, worldId: true },
     });
@@ -481,7 +485,7 @@ async function mergeMetadataEntityTags(
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       if (!skipJsonWrite) {
-        await db.workshopProject.update({
+        await brainDb.workshopProject.update({
           where: { id: row.id },
           data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
         });
@@ -493,7 +497,7 @@ async function mergeMetadataEntityTags(
   }
 
   if (entityType === "contract") {
-    const rows = await db.contractExpense.findMany({
+    const rows = await brainDb.contractExpense.findMany({
       select: { id: true, metadata: true },
     });
     for (const row of rows) {
@@ -507,7 +511,7 @@ async function mergeMetadataEntityTags(
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       if (!skipJsonWrite) {
-        await db.contractExpense.update({
+        await brainDb.contractExpense.update({
           where: { id: row.id },
           data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
         });
@@ -519,7 +523,7 @@ async function mergeMetadataEntityTags(
   }
 
   if (entityType === "hardware") {
-    const rows = await db.hardwareDevice.findMany({
+    const rows = await brainDb.hardwareDevice.findMany({
       select: { id: true, metadata: true },
     });
     for (const row of rows) {
@@ -533,7 +537,7 @@ async function mergeMetadataEntityTags(
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       if (!skipJsonWrite) {
-        await db.hardwareDevice.update({
+        await brainDb.hardwareDevice.update({
           where: { id: row.id },
           data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
         });
@@ -572,6 +576,7 @@ async function mergeMetadataEntityTags(
 
 async function collectEntityTagInventory(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: { worldId?: string } = {},
 ): Promise<TagInventoryEntry[]> {
   const worldId = options.worldId;
@@ -584,7 +589,7 @@ async function collectEntityTagInventory(
   const entityMeta = new Map<string, JsonTagEntityRow>();
 
   for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
-    for (const row of await loadJsonTagEntities(db, entityType, worldId)) {
+    for (const row of await loadJsonTagEntities(db, brainDb, entityType, worldId)) {
       entityMeta.set(`${entityType}:${row.id}`, row);
     }
   }
@@ -691,11 +696,12 @@ function replaceTagsByNormalizedKeys(
 
 export async function collectTagInventory(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: { worldId?: string } = {},
 ): Promise<TagInventoryEntry[]> {
   const [entityInventory, jsonGapInventory] = await Promise.all([
-    collectEntityTagInventory(db, options),
-    collectJsonGapTagInventory(db, options),
+    collectEntityTagInventory(db, brainDb, options),
+    collectJsonGapTagInventory(db, brainDb, options),
   ]);
   return mergeTagInventories(entityInventory, jsonGapInventory);
 }
@@ -785,6 +791,7 @@ export function suggestTagMerges(inventory: TagInventoryEntry[]): TagMergeSugges
 
 export async function mergeTags(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: {
     worldId?: string;
     fromTags: string[];
@@ -859,7 +866,7 @@ export async function mergeTags(
     }
   }
 
-  const brainDocs = await db.personalBrainDocument.findMany({ select: { id: true, tags: true } });
+  const brainDocs = await brainDb.personalBrainDocument.findMany({ select: { id: true, tags: true } });
   for (const doc of brainDocs) {
     const tags = await resolveEntityTagsForMerge(
       db,
@@ -870,7 +877,7 @@ export async function mergeTags(
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       if (!isEntityTagsPrimaryMode()) {
-        await db.personalBrainDocument.update({
+        await brainDb.personalBrainDocument.update({
           where: { id: doc.id },
           data: { tags: toPrismaJsonValue(next) },
         });
@@ -880,7 +887,7 @@ export async function mergeTags(
     }
   }
 
-  const brainFacts = await db.personalBrainFact.findMany({ select: { id: true, tags: true } });
+  const brainFacts = await brainDb.personalBrainFact.findMany({ select: { id: true, tags: true } });
   for (const fact of brainFacts) {
     const tags = await resolveEntityTagsForMerge(
       db,
@@ -891,7 +898,7 @@ export async function mergeTags(
     const next = replaceTagsByNormalizedKeys(tags, fromKeys, toTag);
     if (next) {
       if (!isEntityTagsPrimaryMode()) {
-        await db.personalBrainFact.update({
+        await brainDb.personalBrainFact.update({
           where: { id: fact.id },
           data: { tags: toPrismaJsonValue(next) },
         });
@@ -910,7 +917,7 @@ export async function mergeTags(
     "dev_idea",
   ] as const;
   for (const entityType of metadataEntityTypes) {
-    updatedEntities += await mergeMetadataEntityTags(db, entityType, {
+    updatedEntities += await mergeMetadataEntityTags(db, brainDb, entityType, {
       worldId: options.worldId,
       fromKeys,
       toTag,
@@ -926,6 +933,7 @@ export async function mergeTags(
 
 export async function backfillEntityTagsFromJson(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: { worldId?: string; dryRun?: boolean } = {},
 ): Promise<BackfillEntityTagsResult> {
   const entityTags = createEntityTagService(db);
@@ -937,7 +945,7 @@ export async function backfillEntityTagsFromJson(
   };
 
   for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
-    const rows = await loadJsonTagEntities(db, entityType, options.worldId);
+    const rows = await loadJsonTagEntities(db, brainDb, entityType, options.worldId);
     for (const row of rows) {
       const tags = parseStringArray(row.tags);
       if (tags.length === 0) continue;
@@ -984,6 +992,7 @@ export async function backfillEntityTagsFromJson(
  */
 export async function verifyTagBackfill(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: { worldId?: string } = {},
 ): Promise<TagBackfillVerificationResult> {
   const types: TagBackfillVerificationTypeResult[] = [];
@@ -992,7 +1001,7 @@ export async function verifyTagBackfill(
   let totalMissingLinks = 0;
 
   for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
-    const rows = await loadJsonTagEntities(db, entityType, options.worldId);
+    const rows = await loadJsonTagEntities(db, brainDb, entityType, options.worldId);
     const links = await db.entityTag.findMany({
       where: { entityType },
       select: { entityId: true, tag: { select: { key: true } } },
@@ -1054,12 +1063,13 @@ export async function verifyTagBackfill(
 
 export async function getTagCoverageStats(
   db: PrismaClient,
+  brainDb: BrainPrismaClient,
   options: { worldId?: string } = {},
 ): Promise<TagCoverageStats> {
   const types: TagCoverageTypeStats[] = [];
 
   for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
-    const rows = await loadJsonTagEntities(db, entityType, options.worldId);
+    const rows = await loadJsonTagEntities(db, brainDb, entityType, options.worldId);
     const entityIds = rows.map((row) => row.id);
     const jsonTagged = rows.filter((row) => parseStringArray(row.tags).length > 0).length;
 
@@ -1094,18 +1104,18 @@ export async function getTagCoverageStats(
   return { types, totalTags, totalEntityTags };
 }
 
-export function createTagService(db: PrismaClient) {
+export function createTagService(brainDb: BrainPrismaClient, db: PrismaClient) {
   return {
-    collectInventory: (options?: { worldId?: string }) => collectTagInventory(db, options),
+    collectInventory: (options?: { worldId?: string }) => collectTagInventory(db, brainDb, options),
     findSimilarGroups: findSimilarTagGroups,
     findUnused: findUnusedTags,
     suggestMerges: suggestTagMerges,
     merge: (options: { worldId?: string; fromTags: string[]; toTag: string }) =>
-      mergeTags(db, options),
+      mergeTags(db, brainDb, options),
     backfillFromJson: (options?: { worldId?: string; dryRun?: boolean }) =>
-      backfillEntityTagsFromJson(db, options),
-    verifyBackfill: (options?: { worldId?: string }) => verifyTagBackfill(db, options),
-    getCoverageStats: (options?: { worldId?: string }) => getTagCoverageStats(db, options),
+      backfillEntityTagsFromJson(db, brainDb, options),
+    verifyBackfill: (options?: { worldId?: string }) => verifyTagBackfill(db, brainDb, options),
+    getCoverageStats: (options?: { worldId?: string }) => getTagCoverageStats(db, brainDb, options),
     normalizeKey: normalizeTagKey,
     canonicalize: canonicalizeTag,
   };
