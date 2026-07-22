@@ -212,7 +212,7 @@ verifiziert — folgende Teilmenge umgesetzt:
 | **Brain-Sichtbarkeit** | Landing (3. Karte), `/system/cloudflare`, Owner-Setup/Onboarding, Command Center. |
 | **Deploy-Grenze** | `check-cloudflare-tunnel.sh`-Guard gegen :3002/Brain-Hostname; kein systemd/Tunnel/Firewall-Eintrag. |
 | **Audience-Guard** (Welle 3) | `UweAppSurface += brain`, `evaluateBrainMiddleware` (owner-only, deny-by-default; Rolle server-side). Studio/Portal unverändert. |
-| **Routen-Migration** (Welle 4) | `/life-brain`, `/today`, `/capture` als schlanke Brain-Pages (lesen geteilte `@uwe/database`-Services) + Brain-Nav; Resolver/Command Center auf echten :3002. Studio-Routen bleiben (Übergang). |
+| **Routen-Migration** (Welle 4) | 11 Brain-Bereiche als schlanke Pages (lesen geteilte `@uwe/database`-Services, owner-gated, BrainShell/Nav): `/life-brain`, `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/mail`, `/calendar`, `/miniatures`, `/documents`. Gesamte App baut für Produktion. Resolver/Command Center auf echten :3002. Studio-Routen bleiben (Übergang). Offen: `/kitchen`, `/scan-inbox`, `/search` (keine Server-Service-Factory bzw. contested). |
 | **Daten-Export** (Welle 5, Teil) | `collectBrainExport` (@uwe/backup, read-only, 45 Modelle, an Contracts gepinnt) + Cutover-Runbook. |
 
 Nach Owner-GO umgesetzt (additiv/verifiziert). Der **destruktive Cutover**
