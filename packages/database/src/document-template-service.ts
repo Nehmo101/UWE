@@ -3,16 +3,16 @@ import type {
   DocumentTemplateCategory,
   PersonalBrainDocument,
   PrismaClient,
-} from "./generated/prisma/client";
+} from "./generated/prisma-brain/client";
 import { toPrismaJsonValue } from "./json-utils";
 import { PERSONAL_BRAIN_CATEGORIES } from "./personal-brain-constants";
 
 export type {
   DocumentTemplate,
   DocumentTemplateCategory,
-} from "./generated/prisma/client";
+} from "./generated/prisma-brain/client";
 
-export { DocumentTemplateCategory as DocumentTemplateCategoryEnum } from "./generated/prisma/client";
+export { DocumentTemplateCategory as DocumentTemplateCategoryEnum } from "./generated/prisma-brain/client";
 
 export const DOCUMENT_TEMPLATE_CATEGORY_LABELS: Record<DocumentTemplateCategory, string> = {
   contract: "Vertrag",

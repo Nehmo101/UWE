@@ -1,10 +1,5 @@
-import type {
-  ContractBillingInterval,
-  ContractExpense,
-  ContractExpenseType,
-  ContractStatus,
-} from "./generated/prisma/client";
-import type { PrismaClient } from "./client";
+import type { ContractBillingInterval, ContractExpense, ContractExpenseType, ContractStatus } from "./generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
 import {
   BILLING_INTERVAL_LABELS,
   buildContractAlerts,

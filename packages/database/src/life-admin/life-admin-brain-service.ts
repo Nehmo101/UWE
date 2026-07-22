@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../client";
+import type { BrainPrismaClient as PrismaClient } from "../brain-client";
 import {
   buildLifeBrainContentFromCapture,
   resolveBrainCategoryForCaptureType,

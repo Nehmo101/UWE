@@ -1,5 +1,5 @@
-import type { PersonalProjectCategory, PersonalProjectStatus } from "../generated/prisma/client";
-import type { PrismaClient } from "../client";
+import type { PersonalProjectCategory, PersonalProjectStatus } from "../generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "../brain-client";
 import { toPrismaJsonValue } from "../json-utils";
 import type { LifeAdminLinksService } from "./life-admin-links-service";
 import {

@@ -1,5 +1,5 @@
-import type { ResearchContextMode, ResearchSessionStatus } from "./generated/prisma/client";
-import type { PrismaClient } from "./client";
+import type { ResearchContextMode, ResearchSessionStatus } from "./generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "./brain-client";
 
 const DM_ONLY_MARKERS = [/dm_only/i, /dm-only/i, /geheim/i, /secret level/i];
 

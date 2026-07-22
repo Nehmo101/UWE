@@ -1,8 +1,5 @@
-import type {
-  ContractExpenseSource,
-  ContractStatus,
-} from "../generated/prisma/client";
-import type { PrismaClient } from "../client";
+import type { ContractExpenseSource, ContractStatus } from "../generated/prisma-brain/client";
+import type { BrainPrismaClient as PrismaClient } from "../brain-client";
 import {
   buildAiUsageContractName,
   createAiUsageRollupService,
