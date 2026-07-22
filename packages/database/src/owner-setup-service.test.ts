@@ -31,9 +31,15 @@ describe("owner setup service", () => {
     assertOwnerSetupHasNoSecrets(snapshot, env);
     assert.equal(snapshot.canEdit, true);
     assert.equal(snapshot.role, "owner");
-    assert.equal(snapshot.sections.length, 7);
+    assert.equal(snapshot.sections.length, 8);
     assert.ok(snapshot.sections.some((section) => section.id === "mail"));
     assert.ok(snapshot.sections.some((section) => section.id === "cloudflare"));
+
+    // Brain appears as its own owner-only section and is never publicly exposed.
+    const brain = snapshot.sections.find((section) => section.id === "brain");
+    assert.ok(brain);
+    assert.equal(brain.title, "Brain (privat)");
+    assert.ok(brain.settings.some((item) => item.id === "brain-tunnel"));
 
     const serialized = JSON.stringify(snapshot);
     assert.ok(!serialized.includes("test-smtp-secret-do-not-leak"));
