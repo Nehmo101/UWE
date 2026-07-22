@@ -131,7 +131,26 @@ gepinnt — ein neues Brain-Modell kann nicht stillschweigend entkommen.
   (`scripts/repoint-brain-app-pages.mjs` + calendar/mail von Hand). Zwei-Client-
   Seiten reichen `(brainPrisma, prisma)`, Single-Client `brainPrisma`.
 
-## Stufe 6 — restliche Service-Repoint-Worklist (Host-geführt)
+## Stufe 6 — Service-Repoint: Stand
+
+**Der Service-Repoint ist im Nicht-Test-Code abgeschlossen (blind):** ein
+verifizierter Voll-Scan über `packages/` + `apps/` findet **0** Brain-Delegate-
+Zugriffe mehr über den Core-Client. Jeder Zugriff läuft über den Brain-Client —
+per aliasiertem `PrismaClient` (pure-brain-Services), per `prisma-brain/client`-
+Typ, per `brainDb`-Parameter (Zwei-Client-Services) oder per `brainPrisma`-
+Singleton (Call-Sites). Aggregatoren (`life-admin`), alle Cross-DB-Resolver
+(tag/search/admin-links/asset/undo/calendar/backup/…) und die ~160 Produktions-
+Call-Sites sind gefädelt.
+
+**Verbleibend (bewusst offen):**
+- **Test-Harness-Ripple:** Test-Aufrufer der zweiklientigen Factories brauchen
+  einen Test-Brain-DB-Client (`applySqliteTestMigrations` gegen `uwe-brain.db`).
+- **Barrel-Brain-Typ-Importe (A):** einzelne Packages importieren Brain-*Modell-
+  typen* aus `@uwe/database/server`; nach dem Split kommen die aus dem Brain-
+  Client — `pnpm typecheck` auf dem Host zeigt jede Stelle.
+- **Mail-Boundary (E)** und **Cutover-Drop (F/Stufe 9)** — siehe unten.
+
+## Stufe 6 — Detail-Worklist (ursprünglich, Host-geführt)
 
 Alles Folgende ist **nicht** blind ausgeführt, weil es echte Zwei-Client-
 Design-Entscheidungen (DB-übergreifende Joins) bzw. eine offene
