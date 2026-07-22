@@ -28,8 +28,16 @@ ingress:
     path: /portal
     service: http://127.0.0.1:3001
   # Apex root = the public landing page, served by the Studio app. Its
-  # /api/auth/enter signs the visitor in (Studio or Portal target) and, with a
-  # domain-wide session cookie, the redirect to studio./portal. stays logged in.
+  # /api/auth/enter signs the visitor in (Studio, Portal or Brain target) and,
+  # with a domain-wide session cookie, the redirect to studio./portal. stays
+  # logged in. The landing's Brain card is owner-only and local — see below.
   - hostname: uweanddragons.org
     service: http://127.0.0.1:3000
+  # DO NOT add a Brain ingress here. The owner-only Brain surface (Daily Admin OS
+  # + Personal Brain, later on :3002) is local/LAN only per ADR 004/007 and must
+  # never be publicly exposed. Reach it over the LAN / a local reverse proxy
+  # instead, e.g. (kept commented — never uncomment into the public tunnel):
+  #   # brain.lan  ->  http://127.0.0.1:3002   (LAN-only reverse proxy, NOT here)
+  # deploy/scripts/check-cloudflare-tunnel.sh fails hard if :3002 or a brain
+  # hostname ever appears in this file.
   - service: http_status:404

@@ -3,6 +3,7 @@
 import { SettingsService, prisma } from "@uwe/database/server";
 import {
   buildDeploymentSettingsUpdate,
+  type BrainExposure,
   type DeploymentOverride,
   type DeploymentSettingsInput,
 } from "@uwe/database/deployment";
@@ -21,6 +22,11 @@ function parseText(value: FormDataEntryValue | null): string {
 
 function parseCheckbox(value: FormDataEntryValue | null): boolean {
   return value === "on" || value === "true" || value === "1";
+}
+
+// Brain is never public — only loopback/lan/off are accepted; anything else is loopback.
+function parseBrainExposure(value: FormDataEntryValue | null): BrainExposure {
+  return value === "lan" || value === "off" ? value : "loopback";
 }
 
 export async function updateDeploymentConfigAction(formData: FormData): Promise<void> {
@@ -45,6 +51,9 @@ export async function updateDeploymentConfigAction(formData: FormData): Promise<
     turnstileSiteKey: parseText(formData.get("turnstileSiteKey")),
     turnstileSecret: parseText(formData.get("turnstileSecret")),
     clearTurnstileSecret: parseCheckbox(formData.get("clearTurnstileSecret")),
+    brainUrl: parseText(formData.get("brainUrl")),
+    brainPath: parseText(formData.get("brainPath")),
+    brainExposure: parseBrainExposure(formData.get("brainExposure")),
   };
 
   const deployment = buildDeploymentSettingsUpdate(input, current.deployment);

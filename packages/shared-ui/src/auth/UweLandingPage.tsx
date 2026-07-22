@@ -32,17 +32,29 @@ import {
  * single sign-in here is valid on studio. and portal.uweanddragons.org (SSO).
  */
 
-type View = "choose" | "studio" | "portal";
+type View = "choose" | "studio" | "portal" | "brain";
 
 export interface UweLandingPageProps {
   /** Absolute base URL of the Studio app (its own origin/subdomain). */
   studioAppUrl: string;
   /** Absolute base URL of the Portal app (its own origin/subdomain). */
   portalAppUrl: string;
+  /**
+   * Absolute base URL of the owner-only Brain surface. Today this shares the
+   * Studio origin (Brain routes live in the Studio app); later it can point at
+   * a dedicated local/LAN origin. Brain is never part of the public tunnel.
+   */
+  brainAppUrl: string;
   /** Cloudflare Turnstile site key — when set, sign-in requires a human check. */
   turnstileSiteKey?: string | null;
   /** RTX host reachability shown in the topbar status pill. Defaults to true. */
   rtxOnline?: boolean;
+  /**
+   * Whether to show the owner-only Brain card. Defaults to true. A deployment
+   * that wants Brain hidden from the public entry can pass false (e.g. show it
+   * only on LAN) without changing the component contract.
+   */
+  brainVisible?: boolean;
 }
 
 /**
@@ -94,8 +106,10 @@ const ctaBaseStyle: CSSProperties = {
 export function UweLandingPage({
   studioAppUrl,
   portalAppUrl,
+  brainAppUrl,
   turnstileSiteKey,
   rtxOnline = true,
+  brainVisible = true,
 }: UweLandingPageProps) {
   const [view, setView] = useState<View>("choose");
   const [isPhone, setIsPhone] = useState(false);
@@ -214,11 +228,16 @@ export function UweLandingPage({
         }}
       >
         {view === "choose" ? (
-          <ChooseView onOpenStudio={() => setView("studio")} onOpenPortal={() => setView("portal")} />
+          <ChooseView
+            onOpenStudio={() => setView("studio")}
+            onOpenPortal={() => setView("portal")}
+            onOpenBrain={() => setView("brain")}
+            brainVisible={brainVisible}
+          />
         ) : (
           <UweLandingLoginCard
             target={view}
-            appUrl={view === "studio" ? studioAppUrl : portalAppUrl}
+            appUrl={view === "studio" ? studioAppUrl : view === "brain" ? brainAppUrl : portalAppUrl}
             turnstileSiteKey={turnstileSiteKey}
             onBack={() => setView("choose")}
           />
@@ -254,9 +273,13 @@ export function UweLandingPage({
 function ChooseView({
   onOpenStudio,
   onOpenPortal,
+  onOpenBrain,
+  brainVisible,
 }: {
   onOpenStudio: () => void;
   onOpenPortal: () => void;
+  onOpenBrain: () => void;
+  brainVisible: boolean;
 }) {
   return (
     <>
@@ -300,16 +323,17 @@ function ChooseView({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
           gap: "clamp(16px, 3vw, 24px)",
           justifyContent: "center",
           marginTop: "clamp(32px, 6vh, 56px)",
           width: "100%",
-          maxWidth: "920px",
+          maxWidth: brainVisible ? "1200px" : "920px",
         }}
       >
         <StudioCard onOpen={onOpenStudio} />
         <PortalCard onOpen={onOpenPortal} />
+        {brainVisible ? <BrainCard onOpen={onOpenBrain} /> : null}
       </div>
     </>
   );
@@ -481,6 +505,96 @@ function PortalCard({ onOpen }: { onOpen: () => void }) {
         }}
       >
         Portal öffnen →
+      </div>
+    </div>
+  );
+}
+
+// Owner-only private area (Daily Admin OS + Personal Brain). It lives inside the
+// Studio origin today; the card makes the target three-product split visible.
+// Per ADR 004/007 Brain stays local/LAN and owner-only — the badge says so.
+const BRAIN_ACCENT = "#5c5470";
+
+function BrainCard({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="uwe-lp-card uwe-lp-fade-card-2"
+      style={
+        {
+          "--uwe-lp-accent": BRAIN_ACCENT,
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          padding: "clamp(20px, 4vw, 28px)",
+          borderRadius: "14px",
+          background: "var(--uwe-card-bg)",
+          color: "var(--uwe-fg)",
+          border: "1.5px solid var(--uwe-border)",
+          boxShadow: "0 1px 2px rgba(0,0,0,.22)",
+        } as CSSProperties
+      }
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={eyebrowStyle(BRAIN_ACCENT)}>Für den Owner</span>
+        <span
+          style={{
+            fontSize: TEXT_2XS,
+            letterSpacing: "0.04em",
+            padding: "3px 9px",
+            borderRadius: "99px",
+            border: `1px solid ${BRAIN_ACCENT}`,
+            color: BRAIN_ACCENT,
+          }}
+        >
+          Nur Owner · lokal
+        </span>
+      </div>
+      <div style={{ fontFamily: FONT_SERIF, fontSize: TEXT_2XL, fontWeight: 500, letterSpacing: "-0.02em" }}>
+        UWE Brain
+      </div>
+      <p style={{ margin: 0, fontSize: TEXT_SM, lineHeight: LEADING, color: "var(--uwe-fg-muted)" }}>
+        Dein privater Alltag und dein Wissen — Daily Admin OS und Personal Brain, lokal auf deiner Hardware.
+      </p>
+      <ul
+        style={{
+          margin: 0,
+          padding: 0,
+          listStyle: "none",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          fontSize: TEXT_SM,
+          color: "var(--uwe-fg-muted)",
+        }}
+      >
+        <li style={bulletStyle}>
+          <span style={{ color: BRAIN_ACCENT }}>◆</span>Mail, Kalender, Finanzen, Haushalt, Werkstatt
+        </li>
+        <li style={bulletStyle}>
+          <span style={{ color: BRAIN_ACCENT }}>◆</span>Persönliches Wissen &amp; Capture-Inbox
+        </li>
+        <li style={bulletStyle}>
+          <span style={{ color: BRAIN_ACCENT }}>◆</span>Lokale KI — private Inhalte nie in der Cloud
+        </li>
+      </ul>
+      <div
+        style={{
+          ...ctaBaseStyle,
+          background: BRAIN_ACCENT,
+          color: "var(--uwe-on-accent)",
+        }}
+      >
+        Brain öffnen →
       </div>
     </div>
   );

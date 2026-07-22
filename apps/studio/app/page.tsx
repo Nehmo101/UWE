@@ -1,5 +1,6 @@
 import {
   getTurnstileConfig,
+  resolveBrainPublicBaseUrl,
   resolvePortalPublicBaseUrl,
   resolveStudioPublicBaseUrl,
 } from "@uwe/auth";
@@ -26,6 +27,7 @@ export default async function LandingPage() {
     <UweLandingPage
       studioAppUrl={resolveStudioPublicBaseUrl()}
       portalAppUrl={resolvePortalPublicBaseUrl()}
+      brainAppUrl={resolveBrainPublicBaseUrl()}
       turnstileSiteKey={turnstile.enabled ? turnstile.siteKey : null}
       rtxOnline
     />

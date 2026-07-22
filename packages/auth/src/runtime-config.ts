@@ -226,6 +226,24 @@ export function resolvePortalPublicBaseUrl(env: NodeJS.ProcessEnv = process.env)
   return (urls.portalUrl ?? DEV_PORTAL_URL).replace(/\/$/, "");
 }
 
+/**
+ * Public base URL for the owner-only Brain surface. Brain currently lives inside
+ * the Studio origin (its routes — `/life-brain`, `/today`, `/mail`, `/capture` —
+ * are part of the Studio app tree), so by default it shares the Studio base URL.
+ *
+ * An explicit `NEXT_PUBLIC_BRAIN_URL` can later point Brain at its own origin
+ * once it is extracted. Per ADR 004/007 Brain is owner-only and local/LAN by
+ * default and must never be added to the public Cloudflare tunnel — this
+ * resolver only computes a link target and does not itself expose anything.
+ */
+export function resolveBrainPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const explicitBrain = withRuntimeEnvOverrides(env).NEXT_PUBLIC_BRAIN_URL?.trim()?.replace(/\/$/, "");
+  if (explicitBrain) {
+    return explicitBrain;
+  }
+  return resolveStudioPublicBaseUrl(env);
+}
+
 /** Logged-in Portal entry — relative on Portal, absolute when linked from Studio. */
 export function resolvePortalSessionHref(
   env: NodeJS.ProcessEnv = process.env,

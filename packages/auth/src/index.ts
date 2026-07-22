@@ -180,6 +180,7 @@ export {
   resolvePortalPublicBaseUrl,
   resolvePortalSessionHref,
   resolvePortalLoginHref,
+  resolveBrainPublicBaseUrl,
   resolveStudioPublicBaseUrl,
   resolveStudioSessionHref,
   STUDIO_SESSION_ENTRY_PATH,

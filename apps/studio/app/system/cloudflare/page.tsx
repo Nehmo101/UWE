@@ -85,6 +85,25 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
     },
   ];
 
+  const brainExposureLabel: Record<DeploymentSettings["brainExposure"], string> = {
+    loopback: "Nur lokal (Loopback)",
+    lan: "LAN (nach Owner-Freigabe)",
+    off: "Deaktiviert",
+  };
+  const brain: { label: string; value: string; source: Source }[] = [
+    {
+      label: "Erreichbarkeit",
+      value: brainExposureLabel[d.brainExposure],
+      source: d.brainExposure === "loopback" ? "env" : "db",
+    },
+    {
+      label: "Brain-URL",
+      value: d.brainUrl.trim() || "— (teilt Studio-Origin)",
+      source: stringSource(d.brainUrl),
+    },
+    { label: "Brain-Einstieg", value: d.brainPath.trim() || "/life-brain", source: stringSource(d.brainPath) },
+  ];
+
   const healthy = cf.tunnelConfigured && proxy.trustProxy && proxy.authRequired;
 
   return (
@@ -134,6 +153,7 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
           <StatusCard title="Cloudflare" rows={cloudflare} />
           <StatusCard title="„Ich bin ein Mensch“-Prüfung" rows={humanCheck} />
           <StatusCard title="Sicherheit" rows={security} />
+          <StatusCard title="Brain (lokal, owner-only)" rows={brain} />
         </section>
 
         <form action={updateDeploymentConfigAction} className="flex flex-col gap-4">
@@ -253,6 +273,43 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
                 name="playerPreviewPublic"
                 label="Player-Preview öffentlich"
                 value={d.playerPreviewPublic}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Brain (lokal, owner-only)</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-xs text-muted-foreground">
+                Der private Brain-Bereich (Daily Admin OS &amp; Personal Brain) ist owner-only und
+                bleibt <strong>lokal bzw. im LAN</strong>. Er wird <strong>nie</strong> in den
+                öffentlichen Cloudflare-Tunnel aufgenommen — „öffentlich“ ist bewusst keine Option.
+              </p>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">Erreichbarkeit</span>
+                <select
+                  name="brainExposure"
+                  defaultValue={d.brainExposure}
+                  className="rounded border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="loopback">Nur lokal (Loopback)</option>
+                  <option value="lan">LAN (nach Owner-Freigabe)</option>
+                  <option value="off">Deaktiviert</option>
+                </select>
+              </label>
+              <TextField
+                name="brainUrl"
+                label="Brain-URL (optional, eigenes Origin)"
+                defaultValue={d.brainUrl}
+                placeholder="leer = teilt das Studio-Origin"
+              />
+              <TextField
+                name="brainPath"
+                label="Brain-Einstiegspfad"
+                defaultValue={d.brainPath}
+                placeholder="/life-brain"
               />
             </CardContent>
           </Card>
