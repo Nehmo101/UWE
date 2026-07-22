@@ -1,6 +1,8 @@
 # O02 — Zentrale Domain-Boundary-Contracts
 
-Stand: 2026-07-15. Dieses Dokument ist eine implementierungsreife Spezifikation,
+Stand: 2026-07-15, Modell-Mapping aktualisiert 2026-07-22 auf das
+Atlas-3D-Delta (siehe [07-delta-und-mehrfachzuordnung.md](07-delta-und-mehrfachzuordnung.md)).
+Dieses Dokument ist eine implementierungsreife Spezifikation,
 aber noch keine Implementierung, Migration oder Änderung der aktiven Runtime.
 Maßgebliche Quellen sind das Inventar aus Commit
 `223ac6f176458bf17a6679e39c066ca6e9721012`, `SECURITY.md`, das Prisma-Schema
@@ -255,7 +257,15 @@ eine neu erzeugte, player-safe Projektion nach `exports/<world>-static/`
 beziehungsweise in das konfigurierte Export-Root; `dm_only` und
 `owner_private_local` sind davor ausgeschlossen.
 
-## 5. Vollständiges Prisma-Modell-Mapping (141)
+## 5. Vollständiges Prisma-Modell-Mapping (142)
+
+Aktualisiert 2026-07-22: die fünf 2D-Atlas-Modelle wurden im Zuge der
+Atlas-3D-Wellen (PR #777–#782) entfernt und durch sechs `Atlas3D*`-Modelle
+ersetzt. Atlas 3D besitzt per Owner-Entscheidung (2026-07-21, Schema-Kommentar)
+bewusst keine Visibility-Spalten und ist vollständig spielersichtbar; die
+Modelle erhalten deshalb `player_visible` statt des konservativen
+`dm_only`-Defaults. Führt Atlas 3D später DM-only-Inhalte ein, sind zuerst
+Visibility-Spalte und Projektor nachzurüsten.
 
 `†G1` bis `†G10` markieren die zehn Prisma-relevanten Streitgruppen aus dem
 Inventar. Die sichere Zielentscheidung steht in Abschnitt 6.
@@ -351,11 +361,12 @@ Inventar. Die sichere Zielentscheidung steht in Abschnitt 6.
 | `DndBeyondReference` | `integrations` | `dm_only` | `uwe.db` | — | — |
 | `PageVersion` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
 | `RollTable` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
-| `AtlasMap` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
-| `AtlasNode` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
-| `AtlasFeature` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
-| `AtlasObject` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
-| `AtlasPaletteItem` | `assets` | `dm_only` | `uwe.db` | `studio-world-files` | †G9 |
+| `Atlas3DWorld` | `dnd_world` | `player_visible` | `uwe.db` | — | — |
+| `Atlas3DNode` | `dnd_world` | `player_visible` | `uwe.db` | — | — |
+| `Atlas3DTerrain` | `dnd_world` | `player_visible` | `uwe.db` | — | — |
+| `Atlas3DFeature` | `dnd_world` | `player_visible` | `uwe.db` | — | — |
+| `Atlas3DObject` | `dnd_world` | `player_visible` | `uwe.db` | — | — |
+| `Atlas3DCameraBookmark` | `dnd_world` | `player_visible` | `uwe.db` | — | — |
 | `SessionLiveEntry` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
 | `StructuredItem` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
 | `MailTemplate` | `admin_life` | `owner_private_local` | `uwe-brain.db` | — | †G2 |
@@ -569,11 +580,12 @@ export const PRISMA_MODEL_BOUNDARIES = {
   RollTable: U("dnd_world", "dm_only"),
   ResearchSession: B("personal_brain", "database_only", "G6"),
   ResearchSource: B("personal_brain", "database_only", "G6"),
-  AtlasMap: U("dnd_world", "dm_only"),
-  AtlasNode: U("dnd_world", "dm_only"),
-  AtlasFeature: U("dnd_world", "dm_only"),
-  AtlasObject: U("dnd_world", "dm_only"),
-  AtlasPaletteItem: U("assets", "dm_only", "studio_world_files", "G9"),
+  Atlas3DWorld: U("dnd_world", "player_visible"),
+  Atlas3DNode: U("dnd_world", "player_visible"),
+  Atlas3DTerrain: U("dnd_world", "player_visible"),
+  Atlas3DFeature: U("dnd_world", "player_visible"),
+  Atlas3DObject: U("dnd_world", "player_visible"),
+  Atlas3DCameraBookmark: U("dnd_world", "player_visible"),
   AiGatewayConfig: U("ai_control", "dm_only"),
   AiCloudProvider: U("ai_control", "dm_only"),
   AiUserGrant: U("ai_control", "dm_only"),

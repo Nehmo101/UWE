@@ -2,6 +2,14 @@
 
 Stand: 2026-07-15. Dieses Dokument ist ein **Read-only-Snapshot** des Repositories. Es beschreibt den Ist-Zustand und eine eindeutige Zielverantwortung; es ist noch kein Migrationsplan.
 
+> **Delta-Hinweis (2026-07-22):** Seit diesem Snapshot sind die PRs #777–#782
+> gemerged (Atlas 3D, PDF-Kampagnen-Import, Command Center). Ist-Werte jetzt:
+> 411 Routen, 36 Packages, 142 Prisma-Modelle; die fünf 2D-Atlas-Modelle sind
+> entfernt, sechs `Atlas3D*`-Modelle sowie `packages/atlas-editor` und
+> `packages/pdf-campaign-import` sind neu. Der Snapshot unten bleibt bewusst
+> unverändert; das Delta samt Zuordnung steht in
+> [07-delta-und-mehrfachzuordnung.md](07-delta-und-mehrfachzuordnung.md).
+
 ## Methode und bindende Regeln
 
 Ausgewertet wurden `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/CURRENT_STATE.md`, `SECURITY.md`, `docs/life-brain-privacy.md`, `docs/rework/route-feature-inventory.md`, `.cursor/skills/uwe-architecture/SKILL.md`, dessen Package-Boundary-Referenz, der aktuelle Route-Baum, die drei Navigation Contracts, alle `packages/*` und `tools/*`, `docs/engineering/database-service-map.md`, das vollständige Prisma-Schema sowie Storage-, Job- und Deploy-Quellen.

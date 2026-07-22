@@ -136,6 +136,12 @@ weil sie `dnd_brain` fälschlich sperren könnten. Namespace-Imports des breiten
 DB-Barrels sind in Portal, Shared Engines und nicht als Brain klassifiziertem
 Code verboten, weil ihre Symbole nicht sicher eingegrenzt werden können.
 
+> **Hinweis (2026-07-22):** „O05" bezeichnet in diesem Dokument den damals
+> geplanten Extraktions-Task. Der Slot wurde anders belegt
+> (`05-ci-brain-prep.md` ist CI-Vorbereitung). Alle „O05"-Verweise hier meinen
+> die **Masterplan-Wellen 2 (Contracts) und 4 (fachliche Extraktion)** — siehe
+> [07-delta-und-mehrfachzuordnung.md](07-delta-und-mehrfachzuordnung.md) §3.
+
 O05 ersetzt diese Übergangsmap durch explizite Subpaths beziehungsweise eigene
 Pakete, zum Beispiel Brain-Repositories hinter einem Brain-Port und Portal-
 Projektionen hinter einem Portal-Port. Nach der Extraktion verbietet der Guard
