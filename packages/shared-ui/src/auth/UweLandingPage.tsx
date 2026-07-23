@@ -510,9 +510,11 @@ function PortalCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-// Owner-only private area (Daily Admin OS + Personal Brain). It lives inside the
-// Studio origin today; the card makes the target three-product split visible.
-// Per ADR 004/007 Brain stays local/LAN and owner-only — the badge says so.
+// Owner-only private area (Daily Admin OS + Personal Brain). Runs on the owner's
+// own hardware and is gated to the system-owner role on every route; it is reached
+// online through the owner-gated Cloudflare tunnel (brain.uweanddragons.org) or
+// locally. The badge says "owner-only", not "local", because the surface is now a
+// deliberate owner-authenticated online opt-in.
 const BRAIN_ACCENT = "#5c5470";
 
 function BrainCard({ onOpen }: { onOpen: () => void }) {
@@ -556,7 +558,7 @@ function BrainCard({ onOpen }: { onOpen: () => void }) {
             color: BRAIN_ACCENT,
           }}
         >
-          Nur Owner · lokal
+          Nur Owner
         </span>
       </div>
       <div style={{ fontFamily: FONT_SERIF, fontSize: TEXT_2XL, fontWeight: 500, letterSpacing: "-0.02em" }}>

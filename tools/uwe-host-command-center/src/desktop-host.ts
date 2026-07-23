@@ -801,6 +801,28 @@ export function desktopHostTargetUrl(rootInput: string | undefined, target: stri
     : target === "brain"
       ? parseServicePort(env.BRAIN_PORT, 3102)
       : parseServicePort(env.STUDIO_PORT, 3000);
+  // Prefer the configured public origin (Cloudflare tunnel) when it is a real
+  // non-loopback URL. With a domain-scoped session cookie (SESSION_COOKIE_DOMAIN),
+  // a raw 127.0.0.1 origin can't hold the login session, so opening the public
+  // hostname keeps the owner logged in. Falls back to loopback for local-only
+  // deployments where no public URL is set.
+  const publicUrl =
+    target === "portal"
+      ? env.NEXT_PUBLIC_PORTAL_URL?.trim()
+      : target === "brain"
+        ? env.NEXT_PUBLIC_BRAIN_URL?.trim()
+        : env.NEXT_PUBLIC_STUDIO_URL?.trim();
+  if (publicUrl) {
+    try {
+      const parsed = new URL(publicUrl);
+      const host = parsed.hostname.toLowerCase();
+      if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
+        return publicUrl.replace(/\/$/, "");
+      }
+    } catch {
+      // Malformed configured URL — fall back to loopback below.
+    }
+  }
   return `http://127.0.0.1:${port}`;
 }
 
