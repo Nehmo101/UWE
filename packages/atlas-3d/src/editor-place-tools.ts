@@ -8,6 +8,7 @@ import type * as THREE from "three";
 import type { InkAssetKind, InkTint } from "./assets-ink";
 import { scatterInstances } from "./scatter";
 import { generateSettlement3D } from "./settlement3d";
+import { generateSettlementWFC } from "./wfc-settlement";
 import { findTerrainPath, type PathKind } from "./terrain-path";
 import { lineRoadWithTrees } from "./walls";
 import type { EditorToolsContext } from "./editor-types";
@@ -18,6 +19,8 @@ export interface PlacementState {
   assetTint: InkTint;
   settlementWalls: boolean;
   settlementCitadel: boolean;
+  /** WFC-Layout: Wave-Function-Collapse-Generator statt Ring-Layout. */
+  settlementWfc: boolean;
   /** Straße säumen: Bäume beidseitig entlang neuer Straßen. */
   roadTrees: boolean;
 }
@@ -77,13 +80,17 @@ export function scatterAt(ctx: EditorToolsContext, state: PlacementState, point:
 export function placeSettlement(ctx: EditorToolsContext, state: PlacementState, point: THREE.Vector3): void {
   if (ctx.mode !== "terrain") return;
   const layoutSeed = ctx.seed + Math.round(point.x * 997) * 31 + Math.round(point.z * 997);
-  const settlement = generateSettlement3D({
+  const layout = {
     center: { x: point.x, z: point.z },
     seed: layoutSeed,
     idPrefix: ctx.nextLocalId(),
     walls: state.settlementWalls,
     citadel: state.settlementCitadel,
-  });
+  };
+  // WFC-Layout: Markt-Kern standardmäßig aktiv (kein eigenes UI-Flag)
+  const settlement = state.settlementWfc
+    ? generateSettlementWFC({ ...layout, market: true })
+    : generateSettlement3D(layout);
   ctx.setObjects([...ctx.getObjects(), ...settlement.objects]);
   ctx.setFeatures([...ctx.getFeatures(), ...settlement.features]);
   ctx.syncObjects();

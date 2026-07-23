@@ -10,6 +10,7 @@ import {
   type Atlas3DEditorDocState,
   type Atlas3DEditorMode,
   type Atlas3DEditorTool,
+  type Atlas3DHeightLayerItem,
 } from "@uwe/atlas-3d/editor-app";
 import { ATLAS3D_BIOMES } from "@uwe/atlas-3d/splat";
 import {
@@ -28,6 +29,7 @@ import {
   setAtlas3DStyleAction,
 } from "@/app/atlas3d-actions";
 import { Atlas3DLandmassPanel, Atlas3DToolPanels } from "./Atlas3DToolPanels";
+import { Atlas3DHeightLayersPanel } from "./Atlas3DHeightLayersPanel";
 import { Atlas3DDescribePanel } from "./Atlas3DDescribePanel";
 import {
   Atlas3DInspectorPanel,
@@ -55,6 +57,8 @@ export interface Atlas3DEditorShellProps {
   seed: number;
   initialCarveOps: unknown;
   initialHeightmap: unknown;
+  /** Persistierter Höhen-Layer-Stack (null bei alten Ständen → Migration aus initialHeightmap). */
+  initialHeightLayers: unknown;
   initialSplat: unknown;
   initialObjects: unknown;
   initialFeatures: unknown;
@@ -151,6 +155,8 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [carvePanelOpen, setCarvePanelOpen] = useState(false);
   const [carveOps, setCarveOps] = useState<CarveOpSummary[]>([]);
   const [landmassOpen, setLandmassOpen] = useState(false);
+  const [heightLayersOpen, setHeightLayersOpen] = useState(false);
+  const [heightLayers, setHeightLayers] = useState<Atlas3DHeightLayerItem[]>([]);
   const [measure, setMeasure] = useState<number | null>(null);
   const [polygonPoints, setPolygonPoints] = useState(0);
 
@@ -165,6 +171,10 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
     [],
   );
 
+  const refreshHeightLayers = useCallback(() => {
+    setHeightLayers(appRef.current?.listHeightLayers() ?? []);
+  }, []);
+
   const scheduleSave = useCallback(
     (doc: Atlas3DEditorDocState) => {
       setSaveState("ungespeichert");
@@ -176,6 +186,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         form.set("nodeId", props.nodeId);
         form.set("carveOps", JSON.stringify(doc.carveOps));
         form.set("heightmap", JSON.stringify(doc.heightmap));
+        form.set("heightLayers", JSON.stringify(doc.heightLayers));
         form.set("splat", JSON.stringify(doc.splat));
         form.set("objects", JSON.stringify(doc.objects));
         form.set("features", JSON.stringify(doc.features));
@@ -195,6 +206,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       seed: props.seed,
       carveOps: props.initialCarveOps,
       heightmap: props.initialHeightmap,
+      heightLayers: props.initialHeightLayers,
       splat: props.initialSplat,
       objects: props.initialObjects,
       features: props.initialFeatures,
@@ -235,6 +247,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             setSplitGap(nextDoc.splitGap);
             setRootCount(nextDoc.worldRoots);
             setCarveOps(summarizeCarveOps(nextDoc.carveOps));
+            refreshHeightLayers();
             scheduleSave(nextDoc);
           },
           revert: () => {
@@ -244,6 +257,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             setSplitGap(prevDoc.splitGap);
             setRootCount(prevDoc.worldRoots);
             setCarveOps(summarizeCarveOps(prevDoc.carveOps));
+            refreshHeightLayers();
             scheduleSave(prevDoc);
           },
         });
@@ -254,6 +268,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
     setSplitGap(lastDocRef.current.splitGap);
     setRootCount(lastDocRef.current.worldRoots);
     setCarveOps(summarizeCarveOps(lastDocRef.current.carveOps));
+    setHeightLayers(app.listHeightLayers());
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       app.dispose();
@@ -400,6 +415,15 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         >
           🏝 Vorlagen
         </button>
+        <button
+          type="button"
+          className={heightLayersOpen ? "atlas3d-tool on" : "atlas3d-tool"}
+          aria-pressed={heightLayersOpen}
+          onClick={() => setHeightLayersOpen((open) => !open)}
+          data-testid="atlas3d-height-layers"
+        >
+          ≡ Höhen-Layer ({heightLayers.length})
+        </button>
         <span className="atlas3d-save" data-state={saveState} data-testid="atlas3d-save-state">
           ● {saveState}
         </span>
@@ -451,6 +475,10 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       ) : null}
 
       {landmassOpen ? <Atlas3DLandmassPanel appRef={appRef} /> : null}
+
+      {heightLayersOpen ? (
+        <Atlas3DHeightLayersPanel layers={heightLayers} appRef={appRef} onChanged={refreshHeightLayers} />
+      ) : null}
 
       <Atlas3DToolPanels tool={tool} mode={props.mode} seed={props.seed} appRef={appRef} polygonPoints={polygonPoints} />
 

@@ -58,7 +58,11 @@ export default async function Atlas3DNodePage({ params }: Props) {
   const titleByEntryId = new Map(chainEntries.map((entry) => [entry.id, entry.title]));
   const originTitle = (entryId: string) => (entryId === "default" ? "Standard" : (titleByEntryId.get(entryId) ?? "Standard"));
 
-  const terrainMeta = (node.terrain?.meta ?? null) as { heightmap?: unknown; splat?: unknown } | null;
+  const terrainMeta = (node.terrain?.meta ?? null) as {
+    heightmap?: unknown;
+    heightLayers?: unknown;
+    splat?: unknown;
+  } | null;
 
   const breadcrumb: BreadcrumbItem[] = [
     ...worldSectionBreadcrumb(world.name, worldSlug, "Atlas 3D", `/worlds/${worldSlug}/atlas3d`),
@@ -95,6 +99,7 @@ export default async function Atlas3DNodePage({ params }: Props) {
         seed={node.seed}
         initialCarveOps={node.terrain?.carveOps ?? []}
         initialHeightmap={terrainMeta?.heightmap ?? null}
+        initialHeightLayers={terrainMeta?.heightLayers ?? null}
         initialSplat={terrainMeta?.splat ?? null}
         initialObjects={node.objects.map((object) => ({
           localId: object.id,

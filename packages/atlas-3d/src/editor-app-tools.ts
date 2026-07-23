@@ -64,6 +64,7 @@ export class EditorToolsController implements Atlas3DEditorToolsApi {
     assetTint: INK_ASSET_DEFAULT_TINT.tree,
     settlementWalls: false,
     settlementCitadel: false,
+    settlementWfc: false,
     roadTrees: false,
   };
   private labelText = "";
@@ -120,9 +121,10 @@ export class EditorToolsController implements Atlas3DEditorToolsApi {
     this.stampChoice = kind;
   }
 
-  setSettlementOptions(options: { walls?: boolean; citadel?: boolean }): void {
+  setSettlementOptions(options: { walls?: boolean; citadel?: boolean; wfc?: boolean }): void {
     if (options.walls !== undefined) this.placement.settlementWalls = options.walls;
     if (options.citadel !== undefined) this.placement.settlementCitadel = options.citadel;
+    if (options.wfc !== undefined) this.placement.settlementWfc = options.wfc;
   }
 
   setRoadTreesEnabled(on: boolean): void {

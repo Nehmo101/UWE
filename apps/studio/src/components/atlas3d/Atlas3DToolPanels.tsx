@@ -63,6 +63,7 @@ export function Atlas3DToolPanels(props: Atlas3DToolPanelsProps) {
   const [customStampName, setCustomStampName] = useState<string | null>(null);
   const [settlementWalls, setSettlementWalls] = useState(false);
   const [settlementCitadel, setSettlementCitadel] = useState(false);
+  const [settlementWfc, setSettlementWfc] = useState(false);
   const [labelDraft, setLabelDraft] = useState("");
   const [erosionSize, setErosionSize] = useState(0.5);
   const [fillKind, setFillKind] = useState<AreaFillKindKey>("wald");
@@ -171,6 +172,18 @@ export function Atlas3DToolPanels(props: Atlas3DToolPanelsProps) {
             }}
           />
           Zitadelle
+        </label>
+        <label className="atlas3d-check">
+          <input
+            type="checkbox"
+            checked={settlementWfc}
+            data-testid="atlas3d-settlement-wfc"
+            onChange={(event) => {
+              setSettlementWfc(event.target.checked);
+              appRef.current?.setSettlementOptions({ wfc: event.target.checked });
+            }}
+          />
+          WFC-Layout
         </label>
         <span>Dann auf die Karte klicken.</span>
       </div>

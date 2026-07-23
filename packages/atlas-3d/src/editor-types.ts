@@ -6,6 +6,7 @@
 import type * as THREE from "three";
 import type { CarveOp } from "@uwe/atlas-editor/carve";
 import type { HeightmapGrid, HeightmapJson } from "./planet-field";
+import type { HeightLayerMoveDir, HeightLayersJson } from "./height-layers";
 import type { SplatGrid, SplatJson } from "./splat";
 import type { DocFeatureState, DocObjectState } from "./scene-objects";
 import type { InkAssetKind, InkTint } from "./assets-ink";
@@ -55,7 +56,10 @@ export type Atlas3DStampChoice = TerrainStampKind | "eigen" | "mutation";
 export interface Atlas3DEditorDocState {
   seed: number;
   carveOps: CarveOp[];
+  /** COMPOSITE aller sichtbaren Höhen-Layer — Abwärtskompatibilität (Portal + alte Stände). */
   heightmap: HeightmapJson | null;
+  /** Voller nicht-destruktiver Höhen-Layer-Stack (null nur bei ganz alten Ständen). */
+  heightLayers: HeightLayersJson | null;
   splat: SplatJson | null;
   splitGap: number;
   /** World-root count bridging the split gap (renderer default when no split). */
@@ -71,6 +75,8 @@ export interface Atlas3DEditorAppOptions {
   seed: number;
   carveOps?: unknown;
   heightmap?: unknown;
+  /** Persistierter Höhen-Layer-Stack; fehlt er, wird `heightmap` als Basis-Layer migriert. */
+  heightLayers?: unknown;
   splat?: unknown;
   objects?: unknown;
   features?: unknown;
@@ -136,8 +142,8 @@ export interface Atlas3DEditorToolsApi {
   setLabelText(text: string): void;
   /** Stamp choice for the "stamp" tool: Profil, "eigen" (custom PNG) oder "mutation". */
   setStamp(kind: Atlas3DStampChoice): void;
-  /** Constraints for the settlement generator (walls, citadel). */
-  setSettlementOptions(options: { walls?: boolean; citadel?: boolean }): void;
+  /** Constraints for the settlement generator (walls, citadel, WFC layout). */
+  setSettlementOptions(options: { walls?: boolean; citadel?: boolean; wfc?: boolean }): void;
   /** Straße säumen: Bäume beidseitig entlang neuer Straßen (ein Commit mit dem Pfad). */
   setRoadTreesEnabled(on: boolean): void;
   /** Globale Erosion über die ganze Höhenkarte — commits "sculpt", undoable. */
@@ -158,6 +164,14 @@ export interface Atlas3DEditorToolsApi {
   createTerritory(options: { tint: string; labelText?: string }): void;
   /** Punkte des Fläche-/Gebiet-Drafts verwerfen. */
   clearPolygonDraft(): void;
+}
+
+/** Eintrag der Höhen-Layer-Liste (UI-Panel). */
+export interface Atlas3DHeightLayerItem {
+  id: string;
+  name: string;
+  visible: boolean;
+  active: boolean;
 }
 
 export interface Atlas3DEditorApp extends Atlas3DEditorToolsApi {
@@ -193,6 +207,18 @@ export interface Atlas3DEditorApp extends Atlas3DEditorToolsApi {
   listCarveOps(): CarveOpSummary[];
   /** Remove one carve op by id — commits "carve", undoable via the command stack. */
   removeCarveOp(id: string): void;
+  /** Höhen-Layer-Stack in Reihenfolge, mit Sichtbarkeit + Aktiv-Markierung. */
+  listHeightLayers(): Atlas3DHeightLayerItem[];
+  /** Neuen (leeren) Höhen-Layer anlegen und aktivieren — commits "sculpt", undoable. */
+  addHeightLayer(name: string): void;
+  /** Höhen-Layer entfernen (der letzte ist unlöschbar) — commits "sculpt", undoable. */
+  removeHeightLayer(id: string): void;
+  /** Höhen-Layer ein-/ausblenden (Composite ändert sich) — commits "sculpt", undoable. */
+  setHeightLayerVisible(id: string, on: boolean): void;
+  /** Aktiven Layer wählen — reine UI, KEIN Commit. */
+  setActiveHeightLayer(id: string): void;
+  /** Layer in der Liste verschieben ("hoch" = Richtung Anfang) — commits "sculpt". */
+  moveHeightLayer(id: string, dir: HeightLayerMoveDir): void;
   /** Fresh render → PNG data URL (null without WebGL). */
   exportImage(): string | null;
   applyExternal(doc: Atlas3DEditorDocState): void;
@@ -201,6 +227,7 @@ export interface Atlas3DEditorApp extends Atlas3DEditorToolsApi {
 }
 
 export type { WeatherKind, GridOverlayKind } from "./editor-decor";
+export type { HeightLayerMoveDir, HeightLayersJson } from "./height-layers";
 export type { TerrainStampKind } from "./stamps";
 export type { CustomStampGrid } from "./custom-stamp";
 export type { LandmassTemplateKind } from "./landmass-templates";

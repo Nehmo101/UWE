@@ -13,15 +13,8 @@
 import * as THREE from "three";
 import { parseCarveOps, type CarveOp } from "@uwe/atlas-editor/carve";
 import { parsePolygon, type Vec2 } from "@uwe/atlas-editor/geometry";
-import {
-  applyHeightBrush,
-  createHeightmap,
-  createPlanetField,
-  heightmapFromJson,
-  heightmapToJson,
-  type BrushMode,
-  type HeightmapGrid,
-} from "./planet-field";
+import { applyHeightBrush, createPlanetField, type BrushMode } from "./planet-field";
+import { HeightLayerSession } from "./editor-height-layers";
 import { buildPlanetMeshData } from "./planet-mesh";
 import { applyPlanarBrush, createTerrainField, type TerrainField } from "./terrain-field";
 import { buildTerrainMeshData } from "./terrain-mesh";
@@ -68,9 +61,16 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   const silhouette: Vec2[] | null = mode === "terrain" ? parsePolygon(options.silhouette ?? null) : null;
 
   let carveOps: CarveOp[] = parseCarveOps(options.carveOps ?? []);
-  let heightmap: HeightmapGrid =
-    heightmapFromJson(options.heightmap ?? null) ??
-    (mode === "globe" ? createHeightmap(...GLOBE_GRID) : createHeightmap(...PLANAR_GRID));
+  // Nicht-destruktiver Höhen-Layer-Stack; alte Einzel-Heightmap-Stände werden
+  // beim Laden zum Basis-Layer migriert. Werkzeuge schreiben in den AKTIVEN
+  // Layer, gerendert wird das (gecachte) Composite aller sichtbaren Layer.
+  const heightLayerGrid = mode === "globe" ? GLOBE_GRID : PLANAR_GRID;
+  const heightLayers = new HeightLayerSession(
+    heightLayerGrid[0],
+    heightLayerGrid[1],
+    options.heightLayers ?? null,
+    options.heightmap ?? null,
+  );
   let splat: SplatGrid =
     splatFromJson(options.splat ?? null) ??
     (mode === "globe" ? createSplat(...GLOBE_GRID) : createSplat(...PLANAR_GRID));
@@ -134,7 +134,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     mode,
     seed,
     mapSize: TERRAIN_SIZE,
-    getHeightmap: () => heightmap,
+    getHeightmap: () => heightLayers.activeGrid(),
     getSplat: () => splat,
     getCarveOps: () => carveOps,
     setCarveOps: (ops) => {
@@ -191,6 +191,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   function rebuild(resolution: number): void {
     let data;
     const renderSplat = overlaySplat ?? splat;
+    // VOR jedem Rebuild: Composite der sichtbaren Layer (gecacht in der Session)
+    const heightmap = heightLayers.composite();
     if (mode === "globe") {
       const field = createPlanetField({ seed, heightmap, carveOps });
       currentPlanetElevation = (dir) => field.elevation([dir.x, dir.y, dir.z]);
@@ -235,7 +237,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     return {
       seed,
       carveOps: parseCarveOps(JSON.parse(JSON.stringify(carveOps))),
-      heightmap: heightmapToJson(heightmap),
+      heightmap: heightLayers.compositeJson(),
+      heightLayers: heightLayers.toJson(),
       splat: splatToJson(splat),
       splitGap: splitGapOf(carveOps),
       worldRoots: splitRootsOf(carveOps) ?? worldRootCount,
@@ -286,9 +289,9 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   function applySculptAt(point: THREE.Vector3, brushMode: BrushMode): void {
     if (mode === "globe") {
       const dir = point.clone().normalize();
-      applyHeightBrush(heightmap, [dir.x, dir.y, dir.z], brushRadius, brushStrength, brushMode);
+      applyHeightBrush(heightLayers.activeGrid(), [dir.x, dir.y, dir.z], brushRadius, brushStrength, brushMode);
     } else {
-      applyPlanarBrush(heightmap, TERRAIN_SIZE, [point.x, point.z], brushRadius, brushStrength, brushMode);
+      applyPlanarBrush(heightLayers.activeGrid(), TERRAIN_SIZE, [point.x, point.z], brushRadius, brushStrength, brushMode);
     }
     throttledRemesh();
   }
@@ -565,6 +568,32 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       rebuild(restResolution);
       commit("carve");
     },
+    listHeightLayers() {
+      return heightLayers.list();
+    },
+    addHeightLayer(name) {
+      heightLayers.add(name);
+      rebuild(restResolution);
+      commit("sculpt");
+    },
+    removeHeightLayer(id) {
+      if (!heightLayers.remove(id)) return;
+      rebuild(restResolution);
+      commit("sculpt");
+    },
+    setHeightLayerVisible(id, on) {
+      if (!heightLayers.setVisible(id, on)) return;
+      rebuild(restResolution);
+      commit("sculpt");
+    },
+    setActiveHeightLayer(id) {
+      heightLayers.setActive(id);
+    },
+    moveHeightLayer(id, dir) {
+      if (!heightLayers.move(id, dir)) return;
+      // Reihenfolge ändert die Summe nicht — kein Remesh nötig, aber undo-fähig
+      commit("sculpt");
+    },
     exportImage() {
       if (!renderer) return null;
       // render right before reading — the drawing buffer is not preserved
@@ -573,9 +602,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     },
     applyExternal(doc) {
       carveOps = parseCarveOps(doc.carveOps);
-      heightmap =
-        heightmapFromJson(doc.heightmap) ??
-        (mode === "globe" ? createHeightmap(...GLOBE_GRID) : createHeightmap(...PLANAR_GRID));
+      // Layer-Stack laden; alte Snapshots ohne heightLayers migrieren aus dem Composite
+      heightLayers.load(doc.heightLayers ?? null, doc.heightmap ?? null);
       splat =
         splatFromJson(doc.splat) ??
         (mode === "globe" ? createSplat(...GLOBE_GRID) : createSplat(...PLANAR_GRID));

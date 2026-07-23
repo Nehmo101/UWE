@@ -34,6 +34,7 @@
     "./environment-presets": "./src/environment-presets.ts",
     "./editor-decor": "./src/editor-decor.ts",
     "./settlement3d": "./src/settlement3d.ts",
+    "./wfc-settlement": "./src/wfc-settlement.ts",
     "./viewport-rig": "./src/viewport-rig.ts",
     "./names": "./src/names.ts",
     "./chronicle": "./src/chronicle.ts",
@@ -44,6 +45,7 @@
     "./hydrology": "./src/hydrology.ts",
     "./contours": "./src/contours.ts",
     "./landmass-templates": "./src/landmass-templates.ts",
+    "./height-layers": "./src/height-layers.ts",
     "./custom-stamp": "./src/custom-stamp.ts"
   },
   "scripts": {
