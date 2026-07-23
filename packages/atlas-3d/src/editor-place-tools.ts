@@ -28,9 +28,9 @@ export interface PlacementState {
 export function placeAsset(ctx: EditorToolsContext, state: PlacementState, point: THREE.Vector3): void {
   const localId = ctx.nextLocalId();
   let position: Record<string, unknown>;
-  if ((state.assetKind === "asteroid" || state.assetKind === "mond") && ctx.mode === "globe") {
+  if ((state.assetKind === "asteroid" || state.assetKind === "mond" || state.assetKind === "kometenstein") && ctx.mode === "globe") {
     const flat = Math.max(1.6, Math.hypot(point.x, point.z) + 0.6);
-    const speed = state.assetKind === "mond" ? 0.06 : 0.12;
+    const speed = state.assetKind === "mond" ? 0.06 : state.assetKind === "kometenstein" ? 0.18 : 0.12;
     position = { orbit: { radius: flat, inclination: point.y * 0.4, phase: Math.atan2(point.z, point.x), speed } };
   } else if (ctx.mode === "globe") {
     const dir = point.clone().normalize();
@@ -47,7 +47,7 @@ export function placeAsset(ctx: EditorToolsContext, state: PlacementState, point
 }
 
 export function scatterAt(ctx: EditorToolsContext, state: PlacementState, point: THREE.Vector3): void {
-  if (state.assetKind === "asteroid" || state.assetKind === "mond") {
+  if (state.assetKind === "asteroid" || state.assetKind === "mond" || state.assetKind === "kometenstein") {
     // Orbit-Assets werden einzeln platziert statt gestreut
     placeAsset(ctx, state, point);
     return;

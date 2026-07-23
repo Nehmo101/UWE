@@ -243,7 +243,11 @@ export class SceneObjectLayer {
       holder.scale.setScalar(baseScale);
 
       const orbit = object.position.orbit as { radius?: number; inclination?: number; phase?: number; speed?: number } | undefined;
-      if ((object.assetKind === "asteroid" || object.assetKind === "mond") && orbit && typeof orbit.radius === "number") {
+      if (
+        (object.assetKind === "asteroid" || object.assetKind === "mond" || object.assetKind === "kometenstein") &&
+        orbit &&
+        typeof orbit.radius === "number"
+      ) {
         const angle = (orbit.phase ?? 0) + time * (orbit.speed ?? 0.1);
         const flat = new THREE.Vector3(Math.cos(angle) * orbit.radius, 0, Math.sin(angle) * orbit.radius);
         flat.applyAxisAngle(new THREE.Vector3(0, 0, 1), orbit.inclination ?? 0);
