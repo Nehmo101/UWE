@@ -33,6 +33,9 @@ export interface UweAppUrls {
   publicBaseUrl: string | null;
   studioUrl: string | null;
   portalUrl: string | null;
+  /** Explicit Brain host (NEXT_PUBLIC_BRAIN_URL), when Brain is served on its
+   * own hostname. null keeps Brain on the Studio origin (/life-brain). */
+  brainUrl: string | null;
   studioPath: string;
   portalPath: string;
   deploymentModel: UweDeploymentModel;
@@ -327,12 +330,14 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
 
   const explicitStudio = env.NEXT_PUBLIC_STUDIO_URL?.trim()?.replace(/\/$/, "");
   const explicitPortal = env.NEXT_PUBLIC_PORTAL_URL?.trim()?.replace(/\/$/, "");
+  const explicitBrain = env.NEXT_PUBLIC_BRAIN_URL?.trim()?.replace(/\/$/, "") || null;
 
   if (explicitStudio && explicitPortal) {
     return {
       publicBaseUrl: runtime.publicAppUrl,
       studioUrl: explicitStudio,
       portalUrl: explicitPortal,
+      brainUrl: explicitBrain,
       studioPath: pathInfo.studioPath,
       portalPath: pathInfo.portalPath,
       deploymentModel: pathInfo.deploymentModel,
@@ -352,6 +357,7 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
           : runtime.portalPath === "/"
             ? base
             : `${base}${runtime.portalPath}`,
+      brainUrl: explicitBrain,
       studioPath: pathInfo.studioPath,
       portalPath: pathInfo.portalPath,
       deploymentModel: pathInfo.deploymentModel,
@@ -362,6 +368,7 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
     publicBaseUrl: null,
     studioUrl: explicitStudio ?? null,
     portalUrl: explicitPortal ?? null,
+    brainUrl: explicitBrain,
     studioPath: pathInfo.studioPath,
     portalPath: pathInfo.portalPath,
     deploymentModel: pathInfo.deploymentModel,
@@ -522,7 +529,7 @@ export function getTrustedRequestHosts(
   }
 
   const urls = resolveUweAppUrls(env);
-  for (const candidate of [urls.publicBaseUrl, urls.studioUrl, urls.portalUrl]) {
+  for (const candidate of [urls.publicBaseUrl, urls.studioUrl, urls.portalUrl, urls.brainUrl]) {
     if (!candidate) {
       continue;
     }

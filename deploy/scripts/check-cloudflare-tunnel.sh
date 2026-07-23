@@ -73,16 +73,28 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
   if grep -qiE 'ollama|rtx|11434|8787' "$TUNNEL_CONFIG"; then
     report fail "Tunnel-Konfiguration enthält RTX/Ollama-Referenzen"
   fi
-  # Brain is owner-only and local/LAN (ADR 004/007) — it must never appear in the
-  # public tunnel ingress. Port 3002 is the Brain dev/app port; a brain hostname
-  # is likewise forbidden. This mirrors the RTX/Ollama deny-by-default above.
-  # Only ACTIVE (non-comment) lines count, so a commented LAN note doesn't trip it.
+  # Brain is owner-only and local/LAN by default (ADR 004/007) — it must not appear
+  # in the public tunnel ingress UNLESS the owner has deliberately opted in via
+  # BRAIN_PUBLIC_TUNNEL=1 (Brain enforces owner-role auth on every route; enabling
+  # this is a conscious decision to publish an owner-gated Brain host, and 2FA on
+  # the owner is strongly expected). Without the opt-in, a brain hostname/:3002 in
+  # the tunnel is still a hard failure. Only ACTIVE (non-comment) lines count.
   active_ingress="$(grep -vE '^[[:space:]]*#' "$TUNNEL_CONFIG" || true)"
+  brain_opt_in=0
+  case "${BRAIN_PUBLIC_TUNNEL:-}" in 1|true|TRUE|yes|on) brain_opt_in=1 ;; esac
   if printf '%s\n' "$active_ingress" | grep -Eq '127\.0\.0\.1:3002'; then
-    report fail "Tunnel-Konfiguration zeigt auf den Brain-Port (:3002) — Brain ist owner-only/lokal und darf nie öffentlich exponiert werden"
+    if [[ "$brain_opt_in" == "1" ]]; then
+      report warn "Tunnel zeigt auf den Brain-Port (:3002) — bewusst per BRAIN_PUBLIC_TUNNEL=1 freigeschaltet (Owner-Auth + 2FA vorausgesetzt)"
+    else
+      report fail "Tunnel-Konfiguration zeigt auf den Brain-Port (:3002) — Brain ist owner-only/lokal; für öffentliche Freischaltung BRAIN_PUBLIC_TUNNEL=1 setzen"
+    fi
   fi
   if printf '%s\n' "$active_ingress" | grep -qiE 'hostname:[[:space:]]*brain\.|brain\.uweanddragons\.org'; then
-    report fail "Tunnel-Konfiguration enthält einen Brain-Hostname — Brain nie im öffentlichen Tunnel"
+    if [[ "$brain_opt_in" == "1" ]]; then
+      report warn "Brain-Hostname im Tunnel — bewusst per BRAIN_PUBLIC_TUNNEL=1 freigeschaltet (owner-gated)"
+    else
+      report fail "Tunnel-Konfiguration enthält einen Brain-Hostname — für öffentliche Freischaltung BRAIN_PUBLIC_TUNNEL=1 setzen"
+    fi
   fi
   if grep -q 'portal\.uweanddragons\.org' "$TUNNEL_CONFIG" 2>/dev/null; then
     report ok "Split-Hostname-Ingress: portal.uweanddragons.org konfiguriert"

@@ -11,12 +11,12 @@ import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
  * so `applyDesktopHostUpdate` can size the combined update progress bar (stop →
  * sync → setup steps → start) without importing the step list itself.
  */
-export const HOST_SETUP_STEP_COUNT = 8;
+export const HOST_SETUP_STEP_COUNT = 9;
 
 type ServiceState = "online" | "starting" | "stopped" | "error";
 
 export interface DesktopHostService {
-  id: "studio" | "portal";
+  id: "studio" | "portal" | "brain";
   label: string;
   state: ServiceState;
   healthy: boolean;
@@ -83,7 +83,7 @@ export interface HostPaths {
 }
 
 interface ServiceDefinition {
-  id: "studio" | "portal";
+  id: "studio" | "portal" | "brain";
   label: string;
   port: number;
 }
@@ -98,6 +98,7 @@ function serviceDefinitions(paths: HostPaths): ServiceDefinition[] {
   return [
     { id: "studio", label: "UWE Studio", port: parseServicePort(env.STUDIO_PORT, 3000) },
     { id: "portal", label: "UWE Portal", port: parseServicePort(env.PORTAL_PORT, 3001) },
+    { id: "brain", label: "UWE Brain", port: parseServicePort(env.BRAIN_PORT, 3002) },
   ];
 }
 
@@ -277,7 +278,7 @@ function validateRepo(root: string): boolean {
   );
 }
 
-function pidFile(paths: HostPaths, id: "studio" | "portal"): string {
+function pidFile(paths: HostPaths, id: "studio" | "portal" | "brain"): string {
   return path.join(paths.runtime, `${id}.pid`);
 }
 
@@ -386,7 +387,7 @@ export function deriveOwnedServiceState(
   return { state: "stopped", healthy: false, message: "Gestoppt" };
 }
 
-async function serviceStatus(paths: HostPaths, id: "studio" | "portal", label: string, port: number): Promise<DesktopHostService> {
+async function serviceStatus(paths: HostPaths, id: "studio" | "portal" | "brain", label: string, port: number): Promise<DesktopHostService> {
   const url = `http://127.0.0.1:${port}`;
   const file = pidFile(paths, id);
   const storedPid = readPid(file);
@@ -411,7 +412,8 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
   const dependenciesReady = fs.existsSync(path.join(root, "node_modules", ".modules.yaml"));
   const buildReady =
     fs.existsSync(path.join(root, "apps", "studio", ".next", "BUILD_ID")) &&
-    fs.existsSync(path.join(root, "apps", "portal", ".next", "BUILD_ID"));
+    fs.existsSync(path.join(root, "apps", "portal", ".next", "BUILD_ID")) &&
+    fs.existsSync(path.join(root, "apps", "brain", ".next", "BUILD_ID"));
   const databaseReady = fs.existsSync(database);
   const services = await Promise.all(
     serviceDefinitions(paths).map((service) => serviceStatus(paths, service.id, service.label, service.port)),
@@ -609,6 +611,7 @@ export async function setupHost(
     },
     { phase: "studio-build", label: "Studio-Produktions-Build", run: () => runWorkspaceCommand(paths, "Studio Produktions-Build", ["--filter", "@uwe/studio", "build"]) },
     { phase: "portal-build", label: "Portal-Produktions-Build", run: () => runWorkspaceCommand(paths, "Portal Produktions-Build", ["--filter", "@uwe/portal", "build"]) },
+    { phase: "brain-build", label: "Brain-Produktions-Build", run: () => runWorkspaceCommand(paths, "Brain Produktions-Build", ["--filter", "@uwe/brain", "build"]) },
   ];
 
   if (options.ownProgress ?? true) beginHostProgress(steps.length);
@@ -631,7 +634,12 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   const env = readEnvFile(paths.envFile);
   const databaseModules = path.join(paths.root, "packages", "database", "node_modules");
   env.NODE_PATH = [databaseModules, env.NODE_PATH].filter(Boolean).join(path.delimiter);
-  const child = spawn(process.execPath, [nextCli, "start", "--port", String(service.port)], {
+  // Brain is owner-private: bind it to loopback so it is reachable only locally or
+  // through the (owner-gated) Cloudflare tunnel — never directly on the LAN. Studio
+  // and Portal keep Next's default bind.
+  const startArgs = [nextCli, "start", "--port", String(service.port)];
+  if (service.id === "brain") startArgs.push("--hostname", "127.0.0.1");
+  const child = spawn(process.execPath, startArgs, {
     cwd: appRoot,
     env,
     detached: true,
