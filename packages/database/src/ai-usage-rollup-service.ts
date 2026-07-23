@@ -34,35 +34,37 @@ export interface AiUsageRollupSummary {
 
 const MS_PER_DAY = 86_400_000;
 
+// Usage-rollup periods are keyed by calendar month/year and must be deterministic
+// regardless of the server timezone, so all bounds are computed in UTC.
 function startOfDay(date: Date): Date {
   const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
 function startOfMonth(date: Date): Date {
   const d = new Date(date);
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
 function startOfYear(date: Date): Date {
   const d = new Date(date);
-  d.setMonth(0, 1);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCMonth(0, 1);
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
+  d.setUTCMonth(d.getUTCMonth() + months);
   return d;
 }
 
 function addYears(date: Date, years: number): Date {
   const d = new Date(date);
-  d.setFullYear(d.getFullYear() + years);
+  d.setUTCFullYear(d.getUTCFullYear() + years);
   return d;
 }
 
@@ -74,20 +76,20 @@ export function resolveAiUsagePeriodBounds(
     case "current_month": {
       const since = startOfMonth(now);
       const until = addMonths(since, 1);
-      const month = String(since.getMonth() + 1).padStart(2, "0");
-      return { since, until, periodLabel: `${since.getFullYear()}-${month}` };
+      const month = String(since.getUTCMonth() + 1).padStart(2, "0");
+      return { since, until, periodLabel: `${since.getUTCFullYear()}-${month}` };
     }
     case "last_30_days": {
       const until = startOfDay(now);
-      until.setHours(23, 59, 59, 999);
+      until.setUTCHours(23, 59, 59, 999);
       const since = new Date(until.getTime() - 30 * MS_PER_DAY);
-      since.setHours(0, 0, 0, 0);
+      since.setUTCHours(0, 0, 0, 0);
       return { since, until: now, periodLabel: "Letzte 30 Tage" };
     }
     case "current_year": {
       const since = startOfYear(now);
       const until = addYears(since, 1);
-      return { since, until, periodLabel: String(since.getFullYear()) };
+      return { since, until, periodLabel: String(since.getUTCFullYear()) };
     }
     default: {
       const exhaustive: never = period;

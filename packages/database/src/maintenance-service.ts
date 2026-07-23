@@ -68,14 +68,16 @@ export function computeNextDue(interval: MaintenanceInterval, from: Date): Date 
 }
 
 /** Monate addieren, ohne über kürzere Folgemonate zu „überlaufen" (31. Jan + 1M → 28./29. Feb). */
+// UTC arithmetic so advancing across a DST boundary (e.g. Jan→Apr in Europe)
+// preserves the UTC time-of-day instead of drifting an hour with the offset.
 function addMonths(from: Date, months: number): Date {
   const result = new Date(from.getTime());
-  const targetMonth = result.getMonth() + months;
-  const day = result.getDate();
-  result.setDate(1);
-  result.setMonth(targetMonth);
-  const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
-  result.setDate(Math.min(day, lastDay));
+  const targetMonth = result.getUTCMonth() + months;
+  const day = result.getUTCDate();
+  result.setUTCDate(1);
+  result.setUTCMonth(targetMonth);
+  const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
+  result.setUTCDate(Math.min(day, lastDay));
   return result;
 }
 
