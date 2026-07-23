@@ -30,6 +30,84 @@ function dataRoot(): string {
 const tokenFile = () => path.join(dataRoot(), "cloudflare-tunnel.token");
 const pidFile = () => path.join(dataRoot(), "runtime", "cloudflared.pid");
 const logFile = () => path.join(dataRoot(), "logs", "cloudflared.log");
+const credentialsFile = () => path.join(dataRoot(), "cloudflared-credentials.json");
+const configFile = () => path.join(dataRoot(), "cloudflared-config.yml");
+
+/** Minimal .env reader from the monorepo root (cwd) for ports + public URLs. */
+function readRootEnv(): Record<string, string> {
+  const out: Record<string, string> = {};
+  const file = path.join(process.cwd(), ".env");
+  if (!fs.existsSync(file)) return out;
+  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 1) continue;
+    let value = trimmed.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    out[trimmed.slice(0, eq).trim()] = value;
+  }
+  return out;
+}
+
+function hostnameOf(url: string | undefined): string | null {
+  if (!url?.trim()) return null;
+  try {
+    return new URL(url.trim()).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build a LOCAL cloudflared config from the stored connector token: decode the
+ * token ({a,t,s}) into a credentials file and write an ingress config that maps
+ * each configured public hostname (NEXT_PUBLIC_*_URL) to its local service port
+ * (STUDIO_PORT/PORTAL_PORT/BRAIN_PORT). Running from a local config — rather than
+ * the dashboard config the raw token would use — keeps ports/hostnames in sync
+ * with the Command Center's own .env, so a wrong dashboard ingress can't break it.
+ * Returns the config path, or null if the token can't be decoded.
+ */
+function buildLocalConfig(token: string): string | null {
+  let decoded: { a?: string; t?: string; s?: string };
+  try {
+    decoded = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+  if (!decoded.t || !decoded.s || !decoded.a) return null;
+
+  fs.writeFileSync(
+    credentialsFile(),
+    JSON.stringify({ AccountTag: decoded.a, TunnelID: decoded.t, TunnelSecret: decoded.s }),
+    "utf8",
+  );
+  if (process.platform !== "win32") {
+    try {
+      fs.chmodSync(credentialsFile(), 0o600);
+    } catch {
+      // best-effort
+    }
+  }
+
+  const env = readRootEnv();
+  const services: Array<{ host: string | null; port: string }> = [
+    { host: hostnameOf(env.NEXT_PUBLIC_STUDIO_URL), port: env.STUDIO_PORT || "3100" },
+    { host: hostnameOf(env.NEXT_PUBLIC_PORTAL_URL), port: env.PORTAL_PORT || "3101" },
+    { host: hostnameOf(env.NEXT_PUBLIC_BRAIN_URL), port: env.BRAIN_PORT || "3102" },
+  ];
+  const lines = [`tunnel: ${decoded.t}`, `credentials-file: ${credentialsFile().split(path.sep).join("/")}`, "ingress:"];
+  for (const service of services) {
+    if (!service.host) continue;
+    lines.push(`  - hostname: ${service.host}`);
+    lines.push(`    service: http://localhost:${service.port}`);
+  }
+  lines.push("  - service: http_status:404", "");
+  fs.writeFileSync(configFile(), lines.join("\n"), "utf8");
+  return configFile();
+}
 
 /** Prefer the Windows default install path, else rely on PATH. */
 function cloudflaredBin(): string {
@@ -139,11 +217,18 @@ async function main(): Promise<void> {
         fs.mkdirSync(path.dirname(pidFile()), { recursive: true });
         fs.mkdirSync(path.dirname(logFile()), { recursive: true });
         const out = fs.openSync(logFile(), "a");
-        const child = spawn(
-          cloudflaredBin(),
-          ["tunnel", "--no-autoupdate", "run", "--token", token],
-          { detached: true, windowsHide: true, stdio: ["ignore", out, out] },
-        );
+        // Prefer a local ingress config derived from the token + .env (correct,
+        // self-managed ports/hostnames); fall back to the raw token (dashboard
+        // ingress) only if the token can't be decoded.
+        const config = buildLocalConfig(token);
+        const args = config
+          ? ["tunnel", "--no-autoupdate", "--config", config, "run"]
+          : ["tunnel", "--no-autoupdate", "run", "--token", token];
+        const child = spawn(cloudflaredBin(), args, {
+          detached: true,
+          windowsHide: true,
+          stdio: ["ignore", out, out],
+        });
         fs.closeSync(out);
         if (!child.pid) throw new Error("cloudflared konnte nicht gestartet werden.");
         fs.writeFileSync(pidFile(), String(child.pid), "utf8");
