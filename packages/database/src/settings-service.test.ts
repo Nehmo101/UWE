@@ -34,7 +34,7 @@ describe("SettingsService", () => {
 
     assert.equal(settings.app.theme, DEFAULT_SYSTEM_SETTINGS.app.theme);
     assert.equal(settings.app.backgroundPattern, "none");
-    assert.equal(settings.app.themePreferences?.studio?.themeId, "uwe-parchment-os");
+    assert.equal(settings.app.themePreferences?.studio?.themeId, "uwe-werkbank");
     assert.equal(settings.app.frostedGlass, false);
     assert.equal(settings.app.motionEnabled, true);
     assert.equal(settings.worlds.defaultVisibility, "dm_only");

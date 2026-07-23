@@ -74,15 +74,15 @@ function normalizeElementOverridesRecord(raw: unknown): ThemeElementOverrides | 
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-const DEFAULT_STUDIO_THEME_ID = "uwe-parchment-os";
-const DEFAULT_PORTAL_THEME_ID = "uwe-parchment-os";
+const DEFAULT_STUDIO_THEME_ID = "uwe-werkbank";
+const DEFAULT_PORTAL_THEME_ID = "uwe-lesesaal";
 
 export function defaultThemePreferencesRecord(
   scope: ThemePreferencesScope,
 ): ThemePreferencesRecord {
   return {
     themeId: scope === "portal" ? DEFAULT_PORTAL_THEME_ID : DEFAULT_STUDIO_THEME_ID,
-    font: "mono",
+    font: scope === "portal" ? "serif" : "sans",
     density: "comfortable",
     background: "none",
     frostedGlass: false,

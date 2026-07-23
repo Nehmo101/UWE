@@ -30,16 +30,19 @@ packages/shared-ui/src/
 
 | App | Storage key | Default theme |
 |-----|-------------|---------------|
-| Studio | `uwe-theme-preferences-studio` | `uwe-parchment-os` |
-| Portal | `uwe-theme-preferences-portal` | `uwe-parchment-os` |
+| Studio | `uwe-theme-preferences-studio` | `uwe-werkbank` |
+| Portal | `uwe-theme-preferences-portal` | `uwe-lesesaal` |
 
-`DEFAULT_STUDIO_THEME_ID` and `DEFAULT_PORTAL_THEME_ID` are both `uwe-parchment-os` (`themes.ts`). Studio and Portal can still diverge per scope — a player can pick a dark theme for the Portal while Studio stays on Parchment OS.
+`DEFAULT_STUDIO_THEME_ID` is `uwe-werkbank`, `DEFAULT_PORTAL_THEME_ID` is `uwe-lesesaal` (`themes.ts`) — the Tinte-&-Papier rooms. Studio and Portal can still diverge per scope — a player can pick a dark theme for the Portal while Studio stays on Werkbank.
 
 ## Presets
 
 | ID | Use case |
 |----|----------|
-| `uwe-parchment-os` | **Universal default** — light parchment OS (Studio + Portal) |
+| `uwe-werkbank` | **Studio default** — Tinte & Papier: cool workshop paper, ink sidebar, blueprint accent |
+| `uwe-lesesaal` | **Portal default** — Tinte & Papier: bright reading paper, light top chrome, lamp-green accent |
+| `uwe-nachtstudie` | **Brain default** — Tinte & Papier inverted: ink ground, paper text, candle-gold accent |
+| `uwe-parchment-os` | Light parchment OS (former universal default) |
 | `uwe-parchment-teal` | Parchment OS chrome with teal player-visible accent (Portal-Design) |
 | `uwe-default` | Slate / indigo dark baseline |
 | `uwe-dark-fantasy` | Deep fantasy workspace |

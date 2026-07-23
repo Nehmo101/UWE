@@ -8,11 +8,17 @@ import {
   seedStressWorld,
   type PrismaClient,
 } from "@uwe/database/server";
+// Der Dashboard-Aggregator liest über den brainPrisma-Singleton (vom
+// Test-Runner auf eine migrierte Brain-Test-DB gezeigt) — deshalb muss auch
+// das Seeding durch denselben Singleton laufen, nicht durch einen eigenen
+// createTestBrainClient (der eine zweite, leere Brain-DB anlegen würde).
+import { brainPrisma } from "@uwe/database/brain-client";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { getTodayDashboardData } from "./today-dashboard";
 
 describe("today dashboard integration", () => {
   let db: PrismaClient;
+  const brainDb = brainPrisma;
 
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
@@ -21,7 +27,7 @@ describe("today dashboard integration", () => {
     (globalThis as { uweRepository?: ReturnType<typeof createUweRepository> }).uweRepository =
       repo;
 
-    await seedStressWorld(repo, db, {
+    await seedStressWorld(repo, db, brainDb, {
       ...PERF_SMOKE_SCALE,
       pages: 15,
       links: 20,
@@ -46,7 +52,7 @@ describe("today dashboard integration", () => {
   });
 
   it("scales today summary with seeded captures", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
     const summary = await lifeAdmin.getTodaySummary();
     assert.ok(summary.inboxCaptureCount >= 5);
     assert.ok(summary.activeWorkshopCount >= 1);

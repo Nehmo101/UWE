@@ -22,6 +22,9 @@ describe("uwe theme system", () => {
       "uwe-parchment-os",
       "uwe-parchment-teal",
       "uwe-parchment-brain",
+      "uwe-werkbank",
+      "uwe-lesesaal",
+      "uwe-nachtstudie",
       "uwe-phosphor-console",
       "terra",
       "hells",
@@ -38,9 +41,9 @@ describe("uwe theme system", () => {
     assert.equal(getStorageKey("portal"), "uwe-theme-preferences-portal");
   });
 
-  it("defaults both scopes to the Parchment OS theme", () => {
-    assert.equal(defaultPreferences("studio").themeId, "uwe-parchment-os");
-    assert.equal(defaultPreferences("portal").themeId, "uwe-parchment-os");
+  it("defaults Studio to Werkbank and Portal to Lesesaal", () => {
+    assert.equal(defaultPreferences("studio").themeId, "uwe-werkbank");
+    assert.equal(defaultPreferences("portal").themeId, "uwe-lesesaal");
   });
 
   it("migrates retired preview theme ids to UWE-native ids", () => {

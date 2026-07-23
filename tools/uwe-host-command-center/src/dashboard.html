@@ -6,63 +6,74 @@
   <meta name="uwe-hcc-control-token" content="__UWE_HCC_CONTROL_TOKEN__" />
   <title>UWE Host Command Center</title>
   <style>
+    /*
+     * Tinte & Papier — Maschinenraum-Tokens (statischer Snapshot, wie der
+     * Brain-Block in apps/brain/app/globals.css). Hell = Werkbank-Papier mit
+     * Blaupausen-Akzent, dunkel = Maschinenraum (Nachtstudie-Grund, Blaupause
+     * in der Nacht-Stufe). Werte spiegeln @uwe/shared-ui themes.ts.
+     */
     :root {
-      --bg: #f4efe4;
-      --card: #fffdf8;
-      --border: #d8cfc0;
-      --row-border: rgba(216, 207, 192, 0.6);
-      --text: #2c2416;
-      --muted: #6b5f4d;
-      --ok: #2d6a4f;
-      --warn: #b08900;
-      --error: #9b2226;
-      --unknown: #8a8175;
-      --accent: #5c4a32;
-      --error-bg: #fde8e8;
+      --bg: #e3ded2;
+      --card: #efebe0;
+      --border: #c9c1ad;
+      --row-border: rgba(201, 193, 173, 0.6);
+      --text: #221d16;
+      --muted: #5a5244;
+      --ok: #2e6b50;
+      --warn: #8a5f12;
+      --error: #a83a24;
+      --unknown: #776e5c;
+      --accent: #33567d;
+      --error-bg: #f0e0da;
       --toggle-bg: var(--card);
-      --toggle-hover: rgba(92, 74, 50, 0.08);
+      --toggle-hover: rgba(51, 86, 125, 0.08);
     }
     :root[data-theme="dark"] {
-      --bg: #141210;
-      --card: #1e1b17;
-      --border: #3a342c;
-      --row-border: rgba(58, 52, 44, 0.8);
-      --text: #e8e2d8;
-      --muted: #9a9185;
-      --ok: #52b788;
-      --warn: #e9c46a;
-      --error: #f4a3a8;
-      --unknown: #7a7268;
-      --accent: #c9b99a;
-      --error-bg: #2a1818;
-      --toggle-bg: #2a2520;
-      --toggle-hover: rgba(201, 185, 154, 0.12);
+      --bg: #1f1b14;
+      --card: #2a2418;
+      --border: #413826;
+      --row-border: rgba(65, 56, 38, 0.8);
+      --text: #eae1c9;
+      --muted: #b0a488;
+      --ok: #74b092;
+      --warn: #d3a44f;
+      --error: #d97757;
+      --unknown: #857a5f;
+      --accent: #82a6ca;
+      --error-bg: #2a1a15;
+      --toggle-bg: #2a2418;
+      --toggle-hover: rgba(130, 166, 202, 0.12);
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #141210;
-        --card: #1e1b17;
-        --border: #3a342c;
-        --row-border: rgba(58, 52, 44, 0.8);
-        --text: #e8e2d8;
-        --muted: #9a9185;
-        --ok: #52b788;
-        --warn: #e9c46a;
-        --error: #f4a3a8;
-        --unknown: #7a7268;
-        --accent: #c9b99a;
-        --error-bg: #2a1818;
-        --toggle-bg: #2a2520;
-        --toggle-hover: rgba(201, 185, 154, 0.12);
+        --bg: #1f1b14;
+        --card: #2a2418;
+        --border: #413826;
+        --row-border: rgba(65, 56, 38, 0.8);
+        --text: #eae1c9;
+        --muted: #b0a488;
+        --ok: #74b092;
+        --warn: #d3a44f;
+        --error: #d97757;
+        --unknown: #857a5f;
+        --accent: #82a6ca;
+        --error-bg: #2a1a15;
+        --toggle-bg: #2a2418;
+        --toggle-hover: rgba(130, 166, 202, 0.12);
       }
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
+      /* UI in System-Sans; Messwerte in Mono (siehe .stat-value / .row .value) —
+         Serifen bleiben der Überschrift vorbehalten (Familien-Echo). */
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.45;
+    }
+    h1, .card h2, .update-progress-header h3 {
+      font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
     }
     header {
       padding: 1.25rem 1.5rem;
@@ -115,8 +126,14 @@
       color: var(--accent);
     }
     .stat-label { color: var(--muted); font-size: 0.85rem; }
-    .stat-value { font-size: 1.35rem; font-weight: 600; margin: 0.15rem 0; }
-    .stat-hint { color: var(--muted); font-size: 0.8rem; }
+    .stat-value {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0.15rem 0;
+      font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-hint { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
     .row {
       display: flex;
       justify-content: space-between;
@@ -126,7 +143,7 @@
       font-size: 0.9rem;
     }
     .row:last-child { border-bottom: 0; }
-    .row .value { font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--muted); text-align: right; }
+    .row .value { font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
     .error-banner {
       display: none;
       margin-bottom: 1rem;
@@ -334,7 +351,6 @@
     </div>
     <div class="header-actions">
       <button type="button" class="theme-toggle" id="theme-toggle" title="Theme wechseln" aria-label="Theme wechseln">
-        <span id="theme-icon">🌙</span>
         <span id="theme-label">Dunkel</span>
       </button>
       <div class="ampel">
@@ -433,7 +449,6 @@
       const STORAGE_KEY = "uwe-hcc-theme";
       const root = document.documentElement;
       const toggle = document.getElementById("theme-toggle");
-      const icon = document.getElementById("theme-icon");
       const label = document.getElementById("theme-label");
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -445,7 +460,6 @@
 
       function applyTheme(theme) {
         root.setAttribute("data-theme", theme);
-        icon.textContent = theme === "dark" ? "☀️" : "🌙";
         label.textContent = theme === "dark" ? "Hell" : "Dunkel";
       }
 

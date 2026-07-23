@@ -12,7 +12,7 @@ describe("connectorNavItems", () => {
   it("flattens all groups into a single owner-only connector list", () => {
     const items = connectorNavItems();
 
-    assert.equal(items.length, 8);
+    assert.equal(items.length, 11);
     for (const item of items) {
       assert.equal(item.section, "Command Center");
       assert.equal(item.source, "connector");

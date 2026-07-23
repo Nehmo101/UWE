@@ -7,18 +7,29 @@ import { DatabaseSync } from "node:sqlite";
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Services that read owner-private data through the shared `brainPrisma`
  * singleton (capture-triage, markdown-import, knowledge-assistant) can't be
- * handed a test client. If this package ships Brain migrations, provision one
- * isolated, migrated brain DB for the whole test run and point the singleton at
- * it via BRAIN_DATABASE_URL, so those tests hit a real schema instead of the
- * empty default DB. Uses node:sqlite so no external sqlite3 CLI is needed.
+ * handed a test client. Provision one isolated, migrated brain DB for the
+ * whole test run and point the singleton at it via BRAIN_DATABASE_URL, so
+ * those tests hit a real schema instead of the empty default DB. The
+ * migrations are resolved relative to this script (repo root), not the cwd —
+ * app packages like Studio run brain-backed integration tests too. Uses
+ * node:sqlite so no external sqlite3 CLI is needed.
  */
 function provisionTestBrainDatabase() {
-  const brainMigrationsDir = join(process.cwd(), "prisma", "brain", "migrations");
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+  const brainMigrationsDir = join(
+    repoRoot,
+    "packages",
+    "database",
+    "prisma",
+    "brain",
+    "migrations",
+  );
   if (process.env.BRAIN_DATABASE_URL || !existsSync(brainMigrationsDir)) return;
 
   const dbPath = join(mkdtempSync(join(tmpdir(), "uwe-brain-test-")), "brain.db");

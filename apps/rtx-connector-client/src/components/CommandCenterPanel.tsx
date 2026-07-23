@@ -626,7 +626,7 @@ export function CommandCenterPanel({
         <CardHeader><CardTitle>Backups</CardTitle></CardHeader>
         <CardContent>
           {backups.length === 0 ? (
-            <p className="connector-muted">Noch keine Backups. Über „Backup erstellen" wird eines angelegt.</p>
+            <p className="connector-muted">Noch keine Backups. Über „Backup erstellen&quot; wird eines angelegt.</p>
           ) : (
             <ul className="command-center-user-list">
               {backups.map((backup) => (

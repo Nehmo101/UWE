@@ -446,8 +446,8 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     customThemes: [],
     themePreferences: {
       studio: {
-        themeId: "uwe-parchment-os",
-        font: "mono",
+        themeId: "uwe-werkbank",
+        font: "sans",
         density: "comfortable",
         background: "none",
         frostedGlass: false,
@@ -455,8 +455,8 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
         bgEffectIntensity: 1,
       },
       portal: {
-        themeId: "uwe-parchment-os",
-        font: "mono",
+        themeId: "uwe-lesesaal",
+        font: "serif",
         density: "comfortable",
         background: "none",
         frostedGlass: false,

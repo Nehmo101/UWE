@@ -3,7 +3,7 @@ import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 
-/** The 10 theme presets to sweep (see packages/shared-ui/src/theme/themes.ts). */
+/** The 13 theme presets to sweep (see packages/shared-ui/src/theme/themes.ts). */
 export const QA_THEME_PRESETS = [
   "uwe-default",
   "uwe-dark-fantasy",
@@ -12,6 +12,9 @@ export const QA_THEME_PRESETS = [
   "uwe-parchment-study",
   "uwe-parchment-os",
   "uwe-parchment-teal",
+  "uwe-werkbank",
+  "uwe-lesesaal",
+  "uwe-nachtstudie",
   "uwe-phosphor-console",
   "terra",
   "hells",

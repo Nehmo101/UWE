@@ -1,4 +1,10 @@
-import { LEGACY_THEME_ID_MAP, UWE_THEMES, type CustomThemeDefinition } from "./themes";
+import {
+  DEFAULT_PORTAL_THEME_ID,
+  DEFAULT_STUDIO_THEME_ID,
+  LEGACY_THEME_ID_MAP,
+  UWE_THEMES,
+  type CustomThemeDefinition,
+} from "./themes";
 import { CSS_VARS, LAYOUT_TOKENS } from "./tokens";
 import { resolveThemeColorTokens } from "./resolveColorTokens";
 import type { UweThemePreferences } from "./storage";
@@ -19,7 +25,8 @@ export function buildThemeBootstrapScript(
     scope === "portal"
       ? "uwe-theme-preferences-portal"
       : "uwe-theme-preferences-studio";
-  const defaultTheme = "uwe-parchment-os";
+  const defaultTheme =
+    scope === "portal" ? DEFAULT_PORTAL_THEME_ID : DEFAULT_STUDIO_THEME_ID;
 
   const toColorEntry = (
     colors: Parameters<typeof resolveThemeColorTokens>[0],

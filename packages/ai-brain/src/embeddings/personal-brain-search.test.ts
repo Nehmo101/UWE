@@ -1,16 +1,14 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
-import {
-  createPersonalBrainService,
-  createPrismaClient,
-} from "@uwe/database/server";
-import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
+import { createPersonalBrainService } from "@uwe/database/server";
+import { createTestBrainClient } from "@uwe/database/test-helpers";
 import { MockEmbeddingProvider } from "./provider";
 import { indexPersonalBrainDocument } from "./personal-brain-indexer";
 import { semanticSearchPersonalBrainChunks } from "./personal-brain-search";
 
 describe("personal brain embeddings", () => {
-  const db = createPrismaClient(createTestDatabaseUrl());
+  // PersonalBrain-Modelle leben seit dem Zwei-Client-Umbau in uwe-brain.db.
+  const db = createTestBrainClient();
   const service = createPersonalBrainService(db);
   const provider = new MockEmbeddingProvider("personal-brain-mock");
 

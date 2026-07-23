@@ -14,6 +14,9 @@ export type ThemeId =
   | "uwe-parchment-os"
   | "uwe-parchment-teal"
   | "uwe-parchment-brain"
+  | "uwe-werkbank"
+  | "uwe-lesesaal"
+  | "uwe-nachtstudie"
   | "uwe-phosphor-console"
   | "terra"
   | "hells";
@@ -309,6 +312,117 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
     },
     defaults: { font: "mono", background: "none", frostedGlass: false },
   },
+  "uwe-werkbank": {
+    id: "uwe-werkbank",
+    label: "Werkbank",
+    description:
+      "Tinte & Papier: kühles Werkstattpapier mit Tinte-Sidebar und Blaupausen-Akzent — Studio-Standard.",
+    colors: {
+      bg: "#e3ded2",
+      bgElevated: "#efebe0",
+      surface: "rgba(239, 235, 224, 0.95)",
+      panel: "#d7d1c1",
+      border: "#c9c1ad",
+      borderMuted: "rgba(201, 193, 173, 0.7)",
+      fg: "#221d16",
+      fgMuted: "#5a5244",
+      fgSubtle: "#776e5c",
+      accent: "#33567d",
+      accentHover: "#41689a",
+      accentMuted: "rgba(51, 86, 125, 0.14)",
+      link: "#33567d",
+      danger: "#a83a24",
+      warning: "#8a5f12",
+      success: "#2e6b50",
+      info: "#33567d",
+      wikiLink: "#33567d",
+      wikiLinkHover: "#41689a",
+      dmOnly: "#8a5f12",
+      playerVisible: "#2e6b50",
+      shellGradientStart: "rgba(51, 86, 125, 0.03)",
+      shellGradientMid: "rgba(227, 222, 210, 0.05)",
+      shellGradientEnd: "#e3ded2",
+      sidebarBg: "#241f17",
+      sidebarFg: "#ede6d4",
+      sidebarFgMuted: "#a89c82",
+      cardBg: "#efebe0",
+    },
+    defaults: { font: "sans", background: "none", frostedGlass: false },
+  },
+  "uwe-lesesaal": {
+    id: "uwe-lesesaal",
+    label: "Lesesaal",
+    description:
+      "Tinte & Papier: helles Lesepapier ohne dunkle Sidebar, Serifen-Lesetext, Lampengrün — Portal-Standard.",
+    colors: {
+      bg: "#efe8d8",
+      bgElevated: "#f4efe2",
+      surface: "rgba(244, 239, 226, 0.95)",
+      panel: "#e5dcc7",
+      border: "#d5c9ac",
+      borderMuted: "rgba(213, 201, 172, 0.7)",
+      fg: "#262117",
+      fgMuted: "#5f5644",
+      fgSubtle: "#7c7260",
+      accent: "#2f614b",
+      accentHover: "#3f7a60",
+      accentMuted: "rgba(47, 97, 75, 0.14)",
+      link: "#2f614b",
+      danger: "#a83a24",
+      warning: "#8a5f12",
+      success: "#2e6b50",
+      info: "#33567d",
+      wikiLink: "#2f614b",
+      wikiLinkHover: "#3f7a60",
+      dmOnly: "#8a5f12",
+      playerVisible: "#2e6b50",
+      shellGradientStart: "rgba(47, 97, 75, 0.03)",
+      shellGradientMid: "rgba(239, 232, 216, 0.05)",
+      shellGradientEnd: "#efe8d8",
+      sidebarBg: "#f4efe2",
+      sidebarFg: "#262117",
+      sidebarFgMuted: "#5f5644",
+      cardBg: "#f4efe2",
+    },
+    defaults: { font: "serif", background: "none", frostedGlass: false },
+  },
+  "uwe-nachtstudie": {
+    id: "uwe-nachtstudie",
+    label: "Nachtstudie",
+    description:
+      "Tinte & Papier invertiert: Tinte als Grund, Papiertext, Kerzengold — owner-privates Brain-Design.",
+    colors: {
+      bg: "#1f1b14",
+      bgElevated: "#2a2418",
+      surface: "rgba(42, 36, 24, 0.92)",
+      panel: "#16120c",
+      border: "#413826",
+      borderMuted: "rgba(65, 56, 38, 0.6)",
+      fg: "#eae1c9",
+      fgMuted: "#b0a488",
+      fgSubtle: "#857a5f",
+      accent: "#c29a3a",
+      accentHover: "#d9b258",
+      accentMuted: "rgba(194, 154, 58, 0.16)",
+      link: "#c29a3a",
+      danger: "#d97757",
+      warning: "#d3a44f",
+      success: "#74b092",
+      info: "#82a6ca",
+      wikiLink: "#c29a3a",
+      wikiLinkHover: "#d9b258",
+      dmOnly: "#d3a44f",
+      playerVisible: "#74b092",
+      shellGradientStart: "rgba(194, 154, 58, 0.04)",
+      shellGradientMid: "rgba(31, 27, 20, 0.05)",
+      shellGradientEnd: "#1f1b14",
+      sidebarBg: "#16120c",
+      sidebarFg: "#eae1c9",
+      sidebarFgMuted: "#857a5f",
+      cardBg: "#2a2418",
+    },
+    defaults: { font: "serif", background: "none", frostedGlass: false },
+  },
   "uwe-phosphor-console": {
     id: "uwe-phosphor-console",
     label: "Phosphor Console",
@@ -416,8 +530,8 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
 
 export const THEME_LIST = Object.values(UWE_THEMES);
 
-export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-parchment-os";
-export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-parchment-os";
+export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-werkbank";
+export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-lesesaal";
 
 export type CustomThemeScope = "studio" | "portal" | "both";
 

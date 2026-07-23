@@ -159,7 +159,7 @@ export function UsersPanel() {
       {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
       {!ownerExists ? (
         <div className="connector-banner connector-banner-error">
-          Es existiert noch kein Owner-Account. Lege zuerst einen Benutzer mit der Rolle „Owner" an —
+          Es existiert noch kein Owner-Account. Lege zuerst einen Benutzer mit der Rolle „Owner&quot; an —
           nur der Owner erreicht den privaten Brain-Bereich.
         </div>
       ) : null}

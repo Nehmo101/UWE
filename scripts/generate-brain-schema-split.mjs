@@ -98,7 +98,7 @@ function processSchema(relPath, brainOutRel) {
   }
 
   // --- Main-side model transform: drop back-relation fields pointing to Brain. ---
-  function transformMainModel(text, name) {
+  function transformMainModel(text, _name) {
     const out = [];
     for (const line of text.split("\n")) {
       const target = relationTarget(line, modelNames);

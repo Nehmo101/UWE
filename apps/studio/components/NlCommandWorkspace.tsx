@@ -3,7 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDateTime } from "@/src/lib/format";
-import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
+import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
 
 interface NlCommandIntentPayload {
   intent:
@@ -93,6 +93,9 @@ const EXAMPLE_COMMANDS = [
   "lock portal",
 ];
 
+/** Beispiel-Chips im eingeklappten Zustand — Rest hinter „+ n weitere". */
+const EXAMPLE_PREVIEW_COUNT = 5;
+
 export function NlCommandWorkspace({ initialText }: { initialText?: string } = {}) {
   const [text, setText] = useState(initialText ?? "");
   const [parsing, setParsing] = useState(false);
@@ -102,6 +105,7 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
   const [result, setResult] = useState<ExecuteSuccessResponse | null>(null);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
+  const [showAllExamples, setShowAllExamples] = useState(false);
 
   const loadAudit = useCallback(async () => {
     setAuditLoading(true);
@@ -212,14 +216,20 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
 
           <form onSubmit={handleParse} className="flex flex-col gap-3">
             <Label htmlFor="nl-command-input">Befehl (Deutsch oder Englisch)</Label>
-            <Input
-              id="nl-command-input"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="z. B. Zeige alle Benutzer"
-              autoComplete="off"
-              spellCheck={false}
-            />
+            <div className="flex items-center gap-2 rounded-[var(--radius)] border border-border bg-card px-3 focus-within:border-primary">
+              <span aria-hidden="true" className="font-mono font-bold text-primary">
+                ›
+              </span>
+              <Input
+                id="nl-command-input"
+                value={text}
+                onChange={(event) => setText(event.target.value)}
+                placeholder="z. B. Zeige alle Benutzer"
+                autoComplete="off"
+                spellCheck={false}
+                className="border-0 bg-transparent px-0 font-mono shadow-none focus-visible:ring-0"
+              />
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={parsing || !text.trim()}>
                 {parsing ? "Analysiere…" : "Intent parsen"}
@@ -230,13 +240,37 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">Beispiele:</p>
             <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-              {EXAMPLE_COMMANDS.map((example) => (
+              {(showAllExamples
+                ? EXAMPLE_COMMANDS
+                : EXAMPLE_COMMANDS.slice(0, EXAMPLE_PREVIEW_COUNT)
+              ).map((example) => (
                 <li key={example}>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setText(example)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="font-mono text-xs"
+                    onClick={() => setText(example)}
+                  >
                     {example}
                   </Button>
                 </li>
               ))}
+              {EXAMPLE_COMMANDS.length > EXAMPLE_PREVIEW_COUNT ? (
+                <li>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="font-mono text-xs text-muted-foreground"
+                    onClick={() => setShowAllExamples((current) => !current)}
+                  >
+                    {showAllExamples
+                      ? "weniger anzeigen"
+                      : `+ ${EXAMPLE_COMMANDS.length - EXAMPLE_PREVIEW_COUNT} weitere`}
+                  </Button>
+                </li>
+              ) : null}
             </ul>
           </div>
         </CardContent>
@@ -251,7 +285,14 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
       {parsed ? (
         <Card>
           <CardHeader>
-            <CardTitle>Bestätigung</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Beleg
+              {parsed.requiresConfirmation ? (
+                <Badge variant="warning">Mutation</Badge>
+              ) : (
+                <Badge variant="success">Lesen</Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <dl className="flex flex-col gap-2.5">
@@ -308,7 +349,7 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
 
       <Card>
         <CardHeader>
-          <CardTitle>Letzte NL-Befehle (Audit)</CardTitle>
+          <CardTitle>Journal (Audit)</CardTitle>
         </CardHeader>
         <CardContent>
           {auditLoading ? (
@@ -316,15 +357,26 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
           ) : auditEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground">Noch keine NL-Befehle ausgeführt.</p>
           ) : (
-            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            <ul className="m-0 flex list-none flex-col p-0 font-mono text-xs">
               {auditEntries.map((entry) => (
-                <li key={entry.id}>
-                  <strong>{entry.intent ?? entry.actionLabel}</strong>
-                  {entry.readOnly ? " · lesen" : " · Mutation"}
-                  <p className="mt-0.5 whitespace-pre-line text-sm">
+                <li
+                  key={entry.id}
+                  className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border py-2 last:border-b-0"
+                >
+                  <span className="text-muted-foreground">
                     {formatStudioDateTime(new Date(entry.timestamp))}
-                    {entry.summary ? ` · ${entry.summary}` : ""}
-                  </p>
+                  </span>
+                  <strong>{entry.intent ?? entry.actionLabel}</strong>
+                  {entry.readOnly ? (
+                    <Badge variant="success">Lesen</Badge>
+                  ) : (
+                    <Badge variant="warning">Mutation</Badge>
+                  )}
+                  {entry.summary ? (
+                    <span className="whitespace-pre-line text-muted-foreground">
+                      {entry.summary}
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>

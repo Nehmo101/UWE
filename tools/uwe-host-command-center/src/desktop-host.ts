@@ -5,6 +5,23 @@ import os from "node:os";
 import path from "node:path";
 
 import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
+import {
+  appendToLog,
+  deriveOwnedServiceState,
+  diskSnapshot,
+  gpuSnapshot,
+  pnpmCommand,
+  probeHealth,
+  processRunning,
+  readLogTail,
+  readPid,
+  rotateLogIfLarge,
+  runCapture,
+  stopProcess,
+  waitForHealth,
+} from "./desktop-host-system.ts";
+
+export { deriveOwnedServiceState } from "./desktop-host-system.ts";
 
 /**
  * Number of discrete steps `setupHost` reports progress for. Kept as a constant
@@ -282,109 +299,8 @@ function pidFile(paths: HostPaths, id: "studio" | "portal" | "brain"): string {
   return path.join(paths.runtime, `${id}.pid`);
 }
 
-function readPid(file: string): number | null {
-  try {
-    const pid = Number.parseInt(fs.readFileSync(file, "utf8").trim(), 10);
-    return Number.isInteger(pid) && pid > 0 ? pid : null;
-  } catch {
-    return null;
-  }
-}
-
-function processRunning(pid: number | null): boolean {
-  if (!pid) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-interface HealthProbe {
-  responding: boolean;
-  healthy: boolean;
-}
-
-async function probeHealth(url: string): Promise<HealthProbe> {
-  try {
-    const response = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(2_500) });
-    return { responding: true, healthy: response.ok };
-  } catch {
-    return { responding: false, healthy: false };
-  }
-}
-
-async function health(url: string): Promise<boolean> {
-  return (await probeHealth(url)).healthy;
-}
-
-async function waitForHealth(url: string, timeoutMs = 90_000): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await health(url)) return true;
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-  }
-  return false;
-}
-
-function runCapture(command: string, args: string[], cwd?: string): string | null {
-  const result = spawnSync(command, args, {
-    cwd,
-    encoding: "utf8",
-    windowsHide: true,
-    timeout: 8_000,
-  });
-  return result.status === 0 ? result.stdout.trim() : null;
-}
-
 function gitFact(root: string, args: string[]): string | null {
   return validateRepo(root) ? runCapture("git", args, root) : null;
-}
-
-function gpuSnapshot(): DesktopHostStatus["gpu"] {
-  const raw = runCapture("nvidia-smi", [
-    "--query-gpu=name,memory.total,utilization.gpu,temperature.gpu",
-    "--format=csv,noheader,nounits",
-  ]);
-  if (!raw) {
-    return { available: false, name: null, vramTotalMb: null, utilizationPercent: null, temperatureC: null };
-  }
-  const [name, memory, utilization, temperature] = raw.split(/\r?\n/, 1)[0].split(",").map((value) => value.trim());
-  return {
-    available: true,
-    name: name || null,
-    vramTotalMb: Number.isFinite(Number(memory)) ? Number(memory) : null,
-    utilizationPercent: Number.isFinite(Number(utilization)) ? Number(utilization) : null,
-    temperatureC: Number.isFinite(Number(temperature)) ? Number(temperature) : null,
-  };
-}
-
-function diskSnapshot(root: string): { total: number | null; used: number | null } {
-  try {
-    const stats = fs.statfsSync(root);
-    const total = stats.blocks * stats.bsize;
-    const free = stats.bavail * stats.bsize;
-    return { total, used: total - free };
-  } catch {
-    return { total: null, used: null };
-  }
-}
-
-export function deriveOwnedServiceState(
-  running: boolean,
-  responding: boolean,
-  healthy: boolean,
-): Pick<DesktopHostService, "state" | "healthy" | "message"> {
-  if (responding && !running) {
-    return { state: "error", healthy: false, message: "Port ist durch einen fremd gestarteten Dienst belegt." };
-  }
-  if (healthy) return { state: "online", healthy: true, message: "Erreichbar" };
-  if (running && responding) {
-    return { state: "error", healthy: false, message: "Dienst antwortet, aber der Healthcheck meldet einen Fehler." };
-  }
-  if (running) return { state: "starting", healthy: false, message: "Prozess startet oder Healthcheck ist noch nicht bereit." };
-  return { state: "stopped", healthy: false, message: "Gestoppt" };
 }
 
 async function serviceStatus(paths: HostPaths, id: "studio" | "portal" | "brain", label: string, port: number): Promise<DesktopHostService> {
@@ -462,55 +378,9 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
   };
 }
 
-const MAX_LOG_BYTES = 5 * 1024 * 1024;
-
-/** Rename a log to `.1` (keeping one prior generation) once it exceeds the cap. */
-function rotateLogIfLarge(file: string): void {
-  try {
-    if (fs.statSync(file).size > MAX_LOG_BYTES) {
-      fs.renameSync(file, `${file}.1`);
-    }
-  } catch {
-    // Missing/not-yet-created log — nothing to rotate.
-  }
-}
-
-/** Append to a host log, rotating first so append-only logs cannot grow unbounded. */
-function appendToLog(file: string, text: string): void {
-  rotateLogIfLarge(file);
-  fs.appendFileSync(file, text, "utf8");
-}
-
-/** Read only the tail of a log (last ~64 KB) instead of loading the whole file. */
-function readLogTail(file: string, maxLines: number): string[] {
-  const CHUNK = 64 * 1024;
-  const fd = fs.openSync(file, "r");
-  try {
-    const size = fs.fstatSync(fd).size;
-    const readLength = Math.min(CHUNK, size);
-    const buffer = Buffer.alloc(readLength);
-    if (readLength > 0) fs.readSync(fd, buffer, 0, readLength, size - readLength);
-    const lines = buffer.toString("utf8").split(/\r?\n/);
-    if (size > readLength && lines.length > 0) lines.shift(); // drop the partial first line
-    return lines.filter(Boolean).slice(-maxLines);
-  } finally {
-    fs.closeSync(fd);
-  }
-}
-
 function appendOperationLog(paths: HostPaths, line: string): void {
   ensureHostDirectories(paths);
   appendToLog(path.join(paths.logs, "command-center.log"), `[${new Date().toISOString()}] ${line}\n`);
-}
-
-function pnpmCommand(args: string[]): { command: string; args: string[] } {
-  if (process.platform === "win32") {
-    return {
-      command: process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe",
-      args: ["/d", "/s", "/c", "corepack", "pnpm", ...args],
-    };
-  }
-  return { command: "corepack", args: ["pnpm", ...args] };
 }
 
 function workspaceCommandEnv(paths: HostPaths, extraEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -678,15 +548,6 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
   const status = await collectDesktopHostStatus(root);
   const ok = readiness.every(Boolean);
   return { ok, message: ok ? "Studio, Portal und Brain laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
-}
-
-function stopProcess(pid: number): void {
-  if (!processRunning(pid)) return;
-  if (process.platform === "win32") {
-    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
-  } else {
-    try { process.kill(-pid, "SIGTERM"); } catch { process.kill(pid, "SIGTERM"); }
-  }
 }
 
 export async function stopHost(rootInput?: string): Promise<DesktopHostActionResult> {

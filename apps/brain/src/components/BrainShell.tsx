@@ -3,9 +3,10 @@ import Link from "next/link";
 import { BrainNav } from "./BrainNav";
 
 /**
- * Parchment shell shared by every owner-only Brain surface: ink sidebar + warm
- * paper content area, matching Studio (ParchmentOS) / Portal (ParchmentTeal) but
- * with the plum "uwe-parchment-brain" accent forced in the root layout.
+ * Nachtstudie shell shared by every owner-only Brain surface: inverted
+ * Tinte-&-Papier room (ink ground, paper text, candle-gold accent) — same
+ * family grammar as Studio (Werkbank) / Portal (Lesesaal), with the
+ * "uwe-nachtstudie" theme forced in the root layout.
  *
  * Owner-gating and data fetching stay in each page (data must not load for
  * non-owners); the shell is purely presentational.

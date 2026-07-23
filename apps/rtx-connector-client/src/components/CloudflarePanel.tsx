@@ -113,7 +113,7 @@ export function CloudflarePanel() {
                 placeholder="eyJhIjoi… (aus dem Cloudflare-Dashboard)"
               />
               <small>
-                Cloudflare Zero Trust → Networks → Tunnels → deinen Tunnel → Configure → „Install connector":
+                Cloudflare Zero Trust → Networks → Tunnels → deinen Tunnel → Configure → „Install connector&quot;:
                 der Wert hinter <code>--token</code>. Wird nur lokal, owner-only gespeichert.
               </small>
             </label>
