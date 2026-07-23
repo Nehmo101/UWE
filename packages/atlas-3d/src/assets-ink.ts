@@ -9,6 +9,8 @@
  * ink shader's uTime.
  */
 
+import { INK_ASSET_BUILDERS_BATCH2 } from "./assets-ink-batch2";
+
 export interface InkAssetData {
   /** Interleaved-free flat arrays, non-indexed triangles. */
   positions: Float32Array;
@@ -100,7 +102,7 @@ export function hex(hexColor: string): Rgb {
   ];
 }
 
-class Builder {
+export class Builder {
   positions: number[] = [];
   colors: number[] = [];
   anim: number[] = [];
@@ -225,12 +227,12 @@ class Builder {
   }
 }
 
-function shades(tint: InkTint): [Rgb, Rgb, Rgb] {
+export function shades(tint: InkTint): [Rgb, Rgb, Rgb] {
   const [dark, base, light] = TINT_SHADES[tint];
   return [hex(dark), hex(base), hex(light)];
 }
 
-const INK = hex("#211d17");
+export const INK = hex("#211d17");
 
 /** Weltwurzel: white spiral strands that tower above everything else. */
 function buildWorldroot(tint: InkTint): InkAssetData {
@@ -335,6 +337,7 @@ const BUILDERS: Record<InkAssetKind, (tint: InkTint) => InkAssetData> = {
   house: buildHouse,
   tower: buildTower,
   asteroid: buildAsteroid,
+  ...INK_ASSET_BUILDERS_BATCH2,
 };
 
 /** Default tint per kind (worldroots are lore-white). */
@@ -344,6 +347,14 @@ export const INK_ASSET_DEFAULT_TINT: Record<InkAssetKind, InkTint> = {
   house: "terra",
   tower: "paper",
   asteroid: "sepia",
+  fels: "sepia",
+  busch: "teal",
+  bruecke: "sepia",
+  muehle: "paper",
+  hafen: "sepia",
+  portal: "blue",
+  obelisk: "sepia",
+  mond: "paper",
 };
 
 export function buildInkAsset(kind: InkAssetKind, tint?: InkTint): InkAssetData {

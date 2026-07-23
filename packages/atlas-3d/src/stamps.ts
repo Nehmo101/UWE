@@ -5,8 +5,8 @@
  */
 
 import type { Vec3 } from "@uwe/atlas-editor/carve";
-import { applyHeightBrush, type HeightmapGrid } from "./planet-field";
-import { applyPlanarBrush } from "./terrain-field";
+import { applyHeightBrush, fbm, type HeightmapGrid } from "./planet-field";
+import { applyPlanarBrush, mapToUv } from "./terrain-field";
 
 export const TERRAIN_STAMPS = [
   { key: "krater", label: "Krater" },
