@@ -1,10 +1,13 @@
 "use server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import {
+  createCalendarService,
   createDocumentTemplateService,
   createLifeAdminService,
+  createMailAccountService,
   createMiniatureCollectionService,
   prisma,
+  type CalendarEventKind,
   type CaptureStatus,
   type CaptureType,
   type ContractStatus,
@@ -434,4 +437,117 @@ export async function deleteTemplateAction(formData: FormData) {
   const id = str(formData.get("id"));
   if (id) await templates().deleteTemplate(id);
   revalidatePath("/documents");
+}
+
+/* ══ Calendar events ═════════════════════════════════════════════════ */
+
+function calendar() {
+  return createCalendarService(brainPrisma, prisma);
+}
+
+export async function createEventAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const title = str(formData.get("title"));
+  const startAt = parseOptionalDate(formData.get("startAt"));
+  if (!title || !startAt) return;
+  await calendar().createEvent({
+    title,
+    startAt,
+    endAt: parseOptionalDate(formData.get("endAt")),
+    allDay: str(formData.get("allDay")) === "on",
+    location: str(formData.get("location")) || null,
+    description: str(formData.get("description")) || null,
+    kind: (str(formData.get("kind")) || "personal") as CalendarEventKind,
+  });
+  revalidatePath("/calendar");
+}
+
+export async function updateEventAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  const startAt = parseOptionalDate(formData.get("startAt"));
+  await calendar().updateEvent(id, {
+    title: str(formData.get("title")),
+    ...(startAt ? { startAt } : {}),
+    endAt: parseOptionalDate(formData.get("endAt")),
+    allDay: str(formData.get("allDay")) === "on",
+    location: str(formData.get("location")) || null,
+    description: str(formData.get("description")) || null,
+    kind: (str(formData.get("kind")) || "personal") as CalendarEventKind,
+  });
+  revalidatePath("/calendar");
+}
+
+export async function deleteEventAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (id) await calendar().deleteEvent(id);
+  revalidatePath("/calendar");
+}
+
+/* ══ Mail: accounts + drafts ═════════════════════════════════════════ */
+
+function mail() {
+  return createMailAccountService(brainPrisma);
+}
+
+function parseAddresses(formData: FormData, field = "to"): string[] {
+  return str(formData.get(field))
+    .split(/[,;\n]/)
+    .map((a) => a.trim())
+    .filter(Boolean);
+}
+
+function parsePort(value: FormDataEntryValue | null): number | null {
+  const n = Number.parseInt(str(value), 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export async function createMailAccountAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const label = str(formData.get("label"));
+  const smtpHost = str(formData.get("smtpHost"));
+  const username = str(formData.get("username"));
+  // Passwords are stored encrypted (encryptSecret) — do not trim (may be significant).
+  const password = String(formData.get("password") ?? "");
+  if (!label || !smtpHost || !username || !password) return;
+  await mail().createAccount({
+    label,
+    smtpHost,
+    smtpPort: parsePort(formData.get("smtpPort")),
+    imapHost: str(formData.get("imapHost")) || null,
+    imapPort: parsePort(formData.get("imapPort")),
+    username,
+    password,
+  });
+  revalidatePath("/mail");
+}
+
+export async function createDraftAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const subject = str(formData.get("subject"));
+  const body = str(formData.get("bodyText"));
+  if (!subject && !body) return;
+  await mail().createDraft({
+    subject: subject || "(kein Betreff)",
+    toAddresses: parseAddresses(formData),
+    bodyText: body || null,
+    accountId: str(formData.get("accountId")) || null,
+    status: "draft",
+  });
+  revalidatePath("/mail");
+}
+
+export async function updateDraftAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await mail().updateDraft(id, {
+    subject: str(formData.get("subject")),
+    toAddresses: parseAddresses(formData),
+    bodyText: str(formData.get("bodyText")) || null,
+    accountId: str(formData.get("accountId")) || null,
+  });
+  revalidatePath("/mail");
 }
