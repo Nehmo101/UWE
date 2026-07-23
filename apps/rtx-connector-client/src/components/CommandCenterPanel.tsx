@@ -120,6 +120,7 @@ export function CommandCenterPanel({
   const [status, setStatus] = useState<LocalHostStatus | null>(null);
   const [root, setRoot] = useState(config.localHostRoot);
   const [autoStartHost, setAutoStartHost] = useState(config.autoStartHost);
+  const [autoStartTunnel, setAutoStartTunnel] = useState(config.autoStartTunnel);
   const [autostartApp, setAutostartApp] = useState(config.autostartWindows);
   const [busy, setBusy] = useState<HostAction | "refresh" | "settings" | "all" | "check-update" | "update" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -196,6 +197,7 @@ export function CommandCenterPanel({
         ...config,
         localHostRoot: root,
         autoStartHost,
+        autoStartTunnel,
         autostartWindows: autostartApp,
         hostUrl: config.hostUrl || status?.services.find((service) => service.id === "studio")?.url || "http://127.0.0.1:3000",
       });
@@ -608,7 +610,11 @@ export function CommandCenterPanel({
             </label>
             <label className="connector-checkbox">
               <input type="checkbox" checked={autoStartHost} onChange={(event) => setAutoStartHost(event.target.checked)} />
-              <span>Studio und Portal automatisch starten</span>
+              <span>Studio, Portal und Brain automatisch starten</span>
+            </label>
+            <label className="connector-checkbox">
+              <input type="checkbox" checked={autoStartTunnel} onChange={(event) => setAutoStartTunnel(event.target.checked)} />
+              <span>Cloudflare-Tunnel automatisch starten</span>
             </label>
           </div>
           {status ? <p className="connector-muted">Stand: {status.branch ?? "detached"} · {status.revision ?? "unbekannt"} · Daten: {status.dataDir}</p> : null}

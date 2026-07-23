@@ -97,9 +97,12 @@ struct ConnectorClientConfig {
     /// Checkout used by the all-in-one local host controller.
     #[serde(default)]
     local_host_root: String,
-    /// Start Studio + Portal when the Command Center starts.
+    /// Start Studio + Portal + Brain when the Command Center starts.
     #[serde(default)]
     auto_start_host: bool,
+    /// Start the Cloudflare tunnel connector when the Command Center starts.
+    #[serde(default)]
+    auto_start_tunnel: bool,
 }
 
 fn default_spotify_redirect_uri() -> String {
@@ -133,6 +136,7 @@ impl Default for ConnectorClientConfig {
             default_printer_id: String::new(),
             local_host_root: String::new(),
             auto_start_host: false,
+            auto_start_tunnel: false,
         }
     }
 }

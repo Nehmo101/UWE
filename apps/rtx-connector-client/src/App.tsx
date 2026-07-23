@@ -43,6 +43,7 @@ import {
   toMessage,
 } from "./lib/connector-runtime-labels";
 import {
+  cloudflareStart,
   deleteOllamaModel,
   exitApp,
   getConnectorStatus,
@@ -217,6 +218,9 @@ export default function App() {
         void startHost(nextConfig.localHostRoot || undefined).catch((nextError) => {
           setError(toMessage(nextError));
         });
+      }
+      if (nextConfig.autoStartTunnel) {
+        void cloudflareStart().catch((nextError) => setError(toMessage(nextError)));
       }
       if (
         nextConfig.autoConnect && nextConfig.hostUrl && nextConfig.token &&

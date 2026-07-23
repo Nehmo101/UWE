@@ -80,10 +80,12 @@ export interface ConnectorClientConfig {
   /** UWE checkout used by the integrated local host controller. */
   localHostRoot: string;
   /**
-   * Start local Studio and Portal automatically with the Command Center.
+   * Start local Studio, Portal and Brain automatically with the Command Center.
    * Opt-in keeps existing remote-host connector installations safe.
    */
   autoStartHost: boolean;
+  /** Start the Cloudflare tunnel connector automatically with the Command Center. */
+  autoStartTunnel: boolean;
 }
 
 /** Default Spotify OAuth redirect URI for the connector-local loopback flow. */
