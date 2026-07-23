@@ -277,6 +277,7 @@ export function createPlanetField(partial: Partial<PlanetFieldOptions>): PlanetF
     let best = -1;
     let bestDepth = epsilon;
     for (let i = 0; i < options.carveOps.length; i++) {
+      if (options.carveOps[i].disabled) continue;
       const d = carveOpDistance(options.carveOps[i], p);
       if (d < bestDepth) {
         bestDepth = d;

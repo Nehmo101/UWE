@@ -91,7 +91,12 @@ export function createInkMaterial(options: InkMaterialOptions): THREE.ShaderMate
 }
 
 /** Apply a time-of-day preset + fog to a whole scene (ink shaders + basic materials). */
-export function applySceneEnvironment(scene: THREE.Scene, timeOfDay: string, fogDensity: number): void {
+export function applySceneEnvironment(
+  scene: THREE.Scene,
+  timeOfDay: string,
+  fogDensity: number,
+  extraTint?: readonly [number, number, number],
+): void {
   const preset = environmentPreset(timeOfDay);
   scene.background = new THREE.Color(preset.sky);
   scene.fog = fogDensity > 0.01 ? new THREE.FogExp2(new THREE.Color(preset.fogColor).getHex(), fogDensity * 0.28) : null;
@@ -100,9 +105,12 @@ export function applySceneEnvironment(scene: THREE.Scene, timeOfDay: string, fog
     const mesh = object as THREE.Mesh;
     if (mesh.isMesh && mesh.material instanceof THREE.ShaderMaterial) materials.push(mesh.material);
   });
+  const tint: readonly [number, number, number] = extraTint
+    ? [preset.tint[0] * extraTint[0], preset.tint[1] * extraTint[1], preset.tint[2] * extraTint[2]]
+    : preset.tint;
   applyInkEnvironment(materials, {
     lightDir: preset.lightDir,
-    tint: preset.tint,
+    tint,
     fogColor: preset.fogColor,
     fogDensity,
   });

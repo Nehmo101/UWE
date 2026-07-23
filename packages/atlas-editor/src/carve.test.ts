@@ -97,3 +97,13 @@ test("dominantCarveOp picks the deepest containing op for cut-face materials", (
   assert.equal(dominantCarveOp([0, 0, 0.5], [split, bite]), 0);
   assert.equal(dominantCarveOp([5, 5, 5], [split, bite]), -1);
 });
+
+test("disabled ops are stored but not applied (non-destructive stack)", () => {
+  const disabledBite: CarveOp = { ...bite, disabled: true };
+  assert.equal(applyCarveOps(-1, [1, 0, 0], [disabledBite]), -1, "disabled bite removes nothing");
+  assert.equal(dominantCarveOp([1, 0, 0], [disabledBite]), -1, "disabled op owns no cut face");
+  const parsed = parseCarveOps(JSON.parse(serializeCarveOps([disabledBite, bite])));
+  assert.equal(parsed[0].disabled, true, "disabled survives the round-trip");
+  assert.equal(parsed[1].disabled, undefined, "enabled ops stay lean");
+  assert.ok(applyCarveOps(-1, [1, 0, 0], parsed) > 0, "the enabled twin still carves");
+});

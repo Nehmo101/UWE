@@ -9,7 +9,7 @@
 export const ATLAS3D_LEVELS = ["globe", "continent", "landscape", "city"] as const;
 export type Atlas3DLevel = (typeof ATLAS3D_LEVELS)[number];
 
-export const ATLAS3D_STYLE_PRESETS = ["pergament"] as const;
+export const ATLAS3D_STYLE_PRESETS = ["pergament", "sepia", "aquarell"] as const;
 export type Atlas3DStylePreset = (typeof ATLAS3D_STYLE_PRESETS)[number];
 
 /** Reduced ink palette — the only hues assets may use (in Tuschelagen shades). */
@@ -30,6 +30,10 @@ export type Atlas3DTimeOfDay = "morning" | "noon" | "evening" | "night";
 export const ATLAS3D_WEATHER_KINDS = ["klar", "wolken", "regen", "schnee"] as const;
 export type Atlas3DWeather = (typeof ATLAS3D_WEATHER_KINDS)[number];
 
+/** Season preset — tints the fixed map light, inherited like all environment fields. */
+export const ATLAS3D_SEASONS = ["fruehling", "sommer", "herbst", "winter"] as const;
+export type Atlas3DSeason = (typeof ATLAS3D_SEASONS)[number];
+
 /**
  * Environment settings inherited down the node chain. Every field is optional:
  * `undefined` means "inherit from ancestor"; a value overrides for the node
@@ -46,6 +50,7 @@ export interface Atlas3DEnvironment {
   /** Climate key feeding procedural generators (biomes, names). */
   climate?: string;
   weather?: Atlas3DWeather;
+  season?: Atlas3DSeason;
 }
 
 /** Fully-resolved environment after walking the inheritance chain. */
@@ -56,6 +61,7 @@ export interface Atlas3DResolvedEnvironment {
   waterLevel: number;
   climate: string;
   weather: Atlas3DWeather;
+  season: Atlas3DSeason;
 }
 
 export const ATLAS3D_ENVIRONMENT_DEFAULTS: Atlas3DResolvedEnvironment = {
@@ -65,6 +71,7 @@ export const ATLAS3D_ENVIRONMENT_DEFAULTS: Atlas3DResolvedEnvironment = {
   waterLevel: 0,
   climate: "temperate",
   weather: "klar",
+  season: "sommer",
 };
 
 /** One entry of the ancestor chain, root (world defaults) first. */

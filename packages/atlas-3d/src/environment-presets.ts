@@ -61,3 +61,32 @@ export function environmentPreset(key: unknown): EnvironmentPreset {
   }
   return ENVIRONMENT_PRESETS.noon;
 }
+
+/** Season tint multipliers — composed onto the time-of-day tint. */
+export const SEASON_TINTS: Record<string, readonly [number, number, number]> = {
+  fruehling: [0.97, 1.04, 0.97],
+  sommer: [1, 1, 1],
+  herbst: [1.07, 0.97, 0.86],
+  winter: [0.93, 0.97, 1.06],
+};
+
+/** Style-preset tint multipliers (Pergament · Sepia · Aquarell). */
+export const STYLE_TINTS: Record<string, readonly [number, number, number]> = {
+  pergament: [1, 1, 1],
+  sepia: [1.08, 0.97, 0.82],
+  aquarell: [0.95, 1.0, 1.08],
+};
+
+/** Component-wise product of tint multipliers (undefined entries are identity). */
+export function combineTints(
+  ...tints: (readonly [number, number, number] | undefined)[]
+): [number, number, number] {
+  const out: [number, number, number] = [1, 1, 1];
+  for (const tint of tints) {
+    if (!tint) continue;
+    out[0] *= tint[0];
+    out[1] *= tint[1];
+    out[2] *= tint[2];
+  }
+  return out;
+}

@@ -67,3 +67,15 @@ test("palette scope narrows per level and is inherited", () => {
   assert.deepEqual(settings.paletteScope, ["weltenbau"]);
   assert.equal(settings.origins.paletteScope, "globe");
 });
+
+test("weather and season inherit down the chain like every environment field", () => {
+  const settings = resolveEffectiveNodeSettings([
+    { id: "welt", title: "Welt", level: "world", environment: { weather: "regen" } },
+    { id: "globus", title: "Globus", level: "globe", environment: { season: "winter" } },
+    { id: "kontinent", title: "K", level: "continent", environment: null },
+  ]);
+  assert.equal(settings.environment.weather, "regen");
+  assert.equal(settings.environment.season, "winter");
+  assert.equal(settings.origins.environment.weather, "welt");
+  assert.equal(settings.origins.environment.season, "globus");
+});
