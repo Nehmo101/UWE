@@ -12,6 +12,7 @@ import {
 } from "./knowledge-assistant-service";
 import type { PersonalBrainSearchResult } from "./personal-brain-search";
 import { createPrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 const NOW = new Date("2026-07-03T00:00:00Z");
@@ -154,7 +155,9 @@ describe("knowledge assistant service (integration)", () => {
 
   before(async () => {
     db = createPrismaClient(createTestDatabaseUrl());
-    await db.personalBrainDocument.create({
+    // The service reads the Brain store via the shared brainPrisma singleton, so
+    // seed the fixture through the same client (personalBrainDocument is Brain-owned).
+    await brainPrisma.personalBrainDocument.create({
       data: { title: "Brotrezept", content: "Sauerteig braucht 12 Stunden Gare bei Raumtemperatur.", category: "kitchen" },
     });
   });

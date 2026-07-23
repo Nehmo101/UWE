@@ -18,19 +18,21 @@ import {
   getTagCoverageStats,
   verifyTagBackfill,
 } from "./tag-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 import { toPrismaJsonValue } from "./json-utils";
 
 describe("tag service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let worldId: string;
   let databaseUrl: string;
 
   before(async () => {
     databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     const repo = createUweRepository(databaseUrl);
-    const result = await seedStressWorld(repo, db, {
+    const result = await seedStressWorld(repo, db, brainDb, {
       ...PERF_SMOKE_SCALE,
       pages: 30,
       links: 40,
@@ -52,7 +54,7 @@ describe("tag service", () => {
   });
 
   it("collects tag inventory across entities", async () => {
-    const inventory = await collectTagInventory(db, { worldId });
+    const inventory = await collectTagInventory(db, brainDb, { worldId });
     assert.ok(inventory.length >= 5);
     const stadt = inventory.find((entry) => entry.tag === "stadt" || entry.tag === "Stadt");
     assert.ok(stadt);
@@ -60,7 +62,7 @@ describe("tag service", () => {
   });
 
   it("finds similar tag groups from variants", async () => {
-    const inventory = await collectTagInventory(db, { worldId });
+    const inventory = await collectTagInventory(db, brainDb, { worldId });
     const groups = findSimilarTagGroups(inventory);
     assert.ok(groups.length >= 1);
     const suggestions = suggestTagMerges(inventory);
@@ -69,7 +71,7 @@ describe("tag service", () => {
   });
 
   it("flags low-visibility tags as unused candidates", async () => {
-    const inventory = await collectTagInventory(db, { worldId });
+    const inventory = await collectTagInventory(db, brainDb, { worldId });
     const unused = findUnusedTags(inventory);
     assert.ok(Array.isArray(unused));
   });
@@ -95,14 +97,14 @@ describe("tag service", () => {
       publishStatus: "published",
     });
 
-    const result = await mergeTags(db, {
+    const result = await mergeTags(db, brainDb, {
       worldId,
       fromTags: ["Stadt", "STADT"],
       toTag: "stadt",
     });
     assert.ok(result.updatedEntities >= 1);
 
-    const after = await collectTagInventory(db, { worldId });
+    const after = await collectTagInventory(db, brainDb, { worldId });
     assert.ok(!after.some((entry) => entry.tag === "Stadt" || entry.tag === "STADT"));
   });
 
@@ -118,23 +120,23 @@ describe("tag service", () => {
       publishStatus: "published",
     });
 
-    const result = await backfillEntityTagsFromJson(db, { worldId });
+    const result = await backfillEntityTagsFromJson(db, brainDb, { worldId });
     assert.ok(result.entitiesProcessed >= 1);
     assert.ok(result.entityTagsCreated >= 2);
 
-    const coverage = await getTagCoverageStats(db, { worldId });
+    const coverage = await getTagCoverageStats(db, brainDb, { worldId });
     const pageStats = coverage.types.find((entry) => entry.entityType === "page");
     assert.ok(pageStats);
     assert.ok(pageStats!.entityTagTagged >= 1);
 
-    const inventory = await collectTagInventory(db, { worldId });
+    const inventory = await collectTagInventory(db, brainDb, { worldId });
     assert.ok(inventory.some((entry) => entry.tag === "quest" || entry.tag === "hook"));
 
     await db.page.delete({ where: { id: page.id } });
   });
 
   it("backfills entity tags from capture metadata.tags", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
     const capture = await lifeAdmin.createCapture({
       title: "Metadata Tag Capture",
       content: "Tagged via metadata",
@@ -142,16 +144,16 @@ describe("tag service", () => {
       worldId,
     });
 
-    const result = await backfillEntityTagsFromJson(db, { worldId });
+    const result = await backfillEntityTagsFromJson(db, brainDb, { worldId });
     assert.ok(result.entitiesProcessed >= 1);
 
-    const coverage = await getTagCoverageStats(db, { worldId });
+    const coverage = await getTagCoverageStats(db, brainDb, { worldId });
     const captureStats = coverage.types.find((entry) => entry.entityType === "capture");
     assert.ok(captureStats);
     assert.ok(captureStats!.jsonTagged >= 1);
     assert.ok(captureStats!.entityTagTagged >= 1);
 
-    const mergeResult = await mergeTags(db, {
+    const mergeResult = await mergeTags(db, brainDb, {
       worldId,
       fromTags: ["inbox"],
       toTag: "eingang",
@@ -180,13 +182,13 @@ describe("tag service", () => {
       publishStatus: "published",
     });
 
-    await backfillEntityTagsFromJson(db, { worldId });
+    await backfillEntityTagsFromJson(db, brainDb, { worldId });
     await db.page.update({
       where: { id: page.id },
       data: { tags: toPrismaJsonValue([]) },
     });
 
-    const inventory = await collectTagInventory(db, { worldId });
+    const inventory = await collectTagInventory(db, brainDb, { worldId });
     assert.ok(
       inventory.some(
         (entry) =>
@@ -195,7 +197,7 @@ describe("tag service", () => {
       ),
     );
 
-    const mergeResult = await mergeTags(db, {
+    const mergeResult = await mergeTags(db, brainDb, {
       worldId,
       fromTags: ["entity-primary-tag"],
       toTag: "primary",
@@ -220,7 +222,7 @@ describe("tag service", () => {
       publishStatus: "published",
     });
 
-    const before = await verifyTagBackfill(db, { worldId });
+    const before = await verifyTagBackfill(db, brainDb, { worldId });
     assert.equal(before.ok, false);
     const pageStats = before.types.find((entry) => entry.entityType === "page");
     assert.ok(pageStats);
@@ -229,9 +231,9 @@ describe("tag service", () => {
     assert.deepEqual(miss!.missingTagKeys, ["verify-gap-tag"]);
     assert.ok(before.totalMissingLinks >= 1);
 
-    await backfillEntityTagsFromJson(db, { worldId });
+    await backfillEntityTagsFromJson(db, brainDb, { worldId });
 
-    const after = await verifyTagBackfill(db, { worldId });
+    const after = await verifyTagBackfill(db, brainDb, { worldId });
     assert.equal(after.ok, true);
     assert.equal(after.totalEntitiesMissing, 0);
     assert.equal(after.totalMissingLinks, 0);
@@ -255,9 +257,9 @@ describe("tag service", () => {
       publishStatus: "published",
     });
 
-    await backfillEntityTagsFromJson(db, { worldId });
+    await backfillEntityTagsFromJson(db, brainDb, { worldId });
 
-    const result = await mergeTags(db, {
+    const result = await mergeTags(db, brainDb, {
       worldId,
       fromTags: ["dualwrite-old"],
       toTag: "dualwrite-new",
@@ -273,7 +275,7 @@ describe("tag service", () => {
     assert.ok(linked.some((tag) => tag.label === "dualwrite-new"));
     assert.ok(!linked.some((tag) => tag.label === "dualwrite-old"));
 
-    const verification = await verifyTagBackfill(db, { worldId });
+    const verification = await verifyTagBackfill(db, brainDb, { worldId });
     assert.equal(verification.ok, true);
 
     await db.page.delete({ where: { id: page.id } });

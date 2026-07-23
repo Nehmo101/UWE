@@ -3,12 +3,13 @@ import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { createInspectorFixService, type InspectorFixService } from "./inspector-fix-service";
 import { createUweRepository, type UweRepository } from "./repository";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 import { createUndoService } from "./undo-service";
 import { createWorldInspectorService, type WorldInspectorService } from "./world-inspector";
 
 describe("inspector fix actions", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let repo: UweRepository;
   let fixes: InspectorFixService;
   let inspector: WorldInspectorService;
@@ -18,6 +19,7 @@ describe("inspector fix actions", () => {
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     repo = createUweRepository(databaseUrl);
     fixes = createInspectorFixService(db);
     inspector = createWorldInspectorService(db);
@@ -79,7 +81,7 @@ describe("inspector fix actions", () => {
     assert.equal(logEntry.undoEntryId, result.undoEntryId);
 
     // Undo restores the previous (leaky) visibility.
-    const undoResult = await createUndoService(db).undo(result.undoEntryId!);
+    const undoResult = await createUndoService(brainDb, db).undo(result.undoEntryId!);
     assert.equal(undoResult.ok, true);
     const restored = await db.contentBlock.findUnique({ where: { id: finding.blockId! } });
     assert.equal(restored!.visibility, "player_visible");
@@ -178,7 +180,7 @@ describe("inspector fix actions", () => {
     const after = await inspector.inspectWorld(worldSlug);
     assert.ok(!after!.canonFindings.some((entry) => entry.id === finding.id));
 
-    const undoResult = await createUndoService(db).undo(result.undoEntryId!);
+    const undoResult = await createUndoService(brainDb, db).undo(result.undoEntryId!);
     assert.equal(undoResult.ok, true);
     const restored = await db.contentBlock.findMany({ where: { pageId: page.id } });
     assert.equal(

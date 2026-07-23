@@ -5,8 +5,7 @@ import {
   computeNextDue,
   createMaintenanceService,
 } from "./maintenance-service";
-import { createPrismaClient } from "./client";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient } from "./test-helpers";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -57,10 +56,10 @@ describe("classifyDue (pure)", () => {
 });
 
 describe("maintenance service (integration)", () => {
-  let db: ReturnType<typeof createPrismaClient>;
+  let db: ReturnType<typeof createTestBrainClient>;
 
   before(() => {
-    db = createPrismaClient(createTestDatabaseUrl());
+    db = createTestBrainClient();
   });
 
   after(async () => {

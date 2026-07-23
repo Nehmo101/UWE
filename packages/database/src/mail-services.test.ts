@@ -5,18 +5,20 @@ import { createMailComposeService } from "./mail-compose-service";
 import { createMailLogService } from "./mail-log-service";
 import { createMailRecipientService } from "./mail-recipient-service";
 import { createMailTemplateService } from "./mail-template-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 
 describe("mail-services", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
 
   before(() => {
     db = createPrismaClient(createTestDatabaseUrl());
+    brainDb = createTestBrainClient();
   });
 
   describe("mail-template-service", () => {
     it("seeds system templates and lists them", async () => {
-      const templates = createMailTemplateService(db);
+      const templates = createMailTemplateService(brainDb, db);
       const listed = await templates.listTemplates();
 
       const systemSlugs = listed.filter((t) => t.isSystem).map((t) => t.slug);
@@ -29,7 +31,7 @@ describe("mail-services", () => {
       const world = await db.world.create({
         data: { name: "Mail Template World", slug: "mail-template-world" },
       });
-      const templates = createMailTemplateService(db);
+      const templates = createMailTemplateService(brainDb, db);
 
       const created = await templates.createTemplate(world.id, {
         name: "Eigene Einladung",
@@ -54,7 +56,7 @@ describe("mail-services", () => {
 
   describe("mail-log-service", () => {
     it("creates a log entry with a body preview when body logging is enabled", async () => {
-      const logs = createMailLogService(db);
+      const logs = createMailLogService(brainDb);
       const entry = await logs.create({
         subject: "Session-Recap",
         toAddresses: ["player@test.local"],
@@ -69,7 +71,7 @@ describe("mail-services", () => {
     });
 
     it("marks entries as sent or failed and filters by status", async () => {
-      const logs = createMailLogService(db);
+      const logs = createMailLogService(brainDb);
       const first = await logs.create({
         subject: "Erste Mail",
         toAddresses: ["a@test.local"],
@@ -103,7 +105,7 @@ describe("mail-services", () => {
       const world = await db.world.create({
         data: { name: "Mail Recipient World", slug: "mail-recipient-world" },
       });
-      const recipients = createMailRecipientService(db);
+      const recipients = createMailRecipientService(brainDb, db);
 
       const group = await recipients.createGroup(world.slug, {
         name: "Stammtisch",
@@ -145,7 +147,7 @@ describe("mail-services", () => {
         },
       });
 
-      const recipients = createMailRecipientService(db);
+      const recipients = createMailRecipientService(brainDb, db);
       const group = await recipients.ensurePlayersGroup(world.slug);
 
       assert.equal(group.slug, "players");
@@ -170,7 +172,7 @@ describe("mail-services", () => {
         },
       });
 
-      const compose = createMailComposeService(db);
+      const compose = createMailComposeService(brainDb, db);
       const draft = await compose.composeSessionRecap(world.slug, session.id);
 
       assert.ok(draft);
@@ -182,7 +184,7 @@ describe("mail-services", () => {
     });
 
     it("renders the system warning template with variables", async () => {
-      const compose = createMailComposeService(db);
+      const compose = createMailComposeService(brainDb, db);
       const draft = await compose.composeSystemWarning(
         "Speicher knapp",
         "Nur noch 5% frei.",

@@ -13,8 +13,8 @@ import {
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createCalendarService } from "./calendar-service";
 import { createPrismaClient, type PrismaClient } from "./client";
-import { createTestDatabaseUrl } from "./test-helpers";
-import type { CalendarEvent } from "./generated/prisma/client";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
+import type { CalendarEvent } from "./generated/prisma-brain/client";
 
 const NOW = new Date("2026-06-19T10:00:00Z");
 
@@ -242,14 +242,16 @@ describe("calendar-aggregation-service", () => {
 
 describe("calendar-aggregation-service integration", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
 
   before(async () => {
     db = createPrismaClient(createTestDatabaseUrl());
+    brainDb = createTestBrainClient();
   });
 
   it("returns feed and scoped world events for today summary", async () => {
-    const calendar = createCalendarService(db);
-    const aggregation = createCalendarAggregationService(db);
+    const calendar = createCalendarService(brainDb, db);
+    const aggregation = createCalendarAggregationService(brainDb, db);
     const now = new Date("2026-06-19T10:00:00Z");
 
     const world = await db.world.create({

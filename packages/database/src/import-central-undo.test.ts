@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createPrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import { createLifeAdminService } from "./life-admin-service";
 import { executeMarkdownImport } from "./import-central-service";
 import { createTestDatabaseUrl } from "./test-helpers";
@@ -18,8 +19,8 @@ describe("import central undo", () => {
   });
 
   it("undoes personal brain markdown import", async () => {
-    const lifeAdmin = createLifeAdminService(db);
-    const undo = createUndoService(db);
+    const lifeAdmin = createLifeAdminService(brainPrisma, db);
+    const undo = createUndoService(brainPrisma, db);
     const beforeCount = (await lifeAdmin.listPersonalBrainDocuments()).length;
 
     const result = await executeMarkdownImport(db, "# Undo Test\n\nInhalt", {
@@ -43,8 +44,8 @@ describe("import central undo", () => {
   });
 
   it("undoes capture markdown import", async () => {
-    const lifeAdmin = createLifeAdminService(db);
-    const undo = createUndoService(db);
+    const lifeAdmin = createLifeAdminService(brainPrisma, db);
+    const undo = createUndoService(brainPrisma, db);
     const beforeCount = (await lifeAdmin.listCaptures({ status: "inbox" })).length;
 
     const result = await executeMarkdownImport(db, "# Capture Undo\n\nText", {

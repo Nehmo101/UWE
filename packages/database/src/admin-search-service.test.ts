@@ -3,19 +3,21 @@ import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { createLifeAdminService } from "./life-admin-service";
 import { searchAdminEntities } from "./admin-search-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 
 describe("admin search service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let service: ReturnType<typeof createLifeAdminService>;
 
   before(async () => {
     db = createPrismaClient(createTestDatabaseUrl());
-    service = createLifeAdminService(db);
+    brainDb = createTestBrainClient();
+    service = createLifeAdminService(brainDb, db);
   });
 
   it("returns empty results for short queries", async () => {
-    const results = await searchAdminEntities(db, { query: "a" });
+    const results = await searchAdminEntities(db, brainDb, { query: "a" });
     assert.deepEqual(results, []);
   });
 
@@ -31,7 +33,7 @@ describe("admin search service", () => {
       captureType: "quick_note",
     });
 
-    const projectResults = await searchAdminEntities(db, {
+    const projectResults = await searchAdminEntities(db, brainDb, {
       query: "alpha admin search project",
       entityType: "personal_project",
       limit: 10,
@@ -40,7 +42,7 @@ describe("admin search service", () => {
     assert.equal(projectResults[0]?.entityType, "personal_project");
     assert.equal(projectResults[0]?.href, `/projects/${project.id}`);
 
-    const captureResults = await searchAdminEntities(db, {
+    const captureResults = await searchAdminEntities(db, brainDb, {
       query: "alpha admin search capture",
       entityType: "capture",
       limit: 10,

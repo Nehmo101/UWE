@@ -1,15 +1,14 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
-import { createPrismaClient, type PrismaClient } from "./client";
 import { createPersonalBrainService } from "./personal-brain-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, type BrainPrismaClient } from "./test-helpers";
 
 describe("personal brain service", () => {
-  let db: PrismaClient;
+  let db: BrainPrismaClient;
   let service: ReturnType<typeof createPersonalBrainService>;
 
   before(async () => {
-    db = createPrismaClient(createTestDatabaseUrl());
+    db = createTestBrainClient();
     service = createPersonalBrainService(db);
   });
 

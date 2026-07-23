@@ -6,8 +6,7 @@ import {
   rankContinuations,
   type Continuation,
 } from "./continue-work-service";
-import { createPrismaClient } from "./client";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient } from "./test-helpers";
 
 function cont(overrides: Partial<Continuation>): Continuation {
   return {
@@ -41,10 +40,10 @@ describe("rankContinuations (pure)", () => {
 });
 
 describe("continue-work service (integration)", () => {
-  let db: ReturnType<typeof createPrismaClient>;
+  let db: ReturnType<typeof createTestBrainClient>;
 
   before(async () => {
-    db = createPrismaClient(createTestDatabaseUrl());
+    db = createTestBrainClient();
     await db.captureEntry.create({ data: { title: "Idee", content: "Brotrezept ändern", captureType: "quick_note", status: "inbox" } });
     await db.personalProject.create({
       data: { name: "UWE Feature", status: "active", nextAction: "Radar testen", updatedAt: new Date("2026-07-02") },

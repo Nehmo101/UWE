@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { createUweRepository, type UweRepository } from "./repository";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 import { createUndoService } from "./undo-service";
 import {
   createWikitextConvertService,
@@ -11,6 +11,7 @@ import {
 
 describe("wikitext convert service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let repo: UweRepository;
   let service: WikitextConvertService;
   let worldId: string;
@@ -19,6 +20,7 @@ describe("wikitext convert service", () => {
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     repo = createUweRepository(databaseUrl);
     service = createWikitextConvertService(db);
 
@@ -121,7 +123,7 @@ describe("wikitext convert service", () => {
     assert.match(activity.summary, /Wikitext-Konvertierung/);
 
     // Undo restores the original content.
-    const undo = createUndoService(db);
+    const undo = createUndoService(brainDb, db);
     for (const undoEntryId of result.undoEntryIds) {
       const undoResult = await undo.undo(undoEntryId);
       assert.equal(undoResult.ok, true, undoResult.message);
@@ -289,7 +291,7 @@ describe("wikitext convert service", () => {
     assert.equal(page!.type, "npc");
 
     // Undo stellt den ursprünglichen Typ wieder her.
-    const undo = createUndoService(db);
+    const undo = createUndoService(brainDb, db);
     for (const undoEntryId of applied.undoEntryIds) {
       const undoResult = await undo.undo(undoEntryId);
       assert.equal(undoResult.ok, true, undoResult.message);

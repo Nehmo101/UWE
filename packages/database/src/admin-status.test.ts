@@ -6,14 +6,16 @@ import {
   assertAdminStatusHasNoSecrets,
   getAdminStatus,
 } from "./admin-status";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 
 describe("admin status dashboard sources", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
 
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
   });
 
   it("reports mail config without leaking SMTP password", () => {
@@ -44,7 +46,7 @@ describe("admin status dashboard sources", () => {
       BRAIN_EMBEDDINGS_ENABLED: "false",
     };
 
-    const status = await getAdminStatus(db, { env });
+    const status = await getAdminStatus(db, brainDb, { env });
     assertAdminStatusHasNoSecrets(status, env);
 
     assert.equal(typeof status.timestamp, "string");

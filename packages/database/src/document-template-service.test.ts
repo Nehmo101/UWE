@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
-import { createPrismaClient, type PrismaClient } from "./client";
 import {
   createDocumentTemplateService,
   extractDocumentTemplateVariables,
@@ -8,7 +7,7 @@ import {
   MissingTemplateVariablesError,
   normalizeDocumentTemplateVariables,
 } from "./document-template-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, type BrainPrismaClient } from "./test-helpers";
 
 describe("document template helpers", () => {
   it("extracts unique sorted placeholders including whitespace variants", () => {
@@ -91,11 +90,11 @@ describe("fillDocumentTemplate", () => {
 });
 
 describe("document template service", () => {
-  let db: PrismaClient;
+  let db: BrainPrismaClient;
   let service: ReturnType<typeof createDocumentTemplateService>;
 
   before(async () => {
-    db = createPrismaClient(createTestDatabaseUrl());
+    db = createTestBrainClient();
     service = createDocumentTemplateService(db);
   });
 

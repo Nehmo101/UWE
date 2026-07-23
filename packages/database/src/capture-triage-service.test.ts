@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import { createTestDatabaseUrl } from "./test-helpers";
 import {
   buildCaptureAiProposal,
@@ -18,7 +19,9 @@ describe("capture triage service", () => {
 
   before(async () => {
     db = createPrismaClient(createTestDatabaseUrl());
-    lifeAdmin = createLifeAdminService(db);
+    // createCaptureTriageService builds its LifeAdminService from the shared
+    // brainPrisma singleton, so the test seeds captures through the same client.
+    lifeAdmin = createLifeAdminService(brainPrisma, db);
     triage = createCaptureTriageService(db);
   });
 

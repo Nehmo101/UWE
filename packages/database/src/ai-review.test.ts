@@ -4,11 +4,12 @@ import { createActivityLogService } from "./activity-log-service";
 import { createAiReviewService } from "./ai-review-service";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { createUweRepository, type UweRepository } from "./repository";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 import { createUndoService } from "./undo-service";
 
 describe("AI review / apply / undo", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let repo: UweRepository;
   let review: ReturnType<typeof createAiReviewService>;
   let undo: ReturnType<typeof createUndoService>;
@@ -20,9 +21,10 @@ describe("AI review / apply / undo", () => {
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     repo = createUweRepository(databaseUrl);
     review = createAiReviewService(db);
-    undo = createUndoService(db);
+    undo = createUndoService(brainDb, db);
     activity = createActivityLogService(db);
 
     const world = await repo.createWorld({ name: "Brain Review", slug: "brain-review" });

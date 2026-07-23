@@ -3,15 +3,17 @@ import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { DEFAULT_GENERATOR_PRESETS } from "./generator-service";
 import { createLifeAdminService, getNextWorkshopStatus } from "./life-admin-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 
 describe("life admin service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let service: ReturnType<typeof createLifeAdminService>;
 
   before(async () => {
     db = createPrismaClient(createTestDatabaseUrl());
-    service = createLifeAdminService(db);
+    brainDb = createTestBrainClient();
+    service = createLifeAdminService(brainDb, db);
   });
 
   it("creates and lists capture entries", async () => {

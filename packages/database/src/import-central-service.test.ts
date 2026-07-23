@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createPrismaClient } from "./client";
+import { brainPrisma } from "./brain-client";
 import { createLifeAdminService } from "./life-admin-service";
 import {
   executeMarkdownImport,
@@ -61,7 +62,7 @@ Inhalt zwei`,
   });
 
   it("imports selected documents into Life Brain", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainPrisma, db);
     const beforeCount = (await lifeAdmin.listPersonalBrainDocuments()).length;
 
     const content = `---
@@ -96,7 +97,7 @@ Beta`;
   });
 
   it("imports markdown chunks into Capture as quick notes", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainPrisma, db);
     const beforeCount = (await lifeAdmin.listCaptures({ status: "inbox" })).length;
 
     const result = await executeMarkdownImport(

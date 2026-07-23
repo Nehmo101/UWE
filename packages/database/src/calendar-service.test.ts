@@ -2,17 +2,19 @@ import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { createCalendarService } from "./calendar-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 
 describe("calendar-service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
 
   before(async () => {
     db = createPrismaClient(createTestDatabaseUrl());
+    brainDb = createTestBrainClient();
   });
 
   it("ensures local feed and creates events", async () => {
-    const calendar = createCalendarService(db);
+    const calendar = createCalendarService(brainDb, db);
     const local = await calendar.ensureLocalFeed();
     const event = await calendar.createEvent({
       feedId: local.id,
@@ -26,7 +28,7 @@ describe("calendar-service", () => {
   });
 
   it("syncs session to calendar and removes event when date cleared", async () => {
-    const calendar = createCalendarService(db);
+    const calendar = createCalendarService(brainDb, db);
     const world = await db.world.create({
       data: { name: "Cal Test", slug: `cal-test-${Date.now()}` },
     });
@@ -59,7 +61,7 @@ describe("calendar-service", () => {
   });
 
   it("includes feed events when aggregating with a preferred world scope", async () => {
-    const calendar = createCalendarService(db);
+    const calendar = createCalendarService(brainDb, db);
     const worldA = await db.world.create({
       data: { name: "World A", slug: `cal-a-${Date.now()}` },
     });
@@ -121,10 +123,10 @@ describe("calendar-service", () => {
   });
 
   it("mirrors contract deadlines into the local feed and prunes stale ones", async () => {
-    const calendar = createCalendarService(db);
+    const calendar = createCalendarService(brainDb, db);
     const now = new Date("2026-07-01T08:00:00Z");
 
-    const contract = await db.contractExpense.create({
+    const contract = await brainDb.contractExpense.create({
       data: {
         name: "Streaming Abo",
         status: "active",
@@ -147,7 +149,7 @@ describe("calendar-service", () => {
     assert.ok(cancelEvent.title.includes("Kündigungsfrist"));
 
     // Kündigungstermin entfällt → Event wird beim nächsten Sync entfernt.
-    await db.contractExpense.update({
+    await brainDb.contractExpense.update({
       where: { id: contract.id },
       data: { cancelByDate: null },
     });
@@ -163,7 +165,7 @@ describe("calendar-service", () => {
     );
 
     // Termine außerhalb des Horizonts werden nicht angelegt.
-    await db.contractExpense.update({
+    await brainDb.contractExpense.update({
       where: { id: contract.id },
       data: { nextPaymentDate: new Date("2027-06-01T00:00:00Z") },
     });

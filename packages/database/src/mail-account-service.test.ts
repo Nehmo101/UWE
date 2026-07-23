@@ -1,14 +1,13 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { createPrismaClient, type PrismaClient } from "./client";
 import { createMailAccountService } from "./mail-account-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, type BrainPrismaClient } from "./test-helpers";
 
 describe("mail-account-service", () => {
-  let db: PrismaClient;
+  let db: BrainPrismaClient;
 
   before(async () => {
-    db = createPrismaClient(createTestDatabaseUrl());
+    db = createTestBrainClient();
   });
 
   it("stores encrypted account passwords and drafts", async () => {

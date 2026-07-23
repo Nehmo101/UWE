@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "../client";
-import { createTestDatabaseUrl } from "../test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "../test-helpers";
 import { pruneRetentionLogs } from "./log-retention-service";
 
 const OLD = new Date("2020-01-01T00:00:00.000Z");
@@ -40,9 +40,11 @@ async function seedPageVersions(db: PrismaClient, versions: number): Promise<str
 
 describe("log-retention-service", () => {
   let databaseUrl: string;
+  let brainDb: BrainPrismaClient;
 
   before(() => {
     databaseUrl = createTestDatabaseUrl();
+    brainDb = createTestBrainClient();
   });
 
   it("deletes nothing when disabled (no-op)", async () => {
@@ -50,7 +52,7 @@ describe("log-retention-service", () => {
     await seedAuditLogs(db);
 
     const before = await db.auditLog.count();
-    const summary = await pruneRetentionLogs(db, { enabled: false, retentionDays: 30 });
+    const summary = await pruneRetentionLogs(db, brainDb, { enabled: false, retentionDays: 30 });
 
     assert.equal(summary.mode, "disabled");
     assert.equal(summary.totalDeleted, 0);
@@ -64,7 +66,7 @@ describe("log-retention-service", () => {
     const db = createPrismaClient(databaseUrl);
     const before = await db.auditLog.count();
 
-    const summary = await pruneRetentionLogs(db, { dryRun: true, retentionDays: 30 });
+    const summary = await pruneRetentionLogs(db, brainDb, { dryRun: true, retentionDays: 30 });
 
     assert.equal(summary.mode, "dry-run");
     assert.equal(summary.totalDeleted, 0);
@@ -83,7 +85,7 @@ describe("log-retention-service", () => {
     await seedAuditLogs(db);
     await seedActivityLogs(db);
 
-    const summary = await pruneRetentionLogs(db, { enabled: true, retentionDays: 30 });
+    const summary = await pruneRetentionLogs(db, brainDb, { enabled: true, retentionDays: 30 });
 
     assert.equal(summary.mode, "delete");
     assert.equal(summary.errors.length, 0, JSON.stringify(summary.errors));
@@ -102,7 +104,7 @@ describe("log-retention-service", () => {
     const db = createPrismaClient(createTestDatabaseUrl());
     const pageId = await seedPageVersions(db, 5);
 
-    const summary = await pruneRetentionLogs(db, { enabled: true, keepVersions: 2 });
+    const summary = await pruneRetentionLogs(db, brainDb, { enabled: true, keepVersions: 2 });
 
     const versions = summary.tables.find((entry) => entry.table === "page_versions");
     assert.ok(versions);

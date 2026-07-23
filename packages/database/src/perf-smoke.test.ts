@@ -6,7 +6,7 @@ import { seedStressWorld } from "./stress-seed";
 import { PERF_BUDGETS_MS, PERF_SMOKE_SCALE, assertWithinBudget } from "./perf-budgets";
 import { createTagService } from "./tag-service";
 import { createLifeAdminService } from "./life-admin-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 import { buildSearchIndexForScope } from "./search-index";
 import { searchForWikiContext } from "./search-service";
 
@@ -16,14 +16,16 @@ function elapsed(start: bigint): number {
 
 describe("performance smoke", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let databaseUrl: string;
   let worldSlug: string;
 
   before(async () => {
     databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     const repo = createUweRepository(databaseUrl);
-    const result = await seedStressWorld(repo, db, PERF_SMOKE_SCALE);
+    const result = await seedStressWorld(repo, db, brainDb, PERF_SMOKE_SCALE);
     worldSlug = result.worldSlug;
   });
 
@@ -64,7 +66,7 @@ describe("performance smoke", () => {
   });
 
   it("aggregates today summary within budget", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
     const start = process.hrtime.bigint();
     const summary = await lifeAdmin.getTodaySummary();
     const ms = elapsed(start);
@@ -82,7 +84,7 @@ describe("performance smoke", () => {
   });
 
   it("scans tag inventory within budget", async () => {
-    const tags = createTagService(db);
+    const tags = createTagService(brainDb, db);
     const start = process.hrtime.bigint();
     const inventory = await tags.collectInventory();
     const ms = elapsed(start);
@@ -92,7 +94,7 @@ describe("performance smoke", () => {
   });
 
   it("searches personal brain within budget", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
     const start = process.hrtime.bigint();
     const results = await lifeAdmin.searchPersonalBrain({ query: "homelab", limit: 10 });
     const ms = elapsed(start);

@@ -6,10 +6,11 @@ import { createLifeAdminService } from "./life-admin-service";
 import { createUweRepository } from "./repository";
 import { searchStudioCrossDomain } from "./cross-domain-search-service";
 import { searchEntitiesByTagQuery } from "./entity-tag-search-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 
 describe("cross-domain search service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let databaseUrl: string;
   let worldId: string;
   let worldSlug: string;
@@ -17,6 +18,7 @@ describe("cross-domain search service", () => {
   before(async () => {
     databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     const repo = createUweRepository(databaseUrl);
     const world = await repo.createWorld({
       name: "Cross Search World",
@@ -28,7 +30,7 @@ describe("cross-domain search service", () => {
 
   it("finds wiki pages, admin captures, media assets, and tag hits", async () => {
     const repo = createUweRepository(databaseUrl);
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
     const entityTags = createEntityTagService(db);
 
     const page = await repo.createPage({
@@ -66,7 +68,7 @@ describe("cross-domain search service", () => {
       worldId,
     });
 
-    const result = await searchStudioCrossDomain(db, {
+    const result = await searchStudioCrossDomain(db, brainDb, {
       query: "Cross Search Alpha",
       scope: "all",
       wiki: { worldSlug, limit: 20 },
@@ -77,13 +79,13 @@ describe("cross-domain search service", () => {
     assert.ok(result.admin.some((entry) => entry.id === capture.id));
     assert.ok(result.media.some((entry) => entry.title.includes("Alpha Asset")));
 
-    const tagHits = await searchEntitiesByTagQuery(db, {
+    const tagHits = await searchEntitiesByTagQuery(db, brainDb, {
       query: "alpha-cross-tag",
       limit: 10,
     });
     assert.ok(tagHits.some((entry) => entry.id === capture.id));
 
-    const tagScoped = await searchStudioCrossDomain(db, {
+    const tagScoped = await searchStudioCrossDomain(db, brainDb, {
       query: "alpha-cross-tag",
       scope: "all",
     });
@@ -96,13 +98,15 @@ describe("cross-domain search service", () => {
 
 describe("entity tag search service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
 
   before(async () => {
     db = createPrismaClient(createTestDatabaseUrl());
+    brainDb = createTestBrainClient();
   });
 
   it("returns entities linked to matching tag labels", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
     const entityTags = createEntityTagService(db);
 
     const capture = await lifeAdmin.createCapture({
@@ -117,7 +121,7 @@ describe("entity tag search service", () => {
       entityId: capture.id,
     });
 
-    const hits = await searchEntitiesByTagQuery(db, {
+    const hits = await searchEntitiesByTagQuery(db, brainDb, {
       query: "homelab-backlog",
       limit: 10,
     });

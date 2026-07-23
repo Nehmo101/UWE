@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { createUweRepository, type UweRepository } from "./repository";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 import { createUndoService } from "./undo-service";
 import { parseStringArray } from "./json-utils";
 import { createPageBulkService, type PageBulkService } from "./page-bulk-service";
 
 describe("page bulk service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let repo: UweRepository;
   let service: PageBulkService;
   const worldSlug = "bulk-test";
@@ -18,6 +19,7 @@ describe("page bulk service", () => {
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     repo = createUweRepository(databaseUrl);
     service = createPageBulkService(db);
 
@@ -58,7 +60,7 @@ describe("page bulk service", () => {
     assert.equal((await repo.getPageBySlug(worldSlug, "a"))!.visibility, "player_visible");
     assert.equal((await repo.getPageBySlug(worldSlug, "b"))!.visibility, "player_visible");
 
-    const undo = createUndoService(db);
+    const undo = createUndoService(brainDb, db);
     for (const id of result.undoEntryIds) {
       assert.equal((await undo.undo(id)).ok, true);
     }
@@ -109,7 +111,7 @@ describe("page bulk service", () => {
     assert.equal(result.changedCount, 1);
     assert.equal(await repo.getPageBySlug(worldSlug, "b"), null);
 
-    const undo = createUndoService(db);
+    const undo = createUndoService(brainDb, db);
     for (const id of result.undoEntryIds) {
       const undone = await undo.undo(id);
       assert.equal(undone.ok, true, undone.message);

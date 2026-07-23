@@ -8,7 +8,12 @@ import {
   ensureUploadDirectory,
   resolveAssetFilePath,
 } from "@uwe/assets";
-import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
+import {
+  createTestBrainClient,
+  createTestBrainDatabaseUrl,
+  createTestDatabaseUrl,
+} from "@uwe/database/test-helpers";
+import { createBrainPrismaClient } from "@uwe/database/brain-client";
 import { createPrismaClient, createUweRepository } from "@uwe/database/server";
 import {
   createBackupBundle,
@@ -33,6 +38,10 @@ describe("UWE backup and restore", () => {
     uploadsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-uploads-"));
     backupsDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-backups-"));
     process.env.UWE_UPLOADS_ROOT = uploadsRoot;
+    // createBackupBundle reads the owner-private Brain store via
+    // createBrainPrismaClient() (no arg → BRAIN_DATABASE_URL). Point it at an
+    // isolated, migrated Brain DB so the source Brain data lives there too.
+    process.env.BRAIN_DATABASE_URL = createTestBrainDatabaseUrl();
 
     const repo = createUweRepository(databaseUrl);
     const world = await repo.createWorld({
@@ -114,6 +123,7 @@ describe("UWE backup and restore", () => {
     fs.rmSync(uploadsRoot, { recursive: true, force: true });
     fs.rmSync(backupsDir, { recursive: true, force: true });
     delete process.env.UWE_UPLOADS_ROOT;
+    delete process.env.BRAIN_DATABASE_URL;
   });
 
   it("exports a world backup with expected data", async () => {
@@ -202,12 +212,13 @@ describe("UWE backup and restore", () => {
     process.env.UWE_UPLOADS_ROOT = targetUploads;
 
     const targetDb = createPrismaClient(targetDbUrl);
+    const targetBrainDb = createTestBrainClient();
     const bundle = loadBackupFromBuffer(zipBuffer, "roundtrip.zip");
 
     const preview = await previewRestoreOnly(targetDb, bundle);
     assert.equal(preview.stats.new, preview.items.filter((item) => item.status === "new").length);
 
-    const result = await executeRestore(targetDb, bundle, {
+    const result = await executeRestore(targetDb, targetBrainDb, bundle, {
       confirmed: true,
       autoResolveSlugConflicts: true,
     }, zipBuffer, targetUploads);
@@ -262,6 +273,9 @@ describe("UWE backup and restore", () => {
   it("includes Daily Admin OS data in full backups and restores it", async () => {
     process.env.UWE_UPLOADS_ROOT = uploadsRoot;
     const db = createPrismaClient(databaseUrl);
+    // Daily-admin/Brain rows are owner-private and live in the Brain DB that
+    // createBackupBundle reads via BRAIN_DATABASE_URL (set in before()).
+    const brainDb = createBrainPrismaClient();
     const world = await db.world.findUniqueOrThrow({ where: { slug: worldSlug } });
 
     const captureStorageKey = buildStorageKey("_capture", "capture-photo.png");
@@ -271,7 +285,7 @@ describe("UWE backup and restore", () => {
       Buffer.from("capture-bytes"),
     );
 
-    const capture = await db.captureEntry.create({
+    const capture = await brainDb.captureEntry.create({
       data: {
         title: "Idee für Werkstatt",
         content: "Neues Terrain bauen",
@@ -281,53 +295,53 @@ describe("UWE backup and restore", () => {
         worldId: world.id,
       },
     });
-    const personalProject = await db.personalProject.create({
+    const personalProject = await brainDb.personalProject.create({
       data: {
         name: "Balkon renovieren",
         status: "active",
         category: "other",
       },
     });
-    const workshopProject = await db.workshopProject.create({
+    const workshopProject = await brainDb.workshopProject.create({
       data: {
         title: "Turm-Terrain",
         projectType: "dnd_terrain",
         status: "in_progress",
       },
     });
-    await db.workshopPaintRecipe.create({
+    await brainDb.workshopPaintRecipe.create({
       data: {
         name: "Steingrau",
         targetType: "terrain",
         workshopProjectId: workshopProject.id,
       },
     });
-    await db.workshopPrintProfile.create({
+    await brainDb.workshopPrintProfile.create({
       data: { name: "0.2mm Standard", workshopProjectId: workshopProject.id },
     });
-    await db.workshopTerrainRental.create({
+    await brainDb.workshopTerrainRental.create({
       data: { terrainSetName: "Dungeon-Set", workshopProjectId: workshopProject.id },
     });
-    await db.contractExpense.create({
+    await brainDb.contractExpense.create({
       data: { name: "Internet-Vertrag", vendor: "ISP", amountCents: 3999 },
     });
-    await db.hardwareDevice.create({
+    await brainDb.hardwareDevice.create({
       data: { name: "RTX-Host", role: "ai", status: "active", hostname: "rtx.local" },
     });
-    const brainDocument = await db.personalBrainDocument.create({
+    const brainDocument = await brainDb.personalBrainDocument.create({
       data: { title: "Hausnotizen", content: "Zählerstände und Wartung" },
     });
-    await db.personalBrainChunk.create({
+    await brainDb.personalBrainChunk.create({
       data: {
         documentId: brainDocument.id,
         chunkIndex: 0,
         content: "Zählerstände und Wartung",
       },
     });
-    await db.personalBrainFact.create({
+    await brainDb.personalBrainFact.create({
       data: { factType: "custom", title: "WLAN-Kanal", content: "Kanal 36" },
     });
-    await db.adminEntityLink.create({
+    await brainDb.adminEntityLink.create({
       data: {
         sourceType: "capture",
         sourceId: capture.id,
@@ -336,6 +350,7 @@ describe("UWE backup and restore", () => {
       },
     });
     await db.$disconnect();
+    await brainDb.$disconnect();
 
     const bundle = await createBackupBundle(databaseUrl, { type: "full" });
     assert.ok(bundle.data.dailyAdmin);
@@ -361,50 +376,52 @@ describe("UWE backup and restore", () => {
     const targetDbUrl = createTestDatabaseUrl();
     const targetUploads = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-da-restore-"));
     const targetDb = createPrismaClient(targetDbUrl);
+    const targetBrainDb = createTestBrainClient();
     const loaded = loadBackupFromBuffer(zipBuffer, "daily-admin-roundtrip.zip");
 
-    const result = await executeRestore(targetDb, loaded, {
+    const result = await executeRestore(targetDb, targetBrainDb, loaded, {
       confirmed: true,
       autoResolveSlugConflicts: true,
     }, zipBuffer, targetUploads);
 
     assert.equal(result.errors.length, 0);
-    assert.equal(await targetDb.captureEntry.count(), 1);
-    assert.equal(await targetDb.personalProject.count(), 1);
-    assert.equal(await targetDb.workshopProject.count(), 1);
-    assert.equal(await targetDb.workshopPaintRecipe.count(), 1);
-    assert.equal(await targetDb.workshopPrintProfile.count(), 1);
-    assert.equal(await targetDb.workshopTerrainRental.count(), 1);
-    assert.equal(await targetDb.contractExpense.count(), 1);
-    assert.equal(await targetDb.hardwareDevice.count(), 1);
-    assert.equal(await targetDb.personalBrainDocument.count(), 1);
-    assert.equal(await targetDb.personalBrainChunk.count(), 1);
-    assert.equal(await targetDb.personalBrainFact.count(), 1);
-    assert.equal(await targetDb.adminEntityLink.count(), 1);
+    assert.equal(await targetBrainDb.captureEntry.count(), 1);
+    assert.equal(await targetBrainDb.personalProject.count(), 1);
+    assert.equal(await targetBrainDb.workshopProject.count(), 1);
+    assert.equal(await targetBrainDb.workshopPaintRecipe.count(), 1);
+    assert.equal(await targetBrainDb.workshopPrintProfile.count(), 1);
+    assert.equal(await targetBrainDb.workshopTerrainRental.count(), 1);
+    assert.equal(await targetBrainDb.contractExpense.count(), 1);
+    assert.equal(await targetBrainDb.hardwareDevice.count(), 1);
+    assert.equal(await targetBrainDb.personalBrainDocument.count(), 1);
+    assert.equal(await targetBrainDb.personalBrainChunk.count(), 1);
+    assert.equal(await targetBrainDb.personalBrainFact.count(), 1);
+    assert.equal(await targetBrainDb.adminEntityLink.count(), 1);
 
-    const restoredCapture = await targetDb.captureEntry.findFirstOrThrow();
+    const restoredCapture = await targetBrainDb.captureEntry.findFirstOrThrow();
     assert.equal(restoredCapture.storageKey, captureStorageKey);
     assert.ok(
       fs.existsSync(resolveAssetFilePath(captureStorageKey, targetUploads)),
       "Capture-Upload-Datei muss mit wiederhergestellt werden",
     );
 
-    const restoredRecipe = await targetDb.workshopPaintRecipe.findFirstOrThrow();
-    const restoredWorkshopProject = await targetDb.workshopProject.findFirstOrThrow();
+    const restoredRecipe = await targetBrainDb.workshopPaintRecipe.findFirstOrThrow();
+    const restoredWorkshopProject = await targetBrainDb.workshopProject.findFirstOrThrow();
     assert.equal(restoredRecipe.workshopProjectId, restoredWorkshopProject.id);
 
-    const restoredChunk = await targetDb.personalBrainChunk.findFirstOrThrow();
-    const restoredDocument = await targetDb.personalBrainDocument.findFirstOrThrow();
+    const restoredChunk = await targetBrainDb.personalBrainChunk.findFirstOrThrow();
+    const restoredDocument = await targetBrainDb.personalBrainDocument.findFirstOrThrow();
     assert.equal(restoredChunk.documentId, restoredDocument.id);
 
-    const restoredLink = await targetDb.adminEntityLink.findFirstOrThrow();
+    const restoredLink = await targetBrainDb.adminEntityLink.findFirstOrThrow();
     assert.equal(restoredLink.sourceId, restoredCapture.id);
     assert.equal(
       restoredLink.targetId,
-      (await targetDb.personalProject.findFirstOrThrow()).id,
+      (await targetBrainDb.personalProject.findFirstOrThrow()).id,
     );
 
     await targetDb.$disconnect();
+    await targetBrainDb.$disconnect();
     fs.rmSync(targetUploads, { recursive: true, force: true });
   });
 
@@ -415,17 +432,19 @@ describe("UWE backup and restore", () => {
 
     const targetDbUrl = createTestDatabaseUrl();
     const targetDb = createPrismaClient(targetDbUrl);
+    const targetBrainDb = createTestBrainClient();
 
-    const result = await executeRestore(targetDb, bundle, {
+    const result = await executeRestore(targetDb, targetBrainDb, bundle, {
       confirmed: true,
       autoResolveSlugConflicts: true,
     });
 
     assert.equal(result.errors.length, 0);
     assert.ok(result.created > 0);
-    assert.equal(await targetDb.captureEntry.count(), 0);
+    assert.equal(await targetBrainDb.captureEntry.count(), 0);
     assert.ok(await targetDb.world.findUnique({ where: { slug: worldSlug } }));
 
     await targetDb.$disconnect();
+    await targetBrainDb.$disconnect();
   });
 });

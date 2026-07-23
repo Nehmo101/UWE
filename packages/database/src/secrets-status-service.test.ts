@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createPrismaClient } from "./client";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl } from "./test-helpers";
 import { encryptSecret } from "./token-crypto";
 import {
   assertSecretsStatusHasNoSecrets,
@@ -13,6 +13,7 @@ import {
 describe("secrets status service", () => {
   it("builds snapshot without leaking env secrets", async () => {
     const db = createPrismaClient(createTestDatabaseUrl());
+    const brainDb = createTestBrainClient();
     const secret = "test-auth-secret-do-not-leak-12345";
     const env = {
       NODE_ENV: "development",
@@ -24,7 +25,7 @@ describe("secrets status service", () => {
     };
 
     try {
-      const snapshot = await getSecretsStatusSnapshot(db, { env });
+      const snapshot = await getSecretsStatusSnapshot(db, brainDb, { env });
 
       assertSecretsStatusHasNoSecrets(snapshot, env);
       assert.equal(snapshot.encryptionKeyConfigured, true);
@@ -53,6 +54,7 @@ describe("secrets status service", () => {
 
   it("flags decrypt failures after encryption key mismatch", async () => {
     const db = createPrismaClient(createTestDatabaseUrl());
+    const brainDb = createTestBrainClient();
     const originalKey = "original-encryption-key-32chars!!";
     const rotatedKey = "rotated-encryption-key-32chars!!";
 
@@ -77,7 +79,7 @@ describe("secrets status service", () => {
         },
       });
 
-      const snapshot = await getSecretsStatusSnapshot(db, {
+      const snapshot = await getSecretsStatusSnapshot(db, brainDb, {
         env: {
           NODE_ENV: "development",
           AUTH_SECRET: rotatedKey,

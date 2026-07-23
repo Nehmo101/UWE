@@ -10,10 +10,11 @@ import {
   listAssetsForTarget,
   syncImageStudioProjectLinksToAsset,
 } from "./asset-link-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 
 describe("asset link service", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let worldId: string;
   let pageId: string;
   let assetId: string;
@@ -21,8 +22,9 @@ describe("asset link service", () => {
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     const repo = createUweRepository(databaseUrl);
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
 
     const world = await repo.createWorld({
       name: "Asset Link World",
@@ -52,7 +54,7 @@ describe("asset link service", () => {
     assetId = asset.id;
 
     const capture = await lifeAdmin.createCapture({ title: "Photo capture" });
-    await linkAssetToTarget(db, {
+    await linkAssetToTarget(db, brainDb, {
       assetId,
       targetType: "capture",
       targetId: capture.id,
@@ -60,25 +62,25 @@ describe("asset link service", () => {
   });
 
   it("links assets to pages", async () => {
-    await linkAssetToTarget(db, { assetId, targetType: "page", targetId: pageId });
-    const assets = await listAssetsForTarget(db, "page", pageId);
+    await linkAssetToTarget(db, brainDb, { assetId, targetType: "page", targetId: pageId });
+    const assets = await listAssetsForTarget(db, brainDb, "page", pageId);
     assert.ok(assets.some((asset) => asset.id === assetId));
   });
 
   it("lists all links for an asset", async () => {
-    const links = await listAssetLinksForAsset(db, assetId);
+    const links = await listAssetLinksForAsset(db, brainDb, assetId);
     assert.ok(links.some((link) => link.targetType === "page"));
     assert.ok(links.some((link) => link.targetType === "capture"));
   });
 
   it("adopts asset to workshop project gallery", async () => {
-    const lifeAdmin = createLifeAdminService(db);
+    const lifeAdmin = createLifeAdminService(brainDb, db);
     const workshop = await lifeAdmin.createWorkshopProject({
       title: "Goblin Mini",
       projectType: "miniature",
     });
 
-    await adoptAssetToTarget(db, {
+    await adoptAssetToTarget(db, brainDb, {
       assetId,
       targetType: "workshop_project",
       targetId: workshop.id,
@@ -106,7 +108,7 @@ describe("asset link service", () => {
       },
     });
 
-    const links = await syncImageStudioProjectLinksToAsset(db, project.id, assetId);
+    const links = await syncImageStudioProjectLinksToAsset(db, brainDb, project.id, assetId);
     assert.ok(links.some((link) => link.targetType === "page" && link.targetId === pageId));
   });
 });

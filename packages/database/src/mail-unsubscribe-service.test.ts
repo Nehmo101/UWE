@@ -1,16 +1,15 @@
 import { describe, it, before, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { createPrismaClient, type PrismaClient } from "./client";
 import { createMailUnsubscribeService } from "./mail-unsubscribe-service";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, type BrainPrismaClient } from "./test-helpers";
 import { encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 
 describe("mail-unsubscribe-service", () => {
-  let db: PrismaClient;
+  let db: BrainPrismaClient;
   const originalFetch = global.fetch;
 
   before(() => {
-    db = createPrismaClient(createTestDatabaseUrl());
+    db = createTestBrainClient();
   });
 
   afterEach(() => {

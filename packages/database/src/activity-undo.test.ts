@@ -4,11 +4,12 @@ import { createActivityLogService, type ActivityLogService } from "./activity-lo
 import { createPrismaClient, type PrismaClient } from "./client";
 import { createUweRepository, type UweRepository } from "./repository";
 import { runSeedOnce, isSeedApplied } from "./seed-tracker";
-import { createTestDatabaseUrl } from "./test-helpers";
+import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
 import { createUndoService, type UndoService } from "./undo-service";
 
 describe("activity log + undo basis", () => {
   let db: PrismaClient;
+  let brainDb: BrainPrismaClient;
   let repo: UweRepository;
   let activity: ActivityLogService;
   let undo: UndoService;
@@ -17,9 +18,10 @@ describe("activity log + undo basis", () => {
   before(async () => {
     const databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
+    brainDb = createTestBrainClient();
     repo = createUweRepository(databaseUrl);
     activity = createActivityLogService(db);
-    undo = createUndoService(db);
+    undo = createUndoService(brainDb, db);
 
     const world = await repo.createWorld({ name: "Audit Test", slug: "audit-test" });
     worldId = world.id;
