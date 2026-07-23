@@ -14,6 +14,9 @@ interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
 }
 
+/** Feature-Arten, die der Viewer rendert (Region-Marker bleiben außen vor). */
+const VIEWER_FEATURE_KINDS: readonly string[] = ["river", "road", "label", "territory", "poi", "lake"];
+
 export default async function PortalAtlas3DNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
   const ctx = await getAccessContextForWorld(worldSlug);
@@ -82,16 +85,27 @@ export default async function PortalAtlas3DNodePage({ params }: Props) {
           rotation: object.rotation,
         }))}
         features={node.features
-          .filter((feature) => feature.kind === "river" || feature.kind === "road" || feature.kind === "label")
-          .map((feature) => ({
-            localId: feature.id,
-            kind: feature.kind,
-            points: (feature.geometry as { points?: unknown })?.points ?? [],
-            labelText: feature.labelText ?? undefined,
-          }))}
+          .filter((feature) => VIEWER_FEATURE_KINDS.includes(feature.kind))
+          .map((feature) => {
+            const geometry = (feature.geometry ?? null) as { points?: unknown; tint?: unknown; level?: unknown } | null;
+            return {
+              localId: feature.id,
+              kind: feature.kind,
+              points: geometry?.points ?? [],
+              labelText: feature.labelText ?? undefined,
+              tint: typeof geometry?.tint === "string" ? geometry.tint : undefined,
+              level: typeof geometry?.level === "number" ? geometry.level : undefined,
+            };
+          })}
         silhouette={node.silhouette ?? null}
         waterLevel={effective.environment.waterLevel}
-        environment={{ timeOfDay: effective.environment.timeOfDay, fogDensity: effective.environment.fogDensity, weather: effective.environment.weather }}
+        environment={{
+          timeOfDay: effective.environment.timeOfDay,
+          fogDensity: effective.environment.fogDensity,
+          weather: effective.environment.weather,
+          season: effective.environment.season,
+        }}
+        stylePreset={effective.stylePreset}
         bookmarks={node.bookmarks.map((bookmark) => ({ id: bookmark.id, name: bookmark.name, pose: bookmark.pose }))}
       />
       {node.children.length > 0 ? (

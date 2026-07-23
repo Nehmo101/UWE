@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, type RefObject } from "react";
-import type { Atlas3DEditorApp, Atlas3DEditorMode, GridOverlayKind } from "@uwe/atlas-3d/editor-app";
+import type {
+  Atlas3DEditorApp,
+  Atlas3DEditorMode,
+  Atlas3DViewOverlay,
+  GridOverlayKind,
+} from "@uwe/atlas-3d/editor-app";
 
 export interface Atlas3DInheritedNumber {
   value: number;
@@ -35,6 +40,43 @@ const GRID_OPTIONS: { value: GridOverlayKind; label: string }[] = [
   { value: "hex", label: "Hex" },
 ];
 
+const SEASON_OPTIONS = [
+  { value: "fruehling", label: "Frühling" },
+  { value: "sommer", label: "Sommer" },
+  { value: "herbst", label: "Herbst" },
+  { value: "winter", label: "Winter" },
+];
+
+const STYLE_OPTIONS = [
+  { value: "pergament", label: "Pergament" },
+  { value: "sepia", label: "Sepia" },
+  { value: "aquarell", label: "Aquarell" },
+];
+
+const VIEW_OPTIONS: { value: Atlas3DViewOverlay; label: string }[] = [
+  { value: "karte", label: "Karte" },
+  { value: "klima", label: "Klima" },
+  { value: "hoehe", label: "Höhe" },
+];
+
+/** „Geerbt von …“-Badge mit „wieder erben“-Knopf bei Override. */
+function InheritBadge(props: { item: Atlas3DInheritedText; onInherit: () => void; testId?: string }) {
+  return (
+    <span className="atlas3d-badge" data-testid={props.testId}>
+      {props.item.overridden ? (
+        <>
+          überschrieben ·{" "}
+          <button type="button" className="atlas3d-inherit" onClick={props.onInherit}>
+            ⤓ wieder erben
+          </button>
+        </>
+      ) : (
+        <>⤓ geerbt von {props.item.fromTitle}</>
+      )}
+    </span>
+  );
+}
+
 export interface Atlas3DInspectorPanelProps {
   mode: Atlas3DEditorMode;
   appRef: RefObject<Atlas3DEditorApp | null>;
@@ -42,13 +84,17 @@ export interface Atlas3DInspectorPanelProps {
   timeOfDay: Atlas3DInheritedText;
   fogDensity: Atlas3DInheritedNumber;
   weather: Atlas3DInheritedText;
+  season: Atlas3DInheritedText;
+  stylePreset: Atlas3DInheritedText;
   brushRadius: number;
   onBrushRadius: (radius: number) => void;
   splitGap: number;
   onSplitGap: (gap: number) => void;
   rootCount: number;
   onRootCount: (count: number) => void;
-  onSetEnvironment: (field: "waterLevel" | "timeOfDay" | "fogDensity" | "weather", value: string) => void;
+  onSetEnvironment: (field: "waterLevel" | "timeOfDay" | "fogDensity" | "weather" | "season", value: string) => void;
+  /** Stil-Override der Ebene ("inherit" räumt den Override wieder ab). */
+  onSetStyle: (value: string) => void;
 }
 
 /** Inspector strip (brush + split + environment) — extracted from the shell for the file-size budget. */
@@ -56,6 +102,8 @@ export function Atlas3DInspectorPanel(props: Atlas3DInspectorPanelProps) {
   const [waterDraft, setWaterDraft] = useState(props.waterLevel.value);
   const [fogDraft, setFogDraft] = useState(props.fogDensity.value);
   const [gridKind, setGridKind] = useState<GridOverlayKind>("aus");
+  const [viewOverlay, setViewOverlay] = useState<Atlas3DViewOverlay>("karte");
+  const [contours, setContours] = useState(false);
   const appRef = props.appRef;
 
   return (
@@ -258,6 +306,76 @@ export function Atlas3DInspectorPanel(props: Atlas3DInspectorPanelProps) {
           )}
         </span>
       </label>
+      <label>
+        Jahreszeit
+        <select
+          value={props.season.value}
+          data-testid="atlas3d-season-select"
+          onChange={(event) => {
+            appRef.current?.setEnvironmentVisuals({ season: event.target.value });
+            props.onSetEnvironment("season", event.target.value);
+          }}
+        >
+          {SEASON_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <InheritBadge item={props.season} onInherit={() => props.onSetEnvironment("season", "inherit")} />
+      </label>
+      <label>
+        Stil
+        <select
+          value={props.stylePreset.value}
+          data-testid="atlas3d-style-select"
+          onChange={(event) => {
+            appRef.current?.setEnvironmentVisuals({ stylePreset: event.target.value });
+            props.onSetStyle(event.target.value);
+          }}
+        >
+          {STYLE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <InheritBadge item={props.stylePreset} onInherit={() => props.onSetStyle("inherit")} testId="atlas3d-style-badge" />
+      </label>
+      <label>
+        Ansicht
+        <select
+          value={viewOverlay}
+          data-testid="atlas3d-view-select"
+          onChange={(event) => {
+            const mode = event.target.value as Atlas3DViewOverlay;
+            setViewOverlay(mode);
+            appRef.current?.setViewOverlay(mode);
+          }}
+        >
+          {VIEW_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="atlas3d-badge">nur Ansicht</span>
+      </label>
+      {props.mode === "terrain" ? (
+        <label className="atlas3d-check">
+          <input
+            type="checkbox"
+            checked={contours}
+            data-testid="atlas3d-contours"
+            onChange={(event) => {
+              setContours(event.target.checked);
+              appRef.current?.setContoursVisible(event.target.checked);
+            }}
+          />
+          Höhenlinien
+          <span className="atlas3d-badge">nur Ansicht</span>
+        </label>
+      ) : null}
     </div>
   );
 }

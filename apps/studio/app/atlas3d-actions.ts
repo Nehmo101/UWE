@@ -5,7 +5,12 @@ import { createPrismaClient } from "@uwe/database/server";
 import { createAtlas3DService } from "@uwe/database/atlas3d";
 import { parseCarveOps, serializeCarveOps } from "@uwe/atlas-editor/carve";
 import { projectSurfacePatch, type Vec2, type Vec3 } from "@uwe/atlas-editor/geometry";
-import { ATLAS3D_WEATHER_KINDS, type Atlas3DEnvironment } from "@uwe/atlas-editor/doc";
+import {
+  ATLAS3D_SEASONS,
+  ATLAS3D_STYLE_PRESETS,
+  ATLAS3D_WEATHER_KINDS,
+  type Atlas3DEnvironment,
+} from "@uwe/atlas-editor/doc";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -87,18 +92,24 @@ export async function saveAtlas3DTerrainAction(formData: FormData): Promise<Save
     }
     const featuresRaw: unknown = JSON.parse(String(formData.get("features") || "[]"));
     if (Array.isArray(featuresRaw)) {
-      const editorKinds = ["river", "road", "label"] as const;
+      const editorKinds = ["river", "road", "label", "territory", "poi", "lake"] as const;
       await atlas3d.saveFeatures(
         nodeId,
         featuresRaw
           .filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
           .filter((f) => (editorKinds as readonly string[]).includes(f.kind as string) && Array.isArray(f.points))
-          .map((f) => ({
-            id: typeof f.id === "string" ? f.id : undefined,
-            kind: f.kind as string,
-            geometry: { points: f.points } as object,
-            labelText: typeof f.labelText === "string" ? f.labelText : null,
-          })),
+          .map((f) => {
+            // geometry-JSON: { points, tint?, level? } — tint (territory) und level (lake) reisen mit den Punkten
+            const geometry: Record<string, unknown> = { points: f.points };
+            if (typeof f.tint === "string") geometry.tint = f.tint;
+            if (typeof f.level === "number" && Number.isFinite(f.level)) geometry.level = f.level;
+            return {
+              id: typeof f.id === "string" ? f.id : undefined,
+              kind: f.kind as string,
+              geometry: geometry as object,
+              labelText: typeof f.labelText === "string" ? f.labelText : null,
+            };
+          }),
         { kinds: editorKinds },
       );
     }
@@ -241,7 +252,7 @@ export async function setAtlas3DEnvironmentAction(formData: FormData): Promise<S
   const field = String(formData.get("field"));
   const rawValue = String(formData.get("value"));
   try {
-    if (field !== "waterLevel" && field !== "timeOfDay" && field !== "fogDensity" && field !== "weather") {
+    if (field !== "waterLevel" && field !== "timeOfDay" && field !== "fogDensity" && field !== "weather" && field !== "season") {
       throw new Error(`Unbekanntes Umgebungsfeld: ${field}`);
     }
     const { atlas3d, chain } = await requireNodeInWorld(worldSlug, nodeId);
@@ -256,12 +267,39 @@ export async function setAtlas3DEnvironmentAction(formData: FormData): Promise<S
     } else if (field === "weather") {
       if (!(ATLAS3D_WEATHER_KINDS as readonly string[]).includes(rawValue)) throw new Error("Ungültiges Wetter");
       environment.weather = rawValue as Atlas3DEnvironment["weather"];
+    } else if (field === "season") {
+      if (!(ATLAS3D_SEASONS as readonly string[]).includes(rawValue)) throw new Error("Ungültige Jahreszeit");
+      environment.season = rawValue as Atlas3DEnvironment["season"];
     } else {
       if (!["morning", "noon", "evening", "night"].includes(rawValue)) throw new Error("Ungültige Tageszeit");
       environment.timeOfDay = rawValue as Atlas3DEnvironment["timeOfDay"];
     }
     const hasOverrides = Object.keys(environment).length > 0;
     await atlas3d.updateNode(nodeId, { environment: hasOverrides ? (environment as object) : null });
+    revalidatePath(`/worlds/${worldSlug}/atlas3d/${nodeId}`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Speichern fehlgeschlagen" };
+  }
+}
+
+/**
+ * Stil-Override der Ebene (Pergament · Sepia · Aquarell). `style` = "inherit"
+ * räumt den Override ab — die Ahnenkette gewinnt wieder.
+ */
+export async function setAtlas3DStyleAction(formData: FormData): Promise<SaveAtlas3DTerrainResult> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  const style = String(formData.get("style"));
+  try {
+    if (style !== "inherit" && !(ATLAS3D_STYLE_PRESETS as readonly string[]).includes(style)) {
+      throw new Error(`Unbekannter Stil: ${style}`);
+    }
+    const { atlas3d } = await requireNodeInWorld(worldSlug, nodeId);
+    await atlas3d.updateNode(nodeId, { stylePresetOverride: style === "inherit" ? null : style });
     revalidatePath(`/worlds/${worldSlug}/atlas3d/${nodeId}`);
     return { ok: true };
   } catch (error) {

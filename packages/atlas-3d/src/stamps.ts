@@ -5,8 +5,8 @@
  */
 
 import type { Vec3 } from "@uwe/atlas-editor/carve";
-import { applyHeightBrush, type HeightmapGrid } from "./planet-field";
-import { applyPlanarBrush } from "./terrain-field";
+import { applyHeightBrush, fbm, type HeightmapGrid } from "./planet-field";
+import { applyPlanarBrush, mapToUv } from "./terrain-field";
 
 export const TERRAIN_STAMPS = [
   { key: "krater", label: "Krater" },
@@ -100,6 +100,74 @@ export function applyGlobeStamp(grid: HeightmapGrid, center: Vec3, options: Stam
       options.strength * stroke.strengthFactor,
       stroke.mode,
     );
+  }
+}
+
+const MUTATE_AMPLITUDE = 0.06;
+const MUTATE_FREQUENCY = 3;
+
+/**
+ * Rewrite the brush region on the globe heightmap with fresh seeded fbm noise
+ * (amplitude ±0.06), soft-blended over the existing values at the rim:
+ * new*falloff + old*(1-falloff). Deterministic per (center, radius, seed).
+ */
+export function mutateRegionGlobe(grid: HeightmapGrid, centerDir: Vec3, radius: number, seed: number): void {
+  const length = Math.hypot(centerDir[0], centerDir[1], centerDir[2]) || 1;
+  const center: Vec3 = [centerDir[0] / length, centerDir[1] / length, centerDir[2] / length];
+  const cosRadius = Math.cos(radius);
+  for (let y = 0; y < grid.height; y++) {
+    const theta = (y / Math.max(1, grid.height - 1)) * Math.PI;
+    const sinTheta = Math.sin(theta);
+    const cosTheta = Math.cos(theta);
+    for (let x = 0; x < grid.width; x++) {
+      const phi = (x / grid.width - 0.5) * Math.PI * 2;
+      const dx = sinTheta * Math.cos(phi);
+      const dy = cosTheta;
+      const dz = sinTheta * Math.sin(phi);
+      const dot = dx * center[0] + dy * center[1] + dz * center[2];
+      if (dot < cosRadius) continue;
+      const t = (dot - cosRadius) / Math.max(1e-6, 1 - cosRadius);
+      const falloff = t * t * (3 - 2 * t);
+      const noise = (fbm(dx * MUTATE_FREQUENCY, dy * MUTATE_FREQUENCY, dz * MUTATE_FREQUENCY, seed) - 0.5) *
+        (MUTATE_AMPLITUDE * 2);
+      const index = y * grid.width + x;
+      grid.data[index] = noise * falloff + grid.data[index] * (1 - falloff);
+    }
+  }
+}
+
+/**
+ * Planar counterpart of mutateRegionGlobe: rewrite the brush circle with
+ * fresh seeded fbm noise (amplitude ±0.06), soft-blended at the rim.
+ */
+export function mutateRegionPlanar(
+  grid: HeightmapGrid,
+  mapSize: number,
+  center: readonly [number, number],
+  radius: number,
+  seed: number,
+): void {
+  const [cu, cv] = mapToUv(center[0], center[1], mapSize);
+  const texRadius = (radius / (mapSize * 2)) * grid.width;
+  const cx = cu * (grid.width - 1);
+  const cy = cv * (grid.height - 1);
+  const minX = Math.max(0, Math.floor(cx - texRadius - 1));
+  const maxX = Math.min(grid.width - 1, Math.ceil(cx + texRadius + 1));
+  const minY = Math.max(0, Math.floor(cy - texRadius - 1));
+  const maxY = Math.min(grid.height - 1, Math.ceil(cy + texRadius + 1));
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const distance = Math.hypot(x - cx, y - cy);
+      if (distance > texRadius) continue;
+      const t = 1 - distance / Math.max(texRadius, 1e-6);
+      const falloff = t * t * (3 - 2 * t);
+      const mx = ((x / (grid.width - 1)) * 2 - 1) * mapSize;
+      const mz = ((y / (grid.height - 1)) * 2 - 1) * mapSize;
+      const noise = (fbm(mx * MUTATE_FREQUENCY + 11.3, 0, mz * MUTATE_FREQUENCY + 17.9, seed) - 0.5) *
+        (MUTATE_AMPLITUDE * 2);
+      const index = y * grid.width + x;
+      grid.data[index] = noise * falloff + grid.data[index] * (1 - falloff);
+    }
   }
 }
 

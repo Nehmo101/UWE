@@ -6,6 +6,7 @@
  */
 
 import * as THREE from "three";
+import { ATLAS3D_PALETTE } from "@uwe/atlas-editor/doc";
 import { buildInkAsset, INK_ASSET_DEFAULT_TINT, isInkAssetKind, isInkTint, type InkAssetKind, type InkTint } from "./assets-ink";
 import { createInkMaterial, createOutlineMaterial, setInkTime } from "./ink-style";
 import type { PathPoint } from "./terrain-path";
@@ -21,12 +22,27 @@ export interface DocObjectState {
   rotation: number;
 }
 
+export type DocFeatureKind = "river" | "road" | "label" | "territory" | "poi" | "lake";
+
+const DOC_FEATURE_KINDS: readonly DocFeatureKind[] = ["river", "road", "label", "territory", "poi", "lake"];
+
 export interface DocFeatureState {
   localId: string;
   id?: string;
-  kind: "river" | "road" | "label";
+  kind: DocFeatureKind;
   points: PathPoint[];
   labelText?: string;
+  /** Territory: Farbschlüssel (paper|sepia|terra|teal|blue|gefahr|magie) — Hex kommt aus ATLAS3D_PALETTE. */
+  tint?: string;
+  /** Lake: Wasserhöhe. */
+  level?: number;
+}
+
+/** Mindestpunktzahl je Feature-Art (Polygon braucht 3, Pfade 2, Marker 1). */
+function minFeaturePoints(kind: DocFeatureKind): number {
+  if (kind === "territory") return 3;
+  if (kind === "river" || kind === "road") return 2;
+  return 1;
 }
 
 export function parseDocObjects(value: unknown): DocObjectState[] {
@@ -55,7 +71,8 @@ export function parseDocFeatures(value: unknown): DocFeatureState[] {
   for (const [index, raw] of value.entries()) {
     if (typeof raw !== "object" || raw === null) continue;
     const f = raw as Record<string, unknown>;
-    if (f.kind !== "river" && f.kind !== "road" && f.kind !== "label") continue;
+    if (!(DOC_FEATURE_KINDS as readonly unknown[]).includes(f.kind)) continue;
+    const kind = f.kind as DocFeatureKind;
     const points = Array.isArray(f.points)
       ? f.points
           .filter((p): p is { x: number; z: number } =>
@@ -65,13 +82,15 @@ export function parseDocFeatures(value: unknown): DocFeatureState[] {
           )
           .map((p) => ({ x: p.x, z: p.z }))
       : [];
-    if (f.kind === "label" ? points.length < 1 : points.length < 2) continue;
+    if (points.length < minFeaturePoints(kind)) continue;
     features.push({
       localId: typeof f.localId === "string" ? f.localId : `feat-${index}`,
       id: typeof f.id === "string" ? f.id : undefined,
-      kind: f.kind,
+      kind,
       points,
       labelText: typeof f.labelText === "string" ? f.labelText : undefined,
+      tint: typeof f.tint === "string" ? f.tint : undefined,
+      level: typeof f.level === "number" && Number.isFinite(f.level) ? f.level : undefined,
     });
   }
   return features;
@@ -80,6 +99,19 @@ export function parseDocFeatures(value: unknown): DocFeatureState[] {
 const RIVER_CENTER = new THREE.Color("#4a76a3");
 const RIVER_EDGE = new THREE.Color("#27425d");
 const ROAD_COLOR = new THREE.Color("#93744e");
+const LAKE_COLOR = "#4a76a3";
+
+/** Semantische Territory-Schlüssel auf Palette-Hues abbilden. */
+const TERRITORY_TINT_ALIASES: Record<string, keyof typeof ATLAS3D_PALETTE> = {
+  gefahr: "terra",
+  magie: "blue",
+};
+
+function territoryColor(tint: string | undefined): string {
+  if (tint && tint in ATLAS3D_PALETTE) return ATLAS3D_PALETTE[tint as keyof typeof ATLAS3D_PALETTE];
+  const alias = tint ? TERRITORY_TINT_ALIASES[tint] : undefined;
+  return ATLAS3D_PALETTE[alias ?? "sepia"];
+}
 
 function ribbonGeometry(points: readonly PathPoint[], heightAt: (x: number, z: number) => number, width: number, center: THREE.Color, edge: THREE.Color): THREE.BufferGeometry {
   const positions: number[] = [];
@@ -211,7 +243,7 @@ export class SceneObjectLayer {
       holder.scale.setScalar(baseScale);
 
       const orbit = object.position.orbit as { radius?: number; inclination?: number; phase?: number; speed?: number } | undefined;
-      if (object.assetKind === "asteroid" && orbit && typeof orbit.radius === "number") {
+      if ((object.assetKind === "asteroid" || object.assetKind === "mond") && orbit && typeof orbit.radius === "number") {
         const angle = (orbit.phase ?? 0) + time * (orbit.speed ?? 0.1);
         const flat = new THREE.Vector3(Math.cos(angle) * orbit.radius, 0, Math.sin(angle) * orbit.radius);
         flat.applyAxisAngle(new THREE.Vector3(0, 0, 1), orbit.inclination ?? 0);
@@ -262,6 +294,18 @@ export class SceneObjectLayer {
         });
         continue;
       }
+      if (feature.kind === "territory") {
+        this.syncTerritory(feature);
+        continue;
+      }
+      if (feature.kind === "poi") {
+        this.syncPoi(feature);
+        continue;
+      }
+      if (feature.kind === "lake") {
+        this.syncLake(feature);
+        continue;
+      }
       const width = feature.kind === "river" ? 0.055 : 0.035;
       const center = feature.kind === "river" ? RIVER_CENTER : ROAD_COLOR;
       const edge = feature.kind === "river" ? RIVER_EDGE : ROAD_COLOR;
@@ -278,6 +322,156 @@ export class SceneObjectLayer {
         },
       });
     }
+  }
+
+  /** Punkt → Weltposition: Terrain über die Höhenfunktion, Globus entlang der Punktrichtung. */
+  private surfacePoint(point: PathPoint, lift: number): THREE.Vector3 {
+    if (this.host.mode === "terrain") {
+      return new THREE.Vector3(point.x, this.host.surfaceHeight(point.x, point.z) + lift, point.z);
+    }
+    const dir = new THREE.Vector3(point.x, Math.sqrt(Math.max(0, 1 - point.x * point.x - point.z * point.z)), point.z);
+    if (dir.lengthSq() < 1e-9) dir.set(0, 1, 0);
+    dir.normalize();
+    return dir.multiplyScalar(this.host.globeRadiusAt(dir) + lift);
+  }
+
+  /**
+   * Territory: halbtransparentes Polygon (Fan um den Schwerpunkt) knapp über
+   * der Oberfläche plus Umriss-Linie in der Tint-Farbe. Auf dem Globus wird
+   * nur der Umriss gezeigt (Fan-Sehnen würden die Kugel schneiden).
+   */
+  private syncTerritory(feature: DocFeatureState): void {
+    const color = new THREE.Color(territoryColor(feature.tint));
+    const rim = feature.points.map((point) => this.surfacePoint(point, 0.015));
+    const cx = feature.points.reduce((sum, p) => sum + p.x, 0) / feature.points.length;
+    const cz = feature.points.reduce((sum, p) => sum + p.z, 0) / feature.points.length;
+    const center = this.surfacePoint({ x: cx, z: cz }, 0.015);
+
+    if (this.host.mode === "terrain") {
+      const positions: number[] = [];
+      for (let i = 0; i < rim.length; i++) {
+        const a = rim[i];
+        const b = rim[(i + 1) % rim.length];
+        positions.push(center.x, center.y, center.z, a.x, a.y, a.z, b.x, b.y, b.z);
+      }
+      const fillGeometry = new THREE.BufferGeometry();
+      fillGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(positions), 3));
+      const fillMaterial = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.28,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const fill = new THREE.Mesh(fillGeometry, fillMaterial);
+      fill.userData.localId = feature.localId;
+      this.group.add(fill);
+      this.hitMeshes.push(fill);
+      this.disposables.push({
+        dispose: () => {
+          fillGeometry.dispose();
+          fillMaterial.dispose();
+        },
+      });
+    }
+
+    const outlineGeometry = new THREE.BufferGeometry().setFromPoints(rim);
+    const outlineMaterial = new THREE.LineBasicMaterial({ color });
+    const outline = new THREE.LineLoop(outlineGeometry, outlineMaterial);
+    outline.userData.localId = feature.localId;
+    this.group.add(outline);
+    this.hitMeshes.push(outline);
+    this.disposables.push({
+      dispose: () => {
+        outlineGeometry.dispose();
+        outlineMaterial.dispose();
+      },
+    });
+
+    if (feature.labelText && typeof document !== "undefined") {
+      const sprite = labelSprite(feature.labelText);
+      sprite.position.copy(center).add(new THREE.Vector3(0, 0.22, 0));
+      sprite.userData.localId = feature.localId;
+      this.group.add(sprite);
+      this.disposables.push({
+        dispose: () => {
+          sprite.material.map?.dispose();
+          sprite.material.dispose();
+        },
+      });
+    }
+  }
+
+  /** POI: kleiner Pin (Kegel + Kugel in Terrakotta) mit dem Notiztext als Sprite darüber. */
+  private syncPoi(feature: DocFeatureState): void {
+    const point = feature.points[0];
+    const holder = new THREE.Group();
+    holder.position.copy(this.surfacePoint(point, 0));
+    if (this.host.mode === "globe") {
+      const dir = holder.position.clone().normalize();
+      holder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    }
+    const material = new THREE.MeshBasicMaterial({ color: new THREE.Color(ATLAS3D_PALETTE.terra) });
+    const coneGeometry = new THREE.ConeGeometry(0.035, 0.09, 8);
+    const cone = new THREE.Mesh(coneGeometry, material);
+    cone.rotation.x = Math.PI;
+    cone.position.y = 0.045;
+    const headGeometry = new THREE.SphereGeometry(0.04, 10, 8);
+    const head = new THREE.Mesh(headGeometry, material);
+    head.position.y = 0.11;
+    holder.add(cone);
+    holder.add(head);
+    holder.userData.localId = feature.localId;
+    cone.userData.localId = feature.localId;
+    head.userData.localId = feature.localId;
+    this.group.add(holder);
+    this.hitMeshes.push(holder);
+    this.disposables.push({
+      dispose: () => {
+        coneGeometry.dispose();
+        headGeometry.dispose();
+        material.dispose();
+      },
+    });
+    if (typeof document !== "undefined") {
+      const sprite = labelSprite(feature.labelText ?? "");
+      sprite.position.y = 0.3;
+      sprite.userData.localId = feature.localId;
+      holder.add(sprite);
+      this.disposables.push({
+        dispose: () => {
+          sprite.material.map?.dispose();
+          sprite.material.dispose();
+        },
+      });
+    }
+  }
+
+  /** Lake: flacher Wasser-Disc auf Höhe `level ?? 0`; Radius aus dem zweiten Punkt, sonst 0.25. */
+  private syncLake(feature: DocFeatureState): void {
+    const point = feature.points[0];
+    const second = feature.points.length > 1 ? feature.points[1] : undefined;
+    const radius = second ? Math.max(0.05, Math.hypot(second.x - point.x, second.z - point.z)) : 0.25;
+    const geometry = new THREE.CircleGeometry(radius, 24);
+    geometry.rotateX(-Math.PI / 2);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(LAKE_COLOR),
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(point.x, (feature.level ?? 0) + 0.01, point.z);
+    mesh.userData.localId = feature.localId;
+    this.group.add(mesh);
+    this.hitMeshes.push(mesh);
+    this.disposables.push({
+      dispose: () => {
+        geometry.dispose();
+        material.dispose();
+      },
+    });
   }
 
   clear(): void {

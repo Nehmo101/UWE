@@ -9,6 +9,9 @@
  * ink shader's uTime.
  */
 
+import { INK_ASSET_BUILDERS_BATCH2 } from "./assets-ink-batch2";
+import { INK_ASSET_BUILDERS_BATCH3 } from "./assets-ink-batch3";
+
 export interface InkAssetData {
   /** Interleaved-free flat arrays, non-indexed triangles. */
   positions: Float32Array;
@@ -18,7 +21,37 @@ export interface InkAssetData {
   outlineWidth: number;
 }
 
-export const INK_ASSET_KINDS = ["worldroot", "tree", "house", "tower", "asteroid"] as const;
+export const INK_ASSET_KINDS = [
+  "worldroot",
+  "tree",
+  "house",
+  "tower",
+  "asteroid",
+  "fels",
+  "busch",
+  "bruecke",
+  "muehle",
+  "hafen",
+  "portal",
+  "obelisk",
+  "mond",
+  "tanne",
+  "palme",
+  "pilzhain",
+  "kristalle",
+  "toterbaum",
+  "huette",
+  "brunnen",
+  "zelt",
+  "leuchtturm",
+  "statue",
+  "runenstein",
+  "schrein",
+  "wolkeninsel",
+  "luftschiff",
+  "boot",
+  "seerosen",
+] as const;
 export type InkAssetKind = (typeof INK_ASSET_KINDS)[number];
 
 export const INK_ASSET_LABELS: Record<InkAssetKind, string> = {
@@ -27,6 +60,30 @@ export const INK_ASSET_LABELS: Record<InkAssetKind, string> = {
   house: "Haus",
   tower: "Turm",
   asteroid: "Asteroid",
+  fels: "Fels",
+  busch: "Busch",
+  bruecke: "Brücke",
+  muehle: "Mühle",
+  hafen: "Hafen",
+  portal: "Portal",
+  obelisk: "Obelisk",
+  mond: "Mond",
+  tanne: "Tanne",
+  palme: "Palme",
+  pilzhain: "Pilzhain",
+  kristalle: "Kristalle",
+  toterbaum: "Toter Baum",
+  huette: "Hütte",
+  brunnen: "Brunnen",
+  zelt: "Zelt",
+  leuchtturm: "Leuchtturm",
+  statue: "Statue",
+  runenstein: "Runenstein",
+  schrein: "Schrein",
+  wolkeninsel: "Wolkeninsel",
+  luftschiff: "Luftschiff",
+  boot: "Boot",
+  seerosen: "Seerosen",
 };
 
 export interface InkAssetGroup {
@@ -37,11 +94,19 @@ export interface InkAssetGroup {
 
 /** Asset palette groups for the editor panel — every kind appears exactly once. */
 export const INK_ASSET_GROUPS: InkAssetGroup[] = [
-  { key: "natur", label: "Natur", kinds: ["tree"] },
-  { key: "siedlung", label: "Siedlung", kinds: ["house", "tower"] },
-  { key: "weltenbau", label: "Weltenbau", kinds: ["worldroot"] },
-  { key: "himmel", label: "Himmel", kinds: ["asteroid"] },
+  { key: "natur", label: "Natur", kinds: ["tree", "tanne", "palme", "busch", "fels", "pilzhain", "kristalle", "toterbaum"] },
+  {
+    key: "siedlung",
+    label: "Siedlung",
+    kinds: ["house", "huette", "zelt", "tower", "leuchtturm", "brunnen", "bruecke", "muehle", "hafen"],
+  },
+  { key: "weltenbau", label: "Weltenbau", kinds: ["worldroot", "portal", "obelisk", "statue", "runenstein", "schrein"] },
+  { key: "himmel", label: "Himmel", kinds: ["asteroid", "mond", "wolkeninsel", "luftschiff"] },
+  { key: "gewaesser", label: "Gewässer", kinds: ["boot", "seerosen"] },
 ];
+
+/** Kinds that live on an orbit around the globe — only placeable in globe mode. */
+export const GLOBE_ONLY_ASSET_KINDS: readonly InkAssetKind[] = ["asteroid", "mond"];
 
 export type InkTint = "paper" | "sepia" | "terra" | "teal" | "blue";
 
@@ -62,11 +127,12 @@ export function isInkTint(value: unknown): value is InkTint {
   return typeof value === "string" && value in TINT_SHADES;
 }
 
-type Vec = readonly [number, number, number];
-type Rgb = readonly [number, number, number];
-type AnimFn = ((p: Vec) => readonly [number, number, number, number]) | null;
+export type Vec = readonly [number, number, number];
+export type Rgb = readonly [number, number, number];
+export type AnimFn = ((p: Vec) => readonly [number, number, number, number]) | null;
 
-function hex(hexColor: string): Rgb {
+/** Internal builder toolkit — shared with assets-ink-batch2 (kept out of the app API). */
+export function hex(hexColor: string): Rgb {
   return [
     parseInt(hexColor.slice(1, 3), 16) / 255,
     parseInt(hexColor.slice(3, 5), 16) / 255,
@@ -74,7 +140,7 @@ function hex(hexColor: string): Rgb {
   ];
 }
 
-class Builder {
+export class Builder {
   positions: number[] = [];
   colors: number[] = [];
   anim: number[] = [];
@@ -199,12 +265,12 @@ class Builder {
   }
 }
 
-function shades(tint: InkTint): [Rgb, Rgb, Rgb] {
+export function shades(tint: InkTint): [Rgb, Rgb, Rgb] {
   const [dark, base, light] = TINT_SHADES[tint];
   return [hex(dark), hex(base), hex(light)];
 }
 
-const INK = hex("#211d17");
+export const INK = hex("#211d17");
 
 /** Weltwurzel: white spiral strands that tower above everything else. */
 function buildWorldroot(tint: InkTint): InkAssetData {
@@ -309,6 +375,8 @@ const BUILDERS: Record<InkAssetKind, (tint: InkTint) => InkAssetData> = {
   house: buildHouse,
   tower: buildTower,
   asteroid: buildAsteroid,
+  ...INK_ASSET_BUILDERS_BATCH2,
+  ...INK_ASSET_BUILDERS_BATCH3,
 };
 
 /** Default tint per kind (worldroots are lore-white). */
@@ -318,6 +386,30 @@ export const INK_ASSET_DEFAULT_TINT: Record<InkAssetKind, InkTint> = {
   house: "terra",
   tower: "paper",
   asteroid: "sepia",
+  fels: "sepia",
+  busch: "teal",
+  bruecke: "sepia",
+  muehle: "paper",
+  hafen: "sepia",
+  portal: "blue",
+  obelisk: "sepia",
+  mond: "paper",
+  tanne: "teal",
+  palme: "teal",
+  pilzhain: "terra",
+  kristalle: "blue",
+  toterbaum: "sepia",
+  huette: "sepia",
+  brunnen: "paper",
+  zelt: "paper",
+  leuchtturm: "paper",
+  statue: "paper",
+  runenstein: "sepia",
+  schrein: "terra",
+  wolkeninsel: "paper",
+  luftschiff: "paper",
+  boot: "sepia",
+  seerosen: "teal",
 };
 
 export function buildInkAsset(kind: InkAssetKind, tint?: InkTint): InkAssetData {

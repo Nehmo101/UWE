@@ -69,7 +69,7 @@ Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, 
 
 ## Stand
 
-**Alle acht ★-Quick-Wins sind umgesetzt** (Flatten-Pinsel, Terrain-Stempel, Biome-Ableitung, Constraint-Siedlungen, Streu-Pinsel, Gitter-Overlay, Wetter-Overlay, prozedurales Undo). Die übrigen Einträge sind bewusst Backlog — Erosion, WFC-Siedlungen und der Ebenen-Stack sind eigene Vorhaben mit eigener Abnahme.
+**Alle Roadmap-Punkte sind umgesetzt** — die acht ★-Quick-Wins plus die komplette Backlog-Tranche: Erosion (Pass + Brush, Flow-Maske), Fluss-Simulation, Seen, Klima-/Höhen-Ansichten, Höhenlinien, Landmassen-Vorlagen, PNG-Höhenstempel, Seed-Mutation, Bereichsfüllung, Mauer-Werkzeug + gesäumte Straßen, Warp, Namens-Generator, Chronik (generierte Historie v1), Territorien/Zonen, POI-Marker, 24 neue Assets in 5 Gruppen (inkl. Gewässer), Schwerkraft-/Hang-Verhalten über Surface-Snapping, Jahreszeiten, Stil-Themes (Pergament/Sepia/Aquarell), Papierkorn-Overlay, Mess-Werkzeug in Wegstunden, „Sub-Ebene neu ableiten" und der nicht-destruktive Eingriffe-Stack (Carve-Ops ein-/ausblendbar) als Ebenen-Stack v1. Bewusste v1-Interpretationen: WFC-Siedlungen laufen als constraint-basierter Generator (kein echtes WFC), der volle Höhen-Layer-Stack bleibt Architektur-Fernziel.
 
 ## Quellen (Auswahl)
 

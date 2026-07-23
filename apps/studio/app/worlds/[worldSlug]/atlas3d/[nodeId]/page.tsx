@@ -12,6 +12,9 @@ interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
 }
 
+/** Feature-Arten, die der Editor besitzt (Region-Marker bleiben außen vor). */
+const EDITOR_FEATURE_KINDS: readonly string[] = ["river", "road", "label", "territory", "poi", "lake"];
+
 export default async function Atlas3DNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
   const repo = getAppRepository();
@@ -103,14 +106,19 @@ export default async function Atlas3DNodePage({ params }: Props) {
           rotation: object.rotation,
         }))}
         initialFeatures={node.features
-          .filter((feature) => feature.kind === "river" || feature.kind === "road" || feature.kind === "label")
-          .map((feature) => ({
-            localId: feature.id,
-            id: feature.id,
-            kind: feature.kind,
-            points: (feature.geometry as { points?: unknown })?.points ?? [],
-            labelText: feature.labelText ?? undefined,
-          }))}
+          .filter((feature) => EDITOR_FEATURE_KINDS.includes(feature.kind))
+          .map((feature) => {
+            const geometry = (feature.geometry ?? null) as { points?: unknown; tint?: unknown; level?: unknown } | null;
+            return {
+              localId: feature.id,
+              id: feature.id,
+              kind: feature.kind,
+              points: geometry?.points ?? [],
+              labelText: feature.labelText ?? undefined,
+              tint: typeof geometry?.tint === "string" ? geometry.tint : undefined,
+              level: typeof geometry?.level === "number" ? geometry.level : undefined,
+            };
+          })}
         silhouette={node.silhouette ?? null}
         waterLevel={{
           value: effective.environment.waterLevel,
@@ -131,6 +139,16 @@ export default async function Atlas3DNodePage({ params }: Props) {
           value: effective.environment.weather,
           fromTitle: originTitle(effective.origins.environment.weather),
           overridden: effective.origins.environment.weather === node.id,
+        }}
+        season={{
+          value: effective.environment.season,
+          fromTitle: originTitle(effective.origins.environment.season),
+          overridden: effective.origins.environment.season === node.id,
+        }}
+        stylePreset={{
+          value: effective.stylePreset,
+          fromTitle: originTitle(effective.origins.stylePreset),
+          overridden: effective.origins.stylePreset === node.id,
         }}
         bookmarks={node.bookmarks.map((bookmark) => ({ id: bookmark.id, name: bookmark.name, pose: bookmark.pose }))}
         children3d={node.children.map((child) => ({

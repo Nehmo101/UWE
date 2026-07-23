@@ -14,7 +14,9 @@ export interface Atlas3DPortalViewerProps {
   features: unknown;
   silhouette: unknown;
   waterLevel: number;
-  environment: { timeOfDay?: string; fogDensity?: number; weather?: string };
+  environment: { timeOfDay?: string; fogDensity?: number; weather?: string; season?: string };
+  /** Effektiver Stil (Pergament · Sepia · Aquarell) aus der Ahnenkette. */
+  stylePreset?: string;
   bookmarks: { id: string; name: string; pose: unknown }[];
 }
 
@@ -42,6 +44,7 @@ export function Atlas3DPortalViewer(props: Atlas3DPortalViewerProps) {
       silhouette: props.silhouette,
       waterLevel: props.waterLevel,
       environment: props.environment,
+      stylePreset: props.stylePreset,
       readOnly: true,
       onReady: (info) => setWebgl(info.webgl),
     });

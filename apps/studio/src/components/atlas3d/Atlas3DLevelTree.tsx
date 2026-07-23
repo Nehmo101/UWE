@@ -4,7 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { atlas3DLevelLabel } from "@uwe/atlas-3d/level-labels";
-import { deleteAtlas3DFeatureAction, deleteAtlas3DNodeAction, resetAtlas3DNodeAction } from "@/app/atlas3d-actions";
+import type { ChronicleActor } from "@uwe/atlas-3d/chronicle";
+import {
+  deleteAtlas3DFeatureAction,
+  deleteAtlas3DNodeAction,
+  resetAtlas3DNodeAction,
+  updateAtlas3DNodeAction,
+} from "@/app/atlas3d-actions";
+import { Atlas3DChroniclePanel } from "./Atlas3DChroniclePanel";
 
 export interface Atlas3DTreeNode {
   id: string;
@@ -22,6 +29,8 @@ export interface Atlas3DRegionFeatureItem {
 export interface Atlas3DLevelTreeProps {
   worldSlug: string;
   currentNodeId: string;
+  /** Seed der aktuellen Ebene (Neu ableiten + Chronik). */
+  currentNodeSeed: number;
   nodes: Atlas3DTreeNode[];
   /** Region markers of the CURRENT node. */
   regionFeatures: Atlas3DRegionFeatureItem[];
@@ -41,6 +50,7 @@ export function Atlas3DLevelTree(props: Atlas3DLevelTreeProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chronicleOpen, setChronicleOpen] = useState(false);
 
   const byParent = new Map<string | null, Atlas3DTreeNode[]>();
   for (const node of props.nodes) {
@@ -135,6 +145,43 @@ export function Atlas3DLevelTree(props: Atlas3DLevelTreeProps) {
       });
   };
 
+  /** Neu ableiten: zufälliger Seed für die aktuelle Ebene, dann harter Reload. */
+  const rerollSeed = () => {
+    if (busy || props.saveInFlight) return;
+    const message =
+      "Diese Ebene mit einem neuen Seed ableiten? Prozedurale Inhalte (Grundterrain, Streuungen, Namen) ändern sich; gespeicherte Bearbeitungen bleiben erhalten.";
+    if (!window.confirm(message)) return;
+    setBusy(true);
+    setError(null);
+    props.onBeforeReset();
+    const randomSeed = new Uint32Array(1);
+    crypto.getRandomValues(randomSeed);
+    const form = new FormData();
+    form.set("worldSlug", props.worldSlug);
+    form.set("nodeId", props.currentNodeId);
+    form.set("seed", String(randomSeed[0] % 1_000_000_000));
+    updateAtlas3DNodeAction(form)
+      .then((result) => {
+        if (!result.ok) {
+          setError(result.error ?? "Neu ableiten fehlgeschlagen");
+          setBusy(false);
+        } else {
+          // Hard reload: der Editor mountet einmal pro Node — nur eine frische
+          // Seite garantiert Szene + Undo-Stack auf dem neuen Seed.
+          window.location.reload();
+        }
+      })
+      .catch(() => {
+        setError("Neu ableiten fehlgeschlagen");
+        setBusy(false);
+      });
+  };
+
+  const chronicleActors: ChronicleActor[] = [
+    ...props.nodes.filter((node) => node.parentId !== null).map((node): ChronicleActor => ({ name: node.title, kind: "ort" })),
+    ...props.regionFeatures.map((feature): ChronicleActor => ({ name: feature.title, kind: "region" })),
+  ];
+
   const renderNodes = (parentId: string | null, depth: number): React.ReactNode => {
     const children = byParent.get(parentId) ?? [];
     if (children.length === 0) return null;
@@ -225,7 +272,26 @@ export function Atlas3DLevelTree(props: Atlas3DLevelTreeProps) {
         >
           ⟲ Komplett zurücksetzen
         </button>
+        <button
+          type="button"
+          className="atlas3d-tool"
+          data-testid="atlas3d-reseed"
+          disabled={busy || props.saveInFlight}
+          onClick={rerollSeed}
+        >
+          ↻ Neu ableiten (neuer Seed)
+        </button>
+        <button
+          type="button"
+          className={chronicleOpen ? "atlas3d-tool on" : "atlas3d-tool"}
+          data-testid="atlas3d-chronicle"
+          aria-pressed={chronicleOpen}
+          onClick={() => setChronicleOpen((open) => !open)}
+        >
+          📜 Chronik
+        </button>
       </div>
+      {chronicleOpen ? <Atlas3DChroniclePanel seed={props.currentNodeSeed} actors={chronicleActors} /> : null}
       {error ? <em className="atlas3d-error">{error}</em> : null}
     </div>
   );

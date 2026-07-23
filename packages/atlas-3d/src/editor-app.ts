@@ -27,13 +27,13 @@ import { applyPlanarBrush, createTerrainField, type TerrainField } from "./terra
 import { buildTerrainMeshData } from "./terrain-mesh";
 import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGrid } from "./splat";
 import { applySceneEnvironment, buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
+import { combineTints, SEASON_TINTS, STYLE_TINTS } from "./environment-presets";
 import { buildWorldRootBridge } from "./world-root";
 import { splitGapOf, splitRootsOf, withSplitGap, withSplitRoots } from "./split-ops";
 import { makeBiteOp, makeTunnelOp, removeCarveOpById, summarizeCarveOps } from "./carve-tools";
 import { RegionDraftState } from "./region-draft";
-import { applyGlobeStamp, applyPlanarStamp, type TerrainStampKind } from "./stamps";
 import { deriveGlobeBiomes, derivePlanarBiomes } from "./biome-derive";
-import { scatterInstances } from "./scatter";
+import { EditorToolsController } from "./editor-app-tools";
 import type {
   Atlas3DCommitKind,
   Atlas3DEditorApp,
@@ -41,9 +41,6 @@ import type {
   Atlas3DEditorDocState,
   Atlas3DEditorTool,
 } from "./editor-types";
-import { INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "./assets-ink";
-import { findTerrainPath, type PathKind } from "./terrain-path";
-import { generateSettlement3D } from "./settlement3d";
 import {
   parseDocFeatures,
   parseDocObjects,
@@ -84,17 +81,12 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   let brushRadius = 0.28;
   let brushStrength = 0.02;
   let activeBiome = 1;
-  let stampKind: TerrainStampKind = "krater";
-  let settlementWalls = false;
-  let settlementCitadel = false;
   let tunnelEntry: THREE.Vector3 | null = null;
   let objects: DocObjectState[] = parseDocObjects(options.objects ?? []);
   let features: DocFeatureState[] = parseDocFeatures(options.features ?? []);
-  let assetKind: InkAssetKind = "tree";
-  let assetTint: InkTint = INK_ASSET_DEFAULT_TINT.tree;
-  let labelText = "";
-  let pathStart: { x: number; z: number } | null = null;
   let localSeq = objects.length + features.length + 1;
+  /** Ansicht-Overlay (Klima/Höhe): temporärer Splat, nie Teil des Snapshots. */
+  let overlaySplat: SplatGrid | null = null;
   const selection = new Set<string>();
   let currentTerrainField: TerrainField | null = null;
   let currentPlanetElevation: ((dir: THREE.Vector3) => number) | null = null;
@@ -122,10 +114,12 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   let envTimeOfDay: string = options.environment?.timeOfDay ?? "noon";
   let envFogDensity: number = options.environment?.fogDensity ?? 0;
   let envWeather: string = options.environment?.weather ?? "klar";
+  let envSeason: string = options.environment?.season ?? "sommer";
+  let envStyle: string = options.stylePreset ?? "pergament";
   let appliedWeather: string | null = null;
 
   function applyEnvironment(): void {
-    applySceneEnvironment(scene, envTimeOfDay, envFogDensity);
+    applySceneEnvironment(scene, envTimeOfDay, envFogDensity, combineTints(SEASON_TINTS[envSeason], STYLE_TINTS[envStyle]));
     if (envWeather !== appliedWeather) {
       appliedWeather = envWeather;
       decor.updateWeather(envWeather === "wolken" || envWeather === "regen" || envWeather === "schnee" ? envWeather : "klar");
@@ -134,6 +128,45 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   // region draft (drill-down) — raw surface points + normals, also on the globe
   const regionDraft = new RegionDraftState(mode, decor, options.onRegionDraftChange);
+
+  // tools controller — owns the tool state and everything the tools mutate
+  const tools = new EditorToolsController({
+    mode,
+    seed,
+    mapSize: TERRAIN_SIZE,
+    getHeightmap: () => heightmap,
+    getSplat: () => splat,
+    getCarveOps: () => carveOps,
+    setCarveOps: (ops) => {
+      carveOps = ops;
+    },
+    getObjects: () => objects,
+    setObjects: (next) => {
+      objects = next;
+    },
+    getFeatures: () => features,
+    setFeatures: (next) => {
+      features = next;
+    },
+    getWaterLevel: () => waterLevel,
+    getBrushRadius: () => brushRadius,
+    getBrushStrength: () => brushStrength,
+    nextLocalId: () => `neu-${localSeq++}`,
+    getTerrainField: () => currentTerrainField,
+    elevationAt: (dir) => currentPlanetElevation?.(new THREE.Vector3(dir[0], dir[1], dir[2])) ?? 0,
+    pickSurface: (event) => pickSurface(event),
+    rebuildRest: () => rebuild(restResolution),
+    rebuildEdit: () => rebuild(editResolution),
+    throttledRemesh: () => throttledRemesh(),
+    syncObjects: () => syncObjects(),
+    commit: (kind) => commit(kind),
+    setOverlaySplat: (next) => {
+      overlaySplat = next;
+    },
+    decor,
+    onMeasure: options.onMeasure,
+    onPolygonDraftChange: options.onPolygonDraftChange,
+  });
 
   function updateCamera(): void {
     rig.apply(camera);
@@ -157,14 +190,15 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   function rebuild(resolution: number): void {
     let data;
+    const renderSplat = overlaySplat ?? splat;
     if (mode === "globe") {
       const field = createPlanetField({ seed, heightmap, carveOps });
       currentPlanetElevation = (dir) => field.elevation([dir.x, dir.y, dir.z]);
-      data = buildPlanetMeshData(field, { resolution, splat });
+      data = buildPlanetMeshData(field, { resolution, splat: renderSplat });
     } else {
       const field = createTerrainField({ seed, size: TERRAIN_SIZE, heightmap, carveOps, silhouette, waterLevel });
       currentTerrainField = field;
-      data = buildTerrainMeshData(field, { resolution, splat });
+      data = buildTerrainMeshData(field, { resolution, splat: renderSplat });
     }
     const geometry = buildFlatGeometry(data);
     if (planet) {
@@ -194,6 +228,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       scene.add(roots.group);
     }
     applyEnvironment();
+    tools.onRebuilt(resolution === restResolution);
   }
 
   function snapshot(): Atlas3DEditorDocState {
@@ -285,40 +320,6 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     return null;
   }
 
-  function placeAsset(point: THREE.Vector3): void {
-    const localId = `neu-${localSeq++}`;
-    let position: Record<string, unknown>;
-    if (assetKind === "asteroid" && mode === "globe") {
-      const flat = Math.max(1.6, Math.hypot(point.x, point.z) + 0.6);
-      position = { orbit: { radius: flat, inclination: point.y * 0.4, phase: Math.atan2(point.z, point.x), speed: 0.12 } };
-    } else if (mode === "globe") {
-      const dir = point.clone().normalize();
-      position = { dir: [dir.x, dir.y, dir.z] };
-    } else {
-      position = { x: point.x, z: point.z };
-    }
-    objects = [...objects, { localId, assetKind, tint: assetTint, position, scale: 1, rotation: 0 }];
-    syncObjects();
-    commit("objects");
-  }
-
-  function handlePathClick(point: THREE.Vector3, kind: PathKind): void {
-    if (mode !== "terrain" || !currentTerrainField) return;
-    if (!pathStart) {
-      pathStart = { x: point.x, z: point.z };
-      return;
-    }
-    const routed = findTerrainPath(currentTerrainField, pathStart, { x: point.x, z: point.z }, { kind });
-    pathStart = null;
-    if (!routed) return;
-    features = [
-      ...features,
-      { localId: `neu-${localSeq++}`, kind, points: routed.map((p) => ({ x: p.x, z: p.z })) },
-    ];
-    syncObjects();
-    commit("features");
-  }
-
   function handleToolPointerDown(event: PointerEvent): boolean {
     if (tool === "orbit") return false;
     if (tool === "select") {
@@ -334,83 +335,12 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     const hit = pickSurface(event);
     if (!hit) return false;
     const point = hit.point;
-    if (tool === "asset") {
-      placeAsset(point);
-      return true;
-    }
-    if (tool === "river" || tool === "road") {
-      handlePathClick(point, tool);
-      return true;
-    }
-    if (tool === "settlement" && mode === "terrain") {
-      const layoutSeed = seed + Math.round(point.x * 997) * 31 + Math.round(point.z * 997);
-      const settlement = generateSettlement3D({
-        center: { x: point.x, z: point.z },
-        seed: layoutSeed,
-        idPrefix: `neu-${localSeq++}`,
-        walls: settlementWalls,
-        citadel: settlementCitadel,
-      });
-      objects = [...objects, ...settlement.objects];
-      features = [...features, ...settlement.features];
-      syncObjects();
-      commit("objects");
-      return true;
-    }
-    if (tool === "label") {
-      features = [
-        ...features,
-        { localId: `neu-${localSeq++}`, kind: "label", points: [{ x: point.x, z: point.z }], labelText },
-      ];
-      syncObjects();
-      commit("features");
-      return true;
-    }
+    // placing/generating tools live in the tools controller (editor-app-tools)
+    const delegated = tools.pointerDown(tool, point);
+    if (delegated !== null) return delegated;
     if (tool === "raise" || tool === "lower" || tool === "smooth" || tool === "flatten") {
       sculpting = true;
       applySculptAt(point, tool);
-      return true;
-    }
-    if (tool === "stamp") {
-      const strength = Math.max(0.03, brushStrength * 3);
-      if (mode === "globe") {
-        const dir = point.clone().normalize();
-        applyGlobeStamp(heightmap, [dir.x, dir.y, dir.z], { kind: stampKind, radius: brushRadius, strength });
-      } else {
-        applyPlanarStamp(heightmap, TERRAIN_SIZE, [point.x, point.z], { kind: stampKind, radius: brushRadius, strength });
-      }
-      rebuild(restResolution);
-      commit("sculpt");
-      return true;
-    }
-    if (tool === "scatter") {
-      if (assetKind === "asteroid") {
-        placeAsset(point);
-        return true;
-      }
-      const center = mode === "globe" ? point.clone().normalize() : point;
-      const cluster = scatterInstances({
-        mode,
-        center: [center.x, center.y, center.z],
-        radius: mode === "globe" ? brushRadius * 0.6 : brushRadius * 0.8,
-        seed,
-      });
-      objects = [
-        ...objects,
-        ...cluster.map((instance) => ({
-          localId: `neu-${localSeq++}`,
-          assetKind,
-          tint: assetTint,
-          position:
-            mode === "globe"
-              ? { dir: [instance.position[0], instance.position[1], instance.position[2]] }
-              : { x: instance.position[0], z: instance.position[2] },
-          scale: instance.scale,
-          rotation: instance.rotation,
-        })),
-      ];
-      syncObjects();
-      commit("objects");
       return true;
     }
     if (tool === "biome") {
@@ -471,6 +401,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       if (hit) applyBiomeAt(hit.point);
       return;
     }
+    if (tools.pointerMove(event)) return;
     if (!dragging) return;
     const dx = event.clientX - lastX;
     const dy = event.clientY - lastY;
@@ -487,6 +418,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   function onPointerUp(): void {
     dragging = false;
+    tools.pointerUp();
     const wasStroke = sculpting || painting;
     const wasSculpt = sculpting;
     sculpting = false;
@@ -544,12 +476,14 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   options.onReady?.({ webgl: webglAvailable });
 
   return {
+    ...tools.api(),
     webglAvailable,
     mode,
     setTool(next) {
       tool = next;
       tunnelEntry = null;
       if (next !== "region") regionDraft.clear();
+      tools.onToolChange(next);
     },
     setBrush(brush) {
       if (brush.radius !== undefined) brushRadius = Math.min(1.2, Math.max(0.05, brush.radius));
@@ -557,23 +491,6 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     },
     setBiome(biome) {
       activeBiome = Math.max(0, Math.floor(biome));
-    },
-    setAsset(asset) {
-      if (asset.kind !== undefined) {
-        assetKind = asset.kind;
-        assetTint = INK_ASSET_DEFAULT_TINT[asset.kind];
-      }
-      if (asset.tint !== undefined) assetTint = asset.tint;
-    },
-    setLabelText(text) {
-      labelText = text;
-    },
-    setStamp(kind) {
-      stampKind = kind;
-    },
-    setSettlementOptions(next) {
-      if (next.walls !== undefined) settlementWalls = next.walls;
-      if (next.citadel !== undefined) settlementCitadel = next.citadel;
     },
     deriveBiomes() {
       if (mode === "globe") {
@@ -622,6 +539,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       if (environment.timeOfDay !== undefined) envTimeOfDay = environment.timeOfDay;
       if (environment.fogDensity !== undefined) envFogDensity = environment.fogDensity;
       if (environment.weather !== undefined) envWeather = environment.weather;
+      if (environment.season !== undefined) envSeason = environment.season;
+      if (environment.stylePreset !== undefined) envStyle = environment.stylePreset;
       applyEnvironment();
     },
     getCameraPose() {
