@@ -348,6 +348,45 @@ body {
   color: var(--uwe-fg-subtle);
 }
 
+/* ── Inline edit (native <details>, no JS) ──────────────────────────── */
+.brain-edit {
+  margin-top: 0.6rem;
+}
+
+.brain-edit > summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--uwe-accent);
+  user-select: none;
+}
+
+.brain-edit > summary::-webkit-details-marker {
+  display: none;
+}
+
+.brain-edit > summary::before {
+  content: "✎";
+}
+
+.brain-edit[open] > summary::before {
+  content: "▾";
+}
+
+.brain-edit[open] > summary {
+  margin-bottom: 0.6rem;
+}
+
+.brain-edit > .brain-form {
+  padding: 0.9rem 1rem;
+  border-radius: 0.6rem;
+  border: 1px dashed var(--uwe-border);
+  background: color-mix(in srgb, var(--uwe-panel) 45%, transparent);
+}
+
 /* ── Sidebar nav (base; the parchment block only styles .active) ─────── */
 .uwe-sidebar-nav {
   display: grid;

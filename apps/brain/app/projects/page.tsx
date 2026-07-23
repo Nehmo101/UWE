@@ -8,6 +8,7 @@ import {
   deleteProjectAction,
   deleteProjectStepAction,
   toggleProjectStepAction,
+  updateProjectAction,
 } from "../brain-actions";
 
 export const dynamic = "force-dynamic";
@@ -122,6 +123,52 @@ export default async function BrainProjectsPage() {
                     Nächster Schritt: {project.nextAction}
                   </p>
                 ) : null}
+
+                <details className="brain-edit">
+                  <summary>Bearbeiten</summary>
+                  <form action={updateProjectAction} className="brain-form">
+                    <input type="hidden" name="id" value={project.id} />
+                    <label>
+                      Name
+                      <input name="name" defaultValue={project.name} required />
+                    </label>
+                    <label>
+                      Beschreibung
+                      <textarea name="description" rows={2} defaultValue={project.description} />
+                    </label>
+                    <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+                      <label>
+                        Status
+                        <select name="status" defaultValue={project.status}>
+                          {STATUS.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Kategorie
+                        <select name="category" defaultValue={project.category}>
+                          {CATEGORY.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label>
+                      Nächster Schritt
+                      <input name="nextAction" defaultValue={project.nextAction ?? ""} />
+                    </label>
+                    <div>
+                      <button type="submit" className="brain-btn brain-btn-sm">
+                        Speichern
+                      </button>
+                    </div>
+                  </form>
+                </details>
 
                 {project.steps.length > 0 ? (
                   <ul style={{ listStyle: "none", padding: 0, margin: "0.6rem 0 0", display: "grid", gap: "0.3rem" }}>

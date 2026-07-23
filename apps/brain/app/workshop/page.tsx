@@ -2,7 +2,7 @@ import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
-import { createWorkshopAction, deleteWorkshopAction } from "../brain-actions";
+import { createWorkshopAction, deleteWorkshopAction, updateWorkshopAction } from "../brain-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +108,47 @@ export default async function BrainWorkshopPage() {
                     Nächster Schritt: {project.nextAction}
                   </p>
                 ) : null}
+                <details className="brain-edit">
+                  <summary>Bearbeiten</summary>
+                  <form action={updateWorkshopAction} className="brain-form">
+                    <input type="hidden" name="id" value={project.id} />
+                    <label>
+                      Titel
+                      <input name="title" defaultValue={project.title} required />
+                    </label>
+                    <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+                      <label>
+                        Typ
+                        <select name="projectType" defaultValue={project.projectType}>
+                          {TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Status
+                        <select name="status" defaultValue={project.status}>
+                          {STATUS.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label>
+                      Beschreibung
+                      <textarea name="description" rows={2} defaultValue={project.description} />
+                    </label>
+                    <div>
+                      <button type="submit" className="brain-btn brain-btn-sm">
+                        Speichern
+                      </button>
+                    </div>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>

@@ -8,6 +8,8 @@ import {
   createBrainFactAction,
   deleteBrainDocumentAction,
   deleteBrainFactAction,
+  updateBrainDocumentAction,
+  updateBrainFactAction,
 } from "../brain-actions";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,10 @@ export const dynamic = "force-dynamic";
 function snippet(text: string, max = 200): string {
   const trimmed = text.trim().replace(/\s+/g, " ");
   return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`;
+}
+
+function tagStr(value: unknown): string {
+  return Array.isArray(value) ? value.filter((t) => typeof t === "string").join(", ") : "";
 }
 
 function formatDate(value: Date): string {
@@ -123,6 +129,33 @@ export default async function BrainLifeBrainPage() {
                   </form>
                 </div>
                 {doc.content ? <p style={{ margin: "0.35rem 0 0" }}>{snippet(doc.content)}</p> : null}
+                <details className="brain-edit">
+                  <summary>Bearbeiten</summary>
+                  <form action={updateBrainDocumentAction} className="brain-form">
+                    <input type="hidden" name="id" value={doc.id} />
+                    <label>
+                      Titel
+                      <input name="title" defaultValue={doc.title} required />
+                    </label>
+                    <label>
+                      Kategorie
+                      <input name="category" defaultValue={doc.category ?? ""} />
+                    </label>
+                    <label>
+                      Inhalt
+                      <textarea name="content" rows={4} defaultValue={doc.content} />
+                    </label>
+                    <label>
+                      Tags (kommagetrennt)
+                      <input name="tags" defaultValue={tagStr(doc.tags)} />
+                    </label>
+                    <div>
+                      <button type="submit" className="brain-btn brain-btn-sm">
+                        Speichern
+                      </button>
+                    </div>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>
@@ -149,6 +182,33 @@ export default async function BrainLifeBrainPage() {
                   </form>
                 </div>
                 {fact.content ? <p style={{ margin: "0.35rem 0 0" }}>{snippet(fact.content)}</p> : null}
+                <details className="brain-edit">
+                  <summary>Bearbeiten</summary>
+                  <form action={updateBrainFactAction} className="brain-form">
+                    <input type="hidden" name="id" value={fact.id} />
+                    <label>
+                      Titel
+                      <input name="title" defaultValue={fact.title} required />
+                    </label>
+                    <label>
+                      Typ
+                      <input name="factType" defaultValue={fact.factType} />
+                    </label>
+                    <label>
+                      Inhalt
+                      <textarea name="content" rows={4} defaultValue={fact.content} />
+                    </label>
+                    <label>
+                      Tags (kommagetrennt)
+                      <input name="tags" defaultValue={tagStr(fact.tags)} />
+                    </label>
+                    <div>
+                      <button type="submit" className="brain-btn brain-btn-sm">
+                        Speichern
+                      </button>
+                    </div>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>

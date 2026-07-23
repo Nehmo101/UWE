@@ -2,7 +2,7 @@ import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
-import { createHardwareAction, deleteHardwareAction } from "../brain-actions";
+import { createHardwareAction, deleteHardwareAction, updateHardwareAction } from "../brain-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +97,47 @@ export default async function BrainHardwarePage() {
                     </button>
                   </form>
                 </div>
+                <details className="brain-edit">
+                  <summary>Bearbeiten</summary>
+                  <form action={updateHardwareAction} className="brain-form">
+                    <input type="hidden" name="id" value={device.id} />
+                    <label>
+                      Name
+                      <input name="name" defaultValue={device.name} required />
+                    </label>
+                    <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+                      <label>
+                        Rolle
+                        <input name="role" defaultValue={device.role ?? ""} />
+                      </label>
+                      <label>
+                        Status
+                        <select name="status" defaultValue={device.status}>
+                          {STATUS.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+                      <label>
+                        Hostname
+                        <input name="hostname" defaultValue={device.hostname ?? ""} />
+                      </label>
+                      <label>
+                        Betriebssystem
+                        <input name="operatingSystem" defaultValue={device.operatingSystem ?? ""} />
+                      </label>
+                    </div>
+                    <div>
+                      <button type="submit" className="brain-btn brain-btn-sm">
+                        Speichern
+                      </button>
+                    </div>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>

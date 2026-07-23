@@ -2,7 +2,7 @@ import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
-import { createCaptureAction, deleteCaptureAction } from "../brain-actions";
+import { createCaptureAction, deleteCaptureAction, updateCaptureAction } from "../brain-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,13 @@ const CAPTURE_TYPES: Array<{ value: string; label: string }> = [
   { value: "contract_expense", label: "Vertrag/Ausgabe" },
   { value: "art_miniature_terrain", label: "Miniatur/Terrain" },
   { value: "link", label: "Link" },
+];
+
+const CAPTURE_STATUS: Array<{ value: string; label: string }> = [
+  { value: "inbox", label: "Inbox" },
+  { value: "triaged", label: "Sortiert" },
+  { value: "linked", label: "Verknüpft" },
+  { value: "archived", label: "Archiviert" },
 ];
 
 function snippet(text: string, max = 160): string {
@@ -98,6 +105,47 @@ export default async function BrainCapturePage() {
                 {capture.content ? (
                   <p style={{ margin: "0.35rem 0 0" }}>{snippet(capture.content)}</p>
                 ) : null}
+                <details className="brain-edit">
+                  <summary>Bearbeiten</summary>
+                  <form action={updateCaptureAction} className="brain-form">
+                    <input type="hidden" name="id" value={capture.id} />
+                    <label>
+                      Titel
+                      <input name="title" defaultValue={capture.title} />
+                    </label>
+                    <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+                      <label>
+                        Typ
+                        <select name="captureType" defaultValue={capture.captureType}>
+                          {CAPTURE_TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Status
+                        <select name="status" defaultValue={capture.status}>
+                          {CAPTURE_STATUS.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label>
+                      Inhalt
+                      <textarea name="content" rows={3} defaultValue={capture.content} />
+                    </label>
+                    <div>
+                      <button type="submit" className="brain-btn brain-btn-sm">
+                        Speichern
+                      </button>
+                    </div>
+                  </form>
+                </details>
               </li>
             ))}
           </ul>

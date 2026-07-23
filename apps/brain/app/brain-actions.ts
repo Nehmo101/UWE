@@ -1,11 +1,16 @@
 "use server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import {
+  createDocumentTemplateService,
   createLifeAdminService,
+  createMiniatureCollectionService,
   prisma,
+  type CaptureStatus,
   type CaptureType,
   type ContractStatus,
+  type DocumentTemplateCategory,
   type HardwareStatus,
+  type MiniatureCollectionStatus,
   type PersonalProjectCategory,
   type PersonalProjectStatus,
   type WorkshopProjectType,
@@ -245,4 +250,188 @@ export async function deleteHardwareAction(formData: FormData) {
   const id = str(formData.get("id"));
   if (id) await lifeAdmin().deleteHardwareDevice(id);
   revalidateBrainPaths();
+}
+
+/* ══ Edit (update) actions ═══════════════════════════════════════════ */
+
+export async function updateCaptureAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await lifeAdmin().updateCapture(id, {
+    title: str(formData.get("title")),
+    content: str(formData.get("content")),
+    captureType: (str(formData.get("captureType")) || "quick_note") as CaptureType,
+    status: (str(formData.get("status")) || "inbox") as CaptureStatus,
+  });
+  revalidateBrainPaths();
+}
+
+export async function updateBrainFactAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await lifeAdmin().updatePersonalBrainFact(id, {
+    title: str(formData.get("title")),
+    content: str(formData.get("content")),
+    factType: str(formData.get("factType")) || "custom",
+    tags: parseCommaTags(formData),
+  });
+  revalidateBrainPaths();
+}
+
+export async function updateBrainDocumentAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await lifeAdmin().updatePersonalBrainDocument(id, {
+    title: str(formData.get("title")),
+    content: str(formData.get("content")),
+    category: str(formData.get("category")) || null,
+    tags: parseCommaTags(formData),
+  });
+  revalidateBrainPaths();
+}
+
+export async function updateProjectAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await lifeAdmin().updatePersonalProject(id, {
+    name: str(formData.get("name")),
+    description: str(formData.get("description")),
+    status: (str(formData.get("status")) || "idea") as PersonalProjectStatus,
+    category: (str(formData.get("category")) || "other") as PersonalProjectCategory,
+    nextAction: str(formData.get("nextAction")) || null,
+  });
+  revalidatePath("/projects");
+}
+
+export async function updateWorkshopAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await lifeAdmin().updateWorkshopProject(id, {
+    title: str(formData.get("title")),
+    projectType: (str(formData.get("projectType")) || "miniature") as WorkshopProjectType,
+    status: (str(formData.get("status")) || "idea") as WorkshopStatus,
+    description: str(formData.get("description")),
+  });
+  revalidateBrainPaths();
+}
+
+export async function updateContractAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await lifeAdmin().updateContractExpense(id, {
+    name: str(formData.get("name")),
+    vendor: str(formData.get("vendor")),
+    status: (str(formData.get("status")) || "active") as ContractStatus,
+    amountCents: parseEuroToCents(formData.get("amount")),
+    nextPaymentDate: parseOptionalDate(formData.get("nextPaymentDate")),
+    notes: str(formData.get("notes")),
+  });
+  revalidateBrainPaths();
+}
+
+export async function updateHardwareAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await lifeAdmin().updateHardwareDevice(id, {
+    name: str(formData.get("name")),
+    role: str(formData.get("role")),
+    status: (str(formData.get("status")) || "active") as HardwareStatus,
+    hostname: str(formData.get("hostname")) || null,
+    operatingSystem: str(formData.get("operatingSystem")),
+  });
+  revalidateBrainPaths();
+}
+
+/* ══ Miniatures collection ═══════════════════════════════════════════ */
+
+function miniatures() {
+  return createMiniatureCollectionService(brainPrisma);
+}
+
+function parseQuantity(value: FormDataEntryValue | null): number {
+  const n = Number.parseInt(str(value), 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+export async function createMiniatureAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const name = str(formData.get("name"));
+  if (!name) return;
+  await miniatures().createItem({
+    name,
+    manufacturer: str(formData.get("manufacturer")) || null,
+    gameSystem: str(formData.get("gameSystem")) || null,
+    faction: str(formData.get("faction")) || null,
+    quantity: parseQuantity(formData.get("quantity")),
+    status: (str(formData.get("status")) || "purchased") as MiniatureCollectionStatus,
+    notes: str(formData.get("notes")),
+  });
+  revalidatePath("/miniatures");
+}
+
+export async function updateMiniatureAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await miniatures().updateItem(id, {
+    name: str(formData.get("name")),
+    manufacturer: str(formData.get("manufacturer")) || null,
+    gameSystem: str(formData.get("gameSystem")) || null,
+    faction: str(formData.get("faction")) || null,
+    quantity: parseQuantity(formData.get("quantity")),
+    status: (str(formData.get("status")) || "purchased") as MiniatureCollectionStatus,
+    notes: str(formData.get("notes")),
+  });
+  revalidatePath("/miniatures");
+}
+
+export async function deleteMiniatureAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (id) await miniatures().deleteItem(id);
+  revalidatePath("/miniatures");
+}
+
+/* ══ Document templates ══════════════════════════════════════════════ */
+
+function templates() {
+  return createDocumentTemplateService(brainPrisma);
+}
+
+export async function createTemplateAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const name = str(formData.get("name"));
+  if (!name) return;
+  await templates().createTemplate({
+    name,
+    category: (str(formData.get("category")) || "other") as DocumentTemplateCategory,
+    body: str(formData.get("body")),
+  });
+  revalidatePath("/documents");
+}
+
+export async function updateTemplateAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await templates().updateTemplate(id, {
+    name: str(formData.get("name")),
+    category: (str(formData.get("category")) || "other") as DocumentTemplateCategory,
+    body: str(formData.get("body")),
+  });
+  revalidatePath("/documents");
+}
+
+export async function deleteTemplateAction(formData: FormData) {
+  await requireBrainActionAuth();
+  const id = str(formData.get("id"));
+  if (id) await templates().deleteTemplate(id);
+  revalidatePath("/documents");
 }
