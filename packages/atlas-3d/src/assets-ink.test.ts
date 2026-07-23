@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildInkAsset,
+  GLOBE_ONLY_ASSET_KINDS,
   INK_ASSET_DEFAULT_TINT,
   INK_ASSET_GROUPS,
   INK_ASSET_KINDS,
@@ -68,6 +69,38 @@ test("kind and tint guards", () => {
   assert.ok(isInkTint("teal"));
   assert.equal(isInkTint("neon"), false);
   assert.equal(INK_ASSET_DEFAULT_TINT.worldroot, "paper");
+});
+
+const BATCH2_KINDS = ["fels", "busch", "bruecke", "muehle", "hafen", "portal", "obelisk", "mond"] as const;
+
+test("batch-2 kinds build geometry with anim buffers", () => {
+  for (const kind of BATCH2_KINDS) {
+    const asset = buildInkAsset(kind);
+    assert.ok(asset.positions.length > 0, `${kind} has geometry`);
+    assert.equal(asset.anim.length, (asset.positions.length / 3) * 4, `${kind} anim matches`);
+  }
+});
+
+test("batch-2 idle animation: busch/muehle/portal move, mond orbits via transform", () => {
+  const animAmplitude = (kind: Parameters<typeof buildInkAsset>[0]) => {
+    const asset = buildInkAsset(kind);
+    let sum = 0;
+    for (let i = 0; i < asset.anim.length; i += 4) {
+      sum += Math.abs(asset.anim[i]) + Math.abs(asset.anim[i + 1]) + Math.abs(asset.anim[i + 2]);
+    }
+    return sum;
+  };
+  assert.ok(animAmplitude("busch") > 0, "busch wippt");
+  assert.ok(animAmplitude("muehle") > 0, "muehle-fluegel wippen");
+  assert.ok(animAmplitude("portal") > 0, "portal pulsiert");
+  assert.equal(animAmplitude("mond"), 0, "mond kreist per transform, nicht per vertex-anim");
+});
+
+test("globe-only asset kinds contain asteroid and mond", () => {
+  assert.deepEqual([...GLOBE_ONLY_ASSET_KINDS], ["asteroid", "mond"]);
+  for (const kind of GLOBE_ONLY_ASSET_KINDS) {
+    assert.ok(isInkAssetKind(kind), `${kind} is a valid kind`);
+  }
 });
 
 test("asset groups cover every kind exactly once", () => {

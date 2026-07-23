@@ -106,14 +106,19 @@ export default async function Atlas3DNodePage({ params }: Props) {
           rotation: object.rotation,
         }))}
         initialFeatures={node.features
-          .filter((feature) => feature.kind === "river" || feature.kind === "road" || feature.kind === "label")
-          .map((feature) => ({
-            localId: feature.id,
-            id: feature.id,
-            kind: feature.kind,
-            points: (feature.geometry as { points?: unknown })?.points ?? [],
-            labelText: feature.labelText ?? undefined,
-          }))}
+          .filter((feature) => EDITOR_FEATURE_KINDS.includes(feature.kind))
+          .map((feature) => {
+            const geometry = (feature.geometry ?? null) as { points?: unknown; tint?: unknown; level?: unknown } | null;
+            return {
+              localId: feature.id,
+              id: feature.id,
+              kind: feature.kind,
+              points: geometry?.points ?? [],
+              labelText: feature.labelText ?? undefined,
+              tint: typeof geometry?.tint === "string" ? geometry.tint : undefined,
+              level: typeof geometry?.level === "number" ? geometry.level : undefined,
+            };
+          })}
         silhouette={node.silhouette ?? null}
         waterLevel={{
           value: effective.environment.waterLevel,
