@@ -99,7 +99,13 @@ export default async function PortalAtlas3DNodePage({ params }: Props) {
           })}
         silhouette={node.silhouette ?? null}
         waterLevel={effective.environment.waterLevel}
-        environment={{ timeOfDay: effective.environment.timeOfDay, fogDensity: effective.environment.fogDensity, weather: effective.environment.weather }}
+        environment={{
+          timeOfDay: effective.environment.timeOfDay,
+          fogDensity: effective.environment.fogDensity,
+          weather: effective.environment.weather,
+          season: effective.environment.season,
+        }}
+        stylePreset={effective.stylePreset}
         bookmarks={node.bookmarks.map((bookmark) => ({ id: bookmark.id, name: bookmark.name, pose: bookmark.pose }))}
       />
       {node.children.length > 0 ? (

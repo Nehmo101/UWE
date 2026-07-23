@@ -140,6 +140,16 @@ export default async function Atlas3DNodePage({ params }: Props) {
           fromTitle: originTitle(effective.origins.environment.weather),
           overridden: effective.origins.environment.weather === node.id,
         }}
+        season={{
+          value: effective.environment.season,
+          fromTitle: originTitle(effective.origins.environment.season),
+          overridden: effective.origins.environment.season === node.id,
+        }}
+        stylePreset={{
+          value: effective.stylePreset,
+          fromTitle: originTitle(effective.origins.stylePreset),
+          overridden: effective.origins.stylePreset === node.id,
+        }}
         bookmarks={node.bookmarks.map((bookmark) => ({ id: bookmark.id, name: bookmark.name, pose: bookmark.pose }))}
         children3d={node.children.map((child) => ({
           id: child.id,

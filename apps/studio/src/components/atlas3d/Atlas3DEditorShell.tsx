@@ -21,12 +21,13 @@ import {
   type InkTint,
 } from "@uwe/atlas-3d/assets-ink";
 import { summarizeCarveOps, type CarveOpSummary } from "@uwe/atlas-3d/carve-tools";
-import { TERRAIN_STAMPS, type TerrainStampKind } from "@uwe/atlas-3d/stamps";
 import {
   createAtlas3DRegionAction,
   saveAtlas3DTerrainAction,
   setAtlas3DEnvironmentAction,
+  setAtlas3DStyleAction,
 } from "@/app/atlas3d-actions";
+import { Atlas3DLandmassPanel, Atlas3DToolPanels } from "./Atlas3DToolPanels";
 import { Atlas3DDescribePanel } from "./Atlas3DDescribePanel";
 import {
   Atlas3DInspectorPanel,
@@ -62,6 +63,8 @@ export interface Atlas3DEditorShellProps {
   timeOfDay: Atlas3DInheritedText;
   fogDensity: Atlas3DInheritedNumber;
   weather: Atlas3DInheritedText;
+  season: Atlas3DInheritedText;
+  stylePreset: Atlas3DInheritedText;
   bookmarks: { id: string; name: string; pose: unknown }[];
   children3d: Atlas3DChildLink[];
   /** All nodes of the atlas world (level-tree navigation). */
@@ -85,6 +88,7 @@ const BASE_TOOLS: { id: Atlas3DEditorTool; label: string; hint: string }[] = [
   { id: "smooth", label: "〰 Glätten", hint: "Klicken/Ziehen glättet" },
   { id: "flatten", label: "▭ Plateau", hint: "Klicken/Ziehen zieht das Terrain zur Grundhöhe — ebene Flächen" },
   { id: "stamp", label: "⌾ Stempel", hint: "Klick prägt das gewählte Profil: Krater · Gebirge · Dünen" },
+  { id: "erode", label: "⛏ Erosion", hint: "Klicken/Ziehen verwittert das Terrain lokal — Panel für den globalen Pass" },
   { id: "biome", label: "▨ Biom", hint: "Klicken/Ziehen malt das gewählte Biom — stufenlos, kein Raster" },
   { id: "region", label: "▱ Region", hint: "Punkte klicken (mind. 3), dann Ebene anlegen — Drill-Down" },
   { id: "bite", label: "◔ Biss", hint: "Klick beißt ein Stück heraus (Apfel-Prinzip)" },
@@ -96,10 +100,26 @@ const BASE_TOOLS: { id: Atlas3DEditorTool; label: string; hint: string }[] = [
   { id: "road", label: "═ Straße", hint: "Zwei Klicks — der A*-Assistent umgeht Steigungen" },
   { id: "settlement", label: "⌂ Siedlung", hint: "Klick pflanzt einen Weiler — deterministisch, ein Undo-Schritt" },
   { id: "label", label: "A Label", hint: "Text eingeben, dann Klick platziert das Label" },
+  { id: "lake", label: "≈ See", hint: "Klick senkt das Gelände unter den Wasserstand und legt einen See an" },
+  { id: "spring", label: "⌲ Quellfluss", hint: "Klick setzt eine Quelle — der Fluss sucht sich den Weg bergab" },
+  { id: "fill", label: "▨ Fläche", hint: "Punkte klicken (mind. 3), dann Füllen — Wald · Hain · Markt · Felder" },
+  { id: "wall", label: "⌸ Mauer", hint: "Zwei Klicks ziehen eine Palisade mit Türmen (mit Tor ab halber Länge)" },
+  { id: "warp", label: "↯ Warp", hint: "Ziehen verschiebt Objekte im Pinselradius — weicher Falloff" },
+  { id: "territory", label: "◆ Gebiet", hint: "Punkte klicken (mind. 3), dann Gebiet anlegen — Farbe + Name im Panel" },
+  { id: "poi", label: "⚑ POI", hint: "Text eingeben, dann Klick setzt den Markierungs-Pin" },
+  { id: "measure", label: "📏 Messen", hint: "Zwei Klicks messen die Distanz in Wegstunden" },
 ];
 
-/** Werkzeuge, die flaches Gelände voraussetzen (A*-Routing bzw. Weiler-Layout). */
-const TERRAIN_ONLY_TOOLS: ReadonlySet<Atlas3DEditorTool> = new Set(["river", "road", "settlement"]);
+/** Werkzeuge, die flaches Gelände voraussetzen (A*-Routing, Weiler-Layout, Wasser/Flächen). */
+const TERRAIN_ONLY_TOOLS: ReadonlySet<Atlas3DEditorTool> = new Set([
+  "river",
+  "road",
+  "settlement",
+  "lake",
+  "spring",
+  "fill",
+  "wall",
+]);
 
 type SaveState = "gespeichert" | "ungespeichert" | "speichert …" | "Fehler";
 
@@ -115,7 +135,6 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [activeBiome, setActiveBiome] = useState(1);
   const [assetKind, setAssetKind] = useState<InkAssetKind>("tree");
   const [assetTint, setAssetTint] = useState<InkTint>(INK_ASSET_DEFAULT_TINT.tree);
-  const [labelDraft, setLabelDraft] = useState("");
   const [selectionCount, setSelectionCount] = useState(0);
   const [splitGap, setSplitGap] = useState(0);
   const [rootCount, setRootCount] = useState(6);
@@ -131,9 +150,9 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [levelsOpen, setLevelsOpen] = useState(false);
   const [carvePanelOpen, setCarvePanelOpen] = useState(false);
   const [carveOps, setCarveOps] = useState<CarveOpSummary[]>([]);
-  const [stampKind, setStampKind] = useState<TerrainStampKind>("krater");
-  const [settlementWalls, setSettlementWalls] = useState(false);
-  const [settlementCitadel, setSettlementCitadel] = useState(false);
+  const [landmassOpen, setLandmassOpen] = useState(false);
+  const [measure, setMeasure] = useState<number | null>(null);
+  const [polygonPoints, setPolygonPoints] = useState(0);
 
   const stack = useMemo(
     () =>
@@ -181,10 +200,18 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       features: props.initialFeatures,
       silhouette: props.silhouette,
       waterLevel: props.waterLevel.value,
-      environment: { timeOfDay: props.timeOfDay.value, fogDensity: props.fogDensity.value, weather: props.weather.value },
+      environment: {
+        timeOfDay: props.timeOfDay.value,
+        fogDensity: props.fogDensity.value,
+        weather: props.weather.value,
+        season: props.season.value,
+      },
+      stylePreset: props.stylePreset.value,
       onReady: (info) => setWebgl(info.webgl),
       onRegionDraftChange: (count) => setRegionPointCount(count),
       onSelectionChange: (count) => setSelectionCount(count),
+      onMeasure: (wegstunden) => setMeasure(wegstunden),
+      onPolygonDraftChange: (count) => setPolygonPoints(count),
       onCommit: (kind, nextDoc) => {
         const prevDoc = lastDocRef.current;
         lastDocRef.current = nextDoc;
@@ -267,13 +294,23 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       .finally(() => setRegionBusy(false));
   };
 
-  const setEnvironment = (field: "waterLevel" | "timeOfDay" | "fogDensity" | "weather", value: string) => {
+  const setEnvironment = (field: "waterLevel" | "timeOfDay" | "fogDensity" | "weather" | "season", value: string) => {
     const form = new FormData();
     form.set("worldSlug", props.worldSlug);
     form.set("nodeId", props.nodeId);
     form.set("field", field);
     form.set("value", value);
     setAtlas3DEnvironmentAction(form).then((result) => {
+      if (result.ok) router.refresh();
+    });
+  };
+
+  const setStyle = (value: string) => {
+    const form = new FormData();
+    form.set("worldSlug", props.worldSlug);
+    form.set("nodeId", props.nodeId);
+    form.set("style", value);
+    setAtlas3DStyleAction(form).then((result) => {
       if (result.ok) router.refresh();
     });
   };
@@ -354,6 +391,15 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         >
           ⛏ Eingriffe ({carveOps.length})
         </button>
+        <button
+          type="button"
+          className={landmassOpen ? "atlas3d-tool on" : "atlas3d-tool"}
+          aria-pressed={landmassOpen}
+          onClick={() => setLandmassOpen((open) => !open)}
+          data-testid="atlas3d-landmass"
+        >
+          🏝 Vorlagen
+        </button>
         <span className="atlas3d-save" data-state={saveState} data-testid="atlas3d-save-state">
           ● {saveState}
         </span>
@@ -363,6 +409,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         <Atlas3DLevelTree
           worldSlug={props.worldSlug}
           currentNodeId={props.nodeId}
+          currentNodeSeed={props.seed}
           nodes={props.treeNodes}
           regionFeatures={props.regionFeatures}
           saveInFlight={saveState === "speichert …"}
@@ -378,7 +425,17 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
           {carveOps.length === 0 ? <span>Keine Eingriffe — Biss- und Tunnel-Werkzeug benutzen.</span> : null}
           {carveOps.map((op) => (
             <span key={op.id} className="atlas3d-carve-item">
-              {op.label}
+              <span style={op.disabled ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>{op.label}</span>
+              <button
+                type="button"
+                className="atlas3d-tool"
+                title={op.disabled ? `${op.label} wieder einblenden` : `${op.label} ausblenden`}
+                aria-label={op.disabled ? `${op.label} wieder einblenden` : `${op.label} ausblenden`}
+                aria-pressed={op.disabled === true}
+                onClick={() => appRef.current?.setCarveOpDisabled(op.id, !op.disabled)}
+              >
+                👁
+              </button>
               <button
                 type="button"
                 className="atlas3d-tool"
@@ -393,57 +450,9 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         </div>
       ) : null}
 
-      {tool === "stamp" ? (
-        <div className="atlas3d-biomes" role="group" aria-label="Stempel-Profil wählen" data-testid="atlas3d-stamp-panel">
-          {TERRAIN_STAMPS.map((stamp) => (
-            <button
-              key={stamp.key}
-              type="button"
-              className={stampKind === stamp.key ? "atlas3d-tool on" : "atlas3d-tool"}
-              data-testid={`atlas3d-stamp-${stamp.key}`}
-              aria-pressed={stampKind === stamp.key}
-              onClick={() => {
-                setStampKind(stamp.key);
-                appRef.current?.setStamp(stamp.key);
-              }}
-            >
-              {stamp.label}
-            </button>
-          ))}
-          <span>Pinselgröße bestimmt die Ausdehnung.</span>
-        </div>
-      ) : null}
+      {landmassOpen ? <Atlas3DLandmassPanel appRef={appRef} /> : null}
 
-      {tool === "settlement" ? (
-        <div className="atlas3d-region" data-testid="atlas3d-settlement-panel">
-          <span>Siedlungs-Vorgaben:</span>
-          <label className="atlas3d-check">
-            <input
-              type="checkbox"
-              checked={settlementWalls}
-              data-testid="atlas3d-settlement-walls"
-              onChange={(event) => {
-                setSettlementWalls(event.target.checked);
-                appRef.current?.setSettlementOptions({ walls: event.target.checked });
-              }}
-            />
-            Mauern + Türme
-          </label>
-          <label className="atlas3d-check">
-            <input
-              type="checkbox"
-              checked={settlementCitadel}
-              data-testid="atlas3d-settlement-citadel"
-              onChange={(event) => {
-                setSettlementCitadel(event.target.checked);
-                appRef.current?.setSettlementOptions({ citadel: event.target.checked });
-              }}
-            />
-            Zitadelle
-          </label>
-          <span>Dann auf die Karte klicken.</span>
-        </div>
-      ) : null}
+      <Atlas3DToolPanels tool={tool} mode={props.mode} seed={props.seed} appRef={appRef} polygonPoints={polygonPoints} />
 
       {tool === "asset" || tool === "scatter" ? (
         <div className="atlas3d-biomes" role="group" aria-label="Asset und Farbe wählen" data-testid="atlas3d-asset-panel">
@@ -488,22 +497,6 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
               }}
             />
           ))}
-        </div>
-      ) : null}
-
-      {tool === "label" ? (
-        <div className="atlas3d-region">
-          <input
-            type="text"
-            placeholder="Label-Text"
-            value={labelDraft}
-            data-testid="atlas3d-label-text"
-            onChange={(event) => {
-              setLabelDraft(event.target.value);
-              appRef.current?.setLabelText(event.target.value);
-            }}
-          />
-          <span>Dann auf die Karte klicken.</span>
         </div>
       ) : null}
 
@@ -580,6 +573,11 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
           <div className="atlas3d-nogl">3D-Vorschau benötigt WebGL — Werkzeuge und Speichern funktionieren trotzdem.</div>
         ) : null}
         <div className="atlas3d-hint">
+          {tool === "measure" && measure !== null ? (
+            <strong data-testid="atlas3d-measure-result">
+              📏 {measure.toFixed(1).replace(".", ",")} Wegstunden ·{" "}
+            </strong>
+          ) : null}
           {props.mode === "terrain" ? "Top-Down 3D · Ziehen = Verschieben · Shift = Neigen · " : ""}
           {activeHint}
         </div>
@@ -592,6 +590,8 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         timeOfDay={props.timeOfDay}
         fogDensity={props.fogDensity}
         weather={props.weather}
+        season={props.season}
+        stylePreset={props.stylePreset}
         brushRadius={brushRadius}
         onBrushRadius={setBrushRadius}
         splitGap={splitGap}
@@ -599,6 +599,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         rootCount={rootCount}
         onRootCount={setRootCount}
         onSetEnvironment={setEnvironment}
+        onSetStyle={setStyle}
       />
 
       <Atlas3DBookmarksBar
