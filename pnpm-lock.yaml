@@ -52,6 +52,12 @@ importers:
       '@uwe/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@uwe/mail':
+        specifier: workspace:*
+        version: link:../../packages/mail
+      '@uwe/mail-core':
+        specifier: workspace:*
+        version: link:../../packages/mail-core
       '@uwe/product-contracts':
         specifier: workspace:*
         version: link:../../packages/product-contracts

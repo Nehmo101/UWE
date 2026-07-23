@@ -13,7 +13,7 @@ const standalone = getUweStandaloneNextConfig(appDir);
 const nextConfig: NextConfig = {
   output: "standalone",
   ...standalone,
-  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env"],
+  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env", "@uwe/mail", "@uwe/mail-core"],
   async headers() {
     return [
       {
