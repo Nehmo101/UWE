@@ -50,17 +50,17 @@ const WIZARD_STEPS: WizardStep[] = [
   {
     id: 5,
     title: "Lokale Runner",
-    description: "Ollama, LM Studio und llama.cpp werden in Phase P2 geprüft.",
+    description: "Ollama, LM Studio und llama.cpp prüfst du jederzeit unter „Runner / Ollama“.",
   },
   {
     id: 6,
     title: "Erstes Modell",
-    description: "Modell-Download und Bibliothek folgen in Phase P1.",
+    description: "Modelle lädst und verwaltest du unter „Modelle“ und „Downloads“.",
   },
   {
     id: 7,
     title: "UWE-Freigabe",
-    description: "Einzelne Modell-Freigaben folgen in Phase P1.",
+    description: "Modell-Freigaben für UWE steuerst du unter „Modelle“.",
   },
   {
     id: 8,
@@ -378,7 +378,7 @@ export function SetupWizard({
       case 5:
         return (
           <p className="connector-muted">
-            Dieser Schritt wird in einer späteren Phase automatisiert. Du kannst ihn vorerst
+            Diesen Schritt kannst du überspringen und jederzeit unter „Runner / Ollama“ bzw. „Modelle“ erledigen. Du kannst ihn vorerst
             überspringen und den Connector bereits starten.
           </p>
         );
@@ -404,7 +404,7 @@ export function SetupWizard({
           <div className="connector-stack">
             {modelStore.profiles.length === 0 ? (
               <p className="connector-muted">
-                Noch keine Modelle vorhanden. Du kannst den Schritt überspringen und später in P1 einen Scan ausführen.
+                Noch keine Modelle vorhanden. Du kannst den Schritt überspringen und jederzeit unter „Modelle“ einen Scan ausführen.
               </p>
             ) : (
               <div className="connector-profile-list">

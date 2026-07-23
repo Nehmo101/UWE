@@ -248,6 +248,15 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!showQuitConfirm) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !quitting) setShowQuitConfirm(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showQuitConfirm, quitting]);
+
   async function confirmQuit() {
     setQuitting(true);
     try {
@@ -724,7 +733,7 @@ export default function App() {
           bleiben im Hintergrund aktiv; die aktive RTX-Verbindung wird beim Beenden getrennt.
         </p>
         <div className="connector-actions connector-modal-actions">
-          <Button variant="ghost" onClick={() => setShowQuitConfirm(false)} disabled={quitting}>
+          <Button variant="ghost" onClick={() => setShowQuitConfirm(false)} disabled={quitting} autoFocus>
             Abbrechen
           </Button>
           <Button variant="accent" onClick={confirmQuit} disabled={quitting}>

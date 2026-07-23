@@ -151,7 +151,7 @@ export function DownloadsPanel({ loaded, store, onLoadStore, onPullModel, onDele
 
   useEffect(() => {
     if (!loaded) {
-      void onLoadStore().catch(() => undefined);
+      void onLoadStore().catch((nextError) => setError(toMessage(nextError)));
     }
   }, [loaded, onLoadStore]);
 

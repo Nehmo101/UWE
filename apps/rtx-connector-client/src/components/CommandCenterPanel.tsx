@@ -211,6 +211,12 @@ export function CommandCenterPanel({
   }
 
   async function runAction(action: HostAction): Promise<LocalHostActionResult | null> {
+    if (
+      action === "setup" &&
+      !window.confirm("UWE neu einrichten / bauen? Das baut Studio, Portal und Brain neu und dauert einige Minuten.")
+    ) {
+      return null;
+    }
     setBusy(action);
     resetHostProgress();
     setMessage(action === "setup" ? "UWE wird eingerichtet. Build und Migration können einige Minuten dauern." : null);
@@ -358,6 +364,11 @@ export function CommandCenterPanel({
   }
 
   async function runInstallUpdate() {
+    if (
+      !window.confirm("Update installieren? Der Code wird auf origin/main synchronisiert, alle Apps werden neu gebaut und die Dienste neu gestartet — das dauert mehrere Minuten.")
+    ) {
+      return;
+    }
     setBusy("update");
     resetHostProgress();
     setError(null);

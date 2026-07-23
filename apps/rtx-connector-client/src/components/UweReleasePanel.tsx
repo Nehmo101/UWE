@@ -41,7 +41,7 @@ export function UweReleasePanel({ loaded, store, onLoadStore, onSaveStore }: Pro
 
   useEffect(() => {
     if (!loaded) {
-      void onLoadStore().catch(() => undefined);
+      void onLoadStore().catch((nextError) => setError(toMessage(nextError)));
     }
   }, [loaded, onLoadStore]);
 
