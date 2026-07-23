@@ -127,6 +127,11 @@ export default async function Atlas3DNodePage({ params }: Props) {
           fromTitle: originTitle(effective.origins.environment.fogDensity),
           overridden: effective.origins.environment.fogDensity === node.id,
         }}
+        weather={{
+          value: effective.environment.weather,
+          fromTitle: originTitle(effective.origins.environment.weather),
+          overridden: effective.origins.environment.weather === node.id,
+        }}
         bookmarks={node.bookmarks.map((bookmark) => ({ id: bookmark.id, name: bookmark.name, pose: bookmark.pose }))}
         children3d={node.children.map((child) => ({
           id: child.id,

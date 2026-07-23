@@ -342,3 +342,9 @@
   padding-top: 0.4rem;
   width: 100%;
 }
+
+.atlas3d-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}

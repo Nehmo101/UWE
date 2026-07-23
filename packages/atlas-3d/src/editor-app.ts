@@ -21,17 +21,26 @@ import {
   heightmapToJson,
   type BrushMode,
   type HeightmapGrid,
-  type HeightmapJson,
 } from "./planet-field";
 import { buildPlanetMeshData } from "./planet-mesh";
 import { applyPlanarBrush, createTerrainField, type TerrainField } from "./terrain-field";
 import { buildTerrainMeshData } from "./terrain-mesh";
-import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGrid, type SplatJson } from "./splat";
+import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGrid } from "./splat";
 import { applySceneEnvironment, buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
 import { buildWorldRootBridge } from "./world-root";
 import { splitGapOf, splitRootsOf, withSplitGap, withSplitRoots } from "./split-ops";
-import { makeBiteOp, makeTunnelOp, removeCarveOpById, summarizeCarveOps, type CarveOpSummary } from "./carve-tools";
-import { RegionDraftState, type Atlas3DRegionDraft } from "./region-draft";
+import { makeBiteOp, makeTunnelOp, removeCarveOpById, summarizeCarveOps } from "./carve-tools";
+import { RegionDraftState } from "./region-draft";
+import { applyGlobeStamp, applyPlanarStamp, type TerrainStampKind } from "./stamps";
+import { deriveGlobeBiomes, derivePlanarBiomes } from "./biome-derive";
+import { scatterInstances } from "./scatter";
+import type {
+  Atlas3DCommitKind,
+  Atlas3DEditorApp,
+  Atlas3DEditorAppOptions,
+  Atlas3DEditorDocState,
+  Atlas3DEditorTool,
+} from "./editor-types";
 import { INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "./assets-ink";
 import { findTerrainPath, type PathKind } from "./terrain-path";
 import { generateSettlement3D } from "./settlement3d";
@@ -45,96 +54,9 @@ import {
 import { EditorDecor } from "./editor-decor";
 import { OrbitRig } from "./viewport-rig";
 
-export type Atlas3DEditorMode = "globe" | "terrain";
-
-export type Atlas3DEditorTool =
-  | "orbit"
-  | "raise"
-  | "lower"
-  | "smooth"
-  | "bite"
-  | "tunnel"
-  | "biome"
-  | "region"
-  | "asset"
-  | "select"
-  | "river"
-  | "road"
-  | "label"
-  | "settlement";
-
-export interface Atlas3DEditorDocState {
-  seed: number;
-  carveOps: CarveOp[];
-  heightmap: HeightmapJson | null;
-  splat: SplatJson | null;
-  splitGap: number;
-  /** World-root count bridging the split gap (renderer default when no split). */
-  worldRoots: number;
-  objects: DocObjectState[];
-  features: DocFeatureState[];
-}
-
-export type Atlas3DCommitKind = "sculpt" | "carve" | "split" | "biome" | "objects" | "features";
-
+export * from "./editor-types";
 export type { Atlas3DRegionDraft } from "./region-draft";
 export type { CarveOpSummary } from "./carve-tools";
-
-export interface Atlas3DEditorAppOptions {
-  mode: Atlas3DEditorMode;
-  seed: number;
-  carveOps?: unknown;
-  heightmap?: unknown;
-  splat?: unknown;
-  objects?: unknown;
-  features?: unknown;
-  /** Terrain mode: inherited parent silhouette (2D polygon json) + water level. */
-  silhouette?: unknown;
-  waterLevel?: number;
-  /** Inherited atmosphere: time-of-day key + fog density [0..1]. */
-  environment?: { timeOfDay?: string; fogDensity?: number };
-  /** Portal viewer: orbit/pan only, no editing tools, no commits. */
-  readOnly?: boolean;
-  resolution?: number;
-  editResolution?: number;
-  worldRootCount?: number;
-  onCommit?: (kind: Atlas3DCommitKind, doc: Atlas3DEditorDocState) => void;
-  onRegionDraftChange?: (pointCount: number) => void;
-  onSelectionChange?: (count: number) => void;
-  onReady?: (info: { webgl: boolean }) => void;
-}
-
-export interface Atlas3DEditorApp {
-  readonly webglAvailable: boolean;
-  readonly mode: Atlas3DEditorMode;
-  setTool(tool: Atlas3DEditorTool): void;
-  setBrush(brush: { radius?: number; strength?: number }): void;
-  setBiome(biome: number): void;
-  setAsset(asset: { kind?: InkAssetKind; tint?: InkTint }): void;
-  setLabelText(text: string): void;
-  deleteSelection(): void;
-  /** Live split previews (gap + world-root sliders) — call commitSplit() on release. */
-  setSplitGap(gap: number): void;
-  setWorldRoots(count: number): void;
-  commitSplit(): void;
-  /** Visual water level (inherited/overridden via inspector — not undoable here). */
-  setWaterLevel(level: number): void;
-  /** Live atmosphere preview (inherited/overridden via inspector). */
-  setEnvironmentVisuals(environment: { timeOfDay?: string; fogDensity?: number }): void;
-  getCameraPose(): { theta: number; phi: number; distance: number; target: [number, number, number] };
-  flyTo(pose: { theta?: number; phi?: number; distance?: number; target?: [number, number, number] }, durationMs?: number): void;
-  getRegionDraft(): Atlas3DRegionDraft | null;
-  clearRegionDraft(): void;
-  /** Ordered carve-op summaries for the "Eingriffe" list. */
-  listCarveOps(): CarveOpSummary[];
-  /** Remove one carve op by id — commits "carve", undoable via the command stack. */
-  removeCarveOp(id: string): void;
-  /** Fresh render → PNG data URL (null without WebGL). */
-  exportImage(): string | null;
-  applyExternal(doc: Atlas3DEditorDocState): void;
-  getDocSnapshot(): Atlas3DEditorDocState;
-  dispose(): void;
-}
 
 // grid sizes: globe heightmap/splat are equirect 128×64, flat levels 128×128
 const GLOBE_GRID = [128, 64] as const;
@@ -162,6 +84,9 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   let brushRadius = 0.28;
   let brushStrength = 0.02;
   let activeBiome = 1;
+  let stampKind: TerrainStampKind = "krater";
+  let settlementWalls = false;
+  let settlementCitadel = false;
   let tunnelEntry: THREE.Vector3 | null = null;
   let objects: DocObjectState[] = parseDocObjects(options.objects ?? []);
   let features: DocFeatureState[] = parseDocFeatures(options.features ?? []);
@@ -196,9 +121,15 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   const readOnly = options.readOnly === true;
   let envTimeOfDay: string = options.environment?.timeOfDay ?? "noon";
   let envFogDensity: number = options.environment?.fogDensity ?? 0;
+  let envWeather: string = options.environment?.weather ?? "klar";
+  let appliedWeather: string | null = null;
 
   function applyEnvironment(): void {
     applySceneEnvironment(scene, envTimeOfDay, envFogDensity);
+    if (envWeather !== appliedWeather) {
+      appliedWeather = envWeather;
+      decor.updateWeather(envWeather === "wolken" || envWeather === "regen" || envWeather === "schnee" ? envWeather : "klar");
+    }
   }
 
   // region draft (drill-down) — raw surface points + normals, also on the globe
@@ -417,6 +348,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
         center: { x: point.x, z: point.z },
         seed: layoutSeed,
         idPrefix: `neu-${localSeq++}`,
+        walls: settlementWalls,
+        citadel: settlementCitadel,
       });
       objects = [...objects, ...settlement.objects];
       features = [...features, ...settlement.features];
@@ -433,9 +366,51 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       commit("features");
       return true;
     }
-    if (tool === "raise" || tool === "lower" || tool === "smooth") {
+    if (tool === "raise" || tool === "lower" || tool === "smooth" || tool === "flatten") {
       sculpting = true;
       applySculptAt(point, tool);
+      return true;
+    }
+    if (tool === "stamp") {
+      const strength = Math.max(0.03, brushStrength * 3);
+      if (mode === "globe") {
+        const dir = point.clone().normalize();
+        applyGlobeStamp(heightmap, [dir.x, dir.y, dir.z], { kind: stampKind, radius: brushRadius, strength });
+      } else {
+        applyPlanarStamp(heightmap, TERRAIN_SIZE, [point.x, point.z], { kind: stampKind, radius: brushRadius, strength });
+      }
+      rebuild(restResolution);
+      commit("sculpt");
+      return true;
+    }
+    if (tool === "scatter") {
+      if (assetKind === "asteroid") {
+        placeAsset(point);
+        return true;
+      }
+      const center = mode === "globe" ? point.clone().normalize() : point;
+      const cluster = scatterInstances({
+        mode,
+        center: [center.x, center.y, center.z],
+        radius: mode === "globe" ? brushRadius * 0.6 : brushRadius * 0.8,
+        seed,
+      });
+      objects = [
+        ...objects,
+        ...cluster.map((instance) => ({
+          localId: `neu-${localSeq++}`,
+          assetKind,
+          tint: assetTint,
+          position:
+            mode === "globe"
+              ? { dir: [instance.position[0], instance.position[1], instance.position[2]] }
+              : { x: instance.position[0], z: instance.position[2] },
+          scale: instance.scale,
+          rotation: instance.rotation,
+        })),
+      ];
+      syncObjects();
+      commit("objects");
       return true;
     }
     if (tool === "biome") {
@@ -486,7 +461,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   }
 
   function onPointerMove(event: PointerEvent): void {
-    if (sculpting && (tool === "raise" || tool === "lower" || tool === "smooth")) {
+    if (sculpting && (tool === "raise" || tool === "lower" || tool === "smooth" || tool === "flatten")) {
       const hit = pickSurface(event);
       if (hit) applySculptAt(hit.point, tool);
       return;
@@ -552,6 +527,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     if (disposed) return;
     if (rig.tick(time)) updateCamera();
     objectLayer.updateTime(time / 1000);
+    decor.tick(time);
     renderer?.render(scene, camera);
     frame = requestAnimationFrame(loop);
   }
@@ -592,6 +568,29 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     setLabelText(text) {
       labelText = text;
     },
+    setStamp(kind) {
+      stampKind = kind;
+    },
+    setSettlementOptions(next) {
+      if (next.walls !== undefined) settlementWalls = next.walls;
+      if (next.citadel !== undefined) settlementCitadel = next.citadel;
+    },
+    deriveBiomes() {
+      if (mode === "globe") {
+        const elevationAt = currentPlanetElevation;
+        if (!elevationAt) return;
+        deriveGlobeBiomes({ splat, seed, elevationAt: (dir) => elevationAt(new THREE.Vector3(dir[0], dir[1], dir[2])) });
+      } else {
+        const field = currentTerrainField;
+        if (!field) return;
+        derivePlanarBiomes({ splat, seed, mapSize: TERRAIN_SIZE, heightAt: (x, z) => field.height(x, z), waterLevel });
+      }
+      rebuild(restResolution);
+      commit("biome");
+    },
+    setGridOverlay(kind) {
+      decor.updateGrid(kind);
+    },
     deleteSelection() {
       if (selection.size === 0) return;
       objects = objects.filter((o) => !selection.has(o.localId));
@@ -622,6 +621,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     setEnvironmentVisuals(environment) {
       if (environment.timeOfDay !== undefined) envTimeOfDay = environment.timeOfDay;
       if (environment.fogDensity !== undefined) envFogDensity = environment.fogDensity;
+      if (environment.weather !== undefined) envWeather = environment.weather;
       applyEnvironment();
     },
     getCameraPose() {

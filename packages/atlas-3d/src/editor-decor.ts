@@ -10,6 +10,15 @@ import type { Vec2 } from "@uwe/atlas-editor/geometry";
 const INK = new THREE.Color("#211d17");
 const WATER_BLUE = new THREE.Color("#4a76a3");
 const EMBER = new THREE.Color("#c2622b");
+const PAPER = new THREE.Color("#f1e8d4");
+
+export type GridOverlayKind = "aus" | "quad" | "hex";
+export type WeatherKind = "klar" | "wolken" | "regen" | "schnee";
+
+function hash01(a: number, b: number): number {
+  const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return n - Math.floor(n);
+}
 
 export class EditorDecor {
   private readonly scene: THREE.Scene;
@@ -18,6 +27,11 @@ export class EditorDecor {
   private waterMesh: THREE.Mesh | null = null;
   private silhouetteLine: THREE.LineLoop | null = null;
   private markers: THREE.Group | null = null;
+  private gridLines: THREE.LineSegments | null = null;
+  private weatherGroup: THREE.Group | null = null;
+  private precipitation: THREE.Points | null = null;
+  private precipitationSpeed = 0;
+  private lastTickTime: number | null = null;
 
   constructor(scene: THREE.Scene, mode: "globe" | "terrain", mapSize: number) {
     this.scene = scene;
@@ -99,6 +113,125 @@ export class EditorDecor {
     this.scene.add(this.markers);
   }
 
+  /** Square/hex grid overlay for the tabletop view — flat levels only. */
+  updateGrid(kind: GridOverlayKind): void {
+    if (this.gridLines) {
+      this.scene.remove(this.gridLines);
+      this.gridLines.geometry.dispose();
+      (this.gridLines.material as THREE.Material).dispose();
+      this.gridLines = null;
+    }
+    if (this.mode !== "terrain" || kind === "aus") return;
+    const size = this.mapSize;
+    const y = 0.025;
+    const points: THREE.Vector3[] = [];
+    if (kind === "quad") {
+      const step = size / 6;
+      for (let i = -6; i <= 6; i++) {
+        points.push(new THREE.Vector3(i * step, y, -size), new THREE.Vector3(i * step, y, size));
+        points.push(new THREE.Vector3(-size, y, i * step), new THREE.Vector3(size, y, i * step));
+      }
+    } else {
+      // pointy-top hexes, radius size/7
+      const r = size / 7;
+      const w = Math.sqrt(3) * r;
+      for (let row = -8; row <= 8; row++) {
+        for (let col = -8; col <= 8; col++) {
+          const cx = col * w + (row % 2 === 0 ? 0 : w / 2);
+          const cz = row * r * 1.5;
+          if (Math.abs(cx) > size + r || Math.abs(cz) > size + r) continue;
+          for (let corner = 0; corner < 6; corner++) {
+            const a1 = ((corner + 0.5) / 6) * Math.PI * 2;
+            const a2 = ((corner + 1.5) / 6) * Math.PI * 2;
+            points.push(
+              new THREE.Vector3(cx + Math.sin(a1) * r, y, cz + Math.cos(a1) * r),
+              new THREE.Vector3(cx + Math.sin(a2) * r, y, cz + Math.cos(a2) * r),
+            );
+          }
+        }
+      }
+    }
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.22 });
+    this.gridLines = new THREE.LineSegments(geometry, material);
+    this.scene.add(this.gridLines);
+  }
+
+  /** Weather overlay: cloud puffs plus falling rain/snow particles (see tick()). */
+  updateWeather(weather: WeatherKind): void {
+    if (this.weatherGroup) {
+      this.scene.remove(this.weatherGroup);
+      this.weatherGroup.traverse((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.Points) {
+          child.geometry.dispose();
+          (child.material as THREE.Material).dispose();
+        }
+      });
+      this.weatherGroup = null;
+      this.precipitation = null;
+    }
+    if (weather === "klar") return;
+    this.weatherGroup = new THREE.Group();
+
+    const cloudMaterial = new THREE.MeshBasicMaterial({ color: PAPER, transparent: true, opacity: 0.42 });
+    const puffCount = this.mode === "globe" ? 9 : 6;
+    for (let i = 0; i < puffCount; i++) {
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.14 + hash01(i, 1) * 0.1, 10, 8), cloudMaterial.clone());
+      puff.scale.set(1.7, 0.55, 1);
+      if (this.mode === "globe") {
+        const theta = hash01(i, 2) * Math.PI * 2;
+        const phi = Math.acos(hash01(i, 3) * 1.6 - 0.8);
+        puff.position.setFromSphericalCoords(1.42, phi, theta);
+      } else {
+        puff.position.set((hash01(i, 4) - 0.5) * this.mapSize * 1.8, 1.05 + hash01(i, 5) * 0.25, (hash01(i, 6) - 0.5) * this.mapSize * 1.8);
+      }
+      this.weatherGroup.add(puff);
+    }
+    cloudMaterial.dispose();
+
+    if (weather === "regen" || weather === "schnee") {
+      const count = 420;
+      const positions = new Float32Array(count * 3);
+      const range = this.mode === "globe" ? 2.1 : this.mapSize * 1.6;
+      const heightRange = this.mode === "globe" ? 2.1 : 1.3;
+      for (let i = 0; i < count; i++) {
+        positions[i * 3] = (hash01(i, 7) - 0.5) * range * 2;
+        positions[i * 3 + 1] = hash01(i, 8) * heightRange;
+        positions[i * 3 + 2] = (hash01(i, 9) - 0.5) * range * 2;
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      const material = new THREE.PointsMaterial({
+        color: weather === "regen" ? WATER_BLUE : PAPER,
+        size: weather === "regen" ? 0.014 : 0.022,
+        transparent: true,
+        opacity: 0.75,
+        sizeAttenuation: true,
+      });
+      this.precipitation = new THREE.Points(geometry, material);
+      this.precipitationSpeed = weather === "regen" ? 1.6 : 0.35;
+      this.weatherGroup.add(this.precipitation);
+    }
+    this.scene.add(this.weatherGroup);
+  }
+
+  /** Advance falling particles; called from the render loop with the frame time (ms). */
+  tick(timeMs: number): void {
+    const last = this.lastTickTime;
+    this.lastTickTime = timeMs;
+    if (!this.precipitation || last === null) return;
+    const dt = Math.min(0.1, Math.max(0, (timeMs - last) / 1000));
+    const attribute = this.precipitation.geometry.attributes.position as THREE.BufferAttribute;
+    const heightRange = this.mode === "globe" ? 2.1 : 1.3;
+    const floor = this.mode === "globe" ? -heightRange : -0.1;
+    for (let i = 0; i < attribute.count; i++) {
+      let y = attribute.getY(i) - this.precipitationSpeed * dt;
+      if (y < floor) y += heightRange - floor;
+      attribute.setY(i, y);
+    }
+    attribute.needsUpdate = true;
+  }
+
   dispose(): void {
     if (this.waterMesh) {
       this.scene.remove(this.waterMesh);
@@ -108,5 +241,7 @@ export class EditorDecor {
     }
     this.updateSilhouette(null, 0);
     this.updateRegionMarkers([]);
+    this.updateGrid("aus");
+    this.updateWeather("klar");
   }
 }

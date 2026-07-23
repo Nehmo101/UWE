@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type RefObject } from "react";
-import type { Atlas3DEditorApp, Atlas3DEditorMode } from "@uwe/atlas-3d/editor-app";
+import type { Atlas3DEditorApp, Atlas3DEditorMode, GridOverlayKind } from "@uwe/atlas-3d/editor-app";
 
 export interface Atlas3DInheritedNumber {
   value: number;
@@ -22,25 +22,40 @@ const TIME_OPTIONS = [
   { value: "night", label: "Nacht" },
 ];
 
+const WEATHER_OPTIONS = [
+  { value: "klar", label: "Klar" },
+  { value: "wolken", label: "Wolken" },
+  { value: "regen", label: "Regen" },
+  { value: "schnee", label: "Schnee" },
+];
+
+const GRID_OPTIONS: { value: GridOverlayKind; label: string }[] = [
+  { value: "aus", label: "Aus" },
+  { value: "quad", label: "Quadrat" },
+  { value: "hex", label: "Hex" },
+];
+
 export interface Atlas3DInspectorPanelProps {
   mode: Atlas3DEditorMode;
   appRef: RefObject<Atlas3DEditorApp | null>;
   waterLevel: Atlas3DInheritedNumber;
   timeOfDay: Atlas3DInheritedText;
   fogDensity: Atlas3DInheritedNumber;
+  weather: Atlas3DInheritedText;
   brushRadius: number;
   onBrushRadius: (radius: number) => void;
   splitGap: number;
   onSplitGap: (gap: number) => void;
   rootCount: number;
   onRootCount: (count: number) => void;
-  onSetEnvironment: (field: "waterLevel" | "timeOfDay" | "fogDensity", value: string) => void;
+  onSetEnvironment: (field: "waterLevel" | "timeOfDay" | "fogDensity" | "weather", value: string) => void;
 }
 
 /** Inspector strip (brush + split + environment) — extracted from the shell for the file-size budget. */
 export function Atlas3DInspectorPanel(props: Atlas3DInspectorPanelProps) {
   const [waterDraft, setWaterDraft] = useState(props.waterLevel.value);
   const [fogDraft, setFogDraft] = useState(props.fogDensity.value);
+  const [gridKind, setGridKind] = useState<GridOverlayKind>("aus");
   const appRef = props.appRef;
 
   return (
@@ -164,6 +179,56 @@ export function Atlas3DInspectorPanel(props: Atlas3DInspectorPanelProps) {
           )}
         </span>
       </label>
+      <label>
+        Wetter
+        <select
+          value={props.weather.value}
+          data-testid="atlas3d-weather-select"
+          onChange={(event) => {
+            appRef.current?.setEnvironmentVisuals({ weather: event.target.value });
+            props.onSetEnvironment("weather", event.target.value);
+          }}
+        >
+          {WEATHER_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="atlas3d-badge">
+          {props.weather.overridden ? (
+            <>
+              überschrieben ·{" "}
+              <button type="button" className="atlas3d-inherit" onClick={() => props.onSetEnvironment("weather", "inherit")}>
+                ⤓ wieder erben
+              </button>
+            </>
+          ) : (
+            <>⤓ geerbt von {props.weather.fromTitle}</>
+          )}
+        </span>
+      </label>
+      {props.mode === "terrain" ? (
+        <label>
+          Gitter
+          <select
+            value={gridKind}
+            data-testid="atlas3d-grid-select"
+            onChange={(event) => {
+              const kind = event.target.value as GridOverlayKind;
+              setGridKind(kind);
+              appRef.current?.setGridOverlay(kind);
+            }}
+          >
+            {GRID_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <span className="atlas3d-badge">nur Ansicht</span>
+        </label>
+      ) : null}
       <label>
         Tageszeit
         <select

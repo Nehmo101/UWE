@@ -6,8 +6,8 @@ Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, 
 
 ## A · Terrain & Geologie
 
-- ★ **[M] Flatten-/Plateau-Pinsel** — auf dem Globus relativ zur lokalen „Unten"-Richtung nivellieren (Astroneer-Muster; `BrushMode "flatten"` existiert bereits im Planeten-Feld).
-- ★ **[K] Terrain-Stempel** — Krater-, Dünen-, Gebirgs-Profile als wiederverwendbare Pinselformen (WorldPainter/Darewise-Brushes).
+- ★ **[M] Flatten-/Plateau-Pinsel** ✓ *(umgesetzt)* — auf dem Globus relativ zur lokalen „Unten"-Richtung nivellieren (Astroneer-Muster; `BrushMode "flatten"` existiert bereits im Planeten-Feld).
+- ★ **[K] Terrain-Stempel** ✓ *(umgesetzt: Krater · Gebirge · Dünen)* — Krater-, Dünen-, Gebirgs-Profile als wiederverwendbare Pinselformen (WorldPainter/Darewise-Brushes).
 - **[K] Graustufen-PNG als Höhen-Stempel** — beliebige Bilder als importierbare Pinselbibliothek (WorldPainter Custom Brushes).
 - **[M] Landmassen-Vorlagen als Start-Seeds** — Kontinent / Archipel / Hochinsel als Ausgangspunkt vor dem Formen (Wonderdraft/Azgaar-Templates).
 - **[G] Hydraulische + thermische Erosion** — Pass über das Höhenfeld mit „Feature-Size"-Regler; Flow-/Ablagerungs-Masken wiederverwendbar für Schnee, Schutt, Vegetation (Gaea/Wilbur).
@@ -15,14 +15,14 @@ Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, 
 
 ## B · Klima, Biome & Gewässer
 
-- ★ **[M] Biome-Ableitung** — Temperatur (Breitengrad × Höhe) × Niederschlag → Biom-Vorschlag nach Whittaker-Matrix, auf dem vorhandenen Splat, jederzeit handübermalbar (Azgaar, Dwarf Fortress, WorldEngine).
+- ★ **[M] Biome-Ableitung** ✓ *(umgesetzt: „Biome ableiten“ im Biom-Panel)* — Temperatur (Breitengrad × Höhe) × Niederschlag → Biom-Vorschlag nach Whittaker-Matrix, auf dem vorhandenen Splat, jederzeit handübermalbar (Azgaar, Dwarf Fortress, WorldEngine).
 - **[M] Fluss-Simulation** — Testflüsse ab Gebirgskanten fließen bergab und kerben Täler; ergänzt den A\*-Fluss-Assistenten (Dwarf Fortress Flow-Test).
 - **[M] Seen** — „Wasser auf Höhe X"-Objekt zusätzlich zum globalen Wasserstand (Terragen Lake-Objekt vs. Wasser-Shader).
 - **[K] Klima-/Temperatur-Overlay** — als schaltbare Ansicht über dem Terrain.
 
 ## C · Generatoren (gelenkt, nicht zufällig)
 
-- ★ **[M] Constraint-then-generate für Siedlungen** — Pflicht-Features (Mauern, Fluss, Zitadelle) wählen, dann generieren; Viertel-Typen (Markt, Tempel, Slums) mit eigenen Layout-Parametern (Watabou MFCG, Dungeon Alchemist).
+- ★ **[M] Constraint-then-generate für Siedlungen** ✓ *(umgesetzt: Mauern + Türme, Zitadelle)* — Pflicht-Features (Mauern, Fluss, Zitadelle) wählen, dann generieren; Viertel-Typen (Markt, Tempel, Slums) mit eigenen Layout-Parametern (Watabou MFCG, Dungeon Alchemist).
 - **[M] „Bereich ausmalen"** — Region umreißen → automatisch mit Wald/Markt/Feldern füllen (Dungeon Alchemist, Canvas of Kings).
 - **[M] Auto-Linienfeatures** — Mauerzug bekommt automatisch Türme + Tore; Weg wird gesäumte Straße (Canvas of Kings).
 - **[M] Warp-Werkzeug** — Generiertes nachträglich verformen statt komplett neu würfeln (Watabou).
@@ -34,7 +34,7 @@ Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, 
 
 (baut auf den Asset-Gruppen Natur/Siedlung/Weltenbau/Himmel auf)
 
-- ★ **[M] Streu-Pinsel** — Assets mit Auto-Variation in Größe/Drehung/Abstand malen statt einzeln klicken; Varianten-Attribut je Instanz (Wonderdraft Symbol-Spray, Flowscape, Houdini Scatter).
+- ★ **[M] Streu-Pinsel** ✓ *(umgesetzt: „Streuen“-Werkzeug)* — Assets mit Auto-Variation in Größe/Drehung/Abstand malen statt einzeln klicken; Varianten-Attribut je Instanz (Wonderdraft Symbol-Spray, Flowscape, Houdini Scatter).
 - **[K] Schwerkraft-Platzierung** — Objekte setzen sich natürlich aufs Gelände (Flowscape).
 - **[M] Neue Gruppen-Assets** — Natur: Fels, Busch, Pilzhain · Siedlung: Brücke, Mühle, Hafen · Weltenbau: Portal, Obelisk, Schrein · Himmel: Mond, Wolkeninsel.
 - **[K] Hangneigung-Ausrichtung** — Assets neigen sich mit dem Gelände (Flowscape Align-to-Landscape).
@@ -48,7 +48,7 @@ Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, 
 
 ## F · Darstellung & Karten-Ausgabe
 
-- ★ **[K] Hex-/Quadrat-Gitter-Overlay** — direkt im Viewport, nicht nur im PNG-Export (Inkarnate, CC3+).
+- ★ **[K] Hex-/Quadrat-Gitter-Overlay** ✓ *(umgesetzt: Inspector „Gitter“)* — direkt im Viewport, nicht nur im PNG-Export (Inkarnate, CC3+).
 - **[M] Thematische Ansichten** — Relief · Biome · Politisch · Klima · Bevölkerung als schaltbare Layer über demselben Globus (Azgaar Layer-Presets, World Anvil Overlays).
 - **[M] Gebogene Beschriftungen** — Labels folgen Küsten und Flüssen (Wonderdraft).
 - **[M] Stil-Themes** — dieselbe Welt in Pergament-Varianten (Tusche/Aquarell/Sepia) als Shader-Preset (Inkarnate-Prinzip; passt zum bestehenden `stylePreset`-Vererbungsfeld).
@@ -57,19 +57,19 @@ Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, 
 
 ## G · Stimmung
 
-- ★ **[K] Wetter-Overlay** — Wolkenschicht, Regen-/Schnee-Animation, Nebelbänke; Tageszeit + Nebel existieren bereits im Umgebungs-System (Canvas of Kings, Dungeon Alchemist).
+- ★ **[K] Wetter-Overlay** ✓ *(umgesetzt: Klar/Wolken/Regen/Schnee, vererbt, auch im Portal)* — Wolkenschicht, Regen-/Schnee-Animation, Nebelbänke; Tageszeit + Nebel existieren bereits im Umgebungs-System (Canvas of Kings, Dungeon Alchemist).
 - **[M] Jahreszeiten-Preset je Ebene** — vererbt und überschreibbar, wie Tageszeit heute (passt exakt ins Inheritance-System).
 
 ## H · Workflow
 
-- ★ **[M] Undo über prozedurale Regenerationen** — Generator-Läufe als Commands im bestehenden Command-Stack (World Machine „Mt Rainier").
+- ★ **[M] Undo über prozedurale Regenerationen** ✓ *(umgesetzt: Stempel, Biome-Ableitung und Siedlungen laufen als Commands über den Undo-Stack)* — Generator-Läufe als Commands im bestehenden Command-Stack (World Machine „Mt Rainier").
 - **[G] Nicht-destruktiver Ebenen-Stack** — Höhe/Carve/Paint/Scatter als sortier-, ausblend- und solo-bare Layer (Unreal Landscape Edit Layers; Fernziel/Architektur-Thema).
 - **[K] Mess-Werkzeug** — Distanz in Wegstunden (Engine-Substanz laut Vision-Konzept vorhanden).
 - **[M] Sub-Ebene neu ableiten** — gewählten Bereich bei höherem Detail regenerieren (Azgaar Submaps; passt exakt zum Drill-Down).
 
-## Empfohlene Startreihenfolge
+## Stand
 
-Die **★-Quick-Wins** zuerst, da sie direkt auf vorhandener Substanz aufsetzen: Flatten-Pinsel + Terrain-Stempel (A), Biome-Ableitung (B), Constraint-Siedlungen (C), Streu-Pinsel (D), Gitter-Overlay (F), Wetter-Overlay (G), prozedurales Undo (H).
+**Alle acht ★-Quick-Wins sind umgesetzt** (Flatten-Pinsel, Terrain-Stempel, Biome-Ableitung, Constraint-Siedlungen, Streu-Pinsel, Gitter-Overlay, Wetter-Overlay, prozedurales Undo). Die übrigen Einträge sind bewusst Backlog — Erosion, WFC-Siedlungen und der Ebenen-Stack sind eigene Vorhaben mit eigener Abnahme.
 
 ## Quellen (Auswahl)
 

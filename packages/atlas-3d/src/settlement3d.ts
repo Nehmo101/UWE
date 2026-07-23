@@ -17,6 +17,10 @@ export interface Settlement3DOptions {
   houseCount?: number;
   /** Prefix for generated localIds (caller supplies its sequence base). */
   idPrefix: string;
+  /** Constraint: ring wall with towers + palisade line around the hamlet. */
+  walls?: boolean;
+  /** Constraint: a citadel tower on the plaza. */
+  citadel?: boolean;
 }
 
 export interface Settlement3DResult {
@@ -97,6 +101,21 @@ export function generateSettlement3D(options: Settlement3DOptions): Settlement3D
     rotation: 0,
   });
 
+  // citadel constraint: a dominant tower guarding the plaza
+  if (options.citadel) {
+    objects.push({
+      localId: nextId(),
+      assetKind: "tower",
+      tint: "sepia",
+      position: {
+        x: center.x + (hash01(11, 4, seed) - 0.5) * radius * 0.2,
+        z: center.z + (hash01(12, 5, seed) - 0.5) * radius * 0.2,
+      },
+      scale: 1.5,
+      rotation: 0,
+    });
+  }
+
   // road stub from the plaza outward, opposite the tower
   const roadAngle = towerAngle + Math.PI;
   const features: DocFeatureState[] = [
@@ -109,6 +128,32 @@ export function generateSettlement3D(options: Settlement3DOptions): Settlement3D
       })),
     },
   ];
+
+  // walls constraint: tower ring + closed palisade line (leaves a gate at the road)
+  if (options.walls) {
+    const wallRadius = radius * 1.35;
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 + hash01(i, 6, seed) * 0.2;
+      objects.push({
+        localId: nextId(),
+        assetKind: "tower",
+        tint: "paper",
+        position: { x: center.x + Math.cos(angle) * wallRadius, z: center.z + Math.sin(angle) * wallRadius },
+        scale: 0.7,
+        rotation: 0,
+      });
+    }
+    const gateHalf = 0.22; // radians left open where the road passes
+    const points: { x: number; z: number }[] = [];
+    for (let i = 0; i <= 24; i++) {
+      const angle = roadAngle + gateHalf + (i / 24) * (Math.PI * 2 - gateHalf * 2);
+      points.push({
+        x: center.x + Math.cos(angle) * wallRadius,
+        z: center.z + Math.sin(angle) * wallRadius,
+      });
+    }
+    features.push({ localId: `${idPrefix}-mauer`, kind: "road", points });
+  }
 
   return { objects, features };
 }

@@ -14,7 +14,7 @@ export interface Atlas3DPortalViewerProps {
   features: unknown;
   silhouette: unknown;
   waterLevel: number;
-  environment: { timeOfDay?: string; fogDensity?: number };
+  environment: { timeOfDay?: string; fogDensity?: number; weather?: string };
   bookmarks: { id: string; name: string; pose: unknown }[];
 }
 

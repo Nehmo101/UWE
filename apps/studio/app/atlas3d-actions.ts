@@ -5,7 +5,7 @@ import { createPrismaClient } from "@uwe/database/server";
 import { createAtlas3DService } from "@uwe/database/atlas3d";
 import { parseCarveOps, serializeCarveOps } from "@uwe/atlas-editor/carve";
 import { projectSurfacePatch, type Vec2, type Vec3 } from "@uwe/atlas-editor/geometry";
-import type { Atlas3DEnvironment } from "@uwe/atlas-editor/doc";
+import { ATLAS3D_WEATHER_KINDS, type Atlas3DEnvironment } from "@uwe/atlas-editor/doc";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -241,7 +241,7 @@ export async function setAtlas3DEnvironmentAction(formData: FormData): Promise<S
   const field = String(formData.get("field"));
   const rawValue = String(formData.get("value"));
   try {
-    if (field !== "waterLevel" && field !== "timeOfDay" && field !== "fogDensity") {
+    if (field !== "waterLevel" && field !== "timeOfDay" && field !== "fogDensity" && field !== "weather") {
       throw new Error(`Unbekanntes Umgebungsfeld: ${field}`);
     }
     const { atlas3d, chain } = await requireNodeInWorld(worldSlug, nodeId);
@@ -253,6 +253,9 @@ export async function setAtlas3DEnvironmentAction(formData: FormData): Promise<S
       const value = Number(rawValue);
       if (!Number.isFinite(value)) throw new Error("Ungültiger Wert");
       environment[field] = field === "fogDensity" ? Math.min(1, Math.max(0, value)) : value;
+    } else if (field === "weather") {
+      if (!(ATLAS3D_WEATHER_KINDS as readonly string[]).includes(rawValue)) throw new Error("Ungültiges Wetter");
+      environment.weather = rawValue as Atlas3DEnvironment["weather"];
     } else {
       if (!["morning", "noon", "evening", "night"].includes(rawValue)) throw new Error("Ungültige Tageszeit");
       environment.timeOfDay = rawValue as Atlas3DEnvironment["timeOfDay"];

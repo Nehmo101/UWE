@@ -14,6 +14,7 @@ import {
 import { ATLAS3D_BIOMES } from "@uwe/atlas-3d/splat";
 import { INK_ASSET_GROUPS, INK_ASSET_LABELS, INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "@uwe/atlas-3d/assets-ink";
 import { summarizeCarveOps, type CarveOpSummary } from "@uwe/atlas-3d/carve-tools";
+import { TERRAIN_STAMPS, type TerrainStampKind } from "@uwe/atlas-3d/stamps";
 import {
   createAtlas3DRegionAction,
   saveAtlas3DTerrainAction,
@@ -53,6 +54,7 @@ export interface Atlas3DEditorShellProps {
   waterLevel: Atlas3DInheritedNumber;
   timeOfDay: Atlas3DInheritedText;
   fogDensity: Atlas3DInheritedNumber;
+  weather: Atlas3DInheritedText;
   bookmarks: { id: string; name: string; pose: unknown }[];
   children3d: Atlas3DChildLink[];
   /** All nodes of the atlas world (level-tree navigation). */
@@ -74,11 +76,14 @@ const BASE_TOOLS: { id: Atlas3DEditorTool; label: string; hint: string }[] = [
   { id: "raise", label: "⛰ Heben", hint: "Klicken/Ziehen hebt das Terrain" },
   { id: "lower", label: "🕳 Senken", hint: "Klicken/Ziehen senkt das Terrain" },
   { id: "smooth", label: "〰 Glätten", hint: "Klicken/Ziehen glättet" },
+  { id: "flatten", label: "▭ Plateau", hint: "Klicken/Ziehen zieht das Terrain zur Grundhöhe — ebene Flächen" },
+  { id: "stamp", label: "⌾ Stempel", hint: "Klick prägt das gewählte Profil: Krater · Gebirge · Dünen" },
   { id: "biome", label: "▨ Biom", hint: "Klicken/Ziehen malt das gewählte Biom — stufenlos, kein Raster" },
   { id: "region", label: "▱ Region", hint: "Punkte klicken (mind. 3), dann Ebene anlegen — Drill-Down" },
   { id: "bite", label: "◔ Biss", hint: "Klick beißt ein Stück heraus (Apfel-Prinzip)" },
   { id: "tunnel", label: "◎ Tunnel", hint: "Zwei Klicks bohren einen Tunnel" },
   { id: "asset", label: "♜ Asset", hint: "Klick platziert das gewählte Tusche-Asset" },
+  { id: "scatter", label: "❋ Streuen", hint: "Klick pflanzt einen Cluster des gewählten Assets — mit Auto-Variation" },
   { id: "select", label: "⬚ Auswahl", hint: "Klick wählt aus · Shift erweitert · Entf löscht" },
   { id: "river", label: "↝ Fluss", hint: "Zwei Klicks — der A*-Assistent sucht den Lauf bergab" },
   { id: "road", label: "═ Straße", hint: "Zwei Klicks — der A*-Assistent umgeht Steigungen" },
@@ -119,6 +124,9 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [levelsOpen, setLevelsOpen] = useState(false);
   const [carvePanelOpen, setCarvePanelOpen] = useState(false);
   const [carveOps, setCarveOps] = useState<CarveOpSummary[]>([]);
+  const [stampKind, setStampKind] = useState<TerrainStampKind>("krater");
+  const [settlementWalls, setSettlementWalls] = useState(false);
+  const [settlementCitadel, setSettlementCitadel] = useState(false);
 
   const stack = useMemo(
     () =>
@@ -166,7 +174,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       features: props.initialFeatures,
       silhouette: props.silhouette,
       waterLevel: props.waterLevel.value,
-      environment: { timeOfDay: props.timeOfDay.value, fogDensity: props.fogDensity.value },
+      environment: { timeOfDay: props.timeOfDay.value, fogDensity: props.fogDensity.value, weather: props.weather.value },
       onReady: (info) => setWebgl(info.webgl),
       onRegionDraftChange: (count) => setRegionPointCount(count),
       onSelectionChange: (count) => setSelectionCount(count),
@@ -252,7 +260,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       .finally(() => setRegionBusy(false));
   };
 
-  const setEnvironment = (field: "waterLevel" | "timeOfDay" | "fogDensity", value: string) => {
+  const setEnvironment = (field: "waterLevel" | "timeOfDay" | "fogDensity" | "weather", value: string) => {
     const form = new FormData();
     form.set("worldSlug", props.worldSlug);
     form.set("nodeId", props.nodeId);
@@ -378,7 +386,59 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         </div>
       ) : null}
 
-      {tool === "asset" ? (
+      {tool === "stamp" ? (
+        <div className="atlas3d-biomes" role="group" aria-label="Stempel-Profil wählen" data-testid="atlas3d-stamp-panel">
+          {TERRAIN_STAMPS.map((stamp) => (
+            <button
+              key={stamp.key}
+              type="button"
+              className={stampKind === stamp.key ? "atlas3d-tool on" : "atlas3d-tool"}
+              data-testid={`atlas3d-stamp-${stamp.key}`}
+              aria-pressed={stampKind === stamp.key}
+              onClick={() => {
+                setStampKind(stamp.key);
+                appRef.current?.setStamp(stamp.key);
+              }}
+            >
+              {stamp.label}
+            </button>
+          ))}
+          <span>Pinselgröße bestimmt die Ausdehnung.</span>
+        </div>
+      ) : null}
+
+      {tool === "settlement" ? (
+        <div className="atlas3d-region" data-testid="atlas3d-settlement-panel">
+          <span>Siedlungs-Vorgaben:</span>
+          <label className="atlas3d-check">
+            <input
+              type="checkbox"
+              checked={settlementWalls}
+              data-testid="atlas3d-settlement-walls"
+              onChange={(event) => {
+                setSettlementWalls(event.target.checked);
+                appRef.current?.setSettlementOptions({ walls: event.target.checked });
+              }}
+            />
+            Mauern + Türme
+          </label>
+          <label className="atlas3d-check">
+            <input
+              type="checkbox"
+              checked={settlementCitadel}
+              data-testid="atlas3d-settlement-citadel"
+              onChange={(event) => {
+                setSettlementCitadel(event.target.checked);
+                appRef.current?.setSettlementOptions({ citadel: event.target.checked });
+              }}
+            />
+            Zitadelle
+          </label>
+          <span>Dann auf die Karte klicken.</span>
+        </div>
+      ) : null}
+
+      {tool === "asset" || tool === "scatter" ? (
         <div className="atlas3d-biomes" role="group" aria-label="Asset und Farbe wählen" data-testid="atlas3d-asset-panel">
           {INK_ASSET_GROUPS.map((group) => {
             const kinds = group.kinds.filter((kind) => kind !== "asteroid" || props.mode === "globe");
@@ -453,6 +513,15 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
 
       {tool === "biome" ? (
         <div className="atlas3d-biomes" role="group" aria-label="Biom wählen">
+          <button
+            type="button"
+            className="atlas3d-tool"
+            data-testid="atlas3d-derive-biomes"
+            title="Biome aus Höhe × Klima ableiten — überschreibt die Biom-Malschicht (rückgängig möglich)"
+            onClick={() => appRef.current?.deriveBiomes()}
+          >
+            ✨ Biome ableiten
+          </button>
           {ATLAS3D_BIOMES.map((biome, index) => (
             <button
               key={biome.key}
@@ -515,6 +584,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         waterLevel={props.waterLevel}
         timeOfDay={props.timeOfDay}
         fogDensity={props.fogDensity}
+        weather={props.weather}
         brushRadius={brushRadius}
         onBrushRadius={setBrushRadius}
         splitGap={splitGap}

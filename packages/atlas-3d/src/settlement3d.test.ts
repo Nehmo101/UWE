@@ -49,3 +49,28 @@ test("houses face the plaza and ids are unique", () => {
     assert.ok(Math.abs(house.rotation - toPlaza) < 1e-9);
   }
 });
+
+test("walls constraint adds a tower ring and a palisade line with a gate", () => {
+  const plain = generateSettlement3D(base);
+  const walled = generateSettlement3D({ ...base, walls: true });
+  const plainTowers = plain.objects.filter((o) => o.assetKind === "tower").length;
+  const walledTowers = walled.objects.filter((o) => o.assetKind === "tower").length;
+  assert.equal(walledTowers, plainTowers + 6, "six wall towers");
+  const palisade = walled.features.find((f) => f.localId.endsWith("-mauer"));
+  assert.ok(palisade, "palisade feature exists");
+  assert.equal(palisade?.kind, "road");
+  const points = palisade?.points ?? [];
+  const first = points[0];
+  const last = points[points.length - 1];
+  assert.ok(Math.hypot(first.x - last.x, first.z - last.z) > 0.05, "gate stays open (loop not closed)");
+});
+
+test("citadel constraint adds one dominant tower on the plaza", () => {
+  const plain = generateSettlement3D(base);
+  const withCitadel = generateSettlement3D({ ...base, citadel: true });
+  assert.equal(withCitadel.objects.length, plain.objects.length + 1);
+  const big = withCitadel.objects.find((o) => o.assetKind === "tower" && o.scale === 1.5);
+  assert.ok(big, "citadel tower present");
+  const pos = big?.position as { x: number; z: number };
+  assert.ok(Math.hypot(pos.x - base.center.x, pos.z - base.center.z) < 0.1, "near the plaza");
+});

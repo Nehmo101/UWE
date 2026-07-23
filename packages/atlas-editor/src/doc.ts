@@ -26,6 +26,10 @@ export type Atlas3DPaletteHue = keyof typeof ATLAS3D_PALETTE;
 /** Time of day drives the fixed-direction map light (never camera-relative). */
 export type Atlas3DTimeOfDay = "morning" | "noon" | "evening" | "night";
 
+/** Weather overlay: cloud puffs and precipitation particles, inherited like all environment fields. */
+export const ATLAS3D_WEATHER_KINDS = ["klar", "wolken", "regen", "schnee"] as const;
+export type Atlas3DWeather = (typeof ATLAS3D_WEATHER_KINDS)[number];
+
 /**
  * Environment settings inherited down the node chain. Every field is optional:
  * `undefined` means "inherit from ancestor"; a value overrides for the node
@@ -41,6 +45,7 @@ export interface Atlas3DEnvironment {
   waterLevel?: number;
   /** Climate key feeding procedural generators (biomes, names). */
   climate?: string;
+  weather?: Atlas3DWeather;
 }
 
 /** Fully-resolved environment after walking the inheritance chain. */
@@ -50,6 +55,7 @@ export interface Atlas3DResolvedEnvironment {
   fogDensity: number;
   waterLevel: number;
   climate: string;
+  weather: Atlas3DWeather;
 }
 
 export const ATLAS3D_ENVIRONMENT_DEFAULTS: Atlas3DResolvedEnvironment = {
@@ -58,6 +64,7 @@ export const ATLAS3D_ENVIRONMENT_DEFAULTS: Atlas3DResolvedEnvironment = {
   fogDensity: 0,
   waterLevel: 0,
   climate: "temperate",
+  weather: "klar",
 };
 
 /** One entry of the ancestor chain, root (world defaults) first. */
