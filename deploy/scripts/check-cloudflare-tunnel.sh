@@ -82,11 +82,12 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
   active_ingress="$(grep -vE '^[[:space:]]*#' "$TUNNEL_CONFIG" || true)"
   brain_opt_in=0
   case "${BRAIN_PUBLIC_TUNNEL:-}" in 1|true|TRUE|yes|on) brain_opt_in=1 ;; esac
-  if printf '%s\n' "$active_ingress" | grep -Eq '127\.0\.0\.1:3002'; then
+  brain_port="${BRAIN_PORT:-3102}"
+  if printf '%s\n' "$active_ingress" | grep -Eq "127\.0\.0\.1:${brain_port}"; then
     if [[ "$brain_opt_in" == "1" ]]; then
-      report warn "Tunnel zeigt auf den Brain-Port (:3002) — bewusst per BRAIN_PUBLIC_TUNNEL=1 freigeschaltet (Owner-Auth + 2FA vorausgesetzt)"
+      report warn "Tunnel zeigt auf den Brain-Port (:${brain_port}) — bewusst per BRAIN_PUBLIC_TUNNEL=1 freigeschaltet (Owner-Auth + 2FA vorausgesetzt)"
     else
-      report fail "Tunnel-Konfiguration zeigt auf den Brain-Port (:3002) — Brain ist owner-only/lokal; für öffentliche Freischaltung BRAIN_PUBLIC_TUNNEL=1 setzen"
+      report fail "Tunnel-Konfiguration zeigt auf den Brain-Port (:${brain_port}) — Brain ist owner-only/lokal; für öffentliche Freischaltung BRAIN_PUBLIC_TUNNEL=1 setzen"
     fi
   fi
   if printf '%s\n' "$active_ingress" | grep -qiE 'hostname:[[:space:]]*brain\.|brain\.uweanddragons\.org'; then

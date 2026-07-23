@@ -98,7 +98,7 @@ function serviceDefinitions(paths: HostPaths): ServiceDefinition[] {
   return [
     { id: "studio", label: "UWE Studio", port: parseServicePort(env.STUDIO_PORT, 3000) },
     { id: "portal", label: "UWE Portal", port: parseServicePort(env.PORTAL_PORT, 3001) },
-    { id: "brain", label: "UWE Brain", port: parseServicePort(env.BRAIN_PORT, 3002) },
+    { id: "brain", label: "UWE Brain", port: parseServicePort(env.BRAIN_PORT, 3102) },
   ];
 }
 
