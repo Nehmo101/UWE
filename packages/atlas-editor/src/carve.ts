@@ -57,11 +57,25 @@ export interface CarveSplit extends CarveOpBase {
   normal: Vec3;
   /** Total gap width — halves are pulled apart by gap/2 each. */
   gap: number;
+  /**
+   * Number of world roots bridging the gap (apple-core bundle). Optional —
+   * the renderer applies its default when unset.
+   */
+  roots?: number;
 }
 
 export type CarveOp = CarveBite | CarveCave | CarveTunnel | CarveWedge | CarveSplit;
 
 const CARVE_KINDS = new Set(["bite", "cave", "tunnel", "wedge", "split"]);
+
+/** Valid range for the split op's world-root count. */
+export const SPLIT_ROOTS_MIN = 1;
+export const SPLIT_ROOTS_MAX = 24;
+
+function parseSplitRoots(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.min(SPLIT_ROOTS_MAX, Math.max(SPLIT_ROOTS_MIN, Math.round(value)));
+}
 
 function isVec3(value: unknown): value is Vec3 {
   return Array.isArray(value) && value.length === 3 && value.every((n) => typeof n === "number" && Number.isFinite(n));
@@ -124,7 +138,8 @@ export function parseCarveOps(value: unknown): CarveOp[] {
         break;
       case "split":
         if (isVec3(op.normal) && isFiniteNumber(op.gap) && op.gap >= 0) {
-          ops.push({ ...base, kind: "split", normal: op.normal, gap: op.gap });
+          const roots = parseSplitRoots(op.roots);
+          ops.push({ ...base, kind: "split", normal: op.normal, gap: op.gap, ...(roots !== undefined ? { roots } : {}) });
         }
         break;
     }
@@ -146,7 +161,7 @@ export function serializeCarveOps(ops: readonly CarveOp[]): string {
         case "wedge":
           return { id: op.id, kind: op.kind, angleStart: op.angleStart, angleEnd: op.angleEnd, cutMaterial: op.cutMaterial ?? null, paint: paint ?? null };
         case "split":
-          return { id: op.id, kind: op.kind, normal: op.normal, gap: op.gap, cutMaterial: op.cutMaterial ?? null, paint: paint ?? null };
+          return { id: op.id, kind: op.kind, normal: op.normal, gap: op.gap, roots: op.roots ?? null, cutMaterial: op.cutMaterial ?? null, paint: paint ?? null };
       }
     }),
   );

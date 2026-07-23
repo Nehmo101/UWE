@@ -3,6 +3,11 @@
  *
  * Lore-central asset: paper-white strands that spiral HIGHER than everything
  * else and, on a split globe, bridge the gap between the world halves.
+ *
+ * Bridge shape ("Apfel-Prinzip"): the strands do NOT run as parallel offset
+ * tubes. Like the core of a bitten apple they fan out on each cut face, grow
+ * together into one slim braided bundle on the split axis at mid-gap, and fan
+ * out again into the other half — visually holding the two levels together.
  */
 
 import * as THREE from "three";
@@ -52,22 +57,30 @@ export function buildWorldRootBridge(options: WorldRootBridgeOptions): { group: 
   const reach = options.gap / 2 + options.planetRadius * 0.22;
 
   for (let i = 0; i < options.count; i++) {
-    const angle = (i / options.count) * Math.PI * 2 + deterministicOffset(i, options.seed) * 0.8;
+    const baseAngle = (i / options.count) * Math.PI * 2 + deterministicOffset(i, options.seed) * 0.8;
     const ring = options.planetRadius * (0.3 + deterministicOffset(i, options.seed + 1) * 0.25);
-    const offset = side
-      .clone()
-      .multiplyScalar(Math.cos(angle) * ring)
-      .addScaledVector(up, Math.sin(angle) * ring);
+    // Shared slim waist on the axis — the strands merge into one core bundle.
+    const core = options.planetRadius * (0.05 + deterministicOffset(i, options.seed + 3) * 0.03);
+    const twist = 0.9 + deterministicOffset(i, options.seed + 4) * 0.8;
     const points: THREE.Vector3[] = [];
-    const segments = 8;
+    const segments = 10;
     for (let s = 0; s <= segments; s++) {
       const t = s / segments;
       const along = -reach + t * reach * 2;
+      // Concave apple-core silhouette: wide at the cut faces, pinched center.
+      const w = Math.abs(2 * t - 1);
+      const radial = core + (ring - core) * Math.pow(w, 1.6);
+      const angle = baseAngle + twist * (t - 0.5);
       const bulge = Math.sin(t * Math.PI);
+      const wobbleAmp = 0.05 * bulge * w * options.planetRadius;
+      const offset = side
+        .clone()
+        .multiplyScalar(Math.cos(angle) * radial)
+        .addScaledVector(up, Math.sin(angle) * radial);
       const wobble = side
         .clone()
-        .multiplyScalar(Math.sin(t * Math.PI * 2 + i) * 0.08 * bulge * options.planetRadius)
-        .addScaledVector(up, Math.cos(t * Math.PI * 2 + i * 2) * 0.08 * bulge * options.planetRadius);
+        .multiplyScalar(Math.sin(t * Math.PI * 3 + i) * wobbleAmp)
+        .addScaledVector(up, Math.cos(t * Math.PI * 3 + i * 2) * wobbleAmp);
       points.push(axis.clone().multiplyScalar(along).add(offset).add(wobble));
     }
     const curve = new THREE.CatmullRomCurve3(points);

@@ -29,6 +29,7 @@ import { buildTerrainMeshData } from "./terrain-mesh";
 import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGrid, type SplatJson } from "./splat";
 import { applySceneEnvironment, buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
 import { buildWorldRootBridge } from "./world-root";
+import { splitGapOf, splitRootsOf, withSplitGap, withSplitRoots } from "./split-ops";
 import { INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "./assets-ink";
 import { findTerrainPath, type PathKind } from "./terrain-path";
 import { generateSettlement3D } from "./settlement3d";
@@ -66,6 +67,8 @@ export interface Atlas3DEditorDocState {
   heightmap: HeightmapJson | null;
   splat: SplatJson | null;
   splitGap: number;
+  /** World-root count bridging the split gap (renderer default when no split). */
+  worldRoots: number;
   objects: DocObjectState[];
   features: DocFeatureState[];
 }
@@ -111,8 +114,9 @@ export interface Atlas3DEditorApp {
   setAsset(asset: { kind?: InkAssetKind; tint?: InkTint }): void;
   setLabelText(text: string): void;
   deleteSelection(): void;
-  /** Live split preview (slider drag) — call commitSplit() on release. */
+  /** Live split previews (gap + world-root sliders) — call commitSplit() on release. */
   setSplitGap(gap: number): void;
+  setWorldRoots(count: number): void;
   commitSplit(): void;
   /** Visual water level (inherited/overridden via inspector — not undoable here). */
   setWaterLevel(level: number): void;
@@ -129,16 +133,10 @@ export interface Atlas3DEditorApp {
   dispose(): void;
 }
 
-const SPLIT_OP_ID = "welt-spalt";
 // grid sizes: globe heightmap/splat are equirect 128×64, flat levels 128×128
 const GLOBE_GRID = [128, 64] as const;
 const PLANAR_GRID = [128, 128] as const;
 const TERRAIN_SIZE = 2;
-
-function splitGapOf(ops: readonly CarveOp[]): number {
-  const split = ops.find((op) => op.kind === "split");
-  return split && split.kind === "split" ? split.gap : 0;
-}
 
 export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas3DEditorAppOptions): Atlas3DEditorApp {
   const mode = options.mode;
@@ -256,7 +254,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
         normal: new THREE.Vector3(1, 0, 0),
         gap,
         planetRadius: 1,
-        count: worldRootCount,
+        count: splitRootsOf(carveOps) ?? worldRootCount,
         seed,
       });
       scene.add(roots.group);
@@ -271,6 +269,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       heightmap: heightmapToJson(heightmap),
       splat: splatToJson(splat),
       splitGap: splitGapOf(carveOps),
+      worldRoots: splitRootsOf(carveOps) ?? worldRootCount,
       objects: JSON.parse(JSON.stringify(objects)) as DocObjectState[],
       features: JSON.parse(JSON.stringify(features)) as DocFeatureState[],
     };
@@ -281,14 +280,17 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   }
 
   // --- picking & tools ---
-  function pickSurface(event: PointerEvent): THREE.Vector3 | null {
-    if (!planet) return null;
+  function pointerNdc(event: PointerEvent): THREE.Vector2 {
     const rect = canvas.getBoundingClientRect();
-    const ndc = new THREE.Vector2(
+    return new THREE.Vector2(
       ((event.clientX - rect.left) / rect.width) * 2 - 1,
       -(((event.clientY - rect.top) / rect.height) * 2 - 1),
     );
-    raycaster.setFromCamera(ndc, camera);
+  }
+
+  function pickSurface(event: PointerEvent): THREE.Vector3 | null {
+    if (!planet) return null;
+    raycaster.setFromCamera(pointerNdc(event), camera);
     const hits = raycaster.intersectObject(planet.fill, false);
     return hits.length > 0 ? hits[0].point.clone() : null;
   }
@@ -332,12 +334,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   }
 
   function pickObject(event: PointerEvent): string | null {
-    const rect = canvas.getBoundingClientRect();
-    const ndc = new THREE.Vector2(
-      ((event.clientX - rect.left) / rect.width) * 2 - 1,
-      -(((event.clientY - rect.top) / rect.height) * 2 - 1),
-    );
-    raycaster.setFromCamera(ndc, camera);
+    raycaster.setFromCamera(pointerNdc(event), camera);
     const hits = raycaster.intersectObjects(objectLayer.pickables as THREE.Object3D[], true);
     for (const hit of hits) {
       let walker: THREE.Object3D | null = hit.object;
@@ -616,8 +613,11 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       commit("objects");
     },
     setSplitGap(gap) {
-      const others = carveOps.filter((op) => op.kind !== "split");
-      carveOps = gap > 0.005 ? [...others, { id: SPLIT_OP_ID, kind: "split", normal: [1, 0, 0], gap }] : others;
+      carveOps = withSplitGap(carveOps, gap);
+      rebuild(editResolution);
+    },
+    setWorldRoots(count) {
+      carveOps = withSplitRoots(carveOps, count);
       rebuild(editResolution);
     },
     commitSplit() {

@@ -130,6 +130,12 @@ test.describe("Studio Atlas 3D (neuer Editor)", () => {
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("ArrowRight");
 
+    // a split gap reveals the world-root count slider (apple-core bundle)
+    const rootSlider = page.getByTestId("atlas3d-root-count");
+    await expect(rootSlider).toBeVisible();
+    await rootSlider.focus();
+    await page.keyboard.press("ArrowRight");
+
     const undo = page.getByTestId("atlas3d-undo");
     await expect(undo).toBeEnabled();
     await undo.click();

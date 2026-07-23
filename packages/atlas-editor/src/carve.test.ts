@@ -32,6 +32,22 @@ test("serialization is stable and round-trips through parse", () => {
   assert.equal(json, serializeCarveOps(parseCarveOps(JSON.parse(json))));
 });
 
+test("split roots round-trip, clamp to range and drop invalid values", () => {
+  const withRoots = parseCarveOps([{ id: "s1", kind: "split", normal: [1, 0, 0], gap: 0.4, roots: 9 }]);
+  assert.equal(withRoots[0].kind === "split" && withRoots[0].roots, 9);
+  const json = serializeCarveOps(withRoots);
+  assert.equal(json, serializeCarveOps(parseCarveOps(JSON.parse(json))));
+
+  const clamped = parseCarveOps([
+    { id: "lo", kind: "split", normal: [1, 0, 0], gap: 0.4, roots: 0 },
+    { id: "hi", kind: "split", normal: [1, 0, 0], gap: 0.4, roots: 99 },
+    { id: "bad", kind: "split", normal: [1, 0, 0], gap: 0.4, roots: "viele" },
+  ]);
+  assert.equal(clamped[0].kind === "split" && clamped[0].roots, 1);
+  assert.equal(clamped[1].kind === "split" && clamped[1].roots, 24);
+  assert.equal(clamped[2].kind === "split" && clamped[2].roots, undefined);
+});
+
 test("bite removes a spherical region (CSG subtraction)", () => {
   const base = -1; // deep inside the planet
   const inside = applyCarveOps(base, [1, 0, 0], [bite]);

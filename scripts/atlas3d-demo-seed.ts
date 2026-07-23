@@ -24,7 +24,7 @@ async function main() {
 
     await atlas3d.saveTerrain(rootNode.id, {
       carveOps: [
-        { id: "welt-spalt", kind: "split", normal: [1, 0, 0], gap: 0.3, cutMaterial: "glut" },
+        { id: "welt-spalt", kind: "split", normal: [1, 0, 0], gap: 0.3, roots: 8, cutMaterial: "glut" },
         { id: "demo-biss", kind: "bite", center: [0.62, 0.55, 0.62], radius: 0.5, cutMaterial: "fels" },
       ],
       meta: { splitGap: 0.3, heightmap: null, splat: null },

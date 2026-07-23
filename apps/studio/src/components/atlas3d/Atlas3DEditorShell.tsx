@@ -112,6 +112,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [labelDraft, setLabelDraft] = useState("");
   const [selectionCount, setSelectionCount] = useState(0);
   const [splitGap, setSplitGap] = useState(0);
+  const [rootCount, setRootCount] = useState(6);
   const [regionPointCount, setRegionPointCount] = useState(0);
   const [regionTitle, setRegionTitle] = useState("");
   const [regionBusy, setRegionBusy] = useState(false);
@@ -196,6 +197,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             appRef.current?.applyExternal(nextDoc);
             lastDocRef.current = nextDoc;
             setSplitGap(nextDoc.splitGap);
+            setRootCount(nextDoc.worldRoots);
             scheduleSave(nextDoc);
           },
           revert: () => {
@@ -203,6 +205,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             appRef.current?.applyExternal(prevDoc);
             lastDocRef.current = prevDoc;
             setSplitGap(prevDoc.splitGap);
+            setRootCount(prevDoc.worldRoots);
             scheduleSave(prevDoc);
           },
         });
@@ -211,6 +214,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
     appRef.current = app;
     lastDocRef.current = app.getDocSnapshot();
     setSplitGap(lastDocRef.current.splitGap);
+    setRootCount(lastDocRef.current.worldRoots);
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       app.dispose();
@@ -462,26 +466,50 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
           />
         </label>
         {props.mode === "globe" ? (
-          <label>
-            Spaltbreite (Welt teilen)
-            <input
-              type="range"
-              min={0}
-              max={60}
-              value={Math.round(splitGap * 100)}
-              data-testid="atlas3d-split-gap"
-              onChange={(event) => {
-                const gap = Number(event.target.value) / 100;
-                setSplitGap(gap);
-                appRef.current?.setSplitGap(gap);
-              }}
-              onPointerUp={() => appRef.current?.commitSplit()}
-              onKeyUp={(event) => {
-                if (event.key === "ArrowLeft" || event.key === "ArrowRight") appRef.current?.commitSplit();
-              }}
-            />
-            <em>{splitGap.toFixed(2)}</em>
-          </label>
+          <>
+            <label>
+              Spaltbreite (Welt teilen)
+              <input
+                type="range"
+                min={0}
+                max={60}
+                value={Math.round(splitGap * 100)}
+                data-testid="atlas3d-split-gap"
+                onChange={(event) => {
+                  const gap = Number(event.target.value) / 100;
+                  setSplitGap(gap);
+                  appRef.current?.setSplitGap(gap);
+                }}
+                onPointerUp={() => appRef.current?.commitSplit()}
+                onKeyUp={(event) => {
+                  if (event.key === "ArrowLeft" || event.key === "ArrowRight") appRef.current?.commitSplit();
+                }}
+              />
+              <em>{splitGap.toFixed(2)}</em>
+            </label>
+            {splitGap > 0.01 ? (
+              <label>
+                Weltwurzeln (Kerngehäuse)
+                <input
+                  type="range"
+                  min={1}
+                  max={16}
+                  value={rootCount}
+                  data-testid="atlas3d-root-count"
+                  onChange={(event) => {
+                    const count = Number(event.target.value);
+                    setRootCount(count);
+                    appRef.current?.setWorldRoots(count);
+                  }}
+                  onPointerUp={() => appRef.current?.commitSplit()}
+                  onKeyUp={(event) => {
+                    if (event.key === "ArrowLeft" || event.key === "ArrowRight") appRef.current?.commitSplit();
+                  }}
+                />
+                <em>{rootCount}</em>
+              </label>
+            ) : null}
+          </>
         ) : (
           <label>
             Wasserstand
