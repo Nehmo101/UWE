@@ -90,6 +90,40 @@ async function main(): Promise<void> {
         result = { ok: true, user };
         break;
       }
+      case "update": {
+        const input = JSON.parse(await readStdin()) as {
+          id?: string;
+          displayName?: string;
+          email?: string;
+          role?: string;
+          status?: "invited" | "active" | "disabled";
+        };
+        if (!input.id) throw new Error("Benutzer-ID ist erforderlich.");
+        const current = await db.user.findUnique({ where: { id: input.id }, select: { role: true } });
+        if (!current) throw new Error("Benutzer nicht gefunden.");
+        if (input.role && !VALID_ROLES.includes(input.role as UserRole)) {
+          throw new Error(`Ungültige Rolle: ${input.role}`);
+        }
+        // Never demote the last owner.
+        if (input.role && current.role === "owner" && input.role !== "owner") {
+          const owners = await db.user.count({ where: { role: "owner" } });
+          if (owners <= 1) throw new Error("Der letzte Owner kann nicht herabgestuft werden.");
+        }
+        if (input.email) {
+          const email = input.email.trim().toLowerCase();
+          const clash = await db.user.findFirst({ where: { email, NOT: { id: input.id } } });
+          if (clash) throw new Error(`Es existiert bereits ein Benutzer mit ${email}.`);
+        }
+        const updated = await users.updateUser(input.id, {
+          displayName: input.displayName?.trim() || undefined,
+          email: input.email?.trim().toLowerCase(),
+          role: input.role as UserRole | undefined,
+          status: input.status,
+        });
+        if (!updated) throw new Error("Benutzer konnte nicht aktualisiert werden.");
+        result = { ok: true, user: updated };
+        break;
+      }
       case "set-password": {
         const input = JSON.parse(await readStdin()) as { id?: string; password?: string };
         if (!input.id) throw new Error("Benutzer-ID ist erforderlich.");

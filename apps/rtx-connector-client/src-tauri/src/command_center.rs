@@ -543,3 +543,22 @@ pub async fn stop_service(root: Option<String>, service: String) -> Result<Value
 pub async fn restart_service(root: Option<String>, service: String) -> Result<Value, String> {
     run_host_command_async("restart-service", root, Some(service)).await
 }
+
+#[tauri::command]
+pub async fn update_user(user: Value) -> Result<Value, String> {
+    let payload = serde_json::to_string(&user)
+        .map_err(|error| format!("Benutzerdaten konnten nicht serialisiert werden: {error}"))?;
+    run_user_admin_async("update", Vec::new(), Some(payload)).await
+}
+
+// ── Backups ────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn list_backups(root: Option<String>) -> Result<Value, String> {
+    run_host_command_async("list-backups", root, None).await
+}
+
+#[tauri::command]
+pub async fn restore_backup(root: Option<String>, name: String) -> Result<Value, String> {
+    run_host_command_async("restore-backup", root, Some(name)).await
+}

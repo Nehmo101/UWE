@@ -178,6 +178,20 @@ export async function backupHost(root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("backup_host", { root });
 }
 
+export interface HostBackupEntry {
+  name: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export async function listBackups(root?: string) {
+  return invokeCommand<{ backups: HostBackupEntry[] }>("list_backups", { root });
+}
+
+export async function restoreBackup(name: string, root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("restore_backup", { root, name });
+}
+
 export async function startService(service: "studio" | "portal" | "brain", root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("start_service", { root, service });
 }
@@ -245,6 +259,18 @@ export async function createUser(user: {
   role: CommandCenterUserRole;
 }) {
   return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("create_user", {
+    user,
+  });
+}
+
+export async function updateUser(user: {
+  id: string;
+  displayName?: string;
+  email?: string;
+  role?: CommandCenterUserRole;
+  status?: "invited" | "active" | "disabled";
+}) {
+  return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("update_user", {
     user,
   });
 }

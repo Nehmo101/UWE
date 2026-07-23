@@ -745,6 +745,45 @@ export async function backupHost(rootInput?: string): Promise<DesktopHostActionR
   return { ok: true, message: `Backup wurde unter ${paths.backups} erstellt.`, status: await collectDesktopHostStatus(root) };
 }
 
+export interface HostBackupEntry {
+  name: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+/** List the `.zip` backups in the host backup directory, newest first. */
+export function listBackups(rootInput?: string): { backups: HostBackupEntry[] } {
+  const paths = pathsFor(resolveDesktopHostRoot(rootInput));
+  if (!fs.existsSync(paths.backups)) return { backups: [] };
+  const backups = fs
+    .readdirSync(paths.backups)
+    .filter((name) => name.toLowerCase().endsWith(".zip"))
+    .map((name) => {
+      const stat = fs.statSync(path.join(paths.backups, name));
+      return { name, sizeBytes: stat.size, createdAt: stat.mtime.toISOString() };
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return { backups };
+}
+
+/** Restore a backup zip from the host backup directory (name only — no path traversal). */
+export async function restoreBackup(rootInput: string | undefined, name: string): Promise<DesktopHostActionResult> {
+  const root = resolveDesktopHostRoot(rootInput);
+  const paths = pathsFor(root);
+  const safe = path.basename(name ?? "");
+  const file = path.join(paths.backups, safe);
+  if (!safe.toLowerCase().endsWith(".zip") || !fs.existsSync(file)) {
+    return { ok: false, message: `Backup nicht gefunden: ${safe}`, status: await collectDesktopHostStatus(root) };
+  }
+  try {
+    runWorkspaceCommand(paths, "Backup-Restore", ["exec", "tsx", "packages/backup/src/cli-restore.ts", file]);
+    return { ok: true, message: `Backup „${safe}" wurde wiederhergestellt.`, status: await collectDesktopHostStatus(root) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, message: `Restore fehlgeschlagen: ${message}`, status: await collectDesktopHostStatus(root) };
+  }
+}
+
 export function readLogs(rootInput: string | undefined, target: string | undefined): { target: string; lines: string[] } {
   const paths = pathsFor(resolveDesktopHostRoot(rootInput));
   const safeTarget =

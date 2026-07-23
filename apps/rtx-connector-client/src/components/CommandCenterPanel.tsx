@@ -8,7 +8,9 @@ import {
   checkHostUpdate,
   getHostLogs,
   getHostStatus,
+  listBackups,
   openHostTarget,
+  restoreBackup,
   readConfig,
   restartHost,
   restartService,
@@ -24,6 +26,7 @@ import {
   type LocalHostLogsResult,
   type LocalHostStatus,
   type LocalHostUpdateInfo,
+  type HostBackupEntry,
 } from "../lib/tauri";
 import { humanizeConnectionStatus, toHealthBadgeStatus, toMessage } from "../lib/connector-runtime-labels";
 import { useHostActionProgress } from "../lib/useHostActionProgress";
@@ -126,6 +129,7 @@ export function CommandCenterPanel({
   const [updateInfo, setUpdateInfo] = useState<LocalHostUpdateInfo | null>(null);
   // "<serviceId>:<action>" while a single-service start/stop/restart runs.
   const [busyService, setBusyService] = useState<string | null>(null);
+  const [backups, setBackups] = useState<HostBackupEntry[]>([]);
 
   // Live determinate progress for the long actions (setup/update), streamed from
   // the host CLI. Quick actions emit no events → the bar falls back to an
@@ -283,6 +287,40 @@ export function CommandCenterPanel({
       setError(toMessage(nextError));
     } finally {
       setBusyService(null);
+    }
+  }
+
+  const loadBackups = useCallback(async () => {
+    try {
+      const result = await listBackups(rootRef.current || undefined);
+      setBackups(result.backups);
+    } catch {
+      // non-fatal — the backups card just stays empty
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBackups();
+  }, [loadBackups]);
+
+  async function runRestore(name: string) {
+    if (!window.confirm(`Backup „${name}" wiederherstellen? Die aktuellen Daten werden dabei überschrieben.`)) return;
+    setBusy("all");
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await restoreBackup(name, root || undefined);
+      setStatus(result.status);
+      if (result.ok) {
+        setMessage(result.message);
+        await loadBackups();
+      } else {
+        setError(result.message);
+      }
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -565,6 +603,35 @@ export function CommandCenterPanel({
           {status ? <p className="connector-muted">Stand: {status.branch ?? "detached"} · {status.revision ?? "unbekannt"} · Daten: {status.dataDir}</p> : null}
         </CardContent>
         <CardFooter><Button variant="primary" onClick={saveSettings} disabled={busy !== null}>Einstellungen speichern</Button></CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Backups</CardTitle></CardHeader>
+        <CardContent>
+          {backups.length === 0 ? (
+            <p className="connector-muted">Noch keine Backups. Über „Backup erstellen" wird eines angelegt.</p>
+          ) : (
+            <ul className="command-center-user-list">
+              {backups.map((backup) => (
+                <li key={backup.name} className="command-center-user-row">
+                  <div className="command-center-user-main">
+                    <div>
+                      <strong>{backup.name}</strong>
+                      <p className="connector-muted">{formatBytes(backup.sizeBytes)} · {new Date(backup.createdAt).toLocaleString("de-DE")}</p>
+                    </div>
+                  </div>
+                  <Button variant="secondary" onClick={() => runRestore(backup.name)} disabled={busy !== null}>Wiederherstellen</Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+        <CardFooter>
+          <div className="connector-actions">
+            <Button variant="ghost" onClick={() => runAction("backup").then(() => void loadBackups())} disabled={busy !== null || !status?.installation.databaseReady}>Backup erstellen</Button>
+            <Button variant="ghost" onClick={() => void loadBackups()} disabled={busy !== null}>Liste neu laden</Button>
+          </div>
+        </CardFooter>
       </Card>
 
       <Card>

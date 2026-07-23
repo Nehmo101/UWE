@@ -2,8 +2,10 @@ import {
   argumentValue,
   backupHost,
   collectDesktopHostStatus,
+  listBackups,
   openTarget,
   readLogs,
+  restoreBackup,
   setupHost,
   startHost,
   startHostService,
@@ -39,7 +41,9 @@ type HostAction =
   | "set-env"
   | "start-service"
   | "stop-service"
-  | "restart-service";
+  | "restart-service"
+  | "list-backups"
+  | "restore-backup";
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -81,6 +85,12 @@ async function main(): Promise<void> {
         break;
       case "backup":
         result = await backupHost(root);
+        break;
+      case "list-backups":
+        result = listBackups(root);
+        break;
+      case "restore-backup":
+        result = await restoreBackup(root, target ?? "");
         break;
       case "logs":
         result = readLogs(root, target);

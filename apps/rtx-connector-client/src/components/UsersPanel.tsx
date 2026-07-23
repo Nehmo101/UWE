@@ -7,6 +7,7 @@ import {
   deleteUser,
   listUsers,
   setUserPassword,
+  updateUser,
   type CommandCenterUser,
   type CommandCenterUserRole,
 } from "../lib/tauri";
@@ -96,6 +97,23 @@ export function UsersPanel() {
       setMessage("Passwort wurde aktualisiert.");
       setPwUserId(null);
       setPwValue("");
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeRole(user: CommandCenterUser, nextRole: CommandCenterUserRole) {
+    if (nextRole === user.role) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await updateUser({ id: user.id, role: nextRole });
+      if (!result.ok) throw new Error(result.message ?? "Rolle konnte nicht geändert werden.");
+      setMessage(`Rolle von „${user.displayName}" ist jetzt ${ROLE_LABEL[nextRole] ?? nextRole}.`);
+      await refresh();
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -196,6 +214,17 @@ export function UsersPanel() {
                     </div>
                   </div>
                   <div className="connector-actions">
+                    <select
+                      className="connector-select"
+                      value={user.role}
+                      onChange={(event) => changeRole(user, event.target.value as CommandCenterUserRole)}
+                      disabled={busy}
+                      aria-label={`Rolle von ${user.displayName}`}
+                    >
+                      {ROLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{ROLE_LABEL[option.value] ?? option.value}</option>
+                      ))}
+                    </select>
                     <Button variant="ghost" onClick={() => { setPwUserId(pwUserId === user.id ? null : user.id); setPwValue(""); }} disabled={busy}>
                       Passwort ändern
                     </Button>
