@@ -5,13 +5,7 @@ import { createPrismaClient } from "@uwe/database/server";
 import { createAtlas3DService } from "@uwe/database/atlas3d";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PageHeader } from "@/src/components/shell";
-
-const LEVEL_LABELS: Record<string, string> = {
-  globe: "Globus",
-  continent: "Kontinent",
-  landscape: "Landschaft",
-  city: "Stadt",
-};
+import { ATLAS3D_LEVEL_LABELS as LEVEL_LABELS } from "@uwe/atlas-3d/level-labels";
 
 const LEVEL_ICONS: Record<string, typeof Globe> = {
   globe: Globe,

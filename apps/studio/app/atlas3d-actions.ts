@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createPrismaClient } from "@uwe/database/server";
 import { createAtlas3DService } from "@uwe/database/atlas3d";
 import { parseCarveOps, serializeCarveOps } from "@uwe/atlas-editor/carve";
-import { projectSpherePatch, type Vec2 } from "@uwe/atlas-editor/geometry";
+import { projectSurfacePatch, type Vec2, type Vec3 } from "@uwe/atlas-editor/geometry";
 import type { Atlas3DEnvironment } from "@uwe/atlas-editor/doc";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
@@ -127,11 +127,23 @@ function isPointList(value: unknown): value is [number, number, number][] {
   );
 }
 
+function averageUnit(vectors: readonly [number, number, number][]): Vec3 | undefined {
+  const sum: [number, number, number] = [0, 0, 0];
+  for (const v of vectors) {
+    sum[0] += v[0];
+    sum[1] += v[1];
+    sum[2] += v[2];
+  }
+  const len = Math.hypot(sum[0], sum[1], sum[2]);
+  return len > 1e-9 ? [sum[0] / len, sum[1] / len, sum[2] / len] : undefined;
+}
+
 /**
  * Drill-down: a region drawn on the parent becomes a child level. Globe
- * regions are sphere patches projected into the child's tangent plane;
- * terrain regions are 2D polygons re-centered on their centroid. The scaled
- * polygon is stored as the child's locked silhouette.
+ * regions are surface patches (hull, crater floors, cut faces, tunnel walls)
+ * projected into their best-fit plane; terrain regions are 2D polygons
+ * re-centered on their centroid. The scaled polygon is stored as the child's
+ * locked silhouette.
  */
 export async function createAtlas3DRegionAction(formData: FormData): Promise<CreateAtlas3DRegionResult> {
   await requireStudioActionAuth();
@@ -145,16 +157,19 @@ export async function createAtlas3DRegionAction(formData: FormData): Promise<Cre
     if (!title) throw new Error("Bitte einen Namen für die neue Ebene angeben");
     const points: unknown = JSON.parse(String(formData.get("points") || "[]"));
     if (!isPointList(points)) throw new Error("Region braucht mindestens 3 Punkte");
+    // optional per-point surface normals (backward compatible: older clients omit them)
+    const normalsRaw: unknown = JSON.parse(String(formData.get("normals") || "null"));
+    const normals = isPointList(normalsRaw) && normalsRaw.length === points.length ? normalsRaw : null;
     const { atlas3d, db } = await requireNodeInWorld(worldSlug, parentNodeId);
 
     let silhouette: Vec2[];
     let extent: unknown;
     if (mode === "globe") {
-      const patch = projectSpherePatch(points);
+      const patch = projectSurfacePatch(points, normals ? averageUnit(normals) : undefined);
       if (!patch) throw new Error("Region ist zu klein oder entartet");
       const scale = (CHILD_MAP_SIZE * 0.85) / Math.max(patch.radius, 1e-6);
       silhouette = patch.polygon.map(([x, z]): Vec2 => [x * scale, z * scale]);
-      extent = { kind: "sphere-patch", dirs: points, centroid: patch.centroid, arcRadius: patch.radius };
+      extent = { kind: "surface-patch", points, centroid: patch.centroid, normal: patch.normal, radius: patch.radius };
     } else {
       const cx = points.reduce((sum, p) => sum + p[0], 0) / points.length;
       const cz = points.reduce((sum, p) => sum + p[2], 0) / points.length;
@@ -248,6 +263,72 @@ export async function setAtlas3DEnvironmentAction(formData: FormData): Promise<S
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Speichern fehlgeschlagen" };
+  }
+}
+
+/** Zweistufiger Reset: scope "edits" behält Regionen + Unter-Ebenen, "full" löscht sie mit. */
+export async function resetAtlas3DNodeAction(formData: FormData): Promise<SaveAtlas3DTerrainResult> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  const scope = String(formData.get("scope"));
+  try {
+    if (scope !== "edits" && scope !== "full") throw new Error(`Unbekannter Reset-Umfang: ${scope}`);
+    const { atlas3d } = await requireNodeInWorld(worldSlug, nodeId);
+    await atlas3d.resetNode(nodeId, { includeSubtree: scope === "full" });
+    revalidatePath(`/worlds/${worldSlug}/atlas3d/${nodeId}`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Zurücksetzen fehlgeschlagen" };
+  }
+}
+
+export interface DeleteAtlas3DNodeResult {
+  ok: boolean;
+  parentId?: string;
+  error?: string;
+}
+
+/** Löscht eine Unter-Ebene samt Teilbaum und der Region-Markierung auf der Elternebene. */
+export async function deleteAtlas3DNodeAction(formData: FormData): Promise<DeleteAtlas3DNodeResult> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  try {
+    const { atlas3d, chain } = await requireNodeInWorld(worldSlug, nodeId);
+    const node = chain.nodes[chain.nodes.length - 1];
+    if (!node.parentId) throw new Error("Die Wurzelebene (Globus) kann nicht gelöscht werden");
+    await atlas3d.deleteNodeWithCleanup(nodeId);
+    revalidatePath(`/worlds/${worldSlug}/atlas3d/${node.parentId}`);
+    revalidatePath(`/worlds/${worldSlug}/atlas3d`);
+    return { ok: true, parentId: node.parentId };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Löschen fehlgeschlagen" };
+  }
+}
+
+/** Löscht einen Regions-Marker OHNE die verknüpfte Unter-Ebene. */
+export async function deleteAtlas3DFeatureAction(formData: FormData): Promise<SaveAtlas3DTerrainResult> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const nodeId = String(formData.get("nodeId"));
+  const featureId = String(formData.get("featureId"));
+  try {
+    const { atlas3d, db } = await requireNodeInWorld(worldSlug, nodeId);
+    const feature = await db.atlas3DFeature.findUnique({ where: { id: featureId } });
+    if (!feature || feature.nodeId !== nodeId) throw new Error("Region nicht gefunden");
+    if (feature.kind !== "region") throw new Error("Nur Regions-Marker können hier gelöscht werden");
+    await atlas3d.deleteFeature(nodeId, featureId);
+    revalidatePath(`/worlds/${worldSlug}/atlas3d/${nodeId}`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Löschen fehlgeschlagen" };
   }
 }
 

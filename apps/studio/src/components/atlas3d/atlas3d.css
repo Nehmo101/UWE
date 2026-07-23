@@ -267,3 +267,78 @@
   outline: 2px solid var(--uwe-fg);
   outline-offset: 1px;
 }
+
+.atlas3d-asset-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.atlas3d-asset-group em {
+  font-style: normal;
+  color: var(--uwe-fg-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.atlas3d-carve-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.3rem 0.15rem 0.7rem;
+  background: var(--uwe-bg-elevated);
+}
+
+.atlas3d-tree {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.atlas3d-tree-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.atlas3d-tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.atlas3d-tree-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0;
+}
+
+.atlas3d-tree-link {
+  color: var(--uwe-fg);
+  text-decoration: none;
+}
+
+.atlas3d-tree-link.on {
+  color: var(--uwe-accent);
+  font-weight: 600;
+}
+
+.atlas3d-tree-link em {
+  font-style: normal;
+  color: var(--uwe-fg-muted);
+  font-size: 0.72rem;
+}
+
+.atlas3d-tree-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px dashed var(--uwe-border);
+  padding-top: 0.4rem;
+  width: 100%;
+}

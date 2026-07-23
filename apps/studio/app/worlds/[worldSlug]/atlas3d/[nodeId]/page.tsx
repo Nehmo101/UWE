@@ -3,6 +3,7 @@ import { createPrismaClient, getAppRepository } from "@uwe/database/server";
 import { createAtlas3DService } from "@uwe/database/atlas3d";
 import { resolveEffectiveNodeSettings } from "@uwe/atlas-editor/inheritance";
 import type { Atlas3DChainEntry, Atlas3DEnvironment } from "@uwe/atlas-editor/doc";
+import { ATLAS3D_LEVEL_LABELS as LEVEL_LABELS } from "@uwe/atlas-3d/level-labels";
 import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
 import { worldSectionBreadcrumb, type BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
 import { Atlas3DEditorLazy } from "@/src/components/atlas3d";
@@ -10,13 +11,6 @@ import { Atlas3DEditorLazy } from "@/src/components/atlas3d";
 interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
 }
-
-const LEVEL_LABELS: Record<string, string> = {
-  globe: "Globus",
-  continent: "Kontinent",
-  landscape: "Landschaft",
-  city: "Stadt",
-};
 
 export default async function Atlas3DNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
@@ -31,6 +25,9 @@ export default async function Atlas3DNodePage({ params }: Props) {
 
   const node = await atlas3d.getNode(nodeId);
   if (!node) notFound();
+
+  // full node list for the level-tree panel (direct navigation + management)
+  const atlasWorld = await atlas3d.getAtlasWorldBySlug(worldSlug);
 
   // Effective settings via the shared inheritance resolver (world → … → node).
   const chainEntries: Atlas3DChainEntry[] = [
@@ -136,6 +133,19 @@ export default async function Atlas3DNodePage({ params }: Props) {
           title: child.title,
           levelLabel: LEVEL_LABELS[child.level] ?? child.level,
         }))}
+        treeNodes={(atlasWorld?.nodes ?? []).map((entry) => ({
+          id: entry.id,
+          title: entry.title,
+          level: entry.level,
+          parentId: entry.parentId,
+        }))}
+        regionFeatures={node.features
+          .filter((feature) => feature.kind === "region")
+          .map((feature) => ({
+            id: feature.id,
+            title: feature.labelText ?? "Region",
+            childNodeId: feature.childNodeId,
+          }))}
       />
     </WorldShell>
   );

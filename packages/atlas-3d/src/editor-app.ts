@@ -30,6 +30,8 @@ import { applySplatBrush, createSplat, splatFromJson, splatToJson, type SplatGri
 import { applySceneEnvironment, buildFlatGeometry, buildInkMeshGroup, type InkMeshGroup } from "./ink-style";
 import { buildWorldRootBridge } from "./world-root";
 import { splitGapOf, splitRootsOf, withSplitGap, withSplitRoots } from "./split-ops";
+import { makeBiteOp, makeTunnelOp, removeCarveOpById, summarizeCarveOps, type CarveOpSummary } from "./carve-tools";
+import { RegionDraftState, type Atlas3DRegionDraft } from "./region-draft";
 import { INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "./assets-ink";
 import { findTerrainPath, type PathKind } from "./terrain-path";
 import { generateSettlement3D } from "./settlement3d";
@@ -75,11 +77,8 @@ export interface Atlas3DEditorDocState {
 
 export type Atlas3DCommitKind = "sculpt" | "carve" | "split" | "biome" | "objects" | "features";
 
-export interface Atlas3DRegionDraft {
-  /** Globe: unit directions on the sphere. Terrain: [x, 0, z] map points. */
-  points: [number, number, number][];
-  mode: Atlas3DEditorMode;
-}
+export type { Atlas3DRegionDraft } from "./region-draft";
+export type { CarveOpSummary } from "./carve-tools";
 
 export interface Atlas3DEditorAppOptions {
   mode: Atlas3DEditorMode;
@@ -126,6 +125,10 @@ export interface Atlas3DEditorApp {
   flyTo(pose: { theta?: number; phi?: number; distance?: number; target?: [number, number, number] }, durationMs?: number): void;
   getRegionDraft(): Atlas3DRegionDraft | null;
   clearRegionDraft(): void;
+  /** Ordered carve-op summaries for the "Eingriffe" list. */
+  listCarveOps(): CarveOpSummary[];
+  /** Remove one carve op by id — commits "carve", undoable via the command stack. */
+  removeCarveOp(id: string): void;
   /** Fresh render → PNG data URL (null without WebGL). */
   exportImage(): string | null;
   applyExternal(doc: Atlas3DEditorDocState): void;
@@ -198,8 +201,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     applySceneEnvironment(scene, envTimeOfDay, envFogDensity);
   }
 
-  // region draft (drill-down)
-  const regionPoints: THREE.Vector3[] = [];
+  // region draft (drill-down) — raw surface points + normals, also on the globe
+  const regionDraft = new RegionDraftState(mode, decor, options.onRegionDraftChange);
 
   function updateCamera(): void {
     rig.apply(camera);
@@ -288,11 +291,16 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     );
   }
 
-  function pickSurface(event: PointerEvent): THREE.Vector3 | null {
+  function pickSurface(event: PointerEvent): { point: THREE.Vector3; normal: THREE.Vector3 } | null {
     if (!planet) return null;
     raycaster.setFromCamera(pointerNdc(event), camera);
     const hits = raycaster.intersectObject(planet.fill, false);
-    return hits.length > 0 ? hits[0].point.clone() : null;
+    if (hits.length === 0) return null;
+    const point = hits[0].point.clone();
+    // mesh sits untransformed at the origin, so object space ≈ world space
+    const fallback = mode === "globe" ? point.clone().normalize() : new THREE.Vector3(0, 1, 0);
+    const normal = hits[0].face ? hits[0].face.normal.clone().normalize() : fallback;
+    return { point, normal };
   }
 
   let sculpting = false;
@@ -392,8 +400,9 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       syncObjects();
       return hit !== null;
     }
-    const point = pickSurface(event);
-    if (!point) return false;
+    const hit = pickSurface(event);
+    if (!hit) return false;
+    const point = hit.point;
     if (tool === "asset") {
       placeAsset(point);
       return true;
@@ -435,22 +444,11 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       return true;
     }
     if (tool === "region") {
-      const stored = mode === "globe" ? point.clone().normalize() : new THREE.Vector3(point.x, point.y, point.z);
-      regionPoints.push(stored);
-      decor.updateRegionMarkers(regionPoints);
-      options.onRegionDraftChange?.(regionPoints.length);
+      regionDraft.add(point, hit.normal);
       return true;
     }
     if (tool === "bite") {
-      carveOps = [
-        ...carveOps,
-        {
-          id: `biss-${Date.now().toString(36)}-${carveOps.length}`,
-          kind: "bite",
-          center: [point.x, point.y, point.z],
-          radius: Math.max(0.12, brushRadius),
-        },
-      ];
+      carveOps = [...carveOps, makeBiteOp([point.x, point.y, point.z], brushRadius, carveOps.length)];
       rebuild(restResolution);
       commit("carve");
       return true;
@@ -462,13 +460,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       }
       carveOps = [
         ...carveOps,
-        {
-          id: `tunnel-${Date.now().toString(36)}-${carveOps.length}`,
-          kind: "tunnel",
-          from: [tunnelEntry.x, tunnelEntry.y, tunnelEntry.z],
-          to: [point.x, point.y, point.z],
-          radius: Math.max(0.08, brushRadius * 0.5),
-        },
+        makeTunnelOp([tunnelEntry.x, tunnelEntry.y, tunnelEntry.z], [point.x, point.y, point.z], brushRadius, carveOps.length),
       ];
       tunnelEntry = null;
       rebuild(restResolution);
@@ -495,13 +487,13 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
 
   function onPointerMove(event: PointerEvent): void {
     if (sculpting && (tool === "raise" || tool === "lower" || tool === "smooth")) {
-      const point = pickSurface(event);
-      if (point) applySculptAt(point, tool);
+      const hit = pickSurface(event);
+      if (hit) applySculptAt(hit.point, tool);
       return;
     }
     if (painting && tool === "biome") {
-      const point = pickSurface(event);
-      if (point) applyBiomeAt(point);
+      const hit = pickSurface(event);
+      if (hit) applyBiomeAt(hit.point);
       return;
     }
     if (!dragging) return;
@@ -581,11 +573,7 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
     setTool(next) {
       tool = next;
       tunnelEntry = null;
-      if (next !== "region" && regionPoints.length > 0) {
-        regionPoints.length = 0;
-        decor.updateRegionMarkers(regionPoints);
-        options.onRegionDraftChange?.(0);
-      }
+      if (next !== "region") regionDraft.clear();
     },
     setBrush(brush) {
       if (brush.radius !== undefined) brushRadius = Math.min(1.2, Math.max(0.05, brush.radius));
@@ -645,13 +633,18 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       if (!webglAvailable) updateCamera();
     },
     getRegionDraft() {
-      if (regionPoints.length < 3) return null;
-      return { mode, points: regionPoints.map((p) => [p.x, p.y, p.z]) };
+      return regionDraft.toDraft();
     },
     clearRegionDraft() {
-      regionPoints.length = 0;
-      decor.updateRegionMarkers(regionPoints);
-      options.onRegionDraftChange?.(0);
+      regionDraft.clear();
+    },
+    listCarveOps() {
+      return summarizeCarveOps(carveOps);
+    },
+    removeCarveOp(id) {
+      carveOps = removeCarveOpById(carveOps, id);
+      rebuild(restResolution);
+      commit("carve");
     },
     exportImage() {
       if (!renderer) return null;

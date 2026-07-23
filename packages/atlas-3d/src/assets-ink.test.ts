@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   buildInkAsset,
   INK_ASSET_DEFAULT_TINT,
+  INK_ASSET_GROUPS,
   INK_ASSET_KINDS,
   isInkAssetKind,
   isInkTint,
@@ -67,4 +68,10 @@ test("kind and tint guards", () => {
   assert.ok(isInkTint("teal"));
   assert.equal(isInkTint("neon"), false);
   assert.equal(INK_ASSET_DEFAULT_TINT.worldroot, "paper");
+});
+
+test("asset groups cover every kind exactly once", () => {
+  const grouped = INK_ASSET_GROUPS.flatMap((group) => group.kinds);
+  assert.deepEqual([...grouped].sort(), [...INK_ASSET_KINDS].sort());
+  assert.equal(new Set(grouped).size, grouped.length, "no kind in two groups");
 });

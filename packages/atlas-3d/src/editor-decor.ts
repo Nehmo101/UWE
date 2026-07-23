@@ -56,7 +56,11 @@ export class EditorDecor {
     this.scene.add(this.silhouetteLine);
   }
 
-  updateRegionMarkers(regionPoints: readonly THREE.Vector3[]): void {
+  /**
+   * Draft markers sit slightly OFF the clicked surface along its normal (not
+   * radially), so they stay visible on crater floors and cut faces too.
+   */
+  updateRegionMarkers(regionPoints: readonly THREE.Vector3[], normals?: readonly THREE.Vector3[]): void {
     if (this.markers) {
       this.scene.remove(this.markers);
       this.markers.traverse((child) => {
@@ -68,19 +72,23 @@ export class EditorDecor {
       this.markers = null;
     }
     if (regionPoints.length === 0) return;
+    const offsetOf = (point: THREE.Vector3, index: number): THREE.Vector3 => {
+      if (this.mode === "terrain") return new THREE.Vector3(0, 1, 0);
+      const normal = normals?.[index];
+      return normal && normal.lengthSq() > 1e-9 ? normal.clone().normalize() : point.clone().normalize();
+    };
     this.markers = new THREE.Group();
-    for (const point of regionPoints) {
+    for (const [index, point] of regionPoints.entries()) {
       const marker = new THREE.Mesh(
         new THREE.SphereGeometry(0.02, 8, 8),
         new THREE.MeshBasicMaterial({ color: EMBER }),
       );
-      marker.position.copy(point).multiplyScalar(this.mode === "globe" ? 1.01 : 1);
-      if (this.mode === "terrain") marker.position.y = point.y + 0.03;
+      marker.position.copy(point).addScaledVector(offsetOf(point, index), this.mode === "globe" ? 0.012 : 0.03);
       this.markers.add(marker);
     }
     if (regionPoints.length >= 2) {
-      const lifted = regionPoints.map((p) =>
-        this.mode === "globe" ? p.clone().multiplyScalar(1.012) : new THREE.Vector3(p.x, p.y + 0.03, p.z),
+      const lifted = regionPoints.map((p, index) =>
+        p.clone().addScaledVector(offsetOf(p, index), this.mode === "globe" ? 0.015 : 0.03),
       );
       const line = new THREE.LineLoop(
         new THREE.BufferGeometry().setFromPoints(lifted),

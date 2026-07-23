@@ -216,12 +216,14 @@ export function createAtlas3DService(db: PrismaClient) {
     });
   }
 
-  /** Delete a node and its whole subtree, leaf-first (FK-safe). */
-  async function deleteNodeSubtree(nodeId: string): Promise<number> {
+  type DbClient = PrismaClient | Prisma.TransactionClient;
+
+  /** Subtree node ids as layers, root-first (depth-capped like the chain walk). */
+  async function collectSubtreeIds(client: DbClient, nodeId: string): Promise<string[][]> {
     const layers: string[][] = [[nodeId]];
     const seen = new Set<string>([nodeId]);
     for (let depth = 0; depth < MAX_CHAIN_DEPTH; depth++) {
-      const children = await db.atlas3DNode.findMany({
+      const children = await client.atlas3DNode.findMany({
         where: { parentId: { in: layers[layers.length - 1] } },
         select: { id: true },
       });
@@ -230,10 +232,70 @@ export function createAtlas3DService(db: PrismaClient) {
       next.forEach((id) => seen.add(id));
       layers.push(next);
     }
-    for (const layer of layers.reverse()) {
-      await db.atlas3DNode.deleteMany({ where: { id: { in: layer } } });
+    return layers;
+  }
+
+  async function deleteSubtreeLayers(client: DbClient, layers: string[][]): Promise<number> {
+    for (const layer of [...layers].reverse()) {
+      await client.atlas3DNode.deleteMany({ where: { id: { in: layer } } });
     }
-    return seen.size;
+    return layers.reduce((sum, layer) => sum + layer.length, 0);
+  }
+
+  /** Delete a node and its whole subtree, leaf-first (FK-safe). */
+  async function deleteNodeSubtree(nodeId: string): Promise<number> {
+    return deleteSubtreeLayers(db, await collectSubtreeIds(db, nodeId));
+  }
+
+  /**
+   * Delete a non-root node + subtree AND the ancestor "region" features that
+   * point into it — the FK is SetNull, so without this the parent would keep
+   * an orphaned region polygon.
+   */
+  async function deleteNodeWithCleanup(nodeId: string): Promise<{ deletedNodes: number }> {
+    const node = await db.atlas3DNode.findUnique({ where: { id: nodeId } });
+    if (!node) throw new Error(`atlas3d node not found: ${nodeId}`);
+    if (!node.parentId) throw new Error("cannot delete the root node");
+    return db.$transaction(async (tx) => {
+      const layers = await collectSubtreeIds(tx, nodeId);
+      await tx.atlas3DFeature.deleteMany({ where: { childNodeId: { in: layers.flat() } } });
+      const deletedNodes = await deleteSubtreeLayers(tx, layers);
+      return { deletedNodes };
+    });
+  }
+
+  /**
+   * Two-stage reset. Edits-only (includeSubtree=false): terrain, objects,
+   * bookmarks, editor features and the environment override are cleared while
+   * "region" features and child levels survive. Full (includeSubtree=true):
+   * additionally deletes all region features and every child subtree.
+   */
+  async function resetNode(nodeId: string, options: { includeSubtree: boolean }): Promise<{ deletedNodes: number }> {
+    const node = await db.atlas3DNode.findUnique({ where: { id: nodeId } });
+    if (!node) throw new Error(`atlas3d node not found: ${nodeId}`);
+    return db.$transaction(async (tx) => {
+      await tx.atlas3DTerrain.deleteMany({ where: { nodeId } });
+      await tx.atlas3DObject.deleteMany({ where: { nodeId } });
+      await tx.atlas3DCameraBookmark.deleteMany({ where: { nodeId } });
+      await tx.atlas3DFeature.deleteMany({
+        where: { nodeId, ...(options.includeSubtree ? {} : { kind: { not: "region" } }) },
+      });
+      await tx.atlas3DNode.update({ where: { id: nodeId }, data: { environment: Prisma.DbNull } });
+      let deletedNodes = 0;
+      if (options.includeSubtree) {
+        const children = await tx.atlas3DNode.findMany({ where: { parentId: nodeId }, select: { id: true } });
+        for (const child of children) {
+          deletedNodes += await deleteSubtreeLayers(tx, await collectSubtreeIds(tx, child.id));
+        }
+      }
+      return { deletedNodes };
+    });
+  }
+
+  /** Delete a single feature scoped to its node; throws when nothing matched. */
+  async function deleteFeature(nodeId: string, featureId: string): Promise<void> {
+    const result = await db.atlas3DFeature.deleteMany({ where: { id: featureId, nodeId } });
+    if (result.count === 0) throw new Error(`atlas3d feature not found: ${featureId}`);
   }
 
   async function saveTerrain(nodeId: string, input: Atlas3DTerrainInput) {
@@ -364,6 +426,9 @@ export function createAtlas3DService(db: PrismaClient) {
     updateNode,
     updateAtlasWorld,
     deleteNodeSubtree,
+    deleteNodeWithCleanup,
+    resetNode,
+    deleteFeature,
     saveTerrain,
     saveObjects,
     saveFeatures,

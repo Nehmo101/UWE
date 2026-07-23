@@ -8,13 +8,7 @@ import type { Atlas3DChainEntry, Atlas3DEnvironment } from "@uwe/atlas-editor/do
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PageHeader } from "@/src/components/shell";
 import { Atlas3DPortalViewerLazy } from "@/src/components/atlas3d/Atlas3DPortalViewerLazy";
-
-const LEVEL_LABELS: Record<string, string> = {
-  globe: "Globus",
-  continent: "Kontinent",
-  landscape: "Landschaft",
-  city: "Stadt",
-};
+import { ATLAS3D_LEVEL_LABELS as LEVEL_LABELS } from "@uwe/atlas-3d/level-labels";
 
 interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;

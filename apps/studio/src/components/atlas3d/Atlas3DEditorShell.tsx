@@ -12,27 +12,24 @@ import {
   type Atlas3DEditorTool,
 } from "@uwe/atlas-3d/editor-app";
 import { ATLAS3D_BIOMES } from "@uwe/atlas-3d/splat";
-import { INK_ASSET_KINDS, INK_ASSET_LABELS, INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "@uwe/atlas-3d/assets-ink";
+import { INK_ASSET_GROUPS, INK_ASSET_LABELS, INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "@uwe/atlas-3d/assets-ink";
+import { summarizeCarveOps, type CarveOpSummary } from "@uwe/atlas-3d/carve-tools";
 import {
   createAtlas3DRegionAction,
-  saveAtlas3DBookmarksAction,
   saveAtlas3DTerrainAction,
   setAtlas3DEnvironmentAction,
 } from "@/app/atlas3d-actions";
 import { Atlas3DDescribePanel } from "./Atlas3DDescribePanel";
+import {
+  Atlas3DInspectorPanel,
+  type Atlas3DInheritedNumber,
+  type Atlas3DInheritedText,
+} from "./Atlas3DInspectorPanel";
+import { Atlas3DBookmarksBar } from "./Atlas3DBookmarksBar";
+import { Atlas3DLevelTree, type Atlas3DRegionFeatureItem, type Atlas3DTreeNode } from "./Atlas3DLevelTree";
 import "./atlas3d.css";
 
-export interface Atlas3DInheritedNumber {
-  value: number;
-  fromTitle: string;
-  overridden: boolean;
-}
-
-export interface Atlas3DInheritedText {
-  value: string;
-  fromTitle: string;
-  overridden: boolean;
-}
+export type { Atlas3DInheritedNumber, Atlas3DInheritedText } from "./Atlas3DInspectorPanel";
 
 export interface Atlas3DChildLink {
   id: string;
@@ -58,6 +55,10 @@ export interface Atlas3DEditorShellProps {
   fogDensity: Atlas3DInheritedNumber;
   bookmarks: { id: string; name: string; pose: unknown }[];
   children3d: Atlas3DChildLink[];
+  /** All nodes of the atlas world (level-tree navigation). */
+  treeNodes: Atlas3DTreeNode[];
+  /** Region markers of THIS node. */
+  regionFeatures: Atlas3DRegionFeatureItem[];
 }
 
 const TINTS: { key: InkTint; color: string; label: string }[] = [
@@ -88,13 +89,6 @@ const BASE_TOOLS: { id: Atlas3DEditorTool; label: string; hint: string }[] = [
 /** Werkzeuge, die flaches Gelände voraussetzen (A*-Routing bzw. Weiler-Layout). */
 const TERRAIN_ONLY_TOOLS: ReadonlySet<Atlas3DEditorTool> = new Set(["river", "road", "settlement"]);
 
-const TIME_OPTIONS = [
-  { value: "morning", label: "Morgen" },
-  { value: "noon", label: "Mittag" },
-  { value: "evening", label: "Abend" },
-  { value: "night", label: "Nacht" },
-];
-
 type SaveState = "gespeichert" | "ungespeichert" | "speichert …" | "Fehler";
 
 export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
@@ -122,9 +116,9 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
   const [saveState, setSaveState] = useState<SaveState>("gespeichert");
   const [webgl, setWebgl] = useState(true);
   const [describeOpen, setDescribeOpen] = useState(false);
-  const [waterDraft, setWaterDraft] = useState(props.waterLevel.value);
-  const [fogDraft, setFogDraft] = useState(props.fogDensity.value);
-  const [bookmarkName, setBookmarkName] = useState("");
+  const [levelsOpen, setLevelsOpen] = useState(false);
+  const [carvePanelOpen, setCarvePanelOpen] = useState(false);
+  const [carveOps, setCarveOps] = useState<CarveOpSummary[]>([]);
 
   const stack = useMemo(
     () =>
@@ -198,6 +192,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             lastDocRef.current = nextDoc;
             setSplitGap(nextDoc.splitGap);
             setRootCount(nextDoc.worldRoots);
+            setCarveOps(summarizeCarveOps(nextDoc.carveOps));
             scheduleSave(nextDoc);
           },
           revert: () => {
@@ -206,6 +201,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
             lastDocRef.current = prevDoc;
             setSplitGap(prevDoc.splitGap);
             setRootCount(prevDoc.worldRoots);
+            setCarveOps(summarizeCarveOps(prevDoc.carveOps));
             scheduleSave(prevDoc);
           },
         });
@@ -215,6 +211,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
     lastDocRef.current = app.getDocSnapshot();
     setSplitGap(lastDocRef.current.splitGap);
     setRootCount(lastDocRef.current.worldRoots);
+    setCarveOps(summarizeCarveOps(lastDocRef.current.carveOps));
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       app.dispose();
@@ -241,6 +238,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
     form.set("title", regionTitle);
     form.set("mode", draft.mode);
     form.set("points", JSON.stringify(draft.points));
+    form.set("normals", JSON.stringify(draft.normals));
     createAtlas3DRegionAction(form)
       .then((result) => {
         if (result.ok && result.childId) {
@@ -323,29 +321,90 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         <button type="button" className="atlas3d-tool" onClick={() => setDescribeOpen(true)} data-testid="atlas3d-describe">
           ✦ Beschreiben
         </button>
+        <button
+          type="button"
+          className={levelsOpen ? "atlas3d-tool on" : "atlas3d-tool"}
+          aria-pressed={levelsOpen}
+          onClick={() => setLevelsOpen((open) => !open)}
+          data-testid="atlas3d-levels"
+        >
+          🌍 Ebenen
+        </button>
+        <button
+          type="button"
+          className={carvePanelOpen ? "atlas3d-tool on" : "atlas3d-tool"}
+          aria-pressed={carvePanelOpen}
+          onClick={() => setCarvePanelOpen((open) => !open)}
+          data-testid="atlas3d-carve-ops"
+        >
+          ⛏ Eingriffe ({carveOps.length})
+        </button>
         <span className="atlas3d-save" data-state={saveState} data-testid="atlas3d-save-state">
           ● {saveState}
         </span>
       </div>
 
+      {levelsOpen ? (
+        <Atlas3DLevelTree
+          worldSlug={props.worldSlug}
+          currentNodeId={props.nodeId}
+          nodes={props.treeNodes}
+          regionFeatures={props.regionFeatures}
+          saveInFlight={saveState === "speichert …"}
+          onBeforeReset={() => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+          }}
+          onClose={() => setLevelsOpen(false)}
+        />
+      ) : null}
+
+      {carvePanelOpen ? (
+        <div className="atlas3d-region" data-testid="atlas3d-carve-list">
+          {carveOps.length === 0 ? <span>Keine Eingriffe — Biss- und Tunnel-Werkzeug benutzen.</span> : null}
+          {carveOps.map((op) => (
+            <span key={op.id} className="atlas3d-carve-item">
+              {op.label}
+              <button
+                type="button"
+                className="atlas3d-tool"
+                title={`${op.label} entfernen`}
+                aria-label={`${op.label} entfernen`}
+                onClick={() => appRef.current?.removeCarveOp(op.id)}
+              >
+                🗑
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {tool === "asset" ? (
         <div className="atlas3d-biomes" role="group" aria-label="Asset und Farbe wählen" data-testid="atlas3d-asset-panel">
-          {INK_ASSET_KINDS.filter((kind) => kind !== "asteroid" || props.mode === "globe").map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              className={assetKind === kind ? "atlas3d-tool on" : "atlas3d-tool"}
-              data-testid={`atlas3d-asset-${kind}`}
-              aria-pressed={assetKind === kind}
-              onClick={() => {
-                setAssetKind(kind);
-                setAssetTint(INK_ASSET_DEFAULT_TINT[kind]);
-                appRef.current?.setAsset({ kind });
-              }}
-            >
-              {INK_ASSET_LABELS[kind]}
-            </button>
-          ))}
+          {INK_ASSET_GROUPS.map((group) => {
+            const kinds = group.kinds.filter((kind) => kind !== "asteroid" || props.mode === "globe");
+            if (kinds.length === 0) return null;
+            return (
+              <span key={group.key} className="atlas3d-asset-group" data-testid={`atlas3d-asset-group-${group.key}`}>
+                <em>{group.label}:</em>
+                {kinds.map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    className={assetKind === kind ? "atlas3d-tool on" : "atlas3d-tool"}
+                    data-testid={`atlas3d-asset-${kind}`}
+                    aria-pressed={assetKind === kind}
+                    onClick={() => {
+                      setAssetKind(kind);
+                      setAssetTint(INK_ASSET_DEFAULT_TINT[kind]);
+                      appRef.current?.setAsset({ kind });
+                    }}
+                  >
+                    {INK_ASSET_LABELS[kind]}
+                  </button>
+                ))}
+              </span>
+            );
+          })}
           <span className="atlas3d-spacer" />
           {TINTS.map((tint) => (
             <button
@@ -450,205 +509,28 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
         </div>
       </div>
 
-      <div className="atlas3d-inspector">
-        <label>
-          Pinselgröße
-          <input
-            type="range"
-            min={5}
-            max={80}
-            value={Math.round(brushRadius * 100)}
-            onChange={(event) => {
-              const radius = Number(event.target.value) / 100;
-              setBrushRadius(radius);
-              appRef.current?.setBrush({ radius });
-            }}
-          />
-        </label>
-        {props.mode === "globe" ? (
-          <>
-            <label>
-              Spaltbreite (Welt teilen)
-              <input
-                type="range"
-                min={0}
-                max={60}
-                value={Math.round(splitGap * 100)}
-                data-testid="atlas3d-split-gap"
-                onChange={(event) => {
-                  const gap = Number(event.target.value) / 100;
-                  setSplitGap(gap);
-                  appRef.current?.setSplitGap(gap);
-                }}
-                onPointerUp={() => appRef.current?.commitSplit()}
-                onKeyUp={(event) => {
-                  if (event.key === "ArrowLeft" || event.key === "ArrowRight") appRef.current?.commitSplit();
-                }}
-              />
-              <em>{splitGap.toFixed(2)}</em>
-            </label>
-            {splitGap > 0.01 ? (
-              <label>
-                Weltwurzeln (Kerngehäuse)
-                <input
-                  type="range"
-                  min={1}
-                  max={16}
-                  value={rootCount}
-                  data-testid="atlas3d-root-count"
-                  onChange={(event) => {
-                    const count = Number(event.target.value);
-                    setRootCount(count);
-                    appRef.current?.setWorldRoots(count);
-                  }}
-                  onPointerUp={() => appRef.current?.commitSplit()}
-                  onKeyUp={(event) => {
-                    if (event.key === "ArrowLeft" || event.key === "ArrowRight") appRef.current?.commitSplit();
-                  }}
-                />
-                <em>{rootCount}</em>
-              </label>
-            ) : null}
-          </>
-        ) : (
-          <label>
-            Wasserstand
-            <input
-              type="range"
-              min={-60}
-              max={60}
-              value={Math.round(waterDraft * 100)}
-              data-testid="atlas3d-water-level"
-              onChange={(event) => {
-                const level = Number(event.target.value) / 100;
-                setWaterDraft(level);
-                appRef.current?.setWaterLevel(level);
-              }}
-              onPointerUp={() => setEnvironment("waterLevel", String(waterDraft))}
-            />
-            <em>{waterDraft.toFixed(2)}</em>
-            <span className="atlas3d-badge" data-testid="atlas3d-water-badge">
-              {props.waterLevel.overridden ? (
-                <>
-                  überschrieben ·{" "}
-                  <button type="button" className="atlas3d-inherit" onClick={() => setEnvironment("waterLevel", "inherit")}>
-                    ⤓ wieder erben
-                  </button>
-                </>
-              ) : (
-                <>⤓ geerbt von {props.waterLevel.fromTitle}</>
-              )}
-            </span>
-          </label>
-        )}
-        <label>
-          Nebel
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(fogDraft * 100)}
-            data-testid="atlas3d-fog"
-            onChange={(event) => {
-              const density = Number(event.target.value) / 100;
-              setFogDraft(density);
-              appRef.current?.setEnvironmentVisuals({ fogDensity: density });
-            }}
-            onPointerUp={() => setEnvironment("fogDensity", String(fogDraft))}
-          />
-          <em>{fogDraft.toFixed(2)}</em>
-          <span className="atlas3d-badge">
-            {props.fogDensity.overridden ? (
-              <>
-                überschrieben ·{" "}
-                <button type="button" className="atlas3d-inherit" onClick={() => setEnvironment("fogDensity", "inherit")}>
-                  ⤓ wieder erben
-                </button>
-              </>
-            ) : (
-              <>⤓ geerbt von {props.fogDensity.fromTitle}</>
-            )}
-          </span>
-        </label>
-        <label>
-          Tageszeit
-          <select
-            value={props.timeOfDay.value}
-            data-testid="atlas3d-time-select"
-            onChange={(event) => {
-              appRef.current?.setEnvironmentVisuals({ timeOfDay: event.target.value });
-              setEnvironment("timeOfDay", event.target.value);
-            }}
-          >
-            {TIME_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <span className="atlas3d-badge">
-            {props.timeOfDay.overridden ? (
-              <>
-                überschrieben ·{" "}
-                <button type="button" className="atlas3d-inherit" onClick={() => setEnvironment("timeOfDay", "inherit")}>
-                  ⤓ wieder erben
-                </button>
-              </>
-            ) : (
-              <>⤓ geerbt von {props.timeOfDay.fromTitle}</>
-            )}
-          </span>
-        </label>
-      </div>
+      <Atlas3DInspectorPanel
+        mode={props.mode}
+        appRef={appRef}
+        waterLevel={props.waterLevel}
+        timeOfDay={props.timeOfDay}
+        fogDensity={props.fogDensity}
+        brushRadius={brushRadius}
+        onBrushRadius={setBrushRadius}
+        splitGap={splitGap}
+        onSplitGap={setSplitGap}
+        rootCount={rootCount}
+        onRootCount={setRootCount}
+        onSetEnvironment={setEnvironment}
+      />
 
-      <div className="atlas3d-region" data-testid="atlas3d-bookmarks">
-        <span>📷 Kamera-Lesezeichen:</span>
-        {props.bookmarks.map((bookmark) => (
-          <button
-            key={bookmark.id}
-            type="button"
-            className="atlas3d-tool"
-            onClick={() => {
-              const pose = bookmark.pose as { theta?: number; phi?: number; distance?: number; target?: [number, number, number] };
-              appRef.current?.flyTo(pose);
-            }}
-          >
-            {bookmark.name}
-          </button>
-        ))}
-        <input
-          type="text"
-          placeholder="Name"
-          value={bookmarkName}
-          data-testid="atlas3d-bookmark-name"
-          onChange={(event) => setBookmarkName(event.target.value)}
-        />
-        <button
-          type="button"
-          className="atlas3d-tool"
-          data-testid="atlas3d-bookmark-add"
-          disabled={bookmarkName.trim().length === 0}
-          onClick={() => {
-            const pose = appRef.current?.getCameraPose();
-            if (!pose) return;
-            const form = new FormData();
-            form.set("worldSlug", props.worldSlug);
-            form.set("nodeId", props.nodeId);
-            form.set(
-              "bookmarks",
-              JSON.stringify([...props.bookmarks.map((b) => ({ name: b.name, pose: b.pose })), { name: bookmarkName.trim(), pose }]),
-            );
-            saveAtlas3DBookmarksAction(form).then((result) => {
-              if (result.ok) {
-                setBookmarkName("");
-                router.refresh();
-              }
-            });
-          }}
-        >
-          + Blick merken
-        </button>
-      </div>
+      <Atlas3DBookmarksBar
+        worldSlug={props.worldSlug}
+        nodeId={props.nodeId}
+        bookmarks={props.bookmarks}
+        appRef={appRef}
+        onSaved={() => router.refresh()}
+      />
 
       {props.children3d.length > 0 ? (
         <div className="atlas3d-children" data-testid="atlas3d-children">

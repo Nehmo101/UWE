@@ -29,6 +29,20 @@ export const INK_ASSET_LABELS: Record<InkAssetKind, string> = {
   asteroid: "Asteroid",
 };
 
+export interface InkAssetGroup {
+  key: string;
+  label: string;
+  kinds: InkAssetKind[];
+}
+
+/** Asset palette groups for the editor panel — every kind appears exactly once. */
+export const INK_ASSET_GROUPS: InkAssetGroup[] = [
+  { key: "natur", label: "Natur", kinds: ["tree"] },
+  { key: "siedlung", label: "Siedlung", kinds: ["house", "tower"] },
+  { key: "weltenbau", label: "Weltenbau", kinds: ["worldroot"] },
+  { key: "himmel", label: "Himmel", kinds: ["asteroid"] },
+];
+
 export type InkTint = "paper" | "sepia" | "terra" | "teal" | "blue";
 
 /** Tuschelagen per tint: [dark, base, light]. */
