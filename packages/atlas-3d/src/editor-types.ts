@@ -3,15 +3,17 @@
  * budget). editor-app re-exports everything, so import paths stay stable.
  */
 
+import type * as THREE from "three";
 import type { CarveOp } from "@uwe/atlas-editor/carve";
-import type { HeightmapJson } from "./planet-field";
-import type { SplatJson } from "./splat";
+import type { HeightmapGrid, HeightmapJson } from "./planet-field";
+import type { SplatGrid, SplatJson } from "./splat";
 import type { DocFeatureState, DocObjectState } from "./scene-objects";
 import type { InkAssetKind, InkTint } from "./assets-ink";
 import type { CarveOpSummary } from "./carve-tools";
 import type { Atlas3DRegionDraft } from "./region-draft";
 import type { TerrainStampKind } from "./stamps";
-import type { GridOverlayKind } from "./editor-decor";
+import type { EditorDecor, GridOverlayKind } from "./editor-decor";
+import type { TerrainField } from "./terrain-field";
 import type { CustomStampGrid } from "./custom-stamp";
 import type { LandmassTemplateKind } from "./landmass-templates";
 import type { AreaFillKindKey } from "./area-fill";
@@ -92,6 +94,40 @@ export interface Atlas3DEditorAppOptions {
   /** Polygon-Draft der Fläche-/Gebiet-Werkzeuge (Punktzähler der Panels). */
   onPolygonDraftChange?: (pointCount: number) => void;
   onReady?: (info: { webgl: boolean }) => void;
+}
+
+/**
+ * Zugriff des Tools-Controllers auf den Editor-Zustand (Closures in
+ * editor-app) — geteilt von editor-app-tools und editor-place-tools.
+ */
+export interface EditorToolsContext {
+  mode: Atlas3DEditorMode;
+  seed: number;
+  mapSize: number;
+  getHeightmap(): HeightmapGrid;
+  getSplat(): SplatGrid;
+  getCarveOps(): CarveOp[];
+  setCarveOps(ops: CarveOp[]): void;
+  getObjects(): DocObjectState[];
+  setObjects(objects: DocObjectState[]): void;
+  getFeatures(): DocFeatureState[];
+  setFeatures(features: DocFeatureState[]): void;
+  getWaterLevel(): number;
+  getBrushRadius(): number;
+  getBrushStrength(): number;
+  nextLocalId(): string;
+  getTerrainField(): TerrainField | null;
+  elevationAt(dir: readonly [number, number, number]): number;
+  pickSurface(event: PointerEvent): { point: THREE.Vector3; normal: THREE.Vector3 } | null;
+  rebuildRest(): void;
+  rebuildEdit(): void;
+  throttledRemesh(): void;
+  syncObjects(): void;
+  commit(kind: Atlas3DCommitKind): void;
+  setOverlaySplat(splat: SplatGrid | null): void;
+  decor: EditorDecor;
+  onMeasure?: (wegstunden: number | null) => void;
+  onPolygonDraftChange?: (pointCount: number) => void;
 }
 
 /** Tool-side editor API — implemented by the tools controller, spread into the app. */

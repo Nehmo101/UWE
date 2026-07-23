@@ -10,6 +10,7 @@
  */
 
 import { INK_ASSET_BUILDERS_BATCH2 } from "./assets-ink-batch2";
+import { INK_ASSET_BUILDERS_BATCH3 } from "./assets-ink-batch3";
 
 export interface InkAssetData {
   /** Interleaved-free flat arrays, non-indexed triangles. */
@@ -34,6 +35,22 @@ export const INK_ASSET_KINDS = [
   "portal",
   "obelisk",
   "mond",
+  "tanne",
+  "palme",
+  "pilzhain",
+  "kristalle",
+  "toterbaum",
+  "huette",
+  "brunnen",
+  "zelt",
+  "leuchtturm",
+  "statue",
+  "runenstein",
+  "schrein",
+  "wolkeninsel",
+  "luftschiff",
+  "boot",
+  "seerosen",
 ] as const;
 export type InkAssetKind = (typeof INK_ASSET_KINDS)[number];
 
@@ -51,6 +68,22 @@ export const INK_ASSET_LABELS: Record<InkAssetKind, string> = {
   portal: "Portal",
   obelisk: "Obelisk",
   mond: "Mond",
+  tanne: "Tanne",
+  palme: "Palme",
+  pilzhain: "Pilzhain",
+  kristalle: "Kristalle",
+  toterbaum: "Toter Baum",
+  huette: "Hütte",
+  brunnen: "Brunnen",
+  zelt: "Zelt",
+  leuchtturm: "Leuchtturm",
+  statue: "Statue",
+  runenstein: "Runenstein",
+  schrein: "Schrein",
+  wolkeninsel: "Wolkeninsel",
+  luftschiff: "Luftschiff",
+  boot: "Boot",
+  seerosen: "Seerosen",
 };
 
 export interface InkAssetGroup {
@@ -61,10 +94,15 @@ export interface InkAssetGroup {
 
 /** Asset palette groups for the editor panel — every kind appears exactly once. */
 export const INK_ASSET_GROUPS: InkAssetGroup[] = [
-  { key: "natur", label: "Natur", kinds: ["tree", "fels", "busch"] },
-  { key: "siedlung", label: "Siedlung", kinds: ["house", "tower", "bruecke", "muehle", "hafen"] },
-  { key: "weltenbau", label: "Weltenbau", kinds: ["worldroot", "portal", "obelisk"] },
-  { key: "himmel", label: "Himmel", kinds: ["asteroid", "mond"] },
+  { key: "natur", label: "Natur", kinds: ["tree", "tanne", "palme", "busch", "fels", "pilzhain", "kristalle", "toterbaum"] },
+  {
+    key: "siedlung",
+    label: "Siedlung",
+    kinds: ["house", "huette", "zelt", "tower", "leuchtturm", "brunnen", "bruecke", "muehle", "hafen"],
+  },
+  { key: "weltenbau", label: "Weltenbau", kinds: ["worldroot", "portal", "obelisk", "statue", "runenstein", "schrein"] },
+  { key: "himmel", label: "Himmel", kinds: ["asteroid", "mond", "wolkeninsel", "luftschiff"] },
+  { key: "gewaesser", label: "Gewässer", kinds: ["boot", "seerosen"] },
 ];
 
 /** Kinds that live on an orbit around the globe — only placeable in globe mode. */
@@ -338,6 +376,7 @@ const BUILDERS: Record<InkAssetKind, (tint: InkTint) => InkAssetData> = {
   tower: buildTower,
   asteroid: buildAsteroid,
   ...INK_ASSET_BUILDERS_BATCH2,
+  ...INK_ASSET_BUILDERS_BATCH3,
 };
 
 /** Default tint per kind (worldroots are lore-white). */
@@ -355,6 +394,22 @@ export const INK_ASSET_DEFAULT_TINT: Record<InkAssetKind, InkTint> = {
   portal: "blue",
   obelisk: "sepia",
   mond: "paper",
+  tanne: "teal",
+  palme: "teal",
+  pilzhain: "terra",
+  kristalle: "blue",
+  toterbaum: "sepia",
+  huette: "sepia",
+  brunnen: "paper",
+  zelt: "paper",
+  leuchtturm: "paper",
+  statue: "paper",
+  runenstein: "sepia",
+  schrein: "terra",
+  wolkeninsel: "paper",
+  luftschiff: "paper",
+  boot: "sepia",
+  seerosen: "teal",
 };
 
 export function buildInkAsset(kind: InkAssetKind, tint?: InkTint): InkAssetData {
