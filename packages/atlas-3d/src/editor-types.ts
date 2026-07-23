@@ -12,6 +12,10 @@ import type { CarveOpSummary } from "./carve-tools";
 import type { Atlas3DRegionDraft } from "./region-draft";
 import type { TerrainStampKind } from "./stamps";
 import type { GridOverlayKind } from "./editor-decor";
+import type { CustomStampGrid } from "./custom-stamp";
+import type { LandmassTemplateKind } from "./landmass-templates";
+import type { AreaFillKindKey } from "./area-fill";
+import type { Atlas3DViewOverlay } from "./editor-view-overlay";
 
 export type Atlas3DEditorMode = "globe" | "terrain";
 
@@ -21,6 +25,7 @@ export type Atlas3DEditorTool =
   | "lower"
   | "smooth"
   | "flatten"
+  | "erode"
   | "stamp"
   | "bite"
   | "tunnel"
@@ -32,7 +37,18 @@ export type Atlas3DEditorTool =
   | "river"
   | "road"
   | "label"
-  | "settlement";
+  | "settlement"
+  | "lake"
+  | "fill"
+  | "wall"
+  | "warp"
+  | "measure"
+  | "spring"
+  | "territory"
+  | "poi";
+
+/** Stempel-Art: Profil (Krater · Gebirge · Dünen), eigener PNG-Stempel oder Mutation. */
+export type Atlas3DStampChoice = TerrainStampKind | "eigen" | "mutation";
 
 export interface Atlas3DEditorDocState {
   seed: number;
@@ -59,8 +75,10 @@ export interface Atlas3DEditorAppOptions {
   /** Terrain mode: inherited parent silhouette (2D polygon json) + water level. */
   silhouette?: unknown;
   waterLevel?: number;
-  /** Inherited atmosphere: time-of-day key + fog density [0..1] + weather. */
-  environment?: { timeOfDay?: string; fogDensity?: number; weather?: string };
+  /** Inherited atmosphere: time-of-day key + fog density [0..1] + weather + season. */
+  environment?: { timeOfDay?: string; fogDensity?: number; weather?: string; season?: string };
+  /** Inherited style preset (pergament · sepia · aquarell) — tints the Tuschelagen. */
+  stylePreset?: string;
   /** Portal viewer: orbit/pan only, no editing tools, no commits. */
   readOnly?: boolean;
   resolution?: number;
@@ -69,21 +87,49 @@ export interface Atlas3DEditorAppOptions {
   onCommit?: (kind: Atlas3DCommitKind, doc: Atlas3DEditorDocState) => void;
   onRegionDraftChange?: (pointCount: number) => void;
   onSelectionChange?: (count: number) => void;
+  /** Mess-Werkzeug: Wegstunden nach dem zweiten Klick, null beim Zurücksetzen. */
+  onMeasure?: (wegstunden: number | null) => void;
+  /** Polygon-Draft der Fläche-/Gebiet-Werkzeuge (Punktzähler der Panels). */
+  onPolygonDraftChange?: (pointCount: number) => void;
   onReady?: (info: { webgl: boolean }) => void;
 }
 
-export interface Atlas3DEditorApp {
+/** Tool-side editor API — implemented by the tools controller, spread into the app. */
+export interface Atlas3DEditorToolsApi {
+  setAsset(asset: { kind?: InkAssetKind; tint?: InkTint }): void;
+  setLabelText(text: string): void;
+  /** Stamp choice for the "stamp" tool: Profil, "eigen" (custom PNG) oder "mutation". */
+  setStamp(kind: Atlas3DStampChoice): void;
+  /** Constraints for the settlement generator (walls, citadel). */
+  setSettlementOptions(options: { walls?: boolean; citadel?: boolean }): void;
+  /** Straße säumen: Bäume beidseitig entlang neuer Straßen (ein Commit mit dem Pfad). */
+  setRoadTreesEnabled(on: boolean): void;
+  /** Globale Erosion über die ganze Höhenkarte — commits "sculpt", undoable. */
+  applyErosionPass(featureSize: number): void;
+  /** Landmassen-Vorlage: ÜBERSCHREIBT die Höhenkarte — commits "sculpt", undoable. */
+  applyLandmass(kind: LandmassTemplateKind): void;
+  /** Eigener Graustufen-Stempel für die Stempel-Art "eigen" (null entfernt ihn). */
+  setCustomStamp(stamp: CustomStampGrid | null): void;
+  /** Non-destructive Eingriffe-Stack: Op aus-/einblenden — commits "carve", undoable. */
+  setCarveOpDisabled(id: string, disabled: boolean): void;
+  /** Ansicht Karte/Klima/Höhe — reine Vorschau, kein Commit. */
+  setViewOverlay(mode: Atlas3DViewOverlay): void;
+  /** Höhenlinien-Overlay (flat levels, view-only). */
+  setContoursVisible(on: boolean): void;
+  /** Fläche füllen: Polygon-Draft mit der gewählten Art ausmalen — commits "objects". */
+  fillAreaDraft(kind: AreaFillKindKey): void;
+  /** Gebiet aus dem Polygon-Draft anlegen — commits "features". */
+  createTerritory(options: { tint: string; labelText?: string }): void;
+  /** Punkte des Fläche-/Gebiet-Drafts verwerfen. */
+  clearPolygonDraft(): void;
+}
+
+export interface Atlas3DEditorApp extends Atlas3DEditorToolsApi {
   readonly webglAvailable: boolean;
   readonly mode: Atlas3DEditorMode;
   setTool(tool: Atlas3DEditorTool): void;
   setBrush(brush: { radius?: number; strength?: number }): void;
   setBiome(biome: number): void;
-  setAsset(asset: { kind?: InkAssetKind; tint?: InkTint }): void;
-  setLabelText(text: string): void;
-  /** Stamp profile for the "stamp" tool (Krater · Gebirge · Dünen). */
-  setStamp(kind: TerrainStampKind): void;
-  /** Constraints for the settlement generator (walls, citadel). */
-  setSettlementOptions(options: { walls?: boolean; citadel?: boolean }): void;
   /** Derive biomes from elevation × climate into the splat — commits "biome", undoable. */
   deriveBiomes(): void;
   /** View-only square/hex grid overlay (flat levels; not persisted). */
@@ -96,7 +142,13 @@ export interface Atlas3DEditorApp {
   /** Visual water level (inherited/overridden via inspector — not undoable here). */
   setWaterLevel(level: number): void;
   /** Live atmosphere preview (inherited/overridden via inspector). */
-  setEnvironmentVisuals(environment: { timeOfDay?: string; fogDensity?: number; weather?: string }): void;
+  setEnvironmentVisuals(environment: {
+    timeOfDay?: string;
+    fogDensity?: number;
+    weather?: string;
+    season?: string;
+    stylePreset?: string;
+  }): void;
   getCameraPose(): { theta: number; phi: number; distance: number; target: [number, number, number] };
   flyTo(pose: { theta?: number; phi?: number; distance?: number; target?: [number, number, number] }, durationMs?: number): void;
   getRegionDraft(): Atlas3DRegionDraft | null;
@@ -114,3 +166,7 @@ export interface Atlas3DEditorApp {
 
 export type { WeatherKind, GridOverlayKind } from "./editor-decor";
 export type { TerrainStampKind } from "./stamps";
+export type { CustomStampGrid } from "./custom-stamp";
+export type { LandmassTemplateKind } from "./landmass-templates";
+export type { AreaFillKindKey } from "./area-fill";
+export type { Atlas3DViewOverlay } from "./editor-view-overlay";

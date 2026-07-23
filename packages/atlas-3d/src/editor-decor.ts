@@ -28,6 +28,7 @@ export class EditorDecor {
   private silhouetteLine: THREE.LineLoop | null = null;
   private markers: THREE.Group | null = null;
   private gridLines: THREE.LineSegments | null = null;
+  private contourLines: THREE.LineSegments | null = null;
   private weatherGroup: THREE.Group | null = null;
   private precipitation: THREE.Points | null = null;
   private precipitationSpeed = 0;
@@ -157,6 +158,24 @@ export class EditorDecor {
     this.scene.add(this.gridLines);
   }
 
+  /**
+   * Höhenlinien-Overlay (flat levels, view-only): endpoint pairs sit slightly
+   * above their contour height; `null`/empty removes the lines.
+   */
+  updateContours(segmentPoints: readonly THREE.Vector3[] | null): void {
+    if (this.contourLines) {
+      this.scene.remove(this.contourLines);
+      this.contourLines.geometry.dispose();
+      (this.contourLines.material as THREE.Material).dispose();
+      this.contourLines = null;
+    }
+    if (this.mode !== "terrain" || !segmentPoints || segmentPoints.length < 2) return;
+    const geometry = new THREE.BufferGeometry().setFromPoints([...segmentPoints]);
+    const material = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.35 });
+    this.contourLines = new THREE.LineSegments(geometry, material);
+    this.scene.add(this.contourLines);
+  }
+
   /** Weather overlay: cloud puffs plus falling rain/snow particles (see tick()). */
   updateWeather(weather: WeatherKind): void {
     if (this.weatherGroup) {
@@ -242,6 +261,7 @@ export class EditorDecor {
     this.updateSilhouette(null, 0);
     this.updateRegionMarkers([]);
     this.updateGrid("aus");
+    this.updateContours(null);
     this.updateWeather("klar");
   }
 }

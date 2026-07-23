@@ -10,6 +10,8 @@ export interface CarveOpSummary {
   kind: CarveOp["kind"];
   /** UI label with a running number per kind, e.g. "Biss 2"; split stays "Welt-Spalt". */
   label: string;
+  /** Non-destructive stack: disabled ops stay listed but are not applied. */
+  disabled?: boolean;
 }
 
 export const CARVE_KIND_LABELS: Record<CarveOp["kind"], string> = {
@@ -28,6 +30,7 @@ export function summarizeCarveOps(ops: readonly CarveOp[]): CarveOpSummary[] {
       id: op.id,
       kind: op.kind,
       label: op.kind === "split" ? CARVE_KIND_LABELS.split : `${CARVE_KIND_LABELS[op.kind]} ${n}`,
+      ...(op.disabled === true ? { disabled: true } : {}),
     };
   });
 }

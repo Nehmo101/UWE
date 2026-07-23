@@ -22,6 +22,21 @@ test("summarizeCarveOps numbers ops per kind with German labels", () => {
   );
 });
 
+test("summarizeCarveOps carries the disabled flag through (non-destructive stack)", () => {
+  const mixed: CarveOp[] = [
+    { id: "b1", kind: "bite", center: [1, 0, 0], radius: 0.3, disabled: true },
+    { id: "b2", kind: "bite", center: [0, 1, 0], radius: 0.2 },
+  ];
+  const summaries = summarizeCarveOps(mixed);
+  assert.equal(summaries[0].disabled, true, "disabled op is marked");
+  assert.equal(summaries[1].disabled, undefined, "active op has no disabled key");
+  assert.deepEqual(
+    summaries.map((s) => s.label),
+    ["Biss 1", "Biss 2"],
+    "numbering ignores the disabled state",
+  );
+});
+
 test("removeCarveOpById removes only the match and keeps order", () => {
   const removed = removeCarveOpById(ops, "b2");
   assert.deepEqual(
