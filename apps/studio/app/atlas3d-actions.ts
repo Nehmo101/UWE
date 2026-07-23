@@ -59,6 +59,11 @@ export async function saveAtlas3DTerrainAction(formData: FormData): Promise<Save
     const heightmapRaw = String(formData.get("heightmap") || "null");
     const heightmap: unknown = JSON.parse(heightmapRaw);
 
+    // Voller Höhen-Layer-Stack; `heightmap` bleibt daneben als Composite
+    // erhalten (Portal + Abwärtskompatibilität alter Stände).
+    const heightLayersRaw = String(formData.get("heightLayers") || "null");
+    const heightLayers: unknown = JSON.parse(heightLayersRaw);
+
     const splatRaw = String(formData.get("splat") || "null");
     const splat: unknown = JSON.parse(splatRaw);
 
@@ -67,6 +72,7 @@ export async function saveAtlas3DTerrainAction(formData: FormData): Promise<Save
       carveOps: JSON.parse(serializeCarveOps(carveOps)),
       meta: {
         heightmap: heightmap ?? null,
+        heightLayers: heightLayers ?? null,
         splat: splat ?? null,
         splitGap: splitOp?.kind === "split" ? splitOp.gap : 0,
       },
