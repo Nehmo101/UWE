@@ -288,9 +288,10 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
   function placeAsset(point: THREE.Vector3): void {
     const localId = `neu-${localSeq++}`;
     let position: Record<string, unknown>;
-    if (assetKind === "asteroid" && mode === "globe") {
+    if ((assetKind === "asteroid" || assetKind === "mond") && mode === "globe") {
       const flat = Math.max(1.6, Math.hypot(point.x, point.z) + 0.6);
-      position = { orbit: { radius: flat, inclination: point.y * 0.4, phase: Math.atan2(point.z, point.x), speed: 0.12 } };
+      const speed = assetKind === "mond" ? 0.06 : 0.12;
+      position = { orbit: { radius: flat, inclination: point.y * 0.4, phase: Math.atan2(point.z, point.x), speed } };
     } else if (mode === "globe") {
       const dir = point.clone().normalize();
       position = { dir: [dir.x, dir.y, dir.z] };
@@ -384,7 +385,8 @@ export function createAtlas3DEditorApp(canvas: HTMLCanvasElement, options: Atlas
       return true;
     }
     if (tool === "scatter") {
-      if (assetKind === "asteroid") {
+      if (assetKind === "asteroid" || assetKind === "mond") {
+        // Orbit-Assets werden einzeln platziert statt gestreut
         placeAsset(point);
         return true;
       }

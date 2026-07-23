@@ -12,6 +12,9 @@ interface Props {
   params: Promise<{ worldSlug: string; nodeId: string }>;
 }
 
+/** Feature-Arten, die der Editor besitzt (Region-Marker bleiben außen vor). */
+const EDITOR_FEATURE_KINDS: readonly string[] = ["river", "road", "label", "territory", "poi", "lake"];
+
 export default async function Atlas3DNodePage({ params }: Props) {
   const { worldSlug, nodeId } = await params;
   const repo = getAppRepository();

@@ -87,18 +87,24 @@ export async function saveAtlas3DTerrainAction(formData: FormData): Promise<Save
     }
     const featuresRaw: unknown = JSON.parse(String(formData.get("features") || "[]"));
     if (Array.isArray(featuresRaw)) {
-      const editorKinds = ["river", "road", "label"] as const;
+      const editorKinds = ["river", "road", "label", "territory", "poi", "lake"] as const;
       await atlas3d.saveFeatures(
         nodeId,
         featuresRaw
           .filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
           .filter((f) => (editorKinds as readonly string[]).includes(f.kind as string) && Array.isArray(f.points))
-          .map((f) => ({
-            id: typeof f.id === "string" ? f.id : undefined,
-            kind: f.kind as string,
-            geometry: { points: f.points } as object,
-            labelText: typeof f.labelText === "string" ? f.labelText : null,
-          })),
+          .map((f) => {
+            // geometry-JSON: { points, tint?, level? } — tint (territory) und level (lake) reisen mit den Punkten
+            const geometry: Record<string, unknown> = { points: f.points };
+            if (typeof f.tint === "string") geometry.tint = f.tint;
+            if (typeof f.level === "number" && Number.isFinite(f.level)) geometry.level = f.level;
+            return {
+              id: typeof f.id === "string" ? f.id : undefined,
+              kind: f.kind as string,
+              geometry: geometry as object,
+              labelText: typeof f.labelText === "string" ? f.labelText : null,
+            };
+          }),
         { kinds: editorKinds },
       );
     }

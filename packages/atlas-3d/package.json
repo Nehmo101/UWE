@@ -34,7 +34,17 @@
     "./environment-presets": "./src/environment-presets.ts",
     "./editor-decor": "./src/editor-decor.ts",
     "./settlement3d": "./src/settlement3d.ts",
-    "./viewport-rig": "./src/viewport-rig.ts"
+    "./viewport-rig": "./src/viewport-rig.ts",
+    "./names": "./src/names.ts",
+    "./chronicle": "./src/chronicle.ts",
+    "./area-fill": "./src/area-fill.ts",
+    "./walls": "./src/walls.ts",
+    "./warp": "./src/warp.ts",
+    "./erosion": "./src/erosion.ts",
+    "./hydrology": "./src/hydrology.ts",
+    "./contours": "./src/contours.ts",
+    "./landmass-templates": "./src/landmass-templates.ts",
+    "./custom-stamp": "./src/custom-stamp.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

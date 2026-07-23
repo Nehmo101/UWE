@@ -12,7 +12,14 @@ import {
   type Atlas3DEditorTool,
 } from "@uwe/atlas-3d/editor-app";
 import { ATLAS3D_BIOMES } from "@uwe/atlas-3d/splat";
-import { INK_ASSET_GROUPS, INK_ASSET_LABELS, INK_ASSET_DEFAULT_TINT, type InkAssetKind, type InkTint } from "@uwe/atlas-3d/assets-ink";
+import {
+  GLOBE_ONLY_ASSET_KINDS,
+  INK_ASSET_GROUPS,
+  INK_ASSET_LABELS,
+  INK_ASSET_DEFAULT_TINT,
+  type InkAssetKind,
+  type InkTint,
+} from "@uwe/atlas-3d/assets-ink";
 import { summarizeCarveOps, type CarveOpSummary } from "@uwe/atlas-3d/carve-tools";
 import { TERRAIN_STAMPS, type TerrainStampKind } from "@uwe/atlas-3d/stamps";
 import {
@@ -441,7 +448,7 @@ export function Atlas3DEditorShell(props: Atlas3DEditorShellProps) {
       {tool === "asset" || tool === "scatter" ? (
         <div className="atlas3d-biomes" role="group" aria-label="Asset und Farbe wählen" data-testid="atlas3d-asset-panel">
           {INK_ASSET_GROUPS.map((group) => {
-            const kinds = group.kinds.filter((kind) => kind !== "asteroid" || props.mode === "globe");
+            const kinds = group.kinds.filter((kind) => !GLOBE_ONLY_ASSET_KINDS.includes(kind) || props.mode === "globe");
             if (kinds.length === 0) return null;
             return (
               <span key={group.key} className="atlas3d-asset-group" data-testid={`atlas3d-asset-group-${group.key}`}>
