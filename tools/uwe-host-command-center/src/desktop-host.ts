@@ -11,7 +11,7 @@ import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
  * so `applyDesktopHostUpdate` can size the combined update progress bar (stop →
  * sync → setup steps → start) without importing the step list itself.
  */
-export const HOST_SETUP_STEP_COUNT = 7;
+export const HOST_SETUP_STEP_COUNT = 8;
 
 type ServiceState = "online" | "starting" | "stopped" | "error";
 
@@ -197,6 +197,9 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     "BRAIN_PATH=/life-brain",
     "BRAIN_EXPOSURE=loopback",
     `DATABASE_URL=file:${toPosixPath(paths.database)}`,
+    // Owner-private Brain DB lives next to uwe.db so both are found deterministically
+    // (the Next standalone build can't reliably resolve brain-client's relative default).
+    `BRAIN_DATABASE_URL=file:${toPosixPath(path.join(paths.data, "uwe-brain.db"))}`,
     `UWE_DATA_DIR=${toPosixPath(paths.data)}`,
     `UWE_UPLOADS_DIR=${toPosixPath(paths.uploads)}`,
     `UWE_BACKUP_DIR=${toPosixPath(paths.backups)}`,
@@ -584,6 +587,7 @@ export async function setupHost(
     { phase: "install", label: "Abhängigkeiten installieren", run: () => runWorkspaceCommand(paths, "Abhängigkeiten", ["install", "--frozen-lockfile"]) },
     { phase: "prisma", label: "Prisma-Client generieren", run: () => runWorkspaceCommand(paths, "Prisma Client", ["--filter", "@uwe/database", "db:generate"]) },
     { phase: "migrate", label: "Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Datenbankmigration", ["--filter", "@uwe/database", "db:deploy"]) },
+    { phase: "migrate-brain", label: "Brain-Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Brain-Datenbankmigration", ["--filter", "@uwe/database", "db:deploy:brain"]) },
     {
       phase: "seed",
       label: "Demo-Grundbestand einspielen",
