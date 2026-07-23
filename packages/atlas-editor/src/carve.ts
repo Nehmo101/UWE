@@ -23,6 +23,8 @@ export interface CarveOpBase {
   cutMaterial?: string;
   /** Painted content on the exposed inner surface. */
   paint?: CarvePaintLayer[];
+  /** Non-destructive stack: disabled ops stay stored but are not applied. */
+  disabled?: boolean;
 }
 
 export interface CarveBite extends CarveOpBase {
@@ -118,6 +120,7 @@ export function parseCarveOps(value: unknown): CarveOp[] {
       id: op.id,
       cutMaterial: typeof op.cutMaterial === "string" ? op.cutMaterial : undefined,
       paint: parsePaint(op.paint),
+      ...(op.disabled === true ? { disabled: true } : {}),
     };
     switch (op.kind) {
       case "bite":
@@ -152,16 +155,17 @@ export function serializeCarveOps(ops: readonly CarveOp[]): string {
   return JSON.stringify(
     ops.map((op) => {
       const paint = op.paint?.map((p) => ({ hue: p.hue, center: p.center, radius: p.radius }));
+      const base = { cutMaterial: op.cutMaterial ?? null, paint: paint ?? null, disabled: op.disabled ?? null };
       switch (op.kind) {
         case "bite":
         case "cave":
-          return { id: op.id, kind: op.kind, center: op.center, radius: op.radius, cutMaterial: op.cutMaterial ?? null, paint: paint ?? null };
+          return { id: op.id, kind: op.kind, center: op.center, radius: op.radius, ...base };
         case "tunnel":
-          return { id: op.id, kind: op.kind, from: op.from, to: op.to, radius: op.radius, cutMaterial: op.cutMaterial ?? null, paint: paint ?? null };
+          return { id: op.id, kind: op.kind, from: op.from, to: op.to, radius: op.radius, ...base };
         case "wedge":
-          return { id: op.id, kind: op.kind, angleStart: op.angleStart, angleEnd: op.angleEnd, cutMaterial: op.cutMaterial ?? null, paint: paint ?? null };
+          return { id: op.id, kind: op.kind, angleStart: op.angleStart, angleEnd: op.angleEnd, ...base };
         case "split":
-          return { id: op.id, kind: op.kind, normal: op.normal, gap: op.gap, roots: op.roots ?? null, cutMaterial: op.cutMaterial ?? null, paint: paint ?? null };
+          return { id: op.id, kind: op.kind, normal: op.normal, gap: op.gap, roots: op.roots ?? null, ...base };
       }
     }),
   );
@@ -219,6 +223,7 @@ export function carveOpDistance(op: CarveOp, p: Vec3): number {
 export function applyCarveOps(baseDistance: number, p: Vec3, ops: readonly CarveOp[]): number {
   let d = baseDistance;
   for (const op of ops) {
+    if (op.disabled) continue;
     d = Math.max(d, -carveOpDistance(op, p));
   }
   return d;
@@ -229,6 +234,7 @@ export function dominantCarveOp(p: Vec3, ops: readonly CarveOp[]): number {
   let best = -1;
   let bestDepth = 0;
   for (let i = 0; i < ops.length; i++) {
+    if (ops[i].disabled) continue;
     const d = carveOpDistance(ops[i], p);
     if (d < bestDepth) {
       bestDepth = d;
