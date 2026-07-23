@@ -1,9 +1,14 @@
-import Link from "next/link";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getCurrentUser } from "@/src/lib/auth";
 import { isBrainOwner } from "@/src/lib/owner";
-import { BrainNav } from "@/src/components/BrainNav";
+import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
+import {
+  createBrainDocumentAction,
+  createBrainFactAction,
+  deleteBrainDocumentAction,
+  deleteBrainFactAction,
+} from "../brain-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,24 +22,16 @@ function formatDate(value: Date): string {
 }
 
 /**
- * Pilot-migrated Brain surface: the personal knowledge base, served from the
- * owner-only Brain origin (:3002) and read through the shared @uwe/database
- * services. Owner-gated; private content never leaves the host / the Cloud.
+ * Personal knowledge base — owner-only, read AND write. Facts + documents are
+ * stored in the owner-private brain DB and never leave the host.
  */
 export default async function BrainLifeBrainPage() {
   const user = await getCurrentUser();
   if (!user || !isBrainOwner(user.role)) {
     return (
-      <main className="page">
-        <div className="card">
-          <span className="eyebrow">Owner-only · lokal</span>
-          <h1>Persönliches Brain</h1>
-          <p>Dieser Bereich ist ausschließlich für den System-Owner.</p>
-          <div className="footer">
-            <Link href="/">← Zurück</Link>
-          </div>
-        </div>
-      </main>
+      <BrainShell active="/life-brain" title="Persönliches Brain">
+        <BrainDenied />
+      </BrainShell>
     );
   }
 
@@ -45,56 +42,118 @@ export default async function BrainLifeBrainPage() {
   ]);
 
   return (
-    <main className="page">
-      <div className="card" style={{ maxWidth: "56rem" }}>
-        <BrainNav active="/life-brain" />
-        <span className="eyebrow">Owner-only · lokal · nie in der Cloud</span>
-        <h1>Persönliches Brain</h1>
-        <p>
-          {documents.length} Dokument(e) · {facts.length} Fakt(en) — lokal auf deiner Hardware,
-          niemals an Cloud-KI. Läuft auf dem eigenen Brain-Origin (Port 3002).
-        </p>
+    <BrainShell
+      active="/life-brain"
+      title="Persönliches Wissen"
+      lede={`${documents.length} Dokument(e) · ${facts.length} Fakt(en) — anlegen, festhalten, wiederfinden. Lokal auf deiner Hardware, niemals an Cloud-KI.`}
+    >
+      <div style={{ display: "grid", gap: "0.85rem", gridTemplateColumns: "repeat(auto-fit, minmax(19rem, 1fr))" }}>
+        <section className="brain-section">
+          <h2>Neuer Fakt</h2>
+          <form action={createBrainFactAction} className="brain-form brain-card">
+            <label>
+              Titel
+              <input name="title" required placeholder="z. B. WLAN-Passwort Gäste" />
+            </label>
+            <label>
+              Typ
+              <input name="factType" defaultValue="custom" placeholder="custom, regel, kontakt …" />
+            </label>
+            <label>
+              Inhalt
+              <textarea name="content" rows={3} />
+            </label>
+            <label>
+              Tags (kommagetrennt)
+              <input name="tags" placeholder="netzwerk, zuhause" />
+            </label>
+            <div>
+              <button type="submit" className="brain-btn">
+                Fakt speichern
+              </button>
+            </div>
+          </form>
+        </section>
 
-        <section style={{ marginTop: "1.25rem" }}>
-          <h2 style={{ fontSize: "1.05rem", margin: "0 0 0.5rem" }}>Dokumente</h2>
-          {documents.length === 0 ? (
-            <p>Noch keine persönlichen Dokumente.</p>
-          ) : (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: "0.6rem" }}>
-              {documents.map((doc) => (
-                <li key={doc.id} className="brain-row">
+        <section className="brain-section">
+          <h2>Neues Dokument</h2>
+          <form action={createBrainDocumentAction} className="brain-form brain-card">
+            <label>
+              Titel
+              <input name="title" required placeholder="z. B. Umzugs-Checkliste" />
+            </label>
+            <label>
+              Kategorie
+              <input name="category" placeholder="guide, checkliste, referenz …" />
+            </label>
+            <label>
+              Inhalt
+              <textarea name="content" rows={3} />
+            </label>
+            <label>
+              Tags (kommagetrennt)
+              <input name="tags" placeholder="planung, 2026" />
+            </label>
+            <div>
+              <button type="submit" className="brain-btn">
+                Dokument speichern
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <section className="brain-section">
+        <h2>Dokumente · {documents.length}</h2>
+        {documents.length === 0 ? (
+          <p className="brain-muted">Noch keine persönlichen Dokumente.</p>
+        ) : (
+          <ul className="brain-list">
+            {documents.map((doc) => (
+              <li key={doc.id} className="brain-row">
+                <div className="brain-row-head">
                   <strong>{doc.title}</strong>
                   {doc.category ? <span className="brain-tag">{doc.category}</span> : null}
-                  <span className="brain-muted"> · {formatDate(doc.updatedAt)}</span>
-                  <p style={{ margin: "0.35rem 0 0" }}>{snippet(doc.content)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                  <span className="brain-muted">{formatDate(doc.updatedAt)}</span>
+                  <form action={deleteBrainDocumentAction} style={{ marginLeft: "auto" }}>
+                    <input type="hidden" name="id" value={doc.id} />
+                    <button type="submit" className="brain-btn brain-btn-ghost brain-btn-sm">
+                      Löschen
+                    </button>
+                  </form>
+                </div>
+                {doc.content ? <p style={{ margin: "0.35rem 0 0" }}>{snippet(doc.content)}</p> : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-        <section style={{ marginTop: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.05rem", margin: "0 0 0.5rem" }}>Fakten</h2>
-          {facts.length === 0 ? (
-            <p>Noch keine persönlichen Fakten.</p>
-          ) : (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: "0.6rem" }}>
-              {facts.map((fact) => (
-                <li key={fact.id} className="brain-row">
+      <section className="brain-section">
+        <h2>Fakten · {facts.length}</h2>
+        {facts.length === 0 ? (
+          <p className="brain-muted">Noch keine persönlichen Fakten.</p>
+        ) : (
+          <ul className="brain-list">
+            {facts.map((fact) => (
+              <li key={fact.id} className="brain-row">
+                <div className="brain-row-head">
                   <strong>{fact.title}</strong>
                   <span className="brain-tag">{fact.factType}</span>
-                  <span className="brain-muted"> · {formatDate(fact.updatedAt)}</span>
-                  <p style={{ margin: "0.35rem 0 0" }}>{snippet(fact.content)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <div className="footer">
-          <Link href="/">← Brain-Start</Link>
-        </div>
-      </div>
-    </main>
+                  <span className="brain-muted">{formatDate(fact.updatedAt)}</span>
+                  <form action={deleteBrainFactAction} style={{ marginLeft: "auto" }}>
+                    <input type="hidden" name="id" value={fact.id} />
+                    <button type="submit" className="brain-btn brain-btn-ghost brain-btn-sm">
+                      Löschen
+                    </button>
+                  </form>
+                </div>
+                {fact.content ? <p style={{ margin: "0.35rem 0 0" }}>{snippet(fact.content)}</p> : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </BrainShell>
   );
 }

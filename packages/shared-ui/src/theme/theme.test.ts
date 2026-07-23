@@ -21,6 +21,7 @@ describe("uwe theme system", () => {
       "uwe-parchment-study",
       "uwe-parchment-os",
       "uwe-parchment-teal",
+      "uwe-parchment-brain",
       "uwe-phosphor-console",
       "terra",
       "hells",

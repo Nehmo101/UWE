@@ -1,7 +1,7 @@
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
-import { BrainNav } from "@/src/components/BrainNav";
+import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +13,9 @@ export default async function BrainTodayPage() {
   const owner = await getBrainOwner();
   if (!owner) {
     return (
-      <main className="page">
-        <div className="card">
-          <BrainNav active="/today" />
-          <h1>Heute</h1>
-          <p>Dieser Bereich ist ausschließlich für den System-Owner.</p>
-        </div>
-      </main>
+      <BrainShell active="/today" title="Heute">
+        <BrainDenied />
+      </BrainShell>
     );
   }
 
@@ -36,39 +32,40 @@ export default async function BrainTodayPage() {
   ];
 
   return (
-    <main className="page">
-      <div className="card" style={{ maxWidth: "56rem" }}>
-        <BrainNav active="/today" />
-        <span className="eyebrow">Owner-only · lokal · nie in der Cloud</span>
-        <h1>Heute</h1>
-        <p>Dein Daily Admin OS — Überblick, lokal auf deiner Hardware.</p>
+    <BrainShell
+      active="/today"
+      title="Heute"
+      lede="Dein Daily Admin OS — Überblick auf einen Blick, lokal auf deiner Hardware."
+    >
+      <div className="brain-kpis">
+        {kpis.map((k) => (
+          <div className="brain-kpi" key={k.label}>
+            <strong>{k.n}</strong>
+            <span>{k.label}</span>
+          </div>
+        ))}
+      </div>
 
-        <div className="brain-kpis">
-          {kpis.map((k) => (
-            <div className="brain-kpi" key={k.label}>
-              <strong>{k.n}</strong>
-              <span>{k.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <section style={{ marginTop: "1rem" }}>
-          <h2 style={{ fontSize: "1.05rem", margin: "0 0 0.5rem" }}>Zuletzt erfasst</h2>
-          {summary.recentCaptures.length === 0 ? (
-            <p>Nichts in der Capture-Inbox.</p>
-          ) : (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: "0.6rem" }}>
-              {summary.recentCaptures.map((capture) => (
-                <li key={capture.id} className="brain-row">
+      <section className="brain-section">
+        <h2>Zuletzt erfasst</h2>
+        {summary.recentCaptures.length === 0 ? (
+          <p className="brain-muted">Nichts in der Capture-Inbox.</p>
+        ) : (
+          <ul className="brain-list">
+            {summary.recentCaptures.map((capture) => (
+              <li key={capture.id} className="brain-row">
+                <div className="brain-row-head">
                   <strong>{capture.title}</strong>
                   <span className="brain-tag">{capture.captureType}</span>
-                  <span className="brain-muted"> · {capture.status} · {formatDate(capture.capturedAt)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-    </main>
+                  <span className="brain-muted">
+                    {capture.status} · {formatDate(capture.capturedAt)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </BrainShell>
   );
 }

@@ -1,29 +1,62 @@
 import Link from "next/link";
 
-const LINKS = [
-  { href: "/", label: "Start" },
-  { href: "/today", label: "Heute" },
-  { href: "/life-brain", label: "Wissen" },
-  { href: "/capture", label: "Capture" },
-  { href: "/projects", label: "Projekte" },
-  { href: "/workshop", label: "Werkstatt" },
-  { href: "/contracts", label: "Verträge" },
-  { href: "/hardware", label: "Hardware" },
-  { href: "/mail", label: "Mail" },
-  { href: "/calendar", label: "Kalender" },
-  { href: "/miniatures", label: "Miniaturen" },
-  { href: "/documents", label: "Dokumente" },
-] as const;
+type NavLink = { href: string; label: string; icon: string };
+type NavSection = { title: string; links: NavLink[] };
 
-/** Shared top navigation across the owner-only Brain surfaces. */
+const SECTIONS: NavSection[] = [
+  {
+    title: "Überblick",
+    links: [
+      { href: "/", label: "Start", icon: "◆" },
+      { href: "/today", label: "Heute", icon: "☀" },
+      { href: "/life-brain", label: "Wissen", icon: "✦" },
+      { href: "/capture", label: "Capture", icon: "✎" },
+    ],
+  },
+  {
+    title: "Machen",
+    links: [
+      { href: "/projects", label: "Projekte", icon: "▤" },
+      { href: "/workshop", label: "Werkstatt", icon: "⚒" },
+      { href: "/miniatures", label: "Miniaturen", icon: "♟" },
+    ],
+  },
+  {
+    title: "Verwaltung",
+    links: [
+      { href: "/contracts", label: "Verträge", icon: "€" },
+      { href: "/hardware", label: "Hardware", icon: "▣" },
+      { href: "/documents", label: "Dokumente", icon: "▦" },
+      { href: "/mail", label: "Mail", icon: "✉" },
+      { href: "/calendar", label: "Kalender", icon: "◷" },
+    ],
+  },
+];
+
+/** Sidebar navigation for the owner-only Brain surfaces. */
 export function BrainNav({ active }: { active?: string }) {
   return (
-    <nav className="brain-nav" aria-label="Brain">
-      {LINKS.map((link) => (
-        <Link key={link.href} href={link.href} aria-current={active === link.href ? "page" : undefined}>
-          {link.label}
-        </Link>
+    <>
+      {SECTIONS.map((section) => (
+        <div key={section.title} className="uwe-sidebar-section">
+          <h3>{section.title}</h3>
+          <nav className="uwe-sidebar-nav" aria-label={section.title}>
+            {section.links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={active === link.href ? "active" : undefined}
+                aria-current={active === link.href ? "page" : undefined}
+              >
+                <span className="nav-ico" aria-hidden>
+                  {link.icon}
+                </span>
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
       ))}
-    </nav>
+    </>
   );
 }

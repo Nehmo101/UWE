@@ -13,6 +13,7 @@ export type ThemeId =
   | "uwe-parchment-study"
   | "uwe-parchment-os"
   | "uwe-parchment-teal"
+  | "uwe-parchment-brain"
   | "uwe-phosphor-console"
   | "terra"
   | "hells";
@@ -262,6 +263,43 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
       dmOnly: "#c2622b",
       playerVisible: "#2f6f63",
       shellGradientStart: "rgba(47, 111, 99, 0.03)",
+      shellGradientMid: "rgba(241, 232, 212, 0.05)",
+      shellGradientEnd: "#f1e8d4",
+      sidebarBg: "#211d17",
+      sidebarFg: "#f1e8d4",
+      sidebarFgMuted: "#b6ab92",
+      cardBg: "#fbf6ea",
+    },
+    defaults: { font: "mono", background: "none", frostedGlass: false },
+  },
+  "uwe-parchment-brain": {
+    id: "uwe-parchment-brain",
+    label: "Parchment Brain",
+    description:
+      "Warmes Papier-Studio mit Tinte-Sidebar und Pflaumen-Akzent — owner-privates Brain-Design.",
+    colors: {
+      bg: "#f1e8d4",
+      bgElevated: "#fbf6ea",
+      surface: "rgba(251, 246, 234, 0.95)",
+      panel: "#ece1c9",
+      border: "#e0d4ba",
+      borderMuted: "rgba(224, 212, 186, 0.7)",
+      fg: "#211d17",
+      fgMuted: "#574e40",
+      fgSubtle: "#665d4f",
+      accent: "#5c5470",
+      accentHover: "#6f6690",
+      accentMuted: "rgba(92, 84, 112, 0.16)",
+      link: "#5c5470",
+      danger: "#c2622b",
+      warning: "#e0b15a",
+      success: "#2f6f63",
+      info: "#5c5470",
+      wikiLink: "#5c5470",
+      wikiLinkHover: "#6f6690",
+      dmOnly: "#c2622b",
+      playerVisible: "#2f6f63",
+      shellGradientStart: "rgba(92, 84, 112, 0.03)",
       shellGradientMid: "rgba(241, 232, 212, 0.05)",
       shellGradientEnd: "#f1e8d4",
       sidebarBg: "#211d17",

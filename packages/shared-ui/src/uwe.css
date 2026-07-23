@@ -1256,14 +1256,14 @@ html[data-theme="light"] {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Parchment chrome overrides — shared by Parchment OS + Parchment Teal
-   Selector: html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"])
+   Parchment chrome overrides — shared by Parchment OS + Parchment Teal + Parchment Brain
+   Selector: html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"])
    Structural values (parchment surfaces, ink sidebar, serif headings) are
-   identical for both themes; every accent-colored spot reads var(--uwe-accent)
-   so the terracotta (OS) vs. teal (Teal) identity flows purely from the palette.
+   identical for all three themes; every accent-colored spot reads var(--uwe-accent)
+   so the terracotta (OS) vs. teal (Teal) vs. plum (Brain) identity flows purely from the palette.
    ═══════════════════════════════════════════════════════════ */
 
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) {
   color-scheme: light;
   /* Space Mono drives all UI chrome; Newsreader handles display headings. */
   --uwe-font-family: var(--uwe-font-space-mono, ui-monospace, "Cascadia Code", monospace);
@@ -1274,12 +1274,12 @@ html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal
   --uwe-card: rgba(251, 246, 234, 0.95);
 }
 
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) body {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) body {
   font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
 }
 
 /* Shell — flat parchment background, no gradient */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-shell {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-shell {
   background: #f1e8d4;
   font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
 }
@@ -1288,7 +1288,7 @@ html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal
    Die fixe Höhe MUSS um --uwe-safe-top mitwachsen, sonst quetscht das
    Safe-Area-Padding den Inhalt unter die Handy-Statusleiste (Menübutton
    im PWA-/Fullscreen-Modus nicht mehr drückbar). */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-topbar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-topbar {
   height: calc(54px + var(--uwe-safe-top));
   min-height: calc(54px + var(--uwe-safe-top));
   padding-top: calc(0.45rem + var(--uwe-safe-top));
@@ -1299,14 +1299,14 @@ html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal
   -webkit-backdrop-filter: none;
 }
 
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) body.uwe-theme-frosted .uwe-topbar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) body.uwe-theme-frosted .uwe-topbar {
   background: #e9dfca;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 /* Sidebar — dark ink panel */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-sidebar {
   background: #211d17;
   border-right: none;
   scrollbar-color: #3b342a transparent;
@@ -1318,58 +1318,58 @@ html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal
   --uwe-link: var(--uwe-sidebar-fg);
 }
 
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) body.uwe-theme-frosted .uwe-sidebar {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) body.uwe-theme-frosted .uwe-sidebar {
   background: #211d17;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 /* Sidebar brand text */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar .uwe-brand strong {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-sidebar .uwe-brand strong {
   color: #f1e8d4;
 }
 
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar .uwe-brand small {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-sidebar .uwe-brand small {
   color: #b6ab92;
 }
 
 /* Sidebar section group headers — sidebar-fg-muted adapts per context: light on
    the dark nav sidebar, dark where .uwe-v2-context resets it for light panels. */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar-section h3,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar h3 {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-sidebar-section h3,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-sidebar h3 {
   color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-subtle));
 }
 
 /* Sidebar nav — active */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar-nav a.active {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-sidebar-nav a.active {
   color: #f1e8d4;
   background: #2c261d;
   border-left-color: var(--uwe-accent);
 }
 
 /* Nav badge inside sidebar */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-sidebar .uwe-nav-badge {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-sidebar .uwe-nav-badge {
   background: #3b342a;
   color: #9a8f78;
 }
 
 /* Main content area */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-main {
   background: #f1e8d4;
 }
 
 /* Headings in main use Newsreader serif */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main h1,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main h2,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-main h3,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-page-title,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-entity-title {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-main h1,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-main h2,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-main h3,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-page-title,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-entity-title {
   font-family: var(--uwe-font-newsreader, Georgia, serif);
   font-weight: 600;
 }
 
 /* Context / right panel — matches main parchment */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-context {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-context {
   background: #f1e8d4;
   border-left-color: #e0d4ba;
 }
@@ -1379,10 +1379,10 @@ html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal
    ─────────────────────────────────────────────────────────── */
 
 /* Display headings use Newsreader everywhere, not just .uwe-main */
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) h1,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) h2,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-card-title,
-html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"]) .uwe-section-title {
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) h1,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) h2,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-card-title,
+html:is([data-uwe-theme="uwe-parchment-os"], [data-uwe-theme="uwe-parchment-teal"], [data-uwe-theme="uwe-parchment-brain"]) .uwe-section-title {
   font-family: var(--uwe-font-newsreader, Georgia, serif);
 }
 
