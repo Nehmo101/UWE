@@ -18,7 +18,21 @@ export interface InkAssetData {
   outlineWidth: number;
 }
 
-export const INK_ASSET_KINDS = ["worldroot", "tree", "house", "tower", "asteroid"] as const;
+export const INK_ASSET_KINDS = [
+  "worldroot",
+  "tree",
+  "house",
+  "tower",
+  "asteroid",
+  "fels",
+  "busch",
+  "bruecke",
+  "muehle",
+  "hafen",
+  "portal",
+  "obelisk",
+  "mond",
+] as const;
 export type InkAssetKind = (typeof INK_ASSET_KINDS)[number];
 
 export const INK_ASSET_LABELS: Record<InkAssetKind, string> = {
@@ -27,6 +41,14 @@ export const INK_ASSET_LABELS: Record<InkAssetKind, string> = {
   house: "Haus",
   tower: "Turm",
   asteroid: "Asteroid",
+  fels: "Fels",
+  busch: "Busch",
+  bruecke: "Brücke",
+  muehle: "Mühle",
+  hafen: "Hafen",
+  portal: "Portal",
+  obelisk: "Obelisk",
+  mond: "Mond",
 };
 
 export interface InkAssetGroup {
@@ -37,11 +59,14 @@ export interface InkAssetGroup {
 
 /** Asset palette groups for the editor panel — every kind appears exactly once. */
 export const INK_ASSET_GROUPS: InkAssetGroup[] = [
-  { key: "natur", label: "Natur", kinds: ["tree"] },
-  { key: "siedlung", label: "Siedlung", kinds: ["house", "tower"] },
-  { key: "weltenbau", label: "Weltenbau", kinds: ["worldroot"] },
-  { key: "himmel", label: "Himmel", kinds: ["asteroid"] },
+  { key: "natur", label: "Natur", kinds: ["tree", "fels", "busch"] },
+  { key: "siedlung", label: "Siedlung", kinds: ["house", "tower", "bruecke", "muehle", "hafen"] },
+  { key: "weltenbau", label: "Weltenbau", kinds: ["worldroot", "portal", "obelisk"] },
+  { key: "himmel", label: "Himmel", kinds: ["asteroid", "mond"] },
 ];
+
+/** Kinds that live on an orbit around the globe — only placeable in globe mode. */
+export const GLOBE_ONLY_ASSET_KINDS: readonly InkAssetKind[] = ["asteroid", "mond"];
 
 export type InkTint = "paper" | "sepia" | "terra" | "teal" | "blue";
 
@@ -62,11 +87,12 @@ export function isInkTint(value: unknown): value is InkTint {
   return typeof value === "string" && value in TINT_SHADES;
 }
 
-type Vec = readonly [number, number, number];
-type Rgb = readonly [number, number, number];
-type AnimFn = ((p: Vec) => readonly [number, number, number, number]) | null;
+export type Vec = readonly [number, number, number];
+export type Rgb = readonly [number, number, number];
+export type AnimFn = ((p: Vec) => readonly [number, number, number, number]) | null;
 
-function hex(hexColor: string): Rgb {
+/** Internal builder toolkit — shared with assets-ink-batch2 (kept out of the app API). */
+export function hex(hexColor: string): Rgb {
   return [
     parseInt(hexColor.slice(1, 3), 16) / 255,
     parseInt(hexColor.slice(3, 5), 16) / 255,
