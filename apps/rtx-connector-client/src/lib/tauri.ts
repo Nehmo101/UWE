@@ -180,7 +180,7 @@ export async function backupHost(root?: string) {
 
 export async function getHostLogs(
   root?: string,
-  target: "studio" | "portal" | "command-center" = "command-center",
+  target: "studio" | "portal" | "brain" | "command-center" = "command-center",
 ) {
   return invokeCommand<import("./tauri-types").LocalHostLogsResult>("get_host_logs", {
     root,
@@ -188,7 +188,7 @@ export async function getHostLogs(
   });
 }
 
-export async function openHostTarget(root: string | undefined, target: "studio" | "portal") {
+export async function openHostTarget(root: string | undefined, target: "studio" | "portal" | "brain") {
   return invokeCommand<{ ok: boolean; message: string }>("open_host_target", { root, target });
 }
 

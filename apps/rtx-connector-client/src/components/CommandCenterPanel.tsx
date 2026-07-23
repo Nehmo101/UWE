@@ -319,6 +319,9 @@ export function CommandCenterPanel({
   }
 
   const hostOnline = status?.services.every((service) => service.healthy) ?? false;
+  // Any service not fully stopped — used to keep "Alles stoppen" enabled even when
+  // only some services are up (a partially-running host must still be stoppable).
+  const hostAnyRunning = status?.services.some((service) => service.state !== "stopped") ?? false;
   const connectorConfigured = Boolean(config.hostUrl && config.token);
   const installChecks = status ? [
     ["Repository", status.installation.repoReady],
@@ -386,7 +389,7 @@ export function CommandCenterPanel({
 
       <div className="command-center-primary-actions">
         <Button variant="primary" onClick={startEverything} disabled={busy !== null || hostOnline}>Alles starten</Button>
-        <Button variant="secondary" onClick={stopEverything} disabled={busy !== null || (!hostOnline && connectorStatus.status !== "running")}>Alles stoppen</Button>
+        <Button variant="secondary" onClick={stopEverything} disabled={busy !== null || (!hostAnyRunning && connectorStatus.status !== "running")}>Alles stoppen</Button>
         <Button variant="accent" onClick={() => runAction("setup")} disabled={busy !== null}>{status?.installation.buildReady ? "Reparieren / neu bauen" : "UWE einrichten"}</Button>
         <Button
           variant={updateInfo?.updateAvailable ? "primary" : "secondary"}
@@ -525,8 +528,8 @@ export function CommandCenterPanel({
         <CardHeader><CardTitle>Host-Logs</CardTitle></CardHeader>
         <CardContent>
           <div className="connector-actions">
-            {(["command-center", "studio", "portal"] as const).map((target) => (
-              <Button key={target} variant={logTarget === target ? "secondary" : "ghost"} onClick={() => loadLogs(target)}>{target === "command-center" ? "Einrichtung" : target === "studio" ? "Studio" : "Portal"}</Button>
+            {(["command-center", "studio", "portal", "brain"] as const).map((target) => (
+              <Button key={target} variant={logTarget === target ? "secondary" : "ghost"} onClick={() => loadLogs(target)}>{target === "command-center" ? "Einrichtung" : target === "studio" ? "Studio" : target === "portal" ? "Portal" : "Brain"}</Button>
             ))}
           </div>
           <pre className="connector-log-output">{logs.length ? logs.join("\n") : "Noch keine Logzeilen geladen."}</pre>

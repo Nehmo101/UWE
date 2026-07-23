@@ -313,7 +313,13 @@ export default function App() {
       await writeConfig(parseConnectorClientConfig(config));
       const nextRuntimeStatus = await startConnector();
       setRuntimeStatus(nextRuntimeStatus);
-      setNotice("Connector-Core gestartet.");
+      // start_connector returns Ok with the failure in `status`/`message` — only
+      // report success when the process is actually running.
+      if (nextRuntimeStatus.status === "running") {
+        setNotice("Connector-Core gestartet.");
+      } else {
+        setError(nextRuntimeStatus.message ?? "Connector konnte nicht gestartet werden.");
+      }
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {

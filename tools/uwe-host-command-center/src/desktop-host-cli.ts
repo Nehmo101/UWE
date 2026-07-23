@@ -61,7 +61,7 @@ async function main(): Promise<void> {
         openTarget(root, target);
         result = {
           ok: true,
-          message: `${target === "portal" ? "Portal" : "Studio"} wurde geöffnet.`,
+          message: `${target === "portal" ? "Portal" : target === "brain" ? "Brain" : "Studio"} wurde geöffnet.`,
         };
         break;
       case "check-update":

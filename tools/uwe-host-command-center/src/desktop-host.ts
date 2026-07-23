@@ -677,7 +677,7 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
   const readiness = await Promise.all(definitions.map((service) => waitForHealth(`http://127.0.0.1:${service.port}`)));
   const status = await collectDesktopHostStatus(root);
   const ok = readiness.every(Boolean);
-  return { ok, message: ok ? "Studio und Portal laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
+  return { ok, message: ok ? "Studio, Portal und Brain laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
 }
 
 function stopProcess(pid: number): void {
@@ -699,7 +699,7 @@ export async function stopHost(rootInput?: string): Promise<DesktopHostActionRes
     fs.rmSync(file, { force: true });
   }
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { ok: true, message: "Studio und Portal wurden gestoppt.", status: await collectDesktopHostStatus(root) };
+  return { ok: true, message: "Studio, Portal und Brain wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
 export async function backupHost(rootInput?: string): Promise<DesktopHostActionResult> {
@@ -713,7 +713,8 @@ export async function backupHost(rootInput?: string): Promise<DesktopHostActionR
 
 export function readLogs(rootInput: string | undefined, target: string | undefined): { target: string; lines: string[] } {
   const paths = pathsFor(resolveDesktopHostRoot(rootInput));
-  const safeTarget = target === "studio" || target === "portal" ? target : "command-center";
+  const safeTarget =
+    target === "studio" || target === "portal" || target === "brain" ? target : "command-center";
   const file = path.join(paths.logs, `${safeTarget}.log`);
   if (!fs.existsSync(file)) return { target: safeTarget, lines: [] };
   return { target: safeTarget, lines: readLogTail(file, 200) };
@@ -724,7 +725,9 @@ export function desktopHostTargetUrl(rootInput: string | undefined, target: stri
   const env = readEnvFile(paths.envFile);
   const port = target === "portal"
     ? parseServicePort(env.PORTAL_PORT, 3001)
-    : parseServicePort(env.STUDIO_PORT, 3000);
+    : target === "brain"
+      ? parseServicePort(env.BRAIN_PORT, 3102)
+      : parseServicePort(env.STUDIO_PORT, 3000);
   return `http://127.0.0.1:${port}`;
 }
 

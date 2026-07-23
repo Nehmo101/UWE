@@ -39,7 +39,10 @@ export function UsersPanel() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<CommandCenterUserRole>("owner");
+  // Default to the least-privileged role so a user added without touching the
+  // dropdown never silently becomes an owner. When no owner exists yet, the
+  // create form pre-selects owner (see refresh) to smooth first-run setup.
+  const [role, setRole] = useState<CommandCenterUserRole>("player");
 
   const [pwUserId, setPwUserId] = useState<string | null>(null);
   const [pwValue, setPwValue] = useState("");
@@ -49,7 +52,10 @@ export function UsersPanel() {
     try {
       const result = await listUsers();
       if (!result.ok) throw new Error(result.message ?? "Benutzer konnten nicht geladen werden.");
-      setUsers(result.users ?? []);
+      const nextUsers = result.users ?? [];
+      setUsers(nextUsers);
+      // First-run convenience: if there is no owner yet, pre-select the owner role.
+      if (!nextUsers.some((user) => user.role === "owner")) setRole("owner");
     } catch (nextError) {
       setError(toMessage(nextError));
     }
@@ -98,6 +104,7 @@ export function UsersPanel() {
   }
 
   async function removeUser(user: CommandCenterUser) {
+    if (!window.confirm(`„${user.displayName}" (${user.email ?? "ohne E-Mail"}) endgültig löschen?`)) return;
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -192,7 +199,7 @@ export function UsersPanel() {
                     <Button variant="ghost" onClick={() => { setPwUserId(pwUserId === user.id ? null : user.id); setPwValue(""); }} disabled={busy}>
                       Passwort ändern
                     </Button>
-                    <Button variant="secondary" onClick={() => removeUser(user)} disabled={busy}>
+                    <Button variant="destructive" onClick={() => removeUser(user)} disabled={busy}>
                       Löschen
                     </Button>
                   </div>

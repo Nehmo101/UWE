@@ -105,6 +105,13 @@ async function main(): Promise<void> {
       case "delete": {
         const id = process.argv[3];
         if (!id) throw new Error("Benutzer-ID ist erforderlich.");
+        const target = await db.user.findUnique({ where: { id }, select: { role: true } });
+        if (!target) throw new Error("Benutzer nicht gefunden.");
+        // Never leave the deployment without an owner.
+        if (target.role === "owner") {
+          const owners = await db.user.count({ where: { role: "owner" } });
+          if (owners <= 1) throw new Error("Der letzte Owner kann nicht gelöscht werden.");
+        }
         // Clear login sessions first, then the user (sessions FK-reference the user).
         await db.session.deleteMany({ where: { userId: id } });
         await db.user.delete({ where: { id } });

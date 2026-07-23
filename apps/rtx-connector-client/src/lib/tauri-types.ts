@@ -205,7 +205,7 @@ export interface ConnectorPrinterStore {
 }
 
 export interface LocalHostService {
-  id: "studio" | "portal";
+  id: "studio" | "portal" | "brain";
   label: string;
   state: "online" | "starting" | "stopped" | "error";
   healthy: boolean;
@@ -275,6 +275,6 @@ export interface LocalHostUpdateInfo {
 }
 
 export interface LocalHostLogsResult {
-  target: "studio" | "portal" | "command-center";
+  target: "studio" | "portal" | "brain" | "command-center";
   lines: string[];
 }
