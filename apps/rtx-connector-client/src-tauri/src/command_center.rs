@@ -1,5 +1,5 @@
 use std::{
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
     process::{Command, Stdio},
 };
@@ -258,4 +258,112 @@ pub async fn check_host_update(root: Option<String>) -> Result<Value, String> {
 #[tauri::command]
 pub async fn update_host(app: tauri::AppHandle, root: Option<String>) -> Result<Value, String> {
     run_host_command_streaming_async(app, "update", root, None).await
+}
+
+// ── User / owner administration ────────────────────────────────────────────
+// The Command Center provisions the owner and all other users directly (no
+// Studio web UI needed) via user-admin-cli.ts. Passwords are passed on the
+// child's stdin, never as process arguments.
+
+const USER_ADMIN_CLI_REL: &str = "tools/uwe-host-command-center/src/user-admin-cli.ts";
+
+fn build_user_admin_command(action: &str, extra_args: &[&str]) -> Result<Command, String> {
+    let root = resolve_monorepo_root();
+    let script = root.join(USER_ADMIN_CLI_REL);
+    if !script.exists() {
+        return Err(format!(
+            "Benutzerverwaltung nicht gefunden: {}. Bitte einen aktuellen UWE-Projektordner auswählen.",
+            script.display()
+        ));
+    }
+    let mut command = Command::new("node");
+    configure_hidden_process(&mut command);
+    command
+        .arg("--import")
+        .arg("tsx")
+        .arg(USER_ADMIN_CLI_REL)
+        .arg(action)
+        .args(extra_args)
+        .current_dir(&root);
+    Ok(command)
+}
+
+fn run_user_admin(action: &str, extra_args: &[&str], stdin_json: Option<String>) -> Result<Value, String> {
+    let mut command = build_user_admin_command(action, extra_args)?;
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    if stdin_json.is_some() {
+        command.stdin(Stdio::piped());
+    }
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("Benutzerverwaltung konnte nicht gestartet werden: {error}"))?;
+
+    if let Some(payload) = stdin_json {
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(payload.as_bytes())
+                .map_err(|error| format!("Eingabe konnte nicht übergeben werden: {error}"))?;
+        }
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("Benutzerverwaltung konnte nicht abgeschlossen werden: {error}"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            "Benutzerverwaltung ist fehlgeschlagen.".to_string()
+        } else {
+            stderr
+        });
+    }
+
+    // The CLI prints a single JSON result line ({ ok, ... }); take the last one.
+    let value = stdout
+        .lines()
+        .rev()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .find_map(|line| serde_json::from_str::<Value>(line).ok())
+        .ok_or_else(|| "Antwort der Benutzerverwaltung konnte nicht gelesen werden.".to_string())?;
+    Ok(value)
+}
+
+async fn run_user_admin_async(
+    action: &'static str,
+    extra_args: Vec<String>,
+    stdin_json: Option<String>,
+) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let args: Vec<&str> = extra_args.iter().map(String::as_str).collect();
+        run_user_admin(action, &args, stdin_json)
+    })
+    .await
+    .map_err(|error| format!("Benutzerverwaltung wurde unerwartet beendet: {error}"))?
+}
+
+#[tauri::command]
+pub async fn list_users() -> Result<Value, String> {
+    run_user_admin_async("list", Vec::new(), None).await
+}
+
+#[tauri::command]
+pub async fn create_user(user: Value) -> Result<Value, String> {
+    let payload = serde_json::to_string(&user)
+        .map_err(|error| format!("Benutzerdaten konnten nicht serialisiert werden: {error}"))?;
+    run_user_admin_async("create", Vec::new(), Some(payload)).await
+}
+
+#[tauri::command]
+pub async fn set_user_password(payload: Value) -> Result<Value, String> {
+    let body = serde_json::to_string(&payload)
+        .map_err(|error| format!("Daten konnten nicht serialisiert werden: {error}"))?;
+    run_user_admin_async("set-password", Vec::new(), Some(body)).await
+}
+
+#[tauri::command]
+pub async fn delete_user(id: String) -> Result<Value, String> {
+    run_user_admin_async("delete", vec![id], None).await
 }

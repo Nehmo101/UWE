@@ -30,6 +30,7 @@ import { RunnersPanel } from "./components/RunnersPanel";
 import { SecurityPanel } from "./components/SecurityPanel";
 import { SetupWizard } from "./components/SetupWizard";
 import { SpotifyPanel } from "./components/SpotifyPanel";
+import { UsersPanel } from "./components/UsersPanel";
 import { UweReleasePanel } from "./components/UweReleasePanel";
 import { ConnectorShell } from "./components/shell/ConnectorShell";
 import { connectorSidebar } from "./navigation/connector-nav";
@@ -624,6 +625,8 @@ export default function App() {
         );
       case "/connector":
         return renderHost();
+      case "/users":
+        return <UsersPanel />;
       case "/runner":
         return (
           <RunnersPanel

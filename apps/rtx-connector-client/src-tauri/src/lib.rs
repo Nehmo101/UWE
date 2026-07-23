@@ -1,8 +1,9 @@
 mod command_center;
 
 use command_center::{
-    backup_host, check_host_update, get_host_logs, get_host_status, open_host_target, restart_host,
-    setup_host, start_host, stop_host, update_host,
+    backup_host, check_host_update, create_user, delete_user, get_host_logs, get_host_status,
+    list_users, open_host_target, restart_host, set_user_password, setup_host, start_host,
+    stop_host, update_host,
 };
 
 use std::{
@@ -1512,7 +1513,11 @@ pub fn run() {
             get_host_logs,
             open_host_target,
             check_host_update,
-            update_host
+            update_host,
+            list_users,
+            create_user,
+            set_user_password,
+            delete_user
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

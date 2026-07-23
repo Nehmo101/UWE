@@ -208,3 +208,41 @@ export async function exitApp(): Promise<void> {
   if (!isTauriRuntime()) return;
   await invoke("exit_app");
 }
+
+// ── User / owner administration ────────────────────────────────────────────
+export type CommandCenterUserRole = "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+
+export interface CommandCenterUser {
+  id: string;
+  displayName: string;
+  email: string | null;
+  role: CommandCenterUserRole;
+  status: string;
+  hasPassword: boolean;
+  createdAt: string;
+}
+
+export async function listUsers() {
+  return invokeCommand<{ ok: boolean; users: CommandCenterUser[]; message?: string }>("list_users");
+}
+
+export async function createUser(user: {
+  displayName: string;
+  email: string;
+  password: string;
+  role: CommandCenterUserRole;
+}) {
+  return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("create_user", {
+    user,
+  });
+}
+
+export async function setUserPassword(id: string, password: string) {
+  return invokeCommand<{ ok: boolean; message?: string }>("set_user_password", {
+    payload: { id, password },
+  });
+}
+
+export async function deleteUser(id: string) {
+  return invokeCommand<{ ok: boolean; deletedId?: string; message?: string }>("delete_user", { id });
+}

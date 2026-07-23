@@ -21,6 +21,7 @@ export const CONNECTOR_NAV: NavGroup[] = [
     items: [
       connectorItem("command-center", "Command Center", "/", "layout-dashboard", ["start", "host", "hosting", "status", "setup"]),
       connectorItem("connector-host", "RTX-Verbindung", "/connector", "plug", ["rtx", "verbindung", "token"]),
+      connectorItem("connector-users", "Benutzer & Owner", "/users", "users", ["benutzer", "user", "owner", "konto", "account", "einrichten"]),
       connectorItem("connector-runner", "Runner / Ollama", "/runner", "cpu", ["runner", "ollama", "llm"]),
       connectorItem("connector-models", "Modelle", "/models", "boxes", ["modelle", "models"]),
       connectorItem("connector-printers", "Drucker", "/printers", "printer", ["drucker", "printer", "label"]),

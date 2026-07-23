@@ -4,6 +4,7 @@ import type { ConnectorRuntimeStatus } from "./lib/tauri";
 export type ConnectorPath =
   | "/"
   | "/connector"
+  | "/users"
   | "/runner"
   | "/models"
   | "/printers"

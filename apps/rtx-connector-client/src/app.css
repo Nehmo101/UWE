@@ -728,3 +728,45 @@
 .connector-modal-actions {
   justify-content: flex-end;
 }
+
+/* ── Users panel ───────────────────────────────────────────────────────────*/
+.command-center-user-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.command-center-user-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.9rem;
+}
+
+.command-center-user-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.command-center-user-main strong {
+  display: block;
+}
+
+.command-center-user-pw {
+  flex-basis: 100%;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.command-center-user-pw .connector-input {
+  flex: 1;
+}
