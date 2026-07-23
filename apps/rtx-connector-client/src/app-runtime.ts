@@ -6,6 +6,7 @@ export type ConnectorPath =
   | "/connector"
   | "/users"
   | "/cloudflare"
+  | "/deployment"
   | "/runner"
   | "/models"
   | "/printers"

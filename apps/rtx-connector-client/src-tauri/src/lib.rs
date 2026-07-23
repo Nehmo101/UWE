@@ -2,9 +2,9 @@ mod command_center;
 
 use command_center::{
     backup_host, check_host_update, cloudflare_clear_token, cloudflare_set_token, cloudflare_start,
-    cloudflare_status, cloudflare_stop, create_user, delete_user, get_host_logs, get_host_status,
-    list_users, open_host_target, restart_host, set_user_password, setup_host, start_host,
-    stop_host, update_host,
+    cloudflare_status, cloudflare_stop, create_user, delete_user, get_host_env, get_host_logs,
+    get_host_status, list_users, open_host_target, restart_host, restart_service, set_host_env,
+    set_user_password, setup_host, start_host, start_service, stop_host, stop_service, update_host,
 };
 
 use std::{
@@ -1523,7 +1523,12 @@ pub fn run() {
             cloudflare_set_token,
             cloudflare_clear_token,
             cloudflare_start,
-            cloudflare_stop
+            cloudflare_stop,
+            get_host_env,
+            set_host_env,
+            start_service,
+            stop_service,
+            restart_service
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

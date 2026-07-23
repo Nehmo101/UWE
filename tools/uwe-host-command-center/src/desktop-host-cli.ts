@@ -6,10 +6,23 @@ import {
   readLogs,
   setupHost,
   startHost,
+  startHostService,
   stopHost,
+  stopHostService,
 } from "./desktop-host.ts";
 import { applyDesktopHostUpdate, checkDesktopHostUpdate } from "./desktop-host-update.ts";
 import { setHostProgressSink } from "./desktop-host-progress.ts";
+import { getHostEnv, setHostEnv } from "./desktop-host-env.ts";
+
+function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => (data += chunk));
+    process.stdin.on("end", () => resolve(data));
+    process.stdin.on("error", reject);
+  });
+}
 
 type HostAction =
   | "status"
@@ -21,7 +34,12 @@ type HostAction =
   | "logs"
   | "open"
   | "check-update"
-  | "update";
+  | "update"
+  | "get-env"
+  | "set-env"
+  | "start-service"
+  | "stop-service"
+  | "restart-service";
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -51,6 +69,16 @@ async function main(): Promise<void> {
         await stopHost(root);
         result = await startHost(root);
         break;
+      case "start-service":
+        result = await startHostService(root, target ?? "");
+        break;
+      case "stop-service":
+        result = await stopHostService(root, target ?? "");
+        break;
+      case "restart-service":
+        await stopHostService(root, target ?? "");
+        result = await startHostService(root, target ?? "");
+        break;
       case "backup":
         result = await backupHost(root);
         break;
@@ -69,6 +97,12 @@ async function main(): Promise<void> {
         break;
       case "update":
         result = await applyDesktopHostUpdate(root);
+        break;
+      case "get-env":
+        result = getHostEnv(root);
+        break;
+      case "set-env":
+        result = setHostEnv(root, JSON.parse(await readStdin()) as Record<string, string>);
         break;
       case "status":
         result = await collectDesktopHostStatus(root);

@@ -178,6 +178,18 @@ export async function backupHost(root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("backup_host", { root });
 }
 
+export async function startService(service: "studio" | "portal" | "brain", root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("start_service", { root, service });
+}
+
+export async function stopService(service: "studio" | "portal" | "brain", root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("stop_service", { root, service });
+}
+
+export async function restartService(service: "studio" | "portal" | "brain", root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostActionResult>("restart_service", { root, service });
+}
+
 export async function getHostLogs(
   root?: string,
   target: "studio" | "portal" | "brain" | "command-center" = "command-center",
@@ -277,4 +289,27 @@ export async function cloudflareStart() {
 
 export async function cloudflareStop() {
   return invokeCommand<{ ok: boolean; message?: string }>("cloudflare_stop");
+}
+
+// ── Host env editor ────────────────────────────────────────────────────────
+export interface HostEnvField {
+  key: string;
+  label: string;
+  group: "Ports" | "Öffentliche URLs" | "Auth & Sicherheit" | "KI" | "Mail";
+  kind: "text" | "number" | "boolean" | "password";
+  help?: string;
+}
+
+export interface HostEnvResult {
+  fields: HostEnvField[];
+  values: Record<string, string>;
+  configured: Record<string, boolean>;
+}
+
+export async function getHostEnv(root?: string) {
+  return invokeCommand<HostEnvResult>("get_host_env", { root });
+}
+
+export async function setHostEnv(updates: Record<string, string>, root?: string) {
+  return invokeCommand<{ ok: boolean; written: string[] }>("set_host_env", { root, updates });
 }

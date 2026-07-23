@@ -19,6 +19,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./componen
 
 import { AudioPanel } from "./components/AudioPanel";
 import { CloudflarePanel } from "./components/CloudflarePanel";
+import { DeploymentPanel } from "./components/DeploymentPanel";
 import { CommandCenterPanel } from "./components/CommandCenterPanel";
 import { CookbookPanel } from "./components/CookbookPanel";
 import { DownloadsPanel } from "./components/DownloadsPanel";
@@ -636,6 +637,8 @@ export default function App() {
         return <UsersPanel />;
       case "/cloudflare":
         return <CloudflarePanel />;
+      case "/deployment":
+        return <DeploymentPanel />;
       case "/runner":
         return (
           <RunnersPanel

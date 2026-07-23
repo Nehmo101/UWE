@@ -472,3 +472,74 @@ pub async fn cloudflare_start() -> Result<Value, String> {
 pub async fn cloudflare_stop() -> Result<Value, String> {
     run_cloudflare_async("stop", None).await
 }
+
+// ── Host env editor ────────────────────────────────────────────────────────
+// get/set allow-listed keys in the monorepo .env (ports, public URLs, auth, AI,
+// SMTP). set-env receives the update map on stdin.
+
+fn run_host_command_with_stdin(
+    action: &str,
+    root: Option<String>,
+    stdin_json: String,
+) -> Result<Value, String> {
+    let mut command = build_host_command(action, root, None)?;
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("Host-Aktion konnte nicht gestartet werden: {error}"))?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(stdin_json.as_bytes())
+            .map_err(|error| format!("Eingabe konnte nicht übergeben werden: {error}"))?;
+    }
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("Host-Aktion konnte nicht abgeschlossen werden: {error}"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            "Host-Aktion ist fehlgeschlagen.".to_string()
+        } else {
+            stderr
+        });
+    }
+    extract_result_payload(&stdout)
+        .ok_or_else(|| "Antwort der Host-Steuerung konnte nicht gelesen werden.".to_string())
+}
+
+#[tauri::command]
+pub async fn get_host_env(root: Option<String>) -> Result<Value, String> {
+    run_host_command_async("get-env", root, None).await
+}
+
+#[tauri::command]
+pub async fn set_host_env(root: Option<String>, updates: Value) -> Result<Value, String> {
+    let body = serde_json::to_string(&updates)
+        .map_err(|error| format!("Einstellungen konnten nicht serialisiert werden: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || run_host_command_with_stdin("set-env", root, body))
+        .await
+        .map_err(|error| format!("Host-Aktion wurde unerwartet beendet: {error}"))?
+}
+
+// ── Per-service control ────────────────────────────────────────────────────
+// Start / stop / restart a single host service (studio | portal | brain) via the
+// --target arg, without cycling the whole host.
+
+#[tauri::command]
+pub async fn start_service(root: Option<String>, service: String) -> Result<Value, String> {
+    run_host_command_async("start-service", root, Some(service)).await
+}
+
+#[tauri::command]
+pub async fn stop_service(root: Option<String>, service: String) -> Result<Value, String> {
+    run_host_command_async("stop-service", root, Some(service)).await
+}
+
+#[tauri::command]
+pub async fn restart_service(root: Option<String>, service: String) -> Result<Value, String> {
+    run_host_command_async("restart-service", root, Some(service)).await
+}

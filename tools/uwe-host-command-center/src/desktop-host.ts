@@ -702,6 +702,40 @@ export async function stopHost(rootInput?: string): Promise<DesktopHostActionRes
   return { ok: true, message: "Studio, Portal und Brain wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
+/** Start a single host service (studio | portal | brain) without touching the others. */
+export async function startHostService(rootInput: string | undefined, serviceId: string): Promise<DesktopHostActionResult> {
+  const root = resolveDesktopHostRoot(rootInput);
+  const paths = pathsFor(root);
+  const def = serviceDefinitions(paths).find((service) => service.id === serviceId);
+  if (!def) return { ok: false, message: `Unbekannter Dienst: ${serviceId}`, status: await collectDesktopHostStatus(root) };
+  const before = await collectDesktopHostStatus(root);
+  if (!before.installation.buildReady) {
+    return { ok: false, message: "UWE ist noch nicht vollständig eingerichtet.", status: before };
+  }
+  ensureHostDirectories(paths);
+  if (!processRunning(readPid(pidFile(paths, def.id)))) spawnService(paths, def);
+  const healthy = await waitForHealth(`http://127.0.0.1:${def.port}`);
+  return {
+    ok: healthy,
+    message: healthy ? `${def.label} läuft.` : `${def.label} wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.`,
+    status: await collectDesktopHostStatus(root),
+  };
+}
+
+/** Stop a single host service without touching the others. */
+export async function stopHostService(rootInput: string | undefined, serviceId: string): Promise<DesktopHostActionResult> {
+  const root = resolveDesktopHostRoot(rootInput);
+  const paths = pathsFor(root);
+  const def = serviceDefinitions(paths).find((service) => service.id === serviceId);
+  if (!def) return { ok: false, message: `Unbekannter Dienst: ${serviceId}`, status: await collectDesktopHostStatus(root) };
+  const file = pidFile(paths, def.id);
+  const pid = readPid(file);
+  if (pid) stopProcess(pid);
+  fs.rmSync(file, { force: true });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return { ok: true, message: `${def.label} wurde gestoppt.`, status: await collectDesktopHostStatus(root) };
+}
+
 export async function backupHost(rootInput?: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);

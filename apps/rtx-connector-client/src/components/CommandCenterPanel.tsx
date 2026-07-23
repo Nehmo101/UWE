@@ -11,9 +11,12 @@ import {
   openHostTarget,
   readConfig,
   restartHost,
+  restartService,
   setupHost,
   startHost,
+  startService,
   stopHost,
+  stopService,
   updateHost,
   writeConfig,
   type ConnectorRuntimeStatus,
@@ -121,6 +124,8 @@ export function CommandCenterPanel({
   const [logTarget, setLogTarget] = useState<LocalHostLogsResult["target"]>("command-center");
   const [logs, setLogs] = useState<string[]>([]);
   const [updateInfo, setUpdateInfo] = useState<LocalHostUpdateInfo | null>(null);
+  // "<serviceId>:<action>" while a single-service start/stop/restart runs.
+  const [busyService, setBusyService] = useState<string | null>(null);
 
   // Live determinate progress for the long actions (setup/update), streamed from
   // the host CLI. Quick actions emit no events → the bar falls back to an
@@ -258,6 +263,26 @@ export function CommandCenterPanel({
       setError(toMessage(nextError));
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function runServiceAction(
+    serviceId: "studio" | "portal" | "brain",
+    action: "start" | "stop" | "restart",
+  ) {
+    setBusyService(`${serviceId}:${action}`);
+    setError(null);
+    setMessage(null);
+    try {
+      const fn = action === "start" ? startService : action === "stop" ? stopService : restartService;
+      const result = await fn(serviceId, root || undefined);
+      setStatus(result.status);
+      if (result.ok) setMessage(result.message);
+      else setError(result.message);
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusyService(null);
     }
   }
 
@@ -451,7 +476,25 @@ export function CommandCenterPanel({
                 <p className="connector-muted">{service.message}</p>
               </div>
             </CardContent>
-            <CardFooter><Button variant="ghost" onClick={() => openHostTarget(root || undefined, service.id)} disabled={!service.healthy}>Öffnen</Button></CardFooter>
+            <CardFooter>
+              <div className="connector-actions">
+                <Button variant="ghost" onClick={() => openHostTarget(root || undefined, service.id)} disabled={!service.healthy}>Öffnen</Button>
+                {service.state === "stopped" ? (
+                  <Button variant="secondary" onClick={() => runServiceAction(service.id, "start")} disabled={busyService !== null || busy !== null}>
+                    {busyService === `${service.id}:start` ? "startet …" : "Start"}
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="secondary" onClick={() => runServiceAction(service.id, "restart")} disabled={busyService !== null || busy !== null}>
+                      {busyService === `${service.id}:restart` ? "…" : "Neustart"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => runServiceAction(service.id, "stop")} disabled={busyService !== null || busy !== null}>
+                      {busyService === `${service.id}:stop` ? "…" : "Stop"}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardFooter>
           </Card>
         ))}
         <Card>
