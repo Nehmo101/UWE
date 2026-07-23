@@ -246,3 +246,35 @@ export async function setUserPassword(id: string, password: string) {
 export async function deleteUser(id: string) {
   return invokeCommand<{ ok: boolean; deletedId?: string; message?: string }>("delete_user", { id });
 }
+
+// ── Cloudflare tunnel control ──────────────────────────────────────────────
+export interface CloudflareTunnelStatus {
+  ok: boolean;
+  hasToken: boolean;
+  running: boolean;
+  pid: number | null;
+  bin: string;
+  message?: string;
+}
+
+export async function cloudflareStatus() {
+  return invokeCommand<CloudflareTunnelStatus>("cloudflare_status");
+}
+
+export async function cloudflareSetToken(token: string) {
+  return invokeCommand<{ ok: boolean; hasToken: boolean; message?: string }>("cloudflare_set_token", {
+    token,
+  });
+}
+
+export async function cloudflareClearToken() {
+  return invokeCommand<{ ok: boolean; message?: string }>("cloudflare_clear_token");
+}
+
+export async function cloudflareStart() {
+  return invokeCommand<{ ok: boolean; pid?: number; message?: string }>("cloudflare_start");
+}
+
+export async function cloudflareStop() {
+  return invokeCommand<{ ok: boolean; message?: string }>("cloudflare_stop");
+}

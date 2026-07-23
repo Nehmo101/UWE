@@ -367,3 +367,108 @@ pub async fn set_user_password(payload: Value) -> Result<Value, String> {
 pub async fn delete_user(id: String) -> Result<Value, String> {
     run_user_admin_async("delete", vec![id], None).await
 }
+
+// ── Cloudflare tunnel control ──────────────────────────────────────────────
+// Runs/stops the local cloudflared connector for the dashboard-managed tunnel.
+// The tunnel token (a secret) is stored owner-only by the CLI and passed on
+// stdin for set-token; it is never returned to the frontend.
+
+const CLOUDFLARE_CLI_REL: &str = "tools/uwe-host-command-center/src/cloudflare-tunnel-cli.ts";
+
+fn build_cloudflare_command(action: &str) -> Result<Command, String> {
+    let root = resolve_monorepo_root();
+    let script = root.join(CLOUDFLARE_CLI_REL);
+    if !script.exists() {
+        return Err(format!(
+            "Cloudflare-Steuerung nicht gefunden: {}. Bitte einen aktuellen UWE-Projektordner auswählen.",
+            script.display()
+        ));
+    }
+    let mut command = Command::new("node");
+    configure_hidden_process(&mut command);
+    command
+        .arg("--import")
+        .arg("tsx")
+        .arg(CLOUDFLARE_CLI_REL)
+        .arg(action)
+        .current_dir(&root)
+        .env(
+            "UWE_COMMAND_CENTER_DATA_DIR",
+            connector_app_data_dir()?.join("host"),
+        );
+    Ok(command)
+}
+
+fn run_cloudflare(action: &str, stdin_json: Option<String>) -> Result<Value, String> {
+    let mut command = build_cloudflare_command(action)?;
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    if stdin_json.is_some() {
+        command.stdin(Stdio::piped());
+    }
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("Cloudflare-Steuerung konnte nicht gestartet werden: {error}"))?;
+
+    if let Some(payload) = stdin_json {
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(payload.as_bytes())
+                .map_err(|error| format!("Token konnte nicht übergeben werden: {error}"))?;
+        }
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("Cloudflare-Steuerung konnte nicht abgeschlossen werden: {error}"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            "Cloudflare-Steuerung ist fehlgeschlagen.".to_string()
+        } else {
+            stderr
+        });
+    }
+
+    stdout
+        .lines()
+        .rev()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .find_map(|line| serde_json::from_str::<Value>(line).ok())
+        .ok_or_else(|| "Antwort der Cloudflare-Steuerung konnte nicht gelesen werden.".to_string())
+}
+
+async fn run_cloudflare_async(action: &'static str, stdin_json: Option<String>) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || run_cloudflare(action, stdin_json))
+        .await
+        .map_err(|error| format!("Cloudflare-Steuerung wurde unerwartet beendet: {error}"))?
+}
+
+#[tauri::command]
+pub async fn cloudflare_status() -> Result<Value, String> {
+    run_cloudflare_async("status", None).await
+}
+
+#[tauri::command]
+pub async fn cloudflare_set_token(token: String) -> Result<Value, String> {
+    let body = serde_json::to_string(&serde_json::json!({ "token": token }))
+        .map_err(|error| format!("Token konnte nicht serialisiert werden: {error}"))?;
+    run_cloudflare_async("set-token", Some(body)).await
+}
+
+#[tauri::command]
+pub async fn cloudflare_clear_token() -> Result<Value, String> {
+    run_cloudflare_async("clear-token", None).await
+}
+
+#[tauri::command]
+pub async fn cloudflare_start() -> Result<Value, String> {
+    run_cloudflare_async("start", None).await
+}
+
+#[tauri::command]
+pub async fn cloudflare_stop() -> Result<Value, String> {
+    run_cloudflare_async("stop", None).await
+}

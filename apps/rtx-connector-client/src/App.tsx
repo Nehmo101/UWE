@@ -18,6 +18,7 @@ import { Button } from "./components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
 
 import { AudioPanel } from "./components/AudioPanel";
+import { CloudflarePanel } from "./components/CloudflarePanel";
 import { CommandCenterPanel } from "./components/CommandCenterPanel";
 import { CookbookPanel } from "./components/CookbookPanel";
 import { DownloadsPanel } from "./components/DownloadsPanel";
@@ -627,6 +628,8 @@ export default function App() {
         return renderHost();
       case "/users":
         return <UsersPanel />;
+      case "/cloudflare":
+        return <CloudflarePanel />;
       case "/runner":
         return (
           <RunnersPanel
