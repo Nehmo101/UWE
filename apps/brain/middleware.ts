@@ -18,7 +18,12 @@ function buildBrainLoginUrl(request: NextRequest, redirectPath: string, pathname
     const host = base.hostname.toLowerCase();
     if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
       loginUrl.protocol = base.protocol;
-      loginUrl.host = base.host;
+      // Set hostname and port separately: the URL `host` setter leaves an existing
+      // port in place when the new value omits one, which would keep Brain's raw
+      // :3102 (unreachable through the tunnel). `base.port` is "" for a default
+      // https origin, which correctly clears it.
+      loginUrl.hostname = base.hostname;
+      loginUrl.port = base.port;
     }
   } catch {
     // Malformed public URL — fall back to the request-derived origin.
