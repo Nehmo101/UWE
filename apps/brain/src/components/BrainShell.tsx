@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { AppAccentScope, SceneHero, ThemeModeToggle } from "@uwe/shared-ui";
+import {
+  AppAccentScope,
+  CrossAppBottomNav,
+  SceneHero,
+  ThemeModeToggle,
+  readClientAppUrls,
+} from "@uwe/shared-ui";
 import { BrainNav } from "./BrainNav";
 
 /**
@@ -32,9 +38,11 @@ export function BrainShell({
   sceneIndex?: number;
   children: ReactNode;
 }) {
+  const urls = readClientAppUrls();
+
   return (
     <AppAccentScope app="brain">
-      <div className="uwe-shell">
+      <div className="uwe-shell" data-has-bottom-nav="true">
         <header className="uwe-topbar">
           <Link href="/" className="uwe-brand">
             <span className="uwe-brand-mark" aria-hidden>
@@ -81,6 +89,13 @@ export function BrainShell({
             {children}
           </main>
         </div>
+        <CrossAppBottomNav
+          active="brain"
+          startUrl={urls.start}
+          studioUrl={urls.studio}
+          portalUrl={urls.portal}
+          brainUrl={urls.brain}
+        />
       </div>
     </AppAccentScope>
   );

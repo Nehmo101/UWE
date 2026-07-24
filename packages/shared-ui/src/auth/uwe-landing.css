@@ -133,9 +133,16 @@
   box-sizing: border-box;
 }
 
+/* Mobil sitzen Hero und Auswahl gemeinsam am unteren Bildrand
+   („Landschaft oben, Arbeit unten"); Desktop hebt das unten wieder auf. */
 .uwe-lp-hero {
+  margin-top: auto;
   padding: 0 20px;
   animation: uweLpFadeUp 0.45s ease both;
+}
+
+.uwe-lp-eyebrow-long {
+  display: none;
 }
 
 .uwe-lp-eyebrow {
@@ -171,7 +178,6 @@
   flex-direction: column;
   gap: 8px;
   padding: 0 20px;
-  margin-top: auto;
   margin-bottom: 24px;
 }
 
@@ -322,6 +328,19 @@
     padding: 0 60px;
   }
 
+  .uwe-lp-choices {
+    margin-top: auto;
+  }
+
+  /* Ab hier trägt die Zeile die Langfassung. */
+  .uwe-lp-eyebrow-long {
+    display: inline;
+  }
+
+  .uwe-lp-eyebrow-short {
+    display: none;
+  }
+
   .uwe-lp-eyebrow {
     font-size: 12.5px;
     letter-spacing: 0.2em;
@@ -412,5 +431,13 @@
   .uwe-lp-root *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Die app-übergreifende Produktleiste ist mobil fixiert — der Fuß der Landing
+   braucht darunter Platz, sonst verdeckt sie ihn. */
+@media (max-width: 959px) {
+  .uwe-lp-footer {
+    padding-bottom: calc(76px + var(--uwe-safe-bottom, 0px));
   }
 }

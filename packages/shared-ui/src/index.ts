@@ -85,12 +85,18 @@ export {
 
 export {
   AppAccentScope,
+  CrossAppBottomNav,
+  crossAppBottomNavItems,
+  readClientAppUrls,
   PaintedScene,
   SceneContent,
   SceneHero,
   ThemeModeToggle,
   type AccentApp,
   type AccentScopeLayout,
+  type ClientAppUrls,
+  type CrossAppBottomNavProps,
+  type CrossAppTarget,
   type PaintedSceneProps,
   type SceneHeroProps,
   type SceneVeil,

@@ -76,7 +76,10 @@ export default async function RootLayout({
       data-uwe-app="brain"
       className={`${spaceMono.variable} ${newsreader.variable}`}
     >
-      <body>
+      {/* Das ThemeBootstrapScript setzt Klasse und data-Attribute auf <body>,
+          bevor React hydratisiert — das ist Absicht (Anti-FOUC) und deshalb
+          kein zu meldender Mismatch. */}
+      <body suppressHydrationWarning>
         <ThemeBootstrapScript
           scope="brain"
           serverPreferences={serverThemePreferences}

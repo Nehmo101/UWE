@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import type { ResolvedNavGroup } from "@uwe/shared-utils/navigation";
 import { studioCommands, studioSidebar } from "../../navigation/studio-nav";
-import { resolveStudioBottomNav } from "../../lib/mobile-nav";
 import { readHiddenNavIds } from "../../lib/nav-visibility-prefs";
+import { crossAppBottomNavItems, readClientAppUrls } from "@uwe/shared-ui";
 import { AppShell } from "./AppShell";
 
 function filterNavGroups(groups: ResolvedNavGroup[], hidden: Set<string>): ResolvedNavGroup[] {
@@ -28,6 +28,15 @@ export interface StudioShellProps {
 /** Top-level Studio shell — global product navigation. */
 export function StudioShell({ breadcrumb, contextPanel, footer, children }: StudioShellProps) {
   const pathname = usePathname() ?? "/today";
+  const appUrls = useMemo(() => {
+    const urls = readClientAppUrls();
+    return {
+      startUrl: urls.start,
+      studioUrl: urls.studio,
+      portalUrl: urls.portal,
+      brainUrl: urls.brain,
+    };
+  }, []);
   const [hiddenNavIds, setHiddenNavIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
@@ -51,7 +60,10 @@ export function StudioShell({ breadcrumb, contextPanel, footer, children }: Stud
       breadcrumb={breadcrumb}
       contextPanel={contextPanel}
       footer={footer}
-      bottomNav={resolveStudioBottomNav(pathname)}
+      // Handoff, Abschnitt „5 · Mobil": die Bottom-Nav schaltet zwischen den
+      // Produkten, nicht innerhalb einer App. Die vollständige Studio-Navigation
+      // bleibt in der Schublade der Topbar erreichbar.
+      bottomNav={crossAppBottomNavItems({ active: "studio", ...appUrls })}
     >
       {children}
     </AppShell>

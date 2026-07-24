@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppAccentScope } from "../scene/AppAccentScope";
+import { CrossAppBottomNav } from "../scene/CrossAppBottomNav";
 import { PaintedScene } from "../scene/PaintedScene";
 import { ThemeModeToggle } from "../scene/ThemeModeToggle";
 import { UweLandingChoices, type LandingTarget } from "./UweLandingChoices";
@@ -100,7 +101,14 @@ export function UweLandingPage({
           {view === "choose" ? (
             <>
               <div className="uwe-lp-hero">
-                <div className="uwe-lp-eyebrow">Self-hosted Kampagnen- und Admin-Cockpit</div>
+                <div className="uwe-lp-eyebrow">
+                  {/* Die Langfassung passt bei 0.18em Sperrung nicht auf ein
+                      Telefon — die Kurzfassung ist die des Handoffs. */}
+                  <span className="uwe-lp-eyebrow-long">
+                    Self-hosted Kampagnen- und Admin-Cockpit
+                  </span>
+                  <span className="uwe-lp-eyebrow-short">Self-hosted Cockpit</span>
+                </div>
                 <h1 className="uwe-lp-title">Universeller Welten-Editor</h1>
                 <p className="uwe-lp-lede">Läuft lokal auf deiner Hardware.</p>
               </div>
@@ -117,6 +125,15 @@ export function UweLandingPage({
             </div>
           )}
         </main>
+
+        <CrossAppBottomNav
+          active="start"
+          startUrl="/"
+          studioUrl={studioAppUrl}
+          portalUrl={portalAppUrl}
+          brainUrl={brainAppUrl}
+          brainVisible={brainVisible}
+        />
 
         <footer className="uwe-lp-footer">
           <span>UWE Core · läuft lokal auf deiner Hardware</span>

@@ -91,7 +91,11 @@ export function defaultThemePreferencesRecord(
     font: "mono",
     density: "comfortable",
     background: "none",
-    frostedGlass: true,
+    // Bleibt false: das Bootstrap-Script setzt sonst .uwe-theme-frosted auf
+    // <body>, das der Server nicht rendert — React meldet einen
+    // Hydration-Mismatch. Das Glas der „Gemalten Welt" kommt aus
+    // ghibli-shell.css und braucht diese Klasse nicht.
+    frostedGlass: false,
     uiScale: 1,
     bgEffectColor: undefined,
     bgEffectIntensity: 1,
