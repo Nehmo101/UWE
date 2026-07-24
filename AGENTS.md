@@ -111,7 +111,7 @@ run/test caveats; standard commands live in `README.md` and root `package.json`.
 
 ### Services & how to run them (development)
 
-- `pnpm dev` runs the apps via Turbo: **Studio** on `:3000`, **Portal** on `:3001`, **Brain** on `:3002` (owner-only, local/LAN, never public — see `docs/engineering/brain-local-runtime.md`). `pnpm dev:brain` starts Brain alone.
+- `pnpm dev` runs the apps via Turbo: **Studio** on `:3000`, **Portal** on `:3001`, **Brain** on `:3002` (owner-only; reachability is an explicit deployment choice — see `docs/engineering/brain-local-runtime.md`). `pnpm dev:brain` starts Brain alone.
 - Product boundaries: apps never import each other and packages never import an app (`pnpm boundary:check`, enforced in `test`/`test:ci`). Product tags live in `@uwe/product-contracts`.
   (or `pnpm dev:studio` / `pnpm dev:portal`). Health: `GET /api/health` on each.
 - Lint/typecheck/test/build are the root scripts (`pnpm lint`, `pnpm typecheck`,

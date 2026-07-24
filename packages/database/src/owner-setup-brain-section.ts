@@ -8,8 +8,8 @@ import type {
 /**
  * Owner-setup section for the owner-only Brain product. Kept in its own module so
  * the frozen `owner-setup-service.ts` monolith does not grow (file-size budget).
- * Brain is local/LAN and never in the public tunnel — this section only surfaces
- * its exposure and entry, editing happens under System → Cloudflare.
+ * Brain is owner-only; how it is reached is a deployment choice — this section
+ * only surfaces its exposure and entry, editing happens under System → Cloudflare.
  */
 export function buildBrainSection(
   settings: Awaited<ReturnType<SettingsService["getSettings"]>>,
@@ -19,9 +19,11 @@ export function buildBrainSection(
   const exposureLabel =
     d.brainExposure === "lan"
       ? "LAN (nach Owner-Freigabe)"
-      : d.brainExposure === "off"
-        ? "Deaktiviert"
-        : "Nur lokal (Loopback)";
+      : d.brainExposure === "public"
+        ? "Öffentlich (owner-gated Tunnel)"
+        : d.brainExposure === "off"
+          ? "Deaktiviert"
+          : "Nur lokal (Loopback)";
 
   const settingsItems: SetupSettingItem[] = [
     {
@@ -31,12 +33,12 @@ export function buildBrainSection(
       displayValue: exposureLabel,
       source: d.brainExposure === "loopback" ? "env" : "db",
       editable: true,
-      description: "Owner-only und lokal/LAN — nie im öffentlichen Tunnel (ADR 004/007).",
+      description: "Owner-only auf jeder Route; die Erreichbarkeit ist eine bewusste Betriebsentscheidung (ADR 004/007).",
       href: editorHref,
     },
     {
       id: "brain-url",
-      label: "Brain-URL (lokal)",
+      label: "Brain-URL",
       configured: true,
       displayValue: d.brainUrl.trim() || "teilt Studio-Origin",
       source: d.brainUrl.trim() ? "db" : "env",
@@ -56,10 +58,12 @@ export function buildBrainSection(
       id: "brain-tunnel",
       label: "Im öffentlichen Tunnel",
       configured: true,
-      displayValue: "nie (ADR 004/007)",
+      displayValue:
+        d.brainExposure === "public" ? "ja (owner-gated Opt-in)" : "nein (Standard)",
       source: "env",
       editable: false,
-      description: "Der private Brain-Bereich wird nie öffentlich exponiert.",
+      description:
+        "Brain kommt nur durch das ausdrückliche Opt-in BRAIN_PUBLIC_TUNNEL=1 in den Tunnel — nie als Nebeneffekt.",
     },
   ];
 
@@ -67,7 +71,9 @@ export function buildBrainSection(
   if (d.brainExposure === "off") {
     nextSteps.push("Brain-Einstieg ist deaktiviert — in System → Cloudflare auf „Nur lokal“ oder „LAN“ stellen.");
   } else if (d.brainExposure === "lan") {
-    nextSteps.push("Brain ist im LAN erreichbar — nur nach bewusster Owner-Freigabe, nie öffentlich tunneln.");
+    nextSteps.push("Brain ist im LAN erreichbar — nur nach bewusster Owner-Freigabe.");
+  } else if (d.brainExposure === "public") {
+    nextSteps.push("Brain ist öffentlich erreichbar (owner-gated Tunnel) — 2FA auf dem Owner-Konto aktivieren.");
   } else {
     nextSteps.push("Brain bleibt lokal (Loopback) — der sichere Standard.");
   }

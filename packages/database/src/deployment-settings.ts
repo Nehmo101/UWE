@@ -22,13 +22,17 @@ import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./to
 export type DeploymentOverride = "env" | "on" | "off";
 
 /**
- * How the owner-only Brain surface may be reached. Deliberately has NO "public"
- * value — per ADR 004/007 Brain is never part of the public Cloudflare tunnel.
+ * How the owner-only Brain surface may be reached. Brain always enforces the
+ * global `owner` role server-side; this setting only decides the origin it is
+ * served under.
  *   - `loopback` — only from the host itself (127.0.0.1). The safe default.
  *   - `lan`      — reachable from the local network after explicit owner opt-in.
+ *   - `public`   — published under its own origin through the owner-gated
+ *                  reverse proxy / Cloudflare tunnel. Brain still binds to
+ *                  loopback; the connector runs on the host.
  *   - `off`      — Brain entry disabled entirely.
  */
-export type BrainExposure = "loopback" | "lan" | "off";
+export type BrainExposure = "loopback" | "lan" | "public" | "off";
 
 export interface DeploymentSettings {
   /** PUBLIC_BASE_URL / PUBLIC_APP_URL — "" inherits from env. */
@@ -63,7 +67,7 @@ export interface DeploymentSettings {
   brainUrl: string;
   /** BRAIN_PATH — entry path into the Brain surface; "" = default `/life-brain`. */
   brainPath: string;
-  /** Brain reachability. Never public — see {@link BrainExposure}. Default `loopback`. */
+  /** Brain reachability — see {@link BrainExposure}. Default `loopback`. */
   brainExposure: BrainExposure;
 }
 
@@ -123,9 +127,9 @@ function normalizeString(value: unknown): string {
 }
 
 /** Coerces an untrusted value into a valid {@link BrainExposure}; default `loopback`.
- *  Anything unrecognised (including a stray "public"/"on") collapses to `loopback`. */
+ *  Anything unrecognised (e.g. a stray "on") collapses to `loopback`. */
 function normalizeBrainExposure(value: unknown): BrainExposure {
-  return value === "lan" || value === "off" ? value : "loopback";
+  return value === "lan" || value === "public" || value === "off" ? value : "loopback";
 }
 
 /** Coerces an untrusted stored/merged value into a valid {@link DeploymentSettings}. */
@@ -235,11 +239,12 @@ export function buildDeploymentEnvOverrides(settings: DeploymentSettings): Recor
   setBool("TURNSTILE_ENABLED", settings.turnstileEnabled);
   setString("TURNSTILE_SITE_KEY", settings.turnstileSiteKey);
 
-  // Brain is owner-only and local/LAN — see ADR 004/007. We surface the origin,
-  // entry path and (non-public) exposure for the Studio link + host scripts, but
-  // deliberately never emit a tunnel/public-exposure key for Brain here. Only a
-  // deviation from the safe `loopback` default is emitted (matching the
-  // "explicitly set keys only" contract, so defaults still fall through to env).
+  // Brain is owner-only — see ADR 004/007. We surface the origin, entry path
+  // and exposure for the Studio link + host scripts, but deliberately never
+  // emit a tunnel key: publishing Brain stays a separate, deliberate proxy
+  // decision. Only a deviation from the safe `loopback` default is emitted
+  // (matching the "explicitly set keys only" contract, so defaults still fall
+  // through to env).
   setString("NEXT_PUBLIC_BRAIN_URL", settings.brainUrl);
   setString("BRAIN_PATH", settings.brainPath);
   if (settings.brainExposure !== "loopback") {

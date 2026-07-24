@@ -73,7 +73,7 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
   if grep -qiE 'ollama|rtx|11434|8787' "$TUNNEL_CONFIG"; then
     report fail "Tunnel-Konfiguration enthält RTX/Ollama-Referenzen"
   fi
-  # Brain is owner-only and local/LAN by default (ADR 004/007) — it must not appear
+  # Brain is owner-only and loopback by default (ADR 004/007) — it must not appear
   # in the public tunnel ingress UNLESS the owner has deliberately opted in via
   # BRAIN_PUBLIC_TUNNEL=1 (Brain enforces owner-role auth on every route; enabling
   # this is a conscious decision to publish an owner-gated Brain host, and 2FA on

@@ -236,8 +236,10 @@ export function resolvePortalPublicBaseUrl(env: NodeJS.ProcessEnv = process.env)
  * that loopback origin. An explicit `NEXT_PUBLIC_BRAIN_URL` can point it at a
  * chosen LAN address after owner opt-in.
  *
- * Per ADR 004/007 Brain is owner-only and local/LAN and is never added to the
- * public Cloudflare tunnel — a remote visitor's link to the loopback origin is
+ * Per ADR 004/007 Brain is owner-only; its reachability is an explicit
+ * deployment choice (loopback / LAN / a public origin behind the owner-gated
+ * tunnel). Set `NEXT_PUBLIC_BRAIN_URL` to that origin when Brain is published —
+ * otherwise a remote visitor's link points at the loopback default and is
  * intentionally not reachable. This resolver only computes a link target.
  */
 export function resolveBrainPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {

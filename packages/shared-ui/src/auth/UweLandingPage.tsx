@@ -40,9 +40,10 @@ export interface UweLandingPageProps {
   /** Absolute base URL of the Portal app (its own origin/subdomain). */
   portalAppUrl: string;
   /**
-   * Absolute base URL of the owner-only Brain surface. Today this shares the
-   * Studio origin (Brain routes live in the Studio app); later it can point at
-   * a dedicated local/LAN origin. Brain is never part of the public tunnel.
+   * Absolute base URL of the owner-only Brain surface. It may share the Studio
+   * origin or live on its own (loopback, LAN, or a public origin behind the
+   * owner-gated tunnel) — Brain enforces the `owner` role on every route either
+   * way.
    */
   brainAppUrl: string;
   /** Cloudflare Turnstile site key — when set, sign-in requires a human check. */

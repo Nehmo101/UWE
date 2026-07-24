@@ -24,9 +24,9 @@ function parseCheckbox(value: FormDataEntryValue | null): boolean {
   return value === "on" || value === "true" || value === "1";
 }
 
-// Brain is never public — only loopback/lan/off are accepted; anything else is loopback.
+// Anything unrecognised falls back to the safe default (loopback).
 function parseBrainExposure(value: FormDataEntryValue | null): BrainExposure {
-  return value === "lan" || value === "off" ? value : "loopback";
+  return value === "lan" || value === "public" || value === "off" ? value : "loopback";
 }
 
 export async function updateDeploymentConfigAction(formData: FormData): Promise<void> {

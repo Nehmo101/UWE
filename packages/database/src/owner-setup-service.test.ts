@@ -35,7 +35,7 @@ describe("owner setup service", () => {
     assert.ok(snapshot.sections.some((section) => section.id === "mail"));
     assert.ok(snapshot.sections.some((section) => section.id === "cloudflare"));
 
-    // Brain appears as its own owner-only section and is never publicly exposed.
+    // Brain appears as its own owner-only section, with its reachability surfaced.
     const brain = snapshot.sections.find((section) => section.id === "brain");
     assert.ok(brain);
     assert.equal(brain.title, "Brain (privat)");
