@@ -1,3 +1,6 @@
+export { PaintedScene, SceneContent, type PaintedSceneProps, type SceneVeil } from "./PaintedScene";
+export { AppAccentScope, type AccentApp, type AccentScopeLayout } from "./AppAccentScope";
+export { ThemeModeToggle, type ThemeModeToggleSize } from "./ThemeModeToggle";
 export {
   dayIndex,
   pickScene,

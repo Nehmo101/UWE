@@ -84,6 +84,18 @@ export {
 } from "./auth";
 
 export {
+  AppAccentScope,
+  PaintedScene,
+  SceneContent,
+  ThemeModeToggle,
+  type AccentApp,
+  type AccentScopeLayout,
+  type PaintedSceneProps,
+  type SceneVeil,
+  type ThemeModeToggleSize,
+} from "./scene";
+
+export {
   dayIndex,
   getScenePool,
   pickScene,

@@ -1,0 +1,170 @@
+/**
+ * PaintedScene — die gemalte Bühne hinter dem UI.
+ *
+ * Aufbau von unten nach oben:
+ *   1. Tagbild        (immer sichtbar, im Dunkelmodus gedimmt)
+ *   2. Nachtbild      (opacity 0 -> 1, Crossfade .45s)
+ *   3. Veil           (Abdunkel-Verlauf, nur dunkel)
+ *   4. Top-Shade      (oberer Verlauf, damit die Kopfzeile trägt)
+ *   5. Boden-Verlauf  (transparent -> --uwe-bg, „Landschaft oben, Arbeit unten")
+ *
+ * Die Bild-URLs kommen als Custom-Property vom Server (--uwe-scene-day/-night),
+ * nicht als <img>: das Repo nutzt next/image nirgends, `@next/next/no-img-element`
+ * ist per --max-warnings 0 fatal, und Desktop/Mobil brauchen echte Art-Direction
+ * mit unterschiedlichem Seitenverhältnis. Eine Media-Query wählt die Fassung,
+ * ohne dass JavaScript den Viewport kennen muss — kein Hydration-Mismatch.
+ */
+
+.uwe-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Hinter dem Inhalt, aber im selben Stacking-Context wie er. */
+  z-index: 0;
+
+  /*
+   * Art-Direction: Desktop- und Mobilfassung haben unterschiedliche
+   * Seitenverhältnisse und eigene Crops. Die Komponente setzt beide Fassungen
+   * als Custom-Property; welche gilt, entscheidet allein diese Media-Query —
+   * damit muss der Server den Viewport nicht kennen.
+   *
+   * 960px spiegelt SCENE_BREAKPOINT_PX (scenePools.ts). Ein Test hält beide
+   * Werte zusammen, weil eine Media-Query keine JS-Konstante lesen kann.
+   */
+  --uwe-scene-day: var(--uwe-scene-day-mobil);
+  --uwe-scene-day-pos: var(--uwe-scene-day-pos-mobil);
+  --uwe-scene-night: var(--uwe-scene-night-mobil);
+  --uwe-scene-night-pos: var(--uwe-scene-night-pos-mobil);
+}
+
+@media (min-width: 960px) {
+  .uwe-scene {
+    --uwe-scene-day: var(--uwe-scene-day-desktop);
+    --uwe-scene-day-pos: var(--uwe-scene-day-pos-desktop);
+    --uwe-scene-night: var(--uwe-scene-night-desktop);
+    --uwe-scene-night-pos: var(--uwe-scene-night-pos-desktop);
+  }
+}
+
+/* Studio zeigt die Szene als Band statt als Vollbild. */
+.uwe-scene[data-height="band"] {
+  bottom: auto;
+  height: var(--uwe-scene-band-height, 62%);
+}
+
+.uwe-scene__layer {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.uwe-scene__day {
+  background-image: var(--uwe-scene-day);
+  background-position: var(--uwe-scene-day-pos, center);
+  filter: var(--uwe-scene-filter, none);
+  transition: filter var(--uwe-scene-veil-fade, 0.4s) ease;
+}
+
+.uwe-scene__night {
+  background-image: var(--uwe-scene-night);
+  background-position: var(--uwe-scene-night-pos, center);
+  opacity: var(--uwe-scene-night-opacity, 0);
+  transition: opacity var(--uwe-scene-fade, 0.45s) ease;
+}
+
+.uwe-scene__veil {
+  position: absolute;
+  inset: 0;
+  opacity: var(--uwe-scene-veil-opacity, 0);
+  transition: opacity var(--uwe-scene-veil-fade, 0.4s) ease;
+  background: linear-gradient(
+    180deg,
+    rgba(9, 12, 28, 0.5) 0%,
+    rgba(9, 12, 28, 0.32) 45%,
+    rgba(7, 9, 22, 0.6) 100%
+  );
+}
+
+/* Portal blendet die Mitte etwas weniger ab, Brain deutlich weniger —
+   Werte aus dem Handoff (Abschnitt „Interaktionen & Verhalten"). */
+.uwe-scene__veil[data-veil="portal"] {
+  background: linear-gradient(
+    180deg,
+    rgba(9, 12, 28, 0.5) 0%,
+    rgba(9, 12, 28, 0.35) 45%,
+    rgba(7, 9, 22, 0.6) 100%
+  );
+}
+
+.uwe-scene__veil[data-veil="soft"] {
+  background: linear-gradient(
+    180deg,
+    rgba(9, 12, 28, 0.4) 0%,
+    rgba(9, 12, 28, 0.25) 45%,
+    rgba(7, 9, 22, 0.5) 100%
+  );
+}
+
+/* Das Studio-Band trägt kein Verlaufs-, sondern ein flaches Veil. */
+.uwe-scene__veil[data-veil="band"] {
+  background: linear-gradient(180deg, rgba(9, 12, 28, 0.45), rgba(9, 12, 28, 0.55));
+}
+
+.uwe-scene__top-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--uwe-top-shade) 0%, transparent 16%);
+}
+
+/*
+ * Boden-Verlauf: der Punkt, an dem die Landschaft in die Arbeitsfläche
+ * übergeht. Start/Ende sind je Screen unterschiedlich (Handoff) und kommen
+ * als Custom-Property herein.
+ */
+.uwe-scene__ground {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent var(--uwe-scene-ground-start, 42%),
+    var(--uwe-bg) var(--uwe-scene-ground-end, 96%)
+  );
+}
+
+/* Inhalt über der Szene. */
+.uwe-scene-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Text, der direkt auf dem Bild liegt, braucht den Handoff-Schatten. */
+.uwe-scene-hero {
+  color: var(--uwe-hero-ink, var(--uwe-fg));
+  text-shadow: var(--uwe-hero-sh, none);
+}
+
+.uwe-scene-hero-sub {
+  color: var(--uwe-hero-sub, var(--uwe-fg-muted));
+  text-shadow: var(--uwe-hero-sh, none);
+}
+
+/*
+ * Ruhe ist Teil des Looks: kein Parallax, keine Endlos-Animation. Wer
+ * reduzierte Bewegung verlangt (oder den Motion-Schalter der App ausgeschaltet
+ * hat), bekommt den Moduswechsel sofort statt als Blende.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .uwe-scene__day,
+  .uwe-scene__night,
+  .uwe-scene__veil {
+    transition: none;
+  }
+}
+
+html[data-uwe-motion="off"] .uwe-scene__day,
+html[data-uwe-motion="off"] .uwe-scene__night,
+html[data-uwe-motion="off"] .uwe-scene__veil {
+  transition: none;
+}
