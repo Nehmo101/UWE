@@ -84,6 +84,31 @@ export {
 } from "./auth";
 
 export {
+  dayIndex,
+  getScenePool,
+  pickScene,
+  resolveScenePair,
+  sceneCssUrl,
+  sceneUrl,
+  scenesForAreas,
+  HANDOUT_PREVIEW,
+  SCENE_AREAS,
+  SCENE_BREAKPOINT_PX,
+  SCENE_FILE_EXTENSION,
+  SCENE_MODES,
+  SCENE_POOLS,
+  SCENE_PUBLIC_DIR,
+  SCENE_TIME_ZONE,
+  SCENE_VARIANTS,
+  type Scene,
+  type SceneArea,
+  type SceneCadence,
+  type SceneMode,
+  type ScenePair,
+  type SceneVariant,
+} from "./scene";
+
+export {
   GlobalSearchForm,
   SearchFilterBar,
   SearchResultsList,

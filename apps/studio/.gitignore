@@ -1,2 +1,5 @@
 # Build artifact: copied from @uwe/static-export on predev/prebuild (copy:atlas).
 /public/atlas/
+
+# Szenenbilder werden aus assets/scenes/ kopiert (scripts/copy-scenes.mjs)
+/public/scenes/

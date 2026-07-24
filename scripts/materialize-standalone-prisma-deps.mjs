@@ -11,7 +11,9 @@ import path from "node:path";
 import process from "node:process";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const APPS = ["studio", "portal"];
+// Brain gehört dazu, seit es eigene public/-Assets ausliefert (Szenenbilder) —
+// ohne diesen Eintrag 404en sie im Standalone-Build.
+const APPS = ["studio", "portal", "brain"];
 const DEPLOY_DIR = path.join(ROOT, ".cache", "standalone-prisma-deps");
 
 function copyPath(src, dest, { dereference = false } = {}) {
