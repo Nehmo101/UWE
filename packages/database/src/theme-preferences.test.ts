@@ -43,9 +43,20 @@ describe("theme preferences", () => {
       },
       "portal",
     );
-    assert.equal(prefs.themeId, "uwe-lesesaal");
+    assert.equal(prefs.themeId, "uwe-ghibli-tag");
     assert.equal(prefs.background, "synapse");
     assert.equal(prefs.frostedGlass, false);
+  });
+
+  it("gives Brain its own scope, defaulting to the night theme", () => {
+    assert.equal(defaultThemePreferencesRecord("brain").themeId, "uwe-ghibli-nacht");
+    const stored = defaultThemePreferencesRecord("brain");
+    stored.themeId = "uwe-ghibli-tag";
+    const prefs = resolveThemePreferencesForScope(
+      { themePreferences: { brain: stored } },
+      "brain",
+    );
+    assert.equal(prefs.themeId, "uwe-ghibli-tag");
   });
 
   it("prefers stored themePreferences over legacy fields", () => {

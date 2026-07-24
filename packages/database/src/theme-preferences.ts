@@ -35,6 +35,8 @@ export type ThemeElementOverrides = Partial<{
 export interface AppThemePreferences {
   studio?: ThemePreferencesRecord | null;
   portal?: ThemePreferencesRecord | null;
+  /** Owner-only Brain surface. Stored in the same settings JSON — no migration. */
+  brain?: ThemePreferencesRecord | null;
 }
 
 export type ThemePreferencesScope = keyof AppThemePreferences;
@@ -74,18 +76,22 @@ function normalizeElementOverridesRecord(raw: unknown): ThemeElementOverrides | 
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-const DEFAULT_STUDIO_THEME_ID = "uwe-werkbank";
-const DEFAULT_PORTAL_THEME_ID = "uwe-lesesaal";
+// Mirrors DEFAULT_*_THEME_ID in @uwe/shared-ui/theme/themes.ts. This package
+// must not import the UI package, so the values are duplicated deliberately —
+// packages/shared-ui/src/theme/theme.test.ts and theme-preferences.test.ts both
+// assert them, so a drift fails the gate.
+const DEFAULT_LIGHT_THEME_ID = "uwe-ghibli-tag";
+const DEFAULT_BRAIN_THEME_ID = "uwe-ghibli-nacht";
 
 export function defaultThemePreferencesRecord(
   scope: ThemePreferencesScope,
 ): ThemePreferencesRecord {
   return {
-    themeId: scope === "portal" ? DEFAULT_PORTAL_THEME_ID : DEFAULT_STUDIO_THEME_ID,
-    font: scope === "portal" ? "serif" : "sans",
+    themeId: scope === "brain" ? DEFAULT_BRAIN_THEME_ID : DEFAULT_LIGHT_THEME_ID,
+    font: "mono",
     density: "comfortable",
     background: "none",
-    frostedGlass: false,
+    frostedGlass: true,
     uiScale: 1,
     bgEffectColor: undefined,
     bgEffectIntensity: 1,
@@ -175,7 +181,11 @@ export function normalizeAppThemePreferences(raw: unknown): AppThemePreferences 
     obj.portal === null
       ? null
       : normalizeThemePreferencesRecord(obj.portal, "portal") ?? undefined;
-  return { studio, portal };
+  const brain =
+    obj.brain === null
+      ? null
+      : normalizeThemePreferencesRecord(obj.brain, "brain") ?? undefined;
+  return { studio, portal, brain };
 }
 
 export function getThemePreferencesForScope(

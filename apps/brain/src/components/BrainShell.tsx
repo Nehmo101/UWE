@@ -3,10 +3,9 @@ import Link from "next/link";
 import { BrainNav } from "./BrainNav";
 
 /**
- * Nachtstudie shell shared by every owner-only Brain surface: inverted
- * Tinte-&-Papier room (ink ground, paper text, candle-gold accent) — same
- * family grammar as Studio (Werkbank) / Portal (Lesesaal), with the
- * "uwe-nachtstudie" theme forced in the root layout.
+ * Shell shared by every owner-only Brain surface. It carries the same chrome
+ * grammar as Studio and Portal ("Gemalte Welt"); Brain simply defaults to the
+ * night half of the pair via its own theme scope (see app/layout.tsx).
  *
  * Owner-gating and data fetching stay in each page (data must not load for
  * non-owners); the shell is purely presentational.

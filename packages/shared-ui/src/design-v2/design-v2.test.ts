@@ -17,7 +17,7 @@ describe("design v2 CSS bundle", () => {
       "tokens.css",
       "wiki.css",
       "parchment-os-shell.css",
-      "tinte-papier-shell.css",
+      "ghibli-shell.css",
       "index.css",
     ];
     for (const file of required) {
@@ -54,31 +54,43 @@ describe("design v2 CSS bundle", () => {
     assert.match(shell, /--uwe-v2-sidebar-active-bg/);
   });
 
-  it("tinte-papier tokens match the room theme presets", () => {
-    const werkbank = UWE_THEMES["uwe-werkbank"].colors;
-    assert.equal(werkbank.accent?.toLowerCase(), "#33567d");
-    assert.equal(werkbank.bg?.toLowerCase(), "#e3ded2");
-    assert.equal(werkbank.sidebarBg?.toLowerCase(), "#241f17");
-    const lesesaal = UWE_THEMES["uwe-lesesaal"].colors;
-    assert.equal(lesesaal.accent?.toLowerCase(), "#2f614b");
-    // Lesesaal ist der Raum ohne dunkle Sidebar — Kopfleiste auf Papier.
-    assert.equal(lesesaal.sidebarBg?.toLowerCase(), lesesaal.cardBg?.toLowerCase());
-    const nachtstudie = UWE_THEMES["uwe-nachtstudie"].colors;
-    assert.equal(nachtstudie.accent?.toLowerCase(), "#c29a3a");
-    assert.equal(nachtstudie.bg?.toLowerCase(), "#1f1b14");
-    // Semantik bleibt vom Akzent getrennt (Befund B-3 aus dem Konzept).
-    for (const room of [werkbank, lesesaal, nachtstudie]) {
-      assert.notEqual(room.danger, room.accent);
-      assert.notEqual(room.dmOnly, room.accent);
+  it("Gemalte-Welt tokens match the design handoff table", () => {
+    const tag = UWE_THEMES["uwe-ghibli-tag"].colors;
+    assert.equal(tag.bg?.toLowerCase(), "#f1e8d4"); // --ground
+    assert.equal(tag.fg?.toLowerCase(), "#211d17"); // --ink
+    assert.equal(tag.fgMuted?.toLowerCase(), "#4a4336"); // --ink2
+    assert.equal(tag.fgSubtle?.toLowerCase(), "#8a7d64"); // --ink3
+    assert.equal(tag.sidebarBg?.toLowerCase(), "#211d17"); // --side-bg
+    assert.equal(tag.playerVisible?.toLowerCase(), "#1a5c4f"); // --teal
+    assert.equal(tag.dmOnly?.toLowerCase(), "#a8541b"); // --terra
+
+    const nacht = UWE_THEMES["uwe-ghibli-nacht"].colors;
+    assert.equal(nacht.bg?.toLowerCase(), "#100e16"); // --ground
+    assert.equal(nacht.fg?.toLowerCase(), "#f1e8d4"); // --ink
+    assert.equal(nacht.fgMuted?.toLowerCase(), "#c9bfaf"); // --ink2
+    assert.equal(nacht.fgSubtle?.toLowerCase(), "#948b78"); // --ink3
+    assert.equal(nacht.sidebarBg?.toLowerCase(), "#0d0b13"); // --side-bg
+    assert.equal(nacht.playerVisible?.toLowerCase(), "#7fd0b4"); // --teal
+    assert.equal(nacht.dmOnly?.toLowerCase(), "#e8a670"); // --terra
+
+    // Sichtbarkeits-Semantik bleibt vom Produktakzent getrennt: "Portal
+    // sichtbar" ist teal, "Nur GM" terracotta — auch im Portal, wo der
+    // Produktakzent selbst teal ist.
+    for (const mode of [tag, nacht]) {
+      assert.notEqual(mode.playerVisible, mode.dmOnly);
     }
   });
 
-  it("tinte-papier shell uses semantic CSS tokens instead of hard-coded colors", () => {
-    const shell = readFileSync(path.join(designV2Dir, "tinte-papier-shell.css"), "utf8");
-    assert.doesNotMatch(shell, /#[0-9a-fA-F]{3,8}\b/);
-    assert.doesNotMatch(shell, /\brgba?\(/);
-    assert.match(shell, /--uwe-sidebar-bg/);
-    assert.match(shell, /uwe-nachtstudie/);
+  it("Gemalte-Welt shell only defines tokens the engine does not own", () => {
+    const shell = readFileSync(path.join(designV2Dir, "ghibli-shell.css"), "utf8");
+    // Die Engine schreibt diese Namen als Inline-Style auf <html>; ein
+    // Stylesheet käme dagegen nicht an und der Block wäre stumm wirkungslos.
+    for (const owned of ["--uwe-bg:", "--uwe-fg:", "--uwe-accent:", "--uwe-border:"]) {
+      assert.ok(!shell.includes(owned), `ghibli-shell.css must not set ${owned}`);
+    }
+    assert.match(shell, /--uwe-hero-sh/);
+    assert.match(shell, /--uwe-scene-veil-opacity/);
+    assert.match(shell, /uwe-ghibli-nacht/);
   });
 
   it("v2 layout tokens follow handoff dimensions", () => {

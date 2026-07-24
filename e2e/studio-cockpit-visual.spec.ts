@@ -15,15 +15,15 @@ test.describe("Studio world dashboard on WorldShell", () => {
     await expect(page.getByRole("heading", { name: "Terra" })).toBeVisible();
   });
 
-  test("studio defaults to Werkbank accent tokens", async ({ page }) => {
+  test("studio defaults to Gemalte-Welt accent tokens", async ({ page }) => {
     await page.goto("/worlds/terra/dashboard");
 
     const themeId = await page.evaluate(() => document.documentElement.dataset.uweTheme);
-    expect(themeId).toBe("uwe-werkbank");
+    expect(themeId).toBe("uwe-ghibli-tag");
 
     const accent = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--uwe-accent").trim(),
     );
-    expect(accent.toLowerCase()).toBe("#33567d");
+    expect(accent.toLowerCase()).toBe("#c2622b");
   });
 });

@@ -4,8 +4,12 @@
  * auf --uwe-zone-*); wiki.css + parchment-os-shell.css stylen die lebenden
  * Wiki-Render-Klassen (uwe-v2-wiki*) und Theme-Skins. shell/components/
  * layouts/mobile.css wurden mit ButtonV2/CardV2 entfernt.
+ *
+ * ghibli-shell.css ist der Chrome-Block des aktuellen Standard-Designs
+ * („Gemalte Welt", uwe-ghibli-tag/-nacht). Er löst tinte-papier-shell.css ab,
+ * das die zurückgezogenen Räume Werkbank/Lesesaal/Nachtstudie stylte.
  */
 @import "./tokens.css";
 @import "./wiki.css";
 @import "./parchment-os-shell.css";
-@import "./tinte-papier-shell.css";
+@import "./ghibli-shell.css";

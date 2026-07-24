@@ -185,7 +185,7 @@ export type BackgroundPatternId =
   | "parchment"
   | "noise";
 
-export type AppScope = "studio" | "portal";
+export type AppScope = "studio" | "portal" | "brain";
 
 export const FONT_FAMILIES: Record<FontFamilyId, string> = {
   mono: "var(--uwe-font-space-mono, ui-monospace), 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace",
