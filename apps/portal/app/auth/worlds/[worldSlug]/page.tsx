@@ -4,15 +4,19 @@ import { PreviewAsPlayerForm } from "@/src/components/PreviewAsPlayerForm";
 import {
   canUsePreview,
   getAccessContextForWorld,
+  getCurrentUser,
   getPreviewUserId,
   getWorldPlayers,
 } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import {
+  AppAccentScope,
   EmptyState,
   GlobalSearchForm,
+  SceneHero,
   SearchFilterBar,
   SearchResultsList,
+  dayIndex,
 } from "@uwe/shared-ui";
 import {
   createAuthService,
@@ -24,7 +28,7 @@ import {
   type SearchEntityFilter,
   type SearchResultItem,
 } from "@uwe/database/server";
-import { PageHeader } from "@/src/components/shell";
+
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -83,11 +87,26 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
   const players = previewEnabled ? await getWorldPlayers(worldSlug) : [];
   const dashboardWidgets = getDefaultDashboardLayout(portalWorldPageKey(worldSlug));
 
+  const viewer = await getCurrentUser();
+  const viewerName = ctx.previewAsUserId ? "" : (viewer?.displayName ?? "");
+
   return (
-    <>
-      <PageHeader
+    <AppAccentScope app="portal">
+      {/* Szene als Bühne, der bestehende Welt-Inhalt fließt darunter weiter. */}
+      <SceneHero
+        area="portal"
+        sceneIndex={dayIndex()}
+        size="portal"
+        veil="portal"
+        groundStart="34%"
+        groundEnd="84%"
+        eyebrow={viewerName ? `Willkommen zurück, ${viewerName}` : "Willkommen zurück"}
         title={worldName}
-        summary={`Kampagnen-Übersicht${ctx.previewAsUserId ? " (Preview-as-Player aktiv)" : ""}`}
+        lede={
+          ctx.previewAsUserId
+            ? "Preview-as-Player aktiv — du siehst die Welt mit den Rechten des gewählten Spielers."
+            : "Dein Fenster in die Kampagne — alles hier ist für dich freigegeben."
+        }
       />
 
       <GlobalSearchForm
@@ -141,6 +160,6 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
           description="Für deine Rolle sind derzeit keine Inhalte sichtbar. Wende dich an deinen Spielleiter."
         />
       )}
-    </>
+    </AppAccentScope>
   );
 }

@@ -168,3 +168,124 @@ html[data-uwe-motion="off"] .uwe-scene__night,
 html[data-uwe-motion="off"] .uwe-scene__veil {
   transition: none;
 }
+
+/* --- SceneHero: Kopf über der Szene -------------------------------------- */
+
+.uwe-scene-hero-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Hoch genug, dass die Landschaft trägt, niedrig genug, dass der Inhalt
+     darunter ohne Scrollen angeschnitten ist. */
+  min-height: clamp(260px, 46vh, 460px);
+  margin-bottom: 20px;
+  /* Der Verlauf endet im Grund — der Übergang darf keine Kante zeigen. */
+  background: transparent;
+}
+
+.uwe-scene-hero-inner {
+  padding: 0 20px 8px;
+}
+
+.uwe-scene-hero-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.uwe-scene-hero-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--uwe-accent);
+  text-shadow: var(--uwe-hero-sh, none);
+}
+
+.uwe-scene-hero-title {
+  margin: 8px 0 4px;
+  font-family: var(--uwe-font-newsreader, Georgia), serif;
+  font-weight: 500;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.uwe-scene-hero-lede {
+  margin: 0;
+  font-size: 11.5px;
+  max-width: 62ch;
+}
+
+.uwe-scene-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (min-width: 960px) {
+  .uwe-scene-hero-block {
+    min-height: clamp(320px, 54vh, 560px);
+    margin-bottom: 26px;
+  }
+
+  .uwe-scene-hero-inner {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 70px 10px;
+    box-sizing: border-box;
+  }
+
+  .uwe-scene-hero-eyebrow {
+    font-size: 12px;
+  }
+
+  .uwe-scene-hero-lede {
+    font-size: 13.5px;
+  }
+
+  /* Titelgrößen je Fläche — Handoff, Abschnitte 2–4. */
+  .uwe-scene-hero-block[data-size="portal"] .uwe-scene-hero-title {
+    margin: 10px 0 6px;
+    font-size: 56px;
+  }
+
+  .uwe-scene-hero-block[data-size="brain"] .uwe-scene-hero-title {
+    margin: 10px 0 6px;
+    font-size: 52px;
+  }
+
+  .uwe-scene-hero-block[data-size="studio"] .uwe-scene-hero-title {
+    font-size: 44px;
+  }
+}
+
+/* Der Akzent-Button des Studio-Kopfes („+ Erfassen"): Akzentfüllung mit
+   Tinte-Kante, damit er auch über hellem Bildinhalt steht. */
+.uwe-scene-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--uwe-touch-target, 44px);
+  padding: 10px 18px;
+  border-radius: var(--uwe-radius-btn, 9px);
+  border: var(--uwe-border-width-chrome, 2px) solid var(--uwe-sidebar-bg);
+  background: var(--uwe-accent);
+  color: var(--uwe-on-accent);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--uwe-shadow-sm);
+  transition: filter 0.15s ease;
+}
+
+.uwe-scene-action:hover {
+  filter: brightness(1.1);
+}
+
+.uwe-scene-action:active {
+  transform: translateY(1px);
+}

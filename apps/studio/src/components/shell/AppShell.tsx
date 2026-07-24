@@ -3,7 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import type { NavCommand, ResolvedNavGroup } from "@uwe/shared-utils/navigation";
-import { MobileBottomNav, SidebarContextProvider, type BottomNavItem } from "@uwe/shared-ui";
+import {
+  MobileBottomNav,
+  SidebarContextProvider,
+  ThemeModeToggle,
+  type BottomNavItem,
+} from "@uwe/shared-ui";
 import { NavIcon } from "../ui/icon";
 import { Sheet, SheetContent, SheetClose, SheetTrigger } from "../ui/sheet";
 import { ScrollArea } from "../ui/scroll-area";
@@ -62,6 +67,7 @@ export function AppShell({
             <MobileNav groups={groups} brandLabel={brandLabel} />
             <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{breadcrumb}</div>
             <div id="uwe-topbar-end" className="flex shrink-0 items-center gap-2" />
+            <ThemeModeToggle />
             {commands.length > 0 ? <CommandHint /> : null}
           </header>
 

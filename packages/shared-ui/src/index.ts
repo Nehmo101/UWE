@@ -87,10 +87,12 @@ export {
   AppAccentScope,
   PaintedScene,
   SceneContent,
+  SceneHero,
   ThemeModeToggle,
   type AccentApp,
   type AccentScopeLayout,
   type PaintedSceneProps,
+  type SceneHeroProps,
   type SceneVeil,
   type ThemeModeToggleSize,
 } from "./scene";

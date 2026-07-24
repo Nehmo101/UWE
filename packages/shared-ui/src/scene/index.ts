@@ -1,3 +1,4 @@
+export { SceneHero, type SceneHeroProps } from "./SceneHero";
 export { PaintedScene, SceneContent, type PaintedSceneProps, type SceneVeil } from "./PaintedScene";
 export { AppAccentScope, type AccentApp, type AccentScopeLayout } from "./AppAccentScope";
 export { ThemeModeToggle, type ThemeModeToggleSize } from "./ThemeModeToggle";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HealthBadge } from "@uwe/shared-ui";
+import { AppAccentScope, HealthBadge, SceneHero, dayIndex } from "@uwe/shared-ui";
 import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createLifeAdminService,
@@ -8,7 +8,7 @@ import {
   prisma,
   STUDIO_TODAY_PAGE_KEY,
 } from "@uwe/database/server";
-import { StudioShell, PageHeader } from "@/src/components/shell";
+import { StudioShell } from "@/src/components/shell";
 import { Button, Card, CardContent, CardHeader, CardTitle, NavIcon } from "@/src/components/ui";
 import { getTodayDashboardData } from "@/src/lib/today-dashboard";
 import { generateMorningBriefingAction } from "../briefing-actions";
@@ -43,20 +43,33 @@ export default async function TodayPage() {
     getDefaultDashboardLayout(STUDIO_TODAY_PAGE_KEY),
   );
 
+  const dateLine = new Intl.DateTimeFormat("de-DE", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+
   return (
     <StudioShell breadcrumb={<span>Heute</span>}>
-      <PageHeader
-        title="Heute"
-        summary="Dein Daily Cockpit — DnD, Projekte, Capture, Technik und System auf einen Blick."
-        actions={
-          <Link
-            href="/capture?quick=1"
-            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            + Capture
-          </Link>
-        }
-      />
+      <AppAccentScope app="studio">
+        {/* Szene als Band über dem Kopf; der komplette Bestandsinhalt des
+            Cockpits fließt unverändert darunter weiter. */}
+        <SceneHero
+          area="studio"
+          sceneIndex={dayIndex()}
+          size="studio"
+          veil="band"
+          groundStart="26%"
+          groundEnd="58%"
+          title="Heute"
+          lede={`${dateLine} — dein Cockpit für Welt & Alltag.`}
+          actions={
+            <Link href="/capture?quick=1" className="uwe-scene-action">
+              + Erfassen
+            </Link>
+          }
+        />
+      </AppAccentScope>
       <div className="flex flex-col gap-6">
         <TodayQuickCapture />
         <TodayDashboardClient data={data} widgets={todayWidgets} />
