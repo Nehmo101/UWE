@@ -5,7 +5,7 @@ import {
   resolveStudioPublicBaseUrl,
 } from "@uwe/auth";
 import { getAppRepository } from "@uwe/database/server";
-import { UweLandingPage } from "@uwe/shared-ui";
+import { UweLandingPage, dayIndex } from "@uwe/shared-ui";
 import { redirect } from "next/navigation";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { resolveStudioLandingPath } from "@/src/lib/studio-landing";
@@ -30,6 +30,10 @@ export default async function LandingPage() {
       brainAppUrl={resolveBrainPublicBaseUrl()}
       turnstileSiteKey={turnstile.enabled ? turnstile.siteKey : null}
       rtxOnline
+      // Serverseitig berechnet und durchgereicht: ein clientseitiger Wert
+      // erzeugte um Mitternacht bzw. bei abweichender Serverzone einen
+      // Hydration-Mismatch.
+      sceneIndex={dayIndex()}
     />
   );
 }
