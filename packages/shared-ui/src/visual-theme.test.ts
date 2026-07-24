@@ -16,7 +16,7 @@ describe("buildVisualThemeHtmlAttributes", () => {
 
     assert.deepEqual(attrs, {
       "data-theme": "system",
-      "data-uwe-theme": "system",
+      "data-uwe-appearance": "system",
       "data-uwe-bg-pattern": "dots",
       "data-uwe-glass": "off",
       "data-uwe-motion": "on",

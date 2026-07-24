@@ -23,12 +23,12 @@ html[data-uwe-app="portal"] {
   --uwe-border-accent: color-mix(in srgb, var(--uwe-accent) 32%, transparent);
 }
 
-html[data-uwe-theme="dark"],
-html[data-uwe-theme="system"] {
+html[data-uwe-appearance="dark"],
+html[data-uwe-appearance="system"] {
   color-scheme: dark;
 }
 
-html[data-uwe-theme="light"] {
+html[data-uwe-appearance="light"] {
   color-scheme: light;
   --uwe-surface-base: var(--uwe-bg);
   --uwe-surface-elevated: color-mix(in srgb, var(--uwe-bg-elevated) 97%, var(--uwe-fg) 3%);
@@ -43,7 +43,7 @@ html[data-uwe-theme="light"] {
 }
 
 @media (prefers-color-scheme: light) {
-  html[data-uwe-theme="system"] {
+  html[data-uwe-appearance="system"] {
     color-scheme: light;
     --uwe-surface-base: var(--uwe-bg);
     --uwe-surface-elevated: color-mix(in srgb, var(--uwe-bg-elevated) 97%, var(--uwe-fg) 3%);
@@ -153,7 +153,7 @@ html[data-uwe-bg-pattern="subtle-noise"] body::before {
 }
 
 @media (prefers-color-scheme: light) {
-  html[data-uwe-theme="system"] body {
+  html[data-uwe-appearance="system"] body {
     color: var(--uwe-text-primary);
     background:
       radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99, 102, 241, 0.1), transparent 50%),
@@ -162,7 +162,7 @@ html[data-uwe-bg-pattern="subtle-noise"] body::before {
   }
 }
 
-html[data-uwe-theme="light"] body {
+html[data-uwe-appearance="light"] body {
   color: var(--uwe-text-primary);
   background:
     radial-gradient(ellipse 80% 50% at 20% -10%, color-mix(in srgb, var(--uwe-accent) 10%, transparent), transparent 50%),
