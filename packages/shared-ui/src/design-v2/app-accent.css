@@ -140,11 +140,18 @@ html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-accent-scope[data-accent-app="brain
   top: 2px;
 }
 
-.uwe-mode-toggle[data-mode="dunkel"] .uwe-mode-toggle__knob {
+/*
+ * Die Knopfstellung hängt am Theme-Attribut auf <html>, nicht an React-State.
+ * Das Anti-FOUC-Bootstrap setzt dieses Attribut vor dem ersten Paint — der
+ * Schalter steht damit sofort richtig, auch bevor React hydratisiert. Aus
+ * React-State gerendert wäre es ein Hydration-Mismatch, sobald das gespeicherte
+ * Theme vom Server-Default abweicht (React-Fehler #418).
+ */
+html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-mode-toggle__knob {
   left: 15px;
 }
 
-.uwe-mode-toggle[data-size="nav"][data-mode="dunkel"] .uwe-mode-toggle__knob {
+html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-mode-toggle[data-size="nav"] .uwe-mode-toggle__knob {
   left: 19px;
 }
 
@@ -156,16 +163,4 @@ html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-accent-scope[data-accent-app="brain
 
 html[data-uwe-motion="off"] .uwe-mode-toggle__knob {
   transition: none;
-}
-
-.uwe-visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
 }
