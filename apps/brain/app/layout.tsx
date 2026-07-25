@@ -9,6 +9,7 @@ import {
   type UweThemePreferences,
   type VisualThemeHtmlAttributes,
 } from "@uwe/shared-ui";
+import { BrainThemeSyncProvider } from "@/src/components/BrainThemeSyncProvider";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 
@@ -85,7 +86,15 @@ export default async function RootLayout({
           serverPreferences={serverThemePreferences}
           serverUpdatedAt={updatedAt}
         />
-        {children}
+        {/* Der Theme-Kontext muss die ganze App umschließen: die Topbar der
+            BrainShell trägt den Hell/Dunkel-Umschalter, und der liest
+            `useUweTheme()`. Fehlt der Provider, kippt jede Brain-Seite. */}
+        <BrainThemeSyncProvider
+          serverPreferences={serverThemePreferences}
+          serverUpdatedAt={updatedAt}
+        >
+          {children}
+        </BrainThemeSyncProvider>
       </body>
     </html>
   );
