@@ -275,6 +275,9 @@ html[data-theme="light"] {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  /* Rechts andocken, damit die Bedienelemente auf schmalen Displays nicht über
+     den rechten Rand hinausgeschoben werden. */
+  margin-left: auto;
 }
 
 .uwe-topbar-inner > .uwe-search,
@@ -307,6 +310,64 @@ html[data-theme="light"] {
 .uwe-session-logout {
   white-space: nowrap;
   font-size: 0.875rem;
+}
+
+/*
+ * Navigations-Schublade auf Mobil.
+ *
+ * `.uwe-nav-toggle-input` ist eine visuell versteckte, aber fokussierbare
+ * Checkbox direkt unter `.uwe-shell`; Auf- und Zuklappen läuft rein über CSS
+ * (`:has()`), damit auch Server-Komponenten-Shells ohne Client-JS und unter
+ * strikter CSP navigierbar bleiben. `[data-sidebar-open]` bleibt als
+ * JS-gesteuerte Alternative gültig.
+ */
+.uwe-nav-toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.uwe-mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: var(--uwe-touch-min);
+  min-height: var(--uwe-touch-min);
+  border-radius: var(--uwe-radius-md, 0.5rem);
+  border: 1px solid var(--uwe-border);
+  background: transparent;
+  color: var(--uwe-fg);
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.uwe-nav-toggle-input:focus-visible + .uwe-mobile-nav-toggle,
+.uwe-shell:has(> .uwe-nav-toggle-input:focus-visible) .uwe-mobile-nav-toggle {
+  outline: 2px solid var(--uwe-focus-ring);
+  outline-offset: 2px;
+}
+
+.uwe-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
 }
 
 .uwe-shell[data-sidebar-open="true"] .uwe-mobile-nav-icon {
@@ -727,8 +788,17 @@ html[data-theme="light"] {
     width: 100%;
   }
 
-  .uwe-shell-body {
-    grid-template-columns: 1fr;
+  /* Auf Mobil wird die Sidebar zur Schublade — der Body ist einspaltig.
+     Die Attribut-Varianten müssen mitgelistet werden: Media Queries erhöhen
+     die Spezifität nicht, ein blankes `.uwe-shell-body` (0,1,0) verliert also
+     gegen `.uwe-shell-body[data-has-sidebar][data-has-context]` (0,3,0) und
+     der Inhalt bliebe in der 16rem-Spalte eingeklemmt. */
+  .uwe-shell-body,
+  .uwe-shell-body[data-has-sidebar="false"][data-has-context="false"],
+  .uwe-shell-body[data-has-sidebar="false"][data-has-context="true"],
+  .uwe-shell-body[data-has-sidebar="true"][data-has-context="false"],
+  .uwe-shell-body[data-has-sidebar="true"][data-has-context="true"] {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .uwe-sidebar {
@@ -740,17 +810,27 @@ html[data-theme="light"] {
     transition: transform 0.25s ease;
     border-right: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
-    padding-top: var(--uwe-safe-top);
+    padding-top: calc(1.25rem + var(--uwe-safe-top));
     padding-bottom: calc(1rem + var(--uwe-safe-bottom));
   }
 
-  .uwe-shell[data-sidebar-open="true"] .uwe-sidebar {
+  .uwe-shell[data-sidebar-open="true"] .uwe-sidebar,
+  .uwe-shell:has(> .uwe-nav-toggle-input:checked) .uwe-sidebar {
     transform: translateX(0);
   }
 
-  .uwe-shell[data-sidebar-open="true"] .uwe-sidebar-backdrop {
+  .uwe-shell[data-sidebar-open="true"] .uwe-sidebar-backdrop,
+  .uwe-shell:has(> .uwe-nav-toggle-input:checked) .uwe-sidebar-backdrop {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .uwe-sidebar-backdrop {
+    display: block;
+  }
+
+  .uwe-mobile-nav-toggle {
+    display: inline-flex;
   }
 
   .uwe-main {
@@ -883,7 +963,12 @@ html[data-theme="light"] {
     padding-bottom: calc(8.5rem + var(--uwe-safe-bottom));
   }
 
-  .uwe-filter-sheet-panel {
+  /* `:not([hidden])` ist Pflicht: die Komponente schließt das Sheet über das
+     `hidden`-Attribut, und ein `display: block` aus dem Autoren-Stylesheet
+     schlägt das `[hidden] { display: none }` des Browsers. Ohne die Ausnahme
+     klebt das Filter-Panel dauerhaft am unteren Rand — sichtbar, obwohl sein
+     Zustand „geschlossen" ist. */
+  .uwe-filter-sheet-panel:not([hidden]) {
     display: block;
     position: fixed;
     inset: auto 0 0 0;

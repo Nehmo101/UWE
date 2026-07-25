@@ -9,6 +9,9 @@ import {
 } from "@uwe/shared-ui";
 import { BrainNav } from "./BrainNav";
 
+/** Verbindet Umschalter, Hintergrund und Schublade — muss dokumentweit eindeutig sein. */
+const NAV_DRAWER_ID = "uwe-brain-nav-drawer";
+
 /**
  * Shell shared by every owner-only Brain surface. It carries the same chrome
  * grammar as Studio and Portal ("Gemalte Welt"); Brain simply defaults to the
@@ -43,7 +46,22 @@ export function BrainShell({
   return (
     <AppAccentScope app="brain">
       <div className="uwe-shell" data-has-bottom-nav="true">
+        {/* Schublade der App-Navigation auf Mobil: reines CSS (`:has()`), damit
+            diese Server-Komponente ohne Client-JS auskommt. Der `key` hängt an
+            der aktiven Route — so ist die Schublade nach jedem Seitenwechsel
+            wieder zu. */}
+        <input
+          key={active}
+          type="checkbox"
+          id={NAV_DRAWER_ID}
+          className="uwe-nav-toggle-input"
+          aria-label="Navigation ein- oder ausblenden"
+        />
+        <label className="uwe-sidebar-backdrop" htmlFor={NAV_DRAWER_ID} aria-hidden />
         <header className="uwe-topbar">
+          <label className="uwe-mobile-nav-toggle" htmlFor={NAV_DRAWER_ID} aria-hidden>
+            ☰
+          </label>
           <Link href="/" className="uwe-brand">
             <span className="uwe-brand-mark" aria-hidden>
               ◆

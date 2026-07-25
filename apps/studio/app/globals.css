@@ -1415,3 +1415,29 @@ body {
 .uwe-project-lightbox-next {
   right: clamp(0.5rem, 3vw, 2rem);
 }
+
+/* ── Mobil: Formularfelder ───────────────────────────────────────────────
+ * Safari auf iOS zoomt die Seite hinein, sobald ein Feld mit weniger als
+ * 16px den Fokus bekommt — und wieder heraus zoomt es nicht. Die geteilten
+ * Primitives (Input, Textarea, SelectTrigger) stehen auf `text-sm` (14px),
+ * einzelne Selects auf 13,3px. Auf Telefonbreite gilt deshalb 1rem als
+ * Untergrenze; `1em` erhält absichtlich größere Felder. Dazu die
+ * Touch-Mindesthöhe aus den Design-Tokens — `h-9` sind nur 36px.
+ *
+ * Die Regel steht bewusst außerhalb jeder `@layer`: unlayered schlägt die
+ * Tailwind-Utilities in `layer(utilities)` unabhängig von der Ladereihenfolge.
+ */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea,
+  button[role="combobox"] {
+    font-size: max(1rem, 1em);
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  button[role="combobox"] {
+    min-height: var(--uwe-touch-min, 2.75rem);
+  }
+}

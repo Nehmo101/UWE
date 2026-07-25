@@ -55,7 +55,7 @@ export default async function BrainCalendarPage() {
             Titel
             <input name="title" required placeholder="z. B. Zahnarzt" />
           </label>
-          <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+          <div className="brain-form-row">
             <label>
               Beginn
               <input name="startAt" type="datetime-local" required />
@@ -65,7 +65,7 @@ export default async function BrainCalendarPage() {
               <input name="endAt" type="datetime-local" />
             </label>
           </div>
-          <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr auto" }}>
+          <div className="brain-form-row">
             <label>
               Art
               <select name="kind" defaultValue="personal">
@@ -144,7 +144,7 @@ export default async function BrainCalendarPage() {
                           Titel
                           <input name="title" defaultValue={event.title} required />
                         </label>
-                        <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+                        <div className="brain-form-row">
                           <label>
                             Beginn
                             <input
@@ -159,7 +159,7 @@ export default async function BrainCalendarPage() {
                             <input name="endAt" type="datetime-local" defaultValue={toLocalInput(event.endAt)} />
                           </label>
                         </div>
-                        <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr auto" }}>
+                        <div className="brain-form-row">
                           <label>
                             Art
                             <select name="kind" defaultValue={event.kind}>

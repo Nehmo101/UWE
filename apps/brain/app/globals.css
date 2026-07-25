@@ -257,6 +257,19 @@ body {
   align-items: end;
 }
 
+/*
+ * Feldpaare innerhalb eines Formulars (Beginn/Ende, Art/Ort …). Sie brechen
+ * untereinander um, sobald 12rem je Spalte nicht mehr passen; `min(…, 100%)`
+ * hält Felder mit großer Mindestbreite — `datetime-local` etwa — innerhalb der
+ * Karte statt sie auf dem Handy herauslaufen zu lassen.
+ */
+.brain-form-row {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+  align-items: end;
+}
+
 .brain-form label {
   display: grid;
   gap: 0.3rem;
@@ -473,30 +486,58 @@ body {
   color: var(--uwe-sidebar-fg, #f1e8d4);
 }
 
-/* ── Responsive: stack sidebar above content on narrow screens ───────── */
-@media (max-width: 820px) {
-  .uwe-shell-body[data-has-sidebar="true"][data-has-context="false"] {
-    grid-template-columns: 1fr;
+/* ── Responsive ──────────────────────────────────────────────────────────
+ * Die Sidebar ist auf Mobil die Schublade aus uwe.css (Umschalter ☰ in der
+ * Topbar der BrainShell) — hier wird sie deshalb nicht mehr umgebaut, nur der
+ * Textrhythmus auf schmalen Displays entzerrt: die Monospace-UI-Schrift bricht
+ * bei voller Größe alle drei Wörter um.
+ */
+@media (max-width: 640px) {
+  /* In der Topbar ist nur Platz für Marke und Bedienelemente. Dass der Bereich
+     owner-privat ist, sagt ohnehin die Kopfzeile jeder Seite. */
+  .brain-owner-badge {
+    display: none;
   }
 
-  .uwe-sidebar {
-    border-right: none;
-    border-bottom: 1px solid #2c261d;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1.25rem;
-    padding: 0.85rem 1rem;
+  .uwe-brand strong {
+    white-space: nowrap;
   }
 
-  .uwe-sidebar .uwe-sidebar-section {
-    margin-top: 0;
+  .uwe-main h1 {
+    font-size: 1.4rem;
+    overflow-wrap: break-word;
   }
 
-  .uwe-sidebar .uwe-sidebar-section h3 {
-    margin-bottom: 0.35rem;
+  .uwe-main > .brain-lede {
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
   }
 
-  .uwe-main {
-    padding: 1.25rem 1.15rem 3rem;
+  .brain-card {
+    padding: 0.9rem 0.95rem;
+  }
+
+  .brain-row {
+    padding: 0.75rem 0.85rem;
+  }
+
+  /* Touch-Ziele: Eingaben unter 16px lösen auf iOS den Auto-Zoom aus. */
+  .brain-form input,
+  .brain-form textarea,
+  .brain-form select {
+    font-size: 1rem;
+    min-height: var(--uwe-touch-min);
+  }
+
+  .brain-form textarea {
+    min-height: 5rem;
+  }
+
+  .brain-btn {
+    min-height: var(--uwe-touch-min);
+  }
+
+  .brain-btn-sm {
+    min-height: 2.25rem;
   }
 }

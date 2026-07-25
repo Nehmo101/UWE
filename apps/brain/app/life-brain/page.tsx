@@ -53,7 +53,15 @@ export default async function BrainLifeBrainPage() {
       title="Persönliches Wissen"
       lede={`${documents.length} Dokument(e) · ${facts.length} Fakt(en) — anlegen, festhalten, wiederfinden. Lokal auf deiner Hardware, niemals an Cloud-KI.`}
     >
-      <div style={{ display: "grid", gap: "0.85rem", gridTemplateColumns: "repeat(auto-fit, minmax(19rem, 1fr))" }}>
+      <div
+        style={{
+          display: "grid",
+          gap: "0.85rem",
+          // min() statt 19rem: auf schmalen Displays darf die Spalte nie breiter
+          // werden als der Inhaltsbereich, sonst laufen die Formulare heraus.
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(19rem, 100%), 1fr))",
+        }}
+      >
         <section className="brain-section">
           <h2>Neuer Fakt</h2>
           <form action={createBrainFactAction} className="brain-form brain-card">

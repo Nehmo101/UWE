@@ -155,6 +155,18 @@ html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-mode-toggle[data-size="nav"] .uwe-m
   left: 19px;
 }
 
+/*
+ * Auf dem Telefon ist der Schalter mit 28px Höhe kaum zu treffen. Er wächst
+ * dort auf die Touch-Mindesthöhe der Design-Tokens; Schrift und Kulisse
+ * bleiben unverändert, es kommt nur Innenabstand dazu.
+ */
+@media (max-width: 640px) {
+  .uwe-mode-toggle {
+    min-height: var(--uwe-touch-min, 2.75rem);
+    padding-inline: 12px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .uwe-mode-toggle__knob {
     transition: none;
