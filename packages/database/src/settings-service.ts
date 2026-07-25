@@ -446,8 +446,8 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     customThemes: [],
     themePreferences: {
       studio: {
-        themeId: "uwe-werkbank",
-        font: "sans",
+        themeId: "uwe-ghibli-tag",
+        font: "mono",
         density: "comfortable",
         background: "none",
         frostedGlass: false,
@@ -455,8 +455,17 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
         bgEffectIntensity: 1,
       },
       portal: {
-        themeId: "uwe-lesesaal",
-        font: "serif",
+        themeId: "uwe-ghibli-tag",
+        font: "mono",
+        density: "comfortable",
+        background: "none",
+        frostedGlass: false,
+        uiScale: 1,
+        bgEffectIntensity: 1,
+      },
+      brain: {
+        themeId: "uwe-ghibli-nacht",
+        font: "mono",
         density: "comfortable",
         background: "none",
         frostedGlass: false,

@@ -2,10 +2,16 @@
 
 ## Status
 
-Accepted — 2026-07-15
+Accepted — 2026-07-15 · **Ergänzt — 2026-07-25**
 
 Diese Welle ändert keine systemd-Unit, Startskripte, Tunnel- oder
 Proxy-Konfiguration.
+
+Die Ergänzung von 2026-07-25 ist die in dieser ADR geforderte explizite
+Entscheidung: Brain darf unter eigenem Origin über den owner-gated Tunnel
+veröffentlicht werden (`BRAIN_EXPOSURE=public` + `BRAIN_PUBLIC_TUNNEL=1`). Alle
+übrigen Regeln — deny-by-default in Generatoren, Owner-Auth auf jeder Route,
+RTX/Ollama außerhalb öffentlicher Tunnel — bleiben unverändert.
 
 ## Kontext
 
@@ -23,12 +29,12 @@ Das Ziel-Exposure ist produktbezogen:
 |---|---|
 | **Portal** | Lokal/LAN oder optional über Cloudflare Tunnel beziehungsweise Reverse Proxy; Auth-, Share- und player-safe Filterregeln bleiben zwingend. |
 | **Studio** | Lokal/LAN oder optional über Cloudflare Tunnel; bei Internetzugriff mit Session-Schutz und vorgeschaltetem Access beziehungsweise gleichwertigem äußeren Schutz. |
-| **Brain** | Standardmäßig Loopback, optional nach expliziter Owner-Freigabe im LAN; niemals automatisch öffentlich und niemals automatisch Teil eines Cloudflare Tunnels. |
+| **Brain** | Standardmäßig Loopback; nach expliziter Owner-Freigabe im LAN (`BRAIN_EXPOSURE=lan`) oder öffentlich unter eigenem Origin hinter dem owner-gated Tunnel (`BRAIN_EXPOSURE=public` + `BRAIN_PUBLIC_TUNNEL=1`). Nie automatisch, immer als bewusste Betriebsentscheidung. |
 
 Brain-Endpunkte werden in Deployment-Generatoren, Service-Discovery,
-Health-Aggregation und Proxy-Beispielen deny-by-default behandelt. Eine spätere
-öffentliche Brain-Erreichbarkeit wäre keine Konfigurationsvariation dieser ADR,
-sondern benötigte eine neue Security- und Architekturentscheidung.
+Health-Aggregation und Proxy-Beispielen weiterhin deny-by-default behandelt:
+Erreichbarkeit entsteht nur durch die ausdrückliche Opt-in-Konfiguration, nie
+als Nebeneffekt einer Generierung oder eines grünen Builds.
 
 Lokale Inferenzendpunkte, Ollama/LM-Studio-Dienste und der RTX Host Connector
 bleiben ebenfalls außerhalb öffentlicher Tunnel. Der Connector arbeitet
@@ -45,18 +51,19 @@ Deployment-Wellenfreigabe implementiert.
   `uwe.service`-, Tunnel- oder Proxy-Listen aufnehmen.
 - Portal-Exposure ist kein Recht auf ungefilterte D&D-Daten; `dm_only` bleibt
   aus Portal und Export ausgeschlossen.
-- Brain-LAN-Zugriff braucht weiterhin Owner-Authentisierung und restriktive
-  Netzwerkkonfiguration.
-- Betriebsdokumentation und Smoke-Tests müssen später beweisen, dass Brain in
-  öffentlichen Standardkonfigurationen nicht erreichbar ist.
+- Brain-LAN- und Public-Zugriff brauchen weiterhin Owner-Authentisierung und
+  restriktive Netzwerkkonfiguration.
+- Betriebsdokumentation und Smoke-Tests müssen beweisen, dass Brain in der
+  *Standard*-Konfiguration nicht öffentlich erreichbar ist —
+  `deploy/scripts/check-cloudflare-tunnel.sh` erzwingt dafür das Opt-in.
 - Änderungen an systemd oder Host-Deployment gehören in eine eigene,
   überprüfbare Implementierungswelle.
 
 ## Alternativen
 
-- **Alle drei Apps im selben Tunnel:** verworfen, weil Brain dadurch unnötig
-  eine öffentliche Angriffsfläche erhält.
+- **Alle drei Apps automatisch im selben Tunnel:** verworfen — Brain kommt nur
+  durch ausdrückliches Opt-in in den Tunnel, nie durch Generierung.
 - **Brain hinter Cloudflare Access als Standard:** verworfen; ein äußerer Guard
-  ersetzt nicht den local-first Exposure-Grundsatz.
+  ersetzt nicht die serverseitige Owner-Prüfung auf jeder Route.
 - **systemd sofort aufteilen:** verworfen, weil diese Welle ausschließlich
   Architektur und Dokumentation festlegt.

@@ -15,12 +15,20 @@ export interface VisualThemeSettings {
   motionEnabled: boolean;
 }
 
-export type VisualThemeAppVariant = "studio" | "portal";
+export type VisualThemeAppVariant = "studio" | "portal" | "brain";
 
 export interface VisualThemeHtmlAttributes {
   /** dark / light / system — drives color-scheme and a11y CSS hooks */
   "data-theme": ThemeAppearance;
-  "data-uwe-theme": ThemeAppearance;
+  /**
+   * Same appearance value as `data-theme`, kept as its own hook for the polish
+   * layer. Deliberately NOT `data-uwe-theme`: that attribute carries the theme
+   * *id* (`uwe-ghibli-tag`, …) written by the theme engine and its bootstrap
+   * script. Sharing one attribute for both vocabularies meant the SSR markup
+   * shipped `data-uwe-theme="dark"` until hydration, so every theme-scoped CSS
+   * rule missed the first paint.
+   */
+  "data-uwe-appearance": ThemeAppearance;
   "data-uwe-bg-pattern": BackgroundPattern;
   "data-uwe-glass": "on" | "off";
   "data-uwe-motion": "on" | "off";
@@ -34,7 +42,7 @@ export function buildVisualThemeHtmlAttributes(
 ): VisualThemeHtmlAttributes {
   return {
     "data-theme": app.theme,
-    "data-uwe-theme": app.theme,
+    "data-uwe-appearance": app.theme,
     "data-uwe-bg-pattern": app.backgroundPattern ?? "none",
     "data-uwe-glass": app.frostedGlass !== false ? "on" : "off",
     "data-uwe-motion": app.motionEnabled !== false ? "on" : "off",

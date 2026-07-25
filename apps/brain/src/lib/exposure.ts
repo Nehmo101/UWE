@@ -1,23 +1,30 @@
 /**
- * Brain exposure policy (ADR 004/007). Brain is owner-only and local: it binds
- * to loopback by default, may bind to a chosen LAN interface after an explicit
- * owner opt-in, and can be turned off entirely. There is deliberately NO public
- * value — Brain is never bound to all interfaces and never added to the tunnel.
+ * Brain exposure policy. Brain is owner-only — every route, API and server
+ * action verifies the global `owner` role server-side. Reachability is a
+ * separate, explicit choice: loopback by default, a chosen LAN interface, a
+ * public origin served through the owner-gated reverse proxy / Cloudflare
+ * Tunnel, or off entirely.
+ *
+ * `public` describes the *origin* Brain is reached under, not the bind address:
+ * the tunnel connector runs on the host itself, so Brain keeps binding to
+ * loopback and is never bound to all interfaces.
  */
-export type BrainExposure = "loopback" | "lan" | "off";
+export type BrainExposure = "loopback" | "lan" | "public" | "off";
 
-/** Reads BRAIN_EXPOSURE; anything unrecognised (incl. a stray "public") is loopback. */
+/** Reads BRAIN_EXPOSURE; anything unrecognised falls back to loopback. */
 export function resolveBrainExposure(
   env: Record<string, string | undefined> = process.env,
 ): BrainExposure {
   const value = env.BRAIN_EXPOSURE?.trim().toLowerCase();
-  return value === "lan" || value === "off" ? value : "loopback";
+  return value === "lan" || value === "public" || value === "off" ? value : "loopback";
 }
 
 /**
- * The hostname Brain binds to. Loopback and off both stay on 127.0.0.1; only an
- * explicit LAN exposure with a concrete interface address binds beyond loopback.
- * It never returns 0.0.0.0 / a public bind — that is the point of the policy.
+ * The hostname Brain binds to. Loopback, public and off all stay on 127.0.0.1
+ * — a public Brain is published by the host-local tunnel connector, not by
+ * binding wider. Only an explicit LAN exposure with a concrete interface
+ * address binds beyond loopback; it never returns 0.0.0.0 / an all-interfaces
+ * address.
  */
 export function resolveBrainBindHostname(exposure: BrainExposure, lanHost?: string): string {
   const trimmed = lanHost?.trim();

@@ -4,8 +4,9 @@
   "private": true,
   "description": "UWE Brain — owner-only private daily-admin and personal-knowledge app (local/LAN only)",
   "scripts": {
-    "dev": "next dev --port 3002 --hostname 127.0.0.1",
-    "build": "next build",
+    "copy:scenes": "node --import tsx ../../scripts/copy-scenes.mjs",
+    "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3002 --hostname 127.0.0.1",
+    "build": "node --import tsx ../../scripts/copy-scenes.mjs && next build",
     "start": "next start --port 3002 --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test 'src/**/*.test.ts'"

@@ -10,6 +10,7 @@ import type { AppScope, BackgroundPatternId } from "./tokens";
 const SYNC_TIMESTAMP_KEY: Record<AppScope, string> = {
   studio: "uwe-theme-sync-at-studio",
   portal: "uwe-theme-sync-at-portal",
+  brain: "uwe-theme-sync-at-brain",
 };
 
 export function getSyncTimestampKey(scope: AppScope): string {

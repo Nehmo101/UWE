@@ -14,6 +14,8 @@ import { buildThemeBootstrapScript } from "./bootstrapScript";
 describe("uwe theme system", () => {
   it("defines all required theme presets", () => {
     const required: ThemeId[] = [
+      "uwe-ghibli-tag",
+      "uwe-ghibli-nacht",
       "uwe-default",
       "uwe-dark-fantasy",
       "uwe-charcoal-desk",
@@ -22,9 +24,6 @@ describe("uwe theme system", () => {
       "uwe-parchment-os",
       "uwe-parchment-teal",
       "uwe-parchment-brain",
-      "uwe-werkbank",
-      "uwe-lesesaal",
-      "uwe-nachtstudie",
       "uwe-phosphor-console",
       "terra",
       "hells",
@@ -41,9 +40,20 @@ describe("uwe theme system", () => {
     assert.equal(getStorageKey("portal"), "uwe-theme-preferences-portal");
   });
 
-  it("defaults Studio to Werkbank and Portal to Lesesaal", () => {
-    assert.equal(defaultPreferences("studio").themeId, "uwe-werkbank");
-    assert.equal(defaultPreferences("portal").themeId, "uwe-lesesaal");
+  it("defaults every scope to the Gemalte-Welt pair", () => {
+    assert.equal(defaultPreferences("studio").themeId, "uwe-ghibli-tag");
+    assert.equal(defaultPreferences("portal").themeId, "uwe-ghibli-tag");
+    assert.equal(defaultPreferences("brain").themeId, "uwe-ghibli-nacht");
+  });
+
+  it("keeps the scene layer unobstructed: the pair ships without a bg pattern", () => {
+    // BackgroundEffect's canvas sits on the same layer as the painted scene.
+    for (const id of ["uwe-ghibli-tag", "uwe-ghibli-nacht"] as const) {
+      assert.equal(UWE_THEMES[id].defaults?.background, "none");
+    }
+    for (const scope of ["studio", "portal", "brain"] as const) {
+      assert.equal(defaultPreferences(scope).background, "none");
+    }
   });
 
   it("migrates retired preview theme ids to UWE-native ids", () => {
@@ -52,14 +62,26 @@ describe("uwe theme system", () => {
       resolveThemeId("odysseus-terminal-inspired", "uwe-default"),
       "uwe-phosphor-console",
     );
-    assert.equal(Object.keys(LEGACY_THEME_ID_MAP).length, 6);
+    assert.equal(Object.keys(LEGACY_THEME_ID_MAP).length, 9);
   });
 
-  it("remaps the retired cockpit-red / portal-purple defaults to Parchment OS", () => {
-    assert.equal(isThemeId("uwe-cockpit-red"), false);
-    assert.equal(isThemeId("uwe-portal-purple"), false);
-    assert.equal(resolveThemeId("uwe-cockpit-red", "uwe-default"), "uwe-parchment-os");
-    assert.equal(resolveThemeId("uwe-portal-purple", "uwe-default"), "uwe-parchment-os");
+  it("remaps every retired scope default onto the Gemalte-Welt pair", () => {
+    // Retired ids must NOT resolve as ids any more — otherwise resolveThemeId
+    // short-circuits before the legacy map and the migration silently no-ops.
+    for (const id of [
+      "uwe-cockpit-red",
+      "uwe-portal-purple",
+      "uwe-werkbank",
+      "uwe-lesesaal",
+      "uwe-nachtstudie",
+    ]) {
+      assert.equal(isThemeId(id), false, id);
+    }
+    assert.equal(resolveThemeId("uwe-cockpit-red", "uwe-default"), "uwe-ghibli-tag");
+    assert.equal(resolveThemeId("uwe-portal-purple", "uwe-default"), "uwe-ghibli-tag");
+    assert.equal(resolveThemeId("uwe-werkbank", "uwe-default"), "uwe-ghibli-tag");
+    assert.equal(resolveThemeId("uwe-lesesaal", "uwe-default"), "uwe-ghibli-tag");
+    assert.equal(resolveThemeId("uwe-nachtstudie", "uwe-default"), "uwe-ghibli-nacht");
   });
 
   it("bootstrap script references CSS variables and localStorage", () => {
@@ -73,6 +95,10 @@ describe("uwe theme system", () => {
     assert.match(script, /uwe-cockpit-red/);
     assert.match(script, /uwe-portal-purple/);
     assert.match(script, /odysseus-dark-inspired/);
+    // The retired room ids must travel in the inlined legacy map too, so the
+    // migration happens before first paint instead of after hydration.
+    assert.match(script, /uwe-werkbank/);
+    assert.match(script, /uwe-nachtstudie/);
   });
 
   it("resolves and lists registered custom themes; drops them when cleared", async () => {

@@ -120,7 +120,7 @@ pnpm host:start                 # startet Studio (3000) + Portal (3001)
 |-----|-----|-------|
 | **UWE Studio** (DM) | http://localhost:3000 | Welten bearbeiten |
 | **UWE Portal** (Spieler) | http://localhost:3001 | Wiki & Handouts |
-| **UWE Brain** (Owner) | http://127.0.0.1:3002 | Privater Alltag & Wissen — owner-only, lokal/LAN, nie öffentlich ([Details](docs/engineering/brain-local-runtime.md)) |
+| **UWE Brain** (Owner) | http://127.0.0.1:3002 | Privater Alltag & Wissen — owner-only; Erreichbarkeit lokal, im LAN oder öffentlich hinter dem owner-gated Tunnel ([Details](docs/engineering/brain-local-runtime.md)) |
 
 Status prüfen: `pnpm host:status` · `curl http://localhost:3000/api/health`.
 Für einen produktiven, dauerhaft laufenden Host (systemd, Cloudflare Tunnel) siehe das

@@ -1,6 +1,7 @@
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
+import { dayIndex } from "@uwe/shared-ui";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,9 @@ export default async function BrainTodayPage() {
     <BrainShell
       active="/today"
       title="Heute"
-      lede="Dein Daily Admin OS — Überblick auf einen Blick, lokal auf deiner Hardware."
+      eyebrow="Owner-Bereich · privat"
+      lede="Dein Daily Admin OS — lokal, auch um Mitternacht. Cloud-KI erhält keinen Zugriff."
+      sceneIndex={dayIndex()}
     >
       <div className="brain-kpis">
         {kpis.map((k) => (

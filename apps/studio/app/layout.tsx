@@ -106,7 +106,10 @@ export default async function RootLayout({
 
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
-      <body>
+      {/* Das ThemeBootstrapScript setzt Klasse und data-Attribute auf <body>,
+          bevor React hydratisiert — das ist Absicht (Anti-FOUC) und deshalb
+          kein zu meldender Mismatch. */}
+      <body suppressHydrationWarning>
         <ThemeBootstrapScript
           scope="studio"
           serverPreferences={serverThemePreferences}

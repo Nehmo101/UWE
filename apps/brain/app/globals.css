@@ -24,59 +24,62 @@
 }
 
 /*
- * Nachtstudie — static token snapshot (owner-only Brain app forces this one
- * theme, so there is no ThemeProvider/bootstrap to inject the palette at runtime).
- * Values mirror the "uwe-nachtstudie" definition in @uwe/shared-ui themes.ts;
- * html[data-uwe-theme="uwe-nachtstudie"] (set in layout.tsx) then activates the
- * shared Tinte-&-Papier chrome block in uwe.css (design-v2/tinte-papier-shell.css).
+ * Nachttusche — statischer Token-Fallback.
+ *
+ * Brain hat seit dem Ghibli-Redesign einen echten Theme-Scope: das
+ * ThemeBootstrapScript im Root-Layout schreibt die Palette als Inline-Style auf
+ * <html>, bevor der Body malt, und gewinnt damit gegen diesen Block. Der
+ * Snapshot bleibt als Fallback, falls das Script nicht läuft (JS aus, CSP-
+ * Zwischenfall) — die Werte spiegeln "uwe-ghibli-nacht" aus themes-ghibli.ts.
  */
 :root {
   color-scheme: dark;
 
-  /* Core palette */
-  --uwe-bg: #1f1b14;
-  --uwe-bg-elevated: #2a2418;
-  --uwe-surface: rgba(42, 36, 24, 0.92);
-  --uwe-panel: #16120c;
-  --uwe-border: #413826;
-  --uwe-border-muted: rgba(65, 56, 38, 0.6);
-  --uwe-fg: #eae1c9;
-  --uwe-fg-muted: #b0a488;
-  --uwe-fg-subtle: #857a5f;
-  --uwe-accent: #c29a3a;
-  --uwe-accent-hover: #d9b258;
-  --uwe-accent-muted: rgba(194, 154, 58, 0.16);
-  --uwe-on-accent: #1f1b14;
-  --uwe-link: #c29a3a;
-  --uwe-danger: #d97757;
-  --uwe-warning: #d3a44f;
-  --uwe-success: #74b092;
-  --uwe-info: #82a6ca;
-  --uwe-wiki-link: #c29a3a;
-  --uwe-wiki-link-hover: #d9b258;
-  --uwe-dm-only: #d3a44f;
-  --uwe-player-visible: #74b092;
+  /* Core palette — Handoff-Namen in Klammern */
+  --uwe-bg: #100e16; /* --ground */
+  --uwe-bg-elevated: #12101a;
+  --uwe-surface: rgba(18, 16, 26, 0.74); /* --panel */
+  --uwe-panel: rgba(14, 12, 20, 0.92); /* --chrome */
+  --uwe-border: rgba(225, 215, 195, 0.17); /* --panel-bd */
+  --uwe-border-muted: rgba(225, 215, 195, 0.1);
+  --uwe-fg: #f1e8d4; /* --ink */
+  --uwe-fg-muted: #c9bfaf; /* --ink2 */
+  --uwe-fg-subtle: #948b78; /* --ink3 */
+  --uwe-accent: #cabff0; /* --acc (Brain, dunkel) */
+  --uwe-accent-hover: color-mix(in srgb, #cabff0 88%, #fbf5e6);
+  --uwe-accent-muted: rgba(202, 191, 240, 0.15); /* --acc-bg */
+  --uwe-on-accent: #211d17;
+  --uwe-link: #7fd0b4; /* --teal */
+  --uwe-danger: #e8a670; /* --terra */
+  --uwe-warning: #e0b15a;
+  --uwe-success: #7fd0b4;
+  --uwe-info: #7fd0b4;
+  --uwe-wiki-link: #7fd0b4;
+  --uwe-wiki-link-hover: color-mix(in srgb, #7fd0b4 88%, #fbf5e6);
+  --uwe-dm-only: #e8a670; /* --terra */
+  --uwe-player-visible: #7fd0b4; /* --teal */
 
   /* Legacy aliases (chrome html block) */
-  --uwe-muted: #b0a488;
-  --uwe-card: rgba(42, 36, 24, 0.92);
-  --uwe-card-bg: #2a2418;
+  --uwe-muted: #c9bfaf;
+  --uwe-card: rgba(18, 16, 26, 0.74);
+  --uwe-card-bg: rgba(18, 16, 26, 0.74);
 
   /* Shell / sidebar */
-  --uwe-shell-gradient-start: rgba(194, 154, 58, 0.04);
-  --uwe-shell-gradient-mid: rgba(31, 27, 20, 0.05);
-  --uwe-shell-gradient-end: #1f1b14;
-  --uwe-sidebar-bg: #16120c;
-  --uwe-sidebar-fg: #eae1c9;
-  --uwe-sidebar-fg-muted: #857a5f;
+  --uwe-shell-gradient-start: rgba(232, 166, 112, 0.04);
+  --uwe-shell-gradient-mid: rgba(16, 14, 22, 0.05);
+  --uwe-shell-gradient-end: #100e16;
+  --uwe-sidebar-bg: #0d0b13; /* --side-bg */
+  --uwe-sidebar-fg: #c2b9ab; /* --side-ink */
+  --uwe-sidebar-fg-muted: #7d7565; /* --side-label */
 
   /* Surfaces / focus */
-  --uwe-input-bg: #2a2418;
-  --uwe-focus-ring: color-mix(in srgb, #c29a3a 55%, transparent);
-  --uwe-focus-shadow: color-mix(in srgb, #c29a3a 22%, transparent);
+  --uwe-input-bg: rgba(241, 232, 212, 0.07); /* --field */
+  --uwe-focus-ring: color-mix(in srgb, #cabff0 55%, transparent);
+  --uwe-focus-shadow: color-mix(in srgb, #cabff0 22%, transparent);
 
-  /* Typography — Newsreader als Lesetext der Nachtstudie */
-  --uwe-font-family: var(--uwe-font-newsreader, Georgia), "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+  /* Typography — Space Mono als UI-Schrift, Newsreader für Überschriften */
+  --uwe-font-family: var(--uwe-font-space-mono, ui-monospace), "Cascadia Code", "SF Mono",
+    Consolas, monospace;
 
   /* Layout rhythm */
   --uwe-density-scale: 1;
@@ -85,9 +88,9 @@
   --uwe-radius-sm: 0.375rem;
   --uwe-radius-md: 0.5rem;
   --uwe-radius-lg: 0.75rem;
-  --uwe-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --uwe-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.42);
-  --uwe-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --uwe-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --uwe-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
+  --uwe-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.38);
 }
 
 *,

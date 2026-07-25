@@ -6,6 +6,7 @@ import type { NavCommand, ResolvedNavGroup } from "@uwe/shared-utils/navigation"
 import {
   MobileBottomNav,
   SidebarContextProvider,
+  ThemeModeToggle,
   type BottomNavItem,
 } from "@uwe/shared-ui";
 import { NavIcon } from "../ui/icon";
@@ -88,6 +89,7 @@ export function AppShell({
             {headerActions ? (
               <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
             ) : null}
+            <ThemeModeToggle />
             {commands.length > 0 ? <CommandHint /> : null}
           </header>
 

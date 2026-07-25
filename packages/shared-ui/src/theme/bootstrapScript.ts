@@ -1,11 +1,12 @@
 import {
+  DEFAULT_BRAIN_THEME_ID,
   DEFAULT_PORTAL_THEME_ID,
   DEFAULT_STUDIO_THEME_ID,
   LEGACY_THEME_ID_MAP,
   UWE_THEMES,
   type CustomThemeDefinition,
 } from "./themes";
-import { CSS_VARS, LAYOUT_TOKENS } from "./tokens";
+import { CSS_VARS, LAYOUT_TOKENS, type AppScope } from "./tokens";
 import { resolveThemeColorTokens } from "./resolveColorTokens";
 import type { UweThemePreferences } from "./storage";
 
@@ -18,15 +19,16 @@ export interface ThemeBootstrapOptions {
 
 /** Minimal inline bootstrap to prevent theme flash before React hydrates. */
 export function buildThemeBootstrapScript(
-  scope: "studio" | "portal",
+  scope: AppScope,
   options?: ThemeBootstrapOptions,
 ): string {
-  const storageKey =
-    scope === "portal"
-      ? "uwe-theme-preferences-portal"
-      : "uwe-theme-preferences-studio";
+  const storageKey = `uwe-theme-preferences-${scope}`;
   const defaultTheme =
-    scope === "portal" ? DEFAULT_PORTAL_THEME_ID : DEFAULT_STUDIO_THEME_ID;
+    scope === "portal"
+      ? DEFAULT_PORTAL_THEME_ID
+      : scope === "brain"
+        ? DEFAULT_BRAIN_THEME_ID
+        : DEFAULT_STUDIO_THEME_ID;
 
   const toColorEntry = (
     colors: Parameters<typeof resolveThemeColorTokens>[0],
@@ -124,7 +126,7 @@ export function buildThemeBootstrapScript(
   var LAYOUT=${JSON.stringify(LAYOUT_TOKENS)};
   var SERVER_PREFS=${JSON.stringify(options?.serverPreferences ?? null)};
   var SERVER_UPDATED_AT=${JSON.stringify(options?.serverUpdatedAt ?? null)};
-  var SYNC_KEY=${JSON.stringify(scope === "portal" ? "uwe-theme-sync-at-portal" : "uwe-theme-sync-at-studio")};
+  var SYNC_KEY=${JSON.stringify(`uwe-theme-sync-at-${scope}`)};
   try{
     var raw=localStorage.getItem(KEY);
     var localSyncedAt=localStorage.getItem(SYNC_KEY);

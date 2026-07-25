@@ -45,11 +45,12 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
   const brainExposureLabel: Record<DeploymentSettings["brainExposure"], string> = {
     loopback: "Nur lokal (Loopback)",
     lan: "LAN (nach Owner-Freigabe)",
+    public: "Öffentlich (owner-gated Tunnel)",
     off: "Deaktiviert",
   };
 
   // Brain is listed alongside Studio and Portal so all three products are visible
-  // as peers. Brain stays owner-only/local (see the dedicated card below); by
+  // as peers. Brain stays owner-only (see the dedicated card below); by
   // default it shares the Studio origin and is reached via /life-brain.
   const routing: { label: string; value: string; source: Source }[] = [
     { label: "Deployment-Modell", value: proxy.deploymentModel, source: "env" },
@@ -288,9 +289,11 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <p className="text-xs text-muted-foreground">
-                Der private Brain-Bereich (Daily Admin OS &amp; Personal Brain) ist owner-only und
-                bleibt <strong>lokal bzw. im LAN</strong>. Er wird <strong>nie</strong> in den
-                öffentlichen Cloudflare-Tunnel aufgenommen — „öffentlich“ ist bewusst keine Option.
+                Der private Brain-Bereich (Daily Admin OS &amp; Personal Brain) ist{" "}
+                <strong>owner-only</strong> — jede Route prüft die Rolle serverseitig. Die
+                Erreichbarkeit ist davon unabhängig: lokal, im LAN oder öffentlich unter eigenem
+                Origin über den owner-gated Tunnel (dann <code>BRAIN_PUBLIC_TUNNEL=1</code>; 2FA auf
+                dem Owner-Konto wird dringend empfohlen).
               </p>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-muted-foreground">Erreichbarkeit</span>
@@ -301,6 +304,7 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
                 >
                   <option value="loopback">Nur lokal (Loopback)</option>
                   <option value="lan">LAN (nach Owner-Freigabe)</option>
+                  <option value="public">Öffentlich (owner-gated Tunnel)</option>
                   <option value="off">Deaktiviert</option>
                 </select>
               </label>

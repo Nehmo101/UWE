@@ -1,11 +1,15 @@
 import type {
+  AppScope,
   BackgroundPatternId,
   DensityId,
   FontFamilyId,
   ThemeColorTokens,
 } from "./tokens";
+import { GHIBLI_THEMES } from "./themes-ghibli";
 
 export type ThemeId =
+  | "uwe-ghibli-tag"
+  | "uwe-ghibli-nacht"
   | "uwe-default"
   | "uwe-dark-fantasy"
   | "uwe-charcoal-desk"
@@ -14,9 +18,6 @@ export type ThemeId =
   | "uwe-parchment-os"
   | "uwe-parchment-teal"
   | "uwe-parchment-brain"
-  | "uwe-werkbank"
-  | "uwe-lesesaal"
-  | "uwe-nachtstudie"
   | "uwe-phosphor-console"
   | "terra"
   | "hells";
@@ -41,6 +42,9 @@ export interface UweThemeDefinition {
  * External AGPL projects may inform UX research — never copy their source or palettes 1:1.
  */
 export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
+  // Das Ghibli-Paar liegt in themes-ghibli.ts — diese Datei steht sonst über
+  // dem 700-Zeilen-Budget (scripts/file-size-budget-check.mjs).
+  ...GHIBLI_THEMES,
   "uwe-default": {
     id: "uwe-default",
     label: "UWE Default",
@@ -312,117 +316,6 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
     },
     defaults: { font: "mono", background: "none", frostedGlass: false },
   },
-  "uwe-werkbank": {
-    id: "uwe-werkbank",
-    label: "Werkbank",
-    description:
-      "Tinte & Papier: kühles Werkstattpapier mit Tinte-Sidebar und Blaupausen-Akzent — Studio-Standard.",
-    colors: {
-      bg: "#e3ded2",
-      bgElevated: "#efebe0",
-      surface: "rgba(239, 235, 224, 0.95)",
-      panel: "#d7d1c1",
-      border: "#c9c1ad",
-      borderMuted: "rgba(201, 193, 173, 0.7)",
-      fg: "#221d16",
-      fgMuted: "#5a5244",
-      fgSubtle: "#776e5c",
-      accent: "#33567d",
-      accentHover: "#41689a",
-      accentMuted: "rgba(51, 86, 125, 0.14)",
-      link: "#33567d",
-      danger: "#a83a24",
-      warning: "#8a5f12",
-      success: "#2e6b50",
-      info: "#33567d",
-      wikiLink: "#33567d",
-      wikiLinkHover: "#41689a",
-      dmOnly: "#8a5f12",
-      playerVisible: "#2e6b50",
-      shellGradientStart: "rgba(51, 86, 125, 0.03)",
-      shellGradientMid: "rgba(227, 222, 210, 0.05)",
-      shellGradientEnd: "#e3ded2",
-      sidebarBg: "#241f17",
-      sidebarFg: "#ede6d4",
-      sidebarFgMuted: "#a89c82",
-      cardBg: "#efebe0",
-    },
-    defaults: { font: "sans", background: "none", frostedGlass: false },
-  },
-  "uwe-lesesaal": {
-    id: "uwe-lesesaal",
-    label: "Lesesaal",
-    description:
-      "Tinte & Papier: helles Lesepapier ohne dunkle Sidebar, Serifen-Lesetext, Lampengrün — Portal-Standard.",
-    colors: {
-      bg: "#efe8d8",
-      bgElevated: "#f4efe2",
-      surface: "rgba(244, 239, 226, 0.95)",
-      panel: "#e5dcc7",
-      border: "#d5c9ac",
-      borderMuted: "rgba(213, 201, 172, 0.7)",
-      fg: "#262117",
-      fgMuted: "#5f5644",
-      fgSubtle: "#7c7260",
-      accent: "#2f614b",
-      accentHover: "#3f7a60",
-      accentMuted: "rgba(47, 97, 75, 0.14)",
-      link: "#2f614b",
-      danger: "#a83a24",
-      warning: "#8a5f12",
-      success: "#2e6b50",
-      info: "#33567d",
-      wikiLink: "#2f614b",
-      wikiLinkHover: "#3f7a60",
-      dmOnly: "#8a5f12",
-      playerVisible: "#2e6b50",
-      shellGradientStart: "rgba(47, 97, 75, 0.03)",
-      shellGradientMid: "rgba(239, 232, 216, 0.05)",
-      shellGradientEnd: "#efe8d8",
-      sidebarBg: "#f4efe2",
-      sidebarFg: "#262117",
-      sidebarFgMuted: "#5f5644",
-      cardBg: "#f4efe2",
-    },
-    defaults: { font: "serif", background: "none", frostedGlass: false },
-  },
-  "uwe-nachtstudie": {
-    id: "uwe-nachtstudie",
-    label: "Nachtstudie",
-    description:
-      "Tinte & Papier invertiert: Tinte als Grund, Papiertext, Kerzengold — owner-privates Brain-Design.",
-    colors: {
-      bg: "#1f1b14",
-      bgElevated: "#2a2418",
-      surface: "rgba(42, 36, 24, 0.92)",
-      panel: "#16120c",
-      border: "#413826",
-      borderMuted: "rgba(65, 56, 38, 0.6)",
-      fg: "#eae1c9",
-      fgMuted: "#b0a488",
-      fgSubtle: "#857a5f",
-      accent: "#c29a3a",
-      accentHover: "#d9b258",
-      accentMuted: "rgba(194, 154, 58, 0.16)",
-      link: "#c29a3a",
-      danger: "#d97757",
-      warning: "#d3a44f",
-      success: "#74b092",
-      info: "#82a6ca",
-      wikiLink: "#c29a3a",
-      wikiLinkHover: "#d9b258",
-      dmOnly: "#d3a44f",
-      playerVisible: "#74b092",
-      shellGradientStart: "rgba(194, 154, 58, 0.04)",
-      shellGradientMid: "rgba(31, 27, 20, 0.05)",
-      shellGradientEnd: "#1f1b14",
-      sidebarBg: "#16120c",
-      sidebarFg: "#eae1c9",
-      sidebarFgMuted: "#857a5f",
-      cardBg: "#2a2418",
-    },
-    defaults: { font: "serif", background: "none", frostedGlass: false },
-  },
   "uwe-phosphor-console": {
     id: "uwe-phosphor-console",
     label: "Phosphor Console",
@@ -530,8 +423,10 @@ export const UWE_THEMES: Record<ThemeId, UweThemeDefinition> = {
 
 export const THEME_LIST = Object.values(UWE_THEMES);
 
-export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-werkbank";
-export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-lesesaal";
+export const DEFAULT_STUDIO_THEME_ID: ThemeId = "uwe-ghibli-tag";
+export const DEFAULT_PORTAL_THEME_ID: ThemeId = "uwe-ghibli-tag";
+/** Brain startet dunkel — der Bereich war schon vorher die Nachtfläche. */
+export const DEFAULT_BRAIN_THEME_ID: ThemeId = "uwe-ghibli-nacht";
 
 export type CustomThemeScope = "studio" | "portal" | "both";
 
@@ -570,8 +465,14 @@ export function getCustomThemes(): CustomThemeDefinition[] {
   return [...CUSTOM_THEMES.values()];
 }
 
+/**
+ * Custom palettes visible in a scope's picker. `CustomThemeScope` only knows
+ * studio/portal/both — Brain therefore sees the "both"-scoped palettes and no
+ * others. Giving Brain its own authoring scope would mean changing the stored
+ * `CustomThemeRecord`, which is a separate decision.
+ */
 export function getCustomThemesForScope(
-  scope: "studio" | "portal",
+  scope: AppScope,
 ): CustomThemeDefinition[] {
   return getCustomThemes().filter(
     (theme) => theme.scope === "both" || theme.scope === scope,
@@ -632,16 +533,24 @@ export function getTheme(id: string): ResolvedThemeDefinition {
 
 /**
  * Retired theme IDs — mapped to current UWE-native names at read time.
- * The old per-scope defaults (cockpit-red / portal-purple) are remapped to
- * Parchment OS so existing installs adopt the new design with no migration.
+ *
+ * Die drei bisherigen Scope-Defaults (Werkbank/Lesesaal/Nachtstudie) zeigen auf
+ * das Ghibli-Paar: `DEFAULT_*_THEME_ID` wirkt nur für Installationen *ohne*
+ * gespeicherte Präferenz, und ohne diese Zuordnung würde jeder Bestandsnutzer
+ * das Redesign nie zu sehen bekommen. Die Zuordnung greift auch im
+ * Bootstrap-Script, der Wechsel passiert also ohne FOUC. Die alten Themes
+ * bleiben im ThemePicker wählbar.
  */
 export const LEGACY_THEME_ID_MAP: Record<string, ThemeId> = {
   "odysseus-dark-inspired": "uwe-charcoal-desk",
   "odysseus-midnight-inspired": "uwe-night-observatory",
   "odysseus-paper-inspired": "uwe-parchment-study",
   "odysseus-terminal-inspired": "uwe-phosphor-console",
-  "uwe-cockpit-red": "uwe-parchment-os",
-  "uwe-portal-purple": "uwe-parchment-os",
+  "uwe-cockpit-red": "uwe-ghibli-tag",
+  "uwe-portal-purple": "uwe-ghibli-tag",
+  "uwe-werkbank": "uwe-ghibli-tag",
+  "uwe-lesesaal": "uwe-ghibli-tag",
+  "uwe-nachtstudie": "uwe-ghibli-nacht",
 };
 
 export function resolveThemeId(value: string, fallback: string): string {

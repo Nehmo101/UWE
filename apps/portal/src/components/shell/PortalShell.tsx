@@ -4,8 +4,8 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import type { NavGroup } from "@uwe/shared-utils/navigation";
 import { navGroupsToCommands, resolveNavGroups } from "@uwe/shared-utils/navigation";
-import { resolvePortalAuthBottomNav } from "../../lib/mobile-nav";
 import { PORTAL_NAV, portalWorldNav } from "../../navigation/portal-nav";
+import { crossAppBottomNavItems, readClientAppUrls } from "@uwe/shared-ui";
 import { AppShell } from "./AppShell";
 
 export interface PortalShellProps {
@@ -47,7 +47,19 @@ export function PortalShell({
   const sourceGroups =
     navGroups ?? (worldSlug ? [...PORTAL_NAV, ...portalWorldNav(worldSlug)] : PORTAL_NAV);
   const resolvedLabel = brandLabel ?? worldName ?? "UWE Portal";
-  const bottomNav = navGroups ? undefined : resolvePortalAuthBottomNav(pathname, worldSlug ?? null);
+  // Handoff, Abschnitt „5 · Mobil": die Bottom-Nav schaltet zwischen den
+  // Produkten. Die Welt-/Portal-Navigation bleibt in der Schublade erreichbar.
+  // Gast-/Share-Ansichten (eigene navGroups) bekommen keine Produktleiste.
+  const urls = readClientAppUrls();
+  const bottomNav = navGroups
+    ? undefined
+    : crossAppBottomNavItems({
+        active: "portal",
+        startUrl: urls.start,
+        studioUrl: urls.studio,
+        portalUrl: urls.portal,
+        brainUrl: urls.brain,
+      });
 
   return (
     <AppShell

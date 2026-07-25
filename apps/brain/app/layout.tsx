@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Mono, Newsreader } from "next/font/google";
+import { resolveThemePreferencesForScope } from "@uwe/database/server";
+import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
+import {
+  ThemeBootstrapScript,
+  buildVisualThemeHtmlAttributes,
+  toUweThemePreferences,
+  type UweThemePreferences,
+  type VisualThemeHtmlAttributes,
+} from "@uwe/shared-ui";
 import "@uwe/shared-ui/uwe.css";
 import "./globals.css";
 
@@ -28,22 +37,56 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1f1b14",
+  viewportFit: "cover",
+  themeColor: "#100e16",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Brain hat seit dem Ghibli-Redesign einen eigenen Theme-Scope ("brain"),
+  // damit der Hell/Dunkel-Umschalter dieselbe Persistenz nutzt wie Studio und
+  // Portal. Der Scope lebt im settings-JSON (AppThemePreferences) — ohne
+  // Schema-Migration.
+  let serverThemePreferences: UweThemePreferences | null = null;
+  let updatedAt: string | null = null;
+  let visualThemeAttrs: VisualThemeHtmlAttributes | undefined;
+  try {
+    const snapshot = await getSystemSettingsSnapshotSafe();
+    updatedAt = snapshot.updatedAt;
+    serverThemePreferences = toUweThemePreferences(
+      resolveThemePreferencesForScope(snapshot.settings.app, "brain"),
+      "brain",
+    );
+    visualThemeAttrs = buildVisualThemeHtmlAttributes(snapshot.settings.app, {
+      appVariant: "brain",
+    });
+  } catch {
+    // Ein kalter Start ohne DB darf das Root-Layout nicht kippen — das
+    // Bootstrap-Script fällt dann auf den Scope-Default zurück.
+  }
+
   return (
     <html
       lang="de"
       suppressHydrationWarning
-      data-uwe-theme="uwe-nachtstudie"
+      {...visualThemeAttrs}
+      data-uwe-app="brain"
       className={`${spaceMono.variable} ${newsreader.variable}`}
     >
-      <body>{children}</body>
+      {/* Das ThemeBootstrapScript setzt Klasse und data-Attribute auf <body>,
+          bevor React hydratisiert — das ist Absicht (Anti-FOUC) und deshalb
+          kein zu meldender Mismatch. */}
+      <body suppressHydrationWarning>
+        <ThemeBootstrapScript
+          scope="brain"
+          serverPreferences={serverThemePreferences}
+          serverUpdatedAt={updatedAt}
+        />
+        {children}
+      </body>
     </html>
   );
 }

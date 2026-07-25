@@ -25,7 +25,7 @@ geschnitten:
 |---|---|
 | **Portal** | Player-safe, read-mostly Projektionen veröffentlichter D&D-Daten. Schreibzugriffe sind standardmäßig verboten und nur über eng begrenzte, explizite Spieleraktions-Contracts zulässig. |
 | **Studio** | Ausschließlich D&D-Spielleitung, World-Brain, Authoring, Review, Apply und Veröffentlichung. Studio ist die Quelle für Welt- und Kampagneninhalte. |
-| **Brain** | Owner-private persönliche Daten, Daily Admin OS und persönliche lokale KI. Brain ist owner-only und standardmäßig nur lokal beziehungsweise nach expliziter Freigabe im LAN erreichbar. |
+| **Brain** | Owner-private persönliche Daten, Daily Admin OS und persönliche lokale KI. Brain ist owner-only; die Erreichbarkeit (lokal, LAN oder öffentlich hinter dem owner-gated Tunnel) ist eine bewusste Betriebsentscheidung — siehe [ADR 004](004-brain-owner-only.md) und [ADR 007](007-deployment-exposure.md). |
 | **Platform** | Identität, Security, Konfiguration, Persistenz-Infrastruktur, Queue-Supervision, Connector, Deployment und CI. Platform erhält daraus kein Recht auf generische private Fachdatenzugriffe. |
 | **Shared Engines** | Datenquellenneutrale Engines, UI-Primitives und Verträge. Sie sind I/O-frei oder arbeiten über eng geschnittene, vom jeweiligen Produkt bereitgestellte Ports. |
 

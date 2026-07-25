@@ -34,7 +34,7 @@ oder Netzwerk-Exposition.
 |---|---|---|
 | **Portal** | Player-facing D&D, read-mostly, serverseitig gefilterte Projektionen und eng begrenzte Spieleraktionen | Kein `dm_only`, kein generischer Studio-Schreibzugriff, kein Brain-Zugriff |
 | **Studio** | DM-/D&D-Authoring, World-Brain, Review, Apply und Veröffentlichung | Keine persönlichen Brain-Daten oder Daily-Admin-Verantwortung |
-| **Brain** | Owner-private persönliche Daten, Daily Admin OS und lokale persönliche KI | Owner-only, local/LAN, keine Cloud-KI für private Inhalte |
+| **Brain** | Owner-private persönliche Daten, Daily Admin OS und lokale persönliche KI | Owner-only auf jeder Route, keine Cloud-KI für private Inhalte |
 | **Platform** | Auth, Security, Konfiguration, Persistenz-Infrastruktur, Jobs, Connector, Deployment und CI | Orchestrierung begründet keinen generischen privaten Datenzugriff |
 | **Shared Engines** | Datenquellenneutrale Logik, UI-Primitives und schmale Contracts | Keine App-Imports, keine produktübergreifenden privaten Repositories |
 
@@ -213,6 +213,6 @@ Masterplan vorab autorisiert.
 
 Der Split ist erst abgeschlossen, wenn die drei Apps getrennte Audiences und
 Guards besitzen, keine Cross-App-Imports existieren, Portal ausschließlich
-player-safe Projektionen konsumiert, Brain owner-only und nicht öffentlich ist,
+player-safe Projektionen konsumiert, Brain auf jeder Route owner-only ist,
 private Brain-Daten physisch samt Storage und Backups getrennt sind und ein
 verifizierter Rollback für die Migration dokumentiert wurde.

@@ -1,0 +1,177 @@
+/**
+ * „Gemalte Welt" — Chrome-Block und Zusatz-Tokens für das Theme-Paar
+ * uwe-ghibli-tag (Parchment OS) / uwe-ghibli-nacht (Nachttusche).
+ *
+ * Warum hier und nicht in themes.ts: die Theme-Engine kennt einen festen Satz
+ * `ThemeColorTokens`. Alles, was der Design-Handoff darüber hinaus braucht
+ * (Chrome-Kante, Hero-Schatten, Veil, Boden-Verlauf, Button-Paar), bekäme sonst
+ * neue Pflichtfelder in tokens.ts, applyTheme.ts, resolveColorTokens.ts,
+ * bootstrapScript.ts *und* allen Bestandsthemes. Als Stylesheet-Block kostet es
+ * nichts und bleibt an das Theme gebunden.
+ *
+ * Wichtig für jede Änderung hier: Tokens, die die Engine selbst schreibt
+ * (--uwe-bg, --uwe-fg, --uwe-accent …), sind Inline-Styles auf <html> und
+ * gewinnen gegen dieses Stylesheet. Dieser Block definiert deshalb nur
+ * *zusätzliche* Namen und liest die vorhandenen per var().
+ */
+
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) {
+  /* Legacy-Alias-Tokens: Elemente, die noch --uwe-muted / --uwe-card lesen,
+     erben sonst die dunklen :root-Defaults. */
+  --uwe-muted: var(--uwe-fg-muted);
+  --uwe-card: var(--uwe-surface);
+
+  /* --- Werte, die der Handoff benennt, die Engine aber nicht kennt --- */
+  --uwe-radius-pill: 999px;
+  --uwe-radius-card: 14px; /* Handoff: Karten */
+  --uwe-radius-btn: 9px; /* Handoff: Buttons */
+  --uwe-radius-tile: 12px; /* Handoff: Mobil-Karten/Tabs */
+  --uwe-border-width: 1.5px;
+  --uwe-border-width-chrome: 2px;
+  --uwe-glass-blur: 13px;
+  --uwe-scene-fade: 0.45s;
+  --uwe-scene-veil-fade: 0.4s;
+  --uwe-touch-target: 44px;
+}
+
+/* --- Hell: Parchment OS ------------------------------------------------- */
+html[data-uwe-theme="uwe-ghibli-tag"] {
+  color-scheme: light;
+
+  --uwe-chrome-bd: #211d17;
+  --uwe-side-bd: rgba(232, 213, 180, 0.14);
+  --uwe-btn-bg: #211d17;
+  --uwe-btn-ink: #f1e8d4;
+  --uwe-hero-ink: #211d17;
+  --uwe-hero-sub: #3d372c;
+  --uwe-hero-sh: 0 1px 22px rgba(246, 239, 221, 0.75);
+  --uwe-top-shade: rgba(241, 232, 212, 0.42);
+
+  /* Szenen-Ebenen: hell zeigt das Tagbild unverändert, ohne Veil. */
+  --uwe-scene-night-opacity: 0;
+  --uwe-scene-veil-opacity: 0;
+  --uwe-scene-filter: none;
+}
+
+/* --- Dunkel: Nachttusche ------------------------------------------------ */
+html[data-uwe-theme="uwe-ghibli-nacht"] {
+  color-scheme: dark;
+
+  --uwe-chrome-bd: rgba(225, 215, 195, 0.22);
+  --uwe-side-bd: rgba(225, 215, 195, 0.12);
+  --uwe-btn-bg: #f1e8d4;
+  --uwe-btn-ink: #211d17;
+  --uwe-hero-ink: #fbf5e6;
+  --uwe-hero-sub: #ded4c0;
+  --uwe-hero-sh: 0 2px 30px rgba(0, 0, 0, 0.6);
+  --uwe-top-shade: rgba(8, 7, 13, 0.55);
+
+  --uwe-scene-night-opacity: 1;
+  --uwe-scene-veil-opacity: 0.26;
+  --uwe-scene-filter: brightness(0.92) saturate(0.95);
+}
+
+/* --- Schrift ------------------------------------------------------------ */
+/* Space Mono als UI-Grundschrift, Newsreader für Display-Überschriften.
+   Nutzerpräferenzen (Inline-Style aus dem Bootstrap) gewinnen weiterhin. */
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) {
+  --uwe-font-family: var(--uwe-font-space-mono, ui-monospace), "Cascadia Code", "SF Mono",
+    Consolas, monospace;
+}
+
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) :is(h1, h2),
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  :is(.uwe-card-title, .uwe-section-title, .uwe-page-title, .uwe-entity-title) {
+  font-family: var(--uwe-font-newsreader, Georgia), "Iowan Old Style", serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* --- Shell -------------------------------------------------------------- */
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) :is(.uwe-shell, .uwe-main) {
+  background: var(--uwe-bg);
+}
+
+/* Die gemalte Szene liegt hinter dem Shell — Seiten mit PaintedScene setzen
+   den Shell-Grund auf transparent, damit das Bild durchscheint. */
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  :is(.uwe-shell, .uwe-main).uwe-scene-host {
+  background: transparent;
+}
+
+/* --- Topbar: 54 px, kräftige Chrome-Kante, Glas ------------------------- */
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) .uwe-topbar,
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  body.uwe-theme-frosted
+  .uwe-topbar {
+  min-height: 54px;
+  background: var(--uwe-panel);
+  border-bottom: var(--uwe-border-width-chrome) solid var(--uwe-chrome-bd);
+  backdrop-filter: blur(var(--uwe-glass-blur));
+  -webkit-backdrop-filter: blur(var(--uwe-glass-blur));
+}
+
+/* --- Sidebar: immer dunkle Tinte ---------------------------------------- */
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) .uwe-sidebar,
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  body.uwe-theme-frosted
+  .uwe-sidebar {
+  background: var(--uwe-sidebar-bg);
+  border-right: var(--uwe-border-width) solid var(--uwe-side-bd);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  scrollbar-color: color-mix(in srgb, var(--uwe-sidebar-bg) 78%, var(--uwe-sidebar-fg) 22%)
+    transparent;
+  --uwe-muted: var(--uwe-sidebar-fg-muted);
+  --uwe-fg-muted: var(--uwe-sidebar-fg-muted);
+  --uwe-link: var(--uwe-sidebar-fg);
+}
+
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  .uwe-sidebar
+  .uwe-brand
+  strong {
+  color: var(--uwe-sidebar-fg);
+}
+
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  :is(.uwe-sidebar .uwe-brand small, .uwe-sidebar-section h3, .uwe-sidebar h3) {
+  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-subtle));
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  .uwe-sidebar-nav
+  a.active {
+  color: var(--uwe-accent);
+  background: var(--uwe-accent-muted);
+  border-left-color: var(--uwe-accent);
+  border-radius: var(--uwe-radius-md);
+  font-weight: 700;
+}
+
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  .uwe-sidebar
+  .uwe-nav-badge {
+  background: color-mix(in srgb, var(--uwe-sidebar-bg) 74%, var(--uwe-sidebar-fg) 26%);
+  color: var(--uwe-sidebar-fg-muted);
+  border-radius: var(--uwe-radius-pill);
+}
+
+/* --- Kontextpanel ------------------------------------------------------- */
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) .uwe-context {
+  background: var(--uwe-bg);
+  border-left-color: var(--uwe-border);
+}
+
+/* --- Glaskarten --------------------------------------------------------- */
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"]) .uwe-glass-surface {
+  background: var(--uwe-card-bg);
+  border: var(--uwe-border-width) solid var(--uwe-border);
+  border-radius: var(--uwe-radius-card);
+  box-shadow: var(--uwe-shadow-sm);
+  backdrop-filter: blur(var(--uwe-glass-blur));
+  -webkit-backdrop-filter: blur(var(--uwe-glass-blur));
+}

@@ -209,7 +209,7 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     "NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:3000",
     "PUBLIC_BASE_URL=http://127.0.0.1:3000",
     "NEXT_PUBLIC_PORTAL_URL=http://127.0.0.1:3001",
-    "# Brain: owner-only, local/LAN, never tunneled (ADR 004/007).",
+    "# Brain: owner-only on every route; reachability is a deliberate choice (ADR 004/007).",
     "# Empty NEXT_PUBLIC_BRAIN_URL = share the Studio origin; entry is /life-brain.",
     "NEXT_PUBLIC_BRAIN_URL=",
     "BRAIN_PATH=/life-brain",

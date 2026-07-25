@@ -11,6 +11,7 @@ import {
   type FontFamilyId,
 } from "./tokens";
 import {
+  DEFAULT_BRAIN_THEME_ID,
   DEFAULT_PORTAL_THEME_ID,
   DEFAULT_STUDIO_THEME_ID,
   resolveThemeId,
@@ -32,18 +33,26 @@ export interface UweThemePreferences {
 const STORAGE_KEY: Record<AppScope, string> = {
   studio: "uwe-theme-preferences-studio",
   portal: "uwe-theme-preferences-portal",
+  brain: "uwe-theme-preferences-brain",
+};
+
+const DEFAULT_THEME_ID: Record<AppScope, string> = {
+  studio: DEFAULT_STUDIO_THEME_ID,
+  portal: DEFAULT_PORTAL_THEME_ID,
+  brain: DEFAULT_BRAIN_THEME_ID,
 };
 
 export function defaultPreferences(scope: AppScope): UweThemePreferences {
   return {
-    themeId: scope === "portal" ? DEFAULT_PORTAL_THEME_ID : DEFAULT_STUDIO_THEME_ID,
+    themeId: DEFAULT_THEME_ID[scope],
     font: DEFAULT_FONT,
     density: DEFAULT_DENSITY,
-    background: scope === "studio" ? "constellation" : DEFAULT_BACKGROUND,
+    // Der gemalte Hintergrund ist die Bühne — ein Muster-Canvas von
+    // BackgroundEffect läge auf derselben Ebene und würde darüber zeichnen.
+    background: DEFAULT_BACKGROUND,
     frostedGlass: true,
     uiScale: DEFAULT_UI_SCALE,
-    bgEffectColor: scope === "studio" ? "#fecaca" : undefined,
-    bgEffectIntensity: scope === "studio" ? 0.38 : 1,
+    bgEffectIntensity: 1,
   };
 }
 

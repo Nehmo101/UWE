@@ -4,8 +4,9 @@
   "private": true,
   "description": "UWE Studio \u2014 DM campaign editor and world management",
   "scripts": {
-    "dev": "next dev --port 3000",
-    "build": "next build",
+    "copy:scenes": "node --import tsx ../../scripts/copy-scenes.mjs",
+    "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3000",
+    "build": "node --import tsx ../../scripts/copy-scenes.mjs && next build",
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs"

@@ -30,18 +30,24 @@ packages/shared-ui/src/
 
 | App | Storage key | Default theme |
 |-----|-------------|---------------|
-| Studio | `uwe-theme-preferences-studio` | `uwe-werkbank` |
-| Portal | `uwe-theme-preferences-portal` | `uwe-lesesaal` |
+| Studio | `uwe-theme-preferences-studio` | `uwe-ghibli-tag` |
+| Portal | `uwe-theme-preferences-portal` | `uwe-ghibli-tag` |
+| Brain | `uwe-theme-preferences-brain` | `uwe-ghibli-nacht` |
 
-`DEFAULT_STUDIO_THEME_ID` is `uwe-werkbank`, `DEFAULT_PORTAL_THEME_ID` is `uwe-lesesaal` (`themes.ts`) — the Tinte-&-Papier rooms. Studio and Portal can still diverge per scope — a player can pick a dark theme for the Portal while Studio stays on Werkbank.
+`DEFAULT_STUDIO_THEME_ID` / `DEFAULT_PORTAL_THEME_ID` are `uwe-ghibli-tag`, `DEFAULT_BRAIN_THEME_ID` is `uwe-ghibli-nacht` (`themes.ts`). The scopes still diverge freely — a player can run the Portal at night while Studio stays on the day half.
+
+Hell/Dunkel is **not** a separate mode flag: the two halves are two theme ids, so the existing persistence, DB sync and anti-FOUC bootstrap carry the switch with no extra machinery. `GHIBLI_MODE_BY_THEME` / `GHIBLI_COUNTERPART` (`themes-ghibli.ts`) map between them.
+
+The per-app product accent (terracotta / teal / violet) is **not** part of the theme: the engine writes `--uwe-accent` as an inline style on `<html>`, where no stylesheet can reach it. `AppAccentScope` re-declares it inline on a wrapper element, which wins for its subtree.
+
+The Tinte-&-Papier rooms `uwe-werkbank` / `uwe-lesesaal` / `uwe-nachtstudie` were retired with the redesign; `LEGACY_THEME_ID_MAP` migrates stored preferences onto the new pair. Keeping them selectable *and* migrating them would contradict itself — the picker would offer a theme that the next page load migrates away.
 
 ## Presets
 
 | ID | Use case |
 |----|----------|
-| `uwe-werkbank` | **Studio default** — Tinte & Papier: cool workshop paper, ink sidebar, blueprint accent |
-| `uwe-lesesaal` | **Portal default** — Tinte & Papier: bright reading paper, light top chrome, lamp-green accent |
-| `uwe-nachtstudie` | **Brain default** — Tinte & Papier inverted: ink ground, paper text, candle-gold accent |
+| `uwe-ghibli-tag` | **Studio + Portal default** — Gemalte Welt, Tag: Parchment OS over a painted scene |
+| `uwe-ghibli-nacht` | **Brain default** — Gemalte Welt, Nacht: Nachttusche over the night scene |
 | `uwe-parchment-os` | Light parchment OS (former universal default) |
 | `uwe-parchment-teal` | Parchment OS chrome with teal player-visible accent (Portal-Design) |
 | `uwe-default` | Slate / indigo dark baseline |

@@ -100,16 +100,16 @@ describe("deployment settings", () => {
     assert.equal(cfg.secretConfigured, true);
   });
 
-  it("Brain exposure defaults to loopback and never to a public value", () => {
+  it("Brain exposure defaults to loopback and accepts the documented values", () => {
     assert.equal(DEFAULT_DEPLOYMENT_SETTINGS.brainExposure, "loopback");
-    // Anything unrecognised — including a stray "public"/"on" — collapses to loopback.
-    assert.equal(normalizeDeploymentSettings({ brainExposure: "public" }).brainExposure, "loopback");
+    // Anything unrecognised — e.g. a stray "on" — collapses to loopback.
     assert.equal(normalizeDeploymentSettings({ brainExposure: "on" }).brainExposure, "loopback");
     assert.equal(normalizeDeploymentSettings({ brainExposure: "lan" }).brainExposure, "lan");
+    assert.equal(normalizeDeploymentSettings({ brainExposure: "public" }).brainExposure, "public");
     assert.equal(normalizeDeploymentSettings({ brainExposure: "off" }).brainExposure, "off");
   });
 
-  it("Brain env overrides carry the origin/path but never a tunnel/public key", () => {
+  it("Brain env overrides carry the origin/path and the exposure value", () => {
     const overrides = buildDeploymentEnvOverrides(
       normalizeDeploymentSettings({
         brainUrl: "http://127.0.0.1:3002",
@@ -120,10 +120,18 @@ describe("deployment settings", () => {
     assert.equal(overrides.NEXT_PUBLIC_BRAIN_URL, "http://127.0.0.1:3002");
     assert.equal(overrides.BRAIN_PATH, "/life-brain");
     assert.equal(overrides.BRAIN_EXPOSURE, "lan");
-    // The Brain fields must never turn on public exposure for Brain.
+    // Publishing Brain is a deliberate tunnel/proxy decision — the Brain
+    // settings never flip the tunnel on as a side effect.
     assert.equal(overrides.CLOUDFLARE_TUNNEL, undefined);
     assert.ok(!("BRAIN_TUNNEL" in overrides));
     assert.ok(!("BRAIN_PUBLIC" in overrides));
+  });
+
+  it("public Brain exposure is carried through as an env override", () => {
+    const overrides = buildDeploymentEnvOverrides(
+      normalizeDeploymentSettings({ brainExposure: "public" }),
+    );
+    assert.equal(overrides.BRAIN_EXPOSURE, "public");
   });
 
   it("loopback Brain exposure falls through to env (no override emitted)", () => {
