@@ -36,19 +36,47 @@ In der letzten Spalte eintragen:
 Die Spalte **Vorschlag** ist meine Empfehlung, nicht gesetzt. Wo ich unsicher bin, steht
 das ausdrücklich dabei.
 
-## Die vier Zielbereiche
+---
+
+## Notiz Lasse (2026-07-26)
+
+> Allgemein gilt, nur leute die auf der E-Mail-Allowlist stehen können in den Ihnen
+> zugeordneten Bereich von UWE kommen.
+> Ein eigenständiges Benutzerkonto anlegen ist nicht möglich NUR durch den Owner.
+> Ich würde gerne die „Player_Visible", „DM_only", „owner_private_Local",
+> „household_shared" gesamtfassend entfernen
+> Und durch einen neuen Bereich Im UWE Commandcenter ersetzen. Hier hinterlege ich eh neue
+> Mail adressen und ich möchte einfach nur anhaken können:
+> Portal Ja/Nein, Studio Ja/Nein, Brain Ja/Nein, Family Ja/Nein
+> Das UWE Commandcenter ist von natur aus nur durch den Owner zu steuern (Eigener PC)
+
+**Einordnung dazu in [Abschnitt N](#n--zugangsmodell-nach-notiz-lasse).** Kurzfassung: Das
+Häkchen-Modell ist die richtige Antwort auf die Frage „wer darf in welche App" und ersetzt
+dort mehr, als du vermutlich erwartest — Rollen-Enum, Capability-Matrix und
+`FamilyMember.areas` können weg. Zwei der vier Labels erledigen aber eine *andere* Aufgabe
+als Zugang, und die bleibt offen: `dm_only`/`player_visible` steuern, was **innerhalb einer
+Welt** sichtbar ist, und `owner_private_local` steuert, **was den Host verlassen darf**.
+Details und Entscheidungszeilen dort.
+
+---
+
+## Die fünf Zielbereiche
 
 | Bereich | Für wen | Datenklasse | Zugang |
 |---|---|---|---|
-| **Landing** | alle Besucher | öffentlich | keiner — nur Startseite + Login-Weiche |
-| **Portal** | Mitspieler:innen | `player_visible` | Login + Welt-Mitgliedschaft |
-| **Studio** | DM + Betrieb | `dm_only` / Plattform | Rolle owner/admin/dm |
-| **Brain** | nur du | `owner_private_local` | Rolle owner |
-| **Family** | Haushalt | `household_shared` *(neu)* | E-Mail-Allowlist durch Owner |
+| Bereich | Für wen | Zugang künftig (Notiz Lasse) |
+|---|---|---|
+| **Landing** | alle Besucher | keiner — nur Startseite + Login-Weiche |
+| **Portal** | Mitspieler:innen | Häkchen `Portal` |
+| **Studio** | DM + Betrieb | Häkchen `Studio` |
+| **Brain** | nur du | Häkchen `Brain` |
+| **Family** | Haushalt | Häkchen `Family` |
+| **Command Center** | nur du, lokal | kein Häkchen — läuft auf deinem PC |
 
-Es sind jetzt **fünf** Oberflächen, nicht vier: `apps/landing` ist seit PR #796 eine
-eigene App auf dem Apex-Origin. Sie trägt keine Inhalte, deshalb steht sie in dieser
-Liste am Ende (Abschnitt L) und nicht vorne.
+Es sind inzwischen **sechs** Oberflächen. `apps/landing` ist seit PR #796 eine eigene App
+auf dem Apex-Origin; das **Command Center** (`tools/uwe-host-command-center`, 3.310 Zeilen)
+ist der lokale Steuerstand auf deinem Rechner. Beide tragen keine Weltinhalte, deshalb
+stehen sie am Ende der Liste (Abschnitte L und M) und nicht vorne.
 
 Faustregel: Stört es dich, wenn deine Partnerin/dein Partner es sieht → **Brain**. Muss die
 Person es sehen, damit der Haushalt läuft → **Family**. D&D → **Studio** oder **Portal**.
@@ -298,6 +326,146 @@ arbeitet mit einer **vollständigen Allowlist**; unbekannte Seitenpfade werden d
 
 ---
 
+# M · UWE COMMAND CENTER — lokaler Steuerstand (3.310 Zeilen)
+
+`tools/uwe-host-command-center` — kein Web-Bereich, sondern ein lokaler Dienst auf deinem
+PC mit `dashboard.html` als Oberfläche. Kein Login, keine Rollen: **wer den Rechner hat,
+hat das Command Center.** Deshalb ist es der richtige Ort für die E-Mail-Allowlist.
+
+## M.1 Was heute drin ist
+
+| # | Bereich | Quelle | Vorschlag | Entscheidung |
+|---|---|---|---|---|
+| M1 | UWE Erreichbarkeit | `uwe-health.ts` | behalten | |
+| M2 | systemd Dienste & Timer | `service-journal.ts` | behalten | |
+| M3 | Host-Steuerung | `control.ts` | behalten | |
+| M4 | Host-Sicherheit | `snapshot.ts` | behalten | |
+| M5 | Offene Ports | `snapshot.ts` | behalten | |
+| M6 | Fehlgeschlagene Anmeldungen | `snapshot.ts` | behalten | |
+| M7 | Letzte Fehler | `service-journal.ts` | behalten | |
+| M8 | UWE Journal (Auszug) | `service-journal.ts` | behalten | |
+| M9 | Host-Update | `desktop-host-update.ts` | behalten | |
+| M10 | Cloudflare-Tunnel | `cloudflare-tunnel-cli.ts` | behalten | |
+| M11 | Lokalen Connector einrichten | `provision-local-connector.ts` | behalten | |
+| M12 | **Benutzerverwaltung** *(CLI, ohne eigene Dashboard-Kachel)* | `user-admin-cli.ts` | **→ M13 ausbauen** | |
+
+> **M12 ist der Anknüpfungspunkt.** `user-admin-cli.ts` kann schon
+> `list` / `create` / `update` / `set-password` / `delete` und nimmt heute ein
+> `role`-Feld (`owner`/`admin`/`dm`/`player`). Aus diesem einen Feld werden die vier
+> Häkchen. Kommentar in der Datei: *„Lets the desktop app provision the owner and every
+> other user without the Studio web UI"* — also genau dafür gebaut.
+
+## M.2 Was nach der Notiz dazukommt
+
+| # | Bereich | Vorschlag | Entscheidung |
+|---|---|---|---|
+| M13 | **Zugänge** — E-Mail-Allowlist mit vier Häkchen | neue Dashboard-Kachel: Liste aller Adressen, Spalten Portal / Studio / Brain / Family, Passwort setzen, Einladung, Sperren | |
+| M14 | Welt-Zuordnung *(nur falls „Portal Ja" nicht alle Welten heißt — siehe N4)* | Unterpunkt von M13 | |
+
+---
+
+# N · Zugangsmodell nach Notiz Lasse
+
+Meine Einordnung deines Vorschlags. **Kurz: bauen — aber er löst drei verschiedene Fragen
+auf einmal, und für zwei davon reichen vier Häkchen nicht.**
+
+## N.1 Was die Häkchen ersetzen — mehr als du denkst
+
+Heute beantworten **vier** Mechanismen die Frage „wer darf wo rein", teils widersprüchlich.
+Alle vier werden durch die Häkchen überflüssig:
+
+| Was heute | Zeilen | Nach dem Umbau |
+|---|---|---|
+| Rollen-Enum `owner/admin/dm/player/readonly/guest` + `STUDIO_ACCESS_ROLES` / `ADMIN_ACCESS_ROLES` | ~120 | `owner` bleibt (für Betrieb/Restore), die anderen fünf entfallen |
+| **Capability-Matrix**, 20 Capabilities × 10 Rollen — heute reine Deko (Befund B3) | 274 + 80 Test | **ersatzlos weg** |
+| `AUDIENCE_DOMAIN_ACCESS` — die Hälfte, die App-Zugang regelt (Befund B4) | Teil von 422 | weg; der Daten-Routing-Teil bleibt (N.3) |
+| `FamilyMember.areas` aus meinem eigenen Family-Vorschlag (G.3) | noch nicht gebaut | **verworfen** — dein Modell ist einfacher und reicht |
+| `guest`-Modus / `guestModeEnabled` pro Welt | ~verteilt | entfällt, wenn ohne Häkchen niemand reinkommt |
+
+Das ist ein echter Gewinn: **~900 Zeilen weg**, und das Rechtekonzept schrumpft von vier
+konkurrierenden Modellen auf eines, das man in einem Satz erklären kann. Genau das war
+Befund B3 aus der Zustandsanalyse. Dein Modell erledigt ihn.
+
+Dass Konten **nur** der Owner anlegt, ist übrigens schon fast so: Es gibt keine
+Selbstregistrierung, nur `/setup` für den ersten Owner. Der Rest ist Aufräumen.
+
+## N.2 Was die Häkchen **nicht** können: Sichtbarkeit innerhalb einer Welt
+
+`dm_only` und `player_visible` sitzen nicht am Benutzer, sondern an **jeder einzelnen
+Wiki-Seite und jedem Textblock** (`Page.visibility`, `ContentBlock.visibility`). Sie
+beantworten eine andere Frage:
+
+> Innerhalb *einer* Welt, die ein Spieler betreten darf — welche Seiten sieht er, und
+> welche nur der DM?
+
+Ein Häkchen „Portal Ja" kann das nicht ausdrücken, weil es pro Person gilt und nicht pro
+Seite. Würden `dm_only` und `player_visible` entfallen, wäre die Folge: **jede Wiki-Seite,
+jeder NPC, jede Karte und jeder Session-Recap wäre für jeden Portal-Nutzer sichtbar,
+sobald das Häkchen gesetzt ist.** Der DM könnte keinen Twist mehr vorbereiten, keine
+Fraktion geheim halten, kein Handout zurückhalten. Auch `specific_players` und
+`unlock_after_session` (Seite wird nach der Session freigeschaltet) hängen daran.
+
+Das ist kein Rechtekonzept-Wildwuchs, sondern die Kernmechanik des DM-Studios — und der
+einzige Teil des heutigen Modells, der nachweislich sauber funktioniert und getestet ist.
+
+| # | Frage | Möglichkeiten | Deine Entscheidung |
+|---|---|---|---|
+| N1 | `dm_only` / `player_visible` an Seiten und Blöcken | **(a)** bleibt wie heute — Häkchen regeln nur den App-Zugang *(meine Empfehlung)* · **(b)** wirklich weg, Portal zeigt dann alles · **(c)** vereinfachen auf zwei Werte statt heute sechs | |
+| N2 | `specific_players`, `unlock_after_session`, `secretLevel`/`revealState` | **(a)** bleiben · **(b)** streichen, nur noch DM-oder-alle | |
+
+Falls **(c)** bei N1: Heute gibt es sechs Sichtbarkeiten (`dm_only`, `player_visible`,
+`public`, `specific_players`, `unlock_after_session`, `archived`, `private`). Auf `dm_only`
+und `player_visible` zu reduzieren wäre eine echte Verschlankung im Sinne deiner Notiz —
+ohne die DM-Mechanik zu verlieren.
+
+## N.3 Was die Häkchen **nicht** können: was den Host verlassen darf
+
+`owner_private_local` ist trotz des Namens kein Zugangs-Label, sondern ein
+**Routing-Label**. Es tut zwei Dinge:
+
+1. `privacyGuard` sperrt Inhalte dieser Klasse dauerhaft für Cloud-KI
+   (`validateProviderContextCombination`) — deshalb kann der Brain-Chat deine privaten
+   Dokumente nicht an ein Cloud-Modell schicken.
+2. Es entscheidet, welche Prisma-Modelle in `uwe-brain.db` statt in die App-DB gehören.
+
+Ersatzlos entfernt hieße: Personal-Brain-Inhalte könnten an einen Cloud-Provider gehen.
+Das Häkchen „Brain Ja" sagt nichts darüber, wohin die Daten fließen — es sagt nur, wer die
+Oberfläche sehen darf.
+
+| # | Frage | Möglichkeiten | Deine Entscheidung |
+|---|---|---|---|
+| N3 | `owner_private_local` als Cloud-Sperre | **(a)** bleibt als reines Routing-Label, verschwindet aber aus der Zugangs-Diskussion *(meine Empfehlung)* · **(b)** umbenennen in etwas klar Nicht-Rechte-Klingendes, z. B. `local_only` · **(c)** weg — Cloud-KI darf dann private Inhalte sehen | |
+
+Dass `household_shared` verschwindet, ist dagegen kostenlos: Die Klasse existiert noch
+nicht, sie war nur mein Vorschlag. Family bekommt stattdessen sein Häkchen und — falls
+N3 = (a)/(b) — für den Chatbot dieselbe Cloud-Sperre wie Brain.
+
+## N.4 Eine Lücke, die das Modell noch offen lässt
+
+„Portal Ja" sagt, dass jemand ins Portal darf — aber nicht, **welche Welten** er dort
+sieht. Heute macht das `WorldMembership` (und das ist auch der Fix aus PR #797).
+
+| # | Frage | Möglichkeiten | Deine Entscheidung |
+|---|---|---|---|
+| N4 | Welt-Zuordnung | **(a)** `WorldMembership` bleibt: Häkchen = darf ins Portal, Zuordnung = welche Welten *(meine Empfehlung, funktioniert schon)* · **(b)** „Portal Ja" heißt alle Welten — einfacher, aber bei mehreren Kampagnen sehen alle alles · **(c)** fünftes Häkchen pro Welt in M13 | |
+
+## N.5 Vorschlag für das Zielbild
+
+Wenn N1=(a) oder (c), N3=(a) oder (b), N4=(a):
+
+```
+Zugang          → 4 Häkchen pro E-Mail im Command Center       (ersetzt Rollen + Capabilities)
+Welt-Zuordnung  → WorldMembership                              (bleibt, nur ohne Rollenwerte)
+Sichtbarkeit    → dm_only | player_visible an Seite/Block      (bleibt, ggf. von 6 auf 2 gekürzt)
+KI-Routing      → local_only als Datenklasse                   (bleibt, umbenannt)
+Owner           → einzige verbleibende Rolle                    (Betrieb, Restore, Command Center)
+```
+
+Vier Achsen statt vier konkurrierender Modelle — und jede beantwortet genau eine Frage.
+Das ist erklärbar, und es ist deutlich weniger Code als heute.
+
+---
+
 # G · FAMILY — neu vorgeschlagen
 
 ## G.1 Was aus A–F hierher wandert
@@ -342,33 +510,30 @@ Der eine echt neue Teil ist also die **Mehrbenutzer-Filterung**. Alles andere is
 Wiederverwendung. Genau deshalb lohnt es sich, G.3 (`FamilyMember.areas`) vor dem Bau
 festzulegen — daran hängt der Filter.
 
-## G.3 Zugang — Vorschlag
+## G.3 Zugang — überholt durch Notiz Lasse
 
-Kein neuer globaler Rollenwert, sondern ein Membership-Modell analog `WorldMembership`:
+~~`FamilyMember.areas` mit Freischaltung pro Unterbereich~~ — **verworfen.** Der Zugang
+läuft nach der Notiz über das Häkchen `Family` im Command Center (M13). Ein Mitglied hat
+damit Zugriff auf **ganz** Family, nicht auf einzelne Unterbereiche.
 
-```
-FamilyMember
-  userId    → User
-  email     → vom Owner freigegebene Adresse (Einladung)
-  areas     → contracts | documents | meals | calendar | household | finance
-  status    → invited | active | revoked
-```
-
-Damit ist pro Person entscheidbar: Partner:in sieht Verträge und Essensplan, Kinder nur
-Essensplan und Kalender. Eine flache Rolle könnte das nicht.
+Das ist die einfachere Lösung und ich halte sie für richtig. Der Preis: „Partner:in sieht
+Verträge, Kinder nur den Essensplan" ist damit nicht möglich — Family ist alles oder
+nichts. Falls das später doch gebraucht wird, lässt es sich als zweite Spaltengruppe in
+M13 nachrüsten, ohne das Modell umzubauen.
 
 | # | Frage | Vorschlag | Entscheidung |
 |---|---|---|---|
 | G14 | Eigene App (`apps/family`) oder Bereich in Studio? | **eigene App** — sonst wiederholen wir das Brain/Studio-Duplikat | |
-| G15 | Eigene DB (`uwe-family.db`) oder Brain-DB mitnutzen? | **eigene DB** — sonst bricht die `owner_private_local`-Zusicherung der Brain-DB | |
-| G16 | Dürfen Family-Mitglieder ins Portal oder Studio? | **nein**, strikt getrennt | |
-| G17 | Chatbot: lokal erzwungen oder Cloud erlaubt? | **lokal erzwungen** — Haushaltsdokumente gehen nicht in die Cloud | |
-| G18 | Feingranular pro Bereich freischalten? | **ja** (`areas`) | |
+| G15 | Eigene DB (`uwe-family.db`) oder Brain-DB mitnutzen? | **eigene DB** — Family ist geteilt, Brain ist privat; beides darf nicht in derselben Datei liegen | |
+| G16 | Dürfen Family-Mitglieder ins Portal oder Studio? | ergibt sich aus den Häkchen — wer nur `Family` hat, kommt nirgends sonst hin | |
+| G17 | Chatbot: lokal erzwungen oder Cloud erlaubt? | **lokal erzwungen** — Haushaltsdokumente gehen nicht in die Cloud (hängt an **N3**) | |
+| G18 | ~~Feingranular pro Bereich freischalten?~~ | **nein** — durch M13 ersetzt | *überholt* |
 
 ## G.4 Technische Folge (nur zur Information)
 
-- Neue Audience `family` in `packages/product-contracts`, neue Privacy-Klasse
-  `household_shared`
+- Neue Audience `family` in `packages/product-contracts` *(sofern die Audience-Matrix nach
+  N.1 überhaupt bleibt)*; die ursprünglich geplante Privacy-Klasse `household_shared`
+  entfällt nach der Notiz
 - **~14 Prisma-Modelle** wandern aus der Brain-DB in eine Family-DB: `ContractExpense`,
   `DocumentTemplate`, `Recipe`, `RecipeIngredient`, `MealPlanWeek`, `MealPlanEntry`,
   `ShoppingList`, `ShoppingListItem`, `BringConnection`, `PantryItem`, `MaintenanceTask`,
@@ -413,6 +578,7 @@ Zwei saubere Wege, ein dritter ist keiner:
 
 | Bereich | Anzahl | Inhalt |
 |---|---|---|
+| **Command Center** | 13 | 11 bestehende Kacheln · **Zugänge (M13)** · ggf. Welt-Zuordnung |
 | **Landing** | 3 | Startseite · Login-Weiche · Health |
 | **Portal** | 18 | unverändert (minus Atlas-2D-Leiche) |
 | **Studio** | 19 + Welt-Ebene | Start · Welten · Welt-Wissen · KI · Werkzeuge · System |
@@ -429,16 +595,19 @@ Zusammengelegt: 4 Welt-Werkzeuge → 1, Print Center → Labels, Admin-Hub → S
 *Fortgeschrieben 2026-07-26 abends.*
 
 1. ~~Rechte-Lücken B1/B2 schließen~~ — **erledigt** (PR #797, gemergt)
-2. **Diese Liste ausfüllen** ← wir sind hier
-3. **Abschnitt H entscheiden** (Brain oder Studio) — davon hängt ab, wohin Family gebaut
+2. **Diese Liste ausfüllen** ← wir sind hier, inklusive **N1–N4**
+3. **Zugangsmodell umbauen** (M13 + Abschnitt N) — vier Häkchen im Command Center, Rollen
+   und Capability-Matrix raus. Das ist die Grundlage für alles Weitere: Family braucht das
+   Häkchen, und der Umbau ist am billigsten, *bevor* eine fünfte App daran hängt.
+4. **Abschnitt H entscheiden** (Brain oder Studio) — davon hängt ab, wohin Family gebaut
    wird. **Dringender geworden:** Der neue Brain-MCP-Server liest Brain-Inhalte über
    Studio (`/api/life-brain/*`), weil `apps/brain` keine Inhalts-API hat. Die
    Vermischung ist damit tragend für ein Feature — je länger sie steht, desto teurer wird
    die Trennung.
-4. **Family bauen** — `FamilyMember`, eigene DB, Chat als Ableitung von
+5. **Family bauen** — eigene DB, Häkchen-Zugang, Chat als Ableitung von
    `@uwe/brain-assistant` mit Mehrbenutzer-Filter
-5. Verschlankung (Streichungen und Zusammenlegungen aus C–E) nebenher
-6. **L4** (doppeltes `/api/auth/enter`) einsammeln — klein, aber sollte nicht liegen bleiben
+6. Verschlankung (Streichungen und Zusammenlegungen aus C–E) nebenher
+7. **L4** (doppeltes `/api/auth/enter`) einsammeln — klein, aber sollte nicht liegen bleiben
 
 *Zurückgestellt: E34 (`terra.html`) — berührt keinen der Schritte oben und kann jederzeit
 nachgezogen werden. **E7 (Atlas 3D) bleibt offen** und ist mit 21.750 Zeilen weiterhin der

@@ -58,8 +58,14 @@ Portal-Weltseiten, und drei Rechtemodelle, die dokumentiert aber nicht erzwungen
 |---|--------|-----|-----|-----------------|
 | 1 | **Grobe Rollen** (`owner/admin/dm/player/readonly/guest`) | `packages/auth/src/roles.ts` | 120 | **Ja** — Login, Middleware, API-Guards, Page-Guards |
 | 2 | **Content-Sichtbarkeit** (`dm_only`, `player_visible`, `secretLevel`, `revealState`) | `packages/auth/src/permissions.ts`, `packages/database/src/permissions.ts` | 505 | **Ja** — Portal, Share-Links, Static Export |
-| 3 | **Capability-Matrix** (20 Capabilities × 6 globale × 4 Welt-Rollen) | `packages/auth/src/role-capabilities.ts` | 274 | **Nein** — nur Deko |
+| 3 | **Capability-Matrix** (20 Capabilities × 6 globale × 4 Welt-Rollen) | `packages/auth/src/role-capabilities.ts` | 274 | **Nein** — nur Deko · 🟡 *zur Streichung entschieden, siehe B3* |
 | 4 | **Audience × Domain-Matrix** (Portal/Studio/Brain/Platform × 12 Domains) | `packages/product-contracts` | 422 | **Nein** — und von Studio massiv verletzt |
+
+> **Richtungsentscheidung 2026-07-26 abends:** Modelle 1 und 3 werden durch ein einziges
+> Häkchen-Modell im Command Center ersetzt (Portal/Studio/Brain/Family pro E-Mail-Adresse,
+> Konten nur durch den Owner). Modell 2 bleibt — es beantwortet eine andere Frage
+> (Sichtbarkeit *innerhalb* einer Welt). Von Modell 4 bleibt nur der Daten-Routing-Teil.
+> Siehe [Bereichsliste, Abschnitt N](2026-07-26-bereichsliste.md#n--zugangsmodell-nach-notiz-lasse).
 
 Modelle 1 und 2 sind gut. Modelle 3 und 4 sind Dokumentation im Gewand von Code — sie
 erzeugen den Eindruck eines feingranularen Rechtekonzepts, das faktisch nicht existiert.
@@ -184,7 +190,21 @@ aufrufen (ein Ort, 20 Seiten abgedeckt) und in den Seiten den Kontext von dort b
 
 ---
 
-#### B3 — Die Capability-Matrix ist reine Dekoration (mittel)
+#### B3 — Die Capability-Matrix ist reine Dekoration (mittel) — 🟡 Auflösung entschieden
+
+> **Status 2026-07-26 abends:** Der Owner hat sich für die Streichung entschieden. Das
+> Zugangsmodell wird auf vier Häkchen pro E-Mail-Adresse im Command Center umgestellt
+> (Portal / Studio / Brain / Family), die Konten legt ausschließlich der Owner an. Damit
+> entfallen Rollen-Enum, `STUDIO_ACCESS_ROLES`/`ADMIN_ACCESS_ROLES`, Gastmodus und diese
+> Capability-Matrix — rund 900 Zeilen. Details, Abgrenzung und die noch offenen Fragen
+> stehen in [Abschnitt N der Bereichsliste](2026-07-26-bereichsliste.md#n--zugangsmodell-nach-notiz-lasse).
+>
+> Wichtig für die Umsetzung: Das Häkchen-Modell ersetzt den **App-Zugang**. Die
+> Sichtbarkeit *innerhalb* einer Welt (`dm_only`/`player_visible` an Seite und Block, siehe
+> Modell 2 oben) und das **KI-Routing** (`owner_private_local`) sind andere Achsen und
+> müssen bleiben — sonst sieht jeder Portal-Nutzer jede DM-Seite bzw. Cloud-KI bekommt
+> private Inhalte.
+
 
 `packages/auth/src/role-capabilities.ts` definiert 20 Capabilities, zwei vollständige
 Matrizen und 13 Prüf-Funktionen (`canApproveReviews`, `canGrantPortalUnlocks`,
