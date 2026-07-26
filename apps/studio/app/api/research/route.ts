@@ -1,10 +1,9 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest, guardStudioApiRequestWithContext } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { createJobService, createResearchService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { dispatchJob } from "@/src/lib/job-executor";
-import { getCurrentAuthUser } from "@/src/lib/auth";
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
@@ -27,7 +26,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  const { error: authError, context } = await guardStudioApiRequestWithContext(request);
   if (authError) return authError;
 
   let body: { query?: string; worldId?: string; contextMode?: "dnd_brain" | "life_brain" | "open_web" };
@@ -49,7 +48,7 @@ export async function POST(request: Request) {
       contextMode: body.contextMode,
     });
 
-    const actor = await getCurrentAuthUser();
+    const actor = context.user;
     const jobs = createJobService(prisma);
     const job = await jobs.enqueue({
       type: "research",

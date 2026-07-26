@@ -12,6 +12,7 @@ import {
   SESSION_COOKIE_NAME,
   canPreviewAsPlayer,
   canReadWorld,
+  readSessionTokensFromCookieHeader,
   scopeFromAccessContext,
 } from "@uwe/auth";
 
@@ -59,25 +60,17 @@ export const getCurrentUser = cache(async () => {
 export async function getUserFromRequestCookieHeader(
   cookieHeader: string | null,
 ): Promise<SafeUser | null> {
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const token = cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${SESSION_COOKIE_NAME}=`))
-    ?.slice(SESSION_COOKIE_NAME.length + 1);
-
-  if (!token) {
-    return null;
-  }
-
   const db = getDb();
   const auth = createAuthService(db);
   try {
-    const session = await auth.getSessionByToken(decodeURIComponent(token));
-    return session?.user ?? null;
+    // LAST-first, matching what `cookies()` resolves on the page path.
+    for (const token of readSessionTokensFromCookieHeader(cookieHeader)) {
+      const session = await auth.getSessionByToken(token);
+      if (session) {
+        return session.user;
+      }
+    }
+    return null;
   } finally {
     await disconnectPrismaClientIfOwned(db);
   }

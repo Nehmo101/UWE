@@ -523,6 +523,27 @@ export function getSessionCookieOptionsForRequest(
   return base;
 }
 
+/**
+ * Every cookie scope a session may have been written under, so clearing covers all of them.
+ *
+ * A cookie's identity is (name, domain, path): once `SESSION_COOKIE_DOMAIN` is added or
+ * removed, the browser holds both a host-only and a domain-scoped `uwe_session` and sends
+ * both. Clearing only the currently configured variant leaves the other one behind forever
+ * — it then shadows the fresh session on every request and survives each login/logout cycle.
+ */
+export function getSessionCookieClearVariants(
+  request: RequestLikeForCookieOptions,
+  env: NodeJS.ProcessEnv = process.env,
+): SessionCookieOptions[] {
+  const configured = getSessionCookieOptionsForRequest(request, env);
+  if (!configured.domain) {
+    return [configured];
+  }
+
+  const { domain: _domain, ...hostOnly } = configured;
+  return [configured, hostOnly];
+}
+
 export function getOAuthStateCookieOptions(
   cookiePath: string,
   env: NodeJS.ProcessEnv = process.env,

@@ -1,4 +1,4 @@
-import { SESSION_COOKIE_NAME } from "@uwe/auth";
+import { readSessionTokensFromCookieHeader } from "@uwe/auth";
 import { createAuthService } from "./auth";
 import {
   createPrismaClient,
@@ -12,20 +12,6 @@ import {
   type MaintenanceGateDecision,
 } from "./maintenance-gate";
 import { getSystemSettingsSnapshot } from "./settings-service";
-
-function parseSessionToken(cookieHeader: string | null | undefined): string | null {
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const token = cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${SESSION_COOKIE_NAME}=`))
-    ?.slice(SESSION_COOKIE_NAME.length + 1);
-
-  return token ? decodeURIComponent(token) : null;
-}
 
 export async function evaluateMaintenanceForRequest(input: {
   surface: MaintenanceAppSurface;
@@ -59,12 +45,16 @@ async function resolveIsOwnerFromCookie(
   cookieHeader: string | null | undefined,
   db: PrismaClient,
 ): Promise<boolean> {
-  const token = parseSessionToken(cookieHeader);
-  if (!token) {
-    return false;
+  const auth = createAuthService(db);
+
+  // LAST-first, like `cookies()`; a stale duplicate must not make a signed-in
+  // owner look anonymous — that would redirect them to /maintenance app-wide.
+  for (const token of readSessionTokensFromCookieHeader(cookieHeader)) {
+    const session = await auth.getSessionByToken(token);
+    if (session) {
+      return session.user.isOwner === true;
+    }
   }
 
-  const auth = createAuthService(db);
-  const session = await auth.getSessionByToken(token);
-  return session?.user.isOwner === true;
+  return false;
 }
