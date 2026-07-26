@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import { TurnstileWidget } from "@uwe/shared-ui";
+import { Suspense, useEffect, useState } from "react";
+import { TurnstileWidget, isPasskeySupported, loginWithPasskey } from "@uwe/shared-ui";
 import { readFormFieldValue, redirectAfterAuth } from "@/src/lib/auth-form-utils";
 import { Alert, LoadingState } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
@@ -24,6 +24,8 @@ interface StudioLoginFormProps {
   devCredentials?: React.ReactNode;
   /** Cloudflare Turnstile site key — when set, a "Verify you are human" check is required. */
   turnstileSiteKey?: string | null;
+  /** Whether passkey (WebAuthn) login is enabled in the system settings. */
+  passkeysEnabled?: boolean;
 }
 
 function StudioLoginFormInner({
@@ -36,6 +38,7 @@ function StudioLoginFormInner({
   footer,
   devCredentials,
   turnstileSiteKey,
+  passkeysEnabled = false,
 }: StudioLoginFormProps) {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? defaultRedirect;
@@ -61,6 +64,37 @@ function StudioLoginFormInner({
   const turnstileEnabled = Boolean(turnstileSiteKey);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileRefresh, setTurnstileRefresh] = useState(0);
+  // SSR-safe: only show the passkey button once the browser confirmed support.
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false);
+  useEffect(() => {
+    if (passkeysEnabled) {
+      setPasskeyAvailable(isPasskeySupported());
+    }
+  }, [passkeysEnabled]);
+
+  async function handlePasskeyLogin() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await loginWithPasskey();
+      if (!result.ok) {
+        if (!result.cancelled) {
+          setError(result.error ?? "Passkey-Anmeldung fehlgeschlagen.");
+        }
+        return;
+      }
+
+      if (result.forcePasswordChange) {
+        redirectAfterAuth(forcePasswordRedirect);
+        return;
+      }
+
+      redirectAfterAuth(redirectTo);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -295,6 +329,16 @@ function StudioLoginFormInner({
           <Button type="submit" disabled={loading || (turnstileEnabled && !turnstileToken)}>
             {loading ? "Anmelden…" : "Anmelden"}
           </Button>
+          {passkeyAvailable ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={handlePasskeyLogin}
+            >
+              Mit Passkey anmelden
+            </Button>
+          ) : null}
         </div>
       </form>
 

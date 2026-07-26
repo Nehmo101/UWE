@@ -1,4 +1,5 @@
 import { getTurnstileConfig } from "@uwe/auth";
+import { getAppRepository } from "@uwe/database/server";
 import { StudioLoginForm } from "@/src/components/StudioLoginForm";
 import { StudioLoginFooter } from "@/components/StudioLoginFooter";
 import { STUDIO_DASHBOARD_PATH } from "@/src/lib/routes";
@@ -7,8 +8,9 @@ import { STUDIO_DASHBOARD_PATH } from "@/src/lib/routes";
 // configure keys after build).
 export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
+export default async function LoginPage() {
   const turnstile = getTurnstileConfig();
+  const settings = await getAppRepository().getSystemSettings();
   return (
     <StudioLoginForm
       title="UWE Studio — Anmeldung"
@@ -19,6 +21,7 @@ export default function LoginPage() {
       devDefaultPassword="uwe-dev"
       footer={<StudioLoginFooter />}
       turnstileSiteKey={turnstile.enabled ? turnstile.siteKey : null}
+      passkeysEnabled={settings.auth.passkeysEnabled}
       devCredentials={
         <>
           <p className="font-medium">Entwicklungs-Benutzer</p>

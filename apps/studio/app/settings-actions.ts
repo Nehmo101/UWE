@@ -107,6 +107,11 @@ export async function updateSettingsAction(formData: FormData) {
         })(),
       };
       break;
+    case "login":
+      update.auth = {
+        passkeysEnabled: parseBoolean(formData.get("passkeysEnabled")),
+      };
+      break;
     case "storage":
       update.storage = {
         uploadsPath: String(formData.get("uploadsPath") || ""),

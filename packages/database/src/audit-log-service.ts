@@ -89,6 +89,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   mfa_enabled: "2FA aktiviert",
   mfa_disabled: "2FA deaktiviert",
   mfa_challenge_failed: "2FA-Challenge fehlgeschlagen",
+  passkey_registered: "Passkey registriert",
+  passkey_removed: "Passkey entfernt",
   security_warning_dismissed: "Sicherheitswarnung verworfen",
   host_update_started: "Host-Update gestartet",
   host_update_completed: "Host-Update abgeschlossen",

@@ -76,7 +76,7 @@ const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount
 const BRIEFING_KEYS = new Set(["autoBriefingEnabled", "time"]);
 const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
-const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes"]);
+const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes", "passkeysEnabled"]);
 const MAINTENANCE_KEYS = new Set(["maintenanceMode", "lockPortal", "lockStudio", "message"]);
 
 export interface SettingsValidationResult {
@@ -462,6 +462,10 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
             "settings.auth.sessionInactivityTimeoutMinutes muss zwischen 0 und 1440 liegen (0 = deaktiviert).",
           );
         }
+        return;
+      }
+      if (key === "passkeysEnabled" && typeof value !== "boolean") {
+        sectionErrors.push("settings.auth.passkeysEnabled muss true oder false sein.");
       }
     });
     errors.push(...sectionErrors);
@@ -471,6 +475,9 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
         auth.sessionInactivityTimeoutMinutes = Math.round(
           body.auth.sessionInactivityTimeoutMinutes as number,
         );
+      }
+      if (body.auth.passkeysEnabled !== undefined) {
+        auth.passkeysEnabled = body.auth.passkeysEnabled as boolean;
       }
       if (Object.keys(auth).length > 0) {
         update.auth = auth;

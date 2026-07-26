@@ -54,6 +54,7 @@ const TABS = [
   { id: "worlds", label: "Worlds" },
   { id: "portal", label: "Portal" },
   { id: "privacy", label: "Privacy" },
+  { id: "login", label: "Anmeldung" },
   { id: "storage", label: "Storage" },
   { id: "ai", label: "AI" },
   { id: "integrations", label: "Integrationen" },
@@ -440,6 +441,29 @@ export default async function SettingsPage({ searchParams }: Props) {
               />
             </div>
 
+            <Button type="submit">Speichern</Button>
+          </form>
+        )}
+
+        {activeTab === "login" && (
+          <form action={updateSettingsAction} className={FORM_CLASS}>
+            <input type="hidden" name="tab" value="login" />
+            <h2 className={HEADING_CLASS}>Anmeldung</h2>
+            <p className={HINT_CLASS}>
+              Zusätzliche Anmeldemethoden neben E-Mail + Passwort. Gilt für Studio und Portal.
+            </p>
+            <SettingsToggleGroup title="Passkeys">
+              <SettingToggleRow
+                name="passkeysEnabled"
+                label="Passkey-Login aktiv"
+                hint="Anmeldung per Face ID, Touch ID, Fingerabdruck oder Sicherheitsschlüssel (WebAuthn). Benutzer registrieren ihre Passkeys unter Account → Sicherheit. Benötigt HTTPS (oder localhost)."
+                defaultChecked={settings.auth.passkeysEnabled}
+              />
+            </SettingsToggleGroup>
+            <p className={HINT_CLASS}>
+              Passkeys sind fest an die Domain gebunden, unter der sie registriert wurden. Nach
+              einem Domain-Wechsel müssen sie neu registriert werden.
+            </p>
             <Button type="submit">Speichern</Button>
           </form>
         )}

@@ -56,6 +56,8 @@ export const PUBLIC_PORTAL_API_ROUTES = [
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/api/auth/two-factor/verify",
+  "/api/auth/passkey/login/options",
+  "/api/auth/passkey/login/verify",
   "/api/share",
   "/api/share/*",
 ] as const;
@@ -81,6 +83,10 @@ export const PORTAL_SESSION_API_ROUTES = [
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
   "/api/auth/two-factor/disable",
+  "/api/auth/passkey/register/options",
+  "/api/auth/passkey/register/verify",
+  "/api/auth/passkey/credentials",
+  "/api/auth/passkey/credentials/*",
   "/api/assets/*/file",
   "/api/worlds",
   "/api/worlds/*/graph",
@@ -95,6 +101,10 @@ export const STUDIO_SESSION_API_ROUTES = [
   "/api/auth/two-factor/setup",
   "/api/auth/two-factor/activate",
   "/api/auth/two-factor/disable",
+  "/api/auth/passkey/register/options",
+  "/api/auth/passkey/register/verify",
+  "/api/auth/passkey/credentials",
+  "/api/auth/passkey/credentials/*",
   "/api/worlds",
 ] as const;
 
@@ -171,6 +181,8 @@ export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/api/auth/two-factor/verify",
+  "/api/auth/passkey/login/options",
+  "/api/auth/passkey/login/verify",
   "/api/spotify/callback",
   "/api/agent-jobs/callback",
   // RTX Host Connector endpoints authenticate with their own connector token in

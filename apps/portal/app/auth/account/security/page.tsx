@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PasskeySettingsPanel } from "@/src/components/PasskeySettingsPanel";
 import { PortalActiveSessionsList } from "@/src/components/PortalActiveSessionsList";
 import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
 import { PageHeader } from "@/src/components/shell";
@@ -9,6 +10,7 @@ import {
   createPrismaClient,
 } from "@uwe/database/server";
 import { listActiveSessionsForUser } from "@uwe/database/account-session";
+import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
 
 export default async function PortalAccountSecurityPage() {
   const session = await getCurrentSession();
@@ -26,6 +28,7 @@ export default async function PortalAccountSecurityPage() {
   } finally {
     await db.$disconnect();
   }
+  const { settings } = await getSystemSettingsSnapshotSafe();
 
   return (
     <>
@@ -43,6 +46,21 @@ export default async function PortalAccountSecurityPage() {
                 Passwort ändern
               </Link>
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>Passkeys</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Anmeldung per Face ID, Touch ID, Fingerabdruck oder Sicherheitsschlüssel.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PasskeySettingsPanel
+              enabled={settings.auth.passkeysEnabled}
+              disabledHint="Passkey-Login ist derzeit deaktiviert. Wende dich an deine Spielleitung."
+            />
           </CardContent>
         </Card>
 

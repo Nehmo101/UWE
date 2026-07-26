@@ -13,6 +13,7 @@
     "./page-viewer-service": "./src/page-viewer-service.ts",
     "./client": "./src/client.ts",
     "./brain-client": "./src/brain-client.ts",
+    "./passkeys": "./src/passkey-credential-store.ts",
     "./connector-service": "./src/connector-service.ts",
     "./server": "./src/server.ts",
     "./atlas3d": "./src/atlas3d-service.ts",

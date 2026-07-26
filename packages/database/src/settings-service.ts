@@ -158,6 +158,8 @@ export interface PrivacySettings {
 export interface AuthSettings {
   /** Auto-logout after this many minutes of inactivity. 0 = disabled. */
   sessionInactivityTimeoutMinutes: number;
+  /** Whether passkey (WebAuthn) login is offered on the Studio/Portal login pages. */
+  passkeysEnabled: boolean;
 }
 
 /** Owner emergency / maintenance locks (stored in system_settings JSON). */
@@ -514,6 +516,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   },
   auth: {
     sessionInactivityTimeoutMinutes: 30,
+    passkeysEnabled: false,
   },
   maintenance: {
     maintenanceMode: false,
@@ -642,6 +645,7 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       sessionInactivityTimeoutMinutes: normalizeSessionInactivityTimeoutMinutes(
         settings.auth?.sessionInactivityTimeoutMinutes,
       ),
+      passkeysEnabled: settings.auth?.passkeysEnabled === true,
     },
     maintenance: {
       ...DEFAULT_SYSTEM_SETTINGS.maintenance,

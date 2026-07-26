@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import {
   AUDIT_ACTION_LABELS,
   createAuditLogService,
+  getAppRepository,
   prisma,
 } from "@uwe/database/server";
+import { PasskeySettingsPanel } from "@/src/components/PasskeySettingsPanel";
 import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
 import { BreadcrumbTrail, SystemShell } from "@/src/components/shell";
 import {
@@ -29,6 +31,7 @@ export default async function AccountSecurityPage() {
     actions: ["login_success", "login_failed"],
     limit: 10,
   });
+  const settings = await getAppRepository().getSystemSettings();
 
   return (
     <SystemShell
@@ -56,6 +59,21 @@ export default async function AccountSecurityPage() {
               Passwort ändern
             </Link>
           </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6 max-w-md">
+        <CardHeader>
+          <CardTitle>Passkeys</CardTitle>
+          <CardDescription>
+            Anmeldung per Face ID, Touch ID, Fingerabdruck oder Sicherheitsschlüssel.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PasskeySettingsPanel
+            enabled={settings.auth.passkeysEnabled}
+            disabledHint="Passkey-Login ist deaktiviert. Aktiviere es unter Einstellungen → Anmeldung."
+          />
         </CardContent>
       </Card>
 

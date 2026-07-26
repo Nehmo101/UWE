@@ -12,6 +12,8 @@ export type LoginAuditReason =
   | "account_inactive"
   | "studio_access_denied"
   | "two_factor_required"
+  | "passkey_invalid"
+  | "login_method_disabled"
   | "server_error";
 
 export const LOGIN_AUDIT_REASON_LABELS: Record<LoginAuditReason, string> = {
@@ -22,6 +24,8 @@ export const LOGIN_AUDIT_REASON_LABELS: Record<LoginAuditReason, string> = {
   account_inactive: "Konto deaktiviert",
   studio_access_denied: "Kein Studio-Zugriff für diese Rolle",
   two_factor_required: "Passwort ok — 2FA ausstehend",
+  passkey_invalid: "Passkey-Anmeldung fehlgeschlagen",
+  login_method_disabled: "Anmeldemethode deaktiviert",
   server_error: "Serverfehler beim Login",
 };
 

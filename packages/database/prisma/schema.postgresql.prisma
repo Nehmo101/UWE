@@ -535,6 +535,7 @@ model User {
   twoFactorSecret     TwoFactorSecret?
   twoFactorChallenges TwoFactorChallenge[]
   authIdentities      AuthIdentity[]
+  webAuthnCredentials WebAuthnCredential[]
   contentReviewsProposed ContentReview[] @relation("ContentReviewProposedBy")
   contentReviewsReviewed ContentReview[] @relation("ContentReviewReviewedBy")
   aiUserGrant          AiUserGrant?
@@ -1501,6 +1502,8 @@ enum AuditAction {
   mfa_enabled
   mfa_disabled
   mfa_challenge_failed
+  passkey_registered
+  passkey_removed
   security_warning_dismissed
   host_update_started
   host_update_completed
@@ -2495,6 +2498,48 @@ model TwoFactorChallenge {
 
   @@index([userId, expiresAt])
   @@map("two_factor_challenges")
+}
+
+/// A registered WebAuthn passkey (platform authenticator: Face ID, Touch ID,
+/// Windows Hello, …). `credentialId`/`publicKey` are base64url as produced by
+/// the WebAuthn verifier. `rpId` records the relying-party ID the passkey was
+/// bound to — a passkey is permanently tied to it, so the stored value lets
+/// login filter out credentials from a previous domain and surface why.
+model WebAuthnCredential {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  credentialId String    @unique @map("credential_id")
+  publicKey    String    @map("public_key")
+  counter      Int       @default(0)
+  transports   String?
+  deviceType   String?   @map("device_type")
+  backedUp     Boolean   @default(false) @map("backed_up")
+  rpId         String    @map("rp_id")
+  name         String
+  lastUsedAt   DateTime? @map("last_used_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("webauthn_credentials")
+}
+
+/// Short-lived server-issued WebAuthn challenge. Stored hashed (like session
+/// and 2FA tokens); `userId` is null for usernameless login ceremonies where
+/// the user is only known after the authenticator responds.
+model WebAuthnChallenge {
+  id            String    @id @default(cuid())
+  userId        String?   @map("user_id")
+  challengeHash String    @unique @map("challenge_hash")
+  type          String
+  expiresAt     DateTime  @map("expires_at")
+  consumedAt    DateTime? @map("consumed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("webauthn_challenges")
 }
 
 enum InferenceProvider {
