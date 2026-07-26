@@ -2,7 +2,7 @@
   "name": "@uwe/brain",
   "version": "0.1.0",
   "private": true,
-  "description": "UWE Brain — owner-only private daily-admin and personal-knowledge app (local/LAN only)",
+  "description": "UWE Brain \u2014 owner-only private daily-admin and personal-knowledge app (local/LAN only)",
   "scripts": {
     "copy:scenes": "node --import tsx ../../scripts/copy-scenes.mjs",
     "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3002 --hostname 127.0.0.1",
@@ -13,7 +13,10 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.1",
+    "@uwe/ai-brain": "workspace:*",
+    "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
+    "@uwe/brain-assistant": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/mail": "workspace:*",

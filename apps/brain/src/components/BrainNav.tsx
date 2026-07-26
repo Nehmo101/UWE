@@ -10,6 +10,7 @@ const SECTIONS: NavSection[] = [
       { href: "/", label: "Start", icon: "◆" },
       { href: "/today", label: "Heute", icon: "☀" },
       { href: "/life-brain", label: "Wissen", icon: "✦" },
+      { href: "/ki-chat", label: "KI-Chat", icon: "◈" },
       { href: "/capture", label: "Capture", icon: "✎" },
     ],
   },

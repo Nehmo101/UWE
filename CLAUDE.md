@@ -22,7 +22,7 @@ packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 | `@uwe/assets` | Upload-Pfade, MIME-Validierung |
 | `@uwe/shared-ui` | Geteilte React-Komponenten (AppShell, Nav) |
 | `@uwe/shared-utils` | Framework-agnostische Utilities (Slugs, Lookup-Keys) |
-| Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs` |
+| Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs`, `brain-assistant` |
 
 ### Neuen Code platzieren
 

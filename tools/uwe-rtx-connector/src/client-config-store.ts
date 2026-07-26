@@ -30,6 +30,7 @@ export interface ClientRuntimeConfig {
   spotifyRedirectUri: string;
   audioCommand: string;
   imageCommand: string;
+  sttCommand: string;
   printCommand: string;
 }
 
@@ -44,6 +45,7 @@ function defaultClientRuntimeConfig(): ClientRuntimeConfig {
     spotifyRedirectUri: DEFAULT_SPOTIFY_REDIRECT_URI,
     audioCommand: "",
     imageCommand: "",
+    sttCommand: "",
     printCommand: "",
   };
 }
@@ -86,6 +88,7 @@ export function loadClientRuntimeConfig(dataDir: string): ClientRuntimeConfig {
     spotifyRedirectUri: redirect || defaults.spotifyRedirectUri,
     audioCommand: readString(input.audioCommand),
     imageCommand: readString(input.imageCommand),
+    sttCommand: readString(input.sttCommand),
     printCommand: readString(input.printCommand),
   };
 }

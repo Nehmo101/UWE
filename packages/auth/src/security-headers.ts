@@ -12,6 +12,13 @@ export interface SecurityHeaderOptions {
    * Restricted to youtube.com / youtube-nocookie.com — no wildcard hosts.
    */
   allowYouTubeEmbeds?: boolean;
+  /**
+   * Allow same-origin microphone access (Brain assistant dictation only).
+   * Without this the default `microphone=()` blocks both `getUserMedia({audio})`
+   * and the Web Speech API. Scoped to `'self'` — never a wildcard, and `camera`
+   * stays denied on every surface.
+   */
+  allowMicrophone?: boolean;
 }
 
 export interface SecurityHeader {
@@ -112,6 +119,22 @@ export function shouldSendStrictTransportSecurityForRequest(
   return wantsStrictTransportSecurity(env) && isRequestSecure(request, env);
 }
 
+/**
+ * Permissions-Policy value. Everything stays denied by default; only the Brain
+ * assistant opts into same-origin microphone access for local dictation.
+ */
+export function buildPermissionsPolicy(options: SecurityHeaderOptions = {}): string {
+  const microphone = options.allowMicrophone ? "microphone=(self)" : "microphone=()";
+  return [
+    "camera=()",
+    microphone,
+    "geolocation=()",
+    "payment=()",
+    "usb=()",
+    "interest-cohort=()",
+  ].join(", ");
+}
+
 export function getUweSecurityHeaders(
   env: NodeJS.ProcessEnv = process.env,
   options: SecurityHeaderOptions = { allowYouTubeEmbeds: true },
@@ -124,8 +147,7 @@ export function getUweSecurityHeaders(
     // SAMEORIGIN (not DENY) so the Studio can iframe the same-origin Atlas editor;
     // cross-origin framing stays blocked (mirrors frame-ancestors 'self').
     "X-Frame-Options": "SAMEORIGIN",
-    "Permissions-Policy":
-      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+    "Permissions-Policy": buildPermissionsPolicy(options),
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
   };

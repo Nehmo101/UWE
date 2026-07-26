@@ -750,6 +750,7 @@ Copy `.env.example` to `.env`. Important variables:
 | `SPOTIFY_DEVICE_ID` | Spotify Connect device for connector jobs |
 | `SPOTIFY_ACCESS_TOKEN` / `UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN` | Enables `spotify_connect` together with `SPOTIFY_DEVICE_ID` |
 | `UWE_CONNECTOR_IMAGE_CMD` | Local image worker command; enables `image_generation` when set |
+| `UWE_CONNECTOR_STT_CMD` | Local speech-to-text command; enables `stt_local` (Brain dictation) when set |
 | `UWE_CONNECTOR_PRINTERS` | JSON array of local printers for `label_printing`; auto-discovers via CUPS `lpstat -p` when unset |
 | `UWE_CONNECTOR_PRINT_CMD` | Custom print command for label jobs (appends `--printer <id> --file <path>`); defaults to CUPS `lp` |
 | `OLLAMA_BASE_URL` | Ollama endpoint for local connector LLM/embedding jobs |

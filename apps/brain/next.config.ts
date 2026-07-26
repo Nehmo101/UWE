@@ -14,12 +14,25 @@ const standalone = getUweStandaloneNextConfig(appDir);
 const nextConfig: NextConfig = {
   output: "standalone",
   ...standalone,
-  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env", "@uwe/mail", "@uwe/mail-core"],
+  transpilePackages: [
+    "@uwe/shared-ui",
+    "@uwe/auth",
+    "@uwe/env",
+    "@uwe/mail",
+    "@uwe/mail-core",
+    "@uwe/ai-brain",
+    "@uwe/brain-assistant",
+  ],
   async headers() {
     return [
       {
         source: "/:path*",
-        headers: getUweSecurityHeaderEntries(),
+        // Brain is the only surface that may use the microphone (assistant
+        // dictation, same-origin). Camera and everything else stay denied.
+        headers: getUweSecurityHeaderEntries(process.env, {
+          allowYouTubeEmbeds: true,
+          allowMicrophone: true,
+        }),
       },
     ];
   },

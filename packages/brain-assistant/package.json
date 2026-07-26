@@ -1,0 +1,30 @@
+{
+  "name": "@uwe/brain-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UWE Brain KI-Assistent — persistierte Gespräche, hinterlegte Connector-KI, Bild-/Dokument-/Sprach-Eingabe (nur lokal)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/assistant-types.ts",
+    "./prompt": "./src/chat-prompt.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "@uwe/ai-brain": "workspace:*",
+    "@uwe/assets": "workspace:*",
+    "@uwe/connector": "workspace:*",
+    "@uwe/database": "workspace:*",
+    "@uwe/security": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
