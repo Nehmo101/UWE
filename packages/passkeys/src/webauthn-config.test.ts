@@ -39,6 +39,20 @@ describe("resolveWebAuthnRelyingParty", () => {
     assert.ok(rp.origins.includes("https://uwe.example"));
   });
 
+  it("substitutes an IP-derived RP ID with the request hostname", () => {
+    const rp = resolveWebAuthnRelyingParty({
+      env: {
+        NEXT_PUBLIC_STUDIO_URL: "http://127.0.0.1:3199",
+        NEXT_PUBLIC_PORTAL_URL: "http://127.0.0.1:3200",
+        PUBLIC_BASE_URL: "http://127.0.0.1:3199",
+      } as NodeJS.ProcessEnv,
+      requestOrigin: "http://localhost:3199",
+    });
+
+    assert.equal(rp.rpId, "localhost");
+    assert.ok(rp.origins.includes("http://localhost:3199"));
+  });
+
   it("derives the RP ID from the request host in local deployments", () => {
     const env = {} as NodeJS.ProcessEnv;
 

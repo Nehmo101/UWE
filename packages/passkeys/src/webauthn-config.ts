@@ -27,6 +27,11 @@ function originOf(url: string | null | undefined): string | null {
   }
 }
 
+/** WebAuthn forbids IP-address RP IDs (Chrome rejects them outright). */
+function isIpHostname(hostname: string): boolean {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.includes(":");
+}
+
 /**
  * Derives the browser-facing origin of a request: the `Origin` header when
  * present (all WebAuthn POSTs send it), else `Host` + forwarded proto. Needed
@@ -92,6 +97,17 @@ export function resolveWebAuthnRelyingParty(
   if (!rpId) {
     const primary = originOf(urls.studioUrl) ?? originOf(urls.publicBaseUrl) ?? requestOrigin;
     rpId = primary ? new URL(primary).hostname : "localhost";
+  }
+
+  // An IP address can never serve as an RP ID. When the configured URLs point
+  // at an IP (dev/e2e setups on 127.0.0.1, LAN IPs) but the browser reached us
+  // via a hostname (e.g. `localhost`), prefer that hostname.
+  if (isIpHostname(rpId) && requestOrigin) {
+    const requestHost = new URL(requestOrigin).hostname;
+    if (!isIpHostname(requestHost)) {
+      rpId = requestHost;
+      origins.add(requestOrigin);
+    }
   }
 
   return { rpId, rpName: RP_NAME, origins: [...origins] };
