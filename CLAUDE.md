@@ -22,6 +22,7 @@ packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 | `@uwe/assets` | Upload-Pfade, MIME-Validierung |
 | `@uwe/shared-ui` | Geteilte React-Komponenten (AppShell, Nav) |
 | `@uwe/shared-utils` | Framework-agnostische Utilities (Slugs, Lookup-Keys) |
+| `@uwe/mcp` | MCP-Server für Studio/Portal/Brain (HTTP-Clients, kein DB-Zugriff) |
 | Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs` |
 
 ### Neuen Code platzieren
@@ -108,4 +109,5 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Architektur
 - [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
+- [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain`
 - [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (23 Skills)
