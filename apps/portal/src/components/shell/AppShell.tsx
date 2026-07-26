@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { NavCommand, ResolvedNavGroup } from "@uwe/shared-utils/navigation";
 import {
   MobileBottomNav,
+  NavSearch,
   SidebarContextProvider,
   ThemeModeToggle,
   type BottomNavItem,
@@ -85,7 +86,26 @@ export function AppShell({
               open={mobileNavOpen}
               onOpenChange={setMobileNavOpen}
             />
-            <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{breadcrumb}</div>
+            <div
+              className={cn(
+                "min-w-0 flex-1 truncate text-sm text-muted-foreground",
+                // Auf schmalen Displays hat nur eines von beiden Platz — dort
+                // gewinnt die Suche; die Brotkrumen kommen ab „sm" zurück.
+                commands.length > 0 && "hidden sm:block",
+              )}
+            >
+              {breadcrumb}
+            </div>
+            {commands.length > 0 ? (
+              <NavSearch
+                entries={commands}
+                className="min-w-0 flex-1 sm:max-w-64 lg:max-w-80"
+                placeholder="Bereich suchen…"
+                renderIcon={(hit) => (
+                  <NavIcon name={hit.icon ?? "arrow-right"} width={16} height={16} />
+                )}
+              />
+            ) : null}
             {headerActions ? (
               <div className="flex shrink-0 items-center gap-2">{headerActions}</div>
             ) : null}

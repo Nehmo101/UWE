@@ -49,6 +49,9 @@ export {
 
 export { ViewEditToggle, type ViewEditToggleProps } from "./ViewEditToggle";
 
+export { NavSearch, type NavSearchProps } from "./NavSearch";
+export type { NavSearchEntry, NavSearchHit } from "@uwe/shared-utils/nav-search";
+
 export {
   ErrorAlert,
   LoadingPage,

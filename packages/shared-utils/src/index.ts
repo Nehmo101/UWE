@@ -28,3 +28,13 @@ export {
   type NavCommand,
   type NavConflicts,
 } from "./navigation";
+
+export {
+  normalizeSearchText,
+  navSearchTokens,
+  searchNavEntries,
+  dedupeNavSearchEntries,
+  type NavSearchEntry,
+  type NavSearchHit,
+  type NavSearchOptions,
+} from "./nav-search";
