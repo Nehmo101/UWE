@@ -1866,6 +1866,7 @@ enum ConnectorJobType {
   image_generate
   embedding_generate
   vision_extract
+  audio_transcribe
   connector_refresh_models
   label_print
   printer_discover

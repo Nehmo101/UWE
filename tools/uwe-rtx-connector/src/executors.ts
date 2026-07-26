@@ -21,6 +21,7 @@ import {
 import type { ClaimedJob } from "./host-client";
 import { log } from "./logging";
 import { runLabelPrintJob, runPrinterDiscover } from "./label-printing";
+import { runAudioTranscribe } from "./speech-to-text";
 import {
   resolveOpenAiCompatibleBaseUrl,
   runOpenAiCompatibleChat,
@@ -39,6 +40,8 @@ export interface ExecutorContext {
   spotifyDeviceId?: string;
   imageCommand?: string;
   printCommand?: string;
+  /** Local speech-to-text command (whisper.cpp, faster-whisper, …). */
+  sttCommand?: string;
   hostUrl?: string;
   connectorToken?: string;
   requestTimeoutMs: number;
@@ -402,6 +405,17 @@ export async function executeJob(job: ClaimedJob, ctx: ExecutorContext): Promise
     }
     case "vision_extract": {
       return runVisionExtract(payload, ctx);
+    }
+    case "audio_transcribe": {
+      if (!ctx.sttCommand) {
+        throw new Error(
+          "audio_transcribe: keine lokale Spracherkennung konfiguriert (UWE_CONNECTOR_STT_CMD fehlt).",
+        );
+      }
+      return runAudioTranscribe(payload, {
+        sttCommand: ctx.sttCommand,
+        requestTimeoutMs: ctx.requestTimeoutMs,
+      });
     }
     case "connector_refresh_models": {
       const count = await ctx.refreshModels();

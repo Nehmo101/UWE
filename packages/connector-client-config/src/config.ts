@@ -32,6 +32,7 @@ const connectorClientConfigSchema = z.object({
   spotifyRedirectUri: z.string(),
   audioCommand: z.string(),
   imageCommand: z.string(),
+  sttCommand: z.string(),
   printCommand: z.string(),
   defaultPrinterId: z.string(),
   localHostRoot: z.string(),
@@ -70,6 +71,7 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     spotifyRedirectUri: DEFAULT_SPOTIFY_REDIRECT_URI,
     audioCommand: "",
     imageCommand: "",
+    sttCommand: "",
     printCommand: "",
     defaultPrinterId: "",
     localHostRoot: "",
@@ -154,6 +156,8 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
       typeof input.audioCommand === "string" ? input.audioCommand.trim() : defaults.audioCommand,
     imageCommand:
       typeof input.imageCommand === "string" ? input.imageCommand.trim() : defaults.imageCommand,
+    sttCommand:
+      typeof input.sttCommand === "string" ? input.sttCommand.trim() : defaults.sttCommand,
     printCommand:
       typeof input.printCommand === "string" ? input.printCommand.trim() : defaults.printCommand,
     defaultPrinterId:

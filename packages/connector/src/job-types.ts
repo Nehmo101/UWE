@@ -9,6 +9,8 @@
  *    80  spotify controls
  *    60  model refresh / status
  *    50  llm generation
+ *    45  speech-to-text (a user is waiting on the transcript)
+ *    40  vision extraction
  *    30  image generation
  *    20  embeddings / batch
  *
@@ -44,6 +46,7 @@ export const CONNECTOR_JOB_TYPES = [
   "image_generate",
   "embedding_generate",
   "vision_extract",
+  "audio_transcribe",
   "connector_refresh_models",
   "label_print",
   "printer_discover",
@@ -76,6 +79,9 @@ export const CONNECTOR_JOB_DESCRIPTORS: Record<ConnectorJobType, ConnectorJobDes
   llm_generate: { lane: "gpu", priority: 50, capability: "llm_local", latencySensitive: false },
   image_generate: { lane: "gpu", priority: 30, capability: "image_generation", latencySensitive: false },
   vision_extract: { lane: "gpu", priority: 40, capability: "vision_local", latencySensitive: false },
+  // Dictation: a user is waiting on the result, so it outranks vision and image
+  // work, but it is still GPU work and shares the single-GPU lane.
+  audio_transcribe: { lane: "gpu", priority: 45, capability: "stt_local", latencySensitive: false },
   embedding_generate: {
     lane: "gpu",
     priority: 20,

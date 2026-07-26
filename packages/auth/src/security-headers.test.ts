@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   applySecurityHeaders,
   buildContentSecurityPolicy,
+  buildPermissionsPolicy,
   getUweSecurityHeaderEntries,
   getUweSecurityHeaders,
   shouldSendStrictTransportSecurityForRequest,
@@ -20,6 +21,18 @@ describe("security headers", () => {
     assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
     assert.equal(headers["X-Frame-Options"], "SAMEORIGIN");
     assert.match(headers["Permissions-Policy"], /camera=\(\)/);
+  });
+
+  it("denies the microphone unless a surface explicitly opts in", () => {
+    // Default (Studio, Portal, every caller that does not pass the flag).
+    assert.match(getUweSecurityHeaders({ NODE_ENV: "development" })["Permissions-Policy"], /microphone=\(\)/);
+    assert.match(buildPermissionsPolicy(), /microphone=\(\)/);
+
+    // Brain assistant dictation: same-origin only, camera stays denied.
+    const optedIn = buildPermissionsPolicy({ allowMicrophone: true });
+    assert.match(optedIn, /microphone=\(self\)/);
+    assert.match(optedIn, /camera=\(\)/);
+    assert.doesNotMatch(optedIn, /\*/);
   });
 
   it("allows only explicit YouTube frame sources", () => {

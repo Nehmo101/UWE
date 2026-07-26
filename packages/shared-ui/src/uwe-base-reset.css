@@ -1,0 +1,71 @@
+/*
+ * UWE Basis-Reset für Buttons.
+ *
+ * Die Apps binden Tailwind bewusst additiv ein — Theme + Utilities, aber ohne
+ * Preflight (siehe apps/<app>/app/globals.css), damit der Reset die bestehenden
+ * bespoke .uwe-*-Styles nicht plattmacht. Ohne Preflight fehlt allerdings auch
+ * dessen Control-Reset, und jedes <button> behält die User-Agent-Vorgaben:
+ *
+ *     border: 2px outset buttonborder;
+ *     background-color: buttonface;
+ *     font: 400 13.333px Arial;
+ *
+ * `buttonborder` und `buttonface` sind System-Farben: Sie kommen aus dem
+ * color-scheme des Browsers, nicht aus den --uwe-*-Tokens. Genau das ist der
+ * „Hell/Dunkel überlappt“-Fehler — der Ghost-Button „Abmelden“ im
+ * Session-Chrome setzt Hintergrund und Textfarbe, aber keinen Rahmen, und
+ * bekommt deshalb mitten im dunklen Theme einen hellen OS-Rahmen in Arial.
+ *
+ * Der Reset liegt in @layer base, der untersten Schicht. Er verliert damit
+ * gegen jede Tailwind-Utility (@layer utilities) und gegen die ungelayerten
+ * .uwe-*-Regeln und greift nur dort, wo sonst die UA-Vorgabe stünde.
+ */
+
+@layer theme, base, components, utilities;
+
+@layer base {
+  button,
+  [type="button"],
+  [type="reset"],
+  [type="submit"],
+  ::file-selector-button {
+    border: 0 solid transparent;
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [type="button"]:disabled,
+  [type="reset"]:disabled,
+  [type="submit"]:disabled {
+    cursor: default;
+  }
+
+  /*
+   * Alt-Buttons ohne eigene Klassen (z. B. in .ai-brain-actions) hätten nach
+   * dem Reset gar keine Kontur mehr. Sie bekommen deshalb den Chip aus
+   * .uwe-mobile-nav-toggle nachgebildet — optisch wie bisher, nur aus den
+   * Theme-Tokens statt aus den System-Farben. Auch das bleibt in @layer base
+   * und greift daher nie bei Buttons mit Klassen oder Inline-Styles.
+   */
+  button:not([class]):not([style]) {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--uwe-border);
+    border-radius: var(--uwe-radius-md, 0.5rem);
+    background-color: transparent;
+    color: var(--uwe-fg);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  button:not([class]):not([style]):hover:not(:disabled) {
+    border-color: var(--uwe-accent);
+  }
+
+  button:not([class]):not([style]):disabled {
+    opacity: 0.5;
+  }
+}

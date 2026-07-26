@@ -62,6 +62,51 @@ Zugriffsmatrix darf die Brain-Audience ausschließlich `personal_brain` und
 statische Guard `scripts/product-boundary-check.mjs` verbietet zusätzlich, dass
 Brain eine andere App importiert oder von einem Paket importiert wird.
 
+## KI-Chat (`/ki-chat`)
+
+Der Brain-Assistent (`@uwe/brain-assistant`) ist **lokal-only**: der Chat-Runner
+pinnt `providerMode: "local_rtx"` und nutzt ausschließlich die Kontextmodi
+`general_chat` und `personal_brain`. Es gibt keinen Cloud-Fallback und keinen
+Schalter dafür — `packages/brain-assistant/src/chat-runner.test.ts` hält das
+fest.
+
+**Hinterlegte KI.** Beantwortet wird mit einem Modell, das der Command Center
+per Connector-Heartbeat übertragen hat (`enabledForUwe`). Die Auswahl liegt als
+`{connectorId, modelId}` plus Label-Snapshot in `BrainAssistantProfile`
+(Brain-DB); pro Unterhaltung ist ein Override möglich. Ohne eigene Auswahl gilt
+der globale `ConnectorWorkflowDefault` des Slots `chat` bzw. `vision`.
+
+**Bilder** gehen nie direkt an ein Chat-Modell: kein `AiProvider` in UWE nimmt
+Bilddaten entgegen. Ein Anhang wird per `vision_extract`-Connector-Job zu Text
+gemacht und als Textblock in den Prompt gehängt. Das Ergebnis bleibt am Anhang
+gespeichert, damit Folge-Turns keinen zweiten GPU-Job auslösen.
+
+**Diktat** hat zwei Wege:
+
+- **Lokal (Standard).** `MediaRecorder` → `POST /api/ai/assistant/transcribe` →
+  Connector-Job `audio_transcribe` (Capability `stt_local`) → lokales
+  Sprach-Kommando. Die Aufnahme wird nie auf Platte geschrieben und verlässt den
+  RTX-PC nicht. Das Kommando wird **im Command Center** gesetzt
+  (`sttCommand` → `UWE_CONNECTOR_STT_CMD`), nicht von Hand auf dem Host;
+  Referenz-Wrapper: `deploy/scripts/uwe-stt-whisper.sh`.
+- **Browser-Fallback (opt-in, aus).** Die Web-Speech-API sendet das Audio in
+  Chrome an den Browser-Hersteller. Sie wird nur angeboten, wenn kein Connector
+  `stt_local` meldet, erfordert ein ausdrückliches Häkchen mit sichtbarer
+  Warnung und liegt ausschließlich im `localStorage` — nie in der DB, nie als
+  serverseitiger Default.
+
+**Mikrofon-Berechtigung.** Brain ist die einzige Fläche, die
+`Permissions-Policy: microphone=(self)` sendet (`allowMicrophone` in
+`packages/auth/src/security-headers.ts`, gesetzt in `apps/brain/next.config.ts`
+und in **allen** Zweigen von `apps/brain/middleware.ts` — die Middleware
+überschreibt die Header aus `next.config.ts`). Studio und Portal behalten
+`microphone=()`. `camera=()` bleibt überall gesperrt.
+
+**Kein Streaming.** UWE hat nirgends Token-Streaming, und die Connector-Queue
+ist request/response. Eine Antwort erscheint am Stück; der Composer zeigt dafür
+einen Warte- und Abbrechen-Zustand. Der Vision-Teil begrenzt sich auf 60 s, um
+unter dem ~100-s-Edge-Timeout eines Cloudflare-Tunnels zu bleiben.
+
 ## Aktueller Stand und was bewusst noch fehlt
 
 `apps/brain` existiert als bootfähiger, owner-only Prozess mit `/`, `/login`,

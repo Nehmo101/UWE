@@ -20,6 +20,21 @@
   --uwe-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.38);
   --uwe-card: var(--uwe-card-bg);
   --uwe-muted: var(--uwe-fg-muted);
+  /* Gedämpfte FLÄCHE (Hover, Code-Blöcke, Fortschritts-Spuren) — nicht mit
+     --uwe-muted verwechseln, das ist der Alt-Alias auf die gedämpfte TEXTfarbe.
+     Basiswert ist eine echte Fläche; das @supports darunter hebt auf Tinte-auf-
+     transparent an. Ohne diesen Basiswert baut Lightning CSS sich selbst einen
+     color-mix()-Fallback — und zwar `var(--uwe-fg)`, also VOLLE Tinte als
+     Fläche. Genau die Unlesbarkeit, die dieses Token beheben soll. */
+  --uwe-muted-surface: var(--uwe-bg-elevated, transparent);
+}
+
+/* Tinte auf transparent: dreht mit dem Theme automatisch hell/dunkel und macht
+   über jedem Untergrund (Karte, Chrome, Sidebar) einen sichtbaren Unterschied. */
+@supports (color: color-mix(in srgb, red, red)) {
+  :root {
+    --uwe-muted-surface: color-mix(in srgb, var(--uwe-fg) 10%, transparent);
+  }
 }
 
 .uwe-rail-button:hover,

@@ -39,6 +39,9 @@ export interface CapabilityEnv {
   spotifyBackendConfigured: boolean;
   imageEnabled: boolean;
   imageExecutorConfigured: boolean;
+  /** Speech-to-text master switch (`UWE_CONNECTOR_STT`, default on). */
+  sttEnabled: boolean;
+  sttExecutorConfigured: boolean;
   systemInfoEnabled: boolean;
   fileCacheEnabled: boolean;
   /** Print master switch (`UWE_CONNECTOR_PRINT`, default on) — independent of a backend. */
@@ -56,6 +59,7 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
   const spotifyAccessToken = env.UWE_CONNECTOR_SPOTIFY_ACCESS_TOKEN?.trim() || env.SPOTIFY_ACCESS_TOKEN?.trim();
   const spotifyBackendConfigured = Boolean(spotifyAccessToken && env.SPOTIFY_DEVICE_ID?.trim());
   const imageExecutorConfigured = Boolean(env.UWE_CONNECTOR_IMAGE_CMD?.trim());
+  const sttExecutorConfigured = Boolean(env.UWE_CONNECTOR_STT_CMD?.trim());
   const printCommandConfigured = Boolean(env.UWE_CONNECTOR_PRINT_CMD?.trim());
   const printPrintersConfigured = Boolean(env.UWE_CONNECTOR_PRINTERS?.trim());
   const printAllowed = flag(env.UWE_CONNECTOR_PRINT, true);
@@ -67,6 +71,8 @@ export function resolveCapabilityEnv(env: NodeJS.ProcessEnv = process.env): Capa
     spotifyEnabled: flag(env.UWE_CONNECTOR_SPOTIFY, true) && spotifyBackendConfigured,
     imageExecutorConfigured,
     imageEnabled: flag(env.UWE_CONNECTOR_IMAGE, true) && imageExecutorConfigured,
+    sttExecutorConfigured,
+    sttEnabled: flag(env.UWE_CONNECTOR_STT, true) && sttExecutorConfigured,
     systemInfoEnabled: flag(env.UWE_CONNECTOR_SYSTEM_INFO, true),
     fileCacheEnabled: flag(env.UWE_CONNECTOR_FILE_CACHE, false),
     printAllowed,
@@ -144,6 +150,7 @@ function executableCapabilities(
   if (hasEnabledOllamaCapability(llms, enabledKeys, "embeddings")) detected.push("embedding_local");
   if (hasEnabledVisionModel(llms, enabledKeys)) detected.push("vision_local");
   if (env.imageEnabled) detected.push("image_generation");
+  if (env.sttEnabled) detected.push("stt_local");
   if (env.fileCacheEnabled) detected.push("file_cache");
   // Label printing is advertised when an env backend is configured (existing
   // behavior) OR the user has explicitly selected printers in the client.
