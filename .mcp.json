@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "uwe-studio": {
+      "command": "node",
+      "args": [
+        "--env-file-if-exists=.env",
+        "--import",
+        "tsx",
+        "packages/mcp/src/bin/studio.ts"
+      ]
+    },
+    "uwe-portal": {
+      "command": "node",
+      "args": [
+        "--env-file-if-exists=.env",
+        "--import",
+        "tsx",
+        "packages/mcp/src/bin/portal.ts"
+      ]
+    },
+    "uwe-brain": {
+      "command": "node",
+      "args": [
+        "--env-file-if-exists=.env",
+        "--import",
+        "tsx",
+        "packages/mcp/src/bin/brain.ts"
+      ]
+    }
+  }
+}
