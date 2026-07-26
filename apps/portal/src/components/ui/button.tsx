@@ -2,8 +2,15 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./cn";
 
+/**
+ * `uwe-button-surface` + `no-underline` neutralisieren die User-Agent-Vorgaben,
+ * die ohne Tailwind-Preflight bestehen bleiben (siehe
+ * packages/shared-ui/src/uwe-base-reset.css): Der Marker nimmt als Button
+ * gerenderte Anker von der globalen `a`-Linkfarbe aus, `no-underline` entfernt
+ * deren UA-Unterstreichung. Beides ist für <button> ein No-Op.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  "uwe-button-surface inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius)] text-sm font-medium no-underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
