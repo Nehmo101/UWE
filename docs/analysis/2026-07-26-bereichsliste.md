@@ -22,6 +22,31 @@ Unterseiten stehen als eigene Zeile, weil genau die die Migrationskandidaten sin
 > Die Rechte-Lücken B1/B2 aus der Zustandsanalyse sind erledigt (PR #797) — Abschnitt J
 > ist entsprechend fortgeschrieben.
 
+> ### Stand nach deiner Durchsicht (2026-07-26 nachts)
+>
+> Deine Entscheidungen sind eingearbeitet. **Beantwortet:** Zugangsmodell (N.0), Sichtbarkeit
+> raus (N.2), Cloud raus (N.3), Welt-Zuordnung bleibt (N.4), private Brains pro Person
+> (G.2b), Studio-System komplett weg (Abschnitt D), ein Kalender in Family, Brain gewinnt
+> alle Doppelungen (H).
+>
+> **Noch offen — zwei Zeilen:**
+>
+> | # | Frage | Wo |
+> |---|---|---|
+> | **N5** | Review-Workflow braucht nach dem Wegfall von `publishStatus` ein eigenes Statusfeld — oder C26/E4 fliegen mit raus | N.7 |
+> | **B8a** | Legacy-Weltpfade im Portal ersatzlos löschen? | B.1 |
+>
+> **Alle übrigen leeren Zeilen gelten nach deiner Regel als angenommen** („Wenn ich keine
+> Entscheidung geschrieben habe, gilt deine Empfehlung"). Konkret heißt das bei den vier
+> Zeilen, die ich als unsicher markiert hatte:
+>
+> | # | Bereich | Damit entschieden |
+> |---|---|---|
+> | A7 / C36 | Miniaturen | → **Brain** (deckt sich mit deinem H6) |
+> | A9 / C39 | Hardware / Homelab | → **Brain** (deckt sich mit deinem H8) |
+> | C15 | Finanzen / Abos | → **Family** |
+> | C35 | Geländeverleih | → **Brain** |
+
 ## Wie ausfüllen
 
 In der letzten Spalte eintragen:
@@ -35,6 +60,8 @@ In der letzten Spalte eintragen:
 
 Die Spalte **Vorschlag** ist meine Empfehlung, nicht gesetzt. Wo ich unsicher bin, steht
 das ausdrücklich dabei.
+
+Lasse: Wenn ich keine entscheidung geschrieben habe, gilt deine Empfehlung. Wenn etwas entfernt werden soll, dann wird es entfernt BACKUPS sind absolut egal Datenverlust ist absolut in Ordnung also nicht in die Hose machen.
 
 ---
 
@@ -50,20 +77,18 @@ das ausdrücklich dabei.
 > Portal Ja/Nein, Studio Ja/Nein, Brain Ja/Nein, Family Ja/Nein
 > Das UWE Commandcenter ist von natur aus nur durch den Owner zu steuern (Eigener PC)
 
-**Einordnung dazu in [Abschnitt N](#n--zugangsmodell-nach-notiz-lasse).** Kurzfassung: Das
-Häkchen-Modell ist die richtige Antwort auf die Frage „wer darf in welche App" und ersetzt
-dort mehr, als du vermutlich erwartest — Rollen-Enum, Capability-Matrix und
-`FamilyMember.areas` können weg. Zwei der vier Labels erledigen aber eine *andere* Aufgabe
-als Zugang, und die bleibt offen: `dm_only`/`player_visible` steuern, was **innerhalb einer
-Welt** sichtbar ist, und `owner_private_local` steuert, **was den Host verlassen darf**.
-Details und Entscheidungszeilen dort.
+**Umgesetzt und ausformuliert in [Abschnitt N](#n--zugangsmodell-nach-notiz-lasse--entschieden).**
+Beide Bedenken, die ich zur Vorfassung erhoben hatte, sind beantwortet: Das KI-Routing-Label
+wird überflüssig, weil es gar keinen Cloud-Provider mehr geben soll — das ist die sauberere
+Lösung als ein Verbotsschild. Und bei der Sichtbarkeit bleibt es bei deiner Entscheidung:
+sie fällt vollständig weg, inklusive Entwurfsstatus. Zusammen mit dem Häkchen-Modell sind das
+**rund 3.700 gelöschte Zeilen** (N.6). Eine technische Nebenwirkung, die zwei deiner
+Entscheidungen kollidieren lässt, steht in **N.7** und braucht noch eine Antwort.
 
 ---
 
-## Die fünf Zielbereiche
+## Die sechs Oberflächen
 
-| Bereich | Für wen | Datenklasse | Zugang |
-|---|---|---|---|
 | Bereich | Für wen | Zugang künftig (Notiz Lasse) |
 |---|---|---|
 | **Landing** | alle Besucher | keiner — nur Startseite + Login-Weiche |
@@ -106,10 +131,10 @@ zusätzlich in Studio, auf derselben Datenbank.
 | A9 | Hardware | `/hardware` | ⚠️ `/hardware` | **Brain** *(oder Studio → System)* | unsicher — Homelab ist Betrieb | |
 | A10 | Dokumente | `/documents` | ⚠️ `/documents` | **→ Family** | Urkunden, Policen | |
 | A11 | Mail | `/mail`, `/mail/[id]` | ⚠️ `/mail` | **Brain** | persönliches Postfach, nicht geteilt | |
-| A12 | Kalender | `/calendar` | ⚠️ `/calendar` | **aufteilen**: privat → Brain, Haushalt → Family | | |
-| A13 | Login | `/login` | – | **Brain** | technisch nötig | |
+| A12 | Kalender | `/calendar` | ⚠️ `/calendar` | **→ Family** | ✅ ein Kalender in Family, kein Aufteilen | ✅ |
+| A13 | Login | `/login` | – | **Brain** | technisch nötig, muss bleiben | ✅ |
 | **A14** | **KI-Chat** *(neu, PR #795)* | `/ki-chat`, `/ki-chat/[id]` | – | **Brain** | Bildanalyse + Diktat, `personal_brain` cloud-gesperrt. Vorlage für G12 | |
-| **A15** | **Bereichssuche** *(neu, PR #798)* | Kopfzeile | ⚠️ auch Studio + Portal | **überall** | geteilte Suche über `@uwe/shared-utils/nav-search` — korrekt geteilt | |
+| **A15** | **Bereichssuche** *(neu, PR #798)* | Kopfzeile | ⚠️ auch Studio + Portal | **überall** | ✅ pro App gefiltert: Brain zeigt Brain-Einträge, Portal Portal-Einträge usw. Läuft heute schon so — jede App speist ihre eigene Nav in `searchNavEntries` | ✅ |
 
 ---
 
@@ -129,6 +154,22 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 | B6 | Freigabe-Link (anonym) | `/share/[token]`, `/share/[token]/pages/[slug]` | **Portal** | passwortgeschützte Freigaben | |
 | B7 | Landing / Weiterleitung | `/`, `/portal` | **Portal** | reine Redirects | |
 | B8 | Legacy-Weltpfade | `/worlds`, `/worlds/[slug]`, `/worlds/[slug]/[cat]/[slug]`, `/worlds/[slug]/graph` | **Portal** | reine Redirects, korrekt | |
+| **B27** | **Bereichssuche** | Kopfzeile | **Portal** | ✅ alles was im Portal klickbar ist (dieselbe Leiste wie B26) | ✅ |
+
+> **Antwort auf deine Frage zu B8** — „Legacy Weltpfade? Also veraltet und obsolete?“
+>
+> Ja, obsolet. Vor dem Umbau auf `/auth/worlds/…` lagen die Portal-Welten unter
+> `/worlds/…`. Die vier Pfade enthalten **keinen Inhalt mehr** — es sind vier Dateien mit
+> je 3–8 Zeilen, die ausschließlich weiterleiten, damit alte Lesezeichen und an Spieler
+> verschickte Links nicht ins Leere laufen.
+>
+> Da Datenverlust für dich in Ordnung ist und es um vier Weiterleitungen geht:
+> **Empfehlung `WEG`.** Schlimmstenfalls läuft ein altes Lesezeichen in einen 404.
+>
+> | # | Frage | Deine Entscheidung |
+> |---|---|---|
+> | B8a | Legacy-Weltpfade ersatzlos löschen? | |
+
 
 ## B.2 Welt-Ebene im Portal (15 Nav-Einträge)
 
@@ -150,7 +191,7 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 | B22 | Soundboard | `…/soundboard` | **Portal** | | |
 | B23 | Atlas 3D | `…/atlas3d`, `…/atlas3d/[nodeId]` | abhängig von **E7** | 21.750 Zeilen Code — Grundsatzfrage | |
 | B24 | Atlas (2D) *(ohne Nav-Eintrag)* | `…/atlas` | **WEG** | verwaister Vorgänger von B23 | |
-| B25 | Gruppierung der 15 Einträge | – | Vorschlag: „Nachschlagen" (B10–B12, B17–B19) / „Mitspielen" (B13–B16, B20–B23) | 15 Einträge auf einer Ebene | |
+| B25 | Gruppierung der 15 Einträge | – | Vorschlag: „Nachschlagen" (B10–B12, B17–B19) / „Mitspielen" (B13–B16, B20–B23) | 15 Einträge auf einer Ebene | ✅ als gut befunden |
 | **B26** | **Bereichssuche** *(neu, PR #798)* | Kopfzeile | **Portal** | siehe A15 — entschärft B25 teilweise | |
 
 ---
@@ -159,9 +200,9 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 
 | # | Sektion → Bereich | Pfad | heute sichtbar für | Vorschlag | Begründung | Entscheidung |
 |---|---|---|---|---|---|---|
-| C1 | Start → Heute | `/today` | owner/admin/dm | **Studio** | DM-Cockpit | |
+| C1 | Start → Heute | `/today` | owner/admin/dm | **Studio** | DM-Cockpit | | 
 | C2 | Start → Schnell erfassen | `/capture?quick=1` | owner/admin/dm | **→ Brain** | persönlicher Eingang | |
-| C3 | Start → Suche | `/search` | owner/admin/dm | **Studio** | jeder Bereich braucht eigene Suche | |
+| C3 | Start → Suche | `/search` | owner/admin/dm | ~~Studio~~ | ✅ **WEG** — ersetzt durch die Bereichssuche in der Kopfzeile (C42). Die NL-Befehle aus D5 ziehen dorthin um | ✅ WEG |
 | C4 | Welten → Alle Welten | `/worlds` | owner/admin/dm | **Studio** | | |
 | C5 | Knowledge → Brain Store | `/brain` | owner/admin/dm | **Studio**, **umbenennen** → „Welt-Wissen" | „Brain" meint hier D&D-Kanon, nicht die Brain-App | |
 | C6 | Knowledge → Life Brain | `/life-brain` | owner | **→ Brain** | | |
@@ -196,10 +237,10 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 | C35 | └ Geländeverleih | `/workshop/rental` | – | **→ Brain** *(oder Family, wenn andere buchen)* | unsicher | |
 | C36 | Organisation → Miniaturen | `/miniatures` | owner/admin/dm | **→ Brain** *(oder Studio)* | siehe A7 | |
 | C37 | Organisation → Ideen | `/ideas` | owner | **→ Brain**, hinter Entwickler-Schalter | Produktideen für UWE selbst | |
-| C38 | Organisation → Bug-Center | `/bugs` | owner/admin/dm | **Studio**, hinter Entwickler-Schalter | | |
+| C38 | Organisation → Bug-Center | `/bugs` | owner/admin/dm | **Studio**, hinter Entwickler-Schalter | | **→ Brain**|
 | C39 | Organisation → Hardware / Homelab | `/hardware` | owner/admin | **→ Brain** *(oder Studio → System)* | siehe A9 | |
 | C40 | Organisation → Mail | `/mail`, `/mail/compose` | owner/admin | **→ Brain** | | |
-| C41 | Organisation → Kalender | `/calendar` | owner/admin/dm | **aufteilen**: Haushalt → Family, Session-Termine → Studio | | |
+| C41 | Organisation → Kalender | `/calendar` | owner/admin/dm | **→ Family** | ✅ ein Kalender in Family. Die In-Game-Weltuhr (E11) bleibt unberührt in Studio | ✅ |
 | **C42** | **Bereichssuche** *(neu, PR #798)* | Kopfzeile | owner/admin/dm | **Studio** | ergänzt C3 (`/search`) — prüfen, ob beide nötig sind | |
 
 > Bei Zustimmung verliert Studio 15 Einträge; die Sektionen **„Organisation"** und
@@ -207,37 +248,55 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 
 ---
 
-# D · STUDIO — System & Admin (32 Einträge, zwei konkurrierende Hubs)
+# D · STUDIO — System & Admin ✅ **entfällt vollständig**
 
-`ADMIN_HUB_SECTIONS` (Kacheln auf `/admin`) und `SYSTEM_NAV` (Sidebar) listen weitgehend
-dieselben Ziele doppelt.
+> **Entscheidung:** Der gesamte System- und Admin-Bereich verschwindet aus Studio.
+>
+> - **Konfigurieren** → nur noch im **Command Center** (M). Was dort fehlt, wird nachgezogen:
+>   Setup, Host Control, Cloudflare, RTX-Connector, Drucker, Benutzer, Security, Audit-Log,
+>   API-Tokens, Webhooks, Secrets, Backup, Migrationen, Einstellungen.
+> - **Betrieb ansehen** → **Brain** (D1 System-Hub wandert dorthin).
+> - **Studio** ist danach ausschließlich DM-Werkzeug: Welten, Wiki, Sessions, KI, Medien.
+>
+> Damit entfallen die beiden konkurrierenden Hubs (`ADMIN_HUB_SECTIONS` und `SYSTEM_NAV`)
+> von selbst — es gibt keinen Studio-System-Bereich mehr, in dem sie sich doppeln könnten.
+>
+> **Zwei Punkte, die ich dabei annehme** (widersprich, falls anders gemeint):
+>
+> 1. **D34 (eigenes Passwort / 2FA) bleibt in Studio und Portal.** Konten legt der Owner an,
+>    aber jede Person muss ihr eigenes Passwort ändern und 2FA einrichten können — das kann
+>    das Command Center nicht für sie tun, weil sie keinen Zugriff darauf hat.
+> 2. **D30 (Tags) wandert nach Studio → Welten**, nicht ins Command Center. Tags sind
+>    Inhaltsverschlagwortung für Welten, keine Systemkonfiguration.
+>
+> Die Tabelle bleibt als Umzugsliste stehen: Sie sagt, *wohin* jede Kachel geht.
 
 | # | Gruppe → Bereich | Pfad | Vorschlag | Begründung | Entscheidung |
 |---|---|---|---|---|---|
-| D1 | Übersicht → System-Hub | `/system` | **behalten** — *der* Betriebseinstieg | 512 Zeilen, Tabs: overview/homelab/diagnose/cloudflare | |
+| D1 | Übersicht → System-Hub | `/system` | **behalten** — *der* Betriebseinstieg | 512 Zeilen, Tabs: overview/homelab/diagnose/cloudflare | `→ Brain` |
 | D2 | Übersicht → Admin Übersicht | `/admin` | **WEG** → Redirect auf `/system` | zwei Hubs für eine Sache | |
 | D3 | Übersicht → Owner Cockpit | `/admin/cockpit` | **WEG** → Tab in `/system` | | |
 | D4 | Übersicht → Verlauf | `/admin/activity` | behalten | | |
-| D5 | Übersicht → NL-Befehle | `/command` | behalten *oder* in Suche (C3) integrieren | | |
+| D5 | Übersicht → NL-Befehle | `/command` | in die Suche integrieren | ✅ C3 fällt weg, also **in die Bereichssuche (C42)** statt in `/search` | ✅ in C42 |
 | D6 | Übersicht → Navigation | `/system/navigation` | Entwickler-Schalter | 23 Zeilen | |
-| D7 | Setup → Owner-Einrichtung | `/admin/setup` | behalten | | |
-| D8 | Setup → Aufgabenliste | `/admin/checklist` | behalten | | |
+| D7 | Setup → Owner-Einrichtung | `/admin/setup` | behalten | | -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D8 | Setup → Aufgabenliste | `/admin/checklist` | behalten | |  **WEG** |
 | D9 | Setup → Systemstatus | `/admin/status` | **WEG** | 9 Zeilen, doppelt zu D1 | |
 | D10 | Setup → Kommandozentrale | `/system/command-center` | **WEG** | 30 Zeilen, doppelt zu D5 | |
-| D11 | Setup → Host Control | `/system/host-control` | behalten | | |
-| D12 | Setup → Cloudflare | `/system/cloudflare` | behalten — Platzhalter-Inhalt prüfen | | |
-| D13 | Setup → RTX Connector | `/system/rtx-connector` | behalten | | |
-| D14 | Setup → Drucker | `/system/printers` | behalten | | |
-| D15 | Sicherheit → Benutzer & Rollen | `/admin/users` | behalten — **hier kommt die Family-Allowlist rein** | | |
-| D16 | Sicherheit → Rollen-Matrix | `/admin/roles` | **WEG oder erzwingen** | zeigt heute eine wirkungslose Tabelle | |
-| D17 | Sicherheit → Security | `/admin/security` | behalten | | |
-| D18 | Sicherheit → Audit Log | `/admin/audit-log` | behalten | | |
-| D19 | Sicherheit → API Tokens | `/admin/api-tokens` | behalten | | |
-| D20 | Sicherheit → Webhooks | `/admin/webhooks` | behalten | | |
-| D21 | Sicherheit → Secrets-Status | `/admin/secrets` | behalten | | |
-| D22 | Betrieb → Backup & Restore | `/backup` | behalten | | |
-| D23 | Betrieb → Migrationen | `/admin/migrations` | behalten | | |
-| D24 | Betrieb → Version & Updates | `/system/version` | behalten | | |
+| D11 | Setup → Host Control | `/system/host-control` | behalten | | -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen |
+| D12 | Setup → Cloudflare | `/system/cloudflare` | behalten — Platzhalter-Inhalt prüfen | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D13 | Setup → RTX Connector | `/system/rtx-connector` | behalten | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D14 | Setup → Drucker | `/system/printers` | behalten | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D15 | Sicherheit → Benutzer & Rollen | `/admin/users` | behalten — **hier kommt die Family-Allowlist rein** | | -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen |
+| D16 | Sicherheit → Rollen-Matrix | `/admin/roles` | **WEG oder erzwingen** | zeigt heute eine wirkungslose Tabelle | WEG|
+| D17 | Sicherheit → Security | `/admin/security` | behalten | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D18 | Sicherheit → Audit Log | `/admin/audit-log` | behalten | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D19 | Sicherheit → API Tokens | `/admin/api-tokens` | behalten | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D20 | Sicherheit → Webhooks | `/admin/webhooks` | behalten | | -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen |
+| D21 | Sicherheit → Secrets-Status | `/admin/secrets` | behalten | | -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen |
+| D22 | Betrieb → Backup & Restore | `/backup` | behalten | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D23 | Betrieb → Migrationen | `/admin/migrations` | behalten | |  -> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen|
+| D24 | Betrieb → Version & Updates | `/system/version` | ~~behalten~~ | ✅ **WEG** — Version und Update laufen über das Command Center (M9 Host-Update). Damit sind auch D25 und D26 gegenstandslos, die dorthin integriert werden sollten | ✅ WEG |
 | D25 | Betrieb → Was ist neu | `/system/whats-new` | **WEG** → in D24 integrieren | 39 Zeilen | |
 | D26 | Betrieb → Startklar | `/system/startklar` | **WEG** → in D24 integrieren | 198 Zeilen, einmal pro Update relevant | |
 | D27 | Betrieb → Health-Ampel | `/system/health` | **WEG** → Tab in D1 | 28 Zeilen | |
@@ -245,8 +304,8 @@ dieselben Ziele doppelt.
 | D29 | Betrieb → UWE KnowHow | `/system/uwe-knowhow` | **WEG** | 27 Zeilen Selbstdokumentation | |
 | D30 | Betrieb → Tags | `/admin/tags` | behalten | | |
 | D31 | Betrieb → Mail Center | `/mail` | **→ Brain** (siehe C40) | | |
-| D32 | Betrieb → Cookbook *(ohne Nav)* | `/admin/cookbook` | behalten oder **WEG** | Hardware-Fit + lokale Modelle | |
-| D33 | Einstellungen | `/settings` | behalten — **aufteilen** | 905 Zeilen, 11 Gruppen: app, worlds, campaigns, portal, ai, storage, backup, briefing, privacy, auth, maintenance | |
+| D32 | Betrieb → Cookbook *(ohne Nav)* | `/admin/cookbook` | behalten oder **WEG** | Hardware-Fit + lokale Modelle |**WEG**  |
+| D33 | Einstellungen | `/settings` | behalten — **aufteilen** | 905 Zeilen, 11 Gruppen: app, worlds, campaigns, portal, ai, storage, backup, briefing, privacy, auth, maintenance |-> Einrichtungen nur noch im Uwe Command Center, wenn dort noch nicht vorhanden nachziehen |
 | D34 | Konto → Passwort / 2FA | `/account/password`, `/account/security` | behalten | | |
 
 ---
@@ -263,8 +322,8 @@ Alle sichtbar für owner/admin/dm.
 | E4 | Wiki → Seiten-Review | `…/page-review`, `…/page-review/[pageId]` | behalten | | |
 | E5 | Wiki → Neue Seite | `…/pages/new` | behalten — evtl. Button statt Nav-Eintrag | ist eine Aktion, kein Bereich | |
 | E6 | Wiki → Verbindungen / Graph | `…/graph` | behalten | | |
-| E7 | Wiki → **Atlas 3D** | `…/atlas3d`, `…/atlas3d/[nodeId]` | **Grundsatzfrage** | 3 Packages, 21.750 Zeilen (6,7 % des Codes) für diese eine Seite | |
-| E8 | Wiki → Atlas (2D) *(ohne Nav)* | `…/atlas` | **WEG** | verwaister Vorgänger | |
+| E7 | Wiki → **Atlas 3D** | `…/atlas3d`, `…/atlas3d/[nodeId]` | **Grundsatzfrage** | 3 Packages, 21.750 Zeilen (6,7 % des Codes) für diese eine Seite | erstmal behalten|
+| E8 | Wiki → Atlas (2D) *(ohne Nav)* | `…/atlas` | **WEG** | verwaister Vorgänger ||
 | E9 | Wiki → Magic-Item-Werkbank | `…/magic-items`, `…/magic-items/[pageId]` | behalten | | |
 | E10 | Spiel → Sessions | `…/sessions`, `…/sessions/new`, `…/sessions/[id]` | behalten | | |
 | E11 | Spiel → Weltuhr | `…/calendar` | behalten | | |
@@ -364,10 +423,35 @@ hat das Command Center.** Deshalb ist es der richtige Ort für die E-Mail-Allowl
 
 ---
 
-# N · Zugangsmodell nach Notiz Lasse
+# N · Zugangsmodell nach Notiz Lasse — **entschieden**
 
-Meine Einordnung deines Vorschlags. **Kurz: bauen — aber er löst drei verschiedene Fragen
-auf einmal, und für zwei davon reichen vier Häkchen nicht.**
+> **Notiz Lasse:** Das ganze nur dm sichtbar nur spieler sichtbar soll bitte entfernt
+> werden. Ein spieler darf alles wissen einer welt sehen in der er zugeordnet ist.
+> Die ganze Local vs Cloud geschichte Raus. Es gilt als Grundsatz! Alles was KI Aktionen
+> sind, geht rein über den RTX Host. Kein Cloudprovider mehr und alles was davon abhängig
+> ist wird entfernt.
+
+## N.0 Beschlossenes Modell
+
+| Achse | Entscheidung |
+|---|---|
+| **Zugang** | 4 Häkchen pro E-Mail im Command Center (Portal / Studio / Brain / Family). Konten legt nur der Owner an. |
+| **Welt-Zuordnung** | `WorldMembership` bleibt — ohne Rollenwerte, nur „Person X gehört zu Welt Y". |
+| **Sichtbarkeit in der Welt** | **entfällt vollständig.** Kein `visibility`, kein `publishStatus`, keine `gm_note`. Wer einer Welt zugeordnet ist, sieht alles darin. |
+| **KI-Routing** | **entfällt vollständig.** Kein Cloud-Provider mehr; jede KI-Aktion läuft über den RTX-Host. Damit ist kein Datenschutz-Label mehr nötig. |
+| **Rollen** | nur noch `owner`. |
+
+Zu den beiden Bedenken, die ich in der Vorfassung erhoben hatte:
+
+- **KI-Routing (N.3):** Deine Antwort löst mein Bedenken vollständig auf, sie umgeht es
+  nicht. Meine Sorge war „Cloud-KI könnte private Inhalte bekommen". Wenn es **keinen**
+  Cloud-Provider mehr gibt, kann das strukturell nicht mehr passieren. Ein Verbotsschild
+  wird überflüssig, wenn die Straße nicht mehr existiert. Das ist die sauberere Lösung.
+- **Sichtbarkeit (N.2):** Hier bleibt es bei deiner Entscheidung, und die Folge ist real
+  und gewollt: Sobald eine Seite existiert, sieht sie jeder Spieler der Welt. Es gibt
+  keinen Entwurfszustand mehr in UWE. Vorbereitung, die niemand sehen soll, passiert
+  außerhalb — oder in einer Welt, der noch niemand zugeordnet ist. Notiert, umgesetzt wird
+  es so. Eine technische Nebenwirkung siehe **N.7**.
 
 ## N.1 Was die Häkchen ersetzen — mehr als du denkst
 
@@ -389,80 +473,111 @@ Befund B3 aus der Zustandsanalyse. Dein Modell erledigt ihn.
 Dass Konten **nur** der Owner anlegt, ist übrigens schon fast so: Es gibt keine
 Selbstregistrierung, nur `/setup` für den ersten Owner. Der Rest ist Aufräumen.
 
-## N.2 Was die Häkchen **nicht** können: Sichtbarkeit innerhalb einer Welt
+## N.2 Sichtbarkeit — entfällt (N1 = alles raus)
 
-`dm_only` und `player_visible` sitzen nicht am Benutzer, sondern an **jeder einzelnen
-Wiki-Seite und jedem Textblock** (`Page.visibility`, `ContentBlock.visibility`). Sie
-beantworten eine andere Frage:
+| # | Frage | Entscheidung |
+|---|---|---|
+| N1 | `dm_only` / `player_visible` an Seiten und Blöcken | **raus** |
+| N2 | `specific_players`, `unlock_after_session`, `secretLevel`/`revealState`, `publishStatus`, `gm_note` | **raus** |
 
-> Innerhalb *einer* Welt, die ein Spieler betreten darf — welche Seiten sieht er, und
-> welche nur der DM?
+Alles, was heute steuert, *was* jemand innerhalb einer Welt sieht, entfällt. Danach gilt
+genau eine Regel: **Wer einer Welt zugeordnet ist, sieht alles darin.** Punkt.
 
-Ein Häkchen „Portal Ja" kann das nicht ausdrücken, weil es pro Person gilt und nicht pro
-Seite. Würden `dm_only` und `player_visible` entfallen, wäre die Folge: **jede Wiki-Seite,
-jeder NPC, jede Karte und jeder Session-Recap wäre für jeden Portal-Nutzer sichtbar,
-sobald das Häkchen gesetzt ist.** Der DM könnte keinen Twist mehr vorbereiten, keine
-Fraktion geheim halten, kein Handout zurückhalten. Auch `specific_players` und
-`unlock_after_session` (Seite wird nach der Session freigeschaltet) hängen daran.
+Was das konkret löscht:
 
-Das ist kein Rechtekonzept-Wildwuchs, sondern die Kernmechanik des DM-Studios — und der
-einzige Teil des heutigen Modells, der nachweislich sauber funktioniert und getestet ist.
+| Weg | Wo |
+|---|---|
+| `Visibility`-Enum (7 Werte) | `Page`, `ContentBlock`, `Asset` |
+| `PublishStatus`-Enum (5 Werte) | `Page` — kein Entwurf/Review/Archiv mehr |
+| `SecretLevel` / `revealState` | `Page`, `ContentBlock`, `Asset` |
+| Blocktyp `gm_note` | `ContentBlock` |
+| `PagePlayerAccess`, `SessionUnlock` | Prisma-Modelle für `specific_players` / `unlock_after_session` |
+| `packages/auth/src/permissions.ts` | 291 Zeilen |
+| `packages/auth/src/content-access.ts` | 248 Zeilen |
+| `packages/auth/src/security/authz.ts` | 461 Zeilen |
+| `packages/database/src/permissions.ts` | 213 Zeilen |
+| `packages/database/src/content-access.ts` | 193 Zeilen |
+| `player-note-permissions.ts`, `player-character-permissions.ts` | 144 Zeilen |
 
-| # | Frage | Möglichkeiten | Deine Entscheidung |
-|---|---|---|---|
-| N1 | `dm_only` / `player_visible` an Seiten und Blöcken | **(a)** bleibt wie heute — Häkchen regeln nur den App-Zugang *(meine Empfehlung)* · **(b)** wirklich weg, Portal zeigt dann alles · **(c)** vereinfachen auf zwei Werte statt heute sechs | |
-| N2 | `specific_players`, `unlock_after_session`, `secretLevel`/`revealState` | **(a)** bleiben · **(b)** streichen, nur noch DM-oder-alle | |
+**217 Dateien** berühren heute `visibility` oder `publishStatus`. Das ist der mit Abstand
+größte Umbau in diesem Dokument — deutlich größer als Family. Er ist aber weitgehend
+mechanisch: Filter entfernen, Enum-Spalten droppen, Sichtbarkeits-Auswahl aus den Formularen
+nehmen.
 
-Falls **(c)** bei N1: Heute gibt es sechs Sichtbarkeiten (`dm_only`, `player_visible`,
-`public`, `specific_players`, `unlock_after_session`, `archived`, `private`). Auf `dm_only`
-und `player_visible` zu reduzieren wäre eine echte Verschlankung im Sinne deiner Notiz —
-ohne die DM-Mechanik zu verlieren.
+## N.3 KI-Routing — entfällt, weil es keine Cloud mehr gibt (N3 = raus)
 
-## N.3 Was die Häkchen **nicht** können: was den Host verlassen darf
+Grundsatz aus der Notiz: **Jede KI-Aktion läuft über den RTX-Host. Kein Cloud-Provider.**
 
-`owner_private_local` ist trotz des Namens kein Zugangs-Label, sondern ein
-**Routing-Label**. Es tut zwei Dinge:
+Damit entfällt nicht nur `owner_private_local`, sondern der ganze Apparat, der bisher
+entschied, *wohin* eine Anfrage geht:
 
-1. `privacyGuard` sperrt Inhalte dieser Klasse dauerhaft für Cloud-KI
-   (`validateProviderContextCombination`) — deshalb kann der Brain-Chat deine privaten
-   Dokumente nicht an ein Cloud-Modell schicken.
-2. Es entscheidet, welche Prisma-Modelle in `uwe-brain.db` statt in die App-DB gehören.
+| Weg | Wozu es diente |
+|---|---|
+| `privacyGuard.ts` — `validateProviderContextCombination`, `validateResolvedRouteForContext`, `isCloudRouteAllowedForContext` | Cloud-Route gegen Kontext-Modus prüfen |
+| `AiCloudProvider`, `AiUserGrant`, `AiGatewayConfig` *(teilweise)* | Cloud-Anbieter, Nutzerfreigaben, Budgets |
+| Cloud-Provider im `aiRouter` + `createApiKeyStoreFromEnv` | API-Schlüssel für externe Anbieter |
+| `AI_ALLOWED_MODELS`, `providerMode: "cloud" \| "auto"` | Routing-Entscheidung |
+| `/admin/ai-gateway` (C10) als Provider-Verwaltung | Cloud-Budget und -Auswahl |
+| Privacy-Klassen in `product-contracts` | Was darf den Host verlassen |
 
-Ersatzlos entfernt hieße: Personal-Brain-Inhalte könnten an einen Cloud-Provider gehen.
-Das Häkchen „Brain Ja" sagt nichts darüber, wohin die Daten fließen — es sagt nur, wer die
-Oberfläche sehen darf.
+Was bleibt: der RTX-Connector, die lokalen Modelle, `AiRun`/`AiUsageLog` für die Historie.
+`providerMode` schrumpft auf einen einzigen Wert und kann als Feld entfallen.
 
-| # | Frage | Möglichkeiten | Deine Entscheidung |
-|---|---|---|---|
-| N3 | `owner_private_local` als Cloud-Sperre | **(a)** bleibt als reines Routing-Label, verschwindet aber aus der Zugangs-Diskussion *(meine Empfehlung)* · **(b)** umbenennen in etwas klar Nicht-Rechte-Klingendes, z. B. `local_only` · **(c)** weg — Cloud-KI darf dann private Inhalte sehen | |
+`household_shared` verschwindet kostenlos — die Klasse war nur mein Vorschlag und wurde nie
+gebaut.
 
-Dass `household_shared` verschwindet, ist dagegen kostenlos: Die Klasse existiert noch
-nicht, sie war nur mein Vorschlag. Family bekommt stattdessen sein Häkchen und — falls
-N3 = (a)/(b) — für den Chatbot dieselbe Cloud-Sperre wie Brain.
+## N.4 Welt-Zuordnung — bleibt (N4 = a)
 
-## N.4 Eine Lücke, die das Modell noch offen lässt
+`WorldMembership` bleibt, aber **ohne Rollenwerte**. Heute hat es `owner`/`dm`/`co_dm`/`player`;
+künftig ist es eine reine Zuordnung: Person X gehört zu Welt Y. Wer Studio darf, ist DM;
+wer Portal darf, ist Spieler. Das steht schon im Häkchen.
 
-„Portal Ja" sagt, dass jemand ins Portal darf — aber nicht, **welche Welten** er dort
-sieht. Heute macht das `WorldMembership` (und das ist auch der Fix aus PR #797).
-
-| # | Frage | Möglichkeiten | Deine Entscheidung |
-|---|---|---|---|
-| N4 | Welt-Zuordnung | **(a)** `WorldMembership` bleibt: Häkchen = darf ins Portal, Zuordnung = welche Welten *(meine Empfehlung, funktioniert schon)* · **(b)** „Portal Ja" heißt alle Welten — einfacher, aber bei mehreren Kampagnen sehen alle alles · **(c)** fünftes Häkchen pro Welt in M13 | |
-
-## N.5 Vorschlag für das Zielbild
-
-Wenn N1=(a) oder (c), N3=(a) oder (b), N4=(a):
+## N.5 Zielbild — beschlossen
 
 ```
-Zugang          → 4 Häkchen pro E-Mail im Command Center       (ersetzt Rollen + Capabilities)
-Welt-Zuordnung  → WorldMembership                              (bleibt, nur ohne Rollenwerte)
-Sichtbarkeit    → dm_only | player_visible an Seite/Block      (bleibt, ggf. von 6 auf 2 gekürzt)
-KI-Routing      → local_only als Datenklasse                   (bleibt, umbenannt)
-Owner           → einzige verbleibende Rolle                    (Betrieb, Restore, Command Center)
+Zugang          → 4 Häkchen pro E-Mail im Command Center     (ersetzt Rollen + Capabilities)
+Welt-Zuordnung  → WorldMembership ohne Rollenwerte           (wer gehört zu welcher Welt)
+Sichtbarkeit    → entfällt                                    (Welt-Zuordnung = sieht alles)
+KI-Routing      → entfällt                                    (alles über RTX, keine Cloud)
+Owner           → einzige verbleibende Rolle                  (Betrieb, Restore, Command Center)
 ```
 
-Vier Achsen statt vier konkurrierender Modelle — und jede beantwortet genau eine Frage.
-Das ist erklärbar, und es ist deutlich weniger Code als heute.
+Zwei Achsen statt vier konkurrierender Modelle. Das ist in einem Satz erklärbar:
+*„Häkchen sagt, welche App. Welt-Zuordnung sagt, welche Welt. Sonst nichts."*
+
+## N.6 Geschätzte Löschmenge
+
+| Bereich | Zeilen |
+|---|---|
+| Sichtbarkeitssystem (N.2) | ~1.550 |
+| Rollen, Capability-Matrix, Gastmodus (N.1) | ~900 |
+| Cloud-Routing und Privacy-Guards (N.3) | ~800 |
+| `product-contracts` (Zugangs- und Privacy-Teil) | ~430 |
+| **Summe** | **~3.700 Zeilen**, plus Anpassungen in 217 berührten Dateien |
+
+## N.7 Eine Nebenwirkung, die zwei deiner Entscheidungen kollidieren lässt
+
+Du hast **C26 (Reviews)** und **E4 (Seiten-Review)** behalten. Beide laufen aber über
+`publishStatus`, das nach N2 entfällt:
+
+```
+packages/page-ai-review/src/page-ai-review-service.ts
+  :53   where: { worldId, publishStatus: "review" }     ← Arbeitsvorrat
+  :154  data:  { publishStatus: "review" }              ← Seite in Review schicken
+  :339  data:  { publishStatus: previousStatus }        ← nach Freigabe zurücksetzen
+```
+
+Ohne `publishStatus` hat der Seiten-Review keinen Zustand mehr und funktioniert nicht.
+
+**Mein Vorschlag — kostet fast nichts und rettet beides:** Der Review-Workflow bekommt ein
+eigenes Feld `reviewState` (`none | in_review`), genau wie `ContentReview` schon heute sein
+eigenes `ContentReviewStatus` hat. Damit ist `publishStatus` frei zum Löschen, und C26/E4
+laufen weiter. Der Zustand ist dann ehrlich benannt — er sagt „wird gerade geprüft" und
+nicht „ist unveröffentlicht", was ohnehin nie dasselbe war.
+
+| # | Frage | Vorschlag | Deine Entscheidung |
+|---|---|---|---|
+| N5 | Review-Workflow nach dem Wegfall von `publishStatus` | **eigenes `reviewState`-Feld** *(Empfehlung)* · alternativ C26 und E4 ebenfalls streichen | |
 
 ---
 
@@ -488,8 +603,9 @@ Das ist erklärbar, und es ist deutlich weniger Code als heute.
 | # | Bereich | Vorschlag | Entscheidung |
 |---|---|---|---|
 | G11 | Start / Heute | Was steht heute an, was fehlt im Vorrat | |
-| G12 | Family-Chatbot | siehe G.2a | |
-| G13 | Mitglieder & Freigaben | nur Owner: E-Mail einladen, Bereiche freischalten | |
+| G12 | **Family-Chatbot** | Wissen wird gespeichert, ist für die ganze Familie sichtbar und dient als Kontext im **Family-Brain** | ✅ entschieden |
+| G13 | Mitglieder & Freigaben | nur Owner: E-Mail einladen, Bereiche freischalten | ✅ |
+| **G19** | **Privat-Chatbot** *(Zusatz Lasse)* | Wird gespeichert, aber **nur für die schreibende Person sichtbar**. Legt bei Bedarf ein privates Brain für die Person an | ✅ entschieden — siehe G.2b |
 
 ### G.2a Family-Chatbot im Detail
 
@@ -498,17 +614,47 @@ damit kein Konzept mehr, sondern eine Kopiervorlage — `@uwe/brain-assistant` (
 liefert Konversationsmodell, Anhänge, Modellwahl, RAG-Kontext, Bildanalyse und Diktat
 bereits fertig.
 
-| Aspekt | Vorschlag | Vorlage vorhanden? | Entscheidung |
-|---|---|---|---|
-| Datenbasis | **nur Family-Daten** (Verträge, Dokumente, Essensplan, Kalender, Haushalt). Kein Brain, kein D&D | ✅ `rag-context.ts` | |
-| Provider | **lokal erzwungen** — Haushaltsdokumente gehen nicht in die Cloud | ✅ `privacyGuard`: `personal_brain` ist bereits dauerhaft cloud-gesperrt, `family` analog ergänzen | |
-| Antwortumfang | pro Person gefiltert: wer Verträge nicht freigeschaltet hat, bekommt daraus auch keine Antwort | ❌ **neu** — Brain kennt nur einen Nutzer, Family ist mehrbenutzerfähig | |
-| Konversationen, Anhänge, Diktat | übernehmen | ✅ 4 Prisma-Modelle + `chat-runner.ts` | |
-| Guard | Owner **und** freigeschaltete Mitglieder | ⚠️ `requireBrainActionAuth()` prüft nur Owner — für Family muss daraus eine Mitgliedschaftsprüfung werden | |
+| Aspekt | Entscheidung | Vorlage vorhanden? |
+|---|---|---|
+| Datenbasis | nur Family-Daten (Verträge, Dokumente, Essensplan, Kalender, Haushalt) | ✅ `rag-context.ts` |
+| Provider | RTX-Host — wie künftig alles (N.3) | ✅ nach dem Cloud-Ausbau der einzige Weg |
+| Antwortumfang | **wer in Family ist, darf alles sehen was in Family ist** — keine Filterung pro Person | ✅ entfällt damit |
+| Konversationen, Anhänge, Diktat | übernehmen | ✅ 4 Prisma-Modelle + `chat-runner.ts` |
+| Guard | Häkchen `Family` | ⚠️ `requireBrainActionAuth()` prüft nur Owner — wird zur Family-Zugehörigkeitsprüfung |
 
-Der eine echt neue Teil ist also die **Mehrbenutzer-Filterung**. Alles andere ist
-Wiederverwendung. Genau deshalb lohnt es sich, G.3 (`FamilyMember.areas`) vor dem Bau
-festzulegen — daran hängt der Filter.
+Damit fällt die Mehrbenutzer-Filterung weg, die ich zuvor als den einzigen echt neuen Teil
+bezeichnet hatte. Der Family-Chat ist eine fast unveränderte Kopie des Brain-Chats mit
+anderer Datenquelle.
+
+### G.2b Privat-Chatbot (G19) — Ablage nach aktuellem Benutzer
+
+Neben dem geteilten Family-Chat gibt es einen **privaten** Chat. Was dort geschrieben wird,
+sieht nur die schreibende Person. Existiert für sie noch kein privates Brain, wird es
+angelegt.
+
+**Ablageort richtet sich nach dem angemeldeten Benutzer:**
+
+| Wer chattet | Wohin Wissen und Konversation gehen |
+|---|---|
+| **Owner** *(ist automatisch Teil der Family)* | zurück ins **Owner-Brain** (`uwe-brain.db`) — nicht in die Family-DB |
+| jedes andere Family-Mitglied | **privates Brain in der Family-DB**, getrennt über die Benutzer-ID |
+
+Das heißt konkret: Der Owner hat *einen* Wissensspeicher, egal ob er ihn über `apps/brain`
+oder über den privaten Family-Chat füttert. Family-Mitglieder haben je einen eigenen, der
+den Owner-Brain nie berührt.
+
+| Speicher | Wer sieht ihn | Liegt in |
+|---|---|---|
+| **Owner-Brain** | nur Owner | `uwe-brain.db` |
+| **Family-Brain** (G12) | alle mit Häkchen `Family` | `uwe-family.db` |
+| **Privates Brain je Mitglied** (G19) | nur diese Person | `uwe-family.db`, nach `userId` getrennt |
+
+`apps/brain` bleibt damit owner-only; das Häkchen `Brain` behält seine Bedeutung.
+
+> **Anmerkung zur Konsistenz:** Die Trennung „nur diese Person sieht es" läuft hier über
+> **Eigentum** (`userId` am Datensatz), nicht über ein Sichtbarkeits-Label. Das ist etwas
+> anderes als das nach N.2 gestrichene `visibility` und widerspricht deiner Entscheidung
+> nicht — Eigentum bleibt, Sichtbarkeitsstufen fallen weg.
 
 ## G.3 Zugang — überholt durch Notiz Lasse
 
@@ -523,10 +669,10 @@ M13 nachrüsten, ohne das Modell umzubauen.
 
 | # | Frage | Vorschlag | Entscheidung |
 |---|---|---|---|
-| G14 | Eigene App (`apps/family`) oder Bereich in Studio? | **eigene App** — sonst wiederholen wir das Brain/Studio-Duplikat | |
-| G15 | Eigene DB (`uwe-family.db`) oder Brain-DB mitnutzen? | **eigene DB** — Family ist geteilt, Brain ist privat; beides darf nicht in derselben Datei liegen | |
-| G16 | Dürfen Family-Mitglieder ins Portal oder Studio? | ergibt sich aus den Häkchen — wer nur `Family` hat, kommt nirgends sonst hin | |
-| G17 | Chatbot: lokal erzwungen oder Cloud erlaubt? | **lokal erzwungen** — Haushaltsdokumente gehen nicht in die Cloud (hängt an **N3**) | |
+| G14 | Eigene App (`apps/family`) oder Bereich in Studio? | **eigene App** — sonst wiederholen wir das Brain/Studio-Duplikat | ✅ |
+| G15 | Eigene DB (`uwe-family.db`) | **ja** — mit den privaten Brains der Mitglieder darin (G.2b). Nur der Owner schreibt weiterhin in `uwe-brain.db` | ✅ entschieden |
+| G16 | Dürfen Family-Mitglieder ins Portal oder Studio? | ergibt sich aus den Häkchen — wer nur `Family` hat, kommt nirgends sonst hin | ✅ |
+| G17 | Chatbot-Provider | RTX-Host, wie alles nach N.3 | ✅ |
 | G18 | ~~Feingranular pro Bereich freischalten?~~ | **nein** — durch M13 ersetzt | *überholt* |
 
 ## G.4 Technische Folge (nur zur Information)
@@ -543,24 +689,31 @@ M13 nachrüsten, ohne das Modell umzubauen.
 
 ---
 
-# H · Die 11 Doppelungen — bitte je Zeile entscheiden
+# H · Die 11 Doppelungen ✅ **entschieden: Brain gewinnt**
 
-Diese Bereiche existieren **heute zweimal**, in Brain und in Studio, auf derselben
-Datenbank. Solange das so bleibt, erzeugt jeder neue Bereich eine dritte Kopie.
+Diese Bereiche existierten **zweimal**, in Brain und in Studio, auf derselben Datenbank.
+Deine Entscheidungen ergeben durchgehend Weg (A) aus der Liste unten: **Brain gewinnt,
+Studios „Organisation" wird abgeräumt** — außer bei Verträgen, Dokumenten und Kalender,
+die ganz nach Family wandern.
+
+Damit stimmt auch der Domain-Contract wieder, und Studios 108 Direktimporte auf
+`@uwe/database/brain-client` verschwinden. Preis: Brain muss den Funktionsumfang der
+Studio-Seiten aufholen — grob 3.700 Zeilen, vor allem bei Hardware (148 statt 641),
+Verträgen und Projekten.
 
 | # | Bereich | Brain | Studio | LOC Brain / Studio | Entscheidung: welche Seite gewinnt? |
 |---|---|---|---|---|---|
-| H1 | Heute | `/today` | `/today` | 74 / 202 | |
-| H2 | Wissen / Life Brain | `/life-brain` | `/life-brain` | 227 / 193 | |
-| H3 | Capture | `/capture` | `/capture` | 156 / 49 | |
-| H4 | Projekte | `/projects` | `/projects` | 216 / 522 | |
-| H5 | Werkstatt | `/workshop` | `/workshop` | 159 / 451 | |
-| H6 | Miniaturen | `/miniatures` | `/miniatures` | 157 / 277 | |
+| H1 | Heute | `/today` | `/today` | 74 / 202 | Brain|
+| H2 | Wissen / Life Brain | `/life-brain` | `/life-brain` | 227 / 193 | ✅ **Brain** — die Trennung besteht schon, siehe Antwort unten |
+| H3 | Capture | `/capture` | `/capture` | 156 / 49 | ✅ **Brain** (keine Angabe → Empfehlung) |
+| H4 | Projekte | `/projects` | `/projects` | 216 / 522 |Brain |
+| H5 | Werkstatt | `/workshop` | `/workshop` | 159 / 451 |Brain|
+| H6 | Miniaturen | `/miniatures` | `/miniatures` | 157 / 277 |Brain |
 | H7 | Verträge | `/contracts` | `/contracts` | 172 / 513 | *(→ Family, dann beide weg)* |
-| H8 | Hardware | `/hardware` | `/hardware` | 148 / 641 | |
+| H8 | Hardware | `/hardware` | `/hardware` | 148 / 641 |Brain |
 | H9 | Dokumente | `/documents` | `/documents` | 135 / 143 | *(→ Family, dann beide weg)* |
-| H10 | Mail | `/mail` | `/mail` | 225 / 136 | |
-| H11 | Kalender | `/calendar` | `/calendar` | 215 / 405 | |
+| H10 | Mail | `/mail` | `/mail` | 225 / 136 | Brain|
+| H11 | Kalender | `/calendar` | `/calendar` | 215 / 405 | ✅ **→ Family**, beide weg |
 
 Zwei saubere Wege, ein dritter ist keiner:
 
@@ -572,21 +725,48 @@ Zwei saubere Wege, ein dritter ist keiner:
   `product-contracts` weg, weil das Produktmodell aufgegeben wird.
 - **(C) Status quo** — doppelte Wartung ohne Produktargument.
 
+> **Antwort auf deine Frage bei H2** — „Aufteilen auf Privat und Gamebrain?"
+>
+> Die Trennung existiert bereits, sie ist nur schlecht benannt. Es sind **zwei getrennte
+> Wissensspeicher in zwei verschiedenen Datenbanken**, die zufällig beide „Brain" heißen:
+>
+> | Heute | Modelle | Datenbank | Inhalt |
+> |---|---|---|---|
+> | Studio `/brain`, Welt `…/brain` | `BrainDocument`, `BrainChunk`, `BrainFact` | App-DB | **Spielwissen**, pro Welt — Kanon, NPCs, Lore |
+> | Brain `/life-brain` | `PersonalBrainDocument`, `PersonalBrainChunk`, `PersonalBrainFact` | `uwe-brain.db` | **Privatwissen** |
+>
+> Es gibt also nichts aufzuteilen — nur umzubenennen, damit man sie auseinanderhält. Mein
+> Vorschlag steht schon als **C5** in der Liste: Studios `/brain` heißt künftig
+> **„Welt-Wissen"**, und „Brain" meint dann eindeutig nur noch deine private App.
+>
+> Nach diesem Umbau gibt es vier Wissensspeicher mit klaren Namen:
+>
+> | Speicher | Wer sieht ihn | Datenbank |
+> |---|---|---|
+> | **Welt-Wissen** | wer der Welt zugeordnet ist | App-DB |
+> | **Owner-Brain** | nur du | `uwe-brain.db` |
+> | **Family-Brain** | alle mit Häkchen `Family` | `uwe-family.db` |
+> | **Privates Brain je Mitglied** | nur diese Person | `uwe-family.db` |
+
 ---
 
 # I · Zielbild, wenn du allen Vorschlägen folgst
 
 | Bereich | Anzahl | Inhalt |
 |---|---|---|
-| **Command Center** | 13 | 11 bestehende Kacheln · **Zugänge (M13)** · ggf. Welt-Zuordnung |
+| **Command Center** | ~25 | 11 bestehende Kacheln · **Zugänge (M13)** · der komplette Studio-System-Bereich |
 | **Landing** | 3 | Startseite · Login-Weiche · Health |
 | **Portal** | 18 | unverändert (minus Atlas-2D-Leiche) |
-| **Studio** | 19 + Welt-Ebene | Start · Welten · Welt-Wissen · KI · Werkzeuge · System |
-| **Brain** | 12 | Heute · Life Brain · Wissensassistent · **KI-Chat** · Capture · Projekte · Werkstatt · Miniaturen · Hardware · Mail · Ideen · Start |
-| **Family** | 13 | Start · Verträge · Dokumente · Küche · Essensplan · Einkaufsliste · Vorrat · Haushalt · Finanzen · Kalender · Scan · Chat · Mitglieder |
+| **Studio** | 13 + Welt-Ebene | Start · Welten · Welt-Wissen · KI · Templates · Image Studio · Import · Reviews · Bug-Center — **kein System-Bereich mehr** |
+| **Brain** | 13 | Start · Heute · Life Brain · Wissensassistent · **KI-Chat** · Capture · Projekte · Werkstatt · Miniaturen · Hardware · Mail · Ideen · **System-Hub** |
+| **Family** | 14 | Start · Verträge · Dokumente · Küche · Essensplan · Einkaufsliste · Vorrat · Haushalt · Finanzen · Kalender · Scan · **Family-Chat** · **Privat-Chat** · Mitglieder |
 
-Gestrichen: 13 Bereiche (C14, D2, D3, D9, D10, D25, D26, D27, D29, E8, E32, B24, L4).
-Zusammengelegt: 4 Welt-Werkzeuge → 1, Print Center → Labels, Admin-Hub → System-Hub.
+Gestrichen: **28 Bereiche** — C3, C14, B24, E8, E32, L4 sowie der gesamte Abschnitt D
+(bis auf D34, das in Studio und Portal bleibt, und D30, das zu den Welten wandert).
+Zusammengelegt: 4 Welt-Werkzeuge → 1, Print Center → Labels, NL-Befehle → Bereichssuche.
+
+Dazu die Code-Löschung aus N.6: **~3.700 Zeilen** Rechte-, Sichtbarkeits- und
+Cloud-Routing-Code, verteilt über 217 berührte Dateien.
 
 ---
 
@@ -595,19 +775,25 @@ Zusammengelegt: 4 Welt-Werkzeuge → 1, Print Center → Labels, Admin-Hub → S
 *Fortgeschrieben 2026-07-26 abends.*
 
 1. ~~Rechte-Lücken B1/B2 schließen~~ — **erledigt** (PR #797, gemergt)
-2. **Diese Liste ausfüllen** ← wir sind hier, inklusive **N1–N4**
-3. **Zugangsmodell umbauen** (M13 + Abschnitt N) — vier Häkchen im Command Center, Rollen
-   und Capability-Matrix raus. Das ist die Grundlage für alles Weitere: Family braucht das
-   Häkchen, und der Umbau ist am billigsten, *bevor* eine fünfte App daran hängt.
-4. **Abschnitt H entscheiden** (Brain oder Studio) — davon hängt ab, wohin Family gebaut
-   wird. **Dringender geworden:** Der neue Brain-MCP-Server liest Brain-Inhalte über
-   Studio (`/api/life-brain/*`), weil `apps/brain` keine Inhalts-API hat. Die
-   Vermischung ist damit tragend für ein Feature — je länger sie steht, desto teurer wird
-   die Trennung.
-5. **Family bauen** — eigene DB, Häkchen-Zugang, Chat als Ableitung von
-   `@uwe/brain-assistant` mit Mehrbenutzer-Filter
-6. Verschlankung (Streichungen und Zusammenlegungen aus C–E) nebenher
-7. **L4** (doppeltes `/api/auth/enter`) einsammeln — klein, aber sollte nicht liegen bleiben
+2. ~~Liste ausfüllen~~ — **erledigt**, bis auf **N5** und **B8a**
+3. **Cloud-Ausbau** (N.3) — alle Cloud-Provider, Gateway-Budgets und Privacy-Guards raus,
+   alles über den RTX-Host. Zuerst, weil es unabhängig von allem anderen ist und die
+   KI-Pfade danach nur noch einen Weg kennen.
+4. **Sichtbarkeit ausbauen** (N.2) — `visibility`, `publishStatus`, `secretLevel`,
+   `gm_note`, `PagePlayerAccess`, `SessionUnlock` und die fünf Permission-Module.
+   Größter Einzelposten, ~1.550 Zeilen plus 217 berührte Dateien. **Setzt N5 voraus.**
+5. **Zugangsmodell umbauen** (M13 + N.1) — vier Häkchen im Command Center, Rollen und
+   Capability-Matrix raus. Danach ist `owner` die einzige Rolle.
+6. **Studio-System abräumen** (Abschnitt D) — Konfiguration ins Command Center nachziehen,
+   System-Hub nach Brain, Rest löschen.
+7. **Brain/Studio-Doppelungen auflösen** (H) — Brain gewinnt; Studios „Organisation" wird
+   abgeräumt, die 108 `brain-client`-Importe verschwinden.
+8. **Family bauen** — eigene DB mit Family-Brain und privaten Brains, Häkchen-Zugang,
+   zwei Chats als Ableitung von `@uwe/brain-assistant`.
+9. Restliche Verschlankung (C–E) und **L4** nebenher.
+
+Die Reihenfolge 3 → 4 → 5 ist bewusst so: Jeder Schritt macht den nächsten kleiner.
+Wer zuerst das Zugangsmodell umbaut, muss die Sichtbarkeitslogik zweimal anfassen.
 
 *Zurückgestellt: E34 (`terra.html`) — berührt keinen der Schritte oben und kann jederzeit
 nachgezogen werden. **E7 (Atlas 3D) bleibt offen** und ist mit 21.750 Zeilen weiterhin der
