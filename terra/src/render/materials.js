@@ -20,9 +20,7 @@ const terraUniforms = {
   // Wolkenschatten am Boden (nur Terrainmaterial wertet sie aus).
   uCloudTex: { value: TEX.cloudNoise },
   uCloudDrift: { value: new THREE.Vector2(0, 0) },
-  uCloudAmt: { value: 0.25 },
-  // Malschicht: Aquarelltextur, in Weltkoordinaten abgetastet
-  uMalTex: { value: TEX.aquarellMittel }
+  uCloudAmt: { value: 0.25 }
 };
 
 /**
@@ -44,7 +42,7 @@ const FAMILIEN = {
 };
 
 /** Diagnose: greift jeder Patch? Wird auf window exponiert. */
-const patchInfo = { wrap: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, versuche: 0 };
+const patchInfo = { wrap: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, ranken: 0, versuche: 0 };
 if (typeof window !== 'undefined') window.terraPatchInfo = patchInfo;
 
 function ersetze(shader, feld, alt, neu, patchName) {
@@ -168,12 +166,30 @@ function terraPatch(shader, opts) {
     if (ersetze(shader, 'fragmentShader', mk, malCode, 'malschicht')) patchInfo.mal++;
   }
 
-  // (7) Ranken-Ausblenden: oben Richtung Dunst transparent werden.
+  // (7) Ranken-Ausblenden: oben Richtung Dunst aufloesen — als geordnetes
+  //     4x4-Bayer-Dither mit discard statt echtem Alpha. Das Material bleibt
+  //     dadurch opak (keine Transparent-Queue, keine Selbstsortierung des
+  //     grossen Ranken-Meshes); das Muster haengt nur an gl_FragCoord und ist
+  //     damit deterministisch und zeitstabil.
+  //     Konstanten: Fade setzt bei Welthoehe 140 ein und ist bei 360 voll
+  //     (wie der bisherige Alpha-Fade). Restdeckung oben 0.25 statt frueher
+  //     0.6 Alpha: gedithert braucht das Auslaufen eine niedrigere Enddeckung,
+  //     um sichtbar zu wirken, und endet trotzdem nicht hart.
   if (opts && opts.rankenFade) {
     var oa = '#include <opaque_fragment>';
     if (ersetze(shader, 'fragmentShader', oa,
-        'diffuseColor.a *= mix( 1.0, 0.6, smoothstep( 140.0, 360.0, vTerraW.y ) );\n' + oa,
-        'rankenfade')) { /* zaehlt nicht separat */ }
+        'float terraFade = mix( 1.0, 0.25, smoothstep( 140.0, 360.0, vTerraW.y ) );\n' +
+        'int terraDx = int( mod( gl_FragCoord.x, 4.0 ) );\n' +
+        'int terraDy = int( mod( gl_FragCoord.y, 4.0 ) );\n' +
+        'float terraBayer[16] = float[16](\n' +
+        '   0.0,  8.0,  2.0, 10.0,\n' +
+        '  12.0,  4.0, 14.0,  6.0,\n' +
+        '   3.0, 11.0,  1.0,  9.0,\n' +
+        '  15.0,  7.0, 13.0,  5.0 );\n' +
+        // Schwellen (k+0.5)/16 liegen strikt in (0,1): Fade 1.0 discardet nie,
+        // Fade 0.25 loescht drei Viertel der Fragmente.
+        'if ( terraFade < ( terraBayer[ terraDy * 4 + terraDx ] + 0.5 ) / 16.0 ) discard;\n' + oa,
+        'rankenfade')) { patchInfo.ranken++; }
   }
 
   shader.fragmentShader = kopfF + shader.fragmentShader;
@@ -234,18 +250,15 @@ function terraMat(opts) {
 const tintedMats = [];
 
 // Ranken-Materialien: die Ranke ist in jeder Stimmung der hellste Wert im Bild.
+// Opak: das Auslaufen nach oben uebernimmt der gedithertete Discard (Patch 7),
+// damit das grosse Ranken-Mesh nicht in der Transparent-Queue sortiert wird.
 const vineMat = terraMat({
-  color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.95,
+  color: 0xffffff, vertexColors: true, transparent: false, opacity: 1,
   emissive: 0x4a463e, familie: 'rinde', rankenFade: true
 });
 const leafMat = terraMat({ vertexColors: true, side: THREE.DoubleSide, familie: 'laub' });
 const rockMat = terraMat({ vertexColors: true, familie: 'stein' });
-
-// Fensterglut: eigenes emissives Material, Staerke haengt an der Tageszeit.
-const fensterMat = terraMat({ color: 0x3a3228, emissive: 0xffc878, familie: 'putz' });
-fensterMat.emissiveIntensity = 0.0;
-function setFensterGlut(i) { fensterMat.emissiveIntensity = i; }
 tintedMats.push(vineMat, leafMat, rockMat);
 
 export { terraUniforms, patchInfo, terraPatch, terraMat, tintedMats, FAMILIEN,
-  vineMat, leafMat, rockMat, fensterMat, setFensterGlut };
+  vineMat, leafMat, rockMat };

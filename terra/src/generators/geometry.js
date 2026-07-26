@@ -4,12 +4,11 @@
 // Farbattribute auf - beides deckt mergeGeometries aus den Addons nicht ab.
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, vnoise, fractal, rngOf, rr, ri } from '../core/rng.js';
-import { S, VINE_R } from '../core/store.js';
 import { TEX } from '../render/textures.js';
 import { definePool, setPoolNames } from '../core/pools.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
 
-/** Fügt Geometrien (position/normal/color, indiziert oder nicht) zu einer zusammen. */
+/** Fügt Geometrien (position/normal/color/uv, indiziert oder nicht) zu einer zusammen. */
 function mergeGeos(list) {
   var vTot = 0, iTot = 0, g, i, k;
   for (i = 0; i < list.length; i++) {
@@ -18,6 +17,10 @@ function mergeGeos(list) {
     iTot += g.index ? g.index.count : g.attributes.position.count;
   }
   var pos = new Float32Array(vTot * 3), nor = new Float32Array(vTot * 3), col = new Float32Array(vTot * 3);
+  // uv muss mitwandern: die Pools mit alphaTest-Textur (Kronenkarten, grassTuft)
+  // sampeln sonst konstant bei (0,0), und der Wind-Shader gewichtet mit uv.y.
+  // Float32Array ist nullinitialisiert — Teile ohne uv landen automatisch auf (0,0).
+  var uv = new Float32Array(vTot * 2);
   var idx = vTot > 65535 ? new Uint32Array(iTot) : new Uint16Array(iTot);
   var vo = 0, io = 0;
   for (i = 0; i < list.length; i++) {
@@ -27,6 +30,7 @@ function mergeGeos(list) {
     if (g.attributes.normal) nor.set(g.attributes.normal.array.subarray(0, c * 3), vo * 3);
     if (g.attributes.color) col.set(g.attributes.color.array.subarray(0, c * 3), vo * 3);
     else col.fill(1, vo * 3, (vo + c) * 3);
+    if (g.attributes.uv) uv.set(g.attributes.uv.array.subarray(0, c * 2), vo * 2);
     if (g.index) {
       var a = g.index.array;
       for (k = 0; k < a.length; k++) idx[io + k] = a[k] + vo;
@@ -41,6 +45,7 @@ function mergeGeos(list) {
   out.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   out.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
   out.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  out.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
   out.setIndex(new THREE.BufferAttribute(idx, 1));
   out.computeBoundingSphere();
   return out;
@@ -226,13 +231,15 @@ function leafGeo(L, W, cup, thick, topHex, botHex, veinHex, seed) {
 
 /** Flacher Erdhügel, über den die Wurzeln laufen. */
 function moundGeo(r, h, x0, z0, seed) {
-  var S = 30, R = 6, pos = [], col = [], idx = [], i, j;
+  // SEG statt S: der Name kollidierte frueher mit dem Store-Import und
+  // beschattete ihn — als Segmentzahl benannt ist er eindeutig.
+  var SEG = 30, R = 6, pos = [], col = [], idx = [], i, j;
   var tmp = new THREE.Color();
   var h0 = heightAt(x0, z0);
   for (i = 0; i <= R; i++) {
     var q = i / R;
-    for (j = 0; j < S; j++) {
-      var a = j / S * Math.PI * 2;
+    for (j = 0; j < SEG; j++) {
+      var a = j / SEG * Math.PI * 2;
       var wob = 1 + (hashi(i, j, seed) - 0.5) * 0.26;
       var x = Math.cos(a) * r * q * wob, z = Math.sin(a) * r * q * wob;
       var wx = x0 + x, wz = z0 + z, wh = heightAt(wx, wz);
@@ -244,9 +251,9 @@ function moundGeo(r, h, x0, z0, seed) {
     }
   }
   for (i = 0; i < R; i++) {
-    for (j = 0; j < S; j++) {
-      var j3 = (j + 1) % S;
-      var a1 = i * S + j, b1 = i * S + j3, c1 = (i + 1) * S + j, d1 = (i + 1) * S + j3;
+    for (j = 0; j < SEG; j++) {
+      var j3 = (j + 1) % SEG;
+      var a1 = i * SEG + j, b1 = i * SEG + j3, c1 = (i + 1) * SEG + j, d1 = (i + 1) * SEG + j3;
       idx.push(a1, b1, c1, b1, d1, c1);
     }
   }
@@ -285,36 +292,6 @@ function islandGeo(r, seed) {
 
 var CY = THREE.CylinderGeometry, BX = THREE.BoxGeometry, IC = THREE.IcosahedronGeometry,
     CO = THREE.ConeGeometry, PL = THREE.PlaneGeometry;
-
-/**
- * Dunkelt die Vertexfarben eines Objekts nach unten ab. Ohne
- * Umgebungsverdeckung kleben Objekte sonst wertgleich auf dem Boden —
- * dieser Verlauf setzt sie ab und bringt Tiefe in die Fläche.
- */
-function geoBaum() {
-  return mergeGeos([
-    part(new CY(0.15, 0.36, 2.2, 6), M(0, 1.1, 0), 0x7c6248),
-    part(new IC(1.55, 0), M(0, 3.0, 0, 0.2, 0.4, 0, 1, 0.76, 1), 0x577340),
-    part(new IC(1.2, 0), M(0.55, 4.0, -0.3, 0.3, 0, 0.2, 1, 0.8, 1), 0x6b8b4d),
-    part(new IC(0.92, 0), M(-0.5, 4.6, 0.3, 0, 0.7, 0.1, 1, 0.85, 1), 0x4a6338)
-  ]);
-}
-
-function geoZypresse() {
-  return mergeGeos([
-    part(new CY(0.12, 0.2, 0.9, 5), M(0, 0.45, 0), 0x6d5a45),
-    part(new CO(0.62, 5.2, 7), M(0, 3.0, 0), 0x36523c),
-    part(new CO(0.44, 1.6, 7), M(0, 5.3, 0), 0x40604a)
-  ]);
-}
-
-function geoHaus(roofHex) {
-  return mergeGeos([
-    part(new BX(2.8, 2.1, 2.4), M(0, 1.05, 0), 0xf0ece0),
-    part(prismGeo(3.1, 1.5, 2.7), M(0, 2.1, 0), roofHex),
-    part(new BX(0.5, 0.9, 0.12), M(0, 0.45, 1.24), 0x8d7a64)
-  ]);
-}
 
 function geoTurm() {
   return mergeGeos([
@@ -579,16 +556,6 @@ function geoBaum2() {
   ]);
 }
 
-function geoBlume() {
-  return mergeGeos([
-    part(new PL(0.5, 0.5), M(0, 0.25, 0), 0x7f9a5d),
-    part(new PL(0.5, 0.5), M(0, 0.25, 0, 0, Math.PI / 2, 0), 0x769055),
-    part(new IC(0.13, 0), M(0, 0.56, 0), 0xe0a3b0)
-  ]);
-}
-
-function geoWeg() { return part(new BX(1, 0.18, 1), M(0, 0, 0), 0xb5a68b); }
-
 function geoFels() {
   var g = new IC(0.95, 0);
   var p = g.attributes.position;
@@ -753,7 +720,11 @@ function geoBaumArt(o) {
   var parts = [];
   var stamm = part(new CY(o.stammOben, o.stammUnten, o.stammH, 6),
     M(o.lehne * 0.4, o.stammH / 2, 0, 0, 0, o.lehne * 0.22), o.rinde);
-  uvKonst(stamm, 0.5, 0.995);          // unterste Texturzeile ist opak weiss
+  // Der opake Streifen wird bei fillRect(0, height-4, ...) an den unteren
+  // Canvas-Rand gemalt; CanvasTexture laedt mit flipY=true, also liegt er bei
+  // v ~ [0, 4/256]. v=0.008 trifft die Streifenmitte — und haelt den Stamm
+  // zugleich im Wind still, weil der Shaderpatch mit uv.y gewichtet.
+  uvKonst(stamm, 0.5, 0.008);
   parts.push(stamm);
   for (var i = 0; i < o.karten; i++) {
     var a = i / o.karten * Math.PI + hashi(i, 3, o.seed) * 0.8;
@@ -800,7 +771,12 @@ function geoStammLiegend() {
   ]);
 }
 function geoMoos() {
-  return part(new PL(1.8, 1.8), M(0, 0.04, 0, -Math.PI / 2, 0, 0), 0x4e6b3c);
+  var g = part(new PL(1.8, 1.8), M(0, 0.04, 0, -Math.PI / 2, 0, 0), 0x4e6b3c);
+  // kroneRund traegt bei v<~0.016 den opak weissen Stamm-Anker — den Streifen
+  // darf das Moos nicht sampeln, sonst bekommt es einen hellen Saum.
+  var uv = g.attributes.uv;
+  for (var i = 0; i < uv.count; i++) uv.setY(i, 0.03 + uv.getY(i) * 0.97);
+  return g;
 }
 
 /* --- Requisiten -------------------------------------------------------- */
@@ -920,15 +896,11 @@ definePool("blume", part(new PL(1.0, 1.0), M(0, 0.5, 0), 0xffffff),
     familie: 'laub', wind: { amp: 0.42 } });
 definePool("industrie", geoIndustrie(), { radius: 3.4, familie: 'stein' });
 definePool("kran", geoKran(), { radius: 2.4, familie: 'holz' });
-definePool("blatt", part(new PL(1, 0.62), M(0.5, 0, 0, -Math.PI / 2, 0, 0), 0xffffff),
-  { radius: 0.6, dbl: true, ao: 0, map: TEX.leafBlade, alphaTest: 0.4,
-    familie: 'laub', wind: { amp: 0.3 } });
 definePool("rankenblatt", part(new PL(1, 0.5), M(0.5, 0, 0), 0xffffff),
   { radius: 0.8, dbl: true, ao: 0, map: TEX.rankenBlatt, alphaTest: 0.4,
     familie: 'laub', wind: { amp: 0.8 } });
 definePool("kuppel", geoKuppel(), { radius: 2.6, familie: 'putz' });
 definePool("arkade", geoArkade(), { radius: 2.9, familie: 'putz' });
-definePool("weg", geoWeg(), { radius: 0, ao: 0, familie: 'erde' });
 definePool("fels", geoFels(), { radius: 1.1, familie: 'stein' });
 definePool("pfosten", geoPfosten(), { radius: 0.5, familie: 'holz' });
 definePool("tempel", geoTempel(), { radius: 4.2, ao: 0.22, familie: 'stein' });

@@ -1,7 +1,7 @@
 // Die weissen Ranken: Geflecht, Wurzelteller, Blaetter, Blattplateaus, Inseln.
 import * as THREE from 'three';
 import { clamp, lerp, sstep, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { S, VINE_R, groupOf } from '../core/store.js';
+import { VINE_R, groupOf } from '../core/store.js';
 import { emit, tintOf, schattenAn } from '../core/pools.js';
 import { heightAt } from '../world/terrain.js';
 import { newOcc, occFree, occAdd } from './objects.js';
@@ -170,11 +170,6 @@ function genRanke(el) {
 
   schattenAn(el, x0, heightAt(x0, z0), z0, VINE_R * 5.2);
 
-  var vineMesh = new THREE.Mesh(mergeGeos(geos), vineMat);
-  vineMesh.userData.el = el;
-  vineMesh.renderOrder = 2;
-  groupOf(el).add(vineMesh);
-
   // --- Erdhügel, über den die Wurzeln laufen ---
   var mound = new THREE.Mesh(
     moundGeo(VINE_R * 4.6, VINE_R * 1.15, x0, z0, (el.seed + 61) | 0), rockMat);
@@ -242,6 +237,14 @@ function genRanke(el) {
         sc2, sc2 * rr(rng, 0.9, 1.3), sc2, tintOf(rng, 0.08));
     }
   }
+
+  // Ranken-Mesh erst NACH der Plateau-Schleife bauen, damit die
+  // herabhaengenden Bewuchsstraenge (geos.push in der Schleife) mitkommen.
+  var vineMesh = new THREE.Mesh(mergeGeos(geos), vineMat);
+  vineMesh.userData.el = el;
+  vineMesh.renderOrder = 2;
+  groupOf(el).add(vineMesh);
+
   if (leafGeos.length) {
     var lm = new THREE.Mesh(mergeGeos(leafGeos), leafMat);
     lm.userData.el = el;

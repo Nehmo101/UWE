@@ -287,14 +287,6 @@ function texPaint(size, fn) {
     var g = 0.92 + fr * 0.08;
     o[0] = g; o[1] = g; o[2] = g;
   }), "rauchPuff", false);
-
-  // --- Korn für den Nachbearbeitungs-Pass ---
-  texFinish(texPaint(128, function (u, v, o) {
-    var n = hashi(Math.round(u * 128), Math.round(v * 128), 8080);
-    var g = 0.5 + (n - 0.5) * 0.85;
-    o[0] = o[1] = o[2] = g;
-    o[3] = 1;
-  }), "grain", true);
 })();
 
 // Farbtragende Texturen als sRGB deklarieren; Alpha-/Datentexturen bleiben linear.

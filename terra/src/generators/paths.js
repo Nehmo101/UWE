@@ -1,11 +1,11 @@
 // Pfad-Werkzeug: Strasse, Mauer, Fluss, Hecke/Zaun.
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, wpick } from '../core/rng.js';
-import { S, WATER, COS40, groupOf } from '../core/store.js';
+import { WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
-import { terraMat } from '../render/materials.js';
+import { terraMat, tintedMats } from '../render/materials.js';
 
 function pathCurve(points) {
   var v = [];
@@ -112,6 +112,17 @@ function bandAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
   return mesh;
 }
 var wegBandMat = terraMat({ vertexColors: true, familie: 'erde' });
+
+// Geteiltes Flusswasser-Material: frueher erzeugte genFluss bei JEDER
+// Regenerierung ein neues Material (Leck beim Ziehen des Breite-Sliders).
+// Eigenschaften exakt wie zuvor pro Aufruf; alle Fluss-Meshes teilen es.
+// Ueber tintedMats macht es den Tageszeit-Grundton (welt) mit — die
+// Hauptwasserflaeche haengt separat am wasser-Preset (waterMat.color in
+// atmosphere.js); eine exakte Kopplung daran braeuchte dort eine Zeile.
+var flussMat = terraMat({
+  vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide
+});
+tintedMats.push(flussMat);
 
 var BELAG = { erde: [1.02, 0.98, 0.9], stein: [0.9, 0.92, 0.95], pflaster: [0.82, 0.84, 0.86] };
 
@@ -228,9 +239,7 @@ function genFluss(el) {
   g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(col), 3));
   g.setIndex(idx);
   g.computeVertexNormals();
-  var mesh = new THREE.Mesh(g, terraMat({
-    vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide
-  }));
+  var mesh = new THREE.Mesh(g, flussMat);
   mesh.renderOrder = 5;
   groupOf(el).add(mesh);
   // Schilf und Steine am Ufer

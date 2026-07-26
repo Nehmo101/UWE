@@ -10,7 +10,7 @@ import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOO
 import { handles, rebuildHandles, updateHandlePositions, setPreview, updateBrushRing,
   brushRing, pickElement, select } from './selection.js';
 import { raycaster, _ndc, camera } from './camera.js';
-import { regenElement, commit, isHeavy, deleteElement } from '../core/dirty.js';
+import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
 import { pushUndo, undo, redo } from './history.js';
 import { toast, buildPanel, updateHint } from '../ui/panels.js';
 
@@ -20,8 +20,6 @@ var ptr = { down: false, mode: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, handle:
 var hoverPoint = null;
 var zeigerOffen = false, zeigerX = 0, zeigerY = 0, zeigerZuletzt = 0;
 var _zeigerEv = { clientX: 0, clientY: 0 };
-
-var hoverExport = { get punkt() { return hoverPoint; } };
 
 export function initPointer(cv) {
   cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
@@ -109,7 +107,13 @@ export function initPointer(cv) {
     var wasMode = ptr.mode, dragged = ptr.dragged;
     ptr.down = false; ptr.mode = null; ptr.grab = null;
     if (cv.hasPointerCapture(e.pointerId)) cv.releasePointerCapture(e.pointerId);
-    if (wasMode === "brush") { toast("Terrain geändert"); return; }
+    if (wasMode === "brush") {
+      // Einmalig beim Loslassen: alle Elemente auf die neue Terrainhöhe setzen
+      // (Bäume/Häuser schweben sonst bzw. versinken, Kontaktschatten veralten).
+      regenAlleElemente();
+      toast("Terrain geändert");
+      return;
+    }
     if (wasMode === "handle") {
       if (ed.selected) commit(ed.selected, isHeavy(ed.selected));
       return;
@@ -226,4 +230,4 @@ function onKey(e) {
   }
 }
 
-export { verarbeiteZeiger, onKey, ptr, hoverExport };
+export { verarbeiteZeiger, onKey, ptr };

@@ -1,6 +1,5 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { S, WATER, COS40 } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
@@ -259,9 +258,6 @@ function genViertel(el) {
       var q = line[k];
       if (!inPoly(pts, q.x, q.z)) continue;
       occAdd(occ, q.x, q.z, p.gasse * 0.5 + 0.6);
-      var h = heightAt(q.x, q.z);
-      if (h < WATER + 0.2 || slopeAt(q.x, q.z) < COS40) continue;
-      // (Gassenband unten; hier nur noch die Sperrflaeche)
     }
   }
   // Bebauung an den Gassenseiten: geschlossene Reihen statt Streusiedlung.

@@ -96,6 +96,20 @@ function rebuildAll() {
   markDirty();
 }
 
+/** Regeneriert alle Elemente auf dem aktuellen Terrain — einmalig nach einem
+ *  Pinselstrich (pointerup), damit Bäume/Häuser samt Kontaktschatten auf der
+ *  neuen Höhe sitzen. Der Terrain-Pinsel ist die begründete Ausnahme vom
+ *  Ein-Element-Dirty-Tracking, weil er die Grundlage ALLER Elemente ändert.
+ *  Bewusst OHNE refreshTerrainFull: applyBrush hat das Gitter bereits
+ *  bereichsweise aktualisiert. Ebenso OHNE rebuildRivers/rebuildCorridors:
+ *  der Pinsel ändert nur `base` (nie die Sperrmaske), und applyBrush ruft
+ *  recomputeHeights auf, das die vorhandenen Flussstempel idempotent erneut
+ *  einschneidet — Flusseinschnitte gehen beim Pinseln also nicht verloren. */
+function regenAlleElemente() {
+  for (var i = 0; i < S.elements.length; i++) genElement(S.elements[i]);
+  markDirty();
+}
+
 /** Änderung an einem Element übernehmen. heavy = Terrain/Korridore betroffen. */
 function commit(el, heavy) {
   if (heavy) {
@@ -122,5 +136,5 @@ function deleteElement(el) {
   dropElement(el);
 }
 
-export { genElement, regenElement, rebuildRivers, rebuildCorridors, rebuildAll,
-  commit, isHeavy, deleteElement, markDirty, flushPack };
+export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildCorridors,
+  rebuildAll, commit, isHeavy, deleteElement, markDirty, flushPack };

@@ -2,7 +2,7 @@
 // dazu die bewegten Kleinigkeiten (Voegel, Schornsteinrauch, Wolkenschatten-Drift).
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, rngOf, rr } from '../core/rng.js';
-import { terraUniforms, tintedMats, vineMat, setFensterGlut } from '../render/materials.js';
+import { terraUniforms, tintedMats, vineMat } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { POOLS } from '../core/pools.js';
 import { schattenMat } from '../core/pools.js';
@@ -139,7 +139,6 @@ function applyTod(t) {
   // Fensterglut: warme Emission bei Abendrot, Morgen und Nebel
   var glut = mixNum(a.fenster === undefined ? 0 : a.fenster,
     b.fenster === undefined ? 0 : b.fenster, e);
-  setFensterGlut(glut);
   if (POOLS.fensterlicht && POOLS.fensterlicht.mat) POOLS.fensterlicht.mat.emissiveIntensity = glut;
 
   // Himmel mit fuenf Stuetzstellen

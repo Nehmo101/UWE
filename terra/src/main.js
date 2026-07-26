@@ -79,7 +79,7 @@ function demoMap() {
   var elfen = bei(30, 104, 2, 12);
 
   addEl("ranke", "ranke", [{ x: v1.x, z: v1.z }],
-    { hoehe: 215, straenge: 7, plateaus: 3, staedtchen: true, inseln: 2 });
+    { hoehe: 215, straenge: 5, plateaus: 3, staedtchen: true, inseln: 2 });
   addEl("ranke", "ranke", [{ x: v2.x, z: v2.z }],
     { hoehe: 145, straenge: 5, plateaus: 2, staedtchen: true, inseln: 1 });
 

@@ -29,6 +29,9 @@ var seabedGeo = new THREE.CircleGeometry(360, 48).rotateX(-Math.PI / 2);
 var seabed = new THREE.Mesh(seabedGeo, terraMat({ vertexColors: true }));
 seabed.position.y = -24;
 seabed.frustumCulled = false;
+// Grundfarbe liegt in den Vertexfarben, material.color bleibt weiss und ist
+// frei fuer den Tageszeit-Grundton — sonst bliebe der Boden bei Abendrot neutral.
+tintedMats.push(seabed.material);
 
 function initWater(scene) {
   scene.add(water);

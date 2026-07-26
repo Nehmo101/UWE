@@ -1,7 +1,7 @@
 // Platzierungsregeln (Wasser, Hang, Korridor, Kollision), Kulturtabellen
 // und das Objekt-Werkzeug.
 import { rngOf, rr, wpick } from '../core/rng.js';
-import { S, HALF, WATER, COS40 } from '../core/store.js';
+import { HALF, WATER, COS40 } from '../core/store.js';
 import { POOLS, emit, tintOf } from '../core/pools.js';
 import { heightAt, slopeAt, inCorridor } from '../world/terrain.js';
 import { FENSTER_ANKER } from './geometry.js';

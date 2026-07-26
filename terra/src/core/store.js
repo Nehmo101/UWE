@@ -58,6 +58,20 @@ export function clearElement(el) {
     for (var i = el.group.children.length - 1; i >= 0; i--) {
       var c = el.group.children[i];
       if (c.geometry) c.geometry.dispose();
+      // Materialien: alle Erzeuger von Element-Kind-Meshes (paths.js,
+      // vines.js) nutzen geteilte Modul-Materialien (wegBandMat, flussMat,
+      // vineMat, leafMat, rockMat) — die duerfen hier NICHT disposed werden,
+      // sonst verlieren alle anderen Elemente ihr Material. Konvention:
+      // nur Meshes mit userData.eigenesMaterial = true besitzen ein
+      // exklusives Material und geben es hier frei. Das ist der einfachste
+      // Weg, der garantiert kein geteiltes Material zerstoert.
+      if (c.userData && c.userData.eigenesMaterial && c.material) {
+        if (Array.isArray(c.material)) {
+          for (var mi = 0; mi < c.material.length; mi++) c.material[mi].dispose();
+        } else {
+          c.material.dispose();
+        }
+      }
       el.group.remove(c);
     }
   }

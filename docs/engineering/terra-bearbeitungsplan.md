@@ -6,9 +6,10 @@ Alle Arbeit passiert auf dem Arbeitsbranch bzw. dessen Nachfolgern; `terra.html`
 
 ---
 
-## Runde C — Reparatur (merge-blockierend)
+## Runde C — Reparatur (merge-blockierend) — ERLEDIGT (26.07.2026)
 
 Ziel: Der Branch zeigt, was Runde B gebaut hat, und leckt nicht. Danach Merge-Kandidat.
+Alle Punkte C1-C9 umgesetzt; C10 (WEBGL_debug_renderer_info) als manuelle Pruefung im README dokumentiert, C11-Optikcheck als Checkliste im PR.
 
 | Nr. | Aufgabe | Ort | Größe |
 |---|---|---|---|
