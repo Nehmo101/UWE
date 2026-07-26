@@ -16,6 +16,7 @@
  * Each such exception is annotated inline.
  */
 
+@import "./uwe-base-reset.css";
 @import "./design-v2/index.css";
 @import "./uwe-visual-polish.css";
 @import "./uwe-components.css";
@@ -86,8 +87,14 @@ body {
 
 /* Base hyperlink color so unclassed links never fall back to the browser
    default blue (#0000ee), which fails WCAG AA on themed backgrounds. Lowest
-   specificity — any component rule (.uwe-* a, etc.) overrides it. */
-a {
+   specificity — any component rule (.uwe-* a, etc.) overrides it.
+
+   `.uwe-button-surface` steigt hier bewusst aus: Anker, die über
+   buttonVariants als Button gerendert werden, sollen die Farbe ihrer Variante
+   tragen (outline → text-foreground, default → text-primary-foreground).
+   Tailwind-Utilities liegen in @layer utilities und verlieren gegen diese
+   ungelayerte Regel, deshalb der Ausschluss statt einer Überschreibung. */
+a:not(.uwe-button-surface) {
   color: var(--uwe-link, var(--uwe-accent));
 }
 .wiki-link,
