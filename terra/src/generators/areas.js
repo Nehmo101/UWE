@@ -3,7 +3,7 @@ import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '.
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
-import { bandAusLinie } from './paths.js';
+import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
 
 function polyBBox(pts) {
   var b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity };
@@ -245,13 +245,19 @@ function genViertel(el) {
   var streets = el.streets;
   var occ = newOcc(4.5);
   var i, k, s;
-  // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken
+  // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken.
+  // Alle Zuege wandern in EIN gemergtes Mesh (1 Draw Call statt 20-40);
+  // gesammelt wird in Streets-Index-Reihenfolge, damit die gemergte
+  // Geometrie bytegleich der bisherigen Aufrufreihenfolge entspricht.
+  var gassenGeos = [];
   for (i = 0; i < streets.length; i++) {
     var innen = streets[i].filter(function (q) { return inPoly(pts, q.x, q.z); });
     if (innen.length > 1) {
-      bandAusLinie(el, innen, p.gasse * 0.5, [0.62, 0.58, 0.52], el.seed + i * 7, { einsinken: 0.08 });
+      var geo = bandGeoAusLinie(el, innen, p.gasse * 0.5, [0.62, 0.58, 0.52], el.seed + i * 7, { einsinken: 0.08 });
+      if (geo) gassenGeos.push(geo);
     }
   }
+  bandMeshAusGeos(el, gassenGeos);
   for (i = 0; i < streets.length; i++) {
     var line = streets[i];
     for (k = 0; k < line.length; k++) {

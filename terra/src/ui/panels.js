@@ -3,7 +3,7 @@ import { S } from '../core/store.js';
 import { instanceTotal, schattenAnzahl } from '../core/pools.js';
 import { ed, TOOLS, VARIANTS, PARAMS, schemaKey, defaultsFor, toolParams, setTool }
   from '../editor/tools.js';
-import { commit, isHeavy, deleteElement } from '../core/dirty.js';
+import { commit, isHeavy, deleteElement, regenElement } from '../core/dirty.js';
 import { pushUndo } from '../editor/history.js';
 import { rebuildHandles } from '../editor/selection.js';
 import { getRenderInfo } from '../render/pipeline.js';
@@ -74,13 +74,21 @@ function paramRow(def, obj, apply) {
   inp.min = def.min; inp.max = def.max; inp.step = def.st;
   inp.value = obj[def.k];
   var undoDone = false;
+  // Slider feuern `input` pro Pixel — ein voller Commit (Fluesse, Korridore,
+  // 257²-Terrain, ALLE Elemente) waere dort unbezahlbar. Deshalb waehrend des
+  // Ziehens nur die leichte Vorschau (apply("vorschau") = regenElement des
+  // Zielelements) und der schwere Teil erst beim Loslassen im `change`.
+  // Fuer leichte Elemente ist die Vorschau bereits der ganze Commit — der
+  // zusaetzliche Commit im `change` erzeugt dieselben Instanzen erneut
+  // (deterministisch: gleicher Seed, gleiche Parameter), aendert also nichts
+  // Beobachtbares.
   inp.addEventListener("input", function () {
     if (!undoDone) { apply(true); undoDone = true; }
     obj[def.k] = parseFloat(inp.value);
     val.textContent = inp.value;
-    apply();
+    apply("vorschau");
   });
-  inp.addEventListener("change", function () { undoDone = false; });
+  inp.addEventListener("change", function () { undoDone = false; apply(); });
   row.appendChild(inp);
   return row;
 }
@@ -135,9 +143,17 @@ function buildPanel() {
 
   // Parameter
   var defs = PARAMS[schemaKey(kind, variant)] || [];
-  var applyFn = function (isUndoPoint) {
-    if (isUndoPoint === true) { if (target) pushUndo(); return; }
-    if (target) commit(target, isHeavy(target));
+  // Drei Aufruf-Modi statt zwei: true = Undo-Punkt (unveraendert), "vorschau" =
+  // leichte Live-Vorschau waehrend des Slider-Zugs, ohne Argument = voller
+  // Commit (Slider-change, Checkboxen, Selects — letztere feuern kein
+  // input-Gewitter und duerfen sofort schwer committen). Bei Fluessen zeigt
+  // die Vorschau das Flussbett im Terrain noch nicht — bewusst akzeptiert,
+  // der schwere Teil folgt beim Loslassen.
+  var applyFn = function (mode) {
+    if (mode === true) { if (target) pushUndo(); return; }
+    if (!target) return;
+    if (mode === "vorschau") { regenElement(target); return; }
+    commit(target, isHeavy(target));
   };
   for (var d = 0; d < defs.length; d++) {
     if (obj[defs[d].k] === undefined) obj[defs[d].k] = defs[d].d;

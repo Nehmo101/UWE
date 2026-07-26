@@ -6,6 +6,9 @@ import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { terraMat, tintedMats } from '../render/materials.js';
+// Zyklusfrei: geometry.js importiert weder paths.js noch areas.js (nur
+// rng/textures/pools/terrain), darf hier also direkt angezapft werden.
+import { mergeGeos } from './geometry.js';
 
 function pathCurve(points) {
   var v = [];
@@ -37,8 +40,14 @@ function pathSamples(points, step) {
    Durchgehendes Wegband: folgt der Terrainhoehe, franst an den Raendern
    unregelmaessig aus und sinkt leicht in den Boden ein — keine Plattennaehte.
    Erkennt Wasserquerungen und errichtet dort automatisch eine Bruecke.
+
+   Kern liefert nur die GEOMETRIE: so kann genViertel alle Gassenzuege zu
+   einem einzigen Mesh mergen (1 Draw Call statt einem pro Zug), waehrend
+   genStrasse ueber den Wrapper bandAusLinie beim Ein-Mesh-Pfad bleibt.
+   Die Brueckenausstattung (Pfaehle, Gelaender) laeuft ueber emit() in die
+   Instanz-Pools — sie haengt nicht am Mesh und bleibt vom Merge unberuehrt.
    ========================================================================== */
-function bandAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
+function bandGeoAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
   opts = opts || {};
   var einsinken = opts.einsinken === undefined ? 0.12 : opts.einsinken;
   var pos = [], col = [], idx = [];
@@ -105,8 +114,29 @@ function bandAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
   g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(col), 3));
   g.setIndex(idx);
+  // Normalen schon hier pro Teilband: mergeGeos kopiert sie nur um, dadurch
+  // bleibt das Schattierungsergebnis exakt das der frueheren Einzelmeshes.
   g.computeVertexNormals();
+  return g;
+}
+
+/** Wrapper fuer Einzelbaender (Strasse): ein Element = ein Band = ein Mesh. */
+function bandAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
+  var g = bandGeoAusLinie(el, linie, halbBreite, grundFarbe, seed, opts);
+  if (!g) return null;
   var mesh = new THREE.Mesh(g, wegBandMat);
+  mesh.userData.el = el;
+  groupOf(el).add(mesh);
+  return mesh;
+}
+
+/** Mehrere Bandgeometrien (die Gassenzuege eines Viertels) zu EINEM Mesh
+    vereinen. Das uv-Attribut, das mergeGeos auffuellt, bleibt ungenutzt:
+    wegBandMat hat weder Textur-Map noch Wind, die Malschicht sampelt in
+    Weltkoordinaten — das Rendering aendert sich also nicht. */
+function bandMeshAusGeos(el, geos) {
+  if (!geos.length) return null;
+  var mesh = new THREE.Mesh(mergeGeos(geos), wegBandMat);
   mesh.userData.el = el;
   groupOf(el).add(mesh);
   return mesh;
@@ -282,4 +312,5 @@ function genHecke(el) {
 }
 
 
-export { pathCurve, pathSamples, BELAG, bandAusLinie, genStrasse, genMauer, genFluss, genHecke };
+export { pathCurve, pathSamples, BELAG, bandGeoAusLinie, bandAusLinie, bandMeshAusGeos,
+  genStrasse, genMauer, genFluss, genHecke };

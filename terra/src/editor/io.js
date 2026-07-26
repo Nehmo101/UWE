@@ -79,7 +79,12 @@ function validiereKarte(text) {
     elemente: elemente,
     kamera: d.kamera,
     raster: !!d.raster,
-    tageszeit: d.tageszeit || "mittag"
+    tageszeit: d.tageszeit || "mittag",
+    // Optionales Feld (ab dieser Runde mitgeschrieben, version bleibt 2):
+    // Stand von S.elementSeedCounter beim Speichern. Fehlt es (aeltere
+    // v1/v2-Dateien) oder ist es keine endliche Zahl, liefert null — der
+    // Aufrufer leitet den Zaehler dann aus der Elementanzahl ab.
+    seedZaehler: Number.isFinite(d.seedZaehler) ? (d.seedZaehler | 0) : null
   };
 }
 
@@ -89,7 +94,7 @@ export function initIO() {
     var s = 0;
     if (/^-?\d+$/.test(v)) s = parseInt(v, 10) | 0;
     else { for (var i = 0; i < v.length; i++) s = (Math.imul(s, 31) + v.charCodeAt(i)) | 0; }
-    pushUndo();
+    pushUndo(true);                      // genBase ersetzt die Hoehen -> Terrainkopie sichern
     S.worldSeed = s;
     genBase(S.worldSeed);
     rebuildAll();
@@ -120,7 +125,11 @@ export function initIO() {
       format: "terra", version: 2, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
       kamera: { x: cam.tFocus.x, z: cam.tFocus.z, dist: cam.tDist, yaw: cam.tYaw, pitch: cam.tPitch },
       hoehen: hs,
-      elemente: serializeElements()
+      elemente: serializeElements(),
+      // Stand des Element-Seed-Zaehlers mitschreiben, damit nextSeed() nach
+      // dem Laden keine bereits vergebenen Seeds erneut erzeugt. Zusaetzliches
+      // optionales Feld — v1/v2-Leser ignorieren Unbekanntes, version bleibt 2.
+      seedZaehler: S.elementSeedCounter
     };
     download("terra-karte.json", new Blob([JSON.stringify(data)], { type: "application/json" }));
     toast("Karte gespeichert");
@@ -143,7 +152,7 @@ export function initIO() {
         return;
       }
       // Ab hier ist alles geprüft: Undo-Punkt setzen und in einem Zug übernehmen.
-      pushUndo();
+      pushUndo(true);                    // das Laden ersetzt die Hoehen -> Terrainkopie sichern
       S.worldSeed = karte.seed;
       document.getElementById("seed").value = String(S.worldSeed);
       // Kürzere Höhenfelder (ältere/fremde Dateien): erst das komplette Feld
@@ -152,6 +161,18 @@ export function initIO() {
       if (karte.hoehen.length < base.length) genBase(S.worldSeed);
       base.set(karte.hoehen);
       hydrate(karte.elemente);
+      if (karte.seedZaehler !== null) {
+        S.elementSeedCounter = karte.seedZaehler;
+      } else {
+        // Datei ohne seedZaehler (aeltere v1/v2-Staende): Zaehler deterministisch
+        // aus der Elementanzahl ableiten. 0x1234 ist der Startwert aus
+        // core/store.js, 0x9e3779b9 der Golden-Ratio-Schritt von nextSeed();
+        // nach n Aufrufen steht der Zaehler bei (0x1234 + n*Schritt) | 0.
+        // Restunschaerfe: wurden in der Ursprungssitzung Elemente geloescht,
+        // liegt der echte Zaehler weiter vorn — einzelne Seeds koennten dann
+        // erneut vergeben werden. Besser geht es ohne gespeichertes Feld nicht.
+        S.elementSeedCounter = (0x1234 + Math.imul(karte.elemente.length, 0x9e3779b9)) | 0;
+      }
       ed.selected = null;
       ed.draw = null;
       if (karte.kamera) {

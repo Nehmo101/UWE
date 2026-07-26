@@ -180,7 +180,19 @@ function verarbeiteZeiger(now) {
       list[ptr.handle].x = sp.x; list[ptr.handle].z = sp.z;
       updateHandlePositions();
       if (ed.draw) setPreview(ed.draw.points, null, ed.draw.kind === "flaeche");
-      else regenElement(ed.selected);
+      else {
+        // Viertel cachen ihr Gassennetz in el.streets (genViertel baut nur bei
+        // null neu); das Netz haengt aber ueber Zentrum/Ausdehnung von den
+        // Punkten ab. Ohne Invalidierung klebten Gassen und Haeuser waehrend
+        // des Zugs an der alten Form und spraengen erst beim pointerup-Commit
+        // um (dort baut rebuildCorridors das Netz ohnehin neu — clearElement
+        // nullt streets NICHT, sonst waere der Cache wirkungslos). Kostet
+        // districtStreets pro Drag-Frame; das ist die einzige Stelle, an der
+        // sich die Punkte ohne schweren Commit aendern.
+        if (ed.selected.kind === "flaeche" && ed.selected.variant === "viertel")
+          ed.selected.streets = null;
+        regenElement(ed.selected);
+      }
     }
     return;
   }

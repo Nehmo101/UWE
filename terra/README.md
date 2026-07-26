@@ -30,6 +30,12 @@ Karten aus der frueheren Einzeldatei-Fassung (`terra.html`) laden weiterhin.
 
 ## Offener Stand
 
+- Runde D (Performance/Ergonomie) ist abgeschlossen: Slider-Debouncing
+  (Vorschau bei input, voller Commit bei change), bereichsbeschraenkte
+  Terrain-Updates beim schweren Commit, Depth-only-Prepass fuer den
+  Kanten-Pass, ein Mesh je Viertel-Gassennetz, Undo mit Copy-on-Write
+  fuer Hoehen, seedZaehler im Speicherformat, Viertel-Netz wandert beim
+  Griffziehen live mit.
 - Runde C (Reparatur) ist abgeschlossen: UV-Durchreichung in `mergeGeos`
   (Kronen/Gras/Farn/Wind waren vorher wirkungslos), Plateau-Haengebewuchs im
   Mesh, geteiltes Flussmaterial, Terrain-Pinsel regeneriert Elemente,

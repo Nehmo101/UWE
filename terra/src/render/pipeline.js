@@ -1,6 +1,6 @@
 // Render-Pipeline: Renderer, EffectComposer (Render → Bloom → Graduierung →
-// Kante/Korn → OutputPass) plus ein halbaufgeloester Tiefen-Prepass fuer die
-// Kantenandeutung. Der OutputPass steht zwingend am Ende — er erledigt
+// Kante/Korn → OutputPass) plus ein halbaufgeloester Depth-only-Prepass fuer
+// die Kantenandeutung. Der OutputPass steht zwingend am Ende — er erledigt
 // Tone Mapping und Farbraumkonversion.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -14,7 +14,7 @@ scene.fog = new THREE.Fog(0xdfe8f0, 200, 950);
 
 let renderer = null, composer = null, bloomPass = null, gradePass = null,
     kantePass = null, outputPass = null, renderPass = null;
-let depthRT = null, depthCam = null, depthScene = null;
+let depthRT = null;
 let postAn = true;
 let infoCalls = 0, infoTris = 0;
 
@@ -157,8 +157,9 @@ function initPipeline(camera) {
   composer.addPass(kantePass);
   composer.addPass(outputPass);
 
-  // Tiefen-Prepass in halber Aufloesung: echte Materialien (Alphatest bleibt
-  // korrekt), Farbausgabe wird verworfen, nur die Tiefe zaehlt.
+  // Tiefen-Prepass in halber Aufloesung: fuer die nur angedeutete Kante reicht
+  // das und viertelt die Fragmentarbeit. Die Szene laeuft dabei nicht mit
+  // echtem Shading, sondern mit getauschten Depth-Materialien (s. prepassAn).
   depthRT = new THREE.WebGLRenderTarget(Math.round(w / 2), Math.round(h / 2), {
     minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter
   });
@@ -199,14 +200,102 @@ function setLook(look) {
 function setPost(an) { postAn = !!an; }
 function getPost() { return postAn; }
 
-/** Ein Frame: Tiefen-Prepass (bei aktiver Post), dann Composer oder Direktbild. */
+/* --- Depth-only-Prepass: Materialtausch statt zweitem Voll-Rendering -----
+   Frueher lief hier die komplette Szene mit echten Materialien durch den
+   Fragment-Shader (Phong, Nebel, Aquarell-Malschicht), obwohl niemand die
+   Farbausgabe des depthRT liest — nur der Z-Buffer zaehlt. Der Tausch auf
+   MeshDepthMaterial spart diesen kompletten Shading-Durchlauf. Objekte ohne
+   depthWrite (Himmel, Sonne, Wolken, Wasser, Rauch, Kontaktschatten, Pfade)
+   trugen schon bisher keine Tiefe bei; sie werden jetzt ganz ausgeblendet,
+   was zusaetzlich ihre Draw Calls spart. Der Prepass kostet damit nur noch
+   einen reinen Tiefen-Durchlauf der depth-schreibenden Meshes in halber
+   Aufloesung statt eines vollen Shading-Durchlaufs der ganzen Szene.
+
+   Warum kein scene.overrideMaterial: ein einzelnes Override kann keine
+   per-Material-Alphakarten tragen — Gras, Kronenkarten und Blumen
+   (map + alphaTest) schrieben dann volle Quads in die Tiefe, und der Sobel
+   zeichnete Kanten um unsichtbare Quad-Raender. Der Tausch pro Objekt
+   erlaubt fuer genau diese Materialien einmalig erzeugte Depth-Klone mit
+   map/alphaTest, der Rest teilt sich ein Depth-Material pro side.
+
+   Warum nicht die Tiefe des Composer-Targets wiederverwenden: das Target
+   rendert mit samples:4, und eine MSAA-Tiefe muss vor dem Sampeln aufgeloest
+   werden — ob die gepinnte CDN-Version von three das beim Blit zuverlaessig
+   tut, ist ohne lokale Quelle nicht verifizierbar; zudem haengt von der
+   needsSwap-Paritaet der Passkette ab, welcher Ping-Pong-Puffer den
+   RenderPass empfaengt. Zu viele Annahmen — der explizite Prepass bleibt,
+   wird aber billig.
+
+   Bewusste Abweichungen (halbe Aufloesung, Fern-Ausblendung und die nur
+   andeutende Kantenstaerke verzeihen beides):
+   - Wind: die Depth-Klone kennen den Vertex-Wind-Patch der Originale nicht,
+     die Silhouette im Tiefenbild ruht also, waehrend das Farbbild schwankt
+     (Boeenspitze grob 0.4 Welteinheiten). Den Patch mitzuschleppen hiesse,
+     die Amplitude aus dem Programm-Cache-Key des Originals zu parsen — zu
+     fragil fuer den Gewinn.
+   - Ranken: ihr Bayer-Discard fehlt im Tiefenbild, die Silhouette steht dort
+     voll. Vorher lieferte der halbaufgeloeste Dither dem Sobel verrauschte
+     Gradienten in der Fade-Zone — die ruhige volle Silhouette ist das
+     kleinere Uebel. */
+var prepassSolidMats = {};        // ein geteiltes Depth-Material je side: mit
+                                  // stur FrontSide risse DoubleSide-Blattwerk
+                                  // Tiefenloecher, wo Rueckseiten sichtbar sind
+var prepassMaskMats = new Map();  // Original → Depth-Klon; Pool-Materialien
+                                  // leben die ganze Sitzung, die Map bleibt klein
+var prepassObj = [], prepassMatAlt = [], prepassVersteckt = [];
+
+function prepassAn() {
+  scene.traverse(function (o) {
+    // Nur wirklich Sichtbares anfassen — sonst wuerde die Ruecknahme
+    // urspruenglich Unsichtbares einschalten.
+    if (o.visible !== true) return;
+    var m = o.material;
+    if (!m) return;
+    // Mehrfachmaterialien kommen hier nicht vor; falls doch, rendern sie
+    // unveraendert weiter — das entspricht exakt dem alten Prepass.
+    if (Array.isArray(m)) return;
+    if (m.depthWrite === false) {
+      // Schrieb noch nie Tiefe → der Draw Call ist im Prepass reine Kost.
+      o.visible = false; prepassVersteckt.push(o); return;
+    }
+    // Linien/Punkte/Sprites: MeshDepthMaterial passt nicht zu ihrem
+    // Primitivtyp; ihr echtes Material kostet bei der Groesse kaum etwas.
+    if (!o.isMesh) return;
+    prepassObj.push(o); prepassMatAlt.push(m);
+    if (m.alphaTest > 0 && (m.map || m.alphaMap)) {
+      var d = prepassMaskMats.get(m);
+      if (!d) {
+        d = new THREE.MeshDepthMaterial({
+          map: m.map || null, alphaMap: m.alphaMap || null,
+          alphaTest: m.alphaTest, side: m.side
+        });
+        prepassMaskMats.set(m, d);
+      }
+      o.material = d;
+    } else {
+      o.material = prepassSolidMats[m.side] ||
+        (prepassSolidMats[m.side] = new THREE.MeshDepthMaterial({ side: m.side }));
+    }
+  });
+}
+
+function prepassAus() {
+  for (var i = 0; i < prepassObj.length; i++) prepassObj[i].material = prepassMatAlt[i];
+  for (var h = 0; h < prepassVersteckt.length; h++) prepassVersteckt[h].visible = true;
+  // Arrays leeren statt neu anlegen — laeuft jedes Frame, der GC dankt.
+  prepassObj.length = 0; prepassMatAlt.length = 0; prepassVersteckt.length = 0;
+}
+
+/** Ein Frame: Depth-only-Prepass (bei aktiver Post), dann Composer oder Direktbild. */
 function renderFrame(camera, zeit) {
   renderer.info.reset();
   if (postAn) {
     kantePass.uniforms.uZeit.value = zeit % 61;
+    prepassAn();
     renderer.setRenderTarget(depthRT);
     renderer.render(scene, camera);
     renderer.setRenderTarget(null);
+    prepassAus();               // vor dem Composer: der braucht die echten Materialien
     composer.render();
   } else {
     renderer.render(scene, camera);

@@ -25,9 +25,10 @@ Alle Punkte C1-C9 umgesetzt; C10 (WEBGL_debug_renderer_info) als manuelle Pruefu
 | C10 | **Umgebungsfrage klären**: `WEBGL_debug_renderer_info` im Zielbrowser prüfen (llvmpipe/SwiftShader?). Ergebnis im README festhalten — vorher keine GPU-Optimierung über Runde D hinaus. | Browser / `terra/README.md` | S |
 | C11 | **Abnahme**: gleiche Seed → Screenshot-Vergleich Einzeldatei ↔ Branch (alle 4 Tageszeiten); `terraPatchInfo`-Zähler vollständig; Konsole ohne `console.warn` der Patches. | — | S |
 
-## Runde D — Performance & Ergonomie
+## Runde D — Performance & Ergonomie — ERLEDIGT (26.07.2026)
 
 Ziel: Der Editor fühlt sich auch auf schwacher Hardware flüssig an.
+Alle Punkte D1-D7 umgesetzt (D2 als Depth-only-Pass mit Materialtausch pro Objekt statt overrideMaterial).
 
 | Nr. | Aufgabe | Ort | Größe |
 |---|---|---|---|
