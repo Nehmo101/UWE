@@ -1,4 +1,4 @@
-// Prisma model -> product boundary mapping (146 models). Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §5.
+// Prisma model -> product boundary mapping (148 models). Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §5.
 // Kept in sync with schema.prisma by prisma-model-boundaries.sync.test.ts.
 
 import type { DataDomain, PrivacyClass } from "./domain-boundaries";
@@ -158,6 +158,8 @@ export const PRISMA_MODEL_BOUNDARIES = {
   SecurityWarning: U("platform_ops", "dm_only"),
   TwoFactorSecret: U("platform_auth", "dm_only"),
   TwoFactorChallenge: U("platform_auth", "dm_only"),
+  WebAuthnCredential: U("platform_auth", "dm_only"),
+  WebAuthnChallenge: U("platform_auth", "dm_only"),
   InferenceEndpoint: U("integrations", "dm_only", "database_only", "G8"),
   PageVersion: U("dnd_world", "dm_only"),
   RollTable: U("dnd_world", "dm_only"),
