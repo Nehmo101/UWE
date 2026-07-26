@@ -28,10 +28,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE = path.join(ROOT, "assets", "scenes");
 
 /**
- * Welche Flächen eine App zeigt. Studio trägt zusätzlich die Landing — sie
- * wird vom Apex-Origin des Studio-Servers ausgeliefert (apps/studio/app/page.tsx).
+ * Welche Flächen eine App zeigt. Die Landing hat seit der Apex-Trennung eine
+ * eigene App (apps/landing, uweanddragons.org). Studio führt sie weiterhin mit,
+ * weil `apps/studio/app/page.tsx` ohne getrennte Hostnamen (unified-path bzw.
+ * lokale Entwicklung) nach wie vor die Landing rendert.
  */
 const APP_AREAS = {
+  landing: ["landing"],
   studio: ["landing", "studio"],
   portal: ["portal"],
   brain: ["brain"],

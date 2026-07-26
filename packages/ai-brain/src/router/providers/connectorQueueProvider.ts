@@ -38,6 +38,9 @@ import type { AiProviderId, AiTaskType, GenerateTextResult } from "../../types";
 
 const CONNECTOR_LLM_TIMEOUT_MS = 120_000;
 const CONNECTOR_IMAGE_TIMEOUT_MS = 300_000;
+// Dictation is short and a user is staring at the button — fail fast instead of
+// letting a dead endpoint hold the request open for two minutes.
+const CONNECTOR_STT_TIMEOUT_MS = 60_000;
 const CONNECTOR_POLL_INTERVAL_MS = 500;
 
 type ConnectorDelivery = "direct" | "queue";
@@ -200,6 +203,62 @@ export async function runConnectorVisionExtract(
     payload,
     worldId: input.worldId,
     timeoutMs: input.timeoutMs ?? CONNECTOR_LLM_TIMEOUT_MS,
+  });
+
+  const result = resultRecord(dispatched.result);
+  const text = typeof result.text === "string" ? result.text : "";
+  const model =
+    typeof result.model === "string" && result.model.trim()
+      ? result.model
+      : (input.model?.trim() ?? "");
+  return { text, model, jobId: dispatched.operationId, delivery: dispatched.delivery };
+}
+
+/** True when an online (or degraded) connector advertises local transcription. */
+export async function isConnectorSttAvailable(prisma: PrismaClient): Promise<boolean> {
+  return (
+    getDirectConnectorRegistry().hasCapability("stt_local") ||
+    (await isQueueCapabilityAvailable(prisma, "stt_local"))
+  );
+}
+
+export interface ConnectorTranscribeInput {
+  /** Base64-encoded audio payload (the browser records `audio/webm`). */
+  audioBase64: string;
+  mimeType: string;
+  model?: string;
+  /** BCP-47 hint for the recognizer, e.g. "de". */
+  language?: string;
+  timeoutMs?: number;
+}
+
+export interface ConnectorTranscribeResult {
+  text: string;
+  model: string;
+  jobId: string;
+  delivery: ConnectorDelivery;
+}
+
+/**
+ * Enqueue an `audio_transcribe` job and wait for a connector to complete it.
+ * The connector runs a local speech-to-text endpoint; no audio ever leaves the
+ * home network.
+ */
+export async function runConnectorAudioTranscribe(
+  prisma: PrismaClient,
+  input: ConnectorTranscribeInput,
+): Promise<ConnectorTranscribeResult> {
+  const payload: Record<string, unknown> = {
+    audio: input.audioBase64,
+    mimeType: input.mimeType,
+  };
+  if (input.model?.trim()) payload.model = input.model.trim();
+  if (input.language?.trim()) payload.language = input.language.trim();
+
+  const dispatched = await dispatchConnectorRequest(prisma, {
+    type: "audio_transcribe",
+    payload,
+    timeoutMs: input.timeoutMs ?? CONNECTOR_STT_TIMEOUT_MS,
   });
 
   const result = resultRecord(dispatched.result);

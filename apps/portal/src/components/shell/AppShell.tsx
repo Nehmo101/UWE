@@ -167,7 +167,9 @@ function SidebarNav({ groups }: { groups: ResolvedNavGroup[] }) {
                   "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
                   item.active
                     ? "bg-primary text-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-muted",
+                    // Sidebar-Fläche, nicht die Seiten-Fläche: der Hover muss
+                    // auf der dunklen Tinte sichtbar bleiben (beide Themes).
+                    : "text-sidebar-foreground hover:bg-sidebar-foreground/10",
                   item.status === "planned" && "opacity-60",
                 )}
               >

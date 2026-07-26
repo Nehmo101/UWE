@@ -1,10 +1,14 @@
 # Cloudflare Tunnel - UWE split-hostname deployment (recommended)
-# Landing: https://uweanddragons.org        -> Studio app (:3000) — public entry + sign-in
+# Landing: https://uweanddragons.org        -> Landing app (:3103) — public entry + sign-in
 # Studio:  https://studio.uweanddragons.org  -> Studio app (:3000)
 # Portal:  https://portal.uweanddragons.org  -> Portal app (:3001)
 # Brain:   https://brain.uweanddragons.org  -> Brain app  (:3002) — owner-only, opt-in (see below)
 #
-# One sign-in on the apex landing is valid on both subdomains when
+# The apex is its own process (apps/landing) so the main domain never serves
+# Studio code. It exposes exactly three routes: `/`, `/api/auth/enter` and
+# `/api/health`; anything else 308-redirects to the Studio host.
+#
+# One sign-in on the apex landing is valid on all subdomains when
 # SESSION_COOKIE_DOMAIN=.uweanddragons.org is set (see .env.production.example).
 #
 # Remotely-managed tunnels: apply via Cloudflare Zero Trust dashboard or
@@ -21,19 +25,21 @@ ingress:
   - hostname: portal.uweanddragons.org
     service: http://127.0.0.1:3001
   # Legacy /studio and /portal path bookmarks on the apex — keep these BEFORE the
-  # apex catch-all below so they still route to their app.
+  # apex catch-all below so they still route to their app. Without these rules the
+  # landing app would 308 them to the Studio host, which also works but costs a
+  # redirect round-trip.
   - hostname: uweanddragons.org
     path: /studio
     service: http://127.0.0.1:3000
   - hostname: uweanddragons.org
     path: /portal
     service: http://127.0.0.1:3001
-  # Apex root = the public landing page, served by the Studio app. Its
-  # /api/auth/enter signs the visitor in (Studio, Portal or Brain target) and,
-  # with a domain-wide session cookie, the redirect to studio./portal./brain.
+  # Apex root = the public landing page in its own app (apps/landing, :3103).
+  # Its /api/auth/enter signs the visitor in (Studio, Portal or Brain target)
+  # and, with a domain-wide session cookie, the redirect to studio./portal./brain.
   # stays logged in.
   - hostname: uweanddragons.org
-    service: http://127.0.0.1:3000
+    service: http://127.0.0.1:3103
   # Brain (Daily Admin OS + Personal Brain, :3002) holds the most sensitive data
   # in the installation. Publishing it is a deliberate opt-in, never a default:
   # every route enforces the `owner` role server-side, and

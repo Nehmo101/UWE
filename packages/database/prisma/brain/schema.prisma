@@ -36,6 +36,22 @@ enum AdminLinkTargetType {
   scan_document
 }
 
+enum BrainChatAttachmentKind {
+  image
+  document
+  audio
+}
+
+enum BrainChatContextMode {
+  plain
+  life_brain
+}
+
+enum BrainChatRole {
+  user
+  assistant
+}
+
 enum CalendarEventKind {
   session
   prep
@@ -1272,4 +1288,104 @@ model PantryItem {
   @@index([location])
   @@index([expiresAt])
   @@map("pantry_items")
+}
+
+/// Die im Brain hinterlegte KI: welches vom Command Center übertragene
+/// Connector-Modell der Assistent für Chat, Vision und Diktat benutzt.
+/// Singleton — `id` ist immer "default".
+model BrainAssistantProfile {
+  id String @id @default("default")
+
+  // Connector-Modelle leben in der Haupt-DB (uwe.db), daher kein Fremdschlüssel.
+  // `*Label` ist ein Snapshot des Anzeigenamens, damit die UI das hinterlegte
+  // Modell auch dann benennen kann, wenn der Connector gerade offline ist.
+  chatConnectorId   String? @map("chat_connector_id")
+  chatModelId       String? @map("chat_model_id")
+  chatModelLabel    String? @map("chat_model_label")
+  visionConnectorId String? @map("vision_connector_id")
+  visionModelId     String? @map("vision_model_id")
+  visionModelLabel  String? @map("vision_model_label")
+
+  /// Technischer Modellname für den Transkriptions-Endpunkt des Connectors.
+  sttModelName String? @map("stt_model_name")
+
+  systemPrompt       String               @default("") @map("system_prompt")
+  defaultContextMode BrainChatContextMode @default(plain) @map("default_context_mode")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("brain_assistant_profile")
+}
+
+model BrainChatConversation {
+  id          String               @id @default(cuid())
+  title       String
+  contextMode BrainChatContextMode @default(plain) @map("context_mode")
+
+  /// Optionaler Modell-Override für genau diese Unterhaltung; null = Profil.
+  connectorId String? @map("connector_id")
+  modelId     String? @map("model_id")
+  modelLabel  String? @map("model_label")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages    BrainChatMessage[]
+  attachments BrainChatAttachment[]
+
+  @@index([updatedAt])
+  @@map("brain_chat_conversations")
+}
+
+model BrainChatMessage {
+  id             String        @id @default(cuid())
+  conversationId String        @map("conversation_id")
+  role           BrainChatRole
+  content        String
+
+  /// Gesetzt bei Assistenten-Nachrichten: welches Modell geantwortet hat.
+  model String?
+  /// "llm" oder "vision" — welcher Connector-Pfad den Turn beantwortet hat.
+  route        String?
+  durationMs   Int?    @map("duration_ms")
+  /// Fehlertext statt Antwort (RTX offline, Timeout) — bleibt im Verlauf sichtbar.
+  errorMessage String? @map("error_message")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  conversation BrainChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments  BrainChatAttachment[]
+
+  @@index([conversationId, createdAt])
+  @@map("brain_chat_messages")
+}
+
+model BrainChatAttachment {
+  id String @id @default(cuid())
+
+  /// Anhänge werden im Composer hochgeladen, bevor die Nachricht existiert —
+  /// die Unterhaltung ist daher der Eigentümer, die Nachricht folgt beim Senden.
+  conversationId String  @map("conversation_id")
+  messageId      String? @map("message_id")
+
+  kind             BrainChatAttachmentKind
+  storageKey       String                  @map("storage_key")
+  mimeType         String                  @map("mime_type")
+  originalFilename String                  @map("original_filename")
+  sizeBytes        Int                     @map("size_bytes")
+
+  /// Vision-Beschreibung, PDF-/Text-Inhalt oder Transkript. Wird in Folge-Turns
+  /// als Text in den Prompt gehängt, damit das Bild nicht erneut reisen muss.
+  extractedText String? @map("extracted_text")
+  analysisJobId String? @map("analysis_job_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  conversation BrainChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message      BrainChatMessage?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([messageId])
+  @@map("brain_chat_attachments")
 }

@@ -5,6 +5,7 @@ import {
   applySecurityHeaders,
   evaluateStudioMiddleware,
   fetchMaintenanceMiddlewareDecision,
+  getUweDeploymentModel,
   getUweRuntimeConfig,
   isCrossSiteBrowserRequest,
   resolveLegacyPathRedirect,
@@ -79,6 +80,27 @@ export async function middleware(request: NextRequest) {
   const crossOriginError = rejectCrossOriginApiRequest(request);
   if (crossOriginError) {
     return crossOriginError;
+  }
+
+  // Bei getrennten Hostnamen liegt die öffentliche Startseite in ihrer eigenen
+  // App auf dem Apex — der Studio-Origin hat auf „/" nichts Öffentliches mehr.
+  // Anonyme Besucher hier schon in der Middleware zum Login schicken: `redirect()`
+  // in der Seite käme erst, wenn das Layout bereits streamt, und fiele dann auf
+  // einen Meta-Refresh mit sichtbarer Verzögerung zurück.
+  if (
+    request.nextUrl.pathname === "/" &&
+    getUweDeploymentModel() === "split-hostname" &&
+    !request.cookies.get(SESSION_COOKIE_NAME)?.value
+  ) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    return applySecurityHeaders(
+      NextResponse.redirect(loginUrl, 307),
+      process.env,
+      { allowYouTubeEmbeds: true },
+      request,
+    );
   }
 
   const pathname = request.nextUrl.pathname;

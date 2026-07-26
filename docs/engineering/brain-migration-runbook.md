@@ -109,6 +109,18 @@ gepinnt — ein neues Brain-Modell kann nicht stillschweigend entkommen.
   (+`.postgresql.prisma`) und schreibt die 45 Brain-Modelle + 15
   Rück-Relationen aus den Haupt-Schemas heraus. 15 Cross-Domain-FKs → opake,
   nullbare Skalare (siehe 3a), Enums werden mitkopiert.
+
+  > ⚠️ **Der Generator ist einmalig — nicht erneut ausführen.** Er liest die
+  > Brain-Modelle aus den *Haupt*-Schemas, die sie nach dem Lauf nicht mehr
+  > enthalten. Ein zweiter Lauf würde `prisma/brain/schema.prisma` also mit
+  > einer leeren Modell-Liste überschreiben. Der „AUTO-GENERATED … do not edit
+  > by hand“-Header der Brain-Schemas ist damit überholt: **neue Brain-Modelle
+  > werden direkt** in `prisma/brain/schema.prisma` **und**
+  > `prisma/brain/schema.postgresql.prisma` gepflegt, in
+  > `PRISMA_MODEL_BOUNDARIES` registriert (sonst schlägt
+  > `prisma-model-boundaries.sync.test.ts` fehl) und über
+  > `pnpm --filter @uwe/database db:migrate:brain` migriert. Beispiel: die vier
+  > `BrainAssistant*`/`BrainChat*`-Modelle des KI-Chats.
 - **Brain-Client:** `packages/database/src/brain-client.ts`
   (`getSharedBrainPrismaClient`/`brainPrisma`, `uwe-brain.db`, SQLite,
   loopback-only), Subpath `@uwe/database/brain-client`. `db:generate` erzeugt

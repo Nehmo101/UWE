@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { applySecurityHeaders, evaluateBrainMiddleware, resolveBrainPublicBaseUrl } from "@uwe/auth";
+import type { SecurityHeaderOptions } from "@uwe/auth/security-headers";
 import { isBrainEntryEnabled, resolveBrainExposure } from "@/src/lib/exposure";
+
+// The middleware re-applies the security headers on every response, so it must
+// carry the same options as next.config.ts — otherwise the stricter middleware
+// value wins and the assistant's dictation loses microphone access.
+const BRAIN_SECURITY_HEADER_OPTIONS: SecurityHeaderOptions = { allowMicrophone: true };
 
 // Brain binds to loopback (`next start --hostname 127.0.0.1`), so Next resolves
 // `request.nextUrl` to `localhost:<port>` and ignores the forwarded Host header —
@@ -46,7 +52,7 @@ export function middleware(request: NextRequest) {
     return applySecurityHeaders(
       NextResponse.json({ error: "Der Brain-Bereich ist deaktiviert." }, { status: 503 }),
       process.env,
-      {},
+      BRAIN_SECURITY_HEADER_OPTIONS,
       request,
     );
   }
@@ -63,14 +69,19 @@ export function middleware(request: NextRequest) {
 
   if (decision.action === "redirect-login") {
     const loginUrl = buildBrainLoginUrl(request, decision.redirectPath ?? "/login", pathname);
-    return applySecurityHeaders(NextResponse.redirect(loginUrl), process.env, {}, request);
+    return applySecurityHeaders(
+      NextResponse.redirect(loginUrl),
+      process.env,
+      BRAIN_SECURITY_HEADER_OPTIONS,
+      request,
+    );
   }
 
   if (decision.action === "block") {
     return applySecurityHeaders(
       NextResponse.json({ error: decision.error ?? "Zugriff verweigert." }, { status: decision.status ?? 403 }),
       process.env,
-      {},
+      BRAIN_SECURITY_HEADER_OPTIONS,
       request,
     );
   }
@@ -78,7 +89,7 @@ export function middleware(request: NextRequest) {
   return applySecurityHeaders(
     NextResponse.next({ request: { headers: requestHeaders } }),
     process.env,
-    {},
+    BRAIN_SECURITY_HEADER_OPTIONS,
     request,
   );
 }

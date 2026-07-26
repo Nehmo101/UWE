@@ -15,7 +15,9 @@
   --color-card-foreground: var(--uwe-fg);
   --color-popover: var(--uwe-panel);
   --color-popover-foreground: var(--uwe-fg);
-  --color-muted: var(--uwe-muted);
+  /* Flächen-Rolle, nicht der Text-Alias --uwe-muted — sonst sind bg-muted und
+     text-muted-foreground dieselbe Farbe (Kontrast 1:1). */
+  --color-muted: var(--uwe-muted-surface, var(--uwe-bg-elevated, transparent));
   --color-muted-foreground: var(--uwe-fg-muted);
   --color-border: var(--uwe-border);
   --color-input: var(--uwe-input-bg, var(--uwe-border));

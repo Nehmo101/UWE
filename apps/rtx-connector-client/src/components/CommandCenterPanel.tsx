@@ -109,6 +109,15 @@ function busyLabel(busy: BusyState, status: LocalHostStatus | null): string {
   }
 }
 
+/** Auswählbare Host-Logs. „landing" ist die Startseite auf dem Apex-Origin. */
+const LOG_TARGETS = [
+  { id: "command-center", label: "Einrichtung" },
+  { id: "studio", label: "Studio" },
+  { id: "portal", label: "Portal" },
+  { id: "brain", label: "Brain" },
+  { id: "landing", label: "Startseite" },
+] as const satisfies ReadonlyArray<{ id: LocalHostLogsResult["target"]; label: string }>;
+
 export function CommandCenterPanel({
   config,
   connectorStatus,
@@ -215,7 +224,7 @@ export function CommandCenterPanel({
   async function runAction(action: HostAction): Promise<LocalHostActionResult | null> {
     if (
       action === "setup" &&
-      !window.confirm("UWE neu einrichten / bauen? Das baut Studio, Portal und Brain neu und dauert einige Minuten.")
+      !window.confirm("UWE neu einrichten / bauen? Das baut Studio, Portal, Brain und die Startseite neu und dauert einige Minuten.")
     ) {
       return null;
     }
@@ -279,7 +288,7 @@ export function CommandCenterPanel({
   }
 
   async function runServiceAction(
-    serviceId: "studio" | "portal" | "brain",
+    serviceId: "studio" | "portal" | "brain" | "landing",
     action: "start" | "stop" | "restart",
   ) {
     setBusyService(`${serviceId}:${action}`);
@@ -610,7 +619,7 @@ export function CommandCenterPanel({
             </label>
             <label className="connector-checkbox">
               <input type="checkbox" checked={autoStartHost} onChange={(event) => setAutoStartHost(event.target.checked)} />
-              <span>Studio, Portal und Brain automatisch starten</span>
+              <span>Studio, Portal, Brain und Startseite automatisch starten</span>
             </label>
             <label className="connector-checkbox">
               <input type="checkbox" checked={autoStartTunnel} onChange={(event) => setAutoStartTunnel(event.target.checked)} />
@@ -655,8 +664,8 @@ export function CommandCenterPanel({
         <CardHeader><CardTitle>Host-Logs</CardTitle></CardHeader>
         <CardContent>
           <div className="connector-actions">
-            {(["command-center", "studio", "portal", "brain"] as const).map((target) => (
-              <Button key={target} variant={logTarget === target ? "secondary" : "ghost"} onClick={() => loadLogs(target)}>{target === "command-center" ? "Einrichtung" : target === "studio" ? "Studio" : target === "portal" ? "Portal" : "Brain"}</Button>
+            {LOG_TARGETS.map(({ id, label }) => (
+              <Button key={id} variant={logTarget === id ? "secondary" : "ghost"} onClick={() => loadLogs(id)}>{label}</Button>
             ))}
           </div>
           <pre className="connector-log-output">{logs.length ? logs.join("\n") : "Noch keine Logzeilen geladen."}</pre>

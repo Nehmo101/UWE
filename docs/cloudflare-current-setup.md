@@ -7,10 +7,13 @@ how to verify it in-app. The live status (read-only, no secrets) is shown under
 
 ## Architecture: split hostnames (preferred)
 
-UWE runs two Next.js apps that must never intercept each other:
+UWE runs Next.js apps that must never intercept each other, each on its own
+origin and in its own process:
 
-- Studio (DM/admin) — `https://studio.uweanddragons.org`
-- Portal (players) — `https://portal.uweanddragons.org`
+- Landing (public) — `https://uweanddragons.org` (`apps/landing`, `:3103`)
+- Studio (DM/admin) — `https://studio.uweanddragons.org` (`apps/studio`, `:3000`)
+- Portal (players) — `https://portal.uweanddragons.org` (`apps/portal`, `:3001`)
+- Brain (owner-only) — `https://brain.uweanddragons.org` (`apps/brain`, `:3002`)
 
 Recent work aligned the URL/config layer to this split-hostname model. Path-based
 routing under one host (`/studio`, `/portal`) is supported as a fallback (Studio
@@ -38,7 +41,8 @@ Set on the host (not committed). The in-app status reflects these:
 
 | Variable | Purpose | Recommended |
 |---|---|---|
-| `PUBLIC_BASE_URL` | Public origin of the deployment | `https://uweanddragons.org` (or studio host) |
+| `PUBLIC_BASE_URL` | Public origin of the deployment (the apex/landing origin) | `https://uweanddragons.org` (or studio host) |
+| `LANDING_PORT` | Port of the apex landing app (`apps/landing`) | `3103` |
 | `STUDIO_PATH` | Studio mount path (path-routing mode) | `/studio` or `/` (split host) |
 | `PORTAL_PATH` | Portal mount path (path-routing mode) | `/portal` or `/` (split host) |
 | `NEXT_PUBLIC_STUDIO_URL` | Absolute Studio URL for cross-app links | `https://studio.uweanddragons.org` |
@@ -52,12 +56,25 @@ Set on the host (not committed). The in-app status reflects these:
 
 ## Landing page + single sign-on across subdomains
 
-The apex `https://uweanddragons.org` serves the public **landing page** (the
-Studio app's root route `/`), routed to the Studio container (`:3000`) in the
-tunnel. A visitor chooses **UWE Studio** or **UWE Portal** and signs in in place;
-the landing's `POST /api/auth/enter` authenticates against UWE Core (Studio
-target requires GM access; Portal target accepts any active user), then the
-browser is sent to `studio.` / `portal.uweanddragons.org`.
+The apex `https://uweanddragons.org` serves the public **landing page** from its
+own app (`apps/landing`, `:3103`) — deliberately *not* from the Studio container,
+so the main domain never ships Studio code. A visitor chooses **UWE Studio**,
+**UWE Portal** or **UWE Brain** and signs in in place; the landing's
+`POST /api/auth/enter` authenticates against UWE Core (Studio/Brain targets
+require GM access; Portal accepts any active user), then the browser is sent to
+`studio.` / `portal.` / `brain.uweanddragons.org`.
+
+The apex exposes exactly three routes — `/`, `/api/auth/enter`, `/api/health`.
+Its middleware is a closed allowlist: unknown page paths 308-redirect to the
+Studio host (old `uweanddragons.org/today` bookmarks keep working), unknown API
+paths answer 404. Conversely, `studio.uweanddragons.org/` no longer renders the
+landing: anonymous visitors get a 307 to `/login`, signed-in ones go to the
+configured Studio entry page.
+
+Without split hostnames (`unified-path` or local development) there is no
+separate apex, so `apps/studio/app/page.tsx` keeps rendering the landing at `/`
+as before — that fallback is intact and covered by the deployment-model check in
+that file.
 
 For that redirect to stay signed in, set **`SESSION_COOKIE_DOMAIN=.uweanddragons.org`**
 so the session cookie is shared across all subdomains (SSO). Left unset, the
@@ -118,6 +135,13 @@ in-app Turnstile widget above.
 
 ## Acceptance checks
 
+- `https://uweanddragons.org/` opens the landing chooser; `/api/health` there
+  reports `"app": "UWE Landing"` (not "UWE Studio") — that is the check that the
+  apex really runs its own process.
+- `https://uweanddragons.org/today` (any non-landing path) 308-redirects to the
+  Studio host; `https://uweanddragons.org/api/admin/status` answers 404.
+- `https://studio.uweanddragons.org/` 307-redirects to `/login` when signed out —
+  the landing must not appear on the Studio host.
 - `https://…/studio` (or the studio host) opens Studio.
 - `https://…/portal` (or the portal host) opens the Portal login / "Meine Welten".
 - `/portal` never lands in Studio NotFound — Studio exposes a defensive redirect shim at `apps/studio/app/portal/page.tsx` that sends visitors to `NEXT_PUBLIC_PORTAL_URL` (split hostname) or the unified `PORTAL_PATH` mount.
@@ -130,7 +154,7 @@ Live checks on this host:
 | Check | Status |
 |---|---|
 | `cloudflared.service` | active, QUIC healthy |
-| Tunnel ingress (remote) | `studio.uweanddragons.org` → `:3000`; `uweanddragons.org` (+ `/portal`, `/studio`) → Portal/Studio |
+| Tunnel ingress (remote) | `studio.uweanddragons.org` → `:3000`; `uweanddragons.org` → Landing `:3103` (Stand 2026-07-26; davor Studio `:3000`) |
 | `portal.uweanddragons.org` | **pending** — DNS + Tunnel-Ingress via Dashboard oder `configure-cloudflare-tunnel.sh` |
 | UWE env | `NEXT_PUBLIC_STUDIO_URL=https://studio.uweanddragons.org`, `NEXT_PUBLIC_PORTAL_URL=https://portal.uweanddragons.org` |
 | Studio root | HTTP 200 (nach Service-Neustart mit aktuellem Build) |

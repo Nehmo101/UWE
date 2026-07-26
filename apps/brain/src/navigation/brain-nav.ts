@@ -34,6 +34,12 @@ export const BRAIN_NAV_SECTIONS: BrainNavSection[] = [
         keywords: ["life brain", "knowledge", "notizen", "fakten", "brain"],
       },
       {
+        href: "/ki-chat",
+        label: "KI-Chat",
+        icon: "◈",
+        keywords: ["ki", "ai", "chat", "assistent", "frage", "llm"],
+      },
+      {
         href: "/capture",
         label: "Capture",
         icon: "✎",

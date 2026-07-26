@@ -1,0 +1,1 @@
+-- ConnectorJobType.audio_transcribe: SQLite speichert Enums als TEXT (kein DDL nötig).

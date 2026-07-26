@@ -23,6 +23,7 @@ import { CookbookPanel } from "./components/CookbookPanel";
 import { DownloadsPanel } from "./components/DownloadsPanel";
 import { HostPanel } from "./components/HostPanel";
 import { ImagePanel } from "./components/ImagePanel";
+import { SpeechPanel } from "./components/SpeechPanel";
 import { JobsPanel } from "./components/JobsPanel";
 import { LogsPanel } from "./components/LogsPanel";
 import { ModelLibraryPanel } from "./components/ModelLibraryPanel";
@@ -441,6 +442,12 @@ export default function App() {
           onChange={updateConfig}
           onSave={persistConfig}
           onTest={testImage}
+        />
+        <SpeechPanel
+          config={config}
+          busy={busyAction !== null}
+          onChange={updateConfig}
+          onSave={persistConfig}
         />
       </>
     );

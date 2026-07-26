@@ -7,6 +7,8 @@ UWE (Universeller Welten-Editor) ist ein selbst-gehostetes Alltags- und Hobby-Be
 ```
 apps/studio   → DM-App (Port 3000) — Weltbearbeitung, Admin, AI, Daily Admin OS
 apps/portal   → Spieler-Wiki (Port 3001) — nur gefilterte, freigegebene Inhalte
+apps/brain    → Owner-only Brain (Port 3002) — privater Daily-Admin-/Wissensbereich
+apps/landing  → Öffentliche Startseite (Port 3103) — Apex-Origin, genau drei Routen
 packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 ```
 
@@ -22,7 +24,8 @@ packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 | `@uwe/assets` | Upload-Pfade, MIME-Validierung |
 | `@uwe/shared-ui` | Geteilte React-Komponenten (AppShell, Nav) |
 | `@uwe/shared-utils` | Framework-agnostische Utilities (Slugs, Lookup-Keys) |
-| Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs` |
+| `@uwe/mcp` | MCP-Server für Studio/Portal/Brain (HTTP-Clients, kein DB-Zugriff) |
+| Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs`, `brain-assistant` |
 
 ### Neuen Code platzieren
 
@@ -108,4 +111,5 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Architektur
 - [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
+- [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain`
 - [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (23 Skills)

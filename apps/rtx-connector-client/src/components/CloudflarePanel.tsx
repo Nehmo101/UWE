@@ -58,7 +58,7 @@ export function CloudflarePanel() {
         <div>
           <span className="connector-kicker">CLOUDFLARE · TUNNEL · ÖFFENTLICHE HOSTS</span>
           <h3>Cloudflare-Tunnel</h3>
-          <p>Startet den lokalen cloudflared-Connector, der Studio, Portal und Brain öffentlich erreichbar macht.</p>
+          <p>Startet den lokalen cloudflared-Connector, der Startseite, Studio, Portal und Brain öffentlich erreichbar macht.</p>
         </div>
         <div className="command-center-hero-status">
           <HealthBadge status={running ? "ok" : "degraded"} label={running ? "Tunnel läuft" : "Tunnel gestoppt"} />
