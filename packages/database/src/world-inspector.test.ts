@@ -10,7 +10,6 @@ import {
 } from "./world-inspector";
 import { createPrismaClient } from "./client";
 import { createUweRepository } from "./repository";
-import { createShareLinkService } from "./share-link-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 function makePage(overrides: Partial<InspectorPageInput>): InspectorPageInput {
@@ -42,7 +41,7 @@ describe("world-inspector findings", () => {
       }),
     ];
 
-    const findings = buildSafetyFindings("terra", pages, [], { publicSharingEnabled: true });
+    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
     const leak = findings.find((f) => f.code === "gm_note_player_visible");
     assert.ok(leak);
     assert.equal(leak.severity, "critical");
@@ -59,7 +58,7 @@ describe("world-inspector findings", () => {
       }),
     ];
 
-    const findings = buildSafetyFindings("terra", pages, [], { publicSharingEnabled: true });
+    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
     assert.ok(findings.some((f) => f.code === "secret_page_portal_visible"));
   });
 
@@ -88,7 +87,7 @@ describe("world-inspector findings", () => {
       }),
     ];
 
-    const findings = buildSafetyFindings("terra", pages, [], { publicSharingEnabled: true });
+    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
     const hidden = findings.find((f) => f.code === "hidden_link_in_portal_page");
     assert.ok(hidden);
     assert.equal(hidden.severity, "info");
@@ -115,39 +114,10 @@ describe("world-inspector findings", () => {
       }),
     ];
 
-    const findings = buildSafetyFindings("terra", pages, [], { publicSharingEnabled: true });
+    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
     assert.ok(!findings.some((f) => f.code === "hidden_link_in_portal_page"));
   });
 
-  it("warns about active share links without password and expiry", () => {
-    const findings = buildSafetyFindings(
-      "terra",
-      [],
-      [
-        {
-          id: "link-1",
-          targetType: "page",
-          targetTitle: "Validori",
-          enabled: true,
-          expiresAt: null,
-          hasPassword: false,
-        },
-        {
-          id: "link-2",
-          targetType: "page",
-          targetTitle: "Arbor",
-          enabled: true,
-          expiresAt: null,
-          hasPassword: true,
-        },
-      ],
-      { publicSharingEnabled: true },
-    );
-
-    const unprotected = findings.filter((f) => f.code === "share_link_unprotected");
-    assert.equal(unprotected.length, 1);
-    assert.match(unprotected[0].message, /Validori/);
-  });
 
   it("detects broken wiki links", () => {
     const pages = [
@@ -261,7 +231,7 @@ describe("world-inspector service", () => {
 
     const world = await repo.createWorld({ name: "Inspector Test", slug: "inspector-test" });
 
-    const visiblePage = await repo.createPage({
+    await repo.createPage({
       worldId: world.id,
       title: "Hafenstadt",
       slug: "hafenstadt",
@@ -282,12 +252,6 @@ describe("world-inspector service", () => {
       visibility: "dm_only",
       publishStatus: "draft",
     });
-
-    await createShareLinkService(db).createShareLink({
-      worldId: world.id,
-      targetType: "page",
-      targetId: visiblePage.id,
-    });
   });
 
   it("builds a full report for a world", async () => {
@@ -299,12 +263,7 @@ describe("world-inspector service", () => {
     assert.equal(report.visiblePages[0].visibleBlockCount, 1);
     assert.equal(report.visiblePages[0].hiddenBlockCount, 1);
 
-    assert.equal(report.shareLinks.length, 1);
-    assert.equal(report.shareLinks[0].targetTitle, "Hafenstadt");
-    assert.equal(report.shareLinks[0].active, true);
 
-    // Unprotected share link must be flagged.
-    assert.ok(report.safetyFindings.some((f) => f.code === "share_link_unprotected"));
   });
 
   it("returns null for unknown worlds", async () => {

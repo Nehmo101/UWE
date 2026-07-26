@@ -8,7 +8,6 @@ import type {
 import { navCategoryForPageType, type NavCategory } from "./page-types";
 import { isPageAccessible } from "./permissions";
 import { SettingsService } from "./settings-service";
-import { isShareLinkActive } from "./share-link-service";
 
 /**
  * World Overview: aggregates everything a DM needs at a glance for one world.
@@ -61,7 +60,6 @@ export interface WorldOverviewData {
     portalEnabled: boolean;
     publicSharingEnabled: boolean;
     visiblePageCount: number;
-    activeShareLinkCount: number;
   };
   nextSession: WorldOverviewSession | null;
   openPlots: WorldOverviewOpenPlot[];
@@ -88,7 +86,7 @@ export class WorldOverviewService {
 
     const settings = await new SettingsService(this.db).getSettings();
 
-    const [pages, campaignCount, assetCount, gameSessions, notesForReview, shareLinks] =
+    const [pages, campaignCount, assetCount, gameSessions, notesForReview] =
       await Promise.all([
         this.db.page.findMany({
           where: { worldId: world.id },
@@ -118,10 +116,6 @@ export class WorldOverviewService {
         }),
         this.db.playerNote.count({
           where: { worldId: world.id, status: "visible_to_dm" },
-        }),
-        this.db.shareLink.findMany({
-          where: { worldId: world.id },
-          select: { enabled: true, expiresAt: true },
         }),
       ]);
 
@@ -190,7 +184,6 @@ export class WorldOverviewService {
         portalEnabled: settings.portal.portalEnabled,
         publicSharingEnabled: settings.portal.publicSharingEnabled,
         visiblePageCount,
-        activeShareLinkCount: shareLinks.filter((link) => isShareLinkActive(link)).length,
       },
       nextSession,
       openPlots,

@@ -24,7 +24,6 @@ export interface WorldShellProps {
   breadcrumb?: React.ReactNode;
   contextPanel?: React.ReactNode;
   footer?: React.ReactNode;
-  openReviewCount?: number;
   navMode?: "full" | "live";
   liveSessionId?: string;
   children: React.ReactNode;
@@ -37,7 +36,6 @@ export function WorldShell({
   breadcrumb,
   contextPanel,
   footer,
-  openReviewCount,
   navMode = "full",
   liveSessionId,
   children,
@@ -62,9 +60,9 @@ export function WorldShell({
     const base =
       navMode === "live" && liveSessionId
         ? worldLiveNav(worldSlug, liveSessionId, pathname)
-        : worldSidebar(worldSlug, pathname, openReviewCount);
+        : worldSidebar(worldSlug, pathname);
     return navMode === "live" ? base : filterNavGroups(base, hiddenNavIds);
-  }, [hiddenNavIds, liveSessionId, navMode, openReviewCount, pathname, worldSlug]);
+  }, [hiddenNavIds, liveSessionId, navMode, pathname, worldSlug]);
 
   return (
     <AppShell

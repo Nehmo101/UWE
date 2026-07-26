@@ -341,18 +341,6 @@ export const TOOLS_NAV: NavGroup[] = [
     title: TOOLS_AUTOMATION,
     items: [
       {
-        id: "tools-reviews",
-        label: "Reviews",
-        href: "/admin/reviews",
-        icon: "check-check",
-        group: TOOLS_AUTOMATION,
-        section: TOOLS,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "studio",
-        keywords: ["reviews", "freigabe"],
-      },
-      {
         id: "tools-agent-jobs",
         label: "Cursor Agent Jobs",
         href: "/admin/agent-jobs",

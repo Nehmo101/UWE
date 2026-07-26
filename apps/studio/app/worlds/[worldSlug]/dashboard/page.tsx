@@ -89,7 +89,6 @@ export default async function WorldDashboardPage({ params }: Props) {
                 Sichtbare Seiten: <strong>{overview.portal.visiblePageCount}</strong>
               </li>
               <li>
-                Aktive Share-Links: <strong>{overview.portal.activeShareLinkCount}</strong>
               </li>
               <li>
                 Gastmodus: <strong>{overview.world.guestModeEnabled ? "an" : "aus"}</strong>

@@ -879,7 +879,6 @@ export type {
   InspectorSeverity,
   PortalVisibleAsset,
   PortalVisiblePage,
-  ShareLinkOverview,
   WorldInspectorReport,
 } from "./world-inspector";
 
@@ -1132,22 +1131,7 @@ export {
   type LabelExportWarning,
 } from "./label-export-warnings";
 
-export {
-  createShareLinkService,
-  ShareLinkService,
-  buildShareUrl,
-  isShareLinkActive,
-} from "./share-link-service";
 
-export type {
-  CreateShareLinkInput,
-  UpdateShareLinkInput,
-  ShareLinkValidationResult,
-  ShareResolvedTarget,
-  ShareAccessMeta,
-  ShareLink as DbShareLink,
-  ShareTargetType,
-} from "./share-link-service";
 
 export {
   createSettingsService,
@@ -1382,28 +1366,9 @@ export {
   type StudioWorldDashboardWidgetType,
 } from "./dashboard-layout-types";
 
-export {
-  createReviewService,
-  ReviewService,
-  CONTENT_REVIEW_STATUS_LABELS,
-  CONTENT_REVIEW_SOURCE_LABELS,
-} from "./review-service";
 
-export type {
-  ContentReviewView,
-  ReviewCommentView,
-  CreateContentReviewInput,
-  ListReviewsOptions,
-} from "./review-service";
 
-export {
-  resolveReview,
-  syncAiProposalReview,
-  syncPlayerNoteReview,
-  createPortalUnlockReview,
-} from "./review-bridge";
 
-export type { ResolveReviewResult } from "./review-bridge";
 
 export {
   createSpotifyConnectionService,

@@ -15,7 +15,6 @@ const COMPOSE_KINDS = new Set<MailComposeKind>([
   "session_recap",
   "session_reminder",
   "handout",
-  "share_link",
   "contract_reminder",
   "backup_warning",
   "system_warning",
@@ -26,7 +25,6 @@ const KIND_LABELS: Record<MailComposeKind, string> = {
   session_recap: "Session-Recap",
   session_reminder: "Session-Erinnerung",
   handout: "Handout",
-  share_link: "Player-Preview-Link",
   contract_reminder: "Vertragserinnerung",
   backup_warning: "Backup-Warnung",
   system_warning: "Systemwarnung",
@@ -37,7 +35,6 @@ const WORLD_REQUIRED_KINDS = new Set<MailComposeKind>([
   "session_recap",
   "session_reminder",
   "handout",
-  "share_link",
 ]);
 
 interface Props {

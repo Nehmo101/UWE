@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { generateSessionToken } from "@uwe/auth/server";
 import type { PrismaClient } from "@uwe/database/server";
 import type { BrainPrismaClient } from "@uwe/database/brain-client";
 import { createSettingsService, pickUniqueSlug } from "@uwe/database/server";
@@ -709,37 +708,6 @@ export async function executeRestore(
       },
     });
     result.created++;
-  }
-
-  for (const link of bundle.data.shareLinks ?? []) {
-    const worldId = idMap.get(link.worldId);
-    const targetId = idMap.get(link.targetId);
-    if (!worldId || !targetId) continue;
-
-    const newToken = generateSessionToken();
-    await db.shareLink.create({
-      data: {
-        id: remapId(idMap, link.id),
-        worldId,
-        targetType: link.targetType as never,
-        targetId,
-        token: newToken,
-        expiresAt: link.expiresAt ? new Date(link.expiresAt) : null,
-        passwordHash: null,
-        readOnly: link.readOnly,
-        logAccess: link.logAccess,
-        enabled: link.enabled,
-      },
-    });
-    result.created++;
-    result.items.push({
-      entityType: "shareLink",
-      identifier: newToken,
-      status: "created",
-      error: link.hasPassword
-        ? "Neuer Token generiert; Passwort muss neu gesetzt werden."
-        : "Neuer Share-Link-Token generiert.",
-    });
   }
 
   // Daily Admin OS section is optional — archives created before it existed restore unchanged.

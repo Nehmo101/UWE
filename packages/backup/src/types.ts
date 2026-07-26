@@ -14,7 +14,6 @@ export interface BackupStats {
   soundboardButtons: number;
   pageTemplates: number;
   worldMemberships: number;
-  shareLinks: number;
   playerNotes: number;
   /** Total Daily-Admin-OS records (optional — older backups do not have it). */
   dailyAdminEntities?: number;
@@ -32,7 +31,6 @@ export interface BackupManifest {
   includesAuthSessions: boolean;
   includesSettings: boolean;
   includesPlayerNotes?: boolean;
-  shareLinkTokensRegenerated?: boolean;
   encrypted?: boolean;
   stats: BackupStats;
   assetFiles: string[];
@@ -261,20 +259,6 @@ export interface BackupSettingsRecord {
   storage: Record<string, unknown>;
   backup: Record<string, unknown>;
   privacy: Record<string, unknown>;
-}
-
-export interface BackupShareLinkRecord {
-  id: string;
-  worldId: string;
-  targetType: string;
-  targetId: string;
-  expiresAt: string | null;
-  hasPassword: boolean;
-  readOnly: boolean;
-  logAccess: boolean;
-  enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface BackupPlayerNoteRecord {
@@ -541,7 +525,6 @@ export interface BackupData {
   sessionUnlocks: BackupSessionUnlockRecord[];
   users: BackupUserRecord[];
   pageTemplates?: BackupPageTemplateRecord[];
-  shareLinks?: BackupShareLinkRecord[];
   playerNotes?: BackupPlayerNoteRecord[];
   /** Optional — archives created before Daily Admin OS support omit this section. */
   dailyAdmin?: BackupDailyAdminData;

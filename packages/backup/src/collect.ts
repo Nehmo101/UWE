@@ -21,7 +21,6 @@ import type {
   BackupPageTemplateRecord,
   BackupPlayerNoteRecord,
   BackupSessionUnlockRecord,
-  BackupShareLinkRecord,
   BackupSettingsRecord,
   BackupSoundboardButtonPageLinkRecord,
   BackupSoundboardButtonRecord,
@@ -66,7 +65,6 @@ function collectStats(data: BackupData): BackupStats {
     soundboardButtons: data.soundboardButtons.length,
     pageTemplates: data.pageTemplates?.length ?? 0,
     worldMemberships: data.worldMemberships.length,
-    shareLinks: data.shareLinks?.length ?? 0,
     playerNotes: data.playerNotes?.length ?? 0,
     dailyAdminEntities: countDailyAdminEntities(data.dailyAdmin),
   };
@@ -561,10 +559,6 @@ export async function collectBackupData(
       ? await db.pageTemplate.findMany({ where: { isSystem: false } })
       : [];
 
-  const shareLinks = await db.shareLink.findMany({
-    where: { worldId: { in: worldIds } },
-  });
-
   const playerNotes =
     scope.includePlayerNotes === true
       ? await db.playerNote.findMany({
@@ -840,21 +834,6 @@ export async function collectBackupData(
         isActive: template.isActive,
         createdAt: template.createdAt.toISOString(),
         updatedAt: template.updatedAt.toISOString(),
-      }),
-    ),
-    shareLinks: shareLinks.map(
-      (link): BackupShareLinkRecord => ({
-        id: link.id,
-        worldId: link.worldId,
-        targetType: link.targetType,
-        targetId: link.targetId,
-        expiresAt: toIso(link.expiresAt),
-        hasPassword: Boolean(link.passwordHash),
-        readOnly: link.readOnly,
-        logAccess: link.logAccess,
-        enabled: link.enabled,
-        createdAt: link.createdAt.toISOString(),
-        updatedAt: link.updatedAt.toISOString(),
       }),
     ),
     playerNotes: playerNotes.map(

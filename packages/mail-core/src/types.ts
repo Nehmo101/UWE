@@ -57,7 +57,6 @@ export type MailComposeKind =
   | "session_recap"
   | "session_reminder"
   | "handout"
-  | "share_link"
   | "contract_reminder"
   | "backup_warning"
   | "system_warning"

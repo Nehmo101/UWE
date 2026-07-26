@@ -5,7 +5,6 @@ import type {
   ContentBlockType,
   PageType,
   PublishStatus,
-  ShareTargetType,
   Visibility,
 } from "./generated/prisma/client";
 import { normalizeLookupKey, parseWikiLinks } from "./page-service";
@@ -17,7 +16,6 @@ import {
   type PortalAccessOptions,
 } from "./permissions";
 import { SettingsService } from "./settings-service";
-import { isShareLinkActive } from "./share-link-service";
 import { getExtendedCanonFindings, mergeCanonFindings } from "./canon-conflict-service";
 
 /**
@@ -37,7 +35,6 @@ export type InspectorSeverity = "critical" | "warning" | "info";
 export type InspectorFindingCode =
   | "gm_note_player_visible"
   | "secret_page_portal_visible"
-  | "share_link_unprotected"
   | "hidden_link_in_portal_page"
   | "broken_wiki_link"
   | "duplicate_name"
@@ -114,15 +111,6 @@ function findingId(
   return [code, ...parts.filter(Boolean)].join(":");
 }
 
-export interface InspectorShareLinkInput {
-  id: string;
-  targetType: ShareTargetType;
-  targetTitle: string;
-  enabled: boolean;
-  expiresAt: Date | null;
-  hasPassword: boolean;
-}
-
 export interface PortalVisiblePage {
   title: string;
   href: string;
@@ -137,15 +125,6 @@ export interface PortalVisibleAsset {
   visibility: Visibility;
 }
 
-export interface ShareLinkOverview {
-  id: string;
-  targetType: ShareTargetType;
-  targetTitle: string;
-  active: boolean;
-  hasPassword: boolean;
-  expiresAt: Date | null;
-}
-
 export interface WorldInspectorReport {
   worldSlug: string;
   portal: {
@@ -156,7 +135,6 @@ export interface WorldInspectorReport {
   visiblePages: PortalVisiblePage[];
   visibleAssets: PortalVisibleAsset[];
   dmOnlyAssetCount: number;
-  shareLinks: ShareLinkOverview[];
   safetyFindings: InspectorFinding[];
   canonFindings: InspectorFinding[];
 }
@@ -394,7 +372,6 @@ export function buildCanonFindings(
 export function buildSafetyFindings(
   worldSlug: string,
   pages: InspectorPageInput[],
-  shareLinks: InspectorShareLinkInput[],
   portalOptions: PortalAccessOptions,
 ): InspectorFinding[] {
   const findings: InspectorFinding[] = [];
@@ -468,20 +445,6 @@ export function buildSafetyFindings(
     }
   }
 
-  for (const link of shareLinks) {
-    const active = isShareLinkActive({ enabled: link.enabled, expiresAt: link.expiresAt });
-    if (active && !link.hasPassword && !link.expiresAt) {
-      findings.push({
-        id: findingId("share_link_unprotected", [link.id]),
-        code: "share_link_unprotected",
-        severity: "warning",
-        message: `Share-Link für „${link.targetTitle}" ist aktiv, läuft nie ab und hat kein Passwort.`,
-        pageTitle: link.targetTitle,
-        fixes: [],
-      });
-    }
-  }
-
   return sortFindings(findings);
 }
 
@@ -497,15 +460,11 @@ export class WorldInspectorService {
       publicSharingEnabled: settings.portal.publicSharingEnabled,
     };
 
-    const [rawPages, rawShareLinks, assets, explicitLinks, campaigns] = await Promise.all([
+    const [rawPages, assets, explicitLinks, campaigns] = await Promise.all([
       this.db.page.findMany({
         where: { worldId: world.id },
         include: { contentBlocks: { orderBy: { sortOrder: "asc" } } },
         orderBy: [{ title: "asc" }],
-      }),
-      this.db.shareLink.findMany({
-        where: { worldId: world.id },
-        orderBy: { createdAt: "desc" },
       }),
       this.db.asset.findMany({
         where: { worldId: world.id },
@@ -541,20 +500,6 @@ export class WorldInspectorService {
       })),
     }));
 
-    const pageTitleById = new Map(pages.map((page) => [page.id, page.title]));
-    const assetTitleById = new Map(assets.map((asset) => [asset.id, asset.title]));
-
-    const shareLinkInputs: InspectorShareLinkInput[] = rawShareLinks.map((link) => ({
-      id: link.id,
-      targetType: link.targetType,
-      targetTitle:
-        pageTitleById.get(link.targetId) ??
-        assetTitleById.get(link.targetId) ??
-        "Unbekanntes Ziel",
-      enabled: link.enabled,
-      expiresAt: link.expiresAt,
-      hasPassword: Boolean(link.passwordHash),
-    }));
 
     const visiblePages: PortalVisiblePage[] = pages
       .filter((page) => isPageAccessible(page, "portal", portalOptions))
@@ -589,15 +534,7 @@ export class WorldInspectorService {
       visiblePages,
       visibleAssets,
       dmOnlyAssetCount: assets.length - visibleAssets.length,
-      shareLinks: shareLinkInputs.map((link) => ({
-        id: link.id,
-        targetType: link.targetType,
-        targetTitle: link.targetTitle,
-        active: isShareLinkActive({ enabled: link.enabled, expiresAt: link.expiresAt }),
-        hasPassword: link.hasPassword,
-        expiresAt: link.expiresAt,
-      })),
-      safetyFindings: buildSafetyFindings(worldSlug, pages, shareLinkInputs, portalOptions),
+      safetyFindings: buildSafetyFindings(worldSlug, pages, portalOptions),
       canonFindings: mergeCanonFindings(
         buildCanonFindings(worldSlug, pages, explicitLinks, { campaigns }),
         await getExtendedCanonFindings(this.db, worldSlug, pages),

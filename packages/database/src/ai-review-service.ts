@@ -21,7 +21,6 @@ import { buildPageUrl } from "./page-types";
 import { UweRepository } from "./repository";
 import { toPrismaJsonValue, parseStringArray } from "./json-utils";
 import { createUndoService } from "./undo-service";
-import { syncAiProposalReview } from "./review-bridge";
 import { createWorldEventService } from "./world-event-service";
 import { parseInGameDate, type InGameDate } from "./world-calendar-service";
 import type { Visibility } from "./generated/prisma/client";
@@ -138,21 +137,6 @@ export class AiReviewService {
       include: { aiRun: { include: { world: true, page: true } } },
     });
 
-    const originalContent = patch.payload.originalContent ?? input.originalContent ?? "";
-    await syncAiProposalReview(this.db, {
-      proposalId: proposal.id,
-      worldId: input.worldId,
-      worldSlug: proposal.aiRun.world?.slug ?? null,
-      title: input.title ?? `KI-Vorschlag (${input.taskType})`,
-      summary: input.resultText.slice(0, 200),
-      resultText: input.resultText,
-      originalContent,
-      proposedByUserId: run.userId ?? null,
-      targetHref: proposal.aiRun.page
-        ? `${buildPageUrl(proposal.aiRun.world?.slug ?? "", proposal.aiRun.page.type, proposal.aiRun.page.slug)}/page-review/${proposal.aiRun.page.id}`
-        : null,
-    });
-
     return {
       runId: input.aiRunId,
       proposal: this.toView(proposal),
@@ -222,14 +206,6 @@ export class AiReviewService {
       });
 
       if (json.status !== "applied" && json.status !== "discarded") {
-        await syncAiProposalReview(this.db, {
-          proposalId: json.id,
-          worldId: run.worldId,
-          title: json.label,
-          summary: json.content.slice(0, 200),
-          resultText: json.content,
-          proposedByUserId: run.userId ?? null,
-        });
       }
     }
   }

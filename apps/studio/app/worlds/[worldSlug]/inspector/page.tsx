@@ -45,7 +45,6 @@ const SEVERITY_BADGE_VARIANT: Record<InspectorSeverity, "danger" | "warning" | "
   info: "info",
 };
 
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
 const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
 const TD_CLASS = "border-b border-border/60 px-3 py-2";
@@ -130,7 +129,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
   const warningCount =
     report.safetyFindings.filter((f) => f.severity === "warning").length +
     report.canonFindings.filter((f) => f.severity === "warning").length;
-  const activeShareLinks = report.shareLinks.filter((link) => link.active);
 
   return (
     <WorldShell
@@ -177,7 +175,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
           { label: "Kritisch", value: criticalCount },
           { label: "Warnungen", value: warningCount },
           { label: "Sichtbare Seiten", value: report.visiblePages.length },
-          { label: "Aktive Share-Links", value: activeShareLinks.length },
         ]}
       />
 
@@ -238,41 +235,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Share-Links</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {report.shareLinks.length === 0 ? (
-              <OkNote>Keine Share-Links vorhanden.</OkNote>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Ziel</th>
-                      <th className={TH_CLASS}>Status</th>
-                      <th className={TH_CLASS}>Passwort</th>
-                      <th className={TH_CLASS}>Ablauf</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.shareLinks.map((link) => (
-                      <tr key={link.id}>
-                        <td className={TD_CLASS}>{link.targetTitle}</td>
-                        <td className={TD_CLASS}>{link.active ? "Aktiv" : "Inaktiv"}</td>
-                        <td className={TD_CLASS}>{link.hasPassword ? "Ja" : "Nein"}</td>
-                        <td className={TD_CLASS}>
-                          {link.expiresAt ? DATE_FORMAT.format(link.expiresAt) : "Nie"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader>

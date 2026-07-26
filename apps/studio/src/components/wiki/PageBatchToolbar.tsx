@@ -7,8 +7,6 @@ import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
 import type { PageBulkOperation } from "@uwe/database/page-bulk";
 import { bulkUpdatePagesAction } from "@/app/page-bulk-actions";
 import { PageBatchConvertPanel } from "./PageBatchConvertPanel";
-import { PageBatchAiPanel } from "./PageBatchAiPanel";
-import type { PageAiReviewAction } from "@uwe/page-ai-review";
 
 /** "convert" und KI-Aktionen sind keine deklarativen Feldänderungen — eigene Panels. */
 type OpKind = PageBulkOperation["kind"] | "convert" | "ki_format" | "ki_tags" | "ki_convert";
@@ -249,20 +247,6 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
         />
       )}
 
-      {(kind === "ki_format" || kind === "ki_tags" || kind === "ki_convert") && (
-        <PageBatchAiPanel
-          worldSlug={worldSlug}
-          selectedIds={selectedIds}
-          action={
-            (kind === "ki_format"
-              ? "format"
-              : kind === "ki_tags"
-                ? "tags"
-                : "convert") satisfies PageAiReviewAction
-          }
-          clearSelection={clearSelection}
-        />
-      )}
     </div>
   );
 }

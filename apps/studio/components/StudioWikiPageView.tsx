@@ -12,7 +12,6 @@ import {
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
-import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import { Alert, buttonVariants } from "@/src/components/ui";
 import {
   buildPageGraph,
@@ -20,18 +19,15 @@ import {
   buildPageUrl,
   createAuthService,
   createPrismaClient,
-  createShareLinkService,
   getAppRepository,
   navCategoryForPageType,
   NAV_CATEGORY_LABELS,
   parseStringArray,
   type NavCategory,
   type PageWithBlocks,
-  type ShareTargetType,
 } from "@uwe/database/server";
 import { buildPageGraphForViewer } from "@uwe/database/graph-service";
 import { buildPageViewForViewer } from "@uwe/database/page-viewer-service";
-import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "@/src/lib/page-preview";
 import { describePreviewVisibilityGate } from "@/src/lib/preview-visibility-reason";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
@@ -131,43 +127,7 @@ export async function StudioWikiPageView({
       pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "dm", "neighbors");
     }
 
-    const shareTargetType: ShareTargetType =
-      rawPage.type === "handout" ? "handout" : "page";
-    const returnPath = buildPageUrl(worldSlug, rawPage.type, slug);
     const pageHref = buildPageUrl(worldSlug, rawPage.type, slug);
-
-    let shareLinks: Array<{
-      id: string;
-      token: string;
-      enabled: boolean;
-      expiresAt: string | null;
-      readOnly: boolean;
-      logAccess: boolean;
-      hasPassword: boolean;
-      createdAt: string;
-    }> = [];
-    let previewHref: string | undefined;
-
-    const shareService = createShareLinkService(db);
-    const links = await shareService.listShareLinksForTarget(
-      world.id,
-      shareTargetType,
-      rawPage.id,
-    );
-    shareLinks = links.map((link) => ({
-      id: link.id,
-      token: link.token,
-      enabled: link.enabled,
-      expiresAt: link.expiresAt?.toISOString() ?? null,
-      readOnly: link.readOnly,
-      logAccess: link.logAccess,
-      hasPassword: Boolean(link.passwordHash),
-      createdAt: link.createdAt.toISOString(),
-    }));
-    const activeLink = links.find((link) => link.enabled);
-    if (activeLink) {
-      previewHref = getShareLinkPublicUrl(activeLink.token);
-    }
 
     const dmPage = isPlayerPreview ? null : rawPage;
     const useMockAi = process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
@@ -252,17 +212,6 @@ export async function StudioWikiPageView({
                       revealState={dmPage.revealState}
                     />
                   </SidebarSection>
-                  <Collapsible variant="sidebar" title="Freigabe" defaultOpen={false}>
-                    <ShareLinkPanel
-                      worldId={world.id}
-                      worldSlug={worldSlug}
-                      targetType={shareTargetType}
-                      targetId={rawPage.id}
-                      returnPath={returnPath}
-                      links={shareLinks}
-                      previewHref={previewHref}
-                    />
-                  </Collapsible>
                   <Collapsible variant="sidebar" title="KI & Assistenz" defaultOpen={false}>
                     <MobileAiPromptPanel
                       worldSlug={worldSlug}

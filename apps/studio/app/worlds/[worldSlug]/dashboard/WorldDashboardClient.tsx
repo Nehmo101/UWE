@@ -54,7 +54,6 @@ export interface WorldDashboardClientProps {
     portal: {
       portalEnabled: boolean;
       visiblePageCount: number;
-      activeShareLinkCount: number;
     };
     world: { guestModeEnabled: boolean };
     nextSession: {
@@ -173,7 +172,7 @@ export function WorldDashboardClient({
               <strong>{overview.portal.visiblePageCount}</strong> sichtbare Seiten
             </p>
             <p className="text-sm text-muted-foreground">
-              {overview.portal.activeShareLinkCount} Share-Links · Portal{" "}
+              Portal{" "}
               {overview.portal.portalEnabled ? "aktiv" : "aus"}
             </p>
             <Link className={cn(buttonVariants({ variant: "ghost" }))} href={`/worlds/${worldSlug}/inspector`}>

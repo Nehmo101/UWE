@@ -23,7 +23,6 @@ export function worldDmToolQuickLinks(worldSlug: string): { label: string; href:
     "world-prepare-session",
     "world-one-shot",
     "world-open-items",
-    "world-page-review",
     "world-quality",
     "world-inspector",
     "world-roll-tables",
@@ -58,7 +57,6 @@ export type WorldNavKey =
   | "backup"
   | "new-page"
   | "radar"
-  | "page-review"
   | "atlas"
   | "magic-items"
   | "prepare-session"
@@ -173,7 +171,6 @@ export function worldBottomNavKey(active: WorldNavKey, isSearching = false): Wor
     active === "graph" ||
     active === "atlas" ||
     active === "magic-items" ||
-    active === "page-review" ||
     isSearching
   ) {
     return "content";
@@ -251,7 +248,6 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/calendar") ||
     normalized.startsWith("/brain") ||
     normalized.startsWith("/life-brain") ||
-    normalized.startsWith("/admin/reviews") ||
     normalized.startsWith("/admin/agent-jobs") ||
     normalized.startsWith("/system/rtx-connector")
   ) {
@@ -301,7 +297,6 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   if (normalized.startsWith(`${base}/graph`)) return "graph";
   if (normalized.startsWith(`${base}/atlas`)) return "atlas";
   if (normalized.startsWith(`${base}/magic-items`)) return "magic-items";
-  if (normalized.startsWith(`${base}/page-review`)) return "page-review";
   if (normalized.startsWith(`${base}/inspector`)) return "inspector";
   if (normalized.startsWith(`${base}/quality`)) return "quality";
   if (normalized.startsWith(`${base}/brain`)) return "brain";

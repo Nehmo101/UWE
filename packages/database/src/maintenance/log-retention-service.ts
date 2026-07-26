@@ -140,13 +140,6 @@ function buildAgeTables(prisma: PrismaClient, brainDb: BrainPrismaClient, retent
       remove: (c) => prisma.activityLog.deleteMany({ where: { createdAt: { lt: c } } }).then((r) => r.count),
     },
     {
-      name: "share_access_logs",
-      defaultDays: retentionDays,
-      count: (c) => prisma.shareAccessLog.count({ where: { accessedAt: { lt: c } } }),
-      remove: (c) =>
-        prisma.shareAccessLog.deleteMany({ where: { accessedAt: { lt: c } } }).then((r) => r.count),
-    },
-    {
       name: "job_logs",
       defaultDays: retentionDays,
       count: (c) => prisma.jobLog.count({ where: { createdAt: { lt: c } } }),

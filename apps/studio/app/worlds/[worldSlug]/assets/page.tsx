@@ -11,13 +11,9 @@ import {
   getAppRepository,
   createAssetAlbumService,
   createPrismaClient,
-  createShareLinkService,
   parseStringArray,
   type AssetType,
-  type ShareTargetType,
 } from "@uwe/database/server";
-import { ShareLinkPanel } from "@/components/ShareLinkPanel";
-import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { ASSET_TYPES } from "@uwe/assets";
 import {
   createAssetAlbumAction,
@@ -93,37 +89,8 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
     .filter((asset) => !visibilityFilter || asset.visibility === visibilityFilter);
   const dmOnlyCount = assets.filter((asset) => asset.visibility === "dm_only").length;
   const pages = await repo.listPagesByWorld(worldSlug);
-  const shareService = createShareLinkService(db);
-  const handoutAssetIds = assets.filter((asset) => asset.type === "handout").map((asset) => asset.id);
-  const plainAssetIds = assets.filter((asset) => asset.type !== "handout").map((asset) => asset.id);
-  const [handoutLinksByTarget, assetLinksByTarget] = await Promise.all([
-    shareService.listShareLinksForTargets(world.id, "handout", handoutAssetIds),
-    shareService.listShareLinksForTargets(world.id, "asset", plainAssetIds),
-  ]);
-  const assetShareData = assets.map((asset) => {
-    const targetType: ShareTargetType = asset.type === "handout" ? "handout" : "asset";
-    const links =
-      (targetType === "handout" ? handoutLinksByTarget : assetLinksByTarget).get(asset.id) ?? [];
-    const activeLink = links.find((link) => link.enabled);
-    return {
-      assetId: asset.id,
-      targetType,
-      links: links.map((link) => ({
-        id: link.id,
-        token: link.token,
-        enabled: link.enabled,
-        expiresAt: link.expiresAt?.toISOString() ?? null,
-        readOnly: link.readOnly,
-        logAccess: link.logAccess,
-        hasPassword: Boolean(link.passwordHash),
-        createdAt: link.createdAt.toISOString(),
-      })),
-      previewHref: activeLink ? getShareLinkPublicUrl(activeLink.token) : undefined,
-    };
-  });
   await db.$disconnect();
 
-  const shareByAssetId = new Map(assetShareData.map((item) => [item.assetId, item]));
 
   return (
     <WorldShell
@@ -246,7 +213,6 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                       (entry): entry is string => typeof entry === "string",
                     )
                   : [];
-              const share = shareByAssetId.get(asset.id);
               const dmOnly = asset.visibility === "dm_only";
 
               return (
@@ -372,17 +338,6 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                       assetId={asset.id}
                       proposedTags={proposedTags}
                     />
-                    {share && (
-                      <ShareLinkPanel
-                        worldId={world.id}
-                        worldSlug={worldSlug}
-                        targetType={share.targetType}
-                        targetId={asset.id}
-                        returnPath={`/worlds/${worldSlug}/assets`}
-                        links={share.links}
-                        previewHref={share.previewHref}
-                      />
-                    )}
                   </details>
                 </li>
               );

@@ -16,7 +16,6 @@ import {
   NAV_CATEGORIES,
   NAV_CATEGORY_LABELS,
   parseStringArray,
-  prisma,
   SEARCH_ENTITY_FILTER_LABELS,
   SEARCH_ENTITY_FILTERS,
   type NavCategory,
@@ -24,7 +23,6 @@ import {
   type Visibility,
   type CanonicalStatus,
 } from "@uwe/database/server";
-import { createPageAiReviewService } from "@uwe/page-ai-review";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import {
   CampaignSidebar,
@@ -78,7 +76,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
     canonicalStatus,
   });
 
-  const openReviewCount = await createPageAiReviewService(prisma).countOpenReviews(worldSlug);
 
   const searchResults = q?.trim()
     ? await repo.search("dm", {
@@ -128,7 +125,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
     <WorldShell
       worldSlug={worldSlug}
       worldName={world.name}
-      openReviewCount={openReviewCount}
       breadcrumb={
         <BreadcrumbTrail
           items={worldSectionBreadcrumb(world.name, worldSlug, "Wiki / Seiten", wikiBase)}

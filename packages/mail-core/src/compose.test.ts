@@ -3,7 +3,6 @@ import { describe, it } from "node:test";
 import {
   composeHandoutMail,
   composeSessionRecapMail,
-  composeShareLinkMail,
 } from "./compose";
 
 describe("mail compose — player safety", () => {
@@ -53,15 +52,4 @@ describe("mail compose — player safety", () => {
     assert.match(draft.bodyText, /Geheime Karte/);
   });
 
-  it("share link compose does not mark dm_only hint", () => {
-    const draft = composeShareLinkMail({
-      worldId: "w1",
-      shareLinkId: "sl1",
-      targetLabel: "Kampagne Alpha",
-      publicUrl: "https://uweandragons.org/preview/abc",
-    });
-
-    assert.equal(draft.containsDmOnlyHint, false);
-    assert.match(draft.bodyText, /preview\/abc/);
-  });
 });

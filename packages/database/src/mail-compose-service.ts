@@ -5,17 +5,14 @@ import {
   composeHandoutMail,
   composeSessionRecapMail,
   composeSessionReminderMail,
-  composeShareLinkMail,
   composeSystemWarningMail,
   composeTerrainRentalMail,
   type HandoutSource,
   type MailComposeKind,
   type MailDraft,
   type SessionRecapSource,
-  type ShareLinkSource,
 } from "@uwe/mail-core";
 import type { PrismaClient } from "./client";
-import { buildShareUrl } from "./share-link-service";
 import { BACKUP_CHECK_INTERVAL_DAYS } from "./calendar-aggregation-service";
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createMailTemplateService } from "./mail-template-service";
@@ -132,42 +129,6 @@ export class MailComposeService {
     return composeHandoutMail(source);
   }
 
-  async composeShareLink(
-    worldSlug: string,
-    shareLinkId: string,
-    portalBaseUrl?: string,
-  ): Promise<MailDraft | null> {
-    const link = await this.db.shareLink.findFirst({
-      where: {
-        id: shareLinkId,
-        world: { slug: worldSlug },
-      },
-      select: {
-        id: true,
-        worldId: true,
-        token: true,
-        targetType: true,
-        targetId: true,
-      },
-    });
-
-    if (!link) {
-      return null;
-    }
-
-    const targetLabel = await this.resolveShareTargetLabel(link.targetType, link.targetId);
-    const publicUrl = buildShareUrl(link.token, portalBaseUrl);
-
-    const source: ShareLinkSource = {
-      worldId: link.worldId,
-      shareLinkId: link.id,
-      targetLabel,
-      publicUrl,
-    };
-
-    return composeShareLinkMail(source);
-  }
-
   async composeContractReminder(contractId: string): Promise<MailDraft | null> {
     const contract = await this.brainDb.contractExpense.findUnique({ where: { id: contractId } });
     if (!contract) {
@@ -273,9 +234,6 @@ export class MailComposeService {
       case "handout":
         if (!options.worldSlug || !options.sourceId) return null;
         return this.composeHandout(options.worldSlug, options.sourceId, options.portalBaseUrl);
-      case "share_link":
-        if (!options.worldSlug || !options.sourceId) return null;
-        return this.composeShareLink(options.worldSlug, options.sourceId, options.portalBaseUrl);
       case "contract_reminder":
         if (!options.sourceId) return null;
         return this.composeContractReminder(options.sourceId);
