@@ -1,0 +1,187 @@
+// Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
+import * as THREE from 'three';
+import { clamp, lerp, DEG, hashi } from './core/rng.js';
+import { S, HALF, setScene, mkElement, nextSeed } from './core/store.js';
+import { scene, initPipeline, resizePipeline, renderFrame, getRenderer }
+  from './render/pipeline.js';
+import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
+import { genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull } from './world/terrain.js';
+import './generators/geometry.js';        // registriert alle Objekt-Pools
+import { setRauchSammler, flushPack } from './core/pools.js';
+import { rebuildAll } from './core/dirty.js';
+import { initWater, wasserSichtbar, updateWater, water } from './world/water.js';
+import { initSky, updateSky } from './world/sky.js';
+import { initAtmosphere, setTod, tickAtmosphere, updateBirds, updateRauch,
+  setRauchQuellen } from './world/atmosphere.js';
+import { initSelection, updateHandlePositions, rebuildHandles } from './editor/selection.js';
+import { ed, defaultsFor, setTool } from './editor/tools.js';
+import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
+import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast }
+  from './ui/panels.js';
+import { initIO } from './editor/io.js';
+
+/* ==========================================================================
+   Startkarte (unveraendert portiert — gleiche Seed, gleiche Karte)
+   ========================================================================== */
+/** Sucht in der Nähe einen brauchbaren Bauplatz (Land, flach genug). */
+function findLand(cx, cz, minH, maxH) {
+  for (var r = 0; r <= 90; r += 5) {
+    for (var a = 0; a < 16; a++) {
+      var ang = a / 16 * Math.PI * 2 + r * 0.3;
+      var x = cx + Math.cos(ang) * r, z = cz + Math.sin(ang) * r;
+      if (x < -HALF + 20 || x > HALF - 20 || z < -HALF + 20 || z > HALF - 20) continue;
+      var h = heightAt(x, z);
+      if (h < minH || h > maxH) continue;
+      if (slopeAt(x, z) < Math.cos(18 * DEG)) continue;
+      return { x: Math.round(x), z: Math.round(z) };
+    }
+  }
+  return { x: cx, z: cz };
+}
+
+function addEl(kind, variant, points, over) {
+  var p = defaultsFor(kind, variant);
+  if (over) for (var k in over) p[k] = over[k];
+  var e = mkElement(kind, variant, points, p, nextSeed());
+  S.elements.push(e);
+  return e;
+}
+
+function ring(c, r, n, wob, seed) {
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    var a = i / n * Math.PI * 2;
+    var rr2 = r * (1 + (hashi(i, 0, seed) - 0.5) * wob);
+    out.push({ x: Math.round(c.x + Math.cos(a) * rr2), z: Math.round(c.z + Math.sin(a) * rr2) });
+  }
+  return out;
+}
+
+/** Kleine Beispielkarte, damit beim Öffnen sofort etwas zu sehen ist. */
+function demoMap() {
+  // Blickrichtung der Startkamera, damit die Komposition sofort sitzt
+  var vx = -Math.sin(0.85), vz = -Math.cos(0.85);      // vom Fokus weg
+  var px = -vz, pz = vx;                                // quer dazu
+
+  var town = findLand(20, 20, 2.5, 11);
+  function bei(f, q, lo, hi) {
+    return findLand(town.x + vx * f + px * q, town.z + vz * f + pz * q, lo, hi);
+  }
+  var v1 = bei(96, -8, 1.5, 15);
+  var v2 = bei(150, 78, 1.5, 15);
+  var wood = bei(40, 78, 1.5, 13);
+  var field = bei(-30, 62, 1.5, 9);
+  var meadow = bei(55, -70, 1.5, 9);
+  var klass = bei(-46, -52, 2.5, 12);
+  var zwerg = bei(78, -46, 3, 16);
+  var elfen = bei(30, 104, 2, 12);
+
+  addEl("ranke", "ranke", [{ x: v1.x, z: v1.z }],
+    { hoehe: 215, straenge: 7, plateaus: 3, staedtchen: true, inseln: 2 });
+  addEl("ranke", "ranke", [{ x: v2.x, z: v2.z }],
+    { hoehe: 145, straenge: 5, plateaus: 2, staedtchen: true, inseln: 1 });
+
+  addEl("pfad", "strasse", [
+    { x: v1.x + 16, z: v1.z + 10 },
+    { x: (v1.x + town.x) / 2 + 10, z: (v1.z + town.z) / 2 - 8 },
+    { x: town.x - 6, z: town.z - 4 },
+    { x: town.x + 44, z: town.z + 22 }
+  ], { breite: 6, abstand: 15, haeuser: true, stil: "dorf" });
+
+  // vier Siedlungen in vier Baustilen
+  addEl("flaeche", "viertel", ring(town, 30, 9, 0.26, 11),
+    { netz: "gebogen", block: 21, gasse: 3.5, dichte: 1.25, stil: "dorf" });
+  addEl("flaeche", "viertel", ring(klass, 24, 8, 0.2, 71),
+    { netz: "raster", block: 20, gasse: 4, dichte: 1.1, stil: "klassisch", drehung: 40 });
+  addEl("flaeche", "viertel", ring(zwerg, 20, 7, 0.24, 83),
+    { netz: "zellen", block: 17, gasse: 4, dichte: 1.2, stil: "zwergisch" });
+  addEl("flaeche", "viertel", ring(elfen, 22, 8, 0.28, 97),
+    { netz: "ring", block: 16, gasse: 3, dichte: 1.0, stil: "elfisch" });
+
+  addEl("flaeche", "wald", ring(wood, 44, 11, 0.3, 23), { dichte: 1.3, mischung: 0.28 });
+  addEl("flaeche", "feld", ring(field, 28, 7, 0.2, 41), { drehung: 55, reihe: 3.2 });
+  addEl("flaeche", "wiese", ring(meadow, 26, 8, 0.25, 57), { dichte: 1.4, blumen: 0.45 });
+  addEl("pfad", "hecke", [
+    { x: field.x - 26, z: field.z + 26 },
+    { x: field.x + 8, z: field.z + 34 },
+    { x: field.x + 38, z: field.z + 22 }
+  ], { stil: "hecke" });
+  addEl("objekt", "haeuser", [{ x: field.x + 20, z: field.z - 14 }],
+    { anzahl: 1, streuung: 0, groesse: 1.15, frei: false, nurTyp: "windmuehle" });
+
+  return { x: town.x + vx * 42, z: town.z + vz * 42 };
+}
+
+
+/* ==========================================================================
+   Initialisierung in expliziter Reihenfolge
+   ========================================================================== */
+setScene(scene);
+const renderer = initPipeline(camera);
+initTerrain(scene);
+initWater(scene);
+initSky(scene);
+initAtmosphere(scene);
+initSelection(scene);
+initPanels();
+setRauchSammler(setRauchQuellen);
+initPointer(renderer.domElement);
+initKeys(onKey);
+initIO();
+
+genBase(S.worldSeed);
+refreshTerrainFull();
+var c = demoMap();
+rebuildAll();
+flushPack();
+
+cam.tFocus.x = cam.focus.x = c.x;
+cam.tFocus.z = cam.focus.z = c.z;
+cam.focusY = heightAt(cam.focus.x, cam.focus.z);
+cam.tDist = cam.dist = 120;
+cam.tYaw = cam.yaw = 0.85;
+cam.tPitch = cam.pitch = 42 * DEG;
+
+setTod("mittag", true);
+buildRail();
+buildPanel();
+updateHint();
+
+window.addEventListener("resize", function () {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  resizePipeline(camera);
+});
+
+/* ==========================================================================
+   Renderschleife
+   ========================================================================== */
+var fps = 60, frameCount = 0, fpsAcc = 0, lastT = performance.now();
+
+function animate() {
+  requestAnimationFrame(animate);
+  var now = performance.now();
+  var raw = (now - lastT) / 1000;          // echte Bildzeit fuer Anzeige und Blenden
+  var dt = Math.min(0.05, raw);            // geklammert fuer stabile Bewegung
+  lastT = now;
+
+  verarbeiteZeiger(now);
+  moveFocus(dt);
+  updateCamera(dt);
+  tickAtmosphere(raw);
+  updateSky(dt);
+  updateBirds(dt, now * 0.001);
+  updateRauch(now * 0.001);
+  water.visible = wasserSichtbar(scene.fog.far);
+  if (water.visible) updateWater(now * 0.001);
+  flushPack();
+  updateHandlePositions();
+  tickToast(now);
+  renderFrame(camera, now * 0.001);
+
+  frameCount++; fpsAcc += raw;
+  if (fpsAcc > 0.5) { fps = frameCount / fpsAcc; frameCount = 0; fpsAcc = 0; updateStats(fps); }
+}
+
+animate();
+window.__terraOk = true;
