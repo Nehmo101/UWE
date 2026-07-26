@@ -24,6 +24,7 @@ export const BRAIN_EXPORT_MODEL_KEYS = [
   "DocumentTemplate", "ResearchSession", "ResearchSource", "Recipe", "RecipeIngredient",
   "MealPlanWeek", "MealPlanEntry", "ShoppingList", "ShoppingListItem", "BringConnection",
   "ScanDocument", "MaintenanceTask", "PantryItem",
+  "BrainAssistantProfile", "BrainChatConversation", "BrainChatMessage", "BrainChatAttachment",
 ] as const;
 
 export type BrainExportModelKey = (typeof BRAIN_EXPORT_MODEL_KEYS)[number];
@@ -77,6 +78,10 @@ function brainModelReaders(db: BrainPrismaClient): BrainModelReaders {
     ScanDocument: () => db.scanDocument.findMany(),
     MaintenanceTask: () => db.maintenanceTask.findMany(),
     PantryItem: () => db.pantryItem.findMany(),
+    BrainAssistantProfile: () => db.brainAssistantProfile.findMany(),
+    BrainChatConversation: () => db.brainChatConversation.findMany(),
+    BrainChatMessage: () => db.brainChatMessage.findMany(),
+    BrainChatAttachment: () => db.brainChatAttachment.findMany(),
   };
 }
 

@@ -1,4 +1,4 @@
-// Prisma model -> product boundary mapping (142 models). Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §5.
+// Prisma model -> product boundary mapping (146 models). Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §5.
 // Kept in sync with schema.prisma by prisma-model-boundaries.sync.test.ts.
 
 import type { DataDomain, PrivacyClass } from "./domain-boundaries";
@@ -13,6 +13,7 @@ export type StorageTarget =
   | "brain_workshop_files"
   | "brain_recipe_files"
   | "brain_scan_files"
+  | "brain_chat_files"
   | "platform_dev_files";
 export type DisputedBoundaryGroup =
   | "G1" | "G2" | "G3" | "G4" | "G5"
@@ -129,6 +130,10 @@ export const PRISMA_MODEL_BOUNDARIES = {
   PersonalBrainDocument: B("personal_brain"),
   PersonalBrainChunk: B("personal_brain"),
   PersonalBrainFact: B("personal_brain"),
+  BrainAssistantProfile: B("personal_brain"),
+  BrainChatConversation: B("personal_brain"),
+  BrainChatMessage: B("personal_brain"),
+  BrainChatAttachment: B("personal_brain", "brain_chat_files"),
   AdminEntityLink: B("admin_life"),
   GeneratorPreset: U("dnd_brain", "dm_only"),
   GeneratorOutput: U("dnd_brain", "dm_only"),

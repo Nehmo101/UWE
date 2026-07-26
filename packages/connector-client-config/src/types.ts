@@ -65,6 +65,13 @@ export interface ConnectorClientConfig {
    */
   imageCommand: string;
   /**
+   * Local speech-to-text command. Passed to the connector as
+   * `UWE_CONNECTOR_STT_CMD`; the job payload is provided on stdin as JSON
+   * (`{audioPath, mimeType, language, model}`) and a `{text, model}` JSON object
+   * is expected on stdout. Empty disables local dictation.
+   */
+  sttCommand: string;
+  /**
    * Local label-print command. Passed to the connector as
    * `UWE_CONNECTOR_PRINT_CMD`; called with `--printer <id> --file <path>` when
    * a `label_print` job arrives. Empty lets the connector fall back to a

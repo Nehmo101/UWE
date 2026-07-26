@@ -80,6 +80,15 @@ dispatch can safely be distributed.
 - **Image generation jobs** when `UWE_CONNECTOR_IMAGE_CMD` points at a real local
   image worker. The job payload is sent as JSON on stdin; JSON or text stdout is
   returned as the job result.
+- **Speech-to-text jobs** (`audio_transcribe`) when `UWE_CONNECTOR_STT_CMD` points
+  at a local speech engine. UWE ships no engine on purpose — Ollama has no audio
+  endpoint, and pinning one Python/whisper stack would add a manual host step.
+  The contract is JSON on stdin, JSON on stdout:
+  `{"audioPath","mimeType","language","model"}` in, `{"text","model"}` out. The
+  audio arrives as a temp file (0600, deleted afterwards) because every speech
+  CLI expects a path. Reference wrapper for whisper.cpp:
+  `deploy/scripts/uwe-stt-whisper.sh`; set the command in the UWE Command Center
+  under "Lokale Spracherkennung". Used by the Brain KI-Chat for dictation.
 - **Model refresh** through `connector_refresh_models`.
 - **Privacy mode** via `UWE_CONNECTOR_PRIVACY_MODE` (default off, toggled from the
   desktop client's SecurityPanel): heartbeats send only minimal model metadata
@@ -142,6 +151,8 @@ Advertised today:
 | `llm_local` | A reachable Ollama model reports `chat`. |
 | `image_generation` | `UWE_CONNECTOR_IMAGE_CMD` is configured and image jobs are not disabled. |
 | `embedding_local` | A reachable Ollama model reports `embeddings`. |
+| `vision_local` | A reachable, UWE-enabled model is vision-capable. |
+| `stt_local` | `UWE_CONNECTOR_STT_CMD` is configured and `UWE_CONNECTOR_STT` is not `false`. |
 | `file_cache` | Never in practice — the name is protocol-reserved, but no `file_cache` job type or executor exists yet. Keep it disabled. |
 | `system_info` | Enabled by default for connector maintenance/model refresh. |
 
@@ -156,7 +167,7 @@ advertised.
 | `audio` | `sound_stop*` (100), `sound_play` / `sound_volume` (90) | highest |
 | `spotify` | `spotify_*` | 80 |
 | `maintenance` | `connector_refresh_models` | 60 |
-| `gpu` | `llm_generate` (50), `image_generate` (30), `embedding_generate` (20) | lowest |
+| `gpu` | `llm_generate` (50), `audio_transcribe` (45), `vision_extract` (40), `image_generate` (30), `embedding_generate` (20) | lowest |
 
 ## Label printing (CUPS / local printers)
 

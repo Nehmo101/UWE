@@ -43,9 +43,18 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.3.1
         version: 4.3.1
+      '@uwe/ai-brain':
+        specifier: workspace:*
+        version: link:../../packages/ai-brain
+      '@uwe/assets':
+        specifier: workspace:*
+        version: link:../../packages/assets
       '@uwe/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@uwe/brain-assistant':
+        specifier: workspace:*
+        version: link:../../packages/brain-assistant
       '@uwe/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -679,6 +688,37 @@ importers:
         version: 7.8.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(better-sqlite3@12.10.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       tsx:
         specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/brain-assistant:
+    dependencies:
+      '@uwe/ai-brain':
+        specifier: workspace:*
+        version: link:../ai-brain
+      '@uwe/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@uwe/connector':
+        specifier: workspace:*
+        version: link:../connector
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
+      '@uwe/security':
+        specifier: workspace:*
+        version: link:../security
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
         version: 4.22.4
       typescript:
         specifier: ^5.8.3

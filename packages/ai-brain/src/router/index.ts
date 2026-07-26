@@ -66,6 +66,14 @@ export {
 export {
   isConnectorVisionAvailable,
   runConnectorVisionExtract,
+  isConnectorLlmAvailable,
+  runConnectorLlmGenerate,
+  isConnectorSttAvailable,
+  runConnectorAudioTranscribe,
   type ConnectorVisionInput,
   type ConnectorVisionResult,
+  type ConnectorLlmInput,
+  type ConnectorLlmResult,
+  type ConnectorTranscribeInput,
+  type ConnectorTranscribeResult,
 } from "./providers/connectorQueueProvider";

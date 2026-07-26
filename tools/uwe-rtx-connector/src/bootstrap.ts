@@ -123,6 +123,7 @@ export function applyClientRuntimeEnv(dataDir: string): void {
   const config = loadClientRuntimeConfig(dataDir);
   setIfUnset("UWE_CONNECTOR_AUDIO_CMD", config.audioCommand);
   setIfUnset("UWE_CONNECTOR_IMAGE_CMD", config.imageCommand);
+  setIfUnset("UWE_CONNECTOR_STT_CMD", config.sttCommand);
   setIfUnset("UWE_CONNECTOR_PRINT_CMD", config.printCommand);
   setIfUnset("SPOTIFY_CLIENT_ID", config.spotifyClientId);
 
@@ -265,6 +266,7 @@ export function createConnectorRunner(
         undefined,
       spotifyDeviceId: process.env.SPOTIFY_DEVICE_ID?.trim() || undefined,
       imageCommand: process.env.UWE_CONNECTOR_IMAGE_CMD?.trim() || undefined,
+      sttCommand: process.env.UWE_CONNECTOR_STT_CMD?.trim() || undefined,
       printCommand: process.env.UWE_CONNECTOR_PRINT_CMD?.trim() || undefined,
       hostUrl: config.hostUrl,
       connectorToken: config.token,
