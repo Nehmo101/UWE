@@ -39,14 +39,17 @@ async function passwordLogin(page: Page, baseURL: string): Promise<void> {
 
 async function setPasskeysToggle(page: Page, baseURL: string, enabled: boolean): Promise<void> {
   await page.goto(`${baseURL}/settings?tab=login`);
-  const toggle = page.locator('input[name="passkeysEnabled"]');
-  await expect(toggle).toBeVisible();
+  // The shell renders the tab content twice (desktop + mobile layout) — scope
+  // to the first form containing the toggle.
+  const form = page.locator('form:has(input[name="passkeysEnabled"])').first();
+  const toggle = form.locator('input[name="passkeysEnabled"]');
+  await expect(toggle).toBeAttached();
   if (enabled) {
     await toggle.check();
   } else {
     await toggle.uncheck();
   }
-  await page.getByRole("button", { name: "Speichern" }).first().click();
+  await form.getByRole("button", { name: "Speichern" }).click();
   await expect(page).toHaveURL(/tab=login/);
 }
 
@@ -61,21 +64,21 @@ test.describe("Studio passkeys", () => {
     try {
       // Register a passkey on the account security page.
       await page.goto(`${base}/account/security`);
-      await page.getByLabel("Name des neuen Passkeys").fill("E2E-Testgerät");
-      await page.getByRole("button", { name: "Passkey registrieren" }).click();
-      await expect(page.getByText("Passkey wurde registriert")).toBeVisible();
+      await page.getByLabel("Name des neuen Passkeys").first().fill("E2E-Testgerät");
+      await page.getByRole("button", { name: "Passkey registrieren" }).first().click();
+      await expect(page.getByText("Passkey wurde registriert").first()).toBeVisible();
 
       // Logout, then sign in using only the passkey.
       await page.goto(`${base}/logout`);
       await page.goto(`${base}/login`);
-      await page.getByRole("button", { name: "Mit Passkey anmelden" }).click();
+      await page.getByRole("button", { name: "Mit Passkey anmelden" }).first().click();
       await expect(page).toHaveURL(/\/today/);
 
       // Cleanup: remove the credential so reruns start clean.
       await page.goto(`${base}/account/security`);
       page.on("dialog", (dialog) => void dialog.accept());
       await page.getByRole("button", { name: "Entfernen" }).first().click();
-      await expect(page.getByText("Passkey wurde entfernt.")).toBeVisible();
+      await expect(page.getByText("Passkey wurde entfernt.").first()).toBeVisible();
     } finally {
       // Always restore the default so later specs see the untouched login page.
       await setPasskeysToggle(page, base, false);
