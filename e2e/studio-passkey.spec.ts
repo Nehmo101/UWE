@@ -44,10 +44,11 @@ async function setPasskeysToggle(page: Page, baseURL: string, enabled: boolean):
   const form = page.locator('form:has(input[name="passkeysEnabled"])').first();
   const toggle = form.locator('input[name="passkeysEnabled"]');
   await expect(toggle).toBeAttached();
+  // The styled toggle overlays the invisible checkbox — force the state change.
   if (enabled) {
-    await toggle.check();
+    await toggle.check({ force: true });
   } else {
-    await toggle.uncheck();
+    await toggle.uncheck({ force: true });
   }
   await form.getByRole("button", { name: "Speichern" }).click();
   await expect(page).toHaveURL(/tab=login/);
