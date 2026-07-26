@@ -29,12 +29,17 @@ Unterseiten stehen als eigene Zeile, weil genau die die Migrationskandidaten sin
 > (G.2b), Studio-System komplett weg (Abschnitt D), ein Kalender in Family, Brain gewinnt
 > alle Doppelungen (H).
 >
-> **Noch offen — zwei Zeilen:**
+> **Alles beantwortet.** Die letzten beiden Zeilen sind geschlossen:
 >
-> | # | Frage | Wo |
+> | # | Frage | Entscheidung |
 > |---|---|---|
-> | **N5** | Review-Workflow braucht nach dem Wegfall von `publishStatus` ein eigenes Statusfeld — oder C26/E4 fliegen mit raus | N.7 |
-> | **B8a** | Legacy-Weltpfade im Portal ersatzlos löschen? | B.1 |
+> | **N5** | Review-Workflow nach dem Wegfall von `publishStatus` | ✅ **Der gesamte Review-Prozess wird entfernt** — kein Ersatzfeld |
+> | **B8a** | Legacy-Weltpfade im Portal löschen? | ✅ **Ja, aktiv löschen** |
+> | **N8** | KI-Vorschlags-Flow (`AiProposal`) | ✅ **bleibt** — die KI schlägt vor, du entscheidest |
+> | **N9** | Freigabe-Links (B6) | ✅ **weg** — wirklich nur Allowlist, keine anonymen Links |
+>
+> **Damit ist die Liste vollständig.** Gesamte Löschmenge: **~6.000 Zeilen** über
+> ~290 berührte Dateien (N.6).
 >
 > **Alle übrigen leeren Zeilen gelten nach deiner Regel als angenommen** („Wenn ich keine
 > Entscheidung geschrieben habe, gilt deine Empfehlung"). Konkret heißt das bei den vier
@@ -151,9 +156,9 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 | B3 | Sicherheit (2FA) | `/auth/account/security` | **Portal** | | |
 | B4 | Login / Passwort vergessen / zurücksetzen | `/login`, `/forgot-password`, `/reset-password` | **Portal** | | |
 | B5 | Wartung | `/maintenance` | **Portal** | | |
-| B6 | Freigabe-Link (anonym) | `/share/[token]`, `/share/[token]/pages/[slug]` | **Portal** | passwortgeschützte Freigaben | |
+| B6 | Freigabe-Link (anonym) | `/share/[token]`, `/share/[token]/pages/[slug]` | ~~Portal~~ | ✅ **WEG** — anonymer Zugriff ohne Allowlist widerspricht dem Grundsatz. Siehe N.9 | ✅ WEG |
 | B7 | Landing / Weiterleitung | `/`, `/portal` | **Portal** | reine Redirects | |
-| B8 | Legacy-Weltpfade | `/worlds`, `/worlds/[slug]`, `/worlds/[slug]/[cat]/[slug]`, `/worlds/[slug]/graph` | **Portal** | reine Redirects, korrekt | |
+| B8 | Legacy-Weltpfade | `/worlds`, `/worlds/[slug]`, `/worlds/[slug]/[cat]/[slug]`, `/worlds/[slug]/graph` | ~~Portal~~ | ✅ **WEG** — obsolet, reine Weiterleitungen. Wird aktiv gelöscht, inkl. `legacy-world-redirect.ts` | ✅ WEG |
 | **B27** | **Bereichssuche** | Kopfzeile | **Portal** | ✅ alles was im Portal klickbar ist (dieselbe Leiste wie B26) | ✅ |
 
 > **Antwort auf deine Frage zu B8** — „Legacy Weltpfade? Also veraltet und obsolete?“
@@ -166,9 +171,8 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 > Da Datenverlust für dich in Ordnung ist und es um vier Weiterleitungen geht:
 > **Empfehlung `WEG`.** Schlimmstenfalls läuft ein altes Lesezeichen in einen 404.
 >
-> | # | Frage | Deine Entscheidung |
-> |---|---|---|
-> | B8a | Legacy-Weltpfade ersatzlos löschen? | |
+> ✅ **Entschieden: aktiv löschen.** Vier Seiten plus `src/lib/legacy-world-redirect.ts`
+> und `resolveLegacyPathRedirect` in der Middleware, soweit es nur diese Pfade betrifft.
 
 
 ## B.2 Welt-Ebene im Portal (15 Nav-Einträge)
@@ -225,7 +229,7 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 | C23 | Werkzeuge → Prompt-Bibliothek | `/prompts`, `/prompts/[id]` | owner/admin/dm | **Studio**, hinter Entwickler-Schalter | Werkzeug für den Werkzeugbau | |
 | C24 | Werkzeuge → Image Studio | `/image-studio` + 2 Unterseiten | owner/admin/dm | **Studio** | | |
 | C25 | Werkzeuge → Import-Zentrale | `/import` | owner/admin/dm | **Studio** | | |
-| C26 | Werkzeuge → Reviews | `/admin/reviews` | owner/admin | **Studio** | Kanon-Freigaben | |
+| C26 | Werkzeuge → Reviews | `/admin/reviews` | owner/admin | ~~Studio~~ | ✅ **WEG** — der gesamte Review-Prozess entfällt (N.7) | ✅ WEG |
 | C27 | Werkzeuge → Cursor Agent Jobs | `/admin/agent-jobs` | owner/admin | **Studio**, hinter Entwickler-Schalter | | |
 | C28 | Werkzeuge → Hintergrund-Jobs | `/jobs` | owner/admin | **Studio → System** | Betrieb | |
 | C29 | Organisation → Projekte | `/projects`, `/projects/[id]` | owner/admin/dm | **→ Brain** | | |
@@ -319,7 +323,7 @@ Alle sichtbar für owner/admin/dm.
 | E1 | Übersicht → Übersicht | `…/dashboard` | behalten | | |
 | E2 | Übersicht → Kampagnen-Radar | `…/radar` | **zusammenlegen** mit E27/E28/E29 | vier „Was ist offen?"-Werkzeuge | |
 | E3 | Wiki → Wiki / Seiten | `…/wiki`, `…/[cat]/[slug]`, `…/[cat]/[slug]/edit` | behalten | | |
-| E4 | Wiki → Seiten-Review | `…/page-review`, `…/page-review/[pageId]` | behalten | | |
+| E4 | Wiki → Seiten-Review | `…/page-review`, `…/page-review/[pageId]` | ~~behalten~~ | ✅ **WEG** — Review-Prozess entfällt komplett (N.7) | ✅ WEG |
 | E5 | Wiki → Neue Seite | `…/pages/new` | behalten — evtl. Button statt Nav-Eintrag | ist eine Aktion, kein Bereich | |
 | E6 | Wiki → Verbindungen / Graph | `…/graph` | behalten | | |
 | E7 | Wiki → **Atlas 3D** | `…/atlas3d`, `…/atlas3d/[nodeId]` | **Grundsatzfrage** | 3 Packages, 21.750 Zeilen (6,7 % des Codes) für diese eine Seite | erstmal behalten|
@@ -549,35 +553,76 @@ Zwei Achsen statt vier konkurrierender Modelle. Das ist in einem Satz erklärbar
 
 | Bereich | Zeilen |
 |---|---|
+| Review-Prozess (N.7) | ~1.720 |
 | Sichtbarkeitssystem (N.2) | ~1.550 |
 | Rollen, Capability-Matrix, Gastmodus (N.1) | ~900 |
 | Cloud-Routing und Privacy-Guards (N.3) | ~800 |
+| Freigabe-Links (N.9) | ~600 |
 | `product-contracts` (Zugangs- und Privacy-Teil) | ~430 |
-| **Summe** | **~3.700 Zeilen**, plus Anpassungen in 217 berührten Dateien |
+| **Summe** | **~6.000 Zeilen**, plus Anpassungen in ~290 berührten Dateien |
 
-## N.7 Eine Nebenwirkung, die zwei deiner Entscheidungen kollidieren lässt
+Zum Vergleich: Das Repo hat heute ~353.000 Zeilen TypeScript. Der Umbau löscht also rund
+**1,7 % des Codes** — und zwar den Teil, der am schwersten zu erklären war.
 
-Du hast **C26 (Reviews)** und **E4 (Seiten-Review)** behalten. Beide laufen aber über
-`publishStatus`, das nach N2 entfällt:
+## N.7 Review-Prozess ✅ **entfällt vollständig**
 
-```
-packages/page-ai-review/src/page-ai-review-service.ts
-  :53   where: { worldId, publishStatus: "review" }     ← Arbeitsvorrat
-  :154  data:  { publishStatus: "review" }              ← Seite in Review schicken
-  :339  data:  { publishStatus: previousStatus }        ← nach Freigabe zurücksetzen
-```
+Der Konflikt aus der Vorfassung — C26 und E4 hängen an `publishStatus` — ist damit
+gegenstandslos: Nicht der Zustand wird ersetzt, sondern der ganze Prozess entfernt.
 
-Ohne `publishStatus` hat der Seiten-Review keinen Zustand mehr und funktioniert nicht.
+| # | Entscheidung |
+|---|---|
+| N5 | **Der gesamte Review-Prozess wird entfernt.** Kein Ersatzfeld, kein `reviewState`. |
 
-**Mein Vorschlag — kostet fast nichts und rettet beides:** Der Review-Workflow bekommt ein
-eigenes Feld `reviewState` (`none | in_review`), genau wie `ContentReview` schon heute sein
-eigenes `ContentReviewStatus` hat. Damit ist `publishStatus` frei zum Löschen, und C26/E4
-laufen weiter. Der Zustand ist dann ehrlich benannt — er sagt „wird gerade geprüft" und
-nicht „ist unveröffentlicht", was ohnehin nie dasselbe war.
+Was dabei weggeht:
 
-| # | Frage | Vorschlag | Deine Entscheidung |
-|---|---|---|---|
-| N5 | Review-Workflow nach dem Wegfall von `publishStatus` | **eigenes `reviewState`-Feld** *(Empfehlung)* · alternativ C26 und E4 ebenfalls streichen | |
+| Weg | Zeilen |
+|---|---|
+| `packages/page-ai-review` (ganzes Package) | 509 |
+| `packages/database/src/ai-review-service.ts` | 1.206 |
+| Prisma-Modelle `ContentReview`, `ReviewComment` + Enums `ContentReviewStatus`, `ContentReviewSourceType` | – |
+| Studio `/admin/reviews` (C26) | – |
+| Studio `…/page-review` + `…/page-review/[pageId]` (E4) | – |
+| API `…/page-reviews`, `…/page-reviews/[pageId]`, `…/page-reviews/[pageId]/refine` | – |
+| Capabilities `review_approve`, `proposal_submit` | fallen ohnehin mit N.1 |
+
+**40 Dateien** referenzieren heute den Review-Prozess. Zusammen mit N.2 und N.3 steigt die
+Löschmenge damit auf **~5.400 Zeilen**.
+
+Der benachbarte **KI-Vorschlags-Flow** ist davon *nicht* betroffen — siehe N.8.
+
+## N.8 KI-Vorschläge ✅ **bleiben**
+
+| # | Entscheidung |
+|---|---|
+| N8 | Der KI-Vorschlags-Flow (`AiRun` → `AiProposal` → anwenden/verwerfen) **bleibt** unverändert. |
+
+Er ist ein anderer Mechanismus als der gestrichene `ContentReview`: Die KI erzeugt einen
+Vorschlag, du siehst ihn unter `/ai` (C9) und Welt → KI-Läufe (E27) und entscheidest pro
+Vorschlag. `AiRun`, `AiProposal`, `AiApplyLog` und die zugehörigen Ansichten bleiben.
+
+Das ist nach dem Wegfall von Sichtbarkeit und Entwurfsstatus auch der **einzige verbliebene
+Zwischenschritt** vor der Veröffentlichung: Was angewendet wird, sehen die Spieler sofort.
+
+## N.9 Freigabe-Links ✅ **entfallen**
+
+| # | Entscheidung |
+|---|---|
+| N9 | `ShareLink` und alles daran hängende wird entfernt. Wirklich nur Allowlist. |
+
+Anonymer Zugriff per Link — ohne Konto, ohne Häkchen — war die einzige Ausnahme vom
+Grundsatz „nur Leute auf der Allowlist kommen rein". Sie fällt.
+
+| Weg | Zeilen |
+|---|---|
+| `packages/database/src/share-link-service.ts` | 424 |
+| `apps/portal/src/lib/share-access.ts`, `share-auth.ts` | 55 |
+| `apps/studio/app/share-actions.ts` | 103 |
+| Portal `/share/[token]`, `/share/[token]/pages/[slug]` | 2 Seiten |
+| Portal `…/api/share/[token]/verify`, `…/assets/[assetId]/file` | 2 Routen |
+| Prisma `ShareLink`, `ShareAccessLog` | 2 Modelle |
+| `AccessContext`-Variante `"share"`, `shareGrant`, `PLAYER_PREVIEW_ALLOW_DM_ONLY` | — |
+
+**44 Dateien** betroffen. Wer künftig etwas sehen soll, bekommt ein Konto mit Häkchen.
 
 ---
 
@@ -779,21 +824,28 @@ Cloud-Routing-Code, verteilt über 217 berührte Dateien.
 3. **Cloud-Ausbau** (N.3) — alle Cloud-Provider, Gateway-Budgets und Privacy-Guards raus,
    alles über den RTX-Host. Zuerst, weil es unabhängig von allem anderen ist und die
    KI-Pfade danach nur noch einen Weg kennen.
-4. **Sichtbarkeit ausbauen** (N.2) — `visibility`, `publishStatus`, `secretLevel`,
+4. **Review-Prozess und Freigabe-Links ausbauen** (N.7, N.9) — beide hängen an der
+   Sichtbarkeit und müssen vor ihr weg, sonst repariert man Code, den man danach löscht.
+5. **Sichtbarkeit ausbauen** (N.2) — `visibility`, `publishStatus`, `secretLevel`,
    `gm_note`, `PagePlayerAccess`, `SessionUnlock` und die fünf Permission-Module.
-   Größter Einzelposten, ~1.550 Zeilen plus 217 berührte Dateien. **Setzt N5 voraus.**
-5. **Zugangsmodell umbauen** (M13 + N.1) — vier Häkchen im Command Center, Rollen und
+   Größter Einzelposten, ~1.550 Zeilen plus 217 berührte Dateien.
+6. **Zugangsmodell umbauen** (M13 + N.1) — vier Häkchen im Command Center, Rollen und
    Capability-Matrix raus. Danach ist `owner` die einzige Rolle.
-6. **Studio-System abräumen** (Abschnitt D) — Konfiguration ins Command Center nachziehen,
+7. **Studio-System abräumen** (Abschnitt D) — Konfiguration ins Command Center nachziehen,
    System-Hub nach Brain, Rest löschen.
-7. **Brain/Studio-Doppelungen auflösen** (H) — Brain gewinnt; Studios „Organisation" wird
+8. **Brain/Studio-Doppelungen auflösen** (H) — Brain gewinnt; Studios „Organisation" wird
    abgeräumt, die 108 `brain-client`-Importe verschwinden.
-8. **Family bauen** — eigene DB mit Family-Brain und privaten Brains, Häkchen-Zugang,
+9. **Family bauen** — eigene DB mit Family-Brain und privaten Brains, Häkchen-Zugang,
    zwei Chats als Ableitung von `@uwe/brain-assistant`.
-9. Restliche Verschlankung (C–E) und **L4** nebenher.
+10. Restliche Verschlankung (C–E), **B8a** und **L4** nebenher.
 
-Die Reihenfolge 3 → 4 → 5 ist bewusst so: Jeder Schritt macht den nächsten kleiner.
-Wer zuerst das Zugangsmodell umbaut, muss die Sichtbarkeitslogik zweimal anfassen.
+Die Reihenfolge 3 → 4 → 5 → 6 ist bewusst so: Jeder Schritt macht den nächsten kleiner.
+Wer zuerst das Zugangsmodell umbaut, fasst die Sichtbarkeitslogik zweimal an; wer die
+Sichtbarkeit vor dem Review-Prozess anfasst, repariert Code, den er danach löscht.
+
+**Lieferform:** ein PR pro Schritt, jeder für sich lauffähig und mit grünem Gate. Bei
+~6.000 gelöschten Zeilen über ~290 Dateien wäre ein einzelner PR weder prüfbar noch
+sicher zurückzurollen.
 
 *Zurückgestellt: E34 (`terra.html`) — berührt keinen der Schritte oben und kann jederzeit
 nachgezogen werden. **E7 (Atlas 3D) bleibt offen** und ist mit 21.750 Zeilen weiterhin der
