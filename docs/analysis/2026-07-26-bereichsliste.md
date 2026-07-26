@@ -15,9 +15,10 @@ Unterseiten stehen als eigene Zeile, weil genau die die Migrationskandidaten sin
 > | 🆕 | **Brain KI-Chat** (`/ki-chat`) | neue Zeile **A14**, und **G12** hat jetzt eine Vorlage |
 > | ✅ | Brain-Nav ist ein Modul mit Suche (`brain-nav.ts`) | Anmerkung bei **A** |
 > | 🆕 | **Bereichs-Suchleiste** in allen drei Apps | neue Zeilen **C42**, **B26**, **A15** |
-> | ⚠️ | **`terra.html`** — vierter Karteneditor, nirgends eingebunden | neue Zeile **E34** |
+> | 💤 | **`terra.html`** — Karteneditor, nirgends eingebunden | **zurückgestellt**, siehe **E34** |
 >
-> Neu zu entscheiden sind damit die Zeilen A14, A15, B26, C42, E34, L1–L4.
+> Neu zu entscheiden sind damit die Zeilen A14, A15, B26, C42, L1–L4. (E34 ist
+> zurückgestellt.)
 > Die Rechte-Lücken B1/B2 aus der Zustandsanalyse sind erledigt (PR #797) — Abschnitt J
 > ist entsprechend fortgeschrieben.
 
@@ -261,7 +262,7 @@ Alle sichtbar für owner/admin/dm.
 | E31 | Freigabe → Wiki-Pflege | `…/quality` | **zusammenlegen** (siehe E2) | | |
 | E32 | Freigabe → Backup | `…/backup` | **WEG** → globales `/backup` (D22) reicht | | |
 | E33 | Live-Session (4 Einträge) | `…/sessions/[id]/live` u. a. | behalten | kontextabhängige Nav, korrekt getrennt | |
-| **E34** | **`terra.html`** *(neu, PR #793)* | Repo-Root, **nirgends eingebunden** | **entscheiden: ersetzt es E7 oder nach `prototypes/`?** | 3.998 Zeilen, `file://`, three.js per CDN. Damit gibt es **vier** Kartenimplementierungen mit zusammen 25.748 Zeilen | |
+| ~~E34~~ | `terra.html` *(PR #793)* | Repo-Root, nirgends eingebunden | 💤 **zurückgestellt** | 3.998 Zeilen, `file://`, three.js per CDN. Stört keinen Build; wird erst relevant, falls es produktiv werden soll | *zurückgestellt* |
 
 ---
 
@@ -418,8 +419,7 @@ Zwei saubere Wege, ein dritter ist keiner:
 | **Brain** | 12 | Heute · Life Brain · Wissensassistent · **KI-Chat** · Capture · Projekte · Werkstatt · Miniaturen · Hardware · Mail · Ideen · Start |
 | **Family** | 13 | Start · Verträge · Dokumente · Küche · Essensplan · Einkaufsliste · Vorrat · Haushalt · Finanzen · Kalender · Scan · Chat · Mitglieder |
 
-Gestrichen: 14 Bereiche (C14, D2, D3, D9, D10, D25, D26, D27, D29, E8, E32, B24, L4, und
-je nach E34-Entscheidung `terra.html` oder die Atlas-Familie).
+Gestrichen: 13 Bereiche (C14, D2, D3, D9, D10, D25, D26, D27, D29, E8, E32, B24, L4).
 Zusammengelegt: 4 Welt-Werkzeuge → 1, Print Center → Labels, Admin-Hub → System-Hub.
 
 ---
@@ -435,9 +435,11 @@ Zusammengelegt: 4 Welt-Werkzeuge → 1, Print Center → Labels, Admin-Hub → S
    Studio (`/api/life-brain/*`), weil `apps/brain` keine Inhalts-API hat. Die
    Vermischung ist damit tragend für ein Feature — je länger sie steht, desto teurer wird
    die Trennung.
-4. **E34 entscheiden** (`terra.html` vs. Atlas-Familie) — 25.748 Zeilen in vier parallelen
-   Implementierungen sind der größte Einzelposten. Unabhängig von 3, kann parallel laufen.
-5. **Family bauen** — `FamilyMember`, eigene DB, Chat als Ableitung von
+4. **Family bauen** — `FamilyMember`, eigene DB, Chat als Ableitung von
    `@uwe/brain-assistant` mit Mehrbenutzer-Filter
-6. Verschlankung (Streichungen und Zusammenlegungen aus C–E) nebenher
-7. **L4** (doppeltes `/api/auth/enter`) einsammeln — klein, aber sollte nicht liegen bleiben
+5. Verschlankung (Streichungen und Zusammenlegungen aus C–E) nebenher
+6. **L4** (doppeltes `/api/auth/enter`) einsammeln — klein, aber sollte nicht liegen bleiben
+
+*Zurückgestellt: E34 (`terra.html`) — berührt keinen der Schritte oben und kann jederzeit
+nachgezogen werden. **E7 (Atlas 3D) bleibt offen** und ist mit 21.750 Zeilen weiterhin der
+größte Einzelposten.*

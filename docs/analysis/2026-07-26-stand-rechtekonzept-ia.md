@@ -14,7 +14,7 @@ Erstfassung: 2026-07-26 (Basis `0a9261c`) · **Aktualisiert: 2026-07-26 abends, 
 > | 🆕 | **`apps/landing`** — 5. App auf dem Apex-Origin | neue Oberfläche, sauber gebaut; `/api/auth/enter` liegt jetzt **doppelt** |
 > | 🆕 | **Brain KI-Chat** (`/ki-chat`, `@uwe/brain-assistant`) | vorbildlich abgesichert — und der fertige Bauplan für den Family-Chatbot |
 > | 🆕 | **MCP-Server** für Studio/Portal/Brain | Design sauber, aber **verschärft B4** |
-> | ⚠️ | **`terra.html`** — 3998 Zeilen, nirgends referenziert | **vierter** Karteneditor; verschärft §3.1 |
+> | 💤 | **`terra.html`** — 3998 Zeilen, nirgends referenziert | **auf Wunsch zurückgestellt**, siehe §3.1 |
 >
 > Unverändert gültig bleiben: B3 (Capability-Matrix ohne Wirkung), B4 (Domain-Contract
 > verletzt — jetzt schlimmer), B5 (tote Guards), sowie die IA-Befunde zu Studio.
@@ -403,41 +403,25 @@ Zwei kleine Punkte:
 Kriterium: geringer Nutzen im Verhältnis zu Wartungslast, Angriffsfläche oder
 Bedienkomplexität. Nach Einsparpotenzial sortiert.
 
-### 3.1 Kartenwerkzeuge — 25.748 Zeilen in **vier** parallelen Implementierungen
+### 3.1 Atlas 3D — 21.750 Zeilen für eine Unterseite
 
-*Aktualisiert 2026-07-26 abends: aus drei sind vier geworden.*
+Drei Packages (`atlas` 10.654 · `atlas-3d` 10.308 · `atlas-editor` 788) bedienen genau
+eine Route in Studio und eine im Portal. Das sind **6,2 % des gesamten Codes** für einen
+3D-Globus. Ein D&D-Tisch braucht eine Karte mit Pins; ein Planeten-Editor mit Terrain,
+Features, Objekten und Kamera-Bookmarks ist ein eigenes Produkt. 341 Commits stecken drin,
+der Bereich ist also nicht tot — aber die Frage ist, ob er den Anteil wert ist.
 
-| Implementierung | Zeilen | Eingebunden in |
-|---|---|---|
-| `@uwe/atlas` | 10.654 | Studio + Portal (`/atlas3d`) |
-| `@uwe/atlas-3d` | 10.308 | Studio + Portal (`/atlas3d`) |
-| `@uwe/atlas-editor` | 788 | Studio + Portal (`/atlas3d`) |
-| **`terra.html`** *(neu, PR #793)* | **3.998** | **nirgends** |
+*Empfehlung:* Nicht löschen, aber ehrlich bewerten. Wenn Atlas 3D am Spieltisch nicht
+regelmäßig benutzt wird, ist es der mit Abstand größte Einzelposten zum Ausbauen.
 
-Die ersten drei bedienen genau eine Route in Studio und eine im Portal — **6,2 % des
-Codes** für einen 3D-Globus. Ein D&D-Tisch braucht eine Karte mit Pins; ein
-Planeten-Editor mit Terrain, Features, Objekten und Kamera-Bookmarks ist ein eigenes
-Produkt.
-
-`terra.html` liegt seit PR #793 am Repo-Root und ist **repo-weit nirgends referenziert** —
-kein Import, kein Build-Schritt, kein Deploy, keine Doku, kein Link. Der Commit sagt es
-selbst: *„Berührt keinen Bestandscode: eine neue Datei, sonst nichts."* Die Datei läuft
-über `file://` und lädt three.js r128 per CDN-Script-Tag, ist also auch bewusst außerhalb
-der CSP und des Dependency-Managements.
-
-Als Prototyp ist das legitim und sogar klug — man baut so etwas erst mal frei. Als
-Dauerzustand im Hauptrepo ist es die vierte Antwort auf dieselbe Frage. **Es braucht eine
-Entscheidung, keine weitere Implementierung:**
-
-- Wird `terra` die Zukunft der Karte? Dann ersetzt es die Atlas-Familie — 21.750 Zeilen
-  können weg, und `terra` muss in eine App integriert werden (CSP, three.js als
-  Dependency, Persistenz statt Datei-Export).
-- Ist es ein Experiment? Dann gehört es in einen eigenen Branch oder ein
-  `prototypes/`-Verzeichnis mit README, nicht neben `package.json`.
-- Beides parallel zu pflegen ist die einzige Option, die sicher Geld kostet.
-
-*Empfehlung:* Erst `terra` vs. Atlas entscheiden, dann die Verlierer-Implementierung
-ausbauen. Das ist mit Abstand der größte Einzelposten in diesem Dokument.
+> **Randnotiz, bewusst zurückgestellt:** `terra.html` (PR #793) liegt mit 3.998 Zeilen am
+> Repo-Root und ist repo-weit nirgends referenziert — kein Import, kein Build-Schritt,
+> kein Deploy, kein Link; der Commit sagt selbst *„Berührt keinen Bestandscode."* Es läuft
+> über `file://` mit three.js per CDN-Script-Tag, also außerhalb von CSP und
+> Dependency-Management. Damit gäbe es rechnerisch vier Kartenimplementierungen. Auf
+> Wunsch wird das **hier nicht als Entscheidung geführt** — die Datei stört keinen Build
+> und kostet nichts, solange sie nicht eingebunden wird. Falls sie später produktiv werden
+> soll, gehört sie in diesen Abschnitt zurück.
 
 ### 3.2 Die Capability-Matrix samt `/admin/roles`
 
@@ -568,12 +552,10 @@ Dateien widerlegt und ist durch den neuen Brain-MCP-Server, der Brain-Inhalte ü
 liest, inzwischen sogar tragend für ein Feature. Die Navigation ist handwerklich exzellent
 gepflegt und hat mit der Bereichssuche und `brain-nav.ts` weiter gewonnen, ordnet aber
 weiterhin drei Produkte unter sieben Studio-Überschriften ein, während `apps/brain` Studios
-kompletten Organisation-Bereich auf derselben Datenbank dupliziert. Beim Code-Volumen ist
-die Lage schlechter geworden statt besser: mit `terra.html` liegen jetzt vier parallele
-Kartenimplementierungen im Repo, eine davon 3.998 Zeilen groß und an keiner Stelle
-eingebunden. Das größte Einsparpotenzial liegt weiterhin nicht in vielen kleinen Features,
-sondern in drei Entscheidungen — Brain oder Studio, welche der vier Karten gewinnt, und
-welches der vier Rechtekonzepte gilt.
+kompletten Organisation-Bereich auf derselben Datenbank dupliziert. Das größte
+Einsparpotenzial liegt weiterhin nicht in vielen kleinen Features, sondern in drei
+Entscheidungen — Brain oder Studio, Atlas 3D ja oder nein, und welches der vier
+Rechtekonzepte gilt.
 
 ---
 
@@ -642,9 +624,11 @@ definiert weiterhin einen **eigenen** Item-Typ (`href`/`label`/`icon` als Unicod
 statt `NavGroup` aus `@uwe/shared-utils/navigation`, das Studio und Portal nutzen. Geteilt
 wird nur die Suche, nicht das Nav-Modell — die Drift ist verlangsamt, nicht beendet.
 
-### 6.5 `terra.html` (PR #793)
+### 6.5 `terra.html` (PR #793) — zurückgestellt
 
-Siehe §3.1 — der Befund hat sich dadurch von „drei Implementierungen" auf „vier" verschärft.
+Prozeduraler Fantasy-Karteneditor, 3.998 Zeilen in einer einzelnen HTML-Datei am
+Repo-Root, lauffähig über `file://`. Berührt keinen Bestandscode und ist nirgends
+eingebunden. **Auf Wunsch nicht als Entscheidung geführt** — Randnotiz in §3.1.
 
 ### 6.6 Design-Korrekturen (PRs #792, #794)
 
