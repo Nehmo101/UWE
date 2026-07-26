@@ -69,7 +69,7 @@ export async function executeMailChat(
     },
     {
       user,
-      providerMode: "auto",
+      providerMode: "local_rtx",
       contextMode: "mail",
       taskType: "answer_mail_question",
       userPrompt,

@@ -324,7 +324,6 @@ async function buildDbEncryptedSection(
 ): Promise<SecretsStatusSection> {
   const [
     inferenceEndpoints,
-    aiProviders,
     webhooks,
     mailAccounts,
     calendarFeeds,
@@ -332,9 +331,6 @@ async function buildDbEncryptedSection(
   ] = await Promise.all([
     db.inferenceEndpoint.findMany({
       select: { id: true, name: true, apiKeyEnc: true, updatedAt: true },
-    }),
-    db.aiCloudProvider.findMany({
-      select: { id: true, label: true, apiKeyEnc: true, updatedAt: true },
     }),
     db.webhookEndpoint.findMany({
       select: { id: true, name: true, secretEncrypted: true, updatedAt: true },
@@ -405,22 +401,6 @@ async function buildDbEncryptedSection(
         encryptionSecret,
         href: "/settings?tab=inference",
         updatedAt: endpoint.updatedAt,
-      }),
-    );
-  }
-
-  for (const provider of aiProviders) {
-    if (!provider.apiKeyEnc) {
-      continue;
-    }
-    items.push(
-      assessDbEncryptedSecret({
-        id: `ai-cloud-provider:${provider.id}`,
-        label: `Cloud-Provider: ${provider.label}`,
-        payload: provider.apiKeyEnc,
-        encryptionSecret,
-        href: "/admin/ai-gateway",
-        updatedAt: provider.updatedAt,
       }),
     );
   }

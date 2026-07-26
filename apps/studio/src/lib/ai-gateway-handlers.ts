@@ -4,7 +4,6 @@ import {
   createUweRepository,
   logAuditEvent,
   prisma,
-  type AiFeaturePermission,
   type AiRoutingMode,
   type AiPrivacyLevel,
   type AiFeatureCategory,
@@ -13,7 +12,6 @@ import {
   getAiGatewayStatusForClient,
   runAiGatewayFallbackTest,
   checkRtxReadiness,
-  simulateGatewayRouting,
 } from "@uwe/ai-brain";
 import type { AuthUser } from "@uwe/auth";
 import { jsonError } from "./api-response";
@@ -48,15 +46,13 @@ export async function getAiGatewayDashboard(_user: AuthUser | null) {
   if (denied) return denied;
 
   const service = gatewayService();
-  const [status, grants, usageLogs] = await Promise.all([
+  const [status, usageLogs] = await Promise.all([
     getAiGatewayStatusForClient(service),
-    service.listUserGrants(),
     service.listUsageLogs({ limit: 50 }),
   ]);
 
   return NextResponse.json({
     ...status,
-    userGrants: grants,
     recentUsage: usageLogs.map((entry) => ({
       ...entry,
       createdAt: entry.createdAt.toISOString(),
@@ -139,105 +135,6 @@ export async function patchAiGatewayConfig(
   });
 }
 
-export async function upsertAiCloudProvider(
-  user: AuthUser | null,
-  body: {
-    providerId: string;
-    label: string;
-    baseUrl?: string | null;
-    defaultModel?: string | null;
-    apiKey?: string | null;
-    isEnabled?: boolean;
-    priority?: number;
-  },
-) {
-  const denied = requireMasterAdmin(user);
-  if (denied) return denied;
-
-  if (!body.providerId?.trim() || !body.label?.trim()) {
-    return jsonError("providerId und label sind erforderlich.", 400);
-  }
-
-  const provider = await gatewayService().upsertCloudProvider({
-    providerId: body.providerId.trim(),
-    label: body.label.trim(),
-    baseUrl: body.baseUrl,
-    defaultModel: body.defaultModel,
-    apiKey: body.apiKey,
-    isEnabled: body.isEnabled,
-    priority: body.priority,
-  });
-
-  if (user) {
-    await auditGatewayChange(user, "content_updated", {
-      kind: "ai_cloud_provider",
-      providerId: provider.providerId,
-      hasApiKey: provider.hasApiKey,
-      apiKeyUpdated: body.apiKey !== undefined,
-    });
-  }
-
-  return NextResponse.json({ provider });
-}
-
-export async function deleteAiCloudProvider(user: AuthUser | null, providerId: string) {
-  const denied = requireMasterAdmin(user);
-  if (denied) return denied;
-
-  const deleted = await gatewayService().deleteCloudProvider(providerId);
-  if (!deleted) {
-    return jsonError("Provider nicht gefunden.", 404);
-  }
-  return NextResponse.json({ ok: true });
-}
-
-export async function upsertAiUserGrant(
-  user: AuthUser | null,
-  body: {
-    userId: string;
-    permissions: AiFeaturePermission[];
-    cloudFallbackAllowed?: boolean;
-    dailyBudgetUsd?: number | null;
-  },
-) {
-  const denied = requireMasterAdmin(user);
-  if (denied) return denied;
-
-  if (!body.userId?.trim()) {
-    return jsonError("userId ist erforderlich.", 400);
-  }
-
-  const grant = await gatewayService().upsertUserGrant({
-    userId: body.userId.trim(),
-    permissions: body.permissions ?? [],
-    cloudFallbackAllowed: body.cloudFallbackAllowed ?? false,
-    dailyBudgetUsd: body.dailyBudgetUsd ?? null,
-    grantedBy: user?.id ?? null,
-  });
-
-  if (user) {
-    await auditGatewayChange(user, "content_updated", {
-      kind: "ai_user_grant",
-      userId: grant.userId,
-      permissions: grant.permissions,
-      cloudFallbackAllowed: grant.cloudFallbackAllowed,
-    });
-  }
-
-  return NextResponse.json({ grant });
-}
-
-export async function deleteAiUserGrant(user: AuthUser | null, userId: string) {
-  const denied = requireMasterAdmin(user);
-  if (denied) return denied;
-
-  const deleted = await gatewayService().deleteUserGrant(userId);
-  if (!deleted) {
-    return jsonError("Freigabe nicht gefunden.", 404);
-  }
-  return NextResponse.json({ ok: true });
-}
-
 export async function postAiGatewayFallbackTest(user: AuthUser | null) {
   const denied = requireMasterAdmin(user);
   if (denied) return denied;
@@ -258,51 +155,6 @@ export async function postAiGatewayFallbackTest(user: AuthUser | null) {
     ...result,
     rtxHealth,
   });
-}
-
-export async function postAiGatewaySimulate(
-  user: AuthUser | null,
-  body: {
-    simulateRtxOffline?: boolean;
-    userId?: string;
-    privacyFeature?: AiFeatureCategory;
-  } = {},
-) {
-  const denied = requireMasterAdmin(user);
-  if (denied) return denied;
-
-  const service = gatewayService();
-  const status = await getAiGatewayStatusForClient(service);
-  const privacyFeature = body.privacyFeature ?? "general_chat";
-  const privacyLevel =
-    status.config.privacyRules[privacyFeature] ??
-    status.config.privacyRules.general_chat;
-
-  let userCloudFallbackEnabled = false;
-  if (body.userId) {
-    const grant = await service.getUserGrant(body.userId);
-    userCloudFallbackEnabled = grant?.cloudFallbackAllowed ?? false;
-  }
-
-  const cases = simulateGatewayRouting({
-    config: {
-      ...status.config,
-      updatedAt: new Date(status.config.updatedAt),
-    },
-    rtxOnline: status.rtxHealth.ready,
-    cloudProviders: status.providers.map((provider) => ({
-      label: provider.label,
-      hasApiKey: provider.hasApiKey,
-      isEnabled: provider.isEnabled,
-    })),
-    budgetWithinLimit: status.budget.withinBudget,
-    privacyFeature,
-    privacyLevel,
-    userCloudFallbackEnabled,
-    simulateRtxOffline: body.simulateRtxOffline ?? !status.rtxHealth.ready,
-  });
-
-  return NextResponse.json({ cases });
 }
 
 export async function getAiGatewayUsage(
@@ -378,20 +230,8 @@ export async function getAiGatewayAccessStatus(user: AuthUser | null) {
     return NextResponse.json({ allowed: true, role: user.role, grant: null });
   }
 
-  const grant = await service.getUserGrant(user.id);
-  if (!grant || grant.permissions.length === 0) {
-    return NextResponse.json({
-      allowed: false,
-      reason: "KI ist für diesen Benutzer nicht freigeschaltet.",
-    });
-  }
+  // Per-user AI grants are gone with the cloud budget they rationed. Anyone who
+  // can reach Studio may use its AI.
+  return NextResponse.json({ allowed: true, role: user.role, grant: null });
 
-  return NextResponse.json({
-    allowed: true,
-    role: user.role,
-    grant: {
-      permissions: grant.permissions,
-      cloudFallbackAllowed: grant.cloudFallbackAllowed,
-    },
-  });
 }

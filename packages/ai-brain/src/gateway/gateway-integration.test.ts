@@ -2,7 +2,6 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { PrismaClient } from "@uwe/database/server";
 import {
-  AiGatewayAccessDeniedError,
   AiGatewayService,
   createAiGatewayService,
 } from "@uwe/database/server";
@@ -74,21 +73,10 @@ function createMockGatewayDb(overrides?: {
 }
 
 describe("ai gateway integration", () => {
-  it("player without grant is denied", async () => {
-    const service = new AiGatewayService(createMockGatewayDb({ grant: null }));
-
-    await assert.rejects(
-      () =>
-        service.assertFeatureAccess({
-          userId: "player-1",
-          role: "player",
-          feature: "AI_CHAT_USE",
-          contextMode: "general_chat",
-        }),
-      (error: unknown) => {
-        assert.ok(error instanceof AiGatewayAccessDeniedError);
-        return true;
-      },
+  it("allows a player without a grant — per-user AI grants were removed with the cloud budget", async () => {
+    const gateway = createAiGatewayService(createMockGatewayDb());
+    await assert.doesNotReject(() =>
+      gateway.assertFeatureAccess({ userId: "player-1", role: "player", contextMode: "brain" }),
     );
   });
 
@@ -111,26 +99,10 @@ describe("ai gateway integration", () => {
     });
   });
 
-  it("player with grant but wrong permission is denied", async () => {
-    const service = new AiGatewayService(
-      createMockGatewayDb({
-        grant: {
-          userId: "player-3",
-          permissions: ["AI_CHAT_USE"],
-          cloudFallbackAllowed: false,
-        },
-      }),
-    );
-
-    await assert.rejects(
-      () =>
-        service.assertFeatureAccess({
-          userId: "player-3",
-          role: "player",
-          feature: "AI_DND_USE",
-          contextMode: "brain",
-        }),
-      AiGatewayAccessDeniedError,
+  it("denies everyone only when AI is switched off system-wide", async () => {
+    const gateway = createAiGatewayService(createMockGatewayDb({ routingMode: "DISABLED" }));
+    await assert.rejects(() =>
+      gateway.assertFeatureAccess({ userId: "player-1", role: "player", contextMode: "brain" }),
     );
   });
 

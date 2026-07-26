@@ -24,7 +24,6 @@ import {
 export { deriveOwnedServiceState } from "./desktop-host-system.ts";
 
 import {
-  HOST_SERVICE_IDS,
   isHostServiceId,
   parseServicePort,
   type DesktopHostActionResult,

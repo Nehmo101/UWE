@@ -537,7 +537,6 @@ model User {
   authIdentities      AuthIdentity[]
   contentReviewsProposed ContentReview[] @relation("ContentReviewProposedBy")
   contentReviewsReviewed ContentReview[] @relation("ContentReviewReviewedBy")
-  aiUserGrant          AiUserGrant?
   aiUsageLogs          AiUsageLog[]
   reviewComments         ReviewComment[]
   dashboardLayouts       DashboardLayout[]
@@ -2741,38 +2740,6 @@ model AiGatewayConfig {
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
   @@map("ai_gateway_config")
-}
-
-model AiCloudProvider {
-  id           String   @id @default(cuid())
-  providerId   String   @map("provider_id")
-  label        String
-  baseUrl      String?  @map("base_url")
-  defaultModel String?  @map("default_model")
-  apiKeyEnc    String?  @map("api_key_enc")
-  isEnabled    Boolean  @default(true) @map("is_enabled")
-  priority     Int      @default(0)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  @@unique([providerId])
-  @@index([isEnabled, priority])
-  @@map("ai_cloud_providers")
-}
-
-model AiUserGrant {
-  id                   String   @id @default(cuid())
-  userId               String   @unique @map("user_id")
-  permissions          Json     @default("[]")
-  cloudFallbackAllowed Boolean  @default(false) @map("cloud_fallback_allowed")
-  dailyBudgetUsd       Float?   @map("daily_budget_usd")
-  grantedBy            String?  @map("granted_by")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("ai_user_grants")
 }
 
 model AiUsageLog {

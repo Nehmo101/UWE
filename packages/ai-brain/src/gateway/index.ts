@@ -32,8 +32,3 @@ export {
   getAiGatewayStatusForClient,
   runAiGatewayFallbackTest,
 } from "./ai-gateway-diagnostics";
-export {
-  simulateGatewayRouting,
-  type AiGatewaySimulationCase,
-  type GatewaySimulationInput,
-} from "./simulate";

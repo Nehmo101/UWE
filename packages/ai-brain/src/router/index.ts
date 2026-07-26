@@ -7,12 +7,9 @@ export {
 } from "./aiRouter";
 
 export {
-  validateProviderContextCombination,
-  validateResolvedRouteForContext,
   validateContextModeRequirements,
   validateLocalRtxRequired,
-  contextModeRequiresLocalContext,
-  isCloudRouteAllowedForContext,
+  contextModeLabel,
 } from "./privacyGuard";
 
 export {
@@ -23,8 +20,7 @@ export {
   type AiRouterResult,
   type ProviderResolution,
   AiRouterError,
-  LOCAL_ONLY_CONTEXT_MODES,
-  CLOUD_ALLOWED_CONTEXT_MODES,
+  AI_PROVIDER_MODE,
 } from "./types";
 
 export { buildRouterContext, type RouterContextBuildInput } from "./context/contextBuilder";
@@ -40,13 +36,6 @@ export {
   assertLocalRtxReady,
   type LocalRtxProviderOptions,
 } from "./providers/localRtxProvider";
-
-export {
-  createCloudProvider,
-  resolveCloudProviderId,
-  listAvailableCloudProviders,
-  type CloudProviderOptions,
-} from "./providers/cloudProvider";
 
 export {
   checkRtxHealth,

@@ -1,17 +1,18 @@
-/** Context modes that may reach cloud providers — personal brain is never included. */
-export const CLOUD_ALLOWED_CONTEXT_MODES = ["general_chat"] as const;
-
-export type CloudAllowedContextMode = (typeof CLOUD_ALLOWED_CONTEXT_MODES)[number];
-
 /**
- * Provider modes that may carry personal_brain (Life Brain) context.
- * Mirrors AiProviderMode in packages/ai-brain/src/router/types.ts.
- * - "local_rtx": always local, allowed.
- * - "auto": allowed — the AI router (validateLocalRtxRequired) guarantees that
- *   personal_brain in auto mode never resolves to cloud (no fallback).
- * - "cloud" and any unknown value: rejected.
+ * Personal-brain provider guard.
+ *
+ * This module used to name the provider modes that were allowed to carry
+ * Life-Brain context, so that private notes could never reach a cloud model.
+ * Cloud providers were removed — the RTX host is the only backend — so the
+ * distinction it guarded no longer exists.
+ *
+ * The guard stays as a narrow assertion rather than being deleted outright: it
+ * still catches a caller that hands in some other provider string, which would
+ * mean a route was wired up that UWE does not know about.
  */
-export const PERSONAL_BRAIN_ALLOWED_PROVIDER_MODES = ["local_rtx", "auto"] as const;
+
+/** The only provider mode UWE has. */
+export const PERSONAL_BRAIN_ALLOWED_PROVIDER_MODES = ["local_rtx"] as const;
 
 export type PersonalBrainAllowedProviderMode =
   (typeof PERSONAL_BRAIN_ALLOWED_PROVIDER_MODES)[number];
@@ -22,6 +23,6 @@ export function isPersonalBrainContextAllowedForProvider(provider: string): bool
 
 export function assertPersonalBrainLocalOnly(provider: string): void {
   if (!isPersonalBrainContextAllowedForProvider(provider)) {
-    throw new Error("Life-Brain-Kontext ist nur für lokale KI (RTX) erlaubt.");
+    throw new Error("Life-Brain-Kontext läuft ausschließlich über den lokalen RTX-Host.");
   }
 }

@@ -39,7 +39,7 @@ async function runMailAi(
     },
     {
       user,
-      providerMode: "auto",
+      providerMode: "local_rtx",
       contextMode: "mail",
       taskType,
       userPrompt: prompt,

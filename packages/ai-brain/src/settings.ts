@@ -164,3 +164,17 @@ export function isCloudProvider(providerId: AiProviderId): boolean {
 export function getProviderDefinition(providerId: AiProviderId) {
   return PROVIDER_DEFINITIONS.find((p) => p.id === providerId);
 }
+
+/**
+ * Placeholder key store. Cloud providers were removed, so nothing needs a key —
+ * the local RTX provider talks to the host over the connector, not an API key.
+ * Kept so the router keeps one uniform provider-construction path.
+ */
+export function createEmptyApiKeyStore(): ApiKeyStore {
+  return {
+    get: () => undefined,
+    set: () => {},
+    delete: () => {},
+    has: () => false,
+  };
+}

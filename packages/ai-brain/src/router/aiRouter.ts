@@ -15,15 +15,7 @@ import {
 
 import { runAiTask } from "../providers/registry";
 
-import {
-
-  createApiKeyStoreFromEnv,
-
-  isCloudProvider,
-
-  resolveAiBrainSettings,
-
-} from "../settings";
+import { createEmptyApiKeyStore, resolveAiBrainSettings } from "../settings";
 
 import { buildTaskPrompt, buildTaskSystemPrompt } from "../tasks";
 
@@ -43,19 +35,8 @@ import {
 
   validateLocalRtxRequired,
 
-  validateProviderContextCombination,
-
-  validateResolvedRouteForContext,
-
 } from "./privacyGuard";
 
-import {
-
-  createCloudProvider,
-
-  resolveCloudProviderId,
-
-} from "./providers/cloudProvider";
 
 import {
 
@@ -83,7 +64,7 @@ import type {
 
 } from "./types";
 
-import { AiRouterError, LOCAL_ONLY_CONTEXT_MODES } from "./types";
+import { AiRouterError } from "./types";
 
 import {
   getCookbookRoutingContext,
@@ -135,41 +116,8 @@ const GENERAL_CHAT_SYSTEM =
 const MAIL_SYSTEM =
   "Du bist der lokale Mail-Assistent von UWE. Die E-Mail-Inhalte sind privat und verlassen niemals das lokale System. Antworte auf Deutsch, präzise und ohne erfundene Fakten. Bei Verwaltungsaufgaben schlage konkrete Aktionen vor, führe sie aber nie ohne explizite Nutzerbestätigung aus.";
 
-
-
-function createEmptyGeneralChatContext(request: AiRouterRequest): AiContext {
-
-  return {
-
-    taskType: request.taskType,
-
-    worldId: "",
-
-    primaryPageId: "",
-
-    pages: [],
-
-    sources: [],
-
-    promptContext: "",
-
-    truncated: false,
-
-    datenschutzMode: true,
-
-    allowDmOnly: false,
-
-  };
-
-}
-
-
-
 function buildRouterPrompts(
-
   request: AiRouterRequest,
-
-  route: AiResolvedRoute,
 
   contextMode: AiContextMode,
 
@@ -177,38 +125,6 @@ function buildRouterPrompts(
 
 ): { systemPrompt: string; userPrompt: string } {
 
-  if (route === "cloud") {
-    if (contextMode === "general_chat") {
-      const userText = request.userPrompt?.trim();
-
-      if (!userText) {
-
-        throw new AiRouterError(
-
-          "Cloud-Chat erfordert eine Nutzer-Nachricht — lokaler Kontext wird nicht übermittelt.",
-
-        );
-
-      }
-
-      return {
-
-        systemPrompt: GENERAL_CHAT_SYSTEM,
-
-        userPrompt: userText,
-
-      };
-    }
-
-    // For DnD context modes (brain, current_object, current_object_plus_brain) on cloud route,
-    // send full task prompts with context — owner policy allows campaign context to cloud
-    // when gateway privacy level is CLOUD_ALLOWED. personal_brain is blocked upstream and
-    // never reaches this path.
-    return {
-      systemPrompt: buildTaskSystemPrompt(request.taskType),
-      userPrompt: buildTaskPrompt(request.taskType, safeContext, request.userPrompt),
-    };
-  }
 
 
 
@@ -263,115 +179,28 @@ function buildRouterPrompts(
 
 
 export async function resolveProviderRoute(
-
-  providerMode: AiProviderMode,
-
   contextMode: AiRouterRequest["contextMode"],
-
-  apiKeyStore: ApiKeyStore,
-
-  options?: { useMock?: boolean; cloudProviderId?: AiProviderId; prisma?: PrismaClient },
-
+  options?: { useMock?: boolean; prisma?: PrismaClient },
 ): Promise<ProviderResolution> {
-  validateProviderContextCombination(providerMode, contextMode);
-
   const rtxHealth = await checkRtxReadiness({
     useMock: options?.useMock,
     prisma: options?.prisma,
   });
 
-  const rtxOnline = rtxHealth.ready;
+  validateLocalRtxRequired(contextMode, rtxHealth.ready);
 
-
-
-  validateLocalRtxRequired(providerMode, contextMode, rtxOnline);
-
-
-
-  switch (providerMode) {
-
-    case "cloud":
-
-      return {
-
-        route: "cloud",
-
-        providerId: resolveCloudProviderId(apiKeyStore, options?.cloudProviderId),
-
-      };
-
-
-
-    case "local_rtx":
-
-      if (!rtxOnline) {
-
-        throw new AiRouterError(rtxHealth.message || "Lokale RTX-Inference ist nicht bereit.");
-
-      }
-
-      return {
-
-        route: "local_rtx",
-
-        providerId: getLocalRtxProviderId(),
-
-      };
-
-
-
-    case "auto":
-
-      if (rtxOnline) {
-
-        return {
-
-          route: "local_rtx",
-
-          providerId: getLocalRtxProviderId(),
-
-        };
-
-      }
-
-      return {
-
-        route: "cloud",
-
-        providerId: resolveCloudProviderId(apiKeyStore, options?.cloudProviderId),
-
-      };
-
-
-
-    default:
-
-      throw new AiRouterError(`Unbekannter Provider-Modus: ${providerMode satisfies never}`);
-
-  }
-
+  return {
+    route: "local_rtx",
+    providerId: getLocalRtxProviderId(),
+  };
 }
 
-
-
 function createRoutedProvider(
-
-  resolution: ProviderResolution,
-
+  _resolution: ProviderResolution,
   apiKeyStore: ApiKeyStore,
-
   useMock?: boolean,
-
 ): AiProvider {
-
-  if (resolution.route === "local_rtx") {
-
-    return createLocalRtxProvider(apiKeyStore, { useMock });
-
-  }
-
-  return createCloudProvider(apiKeyStore, resolution.providerId, { useMock });
-
+  return createLocalRtxProvider(apiKeyStore, { useMock });
 }
 
 
@@ -394,20 +223,7 @@ function resolveModel(
 
 
 
-  if (resolution.route === "local_rtx") {
-
-    return rtxDefaultModel;
-
-  }
-
-
-
-  const cloudDef = resolveAiBrainSettings(request.apiKeyStore ?? createApiKeyStoreFromEnv())
-
-    .providers.find((p) => p.id === resolution.providerId);
-
-  return cloudDef?.defaultModel ?? process.env.CLOUD_AI_MODEL?.trim() ?? "gpt-4o-mini";
-
+  return rtxDefaultModel;
 }
 
 
@@ -428,13 +244,11 @@ export async function routeAiRequest(
 
 ): Promise<AiRouterResult> {
 
-  validateProviderContextCombination(request.providerMode, request.contextMode);
-
   validateContextModeRequirements(request.contextMode, request.pageSlug);
 
 
 
-  const apiKeyStore = request.apiKeyStore ?? createApiKeyStoreFromEnv();
+  const apiKeyStore = request.apiKeyStore ?? createEmptyApiKeyStore();
 
   const settings = resolveAiBrainSettings(apiKeyStore, {
 
@@ -446,41 +260,10 @@ export async function routeAiRequest(
 
 
 
-  if (settings.localOnly && request.providerMode === "cloud") {
-
-    throw new AiRouterError(
-
-      "Local-only-Modus aktiv: Cloud-KI ist deaktiviert.",
-
-    );
-
-  }
-
-
-
-  const resolution = await resolveProviderRoute(
-
-    request.providerMode,
-
-    request.contextMode,
-
-    apiKeyStore,
-
-    {
-
-      useMock: request.useMock,
-
-      cloudProviderId: request.cloudProviderId,
-
-      prisma: deps.prisma ?? sharedPrisma,
-
-    },
-
-  );
-
-
-
-  validateResolvedRouteForContext(resolution.route, request.contextMode);
+  const resolution = await resolveProviderRoute(request.contextMode, {
+    useMock: request.useMock,
+    prisma: deps.prisma ?? sharedPrisma,
+  });
 
 
 
@@ -496,10 +279,10 @@ export async function routeAiRequest(
       useMock: request.useMock,
     });
     const cookbook = await getCookbookRoutingContext({
-      providerMode: request.providerMode,
+      providerMode: "local_rtx",
       contextMode: request.contextMode,
       taskType: request.taskType,
-      localOnlyMode: settings.localOnly,
+      localOnlyMode: true,
       rtxReady: rtxHealth.ready,
       explicitModel: request.model,
       probe,
@@ -517,15 +300,7 @@ export async function routeAiRequest(
 
   const playerSafe = PLAYER_SAFE_TASKS.includes(request.taskType);
 
-  const serverAllowDmOnly = resolveServerAllowDmOnly(
-
-    settings,
-
-    resolution.route === "cloud",
-
-    playerSafe,
-
-  );
+  const serverAllowDmOnly = resolveServerAllowDmOnly(settings, false, playerSafe);
 
 
 
@@ -533,110 +308,102 @@ export async function routeAiRequest(
 
 
 
-  if (resolution.route === "cloud" && request.contextMode === "general_chat") {
-
-    context = createEmptyGeneralChatContext(request);
-
-  } else {
-
-    if (request.contextMode === "personal_brain") {
-      if (!deps.loadPersonalBrainContext) {
-        throw new AiRouterError(
-          "Persönliches Life-Brain ist nicht konfiguriert — Server-Loader fehlt.",
-        );
-      }
-
-      const personalBrainPromptContext = await deps.loadPersonalBrainContext();
-
-      context = await buildRouterContext(deps.repo, {
-        taskType: request.taskType,
-        contextMode: request.contextMode,
-        personalBrainPromptContext,
-        options: {
-          ...request.options,
-          datenschutzMode: settings.datenschutzMode,
-          localOnly: settings.localOnly,
-          allowDmOnly: true,
-        },
-      });
-    } else {
-    if (
-
-      (request.contextMode === "brain" ||
-
-        request.contextMode === "current_object" ||
-
-        request.contextMode === "current_object_plus_brain") &&
-
-      !request.worldSlug?.trim()
-
-    ) {
-
-      throw new AiRouterError("worldSlug ist für diesen Kontextmodus erforderlich.");
-
+  if (request.contextMode === "personal_brain") {
+    if (!deps.loadPersonalBrainContext) {
+      throw new AiRouterError(
+        "Persönliches Life-Brain ist nicht konfiguriert — Server-Loader fehlt.",
+      );
     }
 
-
-
-    const brainSource =
-
-      deps.brainStore && request.worldSlug
-
-        ? createBrainRetrievalAdapter(deps.brainStore, request.worldSlug, {
-
-            enabled:
-
-              request.contextMode === "brain" ||
-
-              request.contextMode === "current_object_plus_brain",
-
-          })
-
-        : undefined;
-
-
+    const personalBrainPromptContext = await deps.loadPersonalBrainContext();
 
     context = await buildRouterContext(deps.repo, {
-
       taskType: request.taskType,
-
-      worldSlug: request.worldSlug ?? "",
-
-      pageSlug: request.pageSlug,
-
       contextMode: request.contextMode,
-
-      brainSource,
-
+      personalBrainPromptContext,
       options: {
-
         ...request.options,
-
         datenschutzMode: settings.datenschutzMode,
-
         localOnly: settings.localOnly,
-
-        sessionId: request.sessionId,
-
-        allowDmOnly: serverAllowDmOnly,
-
-        retrievalQuery: request.userPrompt?.trim() || undefined,
-
+        allowDmOnly: true,
       },
-
     });
+  } else {
+  if (
 
-    }
+    (request.contextMode === "brain" ||
+
+      request.contextMode === "current_object" ||
+
+      request.contextMode === "current_object_plus_brain") &&
+
+    !request.worldSlug?.trim()
+
+  ) {
+
+    throw new AiRouterError("worldSlug ist für diesen Kontextmodus erforderlich.");
 
   }
 
 
 
+  const brainSource =
+
+    deps.brainStore && request.worldSlug
+
+      ? createBrainRetrievalAdapter(deps.brainStore, request.worldSlug, {
+
+          enabled:
+
+            request.contextMode === "brain" ||
+
+            request.contextMode === "current_object_plus_brain",
+
+        })
+
+      : undefined;
+
+
+
+  context = await buildRouterContext(deps.repo, {
+
+    taskType: request.taskType,
+
+    worldSlug: request.worldSlug ?? "",
+
+    pageSlug: request.pageSlug,
+
+    contextMode: request.contextMode,
+
+    brainSource,
+
+    options: {
+
+      ...request.options,
+
+      datenschutzMode: settings.datenschutzMode,
+
+      localOnly: settings.localOnly,
+
+      sessionId: request.sessionId,
+
+      allowDmOnly: serverAllowDmOnly,
+
+      retrievalQuery: request.userPrompt?.trim() || undefined,
+
+    },
+
+  });
+
+  }
+
+  
+
+
+
   // Local-only modes (personal_brain, mail) are already blocked upstream;
-  // DnD modes may go to cloud when policy allows.
   validateProviderForContext(resolution.providerId, context, {
     ...settings,
-    allowLocalContextOnCloud: !LOCAL_ONLY_CONTEXT_MODES.includes(request.contextMode),
   });
 
 
@@ -650,8 +417,6 @@ export async function routeAiRequest(
   const { systemPrompt, userPrompt } = buildRouterPrompts(
 
     request,
-
-    resolution.route,
 
     request.contextMode,
 
@@ -732,7 +497,7 @@ export async function routeAiRequest(
 
     contextMode: request.contextMode,
 
-    providerMode: request.providerMode,
+    providerMode: "local_rtx",
 
   };
 
@@ -742,9 +507,9 @@ export async function routeAiRequest(
 
 /** Maps legacy AiProviderId to router provider mode. */
 
-export function providerIdToMode(providerId: AiProviderId): AiProviderMode {
+export function providerIdToMode(_providerId: AiProviderId): AiProviderMode {
 
-  return isCloudProvider(providerId) ? "cloud" : "local_rtx";
+  return "local_rtx";
 
 }
 

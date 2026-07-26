@@ -170,8 +170,6 @@ export const PRISMA_MODEL_BOUNDARIES = {
   Atlas3DObject: U("dnd_world", "player_visible"),
   Atlas3DCameraBookmark: U("dnd_world", "player_visible"),
   AiGatewayConfig: U("ai_control", "dm_only"),
-  AiCloudProvider: U("ai_control", "dm_only"),
-  AiUserGrant: U("ai_control", "dm_only"),
   AiUsageLog: U("ai_control", "dm_only"),
   Tag: U("platform_ops", "dm_only", "database_only", "G7"),
   EntityTag: U("platform_ops", "dm_only", "database_only", "G7"),

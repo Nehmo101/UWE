@@ -3,16 +3,21 @@
 import { Tabs } from "@uwe/shared-ui";
 import { useEffect } from "react";
 import { Alert } from "@/src/components/ui";
-import { AiGatewayBudgetsTab } from "./ai-gateway/AiGatewayBudgetsTab";
-import { AiGatewayGrantsTab } from "./ai-gateway/AiGatewayGrantsTab";
 import { AiGatewayLogsTab } from "./ai-gateway/AiGatewayLogsTab";
 import { AiGatewayModelsTab } from "./ai-gateway/AiGatewayModelsTab";
 import { AiGatewayOverviewCard } from "./ai-gateway/AiGatewayOverviewCard";
-import { AiGatewayPrivacyTab } from "./ai-gateway/AiGatewayPrivacyTab";
-import { AiGatewayRoutingTab } from "./ai-gateway/AiGatewayRoutingTab";
 import { AI_GATEWAY_TABS } from "./ai-gateway/constants";
 import { useAiGateway } from "./ai-gateway/use-ai-gateway";
 
+/**
+ * KI-Gateway.
+ *
+ * This screen used to manage cloud providers, per-user grants, spend budgets,
+ * privacy rules and a routing simulator. All of that went away with the cloud
+ * providers themselves — the RTX host is the only backend, so there is no route
+ * to police, no key to store and no spend to cap. What is left is choosing the
+ * local model per feature and reading the usage log.
+ */
 export function AiGatewayWizard() {
   const gateway = useAiGateway();
   const { data, loading, error, message, loadAdminUsers } = gateway;
@@ -39,26 +44,6 @@ export function AiGatewayWizard() {
 
   const tabItems = AI_GATEWAY_TABS.map((tab) => {
     switch (tab.id) {
-      case "routing":
-        return {
-          id: tab.id,
-          label: tab.label,
-          content: (
-            <AiGatewayRoutingTab
-              data={data}
-              providerForm={gateway.providerForm}
-              setProviderForm={gateway.setProviderForm}
-              patchConfig={gateway.patchConfig}
-              saveProvider={gateway.saveProvider}
-            />
-          ),
-        };
-      case "privacy":
-        return {
-          id: tab.id,
-          label: tab.label,
-          content: <AiGatewayPrivacyTab data={data} patchConfig={gateway.patchConfig} />,
-        };
       case "models":
         return {
           id: tab.id,
@@ -67,28 +52,8 @@ export function AiGatewayWizard() {
             <AiGatewayModelsTab data={data} patchFeatureModel={gateway.patchFeatureModel} />
           ),
         };
-      case "budgets":
-        return {
-          id: tab.id,
-          label: tab.label,
-          content: <AiGatewayBudgetsTab data={data} patchConfig={gateway.patchConfig} />,
-        };
-      case "grants":
-        return {
-          id: tab.id,
-          label: tab.label,
-          content: (
-            <AiGatewayGrantsTab
-              data={data}
-              adminUsers={gateway.adminUsers}
-              grantForm={gateway.grantForm}
-              setGrantForm={gateway.setGrantForm}
-              saveGrant={gateway.saveGrant}
-              deleteGrant={gateway.deleteGrant}
-            />
-          ),
-        };
       case "logs":
+      default:
         return {
           id: tab.id,
           label: tab.label,
@@ -101,11 +66,6 @@ export function AiGatewayWizard() {
               filteredUsage={gateway.filteredUsage}
               usageLoading={gateway.usageLoading}
               loadFilteredUsage={gateway.loadFilteredUsage}
-              simulationForm={gateway.simulationForm}
-              setSimulationForm={gateway.setSimulationForm}
-              simulationCases={gateway.simulationCases}
-              simulationLoading={gateway.simulationLoading}
-              runRoutingSimulation={gateway.runRoutingSimulation}
               runFallbackTest={gateway.runFallbackTest}
             />
           ),
@@ -121,7 +81,7 @@ export function AiGatewayWizard() {
           {message}
         </Alert>
       )}
-      <Tabs items={tabItems} defaultTabId="routing" ariaLabel="KI-Gateway Policy" />
+      <Tabs items={tabItems} defaultTabId="models" ariaLabel="KI-Gateway" />
     </div>
   );
 }

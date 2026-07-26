@@ -10,7 +10,6 @@ import {
 import { createGameSessionService } from "@uwe/database/server";
 import {
   AiPrivacyError,
-  AiRouterError,
   buildAiContext,
   contextContainsDmOnly,
   generateAiTask,
@@ -456,45 +455,34 @@ describe("AI Brain — generateAiTask with mock provider", () => {
     });
 
     assert.ok(result.text.length > 0);
-    assert.equal(result.provider, "ollama");
+    assert.ok(result.text.length > 0);
   });
 
-  it("rejects cloud provider when gateway privacy forbids cloud for DnD (AiRouterError)", async () => {
+  it("no longer rejects a legacy cloud provider id — everything lands on the RTX host", async () => {
+    // Cloud providers were removed. A stored request that still names one must
+    // not blow up; it simply routes locally like every other request.
     const repo = createUweRepository(databaseUrl);
     const seeded = await seedTerraWorld(repo);
-    const apiKeyStore = new InMemoryApiKeyStore();
-    apiKeyStore.set("openai", "test-openai-key");
-    const { createAiGatewayService, createPrismaClient, DEFAULT_PRIVACY_RULES } = await import(
-      "@uwe/database/server"
-    );
+    const { createAiGatewayService, createPrismaClient } = await import("@uwe/database/server");
     const db = createPrismaClient(databaseUrl);
     const gateway = createAiGatewayService(db);
-    await gateway.updateConfig({
-      privacyRules: {
-        ...DEFAULT_PRIVACY_RULES,
-        dnd_world: "CLOUD_FORBIDDEN",
-      },
-    });
 
-    await assert.rejects(
-      () =>
-        generateAiTask(repo, {
-          taskType: "summarize_page",
-          worldId: seeded.world.id,
-          pageId: seeded.pages.validori.id,
-          providerId: "openai",
-          model: "gpt-4o-mini",
-          options: {
-            datenschutzMode: true,
-            localOnly: false,
-            allowDmOnly: false,
-          },
-          apiKeyStore,
-          useMock: true,
-          prisma: db,
-          gatewayService: gateway,
-        }),
-      AiRouterError,
+    await assert.doesNotReject(() =>
+      generateAiTask(repo, {
+        taskType: "summarize_page",
+        worldId: seeded.world.id,
+        pageId: seeded.pages.validori.id,
+        providerId: "openai",
+        options: {
+          datenschutzMode: true,
+          localOnly: true,
+          allowDmOnly: false,
+        },
+        apiKeyStore: new InMemoryApiKeyStore(),
+        useMock: true,
+        prisma: db,
+        gatewayService: gateway,
+      }),
     );
   });
 

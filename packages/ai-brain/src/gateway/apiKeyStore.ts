@@ -1,24 +1,18 @@
-import type { AiProviderId, ApiKeyStore } from "../types";
-import { createAiGatewayService, type AiGatewayService } from "@uwe/database/server";
-import { createApiKeyStoreFromEnv } from "../settings";
+import type { ApiKeyStore } from "../types";
+import type { AiGatewayService } from "@uwe/database/server";
+import { createEmptyApiKeyStore } from "../settings";
 
-/** Build API key store: DB cloud providers take precedence over ENV. */
+/**
+ * Key store for the gateway.
+ *
+ * This used to merge API keys for the configured cloud providers, with the
+ * database taking precedence over the environment. Cloud providers were removed
+ * — the RTX host is the only backend, and it authenticates over the connector
+ * rather than with an API key — so there is nothing left to look up. The
+ * function stays so the gateway keeps one provider-construction path.
+ */
 export async function createGatewayApiKeyStore(
-  gatewayService?: AiGatewayService,
+  _gatewayService?: AiGatewayService,
 ): Promise<ApiKeyStore> {
-  const store = createApiKeyStoreFromEnv();
-  const service = gatewayService ?? createAiGatewayService();
-  const providers = await service.listCloudProviders();
-
-  for (const provider of providers) {
-    if (!provider.isEnabled || !provider.hasApiKey) {
-      continue;
-    }
-    const key = await service.resolveCloudProviderApiKey(provider.providerId);
-    if (key) {
-      store.set(provider.providerId as AiProviderId, key);
-    }
-  }
-
-  return store;
+  return createEmptyApiKeyStore();
 }

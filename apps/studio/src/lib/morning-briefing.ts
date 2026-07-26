@@ -136,7 +136,7 @@ export async function generateMorningBriefing(
     },
     {
       user,
-      providerMode: "auto",
+      providerMode: "local_rtx",
       contextMode: "personal_brain",
       taskType: "generate_briefing",
       userPrompt,

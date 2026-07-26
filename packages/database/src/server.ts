@@ -1754,10 +1754,7 @@ export {
 export {
   assertPersonalBrainLocalOnly,
   isPersonalBrainContextAllowedForProvider,
-  CLOUD_ALLOWED_CONTEXT_MODES,
 } from "./personal-brain-privacy";
-
-export type { CloudAllowedContextMode } from "./personal-brain-privacy";
 
 export {
   DEFAULT_GENERATOR_PRESETS,

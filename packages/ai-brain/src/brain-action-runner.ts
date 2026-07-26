@@ -150,8 +150,6 @@ export async function runBrainAction(
       pageSlug: anchor.pageSlug,
       sessionId: input.sessionId,
       model: input.model,
-      cloudProviderId:
-        providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
       userPrompt: input.userPrompt,
       useMock: input.useMock,
       apiKeyStore,
