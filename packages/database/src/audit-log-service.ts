@@ -91,6 +91,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   mfa_challenge_failed: "2FA-Challenge fehlgeschlagen",
   passkey_registered: "Passkey registriert",
   passkey_removed: "Passkey entfernt",
+  oauth_linked: "Google-Konto verknüpft",
+  oauth_unlinked: "Google-Konto getrennt",
   security_warning_dismissed: "Sicherheitswarnung verworfen",
   host_update_started: "Host-Update gestartet",
   host_update_completed: "Host-Update abgeschlossen",

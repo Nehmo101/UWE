@@ -47,6 +47,9 @@ export type LoginFlowFailureReason =
   | "two_factor_required"
   | "passkey_invalid"
   | "login_method_disabled"
+  | "google_oauth_failed"
+  | "google_email_unverified"
+  | "google_email_unknown"
   | "server_error";
 
 /** Request context for an audit entry (structurally matches `AuditRequestContext`). */

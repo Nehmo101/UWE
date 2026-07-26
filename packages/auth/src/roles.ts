@@ -84,6 +84,8 @@ const PUBLIC_STUDIO_API_PREFIXES = [
   "/api/auth/reset-password",
   "/api/auth/two-factor/verify",
   "/api/auth/passkey/login/",
+  "/api/auth/google/start",
+  "/api/auth/google/callback",
   "/api/spotify/callback",
   "/api/agent-jobs/callback",
   "/api/connectors/",

@@ -160,6 +160,14 @@ export interface AuthSettings {
   sessionInactivityTimeoutMinutes: number;
   /** Whether passkey (WebAuthn) login is offered on the Studio/Portal login pages. */
   passkeysEnabled: boolean;
+  /** Whether "Mit Google anmelden" is offered (needs client id + secret too). */
+  googleLoginEnabled: boolean;
+  /** Google OAuth client id (public identifier, safe for clients). */
+  googleClientId: string;
+  /** Derived flag for clients — true when an encrypted secret is stored. */
+  googleClientSecretConfigured: boolean;
+  /** AES-GCM encrypted Google client secret — server-only, stripped for clients. */
+  googleClientSecretEnc?: string | null;
 }
 
 /** Owner emergency / maintenance locks (stored in system_settings JSON). */
@@ -517,6 +525,10 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   auth: {
     sessionInactivityTimeoutMinutes: 30,
     passkeysEnabled: false,
+    googleLoginEnabled: false,
+    googleClientId: "",
+    googleClientSecretConfigured: false,
+    googleClientSecretEnc: null,
   },
   maintenance: {
     maintenanceMode: false,
@@ -646,6 +658,13 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
         settings.auth?.sessionInactivityTimeoutMinutes,
       ),
       passkeysEnabled: settings.auth?.passkeysEnabled === true,
+      googleLoginEnabled: settings.auth?.googleLoginEnabled === true,
+      googleClientId:
+        typeof settings.auth?.googleClientId === "string"
+          ? settings.auth.googleClientId.trim()
+          : "",
+      googleClientSecretEnc: settings.auth?.googleClientSecretEnc ?? null,
+      googleClientSecretConfigured: Boolean(settings.auth?.googleClientSecretEnc),
     },
     maintenance: {
       ...DEFAULT_SYSTEM_SETTINGS.maintenance,
@@ -705,6 +724,10 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
     ai: {
       ...normalized.ai,
       cloudApiKeys: undefined,
+    },
+    auth: {
+      ...normalized.auth,
+      googleClientSecretEnc: undefined,
     },
     deployment: sanitizeDeploymentSettingsForClient(normalized.deployment),
   };

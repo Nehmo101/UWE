@@ -18,6 +18,10 @@ export const STUDIO_PUBLIC_API_ALLOWLIST = new Set([
   "auth/forgot-password/route.ts",
   "auth/reset-password/route.ts",
   "auth/two-factor/verify/route.ts",
+  // "Mit Google anmelden" — browser redirect flow; auth happens at Google and
+  // in the shared handler (state + nonce + invite-only account policy).
+  "auth/google/start/route.ts",
+  "auth/google/callback/route.ts",
   "health/route.ts",
   "health/public/route.ts",
   "maintenance/status/route.ts",

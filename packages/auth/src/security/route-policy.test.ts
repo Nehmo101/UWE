@@ -89,6 +89,14 @@ describe("route policy", () => {
     assert.notEqual(classifyRoute("/api/auth/passkey/unknown", "portal").access, "public");
   });
 
+  it("keeps google start/callback public and unlink session-protected", () => {
+    assert.equal(classifyRoute("/api/auth/google/start", "studio").access, "public");
+    assert.equal(classifyRoute("/api/auth/google/callback", "studio").access, "public");
+    assert.equal(classifyRoute("/api/auth/google/unlink", "studio").access, "protected-session");
+    assert.equal(classifyRoute("/api/auth/google/unlink", "portal").access, "protected-session");
+    assert.notEqual(classifyRoute("/api/auth/google/other", "studio").access, "public");
+  });
+
   it("treats studio auth pages as public", () => {
     assert.equal(isPublicRoute("/setup", "studio"), true);
     assert.equal(isPublicRoute("/login", "studio"), true);

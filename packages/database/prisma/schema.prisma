@@ -568,6 +568,9 @@ model AuthIdentity {
   userId         String   @map("user_id")
   provider       String
   providerUserId String   @map("provider_user_id")
+  /// Provider-reported e-mail at link time — diagnostics only. The identity
+  /// binds to `providerUserId` (e.g. the Google `sub`), never to the e-mail.
+  email          String?
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -1505,6 +1508,8 @@ enum AuditAction {
   mfa_challenge_failed
   passkey_registered
   passkey_removed
+  oauth_linked
+  oauth_unlinked
   security_warning_dismissed
   host_update_started
   host_update_completed
