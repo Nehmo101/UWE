@@ -1337,6 +1337,9 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+      '@uwe/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
       '@uwe/soundboard':
         specifier: workspace:*
         version: link:../soundboard
