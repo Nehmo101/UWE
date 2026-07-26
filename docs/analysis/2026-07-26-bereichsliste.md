@@ -1,11 +1,25 @@
 # UWE — Vollständige Bereichsliste über alle vier Oberflächen
 
-Stand: 2026-07-26 · **Arbeitsdokument zum Ausfüllen** · Basis: `main` @ `ce9c8b0`
+**Arbeitsdokument zum Ausfüllen** · Aktualisiert: 2026-07-26 abends · Basis: `main` @ `2cf0ae7`
 
-Vollständig aus dem Code erhoben: 149 Studio-Seiten, 34 Portal-Seiten, 14 Brain-Seiten,
-plus die vorgeschlagenen Family-Bereiche. Reine Detailansichten (`[id]`, `[slug]`) sind
-unter ihrem Elternbereich zusammengefasst; eigenständig platzierbare Unterseiten stehen
-als eigene Zeile, weil genau die Migrationskandidaten sind.
+Vollständig aus dem Code erhoben: 149 Studio-Seiten, 34 Portal-Seiten, 16 Brain-Seiten,
+1 Landing-Seite, plus die vorgeschlagenen Family-Bereiche. Reine Detailansichten (`[id]`,
+`[slug]`) sind unter ihrem Elternbereich zusammengefasst; eigenständig platzierbare
+Unterseiten stehen als eigene Zeile, weil genau die die Migrationskandidaten sind.
+
+> ### Aktualisierung gegenüber der ersten Fassung
+>
+> | | Änderung | Wo in dieser Liste |
+> |---|---|---|
+> | 🆕 | **`apps/landing`** — fünfte Oberfläche auf dem Apex-Origin | neuer Abschnitt **L** |
+> | 🆕 | **Brain KI-Chat** (`/ki-chat`) | neue Zeile **A14**, und **G12** hat jetzt eine Vorlage |
+> | ✅ | Brain-Nav ist ein Modul mit Suche (`brain-nav.ts`) | Anmerkung bei **A** |
+> | 🆕 | **Bereichs-Suchleiste** in allen drei Apps | neue Zeilen **C42**, **B26**, **A15** |
+> | ⚠️ | **`terra.html`** — vierter Karteneditor, nirgends eingebunden | neue Zeile **E34** |
+>
+> Neu zu entscheiden sind damit die Zeilen A14, A15, B26, C42, E34, L1–L4.
+> Die Rechte-Lücken B1/B2 aus der Zustandsanalyse sind erledigt (PR #797) — Abschnitt J
+> ist entsprechend fortgeschrieben.
 
 ## Wie ausfüllen
 
@@ -25,20 +39,30 @@ das ausdrücklich dabei.
 
 | Bereich | Für wen | Datenklasse | Zugang |
 |---|---|---|---|
+| **Landing** | alle Besucher | öffentlich | keiner — nur Startseite + Login-Weiche |
 | **Portal** | Mitspieler:innen | `player_visible` | Login + Welt-Mitgliedschaft |
 | **Studio** | DM + Betrieb | `dm_only` / Plattform | Rolle owner/admin/dm |
 | **Brain** | nur du | `owner_private_local` | Rolle owner |
 | **Family** | Haushalt | `household_shared` *(neu)* | E-Mail-Allowlist durch Owner |
+
+Es sind jetzt **fünf** Oberflächen, nicht vier: `apps/landing` ist seit PR #796 eine
+eigene App auf dem Apex-Origin. Sie trägt keine Inhalte, deshalb steht sie in dieser
+Liste am Ende (Abschnitt L) und nicht vorne.
 
 Faustregel: Stört es dich, wenn deine Partnerin/dein Partner es sieht → **Brain**. Muss die
 Person es sehen, damit der Haushalt läuft → **Family**. D&D → **Studio** oder **Portal**.
 
 ---
 
-# A · BRAIN — heute (14 Seiten)
+# A · BRAIN — heute (16 Seiten)
 
-Die Spalte „auch in Studio" zeigt die Doppelungen: **11 von 13** Brain-Bereichen existieren
+Die Spalte „auch in Studio" zeigt die Doppelungen: **11 von 15** Brain-Bereichen existieren
 zusätzlich in Studio, auf derselben Datenbank.
+
+> Seit PR #798 kommt die Brain-Navigation aus `apps/brain/src/navigation/brain-nav.ts`
+> statt aus einem handgeschriebenen Array in der Komponente — mit Keywords und
+> Bereichssuche. Der Item-Typ ist allerdings weiterhin ein eigener, nicht das `NavGroup`
+> aus `@uwe/shared-utils/navigation`, das Studio und Portal nutzen.
 
 | # | Bereich | Pfad | auch in Studio | Vorschlag | Begründung | Entscheidung |
 |---|---|---|---|---|---|---|
@@ -55,6 +79,8 @@ zusätzlich in Studio, auf derselben Datenbank.
 | A11 | Mail | `/mail`, `/mail/[id]` | ⚠️ `/mail` | **Brain** | persönliches Postfach, nicht geteilt | |
 | A12 | Kalender | `/calendar` | ⚠️ `/calendar` | **aufteilen**: privat → Brain, Haushalt → Family | | |
 | A13 | Login | `/login` | – | **Brain** | technisch nötig | |
+| **A14** | **KI-Chat** *(neu, PR #795)* | `/ki-chat`, `/ki-chat/[id]` | – | **Brain** | Bildanalyse + Diktat, `personal_brain` cloud-gesperrt. Vorlage für G12 | |
+| **A15** | **Bereichssuche** *(neu, PR #798)* | Kopfzeile | ⚠️ auch Studio + Portal | **überall** | geteilte Suche über `@uwe/shared-utils/nav-search` — korrekt geteilt | |
 
 ---
 
@@ -96,6 +122,7 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 | B23 | Atlas 3D | `…/atlas3d`, `…/atlas3d/[nodeId]` | abhängig von **E7** | 21.750 Zeilen Code — Grundsatzfrage | |
 | B24 | Atlas (2D) *(ohne Nav-Eintrag)* | `…/atlas` | **WEG** | verwaister Vorgänger von B23 | |
 | B25 | Gruppierung der 15 Einträge | – | Vorschlag: „Nachschlagen" (B10–B12, B17–B19) / „Mitspielen" (B13–B16, B20–B23) | 15 Einträge auf einer Ebene | |
+| **B26** | **Bereichssuche** *(neu, PR #798)* | Kopfzeile | **Portal** | siehe A15 — entschärft B25 teilweise | |
 
 ---
 
@@ -144,6 +171,7 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 | C39 | Organisation → Hardware / Homelab | `/hardware` | owner/admin | **→ Brain** *(oder Studio → System)* | siehe A9 | |
 | C40 | Organisation → Mail | `/mail`, `/mail/compose` | owner/admin | **→ Brain** | | |
 | C41 | Organisation → Kalender | `/calendar` | owner/admin/dm | **aufteilen**: Haushalt → Family, Session-Termine → Studio | | |
+| **C42** | **Bereichssuche** *(neu, PR #798)* | Kopfzeile | owner/admin/dm | **Studio** | ergänzt C3 (`/search`) — prüfen, ob beide nötig sind | |
 
 > Bei Zustimmung verliert Studio 15 Einträge; die Sektionen **„Organisation"** und
 > **„Werkzeuge → Erfassen & Alltag"** entfallen ganz.
@@ -233,6 +261,7 @@ Alle sichtbar für owner/admin/dm.
 | E31 | Freigabe → Wiki-Pflege | `…/quality` | **zusammenlegen** (siehe E2) | | |
 | E32 | Freigabe → Backup | `…/backup` | **WEG** → globales `/backup` (D22) reicht | | |
 | E33 | Live-Session (4 Einträge) | `…/sessions/[id]/live` u. a. | behalten | kontextabhängige Nav, korrekt getrennt | |
+| **E34** | **`terra.html`** *(neu, PR #793)* | Repo-Root, **nirgends eingebunden** | **entscheiden: ersetzt es E7 oder nach `prototypes/`?** | 3.998 Zeilen, `file://`, three.js per CDN. Damit gibt es **vier** Kartenimplementierungen mit zusammen 25.748 Zeilen | |
 
 ---
 
@@ -245,6 +274,26 @@ Zur Vollständigkeit; hier ist vermutlich nichts zu entscheiden.
 | F1 | Landing / Redirects | `/`, `/studio`, `/portal` | behalten (Redirects) | |
 | F2 | Auth | `/login`, `/logout`, `/setup`, `/forgot-password`, `/reset-password` | behalten | |
 | F3 | Wartung | `/maintenance` | behalten | |
+
+---
+
+# L · LANDING — neu seit PR #796 (1 Seite, 2 API-Routes)
+
+Fünfte Oberfläche, 590 Zeilen, trägt den Apex-Origin `uweanddragons.org`. Die Middleware
+arbeitet mit einer **vollständigen Allowlist**; unbekannte Seitenpfade werden dauerhaft
+(308) auf denselben Pfad im Studio umgeleitet, unbekannte API-Pfade geben 404.
+
+| # | Bereich | Pfad | Vorschlag | Begründung | Entscheidung |
+|---|---|---|---|---|---|
+| L1 | Startseite | `/` | **Landing** | öffentliche Visitenkarte | |
+| L2 | Login-Weiche | `/api/auth/enter` | **Landing** | wählt Ziel: studio / portal / brain | |
+| L3 | Health | `/api/health` | **Landing** | | |
+| L4 | Studio-Variante von `/api/auth/enter` | `apps/studio/app/api/auth/enter` | **WEG** *(Empfehlung)* | liegt seit #796 doppelt vor, identische Logik an zwei Origins | |
+
+> **Zu L4:** Das ist genau der Endpunkt, über den die Rechteausweitung aus Befund B1 lief.
+> Der Exploit ist durch den Rollen-Check in PR #797 tot. Aber zwei Kopien einer
+> Login-Zustandsmaschine an zwei Origins driften irgendwann auseinander — und dann gilt
+> die Härtung womöglich nur für eine davon.
 
 ---
 
@@ -275,15 +324,22 @@ Zur Vollständigkeit; hier ist vermutlich nichts zu entscheiden.
 
 ### G.2a Family-Chatbot im Detail
 
-| Aspekt | Vorschlag | Entscheidung |
-|---|---|---|
-| Datenbasis | **nur Family-Daten** (Verträge, Dokumente, Essensplan, Kalender, Haushalt). Kein Zugriff auf Brain, kein Zugriff auf D&D | |
-| Provider | **lokal erzwungen** (RTX-Connector / Ollama) — Haushaltsdokumente gehen nicht in die Cloud | |
-| Antwortumfang | pro Person gefiltert: wer Verträge nicht freigeschaltet hat, bekommt daraus auch keine Antwort | |
-| Wiederverwendung | baut auf `@uwe/ai-brain` + `privacyGuard` auf, **kein** neuer Router — nur ein neuer Kontext-Modus `family` | |
+**Aktualisiert:** Seit PR #795 gibt es den Brain-KI-Chat (A14). Der Family-Chatbot braucht
+damit kein Konzept mehr, sondern eine Kopiervorlage — `@uwe/brain-assistant` (1.384 Zeilen)
+liefert Konversationsmodell, Anhänge, Modellwahl, RAG-Kontext, Bildanalyse und Diktat
+bereits fertig.
 
-Die Privacy-Mechanik dafür existiert bereits und greift nachweislich
-(`packages/ai-brain/src/router/privacyGuard.ts`, eingebunden in `aiRouter.ts`).
+| Aspekt | Vorschlag | Vorlage vorhanden? | Entscheidung |
+|---|---|---|---|
+| Datenbasis | **nur Family-Daten** (Verträge, Dokumente, Essensplan, Kalender, Haushalt). Kein Brain, kein D&D | ✅ `rag-context.ts` | |
+| Provider | **lokal erzwungen** — Haushaltsdokumente gehen nicht in die Cloud | ✅ `privacyGuard`: `personal_brain` ist bereits dauerhaft cloud-gesperrt, `family` analog ergänzen | |
+| Antwortumfang | pro Person gefiltert: wer Verträge nicht freigeschaltet hat, bekommt daraus auch keine Antwort | ❌ **neu** — Brain kennt nur einen Nutzer, Family ist mehrbenutzerfähig | |
+| Konversationen, Anhänge, Diktat | übernehmen | ✅ 4 Prisma-Modelle + `chat-runner.ts` | |
+| Guard | Owner **und** freigeschaltete Mitglieder | ⚠️ `requireBrainActionAuth()` prüft nur Owner — für Family muss daraus eine Mitgliedschaftsprüfung werden | |
+
+Der eine echt neue Teil ist also die **Mehrbenutzer-Filterung**. Alles andere ist
+Wiederverwendung. Genau deshalb lohnt es sich, G.3 (`FamilyMember.areas`) vor dem Bau
+festzulegen — daran hängt der Filter.
 
 ## G.3 Zugang — Vorschlag
 
@@ -356,20 +412,32 @@ Zwei saubere Wege, ein dritter ist keiner:
 
 | Bereich | Anzahl | Inhalt |
 |---|---|---|
+| **Landing** | 3 | Startseite · Login-Weiche · Health |
 | **Portal** | 18 | unverändert (minus Atlas-2D-Leiche) |
 | **Studio** | 19 + Welt-Ebene | Start · Welten · Welt-Wissen · KI · Werkzeuge · System |
-| **Brain** | 11 | Heute · Life Brain · Wissensassistent · Chat · Capture · Projekte · Werkstatt · Miniaturen · Hardware · Mail · Ideen |
+| **Brain** | 12 | Heute · Life Brain · Wissensassistent · **KI-Chat** · Capture · Projekte · Werkstatt · Miniaturen · Hardware · Mail · Ideen · Start |
 | **Family** | 13 | Start · Verträge · Dokumente · Küche · Essensplan · Einkaufsliste · Vorrat · Haushalt · Finanzen · Kalender · Scan · Chat · Mitglieder |
 
-Gestrichen: 12 Bereiche (C14, D2, D3, D9, D10, D25, D26, D27, D29, E8, E32, B24).
+Gestrichen: 14 Bereiche (C14, D2, D3, D9, D10, D25, D26, D27, D29, E8, E32, B24, L4, und
+je nach E34-Entscheidung `terra.html` oder die Atlas-Familie).
 Zusammengelegt: 4 Welt-Werkzeuge → 1, Print Center → Labels, Admin-Hub → System-Hub.
 
 ---
 
 # J · Reihenfolge, die ich empfehle
 
+*Fortgeschrieben 2026-07-26 abends.*
+
 1. ~~Rechte-Lücken B1/B2 schließen~~ — **erledigt** (PR #797, gemergt)
 2. **Diese Liste ausfüllen** ← wir sind hier
-3. **Abschnitt H entscheiden** (Brain oder Studio) — davon hängt ab, wohin Family gebaut wird
-4. **Family bauen** — `FamilyMember`, eigene DB, lokal erzwungener Chat
-5. Verschlankung (Streichungen und Zusammenlegungen aus C–E) nebenher
+3. **Abschnitt H entscheiden** (Brain oder Studio) — davon hängt ab, wohin Family gebaut
+   wird. **Dringender geworden:** Der neue Brain-MCP-Server liest Brain-Inhalte über
+   Studio (`/api/life-brain/*`), weil `apps/brain` keine Inhalts-API hat. Die
+   Vermischung ist damit tragend für ein Feature — je länger sie steht, desto teurer wird
+   die Trennung.
+4. **E34 entscheiden** (`terra.html` vs. Atlas-Familie) — 25.748 Zeilen in vier parallelen
+   Implementierungen sind der größte Einzelposten. Unabhängig von 3, kann parallel laufen.
+5. **Family bauen** — `FamilyMember`, eigene DB, Chat als Ableitung von
+   `@uwe/brain-assistant` mit Mehrbenutzer-Filter
+6. Verschlankung (Streichungen und Zusammenlegungen aus C–E) nebenher
+7. **L4** (doppeltes `/api/auth/enter`) einsammeln — klein, aber sollte nicht liegen bleiben

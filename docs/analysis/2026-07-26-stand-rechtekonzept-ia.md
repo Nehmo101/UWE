@@ -1,24 +1,46 @@
 # UWE — Zustandsanalyse: Rechtekonzept, Informationsarchitektur, Feature-Bilanz
 
-Stand: 2026-07-26 · Basis: `main` @ `0a9261c` · Analyse ohne Codeänderung
+Erstfassung: 2026-07-26 (Basis `0a9261c`) · **Aktualisiert: 2026-07-26 abends, Basis `main` @ `2cf0ae7`**
+
+> ### Was sich seit der Erstfassung geändert hat
+>
+> Sieben PRs sind eingegangen (#792–#798). Kurzfassung, Details in
+> [§6](#6-nachtrag--was-heute-dazugekommen-ist):
+>
+> | | Änderung | Wirkung auf diese Analyse |
+> |---|---|---|
+> | ✅ | **B1 und B2 behoben** (PR #797) | die beiden Rechte-Lücken sind zu |
+> | ✅ | **Brain-Nav ist jetzt ein Modul** (`brain-nav.ts`, PR #798) | IA-Befund teilweise erledigt |
+> | 🆕 | **`apps/landing`** — 5. App auf dem Apex-Origin | neue Oberfläche, sauber gebaut; `/api/auth/enter` liegt jetzt **doppelt** |
+> | 🆕 | **Brain KI-Chat** (`/ki-chat`, `@uwe/brain-assistant`) | vorbildlich abgesichert — und der fertige Bauplan für den Family-Chatbot |
+> | 🆕 | **MCP-Server** für Studio/Portal/Brain | Design sauber, aber **verschärft B4** |
+> | ⚠️ | **`terra.html`** — 3998 Zeilen, nirgends referenziert | **vierter** Karteneditor; verschärft §3.1 |
+>
+> Unverändert gültig bleiben: B3 (Capability-Matrix ohne Wirkung), B4 (Domain-Contract
+> verletzt — jetzt schlimmer), B5 (tote Guards), sowie die IA-Befunde zu Studio.
 
 ---
 
 ## 0. Kennzahlen
 
+Aktualisiert auf `2cf0ae7`; Werte der Erstfassung in Klammern, wo sie sich bewegt haben.
+
 | | |
 |---|---|
-| TypeScript gesamt (ohne `generated/`) | ~327.000 Zeilen |
-| davon `apps/studio` | 104.500 (32 %) |
-| davon `apps/portal` | 11.100 |
-| davon `apps/brain` | 3.400 |
-| davon `apps/rtx-connector-client` | 7.700 |
-| Packages | 37 |
-| Prisma-Modelle | 97 (App-DB) + 45 (Brain-DB) |
+| TypeScript gesamt (ohne `generated/`) | ~353.000 Zeilen *(327.000)* |
+| davon `apps/studio` | 108.300 (31 %) *(104.500)* |
+| davon `apps/portal` | 23.600 *(11.100)* |
+| davon `apps/brain` | 7.500 *(3.400 — durch KI-Chat mehr als verdoppelt)* |
+| davon `apps/landing` | 590 *(neu)* |
+| davon `apps/rtx-connector-client` | 7.800 |
+| Packages | 39 *(37 — neu: `mcp`, `brain-assistant`)* |
+| Prisma-Modelle | 97 (App-DB) + 49 (Brain-DB) *(45 — 4 neue für den KI-Chat)* |
 | Studio: Seiten / API-Routes / Server Actions | 149 / 204 / 272 (in 59 Dateien) |
 | Portal: Seiten / API-Routes | 34 / 24 |
-| Brain: Seiten / API-Routes | 14 / 2 |
-| Eingefrorene Monolithen (`file-size-baseline.json`) | 24 Dateien |
+| Brain: Seiten / API-Routes | 16 / 5 *(14 / 2)* |
+| Landing: Seiten / API-Routes | 1 / 2 *(neu)* |
+| Nicht referenzierter Code am Repo-Root | `terra.html`, 3998 Zeilen *(neu)* |
+| Eingefrorene Monolithen (`file-size-baseline.json`) | 24 Dateien *(unverändert)* |
 
 **Erster Eindruck:** Studio ist zu einem Drittel des Codes gewachsen und trägt inzwischen
 drei Produkte gleichzeitig (DM-Studio, Daily Admin OS, Life Brain). Die Sicherheits-
@@ -62,7 +84,20 @@ Zwei Zellen sind rot. Beide sind unten ausgeführt.
 
 ---
 
-#### B1 — Studio Server Actions haben **kein** Rollen-Gate (kritisch)
+#### B1 — Studio Server Actions haben **kein** Rollen-Gate (kritisch) — ✅ BEHOBEN in PR #797
+
+> **Status 2026-07-26 abends:** geschlossen. `requireStudioActionAuth()` erzwingt jetzt
+> zusätzlich `STUDIO_ACCESS_ROLES` (401 ohne Session, 403 bei falscher Rolle). Der
+> Dev-Bypass bleibt an `studioAuthRequired()` gebunden. Weil `server-actions.test.ts`
+> bereits statisch erzwingt, dass jede Action den Guard aufruft, wirkte die Härtung
+> sofort auf alle 272 Actions. Die Beschreibung unten bleibt als Begründung stehen.
+>
+> **Offener Rest:** `/api/auth/enter` existiert seit PR #796 **doppelt** — in
+> `apps/landing` und weiterhin unverändert in `apps/studio`, beide mit identischer
+> `hasTargetAccess`-Logik. Der Exploit-Pfad ist durch den Rollen-Check tot, aber eine
+> Login-Zustandsmaschine an zwei Origins doppelt zu pflegen ist eine vermeidbare
+> Angriffsfläche. Empfehlung: die Studio-Variante entfernen, jetzt wo Landing sie trägt.
+
 
 Alle 272 Server Actions in Studio rufen genau denselben Guard auf:
 
@@ -116,7 +151,15 @@ gegen den Guard prüft.
 
 ---
 
-#### B2 — Portal-Weltseiten prüfen keine Welt-Mitgliedschaft (hoch)
+#### B2 — Portal-Weltseiten prüfen keine Welt-Mitgliedschaft (hoch) — ✅ BEHOBEN in PR #797
+
+> **Status 2026-07-26 abends:** geschlossen. Das Gate sitzt jetzt in
+> `getAccessContextForWorld()` — im Datenpfad, nicht im Layout, weil ein Next.js-Layout
+> nicht bei jeder Navigation innerhalb seines Segments neu läuft. Damit sind alle 20
+> Weltseiten, 4 API-Routes und 6 Action-Module abgedeckt. Das Welt-Layout prüft
+> zusätzlich über `loadReadableWorld()`, damit auch der Weltname nicht durchsickert.
+> `assertWorldReadable()` ist nicht mehr tot (siehe B5).
+
 
 Alle 20 Seiten unter `apps/portal/app/auth/worlds/[worldSlug]/**` verwenden
 `getAccessContextForWorld(worldSlug)`. Diese Funktion baut nur den `AccessContext`
@@ -163,7 +206,19 @@ Modell 1 wird darauf abgebildet) oder löschen. Der Zwischenzustand ist der schl
 
 ---
 
-#### B4 — `@uwe/product-contracts` wird von Studio in 108 Dateien verletzt (mittel)
+#### B4 — `@uwe/product-contracts` wird von Studio in 108 Dateien verletzt (mittel → **erhöht**)
+
+> **Status 2026-07-26 abends: verschärft.** Mit PR #796 ist der Brain-MCP-Server
+> hinzugekommen. Sein Design ist bewusst sauber — HTTP-Client vor der laufenden App,
+> damit alle Guards auf dem Request-Pfad bleiben. Nur: Brain-Inhalte liest er **über
+> Studio** via `/api/life-brain/*`, weil `apps/brain` selbst nur `/api/health` anbietet
+> (dokumentiert in `packages/mcp/src/client/config.ts`).
+>
+> Damit ist die Vertragsverletzung nicht mehr bloß Altlast, sondern **tragende
+> Voraussetzung eines neuen Features**. Wer Studio künftig von `personal_brain` trennen
+> will, muss zuerst den Brain-MCP umhängen. Das erhöht die Kosten von Option (A) in
+> §4.8 spürbar — und ist ein Argument, die Entscheidung nicht weiter aufzuschieben.
+
 
 Die Matrix in `packages/product-contracts/src/domain-access.ts` ist als *„AUTHORITATIVE
 product-boundary contracts"* deklariert und sagt:
@@ -190,9 +245,13 @@ Repo, und `pnpm test` grünt fröhlich dazu.
 
 #### B5 — Tote Guards
 
+> **Status 2026-07-26 abends:** `assertWorldReadable` ist durch PR #797 nicht mehr tot —
+> es ist jetzt die werfende Variante von `loadReadableWorld()`, das im Welt-Layout
+> aufgerufen wird. Die übrigen fünf Einträge stehen unverändert.
+
 | Symbol | Ort | Aufrufstellen im Produktivcode |
 |---|---|---|
-| `assertWorldReadable` | `apps/portal/src/lib/auth.ts:124` | 0 |
+| ~~`assertWorldReadable`~~ | `apps/portal/src/lib/auth.ts` | ✅ verdrahtet (PR #797) |
 | `requireAiRole` | `packages/security/src/security/ai-policy.ts:57` | 0 |
 | `hasCapability` (+12 Wrapper) | `packages/auth/src/role-capabilities.ts` | 0 |
 | `brainCanAccess` | `apps/brain/src/lib/audience.ts:11` | 0 |
@@ -344,16 +403,41 @@ Zwei kleine Punkte:
 Kriterium: geringer Nutzen im Verhältnis zu Wartungslast, Angriffsfläche oder
 Bedienkomplexität. Nach Einsparpotenzial sortiert.
 
-### 3.1 Atlas 3D — 21.750 Zeilen für eine Unterseite
+### 3.1 Kartenwerkzeuge — 25.748 Zeilen in **vier** parallelen Implementierungen
 
-Drei Packages (`atlas` 10.654 · `atlas-3d` 10.308 · `atlas-editor` 788) bedienen genau
-eine Route in Studio und eine im Portal. Das sind **6,7 % des gesamten Codes** für einen
-3D-Globus. Ein D&D-Tisch braucht eine Karte mit Pins; ein Planeten-Editor mit Terrain,
-Features, Objekten und Kamera-Bookmarks ist ein eigenes Produkt. 341 Commits stecken drin,
-der Bereich ist also nicht tot — aber die Frage ist, ob er den Anteil wert ist.
+*Aktualisiert 2026-07-26 abends: aus drei sind vier geworden.*
 
-*Empfehlung:* Nicht löschen, aber ehrlich bewerten. Wenn Atlas 3D am Spieltisch nicht
-regelmäßig benutzt wird, ist es der mit Abstand größte Einzelposten zum Ausbauen.
+| Implementierung | Zeilen | Eingebunden in |
+|---|---|---|
+| `@uwe/atlas` | 10.654 | Studio + Portal (`/atlas3d`) |
+| `@uwe/atlas-3d` | 10.308 | Studio + Portal (`/atlas3d`) |
+| `@uwe/atlas-editor` | 788 | Studio + Portal (`/atlas3d`) |
+| **`terra.html`** *(neu, PR #793)* | **3.998** | **nirgends** |
+
+Die ersten drei bedienen genau eine Route in Studio und eine im Portal — **6,2 % des
+Codes** für einen 3D-Globus. Ein D&D-Tisch braucht eine Karte mit Pins; ein
+Planeten-Editor mit Terrain, Features, Objekten und Kamera-Bookmarks ist ein eigenes
+Produkt.
+
+`terra.html` liegt seit PR #793 am Repo-Root und ist **repo-weit nirgends referenziert** —
+kein Import, kein Build-Schritt, kein Deploy, keine Doku, kein Link. Der Commit sagt es
+selbst: *„Berührt keinen Bestandscode: eine neue Datei, sonst nichts."* Die Datei läuft
+über `file://` und lädt three.js r128 per CDN-Script-Tag, ist also auch bewusst außerhalb
+der CSP und des Dependency-Managements.
+
+Als Prototyp ist das legitim und sogar klug — man baut so etwas erst mal frei. Als
+Dauerzustand im Hauptrepo ist es die vierte Antwort auf dieselbe Frage. **Es braucht eine
+Entscheidung, keine weitere Implementierung:**
+
+- Wird `terra` die Zukunft der Karte? Dann ersetzt es die Atlas-Familie — 21.750 Zeilen
+  können weg, und `terra` muss in eine App integriert werden (CSP, three.js als
+  Dependency, Persistenz statt Datei-Export).
+- Ist es ein Experiment? Dann gehört es in einen eigenen Branch oder ein
+  `prototypes/`-Verzeichnis mit README, nicht neben `package.json`.
+- Beides parallel zu pflegen ist die einzige Option, die sicher Geld kostet.
+
+*Empfehlung:* Erst `terra` vs. Atlas entscheiden, dann die Verlierer-Implementierung
+ausbauen. Das ist mit Abstand der größte Einzelposten in diesem Dokument.
 
 ### 3.2 Die Capability-Matrix samt `/admin/roles`
 
@@ -470,15 +554,100 @@ Nach Wirkung pro Aufwand geordnet.
 
 ## 5. Zusammenfassung in fünf Sätzen
 
-Die Sicherheitsmechanik, die man erwartet — API-Guards, `dm_only`-Filterung,
-Owner-Gating für Restore und Brain — ist vorhanden, konsequent und getestet. Zwei
-unauffällige Pfade sind offen: Studio-Server-Actions prüfen nur CSRF und keine Rolle
-(was über den öffentlichen `/api/auth/enter` zu einer echten Rechteausweitung führt), und
-Portal-Weltseiten prüfen keine Welt-Mitgliedschaft. Daneben existieren zwei vollständig
-ausformulierte Rechtemodelle — die Capability-Matrix und die Audience-Domain-Matrix —,
-die nirgends erzwungen werden und deren zweite von Studio in 108 Dateien widerlegt wird.
-Die Navigation ist handwerklich exzellent gepflegt (keine toten Links, zentraler Contract,
-Tests), ordnet aber drei Produkte unter sieben Studio-Überschriften ein, und `apps/brain`
-dupliziert Studios kompletten Organisation-Bereich auf derselben Datenbank. Das größte
-Einsparpotenzial liegt nicht in vielen kleinen Features, sondern in drei Entscheidungen:
-Brain oder Studio, Atlas 3D ja oder nein, und welches der vier Rechtekonzepte gilt.
+*Aktualisiert 2026-07-26 abends.*
+
+Die Sicherheitsmechanik, die man erwartet — API-Guards, `dm_only`-Filterung, Owner-Gating
+für Restore und Brain — ist vorhanden, konsequent und getestet; die zwei unauffälligen
+Lücken (Studio-Server-Actions ohne Rollen-Gate, Portal-Weltseiten ohne
+Mitgliedschaftsprüfung) sind mit PR #797 geschlossen, und der am selben Tag hinzugekommene
+Brain-KI-Chat zeigt, dass die Lehre daraus sitzt: sein Action-Guard prüft die Owner-Rolle
+und sagt im Kommentar ausdrücklich, dass er das anders macht als Studio. Was bleibt, sind
+zwei vollständig ausformulierte Rechtemodelle — die Capability-Matrix und die
+Audience-Domain-Matrix —, die nirgends erzwungen werden; die zweite wird von Studio in 108
+Dateien widerlegt und ist durch den neuen Brain-MCP-Server, der Brain-Inhalte über Studio
+liest, inzwischen sogar tragend für ein Feature. Die Navigation ist handwerklich exzellent
+gepflegt und hat mit der Bereichssuche und `brain-nav.ts` weiter gewonnen, ordnet aber
+weiterhin drei Produkte unter sieben Studio-Überschriften ein, während `apps/brain` Studios
+kompletten Organisation-Bereich auf derselben Datenbank dupliziert. Beim Code-Volumen ist
+die Lage schlechter geworden statt besser: mit `terra.html` liegen jetzt vier parallele
+Kartenimplementierungen im Repo, eine davon 3.998 Zeilen groß und an keiner Stelle
+eingebunden. Das größte Einsparpotenzial liegt weiterhin nicht in vielen kleinen Features,
+sondern in drei Entscheidungen — Brain oder Studio, welche der vier Karten gewinnt, und
+welches der vier Rechtekonzepte gilt.
+
+---
+
+## 6. Nachtrag — was heute dazugekommen ist
+
+PRs #792–#798, alle nach der Erstfassung dieser Analyse gemergt.
+
+### 6.1 `apps/landing` — fünfte Oberfläche (PR #796)
+
+590 Zeilen, trägt den Apex-Origin (`uweanddragons.org`). Die Middleware arbeitet mit einer
+**vollständigen Allowlist** (`/`, `/api/auth/enter`, `/api/health`); alles andere gibt 404
+oder leitet dauerhaft (308) auf denselben Pfad im Studio um, damit alte Lesezeichen nicht
+ins Leere laufen. Das ist ein sauberes Deny-by-default und genau richtig für einen
+öffentlichen Origin.
+
+Ein Punkt bleibt: `/api/auth/enter` liegt jetzt **zweimal** im Repo — in `apps/landing`
+und unverändert in `apps/studio` —, beide mit identischer `hasTargetAccess`-Logik. Das war
+der Origin des B1-Exploits. Der ist tot, aber eine Login-Zustandsmaschine an zwei Origins
+doppelt zu pflegen lädt zum Auseinanderdriften ein. Die Studio-Variante kann weg.
+
+### 6.2 Brain KI-Chat (PR #795) — das Vorbild für Family
+
+Neuer Bereich `/ki-chat` in Brain, neues Package `@uwe/brain-assistant` (1.384 Zeilen),
+vier neue Prisma-Modelle (`BrainAssistantProfile`, `BrainChatConversation`,
+`BrainChatMessage`, `BrainChatAttachment`), dazu Bildanalyse und Diktat über den
+RTX-Connector.
+
+**Sicherheitstechnisch ist das die beste Neuzugang-Arbeit im Repo:**
+
+- `requireBrainActionAuth()` prüft die **Owner-Rolle**, nicht nur CSRF — mit dem Kommentar
+  *„unlike Studio's trusted-scope guard — this asserts the global owner role."* Genau der
+  Fehler aus B1 wurde bewusst nicht wiederholt.
+- `guardAssistantApi()` kombiniert `requireBrainOwnerAuth` + Same-Origin + Rate-Limit, und
+  begründet im Kommentar, warum die CSRF-Prüfung hier ausgeschrieben werden muss.
+- `contextModeFor()` bildet nur auf `personal_brain` | `general_chat` ab, mit einem Test,
+  der festhält: *„nothing else may appear."* `personal_brain` ist im `privacyGuard`
+  dauerhaft cloud-gesperrt.
+
+**Konsequenz für Family:** Der in der Bereichsliste vorgeschlagene Family-Chatbot (G12)
+braucht kein Konzept mehr, sondern eine Kopiervorlage. `@uwe/brain-assistant` liefert
+Konversationsmodell, Anhänge, Modellwahl, RAG-Kontext und Diktat. Für Family kommt genau
+ein neuer Kontext-Modus dazu — und der muss, anders als `personal_brain`, gegen die
+Family-DB laufen und pro Mitglied gefiltert werden.
+
+### 6.3 MCP-Server für Studio, Portal und Brain (PR #796)
+
+`packages/mcp`, 1.699 Zeilen. Design bewusst konservativ und dadurch gut: dünne
+HTTP-Clients vor den laufenden Apps, sodass alle Route-Guards, RBAC-Prüfungen und das
+Audit-Log auf dem Request-Pfad bleiben. Schreiben ist deny-by-default
+(`UWE_MCP_ALLOW_WRITES`), Personal-Brain-**Inhalte** ebenso
+(`UWE_MCP_BRAIN_ALLOW_CONTENT`, Default aus — ohne die Freigabe gibt es nur Metadaten).
+
+Die eine Schattenseite steht in B4: Der Brain-MCP liest Brain-Inhalte über Studio
+(`/api/life-brain/*`), weil `apps/brain` selbst keine Inhalts-API hat. Die
+Contract-Verletzung ist damit tragend geworden.
+
+### 6.4 Bereichs-Suchleiste (PR #798)
+
+`@uwe/shared-utils/nav-search` (195 Zeilen, unit-getestet) plus `NavSearch.tsx` in
+`@uwe/shared-ui`, eingebunden in Studio, Portal und Brain. Brain hat dabei
+`src/navigation/brain-nav.ts` bekommen — statt des handgeschriebenen `SECTIONS`-Arrays in
+der Komponente gibt es jetzt ein Modul mit Keywords.
+
+Damit ist der IA-Befund aus §2.2 **teilweise** erledigt. Was bleibt: `brain-nav.ts`
+definiert weiterhin einen **eigenen** Item-Typ (`href`/`label`/`icon` als Unicode-Zeichen)
+statt `NavGroup` aus `@uwe/shared-utils/navigation`, das Studio und Portal nutzen. Geteilt
+wird nur die Suche, nicht das Nav-Modell — die Drift ist verlangsamt, nicht beendet.
+
+### 6.5 `terra.html` (PR #793)
+
+Siehe §3.1 — der Befund hat sich dadurch von „drei Implementierungen" auf „vier" verschärft.
+
+### 6.6 Design-Korrekturen (PRs #792, #794)
+
+Darkmode-Lesbarkeit für Buttons, Badges und Tabs; Abmelden-Button erbt keine
+System-Farben mehr; neues `uwe-base-reset.css` in `@uwe/shared-ui`. Ohne Auswirkung auf
+Rechtekonzept oder Informationsarchitektur.
