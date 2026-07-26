@@ -26,7 +26,8 @@ var VARIANTS = {
   flaeche: [["wald", "Wald"], ["feld", "Feld"], ["viertel", "Viertel"], ["wiese", "Wiese"]],
   objekt: [["baeume", "Bäume"], ["haeuser", "Häuser"], ["klassisch", "Klassisch"],
            ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["ruinen", "Ruinen"],
-           ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"]],
+           ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"],
+           ["inseln", "Schwebeinseln"]],
   ranke: [["ranke", "Ranke"]],
   terrain: [["heben", "Anheben"], ["senken", "Absenken"], ["glaetten", "Glätten"], ["ebnen", "Einebnen"]]
 };
@@ -112,15 +113,40 @@ var PARAMS = {
       ["boot", "Boot"], ["steg", "Steg"]
     ] }
   ],
+  // Eigenes Variantenschema: schemaKey prueft ERST "kind:variant", dann den
+  // Wildcard "kind:*" — ein exakter Eintrag hier deckt die Variante also
+  // vollstaendig ab, und toolParams/defaultsFor laufen ohne Sonderfall
+  // darueber. Darum bekommen die Schwebeinseln ihre Sonderfelder (hoehe,
+  // baeumchen) NICHT im "objekt:*"-Schema, sondern hier; frei/nurTyp fehlen
+  // bewusst — genInseln (objects.js) nutzt weder Bodenregeln noch Pooltabellen.
+  "objekt:inseln": [
+    { k: "anzahl", l: "Inseln pro Klick", min: 1, max: 6, st: 1, d: 2 },
+    { k: "hoehe", l: "Schwebehöhe", min: 10, max: 60, st: 1, d: 24 },
+    { k: "groesse", l: "Größe", min: 0.5, max: 2, st: 0.05, d: 1 },
+    { k: "streuung", l: "Streuradius", min: 5, max: 40, st: 0.5, d: 18 },
+    { k: "baeumchen", l: "Bäumchen obendrauf", b: true, d: true }
+  ],
   "ranke:ranke": [
     { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },
     { k: "straenge", l: "Stränge", min: 3, max: 5, st: 1, d: 4 },
+    { k: "dicke", l: "Dicke", min: 0.5, max: 2.5, st: 0.05, d: 1 },
+    { k: "stil", l: "Stil", o: [["geflochten", "Geflochten"], ["glatt", "Glatt"]], d: "geflochten" },
     { k: "steigung", l: "Steigung (Ø je Windung)", min: 1.2, max: 8, st: 0.1, d: 2.8 },
     { k: "blattgroesse", l: "Blattgröße", min: 0.5, max: 1.8, st: 0.05, d: 1 },
     { k: "plateaus", l: "Blattplateaus", min: 0, max: 6, st: 1, d: 3 },
     { k: "plateau", l: "Plateaugröße", min: 0.5, max: 2, st: 0.05, d: 1 },
     { k: "staedtchen", l: "Städtchen darauf", b: true, d: true },
-    { k: "inseln", l: "Schwebeinseln", min: 0, max: 4, st: 1, d: 2 }
+    { k: "inseln", l: "Schwebeinseln", min: 0, max: 4, st: 1, d: 2 },
+    { k: "luftwurzeln", l: "Luftwurzeln", b: true, d: false },
+    // "" = alter hartkodierter Gebaeudemix (byteidentisch fuer Bestandskarten);
+    // die uebrigen Werte sind KULTUR-Tabellen aus generators/objects.js.
+    { k: "stadtStil", l: "Baustil Städtchen", o: [["", "Klassisch kompakt"],
+        ["dorf", "Dorf"], ["klassisch", "Klassisch"], ["zwergisch", "Zwergisch"],
+        ["elfisch", "Elfisch"], ["werk", "Werkstätten"], ["ruine", "Ruinen"],
+        ["gemischt", "Gemischt"]], d: "" },
+    { k: "stadtDichte", l: "Stadtdichte", min: 0, max: 2, st: 0.1, d: 1 },
+    { k: "treppe", l: "Wendeltreppe", b: true, d: false },
+    { k: "bruecken", l: "Hängebrücken", b: true, d: false }
   ],
   "terrain:*": [
     { k: "radius", l: "Pinselradius", min: 2, max: 40, st: 0.5, d: 12 },

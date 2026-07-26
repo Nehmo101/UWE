@@ -63,9 +63,10 @@ F1-F4 umgesetzt; F4-Sichtabgleich gegen Filmstills bleibt manueller Punkt in der
 | F3 | **Kronen-Normalen von der Hüllkugel**: Normalen der Kronenkarten als `normalize(position − kronenzentrum)` setzen — Krone shaded als ein weicher Körper, Silhouette bleibt unruhig. Erst nach C1 sinnvoll beurteilbar. | `generators/geometry.js` (`geoBaumArt`) | M |
 | F4 | **Kalibrierpass gegen Filmstills**: Abgleich von Grading (Sättigungsfenster S 0,25–0,50 für Landschaftsmassen, Werteumfang ~0,20–0,85, Bloom-Schwellen) gegen 3–4 echte Referenz-Stills je Tageszeit; Ergebnis als Kommentar an den Presets dokumentieren. | `world/atmosphere.js` | M |
 
-## Runde G — Setting-Ausbau (aus den Referenzbildern)
+## Runde G — Setting-Ausbau (aus den Referenzbildern) — ERLEDIGT (27.07.2026)
 
 Ziel: Terra sieht aus wie die Vorlagen — nicht nur bei Mittag auf der Wiese.
+G1-G6 umgesetzt: Nacht-Preset (Sterne, Mond, Rankenglut), Ranken-Parameter (dicke/stil/luftwurzeln), Plateau-Staedte (KULTUR-Stil, Dichte, Gassen), Wendeltreppe + Haengebruecken, 5 Biome, Schwebeinseln als Objekt-Variante.
 
 | Nr. | Aufgabe | Ort | Größe |
 |---|---|---|---|

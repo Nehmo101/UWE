@@ -12,6 +12,7 @@ import { handles, rebuildHandles, updateHandlePositions, setPreview, updateBrush
   from './selection.js';
 import { raycaster, _ndc, camera } from './camera.js';
 import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
+import { rankePlatzierbar } from '../generators/vines.js';
 import { pushUndo, undo, redo } from './history.js';
 import { toast, buildPanel, updateHint } from '../ui/panels.js';
 
@@ -74,8 +75,15 @@ export function initPointer(cv) {
       return;
     }
     if (ed.tool === "ranke") {
+      // Nur beim Erzeugen pruefen — bestehende Karten mit Wasser-Ranken
+      // muessen weiter rendern, deshalb sitzt die Regel nicht in genRanke.
+      var rsp = snapPt(p);
+      if (!rankePlatzierbar(rsp.x, rsp.z)) {
+        toast("Ranke braucht festen, flachen Grund");
+        return;
+      }
       pushUndo();
-      var rel = mkElement("ranke", "ranke", [snapPt(p)], copyParams(curParams()), nextSeed());
+      var rel = mkElement("ranke", "ranke", [rsp], copyParams(curParams()), nextSeed());
       S.elements.push(rel);
       regenElement(rel);
       select(rel);

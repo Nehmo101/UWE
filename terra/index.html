@@ -24,11 +24,23 @@
     <input id="seed" type="text" value="1337" spellcheck="false">
     <button id="seedApply">Übernehmen</button>
     <div class="sep"></div>
+    <label for="biomSel">Biom</label>
+    <!-- width:auto inline: die globale select-Regel (style.css) setzt 100%
+         fuer Panel-Selects, in der flexiblen Leiste soll er kompakt bleiben -->
+    <select id="biomSel" style="width:auto">
+      <option value="wiese" selected>Wiese</option>
+      <option value="wueste">Wüste</option>
+      <option value="kueste">Küste</option>
+      <option value="sumpf">Sumpf</option>
+      <option value="schnee">Schnee</option>
+    </select>
+    <div class="sep"></div>
     <label>Tageszeit</label>
     <button class="tod" data-t="morgen">Morgen</button>
     <button class="tod" data-t="mittag">Mittag</button>
     <button class="tod" data-t="abend">Abendrot</button>
     <button class="tod" data-t="nebel">Nebel</button>
+    <button class="tod" data-t="nacht">Nacht</button>
     <div class="sep"></div>
     <button id="snapBtn">Raster</button>
     <button id="fxBtn" class="on">Effekte</button>

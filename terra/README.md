@@ -22,13 +22,29 @@ Browser-Cache.
 Werkzeuge 1-6 (Pfad, Flaeche, Objekt, Ranke, Terrain, Auswahl), WASD/Pfeile
 bewegen, Q/E drehen, Mausrad zoomt, rechte Maustaste schwenkt. Doppelklick
 oder Enter schliesst eine Zeichnung ab, Esc bricht ab, Entf loescht die
-Auswahl, Strg+Z / Strg+Y fuer Undo/Redo.
+Auswahl (bzw. den golden markierten Punktgriff), Strg+Z / Strg+Y fuer
+Undo/Redo. Im Auswahl-Werkzeug fuegt ein Doppelklick auf ein Segment einen
+Punkt ein.
 
-Untere Leiste: Seed, Tageszeit (Morgen/Mittag/Abendrot/Nebel), Raster,
-Effekte (Nachbearbeitung an/aus), Speichern/Laden (JSON) und PNG-Export.
-Karten aus der frueheren Einzeldatei-Fassung (`terra.html`) laden weiterhin.
+Untere Leiste: Seed, Biom (Wiese/Wueste/Kueste/Sumpf/Schnee), Tageszeit
+(Morgen/Mittag/Abendrot/Nebel/Nacht), Raster, Effekte (Nachbearbeitung
+an/aus), Speichern/Laden (JSON, Formatversion 3 mit Hoehen-Delta) und
+PNG-Export. Karten aus der frueheren Einzeldatei-Fassung (`terra.html`, v1)
+und der v2-Fassung laden weiterhin; ihre Bestueckung wuerfelt unter v3
+einmalig um (ortsstabile Zufallsschluessel).
+
+Ranken: Parameter fuer Dicke, Stil (geflochten/glatt), Luftwurzeln,
+Stadt-Baustil und -Dichte auf den Blattplateaus, Wendeltreppe und
+Haengebruecken. Objekt-Werkzeug: Variante "Schwebeinseln" und "Nur Typ".
 
 ## Offener Stand
+
+- Runde G (Setting-Ausbau) ist abgeschlossen: fuenfte Tageszeit Nacht
+  (deterministische Sterne, Mond = Sonnenscheibe, selbstleuchtende Ranken,
+  Fensterglut 3.2), Ranken-Parameter (dicke, stil geflochten/glatt,
+  Luftwurzeln, Stadt-Baustil/-Dichte, Wendeltreppe, Haengebruecken),
+  fuenf Biome ueber die BIOME-Registry, Schwebeinseln als Objekt-Variante.
+  Damit ist der Bearbeitungsplan C-G vollstaendig abgearbeitet.
 
 - Runde F (Look) ist abgeschlossen: kuehle Schatten im Wrap-Licht
   (schattenKuehl je Tageszeit), niederfrequente Farbdrift in Terrain und

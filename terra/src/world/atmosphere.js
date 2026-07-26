@@ -2,12 +2,13 @@
 // dazu die bewegten Kleinigkeiten (Voegel, Schornsteinrauch, Wolkenschatten-Drift).
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, rngOf, rr } from '../core/rng.js';
+import { S, BIOME } from '../core/store.js';
 import { terraUniforms, tintedMats, vineMat } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { POOLS } from '../core/pools.js';
 import { schattenMat } from '../core/pools.js';
 import { waterMat } from './water.js';
-import { paintSky, setSonne, setSonnenDir, setWolkenFarben, cirrusMat,
+import { paintSky, setSonne, setSonnenDir, setWolkenFarben, setSterne, cirrusMat,
   CLOUD_DRIFT_MITTEL } from './sky.js';
 import { setLook } from '../render/pipeline.js';
 import { cam, camera } from '../editor/camera.js';
@@ -29,6 +30,9 @@ var PRESETS = {
     wolkeOben: 0xfff4e4, wolkeUnten: 0xb9c2d2, wolkeRand: 0xffe2b8, wolkeFern: 0xdfe6ec,
     wolkeDeck: 0.82, wolkenschatten: 0.16, fenster: 1.1,
     schatten: 0.34, wasser: 0x4a95ab, welt: 0xf4f2ee, bounce: 0xd8cebc,
+    // G1: Rankenglut tags dezent warm-grau (entspricht dem bisherigen Look),
+    // sterne 0 — kein Sternenfeld am Tag.
+    rankenGlut: 0.3, rankenGlutFarbe: 0x4a463e, sterne: 0,
     // F1-Startwert (Feinkalibrierung: F4): aufgehelltes, kuehles Morgenblau —
     // Hue ~20° blauwaerts gegenueber bounce, hell genug fuer den 15-%-Sockel.
     schattenKuehl: 0x96a8c8,
@@ -52,6 +56,8 @@ var PRESETS = {
     wolkeOben: 0xffffff, wolkeUnten: 0xb6c4d4, wolkeRand: 0xfff2da, wolkeFern: 0xd8e4ee,
     wolkeDeck: 0.78, wolkenschatten: 0.25, fenster: 0.0,
     schatten: 0.45, wasser: 0x3f93ad, welt: 0xffffff, bounce: 0xe0d8c0,
+    // G1: mittags die schwaechste Glut — hartes Licht schluckt das Leuchten.
+    rankenGlut: 0.25, rankenGlutFarbe: 0x4a463e, sterne: 0,
     // F1-Startwert (Feinkalibrierung: F4): neutrales Himmelblau — mittags
     // kommt die Schattenfuellung vom blauen Himmel, nicht von warmem Bounce.
     schattenKuehl: 0x8ea6c4,
@@ -77,6 +83,9 @@ var PRESETS = {
     wolkeOben: 0xf6c294, wolkeUnten: 0x6e6f96, wolkeRand: 0xffb060, wolkeFern: 0x9a8aa2,
     wolkeDeck: 0.85, wolkenschatten: 0.06, fenster: 2.6,
     schatten: 0.4, wasser: 0x46567c, welt: 0xe8d2c0, bounce: 0x9a8ca0,
+    // G1: in der Daemmerung beginnt die Ranke zu leuchten; sterne 0.15 —
+    // die ersten Sterne stehen schon am Abendhimmel.
+    rankenGlut: 0.55, rankenGlutFarbe: 0x4a463e, sterne: 0.15,
     // F1-Startwert (Feinkalibrierung: F4): kaeltestes und dunkelstes Blau der
     // vier Stimmungen — der Abend lebt vom maximalen Kalt-Warm-Kontrast
     // zwischen orangem Licht und blauvioletten Schatten.
@@ -103,6 +112,8 @@ var PRESETS = {
     wolkeOben: 0xf2f4f0, wolkeUnten: 0xd4dad8, wolkeRand: 0xf0eee2, wolkeFern: 0xe2e7e2,
     wolkeDeck: 0.5, wolkenschatten: 0.0, fenster: 1.6,
     schatten: 0.15, wasser: 0xa6bcbb, welt: 0xf4f6f2, bounce: 0xdcd8cc,
+    // G1: im Nebel traegt die Glut ein Stueck weiter als am klaren Tag.
+    rankenGlut: 0.4, rankenGlutFarbe: 0x4a463e, sterne: 0,
     // F1-Startwert (Feinkalibrierung: F4): fast neutral, kaum blaeuer als das
     // Umgebungslicht — Nebel frisst Farbkontrast, kuehle Schatten wuerden
     // hier kuenstlich wirken.
@@ -116,6 +127,42 @@ var PRESETS = {
     bloom: { staerke: 0.10, radius: 0.6, schwelle: 1.1 },
     grade: { lift: [0.030, 0.034, 0.040], gamma: [1.0, 1.0, 1.0], gain: [1.0, 1.0, 1.0],
       satMitte: 0.85, satLicht: 0.8, schwarz: 0.05, vignette: 0.08 }
+  },
+  nacht: {
+    // G1 — Mondnacht nach den Konzeptbildern: tiefdunkelblauer Himmel mit
+    // Sternen, die weissen Ranken SELBSTLEUCHTEND als hellster Wert im Bild,
+    // warmes Fensterglühen der Staedtchen als Gegenpol, Landschaft gedaempft
+    // und kuehl, Nebel kuehl und duenn. Alle Werte sind kalibrierbare
+    // Richtwerte. Die "Sonne" ist hier der Mond: kuehl, schwach, schraeg.
+    sonneDir: [-0.55, 0.52, -0.42], sonne: 0xb8c8e8, sonneStk: 0.55,
+    hemiHimmel: 0x2a3454, hemiBoden: 0x1c1c28, hemiStk: 0.5,
+    gegen: 0x36406a, gegenStk: 0.22,
+    // fogWarm kaum warm — der Mond liefert kein warmes Streulicht; die
+    // Nebelachse bleibt kuehl-in-kuehl, nur minimal aufgehellt zum Mond hin.
+    fogWarm: 0x4a5680, fogCool: 0x252c48, fogNah: 220, fogFern: 1050, fogCap: 0.95,
+    himmel: [0x0a1026, 0x141c3a, 0x1e2a52, 0x2c3a66, 0x38466e],
+    // Die Scheibe IST der Mond — kein eigenes Objekt, sky.js rendert wie
+    // immer die Preset-getriebene Sonnenscheibe.
+    scheibe: 0xe8ecf4, scheibeGr: 110, gegenGlow: 0x2e3858,
+    // Wolken oben hart (helle Mondkante), unten weich dunkel — die
+    // Kunstrichtung gilt auch nachts.
+    wolkeOben: 0x6a7898, wolkeUnten: 0x1e2438, wolkeRand: 0xb8c4dc, wolkeFern: 0x2a3450,
+    wolkeDeck: 0.6, wolkenschatten: 0.0,
+    fenster: 3.2,                        // hoechster Wert aller Presets: der warme Gegenpol
+    schatten: 0.1, wasser: 0x1c2c48, welt: 0xc8d0e0, bounce: 0x3a4260,
+    // Rankenglut: gazehaft-kuehles Eigenleuchten, mit Abstand der hellste
+    // Wert der Nacht (rankenGlut 1.4 gegen fensterlose 0.25..0.55 am Tag).
+    rankenGlut: 1.4, rankenGlutFarbe: 0x9ec8e8, sterne: 1,
+    schattenKuehl: 0x3a4668,
+    belichtung: 0.9,
+    // Bewusste Ausnahme der ~0.9-Schwellen-Regel: schwelle 0.85 — die Glut
+    // (Ranken, Fenster, Mond) DARF nachts bluehen; die gedaempfte Landschaft
+    // liegt weit unter der Schwelle und bleibt davon unberuehrt.
+    bloom: { staerke: 0.5, radius: 0.8, schwelle: 0.85 },
+    // lift-Sockel ~0.03: die Nacht faellt nie auf reines Schwarz — Schatten
+    // behalten Zeichnung (keine einfarbigen Flaechen), Sockel leicht blau.
+    grade: { lift: [0.028, 0.030, 0.038], gamma: [1.0, 1.0, 1.04], gain: [0.92, 0.96, 1.06],
+      satMitte: 1.0, satLicht: 0.85, schwarz: 0.03, vignette: 0.16 }
   }
 };
 
@@ -172,7 +219,8 @@ function applyTod(t) {
     sceneHook.fog.far = mixNum(a.fogFern, b.fogFern, e);
   }
   terraUniforms.uCloudAmt.value = mixNum(a.wolkenschatten, b.wolkenschatten, e);
-  // Fensterglut: warme Emission bei Abendrot, Morgen und Nebel
+  // Fensterglut: warme Emission bei Abendrot, Morgen, Nebel und (am
+  // staerksten) in der Nacht
   var glut = mixNum(a.fenster === undefined ? 0 : a.fenster,
     b.fenster === undefined ? 0 : b.fenster, e);
   if (POOLS.fensterlicht && POOLS.fensterlicht.mat) POOLS.fensterlicht.mat.emissiveIntensity = glut;
@@ -191,12 +239,24 @@ function applyTod(t) {
     mixHex(a.wolkeFern, b.wolkeFern, e, _b).getHex(),
     mixNum(a.wolkeDeck, b.wolkeDeck, e));
   cirrusMat.opacity = mixNum(a.wolkeDeck, b.wolkeDeck, e) * 0.24;
+  // Sterne blenden mit der Tageszeit (nacht 1, abend 0.15, sonst 0). Der
+  // Mond ist die Preset-getriebene Sonnenscheibe oben — kein eigenes Objekt.
+  setSterne(mixNum(a.sterne === undefined ? 0 : a.sterne,
+    b.sterne === undefined ? 0 : b.sterne, e));
 
   schattenMat.opacity = mixNum(a.schatten, b.schatten, e);
   mixHex(a.wasser, b.wasser, e, waterMat.color);
+  // Biom-Tint (G5): faerbt die Preset-Wasserfarbe je Biom um (wiese = [1,1,1]).
+  // io.js ruft nach jedem Biomwechsel setTod(..., true), damit er sofort greift.
+  var wt = (BIOME[S.biom] || BIOME.wiese).wasserTint;
+  waterMat.color.setRGB(waterMat.color.r * wt[0], waterMat.color.g * wt[1], waterMat.color.b * wt[2]);
   mixHex(a.welt, b.welt, e, _col);
   for (var m = 0; m < tintedMats.length; m++) tintedMats[m].color.copy(_col);
-  vineMat.emissive.copy(_col).multiplyScalar(0.32);
+  // Rankenglut (G1): eigene Emissive-Farbe und -Staerke pro Tageszeit statt
+  // des frueheren pauschalen welt*0.32 — tags dezent warm-grau, nachts
+  // kuehles Gazeleuchten als hellster Wert im Bild. Blendet weich mit.
+  mixHex(a.rankenGlutFarbe, b.rankenGlutFarbe, e, vineMat.emissive)
+    .multiplyScalar(mixNum(a.rankenGlut, b.rankenGlut, e));
 
   setLook({
     belichtung: mixNum(a.belichtung, b.belichtung, e),
@@ -238,14 +298,18 @@ function schnappschuss() {
   // Hex-Farben sind numbers — lerp im Zahlenraum waere falsch. Farbfelder gezielt:
   ['sonne','hemiHimmel','hemiBoden','gegen','fogWarm','fogCool','scheibe','gegenGlow',
    'wolkeOben','wolkeUnten','wolkeRand','wolkeFern','wasser','welt','bounce',
-   'schattenKuehl'].forEach(function (k) {
+   'schattenKuehl','rankenGlutFarbe'].forEach(function (k) {
     s[k] = mixHex(a[k], b[k], e, _col).getHex();
   });
   return s;
 }
 
 function setTod(name, instant) {
-  if (!PRESETS[name]) return;
+  // Tolerantes Speicherformat: unbekannte Tageszeiten (z. B. eine Karte aus
+  // einem neueren Editor mit weiteren Stimmungen) fallen auf "mittag"
+  // zurueck, statt still ignoriert zu werden — der Loader ruft
+  // setTod(d.tageszeit || "mittag") und darf nie crashen.
+  if (!PRESETS[name]) name = "mittag";
   todFrom = schnappschuss();
   todTo = PRESETS[name];
   todName = name;

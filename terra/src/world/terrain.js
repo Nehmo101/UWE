@@ -1,7 +1,7 @@
 // Heightfield-Terrain: Hoehen, Farben, Kruemmungs-AO, Korridore, Fluesse, Pinsel.
 import * as THREE from 'three';
 import { clamp, lerp, sstep, DEG, hashi, vnoise, fractal } from '../core/rng.js';
-import { MAP, VW, HALF, WATER, S } from '../core/store.js';
+import { MAP, VW, HALF, WATER, S, BIOME } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 
 var base = new Float32Array(VW * VW);   // prozedurale Höhen + Pinsel-Änderungen
@@ -65,23 +65,13 @@ tintedMats.push(terrain.material);
 /** Terrain-Mesh in die Szene haengen (einmal beim Start). */
 function initTerrain(scene) { scene.add(terrain); }
 
-var C_SAND = new THREE.Color(0xdfd0ab),          // Strandsaum
-    C_WIESE_KUEHL = new THREE.Color(0x8ea86a),
-    C_WIESE_WARM = new THREE.Color(0xa8b877),
-    C_WIESE_TROCKEN = new THREE.Color(0xbcbd8a),
-    C_EARTH = new THREE.Color(0x9d8560),         // Lehmflecken
-    C_ROCK = new THREE.Color(0xa9a99f),
-    C_SNOW = new THREE.Color(0xf4f6f8),
-    C_SEABED = new THREE.Color(0xd2c6a2),        // heller Sandgrund → türkises Flachwasser
-    C_DEEP = new THREE.Color(0x1f4750),
-    C_TRITT = new THREE.Color(0x8a7554),
-    C_SURF = new THREE.Color(0xf2f6f4);
-// Niederfrequente Farbdrift (F2, Nass-in-nass-Signatur): zwei Zielpole nur
-// wenige Grad neben den Wiesentoenen — einer leicht gelblicher, einer leicht
-// blaugruener. Die Drift laesst grosse Flaechen "atmen", ohne sie scheckig
-// zu machen; deshalb kleine Mischgewichte und weiche Schwellen.
-var C_DRIFT_GELB = new THREE.Color(0xb2b56e),
-    C_DRIFT_BLAU = new THREE.Color(0x82a87c);
+// Farbkonstanten (G5): alle Toene und Zonenschwellen liegen jetzt in der
+// BIOME-Registry (core/store.js). Der Eintrag "wiese" enthaelt exakt die
+// frueheren Konstanten (C_SAND 0xdfd0ab, C_WIESE_* usw.) — der Default-Pfad
+// bleibt byteidentisch. Die F2-Farbdrift-Pole (driftGelb/driftBlau, frueher
+// C_DRIFT_GELB/C_DRIFT_BLAU) wandern mit: zwei Zielpole nur wenige Grad neben
+// den Grundtoenen, kleine Mischgewichte, weiche Schwellen — grosse Flaechen
+// "atmen", ohne scheckig zu werden.
 var COS50 = Math.cos(50 * DEG), COS58 = Math.cos(58 * DEG);
 var COS_BAND_A = Math.cos(52 * DEG), COS_BAND_B = Math.cos(35 * DEG);
 var _tc = new THREE.Color(), _tc2 = new THREE.Color();
@@ -122,41 +112,49 @@ function computeAO(i0, i1, j0, j1) {
 }
 
 /**
- * Einfärbung nach Höhe, Hangneigung und Krümmung. Drei Wiesentöne über
+ * Einfärbung nach Höhe, Hangneigung und Krümmung. Drei Grundtöne über
  * zwei Rauschoktaven, Übergänge zu Sand und Fels mit gestörter Grenze —
- * nirgends bleibt eine einfarbige Fläche stehen.
+ * nirgends bleibt eine einfarbige Fläche stehen. Seit G5 biom-parametrisiert:
+ * Palette und Zonenschwellen kommen aus BIOME[S.biom].terrain — strukturell
+ * bleibt es EINE Funktion, wiese liest exakt die alten Werte (byteidentisch).
  */
 function terrainColor(h, ny, x, z, out, ao) {
+  var P = (BIOME[S.biom] || BIOME.wiese).terrain;
   var gross = fractal(x * 0.012, z * 0.012, S.worldSeed + 404);
   var fein = fractal(x * 0.052, z * 0.052, S.worldSeed + 505);
-  out.copy(C_WIESE_KUEHL).lerp(C_WIESE_WARM,
+  out.copy(P.grasKuehl).lerp(P.grasWarm,
     clamp(sstep(0.34, 0.72, gross) * 0.8 + sstep(1, 17, h) * 0.35, 0, 1));
-  out.lerp(C_WIESE_TROCKEN, sstep(0.54, 0.86, fein) * 0.7);
-  out.lerp(C_EARTH, sstep(0.68, 0.9, fractal(x * 0.055, z * 0.055, S.worldSeed + 717)) * 0.34);
+  out.lerp(P.grasTrocken, sstep(0.54, 0.86, fein) * 0.7);
+  out.lerp(P.erde, sstep(0.68, 0.9, fractal(x * 0.055, z * 0.055, S.worldSeed + 717)) * 0.34);
+
+  // Oasen-Logik (nur wueste, oase > 0 — im wiese-Pfad springt der Zweig nie
+  // an): unter Hoehe ~2 zieht es die Senken Richtung gedaempftem Gruen;
+  // das grobe Rauschen macht die Flecken spaerlich statt zum Ring.
+  if (P.oase > 0) out.lerp(P.oaseFarbe, sstep(2.4, 0.8, h) * sstep(0.35, 0.75, gross) * P.oase);
 
   // F2: grobe Farbdrift ueber die Landschaftsmassen. f = 0.025 ergibt eine
   // Wellenlaenge von ~40 Welteinheiten (Zielkorridor 30–50); Seed fest an
   // worldSeed + 1102 gebunden — deterministisch wie alle anderen Oktaven,
   // kein Math.random. Hue-Wirkung: wenige Grad Richtung Gelb bzw. Blaugruen.
   var drift = fractal(x * 0.025, z * 0.025, S.worldSeed + 1102);
-  out.lerp(C_DRIFT_GELB, sstep(0.55, 0.85, drift) * 0.16);
-  out.lerp(C_DRIFT_BLAU, sstep(0.45, 0.15, drift) * 0.16);
+  out.lerp(P.driftGelb, sstep(0.55, 0.85, drift) * 0.16);
+  out.lerp(P.driftBlau, sstep(0.45, 0.15, drift) * 0.16);
 
   // Zonengrenzen: staerker gestoert (Zungen und Inseln) und mit dunklem Saum
   var stoer = (fractal(x * 0.09, z * 0.09, S.worldSeed + 606) - 0.5) * 2.6
             + (fractal(x * 0.22, z * 0.22, S.worldSeed + 607) - 0.5) * 0.9;
   var hg = h + stoer;
-  out.lerp(C_SAND, sstep(2.0, 1.0, hg));
-  out.lerp(C_ROCK, sstep(12.6, 14.1, hg));
-  out.lerp(C_SNOW, sstep(23, 25, hg));
+  out.lerp(P.sand, sstep(P.sandA, P.sandB, hg));
+  out.lerp(P.fels, sstep(P.felsA, P.felsB, hg));
+  out.lerp(P.schnee, sstep(P.schneeA, P.schneeB, hg));
   var saum = Math.max(
-    1 - sstep(0.0, 0.55, Math.abs(hg - 1.5)),
-    Math.max(1 - sstep(0.0, 0.7, Math.abs(hg - 13.3)),
-             1 - sstep(0.0, 0.7, Math.abs(hg - 24))));
+    1 - sstep(0.0, 0.55, Math.abs(hg - P.saumSand)),
+    Math.max(1 - sstep(0.0, 0.7, Math.abs(hg - P.saumFels)),
+             1 - sstep(0.0, 0.7, Math.abs(hg - P.saumSchnee))));
   out.multiplyScalar(1 - saum * 0.12);
 
   var rock = 1 - sstep(COS58, COS50, ny);                 // Steilhänge immer Fels
-  if (rock > 0) out.lerp(C_ROCK, rock * 0.9);
+  if (rock > 0) out.lerp(P.fels, rock * 0.9);             // bricht auch durch Schnee
   // gerichtete Gesteinsbaender auf Haengen: folgen der Hoehenlinie
   var steil = 1 - sstep(COS_BAND_A, COS_BAND_B, ny);
   if (steil > 0) {
@@ -167,15 +165,15 @@ function terrainColor(h, ny, x, z, out, ao) {
   var wtr = wearAt(x, z);
   if (wtr > 0.01) {
     var frans = fractal(x * 0.35, z * 0.35, S.worldSeed + 505) * 0.5;
-    out.lerp(C_TRITT, clamp(wtr * 1.05 - frans, 0, 0.7));
+    out.lerp(P.tritt, clamp(wtr * 1.05 - frans, 0, 0.7));
   }
 
   if (h < 0.35) {                                          // Meeresgrund
-    _tc2.copy(C_SEABED).lerp(C_DEEP, sstep(-0.25, -4.5, h));
+    _tc2.copy(P.seegrund).lerp(P.tiefe, sstep(-0.25, -4.5, h));
     out.lerp(_tc2, sstep(0.35, -0.4, h));
   }
   var surf = sstep(0.8, 0.3, h) * sstep(-0.6, 0.06, h);
-  if (surf > 0) out.lerp(C_SURF, surf * 0.5);              // Brandungssaum
+  if (surf > 0) out.lerp(P.brandung, surf * 0.5);          // Brandungssaum
 
   // F2: dieselbe grobe Drift moduliert auch den Value um +-5 % — die
   // Helligkeitswelle folgt damit exakt der Farbwelle (ein Waschgang, wie beim

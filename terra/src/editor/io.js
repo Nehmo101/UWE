@@ -1,5 +1,5 @@
 // Untere Leiste: Seed, Tageszeit, Raster, Effekte, Speichern, Laden, PNG-Export.
-import { S, HALF, serializeElements, hydrate } from '../core/store.js';
+import { S, HALF, BIOME, serializeElements, hydrate } from '../core/store.js';
 import { base, genBase, genBaseIn } from '../world/terrain.js';
 import { rebuildAll } from '../core/dirty.js';
 import { pushUndo } from './history.js';
@@ -131,6 +131,10 @@ function validiereKarte(text) {
     kamera: d.kamera,
     raster: !!d.raster,
     tageszeit: d.tageszeit || "mittag",
+    // Biom (G5, tolerantes Zusatzfeld): optionaler String. Fehlt das Feld
+    // oder ist der Wert unbekannt, faellt die Karte ohne Fehler auf "wiese"
+    // zurueck — aeltere Dateien sehen damit exakt wie bisher aus.
+    biom: (typeof d.biom === "string" && BIOME[d.biom]) ? d.biom : "wiese",
     // Optionales Feld (ab dieser Runde mitgeschrieben, version bleibt 2):
     // Stand von S.elementSeedCounter beim Speichern. Fehlt es (aeltere
     // v1/v2-Dateien) oder ist es keine endliche Zahl, liefert null — der
@@ -160,6 +164,22 @@ export function initIO() {
     this.classList.toggle("on", S.snap);
     toast(S.snap ? "Raster-Einrasten an (2 Einheiten)" : "Raster-Einrasten aus");
   });
+  // Biom-Wechsel (G5): gleiches Muster wie die Seed-Uebernahme — Zustand
+  // sichern, dann voller Neuaufbau, denn Terrainfarben und Bestueckung
+  // haengen am Biom (die Hoehen selbst bleiben unangetastet).
+  document.getElementById("biomSel").addEventListener("change", function () {
+    var b = BIOME[this.value] ? this.value : "wiese";
+    this.value = b;
+    if (b === S.biom) return;
+    pushUndo(true);
+    S.biom = b;
+    rebuildAll();
+    // Tageszeit erneut anwenden: sobald atmosphere.js den wasserTint der
+    // BIOME-Registry konsumiert (Folgerunde), greift er damit sofort beim
+    // Wechsel; bis dahin ist das ein harmloses Re-Apply des Presets.
+    setTod(getTodName(), true);
+    toast("Biom: " + BIOME[b].label);
+  });
   function download(name, blob) {
     var a = document.createElement("a");
     var url = URL.createObjectURL(blob);
@@ -177,6 +197,7 @@ export function initIO() {
     genBaseIn(seedTerrain, S.worldSeed);
     var data = {
       format: "terra", version: 3, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
+      biom: S.biom,               // tolerantes Zusatzfeld (G5), version bleibt 3
       kamera: { x: cam.tFocus.x, z: cam.tFocus.z, dist: cam.tDist, yaw: cam.tYaw, pitch: cam.tPitch },
       hoehenDelta: berechneHoehenDelta(base, seedTerrain),
       elemente: serializeElements(),
@@ -208,6 +229,10 @@ export function initIO() {
       pushUndo(true);                    // das Laden ersetzt die Hoehen -> Terrainkopie sichern
       S.worldSeed = karte.seed;
       document.getElementById("seed").value = String(S.worldSeed);
+      // Biom VOR dem Terrain-/Elementaufbau setzen — terrainColor und die
+      // Generatoren lesen S.biom im rebuildAll unten. Select-UI nachfuehren.
+      S.biom = karte.biom;
+      document.getElementById("biomSel").value = S.biom;
       if (karte.hoehenDelta !== null) {
         // v3: erst das komplette Seed-Terrain deterministisch erzeugen —
         // S.worldSeed ist oben bereits gesetzt, genau wie im v1/v2-Ablauf —
