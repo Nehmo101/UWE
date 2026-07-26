@@ -7,6 +7,8 @@ UWE (Universeller Welten-Editor) ist ein selbst-gehostetes Alltags- und Hobby-Be
 ```
 apps/studio   → DM-App (Port 3000) — Weltbearbeitung, Admin, AI, Daily Admin OS
 apps/portal   → Spieler-Wiki (Port 3001) — nur gefilterte, freigegebene Inhalte
+apps/brain    → Owner-only Brain (Port 3002) — privater Daily-Admin-/Wissensbereich
+apps/landing  → Öffentliche Startseite (Port 3103) — Apex-Origin, genau drei Routen
 packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 ```
 

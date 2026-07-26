@@ -107,6 +107,17 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
   elif grep -q '/studio' "$TUNNEL_CONFIG" 2>/dev/null; then
     report warn "Legacy-Pfad-Ingress erkannt — empfohlen: Split-Hostnames (deploy/cloudflare/config.yml.example)"
   fi
+  # Der Apex trägt nur die Startseite (apps/landing, :3103). Zeigt er auf den
+  # Studio-Port, liefert die Hauptdomain wieder die komplette Studio-Oberfläche
+  # aus — genau die Kopplung, die die eigene Landing-App auflöst.
+  apex_service="$(awk '/hostname:[[:space:]]*uweanddragons\.org[[:space:]]*$/{found=1;next} found&&/service:/{print;exit}' "$TUNNEL_CONFIG" 2>/dev/null)"
+  if [[ -n "$apex_service" ]]; then
+    if printf '%s' "$apex_service" | grep -q '3103'; then
+      report ok "Apex-Ingress: uweanddragons.org → Startseiten-App (:3103)"
+    else
+      report warn "Apex-Ingress zeigt nicht auf die Startseiten-App (:3103):${apex_service}"
+    fi
+  fi
 else
   report warn "Keine Tunnel-Konfiguration unter $TUNNEL_CONFIG"
 fi

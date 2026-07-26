@@ -122,7 +122,40 @@ describe("route authorization — Studio UI (/studio root)", () => {
     assert.ok(exists("apps/studio/app/page.tsx"));
     assert.ok(exists("apps/studio/app/studio/page.tsx"));
     const landing = read("apps/studio/app/page.tsx");
+    // Ohne getrennte Hostnamen (unified-path / lokal) bleibt „/" die Landing;
+    // bei getrennten Hostnamen leitet dieselbe Seite weiter, weil der Apex eine
+    // eigene App hat (apps/landing).
     assert.match(landing, /UweLandingPage/);
+    assert.match(landing, /split-hostname/);
+  });
+});
+
+describe("route authorization — Startseiten-App (Apex-Origin)", () => {
+  // Der Apex ist die einzige völlig ungeschützte Fläche von UWE. Er trägt
+  // deshalb genau drei Routen — jede weitere hier wäre öffentlich erreichbar,
+  // ohne dass ein Rollen-Gate davor liegt.
+  const ALLOWED = ["/", "/api/auth/enter", "/api/health"];
+
+  it("bringt nur Startseite, Anmeldung und Health mit", () => {
+    const routes = listRouteFiles("apps/landing/app").map((file) => file.replaceAll("\\", "/"));
+    assert.deepEqual(routes, [
+      "apps/landing/app/api/auth/enter/route.ts",
+      "apps/landing/app/api/health/route.ts",
+    ]);
+    assert.ok(exists("apps/landing/app/page.tsx"));
+  });
+
+  it("riegelt alles außerhalb der Allowlist in der Middleware ab", () => {
+    const middleware = read("apps/landing/middleware.ts");
+    for (const route of ALLOWED) {
+      assert.ok(
+        middleware.includes(`"${route}"`),
+        `Allowlist der Landing-Middleware nennt ${route} nicht`,
+      );
+    }
+    // Unbekannte Seitenpfade gehen ins Studio, unbekannte API-Pfade auf 404.
+    assert.match(middleware, /NextResponse\.redirect\(target, 308\)/);
+    assert.match(middleware, /status: 404/);
   });
 });
 

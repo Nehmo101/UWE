@@ -23,99 +23,49 @@ import {
 
 export { deriveOwnedServiceState } from "./desktop-host-system.ts";
 
+import {
+  HOST_SERVICE_IDS,
+  isHostServiceId,
+  parseServicePort,
+  type DesktopHostActionResult,
+  type DesktopHostService,
+  type DesktopHostStatus,
+  type HostBackupEntry,
+  type HostPaths,
+  type HostServiceId,
+  type ServiceDefinition,
+} from "./desktop-host-types.ts";
+
 /**
  * Number of discrete steps `setupHost` reports progress for. Kept as a constant
  * so `applyDesktopHostUpdate` can size the combined update progress bar (stop →
  * sync → setup steps → start) without importing the step list itself.
  */
-export const HOST_SETUP_STEP_COUNT = 9;
+export const HOST_SETUP_STEP_COUNT = 10;
 
-type ServiceState = "online" | "starting" | "stopped" | "error";
+export type {
+  DesktopHostActionResult,
+  DesktopHostService,
+  DesktopHostStatus,
+  HostBackupEntry,
+  HostPaths,
+  HostServiceId,
+  ServiceDefinition,
+  ServiceState,
+} from "./desktop-host-types.ts";
+export { HOST_SERVICE_IDS, isHostServiceId, parseServicePort } from "./desktop-host-types.ts";
 
-export interface DesktopHostService {
-  id: "studio" | "portal" | "brain";
-  label: string;
-  state: ServiceState;
-  healthy: boolean;
-  pid: number | null;
-  url: string;
-  message: string;
-}
-
-export interface DesktopHostStatus {
-  collectedAt: string;
-  overall: "ready" | "attention" | "error";
-  root: string;
-  revision: string | null;
-  branch: string | null;
-  installation: {
-    repoReady: boolean;
-    dependenciesReady: boolean;
-    envReady: boolean;
-    databaseReady: boolean;
-    buildReady: boolean;
-    message: string;
-  };
-  host: {
-    hostname: string;
-    platform: string;
-    release: string;
-    uptimeSeconds: number;
-    cpuModel: string;
-    cpuCores: number;
-    ramTotalBytes: number;
-    ramUsedBytes: number;
-    diskTotalBytes: number | null;
-    diskUsedBytes: number | null;
-  };
-  gpu: {
-    available: boolean;
-    name: string | null;
-    vramTotalMb: number | null;
-    utilizationPercent: number | null;
-    temperatureC: number | null;
-  };
-  services: DesktopHostService[];
-  dataDir: string;
-  logsDir: string;
-}
-
-export interface DesktopHostActionResult {
-  ok: boolean;
-  message: string;
-  status: DesktopHostStatus;
-}
-
-export interface HostPaths {
-  root: string;
-  dataRoot: string;
-  data: string;
-  uploads: string;
-  backups: string;
-  exports: string;
-  logs: string;
-  runtime: string;
-  envFile: string;
-  database: string;
-}
-
-interface ServiceDefinition {
-  id: "studio" | "portal" | "brain";
-  label: string;
-  port: number;
-}
-
-export function parseServicePort(value: string | undefined, fallback: number): number {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isInteger(parsed) && parsed > 0 && parsed <= 65_535 ? parsed : fallback;
-}
-
+/**
+ * Die vier Host-Dienste mit ihren konfigurierten Ports. Ports kommen aus der
+ * `.env` des Projektordners; die Vorgaben entsprechen der Standardinstallation.
+ */
 function serviceDefinitions(paths: HostPaths): ServiceDefinition[] {
   const env = readEnvFile(paths.envFile);
   return [
     { id: "studio", label: "UWE Studio", port: parseServicePort(env.STUDIO_PORT, 3000) },
     { id: "portal", label: "UWE Portal", port: parseServicePort(env.PORTAL_PORT, 3001) },
     { id: "brain", label: "UWE Brain", port: parseServicePort(env.BRAIN_PORT, 3102) },
+    { id: "landing", label: "UWE Startseite", port: parseServicePort(env.LANDING_PORT, 3103) },
   ];
 }
 
@@ -206,6 +156,9 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     "CLOUDFLARE_TUNNEL=false",
     "STUDIO_PORT=3000",
     "PORTAL_PORT=3001",
+    // Öffentliche Startseite auf dem Apex-Origin — eigener Prozess, damit die
+    // Hauptdomain keine Studio-Routen ausliefert.
+    "LANDING_PORT=3103",
     "NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:3000",
     "PUBLIC_BASE_URL=http://127.0.0.1:3000",
     "NEXT_PUBLIC_PORTAL_URL=http://127.0.0.1:3001",
@@ -295,7 +248,7 @@ function validateRepo(root: string): boolean {
   );
 }
 
-function pidFile(paths: HostPaths, id: "studio" | "portal" | "brain"): string {
+function pidFile(paths: HostPaths, id: HostServiceId): string {
   return path.join(paths.runtime, `${id}.pid`);
 }
 
@@ -303,7 +256,7 @@ function gitFact(root: string, args: string[]): string | null {
   return validateRepo(root) ? runCapture("git", args, root) : null;
 }
 
-async function serviceStatus(paths: HostPaths, id: "studio" | "portal" | "brain", label: string, port: number): Promise<DesktopHostService> {
+async function serviceStatus(paths: HostPaths, id: HostServiceId, label: string, port: number): Promise<DesktopHostService> {
   const url = `http://127.0.0.1:${port}`;
   const file = pidFile(paths, id);
   const storedPid = readPid(file);
@@ -329,7 +282,8 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
   const buildReady =
     fs.existsSync(path.join(root, "apps", "studio", ".next", "BUILD_ID")) &&
     fs.existsSync(path.join(root, "apps", "portal", ".next", "BUILD_ID")) &&
-    fs.existsSync(path.join(root, "apps", "brain", ".next", "BUILD_ID"));
+    fs.existsSync(path.join(root, "apps", "brain", ".next", "BUILD_ID")) &&
+    fs.existsSync(path.join(root, "apps", "landing", ".next", "BUILD_ID"));
   const databaseReady = fs.existsSync(database);
   const services = await Promise.all(
     serviceDefinitions(paths).map((service) => serviceStatus(paths, service.id, service.label, service.port)),
@@ -482,6 +436,7 @@ export async function setupHost(
     { phase: "studio-build", label: "Studio-Produktions-Build", run: () => runWorkspaceCommand(paths, "Studio Produktions-Build", ["--filter", "@uwe/studio", "build"]) },
     { phase: "portal-build", label: "Portal-Produktions-Build", run: () => runWorkspaceCommand(paths, "Portal Produktions-Build", ["--filter", "@uwe/portal", "build"]) },
     { phase: "brain-build", label: "Brain-Produktions-Build", run: () => runWorkspaceCommand(paths, "Brain Produktions-Build", ["--filter", "@uwe/brain", "build"]) },
+    { phase: "landing-build", label: "Startseiten-Produktions-Build", run: () => runWorkspaceCommand(paths, "Startseite Produktions-Build", ["--filter", "@uwe/landing", "build"]) },
   ];
 
   if (options.ownProgress ?? true) beginHostProgress(steps.length);
@@ -547,7 +502,7 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
   const readiness = await Promise.all(definitions.map((service) => waitForHealth(`http://127.0.0.1:${service.port}`)));
   const status = await collectDesktopHostStatus(root);
   const ok = readiness.every(Boolean);
-  return { ok, message: ok ? "Studio, Portal und Brain laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
+  return { ok, message: ok ? "Studio, Portal, Brain und Startseite laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
 }
 
 export async function stopHost(rootInput?: string): Promise<DesktopHostActionResult> {
@@ -560,10 +515,10 @@ export async function stopHost(rootInput?: string): Promise<DesktopHostActionRes
     fs.rmSync(file, { force: true });
   }
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { ok: true, message: "Studio, Portal und Brain wurden gestoppt.", status: await collectDesktopHostStatus(root) };
+  return { ok: true, message: "Studio, Portal, Brain und Startseite wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
-/** Start a single host service (studio | portal | brain) without touching the others. */
+/** Start a single host service (studio | portal | brain | landing) without touching the others. */
 export async function startHostService(rootInput: string | undefined, serviceId: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
@@ -606,12 +561,6 @@ export async function backupHost(rootInput?: string): Promise<DesktopHostActionR
   return { ok: true, message: `Backup wurde unter ${paths.backups} erstellt.`, status: await collectDesktopHostStatus(root) };
 }
 
-export interface HostBackupEntry {
-  name: string;
-  sizeBytes: number;
-  createdAt: string;
-}
-
 /** List the `.zip` backups in the host backup directory, newest first. */
 export function listBackups(rootInput?: string): { backups: HostBackupEntry[] } {
   const paths = pathsFor(resolveDesktopHostRoot(rootInput));
@@ -648,7 +597,7 @@ export async function restoreBackup(rootInput: string | undefined, name: string)
 export function readLogs(rootInput: string | undefined, target: string | undefined): { target: string; lines: string[] } {
   const paths = pathsFor(resolveDesktopHostRoot(rootInput));
   const safeTarget =
-    target === "studio" || target === "portal" || target === "brain" ? target : "command-center";
+    isHostServiceId(target) ? target : "command-center";
   const file = path.join(paths.logs, `${safeTarget}.log`);
   if (!fs.existsSync(file)) return { target: safeTarget, lines: [] };
   return { target: safeTarget, lines: readLogTail(file, 200) };
@@ -661,18 +610,24 @@ export function desktopHostTargetUrl(rootInput: string | undefined, target: stri
     ? parseServicePort(env.PORTAL_PORT, 3001)
     : target === "brain"
       ? parseServicePort(env.BRAIN_PORT, 3102)
-      : parseServicePort(env.STUDIO_PORT, 3000);
+      : target === "landing"
+        ? parseServicePort(env.LANDING_PORT, 3103)
+        : parseServicePort(env.STUDIO_PORT, 3000);
   // Prefer the configured public origin (Cloudflare tunnel) when it is a real
   // non-loopback URL. With a domain-scoped session cookie (SESSION_COOKIE_DOMAIN),
   // a raw 127.0.0.1 origin can't hold the login session, so opening the public
   // hostname keeps the owner logged in. Falls back to loopback for local-only
   // deployments where no public URL is set.
+  // Die Startseite hat keine eigene NEXT_PUBLIC_*-Variable: sie *ist* der
+  // Apex-Origin, den PUBLIC_BASE_URL benennt.
   const publicUrl =
     target === "portal"
       ? env.NEXT_PUBLIC_PORTAL_URL?.trim()
       : target === "brain"
         ? env.NEXT_PUBLIC_BRAIN_URL?.trim()
-        : env.NEXT_PUBLIC_STUDIO_URL?.trim();
+        : target === "landing"
+          ? env.PUBLIC_BASE_URL?.trim()
+          : env.NEXT_PUBLIC_STUDIO_URL?.trim();
   if (publicUrl) {
     try {
       const parsed = new URL(publicUrl);

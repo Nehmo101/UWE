@@ -192,21 +192,21 @@ export async function restoreBackup(name: string, root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("restore_backup", { root, name });
 }
 
-export async function startService(service: "studio" | "portal" | "brain", root?: string) {
+export async function startService(service: "studio" | "portal" | "brain" | "landing", root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("start_service", { root, service });
 }
 
-export async function stopService(service: "studio" | "portal" | "brain", root?: string) {
+export async function stopService(service: "studio" | "portal" | "brain" | "landing", root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("stop_service", { root, service });
 }
 
-export async function restartService(service: "studio" | "portal" | "brain", root?: string) {
+export async function restartService(service: "studio" | "portal" | "brain" | "landing", root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("restart_service", { root, service });
 }
 
 export async function getHostLogs(
   root?: string,
-  target: "studio" | "portal" | "brain" | "command-center" = "command-center",
+  target: "studio" | "portal" | "brain" | "landing" | "command-center" = "command-center",
 ) {
   return invokeCommand<import("./tauri-types").LocalHostLogsResult>("get_host_logs", {
     root,
@@ -214,7 +214,7 @@ export async function getHostLogs(
   });
 }
 
-export async function openHostTarget(root: string | undefined, target: "studio" | "portal" | "brain") {
+export async function openHostTarget(root: string | undefined, target: "studio" | "portal" | "brain" | "landing") {
   return invokeCommand<{ ok: boolean; message: string }>("open_host_target", { root, target });
 }
 

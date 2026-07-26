@@ -104,7 +104,7 @@ read -r -d '' CONFIG_JSON <<'EOF' || true
       },
       {
         "hostname": "uweanddragons.org",
-        "service": "http://127.0.0.1:3001"
+        "service": "http://127.0.0.1:3103"
       },
       {
         "service": "http_status:404"
@@ -118,7 +118,7 @@ echo "Account:  $CLOUDFLARE_ACCOUNT_ID"
 echo "Tunnel:   $CLOUDFLARE_TUNNEL_ID"
 echo "Ingress:  studio.uweanddragons.org → :3000"
 echo "          portal.uweanddragons.org → :3001"
-echo "          uweanddragons.org (/studio, /portal, default → Portal)"
+echo "          uweanddragons.org (/studio, /portal, default → Landing :3103)"
 
 if [[ "$DRY_RUN" == true ]]; then
   echo "$CONFIG_JSON" | python3 -m json.tool
@@ -159,6 +159,6 @@ probe() {
 echo "[OK] Probes:"
 probe "https://studio.uweanddragons.org/api/health/public"
 probe "https://portal.uweanddragons.org/api/health/public"
-probe "https://uweanddragons.org/api/health/public"
+probe "https://uweanddragons.org/api/health"
 
 echo "[OK] Fertig. Prüfe danach: bash $UWE_HOME/deploy/scripts/check-cloudflare-tunnel.sh"

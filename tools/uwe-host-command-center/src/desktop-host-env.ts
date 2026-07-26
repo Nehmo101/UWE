@@ -24,6 +24,7 @@ export const HOST_ENV_FIELDS: HostEnvField[] = [
   { key: "STUDIO_PORT", label: "Studio-Port", group: "Ports", kind: "number" },
   { key: "PORTAL_PORT", label: "Portal-Port", group: "Ports", kind: "number" },
   { key: "BRAIN_PORT", label: "Brain-Port", group: "Ports", kind: "number" },
+  { key: "LANDING_PORT", label: "Startseiten-Port", group: "Ports", kind: "number", help: "Öffentliche Startseite auf dem Apex-Origin (PUBLIC_BASE_URL)." },
   { key: "PUBLIC_BASE_URL", label: "Öffentliche Basis-URL", group: "Öffentliche URLs", kind: "text" },
   { key: "NEXT_PUBLIC_STUDIO_URL", label: "Studio-URL", group: "Öffentliche URLs", kind: "text" },
   { key: "NEXT_PUBLIC_PORTAL_URL", label: "Portal-URL", group: "Öffentliche URLs", kind: "text" },
