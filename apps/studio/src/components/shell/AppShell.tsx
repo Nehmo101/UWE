@@ -273,9 +273,13 @@ function SidebarNavGroup({
             aria-current={item.active ? "page" : undefined}
             className={cn(
               "flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm transition-colors",
+              // Die Sidebar ist in JEDEM Theme dunkle Tinte — Seiten-Tokens
+              // (text-foreground) kippen dort im Hell-Theme auf unlesbar.
+              // Deshalb durchgehend die sidebar-*-Rollen, wie in der
+              // Gruppen-Überschrift oben.
               item.active
-                ? "border-primary bg-accent font-medium text-foreground"
-                : "border-transparent text-sidebar-foreground hover:bg-muted hover:text-foreground",
+                ? "border-primary bg-primary/15 font-medium text-sidebar-foreground"
+                : "border-transparent text-sidebar-foreground hover:bg-sidebar-foreground/10",
               item.status === "planned" && "opacity-60",
             )}
           >

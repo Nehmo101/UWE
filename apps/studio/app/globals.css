@@ -19,7 +19,11 @@
   --color-card-foreground: var(--uwe-fg);
   --color-popover: var(--uwe-panel);
   --color-popover-foreground: var(--uwe-fg);
-  --color-muted: var(--uwe-muted);
+  /* `muted` ist bei Tailwind/shadcn eine FLÄCHE, --uwe-muted dagegen der
+     Alt-Alias auf die gedämpfte TEXTfarbe (= --uwe-fg-muted). Verbrückt ergab
+     das `bg-muted text-muted-foreground` in derselben Farbe — Kontrast 1:1,
+     also unlesbare Badges, Tabs und Hover-Buttons in jedem Theme. */
+  --color-muted: var(--uwe-muted-surface, var(--uwe-bg-elevated, transparent));
   --color-muted-foreground: var(--uwe-fg-muted);
   --color-border: var(--uwe-border);
   --color-input: var(--uwe-input-bg, var(--uwe-border));
