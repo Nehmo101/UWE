@@ -28,8 +28,23 @@ preview.visible = false;
 var dotGeo = new THREE.SphereGeometry(1, 10, 8);
 var dotMatA = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, fog: false });
 var dotMatB = new THREE.MeshBasicMaterial({ color: 0x2d74ab, depthTest: false, fog: false });
+var dotMatC = new THREE.MeshBasicMaterial({ color: 0xe0a83c, depthTest: false, fog: false });
 var handles = new THREE.Group();
 handles.renderOrder = 901;
+
+// Zuletzt angefasster Punktgriff des ausgewaehlten Elements (-1 = keiner).
+// Liegt hier statt an `ed`, damit tools.js unveraendert bleibt; pointer.js
+// liest die Live-Bindung und setzt sie ueber setAktiverGriff.
+var aktiverGriff = -1;
+function setAktiverGriff(idx) {
+  aktiverGriff = (typeof idx === "number" && idx >= 0) ? idx : -1;
+  // Materialien in place umfaerben, ohne die Meshes neu zu bauen
+  for (var i = 0; i < handles.children.length; i++) {
+    handles.children[i].material = ed.draw ? dotMatA
+      : (i === aktiverGriff ? dotMatC : dotMatB);
+  }
+  updateHandlePositions();
+}
 
 function setPreview(points, cursor, closed) {
   var arr = previewGeo.attributes.position.array;
@@ -60,8 +75,11 @@ function rebuildHandles() {
   var list = [];
   if (ed.draw) list = ed.draw.points;
   else if (ed.selected) list = ed.selected.points;
+  // Aktiver Griff verfaellt, sobald er ins Leere zeigt (Abwahl, Werkzeugwechsel
+  // via setTool, Element geloescht) oder eine Zeichnung laeuft.
+  if (ed.draw || aktiverGriff >= list.length) aktiverGriff = -1;
   for (var k = 0; k < list.length; k++) {
-    var m = new THREE.Mesh(dotGeo, ed.draw ? dotMatA : dotMatB);
+    var m = new THREE.Mesh(dotGeo, ed.draw ? dotMatA : (k === aktiverGriff ? dotMatC : dotMatB));
     m.userData.idx = k;
     handles.add(m);
   }
@@ -75,7 +93,8 @@ function updateHandlePositions() {
     var p = list[i];
     if (!p) continue;
     handles.children[i].position.set(p.x, heightAt(p.x, p.z) + 0.9, p.z);
-    handles.children[i].scale.setScalar(s);
+    // aktiver Griff etwas groesser, damit er als Ziel von Entf erkennbar ist
+    handles.children[i].scale.setScalar(!ed.draw && i === aktiverGriff ? s * 1.45 : s);
   }
 }
 
@@ -115,6 +134,28 @@ function distToPolyline(pts, x, z, closed) {
     if (d < best) best = d;
   }
   return Math.sqrt(best);
+}
+
+/** Sucht das dem Punkt (x,z) naechstgelegene Segment eines Elements
+ * (gleiche Projektionslogik wie distToPolyline, aber mit Trefferindex).
+ * Flaechen zaehlen das Schlusssegment letzter→erster Punkt mit.
+ * Liefert { index, px, pz } — Segment beginnt bei points[index], (px,pz) ist
+ * der auf das Segment projizierte Punkt — oder null ausserhalb der Toleranz. */
+function naechstesSegment(el, x, z, tol) {
+  if (!el || !el.points || el.points.length < 2) return null;
+  var pts = el.points, closed = el.kind === "flaeche";
+  var n = pts.length, best = Infinity, bestI = -1, bx = 0, bz = 0;
+  for (var i = 0; i < n - (closed ? 0 : 1); i++) {
+    var a = pts[i], b = pts[(i + 1) % n];
+    var dx = b.x - a.x, dz = b.z - a.z;
+    var l2 = dx * dx + dz * dz;
+    var t = l2 > 0 ? clamp(((x - a.x) * dx + (z - a.z) * dz) / l2, 0, 1) : 0;
+    var px = a.x + dx * t, pz = a.z + dz * t;
+    var d = (px - x) * (px - x) + (pz - z) * (pz - z);
+    if (d < best) { best = d; bestI = i; bx = px; bz = pz; }
+  }
+  if (bestI < 0 || Math.sqrt(best) > tol) return null;
+  return { index: bestI, px: bx, pz: bz };
 }
 
 function pickElement(ev, p) {
@@ -158,6 +199,8 @@ function pickElement(ev, p) {
 }
 
 function select(el) {
+  // Anderes Element oder Abwahl: der aktive Griff gehoert zum alten Element
+  if (el !== ed.selected) aktiverGriff = -1;
   ed.selected = el;
   rebuildHandles();
   buildPanel();
@@ -165,4 +208,5 @@ function select(el) {
 
 
 export { preview, handles, brushRing, setPreview, clearPreview, rebuildHandles,
-  updateHandlePositions, updateBrushRing, distToPolyline, pickElement, select };
+  updateHandlePositions, updateBrushRing, distToPolyline, naechstesSegment,
+  pickElement, select, aktiverGriff, setAktiverGriff };

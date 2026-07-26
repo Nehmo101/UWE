@@ -1,6 +1,6 @@
 // Untere Leiste: Seed, Tageszeit, Raster, Effekte, Speichern, Laden, PNG-Export.
 import { S, HALF, serializeElements, hydrate } from '../core/store.js';
-import { base, genBase } from '../world/terrain.js';
+import { base, genBase, genBaseIn } from '../world/terrain.js';
 import { rebuildAll } from '../core/dirty.js';
 import { pushUndo } from './history.js';
 import { rebuildHandles } from './selection.js';
@@ -17,29 +17,79 @@ import { preview, handles, brushRing } from './selection.js';
 var CAM_DIST_MIN = 25, CAM_DIST_MAX = 400;
 var CAM_FOCUS_MAX = HALF + 40;
 
+/* --- Speicherformat v3: Hoehen als Delta zum Seed-Terrain -----------------
+   Das Seed-Terrain ist deterministisch aus genBaseIn(_, worldSeed)
+   reproduzierbar; nur vom Pinsel veraenderte Zellen weichen ab. v3 speichert
+   deshalb statt ~66k Zahlen nur `hoehenDelta: [i0, v0, i1, v1, ...]` —
+   flache Index/Wert-Paare. Determinismus-Hinweis: die Umstellung der
+   Bestueckungs-Zufaelle (generators/) auf ortsstabile Hashes aendert genBase
+   NICHT (genBase haengt nur an fractal/hashi in terrain.js); das
+   Delta-Format ist davon unabhaengig korrekt. Beide Helfer sind rein.   */
+
+/**
+ * Diff-Haelfte: vergleicht die aktuellen Hoehen mit dem frischen Seed-Terrain
+ * und liefert das flache Paar-Array. Werte wie bisher auf 2 Nachkommastellen
+ * gerundet; als Abweichung zaehlt erst |d| > 0.005, damit Rundungsrauschen
+ * keine Eintraege erzeugt.
+ */
+function berechneHoehenDelta(aktuell, seedTerrain) {
+  var delta = [];
+  for (var i = 0; i < aktuell.length; i++) {
+    var d = aktuell[i] - seedTerrain[i];
+    if (d > 0.005 || d < -0.005) delta.push(i, Math.round(aktuell[i] * 100) / 100);
+  }
+  return delta;
+}
+
+/** Merge-Haelfte: setzt die (bereits validierten) Deltapaare in das Ziel-Array. */
+function wendeHoehenDeltaAn(ziel, delta) {
+  for (var k = 0; k < delta.length; k += 2) ziel[delta[k]] = delta[k + 1];
+}
+
 /**
  * Prüft eine geladene Kartendatei VOLLSTÄNDIG und baut temporäre, bereits
  * geprüfte Strukturen auf. Wirft bei jedem Verstoß — der Aufrufer fängt den
  * Fehler und lässt den Editor-Zustand dann komplett unangetastet.
- * Fassung 1 (terra.html, ohne version-Feld) und Fassung 2 werden gelesen.
+ * Fassung 1 (terra.html, ohne version-Feld), Fassung 2 (hoehen-Vollarray)
+ * und Fassung 3 (hoehenDelta gegen das Seed-Terrain) werden gelesen.
  */
 function validiereKarte(text) {
   var d = JSON.parse(text);
-  if (!d || !d.hoehen || !d.elemente) throw new Error("Unbekanntes Format");
-  if (!Array.isArray(d.hoehen) || !Array.isArray(d.elemente)) throw new Error("Unbekanntes Format");
+  if (!d || !d.elemente || !Array.isArray(d.elemente)) throw new Error("Unbekanntes Format");
+  // Akzeptiert wird entweder `hoehen` (Vollarray, v1/v2) ODER `hoehenDelta`
+  // (v3, flache Index/Wert-Paare). Enthaelt eine Datei unerwartet beides,
+  // gewinnt `hoehen` — die einfachste tolerante Regel.
+  var hatHoehen = Array.isArray(d.hoehen);
+  if (!hatHoehen && !Array.isArray(d.hoehenDelta)) throw new Error("Unbekanntes Format");
   // Dateien ohne Versionsfeld stammen aus Fassung 1 und werden weiter gelesen;
   // fehlende Parameter ergänzt genElement aus dem Schema.
   var dateiVersion = d.version || 1;
 
-  // Höhen: der genutzte Anfang muss aus endlichen Zahlen bestehen. Längere
-  // Arrays werden abgeschnitten; kürzere füllt die Übernahme deterministisch
-  // über genBase aus dem gespeicherten Seed auf.
-  var n = Math.min(d.hoehen.length, base.length);
-  var hoehen = new Float32Array(n);
-  for (var i = 0; i < n; i++) {
-    var h = d.hoehen[i];
-    if (typeof h !== "number" || !Number.isFinite(h)) throw new Error("Ungültige Höhe an Index " + i);
-    hoehen[i] = h;
+  var hoehen = null, hoehenDelta = null;
+  if (hatHoehen) {
+    // Höhen: der genutzte Anfang muss aus endlichen Zahlen bestehen. Längere
+    // Arrays werden abgeschnitten; kürzere füllt die Übernahme deterministisch
+    // über genBase aus dem gespeicherten Seed auf.
+    var n = Math.min(d.hoehen.length, base.length);
+    hoehen = new Float32Array(n);
+    for (var i = 0; i < n; i++) {
+      var h = d.hoehen[i];
+      if (typeof h !== "number" || !Number.isFinite(h)) throw new Error("Ungültige Höhe an Index " + i);
+      hoehen[i] = h;
+    }
+  } else {
+    // hoehenDelta: flaches Array gerader Laenge; Indizes ganzzahlig in
+    // [0, base.length), Werte endliche Zahlen.
+    if (d.hoehenDelta.length % 2 !== 0) throw new Error("hoehenDelta: ungerade Länge");
+    hoehenDelta = [];
+    for (var q = 0; q < d.hoehenDelta.length; q += 2) {
+      var di = d.hoehenDelta[q], dv = d.hoehenDelta[q + 1];
+      if (typeof di !== "number" || !Number.isInteger(di) || di < 0 || di >= base.length)
+        throw new Error("hoehenDelta: ungültiger Index an Position " + q);
+      if (typeof dv !== "number" || !Number.isFinite(dv))
+        throw new Error("hoehenDelta: ungültiger Wert an Position " + (q + 1));
+      hoehenDelta.push(di, dv);
+    }
   }
 
   // Elemente: genau die Felder prüfen, die hydrate/mkElement/genElement
@@ -75,7 +125,8 @@ function validiereKarte(text) {
   return {
     dateiVersion: dateiVersion,
     seed: d.seed | 0,
-    hoehen: hoehen,
+    hoehen: hoehen,               // Float32Array (v1/v2) oder null
+    hoehenDelta: hoehenDelta,     // flaches Paar-Array (v3) oder null
     elemente: elemente,
     kamera: d.kamera,
     raster: !!d.raster,
@@ -119,16 +170,18 @@ export function initIO() {
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
   }
   document.getElementById("saveBtn").addEventListener("click", function () {
-    var hs = new Array(base.length);
-    for (var i = 0; i < base.length; i++) hs[i] = Math.round(base[i] * 100) / 100;
+    // v3: nur die Abweichungen vom deterministischen Seed-Terrain speichern.
+    // Frisches Seed-Terrain in ein temporaeres Array rechnen (laesst
+    // base/AO/Geometrie unberuehrt) und gegen das bearbeitete base diffen.
+    var seedTerrain = new Float32Array(base.length);
+    genBaseIn(seedTerrain, S.worldSeed);
     var data = {
-      format: "terra", version: 2, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
+      format: "terra", version: 3, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
       kamera: { x: cam.tFocus.x, z: cam.tFocus.z, dist: cam.tDist, yaw: cam.tYaw, pitch: cam.tPitch },
-      hoehen: hs,
+      hoehenDelta: berechneHoehenDelta(base, seedTerrain),
       elemente: serializeElements(),
       // Stand des Element-Seed-Zaehlers mitschreiben, damit nextSeed() nach
-      // dem Laden keine bereits vergebenen Seeds erneut erzeugt. Zusaetzliches
-      // optionales Feld — v1/v2-Leser ignorieren Unbekanntes, version bleibt 2.
+      // dem Laden keine bereits vergebenen Seeds erneut erzeugt.
       seedZaehler: S.elementSeedCounter
     };
     download("terra-karte.json", new Blob([JSON.stringify(data)], { type: "application/json" }));
@@ -155,11 +208,19 @@ export function initIO() {
       pushUndo(true);                    // das Laden ersetzt die Hoehen -> Terrainkopie sichern
       S.worldSeed = karte.seed;
       document.getElementById("seed").value = String(S.worldSeed);
-      // Kürzere Höhenfelder (ältere/fremde Dateien): erst das komplette Feld
-      // deterministisch aus dem geladenen Seed erzeugen, damit keine Reste der
-      // vorherigen Karte stehen bleiben — dann die gespeicherten Höhen darüber.
-      if (karte.hoehen.length < base.length) genBase(S.worldSeed);
-      base.set(karte.hoehen);
+      if (karte.hoehenDelta !== null) {
+        // v3: erst das komplette Seed-Terrain deterministisch erzeugen —
+        // S.worldSeed ist oben bereits gesetzt, genau wie im v1/v2-Ablauf —
+        // dann die gespeicherten Deltapaare darueber.
+        genBase(S.worldSeed);
+        wendeHoehenDeltaAn(base, karte.hoehenDelta);
+      } else {
+        // Kürzere Höhenfelder (ältere/fremde Dateien): erst das komplette Feld
+        // deterministisch aus dem geladenen Seed erzeugen, damit keine Reste der
+        // vorherigen Karte stehen bleiben — dann die gespeicherten Höhen darüber.
+        if (karte.hoehen.length < base.length) genBase(S.worldSeed);
+        base.set(karte.hoehen);
+      }
       hydrate(karte.elemente);
       if (karte.seedZaehler !== null) {
         S.elementSeedCounter = karte.seedZaehler;

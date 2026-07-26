@@ -30,6 +30,13 @@ Karten aus der frueheren Einzeldatei-Fassung (`terra.html`) laden weiterhin.
 
 ## Offener Stand
 
+- Runde E (Editierbarkeit/Format) ist abgeschlossen: Bestueckung ortsstabil
+  gehasht (Punktverschieben wuerfelt nicht mehr das ganze Element um; alte
+  Karten wuerfeln beim ersten Laden einmalig um), Punkte einfuegen
+  (Doppelklick aufs Segment) und loeschen (aktiver Griff + Entf),
+  Speicherformat v3 mit hoehenDelta (nur Pinsel-Aenderungen), nurTyp im
+  Objekt-Schema.
+
 - Runde D (Performance/Ergonomie) ist abgeschlossen: Slider-Debouncing
   (Vorschau bei input, voller Commit bei change), bereichsbeschraenkte
   Terrain-Updates beim schweren Commit, Depth-only-Prepass fuer den

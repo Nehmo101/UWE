@@ -8,7 +8,8 @@ import { cam, groundPoint, rayFrom, rayPlane, autoPitch } from './camera.js';
 import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOOLS }
   from './tools.js';
 import { handles, rebuildHandles, updateHandlePositions, setPreview, updateBrushRing,
-  brushRing, pickElement, select } from './selection.js';
+  brushRing, pickElement, select, naechstesSegment, aktiverGriff, setAktiverGriff }
+  from './selection.js';
 import { raycaster, _ndc, camera } from './camera.js';
 import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
 import { pushUndo, undo, redo } from './history.js';
@@ -45,7 +46,10 @@ export function initPointer(cv) {
       if (hits.length) {
         ptr.mode = "handle";
         ptr.handle = hits[0].object.userData.idx;
-        if (!ed.draw) pushUndo();
+        if (!ed.draw) {
+          pushUndo();
+          setAktiverGriff(ptr.handle);   // Griff bleibt nach dem Loslassen "aktiv" (Entf loescht ihn)
+        }
         return;
       }
     }
@@ -131,7 +135,34 @@ export function initPointer(cv) {
       Math.abs(e.clientX - ptr.lastCx) + Math.abs(e.clientY - ptr.lastCy) < 10;
     ptr.lastClick = now; ptr.lastCx = e.clientX; ptr.lastCy = e.clientY;
 
-    if (ed.tool === "auswahl") { select(pickElement(e, p)); return; }
+    if (ed.tool === "auswahl") {
+      // Doppelklick auf ein Segment des ausgewaehlten Elements: Punkt einfuegen.
+      // Nur pfad/flaeche — objekt-Punkte sind Streuzentren ohne Segmentsemantik
+      // (ein "Segment" zwischen zwei Streupunkten existiert visuell nicht),
+      // ranke hat ohnehin nur einen Punkt. Greift nur ohne aktive Zeichnung,
+      // damit die Doppelklick-Semantik "Zeichnen beenden" unberuehrt bleibt.
+      if (isDouble && !ed.draw && ed.selected &&
+          (ed.selected.kind === "pfad" || ed.selected.kind === "flaeche") &&
+          ed.selected.points.length >= 2) {
+        // Toleranz wie in pickElement: halbe Pfadbreite plus Griffradius
+        var tol = ed.selected.kind === "pfad"
+          ? (ed.selected.params.breite || ed.selected.params.dicke || 3) * 0.5 + 3.5
+          : 3.5;
+        var seg = naechstesSegment(ed.selected, p.x, p.z, tol);
+        if (seg) {
+          pushUndo();
+          var np = snapPt({ x: seg.px, z: seg.pz });
+          ed.selected.points.splice(seg.index + 1, 0, np);
+          rebuildHandles();
+          setAktiverGriff(seg.index + 1);   // neuer Punkt ist gleich der aktive Griff
+          commit(ed.selected, isHeavy(ed.selected));
+          toast("Punkt eingefügt");
+          return;
+        }
+      }
+      select(pickElement(e, p));
+      return;
+    }
     if (ed.tool === "pfad" || ed.tool === "flaeche") {
       if (isDouble) { finishDraw(); return; }
       if (!ed.draw) ed.draw = { kind: ed.tool, variant: ed.variantOf[ed.tool], points: [] };
@@ -229,6 +260,24 @@ function onKey(e) {
   }
   if (e.code === "Enter" || e.code === "NumpadEnter") { finishDraw(); return; }
   if (e.code === "Delete" || e.code === "Backspace") {
+    // Aktiver Griff an pfad/flaeche: nur den Punkt loeschen, nicht das Element.
+    if (ed.selected && aktiverGriff >= 0 && aktiverGriff < ed.selected.points.length &&
+        (ed.selected.kind === "pfad" || ed.selected.kind === "flaeche")) {
+      var minPts = ed.selected.kind === "flaeche" ? 3 : 2;
+      if (ed.selected.points.length <= minPts) {
+        toast(ed.selected.kind === "flaeche"
+          ? "Fläche braucht mindestens 3 Punkte"
+          : "Pfad braucht mindestens 2 Punkte");
+        return;
+      }
+      pushUndo();
+      ed.selected.points.splice(aktiverGriff, 1);
+      setAktiverGriff(-1);
+      rebuildHandles();
+      commit(ed.selected, isHeavy(ed.selected));
+      toast("Punkt gelöscht");
+      return;
+    }
     if (ed.selected) {
       pushUndo();
       var was = ed.selected, heavy = isHeavy(was);

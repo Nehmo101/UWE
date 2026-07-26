@@ -7,7 +7,17 @@ import { terraMat, tintedMats } from '../render/materials.js';
 var base = new Float32Array(VW * VW);   // prozedurale Höhen + Pinsel-Änderungen
 var hgt = new Float32Array(VW * VW);    // base + Flusseinschnitte (Renderhöhe)
 
-function genBase(seed) {
+/**
+ * Reine Funktion: schreibt das deterministische Seed-Terrain in das
+ * UEBERGEBENE Float32Array `ziel` (Laenge VW*VW), ohne base/AO/Geometrie
+ * anzufassen. Grundlage des Delta-Speicherformats v3 (editor/io.js): dort
+ * wird ein frisch erzeugtes Seed-Terrain gegen das bearbeitete base gedifft.
+ * Determinismus: haengt AUSSCHLIESSLICH an fractal/hashi aus core/rng.js.
+ * Die Umstellung der Bestueckungs-Zufaelle (generators/) auf ortsstabile
+ * Hashes aendert dieses Ergebnis nicht — das Delta-Format bleibt davon
+ * unabhaengig korrekt.
+ */
+function genBaseIn(ziel, seed) {
   for (var j = 0; j < VW; j++) {
     for (var i = 0; i < VW; i++) {
       var x = i - HALF, z = j - HALF;
@@ -15,10 +25,13 @@ function genBase(seed) {
       // Rand weich unter den Wasserspiegel ziehen, damit die Karte keine Kante zeigt
       var d = Math.min(i, j, MAP - i, MAP - j);
       h = lerp(-22, h, sstep(0, 55, d));
-      base[j * VW + i] = h;
+      ziel[j * VW + i] = h;
     }
   }
 }
+
+/** Seed-Terrain direkt nach base schreiben — gleiche Rechenreihenfolge wie immer. */
+function genBase(seed) { genBaseIn(base, seed); }
 
 var terrainGeo = new THREE.BufferGeometry();
 (function buildTerrainGeometry() {
@@ -337,6 +350,6 @@ function applyBrush(p, mode, radius, strength, dt) {
 
 function setFlattenTarget(v) { flattenTarget = v; }
 
-export { base, hgt, genBase, stampWear, clearWear, wearAt, terrain, terrainGeo, initTerrain, terrainColor, computeAO,
+export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, terrainGeo, initTerrain, terrainColor, computeAO,
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
   inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget };

@@ -5,6 +5,13 @@ import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
 
+/* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
+   an einen stabilen Schluessel statt an die Zugriffsreihenfolge — sonst
+   wuerde jede Aenderung der Schleifenlaengen (Punkt verschoben, Parameter
+   geaendert) die gesamte restliche Bestueckung umwuerfeln. genWald/genWiese
+   arbeiten bereits so (Rasterzellen-Hash) und bleiben unveraendert. */
+function ortsRng(a, b, s) { return rngOf((hashi(a, b, s) * 4294967296) | 0); }
+
 function polyBBox(pts) {
   var b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity };
   for (var i = 0; i < pts.length; i++) {
@@ -113,7 +120,7 @@ var FRUCHT = {
   lavendel: [0.95, 0.92, 1.08], brache: [1.0, 0.96, 0.9]
 };
 function genFeld(el) {
-  var p = el.params, pts = el.points, rng = rngOf(el.seed);
+  var p = el.params, pts = el.points;
   var bb = polyBBox(pts), ctr = polyCenter(pts);
   var ext = Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 0.75 + 4;
   var a = p.drehung * DEG, dx = Math.cos(a), dz = Math.sin(a);
@@ -123,6 +130,11 @@ function genFeld(el) {
   var frucht = FRUCHT[p.frucht] || FRUCHT.weizen;
   var occ = newOcc(2);
   var nRows = Math.ceil(ext * 2 / rowSp);
+  // Zufalls-Schluessel: (Reihenindex r, Schrittindex s, seed+23) — waechst
+  // das Polygon, kommen nur neue Reihen/Schritte hinzu, die bestehenden
+  // behalten ihre Varianz. Grenze: das Raster haengt an polyCenter, jede
+  // Punktverschiebung rueckt also alle Weltpositionen leicht — die Zuordnung
+  // Indexzelle -> Auswuerfelung bleibt davon aber unberuehrt.
   for (var r = -nRows; r <= nRows; r++) {
     var off = r * rowSp;
     var steps = Math.ceil(ext * 2 / alongSp);
@@ -132,9 +144,10 @@ function genFeld(el) {
       if (!inPoly(pts, x, z)) continue;
       var h = tryPlace(occ, x, z, 0.5, null);
       if (h === null) continue;
-      var tn = tintOf(rng, 0.05);
+      var rs = ortsRng(r, s, el.seed + 23);
+      var tn = tintOf(rs, 0.05);
       emit(el, "feldreihe", x, h, z, a + Math.PI / 2,
-        rowSp * 0.34, rr(rng, 0.75, 1.15) * p.hoehe, alongSp * 0.55,
+        rowSp * 0.34, rr(rs, 0.75, 1.15) * p.hoehe, alongSp * 0.55,
         [frucht[0] * tn[0], frucht[1] * tn[1], frucht[2] * tn[2]]);
     }
   }
@@ -240,7 +253,7 @@ function districtStreets(el) {
 }
 
 function genViertel(el) {
-  var p = el.params, pts = el.points, rng = rngOf(el.seed);
+  var p = el.params, pts = el.points;
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
   var occ = newOcc(4.5);
@@ -268,14 +281,23 @@ function genViertel(el) {
   }
   // Bebauung an den Gassenseiten: geschlossene Reihen statt Streusiedlung.
   // In den Vorlagen stehen die Häuser Wand an Wand und bilden Blöcke.
+  // Zufalls-Schluessel: Startversatz + Anfangs-Lauf je Gassenseite
+  // (Street-Index i, Seite, seed+31), jede Segmententscheidung je
+  // (Segmentindex k, i*2+Seite, seed+37). Der Lauf-Zustand (lauf/laufKind)
+  // bleibt sequentiell ueber k — zulaessig, weil k selbst stabil ist; nur die
+  // DRAWS haengen am Schluessel. Das Strassennetz selbst (districtStreets,
+  // eigener Strom seed+51) ist hier ausdruecklich nicht Thema. Kein
+  // elementweiter Strom mehr in genViertel.
   var table = KULTUR[p.stil] || KULTUR.dorf;
-  if (p.stil === "dorf" || p.stil === "gemischt" || !p.stil) dorfUfer(el, pts, rng);
+  if (p.stil === "dorf" || p.stil === "gemischt" || !p.stil) dorfUfer(el, pts);
   var luecke = clamp(1.6 / p.dichte - 0.5, 0.1, 6);   // Abstand zwischen Nachbarn
   for (i = 0; i < streets.length; i++) {
     var ln = streets[i];
     for (var side = -1; side <= 1; side += 2) {
-      var acc = rr(rng, 0, 6);
-      var lauf = 0, laufKind = wpick(rng, table);
+      var seite = side < 0 ? 0 : 1;
+      var rSeite = ortsRng(i, seite, el.seed + 31);
+      var acc = rr(rSeite, 0, 6);
+      var lauf = 0, laufKind = wpick(rSeite, table);
       for (k = 1; k < ln.length; k++) {
         var a = ln[k - 1], b = ln[k];
         var dx = b.x - a.x, dz = b.z - a.z, d = Math.sqrt(dx * dx + dz * dz);
@@ -283,33 +305,39 @@ function genViertel(el) {
         dx /= d; dz /= d;
         acc -= d;
         if (acc > 0) continue;
+        var rs = ortsRng(k, i * 2 + seite, el.seed + 37);
         // Reihenhaus-Läufe: 2–4 gleiche Typen nebeneinander, dann wechseln
-        if (lauf <= 0) { laufKind = wpick(rng, table); lauf = ri(rng, 2, 4); }
+        if (lauf <= 0) { laufKind = wpick(rs, table); lauf = ri(rs, 2, 4); }
         lauf--;
         var kind = laufKind;
         var br = POOLS[kind].radius * 2;
-        acc = br + luecke * rr(rng, 0.4, 1.6);
-        if (rng() < 0.1) continue;                     // gelegentliche Baulücke
-        var off = p.gasse * 0.5 + POOLS[kind].radius + rr(rng, 0.2, 1.1);
+        acc = br + luecke * rr(rs, 0.4, 1.6);
+        if (rs() < 0.1) continue;                     // gelegentliche Baulücke
+        var off = p.gasse * 0.5 + POOLS[kind].radius + rr(rs, 0.2, 1.1);
         var x = b.x + (-dz) * off * side, z = b.z + dx * off * side;
         if (!inPoly(pts, x, z)) continue;
         var hh = tryPlace(occ, x, z, POOLS[kind].radius * 0.82, { ignoreCorridor: true });
         if (hh === null) continue;
-        var sc = rr(rng, 0.88, 1.14);
-        var hyaw = Math.atan2(dx, dz) + rr(rng, -0.05, 0.05);
-        emit(el, kind, x, hh - 0.15, z, hyaw, sc, sc * rr(rng, 0.9, 1.25), sc, tintOf(rng));
+        var sc = rr(rs, 0.88, 1.14);
+        var hyaw = Math.atan2(dx, dz) + rr(rs, -0.05, 0.05);
+        emit(el, kind, x, hh - 0.15, z, hyaw, sc, sc * rr(rs, 0.9, 1.25), sc, tintOf(rs));
         rauchAus(el, kind, x, hh, z, sc);
-        emitFensterlicht(el, rng, kind, x, hh - 0.15, z, hyaw, sc);
+        emitFensterlicht(el, rs, kind, x, hh - 0.15, z, hyaw, sc);
       }
     }
   }
 }
 
-/** Uferzone eines Dorfviertels: Stege und Boote, wo das Polygon ans Wasser grenzt. */
-function dorfUfer(el, pts, rng) {
+/** Uferzone eines Dorfviertels: Stege und Boote, wo das Polygon ans Wasser grenzt.
+    Zufalls-Schluessel: (Kantenindex i, Uferpunkt-Index j, seed+71) — der Hafen
+    haengt damit an SEINER Polygonkante; wird eine andere Kante verschoben,
+    wandert oder wuerfelt er nicht mehr. Das Einfuegen/Loeschen von Punkten
+    verschiebt die Kantenindizes dahinter (akzeptierte Grenze). */
+function dorfUfer(el, pts) {
   for (var i = 0; i < pts.length; i++) {
     var a = pts[i], b = pts[(i + 1) % pts.length];
-    for (var t = 0.2; t < 1; t += 0.3) {
+    for (var j = 0; j < 3; j++) {
+      var t = 0.2 + j * 0.3;
       var x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t);
       var h = heightAt(x, z);
       if (h > 0.4 || h < -2.5) continue;
@@ -317,11 +345,12 @@ function dorfUfer(el, pts, rng) {
       var dx = heightAt(x + 2, z) - heightAt(x - 2, z);
       var dz = heightAt(x, z + 2) - heightAt(x, z - 2);
       var yaw = Math.atan2(-dx, -dz);
-      if (rng() < 0.45) {
-        emit(el, "steg", x, Math.max(h, 0.05), z, yaw, 1, 1, 1, tintOf(rng, 0.06));
-        if (rng() < 0.7) {
+      var ru = ortsRng(i, j, el.seed + 71);
+      if (ru() < 0.45) {
+        emit(el, "steg", x, Math.max(h, 0.05), z, yaw, 1, 1, 1, tintOf(ru, 0.06));
+        if (ru() < 0.7) {
           emit(el, "boot", x + Math.sin(yaw) * 2.4, 0.02, z + Math.cos(yaw) * 2.4,
-            yaw + rr(rng, -0.5, 0.5), 1, 1, 1, tintOf(rng, 0.08));
+            yaw + rr(ru, -0.5, 0.5), 1, 1, 1, tintOf(ru, 0.08));
         }
         return;   // ein Hafen je Viertel reicht
       }

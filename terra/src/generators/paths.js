@@ -10,6 +10,14 @@ import { terraMat, tintedMats } from '../render/materials.js';
 // rng/textures/pools/terrain), darf hier also direkt angezapft werden.
 import { mergeGeos } from './geometry.js';
 
+/* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
+   an einen stabilen Schluessel statt an die Zugriffsreihenfolge. Ein
+   sequentieller Elementstrom wuerde bei jeder Aenderung der Sample-Anzahl
+   (Punkt verschoben, Parameter geaendert) die komplette Bestueckung umwuerfeln;
+   mit Schluessel-Stroemen aendert sich nur die betroffene Stelle (Vorbild:
+   Rasterzellen-Hash in genWald/genWiese). */
+function ortsRng(a, b, s) { return rngOf((hashi(a, b, s) * 4294967296) | 0); }
+
 function pathCurve(points) {
   var v = [];
   for (var i = 0; i < points.length; i++) v.push(new THREE.Vector3(points[i].x, 0, points[i].z));
@@ -166,41 +174,57 @@ function genStrasse(el) {
   var bandFarbe = [0.60 * belag[0], 0.545 * belag[1], 0.45 * belag[2]];
   bandAusLinie(el, sm, w * 0.5, bandFarbe, el.seed, { einsinken: 0.12 });
   if (!p.haeuser) return;
-  // Bebauung beidseitig, zur Straße ausgerichtet
+  // Bebauung beidseitig, zur Straße ausgerichtet.
+  // Zufalls-Schluessel je Haus samt Begleitbusch: (rund(s/1.6), Seite, seed+11)
+  // — der Bogenlaengen-Index ist entlang eines unveraenderten Teilstuecks
+  // stabil, das Verschieben eines Punkts wuerfelt also nur dessen Umgebung um.
+  // Grenze: die Bogenlaenge zaehlt ab Pfadanfang; Aenderungen dort verschieben
+  // die Indizes des gesamten Rests (akzeptiert — ein Weltkoordinaten-Hash
+  // waere stattdessen gegen die Kurvenglaettung instabil).
+  // Elementweit bleibt NUR der Startabstand je Seite: genau ein Draw pro
+  // Seite, unabhaengig von Sample-Anzahl und Parametern, daher unschaedlich.
   var occ = newOcc(4);
   var half = w * 0.5;
   for (var side = -1; side <= 1; side += 2) {
+    var seite = side < 0 ? 0 : 1;
     var next = rr(rng, 2, p.abstand);
     for (i = 0; i < sm.length; i++) {
       s = sm[i];
       if (s.s < next) continue;
-      next = s.s + p.abstand * rr(rng, 0.7, 1.35);
+      var rs = ortsRng(Math.round(s.s / 1.6), seite, el.seed + 11);
+      next = s.s + p.abstand * rr(rs, 0.7, 1.35);
       var nx = -s.tz, nz = s.tx;
-      var off = half + 2.6 + rr(rng, 0, p.streuung);
-      var x = s.x + nx * off * side + s.tx * rr(rng, -p.streuung, p.streuung);
-      var z = s.z + nz * off * side + s.tz * rr(rng, -p.streuung, p.streuung);
-      var kind = wpick(rng, KULTUR[p.stil] || KULTUR.dorf);
+      var off = half + 2.6 + rr(rs, 0, p.streuung);
+      var x = s.x + nx * off * side + s.tx * rr(rs, -p.streuung, p.streuung);
+      var z = s.z + nz * off * side + s.tz * rr(rs, -p.streuung, p.streuung);
+      var kind = wpick(rs, KULTUR[p.stil] || KULTUR.dorf);
       var h = tryPlace(occ, x, z, POOLS[kind].radius, null);
       if (h === null) continue;
-      var sc = rr(rng, 0.85, 1.2);
-      var syaw = Math.atan2(s.tx, s.tz) + rr(rng, -0.14, 0.14);
-      emit(el, kind, x, h - 0.15, z, syaw, sc, sc * rr(rng, 0.9, 1.15), sc, tintOf(rng));
+      var sc = rr(rs, 0.85, 1.2);
+      var syaw = Math.atan2(s.tx, s.tz) + rr(rs, -0.14, 0.14);
+      emit(el, kind, x, h - 0.15, z, syaw, sc, sc * rr(rs, 0.9, 1.15), sc, tintOf(rs));
       rauchAus(el, kind, x, h, z, sc);
-      emitFensterlicht(el, rng, kind, x, h - 0.15, z, syaw, sc);
-      if (rng() < 0.35) {
-        var bx = x + nx * side * rr(rng, 2.2, 3.6), bz = z + nz * side * rr(rng, 2.2, 3.6);
+      emitFensterlicht(el, rs, kind, x, h - 0.15, z, syaw, sc);
+      if (rs() < 0.35) {
+        var bx = x + nx * side * rr(rs, 2.2, 3.6), bz = z + nz * side * rr(rs, 2.2, 3.6);
         var bh = tryPlace(occ, bx, bz, 0.9, null);
-        if (bh !== null) emit(el, "busch", bx, bh, bz, rng() * 6.28,
-          rr(rng, 0.8, 1.3), rr(rng, 0.8, 1.3), rr(rng, 0.8, 1.3), tintOf(rng));
+        if (bh !== null) emit(el, "busch", bx, bh, bz, rs() * 6.28,
+          rr(rs, 0.8, 1.3), rr(rs, 0.8, 1.3), rr(rs, 0.8, 1.3), tintOf(rs));
       }
     }
   }
 }
 
 function genMauer(el) {
-  var p = el.params, rng = rngOf(el.seed);
+  var p = el.params;
   var sm = pathSamples(el.points, 2.0);
   if (!sm.length) return;
+  // Zufalls-Schluessel: Segment-Tint (rund(s/2.0), 0, seed+5), Turm-Drehung/
+  // Tint (rund(s/2.0), 0, seed+6), Tortuerme (Torindex, Seite, seed+7).
+  // Tor- und Turm-POSITIONEN sind reine Rechnung ohne Zufall und daher
+  // ohnehin ortsstabil; ein elementweiter Strom bleibt nicht uebrig.
+  // Grenze wie bei allen Pfaden: Bogenlaenge zaehlt ab Pfadanfang, dortige
+  // Aenderungen verschieben die Indizes des Rests.
   var gates = [];
   if (p.torAbstand > 0) {
     for (var g = p.torAbstand; g < sm.len; g += p.torAbstand) gates.push(g);
@@ -208,35 +232,39 @@ function genMauer(el) {
   var nextTurm = p.turmAbstand;
   for (var i = 0; i < sm.length; i++) {
     var s = sm[i];
+    var idx = Math.round(s.s / 2.0);
     var y = Math.max(heightAt(s.x, s.z), WATER + 0.2);
     var yaw = Math.atan2(s.tx, s.tz);
     var atGate = false;
     for (var k = 0; k < gates.length; k++) if (Math.abs(s.s - gates[k]) < 3.4) atGate = true;
     if (!atGate) {
-      var t = tintOf(rng, 0.05);
+      var rw = ortsRng(idx, 0, el.seed + 5);
+      var t = tintOf(rw, 0.05);
       emit(el, "mauer", s.x, y - 0.35, s.z, yaw, p.dicke, 2.6 * p.hoehe, 2.2, t);
     }
     if (s.s >= nextTurm) {
       nextTurm += p.turmAbstand;
       var th = heightAt(s.x, s.z);
-      emit(el, "turm", s.x, th - 0.4, s.z, rng() * 6.28,
-        p.dicke * 0.85, p.hoehe * 1.05, p.dicke * 0.85, tintOf(rng, 0.04));
+      var rt = ortsRng(idx, 0, el.seed + 6);
+      emit(el, "turm", s.x, th - 0.4, s.z, rt() * 6.28,
+        p.dicke * 0.85, p.hoehe * 1.05, p.dicke * 0.85, tintOf(rt, 0.04));
     }
   }
   // Tortürme flankierend
   for (var q = 0; q < gates.length; q++) {
     for (var side = -1; side <= 1; side += 2) {
+      var rq = ortsRng(q, side < 0 ? 0 : 1, el.seed + 7);
       var target = gates[q] + side * 3.8, best = null;
       for (var m = 0; m < sm.length; m++) if (!best || Math.abs(sm[m].s - target) < Math.abs(best.s - target)) best = sm[m];
       if (!best) continue;
-      emit(el, "turm", best.x, heightAt(best.x, best.z) - 0.4, best.z, rng() * 6.28,
-        p.dicke * 0.8, p.hoehe * 1.15, p.dicke * 0.8, tintOf(rng, 0.04));
+      emit(el, "turm", best.x, heightAt(best.x, best.z) - 0.4, best.z, rq() * 6.28,
+        p.dicke * 0.8, p.hoehe * 1.15, p.dicke * 0.8, tintOf(rq, 0.04));
     }
   }
 }
 
 function genFluss(el) {
-  var p = el.params, rng = rngOf(el.seed);
+  var p = el.params;
   var sm = pathSamples(el.points, 2.2);
   if (sm.length < 2) return;
   // Höhenprofil der Sohle glätten, damit das Wasser nicht bergauf fließt
@@ -272,41 +300,51 @@ function genFluss(el) {
   var mesh = new THREE.Mesh(g, flussMat);
   mesh.renderOrder = 5;
   groupOf(el).add(mesh);
-  // Schilf und Steine am Ufer
+  // Schilf und Steine am Ufer.
+  // Zufalls-Schluessel: (rund(s/2.2), Seite, seed+13) — das Bandprofil selbst
+  // zieht seine Varianz schon aus hashi und bleibt unberuehrt; elementweiter
+  // Strom entfaellt damit vollstaendig. Grenze: Bogenlaenge ab Pfadanfang.
   var occ = newOcc(2.2);
   for (i = 0; i < sm.length; i += 2) {
     var ss = sm[i];
+    var idx = Math.round(ss.s / 2.2);
     for (var side = -1; side <= 1; side += 2) {
-      if (rng() > 0.55) continue;
+      var ru = ortsRng(idx, side < 0 ? 0 : 1, el.seed + 13);
+      if (ru() > 0.55) continue;
       var ox = -ss.tz * side, oz = ss.tx * side;
-      var d = p.breite * 0.5 + rr(rng, 0.6, 3.2);
+      var d = p.breite * 0.5 + rr(ru, 0.6, 3.2);
       var x = ss.x + ox * d, z = ss.z + oz * d;
       var h = tryPlace(occ, x, z, 0.5, { ignoreCorridor: true });
       if (h === null) continue;
-      var what = rng() < 0.72 ? "gras" : "fels";
-      var sc = rr(rng, 0.8, 1.6);
-      emit(el, what, x, h, z, rng() * 6.28, sc, sc * rr(rng, 1, 1.6), sc, tintOf(rng));
+      var what = ru() < 0.72 ? "gras" : "fels";
+      var sc = rr(ru, 0.8, 1.6);
+      emit(el, what, x, h, z, ru() * 6.28, sc, sc * rr(ru, 1, 1.6), sc, tintOf(ru));
     }
   }
 }
 
 function genHecke(el) {
-  var p = el.params, rng = rngOf(el.seed);
+  var p = el.params;
   var step = p.stil === "zaun" ? 2.0 : 1.15;
   var sm = pathSamples(el.points, step);
+  // Zufalls-Schluessel: (rund(s/step), 0, seed+17) je Pfosten/Busch; kein
+  // elementweiter Strom noetig. Ein Stilwechsel (zaun<->hecke) aendert die
+  // Schrittweite und wuerfelt damit neu — das tut die andere Objektart aber
+  // ohnehin. Grenze: Bogenlaenge ab Pfadanfang.
   for (var i = 0; i < sm.length; i++) {
     var s = sm[i];
+    var rh = ortsRng(Math.round(s.s / step), 0, el.seed + 17);
     var nx = -s.tz, nz = s.tx;
-    var j = rr(rng, -0.3, 0.3);
+    var j = rr(rh, -0.3, 0.3);
     var x = s.x + nx * j, z = s.z + nz * j;
     var h = heightAt(x, z);
     if (h < WATER + 0.25 || slopeAt(x, z) < COS40) continue;
     var yaw = Math.atan2(s.tx, s.tz);
     if (p.stil === "zaun") {
-      emit(el, "pfosten", x, h, z, yaw + Math.PI / 2, 1, rr(rng, 0.9, 1.1) * p.hoehe, 1, tintOf(rng));
+      emit(el, "pfosten", x, h, z, yaw + Math.PI / 2, 1, rr(rh, 0.9, 1.1) * p.hoehe, 1, tintOf(rh));
     } else {
-      var sc = rr(rng, 0.85, 1.3);
-      emit(el, "busch", x, h, z, rng() * 6.28, sc * 1.1, sc * p.hoehe, sc * 0.95, tintOf(rng, 0.08));
+      var sc = rr(rh, 0.85, 1.3);
+      emit(el, "busch", x, h, z, rh() * 6.28, sc * 1.1, sc * p.hoehe, sc * 0.95, tintOf(rh, 0.08));
     }
   }
 }

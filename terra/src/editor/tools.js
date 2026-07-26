@@ -87,7 +87,30 @@ var PARAMS = {
     { k: "anzahl", l: "Stück pro Klick", min: 1, max: 12, st: 1, d: 1 },
     { k: "streuung", l: "Streuradius", min: 0, max: 20, st: 0.5, d: 4 },
     { k: "groesse", l: "Größe", min: 0.4, max: 2.5, st: 0.05, d: 1 },
-    { k: "frei", l: "Auch auf Wegen", b: true, d: false }
+    { k: "frei", l: "Auch auf Wegen", b: true, d: false },
+    // Erzwungener Pool statt der gewichteten Gruppen-Auswahl ("" = Gruppe).
+    // Statisch kuratierte Liste: POOLS wird erst beim Laden von geometry.js
+    // gefüllt, dieses Schema aber schon beim Modul-Import ausgewertet —
+    // die Namen sind mit den definePool-Aufrufen in generators/geometry.js
+    // abgeglichen und müssen bei Umbenennungen dort mitgezogen werden.
+    { k: "nurTyp", l: "Nur Typ", d: "", o: [
+      ["", "(Gruppe)"],
+      ["baum", "Laubbaum"], ["baum2", "Laubbaum hoch"], ["nadelbaum", "Nadelbaum"],
+      ["zypresse", "Zypresse"], ["sumpfbaum", "Sumpfbaum"], ["bluetenbaum", "Blütenbaum"],
+      ["busch", "Busch"],
+      ["haus", "Haus"], ["hausA", "Haus A"], ["hausB", "Haus B"], ["hausC", "Haus C"],
+      ["haus2", "Stadthaus"], ["villa", "Villa"], ["scheune", "Scheune"],
+      ["windmuehle", "Windmühle"], ["turm", "Turm"], ["kuppel", "Kuppel"],
+      ["arkade", "Arkade"], ["tempel", "Tempel"], ["tholos", "Tholos"],
+      ["bogen", "Bogen"], ["saeule", "Säule"], ["mauer", "Mauer"],
+      ["zwergenhalle", "Zwergenhalle"], ["schmiedeturm", "Schmiedeturm"],
+      ["zwergentor", "Zwergentor"], ["elfenturm", "Elfenturm"], ["pavillon", "Pavillon"],
+      ["industrie", "Industrie"], ["kran", "Kran"],
+      ["brunnen", "Brunnen"], ["fass", "Fass"], ["kiste", "Kiste"],
+      ["karren", "Karren"], ["laterne", "Laterne"], ["heuhaufen", "Heuhaufen"],
+      ["marktstand", "Marktstand"], ["fels", "Fels"], ["blume", "Blume"],
+      ["boot", "Boot"], ["steg", "Steg"]
+    ] }
   ],
   "ranke:ranke": [
     { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },

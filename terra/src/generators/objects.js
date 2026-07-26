@@ -84,6 +84,9 @@ function genObjekt(el) {
     for (var k = 0; k < n; k++) {
       var ang = rng() * 6.28, rad = k === 0 ? 0 : Math.sqrt(rng()) * p.streuung;
       var x = pt.x + Math.cos(ang) * rad, z = pt.z + Math.sin(ang) * rad;
+      // nurTyp erzwingt einen konkreten Pool; leer/undefined oder ein
+      // unbekannter Poolname (alte Karte, Pool entfernt) fällt still auf
+      // die gewichtete Gruppen-Auswahl zurück — kein Crash.
       var kind = (p.nurTyp && POOLS[p.nurTyp]) ? p.nurTyp : wpick(rng, table);
       var h = tryPlace(occ, x, z, POOLS[kind].radius * 0.85, { ignoreCorridor: p.frei });
       if (h === null) continue;
