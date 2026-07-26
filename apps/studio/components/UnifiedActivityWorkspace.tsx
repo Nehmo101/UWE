@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { studioApiFetch } from "@/src/lib/studio-api-fetch";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDateTime } from "@/src/lib/format";
 import { Alert, Badge, Button, buttonVariants, Card, CardContent, CardHeader, CardTitle, Label } from "@/src/components/ui";
@@ -75,7 +75,7 @@ export function UnifiedActivityWorkspace() {
     params.set("offset", String(offset));
 
     try {
-      const response = await fetch(studioApiUrl(`/api/admin/activity?${params.toString()}`));
+      const response = await studioApiFetch(`/api/admin/activity?${params.toString()}`);
       if (!response.ok) {
         throw new Error(`Verlauf konnte nicht geladen werden (${response.status}).`);
       }

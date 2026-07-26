@@ -1,6 +1,6 @@
 "use client";
 
-import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { studioApiFetch } from "@/src/lib/studio-api-fetch";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -37,7 +37,7 @@ export function HostRestartPanel({ canTrigger }: Props) {
   const loadAvailability = useCallback(async () => {
     setError(null);
     try {
-      const response = await fetch(studioApiUrl("/api/admin/host-restart"));
+      const response = await studioApiFetch("/api/admin/host-restart");
       if (!response.ok) {
         const payload = (await response.json()) as { error?: string };
         throw new Error(payload.error ?? `Status ${response.status}`);
@@ -64,7 +64,7 @@ export function HostRestartPanel({ canTrigger }: Props) {
     setConfirmText("");
 
     try {
-      const response = await fetch(studioApiUrl("/api/admin/host-restart"), { method: "POST" });
+      const response = await studioApiFetch("/api/admin/host-restart", { method: "POST" });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
         throw new Error(payload.error ?? `Status ${response.status}`);

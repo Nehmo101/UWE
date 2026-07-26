@@ -1,12 +1,12 @@
 "use client";
 
-import { studioApiUrl } from "@/src/lib/studio-api-url";
-import { useCallback, useEffect, useState } from "react";
+import { studioApiFetch } from "@/src/lib/studio-api-fetch";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AdminUserOption, GatewayDashboard, SimulationCase, UsageLogEntry } from "./types";
 
-export function useAiGateway() {
-  const [data, setData] = useState<GatewayDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useAiGateway(initialData?: GatewayDashboard | null) {
+  const [data, setData] = useState<GatewayDashboard | null>(initialData ?? null);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -44,7 +44,7 @@ export function useAiGateway() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(studioApiUrl("/api/admin/ai-gateway"));
+      const res = await studioApiFetch("/api/admin/ai-gateway");
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -57,13 +57,19 @@ export function useAiGateway() {
     }
   }, []);
 
+  // The page already rendered this payload server-side; only refetch on demand.
+  const preloaded = useRef(Boolean(initialData));
   useEffect(() => {
+    if (preloaded.current) {
+      preloaded.current = false;
+      return;
+    }
     void load();
   }, [load]);
 
   const loadAdminUsers = useCallback(async () => {
     try {
-      const res = await fetch(studioApiUrl("/api/admin/users"));
+      const res = await studioApiFetch("/api/admin/users");
       if (!res.ok) return;
       const body = (await res.json()) as { users?: AdminUserOption[] };
       setAdminUsers(body.users ?? []);
@@ -80,7 +86,7 @@ export function useAiGateway() {
       if (usageFilters.feature) params.set("feature", usageFilters.feature);
       if (usageFilters.route) params.set("route", usageFilters.route);
       if (usageFilters.success) params.set("success", usageFilters.success);
-      const res = await fetch(studioApiUrl(`/api/admin/ai-gateway?${params.toString()}`));
+      const res = await studioApiFetch(`/api/admin/ai-gateway?${params.toString()}`);
       if (!res.ok) throw new Error("Usage-Logs konnten nicht geladen werden.");
       const body = (await res.json()) as { logs: UsageLogEntry[] };
       setFilteredUsage(body.logs);
@@ -93,7 +99,7 @@ export function useAiGateway() {
 
   async function patchConfig(body: Record<string, unknown>) {
     setMessage(null);
-    const res = await fetch(studioApiUrl("/api/admin/ai-gateway"), {
+    const res = await studioApiFetch("/api/admin/ai-gateway", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -124,7 +130,7 @@ export function useAiGateway() {
 
   async function deleteGrant(userId: string) {
     setMessage(null);
-    const res = await fetch(studioApiUrl(`/api/admin/ai-gateway?userId=${encodeURIComponent(userId)}`), {
+    const res = await studioApiFetch(`/api/admin/ai-gateway?userId=${encodeURIComponent(userId)}`, {
       method: "DELETE",
     });
     if (!res.ok) {
@@ -138,7 +144,7 @@ export function useAiGateway() {
 
   async function saveProvider() {
     setMessage(null);
-    const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=provider"), {
+    const res = await studioApiFetch("/api/admin/ai-gateway?action=provider", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -165,7 +171,7 @@ export function useAiGateway() {
       return;
     }
     setMessage(null);
-    const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=user-grant"), {
+    const res = await studioApiFetch("/api/admin/ai-gateway?action=user-grant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(grantForm),
@@ -181,7 +187,7 @@ export function useAiGateway() {
 
   async function runFallbackTest() {
     setMessage(null);
-    const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=fallback-test"), { method: "POST" });
+    const res = await studioApiFetch("/api/admin/ai-gateway?action=fallback-test", { method: "POST" });
     const body = (await res.json()) as { message?: string; error?: string };
     setMessage(body.message ?? body.error ?? "Test abgeschlossen.");
   }
@@ -190,7 +196,7 @@ export function useAiGateway() {
     setSimulationLoading(true);
     setMessage(null);
     try {
-      const res = await fetch(studioApiUrl("/api/admin/ai-gateway?action=simulate"), {
+      const res = await studioApiFetch("/api/admin/ai-gateway?action=simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
