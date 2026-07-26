@@ -17,7 +17,11 @@ function shadeVertical(geo, strength) {
   if (y1 - y0 < 1e-4) return geo;
   var pos = geo.attributes.position, col = geo.attributes.color;
   for (var i = 0; i < pos.count; i++) {
-    var f = lerp(1 - strength, 1, sstep(0, 0.6, (pos.getY(i) - y0) / (y1 - y0)));
+    var t = (pos.getY(i) - y0) / (y1 - y0);
+    // unten abdunkeln, oben leicht ueber Grundton aufhellen — Firste, Kronen
+    // und Spitzen werden heller als ihre Basis (gemalte Hintergruende tun das
+    // durchgehend, und es kostet nichts)
+    var f = lerp(1 - strength, 1, sstep(0, 0.6, t)) * (1 + sstep(0.72, 1, t) * 0.10);
     col.setXYZ(i, col.getX(i) * f, col.getY(i) * f, col.getZ(i) * f);
   }
   col.needsUpdate = true;
@@ -34,8 +38,12 @@ function Pool(name, geo, opts) {
     transparent: !!opts.transparent,
     opacity: opts.opacity === undefined ? 1 : opts.opacity,
     map: opts.map || null,
-    alphaTest: opts.alphaTest || 0
+    alphaTest: opts.alphaTest || 0,
+    familie: opts.familie || 'holz',
+    wind: opts.wind || null,
+    emissive: opts.emissive || 0x000000
   });
+  if (opts.emissiveIntensity !== undefined) this.mat.emissiveIntensity = opts.emissiveIntensity;
   tintedMats.push(this.mat);
   this.cap = 0;
   this.mesh = null;

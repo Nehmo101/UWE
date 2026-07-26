@@ -3,7 +3,8 @@ import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '.
 import { S, WATER, COS40 } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, slopeAt } from '../world/terrain.js';
-import { newOcc, occAdd, tryPlace, KULTUR } from './objects.js';
+import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
+import { bandAusLinie } from './paths.js';
 
 function polyBBox(pts) {
   var b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity };
@@ -44,6 +45,21 @@ function safeSpacing(pts, wanted, maxCount) {
   return Math.max(wanted, need);
 }
 
+/** 0 am Polygonkern, 1 nahe dem Rand — Unterwuchs verdichtet sich am Saum. */
+function randNaehe(pts, x, z) {
+  var best = 1e9;
+  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    var ax = pts[i].x, az = pts[i].z, bx = pts[j].x, bz = pts[j].z;
+    var dx = bx - ax, dz = bz - az;
+    var l2 = dx * dx + dz * dz;
+    var t = l2 > 0 ? clamp(((x - ax) * dx + (z - az) * dz) / l2, 0, 1) : 0;
+    var px = ax + dx * t - x, pz = az + dz * t - z;
+    var d = px * px + pz * pz;
+    if (d < best) best = d;
+  }
+  return 1 - sstep(3, 9, Math.sqrt(best));
+}
+
 function genWald(el) {
   var p = el.params, pts = el.points;
   var klump = p.klumpen === undefined ? 0.55 : p.klumpen;
@@ -62,22 +78,36 @@ function genWald(el) {
       if (fractal(x * 0.04, z * 0.04, el.seed + 21) < schwelle) continue;
       var rng = rngOf((hashi(cx, cz, el.seed + 7) * 4294967296) | 0);
       var nadel = r3 < p.mischung;
-      var kind = nadel ? "zypresse" : (hashi(cx, cz, el.seed + 33) < 0.42 ? "baum2" : "baum");
+      var artW = hashi(cx, cz, el.seed + 33);
+      var kind = nadel ? (artW < 0.6 ? "nadelbaum" : "zypresse")
+        : (artW < 0.38 ? "baum2" : (artW < 0.86 ? "baum"
+          : (artW < 0.94 ? "sumpfbaum" : "bluetenbaum")));
       var h = tryPlace(occ, x, z, POOLS[kind].radius * 0.8, null);
       if (h === null) continue;
       var sc = rr(rng, 0.8, 1.2);
-      emit(el, kind, x, h - 0.1, z, rng() * 6.28, sc, sc * rr(rng, 0.85, 1.25), sc, tintOf(rng, 0.08));
-      if (rng() < p.unterholz) {
+      // Farbvarianz: leichte Verschiebung, selten ein deutlich abweichender Ton
+      var tint = tintOf(rng, 0.09);
+      var ausW = rng();
+      if (ausW < 0.035) tint = [1.28, 0.92, 0.55];        // goldener Baum
+      else if (ausW < 0.06) tint = [1.3, 0.78, 0.62];     // roetlicher Baum
+      emit(el, kind, x, h - 0.1, z, rng() * 6.28, sc, sc * rr(rng, 0.85, 1.25), sc, tint);
+      if (rng() < p.unterholz * (0.6 + randNaehe(pts, x, z) * 0.8)) {
         var bx = x + rr(rng, -sp * 0.5, sp * 0.5), bz = z + rr(rng, -sp * 0.5, sp * 0.5);
         if (!inPoly(pts, bx, bz)) continue;
         var bh = tryPlace(occ, bx, bz, 0.7, null);
         if (bh === null) continue;
         var bs = rr(rng, 0.7, 1.35);
-        emit(el, rng() < 0.75 ? "busch" : "fels", bx, bh, bz, rng() * 6.28, bs, bs, bs, tintOf(rng, 0.08));
+        var uw = wpick(rng, [["busch", 5], ["farn", 4], ["moos", 3], ["stumpf", 1],
+          ["stammliegend", 1], ["fels", 1]]);
+        emit(el, uw, bx, bh + (uw === "moos" ? 0.04 : 0), bz, rng() * 6.28,
+          bs, bs, bs, tintOf(rng, 0.08));
       }
     }
   }
 }
+
+// Leitfarben der Blumennester (multiplizieren die Bluetentextur)
+var LEITFARBEN = [[1.25, 0.72, 0.85], [1.3, 1.15, 0.55], [1.1, 1.1, 1.15], [0.8, 0.85, 1.3]];
 
 var FRUCHT = {
   weizen: [1.05, 1.0, 0.82], kohl: [0.86, 0.99, 0.83],
@@ -123,12 +153,22 @@ function genWiese(el) {
       var x = (cx + 0.5 + (r1 - 0.5) * 0.95) * sp, z = (cz + 0.5 + (r2 - 0.5) * 0.95) * sp;
       if (!inPoly(pts, x, z)) continue;
       var rng = rngOf((hashi(cx, cz, el.seed + 3) * 4294967296) | 0);
+      // Nester und Luecken statt Gleichverteilung
+      if (fractal(x * 0.06, z * 0.06, el.seed + 77) < 0.34) continue;
       var h = tryPlace(occ, x, z, 0.25, null);
       if (h === null) continue;
-      var kind = rng() < p.blumen
-        ? wpick(rng, [["blume", 4], ["blume2", 3], ["blume3", 2]]) : "gras";
+      // Blumen wachsen in Nestern mit einer Leitfarbe je Nest
+      var nestX = Math.floor(x / 9), nestZ = Math.floor(z / 9);
+      var nest = hashi(nestX, nestZ, el.seed + 91);
+      var istBlume = rng() < p.blumen * sstep(0.45, 0.75, nest);
+      var kind = istBlume ? "blume" : "gras";
       var sc = rr(rng, 0.75, 1.35);
-      emit(el, kind, x, h, z, rng() * 6.28, sc, sc * rr(rng, 0.8, 1.3), sc, tintOf(rng, 0.1));
+      var tint = tintOf(rng, 0.1);
+      if (istBlume) {
+        var leit = LEITFARBEN[Math.floor(hashi(nestX, nestZ, el.seed + 93) * LEITFARBEN.length)];
+        tint = [leit[0] * (0.9 + rng() * 0.2), leit[1] * (0.9 + rng() * 0.2), leit[2] * (0.9 + rng() * 0.2)];
+      }
+      emit(el, kind, x, h, z, rng() * 6.28, sc, sc * rr(rng, 0.8, 1.3), sc, tint);
     }
   }
 }
@@ -206,7 +246,13 @@ function genViertel(el) {
   var streets = el.streets;
   var occ = newOcc(4.5);
   var i, k, s;
-  // Gassen pflastern und als Sperrfläche vormerken
+  // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken
+  for (i = 0; i < streets.length; i++) {
+    var innen = streets[i].filter(function (q) { return inPoly(pts, q.x, q.z); });
+    if (innen.length > 1) {
+      bandAusLinie(el, innen, p.gasse * 0.5, [0.62, 0.58, 0.52], el.seed + i * 7, { einsinken: 0.08 });
+    }
+  }
   for (i = 0; i < streets.length; i++) {
     var line = streets[i];
     for (k = 0; k < line.length; k++) {
@@ -215,16 +261,13 @@ function genViertel(el) {
       occAdd(occ, q.x, q.z, p.gasse * 0.5 + 0.6);
       var h = heightAt(q.x, q.z);
       if (h < WATER + 0.2 || slopeAt(q.x, q.z) < COS40) continue;
-      var nx2 = k < line.length - 1 ? line[k + 1] : line[k - 1];
-      var yaw = Math.atan2(nx2.x - q.x, nx2.z - q.z);
-      var tn = tintOf(rng, 0.05);
-      emit(el, "weg", q.x, h + 0.09, q.z, yaw, p.gasse, 1, 3.2,
-        [0.84 * tn[0], 0.85 * tn[1], 0.88 * tn[2]]);
+      // (Gassenband unten; hier nur noch die Sperrflaeche)
     }
   }
   // Bebauung an den Gassenseiten: geschlossene Reihen statt Streusiedlung.
   // In den Vorlagen stehen die Häuser Wand an Wand und bilden Blöcke.
   var table = KULTUR[p.stil] || KULTUR.dorf;
+  if (p.stil === "dorf" || p.stil === "gemischt" || !p.stil) dorfUfer(el, pts, rng);
   var luecke = clamp(1.6 / p.dichte - 0.5, 0.1, 6);   // Abstand zwischen Nachbarn
   for (i = 0; i < streets.length; i++) {
     var ln = streets[i];
@@ -251,9 +294,34 @@ function genViertel(el) {
         var hh = tryPlace(occ, x, z, POOLS[kind].radius * 0.82, { ignoreCorridor: true });
         if (hh === null) continue;
         var sc = rr(rng, 0.88, 1.14);
-        emit(el, kind, x, hh - 0.15, z, Math.atan2(dx, dz) + rr(rng, -0.05, 0.05),
-          sc, sc * rr(rng, 0.9, 1.25), sc, tintOf(rng));
+        var hyaw = Math.atan2(dx, dz) + rr(rng, -0.05, 0.05);
+        emit(el, kind, x, hh - 0.15, z, hyaw, sc, sc * rr(rng, 0.9, 1.25), sc, tintOf(rng));
         rauchAus(el, kind, x, hh, z, sc);
+        emitFensterlicht(el, rng, kind, x, hh - 0.15, z, hyaw, sc);
+      }
+    }
+  }
+}
+
+/** Uferzone eines Dorfviertels: Stege und Boote, wo das Polygon ans Wasser grenzt. */
+function dorfUfer(el, pts, rng) {
+  for (var i = 0; i < pts.length; i++) {
+    var a = pts[i], b = pts[(i + 1) % pts.length];
+    for (var t = 0.2; t < 1; t += 0.3) {
+      var x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t);
+      var h = heightAt(x, z);
+      if (h > 0.4 || h < -2.5) continue;
+      // Richtung Wasser: bergab
+      var dx = heightAt(x + 2, z) - heightAt(x - 2, z);
+      var dz = heightAt(x, z + 2) - heightAt(x, z - 2);
+      var yaw = Math.atan2(-dx, -dz);
+      if (rng() < 0.45) {
+        emit(el, "steg", x, Math.max(h, 0.05), z, yaw, 1, 1, 1, tintOf(rng, 0.06));
+        if (rng() < 0.7) {
+          emit(el, "boot", x + Math.sin(yaw) * 2.4, 0.02, z + Math.cos(yaw) * 2.4,
+            yaw + rr(rng, -0.5, 0.5), 1, 1, 1, tintOf(rng, 0.08));
+        }
+        return;   // ein Hafen je Viertel reicht
       }
     }
   }

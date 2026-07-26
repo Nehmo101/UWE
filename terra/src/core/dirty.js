@@ -2,8 +2,8 @@
 // nachziehen, geaenderte Pools packen.
 import { S, clearElement, dropElement } from './store.js';
 import { markDirty, flushPack } from './pools.js';
-import { rivers, corridor, stampCorridor, baseHeightAt, refreshTerrainFull }
-  from '../world/terrain.js';
+import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
+  refreshTerrainFull } from '../world/terrain.js';
 import { pathSamples, genStrasse, genMauer, genFluss, genHecke } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
 import { genObjekt } from '../generators/objects.js';
@@ -58,12 +58,16 @@ function rebuildRivers() {
 /** Baut die Sperrmaske für Straßen, Flüsse, Mauern und Viertel-Gassen neu auf. */
 function rebuildCorridors() {
   corridor.fill(0);
+  clearWear();
   for (var i = 0; i < S.elements.length; i++) {
     var el = S.elements[i], k, sm;
     if (el.kind === "pfad" && el.points.length >= 2) {
       if (el.variant === "strasse") {
         sm = pathSamples(el.points, 1.4);
-        for (k = 0; k < sm.length; k++) stampCorridor(sm[k].x, sm[k].z, el.params.breite * 0.5 + 1.6);
+        for (k = 0; k < sm.length; k++) {
+          stampCorridor(sm[k].x, sm[k].z, el.params.breite * 0.5 + 1.6);
+          stampWear(sm[k].x, sm[k].z, el.params.breite * 0.5 + 2.1);
+        }
       } else if (el.variant === "fluss") {
         sm = pathSamples(el.points, 1.4);
         for (k = 0; k < sm.length; k++) stampCorridor(sm[k].x, sm[k].z, el.params.breite * 0.6 + 2.2);
@@ -86,8 +90,8 @@ function rebuildCorridors() {
 /** Vollständiger Neuaufbau (Laden, Undo, Seed-Wechsel). */
 function rebuildAll() {
   rebuildRivers();
-  refreshTerrainFull();
   rebuildCorridors();
+  refreshTerrainFull();
   for (var i = 0; i < S.elements.length; i++) genElement(S.elements[i]);
   markDirty();
 }
@@ -96,8 +100,8 @@ function rebuildAll() {
 function commit(el, heavy) {
   if (heavy) {
     rebuildRivers();
-    refreshTerrainFull();
     rebuildCorridors();
+    refreshTerrainFull();
     for (var i = 0; i < S.elements.length; i++) genElement(S.elements[i]);
     markDirty();
   } else if (el) {

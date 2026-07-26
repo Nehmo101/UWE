@@ -1,10 +1,10 @@
 // Pfad-Werkzeug: Strasse, Mauer, Fluss, Hecke/Zaun.
 import * as THREE from 'three';
-import { clamp, lerp, sstep, hashi, rngOf, rr, wpick } from '../core/rng.js';
+import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, wpick } from '../core/rng.js';
 import { S, WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
-import { newOcc, tryPlace, KULTUR } from './objects.js';
+import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { terraMat } from '../render/materials.js';
 
 function pathCurve(points) {
@@ -32,6 +32,87 @@ function pathSamples(points, step) {
   return out;
 }
 
+
+/* ==========================================================================
+   Durchgehendes Wegband: folgt der Terrainhoehe, franst an den Raendern
+   unregelmaessig aus und sinkt leicht in den Boden ein — keine Plattennaehte.
+   Erkennt Wasserquerungen und errichtet dort automatisch eine Bruecke.
+   ========================================================================== */
+function bandAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
+  opts = opts || {};
+  var einsinken = opts.einsinken === undefined ? 0.12 : opts.einsinken;
+  var pos = [], col = [], idx = [];
+  var n = linie.length;
+  if (n < 2) return null;
+  var holz = [0.58, 0.47, 0.35];
+  var istBruecke = new Array(n);
+  var deckHoehe = new Array(n);
+  // 1) Wasserquerungen finden und Deckhoehe der Bruecke bestimmen
+  var i;
+  for (i = 0; i < n; i++) {
+    var q = linie[i];
+    var h = heightAt(q.x, q.z);
+    istBruecke[i] = h < WATER + 0.25;
+    deckHoehe[i] = Math.max(h, WATER + 0.15) + 0.1;
+  }
+  for (i = 0; i < n; i++) {
+    if (!istBruecke[i]) continue;
+    // Ufersuche links/rechts, Deck spannt zwischen den Ufern
+    var a = i; while (a > 0 && istBruecke[a - 1]) a--;
+    var b = i; while (b < n - 1 && istBruecke[b + 1]) b++;
+    var ha = deckHoehe[Math.max(0, a - 1)], hb = deckHoehe[Math.min(n - 1, b + 1)];
+    var t = (i - a + 1) / (b - a + 2);
+    deckHoehe[i] = Math.max(lerp(ha, hb, t), WATER + 1.0) +
+      Math.sin(t * Math.PI) * 0.35;                     // leichter Bogen
+  }
+  // 2) Band bauen
+  for (i = 0; i < n; i++) {
+    var q2 = linie[i];
+    var vor = linie[Math.min(n - 1, i + 1)], zur = linie[Math.max(0, i - 1)];
+    var tx = vor.x - zur.x, tz = vor.z - zur.z;
+    var tl = Math.sqrt(tx * tx + tz * tz) || 1;
+    var nx = -tz / tl, nz = tx / tl;
+    // ausgefranste Raender: Halbbreite je Seite vom Rauschen moduliert
+    var fL = halbBreite * (1 + (fractal(q2.x * 0.3 + 9, q2.z * 0.3, seed) - 0.5) * 0.7);
+    var fR = halbBreite * (1 + (fractal(q2.x * 0.3, q2.z * 0.3 + 9, seed + 3) - 0.5) * 0.7);
+    var y = deckHoehe[i];
+    var yL = istBruecke[i] ? y : heightAt(q2.x + nx * fL, q2.z + nz * fL) + 0.1 - einsinken;
+    var yR = istBruecke[i] ? y : heightAt(q2.x - nx * fR, q2.z - nz * fR) + 0.1 - einsinken;
+    var f = istBruecke[i] ? holz : grundFarbe;
+    var vv = 0.92 + hashi(i, 3, seed) * 0.14;
+    pos.push(q2.x + nx * fL, yL, q2.z + nz * fL);
+    col.push(f[0] * vv * 0.92, f[1] * vv * 0.92, f[2] * vv * 0.92);
+    pos.push(q2.x, y + (istBruecke[i] ? 0 : 0.045), q2.z);
+    col.push(f[0] * vv, f[1] * vv, f[2] * vv);
+    pos.push(q2.x - nx * fR, yR, q2.z - nz * fR);
+    col.push(f[0] * vv * 0.92, f[1] * vv * 0.92, f[2] * vv * 0.92);
+    if (i > 0) {
+      var A = (i - 1) * 3, B = i * 3;
+      idx.push(A, B, A + 1, A + 1, B, B + 1);
+      idx.push(A + 1, B + 1, A + 2, A + 2, B + 1, B + 2);
+    }
+    // 3) Brueckenausstattung: Pfaehle und Gelaender
+    if (istBruecke[i] && (i % 3 === 1)) {
+      emit(el, "pfosten", q2.x + nx * (halbBreite + 0.2), y + 0.15, q2.z + nz * (halbBreite + 0.2),
+        Math.atan2(tx, tz), 1, 1.2, 1, [0.9, 0.86, 0.8]);
+      emit(el, "pfosten", q2.x - nx * (halbBreite + 0.2), y + 0.15, q2.z - nz * (halbBreite + 0.2),
+        Math.atan2(tx, tz), 1, 1.2, 1, [0.9, 0.86, 0.8]);
+      emit(el, "mauer", q2.x + nx * halbBreite * 0.7, y - 1.1, q2.z + nz * halbBreite * 0.7,
+        Math.atan2(tx, tz), 0.35, 1.1, 0.35, [0.6, 0.52, 0.42]);
+    }
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(col), 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  var mesh = new THREE.Mesh(g, wegBandMat);
+  mesh.userData.el = el;
+  groupOf(el).add(mesh);
+  return mesh;
+}
+var wegBandMat = terraMat({ vertexColors: true, familie: 'erde' });
+
 var BELAG = { erde: [1.02, 0.98, 0.9], stein: [0.9, 0.92, 0.95], pflaster: [0.82, 0.84, 0.86] };
 
 function genStrasse(el) {
@@ -40,14 +121,9 @@ function genStrasse(el) {
   if (!sm.length) return;
   var belag = BELAG[p.belag] || BELAG.erde;
   var i, s;
-  // Fahrbahn aus abgeflachten Quadern
-  for (i = 0; i < sm.length; i++) {
-    s = sm[i];
-    var y = Math.max(heightAt(s.x, s.z), WATER + 0.15) + 0.09;
-    var t = tintOf(rng, 0.05);
-    emit(el, "weg", s.x, y, s.z, Math.atan2(s.tx, s.tz),
-      w, 1, 2.3, [belag[0] * t[0], belag[1] * t[1], belag[2] * t[2]]);
-  }
+  // Fahrbahn als durchgehendes Band (mit automatischen Bruecken ueber Wasser)
+  var bandFarbe = [0.60 * belag[0], 0.545 * belag[1], 0.45 * belag[2]];
+  bandAusLinie(el, sm, w * 0.5, bandFarbe, el.seed, { einsinken: 0.12 });
   if (!p.haeuser) return;
   // Bebauung beidseitig, zur Straße ausgerichtet
   var occ = newOcc(4);
@@ -66,9 +142,10 @@ function genStrasse(el) {
       var h = tryPlace(occ, x, z, POOLS[kind].radius, null);
       if (h === null) continue;
       var sc = rr(rng, 0.85, 1.2);
-      emit(el, kind, x, h - 0.15, z, Math.atan2(s.tx, s.tz) + rr(rng, -0.14, 0.14),
-        sc, sc * rr(rng, 0.9, 1.15), sc, tintOf(rng));
+      var syaw = Math.atan2(s.tx, s.tz) + rr(rng, -0.14, 0.14);
+      emit(el, kind, x, h - 0.15, z, syaw, sc, sc * rr(rng, 0.9, 1.15), sc, tintOf(rng));
       rauchAus(el, kind, x, h, z, sc);
+      emitFensterlicht(el, rng, kind, x, h - 0.15, z, syaw, sc);
       if (rng() < 0.35) {
         var bx = x + nx * side * rr(rng, 2.2, 3.6), bz = z + nz * side * rr(rng, 2.2, 3.6);
         var bh = tryPlace(occ, bx, bz, 0.9, null);
@@ -196,4 +273,4 @@ function genHecke(el) {
 }
 
 
-export { pathCurve, pathSamples, BELAG, genStrasse, genMauer, genFluss, genHecke };
+export { pathCurve, pathSamples, BELAG, bandAusLinie, genStrasse, genMauer, genFluss, genHecke };

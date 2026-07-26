@@ -45,7 +45,7 @@ var terrainGeo = new THREE.BufferGeometry();
   terrainGeo.setIndex(new THREE.BufferAttribute(idx, 1));
 })();
 
-var terrain = new THREE.Mesh(terrainGeo, terraMat({ vertexColors: true, cloudShadow: true }));
+var terrain = new THREE.Mesh(terrainGeo, terraMat({ vertexColors: true, cloudShadow: true, familie: 'erde' }));
 terrain.frustumCulled = false;
 tintedMats.push(terrain.material);
 
@@ -61,8 +61,10 @@ var C_SAND = new THREE.Color(0xdfd0ab),          // Strandsaum
     C_SNOW = new THREE.Color(0xf4f6f8),
     C_SEABED = new THREE.Color(0xd2c6a2),        // heller Sandgrund → türkises Flachwasser
     C_DEEP = new THREE.Color(0x1f4750),
+    C_TRITT = new THREE.Color(0x8a7554),
     C_SURF = new THREE.Color(0xf2f6f4);
 var COS50 = Math.cos(50 * DEG), COS58 = Math.cos(58 * DEG);
+var COS_BAND_A = Math.cos(52 * DEG), COS_BAND_B = Math.cos(35 * DEG);
 var _tc = new THREE.Color(), _tc2 = new THREE.Color();
 
 /* --- Krümmungs-Verdeckung (D1) ---------------------------------------
@@ -113,12 +115,33 @@ function terrainColor(h, ny, x, z, out, ao) {
   out.lerp(C_WIESE_TROCKEN, sstep(0.54, 0.86, fein) * 0.7);
   out.lerp(C_EARTH, sstep(0.68, 0.9, fractal(x * 0.055, z * 0.055, S.worldSeed + 717)) * 0.34);
 
-  var stoer = (fractal(x * 0.09, z * 0.09, S.worldSeed + 606) - 0.5) * 1.7;
-  out.lerp(C_SAND, sstep(2.3 + stoer, 0.8 + stoer, h));
-  out.lerp(C_ROCK, sstep(12.6 + stoer, 14.1 + stoer, h));
-  out.lerp(C_SNOW, sstep(23 + stoer, 25 + stoer, h));
+  // Zonengrenzen: staerker gestoert (Zungen und Inseln) und mit dunklem Saum
+  var stoer = (fractal(x * 0.09, z * 0.09, S.worldSeed + 606) - 0.5) * 2.6
+            + (fractal(x * 0.22, z * 0.22, S.worldSeed + 607) - 0.5) * 0.9;
+  var hg = h + stoer;
+  out.lerp(C_SAND, sstep(2.0, 1.0, hg));
+  out.lerp(C_ROCK, sstep(12.6, 14.1, hg));
+  out.lerp(C_SNOW, sstep(23, 25, hg));
+  var saum = Math.max(
+    1 - sstep(0.0, 0.55, Math.abs(hg - 1.5)),
+    Math.max(1 - sstep(0.0, 0.7, Math.abs(hg - 13.3)),
+             1 - sstep(0.0, 0.7, Math.abs(hg - 24))));
+  out.multiplyScalar(1 - saum * 0.12);
+
   var rock = 1 - sstep(COS58, COS50, ny);                 // Steilhänge immer Fels
   if (rock > 0) out.lerp(C_ROCK, rock * 0.9);
+  // gerichtete Gesteinsbaender auf Haengen: folgen der Hoehenlinie
+  var steil = 1 - sstep(COS_BAND_A, COS_BAND_B, ny);
+  if (steil > 0) {
+    var band = fractal(h * 0.55 + x * 0.01, z * 0.01, S.worldSeed + 808);
+    out.multiplyScalar(1 + steil * (band - 0.5) * 0.34);
+  }
+  // Abnutzung entlang der Wege: getretenes Gras wird erdig, Rand ausgefranst
+  var wtr = wearAt(x, z);
+  if (wtr > 0.01) {
+    var frans = fractal(x * 0.35, z * 0.35, S.worldSeed + 505) * 0.5;
+    out.lerp(C_TRITT, clamp(wtr * 1.05 - frans, 0, 0.7));
+  }
 
   if (h < 0.35) {                                          // Meeresgrund
     _tc2.copy(C_SEABED).lerp(C_DEEP, sstep(-0.25, -4.5, h));
@@ -203,6 +226,27 @@ function baseHeightAt(x, z) {
 }
 
 var corridor = new Uint8Array(VW * VW);
+// Abnutzung entlang der Wege: 0..255, weich auslaufend, faerbt das Gras erdig.
+var wear = new Uint8Array(VW * VW);
+function stampWear(x, z, r) {
+  var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
+  var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
+  for (var j = b0; j <= b1; j++) {
+    for (var i = a0; i <= a1; i++) {
+      var dx = (i - HALF) - x, dz = (j - HALF) - z;
+      var d = Math.sqrt(dx * dx + dz * dz);
+      if (d > r) continue;
+      var w = Math.round(sstep(r, r * 0.3, d) * 255);
+      var id = j * VW + i;
+      if (w > wear[id]) wear[id] = w;
+    }
+  }
+}
+function clearWear() { wear.fill(0); }
+function wearAt(x, z) {
+  var i = clamp(Math.round(x + HALF), 0, VW - 1), j = clamp(Math.round(z + HALF), 0, VW - 1);
+  return wear[j * VW + i] / 255;
+}
 function stampCorridor(x, z, r) {
   var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
   var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
@@ -293,6 +337,6 @@ function applyBrush(p, mode, radius, strength, dt) {
 
 function setFlattenTarget(v) { flattenTarget = v; }
 
-export { base, hgt, genBase, terrain, terrainGeo, initTerrain, terrainColor, computeAO,
+export { base, hgt, genBase, stampWear, clearWear, wearAt, terrain, terrainGeo, initTerrain, terrainColor, computeAO,
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
   inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget };

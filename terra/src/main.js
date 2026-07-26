@@ -8,6 +8,7 @@ import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.
 import { genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull } from './world/terrain.js';
 import './generators/geometry.js';        // registriert alle Objekt-Pools
 import { setRauchSammler, flushPack } from './core/pools.js';
+import { POOLS } from './core/pools.js';
 import { rebuildAll } from './core/dirty.js';
 import { initWater, wasserSichtbar, updateWater, water } from './world/water.js';
 import { initSky, updateSky } from './world/sky.js';
@@ -19,6 +20,7 @@ import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
 import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast }
   from './ui/panels.js';
 import { initIO } from './editor/io.js';
+import { tickWind } from './world/wind.js';
 
 /* ==========================================================================
    Startkarte (unveraendert portiert — gleiche Seed, gleiche Karte)
@@ -170,6 +172,7 @@ function animate() {
   updateCamera(dt);
   tickAtmosphere(raw);
   updateSky(dt);
+  tickWind(now * 0.001);
   updateBirds(dt, now * 0.001);
   updateRauch(now * 0.001);
   water.visible = wasserSichtbar(scene.fog.far);
@@ -185,3 +188,4 @@ function animate() {
 
 animate();
 window.__terraOk = true;
+window.__terraDebug = { POOLS: POOLS, S: S };

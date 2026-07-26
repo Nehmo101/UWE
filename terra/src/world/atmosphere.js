@@ -2,13 +2,15 @@
 // dazu die bewegten Kleinigkeiten (Voegel, Schornsteinrauch, Wolkenschatten-Drift).
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, rngOf, rr } from '../core/rng.js';
-import { terraUniforms, tintedMats, vineMat } from '../render/materials.js';
+import { terraUniforms, tintedMats, vineMat, setFensterGlut } from '../render/materials.js';
+import { TEX } from '../render/textures.js';
+import { POOLS } from '../core/pools.js';
 import { schattenMat } from '../core/pools.js';
 import { waterMat } from './water.js';
 import { paintSky, setSonne, setSonnenDir, setWolkenFarben, cirrusMat,
   CLOUD_DRIFT_MITTEL } from './sky.js';
 import { setLook } from '../render/pipeline.js';
-import { cam } from '../editor/camera.js';
+import { cam, camera } from '../editor/camera.js';
 
 /* ==========================================================================
    Tageszeit-Presets. Jedes definiert die komplette Stimmung: Sonne,
@@ -25,7 +27,7 @@ var PRESETS = {
     himmel: [0x6d9cc8, 0x93b9dc, 0xbcd3e6, 0xf0e3cd, 0xf9eeda],
     scheibe: 0xffe8c8, scheibeGr: 170, gegenGlow: 0xd8e2ee,
     wolkeOben: 0xfff4e4, wolkeUnten: 0xb9c2d2, wolkeRand: 0xffe2b8, wolkeFern: 0xdfe6ec,
-    wolkeDeck: 0.82, wolkenschatten: 0.16,
+    wolkeDeck: 0.82, wolkenschatten: 0.16, fenster: 1.1,
     schatten: 0.34, wasser: 0x4a95ab, welt: 0xf4f2ee, bounce: 0xd8cebc,
     belichtung: 0.98,
     bloom: { staerke: 0.22, radius: 0.7, schwelle: 1.0 },
@@ -40,7 +42,7 @@ var PRESETS = {
     himmel: [0x4f92cf, 0x77aede, 0xa8cbe8, 0xe6ecdf, 0xf6f1e3],
     scheibe: 0xfff8ec, scheibeGr: 120, gegenGlow: 0xd2e0ea,
     wolkeOben: 0xffffff, wolkeUnten: 0xb6c4d4, wolkeRand: 0xfff2da, wolkeFern: 0xd8e4ee,
-    wolkeDeck: 0.78, wolkenschatten: 0.25,
+    wolkeDeck: 0.78, wolkenschatten: 0.25, fenster: 0.0,
     schatten: 0.45, wasser: 0x3f93ad, welt: 0xffffff, bounce: 0xe0d8c0,
     belichtung: 0.98,
     bloom: { staerke: 0.18, radius: 0.7, schwelle: 1.05 },
@@ -57,7 +59,7 @@ var PRESETS = {
     himmel: [0x252a55, 0x4a4a7c, 0x8d6a90, 0xf0a860, 0xffd9a0],
     scheibe: 0xffc078, scheibeGr: 260, gegenGlow: 0x8d94c2,
     wolkeOben: 0xf6c294, wolkeUnten: 0x6e6f96, wolkeRand: 0xffb060, wolkeFern: 0x9a8aa2,
-    wolkeDeck: 0.85, wolkenschatten: 0.06,
+    wolkeDeck: 0.85, wolkenschatten: 0.06, fenster: 2.6,
     schatten: 0.4, wasser: 0x46567c, welt: 0xe8d2c0, bounce: 0x9a8ca0,
     belichtung: 0.94,
     bloom: { staerke: 0.34, radius: 0.75, schwelle: 0.92 },
@@ -74,7 +76,7 @@ var PRESETS = {
     himmel: [0xb9c6cc, 0xc9d4d6, 0xd9e0de, 0xe8ebe4, 0xf0f1ea],
     scheibe: 0xf6f4ea, scheibeGr: 90, gegenGlow: 0xe4e8e4,
     wolkeOben: 0xf2f4f0, wolkeUnten: 0xd4dad8, wolkeRand: 0xf0eee2, wolkeFern: 0xe2e7e2,
-    wolkeDeck: 0.5, wolkenschatten: 0.0,
+    wolkeDeck: 0.5, wolkenschatten: 0.0, fenster: 1.6,
     schatten: 0.15, wasser: 0xa6bcbb, welt: 0xf4f6f2, bounce: 0xdcd8cc,
     belichtung: 1.05,
     bloom: { staerke: 0.10, radius: 0.6, schwelle: 1.1 },
@@ -134,6 +136,11 @@ function applyTod(t) {
     sceneHook.fog.far = mixNum(a.fogFern, b.fogFern, e);
   }
   terraUniforms.uCloudAmt.value = mixNum(a.wolkenschatten, b.wolkenschatten, e);
+  // Fensterglut: warme Emission bei Abendrot, Morgen und Nebel
+  var glut = mixNum(a.fenster === undefined ? 0 : a.fenster,
+    b.fenster === undefined ? 0 : b.fenster, e);
+  setFensterGlut(glut);
+  if (POOLS.fensterlicht && POOLS.fensterlicht.mat) POOLS.fensterlicht.mat.emissiveIntensity = glut;
 
   // Himmel mit fuenf Stuetzstellen
   var h = [];
@@ -291,12 +298,12 @@ function updateBirds(dt, t) {
 
 
 var RAUCH_MAX = 90, RAUCH_PUFF = 4;
-var rauchGeo = new THREE.IcosahedronGeometry(1, 1);
+var rauchGeo = new THREE.PlaneGeometry(2, 2);
 rauchGeo.setAttribute("color", new THREE.BufferAttribute(
   new Float32Array(rauchGeo.attributes.position.count * 3).fill(1), 3));
 var rauchMesh = new THREE.InstancedMesh(rauchGeo,
-  new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.26,
-    depthWrite: false }), RAUCH_MAX * RAUCH_PUFF);
+  new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.3,
+    depthWrite: false, map: TEX.rauchPuff }), RAUCH_MAX * RAUCH_PUFF);
 rauchMesh.frustumCulled = false;
 rauchMesh.renderOrder = 3;
 rauchMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -316,12 +323,14 @@ function updateRauch(t) {
       var drift = ph * ph * 5;
       _rauchObj.position.set(x + drift * 0.9 + Math.sin(t * 0.5 + i) * 0.5,
         y + ph * 11, z + drift * 0.45);
-      var sc = (0.28 + ph * 1.7) * (1 - sstep(0.7, 1, ph) * 0.6);
-      _rauchObj.scale.set(sc, sc * 0.8, sc);
-      _rauchObj.rotation.set(0, i + q, 0);
+      // oben breiter und durchsichtiger; Billboard zur Kamera gedreht
+      var sc = (0.3 + ph * 2.3);
+      _rauchObj.scale.set(sc, sc * 0.85, sc);
+      _rauchObj.rotation.set(0, Math.atan2(camera.position.x - _rauchObj.position.x,
+        camera.position.z - _rauchObj.position.z), 0);
       _rauchObj.updateMatrix();
       rauchMesh.setMatrixAt(k, _rauchObj.matrix);
-      _rauchCol.copy(C_RAUCH).lerp(fogMittel, 0.25 + ph * 0.7);
+      _rauchCol.copy(C_RAUCH).lerp(fogMittel, 0.15 + ph * 0.85);
       rauchMesh.setColorAt(k, _rauchCol);
       k++;
     }

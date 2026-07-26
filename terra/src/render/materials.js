@@ -5,6 +5,7 @@
 // und eine console.warn nennt den betroffenen Patch.
 import * as THREE from 'three';
 import { TEX } from './textures.js';
+import { windUniforms, WIND_GLSL } from '../world/wind.js';
 
 /** Gemeinsame Uniforms aller Weltmaterialien (Tageszeit schreibt hinein). */
 const terraUniforms = {
@@ -19,11 +20,31 @@ const terraUniforms = {
   // Wolkenschatten am Boden (nur Terrainmaterial wertet sie aus).
   uCloudTex: { value: TEX.cloudNoise },
   uCloudDrift: { value: new THREE.Vector2(0, 0) },
-  uCloudAmt: { value: 0.25 }
+  uCloudAmt: { value: 0.25 },
+  // Malschicht: Aquarelltextur, in Weltkoordinaten abgetastet
+  uMalTex: { value: TEX.aquarellMittel }
+};
+
+/**
+ * Materialfamilien: jede Familie bindet eine Aquarellvariante mit eigener
+ * Weltskala und Staerke. Alle Assets greifen ueber definePool auf diese
+ * Namen zu, damit die Karte materiell zusammenhaengt.
+ */
+const FAMILIEN = {
+  putz:       { tex: 'aquarellFein',   skala: 0.35, staerke: 0.12 },
+  holz:       { tex: 'aquarellMittel', skala: 0.55, staerke: 0.16 },
+  dachziegel: { tex: 'aquarellFein',   skala: 0.9,  staerke: 0.15 },
+  reet:       { tex: 'aquarellMittel', skala: 0.8,  staerke: 0.18 },
+  stein:      { tex: 'aquarellGrob',   skala: 0.28, staerke: 0.16 },
+  metall:     { tex: 'aquarellFein',   skala: 0.5,  staerke: 0.10 },
+  laub:       { tex: 'aquarellMittel', skala: 0.45, staerke: 0.17 },
+  rinde:      { tex: 'aquarellMittel', skala: 0.7,  staerke: 0.16 },
+  stoff:      { tex: 'aquarellFein',   skala: 0.6,  staerke: 0.12 },
+  erde:       { tex: 'aquarellGrob',   skala: 0.22, staerke: 0.15 }
 };
 
 /** Diagnose: greift jeder Patch? Wird auf window exponiert. */
-const patchInfo = { wrap: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, versuche: 0 };
+const patchInfo = { wrap: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, versuche: 0 };
 if (typeof window !== 'undefined') window.terraPatchInfo = patchInfo;
 
 function ersetze(shader, feld, alt, neu, patchName) {
@@ -133,19 +154,79 @@ function terraPatch(shader, opts) {
     }
   }
 
+  // (6) Malschicht: Aquarelltextur in WELTkoordinaten — die Koernung bleibt
+  //     damit bei grossen wie kleinen Objekten gleich gross. Subtil gehalten:
+  //     Helligkeit +-Anteil und ein Hauch Farbtonversatz aus der Textur.
+  if (hatWelt && opts && opts.mal) {
+    shader.uniforms['uMalTex' + 0] = { value: opts.mal.texObj };
+    kopfF += 'uniform sampler2D uMalTex0;\n';
+    var mk = '#include <color_fragment>';
+    var malCode = mk + '\n' +
+      'vec3 terraMal = texture2D( uMalTex0, ( vTerraW.xz + vTerraW.yy * 0.7 ) * ' +
+        opts.mal.skala.toFixed(4) + ' ).rgb;\n' +
+      'diffuseColor.rgb *= mix( vec3(1.0), terraMal * 2.0, ' + opts.mal.staerke.toFixed(3) + ' );';
+    if (ersetze(shader, 'fragmentShader', mk, malCode, 'malschicht')) patchInfo.mal++;
+  }
+
+  // (7) Ranken-Ausblenden: oben Richtung Dunst transparent werden.
+  if (opts && opts.rankenFade) {
+    var oa = '#include <opaque_fragment>';
+    if (ersetze(shader, 'fragmentShader', oa,
+        'diffuseColor.a *= mix( 1.0, 0.6, smoothstep( 140.0, 360.0, vTerraW.y ) );\n' + oa,
+        'rankenfade')) { /* zaehlt nicht separat */ }
+  }
+
   shader.fragmentShader = kopfF + shader.fragmentShader;
+
+  // (8) Wind: ersetzt project_vertex, verschiebt die Weltposition mit der
+  //     gemeinsamen Boee; Auslenkung mit uv.y gewichtet (Fuss bleibt stehen).
+  if (opts && opts.wind) {
+    shader.uniforms.uWindZeit = windUniforms.uWindZeit;
+    shader.uniforms.uWindStaerke = windUniforms.uWindStaerke;
+    var pv = '#include <project_vertex>';
+    if (shader.vertexShader.indexOf(pv) >= 0 && shader.vertexShader.indexOf('#include <uv_vertex>') >= 0) {
+      shader.vertexShader = 'uniform float uWindZeit;\nuniform float uWindStaerke;\n' +
+        WIND_GLSL + '\n' + shader.vertexShader.replace(pv,
+        'vec4 terraMV2 = vec4( transformed, 1.0 );\n' +
+        '#ifdef USE_INSTANCING\n  terraMV2 = instanceMatrix * terraMV2;\n#endif\n' +
+        'vec4 terraWelt2 = modelMatrix * terraMV2;\n' +
+        'vec2 terraWehen = terraWind( terraWelt2.xyz, uWindZeit ) * uWindStaerke * ' +
+          (opts.wind.amp || 0.35).toFixed(3) + ' * uv.y;\n' +
+        'terraWelt2.xz += terraWehen;\n' +
+        'vec4 mvPosition = viewMatrix * terraWelt2;\n' +
+        'gl_Position = projectionMatrix * mvPosition;');
+      patchInfo.wind++;
+    } else {
+      console.warn('terra: Shader-Patch "wind" fand seinen Anker nicht.');
+    }
+  }
 }
 
 /** Weltmaterial: Phong (pro Fragment) mit Wrap-Licht statt hartem Lambert. */
 function terraMat(opts) {
   opts = opts || {};
   var cloudShadow = !!opts.cloudShadow;
-  delete opts.cloudShadow;
+  var familie = opts.familie || null;
+  var wind = opts.wind || null;
+  var rankenFade = !!opts.rankenFade;
+  delete opts.cloudShadow; delete opts.familie; delete opts.wind; delete opts.rankenFade;
   opts.shininess = 0;
   opts.specular = new THREE.Color(0x000000);
   var m = new THREE.MeshPhongMaterial(opts);
-  m.onBeforeCompile = function (shader) { terraPatch(shader, { cloudShadow: cloudShadow }); };
-  m.customProgramCacheKey = function () { return 'terraA|cs' + (cloudShadow ? 1 : 0); };
+  var mal = null;
+  if (familie && FAMILIEN[familie]) {
+    var F = FAMILIEN[familie];
+    mal = { texObj: TEX[F.tex], skala: F.skala * 0.06, staerke: F.staerke };
+  }
+  var windOpts = wind ? { amp: wind.amp || 0.35 } : null;
+  m.onBeforeCompile = function (shader) {
+    terraPatch(shader, { cloudShadow: cloudShadow, mal: mal, wind: windOpts,
+      rankenFade: rankenFade });
+  };
+  m.customProgramCacheKey = function () {
+    return 'terraB|cs' + (cloudShadow ? 1 : 0) + '|f' + (familie || '-') +
+      '|w' + (wind ? (wind.amp || 0.35) : '-') + '|rf' + (rankenFade ? 1 : 0);
+  };
   return m;
 }
 
@@ -155,11 +236,16 @@ const tintedMats = [];
 // Ranken-Materialien: die Ranke ist in jeder Stimmung der hellste Wert im Bild.
 const vineMat = terraMat({
   color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.95,
-  emissive: 0x4a463e
+  emissive: 0x4a463e, familie: 'rinde', rankenFade: true
 });
-const leafMat = terraMat({ vertexColors: true, side: THREE.DoubleSide });
-const rockMat = terraMat({ vertexColors: true });
+const leafMat = terraMat({ vertexColors: true, side: THREE.DoubleSide, familie: 'laub' });
+const rockMat = terraMat({ vertexColors: true, familie: 'stein' });
+
+// Fensterglut: eigenes emissives Material, Staerke haengt an der Tageszeit.
+const fensterMat = terraMat({ color: 0x3a3228, emissive: 0xffc878, familie: 'putz' });
+fensterMat.emissiveIntensity = 0.0;
+function setFensterGlut(i) { fensterMat.emissiveIntensity = i; }
 tintedMats.push(vineMat, leafMat, rockMat);
 
-export { terraUniforms, patchInfo, terraPatch, terraMat, tintedMats,
-  vineMat, leafMat, rockMat };
+export { terraUniforms, patchInfo, terraPatch, terraMat, tintedMats, FAMILIEN,
+  vineMat, leafMat, rockMat, fensterMat, setFensterGlut };

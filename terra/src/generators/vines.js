@@ -9,6 +9,7 @@ import { mergeGeos, M, tubeGeo, leafHalfWidth, leafSurface, leafGeo, moundGeo, i
   from './geometry.js';
 import { vineMat, leafMat, rockMat } from '../render/materials.js';
 
+var _moosFarbe = new THREE.Color(0x7a8a5c);
 var VINE_LO = new THREE.Color(0xe7e2d6), VINE_MID = new THREE.Color(0xf4f1e8),
     VINE_HI = new THREE.Color(0xffffff);
 
@@ -33,7 +34,7 @@ function genRanke(el) {
   var pt = el.points[0];
   if (!pt) return;
   var x0 = pt.x, z0 = pt.z;
-  var y0 = heightAt(x0, z0) - 1.8;
+  var y0 = heightAt(x0, z0) - 2.6;   // waechst IN den aufgeworfenen Boden hinein
   var H = p.hoehe;
   var geos = [], i, k, t;
 
@@ -51,40 +52,102 @@ function genRanke(el) {
   }
   var axis = new THREE.CatmullRomCurve3(ctrl, false, "catmullrom", 0.5);
 
-  // --- Stränge: viele, dünn und eng gewickelt, damit ein Geflecht entsteht
-  var nStr = clamp(Math.round(p.straenge), 4, 10);
-  // Die Steigung wird in Ranken-Durchmessern je Umdrehung angegeben — nur so
-  // bleibt das Geflecht bei jeder Höhe gleich dicht geflochten.
+  // --- Straenge: wenige und massiv. Die Umdrehungsrate wechselt ueber die
+  //     Hoehe abschnittsweise, der Radius atmet per Rauschen (Verdickungen
+  //     und Einschnuerungen), Grundverjuengung nach oben auf 45 %.
+  var nStr = clamp(Math.round(p.straenge), 3, 5);
   var TURNS = H / (p.steigung * 2 * VINE_R);
-  var RINGS = clamp(Math.round(TURNS * 22), 64, 220);
+  var RINGS = clamp(Math.round(TURNS * 26), 72, 240);
   var c = new THREE.Vector3(), n1 = new THREE.Vector3(), n2 = new THREE.Vector3();
-  function wrapAt(tt) { return VINE_R * 0.66 * (1 - 0.58 * tt); }
-  function strandR(tt) { return VINE_R * (0.06 + 0.21 * Math.pow(1 - tt, 1.15)); }
+  function wrapAt(tt, kk) {
+    // Straenge legen sich stellenweise aneinander und laufen wieder auseinander
+    var eng = 0.72 + (fractal(tt * 2.6 + kk * 3.7, 0.5, el.seed + 217) - 0.5) * 0.5;
+    return VINE_R * 0.62 * (1 - 0.55 * tt) * eng;
+  }
+  var strandDaten = [];
   for (k = 0; k < nStr; k++) {
-    var a0 = k / nStr * Math.PI * 2 + rr(rng, -0.06, 0.06);
+    var a0 = k / nStr * Math.PI * 2 + rr(rng, -0.2, 0.2);
     var pts = [];
+    var winkel = a0;
+    var radF = [];
     for (i = 0; i <= RINGS; i++) {
       t = i / RINGS;
       frameAt(axis, t, c, n1, n2);
-      var wrap = wrapAt(t);
-      var ang = a0 + t * TURNS * Math.PI * 2;
-      var ca = Math.cos(ang), sa = Math.sin(ang);
+      // abschnittsweise wechselnde Umdrehungsrate
+      var rate = 0.5 + fractal(t * 3.2, k * 1.7, el.seed + 131) * 1.1;
+      winkel += (TURNS * Math.PI * 2 / RINGS) * rate;
+      var wrap = wrapAt(t, k);
+      var ca = Math.cos(winkel), sa = Math.sin(winkel);
       pts.push(new THREE.Vector3(
         c.x + n1.x * ca * wrap + n2.x * sa * wrap,
         c.y,
         c.z + n1.z * ca * wrap + n2.z * sa * wrap
       ));
+      // Radius: Verdickungen/Einschnuerungen 0.7..1.4, Wellenlaenge ~H/8
+      radF.push(0.7 + 0.7 * fractal(t * 8.2, k * 2.3, el.seed + 149));
     }
-    var thick = rr(rng, 0.85, 1.15);
-    geos.push(tubeGeo(pts, function (tt) { return strandR(tt) * thick; },
-      7, function (tt, ii, col) { vineColor(tt, col); }));
+    var thick = rr(rng, 1.35, 1.7);          // dicker als frueher — weniger, massiver
+    strandDaten.push({ pts: pts, radF: radF, thick: thick });
+    geos.push((function (radFL, thickL) {
+      return tubeGeo(pts, function (tt, ii) {
+        return VINE_R * 0.30 * lerp(1, 0.45, tt) * radFL[Math.min(ii, radFL.length - 1)] * thickL;
+      }, 8, function (tt, ii, col) {
+        vineColor(tt, col);
+        // Moos und Bewuchs sammeln sich in den Einschnuerungen
+        var rf = radFL[Math.min(ii, radFL.length - 1)];
+        if (rf < 0.88) col.lerp(_moosFarbe, (0.88 - rf) * 1.6);
+      });
+    })(radF, thick));
   }
 
-  // --- Wurzelteller: viele, unterschiedlich weit ausgreifende Bögen ---
-  var nRoot = ri(rng, 12, 16);
+  // --- Nebentriebe: duenne freie Auslaeufer vom Hauptbuendel ---------------
+  var nTrieb = ri(rng, 2, 4);
+  for (k = 0; k < nTrieb; k++) {
+    var tt0 = rr(rng, 0.25, 0.85);
+    frameAt(axis, tt0, c, n1, n2);
+    var ta = rr(rng, 0, 6.283);
+    var tp = [];
+    for (i = 0; i <= 10; i++) {
+      var q = i / 10;
+      tp.push(new THREE.Vector3(
+        c.x + Math.cos(ta) * (VINE_R * 0.5 + q * VINE_R * rr(rng, 1.2, 2.2)),
+        c.y + q * VINE_R * rr(rng, 0.8, 2.0) - q * q * VINE_R * 0.9,
+        c.z + Math.sin(ta) * (VINE_R * 0.5 + q * VINE_R * rr(rng, 1.2, 2.2))
+      ));
+    }
+    geos.push((function (t0L) {
+      return tubeGeo(tp, function (q2) { return VINE_R * 0.06 * (1 - q2 * 0.8); },
+        5, function (q2, ii, col) { vineColor(t0L, col); });
+    })(tt0));
+  }
+
+  // --- Grosse Blaetter in Buescheln entlang der Straenge -------------------
+  var blattT = 0.06 + rng() * 0.05;
+  while (blattT < 0.96) {
+    var hauptStrang = strandDaten[Math.floor(rng() * strandDaten.length)];
+    var si = Math.floor(blattT * RINGS);
+    var sp = hauptStrang.pts[Math.min(si, hauptStrang.pts.length - 1)];
+    frameAt(axis, blattT, c, n1, n2);
+    var buendel = ri(rng, 3, 7);
+    for (i = 0; i < buendel; i++) {
+      var ba = Math.atan2(sp.z - c.z, sp.x - c.x) + rr(rng, -1.1, 1.1);
+      var groesse = rr(rng, 4, 10.5) * (1 - blattT * 0.5) * (p.blattgroesse || 1);
+      emit(el, "rankenblatt",
+        sp.x + Math.cos(ba) * 0.4, sp.y + rr(rng, -1.2, 1.2), sp.z + Math.sin(ba) * 0.4,
+        -ba + rr(rng, -0.4, 0.4),
+        groesse, groesse * rr(rng, 0.5, 0.7), groesse,
+        [0.97, 1.0, 0.86], rr(rng, -0.15, 0.15), rr(rng, -0.7, -0.1));
+    }
+    // groessere blattfreie Abschnitte zwischen den Buescheln
+    blattT += rr(rng, 0.07, 0.17);
+  }
+
+  // --- Wurzelteller: ungleichmaessig um den Fuss verteilt, flacher, laenger
+  var nRoot = ri(rng, 10, 14);
+  var wStart = rr(rng, 0, 6.283);
   for (k = 0; k < nRoot; k++) {
-    var ra = (k / nRoot) * Math.PI * 2 + rr(rng, -0.16, 0.16);
-    var rd = VINE_R * rr(rng, 1.7, 3.6);
+    var ra = wStart + Math.pow(k / nRoot, rr(rng, 0.7, 1.4)) * Math.PI * 2 + rr(rng, -0.3, 0.3);
+    var rd = VINE_R * rr(rng, 1.6, 4.6);
     var gx = x0 + Math.cos(ra) * rd, gz = z0 + Math.sin(ra) * rd;
     var gy = heightAt(gx, gz) - 2.4;
     var attach = VINE_R * rr(rng, 0.9, 2.8);
@@ -114,25 +177,10 @@ function genRanke(el) {
 
   // --- Erdhügel, über den die Wurzeln laufen ---
   var mound = new THREE.Mesh(
-    moundGeo(VINE_R * 3.6, VINE_R * 0.75, x0, z0, (el.seed + 61) | 0), rockMat);
+    moundGeo(VINE_R * 4.6, VINE_R * 1.15, x0, z0, (el.seed + 61) | 0), rockMat);
   mound.position.set(x0, heightAt(x0, z0), z0);
   mound.userData.el = el;
   groupOf(el).add(mound);
-
-  // --- Blätter am Stamm ---
-  var nLeaf = Math.round(p.blaetter);
-  for (k = 0; k < nLeaf; k++) {
-    t = clamp(0.06 + Math.pow(rng(), 0.85) * 0.92, 0, 0.99);
-    frameAt(axis, t, c, n1, n2);
-    var la = rng() * Math.PI * 2;
-    var surf = wrapAt(t) + strandR(t) * 0.7;
-    var lx = c.x + n1.x * Math.cos(la) * surf + n2.x * Math.sin(la) * surf;
-    var lz = c.z + n1.z * Math.cos(la) * surf + n2.z * Math.sin(la) * surf;
-    var dirA = Math.atan2(lz - c.z, lx - c.x);
-    var size = VINE_R * rr(rng, 0.9, 1.9) * (1 - t * 0.35);
-    emit(el, "blatt", lx, c.y, lz, -dirA + rr(rng, -0.3, 0.3),
-      size, size, size, tintOf(rng, 0.1), 0, rr(rng, -0.85, -0.15));
-  }
 
   // --- Blattplateaus, spiralig um den Stamm gestaffelt ---
   var nPl = clamp(Math.round(p.plateaus), 0, 6);
@@ -152,6 +200,25 @@ function genRanke(el) {
     var full = new THREE.Matrix4().multiplyMatrices(place, droop);
     g.applyMatrix4(full);
     leafGeos.push(g);
+    // Bewuchsstraenge haengen von der Unterseite herab
+    var nHaenge = ri(rng, 3, 6);
+    for (var hg2 = 0; hg2 < nHaenge; hg2++) {
+      var hu = rr(rng, 0.45, 0.9), hv = rr(rng, -0.7, 0.7);
+      var hx = hu * L, hz = hv * leafHalfWidth(hu) * W;
+      var start = new THREE.Vector3(hx, leafSurface(hu, hv, L, cup) - thick, hz)
+        .applyMatrix4(full);
+      var laenge = rr(rng, 3, 9);
+      var hp = [];
+      for (var hq = 0; hq <= 6; hq++) {
+        var qq2 = hq / 6;
+        hp.push(new THREE.Vector3(
+          start.x + Math.sin(qq2 * 2.2 + hg2) * 0.5,
+          start.y - qq2 * laenge,
+          start.z + Math.cos(qq2 * 1.7 + hg2) * 0.5));
+      }
+      geos.push(tubeGeo(hp, function (qv) { return 0.14 * (1 - qv * 0.7); }, 4,
+        function (qv, ii, col) { col.setRGB(0.45, 0.56, 0.34); }));
+    }
 
     if (!p.staedtchen) continue;
     var occ2 = newOcc(4);

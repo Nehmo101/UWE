@@ -91,9 +91,9 @@ var PARAMS = {
   ],
   "ranke:ranke": [
     { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },
-    { k: "straenge", l: "Stränge", min: 4, max: 10, st: 1, d: 7 },
+    { k: "straenge", l: "Stränge", min: 3, max: 5, st: 1, d: 4 },
     { k: "steigung", l: "Steigung (Ø je Windung)", min: 1.2, max: 8, st: 0.1, d: 2.8 },
-    { k: "blaetter", l: "Blätter am Stamm", min: 0, max: 40, st: 1, d: 16 },
+    { k: "blattgroesse", l: "Blattgröße", min: 0.5, max: 1.8, st: 0.05, d: 1 },
     { k: "plateaus", l: "Blattplateaus", min: 0, max: 6, st: 1, d: 3 },
     { k: "plateau", l: "Plateaugröße", min: 0.5, max: 2, st: 0.05, d: 1 },
     { k: "staedtchen", l: "Städtchen darauf", b: true, d: true },
