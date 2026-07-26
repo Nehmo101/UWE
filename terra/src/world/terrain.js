@@ -76,6 +76,12 @@ var C_SAND = new THREE.Color(0xdfd0ab),          // Strandsaum
     C_DEEP = new THREE.Color(0x1f4750),
     C_TRITT = new THREE.Color(0x8a7554),
     C_SURF = new THREE.Color(0xf2f6f4);
+// Niederfrequente Farbdrift (F2, Nass-in-nass-Signatur): zwei Zielpole nur
+// wenige Grad neben den Wiesentoenen — einer leicht gelblicher, einer leicht
+// blaugruener. Die Drift laesst grosse Flaechen "atmen", ohne sie scheckig
+// zu machen; deshalb kleine Mischgewichte und weiche Schwellen.
+var C_DRIFT_GELB = new THREE.Color(0xb2b56e),
+    C_DRIFT_BLAU = new THREE.Color(0x82a87c);
 var COS50 = Math.cos(50 * DEG), COS58 = Math.cos(58 * DEG);
 var COS_BAND_A = Math.cos(52 * DEG), COS_BAND_B = Math.cos(35 * DEG);
 var _tc = new THREE.Color(), _tc2 = new THREE.Color();
@@ -128,6 +134,14 @@ function terrainColor(h, ny, x, z, out, ao) {
   out.lerp(C_WIESE_TROCKEN, sstep(0.54, 0.86, fein) * 0.7);
   out.lerp(C_EARTH, sstep(0.68, 0.9, fractal(x * 0.055, z * 0.055, S.worldSeed + 717)) * 0.34);
 
+  // F2: grobe Farbdrift ueber die Landschaftsmassen. f = 0.025 ergibt eine
+  // Wellenlaenge von ~40 Welteinheiten (Zielkorridor 30–50); Seed fest an
+  // worldSeed + 1102 gebunden — deterministisch wie alle anderen Oktaven,
+  // kein Math.random. Hue-Wirkung: wenige Grad Richtung Gelb bzw. Blaugruen.
+  var drift = fractal(x * 0.025, z * 0.025, S.worldSeed + 1102);
+  out.lerp(C_DRIFT_GELB, sstep(0.55, 0.85, drift) * 0.16);
+  out.lerp(C_DRIFT_BLAU, sstep(0.45, 0.15, drift) * 0.16);
+
   // Zonengrenzen: staerker gestoert (Zungen und Inseln) und mit dunklem Saum
   var stoer = (fractal(x * 0.09, z * 0.09, S.worldSeed + 606) - 0.5) * 2.6
             + (fractal(x * 0.22, z * 0.22, S.worldSeed + 607) - 0.5) * 0.9;
@@ -163,8 +177,12 @@ function terrainColor(h, ny, x, z, out, ao) {
   var surf = sstep(0.8, 0.3, h) * sstep(-0.6, 0.06, h);
   if (surf > 0) out.lerp(C_SURF, surf * 0.5);              // Brandungssaum
 
+  // F2: dieselbe grobe Drift moduliert auch den Value um +-5 % — die
+  // Helligkeitswelle folgt damit exakt der Farbwelle (ein Waschgang, wie beim
+  // Nass-in-nass-Lauf), statt ein zweites unabhaengiges Muster zu stapeln.
   var v = 0.94 + fractal(x * 0.16, z * 0.16, S.worldSeed + 909) * 0.08
-        + vnoise(x * 0.55, z * 0.55, S.worldSeed + 313) * 0.05;
+        + vnoise(x * 0.55, z * 0.55, S.worldSeed + 313) * 0.05
+        + (drift - 0.5) * 0.10;
   out.multiplyScalar(v * (ao === undefined ? 1 : ao));
 }
 

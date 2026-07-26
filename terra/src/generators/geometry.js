@@ -713,6 +713,38 @@ function kronenQuad(w, h, x, y, z, ry, tiltZ, hex) {
 }
 
 /**
+ * Biegt die Normalen der Kronenkarten von der Plane-Normale weg auf die
+ * Richtung vom Kronenzentrum nach aussen (Huellkugel-Technik, Kids with
+ * Sticks / 80.lv): die alphaTest-Silhouetten bleiben unruhig, aber das Licht
+ * laeuft ueber die Krone wie ueber EINEN weichen Koerper, statt jede Karte
+ * einzeln hart zu kanten. oval < 1 staucht die y-Differenz vor dem
+ * Normalisieren: bei schlanken Kronen (Zypresse, Nadel) kippen die Normalen
+ * der Flankenvertices sonst fast senkrecht (das Kugelzentrum liegt weit ueber
+ * bzw. unter ihnen) und die Flanke saeuft im Seitenlicht ab — die Stauchung
+ * entspricht der Normalen eines gestreckten Ellipsoids, dessen Gradient die
+ * y-Komponente genau so herunterskaliert.
+ * Reihenfolge ist unkritisch: shadeVertical (laeuft danach in definePool)
+ * liest nur position und schreibt color, die Normalen ueberleben also.
+ * Die Baum-Pools rendern mit dbl → DoubleSide; Three flippt im Shader die
+ * Normale fuer Rueckseiten, dort zeigt sie dann nach innen. Das ist hier
+ * akzeptiert: die Karten stehen gekreuzt, die Kamera sieht ueberwiegend
+ * Vorderseiten, und Materialaenderungen sind tabu.
+ */
+function kugelNormalen(geos, cx, cy, cz, oval) {
+  for (var g = 0; g < geos.length; g++) {
+    var pos = geos[g].attributes.position, nor = geos[g].attributes.normal;
+    for (var i = 0; i < pos.count; i++) {
+      var dx = pos.getX(i) - cx, dy = (pos.getY(i) - cy) * oval, dz = pos.getZ(i) - cz;
+      var l = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      // Vertex exakt im Zentrum wuerde durch 0 teilen — nach oben ist die
+      // plausibelste Richtung fuer die Kronenmitte.
+      if (l < 1e-6) { dx = 0; dy = 1; dz = 0; l = 1; }
+      nor.setXYZ(i, dx / l, dy / l, dz / l);
+    }
+  }
+}
+
+/**
  * Baumart: konischer Stamm (UV auf den opaken Texturrand geklemmt) plus
  * mehrere Kronenkarten in verschiedenen Winkeln und Groessen.
  */
@@ -726,15 +758,29 @@ function geoBaumArt(o) {
   // zugleich im Wind still, weil der Shaderpatch mit uv.y gewichtet.
   uvKonst(stamm, 0.5, 0.008);
   parts.push(stamm);
+  // Kronenkarten getrennt sammeln: nur ihre Normalen werden unten auf die
+  // Huellkugel umgebogen — der Stamm behaelt seine Zylindernormalen, sonst
+  // wuerde er wie Laub statt wie Holz beleuchtet.
+  var kronen = [];
+  var cx = 0, cy = 0, cz = 0;
   for (var i = 0; i < o.karten; i++) {
     var a = i / o.karten * Math.PI + hashi(i, 3, o.seed) * 0.8;
     var kw = o.kroneW * (0.75 + hashi(i, 5, o.seed) * 0.5);
     var kh = o.kroneH * (0.8 + hashi(i, 7, o.seed) * 0.4);
     var ox = (hashi(i, 11, o.seed) - 0.5) * o.kroneW * 0.3 + o.lehne * 0.6;
     var oz = (hashi(i, 13, o.seed) - 0.5) * o.kroneW * 0.3;
-    parts.push(kronenQuad(kw, kh, ox, o.kroneY + (hashi(i, 17, o.seed) - 0.5) * o.kroneH * 0.22,
-      oz, a, (hashi(i, 19, o.seed) - 0.5) * 0.16, o.laub));
+    var oy = o.kroneY + (hashi(i, 17, o.seed) - 0.5) * o.kroneH * 0.22;
+    var q = kronenQuad(kw, kh, ox, oy, oz, a, (hashi(i, 19, o.seed) - 0.5) * 0.16, o.laub);
+    kronen.push(q);
+    parts.push(q);
+    // Zentrum aus den echten Platzierungen (Kartenfuss + halbe Hoehe) statt
+    // aus kroneY/kroneH der Presets: so folgt das Lichtzentrum auch der
+    // seed-gestreuten Anordnung und der Lehne (SUMPF lehnt mit 0.42 deutlich).
+    // Die kleine tiltZ-Verschiebung (max ~0.08 rad) ist dafuer vernachlaessigbar.
+    cx += ox; cy += oy + kh / 2; cz += oz;
   }
+  kugelNormalen(kronen, cx / o.karten, cy / o.karten, cz / o.karten,
+    o.oval === undefined ? 1 : o.oval);
   return mergeGeos(parts);
 }
 
@@ -742,10 +788,15 @@ var BAUM_LAUBBREIT = { stammOben: 0.16, stammUnten: 0.34, stammH: 2.4, rinde: 0x
   karten: 4, kroneW: 4.2, kroneH: 3.4, kroneY: 2.0, lehne: 0.15, laub: 0x87a45c, seed: 41 };
 var BAUM_LAUBHOCH = { stammOben: 0.13, stammUnten: 0.26, stammH: 3.4, rinde: 0x7a6450,
   karten: 3, kroneW: 2.6, kroneH: 4.4, kroneY: 2.6, lehne: 0.08, laub: 0x7d9a52, seed: 43 };
+// oval (Default 1, s. kugelNormalen): nur die schlanken Arten stauchen die
+// y-Differenz — Nadel ist ~1.8x, Zypresse ~4x hoeher als breit, ohne Stauchung
+// wuerden ihre Flanken fast nur Auf-/Abwaertsnormalen bekommen.
 var BAUM_NADEL = { stammOben: 0.10, stammUnten: 0.24, stammH: 1.4, rinde: 0x5f4c3c,
-  karten: 3, kroneW: 2.6, kroneH: 4.8, kroneY: 0.9, lehne: 0.04, laub: 0x4e6b48, seed: 47 };
+  karten: 3, kroneW: 2.6, kroneH: 4.8, kroneY: 0.9, lehne: 0.04, laub: 0x4e6b48, seed: 47,
+  oval: 0.55 };
 var BAUM_ZYPRESSE = { stammOben: 0.08, stammUnten: 0.16, stammH: 0.8, rinde: 0x6d5a45,
-  karten: 3, kroneW: 1.3, kroneH: 5.4, kroneY: 0.55, lehne: 0.05, laub: 0x3f5f45, seed: 53 };
+  karten: 3, kroneW: 1.3, kroneH: 5.4, kroneY: 0.55, lehne: 0.05, laub: 0x3f5f45, seed: 53,
+  oval: 0.45 };
 var BAUM_SUMPF = { stammOben: 0.2, stammUnten: 0.42, stammH: 2.8, rinde: 0x5c5244,
   karten: 5, kroneW: 4.6, kroneH: 3.0, kroneY: 2.6, lehne: 0.42, laub: 0x6e8258, seed: 59 };
 var BAUM_BLUETE = { stammOben: 0.12, stammUnten: 0.26, stammH: 1.9, rinde: 0x7a6450,

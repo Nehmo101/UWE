@@ -30,6 +30,11 @@ Karten aus der frueheren Einzeldatei-Fassung (`terra.html`) laden weiterhin.
 
 ## Offener Stand
 
+- Runde F (Look) ist abgeschlossen: kuehle Schatten im Wrap-Licht
+  (schattenKuehl je Tageszeit), niederfrequente Farbdrift in Terrain und
+  Malschicht, Kronen-Normalen von der Huellkugel (oval-Stauchung fuer
+  Nadel/Zypresse), Kalibrier-Kommentare + sanfte satMitte-Korrekturen.
+
 - Runde E (Editierbarkeit/Format) ist abgeschlossen: Bestueckung ortsstabil
   gehasht (Punktverschieben wuerfelt nicht mehr das ganze Element um; alte
   Karten wuerfeln beim ersten Laden einmalig um), Punkte einfuegen

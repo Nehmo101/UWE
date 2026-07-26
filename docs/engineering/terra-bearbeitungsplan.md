@@ -51,9 +51,10 @@ Ziel: Der Kerncharakter „dauerhaft editierbar" gilt ohne Einschränkung.
 | E3 | **Speicherformat v3 — Höhen als Delta**: nur vom Pinsel berührte Zellen speichern (Rest aus `seed` reproduzierbar); Loader bleibt tolerant für v1 (Einzeldatei) und v2 (Vollarray). Erledigt zusammen mit E1 in einem Versionssprung. | `editor/io.js`, `world/terrain.js` | M |
 | E4 | **`nurTyp` entscheiden**: ins Objekt-Schema aufnehmen (Select über Poolnamen) oder aus `genObjekt` entfernen — aktuell verstecktes, nicht bedienbares Feature. | `generators/objects.js`, `editor/tools.js` | S |
 
-## Runde F — Look-Nachschärfung (Ghibli-Befunde)
+## Runde F — Look-Nachschärfung (Ghibli-Befunde) — ERLEDIGT (27.07.2026)
 
 Ziel: die drei günstigsten Look-Gewinne aus der Recherche, kalibriert gegen Referenz.
+F1-F4 umgesetzt; F4-Sichtabgleich gegen Filmstills bleibt manueller Punkt in der PR-Checkliste.
 
 | Nr. | Aufgabe | Ort | Größe |
 |---|---|---|---|

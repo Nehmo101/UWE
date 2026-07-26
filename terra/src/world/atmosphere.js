@@ -29,10 +29,18 @@ var PRESETS = {
     wolkeOben: 0xfff4e4, wolkeUnten: 0xb9c2d2, wolkeRand: 0xffe2b8, wolkeFern: 0xdfe6ec,
     wolkeDeck: 0.82, wolkenschatten: 0.16, fenster: 1.1,
     schatten: 0.34, wasser: 0x4a95ab, welt: 0xf4f2ee, bounce: 0xd8cebc,
+    // F1-Startwert (Feinkalibrierung: F4): aufgehelltes, kuehles Morgenblau —
+    // Hue ~20° blauwaerts gegenueber bounce, hell genug fuer den 15-%-Sockel.
+    schattenKuehl: 0x96a8c8,
     belichtung: 0.98,
+    // Kalibrierkorridor (F4): Landschaftsmassen S 0.25–0.50, Werteumfang
+    // 0.20–0.85, reines Weiss nur Wolkenlichtern vorbehalten. Bloomschwelle
+    // >= 1.0: nur echte Lichter bluehen. satMitte 1.2 → 1.15: "Mitten rauf"
+    // gilt, aber 1.2 trieb die Wiesen an den oberen S-Rand (~0.5);
+    // satLicht < 1 (Lichter entsaettigen) bleibt unveraendert.
     bloom: { staerke: 0.22, radius: 0.7, schwelle: 1.0 },
     grade: { lift: [0.014, 0.022, 0.040], gamma: [1.0, 1.0, 1.0], gain: [1.06, 1.02, 0.95],
-      satMitte: 1.2, satLicht: 0.94, schwarz: 0.028, vignette: 0.10 }
+      satMitte: 1.15, satLicht: 0.94, schwarz: 0.028, vignette: 0.10 }
   },
   mittag: {
     sonneDir: [0.45, 0.75, 0.35], sonne: 0xfff2dc, sonneStk: 2.6,
@@ -44,10 +52,18 @@ var PRESETS = {
     wolkeOben: 0xffffff, wolkeUnten: 0xb6c4d4, wolkeRand: 0xfff2da, wolkeFern: 0xd8e4ee,
     wolkeDeck: 0.78, wolkenschatten: 0.25, fenster: 0.0,
     schatten: 0.45, wasser: 0x3f93ad, welt: 0xffffff, bounce: 0xe0d8c0,
+    // F1-Startwert (Feinkalibrierung: F4): neutrales Himmelblau — mittags
+    // kommt die Schattenfuellung vom blauen Himmel, nicht von warmem Bounce.
+    schattenKuehl: 0x8ea6c4,
     belichtung: 0.98,
+    // Kalibrierkorridor (F4): Landschaftsmassen S 0.25–0.50, Werteumfang
+    // 0.20–0.85. Hoechste Bloomschwelle des Tages (1.05) — hartes Mittags-
+    // licht soll zeichnen, nicht leuchten. satMitte 1.22 → 1.15: grenzwertig
+    // hoch, die hellste Stimmung braucht die wenigste Nachsaettigung;
+    // satLicht < 1 bleibt.
     bloom: { staerke: 0.18, radius: 0.7, schwelle: 1.05 },
     grade: { lift: [0.010, 0.016, 0.028], gamma: [1.0, 1.0, 1.0], gain: [1.05, 1.03, 0.97],
-      satMitte: 1.22, satLicht: 0.95, schwarz: 0.024, vignette: 0.10 }
+      satMitte: 1.15, satLicht: 0.95, schwarz: 0.024, vignette: 0.10 }
   },
   abend: {
     // Die staerkste Stimmung: dunkle Silhouetten gegen warmen Himmel, kuehle
@@ -61,7 +77,16 @@ var PRESETS = {
     wolkeOben: 0xf6c294, wolkeUnten: 0x6e6f96, wolkeRand: 0xffb060, wolkeFern: 0x9a8aa2,
     wolkeDeck: 0.85, wolkenschatten: 0.06, fenster: 2.6,
     schatten: 0.4, wasser: 0x46567c, welt: 0xe8d2c0, bounce: 0x9a8ca0,
+    // F1-Startwert (Feinkalibrierung: F4): kaeltestes und dunkelstes Blau der
+    // vier Stimmungen — der Abend lebt vom maximalen Kalt-Warm-Kontrast
+    // zwischen orangem Licht und blauvioletten Schatten.
+    schattenKuehl: 0x5a628e,
     belichtung: 0.94,
+    // Kalibrierkorridor (F4): das Abendrot behaelt den groessten Tonwert-
+    // umfang (dunkelste Silhouetten gegen den hellsten Himmel), deshalb
+    // niedrigster lift-Sockel und die einzige Schwelle unter 1.0 (0.92 — ok,
+    // bleibt ueber der ~0.9-Untergrenze). satMitte 1.05 bleibt: der Kontrast
+    // kommt hier aus Kalt-Warm, nicht aus Saettigung; satLicht 0.9 bleibt.
     bloom: { staerke: 0.34, radius: 0.75, schwelle: 0.92 },
     grade: { lift: [0.012, 0.020, 0.050], gamma: [0.90, 0.90, 0.95], gain: [1.10, 1.0, 0.88],
       satMitte: 1.05, satLicht: 0.9, schwarz: 0.02, vignette: 0.12 }
@@ -78,7 +103,16 @@ var PRESETS = {
     wolkeOben: 0xf2f4f0, wolkeUnten: 0xd4dad8, wolkeRand: 0xf0eee2, wolkeFern: 0xe2e7e2,
     wolkeDeck: 0.5, wolkenschatten: 0.0, fenster: 1.6,
     schatten: 0.15, wasser: 0xa6bcbb, welt: 0xf4f6f2, bounce: 0xdcd8cc,
+    // F1-Startwert (Feinkalibrierung: F4): fast neutral, kaum blaeuer als das
+    // Umgebungslicht — Nebel frisst Farbkontrast, kuehle Schatten wuerden
+    // hier kuenstlich wirken.
+    schattenKuehl: 0xaeb8bc,
     belichtung: 1.05,
+    // Kalibrierkorridor (F4): bewusst engster Werteumfang, aber lesbar —
+    // fogCap 0.86 deckelt den Nebelfaktor, nahe Objekte behalten Zeichnung.
+    // satMitte/satLicht < 1 druecken die Saettigung insgesamt (einzige
+    // Stimmung, in der das erlaubt ist); hoechste Bloomschwelle 1.1, damit
+    // das flache Licht nirgends blueht. Werte bleiben.
     bloom: { staerke: 0.10, radius: 0.6, schwelle: 1.1 },
     grade: { lift: [0.030, 0.034, 0.040], gamma: [1.0, 1.0, 1.0], gain: [1.0, 1.0, 1.0],
       satMitte: 0.85, satLicht: 0.8, schwarz: 0.05, vignette: 0.08 }
@@ -129,6 +163,8 @@ function applyTod(t) {
   terraUniforms.uSunDir.value.copy(_dir);
   terraUniforms.uFogCap.value = mixNum(a.fogCap, b.fogCap, e);
   mixHex(a.bounce, b.bounce, e, terraUniforms.uBounce.value);
+  // F1: kuehle Schattenfarbe blendet wie alle Farbfelder weich mit
+  mixHex(a.schattenKuehl, b.schattenKuehl, e, terraUniforms.uSchattenKuehl.value);
   fogMittel.copy(terraUniforms.uFogWarm.value).lerp(terraUniforms.uFogCool.value, 0.5);
   if (sceneHook && sceneHook.fog) {
     sceneHook.fog.color.copy(fogMittel);
@@ -201,7 +237,8 @@ function schnappschuss() {
   }
   // Hex-Farben sind numbers — lerp im Zahlenraum waere falsch. Farbfelder gezielt:
   ['sonne','hemiHimmel','hemiBoden','gegen','fogWarm','fogCool','scheibe','gegenGlow',
-   'wolkeOben','wolkeUnten','wolkeRand','wolkeFern','wasser','welt','bounce'].forEach(function (k) {
+   'wolkeOben','wolkeUnten','wolkeRand','wolkeFern','wasser','welt','bounce',
+   'schattenKuehl'].forEach(function (k) {
     s[k] = mixHex(a[k], b[k], e, _col).getHex();
   });
   return s;

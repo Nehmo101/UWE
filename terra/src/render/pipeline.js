@@ -19,7 +19,15 @@ let postAn = true;
 let infoCalls = 0, infoTris = 0;
 
 /* --- Farbgraduierung: Lift/Gamma/Gain, Saettigung nach Luminanz,
-       angehobener Schwarzpunkt, dezente Vignette ------------------------- */
+       angehobener Schwarzpunkt, dezente Vignette -------------------------
+   Befund Kalibrierpass (F4): die Saettigungsgewichtung ist tatsaechlich
+   luminanzbasiert und nie global. l ist Rec.-709-Luma im gamma-Raum;
+   "glocke" (smoothstep 0.06→0.35 auf, 0.6→0.95 wieder ab) hebt NUR die
+   Mitten auf uSatMitte, "hoch" (smoothstep 0.6→0.95) senkt die Lichter auf
+   uSatLicht (Presets halten uSatLicht < 1), und unter l ≈ 0.10 blendet die
+   Wirkung komplett aus — tiefste Tiefen bleiben neutral. Die Regel "Mitten
+   rauf, Lichter runter" ist damit strukturell erfuellt; keine
+   Formelaenderung noetig. */
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -147,7 +155,12 @@ function initPipeline(camera) {
   composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
     Math.round(w * pr), Math.round(h * pr), { type: THREE.HalfFloatType, samples: 4 }));
   renderPass = new RenderPass(scene, camera);
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.22, 0.7, 0.88);
+  // Bloom-Startwerte gelten nur bis zum ersten setLook — die Tageszeit-Presets
+  // (atmosphere.js) ueberschreiben Staerke/Radius/Schwelle ab dem ersten
+  // applyTod. Schwelle 0.9 statt frueher 0.88: der Bloom bleibt schwach mit
+  // hoher Schwelle, auch im kurzen Fenster vor dem ersten Preset faellt sie
+  // nicht unter die ~0.9-Untergrenze (Preset-Minimum ist abend mit 0.92).
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.22, 0.7, 0.9);
   gradePass = new ShaderPass(GradeShader);
   kantePass = new ShaderPass(KanteKornShader);
   outputPass = new OutputPass();

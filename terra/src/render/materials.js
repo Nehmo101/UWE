@@ -11,6 +11,10 @@ import { windUniforms, WIND_GLSL } from '../world/wind.js';
 const terraUniforms = {
   uRim: { value: new THREE.Color(0xdcefff) },
   uBounce: { value: new THREE.Color(0xe0d8c0) },
+  // Kuehle Schattenfarbe (F1): tiefe Schatten kippen Richtung Blau, statt nur
+  // dunkler zu werden (Anime-Hintergrund-Regel: Schatten kuehl UND aufgehellt).
+  // Die Tageszeit schreibt pro Preset hinein (atmosphere.js, schattenKuehl).
+  uSchattenKuehl: { value: new THREE.Color(0x8ea6c4) },
   // Richtungsabhaengiger Nebel: warm zur Sonne hin, kuehl von ihr weg.
   uFogWarm: { value: new THREE.Color(0xe8e2d2) },
   uFogCool: { value: new THREE.Color(0xd4e0e8) },
@@ -42,7 +46,7 @@ const FAMILIEN = {
 };
 
 /** Diagnose: greift jeder Patch? Wird auf window exponiert. */
-const patchInfo = { wrap: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, ranken: 0, versuche: 0 };
+const patchInfo = { wrap: 0, kuehl: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, ranken: 0, versuche: 0 };
 if (typeof window !== 'undefined') window.terraPatchInfo = patchInfo;
 
 function ersetze(shader, feld, alt, neu, patchName) {
@@ -62,8 +66,9 @@ function terraPatch(shader, opts) {
   shader.uniforms.uFogCool = terraUniforms.uFogCool;
   shader.uniforms.uSunDir = terraUniforms.uSunDir;
   shader.uniforms.uFogCap = terraUniforms.uFogCap;
+  shader.uniforms.uSchattenKuehl = terraUniforms.uSchattenKuehl;
 
-  var kopfF = 'uniform vec3 uRim;\nuniform vec3 uBounce;\n';
+  var kopfF = 'uniform vec3 uRim;\nuniform vec3 uBounce;\nuniform vec3 uSchattenKuehl;\n';
 
   // (1) Wrap-Diffuse mit drei weich verschliffenen Stufen und warmem Bounce.
   //     Anker aus lights_phong_pars_fragment (three 0.185):
@@ -82,10 +87,20 @@ function terraPatch(shader, opts) {
         '             + smoothstep(0.50,0.56,terraW)*0.33\n' +
         '             + smoothstep(0.74,0.80,terraW)*0.33;\n' +
         'terraB = 0.30 + 0.70 * terraB;\n' +
-        'vec3 irradiance = terraB * directLight.color * mix( uBounce, vec3(1.0), terraB );');
+        // F1, kuehle Schatten: das Tint-Gewicht haengt am untersten Band
+        // (terraW < 0.26 voll kuehl, ab dem Mittelband 0.56 keine Wirkung) —
+        // Mitten kuehlen kaum, tiefe Schatten deutlich. Der 0.30-Sockel bleibt:
+        // bei terraB = 0.30 hat der Tint mix(uSchattenKuehl, 1.0, 0.30) eine
+        // Luminanz von ~0.39–0.54 (je Preset), der Sonnenbeitrag faellt also
+        // nie unter ~0.12–0.16 seiner vollen Staerke; zusammen mit dem
+        // Hemisphaerenlicht bleibt die Gesamthelligkeit ueber ~15 %.
+        'float terraKuehl = 1.0 - smoothstep( 0.26, 0.56, terraW );\n' +
+        'vec3 terraTint = mix( mix( uBounce, uSchattenKuehl, terraKuehl ), vec3(1.0), terraB );\n' +
+        'vec3 irradiance = terraB * directLight.color * terraTint;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <lights_phong_pars_fragment>', neu);
     patchInfo.wrap++;
+    patchInfo.kuehl++;   // kuehler Schattenanteil sitzt im selben Patch
   } else {
     console.warn('terra: Shader-Patch "wrap" fand seinen Anker nicht — Shader bleibt unveraendert.');
   }
@@ -155,6 +170,10 @@ function terraPatch(shader, opts) {
   // (6) Malschicht: Aquarelltextur in WELTkoordinaten — die Koernung bleibt
   //     damit bei grossen wie kleinen Objekten gleich gross. Subtil gehalten:
   //     Helligkeit +-Anteil und ein Hauch Farbtonversatz aus der Textur.
+  //     Zweite, sehr grobe Abtastung DERSELBEN Textur (1/8 der Familienskala,
+  //     halbe Staerke): grossraeumige Nass-in-nass-Drift (F2), damit auch
+  //     Waende und Daecher die niederfrequente Modulation der Wiese tragen —
+  //     keine neue Textur, kein neues Uniform noetig.
   if (hatWelt && opts && opts.mal) {
     shader.uniforms['uMalTex' + 0] = { value: opts.mal.texObj };
     kopfF += 'uniform sampler2D uMalTex0;\n';
@@ -162,7 +181,11 @@ function terraPatch(shader, opts) {
     var malCode = mk + '\n' +
       'vec3 terraMal = texture2D( uMalTex0, ( vTerraW.xz + vTerraW.yy * 0.7 ) * ' +
         opts.mal.skala.toFixed(4) + ' ).rgb;\n' +
-      'diffuseColor.rgb *= mix( vec3(1.0), terraMal * 2.0, ' + opts.mal.staerke.toFixed(3) + ' );';
+      'diffuseColor.rgb *= mix( vec3(1.0), terraMal * 2.0, ' + opts.mal.staerke.toFixed(3) + ' );\n' +
+      'vec3 terraMalGrob = texture2D( uMalTex0, ( vTerraW.xz + vTerraW.yy * 0.7 ) * ' +
+        (opts.mal.skala * 0.125).toFixed(5) + ' ).rgb;\n' +
+      'diffuseColor.rgb *= mix( vec3(1.0), terraMalGrob * 2.0, ' +
+        (opts.mal.staerke * 0.5).toFixed(3) + ' );';
     if (ersetze(shader, 'fragmentShader', mk, malCode, 'malschicht')) patchInfo.mal++;
   }
 
