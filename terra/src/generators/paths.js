@@ -1,6 +1,6 @@
 // Pfad-Werkzeug: Strasse, Mauer, Fluss, Hecke/Zaun.
 import * as THREE from 'three';
-import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, wpick } from '../core/rng.js';
+import { lerp, hashi, fractal, rngOf, rr, wpick } from '../core/rng.js';
 import { WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';

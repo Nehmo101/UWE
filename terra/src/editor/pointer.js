@@ -17,7 +17,7 @@ import { toast, buildPanel, updateHint } from '../ui/panels.js';
 var ptr = { down: false, mode: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, handle: -1,
             grab: null, lastClick: 0, lastCx: -999, lastCy: -999, lastX: 0, lastZ: 0,
             dragged: false };
-var hoverPoint = null;
+var _hoverPoint = null;
 var zeigerOffen = false, zeigerX = 0, zeigerY = 0, zeigerZuletzt = 0;
 var _zeigerEv = { clientX: 0, clientY: 0 };
 
@@ -166,7 +166,7 @@ function verarbeiteZeiger(now) {
   zeigerZuletzt = now; zeigerOffen = false;
   _zeigerEv.clientX = zeigerX; _zeigerEv.clientY = zeigerY;
   var p = groundPoint(_zeigerEv);
-  hoverPoint = p;
+  _hoverPoint = p;
 
   if (ptr.mode === "brush" && p) {
     applyBrush(p, ed.variantOf.terrain, curParams().radius, curParams().staerke, 1 / 60);

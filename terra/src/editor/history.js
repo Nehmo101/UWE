@@ -1,5 +1,5 @@
 // Undo/Redo ueber Schnappschuesse von Elementliste und Terrainhoehen.
-import { S, serializeElements, hydrate } from '../core/store.js';
+import { serializeElements, hydrate } from '../core/store.js';
 import { base } from '../world/terrain.js';
 import { rebuildAll } from '../core/dirty.js';
 import { rebuildHandles } from './selection.js';

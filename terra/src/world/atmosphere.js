@@ -1,7 +1,7 @@
 // Atmosphaere: Tageszeit-Presets (Licht, Nebel, Himmel, Look), weiche Blende,
 // dazu die bewegten Kleinigkeiten (Voegel, Schornsteinrauch, Wolkenschatten-Drift).
 import * as THREE from 'three';
-import { clamp, lerp, sstep, hashi, rngOf, rr } from '../core/rng.js';
+import { lerp, rngOf, rr } from '../core/rng.js';
 import { terraUniforms, tintedMats, vineMat } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { POOLS } from '../core/pools.js';

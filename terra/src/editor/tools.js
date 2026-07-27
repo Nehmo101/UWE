@@ -2,7 +2,7 @@
 import { S, mkElement, nextSeed } from '../core/store.js';
 import { commit, isHeavy } from '../core/dirty.js';
 import { pushUndo } from './history.js';
-import { clearPreview, setPreview, rebuildHandles, select, brushRing } from './selection.js';
+import { clearPreview, rebuildHandles, select, brushRing } from './selection.js';
 import { buildPanel, updateHint } from '../ui/panels.js';
 
 /** Aktiver Werkzeug-Zustand (frueher lose Globals). */

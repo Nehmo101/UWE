@@ -138,7 +138,7 @@ export function initIO() {
       var karte;
       try {
         karte = validiereKarte(rd.result);
-      } catch (err) {
+      } catch {
         toast("Datei konnte nicht gelesen werden");
         return;
       }

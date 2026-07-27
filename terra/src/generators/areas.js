@@ -1,7 +1,7 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
-import { heightAt, slopeAt } from '../world/terrain.js';
+import { heightAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandAusLinie } from './paths.js';
 
@@ -244,7 +244,7 @@ function genViertel(el) {
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
   var occ = newOcc(4.5);
-  var i, k, s;
+  var i, k;
   // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken
   for (i = 0; i < streets.length; i++) {
     var innen = streets[i].filter(function (q) { return inPoly(pts, q.x, q.z); });
