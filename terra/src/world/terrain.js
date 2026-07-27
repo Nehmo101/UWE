@@ -78,7 +78,7 @@ function holeSchmutzRegion() {
    (Undo-Stapel beim Groessenwechsel verwerfen) braucht history.js — siehe
    Bericht H1e. */
 var feldLaenge = 0;
-var base, hgt, aoRoh, aoFeld, corridor, wear;
+var base, hgt, aoRoh, aoFeld, corridor, wear, abfluss, sediment, haerte;
 function felderSichern() {
   var n = VW * VW;
   if (n <= feldLaenge) return;
@@ -89,6 +89,25 @@ function felderSichern() {
   corridor = new Uint8Array(n);
   // Abnutzung entlang der Wege: 0..255, weich auslaufend, faerbt das Gras erdig.
   wear = new Uint8Array(n);
+  /* I3: Ergebnisfelder der Erosion. Sie wachsen mit base/hgt mit und stehen
+     auch ohne gelaufene Erosion bereit (Abfluss und Sediment 0, Haerte neutral
+     1) — wer sie liest, darf das bedingungslos tun.
+
+     LAUFZEITFELDER, bewusst nicht im Speicherformat. Die Hoehenaenderung der
+     Erosion steckt ohnehin im `hoehenDelta` (Format v3), diese drei sind
+     daraus abgeleitete Messwerte. Sie nach dem Laden neu zu erzeugen hiesse,
+     die Erosion noch einmal laufen zu lassen — 456 ms, und das Ergebnis wuerde
+     auf dem bereits erodierten Gelaende ein anderes sein als beim ersten Mal.
+
+     Daraus folgt eine Regel, die einzuhalten ist: KEIN Generator darf diese
+     Felder lesen. Sonst saehe eine Karte nach dem Laden anders aus als vor dem
+     Speichern — genau die Sorte versteckter Zustand, die `rebuildAll` in
+     Runde I5 einen Tag gekostet hat. Erlaubt sind Auswertungen, deren Ergebnis
+     der Nutzer sieht und die gespeichert werden: die Biom-Ableitung macht aus
+     `abfluss` Polygone, und die Polygone liegen danach in der Datei. */
+  abfluss = new Float32Array(n);
+  sediment = new Float32Array(n);
+  haerte = new Float32Array(n); haerte.fill(1);
   feldLaenge = n;
   // Frisches (genullte) base-Feld ist eine Aenderung wie jede andere. Praktisch
   // folgt sofort verwerfeHistorie() aus io.js, aber der Zaehler soll auch dann
@@ -885,6 +904,38 @@ function applyBrush(p, mode, radius, strength, dt) {
   refreshGrid(i0 - m, i1 + m, j0 - m, j1 + m);
 }
 
+/**
+ * Uebernimmt ein Erosionsergebnis — global oder Fenster, die Struktur ist
+ * dieselbe — nach base und in die drei Messfelder, und zieht Hoehen, AO und
+ * Gitter im beruehrten Bereich nach.
+ *
+ * Der Saum von zwei bzw. drei Zellen ist derselbe wie in applyBrush: eine
+ * Hoehenaenderung an der Kante beeinflusst die Normale ihrer Nachbarn, und AO
+ * schaut noch eine Zelle weiter. Ohne den Saum bliebe an der Fenstergrenze des
+ * Pinsels eine sichtbare Beleuchtungsnaht stehen.
+ *
+ * Der Aufrufer hat vorher pushUndo(true) gerufen: die Erosion ist EIN
+ * Historienschritt, nicht einer je Bild. basisGeaendert meldet die Box an die
+ * Regionslogik aus H1e, damit der Schnappschuss klein bleibt.
+ */
+function wendeErosionAn(e) {
+  var i0 = e.i0, j0 = e.j0, w = e.w, hh = e.h;
+  for (var jl = 0; jl < hh; jl++) {
+    var q = jl * w, z = (j0 + jl) * VW + i0;
+    for (var il = 0; il < w; il++) {
+      base[z + il] = e.hoehe[q + il];
+      abfluss[z + il] = e.abfluss[q + il];
+      sediment[z + il] = e.sediment[q + il];
+      haerte[z + il] = e.haerte[q + il];
+    }
+  }
+  var i1 = i0 + w - 1, j1 = j0 + hh - 1;
+  basisGeaendert(i0, i1, j0, j1);
+  recomputeHeights(i0 - 2, i1 + 2, j0 - 2, j1 + 2);
+  computeAO(i0 - 3, i1 + 3, j0 - 3, j1 + 3);
+  refreshGrid(i0 - 2, i1 + 2, j0 - 2, j1 + 2);
+}
+
 function setFlattenTarget(v) { flattenTarget = v; }
 
 /* `terrain` ist jetzt eine THREE.Group mit den Patch-Meshes statt eines
@@ -909,6 +960,7 @@ export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, p
   initTerrain, terrainGeometrienNeu, terrainColor, computeAO,
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
   inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget,
+  abfluss, sediment, haerte, wendeErosionAn,
   hoehenVersion, basisGeaendert, holeSchmutzRegion,
   aktualisiereDetailstufen, setzeLod, lodAn, terrainStufenStatistik,
   holeIndex as terrainIndexSatz };

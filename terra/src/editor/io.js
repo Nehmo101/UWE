@@ -13,6 +13,9 @@ import { cam, setAufnahme, istAufnahme, updateCamera } from './camera.js';
 import { ed, stempelUebernehmen } from './tools.js';
 import { setTod, getTodName, setWetter, getWetterName } from '../world/atmosphere.js';
 import { buildPanel, toast } from '../ui/panels.js';
+// I4: Zielpruefung der Beschriftungen. beschriftung.js haengt nur an three und
+// core/ — der Import ist zyklusfrei und bleibt es, solange das so ist.
+import { zielPruefen } from '../ui/beschriftung.js';
 import { exportPNG, setPost, getPost, renderFrame,
   setFarbskript, getFarbskript, setPalette, getPalette, setMalschicht,
   getMalschicht, setMultiplane, getMultiplane } from '../render/pipeline.js';
@@ -159,6 +162,20 @@ function pruefeElemente(liste, wo) {
         if (!zz || !Number.isFinite(zz.h) || !Number.isFinite(zz.dx) || !Number.isFinite(zz.dz))
           throw new Error(wo + " " + k + ": Zugpunkt " + zq + " ungültig");
       }
+    }
+    /* I4 — das Klickziel einer Beschriftung. Die Pruefung sitzt HIER und
+       nirgends sonst: Karten sollen geteilt werden, und eine fremde Datei darf
+       keinen `javascript:`-Klick mitbringen. `zielPruefen` ist eine
+       Erlaubnisliste (nur http und https), keine Verbotsliste — eine
+       Verbotsliste haette man mit der naechsten Kodierung wieder umgangen.
+       Abgelehnt wird beim LADEN und damit atomar, wie alles andere in dieser
+       Funktion: lieber gar nicht geladen als halb. */
+    if (e.params && e.params.ziel !== undefined) {
+      var zp = zielPruefen(e.params.ziel);
+      if (!zp.ok) throw new Error(wo + " " + k + ": ziel ungültig — " + zp.grund);
+      // Die geprueften Werte ersetzen die eingelesenen — `zielPruefen` raeumt
+      // dabei auch auf (art "keins" leert die Referenz).
+      e.params = Object.assign({}, e.params, { ziel: zp.ziel });
     }
     if (e.seed !== undefined && !Number.isFinite(e.seed)) throw new Error(wo + " " + k + ": seed ungültig");
     if (e.id !== undefined && !Number.isFinite(e.id)) throw new Error(wo + " " + k + ": id ungültig");

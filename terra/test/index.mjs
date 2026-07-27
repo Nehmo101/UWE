@@ -19,3 +19,5 @@ import './02-format.test.mjs';
 import './03-invarianten.test.mjs';
 import './04-shader-anker.test.mjs';
 import './05-registry.test.mjs';
+import './06-erosion.test.mjs';
+import './08-beschriftung.test.mjs';

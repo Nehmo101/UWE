@@ -5,9 +5,17 @@ import { S, hydrate } from '../core/store.js';
 import { clamp } from '../core/rng.js';
 import { instanceTotal, schattenAnzahl } from '../core/pools.js';
 import { ed, TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
+  EROSION_PARAMS, erosionRegler,
   schemaKey, defaultsFor, toolParams, setTool,
   auswahlElemente, stempelErzeugen, aktuellerStempel }
   from '../editor/tools.js';
+// I3: der Erosionstreiber. Zyklusfrei nur in DIESER Richtung — erosion-lauf.js
+// haengt an world/, core/ und history.js und importiert nichts aus ui/.
+import { starteErosion, brichErosionAb, erosionLaeuft, setzeErosionAnzeige }
+  from '../editor/erosion-lauf.js';
+// I4: Zielpruefung der Beschriftung. beschriftung.js haengt nur an three und
+// core/ — kein Zyklus.
+import { zielPruefen } from './beschriftung.js';
 import { commit, isHeavy, deleteElement, regenElement, rebuildAll } from '../core/dirty.js';
 import { pushUndo } from '../editor/history.js';
 import { rebuildHandles, clearPreview, getMarkerAuswahl, rebuildMarker } from '../editor/selection.js';
@@ -29,6 +37,7 @@ var panelEl = null;
 export function initPanels() {
   panelEl = document.getElementById("panel");
   baueWeltKnopf();
+  setzeErosionAnzeige(zeigeErosionFortschritt);
 }
 
 /* ==========================================================================
@@ -221,6 +230,141 @@ function elementNamensZeile(target) {
     function () { return namensVorschlag(target); });
 }
 
+/* ==========================================================================
+   Zielzeile der Beschriftung (I4)
+
+   Zwei Felder, die zusammengehoeren: die Art des Ziels und die Referenz. Sie
+   stehen ausserhalb des Parameterschemas, weil `ziel` ein Objekt ist und das
+   Schema nur Skalare kennt.
+
+   Der wichtige Teil ist die Pruefung: JEDE Eingabe laeuft durch zielPruefen,
+   bevor sie ins Element geht — dieselbe Erlaubnisliste, die auch beim Laden
+   greift. Damit kann eine ungueltige Adresse gar nicht erst in einer Datei
+   landen, die jemand weitergibt.
+   ========================================================================== */
+function baueZielZeile(obj, applyFn) {
+  var ziel = (obj.ziel && typeof obj.ziel === "object") ? obj.ziel : { art: "keins", ref: "" };
+  var row = el("div", "row");
+  var lab = el("label");
+  lab.appendChild(el("span", null, "Klickziel"));
+  row.appendChild(lab);
+
+  var sel = el("select");
+  var arten = [["keins", "kein Ziel"], ["extern", "Adresse (http/https)"], ["wiki", "Wiki-Seite"]];
+  for (var i = 0; i < arten.length; i++) {
+    var op = el("option", null, arten[i][1]);
+    op.value = arten[i][0];
+    sel.appendChild(op);
+  }
+  sel.value = ziel.art || "keins";
+  row.appendChild(sel);
+
+  var ref = el("input");
+  ref.type = "text";
+  ref.value = String(ziel.ref || "");
+  ref.placeholder = sel.value === "wiki" ? "seiten-kennung" : "https://…";
+  ref.style.marginTop = "5px";
+  ref.style.display = sel.value === "keins" ? "none" : "";
+  row.appendChild(ref);
+
+  var uebernimm = function () {
+    var pruef = zielPruefen({ art: sel.value, ref: ref.value });
+    if (!pruef.ok) {
+      toast("Ziel abgelehnt: " + pruef.grund);
+      // Feld stehen lassen, damit der Nutzer sieht, was er getippt hat — aber
+      // NICHT uebernehmen. Ein abgelehntes Ziel darf das gueltige nicht loeschen.
+      return;
+    }
+    applyFn(true);
+    obj.ziel = pruef.ziel;
+    ref.value = pruef.ziel.ref;
+    applyFn();
+  };
+  sel.addEventListener("change", function () {
+    ref.style.display = sel.value === "keins" ? "none" : "";
+    ref.placeholder = sel.value === "wiki" ? "seiten-kennung" : "https://…";
+    uebernimm();
+  });
+  ref.addEventListener("change", uebernimm);
+
+  panelEl.appendChild(row);
+  panelEl.appendChild(el("div", "psub",
+    "Ein Klick auf die Beschriftung öffnet das Ziel in einem neuen Fenster. "
+    + "Zugelassen sind nur http- und https-Adressen — geteilte Karten sollen "
+    + "keinen Schadklick mitbringen. Im Aufnahme-Modus ist der Klick aus."));
+}
+
+/* ==========================================================================
+   Abschnitt „Erosion“ (I3)
+
+   Der einzige Vorgang in Terra, der ueber mehrere Bilder laeuft. Das Panel
+   muss deshalb zwei Zustaende zeigen — bereit und laufend — und im laufenden
+   Zustand einen Weg heraus anbieten.
+
+   Der Balken wird NICHT ueber buildPanel() aktualisiert: ein Neuaufbau des
+   ganzen Panels 60-mal je Sekunde waere absurd, und der Fokus im Regler ginge
+   dabei verloren. Stattdessen meldet der Treiber seinen Fortschritt an ein
+   Element, dessen Verweis hier liegt. Ist das Panel inzwischen neu gebaut, ist
+   der Verweis tot und die Meldung laeuft ins Leere — genau richtig, denn dann
+   zeigt das neue Panel den Zustand ohnehin von sich aus.
+   ========================================================================== */
+var erosionBalken = null;
+
+function baueErosionAbschnitt() {
+  panelEl.appendChild(el("hr"));
+  panelEl.appendChild(el("div", "ph", "Erosion"));
+
+  if (erosionLaeuft()) {
+    var lauf = el("div", "psub", "Läuft …");
+    panelEl.appendChild(lauf);
+    var huelle = el("div", "fortschritt");
+    var balken = el("div", "fortschrittBalken");
+    huelle.appendChild(balken);
+    panelEl.appendChild(huelle);
+    erosionBalken = { balken: balken, text: lauf };
+    var abbruch = el("button", "wide", "Abbrechen");
+    abbruch.addEventListener("click", function () {
+      brichErosionAb();
+      toast("Erosion abgebrochen — nichts übernommen");
+      buildPanel();
+    });
+    panelEl.appendChild(abbruch);
+    return;
+  }
+
+  erosionBalken = null;
+  for (var i = 0; i < EROSION_PARAMS.length; i++) {
+    // apply ist hier leer: die Regler wirken erst beim naechsten Lauf, nicht
+    // sofort. Eine Vorschau gaebe es nur um den Preis, die Erosion bei jedem
+    // Reglerpixel neu zu rechnen — eine Sekunde je Zug.
+    panelEl.appendChild(paramRow(EROSION_PARAMS[i], erosionRegler, function () {}));
+  }
+  var knopf = el("button", "wide", "Gelände erodieren");
+  knopf.addEventListener("click", function () {
+    starteErosion(erosionRegler);
+    buildPanel();
+  });
+  panelEl.appendChild(knopf);
+  panelEl.appendChild(el("div", "psub",
+    "Wäscht Rinnen ins Gelände, lässt Steilhänge nachrutschen und legt "
+    + "Schwemmland ab. Flüsse werden danach neu eingeschnitten und liegen in "
+    + "den entstandenen Talböden. Ein Schritt in der Historie — Strg+Z macht "
+    + "den ganzen Lauf rückgängig."));
+}
+
+/** Meldung des Treibers. Bewusst schmal: Breite setzen, Text setzen, fertig. */
+function zeigeErosionFortschritt(anteil, fertig, abgebrochen) {
+  if (fertig || abgebrochen) {
+    erosionBalken = null;
+    buildPanel();
+    if (fertig) toast("Erosion fertig");
+    return;
+  }
+  if (!erosionBalken || !erosionBalken.balken.isConnected) return;
+  erosionBalken.balken.style.width = Math.round(anteil * 100) + "%";
+  erosionBalken.text.textContent = "Läuft … " + Math.round(anteil * 100) + " %";
+}
+
 /**
  * Abschnitt „Namen“: Sprachfamilie der Karte und die Liste alles Benannten.
  * Die Liste liest ausschliesslich `params.name` und die Markertexte — beides
@@ -404,6 +548,23 @@ function paramRow(def, obj, apply) {
     row.appendChild(sel);
     return row;
   }
+  /* I4: freies Textfeld. Erst mit der Beschriftung gibt es einen Parameter,
+     der Text IST — bis dahin war jeder Schemawert eine Zahl, ein Schalter oder
+     eine Auswahl. `change` statt `input`: bei jedem Tastendruck einen Commit
+     auszuloesen hiesse, das Element je Buchstabe neu zu bauen. */
+  if (def.txt) {
+    var l3 = el("label");
+    l3.appendChild(el("span", null, def.l));
+    row.appendChild(l3);
+    var tf = el("input");
+    tf.type = "text";
+    tf.value = String(obj[def.k] === undefined ? "" : obj[def.k]);
+    tf.addEventListener("change", function () {
+      apply(true); obj[def.k] = tf.value; apply();
+    });
+    row.appendChild(tf);
+    return row;
+  }
   var lab2 = el("label");
   lab2.appendChild(el("span", null, def.l));
   var val = el("b", null, String(obj[def.k]));
@@ -449,6 +610,7 @@ function buildPanel() {
     panelEl.appendChild(el("div", "psub", S.elements.length + " Elemente auf der Karte."));
     // J3: Das Auswahl-Werkzeug ohne Auswahl ist das Panel der GANZEN Karte —
     // hier gehoert die kartenweite Sprachfamilie hin, nicht in ein Elementschema.
+    baueErosionAbschnitt();
     baueNamenAbschnitt();
     return;
   }
@@ -526,6 +688,9 @@ function buildPanel() {
     if (obj[defs[d].k] === undefined) obj[defs[d].k] = defs[d].d;
     panelEl.appendChild(paramRow(defs[d], obj, applyFn));
   }
+
+  // I4: Klickziel der Beschriftung — von Hand, weil {art, ref} kein Skalar ist.
+  if (kind === "marker" && variant === "beschriftung") baueZielZeile(obj, applyFn);
 
   if (target) {
     panelEl.appendChild(el("hr"));

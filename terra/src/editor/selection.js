@@ -9,6 +9,8 @@ import { rankeAchse, rankeStuetzen } from '../generators/vines.js';
 import { cam, camera, raycaster, _ndc, rayFrom } from './camera.js';
 import { ed } from './tools.js';
 import { buildPanel } from '../ui/panels.js';
+// I4: die eine Beschriftungsschicht der laufenden Karte.
+import { holeBeschriftungsschicht } from '../ui/beschriftung.js';
 
 var sceneHooked = null;
 export function initSelection(scene) {
@@ -18,6 +20,40 @@ export function initSelection(scene) {
   scene.add(brushRing);
   scene.add(markerGruppe);
   scene.add(auswahlRahmen);
+  // I4: Beschriftungen liegen IN der Szene und nicht als HTML darueber —
+  // das war der ganze Zweck: sie sollen im PNG-Export erscheinen.
+  scene.add(holeBeschriftungsschicht().gruppe);
+  beschriftungenAktualisieren();
+}
+
+/* ==========================================================================
+   Beschriftungselemente in die Schicht spiegeln (I4)
+
+   Gegenstueck zu rebuildMarker: dort die flache S.marker-Liste, hier die
+   Elemente mit kind "marker" und variant "beschriftung". Zwei Listen, zwei
+   Funktionen — sie sehen aehnlich aus, meinen aber Verschiedenes, und das
+   soll man im Code sehen.
+
+   Die Hoehe kommt aus heightAt und nicht aus dem Element: eine Beschriftung
+   soll ueber dem Gelaende schweben, auch nachdem die Erosion darunter ein Tal
+   gegraben hat. Der Zuschlag von 2,2 Einheiten haelt sie ueber niedrigem
+   Bewuchs, ohne dass sie vom Boden abhebt.
+   ========================================================================== */
+function beschriftungenAktualisieren() {
+  var quellen = [];
+  for (var i = 0; i < S.elements.length; i++) {
+    var e = S.elements[i];
+    if (e.kind !== "marker" || e.variant !== "beschriftung") continue;
+    var p = e.points && e.points[0];
+    if (!p) continue;
+    var pr = e.params || {};
+    if (!pr.text) continue;                 // ohne Text gibt es nichts zu zeichnen
+    quellen.push({
+      id: e.id, text: pr.text, klasse: pr.klasse, groesse: pr.groesse,
+      ziel: pr.ziel, x: p.x, y: heightAt(p.x, p.z) + 2.2, z: p.z
+    });
+  }
+  holeBeschriftungsschicht().abgleichen(quellen);
 }
 
 var previewGeo = new THREE.BufferGeometry();
@@ -486,4 +522,5 @@ export { preview, handles, brushRing, setPreview, clearPreview, rebuildHandles,
   pickElement, select, auswahlUmschalten, aktiverGriff, setAktiverGriff,
   zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer, zugPixelProHoehe,
   markerGruppe, rebuildMarker, updateMarkerPositions, markerTreffer, waehleMarker,
-  getMarkerAuswahl, auswahlRahmen, rebuildAuswahlRahmen };
+  getMarkerAuswahl, auswahlRahmen, rebuildAuswahlRahmen,
+  beschriftungenAktualisieren };

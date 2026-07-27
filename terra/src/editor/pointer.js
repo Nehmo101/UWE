@@ -12,8 +12,11 @@ import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOO
 import { handles, rebuildHandles, updateHandlePositions, setPreview, clearPreview, updateBrushRing,
   brushRing, pickElement, select, auswahlUmschalten, naechstesSegment, aktiverGriff,
   setAktiverGriff, zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer,
-  zugPixelProHoehe, markerTreffer, waehleMarker, getMarkerAuswahl, rebuildMarker }
+  zugPixelProHoehe, markerTreffer, waehleMarker, getMarkerAuswahl, rebuildMarker,
+  beschriftungenAktualisieren }
   from './selection.js';
+// I4: Klick und Zeigerwechsel auf einer Beschriftung.
+import { holeBeschriftungsschicht } from '../ui/beschriftung.js';
 import { raycaster, _ndc, camera } from './camera.js';
 import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
 import { rankePlatzierbar, rankeAchse, rankeKernPunkt } from '../generators/vines.js';
@@ -255,6 +258,21 @@ export function initPointer(cv) {
        dahinter keinen Boden mehr findet: das Auswaehlen und Umbenennen eines
        bestehenden Markers braucht keinen Bodenpunkt, nur das Setzen. */
     if (ed.tool === "marker") {
+      /* I4 — die Variante „beschriftung" legt ein ELEMENT an, keine Nadel.
+         Der Zweig steht ganz vorn, weil markerTreffer() nur die flache
+         S.marker-Liste kennt und eine Beschriftung dort nie auftauchen wird. */
+      if (ed.variantOf.marker === "beschriftung") {
+        var bp0 = groundPoint(e);
+        if (!bp0) return;
+        pushUndo();
+        var bel = mkElement("marker", "beschriftung", [snapPt(bp0)],
+          copyParams(curParams()), nextSeed());
+        S.elements.push(bel);
+        select(bel);
+        beschriftungenAktualisieren();
+        toast("Beschriftung gesetzt — Text und Ziel im Panel rechts");
+        return;
+      }
       var mi = markerTreffer(e);
       if (mi >= 0) {
         waehleMarker(mi);
@@ -280,6 +298,20 @@ export function initPointer(cv) {
       toast("Marker gesetzt (" + S.marker.length + " auf der Karte)");
       return;
     }
+
+    /* I4 — Klick auf eine Beschriftung. Steht VOR groundPoint, weil eine
+       Beschriftung ueber dem Horizont oder ueber Wasser haengen kann, wo der
+       Strahl keinen Boden mehr trifft; ohne diese Reihenfolge waere sie dort
+       nicht anklickbar.
+
+       Treffer per Raycast auf das Sprite statt ueber ein HTML-Overlay: kein
+       DOM-Abgleich, funktioniert im Vollbild und waehrend einer Kamerafahrt.
+       Im Aufnahme-Modus liefert klick() immer false — das Bild soll ein Bild
+       sein und keine Bedienoberflaeche. */
+    // rayFrom setzt den geteilten `raycaster` und liefert dessen Strahl —
+    // gebraucht wird hier der Raycaster selbst (intersectObjects).
+    rayFrom(e);
+    if (holeBeschriftungsschicht().klick(raycaster, { aufnahme: istAufnahme() })) return;
 
     var p = groundPoint(e);
     if (!p) return;

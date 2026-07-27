@@ -89,7 +89,12 @@ var VARIANTS = {
   ranke: [["ranke", "Ranke"]],
   terrain: [["heben", "Anheben"], ["senken", "Absenken"], ["glaetten", "Glätten"], ["ebnen", "Einebnen"]],
   // D1: die vier Markerarten (Farbe der Stecknadel, siehe MARKER_ARTEN in store.js)
-  marker: [["ort", "Ort"], ["gefahr", "Gefahr"], ["notiz", "Notiz"], ["arbor", "Arbor"]],
+  // I4: „Beschriftung" ist die einzige Markervariante, die ein ELEMENT anlegt
+  // statt einer Nadel in der flachen S.marker-Liste. Der Unterschied ist
+  // gewollt und steht im Namen: eine Nadel ist eine Notiz fuer den Bauenden,
+  // eine Beschriftung gehoert ins Bild und in den PNG-Export.
+  marker: [["ort", "Ort"], ["gefahr", "Gefahr"], ["notiz", "Notiz"], ["arbor", "Arbor"],
+    ["beschriftung", "Beschriftung"]],
   // A3: DYNAMISCH — stempelVariantenNeu() haelt die Liste an der Bibliothek.
   // Die Werte sind die Stempelnamen; panels.js baut daraus ohne Zusatzcode
   // die Variantenknoepfe, weil es diese Tabelle ohnehin schon rendert.
@@ -253,6 +258,18 @@ var PARAMS = {
     { k: "streuung", l: "Streuradius", min: 5, max: 40, st: 0.5, d: 18 },
     { k: "baeumchen", l: "Bäumchen obendrauf", b: true, d: true }
   ],
+  /* I4 — Kartenbeschriftung. `text` braucht ein Textfeld; paramRow hat dafuer
+     den Zweig `def.txt` bekommen. Das Klickziel steht bewusst NICHT im Schema:
+     es ist ein verschachteltes Objekt ({art, ref}), und das Schema kennt nur
+     Skalare. Die Zielzeile baut ui/panels.js von Hand und laesst sie durch
+     zielPruefen laufen, bevor sie ins Element geht. */
+  "marker:beschriftung": [
+    { k: "text", l: "Text", txt: true, d: "" },
+    { k: "klasse", l: "Klasse", d: "ort", o: [["ort", "Ort"], ["region", "Region"],
+      ["gewaesser", "Gewässer"], ["gebirge", "Gebirge"], ["gefahr", "Gefahr"],
+      ["arbor", "Arbor"]] },
+    { k: "groesse", l: "Größe", min: 0.4, max: 3, st: 0.05, d: 1 }
+  ],
   "ranke:ranke": [
     { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },
     { k: "straenge", l: "Stränge", min: 3, max: 5, st: 1, d: 4 },
@@ -364,6 +381,33 @@ PARAMS["wegsuche:hecke"] = PARAMS["pfad:hecke"];
 var KARTE_PARAMS = [
   { k: "sprachfamilie", l: "Sprachfamilie der Karte", o: sprachfamilien(), d: "auto" }
 ];
+
+/* --- Erosion (I3) --------------------------------------------------------
+   Fuenf Regler von zweiundzwanzig Werten aus EROSION_STANDARD. Die Auswahl ist
+   nicht willkuerlich: Es sind die, deren Wirkung man im Bild ohne Erklaerung
+   erkennt. Kapazitaet, Traegheit und Verdunstung aendern das Ergebnis
+   ebenfalls, aber niemand kann vorhersagen wie — solche Regler stiften nur
+   Ratlosigkeit und stehen deshalb nicht im Panel. Wer sie braucht, ruft
+   starteErosion mit eigenen Werten.
+
+   Sitzungswerte, bewusst NICHT im Speicherformat: Erosion ist eine einmalige
+   Handlung, ihr Ergebnis steckt danach im Hoehenfeld (Format v3 als
+   `hoehenDelta`). Die Regler noch einmal mitzuspeichern hiesse, einen Zustand
+   zu fuehren, den nichts liest. */
+var EROSION_PARAMS = [
+  { k: "staerke", l: "Stärke", min: 0, max: 2, st: 0.05, d: 1 },
+  { k: "tropfenDichte", l: "Tropfen je Zelle", min: 0, max: 0.15, st: 0.005, d: 0.05 },
+  { k: "merkmalGroesse", l: "Rinnenbreite", min: 1, max: 6, st: 0.5, d: 2 },
+  { k: "haerteVarianz", l: "Härtevarianz", min: 0, max: 0.9, st: 0.05, d: 0.35 },
+  { k: "boeschung", l: "Böschungswinkel", min: 22, max: 52, st: 1, d: 34 }
+];
+
+var erosionRegler = {};
+(function () {
+  for (var i = 0; i < EROSION_PARAMS.length; i++) {
+    erosionRegler[EROSION_PARAMS[i].k] = EROSION_PARAMS[i].d;
+  }
+})();
 
 /* Ein Objekt mit Zugriffsfaellen statt eines schlichten Verweises auf S:
    paramRow (ui/panels.js) liest und schreibt `obj[def.k]` — mit diesem Objekt
@@ -659,6 +703,7 @@ function stempelSetzen(st, pos) {
 stempelBibliothekLaden();
 
 export { TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
+  EROSION_PARAMS, erosionRegler,
   schemaKey, defaultsFor, toolParams, curParams,
   copyParams, snapPt, finishDraw, cancelDraw, setTool,
   auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel,
