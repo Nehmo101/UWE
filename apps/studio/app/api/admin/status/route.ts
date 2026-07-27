@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertAdminStatusHasNoSecrets, prisma } from "@uwe/database/server";
-import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
+import { getAdminDashboardStatus } from "@uwe/host-cockpit";
 import { RATE_LIMITER_MODE, requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
 

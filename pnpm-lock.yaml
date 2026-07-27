@@ -61,6 +61,9 @@ importers:
       '@uwe/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@uwe/host-cockpit':
+        specifier: workspace:*
+        version: link:../../packages/host-cockpit
       '@uwe/mail':
         specifier: workspace:*
         version: link:../../packages/mail
@@ -434,6 +437,9 @@ importers:
       '@uwe/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@uwe/host-cockpit':
+        specifier: workspace:*
+        version: link:../../packages/host-cockpit
       '@uwe/host-monitor':
         specifier: workspace:*
         version: link:../../packages/host-monitor
@@ -977,6 +983,31 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/host-cockpit:
+    dependencies:
+      '@uwe/ai-brain':
+        specifier: workspace:*
+        version: link:../ai-brain
+      '@uwe/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.21
         version: 22.19.21
       '@uwe/config':
         specifier: workspace:*

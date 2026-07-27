@@ -32,7 +32,7 @@ describe("route pattern matching", () => {
 });
 
 describe("auditNavigation (pure)", () => {
-  const routes = ["/today", "/worlds", "/system", "/system/version"];
+  const routes = ["/today", "/worlds", "/admin", "/admin/tags"];
 
   it("flags active items without a route as dead links", () => {
     const items = [
@@ -44,7 +44,7 @@ describe("auditNavigation (pure)", () => {
   });
 
   it("flags planned items that now have a route as promotable", () => {
-    const items = [navItem({ id: "ver", href: "/system/version", status: "planned" })];
+    const items = [navItem({ id: "ver", href: "/admin/tags", status: "planned" })];
     const audit = auditNavigation(items, routes);
     assert.deepEqual(audit.promotable.map((e) => e.id), ["ver"]);
   });

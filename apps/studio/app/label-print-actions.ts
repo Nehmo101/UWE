@@ -20,12 +20,11 @@ export async function refreshPrintersAction(formData: FormData) {
   await requireStudioActionAuth();
   const user = await getCurrentAuthUser();
   if (!user) redirect("/login");
-  const returnTo = String(formData.get("returnTo") || "/system/printers");
+  const returnTo = String(formData.get("returnTo") || "/worlds");
   if (!hasQueueLabelPrintingConnector(await createConnectorService(prisma).summarize())) {
     redirect(`${returnTo}?error=${encodeURIComponent(LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE)}`);
   }
   await createLabelPrintQueueService().enqueuePrinterDiscover({ createdByUserId: user.id });
-  revalidatePath("/system/printers");
   redirect(`${returnTo}?refreshed=1`);
 }
 
@@ -57,7 +56,6 @@ export async function enqueueLabelPrintAction(formData: FormData) {
       format: (String(formData.get("format")) === "html" ? "html" : "pdf") as LabelPrintFormat, targetConnectorId: connectorId || null, createdByUserId: user.id,
     });
   } catch (e) { redirect(`${returnTo}?error=${encodeURIComponent(e instanceof Error ? e.message : "Fehler")}`); }
-  revalidatePath("/system/printers");
   revalidatePath(returnTo);
   redirect(`${returnTo}?queued=1`);
 }

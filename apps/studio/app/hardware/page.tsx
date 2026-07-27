@@ -5,7 +5,6 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, StudioShell } from "@/src/components/shell";
-import { SystemHubBanner } from "@/components/SystemHubBanner";
 import { HostUpdatePanel } from "@/components/HostUpdatePanel";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { formatStudioDateTime } from "@/src/lib/format";
@@ -17,7 +16,7 @@ import {
   toggleHardwareSetupStepAction,
   updateHardwareAction,
 } from "../life-admin-actions";
-import { getHomelabCockpitData } from "@/src/lib/homelab-dashboard";
+import { getHomelabCockpitData } from "@uwe/host-cockpit";
 import { AutoRefreshPanel } from "@/src/components/ux/AutoRefreshPanel";
 import {
   Alert,
@@ -99,7 +98,6 @@ export default async function HardwarePage() {
       />
 
       <div className="flex flex-col gap-6">
-        <SystemHubBanner />
         <HostUpdatePanel canTrigger={canTriggerHostUpdate} />
 
         {cockpit.urlWarnings.length > 0 && (
@@ -123,7 +121,7 @@ export default async function HardwarePage() {
             <h2 className="text-lg font-semibold tracking-tight">Service-Status</h2>
             <p className="text-sm text-muted-foreground">
               Stand: {formatStudioDateTime(cockpit.timestamp)} ·{" "}
-              <Link href="/system?tab=diagnose">System-Diagnose →</Link>
+              <span>Vollständige Diagnose: Brain → System</span>
             </p>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-3">
               {cockpit.serviceStatuses.map((service) => {

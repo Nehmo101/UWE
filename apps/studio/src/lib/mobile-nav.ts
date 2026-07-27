@@ -36,7 +36,7 @@ export function studioGlobalBottomNav(active: StudioGlobalBottomNavKey): StudioB
     { label: "Welten", href: "/worlds", icon: "◎", active: activeKey === "worlds" },
     { label: "Erstellen", href: "/capture", icon: "+", active: activeKey === "create" },
     { label: "Medien & KI", href: "/ai", icon: "✦", active: activeKey === "media-ai" },
-    { label: "System", href: "/system", icon: "⚙", active: activeKey === "system" },
+    { label: "Admin", href: "/admin", icon: "⚙", active: activeKey === "system" },
   ];
 }
 
@@ -52,7 +52,7 @@ export function studioAdminBottomNav(active: StudioAdminBottomNavKey): StudioBot
       active: active === "search",
     },
     { label: "KI", href: "/life-brain", icon: "✦", active: active === "ai" },
-    { label: "Mehr", href: "/system", icon: "☰", active: active === "more" },
+    { label: "Mehr", href: "/admin", icon: "☰", active: active === "more" },
   ];
 }
 

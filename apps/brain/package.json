@@ -19,6 +19,7 @@
     "@uwe/brain-assistant": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
+    "@uwe/host-cockpit": "workspace:*",
     "@uwe/mail": "workspace:*",
     "@uwe/mail-core": "workspace:*",
     "@uwe/product-contracts": "workspace:*",

@@ -195,11 +195,11 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
             {!hasQueueLabelPrintingConnector(connectorSummary) ? (
               <p className="text-sm text-muted-foreground">
                 RTX Label-Druck benötigt Queue- oder Hybrid-Modus.{" "}
-                <a href="/system/rtx-connector">Connector</a>
+                <span>Kommandozentrale</span>
               </p>
             ) : flatPrinters.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Keine Drucker. <a href="/system/printers">Suchen</a>
+                Keine Drucker. <span>In der Kommandozentrale suchen</span>
               </p>
             ) : (
               <PrintListRtxForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />

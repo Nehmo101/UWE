@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 import { ROUTING_LABELS } from "./constants";
 import type { GatewayDashboard } from "./types";
@@ -20,7 +19,7 @@ export function AiGatewayOverviewCard({ data }: { data: GatewayDashboard }) {
           <p className="text-base font-semibold">
             RTX: <strong>{rtxLabel}</strong>
             {" · "}
-            <Link href="/system/rtx-connector">Connector</Link>
+            <span>Connector: Kommandozentrale</span>
           </p>
         </div>
         {rtxHealth.message && <p className="text-sm text-muted-foreground">{rtxHealth.message}</p>}

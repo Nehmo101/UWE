@@ -17,7 +17,7 @@ import {
   type HardwareDeviceCardView,
 } from "@uwe/database/server";
 import { createLifeAdminService } from "@uwe/database/server";
-import { getAdminDashboardStatus } from "./admin-dashboard-status";
+import { getAdminDashboardStatus } from "./admin-status";
 
 export interface HomelabCockpitData {
   timestamp: string;

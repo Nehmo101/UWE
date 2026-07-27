@@ -1,5 +1,14 @@
 /**
- * System area navigation — owner/admin operations.
+ * System area navigation — was von Studios Betriebsfläche übrig ist.
+ *
+ * Betrieb und Einrichtung laufen nicht mehr im Browser: der System-Hub liegt in
+ * Brain (`/system`), Host-Setup, Cloudflare, RTX-Verbindung, Drucker, Secrets,
+ * Migrationen, Tokens, Webhooks, Einstellungen und Backups laufen über die
+ * Kommandozentrale auf dem UWE-Host (Notiz Lasse, Abschnitt D).
+ *
+ * Was hier bleibt, sind die Studio-eigenen Flächen: KI-Governance, der Verlauf,
+ * Tags, Design und das eigene Konto.
+ *
  * Part of the central navigation contract (see ./types.ts).
  */
 import type { NavGroup } from "./types";
@@ -7,13 +16,6 @@ import type { NavGroup } from "./types";
 const SECTION = "System";
 
 export const ADMIN_HUB_SECTIONS = [
-  {
-    title: "Setup & Host",
-    links: [
-      { href: "/admin/setup", label: "Einrichtung" },
-      { href: "/system", label: "System-Hub" },
-    ],
-  },
   {
     title: "Content & KI",
     links: [
@@ -26,7 +28,7 @@ export const ADMIN_HUB_SECTIONS = [
     title: "Betrieb",
     links: [
       { href: "/admin/activity", label: "Verlauf" },
-      { href: "/backup", label: "Backup" },
+      { href: "/hardware", label: "Hardware-Cockpit" },
       { href: "/mail", label: "Mail Center" },
       { href: "/worlds", label: "Welten verwalten", primary: true },
     ],
@@ -38,18 +40,6 @@ export const SYSTEM_NAV: NavGroup[] = [
     id: "system-overview",
     title: "Übersicht",
     items: [
-      {
-        id: "system-hub",
-        label: "System-Hub",
-        href: "/system",
-        icon: "server",
-        group: "Übersicht",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["system", "status", "diagnose"],
-      },
       {
         id: "system-admin",
         label: "Admin Übersicht",
@@ -89,105 +79,9 @@ export const SYSTEM_NAV: NavGroup[] = [
     ],
   },
   {
-    id: "system-setup-host",
-    title: "Setup & Host",
-    items: [
-      {
-        id: "system-setup",
-        label: "Owner-Einrichtung",
-        href: "/admin/setup",
-        icon: "sliders-horizontal",
-        group: "Setup & Host",
-        section: SECTION,
-        permission: ["owner"],
-        status: "active",
-        source: "system",
-        keywords: ["setup", "einrichtung", "owner"],
-      },
-      {
-        id: "system-host-control",
-        label: "Host Control",
-        href: "/system/host-control",
-        icon: "server-cog",
-        group: "Setup & Host",
-        section: SECTION,
-        permission: ["owner"],
-        status: "active",
-        source: "system",
-        keywords: ["host", "control", "url", "healthcheck"],
-      },
-      {
-        id: "system-cloudflare",
-        label: "Cloudflare",
-        href: "/system/cloudflare",
-        icon: "cloud",
-        group: "Setup & Host",
-        section: SECTION,
-        permission: ["owner"],
-        status: "active",
-        source: "system",
-        keywords: ["cloudflare", "tunnel", "access", "dns"],
-      },
-      {
-        id: "system-rtx",
-        label: "RTX Connector",
-        href: "/system/rtx-connector",
-        icon: "cpu",
-        group: "Setup & Host",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["rtx", "connector", "ollama", "host"],
-      },
-      {
-        id: "system-printers",
-        label: "Drucker",
-        href: "/system/printers",
-        icon: "printer",
-        group: "Setup & Host",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["drucker", "printer", "label", "print"],
-      },
-    ],
-  },
-  {
-    id: "system-access",
-    title: "Benutzer & Sicherheit",
-    items: [
-    ],
-  },
-  {
     id: "system-operations",
     title: "Betrieb",
     items: [
-      {
-        id: "system-backup",
-        label: "Backup & Restore",
-        href: "/backup",
-        icon: "database-backup",
-        group: "Betrieb",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["backup", "restore", "sicherung"],
-      },
-      {
-        id: "system-diagnose",
-        label: "Diagnose",
-        href: "/system?tab=diagnose",
-        icon: "stethoscope",
-        group: "Betrieb",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["diagnose", "status", "leak", "env", "systemstatus"],
-      },
       {
         id: "system-tags",
         label: "Tags",
@@ -208,7 +102,7 @@ export const SYSTEM_NAV: NavGroup[] = [
     items: [
       {
         id: "system-settings",
-        label: "Einstellungen",
+        label: "Design & Theme",
         href: "/settings",
         icon: "settings",
         group: "Einstellungen",
@@ -216,7 +110,7 @@ export const SYSTEM_NAV: NavGroup[] = [
         permission: ["owner", "admin", "dm"],
         status: "active",
         source: "system",
-        keywords: ["settings", "einstellungen", "erscheinungsbild", "theme"],
+        keywords: ["settings", "einstellungen", "erscheinungsbild", "theme", "design"],
       },
       {
         id: "system-account-password",

@@ -237,7 +237,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
             ) : (
               <p className="text-sm text-muted-foreground">
                 {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verfügbar.{" "}
-                <Link href="/system/rtx-connector">RTX Connector einrichten →</Link>
+                <span>RTX Connector in der Kommandozentrale einrichten</span>
               </p>
             )}
           </CardContent>

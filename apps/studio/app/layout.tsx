@@ -31,7 +31,6 @@ import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { StudioSessionChrome } from "../components/StudioSessionChrome";
 import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
-import { NavVisibilityBootstrap } from "../components/NavVisibilityBootstrap";
 import { enforceStudioPageAuth, getCurrentAuthUser } from "@/src/lib/auth";
 import { enforceStudioMaintenance } from "@/src/lib/maintenance";
 import "@uwe/shared-ui/uwe.css";
@@ -121,7 +120,6 @@ export default async function RootLayout({
           serverUpdatedAt={updatedAt}
           customThemes={customThemes}
         >
-          <NavVisibilityBootstrap hiddenNavIds={settings.app.hiddenNavIds ?? []} />
           <ThemeDocumentSync theme={serverTheme} />
           {children}
           <GlobalCaptureFab />

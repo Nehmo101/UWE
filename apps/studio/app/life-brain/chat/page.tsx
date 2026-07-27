@@ -23,7 +23,7 @@ export default async function LifeBrainChatPage() {
           Master-Admin:{" "}
           <Link href="/admin/ai-gateway">KI-Gateway</Link> → User-Freigaben →{" "}
           <code>AI_KNOWLEDGE_USE</code> vergeben. RTX-Setup:{" "}
-          <Link href="/system/rtx-connector">RTX Connector</Link>.
+          <strong>Kommandozentrale → RTX-Verbindung</strong>.
         </p>
       </StudioShell>
     );

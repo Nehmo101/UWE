@@ -3,7 +3,6 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { EmptyState, LoadingState } from "@uwe/shared-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
 import { useAiPromptCapabilities } from "@/src/lib/use-ai-prompt-capabilities";
@@ -482,7 +481,7 @@ export function AiBrainSidebar({
         <>
           <p className="ai-brain-meta">
             Modell vom RTX Connector — Ausführung über die lokale RTX-Queue. Standards auf der{" "}
-            <Link href="/system/rtx-connector">RTX-Connector-Seite</Link>.
+            <span className="ai-brain-strong">Kommandozentrale</span> auf dem Host.
           </p>
           <ConnectorModelPicker
             label="Modell"
@@ -500,7 +499,7 @@ export function AiBrainSidebar({
           <p className="ai-brain-meta">
             Vom RTX Connector gemeldete Modelle. Auswahl setzt das Modell für diesen Run; die
             Ausführung läuft lokal über die RTX-Queue. Standards pflegst du auf der{" "}
-            <Link href="/system/rtx-connector">RTX-Connector-Seite</Link>.
+            <span className="ai-brain-strong">Kommandozentrale</span> auf dem Host.
           </p>
           <ConnectorModelPicker
             label="Connector-Modell verwenden"

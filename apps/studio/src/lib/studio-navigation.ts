@@ -248,13 +248,11 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/calendar") ||
     normalized.startsWith("/brain") ||
     normalized.startsWith("/life-brain") ||
-    normalized.startsWith("/admin/agent-jobs") ||
-    normalized.startsWith("/system/rtx-connector")
+    normalized.startsWith("/admin/agent-jobs")
   ) {
     return "media-ai";
   }
   if (
-    normalized.startsWith("/system") ||
     normalized.startsWith("/admin") ||
     normalized.startsWith("/jobs") ||
     normalized.startsWith("/backup") ||
@@ -334,8 +332,6 @@ export const STUDIO_PALETTE_EXTRA: {
   { id: "kitchen-shopping", label: "Einkaufsliste", href: "/kitchen/shopping", group: "Werkzeuge / Küche", keywords: ["shopping", "einkauf"] },
   { id: "workshop-rental", label: "Terrain-Verleih", href: "/workshop/rental", group: "Organisation / Werkstatt", keywords: ["rental", "verleih"] },
   { id: "workshop-print-profiles", label: "Druckprofile", href: "/workshop/print-profiles", group: "Organisation / Werkstatt", keywords: ["print", "3d"] },
-  { id: "system-health", label: "Health-Ampel", href: "/system/health", group: "System / Betrieb", keywords: ["health", "performance"] },
-  { id: "system-version", label: "Version & Updates", href: "/system/version", group: "System / Betrieb", keywords: ["version", "build"] },
   { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },
   { id: "mail-compose", label: "E-Mail verfassen", href: "/mail/compose", group: "AI & Generatoren / Mail", keywords: ["mail", "compose", "email"] },
   { id: "life-brain", label: "Life Brain", href: "/life-brain", group: "Knowledge & Brain", keywords: ["life", "personal", "brain"] },

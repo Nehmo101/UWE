@@ -84,13 +84,13 @@ describe("studio navigation", () => {
   });
 
   it("resolves active state for nested routes", () => {
-    // /admin/users moved to the Command Center (Abschnitt D); the setup page is
-    // the remaining Studio admin route with a nested path.
-    const sidebar = studioSidebar("/admin/setup/mail");
-    const setupActive = sidebar
+    // Studio's admin routes moved to Brain and the Command Center (Abschnitt D);
+    // the tag manager is the remaining route with a nested path.
+    const sidebar = studioSidebar("/admin/tags/orte");
+    const tagsActive = sidebar
       .flatMap((group) => group.items)
-      .some((item) => item.id === "system-setup" && item.active);
-    assert.ok(setupActive);
+      .some((item) => item.id === "system-tags" && item.active);
+    assert.ok(tagsActive);
   });
 
   it("builds command palette entries from the IA", () => {
@@ -98,7 +98,7 @@ describe("studio navigation", () => {
     assert.ok(commands.some((cmd) => cmd.href === "/today"));
     assert.ok(commands.some((cmd) => cmd.href === "/worlds"));
     assert.ok(commands.some((cmd) => cmd.href === "/capture"));
-    assert.ok(commands.some((cmd) => cmd.href === "/system"));
+    assert.ok(commands.some((cmd) => cmd.href === "/admin"));
     assert.ok(commands.every((cmd) => cmd.group.includes(" / ")));
   });
 
@@ -114,13 +114,7 @@ describe("studio navigation", () => {
     }
   });
 
-  it("marks system hub active for /system/* routes and admin hub for /admin/*", () => {
-    const systemSidebar = studioSidebar("/system/cloudflare");
-    const systemHubActive = systemSidebar
-      .flatMap((group) => group.items)
-      .some((item) => item.id === "system-hub" && item.active);
-    assert.ok(systemHubActive);
-
+  it("marks the admin hub active for /admin/* routes", () => {
     const adminSidebar = studioSidebar("/admin/status");
     const adminHubActive = adminSidebar
       .flatMap((group) => group.items)

@@ -73,11 +73,11 @@ export function TodayDashboardClient({
             <CardContent className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-2">
                 {[
-                  { href: "/system?tab=diagnose", status: statusDot(data.systemOk), label: `UWE ${data.systemLabel}` },
+                  { href: "/hardware", status: statusDot(data.systemOk), label: `UWE ${data.systemLabel}` },
                   { href: "/hardware", status: statusDot(data.dbOk), label: `DB ${data.dbOk ? "OK" : "Fehler"}` },
                   { href: "/hardware", status: statusDot(data.backupOk, true), label: `Backup ${data.backupOk ? "OK" : "prüfen"}` },
                   {
-                    href: "/system/rtx-connector",
+                    href: "/hardware",
                     status: statusDot(data.rtxReady, true),
                     label: `RTX ${data.rtxReady ? "bereit" : "offline"}`,
                   },
@@ -131,7 +131,7 @@ export function TodayDashboardClient({
                 </Alert>
               )}
               <p className="text-sm text-muted-foreground">
-                <Link href="/system?tab=diagnose">Details in der System-Diagnose →</Link>
+                <Link href="/hardware">Details im Hardware-Cockpit →</Link>
               </p>
             </CardContent>
           </Card>

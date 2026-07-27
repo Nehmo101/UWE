@@ -13,8 +13,8 @@ import {
 import { createMailPortalService } from "@uwe/mail/portal";
 import { createMaintenanceService } from "@uwe/database/maintenance";
 import { createPantryService } from "@uwe/kitchen";
-import { getAdminDashboardStatus } from "./admin-dashboard-status";
-import { getHomelabCockpitData } from "./homelab-dashboard";
+import { getAdminDashboardStatus } from "@uwe/host-cockpit";
+import { getHomelabCockpitData } from "@uwe/host-cockpit";
 
 export interface TodayMailSummary {
   recentFailed: number;

@@ -21,7 +21,7 @@ describe("studio mobile nav", () => {
     const nav = studioGlobalBottomNav("today");
     assert.deepEqual(
       nav.map((item) => item.label),
-      ["Heute", "Welten", "Erstellen", "Medien & KI", "System"],
+      ["Heute", "Welten", "Erstellen", "Medien & KI", "Admin"],
     );
     assert.equal(nav.length, 5);
     assert.equal(nav[0]?.active, true);
@@ -29,7 +29,7 @@ describe("studio mobile nav", () => {
     assert.equal(nav[1]?.href, "/worlds");
     assert.equal(nav[2]?.href, "/capture");
     assert.equal(nav[3]?.href, "/ai");
-    assert.equal(nav[4]?.href, "/system");
+    assert.equal(nav[4]?.href, "/admin");
   });
 
   it("maps global bottom nav hrefs into the central Studio IA", () => {
@@ -93,7 +93,7 @@ describe("studio mobile nav", () => {
     assert.equal(nav[1]?.href, "/capture");
     assert.equal(nav[2]?.href, "/search?scope=admin");
     assert.equal(nav[3]?.href, "/life-brain");
-    assert.equal(nav[4]?.href, "/system");
+    assert.equal(nav[4]?.href, "/admin");
   });
 
   it("resolves admin nav for Daily Admin OS paths", () => {
@@ -103,7 +103,7 @@ describe("studio mobile nav", () => {
 
     const projectNav = resolveStudioBottomNav("/projects/abc");
     assert.equal(projectNav[4]?.active, true);
-    assert.equal(projectNav[4]?.href, "/system");
+    assert.equal(projectNav[4]?.href, "/admin");
 
     const searchNav = resolveStudioBottomNav("/search?scope=admin");
     assert.equal(searchNav[2]?.active, true);
@@ -113,7 +113,7 @@ describe("studio mobile nav", () => {
     const nav = resolveStudioBottomNav("/worlds/terra/dashboard");
     assert.deepEqual(
       nav.map((item) => item.label),
-      ["Heute", "Welten", "Erstellen", "Medien & KI", "System"],
+      ["Heute", "Welten", "Erstellen", "Medien & KI", "Admin"],
     );
     assert.equal(nav[1]?.active, true);
   });

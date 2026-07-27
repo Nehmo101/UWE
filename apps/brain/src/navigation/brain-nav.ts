@@ -83,6 +83,12 @@ export const BRAIN_NAV_SECTIONS: BrainNavSection[] = [
       },
       { href: "/mail", label: "Mail", icon: "✉", keywords: ["email", "postfach", "nachrichten"] },
       { href: "/calendar", label: "Kalender", icon: "◷", keywords: ["calendar", "termine", "events"] },
+      {
+        href: "/system",
+        label: "System",
+        icon: "⚙",
+        keywords: ["status", "homelab", "diagnose", "host", "betrieb", "rtx", "cloudflare"],
+      },
     ],
   },
 ];

@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { buttonVariants } from "@/src/components/ui/button";
 import { STUDIO_SESSION_ENTRY_PATH } from "@uwe/auth";
 import { AiGatewayWizard } from "@/components/AiGatewayWizard";
 import { requireOwner } from "@/src/lib/auth";
@@ -14,7 +12,6 @@ export default async function AiGatewayAdminPage() {
         <BreadcrumbTrail
           items={[
             { label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH },
-            { label: "RTX Connector", href: "/system/rtx-connector" },
             { label: "KI & RTX Fallback" },
           ]}
         />
@@ -23,11 +20,6 @@ export default async function AiGatewayAdminPage() {
       <PageHeader
         title="KI & RTX Fallback"
         summary="Master-Admin-Wizard: RTX bevorzugen, Cloud-Fallback optional, Privacy-Regeln, Budgets und User-Freigaben."
-        actions={
-          <Link href="/system/rtx-connector" className={buttonVariants({ variant: "ghost" })}>
-            RTX Connector
-          </Link>
-        }
       />
       <AiGatewayWizard />
     </SystemShell>
