@@ -182,7 +182,8 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
                 />
               </div>
               <p className="text-sm text-muted-foreground">
-                Benutzer und Rollen: <Link href="/admin/users">Benutzerverwaltung</Link>
+                Zugänge (Portal / Studio / Brain / Family) vergibst du im Command Center
+                unter &bdquo;Zugänge&ldquo;.
               </p>
               <div>
                 <Button type="submit">Speichern</Button>
@@ -343,12 +344,6 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
             <div className="mt-4 flex flex-wrap gap-2">
               <Link href="/system?tab=diagnose" className={buttonVariants()}>
                 Vollständige Diagnose
-              </Link>
-              <Link href="/admin/status" className={buttonVariants({ variant: "outline" })}>
-                Erweiterte Karten
-              </Link>
-              <Link href="/admin/secrets" className={buttonVariants({ variant: "outline" })}>
-                Secrets-Status
               </Link>
               <Link href="/system?tab=diagnose" className={buttonVariants({ variant: "outline" })}>
                 System-Hub Diagnose

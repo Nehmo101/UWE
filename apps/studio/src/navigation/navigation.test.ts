@@ -84,11 +84,13 @@ describe("studio navigation", () => {
   });
 
   it("resolves active state for nested routes", () => {
-    const sidebar = studioSidebar("/admin/users/abc");
-    const usersActive = sidebar
+    // /admin/users moved to the Command Center (Abschnitt D); the setup page is
+    // the remaining Studio admin route with a nested path.
+    const sidebar = studioSidebar("/admin/setup/mail");
+    const setupActive = sidebar
       .flatMap((group) => group.items)
-      .some((item) => item.id === "system-users" && item.active);
-    assert.ok(usersActive);
+      .some((item) => item.id === "system-setup" && item.active);
+    assert.ok(setupActive);
   });
 
   it("builds command palette entries from the IA", () => {

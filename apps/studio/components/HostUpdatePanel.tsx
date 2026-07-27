@@ -253,7 +253,7 @@ export function HostUpdatePanel({ canTrigger }: Props) {
           <Link href="/backup" className={buttonVariants({ variant: "ghost" })}>
             Backup vor Update
           </Link>
-          <Link href="/admin/audit-log" className={buttonVariants({ variant: "ghost" })}>
+          <Link href="/admin/activity" className={buttonVariants({ variant: "ghost" })}>
             Audit-Log
           </Link>
         </div>

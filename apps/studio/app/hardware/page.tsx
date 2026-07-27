@@ -163,7 +163,7 @@ export default async function HardwarePage() {
             })}
           </ul>
           <p className="text-sm text-muted-foreground">
-            Details: <Link href="/admin/security">Security Dashboard →</Link>
+            Details: Command Center → Betrieb → Security.
           </p>
         </section>
 

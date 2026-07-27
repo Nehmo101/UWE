@@ -334,7 +334,6 @@ export const STUDIO_PALETTE_EXTRA: {
   { id: "kitchen-shopping", label: "Einkaufsliste", href: "/kitchen/shopping", group: "Werkzeuge / Küche", keywords: ["shopping", "einkauf"] },
   { id: "workshop-rental", label: "Terrain-Verleih", href: "/workshop/rental", group: "Organisation / Werkstatt", keywords: ["rental", "verleih"] },
   { id: "workshop-print-profiles", label: "Druckprofile", href: "/workshop/print-profiles", group: "Organisation / Werkstatt", keywords: ["print", "3d"] },
-  { id: "admin-audit-log", label: "Audit Log", href: "/admin/audit-log", group: "System / Sicherheit", keywords: ["audit", "security"] },
   { id: "system-health", label: "Health-Ampel", href: "/system/health", group: "System / Betrieb", keywords: ["health", "performance"] },
   { id: "system-version", label: "Version & Updates", href: "/system/version", group: "System / Betrieb", keywords: ["version", "build"] },
   { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },

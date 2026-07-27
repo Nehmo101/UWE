@@ -152,11 +152,8 @@ export function SystemHealthClient({
             {metrics.pendingMigrations > 0 ? (
               <>
                 {" "}
-                ({metrics.pendingMigrations} offen —{" "}
-                <Link href="/admin/migrations" className="text-primary hover:underline">
-                  Inspector →
-                </Link>
-                )
+                ({metrics.pendingMigrations} offen — Command Center → Betrieb →
+                Migrationen)
               </>
             ) : null}
           </li>

@@ -103,11 +103,7 @@ export default async function SystemHostControlPage() {
               </Link>
             </p>
             <p className="text-muted-foreground">
-              Audit-Log:{" "}
-              <Link href="/admin/audit-log" className="underline">
-                /admin/audit-log
-              </Link>{" "}
-              · Cloudflare:{" "}
+              Audit-Log: Command Center → Betrieb · Cloudflare:{" "}
               <Link href="/system/cloudflare" className="underline">
                 /system/cloudflare
               </Link>{" "}
