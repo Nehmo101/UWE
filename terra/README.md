@@ -39,6 +39,15 @@ Haengebruecken. Objekt-Werkzeug: Variante "Schwebeinseln" und "Nur Typ".
 
 ## Offener Stand
 
+- Runde H, Welle 4: die zuletzt offenen Punkte sind erledigt —
+  Struktur-Generatoren fuer Burg, Werft und Kloster (neue Flaechen-
+  Varianten), genBlattstadt mit echtem Gassennetz in Blattkoordinaten,
+  Drift-Animation an Bruchkanten (Shader-Patch aus der Bruchmaske),
+  Detailstufen fuer ferne Terrain-Patches (bis -72 % Dreiecke auf 1024er
+  Karten, nahtfrei ueber angepasste Randindizes) und regionsweises Undo
+  (Pinselstrich auf 1024er: 6,7 kB statt 4,2 MB).
+  Offen bleibt nur die Sichtpruefung im Browser (Checkliste in PR #806).
+
 - Runde H, Welle 3 (Weltausbau + Ghibli-Bildaufbau) ist fertig: VFX-System
   mit Wetter (Regen/Schnee/Blueten/Sporen/Staub, Arbor-Lichtflug), Godrays,
   Farbskript, Papierkante, gemalte Wasserstreifen; Weltgenerator ("Welt

@@ -84,8 +84,56 @@ const FAMILIEN = {
  *  solange vfx.js ihn nicht hochzaehlt — das ist der ehrlichere Zustand als
  *  ein fehlender Schluessel: 0 heisst „Patch nicht angekommen". */
 const patchInfo = { wrap: 0, kuehl: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, ranken: 0,
-  normale: 0, arbor: 0, schnee: 0, vfx: 0, versuche: 0 };
+  normale: 0, arbor: 0, schnee: 0, drift: 0, vfx: 0, versuche: 0 };
 if (typeof window !== 'undefined') window.terraPatchInfo = patchInfo;
+
+/* --- B4: Zugang zur Bruchmaske ------------------------------------------
+   Die Bruchmaske samt Uniform-Buendel lebt in generators/paths.js. Dieses
+   Modul darf sie NICHT statisch importieren: paths.js importiert seinerseits
+   materials.js und legt schon beim Modulstart Materialien an (terraMat, das
+   FAMILIEN liest). Ein statischer Import der Bruchmasken-Uniforms aus
+   generators/paths.js drehte den Auswertungszyklus um — paths.js liefe dann VOR dem
+   Rumpf dieses Moduls und stiesse auf FAMILIEN in der temporalen Todeszone
+   (nachgestellt in node: "ReferenceError: Cannot access 'FAMILIEN' before
+   initialization", die ganze App startet nicht mehr).
+
+   Stattdessen reicht generators/geometry.js — die Datei, die auch die
+   driftenden Pools definiert — den MODULNAMENSRAUM von paths.js hier herein.
+   Gelesen wird er ausschliesslich in onBeforeCompile, also lange nach jedem
+   Modulstart; weil ein Namensraum lebende Bindungen traegt, ist die
+   Auswertungsreihenfolge dabei egal (ein am Modulstart kopiertes
+   bruchMaskeUniforms waere je nach Einstiegspunkt `undefined` gewesen). */
+var bruchQuelle = null;
+function setBruchQuelle(ns) { bruchQuelle = ns || null; }
+function bruchUniforms() {
+  return (bruchQuelle && bruchQuelle.bruchMaskeUniforms) || null;
+}
+
+/* --- Gemeinsame Vertexstufe fuer alle Weltversatz-Patches ----------------
+   Wind (8) und Bruchdrift (9) verschieben BEIDE die Weltposition und muessen
+   dafuer denselben Anker #include <project_vertex> ersetzen. Wuerde jeder das
+   fuer sich tun, fraesse der zweite Patch den ersten (bzw. faende seinen
+   Anker nicht mehr). Diese Stufe baut den Anker deshalb EINMAL um und laesst
+   zwischen Weltposition und Projektion eine Marke stehen; jeder Versatz haengt
+   seine Zeilen VOR die Marke. Erzeugte Reihenfolge: Weltposition → Wind →
+   Drift → Projektion, beide Summanden kommen also an.
+
+   USE_BATCHING wird hier bewusst nicht behandelt (wie schon im bisherigen
+   Wind-Patch): das Projekt kennt nur InstancedMesh, keine BatchedMesh. */
+var VERSATZ_MARKE = '// terraVersatz\n';
+function versatzStufe(shader) {
+  if (shader.vertexShader.indexOf(VERSATZ_MARKE) >= 0) return true;
+  var pv = '#include <project_vertex>';
+  if (shader.vertexShader.indexOf(pv) < 0) return false;
+  shader.vertexShader = shader.vertexShader.replace(pv,
+    'vec4 terraMV2 = vec4( transformed, 1.0 );\n' +
+    '#ifdef USE_INSTANCING\n  terraMV2 = instanceMatrix * terraMV2;\n#endif\n' +
+    'vec4 terraWelt2 = modelMatrix * terraMV2;\n' +
+    VERSATZ_MARKE +
+    'vec4 mvPosition = viewMatrix * terraWelt2;\n' +
+    'gl_Position = projectionMatrix * mvPosition;');
+  return true;
+}
 
 function ersetze(shader, feld, alt, neu, patchName) {
   if (shader[feld].indexOf(alt) < 0) {
@@ -399,28 +447,112 @@ function terraPatch(shader, opts) {
 
   shader.fragmentShader = kopfF + shader.fragmentShader;
 
-  // (8) Wind: ersetzt project_vertex, verschiebt die Weltposition mit der
-  //     gemeinsamen Boee; Auslenkung mit uv.y gewichtet (Fuss bleibt stehen).
+  // Kopf des VERTEX-Shaders: wird von (8) und (9) gefuellt und ganz am Ende
+  // EINMAL vorangestellt — so kann uWindZeit von beiden gebraucht und trotzdem
+  // nur einmal deklariert werden.
+  var kopfV = '';
+
+  // (8) Wind: verschiebt die Weltposition mit der gemeinsamen Boee;
+  //     Auslenkung mit uv.y gewichtet (Fuss bleibt stehen).
   if (opts && opts.wind) {
     shader.uniforms.uWindZeit = windUniforms.uWindZeit;
     shader.uniforms.uWindStaerke = windUniforms.uWindStaerke;
-    var pv = '#include <project_vertex>';
-    if (shader.vertexShader.indexOf(pv) >= 0 && shader.vertexShader.indexOf('#include <uv_vertex>') >= 0) {
-      shader.vertexShader = 'uniform float uWindZeit;\nuniform float uWindStaerke;\n' +
-        WIND_GLSL + '\n' + shader.vertexShader.replace(pv,
-        'vec4 terraMV2 = vec4( transformed, 1.0 );\n' +
-        '#ifdef USE_INSTANCING\n  terraMV2 = instanceMatrix * terraMV2;\n#endif\n' +
-        'vec4 terraWelt2 = modelMatrix * terraMV2;\n' +
-        'vec2 terraWehen = terraWind( terraWelt2.xyz, uWindZeit ) * uWindStaerke * ' +
-          (opts.wind.amp || 0.35).toFixed(3) + ' * uv.y;\n' +
-        'terraWelt2.xz += terraWehen;\n' +
-        'vec4 mvPosition = viewMatrix * terraWelt2;\n' +
-        'gl_Position = projectionMatrix * mvPosition;');
-      patchInfo.wind++;
+    if (shader.vertexShader.indexOf('#include <uv_vertex>') >= 0 && versatzStufe(shader)) {
+      kopfV += 'uniform float uWindZeit;\nuniform float uWindStaerke;\n' + WIND_GLSL + '\n';
+      if (ersetze(shader, 'vertexShader', VERSATZ_MARKE,
+          'vec2 terraWehen = terraWind( terraWelt2.xyz, uWindZeit ) * uWindStaerke * ' +
+            (opts.wind.amp || 0.35).toFixed(3) + ' * uv.y;\n' +
+          'terraWelt2.xz += terraWehen;\n' + VERSATZ_MARKE, 'wind')) {
+        patchInfo.wind++;
+      }
     } else {
       console.warn('terra: Shader-Patch "wind" fand seinen Anker nicht.');
     }
   }
+
+  // (9) B4 — Bruchdrift: Terra ist zerrissen; nahe einer Bruchkante hat die
+  //     Schwerkraft keinen festen Griff mehr. Kleine, leichte Objekte taumeln
+  //     dort langsam — waagerecht driftend, senkrecht leicht steigend und
+  //     sinkend, dazu eine kleine Eigendrehung um den eigenen Fusspunkt.
+  //
+  //     Ankerpunkt der Instanz: modelMatrix * instanceMatrix * (0,0,0,1). Der
+  //     ist je Instanz KONSTANT — deshalb wird die Maske genau einmal pro
+  //     Instanz abgetastet, das Netz selbst nicht verzerrt, und der innere
+  //     Zweig ( terraDriftM > 0 ) ist ueber alle Vertizes einer Instanz
+  //     kohaerent (weit von der Kante entfernte Instanzen kosten nur einen
+  //     Texturzugriff).
+  //
+  //     Abschaltung: uBruchStaerke ist ohne Bruchkanten-Element 0 (paths.js,
+  //     bruchMaskeFertig) — der komplette Zweig faellt dann uniform-kohaerent
+  //     weg und das Bild ist identisch zu einer Fassung ohne diesen Patch.
+  //     Ausserhalb der Karte klemmt ClampToEdge auf die Randtexel; wie in
+  //     world/water.js wird der Wert dort deshalb hart auf 0 gesetzt.
+  //
+  //     Bekannte Ungenauigkeit (wie beim Wind): vTerraW/vTerraN entstehen aus
+  //     dem UNverschobenen `transformed`. Licht, Nebel und Schnee rechnen also
+  //     mit der Ruhelage — bei Amplituden unter einer Welteinheit unsichtbar.
+  if (opts && opts.drift) {
+    var bu = bruchUniforms();
+    if (!bu) {
+      console.warn('terra: Shader-Patch "bruchdrift" findet die Bruchmaske nicht — ' +
+        'Truemmer an Bruchkanten stehen still.');
+    } else if (!versatzStufe(shader)) {
+      console.warn('terra: Shader-Patch "bruchdrift" fand seinen Anker nicht — ' +
+        'Truemmer an Bruchkanten stehen still.');
+    } else {
+      shader.uniforms.uBruchMaske = bu.uBruchMaske;
+      shader.uniforms.uBruchAbb = bu.uBruchAbb;
+      shader.uniforms.uBruchStaerke = bu.uBruchStaerke;
+      shader.uniforms.uWindZeit = windUniforms.uWindZeit;
+      // Zeitquelle ist bewusst die WINDzeit: eine zweite Uhr brauchte ein
+      // zweites Uniform und einen zweiten Tick, ohne dass man den Unterschied
+      // saehe. uWindStaerke bleibt draussen — die Kante taumelt auch bei
+      // Windstille, das ist ihr Wesen und nicht das Wetter.
+      if (kopfV.indexOf('uniform float uWindZeit;') < 0) kopfV += 'uniform float uWindZeit;\n';
+      kopfV += 'uniform sampler2D uBruchMaske;\nuniform vec2 uBruchAbb;\n' +
+        'uniform float uBruchStaerke;\n';
+      var dAmp = opts.drift.amp;
+      if (ersetze(shader, 'vertexShader', VERSATZ_MARKE,
+          'if ( uBruchStaerke > 0.0 ) {\n' +
+          'vec4 terraDriftO = vec4( 0.0, 0.0, 0.0, 1.0 );\n' +
+          '#ifdef USE_INSTANCING\n  terraDriftO = instanceMatrix * terraDriftO;\n#endif\n' +
+          '  vec3 terraDriftA = ( modelMatrix * terraDriftO ).xyz;\n' +
+          '  vec2 terraDriftUV = terraDriftA.xz * uBruchAbb.x + uBruchAbb.y;\n' +
+          '  vec2 terraDriftIn = step( vec2( 0.0 ), terraDriftUV ) * step( terraDriftUV, vec2( 1.0 ) );\n' +
+          '  float terraDriftM = texture2D( uBruchMaske, terraDriftUV ).r\n' +
+          '    * terraDriftIn.x * terraDriftIn.y * uBruchStaerke;\n' +
+          '  if ( terraDriftM > 0.0 ) {\n' +
+          // Ortsphase: benachbarte Truemmer taumeln aehnlich, aber nicht
+          // gleich — ohne sie schwaenge das ganze Feld als ein Block.
+          '    float terraDriftP = terraDriftA.x * 0.21 + terraDriftA.z * 0.17;\n' +
+          '    float terraDriftT = uWindZeit * 0.55;\n' +
+          // Quadratische Gewichtung: der Uebergang vom festen Land in den
+          // Abgrund beginnt unmerklich und nimmt erst ueber der Kante zu.
+          '    float terraDriftG = terraDriftM * terraDriftM * ' + dAmp.toFixed(3) + ';\n' +
+          '    vec2 terraDriftH = vec2(\n' +
+          '      sin( terraDriftT + terraDriftP ) + 0.45 * sin( terraDriftT * 0.63 - terraDriftP * 1.7 ),\n' +
+          '      cos( terraDriftT * 0.87 + terraDriftP * 1.3 ) + 0.45 * sin( terraDriftT * 0.41 + terraDriftP ) );\n' +
+          '    float terraDriftV = sin( terraDriftT * 0.71 + terraDriftP * 0.6 ) * 1.3;\n' +
+          // Eigendrehung um die Hochachse durch den eigenen Fusspunkt. Der
+          // Winkel waechst mit der Amplitude (schwere Brocken drehen weniger)
+          // und mit dem Maskenwert; bei Maske 0 ist er exakt 0 und die Matrix
+          // die Einheitsmatrix.
+          '    float terraDriftR = sin( terraDriftT * 0.37 + terraDriftP * 0.8 ) * ' +
+            (dAmp * 0.55).toFixed(4) + ' * terraDriftM;\n' +
+          '    float terraDriftC = cos( terraDriftR ), terraDriftS = sin( terraDriftR );\n' +
+          '    vec2 terraDriftL = terraWelt2.xz - terraDriftA.xz;\n' +
+          '    terraWelt2.xz = terraDriftA.xz +\n' +
+          '      mat2( terraDriftC, terraDriftS, -terraDriftS, terraDriftC ) * terraDriftL;\n' +
+          '    terraWelt2.xz += terraDriftH * terraDriftG;\n' +
+          '    terraWelt2.y += terraDriftV * terraDriftG;\n' +
+          '  }\n' +
+          '}\n' + VERSATZ_MARKE, 'bruchdrift')) {
+        patchInfo.drift++;
+      }
+    }
+  }
+
+  if (kopfV) shader.vertexShader = kopfV + shader.vertexShader;
 }
 
 /** Weltmaterial: Phong (pro Fragment) mit Wrap-Licht statt hartem Lambert. */
@@ -429,6 +561,13 @@ function terraMat(opts) {
   var cloudShadow = !!opts.cloudShadow;
   var familie = opts.familie || null;
   var wind = opts.wind || null;
+  // B4 — `drift: <amplitude>` (Zahl in Welteinheiten, wie in geometry.js
+  // gesetzt). Ein Objekt { amp } wird zusaetzlich angenommen, damit die Option
+  // sich genau wie `wind` schreiben laesst; 0/fehlend heisst: kein Patch,
+  // kein zusaetzliches Programm.
+  var driftAmp = (typeof opts.drift === 'number') ? opts.drift
+    : (opts.drift && typeof opts.drift.amp === 'number') ? opts.drift.amp : 0;
+  if (!(driftAmp > 0)) driftAmp = 0;
   var rankenFade = !!opts.rankenFade;
   // H2a: Das Terrainmaterial ist das einzige, das vom Shaderschnee ausgenommen
   // wird — sein Schnee kommt aus terrainColor (schneeA/B + Felsdurchbruch am
@@ -439,7 +578,7 @@ function terraMat(opts) {
   // terrain.js es spaeter ohne Aenderung hier sprechend setzen kann.
   var ohneSchnee = !!opts.ohneSchnee || cloudShadow;
   delete opts.cloudShadow; delete opts.familie; delete opts.wind; delete opts.rankenFade;
-  delete opts.ohneSchnee;
+  delete opts.ohneSchnee; delete opts.drift;
   opts.shininess = 0;
   opts.specular = new THREE.Color(0x000000);
   var m = new THREE.MeshPhongMaterial(opts);
@@ -449,17 +588,24 @@ function terraMat(opts) {
     mal = { texObj: TEX[F.tex], skala: F.skala * 0.06, staerke: F.staerke };
   }
   var windOpts = wind ? { amp: wind.amp || 0.35 } : null;
+  var driftOpts = driftAmp > 0 ? { amp: driftAmp } : null;
   m.onBeforeCompile = function (shader) {
     terraPatch(shader, { cloudShadow: cloudShadow, mal: mal, wind: windOpts,
-      rankenFade: rankenFade, ohneSchnee: ohneSchnee });
+      rankenFade: rankenFade, ohneSchnee: ohneSchnee, drift: driftOpts });
   };
   // ohneSchnee taucht hier BEWUSST NICHT auf: der Schneeblock wird in jeden
   // Shader gleich eingesetzt, nur die Uniform-Bindung unterscheidet sich —
   // der Quelltext ist identisch, also darf der Schluessel nicht wachsen.
   // (ohneSchnee folgt ohnehin cloudShadow, das bereits im Schluessel steht.)
+  // Die Drift MUSS in den Schluessel — sie aendert den Quelltext (eigener
+  // Vertexblock, Amplitude einkompiliert), genau wie es der Wind-Anteil
+  // '|w'+amp seit jeher vormacht. Gedeckelt bleibt die Permutation dadurch,
+  // dass geometry.js nur zwei Amplituden vergibt: alle driftlosen Materialien
+  // tragen einheitlich '|d-' und teilen sich ihre Programme weiter wie bisher.
   m.customProgramCacheKey = function () {
     return 'terraB|cs' + (cloudShadow ? 1 : 0) + '|f' + (familie || '-') +
-      '|w' + (wind ? (wind.amp || 0.35) : '-') + '|rf' + (rankenFade ? 1 : 0);
+      '|w' + (wind ? (wind.amp || 0.35) : '-') + '|rf' + (rankenFade ? 1 : 0) +
+      '|d' + (driftAmp > 0 ? driftAmp : '-');
   };
   return m;
 }
@@ -554,4 +700,4 @@ function setArborQuellen(liste) {
 }
 
 export { terraUniforms, patchInfo, terraPatch, terraMat, tintedMats, FAMILIEN,
-  vineMat, leafMat, rockMat, ARBOR_MAX, setSchnee, setArborQuellen };
+  vineMat, leafMat, rockMat, ARBOR_MAX, setSchnee, setArborQuellen, setBruchQuelle };

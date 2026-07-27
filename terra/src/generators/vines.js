@@ -99,6 +99,507 @@ function plateauRandZu(P, ziel) {
   return best;
 }
 
+/* ===== genBlattstadt — Plateau-Staedtchen als eigener Struktur-Generator ==
+   Objektkatalog (docs/engineering/terra-objektkatalog.md, Abschnitt
+   „Kompositstrukturen und Struktur-Generatoren"):
+     „Das Plateau definiert erst die Hoehe, auf der alles andere steht; die
+      Bebauung braucht ein eigenes `heightAt`-Surrogat (Blattoberflaeche statt
+      Terrain). Muss deshalb den `tryPlace`-Kontrakt ERSETZEN, nicht nur
+      nutzen."
+
+   Der Ersatz heisst `blattPlatz`. Jede der fuenf Pruefungen von `tryPlace`
+   (objects.js) hat hier ein Gegenstueck — aber nur eine einzige liesse sich
+   woertlich uebernehmen:
+
+     Kartenrand  -> Blattkontur mit Saum. HALF kennt nur ein Quadrat; die
+                    Kontur ist |v| <= 1 in NORMIERTER Querkoordinate. Der Saum
+                    muss trotzdem in Weltmassen gerechnet werden, weil die
+                    halbe Breite zur Spitze hin gegen 0 laeuft: dieselben 0.86
+                    in v sind in der Blattmitte 20 Einheiten vom Rand entfernt
+                    und an der Spitze weniger als eine.
+     Wasser      -> entfaellt (auf einem Blatt gibt es keines). An seine
+                    Stelle tritt der RUECKGABEWERT: nur `leafSurface` kennt
+                    die Setzhoehe, `heightAt` liefert hier den Boden 200
+                    Einheiten tiefer.
+     Steilhang   -> `blattNeigung` statt `slopeAt`. Die Schale ist quer
+                    gewoelbt (cup), laengs geneigt und als Ganzes gekippt
+                    (droop); `slopeAt` liest ein Hoehenfeld, das mit alldem
+                    nichts zu tun hat.
+     Korridor    -> entfaellt; die Gassen dieses Generators tragen sich selbst
+                    ins Belegungsraster ein.
+     Belegung    -> `occFree`/`occAdd` unveraendert. Das ist das EINE Stueck
+                    von tryPlace, das ohne Terrain auskommt — und der Grund,
+                    warum der Kontrakt ersetzt und nicht neu erfunden wird.
+
+   Gerechnet wird durchgehend in BLATTKOORDINATEN (u laengs 0..1, v quer
+   -1..1, normiert auf die halbe Breite). Das ist keine Bequemlichkeit: in
+   normierten Koordinaten ist ein Rechteck bereits ein Ring, der der
+   Blattkontur folgt, weil v = const einen festen ANTEIL der halben Breite
+   haelt und damit mit dem Umriss mitschwingt. In Weltkoordinaten waere
+   dieselbe Figur eine Kurve, die man Stueck fuer Stueck an die Kontur
+   heranrechnen muesste (genau deshalb taugt `districtStreets` aus areas.js
+   hier nicht — es arbeitet in Welt-Polygonen).
+
+   ALLE Zufallszuege laufen ueber `ortsRng` mit den Offsets +609..+617 (am
+   Kopf von genRanke dokumentiert). Der Generator wird NUR betreten, wenn
+   `stadtNetz` gesetzt ist; im Default-Zweig existiert keiner dieser Stroeme.
+   ========================================================================= */
+
+/** Neigungsschwelle der Blattstadt: cos 22°. Gegenstueck zu COS40 (store.js),
+ *  aber strenger — COS40 beschreibt, was ein HANG noch tragen darf, hier geht
+ *  es um eine begehbare Schale. Mit der Standardwoelbung cup = 0.17 greift die
+ *  Schwelle genau dort, wo die Blattbreite zur Spitze hin wegfaellt und die
+ *  Querwoelbung dadurch in Weltmassen steil wird (bei u = 0.85 und |v| = 0.95
+ *  sind es bereits ~28°); in der Blattmitte bleibt sie wirkungslos. */
+var COS_BLATT = Math.cos(22 * Math.PI / 180);
+/** Kippwinkel, mit dem genRanke jedes Plateau ansetzt (dortige Matrix `droop`,
+ *  Drehung um z um -0.1). Steht hier als benannte Konstante, weil die
+ *  Neigungspruefung ihn braucht — die Schale ist schon ohne Woelbung schief. */
+var BLATT_DROOP = -0.1;
+
+var _bwA = new THREE.Vector3(), _bwB = new THREE.Vector3(), _buv = { u: 0, v: 0 };
+
+/** Bezugsrahmen eines Plateaus: alles, was der Kontrakt braucht, einmal
+ *  gerechnet. `theta` ist der Kippwinkel der Schale um die z-Achse. */
+function blattRahmen(P, theta) {
+  // Saum: der gerenderte Blattrand ist in leafGeo um bis zu 15 % gelappt
+  // (`wob`), die glatte Kontur leafHalfWidth ist also nur der Mittelwert.
+  // Ein Saum von 4.5 % der Blattlaenge deckt diesen Ausschlag ab.
+  var saum = Math.max(1.2, P.L * 0.045);
+  return {
+    L: P.L, W: P.W, cup: P.cup, full: P.full,
+    inv: new THREE.Matrix4().copy(P.full).invert(),
+    sin: Math.sin(theta), cos: Math.cos(theta),
+    saum: saum,
+    // Laengsfenster: der Stielansatz (u -> 0) hat keine Breite, die Spitze
+    // (u -> 1) laeuft aus. Beide Enden zusaetzlich um den Saum eingezogen.
+    uMin: 0.16 + saum / P.L,
+    uMax: 0.94 - saum / P.L,
+    vRand: 0.86
+  };
+}
+
+/** Blattkoordinate (u,v) -> Weltpunkt. Das Gegenstueck zu „x,z sind schon
+ *  Weltkoordinaten" in allen Terrain-Generatoren. */
+function blattWelt(S, u, v, out) {
+  return out.set(u * S.L, leafSurface(u, v, S.L, S.cup),
+    v * leafHalfWidth(u) * S.W).applyMatrix4(S.full);
+}
+
+/** Weltpunkt -> Blattkoordinate (u,v). Wird fuer die Brueckenanker gebraucht:
+ *  `plateauRandZu` liefert einen WELTpunkt, der Kontrakt rechnet aber in
+ *  (u,v). Ueber die invertierte Plateau-Matrix ist die Umrechnung exakt. */
+function blattUV(S, w, out) {
+  _bwA.copy(w).applyMatrix4(S.inv);
+  var u = clamp(_bwA.x / S.L, 0, 1);
+  var hw = leafHalfWidth(u) * S.W;
+  out.u = u;
+  out.v = hw > 1e-6 ? clamp(_bwA.z / hw, -1, 1) : 0;
+  return out;
+}
+
+/**
+ * Kosinus der Oberflaechenneigung gegen die Senkrechte — das `slopeAt` der
+ * Blattschale. Analytisch statt ueber ein Hoehenfeld:
+ *   1. Gradient der Blattflaeche in Blattkoordinaten, per Zentraldifferenz.
+ *      Umgerechnet auf WELTMASSE: laengs teilt du durch L, quer durch die
+ *      halbe Breite an dieser Stelle (dz/dv = leafHalfWidth(u)*W). Genau
+ *      diese Umrechnung ist der Grund, warum dieselbe Woelbung an der Spitze
+ *      steil und in der Mitte flach ist.
+ *   2. Kippung der ganzen Schale um z um theta. Mit den Tangenten
+ *      T1 = (cos - sin*gx, sin + cos*gx, 0) und T2 = (-sin*gz, cos*gz, 1)
+ *      ist n = T1 x T2 = (sin + cos*gx, -(cos - sin*gx), gz); der Kosinus ist
+ *      |n_y| / |n|. Die anschliessende Drehung um y (pang) laesst die
+ *      Senkrechte unberuehrt und faellt deshalb heraus.
+ */
+function blattNeigung(S, u, v) {
+  var du = 0.01, dv = 0.02;
+  var hw = leafHalfWidth(u) * S.W;
+  var gx = (leafSurface(u + du, v, S.L, S.cup) - leafSurface(u - du, v, S.L, S.cup)) /
+    (2 * du * S.L);
+  var gz = hw > 1e-6
+    ? (leafSurface(u, v + dv, S.L, S.cup) - leafSurface(u, v - dv, S.L, S.cup)) / (2 * dv * hw)
+    : 0;
+  var nx = S.sin + S.cos * gx, ny = -(S.cos - S.sin * gx);
+  var l = Math.sqrt(nx * nx + ny * ny + gz * gz);
+  return l > 1e-9 ? Math.abs(ny) / l : 1;
+}
+
+/**
+ * DER Platzierungs-Kontrakt der Blattstadt — Ersatz fuer tryPlace, nicht
+ * dessen Nutzer. Liefert den WELTPUNKT der Blattoberflaeche (in `out`) oder
+ * null. Bei Erfolg ist die Flaeche bereits belegt, genau wie bei tryPlace.
+ *   S    Bezugsrahmen (blattRahmen)
+ *   occ  Belegungsraster in WELTkoordinaten (occ2-Konvention von genRanke)
+ *   u,v  Blattkoordinaten
+ *   r    Grundflaechenradius des Bauwerks
+ */
+function blattPlatz(S, occ, u, v, r, out) {
+  var hw = leafHalfWidth(u) * S.W;
+  if (!(hw > 1e-6)) return null;                       // Stiel bzw. Spitze
+  // Laengsrand: Saum UND Grundflaeche muessen aufs Blatt passen.
+  if (u * S.L < S.saum + r || (1 - u) * S.L < S.saum + r) return null;
+  // Querrand: der Saum in Weltmassen, umgerechnet auf die normierte
+  // Querkoordinate. Bei schmalen Stellen wird vMax negativ — dort ist kein
+  // Platz mehr, und die Pruefung faellt korrekt durch.
+  var vMax = 1 - (S.saum + r) / hw;
+  if (!(vMax > 0) || Math.abs(v) > vMax) return null;
+  if (blattNeigung(S, u, v) < COS_BLATT) return null;  // zu steile Schale
+  blattWelt(S, u, v, out);
+  if (occ && !occFree(occ, out.x, out.z, r)) return null;
+  if (occ) occAdd(occ, out.x, out.z, r);
+  return out;
+}
+
+/**
+ * Laengsfenster auf der Querlinie v: das u-Intervall, auf dem ein Bauteil mit
+ * Radius r noch aufs Blatt passt. Fragt den KONTRAKT ab, statt eine zweite
+ * Formel fuer dieselbe Frage aufzustellen — damit kann kein Weg entstehen,
+ * auf dem der Kontrakt anschliessend nichts mehr platzieren wuerde (der Ring
+ * lief sonst mit konstantem |v| in die Blattspitze, wo die Breite wegfaellt).
+ * Rueckgabe null, wenn diese Querlinie ueberhaupt nicht traegt.
+ */
+function blattFenster(S, v, r, uA, uB) {
+  var a = uA, b = uB;
+  while (a < b && !blattPlatz(S, null, a, v, r, _bwB)) a += 0.01;
+  while (b > a && !blattPlatz(S, null, b, v, r, _bwB)) b -= 0.01;
+  return b - a > 0.08 ? { a: a, b: b } : null;
+}
+
+/**
+ * Wegenetz eines Blattplateaus in BLATTKOORDINATEN. Rueckgabe: Liste von
+ * Spuren { mode, a0, a1, fix, halb, art }; mode "u" laeuft laengs (fix = v),
+ * mode "v" quer (fix = u) — dieselbe Konvention wie `gassenBand`, das die
+ * Baender zeichnet.
+ *   "aus"     kein Netz (die Bebauung streut dann nur ueber den Kontrakt)
+ *   "einfach" Hauptachse laengs + Querachsen (das, was der Bestandscode bei
+ *             gesetztem Baustil andeutet, aber mit echten Kreuzungen)
+ *   "gassen"  zusaetzlich der Ring am Rand — vier Schenkel eines Rechtecks in
+ *             (u,v), was in Weltkoordinaten ein konturparalleler Ring ist.
+ * `bloecke` ist die angestrebte BLOCKTIEFE in Welteinheiten; daraus folgt die
+ * Zahl der Querachsen, und aus dem Schnitt aller Achsen die Blockteilung.
+ */
+function blattNetz(S, netz, bloecke, rng) {
+  var spuren = [], q;
+  if (netz === "aus") return spuren;
+  var u0 = S.uMin, u1 = S.uMax;
+  // Hauptachse: die Mittelrippe ist die natuerliche Hauptstrasse eines
+  // Blattes — sie ist der einzige Zug, der von der Wurzel bis zur Spitze
+  // durchlaeuft, und sie liegt auf dem Ruecken der Schale (v = 0 ist der
+  // hoechste Punkt jedes Querschnitts).
+  spuren.push({ mode: "u", a0: u0, a1: u1, fix: 0, halb: 0.9, art: "haupt" });
+  var nQ = clamp(Math.round((u1 - u0) * S.L / Math.max(6, bloecke)), 1, 6);
+  for (q = 1; q <= nQ; q++) {
+    // Leichter Versatz je Querachse: ein exakt gleichmaessiges Raster sieht
+    // auf einer 20 Einheiten breiten Blattschale nach Millimeterpapier aus.
+    var uq = clamp(lerp(u0, u1, q / (nQ + 1)) + rr(rng, -0.02, 0.02), u0, u1);
+    spuren.push({ mode: "v", a0: -S.vRand, a1: S.vRand, fix: uq, halb: 0.7, art: "quer" });
+  }
+  if (netz === "gassen") {
+    var vR = S.vRand * 0.82;
+    // Die Laengsschenkel duerfen nur so weit zur Spitze laufen, wie |v| = vR
+    // noch traegt; die beiden Querschenkel schliessen den Ring an genau
+    // diesen Enden. Ohne die Beschneidung endete der Ring in der Luft.
+    var fen = blattFenster(S, vR, 0.6, lerp(u0, u1, 0.08), lerp(u0, u1, 0.95));
+    if (fen) {
+      spuren.push({ mode: "u", a0: fen.a, a1: fen.b, fix: -vR, halb: 0.6, art: "ring" });
+      spuren.push({ mode: "u", a0: fen.a, a1: fen.b, fix: vR, halb: 0.6, art: "ring" });
+      spuren.push({ mode: "v", a0: -vR, a1: vR, fix: fen.a, halb: 0.6, art: "ring" });
+      spuren.push({ mode: "v", a0: -vR, a1: vR, fix: fen.b, halb: 0.6, art: "ring" });
+    }
+  }
+  return spuren;
+}
+
+/** Kreuzungen des Netzes: jede Laengs- gegen jede Querspur. Die Blockteilung
+ *  ist genau das Komplement dazu — die Rechtecke zwischen zwei benachbarten
+ *  Querachsen und zwei benachbarten Laengsachsen. */
+function blattKreuzungen(spuren) {
+  var out = [], i, j;
+  for (i = 0; i < spuren.length; i++) {
+    if (spuren[i].mode !== "u") continue;
+    for (j = 0; j < spuren.length; j++) {
+      if (spuren[j].mode !== "v") continue;
+      var u = spuren[j].fix, v = spuren[i].fix;
+      if (u < spuren[i].a0 || u > spuren[i].a1) continue;
+      if (v < spuren[j].a0 || v > spuren[j].a1) continue;
+      out.push({ u: u, v: v });
+    }
+  }
+  return out;
+}
+
+/** Geschlossener Randweg in (u,v): vier Schenkel eines Rechtecks. Siehe
+ *  Kopfkommentar — in normierten Koordinaten IST das der Konturring. */
+function blattRandWeg(S, vR, uA, uB) {
+  var pts = [], i, N = 26, NE = 6;
+  for (i = 0; i <= N; i++) pts.push([lerp(uA, uB, i / N), vR]);
+  for (i = 1; i <= NE; i++) pts.push([uB, lerp(vR, -vR, i / NE)]);
+  for (i = 1; i <= N; i++) pts.push([lerp(uB, uA, i / N), -vR]);
+  for (i = 1; i <= NE; i++) pts.push([uA, lerp(-vR, vR, i / NE)]);
+  return pts;
+}
+
+/**
+ * Ankunftspunkte am Plateau k, in Blattkoordinaten.
+ *   Wendeltreppe: sie laeuft am Geflecht hoch und endet am TIEFSTEN Plateau —
+ *     dieselbe Auswahl, die der Treppenabschnitt in genRanke trifft. Ankunft
+ *     ist der Blattansatz am Stamm (u -> 0), denn dort haengt das Blatt.
+ *   Haengebruecke: `plateauRandZu` liefert genau den Punkt, an dem der
+ *     Bruecken-Abschnitt ansetzt; die Bedingungen (Mittenabstand < 55,
+ *     horizontaler Versatz >= 4) werden hier bewusst NOCH EINMAL geprueft
+ *     statt den Bestandsabschnitt umzubauen: der darf in dieser Runde nicht
+ *     angefasst werden, und dieselbe Frage zweimal zu stellen ist billiger
+ *     als sie umzustellen.
+ * Zieht keinen Zufall — reine Geometrie.
+ */
+function blattAnker(plateauDaten, k, o) {
+  var out = [], j;
+  if (o.treppe) {
+    var tief = 0;
+    for (j = 1; j < plateauDaten.length; j++) {
+      if (plateauDaten[j].t < plateauDaten[tief].t) tief = j;
+    }
+    if (tief === k) out.push({ u: 0.14, v: 0, art: "treppe" });
+  }
+  if (o.bruecken && plateauDaten.length > 1) {
+    var mA = new THREE.Vector3(), mB = new THREE.Vector3();
+    for (j = 0; j + 1 < plateauDaten.length; j++) {
+      if (j !== k && j + 1 !== k) continue;
+      plateauMitte(plateauDaten[j], mA);
+      plateauMitte(plateauDaten[j + 1], mB);
+      if (mA.distanceTo(mB) >= 55) continue;
+      var pA = plateauRandZu(plateauDaten[j], mB);
+      var pB = plateauRandZu(plateauDaten[j + 1], mA);
+      var hx = pB.x - pA.x, hz = pB.z - pA.z;
+      if (Math.sqrt(hx * hx + hz * hz) < 4) continue;
+      blattUV(o.S, j === k ? pA : pB, _buv);
+      out.push({ u: _buv.u, v: _buv.v, art: "bruecke" });
+    }
+  }
+  return out;
+}
+
+/**
+ * Baut das Staedtchen EINES Blattplateaus. Aufgerufen von genRanke, sobald
+ * `stadtNetz` gesetzt ist — der Default-Zweig laeuft weiter durch den alten
+ * Inline-Block und bleibt davon unberuehrt.
+ *   el            Ranken-Element (nur emit/geos, kein Zustand)
+ *   plateauDaten  alle Plateaus (fuer die Brueckenanker)
+ *   k             Index des zu bebauenden Plateaus
+ *   o             { netz, rand, bloecke, dichte, gruen, stil, treppe,
+ *                   bruecken, geos }
+ * Reihenfolge: Netz -> Baender -> Kreuzungen -> Plaetze -> Gelaender ->
+ * Bebauung -> Begruenung. Infrastruktur zuerst, weil sie ueber occ bestimmt,
+ * wo NICHT gebaut wird; die Bebauung sieht damit dieselbe Stadt wie ein
+ * Betrachter: erst die Wege, dann die Haeuser daran.
+ */
+function genBlattstadt(el, plateauDaten, k, o) {
+  var P = plateauDaten[k];
+  var S = blattRahmen(P, BLATT_DROOP);
+  var occ = newOcc(4);
+  // Bautabelle: ein gesetzter Baustil gewinnt, sonst KULTUR.arbor — genau die
+  // Streuung, die der Objektkatalog fuer genBlattstadt vorsieht.
+  var tab = (o.stil && KULTUR[o.stil]) ? KULTUR[o.stil] : KULTUR.arbor;
+  var i, s, si, sp, seite, q;
+  var wA = new THREE.Vector3(), wB = new THREE.Vector3(), wP = new THREE.Vector3();
+
+  /* --- 1) Netz und Anbindung --------------------------------------------- */
+  var rNetz = ortsRng(k, -1, el.seed + 609);
+  var spuren = blattNetz(S, o.netz, o.bloecke, rNetz);
+  var anker = blattAnker(plateauDaten, k, { treppe: o.treppe, bruecken: o.bruecken, S: S });
+  for (i = 0; i < anker.length; i++) {
+    // Zufahrt: die Ankunft muss LESBAR sein, also braucht sie einen Weg ins
+    // Netz. Kommt sie vom Blattrand (grosses |v|), fuehrt er quer zur
+    // Mittelrippe; kommt sie vom Stielansatz oder von der Spitze, laengs zur
+    // Blattmitte. Ohne Netz ("aus") ist die Zufahrt der einzige Zug — auch
+    // dann bleibt die Ankunft ablesbar.
+    var an = anker[i];
+    if (Math.abs(an.v) > 0.35) {
+      spuren.push({ mode: "v", a0: Math.min(0, an.v), a1: Math.max(0, an.v),
+        fix: clamp(an.u, S.uMin, S.uMax), halb: 0.7, art: "zufahrt" });
+    } else {
+      spuren.push({ mode: "u", a0: Math.min(an.u, 0.5), a1: Math.max(an.u, 0.5),
+        fix: an.v, halb: 0.7, art: "zufahrt" });
+    }
+  }
+
+  /* --- 2) Gassenbaender zeichnen und als Sperrflaeche eintragen ----------- */
+  for (si = 0; si < spuren.length; si++) {
+    sp = spuren[si];
+    var bg = gassenBand(sp.a0, sp.a1, sp.fix, sp.mode, S.L, S.W, S.cup, sp.halb,
+      (el.seed + k * 13 + si * 3 + 1) | 0);
+    bg.applyMatrix4(S.full);
+    o.geos.push(bg);
+    for (s = 0; s <= 14; s++) {
+      q = lerp(sp.a0, sp.a1, s / 14);
+      blattWelt(S, sp.mode === "u" ? q : sp.fix, sp.mode === "u" ? sp.fix : q, wP);
+      occAdd(occ, wP.x, wP.z, sp.halb + 0.9);
+    }
+  }
+
+  /* --- 3) Kreuzungen: die Orientierungspunkte der Stadt ------------------- */
+  var kreuz = blattKreuzungen(spuren);
+  for (i = 0; i < kreuz.length; i++) {
+    var rKz = ortsRng(k, i, el.seed + 609);
+    blattWelt(S, kreuz[i].u, kreuz[i].v, wP);
+    occAdd(occ, wP.x, wP.z, 2.2);
+    var scK = rr(rKz, 0.8, 1.15);
+    emit(el, rKz() < 0.35 ? "brunnen" : "laterne", wP.x, wP.y - 0.1, wP.z,
+      rr(rKz, 0, 6.283), scK, scK, scK, tintOf(rKz, 0.05));
+  }
+
+  /* --- 4) Plaetze und Tore an Treppe/Bruecke ------------------------------
+     Statt Wohnbebauung: eine freigehaltene Flaeche mit Tor und zwei Laternen.
+     Die Sperrflaeche ist der eigentliche Trick — sie sorgt dafuer, dass die
+     Bebauung in Schritt 6 von selbst einen Platz umschliesst. */
+  for (i = 0; i < anker.length; i++) {
+    var a2 = anker[i];
+    var rAn = ortsRng(k, i, el.seed + 615);
+    var platzR = Math.max(3.5, S.L * 0.09);
+    var quer = Math.abs(a2.v) > 0.35;   // Ankunft von der Seite?
+    blattWelt(S, a2.u, a2.v, wP);
+    occAdd(occ, wP.x, wP.z, platzR);
+    // Blickrichtung des Tores: vom Ankunftspunkt zur Blattmitte hin — man
+    // geht hindurch, nicht daran vorbei.
+    blattWelt(S, lerp(a2.u, 0.5, 0.14), a2.v * 0.84, wA);
+    var yawA = Math.atan2(wA.x - wP.x, wA.z - wP.z);
+    var scA = rr(rAn, 0.9, 1.2);
+    emit(el, "rankentor", wP.x, wP.y - 0.1, wP.z, yawA, scA, scA, scA, tintOf(rAn, 0.05));
+    var hwA = leafHalfWidth(a2.u) * S.W;
+    for (seite = -1; seite <= 1; seite += 2) {
+      // Flankierung quer zum Weg — in Blattkoordinaten, damit die Laternen
+      // die Oberflaechenhoehe des Kontrakts bekommen und nicht die des Tores.
+      // OHNE occ geprueft: sie stehen absichtlich AUF dem Platz, dessen
+      // Sperrflaeche gerade eingetragen wurde; mit occ wuerde der Platz seine
+      // eigene Moeblierung ausschliessen. Kontur und Neigung gelten weiter —
+      // das ist der Teil des Kontrakts, der hier zaehlt.
+      var uF = quer ? a2.u + seite * platzR * 0.6 / S.L : a2.u;
+      var vF = quer ? a2.v : a2.v + (hwA > 1e-6 ? seite * platzR * 0.6 / hwA : 0);
+      if (blattPlatz(S, null, uF, vF, 0.8, wB) === null) continue;
+      var scF = rr(rAn, 0.75, 1.0);
+      emit(el, "laterne", wB.x, wB.y - 0.1, wB.z, yawA, scF, scF, scF, tintOf(rAn, 0.05));
+    }
+  }
+
+  /* --- 5) Gelaender am Blattrand ------------------------------------------
+     Ohne Bruestung wirkt jedes Plateau wie ein abgeschnittenes Brett; mit ihr
+     liest sich der Rand als Kante, ueber die man schauen kann. Der Weg folgt
+     dem Konturring (blattRandWeg), die Pfosten stehen in gleichem WELTabstand
+     — in (u,v) waeren sie an der Spitze dicht und in der Mitte weit. */
+  var fenR = o.rand ? blattFenster(S, S.vRand, 0.5, S.uMin, S.uMax) : null;
+  if (fenR) {
+    var weg = blattRandWeg(S, S.vRand, fenR.a, fenR.b);
+    var accG = 2.4, nG = 0;
+    blattWelt(S, weg[0][0], weg[0][1], wA);
+    for (i = 1; i < weg.length; i++) {
+      blattWelt(S, weg[i][0], weg[i][1], wB);
+      var gdx = wB.x - wA.x, gdz = wB.z - wA.z;
+      var gd = Math.sqrt(gdx * gdx + gdz * gdz);
+      wA.copy(wB);
+      if (gd < 1e-4) continue;
+      accG += gd;
+      if (accG < 2.4) continue;
+      accG = 0;
+      var rP = ortsRng(k, nG, el.seed + 613);
+      emit(el, "lattenzaun", wB.x, wB.y - 0.08, wB.z, Math.atan2(gdx, gdz),
+        1, rr(rP, 0.85, 1.1), 1, tintOf(rP, 0.05));
+      occAdd(occ, wB.x, wB.z, 1.0);
+      nG++;
+    }
+  }
+
+  /* --- 6) Bebauung an den Gassen ------------------------------------------
+     Derselbe Rhythmus wie genViertel (areas.js): je Spur und Seite ein
+     Startversatz, dann Reihenhaus-Laeufe von 2-4 gleichen Typen, Bauluecken
+     mit 10 %, Abstand aus Pool-Radius + Luecke. Zwei Unterschiede, beide
+     zwingend:
+       - der Versatz von der Gassenmitte wird in BLATTkoordinaten gerechnet
+         (quer geteilt durch die halbe Breite, laengs durch L), weil nur der
+         Kontrakt weiss, ob dort noch Blatt ist;
+       - die Hoehe faellt zum Rand hin ab. Das ist die Stadtsilhouette: in der
+         Mitte die Tuerme, am Rand die niedrigen Haeuser vor dem Gelaender.
+     Der Yaw kommt aus der WELT-Laufrichtung der Gasse (zwei benachbarte
+     Stuetzpunkte), nicht aus der Plateaudrehung — die Haeuser stehen damit an
+     der Gasse ausgerichtet statt zufaellig gedreht. */
+  if (o.dichte > 0) {
+    var luecke = clamp(2.4 / o.dichte - 0.8, 0.2, 9);
+    var NSp = 24;
+    for (si = 0; si < spuren.length; si++) {
+      sp = spuren[si];
+      for (seite = -1; seite <= 1; seite += 2) {
+        var rSeite = ortsRng(k * 256 + si, seite, el.seed + 611);
+        var acc = rr(rSeite, 0, 5), lauf = 0, laufKind = wpick(rSeite, tab);
+        blattWelt(S, sp.mode === "u" ? sp.a0 : sp.fix,
+          sp.mode === "u" ? sp.fix : sp.a0, wA);
+        for (s = 1; s <= NSp; s++) {
+          q = lerp(sp.a0, sp.a1, s / NSp);
+          blattWelt(S, sp.mode === "u" ? q : sp.fix, sp.mode === "u" ? sp.fix : q, wB);
+          var dx = wB.x - wA.x, dz = wB.z - wA.z;
+          var d = Math.sqrt(dx * dx + dz * dz);
+          wA.copy(wB);
+          if (d < 0.001) continue;
+          dx /= d; dz /= d;
+          acc -= d;
+          if (acc > 0) continue;
+          // Schluessel: (Plateau*256 + Spur, Schritt*2 + Seite). Der zweite
+          // Platz ist ab 2 belegt, die Seiten-Stroeme oben liegen auf -1/+1 —
+          // die beiden Schluesselraeume ueberschneiden sich nicht.
+          var rs = ortsRng(k * 256 + si, s * 2 + (seite > 0 ? 1 : 0), el.seed + 611);
+          if (lauf <= 0) { laufKind = wpick(rs, tab); lauf = ri(rs, 2, 4); }
+          lauf--;
+          var kind = laufKind;
+          // Wie in genViertel: der ABSTAND rechnet mit der vollen
+          // Grundflaeche, die BELEGUNG nur mit 82 % davon — sonst blockieren
+          // sich Nachbarn schon beim Aneinanderbauen. Der Versatz von der
+          // Gassenmitte enthaelt zusaetzlich die 0.9, mit der die Gasse selbst
+          // im Raster steht; ohne sie schoebe die Gasse jedes Haus weg, das an
+          // ihr stehen soll.
+          var radV = POOLS[kind] ? POOLS[kind].radius : 2.9;
+          var rad = radV * 0.82;
+          acc = radV * 2 + luecke * rr(rs, 0.4, 1.6);
+          if (rs() < 0.1) continue;                       // gelegentliche Bauluecke
+          var off = sp.halb + 0.9 + radV + rr(rs, 0.25, 1.1);
+          var uH = sp.mode === "u" ? q : sp.fix, vH = sp.mode === "u" ? sp.fix : q;
+          if (sp.mode === "u") {
+            var hwH = leafHalfWidth(uH) * S.W;
+            if (!(hwH > 1e-6)) continue;
+            vH += seite * off / hwH;
+          } else {
+            uH += seite * off / S.L;
+          }
+          if (blattPlatz(S, occ, uH, vH, rad, wP) === null) continue;
+          // Randnaehe: quer ueber |v|, laengs ueber den Abstand zu den beiden
+          // Enden des Laengsfensters. Das Maximum entscheidet — eine Ecke ist
+          // ebenso Rand wie eine Flanke.
+          var randNah = clamp(Math.max(Math.abs(vH) / S.vRand,
+            Math.max(S.uMin + 0.06 - uH, uH - (S.uMax - 0.06)) / 0.22), 0, 1);
+          var hochF = lerp(1.45, 0.55, randNah);
+          var sc = rr(rs, 0.85, 1.15);
+          emit(el, kind, wP.x, wP.y - 0.1, wP.z, Math.atan2(dx, dz) + rr(rs, -0.05, 0.05),
+            sc, sc * rr(rs, 0.9, 1.25) * hochF, sc, tintOf(rs));
+        }
+      }
+    }
+  }
+
+  /* --- 7) Begruenung ------------------------------------------------------
+     Zypressen und Buesche im Randstreifen — dieselbe Rolle wie im alten
+     Inline-Block, aber ueber den Kontrakt statt frei gesetzt: nichts steht
+     mehr halb ueber der Kante oder in einer Gasse. */
+  var rGrN = ortsRng(k, -1, el.seed + 617);
+  var nGr = Math.round(ri(rGrN, 5, 11) * o.gruen);
+  for (i = 0; i < nGr; i++) {
+    var rGr = ortsRng(k, i, el.seed + 617);
+    var uG = rr(rGr, S.uMin, S.uMax);
+    var vG = (rGr() < 0.5 ? -1 : 1) * rr(rGr, 0.6, S.vRand);
+    if (blattPlatz(S, occ, uG, vG, 1.6, wP) === null) continue;
+    var scG = rr(rGr, 0.45, 0.85);
+    emit(el, rGr() < 0.72 ? "zypresse" : "busch", wP.x, wP.y - 0.1, wP.z,
+      rr(rGr, 0, 6.283), scG, scG * rr(rGr, 0.9, 1.3), scG, tintOf(rGr, 0.08));
+  }
+}
+
 /* ===== H4: Formhelfer der Mittelachse ====================================
    Zugpunkte (H4.2) und Kernneigung (H4.3) verschieben die Achse horizontal.
    Alle Helfer sind rein und ziehen KEINEN Zufall — sie lesen nur el.params
@@ -475,6 +976,21 @@ function genRanke(el) {
   //     +607), je Truemmerstueck (Fussindex, Stueckindex + 1, +607).
   //     Nur gezogen, wenn `schwebeDrift` > 0 UND eine Bruchkante in der Naehe
   //     liegt — sonst existiert der Strom gar nicht.
+  // NEU fuer genBlattstadt (bis +607 war vergeben). ALLE fuenf Stroeme
+  //   existieren nur, wenn `stadtNetz` gesetzt ist; im Default-Zweig ("")
+  //   laeuft weiter der alte Inline-Block und zieht keinen davon:
+  //   Gassennetz und Kreuzungen: Netzlayout (Plateauindex, -1, +609),
+  //     je Kreuzung (Plateauindex, Kreuzungsindex, +609)
+  //   Bebauung an den Gassen: je Spur und Seite
+  //     (Plateauindex*256 + Spurindex, Seite (-1/+1), +611), je Bauplatz
+  //     (Plateauindex*256 + Spurindex, Schritt*2 + Seite (>= 2), +611) —
+  //     die beiden Schluesselraeume im zweiten Platz sind disjunkt
+  //   Randgelaender: je Pfosten (Plateauindex, Pfostenindex, +613)
+  //   Plaetze/Tore an Treppe und Bruecke (Plateauindex, Ankerindex, +615)
+  //   Begruenung: Anzahl (Plateauindex, -1, +617), je Pflanze
+  //     (Plateauindex, Index, +617)
+  //   Die Ankunftspunkte selbst (blattAnker) ziehen KEINEN Zufall — sie sind
+  //   reine Geometrie aus plateauDaten.
   // B2 (`alter`) zieht KEINEN Zufall: es skaliert ausschliesslich bereits
   //   gezogene Werte. Kein bestehender Strom wird angezapft oder verschoben.
   // Elementweit bleibt rGlob NUR fuer einmalige Globalwerte mit fester
@@ -962,6 +1478,21 @@ function genRanke(el) {
   // unter alter 0.18 gar keine) Plateaus; die Hoehenformel `fr` haengt wie
   // bisher an nPl, die verbliebenen Plateaus RUTSCHEN also nur.
   var nPl = clamp(Math.round(p.plateaus * A.plateau), 0, 6);
+  /* --- Schalter der Blattstadt (genBlattstadt, oben) ----------------------
+     "" (Default und jeder unbekannte Wert) heisst WIE BISHER: die Bebauung
+     bleibt Wort fuer Wort der alte Inline-Block am Ende der Plateau-Schleife,
+     und zwar in BEIDEN Stil-Zweigen. Der Sentinel "" statt eines echten
+     Vorgabewerts ist derselbe Kniff wie bei windungUnten/-Oben: defaultsFor
+     ergaenzt fehlende Parameter beim Laden, ein inhaltlicher Default wuerde
+     also jede Bestandskarte umbauen — auch die vielen, die welt.js mit
+     gesetztem `stadtStil` erzeugt hat.
+     Jeder der drei echten Werte schaltet auf den Struktur-Generator um. Der
+     laeuft NACH der Plateau-Schleife, weil er die Ankunftspunkte der
+     Haengebruecken braucht und die erst dann vollstaendig bekannt sind;
+     gesammelt wird hier nur der Auftrag. */
+  var stadtNetz = p.stadtNetz === "aus" || p.stadtNetz === "einfach" ||
+    p.stadtNetz === "gassen" ? p.stadtNetz : "";
+  var stadtAuftrag = [];
   var leafGeos = [];
   var plateauDaten = [];   // fuer Erschliessung (Treppe/Bruecken), reines Sammeln
   var _lv = new THREE.Vector3();
@@ -1044,6 +1575,11 @@ function genRanke(el) {
     // exakt 0). Bei alter = 1 ist A.stadt exakt 1 und die Bedingung
     // gleichbedeutend mit der alten.
     if (!p.staedtchen || !(A.stadt > 0)) continue;
+    // Umschaltpunkt: mit gesetztem `stadtNetz` uebernimmt genBlattstadt nach
+    // der Schleife. Der Auftrag traegt nur den Plateauindex — L/W/cup/full
+    // stehen bereits in plateauDaten (dort an genau derselben Stelle
+    // eingetragen), und der Index IST plateauDaten.length - 1.
+    if (stadtNetz) { stadtAuftrag.push(k); continue; }
     // Gebaeude/Zypressen je (Plateau, Index) — die occ-Pruefung bleibt
     // sequentiell in Schleifenreihenfolge und damit deterministisch.
     var occ2 = newOcc(4);
@@ -1145,6 +1681,31 @@ function genRanke(el) {
       emit(el, "zypresse", _lv.x, _lv.y - 0.1, _lv.z, rZ() * 6.28,
         sc2, sc2 * rr(rZ, 0.9, 1.3), sc2, tintOf(rZ, 0.08));
     }
+  }
+
+  /* --- Blattstaedtchen: zweiter Durchgang (genBlattstadt) -----------------
+     Bewusst NACH der Plateau-Schleife: die Brueckenanker haengen an den
+     NACHBARplateaus, und plateauDaten ist erst hier vollstaendig. Im
+     Default-Zweig (stadtNetz "") ist stadtAuftrag leer — die Schleife laeuft
+     null Mal, es entsteht kein Draw, kein Strom, keine Geometrie.
+     `bloecke` ist die angestrebte Blocktiefe in Welteinheiten; 20 entspricht
+     etwa zwei Reihenhauslaengen und ergibt auf einem Standardblatt (L = 44,
+     nutzbare Laenge ~30) zwei Querachsen, also drei Blockreihen. */
+  for (k = 0; k < stadtAuftrag.length; k++) {
+    genBlattstadt(el, plateauDaten, stadtAuftrag[k], {
+      netz: stadtNetz,
+      rand: !!p.stadtRand,
+      bloecke: typeof p.stadtBloecke === "number" && p.stadtBloecke > 0 ? p.stadtBloecke : 20,
+      // Dieselbe Dichteformel wie im Bestandszweig: Regler mal Alterskurve.
+      dichte: (p.stadtDichte === undefined ? 1 : p.stadtDichte) * A.stadt,
+      gruen: A.stadt,
+      stil: p.stadtStil,
+      // Dieselben Bedingungen wie die Treppen- und Brueckenabschnitte weiter
+      // unten — die bleiben unangetastet, hier wird nur mitgelesen.
+      treppe: !!p.treppe && A.stadt > 0,
+      bruecken: !!p.bruecken,
+      geos: geos
+    });
   }
 
   /* --- Netz- und Lichtdaten des Elements veroeffentlichen (B1/H3) ---------
@@ -1336,6 +1897,12 @@ function genRanke(el) {
 
 
 export { vineColor, genRanke, rankePlatzierbar,
+  // genBlattstadt — Struktur-Generator der Plateau-Staedtchen samt seinem
+  // Platzierungs-Kontrakt (Ersatz fuer tryPlace auf der Blattoberflaeche).
+  // Einzeln exportiert, damit Kontrakt und Netz ohne kompletten Rankenbau
+  // pruefbar sind.
+  genBlattstadt, blattRahmen, blattPlatz, blattNeigung, blattNetz,
+  blattKreuzungen, blattAnker, blattWelt, blattUV,
   zugpunkteVon, rankeStuetzen, zugAuslenkung, rankeAchse, rankeKernPunkt,
   // B2 — Wachstum als Zeitachse
   alterFaktoren, rankeAlter, wachstumsKurve, rankeWachsen,

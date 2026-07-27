@@ -5,6 +5,15 @@ import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
+/* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
+   und Struktur-Generatoren"). Sie liegen in einem eigenen Modul, weil ihre
+   Layout-Logik mit der Streulogik dieser Datei nichts gemeinsam hat — und weil
+   der Import damit EINE Richtung hat: areas.js -> strukturen.js, nie zurueck.
+   Deshalb wohnen die reinen Polygonhelfer jetzt dort und werden hier nur noch
+   durchgereicht; ihre bisherigen Importeure (selection.js, core/dirty.js)
+   bleiben davon unberuehrt. */
+import { polyBBox, inPoly, polyArea, polyCenter,
+  genBurg, genWerft, genKloster } from './strukturen.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
    an einen stabilen Schluessel statt an die Zugriffsreihenfolge — sonst
@@ -13,37 +22,8 @@ import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
    arbeiten bereits so (Rasterzellen-Hash) und bleiben unveraendert. */
 function ortsRng(a, b, s) { return rngOf((hashi(a, b, s) * 4294967296) | 0); }
 
-function polyBBox(pts) {
-  var b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity };
-  for (var i = 0; i < pts.length; i++) {
-    if (pts[i].x < b.x0) b.x0 = pts[i].x;
-    if (pts[i].x > b.x1) b.x1 = pts[i].x;
-    if (pts[i].z < b.z0) b.z0 = pts[i].z;
-    if (pts[i].z > b.z1) b.z1 = pts[i].z;
-  }
-  return b;
-}
-
-function inPoly(pts, x, z) {
-  var inside = false;
-  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    var a = pts[i], b = pts[j];
-    if (((a.z > z) !== (b.z > z)) && (x < (b.x - a.x) * (z - a.z) / (b.z - a.z) + a.x)) inside = !inside;
-  }
-  return inside;
-}
-
-function polyArea(pts) {
-  var s = 0;
-  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) s += (pts[j].x + pts[i].x) * (pts[j].z - pts[i].z);
-  return Math.abs(s * 0.5);
-}
-
-function polyCenter(pts) {
-  var x = 0, z = 0;
-  for (var i = 0; i < pts.length; i++) { x += pts[i].x; z += pts[i].z; }
-  return { x: x / pts.length, z: z / pts.length };
-}
+/* polyBBox/inPoly/polyArea/polyCenter stehen jetzt in strukturen.js (siehe
+   Importblock oben) und werden von dort unveraendert re-exportiert. */
 
 /** Abstand so vergrößern, dass die Instanzzahl beherrschbar bleibt. */
 /** Instanzdeckel flaechenproportional zur Karte (H1d). Gleicher Faktor und
@@ -431,8 +411,18 @@ function genFlaeche(el) {
   else if (el.variant === "feld") genFeld(el);
   else if (el.variant === "viertel") genViertel(el);
   else if (el.variant === "wiese") genWiese(el);
+  // Die Kompositstrukturen haengen bewusst am ENDE der Kette (gleiche
+  // Begruendung wie bei pfad:bruch in core/dirty.js): eine aeltere Fassung des
+  // Editors faellt durch alle else-if hindurch und erzeugt schlicht nichts,
+  // statt abzustuerzen — das Speicherformat bleibt abwaertskompatibel.
+  else if (el.variant === "burg") genBurg(el);
+  else if (el.variant === "werft") genWerft(el);
+  else if (el.variant === "kloster") genKloster(el);
 }
 
 
+/* polyBBox/inPoly/polyArea/polyCenter werden hier weiter exportiert, obwohl sie
+   jetzt aus strukturen.js kommen: selection.js und core/dirty.js importieren
+   `inPoly` seit jeher von hier, und ein Umhaengen dort waere reiner Laerm. */
 export { polyBBox, inPoly, polyArea, polyCenter, safeSpacing, genWald, genFeld,
   genWiese, districtStreets, genViertel, genFlaeche };

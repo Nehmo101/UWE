@@ -10,6 +10,8 @@ import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
   genBruch, bruchDaten, bruchMasse, brueche,
   bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
+import { strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE,
+  WERFT_QUERSUCHE } from '../generators/strukturen.js';
 import { genObjekt } from '../generators/objects.js';
 import { genRanke } from '../generators/vines.js';
 import { defaultsFor } from '../editor/tools.js';
@@ -128,6 +130,15 @@ function rebuildCorridors() {
           if (inPoly(el.points, ln[k].x, ln[k].z)) stampCorridor(ln[k].x, ln[k].z, el.params.gasse * 0.5 + 1.2);
         }
       }
+    } else if (el.kind === "flaeche" && istStruktur(el.variant) && el.points.length >= 3) {
+      /* Kompositstrukturen stempeln ihre TRAGENDEN Linien: Mauerring, Kai-
+         flucht, Kreuzgangfluegel. Begruendung wie bei den Viertel-Gassen —
+         dort steht harte Infrastruktur, in die nachtraeglich kein fremder Wald
+         und keine fremde Streuung hineinwachsen soll. Die Punkte kommen aus
+         strukturen.js, weil ihre Lage aus derselben Layout-Rechnung folgt wie
+         die Bauteile selbst; zwei Rechnungen wuerden auseinanderdriften. */
+      var kor = strukturKorridore(el);
+      for (k = 0; k < kor.length; k++) stampCorridor(kor[k].x, kor[k].z, kor[k].r);
     }
   }
 }
@@ -158,7 +169,34 @@ function stempelRadius(el) {
   }
   // Viertel-Gassen stempeln mit gasse*0.5+1.2, per inPoly aufs Polygon geklippt.
   if (el.kind === "flaeche" && el.variant === "viertel") return (p.gasse || 0) * 0.5 + 1.2;
+  /* Kompositstrukturen: DIESELBEN Radien, die strukturKorridore benutzt —
+     wandert dort eine Zahl, muss sie hier mitwandern, sonst wird die Box zu
+     klein und es bleiben Reste des alten Rings stehen (gleiche Warnung wie im
+     Kopf dieses Abschnitts). Der Burg-Ring verdoppelt sich fast, wenn ein
+     Zwinger davorsteht; das Kloster kann ueber `groesse` ueber die Punktbox
+     hinauswachsen, deshalb dort der zusaetzliche Aufschlag. */
+  if (el.kind === "flaeche" && istStruktur(el.variant)) {
+    if (el.variant === "burg") return KORRIDOR_R.burg * (p.zwinger ? 1.9 : 1) + 1.8;
+    if (el.variant === "werft") return KORRIDOR_R.werft + WERFT_QUERSUCHE;
+    return KORRIDOR_R.kloster + elementSpanne(el) * 0.5 *
+      Math.max(0, Math.min(KLOSTER_MAX_GROESSE, p.groesse || 1) - 1);
+  }
   return 3;   // erreicht isHeavy nie einen anderen Fall, bleibt aber definiert
+}
+
+/** Groesste Punktausdehnung eines Elements — Grundlage fuer den `groesse`-
+ *  Aufschlag des Klosters (sein Rechteck skaliert um die Polygonmitte). */
+function elementSpanne(el) {
+  var minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (var i = 0; i < el.points.length; i++) {
+    var q = el.points[i];
+    if (q.x < minX) minX = q.x;
+    if (q.x > maxX) maxX = q.x;
+    if (q.z < minZ) minZ = q.z;
+    if (q.z > maxZ) maxZ = q.z;
+  }
+  if (minX > maxX) return 0;
+  return Math.max(maxX - minX, maxZ - minZ);
 }
 
 /** Einfluss-Box des Elements in Gitterindizes, inklusive Rand — oder null,
@@ -167,7 +205,11 @@ function elementBox(el) {
   // Pfade stempeln entlang der Catmull-Rom-Kurve (Tension 0.5), die zwischen
   // den Stuetzpunkten ueberschwingen kann — deshalb die tatsaechlichen
   // Kurven-Samples vermessen statt nur der Punkte. Viertel-Gassen werden per
-  // inPoly aufs Polygon geklippt, dort genuegt die Punkt-Box.
+  // inPoly aufs Polygon geklippt, dort genuegt die Punkt-Box. Fuer die
+  // Kompositstrukturen gilt dasselbe: Mauerring, Kaiflucht und Klosterrechteck
+  // entstehen AUS den Punkten (die Kaiflucht wird in werftAchse zusaetzlich auf
+  // die Huellbox geklemmt), die Ausdehnung ueber `groesse` steckt im
+  // Stempelradius.
   var pts = el.points;
   if (el.kind === "pfad" && el.points.length >= 2) {
     var sm = pathSamples(el.points, 2.5);
@@ -276,9 +318,13 @@ function commit(el, heavy) {
 /** Ändert ein Element das Terrain oder die Sperrflächen? */
 function isHeavy(el) {
   // "bruch" schneidet ueber die Stempelkette tief ins Hoehenfeld — schwer.
+  // Burg, Werft und Kloster sperren mit ihrem Mauerring, ihrer Kaiflucht und
+  // ihren Kreuzgangfluegeln Korridore — genau das Kriterium, mit dem auch das
+  // Viertel hier steht. Zusaetzlich haengen ihre Layouts (Torkante, Kaiflucht)
+  // am Hoehenfeld: eine Terrainaenderung darunter muss sie neu rechnen.
   return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" ||
           el.variant === "mauer" || el.variant === "bruch")) ||
-         (el.kind === "flaeche" && el.variant === "viertel");
+         (el.kind === "flaeche" && (el.variant === "viertel" || istStruktur(el.variant)));
 }
 
 

@@ -41,6 +41,10 @@ function Pool(name, geo, opts) {
     alphaTest: opts.alphaTest || 0,
     familie: opts.familie || 'holz',
     wind: opts.wind || null,
+    // B4 — `drift: <amplitude>`: schwebende Eigenbewegung in Bruchkantennaehe.
+    // Reine Durchreiche wie `wind`; ohne die Option (Normalfall) bleibt das
+    // Material Zeichen fuer Zeichen das bisherige.
+    drift: opts.drift || 0,
     emissive: opts.emissive || 0x000000
   });
   if (opts.emissiveIntensity !== undefined) this.mat.emissiveIntensity = opts.emissiveIntensity;

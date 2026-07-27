@@ -4,6 +4,65 @@ import { clamp, lerp, sstep, DEG, hashi, vnoise, fractal } from '../core/rng.js'
 import { MAP, VW, HALF, WATER, S, BIOME, hoehenProfil } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 
+/* ==========================================================================
+   Aenderungserkennung fuer die Historie (H1e)
+
+   editor/history.js musste bisher bei JEDEM pushUndo elementweise ueber das
+   ganze Hoehenfeld laufen (1.050.625 Vergleiche auf einer 1024er Karte, auch
+   bei einer reinen Elementaenderung) und im Trefferfall eine Vollkopie ziehen
+   (4,2 MB). Beides ersetzt dieses Paar:
+
+   * `hoehenVersion` — ein Zaehler, der bei JEDER Schreiboperation auf `base`
+     steigt. history.js vergleicht nur noch zwei Zahlen (O(1)). Der Export ist
+     eine lebende Modulbindung: der Importeur liest immer den aktuellen Wert,
+     ein `var` reicht dafuer (wie MAP/VW/HALF aus core/store.js).
+   * die "schmutzige Region" — die Vereinigungsbox aller Schreibzugriffe seit
+     dem letzten Abholen. history.js holt sie beim Schnappschuss ab (setzt sie
+     dabei zurueck) und sichert nur noch diesen Ausschnitt.
+
+   BEWUSSTE ABWEICHUNG von der Roadmap-Notiz: `recomputeHeights` zaehlt NICHT
+   mit. Es schreibt ausschliesslich `hgt` (base + Flussstempel) und laesst
+   `base` unangetastet — und nur `base` steckt im Schnappschuss. Wuerde es
+   mitzaehlen, markierte jedes `refreshTerrainFull()` (also jedes Element-
+   Commit, jedes rebuildAll) die ganze Karte als schmutzig und H1e waere
+   wirkungslos: genau der Fall, den die Roadmap abstellen will.
+
+   VERTRAG fuer fremde Module: wer `base` direkt beschreibt, MUSS danach
+   `basisGeaendert(i0,i1,j0,j1)` rufen. Heute tut das niemand ohne Not — die
+   drei Stellen in editor/io.js (v3-Delta, base.set, Hoehenkarten-Import)
+   stehen alle hinter `pushUndo(true)`, und dieser Vollschnappschuss deckt
+   eine unbegrenzte Aenderung ohnehin ab (history.js zieht den Schatten
+   danach komplett nach).
+   ========================================================================== */
+var hoehenVersion = 0;
+// leere Box: i1 < i0
+var schmutzI0 = 0, schmutzI1 = -1, schmutzJ0 = 0, schmutzJ1 = -1;
+
+/** Meldet einen Schreibzugriff auf `base` im Gitterbereich [i0..i1]x[j0..j1]. */
+function basisGeaendert(i0, i1, j0, j1) {
+  i0 = clamp(i0 | 0, 0, VW - 1); i1 = clamp(i1 | 0, 0, VW - 1);
+  j0 = clamp(j0 | 0, 0, VW - 1); j1 = clamp(j1 | 0, 0, VW - 1);
+  if (i1 < i0 || j1 < j0) return;             // nichts beruehrt -> auch kein Takt
+  hoehenVersion++;
+  if (schmutzI1 < schmutzI0) {                 // erste Meldung seit dem Abholen
+    schmutzI0 = i0; schmutzI1 = i1; schmutzJ0 = j0; schmutzJ1 = j1;
+    return;
+  }
+  if (i0 < schmutzI0) schmutzI0 = i0;
+  if (i1 > schmutzI1) schmutzI1 = i1;
+  if (j0 < schmutzJ0) schmutzJ0 = j0;
+  if (j1 > schmutzJ1) schmutzJ1 = j1;
+}
+
+/** Liefert die schmutzige Region und setzt sie zurueck — oder null, wenn seit
+ *  dem letzten Abholen nichts geschrieben wurde. Nur history.js ruft das. */
+function holeSchmutzRegion() {
+  if (schmutzI1 < schmutzI0) return null;
+  var r = { i0: schmutzI0, i1: schmutzI1, j0: schmutzJ0, j1: schmutzJ1 };
+  schmutzI0 = 0; schmutzI1 = -1; schmutzJ0 = 0; schmutzJ1 = -1;
+  return r;
+}
+
 /* --- Hoehenfelder (H1b) -------------------------------------------------
    Die Felder haengen an VW und muessen beim Wechsel der Kartengroesse
    mitwachsen. Bewusst NUR WACHSEN, nie schrumpfen:
@@ -31,6 +90,10 @@ function felderSichern() {
   // Abnutzung entlang der Wege: 0..255, weich auslaufend, faerbt das Gras erdig.
   wear = new Uint8Array(n);
   feldLaenge = n;
+  // Frisches (genullte) base-Feld ist eine Aenderung wie jede andere. Praktisch
+  // folgt sofort verwerfeHistorie() aus io.js, aber der Zaehler soll auch dann
+  // stimmen, wenn jemand felderSichern() kuenftig ohne diesen Rahmen ruft.
+  basisGeaendert(0, VW - 1, 0, VW - 1);
 }
 felderSichern();
 
@@ -88,6 +151,10 @@ function genBaseIn(ziel, seed) {
       ziel[j * VW + i] = h;
     }
   }
+  // H1e: nur der Schreibpfad AUF base zaehlt. io.js laesst sich hier auch ein
+  // frisches Vergleichsfeld fuellen (Seed-Terrain fuers v3-Delta) — das ist
+  // kein Undo-relevanter Vorgang und darf den Zaehler nicht bewegen.
+  if (ziel === base) basisGeaendert(0, VW - 1, 0, VW - 1);
 }
 
 /** Seed-Terrain direkt nach base schreiben — gleiche Rechenreihenfolge wie immer. */
@@ -117,18 +184,21 @@ function genBase(seed) { genBaseIn(base, seed); }
    unten (ceil(i0/PATCH)-1).
 
    Alle Patches teilen sich EIN Material (Material-Sharing zwischen nicht
-   instanzierten Meshes ist erlaubt) und EIN Indexattribut (die lokale
+   instanzierten Meshes ist erlaubt) und ihre Indexattribute (die lokale
    Topologie ist in jedem Patch dieselbe; hoechster lokaler Index 65*65-1 =
-   4224, deshalb genuegt Uint16 statt des frueheren Uint32).
+   4224, deshalb genuegt Uint16 statt des frueheren Uint32). Seit H1c ist das
+   nicht mehr EIN Indexattribut, sondern eines je Detailstufe und Randmuster —
+   geteilt bleibt es trotzdem, siehe den LOD-Abschnitt weiter unten.
    ========================================================================== */
 var PATCH = 64;                 // Kacheln je Patch-Kante (teilt 256/512/1024)
 var PVW = PATCH + 1;            // Vertices je Patch-Kante
 var terrain = new THREE.Group();   // Huelle: alle Patch-Meshes haengen hier drin
 var terraMaterial = terraMat({ vertexColors: true, cloudShadow: true, familie: 'erde' });
 tintedMats.push(terraMaterial);    // genau EINMAL, auch ueber Groessenwechsel
-var patches = [];               // [{geo, mesh, gi0, gj0}], zeilenweise pj*patchN+pi
+// [{geo, mesh, gi0, gj0, stufe, kanten, wunsch}], zeilenweise pj*patchN+pi
+var patches = [];
 var patchN = 0;                 // Patches je Achse
-var patchIndex = null;          // geteiltes Indexattribut aller Patches
+var patchIndex = null;          // Startindex aller Patches (Stufe 0, keine Randanpassung)
 
 function baueEinenPatch(gi0, gj0) {
   var geo = new THREE.BufferGeometry();
@@ -150,8 +220,14 @@ function baueEinenPatch(gi0, gj0) {
   geo.computeBoundingSphere();       // vorlaeufig flach, refreshGrid zieht nach
   var mesh = new THREE.Mesh(geo, terraMaterial);
   mesh.frustumCulled = true;         // jetzt sinnvoll: Patches sind klein genug
+  // H1c: der einzige Weg an die Kamera, ohne main.js anzufassen. Der Haken
+  // drosselt sich selbst (siehe lodHaken) und ist bei abgeschaltetem LOD ein
+  // einziger Vergleich pro Patch und Bild.
+  mesh.onBeforeRender = lodHaken;
   terrain.add(mesh);
-  return { geo: geo, mesh: mesh, gi0: gi0, gj0: gj0 };
+  // stufe/kanten: aktuell gezeichnete Detailstufe und das Randmuster (H1c).
+  // 0/0 = jede Zelle, keine angepasste Kante = exakt das Bild vor H1c.
+  return { geo: geo, mesh: mesh, gi0: gi0, gj0: gj0, stufe: 0, kanten: 0, wunsch: 0 };
 }
 
 /** Baut das Patchraster fuer die aktuelle Kartengroesse neu auf. */
@@ -162,21 +238,296 @@ function bauePatches() {
   }
   patches.length = 0;
   patchN = MAP / PATCH;
-  var idx = new Uint16Array(PATCH * PATCH * 6), o = 0;
-  for (var jj = 0; jj < PATCH; jj++) {
-    for (var ii = 0; ii < PATCH; ii++) {
-      // gleiche Diagonale (b->c) wie im frueheren Einzelmesh, nur lokal
-      // indiziert: identische Dreiecke, identische Umlaufrichtung
-      var a = jj * PVW + ii, b = a + 1, c = a + PVW, d = c + 1;
-      idx[o++] = a; idx[o++] = c; idx[o++] = b;
-      idx[o++] = b; idx[o++] = c; idx[o++] = d;
-    }
-  }
-  patchIndex = new THREE.BufferAttribute(idx, 1);
+  // Alle Indexpuffer gehen mit den Geometrien: geo.dispose() raeumt oben auch
+  // die geteilten Attribute ab, ein weiterverwendeter Cache zeigte danach auf
+  // geloeschte GPU-Puffer. Der Cache ist billig wieder aufgebaut.
+  indexCache.length = 0;
+  patchIndex = holeIndex(0, 0);
+  lodAktiv = lodErlaubt && MAP > 256;
   for (var pj = 0; pj < patchN; pj++) {
     for (var pi = 0; pi < patchN; pi++) patches.push(baueEinenPatch(pi * PATCH, pj * PATCH));
   }
 }
+
+/* ==========================================================================
+   Detailstufen (H1c)
+
+   Drei Stufen, Schrittweite 1 / 2 / 4 Kacheln. Die VERTEXDATEN bleiben in
+   jeder Stufe dieselben — Position, Normale und Farbe stehen unveraendert an
+   den 65x65 Gittervertices, nur der Indexpuffer benutzt weniger davon. Das ist
+   der billigste Weg (kein zweiter Upload, kein zweiter Speichersatz) und hat
+   eine angenehme Nebenwirkung: weil die benutzten Vertices eine echte
+   Teilmenge sind, wechseln beim Stufensprung WEDER Farbe NOCH Normale eines
+   einzigen weiterverwendeten Punktes. Die Beleuchtung kann also nicht
+   springen; sichtbar ist nur, dass die Flaeche zwischen zwei behaltenen
+   Punkten linear statt ueber die uebersprungenen Stuetzstellen laeuft.
+   65 = 64+1 und 64 ist durch 1, 2 und 4 teilbar: jede Stufe trifft die
+   Patchecken und die Patchkanten exakt.
+
+   NAHTPROBLEM. Grenzen zwei Patches unterschiedlicher Stufe aneinander, laege
+   auf der feineren Seite ein Vertex mitten auf der Kante der groeberen — ein
+   T-Vertex, und weil dieser Vertex eine andere Hoehe hat als die gerade
+   Verbindung der groeberen Seite, klafft dort ein Riss.
+
+   Geloest wird das mit ANGEPASSTEN RANDINDIZES, nicht mit einem Rock:
+   * Die Stufen benachbarter Patches duerfen sich um hoechstens 1
+     unterscheiden (Glaettungsdurchlauf in aktualisiereDetailstufen).
+   * Der FEINERE Patch verzichtet entlang der betroffenen Kante auf seine
+     Zwischenvertices: sein Aussenrand benutzt dort die Schrittweite des
+     groeberen Nachbarn und ist damit Punkt fuer Punkt derselbe Polygonzug.
+     Kein T-Vertex, kein Riss — auch nicht unter Vergroesserung, und ohne
+     jede zusaetzliche Flaeche.
+   Ein vertikaler Rock waere einfacher, aber schlechter: er braucht zusaetz-
+   liche Vertices (also ein zweites Positionsschema in aktualisierePatch),
+   verdeckt den Riss nur statt ihn zu vermeiden, und ragt an steilen Haengen
+   als dunkler Streifen ins Bild. Da unser Patch ein reines Gitter mit
+   konstanter Kantenlaenge ist, kostet der saubere Weg fast nichts.
+
+   Der Indexpuffer haengt damit an (Stufe, Randmuster). Randmuster = 4 Bits
+   (links/rechts/unten/oben je "Nachbar ist eine Stufe groeber"), also
+   3 * 16 = 48 moegliche Puffer. Sie entstehen faul und werden von ALLEN
+   Patches geteilt; in der Praxis sind je Blickrichtung eine Handvoll aktiv.
+   ========================================================================== */
+var LOD_SCHRITT = [1, 2, 4];
+/* Umschaltabstaende in Welteinheiten, gemessen von der Kamera zur Huellkugel
+   des Patches (Mittelpunkt minus Radius, also naeherungsweise zur
+   Patchoberflaeche). Ein Patch ist 64 Einheiten breit, die Kamera steht 25..400
+   Einheiten vom Fokus entfernt (CAM_DIST_MIN/MAX in editor/io.js).
+   Geeicht am Hoehennebel aus world/atmosphere.js, nicht am Bauchgefuehl:
+   fog.near liegt je nach Tageszeit bei 110..260, fog.far bei 860..1150, im
+   Wetter "nebel" faellt fog.far auf ~0.45 davon. Stufe 1 beginnt damit ab
+   260+34 = 294 — dort steht das Gelaende bereits im Dunst; Stufe 2 ab 554, wo
+   es bei Nebelwetter praktisch vollstaendig im Dunst verschwindet. Die
+   Kartenmitte, wo gearbeitet wird, bleibt in jeder Kartengroesse Stufe 0. */
+var LOD_ABSTAND1 = 260, LOD_ABSTAND2 = 520;
+// Hysterese: erst 34 Einheiten JENSEITS der Schwelle wird umgeschaltet, erst
+// 34 Einheiten DIESSEITS zurueck. Ohne das flackerte die Stufe, sobald die
+// Kamera genau auf der Grenze schwebt.
+var LOD_HYSTERESE = 34;
+var LOD_TAKT = 220;             // ms zwischen zwei Neuberechnungen (~4,5/s)
+var lodErlaubt = true;          // Nutzerschalter
+var lodAktiv = false;           // erlaubt UND lohnend (erst ab 512er Karten)
+var lodZeit = -1e9;
+var indexCache = [];            // [stufe*16 + kanten] -> THREE.BufferAttribute
+
+/** Voller Indexsatz einer Stufe — fuer Schritt 1 Zahl fuer Zahl derselbe
+ *  Puffer wie vor H1c (gleiche Diagonale b->c, gleiche Umlaufrichtung,
+ *  gleiche Reihenfolge). Deshalb ist Stufe 0 ohne angepasste Kante keine
+ *  Naeherung des alten Bildes, sondern buchstaeblich dasselbe Dreiecksnetz. */
+function ebenerIndex(s) {
+  var z = PATCH / s;
+  var idx = new Uint16Array(z * z * 6), o = 0;
+  for (var jj = 0; jj < PATCH; jj += s) {
+    for (var ii = 0; ii < PATCH; ii += s) {
+      var a = jj * PVW + ii, b = a + s, c = a + s * PVW, d = c + s;
+      idx[o++] = a; idx[o++] = c; idx[o++] = b;
+      idx[o++] = b; idx[o++] = c; idx[o++] = d;
+    }
+  }
+  return idx;
+}
+
+/* Reissverschluss zwischen zwei Polygonzuegen desselben Randstreifens.
+   `aussen`/`innen` sind flache Paarlisten [vertexIndex, laufwert, ...]; der
+   Laufwert ist die Position entlang der Kante (0..PATCH). Es wird immer die
+   Seite weitergeschaltet, deren naechster Punkt frueher kommt — dadurch
+   entstehen weder Loecher noch Ueberlappungen, unabhaengig davon, wie sich die
+   Schrittweiten der beiden Seiten verhalten. Genau m+n Dreiecke.
+   Umlaufsinn: die vier Streifen laufen im Kreis (unten +i, rechts +j, oben -i,
+   links -j); mit den beiden Dreiecksformen unten zeigt die Normale in allen
+   vier Faellen nach oben — nachgerechnet fuer jede Kante. */
+function reissverschluss(idx, o, aussen, innen) {
+  var mA = aussen.length / 2 - 1, mI = innen.length / 2 - 1;
+  var a = 0, b = 0;
+  while (a < mA || b < mI) {
+    var nehmeAussen;
+    if (a >= mA) nehmeAussen = false;
+    else if (b >= mI) nehmeAussen = true;
+    else nehmeAussen = aussen[(a + 1) * 2 + 1] <= innen[(b + 1) * 2 + 1];
+    idx[o++] = aussen[a * 2]; idx[o++] = innen[b * 2];
+    if (nehmeAussen) { idx[o++] = aussen[(a + 1) * 2]; a++; }
+    else { idx[o++] = innen[(b + 1) * 2]; b++; }
+  }
+  return o;
+}
+
+/** Aussenrand eines Streifens: Laufwerte 0..PATCH in Schritten von `schritt`,
+ *  Vertexindex ueber die Abbildung f(t). */
+function randPunkte(schritt, f) {
+  var l = [];
+  for (var t = 0; t <= PATCH; t += schritt) { l.push(f(t)); l.push(t); }
+  return l;
+}
+/** Innenrand desselben Streifens: Laufwerte s..PATCH-s in eigener Schrittweite. */
+function innenPunkte(s, f) {
+  var l = [];
+  for (var t = s; t <= PATCH - s; t += s) { l.push(f(t)); l.push(t); }
+  return l;
+}
+
+/**
+ * Indexsatz mit angepassten Raendern. `s` ist die eigene Schrittweite, die
+ * vier Randschrittweiten sind entweder `s` (Nachbar gleich fein oder feiner)
+ * oder `2*s` (Nachbar eine Stufe groeber).
+ *
+ * Aufbau: ein Kern aus regulaeren Zellen [s .. PATCH-s] plus vier Randstreifen
+ * zwischen dem Aussenrand des Patches und dem Rand des Kerns. Die Streifen
+ * schliessen an ihren Enden ueber die Diagonale Aussenecke->Innenecke ab und
+ * teilen diese Diagonale mit dem jeweils naechsten Streifen — der Ring ist
+ * damit lueckenlos gekachelt, auch wenn zwei benachbarte Kanten gleichzeitig
+ * vergroebert sind.
+ */
+function gestreifterIndex(s, eL, eR, eU, eO) {
+  var kern = PATCH / s - 2;                       // Kernzellen je Achse
+  var n = kern * kern * 2
+        + (PATCH / eU + PATCH / s - 2)            // unten
+        + (PATCH / eR + PATCH / s - 2)            // rechts
+        + (PATCH / eO + PATCH / s - 2)            // oben
+        + (PATCH / eL + PATCH / s - 2);           // links
+  var idx = new Uint16Array(n * 3), o = 0;
+  for (var jj = s; jj <= PATCH - 2 * s; jj += s) {
+    for (var ii = s; ii <= PATCH - 2 * s; ii += s) {
+      var a = jj * PVW + ii, b = a + s, c = a + s * PVW, d = c + s;
+      idx[o++] = a; idx[o++] = c; idx[o++] = b;
+      idx[o++] = b; idx[o++] = c; idx[o++] = d;
+    }
+  }
+  var P = PATCH, Q = PVW;
+  o = reissverschluss(idx, o,                                     // unten, +i
+    randPunkte(eU, function (t) { return t; }),
+    innenPunkte(s, function (t) { return s * Q + t; }));
+  o = reissverschluss(idx, o,                                     // rechts, +j
+    randPunkte(eR, function (t) { return t * Q + P; }),
+    innenPunkte(s, function (t) { return t * Q + (P - s); }));
+  o = reissverschluss(idx, o,                                     // oben, -i
+    randPunkte(eO, function (t) { return P * Q + (P - t); }),
+    innenPunkte(s, function (t) { return (P - s) * Q + (P - t); }));
+  o = reissverschluss(idx, o,                                     // links, -j
+    randPunkte(eL, function (t) { return (P - t) * Q; }),
+    innenPunkte(s, function (t) { return (P - t) * Q + s; }));
+  return idx;
+}
+
+/** Geteiltes Indexattribut zu (Stufe, Randmuster) — wird faul gebaut.
+ *  Exportiert als `terrainIndexSatz`, damit Testabzug und Debugansicht die
+ *  Netztopologie einer Stufe pruefen koennen, ohne einen Patch dorthin
+ *  schalten zu muessen. */
+function holeIndex(stufe, kanten) {
+  var key = stufe * 16 + kanten;
+  var a = indexCache[key];
+  if (a) return a;
+  var s = LOD_SCHRITT[stufe];
+  var arr = kanten === 0 ? ebenerIndex(s)
+    : gestreifterIndex(s, (kanten & 1) ? 2 * s : s, (kanten & 2) ? 2 * s : s,
+                          (kanten & 4) ? 2 * s : s, (kanten & 8) ? 2 * s : s);
+  a = new THREE.BufferAttribute(arr, 1);
+  indexCache[key] = a;
+  return a;
+}
+
+function setzeStufe(p, stufe, kanten) {
+  if (p.stufe === stufe && p.kanten === kanten) return;
+  p.stufe = stufe; p.kanten = kanten;
+  p.geo.setIndex(holeIndex(stufe, kanten));
+}
+
+/**
+ * Waehlt fuer jeden Patch die Detailstufe nach Kameraabstand, klemmt die
+ * Stufendifferenz benachbarter Patches auf 1 und setzt daraus Indexpuffer und
+ * Randanpassung. Kostet einen Durchlauf ueber die Patchliste (16 bei 256,
+ * 256 bei 1024) und laeuft nur alle LOD_TAKT Millisekunden.
+ */
+function aktualisiereDetailstufen(kamera) {
+  if (!lodAktiv || !kamera || !patches.length) return;
+  var kp = kamera.position, q, p;
+  for (q = 0; q < patches.length; q++) {
+    p = patches[q];
+    var bs = p.geo.boundingSphere;
+    var d;
+    if (bs) {
+      var dx = kp.x - bs.center.x, dy = kp.y - bs.center.y, dz = kp.z - bs.center.z;
+      d = Math.sqrt(dx * dx + dy * dy + dz * dz) - bs.radius;
+    } else {
+      var cx = p.gi0 + PATCH * 0.5 - HALF, cz = p.gj0 + PATCH * 0.5 - HALF;
+      d = Math.sqrt((kp.x - cx) * (kp.x - cx) + (kp.z - cz) * (kp.z - cz));
+    }
+    if (d < 0) d = 0;
+    var st = p.stufe;
+    // Hysterese in beide Richtungen; die Schleifen erlauben zugleich einen
+    // Sprung ueber zwei Stufen, wenn die Kamera weit versetzt wird.
+    while (st < 2 && d > (st === 0 ? LOD_ABSTAND1 : LOD_ABSTAND2) + LOD_HYSTERESE) st++;
+    while (st > 0 && d < (st === 1 ? LOD_ABSTAND1 : LOD_ABSTAND2) - LOD_HYSTERESE) st--;
+    p.wunsch = st;
+  }
+  // Stufendifferenz auf 1 klemmen — Voraussetzung dafuer, dass eine Kante nur
+  // die Faelle "gleich" und "genau eine Stufe groeber" kennt. Es wird immer
+  // nur verfeinert, der Durchlauf terminiert daher (hoechstens 2 Runden noetig).
+  var runde = 0, geaendert = true;
+  while (geaendert && runde++ < 4) {
+    geaendert = false;
+    for (var pj = 0; pj < patchN; pj++) {
+      for (var pi = 0; pi < patchN; pi++) {
+        var k = pj * patchN + pi, w = patches[k].wunsch, m = w;
+        if (pi > 0 && patches[k - 1].wunsch + 1 < m) m = patches[k - 1].wunsch + 1;
+        if (pi < patchN - 1 && patches[k + 1].wunsch + 1 < m) m = patches[k + 1].wunsch + 1;
+        if (pj > 0 && patches[k - patchN].wunsch + 1 < m) m = patches[k - patchN].wunsch + 1;
+        if (pj < patchN - 1 && patches[k + patchN].wunsch + 1 < m) m = patches[k + patchN].wunsch + 1;
+        if (m < w) { patches[k].wunsch = m; geaendert = true; }
+      }
+    }
+  }
+  for (var bj = 0; bj < patchN; bj++) {
+    for (var bi = 0; bi < patchN; bi++) {
+      var kk = bj * patchN + bi, s = patches[kk].wunsch, bits = 0;
+      if (bi > 0 && patches[kk - 1].wunsch > s) bits |= 1;               // links
+      if (bi < patchN - 1 && patches[kk + 1].wunsch > s) bits |= 2;      // rechts
+      if (bj > 0 && patches[kk - patchN].wunsch > s) bits |= 4;          // unten
+      if (bj < patchN - 1 && patches[kk + patchN].wunsch > s) bits |= 8; // oben
+      setzeStufe(patches[kk], s, bits);
+    }
+  }
+}
+
+/* Selbstgetakteter Aufhaenger an jedem Patch-Mesh. three.js ruft
+   object.onBeforeRender in renderObject() — also einmal je gezeichnetem Patch
+   und Renderdurchgang (Depth-Prepass UND Composer-Durchgang, beide mit
+   derselben Kamera; der Schattenwurf laeuft an onBeforeRender vorbei). Die
+   Zeitdrossel macht daraus wenige Neuberechnungen pro Sekunde statt einer je
+   Patch und Bild. Ein waehrend des Durchgangs gewechselter Indexpuffer eines
+   bereits gezeichneten Patches wirkt erst im naechsten Bild — beide Stufen
+   sind gueltige Netze derselben Flaeche, ein Zwischenzustand ist deshalb
+   unkritisch. */
+function lodHaken(renderer, scene, kamera) {
+  if (!lodAktiv) return;
+  var t = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  if (t - lodZeit < LOD_TAKT) return;
+  lodZeit = t;
+  aktualisiereDetailstufen(kamera);
+}
+
+/** LOD an/aus (Vorgabe an). Aus setzt alle Patches auf Stufe 0 zurueck — das
+ *  Bild ist danach wieder das von vor H1c. Unabhaengig davon bleibt LOD auf
+ *  256er Karten wirkungslos: dort gibt es bei 16 Patches nichts zu sparen,
+ *  und die halbe Kartendiagonale (181) liegt unter der ersten Schwelle. */
+function setzeLod(an) {
+  lodErlaubt = !!an;
+  lodAktiv = lodErlaubt && MAP > 256;
+  if (!lodAktiv) for (var q = 0; q < patches.length; q++) setzeStufe(patches[q], 0, 0);
+}
+function lodAn() { return lodAktiv; }
+
+/** Kennzahlen fuer Bericht und Statistikanzeige. */
+function terrainStufenStatistik() {
+  var z = [0, 0, 0], dr = 0;
+  for (var q = 0; q < patches.length; q++) {
+    z[patches[q].stufe]++;
+    var ix = patches[q].geo.getIndex();
+    dr += (ix ? ix.count : 0) / 3;
+  }
+  return { aktiv: lodAktiv, patches: patches.length, stufen: z, dreiecke: dr,
+    dreieckeVoll: patches.length * PATCH * PATCH * 2 };
+}
+
 bauePatches();
 
 /** Terrain-Meshes in die Szene haengen (einmal beim Start). Die Gruppe bleibt
@@ -523,6 +874,11 @@ function applyBrush(p, mode, radius, strength, dt) {
       }
     }
   }
+  // H1e: geschrieben wurde ausschliesslich in [i0..i1]x[j0..j1] (die Kreis-
+  // pruefung klippt nur weiter herein). Der Sicherheitsrand `m` unten gilt der
+  // abgeleiteten Rechnung (hgt/AO/Normalen) und gehoert NICHT in die Box —
+  // `base` steht dort unveraendert.
+  basisGeaendert(i0, i1, j0, j1);
   var m = Math.ceil(r) + 2;
   recomputeHeights(i0 - m, i1 + m, j0 - m, j1 + m);
   computeAO(i0 - m - 1, i1 + m + 1, j0 - m - 1, j1 + m + 1);
@@ -536,8 +892,23 @@ function setFlattenTarget(v) { flattenTarget = v; }
    sie in die Szene zu haengen. Der frueher exportierte `terrainGeo` entfaellt
    ersatzlos — es gibt keine EINE Terraingeometrie mehr, und kein Modul hat
    ihn je importiert (geprueft ueber das ganze Projekt). Wer die Meshes
-   braucht (Statistik, Debug), liest terrain.children oder terrainPatches. */
+   braucht (Statistik, Debug), liest terrain.children oder terrainPatches.
+
+   Neu ab H1e: `hoehenVersion` (LEBENDE Bindung — der Importeur sieht jede
+   Erhoehung sofort, wie MAP/VW/HALF aus core/store.js), `basisGeaendert` fuer
+   fremde Schreiber von `base` und `holeSchmutzRegion` fuer editor/history.js.
+
+   Neu ab H1c: `aktualisiereDetailstufen(kamera)` laeuft von selbst ueber den
+   onBeforeRender-Haken der Patch-Meshes; der Export ist fuer den Fall gedacht,
+   dass main.js sie kuenftig lieber einmal je Bild im Animationslauf anstoesst
+   (deterministischer als der Renderhaken). `setzeLod`/`lodAn` sind der
+   Nutzerschalter, `terrainStufenStatistik` liefert Kennzahlen fuer die
+   Statistikanzeige, `terrainIndexSatz` den geteilten Indexpuffer einer
+   (Stufe, Randmuster)-Kombination fuer Testabzug und Debugansicht. */
 export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, patches as terrainPatches,
   initTerrain, terrainGeometrienNeu, terrainColor, computeAO,
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
-  inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget };
+  inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget,
+  hoehenVersion, basisGeaendert, holeSchmutzRegion,
+  aktualisiereDetailstufen, setzeLod, lodAn, terrainStufenStatistik,
+  holeIndex as terrainIndexSatz };

@@ -7,6 +7,29 @@ import { clamp, lerp, sstep, hashi, vnoise, fractal, rngOf, rr, ri } from '../co
 import { TEX } from '../render/textures.js';
 import { definePool, setPoolNames } from '../core/pools.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
+// B4 — Bruchdrift: render/materials.js braucht das Uniform-Buendel der
+// Bruchmaske, darf paths.js aber nicht selbst importieren (paths.js legt beim
+// Modulstart Materialien an; der umgekehrte Zyklus laesst FAMILIEN in der TDZ
+// auflaufen und die App gar nicht erst starten). Diese Datei ist die richtige
+// Stelle fuer die Weitergabe: hier stehen ohnehin die Pools, die driften.
+// Uebergeben wird der NAMENSRAUM, nicht der Wert — materials.js liest ihn erst
+// in onBeforeCompile, dann ist paths.js in jeder Einstiegsreihenfolge fertig.
+// (Gegenprobe: eine Kopie beim Modulstart waere bei Einstieg ueber paths.js
+// `undefined`, weil bruchMaskeUniforms dort ein noch nicht belegtes `var` ist.)
+import * as PFADE from './paths.js';
+import { setBruchQuelle } from '../render/materials.js';
+setBruchQuelle(PFADE);
+
+/* --- B4: Amplituden der Bruchdrift (Welteinheiten) ----------------------
+   Nur ZWEI Werte, damit die Programmzahl nicht ausufert: der Cache-Schluessel
+   in materials.js traegt die Amplitude, jede weitere Zahl waere eine weitere
+   Shader-Permutation je Materialfamilie.
+     LEICHT  — Blattwerk, Bodenflor, Leuchtwerk: reisst sofort ab und taumelt.
+     BROCKEN — Stein, Stumpf, Geroell: schwer, hebt und dreht sich nur traege.
+   Schwere Bauten (Haeuser, Tuerme, Mauern, Bruecken) bekommen KEINE Drift —
+   ein schwebendes Haus waere kein Detail mehr, sondern eine andere Erzaehlung. */
+const DRIFT_LEICHT = 0.55;
+const DRIFT_BROCKEN = 0.28;
 
 /** Fügt Geometrien (position/normal/color/uv, indiziert oder nicht) zu einer zusammen. */
 function mergeGeos(list) {
@@ -1419,20 +1442,25 @@ definePool("turm", geoTurm(), { radius: 2.0, familie: 'putz' });
 definePool("mauer", geoMauer(), { radius: 1.2, familie: 'stein' });
 definePool("saeule", geoSaeule(), { radius: 0.9, familie: 'stein' });
 definePool("feldreihe", geoFeldreihe(), { radius: 0.6, ao: 0.15, familie: 'erde' });
-definePool("busch", geoBusch(), { radius: 0.85, dbl: true, familie: 'laub', wind: { amp: 0.14 } });
+definePool("busch", geoBusch(), { radius: 0.85, dbl: true, familie: 'laub', wind: { amp: 0.14 },
+  drift: DRIFT_LEICHT });
 definePool("gras", geoGras(), { radius: 0.3, dbl: true, ao: 0.18,
-  map: TEX.grassTuft, alphaTest: 0.42, familie: 'laub', wind: { amp: 0.4 } });
+  map: TEX.grassTuft, alphaTest: 0.42, familie: 'laub', wind: { amp: 0.4 },
+  drift: DRIFT_LEICHT });
 definePool("blume", part(new PL(1.0, 1.0), M(0, 0.5, 0), 0xffffff),
   { radius: 0.3, dbl: true, ao: 0.1, map: TEX.bluete, alphaTest: 0.42,
-    familie: 'laub', wind: { amp: 0.42 } });
+    familie: 'laub', wind: { amp: 0.42 }, drift: DRIFT_LEICHT });
 definePool("industrie", geoIndustrie(), { radius: 3.4, familie: 'stein' });
 definePool("kran", geoKran(), { radius: 2.4, familie: 'holz' });
+// rankenblatt und fels sind die beiden Pools, die vines.js als schwebende
+// Truemmer an die Bruchkante wirft (schwebeDrift) — ohne Drift stuenden genau
+// die still, die es am noetigsten haben.
 definePool("rankenblatt", part(new PL(1, 0.5), M(0.5, 0, 0), 0xffffff),
   { radius: 0.8, dbl: true, ao: 0, map: TEX.rankenBlatt, alphaTest: 0.4,
-    familie: 'laub', wind: { amp: 0.8 } });
+    familie: 'laub', wind: { amp: 0.8 }, drift: DRIFT_LEICHT });
 definePool("kuppel", geoKuppel(), { radius: 2.6, familie: 'putz' });
 definePool("arkade", geoArkade(), { radius: 2.9, familie: 'putz' });
-definePool("fels", geoFels(), { radius: 1.1, familie: 'stein' });
+definePool("fels", geoFels(), { radius: 1.1, familie: 'stein', drift: DRIFT_BROCKEN });
 definePool("pfosten", geoPfosten(), { radius: 0.5, familie: 'holz' });
 definePool("tempel", geoTempel(), { radius: 4.2, ao: 0.22, familie: 'stein' });
 definePool("tholos", geoTholos(), { radius: 3.4, ao: 0.22, familie: 'stein' });
@@ -1448,11 +1476,13 @@ definePool("scheune", geoScheune(), { radius: 2.8, familie: 'holz' });
 
 // Unterwuchs und Requisiten
 definePool("farn", geoFarn(), { radius: 0.7, dbl: true, ao: 0.2,
-  map: TEX.grassTuft, alphaTest: 0.4, familie: 'laub', wind: { amp: 0.3 } });
-definePool("stumpf", geoStumpf(), { radius: 0.5, familie: 'rinde' });
+  map: TEX.grassTuft, alphaTest: 0.4, familie: 'laub', wind: { amp: 0.3 },
+  drift: DRIFT_LEICHT });
+definePool("stumpf", geoStumpf(), { radius: 0.5, familie: 'rinde', drift: DRIFT_BROCKEN });
+// stammliegend (Radius 1.4) bleibt liegen: ein ganzer Stamm ist kein Truemmer.
 definePool("stammliegend", geoStammLiegend(), { radius: 1.4, familie: 'rinde' });
 definePool("moos", geoMoos(), { radius: 0.6, dbl: true, ao: 0,
-  map: TEX.kroneRund, alphaTest: 0.42, familie: 'laub' });
+  map: TEX.kroneRund, alphaTest: 0.42, familie: 'laub', drift: DRIFT_LEICHT });
 definePool("fass", geoFass(), { radius: 0.4, familie: 'holz' });
 definePool("kiste", geoKiste(), { radius: 0.45, familie: 'holz' });
 definePool("karren", geoKarren(), { radius: 1.2, familie: 'holz' });
@@ -3079,7 +3109,8 @@ function geoTempelruine() {
 definePool("felsnadel", geoFelsnadel(), { radius: 1.2, familie: 'stein' });
 definePool("felsbogen", geoFelsbogen(), { radius: 3.2, ao: 0.26, familie: 'stein' });
 definePool("findling", geoFindling(), { radius: 1.8, familie: 'stein' });
-definePool("geroell", geoGeroell(), { radius: 1.2, ao: 0.2, familie: 'stein' });
+definePool("geroell", geoGeroell(), { radius: 1.2, ao: 0.2, familie: 'stein',
+  drift: DRIFT_BROCKEN });
 definePool("basaltsaeulen", geoBasaltsaeulen(), { radius: 1.8, ao: 0.28, familie: 'stein' });
 definePool("geysir", geoGeysir(), { radius: 1.6, dbl: true, ao: 0.18,
   map: TEX.kroneZerzaust, alphaTest: 0.4, familie: 'stein', wind: { amp: 0.3 } });
@@ -3107,8 +3138,12 @@ definePool("saeulenstumpf", geoSaeulenstumpf(), { radius: 0.8, familie: 'stein' 
 definePool("giebelruine", geoGiebelruine(), { radius: 2.2, ao: 0.26, familie: 'stein' });
 definePool("gewoelbekeller", geoGewoelbekeller(), { radius: 2.4, ao: 0.28, familie: 'stein' });
 definePool("bruchkante", geoBruchkanteFeld(), { radius: 3.4, ao: 0.28, familie: 'erde' });
-definePool("schwebefels", geoSchwebefels(), { radius: 2.5, ao: 0.24, familie: 'stein' });
-definePool("truemmerhaufen", geoTruemmerhaufen(), { radius: 1.4, familie: 'stein' });
+// schwebefels schwebt laut Namen ohnehin; truemmerhaufen ist Bruchgut. Beide
+// bekommen die BROCKEN-Amplitude — sichtbar, aber traege.
+definePool("schwebefels", geoSchwebefels(), { radius: 2.5, ao: 0.24, familie: 'stein',
+  drift: DRIFT_BROCKEN });
+definePool("truemmerhaufen", geoTruemmerhaufen(), { radius: 1.4, familie: 'stein',
+  drift: DRIFT_BROCKEN });
 definePool("statuentorso", geoStatuentorso(), { radius: 0.9, familie: 'stein' });
 definePool("treppenruine", geoTreppenruine(), { radius: 1.8, ao: 0.26, familie: 'stein' });
 definePool("rissspalt", geoRissspalt(), { radius: 2.8, ao: 0.2, familie: 'erde',
@@ -3872,9 +3907,9 @@ definePool("saftzapfer", geoSaftzapfer(), { radius: 1.0, familie: 'holz',
   emissive: 0x2a4438, emissiveIntensity: 0.4 });
 definePool("lichtbluete", geoLichtbluete(), { radius: 0.5, dbl: true, ao: 0,
   map: TEX.bluete, alphaTest: 0.4, familie: 'laub', wind: { amp: 0.6 },
-  emissive: 0x4e8a72, emissiveIntensity: 0.9 });
+  emissive: 0x4e8a72, emissiveIntensity: 0.9, drift: DRIFT_LEICHT });
 definePool("sporenlaterne", geoSporenlaterne(), { radius: 0.3, ao: 0, familie: 'laub',
-  emissive: 0x5ea88a, emissiveIntensity: 1.0 });
+  emissive: 0x5ea88a, emissiveIntensity: 1.0, drift: DRIFT_LEICHT });
 definePool("wurzelbogen", geoWurzelbogen(), { radius: 2.6, ao: 0.24, familie: 'rinde',
   emissive: 0x2e4a3e, emissiveIntensity: 0.4 });
 definePool("wurzelanker", geoWurzelanker(), { radius: 2.8, ao: 0.24, familie: 'rinde',

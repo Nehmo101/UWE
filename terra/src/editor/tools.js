@@ -63,7 +63,12 @@ var TOOLS = [
 var VARIANTS = {
   pfad: [["strasse", "Straße"], ["mauer", "Mauer"], ["fluss", "Fluss"],
          ["hecke", "Hecke / Zaun"], ["bruch", "Bruchkante"]],
-  flaeche: [["wald", "Wald"], ["feld", "Feld"], ["viertel", "Viertel"], ["wiese", "Wiese"]],
+  /* Die drei Kompositstrukturen stehen am ENDE der Liste, nicht zwischen den
+     Bestandsvarianten: die Reihenfolge ist zugleich die Knopfreihenfolge im
+     Panel, und die eingespielten Griffe der vier alten Varianten sollen bleiben,
+     wo sie sind. */
+  flaeche: [["wald", "Wald"], ["feld", "Feld"], ["viertel", "Viertel"], ["wiese", "Wiese"],
+            ["burg", "Burg"], ["werft", "Werft"], ["kloster", "Kloster"]],
   objekt: [["baeume", "Bäume"], ["haeuser", "Häuser"], ["klassisch", "Klassisch"],
            ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["ruinen", "Ruinen"],
            ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"],
@@ -152,6 +157,32 @@ var PARAMS = {
   "flaeche:wiese": [
     { k: "dichte", l: "Dichte", min: 0.3, max: 2.5, st: 0.05, d: 1.2 },
     { k: "blumen", l: "Blütenanteil", min: 0, max: 1, st: 0.02, d: 0.25 }
+  ],
+  /* --- Kompositstrukturen (generators/strukturen.js) ---------------------
+     Der gezeichnete Polygonzug ist bei allen dreien mehr als eine Umrandung:
+     bei der Burg IST er der Mauerring, beim Kloster geben die ersten beiden
+     Punkte die Achse des Hofes, bei der Werft liefert das Gelaende darunter
+     die Kaiflucht. Die Parameter beschreiben deshalb bewusst die ANLAGE
+     (Mauerhoehe, Hellingen, Hofgroesse) und nicht eine Streudichte. */
+  "flaeche:burg": [
+    { k: "mauerhoehe", l: "Mauerhöhe", min: 0.6, max: 2, st: 0.05, d: 1 },
+    { k: "turmAbstand", l: "Turm alle", min: 8, max: 60, st: 1, d: 22 },
+    { k: "zwinger", l: "Zwinger (Vormauer)", b: true, d: false },
+    { k: "palisade", l: "Holzburg statt Stein", b: true, d: false },
+    { k: "dichte", l: "Hofbebauung", min: 0.2, max: 2.5, st: 0.05, d: 1 }
+  ],
+  "flaeche:werft": [
+    { k: "hellingen", l: "Hellingen", min: 1, max: 4, st: 1, d: 2 },
+    { k: "kai", l: "Kaimauer", b: true, d: true },
+    { k: "dichte", l: "Dichte", min: 0.2, max: 2.5, st: 0.05, d: 1 }
+  ],
+  "flaeche:kloster": [
+    // Obergrenze 2 = KLOSTER_MAX_GROESSE in strukturen.js; core/dirty.js
+    // rechnet damit den Stempelaufschlag aus. Beide muessen gleich bleiben.
+    { k: "groesse", l: "Hofgröße", min: 0.5, max: 2, st: 0.05, d: 1 },
+    { k: "kirche", l: "Kirche", o: [["kapelle", "Kapelle"], ["kathedrale", "Kathedrale"]],
+      d: "kapelle" },
+    { k: "garten", l: "Kreuzgarten", min: 0, max: 1, st: 0.02, d: 0.5 }
   ],
   "objekt:*": [
     { k: "anzahl", l: "Stück pro Klick", min: 1, max: 12, st: 1, d: 1 },
@@ -254,6 +285,14 @@ var PARAMS = {
         ["wueste", "Wüste"], ["moor", "Moor"], ["arbor", "Arbor"],
         ["gemischt", "Gemischt"]], d: "" },
     { k: "stadtDichte", l: "Stadtdichte", min: 0, max: 2, st: 0.1, d: 1 },
+    // genBlattstadt: "" = wie bisher. Sentinel statt inhaltlichem Default,
+    // weil defaultsFor fehlende Parameter beim Laden ergaenzt — jeder echte
+    // Wert wuerde Bestandskarten (auch die von welt.js erzeugten) umbauen.
+    { k: "stadtNetz", l: "Gassennetz Blattstadt", o: [["", "Wie bisher"],
+        ["aus", "Ohne Gassen"], ["einfach", "Hauptachse + Queräste"],
+        ["gassen", "Gassennetz mit Randring"]], d: "" },
+    { k: "stadtRand", l: "Geländer am Blattrand", b: true, d: false },
+    { k: "stadtBloecke", l: "Blocktiefe Blattstadt", min: 10, max: 60, st: 2, d: 20 },
     { k: "treppe", l: "Wendeltreppe", b: true, d: false },
     { k: "bruecken", l: "Hängebrücken", b: true, d: false },
     // H4.4: relative Höhe, ab der mehrere Fußpunkte zu einer Ranke

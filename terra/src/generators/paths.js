@@ -8,8 +8,13 @@ import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { terraMat, tintedMats } from '../render/materials.js';
-// Zyklusfrei: geometry.js importiert weder paths.js noch areas.js (nur
-// rng/textures/pools/terrain), darf hier also direkt angezapft werden.
+// Seit der Bruchkanten-Drift (B4) besteht ein Zyklus: geometry.js importiert
+// paths.js als Namensraum, um materials.js die Bruchmasken-Uniforms zu
+// reichen (setBruchQuelle). Er ist harmlos, weil auf beiden Seiten nur
+// Funktionen und lebende Namensraum-Bindungen gelesen werden — nie ein Wert
+// beim Modulstart kopiert. Ein direkter Import von paths.js in materials.js
+// waere dagegen toedlich (Einstieg main -> pipeline -> materials liegt vor
+// paths, FAMILIEN waere dann noch nicht initialisiert).
 import { mergeGeos, tubeGeo } from './geometry.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
