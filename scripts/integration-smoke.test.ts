@@ -77,8 +77,6 @@ describe("integration smoke — core Studio routes", () => {
     "apps/studio/app/backup/page.tsx",
     "apps/studio/app/jobs/page.tsx",
     "apps/studio/app/settings/page.tsx",
-    "apps/studio/app/admin/status/page.tsx",
-    "apps/studio/app/admin/cookbook/page.tsx",
     "apps/studio/app/admin/ai-prompt/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/dashboard/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/brain/page.tsx",

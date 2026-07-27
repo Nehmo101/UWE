@@ -736,14 +736,6 @@ export type {
   SetupSettingSource,
 } from "./owner-setup-service";
 
-export { getAdminOnboardingChecklist } from "./admin-onboarding-checklist-service";
-
-export type {
-  AdminChecklistItem,
-  AdminOnboardingChecklist,
-  ChecklistItemStatus as AdminChecklistItemStatus,
-} from "./admin-onboarding-checklist-service";
-
 export {
   CAMPAIGN_JOB_PRESETS,
   resolveCampaignPresetHref,
@@ -1156,18 +1148,6 @@ export {
 } from "./production-safety";
 
 export type { ProductionSafetyWarning } from "./production-safety";
-
-export {
-  getOwnerCockpitSnapshot,
-  OWNER_COCKPIT_ERROR_SOURCE_LABELS,
-} from "./owner-cockpit-service";
-
-export type {
-  OwnerCockpitAiUsageSummary,
-  OwnerCockpitErrorItem,
-  OwnerCockpitSnapshot,
-  OwnerCockpitWorldRow,
-} from "./owner-cockpit-service";
 
 export {
   listUnifiedActivity,

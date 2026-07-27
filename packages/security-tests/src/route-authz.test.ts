@@ -83,7 +83,6 @@ const STUDIO_UI_ROUTES = [
   "apps/studio/app/studio/page.tsx",
   "apps/studio/app/forgot-password/page.tsx",
   "apps/studio/app/reset-password/page.tsx",
-  "apps/studio/app/admin/status/page.tsx",
   "apps/studio/app/admin/ai-prompt/page.tsx",
   "apps/studio/app/admin/agent-jobs/page.tsx",
   "apps/studio/app/search/page.tsx",
@@ -159,7 +158,6 @@ describe("route authorization — Startseiten-App (Apex-Origin)", () => {
 
 describe("route authorization — /admin and /api/admin/*", () => {
   const adminRoutes = [
-    "apps/studio/app/admin/status/page.tsx",
     "apps/studio/app/admin/ai-prompt/page.tsx",
     "apps/studio/app/admin/agent-jobs/page.tsx",
     "apps/studio/app/api/admin/status/route.ts",
