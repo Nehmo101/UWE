@@ -13,7 +13,6 @@ export interface PortalWorldHubEntry {
   slug: string;
   name: string;
   description: string | null;
-  guestModeEnabled: boolean;
   updatedAt: string;
 }
 
@@ -56,9 +55,6 @@ export function PortalWorldsHubList({ worlds }: PortalWorldsHubListProps) {
               {world.isNew ? (
                 <span className="uwe-badge portal-new-badge">Neu seit deinem letzten Besuch</span>
               ) : null}
-              <span className="uwe-badge">
-                {world.guestModeEnabled ? "Gastmodus aktiv" : "Login erforderlich"}
-              </span>
             </span>
           </Link>
         </li>

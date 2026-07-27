@@ -78,7 +78,6 @@ export * from "./schemas/actions";
 export {
   canUseAi,
   requireAiRole,
-  resolveEffectiveAiRole,
   resolveAiPolicyLimits,
   checkAiRateLimit,
   resetAiRateLimit,
@@ -90,7 +89,6 @@ export {
   enforceAiAccessPolicy,
   sanitizeAiResponseForClient,
   type AiAccessContext,
-  type AiAuthorizedRole,
   type AiRequestLimitsInput,
 } from "./security/ai-policy";
 

@@ -13,10 +13,10 @@ Text:
 
 export async function tryAiShortenLabelText(
   text: string,
-  options: { userId?: string; role?: string } = {},
+  options: { userId?: string } = {},
 ): Promise<string | null> {
   const trimmed = text.trim();
-  if (!trimmed || !options.userId || !options.role) {
+  if (!trimmed || !options.userId) {
     return null;
   }
 
@@ -25,7 +25,7 @@ export async function tryAiShortenLabelText(
     const result = await executeAiGatewayRequest(
       { gatewayService, repo: createUweRepository() },
       {
-        user: { userId: options.userId, role: options.role },
+        user: { userId: options.userId },
         providerMode: "local_rtx",
         contextMode: "general_chat",
         taskType: "summarize_page",

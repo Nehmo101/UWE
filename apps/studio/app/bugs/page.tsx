@@ -83,7 +83,7 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
   const user = await getCurrentAuthUser();
   const agentJobsConfig = resolveAgentJobsConfig();
   const githubIssueSync = {
-    canCreate: user?.role === "owner",
+    canCreate: user?.isOwner === true,
     tokenConfigured: agentJobsConfig.githubTokenConfigured,
     githubRepo: agentJobsConfig.githubRepo,
   };

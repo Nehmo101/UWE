@@ -5,7 +5,7 @@ import { buttonVariants } from "@/src/components/ui/button";
 import { cn } from "@/src/components/ui/cn";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/states";
-import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
+import { canAccessStudio } from "@uwe/auth";
 import { listWorldTemplateOptions } from "@uwe/database/server";
 import Link from "next/link";
 
@@ -15,7 +15,7 @@ export default async function AuthWorldsPage() {
     listAuthWorlds(),
     Promise.resolve(listWorldTemplateOptions()),
   ]);
-  const canCreateWorld = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
+  const canCreateWorld = user ? canAccessStudio(user) : false;
 
   if (worlds.length === 0) {
     return (
@@ -56,7 +56,6 @@ export default async function AuthWorldsPage() {
             slug: world.slug,
             name: world.name,
             description: world.description,
-            guestModeEnabled: world.guestModeEnabled,
             updatedAt: world.updatedAt.toISOString(),
           }))}
         />

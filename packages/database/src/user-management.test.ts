@@ -39,14 +39,13 @@ describe("user management and login hardening", () => {
     worldASlug = worldA.slug;
     worldBSlug = worldB.slug;
 
-    await auth.setWorldGuestMode(worldA.id, false);
-    await auth.setWorldGuestMode(worldB.id, false);
 
     const admin = await auth.createUser({
       displayName: "Mgmt Admin",
       email: "mgmt-admin@uwe.local",
       password: TEST_PASSWORD,
-      role: "admin",
+      portalAccess: true,
+      studioAccess: true,
       status: "active",
     });
     adminUserId = admin.id;
@@ -55,7 +54,8 @@ describe("user management and login hardening", () => {
       displayName: "Mgmt Player",
       email: "mgmt-player@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
     playerUserId = player.id;
@@ -64,7 +64,6 @@ describe("user management and login hardening", () => {
     await auth.upsertWorldMembership({
       userId: playerUserId,
       worldId: worldA.id,
-      role: "player",
       characterName: "Testchar",
     });
 
@@ -122,7 +121,8 @@ describe("user management and login hardening", () => {
       displayName: "Disabled User",
       email: "disabled@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
     await service.disableUser(disabled.id, adminUserId);
@@ -154,7 +154,8 @@ describe("user management and login hardening", () => {
       displayName: "Temp Player",
       email: "temp-player@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
 
@@ -181,7 +182,8 @@ describe("user management and login hardening", () => {
       displayName: "Delete Me",
       email: "delete-me@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
 
@@ -202,7 +204,8 @@ describe("user management and login hardening", () => {
       displayName: "Self Delete",
       email: "self-delete@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
 
@@ -230,7 +233,11 @@ describe("user management and login hardening", () => {
       displayName: "Sole Owner",
       email: "sole-owner@uwe.local",
       password: TEST_PASSWORD,
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
       status: "active",
     });
 
@@ -282,7 +289,8 @@ describe("user management and login hardening", () => {
         id: playerUserId,
         displayName: "Mgmt Player",
         email: playerEmail,
-        role: "player",
+        isOwner: false,
+        access: { portal: true, studio: false, brain: false, family: false },
       },
     });
     assert.ok(denied);

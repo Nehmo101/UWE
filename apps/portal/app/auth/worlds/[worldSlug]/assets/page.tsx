@@ -45,7 +45,7 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
     <>
       <PageHeader
         title="Handouts & Medien"
-        summary={`Medien und Handouts, die für deine Rolle (${ctx.effectiveRole}) sichtbar sind.`}
+        summary="Alle Medien und Handouts dieser Welt."
       />
 
       <div className="mb-4 flex flex-wrap gap-2">

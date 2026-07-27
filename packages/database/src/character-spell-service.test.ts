@@ -30,7 +30,8 @@ describe("character spell service", () => {
       data: {
         displayName: "Caster",
         email: "caster@test.local",
-        role: "player",
+        portalAccess: true,
+        studioAccess: false,
       },
     });
     userId = user.id;

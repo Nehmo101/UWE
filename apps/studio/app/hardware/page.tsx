@@ -89,7 +89,7 @@ export default async function HardwarePage() {
     getHomelabCockpitData(prisma),
     getCurrentAuthUser(),
   ]);
-  const canTriggerHostUpdate = user?.role === "owner";
+  const canTriggerHostUpdate = user?.isOwner === true;
 
   return (
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Hardware / Homelab" }]} />}>

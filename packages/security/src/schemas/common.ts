@@ -247,7 +247,6 @@ export const createWorldBodySchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: slugSchema.optional(),
   description: z.string().trim().max(500).optional(),
-  guestModeEnabled: z.boolean().optional(),
   isSandbox: z.boolean().optional(),
   templateId: worldTemplateIdSchema.optional(),
 });

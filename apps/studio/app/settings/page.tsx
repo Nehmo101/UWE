@@ -23,7 +23,7 @@ import {
   resolveCalendarConfig,
   resolveDndApiConfig,
 } from "@uwe/database/server";
-import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
+import { updateSettingsAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
 import { DesignAssistantWizard } from "../../components/DesignAssistantWizard";
 import { CustomThemesManager } from "../../components/CustomThemesManager";
@@ -81,8 +81,6 @@ const FIELD_CLASS = "flex flex-col gap-1.5";
 const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
 const CHECKBOX_CLASS = "size-4 rounded border-input";
 const HEADING_CLASS = "text-lg font-semibold tracking-tight";
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 const NATIVE_SELECT_CLASS =
   "flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -320,43 +318,6 @@ export default async function SettingsPage({ searchParams }: Props) {
                 </select>
               </div>
             </section>
-
-            <section>
-              <h2 className={HEADING_CLASS}>Gastmodus pro Welt</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Welt</th>
-                      <th className={TH_CLASS}>Gastmodus</th>
-                      <th className={TH_CLASS}>Aktion</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {worlds.map((world) => (
-                      <tr key={world.id}>
-                        <td className={TD_CLASS}>{world.name}</td>
-                        <td className={TD_CLASS}>{world.guestModeEnabled ? "Aktiv" : "Inaktiv"}</td>
-                        <td className={TD_CLASS}>
-                          <form action={setWorldGuestModeAction} className="inline">
-                            <input type="hidden" name="worldId" value={world.id} />
-                            <input type="hidden" name="tab" value="worlds" />
-                            <input
-                              type="hidden"
-                              name="guestModeEnabled"
-                              value={world.guestModeEnabled ? "0" : "1"}
-                            />
-                            <Button type="submit" variant="ghost" size="sm">
-                              {world.guestModeEnabled ? "Deaktivieren" : "Aktivieren"}
-                            </Button>
-                          </form>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
           </div>
         )}
 
@@ -374,18 +335,6 @@ export default async function SettingsPage({ searchParams }: Props) {
                 label="Portal aktiv"
                 hint="Schaltet das Spieler-Portal ein oder aus. Deaktiviert = keine Wiki-Ausgabe für Spieler."
                 defaultChecked={settings.portal.portalEnabled}
-              />
-              <SettingToggleRow
-                name="guestAccessEnabled"
-                label="Guest Access aktiv"
-                hint="Erlaubt anonymen Lesezugriff auf Welten im Gastmodus (nur player_visible Inhalte)."
-                defaultChecked={settings.portal.guestAccessEnabled}
-              />
-              <SettingToggleRow
-                name="publicSharingEnabled"
-                label="Public Sharing aktiv"
-                hint="Erlaubt öffentliche Share-Links für Handouts — prüfe bewusst, welche Inhalte geteilt werden."
-                defaultChecked={settings.portal.publicSharingEnabled}
               />
             </SettingsToggleGroup>
             <Button type="submit">Speichern</Button>

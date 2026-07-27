@@ -20,7 +20,6 @@ export const ADMIN_HUB_SECTIONS = [
     title: "Nutzer & Sicherheit",
     links: [
       { href: "/admin/users", label: "Benutzer" },
-      { href: "/admin/roles", label: "Rollen & Rechte" },
       { href: "/admin/security", label: "Security" },
       { href: "/admin/secrets", label: "Secrets-Status" },
     ],
@@ -229,18 +228,6 @@ export const SYSTEM_NAV: NavGroup[] = [
         status: "active",
         source: "system",
         keywords: ["benutzer", "rollen", "membership", "portalzugriff"],
-      },
-      {
-        id: "system-roles-matrix",
-        label: "Rollen-Matrix",
-        href: "/admin/roles",
-        icon: "table",
-        group: "Benutzer & Sicherheit",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["rollen", "capabilities", "rechte", "rbac", "co-dm"],
       },
       {
         id: "system-security",

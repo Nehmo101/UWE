@@ -9,6 +9,8 @@ import {
   resolveLoginFailureReason,
 } from "@uwe/database/server";
 import {
+  canAccessBrain,
+  canAccessPortal,
   canAccessStudio,
   completeTwoFactorLogin,
   getSessionCookieOptionsForRequest,
@@ -48,11 +50,12 @@ function parseTarget(value: unknown): Target | null {
   return value === "studio" || value === "portal" || value === "brain" ? value : null;
 }
 
-// Portal steht jedem authentifizierten aktiven Benutzer offen; Studio und Brain
-// sind rollen-gated. Brain zusätzlich owner-only — das erzwingt die Brain-App
-// selbst auf jeder Route.
+// Jedes Ziel hat sein eigenes Häkchen. Die Ziel-App prüft es auf jeder Route
+// erneut — hier steht es, damit ein Login ohne Häkchen gar nicht erst gelingt.
 function hasTargetAccess(target: Target, user: AuthUser): boolean {
-  return target === "portal" ? true : canAccessStudio(user);
+  if (target === "portal") return canAccessPortal(user);
+  if (target === "brain") return canAccessBrain(user);
+  return canAccessStudio(user);
 }
 
 // Audit- und Login-Flow unterscheiden nur studio vs. portal; Brain wird als

@@ -235,14 +235,31 @@ export async function exitApp(): Promise<void> {
   await invoke("exit_app");
 }
 
-// ── User / owner administration ────────────────────────────────────────────
-export type CommandCenterUserRole = "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+// ── Access administration („Zugänge") ──────────────────────────────────────
+/** The four areas a person can be let into. One checkbox each. */
+export const COMMAND_CENTER_AREAS = ["portal", "studio", "brain", "family"] as const;
+export type CommandCenterArea = (typeof COMMAND_CENTER_AREAS)[number];
+
+export const COMMAND_CENTER_AREA_LABELS: Record<CommandCenterArea, string> = {
+  portal: "Portal",
+  studio: "Studio",
+  brain: "Brain",
+  family: "Family",
+};
+
+export interface CommandCenterAreaAccess {
+  portal: boolean;
+  studio: boolean;
+  brain: boolean;
+  family: boolean;
+}
 
 export interface CommandCenterUser {
   id: string;
   displayName: string;
   email: string | null;
-  role: CommandCenterUserRole;
+  isOwner: boolean;
+  access: CommandCenterAreaAccess;
   status: string;
   hasPassword: boolean;
   createdAt: string;
@@ -256,7 +273,11 @@ export async function createUser(user: {
   displayName: string;
   email: string;
   password: string;
-  role: CommandCenterUserRole;
+  isOwner: boolean;
+  portal: boolean;
+  studio: boolean;
+  brain: boolean;
+  family: boolean;
 }) {
   return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("create_user", {
     user,
@@ -267,7 +288,11 @@ export async function updateUser(user: {
   id: string;
   displayName?: string;
   email?: string;
-  role?: CommandCenterUserRole;
+  isOwner?: boolean;
+  portal?: boolean;
+  studio?: boolean;
+  brain?: boolean;
+  family?: boolean;
   status?: "invited" | "active" | "disabled";
 }) {
   return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("update_user", {

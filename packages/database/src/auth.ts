@@ -1,6 +1,6 @@
 import type { PrismaClient } from "./client";
 import type {} from "./generated/prisma/client";
-import type { AccessContext, AuthUser, PreviewOptions, WorldMemberRole } from "@uwe/auth";
+import type { AccessContext, AreaAccess, AuthUser, AuthUserSource, PreviewOptions } from "@uwe/auth";
 import {
   buildAccessContext,
   canCreatePlayerNote,
@@ -15,7 +15,7 @@ import {
   filterBlocksForViewer,
   filterPagesForViewer,
   filterPlayerNotesForViewer,
-  isWorldStaff,
+  isDm,
   scopeFromAccessContext,
   sessionExpiresAt,
   canEditPlayerCharacterBlock,
@@ -27,7 +27,7 @@ import {
   isLegacyPasswordHash,
   verifyPassword,
 } from "@uwe/auth/server";
-import { toSafeUser, type SafeUser } from "@uwe/auth";
+import { toAreaAccess, toAuthUser, toSafeUser, type SafeUser } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
 import {
   normalizeLookupKey,
@@ -37,7 +37,7 @@ import {
 } from "./page-service";
 import { parseStringArray } from "./json-utils";
 import { searchForAuthContext, type SearchOptions, type SearchResultItem } from "./search-service";
-import { SettingsService, isGuestPortalAccessAllowed, resolveSessionInactivityTimeoutMs } from "./settings-service";
+import { SettingsService, resolveSessionInactivityTimeoutMs } from "./settings-service";
 import {
   GameSessionService,
   toDmGameSessionView,
@@ -82,25 +82,32 @@ import { USER_SAFE_SELECT } from "./user-service";
 
 const SESSION_ACTIVITY_TOUCH_THROTTLE_MS = 60_000;
 
-export interface CreateUserInput {
+/** The four checkboxes, all optional so callers only set what they mean. */
+export interface AreaAccessInput {
+  portalAccess?: boolean;
+  studioAccess?: boolean;
+  brainAccess?: boolean;
+  familyAccess?: boolean;
+}
+
+export interface CreateUserInput extends AreaAccessInput {
   displayName: string;
   email?: string | null;
   password?: string | null;
-  role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+  isOwner?: boolean;
   status?: "invited" | "active" | "disabled";
 }
 
-export interface UpdateUserInput {
+export interface UpdateUserInput extends AreaAccessInput {
   displayName?: string;
   email?: string | null;
-  role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+  isOwner?: boolean;
   status?: "invited" | "active" | "disabled";
 }
 
 export interface UpsertWorldMembershipInput {
   userId: string;
   worldId: string;
-  role: WorldMemberRole;
   characterName?: string | null;
 }
 
@@ -108,7 +115,8 @@ export interface AdminUserView {
   id: string;
   displayName: string;
   email: string | null;
-  role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+  isOwner: boolean;
+  access: AreaAccess;
   status: "invited" | "active" | "disabled";
   emailVerifiedAt: Date | null;
   lastLoginAt: Date | null;
@@ -117,7 +125,6 @@ export interface AdminUserView {
   worldMemberships: Array<{
     id: string;
     worldId: string;
-    role: WorldMemberRole;
     characterName: string | null;
     world: { id: string; name: string; slug: string };
   }>;
@@ -126,7 +133,6 @@ export interface AdminUserView {
 export interface CreateWorldMembershipInput {
   userId: string;
   worldId: string;
-  role: WorldMemberRole;
   characterName?: string | null;
 }
 
@@ -146,17 +152,20 @@ export class AuthService {
   }
 
   async createUser(input: CreateUserInput): Promise<SafeUser> {
-    const existingOwnerCount =
-      input.role === "owner"
-        ? await this.db.user.count({ where: { role: "owner" } })
-        : 0;
+    const existingOwnerCount = input.isOwner
+      ? await this.db.user.count({ where: { isOwner: true } })
+      : 0;
 
     const user = await this.db.user.create({
       data: {
         displayName: input.displayName,
         email: input.email ?? null,
         passwordHash: input.password ? await hashPassword(input.password) : null,
-        role: input.role ?? "player",
+        isOwner: input.isOwner ?? false,
+        portalAccess: input.portalAccess ?? false,
+        studioAccess: input.studioAccess ?? false,
+        brainAccess: input.brainAccess ?? false,
+        familyAccess: input.familyAccess ?? false,
         status: input.status ?? "active",
       },
       select: USER_SAFE_SELECT,
@@ -169,11 +178,12 @@ export class AuthService {
       metadata: {
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: user.isOwner,
+        access: toAreaAccess(user),
       },
     });
 
-    if (input.role === "owner" && existingOwnerCount === 0) {
+    if (input.isOwner && existingOwnerCount === 0) {
       await logAuditEvent(this.db, {
         action: "setup_owner_created",
         targetType: "user",
@@ -204,7 +214,7 @@ export class AuthService {
 
   async hasOwnerUser(): Promise<boolean> {
     const owner = await this.db.user.findFirst({
-      where: { role: "owner" },
+      where: { isOwner: true },
       select: { id: true },
     });
     return owner !== null;
@@ -223,73 +233,28 @@ export class AuthService {
       throw new Error("SETUP_DISABLED");
     }
 
+    // The first account is the owner and gets every checkbox — there is nobody
+    // else around yet who could tick them.
     return this.createUser({
       displayName: input.displayName,
       email: input.email,
       password: input.password,
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
   }
 
   async createWorldMembership(input: CreateWorldMembershipInput) {
-    const existingOwnerMembership =
-      input.role === "owner"
-        ? await this.db.worldMembership.count({ where: { role: "owner" } })
-        : 0;
-
-    const membership = await this.db.worldMembership.create({
+    return this.db.worldMembership.create({
       data: {
         userId: input.userId,
         worldId: input.worldId,
-        role: input.role,
         characterName: input.characterName ?? null,
       },
     });
-
-    if (input.role === "owner" && existingOwnerMembership === 0) {
-      await logAuditEvent(this.db, {
-        action: "setup_owner_created",
-        targetType: "user",
-        targetId: input.userId,
-        worldId: input.worldId,
-        metadata: { worldRole: input.role },
-      });
-    }
-
-    return membership;
-  }
-
-  async updateWorldMembershipRole(
-    userId: string,
-    worldId: string,
-    role: "owner" | "dm" | "player",
-  ) {
-    const existing = await this.db.worldMembership.findUnique({
-      where: { userId_worldId: { userId, worldId } },
-    });
-
-    if (!existing) {
-      throw new Error("World membership not found");
-    }
-
-    const updated = await this.db.worldMembership.update({
-      where: { userId_worldId: { userId, worldId } },
-      data: { role },
-    });
-
-    await logAuditEvent(this.db, {
-      action: "user_role_changed",
-      targetType: "user",
-      targetId: userId,
-      worldId,
-      metadata: {
-        from: existing.role,
-        to: role,
-        scope: "world",
-      },
-    });
-
-    return updated;
   }
 
   async listUsersForAdmin(): Promise<AdminUserView[]> {
@@ -309,7 +274,8 @@ export class AuthService {
       id: user.id,
       displayName: user.displayName,
       email: user.email,
-      role: user.role,
+      isOwner: user.isOwner,
+      access: toAreaAccess(user),
       status: user.status,
       emailVerifiedAt: user.emailVerifiedAt,
       lastLoginAt: user.lastLoginAt,
@@ -318,7 +284,6 @@ export class AuthService {
       worldMemberships: user.worldMemberships.map((membership) => ({
         id: membership.id,
         worldId: membership.worldId,
-        role: membership.role,
         characterName: membership.characterName,
         world: membership.world,
       })),
@@ -344,12 +309,12 @@ export class AuthService {
       }
     }
 
-    if (input.role && input.role !== existing.role) {
-      if (existing.role === "owner" && input.role !== "owner") {
-        const ownerCount = await this.db.user.count({ where: { role: "owner", status: "active" } });
-        if (ownerCount <= 1) {
-          throw new Error("LAST_OWNER_ROLE");
-        }
+    if (input.isOwner === false && existing.isOwner) {
+      const ownerCount = await this.db.user.count({
+        where: { isOwner: true, status: "active" },
+      });
+      if (ownerCount <= 1) {
+        throw new Error("LAST_OWNER_ROLE");
       }
     }
 
@@ -358,21 +323,31 @@ export class AuthService {
       data: {
         displayName: input.displayName ?? undefined,
         email: input.email !== undefined ? input.email : undefined,
-        role: input.role ?? undefined,
+        isOwner: input.isOwner ?? undefined,
+        portalAccess: input.portalAccess ?? undefined,
+        studioAccess: input.studioAccess ?? undefined,
+        brainAccess: input.brainAccess ?? undefined,
+        familyAccess: input.familyAccess ?? undefined,
         status: input.status ?? undefined,
       },
     });
 
-    if (input.role && input.role !== existing.role) {
+    const accessChanged =
+      toAreaAccess(existing).portal !== toAreaAccess(updated).portal ||
+      toAreaAccess(existing).studio !== toAreaAccess(updated).studio ||
+      toAreaAccess(existing).brain !== toAreaAccess(updated).brain ||
+      toAreaAccess(existing).family !== toAreaAccess(updated).family ||
+      existing.isOwner !== updated.isOwner;
+
+    if (accessChanged) {
       await logAuditEvent(this.db, {
         actorUserId: actorUserId ?? undefined,
-        action: "user_role_changed",
+        action: "user_access_changed",
         targetType: "user",
         targetId: userId,
         metadata: {
-          from: existing.role,
-          to: input.role,
-          scope: "global",
+          from: { isOwner: existing.isOwner, access: toAreaAccess(existing) },
+          to: { isOwner: updated.isOwner, access: toAreaAccess(updated) },
         },
       });
     }
@@ -390,9 +365,9 @@ export class AuthService {
       return user;
     }
 
-    if (user.role === "owner") {
+    if (user.isOwner) {
       const activeOwners = await this.db.user.count({
-        where: { role: "owner", status: "active", id: { not: userId } },
+        where: { isOwner: true, status: "active", id: { not: userId } },
       });
       if (activeOwners === 0) {
         throw new Error("LAST_OWNER");
@@ -497,11 +472,9 @@ export class AuthService {
       create: {
         userId: input.userId,
         worldId: input.worldId,
-        role: input.role,
         characterName: input.characterName ?? null,
       },
       update: {
-        role: input.role,
         characterName: input.characterName !== undefined ? input.characterName : undefined,
       },
       include: {
@@ -527,6 +500,17 @@ export class AuthService {
   }
 
   async listAccessibleWorldsForUser(userId: string | null) {
+    // Without an account there is nothing to see — anonymous guests are gone
+    // along with the guest mode switch (Notiz Lasse, 2026-07-26).
+    if (!userId) {
+      return [];
+    }
+
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user || user.status !== "active") {
+      return [];
+    }
+
     const worlds = await this.db.world.findMany({
       where: { isSandbox: false },
       orderBy: { name: "asc" },
@@ -535,23 +519,9 @@ export class AuthService {
         name: true,
         slug: true,
         description: true,
-        guestModeEnabled: true,
         updatedAt: true,
       },
     });
-
-    const systemSettings = await new SettingsService(this.db).getSettings();
-
-    if (!userId) {
-      return worlds.filter((world) =>
-        isGuestPortalAccessAllowed(systemSettings, world.guestModeEnabled),
-      );
-    }
-
-    const user = await this.db.user.findUnique({ where: { id: userId } });
-    if (!user || user.status !== "active") {
-      return [];
-    }
 
     const memberships = await this.db.worldMembership.findMany({
       where: { userId },
@@ -563,12 +533,10 @@ export class AuthService {
       const membership = membershipByWorld.get(world.id) ?? null;
       return canReadWorld(authUser, {
         id: world.id,
-        guestModeEnabled: isGuestPortalAccessAllowed(systemSettings, world.guestModeEnabled),
         membership: membership
           ? {
               userId: membership.userId,
               worldId: membership.worldId,
-              role: membership.role,
               characterName: membership.characterName,
             }
           : null,
@@ -690,18 +658,8 @@ export class AuthService {
     await this.db.session.deleteMany({ where: { tokenHash } });
   }
 
-  toAuthUser(user: {
-    id: string;
-    displayName: string;
-    email: string | null;
-    role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
-  }): AuthUser {
-    return {
-      id: user.id,
-      displayName: user.displayName,
-      email: user.email,
-      role: user.role,
-    };
+  toAuthUser(user: AuthUserSource): AuthUser {
+    return toAuthUser(user);
   }
 
   async buildAccessContextForWorld(
@@ -715,7 +673,6 @@ export class AuthService {
       where: { slug: worldSlug },
       select: {
         id: true,
-        guestModeEnabled: true,
         isSandbox: true,
       },
     });
@@ -723,8 +680,6 @@ export class AuthService {
     if (!world || world.isSandbox) {
       return null;
     }
-
-    const systemSettings = await new SettingsService(this.db).getSettings();
 
     const user = options.userId
       ? await this.db.user.findUnique({
@@ -754,11 +709,9 @@ export class AuthService {
         ? {
             userId: membership.userId,
             worldId: membership.worldId,
-            role: membership.role,
             characterName: membership.characterName,
           }
         : null,
-      guestModeEnabled: isGuestPortalAccessAllowed(systemSettings, world.guestModeEnabled),
       preview: options.preview,
     });
   }
@@ -927,13 +880,6 @@ export class AuthService {
     });
   }
 
-  async setWorldGuestMode(worldId: string, enabled: boolean) {
-    return this.db.world.update({
-      where: { id: worldId },
-      data: { guestModeEnabled: enabled },
-    });
-  }
-
   /**
    * Linked pages can include DM-only or unpublished pages. Their titles and
    * slugs must never leak to portal viewers, so the list is filtered with the
@@ -970,15 +916,6 @@ export class AuthService {
     worldSlug: string,
     ctx: AccessContext,
   ): Promise<PortalWorldEventView[]> {
-    const mayView =
-      ctx.effectiveRole === "player" ||
-      ctx.effectiveRole === "owner" ||
-      ctx.effectiveRole === "dm" ||
-      ctx.effectiveRole === "admin";
-    if (!mayView) {
-      return [];
-    }
-
     const world = await this.db.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
     if (!world) {
       return [];
@@ -1003,17 +940,13 @@ export class AuthService {
     pageId: string,
     ctx: AccessContext,
   ): Promise<PortalWorldEventView[]> {
-    const mayView =
-      ctx.effectiveRole === "player" ||
-      ctx.effectiveRole === "owner" ||
-      ctx.effectiveRole === "dm" ||
-      ctx.effectiveRole === "admin";
-    if (!mayView) {
+    const world = await this.db.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
+    if (!world) {
       return [];
     }
 
-    const world = await this.db.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
-    if (!world) {
+    const scope = scopeFromAccessContext(ctx, world.id);
+    if (!canReadWorld(ctx.user, scope.world, scope)) {
       return [];
     }
 
@@ -1040,17 +973,11 @@ export class AuthService {
       return [];
     }
 
-    const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
-
-    if (isDm) {
+    if (isDm(ctx)) {
       const sessions = await this.gameSessions.listByWorld(worldSlug);
       return sessions
         .filter((session) => session.recapPublished)
         .map((session) => this.toPortalSessionViewForViewer(session, ctx));
-    }
-
-    if (ctx.effectiveRole !== "player") {
-      return [];
     }
 
     const sessions = await this.gameSessions.listVisibleToPlayersForPortal(worldSlug);
@@ -1067,14 +994,14 @@ export class AuthService {
       return null;
     }
 
-    const isDm = ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm";
+    const dmView = isDm(ctx);
     const playerMayViewSchedule =
-      !isDm &&
-      ctx.effectiveRole === "player" &&
+      !dmView &&
+      ctx.worldMembership !== null &&
       session.playerVisibleSchedule &&
       (session.status === "planned" || session.status === "prepared");
 
-    if (!session.recapPublished && !isDm && !playerMayViewSchedule) {
+    if (!session.recapPublished && !dmView && !playerMayViewSchedule) {
       return null;
     }
 
@@ -1115,10 +1042,11 @@ export class AuthService {
       return [];
     }
 
+    // „Player" is now: assigned to this world and without the Studio checkbox.
     return this.db.worldMembership.findMany({
       where: {
         worldId: world.id,
-        role: "player",
+        user: { studioAccess: false },
       },
       include: {
         user: {
@@ -1267,7 +1195,7 @@ export class AuthService {
   ): Promise<PortalPlayerNoteView[]> {
     const world = await this.db.world.findUnique({
       where: { slug: worldSlug },
-      select: { guestCommentsEnabled: true },
+      select: { id: true },
     });
     if (!world) return [];
 
@@ -1278,10 +1206,6 @@ export class AuthService {
       });
     } else if (options?.gameSessionId) {
       notes = await this.playerNotes.listForGameSession(worldSlug, options.gameSessionId);
-    } else if (ctx.user && ctx.effectiveRole === "player") {
-      notes = await this.playerNotes.listByWorld(worldSlug, {
-        campaignId: options?.campaignId,
-      });
     } else {
       notes = await this.playerNotes.listByWorld(worldSlug, {
         campaignId: options?.campaignId,
@@ -1315,9 +1239,9 @@ export class AuthService {
   ): Promise<PortalPlayerNoteView | null> {
     const world = await this.db.world.findUnique({
       where: { slug: worldSlug },
-      select: { id: true, guestCommentsEnabled: true },
+      select: { id: true },
     });
-    if (!world || !ctx.user || !canCreatePlayerNote(ctx, world.guestCommentsEnabled)) {
+    if (!world || !ctx.user || !canCreatePlayerNote(ctx)) {
       return null;
     }
 
@@ -1397,7 +1321,7 @@ export class AuthService {
       return [];
     }
 
-    if (isWorldStaff(ctx)) {
+    if (isDm(ctx)) {
       const characters = await this.characters.listForWorld(world.id);
       return characters.map((character) => toPortalCharacterView(character));
     }
@@ -1442,7 +1366,7 @@ export class AuthService {
       return null;
     }
 
-    if (!isWorldStaff(ctx)) {
+    if (!isDm(ctx)) {
       if (!ctx.user || character.ownerUserId !== ctx.user.id) {
         return null;
       }
@@ -1461,7 +1385,7 @@ export class AuthService {
     input: UpdateCharacterInput,
     ctx: AccessContext,
   ): Promise<PortalCharacterView | null> {
-    if (ctx.previewAsUserId || ctx.effectiveRole !== "player" || !ctx.user) {
+    if (ctx.previewAsUserId || ctx.worldMembership === null || !ctx.user) {
       return null;
     }
 

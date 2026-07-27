@@ -13,9 +13,9 @@
       "trigger": "Next.js API routes, auth guards, CSRF, uploads, health, webhooks"
     },
     {
-      "id": "auth-rbac-visibility",
-      "path": ".cursor/skills/auth-rbac-visibility/SKILL.md",
-      "trigger": "Login, RBAC, dm_only/player_visible, Portal access, share links"
+      "id": "auth-access",
+      "path": ".cursor/skills/auth-access/SKILL.md",
+      "trigger": "Login, Zugänge (Portal/Studio/Brain/Family), Welt-Zuordnung, Route-Guards"
     },
     {
       "id": "ci-quality-gate",

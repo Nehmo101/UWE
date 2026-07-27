@@ -243,6 +243,19 @@
   margin: 0;
 }
 
+/* Die vier Zugangs-Häkchen (Portal / Studio / Brain / Family) nebeneinander. */
+.connector-checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.connector-checkbox-row .connector-checkbox {
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+
 .connector-phase-list,
 .connector-note-list {
   margin: 0;

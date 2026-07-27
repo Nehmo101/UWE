@@ -29,22 +29,47 @@ function loadEnvFromRoot(): void {
 
 loadEnvFromRoot();
 
-type UserRole = "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
-
 /**
- * User/owner administration CLI for the UWE Command Center. Lets the desktop app
- * provision the owner and every other user without the Studio web UI — the
- * Command Center invokes this over stdout JSON (see command_center.rs). Secrets
- * (passwords) are passed on stdin, never as process arguments.
+ * Access administration CLI for the UWE Command Center — the „Zugänge" surface.
+ * Lets the desktop app provision the owner and every other address without the
+ * Studio web UI; the Command Center invokes this over stdout JSON (see
+ * command_center.rs). Secrets (passwords) are passed on stdin, never as process
+ * arguments.
+ *
+ * Per address there are four checkboxes — Portal, Studio, Brain, Family — plus
+ * the owner flag. The role enum is gone (Notiz Lasse, 2026-07-26).
  *
  * Actions:
  *   list                      → { ok, users: [...] }
- *   create   (stdin JSON)     → { ok, user }      body: { displayName, email, password, role }
+ *   create   (stdin JSON)     → { ok, user }      body: { displayName, email, password,
+ *                                                          portal, studio, brain, family, isOwner }
+ *   update   (stdin JSON)     → { ok, user }      body: { id, displayName, email, status,
+ *                                                          portal, studio, brain, family, isOwner }
  *   set-password (stdin JSON) → { ok }            body: { id, password }
  *   delete <id>               → { ok, deletedId }
  */
 
-const VALID_ROLES: readonly UserRole[] = ["owner", "admin", "dm", "player"];
+const AREAS = ["portal", "studio", "brain", "family"] as const;
+type Area = (typeof AREAS)[number];
+
+interface AreaInput {
+  portal?: unknown;
+  studio?: unknown;
+  brain?: unknown;
+  family?: unknown;
+}
+
+/** Reads the four checkboxes. `undefined` means „leave as is" on update. */
+function readAreas(input: AreaInput): Partial<Record<`${Area}Access`, boolean>> {
+  const out: Partial<Record<`${Area}Access`, boolean>> = {};
+  for (const area of AREAS) {
+    const value = input[area];
+    if (value !== undefined) {
+      out[`${area}Access`] = value === true;
+    }
+  }
+  return out;
+}
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -70,43 +95,48 @@ async function main(): Promise<void> {
         break;
       }
       case "create": {
-        const input = JSON.parse(await readStdin()) as {
+        const input = JSON.parse(await readStdin()) as AreaInput & {
           displayName?: string;
           email?: string;
           password?: string;
-          role?: string;
+          isOwner?: boolean;
         };
         const displayName = input.displayName?.trim();
         const email = input.email?.trim().toLowerCase();
-        const role = (input.role ?? "player") as UserRole;
         if (!displayName) throw new Error("Anzeigename ist erforderlich.");
         if (!email) throw new Error("E-Mail ist erforderlich.");
         if (!input.password || input.password.length < 8)
           throw new Error("Passwort muss mindestens 8 Zeichen haben.");
-        if (!VALID_ROLES.includes(role)) throw new Error(`Ungültige Rolle: ${role}`);
         if (await db.user.findFirst({ where: { email } }))
           throw new Error(`Es existiert bereits ein Benutzer mit ${email}.`);
-        const user = await auth.createUser({ displayName, email, password: input.password, role });
+        const areas = readAreas(input);
+        const user = await auth.createUser({
+          displayName,
+          email,
+          password: input.password,
+          isOwner: input.isOwner === true,
+          ...areas,
+        });
         result = { ok: true, user };
         break;
       }
       case "update": {
-        const input = JSON.parse(await readStdin()) as {
+        const input = JSON.parse(await readStdin()) as AreaInput & {
           id?: string;
           displayName?: string;
           email?: string;
-          role?: string;
+          isOwner?: boolean;
           status?: "invited" | "active" | "disabled";
         };
         if (!input.id) throw new Error("Benutzer-ID ist erforderlich.");
-        const current = await db.user.findUnique({ where: { id: input.id }, select: { role: true } });
+        const current = await db.user.findUnique({
+          where: { id: input.id },
+          select: { isOwner: true },
+        });
         if (!current) throw new Error("Benutzer nicht gefunden.");
-        if (input.role && !VALID_ROLES.includes(input.role as UserRole)) {
-          throw new Error(`Ungültige Rolle: ${input.role}`);
-        }
-        // Never demote the last owner.
-        if (input.role && current.role === "owner" && input.role !== "owner") {
-          const owners = await db.user.count({ where: { role: "owner" } });
+        // Never take the owner flag off the last owner.
+        if (input.isOwner === false && current.isOwner) {
+          const owners = await db.user.count({ where: { isOwner: true } });
           if (owners <= 1) throw new Error("Der letzte Owner kann nicht herabgestuft werden.");
         }
         if (input.email) {
@@ -117,8 +147,9 @@ async function main(): Promise<void> {
         const updated = await users.updateUser(input.id, {
           displayName: input.displayName?.trim() || undefined,
           email: input.email?.trim().toLowerCase(),
-          role: input.role as UserRole | undefined,
+          isOwner: input.isOwner,
           status: input.status,
+          ...readAreas(input),
         });
         if (!updated) throw new Error("Benutzer konnte nicht aktualisiert werden.");
         result = { ok: true, user: updated };
@@ -139,11 +170,11 @@ async function main(): Promise<void> {
       case "delete": {
         const id = process.argv[3];
         if (!id) throw new Error("Benutzer-ID ist erforderlich.");
-        const target = await db.user.findUnique({ where: { id }, select: { role: true } });
+        const target = await db.user.findUnique({ where: { id }, select: { isOwner: true } });
         if (!target) throw new Error("Benutzer nicht gefunden.");
         // Never leave the deployment without an owner.
-        if (target.role === "owner") {
-          const owners = await db.user.count({ where: { role: "owner" } });
+        if (target.isOwner) {
+          const owners = await db.user.count({ where: { isOwner: true } });
           if (owners <= 1) throw new Error("Der letzte Owner kann nicht gelöscht werden.");
         }
         // Clear login sessions first, then the user (sessions FK-reference the user).

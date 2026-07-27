@@ -28,7 +28,6 @@ describe("UWE auth and permissions", () => {
     });
     worldSlug = world.slug;
 
-    await auth.setWorldGuestMode(world.id, true);
 
     const users = await seedAuthUsers(auth, repo, world.id);
     dmUserId = users.dm.id;
@@ -88,7 +87,7 @@ describe("UWE auth and permissions", () => {
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
     assert.ok(ctx);
-    assert.ok(ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm");
+    assert.equal(ctx.user?.access.studio, true);
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     const slugs = pages.map((page) => page.slug);
@@ -111,7 +110,8 @@ describe("UWE auth and permissions", () => {
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
+    assert.equal(ctx.user?.access.studio, false);
+    assert.ok(ctx.worldMembership);
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     const slugs = pages.map((page) => page.slug);
@@ -128,14 +128,14 @@ describe("UWE auth and permissions", () => {
     await db.$disconnect();
   });
 
-  it("denies anonymous viewers when guest mode is disabled", async () => {
+  it("denies anonymous viewers — there is no guest mode left", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "guest");
-    assert.equal(ctx.guestModeEnabled, false);
+    assert.equal(ctx.user, null);
+    assert.equal(ctx.worldMembership, null);
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     assert.deepEqual(
@@ -156,7 +156,7 @@ describe("UWE auth and permissions", () => {
     });
 
     assert.ok(previewCtx);
-    assert.equal(previewCtx.effectiveRole, "player");
+    assert.equal(previewCtx.previewAsUserId, amanUserId);
 
     const pages = await auth.listPagesForViewer(worldSlug, previewCtx);
     const slugs = pages.map((page) => page.slug);

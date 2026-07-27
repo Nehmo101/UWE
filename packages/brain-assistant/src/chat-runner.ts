@@ -49,7 +49,7 @@ export interface RunAssistantTurnInput {
   conversationId: string;
   question: string;
   attachmentIds?: string[];
-  user: { userId: string; role: string };
+  user: { userId: string };
   useMock?: boolean;
   uploadsRoot?: string;
 }

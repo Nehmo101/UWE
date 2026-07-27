@@ -70,7 +70,7 @@ export default async function PortalSoundboardPage({ params }: Props) {
     <>
       <PageHeader
         title="Soundboard"
-        summary={`Ambient, Musik und Effekte für deine Rolle (${ctx.effectiveRole}) — nur freigegebene Sounds.`}
+        summary="Ambient, Musik und Effekte dieser Welt."
       />
 
       <div className="mb-4 grid gap-3">

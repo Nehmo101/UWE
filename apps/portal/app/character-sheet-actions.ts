@@ -145,7 +145,7 @@ async function assertPortalCharacterOwner(worldSlug: string, characterId: string
     if (
       !character ||
       character.ownerUserId !== ctx.user?.id ||
-      ctx.effectiveRole !== "player" ||
+      ctx.worldMembership === null ||
       ctx.previewAsUserId
     ) {
       throw new Error("Keine Berechtigung");

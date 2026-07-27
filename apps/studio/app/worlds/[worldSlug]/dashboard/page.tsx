@@ -91,9 +91,6 @@ export default async function WorldDashboardPage({ params }: Props) {
               <li>
               </li>
               <li>
-                Gastmodus: <strong>{overview.world.guestModeEnabled ? "an" : "aus"}</strong>
-              </li>
-              <li>
                 <Link href={`/worlds/${worldSlug}/inspector`} className="hover:underline">
                   Inspektor öffnen →
                 </Link>
@@ -127,7 +124,6 @@ export default async function WorldDashboardPage({ params }: Props) {
         overview={{
           counts: overview.counts,
           portal: overview.portal,
-          world: overview.world,
           nextSession: overview.nextSession
             ? {
                 id: overview.nextSession.id,

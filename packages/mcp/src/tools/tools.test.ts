@@ -7,7 +7,7 @@ import type { McpServerDefinition, ToolResult } from "../protocol/types";
 let server: Server;
 let origin = "";
 
-/** DM view: two dm_only entries plus one player_visible entry. */
+/** World brain: three entries, all readable by anyone assigned to the world. */
 const DM_BRAIN = {
   documents: [
     { id: "d1", title: "Geheimplan des Kults", category: "lore" },

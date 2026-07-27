@@ -63,7 +63,7 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
     <>
       <PageHeader
         title="Wiki"
-        summary={`Alle Wiki-Seiten, die für deine Rolle (${ctx.effectiveRole}) sichtbar sind.`}
+        summary="Alle Wiki-Seiten dieser Welt."
       />
 
       <GlobalSearchForm

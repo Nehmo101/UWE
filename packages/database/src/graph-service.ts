@@ -1,5 +1,5 @@
 import type { AccessContext as ViewerAccessContext } from "@uwe/auth";
-import { filterBlocksForViewer, filterPagesForViewer, isWorldStaff } from "@uwe/auth";
+import { filterBlocksForViewer, filterPagesForViewer, isDm } from "@uwe/auth";
 import type { PageType } from "./generated/prisma/client";
 import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
@@ -453,7 +453,7 @@ export async function buildWorldGraphForViewer(
 
   const viewerPages = filterPagesForViewer(ctx, pages).map((page) => ({
     ...page,
-    contentBlocks: isWorldStaff(ctx)
+    contentBlocks: isDm(ctx)
       ? page.contentBlocks
       : filterBlocksForViewer(ctx, page.contentBlocks),
   }));

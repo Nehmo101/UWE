@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { toAreaAccess } from "@uwe/auth";
 import type { PrismaClient } from "./client";
 import { logAuditEvent } from "./audit-log-service";
 import {
@@ -150,12 +151,16 @@ export async function executeListWorldMembersIntent(
           id: true,
           displayName: true,
           email: true,
-          role: true,
+          isOwner: true,
+          portalAccess: true,
+          studioAccess: true,
+          brainAccess: true,
+          familyAccess: true,
           status: true,
         },
       },
     },
-    orderBy: [{ role: "asc" }, { user: { displayName: "asc" } }],
+    orderBy: [{ user: { displayName: "asc" } }],
   });
 
   const summary = `${memberships.length} Mitglieder in „${worldResult.entity.name}“.`;
@@ -171,9 +176,9 @@ export async function executeListWorldMembersIntent(
       userId: membership.user.id,
       displayName: membership.user.displayName,
       email: membership.user.email,
-      globalRole: membership.user.role,
+      isOwner: membership.user.isOwner,
+      access: toAreaAccess(membership.user),
       status: membership.user.status,
-      worldRole: membership.role,
       characterName: membership.characterName,
     })),
   };

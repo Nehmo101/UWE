@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { HealthBadge } from "@uwe/shared-ui";
-import { SECURITY_ROLE_LABELS, analyzeCspLooseningRisks, buildContentSecurityPolicy } from "@uwe/auth";
+import { analyzeCspLooseningRisks, buildContentSecurityPolicy } from "@uwe/auth";
 import { getSecurityDashboardStatus, prisma } from "@uwe/database/server";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { StatusCard, type StatusLevel } from "@/src/components/AdminStatusDashboard";
@@ -60,13 +60,11 @@ export default async function AdminSecurityPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <Alert tone="warning">{access.reason}</Alert>
-            {access.userRole && (
-              <p className="text-sm text-muted-foreground">
-                Angemeldet als {access.displayName} ({SECURITY_ROLE_LABELS[access.userRole] ?? access.userRole})
-              </p>
+            {access.displayName && (
+              <p className="text-sm text-muted-foreground">Angemeldet als {access.displayName}</p>
             )}
             <p className="text-sm text-muted-foreground">
-              Melde dich im Portal mit einem OWNER- oder ADMIN-Account an und öffne diese Seite erneut.
+              Melde dich im Portal als Owner an und öffne diese Seite erneut.
             </p>
           </CardContent>
         </Card>
@@ -99,8 +97,7 @@ export default async function AdminSecurityPage() {
         }
       />
       <p className="mb-4 text-sm text-muted-foreground">
-        Stand: {formatStudioDateTime(new Date(status.timestamp))} · Angemeldet: {access.displayName} (
-        {SECURITY_ROLE_LABELS[access.userRole ?? ""] ?? access.userRole})
+        Stand: {formatStudioDateTime(new Date(status.timestamp))} · Angemeldet: {access.displayName}
       </p>
 
       {status.warnings.length > 0 && (
@@ -135,15 +132,16 @@ export default async function AdminSecurityPage() {
         />
 
         <StatusCard
-          title="Benutzer-Rollen"
+          title="Zugänge"
           level="ok"
           statusLabel="Zählung"
-          message="Globale User-Rollen in der Datenbank (OWNER/ADMIN/DM/PLAYER)."
+          message="Wie viele Konten je Häkchen freigeschaltet sind."
           details={[
-            { label: "OWNER", value: status.roleCounts.owner },
-            { label: "ADMIN", value: status.roleCounts.admin },
-            { label: "DM", value: status.roleCounts.dm },
-            { label: "PLAYER", value: status.roleCounts.player },
+            { label: "Owner", value: status.accessCounts.owner },
+            { label: "Portal", value: status.accessCounts.portal },
+            { label: "Studio", value: status.accessCounts.studio },
+            { label: "Brain", value: status.accessCounts.brain },
+            { label: "Family", value: status.accessCounts.family },
           ]}
         />
 

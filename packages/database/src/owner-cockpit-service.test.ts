@@ -19,7 +19,11 @@ describe("owner cockpit service", () => {
         displayName: "Cockpit Tester",
         email: "cockpit@test.local",
         passwordHash: "test",
-        role: "owner",
+        isOwner: true,
+        portalAccess: true,
+        studioAccess: true,
+        brainAccess: true,
+        familyAccess: true,
       },
     });
 

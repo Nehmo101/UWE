@@ -15,7 +15,8 @@ describe("api-token-service", () => {
     const user = await db.user.create({
       data: {
         displayName: "Token Test Admin",
-        role: "admin",
+        portalAccess: true,
+        studioAccess: true,
       },
     });
     userId = user.id;
@@ -36,7 +37,7 @@ describe("api-token-service", () => {
     const service = createApiTokenService(db);
     const created = await service.create({
       userId,
-      userRole: "admin",
+      isOwner: true,
       name: "CI Token",
       scopes: ["health_read"],
     });
@@ -54,7 +55,7 @@ describe("api-token-service", () => {
     const service = createApiTokenService(db);
     const created = await service.create({
       userId,
-      userRole: "admin",
+      isOwner: true,
       name: "Bearer Token",
       scopes: ["admin_read", "health_read"],
     });
@@ -71,7 +72,7 @@ describe("api-token-service", () => {
     const service = createApiTokenService(db);
     const created = await service.create({
       userId,
-      userRole: "admin",
+      isOwner: true,
       name: "Revoke Me",
       scopes: ["health_read"],
     });

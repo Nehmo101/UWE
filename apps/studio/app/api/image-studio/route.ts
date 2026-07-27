@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   try {
     enforceAiAccessPolicy({
-      role: "owner",
+      studioAccess: true,
       studioTrusted: true,
       userKey: resolveClientIp(request.headers),
     });

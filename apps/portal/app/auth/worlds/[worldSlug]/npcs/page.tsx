@@ -45,7 +45,7 @@ export default async function AuthWorldNpcsPage({ params, searchParams }: Props)
     <>
       <PageHeader
         title="NPCs"
-        summary={`Bekannte Nicht-Spieler-Charaktere, die für deine Rolle (${ctx.effectiveRole}) freigeschaltet sind.`}
+        summary="Alle Nicht-Spieler-Charaktere dieser Welt."
       />
 
       <GlobalSearchForm

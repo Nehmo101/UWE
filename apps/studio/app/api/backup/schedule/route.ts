@@ -20,7 +20,7 @@ export async function PUT(request: Request) {
   if (authError) return authError;
 
   const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));
-  if (!user || user.role !== "owner") {
+  if (!user?.isOwner) {
     return NextResponse.json(
       { error: "Nur OWNER darf den Backup-Zeitplan ändern." },
       { status: 403 },

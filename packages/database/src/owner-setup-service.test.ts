@@ -24,13 +24,13 @@ describe("owner setup service", () => {
 
     const snapshot = await getOwnerSetupSnapshot(db, {
       env,
-      role: "owner",
+      isOwner: true,
       canEdit: true,
     });
 
     assertOwnerSetupHasNoSecrets(snapshot, env);
     assert.equal(snapshot.canEdit, true);
-    assert.equal(snapshot.role, "owner");
+    assert.equal(snapshot.isOwner, true);
     assert.equal(snapshot.sections.length, 8);
     assert.ok(snapshot.sections.some((section) => section.id === "mail"));
     assert.ok(snapshot.sections.some((section) => section.id === "cloudflare"));
@@ -56,7 +56,7 @@ describe("owner setup service", () => {
       CLOUDFLARE_TUNNEL: "true",
     };
 
-    const snapshot = await getOwnerSetupSnapshot(db, { env, role: "admin", canEdit: false });
+    const snapshot = await getOwnerSetupSnapshot(db, { env, isOwner: false, canEdit: false });
     const cloudflare = snapshot.sections.find((section) => section.id === "cloudflare");
     assert.ok(cloudflare);
     const studioToken = cloudflare.settings.find((item) => item.id === "studio-api-token");

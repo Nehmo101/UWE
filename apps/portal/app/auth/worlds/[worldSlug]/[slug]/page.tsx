@@ -89,9 +89,9 @@ export default async function AuthWorldPageDetail({ params }: Props) {
 
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { guestCommentsEnabled: true },
+      select: { id: true },
     });
-    canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled));
+    canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx));
 
     if (visiblePage.type === "player_character") {
       canEditCharacter = visiblePage.contentBlocks.some((block) =>
@@ -106,7 +106,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           characterSheet &&
             ctx.user &&
             characterSheet.ownerUserId === ctx.user.id &&
-            ctx.effectiveRole === "player" &&
+            ctx.worldMembership !== null &&
             !ctx.previewAsUserId,
         );
         if (characterSheet) {

@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         hasAttachments: message.hasAttachments,
         vipSenders: body.vipSenders,
       },
-      auth.user ? { userId: auth.user.id, role: auth.user.role } : null,
+      auth.user ? { userId: auth.user.id } : null,
     );
 
     const score = await service.prioritizeMessage(

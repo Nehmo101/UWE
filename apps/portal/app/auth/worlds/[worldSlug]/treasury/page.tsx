@@ -90,7 +90,7 @@ export default async function PortalTreasuryPage({ params }: Props) {
   let view: PortalTreasuryView | null = null;
   let ownCharacters: OwnCharacterInventory[] = [];
   const canMoveItems = Boolean(
-    ctx.user && !ctx.previewAsUserId && ctx.effectiveRole === "player",
+    ctx.user && !ctx.previewAsUserId && ctx.worldMembership !== null,
   );
 
   try {

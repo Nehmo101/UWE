@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BRAIN_NAV_SECTIONS } from "../navigation/brain-nav";
 
-/** Sidebar navigation for the owner-only Brain surfaces. */
+/** Sidebar navigation for the Brain surfaces. */
 export function BrainNav({ active }: { active?: string }) {
   return (
     <>

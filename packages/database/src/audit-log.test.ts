@@ -96,15 +96,14 @@ describe("Audit log", () => {
         id: "player-1",
         displayName: "Player",
         email: "player@example.com",
-        role: "player",
+        isOwner: false,
+        access: { portal: true, studio: false, brain: false, family: false },
       },
       worldMembership: {
         userId: "player-1",
         worldId: "world-1",
-        role: "player",
         characterName: null,
       },
-      guestModeEnabled: false,
     });
 
     const ownerCtx = buildAccessContext({
@@ -112,15 +111,14 @@ describe("Audit log", () => {
         id: "owner-1",
         displayName: "Owner",
         email: "owner@example.com",
-        role: "owner",
+        isOwner: true,
+        access: { portal: true, studio: true, brain: true, family: true },
       },
       worldMembership: {
         userId: "owner-1",
         worldId: "world-1",
-        role: "owner",
         characterName: null,
       },
-      guestModeEnabled: false,
     });
 
     const dmCtx = buildAccessContext({
@@ -128,15 +126,14 @@ describe("Audit log", () => {
         id: "dm-1",
         displayName: "DM",
         email: "dm@example.com",
-        role: "dm",
+        isOwner: false,
+        access: { portal: true, studio: true, brain: false, family: false },
       },
       worldMembership: {
         userId: "dm-1",
         worldId: "world-1",
-        role: "dm",
         characterName: null,
       },
-      guestModeEnabled: false,
     });
 
     assert.equal(canViewAuditLog(playerCtx), false);
@@ -153,7 +150,8 @@ describe("Audit log", () => {
       displayName: "Audit Test User",
       email: "audit-user@example.com",
       password: "test-password-123",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     const entries = await audit.list({

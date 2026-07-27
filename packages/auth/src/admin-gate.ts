@@ -1,5 +1,5 @@
-import type { AuthUser, UweRole } from "./types";
-import { ADMIN_ACCESS_ROLES, STUDIO_ACCESS_ROLES, hasAnyRole } from "./roles";
+import type { AuthUser } from "./types";
+import { canAccessStudio, isOwner } from "./area-access";
 import type { ApiTokenScope } from "./api-token";
 import { hasApiTokenScope } from "./api-token";
 
@@ -16,46 +16,34 @@ export interface AdminGateDenied {
 
 export type AdminGateResult = AdminGateDenied | null;
 
-export function requireAdminRole(user: AuthUser | null): AdminGateResult {
+export function requireOwnerAccess(user: AuthUser | null): AdminGateResult {
   if (!user) {
     return { status: 401, error: "Admin-Zugriff erfordert Anmeldung." };
   }
-  if (!hasAnyRole(user, ADMIN_ACCESS_ROLES)) {
-    return { status: 403, error: "Nur OWNER und ADMIN haben Zugriff auf Admin-Bereiche." };
+  if (!isOwner(user)) {
+    return { status: 403, error: "Nur der Owner hat Zugriff auf Admin-Bereiche." };
   }
   return null;
 }
 
-export function requireStudioRole(user: AuthUser | null): AdminGateResult {
+export function requireStudioAccess(user: AuthUser | null): AdminGateResult {
   if (!user) {
     return { status: 401, error: "Studio-Zugriff erfordert Anmeldung." };
   }
-  if (!hasAnyRole(user, STUDIO_ACCESS_ROLES)) {
-    return { status: 403, error: "Unzureichende Studio-Rolle." };
-  }
-  return null;
-}
-
-export function requirePlayerBlocked(user: AuthUser | null): AdminGateResult {
-  if (!user) {
-    return null;
-  }
-  if (user.role === "player" || user.role === "guest" || user.role === "readonly") {
-    return { status: 403, error: "Spieler haben keinen Zugriff auf Studio/Admin-APIs." };
+  if (!canAccessStudio(user)) {
+    return { status: 403, error: "Kein Zugang zum Bereich Studio." };
   }
   return null;
 }
 
 /**
  * Combined admin gate for API routes.
- * Session users must be owner/admin; API tokens must carry required scopes.
+ *
+ * Session users must be the owner — with the role enum gone there is no
+ * separate `admin` tier left to admit. API tokens are judged by their scopes
+ * instead, as before.
  */
 export function evaluateAdminGate(context: AdminGateContext): AdminGateResult {
-  const playerDenied = requirePlayerBlocked(context.user);
-  if (playerDenied) {
-    return playerDenied;
-  }
-
   if (context.apiTokenScopes) {
     if (context.requiredScopes && context.requiredScopes.length > 0) {
       if (!hasApiTokenScope(context.apiTokenScopes, context.requiredScopes)) {
@@ -65,9 +53,5 @@ export function evaluateAdminGate(context: AdminGateContext): AdminGateResult {
     return null;
   }
 
-  return requireAdminRole(context.user);
-}
-
-export function isAdminRole(role: UweRole): boolean {
-  return hasAnyRole({ role }, ADMIN_ACCESS_ROLES);
+  return requireOwnerAccess(context.user);
 }

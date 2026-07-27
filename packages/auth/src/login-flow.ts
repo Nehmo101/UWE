@@ -22,7 +22,7 @@
  * the deps objects below. This module owns only the orchestration and stays free
  * of new dependencies.
  */
-import type { AuthUser } from "./types";
+import type { AuthUser, AuthUserSource } from "./types";
 
 /** A DB handle that can be released after a request's unit of work. */
 export interface LoginDbHandle {
@@ -104,7 +104,7 @@ export interface LoginTurnstileResult {
  * User shape the flow needs from `authenticate` / `findUserById`. Structurally
  * satisfied by `SafeUser` and by the raw Prisma user record.
  */
-export type LoginFlowUser = AuthUser & { forcePasswordChange?: boolean | null };
+export type LoginFlowUser = AuthUserSource & { forcePasswordChange?: boolean | null };
 
 /**
  * The session-issuing subset of the auth domain service, used by both flows.

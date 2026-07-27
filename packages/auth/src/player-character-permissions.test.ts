@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildAccessContext } from "./permissions";
 import { canEditPlayerCharacterBlock } from "./player-character-permissions";
-import type { AuthUser } from "./types";
+import { NO_AREA_ACCESS, type AuthUser } from "./types";
 
 const playerUser: AuthUser = {
   id: "player-1",
   displayName: "Player",
   email: "player@test.local",
-  role: "player",
+  isOwner: false,
+  access: { ...NO_AREA_ACCESS, portal: true },
 };
 
 function playerCtx() {
@@ -17,10 +18,8 @@ function playerCtx() {
     worldMembership: {
       userId: playerUser.id,
       worldId: "w-1",
-      role: "player",
       characterName: "Hero",
     },
-    guestModeEnabled: false,
   });
 }
 
@@ -49,26 +48,41 @@ describe("player character permissions", () => {
     );
   });
 
-  it("denies guests and preview-as-player", () => {
-    const guest = buildAccessContext({
-      user: null,
-      worldMembership: null,
-      guestModeEnabled: true,
-    });
+  it("denies anonymous visitors and preview-as-player", () => {
+    const anonymous = buildAccessContext({ user: null, worldMembership: null });
     assert.equal(
-      canEditPlayerCharacterBlock(guest, characterPage, { type: "rich_text" }),
+      canEditPlayerCharacterBlock(anonymous, characterPage, { type: "rich_text" }),
       false,
     );
 
     const preview = buildAccessContext({
-      user: { id: "dm-1", displayName: "DM", email: null, role: "dm" },
-      worldMembership: { userId: "dm-1", worldId: "w-1", role: "dm", characterName: null },
-      guestModeEnabled: false,
+      user: {
+        id: "dm-1",
+        displayName: "DM",
+        email: null,
+        isOwner: false,
+        access: { ...NO_AREA_ACCESS, portal: true, studio: true },
+      },
+      worldMembership: { userId: "dm-1", worldId: "w-1", characterName: null },
       preview: { previewAsUserId: playerUser.id },
     });
     assert.equal(
       canEditPlayerCharacterBlock(preview, characterPage, { type: "rich_text" }),
       false,
     );
+  });
+
+  it("denies a DM — canon is edited in Studio, not through the sheet", () => {
+    const dm = buildAccessContext({
+      user: {
+        id: "dm-2",
+        displayName: "DM",
+        email: null,
+        isOwner: false,
+        access: { ...NO_AREA_ACCESS, portal: true, studio: true },
+      },
+      worldMembership: { userId: "dm-2", worldId: "w-1", characterName: null },
+    });
+    assert.equal(canEditPlayerCharacterBlock(dm, characterPage, { type: "rich_text" }), false);
   });
 });

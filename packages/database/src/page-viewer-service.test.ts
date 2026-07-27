@@ -41,7 +41,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       displayName: "DM",
       email: "dm-backlink@test.local",
       password: "test",
-      role: "dm",
+      portalAccess: true,
+      studioAccess: true,
     });
     dmUserId = dm.id;
 
@@ -49,12 +50,13 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       displayName: "Player",
       email: "player-backlink@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
-    await auth.createWorldMembership({ userId: dm.id, worldId, role: "dm" });
-    await auth.createWorldMembership({ userId: player.id, worldId, role: "player" });
+    await auth.createWorldMembership({ userId: dm.id, worldId });
+    await auth.createWorldMembership({ userId: player.id, worldId });
 
     // Focus page every source links to. Player-visible + published so both a DM
     // and a player may read it (backlinks require the focus page to be readable).

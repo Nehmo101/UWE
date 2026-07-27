@@ -4,6 +4,7 @@ import { createAuditLogService } from "./audit-log-service";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
 import {
+  NL_AREA_TARGETS,
   buildConfirmationMessage,
   createNlCommandService,
   isMutationIntent,
@@ -102,20 +103,19 @@ describe("NlCommandService", () => {
   });
 
   it("parses user management intents", () => {
-    const assign = parseCommandIntent("Mach Carina zur Spielerin in Terra");
+    const assign = parseCommandIntent("Weise Carina der Welt Terra zu");
     assert.equal(assign.ok, true);
-    if (assign.ok && assign.intent.intent === "assign_world_role") {
+    if (assign.ok && assign.intent.intent === "assign_world") {
       assert.equal(assign.intent.userQuery.toLowerCase(), "carina");
       assert.equal(assign.intent.worldQuery.toLowerCase(), "terra");
-      assert.equal(assign.intent.role, "player");
       assert.equal(assign.requiresConfirmation, true);
     }
 
-    const invite = parseCommandIntent("invite player@example.com as player in terra");
+    const invite = parseCommandIntent("invite player@example.com for portal in terra");
     assert.equal(invite.ok, true);
     if (invite.ok && invite.intent.intent === "invite_user") {
       assert.equal(invite.intent.email, "player@example.com");
-      assert.equal(invite.intent.role, "player");
+      assert.deepEqual(invite.intent.areas, ["portal"]);
       assert.equal(invite.intent.worldQuery, "terra");
     }
 
@@ -180,7 +180,11 @@ describe("NlCommandService", () => {
       displayName: "NL Owner",
       email: "nl-owner@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createNlCommandService(db);
@@ -202,7 +206,11 @@ describe("NlCommandService", () => {
       displayName: "NL Reader",
       email: "nl-reader@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createNlCommandService(db);
@@ -231,7 +239,11 @@ describe("NlCommandService", () => {
       displayName: "NL Mutator",
       email: "nl-mutator@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const intent = { intent: "set_maintenance_mode" as const, enabled: true };
@@ -258,7 +270,11 @@ describe("NlCommandService", () => {
       displayName: "NL Status",
       email: "nl-status@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createNlCommandService(db);
@@ -300,7 +316,11 @@ describe("NlCommandService", () => {
       displayName: "NL Portal Lock",
       email: "nl-portal-lock@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const intent = { intent: "set_lock_portal" as const, enabled: true };
@@ -324,13 +344,18 @@ describe("NlCommandService", () => {
       displayName: "NL Assign Owner",
       email: "nl-assign-owner@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
     const player = await auth.createUser({
       displayName: "NL Assign Player",
       email: "nl-assign-player@example.com",
       password: "test-password-123",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     const world = await db.world.create({
@@ -341,10 +366,9 @@ describe("NlCommandService", () => {
     });
 
     const intent = {
-      intent: "assign_world_role" as const,
+      intent: "assign_world" as const,
       userQuery: "NL Assign Player",
       worldQuery: "nl-assign-world",
-      role: "player" as const,
     };
     const issuedAt = Date.now();
     const token = issueConfirmationToken(intent, owner.id, issuedAt);
@@ -360,7 +384,6 @@ describe("NlCommandService", () => {
       where: { userId_worldId: { userId: player.id, worldId: world.id } },
     });
     assert.ok(membership);
-    assert.equal(membership.role, "player");
 
     await db.$disconnect();
   });
@@ -395,65 +418,69 @@ describe("NlCommandService", () => {
     }
   });
 
-  it("parses global role change intents in German and English", () => {
-    const de = parseCommandIntent("Mach Carina zum Admin");
+  it("parses access change intents in German and English", () => {
+    const de = parseCommandIntent("Gib Carina den Studio-Zugang");
     assert.equal(de.ok, true);
     if (de.ok) {
-      assert.equal(de.intent.intent, "set_user_role");
-      if (de.intent.intent === "set_user_role") {
+      assert.equal(de.intent.intent, "set_user_access");
+      if (de.intent.intent === "set_user_access") {
         assert.equal(de.intent.userQuery.toLowerCase(), "carina");
-        assert.equal(de.intent.role, "admin");
+        assert.equal(de.intent.area, "studio");
+        assert.equal(de.intent.enabled, true);
       }
       assert.equal(de.requiresConfirmation, true);
     }
 
-    const en = parseCommandIntent("make carina admin");
+    const en = parseCommandIntent("grant carina brain access");
     assert.equal(en.ok, true);
-    if (en.ok && en.intent.intent === "set_user_role") {
-      assert.equal(en.intent.role, "admin");
+    if (en.ok && en.intent.intent === "set_user_access") {
+      assert.equal(en.intent.area, "brain");
+      assert.equal(en.intent.enabled, true);
     }
 
-    const globalRole = parseCommandIntent("Setze die globale Rolle von Carina auf DM");
-    assert.equal(globalRole.ok, true);
-    if (globalRole.ok) {
-      assert.equal(globalRole.intent.intent, "set_user_role");
-      if (globalRole.intent.intent === "set_user_role") {
-        assert.equal(globalRole.intent.userQuery.toLowerCase(), "carina");
-        assert.equal(globalRole.intent.role, "dm");
-      }
+    const revoke = parseCommandIntent("Entziehe Carina den Zugang Family");
+    assert.equal(revoke.ok, true);
+    if (revoke.ok && revoke.intent.intent === "set_user_access") {
+      assert.equal(revoke.intent.userQuery.toLowerCase(), "carina");
+      assert.equal(revoke.intent.area, "family");
+      assert.equal(revoke.intent.enabled, false);
     }
   });
 
-  it("keeps world-scoped role commands separate from global role changes", () => {
-    const worldScoped = parseCommandIntent("Mach Carina zur Spielerin in Terra");
+  it("keeps world assignment separate from an access change", () => {
+    const worldScoped = parseCommandIntent("Weise Carina der Welt Terra zu");
     assert.equal(worldScoped.ok, true);
     if (worldScoped.ok) {
-      assert.equal(worldScoped.intent.intent, "assign_world_role");
+      assert.equal(worldScoped.intent.intent, "assign_world");
     }
 
-    const globalScoped = parseCommandIntent("Mach Carina zur Spielerin");
-    assert.equal(globalScoped.ok, true);
-    if (globalScoped.ok) {
-      assert.equal(globalScoped.intent.intent, "set_user_role");
+    const accessScoped = parseCommandIntent("Gib Carina den Portal-Zugang");
+    assert.equal(accessScoped.ok, true);
+    if (accessScoped.ok) {
+      assert.equal(accessScoped.intent.intent, "set_user_access");
     }
   });
 
-  it("rejects global role commands with unknown roles", () => {
-    const result = parseCommandIntent("Mach Carina zum Superhelden");
+  it("rejects access commands that name no known area", () => {
+    const result = parseCommandIntent("Gib Carina den Superhelden-Zugang");
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.code, "unknown_command");
     }
   });
 
-  it("requires confirmation for create world and set user role mutations", async () => {
+  it("requires confirmation for create world and access-change mutations", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
     const owner = await auth.createUser({
       displayName: "NL Confirm Guard",
       email: "nl-confirm-guard@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createNlCommandService(db);
@@ -467,13 +494,13 @@ describe("NlCommandService", () => {
       assert.equal(createWorld.code, "confirmation_required");
     }
 
-    const setRole = await service.execute(
-      { intent: "set_user_role", userQuery: "carina", role: "admin" },
+    const setAccess = await service.execute(
+      { intent: "set_user_access", userQuery: "carina", area: "studio", enabled: true },
       { actorUserId: owner.id },
     );
-    assert.equal(setRole.ok, false);
-    if (!setRole.ok) {
-      assert.equal(setRole.code, "confirmation_required");
+    assert.equal(setAccess.ok, false);
+    if (!setAccess.ok) {
+      assert.equal(setAccess.code, "confirmation_required");
     }
 
     await db.$disconnect();
@@ -486,7 +513,11 @@ describe("NlCommandService", () => {
       displayName: "NL World Creator",
       email: "nl-world-creator@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const intent = { intent: "create_world" as const, name: "NL Created World" };
@@ -510,7 +541,6 @@ describe("NlCommandService", () => {
       where: { userId_worldId: { userId: owner.id, worldId: world.id } },
     });
     assert.ok(membership);
-    assert.equal(membership.role, "owner");
 
     const audit = createAuditLogService(db);
     const entries = await audit.list({ limit: 30 });
@@ -532,7 +562,11 @@ describe("NlCommandService", () => {
       displayName: "NL World Dup Creator",
       email: "nl-world-dup-creator@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     await db.world.create({
@@ -557,26 +591,32 @@ describe("NlCommandService", () => {
     await db.$disconnect();
   });
 
-  it("sets a global user role with confirmation and audit entry", async () => {
+  it("sets an access checkbox with confirmation and audit entry", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
     const owner = await auth.createUser({
       displayName: "NL Role Admin",
       email: "nl-role-admin@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
     const target = await auth.createUser({
       displayName: "NL Role Target",
       email: "nl-role-target@example.com",
       password: "test-password-123",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     const intent = {
-      intent: "set_user_role" as const,
+      intent: "set_user_access" as const,
       userQuery: "NL Role Target",
-      role: "dm" as const,
+      area: "studio" as const,
+      enabled: true,
     };
     const issuedAt = Date.now();
     const token = issueConfirmationToken(intent, owner.id, issuedAt);
@@ -589,13 +629,13 @@ describe("NlCommandService", () => {
     assert.equal(result.ok, true);
 
     const updated = await db.user.findUnique({ where: { id: target.id } });
-    assert.equal(updated?.role, "dm");
+    assert.equal(updated?.studioAccess, true);
 
     const audit = createAuditLogService(db);
     const entries = await audit.list({ limit: 30 });
     const nlEntry = entries.find((entry) => {
       const metadata = entry.metadataJson as Record<string, unknown> | null;
-      return metadata?.source === "nl_command" && metadata.intent === "set_user_role";
+      return metadata?.source === "nl_command" && metadata.intent === "set_user_access";
     });
     assert.ok(nlEntry);
     assert.equal(nlEntry.targetType, "user");
@@ -604,20 +644,25 @@ describe("NlCommandService", () => {
     await db.$disconnect();
   });
 
-  it("blocks changing your own global role", async () => {
+  it("blocks changing your own access", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
     const owner = await auth.createUser({
       displayName: "NL Self Degrade",
       email: "nl-self-degrade@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const intent = {
-      intent: "set_user_role" as const,
+      intent: "set_user_access" as const,
       userQuery: "NL Self Degrade",
-      role: "player" as const,
+      area: "studio" as const,
+      enabled: true,
     };
     const issuedAt = Date.now();
     const token = issueConfirmationToken(intent, owner.id, issuedAt);
@@ -635,26 +680,35 @@ describe("NlCommandService", () => {
     await db.$disconnect();
   });
 
-  it("blocks demoting an owner via NL command", async () => {
+  it("blocks changing the owner's access via NL command", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
     const actor = await auth.createUser({
       displayName: "NL Owner Actor",
       email: "nl-owner-actor@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
     await auth.createUser({
       displayName: "NL Owner Victim",
       email: "nl-owner-victim@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const intent = {
-      intent: "set_user_role" as const,
+      intent: "set_user_access" as const,
       userQuery: "NL Owner Victim",
-      role: "player" as const,
+      area: "studio" as const,
+      enabled: true,
     };
     const issuedAt = Date.now();
     const token = issueConfirmationToken(intent, actor.id, issuedAt);
@@ -672,42 +726,11 @@ describe("NlCommandService", () => {
     await db.$disconnect();
   });
 
-  it("blocks promoting to owner via NL command", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const auth = createAuthService(db);
-    const actor = await auth.createUser({
-      displayName: "NL Promote Actor",
-      email: "nl-promote-actor@example.com",
-      password: "test-password-123",
-      role: "owner",
-    });
-    await auth.createUser({
-      displayName: "NL Promote Target",
-      email: "nl-promote-target@example.com",
-      password: "test-password-123",
-      role: "player",
-    });
-
-    const intent = {
-      intent: "set_user_role" as const,
-      userQuery: "NL Promote Target",
-      role: "owner" as const,
-    };
-    const issuedAt = Date.now();
-    const token = issueConfirmationToken(intent, actor.id, issuedAt);
-
-    const service = createNlCommandService(db);
-    const result = await service.execute(intent, { actorUserId: actor.id }, {
-      confirmationToken: token,
-      confirmationIssuedAt: issuedAt,
-    });
-    assert.equal(result.ok, false);
-    if (!result.ok) {
-      assert.equal(result.code, "forbidden");
-      assert.match(result.error, /owner/i);
-    }
-
-    await db.$disconnect();
+  it("cannot grant the owner flag at all — only the four areas are targets", () => {
+    // The owner flag is deliberately not an NL target: owner promotion and
+    // demotion never happen over the command channel.
+    assert.deepEqual([...NL_AREA_TARGETS], ["portal", "studio", "brain", "family"]);
+    assert.equal((NL_AREA_TARGETS as readonly string[]).includes("owner"), false);
   });
 
   it("rejects forged confirmation tokens", async () => {
@@ -717,7 +740,11 @@ describe("NlCommandService", () => {
       displayName: "NL Guard",
       email: "nl-guard@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const intent = { intent: "set_maintenance_mode" as const, enabled: false };

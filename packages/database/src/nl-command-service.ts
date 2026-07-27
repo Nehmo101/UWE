@@ -1,4 +1,4 @@
-import type { UweRole, WorldMemberRole } from "@uwe/auth";
+import { UWE_AREAS, type UweArea } from "@uwe/auth";
 import { brainPrisma } from "./brain-client";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PrismaClient } from "./client";
@@ -7,12 +7,10 @@ import { createBugReportService } from "./bug-report-service";
 import { getMigrationStatus } from "./migration-status";
 import {
   formatEntityResolveError,
-  parseUserRoleToken,
-  parseWorldMemberRoleToken,
+  parseAreaToken,
   resolveUserQuery,
   resolveWorldQuery,
-  userRoleLabel,
-  worldMemberRoleLabel,
+  areaLabel,
 } from "./nl-command-entity-resolver";
 import {
   extractUserQuery,
@@ -32,7 +30,6 @@ import { getSecretsStatusSnapshot } from "./secrets-status-service";
 import { createSettingsService } from "./settings-service";
 import { createUserService } from "./user-service";
 import { createWorldCreationService } from "./world-creation-service";
-import type { UserRole } from "./generated/prisma/client";
 
 /** Whitelisted admin command intents — unknown commands are rejected. */
 export const NL_COMMAND_INTENTS = [
@@ -45,13 +42,13 @@ export const NL_COMMAND_INTENTS = [
   "get_secrets_status",
   "get_migration_status",
   "list_pending_migrations",
-  "assign_world_role",
+  "assign_world",
   "remove_world_membership",
   "disable_user",
   "enable_user",
   "invite_user",
   "create_world",
-  "set_user_role",
+  "set_user_access",
   "list_world_members",
   "delete_user",
   "reset_password",
@@ -60,22 +57,16 @@ export const NL_COMMAND_INTENTS = [
 export type NlCommandIntentName = (typeof NL_COMMAND_INTENTS)[number];
 
 /**
- * Global roles assignable via NL command — whitelist derived from the auth role
- * model. "owner" is deliberately excluded: owner promotion/demotion is never
- * allowed through the command channel.
+ * Areas whose checkbox may be flipped through the command channel. All four are
+ * allowed; the owner flag deliberately is not — owner promotion/demotion never
+ * happens over NL commands.
  */
-export const NL_GLOBAL_ROLE_TARGETS = [
-  "admin",
-  "dm",
-  "player",
-  "readonly",
-  "guest",
-] as const satisfies readonly UweRole[];
+export const NL_AREA_TARGETS = UWE_AREAS;
 
-export type NlGlobalRoleTarget = (typeof NL_GLOBAL_ROLE_TARGETS)[number];
+export type NlAreaTarget = UweArea;
 
-function isAllowedGlobalRoleTarget(role: string): role is NlGlobalRoleTarget {
-  return (NL_GLOBAL_ROLE_TARGETS as readonly string[]).includes(role);
+function isAllowedAreaTarget(area: string): area is NlAreaTarget {
+  return (NL_AREA_TARGETS as readonly string[]).includes(area);
 }
 
 export type NlCommandIntent =
@@ -92,7 +83,7 @@ export type NlCommandIntent =
   | { intent: "get_secrets_status" }
   | { intent: "get_migration_status" }
   | { intent: "list_pending_migrations" }
-  | { intent: "assign_world_role"; userQuery: string; worldQuery: string; role: WorldMemberRole }
+  | { intent: "assign_world"; userQuery: string; worldQuery: string }
   | { intent: "remove_world_membership"; userQuery: string; worldQuery: string }
   | { intent: "disable_user"; userQuery: string }
   | { intent: "enable_user"; userQuery: string }
@@ -100,12 +91,11 @@ export type NlCommandIntent =
       intent: "invite_user";
       email: string;
       displayName?: string;
-      role?: UserRole;
+      areas?: readonly UweArea[];
       worldQuery?: string;
-      worldRole?: WorldMemberRole;
     }
   | { intent: "create_world"; name: string }
-  | { intent: "set_user_role"; userQuery: string; role: UserRole }
+  | { intent: "set_user_access"; userQuery: string; area: UweArea; enabled: boolean }
   | { intent: "list_world_members"; worldQuery: string }
   | { intent: "delete_user"; userQuery: string }
   | { intent: "reset_password"; userQuery: string };
@@ -170,8 +160,8 @@ function canonicalIntentPayload(intent: NlCommandIntent): string {
       return "get_migration_status";
     case "list_pending_migrations":
       return "list_pending_migrations";
-    case "assign_world_role":
-      return `assign_world_role:${intent.userQuery}:${intent.worldQuery}:${intent.role}`;
+    case "assign_world":
+      return `assign_world:${intent.userQuery}:${intent.worldQuery}`;
     case "remove_world_membership":
       return `remove_world_membership:${intent.userQuery}:${intent.worldQuery}`;
     case "disable_user":
@@ -179,11 +169,11 @@ function canonicalIntentPayload(intent: NlCommandIntent): string {
     case "enable_user":
       return `enable_user:${intent.userQuery}`;
     case "invite_user":
-      return `invite_user:${intent.email}:${intent.displayName ?? ""}:${intent.role ?? ""}:${intent.worldQuery ?? ""}:${intent.worldRole ?? ""}`;
+      return `invite_user:${intent.email}:${intent.displayName ?? ""}:${(intent.areas ?? []).join("+")}:${intent.worldQuery ?? ""}`;
     case "create_world":
       return `create_world:${intent.name}`;
-    case "set_user_role":
-      return `set_user_role:${intent.userQuery}:${intent.role}`;
+    case "set_user_access":
+      return `set_user_access:${intent.userQuery}:${intent.area}:${intent.enabled}`;
     case "list_world_members":
       return `list_world_members:${intent.worldQuery}`;
     case "delete_user":
@@ -206,13 +196,13 @@ export function isMutationIntent(intent: NlCommandIntent): boolean {
     intent.intent === "set_maintenance_mode" ||
     intent.intent === "set_lock_portal" ||
     intent.intent === "set_lock_studio" ||
-    intent.intent === "assign_world_role" ||
+    intent.intent === "assign_world" ||
     intent.intent === "remove_world_membership" ||
     intent.intent === "disable_user" ||
     intent.intent === "enable_user" ||
     intent.intent === "invite_user" ||
     intent.intent === "create_world" ||
-    intent.intent === "set_user_role" ||
+    intent.intent === "set_user_access" ||
     intent.intent === "delete_user" ||
     intent.intent === "reset_password"
   );
@@ -369,38 +359,22 @@ function parseMigrationStatusIntent(text: string): NlCommandIntent | null {
   return matchesAny(text, patterns) ? { intent: "get_migration_status" } : null;
 }
 
-function extractWorldMemberRole(text: string): WorldMemberRole | null {
-  const labeled = text.match(
-    /\b(?:zur|als|as|role|rolle)\s+(player|spieler(?:in)?|dm|co[-_]?dm|owner|besitzer|weltbesitzer)\b/i,
-  );
-  if (labeled?.[1]) {
-    return parseWorldMemberRoleToken(labeled[1]);
-  }
-
-  const bare = text.match(/\b(player|spieler(?:in)?|dm|co[-_]?dm|owner|besitzer|weltbesitzer)\b/i);
-  if (bare?.[1]) {
-    return parseWorldMemberRoleToken(bare[1]);
-  }
-
-  return null;
-}
-
-function parseAssignWorldRoleIntent(text: string): NlCommandIntent | null {
-  const hasAssignKeyword = /\b(assign|set|mach|weise|rolle|portalzugriff|portal.?zugang)\b/.test(
-    text,
-  );
+function parseAssignWorldIntent(text: string): NlCommandIntent | null {
+  const hasAssignKeyword =
+    /\b(assign|set|mach|weise|zuordnen|zuweisen|hinzufuegen|hinzufügen|portalzugriff|portal.?zugang)\b/.test(
+      text,
+    );
   if (!hasAssignKeyword) {
     return null;
   }
 
   const worldQuery = extractWorldQuery(text);
   const userQuery = extractUserQuery(text);
-  const role = extractWorldMemberRole(text);
-  if (!worldQuery || !userQuery || !role) {
+  if (!worldQuery || !userQuery) {
     return null;
   }
 
-  return { intent: "assign_world_role", userQuery, worldQuery, role };
+  return { intent: "assign_world", userQuery, worldQuery };
 }
 
 function parseRemoveWorldMembershipIntent(text: string): NlCommandIntent | null {
@@ -471,24 +445,19 @@ function parseInviteUserIntent(text: string): NlCommandIntent | null {
     return null;
   }
 
-  const roleMatch = text.match(
-    /\b(?:als|as|role|rolle)\s+(player|spieler(?:in)?|dm|admin|owner|readonly|guest|gast)\b/i,
-  );
-  const role = roleMatch?.[1] ? parseUserRoleToken(roleMatch[1]) : undefined;
+  const areas = extractAreas(text);
 
   const nameMatch = text.match(/\b(?:name|namens)\s+([a-zäöüß][\wäöüß.-]*)/i);
   const displayName = nameMatch?.[1]?.trim();
 
   const worldQuery = extractWorldQuery(text) ?? undefined;
-  const worldRole = worldQuery ? extractWorldMemberRole(text) ?? "player" : undefined;
 
   return {
     intent: "invite_user",
     email: emailMatch[0].toLowerCase(),
     displayName,
-    role: role ?? undefined,
+    areas: areas.length > 0 ? areas : undefined,
     worldQuery,
-    worldRole,
   };
 }
 
@@ -539,54 +508,53 @@ function parseCreateWorldIntent(text: string, rawText: string): NlCommandIntent 
   return { intent: "create_world", name };
 }
 
-const GLOBAL_ROLE_TOKENS =
-  "admin|administrator(?:in)?|dm|spielleiter(?:in)?|player|spieler(?:in)?|readonly|read[- ]only|guest|gast|owner|besitzer(?:in)?";
+const AREA_TOKENS =
+  "portal|spielerportal|wiki|studio|dm[- _]?studio|spielleitung|brain|hirn|wissen|family|familie|haushalt";
 
-function extractGlobalUserRole(text: string): UserRole | null {
-  const labeled = text.match(
-    new RegExp(
-      `\\b(?:zum|zur|zu|als|as|to|auf|rolle)\\s+(?:einem\\s+|einer\\s+|eine\\s+|ein\\s+)?(${GLOBAL_ROLE_TOKENS})\\b`,
-      "i",
-    ),
-  );
-  if (labeled?.[1]) {
-    return parseUserRoleToken(labeled[1]);
+/** Every area named anywhere in the command, in the order the areas are defined. */
+function extractAreas(text: string): UweArea[] {
+  const found = new Set<UweArea>();
+  for (const match of text.matchAll(new RegExp(`\\b(${AREA_TOKENS})\\b`, "gi"))) {
+    const area = parseAreaToken(match[1] ?? "");
+    if (area) {
+      found.add(area);
+    }
   }
-
-  const make = text.match(
-    new RegExp(
-      `\\b(?:make|mach|mache)\\s+\\S+\\s+(?:an\\s+|a\\s+)?(${GLOBAL_ROLE_TOKENS})\\b`,
-      "i",
-    ),
-  );
-  if (make?.[1]) {
-    return parseUserRoleToken(make[1]);
-  }
-
-  return null;
+  return UWE_AREAS.filter((area) => found.has(area));
 }
 
-function parseSetUserRoleIntent(text: string): NlCommandIntent | null {
+/** „nimm X das Studio-Häkchen" vs. „gib X das Studio-Häkchen". */
+function extractAccessDirection(text: string): boolean {
+  const removing =
+    /\b(entzieh|entziehe|entferne|nimm|weg|remove|revoke|deaktiviere|aus|off|ohne|kein|keine|keinen)\b/.test(
+      text,
+    );
+  return !removing;
+}
+
+function parseSetUserAccessIntent(text: string): NlCommandIntent | null {
   const hasKeyword = matchesAny(text, [
-    /\b(mach|mache|make|setze|set|promote|befördere|ernenne|ändere|change)\b/,
-    /\b(globale?n?\s+rolle|global\s+role)\b/,
+    /\b(mach|mache|make|setze|set|gib|gebe|grant|erlaube|entzieh|entziehe|entferne|nimm|revoke)\b/,
+    /\b(zugang|zugriff|haekchen|häkchen|access|checkbox)\b/,
   ]);
   if (!hasKeyword) {
     return null;
   }
 
-  // World-scoped role changes belong to assign_world_role, not the global role.
+  // World assignment belongs to assign_world, not to an access checkbox.
   if (extractWorldQuery(text)) {
     return null;
   }
 
-  const role = extractGlobalUserRole(text);
+  const areas = extractAreas(text);
   const userQuery = extractUserQuery(text);
-  if (!role || !userQuery) {
+  if (areas.length !== 1 || !userQuery) {
+    // Exactly one area per command — „gib X Portal und Studio" would be two
+    // separate access changes and is better said twice than guessed at.
     return null;
   }
 
-  return { intent: "set_user_role", userQuery, role };
+  return { intent: "set_user_access", userQuery, area: areas[0], enabled: extractAccessDirection(text) };
 }
 
 /**
@@ -629,8 +597,8 @@ export function parseCommandIntent(text: string): ParseCommandResult {
   const migration = parseMigrationStatusIntent(normalized);
   if (migration) candidates.push(migration);
 
-  const assignRole = parseAssignWorldRoleIntent(normalized);
-  if (assignRole) candidates.push(assignRole);
+  const assignWorld = parseAssignWorldIntent(normalized);
+  if (assignWorld) candidates.push(assignWorld);
 
   const removeMembership = parseRemoveWorldMembershipIntent(normalized);
   if (removeMembership) candidates.push(removeMembership);
@@ -647,7 +615,7 @@ export function parseCommandIntent(text: string): ParseCommandResult {
   const createWorld = parseCreateWorldIntent(normalized, rawText);
   if (createWorld) candidates.push(createWorld);
 
-  const setUserRole = parseSetUserRoleIntent(normalized);
+  const setUserRole = parseSetUserAccessIntent(normalized);
   if (setUserRole) candidates.push(setUserRole);
 
   const listWorldMembers = parseListWorldMembersIntent(normalized);
@@ -711,8 +679,8 @@ export function buildConfirmationMessage(intent: NlCommandIntent): string {
       return "Aktuellen Migrationsstatus der Datenbank anzeigen (nur Lesen).";
     case "list_pending_migrations":
       return "Ausstehende Datenbank-Migrationen anzeigen (nur Lesen).";
-    case "assign_world_role":
-      return `${intent.userQuery} als ${worldMemberRoleLabel(intent.role)} in „${intent.worldQuery}“ zuweisen (Portal-/Welt-Zugang).`;
+    case "assign_world":
+      return `${intent.userQuery} der Welt „${intent.worldQuery}“ zuordnen (sieht danach alles darin).`;
     case "remove_world_membership":
       return `${intent.userQuery} aus Welt „${intent.worldQuery}“ entfernen.`;
     case "disable_user":
@@ -720,11 +688,15 @@ export function buildConfirmationMessage(intent: NlCommandIntent): string {
     case "enable_user":
       return `Benutzer „${intent.userQuery}“ wieder aktivieren.`;
     case "invite_user":
-      return `Einladung an ${intent.email} senden${intent.role ? ` (Rolle: ${intent.role})` : ""}${intent.worldQuery ? ` und Welt „${intent.worldQuery}“ zuweisen` : ""}.`;
+      return `Einladung an ${intent.email} senden${
+        intent.areas?.length ? ` (Zugänge: ${intent.areas.map(areaLabel).join(", ")})` : ""
+      }${intent.worldQuery ? ` und Welt „${intent.worldQuery}“ zuordnen` : ""}.`;
     case "create_world":
-      return `Neue Welt „${intent.name}“ anlegen (du wirst Welt-Besitzer, Standard-Seiten werden erstellt).`;
-    case "set_user_role":
-      return `Globale Rolle von „${intent.userQuery}“ auf ${userRoleLabel(intent.role)} setzen (systemweit — keine Welt-Rolle).`;
+      return `Neue Welt „${intent.name}“ anlegen (du wirst zugeordnet, Standard-Seiten werden erstellt).`;
+    case "set_user_access":
+      return `„${intent.userQuery}“ den Zugang ${areaLabel(intent.area)} ${
+        intent.enabled ? "geben" : "entziehen"
+      } (systemweites Häkchen — keine Welt-Zuordnung).`;
     case "list_world_members":
       return `Mitglieder der Welt „${intent.worldQuery}“ anzeigen (nur Lesen).`;
     case "delete_user":
@@ -781,12 +753,12 @@ async function logNlCommandAudit(
 ): Promise<void> {
   const isMutation = isMutationIntent(intent);
   const userIntents = new Set([
-    "assign_world_role",
+    "assign_world",
     "remove_world_membership",
     "disable_user",
     "enable_user",
     "invite_user",
-    "set_user_role",
+    "set_user_access",
     "delete_user",
     "reset_password",
   ]);
@@ -950,7 +922,8 @@ export class NlCommandService {
             id: user.id,
             displayName: user.displayName,
             email: user.email,
-            role: user.role,
+            isOwner: user.isOwner,
+            access: user.access,
             status: user.status,
           })),
         };
@@ -1036,7 +1009,7 @@ export class NlCommandService {
           },
         };
       }
-      case "assign_world_role": {
+      case "assign_world": {
         const userResult = await resolveUserQuery(this.db, intent.userQuery);
         if (!userResult.ok) {
           return {
@@ -1058,13 +1031,11 @@ export class NlCommandService {
         const membership = await userService.upsertWorldMembership({
           userId: userResult.entity.id,
           worldId: worldResult.entity.id,
-          role: intent.role,
         });
-        const summary = `${userResult.entity.displayName} ist jetzt ${worldMemberRoleLabel(intent.role)} in „${worldResult.entity.name}“.`;
+        const summary = `${userResult.entity.displayName} ist jetzt der Welt „${worldResult.entity.name}“ zugeordnet.`;
         await logNlCommandAudit(this.db, ctx, intent, summary, {
           userId: userResult.entity.id,
           worldId: worldResult.entity.id,
-          role: intent.role,
           membershipId: membership.id,
         });
         return {
@@ -1078,7 +1049,6 @@ export class NlCommandService {
               email: userResult.entity.email,
             },
             world: worldResult.entity,
-            role: intent.role,
             membershipId: membership.id,
           },
         };
@@ -1208,15 +1178,20 @@ export class NlCommandService {
           intent.email.split("@")[0]?.replace(/[._-]+/g, " ") ||
           intent.email;
 
+        // Without an explicit area the invitation defaults to Portal — that is
+        // the one area a newly invited person almost always needs.
+        const areas = intent.areas?.length ? intent.areas : (["portal"] as const);
         const invite = await userService.createInvite({
           displayName,
           email: intent.email,
-          role: intent.role ?? "player",
+          portalAccess: areas.includes("portal"),
+          studioAccess: areas.includes("studio"),
+          brainAccess: areas.includes("brain"),
+          familyAccess: areas.includes("family"),
           actorUserId: ctx.actorUserId,
         });
 
-        let worldAssignment: { worldId: string; worldName: string; role: WorldMemberRole } | null =
-          null;
+        let worldAssignment: { worldId: string; worldName: string } | null = null;
         if (intent.worldQuery) {
           const worldResult = await resolveWorldQuery(this.db, intent.worldQuery);
           if (!worldResult.ok) {
@@ -1229,24 +1204,21 @@ export class NlCommandService {
           await userService.upsertWorldMembership({
             userId: invite.user.id,
             worldId: worldResult.entity.id,
-            role: intent.worldRole ?? "player",
           });
           worldAssignment = {
             worldId: worldResult.entity.id,
             worldName: worldResult.entity.name,
-            role: intent.worldRole ?? "player",
           };
         }
 
         const summary = worldAssignment
-          ? `Einladung an ${intent.email} erstellt und Welt „${worldAssignment.worldName}“ zugewiesen.`
+          ? `Einladung an ${intent.email} erstellt und Welt „${worldAssignment.worldName}“ zugeordnet.`
           : `Einladung an ${intent.email} erstellt.`;
         await logNlCommandAudit(this.db, ctx, intent, summary, {
           userId: invite.user.id,
           email: intent.email,
-          role: intent.role ?? "player",
+          areas,
           worldId: worldAssignment?.worldId,
-          worldRole: worldAssignment?.role,
         });
         return {
           ok: true,
@@ -1313,11 +1285,11 @@ export class NlCommandService {
           },
         };
       }
-      case "set_user_role": {
-        if (!isAllowedGlobalRoleTarget(intent.role)) {
+      case "set_user_access": {
+        if (!isAllowedAreaTarget(intent.area)) {
           return {
             ok: false,
-            error: `Rolle „${intent.role}“ kann nicht per NL-Befehl vergeben werden. Erlaubt: ${NL_GLOBAL_ROLE_TARGETS.join(", ")}.`,
+            error: `Bereich „${intent.area}“ kann nicht per NL-Befehl gesetzt werden. Erlaubt: ${NL_AREA_TARGETS.join(", ")}.`,
             code: "forbidden",
           };
         }
@@ -1334,7 +1306,7 @@ export class NlCommandService {
         if (userResult.entity.id === ctx.actorUserId) {
           return {
             ok: false,
-            error: "Du kannst deine eigene globale Rolle nicht per NL-Befehl ändern.",
+            error: "Du kannst deine eigenen Zugänge nicht per NL-Befehl ändern.",
             code: "forbidden",
           };
         }
@@ -1344,46 +1316,51 @@ export class NlCommandService {
         if (!target) {
           return { ok: false, error: "Benutzer nicht gefunden.", code: "invalid" };
         }
-        if (target.role === "owner") {
+        if (target.isOwner) {
           return {
             ok: false,
-            error: "Die globale Rolle eines Owners kann nicht per NL-Befehl geändert werden.",
+            error: "Die Zugänge des Owners können nicht per NL-Befehl geändert werden.",
             code: "forbidden",
           };
         }
-        if (target.role === intent.role) {
-          const summary = `${target.displayName} hat bereits die globale Rolle ${userRoleLabel(intent.role)}.`;
+        if (target.access[intent.area] === intent.enabled) {
+          const summary = intent.enabled
+            ? `${target.displayName} hat den Zugang ${areaLabel(intent.area)} bereits.`
+            : `${target.displayName} hat den Zugang ${areaLabel(intent.area)} ohnehin nicht.`;
           await logNlCommandAudit(this.db, ctx, intent, summary, {
             userId: target.id,
-            role: target.role,
+            area: intent.area,
+            enabled: intent.enabled,
             changed: false,
           });
           return {
             ok: true,
             intent: intent.intent,
             summary,
-            data: { userId: target.id, displayName: target.displayName, role: target.role, changed: false },
+            data: {
+              userId: target.id,
+              displayName: target.displayName,
+              area: intent.area,
+              enabled: intent.enabled,
+              changed: false,
+            },
           };
         }
 
-        try {
-          await userService.updateUser(target.id, { role: intent.role }, ctx.actorUserId);
-        } catch (error) {
-          if (error instanceof Error && error.message === "LAST_OWNER_ROLE") {
-            return {
-              ok: false,
-              error: "Der letzte aktive Owner kann seine Rolle nicht verlieren.",
-              code: "forbidden",
-            };
-          }
-          throw error;
-        }
+        const accessField = `${intent.area}Access` as const;
+        await userService.updateUser(
+          target.id,
+          { [accessField]: intent.enabled },
+          ctx.actorUserId,
+        );
 
-        const summary = `${target.displayName} hat jetzt die globale Rolle ${userRoleLabel(intent.role)} (systemweit).`;
+        const summary = intent.enabled
+          ? `${target.displayName} hat jetzt den Zugang ${areaLabel(intent.area)}.`
+          : `${target.displayName} hat den Zugang ${areaLabel(intent.area)} nicht mehr.`;
         await logNlCommandAudit(this.db, ctx, intent, summary, {
           userId: target.id,
-          fromRole: target.role,
-          toRole: intent.role,
+          area: intent.area,
+          enabled: intent.enabled,
         });
         return {
           ok: true,
@@ -1392,8 +1369,9 @@ export class NlCommandService {
           data: {
             userId: target.id,
             displayName: target.displayName,
-            fromRole: target.role,
-            toRole: intent.role,
+            area: intent.area,
+            enabled: intent.enabled,
+            changed: true,
           },
         };
       }

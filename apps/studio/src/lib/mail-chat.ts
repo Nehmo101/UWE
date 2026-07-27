@@ -29,7 +29,7 @@ export type MailChatResult =
 
 export async function executeMailChat(
   body: MailChatRequest,
-  user: { userId: string; role: string },
+  user: { userId: string },
 ): Promise<MailChatResult> {
   const transcript = body.messages
     .map((entry) => ({ role: entry.role, content: entry.content.trim() }))

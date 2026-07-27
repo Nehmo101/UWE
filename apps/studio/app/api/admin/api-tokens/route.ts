@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   const service = createApiTokenService(prisma);
   const created = await service.create({
     userId: user.id,
-    userRole: user.role,
+    isOwner: user.isOwner,
     name: body.name.trim(),
     scopes,
     expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,

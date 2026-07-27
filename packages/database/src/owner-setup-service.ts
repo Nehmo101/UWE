@@ -48,14 +48,14 @@ export interface SetupSectionStatus {
 export interface OwnerSetupSnapshot {
   ok: boolean;
   canEdit: boolean;
-  role: string;
+  isOwner: boolean;
   timestamp: string;
   sections: SetupSectionStatus[];
 }
 
 export interface OwnerSetupOptions {
   env?: NodeJS.ProcessEnv;
-  role?: string;
+  isOwner?: boolean;
   canEdit?: boolean;
 }
 
@@ -163,24 +163,6 @@ function buildAccessSection(
       href: "/admin/setup?tab=access#portal",
     },
     {
-      id: "guest-access",
-      label: "Gastzugang Portal",
-      configured: settings.portal.guestAccessEnabled,
-      displayValue: boolLabel(settings.portal.guestAccessEnabled),
-      source: "db",
-      editable: true,
-      href: "/admin/setup?tab=access#portal",
-    },
-    {
-      id: "public-sharing",
-      label: "Öffentliche Freigabe",
-      configured: settings.portal.publicSharingEnabled,
-      displayValue: boolLabel(settings.portal.publicSharingEnabled),
-      source: "db",
-      editable: true,
-      href: "/admin/setup?tab=access#portal",
-    },
-    {
       id: "auth-required",
       label: "Login erforderlich",
       configured: system.proxy.authRequired,
@@ -230,10 +212,7 @@ function buildAccessSection(
   if (!settings.portal.portalEnabled) {
     nextSteps.push("Portal aktivieren, wenn Spieler Wiki-Zugang brauchen.");
   }
-  nextSteps.push("Benutzer und Rollen unter Zugriff → Benutzer verwalten.");
-  if (system.trust.publicPortalSharingEnabled) {
-    nextSteps.push("Öffentliche Portal-Freigabe ist aktiv — Sichtbarkeit regelmäßig prüfen.");
-  }
+  nextSteps.push("Zugänge im Command Center vergeben (Portal / Studio / Brain / Family).");
 
   const level: SetupSectionLevel =
     !system.trust.authSecretConfigured || system.trust.authSecretLooksWeak
@@ -726,7 +705,7 @@ export async function getOwnerSetupSnapshot(
 ): Promise<OwnerSetupSnapshot> {
   const env = options.env ?? process.env;
   const canEdit = options.canEdit ?? false;
-  const role = options.role ?? "unknown";
+  const isOwner = options.isOwner ?? false;
 
   const [system, settings, admin, userCount, envIssues] = await Promise.all([
     getSystemStatus(db, { env }),
@@ -752,7 +731,7 @@ export async function getOwnerSetupSnapshot(
   return {
     ok,
     canEdit,
-    role,
+    isOwner,
     timestamp: new Date().toISOString(),
     sections,
   };

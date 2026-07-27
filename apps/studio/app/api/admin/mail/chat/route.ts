@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         bodyHtml: body.bodyHtml ?? stored.bodyHtml,
         messages: body.messages,
       },
-      { userId: auth.user.id, role: auth.user.role },
+      { userId: auth.user.id },
     );
 
     if (result.kind === "unavailable") {

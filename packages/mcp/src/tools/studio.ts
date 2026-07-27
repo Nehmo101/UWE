@@ -46,7 +46,7 @@ function readTools(context: ToolContext): ToolDefinition[] {
       name: "studio_world_brain",
       title: "Welt-Brain lesen",
       description:
-        "DnD-Brain einer Welt: Dokumente, Fakten und Welt-Zusammenfassung. accessContext='portal' liefert die spielersichtbare Teilmenge, 'dm' (Default) alles inkl. dm_only.",
+        "DnD-Brain einer Welt: Dokumente, Fakten und Welt-Zusammenfassung. Wer der Welt zugeordnet ist, sieht alles darin.",
       inputSchema: objectSchema(
         {
           worldSlug: stringArg("Slug der Welt, z. B. 'aventurien'."),
@@ -190,7 +190,7 @@ function writeTools(context: ToolContext): ToolDefinition[] {
       name: "studio_create_brain_entry",
       title: "Brain-Eintrag anlegen",
       description:
-        "Legt ein Brain-Dokument oder einen Fakt in einer Welt an. Sichtbarkeit ist per Default dm_only — 'player_visible' nur setzen, wenn der Inhalt bewusst für Spieler freigegeben wird.",
+        "Legt ein Brain-Dokument oder einen Fakt in einer Welt an. Wer der Welt zugeordnet ist, sieht den Eintrag.",
       method: "POST",
       annotations: { readOnlyHint: false, destructiveHint: false },
       inputSchema: objectSchema(
@@ -199,7 +199,6 @@ function writeTools(context: ToolContext): ToolDefinition[] {
           kind: enumArg("Art des Eintrags.", ["document", "fact"]),
           title: stringArg("Titel des Eintrags."),
           content: stringArg("Inhalt (Markdown erlaubt)."),
-          visibility: enumArg("Sichtbarkeit (Default dm_only).", ["dm_only", "player_visible"]),
           campaignId: stringArg("Optionale Kampagnen-ID."),
         },
         ["worldSlug", "kind", "title"],
@@ -209,7 +208,6 @@ function writeTools(context: ToolContext): ToolDefinition[] {
         kind: requireString(args, "kind"),
         title: requireString(args, "title"),
         content: optionalString(args, "content") ?? "",
-        visibility: optionalString(args, "visibility") ?? "dm_only",
         source: "manual",
         campaignId: optionalString(args, "campaignId") ?? null,
       }),
@@ -248,7 +246,6 @@ export function createStudioTools(context: ToolContext): ToolDefinition[] {
 
 export const STUDIO_INSTRUCTIONS = [
   "UWE Studio ist die DM- und Admin-Oberfläche. Diese Tools sprechen die laufende Studio-Instanz über ihre HTTP-API an;",
-  "Rolle und Scopes des API-Tokens entscheiden, was erreichbar ist.",
-  "Inhalte mit Sichtbarkeit dm_only sind hier bewusst sichtbar — sie dürfen niemals in Portal-Ausgaben übernommen werden.",
-  "Bei 401/403 zuerst Token, Rolle und Scopes prüfen (Studio → Admin → API-Tokens), nicht die Guards umgehen.",
+  "Die Scopes des API-Tokens entscheiden, was erreichbar ist.",
+  "Bei 401/403 zuerst Token und Scopes prüfen (Studio → Admin → API-Tokens), nicht die Guards umgehen.",
 ].join(" ");

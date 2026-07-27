@@ -128,7 +128,7 @@ export class PortalDashboardService {
     if (!world) return null;
 
     const characterName =
-      ctx.user && ctx.worldMembership?.role === "player"
+      ctx.user && ctx.worldMembership !== null
         ? ctx.worldMembership.characterName
         : null;
 

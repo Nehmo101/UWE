@@ -181,7 +181,7 @@ Dann parallel (disjunkte Module):
 - data-model-engineer  (Prisma-Modelle/Enums + Migration + server.ts-Exports; database-migration-review)
 - backend-service-engineer  (packages/database Services; uwe-feature-implementation)
 - studio-ui-engineer  (apps/studio UI/Server-Actions; react-next-ui)
-- portal-ui-engineer  (apps/portal player-safe Views; portal-player-view + auth-rbac-visibility)
+- portal-ui-engineer  (apps/portal player-safe Views; portal-player-view + auth-access)
 - ai-pipeline-engineer  (Generatoren/Faction-Sim; ai-agent-proposal-workflow + local-first-privacy)
 - security-reviewer  (Privacy/Portal-Leak/Maintenance/NL-Commands; security-audit)
 - search-engineer  (cross-domain Suche; uwe-feature-implementation)
@@ -194,16 +194,16 @@ Dann parallel (disjunkte Module):
 - A2/A3 -> daily-admin-os (Capture), portal-player-view, uwe-feature-implementation
 - B1/B2/B6 -> uwe-feature-implementation, uwe-architecture; B2 zusaetzlich security-audit
 - B3/B4 -> daily-admin-os, react-next-ui
-- B7 -> security-audit, auth-rbac-visibility
+- B7 -> security-audit, auth-access
 - C1/C2/C8/C10/C12 -> uwe-feature-implementation, react-next-ui
-- C3 -> portal-player-view, auth-rbac-visibility, security-audit
+- C3 -> portal-player-view, auth-access, security-audit
 - C5/C9 -> ai-agent-proposal-workflow, local-first-privacy, dnd-content-consistency-check
 - C6/C7 -> uwe-feature-implementation, react-next-ui, portal-player-view
 - C11 -> dnd-content-consistency-check, image-studio-workflows (Labels)
 - D1 -> ai-agent-proposal-workflow, local-first-privacy, security-audit
 - D3/D4/D5/D6/D7/D8 -> uwe-feature-implementation, react-next-ui
 - D9 (AI-Provider Modell-pro-Feature) -> ai-agent-proposal-workflow, local-first-privacy
-- D10 (Rollen pro Bereich, optional) -> auth-rbac-visibility, security-audit
+- D10 (Rollen pro Bereich, optional) -> auth-access, security-audit
 - alle data-model-Schritte -> database-migration-review
 - vor jedem PR -> ci-quality-gate
 

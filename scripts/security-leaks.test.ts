@@ -1,5 +1,5 @@
 /**
- * Leak-prevention regression tests — visibility, secrets, and public exposure.
+ * Leak-prevention regression tests — access, secrets, and public exposure.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -12,17 +12,19 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
-describe("security leaks — visibility and portal filtering", () => {
+describe("security leaks — access and portal filtering", () => {
+  // Per-item visibility and share links are gone (Notiz Lasse, 2026-07-26), so
+  // their tests are too. What is left guards the one rule: world assignment.
   const leakTests = [
-    "packages/database/src/visibility-security.test.ts",
     "packages/database/src/search-service.test.ts",
     "packages/database/src/graph-service.test.ts",
     "packages/database/src/asset.test.ts",
-    "packages/database/src/share-link.test.ts",
     "packages/database/src/password-security.test.ts",
     "packages/auth/src/password.test.ts",
     "packages/auth/src/permissions.test.ts",
-    "apps/portal/src/lib/share-access.test.ts",
+    "packages/auth/src/area-access.test.ts",
+    "packages/auth/src/security/authz.test.ts",
+    "apps/portal/src/lib/world-access.test.ts",
     "apps/portal/src/navigation/portal-nav.test.ts",
   ];
 
@@ -44,10 +46,22 @@ describe("security leaks — player preview must not expose secrets", () => {
     assert.doesNotMatch(portalAuth, /AUTH_SECRET/);
   });
 
-  it("filters portal-invisible blocks in permissions", () => {
-    const permissions = read("packages/database/src/permissions.ts");
-    assert.match(permissions, /filterBlocksForContext/);
-    assert.match(permissions, /isPortalBlockVisibility/);
+  it("gates world content on assignment, with no per-item filter left", () => {
+    const permissions = read("packages/auth/src/permissions.ts");
+    assert.match(permissions, /canViewWorldContent/);
+    assert.match(permissions, /ctx\.worldMembership !== null/);
+    // The visibility enum must not come back through a side door. Match the
+    // quoted literals, so the comment that explains their removal still reads.
+    assert.doesNotMatch(permissions, /"(dm_only|player_visible)"/);
+  });
+
+  it("keeps the world boundary load-bearing in scopeFromAccessContext", () => {
+    const authz = read("packages/auth/src/security/authz.ts");
+    assert.match(
+      authz,
+      /ctx\.worldMembership\?\.worldId === worldId/,
+      "a membership must never carry over into a different world",
+    );
   });
 
   it("uses login-first portal navigation without public discovery hrefs", () => {

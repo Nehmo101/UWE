@@ -102,14 +102,14 @@ describe("UWE backup and restore", () => {
         displayName: "Backup Player",
         email: "player-backup@uwe.local",
         passwordHash: "hashed-not-exported",
-        role: "player",
+        portalAccess: true,
+        studioAccess: false,
       },
     });
     await db.worldMembership.create({
       data: {
         userId: player.id,
         worldId: world.id,
-        role: "player",
         characterName: "Test PC",
       },
     });

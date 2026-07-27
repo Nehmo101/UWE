@@ -12,7 +12,6 @@ export { parseMailPriorityResponse };
 
 export interface MailAiUser {
   userId: string;
-  role: string;
 }
 
 interface MailContentInput {

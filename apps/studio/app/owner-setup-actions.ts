@@ -46,8 +46,6 @@ export async function updateOwnerSetupAction(formData: FormData) {
     case "access": {
       update.portal = {
         portalEnabled: parseBoolean(formData.get("portalEnabled")),
-        guestAccessEnabled: parseBoolean(formData.get("guestAccessEnabled")),
-        publicSharingEnabled: parseBoolean(formData.get("publicSharingEnabled")),
       };
       update.auth = {
         sessionInactivityTimeoutMinutes: (() => {

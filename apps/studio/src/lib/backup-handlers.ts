@@ -19,7 +19,6 @@ import {
   previewRestoreOnly,
   type BackupType,
 } from "@uwe/backup";
-import type { UweRole } from "@uwe/auth";
 import { getUserFromRequestCookieHeader } from "./auth-session";
 import { enqueueAndDispatch, runJob } from "./job-executor";
 import { listStudioBackups } from "./backup-paths";
@@ -39,13 +38,12 @@ export async function getBackupList() {
 
 export async function getBackupPermissions(request: Request) {
   const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));
-  const role: UweRole = (user?.role as UweRole | undefined) ?? "guest";
   return NextResponse.json({
-    role,
-    canCreate: canCreateBackup(role),
-    canDownload: canDownloadBackup(role),
-    canRestore: canRestoreBackup(role),
-    canPreview: canPreviewRestore(role),
+    isOwner: user?.isOwner === true,
+    canCreate: canCreateBackup(user),
+    canDownload: canDownloadBackup(user),
+    canRestore: canRestoreBackup(user),
+    canPreview: canPreviewRestore(user),
     retentionCount: normalizeRetentionCount(process.env.UWE_BACKUP_RETENTION),
     encryptionConfigured: !!process.env.UWE_BACKUP_ENCRYPTION_KEY,
   });

@@ -12,6 +12,7 @@ import {
   SESSION_COOKIE_NAME,
   canPreviewAsPlayer,
   canReadWorld,
+  scopeFromAccessContext,
 } from "@uwe/auth";
 
 function getDb() {
@@ -102,13 +103,13 @@ export const getPortalWorld = cache(async (worldSlug: string) => {
  * notFound()` do the right thing — and 404 rather than 403 avoids confirming
  * that a foreign world exists.
  *
- * Without this check an authenticated player could read any world by guessing
- * its slug: `buildAccessContextForWorld` happily returns a context with
- * `worldMembership: null`, `resolveEffectiveRole` then yields "player", and
- * `canViewPage` grants every `player_visible` page. World isolation would exist
- * only in the world LIST (`listAccessibleWorldsForUser`), not in the access path.
+ * Without this check an authenticated Portal user could read any world by
+ * guessing its slug: `buildAccessContextForWorld` happily returns a context
+ * with `worldMembership: null`. World isolation would exist only in the world
+ * LIST (`listAccessibleWorldsForUser`), not in the access path.
  *
- * owner/admin/dm always pass (`canReadWorld`), so DM preview is unaffected.
+ * The Studio checkbox always passes (`canReadWorld`), so DM preview is
+ * unaffected.
  */
 export const getAccessContextForWorld = cache(async (
   worldSlug: string,
@@ -141,15 +142,11 @@ export const getAccessContextForWorld = cache(async (
     return null;
   }
 
-  // `ctx.guestModeEnabled` is the settings-aware value (world flag AND the
-  // global guest-portal setting) — do not substitute `world.guestModeEnabled`.
-  const readable = canReadWorld(ctx.user, {
-    id: world.id,
-    guestModeEnabled: ctx.guestModeEnabled,
-    membership: ctx.worldMembership,
-  });
-
-  return readable ? ctx : null;
+  // Build the scope through the shared helper, never by hand: it drops a
+  // membership that does not belong to this world, which is the only thing
+  // keeping worlds apart now.
+  const { world: target, ...scope } = scopeFromAccessContext(ctx, world.id);
+  return canReadWorld(ctx.user, target, scope) ? ctx : null;
 });
 
 export const listAuthWorlds = cache(async () => {

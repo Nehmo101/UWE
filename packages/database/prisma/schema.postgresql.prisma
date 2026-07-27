@@ -79,26 +79,10 @@ enum AssetType {
   other
 }
 
-enum UserRole {
-  owner
-  admin
-  dm
-  player
-  readonly
-  guest
-}
-
 enum UserStatus {
   invited
   active
   disabled
-}
-
-enum WorldMemberRole {
-  owner
-  dm
-  co_dm
-  player
 }
 
 enum GameSessionStatus {
@@ -459,7 +443,11 @@ model User {
   displayName         String     @map("display_name")
   email               String?    @unique
   passwordHash        String?    @map("password_hash")
-  role                UserRole   @default(player)
+  isOwner             Boolean    @default(false) @map("is_owner")
+  portalAccess        Boolean    @default(false) @map("portal_access")
+  studioAccess        Boolean    @default(false) @map("studio_access")
+  brainAccess         Boolean    @default(false) @map("brain_access")
+  familyAccess        Boolean    @default(false) @map("family_access")
   status              UserStatus @default(active)
   emailVerifiedAt     DateTime?  @map("email_verified_at")
   lastLoginAt         DateTime?  @map("last_login_at")
@@ -538,7 +526,6 @@ model WorldMembership {
   id            String          @id @default(cuid())
   userId        String          @map("user_id")
   worldId       String          @map("world_id")
-  role          WorldMemberRole
   characterName String?         @map("character_name")
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
@@ -587,8 +574,6 @@ model World {
   name             String
   slug             String   @unique
   description      String?
-  guestModeEnabled     Boolean  @default(false) @map("guest_mode_enabled")
-  guestCommentsEnabled Boolean  @default(false) @map("guest_comments_enabled")
   isSandbox            Boolean  @default(false) @map("is_sandbox")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
@@ -1291,7 +1276,7 @@ enum AuditAction {
   user_deleted
   user_enabled
   password_reset
-  user_role_changed
+  user_access_changed
   password_changed
   user_invited
   content_created

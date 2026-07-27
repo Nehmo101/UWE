@@ -7,7 +7,7 @@ import { PortalWorldVisitTracker } from "@/src/components/PortalWorldVisitTracke
 import { notFound } from "next/navigation";
 import { getCurrentUser, loadReadableWorld } from "@/src/lib/auth";
 import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
-import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
+import { canAccessStudio } from "@uwe/auth";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -31,8 +31,8 @@ export default async function AuthWorldLayout({ children, params }: Props) {
   const worldId = world.id;
 
   const user = await getCurrentUser();
-  const canAccessStudio = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
-  const studioUrl = canAccessStudio ? resolvePortalStudioOpenHref() : null;
+  const studioAccess = user ? canAccessStudio(user) : false;
+  const studioUrl = studioAccess ? resolvePortalStudioOpenHref() : null;
 
   return (
     <PortalShell
@@ -41,7 +41,7 @@ export default async function AuthWorldLayout({ children, params }: Props) {
       headerActions={
         <PortalAuthChrome
           user={user}
-          canAccessStudio={canAccessStudio}
+          canAccessStudio={studioAccess}
           studioUrl={studioUrl}
         />
       }

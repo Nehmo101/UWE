@@ -13,7 +13,7 @@ const yn = (v: boolean) => (v ? "Ja" : "Nein");
 export default async function SystemHostControlPage() {
   await requireOwner();
   const [status, user] = await Promise.all([getSystemStatus(prisma), getCurrentAuthUser()]);
-  const canTriggerHostRestart = user?.role === "owner";
+  const canTriggerHostRestart = user?.isOwner === true;
 
   const overview = [
     { label: "Gesamtstatus", value: status.ok ? "OK" : "Aufmerksamkeit nötig" },
@@ -45,7 +45,6 @@ export default async function SystemHostControlPage() {
     { label: "AUTH_SECRET konfiguriert", value: yn(status.trust.authSecretConfigured) },
     { label: "AUTH_SECRET schwach", value: yn(status.trust.authSecretLooksWeak) },
     { label: "Studio-API-Token konfiguriert", value: yn(status.trust.studioApiTokenConfigured) },
-    { label: "Öffentliches Portal-Sharing", value: yn(status.trust.publicPortalSharingEnabled) },
   ];
 
   const services = [

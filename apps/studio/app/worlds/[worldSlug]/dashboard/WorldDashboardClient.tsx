@@ -52,7 +52,6 @@ export interface WorldDashboardClientProps {
       portalEnabled: boolean;
       visiblePageCount: number;
     };
-    world: { guestModeEnabled: boolean };
     nextSession: {
       id: string;
       sessionNumber: number;

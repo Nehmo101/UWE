@@ -42,7 +42,6 @@ describe("system status and next actions", () => {
     assert.equal(typeof status.trust.authSecretConfigured, "boolean");
     assert.equal(typeof status.trust.authSecretLooksWeak, "boolean");
     assert.equal(typeof status.trust.runDbSeedDisabled, "boolean");
-    assert.equal(typeof status.trust.publicPortalSharingEnabled, "boolean");
     assert.equal(typeof status.storage.exportsWritable, "boolean");
     assert.ok(
       status.storage.databaseFileExists === null ||

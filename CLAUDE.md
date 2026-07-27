@@ -49,7 +49,9 @@ Schnell-Gate ohne Security/Audit: `pnpm ci:check`
 
 Details: [SECURITY.md](SECURITY.md) und `.cursor/rules/security.mdc`.
 
-Kernregeln: keine Secrets in Source; `dm_only` nie ins Portal; Filtering in `packages/database/src/permissions.ts`; Cloud-AI ohne Kampagnen/Brain-Kontext; CSP nicht ohne Review schwächen.
+Kernregeln: keine Secrets in Source; Zugang = vier Häkchen pro E-Mail (`packages/auth/src/area-access.ts`); Inhalt = Welt-Zuordnung (`packages/auth/src/permissions.ts`); jede KI-Aktion über den RTX-Host, kein Cloud-Provider; CSP nicht ohne Review schwächen.
+
+**Zugangsmodell in einem Satz:** Das Häkchen sagt, welche App (Portal / Studio / Brain / Family). Die Welt-Zuordnung sagt, welche Welt. Sonst nichts. `owner` ist die einzige verbliebene Rolle — für Betrieb, Restore und das Command Center.
 
 ## TypeScript / React Konventionen
 
@@ -112,4 +114,4 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
 - [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain`
-- [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (23 Skills)
+- [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (24 Skills)

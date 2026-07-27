@@ -484,7 +484,7 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
 
   const started = Date.now();
 
-  let gatewayUser: { userId: string; role: string } | undefined;
+  let gatewayUser: { userId: string } | undefined;
   const resolved = await resolveGatewayUserById(ctx.job.userId);
   if (resolved) {
     gatewayUser = resolved;

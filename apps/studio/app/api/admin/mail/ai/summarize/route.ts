@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         bodyText: message.bodyText,
         bodyHtml: message.bodyHtml,
       },
-      auth.user ? { userId: auth.user.id, role: auth.user.role } : null,
+      auth.user ? { userId: auth.user.id } : null,
     );
 
     const action = await service.summarizeMessage(body.messageId, auth.user?.id, {

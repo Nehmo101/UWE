@@ -13,65 +13,55 @@ import {
   canUseAI,
   type WorldAuthTarget,
 } from "./authz";
-import type { AuthUser, WorldMembership } from "../types";
+import { NO_AREA_ACCESS, type AuthUser, type WorldMembership } from "../types";
 
 const ownerUser: AuthUser = {
   id: "owner-1",
   displayName: "Owner",
   email: "owner@test",
-  role: "owner",
+  isOwner: true,
+  access: { portal: true, studio: true, brain: true, family: true },
 };
 
+/** Portal checkbox only — a player. */
 const userA: AuthUser = {
   id: "user-a",
   displayName: "User A",
   email: "a@test",
-  role: "player",
+  isOwner: false,
+  access: { ...NO_AREA_ACCESS, portal: true },
 };
 
-const playerMembershipA: WorldMembership = {
+/** Studio checkbox, no world assignment anywhere — a DM. */
+const dmUser: AuthUser = {
+  id: "dm-1",
+  displayName: "DM",
+  email: "dm@test",
+  isOwner: false,
+  access: { ...NO_AREA_ACCESS, portal: true, studio: true },
+};
+
+const membershipA: WorldMembership = {
   userId: "user-a",
   worldId: "world-a",
-  role: "player",
   characterName: "Hero A",
 };
 
-const playerMembershipB: WorldMembership = {
+const membershipB: WorldMembership = {
   userId: "user-b",
   worldId: "world-b",
-  role: "player",
   characterName: "Hero B",
 };
 
-const worldA: WorldAuthTarget = {
-  id: "world-a",
-  guestModeEnabled: false,
-  membership: playerMembershipA,
-};
-
-const worldB: WorldAuthTarget = {
-  id: "world-b",
-  guestModeEnabled: false,
-  membership: playerMembershipB,
-};
-
-const publicWorld: WorldAuthTarget = {
-  id: "world-public",
-  guestModeEnabled: true,
-  membership: null,
-};
+const worldA: WorldAuthTarget = { id: "world-a", membership: membershipA };
+const worldB: WorldAuthTarget = { id: "world-b", membership: membershipB };
 
 const somePage = { id: "page-1" };
-
 const otherPage = { id: "page-2" };
 
 describe("authz — world access", () => {
   it("blocks User A from reading World B (horizontal privilege)", () => {
-    const worldBForUserA: WorldAuthTarget = {
-      id: "world-b",
-      guestModeEnabled: false,
-      membership: null,
-    };
+    const worldBForUserA: WorldAuthTarget = { id: "world-b", membership: null };
     assert.equal(canReadWorld(userA, worldBForUserA), false);
     assert.throws(
       () => assertCanReadWorld(userA, worldBForUserA),
@@ -83,18 +73,19 @@ describe("authz — world access", () => {
     assert.equal(canReadWorld(userA, worldA), true);
   });
 
-  it("allows guests to read public worlds only", () => {
-    assert.equal(canReadWorld(null, publicWorld), true);
-    assert.equal(
-      canReadWorld(null, { id: "world-a", guestModeEnabled: false, membership: null }),
-      false,
-    );
+  it("gives an anonymous visitor nothing — guest mode is gone", () => {
+    assert.equal(canReadWorld(null, { id: "world-a", membership: null }), false);
+    assert.equal(canReadWorld(null, worldA), false);
+  });
+
+  it("lets the Studio checkbox reach every world without an assignment", () => {
+    assert.equal(canReadWorld(dmUser, { id: "world-a", membership: null }), true);
+    assert.equal(canReadWorld(dmUser, { id: "world-b", membership: null }), true);
   });
 
   it("allows OWNER to read everything", () => {
     assert.equal(canReadWorld(ownerUser, worldA), true);
     assert.equal(canReadWorld(ownerUser, worldB), true);
-    assert.equal(canReadWorld(ownerUser, publicWorld), true);
   });
 });
 
@@ -104,20 +95,16 @@ describe("authz — content access", () => {
     assert.equal(canReadContent(userA, otherPage, worldA), true);
   });
 
-  it("blocks an anonymous guest even in a guest-mode world", () => {
-    assert.equal(canReadContent(null, somePage, publicWorld), false);
+  it("blocks an anonymous visitor", () => {
+    assert.equal(canReadContent(null, somePage, worldA), false);
     assert.throws(
-      () => assertCanReadContent(null, somePage, publicWorld),
+      () => assertCanReadContent(null, somePage, worldA),
       (error: unknown) => error instanceof AuthorizationError,
     );
   });
 
-  it("blocks direct ID lookup on private resource in foreign world", () => {
-    const foreignWorld: WorldAuthTarget = {
-      id: "world-b",
-      guestModeEnabled: false,
-      membership: null,
-    };
+  it("blocks direct ID lookup on a resource in a foreign world", () => {
+    const foreignWorld: WorldAuthTarget = { id: "world-b", membership: null };
     assert.equal(canReadContent(userA, otherPage, foreignWorld), false);
   });
 
@@ -128,7 +115,7 @@ describe("authz — content access", () => {
 });
 
 describe("authz — edit access", () => {
-  it("blocks PLAYER from editing content", () => {
+  it("blocks a Portal-only member from editing content in their own world", () => {
     assert.equal(canEditContent(userA, otherPage, worldA), false);
     assert.throws(
       () => assertCanEditContent(userA, otherPage, worldA),
@@ -136,38 +123,33 @@ describe("authz — edit access", () => {
     );
   });
 
-  it("blocks editing content in foreign/private world", () => {
+  it("blocks editing content in a foreign world", () => {
     assert.equal(canEditContent(userA, otherPage, worldB), false);
     assert.equal(canEditWorld(userA, worldB), false);
   });
 
-  it("allows OWNER to edit everything", () => {
+  it("lets the Studio checkbox edit, and the owner edit everything", () => {
+    assert.equal(canEditWorld(dmUser, worldB), true);
+    assert.equal(canEditContent(dmUser, somePage, worldA), true);
     assert.equal(canEditWorld(ownerUser, worldB), true);
     assert.equal(canEditContent(ownerUser, somePage, worldA), true);
   });
 });
 
 describe("authz — media and AI", () => {
-  it("blocks PLAYER from uploading media", () => {
+  it("blocks a Portal-only member from uploading media and using AI", () => {
     assert.equal(
-      canUploadMedia(userA, { worldId: "world-a", membership: playerMembershipA }),
+      canUploadMedia(userA, { worldId: "world-a", membership: membershipA }),
       false,
     );
+    assert.equal(canUseAI(userA, { worldId: "world-a", membership: membershipA }), false);
   });
 
-  it("allows OWNER to upload media and use AI", () => {
-    assert.equal(
-      canUploadMedia(ownerUser, { worldId: "world-a", membership: null }),
-      true,
-    );
+  it("allows Studio and OWNER to upload media and use AI", () => {
+    assert.equal(canUploadMedia(dmUser, { worldId: "world-a", membership: null }), true);
+    assert.equal(canUseAI(dmUser, { worldId: "world-a" }), true);
+    assert.equal(canUploadMedia(ownerUser, { worldId: "world-a", membership: null }), true);
     assert.equal(canUseAI(ownerUser, { worldId: "world-a" }), true);
-  });
-
-  it("blocks PLAYER from using AI with brain data", () => {
-    assert.equal(
-      canUseAI(userA, { worldId: "world-a", membership: playerMembershipA, includesBrainData: true }),
-      false,
-    );
   });
 
   it("allows studio trusted mode without user", () => {

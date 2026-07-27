@@ -1,7 +1,7 @@
 import type { AccessContext } from "@uwe/auth";
 import {
   canReadWorld,
-  isWorldStaff,
+  isDm,
   scopeFromAccessContext,
 } from "@uwe/auth";
 import type { InventoryItem, Prisma, PrismaClient } from "./generated/prisma/client";
@@ -149,8 +149,8 @@ export class PartyTreasuryService {
       return null;
     }
 
-    const staff = isWorldStaff(ctx);
-    if (!staff && ctx.effectiveRole !== "player") {
+    const staff = isDm(ctx);
+    if (!staff && ctx.worldMembership === null) {
       return null;
     }
 
@@ -215,7 +215,7 @@ export class PartyTreasuryService {
       return null;
     }
 
-    const staff = isWorldStaff(ctx);
+    const staff = isDm(ctx);
     if (!staff && (!ctx.user || character.ownerUserId !== ctx.user.id)) {
       return null;
     }
@@ -359,7 +359,7 @@ export class PartyTreasuryService {
 
   /**
    * Portal-Pfad: Spieler bewegen Items nur zwischen Schatzkammer und EIGENEM Charakter.
-   * DM-only-Items und versteckte Artefakte (nicht sichtbare verlinkte Seite) sind tabu.
+   * DM-only-Items sind tabu.
    * Staff, Gäste und Preview-Sessions erhalten null — der DM nutzt das Studio.
    */
   async moveItemForViewer(
@@ -367,7 +367,8 @@ export class PartyTreasuryService {
     ctx: AccessContext,
     input: MovePartyItemForViewerInput,
   ): Promise<InventoryItem | null> {
-    if (!ctx.user || ctx.previewAsUserId || ctx.effectiveRole !== "player") {
+    // Spieler heißt jetzt: dieser Welt zugeordnet und ohne Studio-Häkchen.
+    if (!ctx.user || ctx.previewAsUserId || ctx.worldMembership === null || isDm(ctx)) {
       return null;
     }
 

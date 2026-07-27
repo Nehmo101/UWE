@@ -225,7 +225,6 @@ export async function updateLabelAction(formData: FormData) {
     const { tryAiShortenLabelText } = await import("@/src/lib/label-ai-shorten");
     const shortened = await tryAiShortenLabelText(sourceText, {
       userId: actor?.id,
-      role: actor?.role,
     });
     if (shortened) {
       content = {

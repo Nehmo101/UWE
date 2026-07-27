@@ -40,14 +40,14 @@ function isSetupTabId(value: string | undefined): value is SetupTabId {
 export default async function OwnerSetupPage({ searchParams }: Props) {
   await requireAdminAccess();
   const user = await getCurrentAuthUser();
-  const canEdit = user?.role === "owner";
+  const canEdit = user?.isOwner === true;
 
   const { tab: tabParam, saved } = await searchParams;
   const activeTab: SetupTabId = isSetupTabId(tabParam) ? tabParam : "system";
 
   const [snapshot, settings] = await Promise.all([
     getOwnerSetupSnapshot(prisma, {
-      role: user?.role ?? "unknown",
+      isOwner: user?.isOwner === true,
       canEdit,
     }),
     getAppRepository().getSystemSettings(),
@@ -167,24 +167,6 @@ export default async function OwnerSetupPage({ searchParams }: Props) {
                   className="size-4 rounded border-input"
                 />
                 Portal aktiv
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="guestAccessEnabled"
-                  defaultChecked={settings.portal.guestAccessEnabled}
-                  className="size-4 rounded border-input"
-                />
-                Gastzugang
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="publicSharingEnabled"
-                  defaultChecked={settings.portal.publicSharingEnabled}
-                  className="size-4 rounded border-input"
-                />
-                Öffentliche Freigabe
               </label>
               <div className="flex flex-col gap-1.5" id="session">
                 <Label htmlFor="setup-access-session-timeout">

@@ -8,7 +8,7 @@ const appDir = path.dirname(fileURLToPath(import.meta.url));
 const standalone = getUweStandaloneNextConfig(appDir);
 
 // Brain runs on its own origin (default :3002) and is never proxied under a
-// sub-path, so there is no basePath. It is owner-only — every route verifies
+// sub-path, so there is no basePath. Access needs the brain checkbox — every route verifies
 // the `owner` role server-side; how it is reached (loopback / lan / public via
 // the owner-gated tunnel) is a separate deployment choice (see ADR 004/007).
 const nextConfig: NextConfig = {

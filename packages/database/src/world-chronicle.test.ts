@@ -83,12 +83,12 @@ describe("wave c0a chronicle models", () => {
       displayName: "Chronicle Player",
       email: "chronicle-player@uwe.local",
       password: "uwe-dev",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     await auth.createWorldMembership({
       userId: player.id,
       worldId: world.id,
-      role: "player",
     });
 
     const events = createWorldEventService(db);

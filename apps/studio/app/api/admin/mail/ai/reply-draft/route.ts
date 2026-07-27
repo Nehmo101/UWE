@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         bodyHtml: message.bodyHtml,
         tone: body.tone ?? "professional",
       },
-      auth.user ? { userId: auth.user.id, role: auth.user.role } : null,
+      auth.user ? { userId: auth.user.id } : null,
     );
 
     const draft = await service.createReplyDraft(

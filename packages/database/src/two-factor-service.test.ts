@@ -38,7 +38,11 @@ describe("two-factor service", () => {
         displayName: "2FA User",
         email: "2fa@uwe.local",
         passwordHash: "hash",
-        role: "owner",
+        isOwner: true,
+        portalAccess: true,
+        studioAccess: true,
+        brainAccess: true,
+        familyAccess: true,
       },
     });
     userId = user.id;

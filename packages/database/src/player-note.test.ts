@@ -42,7 +42,8 @@ describe("UWE player notes", () => {
       displayName: "DM",
       email: "dm-notes@test.local",
       password: "test",
-      role: "dm",
+      portalAccess: true,
+      studioAccess: true,
     });
     dmUserId = dm.id;
 
@@ -50,7 +51,8 @@ describe("UWE player notes", () => {
       displayName: "Player One",
       email: "player1-notes@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
@@ -58,16 +60,16 @@ describe("UWE player notes", () => {
       displayName: "Player Two",
       email: "player2-notes@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     otherPlayerUserId = otherPlayer.id;
 
-    await auth.createWorldMembership({ userId: dm.id, worldId: world.id, role: "dm" });
-    await auth.createWorldMembership({ userId: player.id, worldId: world.id, role: "player" });
+    await auth.createWorldMembership({ userId: dm.id, worldId: world.id });
+    await auth.createWorldMembership({ userId: player.id, worldId: world.id });
     await auth.createWorldMembership({
       userId: otherPlayer.id,
       worldId: world.id,
-      role: "player",
     });
 
     const page = await repo.createPage({

@@ -8,7 +8,6 @@ import {
   createSettingsService,
   getPersistentPathConfiguration,
   getSystemSettingsSnapshotSafe,
-  isGuestPortalAccessAllowed,
   resolveEffectiveExportsPath,
   resolveLocalOnlyMode,
   resolveSessionInactivityTimeoutMs,
@@ -48,7 +47,6 @@ describe("SettingsService", () => {
     await service.updateSettings({
       app: { theme: "light" },
       worlds: { defaultCanonicalStatus: "canon" },
-      portal: { guestAccessEnabled: false, publicSharingEnabled: false },
       ai: { localOnlyMode: true },
       storage: { uploadsPath: "./custom-uploads", exportsPath: "./custom-exports" },
       backup: { backupsPath: "./custom-backups" },
@@ -57,7 +55,6 @@ describe("SettingsService", () => {
     const reloaded = await service.getSettings();
     assert.equal(reloaded.app.theme, "light");
     assert.equal(reloaded.worlds.defaultCanonicalStatus, "canon");
-    assert.equal(reloaded.portal.guestAccessEnabled, false);
     assert.equal(reloaded.ai.localOnlyMode, true);
     assert.equal(reloaded.storage.uploadsPath, "./custom-uploads");
     assert.equal(reloaded.storage.exportsPath, "./custom-exports");
@@ -99,28 +96,24 @@ describe("SettingsService", () => {
   });
 
 
-  it("keeps portal guest access disabled regardless of settings", async () => {
+  it("gives an anonymous visitor no world context at all", async () => {
     const db = createPrismaClient(databaseUrl);
-    const service = createSettingsService(db);
     const auth = createAuthService(db);
 
     await db.world.create({
       data: {
         name: "Guest World",
         slug: "guest-world",
-        guestModeEnabled: true,
       },
     });
 
-    await service.updateSettings({
-      portal: { guestAccessEnabled: true },
-    });
-
-    const settings = await service.getSettings();
+    // There is no guest mode and no guest-access setting left to turn on: the
+    // four checkboxes decide who gets in, and an anonymous visitor has none.
     const ctx = await auth.buildAccessContextForWorld("guest-world");
     assert.ok(ctx);
-    assert.equal(isGuestPortalAccessAllowed(settings, true), false);
-    assert.equal(ctx.guestModeEnabled, false);
+    assert.equal(ctx.user, null);
+    assert.equal(ctx.worldMembership, null);
+    assert.deepEqual(await auth.listPagesForViewer("guest-world", ctx), []);
   });
 
   it("exposes local-only mode from settings", async () => {
@@ -167,7 +160,6 @@ describe("SettingsService", () => {
     await service.updateSettings({
       app: { theme: "light" },
       worlds: { defaultCanonicalStatus: "canon" },
-      portal: { guestAccessEnabled: false, publicSharingEnabled: false },
       ai: { localOnlyMode: true, enabled: false },
     });
 
@@ -178,8 +170,6 @@ describe("SettingsService", () => {
     const settings = await service.getSettings();
     assert.equal(settings.app.theme, "dark");
     assert.equal(settings.worlds.defaultCanonicalStatus, "canon");
-    assert.equal(settings.portal.guestAccessEnabled, false);
-    assert.equal(settings.portal.publicSharingEnabled, false);
     assert.equal(settings.ai.localOnlyMode, true);
     assert.equal(settings.ai.enabled, false);
   });

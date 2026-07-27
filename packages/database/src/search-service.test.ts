@@ -33,7 +33,6 @@ describe("UWE global search", () => {
     worldId = world.id;
     worldSlug = world.slug;
 
-    await auth.setWorldGuestMode(worldId, true);
 
     const campaign = await repo.createCampaign({
       worldId,
@@ -46,28 +45,31 @@ describe("UWE global search", () => {
       displayName: "Search DM",
       email: "search-dm@uwe.local",
       password: "uwe-dev",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
     dmUserId = dm.id;
 
     await auth.createWorldMembership({
       userId: dmUserId,
       worldId,
-      role: "owner",
     });
 
     const player = await auth.createUser({
       displayName: "Search Player",
       email: "search-player@uwe.local",
       password: "uwe-dev",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
     await auth.createWorldMembership({
       userId: playerUserId,
       worldId,
-      role: "player",
     });
 
     await repo.createPage({
@@ -353,14 +355,14 @@ describe("UWE global search", () => {
     await db.$disconnect();
   });
 
-  it("denies anonymous guest search when guest mode is disabled", async () => {
+  it("denies anonymous search — there is no guest mode left", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "guest");
-    assert.equal(ctx.guestModeEnabled, false);
+    assert.equal(ctx.user, null);
+    assert.equal(ctx.worldMembership, null);
 
     const results = await searchForAuthContext(db, ctx, {
       query: "Markt",

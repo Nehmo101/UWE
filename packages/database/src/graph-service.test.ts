@@ -178,15 +178,14 @@ describe("graph-service", () => {
         id: "player-1",
         displayName: "Player",
         email: "player@test.local",
-        role: "player",
+        isOwner: false,
+        access: { portal: true, studio: false, brain: false, family: false },
       },
       worldMembership: {
         userId: "player-1",
         worldId,
-        role: "player",
         characterName: "Tester",
       },
-      guestModeEnabled: false,
     });
 
     const viewerGraph = await buildWorldGraphForViewer(repo, worldSlug, ctx);

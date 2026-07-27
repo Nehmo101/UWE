@@ -1,40 +1,39 @@
 export type {
   AccessContext,
+  AreaAccess,
   AuthUser,
+  AuthUserSource,
   PreviewOptions,
   SafeUser,
-  UweRole,
-  WorldMemberRole,
+  UweArea,
   WorldMembership,
 } from "./types";
+
+export { NO_AREA_ACCESS, UWE_AREAS } from "./types";
 
 export { toSafeUser, stripSensitiveUserFields } from "./safe-user";
 
 export {
-  ADMIN_ACCESS_ROLES,
   AuthRequiredError,
-  ForbiddenRoleError,
-  STUDIO_ACCESS_ROLES,
-  canAccessAdmin,
+  ForbiddenAccessError,
+  UWE_AREA_LABELS,
+  canAccessBrain,
+  canAccessFamily,
+  canAccessPortal,
   canAccessStudio,
-  getRequiredRolesForApiPath,
-  getRequiredRolesForPagePath,
-  hasAnyRole,
-  isContentEditorRole,
+  getRequiredAccessForApiPath,
+  getRequiredAccessForPagePath,
+  hasAreaAccess,
   isOwner,
+  requireArea,
   requireOwner,
-  requireRole,
   requireUser,
-} from "./roles";
+  satisfiesStudioRouteAccess,
+  toAreaAccess,
+  toAuthUser,
+} from "./area-access";
 
-export type { AdminAccessRole, StudioAccessRole } from "./roles";
-
-export {
-  SECURITY_DASHBOARD_ROLES,
-  SECURITY_ROLE_LABELS,
-  canAccessSecurityDashboard,
-  isSecurityDashboardRole,
-} from "./security-access";
+export type { StudioRouteAccess } from "./area-access";
 
 export {
   buildAccessContext,
@@ -45,38 +44,9 @@ export {
   filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
-  isCoDm,
-  isDmOrOwner,
-  isWorldStaff,
-  resolveEffectiveRole,
+  isDm,
+  isOwner as isContextOwner,
 } from "./permissions";
-
-export {
-  ROLE_CAPABILITY_LABELS,
-  WORLD_MEMBER_ROLE_LABELS,
-  buildRoleCapabilityMatrix,
-  canAccessSystemAdmin,
-  canApproveReviews,
-  canDirectlyEditCanon,
-  canEditOwnPlayerNotes,
-  canGrantPortalUnlocks,
-  canManageApiTokens,
-  canManageBackups,
-  canManageSecurity,
-  canManageUsers,
-  canModeratePlayerNotes,
-  hasCapability,
-  listCapabilities,
-  mustSubmitProposal,
-} from "./role-capabilities";
-
-export type {
-  CapabilityContext,
-  RoleCapability,
-  RoleCapabilityMatrixRow,
-  UweRoleId,
-  WorldRoleId,
-} from "./role-capabilities";
 
 export type {
   AIUsageContext,
@@ -211,7 +181,7 @@ export {
   API_TOKEN_PREFIX_DISPLAY_LENGTH,
   API_TOKEN_SCOPES,
   API_TOKEN_SCOPE_LABELS,
-  assertAdminScopesForRole,
+  assertAdminScopesForOwner,
   getApiTokenPrefix,
   hasApiTokenScope,
   isApiTokenFormat,
@@ -223,10 +193,8 @@ export {
 
 export {
   evaluateAdminGate,
-  isAdminRole,
-  requireAdminRole,
-  requirePlayerBlocked,
-  requireStudioRole,
+  requireOwnerAccess,
+  requireStudioAccess,
   type AdminGateContext,
   type AdminGateDenied,
   type AdminGateResult,

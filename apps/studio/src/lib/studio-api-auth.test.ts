@@ -4,14 +4,14 @@ import { requireRestoreOwnerAuth, requireStudioApiAuth } from "./studio-api-auth
 import type { ApiAuthContext } from "@uwe/security";
 
 const OWNER_CONTEXT: ApiAuthContext = {
-  user: { id: "1", displayName: "Owner", email: null, role: "owner" },
+  user: { id: "1", displayName: "Owner", email: null, isOwner: true, access: { portal: true, studio: true, brain: true, family: true } },
   apiTokenId: null,
   apiTokenScopes: null,
   authMethod: "session",
 };
 
 const DM_CONTEXT: ApiAuthContext = {
-  user: { id: "2", displayName: "DM", email: null, role: "dm" },
+  user: { id: "2", displayName: "DM", email: null, isOwner: false, access: { portal: true, studio: true, brain: false, family: false } },
   apiTokenId: null,
   apiTokenScopes: null,
   authMethod: "session",

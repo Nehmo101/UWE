@@ -30,10 +30,7 @@ export async function runDesignAssistantTurnAction(
 ): Promise<ThemeGeneratorTurnResult> {
   await requireStudioActionAuth();
   const currentUser = await getCurrentAuthUser();
-  const user = {
-    userId: currentUser?.id ?? "system",
-    role: currentUser?.role ?? "owner",
-  };
+  const user = { userId: currentUser?.id ?? "system" };
 
   return runThemeGeneratorTurn(
     {

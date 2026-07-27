@@ -46,14 +46,14 @@ const STUDIO_PROMPTS: PromptDefinition[] = [
 const PORTAL_PROMPTS: PromptDefinition[] = [
   {
     name: "player-view-audit",
-    description: "Spielersicht einer Welt prüfen und dm_only-Lecks aufdecken.",
+    description: "Spielersicht einer Welt prüfen.",
     arguments: [{ name: "worldSlug", description: "Slug der Welt", required: true }],
     build: (args) => [
       {
         role: "user",
         content: {
           type: "text",
-          text: `Prüfe die Spielersicht der UWE-Welt "${args.worldSlug ?? "(bitte erfragen)"}". Führe zuerst portal_leak_check aus. Sieh dir danach mit portal_player_view_brain an, was Spieler tatsächlich sehen, und melde, ob etwas Wichtiges fehlt oder etwas Vertrauliches sichtbar ist.`,
+          text: `Prüfe die Spielersicht der UWE-Welt "${args.worldSlug ?? "(bitte erfragen)"}". Sieh dir mit portal_player_view_brain und portal_player_view_graph an, was ein zugeordneter Spieler tatsächlich sieht, und melde, ob etwas Wichtiges fehlt.`,
         },
       },
     ],

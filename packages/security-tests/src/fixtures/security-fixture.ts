@@ -56,12 +56,12 @@ const TEST_PASSWORD = "uwe-security-test";
 /**
  * Seeds two worlds (public + private) with labeled content for security tests.
  *
- * Role mapping (UWE has no separate ADMIN role — see docs/security-testing.md):
- * - owner  → world owner (OWNER)
- * - admin  → system owner with world DM membership (ADMIN)
- * - dm     → DM
- * - player → PLAYER
- * - anonymous → no session (guest)
+ * There is no role enum any more (see docs/engineering/access-model.md). The
+ * fixture seeds the three shapes the model allows:
+ * - owner  → owner flag plus all four checkboxes
+ * - dm     → Studio checkbox, reaches every world
+ * - player → Portal checkbox, assigned to the public world only
+ * - anonymous → no session, sees nothing
  */
 export async function createSecurityFixture(): Promise<SecurityFixture> {
   const databaseUrl = createTestDatabaseUrl();
@@ -84,65 +84,67 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     description: "Guest-disabled world with DM-only content",
   });
 
-  await auth.setWorldGuestMode(publicWorld.id, true);
-  await auth.setWorldGuestMode(privateWorld.id, false);
 
   const owner = await auth.createUser({
     displayName: "Security Owner",
     email: "sec-owner@uwe.local",
     password: TEST_PASSWORD,
-    role: "owner",
+    isOwner: true,
+    portalAccess: true,
+    studioAccess: true,
+    brainAccess: true,
+    familyAccess: true,
   });
   await auth.createWorldMembership({
     userId: owner.id,
     worldId: publicWorld.id,
-    role: "owner",
   });
   await auth.createWorldMembership({
     userId: owner.id,
     worldId: privateWorld.id,
-    role: "owner",
   });
 
   const admin = await auth.createUser({
     displayName: "Security Admin",
     email: "sec-admin@uwe.local",
     password: TEST_PASSWORD,
-    role: "owner",
+    isOwner: true,
+    portalAccess: true,
+    studioAccess: true,
+    brainAccess: true,
+    familyAccess: true,
   });
   await auth.createWorldMembership({
     userId: admin.id,
     worldId: publicWorld.id,
-    role: "dm",
   });
 
   const dm = await auth.createUser({
     displayName: "Security DM",
     email: "sec-dm@uwe.local",
     password: TEST_PASSWORD,
-    role: "dm",
+    portalAccess: true,
+    studioAccess: true,
   });
   await auth.createWorldMembership({
     userId: dm.id,
     worldId: publicWorld.id,
-    role: "dm",
   });
   await auth.createWorldMembership({
     userId: dm.id,
     worldId: privateWorld.id,
-    role: "dm",
   });
 
   const player = await auth.createUser({
     displayName: "Security Player",
     email: "sec-player@uwe.local",
     password: TEST_PASSWORD,
-    role: "player",
+    portalAccess: true,
+    studioAccess: false,
   });
   await auth.createWorldMembership({
     userId: player.id,
     worldId: publicWorld.id,
-    role: "player",
     characterName: "Testspieler",
   });
 

@@ -17,7 +17,7 @@ export async function GET() {
     appName: "UWE Brain",
     rateLimiterMode: RATE_LIMITER_MODE,
     extraChecks: {
-      brain: { status: "ok", message: "Brain is running (local, owner-only)" },
+      brain: { status: "ok", message: "Brain is running (local, checkbox-gated)" },
     },
   });
 

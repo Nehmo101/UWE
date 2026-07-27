@@ -41,13 +41,13 @@ describe("authz integration — IDOR/BOLA", () => {
       displayName: "Player A",
       email: "player-a@authz.test",
       password: "secret",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     await auth.createWorldMembership({
       userId: userA.id,
       worldId: worldAId,
-      role: "player",
     });
 
     await repo.createPage({
@@ -79,9 +79,8 @@ describe("authz integration — IDOR/BOLA", () => {
     const userA = await auth.findUserByEmail("player-a@authz.test");
     assert.ok(userA);
 
-    // World B is members-only (guestModeEnabled defaults to false) and User A
-    // is not a member. Before the world-membership guard, listPagesForViewer
-    // returned World B's player-visible pages to any logged-in player.
+    // User A is not assigned to World B. Before the world-assignment guard,
+    // listPagesForViewer returned World B's pages to any logged-in user.
     const ctxB = await auth.buildAccessContextForWorld(worldBSlug, { userId: userA.id });
     assert.ok(ctxB);
 
@@ -99,7 +98,6 @@ describe("authz integration — IDOR/BOLA", () => {
     assert.equal(
       canReadWorld(auth.toAuthUser(userA), {
         id: worldBId,
-        guestModeEnabled: false,
         membership: ctxB.worldMembership,
       }),
       false,
@@ -119,7 +117,6 @@ describe("authz integration — IDOR/BOLA", () => {
     const scope = {
       world: {
         id: worldBId,
-        guestModeEnabled: false,
         membership: null,
       },
     };
@@ -164,7 +161,7 @@ describe("authz integration — IDOR/BOLA", () => {
       canReadContent(
         auth.toAuthUser(userA),
         dmPage,
-        { id: worldAId, guestModeEnabled: false, membership: ctxA.worldMembership },
+        { id: worldAId,  membership: ctxA.worldMembership },
         { previewAsUserId: ctxA.previewAsUserId },
       ),
       true,
@@ -176,7 +173,11 @@ describe("authz integration — IDOR/BOLA", () => {
       displayName: "Owner",
       email: "owner@authz.test",
       password: "secret",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const ctx = await auth.buildAccessContextForWorld(worldBSlug, { userId: owner.id });

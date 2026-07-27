@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/src/lib/auth";
-import { isBrainOwner } from "@/src/lib/owner";
+import { canEnterBrain } from "@/src/lib/owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function BrainHome() {
     redirect("/login");
   }
 
-  if (!isBrainOwner(user.role)) {
+  if (!canEnterBrain(user)) {
     return (
       <BrainShell active="/" title="UWE Brain">
         <BrainDenied />

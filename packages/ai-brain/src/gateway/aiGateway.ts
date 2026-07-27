@@ -60,13 +60,11 @@ export {
 
 export interface AiGatewayUserContext {
   userId: string;
-  role: string;
 }
 
 /** Fallback actor for background/system AI jobs without a real user session. */
 export const AI_GATEWAY_SYSTEM_USER: AiGatewayUserContext = {
   userId: "system",
-  role: "owner",
 };
 
 function resolveGatewayUsageUserId(user: AiGatewayUserContext): string | null {
@@ -129,7 +127,6 @@ export async function executeAiGatewayRequest(
 
   await gateway.assertFeatureAccess({
     userId: request.user.userId,
-    role: request.user.role,
     feature: request.feature,
     contextMode: request.contextMode,
     taskType: request.taskType,
@@ -292,7 +289,6 @@ async function prepareAiGatewayExecution(
 }> {
   await gateway.assertFeatureAccess({
     userId: input.user.userId,
-    role: input.user.role,
     feature: input.feature,
     contextMode: input.contextMode,
     taskType: input.taskType,

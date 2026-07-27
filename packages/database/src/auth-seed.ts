@@ -24,13 +24,13 @@ export async function seedAuthUsers(
     displayName: "DM User",
     email: "dm@uwe.local",
     password: DEV_SEED_PASSWORD,
-    role: "dm",
+    portalAccess: true,
+    studioAccess: true,
   });
 
   await auth.createWorldMembership({
     userId: dm.id,
     worldId,
-    role: "owner",
   });
 
   const playerDefs = [
@@ -47,13 +47,12 @@ export async function seedAuthUsers(
       displayName: def.displayName,
       email: def.email,
       password: DEV_SEED_PASSWORD,
-      role: "player",
+      portalAccess: true,
     });
 
     await auth.createWorldMembership({
       userId: user.id,
       worldId,
-      role: "player",
       characterName: def.characterName,
     });
 

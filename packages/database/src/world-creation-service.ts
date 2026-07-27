@@ -16,7 +16,6 @@ export interface CreateWorldRequest {
   name: string;
   slug?: string;
   description?: string | null;
-  guestModeEnabled?: boolean;
   isSandbox?: boolean;
   templateId?: WorldTemplateId | string | null;
 }
@@ -26,7 +25,6 @@ export interface CreatedWorldResult {
   name: string;
   slug: string;
   description: string | null;
-  guestModeEnabled: boolean;
   isSandbox: boolean;
   templateId: WorldTemplateId;
   seededPageCount: number;
@@ -52,7 +50,6 @@ export class WorldCreationService {
     }
 
     const isSandbox = input.isSandbox ?? false;
-    const guestModeEnabled = isSandbox ? false : (input.guestModeEnabled ?? false);
 
     const existingSlugs = (await this.db.world.findMany({ select: { slug: true } })).map(
       (world) => world.slug,
@@ -65,7 +62,6 @@ export class WorldCreationService {
         name,
         slug,
         description: input.description?.trim() || null,
-        guestModeEnabled,
         isSandbox,
       },
     });
@@ -82,7 +78,6 @@ export class WorldCreationService {
       await auth.createWorldMembership({
         userId,
         worldId: world.id,
-        role: "owner",
       });
 
       seededPageCount = await this.applyWorldTemplate(world.id, template);
@@ -109,7 +104,6 @@ export class WorldCreationService {
       worldId: world.id,
       metadata: {
         slug: world.slug,
-        guestModeEnabled: world.guestModeEnabled,
         isSandbox: world.isSandbox,
         templateId,
         seededPageCount,
@@ -122,7 +116,6 @@ export class WorldCreationService {
       name: world.name,
       slug: world.slug,
       description: world.description,
-      guestModeEnabled: world.guestModeEnabled,
       isSandbox: world.isSandbox,
       templateId,
       seededPageCount,

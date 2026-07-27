@@ -21,7 +21,6 @@ export async function POST(request: Request) {
   try {
     const result = await executeLifeBrainChat(parsed.data, {
       userId: user.id,
-      role: user.role,
     });
 
     if (result.kind === "unavailable") {

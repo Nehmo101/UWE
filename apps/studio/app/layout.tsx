@@ -99,7 +99,7 @@ export default async function RootLayout({
   let canRunAdminCommands = false;
   try {
     const currentUser = await getCurrentAuthUser();
-    canRunAdminCommands = currentUser?.role === "owner" || currentUser?.role === "admin";
+    canRunAdminCommands = currentUser?.isOwner === true;
   } catch {
     // Auth/DB not ready — palette works without the admin-command entry.
   }

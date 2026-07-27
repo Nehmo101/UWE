@@ -23,7 +23,7 @@ describe("maintenance gate", () => {
       settings,
       surface: "studio",
       pathname: "/today",
-      context: resolveMaintenanceGateContext({ userRole: "owner" }),
+      context: resolveMaintenanceGateContext({ isOwner: true }),
     });
 
     assert.equal(decision.blocked, false);
@@ -44,7 +44,7 @@ describe("maintenance gate", () => {
       settings,
       surface: "studio",
       pathname: "/today",
-      context: resolveMaintenanceGateContext({ userRole: "dm" }),
+      context: resolveMaintenanceGateContext({ isOwner: false }),
     });
 
     assert.equal(decision.blocked, true);
@@ -67,7 +67,7 @@ describe("maintenance gate", () => {
       settings,
       surface: "portal",
       pathname: "/auth/worlds",
-      context: resolveMaintenanceGateContext({ userRole: "player" }),
+      context: resolveMaintenanceGateContext({ isOwner: false }),
     });
 
     assert.equal(decision.blocked, true);
@@ -90,7 +90,7 @@ describe("maintenance gate", () => {
       settings,
       surface: "studio",
       pathname: "/maintenance",
-      context: resolveMaintenanceGateContext({ userRole: "player" }),
+      context: resolveMaintenanceGateContext({ isOwner: false }),
     });
 
     assert.equal(decision.blocked, false);

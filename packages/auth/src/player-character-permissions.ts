@@ -1,11 +1,13 @@
 import type { AccessContext } from "./types";
-import { canViewWorldContent } from "./permissions";
 
 const EDITABLE_BLOCK_TYPES = new Set(["player_text", "rich_text"]);
 
 /**
  * Players may edit the text blocks of their own character sheet. The DM keeps
  * canon control — players cannot change page metadata, only block content.
+ *
+ * „Player" is now simply: assigned to this world through the Portal, and not
+ * holding the Studio checkbox (a DM edits through Studio, not through here).
  */
 export function canEditPlayerCharacterBlock(
   ctx: AccessContext,
@@ -16,15 +18,15 @@ export function canEditPlayerCharacterBlock(
     return false;
   }
 
-  if (ctx.effectiveRole !== "player" || !ctx.user) {
+  if (!ctx.user || ctx.worldMembership === null) {
+    return false;
+  }
+
+  if (ctx.user.access.studio) {
     return false;
   }
 
   if (page.type !== "player_character") {
-    return false;
-  }
-
-  if (!canViewWorldContent(ctx)) {
     return false;
   }
 

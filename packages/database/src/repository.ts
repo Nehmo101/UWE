@@ -461,7 +461,6 @@ export class UweRepository {
         name: true,
         slug: true,
         description: true,
-        guestModeEnabled: true,
       },
     });
   }

@@ -35,7 +35,7 @@ export async function POST(request: Request, context: RouteContext) {
   const user = authContext.user ?? (await requireAdminAccess());
   const { id } = await context.params;
   const service = createApiTokenService(prisma);
-  const rotated = await service.rotate(id, user.id, user.role);
+  const rotated = await service.rotate(id, user.id, user.isOwner);
 
   return NextResponse.json({
     token: rotated.token,

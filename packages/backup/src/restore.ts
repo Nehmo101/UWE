@@ -70,7 +70,6 @@ export async function executeRestore(
           data: {
             name: world.name,
             description: world.description,
-            guestModeEnabled: world.guestModeEnabled,
           },
         });
         idMap.set(world.id, existing.id);
@@ -92,7 +91,6 @@ export async function executeRestore(
             name: world.name,
             slug,
             description: world.description,
-            guestModeEnabled: world.guestModeEnabled,
           },
         });
         result.created++;
@@ -123,7 +121,6 @@ export async function executeRestore(
         name: world.name,
         slug: world.slug,
         description: world.description,
-        guestModeEnabled: world.guestModeEnabled,
       },
     });
     result.created++;
@@ -540,7 +537,11 @@ export async function executeRestore(
         id: remapId(idMap, user.id),
         displayName: user.displayName,
         email: user.email ?? null,
-        role: user.role as never,
+        isOwner: user.isOwner === true,
+        portalAccess: user.portalAccess === true,
+        studioAccess: user.studioAccess === true,
+        brainAccess: user.brainAccess === true,
+        familyAccess: user.familyAccess === true,
         forcePasswordChange: true,
       },
     });
@@ -580,7 +581,6 @@ export async function executeRestore(
         id: remapId(idMap, membership.id),
         userId,
         worldId,
-        role: membership.role as never,
         characterName: membership.characterName ?? null,
       },
     });

@@ -51,13 +51,13 @@ function countForProgress(status: ChecklistItemStatus): boolean {
 
 export async function getAdminOnboardingChecklist(
   db: PrismaClient,
-  options: { env?: NodeJS.ProcessEnv; role?: string } = {},
+  options: { env?: NodeJS.ProcessEnv; isOwner?: boolean } = {},
 ): Promise<AdminOnboardingChecklist> {
   const env = options.env ?? process.env;
 
   const [setup, migration, worldCount, backup, mailSettings, connectorSummary, userCount] =
     await Promise.all([
-    getOwnerSetupSnapshot(db, { env, role: options.role ?? "owner", canEdit: false }),
+    getOwnerSetupSnapshot(db, { env, isOwner: options.isOwner ?? true, canEdit: false }),
     getMigrationStatus(db),
     db.world.count(),
     Promise.resolve(getBackupFreshnessStatus()),

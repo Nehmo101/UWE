@@ -540,7 +540,11 @@ export async function collectBackupData(
       id: true,
       displayName: true,
       email: true,
-      role: true,
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     },
   });
 
@@ -564,7 +568,16 @@ export async function collectBackupData(
     playerNotes.length > 0
       ? await db.user.findMany({
           where: { id: { in: [...userIds] } },
-          select: { id: true, displayName: true, email: true, role: true },
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            isOwner: true,
+            portalAccess: true,
+            studioAccess: true,
+            brainAccess: true,
+            familyAccess: true,
+          },
         })
       : [];
 
@@ -584,7 +597,6 @@ export async function collectBackupData(
         name: world.name,
         slug: world.slug,
         description: world.description,
-        guestModeEnabled: world.guestModeEnabled,
         createdAt: world.createdAt.toISOString(),
         updatedAt: world.updatedAt.toISOString(),
       }),
@@ -775,7 +787,6 @@ export async function collectBackupData(
         id: membership.id,
         userId: membership.userId,
         worldId: membership.worldId,
-        role: membership.role,
         characterName: membership.characterName,
         createdAt: membership.createdAt.toISOString(),
         updatedAt: membership.updatedAt.toISOString(),
@@ -786,7 +797,11 @@ export async function collectBackupData(
         id: user.id,
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: user.isOwner,
+        portalAccess: user.portalAccess,
+        studioAccess: user.studioAccess,
+        brainAccess: user.brainAccess,
+        familyAccess: user.familyAccess,
       }),
     ),
     pageTemplates: pageTemplates.map(

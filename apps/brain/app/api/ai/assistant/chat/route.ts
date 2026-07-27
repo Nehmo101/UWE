@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     conversationId,
     question,
     attachmentIds,
-    user: { userId: user.id, role: user.role },
+    user: { userId: user.id },
     uploadsRoot: await resolveUploadsRootForAssistant(),
   });
 

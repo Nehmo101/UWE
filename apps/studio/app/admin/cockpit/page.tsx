@@ -39,12 +39,13 @@ export default async function OwnerCockpitPage() {
           <h2 className="text-lg font-semibold tracking-tight">Nutzer</h2>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{snapshot.users.total} aktive Rollen-Zählung</CardTitle>
+              <CardTitle className="text-base">{snapshot.users.total} Konten</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-start gap-3">
               <p className="text-sm text-muted-foreground">
-                Owner {snapshot.users.byRole.owner} · Admin {snapshot.users.byRole.admin} · DM{" "}
-                {snapshot.users.byRole.dm} · Spieler {snapshot.users.byRole.player}
+                Owner {snapshot.users.byArea.owner} · Portal {snapshot.users.byArea.portal} · Studio{" "}
+                {snapshot.users.byArea.studio} · Brain {snapshot.users.byArea.brain} · Family{" "}
+                {snapshot.users.byArea.family}
               </p>
               <Link className={buttonVariants({ variant: "secondary", size: "sm" })} href="/admin/users">
                 Benutzerverwaltung

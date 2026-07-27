@@ -162,12 +162,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       if (body.portal.portalEnabled !== undefined) {
         portal.portalEnabled = body.portal.portalEnabled as boolean;
       }
-      if (body.portal.guestAccessEnabled !== undefined) {
-        portal.guestAccessEnabled = body.portal.guestAccessEnabled as boolean;
-      }
-      if (body.portal.publicSharingEnabled !== undefined) {
-        portal.publicSharingEnabled = body.portal.publicSharingEnabled as boolean;
-      }
       if (Object.keys(portal).length > 0) {
         update.portal = portal;
       }

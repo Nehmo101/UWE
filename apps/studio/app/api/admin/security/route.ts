@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { canAccessSecurityDashboard } from "@uwe/auth";
 import {
   assertSecurityDashboardHasNoSecrets,
   getSecurityDashboardStatus,
@@ -23,7 +22,7 @@ export async function GET(request: Request) {
     return authError;
   }
 
-  if (context.authMethod === "session" && context.user && !canAccessSecurityDashboard(context.user.role)) {
+  if (context.authMethod === "session" && context.user && !context.user.isOwner) {
     return jsonError("Nur OWNER/ADMIN dürfen das Security Dashboard sehen.", 403);
   }
 

@@ -54,10 +54,10 @@ export default async function PortalSessionDetailPage({ params }: Props) {
 
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { guestCommentsEnabled: true },
+      select: { id: true },
     });
     canComment = Boolean(
-      session.campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled),
+      session.campaignId && world && canCreatePlayerNote(ctx),
     );
   } finally {
     await db.$disconnect();

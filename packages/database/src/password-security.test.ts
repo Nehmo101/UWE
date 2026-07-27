@@ -29,7 +29,8 @@ describe("password security", () => {
       displayName: "Security Admin",
       email: "admin-security@uwe.local",
       password: "admin-password-1",
-      role: "admin",
+      portalAccess: true,
+      studioAccess: true,
       actorUserId: "bootstrap",
     });
     adminUserId = admin.id;
@@ -38,7 +39,8 @@ describe("password security", () => {
       displayName: "Target User",
       email: "target-security@uwe.local",
       password: "original-password",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       actorUserId: adminUserId,
     });
     targetUserId = target.id;
@@ -146,7 +148,8 @@ describe("password security", () => {
     const invited = await users.createInvite({
       displayName: "Invited User",
       email: "invited-security@uwe.local",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       actorUserId: adminUserId,
     });
 
@@ -183,7 +186,8 @@ describe("password security", () => {
       displayName: "Audit User",
       email: "audit-password@uwe.local",
       password: "audit-password-123",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       actorUserId: adminUserId,
     });
 
@@ -211,7 +215,8 @@ describe("password security", () => {
         displayName: "Legacy User",
         email: "legacy-login@uwe.local",
         passwordHash: legacyStored,
-        role: "player",
+        portalAccess: true,
+        studioAccess: false,
       },
     });
 

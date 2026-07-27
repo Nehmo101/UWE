@@ -33,7 +33,8 @@ describe("character sheet permissions (portal)", () => {
       displayName: "DM",
       email: "dm-char-perm@test.local",
       password: "test",
-      role: "dm",
+      portalAccess: true,
+      studioAccess: true,
     });
     dmUserId = dm.id;
 
@@ -41,7 +42,8 @@ describe("character sheet permissions (portal)", () => {
       displayName: "Player One",
       email: "player1-char-perm@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerOneId = playerOne.id;
 
@@ -49,12 +51,13 @@ describe("character sheet permissions (portal)", () => {
       displayName: "Player Two",
       email: "player2-char-perm@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
-    await auth.createWorldMembership({ userId: dm.id, worldId, role: "dm" });
-    await auth.createWorldMembership({ userId: playerOne.id, worldId, role: "player" });
-    await auth.createWorldMembership({ userId: playerTwo.id, worldId, role: "player" });
+    await auth.createWorldMembership({ userId: dm.id, worldId });
+    await auth.createWorldMembership({ userId: playerOne.id, worldId });
+    await auth.createWorldMembership({ userId: playerTwo.id, worldId });
 
     const visiblePage = await repo.createPage({
       worldId,
@@ -129,19 +132,22 @@ describe("character sheet permissions (portal)", () => {
       displayName: "Global Owner",
       email: "global-owner-char-perm@test.local",
       password: "test",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     await auth.createWorldMembership({
       userId: globalOwner.id,
       worldId,
-      role: "player",
       characterName: "Owner PC",
     });
 
     const ownerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: globalOwner.id });
     assert.ok(ownerCtx);
-    assert.equal(ownerCtx.effectiveRole, "owner");
+    assert.equal(ownerCtx.user?.isOwner, true);
 
     const listed = await auth.listCharactersForViewer(worldSlug, ownerCtx);
     const listedIds = listed.map((entry) => entry.id);

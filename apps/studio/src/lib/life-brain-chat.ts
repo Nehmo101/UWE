@@ -46,7 +46,7 @@ export type LifeBrainChatResult =
  */
 export async function executeLifeBrainChat(
   body: LifeBrainChatRequest,
-  user: { userId: string; role: string },
+  user: { userId: string },
 ): Promise<LifeBrainChatResult> {
   const messages = body.messages
     .map((m) => ({ role: m.role, content: m.content.trim() }))

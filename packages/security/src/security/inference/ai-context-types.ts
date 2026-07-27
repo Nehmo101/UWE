@@ -43,10 +43,12 @@ export type AiTaskType =
   | "answer_mail_question"
   | "generate_theme_palette";
 
-/** Audience for context visibility filtering. */
+/**
+ * Label on a built AI context, for the debug view. It no longer filters
+ * anything: per-item visibility is gone, so a context contains whatever the
+ * world contains.
+ */
 export type ContextAudience = "dm_internal" | "player_visible" | "mail";
-
-export type BrainVisibility = "dm_only" | "player_visible" | "public";
 
 export interface AiContextBlock {
   blockId: string;

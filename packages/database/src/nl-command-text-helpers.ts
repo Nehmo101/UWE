@@ -31,13 +31,39 @@ export function matchesAny(text: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
+/**
+ * Area names are never world names. Without this, „gib X für Portal Zugang in
+ * Terra" would read „portal" as the world.
+ */
+const WORLD_QUERY_STOPWORDS = new Set([
+  "portal",
+  "spielerportal",
+  "wiki",
+  "studio",
+  "brain",
+  "hirn",
+  "wissen",
+  "family",
+  "familie",
+  "haushalt",
+  "zugang",
+  "zugriff",
+]);
+
 export function extractWorldQuery(text: string): string | null {
   const quoted = text.match(/\b(?:in|für|for|world|welt)\s+(["'])([^"']+)\1/i);
   if (quoted?.[2]) {
     return quoted[2].trim();
   }
-  const plain = text.match(/\b(?:in|für|for|world|welt)\s+([a-z0-9_-]+)/i);
-  return plain?.[1]?.trim() ?? null;
+
+  // Take the first candidate that is not an area name.
+  for (const match of text.matchAll(/\b(?:in|für|for|world|welt)\s+([a-z0-9_-]+)/gi)) {
+    const candidate = match[1]?.trim();
+    if (candidate && !WORLD_QUERY_STOPWORDS.has(candidate.toLowerCase())) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 export function extractUserQuery(text: string): string | null {
@@ -63,6 +89,14 @@ export function extractUserQuery(text: string): string | null {
   );
   if (machUser?.[1] && !isUserQueryStopword(machUser[1])) {
     return machUser[1];
+  }
+
+  // Access commands: „gib Carina den Studio-Zugang", „entziehe Carina Family".
+  const accessUser = text.match(
+    /\b(?:gib|gebe|grant|erlaube|entzieh|entziehe|nimm|revoke)\s+([a-zäöüß0-9._-]+)/i,
+  );
+  if (accessUser?.[1] && !isUserQueryStopword(accessUser[1])) {
+    return accessUser[1];
   }
 
   const promoteUser = text.match(

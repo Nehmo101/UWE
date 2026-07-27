@@ -5,7 +5,7 @@
  * through Studio's player-preview parameters (`accessContext=portal`,
  * `preview=player`). Those run the same `packages/database/src/permissions.ts`
  * filtering a logged-in player gets, which makes them a truthful answer to
- * "was sieht ein Spieler?" — and the basis for the dm_only leak check.
+ * "was sieht ein Spieler?" — the player view of a world they are assigned to.
  */
 import type { ToolDefinition, ToolResult } from "../protocol/types";
 import {
@@ -62,7 +62,7 @@ export function createPortalTools(context: ToolContext): ToolDefinition[] {
       name: "portal_player_view_brain",
       title: "Spielersicht: Welt-Brain",
       description:
-        "Welt-Brain in der gefilterten Spielersicht (accessContext=portal). Zeigt genau das, was ein eingeloggter Spieler im Portal sehen darf — dm_only ist herausgefiltert.",
+        "Welt-Brain in der Spielersicht (accessContext=portal). Zeigt genau das, was ein zugeordneter Spieler im Portal sieht.",
       inputSchema: objectSchema(
         {
           worldSlug: stringArg("Slug der Welt."),

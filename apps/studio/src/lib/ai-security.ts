@@ -20,7 +20,7 @@ export function enforceStudioAiRoute(request: Request): Response | null {
 
   try {
     enforceAiAccessPolicy({
-      role: "owner",
+      studioAccess: true,
       studioTrusted: true,
       userKey: resolveClientIp(request.headers),
     });

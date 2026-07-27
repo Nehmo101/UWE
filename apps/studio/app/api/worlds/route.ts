@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { canAccessStudio } from "@uwe/auth";
 import { jsonError } from "@/src/lib/api-response";
 import {
   createPrismaClient,
   createWorldCreationService,
   logAuditEvent,
 } from "@uwe/database/server";
-import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
+
 import { createWorldBodySchema, parseBody } from "@uwe/security";
 import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
@@ -22,14 +23,14 @@ export async function POST(request: Request) {
     return jsonError("Anmeldung erforderlich.", 401);
   }
 
-  if (!hasAnyRole(user, ADMIN_ACCESS_ROLES)) {
+  if (!canAccessStudio(user)) {
     const db = createPrismaClient();
     try {
       await logAuditEvent(db, {
         actorUserId: user.id,
         action: "authz_denied",
         targetType: "world",
-        metadata: { endpoint: "studio_create_world", role: user.role },
+        metadata: { endpoint: "studio_create_world", access: user.access },
       });
     } finally {
       await db.$disconnect();

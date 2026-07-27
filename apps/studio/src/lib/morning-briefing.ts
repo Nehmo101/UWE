@@ -121,7 +121,7 @@ export interface MorningBriefingResult {
  */
 export async function generateMorningBriefing(
   db: PrismaClient,
-  user: { userId: string; role: string },
+  user: { userId: string },
 ): Promise<MorningBriefingResult> {
   const now = new Date();
   const facts = await collectMorningBriefingFacts(db, now);

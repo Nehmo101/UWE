@@ -83,7 +83,7 @@ export type AiPromptExecutionResult =
 
 export async function executeAiPrompt(
   body: AiPromptRequestBody,
-  user?: { userId: string; role: string },
+  user?: { userId: string },
 ): Promise<AiPromptExecutionResult> {
   const prompt = body.prompt?.trim();
   if (!prompt) {
@@ -159,7 +159,7 @@ export async function executeAiPrompt(
     );
   }
 
-  const gatewayUser = { userId: user.userId, role: user.role };
+  const gatewayUser = { userId: user.userId };
 
   const routed = await executeAiGatewayRequest(
     {
@@ -227,7 +227,7 @@ export function aiPromptErrorResponse(error: unknown): NextResponse {
 
 export async function postAiPrompt(
   body: AiPromptRequestBody,
-  user?: { userId: string; role: string },
+  user?: { userId: string },
 ) {
   try {
     const result = await executeAiPrompt(body, user);

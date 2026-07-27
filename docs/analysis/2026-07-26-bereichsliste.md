@@ -64,14 +64,31 @@ Jeder Schritt ist ein eigener Commit mit grünem Gate.
 | **3a — Geheimnis-Level raus** (Teil von N.2) | ✅ fertig | `731dbff` | 33 Dateien, −759 Zeilen |
 | **B8a + L4** — Legacy-Pfade, doppeltes `/api/auth/enter` | ✅ fertig | `380e900` | 13 Dateien, −251 Zeilen |
 | **3b — `publishStatus` raus** | ✅ fertig | `4898c38` | 121 Dateien, −756 Zeilen |
-| **3b — `visibility` raus** | ✅ fertig | folgt | ~230 Dateien; inkl. `PagePlayerAccess`, `SessionUnlock`, `gm_note`, Signierte-Medien-URLs, Leak-Scanner |
-| **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ⏳ offen | — | |
+| **3b — `visibility` raus** | ✅ fertig | `2ee64ca` | 320 Dateien, −8.090 Zeilen; inkl. `PagePlayerAccess`, `SessionUnlock`, `gm_note`, Signierte-Medien-URLs, Leak-Scanner |
+| **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ✅ fertig | folgt | Rollen-Enum, Capability-Matrix, Welt-Rollen und Gastmodus raus; Kachel „Zugänge" im Command Center |
 | **5 — Studio-System abräumen** (Abschnitt D) | ⏳ offen | — | |
 | **6 — Brain/Studio-Doppelungen** (Abschnitt H) | ⏳ offen | — | |
 | **7 — Family bauen** (Abschnitt G) | ⏳ offen | — | |
 
-**Bisher entfernt: ~9.500 Zeilen** über 164 Dateien. Nach jedem Schritt:
-`pnpm lint` grün, `pnpm typecheck` 44/44, `pnpm test:ci` 45/45.
+**Bisher entfernt: ~19.700 Zeilen** über 700 Dateien. Nach jedem Schritt:
+`pnpm lint` grün, `pnpm typecheck` 44/44, `pnpm test:ci` 45/45, `pnpm test:security` grün.
+
+> **`pnpm audit:prod` schlägt fehl — vorbestehend, keine Regression.** 19 Advisories
+> (1 low, 10 moderate, 8 high) aus Abhängigkeiten. Mit `git stash` auf dem
+> Basis-Stand identisch. Gehört in einen eigenen Dependency-Schritt, nicht in
+> diesen Umbau.
+
+### Was Schritt 4 konkret ersetzt hat
+
+| Weg | Statt dessen |
+|---|---|
+| `UserRole` (6 Werte), `STUDIO_ACCESS_ROLES`, `ADMIN_ACCESS_ROLES` | `User.isOwner` + vier Boolean-Spalten (`portalAccess` …) |
+| `WorldMemberRole` (owner/dm/co_dm/player) | `WorldMembership` ohne Rollenwert — reine Zuordnung |
+| Capability-Matrix (20 × 10) + `/admin/roles` | ersatzlos |
+| `World.guestModeEnabled`, `guestCommentsEnabled`, Portal-Settings `guestAccessEnabled`/`publicSharingEnabled` | ersatzlos — ohne Häkchen kommt niemand rein |
+| `AccessContext.effectiveRole` | direkte Prüfung: `user.access.studio`, `ctx.worldMembership` |
+| NL-Intents `assign_world_role`, `set_user_role` | `assign_world`, `set_user_access` (Bereich + an/aus) |
+| Audit-Aktion `user_role_changed` | `user_access_changed` |
 
 ### Was beim Weitermachen zu beachten ist
 

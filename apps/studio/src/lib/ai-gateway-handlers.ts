@@ -21,7 +21,7 @@ function gatewayService() {
 }
 
 function requireMasterAdmin(user: AuthUser | null): NextResponse | null {
-  if (!user || user.role !== "owner") {
+  if (!user?.isOwner) {
     return jsonError("Nur der Master-Admin (Owner) darf KI-Gateway-Einstellungen verwalten.", 403);
   }
   return null;
@@ -146,7 +146,7 @@ export async function postAiGatewayFallbackTest(user: AuthUser | null) {
   const repo = createUweRepository();
   const result = await runAiGatewayFallbackTest(
     { repo },
-    { userId: user.id, role: user.role },
+    { userId: user.id },
   );
 
   const rtxHealth = await checkRtxReadiness({ prisma });
@@ -226,12 +226,8 @@ export async function getAiGatewayAccessStatus(user: AuthUser | null) {
     return NextResponse.json({ allowed: false, reason: "KI ist systemweit deaktiviert." });
   }
 
-  if (user.role === "owner" || user.role === "admin" || user.role === "dm") {
-    return NextResponse.json({ allowed: true, role: user.role, grant: null });
-  }
-
   // Per-user AI grants are gone with the cloud budget they rationed. Anyone who
   // can reach Studio may use its AI.
-  return NextResponse.json({ allowed: true, role: user.role, grant: null });
+  return NextResponse.json({ allowed: true, grant: null });
 
 }

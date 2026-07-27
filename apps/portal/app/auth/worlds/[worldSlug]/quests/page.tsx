@@ -124,7 +124,7 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
     <>
       <PageHeader
         title="Questlog"
-        summary={`Quests, die für deine Rolle (${ctx.effectiveRole}) freigeschaltet sind — filterbar nach Status.`}
+        summary="Alle Quests dieser Welt — filterbar nach Status."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">

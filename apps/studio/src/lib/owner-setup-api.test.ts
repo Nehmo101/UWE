@@ -1,18 +1,34 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ADMIN_ACCESS_ROLES } from "@uwe/auth";
+import { getRequiredAccessForApiPath } from "@uwe/auth";
 import { requireOwnerApiAuth } from "@uwe/security";
 
 function makeRequest(path: string, headers: Record<string, string> = {}) {
   return new Request(`https://studio.local${path}`, { method: "POST", headers });
 }
 
+const studioUser = {
+  id: "1",
+  displayName: "DM",
+  email: "dm@test",
+  isOwner: false,
+  access: { portal: true, studio: true, brain: false, family: false },
+};
+
+const ownerUser = {
+  id: "2",
+  displayName: "Owner",
+  email: "owner@test",
+  isOwner: true,
+  access: { portal: true, studio: true, brain: true, family: true },
+};
+
 describe("owner setup API guards", () => {
-  it("blocks admin session from owner-only setup tests", () => {
+  it("blocks a Studio session from owner-only setup tests", () => {
     const result = requireOwnerApiAuth(
       makeRequest("/api/admin/setup/test/mail"),
       {
-        user: { id: "1", role: "admin", displayName: "Admin", email: "admin@test" },
+        user: studioUser,
         apiTokenId: null,
         apiTokenScopes: null,
         authMethod: "session",
@@ -27,7 +43,7 @@ describe("owner setup API guards", () => {
     const result = requireOwnerApiAuth(
       makeRequest("/api/admin/setup/test/urls"),
       {
-        user: { id: "1", role: "owner", displayName: "Owner", email: "owner@test" },
+        user: ownerUser,
         apiTokenId: null,
         apiTokenScopes: null,
         authMethod: "session",
@@ -37,9 +53,10 @@ describe("owner setup API guards", () => {
     assert.equal(result, null);
   });
 
-  it("admin routes remain admin-accessible", () => {
-    assert.ok(ADMIN_ACCESS_ROLES.includes("admin"));
-    assert.ok(ADMIN_ACCESS_ROLES.includes("owner"));
-    assert.equal(ADMIN_ACCESS_ROLES.length, 2);
+  it("keeps /api/admin owner-only at the route gate", () => {
+    // The `admin` role tier is gone: /api/admin now needs the owner flag, and
+    // everything else in Studio needs the Studio checkbox.
+    assert.equal(getRequiredAccessForApiPath("/api/admin/setup/test/mail"), "owner");
+    assert.equal(getRequiredAccessForApiPath("/api/worlds"), "studio");
   });
 });

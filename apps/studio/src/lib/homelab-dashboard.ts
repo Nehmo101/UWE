@@ -9,7 +9,7 @@ import {
   buildHardwareDeviceCardView,
   detectHardwareUrlWarnings,
   getSecurityDashboardStatus,
-  getUserRoleCounts,
+  getAreaAccessCounts,
   type HomelabRunbook,
   type HomelabSecurityCheckItem,
   type HomelabServiceStatus,
@@ -83,11 +83,12 @@ export async function getHomelabCockpitData(
 ): Promise<HomelabCockpitData> {
   const env = options.env ?? process.env;
   const lifeAdmin = createLifeAdminService(brainPrisma, db);
-  const [adminStatus, securityStatus, roleCounts, devices, portalProbe] = await Promise.all([
+  const [adminStatus, securityStatus, accessCounts, totalUsers, devices, portalProbe] = await Promise.all([
     options.adminStatus ??
       getAdminDashboardStatus(db, { useMockInference: options.useMockInference }),
     getSecurityDashboardStatus(db, { env }),
-    getUserRoleCounts(db),
+    getAreaAccessCounts(db),
+    db.user.count(),
     lifeAdmin.listHardwareDevices({ limit: 200 }),
     probePortalHealth(env),
   ]);
@@ -128,7 +129,8 @@ export async function getHomelabCockpitData(
     system: adminStatus.system,
     studioSecurity: adminStatus.studioSecurity,
     rtxExposure: adminStatus.rtxExposure,
-    roleCounts,
+    accessCounts,
+    totalUsers,
     hardwareUrlWarnings: urlWarnings,
     env,
   });

@@ -55,7 +55,6 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
       description: "listPagesForViewer narrowing equivalence",
     });
     worldSlug = world.slug;
-    await auth.setWorldGuestMode(world.id, true);
 
     const users = await seedAuthUsers(auth, repo, world.id);
     dmUserId = users.dm.id;
@@ -113,7 +112,7 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     for (const userId of [amanUserId, lazulUserId]) {
       const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId });
       assert.ok(ctx);
-      assert.equal(ctx.effectiveRole, "player");
+      assert.equal(ctx.user?.access.studio, false);
       assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
       assert.equal((await narrowedSlugs(ctx)).length, 7);
     }
@@ -125,14 +124,14 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
       preview: { previewAsUserId: amanUserId },
     });
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
+    assert.equal(ctx.previewAsUserId, amanUserId);
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
   });
 
-  it("guest result equals the baseline — an anonymous guest gets nothing", async () => {
+  it("anonymous result equals the baseline — an anonymous visitor gets nothing", async () => {
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "guest");
+    assert.equal(ctx.user, null);
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
     assert.deepEqual(await narrowedSlugs(ctx), []);
   });

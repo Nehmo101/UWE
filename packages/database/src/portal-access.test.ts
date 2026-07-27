@@ -26,21 +26,22 @@ describe("portal access predicate", () => {
     const repo = createUweRepository(databaseUrl);
     const world = await repo.createWorld({ name: "Portal Access World", slug: "portal-access-world" });
     worldId = world.id;
-    await auth.setWorldGuestMode(world.id, false);
     const player = await auth.createUser({
       displayName: "Portal Player",
       email: "portal-player@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
     playerUserId = player.id;
-    await auth.upsertWorldMembership({ userId: playerUserId, worldId: world.id, role: "player" });
+    await auth.upsertWorldMembership({ userId: playerUserId, worldId: world.id });
     const disabled = await auth.createUser({
       displayName: "Disabled Player",
       email: "portal-disabled@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "disabled",
     });
     disabledUserId = disabled.id;
@@ -87,7 +88,13 @@ describe("portal access predicate", () => {
 
   it("derives badges", () => {
     const badge = portalAccessBadgeFromUser(
-      { status: "active", role: "player", email: "a@b.c", hasPassword: true, worldMemberships: [{ worldId }] },
+      {
+        status: "active",
+        access: { portal: true, studio: false, brain: false, family: false },
+        email: "a@b.c",
+        hasPassword: true,
+        worldMemberships: [{ worldId }],
+      },
       { portalEnabled: true },
     );
     assert.equal(badge.label, "Portal bereit");

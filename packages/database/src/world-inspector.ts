@@ -94,7 +94,6 @@ export interface WorldInspectorReport {
   worldSlug: string;
   portal: {
     portalEnabled: boolean;
-    guestModeEnabled: boolean;
   };
   pageCount: number;
   assetCount: number;
@@ -339,7 +338,6 @@ export class WorldInspectorService {
       worldSlug,
       portal: {
         portalEnabled: settings.portal.portalEnabled,
-        guestModeEnabled: world.guestModeEnabled,
       },
       pageCount: pages.length,
       assetCount,

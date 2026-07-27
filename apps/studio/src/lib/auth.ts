@@ -5,20 +5,19 @@ import {
   createAuthService,
 } from "@uwe/database/server";
 import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
-import type { AccessContext, AuthUser, UweRole } from "@uwe/auth";
+import type { AccessContext, AuthUser, StudioRouteAccess, UweArea } from "@uwe/auth";
 import {
-  ADMIN_ACCESS_ROLES,
   AuthRequiredError,
-  ForbiddenRoleError,
+  ForbiddenAccessError,
   PREVIEW_COOKIE_NAME,
   SESSION_COOKIE_NAME,
-  STUDIO_ACCESS_ROLES,
   canAccessStudio,
   canPreviewAsPlayer,
-  getRequiredRolesForPagePath,
+  getRequiredAccessForPagePath,
   getUweRuntimeConfig,
-  hasAnyRole,
-  requireRole as assertRole,
+  satisfiesStudioRouteAccess,
+  requireArea as assertArea,
+  requireOwner as assertOwner,
   requireUser as assertUser,
 } from "@uwe/auth";
 
@@ -116,7 +115,8 @@ export function createDevBypassAuthUser(): AuthUser {
     id: "dev-bypass",
     displayName: "Dev Bypass",
     email: null,
-    role: "owner",
+    isOwner: true,
+    access: { portal: true, studio: true, brain: true, family: true },
   };
 }
 
@@ -136,12 +136,12 @@ export async function requireUser(): Promise<AuthUser> {
   }
 }
 
-export async function requireRole(allowed: readonly UweRole[]): Promise<AuthUser> {
+export async function requireArea(area: UweArea): Promise<AuthUser> {
   const user = await requireUser();
   try {
-    return assertRole(user, allowed);
+    return assertArea(user, area);
   } catch (error) {
-    if (error instanceof ForbiddenRoleError) {
+    if (error instanceof ForbiddenAccessError) {
       redirect("/login?error=forbidden");
     }
     throw error;
@@ -149,15 +149,24 @@ export async function requireRole(allowed: readonly UweRole[]): Promise<AuthUser
 }
 
 export async function requireOwner(): Promise<AuthUser> {
-  return requireRole(["owner"]);
+  const user = await requireUser();
+  try {
+    return assertOwner(user);
+  } catch (error) {
+    if (error instanceof ForbiddenAccessError) {
+      redirect("/login?error=forbidden");
+    }
+    throw error;
+  }
 }
 
 export async function requireStudioAccess(): Promise<AuthUser> {
-  return requireRole(STUDIO_ACCESS_ROLES);
+  return requireArea("studio");
 }
 
+/** Admin surfaces are owner-only now — the `admin` role is gone. */
 export async function requireAdminAccess(): Promise<AuthUser> {
-  return requireRole(ADMIN_ACCESS_ROLES);
+  return requireOwner();
 }
 
 export async function enforceStudioPageAuth(pathname: string): Promise<void> {
@@ -204,12 +213,12 @@ export async function enforceStudioPageAuth(pathname: string): Promise<void> {
     redirect(`/login?redirect=${encodeURIComponent(pathname)}`);
   }
 
-  const requiredRoles = getRequiredRolesForPagePath(pathname);
-  if (requiredRoles && !hasAnyRole(user, requiredRoles)) {
+  const required: StudioRouteAccess = getRequiredAccessForPagePath(pathname);
+  if (!satisfiesStudioRouteAccess(user, required)) {
     redirect("/login?error=forbidden");
   }
 }
 
 export { getUserFromRequestCookieHeader } from "./auth-session";
 
-export { SESSION_COOKIE_NAME, PREVIEW_COOKIE_NAME, canAccessStudio, ADMIN_ACCESS_ROLES, STUDIO_ACCESS_ROLES };
+export { SESSION_COOKIE_NAME, PREVIEW_COOKIE_NAME, canAccessStudio };

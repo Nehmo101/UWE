@@ -65,9 +65,9 @@ export async function createPlayerNoteAction(formData: FormData) {
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { guestCommentsEnabled: true },
+      select: { id: true },
     });
-    if (!world || !canCreatePlayerNote(ctx, world.guestCommentsEnabled)) {
+    if (!world || !canCreatePlayerNote(ctx)) {
       throw new Error("Keine Berechtigung zum Kommentieren");
     }
 

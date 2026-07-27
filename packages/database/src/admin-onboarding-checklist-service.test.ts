@@ -12,7 +12,7 @@ describe("admin onboarding checklist", () => {
   });
 
   it("returns checklist with progress metrics", async () => {
-    const checklist = await getAdminOnboardingChecklist(db, { role: "owner" });
+    const checklist = await getAdminOnboardingChecklist(db, { isOwner: true });
 
     assert.ok(checklist.totalCount >= 9);
     assert.ok(checklist.progressPercent >= 0 && checklist.progressPercent <= 100);

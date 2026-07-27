@@ -135,14 +135,14 @@ describe("mail-services", () => {
         data: {
           displayName: "Mail Player",
           email: "mail-player@test.local",
-          role: "player",
+          portalAccess: true,
+          studioAccess: false,
         },
       });
       await db.worldMembership.create({
         data: {
           userId: player.id,
           worldId: world.id,
-          role: "player",
           characterName: "Aria",
         },
       });

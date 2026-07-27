@@ -16,8 +16,8 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   const snapshot = await getOwnerSetupSnapshot(prisma, {
-    role: context.user?.role ?? "unknown",
-    canEdit: context.user?.role === "owner",
+    isOwner: context.user?.isOwner === true,
+    canEdit: context.user?.isOwner === true,
   });
   assertOwnerSetupHasNoSecrets(snapshot);
 

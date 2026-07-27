@@ -1,7 +1,7 @@
 import { createLifeAdminService, prisma } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getCurrentUser } from "@/src/lib/auth";
-import { isBrainOwner } from "@/src/lib/owner";
+import { canEnterBrain } from "@/src/lib/owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 import {
   createBrainDocumentAction,
@@ -28,12 +28,12 @@ function formatDate(value: Date): string {
 }
 
 /**
- * Personal knowledge base — owner-only, read AND write. Facts + documents are
+ * Personal knowledge base — brain checkbox, read AND write. Facts + documents are
  * stored in the owner-private brain DB and never leave the host.
  */
 export default async function BrainLifeBrainPage() {
   const user = await getCurrentUser();
-  if (!user || !isBrainOwner(user.role)) {
+  if (!user || !canEnterBrain(user)) {
     return (
       <BrainShell active="/life-brain" title="Persönliches Brain">
         <BrainDenied />

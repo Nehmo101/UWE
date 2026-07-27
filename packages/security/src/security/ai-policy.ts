@@ -1,14 +1,8 @@
-import type { UweRole } from "@uwe/auth";
-
 import { AiAccessDeniedError, AiPolicyViolationError } from "./errors";
 import {
 } from "./inference/privacy";
 import type {} from "./inference/ai-context-types";
 import { rejectClientWorkerUrl } from "./rtx-boundary";
-
-export type AiAuthorizedRole = "owner" | "admin" | "dm";
-
-const AI_AUTHORIZED_ROLES: ReadonlySet<string> = new Set(["owner", "admin", "dm"]);
 
 const DEFAULT_MAX_PROMPT_LENGTH = 32_000;
 const DEFAULT_MAX_CONTEXT_CHARS = 24_000;
@@ -24,8 +18,8 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 const MAX_TRACKED_USERS = 10_000;
 
 export interface AiAccessContext {
-  /** Effective UWE role or extended admin alias. */
-  role: UweRole | "admin" | "guest";
+  /** Whether the requester holds the Studio checkbox. AI is a Studio tool. */
+  studioAccess: boolean;
   /** Stable user identifier for rate limiting (IP, session id, or user id). */
   userKey?: string;
   /** Studio same-origin / API-token authenticated request — treated as DM-level. */
@@ -42,25 +36,20 @@ export interface AiRequestLimitsInput {
 }
 
 
-export function canUseAi(role: UweRole | "admin" | "guest"): boolean {
-  return AI_AUTHORIZED_ROLES.has(role);
+/**
+ * AI is a Studio tool: the Studio checkbox is the whole entry condition. There
+ * is no role enum left to consult (Notiz Lasse, 2026-07-26).
+ */
+export function canUseAi(ctx: AiAccessContext): boolean {
+  return ctx.studioTrusted === true || ctx.studioAccess === true;
 }
 
 export function requireAiRole(ctx: AiAccessContext): void {
-  const effectiveRole = resolveEffectiveAiRole(ctx);
-
-  if (!canUseAi(effectiveRole)) {
+  if (!canUseAi(ctx)) {
     throw new AiAccessDeniedError(
-      "KI-Funktionen sind nur für Owner, Admin und DM verfügbar.",
+      "KI-Funktionen sind nur mit Studio-Zugang verfügbar.",
     );
   }
-}
-
-export function resolveEffectiveAiRole(ctx: AiAccessContext): UweRole | "admin" | "guest" {
-  if (ctx.studioTrusted) {
-    return "owner";
-  }
-  return ctx.role;
 }
 
 export function resolveAiPolicyLimits(env: NodeJS.ProcessEnv = process.env) {

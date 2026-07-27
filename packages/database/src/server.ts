@@ -367,7 +367,6 @@ export {
   UserService,
   createUserService,
   USER_SAFE_SELECT,
-  isGlobalAdminRole,
 } from "./user-service";
 export {
   evaluatePortalAccessForUser,
@@ -1088,12 +1087,10 @@ export {
   buildAiProviderKeyUpdate,
   resolveDecryptedProviderKeys,
   getPersistentPathConfiguration,
-  isGuestPortalAccessAllowed,
   isMaintenanceModeActive,
   isPortalLocked,
   isStudioLocked,
   isPortalGloballyEnabled,
-  isPublicSharingEnabled,
   resolveLocalOnlyMode,
 } from "./settings-service";
 
@@ -1153,7 +1150,6 @@ export type {
 export {
   getBackupFreshnessStatus,
   getProductionSafetyWarnings,
-  isPublicPortalExposureEnabled,
   isRunDbSeedUnsafe,
   isStudioApiTokenMissing,
   isWeakAuthSecret,
@@ -1190,7 +1186,7 @@ export {
   assertSecurityDashboardHasNoSecrets,
   buildSecurityWarnings,
   getSecurityDashboardStatus,
-  getUserRoleCounts,
+  getAreaAccessCounts,
 } from "./security-dashboard";
 
 export type {
@@ -1198,7 +1194,7 @@ export type {
   SecurityDashboardStatus,
   SecurityWarning,
   SecurityWarningSeverity,
-  UserRoleCounts,
+  AreaAccessCounts,
 } from "./security-dashboard";
 
 

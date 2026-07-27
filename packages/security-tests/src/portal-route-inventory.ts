@@ -18,10 +18,10 @@ export const PORTAL_API_ROOT = "apps/portal/app/api";
  *                              and the CSRF-only re-export from `@uwe/security`).
  * - `requirePortalOwnerAuth` — global-owner-only guard (private health).
  * - `canViewAuditLog`        — in-handler RBAC gate for the portal audit log.
- * - `hasAnyRole`             — in-handler role gate for owner/admin-only world creation.
+ * - `canAccessStudio`        — in-handler gate for Studio-only world creation.
  */
 export const PORTAL_AUTH_GUARD_PATTERN =
-  /requirePortalApiAuth|requirePortalOwnerAuth|canViewAuditLog|hasAnyRole/;
+  /requirePortalApiAuth|requirePortalOwnerAuth|canViewAuditLog|canAccessStudio/;
 
 /**
  * Genuinely-public Portal endpoints that intentionally carry no auth guard.

@@ -14,7 +14,7 @@ describe("admin secrets route security", () => {
   it("requires admin API auth on secrets status JSON", () => {
     const source = read("apps/studio/app/api/admin/secrets/route.ts");
     assert.match(source, /requireAdminApiAuth/);
-    assert.match(source, /canAccessSecurityDashboard/);
+    assert.match(source, /context\.user\.isOwner/);
     assert.match(source, /assertSecretsStatusHasNoSecrets/);
     assert.doesNotMatch(source, /decryptSecret|passwordEnc|apiKeyEnc/);
   });

@@ -38,13 +38,13 @@ describe("UWE dungeon cockpit", () => {
       displayName: "Player",
       email: "player-dungeon@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     await auth.createWorldMembership({
       userId: player.id,
       worldId: world.id,
-      role: "player",
     });
 
     const dungeon = await dungeons.createWithGeneratedSlug({

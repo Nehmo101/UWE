@@ -459,7 +459,6 @@ export class AiGatewayService {
    */
   async assertFeatureAccess(_input: {
     userId: string;
-    role: string;
     feature?: string;
     contextMode?: string;
     taskType?: string;

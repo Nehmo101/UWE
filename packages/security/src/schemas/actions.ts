@@ -145,9 +145,6 @@ export const captureIdSchema = z.object({
 });
 
 export const INSPECTOR_FIX_ACTIONS = [
-  "set_block_dm_only",
-  "set_page_dm_only",
-  "set_page_player_visible",
   "remove_broken_wiki_link",
   "assign_page_campaign",
 ] as const;
@@ -428,8 +425,6 @@ export const settingsUpdateSchema = z.object({
   defaultCanonicalStatus: z.string().max(64).optional(),
   favoriteWorldSlug: optionalSlugSchema,
   portalEnabled: formCheckboxSchema.optional(),
-  guestAccessEnabled: formCheckboxSchema.optional(),
-  publicSharingEnabled: formCheckboxSchema.optional(),
   restrictPublicExport: formCheckboxSchema.optional(),
   uploadsPath: z.string().max(1000).optional(),
   exportsPath: z.string().max(1000).optional(),
@@ -440,12 +435,6 @@ export const settingsUpdateSchema = z.object({
   mailLogBody: formCheckboxSchema.optional(),
   backupsPath: z.string().max(1000).optional(),
   autoBackupEnabled: formCheckboxSchema.optional(),
-});
-
-export const worldGuestModeSchema = z.object({
-  worldId: idSchema,
-  guestModeEnabled: formCheckboxSchema,
-  tab: z.string().max(64).optional().default("worlds"),
 });
 
 export const shareLinkCreateSchema = z.object({

@@ -14,7 +14,7 @@ import { loadStudioPersonalBrainPromptContext } from "./personal-brain-ai-contex
 export type ResearchContextMode = "dnd_brain" | "life_brain" | "open_web";
 
 export interface SynthesizeResearchInput {
-  user: { userId: string; role: string };
+  user: { userId: string };
   query: string;
   results: ResearchSourceInput[];
   contextMode: ResearchContextMode;

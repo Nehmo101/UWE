@@ -3,7 +3,7 @@ import { brainPrisma } from "./brain-client";
 import { getAdminStatus } from "./admin-status";
 import { createAiUsageRollupService } from "./ai-usage-rollup-service";
 import { BUG_REPORT_SEVERITY_LABELS } from "./bug-report-service";
-import { getUserRoleCounts } from "./security-dashboard";
+import { getAreaAccessCounts } from "./security-dashboard";
 import {
   listUnifiedActivity,
   type UnifiedActivityEntry,
@@ -57,7 +57,7 @@ export interface OwnerCockpitSnapshot {
   users: {
     total: number;
     inactive: number;
-    byRole: Awaited<ReturnType<typeof getUserRoleCounts>>;
+    byArea: Awaited<ReturnType<typeof getAreaAccessCounts>>;
   };
   errors: OwnerCockpitErrorItem[];
   aiUsage: OwnerCockpitAiUsageSummary;
@@ -82,7 +82,8 @@ export async function getOwnerCockpitSnapshot(
     worlds,
     pageCounts,
     membershipCounts,
-    roleCounts,
+    accessCounts,
+    totalUsers,
     inactiveUsers,
     adminStatus,
     activity,
@@ -102,7 +103,8 @@ export async function getOwnerCockpitSnapshot(
       by: ["worldId"],
       _count: { _all: true },
     }),
-    getUserRoleCounts(db),
+    getAreaAccessCounts(db),
+    db.user.count(),
     db.user.count({ where: { status: "disabled" } }),
     getAdminStatus(db, brainPrisma),
     listUnifiedActivity(db, { limit: activityLimit }),
@@ -206,9 +208,6 @@ export async function getOwnerCockpitSnapshot(
     return best;
   }, null);
 
-  const totalUsers =
-    roleCounts.owner + roleCounts.admin + roleCounts.dm + roleCounts.player;
-
   return {
     timestamp: new Date().toISOString(),
     ok: adminStatus.ok && errors.length === 0,
@@ -224,7 +223,7 @@ export async function getOwnerCockpitSnapshot(
     users: {
       total: totalUsers,
       inactive: inactiveUsers,
-      byRole: roleCounts,
+      byArea: accessCounts,
     },
     errors: errors.slice(0, 10),
     aiUsage: {

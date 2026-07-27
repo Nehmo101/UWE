@@ -92,7 +92,7 @@ W0 und p1-data-model daher strikt seriell.
 - P1 engine-pkg / editor-mvp / P2 / P3 -> uwe-feature-implementation, react-next-ui
 - P4 -> ai-agent-proposal-workflow, local-first-privacy
 - P5 -> image-studio-workflows, uwe-image-studio-assets, ai-agent-proposal-workflow
-- P6 -> portal-player-view, auth-rbac-visibility, security-audit
+- P6 -> portal-player-view, auth-access, security-audit
 - P7 -> react-next-ui, image-studio-workflows
 - Vor jedem PR -> ci-quality-gate
 

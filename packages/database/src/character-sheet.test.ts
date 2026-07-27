@@ -34,7 +34,8 @@ describe("wave c0b character and inventory models", () => {
       data: {
         displayName: "Player One",
         email: "player-sheet@test.local",
-        role: "player",
+        portalAccess: true,
+        studioAccess: false,
       },
     });
     userId = user.id;

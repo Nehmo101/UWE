@@ -5,7 +5,7 @@ import {
   createWorldCreationService,
   logAuditEvent,
 } from "@uwe/database/server";
-import { ADMIN_ACCESS_ROLES, hasAnyRole, SESSION_COOKIE_NAME } from "@uwe/auth";
+import { canAccessStudio, SESSION_COOKIE_NAME } from "@uwe/auth";
 import { createWorldBodySchema, parseBody } from "@uwe/security";
 import { cookies } from "next/headers";
 
@@ -26,12 +26,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 });
     }
 
-    if (!hasAnyRole(user, ADMIN_ACCESS_ROLES)) {
+    if (!canAccessStudio(user)) {
       await logAuditEvent(db, {
         actorUserId: user.id,
         action: "authz_denied",
         targetType: "world",
-        metadata: { endpoint: "portal_create_world", role: user.role },
+        metadata: { endpoint: "portal_create_world", access: user.access },
       });
 
       return NextResponse.json(

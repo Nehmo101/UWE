@@ -40,7 +40,6 @@ export interface WorldOverviewData {
     name: string;
     slug: string;
     description: string | null;
-    guestModeEnabled: boolean;
   };
   counts: {
     pages: number;
@@ -51,7 +50,6 @@ export interface WorldOverviewData {
   };
   portal: {
     portalEnabled: boolean;
-    publicSharingEnabled: boolean;
     visiblePageCount: number;
   };
   nextSession: WorldOverviewSession | null;
@@ -150,7 +148,6 @@ export class WorldOverviewService {
         name: world.name,
         slug: world.slug,
         description: world.description,
-        guestModeEnabled: world.guestModeEnabled,
       },
       counts: {
         pages: pages.length,
@@ -161,7 +158,6 @@ export class WorldOverviewService {
       },
       portal: {
         portalEnabled: settings.portal.portalEnabled,
-        publicSharingEnabled: settings.portal.publicSharingEnabled,
         visiblePageCount: pages.length,
       },
       nextSession,

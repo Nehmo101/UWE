@@ -6,23 +6,10 @@ import {
   assertSecurityDashboardHasNoSecrets,
   buildSecurityWarnings,
   getSecurityDashboardStatus,
-  getUserRoleCounts,
+  getAreaAccessCounts,
 } from "./security-dashboard";
 import { getSystemStatus } from "./system-status";
 import { assessStudioSecurity } from "./studio-security";
-import { canAccessSecurityDashboard } from "@uwe/auth";
-
-describe("security dashboard access", () => {
-  it("blocks PLAYER", () => {
-    assert.equal(canAccessSecurityDashboard("player"), false);
-  });
-
-  it("allows ADMIN", () => {
-    assert.equal(canAccessSecurityDashboard("admin"), true);
-    assert.equal(canAccessSecurityDashboard("owner"), true);
-  });
-});
-
 describe("security dashboard warnings", () => {
   it("warns when no backups exist", async () => {
     const db = createPrismaClient(createTestDatabaseUrl());
@@ -86,23 +73,31 @@ describe("security dashboard warnings", () => {
 });
 
 describe("security dashboard status", () => {
-  it("aggregates role counts including admin", async () => {
+  it("counts how many accounts hold each checkbox", async () => {
     const db = createPrismaClient(createTestDatabaseUrl());
     try {
       await db.user.createMany({
         data: [
-          { displayName: "Owner", role: "owner" },
-          { displayName: "Admin", role: "admin" },
-          { displayName: "DM", role: "dm" },
-          { displayName: "Player", role: "player" },
+          {
+            displayName: "Owner",
+            isOwner: true,
+            portalAccess: true,
+            studioAccess: true,
+            brainAccess: true,
+            familyAccess: true,
+          },
+          { displayName: "DM", portalAccess: true, studioAccess: true },
+          { displayName: "Player", portalAccess: true },
+          { displayName: "Family Member", familyAccess: true },
         ],
       });
 
-      const counts = await getUserRoleCounts(db);
+      const counts = await getAreaAccessCounts(db);
       assert.equal(counts.owner, 1);
-      assert.equal(counts.admin, 1);
-      assert.equal(counts.dm, 1);
-      assert.equal(counts.player, 1);
+      assert.equal(counts.portal, 3);
+      assert.equal(counts.studio, 2);
+      assert.equal(counts.brain, 1);
+      assert.equal(counts.family, 2);
     } finally {
       await db.$disconnect();
     }

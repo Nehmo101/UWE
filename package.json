@@ -2,7 +2,7 @@
   "name": "uwe",
   "version": "0.1.0",
   "private": true,
-  "description": "Universeller Welten-Editor — self-hosted campaign brain and world wiki",
+  "description": "Universeller Welten-Editor \u2014 self-hosted campaign brain and world wiki",
   "scripts": {
     "dev": "turbo run dev",
     "command-center:dev": "pnpm --filter @uwe/rtx-connector-client tauri:dev",
@@ -32,7 +32,7 @@
     "test:security": "pnpm --filter @uwe/database db:generate && pnpm --filter @uwe/security-tests test && node --import tsx --test scripts/studio-route-auth.test.ts scripts/security-leaks.test.ts",
     "test:auth": "pnpm --filter @uwe/auth test && pnpm --filter @uwe/database db:generate && node --import tsx --test packages/database/src/password-security.test.ts packages/database/src/auth-setup.test.ts",
     "test:authz": "pnpm --filter @uwe/security-tests test:authz && node --import tsx --test scripts/studio-route-auth.test.ts",
-    "test:leaks": "pnpm --filter @uwe/security-tests test:leaks && node --import tsx --test scripts/security-leaks.test.ts",
+    "test:leaks": "node --import tsx --test scripts/security-leaks.test.ts",
     "secret:scan": "node scripts/secret-scan.mjs",
     "audit:prod": "pnpm --config.minimumReleaseAge=0 dlx pnpm@11.14.0 --pm-on-fail=ignore audit --prod --audit-level high",
     "release:check": "node --import tsx --test scripts/release.test.ts",

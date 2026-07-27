@@ -38,14 +38,14 @@ describe("portal dashboard", () => {
       displayName: "Dash Player",
       email: "dash-player@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
     await auth.createWorldMembership({
       userId: player.id,
       worldId: world.id,
-      role: "player",
       characterName: "Lyra",
     });
 

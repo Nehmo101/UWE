@@ -110,7 +110,7 @@ Siehe [ROADMAP.md](../ROADMAP.md) und Skill `hardware-homelab`:
 | Feature implementieren | `uwe-feature-implementation` |
 | API Routes | `api-routes` |
 | React/Next UI | `react-next-ui` |
-| Auth/RBAC/Visibility | `auth-rbac-visibility` |
+| Auth/Zugänge | `auth-access` |
 | AI / Agent Jobs / Proposals | `ai-agent-proposal-workflow` |
 | Local-first / Datenschutz | `local-first-privacy` |
 | DnD + Life Brain | `uwe-brain` |

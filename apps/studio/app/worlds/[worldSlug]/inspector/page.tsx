@@ -137,9 +137,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
               Portal: <strong>{report.portal.portalEnabled ? "aktiv" : "deaktiviert"}</strong>
             </li>
             <li>
-              Gastmodus: <strong>{report.portal.guestModeEnabled ? "an" : "aus"}</strong>
-            </li>
-            <li>
               <Link href="/settings">Einstellungen öffnen →</Link>
             </li>
           </ul>

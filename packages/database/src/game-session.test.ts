@@ -50,7 +50,8 @@ describe("UWE game session management", () => {
       displayName: "DM",
       email: "dm-session@test.local",
       password: "test",
-      role: "dm",
+      portalAccess: true,
+      studioAccess: true,
     });
     dmUserId = dm.id;
 
@@ -58,20 +59,19 @@ describe("UWE game session management", () => {
       displayName: "Player",
       email: "player-session@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
     await auth.createWorldMembership({
       userId: dm.id,
       worldId: world.id,
-      role: "dm",
     });
 
     await auth.createWorldMembership({
       userId: player.id,
       worldId: world.id,
-      role: "player",
       characterName: "Hero",
     });
 

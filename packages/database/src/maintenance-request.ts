@@ -1,4 +1,4 @@
-import { SESSION_COOKIE_NAME, type UweRole } from "@uwe/auth";
+import { SESSION_COOKIE_NAME } from "@uwe/auth";
 import { createAuthService } from "./auth";
 import {
   createPrismaClient,
@@ -37,16 +37,16 @@ export async function evaluateMaintenanceForRequest(input: {
   const ownsConnection = !input.db;
 
   try {
-    const [{ settings }, userRole] = await Promise.all([
+    const [{ settings }, isOwner] = await Promise.all([
       getSystemSettingsSnapshot(db),
-      resolveUserRoleFromCookie(input.cookieHeader, db),
+      resolveIsOwnerFromCookie(input.cookieHeader, db),
     ]);
 
     return evaluateMaintenanceGate({
       settings,
       surface: input.surface,
       pathname: input.pathname,
-      context: resolveMaintenanceGateContext({ userRole }),
+      context: resolveMaintenanceGateContext({ isOwner }),
     });
   } finally {
     if (ownsConnection) {
@@ -55,16 +55,16 @@ export async function evaluateMaintenanceForRequest(input: {
   }
 }
 
-async function resolveUserRoleFromCookie(
+async function resolveIsOwnerFromCookie(
   cookieHeader: string | null | undefined,
   db: PrismaClient,
-): Promise<UweRole | null> {
+): Promise<boolean> {
   const token = parseSessionToken(cookieHeader);
   if (!token) {
-    return null;
+    return false;
   }
 
   const auth = createAuthService(db);
   const session = await auth.getSessionByToken(token);
-  return session?.user.role ?? null;
+  return session?.user.isOwner === true;
 }

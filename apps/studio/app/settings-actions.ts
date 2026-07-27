@@ -2,8 +2,6 @@
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
-  createAuthService,
-  createPrismaClient,
   getAppRepository,
   mapServerBackgroundToClient,
   resolveThemePreferencesForScope,
@@ -84,8 +82,6 @@ export async function updateSettingsAction(formData: FormData) {
     case "portal":
       update.portal = {
         portalEnabled: parseBoolean(formData.get("portalEnabled")),
-        guestAccessEnabled: parseBoolean(formData.get("guestAccessEnabled")),
-        publicSharingEnabled: parseBoolean(formData.get("publicSharingEnabled")),
       };
       break;
     case "privacy":
@@ -266,19 +262,3 @@ export async function updateSettingsAction(formData: FormData) {
   redirect(`/settings?tab=${redirectTab}&saved=1`);
 }
 
-export async function setWorldGuestModeAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const worldId = String(formData.get("worldId"));
-  const enabled = parseBoolean(formData.get("guestModeEnabled"));
-  const tab = String(formData.get("tab") || "worlds");
-
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
-
-  await auth.setWorldGuestMode(worldId, enabled);
-  await db.$disconnect();
-
-  revalidatePath("/settings");
-  redirect(`/settings?tab=${tab}&saved=1`);
-}

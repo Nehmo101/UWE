@@ -1,4 +1,5 @@
-import type { SafeUser, UweRole } from "./types";
+import type { SafeUser } from "./types";
+import { toAreaAccess } from "./area-access";
 
 const SENSITIVE_USER_FIELDS = new Set([
   "passwordhash",
@@ -35,7 +36,8 @@ export function toSafeUser(user: Record<string, unknown>): SafeUser {
     id: String(user.id),
     displayName: String(user.displayName),
     email: typeof user.email === "string" ? user.email : null,
-    role: user.role as UweRole,
+    isOwner: user.isOwner === true,
+    access: toAreaAccess(user as Parameters<typeof toAreaAccess>[0]),
   };
 
   const createdAt = toIsoString(user.createdAt);

@@ -40,7 +40,11 @@ export interface BackupUserRecord {
   id: string;
   displayName: string;
   email: string | null;
-  role: string;
+  isOwner: boolean;
+  portalAccess: boolean;
+  studioAccess: boolean;
+  brainAccess: boolean;
+  familyAccess: boolean;
 }
 
 export interface BackupWorldRecord {
@@ -48,7 +52,6 @@ export interface BackupWorldRecord {
   name: string;
   slug: string;
   description: string | null;
-  guestModeEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -224,7 +227,6 @@ export interface BackupWorldMembershipRecord {
   id: string;
   userId: string;
   worldId: string;
-  role: string;
   characterName: string | null;
   createdAt: string;
   updatedAt: string;

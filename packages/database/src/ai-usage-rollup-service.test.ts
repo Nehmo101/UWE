@@ -32,7 +32,8 @@ describe("ai usage rollup service", () => {
         displayName: "Rollup Tester",
         email: "rollup@test.local",
         passwordHash: "test",
-        role: "dm",
+        portalAccess: true,
+        studioAccess: true,
       },
     });
 

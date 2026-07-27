@@ -103,8 +103,6 @@ export interface CampaignSettings {
 
 export interface PortalSettings {
   portalEnabled: boolean;
-  guestAccessEnabled: boolean;
-  publicSharingEnabled: boolean;
 }
 
 export interface AiProviderKeyPlaceholder {
@@ -481,8 +479,6 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   },
   portal: {
     portalEnabled: true,
-    guestAccessEnabled: true,
-    publicSharingEnabled: true,
   },
   ai: {
     localOnlyMode: false,
@@ -704,13 +700,6 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
   };
 }
 
-export function isGuestPortalAccessAllowed(
-  _settings: UweSystemSettings,
-  _worldGuestModeEnabled: boolean,
-): boolean {
-  return false;
-}
-
 export function isMaintenanceModeActive(settings: UweSystemSettings): boolean {
   return settings.maintenance.maintenanceMode;
 }
@@ -725,10 +714,6 @@ export function isStudioLocked(settings: UweSystemSettings): boolean {
 
 export function isPortalGloballyEnabled(settings: UweSystemSettings): boolean {
   return settings.portal.portalEnabled;
-}
-
-export function isPublicSharingEnabled(settings: UweSystemSettings): boolean {
-  return settings.portal.publicSharingEnabled;
 }
 
 export function resolveLocalOnlyMode(settings: UweSystemSettings): boolean {

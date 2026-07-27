@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isWorldStaff } from "@uwe/auth";
+import { isDm } from "@uwe/auth";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
@@ -49,7 +49,7 @@ export default async function PortalCharactersPage({ params }: Props) {
   }
 
   const membershipCharacterName = ctx.worldMembership?.characterName ?? null;
-  const staffView = isWorldStaff(ctx);
+  const staffView = isDm(ctx);
 
   return (
     <>

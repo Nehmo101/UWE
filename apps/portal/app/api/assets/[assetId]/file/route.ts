@@ -37,7 +37,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const token = await getSessionToken();
-  if (!token && ctx.effectiveRole !== "guest") {
+  if (!token && ctx.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

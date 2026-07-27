@@ -1,9 +1,9 @@
 /**
- * Brain exposure policy. Brain is owner-only — every route, API and server
- * action verifies the global `owner` role server-side. Reachability is a
- * separate, explicit choice: loopback by default, a chosen LAN interface, a
- * public origin served through the owner-gated reverse proxy / Cloudflare
- * Tunnel, or off entirely.
+ * Brain exposure policy. Brain is gated on the `brain` checkbox — every route,
+ * API and server action verifies it server-side (`canEnterBrain`). Reachability
+ * is a separate, explicit choice: loopback by default, a chosen LAN interface,
+ * a public origin served through the gated reverse proxy / Cloudflare Tunnel,
+ * or off entirely.
  *
  * `public` describes the *origin* Brain is reached under, not the bind address:
  * the tunnel connector runs on the host itself, so Brain keeps binding to

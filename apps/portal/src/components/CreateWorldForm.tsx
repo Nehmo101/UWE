@@ -43,7 +43,6 @@ export function CreateWorldForm({ templates = [] }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "blank");
-  const [guestModeEnabled, setGuestModeEnabled] = useState(false);
   const [isSandbox, setIsSandbox] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +60,6 @@ export function CreateWorldForm({ templates = [] }: Props) {
           name,
           description: description.trim() || undefined,
           templateId,
-          guestModeEnabled: isSandbox ? false : guestModeEnabled,
           isSandbox,
         }),
       });
@@ -159,17 +157,6 @@ export function CreateWorldForm({ templates = [] }: Props) {
           onChange={(event) => setIsSandbox(event.target.checked)}
         />
         Sandbox-Testwelt — nur im Studio sichtbar, kein Backup/Export/Portal
-      </label>
-
-      <label className={`flex items-start gap-2 text-sm${isSandbox ? " opacity-60" : ""}`}>
-        <input
-          type="checkbox"
-          className="mt-1"
-          checked={guestModeEnabled}
-          disabled={isSandbox}
-          onChange={(event) => setGuestModeEnabled(event.target.checked)}
-        />
-        Gastmodus aktiv — für Spieler freigegebene Inhalte ohne Login im Portal lesbar
       </label>
 
       {error ? <Alert tone="danger">{error}</Alert> : null}

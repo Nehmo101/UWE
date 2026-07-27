@@ -7,7 +7,7 @@ Quellcode zu raten.
 | Server | Produkt | Slash-Command | Zweck |
 |--------|---------|---------------|-------|
 | `uwe-studio` | DM-App (Port 3000) | `/uwestudio` | Welten, Brain, Jobs, Health, Admin |
-| `uwe-portal` | Spieler-Wiki (Port 3001) | `/uweportal` | Spielersicht prüfen, `dm_only`-Leak-Check |
+| `uwe-portal` | Spieler-Wiki (Port 3001) | `/uweportal` | Spielersicht einer zugeordneten Welt prüfen |
 | `uwe-brain` | Owner-Bereich (Port 3002) | `/uwebrain` | Personal Brain, Daily Admin OS — privacy-gated |
 
 Code: `packages/mcp`. Registrierung: `.mcp.json` im Repo-Root.
@@ -25,7 +25,7 @@ Die Server sind dünne HTTP-Clients vor der laufenden App. Sie importieren **nic
 `@uwe/database` und sprechen die SQLite-Dateien nicht direkt an. Damit bleibt jeder Request
 auf dem normalen Pfad:
 
-- `guardStudioApiRequest` / `requireAdminApiAuth` prüfen Rolle und Token-Scopes,
+- `guardStudioApiRequest` / `requireAdminApiAuth` prüfen Zugang und Token-Scopes,
 - `packages/database/src/permissions.ts` filtert Sichtbarkeiten,
 - Audit-Log-Einträge entstehen wie bei jedem anderen Client.
 
@@ -62,7 +62,7 @@ Die Server lesen beim Start `.env` im Repo-Root (`node --env-file-if-exists=.env
 | `UWE_MCP_TIMEOUT_MS` | `20000` | HTTP-Timeout je Tool-Aufruf |
 | `UWE_MCP_MAX_RESPONSE_CHARS` | `20000` | Kürzungsgrenze für Tool-Ausgaben |
 
-Token erzeugen: **Studio → Admin → API-Tokens**. Rolle und Scopes des Tokens entscheiden, was
+Token erzeugen: **Studio → Admin → API-Tokens**. Die Scopes des Tokens entscheiden, was
 erreichbar ist — `studio_admin_status` und `studio_audit_log` brauchen `admin_read`.
 
 ## Privacy-Gate für Brain
@@ -80,17 +80,16 @@ MCP-Client wie Claude Code **ist** Cloud-AI. Deshalb hat `uwe-brain` zwei Stufen
 Die Freigabe ist bewusst eine Umgebungsvariable und kein Tool-Argument: Sie ist eine
 Entscheidung des Betreibers pro Sitzung, nicht des Modells zur Laufzeit.
 
-## Der Leak-Check
+## Die Spielersicht
 
-`portal_leak_check` ist der eigentliche Grund für einen eigenen Portal-Server. Er liest das
-Welt-Brain zweimal — als DM und mit `accessContext=portal` — und meldet jeden `dm_only`-Eintrag,
-der in der Spielersicht auftaucht. Die Kern-Invariante „`dm_only` nie ins Portal" wird damit
-prüfbar statt nur dokumentiert. Ein Treffer ist ein Sicherheitsbefund; das Tool antwortet dann
-mit `isError`.
+Der eigene Portal-Server existiert, damit „was sieht ein Spieler?" beantwortbar bleibt, ohne
+sich im Studio anzumelden. Der frühere `portal_leak_check` ist entfallen: Er verglich die
+DM-Sicht mit der Spielersicht auf `dm_only`-Einträge, und Sichtbarkeit pro Eintrag gibt es
+nicht mehr. Es gilt eine Regel — wer der Welt zugeordnet ist, sieht alles darin.
 
 Portal-eigene Inhaltsrouten sind session-cookie-only, deshalb lesen die Spielersicht-Tools über
-Studio mit `accessContext=portal` bzw. `preview=player`. Das ist dieselbe Filterung, die auch
-das Portal fährt.
+Studio mit `accessContext=portal` bzw. `preview=player`. Das ist derselbe Pfad, den auch das
+Portal fährt.
 
 ## Betrieb
 
