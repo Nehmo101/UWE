@@ -6,13 +6,11 @@ import {
   CanonicalBadge,
   PageTypeBadge,
   QuestStatusBadge,
-  VisibilityBadge,
 } from "@uwe/shared-ui";
 import type {
   CanonicalStatus,
   PageType,
   QuestLifecycleStatus,
-  Visibility,
 } from "@uwe/database/enums";
 import { DataTable } from "../ui/data-table";
 import { PageBatchToolbar } from "./PageBatchToolbar";
@@ -22,7 +20,6 @@ export interface WikiPageRow {
   title: string;
   href: string;
   type: PageType;
-  visibility: Visibility;
   canonicalStatus: CanonicalStatus;
   /** Quest lifecycle status for quest pages; `null` counts as open. */
   questStatus?: QuestLifecycleStatus | null;
@@ -69,12 +66,6 @@ const columns: ColumnDef<WikiPageRow>[] = [
     cell: ({ row }) => (
       <span className="text-xs text-muted-foreground">{row.original.tags.join(", ") || "—"}</span>
     ),
-  },
-  {
-    accessorKey: "visibility",
-    header: "Sichtbarkeit",
-    meta: { label: "Sichtbarkeit" },
-    cell: ({ row }) => <VisibilityBadge visibility={row.original.visibility} />,
   },
   {
     accessorKey: "canonicalStatus",

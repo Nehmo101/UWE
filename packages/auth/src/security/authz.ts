@@ -1,19 +1,9 @@
 import {
   buildAccessContext,
-  canViewAsset,
-  canViewContentBlock,
-  canViewPage,
+  canViewWorldContent,
   isDmOrOwner,
 } from "../permissions";
-import type {
-  AccessContext,
-  AssetAccessInfo,
-  AuthUser,
-  ContentBlockAccessInfo,
-  PageAccessInfo,
-  PageVisibility,
-  WorldMembership,
-} from "../types";
+import type { AccessContext, AuthUser, WorldMembership } from "../types";
 
 /** Thrown when an authorization check fails. */
 export class AuthorizationError extends Error {
@@ -25,15 +15,6 @@ export class AuthorizationError extends Error {
     this.statusCode = statusCode;
   }
 }
-
-const KNOWN_VISIBILITIES: ReadonlySet<PageVisibility> = new Set([
-  "dm_only",
-  "player_visible",
-  "public",
-  "specific_players",
-  "unlock_after_session",
-  "archived",
-]);
 
 const DM_WORLD_ROLES: ReadonlySet<WorldMembership["role"]> = new Set(["owner", "dm"]);
 
@@ -48,12 +29,8 @@ export interface WorldAuthTarget {
 /** Content (page) target for authorization checks. */
 export interface ContentAuthTarget {
   id: string;
-  visibility: string;
   type?: string;
 }
-
-/** Secret page target — same shape as content, type should be "secret". */
-export type SecretAuthTarget = ContentAuthTarget & { type: "secret" };
 
 /** Media upload target scoped to a world. */
 export interface MediaUploadTarget {
@@ -71,25 +48,9 @@ export interface AIUsageContext {
 
 /** Optional scope modifiers for authorization checks. */
 export interface AuthzScope {
-  unlockedPageIds?: Iterable<string>;
-  specificPlayerPageIds?: Iterable<string>;
   previewAsUserId?: string | null;
   /** Studio runs behind network trust — grants DM-equivalent access. */
   studioTrusted?: boolean;
-}
-
-function normalizeVisibility(visibility: string): PageVisibility | null {
-  return KNOWN_VISIBILITIES.has(visibility as PageVisibility)
-    ? (visibility as PageVisibility)
-    : null;
-}
-
-function toPageAccessInfo(content: ContentAuthTarget): PageAccessInfo | null {
-  const visibility = normalizeVisibility(content.visibility);
-  if (!visibility) {
-    return null;
-  }
-  return { id: content.id, visibility };
 }
 
 function isGlobalOwner(user: AuthUser | null): boolean {
@@ -117,25 +78,31 @@ function toAccessContext(
     user,
     worldMembership: membershipForUser(user, world),
     guestModeEnabled: world.guestModeEnabled,
-    unlockedPageIds: scope?.unlockedPageIds,
-    specificPlayerPageIds: scope?.specificPlayerPageIds,
     preview: scope?.previewAsUserId ? { previewAsUserId: scope.previewAsUserId } : undefined,
   });
 }
 
-/** Build an AuthzScope from an existing AccessContext. */
+/**
+ * Builds an AuthzScope from an existing AccessContext for a specific world.
+ *
+ * The membership only carries over when it actually belongs to `worldId`. An
+ * access context is built for one world; passing its membership on to a
+ * different world would let a member of world A read world B (the world
+ * boundary is now the only access rule, so this check is load-bearing).
+ */
 export function scopeFromAccessContext(
   ctx: AccessContext,
   worldId: string,
 ): AuthzScope & { world: WorldAuthTarget } {
+  const membership =
+    ctx.worldMembership?.worldId === worldId ? ctx.worldMembership : null;
+
   return {
     world: {
       id: worldId,
-      guestModeEnabled: ctx.guestModeEnabled,
-      membership: ctx.worldMembership,
+      guestModeEnabled: membership ? ctx.guestModeEnabled : false,
+      membership,
     },
-    unlockedPageIds: ctx.unlockedPageIds,
-    specificPlayerPageIds: ctx.specificPlayerPageIds,
     previewAsUserId: ctx.previewAsUserId,
   };
 }
@@ -197,7 +164,7 @@ export function canEditWorld(
 
 export function canReadContent(
   user: AuthUser | null,
-  content: ContentAuthTarget,
+  _content: ContentAuthTarget,
   world: WorldAuthTarget,
   scope?: AuthzScope,
 ): boolean {
@@ -209,13 +176,8 @@ export function canReadContent(
     return false;
   }
 
-  const pageInfo = toPageAccessInfo(content);
-  if (!pageInfo) {
-    return false;
-  }
-
-  const ctx = toAccessContext(user, world, scope);
-  return canViewPage(ctx, pageInfo);
+  // No per-page gate left: whoever may read the world reads everything in it.
+  return canViewWorldContent(toAccessContext(user, world, scope));
 }
 
 export function canEditContent(
@@ -243,67 +205,20 @@ export function canEditContent(
 
 export function canReadContentBlock(
   user: AuthUser | null,
-  block: ContentBlockAccessInfo & { visibility: string },
   content: ContentAuthTarget,
   world: WorldAuthTarget,
   scope?: AuthzScope,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  const pageInfo = toPageAccessInfo(content);
-  if (!pageInfo) {
-    return false;
-  }
-
-  const blockVisibility = normalizeVisibility(block.visibility);
-  if (!blockVisibility) {
-    return false;
-  }
-
-  const ctx = toAccessContext(user, world, scope);
-  return canViewContentBlock(ctx, { visibility: blockVisibility }, pageInfo);
-}
-
-export function canRevealSecret(
-  user: AuthUser | null,
-  secret: SecretAuthTarget,
-  world: WorldAuthTarget,
-  scope?: AuthzScope,
-): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (secret.type !== "secret") {
-    return false;
-  }
-
-  return canReadContent(user, secret, world, scope);
+  return canReadContent(user, content, world, scope);
 }
 
 export function canReadAsset(
   user: AuthUser | null,
-  asset: AssetAccessInfo & { visibility: string },
+  asset: { id: string },
   world: WorldAuthTarget,
   scope?: AuthzScope,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (!canReadWorld(user, world, scope)) {
-    return false;
-  }
-
-  const visibility = normalizeVisibility(asset.visibility);
-  if (!visibility) {
-    return false;
-  }
-
-  const ctx = toAccessContext(user, world, scope);
-  return canViewAsset(ctx, { ...asset, visibility });
+  return canReadContent(user, asset, world, scope);
 }
 
 export function canUploadMedia(
@@ -386,17 +301,6 @@ export function assertCanEditContent(
 ): void {
   if (!canEditContent(user, content, world, scope)) {
     throw new AuthorizationError("Keine Berechtigung zum Bearbeiten dieses Inhalts", user ? 403 : 401);
-  }
-}
-
-export function assertCanRevealSecret(
-  user: AuthUser | null,
-  secret: SecretAuthTarget,
-  world: WorldAuthTarget,
-  scope?: AuthzScope,
-): void {
-  if (!canRevealSecret(user, secret, world, scope)) {
-    throw new AuthorizationError("Keine Berechtigung zum Anzeigen dieses Geheimnisses", user ? 403 : 401);
   }
 }
 

@@ -27,7 +27,6 @@ export {
   createPage,
   getPageBySlug,
   listPagesByWorld,
-  getPublicPageForPortal,
   getDmPage,
   getDbWorldBySlug,
   getDbPageById,
@@ -39,9 +38,6 @@ export {
   listPageLinksForPage,
   updatePageLink,
   deletePageLink,
-  PORTAL_BLOCK_VISIBILITIES,
-  PORTAL_PAGE_VISIBILITIES,
-  isPortalPageVisibility,
 } from "./repository";
 
 export {
@@ -284,7 +280,6 @@ export type {
   Page as DbPage,
   PageLink as DbPageLink,
   PageType,
-  Visibility,
   World as DbWorld,
   CreateWorldInput,
   CreateCampaignInput,
@@ -322,44 +317,9 @@ export {
   ContentBlockTypeEnum,
   AssetTypeEnum,
   PageTypeEnum,
-  VisibilityEnum,
 } from "./repository";
 
-export {
-  isPlayerExposableContent,
-  isBlockPlayerExposable,
-  isPagePlayerExposable,
-  isDmOnlyVisibility,
-  isPlayerPortalVisibility,
-  sanitizeForPlayer,
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-  PLAYER_PORTAL_VISIBILITIES,
-  type ContentAccessFields,
-  type ContentVisibility,
-  type SanitizedPage,
-} from "./content-access";
-
-export {
-  buildPublicSearchIndex,
-  buildStudioSearchIndex,
-  buildSearchIndexForScope,
-} from "./search-index";
-
-export {
-  filterBlocksForContext,
-  filterAssetsForContext,
-  isPageAccessible,
-  isPortalAssetVisibility,
-  isPortalBlockVisibility,
-  isAssetAccessible,
-  shouldHidePageTitle,
-  PORTAL_ASSET_VISIBILITIES,
-  type AccessContext,
-  type ShareAccessGrant,
-  type PortalAccessOptions,
-  type PageAccessOptions,
-} from "./permissions";
+export { sanitizeForPlayer, type SanitizedPage } from "./content-access";
 
 export {
   NAV_CATEGORIES,
@@ -833,7 +793,6 @@ export type {
 export {
   createPortalDashboardService,
   PortalDashboardService,
-  sessionUnlockLabel,
   navCategoryForPageType as portalDashboardNavCategory,
 } from "./portal-dashboard-service";
 
@@ -856,7 +815,6 @@ export {
   createWorldInspectorService,
   WorldInspectorService,
   buildCanonFindings,
-  buildSafetyFindings,
   sortFindings,
 } from "./world-inspector";
 
@@ -867,8 +825,6 @@ export type {
   InspectorFixAction,
   InspectorFixSuggestion,
   InspectorSeverity,
-  PortalVisibleAsset,
-  PortalVisiblePage,
   WorldInspectorReport,
 } from "./world-inspector";
 
@@ -969,7 +925,6 @@ export {
   LabelSourceTypeEnum,
   normalizeLabel,
   applyLayoutToContent,
-  assertPlayerSafeExport,
   buildLabelContentFromPage,
   buildLabelContentFromBlock,
   buildLabelContentFromAsset,
@@ -1071,14 +1026,7 @@ export {
 
 export type { LabelFitStatus, LabelFitResult, LabelFitOptions } from "./label-fit-service";
 
-export {
-  analyzeLabelSafety,
-  stripDmOnlyForPlayer,
-  removeDmOnlyElements,
-  removeImagesFromContent,
-} from "./label-safety";
 
-export type { LabelSafetyWarning, LabelSafetyReport } from "./label-safety";
 
 export {
   resolveLabelImageProvider,
@@ -1253,12 +1201,6 @@ export type {
   UserRoleCounts,
 } from "./security-dashboard";
 
-export { scanPublicContentLeaks } from "./public-leak-scanner";
-export type {
-  PublicLeakFinding,
-  PublicLeakScanResult,
-  PublicLeakSeverity,
-} from "./public-leak-scanner";
 
 export type {
   UweSystemSettings,
@@ -1291,7 +1233,6 @@ export {
   createSoundboardService,
   SoundboardService,
   extractYouTubeVideoId,
-  isSoundboardButtonVisibleInPortal,
   resolveThumbnail,
   toDmSoundboardButtonView,
   toPortalSoundboardButtonView,
@@ -1749,25 +1690,19 @@ export type {
 export {
   createBrainStoreService,
   BrainStoreService,
-  BRAIN_VISIBILITY_LABELS,
   BRAIN_STATUS_LABELS,
   BRAIN_SOURCE_LABELS,
   BRAIN_DOCUMENT_TYPE_LABELS,
   BRAIN_FACT_TYPE_LABELS,
-  PORTAL_BRAIN_VISIBILITIES,
-  filterBrainByVisibility,
-  isPortalBrainVisibility,
   BrainDocumentTypeEnum,
   BrainFactTypeEnum,
   BrainLinkSourceTypeEnum,
   BrainLinkTargetTypeEnum,
   BrainSourceEnum,
   BrainStatusEnum,
-  BrainVisibilityEnum,
 } from "./brain-store-service";
 
 export type {
-  BrainAccessContext,
   BrainDocumentWithRelations,
   BrainFactWithRelations,
   CreateBrainDocumentInput,
@@ -1785,7 +1720,6 @@ export type {
   BrainLinkTargetType,
   BrainSource,
   BrainStatus,
-  BrainVisibility,
 } from "./brain-store-service";
 
 export {

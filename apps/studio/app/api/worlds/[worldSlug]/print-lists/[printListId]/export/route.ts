@@ -2,13 +2,11 @@ import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
-  assertPlayerSafeExport,
   createPrintListService,
   getAppRepository,
   normalizeLabel,
   renderMultiLabelHtml,
   renderMultiLabelPdfAsync,
-  stripDmOnlyForPlayer,
 } from "@uwe/database/server";
 import { logPrintListExportActivity } from "@/app/print-list-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
@@ -32,7 +30,6 @@ export async function GET(request: Request, { params }: Props) {
   const { worldSlug, printListId } = parsedParams.data;
   const url = new URL(request.url);
   const format = url.searchParams.get("format") ?? "html";
-  const includeDmOnly = url.searchParams.get("includeDmOnly") === "1";
 
   const repo = getAppRepository();
   const printListService = createPrintListService();
@@ -52,20 +49,7 @@ export async function GET(request: Request, { params }: Props) {
 
   for (const label of expanded) {
     const parsed = normalizeLabel(label);
-    const content = includeDmOnly ? parsed.content : stripDmOnlyForPlayer(parsed.content);
-
-    if (!includeDmOnly) {
-      const safety = assertPlayerSafeExport(content, false);
-      if (!safety.allowed) {
-        return NextResponse.json(
-          {
-            error: `Label „${label.title}" enthält DM-only Inhalte.`,
-            labelId: label.id,
-          },
-          { status: 403 },
-        );
-      }
-    }
+    const content = parsed.content;
 
     const imageUrls: Record<string, string> = {};
     if (content.imageAssetId) {
@@ -90,7 +74,6 @@ export async function GET(request: Request, { params }: Props) {
       imageUrl: content.imageAssetId ? imageUrls[content.imageAssetId] : null,
       imageUrls,
       worldName: world.name,
-      includeDmOnly,
     });
   }
 

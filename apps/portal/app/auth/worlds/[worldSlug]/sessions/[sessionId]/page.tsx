@@ -25,7 +25,6 @@ export default async function PortalSessionDetailPage({ params }: Props) {
 
   let session;
   let notes;
-  let newlyUnlocked;
   let canComment = false;
   let prevSessionId: string | null = null;
   let nextSessionId: string | null = null;
@@ -45,8 +44,6 @@ export default async function PortalSessionDetailPage({ params }: Props) {
     if (index >= 0 && index < allSessions.length - 1) {
       nextSessionId = allSessions[index + 1]?.id ?? null;
     }
-
-    newlyUnlocked = await auth.listNewlyUnlockedPagesForSession(worldSlug, sessionId, ctx);
 
     notes = session.campaignId
       ? await auth.listPlayerNotesForViewer(worldSlug, ctx, {
@@ -112,7 +109,6 @@ export default async function PortalSessionDetailPage({ params }: Props) {
       <SessionRecapFeed
         worldSlug={worldSlug}
         session={session}
-        newlyUnlocked={newlyUnlocked}
       />
 
       {session.campaignId ? (

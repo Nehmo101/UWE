@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   SidebarSection,
-  VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
   buildPageUrl,
@@ -13,7 +12,6 @@ import {
   getAppRepository,
   parseInGameDate,
   parseWorldCalendarMonths,
-  VisibilityEnum,
 } from "@uwe/database/server";
 import {
   createWorldEventAction,
@@ -32,11 +30,6 @@ import {
   CardTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
 } from "@/src/components/ui";
 
@@ -217,21 +210,6 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
                 <Textarea id="event-summary-dm" name="summaryDm" rows={2} />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="event-visibility">Sichtbarkeit</Label>
-                <Select name="visibility" defaultValue="private">
-                  <SelectTrigger id="event-visibility">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(VisibilityEnum).map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {VISIBILITY_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div>
                 <Button type="submit">Ereignis anlegen</Button>

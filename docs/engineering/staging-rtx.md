@@ -96,7 +96,7 @@ In Cloudflare für **beide** Test-Hostnames eine **Access-Policy** anlegen, die 
 Kopiere [`deploy/rtx-staging/uwe-test.env.example`](../../deploy/rtx-staging/uwe-test.env.example) nach `C:\uwe-test\.env` und passe die Werte an (Secrets neu erzeugen mit `openssl rand -base64 32`). Die wichtigen Punkte:
 
 - Ports `3002`/`3003`, URLs auf `test.studio` / `test.portal.uweanddragons.org`.
-- **Eigene** `SESSION_SECRET` und `UWE_MEDIA_SIGNING_SECRET` — im Produktions-Build **Pflicht**, sonst bricht der Start ab.
+- **Eigenes** `SESSION_SECRET` — im Produktions-Build **Pflicht**, sonst bricht der Start ab.
 - `DATABASE_URL=file:C:/uwe-test/data/uwe-test.db` — getrennte Datei, Vorwärts-Slashes für Prisma.
 - `NEXT_PUBLIC_*` werden beim **Build** eingebacken; `uwe-test-up.ps1` lädt die `.env` daher vor `build:release` in die Prozess-Umgebung.
 - `AI_INFERENCE_BASE_URL=http://localhost:11434` (lokales Ollama), `CLOUD_AI_PROVIDER=` leer.

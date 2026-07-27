@@ -1,23 +1,18 @@
 import type { AccessContext as AuthAccessContext } from "@uwe/auth";
-import { canViewContentBlock, canViewPage } from "@uwe/auth";
+import { canViewWorldContent } from "@uwe/auth";
 import type { PrismaClient } from "./client";
 import type {
   ContentBlock,
   CanonicalStatus,
   PageType,
   QuestLifecycleStatus,
-  Visibility,
 } from "./generated/prisma/client";
 import { parseStringArray } from "./json-utils";
 import { loadEntityTagsByEntityIds } from "./entity-tag-search-service";
 import { buildPageUrl } from "./page-types";
 import { isOpenQuest } from "./quest-lifecycle-service";
-import {
-  type AccessContext as WikiAccessContext,
-  type PortalAccessOptions,
-} from "./permissions";
 import type { SearchIndexContentBlock } from "./content-access";
-import { buildSearchIndexForScope } from "./search-index";
+import { buildSearchIndex as buildIndex } from "./search-index";
 
 export const SEARCH_ENTITY_FILTERS = [
   "pages",
@@ -70,7 +65,6 @@ export interface SearchOptions {
   worldSlug?: string;
   campaignId?: string | null;
   entityFilter?: SearchEntityFilter;
-  visibilityFilter?: Visibility[];
   canonicalStatusFilter?: CanonicalStatus | CanonicalStatus[];
   /**
    * Restricts results to quest pages with the given lifecycle status.
@@ -89,7 +83,6 @@ export interface SearchResultItem {
   worldSlug: string;
   worldName: string;
   campaignName: string | null;
-  visibility: Visibility;
   canonicalStatus: CanonicalStatus;
   questStatus: QuestLifecycleStatus | null;
   href: string;
@@ -106,7 +99,6 @@ export interface SearchIndexEntry {
   summary: string | null;
   tags: string[];
   aliases: string[];
-  visibility: Visibility;
   canonicalStatus: CanonicalStatus;
   questStatus: QuestLifecycleStatus | null;
   worldSlug: string;
@@ -123,7 +115,6 @@ type IndexedPage = {
   summary: string | null;
   tags: unknown;
   aliases: unknown;
-  visibility: Visibility;
   canonicalStatus: CanonicalStatus;
   questStatus?: QuestLifecycleStatus | null;
   campaignId: string | null;
@@ -227,7 +218,6 @@ export function buildSearchIndex(
       summary: page.summary,
       tags: parseStringArray(page.tags),
       aliases: parseStringArray(page.aliases),
-      visibility: page.visibility,
       canonicalStatus: page.canonicalStatus,
       questStatus: page.questStatus ?? null,
       worldSlug: page.world.slug,
@@ -341,10 +331,6 @@ export function searchIndex(
       continue;
     }
 
-    if (options.visibilityFilter?.length && !options.visibilityFilter.includes(entry.visibility)) {
-      continue;
-    }
-
     if (options.canonicalStatusFilter) {
       const allowed = Array.isArray(options.canonicalStatusFilter)
         ? options.canonicalStatusFilter
@@ -380,7 +366,6 @@ export function searchIndex(
       worldSlug: entry.worldSlug,
       worldName: entry.worldName,
       campaignName: entry.campaignName,
-      visibility: entry.visibility,
       canonicalStatus: entry.canonicalStatus,
       questStatus: entry.questStatus,
       href: buildResultHref(entry.worldSlug, entry.type, entry.slug, urlMode),
@@ -445,7 +430,6 @@ async function loadPagesForSearchUncached(
       summary: true,
       tags: true,
       aliases: true,
-      visibility: true,
       canonicalStatus: true,
       questStatus: true,
       campaignId: true,
@@ -466,7 +450,6 @@ async function loadPagesForSearchUncached(
         id: true,
         pageId: true,
         content: true,
-        visibility: true,
         type: true,
         sortOrder: true,
       },
@@ -517,15 +500,14 @@ async function loadPagesForSearchUncached(
 //     canonicalStatus) can never miss an invalidating change that its world saw.
 //   * Entity-tag enrichment (`searchGlobalForDm`) and all authz/scope filtering
 //     run OUTSIDE the cache on the returned pages, so tag changes and per-viewer
-//     visibility are always recomputed — never memoized.
+//     access are always recomputed — never memoized.
 //
 // The returned array (and its page objects) is shared and MUST be treated as
 // read-only; every caller already derives new objects rather than mutating.
 //
 // Residual caveat: renaming a World or Campaign changes the embedded
 // world/campaign display name without touching page/block `updated_at`; the
-// cached name self-heals on the next page/block edit. No content or visibility
-// can leak because both are recomputed downstream. Also `updated_at` is not
+// cached name self-heals on the next page/block edit. Also `updated_at` is not
 // indexed, so at extreme global scale the COUNT/MAX is a two-column table scan —
 // still far cheaper than loading + transforming every page and block, but a
 // dedicated `@@index([updatedAt])` would make the key query O(log n).
@@ -614,15 +596,10 @@ async function loadPagesForSearch(
 
 export async function searchForWikiContext(
   db: PrismaClient,
-  context: WikiAccessContext,
   options: SearchOptions,
-  portalOptions?: PortalAccessOptions,
 ): Promise<SearchResultItem[]> {
   const pages = await loadPagesForSearch(db, options);
-  const scope = context === "dm" ? "studio" : "public";
-  const index = buildSearchIndexForScope(pages, scope, context, portalOptions);
-
-  return searchIndex(index, options);
+  return searchIndex(buildIndex(pages), options);
 }
 
 export async function searchForAuthContext(
@@ -630,18 +607,12 @@ export async function searchForAuthContext(
   context: AuthAccessContext,
   options: SearchOptions,
 ): Promise<SearchResultItem[]> {
+  if (!canViewWorldContent(context)) {
+    return [];
+  }
+
   const pages = await loadPagesForSearch(db, options);
-  const accessiblePages = pages.filter((page) => canViewPage(context, page));
-
-  const index = buildSearchIndexForScope(
-    accessiblePages.map((page) => ({
-      ...page,
-      contentBlocks: page.contentBlocks.filter((block) => canViewContentBlock(context, block, page)),
-    })),
-    "public",
-  );
-
-  return searchIndex(index, options);
+  return searchIndex(buildIndex(pages), options);
 }
 
 export async function searchGlobalForDm(
@@ -665,6 +636,5 @@ export async function searchGlobalForDm(
     };
   });
 
-  const index = buildSearchIndexForScope(enrichedPages, "studio");
-  return searchIndex(index, options);
+  return searchIndex(buildIndex(enrichedPages), options);
 }

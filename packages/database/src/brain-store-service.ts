@@ -5,7 +5,6 @@ import type {
   BrainLinkTargetType,
   BrainSource,
   BrainStatus,
-  BrainVisibility,
   Prisma,
 } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
@@ -21,7 +20,6 @@ export type {
   BrainLinkTargetType,
   BrainSource,
   BrainStatus,
-  BrainVisibility,
 } from "./generated/prisma/client";
 
 export {
@@ -31,14 +29,12 @@ export {
   BrainLinkTargetType as BrainLinkTargetTypeEnum,
   BrainSource as BrainSourceEnum,
   BrainStatus as BrainStatusEnum,
-  BrainVisibility as BrainVisibilityEnum,
 } from "./generated/prisma/client";
 
 export {
   BRAIN_DOCUMENT_TYPE_LABELS,
   BRAIN_SOURCE_LABELS,
   BRAIN_STATUS_LABELS,
-  BRAIN_VISIBILITY_LABELS,
 } from "./brain-constants";
 
 export const BRAIN_FACT_TYPE_LABELS: Record<BrainFactType, string> = {
@@ -52,24 +48,6 @@ export const BRAIN_FACT_TYPE_LABELS: Record<BrainFactType, string> = {
 };
 
 /** Visibilities exposed to player portal / preview context. */
-export const PORTAL_BRAIN_VISIBILITIES: BrainVisibility[] = ["public", "player_visible"];
-
-export type BrainAccessContext = "dm" | "portal" | "preview";
-
-export function isPortalBrainVisibility(visibility: BrainVisibility): boolean {
-  return PORTAL_BRAIN_VISIBILITIES.includes(visibility);
-}
-
-export function filterBrainByVisibility<T extends { visibility: BrainVisibility }>(
-  items: T[],
-  context: BrainAccessContext,
-): T[] {
-  if (context === "dm") {
-    return items;
-  }
-  return items.filter((item) => isPortalBrainVisibility(item.visibility));
-}
-
 const ACTIVE_STATUSES: BrainStatus[] = ["draft", "reviewed", "canonical"];
 
 function documentInclude() {
@@ -102,7 +80,6 @@ export interface CreateBrainDocumentInput {
   title: string;
   content?: string;
   documentType?: BrainDocumentType;
-  visibility?: BrainVisibility;
   source?: BrainSource;
   status?: BrainStatus;
   trustLevel?: number | null;
@@ -116,7 +93,6 @@ export interface UpdateBrainDocumentInput {
   title?: string;
   content?: string;
   documentType?: BrainDocumentType;
-  visibility?: BrainVisibility;
   source?: BrainSource;
   status?: BrainStatus;
   trustLevel?: number | null;
@@ -131,7 +107,6 @@ export interface CreateBrainFactInput {
   title: string;
   content?: string;
   factType?: BrainFactType;
-  visibility?: BrainVisibility;
   source?: BrainSource;
   status?: BrainStatus;
   confidence?: number | null;
@@ -145,7 +120,6 @@ export interface UpdateBrainFactInput {
   title?: string;
   content?: string;
   factType?: BrainFactType;
-  visibility?: BrainVisibility;
   source?: BrainSource;
   status?: BrainStatus;
   confidence?: number | null;
@@ -179,9 +153,7 @@ export interface ListBrainDocumentsOptions {
   gameSessionId?: string | null;
   documentType?: BrainDocumentType;
   status?: BrainStatus | BrainStatus[];
-  visibility?: BrainVisibility;
   includeArchived?: boolean;
-  accessContext?: BrainAccessContext;
   limit?: number;
   offset?: number;
 }
@@ -195,7 +167,6 @@ export interface SearchableBrainChunk {
   document: {
     id: string;
     title: string;
-    visibility: BrainVisibility;
     documentType: BrainDocumentType;
     status: BrainStatus;
     campaignId: string | null;
@@ -208,9 +179,7 @@ export interface ListBrainFactsOptions {
   gameSessionId?: string | null;
   factType?: BrainFactType;
   status?: BrainStatus | BrainStatus[];
-  visibility?: BrainVisibility;
   includeArchived?: boolean;
-  accessContext?: BrainAccessContext;
   limit?: number;
   offset?: number;
 }
@@ -255,7 +224,6 @@ export class BrainStoreService {
         ...(options?.pageId ? { pageId: options.pageId } : {}),
         ...(options?.gameSessionId ? { gameSessionId: options.gameSessionId } : {}),
         ...(options?.documentType ? { documentType: options.documentType } : {}),
-        ...(options?.visibility ? { visibility: options.visibility } : {}),
       },
       include: documentInclude(),
       orderBy: [{ updatedAt: "desc" }],
@@ -263,7 +231,7 @@ export class BrainStoreService {
       skip: options?.offset,
     });
 
-    return filterBrainByVisibility(documents, options?.accessContext ?? "dm");
+    return documents;
   }
 
   async createDocument(input: CreateBrainDocumentInput): Promise<BrainDocumentWithRelations> {
@@ -275,7 +243,6 @@ export class BrainStoreService {
         title: input.title,
         content: input.content ?? "",
         documentType: input.documentType ?? "general",
-        visibility: input.visibility ?? "dm_only",
         source: input.source ?? "manual",
         status: input.status ?? "draft",
         trustLevel: input.trustLevel ?? null,
@@ -316,7 +283,6 @@ export class BrainStoreService {
         title: input.title,
         content: input.content,
         documentType: input.documentType,
-        visibility: input.visibility,
         source: input.source,
         status: input.status,
         trustLevel: input.trustLevel,
@@ -366,7 +332,6 @@ export class BrainStoreService {
         ...(options?.pageId ? { pageId: options.pageId } : {}),
         ...(options?.gameSessionId ? { gameSessionId: options.gameSessionId } : {}),
         ...(options?.factType ? { factType: options.factType } : {}),
-        ...(options?.visibility ? { visibility: options.visibility } : {}),
       },
       include: factInclude(),
       orderBy: [{ updatedAt: "desc" }],
@@ -374,7 +339,7 @@ export class BrainStoreService {
       skip: options?.offset,
     });
 
-    return filterBrainByVisibility(facts, options?.accessContext ?? "dm");
+    return facts;
   }
 
   async createFact(input: CreateBrainFactInput): Promise<BrainFactWithRelations> {
@@ -386,7 +351,6 @@ export class BrainStoreService {
         title: input.title,
         content: input.content ?? "",
         factType: input.factType ?? "custom",
-        visibility: input.visibility ?? "dm_only",
         source: input.source ?? "manual",
         status: input.status ?? "draft",
         confidence: input.confidence ?? null,
@@ -424,7 +388,6 @@ export class BrainStoreService {
         title: input.title,
         content: input.content,
         factType: input.factType,
-        visibility: input.visibility,
         source: input.source,
         status: input.status,
         confidence: input.confidence,
@@ -440,7 +403,6 @@ export class BrainStoreService {
   async listSearchableChunks(
     worldSlug: string,
     options?: {
-      accessContext?: BrainAccessContext;
       campaignId?: string | null;
       documentIds?: string[];
     },
@@ -462,7 +424,6 @@ export class BrainStoreService {
           select: {
             id: true,
             title: true,
-            visibility: true,
             documentType: true,
             status: true,
             campaignId: true,
@@ -472,15 +433,7 @@ export class BrainStoreService {
       orderBy: [{ documentId: "asc" }, { chunkIndex: "asc" }],
     });
 
-    const accessContext = options?.accessContext ?? "dm";
-    const visibleDocuments = filterBrainByVisibility(
-      chunks.map((chunk) => chunk.document),
-      accessContext,
-    );
-    const visibleDocumentIds = new Set(visibleDocuments.map((document) => document.id));
-
     return chunks
-      .filter((chunk) => visibleDocumentIds.has(chunk.documentId))
       .map((chunk) => ({
         id: chunk.id,
         documentId: chunk.documentId,

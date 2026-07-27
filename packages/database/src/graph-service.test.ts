@@ -30,13 +30,11 @@ describe("graph-service", () => {
       title: "Hafenstadt Validori",
       slug: "validori",
       type: "location",
-      visibility: "public",
       tags: ["hafen", "stadt"],
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "public",
           content: "Die Stadt [[Shagottar|Festung]] liegt im Norden.",
         },
       ],
@@ -48,12 +46,10 @@ describe("graph-service", () => {
       title: "Shagottar",
       slug: "shagottar",
       type: "location",
-      visibility: "dm_only",
       contentBlocks: [
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Geheime Festung.",
         },
       ],
@@ -65,13 +61,11 @@ describe("graph-service", () => {
       title: "Kapitän Mara",
       slug: "kapitän-mara",
       type: "npc",
-      visibility: "player_visible",
       tags: ["crew"],
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Mara segelt nach [[Hafenstadt Validori]].",
         },
       ],
@@ -100,7 +94,7 @@ describe("graph-service", () => {
 
   it("builds nodes and edges for DM context", async () => {
     const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "dm");
+    const graph = await buildWorldGraph(repo, worldSlug);
 
     assert.ok(graph.nodes.length >= 3);
     assert.ok(graph.edges.length >= 2);
@@ -112,7 +106,7 @@ describe("graph-service", () => {
 
   it("filters nodes by category", async () => {
     const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "dm", {
+    const graph = await buildWorldGraph(repo, worldSlug, {
       categories: ["npc"],
     });
 
@@ -122,7 +116,7 @@ describe("graph-service", () => {
 
   it("filters nodes by tag", async () => {
     const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "dm", {
+    const graph = await buildWorldGraph(repo, worldSlug, {
       tags: ["hafen"],
     });
 
@@ -130,19 +124,9 @@ describe("graph-service", () => {
     assert.equal(graph.nodes[0]?.slug, "validori");
   });
 
-  it("filters nodes by visibility", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "dm", {
-      visibilities: ["dm_only"],
-    });
-
-    assert.equal(graph.nodes.length, 1);
-    assert.equal(graph.nodes[0]?.title, "Shagottar");
-  });
-
   it("focuses on a page and shows neighbors", async () => {
     const repo = createUweRepository(databaseUrl);
-    const graph = await buildPageGraph(repo, worldSlug, publicPageId, "dm", "neighbors");
+    const graph = await buildPageGraph(repo, worldSlug, publicPageId, "neighbors");
 
     assert.ok(graph.nodes.some((node) => node.id === publicPageId && node.isFocus));
     assert.ok(graph.nodes.length >= 2);
@@ -151,7 +135,7 @@ describe("graph-service", () => {
 
   it("shows backlinks only for focus page", async () => {
     const repo = createUweRepository(databaseUrl);
-    const graph = await buildPageGraph(repo, worldSlug, publicPageId, "dm", "backlinks");
+    const graph = await buildPageGraph(repo, worldSlug, publicPageId, "backlinks");
 
     assert.ok(graph.nodes.some((node) => node.id === npcPageId));
     assert.ok(graph.edges.every((edge) => edge.targetId === publicPageId));
@@ -159,7 +143,7 @@ describe("graph-service", () => {
 
   it("includes relation labels on edges", async () => {
     const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "dm");
+    const graph = await buildWorldGraph(repo, worldSlug);
 
     const relation = graph.edges.find(
       (edge) => edge.kind === "relation" && edge.relationType === "located_in",
@@ -170,7 +154,7 @@ describe("graph-service", () => {
 
   it("caps full-graph mode at MAX_GRAPH_NODES for performance", async () => {
     const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "dm", { mode: "full" });
+    const graph = await buildWorldGraph(repo, worldSlug, { mode: "full" });
     if ((graph.totalNodeCount ?? graph.nodes.length) > 400) {
       assert.equal(graph.truncated, true);
       assert.equal(graph.nodes.length, 400);
@@ -178,70 +162,13 @@ describe("graph-service", () => {
     }
   });
 
-  it("does not expose secret pages or dm-only relations in portal graph", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "portal");
-
-    const titles = graph.nodes.map((node) => node.title);
-    assert.ok(!titles.includes("Shagottar"));
-
-    const secretEdges = graph.edges.filter(
-      (edge) => edge.sourceId === secretPageId || edge.targetId === secretPageId,
-    );
-    assert.equal(secretEdges.length, 0);
-
-    const dmRelation = graph.edges.find((edge) => edge.relationType === "threatens");
-    assert.equal(dmRelation, undefined);
-  });
-
-  it("does not leak secret titles via wiki edges in portal graph", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const graph = await buildWorldGraph(repo, worldSlug, "portal");
-
-    const labels = graph.edges.map((edge) => edge.label.toLowerCase());
-    assert.ok(!labels.some((label) => label.includes("shagottar")));
-    assert.ok(!labels.some((label) => label.includes("festung")));
-  });
-
   it("preview context matches portal graph output", async () => {
     const repo = createUweRepository(databaseUrl);
-    const portalGraph = await buildWorldGraph(repo, worldSlug, "portal");
-    const previewGraph = await buildWorldGraph(repo, worldSlug, "preview");
+    const portalGraph = await buildWorldGraph(repo, worldSlug);
+    const previewGraph = await buildWorldGraph(repo, worldSlug);
 
     assert.deepEqual(portalGraph.nodes, previewGraph.nodes);
     assert.deepEqual(portalGraph.edges, previewGraph.edges);
-  });
-
-  it("buildWorldGraphForViewer hides dm_only pages from player viewers", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const ctx = buildAccessContext({
-      user: {
-        id: "player-1",
-        displayName: "Player",
-        email: "player@test.local",
-        role: "player",
-      },
-      worldMembership: {
-        userId: "player-1",
-        worldId,
-        role: "player",
-        characterName: "Tester",
-      },
-      guestModeEnabled: false,
-    });
-
-    const graph = await buildWorldGraphForViewer(repo, worldSlug, ctx);
-
-    const titles = graph.nodes.map((node) => node.title);
-    assert.ok(!titles.includes("Shagottar"));
-
-    const secretEdges = graph.edges.filter(
-      (edge) => edge.sourceId === secretPageId || edge.targetId === secretPageId,
-    );
-    assert.equal(secretEdges.length, 0);
-
-    const dmRelation = graph.edges.find((edge) => edge.relationType === "threatens");
-    assert.equal(dmRelation, undefined);
   });
 
   it("buildWorldGraphForViewer matches legacy portal graph for player viewers", async () => {
@@ -263,7 +190,7 @@ describe("graph-service", () => {
     });
 
     const viewerGraph = await buildWorldGraphForViewer(repo, worldSlug, ctx);
-    const portalGraph = await buildWorldGraph(repo, worldSlug, "portal");
+    const portalGraph = await buildWorldGraph(repo, worldSlug);
 
     assert.deepEqual(viewerGraph.nodes, portalGraph.nodes);
     assert.deepEqual(viewerGraph.edges, portalGraph.edges);

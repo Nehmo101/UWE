@@ -2,9 +2,7 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import {
   buildCanonFindings,
-  buildSafetyFindings,
   createWorldInspectorService,
-  sortFindings,
   type InspectorPageInput,
   type WorldInspectorService,
 } from "./world-inspector";
@@ -18,7 +16,6 @@ function makePage(overrides: Partial<InspectorPageInput>): InspectorPageInput {
     title: "Seite",
     slug: "seite",
     type: "lore",
-    visibility: "dm_only",
     canonicalStatus: "draft",
     aliases: [],
     blocks: [],
@@ -27,89 +24,9 @@ function makePage(overrides: Partial<InspectorPageInput>): InspectorPageInput {
 }
 
 describe("world-inspector findings", () => {
-  it("flags gm_note blocks marked player-visible as critical", () => {
-    const pages = [
-      makePage({
-        title: "Validori",
-        slug: "validori",
-        visibility: "public",
-        blocks: [
-          { type: "gm_note", visibility: "player_visible", content: "Geheimplan!" },
-        ],
-      }),
-    ];
 
-    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
-    const leak = findings.find((f) => f.code === "gm_note_player_visible");
-    assert.ok(leak);
-    assert.equal(leak.severity, "critical");
-  });
 
-  it("flags portal-visible secret pages as critical", () => {
-    const pages = [
-      makePage({
-        title: "Das dunkle Ritual",
-        slug: "das-dunkle-ritual",
-        type: "secret",
-        visibility: "player_visible",
-      }),
-    ];
 
-    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
-    assert.ok(findings.some((f) => f.code === "secret_page_portal_visible"));
-  });
-
-  it("reports hidden link placeholders in portal pages as info", () => {
-    const pages = [
-      makePage({
-        id: "a",
-        title: "Validori",
-        slug: "validori",
-        visibility: "public",
-        blocks: [
-          {
-            type: "rich_text",
-            visibility: "public",
-            content: "Im Norden liegt [[Shagottar]].",
-          },
-        ],
-      }),
-      makePage({
-        id: "b",
-        title: "Shagottar",
-        slug: "shagottar",
-        visibility: "dm_only",
-      }),
-    ];
-
-    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
-    const hidden = findings.find((f) => f.code === "hidden_link_in_portal_page");
-    assert.ok(hidden);
-    assert.equal(hidden.severity, "info");
-  });
-
-  it("does not flag dm_only links inside dm_only blocks", () => {
-    const pages = [
-      makePage({
-        id: "a",
-        title: "Validori",
-        slug: "validori",
-        visibility: "public",
-        blocks: [
-          { type: "gm_note", visibility: "dm_only", content: "Hier liegt [[Shagottar]]." },
-        ],
-      }),
-      makePage({
-        id: "b",
-        title: "Shagottar",
-        slug: "shagottar",
-        visibility: "dm_only",
-      }),
-    ];
-
-    const findings = buildSafetyFindings("terra", pages, { publicSharingEnabled: true });
-    assert.ok(!findings.some((f) => f.code === "hidden_link_in_portal_page"));
-  });
 
 
   it("detects broken wiki links", () => {
@@ -118,7 +35,7 @@ describe("world-inspector findings", () => {
         title: "Arbor",
         slug: "arbor",
         blocks: [
-          { type: "rich_text", visibility: "public", content: "Siehe [[Gibt Es Nicht]]." },
+          { type: "rich_text", content: "Siehe [[Gibt Es Nicht]]." },
         ],
       }),
     ];
@@ -139,32 +56,6 @@ describe("world-inspector findings", () => {
     assert.ok(findings.some((f) => f.code === "duplicate_name"));
   });
 
-  it("flags contradictory pages and inconsistent publish states", () => {
-    const pages = [
-      makePage({
-        id: "a",
-        title: "Alte Chronik",
-        slug: "alte-chronik",
-        canonicalStatus: "contradictory",
-      }),
-      makePage({
-        id: "b",
-        title: "Marktplatz",
-        slug: "marktplatz",
-        visibility: "player_visible",
-      }),
-      makePage({
-        id: "c",
-        title: "Kriegsplan",
-        slug: "kriegsplan",
-        visibility: "dm_only",
-      }),
-    ];
-
-    const findings = buildCanonFindings("terra", pages);
-    assert.ok(findings.some((f) => f.code === "contradictory_page"));
-    assert.ok(findings.some((f) => f.code === "published_but_dm_only" && f.pageTitle === "Kriegsplan"));
-  });
 
   it("finds orphan pages without any relations", () => {
     const pages = [
@@ -172,7 +63,7 @@ describe("world-inspector findings", () => {
         id: "a",
         title: "Validori",
         slug: "validori",
-        blocks: [{ type: "rich_text", visibility: "public", content: "Nahe [[Arbor]]." }],
+        blocks: [{ type: "rich_text", content: "Nahe [[Arbor]]." }],
       }),
       makePage({ id: "b", title: "Arbor", slug: "arbor" }),
       makePage({ id: "c", title: "Vergessene Insel", slug: "vergessene-insel" }),
@@ -184,30 +75,6 @@ describe("world-inspector findings", () => {
     assert.equal(orphans[0].pageTitle, "Vergessene Insel");
   });
 
-  it("sorts findings by severity", () => {
-    const sorted = sortFindings([
-      { id: "orphan_page:x", code: "orphan_page", severity: "info", message: "c", fixes: [] },
-      {
-        id: "gm_note_player_visible:x",
-        code: "gm_note_player_visible",
-        severity: "critical",
-        message: "a",
-        fixes: [],
-      },
-      {
-        id: "broken_wiki_link:x",
-        code: "broken_wiki_link",
-        severity: "warning",
-        message: "b",
-        fixes: [],
-      },
-    ]);
-
-    assert.deepEqual(
-      sorted.map((f) => f.severity),
-      ["critical", "warning", "info"],
-    );
-  });
 });
 
 describe("world-inspector service", () => {
@@ -226,10 +93,9 @@ describe("world-inspector service", () => {
       title: "Hafenstadt",
       slug: "hafenstadt",
       type: "location",
-      visibility: "public",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "public", content: "Schöner Hafen." },
-        { type: "gm_note", sortOrder: 1, visibility: "dm_only", content: "Schmuggler!" },
+        { type: "rich_text", sortOrder: 0, content: "Schöner Hafen." },
+        { type: "rich_text", sortOrder: 1, content: "Schmuggler!" },
       ],
     });
 
@@ -238,21 +104,9 @@ describe("world-inspector service", () => {
       title: "Geheimversteck",
       slug: "geheimversteck",
       type: "location",
-      visibility: "dm_only",
     });
   });
 
-  it("builds a full report for a world", async () => {
-    const report = await service.inspectWorld("inspector-test");
-    assert.ok(report);
-
-    assert.equal(report.visiblePages.length, 1);
-    assert.equal(report.visiblePages[0].title, "Hafenstadt");
-    assert.equal(report.visiblePages[0].visibleBlockCount, 1);
-    assert.equal(report.visiblePages[0].hiddenBlockCount, 1);
-
-
-  });
 
   it("returns null for unknown worlds", async () => {
     assert.equal(await service.inspectWorld("does-not-exist"), null);

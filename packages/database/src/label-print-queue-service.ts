@@ -18,10 +18,8 @@ import { renderMultiLabelHtml, renderMultiLabelPdfAsync } from "./label-export";
 import { PrintListService } from "./label-print-list-service";
 import { toPrismaJsonValue } from "./json-utils";
 import {
-  assertPlayerSafeExport,
   normalizeLabel,
 } from "./label-service";
-import { stripDmOnlyForPlayer } from "./label-safety";
 
 export type LabelPrintQueueStatus =
   | "pending"
@@ -82,7 +80,6 @@ export interface EnqueuePrintListInput {
   printerId: string;
   printerName?: string;
   format?: LabelPrintFormat;
-  includeDmOnly?: boolean;
   targetConnectorId?: string | null;
   createdByUserId?: string | null;
 }
@@ -152,7 +149,6 @@ export class LabelPrintQueueService {
         title: list.name,
         worldSlug: input.worldSlug,
         printListId: input.printListId,
-        includeDmOnly: input.includeDmOnly === true,
       },
     });
 
@@ -163,7 +159,6 @@ export class LabelPrintQueueService {
       title: list.name,
       worldSlug: input.worldSlug,
       printListId: input.printListId,
-      includeDmOnly: input.includeDmOnly === true,
       documentPath: labelPrintDocumentPath(job.id),
     };
 
@@ -274,11 +269,7 @@ export class LabelPrintQueueService {
     const exportOptions = [];
     for (const label of printListService.expandItemsForExport(list)) {
       const parsed = normalizeLabel(label);
-      const content = payload.includeDmOnly ? parsed.content : stripDmOnlyForPlayer(parsed.content);
-      if (!payload.includeDmOnly) {
-        const safety = assertPlayerSafeExport(content, false);
-        if (!safety.allowed) throw new Error(`Label „${label.title}" enthält DM-only Inhalte.`);
-      }
+      const content = parsed.content;
       const imageUrls: Record<string, string> = {};
       if (content.imageAssetId) {
         imageUrls[content.imageAssetId] = new URL(`/api/assets/${content.imageAssetId}/file`, assetBaseUrl).toString();
@@ -295,7 +286,6 @@ export class LabelPrintQueueService {
         imageUrl: content.imageAssetId ? imageUrls[content.imageAssetId] : null,
         imageUrls,
         worldName: list.campaign?.name ?? undefined,
-        includeDmOnly: payload.includeDmOnly,
       });
     }
 

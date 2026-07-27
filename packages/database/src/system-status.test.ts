@@ -62,15 +62,14 @@ describe("system status and next actions", () => {
   it("surfaces missing backups and open findings as next actions", async () => {
     const world = await repo.createWorld({ name: "Action World", slug: "action-world" });
 
-    // A critical leak: player-visible GM note.
+    // A canon warning: page with a broken wikilink.
     await repo.createPage({
       worldId: world.id,
-      title: "Leck",
-      slug: "leck",
+      title: "Kaputt",
+      slug: "kaputt",
       type: "npc",
-      visibility: "player_visible",
       contentBlocks: [
-        { type: "gm_note", sortOrder: 0, visibility: "player_visible", content: "Geheim" },
+        { type: "rich_text", sortOrder: 0, content: "Verweist auf [[Nirgendwo]]." },
       ],
     });
 
@@ -81,13 +80,6 @@ describe("system status and next actions", () => {
 
     const inspectorAction = actions.find((action) => action.id === "inspector:action-world");
     assert.ok(inspectorAction, "open findings must surface as next action");
-    assert.equal(inspectorAction.severity, "critical");
     assert.equal(inspectorAction.href, "/worlds/action-world/inspector");
-
-    const portalAction = actions.find((action) => action.id === "portal-visible:action-world");
-    assert.ok(portalAction, "publicly visible player content must surface");
-
-    // Critical entries sort first.
-    assert.equal(actions[0].severity, "critical");
   });
 });

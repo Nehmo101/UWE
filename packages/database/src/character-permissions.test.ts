@@ -14,7 +14,7 @@ describe("character sheet permissions (portal)", () => {
   let playerOneId: string;
   let playerOneCharacterId: string;
   let playerTwoCharacterId: string;
-  let dmOnlyCharacterId: string;
+  let pageBoundCharacterId: string;
 
   before(async () => {
     databaseUrl = createTestDatabaseUrl();
@@ -61,7 +61,6 @@ describe("character sheet permissions (portal)", () => {
       title: "Aria",
       slug: "aria-pc",
       type: "player_character",
-      visibility: "player_visible",
     });
 
     const dmOnlyPage = await repo.createPage({
@@ -69,7 +68,6 @@ describe("character sheet permissions (portal)", () => {
       title: "Geheimer NSC-Bogen",
       slug: "geheimer-nsc-bogen",
       type: "player_character",
-      visibility: "dm_only",
     });
 
     const characters = createCharacterService(db);
@@ -90,15 +88,16 @@ describe("character sheet permissions (portal)", () => {
     });
     playerTwoCharacterId = playerTwoCharacter.id;
 
-    // Owned by player one but bound to a dm_only page → must stay hidden in the portal.
-    const dmOnlyCharacter = await characters.create({
+    // Owned by player one and bound to a wiki page — with page visibility gone
+    // this is just another of their characters.
+    const pageBoundCharacter = await characters.create({
       worldId,
       ownerUserId: playerOne.id,
       displayName: "Verdeckter Bogen",
       pageId: dmOnlyPage.id,
       level: 9,
     });
-    dmOnlyCharacterId = dmOnlyCharacter.id;
+    pageBoundCharacterId = pageBoundCharacter.id;
 
     await db.$disconnect();
   });
@@ -107,7 +106,7 @@ describe("character sheet permissions (portal)", () => {
     await createPrismaClient(databaseUrl).$disconnect();
   });
 
-  it("players only list their own characters; dm_only pages are filtered server-side", async () => {
+  it("players list only their own characters", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
@@ -118,7 +117,7 @@ describe("character sheet permissions (portal)", () => {
     const listedIds = listed.map((entry) => entry.id);
     assert.ok(listedIds.includes(playerOneCharacterId));
     assert.ok(!listedIds.includes(playerTwoCharacterId), "foreign character must not be listed");
-    assert.ok(!listedIds.includes(dmOnlyCharacterId), "dm_only-page character must be filtered");
+    assert.ok(listedIds.includes(pageBoundCharacterId));
     await db.$disconnect();
   });
 
@@ -148,7 +147,7 @@ describe("character sheet permissions (portal)", () => {
     const listedIds = listed.map((entry) => entry.id);
     assert.ok(listedIds.includes(playerOneCharacterId));
     assert.ok(listedIds.includes(playerTwoCharacterId));
-    assert.ok(listedIds.includes(dmOnlyCharacterId));
+    assert.ok(listedIds.includes(pageBoundCharacterId));
     await db.$disconnect();
   });
 
@@ -163,7 +162,7 @@ describe("character sheet permissions (portal)", () => {
     const listedIds = listed.map((entry) => entry.id);
     assert.ok(listedIds.includes(playerOneCharacterId));
     assert.ok(listedIds.includes(playerTwoCharacterId));
-    assert.ok(listedIds.includes(dmOnlyCharacterId));
+    assert.ok(listedIds.includes(pageBoundCharacterId));
     await db.$disconnect();
   });
 
@@ -181,8 +180,8 @@ describe("character sheet permissions (portal)", () => {
     const foreign = await auth.getCharacterForViewer(worldSlug, playerTwoCharacterId, playerCtx);
     assert.equal(foreign, null);
 
-    const hidden = await auth.getCharacterForViewer(worldSlug, dmOnlyCharacterId, playerCtx);
-    assert.equal(hidden, null);
+    const pageBound = await auth.getCharacterForViewer(worldSlug, pageBoundCharacterId, playerCtx);
+    assert.equal(pageBound?.id, pageBoundCharacterId);
     await db.$disconnect();
   });
 

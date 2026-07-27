@@ -57,7 +57,6 @@ export default async function PortalSoundboardPage({ params }: Props) {
     volume: button.volume,
     loop: button.loop,
     tags: button.tags,
-    visibility: button.visibility,
     linkedPages: button.linkedPages.map((page) => ({
       title: page.title,
       href: `/auth/worlds/${worldSlug}/${page.slug}`,

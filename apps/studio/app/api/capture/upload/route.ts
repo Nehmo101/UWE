@@ -119,7 +119,6 @@ export async function POST(request: Request) {
       storageKey,
       mimeType,
       size: buffer.length,
-      visibility: "dm_only",
       metadata: { source: "capture", captureId: capture.id },
     });
     assetId = asset.id;

@@ -14,7 +14,6 @@ import {
 } from "./production-safety";
 
 const SECURITY_AUDIT_ACTIONS: ActivityAction[] = [
-  "visibility_changed",
   "backup_created",
   "backup_restored",
   "seed_applied",

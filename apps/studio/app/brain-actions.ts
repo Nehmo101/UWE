@@ -21,7 +21,6 @@ export async function createBrainDocumentAction(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
   const documentType = String(formData.get("documentType") || "general");
-  const visibility = String(formData.get("visibility") || "dm_only");
   const campaignId = String(formData.get("campaignId") || "") || null;
 
   if (!title) {
@@ -42,7 +41,6 @@ export async function createBrainDocumentAction(formData: FormData) {
       title,
       content,
       documentType: documentType as never,
-      visibility: visibility as never,
       campaignId,
       status: "draft",
       source: "manual",
@@ -64,7 +62,6 @@ export async function createBrainFactAction(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
   const factType = String(formData.get("factType") || "custom");
-  const visibility = String(formData.get("visibility") || "dm_only");
   const campaignId = String(formData.get("campaignId") || "") || null;
 
   if (!title) {
@@ -85,7 +82,6 @@ export async function createBrainFactAction(formData: FormData) {
       title,
       content,
       factType: factType as never,
-      visibility: visibility as never,
       campaignId,
       status: "draft",
       source: "manual",
@@ -108,7 +104,6 @@ export async function updateBrainDocumentAction(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "");
   const documentType = String(formData.get("documentType") || "general");
-  const visibility = String(formData.get("visibility") || "dm_only");
   const status = String(formData.get("status") || "draft");
 
   await requireStudioWorldEdit(worldSlug);
@@ -119,7 +114,6 @@ export async function updateBrainDocumentAction(formData: FormData) {
       title,
       content,
       documentType: documentType as never,
-      visibility: visibility as never,
       status: status as never,
     });
   } finally {
@@ -137,7 +131,6 @@ export async function updateBrainFactAction(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "");
   const factType = String(formData.get("factType") || "custom");
-  const visibility = String(formData.get("visibility") || "dm_only");
   const status = String(formData.get("status") || "draft");
 
   await requireStudioWorldEdit(worldSlug);
@@ -148,7 +141,6 @@ export async function updateBrainFactAction(formData: FormData) {
       title,
       content,
       factType: factType as never,
-      visibility: visibility as never,
       status: status as never,
     });
   } finally {

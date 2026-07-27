@@ -1,7 +1,7 @@
 /**
- * Domain logic for turning DnD-API data into DM-only Studio pages:
- * slug-collision resolution, Page/ContentBlock assembly (with dm_only
- * visibility defaults) and the encounter-generator candidate orchestration.
+ * Domain logic for turning DnD-API data into Studio pages: slug-collision
+ * resolution, Page/ContentBlock assembly and the encounter-generator
+ * candidate orchestration.
  *
  * The repository is injected (dependency injection) so this package stays
  * free of an `@uwe/database` import — see the structural interfaces below.
@@ -11,19 +11,17 @@ import { buildEncounterMarkdown, type EncounterMonsterInput } from "./encounter-
 import { analyzeEncounterXp } from "./encounter-xp-budget";
 import type { EncounterCandidate, EncounterComposition } from "./encounter-composer";
 
-/** Minimal Page/ContentBlock shape needed to create a DM page. */
+/** Minimal Page/ContentBlock shape needed to create a page. */
 export interface DndCreatePageInput {
   worldId: string;
   title: string;
   slug: string;
   type: "monster" | "encounter";
-  visibility: "dm_only";
   summary: string;
   contentBlocks: Array<{
     type: "statblock" | "rich_text";
     sortOrder: number;
     content: string;
-    visibility: "dm_only";
   }>;
 }
 
@@ -32,7 +30,7 @@ export interface PageSlugLookup {
   getPageBySlug(worldSlug: string, pageSlug: string): Promise<unknown>;
 }
 
-/** Repository surface needed to create a DM page (injected). */
+/** Repository surface needed to create a page (injected). */
 export interface DndPageRepository<TPage> extends PageSlugLookup {
   createPage(input: DndCreatePageInput): Promise<TPage>;
 }
@@ -69,14 +67,12 @@ export function buildStatblockPageInput(input: {
     title: input.title,
     slug: input.pageSlug,
     type: "monster",
-    visibility: "dm_only",
     summary: `Open5e Statblock (${input.open5eSlug})`,
     contentBlocks: [
       {
         type: "statblock",
         sortOrder: 0,
         content: input.markdown,
-        visibility: "dm_only",
       },
     ],
   };
@@ -95,14 +91,12 @@ export function buildEncounterPageInput(input: {
     title: input.title,
     slug: input.pageSlug,
     type: "encounter",
-    visibility: "dm_only",
     summary: input.summary,
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
         content: input.markdown,
-        visibility: "dm_only",
       },
     ],
   };

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   SidebarSection,
-  VisibilityBadge,
 } from "@uwe/shared-ui";
 import { CONNECTOR_OFFLINE_MESSAGE } from "@uwe/connector";
 import {
@@ -89,7 +88,6 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
     volume: button.volume,
     loop: button.loop,
     tags: button.tags,
-    visibility: button.visibility,
     linkedPages: button.linkedPages.map((page) => ({ title: page.title })),
   }));
 
@@ -158,7 +156,6 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                   >
                     <strong>{button.title}</strong>
                     <span className="text-sm text-muted-foreground">{button.sourceType}</span>
-                    <VisibilityBadge visibility={button.visibility} />
                     <details>
                       <summary>Löschen</summary>
                       <form action={deleteSoundboardButtonAction}>
@@ -184,7 +181,6 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
                           volume: button.volume,
                           loop: button.loop,
                           tags: button.tags.join(", "),
-                          visibility: button.visibility,
                           linkedPageIds: button.linkedPages.map((page) => page.id),
                         }}
                         audioAssets={audioAssets}

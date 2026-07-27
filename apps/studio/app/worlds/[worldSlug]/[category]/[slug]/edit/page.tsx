@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   CollapsibleSection,
   PAGE_TYPE_LABELS,
-  VISIBILITY_LABELS,
   CANONICAL_LABELS,
   BLOCK_TYPE_LABELS,
 } from "@uwe/shared-ui";
@@ -17,7 +16,6 @@ import {
   navCategoryForPageType,
   parseStringArray,
   PageTypeEnum,
-  VisibilityEnum,
   CanonicalStatusEnum,
   ContentBlockTypeEnum,
 } from "@uwe/database/server";
@@ -131,11 +129,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           </>
         }
       />
-      {page.visibility === "dm_only" && (
-        <Alert tone="danger" role="note" className="mb-4">
-          <strong>Nur GM (dm_only)</strong> — diese Seite erscheint niemals im Portal oder in Spieler-Exports.
-        </Alert>
-      )}
       <div className="pb-24">
         {saved && <Alert tone="success" className="mb-4">Änderungen gespeichert.</Alert>}
         <PageEditAutosave formId="world-page-edit-form" storageKey={`uwe:page-edit:${page.id}`} />
@@ -176,23 +169,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             <Textarea id="edit-summary" name="summary" defaultValue={page.summary ?? ""} />
           </div>
 
-          <div className={FIELD_CLASS}>
-            <Label htmlFor="edit-visibility">Sichtbarkeit</Label>
-            <Select name="visibility" defaultValue={page.visibility}>
-              <SelectTrigger id="edit-visibility">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(VisibilityEnum).map((v) => (
-                  <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="m-0 text-xs text-muted-foreground">
-              „Portal sichtbar“ und „Share-Link“ sind nach dem Veröffentlichen für angemeldete
-              Spieler im Portal sichtbar. „Nur GM“ erscheint dort niemals.
-            </p>
-          </div>
 
 
 
@@ -257,20 +233,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                     rows={6}
                   />
 
-                  <div className={FIELD_CLASS}>
-                    <Label htmlFor={`block-${block.id}-visibility`}>Sichtbarkeit</Label>
-                    <Select name="visibility" defaultValue={block.visibility}>
-                      <SelectTrigger id={`block-${block.id}-visibility`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(VisibilityEnum).map((v) => (
-                          <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <div className="flex flex-wrap items-center gap-2">
                     <Button type="submit" variant="secondary">Block speichern</Button>
                     <Link
@@ -312,20 +274,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               defaultType="rich_text"
               rows={4}
             />
-
-            <div className={FIELD_CLASS}>
-              <Label htmlFor="new-block-visibility">Sichtbarkeit</Label>
-              <Select name="visibility" defaultValue="dm_only">
-                <SelectTrigger id="new-block-visibility">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(VisibilityEnum).map((v) => (
-                    <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div>
               <Button type="submit">Block hinzufügen</Button>

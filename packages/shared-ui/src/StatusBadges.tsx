@@ -6,7 +6,6 @@ import type {
   GameSessionStatus,
   PageType,
   QuestLifecycleStatus,
-  Visibility,
 } from "@uwe/database/enums";
 
 /** Shared shape for every status/type badge in this file. */
@@ -68,31 +67,7 @@ export function TagChip({ tag }: { tag: string }) {
   );
 }
 
-export const VISIBILITY_LABELS: Record<Visibility, string> = {
-  private: "Privat",
-  dm_only: "Nur GM",
-  player_visible: "Portal sichtbar",
-  public: "Share-Link",
-  specific_players: "Bestimmte Spieler",
-  unlock_after_session: "Nach Session",
-  archived: "Archiviert",
-};
 
-/**
- * Full explanations for visibility values. Portal content requires an
- * authenticated UWE user; these texts make the publication consequence clear.
- */
-export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
-  private: "Streng privat — nur im Studio sichtbar, Standard für neue Inhalte.",
-  dm_only: "Nur im Studio sichtbar. Erscheint niemals im Player-Portal oder in Exporten.",
-  player_visible:
-    "Für eingeloggte Spieler im Portal sichtbar.",
-  public:
-    "Wie Portal-sichtbar, zusätzlich für explizite Share-Link-Freigaben markiert; Share-Routen brauchen ebenfalls Login.",
-  specific_players: "Nur für eingeloggte Spieler mit Freigabe sichtbar.",
-  unlock_after_session: "Wird nach der verknüpften Session für Spieler freigeschaltet.",
-  archived: "Archiviert — für Spieler ausgeblendet, im Studio weiterhin auffindbar.",
-};
 
 
 
@@ -202,7 +177,6 @@ export const BLOCK_TYPE_LABELS: Record<ContentBlockType, string> = {
   relation: "Beziehung",
   timeline: "Timeline",
   statblock: "Statblock",
-  gm_note: "GM-Notiz",
   player_text: "Spielertext",
   ai_summary: "KI-Zusammenfassung",
 };
@@ -216,28 +190,6 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   video: "Video",
   other: "Sonstiges",
 };
-
-export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
-  const className = `${BADGE_BASE} ${
-    visibility === "dm_only"
-      ? BADGE_TONE.secret
-      : visibility === "player_visible"
-        ? BADGE_TONE.player
-        : visibility === "public"
-          ? BADGE_TONE.public
-          : BADGE_TONE.plain
-  }`;
-
-  return (
-    <span
-      className={className}
-      title={VISIBILITY_DESCRIPTIONS[visibility]}
-      aria-label={`Sichtbarkeit: ${VISIBILITY_LABELS[visibility]}. ${VISIBILITY_DESCRIPTIONS[visibility]}`}
-    >
-      {VISIBILITY_LABELS[visibility]}
-    </span>
-  );
-}
 
 
 /** Shown after a page passed through the KI review workflow. */

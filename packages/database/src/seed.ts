@@ -22,7 +22,6 @@ export const SEED_PAGES: Page[] = [
     aliases: ["Waldgöttin"],
     tags: ["religion", "natur"],
     relations: [{ targetPageId: "page-validori", type: "worshipped_in" }],
-    visibility: "player_visible",
   },
   {
     id: "page-validori",
@@ -40,7 +39,6 @@ export const SEED_PAGES: Page[] = [
       { targetPageId: "page-arbor", type: "worships" },
       { targetPageId: "page-magister-turm", type: "contains" },
     ],
-    visibility: "public",
   },
   {
     id: "page-nepurga",
@@ -57,7 +55,6 @@ export const SEED_PAGES: Page[] = [
       { targetPageId: "page-arbor", type: "enemy_of" },
       { targetPageId: "page-validori", type: "threatens" },
     ],
-    visibility: "player_visible",
   },
   {
     id: "page-magister-turm",
@@ -71,7 +68,6 @@ export const SEED_PAGES: Page[] = [
     aliases: ["Magisterturm"],
     tags: ["dungeon", "magie"],
     relations: [{ targetPageId: "page-validori", type: "located_in" }],
-    visibility: "player_visible",
   },
   {
     id: "page-secret-conspiracy",
@@ -88,6 +84,5 @@ export const SEED_PAGES: Page[] = [
       { targetPageId: "page-magister-turm", type: "centered_in" },
       { targetPageId: "page-nepurga", type: "targets" },
     ],
-    visibility: "dm_only",
   },
 ];

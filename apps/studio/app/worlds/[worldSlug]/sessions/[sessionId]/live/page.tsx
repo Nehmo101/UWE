@@ -55,7 +55,6 @@ export default async function SessionLivePage({ params }: Props) {
         volume: button.volume,
         loop: button.loop,
         tags: button.tags,
-        visibility: button.visibility,
         linkedPages: button.linkedPages.map((page) => ({ title: page.title })),
       }))
     : [];

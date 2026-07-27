@@ -4,7 +4,6 @@ import {
   SearchFilterBar,
   SearchResultsList,
   SidebarSection,
-  VISIBILITY_LABELS,
   CANONICAL_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -22,7 +21,6 @@ import {
   type AdminSearchEntityType,
   type QuestLifecycleStatus,
   type SearchEntityFilter,
-  type Visibility,
   type CanonicalStatus,
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
@@ -38,7 +36,6 @@ interface Props {
     world?: string;
     type?: string;
     entityType?: string;
-    visibility?: string;
     campaign?: string;
     canon?: string;
     quest?: string;
@@ -59,7 +56,6 @@ export default async function StudioSearchPage({ searchParams }: Props) {
     world: worldSlug,
     type: entityFilter,
     entityType: adminEntityType,
-    visibility,
     campaign: campaignSlug,
     canon: canonFilter,
     quest: questParam,
@@ -100,7 +96,6 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           worldSlug: worldSlug || undefined,
           campaignId: selectedCampaign?.id,
           entityFilter: entityFilter as SearchEntityFilter | undefined,
-          visibilityFilter: visibility ? [visibility as Visibility] : undefined,
           canonicalStatusFilter: canonicalStatus,
           questStatusFilter,
           urlMode: "studio",
@@ -226,15 +221,6 @@ export default async function StudioSearchPage({ searchParams }: Props) {
                     ]
                   : []),
                 {
-                  name: "visibility",
-                  label: "Sichtbarkeit",
-                  value: visibility,
-                  options: Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({
-                    value,
-                    label,
-                  })),
-                },
-                {
                   name: "canon",
                   label: "Kanon-Status",
                   value: canonFilter,
@@ -245,7 +231,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
       />
 
       {!trimmedQuery ? (
-        <SearchResultsList results={[]} query={q} showWorld={!worldSlug} showVisibility showLabelActions />
+        <SearchResultsList results={[]} query={q} showWorld={!worldSlug} showLabelActions />
       ) : !hasAnyResults ? (
         <p className="text-sm text-muted-foreground">Keine Treffer für „{trimmedQuery}“.</p>
       ) : (
@@ -255,7 +241,6 @@ export default async function StudioSearchPage({ searchParams }: Props) {
               results={results}
               query={q}
               showWorld={!worldSlug}
-              showVisibility
               showLabelActions
             />
           )}

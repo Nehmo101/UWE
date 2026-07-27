@@ -6,7 +6,6 @@ import {
   createLabelPrintQueueService,
   createPrintListService,
   prisma,
-  summarizePrintList,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -52,16 +51,10 @@ export async function enqueueLabelPrintAction(formData: FormData) {
 
   const list = await createPrintListService().getById(printListId);
   if (!list) redirect(`${returnTo}?error=${encodeURIComponent("Druckliste nicht gefunden.")}`);
-  const summary = summarizePrintList(list);
-  if (summary.hasDmOnly && formData.get("confirmDmOnlyBatch") !== "on") {
-    redirect(`${returnTo}?error=${encodeURIComponent("DM-only Bestätigung fehlt.")}`);
-  }
-
   try {
     await createLabelPrintQueueService().enqueuePrintList({
       worldSlug, printListId, printerId, printerName: nameParts.join("::") || undefined,
-      format: (String(formData.get("format")) === "html" ? "html" : "pdf") as LabelPrintFormat,
-      includeDmOnly: formData.get("includeDmOnly") === "on", targetConnectorId: connectorId || null, createdByUserId: user.id,
+      format: (String(formData.get("format")) === "html" ? "html" : "pdf") as LabelPrintFormat, targetConnectorId: connectorId || null, createdByUserId: user.id,
     });
   } catch (e) { redirect(`${returnTo}?error=${encodeURIComponent(e instanceof Error ? e.message : "Fehler")}`); }
   revalidatePath("/system/printers");

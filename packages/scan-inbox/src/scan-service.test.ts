@@ -134,7 +134,7 @@ describe("scan inbox service (integration)", () => {
     const service = createScanInboxService(brainDb, db);
     const world = await createUweRepositoryFromClient(db).createWorld({ name: "Terra", slug: "scan-dnd" });
 
-    // Session note → gm_note draft page.
+    // Session note → rich_text draft page.
     const sessScan = await service.create({ storageKey: "_scan/s1", mimeType: "image/jpeg" });
     await service.setDndWorld(sessScan.id, world.id);
     await service.applyAnalysis(sessScan.id, {
@@ -149,9 +149,9 @@ describe("scan inbox service (integration)", () => {
     });
     assert.equal(sessPage?.type, "session");
     assert.equal(sessPage?.canonicalStatus, "draft");
-    assert.equal(sessPage?.contentBlocks[0]?.type, "gm_note");
+    assert.equal(sessPage?.contentBlocks[0]?.type, "rich_text");
 
-    // Handout → player-visible draft page.
+    // Handout → player_text draft page.
     const handoutScan = await service.create({ storageKey: "_scan/h1", mimeType: "image/jpeg" });
     await service.setDndWorld(handoutScan.id, world.id);
     await service.applyAnalysis(handoutScan.id, { ocrText: "Ein alter Brief an die Abenteurer.", ocrEngine: "manual" });
@@ -162,7 +162,6 @@ describe("scan inbox service (integration)", () => {
     });
     assert.equal(handoutPage?.type, "handout");
     assert.equal(handoutPage?.contentBlocks[0]?.type, "player_text");
-    assert.equal(handoutPage?.contentBlocks[0]?.visibility, "player_visible");
   });
 
   it("refuses DnD filing without an assigned world", async () => {

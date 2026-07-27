@@ -49,7 +49,6 @@ describe("UWE asset system", () => {
       title: "Linked Page",
       slug: "linked-page",
       type: "handout",
-      visibility: "player_visible",
     });
     pageId = page.id;
 
@@ -64,7 +63,6 @@ describe("UWE asset system", () => {
       storageKey,
       mimeType: "image/png",
       size: 14,
-      visibility: "dm_only",
     });
     dmOnlyAssetId = dmAsset.id;
 
@@ -78,7 +76,6 @@ describe("UWE asset system", () => {
       storageKey: playerStorageKey,
       mimeType: "application/pdf",
       size: 12,
-      visibility: "player_visible",
     });
     playerAssetId = playerAsset.id;
 
@@ -93,28 +90,13 @@ describe("UWE asset system", () => {
     delete process.env.UWE_UPLOADS_ROOT;
   });
 
-  it("lets DM see all assets", async () => {
+  it("lists every asset of the world", async () => {
     const repo = createUweRepository(databaseUrl);
-    const assets = await repo.listAssetsForContext(worldSlug, "dm");
+    const assets = await repo.listAssetsByWorld(worldSlug);
     const ids = assets.map((asset) => asset.id);
 
     assert.ok(ids.includes(dmOnlyAssetId));
     assert.ok(ids.includes(playerAssetId));
-  });
-
-  it("lets player see only allowed assets via portal context", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const assets = await repo.listAssetsForContext(worldSlug, "portal");
-    const ids = assets.map((asset) => asset.id);
-
-    assert.ok(!ids.includes(dmOnlyAssetId));
-    assert.ok(ids.includes(playerAssetId));
-  });
-
-  it("does not deliver dm_only asset through getAssetForContext", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const asset = await repo.getAssetForContext(dmOnlyAssetId, "portal");
-    assert.equal(asset, null);
   });
 
   it("links asset to page", async () => {
@@ -124,7 +106,7 @@ describe("UWE asset system", () => {
     assert.equal(pageAssets[0]!.id, playerAssetId);
   });
 
-  it("filters assets for authenticated player viewer", async () => {
+  it("gives an assigned player every asset of the world", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
@@ -135,14 +117,11 @@ describe("UWE asset system", () => {
       const assets = await auth.listAssetsForViewer(worldSlug, ctx);
       const ids = assets.map((asset) => asset.id);
 
-      assert.ok(!ids.includes(dmOnlyAssetId));
+      assert.ok(ids.includes(dmOnlyAssetId));
       assert.ok(ids.includes(playerAssetId));
 
-      const blocked = await auth.getAssetForViewer(worldSlug, dmOnlyAssetId, ctx);
-      assert.equal(blocked, null);
-
-      const allowed = await auth.getAssetForViewer(worldSlug, playerAssetId, ctx);
-      assert.ok(allowed);
+      assert.ok(await auth.getAssetForViewer(worldSlug, dmOnlyAssetId, ctx));
+      assert.ok(await auth.getAssetForViewer(worldSlug, playerAssetId, ctx));
     } finally {
       await db.$disconnect();
     }

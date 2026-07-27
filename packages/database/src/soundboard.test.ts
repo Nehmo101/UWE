@@ -24,21 +24,16 @@ import { createPrismaClient } from "./client";
 import {
   createSoundboardService,
   extractYouTubeVideoId,
-  toPortalSoundboardButtonView,
 } from "./soundboard";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { createUweRepository } from "./repository";
 
 describe("UWE soundboard", () => {
   let databaseUrl: string;
-  let worldSlug: string;
   let roomPageId: string;
-  let playerUserId: string;
   let localButtonId: string;
   let youtubeButtonId: string;
   let spotifyButtonId: string;
-  let dmOnlyButtonId: string;
-  let dmOnlyAssetButtonId: string;
   let uploadsRoot: string;
 
   before(async () => {
@@ -56,7 +51,6 @@ describe("UWE soundboard", () => {
       slug: "soundboard-test",
       description: "Soundboard integration tests",
     });
-    worldSlug = world.slug;
 
     const campaign = await repo.createCampaign({
       worldId: world.id,
@@ -64,8 +58,7 @@ describe("UWE soundboard", () => {
       slug: "main",
     });
 
-    const users = await seedAuthUsers(auth, repo, world.id);
-    playerUserId = users.players[0]!.id;
+    await seedAuthUsers(auth, repo, world.id);
 
     const room = await repo.createPage({
       worldId: world.id,
@@ -88,7 +81,6 @@ describe("UWE soundboard", () => {
       storageKey,
       mimeType: "audio/mpeg",
       size: 10,
-      visibility: "player_visible",
     });
 
     const localButton = await soundboard.create({
@@ -100,7 +92,6 @@ describe("UWE soundboard", () => {
       volume: 0.8,
       loop: true,
       tags: ["ambient", "dungeon"],
-      visibility: "player_visible",
       linkedPageIds: [roomPageId],
     });
     localButtonId = localButton.id;
@@ -111,7 +102,6 @@ describe("UWE soundboard", () => {
       title: "Battle Theme",
       sourceType: "youtube",
       sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      visibility: "player_visible",
     });
     youtubeButtonId = youtubeButton.id;
 
@@ -120,19 +110,16 @@ describe("UWE soundboard", () => {
       title: "Tavern Playlist",
       sourceType: "spotify",
       sourceUrl: "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
-      visibility: "player_visible",
     });
     spotifyButtonId = spotifyButton.id;
 
-    const dmOnlyButton = await soundboard.create({
+    await soundboard.create({
       worldId: world.id,
       title: "Secret Stinger",
       sourceType: "local",
       sourceUrl: null,
       assetId: audioAsset.id,
-      visibility: "dm_only",
     });
-    dmOnlyButtonId = dmOnlyButton.id;
 
     const dmOnlyAsset = await repo.createAsset({
       worldId: world.id,
@@ -142,19 +129,16 @@ describe("UWE soundboard", () => {
       storageKey: buildStorageKey(world.id, "secret.mp3"),
       mimeType: "audio/mpeg",
       size: 10,
-      visibility: "dm_only",
     });
     fs.writeFileSync(resolveAssetFilePath(dmOnlyAsset.storageKey, uploadsRoot), "secret-audio");
 
-    const dmOnlyAssetButton = await soundboard.create({
+    await soundboard.create({
       worldId: world.id,
       campaignId: campaign.id,
       title: "Hidden Ambient",
       sourceType: "local",
       assetId: dmOnlyAsset.id,
-      visibility: "player_visible",
     });
-    dmOnlyAssetButtonId = dmOnlyAssetButton.id;
 
     await db.$disconnect();
   });
@@ -201,63 +185,6 @@ describe("UWE soundboard", () => {
     assert.ok(spotify);
     assert.equal(spotify.sourceType, "spotify");
     assert.equal(spotify.sourceUrl, "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl");
-  });
-
-  it("does not expose dm_only sounds in player portal", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const auth = createAuthService(db);
-    const soundboard = createSoundboardService(databaseUrl);
-
-    const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
-    assert.ok(playerCtx);
-
-    const portalButtons = await auth.listSoundboardForViewer(worldSlug, playerCtx);
-    const portalIds = portalButtons.map((button) => button.id);
-
-    assert.ok(portalIds.includes(localButtonId));
-    assert.ok(portalIds.includes(youtubeButtonId));
-    assert.ok(portalIds.includes(spotifyButtonId));
-    assert.ok(!portalIds.includes(dmOnlyButtonId));
-
-    const dmOnlyDetail = await auth.getSoundboardButtonForViewer(
-      worldSlug,
-      dmOnlyButtonId,
-      playerCtx,
-    );
-    assert.equal(dmOnlyDetail, null);
-
-    const allButtons = await soundboard.listByWorld(worldSlug);
-    assert.ok(allButtons.some((button) => button.id === dmOnlyButtonId));
-
-    const portalRaw = await soundboard.listForPortal(worldSlug);
-    const portalViews = portalRaw.map(toPortalSoundboardButtonView);
-    assert.ok(!portalViews.some((button) => button.id === dmOnlyButtonId));
-
-    await db.$disconnect();
-  });
-
-  it("hides player_visible buttons when linked asset is dm_only", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const auth = createAuthService(db);
-
-    try {
-      const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
-      assert.ok(playerCtx);
-
-      const portalButtons = await auth.listSoundboardForViewer(worldSlug, playerCtx);
-      const portalIds = portalButtons.map((button) => button.id);
-
-      assert.ok(!portalIds.includes(dmOnlyAssetButtonId));
-
-      const hiddenDetail = await auth.getSoundboardButtonForViewer(
-        worldSlug,
-        dmOnlyAssetButtonId,
-        playerCtx,
-      );
-      assert.equal(hiddenDetail, null);
-    } finally {
-      await db.$disconnect();
-    }
   });
 
   it("manages active sounds state with source limits", () => {

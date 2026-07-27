@@ -2,7 +2,6 @@ import type {
   CanonicalStatus,
   ContentBlockType,
   PageType,
-  Visibility,
 } from "@uwe/database/enums";
 import { EmptyState } from "./AppShell";
 import {
@@ -10,7 +9,6 @@ import {
   CanonicalBadge,
   PageTypeBadge,
   TagChip,
-  VisibilityBadge,
 } from "./StatusBadges";
 
 export interface ContentBlockViewModel {
@@ -18,7 +16,6 @@ export interface ContentBlockViewModel {
   type: ContentBlockType;
   sortOrder: number;
   content: string;
-  visibility: Visibility;
   assetId?: string | null;
   metadata?: Record<string, unknown> | null;
 }
@@ -82,10 +79,8 @@ function renderGalleryBlock(block: ContentBlockViewModel) {
 
 export function ContentBlockList({
   blocks,
-  showVisibility = false,
 }: {
   blocks: ContentBlockViewModel[];
-  showVisibility?: boolean;
 }) {
   if (blocks.length === 0) {
     return (
@@ -108,7 +103,6 @@ export function ContentBlockList({
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
               {BLOCK_TYPE_LABELS[block.type]}
             </span>
-            {showVisibility && <VisibilityBadge visibility={block.visibility} />}
           </header>
           {renderBlockBody(block)}
         </article>
@@ -143,13 +137,11 @@ function renderBlockBody(block: ContentBlockViewModel) {
 }
 
 export function MetaPanel({
-  visibility,
   canonicalStatus,
   type,
   tags,
   aliases,
 }: {
-  visibility: Visibility;
   canonicalStatus: CanonicalStatus;
   type: PageType;
   tags: string[];
@@ -164,10 +156,6 @@ export function MetaPanel({
         <div>
           <dt className={dt}>Typ</dt>
           <dd className={dd}><PageTypeBadge type={type} /></dd>
-        </div>
-        <div>
-          <dt className={dt}>Sichtbarkeit</dt>
-          <dd className={dd}><VisibilityBadge visibility={visibility} /></dd>
         </div>
         <div>
           <dt className={dt}>Kanon</dt>

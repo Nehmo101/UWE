@@ -4,8 +4,6 @@ import {
   ASSET_TYPE_LABELS,
   AssetTypeBadge,
   SidebarSection,
-  VISIBILITY_LABELS,
-  VisibilityBadge,
 } from "@uwe/shared-ui";
 import {
   getAppRepository,
@@ -45,7 +43,6 @@ interface Props {
   params: Promise<{ worldSlug: string }>;
   searchParams: Promise<{
     type?: string;
-    visibility?: string;
     uploaded?: string;
     linked?: string;
     saved?: string;
@@ -68,7 +65,7 @@ const FILTER_LINK_CLASS = cn(
 
 export default async function StudioAssetsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { type: typeFilter, visibility: visibilityFilter, uploaded, linked, saved, tagged, album: albumFilter } =
+  const { type: typeFilter, uploaded, linked, saved, tagged, album: albumFilter } =
     await searchParams;
   const repo = getAppRepository();
 
@@ -85,9 +82,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
   const assets = (await repo.listAssetsByWorld(worldSlug, {
     type: typeFilter as AssetType | undefined,
   }))
-    .filter((asset) => !albumAssetIds || albumAssetIds.has(asset.id))
-    .filter((asset) => !visibilityFilter || asset.visibility === visibilityFilter);
-  const dmOnlyCount = assets.filter((asset) => asset.visibility === "dm_only").length;
+    .filter((asset) => !albumAssetIds || albumAssetIds.has(asset.id));
   const pages = await repo.listPagesByWorld(worldSlug);
   await db.$disconnect();
 
@@ -113,48 +108,10 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
       />
 
       <div className="flex flex-col gap-6">
-        {dmOnlyCount > 0 && !visibilityFilter && (
-          <Alert tone="warning">
-            <strong>{dmOnlyCount}</strong> Asset{dmOnlyCount === 1 ? "" : "s"} sind nur für den GM
-            sichtbar — erscheinen nicht im Portal, bis du die Sichtbarkeit auf „Spieler“ oder
-            „Öffentlich“ setzt.
-          </Alert>
-        )}
         {(uploaded || linked || saved || tagged) && <Alert tone="success">Änderungen gespeichert.</Alert>}
-
-        <nav className="flex flex-wrap gap-2" aria-label="Sichtbarkeit">
-          <Link
-            href={`/worlds/${worldSlug}/assets${typeFilter ? `?type=${typeFilter}` : ""}`}
-            aria-current={!visibilityFilter ? "page" : undefined}
-            className={cn(badgeVariants({ variant: !visibilityFilter ? "accent" : "default" }), FILTER_LINK_CLASS)}
-          >
-            Alle Sichtbarkeiten
-          </Link>
-          <Link
-            href={`/worlds/${worldSlug}/assets?visibility=dm_only${typeFilter ? `&type=${typeFilter}` : ""}`}
-            aria-current={visibilityFilter === "dm_only" ? "page" : undefined}
-            className={cn(
-              badgeVariants({ variant: visibilityFilter === "dm_only" ? "accent" : "default" }),
-              FILTER_LINK_CLASS,
-            )}
-          >
-            Nur GM
-          </Link>
-          <Link
-            href={`/worlds/${worldSlug}/assets?visibility=player_visible${typeFilter ? `&type=${typeFilter}` : ""}`}
-            aria-current={visibilityFilter === "player_visible" ? "page" : undefined}
-            className={cn(
-              badgeVariants({ variant: visibilityFilter === "player_visible" ? "accent" : "default" }),
-              FILTER_LINK_CLASS,
-            )}
-          >
-            Portal-freigegeben
-          </Link>
-        </nav>
-
         <nav className="flex flex-wrap gap-2" aria-label="Asset-Typ">
           <Link
-            href={`/worlds/${worldSlug}/assets${visibilityFilter ? `?visibility=${visibilityFilter}` : ""}`}
+            href={`/worlds/${worldSlug}/assets`}
             aria-current={!typeFilter ? "page" : undefined}
             className={cn(badgeVariants({ variant: !typeFilter ? "accent" : "default" }), FILTER_LINK_CLASS)}
           >
@@ -163,7 +120,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
           {ASSET_TYPES.map((type) => (
             <Link
               key={type}
-              href={`/worlds/${worldSlug}/assets?type=${type}${visibilityFilter ? `&visibility=${visibilityFilter}` : ""}`}
+              href={`/worlds/${worldSlug}/assets?type=${type}`}
               aria-current={typeFilter === type ? "page" : undefined}
               className={cn(badgeVariants({ variant: typeFilter === type ? "accent" : "default" }), FILTER_LINK_CLASS)}
             >
@@ -213,20 +170,17 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                       (entry): entry is string => typeof entry === "string",
                     )
                   : [];
-              const dmOnly = asset.visibility === "dm_only";
 
               return (
                 <li
                   key={asset.id}
                   className={cn(
                     "flex flex-col gap-2 rounded-[var(--radius)] border border-border bg-card p-4 text-card-foreground shadow-sm",
-                    dmOnly && "bg-[color-mix(in_srgb,var(--uwe-danger)_10%,transparent)]",
                   )}
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <strong>{asset.title}</strong>
                     <AssetTypeBadge type={asset.type} />
-                    <VisibilityBadge visibility={asset.visibility} />
                     <span className="text-sm text-muted-foreground">{formatBytes(asset.size)}</span>
                   </div>
                   {asset.description && <p className="text-sm">{asset.description}</p>}
@@ -306,21 +260,6 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                         </Select>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`asset-${asset.id}-visibility`}>Sichtbarkeit</Label>
-                        <Select name="visibility" defaultValue={asset.visibility}>
-                          <SelectTrigger id={`asset-${asset.id}-visibility`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                              <SelectItem key={value} value={value}>
-                                {label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
                         <Label htmlFor={`asset-${asset.id}-tags`}>Tags (kommagetrennt)</Label>
                         <Input
                           id={`asset-${asset.id}-tags`}
@@ -379,21 +318,6 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="upload-visibility">Sichtbarkeit</Label>
-              <Select name="visibility" defaultValue="dm_only">
-                <SelectTrigger id="upload-visibility">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für

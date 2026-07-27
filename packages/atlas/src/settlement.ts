@@ -41,8 +41,6 @@ export interface SettlementOptions {
   idPrefix?: string;
   /** Optional node id copied onto every returned feature/object. */
   nodeId?: string;
-  /** Visibility copied onto every returned feature/object. Defaults to dm_only. */
-  visibility?: string;
   /** Density multiplier for inferred building count. 1 = default. */
   density?: number;
   /** Explicit building count. When omitted it is derived from polygon area. */
@@ -90,7 +88,6 @@ export interface SettlementFeature {
   atlasKind: AtlasFeatureKindValue;
   geometry: Path | Polygon;
   layer: number;
-  visibility: string;
   style: SettlementFeatureStyle;
   labelHint?: string;
   nodeId?: string;
@@ -115,7 +112,6 @@ export interface SettlementObject {
   scale: number;
   rotation: number;
   layer: number;
-  visibility: string;
   style: SettlementObjectStyle;
   nodeId?: string;
   meta?: Record<string, unknown>;
@@ -136,7 +132,6 @@ export interface SettlementLayout {
 }
 
 const DEFAULT_SEED = 7331;
-const DEFAULT_VISIBILITY = "dm_only";
 
 const DEFAULT_PALETTE_ITEMS: Record<SettlementObjectKind, string> = {
   building: "village",
@@ -373,7 +368,6 @@ function createObject(
   scale: number,
   opts: {
     nodeId?: string;
-    visibility: string;
     paletteItemIds?: Partial<Record<SettlementObjectKind, string>>;
     meta?: Record<string, unknown>;
   },
@@ -387,7 +381,6 @@ function createObject(
     scale,
     rotation,
     layer: LAYER_Z.objects,
-    visibility: opts.visibility,
     style: objectStyle(kind),
     ...(opts.nodeId ? { nodeId: opts.nodeId } : {}),
     ...(opts.meta ? { meta: opts.meta } : {}),
@@ -425,7 +418,6 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
   const seed = seedToNumber(options.seed);
   const rng = mulberry32(seed);
   const outer = polygon.rings[0];
-  const visibility = options.visibility ?? DEFAULT_VISIBILITY;
   const idPrefix = options.idPrefix ?? `settlement-${seed}`;
   const features: SettlementFeature[] = [];
   const objects: SettlementObject[] = [];
@@ -483,7 +475,6 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
       atlasKind: AtlasFeatureKind.road,
       geometry: { type: "Path", coordinates: closeRing(outer), closed: true },
       layer: LAYER_Z.roads + 5,
-      visibility,
       style: {
         settlement: "wall",
         strokeColor: "#4f4036",
@@ -512,7 +503,6 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
         atlasKind: AtlasFeatureKind.road,
         geometry: { type: "Path", coordinates: path },
         layer: LAYER_Z.roads,
-        visibility,
         style: {
           settlement: "road",
           strokeColor: "#8f6f4a",
@@ -534,7 +524,6 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
       atlasKind: AtlasFeatureKind.region,
       geometry: plaza,
       layer: LAYER_Z.roads - 1,
-      visibility,
       style: {
         settlement: "plaza",
         fillColor: "#d8bd8b",
@@ -560,7 +549,6 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
     objects.push(
       createObject(kind, `${idPrefix}-object-${suffix}`, point, rotation, scale, {
         nodeId: options.nodeId,
-        visibility,
         paletteItemIds: options.paletteItemIds,
         meta,
       }),
@@ -582,7 +570,6 @@ export function generateSettlement(polygon: Polygon, options: SettlementOptions 
       center,
       span,
       idPrefix,
-      visibility,
       nodePart,
       signedOuterArea: ringSignedArea(outer),
       features,

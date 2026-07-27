@@ -402,66 +402,7 @@ export class GameSessionService {
       status: "summarized",
     });
 
-    await this.unlockLinkedSessionContent(session);
-
     return session;
-  }
-
-  /**
-   * After a recap is published, unlock `unlock_after_session` pages linked to
-   * the session for every player in the world.
-   */
-  private async unlockLinkedSessionContent(session: GameSessionWithLinks): Promise<void> {
-    const linkedPageIds = session.linkedPages.map((link) => link.pageId);
-    if (linkedPageIds.length === 0) {
-      return;
-    }
-
-    const unlockPages = await this.db.page.findMany({
-      where: {
-        id: { in: linkedPageIds },
-        worldId: session.worldId,
-        visibility: "unlock_after_session",
-      },
-      select: { id: true },
-    });
-
-    if (unlockPages.length === 0) {
-      return;
-    }
-
-    const players = await this.db.worldMembership.findMany({
-      where: { worldId: session.worldId, role: "player" },
-      select: { userId: true },
-    });
-
-    if (players.length === 0) {
-      return;
-    }
-
-    const sessionLabel = `Session ${session.sessionNumber}: ${session.title}`;
-
-    for (const page of unlockPages) {
-      for (const membership of players) {
-        await this.db.sessionUnlock.upsert({
-          where: {
-            pageId_userId: {
-              pageId: page.id,
-              userId: membership.userId,
-            },
-          },
-          create: {
-            pageId: page.id,
-            userId: membership.userId,
-            sessionLabel,
-          },
-          update: {
-            unlockedAt: new Date(),
-            sessionLabel,
-          },
-        });
-      }
-    }
   }
 
   async listPublishedForPortal(worldSlug: string): Promise<GameSessionWithLinks[]> {

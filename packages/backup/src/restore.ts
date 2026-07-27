@@ -245,7 +245,6 @@ export async function executeRestore(
           data: {
             title: page.title,
             summary: page.summary,
-            visibility: page.visibility as never,
             canonicalStatus: page.canonicalStatus as never,
             prepStatus: page.prepStatus as never,
             tags: page.tags as never,
@@ -270,7 +269,6 @@ export async function executeRestore(
             slug,
             type: page.type as never,
             summary: page.summary,
-            visibility: page.visibility as never,
             canonicalStatus: page.canonicalStatus as never,
             prepStatus: page.prepStatus as never,
             tags: page.tags as never,
@@ -297,7 +295,6 @@ export async function executeRestore(
         slug: page.slug,
         type: page.type as never,
         summary: page.summary,
-        visibility: page.visibility as never,
         canonicalStatus: page.canonicalStatus as never,
         prepStatus: page.prepStatus as never,
         tags: page.tags as never,
@@ -322,7 +319,6 @@ export async function executeRestore(
         type: block.type as never,
         sortOrder: block.sortOrder,
         content: block.content,
-        visibility: block.visibility as never,
         metadata: block.metadata as never,
       },
     });
@@ -365,7 +361,6 @@ export async function executeRestore(
         storageKey: asset.storageKey.replace(asset.worldId, worldId),
         mimeType: asset.mimeType,
         size: asset.size,
-        visibility: asset.visibility as never,
         tags: asset.tags as never,
         metadata: asset.metadata as never,
       },
@@ -505,7 +500,6 @@ export async function executeRestore(
         volume: button.volume,
         loop: button.loop,
         tags: button.tags as never,
-        visibility: button.visibility as never,
         sortOrder: button.sortOrder,
       },
     });
@@ -598,53 +592,7 @@ export async function executeRestore(
     });
   }
 
-  for (const access of bundle.data.pagePlayerAccess ?? []) {
-    const userId = idMap.get(access.userId);
-    const pageId = idMap.get(access.pageId);
-    if (!userId || !pageId) continue;
 
-    const existing = await db.pagePlayerAccess.findFirst({
-      where: { userId, pageId },
-    });
-    if (existing) {
-      result.skipped++;
-      continue;
-    }
-
-    await db.pagePlayerAccess.create({
-      data: {
-        id: remapId(idMap, access.id),
-        pageId,
-        userId,
-      },
-    });
-    result.created++;
-  }
-
-  for (const unlock of bundle.data.sessionUnlocks ?? []) {
-    const userId = idMap.get(unlock.userId);
-    const pageId = idMap.get(unlock.pageId);
-    if (!userId || !pageId) continue;
-
-    const existing = await db.sessionUnlock.findFirst({
-      where: { userId, pageId },
-    });
-    if (existing) {
-      result.skipped++;
-      continue;
-    }
-
-    await db.sessionUnlock.create({
-      data: {
-        id: remapId(idMap, unlock.id),
-        pageId,
-        userId,
-        unlockedAt: new Date(unlock.unlockedAt),
-        sessionLabel: unlock.sessionLabel ?? null,
-      },
-    });
-    result.created++;
-  }
 
   for (const template of bundle.data.pageTemplates ?? []) {
     if (template.isSystem) continue;
@@ -667,7 +615,6 @@ export async function executeRestore(
         name: template.name,
         description: template.description,
         pageType: template.pageType as never,
-        defaultVisibility: template.defaultVisibility as never,
         titlePlaceholder: template.titlePlaceholder,
         blocks: template.blocks as never,
         isSystem: false,
@@ -700,7 +647,6 @@ export async function executeRestore(
         gameSessionId,
         userId,
         content: note.content,
-        visibility: note.visibility as never,
         status: note.status as never,
       },
     });

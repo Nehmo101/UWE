@@ -3,7 +3,6 @@ export {
   ASSET_TYPES,
   type AssetRecord,
   type AssetType,
-  type AssetVisibility,
   type CreateAssetInput,
   type UpdateAssetInput,
 } from "./types";
@@ -71,22 +70,5 @@ export {
   resolveUploadsDirFromEnv,
   type ResolvedDataPaths,
 } from "./data-paths";
-
-export {
-  PORTAL_ASSET_VISIBILITIES,
-  filterAssetsForContext,
-  isAssetAccessible,
-  isPortalAssetVisibility,
-  type AssetAccessContext,
-} from "./permissions";
-
-export {
-  buildSignedMediaUrl,
-  createSignedMediaToken,
-  isProtectedMediaVisibility,
-  requiresSignedMediaAccess,
-  verifySignedMediaToken,
-  type SignedMediaPayload,
-} from "./signed-media";
 
 export const ASSETS_PACKAGE_VERSION = "0.2.0";

@@ -3,7 +3,6 @@ import { brainPrisma } from "./brain-client";
 import type {
   PageType,
   Prisma,
-  Visibility,
 } from "./generated/prisma/client";
 import { createActivityLogService } from "./activity-log-service";
 import { createUndoService } from "./undo-service";
@@ -18,7 +17,6 @@ import { parseStringArray, toPrismaJsonValue } from "./json-utils";
  */
 
 export type PageBulkOperation =
-  | { kind: "visibility"; visibility: Visibility }
   | { kind: "type"; type: PageType }
   | { kind: "addTags"; tags: string[] }
   | { kind: "removeTags"; tags: string[] }
@@ -36,7 +34,6 @@ export interface PageBulkResult {
 }
 
 const OP_LABELS: Record<PageBulkOperationKind, string> = {
-  visibility: "Sichtbarkeit geändert",
   type: "Seitentyp geändert",
   addTags: "Tags hinzugefügt",
   removeTags: "Tags entfernt",
@@ -72,8 +69,6 @@ function buildUpdateData(
   operation: PageBulkOperation,
 ): Prisma.PageUncheckedUpdateInput | null {
   switch (operation.kind) {
-    case "visibility":
-      return page.visibility === operation.visibility ? null : { visibility: operation.visibility };
     case "type":
       return page.type === operation.type ? null : { type: operation.type };
     case "campaign":
@@ -172,7 +167,7 @@ export class PageBulkService {
       await activity.log({
         worldId: world.id,
         worldSlug: world.slug,
-        action: operation.kind === "visibility" ? "visibility_changed" : "content_updated",
+        action: "content_updated",
         targetType: "world",
         targetId: world.id,
         targetLabel: world.name,

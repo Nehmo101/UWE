@@ -75,11 +75,13 @@ test("keeps <br> soft breaks in authored HTML", () => {
 });
 
 test("resolves wikilinks inside authored HTML without escaping the markup", () => {
-  const content = "<p>Diener von [[Verborgen]].</p>";
-  const links: PageViewLink[] = [{ displayText: "Verborgen", status: "hidden" }];
+  const content = "<p>Diener von [[Zielseite]].</p>";
+  const links: PageViewLink[] = [
+    { displayText: "Zielseite", href: "/worlds/w/lore/zielseite", status: "resolved" },
+  ];
   assert.equal(
     renderContentHtml(content, links),
-    '<p>Diener von <span class="wiki-link-hidden" title="Inhalt nicht verfügbar">Verborgen</span>.</p>',
+    '<p>Diener von <a href="/worlds/w/lore/zielseite" class="wiki-link">Zielseite</a>.</p>',
   );
 });
 

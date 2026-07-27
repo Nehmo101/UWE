@@ -70,7 +70,6 @@ describe("Brain Actions — proposals", () => {
       sessionId: "sess-1",
     });
     assert.equal(proposals[0]?.targetType, "session_summary_dm");
-    assert.equal(proposals[0]?.visibility, "dm_only");
   });
 
   it("builds Wissenstext proposals as brain documents", () => {
@@ -82,7 +81,6 @@ describe("Brain Actions — proposals", () => {
     });
     assert.equal(proposals.length, 1);
     assert.equal(proposals[0]?.targetType, "brain_document");
-    assert.equal(proposals[0]?.visibility, "dm_only");
     assert.equal(proposals[0]?.metadata?.documentType, "world_knowledge");
   });
 
@@ -103,7 +101,6 @@ describe("Brain Actions — proposals", () => {
 
     assert.equal(proposals.length, 1);
     assert.equal(proposals[0]?.targetType, "atlas_plot_fill");
-    assert.equal(proposals[0]?.visibility, "dm_only");
     assert.equal(proposals[0]?.metadata?.autoApply, false);
     assert.equal(proposals[0]?.metadata?.validation, "ok");
     assert.match(proposals[0]?.content ?? "", /"kind": "atlas_plot_fill"/);
@@ -157,7 +154,6 @@ describe("Brain Actions — proposals", () => {
 
     assert.equal(proposals.length, 1);
     assert.equal(proposals[0]?.targetType, "atlas_asset_proposal");
-    assert.equal(proposals[0]?.visibility, "dm_only");
     assert.equal(proposals[0]?.metadata?.autoApply, false);
     assert.equal(proposals[0]?.metadata?.validation, "ok");
     assert.equal(proposals[0]?.metadata?.outputType, "json-recipe");
@@ -206,7 +202,7 @@ describe("Brain Actions — end-to-end with mock provider", () => {
         providerId: "ollama",
         model: "mock-model",
         useMock: true,
-        options: { allowDmOnly: true, localOnly: true },
+        options: { localOnly: true },
       },
     );
 
@@ -236,7 +232,7 @@ describe("Brain Actions — end-to-end with mock provider", () => {
         providerId: "ollama",
         model: "mock-model",
         useMock: true,
-        options: { allowDmOnly: true, localOnly: true },
+        options: { localOnly: true },
       },
     );
 
@@ -259,7 +255,6 @@ describe("Brain Actions — end-to-end with mock provider", () => {
     const created = documents.find((doc) => doc.content === "Wissenstext über Arbor.");
     assert.ok(created);
     assert.equal(created.title, "Wissenstext");
-    assert.equal(created.visibility, "dm_only");
     assert.equal(created.source, "ai_generated");
     assert.equal(created.status, "draft");
   });
@@ -289,7 +284,7 @@ describe("Brain Actions — end-to-end with mock provider", () => {
         model: "mock-model",
         sessionId: session.id,
         useMock: true,
-        options: { allowDmOnly: true, localOnly: true },
+        options: { localOnly: true },
       },
     );
 
@@ -326,7 +321,7 @@ describe("Brain Actions — end-to-end with mock provider", () => {
         model: "mock-model",
         sessionId: session.id,
         useMock: true,
-        options: { allowDmOnly: true, localOnly: true },
+        options: { localOnly: true },
       },
     );
 
@@ -367,7 +362,7 @@ describe("Brain Actions — end-to-end with mock provider", () => {
         providerId: "ollama",
         model: "mock-model",
         useMock: true,
-        options: { allowDmOnly: true, localOnly: true },
+        options: { localOnly: true },
       },
     );
 

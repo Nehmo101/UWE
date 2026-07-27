@@ -12,11 +12,6 @@ import {
   defaultElementsForMode,
   syncContentFromElements,
 } from "./label-elements";
-import {
-  analyzeLabelSafety,
-  removeDmOnlyElements,
-  stripDmOnlyForPlayer,
-} from "./label-safety";
 import { createLabelService, normalizeLabel } from "./label-service";
 import { createPrintListService } from "./label-print-list-service";
 import {
@@ -102,55 +97,7 @@ describe("Label editor extensions", () => {
     assert.ok(["tight", "overflow"].includes(result.fitStatus));
   });
 
-  it("strips DM-only content for player export", () => {
-    const content = {
-      title: "Geheim",
-      text: "Spieler-Text",
-      containsDmOnly: true,
-      dmOnlyBlockCount: 2,
-      elements: [
-        {
-          id: "t1",
-          type: "text" as const,
-          x: 0.2,
-          y: 0.2,
-          width: 5,
-          height: 1,
-          zIndex: 1,
-          visible: true,
-          text: "Spieler",
-        },
-        {
-          id: "d1",
-          type: "text" as const,
-          x: 0.2,
-          y: 1.5,
-          width: 5,
-          height: 1,
-          zIndex: 2,
-          visible: true,
-          dmOnly: true,
-          text: "DM Geheimnis",
-        },
-      ],
-    };
 
-    const player = stripDmOnlyForPlayer(content);
-    assert.equal(player.containsDmOnly, false);
-    assert.equal(player.elements?.find((el) => el.id === "d1")?.visible, false);
-  });
-
-  it("safety analysis warns about DM-only content", () => {
-    const report = analyzeLabelSafety({
-      title: "Test",
-      text: "Text",
-      containsDmOnly: true,
-      dmOnlyBlockCount: 1,
-    });
-
-    assert.equal(report.canExportPlayer, false);
-    assert.ok(report.warnings.some((w) => w.code === "dm_only"));
-  });
 
   it("saves and reopens label with visual elements", async () => {
     const world = await createWorld(
@@ -374,12 +321,10 @@ describe("Label editor extensions", () => {
         title: "Krypta",
         slug: "krypta",
         type: "room",
-        visibility: "dm_only",
         contentBlocks: [
           {
             type: "rich_text",
             sortOrder: 0,
-            visibility: "player_visible",
             content: "Ein dunkler Raum.",
           },
         ],
@@ -393,12 +338,10 @@ describe("Label editor extensions", () => {
         title: "Skelettwache",
         slug: "skelettwache",
         type: "encounter",
-        visibility: "dm_only",
         contentBlocks: [
           {
             type: "rich_text",
             sortOrder: 0,
-            visibility: "player_visible",
             content: "Zwei Skelette.",
           },
         ],
@@ -418,28 +361,4 @@ describe("Label editor extensions", () => {
     assert.equal(list.forNextSession, true);
   });
 
-  it("player label does not receive DM-only elements after strip", () => {
-    const content = removeDmOnlyElements({
-      title: "Test",
-      text: "Spieler",
-      containsDmOnly: true,
-      elements: [
-        {
-          id: "dm",
-          type: "text",
-          x: 0,
-          y: 0,
-          width: 1,
-          height: 1,
-          zIndex: 1,
-          visible: true,
-          dmOnly: true,
-          text: "secret",
-        },
-      ],
-    });
-
-    assert.equal(content.containsDmOnly, false);
-    assert.equal(content.elements?.length, 0);
-  });
 });

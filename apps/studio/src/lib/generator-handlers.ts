@@ -48,7 +48,6 @@ export async function getGeneratorPanelData(worldSlug: string, pageSlug: string)
     contentBlocks: page.contentBlocks.map((block) => ({
       type: block.type,
       content: block.content,
-      visibility: block.visibility,
     })),
     prepStatus: page.prepStatus,
   });

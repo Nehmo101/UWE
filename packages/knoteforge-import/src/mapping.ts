@@ -2,7 +2,6 @@ import type {
   ContentBlockType,
   PageType,
   Prisma,
-  Visibility,
 } from "@uwe/database/server";
 import type {
   KnoteForgeEntityType,
@@ -34,15 +33,6 @@ export function mapKnoteForgeTypeToPageType(type: KnoteForgeEntityType): PageTyp
   return KNOTEFORGE_TYPE_MAP[normalized] ?? "note";
 }
 
-export function mapVisibility(raw?: string | null): Visibility {
-  if (!raw) return "dm_only";
-  const v = raw.trim().toLocaleLowerCase("de");
-  if (v === "public" || v === "oeffentlich") return "public";
-  if (v === "player" || v === "spieler" || v === "player_visible") return "player_visible";
-  if (v === "dm" || v === "dm_only" || v === "sl") return "dm_only";
-  return "dm_only";
-}
-
 function buildProvenanceMetadata(
   entity: KnoteForgeExportEntity,
   importedAt: string,
@@ -61,20 +51,14 @@ function buildContentBlocks(
   importedAt: string,
 ): MappedContentBlockDraft[] {
   const blocks: MappedContentBlockDraft[] = [];
-  const visibility = mapVisibility(entity.visibility);
   let sortOrder = 0;
 
-  const pushBlock = (
-    type: ContentBlockType,
-    content: string,
-    blockVisibility: Visibility = visibility,
-  ) => {
+  const pushBlock = (type: ContentBlockType, content: string) => {
     if (!content.trim()) return;
     blocks.push({
       type,
       sortOrder: sortOrder++,
       content: content.trim(),
-      visibility: blockVisibility,
       metadata: buildProvenanceMetadata(entity, importedAt),
     });
   };
@@ -82,7 +66,7 @@ function buildContentBlocks(
   const normalizedType = entity.type.trim().toLocaleLowerCase("de");
 
   if (normalizedType === "spieler_notiz" && entity.content) {
-    pushBlock("player_text", entity.content, "player_visible");
+    pushBlock("player_text", entity.content);
     return blocks;
   }
 
@@ -96,7 +80,6 @@ function buildContentBlocks(
       type: "image",
       sortOrder: 0,
       content: imagePath,
-      visibility,
       metadata: {
         ...(buildProvenanceMetadata(entity, importedAt) as Record<string, unknown>),
         assetType: "image",
@@ -110,7 +93,6 @@ function buildContentBlocks(
       type: "handout",
       sortOrder: 0,
       content: entity.content ?? entity.title,
-      visibility,
       metadata: {
         ...(buildProvenanceMetadata(entity, importedAt) as Record<string, unknown>),
         printable: true,
@@ -123,7 +105,7 @@ function buildContentBlocks(
   }
 
   if (entity.playerContent) {
-    pushBlock("player_text", entity.playerContent, "player_visible");
+    pushBlock("player_text", entity.playerContent);
   }
 
   if (entity.content) {
@@ -133,7 +115,7 @@ function buildContentBlocks(
   }
 
   if (entity.gmContent) {
-    pushBlock("gm_note", entity.gmContent, "dm_only");
+    pushBlock("rich_text", entity.gmContent);
   }
 
   if (blocks.length === 0) {
@@ -141,7 +123,6 @@ function buildContentBlocks(
       type: "rich_text",
       sortOrder: 0,
       content: "",
-      visibility,
       metadata: buildProvenanceMetadata(entity, importedAt),
     });
   }
@@ -182,7 +163,6 @@ export function mapEntityToPageDraft(
     slug,
     type: pageType,
     summary: entity.summary ?? null,
-    visibility: mapVisibility(entity.visibility),
     tags,
     aliases: entity.aliases ?? [],
     contentBlocks: buildContentBlocks(entity, importedAt),

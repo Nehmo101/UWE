@@ -1,9 +1,6 @@
 import type {
   AccessContext,
-  AssetAccessInfo,
   AuthUser,
-  ContentBlockAccessInfo,
-  PageAccessInfo,
   PreviewOptions,
   UweRole,
   WorldMemberRole,
@@ -40,20 +37,6 @@ export function isDmOrOwner(ctx: AccessContext): boolean {
 }
 
 export function canEditContent(ctx: AccessContext): boolean {
-  if (isCoDm(ctx)) {
-    return false;
-  }
-  return isDmOrOwner(ctx);
-}
-
-export function canPublishContent(ctx: AccessContext): boolean {
-  if (isCoDm(ctx)) {
-    return false;
-  }
-  return isDmOrOwner(ctx);
-}
-
-export function canChangeVisibility(ctx: AccessContext): boolean {
   if (isCoDm(ctx)) {
     return false;
   }
@@ -104,8 +87,6 @@ export function buildAccessContext(input: {
   user: AuthUser | null;
   worldMembership: WorldMembership | null;
   guestModeEnabled: boolean;
-  unlockedPageIds?: Iterable<string>;
-  specificPlayerPageIds?: Iterable<string>;
   preview?: PreviewOptions;
 }): AccessContext {
   const previewAsUserId = input.preview?.previewAsUserId ?? null;
@@ -120,138 +101,33 @@ export function buildAccessContext(input: {
     }),
     guestModeEnabled: input.guestModeEnabled,
     previewAsUserId,
-    unlockedPageIds: new Set(input.unlockedPageIds ?? []),
-    specificPlayerPageIds: new Set(input.specificPlayerPageIds ?? []),
   };
 }
 
-function canViewSpecificPlayerPage(ctx: AccessContext, pageId: string): boolean {
-  return ctx.specificPlayerPageIds.has(pageId);
+/**
+ * The single content rule inside a world: whoever is assigned to the world
+ * sees everything in it.
+ *
+ * Per-item visibility is gone (Notiz Lasse, 2026-07-26) — there is no
+ * `dm_only`, no `player_visible`, no draft state and no per-page grant left to
+ * differentiate. What remains is the world boundary itself, which the caller
+ * has already crossed by holding an access context for this world. Anonymous
+ * guests are the one exception: they are not assigned to anything.
+ */
+export function canViewWorldContent(ctx: AccessContext): boolean {
+  return ctx.effectiveRole !== "guest";
 }
 
-function canViewUnlockedPage(ctx: AccessContext, pageId: string): boolean {
-  return ctx.unlockedPageIds.has(pageId);
+export function filterPagesForViewer<T>(ctx: AccessContext, pages: T[]): T[] {
+  return canViewWorldContent(ctx) ? pages : [];
 }
 
-export function canViewPage(ctx: AccessContext, page: PageAccessInfo): boolean {
-  if (page.visibility === "archived" || page.visibility === "private") {
-    return isWorldStaff(ctx);
-  }
-
-  if (isWorldStaff(ctx)) {
-    return true;
-  }
-
-  switch (page.visibility) {
-    case "dm_only":
-      return false;
-    case "player_visible":
-      return ctx.effectiveRole === "player";
-    case "public":
-      if (ctx.effectiveRole === "player") return true;
-      return ctx.effectiveRole === "guest" && ctx.guestModeEnabled;
-    case "specific_players":
-      return ctx.effectiveRole === "player" && canViewSpecificPlayerPage(ctx, page.id);
-    case "unlock_after_session":
-      return ctx.effectiveRole === "player" && canViewUnlockedPage(ctx, page.id);
-    default:
-      return false;
-  }
+export function filterBlocksForViewer<T>(ctx: AccessContext, blocks: T[]): T[] {
+  return canViewWorldContent(ctx) ? blocks : [];
 }
 
-export function canViewContentBlock(
-  ctx: AccessContext,
-  block: ContentBlockAccessInfo,
-  page: PageAccessInfo,
-): boolean {
-  if (!canViewPage(ctx, page)) {
-    return false;
-  }
-
-  if (isWorldStaff(ctx)) {
-    return true;
-  }
-
-  if (block.type === "gm_note") {
-    return false;
-  }
-
-  if (block.visibility === "archived" || block.visibility === "private" || block.visibility === "dm_only") {
-    return false;
-  }
-
-  if (block.visibility === "player_visible") {
-    return ctx.effectiveRole === "player";
-  }
-
-  if (block.visibility === "public") {
-    if (ctx.effectiveRole === "player") return true;
-    return ctx.effectiveRole === "guest" && ctx.guestModeEnabled;
-  }
-
-  if (block.visibility === "specific_players") {
-    return ctx.effectiveRole === "player" && canViewSpecificPlayerPage(ctx, page.id);
-  }
-
-  if (block.visibility === "unlock_after_session") {
-    return ctx.effectiveRole === "player" && canViewUnlockedPage(ctx, page.id);
-  }
-
-  return false;
-}
-
-export function filterPagesForViewer<T extends PageAccessInfo>(
-  ctx: AccessContext,
-  pages: T[],
-): T[] {
-  return pages.filter((page) => canViewPage(ctx, page));
-}
-
-export function filterBlocksForViewer<T extends ContentBlockAccessInfo>(
-  ctx: AccessContext,
-  blocks: T[],
-  page: PageAccessInfo,
-): T[] {
-  return blocks.filter((block) => canViewContentBlock(ctx, block, page));
-}
-
-export function canViewAsset(ctx: AccessContext, asset: AssetAccessInfo): boolean {
-  if (asset.visibility === "archived" || asset.visibility === "private") {
-    return isWorldStaff(ctx);
-  }
-
-  if (isWorldStaff(ctx)) {
-    return true;
-  }
-
-  switch (asset.visibility) {
-    case "dm_only":
-      return false;
-    case "player_visible":
-      return ctx.effectiveRole === "player";
-    case "public":
-      if (ctx.effectiveRole === "player") return true;
-      return ctx.effectiveRole === "guest" && ctx.guestModeEnabled;
-    case "specific_players":
-      return (
-        ctx.effectiveRole === "player" &&
-        (asset.linkedPageIds ?? []).some((pageId) => canViewSpecificPlayerPage(ctx, pageId))
-      );
-    case "unlock_after_session":
-      return (
-        ctx.effectiveRole === "player" &&
-        (asset.linkedPageIds ?? []).some((pageId) => canViewUnlockedPage(ctx, pageId))
-      );
-    default:
-      return false;
-  }
-}
-
-export function filterAssetsForViewer<T extends AssetAccessInfo>(
-  ctx: AccessContext,
-  assets: T[],
-): T[] {
-  return assets.filter((asset) => canViewAsset(ctx, asset));
+export function filterAssetsForViewer<T>(ctx: AccessContext, assets: T[]): T[] {
+  return canViewWorldContent(ctx) ? assets : [];
 }
 
 export function canPreviewAsPlayer(ctx: AccessContext): boolean {

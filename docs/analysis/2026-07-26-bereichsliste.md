@@ -63,7 +63,8 @@ Jeder Schritt ist ein eigener Commit mit grünem Gate.
 | **2 — Review + Freigabe-Links raus** (N.7, N.9) | ✅ fertig | `00e2655` | 71 Dateien, −5.855 Zeilen |
 | **3a — Geheimnis-Level raus** (Teil von N.2) | ✅ fertig | `731dbff` | 33 Dateien, −759 Zeilen |
 | **B8a + L4** — Legacy-Pfade, doppeltes `/api/auth/enter` | ✅ fertig | `380e900` | 13 Dateien, −251 Zeilen |
-| **3b — `visibility` und `publishStatus` raus** | ⏳ offen | — | ~191 Dateien, der größte Einzelposten |
+| **3b — `publishStatus` raus** | ✅ fertig | `4898c38` | 121 Dateien, −756 Zeilen |
+| **3b — `visibility` raus** | ✅ fertig | folgt | ~230 Dateien; inkl. `PagePlayerAccess`, `SessionUnlock`, `gm_note`, Signierte-Medien-URLs, Leak-Scanner |
 | **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ⏳ offen | — | |
 | **5 — Studio-System abräumen** (Abschnitt D) | ⏳ offen | — | |
 | **6 — Brain/Studio-Doppelungen** (Abschnitt H) | ⏳ offen | — | |

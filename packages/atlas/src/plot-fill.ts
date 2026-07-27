@@ -43,7 +43,6 @@ export interface PlotFillOptions {
   /** Draw layer for generated objects. Defaults to 50. */
   layer?: number;
   /** Visibility copied onto generated objects. Defaults to dm_only. */
-  visibility?: string;
 }
 
 export interface PlotFillObject {
@@ -54,7 +53,6 @@ export interface PlotFillObject {
   scale: number;
   rotation: number;
   layer: number;
-  visibility: string;
   style: {
     gouache: string;
     lineWidth?: number;
@@ -189,7 +187,6 @@ export function fillPlotWithGouacheAssets(
       scale: scaleMin + rng() * (scaleMax - scaleMin),
       rotation: rotateMin + rng() * (rotateMax - rotateMin),
       layer: options.layer ?? 50,
-      visibility: options.visibility ?? "dm_only",
       style,
     });
   }

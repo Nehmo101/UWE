@@ -579,7 +579,6 @@ async function executeDndPageImport(
           type: "rich_text",
           sortOrder: 0,
           content: document.body,
-          visibility: "dm_only",
           metadata: {
             source: "import-central",
             importFormat: "markdown",

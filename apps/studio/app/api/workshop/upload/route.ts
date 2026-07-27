@@ -69,7 +69,6 @@ export async function POST(request: Request) {
     storageKey: validated.storageKey,
     mimeType: validated.mimeType,
     size: buffer.length,
-    visibility: "dm_only",
     metadata: { source: "workshop_photo", category },
   });
 

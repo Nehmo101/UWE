@@ -143,7 +143,6 @@ export default async function WorldDashboardPage({ params }: Props) {
             title: page.title,
             slug: page.slug,
             type: page.type,
-            visibility: page.visibility,
             updatedAt: page.updatedAt.toISOString(),
           })),
         }}

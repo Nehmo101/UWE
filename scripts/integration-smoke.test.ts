@@ -204,11 +204,10 @@ describe("integration smoke — minimal app access paths", () => {
     assert.match(portalShim, /redirect\(/);
   });
 
-  it("keeps DM-only content covered by public leak regression tests", () => {
-    const visibilityTest = read("packages/database/src/visibility-security.test.ts");
-    assert.match(visibilityTest, /dm_only content must NEVER be readable through portal contexts/);
-    assert.match(visibilityTest, /hides dm_only pages from portal page listings/);
-    assert.match(visibilityTest, /dm_only block leaked into portal page/);
+  it("keeps the access model covered by the role matrix", () => {
+    const roleMatrix = read("packages/security-tests/src/role-matrix.test.ts");
+    assert.match(roleMatrix, /whoever is assigned to a world sees/);
+    assert.match(roleMatrix, /anonymous/);
   });
 });
 
@@ -277,9 +276,8 @@ describe("integration smoke — DnD generator AI tasks", () => {
     assert.match(actionsSource, /fill_dungeon_room/);
   });
 
-  it("blocks cloud provider when context has local knowledge", () => {
+  it("keeps the local-knowledge detector for privacy checks", () => {
     assert.match(privacySource, /contextContainsLocalKnowledge/);
-    assert.match(privacySource, /isCloudProvider/);
   });
 });
 
@@ -292,7 +290,6 @@ describe("integration smoke — AI security policy module", () => {
     const policy = read("packages/security/src/security/ai-policy.ts");
     assert.match(policy, /requireAiRole|canUseAi/);
     assert.match(policy, /validatePromptLength/);
-    assert.match(policy, /resolveEffectiveAllowDmOnly/);
   });
 
   it("protects unauthenticated AI routes", () => {
@@ -309,14 +306,12 @@ describe("integration smoke — security test coverage", () => {
     "packages/ai-brain/src/privacy.test.ts",
     "packages/ai-brain/src/router/router.test.ts",
     "packages/ai-brain/src/inference.test.ts",
-    "packages/database/src/visibility-security.test.ts",
     "packages/database/src/production-safety.test.ts",
     "packages/database/src/security-dashboard.test.ts",
     "packages/auth/src/security-access.test.ts",
     "packages/database/src/system-status.test.ts",
     "apps/studio/src/lib/studio-api-auth.test.ts",
     "apps/studio/src/admin-status.test.ts",
-    "packages/security-tests/src/public-leak-scanner.test.ts",
     "packages/security-tests/src/role-matrix.test.ts",
     "packages/security-tests/src/route-authz.test.ts",
   ];

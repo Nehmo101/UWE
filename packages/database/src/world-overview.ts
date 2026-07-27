@@ -2,10 +2,8 @@ import type { PrismaClient } from "./client";
 import type {
   GameSessionStatus,
   PageType,
-  Visibility,
 } from "./generated/prisma/client";
 import { navCategoryForPageType, type NavCategory } from "./page-types";
-import { isPageAccessible } from "./permissions";
 import { SettingsService } from "./settings-service";
 
 /**
@@ -18,7 +16,6 @@ export interface WorldOverviewPage {
   title: string;
   slug: string;
   type: PageType;
-  visibility: Visibility;
   updatedAt: Date;
 }
 
@@ -91,7 +88,6 @@ export class WorldOverviewService {
             title: true,
             slug: true,
             type: true,
-            visibility: true,
             updatedAt: true,
           },
         }),
@@ -115,15 +111,9 @@ export class WorldOverviewService {
       ]);
 
     const byCategory: Record<NavCategory, number> = { ...EMPTY_CATEGORY_COUNTS };
-    let visiblePageCount = 0;
-
-    const portalOptions = {
-      publicSharingEnabled: settings.portal.publicSharingEnabled,
-    };
 
     for (const page of pages) {
       byCategory[navCategoryForPageType(page.type)] += 1;
-      if (isPageAccessible(page, "portal", portalOptions)) visiblePageCount += 1;
     }
 
     const upcoming = gameSessions
@@ -172,7 +162,7 @@ export class WorldOverviewService {
       portal: {
         portalEnabled: settings.portal.portalEnabled,
         publicSharingEnabled: settings.portal.publicSharingEnabled,
-        visiblePageCount,
+        visiblePageCount: pages.length,
       },
       nextSession,
       openPlots,

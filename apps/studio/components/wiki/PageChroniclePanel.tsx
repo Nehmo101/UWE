@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   CollapsibleSection,
-  VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
   createPrismaClient,
@@ -11,7 +10,6 @@ import {
   getAppRepository,
   parseInGameDate,
   parseWorldCalendarMonths,
-  VisibilityEnum,
 } from "@uwe/database/server";
 import {
   createWorldEventAction,
@@ -21,8 +19,6 @@ import { Button, Card, CardContent, Input, Label, Textarea } from "@/src/compone
 
 /** TODO(design-kit): natives Select bleibt — Server-Action-Formular (FormData)
     braucht name/defaultValue ohne Client-State, siehe SessionDetailClient.tsx. */
-const SELECT_CLASS =
-  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface Props {
   worldSlug: string;
@@ -157,21 +153,6 @@ export async function PageChroniclePanel({ worldSlug, pageId, pageSlug, category
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="chronicle-event-visibility">Sichtbarkeit</Label>
-          <select
-            id="chronicle-event-visibility"
-            name="visibility"
-            defaultValue="private"
-            className={SELECT_CLASS}
-          >
-            {Object.values(VisibilityEnum).map((value) => (
-              <option key={value} value={value}>
-                {VISIBILITY_LABELS[value]}
-              </option>
-            ))}
-          </select>
-        </div>
 
         <Button type="submit" className="self-start">
           Chronik-Eintrag anlegen

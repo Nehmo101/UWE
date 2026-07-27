@@ -114,7 +114,6 @@ export async function reindexBrainWorld(
 
   const documents = await brainStore.listDocuments(worldSlug, {
     campaignId: options?.campaignId,
-    accessContext: "dm",
   });
 
   let providerOnline = false;

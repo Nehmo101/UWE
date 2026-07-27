@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { entityToCreatePageInput } from "./page-mapper";
 
 describe("entityToCreatePageInput", () => {
-  it("maps type, tags and provenance with dm_only visibility", () => {
+  it("maps type, tags and provenance", () => {
     const input = entityToCreatePageInput(
       {
         kind: "quest",
@@ -22,9 +22,7 @@ describe("entityToCreatePageInput", () => {
     );
 
     assert.equal(input.type, "quest");
-    assert.equal(input.visibility, "dm_only");
     assert.deepEqual(input.tags, ["Nordturm", "Schlüssel"]);
-    assert.equal(input.contentBlocks?.[0]?.visibility, "dm_only");
     assert.deepEqual(input.contentBlocks?.[0]?.metadata, {
       source: "pdf-campaign-import",
       importJobId: "job-1",

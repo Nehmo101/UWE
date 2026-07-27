@@ -4,15 +4,6 @@ export type UweRole = "owner" | "admin" | "dm" | "player" | "readonly" | "guest"
 /** Role within a specific world. */
 export type WorldMemberRole = "owner" | "dm" | "co_dm" | "player";
 
-export type PageVisibility =
-  | "private"
-  | "dm_only"
-  | "player_visible"
-  | "public"
-  | "specific_players"
-  | "unlock_after_session"
-  | "archived";
-
 export interface AuthUser {
   id: string;
   displayName: string;
@@ -39,23 +30,6 @@ export interface WorldMembership {
   characterName: string | null;
 }
 
-export interface PageAccessInfo {
-  id: string;
-  visibility: PageVisibility;
-}
-
-export interface ContentBlockAccessInfo {
-  visibility: PageVisibility;
-  type?: string;
-}
-
-export interface AssetAccessInfo {
-  id: string;
-  visibility: PageVisibility;
-  /** Page IDs linked to this asset (for specific_players / unlock_after_session). */
-  linkedPageIds?: string[];
-}
-
 /**
  * Runtime access context for permission checks in Studio or Portal.
  * Built from the authenticated user, world membership, and optional preview mode.
@@ -68,10 +42,6 @@ export interface AccessContext {
   guestModeEnabled: boolean;
   /** When set, DM/owner views content as this player would see it. */
   previewAsUserId: string | null;
-  /** Page IDs unlocked for the effective viewer via session unlocks. */
-  unlockedPageIds: ReadonlySet<string>;
-  /** Page IDs the effective viewer may access via specific_players grants. */
-  specificPlayerPageIds: ReadonlySet<string>;
 }
 
 export interface PreviewOptions {

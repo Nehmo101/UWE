@@ -6,7 +6,6 @@ import {
   SettingsToggleGroup,
   ThemeSettingsPanel,
   ThemePicker,
-  VISIBILITY_LABELS,
   VisualThemePreview,
 } from "@uwe/shared-ui";
 import { SettingsCollapsiblePanel } from "../../components/SettingsCollapsiblePanel";
@@ -23,7 +22,6 @@ import {
   resolveAgentJobsConfig,
   resolveCalendarConfig,
   resolveDndApiConfig,
-  VisibilityEnum,
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
@@ -275,16 +273,6 @@ export default async function SettingsPage({ searchParams }: Props) {
             <form action={updateSettingsAction} className={FORM_CLASS}>
               <input type="hidden" name="tab" value="worlds" />
               <h2 className={HEADING_CLASS}>World Settings</h2>
-              <FieldSelect
-                id="settings-default-visibility"
-                name="defaultVisibility"
-                label="Default Visibility"
-                defaultValue={settings.worlds.defaultVisibility}
-                options={Object.values(VisibilityEnum).map((value) => ({
-                  value,
-                  label: VISIBILITY_LABELS[value],
-                }))}
-              />
               <FieldSelect
                 id="settings-default-canonical-status"
                 name="defaultCanonicalStatus"

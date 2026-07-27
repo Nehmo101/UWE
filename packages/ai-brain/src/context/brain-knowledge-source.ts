@@ -1,10 +1,9 @@
-import type { AiTaskType, AiContextBrainEntry, BrainVisibility } from "../types";
+import type { AiTaskType, AiContextBrainEntry } from "../types";
 
 export interface BrainKnowledgeEntry {
   id: string;
   title: string;
   content: string;
-  visibility: BrainVisibility;
   sourceType: string;
   objectRef?: string | null;
   trustLevel?: string | null;
@@ -16,7 +15,6 @@ export interface BrainKnowledgeQuery {
   sessionId?: string;
   pageId?: string;
   taskType: AiTaskType;
-  allowDmOnly: boolean;
   maxEntries?: number;
   /** When set, prefer semantic/keyword chunk retrieval over listing full documents. */
   query?: string;
@@ -37,7 +35,6 @@ export function toContextBrainEntry(entry: BrainKnowledgeEntry): AiContextBrainE
     entryId: entry.id,
     title: entry.title,
     content: entry.content,
-    visibility: entry.visibility,
     sourceType: entry.sourceType,
     objectRef: entry.objectRef,
     trustLevel: entry.trustLevel,
@@ -53,7 +50,6 @@ export function serializeBrainEntries(entries: AiContextBrainEntry[]): string {
     [
       `### ${entry.title} (${entry.entryId})`,
       `Quelle: ${entry.sourceType}`,
-      `Sichtbarkeit: ${entry.visibility}`,
       entry.trustLevel ? `Vertrauen: ${entry.trustLevel}` : "",
       entry.objectRef ? `Bezug: ${entry.objectRef}` : "",
       entry.content,

@@ -174,7 +174,6 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
                           {blocks.map((block) => (
                             <SelectItem key={block.id} value={`content_block:${block.id}`}>
                               {block.pageTitle} · {block.type}
-                              {block.visibility === "dm_only" ? " (DM)" : ""}
                             </SelectItem>
                           ))}
                         </SelectGroup>

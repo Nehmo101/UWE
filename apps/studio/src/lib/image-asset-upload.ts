@@ -109,7 +109,6 @@ export async function storeImageAsset(
     storageKey: validated.storageKey,
     mimeType: validated.mimeType,
     size: buffer.length,
-    visibility: "dm_only",
     metadata: { source: options.source },
   });
 

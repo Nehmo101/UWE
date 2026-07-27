@@ -60,7 +60,6 @@ export function Atlas3DDescribePanel({ worldSlug, nodeTitle, levelLabel, onClose
           providerId: provider,
           model,
           userPrompt: userPromptParts,
-          allowDmOnly: true,
           useMock: model === "mock-model" || process.env.NEXT_PUBLIC_AI_USE_MOCK === "true",
           sync: true,
         }),

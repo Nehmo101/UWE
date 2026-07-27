@@ -72,7 +72,6 @@ export interface BackupPageRecord {
   slug: string;
   type: string;
   summary: string | null;
-  visibility: string;
   canonicalStatus: string;
   prepStatus: string | null;
   tags: unknown;
@@ -88,7 +87,6 @@ export interface BackupContentBlockRecord {
   type: string;
   sortOrder: number;
   content: string;
-  visibility: string;
   metadata: unknown;
   createdAt: string;
   updatedAt: string;
@@ -113,7 +111,6 @@ export interface BackupAssetRecord {
   storageKey: string;
   mimeType: string | null;
   size: number;
-  visibility: string;
   tags: unknown;
   metadata: unknown;
   createdAt: string;
@@ -211,7 +208,6 @@ export interface BackupSoundboardButtonRecord {
   volume: number;
   loop: boolean;
   tags: unknown;
-  visibility: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -234,19 +230,7 @@ export interface BackupWorldMembershipRecord {
   updatedAt: string;
 }
 
-export interface BackupPagePlayerAccessRecord {
-  id: string;
-  pageId: string;
-  userId: string;
-}
 
-export interface BackupSessionUnlockRecord {
-  id: string;
-  pageId: string;
-  userId: string;
-  unlockedAt: string;
-  sessionLabel: string | null;
-}
 
 export interface BackupSettingsRecord {
   app: Record<string, unknown>;
@@ -268,7 +252,6 @@ export interface BackupPlayerNoteRecord {
   gameSessionId: string | null;
   userId: string;
   content: string;
-  visibility: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -280,7 +263,6 @@ export interface BackupPageTemplateRecord {
   name: string;
   description: string;
   pageType: string;
-  defaultVisibility: string;
   titlePlaceholder: string;
   blocks: unknown;
   isSystem: boolean;
@@ -520,8 +502,6 @@ export interface BackupData {
   soundboardButtons: BackupSoundboardButtonRecord[];
   soundboardButtonPageLinks: BackupSoundboardButtonPageLinkRecord[];
   worldMemberships: BackupWorldMembershipRecord[];
-  pagePlayerAccess: BackupPagePlayerAccessRecord[];
-  sessionUnlocks: BackupSessionUnlockRecord[];
   users: BackupUserRecord[];
   pageTemplates?: BackupPageTemplateRecord[];
   playerNotes?: BackupPlayerNoteRecord[];

@@ -1,5 +1,5 @@
 import type { PrismaClient } from "./client";
-import type { Prisma } from "./generated/prisma/client";
+import type {} from "./generated/prisma/client";
 import type { AccessContext, AuthUser, PreviewOptions, WorldMemberRole } from "@uwe/auth";
 import {
   buildAccessContext,
@@ -9,9 +9,7 @@ import {
   canReadAsset,
   canReadContent,
   canReadWorld,
-  canViewAsset,
-  canViewContentBlock,
-  canViewPage,
+  canViewWorldContent,
   canViewPlayerNote,
   filterAssetsForViewer,
   filterBlocksForViewer,
@@ -56,7 +54,6 @@ import {
 } from "./world-event-service";
 import {
   SoundboardService,
-  isSoundboardButtonVisibleInPortal,
   toDmSoundboardButtonView,
   toPortalSoundboardButtonView,
   type DmSoundboardButtonView,
@@ -72,7 +69,6 @@ import {
 import {
   createPortalDashboardService,
   PortalDashboardService,
-  sessionUnlockLabel,
   type PortalDashboardData,
 } from "./portal-dashboard-service";
 import {
@@ -294,33 +290,6 @@ export class AuthService {
     });
 
     return updated;
-  }
-
-  async grantPagePlayerAccess(pageId: string, userId: string) {
-    return this.db.pagePlayerAccess.upsert({
-      where: {
-        pageId_userId: { pageId, userId },
-      },
-      create: { pageId, userId },
-      update: {},
-    });
-  }
-
-  async unlockPageForUser(pageId: string, userId: string, sessionLabel?: string | null) {
-    return this.db.sessionUnlock.upsert({
-      where: {
-        pageId_userId: { pageId, userId },
-      },
-      create: {
-        pageId,
-        userId,
-        sessionLabel: sessionLabel ?? null,
-      },
-      update: {
-        unlockedAt: new Date(),
-        sessionLabel: sessionLabel ?? null,
-      },
-    });
   }
 
   async listUsersForAdmin(): Promise<AdminUserView[]> {
@@ -779,21 +748,6 @@ export class AuthService {
         })
       : null;
 
-    const effectiveUserId = options.preview?.previewAsUserId ?? user?.id ?? null;
-
-    const [unlocks, specificAccess] = effectiveUserId
-      ? await Promise.all([
-          this.db.sessionUnlock.findMany({
-            where: { userId: effectiveUserId, page: { worldId: world.id } },
-            select: { pageId: true },
-          }),
-          this.db.pagePlayerAccess.findMany({
-            where: { userId: effectiveUserId, page: { worldId: world.id } },
-            select: { pageId: true },
-          }),
-        ])
-      : [[], []];
-
     return buildAccessContext({
       user: user ? this.toAuthUser(user) : null,
       worldMembership: membership
@@ -805,8 +759,6 @@ export class AuthService {
           }
         : null,
       guestModeEnabled: isGuestPortalAccessAllowed(systemSettings, world.guestModeEnabled),
-      unlockedPageIds: unlocks.map((entry) => entry.pageId),
-      specificPlayerPageIds: specificAccess.map((entry) => entry.pageId),
       preview: options.preview,
     });
   }
@@ -840,7 +792,7 @@ export class AuthService {
 
     return {
       ...page,
-      contentBlocks: filterBlocksForViewer(ctx, page.contentBlocks, page),
+      contentBlocks: filterBlocksForViewer(ctx, page.contentBlocks),
     };
   }
 
@@ -858,41 +810,25 @@ export class AuthService {
       return [];
     }
 
-    // WS3 (perf): pre-narrow the SQL for non-staff viewers to the only
-    // visibility combinations canViewPage can ever admit for a
-    // player/guest, so the portal wiki index no longer materialises every row.
-    // This is a CONSERVATIVE SUPERSET: it drops only rows canViewPage always
-    // rejects for a non-staff viewer (unpublished, or visibility archived/
-    // private/dm_only). Secret/reveal state is left to the JS filter. Staff
-    // (DM/owner/co-DM) still load everything, exactly as before.
-    const nonStaffNarrowing: Prisma.PageWhereInput = isWorldStaff(ctx)
-      ? {}
-      : {
-          visibility: {
-            in: ["player_visible", "public", "specific_players", "unlock_after_session"],
-          },
-        };
-
+    // The WS3 pre-narrowing that used to sit here is gone with visibility:
+    // there is no combination left that would let SQL drop a row a viewer may
+    // not see. Everyone assigned to the world loads the whole world index.
     const pages = await this.db.page.findMany({
-      where: {
-        world: { slug: worldSlug },
-        ...nonStaffNarrowing,
-      },
+      where: { world: { slug: worldSlug } },
       select: {
         id: true,
         title: true,
         slug: true,
         type: true,
         summary: true,
-        visibility: true,
         questStatus: true,
         updatedAt: true,
       },
       orderBy: [{ title: "asc" }],
     });
 
-    // filterPagesForViewer stays authoritative (defense in depth): the SQL only
-    // pre-narrows; this JS filter still decides every page and is unchanged.
+    // filterPagesForViewer stays as the single gate: it returns nothing for an
+    // anonymous guest and everything for anyone assigned to the world.
     return filterPagesForViewer(ctx, pages);
   }
 
@@ -917,7 +853,6 @@ export class AuthService {
         id: true,
         title: true,
         slug: true,
-        visibility: true,
         aliases: true,
       },
     });
@@ -941,8 +876,7 @@ export class AuthService {
 
   /**
    * Renders block content as HTML with resolved wikilinks for the
-   * authenticated portal. Links to pages the viewer cannot see are shown as
-   * "Verborgen" and never expose the target title or slug. Pass a `renderCtx`
+   * authenticated portal. Pass a `renderCtx`
    * from {@link buildViewerRenderContext} to reuse one page-index query across
    * all blocks; omit it to build the lookup for this block only.
    */
@@ -969,10 +903,6 @@ export class AuthService {
 
       if (!target) {
         return { displayText, status: "broken" as const };
-      }
-
-      if (!canReadContent(ctx.user, target, context.scope.world, context.scope)) {
-        return { displayText: raw.label ?? "Verborgen", status: "hidden" as const };
       }
 
       return {
@@ -1020,19 +950,6 @@ export class AuthService {
     };
   }
 
-  private canViewWorldEventForPortal(
-    ctx: AccessContext,
-    event: Pick<WorldEventWithLinks, "visibility">,
-  ): boolean {
-    if (event.visibility !== "player_visible" && event.visibility !== "public") {
-      return false;
-    }
-    if (ctx.effectiveRole === "player") {
-      return true;
-    }
-    return ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm" || ctx.effectiveRole === "admin";
-  }
-
   private toPortalWorldEventViewForViewer(
     event: WorldEventWithLinks,
     ctx: AccessContext,
@@ -1077,7 +994,6 @@ export class AuthService {
     const portalRows = rows as WorldEventWithLinks[];
 
     return portalRows
-      .filter((event) => this.canViewWorldEventForPortal(ctx, event))
       .map((event) => this.toPortalWorldEventViewForViewer(event, ctx))
       .sort((a, b) => compareInGameDates(a.inGameDate, b.inGameDate));
   }
@@ -1106,7 +1022,6 @@ export class AuthService {
     const portalRows = rows as WorldEventWithLinks[];
 
     return portalRows
-      .filter((event) => this.canViewWorldEventForPortal(ctx, event))
       .map((event) => this.toPortalWorldEventViewForViewer(event, ctx))
       .sort((a, b) => compareInGameDates(a.inGameDate, b.inGameDate));
   }
@@ -1261,7 +1176,6 @@ export class AuthService {
     const scope = scopeFromAccessContext(ctx, asset.worldId);
     const accessInfo = {
       id: asset.id,
-      visibility: asset.visibility,
       linkedPageIds: asset.pageLinks.map((link) => link.pageId),
     };
 
@@ -1309,26 +1223,11 @@ export class AuthService {
     const buttons = await this.soundboard.listByWorld(worldSlug, options);
 
     return buttons
-      .filter((button) => {
-        if (!isSoundboardButtonVisibleInPortal(button.visibility)) {
-          return false;
-        }
-
-        if (button.assetId && button.asset) {
-          return canReadAsset(
-            ctx.user,
-            {
-              id: button.asset.id,
-              visibility: button.asset.visibility,
-              linkedPageIds: [],
-            },
-            scope.world,
-            scope,
-          );
-        }
-
-        return true;
-      })
+      .filter((button) =>
+        button.assetId && button.asset
+          ? canReadAsset(ctx.user, { id: button.asset.id }, scope.world, scope)
+          : true,
+      )
       .map(toPortalSoundboardButtonView);
   }
 
@@ -1338,7 +1237,7 @@ export class AuthService {
     ctx: AccessContext,
   ): Promise<PortalSoundboardButtonView | null> {
     const button = await this.soundboard.getByIdForWorld(worldSlug, buttonId);
-    if (!button || !isSoundboardButtonVisibleInPortal(button.visibility)) {
+    if (!button) {
       return null;
     }
 
@@ -1352,16 +1251,7 @@ export class AuthService {
       }
 
       const scope = scopeFromAccessContext(ctx, world.id);
-      const allowed = canReadAsset(
-        ctx.user,
-        {
-          id: button.asset.id,
-          visibility: button.asset.visibility,
-          linkedPageIds: [],
-        },
-        scope.world,
-        scope,
-      );
+      const allowed = canReadAsset(ctx.user, { id: button.asset.id }, scope.world, scope);
       if (!allowed) {
         return null;
       }
@@ -1490,25 +1380,6 @@ export class AuthService {
     });
   }
 
-  async listNewlyUnlockedPagesForSession(
-    worldSlug: string,
-    sessionId: string,
-    ctx: AccessContext,
-  ): Promise<import("./portal-dashboard-service").PortalDashboardPage[]> {
-    const session = await this.getGameSessionForViewer(worldSlug, sessionId, ctx);
-    if (!session) {
-      return [];
-    }
-
-    const label = sessionUnlockLabel(session.sessionNumber, session.title);
-    return this.portalDashboard.listNewlyUnlockedPagesForSession(
-      worldSlug,
-      ctx,
-      session.sessionNumber,
-      label,
-    );
-  }
-
   async listCharactersForViewer(
     worldSlug: string,
     ctx: AccessContext,
@@ -1539,17 +1410,8 @@ export class AuthService {
     const visible: PortalCharacterView[] = [];
 
     for (const character of characters) {
-      if (character.pageId && character.page) {
-        const page = await this.db.page.findUnique({
-          where: { id: character.pageId },
-          select: {
-            id: true,
-            visibility: true,
-          },
-        });
-        if (page && !canViewPage(ctx, page)) {
-          continue;
-        }
+      if (character.pageId && character.page && !canViewWorldContent(ctx)) {
+        continue;
       }
       visible.push(toPortalCharacterView(character));
     }
@@ -1585,17 +1447,8 @@ export class AuthService {
         return null;
       }
 
-      if (character.pageId) {
-        const page = await this.db.page.findUnique({
-          where: { id: character.pageId },
-          select: {
-            id: true,
-            visibility: true,
-          },
-        });
-        if (page && !canViewPage(ctx, page)) {
-          return null;
-        }
+      if (character.pageId && !canViewWorldContent(ctx)) {
+        return null;
       }
     }
 
@@ -1702,9 +1555,7 @@ export function createAuthService(db: PrismaClient): AuthService {
 export {
   canReadAsset,
   canReadContent,
-  canViewAsset,
-  canViewContentBlock,
-  canViewPage,
+  canViewWorldContent,
   filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,

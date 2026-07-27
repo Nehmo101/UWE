@@ -296,7 +296,7 @@ export class PlayerNoteService {
   async adoptAsContentBlock(
     noteId: string,
     targetPageId: string,
-    options?: { blockType?: "player_text" | "gm_note"; visibility?: "dm_only" | "player_visible" },
+    options?: { blockType?: "player_text" | "rich_text" },
   ): Promise<{ note: PlayerNoteWithRelations; contentBlockId: string }> {
     const note = await this.getById(noteId);
     if (!note) {
@@ -323,7 +323,6 @@ export class PlayerNoteService {
         type: options?.blockType ?? "player_text",
         sortOrder,
         content: note.content,
-        visibility: options?.visibility ?? "player_visible",
         metadata: {
           source: "player_note",
           playerNoteId: note.id,
@@ -366,7 +365,6 @@ export class PlayerNoteService {
         slug: baseSlug,
         type: "note",
         summary: `Übernommen von ${note.user.displayName}`,
-        visibility: "dm_only",
         canonicalStatus: "idea",
         contentBlocks: {
           create: [
@@ -374,7 +372,6 @@ export class PlayerNoteService {
               type: "rich_text",
               sortOrder: 0,
               content: note.content,
-              visibility: "dm_only",
               metadata: {
                 source: "player_note",
                 playerNoteId: note.id,

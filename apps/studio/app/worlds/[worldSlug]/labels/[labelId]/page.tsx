@@ -6,7 +6,6 @@ import {
 } from "@uwe/shared-ui";
 import {
   analyzeLabelExportWarnings,
-  analyzeLabelSafety,
   createLabelService,
   createPrintListService,
   getAppRepository,
@@ -70,7 +69,6 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
   const templates = await labelService.listTemplates(world.id);
   const lists = await createPrintListService().listByWorld(worldSlug);
   const parsed = normalizeLabel(label);
-  const safety = analyzeLabelSafety(parsed.content, parsed.content.elements);
   const exportWarnings = analyzeLabelExportWarnings(parsed.content, parsed.layoutSettings);
   const assets = await repo.listAssetsByWorld(worldSlug);
   const imageAssets = assets
@@ -79,7 +77,6 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
       id: a.id,
       title: a.title,
       url: `/api/assets/${a.id}/file`,
-      visibility: a.visibility,
     }));
 
   return (
@@ -206,12 +203,6 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
                     : "Gespeichert."}
           </Alert>
         )}
-
-        {safety.warnings.map((warning) => (
-          <Alert key={warning.code} tone="warning">
-            {warning.message}
-          </Alert>
-        ))}
 
         {exportWarnings.map((warning) => (
           <Alert key={`export-${warning.code}-${warning.message}`} tone="warning">

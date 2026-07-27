@@ -157,14 +157,12 @@ export async function seedStressWorld(
           slug: `perf-page-${i + 1}`,
           type,
           summary: `Synthetic page ${i + 1} for performance testing.`,
-          visibility: i % 5 === 0 ? "dm_only" : "player_visible",
           canonicalStatus: "canon",
           tags: pickTags(i, scale.tagVariants),
           contentBlocks: [
             {
               type: "rich_text",
               sortOrder: 0,
-              visibility: "public",
               content: `Content for perf page ${i + 1}. Links to [[Perf Page ${((i + 1) % scale.pages) + 1}]].`,
             },
           ],
@@ -203,7 +201,6 @@ export async function seedStressWorld(
       storageKey: `perf-test/asset-${i + 1}.png`,
       mimeType: "image/png",
       size: 1024 + i,
-      visibility: "dm_only",
       tags: pickTags(i, scale.tagVariants),
     });
   }
@@ -262,13 +259,11 @@ export async function seedStressWorld(
       slug: `perf-handout-${i + 1}`,
       type: "handout",
       summary: "Player handout for perf testing.",
-      visibility: "player_visible",
       tags: ["handout", ...pickTags(i, 0)],
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: `Handout content ${i + 1}.`,
         },
       ],

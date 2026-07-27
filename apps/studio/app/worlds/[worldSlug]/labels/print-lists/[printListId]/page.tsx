@@ -9,7 +9,6 @@ import {
   createPrintListService,
   getAppRepository,
   LABEL_PRINT_STATUS_LABELS,
-  normalizeLabel,
   prisma,
   summarizePrintList,
 } from "@uwe/database/server";
@@ -84,12 +83,10 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
   const printCenterHref = `/worlds/${worldSlug}/print-center`;
   const returnTo = `/worlds/${worldSlug}/labels/print-lists/${printListId}`;
   const editorItems = list.items.map((item) => {
-    const parsed = normalizeLabel(item.label);
     return {
       labelId: item.labelId,
       title: item.label.title,
       copies: item.copies,
-      containsDmOnly: parsed.content.containsDmOnly,
       previewHref: `/worlds/${worldSlug}/labels/${item.labelId}/preview`,
       labelHref: `/worlds/${worldSlug}/labels/${item.labelId}`,
     };
@@ -186,10 +183,6 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
         )}
         {error && <Alert tone="warning">{decodeURIComponent(error)}</Alert>}
 
-        {summary.hasDmOnly && (
-          <Alert tone="warning">Diese Druckliste enthält Labels mit DM-only Inhalten.</Alert>
-        )}
-
         <PrintListPreviewPanel
           exportUrl={`/api/worlds/${worldSlug}/print-lists/${printListId}/export?format=html`}
         />
@@ -209,7 +202,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
                 Keine Drucker. <a href="/system/printers">Suchen</a>
               </p>
             ) : (
-              <PrintListRtxForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} hasDmOnly={summary.hasDmOnly} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />
+              <PrintListRtxForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />
             )}
           </CardContent>
         </Card>

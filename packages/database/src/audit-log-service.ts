@@ -64,7 +64,6 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   content_created: "Inhalt erstellt",
   content_updated: "Inhalt geändert",
   content_deleted: "Inhalt gelöscht",
-  visibility_changed: "Sichtbarkeit geändert",
   secret_revealed: "Secret angezeigt",
   import_started: "Import gestartet",
   import_completed: "Import abgeschlossen",

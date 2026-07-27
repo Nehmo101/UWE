@@ -63,7 +63,6 @@ export async function postBrainRun(
     model: string;
     userPrompt?: string;
     sessionId?: string;
-    allowDmOnly?: boolean;
     useMock?: boolean;
     sync?: boolean;
   },

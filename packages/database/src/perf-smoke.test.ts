@@ -7,7 +7,7 @@ import { PERF_BUDGETS_MS, PERF_SMOKE_SCALE, assertWithinBudget } from "./perf-bu
 import { createTagService } from "./tag-service";
 import { createLifeAdminService } from "./life-admin-service";
 import { createTestBrainClient, createTestDatabaseUrl, type BrainPrismaClient } from "./test-helpers";
-import { buildSearchIndexForScope } from "./search-index";
+import { buildSearchIndex } from "./search-index";
 import { searchForWikiContext } from "./search-service";
 
 function elapsed(start: bigint): number {
@@ -48,14 +48,14 @@ describe("performance smoke", () => {
       },
     });
     const start = process.hrtime.bigint();
-    buildSearchIndexForScope(pages, "studio");
+    buildSearchIndex(pages);
     const ms = elapsed(start);
     assertWithinBudget("searchIndexBuild", ms, PERF_BUDGETS_MS.searchIndexBuild);
   });
 
   it("runs global search within budget", async () => {
     const start = process.hrtime.bigint();
-    const results = await searchForWikiContext(db, "dm", {
+    const results = await searchForWikiContext(db, {
       query: "Perf Page",
       worldSlug,
       limit: 25,

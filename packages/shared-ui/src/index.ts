@@ -151,8 +151,6 @@ export {
   QUEST_STATUS_LABELS,
   RTX_STATE_DESCRIPTIONS,
   RTX_STATE_LABELS,
-  VISIBILITY_DESCRIPTIONS,
-  VISIBILITY_LABELS,
   AssetTypeBadge,
   CanonicalBadge,
   DungeonPrepStatusBadge,
@@ -163,7 +161,6 @@ export {
   QuestStatusBadge,
   RtxStatusBadge,
   TagChip,
-  VisibilityBadge,
   type RtxConnectorState,
 } from "./StatusBadges";
 

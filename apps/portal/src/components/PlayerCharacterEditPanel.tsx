@@ -13,9 +13,7 @@ export function PlayerCharacterEditPanel({
   returnPath,
 }: PlayerCharacterEditPanelProps) {
   const editableBlocks = page.contentBlocks.filter(
-    (block) =>
-      block.visibility === "player_visible" &&
-      (block.type === "player_text" || block.type === "rich_text"),
+    (block) => block.type === "player_text" || block.type === "rich_text",
   );
 
   if (editableBlocks.length === 0) {

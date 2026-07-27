@@ -39,7 +39,6 @@ describe("cross-domain search service", () => {
       slug: "cross-search-alpha-page",
       type: "note",
       tags: ["alpha-cross-tag"],
-      visibility: "player_visible",
     });
 
     const capture = await lifeAdmin.createCapture({
@@ -56,7 +55,6 @@ describe("cross-domain search service", () => {
         description: "A distinctive asset description",
         type: "image",
         storageKey: `worlds/${worldSlug}/alpha.png`,
-        visibility: "dm_only",
       },
     });
 

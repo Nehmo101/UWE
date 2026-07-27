@@ -32,7 +32,6 @@ export interface AppendWaterfrontInput {
   center: Coordinate;
   span: number;
   idPrefix: string;
-  visibility: string;
   nodePart: { nodeId?: string };
   signedOuterArea: number;
   features: SettlementFeature[];
@@ -190,7 +189,6 @@ export function appendSettlementWaterfront(input: AppendWaterfrontInput): number
       rings: [[waterStart, waterEnd, landEnd, landStart, waterStart]],
     },
     layer: LAYER_Z.rivers,
-    visibility: input.visibility,
     style: {
       settlement: "waterfront",
       fillColor: "#94b7c5",
@@ -221,7 +219,6 @@ export function appendSettlementWaterfront(input: AppendWaterfrontInput): number
       atlasKind: AtlasFeatureKind.road,
       geometry: { type: "Path", coordinates: path },
       layer: LAYER_Z.roads + 2,
-      visibility: input.visibility,
       style: {
         settlement: "pier",
         strokeColor: "#5f4229",

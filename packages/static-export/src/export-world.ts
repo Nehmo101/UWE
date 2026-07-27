@@ -3,7 +3,6 @@ import path from "node:path";
 import {
   buildPageUrl,
   buildPageView,
-  isPageAccessible,
   navCategoryForPageType,
   type UweRepository,
 } from "@uwe/database/server";
@@ -59,9 +58,7 @@ export async function exportWorldStatic(
   const outputDir = path.resolve(options.outputDir);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const pages = await repo.listPagesForContext(options.worldSlug, "portal");
-  const allPages = await repo.getWorldPageIndex(options.worldSlug);
-  const hiddenPages = allPages.filter((page) => !isPageAccessible(page, "portal"));
+  const pages = await repo.listPagesForWorldIndex(options.worldSlug);
 
   const navItems: StaticNavItem[] = pages.map((page) => ({
     title: page.title,
@@ -76,7 +73,7 @@ export async function exportWorldStatic(
   const uploadRefs = new Set<string>();
 
   for (const page of pages) {
-    const view = await buildPageView(repo, options.worldSlug, page.slug, "portal");
+    const view = await buildPageView(repo, options.worldSlug, page.slug);
     if (!view) continue;
 
     const category = staticExportCategoryForPageType(page.type);
@@ -148,7 +145,7 @@ export async function exportWorldStatic(
     writtenFiles.push(...copied);
   }
 
-  const issues = auditStaticExport(outputDir, hiddenPages, pages);
+  const issues = auditStaticExport(outputDir);
   if (issues.length > 0) {
     throw new StaticExportSecurityError(issues);
   }
@@ -169,44 +166,20 @@ export class StaticExportSecurityError extends Error {
   }
 }
 
-export function auditStaticExport(
-  outputDir: string,
-  hiddenPages: { title: string; slug: string }[],
-  exportedPages: { slug: string }[],
-): StaticExportAuditIssue[] {
+/**
+ * Audits an export directory for anything that should never leave the server.
+ *
+ * The hidden-page half of this audit is gone: there are no hidden pages any
+ * more, so nothing can be "leaked into the export" by visibility. What remains
+ * is the check for secret-looking metadata in generated JSON.
+ */
+export function auditStaticExport(outputDir: string): StaticExportAuditIssue[] {
   const issues: StaticExportAuditIssue[] = [];
-  const exportedSlugs = new Set(exportedPages.map((page) => page.slug.toLocaleLowerCase("de")));
-
-  for (const hidden of hiddenPages) {
-    if (exportedSlugs.has(hidden.slug.toLocaleLowerCase("de"))) {
-      issues.push({
-        file: hidden.slug,
-        reason: "Hidden page was included in export",
-      });
-    }
-  }
-
-  const forbiddenTerms = hiddenPages.flatMap((page) => [
-    page.title,
-    page.slug,
-  ]);
-
   const files = listExportFiles(outputDir);
 
   for (const file of files) {
     const content = fs.readFileSync(file, "utf8");
     const relative = path.relative(outputDir, file);
-
-    for (const term of forbiddenTerms) {
-      if (!term || term.length < 3) continue;
-      if (content.includes(term)) {
-        issues.push({
-          file: relative,
-          reason: `Forbidden hidden content reference: ${term}`,
-          snippet: term,
-        });
-      }
-    }
 
     if (relative.endsWith(".json") && containsSecretLikeFields(content)) {
       issues.push({
@@ -241,7 +214,6 @@ function containsSecretLikeFields(content: string): boolean {
   const lowered = content.toLocaleLowerCase("de");
   return (
     lowered.includes("passwordhash") ||
-    lowered.includes("dm_only") ||
     lowered.includes("sessiontoken") ||
     lowered.includes("auth_secret")
   );

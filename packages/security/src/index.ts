@@ -88,13 +88,10 @@ export {
   assertModelAllowed,
   enforceAiRequestLimits,
   enforceAiAccessPolicy,
-  resolveEffectiveAllowDmOnly,
-  filterContextForViewer,
   sanitizeAiResponseForClient,
   type AiAccessContext,
   type AiAuthorizedRole,
   type AiRequestLimitsInput,
-  type AiDmContextInput,
 } from "./security/ai-policy";
 
 export {

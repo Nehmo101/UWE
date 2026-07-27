@@ -33,7 +33,6 @@ export interface TagReference {
   entityId: string;
   title: string;
   worldId?: string | null;
-  visibility?: string | null;
 }
 
 export interface TagInventoryEntry {
@@ -127,7 +126,6 @@ interface JsonTagEntityRow {
   title: string;
   tags: unknown;
   worldId?: string | null;
-  visibility?: string | null;
 }
 
 async function loadJsonTagEntities(
@@ -145,7 +143,6 @@ async function loadJsonTagEntities(
           title: true,
           tags: true,
           worldId: true,
-          visibility: true,
         },
       });
     case "asset":
@@ -156,7 +153,6 @@ async function loadJsonTagEntities(
           title: true,
           tags: true,
           worldId: true,
-          visibility: true,
         },
       });
     case "soundboard_button":
@@ -331,9 +327,7 @@ function mergeTagInventories(
       if (true) {
         existing.onlyOnDrafts = false;
       }
-      if (ref.visibility !== "dm_only") {
         existing.onlyDmOnly = false;
-      }
     }
   }
 
@@ -367,9 +361,7 @@ async function collectJsonGapTagInventory(
     if (true) {
       entry.onlyOnDrafts = false;
     }
-    if (ref.visibility !== "dm_only") {
       entry.onlyDmOnly = false;
-    }
   };
 
   for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
@@ -386,7 +378,6 @@ async function collectJsonGapTagInventory(
           entityId: row.id,
           title: row.title,
           worldId: row.worldId,
-          visibility: row.visibility ?? null,
         });
       }
     }
@@ -609,9 +600,7 @@ async function collectEntityTagInventory(
     if (true) {
       entry.onlyOnDrafts = false;
     }
-    if (ref.visibility !== "dm_only") {
       entry.onlyDmOnly = false;
-    }
   };
 
   for (const link of links) {
@@ -621,7 +610,6 @@ async function collectEntityTagInventory(
       entityId: link.entityId,
       title: meta?.title ?? link.entityId,
       worldId: link.worldId,
-      visibility: meta?.visibility ?? null,
     });
   }
 

@@ -14,7 +14,6 @@ export interface HandoutSource {
   assetId: string;
   title: string;
   description: string | null;
-  visibility: string;
   publicUrl?: string;
 }
 
@@ -104,10 +103,6 @@ export function composeSessionRecapMail(source: SessionRecapSource): MailDraft {
 export function composeHandoutMail(source: HandoutSource): MailDraft {
   const warnings: string[] = [];
 
-  if (source.visibility === "dm_only") {
-    warnings.push("Dieses Handout ist als DM-only markiert und sollte nicht an Spieler gesendet werden.");
-  }
-
   const description = source.description?.trim() ?? "";
   const linkLine = source.publicUrl ? `\n\nLink: ${source.publicUrl}` : "";
   const bodyText = `${source.title}\n\n${description || "Handout für die Kampagne."}${linkLine}`;
@@ -132,7 +127,7 @@ export function composeHandoutMail(source: HandoutSource): MailDraft {
     sourceId: source.assetId,
     worldId: source.worldId,
     warnings,
-    containsDmOnlyHint: source.visibility === "dm_only",
+    containsDmOnlyHint: false,
   };
 }
 

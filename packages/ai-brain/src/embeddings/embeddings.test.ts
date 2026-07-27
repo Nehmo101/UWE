@@ -66,7 +66,6 @@ describe("Embeddings — indexing and search", () => {
       worldId: world.id,
       title: "Validori",
       content: "Validori ist eine weise Magisterin im Turm von Arbor.",
-      visibility: "player_visible",
       status: "canonical",
     });
 
@@ -152,7 +151,6 @@ describe("Embeddings — indexing and search", () => {
       worldId: world.id,
       title: "NPC Validori",
       content: "Validori leitet den Magisterturm und kennt alte Runen.",
-      visibility: "player_visible",
       status: "canonical",
     });
 
@@ -160,7 +158,6 @@ describe("Embeddings — indexing and search", () => {
       worldId: world.id,
       title: "GM Geheimnis",
       content: "Unter Arbor schlummert ein verbotenes Portal nur für den DM.",
-      visibility: "dm_only",
       status: "canonical",
     });
 
@@ -175,7 +172,6 @@ describe("Embeddings — indexing and search", () => {
       {
         query: npcChunkContent,
         worldSlug: world.slug,
-        accessContext: "dm",
         minScore: 0.999,
       },
       provider,
@@ -190,7 +186,6 @@ describe("Embeddings — indexing and search", () => {
       {
         query: "verbotenes Portal Arbor",
         worldSlug: world.slug,
-        accessContext: "portal",
         minScore: 0.2,
       },
       provider,
@@ -208,7 +203,6 @@ describe("Embeddings — indexing and search", () => {
       worldId: world.id,
       title: "Wald Arbor",
       content: "Die Helden erkundeten den mystischen Wald Arbor.",
-      visibility: "public",
       status: "canonical",
     });
 
@@ -223,7 +217,6 @@ describe("Embeddings — indexing and search", () => {
     const results = await semanticSearchBrainChunks(brainStore, {
       query: "Arbor Wald",
       worldSlug: world.slug,
-      accessContext: "portal",
       minScore: 0.5,
     });
 

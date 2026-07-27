@@ -216,8 +216,8 @@ export class ScanInboxService {
 
   /**
    * Legt einen DnD-Scan als Draft-Seite in der Welt ab (nie Auto-Kanon). Handouts
-   * bekommen einen player_text-Block (spielersicher), Sessionnotizen/Dungeon-Zettel
-   * einen gm_note-Block (nur DM). Der DM überführt sie danach bewusst in den Kanon.
+   * bekommen einen player_text-Block, Sessionnotizen und Dungeon-Zettel einen
+   * rich_text-Block. Der DM überführt sie danach bewusst in den Kanon.
    */
   private async fileDndDraft(
     scan: ScanDocumentRecord,
@@ -226,10 +226,13 @@ export class ScanInboxService {
   ): Promise<{ targetType: string; targetId: string | null }> {
     const pageType = kind === "dnd_handout" ? "handout" : kind === "dnd_dungeon_note" ? "dungeon" : "session";
     const title = scan.proposal?.title || scan.title || "Aus Scan";
-    const blocks =
-      kind === "dnd_handout"
-        ? [{ type: "player_text" as const, sortOrder: 0, content: scan.ocrText, visibility: "player_visible" as const }]
-        : [{ type: "gm_note" as const, sortOrder: 0, content: scan.ocrText, visibility: "dm_only" as const }];
+    const blocks = [
+      {
+        type: (kind === "dnd_handout" ? "player_text" : "rich_text") as "player_text" | "rich_text",
+        sortOrder: 0,
+        content: scan.ocrText,
+      },
+    ];
 
     const page = await createUweRepositoryFromClient(this.db).createPage({
       worldId,

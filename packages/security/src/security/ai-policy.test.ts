@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, beforeEach } from "node:test";
 
-import type { AiContext } from "./inference/ai-context-types";
-
 import {
   assertFetchUrlAllowed,
   assertUserProvidedFetchUrlAllowed,
@@ -14,10 +12,8 @@ import {
   canUseAi,
   enforceAiAccessPolicy,
   enforceAiRequestLimits,
-  filterContextForViewer,
   requireAiRole,
   resetAiRateLimit,
-  resolveEffectiveAllowDmOnly,
   validatePromptLength,
   AiAccessDeniedError,
   AiPolicyViolationError,
@@ -25,41 +21,6 @@ import {
 import { formatAiPromptLog, redactAiSecrets, sanitizeAiLogPayload } from "./ai-logging";
 import { rejectClientWorkerUrl } from "./rtx-boundary";
 
-function emptyContext(overrides: Partial<AiContext> = {}): AiContext {
-  return {
-    taskType: "summarize_page",
-    worldId: "w1",
-    primaryPageId: "p1",
-    pages: [
-      {
-        pageId: "p1",
-        title: "Geheime Insel",
-        pageType: "location",
-        visibility: "dm_only",
-        canonicalStatus: "draft",
-        summary: "DM-only summary",
-        tags: [],
-        aliases: [],
-        contentBlocks: [
-          {
-            blockId: "b1",
-            type: "gm_note",
-            content: "Geheimer Plot",
-            visibility: "dm_only",
-          },
-        ],
-        relations: [],
-        backlinks: [],
-      },
-    ],
-    sources: [],
-    promptContext: "Geheimer Plot",
-    truncated: false,
-    datenschutzMode: false,
-    allowDmOnly: true,
-    ...overrides,
-  };
-}
 
 describe("ai-policy — role enforcement", () => {
   it("allows owner, admin, and dm roles", () => {
@@ -159,36 +120,6 @@ describe("ai-policy — request limits", () => {
           env,
         ),
       /Worker-URLs dürfen nicht vom Client/,
-    );
-  });
-});
-
-describe("ai-policy — DM-only context", () => {
-  it("includes DM-only content only when server allows it", () => {
-    const allowed = filterContextForViewer(emptyContext(), true, false);
-    assert.match(allowed.promptContext, /Geheimer Plot/);
-
-    const denied = filterContextForViewer(emptyContext(), false, false);
-    assert.doesNotMatch(denied.promptContext, /Geheimer Plot/);
-  });
-
-  it("never trusts client allowDmOnly flag over server policy", () => {
-    assert.equal(
-      resolveEffectiveAllowDmOnly({
-        clientAllowDmOnly: true,
-        localOnly: false,
-        routeIsCloud: false,
-      }),
-      false,
-    );
-
-    assert.equal(
-      resolveEffectiveAllowDmOnly({
-        clientAllowDmOnly: true,
-        localOnly: true,
-        routeIsCloud: false,
-      }),
-      true,
     );
   });
 });

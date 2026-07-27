@@ -72,7 +72,6 @@ export async function createDungeonAction(formData: FormData) {
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "dm_only",
         content: String(formData.get("description") || ""),
       },
     ],
@@ -136,20 +135,12 @@ export async function createDungeonRoomAction(formData: FormData) {
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "player_visible",
         content: String(formData.get("readAloud") || ""),
       },
       {
         type: "rich_text",
         sortOrder: 1,
-        visibility: "player_visible",
         content: String(formData.get("playerDescription") || ""),
-      },
-      {
-        type: "gm_note",
-        sortOrder: 2,
-        visibility: "dm_only",
-        content: String(formData.get("dmNotes") || ""),
       },
     ],
   });
@@ -198,7 +189,6 @@ export async function createRoomChildAction(formData: FormData) {
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "dm_only",
         content: String(formData.get("content") || ""),
       },
     ],
@@ -225,7 +215,6 @@ export async function updateDungeonEntityAction(formData: FormData) {
     title: String(formData.get("title")),
     prepStatus: formData.get("prepStatus") as DungeonPrepStatus,
     summary: String(formData.get("summary") || "") || null,
-    visibility: formData.get("visibility") as import("@uwe/database/server").Visibility,
   });
 
   revalidatePath(redirectTo);
@@ -265,11 +254,9 @@ export async function updateRoomContentAction(formData: FormData) {
   const blocks = [...page.contentBlocks].sort((a, b) => a.sortOrder - b.sortOrder);
   const readAloud = blocks.find((b) => b.type === "player_text" && b.sortOrder === 0);
   const playerDescription = blocks.find((b) => b.type === "rich_text" && b.sortOrder === 1);
-  const dmNotes = blocks.find((b) => b.type === "gm_note" && b.sortOrder === 2);
 
   const readAloudContent = String(formData.get("readAloud") || "");
   const playerDescriptionContent = String(formData.get("playerDescription") || "");
-  const dmNotesContent = String(formData.get("dmNotes") || "");
 
   if (readAloud) {
     await repo().updateContentBlock(readAloud.id, { content: readAloudContent });
@@ -278,7 +265,6 @@ export async function updateRoomContentAction(formData: FormData) {
       type: "player_text",
       sortOrder: 0,
       content: readAloudContent,
-      visibility: "player_visible",
     });
   }
 
@@ -289,18 +275,6 @@ export async function updateRoomContentAction(formData: FormData) {
       type: "rich_text",
       sortOrder: 1,
       content: playerDescriptionContent,
-      visibility: "player_visible",
-    });
-  }
-
-  if (dmNotes) {
-    await repo().updateContentBlock(dmNotes.id, { content: dmNotesContent });
-  } else {
-    await repo().addContentBlock(roomId, {
-      type: "gm_note",
-      sortOrder: 2,
-      content: dmNotesContent,
-      visibility: "dm_only",
     });
   }
 

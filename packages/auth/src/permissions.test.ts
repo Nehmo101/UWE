@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildAccessContext,
-  canViewContentBlock,
-  canViewPage,
+  canViewWorldContent,
   filterBlocksForViewer,
   filterPagesForViewer,
+  isCoDm,
   isDmOrOwner,
   isWorldStaff,
   resolveEffectiveRole,
@@ -21,8 +21,12 @@ const playerCtx = buildAccessContext({
   user: { id: "p1", displayName: "Aman", email: "aman@test", role: "player" },
   worldMembership: { userId: "p1", worldId: "w1", role: "player", characterName: "Aman" },
   guestModeEnabled: true,
-  specificPlayerPageIds: ["page-secret"],
-  unlockedPageIds: ["page-unlocked"],
+});
+
+const coDmCtx = buildAccessContext({
+  user: { id: "c1", displayName: "Co", email: "co@test", role: "player" },
+  worldMembership: { userId: "c1", worldId: "w1", role: "co_dm", characterName: null },
+  guestModeEnabled: true,
 });
 
 const guestCtx = buildAccessContext({
@@ -38,157 +42,59 @@ const guestDisabledCtx = buildAccessContext({
 });
 
 describe("permissions", () => {
-  it("lets DM see everything including dm_only and archived", () => {
+  it("lets everyone assigned to the world see its content", () => {
+    // The only content rule left: world assignment. No dm_only, no
+    // player_visible, no draft state, no per-page grant.
+    assert.ok(canViewWorldContent(dmCtx));
+    assert.ok(canViewWorldContent(playerCtx));
+    assert.ok(canViewWorldContent(coDmCtx));
+  });
+
+  it("gives anonymous guests nothing", () => {
+    assert.equal(canViewWorldContent(guestCtx), false);
+    assert.equal(canViewWorldContent(guestDisabledCtx), false);
+  });
+
+  it("separates staff from players without touching content access", () => {
     assert.ok(isDmOrOwner(dmCtx));
-    assert.ok(
-      canViewPage(dmCtx, {
-        id: "page-1",
-        visibility: "dm_only",
-      }),
-    );
-    assert.ok(
-      canViewPage(dmCtx, {
-        id: "page-2",
-        visibility: "archived",
-      }),
-    );
+    assert.ok(isWorldStaff(dmCtx));
+    assert.ok(isWorldStaff(coDmCtx));
+    assert.ok(isCoDm(coDmCtx));
+    assert.equal(isDmOrOwner(playerCtx), false);
+    assert.equal(isWorldStaff(playerCtx), false);
   });
 
-  it("hides gm-only content from players", () => {
-    assert.ok(
-      !canViewPage(playerCtx, {
-        id: "page-1",
-        visibility: "dm_only",
-      }),
-    );
-    assert.ok(
-      !canViewContentBlock(
-        playerCtx,
-        { visibility: "dm_only" },
-        { id: "page-1", visibility: "player_visible" },
-      ),
-    );
+  it("passes lists straight through for assigned viewers", () => {
+    const pages = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    assert.deepEqual(filterPagesForViewer(playerCtx, pages), pages);
+    assert.deepEqual(filterPagesForViewer(dmCtx, pages), pages);
+
+    const blocks = [{ type: "rich_text" }, { type: "player_text" }];
+    assert.deepEqual(filterBlocksForViewer(playerCtx, blocks), blocks);
   });
 
-  it("shows player_visible and public content to players", () => {
-    assert.ok(
-      canViewPage(playerCtx, {
-        id: "page-2",
-        visibility: "player_visible",
-      }),
-    );
-    assert.ok(
-      canViewPage(playerCtx, {
-        id: "page-3",
-        visibility: "public",
-      }),
-    );
+  it("returns nothing for guests", () => {
+    assert.deepEqual(filterPagesForViewer(guestCtx, [{ id: "a" }]), []);
+    assert.deepEqual(filterBlocksForViewer(guestCtx, [{ type: "rich_text" }]), []);
   });
 
-  it("shows only public content to guests when guest mode is enabled", () => {
-    assert.ok(
-      canViewPage(guestCtx, {
-        id: "page-3",
-        visibility: "public",
-      }),
-    );
-    assert.ok(
-      !canViewPage(guestCtx, {
-        id: "page-2",
-        visibility: "player_visible",
-      }),
-    );
-  });
-
-  it("hides all portal content from guests when guest mode is disabled", () => {
-    assert.ok(
-      !canViewPage(guestDisabledCtx, {
-        id: "page-3",
-        visibility: "public",
-      }),
-    );
-  });
-
-  it("supports specific_players visibility", () => {
-    assert.ok(
-      canViewPage(playerCtx, {
-        id: "page-secret",
-        visibility: "specific_players",
-      }),
-    );
-
-    const otherPlayer = buildAccessContext({
-      user: { id: "p2", displayName: "Lazul", email: "lazul@test", role: "player" },
-      worldMembership: { userId: "p2", worldId: "w1", role: "player", characterName: "Lazul" },
-      guestModeEnabled: true,
-      specificPlayerPageIds: [],
-    });
-
-    assert.ok(
-      !canViewPage(otherPlayer, {
-        id: "page-secret",
-        visibility: "specific_players",
-      }),
-    );
-  });
-
-  it("supports unlock_after_session visibility", () => {
-    assert.ok(
-      canViewPage(playerCtx, {
-        id: "page-unlocked",
-        visibility: "unlock_after_session",
-      }),
-    );
-
-    assert.ok(
-      !canViewPage(playerCtx, {
-        id: "page-locked",
-        visibility: "unlock_after_session",
-      }),
-    );
-  });
-
-  it("hides archived pages from players", () => {
-    assert.ok(
-      !canViewPage(playerCtx, {
-        id: "page-archived",
-        visibility: "archived",
-      }),
-    );
-  });
-
-  it("preview-as-player restricts DM to player visibility", () => {
+  it("treats preview-as-player as a player, not as staff", () => {
     const previewCtx = buildAccessContext({
       user: { id: "dm-1", displayName: "DM", email: "dm@test", role: "dm" },
       worldMembership: { userId: "dm-1", worldId: "w1", role: "owner", characterName: null },
       guestModeEnabled: true,
       preview: { previewAsUserId: "p1" },
-      specificPlayerPageIds: ["page-secret"],
-      unlockedPageIds: [],
     });
 
-    assert.ok(!isDmOrOwner(previewCtx));
-    assert.ok(
-      !canViewPage(previewCtx, {
-        id: "page-1",
-        visibility: "dm_only",
-      }),
-    );
-    assert.ok(
-      canViewPage(previewCtx, {
-        id: "page-secret",
-        visibility: "specific_players",
-      }),
-    );
-    assert.ok(
-      !canViewPage(previewCtx, {
-        id: "page-unlocked",
-        visibility: "unlock_after_session",
-      }),
-    );
+    assert.equal(previewCtx.effectiveRole, "player");
+    assert.equal(isWorldStaff(previewCtx), false);
+    assert.equal(isDmOrOwner(previewCtx), false);
+    assert.ok(canViewWorldContent(previewCtx));
   });
+});
 
-  it("global owner keeps owner role even with player world membership", () => {
+describe("resolveEffectiveRole", () => {
+  it("keeps the global owner an owner in every world", () => {
     assert.equal(
       resolveEffectiveRole({
         user: { id: "owner-1", displayName: "Owner", email: "owner@test", role: "owner" },
@@ -216,7 +122,7 @@ describe("permissions", () => {
     assert.equal(isDmOrOwner(ctx), true);
   });
 
-  it("global owner preview-as-player still downgrades to player visibility", () => {
+  it("downgrades even the global owner in preview-as-player", () => {
     assert.equal(
       resolveEffectiveRole({
         user: { id: "owner-1", displayName: "Owner", email: "owner@test", role: "owner" },
@@ -232,30 +138,32 @@ describe("permissions", () => {
     );
   });
 
-  it("filters page and block lists for the effective viewer", () => {
-    const pages = [
-      { id: "a", visibility: "public" as const },
-      { id: "b", visibility: "dm_only" as const },
-      { id: "c", visibility: "player_visible" as const },
-    ];
-
-    const visible = filterPagesForViewer(playerCtx, pages);
-    assert.deepEqual(
-      visible.map((page) => page.id),
-      ["a", "c"],
+  it("maps world membership roles", () => {
+    const user = { id: "u", displayName: "U", email: null, role: "player" } as const;
+    assert.equal(
+      resolveEffectiveRole({
+        user,
+        worldMembership: { userId: "u", worldId: "w1", role: "dm", characterName: null },
+      }),
+      "dm",
     );
-
-    const page = { id: "c", visibility: "player_visible" as const };
-    const blocks = filterBlocksForViewer(
-      playerCtx,
-      [
-        { visibility: "player_visible" as const },
-        { visibility: "dm_only" as const },
-      ],
-      page,
+    assert.equal(
+      resolveEffectiveRole({
+        user,
+        worldMembership: { userId: "u", worldId: "w1", role: "co_dm", characterName: null },
+      }),
+      "readonly",
     );
+    assert.equal(
+      resolveEffectiveRole({
+        user,
+        worldMembership: { userId: "u", worldId: "w1", role: "player", characterName: null },
+      }),
+      "player",
+    );
+  });
 
-    assert.equal(blocks.length, 1);
-    assert.equal(blocks[0]?.visibility, "player_visible");
+  it("falls back to guest without user and membership", () => {
+    assert.equal(resolveEffectiveRole({ user: null, worldMembership: null }), "guest");
   });
 });

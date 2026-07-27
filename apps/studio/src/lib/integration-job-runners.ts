@@ -124,7 +124,6 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       storageKey,
       mimeType: result.mimeType ?? "image/png",
       size: Buffer.byteLength(result.imageBase64, "base64"),
-      visibility: "dm_only",
       metadata: { source: "image_studio", task: payload.task, provider: result.providerUsed },
     });
 

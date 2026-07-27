@@ -11,7 +11,7 @@ const playerUser: AuthUser = {
   role: "player",
 };
 
-function playerCtx(pageIds: string[] = ["pc-1"]) {
+function playerCtx() {
   return buildAccessContext({
     user: playerUser,
     worldMembership: {
@@ -21,73 +21,54 @@ function playerCtx(pageIds: string[] = ["pc-1"]) {
       characterName: "Hero",
     },
     guestModeEnabled: false,
-    specificPlayerPageIds: pageIds,
   });
 }
 
+const characterPage = { id: "pc-1", type: "player_character" };
+
 describe("player character permissions", () => {
-  it("allows editing player_visible blocks on assigned player_character pages", () => {
-    const page = {
-      id: "pc-1",
-      visibility: "specific_players" as const,
-      secretLevel: "none" as const,
-      revealState: "hidden" as const,
-      type: "player_character",
-    };
-    const block = {
-      id: "b-1",
-      visibility: "player_visible" as const,
-      secretLevel: "none" as const,
-      revealState: "hidden" as const,
-      type: "player_text",
-    };
-
-    assert.equal(canEditPlayerCharacterBlock(playerCtx(), page, block), true);
+  it("allows editing text blocks on player_character pages", () => {
+    assert.equal(
+      canEditPlayerCharacterBlock(playerCtx(), characterPage, { type: "player_text" }),
+      true,
+    );
+    assert.equal(
+      canEditPlayerCharacterBlock(playerCtx(), characterPage, { type: "rich_text" }),
+      true,
+    );
   });
 
-  it("denies editing dm_only blocks and non-character pages", () => {
-    const page = {
-      id: "pc-1",
-      visibility: "specific_players" as const,
-      secretLevel: "none" as const,
-      revealState: "hidden" as const,
-      type: "player_character",
-    };
-    const dmBlock = {
-      id: "b-2",
-      visibility: "dm_only" as const,
-      secretLevel: "none" as const,
-      revealState: "hidden" as const,
-      type: "player_text",
-    };
-    const npcPage = {
-      id: "npc-1",
-      visibility: "player_visible" as const,
-      secretLevel: "none" as const,
-      revealState: "hidden" as const,
-      type: "npc",
-    };
-
-    assert.equal(canEditPlayerCharacterBlock(playerCtx(), page, dmBlock), false);
-    assert.equal(canEditPlayerCharacterBlock(playerCtx(), npcPage, dmBlock), false);
+  it("denies non-text blocks and non-character pages", () => {
+    assert.equal(
+      canEditPlayerCharacterBlock(playerCtx(), characterPage, { type: "statblock" }),
+      false,
+    );
+    assert.equal(
+      canEditPlayerCharacterBlock(playerCtx(), { id: "npc-1", type: "npc" }, { type: "rich_text" }),
+      false,
+    );
   });
 
-  it("denies editing without specific_players access", () => {
-    const page = {
-      id: "pc-2",
-      visibility: "specific_players" as const,
-      secretLevel: "none" as const,
-      revealState: "hidden" as const,
-      type: "player_character",
-    };
-    const block = {
-      id: "b-1",
-      visibility: "player_visible" as const,
-      secretLevel: "none" as const,
-      revealState: "hidden" as const,
-      type: "player_text",
-    };
+  it("denies guests and preview-as-player", () => {
+    const guest = buildAccessContext({
+      user: null,
+      worldMembership: null,
+      guestModeEnabled: true,
+    });
+    assert.equal(
+      canEditPlayerCharacterBlock(guest, characterPage, { type: "rich_text" }),
+      false,
+    );
 
-    assert.equal(canEditPlayerCharacterBlock(playerCtx(["pc-1"]), page, block), false);
+    const preview = buildAccessContext({
+      user: { id: "dm-1", displayName: "DM", email: null, role: "dm" },
+      worldMembership: { userId: "dm-1", worldId: "w-1", role: "dm", characterName: null },
+      guestModeEnabled: false,
+      preview: { previewAsUserId: playerUser.id },
+    });
+    assert.equal(
+      canEditPlayerCharacterBlock(preview, characterPage, { type: "rich_text" }),
+      false,
+    );
   });
 });

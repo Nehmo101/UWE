@@ -138,14 +138,12 @@ function ensureHostDirectories(paths: HostPaths): void {
 export function buildLocalHostEnv(paths: HostPaths): string {
   const sessionSecret = randomBytes(48).toString("base64url");
   const setupToken = randomBytes(32).toString("base64url");
-  const mediaSecret = randomBytes(48).toString("base64url");
   return [
     "# Managed initial local-host configuration for UWE Command Center.",
     "# Existing files are preserved and can be edited in Studio later.",
     "NODE_ENV=production",
     `SESSION_SECRET=${sessionSecret}`,
     `UWE_SETUP_TOKEN=${setupToken}`,
-    `UWE_MEDIA_SIGNING_SECRET=${mediaSecret}`,
     "UWE_RUNTIME_ROLE=host",
     "RUN_DB_SEED=false",
     "AUTH_REQUIRED=true",

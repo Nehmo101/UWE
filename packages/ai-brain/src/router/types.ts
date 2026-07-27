@@ -37,7 +37,6 @@ export interface AiRouterRequest {
   sessionId?: string;
   userPrompt?: string;
   model?: string;
-  allowDmOnly?: boolean;
   useMock?: boolean;
   options?: BuildAiContextOptions;
   apiKeyStore?: ApiKeyStore;

@@ -12,7 +12,6 @@ import {
   validateSettingsUpdate,
   type BackgroundPattern,
   type UweSystemSettingsUpdate,
-  type Visibility,
   type CanonicalStatus,
   type ThemeAppearance,
   type AiProviderStoredKey,
@@ -74,7 +73,6 @@ export async function updateSettingsAction(formData: FormData) {
     }
     case "worlds":
       update.worlds = {
-        defaultVisibility: String(formData.get("defaultVisibility") || "dm_only") as Visibility,
         defaultCanonicalStatus: String(
           formData.get("defaultCanonicalStatus") || "draft",
         ) as CanonicalStatus,

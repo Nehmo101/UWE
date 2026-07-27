@@ -60,7 +60,7 @@ describe("generator service", () => {
   it("detects missing room read-aloud", () => {
     const hints = detectMissingContent({
       pageType: "room",
-      contentBlocks: [{ type: "gm_note", content: "secret" }],
+      contentBlocks: [{ type: "rich_text", content: "secret" }],
       prepStatus: "unprepared",
     });
 

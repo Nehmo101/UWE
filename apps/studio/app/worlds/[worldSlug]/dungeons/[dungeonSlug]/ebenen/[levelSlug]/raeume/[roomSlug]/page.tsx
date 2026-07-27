@@ -61,7 +61,7 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const wikiIndex = await buildWorldWikiIndex(repo, worldSlug, "dm");
+  const wikiIndex = await buildWorldWikiIndex(repo, worldSlug);
   const dungeons = createDungeonCockpitService();
   const cockpit = await dungeons.getRoomCockpit(
     worldSlug,
@@ -81,7 +81,6 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
 
   const readAloud = cockpit.sections.readAloud.map((b) => b.content).join("\n\n");
   const playerDescription = cockpit.sections.playerDescription.map((b) => b.content).join("\n\n");
-  const dmNotes = cockpit.sections.dmNotes.map((b) => b.content).join("\n\n");
   const childPageIds = [
     ...cockpit.encounters,
     ...cockpit.traps,
@@ -222,11 +221,6 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
           />
         </div>
 
-        <div className={FIELD_CLASS}>
-          <Label htmlFor="room-dm-notes">DM-Notizen</Label>
-          <Textarea id="room-dm-notes" name="dmNotes" rows={5} defaultValue={dmNotes} />
-        </div>
-
         <div>
           <Button type="submit">Raum speichern</Button>
         </div>
@@ -354,22 +348,18 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
               blocks={[
                 ...cockpit.sections.readAloud,
                 ...cockpit.sections.playerDescription,
-                ...cockpit.sections.dmNotes,
                 ...cockpit.sections.otherBlocks,
               ].map((block) => ({
                 id: block.id,
                 type: block.type,
                 sortOrder: block.sortOrder,
                 content: block.content,
-                visibility: block.visibility,
               }))}
-              showVisibility
             />
             <ul className="mt-3 flex flex-col gap-2">
               {[
                 ...cockpit.sections.readAloud,
                 ...cockpit.sections.playerDescription,
-                ...cockpit.sections.dmNotes,
                 ...cockpit.sections.otherBlocks,
               ].map((block) => (
                 <li key={`label-${block.id}`}>

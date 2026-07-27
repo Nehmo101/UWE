@@ -90,8 +90,8 @@ describe("bridge message guards", () => {
 describe("splitDocForSave", () => {
   const doc = {
     features: [
-      { _key: "ck-1", id: "f1", nodeId: "n1", kind: "biome", geometry: { type: "Polygon", rings: [] }, layer: 10, visibility: "dm_only" },
-      { _key: "ck-2", nodeId: "n1", kind: "river", geometry: { type: "Path", coordinates: [] }, layer: 30, visibility: "player_visible" },
+      { _key: "ck-1", id: "f1", nodeId: "n1", kind: "biome", geometry: { type: "Polygon", rings: [] }, layer: 10 },
+      { _key: "ck-2", nodeId: "n1", kind: "river", geometry: { type: "Path", coordinates: [] }, layer: 30 },
       { _key: "ck-3", nodeId: "n2", kind: "pin", geometry: { type: "Point", coordinates: [0, 0] }, layer: 50 },
     ],
     objects: [
@@ -115,7 +115,6 @@ describe("splitDocForSave", () => {
     assert.ok(!("_key" in n1.features[0]!));
     // persistable fields preserved
     assert.equal(n1.features[0]!.kind, "biome");
-    assert.equal(n1.features[0]!.visibility, "dm_only");
   });
 
   it("restricts to a single node via opts.nodeId (studio edits one node)", () => {

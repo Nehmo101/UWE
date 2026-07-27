@@ -1,46 +1,4 @@
-import type {
-  ContentBlock,
-  ContentBlockType,
-  Page,
-  Visibility,
-} from "./generated/prisma/client";
-import {
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-  isBlockPlayerExposable,
-  isDmOnlyVisibility,
-  isPagePlayerExposable,
-  isPlayerExposableContent,
-  isPlayerPortalVisibility,
-  maskSecretsInUi,
-  DEFAULT_SECRET_PLACEHOLDER,
-  PLAYER_PORTAL_VISIBILITIES,
-  type ContentAccessFields,
-  type ContentBlockAccessFields,
-  type ContentVisibility,
-  type MaskedContent,
-  type MaskSecretsOptions,
-  type PrivateReferenceTarget,
-} from "@uwe/auth/content-access";
-
-export {
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-  isBlockPlayerExposable,
-  isDmOnlyVisibility,
-  isPagePlayerExposable,
-  isPlayerExposableContent,
-  isPlayerPortalVisibility,
-  maskSecretsInUi,
-  DEFAULT_SECRET_PLACEHOLDER,
-  PLAYER_PORTAL_VISIBILITIES,
-  type ContentAccessFields,
-  type ContentBlockAccessFields,
-  type ContentVisibility,
-  type MaskedContent,
-  type MaskSecretsOptions,
-  type PrivateReferenceTarget,
-};
+import type { ContentBlock, ContentBlockType, Page } from "./generated/prisma/client";
 
 /** Admin / internal metadata keys stripped from player responses. */
 const ADMIN_METADATA_KEYS = new Set([
@@ -88,7 +46,6 @@ export interface SanitizedContentBlock {
   type: ContentBlockType;
   sortOrder: number;
   content: string;
-  visibility: Visibility;
   assetId: string | null;
   metadata: unknown;
 }
@@ -101,7 +58,6 @@ export interface SanitizedPage {
   slug: string;
   type: Page["type"];
   summary: string | null;
-  visibility: Visibility;
   tags: string[];
   aliases: string[];
   contentBlocks: SanitizedContentBlock[];
@@ -113,25 +69,17 @@ export interface SanitizeForPlayerOptions {
 }
 
 /**
- * Removes DM notes, hidden secrets, internal IDs, and admin metadata from
- * page content before it is returned through player APIs or previews.
+ * Strips internal IDs and admin metadata from page content before it is
+ * returned through player APIs or previews.
+ *
+ * Content itself is no longer filtered here: per-item visibility is gone, so
+ * whoever is assigned to the world sees every block of every page in it. What
+ * is left is the bookkeeping that was never meant to leave the server.
  */
 export function sanitizeForPlayer(
   page: Page & { contentBlocks: ContentBlock[] },
   options?: SanitizeForPlayerOptions,
 ): SanitizedPage {
-  const exposableBlocks = page.contentBlocks
-    .filter((block) => isBlockPlayerExposable(block))
-    .map((block) => ({
-      id: block.id,
-      type: block.type,
-      sortOrder: block.sortOrder,
-      content: block.content,
-      visibility: block.visibility,
-      assetId: block.assetId,
-      metadata: stripAdminMetadata(block.metadata),
-    }));
-
   return {
     id: page.id,
     worldId: page.worldId,
@@ -140,25 +88,31 @@ export function sanitizeForPlayer(
     slug: page.slug,
     type: page.type,
     summary: page.summary,
-    visibility: page.visibility,
     tags: options?.tags ?? [],
     aliases: options?.aliases ?? [],
-    contentBlocks: exposableBlocks,
+    contentBlocks: page.contentBlocks.map((block) => ({
+      id: block.id,
+      type: block.type,
+      sortOrder: block.sortOrder,
+      content: block.content,
+      assetId: block.assetId,
+      metadata: stripAdminMetadata(block.metadata),
+    })),
   };
 }
 
 /**
- * The content-block columns the search index and its authz filters actually
- * read. Loading only these (instead of the whole `ContentBlock` row) keeps the
- * search load path lean. A full `ContentBlock` is structurally assignable to
- * this subset, so existing callers that pass complete rows still type-check.
+ * The content-block columns the search index actually reads. Loading only
+ * these (instead of the whole `ContentBlock` row) keeps the search load path
+ * lean. A full `ContentBlock` is structurally assignable to this subset, so
+ * existing callers that pass complete rows still type-check.
  */
 export type SearchIndexContentBlock = Pick<
   ContentBlock,
-  "id" | "pageId" | "content" | "visibility" | "type" | "sortOrder"
+  "id" | "pageId" | "content" | "type" | "sortOrder"
 >;
 
-export interface SearchIndexPageInput extends ContentAccessFields {
+export interface SearchIndexPageInput {
   id: string;
   title: string;
   slug: string;

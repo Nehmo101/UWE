@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  composeHandoutMail,
   composeSessionRecapMail,
 } from "./compose";
 
@@ -36,20 +35,6 @@ describe("mail compose — player safety", () => {
     assert.ok(draft.warnings.some((w) => /DM-Zusammenfassung/i.test(w)));
     assert.ok(!draft.bodyText.includes("Geheime DM-Notizen"));
     assert.match(draft.bodyText, /Spieler-Recap noch nicht/i);
-  });
-
-  it("handout mail flags dm_only visibility", () => {
-    const draft = composeHandoutMail({
-      worldId: "w1",
-      assetId: "a1",
-      title: "Geheime Karte",
-      description: "Nur für den DM.",
-      visibility: "dm_only",
-    });
-
-    assert.equal(draft.containsDmOnlyHint, true);
-    assert.ok(draft.warnings.some((w) => /DM-only/i.test(w)));
-    assert.match(draft.bodyText, /Geheime Karte/);
   });
 
 });

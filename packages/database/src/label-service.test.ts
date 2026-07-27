@@ -1,14 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createTestDatabaseUrl } from "./test-helpers";
-import { createPage, createWorld } from "./repository";
+import { createWorld } from "./repository";
 import {
-  assertPlayerSafeExport,
-  buildLabelContentFromPage,
   createLabelService,
   normalizeLabel,
 } from "./label-service";
-import { renderLabelExport, renderLabelExportAsync, renderLabelHtml } from "./label-export";
+import { renderLabelExport, renderLabelExportAsync } from "./label-export";
 import { createPrismaClient } from "./client";
 
 describe("Label service", () => {
@@ -24,93 +22,7 @@ describe("Label service", () => {
     await createPrismaClient(databaseUrl).$disconnect();
   });
 
-  it("creates a label from a published page without dm_only blocks", async () => {
-    const world = await createWorld(
-      { name: "Labelwelt", slug: "labelwelt", description: "Test" },
-      databaseUrl,
-    );
 
-    const page = await createPage(
-      {
-        worldId: world.id,
-        title: "Stadt Validori",
-        slug: "validori",
-        type: "location",
-        visibility: "public",
-        contentBlocks: [
-          {
-            type: "rich_text",
-            sortOrder: 0,
-            visibility: "public",
-            content: "Eine lebendige Hafenstadt am Meer.",
-          },
-        ],
-      },
-      databaseUrl,
-    );
-
-    const template = await labels.getDefaultTemplate();
-    const label = await labels.createFromSource({
-      worldId: world.id,
-      sourceType: "page",
-      sourceId: page.id,
-      templateId: template.id,
-    });
-
-    assert.equal(label.sourceType, "page");
-    assert.equal(label.sourceId, page.id);
-    assert.equal(label.title, "Stadt Validori");
-
-    const parsed = normalizeLabel(label);
-    assert.match(parsed.content.text, /Hafenstadt/);
-    assert.equal(parsed.content.containsDmOnly, false);
-  });
-
-  it("creates a label from a dungeon room page", async () => {
-    const world = await createWorld(
-      { name: "Dungeonwelt", slug: "dungeonwelt", description: "Test" },
-      databaseUrl,
-    );
-
-    const room = await createPage(
-      {
-        worldId: world.id,
-        title: "Schatzkammer",
-        slug: "schatzkammer",
-        type: "room",
-        visibility: "dm_only",
-        contentBlocks: [
-          {
-            type: "player_text",
-            sortOrder: 0,
-            visibility: "player_visible",
-            content: "Ein staubiger Raum voller Truhen.",
-          },
-          {
-            type: "gm_note",
-            sortOrder: 1,
-            visibility: "dm_only",
-            content: "Die Truhe ist trapped.",
-          },
-        ],
-      },
-      databaseUrl,
-    );
-
-    const template = await labels.getDefaultTemplate();
-    const label = await labels.createFromSource({
-      worldId: world.id,
-      sourceType: "dungeon_room",
-      sourceId: room.id,
-      templateId: template.id,
-    });
-
-    assert.equal(label.sourceType, "dungeon_room");
-    const parsed = normalizeLabel(label);
-    assert.match(parsed.content.text, /Truhen/);
-    assert.equal(parsed.content.containsDmOnly, true);
-    assert.ok((parsed.content.dmOnlyBlockCount ?? 0) > 0);
-  });
 
   it("saves and reopens a label draft", async () => {
     const world = await createWorld(
@@ -194,83 +106,5 @@ describe("Label service", () => {
     assert.match(String(pdfExport.body).slice(0, 4), /%PDF/);
   });
 
-  it("blocks player export when dm_only content is present without confirmation", async () => {
-    const world = await createWorld(
-      { name: "Sicherheitswelt", slug: "sicherheitswelt", description: "Test" },
-      databaseUrl,
-    );
 
-    const page = await createPage(
-      {
-        worldId: world.id,
-        title: "Geheime Kammer",
-        slug: "geheim",
-        type: "room",
-        visibility: "dm_only",
-        contentBlocks: [
-          {
-            type: "gm_note",
-            sortOrder: 0,
-            visibility: "dm_only",
-            content: "Nur für den DM.",
-          },
-        ],
-      },
-      databaseUrl,
-    );
-
-    const db = createPrismaClient(databaseUrl);
-    const fullPage = await db.page.findUniqueOrThrow({
-      where: { id: page.id },
-      include: { contentBlocks: true, campaign: true },
-    });
-
-    const content = await buildLabelContentFromPage(db, fullPage, { includeDmOnly: false });
-    const safety = assertPlayerSafeExport(content, false);
-
-    assert.equal(safety.allowed, false);
-    assert.match(safety.reason ?? "", /DM-only/);
-  });
-
-  it("allows dm export when explicitly confirmed", async () => {
-    const world = await createWorld(
-      { name: "Dm Export", slug: "dm-export", description: "Test" },
-      databaseUrl,
-    );
-
-    const page = await createPage(
-      {
-        worldId: world.id,
-        title: "Geheime Kammer",
-        slug: "geheim-dm",
-        type: "room",
-        visibility: "dm_only",
-        contentBlocks: [
-          {
-            type: "gm_note",
-            sortOrder: 0,
-            visibility: "dm_only",
-            content: "Nur für den DM.",
-          },
-        ],
-      },
-      databaseUrl,
-    );
-
-    const label = await labels.createFromSource({
-      worldId: world.id,
-      sourceType: "dungeon_room",
-      sourceId: page.id,
-      templateId: "tpl_standard_6x4",
-      includeDmOnly: true,
-    });
-
-    const html = renderLabelHtml({
-      content: normalizeLabel(label).content,
-      layoutSettings: normalizeLabel(label).layoutSettings,
-      title: label.title,
-    });
-
-    assert.match(html, /Nur für den DM/);
-  });
 });

@@ -18,10 +18,6 @@ import {
   type LabelElement,
 } from "./label-elements";
 import { combineBlockContent } from "./page-service";
-import {
-  filterBlocksForContext,
-  type AccessContext,
-} from "./permissions";
 import type { PageWithBlocks } from "./repository";
 
 export type {
@@ -76,8 +72,6 @@ export interface LabelContentData {
   imageAssetId?: string | null;
   imageMimeType?: string | null;
   sourceTitle?: string;
-  containsDmOnly?: boolean;
-  dmOnlyBlockCount?: number;
   elements?: LabelElement[];
   editorMode?: "visual" | "legacy";
   originalText?: string;
@@ -134,7 +128,6 @@ export interface CreateLabelFromSourceInput {
   sourceId: string;
   templateId: string;
   title?: string;
-  includeDmOnly?: boolean;
   layoutSettings?: Partial<LabelLayoutSettings>;
 }
 
@@ -159,7 +152,7 @@ const DEFAULT_LAYOUT: LabelLayoutSettings = {
   autoFit: false,
 };
 
-const PLAYER_BLOCK_TYPES = new Set([
+const LABEL_BLOCK_TYPES = new Set([
   "rich_text",
   "html",
   "player_text",
@@ -170,8 +163,6 @@ const PLAYER_BLOCK_TYPES = new Set([
   "timeline",
   "relation",
 ]);
-
-const DM_ONLY_BLOCK_TYPES = new Set(["gm_note", "ai_summary"]);
 
 function parseLayoutSettings(raw: unknown): LabelLayoutSettings {
   if (!raw || typeof raw !== "object") {
@@ -211,8 +202,6 @@ function parseContentData(raw: unknown): LabelContentData {
     imageAssetId: value.imageAssetId ?? null,
     imageMimeType: value.imageMimeType ?? null,
     sourceTitle: value.sourceTitle,
-    containsDmOnly: value.containsDmOnly ?? false,
-    dmOnlyBlockCount: value.dmOnlyBlockCount ?? 0,
     elements: value.elements ? parseElements(value.elements) : undefined,
     editorMode: value.editorMode,
     originalText: value.originalText,
@@ -300,19 +289,8 @@ function stripWikiLinks(text: string): string {
 
 function extractBlocksForLabel(
   blocks: ContentBlock[],
-  includeDmOnly: boolean,
-): { text: string; imageAssetId: string | null; imageMimeType: string | null; dmOnlyCount: number } {
-  const context: AccessContext = includeDmOnly ? "dm" : "portal";
-  const visibleBlocks = filterBlocksForContext(blocks, context).filter((block) => {
-    if (DM_ONLY_BLOCK_TYPES.has(block.type) && !includeDmOnly) {
-      return false;
-    }
-    return PLAYER_BLOCK_TYPES.has(block.type) || (includeDmOnly && block.type === "gm_note");
-  });
-
-  const dmOnlyCount = blocks.filter(
-    (block) => block.visibility === "dm_only" || DM_ONLY_BLOCK_TYPES.has(block.type),
-  ).length;
+): { text: string; imageAssetId: string | null; imageMimeType: string | null } {
+  const visibleBlocks = blocks.filter((block) => LABEL_BLOCK_TYPES.has(block.type));
 
   const textBlocks = visibleBlocks.filter(
     (block) => block.type !== "image" && block.type !== "gallery" && block.type !== "map",
@@ -328,7 +306,6 @@ function extractBlocksForLabel(
     text,
     imageAssetId: imageBlock?.assetId ?? null,
     imageMimeType: null,
-    dmOnlyCount,
   };
 }
 
@@ -351,10 +328,9 @@ async function resolveAssetImage(
 export async function buildLabelContentFromPage(
   db: PrismaClient,
   page: PageWithBlocks,
-  options: { includeDmOnly?: boolean; imageAssetId?: string | null } = {},
+  options: { imageAssetId?: string | null } = {},
 ): Promise<LabelContentData> {
-  const includeDmOnly = options.includeDmOnly ?? false;
-  const extracted = extractBlocksForLabel(page.contentBlocks, includeDmOnly);
+  const extracted = extractBlocksForLabel(page.contentBlocks);
   const image = await resolveAssetImage(
     db,
     options.imageAssetId ?? extracted.imageAssetId,
@@ -370,8 +346,6 @@ export async function buildLabelContentFromPage(
     imageAssetId: image.assetId,
     imageMimeType: image.mimeType,
     sourceTitle: page.title,
-    containsDmOnly: !includeDmOnly && extracted.dmOnlyCount > 0,
-    dmOnlyBlockCount: extracted.dmOnlyCount,
     aiImagePlaceholder: "[AI-Bild Platzhalter — später verfügbar]",
     aiTextPlaceholder: "[AI-Text Platzhalter — später verfügbar]",
   };
@@ -380,20 +354,7 @@ export async function buildLabelContentFromPage(
 export async function buildLabelContentFromBlock(
   db: PrismaClient,
   block: ContentBlock & { page?: Page; asset?: Asset | null },
-  options: { includeDmOnly?: boolean } = {},
 ): Promise<LabelContentData> {
-  const includeDmOnly = options.includeDmOnly ?? false;
-
-  if (!includeDmOnly && (block.visibility === "dm_only" || DM_ONLY_BLOCK_TYPES.has(block.type))) {
-    return {
-      title: block.page?.title ?? "Block",
-      text: "",
-      sourceTitle: block.page?.title,
-      containsDmOnly: true,
-      dmOnlyBlockCount: 1,
-    };
-  }
-
   const text = stripWikiLinks(block.content.trim());
   const image = await resolveAssetImage(db, block.assetId);
 
@@ -403,8 +364,6 @@ export async function buildLabelContentFromBlock(
     imageAssetId: image.assetId,
     imageMimeType: image.mimeType,
     sourceTitle: block.page?.title,
-    containsDmOnly: block.visibility === "dm_only",
-    dmOnlyBlockCount: block.visibility === "dm_only" ? 1 : 0,
     aiImagePlaceholder: "[AI-Bild Platzhalter — später verfügbar]",
     aiTextPlaceholder: "[AI-Text Platzhalter — später verfügbar]",
   };
@@ -420,30 +379,9 @@ export async function buildLabelContentFromAsset(asset: Asset): Promise<LabelCon
     imageAssetId: isImage ? asset.id : null,
     imageMimeType: isImage ? asset.mimeType : null,
     sourceTitle: asset.title,
-    containsDmOnly: asset.visibility === "dm_only",
-    dmOnlyBlockCount: asset.visibility === "dm_only" ? 1 : 0,
     aiImagePlaceholder: "[AI-Bild Platzhalter — später verfügbar]",
     aiTextPlaceholder: "[AI-Text Platzhalter — später verfügbar]",
   };
-}
-
-export function assertPlayerSafeExport(
-  content: LabelContentData,
-  includeDmOnly: boolean,
-): { allowed: boolean; reason?: string } {
-  if (includeDmOnly) {
-    return { allowed: true };
-  }
-
-  if (content.containsDmOnly || (content.dmOnlyBlockCount ?? 0) > 0) {
-    return {
-      allowed: false,
-      reason:
-        "Dieses Label enthält DM-only Inhalte. Bitte bestätigen Sie bewusst den Export mit DM-Inhalten.",
-    };
-  }
-
-  return { allowed: true };
 }
 
 export class LabelService {
@@ -767,9 +705,7 @@ export class LabelService {
         throw new Error("Source page is not a dungeon room");
       }
 
-      content = await buildLabelContentFromPage(this.db, page, {
-        includeDmOnly: input.includeDmOnly,
-      });
+      content = await buildLabelContentFromPage(this.db, page);
       title = title || page.title;
       sourceType = page.type === "room" ? "dungeon_room" : "page";
     } else if (input.sourceType === "content_block") {
@@ -779,9 +715,7 @@ export class LabelService {
       });
 
       if (!block) throw new Error("Content block not found");
-      content = await buildLabelContentFromBlock(this.db, block, {
-        includeDmOnly: input.includeDmOnly,
-      });
+      content = await buildLabelContentFromBlock(this.db, block);
       title = title || `${block.page.title} — Block`;
     } else if (input.sourceType === "asset") {
       const asset = await this.db.asset.findUnique({ where: { id: input.sourceId } });
@@ -832,9 +766,7 @@ export class LabelService {
 
   async listSourceBlocksForLabels(
     worldSlug: string,
-  ): Promise<
-    { id: string; type: ContentBlock["type"]; pageTitle: string; preview: string; visibility: ContentBlock["visibility"] }[]
-  > {
+  ): Promise<{ id: string; type: ContentBlock["type"]; pageTitle: string; preview: string }[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
 
@@ -854,7 +786,6 @@ export class LabelService {
       type: block.type,
       pageTitle: block.page.title,
       preview: block.content.slice(0, 80),
-      visibility: block.visibility,
     }));
   }
 }

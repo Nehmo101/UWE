@@ -88,12 +88,10 @@ describe("generateSettlement", () => {
 
     for (const feature of layout.features) {
       assert.ok(feature.id.startsWith("hamlet-feature-"));
-      assert.equal(feature.visibility, "dm_only");
     }
     for (const object of layout.objects) {
       assert.ok(object.id.startsWith("hamlet-object-"));
       assert.equal(object.layer, 50);
-      assert.equal(object.visibility, "dm_only");
       assert.equal(object.style.settlement, object.kind);
     }
   });
@@ -170,12 +168,11 @@ describe("generateSettlement", () => {
     assert.equal(low.meta.pierCount, 1);
   });
 
-  it("threads node, visibility, count, gate, and palette options through the output", () => {
+  it("threads node, count, gate, and palette options through the output", () => {
     const layout = generateSettlement(SITE, {
       seed: "stone-market",
       idPrefix: "stone",
       nodeId: "node-1",
-      visibility: "player_visible",
       buildingCount: 3,
       gateCount: 2,
       towerCount: 1,
@@ -191,8 +188,6 @@ describe("generateSettlement", () => {
     assert.equal(layout.objects.filter((object) => object.kind === "building").length, 3);
     assert.ok(layout.features.every((feature) => feature.nodeId === "node-1"));
     assert.ok(layout.objects.every((object) => object.nodeId === "node-1"));
-    assert.ok(layout.features.every((feature) => feature.visibility === "player_visible"));
-    assert.ok(layout.objects.every((object) => object.visibility === "player_visible"));
 
     for (const building of layout.objects.filter((object) => object.kind === "building")) {
       assert.equal(building.paletteItemId, "pi_house");

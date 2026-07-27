@@ -98,7 +98,7 @@ describe("KnoteForge import", () => {
     assert.equal(draft.type, "dungeon");
     assert.equal(draft.contentBlocks.length, 2);
     assert.equal(draft.contentBlocks[0]?.type, "rich_text");
-    assert.equal(draft.contentBlocks[1]?.type, "gm_note");
+    assert.equal(draft.contentBlocks[1]?.type, "rich_text");
     assert.ok(draft.tags.some((tag) => tag === "kf-import:kf-1"));
   });
 
@@ -202,7 +202,7 @@ describe("KnoteForge import", () => {
       slug: "eingangshalle",
       type: "room",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, content: "Alt", visibility: "dm_only" },
+        { type: "rich_text", sortOrder: 0, content: "Alt" },
       ],
     });
 

@@ -1,7 +1,6 @@
 import type { AccessContext } from "@uwe/auth";
 import {
   canReadWorld,
-  canViewPage,
   isWorldStaff,
   scopeFromAccessContext,
 } from "@uwe/auth";
@@ -104,10 +103,6 @@ export function toPlayerSafeInventoryItemView(item: InventoryItem): PlayerSafeIn
   };
 }
 
-const PAGE_ACCESS_SELECT = {
-  id: true,
-  visibility: true,
-} as const;
 
 export class PartyTreasuryService {
   constructor(private readonly db: PrismaClient) {}
@@ -123,51 +118,19 @@ export class PartyTreasuryService {
     return world.id;
   }
 
-  private async isItemPagePlayerVisible(
-    ctx: AccessContext,
-    pageId: string | null,
-  ): Promise<boolean> {
-    if (!pageId) {
-      return true;
-    }
-    const page = await this.db.page.findUnique({
-      where: { id: pageId },
-      select: PAGE_ACCESS_SELECT,
-    });
-    return page ? canViewPage(ctx, page) : false;
-  }
-
-  /** Player-safe Filter: dm_only-Items und Items mit nicht sichtbarer verlinkter Seite fliegen raus. */
-  private async filterItemsForPlayer(
-    ctx: AccessContext,
+  /**
+   * Player-safe Filter: Items, die der GM über `properties.dmOnly` versteckt
+   * hat, fliegen raus.
+   *
+   * Der frühere zweite Teil dieses Filters — Items, deren verlinkte Seite für
+   * die Person nicht sichtbar war — entfällt: Seiten-Sichtbarkeit gibt es nicht
+   * mehr, wer der Welt zugeordnet ist sieht jede Seite darin.
+   */
+  private filterItemsForPlayer(
+    _ctx: AccessContext,
     items: InventoryItem[],
-  ): Promise<InventoryItem[]> {
-    const candidates = items.filter((item) => !isInventoryItemDmOnly(item));
-    const pageIds = [
-      ...new Set(
-        candidates
-          .map((item) => item.pageId)
-          .filter((pageId): pageId is string => Boolean(pageId)),
-      ),
-    ];
-
-    if (pageIds.length === 0) {
-      return candidates;
-    }
-
-    const pages = await this.db.page.findMany({
-      where: { id: { in: pageIds } },
-      select: PAGE_ACCESS_SELECT,
-    });
-    const pageById = new Map(pages.map((page) => [page.id, page]));
-
-    return candidates.filter((item) => {
-      if (!item.pageId) {
-        return true;
-      }
-      const page = pageById.get(item.pageId);
-      return page ? canViewPage(ctx, page) : false;
-    });
+  ): InventoryItem[] {
+    return items.filter((item) => !isInventoryItemDmOnly(item));
   }
 
   /**
@@ -203,7 +166,7 @@ export class PartyTreasuryService {
       };
     }
 
-    const items = staff ? treasury.items : await this.filterItemsForPlayer(ctx, treasury.items);
+    const items = staff ? treasury.items : this.filterItemsForPlayer(ctx, treasury.items);
 
     const itemUpdatedAt = items.reduce<Date | null>((latest, item) => {
       if (!latest || item.updatedAt > latest) {
@@ -430,10 +393,6 @@ export class PartyTreasuryService {
       if (!item.treasuryId) {
         return null;
       }
-      if (!(await this.isItemPagePlayerVisible(ctx, item.pageId))) {
-        return null;
-      }
-
       const character = await this.db.character.findFirst({
         where: { id: input.targetCharacterId, worldId },
         select: { id: true, ownerUserId: true },

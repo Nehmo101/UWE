@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   DungeonPrepStatusBadge,
   DUNGEON_PREP_STATUS_LABELS,
-  VISIBILITY_LABELS,
   WikiContent,
 } from "@uwe/shared-ui";
 import {
@@ -11,7 +10,6 @@ import {
   createDungeonCockpitService,
   DungeonPrepStatusEnum,
   getAppRepository,
-  VisibilityEnum,
 } from "@uwe/database/server";
 import {
   createDungeonLevelAction,
@@ -58,7 +56,7 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const wikiIndex = await buildWorldWikiIndex(repo, worldSlug, "dm");
+  const wikiIndex = await buildWorldWikiIndex(repo, worldSlug);
   const dungeons = createDungeonCockpitService();
   const overview = await dungeons.getDungeonOverview(worldSlug, dungeonSlug, wikiIndex);
   if (!overview) notFound();
@@ -247,19 +245,6 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
                       <SelectItem key={status} value={status}>
                         {DUNGEON_PREP_STATUS_LABELS[status]}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className={FIELD_CLASS}>
-                <Label htmlFor="dungeon-meta-visibility">Sichtbarkeit</Label>
-                <Select name="visibility" defaultValue={overview.dungeon.visibility}>
-                  <SelectTrigger id="dungeon-meta-visibility">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(VisibilityEnum).map((v) => (
-                      <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

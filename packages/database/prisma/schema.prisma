@@ -42,16 +42,6 @@ enum DungeonPrepStatus {
   skipped
 }
 
-enum Visibility {
-  private
-  dm_only
-  player_visible
-  public
-  specific_players
-  unlock_after_session
-  archived
-}
-
 enum CanonicalStatus {
   idea
   draft
@@ -75,7 +65,6 @@ enum ContentBlockType {
   relation
   timeline
   statblock
-  gm_note
   player_text
   ai_summary
 }
@@ -191,12 +180,6 @@ enum ShareTargetType {
   page
   handout
   asset
-}
-
-enum BrainVisibility {
-  dm_only
-  player_visible
-  public
 }
 
 enum BrainSource {
@@ -490,8 +473,6 @@ model User {
 
   sessions            Session[]
   worldMemberships    WorldMembership[]
-  pageAccess          PagePlayerAccess[]
-  sessionUnlocks      SessionUnlock[]
   playerQuestFlags      PlayerQuestFlag[]
   sessionAvailabilities SessionAvailability[]
   playerNotes         PlayerNote[]
@@ -569,18 +550,6 @@ model WorldMembership {
   @@map("world_memberships")
 }
 
-model PagePlayerAccess {
-  id     String @id @default(cuid())
-  pageId String @map("page_id")
-  userId String @map("user_id")
-
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([pageId, userId])
-  @@map("page_player_access")
-}
-
 model PlayerQuestFlag {
   id        String   @id @default(cuid())
   pageId    String   @map("page_id")
@@ -611,20 +580,6 @@ model SessionAvailability {
 
   @@unique([sessionId, userId])
   @@map("session_availabilities")
-}
-
-model SessionUnlock {
-  id           String   @id @default(cuid())
-  pageId       String   @map("page_id")
-  userId       String   @map("user_id")
-  unlockedAt   DateTime @default(now()) @map("unlocked_at")
-  sessionLabel String?  @map("session_label")
-
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([pageId, userId])
-  @@map("session_unlocks")
 }
 
 model World {
@@ -708,7 +663,6 @@ model Page {
   slug            String
   type            PageType
   summary         String?
-  visibility      Visibility         @default(private)
   canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
   prepStatus      DungeonPrepStatus? @map("prep_status")
   questStatus     QuestLifecycleStatus? @map("quest_status")
@@ -725,8 +679,6 @@ model Page {
   contentBlocks    ContentBlock[]
   outgoingLinks    PageLink[]         @relation("SourcePage")
   incomingLinks    PageLink[]         @relation("TargetPage")
-  playerAccess       PagePlayerAccess[]
-  sessionUnlocks     SessionUnlock[]
   playerQuestFlags    PlayerQuestFlag[]
   gameSessionLinks       GameSessionPageLink[]
   soundboardButtonLinks  SoundboardButtonPageLink[]
@@ -779,7 +731,6 @@ model WorldEvent {
   title              String
   summaryPlayer      String?              @map("summary_player")
   summaryDm          String?              @map("summary_dm")
-  visibility         Visibility           @default(private)
   sourceType         WorldEventSourceType @default(manual) @map("source_type")
   sourceAiProposalId String?              @map("source_ai_proposal_id")
   gameSessionId      String?              @map("game_session_id")
@@ -996,7 +947,6 @@ model ContentBlock {
   type       ContentBlockType
   sortOrder  Int              @map("sort_order")
   content     String           @default("")
-  visibility  Visibility       @default(private)
   metadata    Json?
   createdAt  DateTime         @default(now()) @map("created_at")
   updatedAt  DateTime         @updatedAt @map("updated_at")
@@ -1019,7 +969,6 @@ model Asset {
   storageKey  String     @map("storage_key")
   mimeType    String?    @map("mime_type")
   size        Int        @default(0)
-  visibility  Visibility  @default(private)
   tags        Json?
   metadata    Json?
   createdAt   DateTime    @default(now()) @map("created_at")
@@ -1187,7 +1136,6 @@ model SoundboardButton {
   volume      Float            @default(1.0)
   loop        Boolean          @default(false)
   tags        Json?
-  visibility  Visibility       @default(dm_only)
   sortOrder   Int              @default(0) @map("sort_order")
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
@@ -1275,7 +1223,6 @@ enum ActivityAction {
   content_updated
   content_deleted
   content_restored
-  visibility_changed
   inspector_fix_applied
   template_created
   template_updated
@@ -1351,7 +1298,6 @@ enum AuditAction {
   content_created
   content_updated
   content_deleted
-  visibility_changed
   secret_revealed
   import_started
   import_completed
@@ -1466,7 +1412,6 @@ model PageTemplate {
   name              String
   description       String     @default("")
   pageType          PageType   @map("page_type")
-  defaultVisibility Visibility @default(dm_only) @map("default_visibility")
   titlePlaceholder  String     @default("") @map("title_placeholder")
   blocks            Json
   isSystem          Boolean    @default(false) @map("is_system")
@@ -1582,7 +1527,6 @@ model BrainDocument {
   title         String
   content       String            @default("")
   documentType  BrainDocumentType @default(general) @map("document_type")
-  visibility    BrainVisibility   @default(dm_only)
   source        BrainSource       @default(manual)
   status        BrainStatus       @default(draft)
   trustLevel    Float?            @map("trust_level")
@@ -1597,7 +1541,6 @@ model BrainDocument {
   chunks      BrainChunk[]
 
   @@index([worldId, status])
-  @@index([worldId, visibility])
   @@index([worldId, documentType])
   @@index([pageId])
   @@index([gameSessionId])
@@ -1630,7 +1573,6 @@ model BrainFact {
   factType      BrainFactType   @default(custom) @map("fact_type")
   title         String
   content       String          @default("")
-  visibility    BrainVisibility @default(dm_only)
   source        BrainSource     @default(manual)
   status        BrainStatus     @default(draft)
   confidence    Float?
@@ -1644,7 +1586,6 @@ model BrainFact {
   page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
 
   @@index([worldId, status])
-  @@index([worldId, visibility])
   @@index([worldId, factType])
   @@index([pageId])
   @@index([gameSessionId])

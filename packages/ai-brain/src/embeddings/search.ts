@@ -19,12 +19,10 @@ export async function semanticSearchBrainChunks(
 
   const settings = resolveBrainEmbeddingSettings();
   const embeddingProvider = provider ?? createEmbeddingProvider();
-  const accessContext = options.accessContext ?? "dm";
   const limit = options.limit ?? DEFAULT_LIMIT;
   const minScore = options.minScore ?? DEFAULT_MIN_SCORE;
 
   const chunks = await brainStore.listSearchableChunks(options.worldSlug, {
-    accessContext,
     campaignId: options.campaignId,
   });
 
@@ -81,7 +79,6 @@ export async function semanticSearchBrainChunks(
     content: chunk.content,
     chunkIndex: chunk.chunkIndex,
     score,
-    visibility: chunk.document.visibility,
     documentType: chunk.document.documentType,
     matchMode: "semantic" as const,
   }));
@@ -121,7 +118,6 @@ function keywordSearch(
     content: chunk.content,
     chunkIndex: chunk.chunkIndex,
     score,
-    visibility: chunk.document.visibility,
     documentType: chunk.document.documentType,
     matchMode: "keyword" as const,
   }));

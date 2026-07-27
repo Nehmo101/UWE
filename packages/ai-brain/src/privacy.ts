@@ -1,13 +1,5 @@
-import { isCloudProvider } from "./settings";
-import type { AiContext, AiProviderId } from "./types";
+import type { AiContext } from "./types";
 import { AiPrivacyError } from "./types";
-
-// Provider/settings-independent privacy primitives now live in the low-level
-// `@uwe/security` layer; re-exported here so existing consumers are unchanged.
-export {
-  resolveServerAllowDmOnly,
-  sanitizeContextForCloud,
-} from "@uwe/security/inference";
 
 /** True when context carries any UWE campaign/brain/object knowledge. */
 export function contextContainsLocalKnowledge(context: AiContext): boolean {
@@ -20,54 +12,6 @@ export function contextContainsLocalKnowledge(context: AiContext): boolean {
     Boolean(context.promptContext?.trim()) ||
     context.sources.length > 0
   );
-}
-
-export function contextContainsDmOnly(context: AiContext): boolean {
-  return context.pages.some(
-    (page) =>
-      page.visibility === "dm_only" ||
-      page.contentBlocks.some((block) => block.visibility === "dm_only"),
-  );
-}
-
-export function validateProviderForContext(
-  providerId: AiProviderId,
-  context: AiContext,
-  options: {
-    datenschutzMode: boolean;
-    localOnly: boolean;
-    /**
-     * When true, local campaign/brain context is allowed on the cloud route.
-     * Set to true for DnD modes (brain, current_object, current_object_plus_brain)
-     * when admin gateway policy is CLOUD_ALLOWED. personal_brain must never set this.
-     * Defaults to false for backward-compatible behaviour.
-     */
-    allowLocalContextOnCloud?: boolean;
-  },
-): void {
-  if (options.datenschutzMode && isCloudProvider(providerId)) {
-    throw new AiPrivacyError(
-      "Datenschutzmodus aktiv: Cloud-Provider dürfen keine Kampagnendaten erhalten.",
-    );
-  }
-
-  if (options.localOnly && isCloudProvider(providerId)) {
-    throw new AiPrivacyError(
-      "Local-only-Modus aktiv: Nur lokale Provider sind erlaubt.",
-    );
-  }
-
-  if (isCloudProvider(providerId) && !options.allowLocalContextOnCloud && contextContainsLocalKnowledge(context)) {
-    throw new AiPrivacyError(
-      "Cloud-Provider dürfen keinen lokalen Kampagnen-, Brain- oder Objekt-Kontext erhalten.",
-    );
-  }
-
-  if (isCloudProvider(providerId) && contextContainsDmOnly(context)) {
-    throw new AiPrivacyError(
-      "Cloud-Provider dürfen keine DM-only-Inhalte erhalten.",
-    );
-  }
 }
 
 /** Checks that player-facing recap text does not leak known GM-only phrases. */
@@ -85,19 +29,15 @@ export function validatePlayerRecapContent(
   }
 }
 
-/** Extracts DM-only block contents from context for recap validation. */
+/**
+ * Extracts GM-only session text from the context for recap validation.
+ *
+ * Content blocks no longer contribute: with visibility gone there is no
+ * dm_only block and no gm_note type. What is left is the session's own DM
+ * fields, which a player-facing recap still must not echo verbatim.
+ */
 export function extractDmOnlyPhrases(context: AiContext): string[] {
   const phrases: string[] = [];
-  for (const page of context.pages) {
-    for (const block of page.contentBlocks) {
-      if (block.visibility === "dm_only" || block.type === "gm_note") {
-        const snippet = block.content.trim().slice(0, 120);
-        if (snippet.length > 10) {
-          phrases.push(snippet);
-        }
-      }
-    }
-  }
   if (context.session?.summaryDm) phrases.push(context.session.summaryDm);
   if (context.session?.notes) phrases.push(context.session.notes);
   if (context.session?.openPlots) phrases.push(context.session.openPlots);

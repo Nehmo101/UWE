@@ -2,12 +2,10 @@ import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
-  assertPlayerSafeExport,
   createLabelService,
   getAppRepository,
   normalizeLabel,
   renderLabelExportAsync,
-  stripDmOnlyForPlayer,
 } from "@uwe/database/server";
 import { logLabelExportActivity } from "@/app/label-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
@@ -31,7 +29,6 @@ export async function GET(request: Request, { params }: Props) {
   const { worldSlug, labelId } = parsedParams.data;
   const url = new URL(request.url);
   const format = url.searchParams.get("format") ?? "html";
-  const includeDmOnly = url.searchParams.get("includeDmOnly");
   const version = url.searchParams.get("version");
 
   const repo = getAppRepository();
@@ -48,15 +45,9 @@ export async function GET(request: Request, { params }: Props) {
   }
 
   const parsed = normalizeLabel(label);
-  const allowDm = includeDmOnly === "1" || version === "dm";
   const playerVersion = version === "player";
 
-  const content = playerVersion ? stripDmOnlyForPlayer(parsed.content) : parsed.content;
-
-  const safety = assertPlayerSafeExport(content, allowDm || !playerVersion);
-  if (!safety.allowed && playerVersion) {
-    return jsonError(safety.reason ?? "Export nicht erlaubt.", 403);
-  }
+  const content = playerVersion ? parsed.content : parsed.content;
 
   const imageUrls: Record<string, string> = {};
   if (content.imageAssetId) {
@@ -81,7 +72,6 @@ export async function GET(request: Request, { params }: Props) {
     imageUrl: content.imageAssetId ? imageUrls[content.imageAssetId] : null,
     imageUrls,
     worldName: world.name,
-    includeDmOnly: allowDm,
   };
 
   const exported =

@@ -7,7 +7,6 @@ import {
   MetaPanel,
   SidebarSection,
   TagChip,
-  VisibilityBadge,
   WikiContent,
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
@@ -29,7 +28,6 @@ import {
 import { buildPageGraphForViewer } from "@uwe/database/graph-service";
 import { buildPageViewForViewer } from "@uwe/database/page-viewer-service";
 import { pagePreviewHref } from "@/src/lib/page-preview";
-import { describePreviewVisibilityGate } from "@/src/lib/preview-visibility-reason";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { PreviewAsPlayerControls } from "@/src/components/PreviewAsPlayerControls";
 import { WikiContextPanel } from "@/src/components/wiki";
@@ -41,8 +39,8 @@ function renderPreviewNotVisible(worldSlug: string, page: PageWithBlocks) {
   return (
     <div className="page">
       <EmptyState
-        title="Für Spieler noch nicht sichtbar"
-        description={`Diese Seite existiert, ist aktuell aber nicht für Spieler sichtbar. ${describePreviewVisibilityGate(page)}`}
+        title="Für diesen Spieler nicht zugänglich"
+        description="Die Seite existiert, die Vorschau-Person ist dieser Welt aber nicht zugeordnet."
         action={
           <Link className={buttonVariants({ variant: "default" })} href={pageHref}>
             Zurück zur DM-Ansicht
@@ -117,14 +115,14 @@ export async function StudioWikiPageView({
           "neighbors",
         );
       } else {
-        view = await buildPageView(repo, worldSlug, slug, "preview");
+        view = await buildPageView(repo, worldSlug, slug);
         if (!view) return renderPreviewNotVisible(worldSlug, rawPage);
-        pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "preview", "neighbors");
+        pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "neighbors");
       }
     } else {
-      view = await buildPageView(repo, worldSlug, slug, "dm");
+      view = await buildPageView(repo, worldSlug, slug);
       if (!view) notFound();
-      pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "dm", "neighbors");
+      pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "neighbors");
     }
 
     const pageHref = buildPageUrl(worldSlug, rawPage.type, slug);
@@ -150,11 +148,6 @@ export async function StudioWikiPageView({
                 {previewPlayers.find((player) => player.id === previewUserId)?.characterName ??
                   previewPlayers.find((player) => player.id === previewUserId)?.displayName ??
                   "Spieler"}
-              </p>
-            )}
-            {view.privateReferenceWarning && (
-              <p className="mt-2 font-semibold">
-                {view.privateReferenceWarning}
               </p>
             )}
             {showPreviewControls && (
@@ -202,7 +195,6 @@ export async function StudioWikiPageView({
                 <>
                   <SidebarSection title="Metadaten">
                     <MetaPanel
-                      visibility={dmPage.visibility}
                       canonicalStatus={dmPage.canonicalStatus}
                       type={dmPage.type}
                       tags={parseStringArray(dmPage.tags)}
@@ -235,7 +227,6 @@ export async function StudioWikiPageView({
             meta={
               !isPlayerPreview && dmPage ? (
                 <>
-                  <VisibilityBadge visibility={dmPage.visibility} />
                   {view.page.tags.map((tag) => (
                     <TagChip key={tag} tag={tag} />
                   ))}

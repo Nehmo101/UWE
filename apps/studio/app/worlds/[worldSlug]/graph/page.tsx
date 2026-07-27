@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GraphRelationList, GraphView, VISIBILITY_LABELS } from "@uwe/shared-ui";
+import { GraphRelationList, GraphView } from "@uwe/shared-ui";
 import {
   buildWorldGraph,
   getAppRepository,
@@ -8,7 +8,6 @@ import {
   GRAPH_NODE_CATEGORY_LABELS,
   type GraphNodeCategory,
   type GraphViewMode,
-  type Visibility,
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import {
@@ -23,7 +22,6 @@ interface Props {
     campaign?: string;
     category?: string | string[];
     tag?: string;
-    visibility?: string | string[];
     focusPageId?: string;
     mode?: string;
     preview?: string;
@@ -39,15 +37,6 @@ function parseCategories(value: string | string[] | undefined): GraphNodeCategor
   return categories.length ? categories : undefined;
 }
 
-function parseVisibilities(value: string | string[] | undefined): Visibility[] | undefined {
-  if (!value) return undefined;
-  const raw = Array.isArray(value) ? value : value.split(",");
-  const visibilities = raw.filter((item): item is Visibility =>
-    Object.keys(VISIBILITY_LABELS).includes(item),
-  );
-  return visibilities.length ? visibilities : undefined;
-}
-
 function parseMode(value: string | undefined, focusPageId?: string): GraphViewMode {
   if (value === "focus" || value === "neighbors" || value === "backlinks" || value === "full") {
     return value;
@@ -59,7 +48,6 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
   const query = await searchParams;
   const isPlayerPreview = query.preview === "player";
-  const context = isPlayerPreview ? "preview" : "dm";
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -71,15 +59,13 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
     : null;
 
   const categories = parseCategories(query.category);
-  const visibilities = parseVisibilities(query.visibility);
   const tags = query.tag?.trim() ? [query.tag.trim()] : undefined;
   const mode = parseMode(query.mode, query.focusPageId);
 
-  const graph = await buildWorldGraph(repo, worldSlug, context, {
+  const graph = await buildWorldGraph(repo, worldSlug, {
     campaignId: selectedCampaign?.id,
     categories,
     tags,
-    visibilities,
     focusPageId: query.focusPageId,
     mode,
   });
@@ -186,17 +172,6 @@ export default async function StudioGraphPage({ params, searchParams }: Props) {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1">
-            Sichtbarkeit
-            <select name="visibility" defaultValue={visibilities?.[0] ?? ""} className="rounded-md border border-border px-2 py-1">
-              <option value="">Alle</option>
-              {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
 
           <label className="flex flex-col gap-1">
             Modus

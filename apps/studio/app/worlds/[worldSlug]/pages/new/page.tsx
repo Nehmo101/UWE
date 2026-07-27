@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   PAGE_TYPE_LABELS,
-  VISIBILITY_LABELS,
   CANONICAL_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -10,7 +9,6 @@ import {
   getAppRepository,
   prisma,
   PageTypeEnum,
-  VisibilityEnum,
   CanonicalStatusEnum,
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
@@ -182,33 +180,6 @@ export default async function NewPageForm({ params, searchParams }: Props) {
           <Textarea id="page-summary" name="summary" rows={3} />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="page-visibility">Sichtbarkeit</Label>
-          <Select
-            name="visibility"
-            defaultValue={
-              template.slug === "blank"
-                ? settings.worlds.defaultVisibility
-                : template.defaultVisibility
-            }
-          >
-            <SelectTrigger id="page-visibility">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(VisibilityEnum).map((v) => (
-                <SelectItem key={v} value={v}>
-                  {VISIBILITY_LABELS[v]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <small className="text-xs text-muted-foreground">
-            „Portal sichtbar“ und „Share-Link“ sind nach dem
-              Veröffentlichen für angemeldete Spieler im Portal sichtbar.
-              „Nur GM“ erscheint dort niemals.
-          </small>
-        </div>
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="page-publish-status">Publish Status</Label>
@@ -255,8 +226,8 @@ export default async function NewPageForm({ params, searchParams }: Props) {
             Diese Vorlage legt zusätzlich {extraBlocks.length}{" "}
             {extraBlocks.length === 1 ? "Block" : "Blöcke"} an:{" "}
             {extraBlocks
-              .map((block) =>
-                block.type === "gm_note" ? "DM-Notiz (nur für dich)" : "Inhaltsblock",
+              .map((_block) =>
+                "Inhaltsblock",
               )
               .join(", ")}
             .

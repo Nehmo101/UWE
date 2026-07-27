@@ -35,7 +35,6 @@ export interface EditorVisibilityMessage {
   type: "visibility";
   scope: "node" | "map";
   nodeId?: string;
-  visibility: string;
 }
 export interface EditorAiDraftRequestMessage {
   source: typeof ATLAS_BRIDGE_EDITOR_SOURCE;

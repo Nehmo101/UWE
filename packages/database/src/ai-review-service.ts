@@ -14,7 +14,6 @@ import { buildGeneratedPatch, suggestApplyMode } from "./ai-proposal-types";
 import {
   BrainStoreService,
   type BrainDocumentType,
-  type BrainVisibility,
 } from "./brain-store-service";
 import { GameSessionService } from "./game-session";
 import { buildPageUrl } from "./page-types";
@@ -23,7 +22,6 @@ import { toPrismaJsonValue, parseStringArray } from "./json-utils";
 import { createUndoService } from "./undo-service";
 import { createWorldEventService } from "./world-event-service";
 import { parseInGameDate, type InGameDate } from "./world-calendar-service";
-import type { Visibility } from "./generated/prisma/client";
 import {
   formatStructuredGeneratorMarkdown,
   getStructuredGeneratorSchema,
@@ -43,7 +41,6 @@ const BRAIN_DOCUMENT_TYPES: BrainDocumentType[] = [
   "ai_summary",
 ];
 
-const BRAIN_VISIBILITIES: BrainVisibility[] = ["dm_only", "player_visible", "public"];
 
 function pickMetadataValue<T extends string>(
   value: unknown,
@@ -68,7 +65,6 @@ export interface JsonBrainProposal {
   content: string;
   targetType: string;
   targetId?: string | null;
-  visibility?: string;
   status?: string;
   metadata?: Record<string, unknown>;
 }
@@ -180,10 +176,7 @@ export class AiReviewService {
         content: json.content,
         title: json.label,
       });
-      const brainMetadata = {
-        ...(json.metadata ?? {}),
-        ...(json.visibility ? { visibility: json.visibility } : {}),
-      };
+      const brainMetadata = { ...(json.metadata ?? {}) };
 
       await this.db.aiProposal.create({
         data: {
@@ -357,10 +350,6 @@ export class AiReviewService {
     const documentType = mailDraft
       ? "session_summary"
       : pickMetadataValue(metadata.documentType, BRAIN_DOCUMENT_TYPES, "general");
-    const visibility = mailDraft
-      ? "player_visible"
-      : pickMetadataValue(metadata.visibility, BRAIN_VISIBILITIES, "dm_only");
-
     const doc = await brainStore.createDocument({
       worldId: proposal.worldId,
       pageId: proposal.sourcePageId ?? proposal.aiRun.pageId ?? undefined,
@@ -368,7 +357,6 @@ export class AiReviewService {
       title: mailDraft ? `Mail: ${subject}` : subject,
       content,
       documentType,
-      visibility,
       source: "ai_generated",
       status: "draft",
       metadata: {
@@ -377,7 +365,6 @@ export class AiReviewService {
         mailDraft,
         subject,
         documentType,
-        visibility,
         autoSend: false,
       },
     });
@@ -660,7 +647,6 @@ export class AiReviewService {
           type: "ai_summary",
           sortOrder,
           content,
-          visibility: "dm_only",
           metadata: JSON.parse(
             JSON.stringify({
               aiRunId: proposal.aiRunId,
@@ -836,7 +822,6 @@ export class AiReviewService {
         inGameDate: event.inGameDate,
         summaryPlayer: event.summaryPlayer ?? null,
         summaryDm: event.summaryDm ?? null,
-        visibility: event.visibility ?? "private",
         sourceType: "faction_sim",
         sourceAiProposalId: proposalId,
         linkedPages: [{ pageId: sourcePage.id, role: "faction" }],
@@ -948,10 +933,9 @@ export class AiReviewService {
 
     const sortOrder = await repo.getNextContentBlockSortOrder(sourcePage.id);
     const block = await repo.addContentBlock(sourcePage.id, {
-      type: "gm_note",
+      type: "rich_text",
       sortOrder,
       content: markdown,
-      visibility: "dm_only",
       metadata: {
         aiRunId: proposal.aiRunId,
         proposalId,
@@ -969,7 +953,6 @@ export class AiReviewService {
         type: "player_text",
         sortOrder: playerSortOrder,
         content: parsed.playerText,
-        visibility: "player_visible",
         metadata: {
           aiRunId: proposal.aiRunId,
           proposalId,
@@ -1095,7 +1078,6 @@ interface ParsedFactionSimulationEvent {
   inGameDate: InGameDate;
   summaryPlayer?: string | null;
   summaryDm?: string | null;
-  visibility?: Visibility;
 }
 
 function isStructuredGeneratorTaskType(taskType: string): boolean {
@@ -1144,8 +1126,6 @@ function parseFactionSimulationEvents(content: string): ParsedFactionSimulationE
     }
 
     const inGameDate = parseInGameDate(record.inGameDate);
-    const visibility =
-      typeof record.visibility === "string" ? (record.visibility as Visibility) : undefined;
 
     return {
       title,
@@ -1153,7 +1133,6 @@ function parseFactionSimulationEvents(content: string): ParsedFactionSimulationE
       summaryPlayer:
         typeof record.summaryPlayer === "string" ? record.summaryPlayer.trim() : null,
       summaryDm: typeof record.summaryDm === "string" ? record.summaryDm.trim() : null,
-      visibility,
     };
   });
 }

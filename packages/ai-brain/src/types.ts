@@ -18,7 +18,6 @@ export type AiProviderId =
 export type {
   AiTaskType,
   ContextAudience,
-  BrainVisibility,
   AiContextBlock,
   AiContextRelation,
   AiContextBacklink,
@@ -103,7 +102,6 @@ export interface AiBrainSettings {
 }
 
 export interface BuildAiContextOptions {
-  allowDmOnly?: boolean;
   maxChars?: number;
   includeRelatedPageIds?: string[];
   datenschutzMode?: boolean;

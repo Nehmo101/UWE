@@ -1,14 +1,8 @@
 import type { AccessContext as ViewerAccessContext } from "@uwe/auth";
-import { canViewPage, filterBlocksForViewer, isWorldStaff } from "@uwe/auth";
+import { filterBlocksForViewer, filterPagesForViewer, isWorldStaff } from "@uwe/auth";
 import type { PageType } from "./generated/prisma/client";
 import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
-import {
-  filterBlocksForContext,
-  isPageAccessible,
-  shouldHidePageTitle,
-  type AccessContext,
-} from "./permissions";
 import {
   buildLookupIndex,
   combineBlockContent,
@@ -93,7 +87,6 @@ function pageToGraphNode(
     slug: page.slug,
     type: page.type,
     category: graphCategoryForPageType(page.type),
-    visibility: page.visibility,
     tags: parseStringArray(page.tags),
     href: buildPageUrl(worldSlug, page.type, page.slug),
     campaignId: page.campaignId,
@@ -107,24 +100,20 @@ function edgeLabel(relationType: string, label?: string | null): string {
 function collectWikiEdges(
   pages: PageWithBlocks[],
   worldSlug: string,
-  context: AccessContext,
   nodeIds: Set<string>,
-  allPages: PageWithBlocks[],
 ): GraphEdge[] {
-  const visibleNodes = pages.map((page) => pageToWikiNode(worldSlug, page, context));
-  const index = buildLookupIndex(visibleNodes, context, allPages);
+  const visibleNodes = pages.map((page) => pageToWikiNode(worldSlug, page));
+  const index = buildLookupIndex(visibleNodes);
   const edges: GraphEdge[] = [];
   const seen = new Set<string>();
 
   for (const page of pages) {
-    const blocks = filterBlocksForContext(page.contentBlocks, context);
-    const content = combineBlockContent(blocks);
+    const content = combineBlockContent(page.contentBlocks);
     const parsedLinks = parseWikiLinks(content);
 
     for (const raw of parsedLinks) {
       const targetNode = index.get(normalizeLookupKey(raw.target));
       if (!targetNode || !targetNode.href) continue;
-      if (context !== "dm" && shouldHidePageTitle(targetNode, context)) continue;
       if (!nodeIds.has(page.id) || !nodeIds.has(targetNode.id)) continue;
 
       const relationType = "wikilink";
@@ -149,7 +138,6 @@ function collectWikiEdges(
 
 function collectRelationEdges(
   pageLinks: Awaited<ReturnType<UweRepository["listPageLinksForWorld"]>>,
-  context: AccessContext,
   nodeIds: Set<string>,
   pageById: Map<string, PageWithBlocks>,
 ): GraphEdge[] {
@@ -160,12 +148,6 @@ function collectRelationEdges(
     const source = pageById.get(link.sourcePageId);
     const target = pageById.get(link.targetPageId);
     if (!source || !target) continue;
-
-    if (context !== "dm") {
-      if (!isPageAccessible(source, context) || !isPageAccessible(target, context)) {
-        continue;
-      }
-    }
 
     if (!nodeIds.has(source.id) || !nodeIds.has(target.id)) continue;
 
@@ -227,10 +209,6 @@ function filterNodes(nodes: GraphNode[], filters: GraphFilters): GraphNode[] {
     result = result.filter((node) =>
       filters.tags!.some((tag) => node.tags.includes(tag)),
     );
-  }
-
-  if (filters.visibilities?.length) {
-    result = result.filter((node) => filters.visibilities!.includes(node.visibility));
   }
 
   return result;
@@ -305,34 +283,18 @@ function applyFocusMode(
 export async function buildWorldGraph(
   repo: UweRepository,
   worldSlug: string,
-  context: AccessContext,
   filters: GraphFilters = {},
 ): Promise<WorldGraphData> {
   const mode = filters.mode ?? (filters.focusPageId ? "neighbors" : "full");
   // Reuse the cached world snapshot instead of re-loading + re-parsing the whole
-  // world per view (H2), then reproduce listPagesWithBlocksForGraph's context
-  // filtering (isPageAccessible + filterBlocksForContext) exactly on it.
+  // world per view (H2).
   const graph = await getWorldWikiGraph(repo, worldSlug);
-  const queriedPages = filterGraphPages(graph.pages, {
+  const allPages = filterGraphPages(graph.pages, {
     campaignId: filters.campaignId,
     types: filters.categories?.length
       ? pageTypesForGraphCategories(filters.categories)
       : undefined,
   });
-  const portalOptions =
-    context === "portal" || context === "preview"
-      ? { publicSharingEnabled: (await repo.getSystemSettings()).portal.publicSharingEnabled }
-      : undefined;
-  const pages = queriedPages
-    .filter((page) => isPageAccessible(page, context, portalOptions))
-    .map((page) => ({
-      ...page,
-      contentBlocks: filterBlocksForContext(page.contentBlocks, context, portalOptions),
-    }));
-
-  const allPages = context === "dm"
-    ? pages
-    : pages.filter((page) => isPageAccessible(page, context));
 
   const nodes = allPages.map((page) => pageToGraphNode(worldSlug, page));
   const filteredNodes = filterNodes(nodes, filters);
@@ -341,8 +303,8 @@ export async function buildWorldGraph(
 
   const pageLinks = await repo.listPageLinksForWorld(worldSlug);
   const edges = [
-    ...collectWikiEdges(allPages, worldSlug, context, nodeIds, allPages),
-    ...collectRelationEdges(pageLinks, context, nodeIds, pageById),
+    ...collectWikiEdges(allPages, worldSlug, nodeIds),
+    ...collectRelationEdges(pageLinks, nodeIds, pageById),
     ...collectHierarchyEdges(allPages, nodeIds),
   ];
 
@@ -379,13 +341,9 @@ export async function buildPageGraph(
   repo: UweRepository,
   worldSlug: string,
   pageId: string,
-  context: AccessContext,
   mode: GraphViewMode = "neighbors",
 ): Promise<WorldGraphData> {
-  return buildWorldGraph(repo, worldSlug, context, {
-    focusPageId: pageId,
-    mode,
-  });
+  return buildWorldGraph(repo, worldSlug, { focusPageId: pageId, mode });
 }
 
 function collectWikiEdgesForViewer(
@@ -413,13 +371,13 @@ function collectWikiEdgesForViewer(
   const seen = new Set<string>();
 
   for (const page of pages) {
-    const blocks = filterBlocksForViewer(ctx, page.contentBlocks, page);
+    const blocks = filterBlocksForViewer(ctx, page.contentBlocks);
     const content = combineBlockContent(blocks);
     const parsedLinks = parseWikiLinks(content);
 
     for (const raw of parsedLinks) {
       const targetPage = lookup.get(normalizeLookupKey(raw.target));
-      if (!targetPage || !canViewPage(ctx, targetPage)) continue;
+      if (!targetPage) continue;
       if (!nodeIds.has(page.id) || !nodeIds.has(targetPage.id)) continue;
 
       const relationType = "wikilink";
@@ -456,12 +414,6 @@ function collectRelationEdgesForViewer(
     const target = pageById.get(link.targetPageId);
     if (!source || !target) continue;
 
-    if (!isWorldStaff(ctx)) {
-      if (!canViewPage(ctx, source) || !canViewPage(ctx, target)) {
-        continue;
-      }
-    }
-
     if (!nodeIds.has(source.id) || !nodeIds.has(target.id)) continue;
 
     const label = edgeLabel(link.relationType, link.label);
@@ -489,8 +441,8 @@ export async function buildWorldGraphForViewer(
   filters: GraphFilters = {},
 ): Promise<WorldGraphData> {
   const mode = filters.mode ?? (filters.focusPageId ? "neighbors" : "full");
-  // Reuse the cached world snapshot (H2); viewer visibility is still applied
-  // below via canViewPage/filterBlocksForViewer, so output is unchanged.
+  // Reuse the cached world snapshot (H2); the viewer gate is still applied
+  // below via filterPagesForViewer/filterBlocksForViewer, so output is unchanged.
   const graph = await getWorldWikiGraph(repo, worldSlug);
   const pages = filterGraphPages(graph.pages, {
     campaignId: filters.campaignId,
@@ -499,15 +451,11 @@ export async function buildWorldGraphForViewer(
       : undefined,
   });
 
-  const visiblePages = isWorldStaff(ctx)
-    ? pages
-    : pages.filter((page) => canViewPage(ctx, page));
-
-  const viewerPages = visiblePages.map((page) => ({
+  const viewerPages = filterPagesForViewer(ctx, pages).map((page) => ({
     ...page,
     contentBlocks: isWorldStaff(ctx)
       ? page.contentBlocks
-      : filterBlocksForViewer(ctx, page.contentBlocks, page),
+      : filterBlocksForViewer(ctx, page.contentBlocks),
   }));
 
   const nodes = viewerPages.map((page) => pageToGraphNode(worldSlug, page));

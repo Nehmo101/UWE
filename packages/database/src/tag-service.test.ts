@@ -84,7 +84,6 @@ describe("tag service", () => {
       slug: "tag-merge-a",
       type: "note",
       tags: ["Stadt"],
-      visibility: "player_visible",
     });
     await repo.createPage({
       worldId,
@@ -92,7 +91,6 @@ describe("tag service", () => {
       slug: "tag-merge-b",
       type: "note",
       tags: ["STADT"],
-      visibility: "player_visible",
     });
 
     const result = await mergeTags(db, brainDb, {
@@ -114,7 +112,6 @@ describe("tag service", () => {
       slug: "backfill-tag-page",
       type: "note",
       tags: ["quest", "hook"],
-      visibility: "player_visible",
     });
 
     const result = await backfillEntityTagsFromJson(db, brainDb, { worldId });
@@ -175,7 +172,6 @@ describe("tag service", () => {
       slug: "entitytag-primary-page",
       type: "note",
       tags: ["entity-primary-tag"],
-      visibility: "player_visible",
     });
 
     await backfillEntityTagsFromJson(db, brainDb, { worldId });
@@ -214,7 +210,6 @@ describe("tag service", () => {
       slug: "verify-gap-page",
       type: "note",
       tags: ["Verify Gap Tag"],
-      visibility: "player_visible",
     });
 
     const before = await verifyTagBackfill(db, brainDb, { worldId });
@@ -248,7 +243,6 @@ describe("tag service", () => {
       slug: "dual-write-merge-page",
       type: "note",
       tags: ["dualwrite-old"],
-      visibility: "player_visible",
     });
 
     await backfillEntityTagsFromJson(db, brainDb, { worldId });

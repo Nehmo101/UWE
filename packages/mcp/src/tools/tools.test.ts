@@ -10,30 +10,12 @@ let origin = "";
 /** DM view: two dm_only entries plus one player_visible entry. */
 const DM_BRAIN = {
   documents: [
-    { id: "d1", title: "Geheimplan des Kults", visibility: "dm_only", category: "lore" },
-    { id: "d2", title: "Stadtchronik", visibility: "player_visible", category: "lore" },
+    { id: "d1", title: "Geheimplan des Kults", category: "lore" },
+    { id: "d2", title: "Stadtchronik", category: "lore" },
   ],
-  facts: [{ id: "f1", title: "Der Verräter", visibility: "dm_only", factType: "npc" }],
+  facts: [{ id: "f1", title: "Der Verräter", factType: "npc" }],
   summary: { pages: 12 },
 };
-
-/** Player view as UWE's permission filter should produce it. */
-const PLAYER_BRAIN = {
-  documents: [{ id: "d2", title: "Stadtchronik", visibility: "player_visible", category: "lore" }],
-  facts: [],
-  summary: { pages: 12 },
-};
-
-/** Leaky player view — a dm_only entry survived filtering. */
-const LEAKY_BRAIN = {
-  documents: [
-    { id: "d2", title: "Stadtchronik", visibility: "player_visible", category: "lore" },
-    { id: "d1", title: "Geheimplan des Kults", visibility: "dm_only", category: "lore" },
-  ],
-  facts: [],
-};
-
-let leakMode = false;
 
 before(async () => {
   server = createHttpServer((request, response) => {
@@ -44,10 +26,6 @@ before(async () => {
     };
 
     if (url.pathname.endsWith("/brain")) {
-      if (url.searchParams.get("accessContext") === "portal") {
-        send(leakMode ? LEAKY_BRAIN : PLAYER_BRAIN);
-        return;
-      }
       send(DM_BRAIN);
       return;
     }
@@ -196,30 +174,6 @@ test("brain_privacy_status states the lock and never prints the token", async ()
     "brain_privacy_status",
   );
   assert.match(unlocked.content[0]!.text, /FREIGEGEBEN/);
-});
-
-test("portal_leak_check passes when the player view is properly filtered", async () => {
-  leakMode = false;
-  const result = await call(build("portal"), "portal_leak_check", { worldSlug: "aventurien" });
-
-  assert.notEqual(result.isError, true);
-  const report = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
-  assert.equal(report.dmEntries, 3);
-  assert.equal(report.playerEntries, 1);
-  assert.equal(report.filteredOut, 2);
-  assert.deepEqual(report.leakedTitles, []);
-  assert.match(String(report.verdict), /^OK/);
-});
-
-test("portal_leak_check fails loudly when a dm_only entry reaches the player view", async () => {
-  leakMode = true;
-  const result = await call(build("portal"), "portal_leak_check", { worldSlug: "aventurien" });
-  leakMode = false;
-
-  assert.equal(result.isError, true);
-  const report = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
-  assert.deepEqual(report.leakedTitles, ["Geheimplan des Kults"]);
-  assert.match(String(report.verdict), /^LEAK/);
 });
 
 test("player-view tools force the portal access context", async () => {

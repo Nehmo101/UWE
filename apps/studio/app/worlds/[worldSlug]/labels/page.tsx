@@ -9,7 +9,6 @@ import {
   getAppRepository,
   LABEL_PRINT_STATUS_LABELS,
   LABEL_SOURCE_TYPE_LABELS,
-  normalizeLabel,
   summarizePrintList,
 } from "@uwe/database/server";
 import {
@@ -176,14 +175,10 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
                   </thead>
                   <tbody>
                     {labelRows.map((label) => {
-                      const parsed = normalizeLabel(label);
                       return (
                         <tr key={label.id}>
                           <td className={TD_CLASS}>
                             <strong>{label.title}</strong>
-                            {parsed.content.containsDmOnly && (
-                              <p className="mt-1 text-xs text-warning">Enthält DM-only Inhalte</p>
-                            )}
                           </td>
                           <td className={TD_CLASS}>{LABEL_SOURCE_TYPE_LABELS[label.sourceType]}</td>
                           <td className={TD_CLASS}>{label.template.name}</td>
@@ -320,9 +315,6 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
                             <strong>{list.name}</strong>
                             {list.forNextSession && (
                               <p className="mt-1 text-xs text-muted-foreground">Für nächste Session</p>
-                            )}
-                            {summary.hasDmOnly && (
-                              <p className="mt-1 text-xs text-warning">Enthält DM-only Labels</p>
                             )}
                           </td>
                           <td className={TD_CLASS}>{summary.labelCount}</td>

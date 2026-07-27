@@ -22,7 +22,6 @@ function buildButton(
     volume: 1,
     loop: false,
     tags: null,
-    visibility: "dm_only",
     sortOrder: 0,
     createdAt: new Date(),
     updatedAt: new Date(),

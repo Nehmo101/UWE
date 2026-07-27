@@ -1,15 +1,11 @@
 export type {
   AccessContext,
-  AssetAccessInfo,
   AuthUser,
-  ContentBlockAccessInfo,
-  PageAccessInfo,
   PreviewOptions,
   SafeUser,
   UweRole,
   WorldMemberRole,
   WorldMembership,
-  PageVisibility,
 } from "./types";
 
 export { toSafeUser, stripSensitiveUserFields } from "./safe-user";
@@ -42,14 +38,10 @@ export {
 
 export {
   buildAccessContext,
-  canChangeVisibility,
   canEditContent as canEditContentRole,
   canPreviewAsPlayer,
-  canPublishContent,
-  canViewAsset,
   canViewAuditLog,
-  canViewContentBlock,
-  canViewPage,
+  canViewWorldContent,
   filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
@@ -86,27 +78,11 @@ export type {
   WorldRoleId,
 } from "./role-capabilities";
 
-export {
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-  isBlockPlayerExposable,
-  isDmOnlyVisibility,
-  isPagePlayerExposable,
-  isPlayerExposableContent,
-  isPlayerPortalVisibility,
-  PLAYER_PORTAL_VISIBILITIES,
-  type ContentAccessFields,
-  type ContentBlockAccessFields,
-  type ContentVisibility,
-  type PrivateReferenceTarget,
-} from "./content-access";
-
 export type {
   AIUsageContext,
   AuthzScope,
   ContentAuthTarget,
   MediaUploadTarget,
-  SecretAuthTarget,
   WorldAuthTarget,
 } from "./security/authz";
 
@@ -119,7 +95,6 @@ export {
   assertCanReadContentWithContext,
   assertCanReadWorld,
   assertCanReadWorldWithContext,
-  assertCanRevealSecret,
   assertCanUploadMedia,
   assertCanUseAI,
   canEditContent,
@@ -127,7 +102,6 @@ export {
   canReadContent,
   canReadContentBlock,
   canReadWorld,
-  canRevealSecret,
   canUploadMedia,
   canUseAI,
   scopeFromAccessContext,

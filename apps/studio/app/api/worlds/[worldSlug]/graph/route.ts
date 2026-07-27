@@ -7,7 +7,6 @@ import {
   GRAPH_NODE_CATEGORIES,
   type GraphNodeCategory,
   type GraphViewMode,
-  type Visibility,
 } from "@uwe/database/server";
 import { parseParams, worldSlugParamSchema } from "@uwe/security";
 
@@ -40,21 +39,13 @@ export async function GET(request: Request, { params }: RouteParams) {
   const categories = categoryParam.filter((item): item is GraphNodeCategory =>
     GRAPH_NODE_CATEGORIES.includes(item as GraphNodeCategory),
   );
-
-  const visibilityParam = url.searchParams.getAll("visibility");
-  const visibilities = visibilityParam.length ? (visibilityParam as Visibility[]) : undefined;
-
   const tag = url.searchParams.get("tag") ?? undefined;
   const focusPageId = url.searchParams.get("focusPageId") ?? undefined;
   const mode = (url.searchParams.get("mode") as GraphViewMode | null) ?? "full";
-  const preview = url.searchParams.get("preview") === "player";
-  const context = preview ? "preview" : "dm";
-
-  const graph = await buildWorldGraph(repo, worldSlug, context, {
+  const graph = await buildWorldGraph(repo, worldSlug, {
     campaignId: campaign?.id,
     categories: categories.length ? categories : undefined,
     tags: tag ? [tag] : undefined,
-    visibilities,
     focusPageId: focusPageId ?? undefined,
     mode: focusPageId ? mode : "full",
   });

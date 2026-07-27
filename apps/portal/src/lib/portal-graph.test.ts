@@ -11,7 +11,6 @@ describe("portal-graph", () => {
         slug: "hafen",
         type: "location",
         category: "location",
-        visibility: "player_visible",
         tags: [],
         href: "/worlds/terra/locations/hafen",
         campaignId: null,

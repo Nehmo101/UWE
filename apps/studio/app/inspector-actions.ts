@@ -17,13 +17,7 @@ import {
   requireStudioWorldEdit,
 } from "@/src/lib/authz";
 
-const FIX_ACTIONS: InspectorFixAction[] = [
-  "set_block_dm_only",
-  "set_page_dm_only",
-  "set_page_player_visible",
-  "remove_broken_wiki_link",
-  "assign_page_campaign",
-];
+const FIX_ACTIONS: InspectorFixAction[] = ["remove_broken_wiki_link", "assign_page_campaign"];
 
 export async function applyInspectorFixAction(formData: FormData) {
   await requireStudioActionAuth();
@@ -45,7 +39,6 @@ export async function applyInspectorFixAction(formData: FormData) {
     worldSlug,
     action,
     pageId: String(formData.get("pageId") || "") || undefined,
-    blockId: String(formData.get("blockId") || "") || undefined,
     linkTarget: String(formData.get("linkTarget") || "") || undefined,
   });
 

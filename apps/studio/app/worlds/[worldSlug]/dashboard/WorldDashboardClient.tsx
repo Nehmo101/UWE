@@ -7,14 +7,13 @@ import {
   GAME_SESSION_STATUS_LABELS,
   DashboardWidgetGrid,
   PageTypeBadge,
-  VisibilityBadge,
   WorldCockpitCard,
   WorldCockpitHeader,
   WorldCockpitTabs,
   WorldCockpitTag,
 } from "@uwe/shared-ui";
 import { type DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
-import type { GameSessionStatus, PageType, Visibility } from "@uwe/database/enums";
+import type { GameSessionStatus, PageType } from "@uwe/database/enums";
 import { buildPageUrl } from "@uwe/database/page-types";
 import {
   Card,
@@ -71,7 +70,6 @@ export interface WorldDashboardClientProps {
       title: string;
       slug: string;
       type: PageType;
-      visibility: Visibility;
       updatedAt: string;
     }>;
   };
@@ -236,7 +234,6 @@ export function WorldDashboardClient({
                             <PageTypeBadge type={page.type} />
                           </td>
                           <td className={TD_CLASS}>
-                            <VisibilityBadge visibility={page.visibility} />
                           </td>
                           <td className={TD_CLASS}>
                           </td>

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   PAGE_TYPE_LABELS,
-  VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import { createPageTemplateService, prisma } from "@uwe/database/server";
 import {
@@ -128,7 +127,6 @@ export default async function TemplatesPage({ searchParams }: Props) {
                       )}
                     </td>
                     <td className={TD_CLASS}>{PAGE_TYPE_LABELS[template.pageType]}</td>
-                    <td className={TD_CLASS}>{VISIBILITY_LABELS[template.defaultVisibility]}</td>
                     <td className={TD_CLASS}>{template.blocks.length}</td>
                     <td className={TD_CLASS}>{template.isActive ? "Aktiv" : "Deaktiviert"}</td>
                     <td className={TD_CLASS}>

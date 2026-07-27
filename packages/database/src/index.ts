@@ -16,7 +16,6 @@ export type {
   PageCategory,
   PagePath,
   PageRelation,
-  PageVisibility,
   World,
 } from "./types";
 
@@ -26,9 +25,7 @@ export {
   getPageByPath,
   getWorldById,
   getWorldBySlug,
-  isPlayerVisible,
   listPagesInWorld,
-  listPlayerVisiblePages,
   listWorlds,
   normalizeLookupKey,
   pageHref,

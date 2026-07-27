@@ -13,7 +13,6 @@ import {
   slugifyPageTitle,
   type CreateContentBlockInput,
   type PageType,
-  type Visibility,
   type CanonicalStatus,
   type ContentBlockType,
 } from "@uwe/database/server";
@@ -41,14 +40,12 @@ export async function updatePageAction(formData: FormData) {
 
   // Capture old type/slug before the update so both old and new URLs are revalidated.
   const oldPage = await repo().getPageBySlug(worldSlug, pageSlug);
-  const newVisibility = formData.get("visibility") as Visibility;
 
   await repo().updatePage(pageId, {
     title: String(formData.get("title")),
     slug: String(formData.get("slug")),
     type: formData.get("type") as PageType,
     summary: String(formData.get("summary") || "") || null,
-    visibility: newVisibility,
     canonicalStatus: formData.get("canonicalStatus") as CanonicalStatus,
     tags: String(formData.get("tags") || "")
       .split(",")
@@ -76,20 +73,6 @@ export async function updatePageAction(formData: FormData) {
     targetHref: newHref,
     summary: `Seite „${title}“ geändert.`,
   });
-
-  if (oldPage && oldPage.visibility !== newVisibility) {
-    await activity().log({
-      worldId: oldPage.worldId,
-      worldSlug,
-      action: "visibility_changed",
-      targetType: "page",
-      targetId: pageId,
-      targetLabel: title,
-      targetHref: newHref,
-      summary: `Sichtbarkeit von „${title}“: ${oldPage.visibility} → ${newVisibility}.`,
-      details: { from: oldPage.visibility, to: newVisibility },
-    });
-  }
 
   revalidateWorldRootAndWiki(worldSlug);
   if (oldPage) {
@@ -132,14 +115,12 @@ export async function createPageAction(formData: FormData) {
     ? template.blocks.map((block, index) => ({
         type: block.type,
         sortOrder: index,
-        visibility: block.visibility,
         content: index === 0 ? initialContent : block.content,
       }))
     : [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: initialContent,
         },
       ];
@@ -151,7 +132,6 @@ export async function createPageAction(formData: FormData) {
     slug,
     type,
     summary: String(formData.get("summary") || "") || null,
-    visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
     canonicalStatus: (formData.get("canonicalStatus") as CanonicalStatus) ?? "draft",
     tags: String(formData.get("tags") || "")
       .split(",")
@@ -209,7 +189,6 @@ export async function updateContentBlockAction(formData: FormData) {
     throw new Error("Block nicht gefunden");
   }
 
-  const newVisibility = formData.get("visibility") as Visibility;
   const newType = formData.get("type") as ContentBlockType;
   // Nur Bild-Blöcke verweisen auf ein Asset; beim Wechsel weg vom Bild-Typ wird
   // die Verknüpfung wieder gelöst.
@@ -220,26 +199,11 @@ export async function updateContentBlockAction(formData: FormData) {
     type: newType,
     sortOrder: Number(formData.get("sortOrder")),
     content: String(formData.get("content") || ""),
-    visibility: newVisibility,
     assetId,
   });
 
   const editHref = `/worlds/${worldSlug}/${category}/${pageSlug}/edit`;
 
-
-  if (oldBlock && oldBlock.visibility !== newVisibility) {
-    await activity().log({
-      worldId: oldBlock.page.worldId,
-      worldSlug,
-      action: "visibility_changed",
-      targetType: "content_block",
-      targetId: blockId,
-      targetLabel: `Block auf „${oldBlock.page.title}“`,
-      targetHref: editHref,
-      summary: `Block-Sichtbarkeit auf „${oldBlock.page.title}“: ${oldBlock.visibility} → ${newVisibility}.`,
-      details: { from: oldBlock.visibility, to: newVisibility },
-    });
-  }
 
   revalidatePath(editHref);
   redirect(`${editHref}?saved=1`);
@@ -265,7 +229,6 @@ export async function createContentBlockAction(formData: FormData) {
     type: newType,
     sortOrder: nextOrder,
     content: String(formData.get("content") || ""),
-    visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
     assetId,
   });
 
@@ -314,7 +277,7 @@ export async function deleteContentBlockAction(formData: FormData) {
       targetLabel: `Block auf „${block.page.title}“`,
       targetHref: `/worlds/${worldSlug}/${category}/${pageSlug}/edit`,
       summary: `Block (${block.type}) auf „${block.page.title}“ gelöscht.`,
-      details: { blockType: block.type, visibility: block.visibility },
+      details: { blockType: block.type },
       undoEntryId,
     });
 

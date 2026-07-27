@@ -93,7 +93,6 @@ export async function requireStudioContentEdit(
   const worldTarget = studioWorldTarget(world);
   const content: ContentAuthTarget = {
     id: page.id,
-    visibility: page.visibility,
     type: page.type,
   };
   assertStudioCanEditContent(content, worldTarget);

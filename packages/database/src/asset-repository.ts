@@ -1,13 +1,7 @@
-import type { AssetType, Prisma, Visibility } from "./generated/prisma/client";
+import type { AssetType, Prisma } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { logAuditEvent } from "./audit-log-service";
 import { parseStringArray, toJsonArray } from "./json-utils";
-import {
-  filterAssetsForContext,
-  isAssetAccessible,
-  type AccessContext,
-} from "./permissions";
-
 export interface CreateAssetInput {
   worldId: string;
   campaignId?: string | null;
@@ -17,7 +11,6 @@ export interface CreateAssetInput {
   storageKey: string;
   mimeType?: string | null;
   size?: number;
-  visibility?: Visibility;
   tags?: string[];
   metadata?: Prisma.InputJsonValue;
 }
@@ -26,7 +19,6 @@ export interface UpdateAssetInput {
   title?: string;
   description?: string | null;
   type?: AssetType;
-  visibility?: Visibility;
   campaignId?: string | null;
   tags?: string[];
   metadata?: Prisma.InputJsonValue;
@@ -109,7 +101,6 @@ export async function createAssetRecord(db: PrismaClient, input: CreateAssetInpu
       storageKey: input.storageKey,
       mimeType: input.mimeType ?? null,
       size: input.size ?? 0,
-      visibility: input.visibility ?? "dm_only",
       tags: toJsonArray(input.tags),
       metadata: input.metadata ?? {},
     },
@@ -132,7 +123,6 @@ export async function updateAssetRecord(db: PrismaClient, assetId: string, input
       title: input.title,
       description: input.description,
       type: input.type,
-      visibility: input.visibility,
       campaignId: input.campaignId,
       tags: input.tags ? toJsonArray(input.tags) : undefined,
       metadata: input.metadata,
@@ -193,28 +183,6 @@ export async function linkAssetToContentBlock(
   });
 }
 
-export async function listAssetsForContext(
-  db: PrismaClient,
-  worldSlug: string,
-  context: AccessContext,
-  options?: { type?: AssetType },
-) {
-  const assets = await listAssetsByWorld(db, worldSlug, options);
-  return filterAssetsForContext(assets, context);
-}
-
-export async function getAssetForContext(
-  db: PrismaClient,
-  assetId: string,
-  context: AccessContext,
-) {
-  const asset = await getAssetById(db, assetId);
-  if (!asset || !isAssetAccessible(asset, context)) {
-    return null;
-  }
-  return asset;
-}
-
 export async function listAssetsForPage(db: PrismaClient, pageId: string) {
   const links = await db.assetPageLink.findMany({
     where: { pageId },
@@ -233,5 +201,3 @@ export async function listAssetsForPage(db: PrismaClient, pageId: string) {
 
   return links.map((link) => withParsedAssetTags(link.asset));
 }
-
-export { filterAssetsForContext, isAssetAccessible };

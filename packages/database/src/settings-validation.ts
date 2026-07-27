@@ -1,4 +1,4 @@
-import type { CanonicalStatus, Visibility } from "./generated/prisma/client";
+import type { CanonicalStatus } from "./generated/prisma/client";
 import type { UweSystemSettingsUpdate } from "./settings-service";
 import {
   MAIL_INBOX_LIMIT_MAX,
@@ -15,15 +15,6 @@ import {
   validateSection,
 } from "./settings-validation-helpers";
 
-const VISIBILITY_VALUES = new Set<Visibility>([
-  "private",
-  "dm_only",
-  "player_visible",
-  "public",
-  "specific_players",
-  "unlock_after_session",
-  "archived",
-]);
 
 const CANONICAL_STATUS_VALUES = new Set<CanonicalStatus>([
   "idea",
@@ -53,7 +44,7 @@ const TOP_LEVEL_KEYS = new Set([
   "maintenance",
 ]);
 
-const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
+const WORLDS_KEYS = new Set(["defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
 const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
 const AI_KEYS = new Set(["localOnlyMode", "enabled", "generalChatSystemPrompt"]);
@@ -114,9 +105,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
 
   if ("worlds" in body) {
     const sectionErrors = validateSection(body.worlds, WORLDS_KEYS, "settings.worlds", (key, value, sectionErrors) => {
-      if (key === "defaultVisibility") {
-        requireEnum(value, VISIBILITY_VALUES, "settings.worlds.defaultVisibility", sectionErrors);
-      }
       if (key === "defaultCanonicalStatus") {
         requireEnum(value, CANONICAL_STATUS_VALUES, "settings.worlds.defaultCanonicalStatus", sectionErrors);
       }
@@ -124,9 +112,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
     errors.push(...sectionErrors);
     if (sectionErrors.length === 0 && isRecord(body.worlds)) {
       const worlds: NonNullable<UweSystemSettingsUpdate["worlds"]> = {};
-      if (body.worlds.defaultVisibility !== undefined) {
-        worlds.defaultVisibility = body.worlds.defaultVisibility as Visibility;
-      }
       if (body.worlds.defaultCanonicalStatus !== undefined) {
         worlds.defaultCanonicalStatus = body.worlds.defaultCanonicalStatus as CanonicalStatus;
       }

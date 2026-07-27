@@ -303,7 +303,6 @@ export async function saveImageStudioCanvasAction(formData: FormData) {
     storageKey,
     mimeType: "image/png",
     size: Buffer.byteLength(imageBase64, "base64"),
-    visibility: "dm_only",
     metadata: { source: "image_studio_canvas", projectId },
   });
 

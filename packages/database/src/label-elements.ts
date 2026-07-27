@@ -39,7 +39,6 @@ export interface LabelElement {
   zIndex: number;
   locked?: boolean;
   visible: boolean;
-  dmOnly?: boolean;
   text?: string;
   imageAssetId?: string | null;
   imageAlt?: string;

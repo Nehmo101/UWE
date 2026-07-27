@@ -98,7 +98,6 @@ export const aiGenerateBodySchema = z.object({
   providerId: aiProviderIdSchema,
   model: nonEmptyString.max(200),
   userPrompt: optionalString,
-  allowDmOnly: z.boolean().optional(),
   sessionId: idSchema.optional(),
   useMock: z.boolean().optional(),
   discardProposalId: idSchema.optional(),
@@ -108,7 +107,6 @@ export const aiContextBodySchema = z.object({
   taskType: aiTaskTypeSchema,
   worldSlug: slugSchema,
   pageSlug: slugSchema,
-  allowDmOnly: z.boolean().optional(),
   sessionId: idSchema.optional(),
 });
 
@@ -164,7 +162,6 @@ export const brainRunBodySchema = z.object({
   model: nonEmptyString.max(200),
   userPrompt: optionalString,
   sessionId: idSchema.optional(),
-  allowDmOnly: z.boolean().optional(),
   useMock: z.boolean().optional(),
 });
 
@@ -261,7 +258,6 @@ export const passthroughBodySchema = z.object({}).passthrough();
 export const uploadMetadataSchema = z.object({
   title: z.string().trim().max(500).optional(),
   description: z.string().trim().max(5000).optional(),
-  visibility: z.enum(["dm_only", "player_visible", "public"]).optional().default("dm_only"),
   pageId: idSchema.optional().nullable(),
   type: z
     .enum(["image", "audio", "video", "document", "map", "token", "other"])

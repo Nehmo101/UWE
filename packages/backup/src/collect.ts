@@ -16,11 +16,9 @@ import type {
   BackupPrintListItemRecord,
   BackupPrintListRecord,
   BackupPageLinkRecord,
-  BackupPagePlayerAccessRecord,
   BackupPageRecord,
   BackupPageTemplateRecord,
   BackupPlayerNoteRecord,
-  BackupSessionUnlockRecord,
   BackupSettingsRecord,
   BackupSoundboardButtonPageLinkRecord,
   BackupSoundboardButtonRecord,
@@ -531,18 +529,10 @@ export async function collectBackupData(
     where: { worldId: { in: worldIds } },
   });
 
-  const pagePlayerAccess = await db.pagePlayerAccess.findMany({
-    where: { pageId: { in: [...pageIds] } },
-  });
 
-  const sessionUnlocks = await db.sessionUnlock.findMany({
-    where: { pageId: { in: [...pageIds] } },
-  });
 
   const userIds = new Set<string>();
   for (const membership of worldMemberships) userIds.add(membership.userId);
-  for (const access of pagePlayerAccess) userIds.add(access.userId);
-  for (const unlock of sessionUnlocks) userIds.add(unlock.userId);
 
   const users = await db.user.findMany({
     where: { id: { in: [...userIds] } },
@@ -620,7 +610,6 @@ export async function collectBackupData(
         slug: page.slug,
         type: page.type,
         summary: page.summary,
-        visibility: page.visibility,
         canonicalStatus: page.canonicalStatus,
         prepStatus: page.prepStatus,
         tags: page.tags,
@@ -637,7 +626,6 @@ export async function collectBackupData(
         type: block.type,
         sortOrder: block.sortOrder,
         content: block.content,
-        visibility: block.visibility,
         metadata: block.metadata,
         createdAt: block.createdAt.toISOString(),
         updatedAt: block.updatedAt.toISOString(),
@@ -664,7 +652,6 @@ export async function collectBackupData(
         storageKey: asset.storageKey,
         mimeType: asset.mimeType,
         size: asset.size,
-        visibility: asset.visibility,
         tags: asset.tags,
         metadata: asset.metadata,
         createdAt: asset.createdAt.toISOString(),
@@ -770,7 +757,6 @@ export async function collectBackupData(
         volume: button.volume,
         loop: button.loop,
         tags: button.tags,
-        visibility: button.visibility,
         sortOrder: button.sortOrder,
         createdAt: button.createdAt.toISOString(),
         updatedAt: button.updatedAt.toISOString(),
@@ -795,22 +781,6 @@ export async function collectBackupData(
         updatedAt: membership.updatedAt.toISOString(),
       }),
     ),
-    pagePlayerAccess: pagePlayerAccess.map(
-      (access): BackupPagePlayerAccessRecord => ({
-        id: access.id,
-        pageId: access.pageId,
-        userId: access.userId,
-      }),
-    ),
-    sessionUnlocks: sessionUnlocks.map(
-      (unlock): BackupSessionUnlockRecord => ({
-        id: unlock.id,
-        pageId: unlock.pageId,
-        userId: unlock.userId,
-        unlockedAt: unlock.unlockedAt.toISOString(),
-        sessionLabel: unlock.sessionLabel,
-      }),
-    ),
     users: [...mergedUsers.values()].map(
       (user): BackupUserRecord => ({
         id: user.id,
@@ -826,7 +796,6 @@ export async function collectBackupData(
         name: template.name,
         description: template.description,
         pageType: template.pageType,
-        defaultVisibility: template.defaultVisibility,
         titlePlaceholder: template.titlePlaceholder,
         blocks: template.blocks,
         isSystem: template.isSystem,
@@ -844,7 +813,6 @@ export async function collectBackupData(
         gameSessionId: note.gameSessionId,
         userId: note.userId,
         content: note.content,
-        visibility: note.visibility,
         status: note.status,
         createdAt: note.createdAt.toISOString(),
         updatedAt: note.updatedAt.toISOString(),

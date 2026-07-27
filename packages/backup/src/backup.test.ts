@@ -63,7 +63,6 @@ describe("UWE backup and restore", () => {
       title: "Backup Page",
       slug: "backup-page",
       type: "lore",
-      visibility: "dm_only",
       contentBlocks: [
         {
           type: "rich_text",
@@ -88,7 +87,6 @@ describe("UWE backup and restore", () => {
       storageKey: assetStorageKey,
       mimeType: "image/png",
       size: 8,
-      visibility: "dm_only",
     });
 
     await repo.linkAssetToPage(

@@ -159,12 +159,10 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Öffentliche Notiz",
     slug: slugs.publicPage,
     type: "note",
-    visibility: "public",
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "public",
         content: SECURITY_MARKERS.PUBLIC,
       },
     ],
@@ -175,19 +173,11 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Spieler sichtbar",
     slug: slugs.playerVisiblePage,
     type: "note",
-    visibility: "player_visible",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "player_visible",
         content: SECURITY_MARKERS.PLAYER_VISIBLE,
-      },
-      {
-        type: "gm_note",
-        sortOrder: 1,
-        visibility: "dm_only",
-        content: SECURITY_MARKERS.DM_ONLY,
       },
     ],
   });
@@ -197,12 +187,10 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Nur DM",
     slug: slugs.dmOnlyPage,
     type: "lore",
-    visibility: "dm_only",
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "dm_only",
         content: SECURITY_MARKERS.DM_ONLY,
       },
     ],
@@ -213,46 +201,38 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Verborgenes Geheimnis",
     slug: slugs.hiddenSecretPage,
     type: "secret",
-    visibility: "unlock_after_session",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "unlock_after_session",
         content: SECURITY_MARKERS.HIDDEN_SECRET,
       },
     ],
   });
 
-  const revealedSecret = await repo.createPage({
+  await repo.createPage({
     worldId: publicWorld.id,
     title: "Enthülltes Geheimnis",
     slug: slugs.revealedSecretPage,
     type: "secret",
-    visibility: "unlock_after_session",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "unlock_after_session",
         content: SECURITY_MARKERS.REVEALED_SECRET,
       },
     ],
   });
-
-  await auth.unlockPageForUser(revealedSecret.id, player.id, "Session 1");
 
   await repo.createPage({
     worldId: privateWorld.id,
     title: "Private Welt DM-only",
     slug: "private-dm-only",
     type: "lore",
-    visibility: "dm_only",
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "dm_only",
         content: SECURITY_MARKERS.DM_ONLY,
       },
     ],
@@ -279,7 +259,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     storageKey: publicStorageKey,
     mimeType: "image/png",
     size: SECURITY_MARKERS.PUBLIC.length,
-    visibility: "public",
   });
 
   const privateMedia = await repo.createAsset({
@@ -289,7 +268,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     storageKey: privateStorageKey,
     mimeType: "image/png",
     size: SECURITY_MARKERS.PRIVATE_MEDIA.length,
-    visibility: "dm_only",
   });
 
   void hiddenSecret;

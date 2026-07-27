@@ -2,10 +2,8 @@ import type { UweRole } from "@uwe/auth";
 
 import { AiAccessDeniedError, AiPolicyViolationError } from "./errors";
 import {
-  resolveServerAllowDmOnly,
-  sanitizeContextForCloud,
 } from "./inference/privacy";
-import type { AiContext } from "./inference/ai-context-types";
+import type {} from "./inference/ai-context-types";
 import { rejectClientWorkerUrl } from "./rtx-boundary";
 
 export type AiAuthorizedRole = "owner" | "admin" | "dm";
@@ -43,12 +41,6 @@ export interface AiRequestLimitsInput {
   fetchUrl?: string | null;
 }
 
-export interface AiDmContextInput {
-  clientAllowDmOnly?: boolean;
-  localOnly: boolean;
-  routeIsCloud: boolean;
-  playerSafe?: boolean;
-}
 
 export function canUseAi(role: UweRole | "admin" | "guest"): boolean {
   return AI_AUTHORIZED_ROLES.has(role);
@@ -207,31 +199,6 @@ export function enforceAiAccessPolicy(ctx: AiAccessContext, env: NodeJS.ProcessE
       `KI-Rate-Limit erreicht. Erneut versuchen in ${rate.retryAfterSeconds}s.`,
     );
   }
-}
-
-export function resolveEffectiveAllowDmOnly(input: AiDmContextInput): boolean {
-  void input.clientAllowDmOnly;
-  return resolveServerAllowDmOnly(
-    { localOnly: input.localOnly },
-    input.routeIsCloud,
-    input.playerSafe,
-  );
-}
-
-export function filterContextForViewer(
-  context: AiContext,
-  allowDmOnly: boolean,
-  routeIsCloud: boolean,
-): AiContext {
-  if (routeIsCloud) {
-    return sanitizeContextForCloud(context);
-  }
-
-  if (allowDmOnly) {
-    return context;
-  }
-
-  return sanitizeContextForCloud(context);
 }
 
 export function sanitizeAiResponseForClient<T extends Record<string, unknown>>(payload: T): T {

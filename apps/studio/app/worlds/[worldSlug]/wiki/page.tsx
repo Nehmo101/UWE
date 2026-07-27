@@ -5,7 +5,6 @@ import {
   EmptyState,
   SearchFilterBar,
   SearchResultsList,
-  VISIBILITY_LABELS,
   CANONICAL_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -20,14 +19,12 @@ import {
   SEARCH_ENTITY_FILTERS,
   type NavCategory,
   type SearchEntityFilter,
-  type Visibility,
   type CanonicalStatus,
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import {
   CampaignSidebar,
   WikiPageTable,
-  WorldReleaseControl,
   type WikiPageRow,
 } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
@@ -41,7 +38,6 @@ interface Props {
     type?: string;
     q?: string;
     filter?: string;
-    visibility?: string;
     canon?: string;
   }>;
 }
@@ -53,7 +49,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
     type: typeFilter,
     q,
     filter: entityFilter,
-    visibility,
     canon: canonFilter,
   } = await searchParams;
   const repo = getAppRepository();
@@ -78,12 +73,11 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
 
 
   const searchResults = q?.trim()
-    ? await repo.search("dm", {
+    ? await repo.search({
         query: q,
         worldSlug,
         campaignId: selectedCampaign?.id,
         entityFilter: entityFilter as SearchEntityFilter | undefined,
-        visibilityFilter: visibility ? [visibility as Visibility] : undefined,
         canonicalStatusFilter: canonicalStatus,
         urlMode: "studio",
       })
@@ -110,7 +104,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
     title: page.title,
     href: buildPageUrl(worldSlug, page.type, page.slug),
     type: page.type,
-    visibility: page.visibility,
     canonicalStatus: page.canonicalStatus,
     questStatus: page.questStatus ?? null,
     tags: parseStringArray(page.tags),
@@ -147,7 +140,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
         summary={world.description ?? "Alle Wiki-Seiten dieser Welt — filtern, suchen und verwalten."}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <WorldReleaseControl worldSlug={worldSlug} />
             <Link
               className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               href={newPageHref}
@@ -207,15 +199,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
                 options: SEARCH_ENTITY_FILTERS.map((filter) => ({
                   value: filter,
                   label: SEARCH_ENTITY_FILTER_LABELS[filter],
-                })),
-              },
-              {
-                name: "visibility",
-                label: "Sichtbarkeit",
-                value: visibility,
-                options: Object.entries(VISIBILITY_LABELS).map(([value, label]) => ({
-                  value,
-                  label,
                 })),
               },
               {

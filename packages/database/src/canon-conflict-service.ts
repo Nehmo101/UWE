@@ -1,5 +1,5 @@
 import type { PrismaClient } from "./client";
-import type { CanonicalStatus, PageType, Visibility } from "./generated/prisma/client";
+import type { CanonicalStatus, PageType } from "./generated/prisma/client";
 import { buildPageUrl } from "./page-types";
 import type { InspectorFinding, InspectorPageInput, InspectorSeverity } from "./world-inspector";
 
@@ -8,7 +8,6 @@ export interface CanonConflictPageInput {
   title: string;
   slug: string;
   type: PageType;
-  visibility: Visibility;
   canonicalStatus: CanonicalStatus;
   content: string;
 }
@@ -32,13 +31,7 @@ function findingId(code: string, parts: string[]): string {
   return `${code}:${parts.join(":")}`;
 }
 
-function isPortalPublished(page: CanonConflictPageInput): boolean {
-  return (
-    (page.visibility === "player_visible" || page.visibility === "public")
-  );
-}
-
-/** Deprecated or non-canon content still visible to players. */
+/** Deprecated or non-canon content that every world member now sees. */
 export function checkDeprecatedOrNonCanonPublished(
   worldSlug: string,
   pages: CanonConflictPageInput[],
@@ -46,18 +39,16 @@ export function checkDeprecatedOrNonCanonPublished(
   const findings: InspectorFinding[] = [];
 
   for (const page of pages) {
-    if (!isPortalPublished(page)) continue;
-
     if (page.canonicalStatus === "deprecated" || page.canonicalStatus === "non_canon") {
       findings.push({
         id: findingId("deprecated_player_visible", [page.id]),
         code: "deprecated_player_visible",
         severity: "warning",
-        message: `„${page.title}" ist ${page.canonicalStatus === "deprecated" ? "veraltet" : "Nicht-Kanon"}, aber im Portal veröffentlicht.`,
+        message: `„${page.title}" ist ${page.canonicalStatus === "deprecated" ? "veraltet" : "Nicht-Kanon"}, aber für alle Weltmitglieder sichtbar.`,
         pageTitle: page.title,
         href: studioHref(worldSlug, page),
         pageId: page.id,
-        fixes: [{ action: "set_page_dm_only", label: "Auf DM-only setzen" }],
+        fixes: [],
       });
     }
 
@@ -66,11 +57,11 @@ export function checkDeprecatedOrNonCanonPublished(
         id: findingId("non_canon_portal_published", [page.id]),
         code: "non_canon_portal_published",
         severity: "info",
-        message: `„${page.title}" ist noch ${page.canonicalStatus === "idea" ? "Idee" : "Entwurf"}, aber bereits im Portal sichtbar.`,
+        message: `„${page.title}" ist noch ${page.canonicalStatus === "idea" ? "Idee" : "Entwurf"}, aber bereits für alle Weltmitglieder sichtbar.`,
         pageTitle: page.title,
         href: studioHref(worldSlug, page),
         pageId: page.id,
-        fixes: [{ action: "set_page_dm_only", label: "Zurück auf DM-only" }],
+        fixes: [],
       });
     }
   }
@@ -78,7 +69,7 @@ export function checkDeprecatedOrNonCanonPublished(
   return findings;
 }
 
-/** NPC pages whose content marks them dead but remain player-visible. */
+/** NPC pages whose content marks them dead — every world member sees them. */
 export function checkNpcDeathStatusConflicts(
   worldSlug: string,
   pages: CanonConflictPageInput[],
@@ -88,24 +79,23 @@ export function checkNpcDeathStatusConflicts(
   for (const page of pages) {
     if (page.type !== "npc") continue;
     if (!DEAD_KEYWORDS.test(page.content)) continue;
-    if (page.visibility === "dm_only") continue;
 
     findings.push({
       id: findingId("npc_status_conflict", [page.id]),
       code: "npc_status_conflict",
       severity: "warning",
-      message: `NPC „${page.title}" wirkt im Text tot/verstorben, ist aber für Spieler sichtbar oder veröffentlicht.`,
+      message: `NPC „${page.title}" wirkt im Text tot/verstorben, ist aber für Spieler sichtbar.`,
       pageTitle: page.title,
       href: studioHref(worldSlug, page),
       pageId: page.id,
-      fixes: [{ action: "set_page_dm_only", label: "Auf DM-only setzen" }],
+      fixes: [],
     });
   }
 
   return findings;
 }
 
-/** Brain facts stating death while linked NPC page stays player-visible. */
+/** Brain facts stating death while the linked NPC page stays visible. */
 export function checkBrainFactDeathConflicts(
   worldSlug: string,
   pages: CanonConflictPageInput[],
@@ -118,7 +108,6 @@ export function checkBrainFactDeathConflicts(
     if (!fact.pageId || !DEAD_KEYWORDS.test(`${fact.title} ${fact.content}`)) continue;
     const page = pageById.get(fact.pageId);
     if (!page || page.type !== "npc") continue;
-    if (!isPortalPublished(page) && page.visibility === "dm_only") continue;
 
     findings.push({
       id: findingId("brain_fact_death_conflict", [fact.id, page.id]),
@@ -128,7 +117,7 @@ export function checkBrainFactDeathConflicts(
       pageTitle: page.title,
       href: studioHref(worldSlug, page),
       pageId: page.id,
-      fixes: [{ action: "set_page_dm_only", label: "NPC auf DM-only setzen" }],
+      fixes: [],
     });
   }
 
@@ -189,7 +178,6 @@ function toCanonPageInput(page: InspectorPageInput): CanonConflictPageInput {
     title: page.title,
     slug: page.slug,
     type: page.type,
-    visibility: page.visibility,
     canonicalStatus: page.canonicalStatus,
     content: page.blocks.map((block) => block.content).join("\n"),
   };

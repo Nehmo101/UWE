@@ -3,7 +3,6 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
-import { createPage, createWorld } from "./repository";
 import {
   DEFAULT_SYSTEM_SETTINGS,
   createSettingsService,
@@ -38,7 +37,6 @@ describe("SettingsService", () => {
     assert.equal(settings.app.themePreferences?.brain?.themeId, "uwe-ghibli-nacht");
     assert.equal(settings.app.frostedGlass, false);
     assert.equal(settings.app.motionEnabled, true);
-    assert.equal(settings.worlds.defaultVisibility, "dm_only");
     assert.equal(settings.portal.portalEnabled, true);
     assert.equal(settings.ai.localOnlyMode, false);
   });
@@ -49,7 +47,7 @@ describe("SettingsService", () => {
 
     await service.updateSettings({
       app: { theme: "light" },
-      worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
+      worlds: { defaultCanonicalStatus: "canon" },
       portal: { guestAccessEnabled: false, publicSharingEnabled: false },
       ai: { localOnlyMode: true },
       storage: { uploadsPath: "./custom-uploads", exportsPath: "./custom-exports" },
@@ -58,7 +56,6 @@ describe("SettingsService", () => {
 
     const reloaded = await service.getSettings();
     assert.equal(reloaded.app.theme, "light");
-    assert.equal(reloaded.worlds.defaultVisibility, "player_visible");
     assert.equal(reloaded.worlds.defaultCanonicalStatus, "canon");
     assert.equal(reloaded.portal.guestAccessEnabled, false);
     assert.equal(reloaded.ai.localOnlyMode, true);
@@ -101,32 +98,6 @@ describe("SettingsService", () => {
     }
   });
 
-  it("uses default visibility when creating pages", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const service = createSettingsService(db);
-
-    await service.updateSettings({
-      worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
-    });
-
-    const world = await createWorld(
-      { name: "Settings Test", slug: "settings-test", description: null },
-      databaseUrl,
-    );
-
-    const page = await createPage(
-      {
-        worldId: world.id,
-        title: "Default Page",
-        slug: "default-page",
-        type: "lore",
-      },
-      databaseUrl,
-    );
-
-    assert.equal(page.visibility, "player_visible");
-    assert.equal(page.canonicalStatus, "canon");
-  });
 
   it("keeps portal guest access disabled regardless of settings", async () => {
     const db = createPrismaClient(databaseUrl);
@@ -195,7 +166,7 @@ describe("SettingsService", () => {
 
     await service.updateSettings({
       app: { theme: "light" },
-      worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
+      worlds: { defaultCanonicalStatus: "canon" },
       portal: { guestAccessEnabled: false, publicSharingEnabled: false },
       ai: { localOnlyMode: true, enabled: false },
     });
@@ -206,7 +177,6 @@ describe("SettingsService", () => {
 
     const settings = await service.getSettings();
     assert.equal(settings.app.theme, "dark");
-    assert.equal(settings.worlds.defaultVisibility, "player_visible");
     assert.equal(settings.worlds.defaultCanonicalStatus, "canon");
     assert.equal(settings.portal.guestAccessEnabled, false);
     assert.equal(settings.portal.publicSharingEnabled, false);

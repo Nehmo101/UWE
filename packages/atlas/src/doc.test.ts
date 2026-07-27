@@ -17,7 +17,7 @@ function terraV1Doc() {
     builtinGlyphs: ["tree", "mountain"],
     pageLinks: { node_root: "page_world" },
     nodes: [
-      { id: "node_root", level: "continent", title: "CoK Demo", visibility: "dm_only", sortOrder: 0 },
+      { id: "node_root", level: "continent", title: "CoK Demo", sortOrder: 0 },
     ],
     features: [
       {
@@ -31,11 +31,10 @@ function terraV1Doc() {
         },
         style: { biomeKind: "forest", density: 1.6 },
         layer: 10,
-        visibility: "dm_only",
       },
     ],
     objects: [
-      { _key: "o1", paletteItemId: "pi_city", x: 0.5, y: 0.4, scale: 1, rotation: 0, layer: 50, visibility: "player_visible" },
+      { _key: "o1", paletteItemId: "pi_city", x: 0.5, y: 0.4, scale: 1, rotation: 0, layer: 50 },
     ],
   };
 }
@@ -208,7 +207,7 @@ describe("serializeDoc", () => {
       rootNodeId: "node_root",
       pageLinks: { node_root: "page_world" },
       nodes: [
-        { id: "node_root", level: "continent", title: "CoK Demo", visibility: "dm_only", sortOrder: 0 },
+        { id: "node_root", level: "continent", title: "CoK Demo", sortOrder: 0 },
       ],
       features: [
         {
@@ -221,11 +220,10 @@ describe("serializeDoc", () => {
           },
           style: { biomeKind: "forest", density: 1.6 },
           layer: 10,
-          visibility: "dm_only",
         },
       ],
       objects: [
-        { paletteItemId: "pi_city", x: 0.5, y: 0.4, scale: 1, rotation: 0, layer: 50, visibility: "player_visible" },
+        { paletteItemId: "pi_city", x: 0.5, y: 0.4, scale: 1, rotation: 0, layer: 50 },
       ],
       tileLayer: {
         cols: 64,

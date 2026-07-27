@@ -1,11 +1,10 @@
 "use client";
 
-import { BLOCK_TYPE_LABELS, VISIBILITY_LABELS } from "@uwe/shared-ui";
+import { BLOCK_TYPE_LABELS } from "@uwe/shared-ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 export interface TemplatePreviewBlock {
   type: string;
-  visibility: string;
   content: string;
 }
 
@@ -45,8 +44,6 @@ export function TemplateLivePreview({
               <section key={index} className="mb-3">
                 <p className="text-[0.8rem] text-muted-foreground">
                   {BLOCK_TYPE_LABELS[block.type as keyof typeof BLOCK_TYPE_LABELS] ?? block.type}
-                  {" · "}
-                  {VISIBILITY_LABELS[block.visibility as keyof typeof VISIBILITY_LABELS] ?? block.visibility}
                 </p>
                 <div className="whitespace-pre-wrap">{block.content}</div>
               </section>

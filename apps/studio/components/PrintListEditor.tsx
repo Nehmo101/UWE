@@ -11,7 +11,6 @@ export interface PrintListEditorItem {
   labelId: string;
   title: string;
   copies: number;
-  containsDmOnly?: boolean;
   previewHref: string;
   labelHref: string;
 }
@@ -93,9 +92,6 @@ export function PrintListEditor({
                 <td className={TD_CLASS}>{index + 1}</td>
                 <td className={TD_CLASS}>
                   <Link href={item.labelHref}>{item.title}</Link>
-                  {item.containsDmOnly && (
-                    <p className="text-sm text-warning">DM-only</p>
-                  )}
                 </td>
                 <td className={TD_CLASS}>
                   <Input

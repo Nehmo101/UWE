@@ -5,8 +5,17 @@ import { SECURITY_MARKERS } from "./markers";
 import { createSecurityFixture, type SecurityFixture } from "./fixtures/security-fixture";
 
 type PageExpectation = "visible" | "hidden";
-type BlockExpectation = "all" | "player_only" | "none";
+type BlockExpectation = "all" | "none";
 
+/**
+ * The access matrix after visibility was removed (Notiz Lasse, 2026-07-26).
+ *
+ * There is exactly one content rule left: whoever is assigned to a world sees
+ * everything in it. So the matrix only distinguishes two things any more —
+ * whether the viewer is signed in at all, and whether they belong to the world.
+ * An anonymous visitor gets nothing even in a guest-mode world; a player gets
+ * the full public world but nothing from the private world they are not in.
+ */
 interface RoleExpectations {
   publicPage: PageExpectation;
   playerVisiblePage: PageExpectation;
@@ -19,62 +28,40 @@ interface RoleExpectations {
   privateWorldDmPage: PageExpectation;
 }
 
+const ANONYMOUS: RoleExpectations = {
+  publicPage: "hidden",
+  playerVisiblePage: "hidden",
+  playerVisibleBlocks: "none",
+  dmOnlyPage: "hidden",
+  hiddenSecretPage: "hidden",
+  revealedSecretPage: "hidden",
+  publicMedia: "hidden",
+  privateMedia: "hidden",
+  privateWorldDmPage: "hidden",
+};
+
+/** Assigned to the public world, not to the private one. */
+const WORLD_MEMBER: RoleExpectations = {
+  publicPage: "visible",
+  playerVisiblePage: "visible",
+  playerVisibleBlocks: "all",
+  dmOnlyPage: "visible",
+  hiddenSecretPage: "visible",
+  revealedSecretPage: "visible",
+  publicMedia: "visible",
+  privateMedia: "visible",
+  privateWorldDmPage: "hidden",
+};
+
+/** Staff reads every world. */
+const STAFF: RoleExpectations = { ...WORLD_MEMBER, privateWorldDmPage: "visible" };
+
 const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
-  anonymous: {
-    publicPage: "hidden",
-    playerVisiblePage: "hidden",
-    playerVisibleBlocks: "none",
-    dmOnlyPage: "hidden",
-    hiddenSecretPage: "hidden",
-    revealedSecretPage: "hidden",
-    publicMedia: "hidden",
-    privateMedia: "hidden",
-    privateWorldDmPage: "hidden",
-  },
-  player: {
-    publicPage: "visible",
-    playerVisiblePage: "visible",
-    playerVisibleBlocks: "player_only",
-    dmOnlyPage: "hidden",
-    hiddenSecretPage: "hidden",
-    revealedSecretPage: "visible",
-    publicMedia: "visible",
-    privateMedia: "hidden",
-    privateWorldDmPage: "hidden",
-  },
-  dm: {
-    publicPage: "visible",
-    playerVisiblePage: "visible",
-    playerVisibleBlocks: "all",
-    dmOnlyPage: "visible",
-    hiddenSecretPage: "visible",
-    revealedSecretPage: "visible",
-    publicMedia: "visible",
-    privateMedia: "visible",
-    privateWorldDmPage: "visible",
-  },
-  admin: {
-    publicPage: "visible",
-    playerVisiblePage: "visible",
-    playerVisibleBlocks: "all",
-    dmOnlyPage: "visible",
-    hiddenSecretPage: "visible",
-    revealedSecretPage: "visible",
-    publicMedia: "visible",
-    privateMedia: "visible",
-    privateWorldDmPage: "visible",
-  },
-  owner: {
-    publicPage: "visible",
-    playerVisiblePage: "visible",
-    playerVisibleBlocks: "all",
-    dmOnlyPage: "visible",
-    hiddenSecretPage: "visible",
-    revealedSecretPage: "visible",
-    publicMedia: "visible",
-    privateMedia: "visible",
-    privateWorldDmPage: "visible",
-  },
+  anonymous: ANONYMOUS,
+  player: WORLD_MEMBER,
+  dm: STAFF,
+  admin: STAFF,
+  owner: STAFF,
 };
 
 function userIdForRole(fixture: SecurityFixture, role: SecurityTestRole): string | undefined {
@@ -132,7 +119,7 @@ describe("security role matrix", () => {
         assertPage(fixture.content.slugs.revealedSecretPage, expectations.revealedSecretPage);
       });
 
-      it("respects block-level visibility on player_visible pages", async () => {
+      it("returns all blocks of a page the viewer may read", async () => {
         const userId = userIdForRole(fixture, role);
         const ctx = await fixture.auth.buildAccessContextForWorld(fixture.content.publicWorldSlug, {
           userId,
@@ -155,16 +142,12 @@ describe("security role matrix", () => {
 
         if (expectations.playerVisibleBlocks === "all") {
           assert.ok(contents.includes(SECURITY_MARKERS.PLAYER_VISIBLE));
-          assert.ok(contents.includes(SECURITY_MARKERS.DM_ONLY));
-        } else if (expectations.playerVisibleBlocks === "player_only") {
-          assert.ok(contents.includes(SECURITY_MARKERS.PLAYER_VISIBLE));
-          assert.ok(!contents.includes(SECURITY_MARKERS.DM_ONLY));
         } else {
           assert.equal(page.contentBlocks.length, 0);
         }
       });
 
-      it("controls asset visibility", async () => {
+      it("controls asset access by world assignment", async () => {
         const userId = userIdForRole(fixture, role);
         const ctx = await fixture.auth.buildAccessContextForWorld(fixture.content.publicWorldSlug, {
           userId,
@@ -208,11 +191,4 @@ describe("security role matrix", () => {
     });
   }
 
-  it("anonymous portal context never serves dm_only pages", async () => {
-    const page = await fixture.repo.getPublicPageForPortal(
-      fixture.content.publicWorldSlug,
-      fixture.content.slugs.dmOnlyPage,
-    );
-    assert.equal(page, null);
-  });
 });

@@ -51,7 +51,6 @@ export type BrainVisibility = "dm_only" | "player_visible" | "public";
 export interface AiContextBlock {
   blockId: string;
   type: string;
-  visibility: string;
   content: string;
 }
 
@@ -74,7 +73,6 @@ export interface AiContextPage {
   pageType: string;
   tags: string[];
   aliases: string[];
-  visibility: string;
   canonicalStatus: string;
   summary?: string | null;
   contentBlocks: AiContextBlock[];
@@ -106,7 +104,6 @@ export interface AiContextBrainEntry {
   entryId: string;
   title: string;
   content: string;
-  visibility: BrainVisibility;
   sourceType: string;
   objectRef?: string | null;
   trustLevel?: string | null;
@@ -116,7 +113,6 @@ export interface AiContextDebugItem {
   kind: "world" | "campaign" | "session" | "page" | "brain";
   id: string;
   title: string;
-  visibility?: string;
   charCount: number;
   included: boolean;
   reason?: string;
@@ -124,7 +120,6 @@ export interface AiContextDebugItem {
 
 export interface AiContextDebug {
   audience: ContextAudience;
-  allowDmOnly: boolean;
   maxChars: number;
   totalChars: number;
   truncated: boolean;
@@ -160,6 +155,5 @@ export interface AiContext {
   promptContext: string;
   truncated: boolean;
   datenschutzMode: boolean;
-  allowDmOnly: boolean;
   debug?: AiContextDebug;
 }

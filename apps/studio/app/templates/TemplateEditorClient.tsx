@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   BLOCK_TYPE_LABELS,
   PAGE_TYPE_LABELS,
-  VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import { TemplateLivePreview, type TemplatePreviewBlock } from "./TemplateLivePreview";
 import { Button, Input, Label, Textarea } from "@/src/components/ui";
@@ -18,7 +17,6 @@ const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
 const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 type TemplatePageType = keyof typeof PAGE_TYPE_LABELS;
-type TemplateVisibility = keyof typeof VISIBILITY_LABELS;
 type TemplateBlockType = keyof typeof BLOCK_TYPE_LABELS;
 
 interface PageTemplateEditorModel {
@@ -26,9 +24,8 @@ interface PageTemplateEditorModel {
   name: string;
   description: string;
   pageType: TemplatePageType;
-  defaultVisibility: TemplateVisibility;
   titlePlaceholder: string;
-  blocks: Array<{ type: TemplateBlockType; visibility: TemplateVisibility; content: string }>;
+  blocks: Array<{ type: TemplateBlockType; content: string }>;
 }
 
 interface Props {
@@ -41,19 +38,15 @@ function initialBlocks(template: PageTemplateEditorModel | null): TemplatePrevie
   const existing =
     template?.blocks.map((block) => ({
       type: block.type,
-      visibility: block.visibility,
       content: block.content,
     })) ?? [];
-  return [...existing, { type: "rich_text", visibility: "dm_only", content: "" }];
+  return [...existing, { type: "rich_text", content: "" }];
 }
 
 export function TemplateEditorClient({ template, action, submitLabel }: Props) {
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
   const [pageType, setPageType] = useState(template?.pageType ?? "lore");
-  const [defaultVisibility, setDefaultVisibility] = useState(
-    template?.defaultVisibility ?? "dm_only",
-  );
   const [titlePlaceholder, setTitlePlaceholder] = useState(template?.titlePlaceholder ?? "");
   const [blocks, setBlocks] = useState<TemplatePreviewBlock[]>(() => initialBlocks(template));
 
@@ -71,7 +64,7 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
   function addBlock() {
     setBlocks((current) => [
       ...current,
-      { type: "rich_text", visibility: "dm_only", content: "" },
+      { type: "rich_text", content: "" },
     ]);
   }
 
@@ -119,25 +112,6 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="template-editor-default-visibility">Standard-Sichtbarkeit</Label>
-          <select
-            id="template-editor-default-visibility"
-            name="defaultVisibility"
-            value={defaultVisibility}
-            onChange={(e) =>
-              setDefaultVisibility(e.target.value as TemplateVisibility)
-            }
-            className={NATIVE_SELECT_CLASS}
-          >
-            {(Object.keys(VISIBILITY_LABELS) as TemplateVisibility[]).map((v) => (
-              <option key={v} value={v}>
-                {VISIBILITY_LABELS[v]}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
           <Label htmlFor="template-editor-title-placeholder">Titel-Platzhalter</Label>
           <Input
             id="template-editor-title-placeholder"
@@ -164,22 +138,6 @@ export function TemplateEditorClient({ template, action, submitLabel }: Props) {
                 {Object.keys(BLOCK_TYPE_LABELS).map((type) => (
                   <option key={type} value={type}>
                     {BLOCK_TYPE_LABELS[type as TemplateBlockType]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor={`template-editor-block-${index}-visibility`}>Sichtbarkeit</Label>
-              <select
-                id={`template-editor-block-${index}-visibility`}
-                name={`blockVisibility_${index}`}
-                value={block.visibility}
-                onChange={(e) => updateBlock(index, { visibility: e.target.value })}
-                className={NATIVE_SELECT_CLASS}
-              >
-                {(Object.keys(VISIBILITY_LABELS) as TemplateVisibility[]).map((v) => (
-                  <option key={v} value={v}>
-                    {VISIBILITY_LABELS[v]}
                   </option>
                 ))}
               </select>

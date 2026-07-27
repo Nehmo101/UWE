@@ -155,7 +155,7 @@ export class WorldCreationService {
     let created = 0;
 
     for (const seed of template.seedPages) {
-      const { pageType, visibility } = seedPageDefaults(seed);
+      const { pageType } = seedPageDefaults(seed);
       const basePageSlug = seed.slug?.trim() || slugifyPageTitle(seed.title);
       const pageSlug = pickUniqueSlug(basePageSlug || "seite", [...existingPageSlugs]);
       existingPageSlugs.add(pageSlug);
@@ -168,13 +168,11 @@ export class WorldCreationService {
           title: seed.title,
           slug: pageSlug,
           type: pageType,
-          visibility,
           canonicalStatus: "draft",
           contentBlocks: {
             create: blocks.map((block) => ({
               type: block.type as ContentBlockType,
               sortOrder: block.sortOrder,
-              visibility: block.visibility,
               content: block.content,
             })),
           },

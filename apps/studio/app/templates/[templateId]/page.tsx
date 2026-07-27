@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   BLOCK_TYPE_LABELS,
   PAGE_TYPE_LABELS,
-  VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import { createPageTemplateService, prisma } from "@uwe/database/server";
 import { updateTemplateAction } from "../../template-actions";
@@ -78,7 +77,6 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
                 {" · "}
                 {PAGE_TYPE_LABELS[template.pageType]}
                 {" · "}
-                Standard: {VISIBILITY_LABELS[template.defaultVisibility]}
               </p>
               {template.titlePlaceholder ? (
                 <p className="text-sm text-muted-foreground">
@@ -93,7 +91,7 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
                   {template.blocks.map((block, index) => (
                     <section key={index} className="rounded-[var(--radius)] border border-border p-4">
                       <p className="text-sm text-muted-foreground">
-                        {BLOCK_TYPE_LABELS[block.type]} · {VISIBILITY_LABELS[block.visibility]}
+                        {BLOCK_TYPE_LABELS[block.type]}
                       </p>
                       <div className="whitespace-pre-wrap">{block.content}</div>
                     </section>

@@ -9,7 +9,6 @@ import { createPrismaClient, type PrismaClient } from "./client";
 import { withParsedArrays } from "./json-utils";
 import { slugifyDe } from "./slug-utils";
 import { renderPageContentHtml, type WikiPageNode } from "./page-service";
-import { filterBlocksForContext } from "./permissions";
 import type { PageSummary } from "./repository";
 
 export type {
@@ -60,13 +59,11 @@ export interface CreateDungeonEntityInput {
   slug: string;
   type: PageType;
   summary?: string | null;
-  visibility?: Prisma.PageCreateInput["visibility"];
   prepStatus?: DungeonPrepStatus;
   contentBlocks?: Array<{
     type: Prisma.ContentBlockCreateInput["type"];
     sortOrder: number;
     content?: string;
-    visibility?: Prisma.ContentBlockCreateInput["visibility"];
   }>;
 }
 
@@ -74,7 +71,6 @@ export interface UpdateDungeonEntityInput {
   title?: string;
   slug?: string;
   summary?: string | null;
-  visibility?: Prisma.PageUpdateInput["visibility"];
   prepStatus?: DungeonPrepStatus | null;
 }
 
@@ -92,7 +88,6 @@ export interface DungeonEntitySummary {
   slug: string;
   type: PageType;
   summary: string | null;
-  visibility: Prisma.PageGetPayload<object>["visibility"];
   prepStatus: DungeonPrepStatus | null;
   parentPageId: string | null;
   tags: string[];
@@ -103,7 +98,6 @@ export interface DungeonEntitySummary {
 
 export interface RoomContentSections {
   readAloud: ContentBlock[];
-  dmNotes: ContentBlock[];
   playerDescription: ContentBlock[];
   otherBlocks: ContentBlock[];
 }
@@ -163,7 +157,6 @@ function toEntitySummary(page: Prisma.PageGetPayload<{ include: { campaign: true
     slug: parsed.slug,
     type: parsed.type,
     summary: parsed.summary,
-    visibility: parsed.visibility,
     prepStatus: parsed.prepStatus,
     parentPageId: parsed.parentPageId,
     tags: parsed.tags,
@@ -176,26 +169,20 @@ function toEntitySummary(page: Prisma.PageGetPayload<{ include: { campaign: true
 export function categorizeRoomBlocks(blocks: ContentBlock[]): RoomContentSections {
   const sorted = [...blocks].sort((a, b) => a.sortOrder - b.sortOrder);
   const readAloud: ContentBlock[] = [];
-  const dmNotes: ContentBlock[] = [];
   const playerDescription: ContentBlock[] = [];
   const otherBlocks: ContentBlock[] = [];
 
   for (const block of sorted) {
     if (block.type === "player_text") {
       readAloud.push(block);
-    } else if (block.type === "gm_note") {
-      dmNotes.push(block);
-    } else if (
-      block.type === "rich_text" &&
-      (block.visibility === "player_visible" || block.visibility === "public")
-    ) {
+    } else if (block.type === "rich_text") {
       playerDescription.push(block);
     } else {
       otherBlocks.push(block);
     }
   }
 
-  return { readAloud, dmNotes, playerDescription, otherBlocks };
+  return { readAloud, playerDescription, otherBlocks };
 }
 
 export function filterRoomChildren(
@@ -224,14 +211,9 @@ export function toPortalRoomCockpitView(
   worldSlug: string,
   wikiIndex: WikiPageNode[],
 ): PortalRoomCockpitView {
-  const visibleBlocks = filterBlocksForContext(room.contentBlocks, "portal");
-  const sections = categorizeRoomBlocks(visibleBlocks);
-  const childGroups = filterRoomChildren(
-    children.filter((child) => child.visibility !== "dm_only"),
-  );
-  const visibleAssets = room.assetPageLinks
-    .map((link) => link.asset)
-    .filter((asset) => asset.visibility === "player_visible" || asset.visibility === "public");
+  const sections = categorizeRoomBlocks(room.contentBlocks);
+  const childGroups = filterRoomChildren(children);
+  const visibleAssets = room.assetPageLinks.map((link) => link.asset);
 
   return {
     room: {
@@ -247,7 +229,7 @@ export function toPortalRoomCockpitView(
     handouts: childGroups.handout,
     maps: childGroups.map,
     assets: visibleAssets,
-    html: renderPageContentHtml(worldSlug, { ...room, contentBlocks: visibleBlocks }, wikiIndex, "portal"),
+    html: renderPageContentHtml(room, wikiIndex),
   };
 }
 
@@ -310,7 +292,7 @@ export class DungeonCockpitService {
       dungeon: toEntitySummary(dungeon),
       levels: levels.map(toEntitySummary),
       assets: dungeon.assetPageLinks.map((link) => link.asset),
-      html: renderPageContentHtml(worldSlug, dungeon, wikiIndex, "dm"),
+      html: renderPageContentHtml(dungeon, wikiIndex),
     };
   }
 
@@ -411,7 +393,7 @@ export class DungeonCockpitService {
       maps: childGroups.map,
       assets: room.assetPageLinks.map((link) => link.asset),
       sections: categorizeRoomBlocks(room.contentBlocks),
-      html: renderPageContentHtml(worldSlug, room, wikiIndex, "dm"),
+      html: renderPageContentHtml(room, wikiIndex),
     };
   }
 
@@ -428,7 +410,6 @@ export class DungeonCockpitService {
         worldId: world.id,
         slug: roomSlug,
         type: DUNGEON_ROOM_TYPE,
-        visibility: { in: ["player_visible", "public"] },
       },
       include: this.pageInclude(),
     });
@@ -439,7 +420,6 @@ export class DungeonCockpitService {
         worldId: world.id,
         parentPageId: room.id,
         type: { in: [...ROOM_CHILD_TYPES] },
-        visibility: { in: ["player_visible", "public"] },
       },
       include: { campaign: true },
     });
@@ -457,7 +437,6 @@ export class DungeonCockpitService {
         slug: input.slug,
         type: input.type,
         summary: input.summary ?? null,
-        visibility: input.visibility ?? "dm_only",
         prepStatus: input.prepStatus ?? "unprepared",
         contentBlocks: input.contentBlocks
           ? {
@@ -465,7 +444,6 @@ export class DungeonCockpitService {
                 type: block.type,
                 sortOrder: block.sortOrder,
                 content: block.content ?? "",
-                visibility: block.visibility ?? "dm_only",
               })),
             }
           : undefined,
@@ -481,7 +459,6 @@ export class DungeonCockpitService {
         title: input.title,
         slug: input.slug,
         summary: input.summary,
-        visibility: input.visibility,
         prepStatus: input.prepStatus,
       },
       include: this.pageInclude(),

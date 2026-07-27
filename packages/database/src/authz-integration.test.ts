@@ -55,7 +55,6 @@ describe("authz integration — IDOR/BOLA", () => {
       title: "Public A",
       slug: "public-a",
       type: "lore",
-      visibility: "player_visible",
     });
 
     const privatePageB = await repo.createPage({
@@ -63,7 +62,6 @@ describe("authz integration — IDOR/BOLA", () => {
       title: "Secret B",
       slug: "secret-b",
       type: "secret",
-      visibility: "dm_only",
     });
     privatePageBId = privatePageB.id;
 
@@ -74,7 +72,6 @@ describe("authz integration — IDOR/BOLA", () => {
       title: "Public B",
       slug: "public-b",
       type: "lore",
-      visibility: "player_visible",
     });
   });
 
@@ -141,13 +138,12 @@ describe("authz integration — IDOR/BOLA", () => {
     assert.equal(leakedViaViewer, null);
   });
 
-  it("blocks PLAYER from reading DM-only content", async () => {
+  it("lets a world member read every page of their own world", async () => {
     await repo.createPage({
       worldId: worldAId,
       title: "DM Plan",
       slug: "dm-plan",
       type: "lore",
-      visibility: "dm_only",
     });
 
     const userA = await auth.findUserByEmail("player-a@authz.test");
@@ -157,7 +153,7 @@ describe("authz integration — IDOR/BOLA", () => {
     assert.ok(ctxA);
 
     const page = await auth.getPageForViewer(worldASlug, "dm-plan", ctxA);
-    assert.equal(page, null);
+    assert.ok(page);
 
     const dmPage = await db.page.findFirst({
       where: { slug: "dm-plan", worldId: worldAId },
@@ -169,13 +165,9 @@ describe("authz integration — IDOR/BOLA", () => {
         auth.toAuthUser(userA),
         dmPage,
         { id: worldAId, guestModeEnabled: false, membership: ctxA.worldMembership },
-        {
-          unlockedPageIds: ctxA.unlockedPageIds,
-          specificPlayerPageIds: ctxA.specificPlayerPageIds,
-          previewAsUserId: ctxA.previewAsUserId,
-        },
+        { previewAsUserId: ctxA.previewAsUserId },
       ),
-      false,
+      true,
     );
   });
 

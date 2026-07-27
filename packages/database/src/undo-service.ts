@@ -10,7 +10,6 @@ import type {
   CanonicalStatus,
   ContentBlockType,
   PageType,
-  Visibility,
 } from "./generated/prisma/client";
 
 /**
@@ -46,7 +45,6 @@ interface PageSnapshot {
     slug: string;
     type: PageType;
     summary: string | null;
-    visibility: Visibility;
     canonicalStatus: CanonicalStatus;
     aiReviewedAt?: Date | null;
     tags: unknown;
@@ -64,7 +62,6 @@ interface BlockSnapshot {
     type: ContentBlockType;
     sortOrder: number;
     content: string;
-    visibility: Visibility;
     metadata: unknown;
   };
 }
@@ -160,7 +157,6 @@ export class UndoService {
         slug: page.slug,
         type: page.type,
         summary: page.summary,
-        visibility: page.visibility,
         canonicalStatus: page.canonicalStatus,
         aiReviewedAt: page.aiReviewedAt,
         tags: page.tags,
@@ -198,7 +194,6 @@ export class UndoService {
         slug: page.slug,
         type: page.type,
         summary: page.summary,
-        visibility: page.visibility,
         canonicalStatus: page.canonicalStatus,
         aiReviewedAt: page.aiReviewedAt,
         tags: page.tags,
@@ -211,7 +206,6 @@ export class UndoService {
         type: block.type,
         sortOrder: block.sortOrder,
         content: block.content,
-        visibility: block.visibility,
         metadata: block.metadata,
       })),
     };
@@ -249,7 +243,6 @@ export class UndoService {
         type: block.type,
         sortOrder: block.sortOrder,
         content: block.content,
-        visibility: block.visibility,
         metadata: block.metadata,
       },
     };
@@ -524,7 +517,6 @@ export class UndoService {
           slug: data.slug,
           type: data.type,
           summary: data.summary,
-          visibility: data.visibility,
           canonicalStatus: data.canonicalStatus,
           tags: toPrismaJsonValue(data.tags),
           aliases: toPrismaJsonValue(data.aliases),
@@ -535,7 +527,6 @@ export class UndoService {
               type: block.type,
               sortOrder: block.sortOrder,
               content: block.content,
-              visibility: block.visibility,
               metadata: toPrismaJsonValue(block.metadata),
             })),
           },
@@ -569,7 +560,6 @@ export class UndoService {
         slug: data.slug,
         type: data.type,
         summary: data.summary,
-        visibility: data.visibility,
         canonicalStatus: data.canonicalStatus,
         tags: toPrismaJsonValue(data.tags),
         aliases: toPrismaJsonValue(data.aliases),
@@ -607,7 +597,6 @@ export class UndoService {
           type: data.type,
           sortOrder: data.sortOrder,
           content: data.content,
-          visibility: data.visibility,
           metadata: toPrismaJsonValue(data.metadata),
         },
       });
@@ -626,7 +615,6 @@ export class UndoService {
         type: data.type,
         sortOrder: data.sortOrder,
         content: data.content,
-        visibility: data.visibility,
         metadata: toPrismaJsonValue(data.metadata),
       },
     });
@@ -713,7 +701,6 @@ export class UndoService {
           slug: update.page.slug,
           type: update.page.type,
           summary: update.page.summary,
-          visibility: update.page.visibility,
           canonicalStatus: update.page.canonicalStatus,
           tags: toPrismaJsonValue(update.page.tags),
           aliases: toPrismaJsonValue(update.page.aliases),

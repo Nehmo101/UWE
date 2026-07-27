@@ -72,7 +72,7 @@ describe("wave c0a chronicle models", () => {
     await db.$disconnect();
   });
 
-  it("filters portal page events by visibility", async () => {
+  it("shows assigned players every page event", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
     const repo = createUweRepository(databaseUrl);
@@ -97,7 +97,6 @@ describe("wave c0a chronicle models", () => {
       inGameDate: { year: 1, month: 3, day: 1 },
       title: "Spieler-sichtbar",
       summaryPlayer: "Öffentlich",
-      visibility: "player_visible",
       linkedPages: [{ pageId, role: "involved" }],
     });
     await events.create({
@@ -105,7 +104,6 @@ describe("wave c0a chronicle models", () => {
       inGameDate: { year: 1, month: 3, day: 2 },
       title: "Nur DM",
       summaryPlayer: "Geheim",
-      visibility: "dm_only",
       linkedPages: [{ pageId, role: "involved" }],
     });
 
@@ -113,8 +111,9 @@ describe("wave c0a chronicle models", () => {
     assert.ok(ctx);
 
     const pageEvents = await auth.listWorldEventsForPageViewer("chronicle-test", pageId, ctx);
-    assert.equal(pageEvents.length, 1);
-    assert.equal(pageEvents[0]?.title, "Spieler-sichtbar");
+    assert.ok(pageEvents.length >= 2);
+    assert.ok(pageEvents.some((event) => event.title === "Spieler-sichtbar"));
+    assert.ok(pageEvents.some((event) => event.title === "Nur DM"));
     await db.$disconnect();
   });
 });

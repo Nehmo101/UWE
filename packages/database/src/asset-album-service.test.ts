@@ -27,7 +27,6 @@ describe("AssetAlbumService", () => {
       storageKey: `${worldId}/test.png`,
       mimeType: "image/png",
       size: 128,
-      visibility: "dm_only",
     });
     assetId = asset.id;
   });

@@ -1,4 +1,4 @@
-import type { CanonicalStatus, Prisma, PrismaClient, Visibility } from "./generated/prisma/client";
+import type { CanonicalStatus, Prisma, PrismaClient } from "./generated/prisma/client";
 import { getMailConfigStatus, getMailConfigStatusFromSmtpConfig, mergeSmtpConfig } from "@uwe/mail-core";
 import { resolveImageStudioConfigStatus } from "./integrations-service";
 import { prisma } from "./client";
@@ -94,7 +94,6 @@ export interface AppSettings {
 }
 
 export interface WorldSettings {
-  defaultVisibility: Visibility;
   defaultCanonicalStatus: CanonicalStatus;
 }
 
@@ -475,7 +474,6 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     },
   },
   worlds: {
-    defaultVisibility: "dm_only",
     defaultCanonicalStatus: "draft",
   },
   campaigns: {

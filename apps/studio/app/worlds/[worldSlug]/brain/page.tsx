@@ -2,14 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   SidebarSection,
-  VisibilityBadge,
 } from "@uwe/shared-ui";
-import type { Visibility } from "@uwe/database/enums";
 import {
   BRAIN_DOCUMENT_TYPE_LABELS,
   BRAIN_FACT_TYPE_LABELS,
   BRAIN_STATUS_LABELS,
-  BRAIN_VISIBILITY_LABELS,
   createBrainStoreService,
   createPrismaClient,
   getAppRepository,
@@ -68,13 +65,11 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
   const [documents, facts, summary] = await Promise.all([
     brain.listDocuments(worldSlug, {
       campaignId: selectedCampaign?.id,
-      accessContext: "dm",
       limit: BRAIN_PAGE_SIZE,
       offset: (page - 1) * BRAIN_PAGE_SIZE,
     }),
     brain.listFacts(worldSlug, {
       campaignId: selectedCampaign?.id,
-      accessContext: "dm",
     }),
     brain.getWorldSummary(worldSlug),
   ]);
@@ -156,7 +151,6 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
                         </td>
                         <td className={TD_CLASS}>{BRAIN_DOCUMENT_TYPE_LABELS[doc.documentType]}</td>
                         <td className={TD_CLASS}>
-                          <VisibilityBadge visibility={doc.visibility as Visibility} />
                         </td>
                         <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[doc.status]}</td>
                         <td className={TD_CLASS}>{doc.source}</td>
@@ -220,7 +214,6 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
                         </td>
                         <td className={TD_CLASS}>{BRAIN_FACT_TYPE_LABELS[fact.factType]}</td>
                         <td className={TD_CLASS}>
-                          <VisibilityBadge visibility={fact.visibility as Visibility} />
                         </td>
                         <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[fact.status]}</td>
                       </tr>
@@ -267,21 +260,6 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="brain-doc-visibility">Sichtbarkeit</Label>
-                  <Select name="visibility" defaultValue="dm_only">
-                    <SelectTrigger id="brain-doc-visibility">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div>
                   <Button type="submit">Dokument anlegen</Button>
                 </div>
@@ -309,21 +287,6 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(BRAIN_FACT_TYPE_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="brain-fact-visibility">Sichtbarkeit</Label>
-                  <Select name="visibility" defaultValue="dm_only">
-                    <SelectTrigger id="brain-fact-visibility">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
                         <SelectItem key={value} value={value}>
                           {label}
                         </SelectItem>

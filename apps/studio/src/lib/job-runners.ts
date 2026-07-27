@@ -262,7 +262,6 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
     gatewayUser: gatewayUser ?? undefined,
     useMock,
     options: {
-      allowDmOnly: settings.localOnly,
       datenschutzMode: settings.datenschutzMode,
       localOnly: settings.localOnly,
     },
@@ -304,7 +303,6 @@ export interface BrainActionJobPayload {
   model: string;
   userPrompt?: string;
   sessionId?: string;
-  allowDmOnly?: boolean;
   useMock?: boolean;
 }
 
@@ -503,7 +501,6 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       user: gatewayUser,
       feature: "AI_DND_USE",
       options: {
-        allowDmOnly: settings.localOnly,
         datenschutzMode: settings.datenschutzMode,
         localOnly: settings.localOnly,
         sessionId: payload.sessionId,
@@ -570,7 +567,6 @@ export interface AiRunJobPayload {
   providerId: AiProviderId;
   model: string;
   userPrompt?: string;
-  allowDmOnly?: boolean;
   sessionId?: string;
   useMock?: boolean;
   discardProposalId?: string;
@@ -707,7 +703,7 @@ export async function runCanonCheckJob(ctx: JobRunnerContext): Promise<Record<st
     throw new Error(`Welt ${payload.worldSlug} nicht gefunden.`);
   }
 
-  const findings = [...report.safetyFindings, ...report.canonFindings];
+  const findings = report.canonFindings;
 
   return {
     worldSlug: payload.worldSlug,

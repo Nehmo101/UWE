@@ -106,7 +106,6 @@ export class MailComposeService {
         worldId: true,
         title: true,
         description: true,
-        visibility: true,
       },
     });
 
@@ -119,9 +118,8 @@ export class MailComposeService {
       assetId: asset.id,
       title: asset.title,
       description: asset.description,
-      visibility: asset.visibility,
       publicUrl:
-        portalBaseUrl && asset.visibility !== "dm_only"
+        portalBaseUrl
           ? `${portalBaseUrl.replace(/\/$/, "")}/worlds/${worldSlug}/assets/${asset.id}`
           : undefined,
     };

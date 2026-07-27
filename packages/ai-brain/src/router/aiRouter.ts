@@ -5,11 +5,7 @@ import {
 
   extractDmOnlyPhrases,
 
-  resolveServerAllowDmOnly,
-
   validatePlayerRecapContent,
-
-  validateProviderForContext,
 
 } from "../privacy";
 
@@ -36,7 +32,6 @@ import {
   validateLocalRtxRequired,
 
 } from "./privacyGuard";
-
 
 import {
 
@@ -88,8 +83,6 @@ function assertContextWithinBudget(contextChars: number): void {
   }
 }
 
-
-
 export interface AiRouterDeps {
 
   repo: UweRepository;
@@ -107,8 +100,6 @@ export interface AiRouterDeps {
 
 }
 
-
-
 const GENERAL_CHAT_SYSTEM =
 
   "Du bist ein hilfreicher Assistent für Dungeon Master. Antworte auf Deutsch, klar und prägnant.";
@@ -124,9 +115,6 @@ function buildRouterPrompts(
   safeContext: AiContext,
 
 ): { systemPrompt: string; userPrompt: string } {
-
-
-
 
   if (contextMode === "general_chat") {
 
@@ -176,8 +164,6 @@ function buildRouterPrompts(
 
 }
 
-
-
 export async function resolveProviderRoute(
   contextMode: AiRouterRequest["contextMode"],
   options?: { useMock?: boolean; prisma?: PrismaClient },
@@ -203,8 +189,6 @@ function createRoutedProvider(
   return createLocalRtxProvider(apiKeyStore, { useMock });
 }
 
-
-
 function resolveModel(
 
   request: AiRouterRequest,
@@ -221,12 +205,8 @@ function resolveModel(
 
   }
 
-
-
   return rtxDefaultModel;
 }
-
-
 
 /**
 
@@ -246,8 +226,6 @@ export async function routeAiRequest(
 
   validateContextModeRequirements(request.contextMode, request.pageSlug);
 
-
-
   const apiKeyStore = request.apiKeyStore ?? createEmptyApiKeyStore();
 
   const settings = resolveAiBrainSettings(apiKeyStore, {
@@ -258,14 +236,10 @@ export async function routeAiRequest(
 
   });
 
-
-
   const resolution = await resolveProviderRoute(request.contextMode, {
     useMock: request.useMock,
     prisma: deps.prisma ?? sharedPrisma,
   });
-
-
 
   const rtxHealth = await checkRtxReadiness({
     useMock: request.useMock,
@@ -296,17 +270,9 @@ export async function routeAiRequest(
     });
   }
 
-
-
   const playerSafe = PLAYER_SAFE_TASKS.includes(request.taskType);
 
-  const serverAllowDmOnly = resolveServerAllowDmOnly(settings, false, playerSafe);
-
-
-
   let context: AiContext;
-
-
 
   if (request.contextMode === "personal_brain") {
     if (!deps.loadPersonalBrainContext) {
@@ -325,7 +291,6 @@ export async function routeAiRequest(
         ...request.options,
         datenschutzMode: settings.datenschutzMode,
         localOnly: settings.localOnly,
-        allowDmOnly: true,
       },
     });
   } else {
@@ -345,8 +310,6 @@ export async function routeAiRequest(
 
   }
 
-
-
   const brainSource =
 
     deps.brainStore && request.worldSlug
@@ -362,8 +325,6 @@ export async function routeAiRequest(
         })
 
       : undefined;
-
-
 
   context = await buildRouterContext(deps.repo, {
 
@@ -387,8 +348,6 @@ export async function routeAiRequest(
 
       sessionId: request.sessionId,
 
-      allowDmOnly: serverAllowDmOnly,
-
       retrievalQuery: request.userPrompt?.trim() || undefined,
 
     },
@@ -399,20 +358,9 @@ export async function routeAiRequest(
 
   
 
-
-
-  // Local-only modes (personal_brain, mail) are already blocked upstream;
-  validateProviderForContext(resolution.providerId, context, {
-    ...settings,
-  });
-
-
-
   const safeContext = context;
 
   assertContextWithinBudget(safeContext.promptContext.length);
-
-
 
   const { systemPrompt, userPrompt } = buildRouterPrompts(
 
@@ -423,8 +371,6 @@ export async function routeAiRequest(
     safeContext,
 
   );
-
-
 
   const contextHash = hashContextForCache(safeContext.promptContext);
   const promptCacheKey = buildPromptCacheKey({
@@ -471,8 +417,6 @@ export async function routeAiRequest(
     setCachedPromptResponse(promptCacheKey, result);
   }
 
-
-
   if (playerSafe) {
 
     const forbidden = extractDmOnlyPhrases(context);
@@ -480,8 +424,6 @@ export async function routeAiRequest(
     validatePlayerRecapContent(result.text, forbidden);
 
   }
-
-
 
   return {
 
@@ -503,8 +445,6 @@ export async function routeAiRequest(
 
 }
 
-
-
 /** Maps legacy AiProviderId to router provider mode. */
 
 export function providerIdToMode(_providerId: AiProviderId): AiProviderMode {
@@ -512,8 +452,6 @@ export function providerIdToMode(_providerId: AiProviderId): AiProviderMode {
   return "local_rtx";
 
 }
-
-
 
 /** Maps legacy flows (with brain source) to appropriate context mode. */
 
@@ -533,8 +471,5 @@ export function legacyContextMode(options: {
 
 }
 
-
-
 export type { AiResolvedRoute };
-
 

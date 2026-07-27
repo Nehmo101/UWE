@@ -69,7 +69,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
     getHomelabCockpitData(prisma, { useMockInference }),
   ]);
 
-  const { system, jobs, auth, studioSecurity, envValidation, publicLeaks } = status;
+  const { system, jobs, auth, studioSecurity, envValidation } = status;
   const overallBadge = status.ok ? "ok" : "degraded";
 
   return (
@@ -352,28 +352,6 @@ export default async function SystemHubPage({ searchParams }: Props) {
           </p>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <StatusCard
-              title="Public Leak Scanner"
-              level={
-                publicLeaks.criticalCount > 0
-                  ? "error"
-                  : publicLeaks.warningCount > 0
-                    ? "degraded"
-                    : "ok"
-              }
-              statusLabel={
-                publicLeaks.findingCount === 0
-                  ? "Keine Befunde"
-                  : `${publicLeaks.criticalCount} kritisch, ${publicLeaks.warningCount} Warnungen`
-              }
-              message={
-                publicLeaks.findingCount === 0
-                  ? "Keine verdächtigen Portal-Leaks gefunden."
-                  : `${publicLeaks.findingCount} potenzielle Leak-Befunde.`
-              }
-              wide
-            />
-
             <StatusCard
               title="Env Validation"
               level={

@@ -9,7 +9,6 @@ import {
   canEditWorld,
   canReadContent,
   canReadWorld,
-  canRevealSecret,
   canUploadMedia,
   canUseAI,
   type WorldAuthTarget,
@@ -62,21 +61,9 @@ const publicWorld: WorldAuthTarget = {
   membership: null,
 };
 
-const dmOnlyContent = {
-  id: "page-dm",
-  visibility: "dm_only",
-};
+const somePage = { id: "page-1" };
 
-const playerVisibleContent = {
-  id: "page-player",
-  visibility: "player_visible",
-};
-
-const secretContent = {
-  id: "page-secret",
-  type: "secret" as const,
-  visibility: "dm_only",
-};
+const otherPage = { id: "page-2" };
 
 describe("authz — world access", () => {
   it("blocks User A from reading World B (horizontal privilege)", () => {
@@ -112,16 +99,17 @@ describe("authz — world access", () => {
 });
 
 describe("authz — content access", () => {
-  it("blocks PLAYER from reading DM-only content (vertical privilege)", () => {
-    assert.equal(canReadContent(userA, dmOnlyContent, worldA), false);
-    assert.throws(
-      () => assertCanReadContent(userA, dmOnlyContent, worldA),
-      (error: unknown) => error instanceof AuthorizationError,
-    );
+  it("lets a world member read every page of that world", () => {
+    assert.equal(canReadContent(userA, somePage, worldA), true);
+    assert.equal(canReadContent(userA, otherPage, worldA), true);
   });
 
-  it("allows PLAYER to read player_visible content", () => {
-    assert.equal(canReadContent(userA, playerVisibleContent, worldA), true);
+  it("blocks an anonymous guest even in a guest-mode world", () => {
+    assert.equal(canReadContent(null, somePage, publicWorld), false);
+    assert.throws(
+      () => assertCanReadContent(null, somePage, publicWorld),
+      (error: unknown) => error instanceof AuthorizationError,
+    );
   });
 
   it("blocks direct ID lookup on private resource in foreign world", () => {
@@ -130,49 +118,32 @@ describe("authz — content access", () => {
       guestModeEnabled: false,
       membership: null,
     };
-    assert.equal(canReadContent(userA, playerVisibleContent, foreignWorld), false);
+    assert.equal(canReadContent(userA, otherPage, foreignWorld), false);
   });
 
-  it("denies unknown visibility (deny-by-default)", () => {
-    assert.equal(
-      canReadContent(userA, { id: "x", visibility: "unknown_vis" }, worldA),
-      false,
-    );
-  });
-
-  it("allows OWNER to read all content including DM-only", () => {
-    assert.equal(canReadContent(ownerUser, dmOnlyContent, worldA), true);
-    assert.equal(canReadContent(ownerUser, secretContent, worldA), true);
+  it("allows OWNER to read content in every world", () => {
+    assert.equal(canReadContent(ownerUser, somePage, worldA), true);
+    assert.equal(canReadContent(ownerUser, somePage, worldB), true);
   });
 });
 
 describe("authz — edit access", () => {
   it("blocks PLAYER from editing content", () => {
-    assert.equal(canEditContent(userA, playerVisibleContent, worldA), false);
+    assert.equal(canEditContent(userA, otherPage, worldA), false);
     assert.throws(
-      () => assertCanEditContent(userA, playerVisibleContent, worldA),
+      () => assertCanEditContent(userA, otherPage, worldA),
       (error: unknown) => error instanceof AuthorizationError,
     );
   });
 
   it("blocks editing content in foreign/private world", () => {
-    assert.equal(canEditContent(userA, playerVisibleContent, worldB), false);
+    assert.equal(canEditContent(userA, otherPage, worldB), false);
     assert.equal(canEditWorld(userA, worldB), false);
   });
 
   it("allows OWNER to edit everything", () => {
     assert.equal(canEditWorld(ownerUser, worldB), true);
-    assert.equal(canEditContent(ownerUser, dmOnlyContent, worldA), true);
-  });
-});
-
-describe("authz — secrets", () => {
-  it("blocks PLAYER from revealing secrets", () => {
-    assert.equal(canRevealSecret(userA, secretContent, worldA), false);
-  });
-
-  it("allows OWNER to reveal secrets", () => {
-    assert.equal(canRevealSecret(ownerUser, secretContent, worldA), true);
+    assert.equal(canEditContent(ownerUser, somePage, worldA), true);
   });
 });
 

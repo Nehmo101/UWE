@@ -59,7 +59,7 @@ describe("resolveUniquePageSlug", () => {
 });
 
 describe("buildStatblockPageInput", () => {
-  it("assembles a dm_only monster page with a statblock block", () => {
+  it("assembles a monster page with a statblock block", () => {
     const input = buildStatblockPageInput({
       worldId: "w1",
       open5eSlug: "goblin",
@@ -69,16 +69,15 @@ describe("buildStatblockPageInput", () => {
     });
 
     assert.equal(input.type, "monster");
-    assert.equal(input.visibility, "dm_only");
     assert.equal(input.summary, "Open5e Statblock (goblin)");
     assert.deepEqual(input.contentBlocks, [
-      { type: "statblock", sortOrder: 0, content: "# Goblin", visibility: "dm_only" },
+      { type: "statblock", sortOrder: 0, content: "# Goblin" },
     ]);
   });
 });
 
 describe("buildEncounterPageInput", () => {
-  it("assembles a dm_only encounter page with a rich_text block", () => {
+  it("assembles a encounter page with a rich_text block", () => {
     const input = buildEncounterPageInput({
       worldId: "w1",
       title: "Ambush",
@@ -88,10 +87,9 @@ describe("buildEncounterPageInput", () => {
     });
 
     assert.equal(input.type, "encounter");
-    assert.equal(input.visibility, "dm_only");
     assert.equal(input.summary, "3 Monster");
     assert.deepEqual(input.contentBlocks, [
-      { type: "rich_text", sortOrder: 0, content: "# Encounter", visibility: "dm_only" },
+      { type: "rich_text", sortOrder: 0, content: "# Encounter" },
     ]);
   });
 });
@@ -114,8 +112,6 @@ describe("importOpen5eStatblockPage", () => {
     assert.equal(created.title, "Goblin");
     // base slug "goblin-goblin" is taken -> next candidate
     assert.equal(created.slug, "goblin-goblin-2");
-    assert.equal(created.visibility, "dm_only");
-    assert.equal(created.contentBlocks[0]!.visibility, "dm_only");
   });
 
   it("falls back to the open5e slug when the monster has no name", async () => {
@@ -134,7 +130,7 @@ describe("importOpen5eStatblockPage", () => {
 });
 
 describe("createEncounterPage", () => {
-  it("creates a dm_only encounter page with a monster-count summary", async () => {
+  it("creates a encounter page with a monster-count summary", async () => {
     const repo = fakeRepo();
     await createEncounterPage(repo, {
       worldId: "w1",
@@ -151,11 +147,9 @@ describe("createEncounterPage", () => {
 
     const created = repo.created[0]!;
     assert.equal(created.type, "encounter");
-    assert.equal(created.visibility, "dm_only");
     assert.equal(created.slug, "goblin-ambush-encounter");
     assert.equal(created.summary, "4 Monster");
     assert.equal(created.contentBlocks[0]!.type, "rich_text");
-    assert.equal(created.contentBlocks[0]!.visibility, "dm_only");
   });
 });
 

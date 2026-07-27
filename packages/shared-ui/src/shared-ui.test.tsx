@@ -19,7 +19,6 @@ import {
   PageTypeBadge,
   QuestStatusBadge,
   RtxStatusBadge,
-  VisibilityBadge,
 } from "./StatusBadges";
 import { SearchResultsList } from "./SearchResults";
 import { GraphView } from "./GraphView";
@@ -54,20 +53,9 @@ describe("shared-ui components", () => {
     assert.match(html, /Etwas ging schief/);
   });
 
-  it("renders visibility and type badges", () => {
-    const html = renderToStaticMarkup(
-      <>
-        <VisibilityBadge visibility="player_visible" />
-        <VisibilityBadge visibility="dm_only" />
-        <PageTypeBadge type="lore" />
-      </>,
-    );
-    assert.match(html, /Portal sichtbar/);
-    assert.match(html, /Nur GM/);
-    assert.match(html, /text-destructive/);
-    assert.match(html, /aria-label=/);
+  it("renders type badges", () => {
+    const html = renderToStaticMarkup(<PageTypeBadge type="lore" />);
     assert.match(html, /Lore/);
-    assert.doesNotMatch(html, /dm_only/);
   });
 
   it("renders quest status badges and treats missing status as open", () => {
@@ -82,7 +70,6 @@ describe("shared-ui components", () => {
     assert.match(html, /Gescheitert/);
     assert.match(html, /Offen/);
     assert.match(html, /--uwe-accent/);
-    assert.match(html, /text-destructive/);
     assert.match(html, /aria-label="Quest-Status:/);
   });
 
@@ -99,7 +86,6 @@ describe("shared-ui components", () => {
             worldSlug: "terra",
             worldName: "Terra",
             campaignName: null,
-            visibility: "player_visible",
             questStatus: "completed",
             href: "/worlds/terra/quests/gefallener-turm",
             matchedFields: ["title"],
@@ -112,7 +98,7 @@ describe("shared-ui components", () => {
     assert.match(html, /Erledigt/);
   });
 
-  it("does not expose dm_only labels in player-visible search results", () => {
+  it("renders search results without leaking internal labels", () => {
     const html = renderToStaticMarkup(
       <SearchResultsList
         query="arbor"
@@ -125,19 +111,15 @@ describe("shared-ui components", () => {
             worldSlug: "terra",
             worldName: "Terra",
             campaignName: null,
-            visibility: "player_visible",
             href: "/worlds/terra/lore/arbor",
             matchedFields: ["title"],
             snippet: "Der Wald Arbor.",
           },
         ]}
-        showVisibility
       />,
     );
     assert.match(html, /Arbor/);
-    assert.match(html, /Portal sichtbar/);
     assert.doesNotMatch(html, /Nur GM/);
-    assert.doesNotMatch(html, /dm_only/);
     assert.doesNotMatch(html, /Geheim/);
   });
 
@@ -275,7 +257,6 @@ describe("GraphView accessibility", () => {
             slug: "elara",
             type: "npc",
             category: "npc",
-            visibility: "player_visible",
             tags: [],
             href: "/worlds/terra/npcs/elara",
             campaignId: null,
@@ -286,7 +267,6 @@ describe("GraphView accessibility", () => {
             slug: "hafenstadt",
             type: "location",
             category: "location",
-            visibility: "dm_only",
             tags: [],
             href: "/worlds/terra/locations/hafenstadt",
             campaignId: null,

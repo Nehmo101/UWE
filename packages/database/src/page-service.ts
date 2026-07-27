@@ -1,21 +1,9 @@
 import type { ContentBlock, Page, PageType } from "./generated/prisma/client";
-import {
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-} from "./content-access";
 import { buildPageUrl } from "./page-types";
 import { parseStringArray } from "./json-utils";
 import { normalizeLookupKey } from "./queries";
 import { parseWikiLinks } from "./wikilink-utils";
 import { sanitizeWikiHtml } from "./html-sanitize";
-import {
-  filterBlocksForContext,
-  isPageAccessible,
-  shouldHidePageTitle,
-  type AccessContext,
-  type PageAccessOptions,
-  type ShareAccessGrant,
-} from "./permissions";
 import type { PageSummary, PageWithBlocks, UweRepository } from "./repository";
 
 export interface WikiPageNode {
@@ -24,7 +12,6 @@ export interface WikiPageNode {
   title: string;
   slug: string;
   type: Page["type"];
-  visibility: Page["visibility"];
   tags: string[];
   aliases: string[];
   content: string;
@@ -42,27 +29,12 @@ export function combineBlockContent(blocks: ContentBlock[]): string {
     .join("\n\n");
 }
 
-function shareAccessOptions(shareGrant?: ShareAccessGrant): PageAccessOptions | undefined {
-  return shareGrant ? { shareGrant } : undefined;
-}
-
 export function pageToWikiNode(
   worldSlug: string,
   page: PageSummary | PageWithBlocks,
-  context: AccessContext,
-  options?: { shareToken?: string; shareGrant?: ShareAccessGrant },
 ): WikiPageNode {
-  const blocks =
-    "contentBlocks" in page
-      ? filterBlocksForContext(page.contentBlocks, context, {
-          shareGrant: options?.shareGrant,
-          pageId: page.id,
-        })
-      : [];
-
-  const href = options?.shareToken
-    ? `/share/${options.shareToken}/pages/${page.slug}`
-    : buildPageUrl(worldSlug, page.type, page.slug);
+  const blocks = "contentBlocks" in page ? page.contentBlocks : [];
+  const href = buildPageUrl(worldSlug, page.type, page.slug);
 
   return {
     id: page.id,
@@ -70,7 +42,6 @@ export function pageToWikiNode(
     title: page.title,
     slug: page.slug,
     type: page.type,
-    visibility: page.visibility,
     tags: parseStringArray(page.tags),
     aliases: parseStringArray(page.aliases),
     content: combineBlockContent(blocks),
@@ -81,30 +52,12 @@ export function pageToWikiNode(
 export async function buildWorldWikiIndex(
   repo: UweRepository,
   worldSlug: string,
-  context: AccessContext,
-  options?: { shareGrant?: ShareAccessGrant; shareToken?: string },
 ): Promise<WikiPageNode[]> {
-  const pages =
-    context === "share" && options?.shareGrant
-      ? (await repo.getWorldPageIndex(worldSlug)).filter((page) =>
-          isPageAccessible(page, context, shareAccessOptions(options.shareGrant)),
-        )
-      : await repo.getWorldPageIndexForContext(worldSlug, context);
-
-  return pages.map((page) =>
-    pageToWikiNode(worldSlug, page, context, {
-      shareToken: options?.shareToken,
-      shareGrant: options?.shareGrant,
-    }),
-  );
+  const pages = await repo.getWorldPageIndex(worldSlug);
+  return pages.map((page) => pageToWikiNode(worldSlug, page));
 }
 
-export function buildLookupIndex(
-  nodes: WikiPageNode[],
-  context: AccessContext,
-  allPages?: PageSummary[],
-  accessOptions?: PageAccessOptions,
-): Map<string, WikiPageNode> {
+export function buildLookupIndex(nodes: WikiPageNode[]): Map<string, WikiPageNode> {
   const index = new Map<string, WikiPageNode>();
 
   for (const node of nodes) {
@@ -115,42 +68,13 @@ export function buildLookupIndex(
     }
   }
 
-  if (context !== "dm" && allPages) {
-    for (const page of allPages) {
-      if (shouldHidePageTitle(page, context, accessOptions)) {
-        const hiddenKeys = [
-          normalizeLookupKey(page.title),
-          normalizeLookupKey(page.slug),
-          ...parseStringArray(page.aliases).map(normalizeLookupKey),
-        ];
-
-        for (const key of hiddenKeys) {
-          if (!index.has(key)) {
-            index.set(key, {
-              id: page.id,
-              worldId: page.worldId,
-              title: "Verborgen",
-              slug: page.slug,
-              type: page.type,
-              visibility: page.visibility,
-              tags: [],
-              aliases: [],
-              content: "",
-              href: "",
-            });
-          }
-        }
-      }
-    }
-  }
-
   return index;
 }
 
 export interface PageViewLink {
   displayText: string;
   href?: string;
-  status: "resolved" | "broken" | "hidden";
+  status: "resolved" | "broken";
 }
 
 export interface PageViewBacklink {
@@ -170,49 +94,17 @@ export interface PageViewData {
   backlinks: PageViewBacklink[];
   relatedPages: PageViewRelated[];
   html: string;
-  /** Warning shown to DMs in player preview when content links to private targets. */
-  privateReferenceWarning?: string | null;
 }
 
 export function resolveLinksInContent(
   content: string,
   index: Map<string, WikiPageNode>,
-  context: AccessContext,
-  allPages?: PageSummary[],
-  accessOptions?: PageAccessOptions,
 ): PageViewLink[] {
   return parseWikiLinks(content).map((raw) => {
     const displayText = raw.label ?? raw.target;
     const node = index.get(normalizeLookupKey(raw.target));
 
-    if (!node) {
-      const hiddenPage = allPages?.find(
-        (page) =>
-          normalizeLookupKey(page.title) === normalizeLookupKey(raw.target) ||
-          normalizeLookupKey(page.slug) === normalizeLookupKey(raw.target) ||
-          parseStringArray(page.aliases).some(
-            (alias) => normalizeLookupKey(alias) === normalizeLookupKey(raw.target),
-          ),
-      );
-
-      if (hiddenPage && shouldHidePageTitle(hiddenPage, context, accessOptions)) {
-        return {
-          displayText: raw.label ?? "Verborgen",
-          status: "hidden" as const,
-        };
-      }
-
-      return { displayText, status: "broken" as const };
-    }
-
-    if (context !== "dm" && shouldHidePageTitle(node, context, accessOptions)) {
-      return {
-        displayText: raw.label ?? "Verborgen",
-        status: "hidden" as const,
-      };
-    }
-
-    if (!node.href) {
+    if (!node?.href) {
       return { displayText, status: "broken" as const };
     }
 
@@ -227,9 +119,6 @@ export function resolveLinksInContent(
 function renderWikiLinkHtml(link: PageViewLink): string {
   if (link.status === "resolved" && link.href) {
     return `<a href="${escapeAttr(link.href)}" class="wiki-link">${escapeHtml(link.displayText)}</a>`;
-  }
-  if (link.status === "hidden") {
-    return `<span class="wiki-link-hidden" title="Inhalt nicht verfügbar">${escapeHtml(link.displayText)}</span>`;
   }
   return `<span class="wiki-link-broken" title="Seite nicht gefunden">${escapeHtml(link.displayText)}</span>`;
 }
@@ -379,56 +268,22 @@ export async function buildPageView(
   repo: UweRepository,
   worldSlug: string,
   pageSlug: string,
-  context: AccessContext,
-  options?: { shareGrant?: ShareAccessGrant; shareToken?: string },
 ): Promise<PageViewData | null> {
-  let page: PageWithBlocks | null;
-
-  if (context === "share" && options?.shareGrant) {
-    const rawPage = await repo.getPageBySlug(worldSlug, pageSlug);
-    if (!rawPage) return null;
-    if (!isPageAccessible(rawPage, context, shareAccessOptions(options.shareGrant))) return null;
-    page = {
-      ...rawPage,
-      contentBlocks: filterBlocksForContext(rawPage.contentBlocks, context, {
-        shareGrant: options.shareGrant,
-        pageId: rawPage.id,
-      }),
-    };
-  } else {
-    page = await repo.getPageForContext(worldSlug, pageSlug, context);
-  }
-
+  const page = await repo.getPageBySlug(worldSlug, pageSlug);
   if (!page) return null;
 
-  const node = pageToWikiNode(worldSlug, page, context, {
-    shareToken: options?.shareToken,
-    shareGrant: options?.shareGrant,
-  });
-  const allPages = await repo.getWorldPageIndex(worldSlug);
-  const visibleNodes = await buildWorldWikiIndex(repo, worldSlug, context, options);
-  const index = buildLookupIndex(visibleNodes, context, allPages, shareAccessOptions(options?.shareGrant));
+  const node = pageToWikiNode(worldSlug, page);
+  const visibleNodes = await buildWorldWikiIndex(repo, worldSlug);
+  const index = buildLookupIndex(visibleNodes);
 
-  const links = resolveLinksInContent(
-    node.content,
-    index,
-    context,
-    allPages,
-    shareAccessOptions(options?.shareGrant),
-  );
+  const links = resolveLinksInContent(node.content, index);
   const html = renderContentHtml(node.content, links);
 
   const backlinks: PageViewBacklink[] = [];
   for (const candidate of visibleNodes) {
     if (candidate.id === node.id) continue;
 
-    const candidateLinks = resolveLinksInContent(
-      candidate.content,
-      index,
-      context,
-      allPages,
-      shareAccessOptions(options?.shareGrant),
-    );
+    const candidateLinks = resolveLinksInContent(candidate.content, index);
     const parsed = parseWikiLinks(candidate.content);
 
     const linksToTarget = parsed.some((raw, i) => {
@@ -497,46 +352,22 @@ export async function buildPageView(
       reasons: [...item.reasons],
     }));
 
-  let privateReferenceWarning: string | null = null;
-  if (context === "preview") {
-    const dmPage = await repo.getPageBySlug(worldSlug, pageSlug);
-    if (dmPage) {
-      const playerContent = combineBlockContent(
-        dmPage.contentBlocks.filter(
-          (block) => block.type !== "gm_note" && block.visibility !== "dm_only" && block.visibility !== "private",
-        ),
-      );
-      privateReferenceWarning = formatPrivateReferenceWarning(
-        detectPrivateReferences(playerContent, allPages),
-      );
-    }
-  }
-
   return {
     page: node,
     links,
     backlinks,
     relatedPages,
     html,
-    privateReferenceWarning,
   };
 }
 
 export function renderPageContentHtml(
-  worldSlug: string,
   page: PageWithBlocks,
   wikiIndex: WikiPageNode[],
-  context: AccessContext,
-  allPages?: PageSummary[],
-  accessOptions?: PageAccessOptions,
 ): string {
-  const visibleBlocks = filterBlocksForContext(page.contentBlocks, context, {
-    ...accessOptions,
-    pageId: page.id,
-  });
-  const content = combineBlockContent(visibleBlocks);
-  const index = buildLookupIndex(wikiIndex, context, allPages, accessOptions);
-  const links = resolveLinksInContent(content, index, context, allPages, accessOptions);
+  const content = combineBlockContent(page.contentBlocks);
+  const index = buildLookupIndex(wikiIndex);
+  const links = resolveLinksInContent(content, index);
   return renderContentHtml(content, links);
 }
 

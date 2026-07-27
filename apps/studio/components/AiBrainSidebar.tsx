@@ -39,7 +39,6 @@ interface AiProposalView {
   content: string;
   targetType: string;
   status: string;
-  visibility?: string;
   metadata?: { subject?: string; mailDraft?: boolean };
 }
 
@@ -275,7 +274,6 @@ export function AiBrainSidebar({
           providerId,
           model,
           userPrompt,
-          allowDmOnly,
           sessionId: needsSession
             ? fixedSessionId || sessionId || undefined
             : fixedSessionId || undefined,

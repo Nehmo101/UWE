@@ -5,7 +5,7 @@ import { createAuthService } from "./auth";
 import { createAuditLogService, logAuditEvent, redactAuditMetadata } from "./audit-log-service";
 import { createPrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
-import { createUweRepository } from "./repository";
+import {} from "./repository";
 
 describe("Audit log", () => {
   let databaseUrl: string;
@@ -44,56 +44,6 @@ describe("Audit log", () => {
     await db.$disconnect();
   });
 
-  it("logs visibility_changed for page updates", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const repo = createUweRepository(databaseUrl);
-    const audit = createAuditLogService(db);
-
-    const world = await repo.createWorld({
-      name: "Audit Visibility World",
-      slug: "audit-visibility",
-    });
-
-    const page = await repo.createPage({
-      worldId: world.id,
-      title: "Hidden Lore",
-      slug: "hidden-lore",
-      type: "lore",
-      visibility: "dm_only",
-      contentBlocks: [
-        {
-          type: "rich_text",
-          sortOrder: 0,
-          visibility: "dm_only",
-          content: "DM only content.",
-        },
-      ],
-    });
-
-    await logAuditEvent(db, {
-      action: "visibility_changed",
-      targetType: "page",
-      targetId: page.id,
-      worldId: world.id,
-      metadata: {
-        from: "dm_only",
-        to: "player_visible",
-        title: page.title,
-      },
-    });
-
-    const entries = await audit.list({
-      actions: ["visibility_changed"],
-      worldId: world.id,
-      limit: 5,
-    });
-
-    assert.equal(entries.length, 1);
-    assert.equal(entries[0]!.targetId, page.id);
-    assert.equal((entries[0]!.metadataJson as { to: string }).to, "player_visible");
-
-    await db.$disconnect();
-  });
 
   it("logs secret_revealed without leaking secret values", async () => {
     const db = createPrismaClient(databaseUrl);

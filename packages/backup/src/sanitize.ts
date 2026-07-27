@@ -66,8 +66,6 @@ export function sanitizeBackupData(data: BackupData): BackupData {
       sanitizeRecord(link),
     ),
     worldMemberships: data.worldMemberships.map((membership) => sanitizeRecord(membership)),
-    pagePlayerAccess: data.pagePlayerAccess.map((access) => sanitizeRecord(access)),
-    sessionUnlocks: data.sessionUnlocks.map((unlock) => sanitizeRecord(unlock)),
     users: data.users.map((user) => sanitizeRecord(user)),
     pageTemplates: (data.pageTemplates ?? []).map((template) => sanitizeRecord(template)),
     playerNotes: (data.playerNotes ?? []).map((note) => sanitizeRecord(note)),

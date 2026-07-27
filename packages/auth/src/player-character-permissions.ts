@@ -1,17 +1,16 @@
-import type { AccessContext, ContentBlockAccessInfo, PageAccessInfo } from "./types";
-import { canViewContentBlock, canViewPage } from "./permissions";
+import type { AccessContext } from "./types";
+import { canViewWorldContent } from "./permissions";
 
 const EDITABLE_BLOCK_TYPES = new Set(["player_text", "rich_text"]);
 
 /**
- * Players may edit their own character sheet blocks when the page is visible
- * to them and the block is marked player_visible. DM retains canon and
- * visibility control — players cannot change page metadata or dm_only blocks.
+ * Players may edit the text blocks of their own character sheet. The DM keeps
+ * canon control — players cannot change page metadata, only block content.
  */
 export function canEditPlayerCharacterBlock(
   ctx: AccessContext,
-  page: PageAccessInfo & { type: string },
-  block: ContentBlockAccessInfo & { type: string },
+  page: { id: string; type: string },
+  block: { type: string },
 ): boolean {
   if (ctx.previewAsUserId) {
     return false;
@@ -25,26 +24,9 @@ export function canEditPlayerCharacterBlock(
     return false;
   }
 
-  if (!canViewPage(ctx, page)) {
+  if (!canViewWorldContent(ctx)) {
     return false;
   }
 
-  if (!EDITABLE_BLOCK_TYPES.has(block.type)) {
-    return false;
-  }
-
-  if (block.visibility !== "player_visible") {
-    return false;
-  }
-
-  if (!canViewContentBlock(ctx, block, page)) {
-    return false;
-  }
-
-  const hasSpecificAccess = ctx.specificPlayerPageIds.has(page.id);
-  if (page.visibility === "specific_players") {
-    return hasSpecificAccess;
-  }
-
-  return page.visibility === "player_visible" || page.visibility === "public";
+  return EDITABLE_BLOCK_TYPES.has(block.type);
 }

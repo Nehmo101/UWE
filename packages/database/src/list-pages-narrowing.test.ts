@@ -65,13 +65,13 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     // A matrix that exercises every branch of canViewPage: one page per
     // visibility value.
     const pages = [
-      { slug: "pub-page", visibility: "public" },
-      { slug: "pv-page", visibility: "player_visible" },
-      { slug: "dmonly-page", visibility: "dm_only" },
-      { slug: "private-page", visibility: "private" },
-      { slug: "archived-page", visibility: "archived" },
-      { slug: "specific-page", visibility: "specific_players" },
-      { slug: "unlock-page", visibility: "unlock_after_session" },
+      { slug: "pub-page" },
+      { slug: "pv-page" },
+      { slug: "dmonly-page" },
+      { slug: "private-page" },
+      { slug: "archived-page" },
+      { slug: "specific-page" },
+      { slug: "unlock-page" },
     ] as const;
 
     for (const page of pages) {
@@ -80,19 +80,10 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         title: page.slug,
         slug: page.slug,
         type: "note",
-        visibility: page.visibility,
       });
     }
 
     // Aman is granted the specific-players page and has unlocked the unlock page.
-    const specific = await db.page.findFirstOrThrow({
-      where: { world: { slug: worldSlug }, slug: "specific-page" },
-    });
-    const unlock = await db.page.findFirstOrThrow({
-      where: { world: { slug: worldSlug }, slug: "unlock-page" },
-    });
-    await auth.grantPagePlayerAccess(specific.id, amanUserId);
-    await auth.unlockPageForUser(unlock.id, amanUserId, "Session 1");
   });
 
   after(async () => {
@@ -118,26 +109,14 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     );
   });
 
-  it("granted player result equals the baseline and only exposes allowed pages", async () => {
-    const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
-    assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
-    assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
-    assert.deepEqual(
-      new Set(await narrowedSlugs(ctx)),
-      new Set(["pub-page", "pv-page", "specific-page", "unlock-page"]),
-    );
-  });
-
-  it("ungranted player result equals the baseline (specific/unlock stay hidden)", async () => {
-    const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: lazulUserId });
-    assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
-    const narrowed = await narrowedSlugs(ctx);
-    assert.deepEqual(narrowed, await baselineSlugs(ctx));
-    assert.ok(!narrowed.includes("specific-page"));
-    assert.ok(!narrowed.includes("unlock-page"));
-    assert.ok(!narrowed.includes("dmonly-page"));
+  it("an assigned player sees the whole world, same as the baseline", async () => {
+    for (const userId of [amanUserId, lazulUserId]) {
+      const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId });
+      assert.ok(ctx);
+      assert.equal(ctx.effectiveRole, "player");
+      assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
+      assert.equal((await narrowedSlugs(ctx)).length, 7);
+    }
   });
 
   it("DM preview-as-player result equals the baseline (non-staff narrowing)", async () => {
@@ -150,10 +129,11 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
   });
 
-  it("guest result equals the baseline", async () => {
+  it("guest result equals the baseline — an anonymous guest gets nothing", async () => {
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
     assert.equal(ctx.effectiveRole, "guest");
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
+    assert.deepEqual(await narrowedSlugs(ctx), []);
   });
 });

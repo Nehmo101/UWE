@@ -47,11 +47,7 @@ export {
   resolveAiBrainSettings,
 } from "./settings";
 export {
-  sanitizeContextForCloud,
-  validateProviderForContext,
-  contextContainsDmOnly,
   contextContainsLocalKnowledge,
-  resolveServerAllowDmOnly,
   validatePlayerRecapContent,
   extractDmOnlyPhrases,
 } from "./privacy";

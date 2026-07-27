@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { SidebarSection, VisibilityBadge } from "@uwe/shared-ui";
-import type { Visibility } from "@uwe/database/enums";
 import {
   BRAIN_STATUS_LABELS,
-  BRAIN_VISIBILITY_LABELS,
   createBrainStoreService,
   createPrismaClient,
   getAppRepository,
@@ -31,8 +28,8 @@ export default async function BrainOverviewPage() {
   const worldSummaries = await Promise.all(
     worlds.map(async (world) => {
       const [documents, facts, summary] = await Promise.all([
-        brain.listDocuments(world.slug, { accessContext: "dm", includeArchived: true, limit: 6 }),
-        brain.listFacts(world.slug, { accessContext: "dm", includeArchived: true, limit: 6 }),
+        brain.listDocuments(world.slug, { includeArchived: true, limit: 6 }),
+        brain.listFacts(world.slug, { includeArchived: true, limit: 6 }),
         brain.getWorldSummary(world.slug),
       ]);
       return { world, documents, facts, summary };
@@ -44,17 +41,6 @@ export default async function BrainOverviewPage() {
   return (
     <StudioShell
       breadcrumb={<BreadcrumbTrail items={[{ label: "Brain Knowledge Store" }]} />}
-      contextPanel={
-        <SidebarSection title="Sichtbarkeit">
-          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-              <li key={value}>
-                <strong className="text-foreground">{label}</strong>
-              </li>
-            ))}
-          </ul>
-        </SidebarSection>
-      }
     >
       <PageHeader
         title="Brain Knowledge Store"
@@ -99,9 +85,6 @@ export default async function BrainOverviewPage() {
                               <Link href={`/worlds/${world.slug}/brain/${doc.id}`}>{doc.title}</Link>
                             </td>
                             <td className={TD_CLASS}>Dokument</td>
-                            <td className={TD_CLASS}>
-                              <VisibilityBadge visibility={doc.visibility as Visibility} />
-                            </td>
                             <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[doc.status]}</td>
                           </tr>
                         ))}
@@ -113,9 +96,6 @@ export default async function BrainOverviewPage() {
                               </Link>
                             </td>
                             <td className={TD_CLASS}>Fakt</td>
-                            <td className={TD_CLASS}>
-                              <VisibilityBadge visibility={fact.visibility as Visibility} />
-                            </td>
                             <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[fact.status]}</td>
                           </tr>
                         ))}

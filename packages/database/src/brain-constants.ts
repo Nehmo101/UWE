@@ -2,14 +2,7 @@ import type {
   BrainDocumentType,
   BrainSource,
   BrainStatus,
-  BrainVisibility,
 } from "./generated/prisma/client";
-
-export const BRAIN_VISIBILITY_LABELS: Record<BrainVisibility, string> = {
-  dm_only: "Nur GM",
-  player_visible: "Spieler sichtbar",
-  public: "Öffentlich",
-};
 
 export const BRAIN_STATUS_LABELS: Record<BrainStatus, string> = {
   draft: "Entwurf",

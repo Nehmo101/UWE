@@ -55,7 +55,6 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
           title: document.title,
           content: document.content,
           documentType: document.documentType,
-          visibility: document.visibility,
           status: document.status,
           source: document.source,
           chunks: document.chunks,
