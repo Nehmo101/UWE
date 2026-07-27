@@ -1,8 +1,7 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
-import * as THREE from 'three';
-import { clamp, lerp, DEG, hashi } from './core/rng.js';
+import { DEG, hashi } from './core/rng.js';
 import { S, HALF, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, getRenderer,
+import { scene, initPipeline, resizePipeline, renderFrame,
   setPalette, setMalschicht, setMultiplane, PALETTE_STANDARD, MAL_DEZENT }
   from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
@@ -16,8 +15,8 @@ import { initSky, updateSky } from './world/sky.js';
 import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch,
   setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
 import { initVfx, tickVfx } from './world/vfx.js';
-import { initSelection, updateHandlePositions, rebuildHandles } from './editor/selection.js';
-import { ed, defaultsFor, setTool } from './editor/tools.js';
+import { initSelection, updateHandlePositions } from './editor/selection.js';
+import { defaultsFor } from './editor/tools.js';
 import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
 import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast,
   markerOverlayAktualisieren }

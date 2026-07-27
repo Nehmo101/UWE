@@ -4,10 +4,10 @@ import {
   PortalShell,
 } from "@/src/components/shell";
 import { PortalWorldVisitTracker } from "@/src/components/PortalWorldVisitTracker";
-import { getCurrentUser } from "@/src/lib/auth";
+import { notFound } from "next/navigation";
+import { getCurrentUser, loadReadableWorld } from "@/src/lib/auth";
 import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
 import { ADMIN_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
-import { createPrismaClient } from "@uwe/database/server";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -17,25 +17,22 @@ interface Props {
 
 export default async function AuthWorldLayout({ children, params }: Props) {
   const { worldSlug } = await params;
+
+  // Membership gate before any world metadata is rendered — the shell shows the
+  // world name and breadcrumb, which must not leak for a world the viewer may
+  // not read. The pages below re-check independently via getAccessContextForWorld.
+  const readable = await loadReadableWorld(worldSlug);
+  if (!readable) {
+    notFound();
+  }
+
+  const { world } = readable;
+  const worldName = world.name;
+  const worldId = world.id;
+
   const user = await getCurrentUser();
   const canAccessStudio = user ? hasAnyRole(user, ADMIN_ACCESS_ROLES) : false;
   const studioUrl = canAccessStudio ? resolvePortalStudioOpenHref() : null;
-
-  const db = createPrismaClient();
-  let worldName = worldSlug;
-  let worldId: string | null = null;
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true, name: true },
-    });
-    if (world) {
-      worldName = world.name;
-      worldId = world.id;
-    }
-  } finally {
-    await db.$disconnect();
-  }
 
   return (
     <PortalShell
@@ -57,7 +54,7 @@ export default async function AuthWorldLayout({ children, params }: Props) {
         />
       }
     >
-      {worldId ? <PortalWorldVisitTracker worldId={worldId} /> : null}
+      <PortalWorldVisitTracker worldId={worldId} />
       {children}
     </PortalShell>
   );

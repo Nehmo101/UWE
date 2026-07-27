@@ -3,12 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import type { NavCommand, ResolvedNavGroup } from "@uwe/shared-utils/navigation";
+import { dedupeNavSearchEntries } from "@uwe/shared-utils/nav-search";
 import {
   MobileBottomNav,
+  NavSearch,
   SidebarContextProvider,
   ThemeModeToggle,
   type BottomNavItem,
 } from "@uwe/shared-ui";
+import { studioCommands } from "../../navigation/studio-nav";
 import { NavIcon } from "../ui/icon";
 import { Sheet, SheetContent, SheetClose, SheetTrigger } from "../ui/sheet";
 import { ScrollArea } from "../ui/scroll-area";
@@ -48,6 +51,14 @@ export function AppShell({
 }: AppShellProps) {
   const hasBottomNav = Boolean(bottomNav && bottomNav.length > 0);
 
+  // Die Suchleiste findet immer die gesamte Studio-IA — auch aus einer Welt
+  // heraus, wo `commands` nur die Welt-Navigation enthält. Die Reihenfolge
+  // stellt den aktuellen Kontext voran, das Dedupe verhindert Doppelungen.
+  const searchEntries = React.useMemo(
+    () => dedupeNavSearchEntries([...commands, ...studioCommands()]),
+    [commands],
+  );
+
   return (
     <SidebarContextProvider closeSidebar={() => undefined}>
       <div
@@ -65,7 +76,15 @@ export function AppShell({
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex min-h-14 items-center gap-3 border-b border-border pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)]">
             <MobileNav groups={groups} brandLabel={brandLabel} />
-            <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{breadcrumb}</div>
+            <div className="hidden min-w-0 flex-1 truncate text-sm text-muted-foreground sm:block">
+              {breadcrumb}
+            </div>
+            <NavSearch
+              entries={searchEntries}
+              className="min-w-0 flex-1 sm:max-w-64 lg:max-w-80"
+              placeholder="Bereich suchen… (z. B. KI)"
+              renderIcon={(hit) => <NavIcon name={hit.icon ?? "arrow-right"} width={16} height={16} />}
+            />
             <div id="uwe-topbar-end" className="flex shrink-0 items-center gap-2" />
             <ThemeModeToggle />
             {commands.length > 0 ? <CommandHint /> : null}

@@ -3,7 +3,7 @@ import { S, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreibe
   from '../core/store.js';
 import { commit, isHeavy } from '../core/dirty.js';
 import { pushUndo } from './history.js';
-import { clearPreview, setPreview, rebuildHandles, select, brushRing, waehleMarker }
+import { clearPreview, rebuildHandles, select, brushRing, waehleMarker }
   from './selection.js';
 import { buildPanel, updateHint } from '../ui/panels.js';
 
@@ -452,7 +452,7 @@ function stempelBibliothekLaden() {
       if (Array.isArray(arr)) {
         for (var i = 0; i < arr.length; i++) if (stempelGueltig(arr[i])) S.stempel.push(arr[i]);
       }
-    } catch (e) { /* unlesbar: leere Bibliothek, kein Absturz */ }
+    } catch { /* unlesbar: leere Bibliothek, kein Absturz */ }
   }
   stempelVariantenNeu();
 }

@@ -1111,13 +1111,13 @@ export function speicherLesen(schluessel) {
   try {
     if (typeof localStorage === "undefined") return null;
     return localStorage.getItem(schluessel);
-  } catch (e) { return null; }
+  } catch { return null; }
 }
 export function speicherSchreiben(schluessel, wert) {
   try {
     if (typeof localStorage === "undefined") return false;
     localStorage.setItem(schluessel, wert);
     return true;
-  } catch (e) { return false; }     // Kontingent voll oder Speicher gesperrt
+  } catch { return false; }     // Kontingent voll oder Speicher gesperrt
 }
 

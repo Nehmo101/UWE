@@ -24,7 +24,7 @@ import { toast, buildPanel, updateHint, buildRail } from '../ui/panels.js';
 var ptr = { down: false, mode: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, handle: -1,
             grab: null, lastClick: 0, lastCx: -999, lastCy: -999, lastX: 0, lastZ: 0,
             dragged: false, zug: null };
-var hoverPoint = null;
+var _hoverPoint = null;
 var zeigerOffen = false, zeigerX = 0, zeigerY = 0, zeigerZuletzt = 0;
 // Umschalttaste zum letzten Mausereignis — aus dem Event selbst statt aus dem
 // globalen keys-Objekt, damit der Modus auch dann stimmt, wenn der Fokus
@@ -448,7 +448,7 @@ function verarbeiteZeiger(now) {
   zeigerZuletzt = now; zeigerOffen = false;
   _zeigerEv.clientX = zeigerX; _zeigerEv.clientY = zeigerY;
   var p = groundPoint(_zeigerEv);
-  hoverPoint = p;
+  _hoverPoint = p;
 
   if (ptr.mode === "brush" && p) {
     applyBrush(p, ed.variantOf.terrain, curParams().radius, curParams().staerke, 1 / 60);

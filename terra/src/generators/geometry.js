@@ -3,7 +3,7 @@
 // mischen indizierte und nicht indizierte Geometrie und fuellen fehlende
 // Farbattribute auf - beides deckt mergeGeometries aus den Addons nicht ab.
 import * as THREE from 'three';
-import { clamp, lerp, sstep, hashi, vnoise, fractal, rngOf, rr, ri } from '../core/rng.js';
+import { clamp, sstep, hashi } from '../core/rng.js';
 import { TEX } from '../render/textures.js';
 import { definePool, setPoolNames } from '../core/pools.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
@@ -570,7 +570,7 @@ function geoScheune() {
   ]);
 }
 
-function geoBaum2() {
+function _geoBaum2() {
   return mergeGeos([
     part(new CY(0.18, 0.4, 2.6, 6), M(0, 1.3, 0), 0x6f5a44),
     part(new IC(1.9, 1), M(0, 3.6, 0, 0, 0.3, 0, 1, 0.82, 1), 0x7ba055),
@@ -2588,8 +2588,8 @@ definePool("aquaeduktkopf", geoAquaeduktkopf(), { radius: 2.0, familie: 'stein' 
    ========================================================================== */
 var NA_FELS = 0xb0aca2,       // Grundton wie geoFels — die Formationen sollen
     NA_FELSD = 0x8e897e,      // mit dem Bestandsfelsen als EIN Gestein lesen
-    NA_FELSH = 0xc6c1b4,
-    NA_ERDE = 0x7d6a52,
+    _NA_FELSH = 0xc6c1b4,
+    _NA_ERDE = 0x7d6a52,
     NA_MOOS = 0x5c7a48,
     NA_SINTER = 0xd8cfb8,     // Kalksinter der Terrassen und Geysirkegel
     NA_DAMPF = 0xf0f2ee,
@@ -3547,7 +3547,7 @@ function geoWollgras() {
 var EI_SCHNEE = 0xf2f6fa,
     EI_SCHNEED = 0xd4e0ea,
     EI_EIS = 0xb8d6e4,
-    EI_EISD = 0x82abc2,
+    _EI_EISD = 0x82abc2,
     EI_FELL = 0x8a7358,
     EI_FELLD = 0x685440,
     EI_HOLZ = 0x8a7050,

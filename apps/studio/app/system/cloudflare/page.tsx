@@ -4,15 +4,18 @@ import { applyDeploymentRuntimeOverrides, type DeploymentSettings } from "@uwe/d
 import { SystemShell } from "@/src/components/shell/SystemShell";
 import { CloudflareStatusAutoRefresh } from "@/components/CloudflareStatusAutoRefresh";
 import { CloudflareTunnelHealthPanel } from "@/components/CloudflareTunnelHealthPanel";
+import { CloudflareManagedChallengePanel } from "@/components/CloudflareManagedChallengePanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Alert } from "@/src/components/ui/states";
-import { updateDeploymentConfigAction } from "./actions";
+import { formatListInput } from "@uwe/cloudflare-edge";
+import { managedChallengeConfigFromSettings } from "@/src/lib/cloudflare-challenge-sync";
+import { reapplyManagedChallengeAction, updateDeploymentConfigAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams?: Promise<{ saved?: string }>;
+  searchParams?: Promise<{ saved?: string; challenge?: string }>;
 }
 
 function yesNo(value: boolean): string {
@@ -33,7 +36,7 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
   await requireOwner();
   const [settings, params] = await Promise.all([
     new SettingsService(prisma).getSettings(),
-    searchParams ?? Promise.resolve({} as { saved?: string }),
+    searchParams ?? Promise.resolve({} as { saved?: string; challenge?: string }),
   ]);
   const d = settings.deployment;
   // Keep the shared runtime-config overlay in sync with the persisted settings so the
@@ -87,6 +90,29 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
     },
   ];
 
+  // Desired state of the edge Managed Challenge — the live Cloudflare state is
+  // fetched separately by CloudflareManagedChallengePanel.
+  const challenge = managedChallengeConfigFromSettings(d);
+  const challengeRows: { label: string; value: string; source: Source }[] = [
+    { label: "Managed Challenge gewünscht", value: yesNo(challenge.enabled), source: "db" },
+    {
+      label: "Geschützte Hostnames",
+      value: challenge.hostnames.join(", ") || "—",
+      source: d.managedChallengeHostnames.length > 0 ? "db" : "env",
+    },
+    { label: "Challenge-Stufe", value: challenge.action, source: "db" },
+    {
+      label: "Cloudflare Zone-ID",
+      value: d.cloudflareZoneId.trim() || process.env.CLOUDFLARE_ZONE_ID?.trim() || "—",
+      source: stringSource(d.cloudflareZoneId),
+    },
+    {
+      label: "Cloudflare API-Token hinterlegt",
+      value: yesNo(d.cloudflareApiTokenConfigured || Boolean(process.env.CLOUDFLARE_API_TOKEN?.trim())),
+      source: d.cloudflareApiTokenConfigured ? "db" : "env",
+    },
+  ];
+
   const security: { label: string; value: string; source: Source }[] = [
     { label: "Auth erforderlich", value: yesNo(proxy.authRequired), source: overrideSource(d.authRequired) },
     {
@@ -132,6 +158,22 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
           </Alert>
         )}
 
+        {params.challenge === "failed" && (
+          <Alert tone="danger" icon="cloud" title="Managed Challenge nicht angewendet">
+            Die WAF-Regel konnte nicht zu Cloudflare geschrieben werden — prüfe Zone-ID und
+            API-Token (Rechte: <code>Zone → Zone WAF → Edit</code>). Details im Status-Panel unten.
+          </Alert>
+        )}
+
+        {params.challenge === "pending" && challenge.enabled && (
+          <Alert tone="warning" icon="cloud" title="Managed Challenge nur vorgemerkt">
+            Ohne Cloudflare-Zone-ID und API-Token kann UWE die Regel nicht selbst setzen. Der
+            Soll-Zustand liegt host-lesbar unter <code>data/cloudflare/managed-challenge.json</code>{" "}
+            — anwenden mit{" "}
+            <code>bash deploy/scripts/configure-cloudflare-managed-challenge.sh</code>.
+          </Alert>
+        )}
+
         <Alert tone="info" icon="cloud" title="Was sofort greift">
           Server-gerenderte Effekte (Login/Turnstile, Session-Cookie-Flags, Link-Erzeugung,
           Player-Preview) gelten sofort. Die Edge-Middleware liest weiterhin die <code>.env</code> —
@@ -158,6 +200,8 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
           <StatusCard title="Routing" rows={routing} />
           <StatusCard title="Cloudflare" rows={cloudflare} />
           <StatusCard title="„Ich bin ein Mensch“-Prüfung" rows={humanCheck} />
+          <StatusCard title="Managed Challenge (Edge)" rows={challengeRows} />
+          <CloudflareManagedChallengePanel />
           <StatusCard title="Sicherheit" rows={security} />
           <StatusCard title="Brain (lokal, owner-only)" rows={brain} />
         </section>
@@ -256,6 +300,88 @@ export default async function SystemCloudflarePage({ searchParams }: Props) {
                 <input type="checkbox" name="clearTurnstileSecret" />
                 Gespeichertes Secret löschen (Env-Fallback)
               </label>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Managed Challenge (Cloudflare Edge)</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-xs text-muted-foreground">
+                Ganzseitige „Verify you are human“-Prüfung <strong>vor</strong> UWE — sie greift für
+                jeden Request, nicht nur für den Login. UWE legt dafür genau eine WAF-Custom-Rule in
+                deiner Zone an und pflegt sie beim Speichern selbst; eigene WAF-Regeln bleiben
+                unberührt. Ohne Zone-ID und API-Token wird der Wunsch nur host-lesbar hinterlegt.
+              </p>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="managedChallengeEnabled"
+                  defaultChecked={d.managedChallengeEnabled}
+                />
+                Managed Challenge an der Edge aktivieren
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">Challenge-Stufe</span>
+                <select
+                  name="managedChallengeAction"
+                  defaultValue={d.managedChallengeAction}
+                  className="rounded border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="managed_challenge">
+                    Managed Challenge (empfohlen — Cloudflare wählt die leichteste Prüfung)
+                  </option>
+                  <option value="js_challenge">JS Challenge (immer Challenge-Seite)</option>
+                </select>
+              </label>
+              <TextAreaField
+                name="managedChallengeHostnames"
+                label="Geschützte Hostnames (eine pro Zeile)"
+                defaultValue={formatListInput(d.managedChallengeHostnames)}
+                placeholder={challenge.hostnames.join("\n") || "leer = alle konfigurierten UWE-Origins"}
+                hint="Leer lassen = automatisch aus den oben konfigurierten Landing-, Studio-, Portal- und Brain-URLs."
+              />
+              <TextAreaField
+                name="managedChallengeSkipPaths"
+                label="Zusätzliche Ausnahme-Pfade (eine pro Zeile)"
+                defaultValue={formatListInput(d.managedChallengeSkipPaths)}
+                placeholder="/api/webhooks"
+                hint={`Immer ausgenommen (nicht abschaltbar): ${challenge.skipPaths.join(", ")} — Health-Probes und interne Callbacks würden an einer Challenge-Seite scheitern.`}
+              />
+              <TextField
+                name="cloudflareZoneId"
+                label="Cloudflare Zone-ID"
+                defaultValue={d.cloudflareZoneId}
+                placeholder="aus Env (CLOUDFLARE_ZONE_ID) / nicht gesetzt"
+              />
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">Cloudflare API-Token</span>
+                <input
+                  type="password"
+                  name="cloudflareApiToken"
+                  autoComplete="new-password"
+                  className="rounded border border-input bg-background px-3 py-2 font-mono text-sm"
+                  placeholder={
+                    d.cloudflareApiTokenConfigured
+                      ? "gesetzt — leer lassen, um zu behalten"
+                      : "Token mit Zone → Zone WAF → Edit"
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  Wird verschlüsselt gespeichert und nie angezeigt. Benötigte Rechte:{" "}
+                  <code>Zone → Zone WAF → Edit</code> auf der UWE-Zone.
+                </span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="clearCloudflareApiToken" />
+                Gespeicherten API-Token löschen (Env-Fallback)
+              </label>
+              <div>
+                <Button type="submit" variant="ghost" formAction={reapplyManagedChallengeAction}>
+                  Nur Regel erneut anwenden
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -394,6 +520,34 @@ function TextField({
         placeholder={placeholder}
         className="rounded border border-input bg-background px-3 py-2 font-mono text-sm"
       />
+    </label>
+  );
+}
+
+function TextAreaField({
+  name,
+  label,
+  defaultValue,
+  placeholder,
+  hint,
+}: {
+  name: string;
+  label: string;
+  defaultValue: string;
+  placeholder?: string;
+  hint?: string;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <textarea
+        name={name}
+        defaultValue={defaultValue}
+        placeholder={placeholder}
+        rows={3}
+        className="rounded border border-input bg-background px-3 py-2 font-mono text-sm"
+      />
+      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
     </label>
   );
 }

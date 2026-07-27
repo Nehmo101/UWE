@@ -1,7 +1,7 @@
 // Heightfield-Terrain: Hoehen, Farben, Kruemmungs-AO, Korridore, Fluesse, Pinsel.
 import * as THREE from 'three';
-import { clamp, lerp, sstep, DEG, hashi, vnoise, fractal } from '../core/rng.js';
-import { MAP, VW, HALF, WATER, S, BIOME, hoehenProfil } from '../core/store.js';
+import { clamp, lerp, sstep, DEG, vnoise, fractal } from '../core/rng.js';
+import { MAP, VW, HALF, S, BIOME, hoehenProfil } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 
 /* ==========================================================================

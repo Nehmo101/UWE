@@ -559,7 +559,7 @@ function autosaveMeta() {
     var m = JSON.parse(roh);
     if (!m || !Array.isArray(m.staende)) return { next: 0, staende: [] };
     return { next: (m.next | 0) % AUTOSAVE_SLOTS, staende: m.staende };
-  } catch (e) { return { next: 0, staende: [] }; }
+  } catch { return { next: 0, staende: [] }; }
 }
 
 /** Schreibt den aktuellen Stand in den Ring. Liefert "ok" | "gleich" |
@@ -568,7 +568,7 @@ function autosaveSchreiben() {
   if (!autosaveNoetig()) return "gleich";
   var text;
   try { text = JSON.stringify(kartenDaten()); }
-  catch (e) { return "fehler"; }
+  catch { return "fehler"; }
   if (text === letzterAutosave) return "gleich";
   if (text.length > AUTOSAVE_MAX) return "zu gross";
   var meta = autosaveMeta();
@@ -617,13 +617,13 @@ function autosaveAnbieten() {
   var stand = neuesterAutosave();
   if (!stand) return;
   var jetzt;
-  try { jetzt = JSON.stringify(kartenDaten()); } catch (e) { jetzt = null; }
+  try { jetzt = JSON.stringify(kartenDaten()); } catch { jetzt = null; }
   if (jetzt !== null) letzterAutosave = jetzt;      // Demostand gilt als geschrieben
   if (stand.text === jetzt) return;
   if (!confirm("Letzten Stand wiederherstellen? (" + zeitText(stand.zeit) + ")")) return;
   var karte;
   try { karte = validiereKarte(stand.text); }
-  catch (err) { toast("Gespeicherter Stand ist unlesbar"); return; }
+  catch { toast("Gespeicherter Stand ist unlesbar"); return; }
   pushUndo(true);
   uebernehmeKarte(karte);
   letzterAutosave = stand.text;
@@ -792,7 +792,7 @@ export function initIO() {
       var karte;
       try {
         karte = validiereKarte(rd.result);
-      } catch (err) {
+      } catch {
         toast("Datei konnte nicht gelesen werden");
         return;
       }
@@ -969,7 +969,7 @@ function hoehenkarteImportieren(datei) {
       ctx.drawImage(img, 0, 0, w, h);
       var px;
       try { px = ctx.getImageData(0, 0, w, h).data; }
-      catch (err) { toast("Bilddaten nicht lesbar"); return; }
+      catch { toast("Bilddaten nicht lesbar"); return; }
 
       // Parameter über prompt() — schlicht, aber ausreichend; die Vorgaben
       // sind so gewählt, dass ein durchschnittlich helles Bild eine Karte mit

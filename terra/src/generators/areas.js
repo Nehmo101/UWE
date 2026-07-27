@@ -2,7 +2,7 @@
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
 import { S, BIOME, KARTE } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
-import { heightAt, slopeAt } from '../world/terrain.js';
+import { heightAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
 /* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
@@ -304,7 +304,7 @@ function genViertel(el) {
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
   var occ = newOcc(4.5);
-  var i, k, s;
+  var i, k;
   // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken.
   // Alle Zuege wandern in EIN gemergtes Mesh (1 Draw Call statt 20-40);
   // gesammelt wird in Streets-Index-Reihenfolge, damit die gemergte

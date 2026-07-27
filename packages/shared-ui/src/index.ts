@@ -49,6 +49,9 @@ export {
 
 export { ViewEditToggle, type ViewEditToggleProps } from "./ViewEditToggle";
 
+export { NavSearch, type NavSearchProps } from "./NavSearch";
+export type { NavSearchEntry, NavSearchHit } from "@uwe/shared-utils/nav-search";
+
 export {
   ErrorAlert,
   LoadingPage,
@@ -68,7 +71,10 @@ export {
   PASSWORD_STRENGTH_LABELS,
   evaluatePasswordStrength,
   formatForgotPasswordError,
+  isPasskeySupported,
+  loginWithPasskey,
   readPublicAppUrls,
+  registerPasskey,
   resolveAuthLinks,
   type AuthLinkTargets,
   type MaintenanceAppSurface,
@@ -76,6 +82,9 @@ export {
   type PasswordRequirementsProps,
   type PasswordRule,
   type PasswordStrengthLevel,
+  type PasskeyLoginResult,
+  type PasskeyLoginSuccessUser,
+  type PasskeyRegisterResult,
   type PasswordStrengthMeterProps,
   type PasswordStrengthResult,
   type TurnstileWidgetProps,
