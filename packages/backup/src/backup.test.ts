@@ -115,8 +115,8 @@ describe("UWE backup and restore", () => {
         characterName: "Test PC",
       },
     });
-    // Terra-Karte (J1) — siehe den Test weiter unten: Atlas 3D stand nie im
-    // logischen Export, und niemandem fiel es auf. Der Seed hier sorgt dafür,
+    // Terra-Karte (J1) — siehe den Test weiter unten: der Vorgänger stand nie
+    // im logischen Export, und niemandem fiel es auf. Der Seed hier sorgt dafür,
     // dass jeder Backup-Lauf dieser Datei eine Terra-Karte zu sehen bekommt.
     await db.terraKarte.create({
       data: {
@@ -269,10 +269,10 @@ describe("UWE backup and restore", () => {
   });
 
   /**
-   * Die Lücke, die Atlas 3D hatte. `packages/backup` kannte kein einziges
-   * Atlas-Modell — `backup:create` sicherte die sechs Atlas-Tabellen nie, und
-   * der einzige Vollständigkeitstest im Repo bewacht ausschließlich die
-   * Brain-DB. Das Löschen von Atlas wäre dadurch unumkehrbar gewesen
+   * Die Lücke, die der Vorgänger hatte. `packages/backup` kannte kein einziges
+   * seiner sechs Modelle — `backup:create` sicherte sie nie, und der einzige
+   * Vollständigkeitstest im Repo bewacht ausschließlich die Brain-DB. Sein
+   * Löschen war dadurch unumkehrbar
    * (docs/engineering/terra-runde-j-atlas-abbau.md, Vorabbefund 1).
    *
    * Dieser Test ist die Gegenmaßnahme: Terra-Karten müssen in jedem

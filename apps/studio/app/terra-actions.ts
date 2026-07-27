@@ -7,10 +7,9 @@ import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
 /**
- * Terra — Server Actions für den Karteneditor, der Atlas 3D ablöst (J1).
+ * Terra — Server Actions für den Karteneditor.
  *
- * Jede schreibende Action prüft dasselbe Trio wie der Atlas-Bestand, in
- * dieser Reihenfolge:
+ * Jede schreibende Action prüft dasselbe Trio, in dieser Reihenfolge:
  *
  *   1. `requireStudioActionAuth()`      — CSRF/Origin (Middleware allein genügt nicht)
  *   2. `requireStudioWorldEdit(slug)`   — Rolle owner/admin/dm auf DIESER Welt
@@ -18,8 +17,9 @@ import { requireStudioWorldEdit } from "@/src/lib/authz";
  *
  * Der dritte Guard steckt in `@uwe/database/terra`: jede Methode dort nimmt
  * den `worldSlug` entgegen und schreibt mit `worldId` im `where`. Es gibt
- * hier bewusst keinen Weg, eine Karte über ihre Id allein anzufassen — genau
- * das war die Falle, gegen die Atlas' `requireNodeInWorld` gebaut wurde.
+ * hier bewusst keinen Weg, eine Karte über ihre Id allein anzufassen — eine
+ * Id aus einer fremden Welt darf nicht dadurch gültig werden, dass sie
+ * existiert.
  *
  * Terra-Inhalte sind vollständig spielersichtbar (Owner-Entscheid 2026-07-21,
  * unverändert für Terra übernommen), es gibt deshalb keine Sichtbarkeitslogik.
@@ -56,7 +56,7 @@ const DATEN_MAX = 12 * 1024 * 1024;
  * Datenbank steht.
  *
  * Kein `revalidatePath` — der Editor besitzt die laufende Szene, ein Remount
- * würde die Kamera zurücksetzen (dieselbe Begründung wie bei Atlas).
+ * würde die Kamera zurücksetzen.
  */
 export async function speichereTerraKarteAction(formData: FormData): Promise<TerraSpeichernErgebnis> {
   await requireStudioActionAuth();

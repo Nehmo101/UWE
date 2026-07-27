@@ -16,8 +16,7 @@ import "./terra.css";
  * Werkzeugleiste und Panel aus und lässt nur Navigation zu. Das ist Komfort,
  * nicht die Sicherung — die Sicherung ist das fehlende Gegenüber.
  *
- * Zugriff hängt wie bei Atlas allein an der Weltmitgliedschaft, nie an der
- * einzelnen Karte.
+ * Zugriff hängt allein an der Weltmitgliedschaft, nie an der einzelnen Karte.
  */
 
 export interface TerraLeserahmenProps {

@@ -61,10 +61,9 @@ export function buildContentSecurityPolicy(
   }
 
   // 'self' permits Studio and Portal to embed the same-origin Terra map editor
-  // (/terra/index.html) in an <iframe>. Inherited from the retired single-file
-  // Atlas editor (M3) and deliberately KEPT when Atlas was replaced (J1,
-  // 2026-07-27): removing it would leave the Terra frame blank. Same-origin
-  // only — no external hosts beyond the explicit YouTube/Turnstile opt-ins below.
+  // (/terra/index.html) in an <iframe>. Load-bearing, not decorative: removing
+  // it leaves the Terra frame blank. Same-origin only — no external hosts
+  // beyond the explicit YouTube/Turnstile opt-ins below.
   const frameSrc: string[] = ["'self'"];
   if (options.allowYouTubeEmbeds) {
     frameSrc.push("https://www.youtube.com", "https://www.youtube-nocookie.com");
@@ -149,8 +148,7 @@ export function getUweSecurityHeaders(
     "Referrer-Policy": "strict-origin-when-cross-origin",
     // SAMEORIGIN (not DENY) so Studio and Portal can iframe the same-origin
     // Terra map editor (/terra/index.html); cross-origin framing stays blocked
-    // (mirrors frame-ancestors 'self'). Inherited from the retired Atlas editor
-    // and deliberately kept for Terra (J1) — DENY would blank the frame.
+    // (mirrors frame-ancestors 'self'). DENY would blank the frame.
     "X-Frame-Options": "SAMEORIGIN",
     "Permissions-Policy": buildPermissionsPolicy(options),
     "Cross-Origin-Opener-Policy": "same-origin",

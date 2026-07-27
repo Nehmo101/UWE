@@ -283,11 +283,11 @@ export interface BackupShareLinkRecord {
  * Terra-Karte (J1). Die Karte selbst steckt vollständig in `daten` — ein
  * Kartenbaum im Format v5, der alle Ebenen trägt.
  *
- * Diese Sektion existiert, weil Atlas 3D sie NIE hatte: `packages/backup`
- * kannte kein einziges Atlas-Modell, `backup:create` sicherte die sechs
- * Atlas-Tabellen also nie, und niemandem fiel es auf (siehe
- * docs/engineering/terra-runde-j-atlas-abbau.md, Vorabbefund 1). Ein Löschen
- * wäre unumkehrbar gewesen. Terra soll denselben Fehler nicht wiederholen.
+ * Diese Sektion existiert, weil der Vorgänger sie NIE hatte: `packages/backup`
+ * kannte kein einziges seiner sechs Modelle, `backup:create` sicherte sie also
+ * nie, und niemandem fiel es auf (siehe
+ * docs/engineering/terra-runde-j-atlas-abbau.md, Vorabbefund 1). Sein Löschen
+ * war dadurch unumkehrbar. Terra soll denselben Fehler nicht wiederholen.
  */
 export interface BackupTerraKarteRecord {
   id: string;

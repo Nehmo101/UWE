@@ -89,9 +89,9 @@ function materializeStaticAssets(app, standaloneDir) {
 function materializePublicAssets(app, standaloneDir) {
   // Next.js standalone output never includes `public/` on its own (documented
   // upstream requirement) — without this copy, every public asset (icons,
-  // manifest, the embedded Atlas single-file editor under public/atlas/)
-  // 404s in production, which for the Atlas iframe surfaces as the app's
-  // own not-found page rendered inside the embed.
+  // manifest, the embedded Terra map editor under public/terra/) 404s in
+  // production, which for an iframed editor surfaces as the app's own
+  // not-found page rendered inside the embed.
   const publicSrc = path.join(ROOT, "apps", app, "public");
   const publicDest = path.join(standaloneDir, "apps", app, "public");
 

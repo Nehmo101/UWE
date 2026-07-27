@@ -569,8 +569,8 @@ export async function collectBackupData(
 
   /**
    * Terra-Karten (J1). Weltgebunden, deshalb in jedem Backup-Umfang dabei,
-   * der Welten mitnimmt — kein Schalter, keine Bedingung. Atlas 3D stand hier
-   * nie, und genau deshalb wäre sein Löschen unumkehrbar gewesen.
+   * der Welten mitnimmt — kein Schalter, keine Bedingung. Der Vorgänger stand
+   * hier nie, und genau deshalb war sein Löschen unumkehrbar.
    */
   const terraKarten = await db.terraKarte.findMany({
     where: { worldId: { in: worldIds } },

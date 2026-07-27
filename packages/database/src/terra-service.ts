@@ -3,16 +3,15 @@ import type { TerraKarte } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 
 /**
- * Terra-Karten — Datenzugriff für den Karteneditor, der Atlas 3D ablöst (J1).
+ * Terra-Karten — Datenzugriff für den Karteneditor.
  *
  * Bewusst dünn. Terra speichert eine Karte als EINE JSON-Datei im Format v5
  * (`terra/src/world/kartenbaum.js`): der Baum trägt alle Ebenen in sich. Es
  * gibt deshalb nichts zu normalisieren und nichts teilweise zu schreiben —
- * jeder Speichervorgang ersetzt `daten` vollständig. Das ist dieselbe
- * „replace all"-Zusage, die der Atlas-Service über fünf Tabellen verteilt
- * geben musste, nur auf einem einzigen Feld.
+ * jeder Speichervorgang ersetzt `daten` vollständig — eine „replace all"-
+ * Zusage auf einem einzigen Feld.
  *
- * Sichtbarkeit gibt es hier so wenig wie bei Atlas: Karten sind vollständig
+ * Sichtbarkeit je Karte gibt es nicht: Karten sind vollständig
  * spielersichtbar, der Zugriff hängt allein an der Weltmitgliedschaft. Die
  * Rechteprüfung liegt vor diesem Modul (Studio-Guards, Portal-Weltlogin) —
  * dieser Service prüft ausschließlich die MANDANTENGRENZE (`worldId`), damit
