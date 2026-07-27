@@ -39,7 +39,7 @@ after(() => {
 describe("hostname normalisation", () => {
   it("accepts bare hostnames and full URLs", () => {
     assert.equal(normalizeChallengeHostname("studio.uwe.example"), "studio.uwe.example");
-    assert.equal(normalizeChallengeHostname("  Portal.UweAndDragons.org "), "portal.uwe.example");
+    assert.equal(normalizeChallengeHostname("  Portal.Uwe.Example "), "portal.uwe.example");
     assert.equal(
       normalizeChallengeHostname("https://studio.uwe.example/system/cloudflare"),
       "studio.uwe.example",
