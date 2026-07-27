@@ -245,6 +245,29 @@ const KERN_WETTER = [
   'vfxA *= smoothstep( 0.0, 0.10, leben ) * ( 1.0 - smoothstep( 0.86, 1.0, leben ) );',
   'vfxA *= uDeckkraft * vfxVar.w;',
   'vfxA *= mix( 1.0, 0.5 + 0.5 * sin( uZeit * 2.7 * tempo + ph * 6.2831 ), uFlacker );',
+  /* I6 — Partikelstaerke aus der Biom-LUT. Bis hierher gilt das Wetter der
+     ganzen Karte; ab hier auch die Flaeche darunter. Ein Schneefall ueber
+     einer Wuestenflaeche soll dort duenner werden, statt gleichmaessig ueber
+     die Karte zu liegen.
+
+     Nachgeschlagen wird an der WELTPOSITION des Partikels (`p.xz`), die der
+     Kern oben ohnehin schon gerechnet hat — dieselbe Abbildung wie beim
+     Terrain (uBiomAbb) und bei der Bruchmaske. Zwei Texturzugriffe je
+     Instanz, und nur solange uBiomAn ueber 0 steht: ohne eine einzige
+     Biomflaeche auf der Karte faellt der ganze Block uniform-kohaerent weg
+     und das Bild ist Zeichen fuer Zeichen das bisherige.
+
+     Auf die DECKKRAFT und nicht auf die Groesse: ein halb so grosses
+     Schneekorn liest sich als weiter entfernt, ein blasseres als weniger.
+     Der Deckel bei 0.05 laesst die Instanz stehen statt sie verschwinden zu
+     lassen — ein Partikel, das mitten im Flug erlischt, blinkt. */
+  'if ( uBiomAn > 0.5 ) {',
+  '  vec2 bUv = p.xz * uBiomAbb.x + vec2( uBiomAbb.y );',
+  '  vec2 bKa = texture2D( uBiomKarte, bUv ).rg;',
+  '  float bZeile = ( bKa.r * 255.0 + 0.5 ) / uBiomZeilen;',
+  '  float bStaerke = texture2D( uBiomLut, vec2( 0.25, bZeile ) ).a;',
+  '  vfxA *= mix( 1.0, max( bStaerke, 0.05 ), bKa.g );',
+  '}',
   'vec3 vfxC = mix( uFarbA, uFarbB, vfxVar.z );',
   // Bildschirmachse des Quads: entweder die Bewegungsrichtung (Streifen) oder
   // die Senkrechte mit Eigendrehung (taumelnde Flocken und Blaetter).
