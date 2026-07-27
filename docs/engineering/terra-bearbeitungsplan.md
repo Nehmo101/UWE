@@ -88,3 +88,154 @@ G1-G6 umgesetzt: Nacht-Preset (Sterne, Mond, Rankenglut), Ranken-Parameter (dick
 5. **Runde G** zum Schluss; innerhalb der Runde zuerst G1 (Nacht) — größter Stimmungsgewinn pro Aufwand — dann G2/G3, dann G4/G5/G6 nach Lust.
 
 Jede Runde endet mit dem C11-Abnahmemuster: gleiche Seed, vier (ab G1: fünf) Tageszeiten-Screenshots, `terraPatchInfo` sauber, Statuszeile (Calls/Tris/Instanzen) notiert.
+
+---
+
+# Roadmap ab Runde H — Weltausbau
+
+Aufgenommen am 27.07.2026 aus Nutzerwünschen (Kartengröße, Biome, Objektmenge, Ranken-Mechanik) plus eigenen Vorschlägen. Die Runden C–G sind abgeschlossen (PRs #800–#804), diese Themen bauen darauf auf.
+
+## Kanon: Arbor und der zerbissene Apfel
+
+Das Setting bekommt damit erstmals eine verbindliche Erzähllogik, und die hat unmittelbare technische Folgen:
+
+> Der Planet **Terra** ist auseinandergerissen. Zusammengehalten wird er vom weißen Riesenbaum **Arbor** — die kolossalen weißen Ranken sind seine Triebe. Sie leuchten aus sich heraus und spenden der Welt Licht. Der Planet sieht aus wie ein zerbissener Apfel; Arbor ist der Apfelkern. Die Ranken wachsen deshalb **zur Mitte hin zusammen**, nicht parallel in den Himmel.
+
+Daraus folgt für den Editor (jeder Punkt ist eine echte Änderung, keine Deko):
+
+| Folge | Was sich ändert |
+|---|---|
+| **Ranken sind Lichtquellen** | Bisher sind sie nur emissiv (hellster Wert im Bild). Künftig müssen sie die Umgebung tatsächlich aufhellen — sonst wirkt die Nacht unglaubwürdig. Umsetzung siehe H3. |
+| **Wuchs zur Mitte** | Ranken laufen nicht senkrecht, sondern neigen sich mit der Höhe zu einem gemeinsamen Fluchtpunkt über der Kartenmitte (bzw. zu einem einstellbaren „Kernpunkt"). Die Mittelachse in `vines.js` bekommt eine Neigungskomponente proportional zur Höhe und zum Abstand vom Kern. |
+| **Zusammenwachsen** | Treffen sich zwei Ranken, verschmelzen sie zu einer dickeren (Nutzerwunsch, siehe H4) — genau das Bild des Apfelkerns, in dem alle Stränge zusammenlaufen. |
+| **Bruchkanten** | Ein zerrissener Planet hat Abbruchkanten: Klippen ins Nichts, abgerissene Landbrücken, schwebende Trümmer. Das ist ein eigenes Terrain-Thema (H6) und speist Biome („Aschebrache") und Objekte (Ruinen an der Bruchkante). |
+| **Licht als Ressource** | Erzählerisch naheliegend und spielerisch nutzbar: Nähe zu Arbor = Licht = Siedlungsdichte. Die Auto-Bestückung kann das auswerten (H3, Punkt 3). |
+
+## H1 — Kartengröße
+
+Heute: `MAP = 256` Kacheln, 257² = 66.049 Vertices in **einem** Terrain-Mesh, `corridor`/`wear` als Uint8Array derselben Größe.
+
+Naiv auf 512 zu gehen vervierfacht alles (263k Vertices, ~524k Dreiecke pro Mesh, 1 MB pro Undo-Höhenkopie) und macht jeden Teil-Upload teurer. Deshalb gestaffelt:
+
+1. **H1a — Kachelung des Terrains.** Das eine Mesh wird in Patches zerlegt (z. B. 8×8 Patches à 64 Kacheln). Gewinne: echtes Frustum-Culling, Teil-Uploads betreffen nur die berührten Patches (`refreshGrid` arbeitet dann patchweise), und die Kartengröße wird zur Konfiguration statt zur Konstante. Das ist die Voraussetzung für alles Weitere.
+2. **H1b — Kartengröße als Parameter** (256 / 512 / 1024) im Speicherformat (`kartenGroesse`, v4; Loader tolerant, fehlend = 256). `HALF`/`MAP`/`VW` sind heute `const`-Exporte — sie müssen zu Laufzeitwerten werden; alle Importeure prüfen (`terrain.js`, `objects.js` Kartenrand, `camera.js` Schwenkgrenzen, `pools.js` Hüllkugel `radius: 460`, `water.js` 2000er-Ebene, Nebel-Fernwerte der Presets).
+3. **H1c — Detailstufen (LOD).** Ferne Patches mit halber/viertel Auflösung zeichnen. Erst sinnvoll, wenn H1a steht.
+4. **H1d — Instanz-Budget mitziehen.** `MAX_INST_PER_EL = 24000` und die `safeSpacing`-Deckel (Wald 14k, Wiese 20k) sind auf 256er-Karten kalibriert; auf 1024er-Karten müssen sie flächenproportional mitwachsen, sonst wird eine große Wiese dünner statt größer.
+5. **H1e — Undo-Speicher.** Mit Copy-on-Write aus Runde D kostet ein Terrainschritt schon 1 MB bei 512². Bei 1024² (4 MB) muss der Snapshot auf die berührte Patch-Region beschränkt werden.
+
+**Reihenfolge:** H1a → H1d → H1b → H1e → H1c. Vorher `WEBGL_debug_renderer_info` klären (offener Punkt C10) — auf einem Software-Rasterizer bringt Kachelung wenig, LOD dagegen viel.
+
+## H2 — Biome in die Breite
+
+Ausgearbeitet in **`terra-biomkatalog.md`**: 25 Biome (die 5 aus Runde G präzisiert, 20 neu) mit Paletten, Zonenschwellen, Höhenprofilen, Vegetationsgewichten und Wasser-Tints. Enthalten sind die vom Nutzer genannten Eis, Wüste, Moor und Meer sowie u. a. Hochland, Steppe, Vulkan/Aschekegel, Salzpfanne, Regenwald, Bambuswald, Mangrovenküste, Kreidefelsen, Tundra, Karst, Blütental, Aschebrache, Pilzwald, Terrassenland, Nebelwald, Klippenmeer und Korallenbank.
+
+Drei Punkte daraus gehören in die Reihenfolge, weil sie Code ändern statt nur Werte:
+
+1. **Höhenprofil je Biom.** `genBaseIn` rechnet heute mit festen Literalen (`26 / 4 / -6 / -22 / 55`). Erst wenn diese Werte aus der Registry kommen, unterscheiden sich Meer (12 % Land), Aschebrache (senkrechte Bruchkante statt Küste), Karst (Dolinen) und Terrassenland (Stufen) wirklich — sonst ist jedes Biom nur ein Anstrich. Achtung: Der Biomwechsel muss dann das Basisterrain neu erzeugen (Rückfrage im UI), und das v3-Delta diffst weiterhin gegen `genBaseIn` unter demselben Biom — das passt bereits.
+2. **`veg.abstand`.** Der vorhandene `dichte`-Faktor wirkt nur nach unten; Regenwald, Bambuswald und Pilzwald brauchen dichter als heute, also einen Faktor auf `safeSpacing`.
+3. **Beschneite Bäume** (Nutzerwunsch): siehe H2a.
+
+### H2a — Schneeauflage (beschneite Bäume, Dächer, Felsen)
+
+Der Katalog wägt drei Wege ab und empfiehlt begründet den **Shader-Patch**: ein `onBeforeCompile`-Block mit Ankerprüfung, der nach oben zeigende Flächen aufhellt und leicht kühlt, gesteuert über globale Uniforms (`uSchneeAuflage`, Kanten-Rampe, Höhenband, Farbe, Bruch-Rauschen). Vorteile gegenüber eigenen Schnee-Pools: kein Pool-Neuaufbau beim Biomwechsel, keine sechs zusätzlichen Kronentexturen — und vor allem werden **Dächer, Mauern, Felsen und Karren mitbeschneit**, sodass die Winterkarte als Ganzes winterlich wird statt fleckweise. Zwei Details sind kritisch und stehen im Katalog ausformuliert: die `gl_FrontFacing`-Korrektur für das DoubleSide-Laub und die Uniform-Bindung (statt `opts`-Schalter), damit die Shader-Permutationen nicht wachsen. Das Terrainmaterial wird ausgenommen — dessen Schnee kommt weiterhin aus `terrainColor`.
+
+### H2b — Biom-Flächen statt einer Karte = ein Biom
+
+Ebenfalls im Katalog: Stufe 1 ist ein Flächen-Element `variant: "biom"` und braucht **null Formatänderung** (die Elementserialisierung ist generisch, alte Fassungen ignorieren die unbekannte Variante). Stufe 2 wäre ein Biompinsel, gespeichert als Striche statt als Maske. Wichtig fürs Rendering: Biomgrenzen über die vorhandene Störrauschen-Oktave ausfransen und gemischte Paletten in 16 Stufen cachen, damit `terrainColor` ein Durchlauf bleibt.
+
+## H3 — Arbor als Lichtquelle
+
+1. **Bodenlicht um die Ranke.** Ein Shader-Patch (onBeforeCompile, Ankerprüfung wie alle anderen) addiert auf Terrain und Objekte einen kühl-weißen Lichtbeitrag, der mit dem Abstand zur nächsten Ranke abfällt. Die Rankenpositionen kommen als kleines Uniform-Array (z. B. bis 8 nächste Ranken: `vec4(x, z, radius, staerke)`), aktualisiert beim Commit — kein Per-Pixel-Suchen, kein echtes Punktlicht (Phong mit vielen Lichtern kompiliert neu und kostet).
+2. **Nachts dominant, tags fast unsichtbar.** Stärke wird wie alles andere über das Tageszeit-Preset geblendet (`arborLicht`: nacht 1.0, abend 0.35, morgen/nebel 0.15, mittag 0.0).
+3. **Licht steuert Besiedlung.** Optional in der Auto-Bestückung: in Rankennähe höhere Haus-/Fensterdichte, weiter weg Ruinen und Wildwuchs. Das macht die Lore ohne ein einziges neues Asset sichtbar.
+4. **Bodennebel leuchtet mit.** Der Höhennebel bekommt in Rankennähe einen Anteil der Rankenfarbe — der Klassiker „Lichtsäule im Dunst", und in den Nachtreferenzen genau das, was die Bilder trägt.
+
+## H4 — Ranken: Formkontrolle und Zusammenwachsen
+
+Die vorhandenen Parameter (`dicke`, `steigung`, `stil`, `straenge` aus Runde G) reichen für die Silhouette, aber nicht für gezielte Form.
+
+1. **Windungsgrad differenziert.** `steigung` wirkt global. Neu: `windungUnten` / `windungOben` (die Ranke dreht unten enger, oben weiter — oder umgekehrt), interpoliert über die Höhe. Ebenso `dickeOben` als eigener Wert statt der festen Verjüngung auf 45 %.
+2. **Zugpunkte auf der Achse.** Die Ranke bekommt sichtbare Griffe **auf ihrer Höhe** (heute existiert nur der Fußpunkt): 2–5 Kontrollpunkte, die im Raum gezogen werden können (horizontale Verschiebung per Maus, Höhe per Modifier). Die Mittelachse wird dann nicht mehr aus Rauschen allein gebildet, sondern als CatmullRom durch Fuß → Zugpunkte → Spitze, mit dem Rauschen als Überlagerung. Speicherformat: `zugpunkte: [{x, y, z}]` am Element (v4, fehlend = bisheriges Verhalten). Das ist die Umsetzung von „an markierten Stellen ziehen".
+3. **Kernneigung.** Neuer Parameter `kernzug` (0–1): Wie stark neigt sich die Ranke mit der Höhe zum Kernpunkt der Karte (Apfelkern-Logik). 0 = senkrecht wie bisher.
+4. **Zusammenwachsen zweier Ranken.** Der anspruchsvollste Punkt, weil Elemente einander bisher **nicht kennen** (jedes generiert isoliert — das ist eine Architektur-Invariante). Vorschlag in zwei Stufen:
+   - **H4a (billig, deckt 90 %):** Ein Ranken-Element bekommt **mehrere Fußpunkte** (wie ein Pfad). Aus jedem Fuß wächst ein Strang; ab einer einstellbaren Höhe `vereinigung` laufen alle Achsen auf eine gemeinsame Achse zu und der Durchmesser addiert sich (Flächenaddition, nicht Radienaddition: `r = sqrt(Σ r²)`, sonst wird es unförmig fett). Oberhalb wächst eine Ranke weiter. Kein Element muss ein anderes kennen, Determinismus bleibt, die Editierbarkeit über Punktgriffe kommt gratis.
+   - **H4b (echte Fusion):** Beim Commit prüft ein Nachlauf, ob Fußpunkte verschiedener Ranken-Elemente näher als (r₁+r₂)·k beieinander liegen, und verschmilzt sie zu einem Element mit mehreren Fußpunkten (also automatisch zu H4a). Das ist eine bewusste Ausnahme von der Isolation und braucht ein sauberes Undo (Verschmelzen = ein Undo-Schritt, Trennen per Punkt-Löschen).
+5. **Verwachsungsknoten.** An der Vereinigungsstelle ein sichtbarer Knoten (Wulst, Rindenfalten, Moos, herabhängende Flechten) — sonst sieht die Addition nach Bug aus.
+
+## H5 — Objekte in die Breite
+
+Ausgearbeitet in **`terra-objektkatalog.md`**: 230 neue Pools in 15 Kategorien, jeweils mit Bauweise aus vorhandenen Primitiven, Platzierungsradius, Materialfamilie, Instanzkosten und Platzierungsregel. Die vom Nutzer genannten Mauern, Schloss, Burg, Werft und Schiffe sind vollständig ausgearbeitet — inklusive der Erkenntnis, dass Burg, Werft, Kreuzgang/Karawanserei und Blattstadt **Struktur-Generatoren** im Stil von `genViertel` brauchen statt einzelner Pools, weil ihr Layout dem Gelände folgt.
+
+Drei Voraussetzungen, die vor der Fleißarbeit stehen:
+
+1. **`tryPlaceWasser` und `tryPlaceUfer`** als Gegenstücke zu `tryPlace` — ohne sie ist die gesamte Maritim-Kategorie unplatzierbar (Schiffe brauchen die invertierte Regel: nur *auf* Wasser).
+2. **Zwölf neue Bauhelfer** (Zinnenkranz, Bogenreihe, Schiffsrumpf, Takelage, Dachlandschaft, Fachwerk-Raster, Treppe, Bruchkante, Zeltbahn, Aufsatz-Anker, Leucht-Adern). Der `bruchkante`-Helfer ist der wirtschaftlichste: er macht aus jedem Bestandsobjekt seine Ruine.
+3. **Aufsatz-Anker** verallgemeinern das vorhandene `FENSTER_ANKER`/`emitFensterlicht`-Muster auf Gauben, Kamine, Erker, Banner — sonst wird jedes Dach ein Sonderfall.
+
+Der Katalog schlägt sechs Umsetzungsbündel vor (Wehrbau-Kit → Burg/Schloss/Kloster → Maritim komplett → Arbor-Welt → Biome & Wirtschaft → Ruinen/Natur/Requisiten). Empfehlung für die Reihenfolge: **Arbor-Welt vorziehen**, weil sie das Setting als Erstes sichtbar macht und auf H3/H4 aufsetzt.
+
+## H6 — Bruchkanten: die Form des zerbissenen Planeten
+
+Aus dem Kanon folgt ein Terrain-Thema, das es heute gar nicht gibt: Der Kartenrand läuft aktuell weich unter Wasser aus (`lerp(-22, h, sstep(0, 55, d))`). Ein zerrissener Planet endet aber an einer **Abrisskante**.
+
+1. **Randprofil je Biom** (`randTiefe`, `randBreite` aus dem Biomkatalog): Die Aschebrache fällt über 10 Einheiten fast senkrecht ins Bodenlose statt über 55 Einheiten ins Meer. Der Nebel schluckt den Grund — mehr braucht es für den Abgrund nicht.
+2. **Bruchkanten-Werkzeug** mitten in der Karte: eine gezeichnete Linie, an der das Terrain abreißt (eine Seite bleibt, die andere fällt ins Nichts), mit hängenden Wurzelvorhängen und schwebenden Trümmern am Saum. Technisch ein Pfad-Element mit einseitigem Höhenstempel — dieselbe Mechanik wie der Flusseinschnitt, nur asymmetrisch.
+3. **Schwebende Trümmer** existieren seit Runde G als Objektvariante (`inseln`); sie bekommen hier ihren erzählerischen Ort.
+4. **Blick über die Kante:** Die Kamera darf über den Rand hinausschwenken, ohne dass eine leere Fläche sichtbar wird — unterhalb der Kante braucht es Dunst, Wolken von oben gesehen und tiefere Trümmerlagen.
+
+## Eigene Verbesserungsvorschläge (über die Wunschliste hinaus)
+
+### Werkzeug und Bedienung
+- **Ebenen/Gruppen:** Bei 100+ Objekttypen und großen Karten braucht der Editor eine Elementliste mit Suche, Sichtbarkeits- und Sperrschaltern. Ohne das wird eine 1024er-Karte unbedienbar.
+- **Kopieren/Spiegeln/Rotieren von Elementen** (inkl. Mehrfachauswahl per Rahmen). Heute muss jedes Viertel neu gezeichnet werden.
+- **Pinsel für Biom-Flächen** statt „eine Karte = ein Biom" (siehe Biom-Katalog): dieselbe Polygon-Mechanik wie Wald/Wiese, nur dass die Fläche die Palette lokal umschaltet — mit weichem Saum, sonst entstehen Teppichkanten.
+- **Referenzbild als Untergrund** (Bild einblenden, Deckkraft regeln) — zum Nachzeichnen vorhandener Kartenentwürfe.
+- **Messwerkzeug + Maßstabsanzeige**, sobald Karten 1024 Einheiten groß sind.
+
+### Bild und Stimmung
+- **Wetter als zweite Achse neben der Tageszeit:** klar / bewölkt / Regen / Schneefall / Sturm. Regen ist in der Vorlage ein Kernmotiv (die berühmten Ghibli-Regenszenen) und ist billig: Streifen-Billboards, dunklere nasse Bodenfarbe, gedämpfte Sättigung, Ringe auf dem Wasser.
+- **Jahreszeiten** als Palettenschieber über alle Biome (Frühlingsblüte, Sommergrün, Herbstgold, Winterkahl) — technisch ein Farbmultiplikator plus Blüten-/Laubdichte, erzählerisch enorm ergiebig.
+- **Vogelperspektiven-Vorschau (Postkartenmodus):** Kamera fährt auf einen komponierten Blickwinkel, blendet UI aus, rendert in hoher Auflösung. Der PNG-Export ist heute ein Bildschirmfoto; das hier wäre ein Bild.
+- **Kamerafahrten aufzeichnen** (Wegpunkte + Zeit) und als GIF/WebM exportieren — für ein Werkzeug, dessen Ergebnis geteilt wird, der größte Mehrwert pro Aufwand.
+
+### Technik und Verlässlichkeit
+- **Automatischer Determinismus-Test:** ein kleines Node-Skript, das zwei Läufe derselben Seed hasht und vergleicht (heute nur manuell behauptet). Läuft ohne Browser, wenn die Generatoren three-frei gehalten werden — oder headless über Playwright.
+- **Regressions-Screenshots:** je Tageszeit/Biom ein Referenzbild, Vergleich per Pixel-Diff im CI. Fängt genau die Klasse Fehler, die uns Runde B gekostet hat (UV-Bug war headless unsichtbar).
+- **Fehlerbudget im UI:** Wenn ein Element seinen Instanzdeckel reißt (`MAX_INST_PER_EL`), sollte das sichtbar sein statt stumm zu kappen.
+- **Autosave in den LocalStorage** (letzte 3 Stände) — ein Absturz kostet heute die ganze Sitzung.
+
+## Näher an Studio Ghibli — konkrete Vorschläge
+
+Grundlage ist die Deep-Research vom 26.07. (Oga-Maltechnik, gemessene Farbwerte, Breakdowns Ghibli-inspirierter Spiele). Die Runde F hat die drei billigsten Hebel gezogen (kühle Schatten, Farbdrift, Kronen-Normalen). Was danach am meisten bringt, nach Wirkung sortiert:
+
+### 1. Kantenhierarchie statt gleichmäßiger Schärfe (größter Hebel)
+Ogas Bilder leben davon, dass **zwei Kantensorten koexistieren**: weich verlaufene Nass-in-nass-Übergänge (Himmel, Ferne, Wolkenunterseiten) gegen hart gesetzte, deckende Details (Grasbüschel, Blattcluster, Silhouetten). Unser Bild ist überall gleich scharf.
+Umsetzung: distanz- und materialabhängige Weichzeichnung im Post-Pass — Ferne und Himmel bekommen einen sehr leichten Blur, der Vordergrund bleibt hart. Faktisch ein „malerischer Tiefenschärfe"-Pass, gesteuert über die vorhandene Tiefentextur (existiert seit Runde D), aber ohne Bokeh-Optik: nur 2–3 px, damit es nach Papier aussieht und nicht nach Kamera.
+
+### 2. Sichtbare Pinselführung in den Massen
+Die Aquarelltextur moduliert heute Helligkeit, aber ohne **Richtung**. Gemalte Flächen haben Strichrichtung: Gras nach oben, Wege längs, Hänge dem Gefälle folgend.
+Umsetzung: eine gerichtete Rauschtextur (anisotrop, z. B. 1:6 gestreckt), im Shader entlang der Hangrichtung bzw. der Pfadrichtung orientiert. Kostet eine Textur und ein paar Zeilen im Malschicht-Patch.
+
+### 3. Silhouetten-Disziplin
+Ghibli-Bäume lesen auch als schwarze Fläche noch als Baum. Unsere Kronen sind gute Cluster, aber die Umrisse sind zu gleichmäßig gefiedert.
+Umsetzung: pro Baum 1–3 „Ausreißer"-Blattgruppen, die deutlich aus der Krone ragen (der klassische Oga-Kniff), plus gelegentlich ein toter Ast. Determinismus über den vorhandenen Baum-Seed.
+
+### 4. Wolken mit Volumen statt Deckkraft
+Aktuell 40 Cumulus × 4 Puffs in drei Tiefenlagen, Kanten aus der Textur. Was fehlt: **Selbstverschattung** (Unterseite trägt die Schattenfarbe, Oberkante Streulicht) und **Verformung über die Zeit** (Wolken bauen sich um, statt starr zu driften).
+Umsetzung: Puff-Instanzen bekommen zwei Farben (oben/unten) über die Instanzfarbe plus einen langsamen Verformungs-Offset aus dem Wind-Uniform.
+
+### 5. Bodenkontakt und Verschmutzung
+In den Vorlagen ist nichts sauber aufgesetzt: um jeden Baumfuß Gras und Laub, an Mauern Moos, unter Dächern Schmutzstreifen, an Wegrändern zertretene Zonen (Letzteres haben wir schon als `wear`).
+Umsetzung: „Saum-Emitter" — jedes größere Objekt streut beim Setzen automatisch ein paar Kleinteile um seinen Fuß. Billig, weil es die vorhandenen Pools nutzt, und es tilgt den Eindruck platzierter Requisiten.
+
+### 6. Menschliche Spur
+Ghibli-Landschaften sind **bewohnt**: Wäscheleinen, Zäune mit Lücken, Karren, Feldwege, die irgendwo hinführen, Rauch aus genau einem Schornstein. Ein Teil davon existiert; was fehlt, ist die **Absicht** — Wege, die Orte verbinden, statt frei gezeichnet zu werden.
+Umsetzung: „Wegfindung" zwischen zwei gesetzten Punkten entlang des Terrains (A* auf dem Höhenfeld mit Steigungskosten). Der Nutzer setzt Anfang und Ende, der Weg sucht sich den plausiblen Verlauf — das ist der Unterschied zwischen einer gezeichneten Linie und einem gewachsenen Pfad.
+
+### 7. Farbdramaturgie statt konstanter Palette
+Die Recherche zeigt: Sättigung ist bei Ghibli **erzählerisch** (hoch in freudigen, gedämpft in stillen Momenten). Unsere Presets sind statisch.
+Umsetzung: pro Karte ein Stimmungsregler (0 = gedämpft/melancholisch, 1 = leuchtend/festlich), der Sättigung, Bloom und Fensterglut gemeinsam verschiebt — ein Regler, der die ganze Karte umfärbt, ohne die Presets zu duplizieren.
+
+### 8. Der eine „Ma"-Moment
+Miyazakis Leerstellen: Jede Karte sollte eine große ruhige Fläche haben dürfen. Der Editor verführt heute zum Vollstellen (jede Fläche wird bestückt).
+Umsetzung: eine unaufdringliche Anzeige „Belegte Fläche: 68 %" mit Zielkorridor — Design-Feedback statt Zwang. Klingt klein, ändert aber das Verhalten beim Bauen.
