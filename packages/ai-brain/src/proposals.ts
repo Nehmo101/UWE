@@ -1,6 +1,5 @@
-import { validateAtlasPlotFillProposal } from "./proposal-validators/plot-fill-proposal";
-import { validateRtxAtlasAssetProposal } from "./proposal-validators/rtx-asset-proposal";
 import { validateTerraWorldDraft } from "./proposal-validators/terra-world-draft";
+import { readModelJson } from "./model-json";
 import type { BrainActionDefinition } from "./actions";
 import type { AiProposalTargetType } from "./actions";
 
@@ -33,20 +32,6 @@ function extractMailSubject(text: string): { subject: string; body: string } {
     return { subject, body };
   }
   return { subject: "Session-Update", body: text.trim() };
-}
-
-function extractJsonObject(text: string): unknown {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const source = fenced?.[1]?.trim() || trimmed;
-  const start = source.indexOf("{");
-  const end = source.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
-  try {
-    return JSON.parse(source.slice(start, end + 1));
-  } catch {
-    return null;
-  }
 }
 
 export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[] {
@@ -124,87 +109,39 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
     ];
   }
 
-  if (action.id === "atlas_name_regions") {
+  /* The two Terra text actions produce prose. No validator runs on them: the
+     answer IS the proposal, it is read by a human and never applied
+     automatically (`autoApply: false`). */
+  if (action.id === "terra_name_regions" || action.id === "terra_describe_region") {
     return [
       {
-        id: `${baseId}-atlas-names`,
+        id: `${baseId}-${action.id}`,
         label: action.defaultProposalLabel,
         content: resultText.trim(),
-        targetType: "atlas_draft_names",
+        targetType: action.defaultProposalTarget,
         targetId: pageId ?? null,
         visibility: "dm_only",
         status: "pending",
         metadata: {
           source: "ai_generated",
           autoApply: false,
-        },
-      },
-    ];
-  }
-
-  if (action.id === "atlas_fill_area") {
-    const parsed = extractJsonObject(resultText);
-    const validation = validateAtlasPlotFillProposal(parsed);
-    const validContent = validation.ok
-      ? JSON.stringify(validation.proposal, null, 2)
-      : resultText.trim();
-    return [
-      {
-        id: `${baseId}-atlas-plot-fill`,
-        label: action.defaultProposalLabel,
-        content: validContent,
-        targetType: "atlas_plot_fill",
-        targetId: pageId ?? null,
-        visibility: "dm_only",
-        status: "pending",
-        metadata: {
-          source: "ai_generated",
-          autoApply: false,
-          proposalKind: "atlas_plot_fill",
-          validation: validation.ok ? "ok" : "invalid",
-          ...(validation.ok
-            ? { warnings: validation.warnings }
-            : { errors: validation.errors }),
-        },
-      },
-    ];
-  }
-
-  if (action.id === "atlas_generate_asset_proposal") {
-    const parsed = extractJsonObject(resultText);
-    const validation = validateRtxAtlasAssetProposal(parsed);
-    const validContent = validation.ok
-      ? JSON.stringify(validation.proposal, null, 2)
-      : resultText.trim();
-    return [
-      {
-        id: `${baseId}-atlas-asset`,
-        label: action.defaultProposalLabel,
-        content: validContent,
-        targetType: "atlas_asset_proposal",
-        targetId: pageId ?? null,
-        visibility: "dm_only",
-        status: "pending",
-        metadata: {
-          source: "ai_generated",
-          autoApply: false,
-          proposalKind: "atlas_asset_proposal",
-          validation: validation.ok ? "ok" : "invalid",
-          ...(validation.ok
-            ? { warnings: validation.warnings, outputType: validation.proposal.outputType }
-            : { errors: validation.errors }),
         },
       },
     ];
   }
 
   if (action.id === "terra_world_draft") {
-    /* Unlike the Atlas proposals this one CLAMPS instead of rejecting: an
-       unusable answer would leave the user with nothing, a clamped one leaves
-       them with a boring map they can edit. `content` therefore always holds
-       the validated draft when the answer was JSON at all — what the model
-       lost is listed in `notices`, and the panel shows it. */
-    const parsed = extractJsonObject(resultText);
+    /* This validator CLAMPS instead of rejecting: an unusable answer would
+       leave the user with nothing, a clamped one leaves them with a boring map
+       they can edit. `content` therefore always holds the validated draft when
+       the answer was JSON at all — what the model lost is listed in `notices`,
+       and the panel shows it.
+
+       `readModelJson` is the one shared reader (fences, preamble, balanced
+       braces). By the time we get here the router has already spent its single
+       repair attempt on this text; if it is still not JSON, the validator says
+       so and the panel shows the raw answer. */
+    const parsed = readModelJson(resultText);
     const validation = validateTerraWorldDraft(parsed);
     return [
       {

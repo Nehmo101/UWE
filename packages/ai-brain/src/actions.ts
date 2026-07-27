@@ -10,10 +10,8 @@ export type BrainActionId =
   | "player_handout"
   | "fill_dungeon_room"
   | "mail_draft"
-  | "atlas_name_regions"
-  | "atlas_describe_region"
-  | "atlas_fill_area"
-  | "atlas_generate_asset_proposal"
+  | "terra_name_regions"
+  | "terra_describe_region"
   | "terra_world_draft";
 
 export type AiProposalTargetType =
@@ -23,10 +21,8 @@ export type AiProposalTargetType =
   | "brain_document"
   | "idea_page"
   | "mail_draft"
-  | "atlas_draft_names"
-  | "atlas_region_description"
-  | "atlas_plot_fill"
-  | "atlas_asset_proposal"
+  | "terra_region_names"
+  | "terra_region_description"
   | "terra_world_draft";
 
 export interface BrainActionDefinition {
@@ -131,53 +127,34 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     defaultProposalTarget: "mail_draft",
     defaultProposalLabel: "Mail-Entwurf",
   },
-  atlas_name_regions: {
-    id: "atlas_name_regions",
-    label: "Atlas-Regionen benennen",
+  /* The two surviving map text actions. They produce PROSE, not data — no
+     validator, no JSON: a list of name suggestions and a description are read
+     by a human and copied by hand. That is also why they need no bridge into
+     the Terra frame and could be revived after Atlas went: nothing in their
+     contract ever touched an Atlas table. */
+  terra_name_regions: {
+    id: "terra_name_regions",
+    label: "Regionen benennen",
     description:
-      "Schlägt stimmungsvolle Namen für Regionen, Gebirge, Wälder, Flüsse und Städte im Atlas-Entwurf vor. Nie automatisch in den Kanon.",
-    taskType: "atlas_name_region",
+      "Schlägt stimmungsvolle Namen für Regionen, Gebirge, Wälder, Flüsse und Orte einer Terra-Karte vor. Nie automatisch in den Kanon.",
+    taskType: "terra_name_regions",
     requiresSession: false,
     playerSafe: false,
     audience: "dm_internal",
-    defaultProposalTarget: "atlas_draft_names",
-    defaultProposalLabel: "Atlas-Namen Vorschläge",
+    defaultProposalTarget: "terra_region_names",
+    defaultProposalLabel: "Namensvorschläge zur Karte",
   },
-  atlas_describe_region: {
-    id: "atlas_describe_region",
+  terra_describe_region: {
+    id: "terra_describe_region",
     label: "Region beschreiben",
     description:
-      "Schreibt eine atmosphärische DM-Beschreibung für eine ausgewählte Kartenregion. Nie automatisch in den Kanon.",
-    taskType: "atlas_describe_region",
+      "Schreibt eine atmosphärische DM-Beschreibung für einen Ausschnitt der Karte. Nie automatisch in den Kanon.",
+    taskType: "terra_describe_region",
     requiresSession: false,
     playerSafe: false,
     audience: "dm_internal",
-    defaultProposalTarget: "atlas_region_description",
+    defaultProposalTarget: "terra_region_description",
     defaultProposalLabel: "Regionsbeschreibung (Entwurf)",
-  },
-  atlas_fill_area: {
-    id: "atlas_fill_area",
-    label: "Atlas-Objektfläche füllen",
-    description:
-      "Schlägt ein sicheres Gouache-Scatter-Rezept für eine Atlas-Objektfläche vor. RTX liefert nur Parameter, nie fertige Kartenobjekte.",
-    taskType: "atlas_fill_area",
-    requiresSession: false,
-    playerSafe: false,
-    audience: "dm_internal",
-    defaultProposalTarget: "atlas_plot_fill",
-    defaultProposalLabel: "Atlas-Objektfläche (Rezept)",
-  },
-  atlas_generate_asset_proposal: {
-    id: "atlas_generate_asset_proposal",
-    label: "Atlas-Asset vorschlagen",
-    description:
-      "Schlägt ein sicheres Atlas-Gouache-Asset auf Basis des Styleguides vor. RTX liefert nur ein validierbares Asset-Proposal, nie Code.",
-    taskType: "atlas_generate_asset_proposal",
-    requiresSession: false,
-    playerSafe: false,
-    audience: "dm_internal",
-    defaultProposalTarget: "atlas_asset_proposal",
-    defaultProposalLabel: "Atlas-Asset-Proposal",
   },
   terra_world_draft: {
     id: "terra_world_draft",

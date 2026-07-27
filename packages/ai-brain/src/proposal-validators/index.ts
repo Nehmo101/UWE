@@ -7,11 +7,13 @@
  * object, never the raw one. The prompt context is derived from the same
  * constants the validator enforces, so prompt and validator cannot drift.
  *
- * Moved here from the retired `@uwe/atlas` package; `@uwe/ai-brain` is the
- * only consumer.
+ * Only one validator is left. `gouache-registry`, `plot-fill-proposal` and
+ * `rtx-asset-proposal` (with `rtx-asset-schema` and `rtx-asset-prompt-context`,
+ * ~1.660 Zeilen) came from the retired `@uwe/atlas` package and validated Atlas
+ * gouache assets and AtlasObject scatter recipes. Both data models went with
+ * Atlas 3D; the two Brain actions that fed them went on 28.07.2026, and the
+ * validators with them — a validator without a caller is exactly the dead
+ * weight `packages/atlas` became.
  */
 
-export * from "./gouache-registry";
-export * from "./plot-fill-proposal";
-export * from "./rtx-asset-proposal";
 export * from "./terra-world-draft";

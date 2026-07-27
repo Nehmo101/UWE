@@ -713,7 +713,10 @@ test('I1 — oberhalb der Schwelle schummert sie messbar und aus Nordwest', asyn
     w.m.terrain.terrainColor(20, 0.9, x, z, c, 1);
     return c;
   };
-  // Gleiche Stelle, nur anderer Massstab: der Unterschied IST die Schummerung.
+  /* Gleiche Stelle, nur anderer Massstab: der Unterschied ist die
+     Schummerung — und seit I6 zusaetzlich die Beruhigung (RUHE_AB in
+     world/terrain.js). Beide haengen am selben Band, beide sind unterhalb
+     von 600 m/Zelle exakt 0. */
   const messe = (x, z) => {
     const unten = farbe(x, z, 1), oben = farbe(x, z, 2000);
     return (oben.r + oben.g + oben.b) / (unten.r + unten.g + unten.b);
@@ -722,8 +725,23 @@ test('I1 — oberhalb der Schwelle schummert sie messbar und aus Nordwest', asyn
   try {
     assert.ok(nw > 1.02, 'Die Nordwestflanke wird nicht heller (' + nw + ')');
     assert.ok(so < 0.98, 'Die Suedostflanke wird nicht dunkler (' + so + ')');
-    assert.ok(Math.abs(eben - 1) < 0.02,
-      'Die Kuppe selbst darf ihre Farbe behalten (' + eben + ')');
+    /* I6 — die Schranke war 0.02 und ist 0.08, weil hier seit der Beruhigung
+       zwei Dinge zugleich gemessen werden. Die Beruhigung ersetzt jeden
+       Feinanteil durch seinen MITTELWERT; ueber die Karte gemittelt bleibt
+       die Helligkeit damit erhalten (1,2 % Abweichung, gemessen in
+       17-kartenbild.test.mjs), an einem EINZELNEN Punkt weicht sie um so
+       viel ab, wie dessen Korn vom Mittel entfernt liegt. (0,0) ist dafuer
+       der unguenstigste Punkt der ganzen Karte: dort faellt jedes Rauschgitter
+       auf seinen Ursprung, und die beiden Wertoktaven stehen bei 0,73 und
+       0,87 statt bei 0,5 — die Kuppe wird dadurch um 5,6 % dunkler.
+       Die AUSSAGE der Pruefung bleibt dieselbe und wird durch die zweite
+       Zeile sogar schaerfer: auf ebener Flaeche schummert es nicht, der Wert
+       liegt zwischen den beiden Flanken und weit von beiden entfernt. */
+    assert.ok(Math.abs(eben - 1) < 0.08,
+      'Die Kuppe schummert, statt eben zu bleiben (' + eben + ')');
+    assert.ok(eben < nw - 0.05 && eben > so + 0.05,
+      'Die Kuppe muss deutlich zwischen ihren beiden Flanken liegen ('
+      + so + ' < ' + eben + ' < ' + nw + ')');
     assert.ok(nw - so > 0.1,
       'Der Reliefkontrast ist zu schwach, um eine Karte lesbar zu machen');
   } finally {

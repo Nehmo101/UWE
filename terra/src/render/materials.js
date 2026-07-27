@@ -6,6 +6,10 @@
 import * as THREE from 'three';
 import { TEX } from './textures.js';
 import { windUniforms, WIND_GLSL } from '../world/wind.js';
+/* I6 — Biom-LUT. world/biomfeld.js haengt nur an core/rng.js und
+   core/store.js und importiert nichts aus render/ — der Graph bleibt also
+   azyklisch, obwohl world/terrain.js beide Dateien importiert. */
+import { biomLutDaten, biomLutFormat } from '../world/biomfeld.js';
 
 /** Feste Laenge des Arbor-Lichtarrays. GLSL kennt keine variablen Arrays —
  *  ungenutzte Plaetze tragen staerke 0 und kosten nur eine Multiplikation. */
@@ -56,7 +60,16 @@ const terraUniforms = {
   uArborPos: { value: arborLeer() },
   uArborAnzahl: { value: 0 },
   uArborFarbe: { value: new THREE.Color(0xdfe8f0) },
-  uArborStaerke: { value: 0 }
+  uArborStaerke: { value: 0 },
+  /* I6 — Biomflaechen im Shader. Solange uBiomAn 0 ist (keine Flaeche auf der
+     Karte), wird der ganze Zweig uniform-kohaerent uebersprungen und das Bild
+     ist byteidentisch zu einer Fassung ohne diesen Patch. Die beiden Texturen
+     zeigen dann auf 1x1-Attrappen, damit kein Sampler unbelegt bleibt. */
+  uBiomAn: { value: 0 },
+  uBiomKarte: { value: null },
+  uBiomLut: { value: null },
+  uBiomAbb: { value: new THREE.Vector2(1 / 257, 128.5 / 257) },
+  uBiomZeilen: { value: 1 }
 };
 
 /**
@@ -76,6 +89,114 @@ const FAMILIEN = {
   stoff:      { tex: 'aquarellFein',   skala: 0.6,  staerke: 0.12 },
   erde:       { tex: 'aquarellGrob',   skala: 0.22, staerke: 0.15 }
 };
+
+/* ==========================================================================
+   I6 — Die Biom-Nachschlagetabelle
+
+   Bis hierher waren Schneeauflage, Kuehle, Bruch und Kante GLOBAL: ein
+   Uniformsatz je Karte, gesetzt aus dem `schnee`-Block des Kartenbioms. Eine
+   Karte mit einer Schneeflaeche im Norden und einer Wueste im Sueden hatte
+   deshalb ueberall dieselbe Schneeauflage — die Biomflaechen aus Runde I2
+   faerbten das Gelaende um, liessen den Schnee auf Daechern, Felsen und
+   Baeumen aber unveraendert liegen.
+
+   Der Weg dorthin steht seit I2 in world/biomfeld.js (Abschnitt 12) und wird
+   hier eingehaengt. Zwei Texturen, beide winzig:
+
+   * die LUT — 2 x BIOM_ANZAHL Texel, RGBA-Float. Zeile = Biomindex, Texel 0
+     traegt (auflage, kuehle, bruch, partikelStaerke), Texel 1
+     (kanteA, kanteB, hoeheA, hoeheB). Sie wird EINMAL gebaut; die
+     BIOME-Registry aendert sich zur Laufzeit nicht.
+   * die Biomkarte — VW x VW Texel, RG-Byte: r = Biomindex, g = Gewicht. Sie
+     ist die GPU-Sicht auf genau die beiden Felder, die world/terrain.js schon
+     fuer die Terrainfarbe fuehrt (biomFeld/biomGewicht), und wird von dort
+     nach jedem rebuildBiomFeld nachgereicht.
+
+   Die Weltabbildung ist wortgleich die der Bruchmaske (generators/paths.js):
+   uBiomAbb = vec2( 1/VW, (HALF+0.5)/VW ), damit Texelmitte auf Gittervertex
+   faellt. NearestFilter ist Pflicht und nicht Geschmack — ein interpolierter
+   Biomindex waere der Mittelwert zweier Zeilennummern und zeigte damit auf
+   ein drittes, unbeteiligtes Biom.
+
+   Was NICHT in der LUT steht, steht schon in biomfeld.js begruendet:
+   Schneefarbe und Partikelfarbe. Sie sind Farben, keine Staerken; die
+   Flaechen bekommen also die Menge und die Kante ihres Bioms, den Farbton
+   weiter von der Karte. Fuer den Schnee ist das unauffaellig (alle
+   Schneetoene liegen zwischen 0xeff4f8 und 0xf6fbff), fuer Partikel waere es
+   sichtbar — deshalb liest world/vfx.js die Spalte `partikelStaerke` bis auf
+   Weiteres nicht ueber diesen Weg, siehe Bericht.
+   ========================================================================== */
+var LEER_TEX = new THREE.DataTexture(new Uint8Array(2), 1, 1,
+  THREE.RGFormat, THREE.UnsignedByteType);
+LEER_TEX.needsUpdate = true;
+terraUniforms.uBiomKarte.value = LEER_TEX;
+terraUniforms.uBiomLut.value = LEER_TEX;
+
+var biomLutTex = null;
+/** Baut die LUT beim ersten Gebrauch. */
+function holeBiomLut() {
+  if (biomLutTex) return biomLutTex;
+  var F = biomLutFormat({ spalten: 8 });
+  var t = new THREE.DataTexture(biomLutDaten({ spalten: 8 }), F.breite, F.hoehe,
+    THREE.RGBAFormat, THREE.FloatType);
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false;
+  t.colorSpace = THREE.NoColorSpace;
+  t.needsUpdate = true;
+  biomLutTex = t;
+  terraUniforms.uBiomZeilen.value = F.zeilen;
+  return t;
+}
+
+var biomKarte = null;       // Uint8Array(VW*VW*2), verschraenkt: Index, Gewicht
+var biomKarteTex = null;
+var biomKarteVW = 0;
+
+/**
+ * I6 — Biomfeld und Biomgewicht an die GPU reichen. Wird von
+ * world/terrain.js am Ende von rebuildBiomFeld gerufen; `feld` und `gewicht`
+ * sind dieselben Uint8Array, die auch terrainColor liest.
+ *
+ * Liegt keine einzige Flaeche auf der Karte (alle Gewichte 0), wird uBiomAn
+ * auf 0 gesetzt: der Shaderzweig faellt weg, und das Bild ist Fragment fuer
+ * Fragment das bisherige. Genau dieselbe Zusage wie bei den Biomflaechen in
+ * terrainColor — eine Karte ohne Biomflaechen sieht aus wie immer.
+ */
+function setzeBiomKarte(feld, gewicht, VW, MAP) {
+  var n = VW * VW;
+  if (!feld || !gewicht || !(n > 0) || feld.length < n || gewicht.length < n) {
+    terraUniforms.uBiomAn.value = 0;
+    return 0;
+  }
+  if (!biomKarte || biomKarteVW !== VW || biomKarte.length !== n * 2) {
+    if (biomKarteTex) biomKarteTex.dispose();
+    biomKarte = new Uint8Array(n * 2);
+    biomKarteVW = VW;
+    var t = new THREE.DataTexture(biomKarte, VW, VW, THREE.RGFormat, THREE.UnsignedByteType);
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false;
+    t.colorSpace = THREE.NoColorSpace;
+    t.wrapS = THREE.ClampToEdgeWrapping;
+    t.wrapT = THREE.ClampToEdgeWrapping;
+    biomKarteTex = t;
+    terraUniforms.uBiomKarte.value = t;
+  }
+  var belegt = 0;
+  for (var k = 0; k < n; k++) {
+    var g = gewicht[k];
+    biomKarte[k * 2] = feld[k];
+    biomKarte[k * 2 + 1] = g;
+    if (g > 0) belegt++;
+  }
+  biomKarteTex.needsUpdate = true;
+  terraUniforms.uBiomAbb.value.set(1 / VW, ((MAP / 2) + 0.5) / VW);
+  if (belegt > 0) holeBiomLut();
+  terraUniforms.uBiomLut.value = biomLutTex || LEER_TEX;
+  terraUniforms.uBiomAn.value = belegt > 0 ? 1 : 0;
+  return belegt;
+}
 
 /** Diagnose: greift jeder Patch? Wird auf window exponiert.
  *  `vfx` gehoert zum Partikel-Shader in world/vfx.js und wird HIER nur
@@ -210,6 +331,17 @@ function terraPatch(shader, opts) {
   shader.uniforms.uSchneeFarbe = terraUniforms.uSchneeFarbe;
   shader.uniforms.uSchneeKuehle = terraUniforms.uSchneeKuehle;
   shader.uniforms.uSchneeBruch = terraUniforms.uSchneeBruch;
+  /* I6 — die Biom-LUT haengt an DERSELBEN Bindungsregel wie die Schneemenge:
+     Materialien mit ohneSchnee (das Terrain) bekommen eine tote {value:0}-
+     Bindung. Das Terrain faerbt seine Biomflaechen schon in terrainColor auf
+     der CPU (mischPalette) — liesse man den Zweig hier zusaetzlich zu, laege
+     die Schneeauflage der Flaeche ein zweites Mal darueber. */
+  shader.uniforms.uBiomAn = (opts && opts.ohneSchnee)
+    ? { value: 0 } : terraUniforms.uBiomAn;
+  shader.uniforms.uBiomKarte = terraUniforms.uBiomKarte;
+  shader.uniforms.uBiomLut = terraUniforms.uBiomLut;
+  shader.uniforms.uBiomAbb = terraUniforms.uBiomAbb;
+  shader.uniforms.uBiomZeilen = terraUniforms.uBiomZeilen;
   shader.uniforms.uArborPos = terraUniforms.uArborPos;
   shader.uniforms.uArborAnzahl = terraUniforms.uArborAnzahl;
   shader.uniforms.uArborFarbe = terraUniforms.uArborFarbe;
@@ -219,6 +351,8 @@ function terraPatch(shader, opts) {
     'uniform sampler2D uCloudTex;\n' +
     'uniform float uSchneeAuflage;\nuniform vec2 uSchneeKante;\nuniform vec2 uSchneeHoehe;\n' +
     'uniform vec3 uSchneeFarbe;\nuniform float uSchneeKuehle;\nuniform float uSchneeBruch;\n' +
+    'uniform float uBiomAn;\nuniform sampler2D uBiomKarte;\nuniform sampler2D uBiomLut;\n' +
+    'uniform vec2 uBiomAbb;\nuniform float uBiomZeilen;\n' +
     'uniform vec4 uArborPos[' + ARBOR_MAX + '];\nuniform int uArborAnzahl;\n' +
     'uniform vec3 uArborFarbe;\nuniform float uArborStaerke;\n';
 
@@ -435,25 +569,59 @@ function terraPatch(shader, opts) {
   if (hatWelt && hatNorm) {
     var sk = '#include <color_fragment>';
     if (ersetze(shader, 'fragmentShader', sk, sk + '\n' +
-        'if ( uSchneeAuflage > 0.0 ) {\n' +
+        /* I6 — die fuenf Schneewerte kommen ab hier aus einer lokalen Kopie
+           statt direkt aus dem Uniform. Ohne Biomflaeche traegt die Kopie den
+           Uniformwert unveraendert weiter (mix mit Gewicht 0 gibt es gar
+           nicht — der Zweig wird uebersprungen), das Bild ist also dasselbe.
+           Mit Flaeche wird JEDER der fuenf Werte mit dem Flaechengewicht
+           gegen die LUT-Zeile des Flaechenbioms geblendet: dieselbe weiche
+           Kante, die auch die Terrainfarbe benutzt (biomGewicht ist bereits
+           ausgefranst und ausgelaufen, siehe world/biomfeld.js). */
+        'float terraSAufl = uSchneeAuflage;\n' +
+        'vec2 terraSKante = uSchneeKante;\n' +
+        'vec2 terraSHoehe = uSchneeHoehe;\n' +
+        'float terraSKuehl = uSchneeKuehle;\n' +
+        'float terraSBruch = uSchneeBruch;\n' +
+        'if ( uBiomAn > 0.0 ) {\n' +
+        '  vec2 terraBUV = vTerraW.xz * uBiomAbb.x + uBiomAbb.y;\n' +
+        // Ausserhalb der Karte klemmte ClampToEdge auf die Randtexel und
+        // zoege das Randbiom ins Unendliche — dieselbe Vorsichtsmassnahme
+        // wie bei der Bruchmaske in (9).
+        '  vec2 terraBIn = step( vec2( 0.0 ), terraBUV ) * step( terraBUV, vec2( 1.0 ) );\n' +
+        '  vec4 terraBK = texture2D( uBiomKarte, terraBUV );\n' +
+        '  float terraBW = terraBK.g * terraBIn.x * terraBIn.y;\n' +
+        '  if ( terraBW > 0.0 ) {\n' +
+        // r ist der Biomindex als Byte; *255 macht daraus wieder die
+        // Zeilennummer, +0.5 trifft die Texelmitte (NearestFilter).
+        '    float terraBZ = ( terraBK.r * 255.0 + 0.5 ) / uBiomZeilen;\n' +
+        '    vec4 terraL0 = texture2D( uBiomLut, vec2( 0.25, terraBZ ) );\n' +
+        '    vec4 terraL1 = texture2D( uBiomLut, vec2( 0.75, terraBZ ) );\n' +
+        '    terraSAufl = mix( terraSAufl, terraL0.r, terraBW );\n' +
+        '    terraSKuehl = mix( terraSKuehl, terraL0.g, terraBW );\n' +
+        '    terraSBruch = mix( terraSBruch, terraL0.b, terraBW );\n' +
+        '    terraSKante = mix( terraSKante, terraL1.rg, terraBW );\n' +
+        '    terraSHoehe = mix( terraSHoehe, terraL1.ba, terraBW );\n' +
+        '  }\n' +
+        '}\n' +
+        'if ( terraSAufl > 0.0 ) {\n' +
         // gl_FrontFacing: Kronen, busch, gras, farn, moos und rankenblatt
         // laufen mit side: DoubleSide. Three flippt seine eigene normal, unser
         // Varying nicht — ohne die Korrektur bliebe jede zweite sichtbare
         // Blattflaeche schneefrei und das Laub wirkte zerfressen.
         '  vec3 terraSN = normalize( vTerraN );\n' +
         '  float terraNy = gl_FrontFacing ? terraSN.y : -terraSN.y;\n' +
-        '  float terraOben = smoothstep( uSchneeKante.x, uSchneeKante.y, terraNy );\n' +
+        '  float terraOben = smoothstep( terraSKante.x, terraSKante.y, terraNy );\n' +
         // Bruch-Rauschen aus der vorhandenen Wolkentextur: die Decke reisst
         // auf, statt gleichmaessig zu ueberziehen. Keine neue Textur noetig.
         '  float terraBruch = texture2D( uCloudTex, vTerraW.xz * 0.11 ).r;\n' +
-        '  terraOben *= mix( 1.0, smoothstep( 0.30, 0.72, terraBruch ), uSchneeBruch );\n' +
-        '  terraOben *= smoothstep( uSchneeHoehe.x, uSchneeHoehe.y, vTerraW.y );\n' +
-        '  float terraS = uSchneeAuflage * terraOben;\n' +
+        '  terraOben *= mix( 1.0, smoothstep( 0.30, 0.72, terraBruch ), terraSBruch );\n' +
+        '  terraOben *= smoothstep( terraSHoehe.x, terraSHoehe.y, vTerraW.y );\n' +
+        '  float terraS = terraSAufl * terraOben;\n' +
         '  diffuseColor.rgb = mix( diffuseColor.rgb, uSchneeFarbe, terraS );\n' +
         // Leichte Kuehlung: Schnee im Schatten kippt ins Blaue, ohne die
         // Saettigung anzuheben (die Kalt-Warm-Logik bleibt der Kern).
         '  diffuseColor.rgb = mix( diffuseColor.rgb,\n' +
-        '    diffuseColor.rgb * vec3( 0.94, 0.98, 1.06 ), terraS * uSchneeKuehle );\n' +
+        '    diffuseColor.rgb * vec3( 0.94, 0.98, 1.06 ), terraS * terraSKuehl );\n' +
         '}', 'schneeauflage')) {
       patchInfo.schnee++;
     }
@@ -769,4 +937,5 @@ function setArborQuellen(liste) {
 }
 
 export { terraUniforms, patchInfo, terraPatch, terraMat, tintedMats, FAMILIEN,
-  vineMat, leafMat, rockMat, ARBOR_MAX, setSchnee, setArborQuellen, setBruchQuelle };
+  vineMat, leafMat, rockMat, ARBOR_MAX, setSchnee, setArborQuellen, setBruchQuelle,
+  setzeBiomKarte, holeBiomLut };

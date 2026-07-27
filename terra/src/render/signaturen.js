@@ -281,6 +281,30 @@ var ZEICHEN = {
     { streifen: true, strich: true }),
   sig_seeweg:         z('linie', 0.0018, UEBERGABE.voll,   'H', 'wasser',
     { streifen: true, strich: true }),
+  /* I6 — der GRUNDRISS, den der Katalog als naechsten Schritt nennt: „eine
+     Burg mit drei Mauerringen verdient ihre Form" statt eines groesseren
+     Rechtecks. Er steht in der Liniengruppe und nicht bei den Bauwerken,
+     obwohl er eine Anlage zeigt: er ist ein STREIFEN, laeuft also am Umriss
+     entlang statt in dessen Mitte zu stehen, und die Gruppe entscheidet in
+     diesem Modul ueber die Bauart des Zeichens, nicht ueber sein Thema
+     (11-signaturen haelt genau das fest: `streifen` gilt fuer die
+     Liniengruppe und nur fuer sie).
+
+     Warum er bei `nah` (1200) endet und nicht wie sig_burg bei `gross`: der
+     Grundriss ist die WAHRE Ausdehnung der Anlage. Solange man sie als
+     Anlage liest, ist das die genauere Auskunft; sobald die Karte einen
+     Landstrich zeigt, ist die Burg ein Ort und kein Bauwerk mehr — dann
+     gehoert dorthin ein Zeichen und keine Grundflaeche. Das Punktzeichen
+     laeuft die ganze Zeit mit; beides zusammen ist die Staffelung, die ein
+     Messtischblatt einem Uebersichtsblatt voraushat.
+
+     `anteil` ist bei einem Streifen die BANDBREITE, nicht die
+     Zeichengroesse. 0.0050 liegt zwischen Kueste (0.0045) und Handelsstrasse
+     (0.0035): der Umriss ist die Aussenkante eines Bauwerks und darf kraeftiger
+     stehen als ein Weg, ohne zur Mauer zu werden — bei voll im Bild stehender
+     Karte sind das rund vier Bildpunkte Band mit gut einem Punkt Tinte darin. */
+  sig_grundriss:      z('linie', 0.0050, UEBERGABE.nah,    'A', 'tinte',
+    { streifen: true }),
 
   /* --- 5. Arbor ----------------------------------------------------------
      Der Hauskanon: Terra ist auseinandergerissen und wird vom weissen,
@@ -540,6 +564,17 @@ var SACHEN = {
     waehle: nachArt('sig_ranke',
       ['sig_ranke', 'sig_rankenfuss', 'sig_arborknoten', 'sig_lichtbruecke']) },
 
+  /* I6 — der Grundriss ist eine eigene SACHE und kein Zusatz zum Wehrbau,
+     denn seine Kette ist eine andere: ein Wehrbau wird ueber der Uebergabe
+     zum Zeichen und bleibt es bis 2500, der Grundriss ist der Koerper VON
+     OBEN und hoert deshalb frueher auf. Er beginnt genau dort, wo der
+     Baukoerper endet, und endet dort, wo aus der Anlage ein Ort wird. */
+  grundriss: { label: 'Grundriss einer Anlage', leit: 'sig_grundriss',
+    zeichen: ['sig_grundriss'],
+    kette: kette(K(UEBERGABE.koerper), Zs(UEBERGABE.nah),
+      Weg(UEBERGABE.voll, 'ab Regionsmassstab traegt das Punktzeichen die Anlage')),
+    waehle: nachArt('sig_grundriss', ['sig_grundriss']) },
+
   bruch: { label: 'Bruchkante', leit: 'sig_bruchkante', zeichen: ['sig_bruchkante'],
     kette: kette(K(UEBERGABE.koerper), Zs(UEBERGABE.voll)),
     waehle: nachArt('sig_bruchkante', ['sig_bruchkante']) }
@@ -746,16 +781,25 @@ var ARBOR_FARBE = [1.22, 1.30, 1.36];
 
 /* Woher ein Ton seine Palettenfarbe zieht und wie stark er sie abdunkelt.
    Abgedunkelt wird, weil die Palette Flaechenfarben beschreibt: eine Marke in
-   exakt der Flaechenfarbe waere unsichtbar. */
+   exakt der Flaechenfarbe waere unsichtbar.
+
+   I6 — die Faktoren der LANDtoene sind um rund ein Sechstel gefallen (0.62 →
+   0.52 usw.). Der Grund haengt mit der Beruhigung in world/terrain.js
+   zusammen: solange die Flaeche unter der Marke selbst gesprenkelt war,
+   verschwand ein Zeichen mit 62 % der Grundfarbe im Rauschen, und mehr
+   Kontrast haette es nur lauter, nicht lesbarer gemacht. Auf einer
+   beruhigten Flaeche ist der Kontrast des Zeichens gegen sie das EINZIGE,
+   was es sichtbar macht. Die Wassertoene bleiben unveraendert: sie hellen
+   auf (Faktor > 1), weil `tiefe` der dunkelste Wert der Palette ist. */
 var TON_QUELLE = {
-  bewuchs: { feld: 'grasKuehl',    faktor: 0.62 },
-  kultur:  { feld: 'grasTrocken',  faktor: 0.66 },
+  bewuchs: { feld: 'grasKuehl',    faktor: 0.52 },
+  kultur:  { feld: 'grasTrocken',  faktor: 0.56 },
   nass:    { feld: 'tiefe',        faktor: 1.15 },
-  trocken: { feld: 'sand',         faktor: 0.62 },
-  kalt:    { feld: 'schnee',       faktor: 0.66 },
-  stein:   { feld: 'fels',         faktor: 0.60 },
+  trocken: { feld: 'sand',         faktor: 0.53 },
+  kalt:    { feld: 'schnee',       faktor: 0.58 },
+  stein:   { feld: 'fels',         faktor: 0.50 },
   wasser:  { feld: 'tiefe',        faktor: 1.25 },
-  grenze:  { feld: 'erde',         faktor: 0.70 }
+  grenze:  { feld: 'erde',         faktor: 0.60 }
 };
 
 /** Instanz-Tint eines Zeichens. Rueckgabe [r, g, b] als Multiplikatoren. */
@@ -868,7 +912,20 @@ function atlasStreifenUV(name) {
 
 var DECK_VOLL = 0.94;      // Hauptstrich
 var DECK_HALB = 0.48;      // Schattenseite, Binnenzeichnung
-var DECK_TON = 0.16;       // Flaechenton unter der Randmarke
+/* I6 — der Flaechenton war 0.16 und ist 0.26.
+   Grund ist nicht Geschmack, sondern die Mip-Kette. Ein Atlasfeld ist 128 px
+   gross und steht im Bild bei 9 bis 14 px; gezeichnet wird also aus einer
+   Mipstufe, in der der 0.060 breite Strich (7,7 px im Feld) auf unter einen
+   halben Pixel geschrumpft ist. Sein Alpha mittelt sich dabei mit dem leeren
+   Umfeld auf ein Zehntel herunter — von der Binnenzeichnung eines
+   Flaechenzeichens kommt bei Kartengroesse fast nichts mehr an.
+   Was ankommt, ist der TON: eine Flaeche, die keine feine Struktur hat und
+   deshalb auch keine verliert. Genau so ist eine Karte auch gestochen — das
+   Waldsignet ist die Zugabe, der Flaechenton ist die Aussage. Mit 0.26 liest
+   ein Waldstueck als Waldstueck, ohne dass die Marke zum Klecks wird
+   (getestet gegen den Ortsmassstab: dort steht dieselbe Marke bei 40 px und
+   bleibt eine Zeichnung mit hellem Grund). */
+var DECK_TON = 0.26;       // Flaechenton unter der Randmarke
 var ZITTER = 0.010;
 
 function zitter(seed, i) { return (hashi(i, seed, 0x51ce) - 0.5) * 2 * ZITTER; }
@@ -1371,6 +1428,23 @@ MALER.sig_kueste = function (ctx, s) {
   streifenStrich(ctx, 0.54, s + 1);
   streifenStift(ctx, 0.07, DECK_TON * 2.2);
   streifenStrich(ctx, 0.72, s + 2);
+};
+MALER.sig_grundriss = function (ctx, s) {
+  /* Mauerzug im Grundriss: eine durchgezogene Linie mit einem Turmklotz je
+     Kachel. Die Linie liegt in der Bandmitte, der Klotz sitzt AUSSEN — beim
+     Umlauf eines Polygons zeigt die eine Bandseite nach aussen (die Kacheln
+     laufen mit der Punktreihenfolge), und ein Turm steht auf der Feldseite
+     der Mauer. Ohne den Klotz waere der Umriss von einem Weg nicht zu
+     unterscheiden; mit ihm liest er als Wehrbau, auch wenn er im Bild nur
+     drei Bildpunkte breit ist.
+
+     Die Linie laeuft ueber den Inhaltskasten hinaus (STREIFEN_UEBER), damit
+     an der Kachelnaht Strichmitte auf Strichmitte trifft; der Klotz nicht,
+     sonst zerschnitte ihn die Kante. */
+  streifenStift(ctx, 0.30);
+  streifenStrich(ctx, 0.5, s);
+  pinsel(ctx, DECK_VOLL);
+  ctx.fillRect(0.42, 0.16, 0.16, 0.34);
 };
 MALER.sig_grenze = function (ctx, s) {
   // Perlband: EIN Strich und EIN Punkt je Kachel. Die Konvention fuer

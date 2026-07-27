@@ -1,4 +1,16 @@
-/** Mirrors @uwe/ai-brain router modes without creating a package cycle. */
+/**
+ * Mirrors the AI router modes and the task taxonomy without taking a
+ * dependency. `@uwe/cookbook` has an empty `dependencies` block on purpose —
+ * it is the hardware/model advisor and must stay loadable without the security
+ * layer (zod, ioredis, @uwe/auth) hanging off it. That is why these are hand
+ * copies and not `export type { AiTaskType } from "@uwe/security/inference"`.
+ *
+ * The price of that decision is drift, and it was paid once: when the four
+ * Atlas tasks were added, nothing here failed to compile, and the copy simply
+ * disagreed with the source. `packages/ai-brain/src/ai-task-taxonomy.test.ts`
+ * now reads BOTH files as text and fails when the sets differ — the compiler
+ * cannot see this file, so a test has to.
+ */
 export type CookbookAiProviderMode = "auto" | "local_rtx" | "cloud";
 
 export type CookbookAiContextMode =
@@ -29,10 +41,8 @@ export type CookbookAiTaskType =
   | "create_player_handout"
   | "fill_dungeon_room"
   | "prepare_mail_draft"
-  | "atlas_name_region"
-  | "atlas_describe_region"
-  | "atlas_fill_area"
-  | "atlas_generate_asset_proposal"
+  | "terra_name_regions"
+  | "terra_describe_region"
   | "terra_world_draft"
   | "simulate_faction"
   | "generate_structured_npc"

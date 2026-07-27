@@ -164,3 +164,20 @@
   margin: 0.25rem 0 0;
   padding-left: 1.25rem;
 }
+
+/* „Texte zur Karte": Namensvorschläge und Regionsbeschreibung. Die Ausgabe ist
+   Prosa und wird von Hand übernommen — deshalb <pre>: Zeilenumbrüche des
+   Modells sind die Gliederung, und ein Umformatieren würde sie zerreden. */
+
+.terra-text-ausgabe {
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted, transparent);
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

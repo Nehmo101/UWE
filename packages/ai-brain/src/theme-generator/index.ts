@@ -6,11 +6,8 @@
  * pure and free of gateway/DB dependencies. The model returns a strict JSON
  * envelope which we parse and validate via `@uwe/theme-studio`.
  */
-import {
-  extractJsonObject,
-  validatePalette,
-  type PaletteColors,
-} from "@uwe/theme-studio";
+import { validatePalette, type PaletteColors } from "@uwe/theme-studio";
+import { parseModelJson } from "../model-json";
 import { buildThemeSystemPrompt, buildThemeUserPrompt } from "./prompts";
 import type {
   GeneratedPalette,
@@ -40,20 +37,20 @@ interface ParsedEnvelope {
 
 /** Parse the `{ message, palettes[] }` envelope; validates each palette. */
 export function parseThemeEnvelope(raw: string): ParsedEnvelope {
-  const json = extractJsonObject(raw);
-  if (!json) {
-    return { message: raw.trim(), palettes: [], error: "Kein JSON-Objekt in der Antwort gefunden." };
+  /* One shared reader for every model answer in `@uwe/ai-brain`. The previous
+     `extractJsonObject` from @uwe/theme-studio scanned balanced braces but did
+     not strip Markdown fences — and a fenced answer is the single most common
+     thing a chat-tuned model returns to "answer with JSON". */
+  const parsed = parseModelJson(raw);
+  if (!parsed.ok) {
+    /* The raw text stays the message when there was no object at all: the
+       questionnaire turn is a conversation, and a plain question back from the
+       model is a legitimate answer, not an error to swallow. */
+    return parsed.reason === "no_object" || parsed.reason === "empty"
+      ? { message: raw.trim(), palettes: [], error: "Kein JSON-Objekt in der Antwort gefunden." }
+      : { message: "", palettes: [], error: `Antwort enthält kein gültiges JSON. ${parsed.message}` };
   }
-  let obj: unknown;
-  try {
-    obj = JSON.parse(json);
-  } catch {
-    return { message: "", palettes: [], error: "Antwort enthält kein gültiges JSON." };
-  }
-  if (!obj || typeof obj !== "object") {
-    return { message: "", palettes: [], error: "JSON ist kein Objekt." };
-  }
-  const record = obj as Record<string, unknown>;
+  const record = parsed.value;
   const message = typeof record.message === "string" ? record.message : "";
   const rawPalettes = Array.isArray(record.palettes) ? record.palettes : [];
 

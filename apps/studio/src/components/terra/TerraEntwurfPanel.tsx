@@ -12,7 +12,7 @@ import {
   validateTerraWorldDraft,
 } from "@uwe/ai-brain/proposal-validators";
 import type { TerraWorldDraft } from "@uwe/ai-brain/proposal-validators";
-import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { starteBrainLauf, TERRA_PROMPT_MAX } from "./brain-lauf";
 
 /**
  * „Karte beschreiben" (J4) — die Bedienung der KI-Vorgenerierung.
@@ -65,36 +65,9 @@ export interface TerraEntwurfErgebnis {
   meldung?: string | null;
 }
 
-/* Wie bei den übrigen Brain-Knöpfen im Studio (SessionRecapAiButton,
-   PrepareSessionPanel): lokales Modell zuerst. Ein Auswahlfeld gehört in die
-   AI-Einstellungen, nicht neben jedes Textfeld. */
-const PROVIDER = "ollama";
-const MODELL = "llama3.2";
-const PROMPT_MAX = 2000;
-const POLL_MS = 1500;
-const POLL_MAX = 80; // 2 Minuten — das Provider-Zeitlimit liegt bei 120 s
+const PROMPT_MAX = TERRA_PROMPT_MAX;
 
 type Lage = "ruhe" | "fragt" | "entwurf" | "baut" | "fehler";
-
-interface JobAntwort {
-  job?: { id?: string; status?: string; errorMessage?: string | null; result?: unknown };
-  error?: string;
-}
-
-function proposalInhalt(result: unknown): { inhalt: string | null; notizen: string[] } {
-  const proposals = (result as { proposals?: Array<{ content?: string; metadata?: Record<string, unknown> }> })
-    ?.proposals;
-  const erste = proposals?.[0];
-  if (!erste?.content) return { inhalt: null, notizen: [] };
-  const roh = erste.metadata?.notices;
-  const notizen = Array.isArray(roh)
-    ? roh.map((n) => {
-        const eintrag = n as { path?: string; message?: string };
-        return `${eintrag.path ?? "?"}: ${eintrag.message ?? ""}`.trim();
-      })
-    : [];
-  return { inhalt: erste.content, notizen };
-}
 
 const eingabe =
   "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-2 text-sm text-foreground";
@@ -127,72 +100,39 @@ export function TerraEntwurfPanel({ worldSlug, sende, ergebnis }: TerraEntwurfPa
     setEntwurf(null);
     setLaufId(null);
 
-    try {
-      const antwort = await fetch(studioApiUrl("/api/brain/run"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          actionId: "terra_world_draft",
-          worldSlug,
-          providerId: PROVIDER,
-          model: MODELL,
-          userPrompt: text.slice(0, PROMPT_MAX),
-        }),
-      });
-      const daten = (await antwort.json()) as JobAntwort;
-      if (!antwort.ok || !daten.job?.id) {
-        setLage("fehler");
-        setMeldung(daten.error ?? "Die Brain-Aktion ließ sich nicht starten.");
-        return;
-      }
-
-      // Der Lauf dauert Sekunden; der Client pollt, statt zu warten.
-      let job = daten.job;
-      for (let runde = 0; runde < POLL_MAX && job.status !== "completed" && job.status !== "failed"; runde++) {
-        await new Promise((fertig) => setTimeout(fertig, POLL_MS));
-        const stand = await fetch(studioApiUrl(`/api/jobs/${job.id}`));
-        const gelesen = (await stand.json()) as JobAntwort;
-        if (!stand.ok || !gelesen.job) break;
-        job = gelesen.job;
-      }
-
-      if (job.status !== "completed") {
-        setLage("fehler");
-        setMeldung(job.errorMessage ?? "Der Entwurf ist nicht fertig geworden.");
-        return;
-      }
-
-      const { inhalt, notizen: gemeldet } = proposalInhalt(job.result);
-      if (!inhalt) {
-        setLage("fehler");
-        setMeldung("Der Lauf hat keinen Entwurf geliefert.");
-        return;
-      }
-      let geparst: unknown = null;
-      try {
-        geparst = JSON.parse(inhalt);
-      } catch {
-        geparst = null;
-      }
-      const geprueft = validateTerraWorldDraft(geparst);
-      if (!geprueft.ok) {
-        setLage("fehler");
-        setMeldung(
-          "Die Antwort des Modells war kein brauchbarer Parametersatz: " +
-            geprueft.errors.map((f) => `${f.path} ${f.message}`).join("; "),
-        );
-        return;
-      }
-      setEntwurf(geprueft.draft);
-      setNotizen([...gemeldet, ...geprueft.notices.map((n) => `${n.path}: ${n.message}`)]);
-      setLaufId(typeof (job.result as { runId?: string })?.runId === "string"
-        ? (job.result as { runId: string }).runId
-        : null);
-      setLage("entwurf");
-    } catch (fehler) {
+    /* Anlegen, pollen, ersten Vorschlag lesen — das macht `starteBrainLauf`
+       für beide Terra-Bedienfelder. Hier bleibt nur, was diese Aktion
+       ausmacht: die Antwort ist JSON und muss durch den Validator. */
+    const lauf = await starteBrainLauf({
+      actionId: "terra_world_draft",
+      worldSlug,
+      userPrompt: text,
+    });
+    if (!lauf.ok || !lauf.inhalt) {
       setLage("fehler");
-      setMeldung(fehler instanceof Error ? fehler.message : "Der Entwurf ist fehlgeschlagen.");
+      setMeldung(lauf.meldung ?? "Der Entwurf ist fehlgeschlagen.");
+      return;
     }
+
+    let geparst: unknown = null;
+    try {
+      geparst = JSON.parse(lauf.inhalt);
+    } catch {
+      geparst = null;
+    }
+    const geprueft = validateTerraWorldDraft(geparst);
+    if (!geprueft.ok) {
+      setLage("fehler");
+      setMeldung(
+        "Die Antwort des Modells war kein brauchbarer Parametersatz: " +
+          geprueft.errors.map((f) => `${f.path} ${f.message}`).join("; "),
+      );
+      return;
+    }
+    setEntwurf(geprueft.draft);
+    setNotizen([...lauf.notizen, ...geprueft.notices.map((n) => `${n.path}: ${n.message}`)]);
+    setLaufId(lauf.laufId);
+    setLage("entwurf");
   }, [prompt, worldSlug]);
 
   const bauen = useCallback(() => {

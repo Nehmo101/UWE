@@ -287,6 +287,45 @@ function bandZeichen(el, name, linie, opt) {
 }
 
 /**
+ * I6 — Grundriss einer Kompositstruktur: der Umriss ihres Polygons als
+ * Mauerzug.
+ *
+ * Der Signaturenkatalog nennt das selbst als naechsten Schritt: Burg, Werft
+ * und Kloster bekamen bis hierher dasselbe Punktzeichen wie ein Turm, obwohl
+ * die Anlage ihre FORM kennt — sie steht als Polygon im Element, und aus
+ * genau diesem Polygon baut strukturen.js Mauerringe, Kaifluchten und
+ * Kreuzgaenge. Ein Grundriss ist deshalb keine neue Information, sondern die
+ * vorhandene, die bisher auf Kartenmassstab weggeworfen wurde.
+ *
+ * Gebaut wird er mit derselben Bandmechanik wie ein Weg. Der einzige
+ * Unterschied ist, dass die Linie GESCHLOSSEN ist: der erste Punkt haengt
+ * hinten wieder an. Ein offener Zug haette an der Anfangsecke eine Fuge, und
+ * eine Burg mit einem Loch in der Mauer ist keine Burg.
+ *
+ * @returns true, wenn ein Umriss entstanden ist. false heisst „kein Polygon"
+ *          oder „Massstab ausserhalb des Bandes" — beides regulaer und kein
+ *          Fehler.
+ */
+function umrissZeichen(el, punkte, opt) {
+  if (!punkte || punkte.length < 3) return null;
+  var linie = [];
+  for (var i = 0; i < punkte.length; i++) linie.push({ x: punkte[i].x, z: punkte[i].z });
+  var a = punkte[0], b = punkte[punkte.length - 1];
+  // Schon geschlossen? Dann nicht doppelt schliessen — eine Kachel der Laenge
+  // null teilte in bandGeoZeichen durch die Pfadlaenge.
+  if (Math.abs(a.x - b.x) > 1e-6 || Math.abs(a.z - b.z) > 1e-6) {
+    linie.push({ x: a.x, z: a.z });
+  }
+  /* Ueber linienZeichen und nicht direkt ueber bandZeichen: so laeuft der
+     Grundriss durch dieselbe Kette wie jedes andere Zeichen — Sache,
+     Darstellungsstufe, Band, Rueckfall. Ein Direktaufruf haette das Zeichen
+     an der Massstabsleiter vorbeigeschmuggelt, und genau solche Nebenwege
+     sind der Grund, warum 11-signaturen jedes Zeichen auf Erreichbarkeit
+     ueber eine Zuordnung prueft. */
+  return linienZeichen(el, 'grundriss', linie, el.kennzahl, opt) > 0;
+}
+
+/**
  * Kette aus Einzelzeichen entlang einer Linie — fuer Liniensachen, deren
  * Zeichen KEIN Streifen ist (die Bruchkante ist ein Quad aus der
  * Arborgruppe). Die Zeichen stehen auf Stoss und drehen sich in die
@@ -561,6 +600,7 @@ export {
   punktZeichen, mitteVon,
   KACHEL_STRECKUNG, KACHELN_MAX, PUNKTE_JE_KACHEL,
   pfadMasse, pfadPunkt, bandGeoZeichen, bandZeichen, kettenZeichen, linienZeichen,
+  umrissZeichen,
   kartenBandMat,
   GRAT_ACHSEN, gratPunkte, istRasterGipfel
 };

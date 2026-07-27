@@ -1,4 +1,3 @@
-import { formatRtxAtlasAssetPromptContext } from "./proposal-validators/rtx-asset-proposal";
 import { formatTerraWorldDraftPromptContext } from "./proposal-validators/terra-world-draft";
 import type { AiContext, AiTaskType } from "./types";
 
@@ -22,10 +21,8 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   create_player_handout: "Spieler-Handout erstellen",
   fill_dungeon_room: "Dungeonraum füllen",
   prepare_mail_draft: "Mail-Entwurf vorbereiten",
-  atlas_name_region: "Atlas-Regionen benennen",
-  atlas_describe_region: "Atlas-Region beschreiben",
-  atlas_fill_area: "Atlas-Objektfläche füllen",
-  atlas_generate_asset_proposal: "Atlas-Asset vorschlagen",
+  terra_name_regions: "Kartenregionen benennen",
+  terra_describe_region: "Kartenregion beschreiben",
   terra_world_draft: "Terra-Karte aus Beschreibung entwerfen",
   simulate_faction: "Fraktion simulieren",
   generate_structured_npc: "NPC strukturiert generieren",
@@ -79,15 +76,10 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Fülle einen Dungeonraum mit Atmosphäre, Beschreibung, Interaktionen, Gefahren, Loot-Hinweisen und GM-Notizen. Passend zum bestehenden Setting.",
   prepare_mail_draft:
     "Bereite einen Mail-Entwurf für Spieler vor (Betreff + Text). Nur spieler-sichere Inhalte, keine DM-only-Geheimnisse. Keine automatische Versendung.",
-  atlas_name_region:
-    "Schlage stimmungsvolle, zum Weltbuilding passende Namen für die Regionen, Gebirge, Wälder, Flüsse und Städte im Atlas-Entwurf vor. Nutze den Kampagnen-Kontext für thematische Kohärenz. Gib für jede Einheit einen primären Namen und optional einen Alternativnamen an. Format: eine Zeile je Eintrag 'ID: Name (optional: Alternativname)'. Nie automatisch in den Kanon übernehmen.",
-  atlas_describe_region:
-    "Schreibe eine atmosphärische Beschreibung der angegebenen Kartenregion. Nutze Biom, Nachbarregionen, Flüsse, Orte und Kampagnen-Kontext. Gib eine DM-Beschreibung (2–4 Absätze) und optional einen kurzen Spieler-Flavortext. Markiere alles klar als Vorschlag — nie automatisch in den Kanon übernehmen.",
-  atlas_fill_area:
-    "Schlage ein Atlas-Plot-Fill-Rezept als reines JSON vor. Format: {\"schemaVersion\":1,\"kind\":\"atlas_plot_fill\",\"biomeKind\":\"forest\",\"density\":1,\"seed\":123,\"assets\":[{\"gouacheKey\":\"g_oak\",\"weight\":1}]}. Nutze nur bekannte Gouache-Asset-Keys aus der Zusatzanweisung oder dem Kontext. Liefere keine AtlasObject-Payloads, keine Koordinaten, keine Sichtbarkeit, keine Palette-DB-IDs und keinen Code. UWE erzeugt daraus Ghost-Objekte und übernimmt sie erst nach manueller Prüfung.",
-  atlas_generate_asset_proposal:
-    "Schlage ein Atlas-Gouache-Asset als reines JSON-Proposal vor. Nutze den Styleguide und Asset-Katalog aus dem folgenden Pflichtkontext. Liefere entweder `outputType:\"json-recipe\"` mit einem begrenzten Gouache-Rezept oder `outputType:\"png-fallback\"` mit PNG-Metadaten. Liefere keine AtlasObject-Payloads, keine Palette-DB-IDs, keine Dateipfade außer sicherem PNG-Dateinamen, keine Remote-URLs und keinen Code. UWE validiert das Proposal und übernimmt es erst nach manueller Prüfung.\n\n" +
-    formatRtxAtlasAssetPromptContext(),
+  terra_name_regions:
+    "Schlage stimmungsvolle, zum Weltenbau passende Namen für die Regionen, Gebirge, Wälder, Flüsse und Orte der beschriebenen Karte vor. Nutze den Kampagnen-Kontext für thematische Kohärenz. Gib für jede Einheit einen primären Namen und optional einen Alternativnamen an. Format: eine Zeile je Eintrag 'Element: Name (Alternative)'. Erfinde keine Elemente hinzu, die nicht genannt wurden. Nie automatisch in den Kanon übernehmen.",
+  terra_describe_region:
+    "Schreibe eine atmosphärische Beschreibung des angegebenen Kartenausschnitts. Nutze Biom, Nachbarregionen, Flüsse, Orte und Kampagnen-Kontext. Gib eine DM-Beschreibung (2–4 Absätze) und optional einen kurzen Spieler-Flavortext. Markiere alles klar als Vorschlag — nie automatisch in den Kanon übernehmen.",
   terra_world_draft:
     "Übersetze die Beschreibung des Nutzers in GENERATOR-PARAMETER für Terra und antworte NUR mit dem JSON-Objekt aus dem folgenden Pflichtkontext. " +
     "Du lieferst das WAS (Biom, Kartengröße, Maßstab, Klima, Relief-Wunsch, Anzahl von Flüssen/Siedlungen/Wäldern/Wiesen/Ranken, Stimmung, Namen) — " +
@@ -117,6 +109,53 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
   generate_theme_palette:
     "Entwirf UI-Farbpaletten als striktes JSON. Stelle bei Bedarf kurze Rückfragen; sonst liefere Paletten-Kandidaten. Antworte NUR mit dem vereinbarten JSON-Objekt.",
 };
+
+/**
+ * Tasks whose ANSWER must be a JSON object, not prose.
+ *
+ * This is the switch behind the whole JSON story: the router asks the provider
+ * for protocol-level JSON only for these, and only for these does a failed
+ * parse buy a second attempt. Everything else is prose and must stay prose —
+ * forcing `response_format: json_object` onto a session recap would produce a
+ * quoted blob instead of a summary.
+ *
+ * The list is kept honest by `tasks.test.ts`: every entry's instruction has to
+ * contain the JSON demand in words, and every instruction that demands JSON in
+ * words has to be listed here. Adding a JSON task and forgetting this list is
+ * exactly the mistake that made structured output unreliable before.
+ */
+export const JSON_RESULT_TASKS: readonly AiTaskType[] = [
+  "suggest_page_tags",
+  "terra_world_draft",
+  "simulate_faction",
+  "generate_structured_npc",
+  "generate_structured_quest",
+  "generate_structured_item",
+  "prioritize_mail",
+  "generate_theme_palette",
+] as const;
+
+const JSON_RESULT_TASK_SET = new Set<AiTaskType>(JSON_RESULT_TASKS);
+
+export function requiresJsonResult(taskType: AiTaskType): boolean {
+  return JSON_RESULT_TASK_SET.has(taskType);
+}
+
+/**
+ * The wording that marks an instruction as a JSON contract. Used by the test
+ * that keeps {@link JSON_RESULT_TASKS} and {@link TASK_INSTRUCTIONS} together;
+ * exported so the test does not have to re-guess the phrasing.
+ */
+export const JSON_INSTRUCTION_MARKERS = [
+  "NUR als JSON",
+  "NUR mit dem JSON",
+  "NUR mit dem vereinbarten JSON",
+] as const;
+
+export function instructionDemandsJson(taskType: AiTaskType): boolean {
+  const instruction = TASK_INSTRUCTIONS[taskType];
+  return JSON_INSTRUCTION_MARKERS.some((marker) => instruction.includes(marker));
+}
 
 /** Tasks that run on personal Life-Brain context — prompt heading differs from campaigns. */
 const LIFE_BRAIN_TASKS: AiTaskType[] = ["answer_life_question", "generate_briefing"];

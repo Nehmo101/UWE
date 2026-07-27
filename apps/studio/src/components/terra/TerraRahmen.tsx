@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { TerraWorldDraft } from "@uwe/ai-brain/proposal-validators";
 import { speichereTerraKarteAction } from "@/app/terra-actions";
 import { TerraEntwurfPanel, type TerraEntwurfErgebnis } from "./TerraEntwurfPanel";
+import { TerraTextPanel } from "./TerraTextPanel";
 import "./terra.css";
 
 /**
@@ -226,6 +227,9 @@ export function TerraRahmen({ worldSlug, karteId, version, daten, quelle }: Terr
         />
       </div>
       <TerraEntwurfPanel worldSlug={worldSlug} sende={sendeVorgabe} ergebnis={entwurfErgebnis} />
+      {/* Die beiden Kartentext-Aktionen. Sie rühren den Frame nicht an — sie
+          erzeugen Prosa, die der Spielleiter liest und von Hand übernimmt. */}
+      <TerraTextPanel worldSlug={worldSlug} />
     </div>
   );
 }

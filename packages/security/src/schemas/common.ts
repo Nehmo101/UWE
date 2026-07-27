@@ -162,7 +162,8 @@ export const brainRunBodySchema = z.object({
   /* Optional since J4: not every Brain action hangs on a wiki page. Terra's
      map draft has none, and `runBrainAction` already resolves an anchor page
      itself (`resolveAnchorPageSlug`) when the field is missing. Required, it
-     turned `atlas_describe_region` into a permanent 400. */
+     turned the region-description action (then `atlas_describe_region`, today
+     `terra_describe_region`) into a permanent 400. */
   pageSlug: slugSchema.optional(),
   providerId: aiProviderIdSchema,
   model: nonEmptyString.max(200),
