@@ -52,6 +52,46 @@ Unterseiten stehen als eigene Zeile, weil genau die die Migrationskandidaten sin
 > | C15 | Finanzen / Abos | → **Family** |
 > | C35 | Geländeverleih | → **Brain** |
 
+## Umsetzungsstand (2026-07-27)
+
+Die Umsetzung läuft auf `claude/uwe-analysis-permissions-structure-d2ihqs`.
+Jeder Schritt ist ein eigener Commit mit grünem Gate.
+
+| Schritt | Stand | Commit | Bilanz |
+|---|---|---|---|
+| **1 — Cloud-Provider raus** (N.3) | ✅ fertig | `f1a3b0f` | 47 Dateien, −2.612 Zeilen |
+| **2 — Review + Freigabe-Links raus** (N.7, N.9) | ✅ fertig | `00e2655` | 71 Dateien, −5.855 Zeilen |
+| **3a — Geheimnis-Level raus** (Teil von N.2) | ✅ fertig | `731dbff` | 33 Dateien, −759 Zeilen |
+| **B8a + L4** — Legacy-Pfade, doppeltes `/api/auth/enter` | ✅ fertig | `380e900` | 13 Dateien, −251 Zeilen |
+| **3b — `visibility` und `publishStatus` raus** | ⏳ offen | — | ~191 Dateien, der größte Einzelposten |
+| **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ⏳ offen | — | |
+| **5 — Studio-System abräumen** (Abschnitt D) | ⏳ offen | — | |
+| **6 — Brain/Studio-Doppelungen** (Abschnitt H) | ⏳ offen | — | |
+| **7 — Family bauen** (Abschnitt G) | ⏳ offen | — | |
+
+**Bisher entfernt: ~9.500 Zeilen** über 164 Dateien. Nach jedem Schritt:
+`pnpm lint` grün, `pnpm typecheck` 44/44, `pnpm test:ci` 45/45.
+
+### Was beim Weitermachen zu beachten ist
+
+- **Schritt 3b ist der Bruch, nicht 3a.** `secretLevel` liess sich sauber
+  herausschneiden, weil es eine Zusatzebene über der Sichtbarkeit war.
+  `visibility` und `publishStatus` sitzen dagegen in jedem Formular, jedem
+  Portal-Query und jedem Filter. 191 Dateien, und das Portal-Leseverhalten
+  kollabiert dabei auf „ist die Person Mitglied dieser Welt?".
+- **Reihenfolge innerhalb 3b:** erst `publishStatus` (weniger Aufrufer, der
+  Review-Prozess der daran hing ist schon weg), dann `visibility`.
+- **Zwei Testpakete sind unter Voll-Parallellast flaky** (`import-central` in
+  `@uwe/database`, `image_generate` in `@uwe/rtx-connector`). Jedes Mal trifft
+  es einen anderen Test, isoliert sind alle grün, und keiner berührt die
+  umgebauten Bereiche. Das ist SQLite- bzw. Timing-Contention und war schon
+  vorher da — nicht mit einer Regression verwechseln.
+- **`@uwe/landing#build` scheitert in der Analyseumgebung** an `next/font`, das
+  Google Fonts nicht erreicht. Netzsperre, kein Code-Problem; in CI sollte es
+  durchlaufen.
+
+---
+
 ## Wie ausfüllen
 
 In der letzten Spalte eintragen:
