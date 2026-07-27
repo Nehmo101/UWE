@@ -6,35 +6,33 @@ import { worldDetailBreadcrumb, type BreadcrumbItem } from "@/src/lib/world-brea
 import { TerraRahmen } from "@/src/components/terra";
 
 interface Props {
-  params: Promise<{ worldSlug: string; nodeId: string }>;
+  params: Promise<{ worldSlug: string; karteId: string }>;
 }
 
 /**
- * Der Karteneditor. Seit J1 rendert dieser Pfad Terra statt Atlas 3D.
+ * Der Karteneditor Terra.
  *
- * Der Aufbau ist bewusst derselbe wie bei Atlas — nur der letzte Schritt
- * wechselt: Welt laden → Mandantenprüfung → WorldShell + Breadcrumb → Frame.
+ * Der Ablauf: Welt laden → Mandantenprüfung → WorldShell + Breadcrumb → Frame.
  * Die Rechteprüfung liegt damit VOR dem Frame und wird von ihm nicht berührt.
  *
- * `nodeId` heißt aus Pfadgründen weiter so; es ist die Id einer `TerraKarte`.
  * Die Mandantenprüfung steckt in `holeInWelt` — eine Karten-Id aus einer
  * fremden Welt liefert `null` und damit `notFound()`, ohne ihre Existenz zu
  * verraten.
  */
 export default async function TerraKartePage({ params }: Props) {
-  const { worldSlug, nodeId } = await params;
+  const { worldSlug, karteId } = await params;
   const world = await getAppRepository().getWorldBySlug(worldSlug);
   if (!world) notFound();
 
   const terra = createTerraService(createPrismaClient());
-  const karte = await terra.holeInWelt(worldSlug, nodeId);
+  const karte = await terra.holeInWelt(worldSlug, karteId);
   if (!karte) notFound();
 
   const breadcrumb: BreadcrumbItem[] = worldDetailBreadcrumb(
     world.name,
     worldSlug,
     "Karten",
-    `/worlds/${worldSlug}/atlas3d`,
+    `/worlds/${worldSlug}/karten`,
     karte.titel,
   );
 

@@ -112,7 +112,7 @@ export async function erstelleTerraKarteAction(formData: FormData): Promise<Terr
   try {
     const terra = createTerraService(createPrismaClient());
     const karte = await terra.erstelle(worldSlug, { titel: String(formData.get("titel") ?? "") });
-    revalidatePath(`/worlds/${worldSlug}/atlas3d`);
+    revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true, karteId: karte.id };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Anlegen fehlgeschlagen" };
@@ -130,7 +130,7 @@ export async function benenneTerraKarteAction(formData: FormData): Promise<Terra
     const terra = createTerraService(createPrismaClient());
     const ok = await terra.benenne(worldSlug, karteId, String(formData.get("titel") ?? ""));
     if (!ok) throw new Error("Karte gehört nicht zu dieser Welt");
-    revalidatePath(`/worlds/${worldSlug}/atlas3d`);
+    revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Umbenennen fehlgeschlagen" };
@@ -148,7 +148,7 @@ export async function loescheTerraKarteAction(formData: FormData): Promise<Terra
     const terra = createTerraService(createPrismaClient());
     const ok = await terra.loesche(worldSlug, karteId);
     if (!ok) throw new Error("Karte gehört nicht zu dieser Welt");
-    revalidatePath(`/worlds/${worldSlug}/atlas3d`);
+    revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Löschen fehlgeschlagen" };

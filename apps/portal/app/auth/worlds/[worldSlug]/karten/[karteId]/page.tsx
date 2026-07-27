@@ -9,11 +9,11 @@ import { TerraLeserahmen } from "@/src/components/terra";
 import { TERRA_QUELLE } from "@/src/lib/terra-quelle";
 
 interface Props {
-  params: Promise<{ worldSlug: string; nodeId: string }>;
+  params: Promise<{ worldSlug: string; karteId: string }>;
 }
 
 /**
- * Kartenansicht für Spieler — read-only. Seit J1 rendert dieser Pfad Terra.
+ * Kartenansicht für Spieler — Terra, nur lesend.
  *
  * Es gibt im Portal keine Server Action zum Schreiben, und die
  * Elternkomponente nimmt gar keine Änderungsnachricht entgegen. Die
@@ -23,12 +23,12 @@ interface Props {
  * Zugriff hängt allein an der Weltmitgliedschaft, nie an der einzelnen Karte.
  */
 export default async function PortalTerraKartePage({ params }: Props) {
-  const { worldSlug, nodeId } = await params;
+  const { worldSlug, karteId } = await params;
   const ctx = await getAccessContextForWorld(worldSlug);
   if (!ctx) notFound();
 
   const terra = createTerraService(createPrismaClient());
-  const karte = await terra.holeInWelt(worldSlug, nodeId);
+  const karte = await terra.holeInWelt(worldSlug, karteId);
   if (!karte) notFound();
 
   return (
@@ -36,7 +36,7 @@ export default async function PortalTerraKartePage({ params }: Props) {
       <PageHeader title={karte.titel} summary="Karte — nur ansehen" />
       <div className="flex items-center gap-3 text-sm">
         <Link
-          href={`/auth/worlds/${worldSlug}/atlas3d`}
+          href={`/auth/worlds/${worldSlug}/karten`}
           className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" aria-hidden />

@@ -10,13 +10,11 @@ interface Props {
 }
 
 /**
- * Kartenübersicht der Welt. Seit J1 liegt hier Terra statt Atlas 3D — der
- * PFAD bleibt, der Inhalt wechselt (Owner-Entscheid 27.07.2026: Terra löst
- * Atlas ab, alte Atlas-Welten werden verworfen, nicht migriert).
+ * Kartenübersicht der Welt — der Einstieg in den Karteneditor Terra.
  *
- * Anders als Atlas legt der Aufruf dieser Seite NICHTS an. Atlas' Indexseite
- * rief `getOrCreateForWorld` und leitete weiter; dadurch entstanden
- * Karten-Zeilen allein durchs Hinsehen. Hier ist der GET folgenlos.
+ * Der Aufruf dieser Seite legt NICHTS an: der GET ist folgenlos. Der Vorgänger
+ * rief hier ein `getOrCreate` und leitete weiter, wodurch Karten-Zeilen allein
+ * durchs Hinsehen entstanden — dieser Weg ist bewusst nicht übernommen.
  */
 export default async function TerraKartenIndexPage({ params }: Props) {
   const { worldSlug } = await params;

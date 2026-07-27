@@ -8,10 +8,10 @@ import { erstelleTerraKarteAction, loescheTerraKarteAction } from "@/app/terra-a
 /**
  * Übersicht der Terra-Karten einer Welt.
  *
- * Bewusst OHNE Lazy-Bootstrap: Atlas legte beim bloßen Aufruf seiner
- * Indexseite eine Welt in der Datenbank an (`getOrCreateForWorld` in
- * `atlas3d/page.tsx`) — deshalb standen dort Zeilen, die nie jemand gebaut
- * hatte. Hier passiert auf einem GET nichts; angelegt wird nur auf Klick.
+ * Bewusst OHNE Lazy-Bootstrap: der Vorgänger legte beim bloßen Aufruf seiner
+ * Indexseite eine Welt in der Datenbank an — deshalb standen dort Zeilen, die
+ * nie jemand gebaut hatte. Hier passiert auf einem GET nichts; angelegt wird
+ * nur auf Klick.
  */
 
 export interface TerraKartenListeProps {
@@ -32,7 +32,7 @@ export function TerraKartenListe({ worldSlug, karten }: TerraKartenListeProps) {
       form.set("titel", "Neue Karte");
       const antwort = await erstelleTerraKarteAction(form);
       if (antwort.ok && antwort.karteId) {
-        router.push(`/worlds/${worldSlug}/atlas3d/${antwort.karteId}`);
+        router.push(`/worlds/${worldSlug}/karten/${antwort.karteId}`);
       } else {
         setFehler(antwort.error ?? "Anlegen fehlgeschlagen");
       }
@@ -75,7 +75,7 @@ export function TerraKartenListe({ worldSlug, karten }: TerraKartenListeProps) {
         <ul className="space-y-1" data-testid="terra-karten-liste">
           {karten.map((karte) => (
             <li key={karte.id} className="flex items-center gap-2 rounded-[var(--radius)] px-2 py-1.5 hover:bg-muted/50">
-              <Link href={`/worlds/${worldSlug}/atlas3d/${karte.id}`} className="min-w-0 flex-1 text-sm font-medium">
+              <Link href={`/worlds/${worldSlug}/karten/${karte.id}`} className="min-w-0 flex-1 text-sm font-medium">
                 {karte.titel}
               </Link>
               <span className="text-xs text-muted-foreground">

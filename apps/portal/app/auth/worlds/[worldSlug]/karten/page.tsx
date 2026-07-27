@@ -11,7 +11,7 @@ interface Props {
 }
 
 /**
- * Kartenübersicht für Spieler. Seit J1 liegt hier Terra statt Atlas 3D.
+ * Kartenübersicht für Spieler — Terra im Lesemodus.
  *
  * Karten sind vollständig spielersichtbar (Owner-Entscheid 2026-07-21,
  * unverändert übernommen) — der Zugriff hängt allein an der
@@ -37,7 +37,7 @@ export default async function PortalTerraIndexPage({ params }: Props) {
           {karten.map((karte) => (
             <li key={karte.id}>
               <Link
-                href={`/auth/worlds/${worldSlug}/atlas3d/${karte.id}`}
+                href={`/auth/worlds/${worldSlug}/karten/${karte.id}`}
                 className="flex items-center gap-2 rounded-[var(--radius)] px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
               >
                 <MapIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
