@@ -2545,6 +2545,3041 @@ definePool("uferdamm", geoUferdamm(), { radius: 2.0, familie: 'stein' });
 definePool("aquaedukt", geoAquaedukt(), { radius: 3.0, ao: 0.26, familie: 'stein' });
 definePool("aquaeduktkopf", geoAquaeduktkopf(), { radius: 2.0, familie: 'stein' });
 
+/* ==========================================================================
+   Kategorie 13 des Objektkatalogs — Natur (Fels, Geysire, Korallen, Pilze),
+   erweitert um die Biom-Sonderarten, auf die die Biom-Registry (store.js)
+   heute nur in Kommentaren verweist: bambus, palme (Wueste), pilzhut,
+   koralle, lavaspalte, wollgras.
+
+   FORMENSPRACHE (Ideen-Welle 2, F6): wenige grosse Flaechen, bewusst
+   uebertriebene Proportionen, Silhouette vor Oberflaeche. Ein Fels sind drei
+   Flaechen — deshalb sitzt hier ueberall IC(r, 0) (20 Dreiecke) und nicht
+   IC(r, 1) (80), und die Form kommt aus der Verzerrung, nicht aus Unterteilung.
+   ========================================================================== */
+var NA_FELS = 0xb0aca2,       // Grundton wie geoFels — die Formationen sollen
+    NA_FELSD = 0x8e897e,      // mit dem Bestandsfelsen als EIN Gestein lesen
+    NA_FELSH = 0xc6c1b4,
+    NA_ERDE = 0x7d6a52,
+    NA_MOOS = 0x5c7a48,
+    NA_SINTER = 0xd8cfb8,     // Kalksinter der Terrassen und Geysirkegel
+    NA_DAMPF = 0xf0f2ee,
+    NA_WASSER = 0x3f6b7a,
+    NA_SCHLAMM = 0x6a5a44,
+    NA_KORALLE = 0xcf7f68,
+    NA_KORALLE2 = 0xe3a98a,
+    NA_TANG = 0x5c6b4a,
+    NA_MUSCHEL = 0xdcd2bc,
+    NA_BLEICH = 0xc6bda6,     // Treibholz, gebleichtes Gebein
+    NA_STIEL = 0xe0d3b4,
+    NA_HUT = 0xbf5f4c,
+    NA_LAMELLE = 0xf2e6cc,
+    NA_GLUEHEN = 0x9ff0c8,    // Leuchtpilz, Sporen — kaltes Arbor-Gruen
+    NA_LAVA = 0xff8c3c,
+    NA_BAMBUS = 0x9aab5e,
+    NA_BLATT = 0x7f9a4e,
+    NA_DORN = 0x6a5a48;
+
+/**
+ * Verzerrter Brocken als gemeinsame Basis von Nadel, Findling, Geroell,
+ * Schutt, Eisfels und Muschel. Die Verschiebung laeuft ueber die QUANTISIERTE
+ * Position (Muster geoFels/islandGeo), damit doppelt gefuehrte Ecken denselben
+ * Versatz bekommen und der Koerper geschlossen bleibt.
+ */
+function brockenGeo(r, seed, streu) {
+  var g = new IC(r, 0), p = g.attributes.position;
+  var s = streu === undefined ? 0.45 : streu, i;
+  for (i = 0; i < p.count; i++) {
+    var qx = Math.round(p.getX(i) * 30), qy = Math.round(p.getY(i) * 30),
+        qz = Math.round(p.getZ(i) * 30);
+    p.setXYZ(i,
+      p.getX(i) * (1 - s * 0.5 + hashi(qx, qz, seed) * s),
+      p.getY(i) * (1 - s * 0.5 + hashi(qy, qx, seed + 4) * s),
+      p.getZ(i) * (1 - s * 0.5 + hashi(qz, qy, seed + 8) * s));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+function geoFelsnadel() {
+  var parts = [part(brockenGeo(1.25, 79, 0.35), M(0, 0.2, 0, 0, 0, 0, 1, 0.32, 1), NA_FELSD)];
+  for (var i = 0; i < 3; i++) {
+    var r = 1.0 - i * 0.24;
+    parts.push(part(brockenGeo(r, 71 + i * 5, 0.5),
+      M((hashi(i, 3, 73) - 0.5) * 0.55, 0.9 + i * 1.7, (hashi(i, 7, 73) - 0.5) * 0.55,
+        0, i * 1.1, (hashi(i, 11, 73) - 0.5) * 0.22, 1, 1.55, 1),
+      i % 2 ? NA_FELS : NA_FELSD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoFelsbogen() {
+  // Der Torus traegt den Bogen in EINEM Primitiv; aus BX-Segmenten gestueckelt
+  // stuende an jedem Kaempfer eine Fuge (dieselbe Begruendung wie bogenreihe).
+  return mergeGeos([
+    part(new THREE.TorusGeometry(1.85, 0.6, 4, 9, Math.PI),
+      M(0, 1.45, 0, 0, 0, 0, 1, 1.3, 0.95), NA_FELS),
+    part(brockenGeo(1.05, 83, 0.4), M(-1.9, 0.85, 0, 0, 0, 0, 1, 1.5, 1.1), NA_FELSD),
+    part(brockenGeo(1.1, 89, 0.4), M(1.9, 0.8, 0, 0, 1.2, 0, 1, 1.4, 1.1), NA_FELSD),
+    part(brockenGeo(0.5, 91, 0.5), M(1.15, 0.25, 0.85), NA_FELS)
+  ]);
+}
+
+function geoFindling() {
+  return mergeGeos([
+    part(brockenGeo(1.5, 97, 0.5), M(0, 0.95, 0, 0.12, 0.6, -0.08, 1, 0.85, 1), NA_FELS),
+    part(brockenGeo(0.55, 101, 0.6), M(0.9, 0.25, 0.7), NA_FELSD),
+    // Moos als flach gedrueckter Brocken statt PL: der Pool traegt keine
+    // alphaTest-Karte, ein Quad staende hier als sichtbares Rechteck.
+    part(brockenGeo(0.85, 103, 0.35), M(-0.15, 1.62, 0.1, 0, 0.8, 0, 1, 0.16, 0.9), NA_MOOS)
+  ]);
+}
+
+function geoGeroell() {
+  var parts = [], i;
+  for (i = 0; i < 9; i++) {
+    var d = hashi(i, 3, 107), e = hashi(i, 5, 107);
+    parts.push(part(brockenGeo(0.16 + d * 0.24, 109 + i * 3, 0.55),
+      M((e - 0.5) * 2.0, 0.1 + d * 0.16, (hashi(i, 7, 107) - 0.5) * 2.0,
+        d * 2, e * 3, d, 1, 0.7, 1), d < 0.5 ? NA_FELS : NA_FELSD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBasaltsaeulen() {
+  var parts = [], i;
+  for (i = 0; i < 7; i++) {
+    var d = hashi(i, 3, 127), a = i / 7 * Math.PI * 2;
+    var q = i === 0 ? 0 : 0.5 + hashi(i, 5, 127) * 0.5;
+    parts.push(part(new CY(0.42, 0.46, 1.6 + d * 3.4, 6),
+      M(Math.cos(a) * q, (1.6 + d * 3.4) / 2, Math.sin(a) * q, 0, d * 1.0, (d - 0.5) * 0.07),
+      i % 2 ? NA_FELSD : NA_FELS));
+  }
+  return mergeGeos(parts);
+}
+
+function geoGeysir() {
+  var parts = [
+    part(new CY(0.95, 1.55, 1.0, 9), M(0, 0.5, 0), NA_SINTER),
+    part(new CY(0.72, 0.72, 0.9, 9), M(0, 0.6, 0), NA_WASSER),
+    part(new CY(1.9, 2.1, 0.22, 9), M(0, 0.11, 0), NA_SINTER)
+  ];
+  // Dampf auf kroneZerzaust: die einzige vorhandene alphaTest-Silhouette mit
+  // dem opaken Streifen am unteren Rand, den starr() fuer den Sinterkegel
+  // braucht (Muster netzgestell). Eine echte Dampfkarte gehoert in textures.js.
+  starr(parts, 0, 0.008);
+  for (var i = 0; i < 3; i++) {
+    parts.push(kronenQuad(1.8 + i * 0.5, 2.6 + i * 1.1, 0, 0.9 + i * 1.5, 0,
+      i * 1.1, (hashi(i, 3, 131) - 0.5) * 0.3, NA_DAMPF));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSchlammtopf() {
+  var parts = [
+    part(new CY(1.0, 1.15, 0.5, 9), M(0, 0.25, 0), NA_SCHLAMM),
+    part(new CY(0.86, 0.86, 0.1, 9), M(0, 0.46, 0), 0x4a3c2c)
+  ];
+  for (var i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 137), a = i / 5 * 6.28;
+    parts.push(part(new IC(0.12 + d * 0.14, 0),
+      M(Math.cos(a) * d * 0.6, 0.5 + d * 0.12, Math.sin(a) * d * 0.6,
+        0, 0, 0, 1, 0.7, 1), NA_SCHLAMM));
+  }
+  return mergeGeos(parts);
+}
+
+function geoKaskadenstufe() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {
+    var r = 2.2 - i * 0.55;
+    parts.push(part(new CY(r, r * 1.06, 0.55, 10), M(0, 0.3 + i * 0.5, -i * 0.5), NA_SINTER));
+    parts.push(part(new CY(r * 0.86, r * 0.86, 0.12, 10),
+      M(0, 0.6 + i * 0.5, -i * 0.5), NA_WASSER));
+  }
+  // Ueberlauf: eine schmale, geneigte Flaeche je Kante — der Wasserfall ist
+  // eine Silhouette, kein Partikelsystem.
+  for (i = 0; i < 3; i++) {
+    parts.push(part(new BX(0.9, 0.5, 0.1),
+      M(0, 0.42 + i * 0.5, 1.55 - i * 0.05 - i * 0.5, 0.35, 0, 0), NA_WASSER));
+  }
+  return mergeGeos(parts);
+}
+
+function geoKoralle() {
+  var parts = [part(brockenGeo(0.45, 139, 0.5), M(0, 0.16, 0, 0, 0, 0, 1, 0.6, 1), NA_FELSD)];
+  for (var i = 0; i < 5; i++) {
+    var a = i / 5 * 6.28 + hashi(i, 3, 141), n = 0.35 + hashi(i, 5, 141) * 0.45;
+    var h = 0.9 + hashi(i, 7, 141) * 0.9;
+    parts.push(part(new CY(0.07, 0.13, h, 5),
+      M(Math.cos(a) * 0.2, 0.2 + h / 2 * Math.cos(n), Math.sin(a) * 0.2,
+        Math.sin(a) * n, 0, -Math.cos(a) * n), i % 2 ? NA_KORALLE : NA_KORALLE2));
+    parts.push(part(new IC(0.14, 0),
+      M(Math.cos(a) * (0.2 + Math.sin(n) * h), 0.2 + h * Math.cos(n),
+        Math.sin(a) * (0.2 + Math.sin(n) * h), 0, 0, 0, 1, 0.8, 1), NA_KORALLE2));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSeetang() {
+  return mergeGeos([
+    kronenQuad(1.1, 1.9, 0, 0, 0, 0.3, 0.1, NA_TANG),
+    kronenQuad(0.9, 1.5, 0.2, 0, -0.15, 1.4, -0.14, 0x4e5c40),
+    kronenQuad(0.8, 1.2, -0.22, 0, 0.2, 2.5, 0.18, 0x67754e)
+  ]);
+}
+
+function geoMuschelbank() {
+  var parts = [], i;
+  for (i = 0; i < 12; i++) {
+    var d = hashi(i, 3, 149), e = hashi(i, 5, 149);
+    parts.push(part(new IC(0.1 + d * 0.1, 0),
+      M((e - 0.5) * 1.7, 0.05 + d * 0.05, (hashi(i, 7, 149) - 0.5) * 1.7,
+        d * 3, e * 6, 0, 1.3, 0.35, 1), d < 0.4 ? NA_MUSCHEL : 0xc9bda2));
+  }
+  return mergeGeos(parts);
+}
+
+function geoTreibholz() {
+  var parts = [
+    part(new CY(0.2, 0.3, 2.4, 6), M(0, 0.28, 0, 0, 0.2, Math.PI / 2), NA_BLEICH),
+    part(new CY(0.3, 0.42, 0.5, 7), M(-1.15, 0.32, 0.05, 0, 0, Math.PI / 2), 0xb2a88f)
+  ];
+  for (var i = 0; i < 4; i++) {
+    var a = i / 4 * 6.28 + 0.4, d = hashi(i, 3, 151);
+    parts.push(part(new CY(0.05, 0.11, 0.8 + d * 0.5, 5),
+      M(-1.3, 0.35 + Math.sin(a) * 0.3, Math.cos(a) * 0.3,
+        0, 0, Math.PI / 2 + Math.sin(a) * 0.7), NA_BLEICH));
+  }
+  return mergeGeos(parts);
+}
+
+function geoRiesenpilz() {
+  var parts = [
+    part(new CY(0.26, 0.4, 2.2, 8), M(0, 1.1, 0, 0, 0, 0.06), NA_STIEL),
+    // Phi-Halbschnitt: die Kappe ist eine Halbkugel, in y gestaucht — das
+    // gestauchte Profil ist die bewusste Uebertreibung aus F6.
+    part(new THREE.SphereGeometry(1.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      M(0.08, 2.05, 0, 0, 0, 0, 1, 0.72, 1), NA_HUT),
+    part(new CY(1.5, 1.42, 0.12, 12), M(0.08, 2.03, 0), NA_LAMELLE)
+  ];
+  // Sechs Lamellen statt zwoelf: unter der Kappe zaehlt der Rhythmus, nicht
+  // die Zahl — die zweiten sechs waeren aus keiner Kameradistanz zu trennen.
+  for (var i = 0; i < 6; i++) {
+    var a = i / 6 * 6.28;
+    parts.push(part(new BX(0.06, 0.16, 1.1),
+      M(0.08 + Math.cos(a) * 0.65, 1.94, Math.sin(a) * 0.65, 0, -a, 0), NA_LAMELLE));
+  }
+  return mergeGeos(parts);
+}
+
+function geoPilzhut() {
+  // Baumhoher Pilz fuer den Pilzwald: dieselbe Bauweise wie riesenpilz, nur in
+  // Baumproportionen — die Registry sucht dort eine BAUMSILHOUETTE als Ersatzart.
+  var parts = [
+    part(new CY(0.2, 0.46, 4.2, 8), M(0.1, 2.1, 0, 0, 0, 0.05), NA_STIEL),
+    part(new CY(0.62, 0.62, 0.18, 8), M(0.1, 2.6, 0), NA_LAMELLE),   // Manschette
+    part(new THREE.SphereGeometry(2.0, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      M(0.18, 4.0, 0, 0, 0, 0, 1, 0.62, 1), 0xa8556a),
+    part(new CY(2.0, 1.9, 0.14, 12), M(0.18, 3.98, 0), NA_LAMELLE)
+  ];
+  for (var i = 0; i < 5; i++) {   // helle Tupfen als Silhouettenbrecher
+    var a = i / 5 * 6.28 + 0.7, d = hashi(i, 3, 157);
+    parts.push(part(new IC(0.16 + d * 0.1, 0),
+      M(0.18 + Math.cos(a) * (0.5 + d * 0.9), 4.6 - d * 0.45, Math.sin(a) * (0.5 + d * 0.9),
+        0, 0, 0, 1, 0.45, 1), NA_LAMELLE));
+  }
+  return mergeGeos(parts);
+}
+
+function geoLeuchtpilz() {
+  var parts = [], i;
+  // Streuware mit Radius 0.4: IC(r, 0) statt SphereGeometry — bei dieser
+  // Groesse ist der Unterschied ein Pixel, der Preis aber ein Sechstel.
+  for (i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 163), a = i / 5 * 6.28;
+    var x = Math.cos(a) * d * 0.35, z = Math.sin(a) * d * 0.35, h = 0.2 + d * 0.3;
+    parts.push(part(new CY(0.035, 0.055, h, 4), M(x, h / 2, z), NA_STIEL));
+    parts.push(part(new IC(0.09 + d * 0.07, 0), M(x, h, z, 0, 0, 0, 1, 0.7, 1), NA_GLUEHEN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoDornbusch() {
+  var parts = [], i;
+  for (i = 0; i < 7; i++) {
+    var a = i / 7 * Math.PI * 2, d = hashi(i, 3, 167);
+    var h = 0.7 + d * 0.8, n = 0.4 + d * 0.5;
+    parts.push(part(new CY(0.015, 0.05, h, 4),
+      M(Math.cos(a) * 0.1, h / 2 * Math.cos(n) + 0.05, Math.sin(a) * 0.1,
+        Math.sin(a) * n, 0, -Math.cos(a) * n), NA_DORN));
+    parts.push(part(new CO(0.035, 0.16, 3),
+      M(Math.cos(a) * (0.1 + Math.sin(n) * h * 0.7), h * 0.62, Math.sin(a) * (0.1 + Math.sin(n) * h * 0.7),
+        Math.sin(a) * (n + 0.9), 0, -Math.cos(a) * (n + 0.9)), 0x8a7a5c));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBambus() {
+  var parts = [], i;
+  for (i = 0; i < 6; i++) {
+    var d = hashi(i, 3, 311), h = 3.4 + d * 2.4;
+    var x = (hashi(i, 5, 311) - 0.5) * 0.8, z = (hashi(i, 7, 311) - 0.5) * 0.8;
+    parts.push(part(new CY(0.05, 0.075, h, 5),
+      M(x, h / 2, z, (d - 0.5) * 0.14, 0, (hashi(i, 11, 311) - 0.5) * 0.18),
+      i % 2 ? NA_BAMBUS : 0x8b9c52));
+  }
+  starr(parts, 0, 0.008);                  // Halme opak halten und still stellen
+  for (i = 0; i < 8; i++) {
+    var a = i / 8 * Math.PI * 2 + hashi(i, 13, 313) * 0.9;
+    parts.push(kronenQuad(1.6, 1.2, Math.cos(a) * 0.35,
+      2.4 + hashi(i, 17, 313) * 2.6, Math.sin(a) * 0.35, a,
+      (hashi(i, 19, 313) - 0.5) * 0.45, NA_BLATT));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBlumenteppich() {
+  return part(new PL(2.4, 2.4), M(0, 0.05, 0, -Math.PI / 2, 0, 0), 0xffffff);
+}
+
+function geoLavaspalte() {
+  var parts = [], i;
+  // Zwei versetzte Kanten, dazwischen die Glut — dieselbe Bauweise wie
+  // rissspalt, nur heiss statt leuchtend.
+  for (i = 0; i < 2; i++) {
+    var s = i ? 1 : -1;
+    parts.push(part(new BX(3.6, 0.7, 1.0),
+      M(s * 0.05, 0.25, s * 0.72, 0, s * 0.06, s * 0.05), 0x4a4038));
+    parts.push(part(new BX(3.4, 0.22, 0.8), M(s * 0.05, 0.6, s * 0.78), 0x5c5248));
+  }
+  parts.push(part(new BX(3.2, 0.14, 0.6), M(0, 0.12, 0), NA_LAVA));
+  for (i = 0; i < 3; i++) {
+    parts.push(part(new IC(0.16 + hashi(i, 3, 173) * 0.1, 0),
+      M(-1.1 + i * 1.1, 0.2, (hashi(i, 5, 173) - 0.5) * 0.3, 0, 0, 0, 1, 0.6, 1), NA_LAVA));
+  }
+  return mergeGeos(parts);
+}
+
+/* ==========================================================================
+   Kategorie 8 des Objektkatalogs — Ruinen und Bruchkanten des zerrissenen
+   Planeten. Der Katalog sieht sie ausdruecklich als ABLEITUNG vor: bruchkante()
+   kappt fertige Bauteile an einer verrauschten Ebene, damit aus mauerstueck,
+   saeule, wehrturm und treppe() ihre Ruinen werden, ohne eine zweite Fassung
+   derselben Geometrie zu bauen. Das ist der wirtschaftlichste Weg — und der
+   einzige, bei dem Ruine und Original als DASSELBE Bauwerk lesen.
+   ========================================================================== */
+var RU_STEIN = 0xb4aea0,
+    RU_STEIND = 0x8f8878,
+    RU_SCHUTT = 0x9c9486,
+    RU_MOOS = 0x5e7844,
+    RU_EFEU = 0x4f6b3e,
+    RU_ERDE = 0x74624a,
+    RU_WURZEL = 0x6b5a46,
+    RU_SCHEIN = 0xa8e6ff;     // Lichtschein aus dem Riss (Arbor-Kaltlicht)
+
+/** Streut Schutt um den Fuss einer Ruine — die Gebrauchsspur aus F6. */
+function schutt(parts, n, radius, seed, hex) {
+  for (var i = 0; i < n; i++) {
+    var d = hashi(i, 3, seed), a = i / n * 6.28 + hashi(i, 5, seed) * 1.4;
+    var q = radius * (0.4 + d * 0.6);
+    parts.push(part(brockenGeo(0.14 + d * 0.2, seed + i * 7, 0.55),
+      M(Math.cos(a) * q, 0.08 + d * 0.12, Math.sin(a) * q, d * 3, a, d, 1, 0.6, 1),
+      hex === undefined ? RU_SCHUTT : hex));
+  }
+  return parts;
+}
+
+function geoMauerruine() {
+  // geoMauerstueck() liefert eine FRISCHE Geometrie (definePool haengt seine
+  // Abdunkelung an die uebergebene Instanz, nicht an die Funktion) — sie darf
+  // hier also gefahrlos zerbrochen werden.
+  var w = bruchkante(geoMauerstueck(),
+    { nx: 0.42, ny: 1, nz: 0.1, wert: 1.5, rauheit: 0.85 }, 301);
+  var parts = [w];
+  parts.push(part(brockenGeo(0.7, 307, 0.5), M(1.5, 0.3, 0.2, 0.3, 0.8, 0, 1, 0.5, 1), RU_STEIND));
+  parts.push(part(brockenGeo(0.5, 311, 0.4), M(-1.3, 0.9, -0.1, 0, 1.4, 0.2, 1, 0.25, 0.9), RU_MOOS));
+  schutt(parts, 5, 1.9, 313);
+  return mergeGeos(parts);
+}
+
+function geoSaeulenstumpf() {
+  var s = bruchkante(geoSaeule(), { ny: 1, nx: 0.3, wert: 1.35, rauheit: 0.55 }, 317);
+  return mergeGeos([s,
+    part(new CY(0.44, 0.46, 0.8, 9), M(1.0, 0.24, 0.25, 0, 0.4, Math.PI / 2), RU_STEIN),
+    part(new CY(0.42, 0.44, 0.7, 9), M(0.55, 0.24, -0.9, 0, 1.1, Math.PI / 2), RU_STEIND),
+    part(brockenGeo(0.3, 319, 0.5), M(-0.7, 0.12, 0.6, 0, 0, 0, 1, 0.5, 1), RU_SCHUTT)
+  ]);
+}
+
+function geoGiebelruine() {
+  var parts = [
+    part(new BX(3.4, 3.6, 0.55), M(0, 1.8, 0), RU_STEIN),
+    part(prismGeo(3.4, 1.7, 0.55), M(0, 3.6, 0), RU_STEIN),
+    part(new BX(0.9, 1.2, 0.7), M(-0.75, 2.4, 0), 0x2e3038),          // Fensterloch
+    part(new BX(1.1, 0.16, 0.72), M(-0.75, 3.05, 0), RU_STEIND),      // Sturz
+    part(new BX(0.75, 1.5, 0.7), M(0.9, 0.75, 0), 0x2e3038)           // Tuerloch
+  ];
+  var g = bruchkante(mergeGeos(parts),
+    { nx: 1, ny: 0.55, nz: 0, wert: 1.55, rauheit: 1.0 }, 323);
+  var rest = [g];
+  // Efeu als flach gedrueckte Brocken, nicht als Quad: der Pool traegt keine
+  // alphaTest-Karte (siehe findling).
+  rest.push(part(brockenGeo(0.8, 331, 0.45), M(-1.35, 1.5, 0.32, 0, 0.5, 0.2, 0.9, 1.6, 0.14), RU_EFEU));
+  rest.push(part(brockenGeo(0.55, 337, 0.5), M(0.4, 0.5, 0.34, 0, 1.2, 0, 1.2, 0.9, 0.14), RU_MOOS));
+  schutt(rest, 6, 2.2, 341);
+  return mergeGeos(rest);
+}
+
+function geoGewoelbekeller() {
+  var parts = [
+    // Offene Halbschale: CY ohne Deckel, thetaLength = PI, um x gelegt.
+    part(new CY(1.5, 1.5, 3.4, 12, 1, true, 0, Math.PI),
+      M(0, 1.15, 0, 0, 0, Math.PI / 2), RU_STEIN),
+    part(new BX(0.5, 1.3, 3.5), M(-1.5, 0.65, 0), RU_STEIND),
+    part(new BX(0.5, 1.3, 3.5), M(1.5, 0.65, 0), RU_STEIND),
+    part(new BX(3.5, 0.3, 0.5), M(0, 0.15, -1.6), RU_STEIND)
+  ];
+  var g = bruchkante(mergeGeos(parts),
+    { nx: 0.2, ny: 0.25, nz: 1, wert: 1.3, rauheit: 0.9 }, 347);
+  var rest = [g];
+  schutt(rest, 7, 2.0, 349);
+  return mergeGeos(rest);
+}
+
+function geoBruchkanteFeld() {
+  var parts = [
+    part(brockenGeo(2.4, 353, 0.4), M(0, -0.6, 0, 0, 0.4, 0, 1.2, 0.85, 1), RU_ERDE),
+    part(brockenGeo(2.2, 359, 0.35), M(0.1, 0.35, 0.1, 0, 1.1, 0, 1.15, 0.28, 0.95), 0x6f8a4e)
+  ];
+  // Wurzelvorhang: fuenf Straenge, die ueber die Abbruchkante nach unten
+  // haengen. Sie machen aus einem Erdklotz eine ABGERISSENE Kante.
+  for (var i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 361), a = -0.9 + i * 0.45;
+    var pts = [
+      new THREE.Vector3(Math.cos(a) * 1.9, 0.1, Math.sin(a) * 1.9 + 1.2),
+      new THREE.Vector3(Math.cos(a) * 2.1, -0.9 - d * 0.4, Math.sin(a) * 2.0 + 1.5),
+      new THREE.Vector3(Math.cos(a) * 1.8 + (d - 0.5) * 0.6, -2.2 - d * 1.4,
+        Math.sin(a) * 1.8 + 1.4)
+    ];
+    parts.push(part(tubeGeo(pts, function (t) { return 0.14 * (1 - t * 0.7); }, 4),
+      null, RU_WURZEL));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSchwebefels() {
+  var parts = [islandGeo(2.1, 367)];
+  for (var i = 0; i < 4; i++) {
+    var a = i / 4 * 6.28 + 0.6, d = hashi(i, 3, 373);
+    parts.push(part(new IC(0.3 + d * 0.25, 0),
+      M(Math.cos(a) * d * 1.2, 0.72 + d * 0.12, Math.sin(a) * d * 1.2,
+        0, a, 0, 1.2, 0.7, 1.2), d < 0.5 ? 0x6d8f4a : 0x7ba055));
+  }
+  return mergeGeos(parts);
+}
+
+function geoTruemmerhaufen() {
+  var parts = [], i;
+  for (i = 0; i < 6; i++) {
+    var d = hashi(i, 3, 379), e = hashi(i, 5, 379);
+    parts.push(part(new BX(0.16 + d * 0.1, 0.16, 1.4 + e * 1.0),
+      M((e - 0.5) * 1.2, 0.12 + d * 0.35, (d - 0.5) * 1.2,
+        (d - 0.5) * 0.5, e * 3.1, (e - 0.5) * 0.4), 0x7a6450));
+  }
+  schutt(parts, 4, 1.1, 383, RU_STEIN);
+  return mergeGeos(parts);
+}
+
+function geoStatuentorso() {
+  var parts = [
+    part(new BX(1.1, 0.42, 1.1), M(0, 0.21, 0), RU_STEIND),
+    part(new BX(0.95, 0.18, 0.95), M(0, 0.5, 0), RU_STEIN),
+    part(new CY(0.3, 0.38, 1.5, 8), M(0.05, 1.35, 0, 0, 0.4, 0.07), RU_STEIN),
+    part(new IC(0.42, 0), M(0.06, 1.95, 0, 0, 0.5, 0, 1.25, 0.85, 0.9), RU_STEIN),
+    part(new CY(0.13, 0.16, 0.9, 6), M(-0.42, 1.6, 0.1, 0.2, 0, 0.35), RU_STEIN)
+  ];
+  var g = bruchkante(mergeGeos(parts), { ny: 1, nx: 0.3, wert: 2.15, rauheit: 0.5 }, 389);
+  return mergeGeos([g, part(brockenGeo(0.28, 397, 0.5), M(0.8, 0.12, 0.55), RU_SCHUTT)]);
+}
+
+function geoTreppenruine() {
+  var parts = [];
+  treppe(parts, 7, 1.6, 0.3, 0, 0, -1.0, RU_STEIN, RU_STEIND);
+  var g = bruchkante(mergeGeos(parts),
+    { nz: 1, ny: 0.35, wert: 1.5, rauheit: 0.85 }, 401);
+  var rest = [g];
+  schutt(rest, 5, 1.5, 409);
+  return mergeGeos(rest);
+}
+
+function geoRissspalt() {
+  var parts = [], i;
+  for (i = 0; i < 2; i++) {
+    var s = i ? 1 : -1;
+    parts.push(part(new BX(4.2, 0.9, 1.4),
+      M(s * 0.1, 0.3, s * 0.95, 0, s * 0.05, s * 0.04), RU_ERDE));
+    parts.push(part(new BX(4.0, 0.2, 1.2), M(s * 0.1, 0.72, s * 1.0), 0x6f8a4e));
+  }
+  parts.push(part(new BX(3.8, 0.1, 0.5), M(0, -0.15, 0), 0x2a2620));
+  parts.push(part(new PL(3.6, 0.42), M(0, -0.08, 0, -Math.PI / 2, 0, 0), RU_SCHEIN));
+  return mergeGeos(parts);
+}
+
+function geoSturzwurzel() {
+  var parts = [
+    part(brockenGeo(1.0, 419, 0.4), M(0, 0.1, 0, 0, 0.5, 0, 1.4, 0.4, 1), RU_ERDE)
+  ];
+  for (var i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 421), x = -0.8 + i * 0.4;
+    var pts = [
+      new THREE.Vector3(x, 0.1, (d - 0.5) * 0.7),
+      new THREE.Vector3(x + (d - 0.5) * 0.4, -1.1 - d * 0.5, (d - 0.5) * 0.9),
+      new THREE.Vector3(x + (d - 0.5) * 0.9, -2.4 - d * 1.2, (d - 0.5) * 1.1)
+    ];
+    parts.push(part(tubeGeo(pts, function (t) { return 0.12 * (1 - t * 0.75); }, 4),
+      null, RU_WURZEL));
+    parts.push(part(new IC(0.2 + d * 0.14, 0),
+      M(x + (d - 0.5) * 0.5, -1.4 - d * 0.6, (d - 0.5) * 0.9, 0, 0, 0, 1, 0.5, 0.6), RU_MOOS));
+  }
+  return mergeGeos(parts);
+}
+
+function geoRuinenturm() {
+  var t = bruchkante(geoWehrturm(),
+    { nx: 0.5, ny: 1, nz: 0.2, wert: 3.6, rauheit: 1.3 }, 431);
+  var parts = [t];
+  parts.push(part(brockenGeo(0.9, 433, 0.4), M(-1.0, 1.8, 0.6, 0, 0.7, 0.2, 0.5, 2.2, 0.16), RU_EFEU));
+  parts.push(part(brockenGeo(0.7, 439, 0.45), M(0.9, 1.1, -0.8, 0, 1.6, -0.2, 0.4, 1.8, 0.16), RU_MOOS));
+  schutt(parts, 7, 2.4, 443);
+  return mergeGeos(parts);
+}
+
+function geoTempelruine() {
+  var parts = [
+    part(new BX(7.0, 0.4, 4.6), M(0, 0.2, 0), RU_STEIND),
+    part(new BX(6.4, 0.35, 4.0), M(0, 0.55, 0), RU_STEIN),
+    part(new BX(6.0, 0.25, 3.6), M(0, 0.85, 0), RU_STEIN)
+  ];
+  saeulen(parts, 2, -2.4, 4.8, 1.0, 1.5, 0.3, 3.0, RU_STEIN);
+  parts.push(part(new CY(0.34, 0.34, 0.55, 9), M(-2.4, 4.15, 1.5), RU_STEIND));
+  // Gefallene Saeulen als liegende Zylinder mit Trommelfugen — der Bruch
+  // erzaehlt mehr als eine zweite stehende Reihe.
+  for (var i = 0; i < 4; i++) {
+    var d = hashi(i, 3, 449);
+    parts.push(part(new CY(0.3, 0.32, 2.2 + d * 1.4, 9),
+      M(-1.6 + i * 1.3, 1.3, -1.2 - d * 0.6, 0, 0.2 + d * 0.5, Math.PI / 2 + (d - 0.5) * 0.2),
+      i % 2 ? RU_STEIN : RU_STEIND));
+  }
+  parts.push(part(prismGeo(3.0, 0.9, 0.7), M(1.4, 1.05, 1.6, 0, 0.3, 0.12), RU_STEIN));
+  schutt(parts, 8, 3.2, 457);
+  return mergeGeos(parts);
+}
+
+/* --- Pools Natur und Ruinen. Radien und Familien aus der Katalogtabelle. -- */
+definePool("felsnadel", geoFelsnadel(), { radius: 1.2, familie: 'stein' });
+definePool("felsbogen", geoFelsbogen(), { radius: 3.2, ao: 0.26, familie: 'stein' });
+definePool("findling", geoFindling(), { radius: 1.8, familie: 'stein' });
+definePool("geroell", geoGeroell(), { radius: 1.2, ao: 0.2, familie: 'stein' });
+definePool("basaltsaeulen", geoBasaltsaeulen(), { radius: 1.8, ao: 0.28, familie: 'stein' });
+definePool("geysir", geoGeysir(), { radius: 1.6, dbl: true, ao: 0.18,
+  map: TEX.kroneZerzaust, alphaTest: 0.4, familie: 'stein', wind: { amp: 0.3 } });
+definePool("schlammtopf", geoSchlammtopf(), { radius: 1.2, familie: 'erde' });
+definePool("kaskadenstufe", geoKaskadenstufe(), { radius: 2.6, ao: 0.22, familie: 'stein' });
+definePool("koralle", geoKoralle(), { radius: 1.0, familie: 'laub' });
+definePool("seetang", geoSeetang(), { radius: 0.6, dbl: true, ao: 0.18,
+  map: TEX.grassTuft, alphaTest: 0.4, familie: 'laub', wind: { amp: 0.55 } });
+definePool("muschelbank", geoMuschelbank(), { radius: 1.0, ao: 0.16, familie: 'stein' });
+definePool("treibholz", geoTreibholz(), { radius: 1.4, familie: 'rinde' });
+definePool("riesenpilz", geoRiesenpilz(), { radius: 1.4, familie: 'laub' });
+definePool("pilzhut", geoPilzhut(), { radius: 2.0, ao: 0.24, familie: 'laub' });
+definePool("leuchtpilz", geoLeuchtpilz(), { radius: 0.4, ao: 0.12, familie: 'laub',
+  emissive: 0x4ea882, emissiveIntensity: 0.9 });
+definePool("dornbusch", geoDornbusch(), { radius: 0.8, familie: 'rinde' });
+definePool("bambus", geoBambus(), { radius: 0.9, dbl: true, ao: 0.22,
+  map: TEX.kroneSchmal, alphaTest: 0.42, familie: 'laub', wind: { amp: 0.42 } });
+definePool("blumenteppich", geoBlumenteppich(), { radius: 1.2, dbl: true, ao: 0,
+  map: TEX.bluete, alphaTest: 0.4, familie: 'laub' });
+definePool("lavaspalte", geoLavaspalte(), { radius: 2.0, ao: 0.2, familie: 'stein',
+  emissive: 0x923a12, emissiveIntensity: 0.8 });
+
+definePool("mauerruine", geoMauerruine(), { radius: 1.6, familie: 'stein' });
+definePool("saeulenstumpf", geoSaeulenstumpf(), { radius: 0.8, familie: 'stein' });
+definePool("giebelruine", geoGiebelruine(), { radius: 2.2, ao: 0.26, familie: 'stein' });
+definePool("gewoelbekeller", geoGewoelbekeller(), { radius: 2.4, ao: 0.28, familie: 'stein' });
+definePool("bruchkante", geoBruchkanteFeld(), { radius: 3.4, ao: 0.28, familie: 'erde' });
+definePool("schwebefels", geoSchwebefels(), { radius: 2.5, ao: 0.24, familie: 'stein' });
+definePool("truemmerhaufen", geoTruemmerhaufen(), { radius: 1.4, familie: 'stein' });
+definePool("statuentorso", geoStatuentorso(), { radius: 0.9, familie: 'stein' });
+definePool("treppenruine", geoTreppenruine(), { radius: 1.8, ao: 0.26, familie: 'stein' });
+definePool("rissspalt", geoRissspalt(), { radius: 2.8, ao: 0.2, familie: 'erde',
+  emissive: 0x2a5a70, emissiveIntensity: 0.55 });
+definePool("sturzwurzel", geoSturzwurzel(), { radius: 1.6, ao: 0.22, familie: 'rinde' });
+definePool("ruinenturm", geoRuinenturm(), { radius: 2.0, ao: 0.26, familie: 'stein' });
+definePool("tempelruine", geoTempelruine(), { radius: 4.0, ao: 0.26, familie: 'stein' });
+
+/* ==========================================================================
+   Kategorie 9 des Objektkatalogs — Arbor. Die weissen Ranken des Riesenbaums,
+   der den zerrissenen Planeten zusammenhaelt: alles hier ist weiss, leicht
+   durchscheinend hell und traegt leuchtende Adern.
+
+   `blattplateau` und `genBlattstadt` fehlen bewusst — sie sind Struktur-
+   generatoren und wohnen in vines.js bei der Rankenachse, nicht hier.
+   ========================================================================== */
+var AR_HAUT = 0xf2efe4,       // Rankenhaut
+    AR_HELL = 0xfaf8f0,
+    AR_DUNKEL = 0xd8d2c2,     // Schattenseite, Knoten
+    AR_BLATT = 0xdfe9c6,      // Blattoberseite (bleiches Arbor-Gruen)
+    AR_BLATTU = 0xeef0dc,     // Unterseite
+    AR_ADER = 0xb4e6cc,       // Blattadern und Leuchtrillen
+    AR_HOLZ = 0x9c8a6e,       // angezimmertes Holz an der Ranke
+    AR_HOLZD = 0x7a6a52,
+    AR_METALL = 0x8e8a80,
+    AR_GLUT = 0xcdf4e0;       // leuchtender Kern
+
+/**
+ * Faerbung fuer tubeGeo: helle Rankenhaut mit einem laengs laufenden Band aus
+ * Leuchtadern. Der Katalog nennt das `emissiveAdern`; als colorAt-Funktion
+ * braucht es dafuer keinen eigenen Helfer — tubeGeo bringt den Haken schon mit.
+ */
+function rankenAder(t, i, c) {
+  var g = Math.pow(Math.abs(Math.sin(t * 9.5 + hashi(i, 3, 601) * 2.4)), 6);
+  c.setRGB(0.95 + g * 0.05, 0.94 + g * 0.06, 0.86 + g * 0.14);
+}
+
+function geoRankenstamm() {
+  var pts = [], i;
+  for (i = 0; i <= 10; i++) {
+    var t = i / 10;
+    pts.push(new THREE.Vector3(Math.sin(t * 2.4) * 1.7, t * 8.6,
+      Math.cos(t * 1.7) * 1.0 - 1.0));
+  }
+  return mergeGeos([tubeGeo(pts,
+    function (u) { return 0.95 - u * 0.34 + Math.sin(u * 7) * 0.07; }, 9, rankenAder)]);
+}
+
+function geoRankenknoten() {
+  var parts = [], k;
+  for (k = 0; k < 3; k++) {
+    var a = k / 3 * 6.28 + 0.4;
+    var pts = [
+      new THREE.Vector3(Math.cos(a) * 3.0, 0.6 + hashi(k, 3, 607) * 1.2, Math.sin(a) * 3.0),
+      new THREE.Vector3(Math.cos(a) * 1.3, 1.5, Math.sin(a) * 1.3),
+      new THREE.Vector3(0, 2.1, 0),
+      new THREE.Vector3(Math.cos(a) * -0.4, 3.4 + hashi(k, 5, 607) * 1.0, Math.sin(a) * -0.4)
+    ];
+    parts.push(tubeGeo(pts, function (u) { return 0.5 + Math.sin(u * 3.1) * 0.14; }, 8, rankenAder));
+  }
+  parts.push(part(new IC(0.95, 1), M(0, 2.1, 0, 0, 0.5, 0, 1.1, 0.9, 1.1), AR_HELL));
+  return mergeGeos(parts);
+}
+
+function geoBlattsteg() {
+  var parts = [leafGeo(6.0, 0.62, 0.4, 0.16, AR_BLATT, AR_BLATTU, AR_ADER, 613)];
+  // Zwei Halteseile vom Stielansatz zur Spitze: sie machen aus einem Blatt
+  // eine BRUECKE — ohne sie liegt es nur herum.
+  for (var s = -1; s <= 1; s += 2) {
+    parts.push(part(tubeGeo([
+      new THREE.Vector3(0.1, 0.1, s * 0.5),
+      new THREE.Vector3(3.0, 1.5, s * 0.85),
+      new THREE.Vector3(5.9, 0.2, s * 0.3)
+    ], function () { return 0.055; }, 4), null, AR_HELL));
+  }
+  parts.push(part(new CY(0.14, 0.2, 0.9, 6), M(-0.4, 0, 0, 0, 0, Math.PI / 2), AR_HAUT));
+  return mergeGeos(parts);
+}
+
+function geoRankentreppe() {
+  var parts = [], i;
+  var pts = [];
+  for (i = 0; i <= 6; i++) {
+    pts.push(new THREE.Vector3(0, i * 0.9, 0));
+  }
+  parts.push(tubeGeo(pts, function () { return 0.55; }, 8, rankenAder));  // Ranke als Kern
+  for (i = 0; i < 16; i++) {
+    var a = i * 0.62, y = 0.3 + i * 0.31;
+    parts.push(part(new BX(1.0, 0.11, 0.42),
+      M(Math.cos(a) * 0.95, y, Math.sin(a) * 0.95, 0, -a, 0), AR_HOLZ));
+  }
+  // Handlauf auf derselben Helix, eine Stufenhoehe darueber.
+  var hl = [];
+  for (i = 0; i <= 16; i++) {
+    var b = i * 0.62;
+    hl.push(new THREE.Vector3(Math.cos(b) * 1.35, 1.15 + i * 0.31, Math.sin(b) * 1.35));
+  }
+  parts.push(part(tubeGeo(hl, function () { return 0.06; }, 4), null, AR_HOLZD));
+  return mergeGeos(parts);
+}
+
+function geoRankenleiter() {
+  var parts = [], s, i;
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(tubeGeo([
+      new THREE.Vector3(s * 0.3, 4.6, 0),
+      new THREE.Vector3(s * 0.34, 2.3, 0.18),
+      new THREE.Vector3(s * 0.3, 0.05, 0)
+    ], function () { return 0.05; }, 4), null, AR_HOLZD));
+  }
+  for (i = 0; i < 12; i++) {
+    parts.push(part(new BX(0.68, 0.06, 0.09),
+      M(0, 0.2 + i * 0.38, 0.1 + Math.sin(i * 0.5) * 0.05, 0, 0,
+        (hashi(i, 3, 617) - 0.5) * 0.12), AR_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSaftzapfer() {
+  return mergeGeos([
+    part(new BX(0.62, 0.5, 0.44), M(0, 1.15, 0), AR_HOLZ),
+    part(new BX(0.7, 0.1, 0.52), M(0, 1.44, 0), AR_HOLZD),
+    part(new CY(0.07, 0.07, 0.55, 6), M(0, 1.0, 0.25, Math.PI / 2 - 0.5, 0, 0), AR_METALL),
+    part(new CY(0.3, 0.24, 0.62, 8), M(0, 0.31, 0.42), AR_HOLZ),
+    part(new CY(0.31, 0.31, 0.05, 8), M(0, 0.5, 0.42), AR_HOLZD),
+    part(new CY(0.26, 0.26, 0.06, 8), M(0, 0.55, 0.42), AR_GLUT),      // Saftspiegel
+    part(new IC(0.06, 0), M(0, 0.78, 0.36), AR_GLUT)                   // fallender Tropfen
+  ]);
+}
+
+function geoLichtbluete() {
+  // Reine Karten mit alphaTest: das emissive Material glueht dann exakt in der
+  // Bluetensilhouette. Ein IC-Kern daneben wuerde von derselben alphaTest-Karte
+  // durchloechert (die bluete-Textur traegt keinen opaken Streifen).
+  return mergeGeos([
+    kronenQuad(0.9, 0.9, 0, 0.05, 0, 0.2, 0.1, AR_GLUT),
+    kronenQuad(0.75, 0.75, 0.12, 0.3, -0.1, 1.5, -0.2, AR_HELL),
+    kronenQuad(0.6, 0.6, -0.14, 0.15, 0.16, 2.7, 0.25, AR_BLATT)
+  ]);
+}
+
+function geoSporenlaterne() {
+  return mergeGeos([
+    part(new IC(0.22, 1), M(0, 0.25, 0), AR_GLUT),
+    part(new IC(0.34, 0), M(0, 0.25, 0, 0.4, 0.7, 0), AR_HELL)
+  ]);
+}
+
+function geoWurzelbogen() {
+  var parts = [], s;
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(tubeGeo([
+      new THREE.Vector3(s * 1.9, 0.0, 0.3),
+      new THREE.Vector3(s * 1.5, 1.9, -0.1),
+      new THREE.Vector3(s * 0.4, 3.1, 0.1),
+      new THREE.Vector3(-s * 0.9, 2.7, -0.2),
+      new THREE.Vector3(-s * 1.7, 1.4, 0.2)
+    ], function (t) { return 0.34 - t * 0.1; }, 7, rankenAder), null, AR_HAUT));
+  }
+  // Erdanschuettung als gestauchter Brocken statt moundGeo: moundGeo liest
+  // heightAt/terrainColor und wuerde die Geometrie an das Terrain BEIM LADEN
+  // binden — Pool-Geometrien werden aber einmal gebaut und ueberall gesetzt.
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(brockenGeo(1.0, 619 + (s + 1), 0.4),
+      M(s * 1.8, 0.15, 0.2, 0, s * 0.8, 0, 1.1, 0.45, 1), 0x6f5f48));
+    parts.push(part(brockenGeo(0.5, 631 + (s + 1), 0.5),
+      M(s * 1.5, 0.5, 0.5, 0, s, 0, 1, 0.35, 0.9), 0x5e7844));
+  }
+  return mergeGeos(parts);
+}
+
+function geoWurzelanker() {
+  var parts = [part(brockenGeo(1.25, 641, 0.45), M(0, 0.6, 0, 0.2, 0.6, 0, 1.2, 0.9, 1), 0xa5a094)];
+  for (var i = 0; i < 4; i++) {
+    var a = i / 4 * 6.28 + 0.5, d = hashi(i, 3, 643);
+    parts.push(part(tubeGeo([
+      new THREE.Vector3(0, 2.6, 0),
+      new THREE.Vector3(Math.cos(a) * 0.9, 1.5, Math.sin(a) * 0.9),
+      new THREE.Vector3(Math.cos(a) * 1.7, 0.5 + d * 0.3, Math.sin(a) * 1.7),
+      new THREE.Vector3(Math.cos(a) * 2.4, 0.05, Math.sin(a) * 2.4)
+    ], function (t) { return 0.32 - t * 0.22; }, 6, rankenAder), null, AR_HAUT));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSamenkapsel() {
+  var parts = [];
+  // Zwei Halbschalen mit Phi-Segment: die Kapsel ist AUFGEPLATZT, der Spalt
+  // dazwischen ist die ganze Idee — eine geschlossene Kugel waere ein Ei.
+  for (var s = -1; s <= 1; s += 2) {
+    parts.push(part(new THREE.SphereGeometry(1.5, 10, 6, 0, Math.PI * 0.82, 0, Math.PI),
+      M(0, 1.45, 0, 0, s > 0 ? 0.35 : Math.PI + 0.35, 0, 1, 1.25, 1),
+      s > 0 ? AR_HAUT : AR_DUNKEL));
+  }
+  parts.push(part(new IC(0.85, 0), M(0, 1.3, 0), AR_GLUT));            // Innenlicht
+  parts.push(part(new BX(2.6, 0.3, 1.8), M(0, 0.15, 0), 0x8a8278));    // Fuss im Boden
+  tuer(parts, 0, 0.25, 0.95, 0.7, 1.2);
+  return mergeGeos(parts);
+}
+
+function geoRankenkai() {
+  var parts = [leafGeo(5.2, 1.5, 0.22, 0.22, AR_BLATT, AR_BLATTU, AR_ADER, 647)];
+  var i;
+  for (i = 0; i < 4; i++) {   // Poller entlang der Blattkante
+    var u = 1.2 + i * 1.0, s = i % 2 ? 1 : -1;
+    parts.push(part(new CY(0.13, 0.17, 0.55, 7),
+      M(u, 0.05 - u * 0.012, s * leafHalfWidth(u / 5.2) * 1.5 * 0.8), AR_HOLZ));
+  }
+  for (i = -1; i <= 1; i += 2) {
+    parts.push(part(new CY(0.07, 0.1, 3.0, 6), M(2.4, 1.5, i * 0.5, 0, 0, i * 0.05), AR_HOLZD));
+    parts.push(part(new PL(0.8, 0.3), M(2.8, 2.7, i * 0.5, 0, Math.PI / 2, 0.1), AR_ADER));
+  }
+  parts.push(part(new CY(0.18, 0.26, 1.1, 6), M(-0.5, 0, 0, 0, 0, Math.PI / 2), AR_HAUT));
+  return mergeGeos(parts);
+}
+
+function geoHuetersaeule() {
+  var parts = [
+    part(new BX(0.8, 0.24, 0.8), M(0, 0.12, 0), AR_DUNKEL),
+    part(new CY(0.24, 0.34, 3.2, 8), M(0, 1.7, 0), AR_HELL),
+    part(new CO(0.3, 0.5, 8), M(0, 3.55, 0), AR_HAUT)
+  ];
+  for (var i = 0; i < 4; i++) {      // geschnitzte Rankenbaender
+    parts.push(part(new BX(0.72, 0.09, 0.72),
+      M(0, 0.7 + i * 0.68, 0, 0, i * 0.5, 0), i % 2 ? AR_GLUT : AR_DUNKEL));
+  }
+  return mergeGeos(parts);
+}
+
+/* ==========================================================================
+   Kategorie 12 — Biom Moor / Sumpf. Dunkle Erde, nasses Holz, wenig Farbe:
+   das Moor lebt von der Silhouette gegen den Dunst, nicht von Buntheit.
+   ========================================================================== */
+var MO_TORF = 0x4a3f31,
+    MO_TORFH = 0x655440,
+    MO_HOLZ = 0x7d6e56,
+    MO_HOLZD = 0x5c5040,
+    MO_WASSER = 0x384432,
+    MO_MOOS = 0x6c7a48,
+    MO_REET = 0x9a8a62,
+    MO_SCHILF = 0x8b9a5c,
+    MO_BLUETE = 0xe8e0d0,
+    MO_IRR = 0xa6f2c4,
+    MO_STOFF = 0xaa9a80;
+
+function geoTorfstich() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {          // abgestochene Stufenkante
+    parts.push(part(new BX(4.0 - i * 0.5, 0.5, 1.2),
+      M(0, 0.25 + i * 0.45, -0.7 - i * 0.9), i % 2 ? MO_TORF : MO_TORFH));
+  }
+  parts.push(part(new BX(4.2, 0.12, 2.0), M(0, 0.06, 1.1), MO_WASSER));
+  for (i = 0; i < 8; i++) {          // gestochene Soden zum Trocknen
+    var d = hashi(i, 3, 701);
+    parts.push(part(new BX(0.5, 0.16, 0.32),
+      M(-1.6 + (i % 4) * 1.05, 0.09 + Math.floor(i / 4) * 0.17, 0.5 + (d - 0.5) * 0.5,
+        0, (d - 0.5) * 0.5, 0), MO_TORF));
+  }
+  return mergeGeos(parts);
+}
+
+function geoTorfstapel() {
+  var parts = [], i;
+  for (i = 0; i < 12; i++) {
+    var lage = Math.floor(i / 4), d = hashi(i, 3, 709);
+    var q = 0.5 - lage * 0.13;
+    var a = (i % 4) / 4 * 6.28 + lage * 0.7;
+    parts.push(part(new BX(0.46, 0.17, 0.3),
+      M(Math.cos(a) * q, 0.09 + lage * 0.18, Math.sin(a) * q, 0, -a + (d - 0.5) * 0.3, 0),
+      lage % 2 ? MO_TORF : MO_TORFH));
+  }
+  return mergeGeos(parts);
+}
+
+function geoMoorsteg() {
+  var parts = [], i;
+  for (i = 0; i < 12; i++) {
+    var d = hashi(i, 3, 719);
+    // Leicht wellig: ein Bohlenweg im Moor liegt nie eben, und genau das
+    // erzaehlt den weichen Untergrund.
+    parts.push(part(new BX(1.5, 0.09, 0.42),
+      M((d - 0.5) * 0.12, 0.42 + Math.sin(i * 0.9) * 0.09, -2.6 + i * 0.47,
+        Math.sin(i * 0.9) * 0.06, (d - 0.5) * 0.12, (d - 0.5) * 0.1), MO_HOLZ));
+  }
+  for (i = 0; i < 6; i++) {
+    parts.push(part(new CY(0.08, 0.1, 1.1, 5),
+      M(i % 2 ? 0.6 : -0.6, -0.05, -2.3 + i * 0.94), MO_HOLZD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoMoorhuette() {
+  var parts = [];
+  sockel(parts, 2.4, 2.0, 0x6a6052);
+  // Die Kate steht schief — die bewusste Uebertreibung aus F6. Ein gerades
+  // Haus im Moor sieht aus wie ein Fehler, ein schiefes wie eine Geschichte.
+  parts.push(part(new BX(2.4, 1.7, 2.0), M(0, 1.15, 0, 0.04, 0, -0.07), 0xa89c84));
+  dach(parts, 2.4, 2.0, 1.25, 2.05, MO_REET, true);
+  parts.push(part(new BX(2.7, 0.2, 2.3), M(0, 2.75, 0, 0, 0, -0.05), MO_MOOS)); // Torfdach
+  tuer(parts, 0.35, 0.42, 1.03, 0.6, 1.15);
+  fenster(parts, -0.6, 1.35, 1.03, 0.42, 0.44, "z");
+  parts.push(part(brockenGeo(0.6, 727, 0.5), M(-1.3, 0.35, 0.7, 0, 0.6, 0, 1, 0.4, 1), MO_MOOS));
+  return mergeGeos(parts);
+}
+
+function geoAalreuse() {
+  return mergeGeos([
+    part(new CY(0.11, 0.13, 2.4, 5), M(0.35, 0.9, 0, 0.1, 0, -0.12), MO_HOLZD),
+    part(new CY(0.16, 0.28, 0.95, 8, 1, true), M(0, 0.0, 0, Math.PI / 2 - 0.25, 0.4, 0), MO_HOLZ),
+    part(new CY(0.29, 0.29, 0.05, 8), M(-0.12, -0.35, 0, Math.PI / 2 - 0.25, 0.4, 0), MO_HOLZD),
+    part(new CY(0.5, 0.5, 0.04, 10), M(0, 0.02, 0), MO_WASSER)
+  ]);
+}
+
+function geoIrrlicht() {
+  return mergeGeos([
+    part(new IC(0.16, 1), M(0, 0.9, 0), MO_IRR),
+    part(new IC(0.28, 0), M(0, 0.9, 0, 0.3, 0.8, 0, 1, 0.8, 1), 0xd6f8e4)
+  ]);
+}
+
+function geoSchilf() {
+  return mergeGeos([
+    kronenQuad(1.0, 1.9, 0, 0, 0, 0.25, 0.06, MO_SCHILF),
+    kronenQuad(0.9, 1.6, 0.1, 0, 0.12, 1.55, -0.1, 0x7d8c52),
+    kronenQuad(0.7, 1.2, -0.12, 0, -0.1, 2.6, 0.14, 0x9aa868)
+  ]);
+}
+
+function geoSeerose() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {
+    var a = i / 3 * 6.28, d = hashi(i, 3, 733);
+    parts.push(part(new CY(0.34 + d * 0.16, 0.34 + d * 0.16, 0.04, 9),
+      M(Math.cos(a) * 0.42, 0.02, Math.sin(a) * 0.42), i === 1 ? 0x5c7a48 : 0x6b8a50));
+  }
+  parts.push(part(new IC(0.14, 0), M(0, 0.1, 0, 0, 0, 0, 1, 0.9, 1), MO_BLUETE));
+  parts.push(part(new IC(0.07, 0), M(0, 0.18, 0), 0xe8d488));
+  return mergeGeos(parts);
+}
+
+function geoWurzelstelze() {
+  var parts = [], i;
+  for (i = 0; i < 6; i++) {          // Stelzwurzeln, die den Stamm aus dem Wasser heben
+    var a = i / 6 * 6.28 + 0.3, d = hashi(i, 3, 739);
+    parts.push(part(tubeGeo([
+      new THREE.Vector3(Math.cos(a) * 0.25, 1.9, Math.sin(a) * 0.25),
+      new THREE.Vector3(Math.cos(a) * 0.9, 1.0, Math.sin(a) * 0.9),
+      new THREE.Vector3(Math.cos(a) * 1.35, -0.15 - d * 0.2, Math.sin(a) * 1.35)
+    ], function (t) { return 0.2 - t * 0.09; }, 5), null, 0x5c5244));
+  }
+  starr(parts, 0, 0.008);            // Wurzeln opak halten (Pool traegt Kronenkarte)
+  parts.push(geoBaumArt(BAUM_SUMPF).translate(0, 1.7, 0));
+  return mergeGeos(parts);
+}
+
+function geoPfahlgoetze() {
+  var parts = [
+    part(new CY(0.17, 0.22, 2.3, 7), M(0, 1.15, 0, 0, 0.3, 0.03), MO_HOLZ),
+    part(new BX(0.44, 0.34, 0.4), M(0, 2.3, 0, 0, 0.3, 0), MO_HOLZ),
+    part(new BX(0.1, 0.08, 0.1), M(-0.1, 2.35, 0.2, 0, 0.3, 0), 0x2a2620),   // Augen
+    part(new BX(0.1, 0.08, 0.1), M(0.1, 2.35, 0.18, 0, 0.3, 0), 0x2a2620),
+    part(new BX(0.3, 0.06, 0.1), M(0, 2.18, 0.2, 0, 0.3, 0), 0x2a2620)
+  ];
+  for (var i = 0; i < 3; i++) {
+    parts.push(part(new PL(0.16, 0.7),
+      M(0, 1.65 - i * 0.1, 0.22, 0, i * 1.2, (hashi(i, 3, 743) - 0.5) * 0.4), MO_STOFF));
+  }
+  return mergeGeos(parts);
+}
+
+function geoMoorkahn() {
+  return mergeGeos([
+    part(new BX(0.9, 0.28, 3.2), M(0, 0.05, 0), MO_HOLZ),
+    part(new BX(0.1, 0.34, 3.2), M(-0.45, 0.15, 0), MO_HOLZD),
+    part(new BX(0.1, 0.34, 3.2), M(0.45, 0.15, 0), MO_HOLZD),
+    part(new BX(0.9, 0.3, 0.4), M(0, 0.16, 1.55, -0.4, 0, 0), MO_HOLZD),
+    part(new BX(0.9, 0.3, 0.4), M(0, 0.16, -1.55, 0.4, 0, 0), MO_HOLZD),
+    part(new BX(0.8, 0.06, 0.24), M(0, 0.24, -0.5), MO_HOLZ),
+    part(new CY(0.04, 0.05, 3.4, 5), M(0.3, 1.1, 0.3, 0.35, 0, 0.12), MO_HOLZD)
+  ]);
+}
+
+function geoWollgras() {
+  // Reine Karten: unten der Horst, oben die weissen Fruchtstaende. Zwei Ebenen
+  // statt IC-Koepfen — der Pool traegt eine alphaTest-Karte, ein Koerper darin
+  // wuerde durchloechert.
+  return mergeGeos([
+    kronenQuad(0.9, 0.8, 0, 0, 0, 0.3, 0, 0x8a9a60),
+    kronenQuad(0.8, 0.7, 0.08, 0, 0.06, 1.6, 0.08, 0x7d8c54),
+    kronenQuad(0.55, 0.5, 0, 0.55, 0, 0.7, -0.06, 0xf2efe0),
+    kronenQuad(0.45, 0.42, 0.1, 0.72, -0.08, 2.2, 0.1, 0xe8e4d2)
+  ]);
+}
+
+/* ==========================================================================
+   Kategorie 10 — Biom Eis / Schnee. Weiss auf Weiss lebt nur ueber die
+   Silhouette und einen kuehlen Schattenton; deshalb ist der Schnee hier nie
+   rein 0xffffff, sondern immer leicht blau gebrochen.
+   ========================================================================== */
+var EI_SCHNEE = 0xf2f6fa,
+    EI_SCHNEED = 0xd4e0ea,
+    EI_EIS = 0xb8d6e4,
+    EI_EISD = 0x82abc2,
+    EI_FELL = 0x8a7358,
+    EI_FELLD = 0x685440,
+    EI_HOLZ = 0x8a7050,
+    EI_HOLZD = 0x6a5540,
+    EI_GEWEIH = 0xdcd4bc,
+    EI_DAMPF = 0xeaf0f4,
+    EI_SINTER = 0xc4bca6;
+
+function geoIglu() {
+  var parts = [
+    part(new THREE.SphereGeometry(1.7, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      M(0, 0, 0, 0, 0, 0, 1, 0.92, 1), EI_SCHNEE),
+    part(new CY(0.62, 0.7, 1.5, 8, 1, true), M(0, 0.62, 1.6, Math.PI / 2, 0, 0), EI_SCHNEE),
+    part(new CY(0.5, 0.5, 0.1, 8), M(0, 0.6, 2.3, Math.PI / 2, 0, 0), 0x2a3038)
+  ];
+  // Blockfugen als flach aufgesetzte Quader: die Kuppel wird dadurch aus
+  // Schneebloecken GEBAUT statt gegossen — zehn reichen dafuer.
+  for (var i = 0; i < 10; i++) {
+    var ring = Math.floor(i / 5), a = (i % 5) / 5 * 6.28 + ring * 0.6;
+    var t = ring === 0 ? 0.35 : 0.78, r = Math.cos(t) * 1.72, y = Math.sin(t) * 1.58;
+    parts.push(part(new BX(0.62, 0.1, 0.28),
+      M(Math.cos(a) * r, y, Math.sin(a) * r, 0, -a, t), EI_SCHNEED));
+  }
+  return mergeGeos(parts);
+}
+
+function geoEisfischerhuette() {
+  var parts = [
+    part(new BX(1.7, 1.4, 1.5), M(0, 0.7, 0, 0, 0, 0.04), 0x9c8a70)
+  ];
+  parts.push(part(prismGeo(1.95, 0.8, 1.75), M(0, 1.4, 0, 0, 0, 0.04), EI_SCHNEE));
+  parts.push(part(new BX(1.95, 0.09, 1.75), M(0, 1.36, 0, 0, 0, 0.04), 0x4a4038));
+  tuer(parts, 0, 0.05, 0.78, 0.55, 1.0);
+  parts.push(part(new CY(0.4, 0.4, 0.06, 9), M(1.3, 0.03, 0.9), 0x2a4450));   // Angelloch
+  parts.push(part(new CY(0.02, 0.03, 0.9, 4), M(1.3, 0.45, 0.9, 0.4, 0, 0.2), EI_HOLZD));
+  return mergeGeos(parts);
+}
+
+function geoSchlitten() {
+  var parts = [], s;
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(0.1, 0.1, 2.0), M(s * 0.34, 0.08, 0), EI_HOLZD));
+    parts.push(part(new BX(0.1, 0.32, 0.28), M(s * 0.34, 0.25, -0.95, -0.5, 0, 0), EI_HOLZD));
+    parts.push(part(new BX(0.09, 0.45, 0.09), M(s * 0.34, 0.35, 0.85), EI_HOLZ));
+  }
+  parts.push(part(new BX(0.82, 0.3, 1.5), M(0, 0.32, -0.05), EI_HOLZ));
+  parts.push(part(new BX(0.86, 0.08, 0.1), M(0, 0.58, 0.85), EI_HOLZ));
+  parts.push(part(new IC(0.3, 0), M(-0.1, 0.6, -0.3, 0.3, 0.6, 0, 1.3, 0.8, 1), EI_FELL));
+  parts.push(part(new IC(0.24, 0), M(0.18, 0.58, 0.2, 0, 1.1, 0.2, 1.2, 0.8, 1), EI_FELLD));
+  return mergeGeos(parts);
+}
+
+function geoEisfels() {
+  var parts = [
+    part(brockenGeo(1.1, 751, 0.5), M(0, 0.8, 0, 0.1, 0.5, 0, 1, 1.5, 1), 0x9aa8ae),
+    part(brockenGeo(0.85, 757, 0.45), M(0.2, 1.9, 0.1, 0, 1.2, 0.15, 1, 0.9, 1), EI_SCHNEE)
+  ];
+  for (var i = 0; i < 5; i++) {
+    var a = i / 5 * 6.28, d = hashi(i, 3, 761);
+    parts.push(part(new CO(0.13, 0.5 + d * 0.5, 5),
+      M(Math.cos(a) * 0.85, 1.0 + d * 0.7, Math.sin(a) * 0.85, Math.PI, 0, 0), EI_EIS));
+  }
+  return mergeGeos(parts);
+}
+
+function geoEisscholle() {
+  // Flache, quantisiert verzerrte Platte — dieselbe Technik wie islandGeo,
+  // aber ohne Unterbau: eine Scholle hat keine Wurzel.
+  var g = new IC(2.2, 0), p = g.attributes.position, i;
+  for (i = 0; i < p.count; i++) {
+    var x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    var qx = Math.round(x * 20), qz = Math.round(z * 20);
+    var d = (hashi(qx, qz, 769) - 0.5) * 0.9;
+    p.setXYZ(i, x * (1 + d * 0.3), y * 0.11 + (y > 0 ? 0.14 : -0.06), z * (1 + d * 0.3));
+  }
+  g.computeVertexNormals();
+  return mergeGeos([part(g, null, EI_SCHNEE),
+    part(brockenGeo(0.55, 773, 0.5), M(0.5, 0.2, -0.3, 0, 0.7, 0, 1, 0.9, 1), EI_EIS)]);
+}
+
+function geoGletschertor() {
+  var parts = [
+    part(new THREE.TorusGeometry(1.7, 0.75, 4, 8, Math.PI),
+      M(0, 1.3, 0, 0, 0, 0, 1, 1.35, 1.1), EI_EIS),
+    part(new BX(1.0, 2.0, 1.2), M(-1.75, 1.0, 0, 0, 0.2, -0.06), EI_EIS),
+    part(new BX(1.0, 2.0, 1.2), M(1.75, 1.0, 0, 0, -0.2, 0.06), EI_EIS),
+    part(new PL(2.9, 3.0), M(0, 1.5, -0.5), 0x1c3a4e)                  // dunkles Inneres
+  ];
+  for (var i = 0; i < 6; i++) {
+    var d = hashi(i, 3, 787), a = -1.1 + i * 0.44;
+    parts.push(part(brockenGeo(0.4 + d * 0.35, 787 + i * 5, 0.5),
+      M(Math.cos(a) * 2.2, 0.3 + d * 0.5, Math.sin(a) * 1.2 + 0.6, d, a, 0), EI_SCHNEE));
+  }
+  return mergeGeos(parts);
+}
+
+function geoPelzzelt() {
+  var parts = [], i;
+  for (i = 0; i < 5; i++) {          // Stangen ragen oben heraus
+    var a = i / 5 * 6.28;
+    parts.push(part(new CY(0.04, 0.06, 3.4, 4),
+      M(Math.cos(a) * 0.3, 1.7, Math.sin(a) * 0.3, Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25),
+      EI_HOLZD));
+  }
+  parts.push(part(new CO(1.35, 2.6, 9), M(0, 1.3, 0), EI_FELL));
+  parts.push(part(new CO(1.4, 0.5, 9), M(0, 0.25, 0), EI_FELLD));      // schwerer Saum
+  parts.push(part(new BX(0.6, 1.1, 0.12), M(0, 0.55, 1.05, 0.18, 0, 0), EI_FELLD));
+  return mergeGeos(parts);
+}
+
+function geoSchneewall() {
+  var parts = [], i;
+  for (i = 0; i < 8; i++) {
+    var lage = i % 2, d = hashi(i, 3, 797);
+    parts.push(part(new BX(1.0, 0.5, 0.55),
+      M(-1.7 + Math.floor(i / 2) * 1.15 + lage * 0.1, 0.25 + lage * 0.5,
+        (d - 0.5) * 0.14, 0, (d - 0.5) * 0.12, 0), lage ? EI_SCHNEE : EI_SCHNEED));
+  }
+  parts.push(part(new CY(0.3, 0.3, 4.5, 7, 1, false),
+    M(0, 1.0, 0, 0, 0, Math.PI / 2, 1, 1, 0.65), EI_SCHNEE));          // gerundete Krone
+  return mergeGeos(parts);
+}
+
+function geoThermalquelle() {
+  var parts = [
+    part(new CY(1.35, 1.6, 0.55, 10), M(0, 0.27, 0), EI_SINTER),
+    part(new CY(1.15, 1.15, 0.12, 10), M(0, 0.5, 0), 0x4e8296)
+  ];
+  for (var i = 0; i < 4; i++) {
+    var a = i / 4 * 6.28 + 0.4;
+    parts.push(part(brockenGeo(0.4, 809 + i * 3, 0.5),
+      M(Math.cos(a) * 1.5, 0.2, Math.sin(a) * 1.5, 0, a, 0, 1, 0.55, 1), EI_SINTER));
+  }
+  starr(parts, 0, 0.008);
+  parts.push(kronenQuad(1.6, 2.2, 0, 0.5, 0, 0.4, 0.12, EI_DAMPF));
+  parts.push(kronenQuad(1.3, 1.8, 0.2, 0.7, -0.2, 1.7, -0.15, EI_DAMPF));
+  return mergeGeos(parts);
+}
+
+function geoGeweihgestell() {
+  var parts = [], s, i;
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(0.1, 2.0, 0.1), M(s * 1.0, 1.0, -0.25), EI_HOLZD));
+    parts.push(part(new BX(0.1, 2.0, 0.1), M(s * 1.0, 1.0, 0.25), EI_HOLZD));
+  }
+  parts.push(part(new BX(2.3, 0.09, 0.09), M(0, 1.95, 0), EI_HOLZD));
+  for (i = 0; i < 4; i++) {          // Geweihe: Stange plus zwei Enden
+    var x = -0.9 + i * 0.6, d = hashi(i, 3, 811);
+    parts.push(part(new CY(0.035, 0.055, 0.9 + d * 0.4, 4),
+      M(x, 1.55, 0, 0, 0, (d - 0.5) * 0.5), EI_GEWEIH));
+    parts.push(part(new CY(0.03, 0.04, 0.5, 4),
+      M(x + 0.15, 1.95 + d * 0.2, 0, 0, 0, 0.8), EI_GEWEIH));
+    parts.push(part(new CY(0.03, 0.04, 0.42, 4),
+      M(x - 0.15, 1.9 + d * 0.2, 0, 0, 0, -0.9), EI_GEWEIH));
+  }
+  for (i = -1; i <= 1; i += 2) {     // Felle ueber der Stange
+    parts.push(part(new BX(0.75, 1.0, 0.12), M(i * 0.5, 1.42, 0.24, 0, 0, i * 0.05),
+      i > 0 ? EI_FELL : EI_FELLD));
+  }
+  return mergeGeos(parts);
+}
+
+/* ==========================================================================
+   Kategorie 11 — Biom Wueste. Lehm, Sand, gespanntes Tuch. Der Katalog fuehrt
+   `karawanserei` als Struktur-Generator (G) — sie fehlt hier bewusst, weil ein
+   ummauerter Hof aus Kantenlaengen entsteht und nicht aus einer Instanz.
+   ========================================================================== */
+var WU_LEHM = 0xd6c096,
+    WU_LEHMD = 0xae9670,
+    WU_LEHMH = 0xe8d8b2,
+    WU_STOFF = 0xc9a97c,
+    WU_STOFFD = 0x9c8158,
+    WU_HOLZ = 0x9a7f56,
+    WU_SAND = 0xe0d0a6,
+    WU_STEIN = 0xc2b28c,
+    WU_STEIND = 0x9a8c6a,
+    WU_GOLD = 0xd8b25e,
+    WU_WASSER = 0x3f7f8c,
+    WU_PALME = 0x7f9a4e,
+    WU_KNOCHEN = 0xe6dec6;
+
+function geoWuestenzelt() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {          // Firststangen
+    parts.push(part(new CY(0.06, 0.09, 3.0, 5), M(-1.2 + i * 1.2, 1.5, 0), WU_HOLZ));
+  }
+  for (i = 0; i < 6; i++) {          // Abspannpfloecke
+    var a = i / 6 * 6.28;
+    parts.push(part(new CY(0.04, 0.05, 0.4, 4),
+      M(Math.cos(a) * 2.3, 0.1, Math.sin(a) * 1.7, 0.3, -a, 0), WU_HOLZ));
+  }
+  starr(parts, 0, 0);
+  // Vier Bahnen mit Durchhang: das ist der Unterschied zwischen Stoff und
+  // Blech. Der Bauch faellt nach aussen, die Bahn haengt am First.
+  for (i = -1; i <= 1; i += 2) {
+    zeltbahn(parts, [
+      new THREE.Vector3(-1.5, 3.0, 0), new THREE.Vector3(1.5, 3.0, 0),
+      new THREE.Vector3(1.9, 0.15, i * 1.9), new THREE.Vector3(-1.9, 0.15, i * 1.9)
+    ], i * 0.35, i > 0 ? WU_STOFF : WU_STOFFD);
+  }
+  zeltbahn(parts, [
+    new THREE.Vector3(-1.5, 3.0, 0), new THREE.Vector3(-1.5, 3.0, 0),
+    new THREE.Vector3(-2.2, 0.15, 1.5), new THREE.Vector3(-2.2, 0.15, -1.5)
+  ], 0.3, WU_STOFFD);
+  return mergeGeos(parts);
+}
+
+function geoKleinzelt() {
+  var parts = [
+    part(new CO(1.0, 1.9, 8), M(0, 0.95, 0), WU_STOFF),
+    part(new CO(1.05, 0.35, 8), M(0, 0.17, 0), WU_STOFFD),
+    part(new BX(0.5, 0.9, 0.1), M(0, 0.45, 0.72, 0.1, 0, 0), WU_STOFFD),
+    part(new CY(0.03, 0.04, 0.5, 4), M(0, 2.05, 0), WU_HOLZ)
+  ];
+  return mergeGeos(parts);
+}
+
+function geoZisterne() {
+  var parts = [
+    part(new CY(1.15, 1.15, 2.2, 10, 1, true), M(0, -0.9, 0), WU_STEIND),
+    part(new CY(1.3, 1.35, 0.4, 10), M(0, 0.2, 0), WU_STEIN),
+    part(new CY(1.0, 1.0, 0.06, 10), M(0, -1.6, 0), WU_WASSER)
+  ];
+  treppe(parts, 8, 0.9, -0.22, 0, 0.1, -1.05, WU_STEIND);
+  for (var i = 0; i < 4; i++) {      // Kuppel auf vier Saeulen
+    var a = i / 4 * 6.28 + 0.78;
+    parts.push(part(new CY(0.13, 0.16, 2.0, 7),
+      M(Math.cos(a) * 1.15, 1.4, Math.sin(a) * 1.15), WU_STEIN));
+  }
+  parts.push(part(new THREE.SphereGeometry(1.3, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2),
+    M(0, 2.4, 0, 0, 0, 0, 1, 0.8, 1), WU_LEHMH));
+  parts.push(part(new CO(0.16, 0.3, 6), M(0, 3.5, 0), WU_GOLD));
+  return mergeGeos(parts);
+}
+
+function geoWindfaenger() {
+  var parts = [
+    part(new BX(1.1, 3.4, 1.1), M(0, 1.7, 0), WU_LEHM),
+    part(new BX(1.35, 0.22, 1.35), M(0, 3.5, 0), WU_LEHMH),
+    part(new BX(1.2, 0.14, 1.2), M(0, 3.7, 0), WU_LEHMD)
+  ];
+  for (var i = 0; i < 4; i++) {      // Schlitze auf allen vier Seiten
+    var a = i / 4 * 6.28;
+    parts.push(part(new BX(0.7, 1.1, 0.14),
+      M(Math.cos(a) * 0.56, 2.7, Math.sin(a) * 0.56, 0, -a, 0), 0x2e3038));
+  }
+  return mergeGeos(parts);
+}
+
+function geoLehmspeicher() {
+  var parts = [
+    part(new CO(1.2, 3.0, 9), M(0, 1.5, 0, 0, 0, 0, 1, 1, 1), WU_LEHM),
+    part(new CY(0.28, 0.34, 0.4, 7), M(0, 3.0, 0), WU_LEHMD),
+    part(new BX(0.4, 0.5, 0.16), M(0, 0.35, 1.0), 0x2e3038)
+  ];
+  for (var i = 0; i < 4; i++) {      // Ringrillen aus der Bauweise
+    var y = 0.5 + i * 0.55, r = 1.2 * (1 - y / 3.0) + 0.06;
+    parts.push(part(new CY(r, r, 0.1, 9), M(0, y, 0), WU_LEHMH));
+  }
+  return mergeGeos(parts);
+}
+
+function geoPalme() {
+  var pts = [], i;
+  for (i = 0; i <= 6; i++) {
+    var t = i / 6;
+    // Gebogener Stamm: der Schwung ist die halbe Palme.
+    pts.push(new THREE.Vector3(Math.pow(t, 1.9) * 1.3, t * 5.4, Math.pow(t, 2.2) * 0.4));
+  }
+  var parts = [tubeGeo(pts, function (t) { return 0.24 - t * 0.11; }, 6,
+    function (t, k, c) {
+      var b = (k % 2) * 0.06;
+      c.setRGB(0.62 + b, 0.53 + b, 0.38 + b);
+    })];
+  starr(parts, 0, 0.008);
+  for (i = 0; i < 7; i++) {          // Fiederwedel, kraeftig nach aussen gekippt
+    var a = i / 7 * 6.28 + 0.4;
+    parts.push(kronenQuad(3.4, 1.5, 1.3 + Math.cos(a) * 0.35, 5.2, 0.4 + Math.sin(a) * 0.35,
+      a, -0.5 - hashi(i, 3, 821) * 0.5, i % 2 ? WU_PALME : 0x6d8a44));
+  }
+  return mergeGeos(parts);
+}
+
+function geoOasenbecken() {
+  var parts = [
+    part(new CY(1.7, 1.75, 0.7, 12), M(0, 0.3, 0), WU_STEIN),
+    part(new CY(1.5, 1.5, 0.55, 12), M(0, 0.35, 0), WU_WASSER),
+    part(new CY(1.9, 1.95, 0.22, 12), M(0, 0.11, 0), WU_STEIND)
+  ];
+  for (var i = 0; i < 4; i++) {
+    var a = i / 4 * 6.28 + 0.4;
+    parts.push(part(new BX(0.7, 0.28, 0.3),
+      M(Math.cos(a) * 1.8, 0.76, Math.sin(a) * 1.8, 0, -a, 0), WU_LEHMH));
+  }
+  return mergeGeos(parts);
+}
+
+function geoTraenke() {
+  return mergeGeos([
+    part(new BX(1.5, 0.42, 0.62), M(0, 0.21, 0), WU_STEIN),
+    part(new BX(1.3, 0.26, 0.44), M(0, 0.3, 0), WU_WASSER),
+    part(new CY(0.07, 0.07, 0.7, 5), M(-0.72, 0.65, 0, 0, 0, 0.35), WU_STEIND),
+    part(new CY(0.32, 0.34, 0.05, 9), M(0.9, 0.02, 0.3), 0x8a7c5e)   // Pfuetze
+  ]);
+}
+
+function geoSandwehe() {
+  var parts = [
+    part(brockenGeo(2.4, 823, 0.3), M(0, -0.2, 0, 0, 0.4, 0, 1.15, 0.32, 0.85), WU_SAND),
+    part(brockenGeo(1.4, 827, 0.35), M(0.9, -0.1, 0.6, 0, 1.1, 0, 1.1, 0.28, 0.9), WU_LEHMH)
+  ];
+  for (var i = 0; i < 6; i++) {      // Halmbueschel als schlanke Kegel: kein
+    var d = hashi(i, 3, 829), a = i / 6 * 6.28;   // alphaTest noetig, und aus
+    var q = 0.6 + d * 1.2;                        // der Distanz identisch.
+    parts.push(part(new CO(0.07, 0.55 + d * 0.4, 4),
+      M(Math.cos(a) * q, 0.45 + d * 0.15, Math.sin(a) * q,
+        Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25), 0x9a9464));
+  }
+  return mergeGeos(parts);
+}
+
+function geoObelisk() {
+  var parts = [];
+  sockel(parts, 0.9, 0.9, WU_STEIND);
+  parts.push(part(new BX(0.62, 4.6, 0.62), M(0, 2.8, 0, 0, 0, 0, 1, 1, 1), WU_STEIN));
+  // Verjuengung: ein zweiter, schmalerer Block oben statt echter Konik — die
+  // Silhouette liest identisch, kostet aber kein Sonderprimitiv.
+  parts.push(part(new BX(0.44, 1.6, 0.44), M(0, 5.6, 0), WU_STEIN));
+  parts.push(part(new CO(0.32, 0.6, 4), M(0, 6.6, 0, 0, Math.PI / 4, 0), WU_GOLD));
+  return mergeGeos(parts);
+}
+
+function geoGebein() {
+  var parts = [
+    part(new CY(0.11, 0.13, 2.6, 6), M(0, 0.25, 0, 0, 0.15, Math.PI / 2), WU_KNOCHEN)
+  ];
+  for (var i = 0; i < 6; i++) {      // Rippenbogen ueber der Wirbelsaeule
+    var x = -1.0 + i * 0.42, d = hashi(i, 3, 839);
+    var h = 0.9 + Math.sin(i / 5 * Math.PI) * 0.7;
+    parts.push(part(new THREE.TorusGeometry(h * 0.5, 0.055, 3, 6, Math.PI * 0.9),
+      M(x, 0.25, 0, 0, Math.PI / 2, (d - 0.5) * 0.2), WU_KNOCHEN));
+  }
+  parts.push(part(new IC(0.36, 0), M(1.65, 0.25, 0.1, 0.3, 0.7, 0, 1.4, 0.85, 0.9), WU_KNOCHEN));
+  parts.push(part(new BX(0.3, 0.14, 0.14), M(2.0, 0.2, 0.1, 0, 0.7, 0), 0xd0c8b0));
+  return mergeGeos(parts);
+}
+
+/* --- Pools Arbor, Moor, Eis, Wueste --------------------------------------- */
+definePool("rankenstamm", geoRankenstamm(), { radius: 3.5, ao: 0.18, familie: 'rinde',
+  emissive: 0x2e4a3e, emissiveIntensity: 0.5 });
+definePool("rankenknoten", geoRankenknoten(), { radius: 3.0, ao: 0.18, familie: 'rinde',
+  emissive: 0x2e4a3e, emissiveIntensity: 0.5 });
+definePool("blattsteg", geoBlattsteg(), { radius: 3.0, dbl: true, ao: 0.16, familie: 'laub' });
+definePool("rankentreppe", geoRankentreppe(), { radius: 2.2, ao: 0.24, familie: 'holz' });
+definePool("rankenleiter", geoRankenleiter(), { radius: 0.8, ao: 0.2, familie: 'holz' });
+definePool("saftzapfer", geoSaftzapfer(), { radius: 1.0, familie: 'holz',
+  emissive: 0x2a4438, emissiveIntensity: 0.4 });
+definePool("lichtbluete", geoLichtbluete(), { radius: 0.5, dbl: true, ao: 0,
+  map: TEX.bluete, alphaTest: 0.4, familie: 'laub', wind: { amp: 0.6 },
+  emissive: 0x4e8a72, emissiveIntensity: 0.9 });
+definePool("sporenlaterne", geoSporenlaterne(), { radius: 0.3, ao: 0, familie: 'laub',
+  emissive: 0x5ea88a, emissiveIntensity: 1.0 });
+definePool("wurzelbogen", geoWurzelbogen(), { radius: 2.6, ao: 0.24, familie: 'rinde',
+  emissive: 0x2e4a3e, emissiveIntensity: 0.4 });
+definePool("wurzelanker", geoWurzelanker(), { radius: 2.8, ao: 0.24, familie: 'rinde',
+  emissive: 0x2e4a3e, emissiveIntensity: 0.4 });
+definePool("samenkapsel", geoSamenkapsel(), { radius: 2.2, ao: 0.22, familie: 'rinde',
+  emissive: 0x3a5a4a, emissiveIntensity: 0.45 });
+definePool("rankenkai", geoRankenkai(), { radius: 3.4, dbl: true, ao: 0.18, familie: 'laub' });
+definePool("huetersaeule", geoHuetersaeule(), { radius: 0.8, familie: 'stein',
+  emissive: 0x3a5a4a, emissiveIntensity: 0.5 });
+
+definePool("torfstich", geoTorfstich(), { radius: 2.2, ao: 0.22, familie: 'erde' });
+definePool("torfstapel", geoTorfstapel(), { radius: 0.9, familie: 'erde' });
+definePool("moorsteg", geoMoorsteg(), { radius: 2.6, familie: 'holz' });
+definePool("moorhuette", geoMoorhuette(), { radius: 1.8, familie: 'reet' });
+definePool("aalreuse", geoAalreuse(), { radius: 0.6, familie: 'holz' });
+definePool("irrlicht", geoIrrlicht(), { radius: 0.3, ao: 0, familie: 'laub',
+  emissive: 0x4e9c78, emissiveIntensity: 1.0 });
+definePool("schilf", geoSchilf(), { radius: 0.5, dbl: true, ao: 0.18,
+  map: TEX.grassTuft, alphaTest: 0.42, familie: 'laub', wind: { amp: 0.55 } });
+definePool("seerose", geoSeerose(), { radius: 0.7, ao: 0.1, familie: 'laub' });
+definePool("wurzelstelze", geoWurzelstelze(), { radius: 2.8, dbl: true, ao: 0.26,
+  map: TEX.kroneZerzaust, alphaTest: 0.4, familie: 'rinde', wind: WINDLAUB });
+definePool("pfahlgoetze", geoPfahlgoetze(), { radius: 0.5, familie: 'holz' });
+definePool("moorkahn", geoMoorkahn(), { radius: 1.6, familie: 'holz' });
+definePool("wollgras", geoWollgras(), { radius: 0.4, dbl: true, ao: 0.16,
+  map: TEX.grassTuft, alphaTest: 0.42, familie: 'laub', wind: { amp: 0.5 } });
+
+definePool("iglu", geoIglu(), { radius: 1.8, familie: 'putz' });
+definePool("eisfischerhuette", geoEisfischerhuette(), { radius: 1.6, familie: 'holz' });
+definePool("schlitten", geoSchlitten(), { radius: 1.2, familie: 'holz' });
+definePool("eisfels", geoEisfels(), { radius: 1.6, familie: 'stein' });
+definePool("eisscholle", geoEisscholle(), { radius: 2.4, ao: 0.14, familie: 'stein' });
+definePool("gletschertor", geoGletschertor(), { radius: 3.0, dbl: true, ao: 0.28, familie: 'stein' });
+definePool("pelzzelt", geoPelzzelt(), { radius: 1.6, familie: 'stoff' });
+definePool("schneewall", geoSchneewall(), { radius: 2.0, ao: 0.2, familie: 'putz' });
+definePool("thermalquelle", geoThermalquelle(), { radius: 2.0, dbl: true, ao: 0.18,
+  map: TEX.kroneZerzaust, alphaTest: 0.4, familie: 'stein', wind: { amp: 0.28 } });
+definePool("geweihgestell", geoGeweihgestell(), { radius: 1.2, familie: 'holz' });
+
+definePool("wuestenzelt", geoWuestenzelt(), { radius: 2.2, dbl: true, ao: 0.2,
+  familie: 'stoff', wind: { amp: 0.16 } });
+definePool("kleinzelt", geoKleinzelt(), { radius: 1.0, familie: 'stoff' });
+definePool("zisterne", geoZisterne(), { radius: 2.4, ao: 0.26, familie: 'stein' });
+definePool("windfaenger", geoWindfaenger(), { radius: 1.2, familie: 'putz' });
+definePool("lehmspeicher", geoLehmspeicher(), { radius: 1.4, familie: 'putz' });
+definePool("palme", geoPalme(), { radius: 1.6, dbl: true, ao: 0.22,
+  map: TEX.kroneZerzaust, alphaTest: 0.4, familie: 'laub', wind: { amp: 0.36 } });
+definePool("oasenbecken", geoOasenbecken(), { radius: 2.2, ao: 0.2, familie: 'stein' });
+definePool("traenke", geoTraenke(), { radius: 0.8, familie: 'stein' });
+definePool("sandwehe", geoSandwehe(), { radius: 2.6, ao: 0.16, familie: 'erde' });
+definePool("obelisk", geoObelisk(), { radius: 0.7, familie: 'stein' });
+definePool("gebein", geoGebein(), { radius: 1.8, ao: 0.16, familie: 'stein' });
+
+/* ==========================================================================
+   Kategorie 3 — Landwirtschaft. Der bewirtschaftete Guertel um jedes Dorf:
+   Acker, Weide, Vorrat. Alles teilt die Holz-/Stroh-Palette des Bestands
+   (geoScheune, geoHeuhaufen), damit Hof und Dorf als EIN Ort lesen.
+   ========================================================================== */
+var LW_HOLZ = 0x9c8468,
+    LW_HOLZD = 0x7a6450,
+    LW_ERDE = 0x7d6a50,
+    LW_ERDEH = 0x8f7a5c,
+    LW_STROH = 0xc9b374,
+    LW_STROHD = 0xa8945c,
+    LW_LAUB = 0x7ba055,
+    LW_STEIN = 0xb0aa9c,
+    LW_PUTZ = 0xefe7d6,
+    LW_DACH = 0x8a7a5a,
+    LW_STOFF = 0xc4b89c,
+    LW_GRUEN = 0x6f8f4a;
+
+function geoAckerscholle() {
+  var parts = [], i;
+  for (i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 901);
+    parts.push(part(new BX(0.5, 0.26 + d * 0.12, 3.4),
+      M(-1.0 + i * 0.5, 0.13 + d * 0.06, 0, 0, (d - 0.5) * 0.05, 0),
+      i % 2 ? LW_ERDE : LW_ERDEH));
+    parts.push(part(new BX(0.2, 0.1, 3.4),
+      M(-1.0 + i * 0.5 + 0.25, 0.05, 0), 0x6a5a44));           // Furche dazwischen
+  }
+  return mergeGeos(parts);
+}
+
+function geoRebenreihe() {
+  var parts = [
+    part(new CY(0.05, 0.07, 1.5, 5), M(-0.85, 0.75, 0), LW_HOLZD),
+    part(new CY(0.05, 0.07, 1.5, 5), M(0.85, 0.75, 0), LW_HOLZD),
+    part(new BX(1.8, 0.04, 0.04), M(0, 1.25, 0), 0x6a6258),
+    part(new BX(1.8, 0.04, 0.04), M(0, 0.85, 0), 0x6a6258)
+  ];
+  for (var i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 907);
+    parts.push(part(new IC(0.3 + d * 0.12, 0),
+      M(-0.8 + i * 0.4, 0.95 + d * 0.14, (d - 0.5) * 0.16, 0, d * 3, 0, 1, 0.85, 1),
+      i % 2 ? LW_LAUB : LW_GRUEN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoHopfengeruest() {
+  var parts = [], i, s;
+  for (i = 0; i < 4; i++) {
+    var x = i % 2 ? 1.1 : -1.1, z = i < 2 ? -0.6 : 0.6;
+    parts.push(part(new CY(0.06, 0.09, 3.6, 5), M(x, 1.8, z), LW_HOLZD));
+  }
+  parts.push(part(new BX(2.4, 0.08, 0.08), M(0, 3.55, -0.6), LW_HOLZD));
+  parts.push(part(new BX(2.4, 0.08, 0.08), M(0, 3.55, 0.6), LW_HOLZD));
+  starr(parts, 0, 0);
+  // Die Rankenbahnen als gespannte, durchhaengende Flaechen: der Bauch macht
+  // aus einem Draht eine bewachsene Bahn.
+  for (s = 0; s < 3; s++) {
+    var u = -0.8 + s * 0.8;
+    zeltbahn(parts, [
+      new THREE.Vector3(u - 0.3, 3.5, -0.6), new THREE.Vector3(u + 0.3, 3.5, -0.6),
+      new THREE.Vector3(u + 0.3, 0.2, -0.45), new THREE.Vector3(u - 0.3, 0.2, -0.45)
+    ], 0.2, s % 2 ? LW_LAUB : LW_GRUEN);
+    zeltbahn(parts, [
+      new THREE.Vector3(u - 0.3, 3.5, 0.6), new THREE.Vector3(u + 0.3, 3.5, 0.6),
+      new THREE.Vector3(u + 0.3, 0.2, 0.45), new THREE.Vector3(u - 0.3, 0.2, 0.45)
+    ], -0.2, s % 2 ? LW_GRUEN : LW_LAUB);
+  }
+  return mergeGeos(parts);
+}
+
+var BAUM_OBST = { stammOben: 0.14, stammUnten: 0.3, stammH: 1.3, rinde: 0x74604a,
+  karten: 4, kroneW: 3.2, kroneH: 2.0, kroneY: 1.1, lehne: 0.1, laub: 0x82a856, seed: 67 };
+
+function geoObstbaum() {
+  var parts = [geoBaumArt(BAUM_OBST)], i;
+  for (i = 0; i < 8; i++) {
+    var a = i / 8 * 6.28 + hashi(i, 3, 911), d = hashi(i, 5, 911);
+    var f = part(new IC(0.11, 0),
+      M(Math.cos(a) * (0.7 + d * 0.6), 1.5 + d * 1.0, Math.sin(a) * (0.7 + d * 0.6)),
+      d < 0.5 ? 0xd8734c : 0xe0a03c);
+    // Fruechte auf den opaken Texturstreifen klemmen — sonst schlaegt die
+    // alphaTest-Kronenkarte Loecher in sie (Muster geoBaumArt).
+    uvKonst(f, 0.5, 0.008);
+    parts.push(f);
+  }
+  return mergeGeos(parts);
+}
+
+function geoGarbe() {
+  return mergeGeos([
+    part(new CO(0.34, 1.3, 8), M(0, 0.65, 0, 0.06, 0, 0.05), LW_STROH),
+    part(new CY(0.3, 0.3, 0.08, 8), M(0, 0.85, 0), LW_STROHD),
+    part(new CY(0.24, 0.24, 0.07, 8), M(0, 0.45, 0), LW_STROHD)
+  ]);
+}
+
+function geoHeuschober() {
+  var parts = [], i;
+  for (i = 0; i < 4; i++) {
+    var x = i % 2 ? 1.1 : -1.1, z = i < 2 ? -1.0 : 1.0;
+    parts.push(part(new CY(0.09, 0.12, 3.0, 5), M(x, 1.5, z), LW_HOLZD));
+  }
+  parts.push(part(new CO(1.3, 1.9, 9), M(0, 0.95, 0), LW_STROH));
+  parts.push(part(prismGeo(2.9, 0.7, 2.6), M(0, 2.85, 0, 0, Math.PI / 2, 0), LW_DACH));
+  parts.push(part(new BX(2.9, 0.09, 2.6), M(0, 2.8, 0), 0x4a4038));
+  return mergeGeos(parts);
+}
+
+function geoTaubenschlag() {
+  var parts = [
+    part(new CY(0.55, 0.65, 3.2, 8), M(0, 1.6, 0), LW_PUTZ),
+    part(new CY(0.75, 0.75, 0.14, 8), M(0, 3.25, 0), LW_HOLZD),
+    part(new CO(0.85, 0.7, 8), M(0, 3.65, 0), LW_DACH),
+    part(new BX(0.9, 0.06, 0.4), M(0, 2.6, 0.5), LW_HOLZ)         // Anflugbrett
+  ];
+  for (var i = 0; i < 8; i++) {   // Flugloecher in zwei Reihen
+    var a = (i % 4) / 4 * 6.28 + Math.floor(i / 4) * 0.78;
+    parts.push(part(new BX(0.16, 0.2, 0.14),
+      M(Math.cos(a) * 0.56, 2.35 + Math.floor(i / 4) * 0.45, Math.sin(a) * 0.56, 0, -a, 0),
+      0x2e3038));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBienenstand() {
+  var parts = [
+    part(new BX(2.2, 0.5, 0.7), M(0, 0.25, 0), LW_HOLZD),
+    part(new BX(2.5, 0.12, 1.0), M(0, 1.35, -0.15, -0.22, 0, 0), LW_DACH),
+    part(new CY(0.08, 0.08, 1.2, 4), M(-1.1, 0.9, -0.3), LW_HOLZD),
+    part(new CY(0.08, 0.08, 1.2, 4), M(1.1, 0.9, -0.3), LW_HOLZD)
+  ];
+  for (var i = 0; i < 4; i++) {
+    var d = hashi(i, 3, 919);
+    parts.push(part(new CY(0.2, 0.26, 0.55, 8),
+      M(-0.78 + i * 0.52, 0.78, (d - 0.5) * 0.1), LW_STROH));
+    parts.push(part(new CO(0.27, 0.24, 8), M(-0.78 + i * 0.52, 1.15, (d - 0.5) * 0.1), LW_STROHD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoPferch() {
+  var parts = [], i;
+  for (i = 0; i < 10; i++) {
+    var a = i / 10 * 6.28;
+    if (i === 0) continue;          // Luecke fuer das Gatter
+    var x = Math.cos(a) * 2.3, z = Math.sin(a) * 2.3;
+    parts.push(part(new BX(0.14, 1.1, 0.14), M(x, 0.55, z, 0, -a, 0), LW_HOLZD));
+    var b = (i - 0.5) / 10 * 6.28, l = 2 * 2.3 * Math.sin(Math.PI / 10);
+    parts.push(part(new BX(l, 0.09, 0.07),
+      M(Math.cos(b) * 2.3, 0.85, Math.sin(b) * 2.3, 0, -b + Math.PI / 2, 0), LW_HOLZ));
+    parts.push(part(new BX(l, 0.09, 0.07),
+      M(Math.cos(b) * 2.3, 0.5, Math.sin(b) * 2.3, 0, -b + Math.PI / 2, 0), LW_HOLZ));
+  }
+  parts.push(part(new BX(1.3, 0.9, 0.09), M(2.3, 0.5, 0, 0, Math.PI / 2, 0.12), LW_HOLZ));
+  return mergeGeos(parts);
+}
+
+function geoViehstall() {
+  var parts = [];
+  sockel(parts, 4.2, 2.6, 0x8a8278);
+  parts.push(part(new BX(4.2, 1.8, 2.6), M(0, 1.3, 0), 0xd8cbb0));
+  dach(parts, 4.2, 2.6, 1.2, 2.2, LW_DACH, true);
+  tuer(parts, -0.9, 0.5, 1.35, 1.3, 1.4);
+  fenster(parts, 1.2, 1.5, 1.34, 0.5, 0.4, "z");
+  for (var i = 0; i < 5; i++) {   // Freilaufzaun
+    parts.push(part(new BX(0.11, 0.9, 0.11), M(-2.3 + i * 1.15, 0.45, 2.6), LW_HOLZD));
+  }
+  parts.push(part(new BX(4.7, 0.08, 0.07), M(-0.05, 0.75, 2.6), LW_HOLZ));
+  parts.push(part(new BX(4.7, 0.08, 0.07), M(-0.05, 0.4, 2.6), LW_HOLZ));
+  return mergeGeos(parts);
+}
+
+function geoKornspeicher() {
+  var parts = [], i;
+  for (i = 0; i < 4; i++) {
+    var x = i % 2 ? 0.85 : -0.85, z = i < 2 ? -0.7 : 0.7;
+    parts.push(part(new CY(0.13, 0.16, 1.2, 6), M(x, 0.6, z), LW_HOLZD));
+    // Maeusescheiben: die flache Platte auf dem Stelzenkopf ist das Merkmal,
+    // an dem ein Speicher als Speicher zu erkennen ist.
+    parts.push(part(new CY(0.4, 0.4, 0.09, 8), M(x, 1.25, z), LW_STEIN));
+  }
+  parts.push(part(new BX(2.4, 1.7, 2.0), M(0, 2.15, 0), 0xc6b18c));
+  parts.push(part(new BX(2.5, 0.12, 2.1), M(0, 1.32, 0), LW_HOLZD));
+  dach(parts, 2.4, 2.0, 1.0, 3.0, LW_DACH, false);
+  tuer(parts, 0, 1.35, 1.02, 0.6, 1.1);
+  for (i = 0; i < 5; i++) {       // Leiter
+    parts.push(part(new BX(0.5, 0.05, 0.07), M(0, 0.3 + i * 0.22, 1.3 + i * 0.05), LW_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoDreschtenne() {
+  var parts = [
+    part(new CY(2.2, 2.3, 0.2, 14), M(0, 0.1, 0), LW_ERDEH),
+    part(new CY(2.05, 2.05, 0.08, 14), M(0, 0.2, 0), 0x8a7a5e),
+    part(new CY(0.42, 0.42, 1.1, 9), M(0.4, 0.44, 0.2, 0, 0.4, Math.PI / 2), LW_STEIN),
+    part(new BX(1.2, 0.08, 0.08), M(1.2, 0.5, 0.2, 0, 0.4, 0), LW_HOLZD)
+  ];
+  for (var i = 0; i < 2; i++) {   // Gabeln an der Kante
+    parts.push(part(new CY(0.04, 0.05, 1.8, 4),
+      M(-1.5 - i * 0.3, 0.85, -0.8 + i * 0.4, 0.25, 0, 0.2 + i * 0.15), LW_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoTerrassenfeld() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {
+    parts.push(part(new BX(5.0, 0.9, 0.45), M(0, 0.45 + i * 0.8, 1.4 - i * 1.4), LW_STEIN));
+    parts.push(part(new BX(5.0, 0.16, 0.5), M(0, 0.94 + i * 0.8, 1.4 - i * 1.4), 0xc2bcae));
+    parts.push(part(new BX(4.8, 0.5, 1.0),
+      M(0, 0.65 + i * 0.8, 0.9 - i * 1.4), i % 2 ? LW_ERDE : LW_ERDEH));
+    parts.push(part(new BX(4.6, 0.14, 0.85),
+      M(0, 0.94 + i * 0.8, 0.9 - i * 1.4), LW_GRUEN));
+  }
+  treppe(parts, 6, 0.8, 0.4, 2.0, 0, -1.6, LW_STEIN);
+  return mergeGeos(parts);
+}
+
+function geoVogelscheuche() {
+  var parts = [
+    part(new BX(0.09, 2.2, 0.09), M(0, 1.1, 0), LW_HOLZD),
+    part(new BX(1.5, 0.08, 0.08), M(0, 1.65, 0), LW_HOLZD),
+    part(new IC(0.2, 0), M(0, 2.0, 0, 0, 0.5, 0, 1, 1.1, 1), LW_STROH),
+    part(new CO(0.42, 0.28, 8), M(0, 2.2, 0, 0.15, 0, 0.1), LW_STROHD)
+  ];
+  starr(parts, 0, 0);
+  zeltbahn(parts, [
+    new THREE.Vector3(-0.66, 1.62, 0), new THREE.Vector3(0.66, 1.62, 0),
+    new THREE.Vector3(0.44, 0.55, 0.1), new THREE.Vector3(-0.44, 0.55, 0.1)
+  ], 0.2, LW_STOFF);
+  return mergeGeos(parts);
+}
+
+function geoWassermuehle() {
+  var parts = [];
+  sockel(parts, 3.0, 2.6, 0x8a8278);
+  parts.push(part(new BX(3.0, 2.4, 2.6), M(0, 1.7, 0), LW_PUTZ));
+  parts.push(part(new BX(0.1, 2.4, 0.1), M(-1.46, 1.7, 1.28), LW_HOLZD));
+  parts.push(part(new BX(0.1, 2.4, 0.1), M(1.46, 1.7, 1.28), LW_HOLZD));
+  parts.push(part(new BX(2.9, 0.1, 0.1), M(0, 2.85, 1.29), LW_HOLZD));
+  dach(parts, 3.0, 2.6, 1.5, 2.95, LW_DACH, false);
+  fenster(parts, -0.8, 2.0, 1.32, 0.5, 0.6, "z");
+  tuer(parts, 0.7, 0.5, 1.32, 0.7, 1.3);
+  // Unterschlaechtiges Rad an der Giebelseite: Felge, Achse, zwoelf Schaufeln.
+  parts.push(part(new CY(1.25, 1.25, 0.12, 14), M(1.85, 1.0, 0, 0, 0, Math.PI / 2), LW_HOLZD));
+  parts.push(part(new CY(1.25, 1.25, 0.12, 14), M(2.55, 1.0, 0, 0, 0, Math.PI / 2), LW_HOLZD));
+  parts.push(part(new CY(0.12, 0.12, 1.2, 6), M(2.2, 1.0, 0, 0, 0, Math.PI / 2), LW_HOLZ));
+  for (var i = 0; i < 12; i++) {
+    var a = i / 12 * 6.28;
+    parts.push(part(new BX(0.62, 0.34, 0.07),
+      M(2.2, 1.0 + Math.sin(a) * 1.1, Math.cos(a) * 1.1, a, Math.PI / 2, 0), LW_HOLZ));
+  }
+  parts.push(part(new BX(0.7, 0.22, 2.2), M(2.2, 1.9, -1.5), LW_HOLZD));   // Gerinne
+  return mergeGeos(parts);
+}
+
+/* ==========================================================================
+   Kategorie 4 — Handwerk / Industrie. Der laute Rand der Siedlung. Die vier
+   Feuerstellen (Schmiede, Ziegelofen, Kalkofen, Glashuette) bekommen einen
+   Eintrag in LICHT_ANKER: eine Esse, die nicht glueht, ist ein Schuppen.
+   ========================================================================== */
+var HW_STEIN = 0xa8a094,
+    HW_STEIND = 0x847e6e,
+    HW_ZIEGEL = 0xa8624c,
+    HW_ZIEGELD = 0x8a4e3c,
+    HW_ERDE = 0x6a5844,
+    HW_HOLZ = 0x9a7f5e,
+    HW_HOLZD = 0x6f5a44,
+    HW_GLUT = 0xffa04c,
+    HW_METALL = 0x4c4841,
+    HW_PUTZ = 0xe6dcc6,
+    HW_DACH = 0x6f5a48,
+    HW_TUCH1 = 0xb0574e,
+    HW_TUCH2 = 0x3d78a8,
+    HW_TUCH3 = 0xd8b25e;
+
+function geoSchmiede() {
+  var parts = [
+    part(new BX(2.6, 1.9, 2.2), M(0, 0.95, -0.4), HW_STEIN),
+    part(new BX(2.7, 0.16, 2.3), M(0, 1.95, -0.4), HW_STEIND)
+  ];
+  parts.push(part(prismGeo(3.4, 1.1, 3.2), M(0, 2.05, -0.1, 0, Math.PI / 2, 0), HW_DACH));
+  parts.push(part(new BX(3.4, 0.1, 3.2), M(0, 2.0, -0.1), 0x4a4038));
+  parts.push(part(new CY(0.09, 0.11, 2.0, 5), M(-1.5, 1.0, 1.35), HW_HOLZD));  // offene Front
+  parts.push(part(new CY(0.09, 0.11, 2.0, 5), M(1.5, 1.0, 1.35), HW_HOLZD));
+  parts.push(part(new CY(0.34, 0.44, 3.4, 7), M(0.9, 2.4, -1.0), HW_ZIEGEL));  // Esse
+  parts.push(part(new CY(0.4, 0.4, 0.16, 7), M(0.9, 4.05, -1.0), HW_ZIEGELD));
+  parts.push(part(new BX(0.8, 0.6, 0.3), M(0.9, 0.55, 0.3), HW_GLUT));         // Feuerstelle
+  parts.push(part(new BX(0.55, 0.3, 0.55), M(-0.7, 0.4, 0.5), HW_HOLZD));      // Ambossklotz
+  parts.push(part(new IC(0.26, 0), M(-0.7, 0.68, 0.5, 0, 0.5, 0, 1.6, 0.6, 0.7), HW_METALL));
+  return mergeGeos(parts);
+}
+
+function geoKoehlermeiler() {
+  var parts = [
+    part(new CO(1.7, 2.0, 10), M(0, 1.0, 0), HW_ERDE),
+    part(new CO(1.75, 0.35, 10), M(0, 0.17, 0), 0x584a3a),
+    part(new CY(0.2, 0.26, 0.5, 7), M(0, 2.1, 0), 0x3a332c)     // Rauchloch
+  ];
+  for (var i = 0; i < 6; i++) {   // Holzstapel daneben
+    var lage = Math.floor(i / 3);
+    parts.push(part(new CY(0.16, 0.16, 1.4, 5),
+      M(2.2 + (i % 3) * 0.34, 0.16 + lage * 0.33, 0, Math.PI / 2, 0.1, 0), HW_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoZiegelofen() {
+  var parts = [
+    part(new CY(0.8, 1.5, 3.0, 10), M(0, 1.5, 0), HW_ZIEGEL),
+    part(new CY(1.55, 1.55, 0.2, 10), M(0, 0.1, 0), HW_ZIEGELD),
+    part(new CO(0.95, 1.0, 10), M(0, 3.4, 0), HW_ZIEGELD),
+    part(new CY(0.24, 0.24, 0.3, 7), M(0, 3.95, 0), 0x2e2a24),
+    part(new BX(0.85, 0.95, 0.4), M(0, 0.5, 1.25), HW_GLUT)     // Ofenmaul
+  ];
+  for (var i = 0; i < 6; i++) {   // Ziegelstapel
+    var lage = Math.floor(i / 3);
+    parts.push(part(new BX(0.7, 0.3, 0.9),
+      M(2.3, 0.15 + lage * 0.33, -0.9 + (i % 3) * 0.95, 0, (hashi(i, 3, 941) - 0.5) * 0.2, 0),
+      lage % 2 ? HW_ZIEGEL : HW_ZIEGELD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoKalkofen() {
+  var parts = [
+    part(new CY(1.2, 1.55, 2.6, 9), M(0, 1.3, 0), HW_STEIN),
+    part(new CY(1.3, 1.3, 0.22, 9), M(0, 2.6, 0), HW_STEIND),
+    part(new CY(0.95, 0.95, 0.3, 9), M(0, 2.5, 0), 0x2e2a24),   // Trichtermund
+    part(new BX(0.7, 0.85, 0.5), M(0, 0.42, 1.35), 0x2a2620),   // Feuerloch
+    part(new BX(1.6, 0.3, 3.4), M(0, 2.1, -2.4, 0.22, 0, 0), HW_HOLZD)  // Rampe vom Hang
+  ];
+  for (var i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 947), a = i / 5 * 6.28;
+    parts.push(part(brockenGeo(0.24 + d * 0.16, 947 + i * 3, 0.5),
+      M(Math.cos(a) * (1.9 + d * 0.6), 0.16, Math.sin(a) * (1.9 + d * 0.6) + 1.0,
+        d, a, 0, 1, 0.7, 1), 0xd0cabc));
+  }
+  return mergeGeos(parts);
+}
+
+function geoGerbergruben() {
+  var parts = [], i;
+  for (i = 0; i < 4; i++) {
+    var x = i % 2 ? 0.95 : -0.95, z = i < 2 ? -0.95 : 0.95;
+    parts.push(part(new CY(0.72, 0.72, 0.7, 9), M(x, 0.05, z), HW_STEIND));
+    parts.push(part(new CY(0.6, 0.6, 0.08, 9),
+      M(x, 0.3, z), i % 2 ? 0x5a4a30 : 0x6a5a3a));
+  }
+  for (i = -1; i <= 1; i += 2) {   // Haeuterahmen
+    parts.push(part(new BX(0.09, 2.0, 0.09), M(i * 2.0, 1.0, -0.7), HW_HOLZD));
+    parts.push(part(new BX(0.09, 2.0, 0.09), M(i * 2.0, 1.0, 0.7), HW_HOLZD));
+    parts.push(part(new BX(0.09, 0.09, 1.5), M(i * 2.0, 1.95, 0), HW_HOLZD));
+    parts.push(part(new BX(0.07, 1.3, 1.25), M(i * 2.0, 1.25, 0), 0xc0a684));
+  }
+  return mergeGeos(parts);
+}
+
+function geoFaerbergestell() {
+  var parts = [], i;
+  for (i = -1; i <= 1; i += 2) {
+    parts.push(part(new BX(0.13, 3.0, 0.13), M(i * 1.7, 1.5, 0), HW_HOLZD));
+  }
+  parts.push(part(new BX(3.6, 0.12, 0.12), M(0, 2.95, 0), HW_HOLZD));
+  parts.push(part(new BX(3.6, 0.12, 0.12), M(0, 2.2, 0), HW_HOLZD));
+  starr(parts, 0, 0);
+  var toene = [HW_TUCH1, HW_TUCH2, HW_TUCH3, 0x5f8a56];
+  for (i = 0; i < 4; i++) {
+    var u = -1.35 + i * 0.9;
+    zeltbahn(parts, [
+      new THREE.Vector3(u - 0.34, 2.9, 0), new THREE.Vector3(u + 0.34, 2.9, 0),
+      new THREE.Vector3(u + 0.34, 0.35, 0.12), new THREE.Vector3(u - 0.34, 0.35, 0.12)
+    ], 0.22 + i * 0.05, toene[i]);
+  }
+  return mergeGeos(parts);
+}
+
+function geoSeilerbahn() {
+  var parts = [], i, s;
+  for (s = -1; s <= 1; s += 2) {   // Boecke an beiden Enden
+    parts.push(part(new BX(0.14, 1.3, 0.14), M(s * 3.0, 0.65, -0.35), HW_HOLZD));
+    parts.push(part(new BX(0.14, 1.3, 0.14), M(s * 3.0, 0.65, 0.35), HW_HOLZD));
+    parts.push(part(new BX(0.16, 0.16, 0.9), M(s * 3.0, 1.3, 0), HW_HOLZD));
+  }
+  for (i = 0; i < 3; i++) {        // drei laufende Seile
+    parts.push(part(new CY(0.045, 0.045, 6.0, 4),
+      M(0, 1.28, -0.3 + i * 0.3, 0, 0, Math.PI / 2), 0xb2a184));
+  }
+  parts.push(part(new CY(0.7, 0.7, 0.12, 12), M(-3.35, 1.3, 0, 0, 0, Math.PI / 2), HW_HOLZ));
+  for (i = 0; i < 4; i++) {        // Speichen des Haspelrads
+    parts.push(part(new BX(0.08, 1.3, 0.08),
+      M(-3.35, 1.3, 0, 0, 0, i * 0.78 + Math.PI / 2), HW_HOLZD));
+  }
+  parts.push(part(new BX(0.7, 0.4, 0.8), M(1.4, 1.05, 0), HW_HOLZ));   // Schlitten
+  return mergeGeos(parts);
+}
+
+function geoSaegewerk() {
+  var parts = [], i, s;
+  for (s = -1; s <= 1; s += 2) {   // offene Halle auf Staendern
+    for (i = 0; i < 3; i++) {
+      parts.push(part(new CY(0.15, 0.19, 2.8, 6), M(s * 1.7, 1.4, -2.0 + i * 2.0), HW_HOLZ));
+    }
+    parts.push(part(new BX(0.22, 0.24, 4.6), M(s * 1.7, 2.9, 0), HW_HOLZD));
+    fachwerk(parts, 4.4, 2.7, s * 1.7, "x", 1, s > 0 ? 953 : 967, HW_HOLZD);
+  }
+  parts.push(part(prismGeo(4.0, 1.2, 5.0), M(0, 3.0, 0), HW_DACH));
+  parts.push(part(new BX(4.0, 0.1, 5.0), M(0, 2.95, 0), 0x4a4038));
+  parts.push(part(new BX(0.9, 0.06, 3.0), M(0, 1.4, 0), HW_HOLZ));     // Sagegatter
+  parts.push(part(new BX(0.1, 1.3, 0.06), M(0, 1.9, 0.4), HW_METALL));
+  parts.push(part(new CY(1.1, 1.1, 0.12, 12), M(2.4, 0.9, 1.6, 0, 0, Math.PI / 2), HW_HOLZD));
+  for (i = 0; i < 10; i++) {
+    var a = i / 10 * 6.28;
+    parts.push(part(new BX(0.5, 0.28, 0.06),
+      M(2.4, 0.9 + Math.sin(a) * 0.95, 1.6 + Math.cos(a) * 0.95, a, Math.PI / 2, 0), HW_HOLZ));
+  }
+  for (i = 0; i < 4; i++) {        // Bretterstapel
+    parts.push(part(new BX(1.4, 0.12, 2.4), M(-2.9, 0.1 + i * 0.15, -0.6), HW_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSteinmetzhof() {
+  var parts = [], i;
+  for (i = 0; i < 4; i++) {
+    var d = hashi(i, 3, 971);
+    parts.push(part(new BX(0.9 + d * 0.3, 0.65 + d * 0.3, 0.8),
+      M(-1.4 + (i % 2) * 1.5, 0.35 + d * 0.15, -0.9 + Math.floor(i / 2) * 1.6,
+        0, (d - 0.5) * 0.6, 0), i % 2 ? HW_STEIN : 0xc0bbac));
+  }
+  parts.push(part(new BX(0.6, 0.55, 1.6), M(1.4, 0.28, 0.9), HW_HOLZD));  // Bock
+  parts.push(part(new CY(0.34, 0.4, 1.9, 9), M(1.4, 0.75, 0.9, 0, 0.3, Math.PI / 2), 0xcac4b6));
+  var s = bruchkante(part(new CY(0.34, 0.34, 0.5, 9), M(1.4, 0.75, 2.0, 0, 0, Math.PI / 2), 0xcac4b6),
+    { nz: 1, wert: 2.05, rauheit: 0.35 }, 977);
+  parts.push(s);
+  for (i = 0; i < 5; i++) {        // Spaene
+    var e = hashi(i, 5, 983);
+    parts.push(part(brockenGeo(0.1 + e * 0.1, 983 + i * 3, 0.6),
+      M((e - 0.5) * 2.4, 0.05, 1.6 + (hashi(i, 7, 983) - 0.5) * 1.0, e * 3, e * 6, 0,
+        1, 0.5, 1), 0xd4cfc0));
+  }
+  return mergeGeos(parts);
+}
+
+function geoGlashuette() {
+  var parts = [];
+  sockel(parts, 3.2, 2.8, HW_STEIND);
+  parts.push(part(new BX(3.2, 2.2, 2.8), M(0, 1.6, 0), HW_PUTZ));
+  dach(parts, 3.2, 2.8, 1.3, 2.75, HW_DACH, false);
+  fenster(parts, -1.0, 1.9, 1.42, 0.5, 0.55, "z");
+  tuer(parts, 0.9, 0.5, 1.42, 0.75, 1.3);
+  parts.push(part(new CO(1.1, 1.8, 9), M(0, 2.5, -0.3), HW_ZIEGEL));    // Ofen im Haus
+  parts.push(part(new CY(0.3, 0.36, 2.4, 7), M(0, 4.3, -0.3), HW_ZIEGELD));
+  parts.push(part(new CY(0.4, 0.4, 0.14, 7), M(0, 5.5, -0.3), 0x2e2a24));
+  parts.push(part(new BX(0.7, 0.55, 0.25), M(0, 0.75, 1.44), HW_GLUT));  // Glutschein
+  return mergeGeos(parts);
+}
+
+function geoLagerhaus() {
+  var parts = [], i;
+  sockel(parts, 3.4, 3.0, 0x8a8278);
+  parts.push(part(new BX(3.4, 4.6, 3.0), M(0, 2.8, 0), 0xb09a72));
+  // Nur die Schauseite bekommt Fachwerk: die drei uebrigen Wandflaechen sieht
+  // die Kamera bei diesem Objekt praktisch nie, und jede kostete 60 Dreiecke.
+  fachwerk(parts, 3.3, 4.4, 1.51, "z", 3, 991, HW_HOLZD);
+  parts.push(part(prismGeo(3.8, 1.6, 3.4), M(0, 5.1, 0), HW_DACH));
+  parts.push(part(new BX(3.8, 0.1, 3.4), M(0, 5.05, 0), 0x4a4038));
+  for (i = 0; i < 4; i++) {
+    fenster(parts, -0.9 + (i % 2) * 1.8, 1.9 + Math.floor(i / 2) * 1.7, 1.53, 0.45, 0.5, "z");
+  }
+  parts.push(part(new BX(0.9, 1.3, 0.14), M(0, 4.4, 1.55), 0x3a332c));   // Ladeluke
+  parts.push(part(new BX(0.24, 0.24, 1.6), M(0, 5.3, 2.0), HW_HOLZD));   // Ausleger
+  parts.push(part(new CY(0.22, 0.22, 0.2, 8), M(0, 5.3, 2.7, 0, 0, Math.PI / 2), HW_HOLZ));
+  parts.push(part(new CY(0.03, 0.03, 1.6, 4), M(0, 4.5, 2.7), 0xb2a184));
+  tuer(parts, 0, 0.5, 1.53, 1.1, 1.6);
+  return mergeGeos(parts);
+}
+
+function geoHochschlot() {
+  var parts = [
+    part(new CY(0.4, 0.95, 7.0, 9), M(0, 3.5, 0), HW_ZIEGEL),
+    part(new CY(1.15, 1.25, 0.5, 9), M(0, 0.25, 0), HW_ZIEGELD),
+    part(new CY(0.5, 0.5, 0.14, 9), M(0, 6.98, 0), 0x2a2620)
+  ];
+  for (var i = 0; i < 3; i++) {
+    var y = 2.0 + i * 1.7, r = 0.95 - (y / 7.0) * 0.55 + 0.07;
+    parts.push(part(new CY(r, r, 0.22, 9), M(0, y, 0), HW_ZIEGELD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoWasserrad() {
+  var parts = [], i;
+  parts.push(part(new CY(1.55, 1.55, 0.14, 16), M(0, 1.7, -0.4, 0, 0, Math.PI / 2), HW_HOLZD));
+  parts.push(part(new CY(1.55, 1.55, 0.14, 16), M(0, 1.7, 0.4, 0, 0, Math.PI / 2), HW_HOLZD));
+  parts.push(part(new CY(0.14, 0.14, 1.4, 6), M(0, 1.7, 0, 0, 0, Math.PI / 2), HW_HOLZ));
+  for (i = 0; i < 12; i++) {
+    var a = i / 12 * 6.28;
+    parts.push(part(new BX(0.9, 0.42, 0.08),
+      M(0, 1.7 + Math.sin(a) * 1.35, Math.cos(a) * 1.35, a, Math.PI / 2, 0), HW_HOLZ));
+  }
+  for (i = -1; i <= 1; i += 2) {   // Bock
+    parts.push(part(new BX(0.2, 2.0, 0.2), M(i * 0.85, 0.9, 0), HW_HOLZD));
+    parts.push(part(new BX(0.16, 1.4, 0.16), M(i * 1.5, 0.7, 0, 0, 0, i * 0.5), HW_HOLZD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoWindpumpe() {
+  var parts = [], i;
+  for (i = 0; i < 4; i++) {        // Bockgeruest
+    var x = i % 2 ? 0.7 : -0.7, z = i < 2 ? -0.7 : 0.7;
+    parts.push(part(new BX(0.14, 3.2, 0.14),
+      M(x * 0.55, 1.6, z * 0.55, z * 0.13, 0, -x * 0.13), HW_HOLZD));
+  }
+  parts.push(part(new BX(1.1, 0.14, 1.1), M(0, 3.2, 0), HW_HOLZD));
+  parts.push(part(new BX(0.9, 0.7, 0.9), M(0, 0.35, 0), HW_HOLZ));      // Pumpenkasten
+  parts.push(part(new CY(0.16, 0.16, 0.4, 8), M(0, 3.4, 0.55, Math.PI / 2, 0, 0), HW_METALL));
+  for (i = 0; i < 4; i++) {        // Fluegel: schmale Bretter statt Tuecher,
+    var a = i / 4 * 6.28;          // damit sie ohne alphaTest opak bleiben
+    parts.push(part(new BX(0.42, 1.6, 0.06),
+      M(Math.sin(a) * 0.9, 3.4 + Math.cos(a) * 0.9, 0.75, 0, 0, -a), 0xd8cdb2));
+  }
+  return mergeGeos(parts);
+}
+
+/* --- Pools Landwirtschaft und Handwerk ------------------------------------ */
+definePool("ackerscholle", geoAckerscholle(), { radius: 1.8, ao: 0.15, familie: 'erde' });
+definePool("rebenreihe", geoRebenreihe(), { radius: 1.0, ao: 0.2, familie: 'laub' });
+definePool("hopfengeruest", geoHopfengeruest(), { radius: 1.4, dbl: true, ao: 0.2,
+  familie: 'holz', wind: { amp: 0.22 } });
+definePool("obstbaum", geoObstbaum(), { radius: 1.6, dbl: true, ao: 0.24,
+  map: TEX.kroneRund, alphaTest: 0.42, familie: 'laub', wind: WINDLAUB });
+definePool("garbe", geoGarbe(), { radius: 0.4, familie: 'stoff' });
+definePool("heuschober", geoHeuschober(), { radius: 1.5, ao: 0.24, familie: 'stoff' });
+definePool("taubenschlag", geoTaubenschlag(), { radius: 1.0, familie: 'holz' });
+definePool("bienenstand", geoBienenstand(), { radius: 1.2, familie: 'stoff' });
+definePool("pferch", geoPferch(), { radius: 2.6, ao: 0.2, familie: 'holz' });
+definePool("viehstall", geoViehstall(), { radius: 2.6, familie: 'holz' });
+definePool("kornspeicher", geoKornspeicher(), { radius: 1.8, ao: 0.24, familie: 'holz' });
+definePool("dreschtenne", geoDreschtenne(), { radius: 2.0, ao: 0.16, familie: 'erde' });
+definePool("terrassenfeld", geoTerrassenfeld(), { radius: 3.0, ao: 0.22, familie: 'stein' });
+definePool("vogelscheuche", geoVogelscheuche(), { radius: 0.4, dbl: true, ao: 0.16,
+  familie: 'stoff', wind: { amp: 0.3 } });
+definePool("wassermuehle", geoWassermuehle(), { radius: 3.0, ao: 0.24, familie: 'holz' });
+
+definePool("schmiede", geoSchmiede(), { radius: 2.2, ao: 0.24, familie: 'stein' });
+definePool("koehlermeiler", geoKoehlermeiler(), { radius: 1.8, familie: 'erde' });
+definePool("ziegelofen", geoZiegelofen(), { radius: 2.2, familie: 'stein' });
+definePool("kalkofen", geoKalkofen(), { radius: 2.0, ao: 0.24, familie: 'stein' });
+definePool("gerbergruben", geoGerbergruben(), { radius: 2.4, ao: 0.22, familie: 'holz' });
+definePool("faerbergestell", geoFaerbergestell(), { radius: 1.8, dbl: true, ao: 0.2,
+  familie: 'stoff', wind: { amp: 0.26 } });
+definePool("seilerbahn", geoSeilerbahn(), { radius: 3.2, ao: 0.2, familie: 'holz' });
+definePool("saegewerk", geoSaegewerk(), { radius: 3.2, ao: 0.26, familie: 'holz' });
+definePool("steinmetzhof", geoSteinmetzhof(), { radius: 2.2, familie: 'stein' });
+definePool("glashuette", geoGlashuette(), { radius: 2.6, familie: 'stein' });
+definePool("lagerhaus", geoLagerhaus(), { radius: 3.0, ao: 0.24, familie: 'holz' });
+definePool("hochschlot", geoHochschlot(), { radius: 1.0, familie: 'stein' });
+definePool("wasserrad", geoWasserrad(), { radius: 2.0, ao: 0.24, familie: 'holz' });
+definePool("windpumpe", geoWindpumpe(), { radius: 1.6, ao: 0.24, familie: 'holz' });
+
+/* ==========================================================================
+   Kategorie 5 — Sakral / Kult, einschliesslich des Arbor-Kults. Zwei Familien
+   in einer Kategorie: der gebaute Kult aus Stein (Kapelle bis Steinkreis) und
+   der gewachsene aus Ranke und Blatt. Sie teilen bewusst KEINE Palette — der
+   Unterschied zwischen beiden ist die halbe Aussage des Settings.
+
+   `kreuzgang` fehlt: der Katalog fuehrt ihn als Struktur-Generator (G), weil
+   ein geschlossener Arkadenhof aus Kantenlaengen entsteht.
+   ========================================================================== */
+var SK_STEIN = 0xc4beac,
+    SK_STEIND = 0x9a9484,
+    SK_PUTZ = 0xf2ecdc,
+    SK_DACH = 0x53707e,
+    SK_HOLZ = 0x7a6450,
+    SK_GOLD = 0xd8b25e,
+    SK_GLAS = 0xe2934c,
+    SK_MOOS = 0x5e7844,
+    SK_METALL = 0x8e8a80,
+    SK_GLUT = 0xffb45c,
+    SK_TUCH1 = 0xb0574e,
+    SK_TUCH2 = 0x3d78a8;
+
+function geoKapelle() {
+  var parts = [];
+  sockel(parts, 2.4, 3.4, SK_STEIND);
+  parts.push(part(new BX(2.4, 2.2, 3.4), M(0, 1.6, 0), SK_PUTZ));
+  parts.push(part(new CY(1.2, 1.2, 2.2, 9, 1, false, -Math.PI / 2, Math.PI),
+    M(0, 1.6, -1.7, 0, 0, 0, 1, 1, 1), SK_PUTZ));               // halbrunde Apsis
+  parts.push(part(prismGeo(2.7, 1.2, 3.9), M(0, 2.7, 0, 0, Math.PI / 2, 0), SK_DACH));
+  parts.push(part(new BX(2.7, 0.1, 3.9), M(0, 2.65, 0), 0x4a4038));
+  parts.push(part(new CY(0.24, 0.28, 0.9, 6), M(0, 4.1, 1.0), SK_PUTZ));  // Dachreiter
+  parts.push(part(new CO(0.34, 0.7, 6), M(0, 4.85, 1.0), SK_DACH));
+  parts.push(part(new THREE.TorusGeometry(0.34, 0.09, 4, 9),
+    M(0, 2.35, 1.72), SK_STEIN));                                // Rundfenster
+  parts.push(part(new CY(0.3, 0.3, 0.08, 9), M(0, 2.35, 1.7), SK_GLAS));
+  tuer(parts, 0, 0.5, 1.72, 0.75, 1.4);
+  return mergeGeos(parts);
+}
+
+function geoGlockenturm() {
+  var parts = [];
+  sockel(parts, 1.7, 1.7, SK_STEIND);
+  parts.push(part(new BX(1.7, 6.0, 1.7), M(0, 3.4, 0), SK_PUTZ));
+  parts.push(part(new BX(1.95, 0.2, 1.95), M(0, 6.5, 0), SK_STEIN));
+  for (var i = 0; i < 4; i++) {     // Schalloeffnungen
+    var a = i / 4 * 6.28;
+    parts.push(part(new BX(0.6, 1.4, 0.2),
+      M(Math.cos(a) * 0.83, 5.6, Math.sin(a) * 0.83, 0, -a, 0), 0x2e3038));
+  }
+  parts.push(part(prismGeo(2.0, 1.3, 2.0), M(0, 6.6, 0), SK_DACH));
+  parts.push(part(new BX(2.0, 0.1, 2.0), M(0, 6.55, 0), 0x4a4038));
+  parts.push(part(new IC(0.34, 0), M(0, 5.55, 0, 0, 0.4, 0, 1, 1.2, 1), SK_GOLD));
+  return mergeGeos(parts);
+}
+
+function geoKathedralenschiff() {
+  var parts = [], i, s;
+  parts.push(part(new BX(3.6, 6.4, 9.0), M(0, 3.2, 0), SK_PUTZ));
+  parts.push(part(new BX(3.8, 0.24, 9.2), M(0, 6.5, 0), SK_STEIN));
+  parts.push(part(prismGeo(4.2, 2.0, 9.4), M(0, 6.6, 0, 0, Math.PI / 2, 0), SK_DACH));
+  parts.push(part(new BX(4.2, 0.1, 9.4), M(0, 6.55, 0), 0x4a4038));
+  // Strebewerk: Pfeiler aussen, Bogen zurueck ans Langhaus. Der Torus traegt
+  // den Bogen in einem Stueck — dieselbe Begruendung wie in bogenreihe().
+  var bogen = new THREE.TorusGeometry(1.05, 0.16, 4, 6, Math.PI * 0.55);
+  for (s = -1; s <= 1; s += 2) {
+    for (i = 0; i < 3; i++) {
+      var z = -2.8 + i * 2.8;
+      parts.push(part(new BX(0.55, 4.6, 0.8), M(s * 2.9, 2.3, z), SK_STEIN));
+      parts.push(part(new CO(0.4, 0.8, 5), M(s * 2.9, 4.9, z), SK_DACH));
+      parts.push(part(bogen, M(s * 2.35, 4.3, z, 0, 0, s > 0 ? 0.35 : Math.PI - 0.35,
+        1, 1, 5), SK_STEIN));
+    }
+  }
+  // Rosette in der Westfassade — als Aufsatz gedacht, hier fest verbaut, weil
+  // die Fassade ohne sie nur eine Wand ist.
+  parts.push(part(new THREE.TorusGeometry(0.85, 0.16, 4, 12), M(0, 4.6, 4.55), SK_STEIN));
+  parts.push(part(new CY(0.8, 0.8, 0.1, 12), M(0, 4.6, 4.52, Math.PI / 2, 0, 0), SK_GLAS));
+  tuer(parts, 0, 0.5, 4.55, 1.4, 2.4);
+  parts.push(part(new THREE.TorusGeometry(0.85, 0.28, 4, 8, Math.PI),
+    M(0, 2.9, 4.55, 0, 0, 0, 1, 1, 1.2), SK_STEIN));
+  return mergeGeos(parts);
+}
+
+function geoRosette() {
+  var parts = [
+    part(new THREE.TorusGeometry(0.55, 0.11, 4, 12), M(0, 0.55, 0), SK_STEIN),
+    part(new CY(0.5, 0.5, 0.07, 12), M(0, 0.55, 0, Math.PI / 2, 0, 0), SK_GLAS)
+  ];
+  for (var i = 0; i < 8; i++) {
+    parts.push(part(new BX(1.05, 0.08, 0.09), M(0, 0.55, 0.02, 0, 0, i * 0.393), SK_STEIN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBildstock() {
+  return mergeGeos([
+    part(new BX(0.5, 0.2, 0.5), M(0, 0.1, 0), SK_STEIND),
+    part(new CY(0.13, 0.17, 1.9, 7), M(0, 1.15, 0), SK_STEIN),
+    part(new BX(0.46, 0.55, 0.36), M(0, 2.35, 0), SK_PUTZ),
+    part(new BX(0.3, 0.38, 0.12), M(0, 2.35, 0.16), 0x3a332c),
+    part(prismGeo(0.66, 0.28, 0.52), M(0, 2.63, 0, 0, Math.PI / 2, 0), SK_DACH),
+    part(new CY(0.02, 0.02, 0.3, 4), M(0, 2.95, 0), SK_METALL)
+  ]);
+}
+
+function geoMenhir() {
+  return mergeGeos([
+    part(new BX(0.62, 2.4, 0.42), M(0, 1.2, 0, 0.04, 0.3, 0.09, 1, 1, 1), SK_STEIN),
+    part(new BX(0.4, 0.9, 0.3), M(0.06, 2.5, 0.02, 0.04, 0.3, 0.09), SK_STEIN),
+    part(new BX(0.66, 0.4, 0.46), M(0, 0.35, 0, 0, 0.3, 0), SK_MOOS)
+  ]);
+}
+
+function geoSteinkreis() {
+  var parts = [], i;
+  for (i = 0; i < 9; i++) {
+    var a = i / 9 * 6.28, d = hashi(i, 3, 1009);
+    parts.push(part(new BX(0.55 + d * 0.2, 1.8 + d * 1.4, 0.4),
+      M(Math.cos(a) * 3.0, (1.8 + d * 1.4) / 2, Math.sin(a) * 3.0,
+        (d - 0.5) * 0.18, -a, (d - 0.5) * 0.22), i % 3 ? SK_STEIN : SK_STEIND));
+  }
+  parts.push(part(new BX(1.4, 0.3, 1.0), M(0, 0.15, 0, 0, 0.4, 0), SK_STEIND));
+  return mergeGeos(parts);
+}
+
+function geoFeuerschale() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {
+    var a = i / 3 * 6.28;
+    parts.push(part(new CY(0.04, 0.06, 1.1, 4),
+      M(Math.cos(a) * 0.22, 0.55, Math.sin(a) * 0.22,
+        Math.sin(a) * 0.22, 0, -Math.cos(a) * 0.22), SK_METALL));
+  }
+  parts.push(part(new CY(0.48, 0.3, 0.34, 9), M(0, 1.2, 0), SK_METALL));
+  parts.push(part(new IC(0.3, 0), M(0, 1.32, 0, 0, 0.4, 0, 1, 0.55, 1), SK_GLUT));
+  return mergeGeos(parts);
+}
+
+function geoOpferstein() {
+  var parts = [
+    part(new BX(1.7, 0.5, 1.1), M(0, 0.25, 0, 0, 0.1, 0.02), SK_STEIN),
+    part(new BX(1.5, 0.1, 0.9), M(0, 0.5, 0, 0, 0.1, 0), SK_STEIND),
+    part(new BX(0.9, 0.2, 0.55), M(-0.9, 0.1, 0.2, 0, 0.5, 0.1), SK_MOOS)
+  ];
+  for (var i = 0; i < 2; i++) {     // eingekerbte Rinnen
+    parts.push(part(new BX(1.4, 0.07, 0.09), M(0, 0.51, -0.25 + i * 0.5, 0, 0.1, 0), 0x6a6458));
+  }
+  return mergeGeos(parts);
+}
+
+/** Kleines Arbor-Blatt als gestauchter Brocken statt leafGeo: leafGeo kostet
+    ueber 380 Dreiecke pro Flaeche und ist fuer eine handgrosse Beigabe an
+    Schrein, Altar und Tor um zwei Groessenordnungen zu teuer. */
+function arborBlatt(parts, x, y, z, r, ry, hex) {
+  parts.push(part(brockenGeo(r, 1013 + Math.round(x * 7 + z * 13), 0.3),
+    M(x, y, z, 0.2, ry, 0.15, 1.5, 0.16, 0.75), hex === undefined ? AR_BLATT : hex));
+  return parts;
+}
+
+function geoArborschrein() {
+  var parts = [];
+  // Rankenschlaufe: ein geschlossener Bogen ueber dem Altar, der links und
+  // rechts in den Boden laeuft. Das ist die Geste des ganzen Kults.
+  parts.push(part(tubeGeo([
+    new THREE.Vector3(-1.1, 0.0, 0.2), new THREE.Vector3(-0.9, 1.4, -0.3),
+    new THREE.Vector3(0.0, 2.2, 0.1), new THREE.Vector3(0.9, 1.5, -0.2),
+    new THREE.Vector3(1.1, 0.0, 0.25)
+  ], function (t) { return 0.19 + Math.sin(t * 3.14) * 0.06; }, 7, rankenAder), null, AR_HAUT));
+  parts.push(part(new BX(1.2, 0.55, 0.8), M(0, 0.28, 0), SK_STEIN));
+  parts.push(part(new BX(1.35, 0.12, 0.95), M(0, 0.58, 0), SK_STEIND));
+  arborBlatt(parts, -0.75, 1.5, -0.1, 0.34, 0.5);
+  arborBlatt(parts, 0.7, 1.7, 0.1, 0.3, -0.7, AR_BLATTU);
+  arborBlatt(parts, 0.05, 2.35, -0.05, 0.26, 1.4);
+  return mergeGeos(parts);
+}
+
+function geoRankenaltar() {
+  var parts = [
+    part(new BX(1.5, 0.9, 1.0), M(0, 0.45, 0), SK_STEIN),
+    part(new BX(1.65, 0.14, 1.15), M(0, 0.95, 0), SK_STEIND)
+  ];
+  // Die Ranke durchstoesst den Block: sie war zuerst da, der Altar kam darum
+  // herum. Der Katalogeintrag lebt genau von dieser Lesart.
+  parts.push(part(tubeGeo([
+    new THREE.Vector3(-1.0, -0.1, 0.3), new THREE.Vector3(-0.2, 0.5, 0.0),
+    new THREE.Vector3(0.4, 1.2, -0.1), new THREE.Vector3(0.75, 2.0, 0.25)
+  ], function (t) { return 0.16 - t * 0.05; }, 6, rankenAder), null, AR_HAUT));
+  arborBlatt(parts, 0.85, 1.85, 0.3, 0.3, 0.6);
+  arborBlatt(parts, 0.6, 1.35, -0.15, 0.24, -1.1, AR_BLATTU);
+  return mergeGeos(parts);
+}
+
+function geoLichtsammler() {
+  var parts = [
+    part(new CY(0.3, 0.34, 0.3, 8), M(0, 0.15, 0), SK_STEIND),
+    part(new CY(0.09, 0.12, 1.8, 6), M(0, 1.1, 0), SK_METALL),
+    // Invertierter Kegel: die Schale oeffnet sich nach OBEN zum Licht.
+    part(new CO(0.95, 0.8, 10), M(0, 2.35, 0, Math.PI, 0, 0), SK_METALL),
+    part(new CY(0.85, 0.85, 0.07, 10), M(0, 2.6, 0), AR_GLUT)
+  ];
+  for (var i = 0; i < 3; i++) {
+    var a = i / 3 * 6.28;
+    parts.push(part(new CY(0.035, 0.045, 1.1, 4),
+      M(Math.cos(a) * 0.42, 1.7, Math.sin(a) * 0.42,
+        -Math.sin(a) * 0.35, 0, Math.cos(a) * 0.35), SK_METALL));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSamenreliquiar() {
+  var parts = [
+    part(new BX(0.9, 0.3, 0.9), M(0, 0.15, 0), SK_STEIND),
+    part(new BX(0.75, 0.1, 0.75), M(0, 0.35, 0), SK_METALL),
+    part(new THREE.SphereGeometry(0.5, 10, 6), M(0, 1.15, 0, 0, 0, 0, 1, 1.25, 1), AR_HELL),
+    part(new IC(0.24, 0), M(0, 1.1, 0), AR_GLUT),
+    part(new CO(0.3, 0.4, 6), M(0, 1.95, 0), SK_GOLD)
+  ];
+  for (var i = 0; i < 4; i++) {
+    var a = i / 4 * 6.28 + 0.78;
+    parts.push(part(new CY(0.04, 0.05, 1.6, 4),
+      M(Math.cos(a) * 0.36, 1.15, Math.sin(a) * 0.36), SK_METALL));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBlattkanzel() {
+  var b = leafGeo(3.0, 1.1, 0.62, 0.16, AR_BLATT, AR_BLATTU, AR_ADER, 1019);
+  b.applyMatrix4(M(-1.0, 1.9, 0, 0, 0, 0.12));
+  var parts = [b];
+  parts.push(part(tubeGeo([
+    new THREE.Vector3(-1.3, 0.0, 0), new THREE.Vector3(-1.15, 1.0, 0.15),
+    new THREE.Vector3(-1.0, 1.9, 0)
+  ], function (t) { return 0.24 - t * 0.09; }, 6, rankenAder), null, AR_HAUT));
+  // Gelaender auf der offenen Seite: erst dadurch wird aus einem Blatt eine
+  // Kanzel, auf der jemand stehen kann.
+  for (var i = 0; i < 5; i++) {
+    var u = 0.4 + i * 0.4, hw = leafHalfWidth(u / 3.0) * 1.1;
+    parts.push(part(new CY(0.035, 0.045, 0.55, 4),
+      M(u - 1.0, 2.15, hw * 0.9), AR_HOLZ));
+    parts.push(part(new CY(0.035, 0.045, 0.55, 4),
+      M(u - 1.0, 2.15, -hw * 0.9), AR_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoGebetsband() {
+  var parts = [
+    part(new CY(0.06, 0.09, 2.2, 5), M(-1.1, 1.1, 0), SK_HOLZ),
+    part(new CY(0.06, 0.09, 2.2, 5), M(1.1, 1.1, 0), SK_HOLZ),
+    part(new BX(2.3, 0.05, 0.05), M(0, 2.1, 0), 0xb2a184)
+  ];
+  starr(parts, 0, 0);
+  var toene = [SK_TUCH1, SK_TUCH2, 0xe8dfc9, SK_GOLD, 0x5f8a56, 0xc0a6c4];
+  for (var i = 0; i < 6; i++) {
+    var u = -0.95 + i * 0.38;
+    zeltbahn(parts, [
+      new THREE.Vector3(u - 0.13, 2.08, 0), new THREE.Vector3(u + 0.13, 2.08, 0),
+      new THREE.Vector3(u + 0.13, 0.9 - hashi(i, 3, 1021) * 0.5, 0.1),
+      new THREE.Vector3(u - 0.13, 0.9 - hashi(i, 3, 1021) * 0.5, 0.1)
+    ], 0.14, toene[i]);
+  }
+  return mergeGeos(parts);
+}
+
+function geoRankentor() {
+  var parts = [], s;
+  // Zwei Ranken, die sich oben verflechten: das Tor ist gewachsen, nicht
+  // gebaut — es hat keinen Sturz, nur einen Knoten.
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(tubeGeo([
+      new THREE.Vector3(s * 1.9, 0.0, 0.15),
+      new THREE.Vector3(s * 1.7, 1.6, -0.2),
+      new THREE.Vector3(s * 0.9, 2.9, 0.1),
+      new THREE.Vector3(-s * 0.2, 3.4, -0.15),
+      new THREE.Vector3(-s * 0.9, 3.0, 0.15)
+    ], function (t) { return 0.28 - t * 0.11; }, 7, rankenAder), null, AR_HAUT));
+  }
+  arborBlatt(parts, -1.5, 2.1, 0.2, 0.4, 0.4);
+  arborBlatt(parts, 1.55, 1.7, -0.2, 0.36, -0.6, AR_BLATTU);
+  arborBlatt(parts, 0.3, 3.5, 0.1, 0.32, 1.2);
+  arborBlatt(parts, -0.5, 2.7, -0.25, 0.28, 2.1, AR_BLATTU);
+  return mergeGeos(parts);
+}
+
+function geoGrabhuegel() {
+  var parts = [
+    // Kein moundGeo: das liest heightAt/terrainColor und wuerde die Geometrie
+    // an das Terrain BEIM LADEN binden — Pool-Geometrien entstehen aber einmal
+    // und stehen danach ueberall auf der Karte.
+    part(brockenGeo(2.2, 1031, 0.3), M(0, 0.0, 0, 0, 0.4, 0, 1.1, 0.55, 1), 0x6f8a4e),
+    part(brockenGeo(1.5, 1033, 0.35), M(-0.3, 0.5, -0.2, 0, 1.2, 0, 1, 0.45, 1), 0x7ba055),
+    part(new BX(1.3, 1.5, 0.4), M(0, 0.7, 1.75, 0.1, 0, 0.03), SK_STEIN),
+    part(new BX(1.6, 0.3, 0.5), M(0, 1.55, 1.75), SK_STEIND),
+    part(new BX(0.7, 0.9, 0.2), M(0, 0.45, 1.95), 0x2e2a24)
+  ];
+  for (var s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(0.42, 1.5, 0.3),
+      M(s * 1.5, 0.75, 1.6, (s) * 0.06, s * 0.3, s * 0.1), SK_STEIN));
+  }
+  return mergeGeos(parts);
+}
+
+/* ==========================================================================
+   Kategorie 6 — Wohnbau je Kultur. Vierzehn Haustypen plus die zwei Aufsaetze
+   (Gaube, Kamin), die der Katalog als Anker-Bauteile fuehrt. Alle Bauten mit
+   Fenstern bekommen unten einen FENSTER_ANKER-Eintrag, damit emitFensterlicht
+   greift — ein Wohnhaus ohne Licht im Fenster ist eine Kulisse.
+   ========================================================================== */
+var WO_PUTZ = 0xf0ece0,
+    WO_PUTZ2 = 0xe4dac2,
+    WO_HOLZ = 0x9c8468,
+    WO_HOLZD = 0x6f5a44,
+    WO_DACH = 0x8a7a5a,
+    WO_DACHZ = 0x36719f,
+    WO_DACHS = 0x53707e,
+    WO_REET = 0x9a8862,
+    WO_STEIN = 0xb4aea0,
+    WO_STEIND = 0x8f8878,
+    WO_STOFF = 0xdcd0b4,
+    WO_GRAS = 0x6f8f4a;
+
+function geoLanghaus() {
+  var parts = [], s, i;
+  sockel(parts, 3.0, 7.0, WO_STEIND);
+  parts.push(part(new BX(3.0, 2.0, 7.0), M(0, 1.4, 0), 0xd6c8a8));
+  dach(parts, 3.0, 7.0, 1.8, 2.4, WO_REET, true);
+  parts.push(part(new BX(3.5, 0.24, 7.6), M(0, 3.4, 0), WO_GRAS));   // Grasdach
+  // Aeussere Stuetzboecke: die schraegen Balken sind die Silhouette, an der
+  // ein nordisches Langhaus erkannt wird.
+  for (s = -1; s <= 1; s += 2) {
+    for (i = 0; i < 3; i++) {
+      parts.push(part(new BX(0.16, 3.0, 0.16),
+        M(s * 2.1, 1.3, -2.2 + i * 2.2, 0, 0, s * 0.42), WO_HOLZD));
+    }
+  }
+  tuer(parts, 0, 0.5, 3.55, 0.9, 1.6);
+  fenster(parts, 1.55, 1.7, -1.2, 0.45, 0.4, "x");
+  fenster(parts, -1.55, 1.7, 1.0, 0.45, 0.4, "x");
+  return mergeGeos(parts);
+}
+
+function geoGrubenhaus() {
+  var parts = [
+    part(brockenGeo(1.9, 1039, 0.3), M(0, -0.35, 0, 0, 0.4, 0, 1.1, 0.5, 1), 0x7a6a50)
+  ];
+  // Das Dach reicht bis auf den Boden — das ist die ganze Bauform.
+  parts.push(part(prismGeo(2.6, 1.9, 3.0), M(0, 0.15, 0, 0, Math.PI / 2, 0), WO_REET));
+  parts.push(part(new BX(2.7, 0.14, 3.1), M(0, 0.1, 0), 0x4a4038));
+  parts.push(part(new CY(0.12, 0.12, 3.1, 5), M(0, 2.08, 0, Math.PI / 2, 0, 0), WO_HOLZD));
+  parts.push(part(new BX(1.0, 1.3, 0.16), M(0, 0.65, 1.5), 0xa89678));
+  tuer(parts, 0, 0.1, 1.6, 0.6, 1.1);
+  return mergeGeos(parts);
+}
+
+function geoTurmhaus() {
+  var parts = [], i;
+  sockel(parts, 2.0, 2.0, WO_STEIND);
+  parts.push(part(new BX(2.0, 5.6, 2.0), M(0, 3.3, 0), WO_PUTZ));
+  parts.push(part(new BX(2.2, 0.14, 2.2), M(0, 2.4, 0), WO_PUTZ2));   // Gesimse
+  parts.push(part(new BX(2.2, 0.14, 2.2), M(0, 4.2, 0), WO_PUTZ2));
+  dach(parts, 2.0, 2.0, 1.3, 6.1, WO_DACHZ, false);
+  for (i = 0; i < 3; i++) {
+    fenster(parts, -0.45, 1.6 + i * 1.8, 1.02, 0.42, 0.55, "z");
+    fenster(parts, 0.45, 1.6 + i * 1.8, 1.02, 0.42, 0.55, "z");
+  }
+  tuer(parts, 0, 0.5, 1.02, 0.65, 1.3);
+  return mergeGeos(parts);
+}
+
+function geoGiebelhaus() {
+  var parts = [], s, i;
+  sockel(parts, 2.6, 3.2, WO_STEIND);
+  parts.push(part(new BX(2.6, 3.4, 3.2), M(0, 2.2, 0), WO_PUTZ));
+  parts.push(part(prismGeo(2.6, 1.5, 3.3), M(0, 3.9, 0, 0, Math.PI / 2, 0), WO_DACHZ));
+  // Treppengiebel: fuenf Stufen je Seite, das Erkennungszeichen des Typs.
+  for (s = -1; s <= 1; s += 2) {
+    for (i = 0; i < 5; i++) {
+      var b = 2.6 - i * 0.44;
+      parts.push(part(new BX(b, 0.32, 0.24),
+        M(0, 3.95 + i * 0.3, s * 1.62), WO_PUTZ2));
+    }
+    parts.push(part(new BX(0.5, 0.26, 0.3), M(0, 5.45, s * 1.62), WO_PUTZ2));
+  }
+  for (i = 0; i < 2; i++) {
+    fenster(parts, -0.65, 1.6 + i * 1.5, 1.62, 0.5, 0.6, "z");
+    fenster(parts, 0.65, 1.6 + i * 1.5, 1.62, 0.5, 0.6, "z");
+  }
+  tuer(parts, 0, 0.5, 1.62, 0.7, 1.4);
+  return mergeGeos(parts);
+}
+
+function geoLaubenhaus() {
+  var parts = [];
+  sockel(parts, 3.4, 3.0, WO_STEIND);
+  // Arkadenlaube im Erdgeschoss: bogenreihe traegt die Konstruktion, das
+  // Obergeschoss sitzt darauf.
+  bogenreihe(parts, 3, 0.72, 1.5, 0.5, WO_STEIN, 2.9, 0.35);
+  parts.push(part(new BX(3.6, 0.22, 3.1), M(0, 2.6, 0), WO_STEIN));    // Laubendecke
+  parts.push(part(new BX(3.4, 2.2, 3.0), M(0, 3.8, 0), WO_PUTZ));
+  dach(parts, 3.4, 3.0, 1.4, 4.9, WO_DACHZ, false);
+  fenster(parts, -0.9, 4.0, 1.52, 0.5, 0.6, "z");
+  fenster(parts, 0.9, 4.0, 1.52, 0.5, 0.6, "z");
+  fenster(parts, 1.72, 4.0, 0, 0.5, 0.6, "x");
+  tuer(parts, 0, 0.6, 1.4, 0.7, 1.3);
+  return mergeGeos(parts);
+}
+
+function geoHofdurchfahrt() {
+  var parts = [];
+  sockel(parts, 3.4, 2.8, WO_STEIND);
+  for (var s = -1; s <= 1; s += 2) {   // zwei Pfeilerteile, dazwischen die Durchfahrt
+    parts.push(part(new BX(1.0, 2.6, 2.8), M(s * 1.2, 1.5, 0), WO_PUTZ));
+  }
+  parts.push(part(new BX(3.4, 1.9, 2.8), M(0, 3.75, 0), WO_PUTZ));     // Riegel darueber
+  parts.push(part(new THREE.TorusGeometry(0.72, 0.2, 4, 8, Math.PI),
+    M(0, 2.35, 0, 0, 0, 0, 1, 1, 7.0), WO_STEIN));
+  parts.push(part(new BX(3.6, 0.14, 2.95), M(0, 2.75, 0), WO_PUTZ2));
+  dach(parts, 3.4, 2.8, 1.4, 4.7, WO_DACH, false);
+  fenster(parts, -0.9, 3.9, 1.42, 0.5, 0.55, "z");
+  fenster(parts, 0.9, 3.9, 1.42, 0.5, 0.55, "z");
+  return mergeGeos(parts);
+}
+
+function geoPfahlhaus() {
+  var parts = [], i;
+  for (i = 0; i < 6; i++) {
+    var x = (i % 3 - 1) * 1.1, z = i < 3 ? -0.9 : 0.9;
+    parts.push(part(new CY(0.14, 0.19, 2.6, 6), M(x, 1.0, z), 0x6a5540));
+  }
+  parts.push(part(new BX(3.0, 0.16, 2.4), M(0, 2.3, 0), WO_HOLZ));
+  parts.push(part(new BX(2.4, 1.7, 2.0), M(-0.2, 3.25, 0), 0xc8b494));
+  dach(parts, 2.4, 2.0, 1.2, 4.1, WO_REET, true);
+  parts.push(part(new BX(0.9, 0.1, 2.4), M(1.25, 2.38, 0), WO_HOLZ));  // Plattform
+  for (i = 0; i < 5; i++) {                                            // Leiter
+    parts.push(part(new BX(0.6, 0.05, 0.07), M(1.55, 0.4 + i * 0.42, 0.9), WO_HOLZ));
+  }
+  tuer(parts, -0.2, 2.4, 1.03, 0.6, 1.2);
+  fenster(parts, -1.0, 3.4, 1.03, 0.42, 0.44, "z");
+  return mergeGeos(parts);
+}
+
+function geoBaumhaus() {
+  var parts = [
+    part(new CY(0.34, 0.62, 5.0, 7), M(0, 2.5, 0, 0, 0, 0.05), 0x6f5a44),
+    part(new BX(2.3, 0.16, 2.0), M(0.25, 3.3, 0, 0, 0.2, 0.04), WO_HOLZ),
+    part(new BX(2.0, 1.5, 1.7), M(0.35, 4.1, 0, 0, 0.2, 0.05), 0xc0aa86)
+  ];
+  parts.push(part(prismGeo(2.4, 1.0, 2.1), M(0.35, 4.85, 0, 0, Math.PI / 2 + 0.2, 0), WO_DACH));
+  parts.push(part(new BX(2.4, 0.09, 2.1), M(0.35, 4.8, 0, 0, 0.2, 0), 0x4a4038));
+  tuer(parts, 0.5, 3.4, 0.9, 0.55, 1.1);
+  fenster(parts, -0.35, 4.2, 0.88, 0.4, 0.42, "z");
+  // Leiterseil statt Leiter: es haengt und schwingt, eine Holzleiter stuende.
+  parts.push(part(tubeGeo([
+    new THREE.Vector3(0.5, 3.25, 1.0), new THREE.Vector3(0.6, 1.7, 1.35),
+    new THREE.Vector3(0.55, 0.05, 1.15)
+  ], function () { return 0.05; }, 4), null, 0xb2a184));
+  for (var i = 0; i < 6; i++) {
+    parts.push(part(new BX(0.4, 0.05, 0.06),
+      M(0.56, 0.4 + i * 0.5, 1.1 + Math.sin(i * 0.6) * 0.1), WO_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoRankenhaus() {
+  var parts = [], s;
+  for (s = -1; s <= 1; s += 2) {   // zwei Aufhaengungen nach oben
+    parts.push(part(tubeGeo([
+      new THREE.Vector3(s * 0.9, 4.6, 0.1),
+      new THREE.Vector3(s * 1.0, 2.8, -0.15),
+      new THREE.Vector3(s * 0.85, 1.5, 0.05)
+    ], function (t) { return 0.2 - t * 0.06; }, 6, rankenAder), null, AR_HAUT));
+  }
+  parts.push(part(new BX(2.4, 1.9, 2.1), M(0, 0.95, 0), 0xd0c0a0));
+  dach(parts, 2.4, 2.1, 1.2, 1.9, WO_DACH, false);
+  parts.push(part(new BX(2.6, 0.14, 2.3), M(0, -0.1, 0), WO_HOLZD));
+  // Blattterrasse an der Front: gestauchte Brocken statt leafGeo (siehe
+  // arborBlatt) — bei 2.6 m Radius zaehlt die Silhouette, nicht die Aderung.
+  arborBlatt(parts, 0, -0.2, 1.9, 1.1, 0.2);
+  arborBlatt(parts, 0.9, -0.15, 1.5, 0.7, 1.1, AR_BLATTU);
+  fenster(parts, -0.6, 1.2, 1.07, 0.45, 0.5, "z");
+  fenster(parts, 0.6, 1.2, 1.07, 0.45, 0.5, "z");
+  return mergeGeos(parts);
+}
+
+function geoElfenlaube() {
+  var parts = [], i;
+  for (i = 0; i < 6; i++) {
+    var a = i / 6 * 6.28;
+    parts.push(part(new CY(0.1, 0.14, 2.6, 7),
+      M(Math.cos(a) * 1.6, 1.3, Math.sin(a) * 1.6), WO_PUTZ));
+  }
+  parts.push(part(new CY(1.9, 1.9, 0.14, 12), M(0, 0.07, 0), WO_PUTZ2));  // Boden
+  parts.push(part(new CY(1.85, 1.85, 0.12, 12), M(0, 2.65, 0), WO_PUTZ2));
+  parts.push(part(new CO(2.1, 1.4, 12), M(0, 3.4, 0), 0x5f8a76));
+  starr(parts, 0, 0);
+  for (i = 0; i < 4; i++) {        // Segeltuecher zwischen den Saeulen
+    var a0 = i * 1.57 + 0.52, a1 = a0 + 1.05;
+    zeltbahn(parts, [
+      new THREE.Vector3(Math.cos(a0) * 1.6, 2.55, Math.sin(a0) * 1.6),
+      new THREE.Vector3(Math.cos(a1) * 1.6, 2.55, Math.sin(a1) * 1.6),
+      new THREE.Vector3(Math.cos(a1) * 1.7, 0.5, Math.sin(a1) * 1.7),
+      new THREE.Vector3(Math.cos(a0) * 1.7, 0.5, Math.sin(a0) * 1.7)
+    ], 0.28, i % 2 ? WO_STOFF : 0xe8e0cc);
+  }
+  return mergeGeos(parts);
+}
+
+function geoStollenhaus() {
+  var parts = [];
+  parts.push(part(brockenGeo(2.6, 1049, 0.4),
+    M(0, 1.2, -2.2, 0, 0.5, 0, 1.2, 1.3, 1), 0x9a948a));    // Felsruecken dahinter
+  sockel(parts, 3.2, 1.2, WO_STEIND);
+  parts.push(part(new BX(3.2, 3.2, 1.2), M(0, 1.8, 0), WO_STEIN));
+  parts.push(part(new BX(3.5, 0.24, 1.4), M(0, 3.5, 0), 0x9a9488));
+  parts.push(part(new THREE.TorusGeometry(0.62, 0.18, 4, 8, Math.PI),
+    M(0, 1.55, 0, 0, 0, 0, 1, 1, 3.6), 0x9a9488));
+  parts.push(part(new BX(1.15, 1.55, 0.3), M(0, 0.8, 0.1), 0x2a2620));   // dunkler Stollen
+  fenster(parts, -1.1, 2.5, 0.63, 0.45, 0.5, "z");
+  fenster(parts, 1.1, 2.5, 0.63, 0.45, 0.5, "z");
+  return mergeGeos(parts);
+}
+
+function geoLehmkuppelhaus() {
+  var parts = [], i;
+  parts.push(part(new CY(1.5, 1.65, 2.2, 10), M(0, 1.1, 0), WU_LEHM));
+  parts.push(part(new THREE.SphereGeometry(1.55, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    M(0, 2.2, 0, 0, 0, 0, 1, 0.78, 1), WU_LEHMH));
+  parts.push(part(new CY(0.2, 0.24, 0.3, 6), M(0, 3.4, 0), WU_LEHMD));
+  for (i = 0; i < 6; i++) {        // Aussentreppe aufs Dach
+    var a = -0.5 + i * 0.28;
+    parts.push(part(new BX(0.75, 0.24, 0.42),
+      M(Math.cos(a) * 1.75, 0.2 + i * 0.35, Math.sin(a) * 1.75, 0, -a, 0), WU_LEHMD));
+  }
+  fenster(parts, -0.75, 1.6, 1.32, 0.34, 0.4, "z");
+  fenster(parts, 1.32, 1.6, -0.4, 0.34, 0.4, "x");
+  tuer(parts, 0.3, 0.05, 1.5, 0.65, 1.3);
+  return mergeGeos(parts);
+}
+
+function geoWohnblock() {
+  var parts = [], i;
+  sockel(parts, 3.6, 3.0, WO_STEIND);
+  parts.push(part(new BX(3.6, 6.4, 3.0), M(0, 3.7, 0), WO_PUTZ));
+  parts.push(part(new BX(3.8, 0.3, 3.2), M(0, 7.05, 0), WO_PUTZ2));     // Attika
+  parts.push(part(new BX(3.5, 0.16, 2.9), M(0, 6.95, 0), 0x6a6458));    // Flachdach
+  // Acht Fenster statt zwoelf: die vierte Reihe verschwindet in der Silhouette,
+  // kostet aber 48 Dreiecke je Fenster.
+  for (i = 0; i < 8; i++) {
+    fenster(parts, -1.1 + (i % 2) * 2.2, 1.7 + Math.floor(i / 2) * 1.55, 1.53,
+      0.5, 0.62, "z");
+  }
+  fenster(parts, 1.83, 3.2, 0.7, 0.5, 0.62, "x");
+  fenster(parts, 1.83, 4.75, -0.7, 0.5, 0.62, "x");
+  tuer(parts, 0, 0.5, 1.53, 0.8, 1.5);
+  for (i = 0; i < 3; i++) {        // Kamine auf dem Flachdach
+    parts.push(part(new BX(0.34, 1.0, 0.34), M(-1.0 + i * 1.0, 7.5, -0.6), WO_STEIN));
+    parts.push(part(new BX(0.48, 0.12, 0.48), M(-1.0 + i * 1.0, 8.05, -0.6), WO_STEIND));
+    parts.push(part(new BX(0.22, 0.06, 0.22), M(-1.0 + i * 1.0, 8.09, -0.6), 0x2a2622));
+  }
+  return mergeGeos(parts);
+}
+
+function geoGaube() {
+  var parts = [
+    part(new BX(0.66, 0.5, 0.66), M(0, 0.25, 0), WO_PUTZ),
+    part(prismGeo(0.78, 0.34, 0.74), M(0, 0.5, 0, 0, Math.PI / 2, 0), WO_DACHS),
+    part(new BX(0.78, 0.08, 0.74), M(0, 0.46, 0), 0x4a4038)
+  ];
+  fenster(parts, 0, 0.28, 0.34, 0.36, 0.34, "z");
+  return mergeGeos(parts);
+}
+
+function geoKamin() {
+  return mergeGeos([
+    part(new BX(0.36, 1.3, 0.36), M(0, 0.65, 0), WO_STEIN),
+    part(new BX(0.3, 0.2, 0.3), M(0, 0.3, 0), WO_STEIND),
+    part(new BX(0.52, 0.13, 0.52), M(0, 1.36, 0), WO_STEIND),
+    part(new BX(0.24, 0.07, 0.24), M(0, 1.41, 0), 0x2a2622)
+  ]);
+}
+
+/* --- Pools Sakral und Wohnbau --------------------------------------------- */
+definePool("kapelle", geoKapelle(), { radius: 2.0, ao: 0.24, familie: 'putz' });
+definePool("glockenturm", geoGlockenturm(), { radius: 1.6, familie: 'putz' });
+definePool("kathedralenschiff", geoKathedralenschiff(), { radius: 5.0, ao: 0.26, familie: 'stein' });
+definePool("rosette", geoRosette(), { radius: 0.6, ao: 0.14, familie: 'stein' });
+definePool("bildstock", geoBildstock(), { radius: 0.4, familie: 'stein' });
+definePool("steinkreis", geoSteinkreis(), { radius: 3.4, ao: 0.24, familie: 'stein' });
+definePool("menhir", geoMenhir(), { radius: 0.8, familie: 'stein' });
+definePool("feuerschale", geoFeuerschale(), { radius: 0.7, ao: 0.16, familie: 'metall' });
+definePool("opferstein", geoOpferstein(), { radius: 0.9, familie: 'stein' });
+definePool("arborschrein", geoArborschrein(), { radius: 1.6, ao: 0.2, familie: 'rinde',
+  emissive: 0x2e4a3e, emissiveIntensity: 0.5 });
+definePool("rankenaltar", geoRankenaltar(), { radius: 1.2, familie: 'stein',
+  emissive: 0x24382e, emissiveIntensity: 0.4 });
+definePool("lichtsammler", geoLichtsammler(), { radius: 1.4, ao: 0.18, familie: 'metall',
+  emissive: 0x4e8a72, emissiveIntensity: 0.6 });
+definePool("samenreliquiar", geoSamenreliquiar(), { radius: 1.0, ao: 0.16, familie: 'metall',
+  emissive: 0x4e8a72, emissiveIntensity: 0.7 });
+definePool("blattkanzel", geoBlattkanzel(), { radius: 2.0, dbl: true, ao: 0.18, familie: 'laub' });
+definePool("gebetsband", geoGebetsband(), { radius: 1.2, dbl: true, ao: 0.16,
+  familie: 'stoff', wind: { amp: 0.5 } });
+definePool("rankentor", geoRankentor(), { radius: 2.4, ao: 0.2, familie: 'rinde',
+  emissive: 0x2e4a3e, emissiveIntensity: 0.5 });
+definePool("grabhuegel", geoGrabhuegel(), { radius: 2.6, ao: 0.24, familie: 'erde' });
+
+definePool("langhaus", geoLanghaus(), { radius: 3.8, ao: 0.26, familie: 'reet' });
+definePool("grubenhaus", geoGrubenhaus(), { radius: 1.8, familie: 'reet' });
+definePool("turmhaus", geoTurmhaus(), { radius: 2.0, familie: 'putz' });
+definePool("giebelhaus", geoGiebelhaus(), { radius: 2.6, familie: 'putz' });
+definePool("laubenhaus", geoLaubenhaus(), { radius: 3.0, ao: 0.26, familie: 'putz' });
+definePool("hofdurchfahrt", geoHofdurchfahrt(), { radius: 3.0, ao: 0.26, familie: 'putz' });
+definePool("pfahlhaus", geoPfahlhaus(), { radius: 2.4, ao: 0.26, familie: 'holz' });
+definePool("baumhaus", geoBaumhaus(), { radius: 2.2, ao: 0.26, familie: 'holz' });
+definePool("rankenhaus", geoRankenhaus(), { radius: 2.6, ao: 0.22, familie: 'holz' });
+definePool("elfenlaube", geoElfenlaube(), { radius: 2.4, dbl: true, ao: 0.2,
+  familie: 'stoff', wind: { amp: 0.2 } });
+definePool("stollenhaus", geoStollenhaus(), { radius: 2.8, ao: 0.24, familie: 'stein' });
+definePool("lehmkuppelhaus", geoLehmkuppelhaus(), { radius: 2.2, familie: 'putz' });
+definePool("wohnblock", geoWohnblock(), { radius: 3.6, ao: 0.26, familie: 'putz' });
+definePool("gaube", geoGaube(), { radius: 0.5, familie: 'dachziegel' });
+definePool("kamin", geoKamin(), { radius: 0.3, familie: 'stein' });
+
+/* ==========================================================================
+   Kategorie 14 — Kleinzeug und Requisiten. Sie stehen an keiner Struktur, sind
+   billig und machen am Ende den Unterschied zwischen "Modell" und "bewohnter
+   Ort" (Katalog, Buendel 6). Deshalb ist hier jedes Stueck unter 100 Dreiecke.
+   ========================================================================== */
+var RQ_HOLZ = 0x9c8468,
+    RQ_HOLZD = 0x6f5a44,
+    RQ_STEIN = 0xa9a196,
+    RQ_STEIND = 0x8a8278,
+    RQ_METALL = 0x4c4841,
+    RQ_STOFF = 0xdcd0b4,
+    RQ_ERDE = 0x6a5844,
+    RQ_TON = 0xb87a52,
+    RQ_WASSER = 0x2e3a40,
+    RQ_GLUT = 0xffa04c,
+    RQ_GRUEN = 0x6f8f4a;
+
+function geoWagenrad() {
+  var parts = [
+    part(new THREE.TorusGeometry(0.45, 0.07, 3, 12), M(0, 0.5, 0, 0, 0, 0.25), RQ_HOLZD),
+    part(new CY(0.11, 0.11, 0.14, 7), M(0, 0.5, 0, Math.PI / 2, 0, 0), RQ_HOLZ)
+  ];
+  for (var i = 0; i < 6; i++) {
+    parts.push(part(new BX(0.06, 0.86, 0.05), M(0, 0.5, 0, 0, 0, i * 0.52 + 0.25), RQ_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoHolzstapel() {
+  var parts = [], i;
+  for (i = 0; i < 12; i++) {
+    var lage = Math.floor(i / 6), d = hashi(i, 3, 1061);
+    parts.push(part(new CY(0.11 + d * 0.03, 0.11 + d * 0.03, 1.3, 5),
+      M(-0.42 + (i % 6) * 0.17, 0.12 + lage * 0.24, (d - 0.5) * 0.08,
+        Math.PI / 2, (d - 0.5) * 0.06, 0), lage ? RQ_HOLZ : 0x8a7050));
+  }
+  return mergeGeos(parts);
+}
+
+function geoWasserbottich() {
+  return mergeGeos([
+    part(new CY(0.42, 0.36, 0.6, 9), M(0, 0.3, 0), RQ_HOLZ),
+    part(new CY(0.435, 0.435, 0.06, 9), M(0, 0.14, 0), 0x55483a),
+    part(new CY(0.425, 0.425, 0.06, 9), M(0, 0.5, 0), 0x55483a),
+    part(new CY(0.38, 0.38, 0.05, 9), M(0, 0.52, 0), RQ_WASSER)
+  ]);
+}
+
+function geoWaescheleine() {
+  var parts = [
+    part(new CY(0.05, 0.07, 1.9, 5), M(-1.2, 0.95, 0), RQ_HOLZD),
+    part(new CY(0.05, 0.07, 1.9, 5), M(1.2, 0.95, 0), RQ_HOLZD),
+    part(new BX(2.5, 0.03, 0.03), M(0, 1.82, 0), 0xb2a184)
+  ];
+  starr(parts, 0, 0);
+  var toene = [RQ_STOFF, 0xe8e0cc, 0xc0d0d8, 0xd8c8b0];
+  for (var i = 0; i < 4; i++) {
+    var u = -0.9 + i * 0.6;
+    zeltbahn(parts, [
+      new THREE.Vector3(u - 0.24, 1.8, 0), new THREE.Vector3(u + 0.24, 1.8, 0),
+      new THREE.Vector3(u + 0.24, 1.0 - hashi(i, 3, 1063) * 0.3, 0.08),
+      new THREE.Vector3(u - 0.24, 1.0 - hashi(i, 3, 1063) * 0.3, 0.08)
+    ], 0.12, toene[i]);
+  }
+  return mergeGeos(parts);
+}
+
+function geoBank() {
+  return mergeGeos([
+    part(new BX(1.5, 0.1, 0.36), M(0, 0.42, 0), RQ_HOLZ),
+    part(new BX(0.12, 0.42, 0.32), M(-0.6, 0.21, 0), RQ_HOLZD),
+    part(new BX(0.12, 0.42, 0.32), M(0.6, 0.21, 0), RQ_HOLZD)
+  ]);
+}
+
+function geoTisch() {
+  var parts = [
+    part(new BX(1.6, 0.1, 0.8), M(0, 0.72, 0), RQ_HOLZ),
+    part(new BX(1.4, 0.08, 0.3), M(0, 0.42, 0.65), RQ_HOLZ),
+    part(new BX(1.4, 0.08, 0.3), M(0, 0.42, -0.65), RQ_HOLZ)
+  ], i;
+  for (i = 0; i < 4; i++) {
+    parts.push(part(new CY(0.06, 0.07, 0.7, 5),
+      M(i % 2 ? 0.65 : -0.65, 0.35, i < 2 ? -0.28 : 0.28), RQ_HOLZD));
+  }
+  for (i = -1; i <= 1; i += 2) {
+    parts.push(part(new BX(0.1, 0.36, 0.26), M(-0.55, 0.2, i * 0.65), RQ_HOLZD));
+    parts.push(part(new BX(0.1, 0.36, 0.26), M(0.55, 0.2, i * 0.65), RQ_HOLZD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoFeuerstelle() {
+  var parts = [], i;
+  for (i = 0; i < 8; i++) {
+    var a = i / 8 * 6.28, d = hashi(i, 3, 1069);
+    parts.push(part(brockenGeo(0.13 + d * 0.07, 1069 + i * 3, 0.5),
+      M(Math.cos(a) * 0.58, 0.08, Math.sin(a) * 0.58, d, a, 0, 1, 0.7, 1), RQ_STEIN));
+  }
+  for (i = 0; i < 4; i++) {
+    var b = i / 4 * 3.14;
+    parts.push(part(new CY(0.05, 0.06, 0.85, 4),
+      M(0, 0.16, 0, 0.2, b, 1.35), 0x6a5540));
+  }
+  parts.push(part(new CO(0.24, 0.62, 6), M(0, 0.4, 0, 0, 0.4, 0.05), RQ_GLUT));
+  return mergeGeos(parts);
+}
+
+function geoKochkessel() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {
+    var a = i / 3 * 6.28;
+    parts.push(part(new CY(0.03, 0.045, 1.3, 4),
+      M(Math.cos(a) * 0.24, 0.65, Math.sin(a) * 0.24,
+        Math.sin(a) * 0.32, 0, -Math.cos(a) * 0.32), RQ_METALL));
+  }
+  parts.push(part(new THREE.SphereGeometry(0.3, 9, 5, 0, Math.PI * 2, 0, Math.PI * 0.62),
+    M(0, 0.62, 0, Math.PI, 0, 0), 0x3a3630));
+  parts.push(part(new THREE.TorusGeometry(0.28, 0.025, 3, 8, Math.PI),
+    M(0, 0.62, 0, 0, 0, 0), RQ_METALL));
+  return mergeGeos(parts);
+}
+
+function geoLattenzaun() {
+  var parts = [
+    part(new CY(0.08, 0.1, 1.2, 5), M(-0.95, 0.6, 0), RQ_HOLZD),
+    part(new CY(0.08, 0.1, 1.2, 5), M(0.95, 0.6, 0), RQ_HOLZD),
+    part(new BX(2.0, 0.08, 0.06), M(0, 0.95, 0), RQ_HOLZ),
+    part(new BX(2.0, 0.08, 0.06), M(0, 0.55, 0), RQ_HOLZ)
+  ];
+  for (var i = 0; i < 5; i++) {
+    var d = hashi(i, 3, 1087);
+    parts.push(part(new BX(0.11, 1.05, 0.05),
+      M(-0.72 + i * 0.36, 0.55, 0.03, 0, 0, (d - 0.5) * 0.1), RQ_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+function geoGartenbeet() {
+  var parts = [
+    part(new BX(1.4, 0.32, 0.9), M(0, 0.16, 0), RQ_HOLZ),
+    part(new BX(1.24, 0.1, 0.74), M(0, 0.34, 0), RQ_ERDE)
+  ];
+  for (var i = 0; i < 6; i++) {
+    var d = hashi(i, 3, 1091);
+    parts.push(part(new IC(0.12 + d * 0.06, 0),
+      M(-0.45 + (i % 3) * 0.45, 0.42, i < 3 ? -0.18 : 0.18, 0, d * 3, 0, 1, 0.9, 1),
+      i % 2 ? RQ_GRUEN : 0x86a85a));
+  }
+  return mergeGeos(parts);
+}
+
+function geoTontoepfe() {
+  var parts = [], i;
+  for (i = 0; i < 4; i++) {
+    var d = hashi(i, 3, 1093);
+    parts.push(part(new CY(0.16 - i * 0.02, 0.11 - i * 0.015, 0.24, 8),
+      M((d - 0.5) * 0.1, 0.12 + i * 0.2, (hashi(i, 5, 1093) - 0.5) * 0.1,
+        0, d * 3, (d - 0.5) * 0.08), i % 2 ? RQ_TON : 0xa06a48));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSackstapel() {
+  var parts = [], i;
+  for (i = 0; i < 5; i++) {
+    var lage = i < 3 ? 0 : 1, d = hashi(i, 3, 1097);
+    var a = (i % 3) / 3 * 6.28 + lage * 0.9;
+    parts.push(part(new IC(0.22, 0),
+      M(Math.cos(a) * 0.22, 0.17 + lage * 0.32, Math.sin(a) * 0.22,
+        0, d * 3, (d - 0.5) * 0.2, 1.15, 0.85, 0.95),
+      lage ? 0xcfc3a4 : 0xbfb08e));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSchubkarre() {
+  return mergeGeos([
+    part(new BX(0.55, 0.32, 0.8), M(0, 0.42, 0, 0.1, 0, 0), RQ_HOLZ),
+    part(new BX(0.48, 0.06, 0.7), M(0, 0.3, 0), RQ_HOLZD),
+    part(new CY(0.2, 0.2, 0.07, 9), M(0, 0.2, 0.62, 0, 0, Math.PI / 2), RQ_HOLZD),
+    part(new BX(0.06, 0.06, 1.0), M(-0.2, 0.5, -0.75, -0.12, 0, 0), RQ_HOLZ),
+    part(new BX(0.06, 0.06, 1.0), M(0.2, 0.5, -0.75, -0.12, 0, 0), RQ_HOLZ),
+    part(new CY(0.05, 0.05, 0.3, 4), M(0, 0.16, -0.4, 0, 0, Math.PI / 2), RQ_HOLZD)
+  ]);
+}
+
+function geoLeiter() {
+  var parts = [
+    part(new BX(0.07, 2.6, 0.07), M(-0.24, 1.3, 0, 0.22, 0, 0), RQ_HOLZ),
+    part(new BX(0.07, 2.6, 0.07), M(0.24, 1.3, 0, 0.22, 0, 0), RQ_HOLZ)
+  ];
+  for (var i = 0; i < 7; i++) {
+    var y = 0.2 + i * 0.36;
+    parts.push(part(new BX(0.5, 0.05, 0.05), M(0, y, -y * 0.22, 0, 0, 0), RQ_HOLZD));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBlumenkasten() {
+  var parts = [
+    part(new BX(0.62, 0.16, 0.18), M(0, 0.08, 0), RQ_HOLZD),
+    part(new BX(0.56, 0.06, 0.13), M(0, 0.17, 0), RQ_ERDE)
+  ];
+  var toene = [0xd8734c, 0xe0a03c, 0xc0a6c4, 0xe8e0cc, 0xd06a7c];
+  for (var i = 0; i < 5; i++) {
+    parts.push(part(new IC(0.07, 0),
+      M(-0.22 + i * 0.11, 0.23, (hashi(i, 3, 1103) - 0.5) * 0.06), toene[i]));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBrunnentrog() {
+  return mergeGeos([
+    part(new BX(1.9, 0.5, 0.6), M(0, 0.25, 0), RQ_STEIN),
+    part(new BX(1.7, 0.28, 0.44), M(0, 0.34, 0), RQ_WASSER),
+    part(new BX(0.4, 0.75, 0.3), M(-1.05, 0.38, 0), RQ_STEIND),
+    part(new CY(0.06, 0.06, 0.34, 5), M(-0.86, 0.62, 0, 0, 0, Math.PI / 2), RQ_METALL),
+    part(new BX(0.08, 0.28, 0.06), M(-0.7, 0.48, 0), 0x35566b)
+  ]);
+}
+
+function geoMarktkorb() {
+  var parts = [], i;
+  for (i = 0; i < 3; i++) {
+    var d = hashi(i, 3, 1109), a = i / 3 * 6.28;
+    parts.push(part(new CY(0.2, 0.15, 0.26, 8, 1, true),
+      M(Math.cos(a) * 0.16, 0.13 + (i === 2 ? 0.18 : 0), Math.sin(a) * 0.16,
+        0, d * 3, (d - 0.5) * 0.14), 0xb59a6e));
+  }
+  for (i = 0; i < 4; i++) {
+    var e = hashi(i, 5, 1109);
+    parts.push(part(new IC(0.06 + e * 0.03, 0),
+      M(0.16 + (e - 0.5) * 0.2, 0.4, 0.0 + (hashi(i, 7, 1109) - 0.5) * 0.2),
+      i % 2 ? 0xd8734c : 0xd8b25e));
+  }
+  return mergeGeos(parts);
+}
+
+/* ==========================================================================
+   Kategorie 15 — Fahrzeuge und Tiersilhouetten. Tiere sind hier bewusst
+   SILHOUETTEN und keine Modelle: Rumpf, vier Striche, Kopf. Alles darueber
+   hinaus liest bei Objektgroesse 0.5 m nicht mehr, kostet aber sofort.
+   ========================================================================== */
+var TI_FELL = 0xa89478,
+    TI_FELLD = 0x74604a,
+    TI_WOLLE = 0xe0d8c4,
+    TI_DUNKEL = 0x4a4038,
+    TI_HORN = 0xd8cfb4;
+
+/** Vier Beine an den Ecken eines Rumpfes — der Kern jeder Tiersilhouette. */
+function beine(parts, bx, bz, y, h, r, hex) {
+  for (var i = 0; i < 4; i++) {
+    parts.push(part(new CY(r * 0.75, r, h, 4),
+      M(i % 2 ? bx : -bx, y - h / 2, i < 2 ? -bz : bz), hex));
+  }
+  return parts;
+}
+
+function geoPferd() {
+  var parts = [part(new BX(0.44, 0.6, 1.5), M(0, 1.2, 0), TI_FELL)];
+  beine(parts, 0.16, 0.52, 0.9, 0.9, 0.07, TI_FELLD);
+  parts.push(part(new BX(0.3, 0.75, 0.34), M(0, 1.5, 0.62, -0.5, 0, 0), TI_FELL));
+  parts.push(part(new CO(0.19, 0.5, 5), M(0, 1.85, 0.95, 1.9, 0, 0), TI_FELL));
+  parts.push(part(new PL(0.75, 0.3), M(0, 1.65, 0.6, 0, Math.PI / 2, -0.5), TI_FELLD));
+  parts.push(part(new PL(0.5, 0.24), M(0, 1.3, -0.78, 0, Math.PI / 2, 0.35), TI_FELLD));
+  return mergeGeos(parts);
+}
+
+function geoRind() {
+  var parts = [part(new BX(0.5, 0.62, 1.35), M(0, 0.95, 0), 0xc4b8a4)];
+  beine(parts, 0.19, 0.45, 0.65, 0.65, 0.075, TI_FELLD);
+  parts.push(part(new BX(0.36, 0.34, 0.5), M(0, 1.0, 0.85, -0.15, 0, 0), 0xc4b8a4));
+  parts.push(part(new BX(0.42, 0.5, 0.42), M(0, 0.9, -0.62), TI_DUNKEL));
+  for (var s = -1; s <= 1; s += 2) {
+    parts.push(part(new CO(0.05, 0.28, 4), M(s * 0.16, 1.2, 0.8, 0, 0, s * 1.0), TI_HORN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSchaf() {
+  var parts = [part(new IC(0.4, 0), M(0, 0.62, 0, 0, 0.4, 0, 1.0, 0.85, 1.35), TI_WOLLE)];
+  beine(parts, 0.16, 0.24, 0.4, 0.4, 0.045, TI_DUNKEL);
+  parts.push(part(new BX(0.22, 0.26, 0.3), M(0, 0.66, 0.52, 0.2, 0, 0), TI_DUNKEL));
+  parts.push(part(new IC(0.13, 0), M(0, 0.78, 0.44), TI_WOLLE));
+  return mergeGeos(parts);
+}
+
+function geoZiege() {
+  var parts = [part(new IC(0.3, 0), M(0, 0.62, 0, 0, 0.3, 0, 0.9, 0.85, 1.4), 0xbdb0a0)];
+  beine(parts, 0.13, 0.22, 0.44, 0.44, 0.04, TI_FELLD);
+  parts.push(part(new BX(0.18, 0.2, 0.3), M(0, 0.7, 0.44, -0.2, 0, 0), 0xbdb0a0));
+  for (var s = -1; s <= 1; s += 2) {   // geschwungene Hoerner nach hinten
+    parts.push(part(new CY(0.02, 0.035, 0.34, 4), M(s * 0.07, 0.86, 0.38, -0.9, 0, s * 0.2), TI_HORN));
+    parts.push(part(new CY(0.015, 0.025, 0.24, 4), M(s * 0.08, 0.95, 0.24, -1.9, 0, s * 0.2), TI_HORN));
+  }
+  parts.push(part(new PL(0.2, 0.16), M(0, 0.62, 0.46, 0, Math.PI / 2, 0.4), TI_FELLD));
+  return mergeGeos(parts);
+}
+
+function geoMoewe() {
+  // V-Stellung: die einzige Flugsilhouette, die aus jeder Richtung als Vogel
+  // gelesen wird. Der Koerper ist bewusst ein einziger Quader.
+  return mergeGeos([
+    part(new BX(0.1, 0.09, 0.4), M(0, 0, 0), 0xf2efe6),
+    part(new PL(0.7, 0.2), M(-0.36, 0.11, 0, 0, 0, 0.32), 0xf2efe6),
+    part(new PL(0.7, 0.2), M(0.36, 0.11, 0, 0, 0, -0.32), 0xeae6da),
+    part(new CO(0.05, 0.14, 3), M(0, 0.01, 0.24, Math.PI / 2, 0, 0), 0xd8a44c)
+  ]);
+}
+
+function geoKutsche() {
+  var parts = [], i;
+  parts.push(part(new BX(0.95, 1.1, 1.5), M(0, 1.0, 0), 0x6a4a3c));
+  parts.push(part(new BX(1.05, 0.14, 1.6), M(0, 1.6, 0), 0x54382c));
+  parts.push(part(prismGeo(1.1, 0.28, 1.65), M(0, 1.67, 0, 0, Math.PI / 2, 0), 0x54382c));
+  parts.push(part(new BX(1.0, 0.16, 1.6), M(0, 0.42, 0), 0x54382c));
+  fenster(parts, 0, 1.15, 0.78, 0.44, 0.5, "z");
+  fenster(parts, 0.5, 1.15, 0, 0.44, 0.5, "x");
+  parts.push(part(new BX(0.9, 0.12, 0.5), M(0, 1.72, 0.7), 0x6a4a3c));   // Kutschbock
+  for (i = 0; i < 4; i++) {
+    var gross = i < 2;
+    var r = gross ? 0.42 : 0.28;
+    parts.push(part(new CY(r, r, 0.07, 10),
+      M(i % 2 ? 0.55 : -0.55, r, gross ? -0.62 : 0.72, 0, 0, Math.PI / 2), RQ_HOLZD));
+  }
+  parts.push(part(new BX(0.08, 0.08, 1.4), M(0, 0.5, 1.5, -0.06, 0, 0), RQ_HOLZ));
+  return mergeGeos(parts);
+}
+
+function geoOchsengespann() {
+  var parts = [], s;
+  // Karren: Muster geoKarren, aber laenger und mit Bordwaenden.
+  parts.push(part(new BX(1.1, 0.24, 2.0), M(0, 0.72, -0.9), RQ_HOLZ));
+  parts.push(part(new BX(0.1, 0.42, 2.0), M(-0.55, 0.95, -0.9), RQ_HOLZD));
+  parts.push(part(new BX(0.1, 0.42, 2.0), M(0.55, 0.95, -0.9), RQ_HOLZD));
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new CY(0.45, 0.45, 0.08, 10),
+      M(s * 0.62, 0.45, -1.3, 0, 0, Math.PI / 2), RQ_HOLZD));
+  }
+  parts.push(part(new BX(0.09, 0.09, 1.6), M(0, 0.7, 0.6), RQ_HOLZ));   // Deichsel
+  parts.push(part(new BX(1.3, 0.12, 0.12), M(0, 0.95, 1.35), RQ_HOLZD));  // Joch
+  for (s = -1; s <= 1; s += 2) {     // zwei Zugochsen
+    var ox = s * 0.42;
+    parts.push(part(new BX(0.48, 0.6, 1.3), M(ox, 0.95, 2.1), 0xa89478));
+    // Beine hier von Hand statt ueber beine(): das Gespann setzt ZWEI Ochsen
+    // nebeneinander, der Helfer kennt nur einen Rumpf im Ursprung.
+    parts.push(part(new CY(0.06, 0.075, 0.65, 4), M(ox - 0.18, 0.32, 1.72), TI_FELLD));
+    parts.push(part(new CY(0.06, 0.075, 0.65, 4), M(ox + 0.18, 0.32, 1.72), TI_FELLD));
+    parts.push(part(new CY(0.06, 0.075, 0.65, 4), M(ox - 0.18, 0.32, 2.5), TI_FELLD));
+    parts.push(part(new CY(0.06, 0.075, 0.65, 4), M(ox + 0.18, 0.32, 2.5), TI_FELLD));
+    parts.push(part(new BX(0.34, 0.32, 0.46), M(ox, 0.98, 2.9, -0.12, 0, 0), 0xa89478));
+    parts.push(part(new CO(0.05, 0.26, 4), M(ox - 0.14, 1.2, 2.85, 0, 0, -0.9), TI_HORN));
+    parts.push(part(new CO(0.05, 0.26, 4), M(ox + 0.14, 1.2, 2.85, 0, 0, 0.9), TI_HORN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoRankengleiter() {
+  var parts = [rumpf(3.4, 1.0, 0.75, 0.25, AR_HOLZ)], s;
+  // Blattfluegel ohne Dicke (thick = 0): eine Tragflaeche wird von unten
+  // gesehen, deshalb rendert der Pool mit dbl — eine zweite Blattflaeche waere
+  // 380 Dreiecke fuer nichts.
+  for (s = -1; s <= 1; s += 2) {
+    var fl = leafGeo(2.6, 1.0, 0.3, 0, AR_BLATT, AR_BLATTU, AR_ADER, 1117 + (s + 1));
+    fl.applyMatrix4(M(s * 0.4, 0.5, 0, 0, s > 0 ? -Math.PI / 2 : Math.PI / 2, s * 0.18));
+    parts.push(fl);
+  }
+  parts.push(part(new THREE.SphereGeometry(1.1, 12, 6),
+    M(0, 1.9, -0.2, 0, 0, 0, 1.0, 0.62, 2.1), AR_HELL));   // gestauchter Ballon
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new CY(0.04, 0.05, 1.2, 4), M(s * 0.45, 1.1, -0.2), AR_HOLZD));
+  }
+  starr(parts, 0, 0);
+  zeltbahn(parts, [
+    new THREE.Vector3(-0.1, 1.5, -1.9), new THREE.Vector3(0.1, 1.5, -1.9),
+    new THREE.Vector3(0.1, 0.4, -2.4), new THREE.Vector3(-0.1, 0.4, -2.4)
+  ], 0.25, 0xe8dfc9);
+  return mergeGeos(parts);
+}
+
+/* --- Pools Requisiten, Fahrzeuge, Tiere ----------------------------------- */
+definePool("wagenrad", geoWagenrad(), { radius: 0.5, familie: 'holz' });
+definePool("holzstapel", geoHolzstapel(), { radius: 0.8, familie: 'holz' });
+definePool("wasserbottich", geoWasserbottich(), { radius: 0.5, familie: 'holz' });
+definePool("waescheleine", geoWaescheleine(), { radius: 1.4, dbl: true, ao: 0.16,
+  familie: 'stoff', wind: { amp: 0.42 } });
+definePool("bank", geoBank(), { radius: 0.6, familie: 'holz' });
+definePool("tisch", geoTisch(), { radius: 0.9, familie: 'holz' });
+definePool("feuerstelle", geoFeuerstelle(), { radius: 0.8, ao: 0.18, familie: 'stein' });
+definePool("kochkessel", geoKochkessel(), { radius: 0.6, familie: 'metall' });
+definePool("lattenzaun", geoLattenzaun(), { radius: 1.0, familie: 'holz' });
+definePool("gartenbeet", geoGartenbeet(), { radius: 0.8, familie: 'holz' });
+definePool("tontoepfe", geoTontoepfe(), { radius: 0.4, familie: 'erde' });
+definePool("sackstapel", geoSackstapel(), { radius: 0.6, familie: 'stoff' });
+definePool("schubkarre", geoSchubkarre(), { radius: 0.7, familie: 'holz' });
+definePool("leiter", geoLeiter(), { radius: 0.6, familie: 'holz' });
+definePool("blumenkasten", geoBlumenkasten(), { radius: 0.3, ao: 0.14, familie: 'holz' });
+definePool("brunnentrog", geoBrunnentrog(), { radius: 0.8, familie: 'stein' });
+definePool("marktkorb", geoMarktkorb(), { radius: 0.4, familie: 'stoff' });
+
+definePool("ochsengespann", geoOchsengespann(), { radius: 2.2, ao: 0.24, familie: 'holz' });
+definePool("kutsche", geoKutsche(), { radius: 1.6, familie: 'holz' });
+definePool("pferd", geoPferd(), { radius: 1.0, dbl: true, ao: 0.2, familie: 'stoff' });
+definePool("rind", geoRind(), { radius: 0.8, familie: 'stoff' });
+definePool("schaf", geoSchaf(), { radius: 0.5, familie: 'stoff' });
+definePool("ziege", geoZiege(), { radius: 0.4, dbl: true, ao: 0.2, familie: 'stoff' });
+definePool("moewe", geoMoewe(), { radius: 0.2, dbl: true, ao: 0, familie: 'stoff' });
+definePool("rankengleiter", geoRankengleiter(), { radius: 3.0, dbl: true, ao: 0.18,
+  familie: 'stoff' });
+
+/* --- Anker der neuen Buendel ---------------------------------------------
+   Beide Tabellen werden NUR ERWEITERT. Die Bestandszeilen bleiben unberuehrt,
+   weil jede Aenderung dort die Beleuchtung bestehender Karten verschoebe.   */
+
+/* Fensterglut: nur ACHSPARALLELE Oeffnungen bekommen einen Anker —
+   emitFensterlicht leitet die Blickrichtung aus der dominanten Achse ab. */
+FENSTER_ANKER.langhaus = [[1.58, 1.7, -1.2], [-1.58, 1.7, 1.0]];
+FENSTER_ANKER.turmhaus = [[-0.45, 1.6, 1.05], [0.45, 1.6, 1.05],
+                          [-0.45, 3.4, 1.05], [0.45, 3.4, 1.05], [0.45, 5.2, 1.05]];
+FENSTER_ANKER.giebelhaus = [[-0.65, 1.6, 1.65], [0.65, 1.6, 1.65],
+                            [-0.65, 3.1, 1.65], [0.65, 3.1, 1.65]];
+FENSTER_ANKER.laubenhaus = [[-0.9, 4.0, 1.55], [0.9, 4.0, 1.55], [1.75, 4.0, 0]];
+FENSTER_ANKER.hofdurchfahrt = [[-0.9, 3.9, 1.45], [0.9, 3.9, 1.45]];
+FENSTER_ANKER.pfahlhaus = [[-1.0, 3.4, 1.06]];
+FENSTER_ANKER.baumhaus = [[-0.35, 4.2, 0.91]];
+FENSTER_ANKER.rankenhaus = [[-0.6, 1.2, 1.1], [0.6, 1.2, 1.1]];
+FENSTER_ANKER.stollenhaus = [[-1.1, 2.5, 0.66], [1.1, 2.5, 0.66]];
+FENSTER_ANKER.lehmkuppelhaus = [[-0.75, 1.6, 1.35], [1.35, 1.6, -0.4]];
+FENSTER_ANKER.wohnblock = [[-1.1, 1.7, 1.56], [1.1, 1.7, 1.56],
+                           [-1.1, 3.25, 1.56], [1.1, 3.25, 1.56],
+                           [-1.1, 4.8, 1.56], [1.1, 4.8, 1.56],
+                           [-1.1, 6.35, 1.56], [1.1, 6.35, 1.56],
+                           [1.86, 3.2, 0.7], [1.86, 4.75, -0.7]];
+FENSTER_ANKER.moorhuette = [[-0.6, 1.35, 1.06]];
+FENSTER_ANKER.lagerhaus = [[-0.9, 1.9, 1.56], [0.9, 1.9, 1.56],
+                           [-0.9, 3.6, 1.56], [0.9, 3.6, 1.56]];
+FENSTER_ANKER.glashuette = [[-1.0, 1.9, 1.45]];
+FENSTER_ANKER.viehstall = [[1.2, 1.5, 1.37]];
+FENSTER_ANKER.wassermuehle = [[-0.8, 2.0, 1.35]];
+FENSTER_ANKER.kapelle = [[0, 2.35, 1.74]];
+FENSTER_ANKER.gaube = [[0, 0.28, 0.37]];
+FENSTER_ANKER.kutsche = [[0, 1.15, 0.81]];
+
+/* Dauerlicht: hier wird NICHT gewuerfelt. Eine Esse, ein Irrlicht oder eine
+   Lavaspalte, die in 60 % der Faelle aus ist, waere keine.
+   Werte: [x, y, z, groesse] im lokalen Massstab des Wirtspools.            */
+LICHT_ANKER.schmiede = [0.9, 0.6, 0.35, 1.5];
+LICHT_ANKER.ziegelofen = [0, 0.55, 1.3, 1.4];
+LICHT_ANKER.kalkofen = [0, 0.45, 1.4, 1.1];
+LICHT_ANKER.glashuette = [0, 0.8, 1.5, 1.2];
+LICHT_ANKER.feuerschale = [0, 1.34, 0, 1.1];
+LICHT_ANKER.feuerstelle = [0, 0.28, 0, 1.2];
+LICHT_ANKER.lavaspalte = [0, 0.2, 0, 2.4];
+LICHT_ANKER.rissspalt = [0, 0.0, 0, 2.6];
+LICHT_ANKER.irrlicht = [0, 0.9, 0, 1.3];
+LICHT_ANKER.sporenlaterne = [0, 0.25, 0, 1.3];
+LICHT_ANKER.leuchtpilz = [0, 0.35, 0, 0.9];
+LICHT_ANKER.lichtbluete = [0, 0.3, 0, 1.0];
+LICHT_ANKER.samenreliquiar = [0, 1.15, 0, 1.3];
+LICHT_ANKER.lichtsammler = [0, 2.62, 0, 1.5];
+LICHT_ANKER.samenkapsel = [0, 1.3, 0, 2.0];
+LICHT_ANKER.saftzapfer = [0, 0.56, 0.42, 0.7];
+
 setPoolNames();
 
 export { mergeGeos, M, part, prismGeo, tubeGeo, leafHalfWidth, leafSurface, leafGeo,

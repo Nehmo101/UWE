@@ -39,6 +39,17 @@ Haengebruecken. Objekt-Werkzeug: Variante "Schwebeinseln" und "Nur Typ".
 
 ## Offener Stand
 
+- Runde H, Welle 3 (Weltausbau + Ghibli-Bildaufbau) ist fertig: VFX-System
+  mit Wetter (Regen/Schnee/Blueten/Sporen/Staub, Arbor-Lichtflug), Godrays,
+  Farbskript, Papierkante, gemalte Wasserstreifen; Weltgenerator ("Welt
+  wuerfeln") und Wegsuche-Werkzeug; Marker mit Beschriftung, Stempel-
+  Bibliothek, Autosave, Hoehenkarten-Import; 164 weitere Objekte (272 Pools);
+  Arbor-Netzwerk und Ranken-Alterung; Palettenbindung, bildraumfeste
+  Malschicht und Multiplane-Tiefenbaender; Aufnahme-Modus (Taste C) und
+  Bewegungsdisziplin (ruhige Karte, wenige Boeen-Nester, seltener fliegende
+  Voegel). Neue Karten starten mit aktivem Ghibli-Bildaufbau, geladene
+  Altkarten bleiben unveraendert.
+
 - Runde H (Weltausbau) ist in Arbeit. Fertig: Kartengroesse 256/512/1024
   (Terrain in Patches, Format v4), 25 Biome mit eigenen Hoehenprofilen und
   Schneeauflage, Arbor als echte Lichtquelle (Kanon: der weisse Baum haelt

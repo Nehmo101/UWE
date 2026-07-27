@@ -7,6 +7,7 @@ import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occFree, occAdd, KULTUR } from './objects.js';
 import { mergeGeos, M, part, tubeGeo, leafHalfWidth, leafSurface, leafGeo, moundGeo,
   islandGeo } from './geometry.js';
+import { bruchMaskeAt } from './paths.js';
 import { vineMat, leafMat, rockMat } from '../render/materials.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINES Teilsystem-Bausteins
@@ -219,6 +220,209 @@ function rankeAchse(el, t, out, st) {
   return out;
 }
 
+/* ===== B2: Wachstum als Zeitachse ========================================
+   Ein einziger Regler `alter` (0..1) steuert Hoehe, Dicke, Verjuengung,
+   Bewuchs, Plateauzahl, Luftwurzeln, Staedtchen und Schwebeinseln GEMEINSAM.
+   Absicht laut Ideenwelle B2: eine junge Ranke soll nicht wie eine
+   verkleinerte alte aussehen, sondern JUENGER — also relativ duenner,
+   spitzer auslaufend, weniger verzweigt und ohne die Aufbauten, die erst
+   ein ausgewachsener Trieb tragen kann.
+
+   BYTEIDENTITAET: Default ist 1. `alterFaktoren` liefert dann das
+   eingefrorene Objekt ALT_FAKTOREN, dessen Felder allesamt exakt 1 sind;
+   jede Verwendungsstelle multipliziert also mit der Gleitkomma-Eins (in
+   IEEE-754 bitgenau die Identitaet) bzw. rundet eine unveraenderte Zahl.
+   Die Formeln unten werden bei alter === 1 gar nicht erst ausgewertet —
+   `lerp(0.12, 1, 1)` waere zwar rechnerisch 1, aber 0.12 ist binaer nicht
+   exakt darstellbar, und darauf soll sich niemand verlassen muessen. */
+
+/** Alle Faktoren exakt 1 — der Ist-Zustand. Eingefroren, damit ein
+ *  Aufrufer ihn nicht versehentlich beschreibt. */
+var ALT_FAKTOREN = Object.freeze({
+  hoehe: 1, dicke: 1, verjuengung: 1, bewuchs: 1, blatt: 1,
+  plateau: 1, stadt: 1, luft: 1, insel: 1
+});
+
+/**
+ * Alterskurven. Jede Kurve ist bei alter = 1 exakt 1 (siehe ALT_FAKTOREN,
+ * das diesen Fall abkuerzt) und bei alter = 0 ihr jeweiliger Mindestwert.
+ *
+ *   hoehe       lerp(0.12, 1, alter)      — Vorgabe aus B2: der Keimling ist
+ *                                           12 % hoch.
+ *   dicke       hoehe^1.6                 — ALLOMETRISCH statt proportional.
+ *                                           Der Stammquerschnitt waechst bei
+ *                                           Baeumen ueberproportional zur
+ *                                           Hoehe; mit dem Exponenten 1.6 ist
+ *                                           eine halb hohe Ranke nur ~40 %
+ *                                           dick (Schlankheitsverhaeltnis
+ *                                           0.71 statt 1.0), wirkt also
+ *                                           gertenhaft statt wie ein
+ *                                           Miniaturstamm. Das ist der Kern
+ *                                           von "juenger statt kleiner".
+ *   verjuengung lerp(0.5, 1, alter)       — Faktor auf `dickeOben`: der junge
+ *                                           Trieb laeuft nach oben spitz aus.
+ *   bewuchs     lerp(0.25, 1, alter²)     — Nebentriebe, Blattbuendel,
+ *                                           Haengebewuchs, Wurzelzahl. Das
+ *                                           Quadrat laesst den Bewuchs der
+ *                                           Hoehe HINTERHERLAUFEN: erst
+ *                                           wachsen, dann begruenen.
+ *   blatt       lerp(0.45, 1, alter)      — Blattgroesse (ein Keimblatt ist
+ *                                           kleiner, aber nicht winzig).
+ *   plateau     sstep(0.18, 0.92, alter)  — Anzahl der Blattplateaus. Weiche
+ *                                           Kanten, damit beim Hochfahren
+ *                                           kein Plateau schlagartig
+ *                                           erscheint; unter 0.18 keines.
+ *   stadt       sstep(0.55, 0.78, alter)  — Staedtchen (und Wendeltreppe):
+ *                                           "erst ab ~0.6 sinnvoll" aus B2.
+ *                                           Junge Ranken tragen keine Stadt.
+ *   luft        sstep(0.35, 0.85, alter)  — Luftwurzeln haengen erst, wenn es
+ *                                           etwas zu ueberbruecken gibt.
+ *   insel       sstep(0.30, 0.85, alter)  — Schwebeinseln sammeln sich erst
+ *                                           um einen gewachsenen Trieb.
+ */
+function alterFaktoren(alter) {
+  if (!(alter < 1)) return ALT_FAKTOREN;    // undefined/NaN/>=1 => Ist-Zustand
+  var a = clamp(alter, 0, 1);
+  var aH = lerp(0.12, 1, a);
+  return {
+    hoehe: aH,
+    dicke: Math.pow(aH, 1.6),
+    verjuengung: lerp(0.5, 1, a),
+    bewuchs: lerp(0.25, 1, a * a),
+    blatt: lerp(0.45, 1, a),
+    plateau: sstep(0.18, 0.92, a),
+    stadt: sstep(0.55, 0.78, a),
+    luft: sstep(0.35, 0.85, a),
+    insel: sstep(0.30, 0.85, a)
+  };
+}
+
+/** `alter` eines Elements, robust gegen fehlende/kaputte Werte. */
+function rankeAlter(el) {
+  var a = el && el.params ? el.params.alter : undefined;
+  return (typeof a === "number" && Number.isFinite(a)) ? clamp(a, 0, 1) : 1;
+}
+
+/**
+ * B2 — Zeitverlauf der Wachstumsanimation: u = 0..1 Zeitanteil -> alter.
+ * Ease-out (1 - (1-u)^2.2): der Trieb schiesst zuerst hoch und laeuft dann
+ * aus; linear saehe nach Fahrstuhl aus. Der Startwert 0.06 statt 0 sorgt
+ * dafuer, dass im ersten Bild bereits ein Keimling steht.
+ * Rein und deterministisch — dieselbe Zeit liefert dasselbe Alter.
+ */
+function wachstumsKurve(u) {
+  return lerp(0.06, 1, 1 - Math.pow(1 - clamp(u, 0, 1), 2.2));
+}
+
+/**
+ * B2 — Treiber der Wachstumsanimation ("die Ranke waechst aus dem Boden").
+ *
+ * Bewusst OHNE Kenntnis von dirty.js (das importiert vines.js — die
+ * Gegenrichtung waere ein Zyklus) und OHNE Kenntnis des Browsers: der
+ * Neuaufbau `regen(el)`, die Uhr und der Bildplaner werden hereingereicht.
+ * Die Anbindung in pointer.js steht im Bericht.
+ *
+ *   el      das Ranken-Element
+ *   regen   Rueckruf, der das Element neu erzeugt (dirty.js: regenElement,
+ *           anschliessend flushPack)
+ *   opts    { dauer:  Gesamtdauer in ms (Default 2000, B2 nennt ~2 s)
+ *             schritte: Zahl der Neuaufbauten (Default 14 — ein voller
+ *                       genRanke je Bild waere bei 60 fps 120 Neuaufbauten
+ *                       fuer eine Animation, die man mit 7/s nicht von
+ *                       einer fluessigen unterscheidet)
+ *             ziel:   Endalter (Default: das am Element eingestellte)
+ *             jetzt:  () => ms          (Default performance.now/Date.now)
+ *             planen: (cb) => handle    (Default requestAnimationFrame)
+ *             stoppen:(handle) => void
+ *             fertig: () => void }
+ *
+ * Rueckgabe: { abbrechen() } — bricht ab und setzt das Zielalter sofort.
+ * Der gespeicherte Parameter traegt am Ende EXAKT `ziel`; die Animation
+ * hinterlaesst also keine Spur im Speicherformat. Gibt es keinen Planer
+ * (Test, headless), wird in einem Schritt auf das Ziel gesprungen.
+ */
+function rankeWachsen(el, regen, opts) {
+  opts = opts || {};
+  var ziel = typeof opts.ziel === "number" ? clamp(opts.ziel, 0, 1) : rankeAlter(el);
+  var setze = function (a) {
+    if (!el.params) el.params = {};
+    el.params.alter = a;
+    if (regen) regen(el);
+  };
+  var ende = function () {
+    setze(ziel);
+    if (opts.fertig) opts.fertig();
+  };
+  var planen = opts.planen ||
+    (typeof requestAnimationFrame === "function" ? requestAnimationFrame : null);
+  if (!planen) { ende(); return { abbrechen: function () {} }; }
+  var jetzt = opts.jetzt ||
+    (typeof performance === "object" && performance && performance.now
+      ? function () { return performance.now(); }
+      : function () { return Date.now(); });
+  var stoppen = opts.stoppen ||
+    (planen === (typeof requestAnimationFrame === "function" ? requestAnimationFrame : null) &&
+     typeof cancelAnimationFrame === "function" ? cancelAnimationFrame : null);
+  var dauer = typeof opts.dauer === "number" && opts.dauer > 0 ? opts.dauer : 2000;
+  var schritte = Math.max(1, Math.round(opts.schritte > 0 ? opts.schritte : 14));
+  // Schritt 0 wird sofort gesetzt; letzterSchritt startet deshalb auf 0 und
+  // nicht auf -1, sonst baut das erste Bild denselben Stand ein zweites Mal.
+  var t0 = jetzt(), letzterSchritt = 0, handle = null, aus = false;
+  setze(ziel * wachstumsKurve(0));
+  function bild() {
+    if (aus) return;
+    var u = clamp((jetzt() - t0) / dauer, 0, 1);
+    if (u >= 1) { aus = true; ende(); return; }
+    // Nur bei Schrittwechsel neu erzeugen — spart die teuren Zwischen-
+    // aufbauten, ohne dass die Animation sichtbar ruckelt.
+    var s = Math.floor(u * schritte);
+    if (s !== letzterSchritt) { letzterSchritt = s; setze(ziel * wachstumsKurve(s / schritte)); }
+    handle = planen(bild);
+  }
+  handle = planen(bild);
+  return {
+    abbrechen: function () {
+      if (aus) return;
+      aus = true;
+      if (handle !== null && stoppen) stoppen(handle);
+      ende();
+    }
+  };
+}
+
+/* ===== B4: Schwerkraft an den Bruchkanten ================================
+   Die Bruchmaske (paths.js) ist 1 ueber dem Abgrund und 0 auf festem Grund.
+   `bruchNaehe` misst, wie dicht ein Fusspunkt an dieser Kante steht, und
+   liefert zugleich die Richtung zum Abgrund. Rein geometrisch, ohne Zufall,
+   und ohne Bruchkanten-Element auf der Karte konstant 0 (bruchMaskeAt gibt
+   dann 0 zurueck) — der Zweig, der daran haengt, bleibt also stumm.
+   Kosten: 3 Ringe x 12 Richtungen = 36 Nachschlagevorgaenge je Fuss, und das
+   nur, wenn `schwebeDrift` ueberhaupt gesetzt ist. */
+var _bn = { naehe: 0, dx: 0, dz: 0 };
+function bruchNaehe(x, z, weite) {
+  _bn.naehe = 0; _bn.dx = 0; _bn.dz = 0;
+  var beste = 0, sx = 0, sz = 0, ring, dir;
+  for (ring = 1; ring <= 3; ring++) {
+    var d = weite * ring / 3;
+    // Naeher an der Kante = staerker: linearer Abfall ueber die Reichweite.
+    var gew = 1 - (ring - 1) / 3;
+    for (dir = 0; dir < 12; dir++) {
+      var w = dir * Math.PI / 6;
+      var cx = Math.cos(w), cz = Math.sin(w);
+      var m = bruchMaskeAt(x + cx * d, z + cz * d);
+      if (m <= 0) continue;
+      var v = m * gew;
+      if (v > beste) beste = v;
+      sx += cx * v; sz += cz * v;
+    }
+  }
+  if (beste <= 0) return _bn;
+  var l = Math.sqrt(sx * sx + sz * sz);
+  _bn.naehe = clamp(beste, 0, 1);
+  if (l > 1e-6) { _bn.dx = sx / l; _bn.dz = sz / l; }
+  return _bn;
+}
+
 /** Wie rankeAchse, aber OHNE den Zuganteil — Bezugspunkt, gegen den ein
  *  gezogener Griff sein neues dx/dz misst. */
 function rankeKernPunkt(el, t, out) {
@@ -266,6 +470,13 @@ function genRanke(el) {
   //     Systematik wie +505 am Hauptast
   //   Verwachsungsknoten: Anzahlen (0, 0, +605), Rindenfalten
   //     (Faltenindex, 2, +605), Moospolster (Moosindex, 3, +605)
+  // NEU in Welle 2 / B4 (bis +605 war vergeben):
+  //   Schwebende Truemmer an der Bruchkante: Anzahl je Fuss (Fussindex, 0,
+  //     +607), je Truemmerstueck (Fussindex, Stueckindex + 1, +607).
+  //     Nur gezogen, wenn `schwebeDrift` > 0 UND eine Bruchkante in der Naehe
+  //     liegt — sonst existiert der Strom gar nicht.
+  // B2 (`alter`) zieht KEINEN Zufall: es skaliert ausschliesslich bereits
+  //   gezogene Werte. Kein bestehender Strom wird angezapft oder verschoben.
   // Elementweit bleibt rGlob NUR fuer einmalige Globalwerte mit fester
   // Draw-Anzahl (Trieb-Anzahl, Bueschel-Starthoehe, Wurzelzahl und
   // -startwinkel) — die sind von Punkten und uebrigen Parametern unabhaengig
@@ -274,13 +485,21 @@ function genRanke(el) {
   // Rueckwaertskompatible Defaults: alte Karten ohne dicke/stil/luftwurzeln
   // rendern byteidentisch (R = VINE_R, alle Glatt-Faktoren = 1 bzw.
   // Glatt-Zweige inaktiv, Luftwurzel-Zweig inaktiv).
-  var R = VINE_R * (p.dicke || 1);       // Dicke als Multiplikator auf den Bezugsradius
+  /* B2 — Alterskurven. `A` ist bei alter = 1 (Default) das eingefrorene
+     Eins-Objekt; jede Multiplikation unten ist dann die Identitaet und jede
+     Rundung arbeitet auf dem unveraenderten Altwert. */
+  var A = alterFaktoren(p.alter);
+  var R = VINE_R * (p.dicke || 1) * A.dicke;   // Dicke als Multiplikator auf den Bezugsradius
   var glatt = p.stil === "glatt";        // Stil: geflochten (Default) | glatt
   var pt = el.points[0];
   if (!pt) return;
   var x0 = pt.x, z0 = pt.z;
   var y0 = heightAt(x0, z0) - 2.6;   // waechst IN den aufgeworfenen Boden hinein
-  var H = p.hoehe;
+  var H = p.hoehe * A.hoehe;
+  // Blattgroesse und Bewuchsdichte gehen an mehreren Stellen ein — einmal
+  // ausrechnen, damit Haupt- und Zusatzast garantiert dieselbe Alterung
+  // sehen.
+  var blattGr = (p.blattgroesse || 1) * A.blatt;
   var geos = [], i, k, t;
 
   /* --- H4.4: mehrere Fusspunkte ------------------------------------------
@@ -387,6 +606,11 @@ function genRanke(el) {
   // Endradius relativ zum Fussradius; 0.45 ist die bisher fest verdrahtete
   // Verjuengung und daher der Schema-Default.
   var dickeOben = p.dickeOben === undefined ? 0.45 : clamp(p.dickeOben, 0.2, 1);
+  // B2: der junge Trieb laeuft spitzer aus. A.verjuengung ist bei alter = 1
+  // exakt 1, die Multiplikation also die Identitaet; der zweite clamp faengt
+  // nur die gealterten Werte ab (0.2 ist die Schema-Untergrenze fuer die
+  // BEDIENUNG, nicht fuer die Geometrie).
+  dickeOben = clamp(dickeOben * A.verjuengung, 0.08, 1);
   var c = new THREE.Vector3(), n1 = new THREE.Vector3(), n2 = new THREE.Vector3();
   function wrapAt(tt, kk, fi) {
     // Straenge legen sich stellenweise aneinander und laufen wieder auseinander
@@ -437,6 +661,49 @@ function genRanke(el) {
         if (rf < 0.88) col.lerp(_moosFarbe, (0.88 - rf) * 1.6);
       });
     })(radF, thick));
+  }
+
+  /* --- Blattbueschel entlang eines Strangbuendels -------------------------
+     AUFRAEUMEN (Welle 2): Hauptast und Zusatzast bauten ihre Bueschel bisher
+     mit zwei Wort-fuer-Wort gleichen Schleifen, die sich nur in Strom,
+     Schluesselbasis, Kurve, Ringzahl und Endhoehe unterschieden. Genau diese
+     fuenf Unterschiede sind jetzt Argumente — die Logik ist NICHT
+     zusammengefasst, sondern nur einmal statt zweimal hingeschrieben.
+     Byteidentitaet: der Hauptast ruft mit tSkala = 1 und kBasis = 0 auf;
+     `bt / 1 * nRing` ist bitgenau `bt * nRing` und `0 + sr` ist `sr`.
+       kurve    Achse, an der die Frames haengen
+       straenge Liste { pts } der Straenge, aus denen ein Ansatz gewaehlt wird
+       nRing    Ringzahl dieser Straenge
+       tStart   erste Bueschelhoehe (der Aufrufer wuerfelt sie aus SEINEM Strom)
+       tEnde    Ende der Bueschelkette
+       tSkala   Hoehenanteil, ueber den `straenge` laeuft (1 = volle Ranke)
+       kBasis   Offset im ersten Schluesselplatz
+       sBasis   el.seed + Stromoffset */
+  function blattBuescheln(kurve, straenge, nRing, tStart, tEnde, tSkala, kBasis, sBasis) {
+    var bt = tStart, sr = 0;
+    while (bt < tEnde) {
+      var rB = ortsRng(kBasis + sr, -1, sBasis);
+      var strang = straenge[Math.floor(rB() * straenge.length)];
+      var si = Math.floor(bt / tSkala * nRing);
+      var sp = strang.pts[Math.min(si, strang.pts.length - 1)];
+      frameAt(kurve, bt, c, n1, n2);
+      // B2: weniger Bueschel am jungen Trieb. ri() wird IMMER gezogen, damit
+      // der Strom nicht verrutscht; skaliert wird erst das Ergebnis.
+      var buendel = Math.round(ri(rB, 3, 7) * A.bewuchs);
+      for (var bi = 0; bi < buendel; bi++) {
+        var rBl = ortsRng(kBasis + sr, bi, sBasis);
+        var ba = Math.atan2(sp.z - c.z, sp.x - c.x) + rr(rBl, -1.1, 1.1);
+        var gr = rr(rBl, 4, 10.5) * (1 - bt * 0.5) * blattGr;
+        emit(el, "rankenblatt",
+          sp.x + Math.cos(ba) * 0.4, sp.y + rr(rBl, -1.2, 1.2), sp.z + Math.sin(ba) * 0.4,
+          -ba + rr(rBl, -0.4, 0.4),
+          gr, gr * rr(rBl, 0.5, 0.7), gr,
+          [0.97, 1.0, 0.86], rr(rBl, -0.15, 0.15), rr(rBl, -0.7, -0.1));
+      }
+      // groessere blattfreie Abschnitte zwischen den Buescheln
+      bt += rr(rB, 0.07, 0.17);
+      sr++;
+    }
   }
 
   /* --- H4.4: Zusatz-Aeste aus den weiteren Fusspunkten --------------------
@@ -492,31 +759,11 @@ function genRanke(el) {
         });
       })(aPts, aRadF, aThick));
     }
-    // Blattbueschel am Zusatzast — Muster des Hauptastes (dort ab "Grosse
-    // Blaetter"), eigener Strom +601, Ende an der Vereinigung.
+    // Blattbueschel am Zusatzast — dieselbe Routine wie am Hauptast, eigener
+    // Strom +601, eigene Schluesselbasis, Ende an der Vereinigung.
     var rAstStart = ortsRng(fi, -2, el.seed + 601);
-    var aBlattT = 0.06 + rAstStart() * 0.05;
-    var aSchritt = 0;
-    while (aBlattT < tVerEnd - 0.02) {
-      var rAB = ortsRng(fi * 4096 + aSchritt, -1, el.seed + 601);
-      var aStrang = astStraenge[Math.floor(rAB() * astStraenge.length)];
-      var aSi = Math.floor(aBlattT / tVerEnd * RA);
-      var aSp = aStrang.pts[Math.min(aSi, aStrang.pts.length - 1)];
-      frameAt(aAxis, aBlattT, c, n1, n2);
-      var aBuendel = ri(rAB, 3, 7);
-      for (i = 0; i < aBuendel; i++) {
-        var rABl = ortsRng(fi * 4096 + aSchritt, i, el.seed + 601);
-        var aBa = Math.atan2(aSp.z - c.z, aSp.x - c.x) + rr(rABl, -1.1, 1.1);
-        var aGr = rr(rABl, 4, 10.5) * (1 - aBlattT * 0.5) * (p.blattgroesse || 1);
-        emit(el, "rankenblatt",
-          aSp.x + Math.cos(aBa) * 0.4, aSp.y + rr(rABl, -1.2, 1.2), aSp.z + Math.sin(aBa) * 0.4,
-          -aBa + rr(rABl, -0.4, 0.4),
-          aGr, aGr * rr(rABl, 0.5, 0.7), aGr,
-          [0.97, 1.0, 0.86], rr(rABl, -0.15, 0.15), rr(rABl, -0.7, -0.1));
-      }
-      aBlattT += rr(rAB, 0.07, 0.17);
-      aSchritt++;
-    }
+    blattBuescheln(aAxis, astStraenge, RA, 0.06 + rAstStart() * 0.05,
+      tVerEnd - 0.02, tVerEnd, fi * 4096, el.seed + 601);
   }
 
   /* --- H4.4: Verwachsungsknoten ------------------------------------------
@@ -583,7 +830,8 @@ function genRanke(el) {
   }
 
   // --- Nebentriebe: duenne freie Auslaeufer vom Hauptbuendel ---------------
-  var nTrieb = ri(rGlob, 2, 4);
+  // B2: ri() wird immer gezogen (Globalstrom!), nur das Ergebnis skaliert.
+  var nTrieb = Math.round(ri(rGlob, 2, 4) * A.bewuchs);
   for (k = 0; k < nTrieb; k++) {
     var rTrieb = ortsRng(k, 0, el.seed + 503);
     var tt0 = rr(rTrieb, 0.25, 0.85);
@@ -610,29 +858,8 @@ function genRanke(el) {
   // Die Starthoehe ist ein Globalwert (rGlob), jeder Hoehenschritt danach
   // wuerfelt aus seinem eigenen Strom — die Kette der Schrittweiten bleibt
   // sequentiell ueber den Schrittindex, der selbst stabil ist.
-  var blattT = 0.06 + rGlob() * 0.05;
-  var schritt = 0;
-  while (blattT < 0.96) {
-    var rB = ortsRng(schritt, -1, el.seed + 505);
-    var hauptStrang = strandDaten[Math.floor(rB() * strandDaten.length)];
-    var si = Math.floor(blattT * RINGS);
-    var sp = hauptStrang.pts[Math.min(si, hauptStrang.pts.length - 1)];
-    frameAt(axis, blattT, c, n1, n2);
-    var buendel = ri(rB, 3, 7);
-    for (i = 0; i < buendel; i++) {
-      var rBl = ortsRng(schritt, i, el.seed + 505);
-      var ba = Math.atan2(sp.z - c.z, sp.x - c.x) + rr(rBl, -1.1, 1.1);
-      var groesse = rr(rBl, 4, 10.5) * (1 - blattT * 0.5) * (p.blattgroesse || 1);
-      emit(el, "rankenblatt",
-        sp.x + Math.cos(ba) * 0.4, sp.y + rr(rBl, -1.2, 1.2), sp.z + Math.sin(ba) * 0.4,
-        -ba + rr(rBl, -0.4, 0.4),
-        groesse, groesse * rr(rBl, 0.5, 0.7), groesse,
-        [0.97, 1.0, 0.86], rr(rBl, -0.15, 0.15), rr(rBl, -0.7, -0.1));
-    }
-    // groessere blattfreie Abschnitte zwischen den Buescheln
-    blattT += rr(rB, 0.07, 0.17);
-    schritt++;
-  }
+  blattBuescheln(axis, strandDaten, RINGS, 0.06 + rGlob() * 0.05,
+    0.96, 1, 0, el.seed + 505);
 
   // --- Wurzelteller: ungleichmaessig um den Fuss verteilt, flacher, laenger
   // H4.4: dieselbe Logik je Fusspunkt. Fuss 0 zieht Anzahl und Startwinkel
@@ -644,7 +871,11 @@ function genRanke(el) {
     var fx0 = fuesse[wf].x, fz0 = fuesse[wf].z;
     var fy0 = wf === 0 ? y0 : heightAt(fx0, fz0) - 2.6;
     var rFuss = wf === 0 ? null : ortsRng(wf, -1, el.seed + 509);
-    var nRoot = wf === 0 ? ri(rGlob, 10, 14) : ri(rFuss, 10, 14);
+    // B2: weniger, aber nie gar keine Wurzeln — der Fuss soll auch jung im
+    // Boden verankert aussehen. Bei alter = 1 ist A.bewuchs exakt 1 und der
+    // Rohwert liegt bei 10..14, die Untergrenze 4 greift also nie.
+    var nRoot = Math.max(4, Math.round(
+      (wf === 0 ? ri(rGlob, 10, 14) : ri(rFuss, 10, 14)) * A.bewuchs));
     var wStart = wf === 0 ? rr(rGlob, 0, 6.283) : rr(rFuss, 0, 6.283);
     for (k = 0; k < nRoot; k++) {
       var rW = ortsRng(k, wf, el.seed + 509);
@@ -678,10 +909,59 @@ function genRanke(el) {
     mound.position.set(fx0, heightAt(fx0, fz0), fz0);
     mound.userData.el = el;
     groupOf(el).add(mound);
+
+    /* --- B4: Schwerkraft an der Bruchkante ------------------------------
+       Steht dieser Fuss nahe an einer Bruchkante, loesen sich Truemmer und
+       Blaetter vom Wurzelteller und BLEIBEN in der Luft stehen — je weiter
+       ueber dem Abgrund, desto hoeher und desto weiter zur Kante hin
+       versetzt. Das ist die statische Haelfte von B4; die eigentliche
+       Drift-BEWEGUNG braucht einen Shader (siehe Bericht), materials.js
+       gehoert dieser Runde nicht.
+       `schwebeDrift` ist Default 0 => kein Draw, kein Strom, keine Instanz.
+       Zusaetzlich liefert bruchMaskeAt ohne Bruchkanten-Element konstant 0,
+       der Zweig bleibt also auch bei gesetztem Regler still. */
+    var drift = typeof p.schwebeDrift === "number" ? clamp(p.schwebeDrift, 0, 1) : 0;
+    if (drift > 0) {
+      // Reichweite: der doppelte Wurzelteller (R*4.6) — was weiter weg ist,
+      // gehoert erzaehlerisch nicht mehr zu diesem Fuss.
+      var bn = bruchNaehe(fx0, fz0, R * 9.2);
+      if (bn.naehe > 0) {
+        var rSchw = ortsRng(wf, 0, el.seed + 607);
+        var nSchw = Math.round(ri(rSchw, 5, 11) * bn.naehe * drift);
+        var qx = -bn.dz, qz = bn.dx;          // quer zur Abgrundrichtung
+        for (i = 0; i < nSchw; i++) {
+          var rSt = ortsRng(wf, i + 1, el.seed + 607);
+          // qS = 0 am Wurzelteller, 1 am aeusseren Rand der Reichweite
+          var qS = rr(rSt, 0.35, 1);
+          var sx2 = fx0 + bn.dx * qS * R * 8 + qx * rr(rSt, -3.2, 3.2) * R * 0.5;
+          var sz2 = fz0 + bn.dz * qS * R * 8 + qz * rr(rSt, -3.2, 3.2) * R * 0.5;
+          // Schwebehoehe waechst mit dem Weg ueber den Abgrund; Bezug ist der
+          // Boden AM FUSS, nicht unter dem Stueck (ueber dem Abgrund gibt es
+          // keinen).
+          var sy2 = heightAt(fx0, fz0) +
+            lerp(0.6, 7.5, qS * qS) * bn.naehe * drift + rr(rSt, -0.4, 1.6);
+          var sSc = rr(rSt, 0.22, 0.62);
+          if (rSt() < 0.55) {
+            emit(el, "fels", sx2, sy2, sz2, rr(rSt, 0, 6.283),
+              sSc, sSc * rr(rSt, 0.6, 1.1), sSc, tintOf(rSt, 0.06),
+              rr(rSt, -0.5, 0.5), rr(rSt, -0.5, 0.5));
+          } else {
+            var bSc = rr(rSt, 2.2, 5.4) * blattGr;
+            emit(el, "rankenblatt", sx2, sy2, sz2, rr(rSt, 0, 6.283),
+              bSc, bSc * rr(rSt, 0.5, 0.7), bSc,
+              [0.97, 1.0, 0.86], rr(rSt, -0.8, 0.8), rr(rSt, -0.8, 0.8));
+          }
+        }
+      }
+    }
   }
 
   // --- Blattplateaus, spiralig um den Stamm gestaffelt ---
-  var nPl = clamp(Math.round(p.plateaus), 0, 6);
+  // B2: A.plateau ist bei alter = 1 exakt 1 — Math.round(p.plateaus * 1)
+  // ist Zeichen fuer Zeichen der Altwert. Junge Ranken tragen weniger (und
+  // unter alter 0.18 gar keine) Plateaus; die Hoehenformel `fr` haengt wie
+  // bisher an nPl, die verbliebenen Plateaus RUTSCHEN also nur.
+  var nPl = clamp(Math.round(p.plateaus * A.plateau), 0, 6);
   var leafGeos = [];
   var plateauDaten = [];   // fuer Erschliessung (Treppe/Bruecken), reines Sammeln
   var _lv = new THREE.Vector3();
@@ -712,7 +992,7 @@ function genRanke(el) {
     // Geometrie: der Default-Pfad bleibt dadurch unveraendert.
     plateauDaten.push({ t: t, L: L, W: W, cup: cup, full: full });
     // Bewuchsstraenge haengen von der Unterseite herab
-    var nHaenge = ri(rPl, 3, 6);
+    var nHaenge = Math.round(ri(rPl, 3, 6) * A.bewuchs);
     for (var hg2 = 0; hg2 < nHaenge; hg2++) {
       var hu = rr(rPl, 0.45, 0.9), hv = rr(rPl, -0.7, 0.7);
       var hx = hu * L, hz = hv * leafHalfWidth(hu) * W;
@@ -737,8 +1017,8 @@ function genRanke(el) {
     //     rPl bleibt unangetastet, sonst wuerden die nachfolgenden
     //     Staedtchen-/Zypressen-Zaehler (nH, nCyp) verrutschen.
     //     Default luftwurzeln=false ⇒ Zweig inaktiv, alte Karten unveraendert.
-    if (p.luftwurzeln) {
-      var nLw = ri(ortsRng(k, -1, el.seed + 519), 2, 4);
+    if (p.luftwurzeln && A.luft > 0) {
+      var nLw = Math.round(ri(ortsRng(k, -1, el.seed + 519), 2, 4) * A.luft);
       for (var lw = 0; lw < nLw; lw++) {
         var rLw = ortsRng(k, lw, el.seed + 519);
         var lu = rr(rLw, 0.35, 0.9), lv = rr(rLw, -0.7, 0.7);
@@ -760,7 +1040,10 @@ function genRanke(el) {
       }
     }
 
-    if (!p.staedtchen) continue;
+    // B2: Ein junger Trieb traegt keine Stadt (A.stadt ist unter alter 0.55
+    // exakt 0). Bei alter = 1 ist A.stadt exakt 1 und die Bedingung
+    // gleichbedeutend mit der alten.
+    if (!p.staedtchen || !(A.stadt > 0)) continue;
     // Gebaeude/Zypressen je (Plateau, Index) — die occ-Pruefung bleibt
     // sequentiell in Schleifenreihenfolge und damit deterministisch.
     var occ2 = newOcc(4);
@@ -812,7 +1095,7 @@ function genRanke(el) {
     // nachfolgende nCyp-Draw. Skaliert wird nur das Produkt: Default 1 =>
     // Math.round(n * 1) === n, exakt die alte Anzahl; 0 => keine Gebaeude,
     // die Zypressen bleiben.
-    var dichteSt = p.stadtDichte === undefined ? 1 : p.stadtDichte;
+    var dichteSt = (p.stadtDichte === undefined ? 1 : p.stadtDichte) * A.stadt;
     var nH = Math.round(ri(rPl, 5, 18) * dichteSt);
     for (i = 0; i < nH; i++) {
       var rH = ortsRng(k, i, el.seed + 513);
@@ -853,7 +1136,7 @@ function genRanke(el) {
           sc, sc * rr(rH, 0.9, 1.25), sc, tintOf(rH));
       }
     }
-    var nCyp = ri(rPl, 4, 9);
+    var nCyp = Math.round(ri(rPl, 4, 9) * A.stadt);
     for (i = 0; i < nCyp; i++) {
       var rZ = ortsRng(k, i, el.seed + 515);
       var u2 = rr(rZ, 0.3, 0.92), v2 = (rZ() < 0.5 ? -1 : 1) * rr(rZ, 0.78, 0.92);
@@ -863,6 +1146,38 @@ function genRanke(el) {
         sc2, sc2 * rr(rZ, 0.9, 1.3), sc2, tintOf(rZ, 0.08));
     }
   }
+
+  /* --- Netz- und Lichtdaten des Elements veroeffentlichen (B1/H3) ---------
+     Zwei Felder mit Unterstrich — serializeElements (store.js) schreibt eine
+     Whitelist, sie landen also nicht im Speicherformat.
+
+     el._arbor  Lichtquellen dieses Elements, je Fuss eine. refreshArborQuellen
+                hat diese Werte bisher ERSATZWEISE selbst aus el.points und
+                el.params gerechnet; hier stehen sie an der Quelle und kennen
+                zusaetzlich `alter`. Bei alter = 1 sind R und H bitgenau
+                VINE_R*dicke bzw. p.hoehe — die Formel ist dieselbe, das
+                Ergebnis also byteidentisch zum bisherigen Ersatzpfad.
+     el._netz   Reine Geometrie fuer die Netzanalyse in dirty.js: Fusspunkte
+                mit ihrem Radius und Plateaumitten mit ihrer halben Blatt-
+                laenge. genRanke selbst LIEST hier nichts — kein Element
+                rechnet aus den Daten eines anderen. */
+  var arborQ = [], netzF = [];
+  for (i = 0; i < nF; i++) {
+    arborQ.push({ x: fuesse[i].x, z: fuesse[i].z, radius: R,
+      // Hohe Ranken tragen weiter: 220 Einheiten sind die volle Staerke
+      // (dieselbe Konstante wie im Ersatzpfad in dirty.js).
+      staerke: Math.min(1, H / 220) });
+    netzF.push({ x: fuesse[i].x, z: fuesse[i].z, r: R });
+  }
+  var netzP = [];
+  for (k = 0; k < plateauDaten.length; k++) {
+    plateauMitte(plateauDaten[k], _lv);
+    // r = halbe Blattlaenge: die Blattmitte liegt bei u = 0.5, Spitze und
+    // Ansatz sind je L/2 entfernt — das ist der ehrliche Wirkradius.
+    netzP.push({ x: _lv.x, y: _lv.y, z: _lv.z, r: plateauDaten[k].L * 0.5 });
+  }
+  el._arbor = arborQ;
+  el._netz = { fuesse: netzF, plateaus: netzP };
 
   // --- Wendeltreppe (p.treppe, Default false => Zweig inaktiv): schmales
   //     Stufenband am Aussenrand des Geflechts, von Bodennaehe bis zum
@@ -875,7 +1190,9 @@ function genRanke(el) {
   //     Steigung (Anstieg 0.42/Stufe); bei H=400 und Plateau bei t~0.34
   //     sind das ~320 Stufen ≈ 3.9k Dreiecke, plus Handlauf-Tube
   //     (~160 Punkte x 4-seitig ≈ 1.3k) — vertretbar.
-  if (p.treppe) {
+  // B2: Eine Treppe wird gebaut, wenn oben etwas ist, das sie erschliesst —
+  // dieselbe Schwelle wie das Staedtchen. A.stadt ist bei alter = 1 exakt 1.
+  if (p.treppe && A.stadt > 0) {
     var rT = ortsRng(0, 0, el.seed + 527);
     var tZiel = 0.8;
     for (k = 0; k < plateauDaten.length; k++) {
@@ -986,7 +1303,7 @@ function genRanke(el) {
   }
 
   // --- Schwebeinseln ---
-  var nIsl = clamp(Math.round(p.inseln), 0, 4);
+  var nIsl = clamp(Math.round(p.inseln * A.insel), 0, 4);
   var islGeos = [];
   for (k = 0; k < nIsl; k++) {
     // Ein Strom je Insel (Baeume laufen sequentiell mit — sie gehoeren zur
@@ -1019,4 +1336,8 @@ function genRanke(el) {
 
 
 export { vineColor, genRanke, rankePlatzierbar,
-  zugpunkteVon, rankeStuetzen, zugAuslenkung, rankeAchse, rankeKernPunkt };
+  zugpunkteVon, rankeStuetzen, zugAuslenkung, rankeAchse, rankeKernPunkt,
+  // B2 — Wachstum als Zeitachse
+  alterFaktoren, rankeAlter, wachstumsKurve, rankeWachsen,
+  // B4 — Naehe zur Bruchkante (auch fuer Werkzeuge/Tests lesbar)
+  bruchNaehe };

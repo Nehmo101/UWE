@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { clamp, lerp, DEG, hashi } from './core/rng.js';
 import { S, HALF, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, getRenderer }
+import { scene, initPipeline, resizePipeline, renderFrame, getRenderer,
+  setPalette, setMalschicht, setMultiplane, PALETTE_STANDARD, MAL_DEZENT }
   from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull } from './world/terrain.js';
@@ -12,12 +13,14 @@ import { POOLS } from './core/pools.js';
 import { rebuildAll } from './core/dirty.js';
 import { initWater, wasserSichtbar, updateWater, water } from './world/water.js';
 import { initSky, updateSky } from './world/sky.js';
-import { initAtmosphere, setTod, tickAtmosphere, updateBirds, updateRauch,
-  setRauchQuellen } from './world/atmosphere.js';
+import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch,
+  setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
+import { initVfx, tickVfx } from './world/vfx.js';
 import { initSelection, updateHandlePositions, rebuildHandles } from './editor/selection.js';
 import { ed, defaultsFor, setTool } from './editor/tools.js';
 import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
-import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast }
+import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast,
+  markerOverlayAktualisieren }
   from './ui/panels.js';
 import { initIO } from './editor/io.js';
 import { tickWind } from './world/wind.js';
@@ -120,10 +123,23 @@ function demoMap() {
    ========================================================================== */
 setScene(scene);
 const renderer = initPipeline(camera);
+/* Ghibli-Bildaufbau (F1-F3) fuer NEUE Karten einschalten. Die Setter stehen
+   ab Werk auf 0, damit der Pass byteidentisch bleibt, solange niemand ihn
+   ruft — sichtbar wird der Look aber erst hier. Geladene Karten ueber-
+   schreiben die Werte gleich wieder aus ihren eigenen Feldern; fehlen sie
+   (Dateien vor dieser Runde), setzt io.js auf 0 und die Karte sieht exakt so
+   aus wie frueher. Werte bewusst zurueckhaltend: die Bindung soll das Bild
+   auf eine Palette ziehen, nicht postern. */
+setPalette(PALETTE_STANDARD, 0.34);
+setMalschicht(MAL_DEZENT);
+setMultiplane(0.5);
 initTerrain(scene);
 initWater(scene);
 initSky(scene);
 initAtmosphere(scene);
+// VFX nach der Atmosphaere: initAtmosphere verdrahtet #wetterSel, setWetter()
+// weiter unten schreibt dann bereits in ein fertig aufgebautes Partikelsystem.
+initVfx(scene);
 initSelection(scene);
 initPanels();
 setRauchSammler(setRauchQuellen);
@@ -145,6 +161,7 @@ cam.tYaw = cam.yaw = 0.85;
 cam.tPitch = cam.pitch = 42 * DEG;
 
 setTod("mittag", true);
+setWetter("klar", true);       // Standardwetter; waehlt bei "klar" den Biom-VFX
 buildRail();
 buildPanel();
 updateHint();
@@ -159,6 +176,10 @@ window.addEventListener("resize", function () {
    Renderschleife
    ========================================================================== */
 var fps = 60, frameCount = 0, fpsAcc = 0, lastT = performance.now();
+// Wiederverwendeter Fokuspunkt fuer tickVfx — das Partikelvolumen haengt am
+// Kamerafokus (x/z aus cam.focus, Hoehe aus cam.focusY). Ein Modulobjekt statt
+// eines Literals pro Bild: kein Muell fuer den Sammler.
+var vfxFokus = { x: 0, y: 0, z: 0 };
 
 function animate() {
   requestAnimationFrame(animate);
@@ -171,15 +192,22 @@ function animate() {
   moveFocus(dt);
   updateCamera(dt);
   tickAtmosphere(raw);
-  updateSky(dt);
+  // Wolkentempo aus der Wetterlage: im Sturm jagen Cumulus und Zirren, im
+  // Schneefall ziehen sie langsamer. sky.js bleibt dafuer unveraendert.
+  updateSky(dt * getWolkenTempo());
   tickWind(now * 0.001);
   updateBirds(dt, now * 0.001);
   updateRauch(now * 0.001);
+  vfxFokus.x = cam.focus.x; vfxFokus.y = cam.focusY; vfxFokus.z = cam.focus.z;
+  tickVfx(now * 0.001, vfxFokus);
   water.visible = wasserSichtbar(scene.fog.far);
   if (water.visible) updateWater(now * 0.001);
   flushPack();
   updateHandlePositions();
   tickToast(now);
+  // Marker-Beschriftung als HTML-Overlay ueber dem Canvas (D1) — eigene
+  // Zeile statt Anhaengsel von tickToast, damit der Taktgeber eindeutig bleibt.
+  markerOverlayAktualisieren();
   renderFrame(camera, now * 0.001);
 
   frameCount++; fpsAcc += raw;

@@ -1,6 +1,7 @@
 // Aenderungs-Orchestrierung: Elemente (neu) erzeugen, Terrain/Korridore
 // nachziehen, geaenderte Pools packen.
 import { S, HALF, VINE_R, clearElement, dropElement } from './store.js';
+import { lerp } from './rng.js';
 import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
 import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
@@ -281,26 +282,174 @@ function isHeavy(el) {
 }
 
 
+/* ===== B1 — Arbor-Netzwerk ===============================================
+   Ranken generieren isoliert (Architektur-Invariante: ein Element rechnet
+   aus seinen eigenen Daten). Welche Ranken MITEINANDER verwachsen sind, ist
+   dagegen eine Aussage ueber die ganze Karte und gehoert deshalb hierher —
+   in die Orchestrierung, die ohnehin ueber alle Elemente laeuft.
+
+   Die Analyse liest ausschliesslich `el._netz`, das genRanke veroeffentlicht
+   (Fusspunkte mit Radius, Plateaumitten mit halber Blattlaenge). Sie schreibt
+   nichts zurueck, was die GEOMETRIE beeinflusst — nur `el._netzGrad`, und der
+   wirkt einzig auf die Lichtstaerke (siehe refreshArborQuellen).
+
+   Warum der Netzgrad NICHT in genRanke gelesen wird (die als optional
+   ausgewiesene Kopplung): genRanke muesste dann bei jeder Aenderung eines
+   NACHBARN neu laufen. Das Ein-Element-Dirty-Tracking (regenElement),
+   history.js/restore und die Ladereihenfolge in rebuildAll kennen aber keine
+   Komponenten — ein Element, das ein anderes betritt, wuerde still veralten.
+   Der Netzgrad bleibt darum, wo er nichts kaputtmachen kann: im globalen
+   Lichtpass, der bei jedem Commit ohnehin komplett neu gerechnet wird und
+   ausschliesslich Uniforms schreibt. Der erzaehlerische Effekt aus B1
+   (isolierte Triebe leuchten schwaecher, das vernetzte Zentrum staerker) ist
+   damit vollstaendig da; nur das Ranken-Mesh selbst bleibt unabhaengig. */
+
+/* Kopplungsschwelle am Fuss: Vielfaches der Fussradien. 4.6 ist NICHT
+   gegriffen, sondern genau die Reichweite des Wurzeltellers in vines.js —
+   dort laufen die Wurzeln bis `R * rr(rW, 1.6, 4.6)` und der Erdhuegel ist
+   `moundGeo(R * 4.6, ...)`. Zwei Ranken, deren Wurzelteller einander
+   beruehren, sind also im Bild WIRKLICH zusammengewachsen. */
+var NETZ_WURZEL = 4.6;
+/* Kopplungsschwelle oben: Plateaus gelten als verbunden, wenn sich ihre
+   Blaetter ueberlappen (Summe der halben Blattlaengen) ODER wenn zwischen
+   ihnen eine Haengebruecke moeglich waere. 55 ist dieselbe Spannweite, ab
+   der genRanke innerhalb EINES Elements keine Bruecke mehr baut — die
+   Netzanalyse benutzt damit exakt das Kriterium, das die Geometrie selbst
+   schon kennt, statt eine zweite Zahl zu erfinden. */
+var NETZ_SPANN = 55;
+/* Lichtdaempfung des am schwaechsten vernetzten Triebes. */
+var NETZ_LICHT_MIN = 0.55;
+
+/** Netzgeometrie eines Ranken-Elements. genRanke setzt `_netz`; fehlt es
+ *  (Element noch nie erzeugt), genuegen die Fusspunkte aus el.points. */
+function netzDatenVon(el) {
+  if (el._netz && el._netz.fuesse && el._netz.fuesse.length) return el._netz;
+  var pr = el.params || {}, f = [];
+  for (var i = 0; i < el.points.length; i++) {
+    f.push({ x: el.points[i].x, z: el.points[i].z, r: VINE_R * (pr.dicke || 1) });
+  }
+  return { fuesse: f, plateaus: [] };
+}
+
+/** Sind zwei Rankennetze verbunden? Reine Geometrie, kein Zufall. */
+function netzeVerbunden(a, b) {
+  var i, j, dx, dy, dz, s;
+  var fa = a.fuesse, fb = b.fuesse;
+  for (i = 0; i < fa.length; i++) {
+    for (j = 0; j < fb.length; j++) {
+      dx = fa[i].x - fb[j].x; dz = fa[i].z - fb[j].z;
+      s = NETZ_WURZEL * (fa[i].r + fb[j].r);
+      if (dx * dx + dz * dz < s * s) return true;
+    }
+  }
+  var pa = a.plateaus, pb = b.plateaus;
+  for (i = 0; i < pa.length; i++) {
+    for (j = 0; j < pb.length; j++) {
+      dx = pa[i].x - pb[j].x; dy = pa[i].y - pb[j].y; dz = pa[i].z - pb[j].z;
+      // pa.r/pb.r sind bereits HALBE Blattlaengen — ihre Summe ist der
+      // Beruehrungsabstand der beiden Blaetter.
+      s = Math.max(pa[i].r + pb[j].r, NETZ_SPANN);
+      if (dx * dx + dy * dy + dz * dz < s * s) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * B1 — Zusammenhangskomponenten aller Ranken der Karte.
+ *
+ * Verfahren: Union-Find ueber alle Paare. Aufwand O(n² · (f² + p²)) mit n =
+ * Ranken, f = Fuesse je Ranke (1..wenige), p = Plateaus (0..6) — bei den
+ * realistischen Kartengroessen sind das ein paar hundert Abstandsquadrate
+ * und damit billiger als ein einziges emit(). Deterministisch: keine
+ * Zufallsquelle, und beim Vereinigen gewinnt immer der kleinere Index, die
+ * Komponentenwurzeln haengen also nicht an der Vergleichsreihenfolge.
+ *
+ * `netzGrad` = Komponentengroesse / groesste Komponentengroesse, also 0..1
+ * mit 1 fuer das Zentrum. Diese Normierung ist bewusst RELATIV gewaehlt:
+ * gibt es keine einzige Verwachsung, sind alle Komponenten gleich gross,
+ * jeder Netzgrad ist exakt 1 und die Lichtrechnung bleibt Zahl fuer Zahl die
+ * bisherige. Erst wenn wirklich ein Buendel entsteht, faellt die Peripherie
+ * ab — genau die Aussage von B1 und keine einzige Aenderung darueber hinaus.
+ *
+ * Rueckgabe: [{ el, komponente, groesse, netzGrad }] in Elementreihenfolge.
+ * Nebenwirkung: setzt `el._netzGrad` (nicht serialisiert, siehe
+ * serializeElements-Whitelist in store.js).
+ */
+function rankenNetz() {
+  var ranken = [], daten = [], i, j;
+  for (i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind !== "ranke" || !el.points.length) continue;
+    ranken.push(el);
+    daten.push(netzDatenVon(el));
+  }
+  var n = ranken.length, vater = [];
+  for (i = 0; i < n; i++) vater.push(i);
+  function wurzel(x) {
+    while (vater[x] !== x) { vater[x] = vater[vater[x]]; x = vater[x]; }
+    return x;
+  }
+  for (i = 0; i < n; i++) {
+    for (j = i + 1; j < n; j++) {
+      if (!netzeVerbunden(daten[i], daten[j])) continue;
+      var wi = wurzel(i), wj = wurzel(j);
+      if (wi !== wj) vater[wi < wj ? wj : wi] = wi < wj ? wi : wj;
+    }
+  }
+  var groesse = [], maxG = 1;
+  for (i = 0; i < n; i++) groesse.push(0);
+  for (i = 0; i < n; i++) groesse[wurzel(i)]++;
+  for (i = 0; i < n; i++) if (groesse[i] > maxG) maxG = groesse[i];
+  var out = [];
+  for (i = 0; i < n; i++) {
+    var w = wurzel(i), g = groesse[w], grad = g / maxG;
+    ranken[i]._netzGrad = grad;
+    out.push({ el: ranken[i], komponente: w, groesse: g, netzGrad: grad });
+  }
+  return out;
+}
+
+/** Lichtfaktor aus dem Netzgrad. Bei Netzgrad 1 EXAKT 1 (nicht ueber lerp
+ *  gerechnet — 0.55 ist binaer nicht darstellbar, und der Regelfall soll
+ *  bitgenau die Eins sein). */
+function netzGewicht(grad) {
+  if (!(grad < 1)) return 1;
+  return lerp(NETZ_LICHT_MIN, 1, grad < 0 ? 0 : grad);
+}
+
 /**
  * Meldet die Rankenfuesse als Arbor-Lichtquellen an den Shader (H3).
  * Kanon: Arbor haelt den zerrissenen Planeten zusammen und spendet der Welt
  * Licht — die Ranken muessen ihre Umgebung also wirklich aufhellen, nicht nur
- * selbst hell sein. genRanke darf `el._arbor` setzen (mehrere Fuesse, eigene
- * Radien); fehlt das Feld, genuegt der erste Punkt.
+ * selbst hell sein. genRanke setzt `el._arbor` (mehrere Fuesse, eigene Radien
+ * und die Alterung aus B2); fehlt das Feld — das Element wurde noch nie
+ * erzeugt —, wird dieselbe Formel ersatzweise aus points/params gerechnet.
+ *
+ * B1: Die Staerke jeder Quelle wird mit dem Netzgrad ihres Elements
+ * gewichtet. Die Eintraege werden dabei KOPIERT, nicht in `_arbor`
+ * multipliziert — sonst wuerde sich der Faktor ueber die vielen Aufrufe
+ * dieser Funktion aufmultiplizieren.
  */
 function refreshArborQuellen() {
-  var q = [];
-  for (var i = 0; i < S.elements.length; i++) {
-    var el = S.elements[i];
-    if (el.kind !== "ranke" || !el.points.length) continue;
-    if (el._arbor && el._arbor.length) { q.push.apply(q, el._arbor); continue; }
+  var netz = rankenNetz();
+  var q = [], i, k;
+  for (i = 0; i < netz.length; i++) {
+    var el = netz[i].el, g = netzGewicht(netz[i].netzGrad);
+    if (el._arbor && el._arbor.length) {
+      for (k = 0; k < el._arbor.length; k++) {
+        var a = el._arbor[k];
+        q.push({ x: a.x, z: a.z, radius: a.radius, staerke: a.staerke * g });
+      }
+      continue;
+    }
     var pr = el.params || {};
-    for (var k = 0; k < el.points.length; k++) {
+    for (k = 0; k < el.points.length; k++) {
       q.push({
         x: el.points[k].x, z: el.points[k].z,
         radius: VINE_R * (pr.dicke || 1),
         // Hohe Ranken tragen weiter: 220 Einheiten sind die volle Staerke.
-        staerke: Math.min(1, (pr.hoehe || 0) / 220)
+        staerke: Math.min(1, (pr.hoehe || 0) / 220) * g
       });
     }
   }
@@ -316,4 +465,5 @@ function deleteElement(el) {
 
 export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildBrueche, rebuildCorridors,
   rebuildAll, commit, isHeavy, deleteElement, refreshArborQuellen,
+  rankenNetz, netzGewicht,
   markDirty, flushPack };

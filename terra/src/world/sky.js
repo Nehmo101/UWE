@@ -128,6 +128,28 @@ function setSterne(alpha) {
   sternPunkte.visible = alpha > 0.003;
 }
 
+/* --- F5: Bewegungsdisziplin am Himmel -----------------------------------
+   In den Vorlagen steht der Himmel praktisch. Beide Tempofaktoren wirken
+   AUSSCHLIESSLICH an der Driftstelle (updateClouds/updateCirren); die
+   Erzeugungsbloecke mit rngOf/rr bleiben Zeichen fuer Zeichen unveraendert,
+   damit Positionen, Groessen, Blob-Versaetze und der Zufallsstrom identisch
+   bleiben — es aendert sich nur, wie schnell ein bereits erzeugtes v
+   abgefahren wird.
+
+   WOLKEN_TEMPO 0.45: Cumulus liefen mit v = 0.22 .. 1.22 Welteinheiten/s
+   (Mittel 0.62), jetzt mit 0.10 .. 0.55 (Mittel 0.279). Eine Wolke braucht
+   fuer die 1560 Einheiten des Umlaufs damit rund 1.6 h statt 42 min.
+
+   ZIRREN_TEMPO 0.12: Zirren liefen mit 0.25 .. 0.55 (Mittel 0.40) — nur
+   knapp langsamer als die Cumulus, obwohl der Kommentar "sehr langsam"
+   versprach. Jetzt 0.030 .. 0.066 (Mittel 0.048), also rund 5.8-mal
+   langsamer als die mittlere Cumuluslage. Damit stehen sie fuer das Auge.
+
+   Die Wetterskala bleibt erhalten: main.js ruft updateSky(dt * getWolkenTempo()),
+   der Faktor greift also weiterhin voll auf beide Schichten.                */
+var WOLKEN_TEMPO = 0.45;
+var ZIRREN_TEMPO = 0.12;
+
 /* --- Zirren: wenige langgezogene Streifen, sehr langsam ----------------- */
 var CIRRUS_N = 7;
 var cirrusMat = new THREE.MeshBasicMaterial({
@@ -245,7 +267,7 @@ var _cloudObj = new THREE.Object3D();
 function updateClouds(dt) {
   for (var i = 0; i < CLOUD_N; i++) {
     var c = clouds[i];
-    c.x += c.v * dt;
+    c.x += c.v * WOLKEN_TEMPO * dt;
     if (c.x - cam.focus.x > 780) c.x -= 1560;
     if (c.x - cam.focus.x < -780) c.x += 1560;
     if (c.z - cam.focus.z > 780) c.z -= 1560;
@@ -267,7 +289,8 @@ function updateClouds(dt) {
 function updateCirren(dt) {
   for (var i = 0; i < CIRRUS_N; i++) {
     var c = cirren[i];
-    c.x += c.v * dt;                       // deutlich langsamer als Cumulus
+    // Zirren stehen praktisch: ~5.8-mal langsamer als die mittlere Cumuluslage
+    c.x += c.v * ZIRREN_TEMPO * dt;
     if (c.x - cam.focus.x > 980) c.x -= 1960;
     if (c.x - cam.focus.x < -980) c.x += 1960;
     _cirObj.position.set(c.x, c.y, c.z);
@@ -292,8 +315,11 @@ function updateSky(dt) {
   updateCirren(dt);
 }
 
-/** Mittlere Driftgeschwindigkeit (fuer synchrone Wolkenschatten am Boden). */
-var CLOUD_DRIFT_MITTEL = 0.62;
+/** Mittlere Driftgeschwindigkeit (fuer synchrone Wolkenschatten am Boden).
+    MUSS WOLKEN_TEMPO enthalten: atmosphere.js schiebt uCloudDrift mit genau
+    diesem Wert weiter, sonst laufen die Bodenschatten ihren Wolken davon. */
+var CLOUD_DRIFT_MITTEL = 0.62 * WOLKEN_TEMPO;   // 0.279
 
 export { initSky, updateSky, paintSky, setSonne, setSonnenDir, setWolkenFarben,
-  setSterne, recolorClouds, cirrusMat, CLOUD_DRIFT_MITTEL };
+  setSterne, recolorClouds, cirrusMat, CLOUD_DRIFT_MITTEL,
+  WOLKEN_TEMPO, ZIRREN_TEMPO };

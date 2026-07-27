@@ -93,6 +93,22 @@ function tryPlaceUfer(occ, x, z, r) {
   return { h: h, yaw: yaw };
 }
 
+/**
+ * Dritte Regel des Objektkatalogs ("Fr" — keine Bodenregeln), Gegenstueck zu
+ * tryPlace fuer alles, was schwebt oder an einer Ranke haengt: Moewe,
+ * Schwebescholle, Sturzwurzel, Gleiter, Sporenlaterne. Begruendung wie bei
+ * genInseln: Wasserverbot, Steilhangverbot und Korridorverbot gelten fuer
+ * BODENSTAENDIGE Objekte — eine fliegende Moewe darf ueber allem haengen.
+ * Rueckgabe ist die Bodenhoehe; die Flughoehe legt genObjekt darueber, damit
+ * die Silhouette dem Gelaende folgt statt in einen Hang zu tauchen.
+ */
+function tryPlaceFrei(occ, x, z, r) {
+  if (x < -HALF + 1 || x > HALF - 1 || z < -HALF + 1 || z > HALF - 1) return null;
+  if (occ && !occFree(occ, x, z, r)) return null;
+  if (occ) occAdd(occ, x, z, r);
+  return heightAt(x, z);
+}
+
 var KULTUR = {
   dorf:      [["haus", 6], ["hausA", 3], ["hausB", 3], ["hausC", 2], ["scheune", 2],
               ["windmuehle", 1], ["turm", 1], ["brunnen", 1], ["karren", 1],
@@ -123,6 +139,45 @@ KULTUR.holzburg = [["palisade", 6], ["palisadentor", 1], ["wachturm", 3],
                    ["haus", 3], ["hausC", 2], ["scheune", 2], ["heuhaufen", 1],
                    ["karren", 1], ["fass", 1]];
 KULTUR.wohn = KULTUR.dorf;          // Rückwärtskompatibilität für alte Karten
+
+/* Katalogbündel 4–15 (Landwirtschaft, Handwerk, Sakral, Wohnbau, Biome,
+   Requisiten, Tiere). Auch hier gilt: NUR NEUE Schlüssel. Die neun Tabellen
+   oben behalten Wort für Wort ihre Gewichte, sonst würfelt wpick jede
+   bestehende Karte neu aus. */
+KULTUR.bauern = [["viehstall", 3], ["kornspeicher", 3], ["heuschober", 3],
+                 ["scheune", 3], ["hausC", 3], ["haus", 2], ["pferch", 2],
+                 ["ackerscholle", 3], ["dreschtenne", 1], ["taubenschlag", 1],
+                 ["bienenstand", 1], ["vogelscheuche", 2], ["garbe", 2],
+                 ["holzstapel", 2], ["schubkarre", 1], ["rind", 2], ["schaf", 2]];
+KULTUR.handwerk = [["schmiede", 3], ["ziegelofen", 2], ["glashuette", 2],
+                   ["gerbergruben", 2], ["faerbergestell", 2], ["steinmetzhof", 2],
+                   ["lagerhaus", 2], ["koehlermeiler", 2], ["hochschlot", 1],
+                   ["saegewerk", 1], ["seilerbahn", 1], ["holzstapel", 3],
+                   ["fass", 2], ["kiste", 2], ["karren", 1]];
+KULTUR.kloster = [["kapelle", 4], ["glockenturm", 2], ["kathedralenschiff", 1],
+                  ["arkade", 3], ["bildstock", 2], ["gartenbeet", 3],
+                  ["brunnen", 1], ["zypresse", 3], ["obstbaum", 2], ["bank", 2]];
+KULTUR.stadt = [["turmhaus", 4], ["giebelhaus", 4], ["haus2", 3], ["laubenhaus", 3],
+                ["hofdurchfahrt", 2], ["wohnblock", 2], ["villa", 1],
+                ["laterne", 2], ["marktstand", 1], ["brunnen", 1], ["tisch", 1]];
+KULTUR.nordisch = [["langhaus", 4], ["grubenhaus", 3], ["hausC", 2], ["scheune", 2],
+                   ["palisade", 2], ["holzstapel", 2], ["heuhaufen", 1],
+                   ["feuerstelle", 1], ["nadelbaum", 2]];
+KULTUR.eis = [["iglu", 4], ["pelzzelt", 4], ["eisfischerhuette", 2], ["schneewall", 3],
+              ["eisfels", 3], ["schlitten", 2], ["geweihgestell", 2],
+              ["thermalquelle", 1], ["gletschertor", 1]];
+KULTUR.wueste = [["lehmkuppelhaus", 4], ["wuestenzelt", 3], ["kleinzelt", 3],
+                 ["lehmspeicher", 3], ["windfaenger", 2], ["zisterne", 1],
+                 ["oasenbecken", 1], ["traenke", 2], ["palme", 3], ["obelisk", 1],
+                 ["tontoepfe", 2], ["marktkorb", 1]];
+KULTUR.moor = [["moorhuette", 4], ["torfstich", 2], ["torfstapel", 3],
+               ["pfahlgoetze", 2], ["moorsteg", 2], ["wollgras", 3],
+               ["sumpfbaum", 2], ["irrlicht", 1], ["stumpf", 2]];
+KULTUR.arbor = [["rankenhaus", 3], ["samenkapsel", 3], ["huetersaeule", 2],
+                ["arborschrein", 2], ["rankenaltar", 2], ["rankentor", 1],
+                ["lichtsammler", 2], ["samenreliquiar", 1], ["blattkanzel", 1],
+                ["rankenleiter", 2], ["lichtbluete", 3], ["sporenlaterne", 3],
+                ["saftzapfer", 2], ["leuchtpilz", 2]];
 
 var OBJGRUPPEN = {
   baeume: [["baum", 4], ["baum2", 3], ["nadelbaum", 3], ["sumpfbaum", 1],
@@ -162,7 +217,81 @@ var OBJGRUPPEN = {
           ["netzgestell", 3], ["kaitreppe", 3], ["fischtrockner", 2],
           ["hafenlaterne", 3], ["bootshaus", 2], ["uferdamm", 2], ["kaikran", 2],
           ["leuchtfeuer", 2], ["slipbahn", 1], ["salzgarten", 1],
-          ["werfthalle", 1], ["helling", 1], ["leuchtturm", 1], ["kanalschleuse", 1]]
+          ["werfthalle", 1], ["helling", 1], ["leuchtturm", 1], ["kanalschleuse", 1]],
+
+  /* --- Katalogbündel 4–15. Ausschliesslich NEUE Gruppen: die neun oben
+     behalten ihre Einträge und Gewichte unverändert, damit bestehende Karten
+     exakt dieselbe Bestückung behalten. Durchgehendes Gewichtsprinzip:
+     Streuware hoch, Einzelstücke auf 1 — vervielfacht wirkt ein Einzelstück
+     wie Kulisse, einzeln wie ein Ereignis. */
+
+  /* Fels- und Pilzformationen. Trägt die neuen Biome (Vulkan, Pilzwald,
+     Bambus, Geysirfeld) und ergänzt die bestehende, magere "felsen"-Gruppe,
+     ohne sie anzufassen. */
+  natur2: [["findling", 5], ["geroell", 6], ["felsnadel", 4], ["basaltsaeulen", 3],
+           ["dornbusch", 4], ["bambus", 4], ["blumenteppich", 4], ["riesenpilz", 2],
+           ["leuchtpilz", 3], ["pilzhut", 2], ["schlammtopf", 2], ["geysir", 1],
+           ["felsbogen", 1], ["lavaspalte", 1]],
+  /* Ruinen aus bruchkante(). Bewusst getrennt von der Bestandsgruppe "ruinen"
+     (saeule/mauer/fels), die als grobe Kulisse weiterlebt. */
+  ruinen2: [["mauerruine", 5], ["truemmerhaufen", 4], ["saeulenstumpf", 4],
+            ["statuentorso", 2], ["ruinenturm", 2], ["giebelruine", 2],
+            ["treppenruine", 2], ["gewoelbekeller", 1], ["rissspalt", 1],
+            ["tempelruine", 1], ["bruchkante", 1], ["rosette", 1]],
+  /* Arbor: die weisse, leuchtende Seite des Settings. Die kleinen Leuchten
+     sind hoch gewichtet — sie tragen die Stimmung, die Bauten sind der Anlass. */
+  arbor: [["lichtbluete", 5], ["sporenlaterne", 5], ["huetersaeule", 3],
+          ["rankenaltar", 3], ["arborschrein", 3], ["saftzapfer", 3],
+          ["rankenleiter", 2], ["wurzelanker", 2], ["wurzelbogen", 2],
+          ["samenkapsel", 2], ["lichtsammler", 2], ["rankentor", 2],
+          ["rankenknoten", 1], ["rankenstamm", 1], ["samenreliquiar", 1],
+          ["blattkanzel", 1], ["blattsteg", 1], ["rankenkai", 1], ["rankentreppe", 1]],
+  eis: [["eisfels", 5], ["schneewall", 4], ["pelzzelt", 3], ["iglu", 3],
+        ["schlitten", 3], ["geweihgestell", 2], ["eisfischerhuette", 2],
+        ["thermalquelle", 2], ["gletschertor", 1]],
+  wueste: [["palme", 5], ["sandwehe", 4], ["kleinzelt", 3], ["lehmspeicher", 3],
+           ["traenke", 3], ["gebein", 3], ["wuestenzelt", 2], ["windfaenger", 2],
+           ["lehmkuppelhaus", 2], ["obelisk", 2], ["oasenbecken", 1], ["zisterne", 1]],
+  moor: [["wollgras", 6], ["torfstapel", 4], ["pfahlgoetze", 3], ["irrlicht", 3],
+         ["torfstich", 2], ["moorhuette", 2], ["dornbusch", 2], ["stumpf", 2]],
+  /* Landwirtschaft: der bewirtschaftete Gürtel ums Dorf. */
+  hof: [["ackerscholle", 5], ["garbe", 4], ["rebenreihe", 4], ["vogelscheuche", 3],
+        ["heuschober", 3], ["obstbaum", 3], ["pferch", 2], ["bienenstand", 2],
+        ["taubenschlag", 2], ["kornspeicher", 2], ["viehstall", 2],
+        ["hopfengeruest", 2], ["dreschtenne", 1], ["terrassenfeld", 1],
+        ["wassermuehle", 1]],
+  handwerk: [["holzstapel", 4], ["koehlermeiler", 3], ["schmiede", 3],
+             ["steinmetzhof", 3], ["faerbergestell", 2], ["gerbergruben", 2],
+             ["ziegelofen", 2], ["kalkofen", 2], ["glashuette", 2],
+             ["windpumpe", 2], ["lagerhaus", 2], ["hochschlot", 1],
+             ["saegewerk", 1], ["seilerbahn", 1], ["wasserrad", 1]],
+  sakral: [["bildstock", 5], ["menhir", 4], ["opferstein", 3], ["feuerschale", 3],
+           ["gebetsband", 3], ["kapelle", 2], ["glockenturm", 2], ["grabhuegel", 2],
+           ["steinkreis", 1], ["kathedralenschiff", 1]],
+  wohnbau: [["turmhaus", 4], ["giebelhaus", 4], ["grubenhaus", 3], ["langhaus", 3],
+            ["laubenhaus", 2], ["hofdurchfahrt", 2], ["baumhaus", 2],
+            ["stollenhaus", 2], ["elfenlaube", 2], ["wohnblock", 1],
+            ["gaube", 1], ["kamin", 1]],
+  requisiten: [["holzstapel", 4], ["bank", 4], ["tontoepfe", 4], ["sackstapel", 3],
+               ["wagenrad", 3], ["leiter", 3], ["wasserbottich", 3], ["tisch", 3],
+               ["lattenzaun", 3], ["gartenbeet", 3], ["marktkorb", 3],
+               ["schubkarre", 2], ["waescheleine", 2], ["feuerstelle", 2],
+               ["kochkessel", 2], ["brunnentrog", 2], ["blumenkasten", 1]],
+  tiere: [["schaf", 5], ["rind", 4], ["ziege", 3], ["pferd", 3], ["kutsche", 1],
+          ["ochsengespann", 1]],
+  /* Wasserflora: dieselbe invertierte Regel wie "maritim" (siehe genObjekt) —
+     diese Gruppe steht AUF dem Wasser, nicht daneben. */
+  wasserflora: [["seerose", 5], ["schilf", 5], ["seetang", 4], ["koralle", 3],
+                ["aalreuse", 2], ["moorkahn", 2], ["moorsteg", 2], ["eisscholle", 2]],
+  /* Uferband wie "hafen", aber die Naturseite davon. */
+  ufer2: [["muschelbank", 5], ["treibholz", 4], ["schilf", 4], ["wollgras", 3],
+          ["wurzelstelze", 2], ["kaskadenstufe", 2], ["pfahlhaus", 2],
+          ["wasserrad", 1], ["eisfischerhuette", 1]],
+  /* Schwebendes (Regel "Fr", siehe tryPlaceFrei): ueber tryPlace waere davon
+     kein Stueck platzierbar, und ohne Gruppe waere es nur ueber nurTyp
+     erreichbar. Die Flughoehe kommt in genObjekt dazu. */
+  schwebend: [["moewe", 6], ["sporenlaterne", 4], ["lichtbluete", 3],
+              ["schwebefels", 2], ["sturzwurzel", 2], ["rankengleiter", 1]]
 };
 /* Ortsstabiler Zufallsstrom je (Klickpunkt i, Inselindex k) — Muster ortsRng
    aus vines.js: der Strom haengt am stabilen Indexpaar statt an der
@@ -237,7 +366,12 @@ function genObjekt(el) {
   // richtet dort zusaetzlich aus. Alle uebrigen Varianten laufen unveraendert
   // ueber tryPlace — die Fallunterscheidung haengt bewusst an der Variante und
   // nicht am Pool, damit nurTyp weiterhin jeden Pool in jede Regel setzen kann.
-  var aufWasser = el.variant === "maritim", amUfer = el.variant === "hafen";
+  // "wasserflora" und "ufer2" (Katalogbuendel 4-15) haengen sich an dieselben
+  // beiden Regeln — rein additiv: die Zuordnung der Bestandsvarianten aendert
+  // sich nicht, es kommt je eine zweite Variante pro Regel dazu.
+  var aufWasser = el.variant === "maritim" || el.variant === "wasserflora";
+  var amUfer = el.variant === "hafen" || el.variant === "ufer2";
+  var schwebt = el.variant === "schwebend";
   for (var i = 0; i < el.points.length; i++) {
     var pt = el.points[i];
     var rng = rngOf((el.seed + i * 7919) | 0);
@@ -252,7 +386,13 @@ function genObjekt(el) {
       var r = POOLS[kind].radius * 0.85, h = null, ufer = null;
       if (aufWasser) h = tryPlaceWasser(occ, x, z, r);
       else if (amUfer) { ufer = tryPlaceUfer(occ, x, z, r); if (ufer) h = ufer.h; }
-      else h = tryPlace(occ, x, z, r, { ignoreCorridor: p.frei });
+      else if (schwebt) {
+        h = tryPlaceFrei(occ, x, z, r);
+        // Flughoehe ueber dem Gelaende. Sie folgt dem Boden, damit die
+        // Silhouette am Hang nicht im Fels verschwindet; emit legt bei dieser
+        // Distanz zum Boden automatisch KEINEN Kontaktschatten mehr ab.
+        if (h !== null) h += 4.5 + rng() * 8;
+      } else h = tryPlace(occ, x, z, r, { ignoreCorridor: p.frei });
       if (h === null) continue;
       // Zufallsreihenfolge unveraendert: erst groesse, dann Drehung, dann
       // Hoehenfaktor, dann Tint. Die Drehung steht nur deshalb in einer
@@ -309,5 +449,5 @@ function emitFensterlicht(el, rng, kind, x, y, z, yaw, sc) {
   }
 }
 
-export { newOcc, occFree, occAdd, tryPlace, tryPlaceWasser, tryPlaceUfer,
+export { newOcc, occFree, occAdd, tryPlace, tryPlaceWasser, tryPlaceUfer, tryPlaceFrei,
   KULTUR, OBJGRUPPEN, genObjekt, genInseln, emitFensterlicht, emitLicht };

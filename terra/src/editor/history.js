@@ -1,8 +1,8 @@
 // Undo/Redo ueber Schnappschuesse von Elementliste und Terrainhoehen.
-import { S, serializeElements, hydrate } from '../core/store.js';
+import { S, serializeElements, hydrate, serializeMarker, hydrateMarker } from '../core/store.js';
 import { base } from '../world/terrain.js';
 import { rebuildAll } from '../core/dirty.js';
-import { rebuildHandles } from './selection.js';
+import { rebuildHandles, rebuildMarker } from './selection.js';
 import { ed } from './tools.js';
 import { buildPanel, toast } from '../ui/panels.js';
 
@@ -33,9 +33,16 @@ function terrainGeaendert() {
  * Argument uebergeben (der Terrain-Pinsel in pointer.js mutiert base nach
  * seinem pushUndo(); der naechste Schnappschuss muss den neuen Stand sichern).
  */
+/* Marker sind Teil des Schnappschusses (frueher nicht — ein geloeschter
+   Marker liess sich nicht zurueckholen). Sie liegen als eigene flache Liste
+   in S.marker (D1) und sind billig zu sichern: JSON ueber {x,z,text,art},
+   ohne Laufzeitfelder. Gleiche Copy-on-Write-Frage wie beim Terrain stellt
+   sich nicht, weil serializeMarker() ohnehin frische Objekte liefert und der
+   String danach unveraenderlich ist. */
 function snapshot(mitTerrain) {
   if (mitTerrain === true || terrainGeaendert()) letzteTerrainKopie = base.slice();
-  return { el: JSON.stringify(serializeElements()), h: letzteTerrainKopie };
+  return { el: JSON.stringify(serializeElements()), h: letzteTerrainKopie,
+    mk: JSON.stringify(serializeMarker()) };
 }
 
 function pushUndo(mitTerrain) {
@@ -51,6 +58,16 @@ function restore(s) {
   // und der naechste Schnappschuss keine unnoetige Vollkopie zieht.
   letzteTerrainKopie = s.h;
   hydrate(JSON.parse(s.el));
+  // Marker zurueckholen. `mk` ist optional geprueft, damit ein von aussen
+  // gebauter Schnappschuss (restore/snapshot sind exportiert) die Historie
+  // nicht sprengt; fehlt das Feld, bleiben die Marker wie sie sind.
+  if (typeof s.mk === "string") {
+    hydrateMarker(JSON.parse(s.mk));
+    // rebuildMarker() baut die Nadeln neu UND klemmt dabei die Markerauswahl
+    // auf die neue Listenlaenge (selection.js) — nach einem rueckgaengig
+    // gemachten Loeschen zeigt der Index sonst auf einen fremden Marker.
+    rebuildMarker();
+  }
   ed.selected = null;
   ed.draw = null;
   rebuildAll();

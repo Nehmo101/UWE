@@ -89,12 +89,37 @@
     <button class="tod" data-t="nebel">Nebel</button>
     <button class="tod" data-t="nacht">Nacht</button>
     <div class="sep"></div>
+    <label for="wetterSel">Wetter</label>
+    <!-- Zweite Stimmungsachse neben der Tageszeit. Die VALUES sind die
+         Schlüssel der WETTER-Tabelle in world/atmosphere.js; der Listener
+         hängt dort in initAtmosphere() (io.js kennt das Wetter nicht).
+         Wirkt auf Wolkendeckung/-farbe, Nebel, Grading, Windstärke,
+         Kontaktschatten und den Partikeltyp aus world/vfx.js. -->
+    <select id="wetterSel" style="width:auto">
+      <option value="klar" selected>klar</option>
+      <option value="bewoelkt">bewölkt</option>
+      <option value="regen">Regen</option>
+      <option value="schneefall">Schneefall</option>
+      <option value="sturm">Sturm</option>
+    </select>
+    <div class="sep"></div>
     <button id="snapBtn">Raster</button>
     <button id="fxBtn" class="on">Effekte</button>
     <div class="sep"></div>
     <button id="saveBtn">Speichern</button>
     <button id="loadBtn">Laden</button>
     <button id="pngBtn">PNG</button>
+    <div class="sep"></div>
+    <!-- D2 — Höhenbild-Import. Steht jetzt statisch hier statt in io.js
+         erzeugt zu werden: die Leiste gehört ins Dokument, nicht in den
+         Code. io.js sucht beide Elemente per id und hängt nur noch die
+         Listener an; findet es sie nicht (Testläufe ohne dieses Dokument),
+         legt es sie weiterhin selbst an. Das versteckte <input> liegt
+         bewusst direkt neben seinem Knopf — display:none, es beeinflusst
+         das Flex-Layout der Leiste nicht. -->
+    <button id="hoehenbildBtn"
+            title="Graustufenbild als Geländehöhe einlesen (PNG/JPG)">Höhenbild</button>
+    <input type="file" id="hoehenbildIn" accept="image/*" style="display:none">
   </div>
   <div id="stats" class="card"></div>
   <div id="hint" class="card"></div>

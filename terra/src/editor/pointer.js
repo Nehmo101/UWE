@@ -2,20 +2,24 @@
 // Mausbewegungen schreiben nur Koordinaten; die Terrain-Strahl-Auswertung laeuft
 // gedrosselt auf 30 Hz in der Renderschleife (verarbeiteZeiger).
 import { clamp, DEG } from '../core/rng.js';
-import { S, HALF, mkElement, nextSeed } from '../core/store.js';
-import { applyBrush, baseHeightAt, setFlattenTarget } from '../world/terrain.js';
-import { cam, groundPoint, rayFrom, rayPlane, autoPitch } from './camera.js';
-import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOOLS }
+import { S, HALF, KARTE, mkElement, nextSeed, mkMarker } from '../core/store.js';
+import { applyBrush, baseHeightAt, setFlattenTarget, heightAt } from '../world/terrain.js';
+import { cam, groundPoint, rayFrom, rayPlane, autoPitch,
+  setAufnahme, istAufnahme, aufnahmeAufMotiv } from './camera.js';
+import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOOLS,
+  auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel }
   from './tools.js';
-import { handles, rebuildHandles, updateHandlePositions, setPreview, updateBrushRing,
-  brushRing, pickElement, select, naechstesSegment, aktiverGriff, setAktiverGriff,
-  zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer, zugPixelProHoehe }
+import { handles, rebuildHandles, updateHandlePositions, setPreview, clearPreview, updateBrushRing,
+  brushRing, pickElement, select, auswahlUmschalten, naechstesSegment, aktiverGriff,
+  setAktiverGriff, zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer,
+  zugPixelProHoehe, markerTreffer, waehleMarker, getMarkerAuswahl, rebuildMarker }
   from './selection.js';
 import { raycaster, _ndc, camera } from './camera.js';
 import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
 import { rankePlatzierbar, rankeAchse, rankeKernPunkt } from '../generators/vines.js';
+import { sucheWeg } from '../generators/wegsuche.js';
 import { pushUndo, undo, redo } from './history.js';
-import { toast, buildPanel, updateHint } from '../ui/panels.js';
+import { toast, buildPanel, updateHint, buildRail } from '../ui/panels.js';
 
 var ptr = { down: false, mode: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, handle: -1,
             grab: null, lastClick: 0, lastCx: -999, lastCy: -999, lastX: 0, lastZ: 0,
@@ -29,6 +33,36 @@ var zeigerShift = false;
 var _zeigerEv = { clientX: 0, clientY: 0 };
 // Arbeitspunkte fuer die Zugpunkt-Bearbeitung (Achspunkt mit / ohne Zuganteil)
 var _zpA = { x: 0, y: 0, z: 0 }, _zpB = { x: 0, y: 0, z: 0 };
+
+/* ==========================================================================
+   A2 — Wegsuche: der halbfertige Zustand zwischen den beiden Klicks
+
+   Bewusst NICHT ed.draw: eine Zeichnung sammelt beliebig viele Punkte, kann
+   mit Enter beendet und mit Griffen bearbeitet werden — alles, was hier nicht
+   gilt. ed.draw mitzubenutzen hiesse, finishDraw/cancelDraw/rebuildHandles
+   und die Hinweiszeile mit Sonderfaellen zu durchsetzen. Ein lokaler Punkt
+   ist der ganze Zustand, den das Werkzeug braucht.
+   ========================================================================== */
+var wegStart = null;
+
+/** Bricht eine begonnene Suche ab. Liefert true, wenn wirklich eine lief. */
+function wegAbbrechen() {
+  if (!wegStart) return false;
+  wegStart = null;
+  clearPreview();
+  updateHint();
+  return true;
+}
+
+/* Schrittweite der Suche: die Knotenzahl waechst quadratisch mit 1/schritt.
+   Auf einer 1024er Karte sind das bei 2 rund 263 000 Knoten (gemessen 22 ms),
+   bei 4 nur ein Viertel davon (~5 ms) — und der Unterschied ist im Ergebnis
+   nicht zu sehen, weil Douglas-Peucker den Weg ohnehin auf wenige
+   Stuetzpunkte eindampft. Kleinere Karten bleiben beim feineren Gitter, dort
+   kostet es nichts. */
+function wegOptionen() {
+  return { schritt: KARTE.map >= 1024 ? 4 : 2 };
+}
 
 export function initPointer(cv) {
   cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
@@ -137,7 +171,13 @@ export function initPointer(cv) {
 
     if (ptr.mode === "orbit") {                    // billig, sofort auswerten
       cam.tYaw -= dx * 0.006;
-      cam.tPitch = clamp(cam.tPitch + dy * 0.004, 22 * DEG, 68 * DEG);
+      /* F4: Im Aufnahme-Modus haelt updateCamera die Neigung ohnehin auf dem
+         komponierten Wert (cam.tPitch = AUF.pitch, jedes Bild). Ohne diesen
+         Riegel schriebe das Ziehen tPitch dazwischen immer wieder voll und der
+         Wert zappelte sinnlos zwischen zwei Quellen hin und her — sichtbar
+         wuerde davon nichts, gerechnet schon. Gieren bleibt frei, nur die
+         Bildaufteilung ist eingerastet. */
+      if (!istAufnahme()) cam.tPitch = clamp(cam.tPitch + dy * 0.004, 22 * DEG, 68 * DEG);
       return;
     }
     if (ptr.mode === "pan" && ptr.grab) {          // nur Ebenenschnitt, kein Terrain
@@ -210,8 +250,122 @@ export function initPointer(cv) {
       }
     }
 
+    /* D1 — Markerwerkzeug. Der Zweig steht VOR der Bodenpunkt-Pruefung, weil
+       eine Nadel bergaufwaerts auch dann getroffen wird, wenn der Strahl
+       dahinter keinen Boden mehr findet: das Auswaehlen und Umbenennen eines
+       bestehenden Markers braucht keinen Bodenpunkt, nur das Setzen. */
+    if (ed.tool === "marker") {
+      var mi = markerTreffer(e);
+      if (mi >= 0) {
+        waehleMarker(mi);
+        if (isDouble) {
+          // Text aendern. prompt() ist schlicht, aber ausreichend: eine
+          // Eingabezeile gehoerte ins Panel (ui/panels.js) — Vorschlag im
+          // Bericht. Abbruch (null) laesst den Text unveraendert.
+          var neuT = prompt("Beschriftung des Markers", S.marker[mi].text);
+          if (neuT !== null) { S.marker[mi].text = String(neuT); rebuildMarker(); }
+        }
+        toast(S.marker[mi].text
+          ? "Marker: " + S.marker[mi].text + " (Entf löscht, Doppelklick ändert den Text)"
+          : "Marker ohne Text (Doppelklick beschriftet, Entf löscht)");
+        return;
+      }
+      var mp0 = groundPoint(e);
+      if (!mp0) return;
+      var mp = snapPt(mp0);
+      var txt = prompt("Beschriftung des neuen Markers", "");
+      if (txt === null) return;                 // Abbruch setzt nichts
+      S.marker.push(mkMarker(mp.x, mp.z, String(txt), ed.variantOf.marker));
+      waehleMarker(S.marker.length - 1);
+      toast("Marker gesetzt (" + S.marker.length + " auf der Karte)");
+      return;
+    }
+
     var p = groundPoint(e);
     if (!p) return;
+
+    /* ======================================================================
+       A2 — Wegsuche: erster Klick setzt den Start, zweiter sucht und baut.
+
+       Kein Doppelklick-Sonderfall noetig: die beiden Klicks liegen an
+       verschiedenen Stellen, ein Doppelklick auf denselben Fleck ergaebe
+       Start == Ziel und faellt unten sauber durch (sucheWeg liefert dann eine
+       Zweipunktliste ohne Laenge, die als "zu kurz" verworfen wird).
+       ====================================================================== */
+    if (ed.tool === "wegsuche") {
+      var wsp = snapPt(p);
+      if (!wegStart) {
+        wegStart = wsp;
+        // Einzelner Punkt: setPreview zeigt erst ab zwei Punkten etwas an —
+        // das Gummiband entsteht in verarbeiteZeiger, sobald die Maus zieht.
+        setPreview([wegStart], null, false);
+        toast("Wegsuche: Startpunkt gesetzt — jetzt das Ziel klicken (Esc bricht ab)");
+        updateHint();
+        return;
+      }
+      var wVon = wegStart, wNach = wsp;
+      var weg = sucheWeg(wVon, wNach, wegOptionen());
+      /* „Kein Treffer“ ist hier BEIDES: eine zu kurze Liste und ein
+         unvollstaendiger Weg. sucheWeg liefert im zweiten Fall den besten
+         Teilweg zurueck (damit ein Aufrufer nicht leer ausgeht) — als
+         Editor-Ergebnis waere das aber eine Straße, die im Nirgendwo endet,
+         und der Nutzer haette sie fuer den gewuenschten Weg gehalten. Lieber
+         nichts anlegen und es sagen. */
+      if (!weg || weg.length < 2 || !weg.vollstaendig || weg.laenge < 1) {
+        wegAbbrechen();
+        toast(weg && weg.length >= 2 && !weg.vollstaendig
+          ? "Kein durchgehender Weg zum Ziel gefunden — anderen Zielpunkt wählen"
+          : "Start und Ziel liegen zu dicht beieinander");
+        return;
+      }
+      /* Eigene Punktobjekte: die Liste aus sucheWeg traegt Zusatzfelder und
+         gehoert nicht dem Element. Ausserdem soll das Raster (S.snap) auch
+         hier greifen — und genau dadurch koennen zwei Stuetzpunkte auf
+         dieselbe Rasterzelle fallen; ein doppelter Nachbarpunkt ergaebe in
+         pathSamples ein Kurvenstueck der Laenge null. */
+      var wPts = [];
+      for (var wi = 0; wi < weg.length; wi++) {
+        var wq = snapPt(weg[wi]), wl = wPts[wPts.length - 1];
+        if (wl && wl.x === wq.x && wl.z === wq.z) continue;
+        wPts.push(wq);
+      }
+      // Erst pruefen, dann den Undo-Punkt setzen: bis hierher ist die Karte
+      // unveraendert, ein Abbruch darf keinen leeren Schritt hinterlassen.
+      if (wPts.length < 2) { wegAbbrechen(); toast("Der gefundene Weg ist zu kurz"); return; }
+      pushUndo();
+      var wVar = ed.variantOf.wegsuche;
+      // kind ist "pfad": das Ergebnis ist ein ganz gewoehnliches Pfad-Element,
+      // das sich danach mit Griffen, Panel und Varianten weiterbearbeiten
+      // laesst. "wegsuche" ist nur die Art, wie seine Punkte entstanden sind.
+      var wEl = mkElement("pfad", wVar, wPts, copyParams(curParams()), nextSeed());
+      S.elements.push(wEl);
+      wegStart = null;
+      clearPreview();
+      commit(wEl, isHeavy(wEl));
+      select(wEl);
+      toast("Weg gefunden: " + Math.round(weg.laenge) + " Einheiten, "
+        + wPts.length + " Stützpunkte" + (weg.ms >= 1 ? " (" + Math.round(weg.ms) + " ms)" : ""));
+      updateHint();
+      return;
+    }
+
+    /* A3 — Stempelwerkzeug: Klick setzt die Komposition an der Mausposition.
+       Ausrichtung kommt aus dem Zustand (R dreht, M spiegelt), nicht aus
+       Modifiertasten beim Klick: so sieht man vor dem Setzen im Toast, was
+       gesetzt wird, und kann mehrere Stempel gleich ausgerichtet platzieren. */
+    if (ed.tool === "stempel") {
+      var st = aktuellerStempel();
+      if (!st) {
+        toast("Keine Stempel in der Bibliothek — Elemente mit Shift+Klick wählen und K drücken");
+        return;
+      }
+      pushUndo();
+      var n = stempelSetzen(st, snapPt(p));
+      toast(n ? "Stempel „" + st.name + "“ gesetzt (" + n + " Elemente, neue Seeds)"
+              : "Stempel ist leer");
+      updateHint();
+      return;
+    }
 
     if (ed.tool === "auswahl") {
       // Doppelklick auf ein Segment des ausgewaehlten Elements: Punkt einfuegen.
@@ -240,7 +394,17 @@ export function initPointer(cv) {
           return;
         }
       }
-      select(pickElement(e, p));
+      /* A3 — Shift+Klick erweitert die Auswahl bzw. nimmt ein Element wieder
+         heraus. Ohne Shift bleibt alles exakt wie bisher: select() setzt die
+         Liste auf genau dieses eine Element. */
+      var getroffen = pickElement(e, p);
+      if (e.shiftKey && getroffen) {
+        var anz = auswahlUmschalten(getroffen);
+        toast(anz === 1 ? "1 Element ausgewählt"
+                        : anz + " Elemente ausgewählt (K macht daraus einen Stempel)");
+        return;
+      }
+      select(getroffen);
       return;
     }
     if (ed.tool === "pfad" || ed.tool === "flaeche") {
@@ -273,6 +437,13 @@ export function initPointer(cv) {
 
 /** Ausgelagerte Auswertung der Mausposition, höchstens alle 33 ms. */
 function verarbeiteZeiger(now) {
+  /* A2: eine begonnene Suche ueberlebt den Werkzeugwechsel nicht — sonst
+     bliebe das Gummiband stehen und der naechste Klick mit Werkzeug 9 fiele
+     in einen Zustand, den man laengst vergessen hat. Der Test steht VOR der
+     Drosselung, weil setTool (tools.js) den Zustand nicht selbst raeumen
+     kann: er liegt hier, und tools.js darf pointer.js nicht importieren
+     (pointer.js importiert tools.js — das ergaebe einen Zyklus). */
+  if (wegStart && ed.tool !== "wegsuche") wegAbbrechen();
   if (!zeigerOffen || now - zeigerZuletzt < 33) return;
   zeigerZuletzt = now; zeigerOffen = false;
   _zeigerEv.clientX = zeigerX; _zeigerEv.clientY = zeigerY;
@@ -345,6 +516,11 @@ function verarbeiteZeiger(now) {
   if (ed.tool === "terrain") updateBrushRing(p, curParams().radius);
   else brushRing.visible = false;
   if (ed.draw && p) setPreview(ed.draw.points, snapPt(p), ed.draw.kind === "flaeche");
+  /* A2 — Gummiband der Wegsuche: die GERADE Verbindung Start–Maus, nicht der
+     gesuchte Weg. Eine Live-Suche je 33 ms waere auf einer grossen Karte
+     teuer und zeigte dauernd einen anderen Verlauf; die Gerade sagt genau
+     das, was sie soll — "von hier nach dort", der Rest ist Sache der Suche. */
+  else if (wegStart && p) setPreview([wegStart], snapPt(p), false);
 }
 
 function onKey(e) {
@@ -359,12 +535,79 @@ function onKey(e) {
     }
   }
   if (e.code === "Escape") {
+    // A2 zuerst: eine begonnene Wegsuche ist der juengste offene Vorgang und
+    // schliesst sich immer nur mit einem zweiten Klick oder mit Esc.
+    if (wegAbbrechen()) { toast("Wegsuche abgebrochen"); return; }
     if (ed.draw) cancelDraw();
+    else if (getMarkerAuswahl() >= 0) waehleMarker(-1);
     else if (ed.selected) select(null);
     return;
   }
   if (e.code === "Enter" || e.code === "NumpadEnter") { finishDraw(); return; }
+  /* A3 — Tastenkuerzel der Stempel. Bewusst Buchstaben statt Panel-Knoepfe:
+     ui/panels.js gehoert dieser Runde nicht (Vorschlag fuer Knoepfe steht im
+     Bericht), und K/R/M sind frei — belegt sind WASD/QE (Kamera), die Ziffern
+     (Werkzeuge) und Strg+Z/Y. */
+  if (e.code === "KeyK") {
+    var sel = auswahlElemente();
+    if (!sel.length) { toast("Erst Elemente wählen (Auswahl-Werkzeug, Shift+Klick fügt hinzu)"); return; }
+    var name = prompt("Name des Stempels (" + sel.length + " Elemente)", "");
+    if (name === null) return;
+    var st = stempelErzeugen(String(name));
+    if (!st) { toast("Stempel braucht einen Namen"); return; }
+    toast("Stempel „" + st.name + "“ gespeichert — Werkzeug 8 setzt ihn");
+    buildPanel();
+    return;
+  }
+  if (e.code === "KeyR" && ed.tool === "stempel") {
+    ed.stempelDrehung = (ed.stempelDrehung + 1) & 3;
+    toast("Stempeldrehung " + (ed.stempelDrehung * 90) + "°");
+    return;
+  }
+  if (e.code === "KeyM" && ed.tool === "stempel") {
+    ed.stempelSpiegel = !ed.stempelSpiegel;
+    toast(ed.stempelSpiegel ? "Stempel gespiegelt" : "Stempel ungespiegelt");
+    return;
+  }
+  /* F4 — Aufnahme-Modus umschalten.
+
+     Taste geprueft: KeyC ist frei. Belegt sind WASD und QE (Kamera, in
+     camera.js ueber das keys-Objekt), die Ziffern 1-9 samt Numpad
+     (Werkzeuge, Schleife oben), K/R/M (Stempel), Escape, Enter/NumpadEnter,
+     Entf/Backspace und Strg+Z / Strg+Y / Strg+Shift+Z. Ein KeyC kommt in
+     terra/src ausser hier nirgends vor.
+
+     Kein Werkzeugwechsel: ed.tool bleibt unberuehrt, die Auswahl auch — man
+     schaltet in die Komposition und weiter mit derselben Arbeit heraus. Ist
+     nach dem Umschalten ein Element gewaehlt, richtet aufnahmeAufMotiv die
+     Einstellung zusaetzlich auf dessen ERSTEN Punkt aus (Fusspunkt der Ranke,
+     Startpunkt des Pfades, erster Umrisspunkt der Flaeche) — die Hoehe kommt
+     aus dem Gelaende, weil Elementpunkte nur x/z tragen. */
+  if (e.code === "KeyC") {
+    var aufAn = setAufnahme(!istAufnahme());
+    var motiv = null;
+    if (aufAn && ed.selected && ed.selected.points && ed.selected.points.length) {
+      var mp = ed.selected.points[0];
+      motiv = aufnahmeAufMotiv({ x: mp.x, y: heightAt(mp.x, mp.z), z: mp.z });
+    }
+    toast(!aufAn ? "Aufnahme-Modus aus — freie Ansicht"
+      : motiv ? "Aufnahme auf das gewählte Element ausgerichtet"
+          + (motiv.beschnitten ? " (Kartenrand — Motiv nicht ganz auf dem Drittel)" : "")
+      : "Aufnahme-Modus an — Horizont auf einem Drittel (C schaltet zurück)");
+    buildRail();                     // Knopfzustand in der Werkzeugleiste
+    return;
+  }
   if (e.code === "Delete" || e.code === "Backspace") {
+    // D1: ausgewaehlter Marker zuerst — er kann nur im Markerwerkzeug
+    // ausgewaehlt sein (setTool raeumt die Auswahl beim Wechsel weg), es gibt
+    // also keine Ueberschneidung mit den Elementfaellen darunter.
+    var mSel = getMarkerAuswahl();
+    if (mSel >= 0 && mSel < S.marker.length) {
+      S.marker.splice(mSel, 1);
+      waehleMarker(-1);            // baut die Nadeln mit neuer Indizierung neu
+      toast("Marker gelöscht");
+      return;
+    }
     // H4.2: aktiver Zugpunkt-Griff — nur diesen Zugpunkt loeschen. Steht vor
     // allen anderen Faellen, weil der Griffindex hinter den Punktgriffen liegt.
     if (ed.selected && aktiverGriff >= 0) {
@@ -413,13 +656,23 @@ function onKey(e) {
     }
     if (ed.selected) {
       pushUndo();
-      var was = ed.selected, heavy = isHeavy(was);
-      deleteElement(was);
+      /* A3: bei einer Mehrfachauswahl loescht Entf die GANZE Auswahl. Nur
+         ed.selected zu loeschen liesse die uebrigen Eintraege als Auswahl
+         ohne fuehrendes Element zurueck — und "markieren, dann loeschen" ist
+         genau der Grund, aus dem man mehrere Elemente waehlt. */
+      var zuLoeschen = auswahlElemente();
+      if (zuLoeschen.indexOf(ed.selected) < 0) zuLoeschen.push(ed.selected);
+      var heavy = false;
+      for (var di = 0; di < zuLoeschen.length; di++) {
+        if (isHeavy(zuLoeschen[di])) heavy = true;
+        deleteElement(zuLoeschen[di]);
+      }
       ed.selected = null;
+      ed.auswahl.length = 0;
       rebuildHandles();
       commit(null, heavy);
       buildPanel();
-      toast("Element gelöscht");
+      toast(zuLoeschen.length > 1 ? zuLoeschen.length + " Elemente gelöscht" : "Element gelöscht");
     }
   }
 }

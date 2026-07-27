@@ -31,6 +31,13 @@ const terraUniforms = {
   uSunDir: { value: new THREE.Vector3(0.45, 0.72, 0.35).normalize() },
   // Obergrenze des Nebelfaktors: haelt im Nebel-Preset nahe Objekte lesbar.
   uFogCap: { value: 1.0 },
+  // C4 — Horizontfarbe des Himmels. Kein Weltmaterial-Patch liest sie; sie
+  // liegt hier, weil terraUniforms der einzige zyklusfreie Treffpunkt
+  // zwischen der Tageszeit (schreibt ueber setLook in render/pipeline.js)
+  // und world/water.js (liest sie fuer die gemalten Himmelsstreifen) ist.
+  // world/water.js darf world/atmosphere.js NICHT importieren — atmosphere
+  // importiert waterMat, das waere ein Zyklus.
+  uHorizont: { value: new THREE.Color(0xdfe8f0) },
   // Wolkenschatten am Boden (nur Terrainmaterial wertet sie aus).
   uCloudTex: { value: TEX.cloudNoise },
   uCloudDrift: { value: new THREE.Vector2(0, 0) },
@@ -70,9 +77,14 @@ const FAMILIEN = {
   erde:       { tex: 'aquarellGrob',   skala: 0.22, staerke: 0.15 }
 };
 
-/** Diagnose: greift jeder Patch? Wird auf window exponiert. */
+/** Diagnose: greift jeder Patch? Wird auf window exponiert.
+ *  `vfx` gehoert zum Partikel-Shader in world/vfx.js und wird HIER nur
+ *  vorgehalten, damit alle Shader-Patches des Projekts in EINEM Objekt
+ *  stehen (das Abnahmemuster liest sonst zwei Stellen). Der Zaehler bleibt 0,
+ *  solange vfx.js ihn nicht hochzaehlt — das ist der ehrlichere Zustand als
+ *  ein fehlender Schluessel: 0 heisst „Patch nicht angekommen". */
 const patchInfo = { wrap: 0, kuehl: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, ranken: 0,
-  normale: 0, arbor: 0, schnee: 0, versuche: 0 };
+  normale: 0, arbor: 0, schnee: 0, vfx: 0, versuche: 0 };
 if (typeof window !== 'undefined') window.terraPatchInfo = patchInfo;
 
 function ersetze(shader, feld, alt, neu, patchName) {

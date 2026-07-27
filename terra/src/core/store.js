@@ -140,6 +140,22 @@ export const S = {
        wolkenschatten                   Faktor auf uCloudAmt
      Nachtregel des Katalogs: Tints und satMitte nie ueber 1.10.
 
+   vfx — OPTIONALER Umgebungs-Partikelblock (world/vfx.js), gelesen von
+     world/atmosphere.js (biomVfx). Zwei Schreibweisen sind erlaubt, weil
+     atmosphere.js sie tolerant liest:
+       vfx: "sporen"                                   Kurzform, dichte 1
+       vfx: { typ, dichte, farbe }                     ausgeschrieben
+         typ     "blueten" | "sporen" | "staub" | "schnee" (Sorten aus vfx.js)
+         dichte  0..1, Grunddichte des Bioms. Das Wetter multipliziert sie
+                 ueber WETTER[..].vfxBiom bzw. ersetzt den Typ ganz (Regen,
+                 Schneefall, Sturm bringen ihren eigenen mit).
+         farbe   OPTIONAL (hex). Fehlt sie, faerbt vfx.js die Sorte selbst —
+                 deshalb tragen tundra/hochland bewusst keine: ihr Flugschnee
+                 soll exakt so aussehen wie der des Wetters.
+     Fehlt der Block, gibt es keinen Umgebungs-VFX und der ganze Zweig kostet
+     nichts. Bewusst OHNE vfx bleiben die Biome, deren Luft leer sein soll:
+     wiese, kueste, meer, klippenmeer, korallenbank, kreide, karst, terrassen.
+
    hoehe — OPTIONALES Hoehenprofil fuer genBaseIn (world/terrain.js, H6).
      Fehlt das Feld (Stand dieser Runde bei allen fuenf Biomen), gilt
      HOEHEN_STANDARD, und genBaseIn rechnet Byte fuer Byte wie bisher.
@@ -248,7 +264,9 @@ export const BIOME = {
       uwTabelle: [["busch", 4], ["farn", 1], ["moos", 1], ["stumpf", 1],
         ["stammliegend", 1], ["fels", 5]]
     },
-    wasserTint: [1, 1, 1]
+    wasserTint: [1, 1, 1],
+    // Sandfahnen ueber den Duenen — das staerkste Staub-Biom neben dem Vulkan.
+    vfx: { typ: "staub", dichte: 0.70, farbe: 0xdcc79a }
   },
   kueste: {
     label: "Küste",
@@ -290,6 +308,8 @@ export const BIOME = {
         ["stammliegend", 2], ["fels", 1]]
     },
     wasserTint: [0.9, 0.5, 0.35],    // Richtung dunkles #3a4a3c
+    // Sporen ueber dem Faulwasser, sparsam: der Sumpf lebt vom Nebel (luft).
+    vfx: { typ: "sporen", dichte: 0.30, farbe: 0xbcd489 },
     // Katalog 5: die Nebelbank knapp ueber der Flaeche traegt mehr zum Sumpf
     // bei als jede Farbkorrektur.
     luft: { fogNah: 0.55, fogCapMax: 0.95 }
@@ -319,6 +339,9 @@ export const BIOME = {
         ["stammliegend", 2], ["fels", 4]]
     },
     wasserTint: [0.85, 0.95, 1.05],  // stahlblau, kuehl entsaettigt
+    // Leichter Flugschnee auch bei klarem Wetter — der Winterwald soll nie
+    // ganz still stehen. Bei Schneefall/Sturm ersetzt ihn der Wetter-VFX.
+    vfx: { typ: "schnee", dichte: 0.35, farbe: 0xf2f6fa },
     schnee: { auflage: 0.75, kante: [0.20, 0.70], hoehe: [1, 8],
       farbe: 0xf0f4f8, kuehle: 0.10, bruch: 0.40 }
   },
@@ -352,6 +375,8 @@ export const BIOME = {
       uwTabelle: [["fels", 8], ["stumpf", 2], ["stammliegend", 2], ["moos", 1], ["busch", 1]]
     },
     wasserTint: [0.78, 0.95, 1.12],
+    // Dichteres Schneetreiben als im Winterwald: hier ist die Luft das Motiv.
+    vfx: { typ: "schnee", dichte: 0.50, farbe: 0xeaf2fa },
     schnee: { auflage: 1.0, kante: [0.05, 0.55], hoehe: [-10, 0],
       farbe: 0xf2f6fa, kuehle: 0.18, bruch: 0.25 },
     luft: { fogCoolTint: [0.95, 0.99, 1.06], fogNah: 0.85, fogCapMax: 1.00,
@@ -381,6 +406,8 @@ export const BIOME = {
         ["stammliegend", 2], ["fels", 1]]
     },
     wasserTint: [0.7, 0.72, 0.55],  // Huminsaeure-Braunschwarz
+    // Wollgrasflug ueber der Ebene — gelbgruen, deutlich sichtbar.
+    vfx: { typ: "sporen", dichte: 0.45, farbe: 0xc8e08a },
     luft: { fogCoolTint: [0.97, 0.99, 0.97], fogNah: 0.55, fogCapMax: 0.94,
       hemiBoden: 0x7d7357, hemiMisch: 0.55, satMitte: 0.95 }
   },
@@ -451,6 +478,9 @@ export const BIOME = {
         ["stammliegend", 1], ["farn", 1]]
     },
     wasserTint: [0.92, 1.0, 1.06],
+    // Ohne farbe: der duenne Hochlandflug soll die Sortenfarbe von vfx.js
+    // tragen und nicht auffallen — er ist Luftbewegung, kein Ereignis.
+    vfx: { typ: "schnee", dichte: 0.20 },
     // Das Hoehenband beschneit nur die Gipfel — es ersetzt ein zweites Biom.
     schnee: { auflage: 0.5, kante: [0.25, 0.75], hoehe: [14, 20],
       farbe: 0xeef2f6, kuehle: 0.10, bruch: 0.5 }
@@ -476,7 +506,9 @@ export const BIOME = {
       uwTabelle: [["busch", 6], ["fels", 3], ["stumpf", 1], ["stammliegend", 1],
         ["farn", 1], ["moos", 1]]
     },
-    wasserTint: [1.0, 1.0, 0.95]
+    wasserTint: [1.0, 1.0, 0.95],
+    // Trockener Grasstaub ueber den langen Wellen.
+    vfx: { typ: "staub", dichte: 0.40, farbe: 0xcfc094 }
   },
   vulkan: {
     label: "Aschekegel",
@@ -501,6 +533,8 @@ export const BIOME = {
       uwTabelle: [["fels", 10], ["stumpf", 2], ["stammliegend", 2], ["busch", 1]]
     },
     wasserTint: [0.72, 0.70, 0.68],
+    // Ascheflug — das dichteste Biom-VFX ueberhaupt und Teil der Silhouette.
+    vfx: { typ: "staub", dichte: 0.90, farbe: 0x8c7d74 },
     luft: { fogWarmTint: [0.94, 0.92, 0.92], fogCoolTint: [0.94, 0.92, 0.92],
       fogNah: 0.70, fogCapMax: 0.95, hemiBoden: 0x5e564e, hemiMisch: 0.65, satMitte: 0.98 }
   },
@@ -526,6 +560,8 @@ export const BIOME = {
       uwTabelle: [["fels", 6], ["stumpf", 1]]
     },
     wasserTint: [1.15, 1.20, 1.05],
+    // Salzstaub, fast weiss — er hellt die ohnehin helle Pfanne weiter auf.
+    vfx: { typ: "staub", dichte: 0.50, farbe: 0xeee6d2 },
     luft: { fogWarmTint: [1.04, 1.03, 0.99], fogCoolTint: [1.04, 1.03, 0.99],
       fogNah: 1.35, fogCapMax: 1.00, hemiBoden: 0xe2ddc9, hemiMisch: 0.75, satMitte: 0.92 }
   },
@@ -553,6 +589,8 @@ export const BIOME = {
         ["stumpf", 2], ["fels", 1]]
     },
     wasserTint: [0.85, 0.98, 0.82],
+    // Schwebende Sporen im Kronendunst, sparsam — der Regenwald ist voll genug.
+    vfx: { typ: "sporen", dichte: 0.30, farbe: 0xd8e8a0 },
     luft: { fogCoolTint: [0.96, 1.00, 0.96], fogNah: 0.60, fogCapMax: 0.96,
       hemiBoden: 0x566b48, hemiMisch: 0.60, satMitte: 1.05 }
   },
@@ -579,7 +617,10 @@ export const BIOME = {
       ersatz: "zypresse",
       uwTabelle: [["farn", 6], ["moos", 4], ["busch", 2], ["stumpf", 1], ["fels", 1]]
     },
-    wasserTint: [0.95, 1.02, 0.98]
+    wasserTint: [0.95, 1.02, 0.98],
+    // Bambusblaetter statt Blueten: dieselbe Sorte, aber blassgruen und viel
+    // duenner als im Bluetental.
+    vfx: { typ: "blueten", dichte: 0.35, farbe: 0xdfe8c0 }
   },
   mangrove: {
     label: "Mangrovenküste",
@@ -603,7 +644,10 @@ export const BIOME = {
       uwTabelle: [["farn", 5], ["moos", 4], ["busch", 4], ["stammliegend", 3],
         ["stumpf", 2], ["fels", 1]]
     },
-    wasserTint: [0.95, 1.02, 0.88]
+    wasserTint: [0.95, 1.02, 0.88],
+    // Nur ein Hauch ueber dem Watt — die Mangrove lebt vom Wasser, nicht von
+    // der Luft.
+    vfx: { typ: "sporen", dichte: 0.22, farbe: 0xcfe0a8 }
   },
   kreide: {
     label: "Kreidefelsen",
@@ -657,6 +701,8 @@ export const BIOME = {
         ["stammliegend", 1], ["farn", 1]]
     },
     wasserTint: [0.88, 0.96, 1.04],
+    // Ohne farbe (wie hochland): feiner Flugschnee in der Sortenfarbe.
+    vfx: { typ: "schnee", dichte: 0.25 },
     schnee: { auflage: 0.6, kante: [0.20, 0.70], hoehe: [6, 12],
       farbe: 0xeef2f6, kuehle: 0.14, bruch: 0.45 }
   },
@@ -712,7 +758,10 @@ export const BIOME = {
       leitfarben: [[1.30, 0.80, 0.90], [1.22, 1.10, 1.05],
         [1.10, 0.95, 1.15], [1.25, 1.12, 0.85]]
     },
-    wasserTint: [1.02, 0.99, 1.02]
+    wasserTint: [1.02, 0.99, 1.02],
+    // Der Bluetenflug ist das Wahrzeichen des Bioms — hoechste Dichte der
+    // Sorte, rosa wie die Leitfarben der Nester.
+    vfx: { typ: "blueten", dichte: 0.9, farbe: 0xf6d2de }
   },
   aschebrache: {
     label: "Aschebrache",
@@ -739,6 +788,8 @@ export const BIOME = {
       uwTabelle: [["fels", 7], ["stumpf", 4], ["stammliegend", 4], ["busch", 1]]
     },
     wasserTint: [0.6, 0.62, 0.66],   // falls ueberhaupt Wasser vorkommt
+    // Ascheflug wie beim Vulkan, nur etwas kaelter und duenner.
+    vfx: { typ: "staub", dichte: 0.80, farbe: 0x9a938c },
     luft: { fogWarmTint: [0.95, 0.95, 0.96], fogCoolTint: [0.95, 0.95, 0.96],
       fogNah: 0.75, fogCapMax: 0.90, hemiBoden: 0x6a655c, hemiMisch: 0.65, satMitte: 0.88 }
   },
@@ -763,7 +814,9 @@ export const BIOME = {
       uwTabelle: [["moos", 8], ["farn", 5], ["stumpf", 4], ["stammliegend", 3],
         ["busch", 2], ["fels", 1]]
     },
-    wasserTint: [0.8, 0.95, 1.0]
+    wasserTint: [0.8, 0.95, 1.0],
+    // Leuchtgruene Sporenwolke — dieselbe kuehle Leuchtfarbe wie die Senken.
+    vfx: { typ: "sporen", dichte: 0.8, farbe: 0x9fe8c4 }
   },
   terrassen: {
     label: "Terrassenland",
@@ -814,6 +867,9 @@ export const BIOME = {
         ["busch", 2], ["fels", 1]]
     },
     wasserTint: [0.92, 0.98, 0.98],
+    // Fast weisse Sporen: sie lesen sich als Dunstflocken und verstaerken die
+    // Tiefenstaffelung, die dieses Biom traegt.
+    vfx: { typ: "sporen", dichte: 0.35, farbe: 0xdfeae2 },
     luft: { fogCoolTint: [0.98, 1.00, 0.99], fogNah: 0.42, fogFern: 0.7,
       fogCapMax: 0.92, hemiBoden: 0x7e8a76, hemiMisch: 0.55, satMitte: 0.90 }
   },
@@ -959,5 +1015,109 @@ export function hydrate(list) {
     S.nextId = Math.max(S.nextId, el.id + 1);
     S.elements.push(el);
   }
+}
+
+/* ==========================================================================
+   D1 — Marker
+   Datenmodell: { x, z, text, art }. `art` ist eine der MARKER_ARTEN und
+   steuert ausschliesslich die Farbe der Stecknadel (selection.js); eine
+   unbekannte Art faellt beim Laden auf "ort" zurueck, damit eine fremde
+   Datei nie eine unbezeichnete Nadel erzeugt. Kein Seed, keine Parameter:
+   ein Marker wird nicht generiert, er wird gesetzt.
+   ========================================================================== */
+export const MARKER_ARTEN = ["ort", "gefahr", "notiz", "arbor"];
+
+export function mkMarker(x, z, text, art) {
+  return {
+    x: +x, z: +z,
+    text: typeof text === "string" ? text : "",
+    art: MARKER_ARTEN.indexOf(art) >= 0 ? art : "ort"
+  };
+}
+
+/** Kartenfeld `marker` — flach, ohne Laufzeitfelder (es gibt keine). */
+export function serializeMarker() {
+  var out = [];
+  for (var i = 0; i < S.marker.length; i++) {
+    var m = S.marker[i];
+    out.push({ x: m.x, z: m.z, text: m.text, art: m.art });
+  }
+  return out;
+}
+
+/** Uebernimmt eine bereits gepruefte Markerliste (io.js validiert streng). */
+export function hydrateMarker(list) {
+  S.marker.length = 0;
+  if (!Array.isArray(list)) return;
+  for (var i = 0; i < list.length; i++) {
+    var m = list[i];
+    if (!m || !Number.isFinite(m.x) || !Number.isFinite(m.z)) continue;
+    S.marker.push(mkMarker(m.x, m.z, m.text, m.art));
+  }
+}
+
+/* ==========================================================================
+   A3 — Stempel
+   Datenmodell: { name, anker:{x,z}, elemente:[{kind, variant, points, params}] }
+   Die Punkte liegen RELATIV zum Anker; `anker` selbst dokumentiert nur, wo
+   der Stempel ausgeschnitten wurde (beim Setzen zaehlt die Mausposition).
+   BEWUSST OHNE seed: ein Stempel wird nie identisch gesetzt, die Seeds
+   vergibt stempelSetzen() frisch ueber nextSeed().
+   BEWUSST OHNE Terrainhoehen: der Stempel setzt Elemente, kein Gelaende.
+   Hoehen sind ein globales Feld (base) mit Fluss-/Bruchstempeln darauf; ein
+   mitkopierter Hoehenausschnitt wuerde beim Setzen fremdes Relief in die
+   Karte schneiden, das Delta-Speicherformat aufblaehen und mit jeder
+   Terrainbearbeitung an dieser Stelle kollidieren.
+   ========================================================================== */
+
+/** Tolerante Strukturpruefung fuer die localStorage-Bibliothek: kaputte
+ *  Eintraege werden verworfen statt geworfen. Die STRENGE Pruefung des
+ *  Kartenfelds `stempel` steht in io.js/validiereKarte (atomar, mit
+ *  Fehlermeldung) — hier waere ein Wurf falsch, weil ein defekter
+ *  Browser-Speicher den Editor nicht am Starten hindern darf. */
+export function stempelGueltig(st) {
+  if (!st || typeof st !== "object" || Array.isArray(st)) return false;
+  if (typeof st.name !== "string" || !st.name) return false;
+  if (!st.anker || !Number.isFinite(st.anker.x) || !Number.isFinite(st.anker.z)) return false;
+  if (!Array.isArray(st.elemente) || !st.elemente.length) return false;
+  for (var i = 0; i < st.elemente.length; i++) {
+    var e = st.elemente[i];
+    if (!e || typeof e !== "object" || typeof e.kind !== "string" || !e.kind) return false;
+    if (e.variant !== undefined && typeof e.variant !== "string") return false;
+    if (!Array.isArray(e.points) || !e.points.length) return false;
+    for (var p = 0; p < e.points.length; p++) {
+      var q = e.points[p];
+      if (!q || !Number.isFinite(q.x) || !Number.isFinite(q.z)) return false;
+    }
+    if (e.params !== undefined &&
+        (typeof e.params !== "object" || e.params === null || Array.isArray(e.params))) return false;
+  }
+  return true;
+}
+
+/** Kartenfeld `stempel` — tiefe Kopie, damit spaetere Bearbeitungen der
+ *  Bibliothek die gespeicherte Datei nicht nachtraeglich veraendern. */
+export function serializeStempel() {
+  return JSON.parse(JSON.stringify(S.stempel));
+}
+
+/* ==========================================================================
+   Browser-Speicher (A3 Bibliothek, D6 Autosave). Einzige Stelle, die
+   localStorage anfasst: der Zugriff wirft im Privatmodus, bei blockierten
+   Cookies und in jeder Nicht-Browser-Umgebung (Testlaeufe). Alle Aufrufer
+   bekommen deshalb null bzw. false statt einer Ausnahme.
+   ========================================================================== */
+export function speicherLesen(schluessel) {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    return localStorage.getItem(schluessel);
+  } catch (e) { return null; }
+}
+export function speicherSchreiben(schluessel, wert) {
+  try {
+    if (typeof localStorage === "undefined") return false;
+    localStorage.setItem(schluessel, wert);
+    return true;
+  } catch (e) { return false; }     // Kontingent voll oder Speicher gesperrt
 }
 
