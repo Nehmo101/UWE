@@ -43,10 +43,6 @@ function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
 
 function revalidateAdminPaths() {
   revalidatePath("/capture");
-  revalidatePath("/workshop");
-  revalidatePath("/workshop/recipes");
-  revalidatePath("/workshop/rental");
-  revalidatePath("/workshop/print-profiles");
   revalidatePath("/contracts");
   revalidatePath("/hardware");
   revalidatePath("/life-brain");

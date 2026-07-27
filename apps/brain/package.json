@@ -17,6 +17,7 @@
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/brain-assistant": "workspace:*",
+    "@uwe/calendar": "workspace:*",
     "@uwe/daily-cockpit": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",

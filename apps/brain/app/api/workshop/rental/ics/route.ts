@@ -1,11 +1,16 @@
 import { generateIcalCalendar } from "@uwe/calendar";
 import { createLifeAdminService, prisma } from "@uwe/database/server";
-import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { parseRentalReturnDue } from "@/src/lib/workshop-rental-due";
 import { brainPrisma } from "@uwe/database/brain-client";
+import { requireBrainOwnerAuth } from "@/src/lib/owner-auth";
 
-export async function GET(request: Request) {
-  const authError = await guardStudioApiRequest(request);
+/**
+ * iCal-Feed der Terrain-Rückgaben. Lag in Studio; der Verleih gehört zu Brain
+ * (Abschnitt H5), also liegt der Feed hier — hinter dem Brain-Häkchen.
+ */
+
+export async function GET() {
+  const authError = await requireBrainOwnerAuth();
   if (authError) return authError;
 
   const rentals = await createLifeAdminService(brainPrisma, prisma).listWorkshopTerrainRentals({ limit: 500 });

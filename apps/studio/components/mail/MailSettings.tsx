@@ -173,7 +173,10 @@ export function MailSettings({ accounts, config, logs, worlds, rtxState }: MailS
             <Link href="/contracts" className={buttonVariants({ variant: "secondary", size: "sm" })}>
               Vertragserinnerung
             </Link>
-            <Link href="/workshop" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+            <Link
+              href="/mail/compose?kind=terrain_rental"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
               Terrain-Verleih
             </Link>
           </div>

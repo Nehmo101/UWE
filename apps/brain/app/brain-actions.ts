@@ -11,8 +11,6 @@ import {
   type ContractStatus,
   type DocumentTemplateCategory,
   type MiniatureCollectionStatus,
-  type WorkshopProjectType,
-  type WorkshopStatus,
 } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { revalidatePath } from "next/cache";
@@ -114,27 +112,6 @@ export async function deleteBrainDocumentAction(formData: FormData) {
 
 /* ── Workshop ────────────────────────────────────────────────────────── */
 
-export async function createWorkshopAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const title = str(formData.get("title"));
-  if (!title) return;
-
-  await lifeAdmin().createWorkshopProject({
-    title,
-    projectType: (str(formData.get("projectType")) || "miniature") as WorkshopProjectType,
-    status: (str(formData.get("status")) || "idea") as WorkshopStatus,
-    description: str(formData.get("description")),
-  });
-  revalidateBrainPaths();
-}
-
-export async function deleteWorkshopAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await lifeAdmin().deleteWorkshopProject(id);
-  revalidateBrainPaths();
-}
-
 /* ── Contracts ───────────────────────────────────────────────────────── */
 
 export async function createContractAction(formData: FormData) {
@@ -199,19 +176,6 @@ export async function updateBrainDocumentAction(formData: FormData) {
     content: str(formData.get("content")),
     category: str(formData.get("category")) || null,
     tags: parseCommaTags(formData),
-  });
-  revalidateBrainPaths();
-}
-
-export async function updateWorkshopAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (!id) return;
-  await lifeAdmin().updateWorkshopProject(id, {
-    title: str(formData.get("title")),
-    projectType: (str(formData.get("projectType")) || "miniature") as WorkshopProjectType,
-    status: (str(formData.get("status")) || "idea") as WorkshopStatus,
-    description: str(formData.get("description")),
   });
   revalidateBrainPaths();
 }

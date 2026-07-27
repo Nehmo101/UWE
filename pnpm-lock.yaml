@@ -55,6 +55,9 @@ importers:
       '@uwe/brain-assistant':
         specifier: workspace:*
         version: link:../../packages/brain-assistant
+      '@uwe/calendar':
+        specifier: workspace:*
+        version: link:../../packages/calendar
       '@uwe/daily-cockpit':
         specifier: workspace:*
         version: link:../../packages/daily-cockpit

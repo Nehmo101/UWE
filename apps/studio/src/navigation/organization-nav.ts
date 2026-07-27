@@ -38,18 +38,6 @@ export const ORGANIZATION_NAV: NavGroup[] = [
         keywords: ["dokumente", "documents", "vorlagen", "templates", "generator"],
       },
       {
-        id: "org-workshop",
-        label: "Werkstatt",
-        href: "/workshop",
-        icon: "hammer",
-        group: "Arbeit & Projekte",
-        section: SECTION,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "organization",
-        keywords: ["werkstatt", "workshop", "recipes", "rental"],
-      },
-      {
         id: "org-ideas",
         label: "Ideen",
         href: "/ideas",
