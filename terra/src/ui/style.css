@@ -1,7 +1,7 @@
 /* ============================================================================
  * terra — Bedienoberflaeche im UWE-Design („Gemalte Welt")
  * ----------------------------------------------------------------------------
- * Terra laeuft demnaechst als Frame unter den Atlas-Pfaden von UWE. Damit es
+ * Terra laeuft als Frame unter /worlds/:slug/karten in UWE. Damit es
  * dort nicht wie ein fremdes Programm im Fenster wirkt, uebernimmt diese Datei
  * die Gestaltungssprache des Produkts: Farbwelt, Schrift, Radien, Kantenstaerke,
  * Zustaende.
@@ -48,7 +48,7 @@
   --uwe-fg-muted: light-dark(#4a4336, #c9bfaf);              /* --ink2 */
   --uwe-fg-subtle: light-dark(#8a7d64, #948b78);             /* --ink3 */
 
-  /* Akzent: Terra haengt unter den Atlas-Pfaden von Studio, also der
+  /* Akzent: Terra haengt unter den Kartenpfaden von Studio, also der
      Studio-/Landing-Akzent Terrakotta (app-accent.css:24-33). Ueber der
      gruenen Landschaft steht er als Gegenfarbe, statt in ihr zu verschwinden. */
   --uwe-accent: light-dark(#c2622b, #e8a670);                /* --acc     */

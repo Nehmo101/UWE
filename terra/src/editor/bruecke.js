@@ -79,8 +79,9 @@
  *  älterer Elternteil nicht mehr verstünde. */
 export const BRUECKE_PROTOKOLL = 1;
 
-/** Ruhezeit nach der letzten Bedienung, bevor gemeldet wird. Wie Atlas'
- *  scheduleSave (1200 ms) — nur eben MIT beforeunload-Flush. */
+/** Ruhezeit nach der letzten Bedienung, bevor gemeldet wird. 1200 ms ist der
+ *  Wert, den der Vorgaenger-Editor an dieser Stelle benutzt hat — uebernommen,
+ *  weil er sich im Betrieb bewaehrt hatte, aber MIT beforeunload-Flush. */
 export const ENTPRELLUNG_MS = 1200;
 
 var wege = null;          // { text(), uebernehmen(text), melde(text) }

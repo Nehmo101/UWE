@@ -1,8 +1,0 @@
-{
-  "extends": "@uwe/config/tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "noEmit": true
-  },
-  "include": ["src/**/*.ts"]
-}

@@ -25,7 +25,6 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/atlas": "workspace:*",
     "@uwe/connector": "workspace:*",
     "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
