@@ -35,18 +35,6 @@ export const START_NAV: NavGroup[] = [
     title: START,
     items: [
       {
-        id: "start-today",
-        label: "Heute",
-        href: "/today",
-        icon: "sun",
-        group: START,
-        section: START,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "studio",
-        keywords: ["heute", "today", "cockpit", "dashboard"],
-      },
-      {
         id: "start-capture-quick",
         label: "Schnell erfassen",
         href: "/capture?quick=1",

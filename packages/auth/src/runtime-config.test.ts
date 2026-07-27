@@ -276,7 +276,7 @@ describe("runtime config", () => {
       },
       { currentApp: "studio" },
     );
-    assert.equal(href, "/today");
+    assert.equal(href, "/worlds");
   });
 
   it("builds studio session href from portal on split-hostname", () => {
@@ -288,7 +288,7 @@ describe("runtime config", () => {
       },
       { currentApp: "portal" },
     );
-    assert.equal(href, "https://studio.uweanddragons.org/today");
+    assert.equal(href, "https://studio.uweanddragons.org/worlds");
   });
 
   it("builds studio session href for unified-path deployments", () => {

@@ -315,7 +315,7 @@ export default async function WorkshopPage({ searchParams }: Props) {
         </section>
 
         <p className="text-sm text-muted-foreground">
-          <Link href="/today">← Heute</Link>
+          <Link href="/worlds">← Welten</Link>
         </p>
       </div>
     </StudioShell>

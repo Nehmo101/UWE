@@ -78,7 +78,7 @@ export default async function SettingsPage({ searchParams }: Props) {
   return (
     <SystemShell
       breadcrumb={
-        <BreadcrumbTrail items={[{ label: "Heute", href: "/today" }, { label: "Einstellungen" }]} />
+        <BreadcrumbTrail items={[{ label: "Einstellungen" }]} />
       }
     >
       <SettingsShell

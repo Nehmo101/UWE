@@ -26,17 +26,17 @@ describe("route pattern matching", () => {
   it("matches dynamic segments", () => {
     assert.equal(matchesRoutePattern("/worlds/terra/dashboard", "/worlds/[worldSlug]/dashboard"), true);
     assert.equal(matchesRoutePattern("/worlds/terra", "/worlds/[worldSlug]/dashboard"), false);
-    assert.equal(matchesRoutePattern("/today", "/today"), true);
-    assert.equal(matchesRoutePattern("/today/x", "/today"), false);
+    assert.equal(matchesRoutePattern("/worlds", "/worlds"), true);
+    assert.equal(matchesRoutePattern("/worlds/x", "/worlds"), false);
   });
 });
 
 describe("auditNavigation (pure)", () => {
-  const routes = ["/today", "/worlds", "/admin", "/admin/activity"];
+  const routes = ["/worlds", "/capture", "/admin", "/admin/activity"];
 
   it("flags active items without a route as dead links", () => {
     const items = [
-      navItem({ id: "ok", href: "/today", status: "active" }),
+      navItem({ id: "ok", href: "/worlds", status: "active" }),
       navItem({ id: "dead", href: "/nope", status: "active" }),
     ];
     const audit = auditNavigation(items, routes);
@@ -50,17 +50,17 @@ describe("auditNavigation (pure)", () => {
   });
 
   it("lists routes not referenced by navigation", () => {
-    const items = [navItem({ id: "a", href: "/today", status: "active" })];
+    const items = [navItem({ id: "a", href: "/worlds", status: "active" })];
     const audit = auditNavigation(items, routes);
-    assert.ok(audit.routesWithoutNav.includes("/worlds"));
-    assert.ok(!audit.routesWithoutNav.includes("/today"));
+    assert.ok(audit.routesWithoutNav.includes("/capture"));
+    assert.ok(!audit.routesWithoutNav.includes("/worlds"));
   });
 });
 
 describe("collectAppRoutePatterns (fs)", () => {
   it("collects real Studio routes, excludes /api, keeps [param]", () => {
     const patterns = collectAppRoutePatterns();
-    assert.ok(patterns.includes("/today"), "expected /today");
+    assert.ok(patterns.includes("/worlds"), "expected /worlds");
     assert.ok(patterns.includes("/worlds/[worldSlug]/dashboard"), "expected dynamic world route");
     assert.ok(!patterns.some((p) => p.startsWith("/api")), "should exclude api routes");
   });

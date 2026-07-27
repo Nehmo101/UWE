@@ -21,7 +21,7 @@ export default async function WorldsPage() {
   ]);
   const canCreateWorld = user ? canAccessStudio(user) : false;
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Heute", href: "/today" }, { label: "Welten" }]} />}>
+    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Welten" }]} />}>
       <PageHeader title="Welten" summary="Wähle eine Welt für Kampagne und Wiki-Bearbeitung — oder lege eine neue an." />
       {canCreateWorld ? (
         <section className="mb-6 rounded-lg border border-border p-4">

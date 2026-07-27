@@ -26,7 +26,7 @@ export default async function AdminOverviewPage() {
     <SystemShell
       breadcrumb={
         <BreadcrumbTrail
-          items={[{ label: "Heute", href: "/today" }, { label: "Admin" }]}
+          items={[{ label: "Admin" }]}
         />
       }
     >
@@ -96,8 +96,8 @@ export default async function AdminOverviewPage() {
                 Portal öffnen
               </a>
             ) : (
-              <Link className={buttonVariants({ variant: "secondary" })} href="/settings?tab=portal">
-                Portal konfigurieren
+              <Link className={buttonVariants({ variant: "secondary" })} href="/settings">
+                Einstellungen
               </Link>
             )}
             {appUrls.studioUrl ? (
@@ -115,11 +115,6 @@ export default async function AdminOverviewPage() {
             Cloudflare, RTX-Verbindung, Drucker, Secrets, Migrationen, Tokens und Backups laufen
             über die <strong>Kommandozentrale</strong> auf dem UWE-Host.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Link className={buttonVariants({ variant: "default" })} href="/hardware">
-              Hardware-Cockpit
-            </Link>
-          </div>
         </section>
       </div>
     </SystemShell>

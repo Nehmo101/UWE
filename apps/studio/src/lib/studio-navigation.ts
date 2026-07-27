@@ -226,8 +226,7 @@ export function campaignNavItems(
 
 /** Resolve icon-rail active id from Studio path. */
 export function resolveStudioRailActiveId(activePath: string): string | undefined {
-  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/today";
-  if (normalized.startsWith("/today")) return "today";
+  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/worlds";
   if (normalized.startsWith("/worlds") || normalized.startsWith("/search")) return "worlds";
   if (
     normalized.startsWith("/capture") ||

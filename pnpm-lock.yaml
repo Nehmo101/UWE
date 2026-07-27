@@ -55,6 +55,9 @@ importers:
       '@uwe/brain-assistant':
         specifier: workspace:*
         version: link:../../packages/brain-assistant
+      '@uwe/daily-cockpit':
+        specifier: workspace:*
+        version: link:../../packages/daily-cockpit
       '@uwe/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -428,6 +431,9 @@ importers:
       '@uwe/cookbook':
         specifier: workspace:*
         version: link:../../packages/cookbook
+      '@uwe/daily-cockpit':
+        specifier: workspace:*
+        version: link:../../packages/daily-cockpit
       '@uwe/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -876,6 +882,34 @@ importers:
         version: link:../config
       tsx:
         specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/daily-cockpit:
+    dependencies:
+      '@uwe/database':
+        specifier: workspace:*
+        version: link:../database
+      '@uwe/host-cockpit':
+        specifier: workspace:*
+        version: link:../host-cockpit
+      '@uwe/kitchen':
+        specifier: workspace:*
+        version: link:../kitchen
+      '@uwe/mail':
+        specifier: workspace:*
+        version: link:../mail
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.21
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.22.4
         version: 4.22.4
       typescript:
         specifier: ^5.8.3

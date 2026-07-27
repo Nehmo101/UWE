@@ -28,7 +28,6 @@ export const ADMIN_HUB_SECTIONS = [
     title: "Betrieb",
     links: [
       { href: "/admin/activity", label: "Verlauf" },
-      { href: "/hardware", label: "Hardware-Cockpit" },
       { href: "/mail", label: "Mail Center" },
       { href: "/worlds", label: "Welten verwalten", primary: true },
     ],

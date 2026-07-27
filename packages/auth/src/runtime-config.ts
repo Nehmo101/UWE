@@ -291,8 +291,13 @@ export function resolvePortalLoginHref(
   return `${resolvePortalPublicBaseUrl(env)}/login`;
 }
 
-/** Logged-in Studio work area — not the marketing landing at `/`. */
-export const STUDIO_SESSION_ENTRY_PATH = "/today";
+/**
+ * Logged-in Studio work area — not the marketing landing at `/`.
+ *
+ * Die Welten-Liste, nicht mehr „Heute": das Daily Admin OS liegt in Brain
+ * (Abschnitt H1), Studio ist DM-Werkzeug.
+ */
+export const STUDIO_SESSION_ENTRY_PATH = "/worlds";
 
 /** Legacy unified-path mount; `/studio` redirects to {@link STUDIO_SESSION_ENTRY_PATH}. */
 const STUDIO_LEGACY_MOUNT_PATH = "/studio";

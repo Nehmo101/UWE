@@ -95,7 +95,6 @@ describe("studio navigation", () => {
 
   it("builds command palette entries from the IA", () => {
     const commands = studioCommands();
-    assert.ok(commands.some((cmd) => cmd.href === "/today"));
     assert.ok(commands.some((cmd) => cmd.href === "/worlds"));
     assert.ok(commands.some((cmd) => cmd.href === "/capture"));
     assert.ok(commands.some((cmd) => cmd.href === "/admin"));

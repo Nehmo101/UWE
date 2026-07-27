@@ -36,7 +36,7 @@ export async function updateSettingsAction(formData: FormData) {
   switch (tab) {
     case "landing":
       update.app = {
-        defaultLandingPage: String(formData.get("defaultLandingPage") || "/today").trim() || "/today",
+        defaultLandingPage: String(formData.get("defaultLandingPage") || "/worlds").trim() || "/worlds",
       };
       break;
     case "general": {

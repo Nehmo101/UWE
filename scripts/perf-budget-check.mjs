@@ -6,7 +6,7 @@
  * measured metric exceeds its budget. Mirrors `bundle-budget-check.mjs`.
  *
  * Results file shape:
- *   [{ "route": "studio:/today", "lcp": 1234, "fcp": 800, "load": 1900 }, ...]
+ *   [{ "route": "studio:/worlds", "lcp": 1234, "fcp": 800, "load": 1900 }, ...]
  *
  * Usage:
  *   node scripts/perf-budget-check.mjs [--results <path>] [--require]
@@ -28,7 +28,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Milliseconds. Keep in sync with perf-budgets.ts RUNTIME_BUDGETS_MS. */
 export const RUNTIME_BUDGETS_MS = {
-  "studio:/today": { lcp: 3000, fcp: 2000, load: 4000 },
+  "studio:/worlds": { lcp: 3000, fcp: 2000, load: 4000 },
   "portal:/worlds": { lcp: 2800, fcp: 1900, load: 3800 },
 };
 

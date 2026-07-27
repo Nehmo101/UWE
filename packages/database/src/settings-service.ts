@@ -63,7 +63,7 @@ export const BACKGROUND_PATTERN_VALUES: readonly BackgroundPattern[] = [
   "subtle-noise",
 ] as const;
 
-export const STUDIO_LANDING_PAGE_PATHS = ["/today", "/worlds", "/continue", "/capture"] as const;
+export const STUDIO_LANDING_PAGE_PATHS = ["/worlds", "/continue", "/capture"] as const;
 
 export type StudioLandingPagePath = (typeof STUDIO_LANDING_PAGE_PATHS)[number];
 
@@ -413,7 +413,7 @@ function normalizeDefaultLandingPage(value: unknown): StudioLandingPagePath {
       return trimmed as StudioLandingPagePath;
     }
   }
-  return "/today";
+  return "/worlds";
 }
 
 function normalizeAppSettings(app: AppSettings): AppSettings {
@@ -435,7 +435,7 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     backgroundPattern: "none",
     frostedGlass: false,
     motionEnabled: true,
-    defaultLandingPage: "/today",
+    defaultLandingPage: "/worlds",
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
     startklarSeenVersion: null,

@@ -27,7 +27,7 @@ const LANDING_PATHS = new Set<string>(STUDIO_LANDING_PAGE_PATHS);
 async function studioEntryPath(): Promise<string> {
   const { settings } = await getSystemSettingsSnapshotSafe();
   const configured = settings.app.defaultLandingPage?.trim();
-  return configured && LANDING_PATHS.has(configured) ? configured : "/today";
+  return configured && LANDING_PATHS.has(configured) ? configured : "/worlds";
 }
 
 export default async function LandingPage() {

@@ -35,6 +35,7 @@
     "@uwe/calendar": "workspace:*",
     "@uwe/connector": "workspace:*",
     "@uwe/cookbook": "workspace:*",
+    "@uwe/daily-cockpit": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/dnd-api": "workspace:*",
     "@uwe/env": "workspace:*",

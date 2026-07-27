@@ -16,7 +16,7 @@ export interface StudioShellProps {
 
 /** Top-level Studio shell — global product navigation. */
 export function StudioShell({ breadcrumb, contextPanel, footer, children }: StudioShellProps) {
-  const pathname = usePathname() ?? "/today";
+  const pathname = usePathname() ?? "/worlds";
   const appUrls = useMemo(() => {
     const urls = readClientAppUrls();
     return {
@@ -33,7 +33,7 @@ export function StudioShell({ breadcrumb, contextPanel, footer, children }: Stud
       groups={groups}
       commands={studioCommands()}
       brandLabel="UWE Studio"
-      brandHref="/today"
+      brandHref="/worlds"
       breadcrumb={breadcrumb}
       contextPanel={contextPanel}
       footer={footer}

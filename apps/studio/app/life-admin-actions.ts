@@ -49,7 +49,6 @@ function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
 }
 
 function revalidateAdminPaths() {
-  revalidatePath("/today");
   revalidatePath("/capture");
   revalidatePath("/projects");
   revalidatePath("/workshop");
@@ -477,6 +476,5 @@ export async function setFavoriteWorldAction(formData: FormData) {
   await createSettingsService(prisma).updateSettings({
     app: { favoriteWorldSlug: slug },
   });
-  revalidatePath("/today");
   revalidatePath("/settings");
 }

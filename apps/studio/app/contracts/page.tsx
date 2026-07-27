@@ -505,7 +505,7 @@ export default async function ContractsPage({ searchParams }: Props) {
         )}
 
         <p className="text-sm text-muted-foreground">
-          <Link href="/today">← Heute</Link>
+          <Link href="/worlds">← Welten</Link>
         </p>
       </div>
     </StudioShell>

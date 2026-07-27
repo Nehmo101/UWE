@@ -79,7 +79,7 @@ export default async function ScanInboxPage({
         <ScanInboxBoard docs={filteredDocs} statusOrder={STATUS_ORDER} byStatus={byStatusRecord} />
 
         <p className="text-sm text-muted-foreground">
-          <Link href="/today">← Zurück zu Heute</Link>
+          <Link href="/worlds">← Zurück zu den Welten</Link>
         </p>
       </div>
     </StudioShell>

@@ -35,7 +35,6 @@ function triageService() {
 }
 
 function revalidateCapturePaths() {
-  revalidatePath("/today");
   revalidatePath("/capture");
 }
 

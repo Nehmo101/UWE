@@ -100,24 +100,6 @@ export const ORGANIZATION_NAV: NavGroup[] = [
     ],
   },
   {
-    id: "org-infra",
-    title: "Infrastruktur",
-    items: [
-      {
-        id: "org-hardware",
-        label: "Hardware / Homelab",
-        href: "/hardware",
-        icon: "hard-drive",
-        group: "Infrastruktur",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "organization",
-        keywords: ["hardware", "homelab"],
-      },
-    ],
-  },
-  {
     id: "org-comms",
     title: "Kommunikation",
     items: [

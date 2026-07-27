@@ -12,7 +12,7 @@ const root = path.resolve(import.meta.dirname, "..");
 describe("runtime perf budget tooling", () => {
   it("passes when all metrics are within budget", () => {
     const result = checkPerfBudgets([
-      { route: "studio:/today", lcp: 1200, fcp: 700, load: 1800 },
+      { route: "studio:/worlds", lcp: 1200, fcp: 700, load: 1800 },
       { route: "portal:/worlds", lcp: 1000, fcp: 600, load: 1500 },
     ]);
     assert.equal(result.ok, true);
@@ -22,7 +22,7 @@ describe("runtime perf budget tooling", () => {
 
   it("fails and reports the breached metric", () => {
     const result = checkPerfBudgets([
-      { route: "studio:/today", lcp: 9999, fcp: 700, load: 1800 },
+      { route: "studio:/worlds", lcp: 9999, fcp: 700, load: 1800 },
     ]);
     assert.equal(result.ok, false);
     assert.equal(result.failures.length, 1);
@@ -39,7 +39,7 @@ describe("runtime perf budget tooling", () => {
   });
 
   it("exposes runtime budgets and a check script", () => {
-    assert.ok(RUNTIME_BUDGETS_MS["studio:/today"]);
+    assert.ok(RUNTIME_BUDGETS_MS["studio:/worlds"]);
     assert.ok(RUNTIME_BUDGETS_MS["portal:/worlds"]);
     assert.ok(fs.existsSync(path.join(root, "scripts/perf-budget-check.mjs")));
   });

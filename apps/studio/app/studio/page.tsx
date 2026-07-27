@@ -5,8 +5,8 @@ interface Props {
 }
 
 /**
- * Legacy DM dashboard URL — canonical Studio landing is /today (IA consolidation).
- * Preserves query string for deep links (e.g. ?world=…).
+ * Legacy DM dashboard URL — die kanonische Studio-Landung ist die Welten-Liste.
+ * Query-String bleibt für Deep Links erhalten (z. B. ?world=…).
  */
 export default async function StudioDashboardRedirect({ searchParams }: Props) {
   const params = await searchParams;
@@ -16,5 +16,5 @@ export default async function StudioDashboardRedirect({ searchParams }: Props) {
     else if (Array.isArray(value)) value.forEach((v) => qs.append(key, v));
   }
   const query = qs.toString();
-  redirect(query ? `/today?${query}` : "/today");
+  redirect(query ? `/worlds?${query}` : "/worlds");
 }

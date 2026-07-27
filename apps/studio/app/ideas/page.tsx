@@ -81,7 +81,7 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
           githubRepo: config.githubRepo, defaultBranch: config.defaultBranch, defaultProvider: config.defaultProvider,
         }}
       />
-      <p className="text-sm text-muted-foreground"><Link href="/today">← Heute</Link></p>
+      <p className="text-sm text-muted-foreground"><Link href="/worlds">← Welten</Link></p>
     </StudioShell>
   );
 }

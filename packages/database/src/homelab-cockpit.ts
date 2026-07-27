@@ -251,7 +251,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 5,
-          instruction: "Studio /today und /hardware öffnen — System-Ampel muss grün sein",
+          instruction: "Brain /today und /system öffnen — System-Ampel muss grün sein",
         },
       ],
     },

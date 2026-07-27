@@ -3,7 +3,6 @@ import { brainPrisma } from "@uwe/database/brain-client";
 import {
   createCalendarService,
   createDocumentTemplateService,
-  createLifeAdminService,
   createMiniatureCollectionService,
   prisma,
   type CalendarEventKind,
@@ -11,7 +10,6 @@ import {
   type CaptureType,
   type ContractStatus,
   type DocumentTemplateCategory,
-  type HardwareStatus,
   type MiniatureCollectionStatus,
   type PersonalProjectCategory,
   type PersonalProjectStatus,
@@ -22,14 +20,7 @@ import { createMailPortalService } from "@uwe/mail/portal";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBrainActionAuth } from "@/src/lib/brain-action-auth";
-
-function lifeAdmin() {
-  return createLifeAdminService(brainPrisma, prisma);
-}
-
-function str(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim();
-}
+import { lifeAdmin, revalidateBrainPaths, str } from "@/src/lib/brain-action-shared";
 
 function parseCommaTags(formData: FormData, field = "tags"): string[] {
   return str(formData.get(field))
@@ -51,22 +42,6 @@ function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
   if (!raw) return null;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function revalidateBrainPaths() {
-  for (const path of [
-    "/",
-    "/today",
-    "/life-brain",
-    "/capture",
-    "/projects",
-    "/workshop",
-    "/contracts",
-    "/hardware",
-    "/documents",
-  ]) {
-    revalidatePath(path);
-  }
 }
 
 /* ── Capture ─────────────────────────────────────────────────────────── */
@@ -234,28 +209,6 @@ export async function deleteContractAction(formData: FormData) {
 
 /* ── Hardware ────────────────────────────────────────────────────────── */
 
-export async function createHardwareAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const name = str(formData.get("name"));
-  if (!name) return;
-
-  await lifeAdmin().createHardwareDevice({
-    name,
-    role: str(formData.get("role")),
-    status: (str(formData.get("status")) || "active") as HardwareStatus,
-    hostname: str(formData.get("hostname")) || null,
-    operatingSystem: str(formData.get("operatingSystem")),
-  });
-  revalidateBrainPaths();
-}
-
-export async function deleteHardwareAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await lifeAdmin().deleteHardwareDevice(id);
-  revalidateBrainPaths();
-}
-
 /* ══ Edit (update) actions ═══════════════════════════════════════════ */
 
 export async function updateCaptureAction(formData: FormData) {
@@ -335,20 +288,6 @@ export async function updateContractAction(formData: FormData) {
     amountCents: parseEuroToCents(formData.get("amount")),
     nextPaymentDate: parseOptionalDate(formData.get("nextPaymentDate")),
     notes: str(formData.get("notes")),
-  });
-  revalidateBrainPaths();
-}
-
-export async function updateHardwareAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (!id) return;
-  await lifeAdmin().updateHardwareDevice(id, {
-    name: str(formData.get("name")),
-    role: str(formData.get("role")),
-    status: (str(formData.get("status")) || "active") as HardwareStatus,
-    hostname: str(formData.get("hostname")) || null,
-    operatingSystem: str(formData.get("operatingSystem")),
   });
   revalidateBrainPaths();
 }

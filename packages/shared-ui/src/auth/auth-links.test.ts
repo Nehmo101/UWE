@@ -73,7 +73,7 @@ describe("auth-links", () => {
       },
     });
     assert.equal(links.portalHref, "https://uweanddragons.org/auth/worlds");
-    assert.equal(links.studioHref, "/today");
+    assert.equal(links.studioHref, "/worlds");
   });
 
   it("links to studio dashboard from portal on split-hostname deployment", () => {
@@ -86,7 +86,7 @@ describe("auth-links", () => {
         NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
       },
     });
-    assert.equal(links.studioHref, "https://studio.uweanddragons.org/today");
+    assert.equal(links.studioHref, "https://studio.uweanddragons.org/worlds");
   });
 
   it("links from Studio landing to Portal login when logged out", () => {

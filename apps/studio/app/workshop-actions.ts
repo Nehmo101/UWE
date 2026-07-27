@@ -48,7 +48,6 @@ function readRentalNotes(formData: FormData): string {
 }
 
 function revalidateWorkshopPaths(projectId?: string) {
-  revalidatePath("/today");
   revalidatePath("/capture");
   revalidatePath("/workshop");
   revalidatePath("/workshop/recipes");

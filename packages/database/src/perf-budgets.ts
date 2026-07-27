@@ -83,7 +83,7 @@ export const PERF_BUDGETS_MS = {
  * Adjust with justification in `docs/engineering/performance.md`.
  */
 export const RUNTIME_BUDGETS_MS = {
-  "studio:/today": { lcp: 3000, fcp: 2000, load: 4000 },
+  "studio:/worlds": { lcp: 3000, fcp: 2000, load: 4000 },
   "portal:/worlds": { lcp: 2800, fcp: 1900, load: 3800 },
 } as const;
 

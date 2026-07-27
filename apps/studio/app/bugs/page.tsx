@@ -102,7 +102,7 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
         githubIssueSync={githubIssueSync}
       />
       <p className="text-sm text-muted-foreground">
-        <Link href="/today">← Heute</Link>
+        <Link href="/worlds">← Welten</Link>
       </p>
     </StudioShell>
   );

@@ -64,14 +64,14 @@ function StatusRow({
         {message ? <span className="brain-muted">{message}</span> : null}
       </div>
       {details && details.length > 0 ? (
-        <dl className="brain-kpis">
+        <div className="brain-kpis">
           {details.map((detail) => (
             <div key={detail.label} className="brain-kpi">
-              <dt>{detail.label}</dt>
-              <dd>{formatValue(detail.value)}</dd>
+              <strong>{formatValue(detail.value)}</strong>
+              <span>{detail.label}</span>
             </div>
           ))}
-        </dl>
+        </div>
       ) : null}
     </li>
   );

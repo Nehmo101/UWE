@@ -39,7 +39,6 @@ function readStatus(raw: FormDataEntryValue | null): MiniatureCollectionStatus {
 function revalidateMiniaturePaths() {
   revalidatePath("/miniatures");
   revalidatePath("/workshop");
-  revalidatePath("/today");
 }
 
 function readMiniatureFields(formData: FormData) {

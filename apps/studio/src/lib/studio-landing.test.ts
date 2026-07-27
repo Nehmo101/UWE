@@ -3,9 +3,9 @@ import { describe, it } from "node:test";
 import { normalizeStudioLandingPage, resolveStudioLandingPath } from "./studio-landing";
 
 describe("studio-landing", () => {
-  it("defaults unknown values to /today", () => {
-    assert.equal(normalizeStudioLandingPage(null), "/today");
-    assert.equal(normalizeStudioLandingPage("/invalid"), "/today");
+  it("defaults unknown values to /worlds", () => {
+    assert.equal(normalizeStudioLandingPage(null), "/worlds");
+    assert.equal(normalizeStudioLandingPage("/invalid"), "/worlds");
   });
 
   it("keeps allowed landing paths", () => {
