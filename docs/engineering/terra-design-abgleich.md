@@ -5,7 +5,7 @@
 `terra/index.html` blieb **unverändert** — die nötigen Anpassungen ließen sich alle im
 Stylesheet erledigen.
 
-Terra läuft demnächst als Frame unter den Atlas-Pfaden von UWE. Bis heute brachte es
+Terra läuft als Frame unter den Kartenpfaden von UWE. Bis dahin brachte es
 seine eigene Gestaltung mit: hellblaue Akzente, weiße Karten mit kühlem Schlagschatten,
 eine eigene Schriftwahl. Direkt neben der UWE-Oberfläche hätte das gewirkt wie ein
 fremdes Programm in einem Fenster. Dieses Dokument hält fest, woran sich die Angleichung
@@ -60,7 +60,7 @@ der Wert ist der etablierte Parchment-Bernstein (`themes-ghibli.ts:18-19`).
 
 **Der Akzent gehört nicht ins Theme, sondern zur App** (`design-v2/app-accent.css:24-61`):
 Landing/Studio Terrakotta `#c2622b`/`#e8a670`, Portal Teal `#1a5c4f`/`#7fd0b4`, Brain
-Violett `#55447c`/`#cabff0`. Terra hängt unter den Atlas-Pfaden von Studio und nimmt
+Violett `#55447c`/`#cabff0`. Terra hängt unter den Kartenpfaden von Studio und nimmt
 deshalb Terrakotta.
 
 ### 1.3 Radien, Kanten, Glas (`design-v2/ghibli-shell.css:18-35`)

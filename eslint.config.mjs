@@ -34,6 +34,10 @@ const config = [
       "**/src-tauri/target/**",
       "packages/database/src/generated/**",
       "design-system/_ds_bundle.js",
+      // Fremdcode: terra/vendor/ traegt three unveraendert aus (siehe
+      // terra/vendor/HERKUNFT.md und .gitattributes). Gelintet wird nur, was
+      // hier geschrieben wurde.
+      "terra/vendor/**",
       // Build-Artefakt: `scripts/copy-terra.mjs` legt terra/ zur Auslieferung in
       // beide Apps. Gelintet wird die QUELLE unter terra/, nicht die Kopie —
       // sonst meldete jeder Fund doppelt (J1).
