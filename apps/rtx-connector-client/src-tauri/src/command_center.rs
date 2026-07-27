@@ -496,6 +496,10 @@ const OPS_ACTIONS: &[&str] = &[
     "webhooks-delete",
     "settings-get",
     "settings-update",
+    "setup-status",
+    "smtp-status",
+    "smtp-set",
+    "smtp-clear",
 ];
 
 fn build_ops_command(action: &str) -> Result<Command, String> {

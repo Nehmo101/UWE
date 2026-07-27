@@ -111,13 +111,9 @@ function buildLinks(studioPort: number, portalPort: number, studioUp: boolean): 
     if (brain) {
       links.push(brain);
     }
-    links.push(
-      { label: "Kommandozentrale", href: `${studioBase}/system/command-center`, external: true },
-      { label: "Einrichtung", href: `${studioBase}/admin/setup`, external: true },
-      { label: "Host Control", href: `${studioBase}/system/host-control`, external: true },
-      { label: "Backup", href: `${studioBase}/backup`, external: true },
-      { label: "Cloudflare", href: `${studioBase}/system/cloudflare`, external: true },
-    );
+    // Kein Link mehr auf Studios Systembereich: Einrichtung, Host Control,
+    // Backup und Cloudflare liegen im Command Center selbst (Abschnitt D).
+    links.push({ label: "Admin", href: `${studioBase}/admin`, external: true });
   }
   return links;
 }

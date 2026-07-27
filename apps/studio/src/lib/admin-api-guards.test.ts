@@ -23,10 +23,10 @@ const ownerUser = {
   access: { portal: true, studio: true, brain: true, family: true },
 };
 
-describe("owner setup API guards", () => {
-  it("blocks a Studio session from owner-only setup tests", () => {
+describe("owner-only admin API guards", () => {
+  it("blocks a Studio session from owner-only admin routes", () => {
     const result = requireOwnerApiAuth(
-      makeRequest("/api/admin/setup/test/mail"),
+      makeRequest("/api/admin/audit-log"),
       {
         user: studioUser,
         apiTokenId: null,
@@ -39,9 +39,9 @@ describe("owner setup API guards", () => {
     assert.equal(result.status, 403);
   });
 
-  it("allows owner session for setup tests", () => {
+  it("allows an owner session", () => {
     const result = requireOwnerApiAuth(
-      makeRequest("/api/admin/setup/test/urls"),
+      makeRequest("/api/admin/secrets"),
       {
         user: ownerUser,
         apiTokenId: null,
@@ -56,7 +56,7 @@ describe("owner setup API guards", () => {
   it("keeps /api/admin owner-only at the route gate", () => {
     // The `admin` role tier is gone: /api/admin now needs the owner flag, and
     // everything else in Studio needs the Studio checkbox.
-    assert.equal(getRequiredAccessForApiPath("/api/admin/setup/test/mail"), "owner");
+    assert.equal(getRequiredAccessForApiPath("/api/admin/audit-log"), "owner");
     assert.equal(getRequiredAccessForApiPath("/api/worlds"), "studio");
   });
 });

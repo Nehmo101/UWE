@@ -382,7 +382,11 @@ export type OpsAction =
   | "webhooks-create"
   | "webhooks-delete"
   | "settings-get"
-  | "settings-update";
+  | "settings-update"
+  | "setup-status"
+  | "smtp-status"
+  | "smtp-set"
+  | "smtp-clear";
 
 export interface OpsResult<T = unknown> {
   ok: boolean;

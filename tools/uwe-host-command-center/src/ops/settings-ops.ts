@@ -3,6 +3,7 @@ import {
   validateSettingsUpdate,
   type PrismaClient,
 } from "@uwe/database/server";
+import { syncSchedulesForUpdate } from "@uwe/host-cockpit";
 
 /**
  * System settings from the Command Center — replaces Studio `/settings`
@@ -11,6 +12,9 @@ import {
  *
  * The read is the client-safe projection: `getSettings` masks secrets in the
  * UI shape, and `sanitizeSettingsForClient` drops the AI key material entirely.
+ *
+ * A write also refreshes the host-readable schedule files, because the backup,
+ * briefing and mail timers read those and not the database.
  */
 
 export async function getSettings(db: PrismaClient): Promise<unknown> {
@@ -28,5 +32,9 @@ export async function updateSettings(
 
   const service = createSettingsService(db);
   await service.updateSettings(parsed.value);
+
+  // Read back before syncing: a partial update leaves the rest of the group at
+  // its stored value, and the schedule files describe the whole group.
+  syncSchedulesForUpdate(parsed.value, await service.getSettings());
   return service.getSettingsForClient();
 }

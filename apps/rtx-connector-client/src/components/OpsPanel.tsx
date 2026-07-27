@@ -4,6 +4,8 @@ import { HealthBadge } from "@uwe/shared-ui";
 
 import { opsInvoke, type OpsAction } from "../lib/tauri";
 import { toMessage } from "../lib/connector-runtime-labels";
+import { OpsSettingsForm } from "./ops/OpsSettingsForm";
+import { OpsSmtpForm } from "./ops/OpsSmtpForm";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
@@ -21,8 +23,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card"
 interface TabDef {
   id: string;
   label: string;
-  action: OpsAction;
-  /** Read-only tabs poll on mount; the rest need an explicit load. */
+  /** Read-only tabs render their payload; editors set `action` to null. */
+  action: OpsAction | null;
   hint: string;
 }
 
@@ -33,7 +35,9 @@ const TABS: TabDef[] = [
   { id: "audit", label: "Audit-Log", action: "audit-log", hint: "Die letzten sicherheitsrelevanten Ereignisse." },
   { id: "tokens", label: "API-Tokens", action: "api-tokens-list", hint: "Tokens des Owners. Der Klartext erscheint genau einmal." },
   { id: "webhooks", label: "Webhooks", action: "webhooks-list", hint: "Endpunkte und die letzten Zustellungen." },
-  { id: "settings", label: "Einstellungen", action: "settings-get", hint: "Systemeinstellungen aus der Datenbank." },
+  { id: "settings", label: "Einstellungen", action: null, hint: "Systemeinstellungen der Datenbank — bearbeitbar." },
+  { id: "setup", label: "Einrichtung", action: "setup-status", hint: "Was ist konfiguriert, was fehlt noch — ohne Secret-Werte." },
+  { id: "smtp", label: "SMTP", action: null, hint: "Mail-Zugangsdaten in der Datenbank. Leer = es gilt .env." },
 ];
 
 function summarize(data: unknown): { tone: "ok" | "degraded" | "error"; label: string } | null {
@@ -54,6 +58,12 @@ export function OpsPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (tab: TabDef) => {
+    if (!tab.action) {
+      setBusy(false);
+      setError(null);
+      setData(null);
+      return;
+    }
     setBusy(true);
     setError(null);
     setData(null);
@@ -114,7 +124,11 @@ export function OpsPanel() {
         </CardHeader>
         <CardContent>
           <p className="connector-muted">{activeTab.hint}</p>
-          {busy ? (
+          {activeTab.id === "settings" ? (
+            <OpsSettingsForm />
+          ) : activeTab.id === "smtp" ? (
+            <OpsSmtpForm />
+          ) : busy ? (
             <p className="connector-muted">Lade …</p>
           ) : data ? (
             <pre className="connector-pre">{JSON.stringify(data, null, 2)}</pre>
@@ -122,11 +136,13 @@ export function OpsPanel() {
             <p className="connector-muted">Keine Daten.</p>
           ) : null}
         </CardContent>
-        <CardFooter>
-          <Button variant="ghost" onClick={() => void load(activeTab)} disabled={busy}>
-            Neu laden
-          </Button>
-        </CardFooter>
+        {activeTab.action === null ? null : (
+          <CardFooter>
+            <Button variant="ghost" onClick={() => void load(activeTab)} disabled={busy}>
+              Neu laden
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

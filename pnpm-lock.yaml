@@ -999,12 +999,21 @@ importers:
       '@uwe/ai-brain':
         specifier: workspace:*
         version: link:../ai-brain
+      '@uwe/assets':
+        specifier: workspace:*
+        version: link:../assets
       '@uwe/auth':
         specifier: workspace:*
         version: link:../auth
+      '@uwe/backup':
+        specifier: workspace:*
+        version: link:../backup
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+      '@uwe/mail':
+        specifier: workspace:*
+        version: link:../mail
     devDependencies:
       '@types/node':
         specifier: ^22.19.21
@@ -1480,6 +1489,9 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@uwe/host-cockpit':
+        specifier: workspace:*
+        version: link:../../packages/host-cockpit
       '@uwe/host-monitor':
         specifier: workspace:*
         version: link:../../packages/host-monitor

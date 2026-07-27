@@ -16,6 +16,7 @@
     "@uwe/auth": "workspace:*",
     "@uwe/connector-client-config": "workspace:*",
     "@uwe/database": "workspace:*",
+    "@uwe/host-cockpit": "workspace:*",
     "@uwe/host-monitor": "workspace:*"
   },
   "devDependencies": {

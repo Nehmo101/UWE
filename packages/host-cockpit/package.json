@@ -2,7 +2,7 @@
   "name": "@uwe/host-cockpit",
   "version": "0.1.0",
   "private": true,
-  "description": "Operations cockpit data for UWE — admin status and homelab overview, shared by Brain and the Command Center",
+  "description": "Operations cockpit data for UWE — admin status, homelab overview and host schedule sync",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -14,8 +14,11 @@
   },
   "dependencies": {
     "@uwe/ai-brain": "workspace:*",
+    "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
-    "@uwe/database": "workspace:*"
+    "@uwe/backup": "workspace:*",
+    "@uwe/database": "workspace:*",
+    "@uwe/mail": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",

@@ -5,6 +5,7 @@ import { auditLog, migrationStatus, secretsStatus, securityStatus } from "./ops/
 import { createApiToken, listApiTokens, revokeApiToken } from "./ops/token-ops";
 import { createWebhook, deleteWebhook, listWebhooks } from "./ops/webhook-ops";
 import { getSettings, updateSettings } from "./ops/settings-ops";
+import { clearSmtp, setSmtp, setupStatus, smtpStatus } from "./ops/setup-ops";
 
 loadEnvFromRoot();
 
@@ -37,6 +38,10 @@ const ACTIONS = [
   "webhooks-delete",
   "settings-get",
   "settings-update",
+  "setup-status",
+  "smtp-status",
+  "smtp-set",
+  "smtp-clear",
 ] as const;
 
 type OpsAction = (typeof ACTIONS)[number];
@@ -71,6 +76,14 @@ async function run(action: OpsAction, db: ReturnType<typeof createPrismaClient>)
       return getSettings(db);
     case "settings-update":
       return updateSettings(db, await readStdinJson());
+    case "setup-status":
+      return setupStatus(db);
+    case "smtp-status":
+      return smtpStatus(db);
+    case "smtp-set":
+      return setSmtp(db, await readStdinJson());
+    case "smtp-clear":
+      return clearSmtp(db);
     default: {
       const exhaustive: never = action;
       return exhaustive;
