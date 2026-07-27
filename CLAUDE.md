@@ -8,6 +8,7 @@ UWE (Universeller Welten-Editor) ist ein selbst-gehostetes Alltags- und Hobby-Be
 apps/studio   → DM-App (Port 3000) — Weltbearbeitung, Admin, AI, Daily Admin OS
 apps/portal   → Spieler-Wiki (Port 3001) — nur gefilterte, freigegebene Inhalte
 apps/brain    → Owner-only Brain (Port 3002) — privater Daily-Admin-/Wissensbereich
+apps/family   → Family (Port 3004) — gemeinsamer Haushalt, Häkchen `Family`
 apps/landing  → Öffentliche Startseite (Port 3103) — Apex-Origin, genau drei Routen
 packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 ```
@@ -85,6 +86,9 @@ pnpm --filter @uwe/database db:seed
 
 ## Aktive Runtime-Wahrheit
 
+- **Datenbanken**: `uwe.db` (D&D), `uwe-brain.db` (owner-privat), `uwe-family.db` (Family).
+  Die Aufteilung kommt aus `PRISMA_MODEL_BOUNDARIES`; `scripts/generate-brain-schema-split.mjs`
+  schreibt daraus die drei Prisma-Schemata.
 - **UWE Host**: Linux + Node.js 22 + `pnpm` + `systemd` (`deploy/systemd/uwe.service`).
 - **RTX Host Connector**: optionaler **outbound** Worker (`tools/uwe-rtx-connector`).
 - **Cloudflare Tunnel / Access**: optional davor.

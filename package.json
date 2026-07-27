@@ -39,6 +39,7 @@
     "dev:studio": "pnpm --filter @uwe/studio dev",
     "dev:portal": "pnpm --filter @uwe/portal dev",
     "dev:brain": "pnpm --filter @uwe/brain dev",
+    "dev:family": "pnpm --filter @uwe/family dev",
     "export:static": "pnpm --filter @uwe/database db:generate && node --import tsx packages/static-export/src/cli.ts",
     "export:wiki": "pnpm --filter @uwe/database db:generate && node --import tsx packages/static-export/src/wiki-cli.ts",
     "backup:create": "pnpm --filter @uwe/database db:generate && node --import tsx packages/backup/src/cli.ts",

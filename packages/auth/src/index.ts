@@ -220,6 +220,7 @@ export {
   PUBLIC_STUDIO_API_ROUTES,
   PROTECTED_ROUTE_PREFIXES,
   BRAIN_PUBLIC_ROUTES,
+  FAMILY_PUBLIC_ROUTES,
   classifyRoute,
   isApiRoute,
   isGuestWikiPath,
@@ -236,6 +237,7 @@ export {
   evaluatePortalMiddleware,
   evaluateStudioMiddleware,
   evaluateBrainMiddleware,
+  evaluateFamilyMiddleware,
   getMiddlewareMatcher,
 } from "./security/middleware";
 

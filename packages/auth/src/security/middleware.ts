@@ -108,14 +108,16 @@ export function evaluateStudioMiddleware(
 }
 
 /**
- * Owner-only Brain surface: path-based, deny-by-default session gate. Pages
- * without a session redirect to /login; protected APIs return 401 (or 404 for
- * unknown APIs, hiding their existence). The owner *role* is enforced
- * server-side by the route handlers (`requireBrainOwnerAuth`) — the middleware
- * has no user object and therefore never decides the role. In non-production
- * everything is allowed for local development.
+ * Checkbox-gated surface (Brain, Family): path-based, deny-by-default session
+ * gate. Pages without a session redirect to /login; protected APIs return 401
+ * (or 404 for unknown APIs, hiding their existence). *Which* checkbox is
+ * required is enforced server-side by the route handlers
+ * (`requireBrainOwnerAuth` / `requireFamilyAuth`) — the middleware has no user
+ * object and therefore never decides it. In non-production everything is
+ * allowed for local development.
  */
-export function evaluateBrainMiddleware(
+function evaluateCheckboxSurfaceMiddleware(
+  surface: "brain" | "family",
   request: MiddlewareRequestLike,
   env: NodeJS.ProcessEnv = process.env,
 ): MiddlewareDecision {
@@ -124,7 +126,7 @@ export function evaluateBrainMiddleware(
   }
   const pathname = request.pathname;
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
-  const classification = classifyRoute(pathname, "brain");
+  const classification = classifyRoute(pathname, surface);
 
   if (classification.access === "public") {
     return { action: "allow" };
@@ -144,6 +146,20 @@ export function evaluateBrainMiddleware(
     return { action: "redirect-login", redirectPath: "/login" };
   }
   return { action: "allow" };
+}
+
+export function evaluateBrainMiddleware(
+  request: MiddlewareRequestLike,
+  env: NodeJS.ProcessEnv = process.env,
+): MiddlewareDecision {
+  return evaluateCheckboxSurfaceMiddleware("brain", request, env);
+}
+
+export function evaluateFamilyMiddleware(
+  request: MiddlewareRequestLike,
+  env: NodeJS.ProcessEnv = process.env,
+): MiddlewareDecision {
+  return evaluateCheckboxSurfaceMiddleware("family", request, env);
 }
 
 export function getMiddlewareMatcher(surface: UweAppSurface): string[] {

@@ -1,0 +1,35 @@
+{
+  "name": "@uwe/family",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UWE Family \u2014 shared household app (Vertr\u00e4ge, Dokumente, K\u00fcche, Haushalt, Kalender), gated on the family checkbox",
+  "scripts": {
+    "dev": "next dev --port 3004 --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --port 3004 --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "@uwe/ai-brain": "workspace:*",
+    "@uwe/auth": "workspace:*",
+    "@uwe/database": "workspace:*",
+    "@uwe/env": "workspace:*",
+    "@uwe/product-contracts": "workspace:*",
+    "@uwe/security": "workspace:*",
+    "@uwe/shared-ui": "workspace:*",
+    "next": "^15.3.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

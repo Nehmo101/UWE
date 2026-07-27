@@ -63,7 +63,8 @@
     "./test-helpers": "./src/test-helpers.ts",
     "./first-run-setup": "./src/first-run-setup-service.ts",
     "./first-run-setup-types": "./src/first-run-setup-types.ts",
-    "./family-client": "./src/family-client.ts"
+    "./family-client": "./src/family-client.ts",
+    "./family-service": "./src/family-service.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

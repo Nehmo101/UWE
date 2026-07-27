@@ -2,7 +2,8 @@
  * Product-boundary import guard (three-product split, Invariant 5).
  *
  * Enforces, statically and with zero dependencies:
- *  - No app imports another app: apps/studio, apps/portal and apps/brain must
+ *  - No app imports another app: apps/studio, apps/portal, apps/brain and
+ *    apps/family must
  *    never import each other (via `@uwe/{studio,portal,brain}` or a relative
  *    path that escapes into a sibling app).
  *  - No package/tool imports an app: shared engines and tools must not depend on
