@@ -136,15 +136,28 @@ test('Ebene 5 — Biom-Registry und Auswahlliste in index.html stimmen ueberein'
   assert.equal(imHtml.length, inRegistry.length);
 });
 
-test('Ebene 5 — keine doppelten Poolnamen', () => {
+test('Ebene 5 — keine doppelten Poolnamen', async () => {
   /* definePool ueberschreibt einen bereits vergebenen Namen kommentarlos —
-     der zuerst gebaute Pool waere dann unsichtbar, sein Speicher belegt. */
-  const namen = [...quelltext('generators/geometry.js')
+     der zuerst gebaute Pool waere dann unsichtbar, sein Speicher belegt.
+
+     Seit I1 kommen die Pools aus ZWEI Quellen: die Koerper stehen als
+     literale definePool-Zeilen in geometry.js, die 49 Kartenzeichen
+     registriert `registriereSignaturPools` aus render/signaturen.js zur
+     Laufzeit. Ein Abgleich gegen die Literale allein wuerde deshalb dauerhaft
+     scheitern — geprueft wird jetzt die SUMME beider Quellen gegen die
+     Registry, und das haelt die Zusage unveraendert: passt die Summe nicht,
+     hat einer den anderen ueberschrieben. */
+  const literal = [...quelltext('generators/geometry.js')
     .matchAll(/definePool\(\s*["']([a-zA-Z0-9_]+)["']/g)].map((m) => m[1]);
+  const sig = await ladeTerra('render/signaturen.js');
+  const zeichen = sig.ZEICHEN_NAMEN.map((n) => 'sig_' + n.replace(/^sig_/, ''));
+  const namen = literal.concat(zeichen);
   const doppelt = namen.filter((n, i) => namen.indexOf(n) !== i);
-  assert.deepEqual([...new Set(doppelt)], []);
+  assert.deepEqual([...new Set(doppelt)], [],
+    'Dieser Name wird zweimal vergeben — der zuerst gebaute Pool waere unsichtbar');
   assert.equal(namen.length, Object.keys(POOLS).length,
-    'Es gibt mehr definePool-Aufrufe als registrierte Pools — ein Name wurde ueberschrieben');
+    'Koerper (' + literal.length + ') + Kartenzeichen (' + zeichen.length + ') decken sich '
+    + 'nicht mit der Registry (' + Object.keys(POOLS).length + ') — ein Name wurde ueberschrieben');
 });
 
 test('Ebene 5 — POOL_NAMES deckt sich mit POOLS', () => {

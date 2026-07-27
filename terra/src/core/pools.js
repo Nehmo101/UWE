@@ -1,7 +1,7 @@
 // InstancedMesh-Pools, Instanz-Emission, Kontaktschatten und Dirty-Packen.
 import * as THREE from 'three';
 import { lerp, sstep } from '../core/rng.js';
-import { S, sceneRef, MAX_INST_PER_EL, KARTE } from '../core/store.js';
+import { S, sceneRef, MAX_INST_PER_EL, MAX_KARTE_PER_EL, KARTE } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { heightAt, normalAt } from '../world/terrain.js';
@@ -32,7 +32,18 @@ function Pool(name, geo, opts) {
   this.name = name;
   this.geo = geo;
   this.radius = opts.radius;
+  /* I1 — Massstabsband in Weltmetern je Gitterzelle. Fehlen die Felder, gilt
+     das Vorgabeband des Bestands: alle 272 vorhandenen Pools bleiben damit
+     ohne eine einzige Aenderung genau dort, wo sie heute schon sind (Ort bis
+     Landschaft). Keine Migration, kein Formatschritt. */
+  this.sichtbarAb = opts.sichtbarAb === undefined ? 0 : opts.sichtbarAb;
+  this.sichtbarBis = opts.sichtbarBis === undefined ? 60 : opts.sichtbarBis;
+  this.karte = !!opts.karte;
   this.mat = terraMat({
+    // I1: Kartenzeichen bekommen ein unbeleuchtetes Material. Ein Ortsring mit
+    // Lichtrichtung, Wolkenschatten und Malschicht saehe aus wie ein liegender
+    // Reifen — Tinte auf Papier ist kein Gegenstand im Licht.
+    flach: !!opts.karte,
     vertexColors: true,
     side: opts.dbl ? THREE.DoubleSide : THREE.FrontSide,
     transparent: !!opts.transparent,
@@ -48,7 +59,10 @@ function Pool(name, geo, opts) {
     emissive: opts.emissive || 0x000000
   });
   if (opts.emissiveIntensity !== undefined) this.mat.emissiveIntensity = opts.emissiveIntensity;
-  tintedMats.push(this.mat);
+  // Kartenzeichen bekommen KEINEN Tageszeit-Grundton: sie sollen bei Nacht
+  // dieselbe Tinte tragen wie am Mittag. Eine Karte wird gelesen, nicht
+  // beleuchtet.
+  if (!this.karte) tintedMats.push(this.mat);
   this.cap = 0;
   this.mesh = null;
   this.count = 0;
@@ -113,8 +127,14 @@ var _schattenN = new THREE.Vector3();
 function emit(el, pool, x, y, z, yaw, sx, sy, sz, tint, pitch, roll) {
   var a = el.inst[pool];
   if (!a) { a = el.inst[pool] = []; }
-  if (el.total >= MAX_INST_PER_EL) return;
-  el.total++;
+  // I1: getrennte Deckel — siehe MAX_KARTE_PER_EL in core/store.js.
+  if (POOLS[pool] && POOLS[pool].karte) {
+    if (el.karteTotal >= MAX_KARTE_PER_EL) return;
+    el.karteTotal++;
+  } else {
+    if (el.total >= MAX_INST_PER_EL) return;
+    el.total++;
+  }
   a.push(x, y, z, pitch || 0, yaw || 0, roll || 0, sx, sy, sz,
     tint ? tint[0] : 1, tint ? tint[1] : 1, tint ? tint[2] : 1);
   // Kontaktschatten nur für bodenständige Objekte mit nennenswerter Grundfläche

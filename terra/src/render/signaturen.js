@@ -54,8 +54,12 @@
    dem Karten seit je gestochen werden.
    ========================================================================== */
 import * as THREE from 'three';
+import { bildhoehe } from '../core/bild.js';
 import { clamp, lerp, sstep, DEG, hashi } from '../core/rng.js';
 import { KARTE, BIOME } from '../core/store.js';
+// I1: die Maszstabsleiter gehoert der Karte, nicht der Darstellung.
+// kartenbaum.js haengt nur an core/ — kein Zyklus.
+import { MASSSTAB_LEITER } from '../world/kartenbaum.js';
 
 var TAU = Math.PI * 2;
 
@@ -72,12 +76,17 @@ var TAU = Math.PI * 2;
 var MASSSTAB_MIN = 0.5;      // feiner als 0,5 m/Zelle waere ein Bauplan
 var MASSSTAB_MAX = 4000;     // gröber waere ein Globus
 
-var MASSSTABSLEITER = [
-  { id: 'ort',         label: 'Ort',         von: 0.5, bis: 4 },
-  { id: 'landschaft',  label: 'Landschaft',  von: 4,   bis: 60 },
-  { id: 'region',      label: 'Region',      von: 60,  bis: 600 },
-  { id: 'kontinent',   label: 'Kontinent',   von: 600, bis: 4000 }
-];
+/* Die Leiter selbst steht in world/kartenbaum.js — sie ist eine Eigenschaft
+   der KARTE, nicht der Darstellung, und der Kartenbaum ist es, der sie
+   vergibt. Hier wird sie nur um die Anzeigenamen ergaenzt.
+
+   Vorher stand sie zweimal da, mit anderen Feldnamen (`von/bis/id` gegen
+   `ab/bis/name`) und denselben Zahlen. Solche Paare halten genau so lange,
+   bis jemand eine der beiden anfasst. */
+var MASSSTABSLEITER = MASSSTAB_LEITER.map(function (L) {
+  return { id: L.name, label: L.name.charAt(0).toUpperCase() + L.name.slice(1),
+    von: L.ab, bis: L.bis };
+});
 
 /** Name der Stufe, in die ein Massstab faellt (nur fuer Anzeige/Pruefung). */
 function stufeFuer(massstab) {
@@ -596,19 +605,7 @@ var SIG_MAX_PX = 64;     // darueber ein Fladen
    um denselben Faktor groesser gerechnet. */
 var ATLAS_INHALT = 0.76;
 
-/**
- * Bildhoehe eines Quads fester Weltgroesse in Pixeln (perspektivische Kamera).
- *
- * ACHTUNG, doppelte Buchfuehrung: `spriteBildhoehe` in ui/beschriftung.js
- * rechnet Zeichen fuer Zeichen dasselbe. Sie gehoeren zusammengelegt (siehe
- * Bericht); dieses Modul darf ui/ nicht importieren, deshalb steht die
- * Formel hier ein zweites Mal — mit dieser Notiz, damit sie nicht
- * unbemerkt auseinanderlaeuft.
- */
-function bildhoehe(weltHoehe, abstand, fovGrad, bildHoehe) {
-  var t = Math.tan((fovGrad || 30) * 0.5 * DEG) * Math.max(1e-3, abstand) * 2;
-  return weltHoehe / t * bildHoehe;
-}
+
 
 /**
  * Weltgroesse eines Zeichens.

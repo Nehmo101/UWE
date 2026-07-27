@@ -22,6 +22,7 @@
    nur, WANN neu bewertet wird, nicht WIE).
    ========================================================================== */
 import * as THREE from 'three';
+import { bildhoehe } from '../core/bild.js';
 import { clamp, DEG } from '../core/rng.js';
 
 
@@ -708,11 +709,10 @@ function bildKaesten(eintraege, sicht) {
   return out;
 }
 
-/** Bildhöhe eines Sprites fester Weltgröße in Pixeln (perspektivische Kamera). */
-function spriteBildhoehe(weltHoehe, abstand, fovGrad, bildHoehe) {
-  var t = Math.tan(fovGrad * 0.5 * DEG) * Math.max(1e-3, abstand) * 2;
-  return weltHoehe / t * bildHoehe;
-}
+/* I1: die Formel steht jetzt EINMAL in core/bild.js — render/signaturen.js
+   rechnet dasselbe, und zwei Fassungen davon laufen auseinander. Der Name
+   bleibt hier erhalten, damit kein Aufrufer angefasst werden muss. */
+var spriteBildhoehe = bildhoehe;
 
 
 /* ==========================================================================

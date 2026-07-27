@@ -84,7 +84,7 @@ const FAMILIEN = {
  *  solange vfx.js ihn nicht hochzaehlt — das ist der ehrlichere Zustand als
  *  ein fehlender Schluessel: 0 heisst „Patch nicht angekommen". */
 const patchInfo = { wrap: 0, kuehl: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, ranken: 0,
-  normale: 0, arbor: 0, schnee: 0, drift: 0, vfx: 0, versuche: 0 };
+  normale: 0, arbor: 0, schnee: 0, drift: 0, vfx: 0, karte: 0, versuche: 0 };
 if (typeof window !== 'undefined') window.terraPatchInfo = patchInfo;
 
 /* --- B4: Zugang zur Bruchmaske ------------------------------------------
@@ -142,6 +142,46 @@ function ersetze(shader, feld, alt, neu, patchName) {
   }
   shader[feld] = shader[feld].replace(alt, neu);
   return true;
+}
+
+/* ==========================================================================
+   I1 — Kartenpatch: die Verblassung der Signaturen
+
+   Ein Kartenzeichen blendet ueber einen Maszstabsbereich ein und wieder aus.
+   Der Faktor dafuer muss je INSTANZ ankommen — und unter den 12 Festwerten
+   je Instanz (Matrix + Tint) ist keiner frei. Bis auf einen: `sy`. Ein
+   Signaturquad liegt flach in der XZ-Ebene und hat in y keine Ausdehnung, die
+   y-Skalierung ist also geometrisch wirkungslos.
+
+   Genau die liest dieser Patch zurueck: `length(instanceMatrix[1].xyz)` ist
+   der Betrag der zweiten Spalte der Instanzmatrix, und das IST sy.
+
+   Kein Alphaslot, keine dreizehnte Zahl, keine Aenderung an der
+   Instanzmechanik — der Preis ist diese Erklaerung.
+   ========================================================================== */
+function kartenPatch(shader) {
+  patchInfo.versuche++;
+  var vorher =
+    "varying float vTerraSig;\n" +
+    "void main() {";
+  if (ersetze(shader, "vertexShader", "void main() {", vorher, "kartenSichtbarkeit")) {
+    if (ersetze(shader, "vertexShader", "#include <begin_vertex>",
+        "#include <begin_vertex>\n" +
+        "  #ifdef USE_INSTANCING\n" +
+        "    vTerraSig = length( instanceMatrix[1].xyz );\n" +
+        "  #else\n" +
+        "    vTerraSig = 1.0;\n" +
+        "  #endif", "kartenSichtbarkeit")) {
+      patchInfo.karte = (patchInfo.karte || 0) + 1;
+    }
+  }
+  ersetze(shader, "fragmentShader", "void main() {",
+    "varying float vTerraSig;\nvoid main() {", "kartenSichtbarkeit");
+  // Ganz am Ende, nach allen eingebauten Fragmenten: der Faktor multipliziert
+  // die fertige Deckung, statt irgendwo dazwischen zu wirken.
+  ersetze(shader, "fragmentShader", "#include <dithering_fragment>",
+    "#include <dithering_fragment>\n  gl_FragColor.a *= clamp( vTerraSig, 0.0, 1.0 );",
+    "kartenSichtbarkeit");
 }
 
 function terraPatch(shader, opts) {
@@ -579,6 +619,29 @@ function terraMat(opts) {
   var ohneSchnee = !!opts.ohneSchnee || cloudShadow;
   delete opts.cloudShadow; delete opts.familie; delete opts.wind; delete opts.rankenFade;
   delete opts.ohneSchnee; delete opts.drift;
+  /* I1 — `flach`: unbeleuchtetes Kartenmaterial fuer die Signaturen. Ein
+     Ortsring mit Lichtrichtung, Wolkenschatten und Malschicht saehe aus wie
+     ein liegender Reifen; eine Signatur ist Tinte auf Papier.
+
+     Der Zweig steigt VOR dem Phong-Material aus und bekommt deshalb auch
+     keinen terraPatch — kein Wind, kein Schnee, keine Kuehlung, keine
+     Hoehenfaerbung. Genau das ist der Zweck. Was er braucht, ist eine einzige
+     Zutat: die Verblassung, die im Instanzwert `sy` steckt (es gibt keinen
+     Alphaslot unter den 12 Festwerten je Instanz, und ein flaches Quad hat in
+     y keine Ausdehnung — sy ist also der einzige freie Wert).
+
+     depthWrite aus: Kartenzeichen liegen flach uebereinander (Flaechenton,
+     Randmarke, Beschriftung) und wuerden sich sonst gegenseitig wegschneiden. */
+  var flach = !!opts.flach;
+  delete opts.flach;
+  if (flach) {
+    opts.depthWrite = false;
+    opts.transparent = true;
+    var mb = new THREE.MeshBasicMaterial(opts);
+    mb.customProgramCacheKey = function () { return "terraKarte"; };
+    mb.onBeforeCompile = kartenPatch;
+    return mb;
+  }
   opts.shininess = 0;
   opts.specular = new THREE.Color(0x000000);
   var m = new THREE.MeshPhongMaterial(opts);

@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, vnoise, fractal, rngOf, rr, ri } from '../core/rng.js';
 import { TEX } from '../render/textures.js';
 import { definePool, setPoolNames } from '../core/pools.js';
+// I1: die Kartenzeichen. Umgekehrter Weg waere ein Zyklus — siehe unten.
+import { registriereSignaturPools } from '../render/signaturen.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
 // B4 — Bruchdrift: render/materials.js braucht das Uniform-Buendel der
 // Bruchmaske, darf paths.js aber nicht selbst importieren (paths.js legt beim
@@ -5679,6 +5681,12 @@ LICHT_ANKER.lichtsammler = [0, 2.62, 0, 1.5];
 LICHT_ANKER.samenkapsel = [0, 1.3, 0, 2.0];
 LICHT_ANKER.saftzapfer = [0, 0.56, 0.42, 0.7];
 
+/* I1 — die 49 Kartenzeichen. `definePool` wird HEREINGEREICHT statt dort
+   importiert: signaturen.js darf diese Datei nicht importieren, sonst
+   entstuende genau der Auswertungszyklus, der in Runde H schon einmal die
+   ganze App am Start gehindert hat (siehe die Notiz zu setBruchQuelle oben).
+   Die Richtung ist also geometry.js -> signaturen.js, nie zurueck. */
+registriereSignaturPools(definePool);
 setPoolNames();
 
 export { mergeGeos, M, part, prismGeo, tubeGeo, leafHalfWidth, leafSurface, leafGeo,

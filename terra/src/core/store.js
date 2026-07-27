@@ -41,6 +41,13 @@ function instanzBudget(map) {
   return Math.min(MAX_INST_DECKEL, Math.round(24000 * (map * map) / (256 * 256)));
 }
 export let MAX_INST_PER_EL = instanzBudget(KARTE.map);   // Sicherheitsnetz je Element
+/* I1 — eigenes Budget fuer Kartenzeichen, und zwar aus einem einfachen Grund:
+   ein Wald kostet 4000 Instanzen, seine Waldsignatur kostet eine. Liefen beide
+   gegen denselben Deckel, wuerde im Uebergangsbereich (beide Darstellungen
+   ueberblenden) das Kartenzeichen von den Baeumen verdraengt — ausgerechnet
+   dort, wo es sichtbar werden soll. 400 traegt ein gekacheltes Waldpolygon
+   bequem und liegt zwei Groeszenordnungen unter dem Koerperbudget. */
+export const MAX_KARTE_PER_EL = 400;
 
 /**
  * Setzt die Kartengroesse (256/512/1024). Aendert AUSSCHLIESSLICH die
@@ -980,6 +987,7 @@ export function mkElement(kind, variant, points, params, seed) {
     schatten: [],           // abgeleitete Kontaktschatten (nicht gespeichert)
     rauch: [],              // Schornsteinpositionen für den Rauch
     total: 0,
+    karteTotal: 0,      // I1: eigener Zaehler fuer Kartenzeichen
     group: null,            // eigene Meshes (Ranken, Flusswasser)
     streets: null           // Viertel: erzeugtes Wegenetz
   };
@@ -995,6 +1003,7 @@ export function clearElement(el) {
   el.schatten.length = 0;
   el.rauch.length = 0;
   el.total = 0;
+  el.karteTotal = 0;
   if (el.group) {
     for (var i = el.group.children.length - 1; i >= 0; i--) {
       var c = el.group.children[i];
