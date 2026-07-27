@@ -23,8 +23,6 @@
     "@tailwindcss/postcss": "^4.3.1",
     "@tanstack/react-table": "^8.21.3",
     "@uwe/assets": "workspace:*",
-    "@uwe/atlas": "workspace:*",
-    "@uwe/atlas-3d": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/player-hub": "workspace:*",
@@ -45,8 +43,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
-    "zod": "^3.25.76",
-    "@uwe/atlas-editor": "workspace:*"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",
