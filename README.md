@@ -332,7 +332,10 @@ Inhalte. Details:
 
 ## Lizenz
 
-Siehe [LICENSE](LICENSE). Die Lizenzlage fremder Werke, die UWE berührt —
-insbesondere das AGPL-Projekt Odysseus als UX-Referenz und die über öffentliche
-APIs geladenen SRD-Inhalte — steht in
+[MIT](LICENSE) — Nutzung, Änderung und Weitergabe sind frei, auch kommerziell,
+solange der Copyright- und Lizenzhinweis erhalten bleibt.
+
+Die Lizenzlage fremder Werke, die UWE berührt — das AGPL-Projekt Odysseus als
+UX-Referenz sowie die über öffentliche APIs geladenen SRD-Inhalte unter OGL 1.0a
+bzw. CC-BY-4.0 — steht in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

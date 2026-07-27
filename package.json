@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Universeller Welten-Editor — self-hosted campaign brain and world wiki",
+  "license": "MIT",
   "scripts": {
     "dev": "turbo run dev",
     "command-center:dev": "pnpm --filter @uwe/rtx-connector-client tauri:dev",

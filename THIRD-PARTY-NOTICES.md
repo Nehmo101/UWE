@@ -81,8 +81,9 @@ in `pnpm-lock.yaml`. `pnpm audit:prod` läuft als Teil des Quality Gates.
 
 ## 4. Bildmaterial in `assets/scenes/`
 
-> **Offen — vor der Veröffentlichung zu klären.** Das Verzeichnis enthält rund
-> 74 MB Szenen-Artwork ohne dokumentierte Herkunft. Vor dem Öffentlichstellen
-> muss hier stehen, wie die Bilder entstanden sind (eigene Erstellung,
-> KI-Generierung mit welchem Werkzeug, oder lizenziertes Fremdmaterial) und
-> unter welchen Bedingungen Dritte sie weiterverwenden dürfen.
+Das Szenen-Artwork (rund 74 MB, Tag- und Nacht-Varianten für Desktop und Mobil)
+ist **KI-generiert und vom Projekteigner erzeugt**. Es enthält kein lizenziertes
+Fremdmaterial und keine Werke Dritter.
+
+Die Bilder stehen unter derselben Lizenz wie das übrige Repository — siehe
+[LICENSE](LICENSE).
