@@ -149,6 +149,24 @@ Treffer** auf `atlas3d` / `atlas-3d` / `atlas_3d`.
 | Docs | 10 Dateien | u. a. `atlas3d-feature-roadmap.md`, `atlas-3d.md`, `atlas-follow-ups.md` |
 | Statisches | `packages/static-export/static/atlas.html`, `docs/artifacts/atlas-3d-prototype.html` | Prototypen |
 | Prisma | 6 Modelle + Enum `AtlasNodeLevel` | plus Relationsfelder in `World`, `Page`, `Asset` |
+| Brain-Actions | 4 Stück | `atlas_name_regions`, `atlas_describe_region`, `atlas_fill_area`, `atlas_generate_asset_proposal` — siehe unten |
+
+## Sonderfall Brain-Actions
+
+Vier der zwölf Brain-Actions gehören zu Atlas. Sie **nicht einfach mitlöschen**:
+
+- `atlas_fill_area` und `atlas_generate_asset_proposal` sind die **Vorlage** für
+  Terras eigene Karten-Action (J4) — ihre Validatoren und der
+  Prompt-Kontext-Generator sind das Beste, was das Repo an strukturierter
+  KI-Ausgabe hat. Erst übernehmen, dann löschen.
+- `atlas_name_regions` ist inhaltlich das, was J3 leisten soll — als Vorlage
+  ansehen, dann durch die Terra-Fassung ersetzen.
+- `atlas_describe_region` funktioniert ohnehin nicht (siehe J4, Baustelle 3) und
+  kann ersatzlos weg; die Beschreibungsfunktion kommt als Terra-Action zurück.
+
+Zu beachten: Die Action-Ids stecken in einer compilergeprüften Union über neun
+Dateien — Löschen bricht die Typprüfung an allen Stellen gleichzeitig, das ist
+gewollt und macht den Ausbau sicher.
 
 ## Reihenfolge (wichtig, sonst bricht es)
 
@@ -325,22 +343,132 @@ verletzt wird:
   und ist übernehmenswert). Landet als Kartennotiz oder als Entwurf einer
   Wiki-Seite, die der Spielleiter freigibt.
 
-## Was zu klären ist (läuft)
+## Ergebnis der Brain-Prüfung (27.07.2026)
 
-Eine Untersuchung der Brain-Schnittstelle prüft gerade:
-- Wie eine neue Action angelegt und registriert wird
-- Ob **strukturierte Ausgabe** (JSON-Schema, erzwungenes Format) unterstützt
-  wird — davon hängt ab, wie robust der Parametersatz ankommt oder ob eine
-  Nachvalidierung mit Reparaturschleife nötig ist
-- Welche Provider und Modelle verfügbar sind, ob lokal (Ollama) und mit welchen
-  Grenzen (Timeout, Größe)
-- Ob es Kontext-Injektion aus der Welt gibt (dann könnte die Karte den Kanon
-  kennen: vorhandene Orte, Völker, Geschichte)
+Die Untersuchung ist abgeschlossen. Kurzfassung: **Der geplante Zuschnitt ist im
+Repo bereits etablierte Praxis** — es gibt aber drei Baustellen, die vorher
+erledigt sein müssen.
 
-Die Ergebnisse werden hier nachgetragen. **Unabhängig davon gilt:** Der
-Parametersatz muss serverseitig **validiert und geklemmt** werden, bevor er in
-den Generator geht — Biomname existiert, Zahlen in ihren Bereichen, Anzahl
-gedeckelt. Eine KI-Antwort ist Eingabe, nicht Wahrheit.
+### Was Brain ist
+
+`packages/ai-brain` (LLM-Router, Provider, Actions, Kontextbau, Proposals) hinter
+der Studio-Route `/api/brain/run`. **Nicht zu verwechseln mit `apps/brain`** —
+das ist die private Life-Admin-App und hat damit nichts zu tun.
+
+Ein Aufruf legt immer einen **Job** an (DB-persistiert, in-process ausgeführt,
+mit Fortschritt, Abbruch, Wiederholung). Für eine Kartengenerierung, die ein paar
+Sekunden braucht, ist das genau die richtige Grundlage — der Client pollt statt
+zu warten.
+
+### Der Präzedenzfall
+
+Von den zwölf vorhandenen Actions sind zwei genau unser Muster:
+
+- **`atlas_fill_area`** — liefert ein Streu-Rezept als **validiertes JSON**, mit
+  dem Kommentar im Code: *„The model may suggest scatter parameters, but UWE owns
+  geometry, visibility, palette resolution, object creation and final
+  persistence."* Das Schema enthält `seed` und `density`; ein deterministischer
+  Konsument baut daraus per `mulberry32(seed)` reproduzierbar die Objekte.
+- **`atlas_generate_asset_proposal`** — validierbares Proposal, nie Code.
+
+Das ist wörtlich der Zuschnitt aus dem Abschnitt oben, nur eine Ebene kleiner
+(Fläche statt Welt). Die Validatoren (`plot-fill-proposal.ts`) lehnen unbekannte
+Felder, Typfehler, Bereichsverletzungen **und jeden ausführbaren Code** ab und
+liefern zugleich den erlaubten Wertebereich in den Prompt. Als Vorlage für
+`terra_world_draft` ist das nahezu fertig.
+
+### Baustelle 1: Es gibt keinen JSON-Zwang
+
+**Der wichtigste Befund.** Die Provider senden heute **kein** `response_format`,
+kein `json_schema`, keine Tool-Calls, und für Ollama kein `format: "json"`. Auch
+**kein `seed`**, und die Temperatur ist fest auf 0.7. „JSON" ist heute reine
+Prompt-Disziplin plus nachträgliches Ausschneiden zwischen erster `{` und letzter
+`}` — ohne Wiederholung bei Fehlschlag (das Ergebnis landet dann als
+`validation: "invalid"` im Proposal).
+
+Mit einem kleinen lokalen Modell und einem komplexen Schema ist die Trefferquote
+damit deutlich unter 100 %. Nötig wäre:
+1. `GenerateTextOptions` um `responseFormat`, `temperature` und `seed` erweitern
+2. Durchreichen in den Providern (OpenAI/OpenRouter `response_format`, Anthropic
+   über Tool-Use mit `input_schema`, Ollama `format: <schema>` + `options.seed`
+   + `temperature: 0`)
+3. Router und Connector-Queue müssen die Felder mitführen
+4. **Reparaturschleife**: bei Validierungsfehler ein zweiter Durchgang mit den
+   Fehlern als Hinweis (das Muster gibt es beim Theme-Generator schon)
+
+Das ist der eigentliche Hebel für Verlässlichkeit — und es nützt allen Actions,
+nicht nur unserer.
+
+### Baustelle 2: Ollama läuft hier, aber ohne Modelle
+
+`ollama.exe` läuft (Version 0.30.11), `/api/tags` antwortet aber mit **HTTP 500**:
+Das Modellverzeichnis zeigt auf ein Laufwerk `E:`, das es nicht gibt. Damit ist
+**kein einziges lokales Modell verfügbar**. Da in der `.env` zugleich
+`UWE_AI_CLOUD_FALLBACK=false` steht und keine Cloud-Schlüssel hinterlegt sind,
+würde jede Brain-Action derzeit mit „Lokale RTX-Inference ist nicht bereit"
+abbrechen. **Das muss vor jedem Experiment repariert werden.**
+
+### Baustelle 3: Zwei Fehler im vorhandenen Atlas-Aufruf
+
+Das Beschreiben-Panel von Atlas sendet keinen `pageSlug` — das Body-Schema
+verlangt ihn aber (also 400), und sein `sync: true` wird von der Validierung
+stillschweigend entfernt, sodass der synchrone Zweig über HTTP gar nicht
+erreichbar ist. Mit anderen Worten: **`atlas_describe_region` funktioniert
+vermutlich seit jeher nicht**, und es ist niemandem aufgefallen — ein guter
+Hinweis darauf, wie wenig die Funktion genutzt wurde.
+
+Für uns heißt das: `pageSlug` optional machen (die Action kann sich ihre
+Ankerseite selbst suchen) und den Job-Polling-Weg nutzen statt `sync`.
+
+### Grenzen, mit denen zu rechnen ist
+
+| Grenze | Wert |
+|---|---|
+| Provider-Timeout | 120 s |
+| Kontext | 24.000 Zeichen (harter Abbruch) |
+| Nutzer-Prompt | 10.000 Zeichen |
+| Ausgabe | **2.048 Token voreingestellt**, Deckel 8.192 |
+| Rate-Limit | 30 Anfragen / 60 s je Nutzer |
+| Rollen | nur owner/admin/dm |
+
+Der Entwurf oben (Parameter + Namen, keine Punktlisten) passt bequem in ~800
+Token. **Sobald Polygone oder Pfade im JSON stünden, reißt das Limit** — und
+abgeschnittenes JSON ist unparsebar. Ein weiteres Argument für die
+Arbeitsteilung.
+
+### Zwei Fallen für den Determinismus
+
+1. **Der Prompt-Cache täuscht Reproduzierbarkeit vor.** Identische Anfragen
+   liefern identische Antworten — bis der Prozess neu startet oder 128 Einträge
+   überschritten sind. Darauf darf man nichts stützen.
+2. **Automatische Routenwahl kann das Modell wechseln** (je nach RTX-Bereitschaft).
+
+Beides ist unkritisch, **solange die KI-Antwort ein einmalig erzeugtes,
+gespeichertes Artefakt ist**: Parametersatz und Namen werden in der Karte
+abgelegt, ab da ist alles deterministisch. Nicht: bei jedem Öffnen neu fragen.
+
+### Der eine Punkt, der Terra-Arbeit ist
+
+„Gebirge im Norden" lässt sich heute nicht erfüllen: `genBase` erzeugt sein
+Höhenfeld unabhängig vom Wunsch aus zwei Rauschoktaven. Zwei Wege:
+- **Bias-Terme in `genBase`** (Gebirgsachse, Küstenrichtung, Rauheit) — sauber,
+  aber ein Eingriff in den Kern, der die Byteidentität bestehender Karten
+  berühren würde (also hinter Default-Werten, wie in Runde H gehandhabt).
+- **Seed-Suche**: N Seeds deterministisch durchprobieren und den nehmen, der dem
+  Wunsch am nächsten kommt. Billig umzusetzen, kostet Rechenzeit, bleibt
+  vollständig deterministisch. **Für eine erste Fassung der bessere Weg.**
+
+### Umsetzungsschritte (aktualisiert)
+
+1. Ollama-Modellpfad reparieren — sonst läuft nichts
+2. `pageSlug` optional machen, Job-Polling statt `sync`
+3. `terra-welt-entwurf.ts`: Validator + Prompt-Kontext-Generator nach dem Vorbild
+   von `plot-fill-proposal.ts`; der Wertebereich kommt direkt aus Terras
+   `PARAMS`-Schema, ist also maschinell ableitbar
+4. Neuer Task-Typ + Action + Prompt (neun Dateien, compilergeprüft)
+5. JSON-Zwang und Reparaturschleife in Provider und Router
+6. Seed-Suche für `terrainBias` in Terra
+7. Bedienung: Prompt-Feld, Parametervorschau, erzeugen
 
 ## Bedienung
 
