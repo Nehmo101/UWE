@@ -24,6 +24,7 @@ Windows-Installer-Pfad existiert nicht mehr — siehe
 | Benutzer-Auth-Sessions | Nein | Nein |
 | ShareLinks (Token/Passwort) | Ja (ohne Token/Passwort) | Ja — neue Tokens; Passwörter neu setzen |
 | PlayerNotes | Opt-in (`includePlayerNotes`) | Ja (wenn exportiert) |
+| Terra-Karten (`terra_karten`) | Ja | Ja (inkl. Versionszähler) |
 | Secrets / Tokens | Nein (automatisch ausgeschlossen) | — |
 
 ## Backup erstellen

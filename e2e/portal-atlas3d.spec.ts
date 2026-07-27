@@ -2,7 +2,13 @@ import { expect, test } from "@playwright/test";
 
 import { loginPortalPlayer } from "./helpers/auth";
 
-test.describe("Portal Atlas 3D (read-only Viewer)", () => {
+/**
+ * STILLGELEGT seit J1 (27.07.2026) — siehe e2e/studio-atlas3d.spec.ts.
+ * `/auth/worlds/:slug/atlas3d[/:id]` zeigt jetzt Terra im Lesemodus; die
+ * Testkennungen `atlas3d-portal-tree` / `atlas3d-portal-viewer` gibt es dort
+ * nicht mehr. Die Datei geht mit dem Atlas-Ausbau (Schritt 5).
+ */
+test.describe.skip("Portal Atlas 3D (abgelöst von Terra, J1)", () => {
   test.beforeEach(async ({ page }) => {
     await loginPortalPlayer(page);
   });

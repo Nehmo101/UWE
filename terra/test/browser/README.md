@@ -44,6 +44,30 @@ hält `zielPruefen` auch im Browser dicht.
 Stand 27.07.2026: **19/19 grün**, 44 Shaderpatches, 0 Konsolenwarnungen,
 19 vorgeschlagene Biomflächen aus 8 Biomen, größtes Polygon 32 Punkte.
 
+## `bruecke.mjs` — 20 Schritte (J1)
+
+Prüft die Einbettung: Terra läuft in einem gleich-origin `<iframe>`, eine
+Elternseite spricht das Protokoll aus `src/editor/bruecke.js`.
+
+Die Elternseite liegt **nicht** im Baum — Playwright blendet sie über
+`page.route()` auf die Herkunft des Servers ein (`/__brueckenprobe.html`).
+Anders ginge es nicht: der `origin`-Vergleich verlangt dieselbe Herkunft, und
+eine Testdatei unter `terra/` wäre Werkzeug am falschen Ort.
+
+Drei Läufe:
+
+1. **Bearbeiten** — kommt `terra-bereit` an, läuft eine hereingereichte
+   v5-Datei durch den GANZEN Ladeweg (Seed, Biom, Baumtitel), löst eine echte
+   Bedienung entprellt `karte-geaendert` aus, hebt `stand-bestaetigt` die
+   Version, lässt eine unlesbare Karte den Editorstand unangetastet.
+2. **Lesen** (`?modus=lesen`) — Rail, Panel und Leiste ausgeblendet,
+   `<body data-terra-modus="lesen">`, Karten kommen herein, aber es geht
+   **nie** eine Änderung hinaus.
+3. **Ohne Rahmen** — die wichtigste Zusage: Terra allein aufgerufen verhält
+   sich wie vorher. Keine Brücke, kein Zuhörer, nichts ausgeblendet.
+
+Stand 27.07.2026: **20/20 grün**, 0 Seitenfehler in allen drei Läufen.
+
 ## Was auch das nicht leistet
 
 WebGL läuft hier über SwiftShader, also in Software — rund ein Bild je

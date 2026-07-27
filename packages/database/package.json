@@ -16,6 +16,7 @@
     "./connector-service": "./src/connector-service.ts",
     "./server": "./src/server.ts",
     "./atlas3d": "./src/atlas3d-service.ts",
+    "./terra": "./src/terra-service.ts",
     "./campaign-radar": "./src/campaign-radar-service.ts",
     "./player-questions": "./src/player-question-service.ts",
     "./player-question-notify": "./src/player-question-notify.ts",

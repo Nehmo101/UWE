@@ -2,7 +2,20 @@ import { expect, test } from "@playwright/test";
 
 import { loginStudio } from "./helpers/auth";
 
-test.describe("Studio Atlas 3D (neuer Editor)", () => {
+/**
+ * STILLGELEGT seit J1 (27.07.2026).
+ *
+ * `/worlds/:slug/atlas3d[/:id]` rendert seit der Pfadübernahme Terra, nicht
+ * mehr den Atlas-Editor. Diese Fälle prüfen ausschließlich Atlas-Innenleben
+ * (`atlas3d-editor`, `atlas3d-canvas`, Werkzeuge, Drill-Down) und träfen jetzt
+ * ins Leere.
+ *
+ * Bewusst NICHT gelöscht: das Löschen von Atlas ist ein eigener Schritt
+ * (docs/engineering/terra-runde-j-atlas-abbau.md, Schritt 5). Diese Datei geht
+ * dann mit. Bis dahin dokumentiert sie, was der Vorgänger konnte — und ist die
+ * Prüfliste für den Terra-Ersatz, der sie beerben muss.
+ */
+test.describe.skip("Studio Atlas 3D (abgelöst von Terra, J1)", () => {
   test.beforeEach(async ({ page }) => {
     await loginStudio(page);
   });

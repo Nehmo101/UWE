@@ -699,6 +699,7 @@ model World {
   dndBeyondReferences DndBeyondReference[]
   contentReviews      ContentReview[]
   atlas3d             Atlas3DWorld?
+  terraKarten         TerraKarte[]
   worldCalendar       WorldCalendar?
   worldEvents         WorldEvent[]
   factionStates       FactionState[]
@@ -3017,4 +3018,37 @@ enum PantryLocation {
   fridge
   freezer
   spices
+}
+
+/// Terra-Karte — eine Zeile je Karte, der ganze Kartenbaum als eine JSON-Datei.
+///
+/// Terra loest Atlas 3D ab (Owner-Entscheid 27.07.2026). Wo Atlas sechs
+/// Tabellen brauchte (Welt, Ebene, Terrain, Feature, Objekt, Lesezeichen),
+/// genuegt hier eine einzige: das Speicherformat v5 aus
+/// `terra/src/world/kartenbaum.js` traegt ALLE Ebenen einer Karte in EINER
+/// Datei. Der Editor laeuft als gleich-origin-Frame und schickt bei jeder
+/// Aenderung den vollstaendigen Baum — ein Teil-Update gibt es nicht und soll
+/// es auch nicht geben (dieselbe „replace all"-Zusage wie beim Atlas-Service,
+/// nur auf einem einzigen Feld statt auf fuenf Tabellen).
+///
+/// Gesichert wird die Tabelle von `packages/backup` (Sektion `terraKarten`) —
+/// anders als Atlas, das nie im logischen Export stand.
+model TerraKarte {
+  id      String @id @default(cuid())
+  worldId String @map("world_id")
+  titel   String @default("Karte")
+  /// Kartenbaum im Terra-Format v5: { format, version, wurzel, karten[] }.
+  daten   Json
+  /// Konflikterkennung. Die Version reist ueber die postMessage-Bruecke in
+  /// beide Richtungen mit; jede erfolgreiche Speicherung erhoeht sie um 1.
+  /// Ein Schreiben mit veralteter Version wird abgelehnt statt zu
+  /// ueberschreiben — zwei offene Reiter loeschen sich so nicht gegenseitig.
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@map("terra_karten")
 }

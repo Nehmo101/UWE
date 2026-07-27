@@ -686,6 +686,28 @@ export async function executeRestore(
     });
   }
 
+  /**
+   * Terra-Karten (J1). Die Karte steckt vollständig in `daten`; es gibt
+   * nichts zu verknüpfen außer der Welt. `version` reist mit, damit die
+   * Konflikterkennung nach einem Restore nicht bei 1 wieder anfängt und
+   * einen noch offenen Editor-Reiter blind überschreiben ließe.
+   */
+  for (const karte of bundle.data.terraKarten ?? []) {
+    const worldId = idMap.get(karte.worldId);
+    if (!worldId) continue;
+
+    await db.terraKarte.create({
+      data: {
+        id: remapId(idMap, karte.id),
+        worldId,
+        titel: karte.titel,
+        daten: karte.daten as never,
+        version: karte.version,
+      },
+    });
+    result.created++;
+  }
+
   for (const note of bundle.data.playerNotes ?? []) {
     const worldId = idMap.get(note.worldId);
     const campaignId = idMap.get(note.campaignId);

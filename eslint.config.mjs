@@ -36,6 +36,10 @@ const config = [
       "design-system/_ds_bundle.js",
       // Committed/generated browser bundles are verified by their source packages.
       "**/atlas-3d.js",
+      // Build-Artefakt: `scripts/copy-terra.mjs` legt terra/ zur Auslieferung in
+      // beide Apps. Gelintet wird die QUELLE unter terra/, nicht die Kopie —
+      // sonst meldete jeder Fund doppelt (J1).
+      "apps/*/public/terra/**",
       "data/**",
       "exports/**",
       "**/*.d.ts",

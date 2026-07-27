@@ -19,6 +19,10 @@ import { cam, setAufnahme, istAufnahme, updateCamera } from './camera.js';
 import { ed, stempelUebernehmen, setzeAusschnittWeg, setTool } from './tools.js';
 import { setTod, getTodName, setWetter, getWetterName } from '../world/atmosphere.js';
 import { buildPanel, toast, setzeKartenWege } from '../ui/panels.js';
+// J1: die Einbettung. Gleiche Richtung wie setzeKartenWege oben — io.js meldet
+// seine Wege an, bruecke.js importiert NICHTS aus terra. Ausserhalb eines
+// Rahmens (Doppelklick, Node-Tests) bleibt das Modul vollstaendig still.
+import { setzeBrueckenWege, brueckeAktiv } from './bruecke.js';
 // I4: Zielpruefung der Beschriftungen. beschriftung.js haengt nur an three und
 // core/ — der Import ist zyklusfrei und bleibt es, solange das so ist.
 import { zielPruefen } from '../ui/beschriftung.js';
@@ -962,6 +966,11 @@ export function initIO() {
     nachziehen: function () { zieheKarteNach(false); },
     neuAbleiten: function () { zieheKarteNach(true); }
   });
+  /* J1: dieselben zwei Wege, die auch Datei-Speichern und Datei-Laden nehmen.
+     Die Bruecke bekommt bewusst KEINEN dritten Ladeweg — baumUebernehmen ist
+     genau der Weg des Dateidialogs (leseBaumDatei -> validiereKarteObjekt je
+     Karte -> uebernehmeKarte), nur ohne FileReader davor. */
+  setzeBrueckenWege({ text: baumText, uebernehmen: baumUebernehmen });
   setzeAusschnittWeg(function (punkte) {
     var titel = prompt("Titel der neuen Karte", "Ausschnitt");
     if (titel === null) return;                       // Abbruch legt nichts an
@@ -1221,7 +1230,12 @@ export function initIO() {
   // ohne Toast und ohne Rueckfrage: ein beforeunload-Dialog ist in modernen
   // Browsern ohnehin nicht frei gestaltbar und hier auch nicht gewollt.
   window.addEventListener("beforeunload", function () { autosaveSchreiben(); });
-  setTimeout(autosaveAnbieten, 600);
+  /* J1: im eingebetteten Rahmen NICHT anbieten. Dort ist die Wahrheit die
+     Karte aus der Datenbank, die die Bruecke gerade hereingereicht hat — der
+     Ringpuffer im localStorage dieser Herkunft gehoert einer anderen Sitzung
+     und wuerde die Karte beim Bestaetigen ueberschreiben. Der Autosave selbst
+     laeuft weiter; nur die Rueckfrage entfaellt. */
+  setTimeout(function () { if (!brueckeAktiv()) autosaveAnbieten(); }, 600);
 }
 
 /**

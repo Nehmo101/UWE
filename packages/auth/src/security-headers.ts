@@ -60,9 +60,11 @@ export function buildContentSecurityPolicy(
     connectSrc.push(TURNSTILE_SCRIPT_ORIGIN);
   }
 
-  // 'self' permits the Studio to embed the same-origin single-file Atlas editor
-  // (atlas.html) in an <iframe> (M3). Kept to same-origin only — no external hosts
-  // beyond the explicit YouTube/Turnstile opt-ins below.
+  // 'self' permits Studio and Portal to embed the same-origin Terra map editor
+  // (/terra/index.html) in an <iframe>. Inherited from the retired single-file
+  // Atlas editor (M3) and deliberately KEPT when Atlas was replaced (J1,
+  // 2026-07-27): removing it would leave the Terra frame blank. Same-origin
+  // only — no external hosts beyond the explicit YouTube/Turnstile opt-ins below.
   const frameSrc: string[] = ["'self'"];
   if (options.allowYouTubeEmbeds) {
     frameSrc.push("https://www.youtube.com", "https://www.youtube-nocookie.com");
@@ -76,8 +78,9 @@ export function buildContentSecurityPolicy(
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
-    // 'self' allows same-origin framing (Studio → atlas.html iframe); still blocks
-    // cross-origin clickjacking. Paired with X-Frame-Options: SAMEORIGIN.
+    // 'self' allows same-origin framing (Studio/Portal → /terra/index.html);
+    // still blocks cross-origin clickjacking. Paired with X-Frame-Options:
+    // SAMEORIGIN. Required by the Terra editor frame — do not tighten to 'none'.
     "frame-ancestors 'self'",
     `script-src ${scriptSrc.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
@@ -144,8 +147,10 @@ export function getUweSecurityHeaders(
     "Content-Security-Policy": buildContentSecurityPolicy(options, env),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    // SAMEORIGIN (not DENY) so the Studio can iframe the same-origin Atlas editor;
-    // cross-origin framing stays blocked (mirrors frame-ancestors 'self').
+    // SAMEORIGIN (not DENY) so Studio and Portal can iframe the same-origin
+    // Terra map editor (/terra/index.html); cross-origin framing stays blocked
+    // (mirrors frame-ancestors 'self'). Inherited from the retired Atlas editor
+    // and deliberately kept for Terra (J1) — DENY would blank the frame.
     "X-Frame-Options": "SAMEORIGIN",
     "Permissions-Policy": buildPermissionsPolicy(options),
     "Cross-Origin-Opener-Policy": "same-origin",

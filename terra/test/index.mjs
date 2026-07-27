@@ -25,3 +25,4 @@ import './08-beschriftung.test.mjs';
 import './09-einbettung.test.mjs';
 import './10-kartenbaum.test.mjs';
 import './11-signaturen.test.mjs';
+import './12-bruecke.test.mjs';

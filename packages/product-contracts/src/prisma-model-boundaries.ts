@@ -169,6 +169,9 @@ export const PRISMA_MODEL_BOUNDARIES = {
   Atlas3DFeature: U("dnd_world", "player_visible"),
   Atlas3DObject: U("dnd_world", "player_visible"),
   Atlas3DCameraBookmark: U("dnd_world", "player_visible"),
+  // Terra löst Atlas 3D ab (J1). Dieselbe Einstufung wie Atlas: Karten sind
+  // vollständig spielersichtbar, der Zugriff hängt allein an der Weltmitgliedschaft.
+  TerraKarte: U("dnd_world", "player_visible"),
   AiGatewayConfig: U("ai_control", "dm_only"),
   AiCloudProvider: U("ai_control", "dm_only"),
   AiUserGrant: U("ai_control", "dm_only"),

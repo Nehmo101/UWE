@@ -699,6 +699,7 @@ model World {
   dndBeyondReferences DndBeyondReference[]
   contentReviews      ContentReview[]
   atlas3d             Atlas3DWorld?
+  terraKarten         TerraKarte[]
   worldCalendar       WorldCalendar?
   worldEvents         WorldEvent[]
   factionStates       FactionState[]
@@ -3004,4 +3005,23 @@ enum PantryLocation {
   fridge
   freezer
   spices
+}
+
+/// Terra-Karte — eine Zeile je Karte, der ganze Kartenbaum als eine JSON-Datei.
+/// Spiegel des SQLite-Zweigs; siehe dort fuer die ausfuehrliche Begruendung.
+model TerraKarte {
+  id      String @id @default(cuid())
+  worldId String @map("world_id")
+  titel   String @default("Karte")
+  /// Kartenbaum im Terra-Format v5: { format, version, wurzel, karten[] }.
+  daten   Json
+  /// Konflikterkennung — reist ueber die postMessage-Bruecke mit.
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+  @@map("terra_karten")
 }

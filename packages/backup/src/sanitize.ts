@@ -72,6 +72,7 @@ export function sanitizeBackupData(data: BackupData): BackupData {
     pageTemplates: (data.pageTemplates ?? []).map((template) => sanitizeRecord(template)),
     shareLinks: (data.shareLinks ?? []).map((link) => sanitizeRecord(link)),
     playerNotes: (data.playerNotes ?? []).map((note) => sanitizeRecord(note)),
+    terraKarten: (data.terraKarten ?? []).map((karte) => sanitizeRecord(karte)),
     dailyAdmin: data.dailyAdmin ? sanitizeDailyAdminData(data.dailyAdmin) : undefined,
   };
 }

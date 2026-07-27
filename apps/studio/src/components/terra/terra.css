@@ -1,0 +1,59 @@
+/* Terra-Rahmen (J1). Bewusst knapp: alles Gestalterische steckt IM Frame
+   (terra/src/ui/style.css). Hier steht nur, wie der Rahmen in der Seite
+   sitzt und wie der Speicherzustand aussieht. */
+
+.terra-rahmen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.terra-rahmen-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.terra-rahmen-zustand {
+  font-variant-numeric: tabular-nums;
+}
+
+.terra-rahmen-zustand[data-art="fehler"],
+.terra-rahmen-zustand[data-art="konflikt"] {
+  color: var(--destructive, #b3261e);
+  font-weight: 600;
+}
+
+.terra-rahmen-flaeche {
+  position: relative;
+  width: 100%;
+  /* Der Editor braucht Höhe; 100vh minus Kopfzeilen/Breadcrumb der Hülle. */
+  height: min(78vh, 900px);
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0b0d10;
+}
+
+.terra-rahmen-flaeche > iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.terra-rahmen-hinweis {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #e8e2d4;
+  pointer-events: none;
+}

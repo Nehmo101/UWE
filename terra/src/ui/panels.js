@@ -978,7 +978,31 @@ function baueStempelPanel() {
       + "Die Bibliothek überdauert die Sitzung und wandert beim Speichern mit der Karte."));
 }
 
+/**
+ * Misst die untere Leiste und legt ihre Hoehe als CSS-Variable ab.
+ *
+ * Die Hinweiszeile stand darueber auf einem geratenen Abstand. Das ging,
+ * solange die Leiste eine Reihe hoch war — sie bricht aber je nach
+ * Fensterbreite auf zwei um, und seit der Angleichung an das UWE-Design ist
+ * die Laufschrift breiter, der Umbruch also frueher. Der Hinweis lag dann
+ * ueber der Leiste und verdeckte Seed-Feld und Biomauswahl.
+ *
+ * Eine feste Zahl haette den Fehler nur verschoben. Gemessen wird beim
+ * Wechsel des Hinweises und beim Aendern der Fenstergroesse — beides sind die
+ * einzigen Anlaesse, bei denen sich die Hoehe aendern kann.
+ */
+function leistenHoeheMessen() {
+  var bar = document.getElementById("bar");
+  if (!bar) return;
+  document.documentElement.style.setProperty(
+    "--terra-leiste-hoehe", Math.ceil(bar.getBoundingClientRect().height) + "px");
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", leistenHoeheMessen);
+}
+
 function updateHint() {
+  leistenHoeheMessen();
   var h = document.getElementById("hint");
   var txt;
   if (ed.draw) txt = "<b>" + ed.draw.points.length + (ed.draw.points.length === 1 ? " Punkt" : " Punkte") +
@@ -1069,19 +1093,24 @@ function markerBoxHolen() {
 
 function markerLabelNeu() {
   var d = document.createElement("div");
+  /* Die GESTALTUNG steht in ui/style.css unter `.markerLabel`. Sie stand
+     frueher hier als Inline-Stil, und Inline schlaegt jede Regel im
+     Stylesheet — diese Beschriftungen waren deshalb die einzige Stelle, die
+     nach der Angleichung an das UWE-Design noch im alten Blaugrau stand und
+     auch nicht mit Tag/Nacht drehte.
+
+     Was inline BLEIBT, ist Mechanik und keine Gestaltung: die Verankerung an
+     der Nadelspitze, die Umbruchsperre, die Breitengrenze und die
+     Durchlaessigkeit fuer Klicks. Diese Werte gehoeren zur Positionierung im
+     Bild, nicht zum Aussehen, und ein Themenwechsel hat mit ihnen nichts zu
+     schaffen. */
+  d.className = "markerLabel";
   var s = d.style;
   s.position = "absolute";
   // Der Ankerpunkt ist die Nadelspitze: waagerecht mittig, senkrecht darueber.
   s.transform = "translate(-50%,-100%)";
   s.whiteSpace = "nowrap";
-  s.font = "600 11.5px/1.35 \"Segoe UI\",Roboto,system-ui,-apple-system,sans-serif";
-  s.color = "#3d4753";
-  s.background = "rgba(255,255,255,.84)";
-  s.border = "1px solid rgba(150,168,186,.34)";
-  s.borderRadius = "9px";
   s.padding = "2px 8px";
-  s.boxShadow = "0 4px 14px rgba(92,116,140,.16)";
-  s.backdropFilter = "blur(9px)";
   s.maxWidth = "230px";
   s.overflow = "hidden";
   s.textOverflow = "ellipsis";
@@ -1139,8 +1168,9 @@ function markerOverlayAktualisieren() {
     var aktiv = i === gewaehlt;
     if (d._aktiv !== aktiv) {
       d._aktiv = aktiv;
-      d.style.background = aktiv ? "rgba(255,255,255,.97)" : "rgba(255,255,255,.84)";
-      d.style.color = aktiv ? "#2d74ab" : "#3d4753";
+      // Klasse statt zweier Inline-Farben: die gewaehlte Beschriftung soll in
+      // beiden Modi richtig aussehen, und das kann nur das Stylesheet wissen.
+      d.classList.toggle("aktiv", aktiv);
     }
   }
 }

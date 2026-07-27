@@ -3,3 +3,7 @@
 
 # Szenenbilder werden aus assets/scenes/ kopiert (scripts/copy-scenes.mjs)
 /public/scenes/
+
+# Build-Artefakt: aus terra/ kopiert auf predev/prebuild (copy:terra).
+# Gepflegt wird ausschliesslich terra/ — hier NICHTS von Hand aendern.
+/public/terra/
