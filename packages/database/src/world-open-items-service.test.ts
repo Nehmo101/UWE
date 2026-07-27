@@ -46,7 +46,6 @@ describe("world open items", () => {
       title: "Händlerin Mara",
       slug: "haendlerin-mara",
       type: "npc",
-      publishStatus: "draft",
       canonicalStatus: "draft",
     });
 
@@ -56,7 +55,6 @@ describe("world open items", () => {
       title: "Verworfener Spion",
       slug: "verworfener-spion",
       type: "npc",
-      publishStatus: "draft",
       canonicalStatus: "discarded",
     });
 
@@ -67,7 +65,6 @@ describe("world open items", () => {
       slug: "gespielte-szene",
       type: "note",
       canonicalStatus: "played",
-      publishStatus: "published",
     });
 
     await sessions.create({

@@ -34,7 +34,6 @@ describe("UWE repository", () => {
         slug: "validori",
         type: "location",
         visibility: "public",
-        publishStatus: "published",
         contentBlocks: [
           {
             type: "rich_text",
@@ -80,7 +79,6 @@ describe("UWE repository", () => {
         slug: "arbor",
         type: "region",
         visibility: "player_visible",
-        publishStatus: "published",
         contentBlocks: [
           {
             type: "player_text",
@@ -144,29 +142,9 @@ describe("UWE repository", () => {
     assert.equal(pages[0]?.slug, "nepurga");
   });
 
-  it("hides unpublished or dm_only pages from the portal", async () => {
+  it("hides dm_only pages from the portal", async () => {
     const world = await createWorld(
       { name: "Portal Filter", slug: "portal-filter", description: "Test" },
-      databaseUrl,
-    );
-
-    await createPage(
-      {
-        worldId: world.id,
-        title: "Draft Page",
-        slug: "draft-page",
-        type: "note",
-        visibility: "public",
-        publishStatus: "draft",
-        contentBlocks: [
-          {
-            type: "rich_text",
-            sortOrder: 0,
-            visibility: "public",
-            content: "Should not appear.",
-          },
-        ],
-      },
       databaseUrl,
     );
 
@@ -177,7 +155,6 @@ describe("UWE repository", () => {
         slug: "secret-page",
         type: "note",
         visibility: "dm_only",
-        publishStatus: "published",
         contentBlocks: [
           {
             type: "rich_text",
@@ -190,7 +167,6 @@ describe("UWE repository", () => {
       databaseUrl,
     );
 
-    assert.equal(await getPublicPageForPortal("portal-filter", "draft-page", databaseUrl), null);
     assert.equal(await getPublicPageForPortal("portal-filter", "secret-page", databaseUrl), null);
   });
 });

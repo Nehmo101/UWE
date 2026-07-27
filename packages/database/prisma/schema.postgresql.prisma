@@ -52,14 +52,6 @@ enum Visibility {
   archived
 }
 
-enum PublishStatus {
-  draft
-  internal
-  review
-  published
-  archived
-}
-
 enum CanonicalStatus {
   idea
   draft
@@ -717,7 +709,6 @@ model Page {
   type            PageType
   summary         String?
   visibility      Visibility         @default(private)
-  publishStatus   PublishStatus      @default(draft) @map("publish_status")
   canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
   prepStatus      DungeonPrepStatus? @map("prep_status")
   questStatus     QuestLifecycleStatus? @map("quest_status")

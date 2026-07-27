@@ -12,7 +12,6 @@ interface RoleExpectations {
   playerVisiblePage: PageExpectation;
   playerVisibleBlocks: BlockExpectation;
   dmOnlyPage: PageExpectation;
-  privateDraftPage: PageExpectation;
   hiddenSecretPage: PageExpectation;
   revealedSecretPage: PageExpectation;
   publicMedia: PageExpectation;
@@ -26,7 +25,6 @@ const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
     playerVisiblePage: "hidden",
     playerVisibleBlocks: "none",
     dmOnlyPage: "hidden",
-    privateDraftPage: "hidden",
     hiddenSecretPage: "hidden",
     revealedSecretPage: "hidden",
     publicMedia: "hidden",
@@ -38,7 +36,6 @@ const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
     playerVisiblePage: "visible",
     playerVisibleBlocks: "player_only",
     dmOnlyPage: "hidden",
-    privateDraftPage: "hidden",
     hiddenSecretPage: "hidden",
     revealedSecretPage: "visible",
     publicMedia: "visible",
@@ -50,7 +47,6 @@ const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
     playerVisiblePage: "visible",
     playerVisibleBlocks: "all",
     dmOnlyPage: "visible",
-    privateDraftPage: "visible",
     hiddenSecretPage: "visible",
     revealedSecretPage: "visible",
     publicMedia: "visible",
@@ -62,7 +58,6 @@ const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
     playerVisiblePage: "visible",
     playerVisibleBlocks: "all",
     dmOnlyPage: "visible",
-    privateDraftPage: "visible",
     hiddenSecretPage: "visible",
     revealedSecretPage: "visible",
     publicMedia: "visible",
@@ -74,7 +69,6 @@ const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
     playerVisiblePage: "visible",
     playerVisibleBlocks: "all",
     dmOnlyPage: "visible",
-    privateDraftPage: "visible",
     hiddenSecretPage: "visible",
     revealedSecretPage: "visible",
     publicMedia: "visible",
@@ -134,7 +128,6 @@ describe("security role matrix", () => {
         assertPage(fixture.content.slugs.publicPage, expectations.publicPage);
         assertPage(fixture.content.slugs.playerVisiblePage, expectations.playerVisiblePage);
         assertPage(fixture.content.slugs.dmOnlyPage, expectations.dmOnlyPage);
-        assertPage(fixture.content.slugs.privateDraftPage, expectations.privateDraftPage);
         assertPage(fixture.content.slugs.hiddenSecretPage, expectations.hiddenSecretPage);
         assertPage(fixture.content.slugs.revealedSecretPage, expectations.revealedSecretPage);
       });

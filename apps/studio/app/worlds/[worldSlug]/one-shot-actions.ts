@@ -42,7 +42,6 @@ export async function saveOneShotDraftAction(formData: FormData): Promise<void> 
     type: "quest",
     summary: outline.hook,
     canonicalStatus: "draft",
-    publishStatus: "draft",
     questStatus: "open",
     contentBlocks: [
       { type: "player_text", sortOrder: 0, content: outline.playerBrief, visibility: "player_visible" },

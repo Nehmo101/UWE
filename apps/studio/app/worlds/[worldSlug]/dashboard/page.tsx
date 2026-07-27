@@ -144,7 +144,6 @@ export default async function WorldDashboardPage({ params }: Props) {
             slug: page.slug,
             type: page.type,
             visibility: page.visibility,
-            publishStatus: page.publishStatus,
             updatedAt: page.updatedAt.toISOString(),
           })),
         }}

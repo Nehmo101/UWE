@@ -128,7 +128,7 @@ export async function buildNextActions(db: PrismaClient): Promise<NextActionItem
 
     const pages = await db.page.findMany({
       where: { worldId: world.id },
-      select: { id: true, visibility: true, publishStatus: true, campaignId: true },
+      select: { id: true, visibility: true, campaignId: true },
     });
 
     const campaignCount = await db.campaign.count({ where: { worldId: world.id } });

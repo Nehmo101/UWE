@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   PAGE_TYPE_LABELS,
   VISIBILITY_LABELS,
-  PUBLISH_LABELS,
   CANONICAL_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -12,7 +11,6 @@ import {
   prisma,
   PageTypeEnum,
   VisibilityEnum,
-  PublishStatusEnum,
   CanonicalStatusEnum,
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
@@ -214,18 +212,6 @@ export default async function NewPageForm({ params, searchParams }: Props) {
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="page-publish-status">Publish Status</Label>
-          <Select name="publishStatus" defaultValue="draft">
-            <SelectTrigger id="page-publish-status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(PublishStatusEnum).map((v) => (
-                <SelectItem key={v} value={v}>
-                  {PUBLISH_LABELS[v]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="flex flex-col gap-1.5">

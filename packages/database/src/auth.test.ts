@@ -48,7 +48,6 @@ describe("UWE auth and permissions", () => {
       slug: "public-notice",
       type: "note",
       visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -65,7 +64,6 @@ describe("UWE auth and permissions", () => {
       slug: "player-lore",
       type: "note",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "player_text",
@@ -294,7 +292,6 @@ describe("UWE auth and permissions", () => {
       slug: "geheimer-npc",
       type: "npc",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -311,7 +308,6 @@ describe("UWE auth and permissions", () => {
       slug: "geheimes-handout",
       type: "handout",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",

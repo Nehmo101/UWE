@@ -375,7 +375,6 @@ describe("Label editor extensions", () => {
         slug: "krypta",
         type: "room",
         visibility: "dm_only",
-        publishStatus: "draft",
         contentBlocks: [
           {
             type: "rich_text",
@@ -395,7 +394,6 @@ describe("Label editor extensions", () => {
         slug: "skelettwache",
         type: "encounter",
         visibility: "dm_only",
-        publishStatus: "draft",
         contentBlocks: [
           {
             type: "rich_text",

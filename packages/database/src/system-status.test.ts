@@ -69,7 +69,6 @@ describe("system status and next actions", () => {
       slug: "leck",
       type: "npc",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         { type: "gm_note", sortOrder: 0, visibility: "player_visible", content: "Geheim" },
       ],

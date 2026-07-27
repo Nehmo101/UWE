@@ -158,7 +158,6 @@ export async function seedStressWorld(
           type,
           summary: `Synthetic page ${i + 1} for performance testing.`,
           visibility: i % 5 === 0 ? "dm_only" : "player_visible",
-          publishStatus: i % 3 === 0 ? "draft" : "published",
           canonicalStatus: "canon",
           tags: pickTags(i, scale.tagVariants),
           contentBlocks: [
@@ -264,7 +263,6 @@ export async function seedStressWorld(
       type: "handout",
       summary: "Player handout for perf testing.",
       visibility: "player_visible",
-      publishStatus: "published",
       tags: ["handout", ...pickTags(i, 0)],
       contentBlocks: [
         {

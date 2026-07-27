@@ -279,7 +279,6 @@ export class PortalDashboardService {
             summary: true,
             updatedAt: true,
             visibility: true,
-            publishStatus: true,
           },
         },
       },

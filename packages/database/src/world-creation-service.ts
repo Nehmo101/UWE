@@ -169,7 +169,6 @@ export class WorldCreationService {
           slug: pageSlug,
           type: pageType,
           visibility,
-          publishStatus: "draft",
           canonicalStatus: "draft",
           contentBlocks: {
             create: blocks.map((block) => ({

@@ -34,7 +34,6 @@ describe("wiki export", () => {
       slug: "public-town",
       type: "location",
       visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -51,7 +50,6 @@ describe("wiki export", () => {
       slug: "secret-lair",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "gm_note",

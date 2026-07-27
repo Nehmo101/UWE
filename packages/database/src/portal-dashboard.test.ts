@@ -56,7 +56,6 @@ describe("portal dashboard", () => {
       slug: "den-turm-erkunden",
       type: "quest",
       visibility: "player_visible",
-      publishStatus: "published",
     });
     questPageId = quest.id;
 
@@ -67,7 +66,6 @@ describe("portal dashboard", () => {
       slug: "dm-geheimnis",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "published",
     });
     dmOnlyPageId = secret.id;
 
@@ -244,7 +242,6 @@ describe("portal dashboard", () => {
       slug: "nach-session-2",
       type: "note",
       visibility: "unlock_after_session",
-      publishStatus: "published",
     });
 
     const session2 = await sessions.create({

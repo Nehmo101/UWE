@@ -62,7 +62,6 @@ describe("activity log + undo basis", () => {
       slug: "kurzlebig",
       type: "note",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     await activity.log({
@@ -87,7 +86,6 @@ describe("activity log + undo basis", () => {
       slug: "wiederkehrer",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Inhalt A" },
         { type: "gm_note", sortOrder: 1, visibility: "dm_only", content: "Notiz B" },
@@ -118,7 +116,6 @@ describe("activity log + undo basis", () => {
       slug: "blockhalter",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Bleibt." },
         { type: "rich_text", sortOrder: 1, visibility: "dm_only", content: "Wird gelöscht." },
@@ -149,7 +146,6 @@ describe("activity log + undo basis", () => {
       slug: "einmaliger",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     const entry = await undo.capturePageUpdate(page.id);
@@ -191,7 +187,6 @@ describe("activity log + undo basis", () => {
       slug: "import-ziel",
       type: "note",
       visibility: "dm_only",
-      publishStatus: "draft",
       summary: "Alt",
     });
     await repo.createContentBlock(page.id, {
@@ -207,7 +202,6 @@ describe("activity log + undo basis", () => {
       slug: "import-neu",
       type: "note",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     const addedBlock = await repo.createContentBlock(page.id, {
@@ -234,7 +228,6 @@ describe("activity log + undo basis", () => {
             type: page.type,
             summary: "Alt",
             visibility: page.visibility,
-            publishStatus: page.publishStatus,
             canonicalStatus: page.canonicalStatus,
             tags: page.tags,
             aliases: page.aliases,

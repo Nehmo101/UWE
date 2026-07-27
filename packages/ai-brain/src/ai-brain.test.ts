@@ -68,7 +68,6 @@ describe("AI Brain — buildAiContext", () => {
         slug: "oeffentlich",
         type: "lore",
         visibility: "public",
-        publishStatus: "published",
         canonicalStatus: "canon",
         contentBlocks: [
           {
@@ -89,7 +88,6 @@ describe("AI Brain — buildAiContext", () => {
         slug: "geheim",
         type: "note",
         visibility: "dm_only",
-        publishStatus: "draft",
         canonicalStatus: "canon",
         contentBlocks: [
           {
@@ -345,7 +343,6 @@ describe("AI Brain — saving results", () => {
 
     assert.equal(idea.canonicalStatus, "idea");
     assert.notEqual(idea.canonicalStatus, "canon");
-    assert.equal(idea.publishStatus, "draft");
     assert.ok(idea.contentBlocks.length > 0);
 
     const metadata = idea.contentBlocks[0]?.metadata as {

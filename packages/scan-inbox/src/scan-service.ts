@@ -238,7 +238,6 @@ export class ScanInboxService {
       type: pageType,
       summary: scan.proposal?.rationale ?? "",
       canonicalStatus: "draft",
-      publishStatus: "draft",
       contentBlocks: blocks,
     });
     return { targetType: "page", targetId: page.id };

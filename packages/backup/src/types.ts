@@ -73,7 +73,6 @@ export interface BackupPageRecord {
   type: string;
   summary: string | null;
   visibility: string;
-  publishStatus: string;
   canonicalStatus: string;
   prepStatus: string | null;
   tags: unknown;

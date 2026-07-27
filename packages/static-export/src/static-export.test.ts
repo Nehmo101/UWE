@@ -32,7 +32,6 @@ describe("static export", () => {
       type: "location",
       summary: "Hafenstadt",
       visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -55,7 +54,6 @@ describe("static export", () => {
       slug: "arbor",
       type: "region",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -72,7 +70,6 @@ describe("static export", () => {
       slug: "shagottar",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "gm_note",

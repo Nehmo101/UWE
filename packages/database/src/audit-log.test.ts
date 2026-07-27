@@ -60,7 +60,6 @@ describe("Audit log", () => {
       slug: "hidden-lore",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",

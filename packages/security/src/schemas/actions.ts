@@ -151,7 +151,6 @@ export const captureIdSchema = z.object({
 export const INSPECTOR_FIX_ACTIONS = [
   "set_block_dm_only",
   "set_page_dm_only",
-  "publish_page",
   "set_page_player_visible",
   "remove_broken_wiki_link",
   "assign_page_campaign",
@@ -540,7 +539,6 @@ export const pageUpdateSchema = z.object({
   type: z.string().max(64),
   summary: z.string().max(5000).optional(),
   visibility: z.string().max(64),
-  publishStatus: z.string().max(64),
   canonicalStatus: z.string().max(64),
   tags: z.string().max(2000).optional().default(""),
   aliases: z.string().max(2000).optional().default(""),
@@ -556,7 +554,6 @@ export const pageCreateSchema = z.object({
   initialContent: z.string().max(100_000).optional().default(""),
   summary: z.string().max(5000).optional(),
   visibility: z.string().max(64).optional(),
-  publishStatus: z.string().max(64).optional(),
   canonicalStatus: z.string().max(64).optional(),
   tags: z.string().max(2000).optional().default(""),
 });
@@ -650,7 +647,6 @@ export const dungeonEntityUpdateSchema = z.object({
   prepStatus: z.string().max(64),
   summary: z.string().max(5000).optional(),
   visibility: z.string().max(64).optional(),
-  publishStatus: z.string().max(64).optional(),
 });
 
 export const dungeonAssetLinkSchema = z.object({

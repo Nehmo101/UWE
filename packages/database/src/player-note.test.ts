@@ -77,7 +77,6 @@ describe("UWE player notes", () => {
       slug: "visible-location",
       type: "location",
       visibility: "player_visible",
-      publishStatus: "published",
     });
     pageId = page.id;
 

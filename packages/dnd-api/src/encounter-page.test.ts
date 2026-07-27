@@ -70,7 +70,6 @@ describe("buildStatblockPageInput", () => {
 
     assert.equal(input.type, "monster");
     assert.equal(input.visibility, "dm_only");
-    assert.equal(input.publishStatus, "draft");
     assert.equal(input.summary, "Open5e Statblock (goblin)");
     assert.deepEqual(input.contentBlocks, [
       { type: "statblock", sortOrder: 0, content: "# Goblin", visibility: "dm_only" },
@@ -90,7 +89,6 @@ describe("buildEncounterPageInput", () => {
 
     assert.equal(input.type, "encounter");
     assert.equal(input.visibility, "dm_only");
-    assert.equal(input.publishStatus, "draft");
     assert.equal(input.summary, "3 Monster");
     assert.deepEqual(input.contentBlocks, [
       { type: "rich_text", sortOrder: 0, content: "# Encounter", visibility: "dm_only" },

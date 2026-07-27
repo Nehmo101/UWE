@@ -226,7 +226,6 @@ export async function updateDungeonEntityAction(formData: FormData) {
     prepStatus: formData.get("prepStatus") as DungeonPrepStatus,
     summary: String(formData.get("summary") || "") || null,
     visibility: formData.get("visibility") as import("@uwe/database/server").Visibility,
-    publishStatus: formData.get("publishStatus") as import("@uwe/database/server").PublishStatus,
   });
 
   revalidatePath(redirectTo);

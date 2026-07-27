@@ -98,8 +98,6 @@ describe("UWE dungeon cockpit", () => {
     roomId = room.id;
     roomSlug = room.slug;
 
-    await repo.updatePage(room.id, { publishStatus: "published" });
-
     const encounter = await dungeons.createWithGeneratedSlug({
       worldId: world.id,
       parentPageId: room.id,
@@ -115,7 +113,6 @@ describe("UWE dungeon cockpit", () => {
       slug: "geheimes-heiligtum",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "gm_note",

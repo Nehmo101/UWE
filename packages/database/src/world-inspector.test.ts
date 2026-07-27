@@ -19,7 +19,6 @@ function makePage(overrides: Partial<InspectorPageInput>): InspectorPageInput {
     slug: "seite",
     type: "lore",
     visibility: "dm_only",
-    publishStatus: "draft",
     canonicalStatus: "draft",
     aliases: [],
     blocks: [],
@@ -34,7 +33,6 @@ describe("world-inspector findings", () => {
         title: "Validori",
         slug: "validori",
         visibility: "public",
-        publishStatus: "published",
         blocks: [
           { type: "gm_note", visibility: "player_visible", content: "Geheimplan!" },
         ],
@@ -54,7 +52,6 @@ describe("world-inspector findings", () => {
         slug: "das-dunkle-ritual",
         type: "secret",
         visibility: "player_visible",
-        publishStatus: "published",
       }),
     ];
 
@@ -69,7 +66,6 @@ describe("world-inspector findings", () => {
         title: "Validori",
         slug: "validori",
         visibility: "public",
-        publishStatus: "published",
         blocks: [
           {
             type: "rich_text",
@@ -83,7 +79,6 @@ describe("world-inspector findings", () => {
         title: "Shagottar",
         slug: "shagottar",
         visibility: "dm_only",
-        publishStatus: "published",
       }),
     ];
 
@@ -100,7 +95,6 @@ describe("world-inspector findings", () => {
         title: "Validori",
         slug: "validori",
         visibility: "public",
-        publishStatus: "published",
         blocks: [
           { type: "gm_note", visibility: "dm_only", content: "Hier liegt [[Shagottar]]." },
         ],
@@ -110,7 +104,6 @@ describe("world-inspector findings", () => {
         title: "Shagottar",
         slug: "shagottar",
         visibility: "dm_only",
-        publishStatus: "published",
       }),
     ];
 
@@ -159,20 +152,17 @@ describe("world-inspector findings", () => {
         title: "Marktplatz",
         slug: "marktplatz",
         visibility: "player_visible",
-        publishStatus: "draft",
       }),
       makePage({
         id: "c",
         title: "Kriegsplan",
         slug: "kriegsplan",
         visibility: "dm_only",
-        publishStatus: "published",
       }),
     ];
 
     const findings = buildCanonFindings("terra", pages);
     assert.ok(findings.some((f) => f.code === "contradictory_page"));
-    assert.ok(findings.some((f) => f.code === "visible_but_unpublished" && f.pageTitle === "Marktplatz"));
     assert.ok(findings.some((f) => f.code === "published_but_dm_only" && f.pageTitle === "Kriegsplan"));
   });
 
@@ -237,7 +227,6 @@ describe("world-inspector service", () => {
       slug: "hafenstadt",
       type: "location",
       visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "public", content: "Schöner Hafen." },
         { type: "gm_note", sortOrder: 1, visibility: "dm_only", content: "Schmuggler!" },
@@ -250,7 +239,6 @@ describe("world-inspector service", () => {
       slug: "geheimversteck",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
   });
 

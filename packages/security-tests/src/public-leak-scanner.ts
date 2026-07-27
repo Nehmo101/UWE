@@ -111,10 +111,6 @@ export async function scanPublicPortalForLeaks(
       await repo.search("portal", { query: "DM_ONLY_SECRET", worldSlug, limit: 50 }),
     );
     record(
-      `search:portal:${worldSlug}:DRAFT`,
-      await repo.search("portal", { query: "PRIVATE_DRAFT", worldSlug, limit: 50 }),
-    );
-    record(
       `search:portal:${worldSlug}:HIDDEN`,
       await repo.search("portal", { query: "HIDDEN_SECRET", worldSlug, limit: 50 }),
     );

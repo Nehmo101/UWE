@@ -27,7 +27,6 @@ describe("page-service portal security", () => {
       slug: "validori",
       type: "location",
       visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -51,7 +50,6 @@ describe("page-service portal security", () => {
       slug: "shagottar",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "gm_note",
@@ -68,7 +66,6 @@ describe("page-service portal security", () => {
       slug: "arbor",
       type: "region",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",

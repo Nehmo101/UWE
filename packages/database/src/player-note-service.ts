@@ -367,7 +367,6 @@ export class PlayerNoteService {
         type: "note",
         summary: `Übernommen von ${note.user.displayName}`,
         visibility: "dm_only",
-        publishStatus: "draft",
         canonicalStatus: "idea",
         contentBlocks: {
           create: [

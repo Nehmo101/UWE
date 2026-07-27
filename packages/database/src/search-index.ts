@@ -27,7 +27,6 @@ function pageToSearchIndexEntry(
     tags: parseStringArray(page.tags),
     aliases: parseStringArray(page.aliases),
     visibility: page.visibility,
-    publishStatus: page.publishStatus,
     canonicalStatus: page.canonicalStatus,
     questStatus: page.questStatus ?? null,
     worldSlug: page.world.slug,

@@ -25,7 +25,6 @@ export interface WikiPageNode {
   slug: string;
   type: Page["type"];
   visibility: Page["visibility"];
-  publishStatus: Page["publishStatus"];
   tags: string[];
   aliases: string[];
   content: string;
@@ -72,7 +71,6 @@ export function pageToWikiNode(
     slug: page.slug,
     type: page.type,
     visibility: page.visibility,
-    publishStatus: page.publishStatus,
     tags: parseStringArray(page.tags),
     aliases: parseStringArray(page.aliases),
     content: combineBlockContent(blocks),
@@ -135,7 +133,6 @@ export function buildLookupIndex(
               slug: page.slug,
               type: page.type,
               visibility: page.visibility,
-              publishStatus: page.publishStatus,
               tags: [],
               aliases: [],
               content: "",

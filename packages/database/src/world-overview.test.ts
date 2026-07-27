@@ -27,7 +27,6 @@ describe("world-overview", () => {
       slug: "hafenstadt",
       type: "location",
       visibility: "public",
-      publishStatus: "published",
     });
 
     await repo.createPage({
@@ -36,7 +35,6 @@ describe("world-overview", () => {
       slug: "geheimer-kult",
       type: "faction",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     await repo.createPage({
@@ -45,7 +43,6 @@ describe("world-overview", () => {
       slug: "kapitaenin-mara",
       type: "npc",
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     await db.gameSession.create({
@@ -72,7 +69,7 @@ describe("world-overview", () => {
     assert.equal(await service.getWorldOverview("does-not-exist"), null);
   });
 
-  it("aggregates page counts by category and publish status", async () => {
+  it("aggregates page counts by category", async () => {
     const overview = await service.getWorldOverview("overview-test");
     assert.ok(overview);
 
@@ -80,8 +77,6 @@ describe("world-overview", () => {
     assert.equal(overview.counts.byCategory.orte, 1);
     assert.equal(overview.counts.byCategory.npcs, 1);
     assert.equal(overview.counts.byCategory.fraktionen, 1);
-    assert.equal(overview.counts.published, 2);
-    assert.equal(overview.counts.drafts, 1);
     assert.equal(overview.counts.gameSessions, 2);
   });
 
@@ -89,8 +84,8 @@ describe("world-overview", () => {
     const overview = await service.getWorldOverview("overview-test");
     assert.ok(overview);
 
-    // Hafenstadt (public/published) + Mara (player_visible/published);
-    // Geheimer Kult (dm_only/draft) must never be counted.
+    // Hafenstadt (public) + Mara (player_visible);
+    // Geheimer Kult (dm_only) must never be counted.
     assert.equal(overview.portal.visiblePageCount, 2);
   });
 

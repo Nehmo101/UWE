@@ -85,7 +85,6 @@ describe("tag service", () => {
       type: "note",
       tags: ["Stadt"],
       visibility: "player_visible",
-      publishStatus: "published",
     });
     await repo.createPage({
       worldId,
@@ -94,7 +93,6 @@ describe("tag service", () => {
       type: "note",
       tags: ["STADT"],
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const result = await mergeTags(db, brainDb, {
@@ -117,7 +115,6 @@ describe("tag service", () => {
       type: "note",
       tags: ["quest", "hook"],
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const result = await backfillEntityTagsFromJson(db, brainDb, { worldId });
@@ -179,7 +176,6 @@ describe("tag service", () => {
       type: "note",
       tags: ["entity-primary-tag"],
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     await backfillEntityTagsFromJson(db, brainDb, { worldId });
@@ -219,7 +215,6 @@ describe("tag service", () => {
       type: "note",
       tags: ["Verify Gap Tag"],
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const before = await verifyTagBackfill(db, brainDb, { worldId });
@@ -254,7 +249,6 @@ describe("tag service", () => {
       type: "note",
       tags: ["dualwrite-old"],
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     await backfillEntityTagsFromJson(db, brainDb, { worldId });

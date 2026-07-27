@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   DungeonPrepStatusBadge,
   DUNGEON_PREP_STATUS_LABELS,
-  PUBLISH_LABELS,
   VISIBILITY_LABELS,
   WikiContent,
 } from "@uwe/shared-ui";
@@ -12,7 +11,6 @@ import {
   createDungeonCockpitService,
   DungeonPrepStatusEnum,
   getAppRepository,
-  PublishStatusEnum,
   VisibilityEnum,
 } from "@uwe/database/server";
 import {
@@ -262,19 +260,6 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
                   <SelectContent>
                     {Object.values(VisibilityEnum).map((v) => (
                       <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className={FIELD_CLASS}>
-                <Label htmlFor="dungeon-meta-publish">Publish</Label>
-                <Select name="publishStatus" defaultValue={overview.dungeon.publishStatus}>
-                  <SelectTrigger id="dungeon-meta-publish">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(PublishStatusEnum).map((s) => (
-                      <SelectItem key={s} value={s}>{PUBLISH_LABELS[s]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -621,7 +621,6 @@ export async function collectBackupData(
         type: page.type,
         summary: page.summary,
         visibility: page.visibility,
-        publishStatus: page.publishStatus,
         canonicalStatus: page.canonicalStatus,
         prepStatus: page.prepStatus,
         tags: page.tags,

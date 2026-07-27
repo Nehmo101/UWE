@@ -5,7 +5,6 @@ import type {
   ContentBlock,
   CanonicalStatus,
   PageType,
-  PublishStatus,
   QuestLifecycleStatus,
   Visibility,
 } from "./generated/prisma/client";
@@ -91,7 +90,6 @@ export interface SearchResultItem {
   worldName: string;
   campaignName: string | null;
   visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   questStatus: QuestLifecycleStatus | null;
   href: string;
@@ -109,7 +107,6 @@ export interface SearchIndexEntry {
   tags: string[];
   aliases: string[];
   visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   questStatus: QuestLifecycleStatus | null;
   worldSlug: string;
@@ -127,7 +124,6 @@ type IndexedPage = {
   tags: unknown;
   aliases: unknown;
   visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   questStatus?: QuestLifecycleStatus | null;
   campaignId: string | null;
@@ -232,7 +228,6 @@ export function buildSearchIndex(
       tags: parseStringArray(page.tags),
       aliases: parseStringArray(page.aliases),
       visibility: page.visibility,
-      publishStatus: page.publishStatus,
       canonicalStatus: page.canonicalStatus,
       questStatus: page.questStatus ?? null,
       worldSlug: page.world.slug,
@@ -386,7 +381,6 @@ export function searchIndex(
       worldName: entry.worldName,
       campaignName: entry.campaignName,
       visibility: entry.visibility,
-      publishStatus: entry.publishStatus,
       canonicalStatus: entry.canonicalStatus,
       questStatus: entry.questStatus,
       href: buildResultHref(entry.worldSlug, entry.type, entry.slug, urlMode),
@@ -452,7 +446,6 @@ async function loadPagesForSearchUncached(
       tags: true,
       aliases: true,
       visibility: true,
-      publishStatus: true,
       canonicalStatus: true,
       questStatus: true,
       campaignId: true,

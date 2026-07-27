@@ -30,7 +30,6 @@ describe("player character permissions", () => {
     const page = {
       id: "pc-1",
       visibility: "specific_players" as const,
-      publishStatus: "published" as const,
       secretLevel: "none" as const,
       revealState: "hidden" as const,
       type: "player_character",
@@ -50,7 +49,6 @@ describe("player character permissions", () => {
     const page = {
       id: "pc-1",
       visibility: "specific_players" as const,
-      publishStatus: "published" as const,
       secretLevel: "none" as const,
       revealState: "hidden" as const,
       type: "player_character",
@@ -65,7 +63,6 @@ describe("player character permissions", () => {
     const npcPage = {
       id: "npc-1",
       visibility: "player_visible" as const,
-      publishStatus: "published" as const,
       secretLevel: "none" as const,
       revealState: "hidden" as const,
       type: "npc",
@@ -79,7 +76,6 @@ describe("player character permissions", () => {
     const page = {
       id: "pc-2",
       visibility: "specific_players" as const,
-      publishStatus: "published" as const,
       secretLevel: "none" as const,
       revealState: "hidden" as const,
       type: "player_character",

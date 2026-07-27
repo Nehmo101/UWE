@@ -35,7 +35,6 @@ describe("inspector fix actions", () => {
       slug: "leaky-npc",
       type: "npc",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "gm_note",
@@ -97,7 +96,6 @@ describe("inspector fix actions", () => {
       slug: "verratenes-geheimnis",
       type: "secret",
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const result = await fixes.applyFix({
@@ -119,27 +117,6 @@ describe("inspector fix actions", () => {
     );
   });
 
-  it("publish_page resolves visible_but_unpublished", async () => {
-    const page = await repo.createPage({
-      worldId,
-      title: "Halbfertig",
-      slug: "halbfertig",
-      type: "lore",
-      visibility: "player_visible",
-      publishStatus: "draft",
-    });
-
-    const result = await fixes.applyFix({
-      worldSlug,
-      action: "publish_page",
-      pageId: page.id,
-    });
-    assert.equal(result.ok, true);
-
-    const updated = await db.page.findUnique({ where: { id: page.id } });
-    assert.equal(updated!.publishStatus, "published");
-  });
-
   it("remove_broken_wiki_link converts the link to plain text and is undoable", async () => {
     const page = await repo.createPage({
       worldId,
@@ -147,7 +124,6 @@ describe("inspector fix actions", () => {
       slug: "kaputte-links",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
@@ -202,7 +178,6 @@ describe("inspector fix actions", () => {
       slug: "ohne-kampagne",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     const report = await inspector.inspectWorld(worldSlug);
@@ -231,7 +206,6 @@ describe("inspector fix actions", () => {
       slug: "fremde-seite",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const result = await fixes.applyFix({

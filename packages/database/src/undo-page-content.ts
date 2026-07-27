@@ -24,7 +24,6 @@ export interface PageContentReplaceSnapshot {
     type: string;
     summary: string | null;
     visibility: string;
-    publishStatus: string;
     canonicalStatus: string;
     aiReviewedAt?: Date | null;
     tags: unknown;
@@ -52,7 +51,6 @@ export async function capturePageContentReplaceUndo(db: PrismaClient, pageId: st
       type: page.type,
       summary: page.summary,
       visibility: page.visibility,
-      publishStatus: page.publishStatus,
       canonicalStatus: page.canonicalStatus,
       aiReviewedAt: page.aiReviewedAt,
       tags: page.tags,
@@ -97,7 +95,6 @@ export async function restorePageContentReplaceUndo(
   await db.page.update({
     where: { id: data.id },
     data: {
-      publishStatus: data.publishStatus as never,
       canonicalStatus: data.canonicalStatus as never,
       aiReviewedAt: data.aiReviewedAt ?? null,
       tags: toPrismaJsonValue(data.tags),

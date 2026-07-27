@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "./AppShell";
 import { MobileFilterSheet } from "./MobileComponents";
-import { PageTypeBadge, PUBLISH_LABELS, QuestStatusBadge, VisibilityBadge } from "./StatusBadges";
+import { PageTypeBadge, QuestStatusBadge, VisibilityBadge } from "./StatusBadges";
 import type {
   PageType,
-  PublishStatus,
   QuestLifecycleStatus,
   Visibility,
 } from "@uwe/database/enums";
@@ -27,7 +26,6 @@ export interface SearchResultViewModel {
   worldName: string;
   campaignName: string | null;
   visibility: Visibility;
-  publishStatus?: PublishStatus;
   /** Quest lifecycle status; `null` counts as open. Only rendered for quest results. */
   questStatus?: QuestLifecycleStatus | null;
   href: string;
@@ -40,14 +38,12 @@ export function SearchResultsList({
   query,
   showWorld = false,
   showVisibility = false,
-  showPublish = false,
   showLabelActions = false,
 }: {
   results: SearchResultViewModel[];
   query?: string;
   showWorld?: boolean;
   showVisibility?: boolean;
-  showPublish?: boolean;
   /** Studio: optional „Label erstellen“ link per result */
   showLabelActions?: boolean;
 }) {
@@ -108,9 +104,6 @@ export function SearchResultsList({
                 )}
                 {!showWorld && result.campaignName && (
                   <span>{result.campaignName}</span>
-                )}
-                {showPublish && result.publishStatus && (
-                  <span>{PUBLISH_LABELS[result.publishStatus] ?? result.publishStatus}</span>
                 )}
               </div>
 

@@ -62,7 +62,6 @@ describe("character sheet permissions (portal)", () => {
       slug: "aria-pc",
       type: "player_character",
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const dmOnlyPage = await repo.createPage({
@@ -71,7 +70,6 @@ describe("character sheet permissions (portal)", () => {
       slug: "geheimer-nsc-bogen",
       type: "player_character",
       visibility: "dm_only",
-      publishStatus: "published",
     });
 
     const characters = createCharacterService(db);

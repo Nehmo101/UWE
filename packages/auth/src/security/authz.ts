@@ -35,14 +35,6 @@ const KNOWN_VISIBILITIES: ReadonlySet<PageVisibility> = new Set([
   "archived",
 ]);
 
-const KNOWN_PUBLISH_STATUSES: ReadonlySet<string> = new Set([
-  "draft",
-  "internal",
-  "review",
-  "published",
-  "archived",
-]);
-
 const DM_WORLD_ROLES: ReadonlySet<WorldMembership["role"]> = new Set(["owner", "dm"]);
 
 /** World target for authorization checks — membership is the requesting user's role in this world. */
@@ -57,7 +49,6 @@ export interface WorldAuthTarget {
 export interface ContentAuthTarget {
   id: string;
   visibility: string;
-  publishStatus: string;
   type?: string;
 }
 
@@ -93,17 +84,12 @@ function normalizeVisibility(visibility: string): PageVisibility | null {
     : null;
 }
 
-function normalizePublishStatus(status: string): string | null {
-  return KNOWN_PUBLISH_STATUSES.has(status) ? status : null;
-}
-
 function toPageAccessInfo(content: ContentAuthTarget): PageAccessInfo | null {
   const visibility = normalizeVisibility(content.visibility);
-  const publishStatus = normalizePublishStatus(content.publishStatus);
-  if (!visibility || !publishStatus) {
+  if (!visibility) {
     return null;
   }
-  return { id: content.id, visibility, publishStatus };
+  return { id: content.id, visibility };
 }
 
 function isGlobalOwner(user: AuthUser | null): boolean {

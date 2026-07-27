@@ -111,7 +111,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
     href: buildPageUrl(worldSlug, page.type, page.slug),
     type: page.type,
     visibility: page.visibility,
-    publishStatus: page.publishStatus,
     canonicalStatus: page.canonicalStatus,
     questStatus: page.questStatus ?? null,
     tags: parseStringArray(page.tags),

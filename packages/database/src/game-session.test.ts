@@ -243,7 +243,6 @@ describe("UWE game session management", () => {
       slug: "geheimer-verraeter",
       type: "npc",
       visibility: "dm_only",
-      publishStatus: "published",
     });
 
     const visiblePage = await repo.createPage({
@@ -253,7 +252,6 @@ describe("UWE game session management", () => {
       slug: "bekannter-marktplatz",
       type: "location",
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     await sessions.linkPage(sessionId, secretPage.id);

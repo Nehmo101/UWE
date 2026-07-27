@@ -107,7 +107,6 @@ export function toPlayerSafeInventoryItemView(item: InventoryItem): PlayerSafeIn
 const PAGE_ACCESS_SELECT = {
   id: true,
   visibility: true,
-  publishStatus: true,
 } as const;
 
 export class PartyTreasuryService {

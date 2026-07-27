@@ -686,11 +686,9 @@ export class AiReviewService {
         await repo.replacePageBodyContent(sourcePage.id, content);
 
         const pageUpdate: {
-          publishStatus: "draft";
           aiReviewedAt: Date;
           tags?: string[];
         } = {
-          publishStatus: "draft",
           aiReviewedAt: new Date(),
         };
 

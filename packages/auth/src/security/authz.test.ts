@@ -65,20 +65,17 @@ const publicWorld: WorldAuthTarget = {
 const dmOnlyContent = {
   id: "page-dm",
   visibility: "dm_only",
-  publishStatus: "published",
 };
 
 const playerVisibleContent = {
   id: "page-player",
   visibility: "player_visible",
-  publishStatus: "published",
 };
 
 const secretContent = {
   id: "page-secret",
   type: "secret" as const,
   visibility: "dm_only",
-  publishStatus: "published",
 };
 
 describe("authz — world access", () => {
@@ -138,14 +135,7 @@ describe("authz — content access", () => {
 
   it("denies unknown visibility (deny-by-default)", () => {
     assert.equal(
-      canReadContent(userA, { id: "x", visibility: "unknown_vis", publishStatus: "published" }, worldA),
-      false,
-    );
-  });
-
-  it("denies unknown publish status (deny-by-default)", () => {
-    assert.equal(
-      canReadContent(userA, { id: "x", visibility: "player_visible", publishStatus: "unknown_status" }, worldA),
+      canReadContent(userA, { id: "x", visibility: "unknown_vis" }, worldA),
       false,
     );
   });

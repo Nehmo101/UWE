@@ -1,14 +1,11 @@
 import {
   isPlayerPortalVisibility,
-  isPublishedContentStatus,
-  mapPublishStatusToContentStatus,
 } from "@uwe/auth";
-import { PUBLISH_LABELS, VISIBILITY_LABELS } from "@uwe/shared-ui";
-import type { PublishStatus, Visibility } from "@uwe/database/enums";
+import { VISIBILITY_LABELS } from "@uwe/shared-ui";
+import type { Visibility } from "@uwe/database/enums";
 
 interface PreviewGateFields {
   visibility: Visibility;
-  publishStatus: PublishStatus;
 }
 
 /**
@@ -19,10 +16,6 @@ interface PreviewGateFields {
 export function describePreviewVisibilityGate(page: PreviewGateFields): string {
   if (!isPlayerPortalVisibility(page.visibility)) {
     return `Sichtbarkeit ist auf "${VISIBILITY_LABELS[page.visibility]}" gesetzt — Spieler sehen diese Seite im Portal nicht.`;
-  }
-
-  if (!isPublishedContentStatus(mapPublishStatusToContentStatus(page.publishStatus))) {
-    return `Status ist "${PUBLISH_LABELS[page.publishStatus]}" — nur veröffentlichte Seiten sind für Spieler sichtbar.`;
   }
 
   if (!true) {

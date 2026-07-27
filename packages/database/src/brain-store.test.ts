@@ -43,7 +43,6 @@ describe("UWE brain store", () => {
       slug: "test-location",
       type: "location",
       visibility: "player_visible",
-      publishStatus: "published",
     });
     pageId = page.id;
 

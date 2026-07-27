@@ -76,7 +76,6 @@ describe("user management and login hardening", () => {
       slug: "player-lore",
       type: "note",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "player_text",
@@ -93,7 +92,6 @@ describe("user management and login hardening", () => {
       slug: "specific-secret",
       type: "note",
       visibility: "specific_players",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "player_text",

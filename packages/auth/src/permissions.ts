@@ -125,10 +125,6 @@ export function buildAccessContext(input: {
   };
 }
 
-function isPublished(page: PageAccessInfo): boolean {
-  return page.publishStatus === "published";
-}
-
 function canViewSpecificPlayerPage(ctx: AccessContext, pageId: string): boolean {
   return ctx.specificPlayerPageIds.has(pageId);
 }
@@ -139,10 +135,6 @@ function canViewUnlockedPage(ctx: AccessContext, pageId: string): boolean {
 
 export function canViewPage(ctx: AccessContext, page: PageAccessInfo): boolean {
   if (page.visibility === "archived" || page.visibility === "private") {
-    return isWorldStaff(ctx);
-  }
-
-  if (!isPublished(page)) {
     return isWorldStaff(ctx);
   }
 

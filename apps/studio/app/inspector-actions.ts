@@ -20,7 +20,6 @@ import {
 const FIX_ACTIONS: InspectorFixAction[] = [
   "set_block_dm_only",
   "set_page_dm_only",
-  "publish_page",
   "set_page_player_visible",
   "remove_broken_wiki_link",
   "assign_page_campaign",

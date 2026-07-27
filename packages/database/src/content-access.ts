@@ -2,7 +2,6 @@ import type {
   ContentBlock,
   ContentBlockType,
   Page,
-  PublishStatus,
   Visibility,
 } from "./generated/prisma/client";
 import {
@@ -13,14 +12,11 @@ import {
   isPagePlayerExposable,
   isPlayerExposableContent,
   isPlayerPortalVisibility,
-  isPublishedContentStatus,
-  mapPublishStatusToContentStatus,
   maskSecretsInUi,
   DEFAULT_SECRET_PLACEHOLDER,
   PLAYER_PORTAL_VISIBILITIES,
   type ContentAccessFields,
   type ContentBlockAccessFields,
-  type ContentStatus,
   type ContentVisibility,
   type MaskedContent,
   type MaskSecretsOptions,
@@ -35,14 +31,11 @@ export {
   isPagePlayerExposable,
   isPlayerExposableContent,
   isPlayerPortalVisibility,
-  isPublishedContentStatus,
-  mapPublishStatusToContentStatus,
   maskSecretsInUi,
   DEFAULT_SECRET_PLACEHOLDER,
   PLAYER_PORTAL_VISIBILITIES,
   type ContentAccessFields,
   type ContentBlockAccessFields,
-  type ContentStatus,
   type ContentVisibility,
   type MaskedContent,
   type MaskSecretsOptions,
@@ -109,7 +102,6 @@ export interface SanitizedPage {
   type: Page["type"];
   summary: string | null;
   visibility: Visibility;
-  publishStatus: PublishStatus;
   tags: string[];
   aliases: string[];
   contentBlocks: SanitizedContentBlock[];
@@ -149,7 +141,6 @@ export function sanitizeForPlayer(
     type: page.type,
     summary: page.summary,
     visibility: page.visibility,
-    publishStatus: page.publishStatus,
     tags: options?.tags ?? [],
     aliases: options?.aliases ?? [],
     contentBlocks: exposableBlocks,

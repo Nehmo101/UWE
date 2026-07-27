@@ -50,7 +50,6 @@ describe("UWE asset system", () => {
       slug: "linked-page",
       type: "handout",
       visibility: "player_visible",
-      publishStatus: "published",
     });
     pageId = page.id;
 

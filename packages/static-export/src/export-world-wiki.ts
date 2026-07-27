@@ -43,7 +43,6 @@ function pageMarkdownFrontmatter(input: {
   slug: string;
   type: string;
   visibility: string;
-  publishStatus: string;
   tags: string[];
 }): string {
   const lines = [
@@ -52,7 +51,6 @@ function pageMarkdownFrontmatter(input: {
     `slug: ${input.slug}`,
     `type: ${input.type}`,
     `visibility: ${input.visibility}`,
-    `publish_status: ${input.publishStatus}`,
   ];
 
   if (input.tags.length > 0) {
@@ -129,7 +127,6 @@ export async function exportWorldWiki(
           slug: view.page.slug,
           type: view.page.type,
           visibility: view.page.visibility,
-          publishStatus: view.page.publishStatus,
           tags: view.page.tags,
         }),
         body,

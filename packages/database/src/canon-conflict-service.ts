@@ -1,5 +1,5 @@
 import type { PrismaClient } from "./client";
-import type { CanonicalStatus, PageType, PublishStatus, Visibility } from "./generated/prisma/client";
+import type { CanonicalStatus, PageType, Visibility } from "./generated/prisma/client";
 import { buildPageUrl } from "./page-types";
 import type { InspectorFinding, InspectorPageInput, InspectorSeverity } from "./world-inspector";
 
@@ -9,7 +9,6 @@ export interface CanonConflictPageInput {
   slug: string;
   type: PageType;
   visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   content: string;
 }
@@ -35,7 +34,6 @@ function findingId(code: string, parts: string[]): string {
 
 function isPortalPublished(page: CanonConflictPageInput): boolean {
   return (
-    page.publishStatus === "published" &&
     (page.visibility === "player_visible" || page.visibility === "public")
   );
 }
@@ -90,7 +88,7 @@ export function checkNpcDeathStatusConflicts(
   for (const page of pages) {
     if (page.type !== "npc") continue;
     if (!DEAD_KEYWORDS.test(page.content)) continue;
-    if (page.visibility === "dm_only" && page.publishStatus !== "published") continue;
+    if (page.visibility === "dm_only") continue;
 
     findings.push({
       id: findingId("npc_status_conflict", [page.id]),
@@ -192,7 +190,6 @@ function toCanonPageInput(page: InspectorPageInput): CanonConflictPageInput {
     slug: page.slug,
     type: page.type,
     visibility: page.visibility,
-    publishStatus: page.publishStatus,
     canonicalStatus: page.canonicalStatus,
     content: page.blocks.map((block) => block.content).join("\n"),
   };

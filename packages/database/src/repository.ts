@@ -21,7 +21,6 @@ import type {
   PageLink,
   PageType,
   Prisma,
-  PublishStatus,
   Visibility,
 } from "./generated/prisma/client";
 import { pageTypesForNavCategory, type NavCategory } from "./page-types";
@@ -31,7 +30,6 @@ import {
   filterBlocksForContext,
   isPageAccessible,
   isPortalPageVisibility,
-  isPublishedForPortal,
   PORTAL_BLOCK_VISIBILITIES,
   PORTAL_PAGE_VISIBILITIES,
   type AccessContext,
@@ -63,7 +61,6 @@ export type {
   Page,
   PageLink,
   PageType,
-  PublishStatus,
   Visibility,
   World,
 } from "./generated/prisma/client";
@@ -73,7 +70,6 @@ export {
   ContentBlockType as ContentBlockTypeEnum,
   AssetType as AssetTypeEnum,
   PageType as PageTypeEnum,
-  PublishStatus as PublishStatusEnum,
   Visibility as VisibilityEnum,
 } from "./generated/prisma/client";
 
@@ -110,7 +106,6 @@ export interface CreatePageInput {
   type: PageType;
   summary?: string | null;
   visibility?: Visibility;
-  publishStatus?: PublishStatus;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
@@ -127,7 +122,6 @@ export interface UpdatePageInput {
   campaignId?: string | null;
   parentPageId?: string | null;
   visibility?: Visibility;
-  publishStatus?: PublishStatus;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
@@ -254,7 +248,6 @@ export class UweRepository {
         type: input.type,
         summary: input.summary ?? null,
         visibility: input.visibility ?? defaults.defaultVisibility,
-        publishStatus: input.publishStatus ?? "draft",
         canonicalStatus: input.canonicalStatus ?? defaults.defaultCanonicalStatus,
         prepStatus: input.prepStatus ?? null,
         questStatus: input.questStatus ?? null,
@@ -291,7 +284,6 @@ export class UweRepository {
         campaignId: input.campaignId,
         parentPageId: input.parentPageId,
         visibility: input.visibility,
-        publishStatus: input.publishStatus,
         canonicalStatus: input.canonicalStatus,
         prepStatus: input.prepStatus,
         questStatus: input.questStatus,
@@ -803,7 +795,6 @@ export class UweRepository {
         type: input.type,
         summary: input.summary ?? null,
         visibility: input.visibility ?? defaults.defaultVisibility,
-        publishStatus: "draft",
         canonicalStatus: "idea",
         contentBlocks: {
           create: [
@@ -826,14 +817,12 @@ export class UweRepository {
   }
 
   async getDashboardStats() {
-    const [worldCount, pageCount, publishedCount, draftCount] = await Promise.all([
+    const [worldCount, pageCount] = await Promise.all([
       this.db.world.count(),
       this.db.page.count(),
-      this.db.page.count({ where: { publishStatus: "published" } }),
-      this.db.page.count({ where: { publishStatus: "draft" } }),
     ]);
 
-    return { worldCount, pageCount, publishedCount, draftCount };
+    return { worldCount, pageCount };
   }
 
   /** Most recently edited pages across all worlds — for the DM dashboard. */
@@ -998,7 +987,7 @@ export async function getDmPage(worldSlug: string, pageSlug: string, databaseUrl
   return createUweRepository(databaseUrl).getDmPage(worldSlug, pageSlug);
 }
 
-export { PORTAL_BLOCK_VISIBILITIES, PORTAL_PAGE_VISIBILITIES, isPortalPageVisibility, isPublishedForPortal };
+export { PORTAL_BLOCK_VISIBILITIES, PORTAL_PAGE_VISIBILITIES, isPortalPageVisibility };
 
 export async function getDbWorldBySlug(worldSlug: string, databaseUrl?: string) {
   return createUweRepository(databaseUrl).getWorldBySlug(worldSlug);

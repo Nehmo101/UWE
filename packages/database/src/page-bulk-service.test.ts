@@ -31,7 +31,6 @@ describe("page bulk service", () => {
       slug: "a",
       type: "npc",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Inhalt A" },
       ],
@@ -42,7 +41,6 @@ describe("page bulk service", () => {
       slug: "b",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [],
     });
     pageA = a.id;
@@ -94,7 +92,6 @@ describe("page bulk service", () => {
       slug: "fremd",
       type: "npc",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [],
     });
 

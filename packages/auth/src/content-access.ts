@@ -9,11 +9,6 @@ export type ExtendedVisibility =
   | "unlock_after_session"
   | "archived";
 
-/** Normalized lifecycle status mapped from publishStatus. */
-export type ContentStatus = "draft" | "ready" | "published" | "archived";
-
-export type PublishStatusValue = "draft" | "internal" | "review" | "published" | "archived";
-
 export type ContentBlockTypeValue = string;
 
 /** Visibilities that may appear in public/player APIs when published. */
@@ -32,7 +27,6 @@ export const DM_ONLY_VISIBILITIES: readonly ExtendedVisibility[] = [
 /** Fields required for player exposure checks. */
 export interface ContentAccessFields {
   visibility: ExtendedVisibility;
-  publishStatus: PublishStatusValue;
 }
 
 export interface ContentBlockAccessFields {
@@ -40,25 +34,6 @@ export interface ContentBlockAccessFields {
   type?: ContentBlockTypeValue;
 }
 
-export function mapPublishStatusToContentStatus(publishStatus: PublishStatusValue): ContentStatus {
-  switch (publishStatus) {
-    case "draft":
-    case "review":
-      return "draft";
-    case "internal":
-      return "ready";
-    case "published":
-      return "published";
-    case "archived":
-      return "archived";
-    default:
-      return "draft";
-  }
-}
-
-export function isPublishedContentStatus(status: ContentStatus): boolean {
-  return status === "published";
-}
 
 export function isPlayerPortalVisibility(visibility: ExtendedVisibility): boolean {
   return visibility === "player_visible" || visibility === "public";
@@ -115,14 +90,7 @@ export function maskSecretsInUi(
  * and secret/reveal state all allow it.
  */
 export function isPlayerExposableContent(content: ContentAccessFields): boolean {
-  if (!isPlayerPortalVisibility(content.visibility)) {
-    return false;
-  }
-
-  if (!isPublishedContentStatus(mapPublishStatusToContentStatus(content.publishStatus))) {
-    return false;
-  }
-  return true;
+  return isPlayerPortalVisibility(content.visibility);
 }
 
 export function isBlockPlayerExposable(block: ContentBlockAccessFields): boolean {
@@ -148,14 +116,13 @@ export interface PrivateReferencePage {
   title: string;
   slug: string;
   visibility: ExtendedVisibility;
-  publishStatus: PublishStatusValue;
   aliases?: unknown;
 }
 
 export interface PrivateReferenceTarget {
   title: string;
   slug: string;
-  reason: "private_visibility" | "unpublished" | "hidden_secret";
+  reason: "private_visibility" | "hidden_secret";
 }
 
 function parseAliases(aliases: unknown): string[] {
@@ -197,11 +164,6 @@ export function detectPrivateReferences(
 
     if (isDmOnlyVisibility(page.visibility)) {
       results.push({ title: page.title, slug: page.slug, reason: "private_visibility" });
-      continue;
-    }
-
-    if (!isPublishedContentStatus(mapPublishStatusToContentStatus(page.publishStatus))) {
-      results.push({ title: page.title, slug: page.slug, reason: "unpublished" });
       continue;
     }
 

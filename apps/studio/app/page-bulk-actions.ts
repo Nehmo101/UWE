@@ -82,7 +82,6 @@ export async function releaseAllWorldPagesAction(
     mode === "release"
       ? [
           { kind: "visibility", visibility: "player_visible" },
-          { kind: "publishStatus", publishStatus: "published" },
         ]
       : [{ kind: "visibility", visibility: "dm_only" }];
 

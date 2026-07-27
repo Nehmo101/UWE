@@ -22,7 +22,6 @@ describe("public leak scanner", () => {
       slug: "geheimplan",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "gm_note",
@@ -39,7 +38,6 @@ describe("public leak scanner", () => {
       slug: "marktplatz",
       type: "location",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",

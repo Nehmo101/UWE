@@ -88,7 +88,6 @@ export async function seedAuthDemoContent(
     type: "note",
     summary: "Nur für Aman freigegeben.",
     visibility: "specific_players",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
@@ -108,7 +107,6 @@ export async function seedAuthDemoContent(
     type: "note",
     summary: "Wird nach Session 1 freigeschaltet.",
     visibility: "unlock_after_session",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
@@ -128,7 +126,6 @@ export async function seedAuthDemoContent(
     type: "note",
     summary: "Sollte im Portal nicht erscheinen.",
     visibility: "archived",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",

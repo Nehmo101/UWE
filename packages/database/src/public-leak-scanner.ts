@@ -71,7 +71,6 @@ async function scanPages(
   const pages = await db.page.findMany({
     where: {
       worldId: world.id,
-      publishStatus: "published",
       visibility: { in: PORTAL_PAGE_VISIBILITIES as Visibility[] },
     },
     include: { contentBlocks: true },

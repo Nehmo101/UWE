@@ -2,7 +2,6 @@ import type { PrismaClient } from "./client";
 import type {
   GameSessionStatus,
   PageType,
-  PublishStatus,
   Visibility,
 } from "./generated/prisma/client";
 import { navCategoryForPageType, type NavCategory } from "./page-types";
@@ -20,7 +19,6 @@ export interface WorldOverviewPage {
   slug: string;
   type: PageType;
   visibility: Visibility;
-  publishStatus: PublishStatus;
   updatedAt: Date;
 }
 
@@ -50,8 +48,6 @@ export interface WorldOverviewData {
   counts: {
     pages: number;
     byCategory: Record<NavCategory, number>;
-    published: number;
-    drafts: number;
     campaigns: number;
     assets: number;
     gameSessions: number;
@@ -96,7 +92,6 @@ export class WorldOverviewService {
             slug: true,
             type: true,
             visibility: true,
-            publishStatus: true,
             updatedAt: true,
           },
         }),
@@ -120,8 +115,6 @@ export class WorldOverviewService {
       ]);
 
     const byCategory: Record<NavCategory, number> = { ...EMPTY_CATEGORY_COUNTS };
-    let published = 0;
-    let drafts = 0;
     let visiblePageCount = 0;
 
     const portalOptions = {
@@ -130,8 +123,6 @@ export class WorldOverviewService {
 
     for (const page of pages) {
       byCategory[navCategoryForPageType(page.type)] += 1;
-      if (page.publishStatus === "published") published += 1;
-      if (page.publishStatus === "draft") drafts += 1;
       if (isPageAccessible(page, "portal", portalOptions)) visiblePageCount += 1;
     }
 
@@ -174,8 +165,6 @@ export class WorldOverviewService {
       counts: {
         pages: pages.length,
         byCategory,
-        published,
-        drafts,
         campaigns: campaignCount,
         assets: assetCount,
         gameSessions: gameSessions.length,

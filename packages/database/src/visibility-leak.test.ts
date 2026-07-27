@@ -34,7 +34,6 @@ describe("visibility and secret leak protection", () => {
       slug: "spieler-seite",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -53,28 +52,10 @@ describe("visibility and secret leak protection", () => {
 
     await repo.createPage({
       worldId,
-      title: "Entwurf sichtbar",
-      slug: "entwurf-sichtbar",
-      type: "lore",
-      visibility: "player_visible",
-      publishStatus: "draft",
-      contentBlocks: [
-        {
-          type: "rich_text",
-          sortOrder: 0,
-          visibility: "player_visible",
-          content: "Noch nicht live.",
-        },
-      ],
-    });
-
-    await repo.createPage({
-      worldId,
       title: "Verstecktes Geheimnis",
       slug: "geheimnis",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -91,7 +72,6 @@ describe("visibility and secret leak protection", () => {
       slug: "enthuellt",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -108,7 +88,6 @@ describe("visibility and secret leak protection", () => {
       slug: "block-geheimnisse",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -137,7 +116,6 @@ describe("visibility and secret leak protection", () => {
       slug: "privater-plot",
       type: "lore",
       visibility: "private",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -165,7 +143,7 @@ describe("visibility and secret leak protection", () => {
 
 
 
-  it("public search index excludes private and unpublished content", async () => {
+  it("public search index excludes private content", async () => {
     const db = createPrismaClient(databaseUrl);
     const pages = await db.page.findMany({
       where: { world: { slug: worldSlug } },
@@ -181,7 +159,6 @@ describe("visibility and secret leak protection", () => {
 
     assert.ok(publicIndex.length < studioIndex.length);
     assert.ok(!publicIndex.some((entry) => entry.slug === "privater-plot"));
-    assert.ok(!publicIndex.some((entry) => entry.slug === "entwurf-sichtbar"));
     assert.ok(publicIndex.some((entry) => entry.slug === "geheimnis"));
     assert.ok(publicIndex.some((entry) => entry.slug === "spieler-seite"));
     assert.ok(publicIndex.some((entry) => entry.slug === "enthuellt"));
@@ -192,9 +169,8 @@ describe("visibility and secret leak protection", () => {
     await db.$disconnect();
   });
 
-  it("player portal API excludes drafts and private pages", async () => {
+  it("player portal API excludes private pages", async () => {
     assert.ok(await repo.getPublicPageForPortal(worldSlug, "spieler-seite"));
-    assert.equal(await repo.getPublicPageForPortal(worldSlug, "entwurf-sichtbar"), null);
     assert.ok(await repo.getPublicPageForPortal(worldSlug, "geheimnis"));
     assert.equal(await repo.getPublicPageForPortal(worldSlug, "privater-plot"), null);
     assert.ok(await repo.getPublicPageForPortal(worldSlug, "enthuellt"));
@@ -202,29 +178,20 @@ describe("visibility and secret leak protection", () => {
 
 
   it("central exposure rules match acceptance criteria", () => {
-    // Visibility and publish status are the whole rule now — secret level and
-    // reveal state were removed, so a published player-facing page is exposable
-    // and nothing else about the page can hold it back.
-    assert.equal(
-      isPlayerExposableContent({ visibility: "player_visible", publishStatus: "published" }),
-      true,
-    );
-    assert.equal(
-      isPlayerExposableContent({ visibility: "public", publishStatus: "published" }),
-      true,
-    );
-
-    for (const publishStatus of ["draft", "internal", "review", "archived"] as const) {
+    // Visibility is the whole rule now — secret level, reveal state and
+    // publish status were removed, so a player-facing page is exposable and
+    // nothing else about the page can hold it back.
+    for (const visibility of ["player_visible", "public"] as const) {
       assert.equal(
-        isPlayerExposableContent({ visibility: "player_visible", publishStatus }),
-        false,
-        `${publishStatus} must not be exposable`,
+        isPlayerExposableContent({ visibility }),
+        true,
+        `${visibility} must be exposable`,
       );
     }
 
     for (const visibility of ["dm_only", "private", "archived"] as const) {
       assert.equal(
-        isPlayerExposableContent({ visibility, publishStatus: "published" }),
+        isPlayerExposableContent({ visibility }),
         false,
         `${visibility} must not be exposable`,
       );

@@ -31,7 +31,6 @@ describe("graph-service", () => {
       slug: "validori",
       type: "location",
       visibility: "public",
-      publishStatus: "published",
       tags: ["hafen", "stadt"],
       contentBlocks: [
         {
@@ -50,7 +49,6 @@ describe("graph-service", () => {
       slug: "shagottar",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "gm_note",
@@ -68,7 +66,6 @@ describe("graph-service", () => {
       slug: "kapitän-mara",
       type: "npc",
       visibility: "player_visible",
-      publishStatus: "published",
       tags: ["crew"],
       contentBlocks: [
         {

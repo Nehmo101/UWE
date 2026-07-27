@@ -2,7 +2,6 @@ import type {
   ContentBlockType,
   PageType,
   Prisma,
-  PublishStatus,
   Visibility,
 } from "@uwe/database/server";
 import type {
@@ -42,15 +41,6 @@ export function mapVisibility(raw?: string | null): Visibility {
   if (v === "player" || v === "spieler" || v === "player_visible") return "player_visible";
   if (v === "dm" || v === "dm_only" || v === "sl") return "dm_only";
   return "dm_only";
-}
-
-export function mapPublishStatus(raw?: string | null): PublishStatus {
-  if (!raw) return "draft";
-  const v = raw.trim().toLocaleLowerCase("de");
-  if (v === "published" || v === "veroeffentlicht") return "published";
-  if (v === "internal" || v === "intern") return "internal";
-  if (v === "archived" || v === "archiviert") return "archived";
-  return "draft";
 }
 
 function buildProvenanceMetadata(
@@ -193,7 +183,6 @@ export function mapEntityToPageDraft(
     type: pageType,
     summary: entity.summary ?? null,
     visibility: mapVisibility(entity.visibility),
-    publishStatus: mapPublishStatus(entity.publishStatus),
     tags,
     aliases: entity.aliases ?? [],
     contentBlocks: buildContentBlocks(entity, importedAt),

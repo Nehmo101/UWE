@@ -541,7 +541,6 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       taskType: payload.taskType,
       resultText: result.text,
       originalContent,
-      previousPublishStatus: payload.previousPublishStatus ?? page.publishStatus,
     });
 
     await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Aufgabe abgeschlossen");

@@ -94,12 +94,9 @@ export {
   isPagePlayerExposable,
   isPlayerExposableContent,
   isPlayerPortalVisibility,
-  isPublishedContentStatus,
-  mapPublishStatusToContentStatus,
   PLAYER_PORTAL_VISIBILITIES,
   type ContentAccessFields,
   type ContentBlockAccessFields,
-  type ContentStatus,
   type ContentVisibility,
   type PrivateReferenceTarget,
 } from "./content-access";

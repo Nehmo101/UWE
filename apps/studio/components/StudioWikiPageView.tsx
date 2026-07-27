@@ -203,7 +203,6 @@ export async function StudioWikiPageView({
                   <SidebarSection title="Metadaten">
                     <MetaPanel
                       visibility={dmPage.visibility}
-                      publishStatus={dmPage.publishStatus}
                       canonicalStatus={dmPage.canonicalStatus}
                       type={dmPage.type}
                       tags={parseStringArray(dmPage.tags)}

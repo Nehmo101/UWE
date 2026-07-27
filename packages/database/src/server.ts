@@ -42,7 +42,6 @@ export {
   PORTAL_BLOCK_VISIBILITIES,
   PORTAL_PAGE_VISIBILITIES,
   isPortalPageVisibility,
-  isPublishedForPortal,
 } from "./repository";
 
 export {
@@ -285,7 +284,6 @@ export type {
   Page as DbPage,
   PageLink as DbPageLink,
   PageType,
-  PublishStatus,
   Visibility,
   World as DbWorld,
   CreateWorldInput,
@@ -324,7 +322,6 @@ export {
   ContentBlockTypeEnum,
   AssetTypeEnum,
   PageTypeEnum,
-  PublishStatusEnum,
   VisibilityEnum,
 } from "./repository";
 
@@ -334,13 +331,11 @@ export {
   isPagePlayerExposable,
   isDmOnlyVisibility,
   isPlayerPortalVisibility,
-  mapPublishStatusToContentStatus,
   sanitizeForPlayer,
   detectPrivateReferences,
   formatPrivateReferenceWarning,
   PLAYER_PORTAL_VISIBILITIES,
   type ContentAccessFields,
-  type ContentStatus,
   type ContentVisibility,
   type SanitizedPage,
 } from "./content-access";

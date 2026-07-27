@@ -76,7 +76,6 @@ export interface UpdateDungeonEntityInput {
   summary?: string | null;
   visibility?: Prisma.PageUpdateInput["visibility"];
   prepStatus?: DungeonPrepStatus | null;
-  publishStatus?: Prisma.PageUpdateInput["publishStatus"];
 }
 
 export type DungeonPageWithBlocks = Prisma.PageGetPayload<{
@@ -94,7 +93,6 @@ export interface DungeonEntitySummary {
   type: PageType;
   summary: string | null;
   visibility: Prisma.PageGetPayload<object>["visibility"];
-  publishStatus: Prisma.PageGetPayload<object>["publishStatus"];
   prepStatus: DungeonPrepStatus | null;
   parentPageId: string | null;
   tags: string[];
@@ -166,7 +164,6 @@ function toEntitySummary(page: Prisma.PageGetPayload<{ include: { campaign: true
     type: parsed.type,
     summary: parsed.summary,
     visibility: parsed.visibility,
-    publishStatus: parsed.publishStatus,
     prepStatus: parsed.prepStatus,
     parentPageId: parsed.parentPageId,
     tags: parsed.tags,
@@ -432,7 +429,6 @@ export class DungeonCockpitService {
         slug: roomSlug,
         type: DUNGEON_ROOM_TYPE,
         visibility: { in: ["player_visible", "public"] },
-        publishStatus: "published",
       },
       include: this.pageInclude(),
     });
@@ -444,7 +440,6 @@ export class DungeonCockpitService {
         parentPageId: room.id,
         type: { in: [...ROOM_CHILD_TYPES] },
         visibility: { in: ["player_visible", "public"] },
-        publishStatus: "published",
       },
       include: { campaign: true },
     });
@@ -488,7 +483,6 @@ export class DungeonCockpitService {
         summary: input.summary,
         visibility: input.visibility,
         prepStatus: input.prepStatus,
-        publishStatus: input.publishStatus,
       },
       include: this.pageInclude(),
     });

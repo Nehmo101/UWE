@@ -39,7 +39,6 @@ describe("asset link service", () => {
       slug: "npc-portrait",
       type: "npc",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
     pageId = page.id;
 

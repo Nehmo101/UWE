@@ -859,7 +859,7 @@ export class AuthService {
     }
 
     // WS3 (perf): pre-narrow the SQL for non-staff viewers to the only
-    // publishStatus/visibility combinations canViewPage can ever admit for a
+    // visibility combinations canViewPage can ever admit for a
     // player/guest, so the portal wiki index no longer materialises every row.
     // This is a CONSERVATIVE SUPERSET: it drops only rows canViewPage always
     // rejects for a non-staff viewer (unpublished, or visibility archived/
@@ -868,7 +868,6 @@ export class AuthService {
     const nonStaffNarrowing: Prisma.PageWhereInput = isWorldStaff(ctx)
       ? {}
       : {
-          publishStatus: "published",
           visibility: {
             in: ["player_visible", "public", "specific_players", "unlock_after_session"],
           },
@@ -886,7 +885,6 @@ export class AuthService {
         type: true,
         summary: true,
         visibility: true,
-        publishStatus: true,
         questStatus: true,
         updatedAt: true,
       },
@@ -920,7 +918,6 @@ export class AuthService {
         title: true,
         slug: true,
         visibility: true,
-        publishStatus: true,
         aliases: true,
       },
     });
@@ -1548,7 +1545,6 @@ export class AuthService {
           select: {
             id: true,
             visibility: true,
-            publishStatus: true,
           },
         });
         if (page && !canViewPage(ctx, page)) {
@@ -1595,7 +1591,6 @@ export class AuthService {
           select: {
             id: true,
             visibility: true,
-            publishStatus: true,
           },
         });
         if (page && !canViewPage(ctx, page)) {

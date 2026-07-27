@@ -33,7 +33,6 @@ describe("wikitext convert service", () => {
       slug: "gandalf",
       type: "npc",
       visibility: "dm_only",
-      publishStatus: "draft",
       aliases: ["Mithrandir"],
       contentBlocks: [
         {
@@ -51,7 +50,6 @@ describe("wikitext convert service", () => {
       slug: "schwarzer-turm",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
@@ -154,7 +152,6 @@ describe("wikitext convert service", () => {
       slug: "seite-a",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Erwähnt Seite B." },
       ],
@@ -165,7 +162,6 @@ describe("wikitext convert service", () => {
       slug: "seite-b",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Erwähnt Seite A." },
       ],
@@ -194,7 +190,6 @@ describe("wikitext convert service", () => {
       slug: "handelsposten",
       type: "location",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
@@ -219,7 +214,6 @@ describe("wikitext convert service", () => {
       slug: "rote-hand",
       type: "note",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Eine Gilde von Dieben." },
       ],
@@ -230,7 +224,6 @@ describe("wikitext convert service", () => {
       slug: "namenloser-krieger",
       type: "note",
       visibility: "dm_only",
-      publishStatus: "draft",
       tags: ["npc"],
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Kämpft an der Grenze." },
@@ -260,7 +253,6 @@ describe("wikitext convert service", () => {
       slug: "thalindor-golsa",
       type: "note",
       visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",

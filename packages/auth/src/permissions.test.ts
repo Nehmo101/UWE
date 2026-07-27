@@ -44,14 +44,12 @@ describe("permissions", () => {
       canViewPage(dmCtx, {
         id: "page-1",
         visibility: "dm_only",
-        publishStatus: "published",
       }),
     );
     assert.ok(
       canViewPage(dmCtx, {
         id: "page-2",
         visibility: "archived",
-        publishStatus: "published",
       }),
     );
   });
@@ -61,14 +59,13 @@ describe("permissions", () => {
       !canViewPage(playerCtx, {
         id: "page-1",
         visibility: "dm_only",
-        publishStatus: "published",
       }),
     );
     assert.ok(
       !canViewContentBlock(
         playerCtx,
         { visibility: "dm_only" },
-        { id: "page-1", visibility: "player_visible", publishStatus: "published" },
+        { id: "page-1", visibility: "player_visible" },
       ),
     );
   });
@@ -78,14 +75,12 @@ describe("permissions", () => {
       canViewPage(playerCtx, {
         id: "page-2",
         visibility: "player_visible",
-        publishStatus: "published",
       }),
     );
     assert.ok(
       canViewPage(playerCtx, {
         id: "page-3",
         visibility: "public",
-        publishStatus: "published",
       }),
     );
   });
@@ -95,14 +90,12 @@ describe("permissions", () => {
       canViewPage(guestCtx, {
         id: "page-3",
         visibility: "public",
-        publishStatus: "published",
       }),
     );
     assert.ok(
       !canViewPage(guestCtx, {
         id: "page-2",
         visibility: "player_visible",
-        publishStatus: "published",
       }),
     );
   });
@@ -112,7 +105,6 @@ describe("permissions", () => {
       !canViewPage(guestDisabledCtx, {
         id: "page-3",
         visibility: "public",
-        publishStatus: "published",
       }),
     );
   });
@@ -122,7 +114,6 @@ describe("permissions", () => {
       canViewPage(playerCtx, {
         id: "page-secret",
         visibility: "specific_players",
-        publishStatus: "published",
       }),
     );
 
@@ -137,7 +128,6 @@ describe("permissions", () => {
       !canViewPage(otherPlayer, {
         id: "page-secret",
         visibility: "specific_players",
-        publishStatus: "published",
       }),
     );
   });
@@ -147,7 +137,6 @@ describe("permissions", () => {
       canViewPage(playerCtx, {
         id: "page-unlocked",
         visibility: "unlock_after_session",
-        publishStatus: "published",
       }),
     );
 
@@ -155,7 +144,6 @@ describe("permissions", () => {
       !canViewPage(playerCtx, {
         id: "page-locked",
         visibility: "unlock_after_session",
-        publishStatus: "published",
       }),
     );
   });
@@ -165,7 +153,6 @@ describe("permissions", () => {
       !canViewPage(playerCtx, {
         id: "page-archived",
         visibility: "archived",
-        publishStatus: "published",
       }),
     );
   });
@@ -185,21 +172,18 @@ describe("permissions", () => {
       !canViewPage(previewCtx, {
         id: "page-1",
         visibility: "dm_only",
-        publishStatus: "published",
       }),
     );
     assert.ok(
       canViewPage(previewCtx, {
         id: "page-secret",
         visibility: "specific_players",
-        publishStatus: "published",
       }),
     );
     assert.ok(
       !canViewPage(previewCtx, {
         id: "page-unlocked",
         visibility: "unlock_after_session",
-        publishStatus: "published",
       }),
     );
   });
@@ -250,9 +234,9 @@ describe("permissions", () => {
 
   it("filters page and block lists for the effective viewer", () => {
     const pages = [
-      { id: "a", visibility: "public" as const, publishStatus: "published" },
-      { id: "b", visibility: "dm_only" as const, publishStatus: "published" },
-      { id: "c", visibility: "player_visible" as const, publishStatus: "published" },
+      { id: "a", visibility: "public" as const },
+      { id: "b", visibility: "dm_only" as const },
+      { id: "c", visibility: "player_visible" as const },
     ];
 
     const visible = filterPagesForViewer(playerCtx, pages);
@@ -261,7 +245,7 @@ describe("permissions", () => {
       ["a", "c"],
     );
 
-    const page = { id: "c", visibility: "player_visible" as const, publishStatus: "published" };
+    const page = { id: "c", visibility: "player_visible" as const };
     const blocks = filterBlocksForViewer(
       playerCtx,
       [

@@ -5,7 +5,6 @@ import type {
   DungeonPrepStatus,
   GameSessionStatus,
   PageType,
-  PublishStatus,
   QuestLifecycleStatus,
   Visibility,
 } from "@uwe/database/enums";
@@ -87,7 +86,7 @@ export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
   private: "Streng privat — nur im Studio sichtbar, Standard für neue Inhalte.",
   dm_only: "Nur im Studio sichtbar. Erscheint niemals im Player-Portal oder in Exporten.",
   player_visible:
-    "Für eingeloggte Spieler im Portal sichtbar, sobald die Seite veröffentlicht ist.",
+    "Für eingeloggte Spieler im Portal sichtbar.",
   public:
     "Wie Portal-sichtbar, zusätzlich für explizite Share-Link-Freigaben markiert; Share-Routen brauchen ebenfalls Login.",
   specific_players: "Nur für eingeloggte Spieler mit Freigabe sichtbar.",
@@ -95,13 +94,6 @@ export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
   archived: "Archiviert — für Spieler ausgeblendet, im Studio weiterhin auffindbar.",
 };
 
-export const PUBLISH_LABELS: Record<PublishStatus, string> = {
-  draft: "Entwurf",
-  internal: "Intern",
-  review: "Review",
-  published: "Veröffentlicht",
-  archived: "Archiviert",
-};
 
 
 
@@ -247,19 +239,6 @@ export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
   );
 }
 
-export function PublishBadge({ status }: { status: PublishStatus }) {
-  const className = `${BADGE_BASE} ${
-    status === "published"
-      ? BADGE_TONE.published
-      : status === "draft"
-        ? BADGE_TONE.draft
-        : status === "review"
-          ? BADGE_TONE.warning
-          : BADGE_TONE.plain
-  }`;
-
-  return <span className={className}>{PUBLISH_LABELS[status]}</span>;
-}
 
 /** Shown after a page passed through the KI review workflow. */
 export function AiReviewedBadge() {

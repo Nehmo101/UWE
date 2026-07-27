@@ -10,7 +10,7 @@ import { createUweRepository, type UweRepository } from "./repository";
 
 /**
  * WS3 safety net: `listPagesForViewer` pre-narrows the SQL for non-staff
- * viewers (publishStatus/visibility) and then still runs `filterPagesForViewer`
+ * viewers (visibility) and then still runs `filterPagesForViewer`
  * in JS as the authoritative gate. This suite proves the SQL pre-narrowing is a
  * behaviour-preserving optimisation: for every viewer, the returned set is
  * byte-for-byte the same as a plain `findMany`-then-`filterPagesForViewer`
@@ -62,40 +62,16 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     amanUserId = users.players.find((p) => p.displayName === "Aman")!.id;
     lazulUserId = users.players.find((p) => p.displayName === "Lazul")!.id;
 
-    // A matrix that exercises every branch of canViewPage: each visibility, each
-    // publishStatus that is / isn't "published".
+    // A matrix that exercises every branch of canViewPage: one page per
+    // visibility value.
     const pages = [
-      { slug: "pub-published", visibility: "public", publishStatus: "published" },
-      { slug: "pv-published", visibility: "player_visible", publishStatus: "published" },
-      { slug: "dmonly-published", visibility: "dm_only", publishStatus: "published" },
-      { slug: "private-published", visibility: "private", publishStatus: "published" },
-      { slug: "archived-visibility", visibility: "archived", publishStatus: "published" },
-      { slug: "pv-draft", visibility: "player_visible", publishStatus: "draft" },
-      { slug: "pv-internal", visibility: "player_visible", publishStatus: "internal" },
-      { slug: "pv-review", visibility: "player_visible", publishStatus: "review" },
-      { slug: "pub-archived-status", visibility: "public", publishStatus: "archived" },
-      { slug: "specific-published", visibility: "specific_players", publishStatus: "published" },
-      { slug: "unlock-published", visibility: "unlock_after_session", publishStatus: "published" },
-      {
-        slug: "secret-hidden",
-        visibility: "player_visible",
-        publishStatus: "published",
-      },
-      {
-        slug: "secret-revealed",
-        visibility: "player_visible",
-        publishStatus: "published",
-      },
-      {
-        slug: "spoiler-preview",
-        visibility: "public",
-        publishStatus: "published",
-      },
-      {
-        slug: "secret-none-hidden",
-        visibility: "player_visible",
-        publishStatus: "published",
-      },
+      { slug: "pub-page", visibility: "public" },
+      { slug: "pv-page", visibility: "player_visible" },
+      { slug: "dmonly-page", visibility: "dm_only" },
+      { slug: "private-page", visibility: "private" },
+      { slug: "archived-page", visibility: "archived" },
+      { slug: "specific-page", visibility: "specific_players" },
+      { slug: "unlock-page", visibility: "unlock_after_session" },
     ] as const;
 
     for (const page of pages) {
@@ -105,16 +81,15 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         slug: page.slug,
         type: "note",
         visibility: page.visibility,
-        publishStatus: page.publishStatus,
       });
     }
 
     // Aman is granted the specific-players page and has unlocked the unlock page.
     const specific = await db.page.findFirstOrThrow({
-      where: { world: { slug: worldSlug }, slug: "specific-published" },
+      where: { world: { slug: worldSlug }, slug: "specific-page" },
     });
     const unlock = await db.page.findFirstOrThrow({
-      where: { world: { slug: worldSlug }, slug: "unlock-published" },
+      where: { world: { slug: worldSlug }, slug: "unlock-page" },
     });
     await auth.grantPagePlayerAccess(specific.id, amanUserId);
     await auth.unlockPageForUser(unlock.id, amanUserId, "Session 1");
@@ -128,25 +103,17 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
     assert.ok(ctx);
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
-    // Staff must see the full world, including archived/private/draft/secret.
+    // Staff must see the full world, including archived and private pages.
     assert.deepEqual(
       new Set(await narrowedSlugs(ctx)),
       new Set([
-        "pub-published",
-        "pv-published",
-        "dmonly-published",
-        "private-published",
-        "archived-visibility",
-        "pv-draft",
-        "pv-internal",
-        "pv-review",
-        "pub-archived-status",
-        "specific-published",
-        "unlock-published",
-        "secret-hidden",
-        "secret-revealed",
-        "spoiler-preview",
-        "secret-none-hidden",
+        "pub-page",
+        "pv-page",
+        "dmonly-page",
+        "private-page",
+        "archived-page",
+        "specific-page",
+        "unlock-page",
       ]),
     );
   });
@@ -158,16 +125,7 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
     assert.deepEqual(
       new Set(await narrowedSlugs(ctx)),
-      new Set([
-        "pub-published",
-        "pv-published",
-        "specific-published",
-        "unlock-published",
-        "secret-hidden",
-        "secret-revealed",
-        "spoiler-preview",
-        "secret-none-hidden",
-      ]),
+      new Set(["pub-page", "pv-page", "specific-page", "unlock-page"]),
     );
   });
 
@@ -177,9 +135,9 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     assert.equal(ctx.effectiveRole, "player");
     const narrowed = await narrowedSlugs(ctx);
     assert.deepEqual(narrowed, await baselineSlugs(ctx));
-    assert.ok(!narrowed.includes("specific-published"));
-    assert.ok(!narrowed.includes("unlock-published"));
-    assert.ok(!narrowed.includes("dmonly-published"));
+    assert.ok(!narrowed.includes("specific-page"));
+    assert.ok(!narrowed.includes("unlock-page"));
+    assert.ok(!narrowed.includes("dmonly-page"));
   });
 
   it("DM preview-as-player result equals the baseline (non-staff narrowing)", async () => {

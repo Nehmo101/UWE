@@ -42,7 +42,6 @@ export interface WorldMembership {
 export interface PageAccessInfo {
   id: string;
   visibility: PageVisibility;
-  publishStatus: string;
 }
 
 export interface ContentBlockAccessInfo {

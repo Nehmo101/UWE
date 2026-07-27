@@ -23,7 +23,7 @@ export type WorldEventWithLinks = Prisma.WorldEventGetPayload<{
   include: {
     entityLinks: {
       include: {
-        page: { select: { id: true; title: true; slug: true; type: true; visibility: true; secretLevel: true; publishStatus: true; playerAccess: true } };
+        page: { select: { id: true; title: true; slug: true; type: true; visibility: true; playerAccess: true } };
       };
     };
   };
@@ -60,7 +60,6 @@ export class WorldEventService {
                 slug: true,
                 type: true,
                 visibility: true,
-                publishStatus: true,
                 playerAccess: true,
               },
             },
@@ -85,7 +84,6 @@ export class WorldEventService {
                 slug: true,
                 type: true,
                 visibility: true,
-                publishStatus: true,
                 playerAccess: true,
               },
             },
@@ -109,7 +107,6 @@ export class WorldEventService {
                 slug: true,
                 type: true,
                 visibility: true,
-                publishStatus: true,
                 playerAccess: true,
               },
             },
@@ -163,7 +160,6 @@ export class WorldEventService {
                 slug: true,
                 type: true,
                 visibility: true,
-                publishStatus: true,
                 playerAccess: true,
               },
             },

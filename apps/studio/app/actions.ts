@@ -14,7 +14,6 @@ import {
   type CreateContentBlockInput,
   type PageType,
   type Visibility,
-  type PublishStatus,
   type CanonicalStatus,
   type ContentBlockType,
 } from "@uwe/database/server";
@@ -50,7 +49,6 @@ export async function updatePageAction(formData: FormData) {
     type: formData.get("type") as PageType,
     summary: String(formData.get("summary") || "") || null,
     visibility: newVisibility,
-    publishStatus: formData.get("publishStatus") as PublishStatus,
     canonicalStatus: formData.get("canonicalStatus") as CanonicalStatus,
     tags: String(formData.get("tags") || "")
       .split(",")
@@ -154,7 +152,6 @@ export async function createPageAction(formData: FormData) {
     type,
     summary: String(formData.get("summary") || "") || null,
     visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
-    publishStatus: (formData.get("publishStatus") as PublishStatus) ?? "draft",
     canonicalStatus: (formData.get("canonicalStatus") as CanonicalStatus) ?? "draft",
     tags: String(formData.get("tags") || "")
       .split(",")

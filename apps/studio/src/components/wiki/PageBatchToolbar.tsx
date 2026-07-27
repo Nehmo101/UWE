@@ -2,8 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PAGE_TYPE_LABELS, PUBLISH_LABELS } from "@uwe/shared-ui";
-import type { PageType, PublishStatus, Visibility } from "@uwe/database/enums";
+import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
+import type { PageType, Visibility } from "@uwe/database/enums";
 import type { PageBulkOperation } from "@uwe/database/page-bulk";
 import { bulkUpdatePagesAction } from "@/app/page-bulk-actions";
 import { PageBatchConvertPanel } from "./PageBatchConvertPanel";
@@ -13,7 +13,6 @@ type OpKind = PageBulkOperation["kind"] | "convert" | "ki_format" | "ki_tags" | 
 
 const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "visibility", label: "Sichtbarkeit setzen" },
-  { value: "publishStatus", label: "Status setzen" },
   { value: "type", label: "Seitentyp setzen" },
   { value: "addTags", label: "Tags hinzufügen" },
   { value: "removeTags", label: "Tags entfernen" },
@@ -33,11 +32,6 @@ const VISIBILITY_OPTIONS: { value: Visibility; label: string }[] = [
   { value: "public", label: "Share-Link" },
 ];
 
-const PUBLISH_OPTIONS = (Object.keys(PUBLISH_LABELS) as PublishStatus[]).map((value) => ({
-  value,
-  label: PUBLISH_LABELS[value],
-}));
-
 const TYPE_OPTIONS = (Object.keys(PAGE_TYPE_LABELS) as PageType[]).map((value) => ({
   value,
   label: PAGE_TYPE_LABELS[value],
@@ -56,7 +50,6 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
   const router = useRouter();
   const [kind, setKind] = useState<OpKind>("visibility");
   const [visibility, setVisibility] = useState<Visibility>("dm_only");
-  const [publishStatus, setPublishStatus] = useState<PublishStatus>("published");
   const [pageType, setPageType] = useState<PageType>("npc");
   const [tags, setTags] = useState("");
   const [campaignId, setCampaignId] = useState("");
@@ -68,8 +61,6 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
     switch (kind) {
       case "visibility":
         return { kind, visibility };
-      case "publishStatus":
-        return { kind, publishStatus };
       case "type":
         return { kind, type: pageType };
       case "addTags":
@@ -84,7 +75,7 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
       default:
         return null;
     }
-  }, [kind, visibility, publishStatus, pageType, tags, campaignId]);
+  }, [kind, visibility, pageType, tags, campaignId]);
 
   const handleApply = useCallback(async () => {
     setError(null);
@@ -154,21 +145,6 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
             aria-label="Sichtbarkeit"
           >
             {VISIBILITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {kind === "publishStatus" && (
-          <select
-            className={SELECT_CLASS}
-            value={publishStatus}
-            onChange={(event) => setPublishStatus(event.target.value as PublishStatus)}
-            aria-label="Status"
-          >
-            {PUBLISH_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

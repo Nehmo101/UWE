@@ -422,7 +422,6 @@ export class GameSessionService {
         id: { in: linkedPageIds },
         worldId: session.worldId,
         visibility: "unlock_after_session",
-        publishStatus: "published",
       },
       select: { id: true },
     });

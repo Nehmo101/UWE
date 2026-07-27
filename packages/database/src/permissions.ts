@@ -1,6 +1,5 @@
 import { getUweRuntimeConfig } from "@uwe/auth";
 import type { ContentBlock, Page, Visibility } from "./generated/prisma/client";
-import type { PublishStatus } from "./generated/prisma/client";
 import {
   isBlockPlayerExposable,
   isDmOnlyVisibility,
@@ -34,7 +33,7 @@ export interface PageAccessOptions extends PortalAccessOptions {
 
 export type PageAccessRecord = Pick<
   Page,
-  "id" | "visibility" | "publishStatus"
+  "id" | "visibility"
 > & {
 };
 
@@ -49,9 +48,6 @@ export function isPortalBlockVisibility(visibility: Visibility): boolean {
   return isPlayerPortalVisibility(visibility);
 }
 
-export function isPublishedForPortal(publishStatus: PublishStatus): boolean {
-  return publishStatus === "published";
-}
 
 function isPublicVisibilityAllowed(
   visibility: Visibility,
@@ -129,7 +125,6 @@ export function isPortalAssetVisibility(visibility: Visibility): boolean {
 export type AssetAccessRecord = {
   id: string;
   visibility: Visibility;
-  publishStatus?: PublishStatus;
 };
 
 /**
@@ -142,7 +137,7 @@ export type AssetAccessRecord = {
  * and default to a fully exposable asset (`secretLevel: "none"`).
  */
 function isAssetExposableToPlayers(
-  asset: Pick<AssetAccessRecord, "visibility" | "publishStatus">,
+  asset: Pick<AssetAccessRecord, "visibility">,
   context: AccessContext,
   options?: PageAccessOptions,
 ): boolean {
@@ -154,13 +149,8 @@ function isAssetExposableToPlayers(
     return false;
   }
 
-  if (asset.publishStatus && !isPublishedForPortal(asset.publishStatus)) {
-    return false;
-  }
-
   if (!isPlayerExposableContent({
     visibility: asset.visibility,
-    publishStatus: asset.publishStatus ?? "published",
   })) {
     return false;
   }
@@ -185,8 +175,7 @@ export function isAssetAccessible(
 }
 
 export function filterAssetsForContext<
-  T extends Pick<AssetAccessRecord, "visibility"> &
-    Partial<Pick<AssetAccessRecord, "publishStatus">>,
+  T extends Pick<AssetAccessRecord, "visibility">,
 >(
   assets: T[],
   context: AccessContext,

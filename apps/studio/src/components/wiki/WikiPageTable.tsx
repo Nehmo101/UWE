@@ -5,14 +5,12 @@ import {
   AiReviewedBadge,
   CanonicalBadge,
   PageTypeBadge,
-  PublishBadge,
   QuestStatusBadge,
   VisibilityBadge,
 } from "@uwe/shared-ui";
 import type {
   CanonicalStatus,
   PageType,
-  PublishStatus,
   QuestLifecycleStatus,
   Visibility,
 } from "@uwe/database/enums";
@@ -25,7 +23,6 @@ export interface WikiPageRow {
   href: string;
   type: PageType;
   visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   /** Quest lifecycle status for quest pages; `null` counts as open. */
   questStatus?: QuestLifecycleStatus | null;
@@ -80,21 +77,15 @@ const columns: ColumnDef<WikiPageRow>[] = [
     cell: ({ row }) => <VisibilityBadge visibility={row.original.visibility} />,
   },
   {
-    accessorKey: "publishStatus",
-    header: "Status",
-    meta: { label: "Status" },
-    cell: ({ row }) => (
-      <div className="flex flex-wrap items-center gap-1">
-        <PublishBadge status={row.original.publishStatus} />
-        {row.original.aiReviewedAt ? <AiReviewedBadge /> : null}
-      </div>
-    ),
-  },
-  {
     accessorKey: "canonicalStatus",
     header: "Kanon",
     meta: { label: "Kanon" },
-    cell: ({ row }) => <CanonicalBadge status={row.original.canonicalStatus} />,
+    cell: ({ row }) => (
+      <span className="inline-flex flex-wrap items-center gap-1">
+        <CanonicalBadge status={row.original.canonicalStatus} />
+        {row.original.aiReviewedAt && <AiReviewedBadge />}
+      </span>
+    ),
   },
   {
     accessorKey: "updatedAt",

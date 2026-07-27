@@ -40,7 +40,6 @@ describe("cross-domain search service", () => {
       type: "note",
       tags: ["alpha-cross-tag"],
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const capture = await lifeAdmin.createCapture({

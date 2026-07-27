@@ -5,8 +5,6 @@
 export const SECURITY_MARKERS = {
   /** dm_only page / block content */
   DM_ONLY: "__DM_ONLY_SECRET_SHOULD_NOT_LEAK__",
-  /** draft page (player_visible visibility but draft status) */
-  PRIVATE_DRAFT: "__PRIVATE_DRAFT_SHOULD_NOT_LEAK__",
   /** unlock_after_session page not yet unlocked */
   HIDDEN_SECRET: "__HIDDEN_SECRET_SHOULD_NOT_LEAK__",
   /** dm_only asset file bytes */
@@ -22,7 +20,6 @@ export const SECURITY_MARKERS = {
 /** Markers that must never appear in anonymous / public portal responses. */
 export const PRIVATE_LEAK_MARKERS = [
   SECURITY_MARKERS.DM_ONLY,
-  SECURITY_MARKERS.PRIVATE_DRAFT,
   SECURITY_MARKERS.HIDDEN_SECRET,
   SECURITY_MARKERS.PRIVATE_MEDIA,
 ] as const;

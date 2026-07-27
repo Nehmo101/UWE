@@ -37,7 +37,6 @@ describe("Label service", () => {
         slug: "validori",
         type: "location",
         visibility: "public",
-        publishStatus: "published",
         contentBlocks: [
           {
             type: "rich_text",
@@ -80,7 +79,6 @@ describe("Label service", () => {
         slug: "schatzkammer",
         type: "room",
         visibility: "dm_only",
-        publishStatus: "draft",
         contentBlocks: [
           {
             type: "player_text",

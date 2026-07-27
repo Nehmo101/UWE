@@ -33,7 +33,6 @@ export interface TagReference {
   entityId: string;
   title: string;
   worldId?: string | null;
-  publishStatus?: string | null;
   visibility?: string | null;
 }
 
@@ -128,7 +127,6 @@ interface JsonTagEntityRow {
   title: string;
   tags: unknown;
   worldId?: string | null;
-  publishStatus?: string | null;
   visibility?: string | null;
 }
 
@@ -147,7 +145,6 @@ async function loadJsonTagEntities(
           title: true,
           tags: true,
           worldId: true,
-          publishStatus: true,
           visibility: true,
         },
       });
@@ -331,7 +328,7 @@ function mergeTagInventories(
       }
       existing.references.push(ref);
       existing.count++;
-      if (ref.publishStatus !== "draft") {
+      if (true) {
         existing.onlyOnDrafts = false;
       }
       if (ref.visibility !== "dm_only") {
@@ -367,7 +364,7 @@ async function collectJsonGapTagInventory(
     }
     entry.count++;
     entry.references.push(ref);
-    if (ref.publishStatus !== "draft") {
+    if (true) {
       entry.onlyOnDrafts = false;
     }
     if (ref.visibility !== "dm_only") {
@@ -389,7 +386,6 @@ async function collectJsonGapTagInventory(
           entityId: row.id,
           title: row.title,
           worldId: row.worldId,
-          publishStatus: row.publishStatus ?? null,
           visibility: row.visibility ?? null,
         });
       }
@@ -610,7 +606,7 @@ async function collectEntityTagInventory(
     }
     entry.count++;
     entry.references.push(ref);
-    if (ref.publishStatus !== "draft") {
+    if (true) {
       entry.onlyOnDrafts = false;
     }
     if (ref.visibility !== "dm_only") {
@@ -625,7 +621,6 @@ async function collectEntityTagInventory(
       entityId: link.entityId,
       title: meta?.title ?? link.entityId,
       worldId: link.worldId,
-      publishStatus: meta?.publishStatus ?? null,
       visibility: meta?.visibility ?? null,
     });
   }

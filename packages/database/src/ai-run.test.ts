@@ -26,7 +26,6 @@ describe("UWE AI Run History", () => {
       slug: "test-page",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "draft",
     });
     pageId = page.id;
   });

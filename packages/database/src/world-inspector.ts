@@ -4,7 +4,6 @@ import type {
   CanonicalStatus,
   ContentBlockType,
   PageType,
-  PublishStatus,
   Visibility,
 } from "./generated/prisma/client";
 import { normalizeLookupKey, parseWikiLinks } from "./page-service";
@@ -39,7 +38,6 @@ export type InspectorFindingCode =
   | "broken_wiki_link"
   | "duplicate_name"
   | "contradictory_page"
-  | "visible_but_unpublished"
   | "published_but_dm_only"
   | "orphan_page"
   | "uncategorized_page"
@@ -53,7 +51,6 @@ export type InspectorFindingCode =
 export type InspectorFixAction =
   | "set_block_dm_only"
   | "set_page_dm_only"
-  | "publish_page"
   | "set_page_player_visible"
   | "remove_broken_wiki_link"
   | "assign_page_campaign";
@@ -92,7 +89,6 @@ export interface InspectorPageInput {
   slug: string;
   type: PageType;
   visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   aliases: string[];
   campaignId?: string | null;
@@ -271,31 +267,12 @@ export function buildCanonFindings(
       });
     }
 
-    if (
-      (page.visibility === "public" || page.visibility === "player_visible") &&
-      page.publishStatus === "draft"
-    ) {
-      findings.push({
-        id: findingId("visible_but_unpublished", [page.id]),
-        code: "visible_but_unpublished",
-        severity: "info",
-        message: `„${page.title}" ist für Spieler freigegeben, aber noch ein Entwurf — im Portal nicht sichtbar.`,
-        pageTitle: page.title,
-        href,
-        pageId: page.id,
-        fixes: [
-          { action: "publish_page", label: "Seite veröffentlichen" },
-          { action: "set_page_dm_only", label: "Auf Nur GM setzen" },
-        ],
-      });
-    }
-
-    if (page.publishStatus === "published" && page.visibility === "dm_only") {
+    if (page.visibility === "dm_only") {
       findings.push({
         id: findingId("published_but_dm_only", [page.id]),
         code: "published_but_dm_only",
         severity: "info",
-        message: `„${page.title}" ist veröffentlicht, aber DM-only — Spieler sehen sie nicht.`,
+        message: `„${page.title}" ist DM-only — Spieler sehen sie nicht.`,
         pageTitle: page.title,
         href,
         pageId: page.id,
@@ -488,7 +465,6 @@ export class WorldInspectorService {
       slug: page.slug,
       type: page.type,
       visibility: page.visibility,
-      publishStatus: page.publishStatus,
       canonicalStatus: page.canonicalStatus,
       aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
       campaignId: page.campaignId,

@@ -57,12 +57,6 @@ export class InspectorFixService {
             describe: (title) => `„${title}“ auf Nur GM gesetzt.`,
             visibilityChange: true,
           });
-        case "publish_page":
-          return await this.updatePageFix(world, input.pageId, {
-            data: { publishStatus: "published" },
-            describe: (title) => `„${title}“ veröffentlicht.`,
-            visibilityChange: false,
-          });
         case "set_page_player_visible":
           return await this.updatePageFix(world, input.pageId, {
             data: { visibility: "player_visible" },
@@ -148,7 +142,7 @@ export class InspectorFixService {
     world: { id: string; slug: string },
     pageId: string | undefined,
     options: {
-      data: { visibility?: "dm_only" | "player_visible"; publishStatus?: "published" };
+      data: { visibility?: "dm_only" | "player_visible" };
       describe: (title: string) => string;
       visibilityChange: boolean;
     },
@@ -173,7 +167,6 @@ export class InspectorFixService {
       details: {
         fix: options.data,
         previousVisibility: page.visibility,
-        previousPublishStatus: page.publishStatus,
       },
       undoEntryId: undoEntry.id,
     });

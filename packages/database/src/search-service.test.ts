@@ -78,7 +78,6 @@ describe("UWE global search", () => {
       type: "location",
       summary: "Ein belebter Platz in der Stadt.",
       visibility: "public",
-      publishStatus: "published",
       tags: ["stadt", "markt"],
       aliases: ["Markt"],
       contentBlocks: [
@@ -98,7 +97,6 @@ describe("UWE global search", () => {
       type: "lore",
       summary: "Nur für den GM.",
       visibility: "dm_only",
-      publishStatus: "published",
       tags: ["geheim", "plot"],
       aliases: ["Verschwörer"],
       contentBlocks: [
@@ -118,7 +116,6 @@ describe("UWE global search", () => {
       type: "quest",
       summary: "Die Gruppe muss das Artefakt finden.",
       visibility: "player_visible",
-      publishStatus: "published",
       questStatus: "open",
       tags: ["quest", "artefakt"],
       contentBlocks: [
@@ -138,7 +135,6 @@ describe("UWE global search", () => {
       type: "quest",
       summary: "Diese Quest wurde bereits abgeschlossen.",
       visibility: "player_visible",
-      publishStatus: "published",
       questStatus: "completed",
       tags: ["quest"],
       contentBlocks: [
@@ -158,7 +154,6 @@ describe("UWE global search", () => {
       type: "npc",
       summary: "Eine bekannte Magierin.",
       visibility: "player_visible",
-      publishStatus: "published",
       tags: ["magier", "verbündet"],
       aliases: ["Elara die Weise"],
       contentBlocks: [
@@ -183,7 +178,6 @@ describe("UWE global search", () => {
       slug: "entwurf",
       type: "note",
       visibility: "public",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
@@ -487,7 +481,6 @@ describe("search index memoization", () => {
       type: "location",
       summary: "Ein Hort voller Gold.",
       visibility: "public",
-      publishStatus: "published",
       tags: ["drache"],
       contentBlocks: [
         {

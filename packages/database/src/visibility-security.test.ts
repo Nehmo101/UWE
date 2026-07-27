@@ -44,7 +44,6 @@ describe("visibility security guarantees", () => {
       slug: "geheimplan",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "STRENG GEHEIM" },
       ],
@@ -56,7 +55,6 @@ describe("visibility security guarantees", () => {
       slug: "marktplatz",
       type: "location",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
@@ -79,7 +77,6 @@ describe("visibility security guarantees", () => {
       slug: "unfertiger-ort",
       type: "location",
       visibility: "player_visible",
-      publishStatus: "draft",
     });
   });
 
@@ -115,13 +112,6 @@ describe("visibility security guarantees", () => {
       page.contentBlocks.every((block) => block.visibility !== "dm_only"),
       "dm_only block visibility leaked into portal page!",
     );
-  });
-
-  it("hides player_visible drafts from the portal until published", async () => {
-    assert.equal(await repo.getPublicPageForPortal(worldSlug, "unfertiger-ort"), null);
-
-    const portalPages = await repo.listPagesForContext(worldSlug, "portal");
-    assert.ok(!portalPages.some((page) => page.title === "Unfertiger Ort"));
   });
 
   it("keeps the DM context complete (no accidental filtering in Studio)", async () => {

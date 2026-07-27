@@ -64,7 +64,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       slug: "zielort",
       type: "location",
       visibility: "player_visible",
-      publishStatus: "published",
       aliases: ["Zieldorf"],
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Der Zielort." },
@@ -79,7 +78,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       slug: "quelle-a",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Weg nach [[Zielort]]." },
       ],
@@ -93,7 +91,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       slug: "quelle-b",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Nichts zu sehen." },
         { type: "gm_note", sortOrder: 1, visibility: "dm_only", content: "Geheim: [[Zielort]]." },
@@ -108,7 +105,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       slug: "geheime-quelle",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         { type: "gm_note", sortOrder: 0, visibility: "dm_only", content: "Führt zu [[Zielort]]." },
       ],
@@ -122,7 +118,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       slug: "quelle-d",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Reise nach [[Zieldorf]]." },
       ],
@@ -135,7 +130,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       slug: "abseits",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Kein Bezug." },
       ],
@@ -218,7 +212,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       slug: "quelle-e",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Neuer Pfad nach [[Zielort]]." },
       ],

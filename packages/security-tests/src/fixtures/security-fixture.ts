@@ -31,7 +31,6 @@ export interface SecurityFixtureContent {
     publicPage: string;
     playerVisiblePage: string;
     dmOnlyPage: string;
-    privateDraftPage: string;
     hiddenSecretPage: string;
     revealedSecretPage: string;
   };
@@ -151,7 +150,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     publicPage: "oeffentliche-notiz",
     playerVisiblePage: "spieler-sichtbar",
     dmOnlyPage: "nur-dm",
-    privateDraftPage: "privater-entwurf",
     hiddenSecretPage: "verborgenes-geheimnis",
     revealedSecretPage: "enthuelltes-geheimnis",
   };
@@ -162,7 +160,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     slug: slugs.publicPage,
     type: "note",
     visibility: "public",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",
@@ -179,7 +176,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     slug: slugs.playerVisiblePage,
     type: "note",
     visibility: "player_visible",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
@@ -202,7 +198,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     slug: slugs.dmOnlyPage,
     type: "lore",
     visibility: "dm_only",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",
@@ -213,30 +208,12 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     ],
   });
 
-  await repo.createPage({
-    worldId: publicWorld.id,
-    title: "Privater Entwurf",
-    slug: slugs.privateDraftPage,
-    type: "note",
-    visibility: "player_visible",
-    publishStatus: "draft",
-    contentBlocks: [
-      {
-        type: "rich_text",
-        sortOrder: 0,
-        visibility: "player_visible",
-        content: SECURITY_MARKERS.PRIVATE_DRAFT,
-      },
-    ],
-  });
-
   const hiddenSecret = await repo.createPage({
     worldId: publicWorld.id,
     title: "Verborgenes Geheimnis",
     slug: slugs.hiddenSecretPage,
     type: "secret",
     visibility: "unlock_after_session",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
@@ -253,7 +230,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     slug: slugs.revealedSecretPage,
     type: "secret",
     visibility: "unlock_after_session",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
@@ -272,7 +248,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     slug: "private-dm-only",
     type: "lore",
     visibility: "dm_only",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",

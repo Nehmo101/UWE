@@ -56,7 +56,6 @@ describe("authz integration — IDOR/BOLA", () => {
       slug: "public-a",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
     });
 
     const privatePageB = await repo.createPage({
@@ -65,7 +64,6 @@ describe("authz integration — IDOR/BOLA", () => {
       slug: "secret-b",
       type: "secret",
       visibility: "dm_only",
-      publishStatus: "published",
     });
     privatePageBId = privatePageB.id;
 
@@ -77,7 +75,6 @@ describe("authz integration — IDOR/BOLA", () => {
       slug: "public-b",
       type: "lore",
       visibility: "player_visible",
-      publishStatus: "published",
     });
   });
 
@@ -151,7 +148,6 @@ describe("authz integration — IDOR/BOLA", () => {
       slug: "dm-plan",
       type: "lore",
       visibility: "dm_only",
-      publishStatus: "published",
     });
 
     const userA = await auth.findUserByEmail("player-a@authz.test");

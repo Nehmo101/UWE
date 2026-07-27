@@ -17,7 +17,6 @@ import {
 } from "./index";
 import {
   PageTypeBadge,
-  PublishBadge,
   QuestStatusBadge,
   RtxStatusBadge,
   VisibilityBadge,
@@ -55,12 +54,11 @@ describe("shared-ui components", () => {
     assert.match(html, /Etwas ging schief/);
   });
 
-  it("renders visibility, publish and type badges", () => {
+  it("renders visibility and type badges", () => {
     const html = renderToStaticMarkup(
       <>
         <VisibilityBadge visibility="player_visible" />
         <VisibilityBadge visibility="dm_only" />
-        <PublishBadge status="published" />
         <PageTypeBadge type="lore" />
       </>,
     );
@@ -68,7 +66,6 @@ describe("shared-ui components", () => {
     assert.match(html, /Nur GM/);
     assert.match(html, /text-destructive/);
     assert.match(html, /aria-label=/);
-    assert.match(html, /Veröffentlicht/);
     assert.match(html, /Lore/);
     assert.doesNotMatch(html, /dm_only/);
   });

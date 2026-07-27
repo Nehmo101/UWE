@@ -4,7 +4,6 @@ import {
   CollapsibleSection,
   PAGE_TYPE_LABELS,
   VISIBILITY_LABELS,
-  PUBLISH_LABELS,
   CANONICAL_LABELS,
   BLOCK_TYPE_LABELS,
 } from "@uwe/shared-ui";
@@ -19,7 +18,6 @@ import {
   parseStringArray,
   PageTypeEnum,
   VisibilityEnum,
-  PublishStatusEnum,
   CanonicalStatusEnum,
   ContentBlockTypeEnum,
 } from "@uwe/database/server";
@@ -196,19 +194,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             </p>
           </div>
 
-          <div className={FIELD_CLASS}>
-            <Label htmlFor="edit-publish-status">Publish Status</Label>
-            <Select name="publishStatus" defaultValue={page.publishStatus}>
-              <SelectTrigger id="edit-publish-status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(PublishStatusEnum).map((v) => (
-                  <SelectItem key={v} value={v}>{PUBLISH_LABELS[v]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
 
           <div className={FIELD_CLASS}>

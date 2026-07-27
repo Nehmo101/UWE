@@ -2,7 +2,6 @@ import type {
   CanonicalStatus,
   ContentBlockType,
   PageType,
-  PublishStatus,
   Visibility,
 } from "@uwe/database/enums";
 import { EmptyState } from "./AppShell";
@@ -10,7 +9,6 @@ import {
   BLOCK_TYPE_LABELS,
   CanonicalBadge,
   PageTypeBadge,
-  PublishBadge,
   TagChip,
   VisibilityBadge,
 } from "./StatusBadges";
@@ -146,14 +144,12 @@ function renderBlockBody(block: ContentBlockViewModel) {
 
 export function MetaPanel({
   visibility,
-  publishStatus,
   canonicalStatus,
   type,
   tags,
   aliases,
 }: {
   visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   type: PageType;
   tags: string[];
@@ -172,10 +168,6 @@ export function MetaPanel({
         <div>
           <dt className={dt}>Sichtbarkeit</dt>
           <dd className={dd}><VisibilityBadge visibility={visibility} /></dd>
-        </div>
-        <div>
-          <dt className={dt}>Publish</dt>
-          <dd className={dd}><PublishBadge status={publishStatus} /></dd>
         </div>
         <div>
           <dt className={dt}>Kanon</dt>

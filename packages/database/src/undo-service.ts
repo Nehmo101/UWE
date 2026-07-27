@@ -10,7 +10,6 @@ import type {
   CanonicalStatus,
   ContentBlockType,
   PageType,
-  PublishStatus,
   Visibility,
 } from "./generated/prisma/client";
 
@@ -48,7 +47,6 @@ interface PageSnapshot {
     type: PageType;
     summary: string | null;
     visibility: Visibility;
-    publishStatus: PublishStatus;
     canonicalStatus: CanonicalStatus;
     aiReviewedAt?: Date | null;
     tags: unknown;
@@ -163,7 +161,6 @@ export class UndoService {
         type: page.type,
         summary: page.summary,
         visibility: page.visibility,
-        publishStatus: page.publishStatus,
         canonicalStatus: page.canonicalStatus,
         aiReviewedAt: page.aiReviewedAt,
         tags: page.tags,
@@ -202,7 +199,6 @@ export class UndoService {
         type: page.type,
         summary: page.summary,
         visibility: page.visibility,
-        publishStatus: page.publishStatus,
         canonicalStatus: page.canonicalStatus,
         aiReviewedAt: page.aiReviewedAt,
         tags: page.tags,
@@ -529,7 +525,6 @@ export class UndoService {
           type: data.type,
           summary: data.summary,
           visibility: data.visibility,
-          publishStatus: data.publishStatus,
           canonicalStatus: data.canonicalStatus,
           tags: toPrismaJsonValue(data.tags),
           aliases: toPrismaJsonValue(data.aliases),
@@ -575,7 +570,6 @@ export class UndoService {
         type: data.type,
         summary: data.summary,
         visibility: data.visibility,
-        publishStatus: data.publishStatus,
         canonicalStatus: data.canonicalStatus,
         tags: toPrismaJsonValue(data.tags),
         aliases: toPrismaJsonValue(data.aliases),
@@ -720,7 +714,6 @@ export class UndoService {
           type: update.page.type,
           summary: update.page.summary,
           visibility: update.page.visibility,
-          publishStatus: update.page.publishStatus,
           canonicalStatus: update.page.canonicalStatus,
           tags: toPrismaJsonValue(update.page.tags),
           aliases: toPrismaJsonValue(update.page.aliases),

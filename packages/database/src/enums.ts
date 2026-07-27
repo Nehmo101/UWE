@@ -6,7 +6,6 @@ export type {
   PageType,
   PlayerNoteStatus,
   PlayerNoteVisibility,
-  PublishStatus,
   QuestLifecycleStatus,
   Visibility,
   AssetType,
@@ -20,7 +19,6 @@ export {
   PageType as PageTypeEnum,
   PlayerNoteStatus as PlayerNoteStatusEnum,
   PlayerNoteVisibility as PlayerNoteVisibilityEnum,
-  PublishStatus as PublishStatusEnum,
   Visibility as VisibilityEnum,
   AssetType as AssetTypeEnum,
 } from "./generated/prisma/client";

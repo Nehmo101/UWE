@@ -45,7 +45,6 @@ describe("Context Builder — config and budget", () => {
         slug: "lang",
         type: "lore",
         visibility: "public",
-        publishStatus: "published",
         canonicalStatus: "canon",
         contentBlocks: [
           {

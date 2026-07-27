@@ -18,7 +18,6 @@ export interface DndCreatePageInput {
   slug: string;
   type: "monster" | "encounter";
   visibility: "dm_only";
-  publishStatus: "draft";
   summary: string;
   contentBlocks: Array<{
     type: "statblock" | "rich_text";
@@ -71,7 +70,6 @@ export function buildStatblockPageInput(input: {
     slug: input.pageSlug,
     type: "monster",
     visibility: "dm_only",
-    publishStatus: "draft",
     summary: `Open5e Statblock (${input.open5eSlug})`,
     contentBlocks: [
       {
@@ -98,7 +96,6 @@ export function buildEncounterPageInput(input: {
     slug: input.pageSlug,
     type: "encounter",
     visibility: "dm_only",
-    publishStatus: "draft",
     summary: input.summary,
     contentBlocks: [
       {
