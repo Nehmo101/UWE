@@ -28,6 +28,7 @@ const TASK_TO_USE_CASE: Partial<Record<CookbookAiTaskType, CookbookUseCaseId>> =
   prepare_mail_draft: "player_safe_rewrite",
   atlas_fill_area: "dnd_generator",
   atlas_generate_asset_proposal: "dnd_generator",
+  terra_world_draft: "dnd_generator",
   simulate_faction: "dnd_generator",
   generate_structured_npc: "dnd_generator",
   generate_structured_quest: "dnd_generator",

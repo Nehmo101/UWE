@@ -1,5 +1,6 @@
 import { validateAtlasPlotFillProposal } from "./proposal-validators/plot-fill-proposal";
 import { validateRtxAtlasAssetProposal } from "./proposal-validators/rtx-asset-proposal";
+import { validateTerraWorldDraft } from "./proposal-validators/terra-world-draft";
 import type { BrainActionDefinition } from "./actions";
 import type { AiProposalTargetType } from "./actions";
 
@@ -191,6 +192,38 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
           validation: validation.ok ? "ok" : "invalid",
           ...(validation.ok
             ? { warnings: validation.warnings, outputType: validation.proposal.outputType }
+            : { errors: validation.errors }),
+        },
+      },
+    ];
+  }
+
+  if (action.id === "terra_world_draft") {
+    /* Unlike the Atlas proposals this one CLAMPS instead of rejecting: an
+       unusable answer would leave the user with nothing, a clamped one leaves
+       them with a boring map they can edit. `content` therefore always holds
+       the validated draft when the answer was JSON at all — what the model
+       lost is listed in `notices`, and the panel shows it. */
+    const parsed = extractJsonObject(resultText);
+    const validation = validateTerraWorldDraft(parsed);
+    return [
+      {
+        id: `${baseId}-terra-world-draft`,
+        label: action.defaultProposalLabel,
+        content: validation.ok
+          ? JSON.stringify(validation.draft, null, 2)
+          : resultText.trim(),
+        targetType: "terra_world_draft",
+        targetId: pageId ?? null,
+        visibility: "dm_only",
+        status: "pending",
+        metadata: {
+          source: "ai_generated",
+          autoApply: false,
+          proposalKind: "terra_world_draft",
+          validation: validation.ok ? "ok" : "invalid",
+          ...(validation.ok
+            ? { notices: validation.notices }
             : { errors: validation.errors }),
         },
       },

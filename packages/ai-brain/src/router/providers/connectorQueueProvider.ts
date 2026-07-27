@@ -478,6 +478,7 @@ const TASK_TYPE_TO_WORKFLOW_SLOT: Record<AiTaskType, ConnectorWorkflowSlot> = {
   atlas_describe_region: "dnd",
   atlas_fill_area: "dnd",
   atlas_generate_asset_proposal: "dnd",
+  terra_world_draft: "dnd",
   simulate_faction: "dnd",
   generate_structured_npc: "dnd",
   generate_structured_quest: "dnd",

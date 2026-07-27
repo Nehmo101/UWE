@@ -57,3 +57,110 @@
   color: #e8e2d4;
   pointer-events: none;
 }
+
+/* „Karte beschreiben" (J4). Unter dem Frame, nicht daneben: das Bild ist die
+   Hauptsache, die Beschreibung ein Werkzeug, das man einmal benutzt. */
+
+.terra-entwurf {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.terra-entwurf-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.terra-entwurf-feld > span {
+  font-weight: 600;
+}
+
+.terra-entwurf-feld > textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.5rem;
+  border: 1px solid var(--input, var(--border));
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.terra-entwurf-zeile {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.terra-entwurf-zeile > label,
+.terra-entwurf-gitter > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.terra-entwurf-zeile > label {
+  max-width: 9rem;
+}
+
+.terra-entwurf button {
+  align-self: start;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--secondary, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.terra-entwurf button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terra-entwurf-vorschau {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.terra-entwurf-gitter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
+.terra-entwurf-hinweis,
+.terra-entwurf-meldung,
+.terra-entwurf-ergebnis {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.terra-entwurf-meldung {
+  color: var(--destructive, #b3261e);
+}
+
+.terra-entwurf-notizen {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.terra-entwurf-notizen ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}

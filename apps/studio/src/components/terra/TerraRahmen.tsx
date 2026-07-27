@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { TerraWorldDraft } from "@uwe/ai-brain/proposal-validators";
 import { speichereTerraKarteAction } from "@/app/terra-actions";
+import { TerraEntwurfPanel, type TerraEntwurfErgebnis } from "./TerraEntwurfPanel";
 import "./terra.css";
 
 /**
@@ -57,6 +59,31 @@ export function TerraRahmen({ worldSlug, karteId, version, daten, quelle }: Terr
   const laeuftRef = useRef(false);
   const gesperrtRef = useRef(false); // nach einem Konflikt wird nicht weitergeschrieben
   const [zustand, setZustand] = useState<Zustand>("bereit");
+  /* J4: das Ergebnis der letzten Erzeugung. Es kommt aus dem Frame zurück und
+     gehört ins Bedienfeld — der Rahmen reicht es nur durch. */
+  const [entwurfErgebnis, setEntwurfErgebnis] = useState<TerraEntwurfErgebnis | null>(null);
+
+  /** Schickt eine geprüfte Weltvorgabe in den Frame. Ziel ist wie überall
+   *  `window.location.origin`, nie "*". Die Rückfrage vor dem Überschreiben
+   *  stellt der Frame — nur er kennt den Inhalt der Karte. */
+  const sendeVorgabe = useCallback(
+    (vorgabe: TerraWorldDraft, opt: { laufId: string | null; seed: number | null }) => {
+      const fenster = rahmenRef.current?.contentWindow;
+      if (!fenster) return false;
+      setEntwurfErgebnis(null);
+      fenster.postMessage(
+        {
+          typ: "welt-vorgabe",
+          vorgabe,
+          laufId: opt.laufId ?? undefined,
+          seed: opt.seed ?? undefined,
+        },
+        window.location.origin,
+      );
+      return true;
+    },
+    [],
+  );
 
   const schreiben = useCallback(async () => {
     const text = offenRef.current;
@@ -138,6 +165,13 @@ export function TerraRahmen({ worldSlug, karteId, version, daten, quelle }: Terr
       }
       if (nachricht.typ === "terra-fehler") {
         setZustand("fehler");
+        return;
+      }
+      /* J4: die Quittung der Weltvorgabe. Die geänderte Karte kommt getrennt
+         über `karte-geaendert` und wird wie jede andere Änderung gespeichert
+         — diese Nachricht ist nur die Auskunft für das Bedienfeld. */
+      if (nachricht.typ === "welt-vorgabe-ergebnis") {
+        setEntwurfErgebnis(nachricht as unknown as TerraEntwurfErgebnis);
       }
     }
 
@@ -191,6 +225,7 @@ export function TerraRahmen({ worldSlug, karteId, version, daten, quelle }: Terr
           allow="fullscreen"
         />
       </div>
+      <TerraEntwurfPanel worldSlug={worldSlug} sende={sendeVorgabe} ergebnis={entwurfErgebnis} />
     </div>
   );
 }

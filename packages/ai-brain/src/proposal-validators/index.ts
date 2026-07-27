@@ -14,3 +14,4 @@
 export * from "./gouache-registry";
 export * from "./plot-fill-proposal";
 export * from "./rtx-asset-proposal";
+export * from "./terra-world-draft";

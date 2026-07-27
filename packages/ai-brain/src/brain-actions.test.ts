@@ -33,7 +33,8 @@ describe("Brain Actions — catalog", () => {
     assert.ok(ids.includes("atlas_describe_region"), "atlas_describe_region action must be present");
     assert.ok(ids.includes("atlas_fill_area"), "atlas_fill_area action must be present");
     assert.ok(ids.includes("atlas_generate_asset_proposal"), "atlas_generate_asset_proposal action must be present");
-    assert.equal(BRAIN_ACTION_LIST.length, 12);
+    assert.ok(ids.includes("terra_world_draft"), "terra_world_draft action must be present");
+    assert.equal(BRAIN_ACTION_LIST.length, 13);
   });
 
   it("marks player-safe actions correctly", () => {
@@ -174,6 +175,45 @@ describe("Brain Actions — proposals", () => {
 
     assert.equal(proposals[0]?.targetType, "atlas_asset_proposal");
     assert.equal(proposals[0]?.metadata?.autoApply, false);
+    assert.equal(proposals[0]?.metadata?.validation, "invalid");
+    assert.ok(Array.isArray(proposals[0]?.metadata?.errors));
+  });
+
+  it("clamps a Terra world draft instead of throwing it away", () => {
+    const action = getBrainAction("terra_world_draft");
+    const proposals = buildProposalsFromResult({
+      action,
+      // Markdown fence, an invented biome, a runaway count and a language
+      // family that does not exist — exactly what a small local model does.
+      resultText:
+        '```json\n{"kind":"terra_world_draft","biom":"nebelheide","kartenGroesse":512,' +
+        '"siedlungen":300,"sprachfamilie":"nordisch",' +
+        '"namen":{"region":"Die Graue Küste","orte":["Möwenfurt"]}}\n```',
+      pageId: "page-1",
+    });
+
+    assert.equal(proposals.length, 1);
+    assert.equal(proposals[0]?.targetType, "terra_world_draft");
+    assert.equal(proposals[0]?.visibility, "dm_only");
+    assert.equal(proposals[0]?.metadata?.autoApply, false);
+    assert.equal(proposals[0]?.metadata?.validation, "ok");
+    assert.ok(Array.isArray(proposals[0]?.metadata?.notices));
+    const entwurf = JSON.parse(proposals[0]?.content ?? "{}");
+    assert.equal(entwurf.biom, "wiese", "unbekanntes Biom faellt auf die Vorgabe");
+    assert.equal(entwurf.siedlungen, 14, "auf den Deckel des Generators geklemmt");
+    assert.equal(entwurf.sprachfamilie, "auto", "erfundene Sprachfamilie abgelehnt");
+    assert.equal(entwurf.kartenGroesse, 512, "was stimmt, bleibt stehen");
+    assert.deepEqual(entwurf.namen.orte, ["Möwenfurt"]);
+  });
+
+  it("keeps a Terra world draft that carries geometry out of the map", () => {
+    const action = getBrainAction("terra_world_draft");
+    const proposals = buildProposalsFromResult({
+      action,
+      resultText: '{"kind":"terra_world_draft","elemente":[{"kind":"pfad","points":[{"x":1,"z":2}]}]}',
+      pageId: "page-1",
+    });
+
     assert.equal(proposals[0]?.metadata?.validation, "invalid");
     assert.ok(Array.isArray(proposals[0]?.metadata?.errors));
   });

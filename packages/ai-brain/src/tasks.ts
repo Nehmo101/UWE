@@ -1,4 +1,5 @@
 import { formatRtxAtlasAssetPromptContext } from "./proposal-validators/rtx-asset-proposal";
+import { formatTerraWorldDraftPromptContext } from "./proposal-validators/terra-world-draft";
 import type { AiContext, AiTaskType } from "./types";
 
 export const AI_TASK_LABELS: Record<AiTaskType, string> = {
@@ -25,6 +26,7 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   atlas_describe_region: "Atlas-Region beschreiben",
   atlas_fill_area: "Atlas-Objektfläche füllen",
   atlas_generate_asset_proposal: "Atlas-Asset vorschlagen",
+  terra_world_draft: "Terra-Karte aus Beschreibung entwerfen",
   simulate_faction: "Fraktion simulieren",
   generate_structured_npc: "NPC strukturiert generieren",
   generate_structured_quest: "Quest strukturiert generieren",
@@ -86,6 +88,12 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
   atlas_generate_asset_proposal:
     "Schlage ein Atlas-Gouache-Asset als reines JSON-Proposal vor. Nutze den Styleguide und Asset-Katalog aus dem folgenden Pflichtkontext. Liefere entweder `outputType:\"json-recipe\"` mit einem begrenzten Gouache-Rezept oder `outputType:\"png-fallback\"` mit PNG-Metadaten. Liefere keine AtlasObject-Payloads, keine Palette-DB-IDs, keine Dateipfade außer sicherem PNG-Dateinamen, keine Remote-URLs und keinen Code. UWE validiert das Proposal und übernimmt es erst nach manueller Prüfung.\n\n" +
     formatRtxAtlasAssetPromptContext(),
+  terra_world_draft:
+    "Übersetze die Beschreibung des Nutzers in GENERATOR-PARAMETER für Terra und antworte NUR mit dem JSON-Objekt aus dem folgenden Pflichtkontext. " +
+    "Du lieferst das WAS (Biom, Kartengröße, Maßstab, Klima, Relief-Wunsch, Anzahl von Flüssen/Siedlungen/Wäldern/Wiesen/Ranken, Stimmung, Namen) — " +
+    "das WIE (Koordinaten, Punktlisten, Höhen, Platzierung) macht Terras deterministischer Weltgenerator. " +
+    "Liefere niemals Koordinaten, Polygone, Höhendaten, Elemente oder Code. Alles, was du weglässt, füllt Terra aus seinen Vorgaben.\n\n" +
+    formatTerraWorldDraftPromptContext(),
   simulate_faction:
     "Simuliere einen Zeitsprung für die Fraktion im Kontext: Welche Ereignisse, Ressourcen- und Beziehungsänderungen ergeben sich? Antworte NUR als JSON-Objekt {\"events\":[...]} — jedes Event mit title, inGameDate {year,month,day}, summaryPlayer, summaryDm (optional), visibility (player_visible|private|dm_only). Keine Kanon-Änderungen ohne Review.",
   generate_structured_npc:

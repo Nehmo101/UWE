@@ -13,7 +13,8 @@ export type BrainActionId =
   | "atlas_name_regions"
   | "atlas_describe_region"
   | "atlas_fill_area"
-  | "atlas_generate_asset_proposal";
+  | "atlas_generate_asset_proposal"
+  | "terra_world_draft";
 
 export type AiProposalTargetType =
   | "session_summary_dm"
@@ -25,7 +26,8 @@ export type AiProposalTargetType =
   | "atlas_draft_names"
   | "atlas_region_description"
   | "atlas_plot_fill"
-  | "atlas_asset_proposal";
+  | "atlas_asset_proposal"
+  | "terra_world_draft";
 
 export interface BrainActionDefinition {
   id: BrainActionId;
@@ -176,6 +178,18 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     audience: "dm_internal",
     defaultProposalTarget: "atlas_asset_proposal",
     defaultProposalLabel: "Atlas-Asset-Proposal",
+  },
+  terra_world_draft: {
+    id: "terra_world_draft",
+    label: "Terra-Karte beschreiben",
+    description:
+      "Übersetzt eine Beschreibung („Raue Küstenregion, drei Fischerdörfer …“) in Parameter für Terras deterministischen Weltgenerator. Das Modell liefert nur Parameter und Namen, nie Geometrie.",
+    taskType: "terra_world_draft",
+    requiresSession: false,
+    playerSafe: false,
+    audience: "dm_internal",
+    defaultProposalTarget: "terra_world_draft",
+    defaultProposalLabel: "Terra-Kartenentwurf (Parameter)",
   },
 };
 

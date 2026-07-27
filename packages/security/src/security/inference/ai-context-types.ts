@@ -31,6 +31,7 @@ export type AiTaskType =
   | "atlas_describe_region"
   | "atlas_fill_area"
   | "atlas_generate_asset_proposal"
+  | "terra_world_draft"
   | "simulate_faction"
   | "generate_structured_npc"
   | "generate_structured_quest"
