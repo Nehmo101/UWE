@@ -1,47 +1,67 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
+import { S, BIOME, KARTE } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
-import { bandAusLinie } from './paths.js';
+import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
+/* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
+   und Struktur-Generatoren"). Sie liegen in einem eigenen Modul, weil ihre
+   Layout-Logik mit der Streulogik dieser Datei nichts gemeinsam hat — und weil
+   der Import damit EINE Richtung hat: areas.js -> strukturen.js, nie zurueck.
+   Deshalb wohnen die reinen Polygonhelfer jetzt dort und werden hier nur noch
+   durchgereicht; ihre bisherigen Importeure (selection.js, core/dirty.js)
+   bleiben davon unberuehrt. */
+import { polyBBox, inPoly, polyArea, polyCenter,
+  genBurg, genWerft, genKloster } from './strukturen.js';
 
-function polyBBox(pts) {
-  var b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity };
-  for (var i = 0; i < pts.length; i++) {
-    if (pts[i].x < b.x0) b.x0 = pts[i].x;
-    if (pts[i].x > b.x1) b.x1 = pts[i].x;
-    if (pts[i].z < b.z0) b.z0 = pts[i].z;
-    if (pts[i].z > b.z1) b.z1 = pts[i].z;
-  }
-  return b;
-}
+/* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
+   an einen stabilen Schluessel statt an die Zugriffsreihenfolge — sonst
+   wuerde jede Aenderung der Schleifenlaengen (Punkt verschoben, Parameter
+   geaendert) die gesamte restliche Bestueckung umwuerfeln. genWald/genWiese
+   arbeiten bereits so (Rasterzellen-Hash) und bleiben unveraendert. */
+function ortsRng(a, b, s) { return rngOf((hashi(a, b, s) * 4294967296) | 0); }
 
-function inPoly(pts, x, z) {
-  var inside = false;
-  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    var a = pts[i], b = pts[j];
-    if (((a.z > z) !== (b.z > z)) && (x < (b.x - a.x) * (z - a.z) / (b.z - a.z) + a.x)) inside = !inside;
-  }
-  return inside;
-}
-
-function polyArea(pts) {
-  var s = 0;
-  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) s += (pts[j].x + pts[i].x) * (pts[j].z - pts[i].z);
-  return Math.abs(s * 0.5);
-}
-
-function polyCenter(pts) {
-  var x = 0, z = 0;
-  for (var i = 0; i < pts.length; i++) { x += pts[i].x; z += pts[i].z; }
-  return { x: x / pts.length, z: z / pts.length };
-}
+/* polyBBox/inPoly/polyArea/polyCenter stehen jetzt in strukturen.js (siehe
+   Importblock oben) und werden von dort unveraendert re-exportiert. */
 
 /** Abstand so vergrößern, dass die Instanzzahl beherrschbar bleibt. */
+/** Instanzdeckel flaechenproportional zur Karte (H1d). Gleicher Faktor und
+ *  gleicher 4x-Deckel wie MAX_INST_PER_EL in store.js, damit die Flaechen-
+ *  deckel nie ueber das Element-Budget hinauswachsen. Bei 256 liefert er
+ *  exakt die alten Werte — grosse Karten sollen groessere Waelder tragen,
+ *  nicht duennere. */
+function deckel(n) {
+  return Math.round(n * Math.min(4, (KARTE.map * KARTE.map) / (256 * 256)));
+}
+
 function safeSpacing(pts, wanted, maxCount) {
   var a = polyArea(pts);
   var need = Math.sqrt(a / Math.max(1, maxCount));
   return Math.max(wanted, need);
+}
+
+/**
+ * Biom-Abstandsfaktor (H-Welle 2). `veg.dichte` wirkt konstruktionsbedingt NUR
+ * nach unten (`if (V.dichte < 1 && ...)`), Werte > 1 sind wirkungslos —
+ * Regenwald, Bambus und Pilzwald koennen deshalb ueber `dichte` gar nicht
+ * dichter werden als der Bestand. `veg.abstand` ist der Gegenweg: ein Faktor
+ * auf das FERTIGE Ergebnis von safeSpacing (< 1 verdichtet, > 1 lichtet auf).
+ *
+ * Bewusst NACH safeSpacing und nicht auf dessen `wanted`-Argument: der
+ * Max()-Boden in safeSpacing ist genau die Grenze, die ueberschritten werden
+ * soll. Der Instanzdeckel wird damit umgangen — bei abstand 0.55 (Bambus)
+ * vervierfacht sich die Kandidatenzahl fast; MAX_INST_PER_EL in pools.js
+ * bleibt das Sicherheitsnetz.
+ *
+ * Byteidentitaet: fehlt das Feld (wiese, kueste, alle Runde-G-Biome) oder
+ * steht es auf 1, wird die Multiplikation NICHT ausgefuehrt — kein "* 1",
+ * keine Rundungsschleife, kein veraenderter Float.
+ */
+function biomAbstand(V, sp) {
+  var f = V.abstand;
+  if (f === undefined || f === null || f === 1) return sp;
+  return sp * f;
 }
 
 /** 0 am Polygonkern, 1 nahe dem Rand — Unterwuchs verdichtet sich am Saum. */
@@ -59,10 +79,26 @@ function randNaehe(pts, x, z) {
   return 1 - sstep(3, 9, Math.sqrt(best));
 }
 
+/* Biom-Vegetation (G5): genWald/genWiese lesen Multiplikatoren aus
+   BIOME[S.biom].veg. Umsetzung minimalinvasiv: im wiese-Pfad sind alle
+   Faktoren 1 bzw. null — jede Bedingung kurzschliesst, es wird kein
+   zusaetzlicher Hash gezogen und kein bestehender Schluessel verschoben,
+   die Bestueckung bleibt byteidentisch. Andere Biome duerfen zusaetzliche
+   ortsstabile Ablehnungen (continue) oder Art-Ersetzungen ausloesen; die
+   dafuer NEU vergebenen hashi-Schluessel sind el.seed+57 (Dichte) und
+   el.seed+58 (Artgewichte) — beide waren bisher unbenutzt. */
+
+// Standard-Unterwuchsmischung (wiese/kueste). Biome koennen per uwTabelle
+// eine eigene wpick-Tabelle hinterlegen — der rng-Verbrauch bleibt gleich,
+// wpick zieht unabhaengig von der Tabelle genau einen Wert.
+var UW_STANDARD = [["busch", 5], ["farn", 4], ["moos", 3], ["stumpf", 1],
+  ["stammliegend", 1], ["fels", 1]];
+
 function genWald(el) {
   var p = el.params, pts = el.points;
+  var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var klump = p.klumpen === undefined ? 0.55 : p.klumpen;
-  var sp = safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), 14000);
+  var sp = biomAbstand(V, safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), deckel(14000)));
   var schwelle = 0.26 + klump * 0.36;
   var bb = polyBBox(pts), occ = newOcc(4);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
@@ -75,12 +111,23 @@ function genWald(el) {
       if (!inPoly(pts, x, z)) continue;
       // Bäume wachsen in Nestern mit Lichtungen dazwischen, nicht im Raster
       if (fractal(x * 0.04, z * 0.04, el.seed + 21) < schwelle) continue;
+      // Biom-Gesamtdichte: zusaetzliche ortsstabile Ablehnung (Schluessel +57)
+      if (V.dichte < 1 && hashi(cx, cz, el.seed + 57) >= V.dichte) continue;
       var rng = rngOf((hashi(cx, cz, el.seed + 7) * 4294967296) | 0);
       var nadel = r3 < p.mischung;
       var artW = hashi(cx, cz, el.seed + 33);
       var kind = nadel ? (artW < 0.6 ? "nadelbaum" : "zypresse")
         : (artW < 0.38 ? "baum2" : (artW < 0.86 ? "baum"
           : (artW < 0.94 ? "sumpfbaum" : "bluetenbaum")));
+      // Biom-Artgewichte: Behalte-Wahrscheinlichkeit je Art (Schluessel +58);
+      // Abgelehntes ersetzt ortsstabil die biomtypische Ersatzart oder faellt aus.
+      if (V.arten) {
+        var behalte = V.arten[kind];
+        if (behalte !== undefined && hashi(cx, cz, el.seed + 58) >= behalte) {
+          if (!V.ersatz) continue;
+          kind = V.ersatz;
+        }
+      }
       var h = tryPlace(occ, x, z, POOLS[kind].radius * 0.8, null);
       if (h === null) continue;
       var sc = rr(rng, 0.8, 1.2);
@@ -90,14 +137,13 @@ function genWald(el) {
       if (ausW < 0.035) tint = [1.28, 0.92, 0.55];        // goldener Baum
       else if (ausW < 0.06) tint = [1.3, 0.78, 0.62];     // roetlicher Baum
       emit(el, kind, x, h - 0.1, z, rng() * 6.28, sc, sc * rr(rng, 0.85, 1.25), sc, tint);
-      if (rng() < p.unterholz * (0.6 + randNaehe(pts, x, z) * 0.8)) {
+      if (rng() < p.unterholz * V.unterwuchs * (0.6 + randNaehe(pts, x, z) * 0.8)) {
         var bx = x + rr(rng, -sp * 0.5, sp * 0.5), bz = z + rr(rng, -sp * 0.5, sp * 0.5);
         if (!inPoly(pts, bx, bz)) continue;
         var bh = tryPlace(occ, bx, bz, 0.7, null);
         if (bh === null) continue;
         var bs = rr(rng, 0.7, 1.35);
-        var uw = wpick(rng, [["busch", 5], ["farn", 4], ["moos", 3], ["stumpf", 1],
-          ["stammliegend", 1], ["fels", 1]]);
+        var uw = wpick(rng, V.uwTabelle || UW_STANDARD);
         emit(el, uw, bx, bh + (uw === "moos" ? 0.04 : 0), bz, rng() * 6.28,
           bs, bs, bs, tintOf(rng, 0.08));
       }
@@ -113,16 +159,21 @@ var FRUCHT = {
   lavendel: [0.95, 0.92, 1.08], brache: [1.0, 0.96, 0.9]
 };
 function genFeld(el) {
-  var p = el.params, pts = el.points, rng = rngOf(el.seed);
+  var p = el.params, pts = el.points;
   var bb = polyBBox(pts), ctr = polyCenter(pts);
   var ext = Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 0.75 + 4;
   var a = p.drehung * DEG, dx = Math.cos(a), dz = Math.sin(a);
   var px = -dz, pz = dx;
-  var rowSp = safeSpacing(pts, p.reihe, 6000) * 1.0;
+  var rowSp = safeSpacing(pts, p.reihe, deckel(6000)) * 1.0;
   var alongSp = 2.6;
   var frucht = FRUCHT[p.frucht] || FRUCHT.weizen;
   var occ = newOcc(2);
   var nRows = Math.ceil(ext * 2 / rowSp);
+  // Zufalls-Schluessel: (Reihenindex r, Schrittindex s, seed+23) — waechst
+  // das Polygon, kommen nur neue Reihen/Schritte hinzu, die bestehenden
+  // behalten ihre Varianz. Grenze: das Raster haengt an polyCenter, jede
+  // Punktverschiebung rueckt also alle Weltpositionen leicht — die Zuordnung
+  // Indexzelle -> Auswuerfelung bleibt davon aber unberuehrt.
   for (var r = -nRows; r <= nRows; r++) {
     var off = r * rowSp;
     var steps = Math.ceil(ext * 2 / alongSp);
@@ -132,9 +183,10 @@ function genFeld(el) {
       if (!inPoly(pts, x, z)) continue;
       var h = tryPlace(occ, x, z, 0.5, null);
       if (h === null) continue;
-      var tn = tintOf(rng, 0.05);
+      var rs = ortsRng(r, s, el.seed + 23);
+      var tn = tintOf(rs, 0.05);
       emit(el, "feldreihe", x, h, z, a + Math.PI / 2,
-        rowSp * 0.34, rr(rng, 0.75, 1.15) * p.hoehe, alongSp * 0.55,
+        rowSp * 0.34, rr(rs, 0.75, 1.15) * p.hoehe, alongSp * 0.55,
         [frucht[0] * tn[0], frucht[1] * tn[1], frucht[2] * tn[2]]);
     }
   }
@@ -142,7 +194,12 @@ function genFeld(el) {
 
 function genWiese(el) {
   var p = el.params, pts = el.points;
-  var sp = safeSpacing(pts, 2.6 / p.dichte, 20000);
+  var V = (BIOME[S.biom] || BIOME.wiese).veg;
+  var sp = biomAbstand(V, safeSpacing(pts, 2.6 / p.dichte, deckel(20000)));
+  // Blumen-Leitfarben: das Biom darf die modulweite Tabelle ersetzen
+  // (Bluetental: rosa/creme). Ohne Feld ist LF exakt dieselbe Referenz wie
+  // frueher — gleiche Laenge, gleiche Werte, gleicher Index.
+  var LF = V.leitfarben || LEITFARBEN;
   var bb = polyBBox(pts), occ = newOcc(1.5);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
   var d0 = Math.floor(bb.z0 / sp), d1 = Math.ceil(bb.z1 / sp);
@@ -154,17 +211,20 @@ function genWiese(el) {
       var rng = rngOf((hashi(cx, cz, el.seed + 3) * 4294967296) | 0);
       // Nester und Luecken statt Gleichverteilung
       if (fractal(x * 0.06, z * 0.06, el.seed + 77) < 0.34) continue;
+      // Biom-Gesamtdichte (Schluessel +57, wie genWald): im wiese-Pfad
+      // kurzgeschlossen, sonst ortsstabile Zusatz-Ablehnung.
+      if (V.dichte < 1 && hashi(cx, cz, el.seed + 57) >= V.dichte) continue;
       var h = tryPlace(occ, x, z, 0.25, null);
       if (h === null) continue;
       // Blumen wachsen in Nestern mit einer Leitfarbe je Nest
       var nestX = Math.floor(x / 9), nestZ = Math.floor(z / 9);
       var nest = hashi(nestX, nestZ, el.seed + 91);
-      var istBlume = rng() < p.blumen * sstep(0.45, 0.75, nest);
+      var istBlume = rng() < p.blumen * V.blumen * sstep(0.45, 0.75, nest);
       var kind = istBlume ? "blume" : "gras";
       var sc = rr(rng, 0.75, 1.35);
       var tint = tintOf(rng, 0.1);
       if (istBlume) {
-        var leit = LEITFARBEN[Math.floor(hashi(nestX, nestZ, el.seed + 93) * LEITFARBEN.length)];
+        var leit = LF[Math.floor(hashi(nestX, nestZ, el.seed + 93) * LF.length)];
         tint = [leit[0] * (0.9 + rng() * 0.2), leit[1] * (0.9 + rng() * 0.2), leit[2] * (0.9 + rng() * 0.2)];
       }
       emit(el, kind, x, h, z, rng() * 6.28, sc, sc * rr(rng, 0.8, 1.3), sc, tint);
@@ -240,18 +300,24 @@ function districtStreets(el) {
 }
 
 function genViertel(el) {
-  var p = el.params, pts = el.points, rng = rngOf(el.seed);
+  var p = el.params, pts = el.points;
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
   var occ = newOcc(4.5);
   var i, k;
-  // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken
+  // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken.
+  // Alle Zuege wandern in EIN gemergtes Mesh (1 Draw Call statt 20-40);
+  // gesammelt wird in Streets-Index-Reihenfolge, damit die gemergte
+  // Geometrie bytegleich der bisherigen Aufrufreihenfolge entspricht.
+  var gassenGeos = [];
   for (i = 0; i < streets.length; i++) {
     var innen = streets[i].filter(function (q) { return inPoly(pts, q.x, q.z); });
     if (innen.length > 1) {
-      bandAusLinie(el, innen, p.gasse * 0.5, [0.62, 0.58, 0.52], el.seed + i * 7, { einsinken: 0.08 });
+      var geo = bandGeoAusLinie(el, innen, p.gasse * 0.5, [0.62, 0.58, 0.52], el.seed + i * 7, { einsinken: 0.08 });
+      if (geo) gassenGeos.push(geo);
     }
   }
+  bandMeshAusGeos(el, gassenGeos);
   for (i = 0; i < streets.length; i++) {
     var line = streets[i];
     for (k = 0; k < line.length; k++) {
@@ -262,14 +328,23 @@ function genViertel(el) {
   }
   // Bebauung an den Gassenseiten: geschlossene Reihen statt Streusiedlung.
   // In den Vorlagen stehen die Häuser Wand an Wand und bilden Blöcke.
+  // Zufalls-Schluessel: Startversatz + Anfangs-Lauf je Gassenseite
+  // (Street-Index i, Seite, seed+31), jede Segmententscheidung je
+  // (Segmentindex k, i*2+Seite, seed+37). Der Lauf-Zustand (lauf/laufKind)
+  // bleibt sequentiell ueber k — zulaessig, weil k selbst stabil ist; nur die
+  // DRAWS haengen am Schluessel. Das Strassennetz selbst (districtStreets,
+  // eigener Strom seed+51) ist hier ausdruecklich nicht Thema. Kein
+  // elementweiter Strom mehr in genViertel.
   var table = KULTUR[p.stil] || KULTUR.dorf;
-  if (p.stil === "dorf" || p.stil === "gemischt" || !p.stil) dorfUfer(el, pts, rng);
+  if (p.stil === "dorf" || p.stil === "gemischt" || !p.stil) dorfUfer(el, pts);
   var luecke = clamp(1.6 / p.dichte - 0.5, 0.1, 6);   // Abstand zwischen Nachbarn
   for (i = 0; i < streets.length; i++) {
     var ln = streets[i];
     for (var side = -1; side <= 1; side += 2) {
-      var acc = rr(rng, 0, 6);
-      var lauf = 0, laufKind = wpick(rng, table);
+      var seite = side < 0 ? 0 : 1;
+      var rSeite = ortsRng(i, seite, el.seed + 31);
+      var acc = rr(rSeite, 0, 6);
+      var lauf = 0, laufKind = wpick(rSeite, table);
       for (k = 1; k < ln.length; k++) {
         var a = ln[k - 1], b = ln[k];
         var dx = b.x - a.x, dz = b.z - a.z, d = Math.sqrt(dx * dx + dz * dz);
@@ -277,33 +352,39 @@ function genViertel(el) {
         dx /= d; dz /= d;
         acc -= d;
         if (acc > 0) continue;
+        var rs = ortsRng(k, i * 2 + seite, el.seed + 37);
         // Reihenhaus-Läufe: 2–4 gleiche Typen nebeneinander, dann wechseln
-        if (lauf <= 0) { laufKind = wpick(rng, table); lauf = ri(rng, 2, 4); }
+        if (lauf <= 0) { laufKind = wpick(rs, table); lauf = ri(rs, 2, 4); }
         lauf--;
         var kind = laufKind;
         var br = POOLS[kind].radius * 2;
-        acc = br + luecke * rr(rng, 0.4, 1.6);
-        if (rng() < 0.1) continue;                     // gelegentliche Baulücke
-        var off = p.gasse * 0.5 + POOLS[kind].radius + rr(rng, 0.2, 1.1);
+        acc = br + luecke * rr(rs, 0.4, 1.6);
+        if (rs() < 0.1) continue;                     // gelegentliche Baulücke
+        var off = p.gasse * 0.5 + POOLS[kind].radius + rr(rs, 0.2, 1.1);
         var x = b.x + (-dz) * off * side, z = b.z + dx * off * side;
         if (!inPoly(pts, x, z)) continue;
         var hh = tryPlace(occ, x, z, POOLS[kind].radius * 0.82, { ignoreCorridor: true });
         if (hh === null) continue;
-        var sc = rr(rng, 0.88, 1.14);
-        var hyaw = Math.atan2(dx, dz) + rr(rng, -0.05, 0.05);
-        emit(el, kind, x, hh - 0.15, z, hyaw, sc, sc * rr(rng, 0.9, 1.25), sc, tintOf(rng));
+        var sc = rr(rs, 0.88, 1.14);
+        var hyaw = Math.atan2(dx, dz) + rr(rs, -0.05, 0.05);
+        emit(el, kind, x, hh - 0.15, z, hyaw, sc, sc * rr(rs, 0.9, 1.25), sc, tintOf(rs));
         rauchAus(el, kind, x, hh, z, sc);
-        emitFensterlicht(el, rng, kind, x, hh - 0.15, z, hyaw, sc);
+        emitFensterlicht(el, rs, kind, x, hh - 0.15, z, hyaw, sc);
       }
     }
   }
 }
 
-/** Uferzone eines Dorfviertels: Stege und Boote, wo das Polygon ans Wasser grenzt. */
-function dorfUfer(el, pts, rng) {
+/** Uferzone eines Dorfviertels: Stege und Boote, wo das Polygon ans Wasser grenzt.
+    Zufalls-Schluessel: (Kantenindex i, Uferpunkt-Index j, seed+71) — der Hafen
+    haengt damit an SEINER Polygonkante; wird eine andere Kante verschoben,
+    wandert oder wuerfelt er nicht mehr. Das Einfuegen/Loeschen von Punkten
+    verschiebt die Kantenindizes dahinter (akzeptierte Grenze). */
+function dorfUfer(el, pts) {
   for (var i = 0; i < pts.length; i++) {
     var a = pts[i], b = pts[(i + 1) % pts.length];
-    for (var t = 0.2; t < 1; t += 0.3) {
+    for (var j = 0; j < 3; j++) {
+      var t = 0.2 + j * 0.3;
       var x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t);
       var h = heightAt(x, z);
       if (h > 0.4 || h < -2.5) continue;
@@ -311,11 +392,12 @@ function dorfUfer(el, pts, rng) {
       var dx = heightAt(x + 2, z) - heightAt(x - 2, z);
       var dz = heightAt(x, z + 2) - heightAt(x, z - 2);
       var yaw = Math.atan2(-dx, -dz);
-      if (rng() < 0.45) {
-        emit(el, "steg", x, Math.max(h, 0.05), z, yaw, 1, 1, 1, tintOf(rng, 0.06));
-        if (rng() < 0.7) {
+      var ru = ortsRng(i, j, el.seed + 71);
+      if (ru() < 0.45) {
+        emit(el, "steg", x, Math.max(h, 0.05), z, yaw, 1, 1, 1, tintOf(ru, 0.06));
+        if (ru() < 0.7) {
           emit(el, "boot", x + Math.sin(yaw) * 2.4, 0.02, z + Math.cos(yaw) * 2.4,
-            yaw + rr(rng, -0.5, 0.5), 1, 1, 1, tintOf(rng, 0.08));
+            yaw + rr(ru, -0.5, 0.5), 1, 1, 1, tintOf(ru, 0.08));
         }
         return;   // ein Hafen je Viertel reicht
       }
@@ -329,8 +411,18 @@ function genFlaeche(el) {
   else if (el.variant === "feld") genFeld(el);
   else if (el.variant === "viertel") genViertel(el);
   else if (el.variant === "wiese") genWiese(el);
+  // Die Kompositstrukturen haengen bewusst am ENDE der Kette (gleiche
+  // Begruendung wie bei pfad:bruch in core/dirty.js): eine aeltere Fassung des
+  // Editors faellt durch alle else-if hindurch und erzeugt schlicht nichts,
+  // statt abzustuerzen — das Speicherformat bleibt abwaertskompatibel.
+  else if (el.variant === "burg") genBurg(el);
+  else if (el.variant === "werft") genWerft(el);
+  else if (el.variant === "kloster") genKloster(el);
 }
 
 
+/* polyBBox/inPoly/polyArea/polyCenter werden hier weiter exportiert, obwohl sie
+   jetzt aus strukturen.js kommen: selection.js und core/dirty.js importieren
+   `inPoly` seit jeher von hier, und ein Umhaengen dort waere reiner Laerm. */
 export { polyBBox, inPoly, polyArea, polyCenter, safeSpacing, genWald, genFeld,
   genWiese, districtStreets, genViertel, genFlaeche };

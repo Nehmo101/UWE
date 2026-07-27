@@ -66,6 +66,90 @@ function setSonne(dir, farbeHex, groesse, gegenHex) {
   gegenSprite.scale.set(900, 380, 1);
 }
 
+/* --- Sterne: deterministisches Punktfeld auf der Kuppel-Halbkugel --------
+   ~300 Punkte, verteilt ueber rngOf(0x57e11a) — kein Math.random. Groesse
+   und Helligkeit variieren pro Stern. Der Mond IST die vorhandene
+   Sonnenscheibe (scheibe/scheibeGr kommen aus dem Tageszeit-Preset), es gibt
+   KEIN eigenes Mond-Objekt. Sichtbarkeit steuert atmosphere.js aus der
+   Tageszeit-Blende ueber setSterne(alpha).                                  */
+var STERNE_N = 300;
+var sternGeo = new THREE.BufferGeometry();
+(function () {
+  var rng = rngOf(0x57e11a);
+  var pos = new Float32Array(STERNE_N * 3);
+  var col = new Float32Array(STERNE_N * 3);
+  var gr = new Float32Array(STERNE_N);
+  for (var i = 0; i < STERNE_N; i++) {
+    // Gleichverteilung auf der Halbkugel (y uniform = flaechentreu), knapp
+    // innerhalb der Kuppel (Radius 1430 < 1500), unterhalb des Horizonts nichts.
+    var y = rr(rng, 0.07, 0.995);
+    var w = rr(rng, 0, Math.PI * 2);
+    var rxz = Math.sqrt(Math.max(0, 1 - y * y));
+    pos[i * 3] = Math.cos(w) * rxz * 1430;
+    pos[i * 3 + 1] = y * 1430;
+    pos[i * 3 + 2] = Math.sin(w) * rxz * 1430;
+    // Helligkeit variiert; Kalt-Warm auch hier: die meisten Sterne kuehl-
+    // weiss, rund jeder sechste kippt leicht ins Warme.
+    var hell = rr(rng, 0.35, 1.0);
+    var warm = rng() < 0.18;
+    col[i * 3]     = hell * (warm ? 1.0  : 0.82);
+    col[i * 3 + 1] = hell * (warm ? 0.92 : 0.90);
+    col[i * 3 + 2] = hell * (warm ? 0.78 : 1.0);
+    gr[i] = rr(rng, 0.5, 1.6);
+  }
+  sternGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  sternGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  sternGeo.setAttribute('sternGr', new THREE.BufferAttribute(gr, 1));
+})();
+var sternMat = new THREE.PointsMaterial({
+  size: 2.8, sizeAttenuation: false, vertexColors: true, transparent: true,
+  opacity: 0, depthWrite: false, depthTest: false, fog: false
+});
+// Groessenvariation pro Stern: Shader-Patch mit Ankerpruefung (Konvention).
+sternMat.onBeforeCompile = function (shader) {
+  var anker = 'gl_PointSize = size;';
+  if (shader.vertexShader.indexOf(anker) >= 0) {
+    shader.vertexShader = 'attribute float sternGr;\n' +
+      shader.vertexShader.replace(anker, 'gl_PointSize = size * sternGr;');
+  } else {
+    console.warn('terra: Shader-Patch "sterngroesse" fand seinen Anker nicht.');
+  }
+};
+sternMat.customProgramCacheKey = function () { return 'terraSterne'; };
+var sternPunkte = new THREE.Points(sternGeo, sternMat);
+sternPunkte.renderOrder = -9.5;   // knapp ueber der Kuppel (-10), unter der Scheibe (-9)
+sternPunkte.frustumCulled = false;
+sternPunkte.visible = false;
+skyGroup.add(sternPunkte);        // folgt wie die Kuppel der Kamera
+
+/** Sternsichtbarkeit 0..1, aus der Tageszeit-Ueberblendung gespeist. */
+function setSterne(alpha) {
+  sternMat.opacity = alpha;
+  sternPunkte.visible = alpha > 0.003;
+}
+
+/* --- F5: Bewegungsdisziplin am Himmel -----------------------------------
+   In den Vorlagen steht der Himmel praktisch. Beide Tempofaktoren wirken
+   AUSSCHLIESSLICH an der Driftstelle (updateClouds/updateCirren); die
+   Erzeugungsbloecke mit rngOf/rr bleiben Zeichen fuer Zeichen unveraendert,
+   damit Positionen, Groessen, Blob-Versaetze und der Zufallsstrom identisch
+   bleiben — es aendert sich nur, wie schnell ein bereits erzeugtes v
+   abgefahren wird.
+
+   WOLKEN_TEMPO 0.45: Cumulus liefen mit v = 0.22 .. 1.22 Welteinheiten/s
+   (Mittel 0.62), jetzt mit 0.10 .. 0.55 (Mittel 0.279). Eine Wolke braucht
+   fuer die 1560 Einheiten des Umlaufs damit rund 1.6 h statt 42 min.
+
+   ZIRREN_TEMPO 0.12: Zirren liefen mit 0.25 .. 0.55 (Mittel 0.40) — nur
+   knapp langsamer als die Cumulus, obwohl der Kommentar "sehr langsam"
+   versprach. Jetzt 0.030 .. 0.066 (Mittel 0.048), also rund 5.8-mal
+   langsamer als die mittlere Cumuluslage. Damit stehen sie fuer das Auge.
+
+   Die Wetterskala bleibt erhalten: main.js ruft updateSky(dt * getWolkenTempo()),
+   der Faktor greift also weiterhin voll auf beide Schichten.                */
+var WOLKEN_TEMPO = 0.45;
+var ZIRREN_TEMPO = 0.12;
+
 /* --- Zirren: wenige langgezogene Streifen, sehr langsam ----------------- */
 var CIRRUS_N = 7;
 var cirrusMat = new THREE.MeshBasicMaterial({
@@ -183,7 +267,7 @@ var _cloudObj = new THREE.Object3D();
 function updateClouds(dt) {
   for (var i = 0; i < CLOUD_N; i++) {
     var c = clouds[i];
-    c.x += c.v * dt;
+    c.x += c.v * WOLKEN_TEMPO * dt;
     if (c.x - cam.focus.x > 780) c.x -= 1560;
     if (c.x - cam.focus.x < -780) c.x += 1560;
     if (c.z - cam.focus.z > 780) c.z -= 1560;
@@ -205,7 +289,8 @@ function updateClouds(dt) {
 function updateCirren(dt) {
   for (var i = 0; i < CIRRUS_N; i++) {
     var c = cirren[i];
-    c.x += c.v * dt;                       // deutlich langsamer als Cumulus
+    // Zirren stehen praktisch: ~5.8-mal langsamer als die mittlere Cumuluslage
+    c.x += c.v * ZIRREN_TEMPO * dt;
     if (c.x - cam.focus.x > 980) c.x -= 1960;
     if (c.x - cam.focus.x < -980) c.x += 1960;
     _cirObj.position.set(c.x, c.y, c.z);
@@ -230,8 +315,11 @@ function updateSky(dt) {
   updateCirren(dt);
 }
 
-/** Mittlere Driftgeschwindigkeit (fuer synchrone Wolkenschatten am Boden). */
-var CLOUD_DRIFT_MITTEL = 0.62;
+/** Mittlere Driftgeschwindigkeit (fuer synchrone Wolkenschatten am Boden).
+    MUSS WOLKEN_TEMPO enthalten: atmosphere.js schiebt uCloudDrift mit genau
+    diesem Wert weiter, sonst laufen die Bodenschatten ihren Wolken davon. */
+var CLOUD_DRIFT_MITTEL = 0.62 * WOLKEN_TEMPO;   // 0.279
 
 export { initSky, updateSky, paintSky, setSonne, setSonnenDir, setWolkenFarben,
-  recolorClouds, cirrusMat, CLOUD_DRIFT_MITTEL };
+  setSterne, recolorClouds, cirrusMat, CLOUD_DRIFT_MITTEL,
+  WOLKEN_TEMPO, ZIRREN_TEMPO };
