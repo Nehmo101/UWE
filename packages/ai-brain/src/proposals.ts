@@ -1,5 +1,5 @@
-import { validateAtlasPlotFillProposal } from "@uwe/atlas/plot-fill-proposal";
-import { validateRtxAtlasAssetProposal } from "@uwe/atlas/rtx-asset-proposal";
+import { validateAtlasPlotFillProposal } from "./proposal-validators/plot-fill-proposal";
+import { validateRtxAtlasAssetProposal } from "./proposal-validators/rtx-asset-proposal";
 import type { BrainActionDefinition } from "./actions";
 import type { AiProposalTargetType } from "./actions";
 

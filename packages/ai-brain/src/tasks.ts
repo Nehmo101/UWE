@@ -1,4 +1,4 @@
-import { formatRtxAtlasAssetPromptContext } from "@uwe/atlas/rtx-asset-proposal";
+import { formatRtxAtlasAssetPromptContext } from "./proposal-validators/rtx-asset-proposal";
 import type { AiContext, AiTaskType } from "./types";
 
 export const AI_TASK_LABELS: Record<AiTaskType, string> = {
