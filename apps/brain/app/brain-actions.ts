@@ -1,5 +1,8 @@
 "use server";
 import { brainPrisma } from "@uwe/database/brain-client";
+// Vorlagen und Kalender liegen seit Abschnitt G in uwe-family.db; das erzeugte
+// Dokument bleibt owner-privat und geht deshalb weiter ins Brain.
+import { familyPrisma } from "@uwe/database/family-client";
 import {
   createCalendarService,
   createDocumentTemplateService,
@@ -248,7 +251,7 @@ export async function deleteMiniatureAction(formData: FormData) {
 /* ══ Document templates ══════════════════════════════════════════════ */
 
 function templates() {
-  return createDocumentTemplateService(brainPrisma);
+  return createDocumentTemplateService(familyPrisma, brainPrisma);
 }
 
 export async function createTemplateAction(formData: FormData) {
@@ -285,7 +288,7 @@ export async function deleteTemplateAction(formData: FormData) {
 /* ══ Calendar events ═════════════════════════════════════════════════ */
 
 function calendar() {
-  return createCalendarService(brainPrisma, prisma);
+  return createCalendarService(familyPrisma, prisma);
 }
 
 export async function createEventAction(formData: FormData) {

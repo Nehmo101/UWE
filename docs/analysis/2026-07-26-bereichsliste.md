@@ -66,9 +66,9 @@ Jeder Schritt ist ein eigener Commit mit grünem Gate.
 | **3b — `publishStatus` raus** | ✅ fertig | `4898c38` | 121 Dateien, −756 Zeilen |
 | **3b — `visibility` raus** | ✅ fertig | `2ee64ca` | 320 Dateien, −8.090 Zeilen; inkl. `PagePlayerAccess`, `SessionUnlock`, `gm_note`, Signierte-Medien-URLs, Leak-Scanner |
 | **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ✅ fertig | folgt | Rollen-Enum, Capability-Matrix, Welt-Rollen und Gastmodus raus; Kachel „Zugänge" im Command Center |
-| **5 — Studio-System abräumen** (Abschnitt D) | ⏳ offen | — | |
-| **6 — Brain/Studio-Doppelungen** (Abschnitt H) | ⏳ offen | — | |
-| **7 — Family bauen** (Abschnitt G) | ⏳ offen | — | |
+| **5 — Studio-System abräumen** (Abschnitt D) | ✅ fertig | `0d1c75a0`…`ab893857` | System-Hub, Einrichtung/Backup ins Command Center, Tag-Aufräumer ins Welt-Cockpit |
+| **6 — Brain/Studio-Doppelungen** (Abschnitt H) | 🟡 fast | `2cfafd30`…`5db4593c` | H1–H6, H8 erledigt; H10 halb, H7/H9/H11 an Family gebunden |
+| **7 — Family bauen** (Abschnitt G) | 🟡 fast | `3720cd27`, `27068dd7`, folgt | DB, App und die 14 Modelle stehen; Verträge/Dokumente/Kalender als Family-Seiten fehlen noch |
 
 **Bisher entfernt: ~19.700 Zeilen** über 700 Dateien. Nach jedem Schritt:
 `pnpm lint` grün, `pnpm typecheck` 44/44, `pnpm test:ci` 45/45, `pnpm test:security` grün.
@@ -808,6 +808,24 @@ M13 nachrüsten, ohne das Modell umzubauen.
   `ScanDocument`, `CalendarFeed`, `CalendarEvent`
 - Studio verliert dadurch rund die Hälfte seiner 108 Direktimporte auf
   `@uwe/database/brain-client` — der Umbau entlastet die Architektur, statt sie zu belasten
+
+## Stand nach der Umsetzung (Schritt 7)
+
+| Teilschritt | Stand | Was passiert ist |
+|---|-------|------------------|
+| 7a Datenbank | ✅ erledigt | Dritter Speicher `uwe-family.db` mit eigenem generierten Client (`@uwe/database/family-client`). Der Split kommt aus `PRISMA_MODEL_BOUNDARIES.targetDatabase`; `scripts/generate-brain-schema-split.mjs` erzeugt jetzt alle drei Schemas idempotent. Neue Privacy-Klasse `family_shared`. |
+| 7b App | ✅ erledigt | `apps/family` auf Port 3004 — Start, Family-Chat, privater Chat, Mitglieder. Zugang über das Häkchen `Family`; dieselbe Middleware wie Brain (`evaluateCheckboxSurfaceMiddleware`). |
+| 7c Modelle | ✅ erledigt | Die 14 Bestandsmodelle liegen jetzt in `uwe-family.db`: `ContractExpense`, `DocumentTemplate`, `Recipe`, `RecipeIngredient`, `MealPlanWeek`, `MealPlanEntry`, `ShoppingList`, `ShoppingListItem`, `BringConnection`, `PantryItem`, `MaintenanceTask`, `ScanDocument`, `CalendarFeed`, `CalendarEvent`. `@uwe/kitchen` und `@uwe/scan-inbox` sprechen den Family-Client; das Backup hat mit `family-export.ts` einen eigenen, vertraglich geprüften Export, und `executeRestore` schreibt Family-Zeilen in die Family-DB statt ins Brain. |
+
+Ein Detail, das beim Umbau wichtig war: Services, die **beide** Speicher brauchen
+(Scan-Ablage, Life-Admin, Weiterarbeiten, Heute-Dashboard), bekommen den
+Family-Client als **optionalen letzten Parameter mit dem Singleton als Vorgabe**.
+So muss keine Aufrufstelle im Repo einen dritten Client durchreichen, und Tests
+können trotzdem eine isolierte Family-DB einsetzen — ein reiner Singleton-Zugriff
+hätte die Tests gegen die echte Datei laufen lassen.
+
+Offen bleibt aus Abschnitt G: Verträge, Dokumente und Kalender als Family-Seiten
+(H7 / H9 / H11) — die Daten liegen richtig, die Fläche fehlt noch.
 
 ---
 

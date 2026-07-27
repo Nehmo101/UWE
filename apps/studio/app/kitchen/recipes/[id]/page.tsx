@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import { notFound } from "next/navigation";
 import {
   createKitchenService,
@@ -51,7 +51,7 @@ export default async function RecipeDetailPage({ params }: Props) {
   await requireStudioAccess();
 
   const { id } = await params;
-  const recipe = await createKitchenService(brainPrisma, prisma).getRecipe(id);
+  const recipe = await createKitchenService(familyPrisma, prisma).getRecipe(id);
 
   if (!recipe) {
     notFound();

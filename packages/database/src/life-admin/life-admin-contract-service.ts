@@ -1,6 +1,8 @@
-import type { ContractExpenseSource, ContractStatus } from "../generated/prisma-brain/client";
+import type { ContractExpenseSource, ContractStatus } from "../generated/prisma-family/client";
 import type { PrismaClient } from "../client";
-import type { BrainPrismaClient } from "../brain-client";
+import type { FamilyPrismaClient } from "../family-client";
+// Die Verknuepfungstabelle bleibt owner-privat in der Brain-DB.
+import { brainPrisma } from "../brain-client";
 import {
   buildAiUsageContractName,
   createAiUsageRollupService,
@@ -14,7 +16,7 @@ import type { CreateContractExpenseInput } from "./life-admin-types";
 
 export class LifeAdminContractService {
   constructor(
-    private readonly brainDb: BrainPrismaClient,
+    private readonly familyDb: FamilyPrismaClient,
     private readonly coreDb: PrismaClient,
   ) {}
 
@@ -29,7 +31,7 @@ export class LifeAdminContractService {
         : options.status
       : undefined;
 
-    return this.brainDb.contractExpense.findMany({
+    return this.familyDb.contractExpense.findMany({
       where: {
         status: statusFilter,
         ...(options.source ? { source: options.source } : {}),
@@ -40,7 +42,7 @@ export class LifeAdminContractService {
   }
 
   async createContractExpense(input: CreateContractExpenseInput) {
-    return this.brainDb.contractExpense.create({
+    return this.familyDb.contractExpense.create({
       data: {
         name: input.name,
         vendor: input.vendor ?? "",
@@ -64,11 +66,11 @@ export class LifeAdminContractService {
   }
 
   async getContractExpense(id: string) {
-    return this.brainDb.contractExpense.findUnique({ where: { id } });
+    return this.familyDb.contractExpense.findUnique({ where: { id } });
   }
 
   async updateContractExpense(id: string, input: Partial<CreateContractExpenseInput>) {
-    return this.brainDb.contractExpense.update({
+    return this.familyDb.contractExpense.update({
       where: { id },
       data: {
         name: input.name,
@@ -93,7 +95,7 @@ export class LifeAdminContractService {
   }
 
   async deleteContractExpense(id: string) {
-    await this.brainDb.adminEntityLink.deleteMany({
+    await brainPrisma.adminEntityLink.deleteMany({
       where: {
         OR: [
           { sourceType: "contract_expense", sourceId: id },
@@ -101,7 +103,7 @@ export class LifeAdminContractService {
         ],
       },
     });
-    return this.brainDb.contractExpense.delete({ where: { id } });
+    return this.familyDb.contractExpense.delete({ where: { id } });
   }
 
   async getAiUsageCostRollups(options: {
@@ -131,12 +133,12 @@ export class LifeAdminContractService {
       syncedAt: new Date().toISOString(),
     };
 
-    const existing = await this.brainDb.contractExpense.findFirst({
+    const existing = await this.familyDb.contractExpense.findFirst({
       where: { source: "ai_usage", name },
     });
 
     if (existing) {
-      return this.brainDb.contractExpense.update({
+      return this.familyDb.contractExpense.update({
         where: { id: existing.id },
         data: {
           amountCents,
@@ -149,7 +151,7 @@ export class LifeAdminContractService {
       });
     }
 
-    return this.brainDb.contractExpense.create({
+    return this.familyDb.contractExpense.create({
       data: {
         name,
         vendor: "Cloud-KI (Schätzung)",

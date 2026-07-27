@@ -2,6 +2,11 @@ import type { PrismaClient } from "./client";
 import type { BrainPrismaClient } from "./brain-client";
 import { createLifeAdminService } from "./life-admin-service";
 import { parseTagsFromMetadata } from "./json-utils";
+// Die Family-Modelle (Vertraege, Dokumente, Kueche, Haushalt, Kalender,
+// Scan-Eingang) liegen seit Abschnitt G in uwe-family.db. Der Singleton statt
+// eines weiteren Konstruktor-Parameters: sonst muesste jede Aufrufstelle im
+// Repo einen dritten Client durchreichen.
+import { familyPrisma } from "./family-client";
 
 export const ADMIN_SEARCH_ENTITY_TYPES = [
   "capture",
@@ -242,7 +247,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const contracts = await brainDb.contractExpense.findMany({
+        const contracts = await familyPrisma.contractExpense.findMany({
           where: {
             OR: [
               { name: { contains: query } },
@@ -348,7 +353,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const templates = await brainDb.documentTemplate.findMany({
+        const templates = await familyPrisma.documentTemplate.findMany({
           where: {
             OR: [
               { name: { contains: query } },
@@ -380,7 +385,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const scans = await brainDb.scanDocument.findMany({
+        const scans = await familyPrisma.scanDocument.findMany({
           where: {
             OR: [
               { title: { contains: query } },
@@ -479,7 +484,7 @@ export async function searchAdminEntities(
     tasks.push(
       (async (): Promise<AdminSearchResultItem[]> => {
         const items: AdminSearchResultItem[] = [];
-        const lists = await brainDb.shoppingList.findMany({
+        const lists = await familyPrisma.shoppingList.findMany({
           where: {
             OR: [
               { title: { contains: query } },

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createPrismaClient } from "@uwe/database/server";
 import { createBrainPrismaClient } from "@uwe/database/brain-client";
+import { createFamilyPrismaClient } from "@uwe/database/family-client";
 import { collectBackupData } from "./collect";
 import { readBackupZip, writeBackupZip } from "./archive";
 import { writeFileAtomic } from "./atomic-write";
@@ -33,12 +34,14 @@ export async function createBackupBundle(
   options: CreateBackupOptions,
 ): Promise<BackupBundle> {
   const db = createPrismaClient(databaseUrl);
-  // Owner-private daily-admin/Brain rows live in a separate DB (uwe-brain.db);
-  // a full backup reads both stores. Brain URL comes from BRAIN_DATABASE_URL.
+  // Owner-private daily-admin/Brain rows live in a separate DB (uwe-brain.db),
+  // die geteilten Family-Daten in uwe-family.db; ein volles Backup liest alle
+  // drei Speicher. URLs kommen aus BRAIN_DATABASE_URL / FAMILY_DATABASE_URL.
   const brainDb = createBrainPrismaClient();
+  const familyDb = createFamilyPrismaClient();
 
   try {
-    const { data, stats, settings } = await collectBackupData(db, brainDb, {
+    const { data, stats, settings } = await collectBackupData(db, brainDb, familyDb, {
       type: options.type,
       worldSlug: options.worldSlug,
       campaignSlug: options.campaignSlug,
@@ -68,6 +71,7 @@ export async function createBackupBundle(
   } finally {
     await db.$disconnect();
     await brainDb.$disconnect();
+    await familyDb.$disconnect();
   }
 }
 

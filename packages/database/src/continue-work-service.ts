@@ -1,4 +1,9 @@
 import type { BrainPrismaClient as PrismaClient } from "./brain-client";
+// Die Family-Modelle (Vertraege, Dokumente, Kueche, Haushalt, Kalender,
+// Scan-Eingang) liegen seit Abschnitt G in uwe-family.db. Der Singleton als
+// Vorgabewert statt eines Pflicht-Parameters: sonst muesste jede Aufrufstelle
+// im Repo einen dritten Client durchreichen. Tests reichen ihn explizit rein.
+import { familyPrisma, type FamilyPrismaClient } from "./family-client";
 
 /**
  * „Mach weiter wo ich aufgehört habe"-Zentrale: aggregiert die wahrscheinlich
@@ -44,7 +49,10 @@ function preview(text: string | null | undefined, fallback: string): string {
 }
 
 export class ContinueWorkService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly db: PrismaClient,
+    private readonly familyDb: FamilyPrismaClient = familyPrisma,
+  ) {}
 
   async getContinuations(limit = 5): Promise<Continuation[]> {
     const perSource = Math.max(limit, 5);
@@ -67,7 +75,7 @@ export class ContinueWorkService {
         take: perSource,
         select: { id: true, title: true, content: true, capturedAt: true },
       }),
-      this.db.scanDocument.findMany({
+      this.familyDb.scanDocument.findMany({
         where: {
           status: {
             notIn: ["filed", "rejected", "archived", "unanalyzed", "analyzing"],
@@ -131,6 +139,9 @@ export class ContinueWorkService {
   }
 }
 
-export function createContinueWorkService(db: PrismaClient): ContinueWorkService {
-  return new ContinueWorkService(db);
+export function createContinueWorkService(
+  db: PrismaClient,
+  familyDb: FamilyPrismaClient = familyPrisma,
+): ContinueWorkService {
+  return new ContinueWorkService(db, familyDb);
 }

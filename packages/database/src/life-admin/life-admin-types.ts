@@ -1,13 +1,18 @@
-import type { AdminLinkSourceType, AdminLinkTargetType, CaptureEntry, CaptureStatus, CaptureType, ContractBillingInterval, ContractExpenseSource, ContractExpenseType, ContractStatus, HardwareStatus, PersonalBrainDocument, PersonalBrainFact, PersonalProjectCategory, PersonalProjectStatus, WorkshopPaintTarget, WorkshopProjectType, WorkshopRentalStatus, WorkshopStatus } from "../generated/prisma-brain/client";
+// Die Vertrags-Typen sind mit ihren Modellen in die Family-DB gewandert
+// (Abschnitt G); alles andere bleibt owner-privat in der Brain-DB.
+import type { AdminLinkSourceType, AdminLinkTargetType, CaptureEntry, CaptureStatus, CaptureType, HardwareStatus, PersonalBrainDocument, PersonalBrainFact, PersonalProjectCategory, PersonalProjectStatus, WorkshopPaintTarget, WorkshopProjectType, WorkshopRentalStatus, WorkshopStatus } from "../generated/prisma-brain/client";
+import type { ContractBillingInterval, ContractExpenseSource, ContractExpenseType, ContractStatus } from "../generated/prisma-family/client";
 import type {
   PersonalBrainSearchOptions,
   PersonalBrainSearchResult,
 } from "../personal-brain-search";
 
 export type { GeneratorPreset, GeneratorOutput } from "../generated/prisma/client";
-export type { CaptureEntry, CaptureStatus, CaptureType, PersonalProject, PersonalProjectCategory, PersonalProjectStatus, WorkshopProject, WorkshopProjectType, WorkshopStatus, ContractExpense, ContractExpenseType, ContractExpenseSource, ContractStatus, HardwareDevice, HardwareStatus, PersonalBrainDocument, PersonalBrainFact, AdminEntityLink, AdminLinkSourceType, AdminLinkTargetType, WorkshopPaintRecipe, WorkshopPrintProfile, WorkshopTerrainRental, WorkshopPaintTarget, WorkshopRentalStatus } from "../generated/prisma-brain/client";
+export type { CaptureEntry, CaptureStatus, CaptureType, PersonalProject, PersonalProjectCategory, PersonalProjectStatus, WorkshopProject, WorkshopProjectType, WorkshopStatus, HardwareDevice, HardwareStatus, PersonalBrainDocument, PersonalBrainFact, AdminEntityLink, AdminLinkSourceType, AdminLinkTargetType, WorkshopPaintRecipe, WorkshopPrintProfile, WorkshopTerrainRental, WorkshopPaintTarget, WorkshopRentalStatus } from "../generated/prisma-brain/client";
+export type { ContractExpense, ContractExpenseType, ContractExpenseSource, ContractStatus } from "../generated/prisma-family/client";
 
-export { CaptureStatus as CaptureStatusEnum, CaptureType as CaptureTypeEnum, PersonalProjectStatus as PersonalProjectStatusEnum, PersonalProjectCategory as PersonalProjectCategoryEnum, WorkshopStatus as WorkshopStatusEnum, WorkshopProjectType as WorkshopProjectTypeEnum, ContractStatus as ContractStatusEnum, ContractExpenseType as ContractExpenseTypeEnum, ContractExpenseSource as ContractExpenseSourceEnum, ContractBillingInterval as ContractBillingIntervalEnum, HardwareStatus as HardwareStatusEnum, AdminLinkSourceType as AdminLinkSourceTypeEnum, AdminLinkTargetType as AdminLinkTargetTypeEnum, WorkshopPaintTarget as WorkshopPaintTargetEnum, WorkshopRentalStatus as WorkshopRentalStatusEnum } from "../generated/prisma-brain/client";
+export { CaptureStatus as CaptureStatusEnum, CaptureType as CaptureTypeEnum, PersonalProjectStatus as PersonalProjectStatusEnum, PersonalProjectCategory as PersonalProjectCategoryEnum, WorkshopStatus as WorkshopStatusEnum, WorkshopProjectType as WorkshopProjectTypeEnum, HardwareStatus as HardwareStatusEnum, AdminLinkSourceType as AdminLinkSourceTypeEnum, AdminLinkTargetType as AdminLinkTargetTypeEnum, WorkshopPaintTarget as WorkshopPaintTargetEnum, WorkshopRentalStatus as WorkshopRentalStatusEnum } from "../generated/prisma-brain/client";
+export { ContractStatus as ContractStatusEnum, ContractExpenseType as ContractExpenseTypeEnum, ContractExpenseSource as ContractExpenseSourceEnum, ContractBillingInterval as ContractBillingIntervalEnum } from "../generated/prisma-family/client";
 export { CAPTURE_TYPE_LABELS } from "../capture-constants";
 
 export const CAPTURE_STATUS_LABELS: Record<CaptureStatus, string> = {

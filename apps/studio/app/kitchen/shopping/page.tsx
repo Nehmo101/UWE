@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import {
   createBringService,
   createShoppingService,
@@ -56,11 +56,11 @@ export default async function KitchenShoppingPage({ searchParams }: Props) {
   await requireStudioAccess();
   const { list: listId, bring: bringFlag, msg } = await searchParams;
 
-  const shopping = createShoppingService(brainPrisma);
+  const shopping = createShoppingService(familyPrisma);
   const [lists, active, bringStatus, suggestions] = await Promise.all([
     shopping.listLists(),
     listId ? shopping.getList(listId) : Promise.resolve(null),
-    createBringService(brainPrisma).getStatus(),
+    createBringService(familyPrisma).getStatus(),
     shopping.getItemSuggestions(),
   ]);
 

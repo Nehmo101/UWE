@@ -8,26 +8,31 @@ import {
 import {
   createTestBrainClient,
   createTestDatabaseUrl,
+  createTestFamilyClient,
   type BrainPrismaClient,
+  type FamilyPrismaClient,
 } from "@uwe/database/test-helpers";
 import { createScanInboxService } from "./scan-service";
 
 describe("scan inbox service (integration)", () => {
   let db: ReturnType<typeof createPrismaClient>;
   let brainDb: BrainPrismaClient;
+  let familyDb: FamilyPrismaClient;
 
   before(() => {
     db = createPrismaClient(createTestDatabaseUrl());
     brainDb = createTestBrainClient();
+    familyDb = createTestFamilyClient();
   });
 
   after(async () => {
     await db.$disconnect();
     await brainDb.$disconnect();
+    await familyDb.$disconnect();
   });
 
   it("creates, analyzes and files an invoice scan as a contract", async () => {
-    const service = createScanInboxService(brainDb, db);
+    const service = createScanInboxService(brainDb, db, familyDb);
     const scan = await service.create({ storageKey: "_scan/a.jpg", mimeType: "image/jpeg" });
     assert.equal(scan.status, "unanalyzed");
 
@@ -48,13 +53,13 @@ describe("scan inbox service (integration)", () => {
     assert.equal(reloaded?.status, "filed");
     assert.equal(reloaded?.filedTargetType, "contract_expense");
 
-    const contract = await brainDb.contractExpense.findUnique({ where: { id: filed.targetId! } });
+    const contract = await familyDb.contractExpense.findUnique({ where: { id: filed.targetId! } });
     assert.equal(contract?.amountCents, 8499);
     assert.equal(contract?.vendor, "Stadtwerke");
   });
 
   it("routes an unknown scan to uncertain and files it as a capture", async () => {
-    const service = createScanInboxService(brainDb, db);
+    const service = createScanInboxService(brainDb, db, familyDb);
     const scan = await service.create({ storageKey: "_scan/b.jpg", mimeType: "image/jpeg" });
     const analyzed = await service.applyAnalysis(scan.id, {
       ocrText: "unklarer text",
@@ -69,7 +74,7 @@ describe("scan inbox service (integration)", () => {
   });
 
   it("lists by status and rejects", async () => {
-    const service = createScanInboxService(brainDb, db);
+    const service = createScanInboxService(brainDb, db, familyDb);
     const scan = await service.create({ storageKey: "_scan/c.jpg", mimeType: "image/jpeg" });
     await service.reject(scan.id);
     const rejected = await service.list("rejected");
@@ -77,7 +82,7 @@ describe("scan inbox service (integration)", () => {
   });
 
   it("writes back a completed vision job result and analyzes it", async () => {
-    const service = createScanInboxService(brainDb, db);
+    const service = createScanInboxService(brainDb, db, familyDb);
     const scan = await service.create({ storageKey: "_scan/v.jpg", mimeType: "image/jpeg" });
 
     const job = await createConnectorService(db).enqueueJob({
@@ -101,7 +106,7 @@ describe("scan inbox service (integration)", () => {
   });
 
   it("files to life-brain, calendar and recipe drafts", async () => {
-    const service = createScanInboxService(brainDb, db);
+    const service = createScanInboxService(brainDb, db, familyDb);
 
     const brainScan = await service.create({ storageKey: "_scan/b1", mimeType: "image/jpeg" });
     await service.applyAnalysis(brainScan.id, { ocrText: "Garantie bis 03.07.2028 für Gerät X", ocrEngine: "manual" });
@@ -113,13 +118,13 @@ describe("scan inbox service (integration)", () => {
     await service.applyAnalysis(calScan.id, { ocrText: "Rechnung zahlbar bis 15.07.2026 84,99 €", ocrEngine: "manual" });
     const calFiled = await service.file(calScan.id, "calendar_event");
     assert.equal(calFiled.targetType, "calendar_event");
-    assert.ok(await brainDb.calendarEvent.findUnique({ where: { id: calFiled.targetId! } }));
+    assert.ok(await familyDb.calendarEvent.findUnique({ where: { id: calFiled.targetId! } }));
 
     const recipeScan = await service.create({ storageKey: "_scan/b3", mimeType: "image/jpeg" });
     await service.applyAnalysis(recipeScan.id, { ocrText: "Zutaten: 400 g Mehl, Wasser. Zubereitung: backen.", ocrEngine: "manual" });
     const recipeFiled = await service.file(recipeScan.id, "recipe");
     assert.equal(recipeFiled.targetType, "recipe");
-    const recipe = await brainDb.recipe.findUnique({
+    const recipe = await familyDb.recipe.findUnique({
       where: { id: recipeFiled.targetId! },
       include: { ingredients: true },
     });
@@ -131,7 +136,7 @@ describe("scan inbox service (integration)", () => {
   });
 
   it("files DnD scans as draft world pages (S2)", async () => {
-    const service = createScanInboxService(brainDb, db);
+    const service = createScanInboxService(brainDb, db, familyDb);
     const world = await createUweRepositoryFromClient(db).createWorld({ name: "Terra", slug: "scan-dnd" });
 
     // Session note → rich_text draft page.
@@ -165,7 +170,7 @@ describe("scan inbox service (integration)", () => {
   });
 
   it("refuses DnD filing without an assigned world", async () => {
-    const service = createScanInboxService(brainDb, db);
+    const service = createScanInboxService(brainDb, db, familyDb);
     const scan = await service.create({ storageKey: "_scan/nw", mimeType: "image/jpeg" });
     await service.applyAnalysis(scan.id, { ocrText: "Session-Notiz", ocrEngine: "manual" });
     await assert.rejects(() => service.file(scan.id, "dnd_session_note"), /Welt/);

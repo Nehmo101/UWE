@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@uwe/database/server";
 import type { BrainPrismaClient } from "@uwe/database/brain-client";
+import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import { createSettingsService, pickUniqueSlug } from "@uwe/database/server";
 import { extractBackupAssets } from "./archive";
 import { previewRestore } from "./restore-preview";
@@ -20,6 +21,7 @@ function remapId(idMap: Map<string, string>, oldId: string): string {
 export async function executeRestore(
   db: PrismaClient,
   brainDb: BrainPrismaClient,
+  familyDb: FamilyPrismaClient,
   bundle: BackupBundle,
   options: RestoreExecuteOptions,
   zipBuffer?: Buffer,
@@ -811,10 +813,10 @@ export async function executeRestore(
     }
 
     for (const expense of dailyAdmin.contractExpenses ?? []) {
-      const existing = await brainDb.contractExpense.findUnique({ where: { id: expense.id } });
+      const existing = await familyDb.contractExpense.findUnique({ where: { id: expense.id } });
       if (existing) continue;
 
-      await brainDb.contractExpense.create({
+      await familyDb.contractExpense.create({
         data: {
           id: remapId(idMap, expense.id),
           name: expense.name,

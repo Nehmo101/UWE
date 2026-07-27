@@ -1,18 +1,21 @@
 import type {
   DocumentTemplate,
   DocumentTemplateCategory,
-  PersonalBrainDocument,
-  PrismaClient,
-} from "./generated/prisma-brain/client";
+} from "./generated/prisma-family/client";
+// Vorlagen sind Family, das erzeugte Dokument landet im Owner-Brain — der
+// Generator schreibt also über die DB-Grenze hinweg.
+import type { PersonalBrainDocument } from "./generated/prisma-brain/client";
+import type { BrainPrismaClient } from "./brain-client";
+import type { FamilyPrismaClient } from "./family-client";
 import { toPrismaJsonValue } from "./json-utils";
 import { PERSONAL_BRAIN_CATEGORIES } from "./personal-brain-constants";
 
 export type {
   DocumentTemplate,
   DocumentTemplateCategory,
-} from "./generated/prisma-brain/client";
+} from "./generated/prisma-family/client";
 
-export { DocumentTemplateCategory as DocumentTemplateCategoryEnum } from "./generated/prisma-brain/client";
+export { DocumentTemplateCategory as DocumentTemplateCategoryEnum } from "./generated/prisma-family/client";
 
 export const DOCUMENT_TEMPLATE_CATEGORY_LABELS: Record<DocumentTemplateCategory, string> = {
   contract: "Vertrag",
@@ -143,7 +146,11 @@ export interface ListDocumentTemplatesOptions {
 }
 
 export class DocumentTemplateService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly db: FamilyPrismaClient,
+    /** Ziel des Generators: das erzeugte Dokument gehört ins Owner-Brain. */
+    private readonly brainDb: BrainPrismaClient,
+  ) {}
 
   async listTemplates(
     options: ListDocumentTemplatesOptions = {},
@@ -225,7 +232,7 @@ export class DocumentTemplateService {
     const filled = fillDocumentTemplate(template, values, options);
     const generatedAt = (options.now ?? new Date()).toISOString();
 
-    return this.db.personalBrainDocument.create({
+    return this.brainDb.personalBrainDocument.create({
       data: {
         title: filled.title,
         content: filled.content,
@@ -244,6 +251,9 @@ export class DocumentTemplateService {
   }
 }
 
-export function createDocumentTemplateService(db: PrismaClient): DocumentTemplateService {
-  return new DocumentTemplateService(db);
+export function createDocumentTemplateService(
+  db: FamilyPrismaClient,
+  brainDb: BrainPrismaClient,
+): DocumentTemplateService {
+  return new DocumentTemplateService(db, brainDb);
 }

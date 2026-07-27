@@ -1,7 +1,7 @@
 import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import {
   createCalendarService,
   createJobService,
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
-  const calendar = createCalendarService(brainPrisma, prisma);
+  const calendar = createCalendarService(familyPrisma, prisma);
   const feeds = await calendar.listFeeds(true);
   return NextResponse.json({ feeds });
 }
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     return jsonError("FamilyWall-Feeds sind deaktiviert.", 403);
   }
 
-  const calendar = createCalendarService(brainPrisma, prisma);
+  const calendar = createCalendarService(familyPrisma, prisma);
   const feed = await calendar.createFeed({
     name: body.name,
     type: body.type,

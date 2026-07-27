@@ -52,26 +52,6 @@ enum BrainChatRole {
   assistant
 }
 
-enum CalendarEventKind {
-  session
-  prep
-  personal
-  external
-  dnd
-}
-
-enum CalendarFeedDirection {
-  read_only
-  read_write
-}
-
-enum CalendarFeedType {
-  local
-  caldav
-  ical_url
-  familywall
-}
-
 enum CaptureStatus {
   inbox
   triaged
@@ -92,42 +72,6 @@ enum CaptureType {
   voice_memo
 }
 
-enum ContractBillingInterval {
-  monthly
-  yearly
-  once
-  other
-}
-
-enum ContractExpenseSource {
-  manual
-  ai_usage
-}
-
-enum ContractExpenseType {
-  subscription
-  rent
-  insurance
-  utility
-  software
-  other
-}
-
-enum ContractStatus {
-  active
-  cancelled
-  review
-  paused
-  archived
-}
-
-enum DocumentTemplateCategory {
-  contract
-  guide
-  checklist
-  other
-}
-
 enum HardwareStatus {
   planned
   active
@@ -135,18 +79,6 @@ enum HardwareStatus {
   broken
   retired
   archived
-}
-
-enum IngredientUnit {
-  gram
-  milliliter
-  piece
-  tbsp
-  tsp
-  pinch
-  bunch
-  pack
-  freeform
 }
 
 enum MailAiActionKind {
@@ -217,42 +149,11 @@ enum MailUnsubscribeStatus {
   failed
 }
 
-enum MaintenanceInterval {
-  once
-  weekly
-  biweekly
-  monthly
-  quarterly
-  yearly
-}
-
-enum MealEntryType {
-  recipe
-  leftovers
-  eating_out
-  routine
-  note
-}
-
-enum MealSlot {
-  breakfast
-  lunch
-  dinner
-  snack
-}
-
 enum MiniatureCollectionStatus {
   purchased
   built
   primed
   painted
-}
-
-enum PantryLocation {
-  pantry
-  fridge
-  freezer
-  spices
 }
 
 enum PersonalProjectCategory {
@@ -274,12 +175,6 @@ enum PersonalProjectStatus {
   archived
 }
 
-enum RecipeStatus {
-  draft
-  active
-  archived
-}
-
 enum ResearchContextMode {
   dnd_brain
   life_brain
@@ -292,46 +187,6 @@ enum ResearchSessionStatus {
   completed
   failed
   cancelled
-}
-
-enum ScanDocumentKind {
-  letter
-  invoice
-  contract_doc
-  warranty
-  receipt
-  handwritten_note
-  recipe
-  dnd_session_note
-  dnd_dungeon_note
-  dnd_handout
-  unknown
-}
-
-enum ScanDocumentStatus {
-  unanalyzed
-  analyzing
-  waiting_for_rtx
-  proposal_ready
-  uncertain
-  filed
-  rejected
-  archived
-}
-
-enum ScanPrivacyLevel {
-  private
-  dnd
-}
-
-enum ShoppingCategory {
-  produce
-  chilled
-  frozen
-  dry
-  drugstore
-  household
-  other
 }
 
 enum WorkshopPaintTarget {
@@ -1094,295 +949,4 @@ model BrainChatAttachment {
   @@index([conversationId, createdAt])
   @@index([messageId])
   @@map("brain_chat_attachments")
-}
-
-model ContractExpense {
-  id              String                  @id @default(cuid())
-  name            String
-  vendor          String                  @default("")
-  status          ContractStatus          @default(active)
-  expenseType     ContractExpenseType     @default(other) @map("expense_type")
-  source          ContractExpenseSource   @default(manual)
-  billingInterval ContractBillingInterval @default(monthly) @map("billing_interval")
-  categoryLabel   String                  @default("") @map("category_label")
-  amountCents     Int?                    @map("amount_cents")
-  currency        String                  @default("EUR")
-  billingDay      Int?                    @map("billing_day")
-  startDate       DateTime?               @map("start_date")
-  nextPaymentDate DateTime?               @map("next_payment_date")
-  renewalDate     DateTime?               @map("renewal_date")
-  cancelByDate    DateTime?               @map("cancel_by_date")
-  portalUrl       String?                 @map("portal_url")
-  notes           String                  @default("")
-  metadata        Json?
-  createdAt       DateTime                @default(now()) @map("created_at")
-  updatedAt       DateTime                @updatedAt @map("updated_at")
-
-  @@index([status])
-  @@index([expenseType])
-  @@index([renewalDate])
-  @@index([nextPaymentDate])
-  @@map("contract_expenses")
-}
-
-model CalendarFeed {
-  id          String                @id @default(cuid())
-  name        String
-  type        CalendarFeedType
-  direction   CalendarFeedDirection @default(read_only)
-  url         String?
-  caldavUrl   String?               @map("caldav_url")
-  username    String?
-  credentialsEnc String?            @map("credentials_enc")
-  enabled     Boolean               @default(true)
-  color       String?
-  lastSyncAt  DateTime?             @map("last_sync_at")
-  syncError   String?               @map("sync_error")
-  metadata    Json?
-  createdAt   DateTime              @default(now()) @map("created_at")
-  updatedAt   DateTime              @updatedAt @map("updated_at")
-
-  events CalendarEvent[]
-
-  @@map("calendar_feeds")
-}
-
-model CalendarEvent {
-  id          String            @id @default(cuid())
-  feedId      String?           @map("feed_id")
-  worldId     String?           @map("world_id")
-  sessionId   String?           @map("session_id")
-  title       String
-  description String?
-  location    String?
-  startAt     DateTime          @map("start_at")
-  endAt       DateTime?         @map("end_at")
-  allDay      Boolean           @default(false) @map("all_day")
-  kind        CalendarEventKind @default(personal)
-  externalUid String?           @map("external_uid")
-  remoteHref  String?           @map("remote_href")
-  remoteEtag  String?           @map("remote_etag")
-  caldavPending Boolean         @default(false) @map("caldav_pending")
-  metadata    Json?
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
-
-  feed    CalendarFeed? @relation(fields: [feedId], references: [id], onDelete: SetNull)
-
-  @@index([startAt])
-  @@index([worldId, startAt])
-  @@index([feedId, externalUid])
-  @@map("calendar_events")
-}
-
-model DocumentTemplate {
-  id        String                   @id @default(cuid())
-  name      String
-  category  DocumentTemplateCategory @default(other)
-  body      String                   @default("")
-  variables Json?
-  metadata  Json?
-  createdAt DateTime                 @default(now()) @map("created_at")
-  updatedAt DateTime                 @updatedAt @map("updated_at")
-
-  @@index([category])
-  @@map("document_templates")
-}
-
-model Recipe {
-  id              String       @id @default(cuid())
-  title           String
-  status          RecipeStatus @default(active)
-  description     String       @default("")
-  servingsBase    Float        @default(2) @map("servings_base")
-  durationMinutes Int?         @map("duration_minutes")
-  effortRating    Int?         @map("effort_rating")
-  tasteRating     Int?         @map("taste_rating")
-  kidRating       Int?         @map("kid_rating")
-  partnerRating   Int?         @map("partner_rating")
-  steps           Json
-  variants        Json?
-  imageStorageKey String?      @map("image_storage_key")
-  sourceUrl       String?      @map("source_url")
-  sourceScanId    String?      @map("source_scan_id")
-  notes           String       @default("")
-  metadata        Json?
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
-
-  ingredients    RecipeIngredient[]
-  mealPlanEntries MealPlanEntry[]
-
-  @@index([status])
-  @@map("recipes")
-}
-
-model RecipeIngredient {
-  id             String           @id @default(cuid())
-  recipeId       String           @map("recipe_id")
-  name           String
-  normalizedName String           @map("normalized_name")
-  amount         Float?
-  unit           IngredientUnit   @default(freeform)
-  unitLabel      String?          @map("unit_label")
-  category       ShoppingCategory @default(other)
-  optional       Boolean          @default(false)
-  sortIndex      Int              @default(0) @map("sort_index")
-
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-
-  @@index([recipeId])
-  @@index([normalizedName])
-  @@map("recipe_ingredients")
-}
-
-model MealPlanWeek {
-  id              String   @id @default(cuid())
-  isoYear         Int      @map("iso_year")
-  isoWeek         Int      @map("iso_week")
-  householdFactor Float    @default(2.5) @map("household_factor")
-  goals           Json?
-  aiDraft         Json?    @map("ai_draft")
-  notes           String   @default("")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  entries MealPlanEntry[]
-
-  @@unique([isoYear, isoWeek])
-  @@map("meal_plan_weeks")
-}
-
-model MealPlanEntry {
-  id        String        @id @default(cuid())
-  weekId    String        @map("week_id")
-  date      DateTime
-  slot      MealSlot
-  entryType MealEntryType @default(recipe) @map("entry_type")
-  recipeId  String?       @map("recipe_id")
-  servings  Float?
-  note      String        @default("")
-  cooked    Boolean       @default(false)
-  sortIndex Int           @default(0) @map("sort_index")
-
-  week   MealPlanWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  recipe Recipe?      @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-
-  @@index([weekId, date])
-  @@map("meal_plan_entries")
-}
-
-model ShoppingList {
-  id        String   @id @default(cuid())
-  weekId    String?  @map("week_id")
-  title     String
-  done      Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  items ShoppingListItem[]
-
-  @@map("shopping_lists")
-}
-
-model ShoppingListItem {
-  id              String           @id @default(cuid())
-  listId          String           @map("list_id")
-  name            String
-  normalizedName  String           @map("normalized_name")
-  amount          Float?
-  unit            IngredientUnit   @default(freeform)
-  unitLabel       String?          @map("unit_label")
-  category        ShoppingCategory @default(other)
-  checked         Boolean          @default(false)
-  recurring       Boolean          @default(false)
-  sourceRecipeIds Json?            @map("source_recipe_ids")
-  sortIndex       Int              @default(0) @map("sort_index")
-
-  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
-
-  @@index([listId, category])
-  @@map("shopping_list_items")
-}
-
-model BringConnection {
-  id                String    @id @default("singleton")
-  emailEncrypted    String    @map("email_encrypted")
-  passwordEncrypted String    @map("password_encrypted")
-  bringUserUuid     String?   @map("bring_user_uuid")
-  bringPublicUuid   String?   @map("bring_public_uuid")
-  defaultListUuid   String?   @map("default_list_uuid")
-  defaultListName   String?   @map("default_list_name")
-  availableLists    Json?     @map("available_lists")
-  lastSyncedAt      DateTime? @map("last_synced_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-
-  @@map("bring_connections")
-}
-
-model ScanDocument {
-  id                  String             @id @default(cuid())
-  title               String             @default("")
-  status              ScanDocumentStatus @default(unanalyzed)
-  privacyLevel        ScanPrivacyLevel   @default(private)
-  storageKey          String             @map("storage_key")
-  mimeType            String             @map("mime_type")
-  fileSize            Int                @default(0) @map("file_size")
-  pageCount           Int?               @map("page_count")
-  ocrText             String             @default("") @map("ocr_text")
-  ocrEngine           String?            @map("ocr_engine")
-  detectedKind        ScanDocumentKind   @default(unknown) @map("detected_kind")
-  detectionConfidence String?            @map("detection_confidence")
-  extractedFields     Json?              @map("extracted_fields")
-  proposal            Json?
-  uncertainties       Json?
-  connectorJobId      String?            @map("connector_job_id")
-  errorMessage        String?            @map("error_message")
-  worldId             String?            @map("world_id")
-  filedTargetType     String?            @map("filed_target_type")
-  filedTargetId       String?            @map("filed_target_id")
-  filedAt             DateTime?          @map("filed_at")
-  rejectedAt          DateTime?          @map("rejected_at")
-  createdAt           DateTime           @default(now()) @map("created_at")
-  updatedAt           DateTime           @updatedAt @map("updated_at")
-
-
-  @@index([status, createdAt])
-  @@index([detectedKind])
-  @@index([worldId])
-  @@map("scan_documents")
-}
-
-model MaintenanceTask {
-  id         String              @id @default(cuid())
-  title      String
-  category   String              @default("")
-  interval   MaintenanceInterval @default(yearly)
-  lastDoneAt DateTime?           @map("last_done_at")
-  nextDueAt  DateTime?           @map("next_due_at")
-  notes      String              @default("")
-  createdAt  DateTime            @default(now()) @map("created_at")
-  updatedAt  DateTime            @updatedAt @map("updated_at")
-
-  @@index([nextDueAt])
-  @@map("maintenance_tasks")
-}
-
-model PantryItem {
-  id             String         @id @default(cuid())
-  name           String
-  normalizedName String         @map("normalized_name")
-  location       PantryLocation @default(pantry)
-  amount         Float?
-  unit           IngredientUnit @default(freeform)
-  unitLabel      String?        @map("unit_label")
-  expiresAt      DateTime?      @map("expires_at")
-  lowStock       Boolean        @default(false) @map("low_stock")
-  notes          String         @default("")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-
-  @@index([location])
-  @@index([expiresAt])
-  @@map("pantry_items")
 }

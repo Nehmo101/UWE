@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
+// Kalender, Haushalt und Vorratskammer liegen seit Abschnitt G in uwe-family.db.
+import { familyPrisma } from "@uwe/database/family-client";
 import {
   createCalendarAggregationService,
   createLifeAdminService,
@@ -99,11 +101,11 @@ export async function getTodayDashboardData(
 ): Promise<TodayDashboardData> {
   const repo = getAppRepository();
   const lifeAdmin = createLifeAdminService(brainPrisma, db);
-  const calendarAggregation = createCalendarAggregationService(brainPrisma, db);
+  const calendarAggregation = createCalendarAggregationService(familyPrisma, db);
   const mailLog = createMailLogService(brainPrisma);
   const mailPortal = createMailPortalService(brainPrisma);
-  const maintenance = createMaintenanceService(brainPrisma, db);
-  const pantry = createPantryService(brainPrisma);
+  const maintenance = createMaintenanceService(familyPrisma, db);
+  const pantry = createPantryService(familyPrisma);
 
   const [worlds, settings] = await Promise.all([repo.listWorlds(), getSystemSettings(db)]);
   const preferredSlug = resolvePreferredWorldSlug(worlds, {

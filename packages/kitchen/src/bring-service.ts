@@ -10,7 +10,7 @@
  * kurzlebigen Access-Tokens persistiert.
  */
 import { toPrismaJsonValue } from "@uwe/database/server";
-import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
+import type { FamilyPrismaClient as PrismaClient } from "@uwe/database/family-client";
 import {
   decryptSecret,
   encryptSecret,

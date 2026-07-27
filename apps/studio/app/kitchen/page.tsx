@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import {
   createKitchenService,
   createMealPlanService,
@@ -27,10 +27,10 @@ const PLAN_DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
 export default async function KitchenDashboardPage() {
   await requireStudioAccess();
 
-  const kitchen = createKitchenService(brainPrisma, prisma);
-  const pantry = createPantryService(brainPrisma);
-  const shopping = createShoppingService(brainPrisma);
-  const meals = createMealPlanService(brainPrisma);
+  const kitchen = createKitchenService(familyPrisma, prisma);
+  const pantry = createPantryService(familyPrisma);
+  const shopping = createShoppingService(familyPrisma);
+  const meals = createMealPlanService(familyPrisma);
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());

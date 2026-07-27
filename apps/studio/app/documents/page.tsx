@@ -7,6 +7,7 @@ import {
   type DocumentTemplateCategory,
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { Card, CardHeader, CardTitle, CardContent } from "@/src/components/ui";
 import { requireStudioAccess } from "@/src/lib/auth";
@@ -64,7 +65,7 @@ export default async function DocumentsPage({
   await requireStudioAccess();
   const { q } = await searchParams;
 
-  const service = createDocumentTemplateService(brainPrisma);
+  const service = createDocumentTemplateService(familyPrisma, brainPrisma);
   const templates = await service.listTemplates();
   const filteredTemplates = templates.filter((template) =>
     matchesAdminListQuery(q, [template.name, template.body, template.category]),

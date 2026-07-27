@@ -10,7 +10,7 @@ import {
   type EntityTagService,
   type PrismaClient,
 } from "@uwe/database/server";
-import type { BrainPrismaClient } from "@uwe/database/brain-client";
+import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import type {
   IngredientUnit,
   RecipeIngredientInput,
@@ -50,7 +50,7 @@ export class KitchenService {
   private readonly tags: EntityTagService;
 
   constructor(
-    private readonly brainDb: BrainPrismaClient,
+    private readonly familyDb: FamilyPrismaClient,
     private readonly db: PrismaClient,
   ) {
     this.tags = createEntityTagService(db);
@@ -71,7 +71,7 @@ export class KitchenService {
       }
     }
 
-    return this.brainDb.recipe.findMany({
+    return this.familyDb.recipe.findMany({
       where: {
         status: statusFilter,
         ...(idFilter ? { id: { in: idFilter } } : {}),
@@ -83,7 +83,7 @@ export class KitchenService {
 
   /** Rezept inklusive Zutaten und verknüpfter Tags. */
   async getRecipe(id: string) {
-    const recipe = await this.brainDb.recipe.findUnique({
+    const recipe = await this.familyDb.recipe.findUnique({
       where: { id },
       include: RECIPE_INCLUDE,
     });
@@ -95,7 +95,7 @@ export class KitchenService {
   }
 
   async createRecipe(input: RecipeInput) {
-    const recipe = await this.brainDb.recipe.create({
+    const recipe = await this.familyDb.recipe.create({
       data: {
         title: input.title.trim(),
         status: (input.status ?? "active") as RecipeStatus,
@@ -127,7 +127,7 @@ export class KitchenService {
   }
 
   async updateRecipe(id: string, input: Partial<RecipeInput>) {
-    await this.brainDb.$transaction(async (tx) => {
+    await this.familyDb.$transaction(async (tx) => {
       await tx.recipe.update({
         where: { id },
         data: {
@@ -175,12 +175,12 @@ export class KitchenService {
   }
 
   async archiveRecipe(id: string) {
-    await this.brainDb.recipe.update({ where: { id }, data: { status: "archived" } });
+    await this.familyDb.recipe.update({ where: { id }, data: { status: "archived" } });
     return this.getRecipe(id);
   }
 
   async getStatusCounts(): Promise<Record<RecipeStatus, number>> {
-    const rows = await this.brainDb.recipe.groupBy({
+    const rows = await this.familyDb.recipe.groupBy({
       by: ["status"],
       _count: { _all: true },
     });
@@ -208,6 +208,6 @@ export class KitchenService {
   }
 }
 
-export function createKitchenService(brainDb: BrainPrismaClient, db: PrismaClient): KitchenService {
-  return new KitchenService(brainDb, db);
+export function createKitchenService(familyDb: FamilyPrismaClient, db: PrismaClient): KitchenService {
+  return new KitchenService(familyDb, db);
 }

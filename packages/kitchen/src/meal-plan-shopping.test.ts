@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createPrismaClient } from "@uwe/database/server";
 import {
-  createTestBrainClient,
+  createTestFamilyClient,
   createTestDatabaseUrl,
-  type BrainPrismaClient,
+  type FamilyPrismaClient,
 } from "@uwe/database/test-helpers";
 import {
   createMealPlanService,
@@ -36,14 +36,14 @@ describe("ISO week helpers (pure)", () => {
 
 describe("meal plan + shopping (integration)", () => {
   let db: ReturnType<typeof createPrismaClient>;
-  let brainDb: BrainPrismaClient;
+  let familyDb: FamilyPrismaClient;
   let recipeId: string;
 
   before(async () => {
     const url = createTestDatabaseUrl();
     db = createPrismaClient(url);
-    brainDb = createTestBrainClient();
-    const kitchen = createKitchenService(brainDb, db);
+    familyDb = createTestFamilyClient();
+    const kitchen = createKitchenService(familyDb, db);
     const recipe = await kitchen.createRecipe({
       title: "Tomatensauce",
       servingsBase: 2,
@@ -58,11 +58,11 @@ describe("meal plan + shopping (integration)", () => {
 
   after(async () => {
     await db.$disconnect();
-    await brainDb.$disconnect();
+    await familyDb.$disconnect();
   });
 
   it("creates a week, adds an entry, and reads it back with the recipe", async () => {
-    const meals = createMealPlanService(brainDb);
+    const meals = createMealPlanService(familyDb);
     const week = await meals.getOrCreateWeek(2026, 27, 3);
     const days = datesOfIsoWeek(2026, 27);
     await meals.setEntry({ weekId: week.id, date: days[4], slot: "dinner", recipeId });
@@ -77,8 +77,8 @@ describe("meal plan + shopping (integration)", () => {
   });
 
   it("generates a consolidated, scaled shopping list from the week", async () => {
-    const meals = createMealPlanService(brainDb);
-    const shopping = createShoppingService(brainDb);
+    const meals = createMealPlanService(familyDb);
+    const shopping = createShoppingService(familyDb);
     const week = await meals.getOrCreateWeek(2026, 28, 3);
     const days = datesOfIsoWeek(2026, 28);
     // Same recipe twice → ingredients must consolidate.
@@ -108,7 +108,7 @@ describe("meal plan + shopping (integration)", () => {
   });
 
   it("persists and clears the AI week draft", async () => {
-    const meals = createMealPlanService(brainDb);
+    const meals = createMealPlanService(familyDb);
     const week = await meals.getOrCreateWeek(2026, 29, 3);
 
     const stored = await meals.setAiDraft(week.id, {

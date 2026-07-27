@@ -1,5 +1,6 @@
 import { createDocumentTemplateService } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 import {
@@ -32,7 +33,7 @@ export default async function BrainDocumentsPage() {
     );
   }
 
-  const templates = await createDocumentTemplateService(brainPrisma).listTemplates();
+  const templates = await createDocumentTemplateService(familyPrisma, brainPrisma).listTemplates();
 
   return (
     <BrainShell

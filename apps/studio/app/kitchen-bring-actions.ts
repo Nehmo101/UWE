@@ -1,5 +1,5 @@
 "use server";
-import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { BringApiError, createBringService } from "@uwe/kitchen";
@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function bring() {
-  return createBringService(brainPrisma);
+  return createBringService(familyPrisma);
 }
 
 const SHOPPING_PATH = "/kitchen/shopping";

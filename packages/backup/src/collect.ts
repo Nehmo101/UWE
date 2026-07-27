@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@uwe/database/server";
 import type { BrainPrismaClient } from "@uwe/database/brain-client";
+import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import { createSettingsService } from "@uwe/database/server";
 import { sanitizeBackupData, sanitizeSettingsForBackup } from "./sanitize";
 import type {
@@ -71,6 +72,7 @@ function collectStats(data: BackupData): BackupStats {
 /** Daily Admin OS data is global (not world-scoped) — collected only for full backups. */
 async function collectDailyAdminData(
   brainDb: BrainPrismaClient,
+  familyDb: FamilyPrismaClient,
 ): Promise<BackupDailyAdminData> {
   const [
     captureEntries,
@@ -92,7 +94,7 @@ async function collectDailyAdminData(
     brainDb.workshopPaintRecipe.findMany(),
     brainDb.workshopPrintProfile.findMany(),
     brainDb.workshopTerrainRental.findMany(),
-    brainDb.contractExpense.findMany(),
+    familyDb.contractExpense.findMany(),
     brainDb.hardwareDevice.findMany(),
     brainDb.personalBrainDocument.findMany(),
     brainDb.personalBrainChunk.findMany(),
@@ -413,6 +415,7 @@ async function collectPageIds(
 export async function collectBackupData(
   db: PrismaClient,
   brainDb: BrainPrismaClient,
+  familyDb: FamilyPrismaClient,
   scope: CollectScope,
 ): Promise<{ data: BackupData; stats: BackupStats; settings?: BackupSettingsRecord }> {
   const { worldIds, campaignIds } = await resolveScopeIds(db, scope);
@@ -587,7 +590,7 @@ export async function collectBackupData(
   }
 
   const dailyAdmin =
-    scope.type === "full" ? await collectDailyAdminData(brainDb) : undefined;
+    scope.type === "full" ? await collectDailyAdminData(brainDb, familyDb) : undefined;
 
   const data: BackupData = sanitizeBackupData({
     dailyAdmin,

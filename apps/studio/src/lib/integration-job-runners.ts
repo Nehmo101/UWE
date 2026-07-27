@@ -18,6 +18,7 @@ import {
   type JobService,
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
 import { fetchIcalFeed, parseIcalEvents, putCalDavEvent, syncCalDavCollection } from "@uwe/calendar";
 import {
@@ -428,7 +429,7 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
   }
 
   const db = createPrismaClient();
-  const calendar = createCalendarService(brainPrisma, db);
+  const calendar = createCalendarService(familyPrisma, db);
   const feed = await calendar.getFeed(payload.feedId);
   if (!feed) {
     await db.$disconnect();

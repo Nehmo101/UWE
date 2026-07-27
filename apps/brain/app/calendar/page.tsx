@@ -1,5 +1,5 @@
 import { createCalendarService, prisma } from "@uwe/database/server";
-import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 import { createEventAction, deleteEventAction, updateEventAction } from "../brain-actions";
@@ -40,7 +40,7 @@ export default async function BrainCalendarPage() {
     );
   }
 
-  const events = await createCalendarService(brainPrisma, prisma).listEvents();
+  const events = await createCalendarService(familyPrisma, prisma).listEvents();
 
   return (
     <BrainShell

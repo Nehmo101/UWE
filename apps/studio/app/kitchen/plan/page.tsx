@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { brainPrisma } from "@uwe/database/brain-client";
+import { familyPrisma } from "@uwe/database/family-client";
 import {
   createKitchenService,
   createMealPlanService,
@@ -66,8 +66,8 @@ export default async function KitchenPlanPage({ searchParams }: Props) {
   const isoYear = Number.parseInt(y || "", 10) || now.isoYear;
   const isoWeek = Number.parseInt(w || "", 10) || now.isoWeek;
 
-  const meals = createMealPlanService(brainPrisma);
-  const kitchen = createKitchenService(brainPrisma, prisma);
+  const meals = createMealPlanService(familyPrisma);
+  const kitchen = createKitchenService(familyPrisma, prisma);
   const [week, recipes] = await Promise.all([
     meals.getWeek(isoYear, isoWeek),
     kitchen.listRecipes({ status: "active" }),

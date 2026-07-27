@@ -1466,7 +1466,7 @@ export {
 
 export type { ResolvedAdminEntityLink } from "./admin-entity-link-resolver";
 
-export type { ContractBillingInterval } from "./generated/prisma-brain/client";
+export type { ContractBillingInterval } from "./generated/prisma-family/client";
 
 export {
   buildAiUsageContractName,

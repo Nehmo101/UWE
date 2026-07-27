@@ -7,7 +7,12 @@ import {
   MissingTemplateVariablesError,
   normalizeDocumentTemplateVariables,
 } from "./document-template-service";
-import { createTestBrainClient, type BrainPrismaClient } from "./test-helpers";
+import {
+  createTestBrainClient,
+  createTestFamilyClient,
+  type BrainPrismaClient,
+  type FamilyPrismaClient,
+} from "./test-helpers";
 
 describe("document template helpers", () => {
   it("extracts unique sorted placeholders including whitespace variants", () => {
@@ -90,12 +95,15 @@ describe("fillDocumentTemplate", () => {
 });
 
 describe("document template service", () => {
-  let db: BrainPrismaClient;
+  // Die Vorlagen liegen in uwe-family.db, das erzeugte Dokument im Owner-Brain.
+  let db: FamilyPrismaClient;
+  let brainDb: BrainPrismaClient;
   let service: ReturnType<typeof createDocumentTemplateService>;
 
   before(async () => {
-    db = createTestBrainClient();
-    service = createDocumentTemplateService(db);
+    db = createTestFamilyClient();
+    brainDb = createTestBrainClient();
+    service = createDocumentTemplateService(db, brainDb);
   });
 
   it("generates and stores a document as personal brain document", async () => {
@@ -116,7 +124,7 @@ describe("document template service", () => {
     assert.equal(document.content, "Vermieter: Alice\nMieter: Bob");
     assert.equal(document.category, "contracts_expenses");
 
-    const stored = await db.personalBrainDocument.findUnique({
+    const stored = await brainDb.personalBrainDocument.findUnique({
       where: { id: document.id },
     });
     assert.ok(stored, "generated document not persisted");

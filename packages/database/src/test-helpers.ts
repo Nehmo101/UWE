@@ -5,13 +5,15 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBrainPrismaClient, type BrainPrismaClient } from "./brain-client";
+import { createFamilyPrismaClient, type FamilyPrismaClient } from "./family-client";
 
-export type { BrainPrismaClient };
+export type { BrainPrismaClient, FamilyPrismaClient };
 
 const packageRoot = path.dirname(fileURLToPath(import.meta.url));
 const databaseRoot = path.resolve(packageRoot, "..");
 const migrationsDir = path.join(databaseRoot, "prisma", "migrations");
 const brainMigrationsDir = path.join(databaseRoot, "prisma", "brain", "migrations");
+const familyMigrationsDir = path.join(databaseRoot, "prisma", "family", "migrations");
 
 function listMigrationFiles(dir: string): Array<{ name: string; sqlPath: string }> {
   return fs
@@ -147,4 +149,27 @@ export function createTestBrainDatabaseUrl(): string {
  */
 export function createTestBrainClient(): BrainPrismaClient {
   return createBrainPrismaClient(createTestBrainDatabaseUrl());
+}
+
+/** Migrations for the shared Family DB — same mechanism as the Brain helper. */
+export function applySqliteTestFamilyMigrations(dbPath: string): void {
+  createPrismaMigrationsTable(dbPath);
+
+  for (const migration of listMigrationFiles(familyMigrationsDir)) {
+    const sql = fs.readFileSync(migration.sqlPath, "utf8");
+    execSqlite(dbPath, sql);
+    recordMigration(dbPath, migration.name, sql);
+  }
+}
+
+export function createTestFamilyDatabaseUrl(): string {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-family-db-"));
+  const dbPath = path.join(tempDir, "test.db");
+  applySqliteTestFamilyMigrations(dbPath);
+  return `file:${dbPath}`;
+}
+
+/** Isolated real Family SQLite DB (schema applied) wrapped in a ready client. */
+export function createTestFamilyClient(): FamilyPrismaClient {
+  return createFamilyPrismaClient(createTestFamilyDatabaseUrl());
 }

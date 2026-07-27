@@ -1,4 +1,3 @@
-import { brainPrisma } from "./brain-client";
 import type {
   GameSessionStatus,
   Prisma,
@@ -7,6 +6,8 @@ import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray } from "./json-utils";
 import type { PageSummary } from "./repository";
 import { createCalendarService } from "./calendar-service";
+// Der Kalender liegt seit Abschnitt G in uwe-family.db.
+import { familyPrisma } from "./family-client";
 
 export type {
   GameSession,
@@ -325,12 +326,12 @@ export class GameSessionService {
 
   /** Overridable seam for tests. Performs the actual calendar sync. */
   protected async runCalendarSync(sessionId: string): Promise<void> {
-    await createCalendarService(brainPrisma, this.db).syncSessionToCalendar(sessionId);
+    await createCalendarService(familyPrisma, this.db).syncSessionToCalendar(sessionId);
   }
 
   /** Overridable seam for tests. Performs the actual calendar unsync. */
   protected async runCalendarUnsync(sessionId: string): Promise<void> {
-    await createCalendarService(brainPrisma, this.db).unsyncSessionFromCalendar(sessionId);
+    await createCalendarService(familyPrisma, this.db).unsyncSessionFromCalendar(sessionId);
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {

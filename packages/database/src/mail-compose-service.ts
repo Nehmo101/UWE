@@ -17,6 +17,8 @@ import { BACKUP_CHECK_INTERVAL_DAYS } from "./calendar-aggregation-service";
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createMailTemplateService } from "./mail-template-service";
 import { renderMailTemplate } from "./mail-utils";
+// Die Family-Modelle liegen seit Abschnitt G in uwe-family.db.
+import { familyPrisma } from "./family-client";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -128,7 +130,7 @@ export class MailComposeService {
   }
 
   async composeContractReminder(contractId: string): Promise<MailDraft | null> {
-    const contract = await this.brainDb.contractExpense.findUnique({ where: { id: contractId } });
+    const contract = await familyPrisma.contractExpense.findUnique({ where: { id: contractId } });
     if (!contract) {
       return null;
     }

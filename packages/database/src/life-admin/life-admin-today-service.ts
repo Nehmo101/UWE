@@ -17,6 +17,11 @@ import type { LifeAdminHardwareService } from "./life-admin-hardware-service";
 import type { LifeAdminProjectService } from "./life-admin-project-service";
 import type { LifeAdminWorkshopService } from "./life-admin-workshop-service";
 import { PROJECT_ACTIVE_STATUSES } from "./life-admin-types";
+// Die Family-Modelle (Vertraege, Dokumente, Kueche, Haushalt, Kalender,
+// Scan-Eingang) liegen seit Abschnitt G in uwe-family.db. Der Singleton statt
+// eines weiteren Konstruktor-Parameters: sonst muesste jede Aufrufstelle im
+// Repo einen dritten Client durchreichen.
+import { familyPrisma, type FamilyPrismaClient } from "../family-client";
 
 export interface TodayAdminSummary {
   inboxCaptureCount: number;
@@ -48,6 +53,7 @@ export class LifeAdminTodayService {
   constructor(
     private readonly db: PrismaClient,
     private readonly deps: LifeAdminTodayDeps,
+    private readonly familyDb: FamilyPrismaClient = familyPrisma,
   ) {}
 
   async getTodaySummary(): Promise<TodayAdminSummary> {
@@ -84,7 +90,7 @@ export class LifeAdminTodayService {
       this.db.workshopProject.count({
         where: { status: { in: ["in_progress", "material_missing", "planned"] } },
       }),
-      this.db.contractExpense.count({ where: { status: "review" } }),
+      this.familyDb.contractExpense.count({ where: { status: "review" } }),
       this.db.hardwareDevice.count({
         where: { status: { in: ["offline", "broken"] } },
       }),

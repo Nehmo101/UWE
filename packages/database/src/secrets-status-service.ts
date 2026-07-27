@@ -9,6 +9,8 @@ import {
 } from "./secrets-status-warnings";
 
 export { collectRotationDueSecretIds } from "./secrets-status-warnings";
+// Die Family-Modelle liegen seit Abschnitt G in uwe-family.db.
+import { familyPrisma } from "./family-client";
 
 export type SecretSource = "env" | "db-encrypted" | "db-hashed";
 
@@ -338,7 +340,7 @@ async function buildDbEncryptedSection(
     brainDb.mailAccount.findMany({
       select: { id: true, label: true, passwordEnc: true, updatedAt: true },
     }),
-    brainDb.calendarFeed.findMany({
+    familyPrisma.calendarFeed.findMany({
       select: { id: true, name: true, credentialsEnc: true, updatedAt: true },
     }),
     db.spotifyConnection.findMany({

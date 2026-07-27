@@ -3,6 +3,11 @@ import type { BrainPrismaClient } from "./brain-client";
 import type { EntityTagEntityType } from "./generated/prisma/client";
 import { createEntityTagService } from "./entity-tag-service";
 import { asMetadataRecord, parseStringArray, parseTagsFromMetadata, toPrismaJsonValue } from "./json-utils";
+// Die Family-Modelle (Vertraege, Dokumente, Kueche, Haushalt, Kalender,
+// Scan-Eingang) liegen seit Abschnitt G in uwe-family.db. Der Singleton statt
+// eines weiteren Konstruktor-Parameters: sonst muesste jede Aufrufstelle im
+// Repo einen dritten Client durchreichen.
+import { familyPrisma } from "./family-client";
 
 /** When true, tag merges update EntityTag only (Json dual-write skipped). Requires completed backfill. */
 export function isEntityTagsPrimaryMode(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -211,7 +216,7 @@ async function loadJsonTagEntities(
           })),
         );
     case "contract":
-      return brainDb.contractExpense.findMany({
+      return familyPrisma.contractExpense.findMany({
         select: { id: true, name: true, metadata: true },
       }).then((rows) =>
         rows.map((row) => ({
@@ -484,7 +489,7 @@ async function mergeMetadataEntityTags(
   }
 
   if (entityType === "contract") {
-    const rows = await brainDb.contractExpense.findMany({
+    const rows = await familyPrisma.contractExpense.findMany({
       select: { id: true, metadata: true },
     });
     for (const row of rows) {
@@ -498,7 +503,7 @@ async function mergeMetadataEntityTags(
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       if (!skipJsonWrite) {
-        await brainDb.contractExpense.update({
+        await familyPrisma.contractExpense.update({
           where: { id: row.id },
           data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
         });
