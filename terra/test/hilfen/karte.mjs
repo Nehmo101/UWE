@@ -72,6 +72,17 @@ export async function testWelt(opt) {
 
   setScene(new THREE.Scene());
   setKartenGroesse(o.groesse);
+  /* terrainGeometrienNeu() ist der Schritt, den editor/io.js nach jedem
+     Groessenwechsel macht und der hier fehlte: er zieht die Felder auf die
+     neue Kantenlaenge nach (felderSichern) und baut die Patches neu.
+
+     Ohne ihn blieben bei `groesse: 512` oder `1024` die Felder auf der
+     Laenge der zuletzt benutzten Karte stehen — genBase schreibt dann in ein
+     zu kurzes Array, und der Rest bleibt uninitialisiert. Im Test sah das
+     nicht nach einem Fehler aus, sondern nach NaN mitten im Hoehenfeld, und
+     zwar nur in den Dateien, die eine groessere Karte anlegen. Gefunden
+     wurde es beim Bau der Fluesse (Runde J). */
+  m.terrain.terrainGeometrienNeu();
   S.worldSeed = o.seed;
   S.biom = o.biom;
   S.elements.length = 0;

@@ -26,6 +26,14 @@ import { setzeBrueckenWege, brueckeAktiv } from './bruecke.js';
 // I4: Zielpruefung der Beschriftungen. beschriftung.js haengt nur an three und
 // core/ — der Import ist zyklusfrei und bleibt es, solange das so ist.
 import { zielPruefen } from '../ui/beschriftung.js';
+/* J4 — KI-Vorgenerierung. welt.js LIEST nur (siehe weltWuerfeln in
+   ui/panels.js); welt-vorgabe.js ist reine Rechnung. Das Einsetzen macht
+   diese Datei, weil hier Kartengroesse, Biom, Terrain, Historie und Bild
+   ohnehin zusammenlaufen. */
+import { erzeugeWelt } from '../generators/welt.js';
+import { pruefeVorgabe, weltOptionen, sucheSeed, namenAnwenden,
+  herkunftBauen, herkunftGelesen } from '../generators/welt-vorgabe.js';
+import { clearPreview } from './selection.js';
 import { exportPNG, setPost, getPost, renderFrame,
   setFarbskript, getFarbskript, setPalette, getPalette, setMalschicht,
   getMalschicht, setMultiplane, getMultiplane } from '../render/pipeline.js';
@@ -396,6 +404,11 @@ function validiereKarteObjekt(d) {
     biom: (typeof d.biom === "string" && BIOME[d.biom]) ? d.biom : "wiese",
     // J3: tolerant wie `biom` — unbekannte Werte fallen auf "auto" zurueck.
     sprachfamilie: typeof d.sprachfamilie === "string" ? d.sprachfamilie : "auto",
+    /* J4: Herkunftsvermerk. Tolerant wie `biom` und `wetter` — was nicht
+       stimmt, wird null. Der enthaltene Parametersatz laeuft durch DIESELBE
+       Klemmung wie ein frischer, damit eine von Hand veraenderte Datei nichts
+       durchreicht, was der Frame nicht selbst geprueft haette. */
+    herkunft: herkunftGelesen(d.herkunft),
     // I2: Klimaachse, feldweise tolerant. Eine Karte aus einer Fassung ohne
     // Klima laedt mit den Vorgabewerten — die Biomflaechen selbst stehen als
     // Elemente in der Liste und haengen nicht daran.
@@ -450,6 +463,14 @@ function kartenDaten() {
   // dieselbe Datei wie vor dieser Runde.
   if (S.marker.length) data.marker = serializeMarker();
   if (S.stempel.length) data.stempel = serializeStempel();
+  /* J4: woraus diese Karte entstanden ist. Tolerantes Zusatzfeld nach dem
+     Muster von `marker`/`stempel` — nur schreiben, wenn es etwas zu schreiben
+     gibt; eine von Hand gebaute Karte ergibt damit byteidentisch dieselbe
+     Datei wie zuvor, und `version` bleibt 4. Enthaelt den geprueften
+     Parametersatz und den benutzten Seed (zusammen reproduzieren sie die
+     Karte), aber NICHT den Prompt — Begruendung in
+     generators/welt-vorgabe.js. */
+  if (herkunftsVermerk) data.herkunft = herkunftsVermerk;
   // F1-F3 (Ghibli-Bildaufbau) nach demselben Muster: die 20er-Farbrampe
   // wuerde jede Datei aufblaehen, obwohl der Zweig bei staerke 0 gar nicht
   // laeuft. Fehlt das Feld beim Laden, setzt uebernehmeKarte auf 0 zurueck.
@@ -472,6 +493,9 @@ function uebernehmeKarte(karte, knoten) {
   S.biom = karte.biom;
   document.getElementById("biomSel").value = S.biom;
   S.sprachfamilie = karte.sprachfamilie;
+  // J4: der Vermerk gehoert zur Karte und wird mit ihr ersetzt — sonst erbte
+  // eine handgebaute Karte die Herkunft der zuvor geladenen.
+  herkunftsVermerk = karte.herkunft;
   // I2: Klima VOR dem Aufbau — die Biom-Ableitung liest es, und die Farbe
   // haengt ueber die Biomflaechen daran.
   S.klima = karte.klima;
@@ -953,6 +977,138 @@ function kameraStandSetzen(s) {
    wird. */
 var komponiertExport = true;
 
+/* ==========================================================================
+   J4 — eine Karte aus einer Beschreibung
+
+   Die Brain-Aktion `terra_world_draft` liefert einen geprueften
+   Parametersatz, die Bruecke reicht ihn herein, generators/welt-vorgabe.js
+   prueft ihn ein zweites Mal und rechnet ihn um — hier wird er ANGEWENDET.
+
+   Warum in dieser Datei: eine Vorgabe kann Kartengroesse, Biom, Seed, Klima,
+   Sprachfamilie, Massstab, Tageszeit und Wetter aendern. Genau diese acht
+   Dinge zieht io.js beim Laden einer Datei ebenfalls nach, in genau dieser
+   Reihenfolge (uebernehmeKarte). Ein zweiter Weg daneben waere eine zweite
+   Wahrheit ueber den Kartenzustand.
+
+   ANDERS ALS „Welt wuerfeln“ (ui/panels.js) wird hier das GELAENDE NEU
+   erzeugt: Biom, Kartengroesse und Seed duerfen sich aendern, und ohne neues
+   Basisterrain waere ein Reliefwunsch („Gebirge im Norden“) sinnlos. Die
+   Rueckfrage sagt das ausdruecklich.
+
+   Die Rueckfrage stellt der FRAME, nicht die Elternseite: nur er weiss, wie
+   viele Elemente auf der Karte stehen. Dieselbe Haltung wie bei weltWuerfeln
+   und beim Biomwechsel.
+   ========================================================================== */
+
+/** Herkunftsvermerk der aktiven Karte (tolerantes Zusatzfeld `herkunft`).
+ *  null = die Karte ist nicht aus einer Beschreibung entstanden. */
+var herkunftsVermerk = null;
+
+/**
+ * Wendet eine Weltvorgabe an. Liefert { ok, bericht, hinweise, meldung } —
+ * nie ein throw nach aussen, damit die Bruecke immer quittieren kann.
+ *
+ * @param roh  Parametersatz, ungeprueft (er kam per postMessage herein)
+ * @param opt  { laufId, seed }
+ */
+function weltVorgabeAnwenden(roh, opt) {
+  opt = opt || {};
+  var g = pruefeVorgabe(roh);
+  var v = g.vorgabe;
+
+  if (S.elements.length &&
+      !confirm("Die Karte trägt bereits " + S.elements.length + " Elemente. "
+        + "„Karte beschreiben“ ersetzt sie vollständig durch eine neu erzeugte Welt "
+        + "und erzeugt auch das Geländerelief neu — von Hand modellierte Höhen "
+        + "gehen dabei verloren. Fortfahren?")) {
+    return { ok: false, hinweise: g.hinweise, meldung: "abgebrochen" };
+  }
+
+  var startSeed = Number.isFinite(opt.seed) ? (opt.seed | 0) : S.worldSeed;
+  var suche = sucheSeed(v, startSeed);
+
+  pushUndo(true);                       // ersetzt die Hoehen -> Terrainkopie sichern
+  S.worldSeed = suche.seed;
+  var seedFeld = document.getElementById("seed");
+  if (seedFeld) seedFeld.value = String(S.worldSeed);
+  S.biom = v.biom;
+  var biomSel = document.getElementById("biomSel");
+  if (biomSel) biomSel.value = S.biom;
+  S.sprachfamilie = v.sprachfamilie;
+  S.klima = { richtung: v.klima.richtung, staerke: v.klima.staerke,
+              grund: v.klima.grund, hoeheKuehl: v.klima.hoeheKuehl };
+  if (v.kartenGroesse !== KARTE.map) setzeKartenGroesse(v.kartenGroesse);
+  /* Der Massstab steht im Baumeintrag, nicht in der Datei der Einzelkarte
+     (karteSichern liest ihn von dort zurueck) — beides setzen, sonst faellt
+     er beim naechsten Sichern auf den alten Wert. */
+  S.einheitMeter = v.einheitMeter;
+  var baum = aktiverBaum(), knoten = baum.index[S.aktiveKarte];
+  if (knoten) knoten.karte.einheitMeter = v.einheitMeter;
+  genBase(S.worldSeed);
+
+  var liste;
+  try {
+    liste = erzeugeWelt(S.worldSeed, weltOptionen(v));
+  } catch (err) {
+    /* Das Gelaende steht schon neu, die Elemente noch nicht — ein Undo stellt
+       beides her (pushUndo(true) oben hat die Hoehen gesichert). Mehr ist
+       ehrlich nicht zu retten, und ein halb gebauter Zustand waere schlimmer. */
+    console.error("erzeugeWelt", err);
+    rebuildAll();
+    return { ok: false, hinweise: g.hinweise, meldung: "Weltgenerator fehlgeschlagen" };
+  }
+  if (!liste || !liste.length) {
+    rebuildAll();
+    return { ok: false, hinweise: g.hinweise, meldung: "Kein brauchbarer Bauplatz auf dieser Karte" };
+  }
+
+  // Freie Namen des Modells VOR dem Einsetzen: danach haengen die Elemente in
+  // S.elements und in den Pools, und eine Umbenennung muesste dort nachziehen.
+  var freie = namenAnwenden(liste, v.namen);
+
+  ed.selected = null;
+  ed.auswahl.length = 0;
+  ed.draw = null;
+  clearPreview();
+  hydrate(liste);
+  rebuildAll();
+  rebuildHandles();
+  buildPanel();
+  setTod(v.tageszeit, true);
+  setWetter(v.wetter, true);
+  var wetterSel = document.getElementById("wetterSel");
+  if (wetterSel) wetterSel.value = getWetterName();
+
+  var b = liste.bericht || {};
+  var region = v.namen.region || b.region || null;
+  herkunftsVermerk = herkunftBauen(v, {
+    seed: S.worldSeed,
+    laufId: opt.laufId,
+    zeit: new Date().toISOString()
+  });
+
+  toast("Karte beschrieben: " + liste.length + " Elemente · "
+    + (b.fluesse || 0) + " Flüsse · " + (b.siedlungen || 0) + " Siedlungen"
+    + (region ? " · „" + region + "“" : ""));
+
+  return {
+    ok: true,
+    hinweise: g.hinweise,
+    bericht: {
+      elemente: liste.length,
+      fluesse: b.fluesse || 0,
+      siedlungen: b.siedlungen || 0,
+      namen: b.namen || 0,
+      freieNamen: freie,
+      region: region,
+      seed: S.worldSeed,
+      seedGesucht: suche.geprueft,
+      kartenGroesse: KARTE.map,
+      biom: S.biom
+    }
+  };
+}
+
 export function initIO() {
   /* I1: das Ausschnitt-Werkzeug meldet sein fertiges Polygon hierher. Die
      Richtung ist Absicht — io.js kennt tools.js, nicht umgekehrt. */
@@ -970,7 +1126,10 @@ export function initIO() {
      Die Bruecke bekommt bewusst KEINEN dritten Ladeweg — baumUebernehmen ist
      genau der Weg des Dateidialogs (leseBaumDatei -> validiereKarteObjekt je
      Karte -> uebernehmeKarte), nur ohne FileReader davor. */
-  setzeBrueckenWege({ text: baumText, uebernehmen: baumUebernehmen });
+  /* J4: der dritte Weg. Die Bruecke ruft ihn, wenn eine Weltvorgabe
+     hereinkommt; ohne ihn antwortete sie mit einer Absage statt zu bauen. */
+  setzeBrueckenWege({ text: baumText, uebernehmen: baumUebernehmen,
+    vorgabe: weltVorgabeAnwenden });
   setzeAusschnittWeg(function (punkte) {
     var titel = prompt("Titel der neuen Karte", "Ausschnitt");
     if (titel === null) return;                       // Abbruch legt nichts an

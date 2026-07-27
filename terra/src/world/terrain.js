@@ -585,6 +585,25 @@ function initTerrain(scene) { scene.add(terrain); }
  *  Der Aufrufer (editor/io.js) ruft danach genBase + rebuildAll. */
 function terrainGeometrienNeu() {
   felderSichern();
+  /* I3 — die drei Messfelder der Erosion leeren.
+     felderSichern() laesst Felder nur WACHSEN: nach einer 1024er Karte bleibt
+     `abfluss` 1.050.625 Eintraege lang, auch wenn danach eine 256er geladen
+     wird. Darin steht dann ein Feld in der ZEILENORDNUNG der grossen Karte —
+     dieselben Bytes, aber jede Zeile an der falschen Stelle. Wer das liest,
+     bekommt kein leeres Feld, sondern ein plausibel aussehendes falsches.
+
+     Genau dieser Fehlertyp hat schon einmal dafuer gesorgt, dass Biomflaechen
+     nach einer groesseren Karte still wirkungslos waren (siehe die
+     Regressionspruefung in terra/test/09-einbettung.test.mjs). Deshalb hier
+     an der Quelle: ein Groessenwechsel entwertet die Messung, also wird sie
+     verworfen statt umgedeutet.
+
+     `haerte` faellt auf 1 zurueck, nicht auf 0 — das ist der neutrale Wert
+     (siehe felderSichern). Ein Haertefeld voller Nullen hiesse „ueberall
+     weich" und waere eine Aussage, keine fehlende. */
+  abfluss.fill(0);
+  sediment.fill(0);
+  haerte.fill(1);
   bauePatches();
 }
 
@@ -598,6 +617,66 @@ function terrainGeometrienNeu() {
 var COS50 = Math.cos(50 * DEG), COS58 = Math.cos(58 * DEG);
 var COS_BAND_A = Math.cos(52 * DEG), COS_BAND_B = Math.cos(35 * DEG);
 var _tc = new THREE.Color(), _tc2 = new THREE.Color();
+
+/* ==========================================================================
+   I1 — Reliefschattierung: der einzige Eingriff des Signaturenkatalogs in
+   diese Datei
+
+   Der Katalog fuehrt sie ausdruecklich NICHT als Zeichen und nicht als Pool,
+   sondern als TERRAINFARBE: „schraeg von Nordwest beleuchtet, in die
+   vorhandene terrainColor eingerechnet, sobald der Massstab ueber etwa
+   600 m/Zelle liegt". Auf Kontinentmassstab ersetzt sie die gesamte
+   Objektdarstellung des Gelaendes — dort steht kein einziger Felsen mehr,
+   und ohne sie waere ein Gebirge ein Farbfleck.
+
+   --- Warum von Nordwest ------------------------------------------------
+   Kartografische Konvention seit dem Kupferstich, und sie ist Konvention
+   geworden, weil sie funktioniert: bei Licht von links oben liest das Auge
+   Erhebungen als Erhebungen. Bei Licht von rechts unten kippt das Bild in
+   die Hohlform um (Relief-Inversion) — dieselbe Karte zeigt dann Taeler, wo
+   Berge sind.
+
+   --- Warum eine eigene Ableitung und nicht das uebergebene `ny` ---------
+   `ny` ist die y-Komponente der Vertexnormalen aus der Nachbarschaft von
+   EINER Gitterzelle. Sie traegt jede Bodenwelle mit und weiss nichts ueber
+   die Richtung des Hangs. Eine Schummerung braucht beides: die Richtung,
+   und einen Stuetzabstand, der zum Massstab passt. Auf 2000 m je Zelle ist
+   eine Welle von zwei Einheiten ein Vier-Kilometer-Huegel — sie GEHOERT ins
+   Bild, aber geglaettet, sonst rauscht die halbe Karte.
+
+   --- Und warum das unterhalb der Schwelle nichts kostet ----------------
+   Die Berechnung steht hinter einem einzigen `if`, das unterhalb von 600
+   m/Zelle gar nicht betreten wird. Der Rechenweg von terrainColor bleibt
+   dort Bit fuer Bit der bisherige: kein zusaetzlicher Faktor, keine
+   Multiplikation mit 1, kein veraenderter Float. Dieselbe Zusage, die die
+   Biomflaechen weiter oben geben, und 14-signaturen-generatoren haelt sie
+   gegen einen Hash fest, der VOR diesem Eingriff aufgenommen wurde.
+   ========================================================================== */
+var RELIEF_AB = 600;              // m je Zelle, ab hier beginnt die Schummerung
+var RELIEF_VOLL = RELIEF_AB * 1.6;  // dieselbe halbe Groessenordnung wie BLENDE
+var RELIEF_STUETZ = 2.5;          // Stuetzabstand der Ableitung in Welteinheiten
+/* Ueberhoehung. 2,0 ist gemessen und nicht geschaetzt: Terras Gelaende hat
+   auf einem gewachsenen Hang ein Gefaelle um 0,2 je Welteinheit, und mit
+   Faktor 1 laege der Unterschied zwischen Sonnen- und Schattenflanke bei
+   knapp 5 % — sichtbar im Diagramm, unsichtbar im Bild. Mit 2,0 sind es rund
+   19 %, und das ist der Kontrast, an dem eine Schummerung ihren Zweck
+   erfuellt: die Karte lesbar zu machen, ohne wie eine Fotografie auszusehen.
+   Kartografische Schummerungen ueberhoehen seit je; eine massstabsgetreue
+   waere auf jedem Uebersichtsblatt unsichtbar. */
+var RELIEF_UEBERHOEHUNG = 2.0;
+var RELIEF_TIEFE = 0.30;          // wie dunkel die Schattenseite hoechstens wird
+var RELIEF_LICHT = 0.16;          // wie hell die Sonnenseite hoechstens wird
+/* Lichtrichtung: Nordwest ist (-x, -z), die Hoehe darueber knapp 40 Grad.
+   Normiert, damit das Skalarprodukt unten direkt der Lambertfaktor ist. */
+var RELIEF_LX = -0.5054, RELIEF_LY = 0.6998, RELIEF_LZ = -0.5054;
+
+/** Staerke der Schummerung bei diesem Massstab: 0 unterhalb der Schwelle,
+ *  ueber eine halbe Groessenordnung auf 1. Getrennt exportiert, damit die
+ *  Pruefung die Schwelle nachrechnen kann, ohne Farben zu vergleichen. */
+function reliefFaktor(m) {
+  if (!Number.isFinite(m) || m <= RELIEF_AB) return 0;
+  return sstep(RELIEF_AB, RELIEF_VOLL, m);
+}
 
 /* --- Krümmungs-Verdeckung (D1) ---------------------------------------
    Mulden und Grabenkanten sind konkav und werden abgedunkelt, Grate
@@ -723,6 +802,28 @@ function terrainColor(h, ny, x, z, out, ao) {
         + vnoise(x * 0.55, z * 0.55, S.worldSeed + 313) * 0.05
         + (drift - 0.5) * 0.10;
   out.multiplyScalar(v * (ao === undefined ? 1 : ao));
+
+  /* I1 — Reliefschattierung. Die Begruendung steht oben bei RELIEF_AB; hier
+     zaehlt nur, dass der ganze Block hinter EINEM Vergleich liegt. Unterhalb
+     von 600 m je Zelle wird er nicht betreten, und der Rueckgabewert ist
+     derselbe Float wie vorher. */
+  if (S.einheitMeter > RELIEF_AB) {
+    var st = reliefFaktor(S.einheitMeter);
+    var rd = RELIEF_STUETZ;
+    // Gefaelle ueber einen breiten Stuetzabstand: das ist die Glaettung, die
+    // aus Bodenwellen Landschaftsformen macht.
+    var gx = (heightAt(x + rd, z) - heightAt(x - rd, z)) / (2 * rd);
+    var gz = (heightAt(x, z + rd) - heightAt(x, z - rd)) / (2 * rd);
+    var rnx = -gx * RELIEF_UEBERHOEHUNG, rnz = -gz * RELIEF_UEBERHOEHUNG;
+    var rinv = 1 / Math.sqrt(rnx * rnx + 1 + rnz * rnz);
+    var lam = (rnx * RELIEF_LX + RELIEF_LY + rnz * RELIEF_LZ) * rinv;
+    // Bezug ist die EBENE Flaeche (lam = RELIEF_LY), nicht die Null: eine
+    // Ebene soll ihre Farbe behalten und nicht pauschal nachdunkeln.
+    var ab = lam - RELIEF_LY;
+    out.multiplyScalar(1 + st * (ab > 0
+      ? (ab / (1 - RELIEF_LY)) * RELIEF_LICHT
+      : (ab / RELIEF_LY) * RELIEF_TIEFE));
+  }
 }
 
 /**
@@ -1036,6 +1137,7 @@ function setFlattenTarget(v) { flattenTarget = v; }
    (Stufe, Randmuster)-Kombination fuer Testabzug und Debugansicht. */
 export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, patches as terrainPatches,
   initTerrain, terrainGeometrienNeu, terrainColor, computeAO,
+  RELIEF_AB, RELIEF_VOLL, reliefFaktor,
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
   inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget,
   abfluss, sediment, haerte, wendeErosionAn,

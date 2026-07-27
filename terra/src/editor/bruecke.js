@@ -49,6 +49,18 @@
         beim nächsten Mal die neue Version — ohne diese Nachricht liefe jede
         zweite Speicherung in die Konflikterkennung.
 
+     { typ: "welt-vorgabe",      vorgabe, laufId, seed }                 (J4)
+        Ein von der Brain-Aktion `terra_world_draft` geprüfter Parametersatz.
+        Der Frame prüft ihn NOCH EINMAL (welt-vorgabe.js klemmt), fragt bei
+        einer bestückten Karte zurück und baut dann die Welt.
+        `laufId`  optionale Kennung des KI-Laufs. Sie wandert in den
+                  Herkunftsvermerk der Karte — der Prompt selbst nicht,
+                  Begründung in generators/welt-vorgabe.js.
+        `seed`    optionaler Startseed. Fehlt er, bleibt es bei S.worldSeed.
+        Es gibt bewusst KEINE zweite Nachricht "bauen jetzt wirklich": die
+        Rückfrage stellt der Frame, weil nur er weiß, wieviel auf der Karte
+        steht. Eine Elternseite, die sie überspringen wollte, könnte es nicht.
+
    Frame → Eltern
      { typ: "terra-bereit",      protokoll, modus }
         Einmal, sobald der Frame Karten annehmen kann. Die Elternseite wartet
@@ -63,6 +75,16 @@
      { typ: "terra-fehler",      meldung }
         Wenn eine hereingereichte Karte nicht gelesen werden konnte. Der
         Editorzustand bleibt dabei unangetastet (io.js prüft atomar).
+
+     { typ: "welt-vorgabe-ergebnis", ok, bericht, hinweise, meldung }    (J4)
+        Antwort auf `welt-vorgabe`, immer genau eine je Anfrage.
+        `ok`        wurde gebaut?
+        `bericht`   { elemente, fluesse, siedlungen, region, namen, seed }
+        `hinweise`  was die Prüfung im Frame geklemmt oder verworfen hat
+        `meldung`   Grund, wenn nicht gebaut wurde ("abgebrochen" bei einem
+                    Nein auf die Rückfrage — kein Fehler, nur ein Nein)
+        Die geänderte Karte geht danach wie jede andere Änderung über
+        `karte-geaendert` hinaus; diese Nachricht ist nur die Quittung.
 
    ------------------------------------------------------------------------
    WARUM ENTPRELLT UND NICHT BEI JEDEM MAUSZUCKEN
@@ -169,6 +191,41 @@ function karteLaden(nachricht) {
   catch (_e) { letzterText = null; }
 }
 
+/* --- Hinein: eine Weltvorgabe (J4) -------------------------------------- */
+
+/**
+ * Im Lesemodus wird gar nicht erst gebaut: das Portal zeigt Karten, es macht
+ * keine. Sonst geht die Nachricht an den angemeldeten Weg — io.js prüft,
+ * fragt zurück und baut. Die Quittung geht in jedem Fall zurück, auch bei
+ * einem Nein: eine Bedienung, die auf eine Antwort wartet, darf nicht hängen.
+ */
+function weltVorgabe(nachricht) {
+  if (lesemodus || !wege || typeof wege.vorgabe !== "function") {
+    postiere({ typ: "welt-vorgabe-ergebnis", ok: false, meldung: "In diesem Modus wird nicht gebaut" });
+    return;
+  }
+  var antwort;
+  try {
+    antwort = wege.vorgabe(nachricht.vorgabe, {
+      laufId: nachricht.laufId,
+      seed: nachricht.seed
+    });
+  } catch (e) {
+    postiere({ typ: "welt-vorgabe-ergebnis", ok: false, meldung: String((e && e.message) || e) });
+    return;
+  }
+  antwort = antwort || {};
+  postiere({
+    typ: "welt-vorgabe-ergebnis",
+    ok: !!antwort.ok,
+    bericht: antwort.bericht || null,
+    hinweise: antwort.hinweise || [],
+    meldung: antwort.meldung || null
+  });
+  // Die neue Karte soll nicht erst nach der nächsten Mausbewegung ankommen.
+  if (antwort.ok) angestossen();
+}
+
 /* --- Heraus: Änderungen melden ------------------------------------------ */
 
 function angestossen() {
@@ -203,10 +260,15 @@ function fluss() {
  * Brücke: vorher horcht sie auf nichts und verändert nichts.
  *
  * @param {{ text: function(): string,
- *           uebernehmen: function(string): void }} w
+ *           uebernehmen: function(string): void,
+ *           vorgabe?: function(object, object): object }} w
  *   `text()`        — der ganze Kartenbaum als Dateitext (baumText)
  *   `uebernehmen(t)`— liest, prüft ALLE Karten und übernimmt atomar
  *                     (baumUebernehmen); wirft bei jedem Verstoß
+ *   `vorgabe(v, o)` — OPTIONAL (J4): prüft eine Weltvorgabe, fragt bei einer
+ *                     bestückten Karte zurück, baut und liefert
+ *                     { ok, bericht, hinweise, meldung }. Fehlt der Weg,
+ *                     antwortet die Brücke mit einer Absage statt zu bauen.
  */
 export function setzeBrueckenWege(w) {
   wege = w;
@@ -245,6 +307,8 @@ function empfange(ereignis) {
     karteLaden(n);
   } else if (n.typ === "stand-bestaetigt") {
     if (Number.isFinite(n.version)) version = n.version | 0;
+  } else if (n.typ === "welt-vorgabe") {
+    weltVorgabe(n);
   }
 }
 

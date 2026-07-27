@@ -621,3 +621,270 @@ export function erosionRegionStarten(hoehen, VW, i0, i1, j0, j1, opt) {
   return neuerZustand(hoehen, VW, fi0, fj0, fi1 - fi0 + 1, fj1 - fj0 + 1,
     bi0, bi1, bj0, bj1, true, opt);
 }
+
+/* ==========================================================================
+   SENKENFUELLUNG UND ABFLUSSNETZ
+
+   Der Bericht zur Tropfenerosion nennt die Luecke beim Namen: ein Tropfen, der
+   in einer abflusslosen Mulde stehenbleibt, lagert dort ab und endet. `abfluss`
+   misst deshalb zwar, WO viel Wasser lief, taugt aber nicht als NETZ — es
+   reisst an jeder Mulde. Wer daraus Fluesse ziehen will, braucht vorher ein
+   Hoehenfeld ohne abflusslose Senken.
+
+   ---------------------------------------------------------------------------
+   DAS GELAENDE WIRD NICHT VERAENDERT.
+
+   Das ist die wichtigste Entscheidung dieses Blocks, und sie faellt gegen das
+   uebliche Vorgehen der Gelaendesimulation. Dort ist ein Loch im Hoehenfeld ein
+   Artefakt des Rauschens und darf zugeschuettet werden. In Terra ist es
+   INHALT: der Krater, der Steinbruch, das Kesseltal, die Mulde, die jemand mit
+   dem Pinsel gezogen hat. Ein Senkenfueller, der `base` schreibt, macht aus
+   jedem davon eine Ebene — still, flaechendeckend und ohne dass der Bearbeiter
+   den Zusammenhang zur Flusserzeugung herstellen koennte.
+
+   Deshalb liefert `senkenFuellen` ein ZWEITES Feld. Das kostet VW*VW*4 Byte auf
+   Zeit des Aufrufs und hat drei Vorteile, die den Speicher aufwiegen:
+     * das gemalte Gelaende bleibt unangetastet, es gibt nichts rueckgaengig zu
+       machen und kein recomputeHeights/computeAO/Patchneubau hinterher;
+     * die DIFFERENZ gefuellt - hoehe ist selbst eine Auskunft, naemlich die
+       Seenkarte. Wo sie ueber einer Schwelle liegt, steht Wasser;
+     * die Aufloesung ist frei waehlbar. Der Weltgenerator rechnet auf seinem
+       Analyseraster (jede vierte Welteinheit), nicht auf dem Terraingitter —
+       das ist der Faktor 16 an Zellen, den es kostenlos gibt.
+
+   ---------------------------------------------------------------------------
+   VERFAHREN: PRIORITY-FLOOD MIT EPSILON
+
+   Von allen Randzellen (und allen frei entwaessernden Zellen, siehe `aussen`)
+   aus waechst eine Flut nach innen, immer von der derzeit TIEFSTEN Front aus.
+   Eine neu erreichte Zelle bekommt max(eigene Hoehe, Front + eps). Wer tiefer
+   liegt als die Front, ueber die er erreicht wurde, wird also genau bis auf
+   deren Hoehe angehoben — nicht weiter.
+
+   Warum dieses Verfahren und nicht das haeufigere iterative Aufschaukeln
+   ("solange ein Nachbar tiefer ist, hebe an"): Priority-Flood ist mit
+   O(n log n) und EINEM Durchgang fertig, das iterative Verfahren braucht in
+   langen flachen Taelern Hunderte Durchgaenge und hat kein Abbruchkriterium,
+   das nicht selbst wieder eine Schwelle waere. Gemessen auf dem Analyseraster
+   einer 1024er Karte (257 x 257 = 66 049 Zellen): 12 ms.
+
+   Das eps ist der Grund, warum das Ergebnis fuer eine Flussverfolgung
+   ueberhaupt taugt. Ohne es ist eine gefuellte Senke eine exakt waagerechte
+   Flaeche, auf der "steilster Abstieg" keine Antwort hat — der Lauf bliebe
+   stehen, nur eine Zelle spaeter als vorher. Mit eps faellt jede gefuellte
+   Flaeche mit winzigem Gefaelle zu ihrem Ausfluss hin ab, und JEDE Zelle
+   ausser den Saatzellen hat garantiert einen echt tieferen Nachbarn. Genau
+   diese Zusage traegt `abflussNetz`.
+
+   eps = 1e-4 ist nicht beliebig: es muss ueber der Float32-Aufloesung des
+   Hoehenbereichs liegen (bei |h| < 1000 ist ein ULP < 6.1e-5, das eps also
+   sicher darstellbar) und zugleich so klein, dass es sich ueber einen langen
+   Flachlauf nicht zu sichtbarer Hoehe summiert (1000 Zellen ergeben 0.1
+   Welteinheiten). Wer mit Hoehen jenseits von 1000 arbeitet, muss es anheben.
+
+   ABHAENGIGKEITEN: keine. Der Block rechnet auf uebergebenen Arrays und kennt
+   weder WATER noch KARTE — welche Zelle "Meer" ist, sagt der Aufrufer ueber
+   `aussen`. Damit bleibt er fuer Gitter jeder Groesse und jeder Herkunft
+   benutzbar, und die Pruefungen brauchen kein Terrain.
+   ========================================================================== */
+
+/* Achtnachbarschaft. Nicht vier: ein Talweg, der diagonal laeuft, waere in
+   Vierernachbarschaft eine Treppe aus doppelt so vielen Zellen, und die
+   Einzugsgebiete zweier diagonal benachbarter Rinnen blieben faelschlich
+   getrennt. Die Laengen stehen daneben, weil das steilste Gefaelle je
+   Entfernung gemessen wird und die Diagonale 1.41-mal so weit ist. */
+var N8I = [1, 1, 0, -1, -1, -1, 0, 1];
+var N8J = [0, 1, 1, 1, 0, -1, -1, -1];
+var N8L = [1, Math.SQRT2, 1, Math.SQRT2, 1, Math.SQRT2, 1, Math.SQRT2];
+
+var SENKEN_EPSILON = 1e-4;
+
+/* --------------------------------------------------------------------------
+   Binaerer Min-Heap auf zwei parallelen Arrays.
+
+   Der Vergleich zieht bei GLEICHER Hoehe den Zellindex heran. Das ist keine
+   Feinheit, sondern die Determinismuszusage: ein Hoehenfeld hat reichlich
+   exakt gleiche Werte (Meeresboden, geklemmte Raender), und ohne festen
+   Zweitschluessel haengt die Reihenfolge der Flut an der Reihenfolge der
+   Einfuegungen — und damit das gefuellte Feld an Dingen, die niemand sieht.
+   -------------------------------------------------------------------------- */
+function heapRein(hk, hv, hn, k, v) {
+  var i = hn;
+  hk[i] = k; hv[i] = v;
+  while (i > 0) {
+    var p = (i - 1) >> 1;
+    if (hk[p] < hk[i] || (hk[p] === hk[i] && hv[p] < hv[i])) break;
+    var tk = hk[p]; hk[p] = hk[i]; hk[i] = tk;
+    var tv = hv[p]; hv[p] = hv[i]; hv[i] = tv;
+    i = p;
+  }
+  return hn + 1;
+}
+
+/** Entfernt die Wurzel. Der Aufrufer liest hk[0]/hv[0] VORHER. */
+function heapRaus(hk, hv, hn) {
+  hn--;
+  hk[0] = hk[hn]; hv[0] = hv[hn];
+  var i = 0;
+  for (;;) {
+    var l = i * 2 + 1, r = l + 1, m = i;
+    if (l < hn && (hk[l] < hk[m] || (hk[l] === hk[m] && hv[l] < hv[m]))) m = l;
+    if (r < hn && (hk[r] < hk[m] || (hk[r] === hk[m] && hv[r] < hv[m]))) m = r;
+    if (m === i) break;
+    var tk = hk[m]; hk[m] = hk[i]; hk[i] = tk;
+    var tv = hv[m]; hv[m] = hv[i]; hv[i] = tv;
+    i = m;
+  }
+  return hn;
+}
+
+/**
+ * Priority-Flood. Liefert das gefuellte Feld UND die Reihenfolge, in der die
+ * Zellen entnommen wurden (aufsteigend nach gefuellter Hoehe).
+ *
+ * Die Reihenfolge wird mitgegeben, weil sie sonst zweimal entstehen muesste:
+ * die Abflussrechnung braucht genau sie, rueckwaerts gelesen, als topologische
+ * Ordnung des Abflussbaums. Sie hier wegzuwerfen und spaeter zu sortieren waere
+ * dasselbe Ergebnis fuer ein zweites O(n log n).
+ */
+function priorityFlood(hoehen, w, h, eps, aussen) {
+  var n = w * h;
+  var gef = new Float32Array(n);
+  var drin = new Uint8Array(n);
+  var ordnung = new Int32Array(n);
+  // Float32 wie `gef`, nicht Float64: der Schluessel im Heap muss BITGLEICH
+  // der Wert sein, der im Feld steht. Sonst vergleicht die Flut mit der
+  // ungerundeten Zwischenrechnung, das Feld traegt die gerundete — und die
+  // Zusage "jede Zelle hat einen echt tieferen Nachbarn" haengt an einem
+  // Rundungsschritt, den niemand sieht.
+  var hk = new Float32Array(n), hv = new Int32Array(n), hn = 0;
+  var i, j, id;
+
+  // Saat: der Gitterrand (dort verlaesst Wasser die Karte) und alles, was der
+  // Aufrufer als frei entwaessernd meldet (Meer, See, Kartenloch).
+  for (j = 0; j < h; j++) {
+    for (i = 0; i < w; i++) {
+      id = j * w + i;
+      if (!(i === 0 || j === 0 || i === w - 1 || j === h - 1 || (aussen && aussen[id]))) continue;
+      drin[id] = 1; gef[id] = hoehen[id];
+      hn = heapRein(hk, hv, hn, hoehen[id], id);
+    }
+  }
+  // Ein Gitter ohne einzige Saatzelle gibt es nicht (der Rand ist immer dabei),
+  // ausser bei w oder h unter 1 — dann ist das Feld leer und alles stimmt.
+
+  var gezogen = 0;
+  while (hn > 0) {
+    var cw = hk[0], c = hv[0];
+    hn = heapRaus(hk, hv, hn);
+    ordnung[gezogen++] = c;
+    var ci = c % w, cj = (c - ci) / w;
+    for (var k = 0; k < 8; k++) {
+      var ni = ci + N8I[k];
+      if (ni < 0 || ni >= w) continue;
+      var nj = cj + N8J[k];
+      if (nj < 0 || nj >= h) continue;
+      var nid = nj * w + ni;
+      if (drin[nid]) continue;
+      drin[nid] = 1;
+      var hoch = cw + eps;
+      gef[nid] = hoehen[nid] > hoch ? hoehen[nid] : hoch;
+      hn = heapRein(hk, hv, hn, gef[nid], nid);   // gerundeter Wert, s. o.
+    }
+  }
+  return { gefuellt: gef, ordnung: ordnung, gezogen: gezogen };
+}
+
+/**
+ * Gefuelltes Hoehenfeld. Die Eingabe wird NICHT angefasst (siehe Kopf dieses
+ * Blocks); das Ergebnis ist ein neues Float32Array derselben Laenge.
+ *
+ * @param hoehen  Float32Array, w*h, Zeilen-Major
+ * @param w, h    Gittergroesse (bei quadratischen Gittern zweimal dasselbe)
+ * @param opt     { epsilon, aussen } — `aussen` ist eine Uint8Array-Maske
+ *                frei entwaessernder Zellen (Meer); ohne sie entwaessert nur
+ *                der Gitterrand.
+ */
+export function senkenFuellen(hoehen, w, h, opt) {
+  var o = opt || {};
+  var eps = (typeof o.epsilon === 'number' && o.epsilon > 0) ? o.epsilon : SENKEN_EPSILON;
+  return priorityFlood(hoehen, w, h, eps, o.aussen || null).gefuellt;
+}
+
+/**
+ * Senkenfuellung + Abflussrichtungen + Einzugsgebiete in einem Durchgang.
+ *
+ * @param hoehen  wie oben; wird nicht veraendert
+ * @param w, h    Gittergroesse
+ * @param opt     { epsilon, aussen, regen, sog }
+ *                `regen` (Float32Array, w*h) ist die Wassermenge, die je Zelle
+ *                anfaellt. Ohne Angabe traegt jede Zelle 1, `akk` ist dann
+ *                buchstaeblich die Zahl der Zellen oberhalb. MIT Angabe ist es
+ *                die gewichtete Flaeche — der Hebel, an dem der gemessene
+ *                Abfluss der Erosion haengt.
+ *                `sog` (Float32Array, w*h, Werte um 1) gewichtet die
+ *                RICHTUNGSWAHL: unter zwei gleich steilen Nachbarn gewinnt der
+ *                mit dem groesseren Sog. Gedacht fuer den gemessenen Abfluss —
+ *                Wasser folgt der Rinne, die es selbst gegraben hat, und nicht
+ *                dem rechnerisch steilsten Gefaelle. Die Wahl bleibt dabei
+ *                zwingend auf ECHT TIEFERE Nachbarn beschraenkt, der Sog kann
+ *                einen Lauf also nicht bergauf ziehen.
+ * @returns { gefuellt, ziel, akk, ordnung }
+ *   ziel[id]  Index der Zelle, in die id entwaessert; -1 heisst "hier endet
+ *             der Weg" (Gitterrand oder `aussen`).
+ *   akk[id]   Summe des Regens ueber id und alles, was ueber id abfliesst.
+ *   ordnung   Zellindizes, aufsteigend nach gefuellter Hoehe.
+ */
+export function abflussNetz(hoehen, w, h, opt) {
+  var o = opt || {};
+  var eps = (typeof o.epsilon === 'number' && o.epsilon > 0) ? o.epsilon : SENKEN_EPSILON;
+  var aussen = o.aussen || null;
+  var n = w * h;
+  var pf = priorityFlood(hoehen, w, h, eps, aussen);
+  var gef = pf.gefuellt, ordnung = pf.ordnung;
+  var ziel = new Int32Array(n);
+  var akk = new Float32Array(n);
+  var regen = (o.regen && o.regen.length === n) ? o.regen : null;
+  var sog = (o.sog && o.sog.length === n) ? o.sog : null;
+  var i, j, k, id;
+
+  for (j = 0; j < h; j++) {
+    for (i = 0; i < w; i++) {
+      id = j * w + i;
+      akk[id] = regen ? regen[id] : 1;
+      // Rand und Meer sind Enden, keine Durchgangszellen. Ohne diese beiden
+      // Zeilen liefe das Netz durch das Meer weiter und saugte die Einzugs-
+      // gebiete ganzer Kuestenabschnitte in eine einzige Zelle.
+      if (i === 0 || j === 0 || i === w - 1 || j === h - 1 || (aussen && aussen[id])) {
+        ziel[id] = -1;
+        continue;
+      }
+      var hier = gef[id], best = -1, bestG = 0;
+      for (k = 0; k < 8; k++) {
+        var nid = (j + N8J[k]) * w + (i + N8I[k]);
+        var g = (hier - gef[nid]) / N8L[k];
+        // Der Sog wirkt NUR auf schon absteigende Nachbarn: g ist hier bereits
+        // negativ oder null, wenn der Nachbar nicht tiefer liegt, und eine
+        // Multiplikation mit einer positiven Zahl dreht daran nichts.
+        if (sog && g > 0) g *= sog[nid];
+        // Echt groesser, nicht groesser-gleich: bei Gleichstand bliebe die
+        // Wahl an der Nachbarreihenfolge haengen statt am Gefaelle. Nach der
+        // eps-Fuellung gibt es zu jeder Nichtsaatzelle mindestens einen echt
+        // tieferen Nachbarn, der Zweig kann also nicht leer ausgehen.
+        if (g > bestG) { bestG = g; best = nid; }
+      }
+      ziel[id] = best;
+    }
+  }
+
+  // Rueckwaerts durch die Entnahmereihenfolge: eine Zelle wird erst
+  // weitergereicht, wenn alles, was ueber sie laeuft, schon gezaehlt ist.
+  // Das gilt, weil ziel[id] immer echt TIEFER liegt und damit frueher gezogen
+  // wurde — die Ordnung ist eine topologische Ordnung des Abflussbaums.
+  for (k = pf.gezogen - 1; k >= 0; k--) {
+    id = ordnung[k];
+    var t = ziel[id];
+    if (t >= 0) akk[t] += akk[id];
+  }
+  return { gefuellt: gef, ziel: ziel, akk: akk, ordnung: ordnung };
+}
