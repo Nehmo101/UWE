@@ -30,6 +30,38 @@ import { wasserNeuBauen } from '../world/water.js';
 var CAM_DIST_MIN = 25, CAM_DIST_MAX = 400;
 function camFokusMax() { return KARTE.half + 40; }
 
+/* --- Palettenbindung aus dem Biom (F1) -----------------------------------
+   Die Standardrampe in pipeline.js ist entsaettigt "Tiefen blau, Lichter
+   cremig". Aufgeprägt auf ein dunkles Biom zieht sie Mitteltoene Richtung
+   Creme — in der Sichtpruefung bekam der Aschekegel dadurch helle Flecken.
+   Die Rampe muss also aus dem Biom kommen: dessen Terrainpalette IST die
+   Sammlung der Farben, die auf der Karte wirklich vorkommen. Sortiert nach
+   Luminanz ergibt sie genau das, was ein Maler vormischt.                */
+function biomRampe(b) {
+  var t = (BIOME[b] || BIOME.wiese).terrain;
+  var namen = ["tiefe", "seegrund", "erde", "tritt", "grasKuehl", "driftBlau",
+    "grasWarm", "driftGelb", "grasTrocken", "fels", "sand", "brandung", "schnee"];
+  var liste = [];
+  for (var i = 0; i < namen.length; i++) {
+    var c = t[namen[i]];
+    if (!c) continue;
+    liste.push({ hex: c.getHex(), lum: 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b });
+  }
+  // Nach Helligkeit sortieren; gleiche Luminanz ueber den Namen entscheiden,
+  // damit die Rampe deterministisch bleibt.
+  liste.sort(function (a, b2) { return a.lum - b2.lum || a.hex - b2.hex; });
+  var raus = [];
+  for (var k = 0; k < liste.length; k++) raus.push(liste[k].hex);
+  return raus;
+}
+
+/** Rampe des aktiven Bioms setzen. Staerke bewusst niedrig: die Bindung soll
+ *  das Bild auf eine Palette ziehen, nicht postern — 0.34 nahm in der
+ *  Sichtpruefung sichtbar Kontrast. */
+export function palettePassend() {
+  setPalette(biomRampe(S.biom), 0.16);
+}
+
 /* --- Kartengroesse wechseln (H1b) ---------------------------------------
    setKartenGroesse() in store.js aendert nur Zahlen. Alles, was an diesen
    Zahlen haengt, muss hier in dieser Reihenfolge nachgezogen werden:
@@ -711,6 +743,7 @@ export function initIO() {
     rebuildAll();
     // Tageszeit erneut anwenden: wasserTint, Schneeauflage und der luft-Block
     // des Bioms haengen daran und greifen so sofort beim Wechsel.
+    palettePassend();
     setTod(getTodName(), true);
     toast("Biom: " + BIOME[b].label + (formNeu ? " — Gelände neu erzeugt" : ""));
   });

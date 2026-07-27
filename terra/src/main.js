@@ -22,7 +22,7 @@ import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
 import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast,
   markerOverlayAktualisieren }
   from './ui/panels.js';
-import { initIO } from './editor/io.js';
+import { initIO, palettePassend } from './editor/io.js';
 import { tickWind } from './world/wind.js';
 
 /* ==========================================================================
@@ -130,9 +130,13 @@ const renderer = initPipeline(camera);
    (Dateien vor dieser Runde), setzt io.js auf 0 und die Karte sieht exakt so
    aus wie frueher. Werte bewusst zurueckhaltend: die Bindung soll das Bild
    auf eine Palette ziehen, nicht postern. */
-setPalette(PALETTE_STANDARD, 0.34);
 setMalschicht(MAL_DEZENT);
-setMultiplane(0.5);
+// 0.5 nahm in der Sichtpruefung sichtbar Kontrast (Mittag wirkte wie durch
+// Milchglas); 0.3 staffelt die Tiefe, ohne das Bild zu verhangen.
+setMultiplane(0.3);
+// Die Farbrampe kommt aus dem Biom (palettePassend in io.js) — die
+// Standardrampe hier waere biomblind und zoege dunkle Biome Richtung Creme.
+setPalette(PALETTE_STANDARD, 0.16);
 initTerrain(scene);
 initWater(scene);
 initSky(scene);
@@ -146,6 +150,9 @@ setRauchSammler(setRauchQuellen);
 initPointer(renderer.domElement);
 initKeys(onKey);
 initIO();
+// Farbrampe des Startbioms setzen (F1) — muss nach initIO stehen, weil die
+// Funktion dort lebt und BIOME liest.
+palettePassend();
 
 genBase(S.worldSeed);
 refreshTerrainFull();
