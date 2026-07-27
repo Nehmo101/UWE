@@ -6,6 +6,10 @@ import { KARTE } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { cam, camera } from '../editor/camera.js';
+// Bruchmaske (H6). Zyklusfrei: generators/paths.js zieht rng/store/pools/
+// terrain/objects/materials/geometry — keines davon importiert world/water.js
+// (geprueft: water.js wird nur von main.js und editor/io.js importiert).
+import { bruchMaskeUniforms } from '../generators/paths.js';
 
 /* --- Masse mit der Kartengroesse (H1b) ----------------------------------
    Beide Flaechen muessen die Karte plus Sichtweite ueberdecken, sonst
@@ -34,11 +38,94 @@ function baueWasserGeo() {
   g.rotateX(-Math.PI / 2);
   return g;
 }
+
+/* --- Bruchzonen aussparen (H6) -------------------------------------------
+   Kanon: Terra ist auseinandergerissen. Eine Bruchkante (generators/paths.js)
+   laesst das Terrain einseitig um 40..200 Einheiten ins Nichts fallen — die
+   kartenfuellende Wasserebene bei y = 0 und der opake Meeresboden-Teller bei
+   y = -24 wuerden daraus einen tiefen See mit Boden machen und alles darunter
+   (Wurzelvorhaenge, schwebende Truemmer) verdecken.
+
+   Beide Flaechen sampeln deshalb die Bruchmaske in WELTkoordinaten und
+   verschwinden dort, wo sie hoch steht. Kein neues ShaderMaterial: die
+   Materialien bleiben terraMat, ihr onBeforeCompile wird nur umhuellt
+   (Projektkonvention: Ankerpruefung + console.warn, siehe terraPatch in
+   render/materials.js).
+
+   Zwei Spielarten:
+     weich (Wasser)  — transparentes Material, also Alpha weich ausblenden und
+                       erst bei voller Wirkung discarden. Die Kante treppt
+                       dadurch nicht, obwohl discard binaer ist.
+     hart (Teller)   — opakes Material, dort traegt kein Alpha. Der Schnitt
+                       liegt bei Maske 0.5 und damit GENAU auf der Bruchkante,
+                       wo das Terrain noch auf voller Hoehe steht: die harte
+                       Kante des Tellers liegt unter unversehrtem Land und ist
+                       von keinem Blickwinkel zu sehen. Zugleich ist das
+                       Teller-Loch damit IMMER mindestens so gross wie das
+                       Wasserloch (das erst bei 0.5 vollstaendig offen ist) —
+                       es gibt keinen Streifen, in dem verblassendes Wasser
+                       ueber fehlendem Boden schwebte, und keinen, in dem der
+                       Teller durch die Abgrundwand schnitte.
+   ------------------------------------------------------------------------- */
+var BRUCH_FRAG =
+  'if ( uBruchStaerke > 0.0 ) {\n' +
+  '  vec2 terraBruchUV = vTerraW.xz * uBruchAbb.x + uBruchAbb.y;\n' +
+  // Ausserhalb der Karte klemmt ClampToEdge auf die Randtexel — eine
+  // Bruchkante am Kartenrand wuerde ihren Wert sonst ueber den kompletten
+  // 872-Einheiten-Saum der Wasserebene schmieren. Deshalb hart auf 0 setzen.
+  '  vec2 terraBruchIn = step( vec2( 0.0 ), terraBruchUV ) * step( terraBruchUV, vec2( 1.0 ) );\n' +
+  '  float terraBruchM = texture2D( uBruchMaske, terraBruchUV ).r\n' +
+  '    * terraBruchIn.x * terraBruchIn.y * uBruchStaerke;\n';
+
+function patchBruchAusschnitt(shader, hart) {
+  shader.uniforms.uBruchMaske = bruchMaskeUniforms.uBruchMaske;
+  shader.uniforms.uBruchAbb = bruchMaskeUniforms.uBruchAbb;
+  shader.uniforms.uBruchStaerke = bruchMaskeUniforms.uBruchStaerke;
+  // vTerraW liefert Patch (3) von terraPatch (Weltposition als Varying).
+  if (shader.fragmentShader.indexOf('varying vec3 vTerraW;') < 0) {
+    console.warn('terra: Shader-Patch "bruchausschnitt" findet kein vTerraW — ' +
+      'Wasser und Meeresboden werden an Bruchkanten nicht ausgespart.');
+    return;
+  }
+  var anker = '#include <alphatest_fragment>';
+  if (shader.fragmentShader.indexOf(anker) < 0) {
+    console.warn('terra: Shader-Patch "bruchausschnitt" fand seinen Anker nicht — ' +
+      'Wasser und Meeresboden werden an Bruchkanten nicht ausgespart.');
+    return;
+  }
+  var kern = BRUCH_FRAG + (hart
+    ? '  if ( terraBruchM > 0.5 ) discard;\n'
+    : '  float terraBruchA = smoothstep( 0.12, 0.50, terraBruchM );\n' +
+      '  diffuseColor.a *= 1.0 - terraBruchA;\n' +
+      '  if ( terraBruchA >= 1.0 ) discard;\n') + '}\n';
+  shader.fragmentShader = 'uniform sampler2D uBruchMaske;\nuniform vec2 uBruchAbb;\n' +
+    'uniform float uBruchStaerke;\n' +
+    shader.fragmentShader.replace(anker, anker + '\n' + kern);
+}
+
+/** Umhuellt onBeforeCompile/customProgramCacheKey eines terraMat-Materials.
+ *  Der Cache-Schluessel MUSS mitwachsen: waterMat, das Teller-Material und
+ *  z. B. flussMat (paths.js) liefern sonst denselben terraMat-Schluessel und
+ *  koennten sich ein Programm teilen — der Ausschnitt landete dann im
+ *  falschen Material oder fehlte im richtigen. */
+function bruchAusschnitt(mat, hart) {
+  var vorher = mat.onBeforeCompile;
+  mat.onBeforeCompile = function (shader) {
+    if (vorher) vorher.call(this, shader);
+    patchBruchAusschnitt(shader, hart);
+  };
+  var schluessel = mat.customProgramCacheKey;
+  mat.customProgramCacheKey = function () {
+    return (schluessel ? schluessel.call(this) : '') + '|bruch' + (hart ? 'h' : 'w');
+  };
+  return mat;
+}
+
 var waterGeo = baueWasserGeo();
-var waterMat = terraMat({
+var waterMat = bruchAusschnitt(terraMat({
   color: 0x3f93ad, transparent: true, opacity: 0.68, depthWrite: false,
   map: TEX.foamEdge
-});
+}), false);
 waterMat.map.repeat.set(26, 26);
 var water = new THREE.Mesh(waterGeo, waterMat);
 water.position.y = 0;
@@ -55,7 +142,7 @@ function baueBodenGeo() {
   return g;
 }
 var seabedGeo = baueBodenGeo();
-var seabed = new THREE.Mesh(seabedGeo, terraMat({ vertexColors: true }));
+var seabed = new THREE.Mesh(seabedGeo, bruchAusschnitt(terraMat({ vertexColors: true }), true));
 seabed.position.y = -24;
 seabed.frustumCulled = false;
 // Grundfarbe liegt in den Vertexfarben, material.color bleibt weiss und ist

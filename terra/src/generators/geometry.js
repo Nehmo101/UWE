@@ -913,6 +913,204 @@ function bruchkante(geo, ebene, seed) {
 }
 
 /* ==========================================================================
+   Schiffbau- und Stoffhelfer: Rumpf, Takelage, gespannte Bahn. Sie tragen
+   Kategorie 2 des Objektkatalogs und werden von Zelten, Planen und Markisen
+   der spaeteren Buendel mitbenutzt. Bewusst OHNE die Maritim-Palette weiter
+   unten: als allgemeine Helfer bringen sie ihre Vorgabefarben selbst mit.
+   ========================================================================== */
+
+/**
+ * Setzt die uv aller bereits gesammelten Teile auf einen festen Punkt.
+ * Zwei Gruende, beide unverzichtbar, sobald ein Pool Stoffbahnen enthaelt:
+ * der Wind-Shader gewichtet die Auslenkung mit uv.y (BX/CY/PL bringen echte
+ * uv von 0..1 mit und wuerden sonst mitschwingen), und ein Pool mit
+ * alphaTest-Karte muss seine starren Teile auf den opaken Texturstreifen
+ * klemmen (Muster geoBaumArt: v = 0.008). Danach angehaengte zeltbahn-Flaechen
+ * behalten ihre eigenen uv und schwingen als Einzige.
+ */
+function starr(parts, ab, v) {
+  for (var i = ab || 0; i < parts.length; i++) uvKonst(parts[i], 0.5, v || 0);
+  return parts;
+}
+
+/**
+ * Schiffsrumpf als gelofteter Koerper: laengs gekruemmter Kiel (Aufkimmung an
+ * Bug und Heck), sich zu den Enden verjuengende Spanten, darauf ein Deck.
+ * Bug zeigt nach +z. y = 0 IST DIE WASSERLINIE — damit steht derselbe Rumpf
+ * richtig im Wasser, egal ob tryPlaceWasser ihn auf WATER setzt oder ein
+ * Kompositum ihn auf die Helling hebt.
+ * l/b/h = Laenge/Breite/Rumpfhoehe (Kiel bis Schandeck mittschiffs),
+ * sprung = Deckssprung, also die Ueberhoehung des Decks an den Enden.
+ * Kahn bis Dreimaster unterscheiden sich NUR in diesen vier Zahlen; deshalb
+ * ist der Rumpf ein Generator und kein Satz fertiger Geometrien.
+ * Rueckgabe ist eine fertig eingefaerbte Geometrie (Muster geoFels/leafGeo):
+ * unter der Wasserlinie laeuft sie in den Teerton aus, part() darf also NICHT
+ * mehr darueber, das wuerde die Faerbung platt schreiben.
+ */
+function rumpf(l, b, h, sprung, hex) {
+  var NL = 8, NV = 6, NB = 2, i, j;
+  var pos = [], col = [], idx = [];
+  var c = new THREE.Color(hex), teer = new THREE.Color(0x453a30), tmp = new THREE.Color();
+  var halb = [], kiel = [], deck = [];
+  for (i = 0; i <= NL; i++) {
+    var t = i / NL, voll = Math.sin(Math.PI * t);
+    halb.push(b * 0.5 * Math.pow(voll, 0.5) * (0.7 + 0.3 * voll));
+    kiel.push(-h * 0.6 * (0.4 + 0.6 * Math.pow(voll, 0.7)));
+    // vorn staerker ueberhoeht als achtern — so sitzt jedes Rundspantboot
+    deck.push(h * 0.4 + sprung * Math.pow(Math.abs(t * 2 - 1), 1.7) * (t > 0.5 ? 1.2 : 0.85));
+  }
+  function schreib(x, y, z, unter) {
+    tmp.copy(c);
+    if (unter > 0) tmp.lerp(teer, clamp(unter, 0, 1) * 0.75);
+    // Rauschen ueber die QUANTISIERTE Lage (Muster geoFels): eine Planke
+    // behaelt ihren Ton, auch wenn zwei Flaechen dieselbe Ecke fuehren.
+    tmp.multiplyScalar(0.95 + hashi(Math.round(x * 8), Math.round(z * 8), 311) * 0.1);
+    pos.push(x, y, z); col.push(tmp.r, tmp.g, tmp.b);
+  }
+  // Aussenhaut: j laeuft vom Backbord-Schandeck ueber den Kiel nach Steuerbord.
+  // Der Exponent 0.72 auf sin(a) macht die Kimm voll statt spitz — ein reines
+  // sin ergaebe ein V-Boot, das nur als Rennruderer taugt.
+  for (i = 0; i <= NL; i++) {
+    for (j = 0; j <= NV; j++) {
+      var a = Math.PI * j / NV;
+      var y = deck[i] - (deck[i] - kiel[i]) * Math.pow(Math.sin(a), 0.72);
+      schreib(-Math.cos(a) * halb[i], y, (i / NL - 0.5) * l, -y / (h * 0.5));
+    }
+  }
+  for (i = 0; i < NL; i++) {
+    for (j = 0; j < NV; j++) {
+      var a0 = i * (NV + 1) + j, b0 = a0 + 1, c0 = a0 + NV + 1, d0 = c0 + 1;
+      idx.push(a0, b0, c0, b0, d0, c0);         // Umlauf so, dass die Normale nach aussen zeigt
+    }
+  }
+  // Deck etwas unter der Schandeckkante: der Rest der Aussenhaut steht dann von
+  // selbst als Schanzkleid darueber und kostet kein eigenes Bauteil.
+  var ds = pos.length / 3;
+  for (i = 0; i <= NL; i++) {
+    for (j = 0; j <= NB; j++) {
+      schreib((j / NB * 2 - 1) * halb[i] * 0.88, deck[i] - h * 0.16, (i / NL - 0.5) * l, -1);
+    }
+  }
+  for (i = 0; i < NL; i++) {
+    for (j = 0; j < NB; j++) {
+      var e0 = ds + i * (NB + 1) + j, f0 = e0 + 1, g0 = e0 + NB + 1, h0 = g0 + 1;
+      idx.push(e0, g0, f0, f0, g0, h0);
+    }
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(col), 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * Gespannte Stoffbahn zwischen VIER Eckpunkten: pts = [oben-links, oben-rechts,
+ * unten-rechts, unten-links], wobei "oben" die Kante ist, an der die Bahn
+ * haengt. durchhang beult die Flaeche ENTGEGEN ihrer Normalen aus (Normale =
+ * (p1-p0) x (p3-p0)) — eine waagerecht gespannte Plane sackt damit nach unten
+ * durch, ein senkrechtes Segel bauscht sich nach Lee. Reihenfolge der Ecken
+ * und Vorzeichen von durchhang bestimmen also die Richtung; ein flaches PL
+ * bekommt diesen Bauch nie hin, und genau daran erkennt man Stoff.
+ * Die uv laufen mit v = 0 an der Aufhaengung und v = 1 an der freien Kante:
+ * der Wind-Shader gewichtet mit uv.y, der Saum schwingt, die Naht nicht.
+ */
+function zeltbahn(parts, pts, durchhang, hex) {
+  var NU = 5, NV = 3, i, j;
+  var p0 = pts[0], p1 = pts[1], p2 = pts[2], p3 = pts[3];
+  var e1 = new THREE.Vector3().subVectors(p1, p0);
+  var e2 = new THREE.Vector3().subVectors(p3, p0);
+  var nrm = new THREE.Vector3().crossVectors(e1, e2);
+  if (nrm.lengthSq() < 1e-9) nrm.set(0, 1, 0);     // entartete Ecken: nach oben ausbeulen
+  nrm.normalize();
+  var anz = (NU + 1) * (NV + 1);
+  var pos = new Float32Array(anz * 3), uv = new Float32Array(anz * 2), idx = [];
+  var a = new THREE.Vector3(), b = new THREE.Vector3();
+  for (i = 0; i <= NU; i++) {
+    var u = i / NU;
+    a.lerpVectors(p0, p1, u);
+    b.lerpVectors(p3, p2, u);
+    for (j = 0; j <= NV; j++) {
+      var v = j / NV, k = i * (NV + 1) + j;
+      // Beide Ränder festgehalten, Maximum in der Mitte — das ist die
+      // Naeherung einer an allen vier Ecken angeschlagenen Bahn.
+      var s = durchhang * Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
+      pos[k * 3] = a.x + (b.x - a.x) * v - nrm.x * s;
+      pos[k * 3 + 1] = a.y + (b.y - a.y) * v - nrm.y * s;
+      pos[k * 3 + 2] = a.z + (b.z - a.z) * v - nrm.z * s;
+      uv[k * 2] = u; uv[k * 2 + 1] = v;
+    }
+  }
+  for (i = 0; i < NU; i++) {
+    for (j = 0; j < NV; j++) {
+      var q = i * (NV + 1) + j;
+      idx.push(q, q + 1, q + NV + 1, q + 1, q + NV + 2, q + NV + 1);
+    }
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  parts.push(part(g, null, hex));
+  return parts;
+}
+
+/**
+ * Takelage: Masten, Rahen, Segel und Wanten — bewusst getrennt vom Rumpf,
+ * damit Wrack und Floss sie einfach weglassen.
+ * masten: [{ x, z, h, r, rake, wx, wy }] — Fusspunkt, Hoehe, Fussradius,
+ *   Neigung nach achtern, Ansatzbreite/-hoehe der Wanten (wx fehlt = keine).
+ * segel:  [{ m, y, w, h, dx, dz, bauch, unten, rahe, hex }] — Mastindex,
+ *   Rahhoehe, Breite, Hoehe, Versatz zum Mast, Bauch, Breitenverhaeltnis der
+ *   Unterkante, rahe:false laesst die Rah weg (Stag- und Klueversegel).
+ * seed streut Bauch und Rahlaenge — sechs Segel eines Dreimasters sollen nicht
+ * sechsmal dasselbe Rechteck sein.
+ * Segel bleiben ohne Karte: eine Tuchtextur mit brauchbarem Alpha gibt es im
+ * Bestand nicht, und ein alphaTest auf einer der Vegetationskarten wuerde
+ * Loecher ins Tuch schlagen. Ein schlichtes, gebauschtes Tuch traegt hier
+ * mehr als eine falsche Silhouette. (transparent bleibt in jedem Fall tabu.)
+ */
+function takelage(parts, masten, segel, seed, hex) {
+  var holz = hex === undefined ? 0x6a5540 : hex, i, s;
+  for (i = 0; i < masten.length; i++) {
+    var m = masten[i];
+    var mr = m.r === undefined ? m.h * 0.024 : m.r;
+    parts.push(part(new CY(mr * 0.5, mr, m.h, 6), M(m.x, m.h * 0.5, m.z, m.rake || 0, 0, 0), holz));
+    parts.push(part(new CO(mr * 1.5, mr * 3.4, 5), M(m.x, m.h + mr * 1.5, m.z), holz));
+    if (m.wx) {
+      for (s = -1; s <= 1; s += 2) {
+        // Wanten laufen als leicht eingezogener Zug von der Reling zum Topp.
+        // radial 3: bei dieser Kameradistanz ist ein Want ein Strich — ein
+        // Dreikant kostet 12 Dreiecke statt der 48 eines runden Seils.
+        var zug = [new THREE.Vector3(m.x + s * m.wx, m.wy || 0, m.z),
+                   new THREE.Vector3(m.x + s * m.wx * 0.5, m.h * 0.52, m.z),
+                   new THREE.Vector3(m.x, m.h * 0.9, m.z)];
+        parts.push(part(tubeGeo(zug, function () { return mr * 0.28; }, 3), null, 0xb2a184));
+      }
+    }
+  }
+  for (i = 0; i < segel.length; i++) {
+    var sg = segel[i], mm = masten[sg.m];
+    var sr = mm.r === undefined ? mm.h * 0.024 : mm.r;
+    var cx = mm.x + (sg.dx || 0), cz = mm.z + (sg.dz || 0);
+    var bw = sg.w * 0.5, uw = bw * (sg.unten === undefined ? 0.94 : sg.unten);
+    var y1 = sg.y, y0 = sg.y - sg.h;
+    if (sg.rahe !== false) {
+      parts.push(part(new CY(sr * 0.45, sr * 0.45, sg.w * (1.04 + hashi(i, 3, seed) * 0.12), 5),
+        M(cx, y1, cz, 0, 0, Math.PI / 2), holz));
+    }
+    var bauch = (sg.bauch === undefined ? sg.h * 0.17 : sg.bauch) * (0.7 + hashi(i, 5, seed) * 0.6);
+    zeltbahn(parts, [
+      new THREE.Vector3(cx - bw, y1, cz), new THREE.Vector3(cx + bw, y1, cz),
+      new THREE.Vector3(cx + uw, y0, cz), new THREE.Vector3(cx - uw, y0, cz)
+    ], bauch, sg.hex === undefined ? 0xe8dfc9 : sg.hex);
+  }
+  return parts;
+}
+
+/* ==========================================================================
    Gebaeude, zweite Fassung: Ueberstand, Fenster, Sockel, Stilmerkmale.
    ========================================================================== */
 
@@ -1727,7 +1925,627 @@ definePool("wehrbanner", geoWehrbanner(), { radius: 0.4, dbl: true, ao: 0.12,
   familie: 'stoff', wind: { amp: 0.22 } });
 definePool("wappenstein", geoWappenstein(), { radius: 0.4, ao: 0.2, familie: 'stein' });
 
+/* ==========================================================================
+   Kategorie 2 des Objektkatalogs — Maritim (Buendel 3), dazu die Wasser- und
+   Brueckenbauten aus Kategorie 7. Wie beim Wehrbau teilen sich alle Bauten
+   EINE Palette: nur so lesen Kaimauer, Kran und Kogge als ein Hafen statt als
+   drei zufaellig benachbarte Objekte.
+
+   AUSRICHTUNGSKONVENTION: Jedes Uferobjekt ist mit dem WASSER BEI +z gebaut.
+   tryPlaceUfer (objects.js) liefert den Yaw aus dem Hoehengradienten — bergab
+   entspricht dem lokalen +z — und genObjekt dreht die Instanz damit direkt
+   aufs Wasser zu, statt sie zufaellig zu wuerfeln. Wer hier eine Rueckwand
+   nach +z setzt, dreht dem Hafenbecken den Ruecken zu.
+   ========================================================================== */
+var MR_HOLZ = 0x9a7f5e,       // frische Planken, Beplankung
+    MR_HOLZH = 0xb09268,      // Decksbretter, Aufbauten (heller)
+    MR_HOLZD = 0x6a5540,      // Balken, Spanten, Masten
+    MR_TEER = 0x453a30,       // geteerte Pfahlfuesse, Unterwasserschiff
+    MR_STEIN = 0xb2ac9e,      // Kaimauerwerk
+    MR_STEINH = 0xc6c0b0,     // Abdeckplatten, Kaikante
+    MR_STEIND = 0x8b8474,     // nasse Sockelzone
+    MR_TUCH = 0xe8dfc9,       // Segeltuch
+    MR_TUCHR = 0xc0553f,      // Seezeichen, Wimpel, Bojenmarken
+    MR_EISEN = 0x4c4841,
+    MR_SEIL = 0xb2a184,
+    MR_GLUT = 0xffd28a,       // Laternenglas und Glut (Schein kommt aus dem
+                              // fensterlicht-Pool, s. LICHT_ANKER)
+    MR_PUTZ = 0xf0e8d8,
+    MR_NETZ = 0x7d7254,
+    MR_WASSER = 0x35566b,     // gefasste Wasserflaechen (Becken, Rinne, Kammer)
+    MR_SALZ = 0xf4f1e4,
+    MR_TANG = 0x5c6b4a;
+
+/* --- Werft und Kai ------------------------------------------------------- */
+
+function geoWerfthalle() {
+  var parts = [], i, s;
+  for (s = -1; s <= 1; s += 2) {
+    for (i = 0; i < 4; i++) {
+      parts.push(part(new CY(0.17, 0.23, 4.0, 6), M(s * 2.5, 2.0, -3.3 + i * 2.2), MR_HOLZ));
+    }
+    parts.push(part(new BX(0.26, 0.28, 7.6), M(s * 2.5, 4.14, 0), MR_HOLZD));   // Pfette
+    // Nur die Laengsseiten sind beplankt; die Giebelseite zum Wasser (+z)
+    // bleibt offen — sonst kaeme kein Rumpf aus der Halle.
+    fachwerk(parts, 7.2, 3.9, s * 2.5, "x", 1, s > 0 ? 151 : 157, MR_HOLZD);
+  }
+  parts.push(part(new BX(5.2, 3.9, 0.16), M(0, 1.95, -3.7), MR_HOLZ));         // Rueckwand
+  parts.push(part(new BX(5.3, 0.24, 0.28), M(0, 4.14, -3.7), MR_HOLZD));
+  parts.push(part(prismGeo(5.8, 1.9, 8.0), M(0, 4.28, 0), 0x6f5a48));
+  parts.push(part(new BX(5.8, 0.1, 8.0), M(0, 4.23, 0), 0x4a4038));            // Untersicht
+  return mergeGeos(parts);
+}
+
+function geoHelling() {
+  var parts = [], i, s;
+  for (i = 0; i < 7; i++) {                                  // Kielpallen
+    parts.push(part(new BX(0.6, 0.85 - Math.abs(i - 3) * 0.05, 0.4),
+      M(0, 0.42, -2.7 + i * 0.9), MR_HOLZD));
+  }
+  parts.push(part(new BX(0.3, 0.34, 6.6), M(0, 1.0, 0), MR_HOLZD));            // Kielbalken
+  // Halbfertiger Rumpf: bruchkante kappt ihn an einer schraegen, verrauschten
+  // Ebene. Auf der einen Seite steht die Beplankung schon bis zum Schandeck,
+  // auf der anderen ist offen — genau das macht eine Helling aus, und es
+  // kostet keine zweite Rumpfvariante.
+  var rh = rumpf(6.2, 2.3, 1.6, 0.4, MR_HOLZ);
+  bruchkante(rh, { nx: 0.55, ny: 1, nz: 0.15, wert: 0.35, rauheit: 0.75 }, 163);
+  rh.applyMatrix4(M(0, 2.05, 0));
+  parts.push(rh);
+  for (i = 0; i < 6; i++) {                                  // aufragende Spanten
+    var t = (i + 0.5) / 6, voll = Math.sin(Math.PI * t);
+    var hw = 1.15 * Math.pow(voll, 0.5) * (0.7 + 0.3 * voll);
+    for (s = -1; s <= 1; s += 2) {
+      parts.push(part(new BX(0.12, 1.5, 0.22),
+        M(s * hw, 2.8, (t - 0.5) * 6.2, 0, 0, -s * 0.35), MR_HOLZD));
+    }
+  }
+  for (s = -1; s <= 1; s += 2) {                             // Geruestleitern
+    parts.push(part(new BX(0.1, 3.2, 0.1), M(s * 1.8, 1.6, 1.6), MR_HOLZD));
+    parts.push(part(new BX(0.1, 3.2, 0.1), M(s * 1.8, 1.6, 2.05), MR_HOLZD));
+    for (i = 0; i < 5; i++) {
+      parts.push(part(new BX(0.09, 0.07, 0.5), M(s * 1.8, 0.6 + i * 0.6, 1.83), MR_HOLZ));
+    }
+  }
+  return mergeGeos(parts);
+}
+
+function geoSlipbahn() {
+  var parts = [], i, s;
+  // Die Bahn faellt nach +z ins Wasser; u ist die Koordinate auf der geneigten
+  // Achse, alle Teile teilen dieselbe Drehung um x.
+  var neig = 0.24, cn = Math.cos(neig), sn = Math.sin(neig);
+  for (i = 0; i < 8; i++) {
+    var u = -2.45 + i * 0.7;
+    parts.push(part(new BX(2.7, 0.2, 0.3), M(0, 0.45 - u * sn, u * cn, neig, 0, 0), MR_HOLZD));
+  }
+  for (s = -1; s <= 1; s += 2) {
+    for (i = 0; i < 3; i++) {
+      var ox = s * (0.3 + i * 0.52);
+      parts.push(part(new BX(0.22, 0.22, 5.6), M(ox, 0.62, 0, neig, 0, 0), MR_HOLZ));
+    }
+  }
+  parts.push(part(new BX(3.0, 0.6, 0.6), M(0, 0.5, -2.95), MR_STEIND));        // Widerlager
+  return mergeGeos(parts);
+}
+
+function geoKaimauer() {
+  var parts = [
+    part(new BX(4.4, 3.2, 1.7), M(0, -1.15, 0), MR_STEIN),                     // Blockmauer
+    part(new BX(4.5, 0.7, 1.84), M(0, -2.4, 0), MR_STEIND),                    // nasse Sockelzone
+    part(new BX(4.5, 0.3, 1.88), M(0, 0.6, 0), MR_STEINH),                     // Kaikante
+    part(new BX(4.4, 0.16, 1.7), M(0, 0.83, 0), MR_STEIN)                      // Pflaster
+  ];
+  var ring = new THREE.TorusGeometry(0.2, 0.045, 4, 8);
+  for (var i = -1; i <= 1; i++) {
+    parts.push(part(new CY(0.2, 0.24, 0.75, 8), M(i * 1.5, 1.28, 0.45), MR_HOLZD));
+    parts.push(part(new CY(0.26, 0.26, 0.1, 8), M(i * 1.5, 1.68, 0.45), MR_HOLZD));
+    // Torus liegt von Haus aus in der xy-Ebene — der Anlegering haengt damit
+    // flach an der Kaifront (z = +0.85) und braucht keine Drehung.
+    parts.push(part(ring, M(i * 1.5, 0.2, 0.88), MR_EISEN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoKaitreppe() {
+  var parts = [], sub = [], i;
+  // treppe() steigt immer nach +z; die Kaitreppe fuehrt INS Wasser, also wird
+  // der fertige Lauf um die Hochachse gedreht. Ein zweiter Treppenhelfer mit
+  // umgekehrter Laufrichtung waere dieselbe Schleife noch einmal.
+  treppe(sub, 8, 1.3, 0.26, 0, -2.08, -2.0, MR_STEIN, MR_STEINH);
+  var dreh = M(0, 0, 0, 0, Math.PI, 0);
+  for (i = 0; i < sub.length; i++) parts.push(sub[i].applyMatrix4(dreh));
+  parts.push(part(new BX(1.7, 0.3, 0.8), M(0, -0.15, -1.4), MR_STEINH));       // Podest oben
+  return mergeGeos(parts);
+}
+
+function geoKaikran() {
+  var parts = [], s, i;
+  for (s = -1; s <= 1; s += 2) {
+    for (i = -1; i <= 1; i += 2) {
+      parts.push(part(new BX(0.22, 4.4, 0.22), M(s * 0.85, 2.2, i * 0.85), MR_HOLZD));
+    }
+  }
+  fachwerk(parts, 1.9, 4.2, -0.85, "z", 1, 167, MR_HOLZD);
+  fachwerk(parts, 1.9, 4.2, 0.85, "x", 3, 173, MR_HOLZD);
+  parts.push(part(new BX(2.1, 0.95, 2.1), M(0, 4.78, 0), MR_HOLZ));            // Radkasten
+  // Das Tretrad ist ein offener Zylinder quer im Kasten — ein geschlossener
+  // haette zwei Deckel, die niemand je sieht.
+  parts.push(part(new CY(0.8, 0.8, 1.5, 12, 1, true),
+    M(0, 4.78, 0, 0, 0, Math.PI / 2), MR_HOLZD));
+  parts.push(part(prismGeo(2.5, 1.0, 2.5), M(0, 5.26, 0), 0x6f5a48));          // Haube
+  parts.push(part(new BX(0.3, 0.3, 3.4), M(0, 5.0, 1.5, -0.5, 0, 0), MR_HOLZ)); // Ausleger
+  parts.push(part(new CY(0.03, 0.03, 3.6, 4), M(0, 3.9, 2.98), MR_SEIL));
+  parts.push(part(new BX(0.34, 0.18, 0.34), M(0, 2.1, 2.98), MR_EISEN));       // Kloben
+  return mergeGeos(parts);
+}
+
+function geoAnleger() {
+  var parts = [], i;
+  // L-foermig: der Stamm laeuft nach +z ins Wasser, der Kopf quer davor.
+  for (i = 0; i < 7; i++) {
+    parts.push(part(new BX(1.7, 0.12, 0.46), M(0, 0.55, -1.4 + i * 0.56), MR_HOLZ));
+  }
+  for (i = 0; i < 5; i++) {
+    parts.push(part(new BX(0.5, 0.12, 1.6), M(-1.4 + i * 0.7, 0.55, 2.9), MR_HOLZ));
+  }
+  parts.push(part(new BX(1.9, 0.16, 0.18), M(0, 0.42, -1.5), MR_HOLZD));       // Landanschluss
+  for (i = 0; i < 4; i++) {
+    parts.push(part(new CY(0.11, 0.14, 2.2, 6),
+      M(i % 2 ? 0.7 : -0.7, -0.4, -1.0 + Math.floor(i / 2) * 1.9), MR_TEER));
+  }
+  for (i = 0; i < 4; i++) {
+    parts.push(part(new CY(0.11, 0.14, 2.2, 6), M(-1.35 + i * 0.9, -0.4, 2.9), MR_TEER));
+  }
+  for (i = -1; i <= 1; i += 2) {
+    parts.push(part(new CY(0.16, 0.19, 0.7, 7), M(i * 1.1, 0.85, 3.3), MR_HOLZD)); // Poller
+  }
+  return mergeGeos(parts);
+}
+
+function geoBootshaus() {
+  var parts = [], i;
+  for (i = 0; i < 6; i++) {
+    parts.push(part(new CY(0.14, 0.18, 2.6, 6),
+      M(i % 2 ? 1.35 : -1.35, 0.0, -1.6 + Math.floor(i / 2) * 1.6), MR_TEER));
+  }
+  parts.push(part(new BX(3.4, 0.16, 4.0), M(0, 1.2, 0), MR_HOLZ));             // Plattform
+  parts.push(part(new BX(3.2, 2.2, 3.8), M(0, 2.35, 0), MR_HOLZ));
+  // Wasserdurchfahrt: ein dunkler Kasten durch den ganzen Baukoerper. Billiger
+  // und lesbarer als eine echte Aussparung, die drei Wandstuecke braeuchte.
+  parts.push(part(new BX(1.5, 1.6, 4.1), M(0, 2.0, 0), 0x2a2622));
+  dach(parts, 3.2, 3.8, 1.5, 3.45, 0x6f5a48, false);
+  // Torbahn vor der Durchfahrt, leicht nach aussen gebaucht
+  zeltbahn(parts, [new THREE.Vector3(-0.75, 2.7, 1.94), new THREE.Vector3(0.75, 2.7, 1.94),
+    new THREE.Vector3(0.75, 1.35, 1.94), new THREE.Vector3(-0.75, 1.35, 1.94)], 0.14, MR_TUCH);
+  return mergeGeos(parts);
+}
+
+/* --- Seezeichen ---------------------------------------------------------- */
+
+function geoLeuchtturm() {
+  var parts = [], i;
+  parts.push(part(new CY(1.5, 2.2, 1.1, 12), M(0, 0.45, 0), MR_STEIND));       // Fundament
+  parts.push(part(new CY(0.85, 1.5, 6.6, 12), M(0, 4.3, 0), MR_PUTZ));
+  for (i = 0; i < 3; i++) {                                                    // Farbringe
+    var t = 0.16 + i * 0.29, r = 1.5 - 0.65 * t;
+    parts.push(part(new CY(r + 0.02, r + 0.05, 0.8, 12), M(0, 1.0 + t * 6.6, 0),
+      i % 2 ? MR_PUTZ : MR_TUCHR));
+  }
+  parts.push(part(new CY(1.25, 1.25, 0.22, 12), M(0, 7.71, 0), MR_STEINH));    // Galerie
+  parts.push(part(new CY(1.2, 1.2, 0.45, 12, 1, true), M(0, 8.04, 0), MR_EISEN));
+  parts.push(part(new CY(0.78, 0.84, 1.3, 10), M(0, 8.6, 0), MR_GLUT));        // Laternenhaus
+  for (i = 0; i < 6; i++) {                                                    // Sprossen
+    var a = i / 6 * Math.PI * 2;
+    parts.push(part(new BX(0.08, 1.32, 0.08),
+      M(Math.cos(a) * 0.82, 8.6, Math.sin(a) * 0.82), MR_EISEN));
+  }
+  parts.push(part(new CO(1.05, 0.85, 10), M(0, 9.68, 0), MR_EISEN));
+  parts.push(part(new CY(0.04, 0.04, 0.5, 4), M(0, 10.3, 0), MR_EISEN));
+  fenster(parts, 0, 3.4, 1.24, 0.42, 0.7, "z");
+  tuer(parts, 0, 1.0, 1.44, 0.7, 1.5);
+  return mergeGeos(parts);
+}
+
+function geoLeuchtfeuer() {
+  var parts = [
+    part(new BX(0.55, 0.16, 0.55), M(0, 0.08, 0), MR_STEIND),
+    part(new CY(0.07, 0.1, 2.2, 6), M(0, 1.2, 0), MR_EISEN),
+    part(new CY(0.34, 0.22, 0.42, 8, 1, true), M(0, 2.4, 0), MR_EISEN),        // Feuerkorb
+    part(new IC(0.26, 0), M(0, 2.44, 0, 0, 0, 0, 1, 0.7, 1), MR_GLUT)          // Glut
+  ];
+  for (var i = 0; i < 4; i++) {
+    var a = i / 4 * Math.PI * 2;
+    parts.push(part(new BX(0.05, 0.5, 0.05),
+      M(Math.cos(a) * 0.3, 2.34, Math.sin(a) * 0.3), MR_EISEN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoBake() {
+  // Die Dreieckstafel ist ein sehr flaches prismGeo: das Dreieck steckt damit
+  // in EINEM Primitiv statt in zwei PL-Haelften mit offener Rueckseite.
+  return mergeGeos([
+    part(new CY(0.09, 0.13, 3.6, 6), M(0, 1.4, 0), MR_HOLZD),
+    part(new BX(0.8, 0.09, 0.09), M(0, 2.1, 0), MR_HOLZD),
+    part(new BX(0.8, 0.09, 0.09), M(0, 1.5, 0), MR_HOLZD),
+    part(prismGeo(0.95, 1.05, 0.07), M(0, 2.45, 0), MR_TUCHR)
+  ]);
+}
+
+function geoBoje() {
+  return mergeGeos([
+    part(new CY(0.3, 0.34, 0.35, 8), M(0, -0.4, 0), MR_EISEN),                 // Unterwasserteil
+    part(new CY(0.34, 0.26, 0.62, 8), M(0, 0.05, 0), MR_TUCHR),
+    part(new CO(0.34, 0.42, 8), M(0, 0.57, 0), MR_TUCHR),
+    part(new CY(0.04, 0.04, 1.0, 4), M(0, 1.2, 0), MR_EISEN),
+    part(new IC(0.16, 0), M(0, 1.68, 0), 0x2a2622)                             // Topzeichen
+  ]);
+}
+
+function geoHafenlaterne() {
+  return mergeGeos([
+    part(new CY(0.16, 0.22, 0.35, 6), M(0, 0.17, 0), MR_STEIND),
+    part(new CY(0.07, 0.12, 3.4, 6), M(0, 1.9, 0), MR_EISEN),
+    // Ausleger als halber Torus, um PI gedreht, damit der Bogen UNTER der
+    // Laterne durchhaengt: dieser Schwung unterscheidet die Kailaterne von der
+    // geraden Strassenlaterne.
+    part(new THREE.TorusGeometry(0.3, 0.035, 4, 8, Math.PI), M(0, 3.35, 0, 0, 0, Math.PI), MR_EISEN),
+    part(new BX(0.34, 0.44, 0.34), M(0, 3.72, 0), MR_GLUT),
+    part(new BX(0.44, 0.08, 0.44), M(0, 4.0, 0), MR_EISEN),
+    part(new CO(0.3, 0.26, 6), M(0, 4.16, 0), MR_EISEN)
+  ]);
+}
+
+/* --- Fischerei am Ufer --------------------------------------------------- */
+
+function geoNetzgestell() {
+  var parts = [], s;
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new CY(0.06, 0.08, 2.5, 5), M(s * 1.2, 1.1, 0.35, -0.25, 0, 0), MR_HOLZD));
+    parts.push(part(new CY(0.06, 0.08, 2.5, 5), M(s * 1.2, 1.1, -0.35, 0.25, 0, 0), MR_HOLZD));
+  }
+  parts.push(part(new CY(0.055, 0.055, 2.8, 5), M(0, 2.14, 0, 0, 0, Math.PI / 2), MR_HOLZD));
+  // Alles Holz auf den opaken Texturstreifen klemmen (Muster geoBaumArt): der
+  // Pool traegt eine alphaTest-Karte fuer die Netze, sonst waeren die Boecke
+  // durchloechert — und der Wind laesst sie zugleich stehen.
+  starr(parts, 0, 0.008);
+  for (s = 0; s < 3; s++) {
+    var x0 = -0.9 + s * 0.9;
+    zeltbahn(parts, [
+      new THREE.Vector3(x0 - 0.42, 2.1, 0), new THREE.Vector3(x0 + 0.42, 2.1, 0),
+      new THREE.Vector3(x0 + 0.38, 0.7, 0.24), new THREE.Vector3(x0 - 0.38, 0.7, 0.24)
+    ], 0.22, MR_NETZ);
+  }
+  return mergeGeos(parts);
+}
+
+function geoFischtrockner() {
+  var parts = [], s, i;
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(0.12, 2.6, 0.12), M(s * 1.3, 1.3, -0.3), MR_HOLZD));
+    parts.push(part(new BX(0.12, 2.6, 0.12), M(s * 1.3, 1.3, 0.3), MR_HOLZD));
+    parts.push(part(new BX(0.1, 0.1, 0.86), M(s * 1.3, 2.55, 0), MR_HOLZD));
+  }
+  for (i = 0; i < 2; i++) {
+    parts.push(part(new BX(2.8, 0.09, 0.09), M(0, 1.5 + i * 0.9, 0), MR_HOLZD));
+  }
+  // Stockfische aus einer Seed: zwoelf gleich grosse Klumpen im exakten Raster
+  // sehen nach Tapete aus, nicht nach Fang.
+  for (i = 0; i < 14; i++) {
+    var d = hashi(i, 3, 181);
+    parts.push(part(new IC(0.1 + d * 0.05, 0),
+      M(-1.2 + (i % 7) * 0.4, 1.5 + (i % 2) * 0.9 - 0.26 - d * 0.08,
+        i % 2 ? 0.07 : -0.07, 0, d * 3, 0, 0.7, 1.9, 0.7), 0xcdbd9a));
+  }
+  return mergeGeos(parts);
+}
+
+function geoReusenstapel() {
+  var parts = [], i;
+  // Offene CY (kein Deckel) = Korbreuse; die Stapelung kommt aus hashi, damit
+  // die drei Koerbe nicht wie gestanzt uebereinanderliegen.
+  for (i = 0; i < 3; i++) {
+    var d = hashi(i, 5, 191);
+    parts.push(part(new CY(0.24, 0.3, 0.85, 8, 1, true),
+      M(-0.18 + i * 0.2, 0.26 + (i === 2 ? 0.44 : 0), (d - 0.5) * 0.3,
+        Math.PI / 2 + (d - 0.5) * 0.2, (d - 0.5) * 0.6, 0), MR_HOLZ));
+  }
+  parts.push(part(new BX(1.0, 0.07, 0.07), M(0, 0.05, 0.32), MR_HOLZD));
+  return mergeGeos(parts);
+}
+
+function geoTauhaufen() {
+  var parts = [];
+  for (var i = 0; i < 3; i++) {
+    // radial 3 statt 4: ein aufgeschossenes Tau mit r = 0.4 ist zwei Pixel
+    // dick — der Dreikant spart hier ein Viertel der Dreiecke sichtbar folgenlos.
+    parts.push(part(new THREE.TorusGeometry(0.3 - i * 0.05, 0.055, 3, 8),
+      M(0, 0.06 + i * 0.1, 0, Math.PI / 2, i * 0.5, 0), MR_SEIL));
+  }
+  return mergeGeos(parts);
+}
+
+function geoSalzgarten() {
+  var parts = [], i;
+  for (i = 0; i < 4; i++) {
+    var x = i % 2 ? 1.1 : -1.1, z = i < 2 ? -1.1 : 1.1;
+    parts.push(part(new BX(2.1, 0.3, 2.1), M(x, 0.0, z), 0x8a7f68));           // Wanne
+    parts.push(part(new BX(1.86, 0.06, 1.86), M(x, 0.13, z), MR_WASSER));      // Sole
+  }
+  parts.push(part(new BX(4.6, 0.34, 0.34), M(0, 0.17, 0), 0x9c8f74));          // Daemme
+  parts.push(part(new BX(0.34, 0.34, 4.6), M(0, 0.17, 0), 0x9c8f74));
+  for (i = 0; i < 3; i++) {
+    parts.push(part(new CO(0.4, 0.55, 7),
+      M(-1.2 + i * 1.2, 0.42, 2.6, 0, i * 0.7, 0, 1, 0.9, 1), MR_SALZ));
+  }
+  return mergeGeos(parts);
+}
+
+/* --- Schiffe. Alle nutzen rumpf(); die Typen unterscheiden sich in Laenge,
+   Breite, Rumpfhoehe, Deckssprung und Aufbauten, nicht in der Bauweise. ---- */
+
+function geoFischerboot() {
+  var parts = [rumpf(3.6, 1.25, 0.85, 0.22, MR_HOLZ)];
+  parts.push(part(new BX(1.0, 0.07, 0.34), M(0, 0.2, -0.55), MR_HOLZH));       // Duchten
+  parts.push(part(new BX(1.0, 0.07, 0.34), M(0, 0.2, 0.7), MR_HOLZH));
+  takelage(parts, [{ x: 0, z: 0.35, h: 3.4, r: 0.06, wx: 0.5, wy: 0.3 }],
+    [{ m: 0, y: 3.0, w: 1.5, h: 2.0, unten: 1.25 }], 197, MR_HOLZD);
+  parts.push(part(new BX(0.1, 0.55, 0.6), M(0, 0.1, -1.8, 0.3, 0, 0), MR_HOLZD)); // Ruder
+  return mergeGeos(parts);
+}
+
+function geoKutter() {
+  var parts = [rumpf(5.4, 1.9, 1.25, 0.32, MR_HOLZ)];
+  parts.push(part(new BX(1.5, 0.95, 1.8), M(0, 0.78, -1.1), MR_HOLZH));        // Kajuete
+  // Eigenes Kajuetdach statt dach(): dach() setzt immer auf x = z = 0 auf, die
+  // Kajuete steht aber achtern.
+  parts.push(part(prismGeo(1.68, 0.5, 1.92), M(0, 1.25, -1.1), 0x6f5a48));
+  parts.push(part(new BX(1.68, 0.08, 1.92), M(0, 1.21, -1.1), 0x4a4038));
+  fenster(parts, 0, 1.0, -0.2, 0.4, 0.34, "z");
+  takelage(parts, [{ x: 0, z: 0.9, h: 4.8, r: 0.08, wx: 0.75, wy: 0.5 }],
+    [{ m: 0, y: 4.3, w: 2.1, h: 2.6, unten: 1.2 },
+     { m: 0, y: 4.0, w: 1.2, h: 2.2, dz: 1.4, unten: 0.35, rahe: false }], 199, MR_HOLZD);
+  parts.push(part(new BX(0.12, 0.75, 0.55), M(0, 0.05, -2.75, 0.35, 0, 0), MR_HOLZD));
+  return mergeGeos(parts);
+}
+
+function geoKogge() {
+  var parts = [rumpf(7.2, 2.9, 1.9, 0.55, MR_HOLZ)];
+  // Kastelle vorn und achtern mit Zinnenband: die Kogge ist ein schwimmendes
+  // Wehrbauwerk, deshalb hier dieselbe zinnen()-Zelle wie an Land.
+  parts.push(part(new BX(2.0, 1.3, 1.6), M(0, 1.4, -2.6), MR_HOLZH));
+  parts.push(part(new BX(1.7, 1.1, 1.3), M(0, 1.3, 2.6), MR_HOLZH));
+  zinnen(parts, 2.0, 1.6, 2.05, MR_HOLZD, 4, { z: -2.6, hoehe: 0.34, staerke: 0.18 });
+  zinnen(parts, 1.7, 1.3, 1.85, MR_HOLZD, 3, { z: 2.6, hoehe: 0.34, staerke: 0.18 });
+  takelage(parts, [{ x: 0, z: 0.2, h: 7.0, r: 0.14, wx: 1.25, wy: 0.75 }],
+    [{ m: 0, y: 6.2, w: 4.4, h: 3.4, unten: 1.0 }], 211, MR_HOLZD);
+  parts.push(part(new PL(0.9, 0.3), M(0.45, 7.15, 0.2, 0, Math.PI / 2, 0), MR_TUCHR));
+  return mergeGeos(parts);
+}
+
+function geoDreimaster() {
+  var parts = [rumpf(10.5, 3.2, 2.4, 0.7, MR_HOLZ)];
+  parts.push(part(new BX(2.4, 1.4, 2.6), M(0, 1.7, -3.6), MR_HOLZH));          // Achterkastell
+  parts.push(part(new BX(2.5, 0.16, 2.7), M(0, 2.45, -3.6), MR_HOLZD));
+  parts.push(part(new BX(2.0, 0.75, 1.4), M(0, 1.35, 3.8), MR_HOLZH));         // Back
+  // Bugspriet: CY-Achse ist +y, PI/2 legt sie nach +z, die 0.3 heben die
+  // Spitze aus dem Wasser.
+  parts.push(part(new CY(0.06, 0.11, 3.2, 6), M(0, 1.9, 5.2, Math.PI / 2 - 0.3, 0, 0), MR_HOLZD));
+  takelage(parts, [
+    { x: 0, z: 3.0, h: 7.4, r: 0.14, wx: 1.3, wy: 1.0 },
+    { x: 0, z: 0.0, h: 9.6, r: 0.17, wx: 1.55, wy: 1.0 },
+    { x: 0, z: -3.4, h: 7.0, r: 0.12, wx: 1.2, wy: 1.5 }
+  ], [
+    { m: 0, y: 6.9, w: 3.4, h: 2.6 }, { m: 0, y: 4.1, w: 3.9, h: 2.4 },
+    { m: 1, y: 9.0, w: 3.8, h: 2.8 }, { m: 1, y: 6.0, w: 4.6, h: 2.9 },
+    { m: 2, y: 6.5, w: 3.0, h: 2.3 }, { m: 2, y: 4.0, w: 3.4, h: 2.2 }
+  ], 223, MR_HOLZD);
+  return mergeGeos(parts);
+}
+
+function geoRuderschiff() {
+  var parts = [rumpf(9.0, 1.7, 1.3, 0.5, MR_HOLZ)], i, s;
+  parts.push(part(new BX(0.42, 0.42, 1.9), M(0, -0.15, 5.0, 0.12, 0, 0), MR_EISEN)); // Rammsporn
+  parts.push(part(new BX(0.9, 0.1, 6.4), M(0, 0.5, -0.4), MR_HOLZH));          // Laufgang
+  for (s = -1; s <= 1; s += 2) {
+    for (i = 0; i < 8; i++) {
+      var z = -2.9 + i * 0.82;
+      // Riemen leicht gefaechert (hashi): eine exakt parallele Reihe wirkt wie
+      // ein Kamm, nicht wie ein rudernder Verband.
+      parts.push(part(new BX(2.6, 0.07, 0.11),
+        M(s * 1.55, 0.3, z, 0, s * (0.06 + hashi(i, 3, 227) * 0.05), -s * 0.22), MR_HOLZD));
+      parts.push(part(new BX(0.5, 0.05, 0.3),
+        M(s * 2.75, -0.02, z, 0, s * 0.1, -s * 0.22), MR_HOLZH));              // Blatt
+    }
+  }
+  takelage(parts, [{ x: 0, z: 0.0, h: 5.4, r: 0.1, wx: 0.7, wy: 0.5 }],
+    [{ m: 0, y: 4.9, w: 2.8, h: 2.2 }], 229, MR_HOLZD);
+  return mergeGeos(parts);
+}
+
+function geoFloss() {
+  var parts = [], i;
+  for (i = 0; i < 6; i++) {
+    var d = hashi(i, 3, 233);
+    // Stammachse nach z drehen; die halb eingetauchte Lage (Mitte auf y = 0)
+    // ist genau die Schwimmlage eines Rundholzes.
+    parts.push(part(new CY(0.24 + d * 0.04, 0.26 + d * 0.04, 3.2, 7),
+      M(-0.75 + i * 0.3, 0.0, (d - 0.5) * 0.2, Math.PI / 2, (d - 0.5) * 0.05, 0), MR_HOLZD));
+  }
+  parts.push(part(new BX(1.7, 0.09, 1.7), M(0, 0.24, 0), MR_HOLZ));
+  parts.push(part(new BX(1.2, 0.9, 1.2), M(-0.1, 0.73, -0.35), MR_HOLZH));     // Huette
+  parts.push(part(prismGeo(1.45, 0.5, 1.45), M(-0.1, 1.18, -0.35), 0x6f5a48));
+  parts.push(part(new CY(0.05, 0.06, 3.0, 5), M(0.7, 1.3, 0.8, 0.3, 0, 0.18), MR_HOLZD));
+  return mergeGeos(parts);
+}
+
+function geoWrack() {
+  var parts = [];
+  // Erst wegbrechen, dann kippen: bruchkante nimmt dem Rumpf die hochliegende
+  // Bordwand, die Matrix legt ihn danach auf die Seite. Aus einem Bestandsteil
+  // wird so seine Ruine, ohne eine zweite Rumpfvariante zu bauen.
+  var rh = rumpf(6.6, 2.5, 1.8, 0.45, 0x7a6a55);
+  bruchkante(rh, { nx: -0.8, ny: 1, nz: 0.3, wert: 0.5, rauheit: 0.9 }, 239);
+  rh.applyMatrix4(M(0, 0.1, 0, 0.1, 0, -0.55));
+  parts.push(rh);
+  parts.push(part(new CY(0.09, 0.17, 2.6, 6), M(1.05, 1.1, 0.3, 0.15, 0, -0.62), MR_HOLZD));
+  parts.push(part(new IC(0.32, 0), M(1.95, 0.05, 0.7, 0.4, 0.9, 0.2, 1.4, 0.5, 1.2), MR_STEIND));
+  zeltbahn(parts, [new THREE.Vector3(-0.9, 0.55, -1.4), new THREE.Vector3(-1.5, 0.15, 0.9),
+    new THREE.Vector3(-0.6, -0.5, 1.2), new THREE.Vector3(-0.2, -0.35, -1.2)], 0.3, MR_TANG);
+  return mergeGeos(parts);
+}
+
+/* --- Kategorie 7: Bruecken und Wasserbauten ------------------------------ */
+
+function geoSteinbruecke() {
+  var parts = [], s, i;
+  // bogenreihe liefert Pfeiler und Boegen in einem Zug; die Bruecke setzt nur
+  // Fahrbahn, Bruestung und Eisbrecher dazu.
+  bogenreihe(parts, 3, 1.9, 1.5, -1.4, MR_STEIN, 2.4, 0.9);
+  parts.push(part(new BX(9.0, 0.4, 2.6), M(0, 1.75, 0), MR_STEIN));            // Fahrbahn
+  parts.push(part(new BX(9.0, 0.18, 2.84), M(0, 1.99, 0), MR_STEINH));
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(9.0, 0.5, 0.22), M(0, 2.33, s * 1.31), MR_STEINH)); // Bruestung
+  }
+  // Eisbrecher: CY mit 3 Radialsegmenten IST der dreieckige Keil — ein
+  // gedrehter BX braeuchte zwei Teile fuer dieselbe Schneide.
+  for (i = -1; i <= 1; i += 2) {
+    parts.push(part(new CY(0.5, 0.62, 2.6, 3), M(i * 1.4, -0.3, 1.5, 0, Math.PI / 6, 0), MR_STEIND));
+  }
+  return mergeGeos(parts);
+}
+
+function geoHolzbruecke() {
+  var parts = [], s, i;
+  for (i = 0; i < 12; i++) {
+    parts.push(part(new BX(0.42, 0.11, 2.2), M(-2.31 + i * 0.42, 1.06, 0), MR_HOLZ));
+  }
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(5.4, 0.22, 0.22), M(0, 0.9, s * 0.95), MR_HOLZD));  // Holm
+    for (i = -1; i <= 1; i += 2) {                                             // Joche
+      parts.push(part(new CY(0.14, 0.18, 2.8, 6),
+        M(i * 1.5, -0.25, s * 0.95, 0, 0, s * i * 0.12), MR_TEER));
+    }
+    parts.push(part(new BX(5.4, 0.09, 0.09), M(0, 1.85, s * 1.04), MR_HOLZD)); // Handlauf
+    for (i = 0; i < 4; i++) {
+      parts.push(part(new BX(0.09, 0.85, 0.09), M(-2.1 + i * 1.4, 1.5, s * 1.04), MR_HOLZD));
+    }
+  }
+  return mergeGeos(parts);
+}
+
+function geoKanalschleuse() {
+  var parts = [], s, i;
+  for (s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(1.0, 3.0, 6.0), M(s * 1.9, 0.1, 0), MR_STEIN));     // Kammerwange
+    parts.push(part(new BX(1.16, 0.24, 6.2), M(s * 1.9, 1.72, 0), MR_STEINH));
+    for (i = -1; i <= 1; i += 2) {                                             // Spindeln
+      parts.push(part(new CY(0.09, 0.09, 1.0, 6), M(s * 1.9, 2.3, i * 2.6), MR_EISEN));
+      parts.push(part(new BX(0.6, 0.09, 0.09), M(s * 1.9, 2.8, i * 2.6, 0, 0.5, 0), MR_EISEN));
+    }
+  }
+  for (i = -1; i <= 1; i += 2) {                                               // Stemmtore
+    for (s = -1; s <= 1; s += 2) {
+      parts.push(part(new BX(1.6, 2.2, 0.22), M(s * 0.72, 0.7, i * 2.6, 0, s * i * 0.28, 0), MR_HOLZD));
+    }
+  }
+  parts.push(part(new BX(4.6, 0.16, 0.7), M(0, 1.92, 2.6), MR_HOLZ));          // Steg
+  parts.push(part(new BX(2.8, 0.1, 4.6), M(0, -1.2, 0), MR_WASSER));           // Kammerwasser
+  return mergeGeos(parts);
+}
+
+function geoUferdamm() {
+  var parts = [], i;
+  // Der Kern ist ein um die Laengsachse gekippter Block: die Kante zum Wasser
+  // (+z) liegt tiefer, die Schuettung liegt darauf.
+  parts.push(part(new BX(4.0, 0.9, 2.8), M(0, -0.2, 0, 0.34, 0, 0), MR_STEIND));
+  for (i = 0; i < 12; i++) {
+    var a = hashi(i, 3, 251), b = hashi(i, 7, 251);
+    parts.push(part(new IC(0.22 + a * 0.16, 0),
+      M(-1.8 + (i % 6) * 0.72, (i < 6 ? 0.25 : -0.3) - b * 0.12,
+        (i < 6 ? -0.55 : 0.7) + (a - 0.5) * 0.4,
+        a * 3, b * 3, a * 2, 1, 0.75, 1), MR_STEIN));
+  }
+  return mergeGeos(parts);
+}
+
+function geoAquaedukt() {
+  var parts = [];
+  bogenreihe(parts, 2, 1.7, 3.4, 0, MR_STEIN, 1.3, 0.8);
+  parts.push(part(new BX(5.8, 0.4, 1.5), M(0, 4.8, 0), MR_STEIN));             // Rinnenunterbau
+  parts.push(part(new BX(5.8, 0.6, 0.3), M(0, 5.3, 0.6), MR_STEINH));          // Wangen
+  parts.push(part(new BX(5.8, 0.6, 0.3), M(0, 5.3, -0.6), MR_STEINH));
+  parts.push(part(new BX(5.8, 0.12, 0.9), M(0, 5.16, 0), MR_WASSER));          // Wasserfaden
+  return mergeGeos(parts);
+}
+
+function geoAquaeduktkopf() {
+  var parts = [];
+  sockel(parts, 3.0, 2.6, MR_STEIND);
+  parts.push(part(new BX(3.0, 3.2, 2.6), M(0, 2.1, 0), MR_STEIN));
+  parts.push(part(new BX(3.2, 0.22, 2.8), M(0, 3.81, 0), MR_STEINH));
+  dach(parts, 3.0, 2.6, 1.1, 3.98, 0x8a5c48, false);
+  parts.push(part(new CY(1.25, 1.35, 0.7, 12), M(0, 0.35, 2.2), MR_STEINH));   // Auslaufbecken
+  parts.push(part(new CY(1.1, 1.1, 0.1, 12), M(0, 0.66, 2.2), MR_WASSER));
+  parts.push(part(new CY(0.18, 0.18, 0.6, 8), M(0, 1.5, 1.55, Math.PI / 2, 0, 0), MR_STEIND));
+  parts.push(part(new BX(0.3, 0.95, 0.12), M(0, 1.05, 1.7), MR_WASSER));       // Strahl
+  return mergeGeos(parts);
+}
+
+/* --- Dauerlicht-Anker: lokale Position + Groesse des Lichtscheins ---------
+   Gegenstueck zu FENSTER_ANKER, aber ohne Wuerfeln: emitLicht (objects.js)
+   setzt hier IMMER einen fensterlicht-Quad hin. Ein Seezeichen, das in 60 %
+   der Faelle aus ist, waere keines. Der bestehende fensterlicht-Pool wird
+   bewusst mitbenutzt — atmosphere.js faehrt dessen emissiveIntensity schon
+   ueber die Tageszeit, ein eigener Leucht-Pool braeuchte dort eine Zeile.
+   Werte: [x, y, z, groesse] im lokalen Massstab des Wirtspools.            */
+var LICHT_ANKER = {
+  leuchtturm: [0, 8.6, 0, 2.6],
+  leuchtfeuer: [0, 2.44, 0, 1.1],
+  hafenlaterne: [0, 3.72, 0, 0.7]
+};
+
+/* --- Pools. Radien und Familien stammen aus der Katalogtabelle. ----------- */
+definePool("werfthalle", geoWerfthalle(), { radius: 4.4, ao: 0.26, familie: 'holz' });
+definePool("helling", geoHelling(), { radius: 3.6, ao: 0.26, familie: 'holz' });
+definePool("slipbahn", geoSlipbahn(), { radius: 2.6, familie: 'holz' });
+definePool("kaimauer", geoKaimauer(), { radius: 2.2, familie: 'stein' });
+definePool("kaitreppe", geoKaitreppe(), { radius: 1.2, ao: 0.26, familie: 'stein' });
+definePool("kaikran", geoKaikran(), { radius: 2.6, ao: 0.26, familie: 'holz' });
+definePool("anleger", geoAnleger(), { radius: 2.4, familie: 'holz' });
+definePool("bootshaus", geoBootshaus(), { radius: 2.8, familie: 'holz' });
+definePool("leuchtturm", geoLeuchtturm(), { radius: 2.4, familie: 'putz' });
+definePool("leuchtfeuer", geoLeuchtfeuer(), { radius: 0.6, familie: 'metall' });
+definePool("bake", geoBake(), { radius: 0.7, familie: 'holz' });
+definePool("boje", geoBoje(), { radius: 0.5, familie: 'metall' });
+// Netze: TEX.kroneZerzaust statt einer eigenen Netzkarte — sie ist die einzige
+// vorhandene alphaTest-Silhouette mit dem opaken Streifen am unteren Rand, den
+// starr() fuer die Boecke braucht (siehe geoBaumArt). Der Kompromiss ist die
+// Silhouette selbst; eine echte Maschenkarte gehoert in textures.js.
+definePool("netzgestell", geoNetzgestell(), { radius: 1.4, dbl: true, ao: 0.18,
+  map: TEX.kroneZerzaust, alphaTest: 0.4, familie: 'stoff', wind: { amp: 0.24 } });
+definePool("fischtrockner", geoFischtrockner(), { radius: 1.5, familie: 'holz' });
+definePool("reusenstapel", geoReusenstapel(), { radius: 0.6, familie: 'holz' });
+definePool("tauhaufen", geoTauhaufen(), { radius: 0.4, familie: 'stoff' });
+definePool("salzgarten", geoSalzgarten(), { radius: 2.8, ao: 0.18, familie: 'erde' });
+definePool("hafenlaterne", geoHafenlaterne(), { radius: 0.4, familie: 'metall' });
+// Schiffe: dbl, weil die Segel von beiden Seiten gesehen werden. ao bleibt
+// niedrig — der Rumpf bringt seine Abdunkelung unter der Wasserlinie schon mit.
+definePool("fischerboot", geoFischerboot(), { radius: 1.8, dbl: true, ao: 0.18, familie: 'holz' });
+definePool("kutter", geoKutter(), { radius: 2.6, dbl: true, ao: 0.18, familie: 'holz' });
+definePool("kogge", geoKogge(), { radius: 3.6, dbl: true, ao: 0.18, familie: 'holz' });
+definePool("dreimaster", geoDreimaster(), { radius: 5.0, dbl: true, ao: 0.18, familie: 'holz' });
+definePool("ruderschiff", geoRuderschiff(), { radius: 4.0, dbl: true, ao: 0.18, familie: 'holz' });
+definePool("floss", geoFloss(), { radius: 1.9, familie: 'holz' });
+definePool("wrack", geoWrack(), { radius: 3.0, dbl: true, ao: 0.2, familie: 'holz' });
+definePool("steinbruecke", geoSteinbruecke(), { radius: 4.0, ao: 0.26, familie: 'stein' });
+definePool("holzbruecke", geoHolzbruecke(), { radius: 2.6, ao: 0.24, familie: 'holz' });
+definePool("kanalschleuse", geoKanalschleuse(), { radius: 3.0, ao: 0.24, familie: 'stein' });
+definePool("uferdamm", geoUferdamm(), { radius: 2.0, familie: 'stein' });
+definePool("aquaedukt", geoAquaedukt(), { radius: 3.0, ao: 0.26, familie: 'stein' });
+definePool("aquaeduktkopf", geoAquaeduktkopf(), { radius: 2.0, familie: 'stein' });
+
 setPoolNames();
 
 export { mergeGeos, M, part, prismGeo, tubeGeo, leafHalfWidth, leafSurface, leafGeo,
-  moundGeo, islandGeo, FENSTER_ANKER };
+  moundGeo, islandGeo, FENSTER_ANKER, LICHT_ANKER };

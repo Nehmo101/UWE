@@ -235,21 +235,27 @@ export function initIO() {
     var b = BIOME[this.value] ? this.value : "wiese";
     this.value = b;
     if (b === S.biom) return;
+    // H6/H2: Bringt das neue Biom ein anderes Hoehenprofil mit (Randabbruch,
+    // Amplitude, Terrassen, Dolinen ...), muss das Basisterrain neu erzeugt
+    // werden — sonst zeigt eine "Aschebrache" die weiche Kueste der Wiese.
+    // 21 der 25 Biome tragen ein `hoehe`-Feld, der Zweig greift also regulaer.
+    var formNeu = !hoehenProfilGleich(hoehenProfil(S.biom), hoehenProfil(b));
+    // Rueckfrage VOR jeder Zustandsaenderung: das Gelaende ist Handarbeit
+    // (Pinselhoehen, Flussbetten, Bruchkanten liegen darauf) und waere sonst
+    // kommentarlos weg. Nur fragen, wenn es etwas zu verlieren gibt.
+    if (formNeu && S.elements.length &&
+        !confirm("Das Biom „" + BIOME[b].label + "“ bringt ein eigenes Geländeprofil mit. "
+                 + "Das Basisgelände wird dafür neu erzeugt, von Hand modellierte Höhen gehen verloren. "
+                 + "Trotzdem wechseln?")) {
+      this.value = S.biom;                 // Auswahl zuruecksetzen
+      return;
+    }
     pushUndo(true);
-    // H6: hat das neue Biom ein anderes Hoehenprofil (Randabbruch, Amplitude,
-    // Terrassen ...), muss das Basisterrain neu erzeugt werden — sonst zeigt
-    // eine "Aschebrache" die weiche Kueste der Wiese. Solange kein Biom ein
-    // `hoehe`-Feld traegt (Stand dieser Runde), sind beide Profile gleich und
-    // der Zweig springt nie an: der Biomwechsel bleibt exakt wie bisher eine
-    // reine Farb- und Bestueckungsaenderung, die Hoehen bleiben unberuehrt.
-    var profilAlt = hoehenProfil(S.biom), profilNeu = hoehenProfil(b);
-    var formNeu = !hoehenProfilGleich(profilAlt, profilNeu);
     S.biom = b;
     if (formNeu) genBase(S.worldSeed);
     rebuildAll();
-    // Tageszeit erneut anwenden: sobald atmosphere.js den wasserTint der
-    // BIOME-Registry konsumiert (Folgerunde), greift er damit sofort beim
-    // Wechsel; bis dahin ist das ein harmloses Re-Apply des Presets.
+    // Tageszeit erneut anwenden: wasserTint, Schneeauflage und der luft-Block
+    // des Bioms haengen daran und greifen so sofort beim Wechsel.
     setTod(getTodName(), true);
     toast("Biom: " + BIOME[b].label + (formNeu ? " — Gelände neu erzeugt" : ""));
   });

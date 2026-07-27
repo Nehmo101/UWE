@@ -61,6 +61,29 @@ function safeSpacing(pts, wanted, maxCount) {
   return Math.max(wanted, need);
 }
 
+/**
+ * Biom-Abstandsfaktor (H-Welle 2). `veg.dichte` wirkt konstruktionsbedingt NUR
+ * nach unten (`if (V.dichte < 1 && ...)`), Werte > 1 sind wirkungslos —
+ * Regenwald, Bambus und Pilzwald koennen deshalb ueber `dichte` gar nicht
+ * dichter werden als der Bestand. `veg.abstand` ist der Gegenweg: ein Faktor
+ * auf das FERTIGE Ergebnis von safeSpacing (< 1 verdichtet, > 1 lichtet auf).
+ *
+ * Bewusst NACH safeSpacing und nicht auf dessen `wanted`-Argument: der
+ * Max()-Boden in safeSpacing ist genau die Grenze, die ueberschritten werden
+ * soll. Der Instanzdeckel wird damit umgangen — bei abstand 0.55 (Bambus)
+ * vervierfacht sich die Kandidatenzahl fast; MAX_INST_PER_EL in pools.js
+ * bleibt das Sicherheitsnetz.
+ *
+ * Byteidentitaet: fehlt das Feld (wiese, kueste, alle Runde-G-Biome) oder
+ * steht es auf 1, wird die Multiplikation NICHT ausgefuehrt — kein "* 1",
+ * keine Rundungsschleife, kein veraenderter Float.
+ */
+function biomAbstand(V, sp) {
+  var f = V.abstand;
+  if (f === undefined || f === null || f === 1) return sp;
+  return sp * f;
+}
+
 /** 0 am Polygonkern, 1 nahe dem Rand — Unterwuchs verdichtet sich am Saum. */
 function randNaehe(pts, x, z) {
   var best = 1e9;
@@ -95,7 +118,7 @@ function genWald(el) {
   var p = el.params, pts = el.points;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var klump = p.klumpen === undefined ? 0.55 : p.klumpen;
-  var sp = safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), deckel(14000));
+  var sp = biomAbstand(V, safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), deckel(14000)));
   var schwelle = 0.26 + klump * 0.36;
   var bb = polyBBox(pts), occ = newOcc(4);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
@@ -192,7 +215,11 @@ function genFeld(el) {
 function genWiese(el) {
   var p = el.params, pts = el.points;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
-  var sp = safeSpacing(pts, 2.6 / p.dichte, deckel(20000));
+  var sp = biomAbstand(V, safeSpacing(pts, 2.6 / p.dichte, deckel(20000)));
+  // Blumen-Leitfarben: das Biom darf die modulweite Tabelle ersetzen
+  // (Bluetental: rosa/creme). Ohne Feld ist LF exakt dieselbe Referenz wie
+  // frueher — gleiche Laenge, gleiche Werte, gleicher Index.
+  var LF = V.leitfarben || LEITFARBEN;
   var bb = polyBBox(pts), occ = newOcc(1.5);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
   var d0 = Math.floor(bb.z0 / sp), d1 = Math.ceil(bb.z1 / sp);
@@ -217,7 +244,7 @@ function genWiese(el) {
       var sc = rr(rng, 0.75, 1.35);
       var tint = tintOf(rng, 0.1);
       if (istBlume) {
-        var leit = LEITFARBEN[Math.floor(hashi(nestX, nestZ, el.seed + 93) * LEITFARBEN.length)];
+        var leit = LF[Math.floor(hashi(nestX, nestZ, el.seed + 93) * LF.length)];
         tint = [leit[0] * (0.9 + rng() * 0.2), leit[1] * (0.9 + rng() * 0.2), leit[2] * (0.9 + rng() * 0.2)];
       }
       emit(el, kind, x, h, z, rng() * 6.28, sc, sc * rr(rng, 0.8, 1.3), sc, tint);

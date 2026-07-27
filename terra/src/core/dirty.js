@@ -5,7 +5,9 @@ import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
 import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
   refreshTerrainFull, recomputeHeights, computeAO, refreshGrid } from '../world/terrain.js';
-import { pathSamples, genStrasse, genMauer, genFluss, genHecke } from '../generators/paths.js';
+import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
+  genBruch, bruchDaten, bruchMasse, brueche,
+  bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
 import { genObjekt } from '../generators/objects.js';
 import { genRanke } from '../generators/vines.js';
@@ -22,6 +24,10 @@ function genElement(el) {
     else if (el.variant === "mauer") genMauer(el);
     else if (el.variant === "fluss") genFluss(el);
     else if (el.variant === "hecke") genHecke(el);
+    // H6: neue Variante am ENDE der Kette — eine aeltere Fassung des Editors
+    // faellt durch alle else-if hindurch und erzeugt schlicht nichts, statt
+    // abzustuerzen. Das Speicherformat bleibt damit abwaertskompatibel.
+    else if (el.variant === "bruch") genBruch(el);
   } else if (el.kind === "flaeche") genFlaeche(el);
   else if (el.kind === "objekt") genObjekt(el);
   else if (el.kind === "ranke") genRanke(el);
@@ -54,6 +60,43 @@ function rebuildRivers() {
     for (var s = 0; s < sm.length; s++) samples.push({ x: sm[s].x, z: sm[s].z, y: prof[s] });
     rivers.push({ samples: samples, radius: el.params.breite * 0.62 + 2.2, depth: el.params.tiefe });
   }
+  // Bruchkanten benutzen DIESELBE Stempelliste (siehe rebuildBrueche) und
+  // muessen daher nach dem rivers.length = 0 oben laufen. Der Aufruf steht
+  // bewusst hier statt an jeder Aufrufstelle: so ist jeder Weg, der die
+  // Flussstempel erneuert (rebuildAll, commit), automatisch auch fuer die
+  // Bruchstempel korrekt.
+  rebuildBrueche();
+}
+
+/**
+ * Sammelt die Bruchkanten-Stempel (H6). Ein Bruch ist ein Flussstempel mit
+ * sehr grosser Tiefe und asymmetrischem Profil: die Kreiskette aus
+ * bruchDaten() liegt ausschliesslich auf der Abgrundseite, an der
+ * gezeichneten Linie selbst ist das Stempelgewicht exakt 0. Deshalb kommt der
+ * Bruch OHNE jede Aenderung an terrain.js/recomputeHeights aus — er wird
+ * einfach an `rivers` angehaengt und ueber dieselbe Minimum-Regel eingebrannt.
+ * `brueche` behaelt die Eintraege zusaetzlich mit Kantenverlauf und Massen,
+ * damit Werkzeuge sie ohne Neuberechnung lesen koennen.
+ *
+ * In DERSELBEN Schleife entsteht die Bruchmaske (paths.js): das Rasterbild der
+ * Abgrundzonen, mit dem world/water.js Wasserebene und Meeresboden-Teller
+ * aussparen. Sie haengt an genau denselben Stempeln wie die Hoehenwirkung und
+ * kann deshalb nicht gegen die Klippe verrutschen. Gibt es keine Bruchkante,
+ * bleibt die Maske leer und ihr Shaderzweig abgeschaltet.
+ */
+function rebuildBrueche() {
+  brueche.length = 0;
+  bruchMaskeLeeren();
+  for (var i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind !== "pfad" || el.variant !== "bruch" || el.points.length < 2) continue;
+    var d = bruchDaten(el);
+    if (!d) continue;
+    brueche.push(d);
+    rivers.push(d);          // {samples, radius, depth} — genau die rivers-Form
+    bruchMaskeStempeln(d);
+  }
+  bruchMaskeFertig();
 }
 
 /** Baut die Sperrmaske für Straßen, Flüsse, Mauern und Viertel-Gassen neu auf. */
@@ -106,6 +149,11 @@ function stempelRadius(el) {
     // weiter als der Korridor (breite*0.5+1.6).
     if (el.variant === "strasse") return p.breite * 0.5 + 2.1;
     if (el.variant === "mauer") return p.dicke * 0.6 + 1.2;
+    // Bruch (H6): die Stempelkette reicht bis `reichweite` auf die
+    // Abgrundseite. bruchMasse ist DIESELBE Rechnung, die bruchDaten benutzt —
+    // hier darf nichts nachgerechnet werden, sonst wird die Box zu klein und
+    // es bleiben Reste der alten Klippe stehen.
+    if (el.variant === "bruch") return bruchMasse(p).reichweite;
   }
   // Viertel-Gassen stempeln mit gasse*0.5+1.2, per inPoly aufs Polygon geklippt.
   if (el.kind === "flaeche" && el.variant === "viertel") return (p.gasse || 0) * 0.5 + 1.2;
@@ -226,7 +274,9 @@ function commit(el, heavy) {
 
 /** Ändert ein Element das Terrain oder die Sperrflächen? */
 function isHeavy(el) {
-  return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" || el.variant === "mauer")) ||
+  // "bruch" schneidet ueber die Stempelkette tief ins Hoehenfeld — schwer.
+  return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" ||
+          el.variant === "mauer" || el.variant === "bruch")) ||
          (el.kind === "flaeche" && el.variant === "viertel");
 }
 
@@ -264,6 +314,6 @@ function deleteElement(el) {
   refreshArborQuellen();
 }
 
-export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildCorridors,
+export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildBrueche, rebuildCorridors,
   rebuildAll, commit, isHeavy, deleteElement, refreshArborQuellen,
   markDirty, flushPack };

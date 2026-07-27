@@ -27,12 +27,50 @@
     <label for="biomSel">Biom</label>
     <!-- width:auto inline: die globale select-Regel (style.css) setzt 100%
          fuer Panel-Selects, in der flexiblen Leiste soll er kompakt bleiben -->
+    <!-- 25 Biome aus docs/engineering/terra-biomkatalog.md, gruppiert nach
+         Klima/Charakter. Die VALUES sind die Registry-Schlüssel aus
+         core/store.js und stehen so in gespeicherten Karten — sie dürfen
+         niemals umbenannt werden. `schnee` heißt deshalb weiterhin `schnee`,
+         zeigt aber laut Katalog das Label „Winterwald" (den Namensteil „Eis"
+         übernimmt das eigenständige Biom `eis`). -->
     <select id="biomSel" style="width:auto">
-      <option value="wiese" selected>Wiese</option>
-      <option value="wueste">Wüste</option>
-      <option value="kueste">Küste</option>
-      <option value="sumpf">Sumpf</option>
-      <option value="schnee">Schnee</option>
+      <optgroup label="Gemäßigt">
+        <option value="wiese" selected>Wiese</option>
+        <option value="bluetental">Blütental</option>
+        <option value="bambuswald">Bambuswald</option>
+        <option value="terrassen">Terrassenland</option>
+        <option value="nebelwald">Nebelwald</option>
+      </optgroup>
+      <optgroup label="Trocken">
+        <option value="wueste">Wüste</option>
+        <option value="steppe">Steppe</option>
+        <option value="salzwueste">Salzpfanne</option>
+      </optgroup>
+      <optgroup label="Kalt">
+        <option value="schnee">Winterwald</option>
+        <option value="eis">Ewiges Eis</option>
+        <option value="tundra">Tundra</option>
+        <option value="hochland">Hochland</option>
+      </optgroup>
+      <optgroup label="Feucht">
+        <option value="sumpf">Sumpf</option>
+        <option value="moor">Hochmoor</option>
+        <option value="regenwald">Regenwald</option>
+        <option value="mangrove">Mangrovenküste</option>
+        <option value="pilzwald">Pilzwald</option>
+      </optgroup>
+      <optgroup label="Fels &amp; Küste">
+        <option value="kueste">Küste</option>
+        <option value="kreide">Kreidefelsen</option>
+        <option value="karst">Karst</option>
+        <option value="klippenmeer">Klippenmeer</option>
+        <option value="korallenbank">Korallenbank</option>
+        <option value="meer">Offenes Meer</option>
+      </optgroup>
+      <optgroup label="Besonders">
+        <option value="vulkan">Aschekegel</option>
+        <option value="aschebrache">Aschebrache</option>
+      </optgroup>
     </select>
     <div class="sep"></div>
     <label for="kartenSel">Karte</label>

@@ -5,7 +5,7 @@ import { clamp, hashi, rngOf, rr, ri, wpick } from '../core/rng.js';
 import { HALF, WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf } from '../core/pools.js';
 import { heightAt, slopeAt, inCorridor } from '../world/terrain.js';
-import { FENSTER_ANKER, islandGeo } from './geometry.js';
+import { FENSTER_ANKER, LICHT_ANKER, islandGeo } from './geometry.js';
 import { rockMat } from '../render/materials.js';
 
 function newOcc(cell) { return { cell: cell || 3.5, map: {} }; }
@@ -44,6 +44,53 @@ function tryPlace(occ, x, z, r, opts) {
   if (occ && !occFree(occ, x, z, r)) return null;           // keine Überschneidung
   if (occ) occAdd(occ, x, z, r);
   return h;
+}
+
+/**
+ * Gegenstueck zu tryPlace fuer die Wasserobjekte (Objektkatalog, Regel "W").
+ * Liefert WATER als Setzhoehe zurueck — ein Rumpf schwimmt auf dem Spiegel,
+ * nicht auf dem Grund. Kartenrand und Belegungsraster gelten unveraendert.
+ */
+function tryPlaceWasser(occ, x, z, r) {
+  if (x < -HALF + 1 || x > HALF - 1 || z < -HALF + 1 || z > HALF - 1) return null;
+  // WATER - 0.3 statt WATER: die Uferbank liegt zwar unter dem Spiegel, ist
+  // aber so flach, dass ein Boot dort aufsaesse. Das ist genau die Gegenprobe
+  // zu tryPlace, das umgekehrt alles unter WATER + 0.35 verwirft — zwischen
+  // beiden Schwellen liegt das Uferband von tryPlaceUfer.
+  if (heightAt(x, z) >= WATER - 0.3) return null;
+  // Hangneigung und Korridor bleiben BEWUSST ungeprueft: unter Wasser
+  // beschreibt slopeAt die Beckenwand statt einer Standflaeche, und ein
+  // Wegkorridor, der durch den See laeuft, ist keiner.
+  if (occ && !occFree(occ, x, z, r)) return null;
+  if (occ) occAdd(occ, x, z, r);
+  return WATER;
+}
+
+/**
+ * Gegenstueck fuer das Uferband (Regel "U"): schmaler Streifen beiderseits der
+ * Wasserlinie. Rueckgabe ist { h, yaw } statt einer blossen Hoehe — Kai, Kran,
+ * Slipbahn und Bootshaus sind auf ihre Wasserseite gebaut und muessen sich
+ * danach ausrichten. Formalisiert damit die heute in dorfUfer (areas.js)
+ * hartkodierte Gradientenlogik; dort steht sie mit einem asymmetrischen
+ * Fenster (h > 0.4 || h < -2.5), hier mit dem symmetrischen Band aus dem
+ * Katalog. Steilhang und Korridor sind wie bei tryPlaceWasser kein Kriterium:
+ * das Ufer IST die Boeschung, und ein Weg endet am Anleger.
+ */
+function tryPlaceUfer(occ, x, z, r) {
+  if (x < -HALF + 1 || x > HALF - 1 || z < -HALF + 1 || z > HALF - 1) return null;
+  var h = heightAt(x, z);
+  if (Math.abs(h - WATER) >= 0.8) return null;
+  if (occ && !occFree(occ, x, z, r)) return null;
+  // Blickrichtung aufs Wasser = bergab. Zentraldifferenz ueber 4 m wie in
+  // dorfUfer: ein kleinerer Stuetzabstand nimmt die Duenung des
+  // Terrainrauschens mit, statt der Uferlinie zu folgen.
+  var dx = heightAt(x + 2, z) - heightAt(x - 2, z);
+  var dz = heightAt(x, z + 2) - heightAt(x, z - 2);
+  // Auf einer exakt ebenen Stelle liefert atan2(0, 0) den Wert 0, das Objekt
+  // blickt dann nach +z. Ohne Gefaelle gibt es keine bessere Antwort.
+  var yaw = Math.atan2(-dx, -dz);
+  if (occ) occAdd(occ, x, z, r);
+  return { h: h, yaw: yaw };
 }
 
 var KULTUR = {
@@ -98,7 +145,24 @@ var OBJGRUPPEN = {
             ["schildmauer", 2], ["wehrturm", 4], ["geschuetzturm", 2],
             ["bergfried", 1], ["torhaus", 1], ["barbakane", 1], ["bastion", 1],
             ["kettenturm", 1], ["wappenstein", 1], ["wehrbanner", 2]],
-  palisaden: [["palisade", 7], ["palisadentor", 1], ["wachturm", 2], ["pfosten", 2]]
+  palisaden: [["palisade", 7], ["palisadentor", 1], ["wachturm", 2], ["pfosten", 2]],
+  /* Maritim (Buendel 3). Diese Gruppe wird von genObjekt ueber tryPlaceWasser
+     gesetzt — sie enthaelt AUSSCHLIESSLICH Objekte, die auf dem Wasser stehen
+     duerfen. Die teuren Einzelstuecke (kogge, dreimaster, ruderschiff, wrack)
+     bleiben schwach gewichtet: vervielfacht wirkt eine Flotte wie Kulisse,
+     einzeln wie ein Ereignis. Die Bruecken sind mit dabei, weil ihr Feld
+     definitionsgemaess ueber dem Wasser liegt. */
+  maritim: [["fischerboot", 6], ["kutter", 3], ["floss", 3], ["boje", 4],
+            ["bake", 3], ["kogge", 1], ["dreimaster", 1], ["ruderschiff", 1],
+            ["wrack", 1], ["holzbruecke", 1], ["steinbruecke", 1]],
+  /* Hafen (Buendel 3): das Uferband. genObjekt setzt sie ueber tryPlaceUfer und
+     dreht sie mit dem Hoehengradienten aufs Wasser zu. Kleinkram vor Bauwerk —
+     ein Kai lebt von Tauhaufen und Reusen, nicht von drei Kraenen. */
+  hafen: [["kaimauer", 5], ["anleger", 4], ["tauhaufen", 4], ["reusenstapel", 3],
+          ["netzgestell", 3], ["kaitreppe", 3], ["fischtrockner", 2],
+          ["hafenlaterne", 3], ["bootshaus", 2], ["uferdamm", 2], ["kaikran", 2],
+          ["leuchtfeuer", 2], ["slipbahn", 1], ["salzgarten", 1],
+          ["werfthalle", 1], ["helling", 1], ["leuchtturm", 1], ["kanalschleuse", 1]]
 };
 /* Ortsstabiler Zufallsstrom je (Klickpunkt i, Inselindex k) — Muster ortsRng
    aus vines.js: der Strom haengt am stabilen Indexpaar statt an der
@@ -168,6 +232,12 @@ function genObjekt(el) {
   if (el.variant === "inseln") { genInseln(el); return; }
   var p = el.params, occ = newOcc(3.5);
   var table = OBJGRUPPEN[el.variant] || OBJGRUPPEN.baeume;
+  // Platzierungsregel je Variante (Objektkatalog, "Zusammenfassung der
+  // Sonderfaelle"): maritim setzt AUF das Wasser, hafen ins Uferband und
+  // richtet dort zusaetzlich aus. Alle uebrigen Varianten laufen unveraendert
+  // ueber tryPlace — die Fallunterscheidung haengt bewusst an der Variante und
+  // nicht am Pool, damit nurTyp weiterhin jeden Pool in jede Regel setzen kann.
+  var aufWasser = el.variant === "maritim", amUfer = el.variant === "hafen";
   for (var i = 0; i < el.points.length; i++) {
     var pt = el.points[i];
     var rng = rngOf((el.seed + i * 7919) | 0);
@@ -179,11 +249,42 @@ function genObjekt(el) {
       // unbekannter Poolname (alte Karte, Pool entfernt) fällt still auf
       // die gewichtete Gruppen-Auswahl zurück — kein Crash.
       var kind = (p.nurTyp && POOLS[p.nurTyp]) ? p.nurTyp : wpick(rng, table);
-      var h = tryPlace(occ, x, z, POOLS[kind].radius * 0.85, { ignoreCorridor: p.frei });
+      var r = POOLS[kind].radius * 0.85, h = null, ufer = null;
+      if (aufWasser) h = tryPlaceWasser(occ, x, z, r);
+      else if (amUfer) { ufer = tryPlaceUfer(occ, x, z, r); if (ufer) h = ufer.h; }
+      else h = tryPlace(occ, x, z, r, { ignoreCorridor: p.frei });
       if (h === null) continue;
+      // Zufallsreihenfolge unveraendert: erst groesse, dann Drehung, dann
+      // Hoehenfaktor, dann Tint. Die Drehung steht nur deshalb in einer
+      // eigenen Variablen, weil das Ufer sie ueberschreibt — gezogen wird sie
+      // an derselben Stelle wie bisher, sonst wuerfelte jede Bestandskarte neu.
       var sc = rr(rng, 0.8, 1.2) * p.groesse;
-      emit(el, kind, x, h - 0.1, z, rng() * 6.28, sc, sc * rr(rng, 0.88, 1.2), sc, tintOf(rng));
+      var yaw = rng() * 6.28;
+      // Uferbauten sind mit ihrer Wasserseite auf +z gebaut; eine Zufallsdrehung
+      // stellte sie mit dem Ruecken zum Hafenbecken.
+      if (ufer) yaw = ufer.yaw;
+      emit(el, kind, x, h - 0.1, z, yaw, sc, sc * rr(rng, 0.88, 1.2), sc, tintOf(rng));
+      emitLicht(el, kind, x, h - 0.1, z, sc);
     }
+  }
+}
+
+/**
+ * Dauerlicht der Seezeichen (Leuchtturmlaterne, Feuerkorb, Kailaterne).
+ * Nutzt bewusst den BESTEHENDEN Pool "fensterlicht": dessen emissiveIntensity
+ * fuehrt atmosphere.js bereits ueber die Tageszeit (tags 0, nachts am
+ * hellsten), ein eigener Leucht-Pool braeuchte dort eine zusaetzliche Zeile.
+ * Anders als emitFensterlicht wird hier NICHT gewuerfelt — ein Leuchtfeuer,
+ * das in 60 % der Faelle aus ist, waere kein Seezeichen.
+ */
+function emitLicht(el, kind, x, y, z, sc) {
+  var a = LICHT_ANKER[kind];
+  if (!a) return;
+  // Zwei gekreuzte Quads: der Schein soll aus jeder Blickrichtung stehen.
+  // fensterlicht hat radius 0, emit legt dafuer keinen Kontaktschatten ab.
+  for (var q = 0; q < 2; q++) {
+    emit(el, "fensterlicht", x + a[0] * sc, y + a[1] * sc, z + a[2] * sc,
+      q * Math.PI / 2, a[3] * sc, a[3] * sc, a[3] * sc, [1, 1, 1]);
   }
 }
 
@@ -208,5 +309,5 @@ function emitFensterlicht(el, rng, kind, x, y, z, yaw, sc) {
   }
 }
 
-export { newOcc, occFree, occAdd, tryPlace, KULTUR, OBJGRUPPEN, genObjekt,
-  genInseln, emitFensterlicht };
+export { newOcc, occFree, occAdd, tryPlace, tryPlaceWasser, tryPlaceUfer,
+  KULTUR, OBJGRUPPEN, genObjekt, genInseln, emitFensterlicht, emitLicht };

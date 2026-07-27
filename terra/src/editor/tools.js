@@ -22,12 +22,14 @@ var TOOLS = [
   { id: "auswahl", g: "➤", l: "Auswahl", key: "6" }
 ];
 var VARIANTS = {
-  pfad: [["strasse", "Straße"], ["mauer", "Mauer"], ["fluss", "Fluss"], ["hecke", "Hecke / Zaun"]],
+  pfad: [["strasse", "Straße"], ["mauer", "Mauer"], ["fluss", "Fluss"],
+         ["hecke", "Hecke / Zaun"], ["bruch", "Bruchkante"]],
   flaeche: [["wald", "Wald"], ["feld", "Feld"], ["viertel", "Viertel"], ["wiese", "Wiese"]],
   objekt: [["baeume", "Bäume"], ["haeuser", "Häuser"], ["klassisch", "Klassisch"],
            ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["ruinen", "Ruinen"],
            ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"],
            ["wehrbau", "Wehrbau"], ["palisaden", "Palisaden"],
+           ["maritim", "Schiffe & Bojen"], ["hafen", "Hafen & Ufer"],
            ["inseln", "Schwebeinseln"]],
   ranke: [["ranke", "Ranke"]],
   terrain: [["heben", "Anheben"], ["senken", "Absenken"], ["glaetten", "Glätten"], ["ebnen", "Einebnen"]]
@@ -57,6 +59,16 @@ var PARAMS = {
   "pfad:hecke": [
     { k: "stil", l: "Art", o: [["hecke", "Hecke"], ["zaun", "Zaun"]], d: "hecke" },
     { k: "hoehe", l: "Höhe", min: 0.5, max: 2.5, st: 0.05, d: 1 }
+  ],
+  // H6: Bruchkante — an dieser Linie reisst das Gelaende einseitig ab.
+  // `seite` kommt als String aus dem Select, genBruch liest Number(p.seite).
+  "pfad:bruch": [
+    { k: "tiefe", l: "Absturztiefe", min: 40, max: 200, st: 5, d: 90 },
+    { k: "breite", l: "Übergangszone", min: 2, max: 20, st: 0.5, d: 6 },
+    { k: "zackigkeit", l: "Zackigkeit", min: 0, max: 1, st: 0.02, d: 0.5 },
+    { k: "seite", l: "Abrissseite", o: [["1", "Rechts vom Pfad"], ["-1", "Links vom Pfad"]], d: "1" },
+    { k: "wurzeln", l: "Wurzelvorhänge", b: true, d: true },
+    { k: "truemmer", l: "Schwebende Trümmer", min: 0, max: 6, st: 1, d: 2 }
   ],
   "flaeche:wald": [
     { k: "dichte", l: "Dichte", min: 0.2, max: 2.5, st: 0.05, d: 1.1 },
@@ -112,7 +124,30 @@ var PARAMS = {
       ["brunnen", "Brunnen"], ["fass", "Fass"], ["kiste", "Kiste"],
       ["karren", "Karren"], ["laterne", "Laterne"], ["heuhaufen", "Heuhaufen"],
       ["marktstand", "Marktstand"], ["fels", "Fels"], ["blume", "Blume"],
-      ["boot", "Boot"], ["steg", "Steg"]
+      ["boot", "Boot"], ["steg", "Steg"],
+      // Maritim (Objektkatalog Kategorie 2) und die Wasserbauten aus
+      // Kategorie 7. "(Wasser)" markiert die Pools, die tryPlaceWasser
+      // braucht: sie erscheinen NUR mit der Variante "Schiffe & Bojen", weil
+      // jede andere Variante ueber tryPlace laeuft und dort alles unterhalb
+      // von WATER + 0.35 verwirft. "(Ufer)" heisst umgekehrt: nur mit
+      // "Hafen & Ufer" sitzen sie richtig und drehen sich zum Wasser.
+      ["fischerboot", "Fischerboot (Wasser)"], ["kutter", "Kutter (Wasser)"],
+      ["kogge", "Kogge (Wasser)"], ["dreimaster", "Dreimaster (Wasser)"],
+      ["ruderschiff", "Ruderschiff (Wasser)"], ["floss", "Floß (Wasser)"],
+      ["wrack", "Wrack (Wasser)"], ["boje", "Boje (Wasser)"],
+      ["bake", "Bake (Wasser)"],
+      ["steinbruecke", "Steinbrücke (Wasser)"], ["holzbruecke", "Holzbrücke (Wasser)"],
+      ["kaimauer", "Kaimauer (Ufer)"], ["kaitreppe", "Kaitreppe (Ufer)"],
+      ["kaikran", "Kaikran (Ufer)"], ["anleger", "Anleger (Ufer)"],
+      ["bootshaus", "Bootshaus (Ufer)"], ["slipbahn", "Slipbahn (Ufer)"],
+      ["werfthalle", "Werfthalle (Ufer)"], ["helling", "Helling (Ufer)"],
+      ["leuchtturm", "Leuchtturm (Ufer)"], ["leuchtfeuer", "Leuchtfeuer (Ufer)"],
+      ["hafenlaterne", "Hafenlaterne (Ufer)"], ["netzgestell", "Netzgestell (Ufer)"],
+      ["fischtrockner", "Fischtrockner (Ufer)"], ["reusenstapel", "Reusenstapel (Ufer)"],
+      ["salzgarten", "Salzgarten (Ufer)"], ["uferdamm", "Uferdamm (Ufer)"],
+      ["kanalschleuse", "Kanalschleuse (Ufer)"],
+      ["tauhaufen", "Tauhaufen"], ["aquaedukt", "Aquädukt"],
+      ["aquaeduktkopf", "Aquädukt-Kopf"]
     ] }
   ],
   // Eigenes Variantenschema: schemaKey prueft ERST "kind:variant", dann den

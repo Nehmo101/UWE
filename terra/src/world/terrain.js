@@ -48,8 +48,9 @@ felderSichern();
  */
 function genBaseIn(ziel, seed) {
   // H6: die frueheren Literale 26 / 4 / -6 / -22 / 55 kommen jetzt aus der
-  // BIOME-Registry. Fehlt dort das Feld `hoehe` (Stand: alle fuenf Biome),
-  // liefert hoehenProfil() exakt diese Werte zurueck.
+  // BIOME-Registry. Fehlt dort das Feld `hoehe`, liefert hoehenProfil() exakt
+  // diese Werte zurueck — das gilt seit H-Welle 2 noch fuer wiese, kueste,
+  // sumpf und schnee; die uebrigen 21 Biome tragen ein eigenes Profil.
   var HP = hoehenProfil(S.biom);
   // randBreite 0 = Abrisskante ohne Uebergang. sstep teilt durch (e1-e0),
   // deshalb hier ein Winzigwert statt einer Fallunterscheidung in der
@@ -63,13 +64,19 @@ function genBaseIn(ziel, seed) {
       // Vorbereitete Profilfelder: bei 0 (Standard) wird der Zweig komplett
       // uebersprungen, der Rechenweg bleibt damit Bit fuer Bit der alte.
       // Grate: invertiertes Rauschen (Ridge) schaerft Kaemme statt Kuppen.
+      // H-Welle 2: `grat` ist RELATIV zu amp. Der Biomkatalog nennt Werte von
+      // 0.1 (Bluetental, weich) bis 0.7 (Karst, Turmkarst) — als absolute
+      // Welteinheiten waeren sie neben amp 26 unsichtbar, als Bruchteil der
+      // Landschaftsmasse ergeben sie genau die beschriebenen Silhouetten.
       if (HP.grat !== 0) {
         var rg = fractal(x * 0.011, z * 0.011, seed + 211);
-        h += (1 - Math.abs(rg * 2 - 1)) * HP.grat;
+        h += (1 - Math.abs(rg * 2 - 1)) * HP.grat * HP.amp;
       }
-      // Terrassen: Hoehe auf ein Raster ziehen, aber nur zu 80 % — die
-      // Restweichheit haelt die Stufenkanten malerisch statt technisch.
-      if (HP.stufe !== 0) h = lerp(h, Math.round(h / HP.stufe) * HP.stufe, 0.8);
+      // Terrassen: Hoehe auf ein Raster ziehen. `stufeKante` bestimmt, wie
+      // hart die Stufe wird — 1 ergibt senkrechte Wangen, der Standard 0.8
+      // (frueher fest verdrahtet) laesst sie malerisch weich, Terrassenland
+      // faehrt mit 0.35 die gemalte Weichheit des Katalogs.
+      if (HP.stufe !== 0) h = lerp(h, Math.round(h / HP.stufe) * HP.stufe, HP.stufeKante);
       // Senken/Dolinen: nur die obersten Rauschwerte reissen ein Loch.
       if (HP.senken !== 0) {
         h -= sstep(0.62, 1.0, fractal(x * 0.045, z * 0.045, seed + 311)) * HP.senken;
@@ -288,8 +295,16 @@ function terrainColor(h, ny, x, z, out, ao) {
     _tc2.copy(P.seegrund).lerp(P.tiefe, sstep(-0.25, -4.5, h));
     out.lerp(_tc2, sstep(0.35, -0.4, h));
   }
-  var surf = sstep(0.8, 0.3, h) * sstep(-0.6, 0.06, h);
-  if (surf > 0) out.lerp(P.brandung, surf * 0.5);          // Brandungssaum
+  // Brandungssaum (H-Welle 2 parametrisiert). Frueher fest 0.8 / 0.3 / 0.5 —
+  // genau diese Zahlen sind jetzt die Standardwerte, wenn das Biom die Felder
+  // nicht traegt (wiese, wueste, ...): der Rechenweg bleibt dort Bit fuer Bit
+  // der alte. Klippenmeer braucht 1.4 / -0.3 / 0.8 (Gischt bis unter die
+  // Wasserlinie), Kueste den breiten weichen Bogen 1.1 / 0.15 / 0.65.
+  var brA = P.brandungA === undefined ? 0.8 : P.brandungA;
+  var brB = P.brandungB === undefined ? 0.3 : P.brandungB;
+  var brS = P.brandungStaerke === undefined ? 0.5 : P.brandungStaerke;
+  var surf = sstep(brA, brB, h) * sstep(-0.6, 0.06, h);
+  if (surf > 0) out.lerp(P.brandung, surf * brS);
 
   // F2: dieselbe grobe Drift moduliert auch den Value um +-5 % — die
   // Helligkeitswelle folgt damit exakt der Farbwelle (ein Waschgang, wie beim
