@@ -75,7 +75,7 @@ export function validateAppSettingsSection(
         typeof appBody.defaultLandingPage === "string" ? appBody.defaultLandingPage.trim() : "";
       if (trimmed && !STUDIO_LANDING_PAGE_PATH_SET.has(trimmed)) {
         appErrors.push(
-          "settings.app.defaultLandingPage muss /worlds, /continue oder /capture sein.",
+          "settings.app.defaultLandingPage muss /worlds oder /continue sein.",
         );
       } else {
         app.defaultLandingPage = trimmed || "/worlds";

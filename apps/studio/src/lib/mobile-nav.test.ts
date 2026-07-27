@@ -20,12 +20,12 @@ describe("studio mobile nav", () => {
     const nav = studioGlobalBottomNav("worlds");
     assert.deepEqual(
       nav.map((item) => item.label),
-      ["Welten", "Erstellen", "Medien & KI", "Admin"],
+      ["Welten", "Suche", "Medien & KI", "Admin"],
     );
     assert.equal(nav.length, 4);
     assert.equal(nav[0]?.active, true);
     assert.equal(nav[0]?.href, "/worlds");
-    assert.equal(nav[1]?.href, "/capture");
+    assert.equal(nav[1]?.href, "/search");
     assert.equal(nav[2]?.href, "/ai");
     assert.equal(nav[3]?.href, "/admin");
   });
@@ -39,8 +39,7 @@ describe("studio mobile nav", () => {
   });
 
   it("keeps legacy active keys mapped into the reduced global nav", () => {
-    assert.equal(studioGlobalBottomNav("capture")[1]?.active, true);
-    assert.equal(studioGlobalBottomNav("search")[0]?.active, true);
+    assert.equal(studioGlobalBottomNav("search")[1]?.active, true);
     assert.equal(studioGlobalBottomNav("ai")[2]?.active, true);
     assert.equal(studioGlobalBottomNav("more")[3]?.active, true);
   });
@@ -84,12 +83,12 @@ describe("studio mobile nav", () => {
     const worldNav = resolveStudioBottomNav("/worlds/terra/dashboard");
     assert.deepEqual(
       worldNav.map((item) => item.label),
-      ["Welten", "Erstellen", "Medien & KI", "Admin"],
+      ["Welten", "Suche", "Medien & KI", "Admin"],
     );
     assert.equal(worldNav[0]?.active, true);
 
-    assert.equal(resolveStudioBottomNav("/search?scope=admin")[0]?.active, true);
-    assert.equal(resolveStudioBottomNav("/capture")[1]?.active, true);
+    assert.equal(resolveStudioBottomNav("/search?scope=admin")[1]?.active, true);
+    assert.equal(resolveStudioBottomNav("/ai")[2]?.active, true);
     assert.equal(resolveStudioBottomNav("/admin")[3]?.active, true);
   });
 });

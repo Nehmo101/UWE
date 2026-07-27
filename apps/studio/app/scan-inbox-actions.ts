@@ -132,7 +132,6 @@ export async function fileScanAction(formData: FormData): Promise<void> {
   await service().file(id, targetRaw);
   revalidate(id);
   revalidatePath("/contracts");
-  revalidatePath("/capture");
 }
 
 export async function rejectScanAction(formData: FormData): Promise<void> {

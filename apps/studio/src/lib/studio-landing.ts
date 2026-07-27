@@ -6,7 +6,6 @@ import {
 export const STUDIO_LANDING_PAGE_OPTIONS = [
   { path: "/worlds", label: "Welten" },
   { path: "/continue", label: "Mach weiter" },
-  { path: "/capture", label: "Capture-Inbox" },
 ] as const satisfies ReadonlyArray<{ path: StudioLandingPagePath; label: string }>;
 
 export type { StudioLandingPagePath };

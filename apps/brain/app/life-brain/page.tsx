@@ -1,8 +1,15 @@
-import { createLifeAdminService, prisma } from "@uwe/database/server";
+import Link from "next/link";
+import {
+  createLifeAdminService,
+  PERSONAL_BRAIN_CATEGORIES,
+  PERSONAL_BRAIN_CATEGORY_LABELS,
+  prisma,
+} from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getCurrentUser } from "@/src/lib/auth";
 import { canEnterBrain } from "@/src/lib/owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
+import { LifeBrainIndexStatus } from "@/src/components/LifeBrainIndexStatus";
 import {
   createBrainDocumentAction,
   createBrainFactAction,
@@ -23,15 +30,30 @@ function tagStr(value: unknown): string {
   return Array.isArray(value) ? value.filter((t) => typeof t === "string").join(", ") : "";
 }
 
-function formatDate(value: Date): string {
-  return value.toLocaleDateString("de-DE", { year: "numeric", month: "short", day: "numeric" });
+function formatDate(value: Date | undefined): string {
+  // Die Suchtreffer liefern eine schlankere Form als die Listen — `updatedAt`
+  // kann dort fehlen.
+  return value
+    ? value.toLocaleDateString("de-DE", { year: "numeric", month: "short", day: "numeric" })
+    : "—";
+}
+
+interface Props {
+  searchParams: Promise<{ q?: string; category?: string }>;
 }
 
 /**
- * Personal knowledge base — brain checkbox, read AND write. Facts + documents are
- * stored in the owner-private brain DB and never leave the host.
+ * Persönliches Wissen — Fakten und Dokumente in der owner-privaten Brain-DB.
+ *
+ * Studios `/life-brain` ist hier aufgegangen (Abschnitt H2): Suche mit
+ * Kategoriefilter und die Index-Lage sind mitgekommen. Die Suche läuft
+ * server-seitig über `searchPersonalBrain` statt über einen Client-Fetch — eine
+ * Fläche weniger, die auf eine API zeigt.
+ *
+ * Der Chat lag in Studio unter `/life-brain/chat`; Brains `/ki-chat` kann mehr
+ * (Unterhaltungen, Modellwahl, Anhänge, Diktat) und ersetzt ihn.
  */
-export default async function BrainLifeBrainPage() {
+export default async function BrainLifeBrainPage({ searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user || !canEnterBrain(user)) {
     return (
@@ -41,18 +63,64 @@ export default async function BrainLifeBrainPage() {
     );
   }
 
+  const params = await searchParams;
+  const query = params.q?.trim() ?? "";
+  const category = params.category?.trim() || undefined;
+  const filtering = Boolean(query || category);
+
   const service = createLifeAdminService(brainPrisma, prisma);
-  const [documents, facts] = await Promise.all([
+  const [allDocuments, allFacts, hits] = await Promise.all([
     service.listPersonalBrainDocuments({ limit: 100 }),
     service.listPersonalBrainFacts({ limit: 100 }),
+    filtering
+      ? service.searchPersonalBrain({ query: query || undefined, category, limit: 50 })
+      : Promise.resolve(null),
   ]);
+
+  const documents = hits ? hits.documents.map((hit) => hit.item) : allDocuments;
+  const facts = hits ? hits.facts.map((hit) => hit.item) : allFacts;
 
   return (
     <BrainShell
       active="/life-brain"
       title="Persönliches Wissen"
-      lede={`${documents.length} Dokument(e) · ${facts.length} Fakt(en) — anlegen, festhalten, wiederfinden. Lokal auf deiner Hardware, niemals an Cloud-KI.`}
+      lede={`${allDocuments.length} Dokument(e) · ${allFacts.length} Fakt(en) — anlegen, festhalten, wiederfinden. Lokal auf deiner Hardware, niemals an Cloud-KI.`}
     >
+      <form method="get" action="/life-brain" className="brain-form-row" role="search">
+        <label>
+          Suchen
+          <input name="q" defaultValue={query} placeholder="Titel, Inhalt, Tag …" />
+        </label>
+        <label>
+          Kategorie
+          <select name="category" defaultValue={category ?? ""}>
+            <option value="">Alle</option>
+            {PERSONAL_BRAIN_CATEGORIES.map((entry) => (
+              <option key={entry} value={entry}>
+                {PERSONAL_BRAIN_CATEGORY_LABELS[entry] ?? entry}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className="brain-btn brain-btn-sm">
+          Suchen
+        </button>
+        {filtering ? (
+          <Link className="brain-btn brain-btn-ghost brain-btn-sm" href="/life-brain">
+            Zurücksetzen
+          </Link>
+        ) : null}
+      </form>
+
+      {filtering ? (
+        <p className="brain-muted">
+          {documents.length} Dokument(e) und {facts.length} Fakt(en) passen
+          {query ? ` zu „${query}"` : ""}
+          {category ? ` in ${PERSONAL_BRAIN_CATEGORY_LABELS[category] ?? category}` : ""}.
+        </p>
+      ) : null}
+
+      <LifeBrainIndexStatus />
       <div
         style={{
           display: "grid",
@@ -98,7 +166,13 @@ export default async function BrainLifeBrainPage() {
             </label>
             <label>
               Kategorie
-              <input name="category" placeholder="guide, checkliste, referenz …" />
+              <select name="category" defaultValue={category ?? PERSONAL_BRAIN_CATEGORIES[0]}>
+                {PERSONAL_BRAIN_CATEGORIES.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {PERSONAL_BRAIN_CATEGORY_LABELS[entry] ?? entry}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Inhalt

@@ -32,7 +32,7 @@ describe("route pattern matching", () => {
 });
 
 describe("auditNavigation (pure)", () => {
-  const routes = ["/worlds", "/capture", "/admin", "/admin/activity"];
+  const routes = ["/worlds", "/search", "/admin", "/admin/activity"];
 
   it("flags active items without a route as dead links", () => {
     const items = [
@@ -52,7 +52,7 @@ describe("auditNavigation (pure)", () => {
   it("lists routes not referenced by navigation", () => {
     const items = [navItem({ id: "a", href: "/worlds", status: "active" })];
     const audit = auditNavigation(items, routes);
-    assert.ok(audit.routesWithoutNav.includes("/capture"));
+    assert.ok(audit.routesWithoutNav.includes("/search"));
     assert.ok(!audit.routesWithoutNav.includes("/worlds"));
   });
 });

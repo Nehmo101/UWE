@@ -9,7 +9,7 @@ describe("studio-landing", () => {
   });
 
   it("keeps allowed landing paths", () => {
-    assert.equal(resolveStudioLandingPath("/capture"), "/capture");
+    assert.equal(resolveStudioLandingPath("/continue"), "/continue");
     assert.equal(resolveStudioLandingPath(" /worlds "), "/worlds");
   });
 });

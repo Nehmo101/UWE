@@ -1,4 +1,3 @@
-import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { semanticSearchPersonalBrainChunks } from "@uwe/ai-brain";
 import { brainPrisma } from "@uwe/database/brain-client";
@@ -7,10 +6,30 @@ import {
   createPersonalBrainService,
   prisma,
 } from "@uwe/database/server";
+import { requireBrainOwnerAuth } from "@/src/lib/owner-auth";
+import { checkRateLimit, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
+
+/**
+ * Suche im Personal Brain — Dokumente, Fakten und semantische Chunk-Treffer.
+ *
+ * Lag in Studio (`/api/life-brain/search`). Das persönliche Wissen gehört zu
+ * Brain (Abschnitt H2), also liegt die Route jetzt hier — hinter demselben
+ * Häkchen-Guard wie jede andere Brain-Route. Der MCP-Brain-Server liest sie
+ * ebenfalls hier; sein `dataApi` zeigt nicht mehr auf Studio.
+ */
 
 export async function GET(request: Request) {
-  const authError = await guardStudioApiRequest(request, { rateLimit: "search" });
+  const authError = await requireBrainOwnerAuth();
   if (authError) return authError;
+
+  const ip = clientIpFromHeaders(request.headers);
+  const limitCheck = checkRateLimit(`brain-search:${ip}`, RATE_LIMIT_PRESETS.search);
+  if (!limitCheck.allowed) {
+    return NextResponse.json(
+      { error: "Zu viele Anfragen. Bitte kurz warten." },
+      { status: 429, headers: { "Retry-After": String(limitCheck.retryAfterSeconds) } },
+    );
+  }
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";

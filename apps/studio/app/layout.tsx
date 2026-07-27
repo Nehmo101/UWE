@@ -29,7 +29,6 @@ const newsreader = Newsreader({
 });
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { StudioSessionChrome } from "../components/StudioSessionChrome";
-import { GlobalCaptureFab } from "../components/GlobalCaptureFab";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
 import { enforceStudioPageAuth, getCurrentAuthUser } from "@/src/lib/auth";
 import { enforceStudioMaintenance } from "@/src/lib/maintenance";
@@ -122,7 +121,6 @@ export default async function RootLayout({
         >
           <ThemeDocumentSync theme={serverTheme} />
           {children}
-          <GlobalCaptureFab />
           <StudioCommandPalette worlds={worlds} canRunAdminCommands={canRunAdminCommands} />
           <TopBarSessionMount>
             <StudioSessionChrome />

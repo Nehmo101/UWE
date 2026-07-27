@@ -9,17 +9,13 @@ export interface StudioBottomNavItem {
 
 export type StudioGlobalBottomNavKey =
   | "worlds"
-  | "create"
   | "media-ai"
   | "system"
-  | "capture"
   | "search"
   | "ai"
   | "more";
 
 function normalizeGlobalKey(active: StudioGlobalBottomNavKey) {
-  if (active === "capture") return "create";
-  if (active === "search") return "worlds";
   if (active === "ai") return "media-ai";
   if (active === "more") return "system";
   return active;
@@ -35,18 +31,18 @@ export function studioGlobalBottomNav(active: StudioGlobalBottomNavKey): StudioB
   const activeKey = normalizeGlobalKey(active);
   return [
     { label: "Welten", href: "/worlds", icon: "◎", active: activeKey === "worlds" },
-    { label: "Erstellen", href: "/capture", icon: "+", active: activeKey === "create" },
+    { label: "Suche", href: "/search", icon: "🔍", active: activeKey === "search" },
     { label: "Medien & KI", href: "/ai", icon: "✦", active: activeKey === "media-ai" },
     { label: "Admin", href: "/admin", icon: "⚙", active: activeKey === "system" },
   ];
 }
 
 function resolveGlobalNavActive(pathname: string): StudioGlobalBottomNavKey {
-  if (pathname.startsWith("/worlds") || pathname.startsWith("/search")) {
-    return "worlds";
+  if (pathname.startsWith("/search")) {
+    return "search";
   }
-  if (pathname.startsWith("/capture")) {
-    return "capture";
+  if (pathname.startsWith("/worlds")) {
+    return "worlds";
   }
   if (
     pathname.startsWith("/ai") ||

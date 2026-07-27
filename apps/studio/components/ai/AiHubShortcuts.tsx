@@ -12,8 +12,6 @@ const SECTIONS = [
   {
     title: "Personal",
     links: [
-      { href: "/life-brain/chat", label: "Life-Brain Chat" },
-      { href: "/life-brain", label: "Life-Brain Hub" },
     ],
   },
   {

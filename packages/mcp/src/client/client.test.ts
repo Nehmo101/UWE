@@ -71,13 +71,15 @@ test("loadConfig falls back to the documented default ports", () => {
   assert.equal(loadConfig("brain", {}).primary.baseUrl, "http://127.0.0.1:3002");
 });
 
-test("Brain and Portal read their content API from Studio", () => {
+test("Brain serves its own content API, Portal reads Studio's", () => {
   const env = { UWE_STUDIO_URL: "http://studio.local:3000", UWE_BRAIN_URL: "http://brain.local:3002" };
 
+  // Seit Abschnitt H2 liegt /api/life-brain/* in Brain, nicht mehr in Studio.
   const brain = loadConfig("brain", env);
   assert.equal(brain.primary.baseUrl, "http://brain.local:3002");
-  assert.equal(brain.dataApi.baseUrl, "http://studio.local:3000");
+  assert.equal(brain.dataApi.baseUrl, "http://brain.local:3002");
 
+  // Die Spielersicht liest weiterhin über Studio — dort liegen die Welt-Inhalte.
   const portal = loadConfig("portal", env);
   assert.equal(portal.dataApi.baseUrl, "http://studio.local:3000");
 });

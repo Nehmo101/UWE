@@ -63,7 +63,7 @@ export const BACKGROUND_PATTERN_VALUES: readonly BackgroundPattern[] = [
   "subtle-noise",
 ] as const;
 
-export const STUDIO_LANDING_PAGE_PATHS = ["/worlds", "/continue", "/capture"] as const;
+export const STUDIO_LANDING_PAGE_PATHS = ["/worlds", "/continue"] as const;
 
 export type StudioLandingPagePath = (typeof STUDIO_LANDING_PAGE_PATHS)[number];
 

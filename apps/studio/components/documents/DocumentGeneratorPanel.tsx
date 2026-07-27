@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { generateDocumentFromTemplateAction } from "@/app/document-actions";
 import {
@@ -239,9 +238,7 @@ export function DocumentGeneratorPanel({ templates }: DocumentGeneratorPanelProp
 
         {savedDocument ? (
           <p>
-            <Link href={`/life-brain/documents/${savedDocument.id}`}>
-              Im Life Brain öffnen
-            </Link>{" "}
+            <span className="text-muted-foreground">Im Brain gespeichert</span>{" "}
             ·{" "}
             <a
               href={`/api/documents/print?documentId=${encodeURIComponent(savedDocument.id)}`}
