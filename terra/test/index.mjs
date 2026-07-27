@@ -23,3 +23,4 @@ import './06-erosion.test.mjs';
 import './07-biomfeld.test.mjs';
 import './08-beschriftung.test.mjs';
 import './09-einbettung.test.mjs';
+import './10-kartenbaum.test.mjs';

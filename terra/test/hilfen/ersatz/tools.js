@@ -36,3 +36,15 @@ export function stempelBibliothekSichern() {}
 export const TOOLS = [];
 export const VARIANTS = {};
 export const PARAMS = {};
+
+/* I1: der Ausschnitt meldet sein Polygon ueber diesen Weg an editor/io.js.
+   Im Test wird er nur angemeldet, nie ausgeloest — es gibt keinen Zeiger, der
+   ein Polygon zeichnen koennte. `letzterAusschnittWeg` liegt trotzdem offen,
+   damit eine Pruefung ihn von Hand rufen kann. */
+export let letzterAusschnittWeg = null;
+export function setzeAusschnittWeg(fn) { letzterAusschnittWeg = fn; }
+export const EROSION_PARAMS = [];
+export const erosionRegler = {};
+export const KARTE_PARAMS = [];
+export const karteParams = {};
+export function aktiveSprachfamilie() { return 'neutral'; }

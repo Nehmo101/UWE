@@ -234,6 +234,93 @@ function elementNamensZeile(target) {
 }
 
 /* ==========================================================================
+   Kartenbaum und Brotkrume (I1)
+
+   Die Wege in den Baum hinein — wechseln, neu ableiten, nachziehen — leben in
+   editor/io.js, wo der Baum wohnt. Hier stehen sie nur als angemeldete
+   Rueckmeldungen: io.js importiert panels.js, der umgekehrte Weg waere ein
+   Zyklus. Dasselbe Muster wie bei der Erosion und beim Ausschnitt-Werkzeug.
+
+   Ohne geladene Baumdatei ist `S.baum` null. Dann zeigt der Abschnitt nichts
+   ausser dem Hinweis, wie man eine Kindkarte anlegt — eine einzelne Karte
+   braucht keinen Baum, und ein Baum mit einem Knoten waere nur Rauschen.
+   ========================================================================== */
+var kartenWege = null;
+function setzeKartenWege(w) { kartenWege = w; }
+
+function baueKartenAbschnitt() {
+  if (!S.baum || !kartenWege) return;
+  var baum = S.baum;
+  if (baum.karten.length < 2) return;          // eine einzelne Karte ist kein Baum
+
+  panelEl.appendChild(el("hr"));
+  panelEl.appendChild(el("div", "ph", "Karten"));
+
+  /* Brotkrume: Wurzel → … → hier. Sie steht oben, weil sie die Frage
+     beantwortet, die man an einer fremden Karte zuerst hat — wo bin ich? */
+  var pfad = kartenWege.pfad(baum, S.aktiveKarte);
+  var krume = el("div", "krume");
+  for (var i = 0; i < pfad.length; i++) {
+    (function (id, letzter) {
+      if (i > 0) krume.appendChild(el("span", "krumeTrenner", "›"));
+      var k = baum.index[id].karte;
+      var b = el("span", letzter ? "krumeHier" : "krumeLink", k.titel || id);
+      if (!letzter) b.addEventListener("click", function () { kartenWege.wechsle(id); });
+      krume.appendChild(b);
+    })(pfad[i], i === pfad.length - 1);
+  }
+  panelEl.appendChild(krume);
+
+  var hier = baum.index[S.aktiveKarte].karte;
+  // massstabName liefert die Stufe klein ("ort", "landschaft"); am Satzanfang
+  // gehoert sie gross. Hier statt im Generator, weil dort der Name ein
+  // Schluessel ist und mitten im Satz auch klein richtig waere.
+  var stufe = kartenWege.massstabName(hier.einheitMeter || 1);
+  panelEl.appendChild(el("div", "psub",
+    stufe.charAt(0).toUpperCase() + stufe.slice(1) + " · "
+    + (hier.einheitMeter || 1) + " m je Zelle · Kante "
+    + Math.round(((hier.kartenGroesse | 0) || 256) * (hier.einheitMeter || 1)) + " m"));
+
+  /* Kinder als Sprungliste. Doppelklick auf die markierte Flaeche in der Szene
+     waere der schoenere Weg; bis es ihn gibt, ist die Liste der ehrliche. */
+  var kinder = kartenWege.kinder(baum, S.aktiveKarte);
+  if (kinder.length) {
+    panelEl.appendChild(el("div", "psub", kinder.length + " Ausschnitte in dieser Karte:"));
+    for (var c = 0; c < kinder.length; c++) {
+      (function (id) {
+        var k = baum.index[id].karte;
+        var b = el("button", "wide", "↓ " + (k.titel || id));
+        b.addEventListener("click", function () { kartenWege.wechsle(id); });
+        panelEl.appendChild(b);
+      })(kinder[c]);
+    }
+  }
+
+  /* Neu ableiten / Nachziehen — nur an einer abgeleiteten Karte. Die beiden
+     Knoepfe sind der Unterschied zwischen „ich habe mich vertan" und „das
+     Elterngelaende hat sich geaendert". */
+  if (baum.index[S.aktiveKarte].elternId !== null) {
+    var nach = el("button", "wide", "Elternform nachziehen");
+    nach.addEventListener("click", function () { kartenWege.nachziehen(); });
+    panelEl.appendChild(nach);
+    var neu = el("button", "wide warn", "Neu ableiten (verwirft Handarbeit)");
+    neu.addEventListener("click", function () {
+      if (!confirm("Das Gelände dieser Karte wird neu aus der Elternkarte abgeleitet. "
+        + "Alle Höhenänderungen von Hand gehen verloren. Fortfahren?")) return;
+      kartenWege.neuAbleiten();
+    });
+    panelEl.appendChild(neu);
+    panelEl.appendChild(el("div", "psub",
+      "„Nachziehen“ übernimmt die geänderte Elternform und behält deine "
+      + "Höhenänderungen. „Neu ableiten“ verwirft sie."));
+  } else {
+    panelEl.appendChild(el("div", "psub",
+      "Wurzelkarte. Mit dem Werkzeug „Ausschnitt“ (Taste 0) ein Polygon "
+      + "zeichnen und daraus eine feinere Kindkarte machen."));
+  }
+}
+
+/* ==========================================================================
    Abschnitt „Biome" (I2)
 
    Zwei Dinge: die Klimaachse der Karte und der Knopf, der daraus einen
@@ -683,6 +770,9 @@ function buildPanel() {
     panelEl.appendChild(el("div", "psub", S.elements.length + " Elemente auf der Karte."));
     // J3: Das Auswahl-Werkzeug ohne Auswahl ist das Panel der GANZEN Karte —
     // hier gehoert die kartenweite Sprachfamilie hin, nicht in ein Elementschema.
+    // I1: der Baum steht ganz oben — wo man ist, beantwortet man vor allem
+    // anderen. Erosion und Biome gelten immer nur der Karte, auf der man steht.
+    baueKartenAbschnitt();
     baueErosionAbschnitt();
     baueBiomAbschnitt();
     baueNamenAbschnitt();
@@ -1090,4 +1180,4 @@ function tickToast(now) {
 }
 
 export { el, buildRail, paramRow, buildPanel, updateHint, toast, tickToast, updateStats,
-  markerOverlayAktualisieren };
+  markerOverlayAktualisieren, setzeKartenWege };

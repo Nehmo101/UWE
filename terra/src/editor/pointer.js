@@ -439,9 +439,12 @@ export function initPointer(cv) {
       select(getroffen);
       return;
     }
-    if (ed.tool === "pfad" || ed.tool === "flaeche") {
+    // I1: der Ausschnitt zeichnet wie eine Flaeche — Klick setzt Punkte,
+    // Doppelklick schliesst. Was danach entsteht, ist keine Flaeche, sondern
+    // eine Karte; das entscheidet finishDraw, nicht dieser Zweig.
+    if (ed.tool === "pfad" || ed.tool === "flaeche" || ed.tool === "ausschnitt") {
       if (isDouble) { finishDraw(); return; }
-      if (!ed.draw) ed.draw = { kind: ed.tool, variant: ed.variantOf[ed.tool], points: [] };
+      if (!ed.draw) ed.draw = { kind: ed.tool, variant: ed.variantOf[ed.tool] || "", points: [] };
       ed.draw.points.push(snapPt(p));
       rebuildHandles();
       setPreview(ed.draw.points, null, ed.tool === "flaeche");

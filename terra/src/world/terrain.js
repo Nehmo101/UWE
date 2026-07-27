@@ -141,19 +141,34 @@ felderSichern();
  * Hashes aendert dieses Ergebnis nicht — das Delta-Format bleibt davon
  * unabhaengig korrekt.
  */
-function genBaseIn(ziel, seed) {
+/**
+ * @param groesse  I1: Kartengroesse in Zellen, falls das Ziel NICHT die
+ *   aktuelle Karte ist. Der Kartenbaum braucht das: um eine Kindkarte
+ *   abzuleiten, muss zuerst das Gelaende der ELTERNkarte stehen, und die hat
+ *   im Allgemeinen eine andere Groesse als die gerade geoeffnete. Ohne den
+ *   Parameter rechnete die Ableitung auf einem Gitter der falschen Kantenlaenge
+ *   — das Ergebnis waere nicht falsch aussehend, sondern schlicht versetzt.
+ *   Fehlt der Parameter, gilt wie bisher die aktuelle Karte, und der Rechenweg
+ *   ist Bit fuer Bit der alte.
+ * @param biom  desgleichen fuer das Hoehenprofil: eine Elternkarte mit
+ *   Karstprofil ergibt ein anderes Gelaende als eine mit Wiesenprofil, und
+ *   S.biom steht beim Ableiten schon auf dem der KINDkarte.
+ */
+function genBaseIn(ziel, seed, groesse, biom) {
+  var MAP_L = Number.isFinite(groesse) && groesse > 0 ? (groesse | 0) : MAP;
+  var VW_L = MAP_L + 1, HALF_L = MAP_L / 2;
   // H6: die frueheren Literale 26 / 4 / -6 / -22 / 55 kommen jetzt aus der
   // BIOME-Registry. Fehlt dort das Feld `hoehe`, liefert hoehenProfil() exakt
   // diese Werte zurueck — das gilt seit H-Welle 2 noch fuer wiese, kueste,
   // sumpf und schnee; die uebrigen 21 Biome tragen ein eigenes Profil.
-  var HP = hoehenProfil(S.biom);
+  var HP = hoehenProfil(typeof biom === "string" ? biom : S.biom);
   // randBreite 0 = Abrisskante ohne Uebergang. sstep teilt durch (e1-e0),
   // deshalb hier ein Winzigwert statt einer Fallunterscheidung in der
   // inneren Schleife (bei 55 rechnerisch identisch zu vorher).
   var randBreite = HP.randBreite > 0 ? HP.randBreite : 1e-6;
-  for (var j = 0; j < VW; j++) {
-    for (var i = 0; i < VW; i++) {
-      var x = i - HALF, z = j - HALF;
+  for (var j = 0; j < VW_L; j++) {
+    for (var i = 0; i < VW_L; i++) {
+      var x = i - HALF_L, z = j - HALF_L;
       var h = fractal(x * 0.006, z * 0.006, seed) * HP.amp
             + fractal(x * 0.03, z * 0.03, seed + 77) * HP.fein + HP.sockel;
       // Vorbereitete Profilfelder: bei 0 (Standard) wird der Zweig komplett
@@ -178,15 +193,15 @@ function genBaseIn(ziel, seed) {
       }
       // Rand auf randTiefe ziehen: weich unter den Wasserspiegel (Standard)
       // oder ueber wenige Kacheln senkrecht ins Bodenlose (Bruchkante, H6).
-      var d = Math.min(i, j, MAP - i, MAP - j);
+      var d = Math.min(i, j, MAP_L - i, MAP_L - j);
       h = lerp(HP.randTiefe, h, sstep(0, randBreite, d));
-      ziel[j * VW + i] = h;
+      ziel[j * VW_L + i] = h;
     }
   }
   // H1e: nur der Schreibpfad AUF base zaehlt. io.js laesst sich hier auch ein
   // frisches Vergleichsfeld fuellen (Seed-Terrain fuers v3-Delta) — das ist
   // kein Undo-relevanter Vorgang und darf den Zaehler nicht bewegen.
-  if (ziel === base) basisGeaendert(0, VW - 1, 0, VW - 1);
+  if (ziel === base) basisGeaendert(0, VW_L - 1, 0, VW_L - 1);
 }
 
 /** Seed-Terrain direkt nach base schreiben — gleiche Rechenreihenfolge wie immer. */

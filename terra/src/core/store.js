@@ -76,6 +76,25 @@ export const S = {
      tropisch), `hoeheKuehl` als Abkuehlung je Hoeheneinheit. Felder wie
      KLIMA_STANDARD in world/biomfeld.js. */
   klima: { richtung: 0, staerke: 0.5, grund: 0.5, hoeheKuehl: 0.012 },
+  /* I1 — Ebenen-Hierarchie. `baum` haelt ALLE Karten der Datei, `aktiveKarte`
+     nennt die, die gerade in S und im Hoehenfeld steht.
+
+     Wichtig zum Verstaendnis: der Eintrag der aktiven Karte im Baum ist
+     VERALTET, solange man sie bearbeitet — der Wahrheitswert steht in S und
+     in `base`. Erst karteSichern() (editor/io.js) schreibt ihn zurueck. Diese
+     Trennung ist Absicht: den Baum bei jeder Aenderung mitzupflegen hiesse,
+     zwei Fassungen derselben Karte zu fuehren, und die laufen auseinander.
+
+     Vor dem ersten Laden ist `baum` null — dann verhaelt sich Terra wie
+     bisher, mit genau einer Karte. */
+  baum: null,
+  aktiveKarte: null,
+  /* Maszstab der aktiven Karte in Weltmetern je Gitterzelle. Kein Levelname:
+     eine Karte mit 8 m/Zelle soll nicht in eine Schublade gezwungen werden
+     (siehe docs/engineering/terra-signaturenkatalog.md). 1 ist der Bestand —
+     eine Welteinheit ist ein Meter, und damit sieht jede bisherige Karte aus
+     wie bisher. */
+  einheitMeter: 1,
   /* D1 — Marker sind BEWUSST kein Elementtyp. Ein Element ist Weltgeometrie
      (Punkte + Parameter + Seed -> Instanzen, Terrainwirkung, Korridore); ein
      Marker ist eine Notiz an einer Koordinate und erzeugt nichts davon. Als

@@ -72,7 +72,7 @@ const ERSATZ = {
 
 /* Modulpfad -> Namen, die zusaetzlich exportiert werden sollen (Testfenster). */
 const TESTFENSTER = {
-  'editor/io.js': ['validiereKarte', 'uebernehmeKarte', 'kartenDaten', 'pruefeElemente',
+  'editor/io.js': ['validiereKarte', 'validiereKarteObjekt', 'uebernehmeKarte', 'kartenDaten', 'pruefeElemente',
     'berechneHoehenDelta', 'wendeHoehenDeltaAn', 'setzeKartenGroesse']
 };
 

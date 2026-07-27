@@ -73,7 +73,15 @@ var TOOLS = [
      Taste 9: 1..6 sind seit jeher belegt, 7 (Marker) und 8 (Stempel) kamen in
      D1/A3 dazu — 9 ist die naechste freie Ziffer (0 bleibt frei, onKey liest
      nur Digit/Numpad der hier eingetragenen Tasten). */
-  { id: "wegsuche", g: "⤳", l: "Wegsuche", key: "9" }
+  { id: "wegsuche", g: "⤳", l: "Wegsuche", key: "9" },
+  /* I1 — Ausschnitt: ein Polygon zeichnen und daraus eine KINDKARTE machen.
+     Kein Element, sondern der einzige Weg, eine neue Karte anzulegen — und
+     weil es nur einen Weg gibt, gibt es auch nur eine Stelle, an der die
+     Baumregeln durchgesetzt werden.
+     Taste 0: die letzte freie Ziffer. Danach ist die Reihe voll; ein elftes
+     Werkzeug braucht eine andere Belegung, und das ist gut so — zehn sind
+     bereits an der Grenze dessen, was eine Leiste ohne Gruppierung traegt. */
+  { id: "ausschnitt", g: "⧉", l: "Ausschnitt", key: "0" }
 ];
 var VARIANTS = {
   pfad: [["strasse", "Straße"], ["mauer", "Mauer"], ["fluss", "Fluss"],
@@ -490,10 +498,25 @@ function snapPt(p) {
   return { x: Math.round(p.x / 2) * 2, z: Math.round(p.z / 2) * 2 };
 }
 
+/* I1 — der Ausschnitt erzeugt kein Element, sondern eine Kindkarte. Das
+   passiert in editor/io.js, wo der Kartenbaum wohnt. Hier steht nur die
+   Anmeldung: io.js importiert tools.js, der umgekehrte Weg waere ein Zyklus.
+   Dasselbe Muster wie bei der Fortschrittsanzeige der Erosion. */
+var ausschnittWeg = null;
+function setzeAusschnittWeg(fn) { ausschnittWeg = fn; }
+
 function finishDraw() {
   if (!ed.draw) return;
-  var min = ed.draw.kind === "flaeche" ? 3 : 2;
+  var min = (ed.draw.kind === "flaeche" || ed.draw.kind === "ausschnitt") ? 3 : 2;
   if (ed.draw.points.length < min) { cancelDraw(); return; }
+  if (ed.draw.kind === "ausschnitt") {
+    var pts = ed.draw.points.slice();
+    ed.draw = null;
+    clearPreview();
+    updateHint();
+    if (ausschnittWeg) ausschnittWeg(pts);
+    return;
+  }
   pushUndo();
   var el = mkElement(ed.draw.kind, ed.draw.variant, ed.draw.points.slice(),
     copyParams(toolParams[ed.draw.kind + ":" + ed.draw.variant]), nextSeed());
@@ -729,6 +752,7 @@ function stempelSetzen(st, pos) {
 stempelBibliothekLaden();
 
 export { TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
+  setzeAusschnittWeg,
   EROSION_PARAMS, erosionRegler,
   schemaKey, defaultsFor, toolParams, curParams,
   copyParams, snapPt, finishDraw, cancelDraw, setTool,

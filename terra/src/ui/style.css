@@ -49,6 +49,15 @@
   /* Fortschritt eines mehrbildrigen Laufs. Bewusst ohne Uebergang auf der
      Breite: der Balken wird bis zu 60-mal je Sekunde gesetzt, eine Animation
      darauf liefe der Wahrheit immer hinterher. */
+  /* Brotkrume des Kartenbaums (I1). Umbricht, statt zu scrollen: eine tiefe
+     Hierarchie soll man lesen koennen, ohne seitwaerts zu ziehen. */
+  .krume{font-size:11.5px;line-height:1.6;margin:0 0 6px}
+  .krumeLink{color:#2d74ab;cursor:pointer}
+  .krumeLink:hover{text-decoration:underline}
+  .krumeHier{font-weight:600;opacity:.75}
+  .krumeTrenner{opacity:.35;margin:0 4px}
+  button.wide.warn{color:#a2493a;border-color:rgba(162,73,58,.35)}
+  button.wide.warn:hover{background:#fff5f3;border-color:#a2493a;color:#a2493a}
   .fortschritt{height:5px;border-radius:3px;background:#dbe3ea;overflow:hidden;margin:0 0 10px}
   .fortschrittBalken{height:100%;width:0;background:#7fa9cc}
   .seg{display:flex;flex-wrap:wrap;gap:5px}
