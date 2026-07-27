@@ -422,6 +422,9 @@ importers:
       '@uwe/calendar':
         specifier: workspace:*
         version: link:../../packages/calendar
+      '@uwe/cloudflare-edge':
+        specifier: workspace:*
+        version: link:../../packages/cloudflare-edge
       '@uwe/connector':
         specifier: workspace:*
         version: link:../../packages/connector
@@ -796,6 +799,25 @@ importers:
         version: link:../config
       tsx:
         specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/cloudflare-edge:
+    dependencies:
+      '@uwe/assets':
+        specifier: workspace:*
+        version: link:../assets
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.21
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.22.4
         version: 4.22.4
       typescript:
         specifier: ^5.8.3

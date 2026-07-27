@@ -198,6 +198,25 @@ elif [[ -n "$PUBLIC_URL" ]]; then
   fi
 fi
 
+# Managed Challenge (edge "Verify you are human") — desired state as UWE stored it.
+# A challenge that also covered /api/health would make every probe above look
+# like an outage, so the exemption is checked explicitly.
+CHALLENGE_CONFIG="${UWE_DATA_DIR:-${UWE_HOME:-/opt/uwe}/data}/cloudflare/managed-challenge.json"
+if [[ -f "$CHALLENGE_CONFIG" ]]; then
+  challenge_enabled="$(grep -o '"enabled"[[:space:]]*:[[:space:]]*[a-z]*' "$CHALLENGE_CONFIG" | grep -o '[a-z]*$' || echo "false")"
+  if [[ "$challenge_enabled" == "true" ]]; then
+    if grep -q '"/api/health"' "$CHALLENGE_CONFIG"; then
+      report ok "Managed Challenge aktiviert — /api/health ausgenommen"
+    else
+      report fail "Managed Challenge aktiviert, aber /api/health nicht ausgenommen — Probes und Timer scheitern"
+    fi
+  else
+    report ok "Managed Challenge nicht aktiviert (UWE → System → Cloudflare)"
+  fi
+else
+  report ok "Managed Challenge nie konfiguriert — kein Edge-Challenge-Gate"
+fi
+
 echo ""
 echo "Cloudflare Tunnel check: ${status_fail} fail, ${status_warn} warn"
 

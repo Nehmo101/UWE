@@ -37,6 +37,22 @@ steuerbar, ohne Units neu zu schreiben.
 | Host-Writer (JSON) | `writeBackupScheduleConfig` in `packages/backup/src/schedule.ts` |
 | systemd liest JSON | `deploy/scripts/uwe-backup.sh` (`schedule.json`) |
 
+### Cloudflare Managed Challenge
+
+Variante des Musters ohne systemd-Timer: der Ziel-Zustand liegt nicht auf dem
+Host, sondern **bei Cloudflare**. Studio schreibt die host-lesbare JSON *und*
+wendet die Regel direkt über die Cloudflare-API an; das Host-Skript ist der
+Wiederherstellungs-/Bootstrap-Pfad, kein laufender Schritt.
+
+| Schritt | Datei |
+|---|---|
+| Setting + Default (`managedChallengeEnabled`, Hostnames, Zone-ID, Token) | `packages/database/src/deployment-settings.ts` |
+| UI + Speichern | `apps/studio/app/system/cloudflare/{page.tsx,actions.ts}` |
+| Sync-Wrapper (JSON schreiben + Edge anwenden) | `apps/studio/src/lib/cloudflare-challenge-sync.ts` |
+| Host-Writer (JSON) | `writeManagedChallengeConfig` in `packages/cloudflare-edge/src/config-file.ts` |
+| Domänenlogik (Regel, Ausdruck, API-Client) | `packages/cloudflare-edge/src/{managed-challenge,ruleset-client}.ts` |
+| Host-Skript liest JSON | `deploy/scripts/configure-cloudflare-managed-challenge.sh` → `pnpm cloudflare:challenge` |
+
 ### Auto-Briefing
 
 | Schritt | Datei |

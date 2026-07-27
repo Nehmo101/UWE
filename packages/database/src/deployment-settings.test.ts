@@ -7,6 +7,7 @@ import {
   buildDeploymentEnvOverrides,
   buildDeploymentSettingsUpdate,
   normalizeDeploymentSettings,
+  resolveCloudflareEdgeCredentials,
   sanitizeDeploymentSettingsForClient,
 } from "./deployment-settings";
 import { getTurnstileConfig } from "@uwe/auth";
@@ -139,5 +140,89 @@ describe("deployment settings", () => {
       normalizeDeploymentSettings({ brainExposure: "loopback" }),
     );
     assert.equal(overrides.BRAIN_EXPOSURE, undefined);
+  });
+});
+
+describe("Cloudflare Managed Challenge settings", () => {
+  afterEach(() => setRuntimeEnvOverrides(null));
+
+  it("is off by default with no hostnames", () => {
+    assert.equal(DEFAULT_DEPLOYMENT_SETTINGS.managedChallengeEnabled, false);
+    assert.deepEqual(DEFAULT_DEPLOYMENT_SETTINGS.managedChallengeHostnames, []);
+    assert.equal(DEFAULT_DEPLOYMENT_SETTINGS.managedChallengeAction, "managed_challenge");
+  });
+
+  it("normalises lists and collapses an unknown challenge level", () => {
+    const settings = normalizeDeploymentSettings({
+      managedChallengeEnabled: true,
+      managedChallengeHostnames: [" studio.uweanddragons.org ", "studio.uweanddragons.org", ""],
+      managedChallengeSkipPaths: "not-a-list",
+      managedChallengeAction: "block",
+    });
+
+    assert.deepEqual(settings.managedChallengeHostnames, ["studio.uweanddragons.org"]);
+    assert.deepEqual(settings.managedChallengeSkipPaths, []);
+    assert.equal(settings.managedChallengeAction, "managed_challenge");
+  });
+
+  it("keeps the stored API token when the field is left blank", () => {
+    const first = buildDeploymentSettingsUpdate({ cloudflareApiToken: "cf-token" });
+    assert.equal(first.cloudflareApiTokenConfigured, true);
+
+    const second = buildDeploymentSettingsUpdate({ cloudflareZoneId: "zone-1" }, first);
+    assert.equal(second.cloudflareApiTokenConfigured, true);
+    assert.equal(second.cloudflareApiTokenEnc, first.cloudflareApiTokenEnc);
+    assert.equal(second.cloudflareZoneId, "zone-1");
+  });
+
+  it("clears the API token on request so env takes over again", () => {
+    const stored = buildDeploymentSettingsUpdate({ cloudflareApiToken: "cf-token" });
+    const cleared = buildDeploymentSettingsUpdate({ clearCloudflareApiToken: true }, stored);
+
+    assert.equal(cleared.cloudflareApiTokenConfigured, false);
+    assert.equal(cleared.cloudflareApiTokenEnc, null);
+  });
+
+  it("never ships the encrypted API token to a browser client", () => {
+    const built = buildDeploymentSettingsUpdate({ cloudflareApiToken: "cf-token" });
+    const client = sanitizeDeploymentSettingsForClient(built);
+
+    assert.equal(client.cloudflareApiTokenConfigured, true);
+    assert.equal(client.cloudflareApiTokenEnc, undefined);
+    assert.ok(!JSON.stringify(client).includes("cf-token"));
+  });
+
+  it("keeps the Cloudflare API token out of the process-wide env overlay", () => {
+    const built = buildDeploymentSettingsUpdate({
+      cloudflareApiToken: "cf-token",
+      cloudflareZoneId: "zone-1",
+      managedChallengeEnabled: true,
+    });
+    const overrides = buildDeploymentEnvOverrides(built);
+
+    assert.equal(overrides.CLOUDFLARE_API_TOKEN, undefined);
+    assert.equal(overrides.CLOUDFLARE_ZONE_ID, undefined);
+    assert.ok(!JSON.stringify(overrides).includes("cf-token"));
+  });
+
+  it("resolves credentials from the database first, env as fallback", () => {
+    const stored = buildDeploymentSettingsUpdate({
+      cloudflareApiToken: "db-token",
+      cloudflareZoneId: "db-zone",
+    });
+    const env = { CLOUDFLARE_API_TOKEN: "env-token", CLOUDFLARE_ZONE_ID: "env-zone" };
+
+    assert.deepEqual(resolveCloudflareEdgeCredentials(stored, env), {
+      apiToken: "db-token",
+      zoneId: "db-zone",
+    });
+    assert.deepEqual(resolveCloudflareEdgeCredentials(DEFAULT_DEPLOYMENT_SETTINGS, env), {
+      apiToken: "env-token",
+      zoneId: "env-zone",
+    });
+    assert.deepEqual(resolveCloudflareEdgeCredentials(DEFAULT_DEPLOYMENT_SETTINGS, {}), {
+      apiToken: null,
+      zoneId: null,
+    });
   });
 });
