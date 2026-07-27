@@ -95,3 +95,42 @@ Wegpunkte setzen, Dauer wählen, als WebM/GIF exportieren. Für ein Werkzeug, de
 
 ### E3. Karte als Datei, Welt als Sammlung
 Mehrere Karten mit gemeinsamer Weltseed und Nachbarschaftsbeziehung („östlich von …") — die Grundlage für einen Atlas statt einzelner Bilder. Passt zur UWE-Einbindung und braucht im Format nur ein paar Felder.
+
+---
+
+# F — Näher an ein echtes Ghibli-Filmbild
+
+Antwort auf die Frage „was brauchen wir, um so nah wie möglich an den Filmlook zu kommen — sind es die Assets?". Kurz: **Die Assets sind rund ein Drittel.** Die größere Lücke liegt darin, dass ein Filmhintergrund *gemalt* ist und unser Bild *berechnet* wird. Fünf Hebel, nach Wirkung sortiert.
+
+## F1 — Palettenbindung: gemalt statt beleuchtet
+Oga malt ein Bild mit 21–24 Farben; ein Mensch entscheidet jeden Wert danach, ob die Silhouette davor liest. Unser Renderer liefert stufenlose Verläufe aus Geometrie und Licht — deshalb wirkt selbst gutes stilisiertes 3D „errechnet".
+
+Gegenmittel: ein finaler Pass, der das Bild auf eine **kartenweite Palette zieht**. Gradient-Mapping über die Luminanz plus milde Farbquantisierung mit ordered Dithering; Stärke regelbar, Default dezent. Das Farbskript (C2) verschiebt Farbtöne — hier geht es darum, die *Anzahl* der vorkommenden Töne zu begrenzen. Zusammen ergibt das den Sprung.
+
+## F2 — Pinselstruktur gehört in den Bildraum
+Echter Konflikt mit unserer Regel „Texturen in Welteinheiten": Für Materialidentität ist sie richtig, aber **Pinselstriche skalieren mit der Leinwand, nicht mit dem Motiv** — auf einem Gemälde ist der Strich am fernen Berg so breit wie der im Vordergrund. Unsere Aquarellschicht wird mit der Entfernung feiner und verschwindet, die Ferne wirkt dadurch glatt.
+
+Lösung: beides. Weltraum-Textur bleibt fürs Material, dazu eine **bildraumfeste Malschicht** (im Post-Pass oder als Screen-Space-Anteil im Materialpatch), deren Körnung mit der Entfernung nicht schrumpft.
+
+## F3 — Multiplane statt kontinuierlicher Tiefe
+Ghibli staffelt in drei bis vier **diskrete Ebenen** (Vordergrund, Mittelgrund, Ferne, Himmel), jede mit eigener Sättigung, eigenem Wertebereich und eigener Kantenschärfe. Wir haben stufenlosen Nebel.
+
+Umsetzung: Tiefe in Bänder quantisieren (Tiefentextur existiert seit Runde D), je Band ein Sättigungs- und Werteoffset, Bandgrenzen im Nebel versteckt. Ergibt die gestaffelte Ruhe der Vorlagen statt gleichmäßigen Wegblendens.
+
+## F4 — Komponierte Kamera (Aufnahme-Modus)
+Ein Filmhintergrund ist für genau **eine** Kameraposition gemalt; freie Orbitkamera heißt: keine Komposition. Ein Aufnahme-Modus rastet auf eine komponierte Einstellung ein — langes Objektiv, Horizont auf ein Drittel, angeschnittenes Vordergrundelement, Blick auf ein Motiv ausgerichtet. Für Standbild, PNG-Export und Vorschaubilder ist das der größte Gewinn pro Aufwand, größer als jeder Shader.
+
+## F5 — Bewegungsdisziplin
+Bei uns schwingt alles gleichzeitig. In einem Ghibli-Hintergrund ist fast alles **still**, und eine Sache bewegt sich. Konkret: globale Windamplitude senken, dafür einzelne Nester (ein Grasbüschel, eine Krone, ein Vorhang) deutlich stärker animieren; Wolken langsamer; Vögel nur gelegentlich.
+
+## F6 — Was die Assets beitragen müssen
+Nicht Detailgrad, sondern **Formensprache**:
+- Wenige große Formen statt vieler kleiner (ein Fels sind drei Flächen), mit bewusster Übertreibung — gestauchte Proportionen, schiefe Dächer, ausgebeulte Kronen.
+- Silhouette vor Oberfläche: Jedes Objekt muss als schwarze Fläche lesbar sein; Kronen brauchen ein bis drei ausbrechende Blattgruppen.
+- Handgemalte Kronenkarten statt Rauschen — dort lohnt echte Handarbeit am meisten.
+- Gebrauchsspuren an jedem größeren Objekt (Moos am Sockel, Laub am Fuß, getretene Ränder), sonst bleibt der „platziert"-Eindruck.
+
+## F7 — Kalibriermethode: Übermalen
+Wirksamer als jede Theorie: einen Screenshot zwanzig Minuten lang übermalen, bis er gefällt. Die Differenz zwischen Übermalung und Original **ist** die Liste dessen, was der Renderer noch nicht kann. Genau der Abgleich, den die Ghibli-nahen Spieleprojekte gemacht haben.
+
+**Erwartungshaltung:** „Ununterscheidbar vom Filmbild" ist nicht erreichbar — ein Gemälde für eine Kamera schlägt Echtzeit aus jeder Kamera. Erreichbar ist **ein Gemälde, das sich bewegt**.

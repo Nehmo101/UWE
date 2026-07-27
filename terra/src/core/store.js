@@ -65,7 +65,21 @@ export const S = {
   nextId: 1,
   elementSeedCounter: 0x1234,
   snap: false,
-  biom: "wiese"
+  biom: "wiese",
+  /* D1 — Marker sind BEWUSST kein Elementtyp. Ein Element ist Weltgeometrie
+     (Punkte + Parameter + Seed -> Instanzen, Terrainwirkung, Korridore); ein
+     Marker ist eine Notiz an einer Koordinate und erzeugt nichts davon. Als
+     Element muesste er durch genElement/isHeavy/rebuildAll laufen, in den
+     Instanzpools auftauchen und beim PNG-Export einzeln ausgeblendet werden.
+     Deshalb eine eigene, flache Liste: [{x, z, text, art}].
+     Nicht Teil der Undo-Historie (history.js sichert nur Elemente + Hoehen) —
+     siehe Bericht. */
+  marker: [],
+  /* A3 — Stempelbibliothek: [{name, anker:{x,z}, elemente:[...]}]. Liegt
+     parallel zu den Elementen, weil ein Stempel eine VORLAGE ist und keine
+     Weltgeometrie. Dieselbe Liste dient als localStorage-Bibliothek (tools.js)
+     und als optionales Kartenfeld `stempel` (io.js). */
+  stempel: []
 };
 
 /* ==========================================================================

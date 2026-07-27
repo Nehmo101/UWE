@@ -1,6 +1,7 @@
-// Render-Pipeline: Renderer, EffectComposer (Render → Bloom → Graduierung →
-// Kante/Korn → OutputPass) plus ein halbaufgeloester Depth-only-Prepass fuer
-// die Kantenandeutung. Der OutputPass steht zwingend am Ende — er erledigt
+// Render-Pipeline: Renderer, EffectComposer (Render → Bloom → Strahlen →
+// Graduierung → Kante/Korn/Papierkante → OutputPass) plus ein halbaufgeloester
+// Depth-only-Prepass, der die Kantenandeutung UND die Himmelsmaske der
+// Godrays speist. Der OutputPass steht zwingend am Ende — er erledigt
 // Tone Mapping und Farbraumkonversion.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -8,15 +9,28 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+// Nur fuer die Horizontfarbe der gemalten Wasserstreifen (C4): setLook
+// bekommt sie ohnehin als look.horizont und legt sie hier ins gemeinsame
+// Uniform, damit water.js sie ohne Import aus atmosphere.js lesen kann.
+// Zyklusfrei: render/materials.js zieht nur textures.js und world/wind.js,
+// keines davon importiert render/pipeline.js.
+import { terraUniforms } from './materials.js';
 
 export const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xdfe8f0, 200, 950);
 
 let renderer = null, composer = null, bloomPass = null, gradePass = null,
-    kantePass = null, outputPass = null, renderPass = null;
+    kantePass = null, outputPass = null, renderPass = null, strahlenPass = null;
 let depthRT = null;
 let postAn = true;
 let infoCalls = 0, infoTris = 0;
+
+/** Sanfte Stufe wie smoothstep — pipeline.js bleibt sonst importfrei. */
+function sanft(a, b, x) {
+  var t = (x - a) / (b - a);
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  return t * t * (3 - 2 * t);
+}
 
 /* --- Farbgraduierung: Lift/Gamma/Gain, Saettigung nach Luminanz,
        angehobener Schwarzpunkt, dezente Vignette -------------------------
@@ -37,7 +51,15 @@ const GradeShader = {
     uSatMitte: { value: 1.08 },
     uSatLicht: { value: 0.92 },
     uSchwarz: { value: 0.032 },
-    uVignette: { value: 0.1 }
+    uVignette: { value: 0.1 },
+    // C2 Farbskript pro Karte: drei Farben, die Tiefen/Mitten/Lichter zu sich
+    // ziehen. Startwerte neutral und uSkriptStaerke 0 — der ganze Zweig ist
+    // uniform-kohaerent und faellt weg, solange keine Karte ein Skript traegt.
+    // Vorhandene Karten bleiben dadurch byteidentisch.
+    uSkriptLicht: { value: new THREE.Color(0xffffff) },
+    uSkriptMitte: { value: new THREE.Color(0xffffff) },
+    uSkriptSchatten: { value: new THREE.Color(0xffffff) },
+    uSkriptStaerke: { value: 0 }
   },
   vertexShader: [
     'varying vec2 vUv;',
@@ -51,6 +73,8 @@ const GradeShader = {
     'uniform vec3 uLift; uniform vec3 uGamma; uniform vec3 uGain;',
     'uniform float uSatMitte; uniform float uSatLicht;',
     'uniform float uSchwarz; uniform float uVignette;',
+    'uniform vec3 uSkriptLicht; uniform vec3 uSkriptMitte; uniform vec3 uSkriptSchatten;',
+    'uniform float uSkriptStaerke;',
     'varying vec2 vUv;',
     'void main() {',
     '  vec4 tex = texture2D( tDiffuse, vUv );',
@@ -64,11 +88,125 @@ const GradeShader = {
     '  sat = mix( sat, uSatLicht, hoch );',
     '  sat = mix( 1.0, sat, smoothstep( 0.02, 0.10, l ) );   // tiefste Tiefen fast neutral',
     '  c = mix( vec3( l ), c, sat );',
+    '  // --- C2 Farbskript ---------------------------------------------------',
+    '  // Der Filmlook UEBER der Biom- und Tageszeitpalette: drei Farben ziehen',
+    '  // Tiefen, Mitten und Lichter zu sich. Die Saettigungsstufe darueber',
+    '  // bleibt unangetastet — das Skript VERSCHIEBT Farbtoene, es saettigt',
+    '  // nicht: (a) die Luminanz wird exakt zurueckgeholt, (b) der Farbanteil',
+    '  // darf nur bis zum Ausgangsbetrag (plus einem kleinen Sockel, damit auch',
+    '  // neutrale Flaechen den Ton annehmen) wachsen.',
+    '  // Hinweis: mix( vec3(l), c, sat ) laesst l unveraendert (die Luma-',
+    '  // gewichte summieren sich zu 1), l gilt hier also weiter.',
+    '  if ( uSkriptStaerke > 0.0 ) {',
+    '    float sSch = 1.0 - smoothstep( 0.02, 0.42, l );',
+    '    float sLic = smoothstep( 0.58, 0.96, l );',
+    '    float sMit = max( 1.0 - sSch - sLic, 0.0 );',
+    '    vec3 ziel = uSkriptSchatten * sSch + uSkriptMitte * sMit + uSkriptLicht * sLic;',
+    '    float zl = dot( ziel, vec3( 0.2126, 0.7152, 0.0722 ) );',
+    '    vec3 getoent = c * ( ziel / max( zl, 0.0001 ) );',
+    '    getoent *= l / max( dot( getoent, vec3( 0.2126, 0.7152, 0.0722 ) ), 0.0001 );',
+    '    vec3 chrNeu = getoent - vec3( l ), chrAlt = c - vec3( l );',
+    '    getoent = vec3( l ) + chrNeu *',
+    '      min( 1.0, ( length( chrAlt ) + 0.05 ) / max( length( chrNeu ), 0.0001 ) );',
+    '    c = mix( c, getoent, uSkriptStaerke );',
+    '  }',
     '  // Schwarzpunkt anheben, leicht ins Kuehle',
     '  c = c * ( 1.0 - uSchwarz ) + vec3( uSchwarz * 0.9, uSchwarz * 0.96, uSchwarz * 1.08 );',
     '  float d = distance( vUv, vec2( 0.5 ) );',
     '  c *= 1.0 - uVignette * smoothstep( 0.42, 0.86, d );',
     '  gl_FragColor = vec4( pow( c, vec3( 2.2 ) ), tex.a );',
+    '}'
+  ].join('\n')
+};
+
+/* --- C1 Godrays: Lichtstrahlen durch die Wolkenluecken -------------------
+   Screen-Space, VOR der Graduierung (die Strahlen sollen mitgraduiert und
+   von der Papierkante gerahmt werden, nicht darueber liegen).
+
+   Quelle ist die vorhandene Sonnen-/Mondscheibe: sie haengt als Sprite auf der
+   Himmelskuppel bei Kameraposition + sonneDir * 1350 (world/sky.js, setSonne).
+   renderFrame projiziert genau diesen Punkt ins Bild und legt ihn als
+   uSonneUV ab — es gibt also KEINE zweite Kamera und keinen zweiten
+   Renderdurchgang.
+
+   Maske: die halbaufgeloeste Tiefentextur des Prepasses. Alles, was Tiefe
+   schreibt, ist Geometrie; der Himmel (Kuppel, Scheibe, Wolken) laeuft mit
+   depthWrite:false und wird im Prepass ausgeblendet, seine Texel behalten
+   also den Clearwert 1.0 — "weit == Himmel" ist damit exakt und gratis.
+   Zusaetzlich zaehlt nur, was HELL ist (uSchwelle): so tragen die Scheibe und
+   ihr Horizontgluehen die Strahlen, nicht die ganze Himmelsflaeche.
+   Bekannte Unschaerfe: Wasser und Rauch schreiben ebenfalls keine Tiefe und
+   gelten der Maske als Himmel. Der Helligkeitsanteil und der Radialabfall um
+   die Scheibe daempfen das so weit, dass es nicht auffaellt.
+
+   Streifenregel (wie beim Sobel): Strahlen duerfen nur ANGEDEUTET werden. Der
+   Startpunkt jedes Marschs wird deshalb aus gl_FragCoord gejittert —
+   deterministisch, ohne Zeit, ohne Textur —, sonst legt das Verfahren
+   sichtbare konzentrische Ringe ins Bild.
+
+   Kosten: EIN zusaetzlicher Vollbildpass, je Fragment STRAHLEN_SAMPLES Taps
+   auf das (halbfloat) Farbziel und ebenso viele auf die halbaufgeloeste
+   Tiefe. Keine neuen Rendertargets — der Composer hat seine beiden
+   Ping-Pong-Puffer schon. Bei Staerke 0 (nachts: dort strahlen die Ranken)
+   wird der Pass ueber pass.enabled ganz uebersprungen, das Bild ist dann
+   byteidentisch zu vorher. */
+const STRAHLEN_SAMPLES = 10;
+const StrahlenShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    tDepth: { value: null },
+    uNahFern: { value: new THREE.Vector2(0.5, 3000) },
+    uSonneUV: { value: new THREE.Vector2(0.5, 0.5) },
+    uStrahlen: { value: 0 },
+    // Weiss als Standard: die Faerbung kommt aus der abgetasteten Scheibe
+    // selbst (morgens warm, nachts kuehl) — das Uniform ist nur Feinabgleich.
+    uStrahlenFarbe: { value: new THREE.Color(0xffffff) },
+    uDichte: { value: 0.62 },     // Laenge des Marschs in Bildschirmanteilen
+    uDekay: { value: 0.93 },      // Abfall je Schritt
+    uSchwelle: { value: new THREE.Vector2(0.62, 1.10) }
+  },
+  vertexShader: [
+    'varying vec2 vUv;',
+    'void main() {',
+    '  vUv = uv;',
+    '  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );',
+    '}'
+  ].join('\n'),
+  fragmentShader: [
+    'uniform sampler2D tDiffuse; uniform sampler2D tDepth;',
+    'uniform vec2 uNahFern; uniform vec2 uSonneUV; uniform vec2 uSchwelle;',
+    'uniform float uStrahlen; uniform float uDichte; uniform float uDekay;',
+    'uniform vec3 uStrahlenFarbe;',
+    'varying vec2 vUv;',
+    'float strahlTiefe( vec2 uv ) {',
+    '  float z = texture2D( tDepth, uv ).x;',
+    '  float n = uNahFern.x, f = uNahFern.y;',
+    '  return ( 2.0 * n ) / ( f + n - z * ( f - n ) );',
+    '}',
+    'void main() {',
+    '  vec4 tex = texture2D( tDiffuse, vUv );',
+    '  vec2 schritt = ( vUv - uSonneUV ) * ( uDichte / ' + STRAHLEN_SAMPLES + '.0 );',
+    '  // Jitter des Startversatzes: bricht das Ringmuster des radialen Blurs',
+    '  float jit = fract( sin( dot( gl_FragCoord.xy, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );',
+    '  vec2 uv = vUv - schritt * jit;',
+    '  vec3 summe = vec3( 0.0 );',
+    '  float gew = 1.0, norm = 0.0;',
+    '  for ( int i = 0; i < ' + STRAHLEN_SAMPLES + '; i ++ ) {',
+    '    uv -= schritt;',
+    '    vec3 q = texture2D( tDiffuse, uv ).rgb;',
+    '    float himmel = smoothstep( 0.88, 0.995, strahlTiefe( uv ) );',
+    '    float hell = smoothstep( uSchwelle.x, uSchwelle.y,',
+    '      dot( q, vec3( 0.2126, 0.7152, 0.0722 ) ) );',
+    '    summe += q * himmel * hell * gew;',
+    '    norm += gew;',
+    '    gew *= uDekay;',
+    '  }',
+    '  // Radialabfall um die Scheibe: ohne ihn wuerde ein durchweg heller',
+    '  // Himmel (Nebel-Preset) das ganze Bild gleichmaessig aufhellen, statt',
+    '  // Strahlen zu zeichnen.',
+    '  float nah = 1.0 - smoothstep( 0.10, 0.85, distance( vUv, uSonneUV ) );',
+    '  gl_FragColor = vec4( tex.rgb + summe * uStrahlenFarbe',
+    '    * ( uStrahlen * nah / max( norm, 0.0001 ) ), tex.a );',
     '}'
   ].join('\n')
 };
@@ -83,7 +221,13 @@ const KanteKornShader = {
     uKante: { value: 0.16 },
     uKanteFarbe: { value: new THREE.Color(0x2e2418) },
     uKorn: { value: 0.025 },
-    uZeit: { value: 0 }
+    uZeit: { value: 0 },
+    // C3 Papierkante: unregelmaessig auslaufender Blattrand. Ergaenzt die
+    // Vignette der Graduierung (die weiter aus den Presets kommt und weiter
+    // abdunkelt) — hier wird zum Rand hin AUFgehellt, damit das Bild wie auf
+    // Papier gemalt endet statt technisch abzublenden.
+    uPapier: { value: 0.16 },
+    uPapierFarbe: { value: new THREE.Color(0xf6f0e2) }
   },
   vertexShader: [
     'varying vec2 vUv;',
@@ -97,6 +241,7 @@ const KanteKornShader = {
     'uniform vec2 uTexel; uniform vec2 uNahFern;',
     'uniform float uKante; uniform vec3 uKanteFarbe;',
     'uniform float uKorn; uniform float uZeit;',
+    'uniform float uPapier; uniform vec3 uPapierFarbe;',
     'varying vec2 vUv;',
     'float linDepth( vec2 uv ) {',
     '  float z = texture2D( tDepth, uv ).x;',
@@ -105,6 +250,10 @@ const KanteKornShader = {
     '}',
     'float korn( vec2 p ) {',
     '  return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) + uZeit * 61.7 ) * 43758.5453 );',
+    '}',
+    '// Ortsfestes Rauschen OHNE uZeit: Papier flimmert nicht.',
+    'float papierRauschen( vec2 p ) {',
+    '  return fract( sin( dot( p, vec2( 269.5, 183.3 ) ) ) * 43758.5453 );',
     '}',
     'void main() {',
     '  vec4 tex = texture2D( tDiffuse, vUv );',
@@ -129,6 +278,26 @@ const KanteKornShader = {
     '  float lum = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );',
     '  float n = korn( gl_FragCoord.xy * 0.7 );',
     '  c += ( n - 0.5 ) * uKorn * ( 1.25 - min( lum, 1.0 ) );',
+    '  // --- C3 Papierkante ---------------------------------------------------',
+    '  // Radius wie bei der Vignette (vUv-Abstand, also elliptisch: Ecken frueh,',
+    '  // Kantenmitten spaet), aber fransig gestoert. Drei teilerfremde',
+    '  // Winkelperioden geben die grosse Unruhe des Blattrands, zwei Rausch-',
+    '  // stufen aus gl_FragCoord die Fasern. Alles deterministisch und',
+    '  // zeitstabil — keine Textur noetig.',
+    '  if ( uPapier > 0.0 ) {',
+    '    vec2 pp = vUv - vec2( 0.5 );',
+    '    float pw = atan( pp.y, pp.x );',
+    '    float wellig = sin( pw *  3.0 + 0.7 ) * 0.013',
+    '                 + sin( pw *  7.0 - 1.9 ) * 0.008',
+    '                 + sin( pw * 17.0 + 2.6 ) * 0.004;',
+    '    float faser = ( papierRauschen( gl_FragCoord.xy * 0.31 ) - 0.5 ) * 0.011',
+    '                + ( papierRauschen( gl_FragCoord.xy * 0.07 ) - 0.5 ) * 0.018;',
+    '    float rand = smoothstep( 0.44, 0.68, length( pp ) + wellig + faser );',
+    '    c = mix( c, uPapierFarbe, rand * uPapier );',
+    '    // Feine Koernung, die zum Rand hin zunimmt: die Malschicht laeuft aus.',
+    '    c += ( papierRauschen( gl_FragCoord.xy * 1.63 + 11.0 ) - 0.5 )',
+    '       * uPapier * 0.09 * rand;',
+    '  }',
     '  gl_FragColor = vec4( c, tex.a );',
     '}'
   ].join('\n')
