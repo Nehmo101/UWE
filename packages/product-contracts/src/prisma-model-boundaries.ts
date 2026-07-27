@@ -1,9 +1,9 @@
-// Prisma model -> product boundary mapping (146 models). Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §5.
-// Kept in sync with schema.prisma by prisma-model-boundaries.sync.test.ts.
+// Prisma model -> product boundary mapping. Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §5.
+// Kept in sync with schema.prisma + brain/ + family/ by prisma-model-boundaries.sync.test.ts.
 
 import type { DataDomain, PrivacyClass } from "./domain-boundaries";
 
-export type TargetDatabase = "uwe.db" | "uwe-brain.db";
+export type TargetDatabase = "uwe.db" | "uwe-brain.db" | "uwe-family.db";
 export type StorageTarget =
   | "database_only"
   | "studio_world_files"
@@ -42,16 +42,23 @@ const B = <const D extends DataDomain>(
   domain: D, storage: StorageTarget = "database_only", group?: DisputedBoundaryGroup,
 ) => boundary(domain, "owner_private_local", "uwe-brain.db", storage, group);
 
+/**
+ * Family data (`uwe-family.db`) — shared with everyone who holds the `family`
+ * checkbox, not owner-private (Notiz Lasse, Abschnitt G15). Same local-only
+ * storage rules as Brain; the difference is who may read it.
+ */
+const F = <const D extends DataDomain>(
+  domain: D, storage: StorageTarget = "database_only", group?: DisputedBoundaryGroup,
+) => boundary(domain, "family_shared", "uwe-family.db", storage, group);
+
 export const PRISMA_MODEL_BOUNDARIES = {
   User: U("platform_auth", "dm_only"),
   DashboardLayout: U("platform_auth", "dm_only"),
   AuthIdentity: U("platform_auth", "dm_only"),
   Session: U("platform_auth", "dm_only"),
   WorldMembership: U("platform_auth", "dm_only"),
-  PagePlayerAccess: U("portal_player", "player_visible"),
   PlayerQuestFlag: U("portal_player", "player_visible"),
   SessionAvailability: U("portal_player", "player_visible"),
-  SessionUnlock: U("portal_player", "player_visible"),
   World: U("dnd_world", "dm_only"),
   Campaign: U("dnd_world", "dm_only"),
   Page: U("dnd_world", "dm_only"),
@@ -183,6 +190,12 @@ export const PRISMA_MODEL_BOUNDARIES = {
   PromptTemplate: U("ai_control", "dm_only"),
   MaintenanceTask: B("admin_life"),
   PantryItem: B("admin_life"),
+
+  // Family (uwe-family.db) — geteilt mit allen, die das Häkchen `Family` haben.
+  FamilyChatConversation: F("family"),
+  FamilyChatMessage: F("family"),
+  FamilyBrainFact: F("family"),
+  FamilyMemberProfile: F("family"),
 } as const satisfies Record<string, PrismaModelBoundary>;
 
 export type PrismaModelName = keyof typeof PRISMA_MODEL_BOUNDARIES;
@@ -196,6 +209,16 @@ export function isPrismaModelName(value: unknown): value is PrismaModelName {
  * (`uwe-brain.db`). This is the authoritative set the Brain data export and the
  * physical migration must cover — derived from the mapping so it never drifts.
  */
+export const FAMILY_MODEL_NAMES: readonly PrismaModelName[] = (
+  Object.entries(PRISMA_MODEL_BOUNDARIES) as [PrismaModelName, PrismaModelBoundary][]
+)
+  .filter(([, boundary]) => boundary.targetDatabase === "uwe-family.db")
+  .map(([name]) => name);
+
+export function isFamilyModelName(value: unknown): value is PrismaModelName {
+  return isPrismaModelName(value) && PRISMA_MODEL_BOUNDARIES[value].targetDatabase === "uwe-family.db";
+}
+
 export const BRAIN_MODEL_NAMES: readonly PrismaModelName[] = (
   Object.entries(PRISMA_MODEL_BOUNDARIES) as [PrismaModelName, PrismaModelBoundary][]
 )

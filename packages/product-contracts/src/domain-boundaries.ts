@@ -5,6 +5,8 @@ export const APP_AUDIENCE = {
   portal: "portal",
   studio: "studio",
   brain: "brain",
+  /** Everyone holding the `family` checkbox — see Notiz Lasse, Abschnitt G. */
+  family: "family",
   platform: "platform",
 } as const;
 
@@ -16,6 +18,8 @@ export const DATA_DOMAIN = {
   portalPlayer: "portal_player",
   personalBrain: "personal_brain",
   adminLife: "admin_life",
+  /** Haushalt, Küche, Verträge, Dokumente, Familien-Kalender. */
+  family: "family",
   platformAuth: "platform_auth",
   platformOps: "platform_ops",
   assets: "assets",
@@ -32,6 +36,11 @@ export const PRIVACY_CLASS = {
   playerVisible: "player_visible",
   dmOnly: "dm_only",
   ownerPrivateLocal: "owner_private_local",
+  /**
+   * Lokal wie `owner_private_local`, aber geteilt: wer das Häkchen `Family`
+   * hat, sieht alles davon. Verlässt den Host genauso wenig.
+   */
+  familyShared: "family_shared",
 } as const;
 
 export type PrivacyClass = (typeof PRIVACY_CLASS)[keyof typeof PRIVACY_CLASS];
@@ -57,4 +66,18 @@ export function isBrainOnlyDataDomain(
   value: DataDomain,
 ): value is (typeof BRAIN_ONLY_DATA_DOMAINS)[number] {
   return isOneOf(BRAIN_ONLY_DATA_DOMAINS, value);
+}
+
+/** Domains that live in the shared Family database (`uwe-family.db`). */
+export const FAMILY_ONLY_DATA_DOMAINS = [DATA_DOMAIN.family] as const satisfies readonly DataDomain[];
+
+export function isFamilyOnlyDataDomain(
+  value: DataDomain,
+): value is (typeof FAMILY_ONLY_DATA_DOMAINS)[number] {
+  return isOneOf(FAMILY_ONLY_DATA_DOMAINS, value);
+}
+
+/** Never leaves the host — owner-private *or* family-shared. */
+export function isHostLocalPrivacyClass(value: PrivacyClass): boolean {
+  return value === PRIVACY_CLASS.ownerPrivateLocal || value === PRIVACY_CLASS.familyShared;
 }

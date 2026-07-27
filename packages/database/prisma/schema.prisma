@@ -2786,3 +2786,15 @@ enum PantryLocation {
   freezer
   spices
 }
+
+enum FamilyChatScope {
+  /// Sichtbar für alle mit dem Häkchen `Family` — füttert das Family-Brain.
+  shared
+  /// Nur für die schreibende Person (G19) — getrennt über `ownerUserId`.
+  private
+}
+
+enum FamilyChatRole {
+  user
+  assistant
+}

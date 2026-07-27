@@ -6,6 +6,7 @@ import {
   DATA_DOMAIN,
   isAppAudience,
   isBrainOnlyDataDomain,
+  isFamilyOnlyDataDomain,
   isDataDomain,
   isPrivacyClass,
   type DataDomain,
@@ -62,22 +63,35 @@ describe("domain access matrix", () => {
 describe("prisma model boundaries", () => {
   const entries = Object.entries(PRISMA_MODEL_BOUNDARIES);
 
-  it("routes every owner_private_local model to uwe-brain.db and nothing else there", () => {
+  it("keeps each host-local privacy class in exactly its own database", () => {
     for (const [name, b] of entries) {
       if (b.privacyClass === "owner_private_local") {
         assert.equal(b.targetDatabase, "uwe-brain.db", `${name} must live in uwe-brain.db`);
       }
+      if (b.privacyClass === "family_shared") {
+        assert.equal(b.targetDatabase, "uwe-family.db", `${name} must live in uwe-family.db`);
+      }
       if (b.targetDatabase === "uwe-brain.db") {
         assert.equal(b.privacyClass, "owner_private_local", `${name} in uwe-brain.db must be owner_private_local`);
+      }
+      if (b.targetDatabase === "uwe-family.db") {
+        assert.equal(b.privacyClass, "family_shared", `${name} in uwe-family.db must be family_shared`);
       }
     }
   });
 
-  it("keeps brain-only domains and owner_private_local perfectly aligned", () => {
+  it("keeps split-only domains and their privacy class perfectly aligned", () => {
     for (const [name, b] of entries) {
-      const brainOnly = isBrainOnlyDataDomain(b.domain);
-      const local = b.privacyClass === "owner_private_local";
-      assert.equal(brainOnly, local, `${name}: brain-only domain and owner_private_local must match`);
+      assert.equal(
+        isBrainOnlyDataDomain(b.domain),
+        b.privacyClass === "owner_private_local",
+        `${name}: brain-only domain and owner_private_local must match`,
+      );
+      assert.equal(
+        isFamilyOnlyDataDomain(b.domain),
+        b.privacyClass === "family_shared",
+        `${name}: family domain and family_shared must match`,
+      );
     }
   });
 

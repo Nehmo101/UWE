@@ -62,12 +62,13 @@
     "./host-restart": "./src/host-restart-service.ts",
     "./test-helpers": "./src/test-helpers.ts",
     "./first-run-setup": "./src/first-run-setup-service.ts",
-    "./first-run-setup-types": "./src/first-run-setup-types.ts"
+    "./first-run-setup-types": "./src/first-run-setup-types.ts",
+    "./family-client": "./src/family-client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs",
-    "db:generate": "prisma generate && prisma generate --schema=prisma/schema.postgresql.prisma && prisma generate --schema=prisma/brain/schema.prisma",
+    "db:generate": "prisma generate && prisma generate --schema=prisma/schema.postgresql.prisma && prisma generate --schema=prisma/brain/schema.prisma && prisma generate --schema=prisma/family/schema.prisma",
     "db:migrate": "prisma migrate dev",
     "db:migrate:brain": "prisma migrate dev --config prisma.brain.config.ts",
     "db:deploy": "prisma migrate deploy",
@@ -75,7 +76,9 @@
     "db:deploy:safe": "node scripts/db-deploy-safe.mjs",
     "db:deploy:postgres": "prisma migrate deploy --config prisma.postgres.config.ts",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "db:migrate:family": "prisma migrate dev --config prisma.family.config.ts",
+    "db:deploy:family": "prisma migrate deploy --config prisma.family.config.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
