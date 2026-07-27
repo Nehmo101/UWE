@@ -7,13 +7,24 @@ export class PdfExtractError extends Error {
   }
 }
 
+export interface ExtractPdfTextOptions {
+  /** Größenlimit in Bytes; Default bleibt das 10-MB-Limit der Markdown-Pipelines. */
+  maxBytes?: number;
+}
+
 /** Extract plain text from a PDF buffer for Import-Zentrale markdown pipelines. */
-export async function extractPdfText(buffer: Buffer): Promise<string> {
+export async function extractPdfText(
+  buffer: Buffer,
+  options: ExtractPdfTextOptions = {},
+): Promise<string> {
+  const maxBytes = options.maxBytes ?? MAX_PDF_BYTES;
   if (buffer.length === 0) {
     throw new PdfExtractError("PDF-Datei ist leer.");
   }
-  if (buffer.length > MAX_PDF_BYTES) {
-    throw new PdfExtractError("PDF-Datei ist zu groß (max. 10 MB).");
+  if (buffer.length > maxBytes) {
+    throw new PdfExtractError(
+      `PDF-Datei ist zu groß (max. ${Math.floor(maxBytes / (1024 * 1024))} MB).`,
+    );
   }
 
   if (!buffer.subarray(0, 4).toString("utf8").startsWith("%PDF")) {

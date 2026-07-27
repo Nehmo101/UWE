@@ -1,5 +1,5 @@
 export const MAX_CHUNK_CHARS = 6_000;
-export const MAX_CHUNKS = 20;
+export const MAX_CHUNKS = 400;
 
 function appendChunk(chunks: string[], value: string): boolean {
   const trimmed = value.trim();

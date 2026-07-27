@@ -19,6 +19,7 @@ import {
   dedupeEntitiesByTitle,
   entityToCreatePageInput,
   MAX_CAMPAIGN_CONTEXT_CHARACTERS,
+  MAX_CAMPAIGN_PDF_BYTES,
   MAX_CHUNKS,
   parseCampaignEntities,
   toCampaignPreviewSummary,
@@ -26,10 +27,31 @@ import {
   type CampaignImportPreviewSummary,
   type ExtractedCampaignEntity,
 } from "@uwe/pdf-campaign-import";
+import {
+  buildPreviewPayload,
+  buildProgressPayload,
+  jobToCampaignStatus,
+  readAnalysisProgress,
+  readCampaignMetadata,
+  readPdfFileName,
+  readPreviewEntities,
+  readStoredPreview,
+  type CampaignAnalysisProgress,
+  type CampaignPdfJobStatus,
+} from "@/src/lib/campaign-import-payloads";
+import {
+  deleteCampaignImportPdf,
+  hasCampaignImportPdf,
+  readCampaignImportPdf,
+} from "@/src/lib/campaign-pdf-storage";
 import { revalidatePath } from "next/cache";
 
-const MAX_PDF_BYTES = 10 * 1024 * 1024;
-const CAMPAIGN_PREVIEW_KIND = "campaign_entities";
+/**
+ * Eine laufende Analyse schreibt nach jedem Chunk Fortschritt; bleibt der Job
+ * länger als diese Spanne ohne Update, gilt die Analyse als abgebrochen
+ * (z. B. Server-Neustart) und darf neu gestartet werden.
+ */
+const STALE_ANALYSIS_MS = 3 * 60 * 1000;
 
 function importJobs() {
   return createImportJobService(prisma);
@@ -46,56 +68,6 @@ async function requireCampaignPdfJob(jobId: string) {
   return job;
 }
 
-function recordFrom(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function readString(record: Record<string, unknown>, key: string): string | null {
-  const value = record[key];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function readCampaignMetadata(
-  metadata: unknown,
-  targetWorldId: string | null,
-): { worldId: string; worldSlug: string; campaignId: string; campaignSlug: string } {
-  const record = recordFrom(metadata);
-  const worldSlug = record ? readString(record, "worldSlug") : null;
-  const campaignId = record ? readString(record, "campaignId") : null;
-  const campaignSlug = record ? readString(record, "campaignSlug") : null;
-  if (!targetWorldId || !worldSlug || !campaignId || !campaignSlug) {
-    throw new Error("Kampagnen-Kontext fehlt im Import-Job.");
-  }
-  return { worldId: targetWorldId, worldSlug, campaignId, campaignSlug };
-}
-
-function readPreviewEntities(previewPayload: unknown): ExtractedCampaignEntity[] | null {
-  const record = recordFrom(previewPayload);
-  if (record?.kind !== CAMPAIGN_PREVIEW_KIND || !Array.isArray(record.entities)) {
-    return null;
-  }
-  return parseCampaignEntities(JSON.stringify(record.entities));
-}
-
-function readStoredPreview(previewPayload: unknown): CampaignImportPreview | null {
-  const record = recordFrom(previewPayload);
-  const entities = readPreviewEntities(previewPayload);
-  if (!record || !entities) {
-    return null;
-  }
-  const preview = buildCampaignPreview(entities);
-  const errors = Array.isArray(record.errors)
-    ? record.errors.filter((error): error is string => typeof error === "string")
-    : [];
-  return {
-    ...preview,
-    errors,
-    canExecute: preview.canExecute && record.canExecute !== false,
-  };
-}
-
 function mockEntityForChunk(chunk: string, index: number): ExtractedCampaignEntity {
   return {
     kind: "note",
@@ -106,15 +78,8 @@ function mockEntityForChunk(chunk: string, index: number): ExtractedCampaignEnti
   };
 }
 
-function buildPreviewPayload(
-  preview: CampaignImportPreview,
-  extractionMeta: Record<string, unknown>,
-): Record<string, unknown> {
-  return {
-    kind: CAMPAIGN_PREVIEW_KIND,
-    ...preview,
-    extractionMeta,
-  };
+async function writeProgress(jobId: string, progress: CampaignAnalysisProgress): Promise<void> {
+  await importJobs().updateJob(jobId, { previewPayload: buildProgressPayload(progress) });
 }
 
 async function markPreviewFailed(
@@ -134,37 +99,70 @@ async function markPreviewFailed(
   return { preview: toCampaignPreviewSummary(preview) };
 }
 
+/** Poll-Endpunkt für das Panel: Upload-/Analyse-/Vorschau-Zustand des Jobs. */
+export async function getImportCampaignJobStatusAction(
+  jobId: string,
+): Promise<CampaignPdfJobStatus> {
+  await requireStudioActionAuth();
+  const job = await requireCampaignPdfJob(jobId);
+  return jobToCampaignStatus(job, await hasCampaignImportPdf(jobId));
+}
+
 export async function previewImportCampaignPdfJobAction(
   jobId: string,
-  contentBase64: string,
   campaignContext = "",
 ): Promise<{ preview: CampaignImportPreviewSummary }> {
   await requireStudioActionAuth();
 
   const job = await requireCampaignPdfJob(jobId);
   const storedPreview = readStoredPreview(job.previewPayload);
-  if (storedPreview) {
+  if (storedPreview && storedPreview.totalDocuments > 0) {
     return { preview: toCampaignPreviewSummary(storedPreview) };
+  }
+
+  const runningProgress = readAnalysisProgress(job.previewPayload);
+  if (runningProgress && Date.now() - job.updatedAt.getTime() < STALE_ANALYSIS_MS) {
+    throw new Error("Die Analyse läuft bereits — der Fortschritt wird im Panel angezeigt.");
   }
 
   const normalizedCampaignContext = campaignContext.trim();
   if (normalizedCampaignContext.length > MAX_CAMPAIGN_CONTEXT_CHARACTERS) {
     throw new Error(
-      `Der Kampagnen-Kontext darf h\u00f6chstens ${MAX_CAMPAIGN_CONTEXT_CHARACTERS} Zeichen lang sein.`,
+      `Der Kampagnen-Kontext darf höchstens ${MAX_CAMPAIGN_CONTEXT_CHARACTERS} Zeichen lang sein.`,
     );
   }
 
-  const buffer = Buffer.from(contentBase64, "base64");
-  if (buffer.length > MAX_PDF_BYTES) {
-    return markPreviewFailed(jobId, "PDF-Datei ist zu groß (max. 10 MB).");
+  const buffer = await readCampaignImportPdf(jobId);
+  if (!buffer) {
+    throw new Error("Keine hochgeladene PDF gefunden — bitte zuerst die PDF-Datei hochladen.");
+  }
+  if (buffer.length > MAX_CAMPAIGN_PDF_BYTES) {
+    return markPreviewFailed(
+      jobId,
+      `PDF-Datei ist zu groß (max. ${Math.floor(MAX_CAMPAIGN_PDF_BYTES / (1024 * 1024))} MB).`,
+    );
   }
 
+  const startedAt = new Date().toISOString();
   try {
-    const text = await extractPdfText(buffer);
+    await writeProgress(jobId, {
+      phase: "extracting",
+      processedChunks: 0,
+      totalChunks: null,
+      startedAt,
+    });
+    const text = await extractPdfText(buffer, { maxBytes: MAX_CAMPAIGN_PDF_BYTES });
     const chunks = chunkPdfText(text);
     const useMock = process.env.NODE_ENV !== "production" && process.env.AI_USE_MOCK === "true";
     const repo = createUweRepositoryFromClient(prisma);
     const extracted: ExtractedCampaignEntity[] = [];
+
+    await writeProgress(jobId, {
+      phase: "analyzing",
+      processedChunks: 0,
+      totalChunks: chunks.length,
+      startedAt,
+    });
 
     for (const [index, chunk] of chunks.entries()) {
       const routed = await routeAiRequest(
@@ -184,6 +182,12 @@ export async function previewImportCampaignPdfJobAction(
           ? [mockEntityForChunk(chunk, index)]
           : chunkEntities),
       );
+      await writeProgress(jobId, {
+        phase: "analyzing",
+        processedChunks: index + 1,
+        totalChunks: chunks.length,
+        startedAt,
+      });
     }
 
     const entities = dedupeEntitiesByTitle(extracted);
@@ -213,6 +217,12 @@ export async function previewImportCampaignPdfJobAction(
       previewPayload: buildPreviewPayload(preview, extractionMeta),
       errorMessage: null,
     });
+    if (entities.length > 0) {
+      // Erfolgreiche Analyse: die (bis zu 300 MB große) Roh-PDF wird nicht
+      // mehr gebraucht. Bei leerem Ergebnis bleibt sie für einen neuen
+      // Versuch mit anderem Kontext liegen.
+      await deleteCampaignImportPdf(jobId);
+    }
     revalidatePath("/import");
     return { preview: toCampaignPreviewSummary(preview) };
   } catch (error) {
@@ -269,7 +279,7 @@ export async function executeImportCampaignPdfJobAction(
           campaignId: context.campaignId,
           slug,
           importJobId: jobId,
-          sourceFile: job.fileName || "import.pdf",
+          sourceFile: job.fileName || readPdfFileName(job.metadata) || "import.pdf",
         }),
       );
       createdPageIds.push(page.id);
@@ -291,6 +301,7 @@ export async function executeImportCampaignPdfJobAction(
     });
     const undoToken = undoEntry?.id ?? null;
     await importJobs().markCompleted(jobId, resultSummary, undoToken);
+    await deleteCampaignImportPdf(jobId);
     revalidatePath("/import");
     return { resultSummary, undoToken };
   } catch (error) {

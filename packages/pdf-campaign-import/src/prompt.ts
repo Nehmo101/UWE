@@ -1,4 +1,4 @@
-export const MAX_CAMPAIGN_CONTEXT_CHARACTERS = 4_000;
+export const MAX_CAMPAIGN_CONTEXT_CHARACTERS = 32_000;
 
 export function buildCampaignExtractionPrompt(
   chunk: string,

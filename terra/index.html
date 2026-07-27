@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>terra — Fantasy-Karteneditor</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./src/ui/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="ui">
+  <div id="rail"></div>
+  <div id="panel" class="card"></div>
+  <div id="bar" class="card">
+    <label for="seed">Seed</label>
+    <input id="seed" type="text" value="1337" spellcheck="false">
+    <button id="seedApply">Übernehmen</button>
+    <div class="sep"></div>
+    <label>Tageszeit</label>
+    <button class="tod" data-t="morgen">Morgen</button>
+    <button class="tod" data-t="mittag">Mittag</button>
+    <button class="tod" data-t="abend">Abendrot</button>
+    <button class="tod" data-t="nebel">Nebel</button>
+    <div class="sep"></div>
+    <button id="snapBtn">Raster</button>
+    <button id="fxBtn" class="on">Effekte</button>
+    <div class="sep"></div>
+    <button id="saveBtn">Speichern</button>
+    <button id="loadBtn">Laden</button>
+    <button id="pngBtn">PNG</button>
+  </div>
+  <div id="stats" class="card"></div>
+  <div id="hint" class="card"></div>
+  <div id="toast" class="card"></div>
+  <div id="fail" class="card">
+    <b>Die Module konnten nicht geladen werden.</b><br>
+    terra laedt Three.js als ES-Modul vom CDN (jsDelivr, Version gepinnt) und muss
+    ueber einen statischen Server laufen — siehe README.md
+    (<code>python3 -m http.server</code> im Ordner terra/).
+  </div>
+</div>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+<script>
+  // Fallback: wenn die Module (CDN) nicht laden, Hinweis zeigen.
+  setTimeout(function () {
+    if (!window.__terraOk) document.getElementById("fail").style.display = "block";
+  }, 6000);
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
