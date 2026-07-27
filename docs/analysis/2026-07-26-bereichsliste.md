@@ -848,7 +848,7 @@ Verträgen und Projekten.
 | H3 Capture | 🟡 halb | Brain hat Filter, KI-Vorschlag und Triage. Studios `/capture` steht noch — es hängt an `/life-brain` und `/scan-inbox` (H2). |
 | H2 Life Brain | ⬜ offen | Studio hat `/life-brain` mit `chat`, `documents` und `facts` als Unterseiten. |
 | H5 Werkstatt | ⬜ offen | Der grösste Abstand: Studio hat ~2.700 Zeilen über fünf Seiten (`/workshop`, `[id]`, `recipes`, `rental`, `print-profiles`), Brain 159. |
-| H10 Mail | ⬜ offen | Brain hat Konten, Sync, Versand, Posteingang und Detailseite. Es fehlen die Ordner (Entwürfe, Gesendet, Archiv, Papierkorb) und die Prioritäten-Kategorien. |
+| H10 Mail | 🟡 halb | Brain hat jetzt Ordner (Posteingang, Markiert, Gesendet, Archiv, Papierkorb), Volltextsuche und die Prioritäten-Einstufung — dieselbe Quelle wie Studio (`@uwe/mail/portal`). Studios Mail-Center bleibt vorerst: die Zeilenzahlen in der Tabelle oben zählen nur die Seiten, nicht die 17 Komponenten darunter (Reader, Triage, Regeln, Entwürfe, Mail-Chat, Tastaturkürzel). Erst wenn Brain die hat, kann es weg. `/mail/compose` bleibt ohnehin in Studio: Session-Recap und Handout sind DM-Arbeit. |
 | H7 / H9 / H11 | ⬜ offen | Verträge, Dokumente und Kalender warten auf Family (Abschnitt G) — erst danach fallen beide Fassungen weg. |
 
 Muster für die offenen Punkte: die Fachlogik liegt bereits in `packages/`

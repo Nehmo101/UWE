@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { createMailAccountService } from "@uwe/database/server";
+import { createMailAccountService, getSystemSettings, prisma } from "@uwe/database/server";
+import { createMailPortalService, type MailFolderKey } from "@uwe/mail/portal";
+import { MAIL_PRIORITY_LABELS } from "@uwe/mail/portal-types";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
@@ -11,7 +13,43 @@ import {
   syncMailAction,
 } from "../brain-actions";
 
+/**
+ * Mail-Center — Abschnitt H10, Brain gewinnt.
+ *
+ * Gegenüber der bisherigen Brain-Fassung neu: die Ordner der Studio-Seite
+ * (Posteingang, Markiert, Gesendet, Archiv, Papierkorb), die Volltextsuche und
+ * die Prioritäten-Einstufung. Beides kommt aus `@uwe/mail/portal` — dieselbe
+ * Quelle, die Studio benutzt hat.
+ *
+ * Die Vorlagen-Fassung (`/mail/compose?kind=session_recap` …) bleibt in Studio:
+ * Session-Recap und Handout sind DM-Arbeit, kein Alltag.
+ */
+
 export const dynamic = "force-dynamic";
+
+const FOLDERS: Array<{ key: MailFolderKey; label: string }> = [
+  { key: "inbox", label: "Posteingang" },
+  { key: "marked", label: "Markiert" },
+  { key: "sent", label: "Gesendet" },
+  { key: "archive", label: "Archiv" },
+  { key: "trash", label: "Papierkorb" },
+];
+
+interface Props {
+  searchParams: Promise<{ folder?: string; q?: string }>;
+}
+
+function parseFolder(value: string | undefined): MailFolderKey {
+  return FOLDERS.some((entry) => entry.key === value) ? (value as MailFolderKey) : "inbox";
+}
+
+function folderHref(folder: MailFolderKey, query: string): string {
+  const params = new URLSearchParams();
+  if (folder !== "inbox") params.set("folder", folder);
+  if (query) params.set("q", query);
+  const search = params.toString();
+  return search ? `/mail?${search}` : "/mail";
+}
 
 function formatWhen(value: Date): string {
   return new Date(value).toLocaleString("de-DE", {
@@ -22,7 +60,7 @@ function formatWhen(value: Date): string {
   });
 }
 
-export default async function BrainMailPage() {
+export default async function BrainMailPage({ searchParams }: Props) {
   const owner = await getBrainOwner();
   if (!owner) {
     return (
@@ -32,12 +70,30 @@ export default async function BrainMailPage() {
     );
   }
 
+  const params = await searchParams;
+  const folder = parseFolder(params.folder);
+  const query = params.q?.trim() ?? "";
+
   const service = createMailAccountService(brainPrisma);
-  const [accounts, inbox] = await Promise.all([
+  const portal = createMailPortalService(brainPrisma);
+  const settings = await getSystemSettings(prisma);
+  const limit = settings.mail.inboxLimit;
+
+  const [accounts, result, sent] = await Promise.all([
     service.listAccounts(),
-    service.listInbox(undefined, 100),
+    folder === "sent"
+      ? Promise.resolve({ items: [], nextCursor: null })
+      : portal.searchMessages({
+          q: query || undefined,
+          folder: folder === "marked" ? "marked" : folder,
+          markedOnly: folder === "marked",
+          limit,
+        }),
+    folder === "sent" ? portal.listSentMessages({ limit }) : Promise.resolve([]),
   ]);
-  const unread = inbox.filter((m) => !m.isRead).length;
+
+  const inbox = folder === "sent" ? sent : result.items;
+  const unread = inbox.filter((message) => !message.isRead).length;
 
   const syncAction = (
     <form action={syncMailAction}>
@@ -55,6 +111,33 @@ export default async function BrainMailPage() {
       lede={`${accounts.length} Konto/Konten · ${inbox.length} Nachricht(en)${unread ? ` · ${unread} ungelesen` : ""} — echter Mail-Client (IMAP-Empfang, SMTP-Versand), lokal auf deiner Hardware.`}
       actions={syncAction}
     >
+      <nav className="brain-form-row" aria-label="Ordner">
+        {FOLDERS.map((entry) => (
+          <Link
+            key={entry.key}
+            href={folderHref(entry.key, query)}
+            aria-current={folder === entry.key ? "page" : undefined}
+            className={
+              folder === entry.key ? "brain-btn brain-btn-sm" : "brain-btn brain-btn-ghost brain-btn-sm"
+            }
+          >
+            {entry.label}
+          </Link>
+        ))}
+      </nav>
+
+      <form method="get" action="/mail" className="brain-form-row" role="search">
+        {folder === "inbox" ? null : <input type="hidden" name="folder" value={folder} />}
+        <input name="q" defaultValue={query} placeholder="Betreff, Absender, Text …" />
+        <button type="submit" className="brain-btn brain-btn-sm">
+          Suchen
+        </button>
+        {query ? (
+          <Link className="brain-btn brain-btn-ghost brain-btn-sm" href={folderHref(folder, "")}>
+            Zurücksetzen
+          </Link>
+        ) : null}
+      </form>
       {accounts.length === 0 ? (
         <p className="brain-muted" style={{ marginBottom: "1.25rem" }}>
           Noch kein Mail-Konto eingerichtet — füge unten eines hinzu, dann kannst du synchronisieren und senden.
@@ -103,9 +186,16 @@ export default async function BrainMailPage() {
       </section>
 
       <section className="brain-section">
-        <h2>Posteingang · {inbox.length}</h2>
+        <h2>
+          {FOLDERS.find((entry) => entry.key === folder)?.label} · {inbox.length}
+          {query ? ` · Suche „${query}"` : ""}
+        </h2>
         {inbox.length === 0 ? (
-          <p className="brain-muted">Keine Nachrichten. Klicke oben auf Synchronisieren, um dein Postfach abzurufen.</p>
+          <p className="brain-muted">
+            {query
+              ? "Nichts gefunden."
+              : "Keine Nachrichten. Klicke oben auf Synchronisieren, um dein Postfach abzurufen."}
+          </p>
         ) : (
           <ul className="brain-list">
             {inbox.map((message) => (
@@ -115,6 +205,11 @@ export default async function BrainMailPage() {
                     {message.subject || "(kein Betreff)"}
                   </Link>
                   {message.isRead ? null : <span className="brain-tag">neu</span>}
+                  {message.priority?.category ? (
+                    <span className="brain-tag">
+                      {MAIL_PRIORITY_LABELS[message.priority.category] ?? message.priority.category}
+                    </span>
+                  ) : null}
                   <span className="brain-muted">
                     {message.fromAddress} · {formatWhen(message.receivedAt)}
                   </span>
