@@ -91,11 +91,9 @@ const STUDIO_UI_ROUTES = [
   "apps/studio/app/worlds/[worldSlug]/dashboard/page.tsx",
 ];
 
+// The legacy /worlds/** redirect pages were removed; what is left of the Portal
+// beyond the login pages sits behind the session gate.
 const PORTAL_PUBLIC_ROUTES = [
-  "apps/portal/app/worlds/page.tsx",
-  "apps/portal/app/worlds/[worldSlug]/page.tsx",
-  "apps/portal/app/worlds/[worldSlug]/[category]/[slug]/page.tsx",
-  "apps/portal/app/worlds/[worldSlug]/graph/page.tsx",
   "apps/portal/app/api/worlds/[worldSlug]/graph/route.ts",
   "apps/portal/app/api/health/route.ts",
 ];

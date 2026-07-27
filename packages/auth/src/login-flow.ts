@@ -8,7 +8,7 @@
  * HTTP handlers:
  *   - `apps/studio/app/api/auth/login/route.ts`
  *   - `apps/portal/app/api/auth/login/route.ts`
- *   - `apps/studio/app/api/auth/enter/route.ts` (both the password and 2FA steps)
+ *   - `apps/landing/app/api/auth/enter/route.ts` (both the password and 2FA steps)
  *   - `apps/{studio,portal}/app/api/auth/two-factor/verify/route.ts`
  * and had DRIFTED (session IP recorded on Portal only; Portal used an inline
  * rate-limit config instead of the shared preset).

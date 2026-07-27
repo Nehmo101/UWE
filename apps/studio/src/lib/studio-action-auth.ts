@@ -31,9 +31,10 @@ export class StudioActionAuthError extends Error {
  *
  * Layer 2 is not optional and must not be delegated to the middleware: the
  * Studio middleware only checks that *a* session cookie exists, and
- * `POST /api/auth/enter` (public, Studio origin) issues a valid `uwe_session`
- * to ANY active user when `target: "portal"` — including role `player`. Without
- * the role check here, such a session could invoke every Studio Server Action,
+ * `POST /api/auth/enter` on the landing origin issues a valid `uwe_session` to
+ * ANY active user when `target: "portal"` — including role `player`. When the
+ * session cookie is shared across origins, such a session reaches Studio.
+ * Without the role check here it could invoke every Studio Server Action,
  * because pages (`enforceStudioPageAuth`) and API routes
  * (`guardStudioApiRequest`) are the only other places a role is verified and
  * Server Actions pass through neither.

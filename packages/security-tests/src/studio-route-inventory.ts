@@ -12,7 +12,6 @@ export const STUDIO_PUBLIC_API_ALLOWLIST = new Set([
   "auth/login/route.ts",
   // Landing-page (uweanddragons.org) unified sign-in — authenticates in-place
   // for the Studio or Portal target; access is enforced inside the handler.
-  "auth/enter/route.ts",
   "auth/logout/route.ts",
   "auth/setup/route.ts",
   "auth/forgot-password/route.ts",
