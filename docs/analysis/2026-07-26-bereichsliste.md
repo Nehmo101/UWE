@@ -837,6 +837,26 @@ Verträgen und Projekten.
 | H10 | Mail | `/mail` | `/mail` | 225 / 136 | Brain|
 | H11 | Kalender | `/calendar` | `/calendar` | 215 / 405 | ✅ **→ Family**, beide weg |
 
+## Stand nach der Umsetzung (Schritt 6)
+
+| # | Stand | Was passiert ist |
+|---|-------|------------------|
+| H1 Heute | ✅ erledigt | Brains `/today` hat Briefing, Kalender, Werkstatt, Mail, Capture, Homelab-Alarme und System-Ampel; Studios `/today` ist weg. Die Aggregation liegt in `packages/daily-cockpit`. Studio startet auf `/worlds`. |
+| H4 Projekte | ✅ erledigt | Brain hat Filter, Detailseite, Schritte, Links, Kosten und verknüpfte Captures. Studios `/projects` ist weg. Ohne Welt-Zuordnung und Medien-Bibliothek. |
+| H6 Miniaturen | ✅ erledigt | Filter nach Status, Hersteller und Spielsystem. Studios `/miniatures` ist weg. Ohne Fotovergleich. |
+| H8 Hardware | ✅ erledigt | Voller Feldsatz, Setup-Schritte, Prüfungen, Fehlerhistorie, URL-Warnungen. Studios `/hardware` ist weg. |
+| H3 Capture | 🟡 halb | Brain hat Filter, KI-Vorschlag und Triage. Studios `/capture` steht noch — es hängt an `/life-brain` und `/scan-inbox` (H2). |
+| H2 Life Brain | ⬜ offen | Studio hat `/life-brain` mit `chat`, `documents` und `facts` als Unterseiten. |
+| H5 Werkstatt | ⬜ offen | Der grösste Abstand: Studio hat ~2.700 Zeilen über fünf Seiten (`/workshop`, `[id]`, `recipes`, `rental`, `print-profiles`), Brain 159. |
+| H10 Mail | ⬜ offen | Brain hat Konten, Sync, Versand, Posteingang und Detailseite. Es fehlen die Ordner (Entwürfe, Gesendet, Archiv, Papierkorb) und die Prioritäten-Kategorien. |
+| H7 / H9 / H11 | ⬜ offen | Verträge, Dokumente und Kalender warten auf Family (Abschnitt G) — erst danach fallen beide Fassungen weg. |
+
+Muster für die offenen Punkte: die Fachlogik liegt bereits in `packages/`
+(`CaptureTriageService`, `createLifeAdminService`, `@uwe/mail`), Brain braucht
+nur die Fläche in seiner eigenen Optik. Server-Actions gehören in eine eigene
+`*-actions.ts` je Bereich — `brain-actions.ts` liegt sonst über der
+700-Zeilen-Grenze.
+
 Zwei saubere Wege, ein dritter ist keiner:
 
 - **(A) Brain gewinnt** — Studios „Organisation" wird zu Redirects. Studio ist wieder reine
