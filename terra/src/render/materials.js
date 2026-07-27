@@ -635,6 +635,12 @@ function terraMat(opts) {
   var flach = !!opts.flach;
   delete opts.flach;
   if (flach) {
+    /* `emissive` gehoert zu Phong und Lambert, nicht zu Basic — three
+       verwirft es zwar, meldet das aber je Material einmal auf der Konsole,
+       und 49 gleichlautende Warnungen beim Start machen jede echte Meldung
+       unauffindbar. Ein unbeleuchtetes Material kennt kein Eigenleuchten:
+       Arbor leuchtet ueber den Tint (siehe ARBOR_FARBE in signaturen.js). */
+    delete opts.emissive;
     opts.depthWrite = false;
     opts.transparent = true;
     var mb = new THREE.MeshBasicMaterial(opts);

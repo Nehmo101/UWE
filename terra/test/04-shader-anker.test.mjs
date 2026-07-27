@@ -63,13 +63,43 @@ const CHUNK_TEXTANKER = {
 
 const echt = await echteThreeQuelle();
 
-test('Ebene 4 — die Ankerliste passt zur gepinnten Fassung', () => {
+test('Ebene 4 — die Ankerliste passt zur mitgelieferten Fassung', () => {
+  /* Bis Runde J stand die Fassung als CDN-Adresse in der Import-Map und liess
+     sich dort ablesen. Seit three im Baum liegt (terra/vendor/three/, Grund
+     siehe terra/vendor/HERKUNFT.md) zeigt die Import-Map auf einen relativen
+     Pfad ohne Fassungsnummer — geprueft wird deshalb gegen die Datei selbst.
+
+     Das ist die bessere Quelle: die Adresse in der Import-Map war eine
+     BEHAUPTUNG ueber die Fassung, `REVISION` in three.module.js IST sie. Wer
+     die Dateien austauscht, ohne die Ankerliste nachzuziehen, faellt hier auf. */
   assert.equal(ANKERLISTE.pin, '0.185.1', 'Ankerliste ist fuer eine andere Fassung');
+
   const importMap = fs.readFileSync(path.join(SRC, '..', 'index.html'), 'utf8');
-  assert.ok(importMap.includes('three@' + ANKERLISTE.pin + '/build/three.module.js'),
-    'terra/index.html pinnt eine andere Three-Fassung als die Ankerliste (' + ANKERLISTE.pin + ')');
-  assert.ok(importMap.includes('three@' + ANKERLISTE.pin + '/examples/jsm/'),
-    'Import-Map: three/addons zeigt auf eine andere Fassung');
+  assert.ok(importMap.includes('"three": "./vendor/three/three.module.js"'),
+    'Die Import-Map zeigt nicht mehr auf das mitgelieferte three — im UWE-Frame '
+    + 'blockiert die Content-Security-Policy jeden fremden Host, Terra bliebe schwarz');
+  assert.ok(importMap.includes('"three/addons/": "./vendor/three/addons/"'),
+    'Import-Map: three/addons zeigt nicht auf den mitgelieferten Ordner');
+
+  /* `REVISION` steht in three.core.js, nicht in three.module.js — letzteres
+     reicht sie nur durch. Gelesen wird sie deshalb ueber den geladenen Modul
+     (echteThreeQuelle tut das ohnehin), nicht per Textsuche in einer Datei,
+     die sie gar nicht enthaelt. */
+  assert.ok(echt, 'Keine echte Three-Quelle — siehe die naechste Pruefung');
+  assert.equal(echt.revision, ANKERLISTE.pin.split('.')[1],
+    'Die mitgelieferte three-Fassung (REVISION ' + (echt && echt.revision) + ') passt nicht '
+    + 'zur Ankerliste (' + ANKERLISTE.pin + ') — Schritt 4 in terra/vendor/HERKUNFT.md fehlt');
+});
+
+test('Ebene 4 — geprueft wird gegen die ECHTE Quelle, nicht gegen die Liste', () => {
+  /* Die Ankerliste ist der Rueckfall fuer den Fall, dass keine echte Quelle
+     erreichbar ist. Seit sie im Baum liegt, darf dieser Rueckfall nicht mehr
+     stillschweigend greifen: eine Liste, die gegen sich selbst prueft, findet
+     nichts. Diese Zeile stellt sicher, dass die staerkere Pruefung wirklich
+     laeuft — sie ist der Grund, warum die 2 MB Fremdcode sich lohnen. */
+  assert.ok(echt, 'Keine echte Three-Quelle gefunden, obwohl terra/vendor/three/ '
+    + 'sie mitliefert — siehe hilfen/three-quelle.mjs');
+  assert.equal(echt.revision, ANKERLISTE.pin.split('.')[1]);
 });
 
 test('Ebene 4 — jeder ersetzte Anker existiert in der gepinnten Fassung', async (t) => {

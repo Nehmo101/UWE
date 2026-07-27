@@ -38,7 +38,18 @@ export const ANKERLISTE = JSON.parse(
 function quelleSuchen() {
   const kandidaten = [];
   if (process.env.TERRA_THREE) kandidaten.push(process.env.TERRA_THREE);
+  /* J1 — seit die Content-Security-Policy von UWE keinen fremden Host mehr
+     erlaubt, liegt three MIT im Baum (terra/vendor/three/, siehe
+     terra/vendor/HERKUNFT.md). Damit ist die STARKE Pruefung nicht mehr die
+     Ausnahme, die man sich von Hand einrichtet, sondern der Regelfall: jeder
+     Lauf prueft die Shader-Anker gegen die echte Quelle statt gegen eine
+     mitgelieferte Liste, die unbemerkt veralten koennte.
+
+     Die beiden alten Wege bleiben davor stehen — wer eine ANDERE Fassung
+     gegenpruefen will, setzt weiterhin TERRA_THREE oder legt eine Datei nach
+     terra/test/.three/. */
   kandidaten.push(path.join(TEST, '.three', 'three.module.js'));
+  kandidaten.push(path.join(TEST, '..', 'vendor', 'three', 'three.module.js'));
   for (const k of kandidaten) {
     try { if (fs.statSync(k).isFile()) return k; } catch { /* nicht da */ }
   }
