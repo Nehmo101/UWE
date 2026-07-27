@@ -1,13 +1,14 @@
 // Die weissen Ranken: Geflecht, Wurzelteller, Blaetter, Blattplateaus, Inseln.
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { VINE_R, WATER, COS40, groupOf } from '../core/store.js';
+import { S, VINE_R, WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, schattenAn } from '../core/pools.js';
 import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occFree, occAdd, KULTUR } from './objects.js';
 import { mergeGeos, M, part, tubeGeo, leafHalfWidth, leafSurface, leafGeo, moundGeo,
   islandGeo } from './geometry.js';
 import { bruchMaskeAt } from './paths.js';
+import { alsKoerper, alsZeichen, punktZeichen, mitteVon, kettenZeichen } from './zeichen.js';
 import { vineMat, leafMat, rockMat } from '../render/materials.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINES Teilsystem-Bausteins
@@ -938,6 +939,54 @@ function rankeKernPunkt(el, t, out) {
   return out;
 }
 
+/* ==========================================================================
+   I1 — Die Ranken auf Kartenmassstab: Infrastruktur, kein Bewuchs
+
+   Der Hauskanon: Terra ist auseinandergerissen und wird vom weissen,
+   leuchtenden Riesenbaum Arbor zusammengehalten; die Ranken sind seine
+   Triebe. Daraus folgt fuer die Karte eine Entscheidung, die keine
+   Geschmacksfrage ist: eine Ranke ist auf einer Kontinentkarte KEINE
+   Vegetation, sondern das Netz, an dem die Bruchstuecke haengen. Eine Karte,
+   die sie nicht zeigt, erzaehlt die Welt falsch.
+
+   Vier der fuenf Arborzeichen entstehen hier (das fuenfte, die Bruchkante,
+   in paths.js). Sie sind die einzigen, die LEUCHTEN — ihr Tint liegt ueber
+   1,0 und traegt damit den Bluetesaum des Nachbearbeiters. Auf einer
+   Kontinentkarte ist das der einzige Ort im Bild, an dem es hell wird, und
+   genau deshalb liest man die Karte von den Ranken her. Das ist Absicht.
+
+   Was aus welcher Eigenschaft des Elements folgt:
+
+     je Fusspunkt   sig_ranke      die Lichtsaeule selbst
+     je Fusspunkt   sig_rankenfuss der Wurzelteller (bis 2500 m/Zelle)
+     mehrere Fuesse sig_arborknoten am Schwerpunkt — dort VEREINIGEN sich die
+                    Aeste zum gemeinsamen Stamm (Parameter `vereinigung`),
+                    und ein Knoten ist genau das
+     p.bruecken     sig_lichtbruecke als Kette zwischen den Fuessen: das
+                    Element traegt Haengebruecken, also verbindet es etwas
+
+   Alle vier haengen an Elementdaten, nicht an gebauter Geometrie. Das ist
+   Absicht: die Plateaus entstehen erst im Koerperzweig, und ein Zeichen, das
+   auf sie warten muesste, zwaenge den ganzen Rankenbau auf Kontinentmassstab
+   durchzurechnen — fuer vier Quads.
+   ========================================================================== */
+function rankenZeichen(el) {
+  var p = el.params || {};
+  var pkt = el.points || [];
+  if (!pkt.length) return 0;
+  var n = 0, i;
+  for (i = 0; i < pkt.length; i++) {
+    n += punktZeichen(el, "arbor", null, pkt[i].x, pkt[i].z, { art: "sig_ranke" });
+    n += punktZeichen(el, "arbor", null, pkt[i].x, pkt[i].z, { art: "sig_rankenfuss" });
+  }
+  if (pkt.length > 1) {
+    var m = mitteVon(pkt);
+    n += punktZeichen(el, "arbor", null, m.x, m.z, { art: "sig_arborknoten" });
+    if (p.bruecken) n += kettenZeichen(el, "sig_lichtbruecke", pkt, null);
+  }
+  return n;
+}
+
 function genRanke(el) {
   // Zufalls-Schluessel je Teilsystem (jeweils + el.seed):
   //   Straenge (Strangindex, Fussindex, +501) — Ringwerte kommen aus fractal,
@@ -998,6 +1047,12 @@ function genRanke(el) {
   // -startwinkel) — die sind von Punkten und uebrigen Parametern unabhaengig
   // und koennen daher keinen Strom verschieben.
   var p = el.params, rGlob = rngOf(el.seed);
+  // I1: ueber der Uebergabe wird die Ranke zum Kartenzeichen (siehe
+  // rankenZeichen). Im Ueberblendbereich steht beides — die Lichtsaeule
+  // blendet ueber dem Geflecht ein.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) rankenZeichen(el);
+  if (!alsKoerper(mSig)) return;
   // Rueckwaertskompatible Defaults: alte Karten ohne dicke/stil/luftwurzeln
   // rendern byteidentisch (R = VINE_R, alle Glatt-Faktoren = 1 bzw.
   // Glatt-Zweige inaktiv, Luftwurzel-Zweig inaktiv).
@@ -1896,7 +1951,7 @@ function genRanke(el) {
 }
 
 
-export { vineColor, genRanke, rankePlatzierbar,
+export { vineColor, genRanke, rankenZeichen, rankePlatzierbar,
   // genBlattstadt — Struktur-Generator der Plateau-Staedtchen samt seinem
   // Platzierungs-Kontrakt (Ersatz fuer tryPlace auf der Blattoberflaeche).
   // Einzeln exportiert, damit Kontrakt und Netz ohne kompletten Rankenbau

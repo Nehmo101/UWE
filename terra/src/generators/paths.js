@@ -3,11 +3,15 @@ import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
 // VW/HALF sind LEBENDE Bindungen (H1b) — sie duerfen nie beim Modulstart in
 // eine eigene Variable kopiert werden, nur innerhalb von Funktionen gelesen.
-import { WATER, COS40, VW, HALF, groupOf } from '../core/store.js';
+import { S, WATER, COS40, VW, HALF, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { terraMat, tintedMats } from '../render/materials.js';
+// I1: Kartenzeichen. zeichen.js haengt an core/, world/terrain.js und render/ —
+// nie an generators/, der Weg ist also zyklusfrei (dieselbe Richtung, die
+// areas.js zu signaturen.js nimmt).
+import { alsKoerper, alsZeichen, linienZeichen, punktZeichen } from './zeichen.js';
 // Seit der Bruchkanten-Drift (B4) besteht ein Zyklus: geometry.js importiert
 // paths.js als Namensraum, um materials.js die Bruchmasken-Uniforms zu
 // reichen (setBruchQuelle). Er ist harmlos, weil auf beiden Seiten nur
@@ -171,10 +175,105 @@ tintedMats.push(flussMat);
 
 var BELAG = { erde: [1.02, 0.98, 0.9], stein: [0.9, 0.92, 0.95], pflaster: [0.82, 0.84, 0.86] };
 
+/* ==========================================================================
+   I1 — Die Kennzahl der Pfade
+
+   Der Katalog verlangt fuer das Zusammenzeichnen eine Kennzahl, die auf
+   ORTSMASSSTAB entsteht und mit dem Element gespeichert wird — nie eine, die
+   auf Kartenmassstab geschaetzt wird, weil die Signatur sonst davon abhinge,
+   mit welchem Massstab man die Karte zuletzt geoeffnet hat.
+
+   Ein Pfad hat diese Kennzahl schon: seine PARAMETER. Breite und Belag
+   stehen im Element, sind vom Massstab unabhaengig und beschreiben genau
+   das, was die drei Wegzeichen unterscheiden. Es waere ein Fehler, dafuer
+   noch etwas zu zaehlen — gezaehlt wird nur da, wo der Generator sein
+   Ergebnis nicht schon in der Hand haelt (siehe genViertel in areas.js).
+   ========================================================================== */
+
+/** Welcher Weg ist das? Sechs Einheiten sind zwei Fuhrwerke nebeneinander,
+ *  unter drei passt keines mehr durch. Pflaster hebt jeden Weg zur
+ *  Handelsstrasse — gepflastert wird, was Fracht traegt.
+ *
+ *  Die 6 ist nicht gegriffen, sondern der Vorgabewert des Strassenwerkzeugs.
+ *  Das ist Absicht: nur die Handelsstrasse ueberlebt bis 4000 m/Zelle, und
+ *  eine Kontinentkarte, auf der jede voreingestellte Strasse verschwindet,
+ *  waere keine Generalisierung, sondern ein leeres Blatt. Wer einen Landweg
+ *  will, zieht den Regler herunter — dann faellt der Weg ueber sein Band bei
+ *  1200 weg, und GENAU DAS ist die Generalisierung des Katalogs. */
+function strassenZeichen(p) {
+  var b = Number.isFinite(p.breite) ? p.breite : 6;
+  if (b >= 6 || p.belag === "pflaster") return "sig_handelsstrasse";
+  return b >= 3 ? "sig_landweg" : "sig_saumpfad";
+}
+
+/* Flussbreite auf Kartenmassstab.
+
+   Der Katalog will die Breite nach dem ABFLUSS (I3) gestuft haben, und das
+   ist die richtige Groesse: ein Fluss wird breit, weil viel Wasser durch ihn
+   laeuft. `abfluss` ist aber ein LAUFZEITfeld der Erosion — nach dem Laden
+   einer Karte steht es auf null, und eine Signatur, die davon abhinge, waere
+   nach dem Laden eine andere als vor dem Speichern. Genau die Sorte
+   versteckter Zustand, die dieses Projekt schon einmal einen Tag gekostet
+   hat.
+
+   Also `params.breite`, und zwar unter der Wurzel: die Flaeche eines
+   Querschnitts waechst quadratisch mit der Breite, die STRICHSTAERKE auf
+   einer Karte soll das nicht tun. Was ein spaeterer Anschluss an den Abfluss
+   braeuchte, steht im Bericht. */
+function flussBreite(p) {
+  var b = Number.isFinite(p.breite) ? p.breite : 9;
+  return clamp(Math.sqrt(b / 9), 0.55, 2.4);
+}
+
+/**
+ * I1 — Flussuebergaenge als Zeichen.
+ *
+ * Eine Bruecke ist in Terra kein Element: bandGeoAusLinie baut sie von
+ * selbst, wo ein Weg durchs Wasser laeuft. Genau diese Erkennung wird hier
+ * noch einmal gefahren — mit derselben Schwelle (WATER + 0.25), damit
+ * Zeichen und Bauwerk nie an verschiedenen Stellen sitzen.
+ *
+ * Bruecke oder Furt entscheidet die TIEFE der Querung, und das ist die
+ * ehrliche Ableitung: knietief watet man durch, darunter braucht es ein
+ * Bauwerk. Der Katalog fuehrt die Furt deshalb als Q = A (abgeleitet) und
+ * die Bruecke als Q = E.
+ *
+ * Gedreht wird um einen rechten Winkel zur Fahrbahn: das Brueckenzeichen
+ * sind zwei Querstriche UEBER der Linie. Laegen sie laengs, waere es eine
+ * doppelte Strasse.
+ */
+function uebergangsZeichen(el, sm) {
+  var n = sm.length, i = 0, gesetzt = 0;
+  while (i < n) {
+    if (heightAt(sm[i].x, sm[i].z) >= WATER + 0.25) { i++; continue; }
+    var a = i, tief = Infinity;
+    while (i < n && heightAt(sm[i].x, sm[i].z) < WATER + 0.25) {
+      tief = Math.min(tief, heightAt(sm[i].x, sm[i].z));
+      i++;
+    }
+    var s = sm[(a + i - 1) >> 1];
+    gesetzt += punktZeichen(el, "uebergang", null, s.x, s.z, {
+      art: tief > WATER - 0.9 ? "sig_furt" : "sig_bruecke",
+      dreh: Math.atan2(-s.tz, s.tx) + Math.PI / 2
+    });
+  }
+  return gesetzt;
+}
+
 function genStrasse(el) {
   var p = el.params, rng = rngOf(el.seed);
   var w = p.breite, sm = pathSamples(el.points, 1.6);
   if (!sm.length) return;
+  /* I1 — ueber der Uebergabe wird die Strasse zur Linie. Im Ueberblendbereich
+     laeuft beides: das Band blendet ueber den Alphakanal ein, waehrend die
+     Fahrbahn bis zum oberen Rand stehen bleibt. Die Haeuser am Weg brauchen
+     hier nichts — ihr Pool traegt sein Band, und emit setzt es durch. */
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) {
+    linienZeichen(el, "strasse", sm, null, { art: strassenZeichen(p) });
+    uebergangsZeichen(el, sm);
+  }
+  if (!alsKoerper(mSig)) return;
   var belag = BELAG[p.belag] || BELAG.erde;
   var i, s;
   // Fahrbahn als durchgehendes Band (mit automatischen Bruecken ueber Wasser)
@@ -226,6 +325,15 @@ function genMauer(el) {
   var p = el.params;
   var sm = pathSamples(el.points, 2.0);
   if (!sm.length) return;
+  /* I1 — eine Mauer ist auf Kartenmassstab eine GRENZLINIE. Das Perlband ist
+     das einzige Linienzeichen des Katalogs, das eine gezogene Trennung meint
+     und kein Gewaesser und keinen Weg; die Stufentabelle fuehrt „Grenze" von
+     Grenzsteinen ueber die Steinreihe genau dorthin. Ein Zackenkranz
+     (sig_stadtmauer) waere die Alternative, aber der gehoert um eine
+     Ortssignatur herum und nicht an einen freien Pfad. */
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) linienZeichen(el, "grenze", sm, null, { art: "sig_grenze" });
+  if (!alsKoerper(mSig)) return;
   // Zufalls-Schluessel: Segment-Tint (rund(s/2.0), 0, seed+5), Turm-Drehung/
   // Tint (rund(s/2.0), 0, seed+6), Tortuerme (Torindex, Seite, seed+7).
   // Tor- und Turm-POSITIONEN sind reine Rechnung ohne Zufall und daher
@@ -274,6 +382,13 @@ function genFluss(el) {
   var p = el.params;
   var sm = pathSamples(el.points, 2.2);
   if (sm.length < 2) return;
+  // I1: ueber der Uebergabe traegt die Linie den Fluss, nicht die
+  // Wasserflaeche. Der Einschnitt ins Hoehenfeld bleibt davon unberuehrt —
+  // den legt dirty.js/rebuildRivers, und er ist Gelaende, keine Darstellung.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) linienZeichen(el, "gewaesser", sm, null,
+    { art: "sig_fluss", breite: flussBreite(p) });
+  if (!alsKoerper(mSig)) return;
   // Höhenprofil der Sohle glätten, damit das Wasser nicht bergauf fließt
   var prof = [];
   for (var i = 0; i < sm.length; i++) prof.push(baseHeightAt(sm[i].x, sm[i].z));
@@ -334,6 +449,14 @@ function genHecke(el) {
   var p = el.params;
   var step = p.stil === "zaun" ? 2.0 : 1.15;
   var sm = pathSamples(el.points, step);
+  if (!sm.length) return;
+  /* I1 — Hecke und Zaun sind dieselbe Sache wie die Mauer, nur leiser: die
+     Stufentabelle des Katalogs nennt fuer „Grenze" auf Ortsmassstab
+     ausdruecklich GRENZSTEINE, und genau die setzt der zaun-Zweig hier als
+     Pfosten. Auf Kartenmassstab bleibt davon das Perlband. */
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) linienZeichen(el, "grenze", sm, null, { art: "sig_grenze" });
+  if (!alsKoerper(mSig)) return;
   // Zufalls-Schluessel: (rund(s/step), 0, seed+17) je Pfosten/Busch; kein
   // elementweiter Strom noetig. Ein Stilwechsel (zaun<->hecke) aendert die
   // Schrittweite und wuerfelt damit neu — das tut die andere Objektart aber
@@ -682,6 +805,21 @@ function genBruch(el) {
   var d = bruchDaten(el);
   if (!d) return;
   merkeBruch(d);
+  /* I1 — die Bruchkante ist der einzige Pfad mit einem ARBOR-Zeichen: sie
+     gehoert zur Gruppe, die leuchtet, weil sie erzaehlt, wo die Welt
+     auseinandergerissen ist. Ihr Zeichen ist kein Streifen, sondern ein Quad
+     (doppelte Bruchlinie mit Schattenseite) — linienZeichen legt es deshalb
+     als Kette und nicht als Band.
+
+     Gezeichnet wird entlang der AUSGEFRANSTEN Kante (d.kante), nicht entlang
+     des gezeichneten Pfades: die Klippe liegt dort, wo die Stempel liegen,
+     und eine Signatur, die daneben laege, waere schlimmer als keine.
+
+     merkeBruch steht bewusst DAVOR: der Hoehenstempel ist Gelaende und darf
+     nicht davon abhaengen, mit welchem Massstab man hinsieht. */
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) linienZeichen(el, "bruch", d.kante, null, null);
+  if (!alsKoerper(mSig)) return;
   var kante = d.kante, M = d.masse;
   var geos = [], occ = newOcc(2.6), i;
   var schritt = Math.max(1, Math.round(3.2 / BRUCH_SCHRITT));
@@ -772,6 +910,7 @@ function genBruch(el) {
 
 
 export { pathCurve, pathSamples, BELAG, bandGeoAusLinie, bandAusLinie, bandMeshAusGeos,
+  strassenZeichen, flussBreite, uebergangsZeichen,
   genStrasse, genMauer, genFluss, genHecke,
   brueche, bruchMasse, bruchDaten, genBruch,
   bruchMaskeUniforms, bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig, bruchMaskeAt };

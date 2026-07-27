@@ -2,11 +2,15 @@
 // und das Objekt-Werkzeug.
 import * as THREE from 'three';
 import { clamp, hashi, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { HALF, WATER, COS40, groupOf } from '../core/store.js';
+import { S, HALF, WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf } from '../core/pools.js';
 import { heightAt, slopeAt, inCorridor } from '../world/terrain.js';
 import { FENSTER_ANKER, LICHT_ANKER, islandGeo } from './geometry.js';
 import { rockMat } from '../render/materials.js';
+// I1: Kartenzeichen (siehe generators/zeichen.js). Die Richtung ist
+// objects.js -> zeichen.js, nie zurueck.
+import { alsKoerper, alsZeichen, kartenPlatz, punktZeichen, mitteVon,
+  bandZeichen, gratPunkte, wasserlinie } from './zeichen.js';
 
 function newOcc(cell) { return { cell: cell || 3.5, map: {} }; }
 
@@ -293,6 +297,190 @@ var OBJGRUPPEN = {
   schwebend: [["moewe", 6], ["sporenlaterne", 4], ["lichtbluete", 3],
               ["schwebefels", 2], ["sturzwurzel", 2], ["rankengleiter", 1]]
 };
+/* ==========================================================================
+   I1 — Was aus einer Objektstreuung wird, wenn man herauszoomt
+
+   Der Katalog nennt Zeichen; die schwierigere Haelfte ist die Zuordnung. Eine
+   Objektstreuung ist die vielfaeltigste Sache in Terra — dieselbe Mechanik
+   traegt Baeume, Schiffe, Ruinen, Marktkoerbe und Moewen —, und genau deshalb
+   steht die Zuordnung hier als TABELLE und nicht als Kette von else-if.
+
+   Drei Arten von Eintrag:
+
+     { sache, art }   die Gruppe bekommt EIN Zeichen an ihrem Schwerpunkt.
+                      `art` waehlt daraus das konkrete Zeichen; `sache`
+                      entscheidet ueber Band und Rueckfall.
+     { relief: 1 }    das Zeichen folgt dem KAMM, nicht dem Klickpunkt
+                      (Fels- und Gebirgsgruppen, siehe reliefZeichen).
+     { kueste: 1 }    das Zeichen folgt der WASSERLINIE (Naturufer).
+     { auf: '…' }     bewusst weggelassen, mit Begruendung.
+
+   Der letzte Fall ist der wichtigste: er macht das Weglassen zu einer
+   EINTRAGUNG statt zu einer Luecke. Eine Luecke sieht im Betrieb genauso aus
+   wie ein Fehler — und ist einer, wenn sie niemand entschieden hat.
+
+   Ein Zeichen je GRUPPE, nicht je Objekt: neun Findlinge sind auf einer
+   Regionskarte kein Neunfaches von irgendetwas, sie sind eine Felsgruppe.
+   ========================================================================== */
+var OBJEKT_ZEICHEN = {
+  baeume:      { sache: 'wald' },
+  // Bauten: welches Ortszeichen es wird, entscheidet die Kennzahl weiter
+  // unten — acht Haeuser sind ein Weiler, neun ein Dorf.
+  haeuser:     { sache: 'ort' },
+  wohnbau:     { sache: 'ort' },
+  klassisch:   { sache: 'ort' },
+  zwergisch:   { sache: 'ort' },
+  elfisch:     { sache: 'ort' },
+  ruinen:      { sache: 'ruine', art: 'sig_ruine' },
+  ruinen2:     { sache: 'ruine', art: 'sig_ruine' },
+  felsen:      { relief: 1 },
+  natur2:      { relief: 1 },
+  natur:       { sache: 'acker', art: 'sig_weide' },
+  tiere:       { sache: 'acker', art: 'sig_weide' },
+  hof:         { sache: 'acker', art: 'sig_obstgarten' },
+  werk:        { sache: 'werk', art: 'sig_mine' },
+  handwerk:    { sache: 'werk', art: 'sig_muehle' },
+  wehrbau:     { sache: 'wehrbau', art: 'sig_burg' },
+  palisaden:   { sache: 'wehrbau', art: 'sig_burg' },
+  sakral:      { sache: 'wehrbau', art: 'sig_kloster' },
+  hafen:       { sache: 'hafen', art: 'sig_hafen' },
+  // Der Anker ist auf jeder Seekarte das Zeichen fuer den ANKERPLATZ, nicht
+  // fuer das einzelne Schiff. Eine Schiffsgruppe ist genau das.
+  maritim:     { sache: 'hafen', art: 'sig_hafen' },
+  ufer2:       { kueste: 1 },
+  wasserflora: { sache: 'nass', art: 'sig_sumpf' },
+  moor:        { sache: 'nass', art: 'sig_moor' },
+  eis:         { sache: 'kalt', art: 'sig_eis' },
+  wueste:      { sache: 'trocken', art: 'sig_wueste' },
+  arbor:       { sache: 'arbor', art: 'sig_rankenfuss' },
+  inseln:      { sache: 'arbor', art: 'sig_lichtbruecke' },
+  requisiten:  { auf: 'Hausrat geht in der Ortssignatur auf' },
+  schwebend:   { auf: 'Fliegendes traegt keine Karte — eine Moewe ist kein Ort' }
+};
+/* Fallback wie im Koerperzweig: eine unbekannte Variante (alte Karte, Gruppe
+   entfernt) streut Baeume und bekommt folglich das Waldzeichen. */
+var OBJEKT_ZEICHEN_VORGABE = OBJEKT_ZEICHEN.baeume;
+
+/* Zwingt der Nutzer ueber `nurTyp` genau EINE Poolsorte, dann ist DAS die
+   Sache — nicht die Gruppe, aus der der Pool zufaellig stammt. Ein Element
+   aus zehn Wachtuermen ist keine Palisade und schon gar kein Wald.
+   Aufgefuehrt sind nur Pools, die auf einer Karte wirklich ein eigenes
+   Zeichen verdienen; alle uebrigen fallen auf ihre Gruppe zurueck. Erst
+   ueber diesen Weg werden `sig_turm` und `sig_muehle` ueberhaupt
+   erreichbar — es gibt keine Objektgruppe, die nur aus Tuermen bestuende. */
+var POOL_ZEICHEN = {
+  turm:        { sache: 'wehrbau', art: 'sig_turm' },
+  wachturm:    { sache: 'wehrbau', art: 'sig_turm' },
+  wehrturm:    { sache: 'wehrbau', art: 'sig_turm' },
+  bergfried:   { sache: 'wehrbau', art: 'sig_turm' },
+  elfenturm:   { sache: 'wehrbau', art: 'sig_turm' },
+  schmiedeturm: { sache: 'werk', art: 'sig_mine' },
+  windmuehle:  { sache: 'werk', art: 'sig_muehle' },
+  wassermuehle: { sache: 'werk', art: 'sig_muehle' },
+  saegewerk:   { sache: 'werk', art: 'sig_muehle' },
+  leuchtturm:  { sache: 'hafen', art: 'sig_hafen' },
+  leuchtfeuer: { sache: 'hafen', art: 'sig_hafen' },
+  kapelle:     { sache: 'wehrbau', art: 'sig_kloster' },
+  glockenturm: { sache: 'wehrbau', art: 'sig_kloster' },
+  kathedralenschiff: { sache: 'wehrbau', art: 'sig_kloster' },
+  ruinenturm:  { sache: 'ruine', art: 'sig_ruine' },
+  mauerruine:  { sache: 'ruine', art: 'sig_ruine' },
+  tempelruine: { sache: 'ruine', art: 'sig_ruine' }
+};
+
+/** Huellrechteck der Klickpunkte, um `saum` erweitert. */
+function punkteBox(punkte, saum) {
+  var x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (var i = 0; i < punkte.length; i++) {
+    if (punkte[i].x < x0) x0 = punkte[i].x;
+    if (punkte[i].x > x1) x1 = punkte[i].x;
+    if (punkte[i].z < z0) z0 = punkte[i].z;
+    if (punkte[i].z > z1) z1 = punkte[i].z;
+  }
+  return { x0: x0 - saum, z0: z0 - saum, x1: x1 + saum, z1: z1 + saum };
+}
+
+/** Reichweite einer Streuung: so weit, wie ihre Objekte tatsaechlich liegen
+ *  (Klickpunkte plus Streuradius). Sie bestimmt, wie weit Kamm und Kueste
+ *  gesucht werden — ein Zeichen soll erklaeren, was der Nutzer gesetzt hat,
+ *  und nicht die halbe Karte kommentieren. */
+function streuWeite(el) {
+  var p = el.params || {};
+  return clamp((p.streuung || 4) * 1.5 + 8, 10, 90);
+}
+
+/**
+ * I1 — Gebirgszeichen: dem Kamm folgen, nicht die Flaeche fuellen.
+ *
+ * Eine Felsstreuung sagt „hier ist Gebirge"; WO genau der Grat laeuft, sagt
+ * das Hoehenfeld. Deshalb wird nicht am Klickpunkt gezeichnet, sondern auf
+ * den Kammpunkten, die gratPunkte in der Umgebung findet — mit der
+ * Kammrichtung als Gierwinkel, damit die Schraffur laengs des Kamms liegt
+ * und nicht quer darueber.
+ *
+ * Findet sich kein Kamm (flaches Gelaende, Findlinge in der Ebene), bleibt
+ * es bei EINEM Huegellandzeichen am Schwerpunkt. Das ist kein Notausgang,
+ * sondern die richtige Aussage: ohne Kamm gibt es keinen Grat.
+ */
+function reliefZeichen(el) {
+  var pl = kartenPlatz('sig_grat');
+  if (!pl) return 0;
+  var weite = streuWeite(el);
+  var bb = punkteBox(el.points, weite);
+  var sp = Math.max(pl.marke * 0.8, 1.2);
+  var kamm = gratPunkte({ x0: bb.x0, z0: bb.z0, x1: bb.x1, z1: bb.z1,
+    sp: sp, d: sp, maxN: 96 });
+  var m = mitteVon(el.points);
+  if (!kamm.length) {
+    return punktZeichen(el, 'gebirge', null, m.x, m.z, { art: 'sig_huegelland' });
+  }
+  var n = 0;
+  for (var i = 0; i < kamm.length; i++) {
+    var g = kamm[i];
+    n += punktZeichen(el, 'gebirge', null, g.x, g.z, {
+      art: g.gipfel ? 'sig_gipfel' : 'sig_grat',
+      dreh: Math.atan2(-g.dz, g.dx)
+    });
+  }
+  return n;
+}
+
+/**
+ * I1 — Kuestenzeichen: die Linie zwischen Land und Wasser.
+ *
+ * Ein Uferelement bekommt kein Zeichen an seinem Klickpunkt, sondern ein
+ * Band auf der Wasserlinie — eine Kueste, die zehn Meter neben dem Wasser
+ * laeuft, ist eine falsche Karte. Liegt an dieser Stelle gar keine
+ * Wasserlinie (das Element steht im Binnenland), bleibt das Nass-Zeichen:
+ * Schilf und Treibholz ohne Ufer sind Feuchtgebiet.
+ */
+function kuestenZeichen(el) {
+  var pl = kartenPlatz('sig_kueste');
+  var m = mitteVon(el.points);
+  if (pl) {
+    var linie = wasserlinie({ x: m.x, z: m.z,
+      schritt: Math.max(1.5, pl.marke * 1.2), reichweite: streuWeite(el) * 2.5 });
+    if (linie.length > 1 && bandZeichen(el, 'sig_kueste', linie, null)) return 1;
+  }
+  return punktZeichen(el, 'nass', null, m.x, m.z, { art: 'sig_sumpf' });
+}
+
+/**
+ * I1 — das Kartenzeichen EINER Objektstreuung.
+ * Rueckgabe: Zahl der gesetzten Zeichen (0 heisst „auf diesem Massstab
+ * weggelassen", siehe Tabelle oben).
+ */
+function objektZeichen(el) {
+  if (!el.points.length) return 0;
+  var nur = el.params && el.params.nurTyp;
+  var Z = (nur && POOL_ZEICHEN[nur]) || OBJEKT_ZEICHEN[el.variant] || OBJEKT_ZEICHEN_VORGABE;
+  if (Z.auf) return 0;
+  if (Z.relief) return reliefZeichen(el);
+  if (Z.kueste) return kuestenZeichen(el);
+  var m = mitteVon(el.points);
+  return punktZeichen(el, Z.sache, el.kennzahl, m.x, m.z, { art: Z.art });
+}
+
 /* Ortsstabiler Zufallsstrom je (Klickpunkt i, Inselindex k) — Muster ortsRng
    aus vines.js: der Strom haengt am stabilen Indexpaar statt an der
    Zugriffsreihenfolge, eine geaenderte anzahl oder zusaetzliche Klickpunkte
@@ -311,6 +499,13 @@ function inselRng(i, k, s) { return rngOf((hashi(i, k, s) * 4294967296) | 0); }
  */
 function genInseln(el) {
   var p = el.params;
+  // I1: Schwebeinseln sind Bruchstuecke, die Arbor traegt — auf
+  // Kartenmassstab also Infrastruktur und kein Bewuchs. Die Kennzahl steht
+  // unten, wo die Inseln wirklich entstehen.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) objektZeichen(el);
+  if (!alsKoerper(mSig)) return;
+  var gesetzt = 0;
   for (var i = 0; i < el.points.length; i++) {
     var pt = el.points[i];
     var n = clamp(Math.round(p.anzahl), 1, 6);
@@ -350,8 +545,14 @@ function genInseln(el) {
             rng() * 6.28, sc, sc, sc, tintOf(rng, 0.08));
         }
       }
+      gesetzt++;
     }
   }
+  // I1: Kennzahl auf ORTSMASSSTAB, mit dem Element gespeichert. Sie hier zu
+  // ermitteln und nicht oben zu schaetzen, ist der ganze Punkt: sonst haenge
+  // das Zeichen davon ab, mit welchem Massstab man die Karte zuletzt
+  // geoeffnet hat.
+  el.kennzahl = gesetzt;
 }
 
 function genObjekt(el) {
@@ -359,7 +560,15 @@ function genObjekt(el) {
   // Bodenregeln, ohne OBJGRUPPEN-Tabelle (der Fallback auf "baeume" darf
   // fuer diese Variante nie greifen).
   if (el.variant === "inseln") { genInseln(el); return; }
-  var p = el.params, occ = newOcc(3.5);
+  /* I1 — ueber der Uebergabe wird aus der Streuung EIN Kartenzeichen (bzw.
+     eine Kammfolge oder ein Kuestenband, siehe OBJEKT_ZEICHEN). Im
+     Ueberblendbereich laeuft beides; darunter aendert sich nichts, und zwar
+     buchstaeblich nichts: der gesamte Rumpf unten ist unveraendert, es kommt
+     nur die Zaehlung fuer die Kennzahl dazu. */
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) objektZeichen(el);
+  if (!alsKoerper(mSig)) return;
+  var p = el.params, occ = newOcc(3.5), gesetzt = 0;
   var table = OBJGRUPPEN[el.variant] || OBJGRUPPEN.baeume;
   // Platzierungsregel je Variante (Objektkatalog, "Zusammenfassung der
   // Sonderfaelle"): maritim setzt AUF das Wasser, hafen ins Uferband und
@@ -405,8 +614,12 @@ function genObjekt(el) {
       if (ufer) yaw = ufer.yaw;
       emit(el, kind, x, h - 0.1, z, yaw, sc, sc * rr(rng, 0.88, 1.2), sc, tintOf(rng));
       emitLicht(el, kind, x, h - 0.1, z, sc);
+      gesetzt++;
     }
   }
+  // I1: siehe genInseln — die Kennzahl entsteht dort, wo wirklich gesetzt
+  // wird, und wandert mit dem Element in die Datei.
+  el.kennzahl = gesetzt;
 }
 
 /**
@@ -450,4 +663,6 @@ function emitFensterlicht(el, rng, kind, x, y, z, yaw, sc) {
 }
 
 export { newOcc, occFree, occAdd, tryPlace, tryPlaceWasser, tryPlaceUfer, tryPlaceFrei,
-  KULTUR, OBJGRUPPEN, genObjekt, genInseln, emitFensterlicht, emitLicht };
+  KULTUR, OBJGRUPPEN, genObjekt, genInseln, emitFensterlicht, emitLicht,
+  OBJEKT_ZEICHEN, POOL_ZEICHEN, punkteBox, streuWeite,
+  reliefZeichen, kuestenZeichen, objektZeichen };

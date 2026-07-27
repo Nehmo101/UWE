@@ -1331,18 +1331,23 @@ function streifenStrich(ctx, y, seed) {
   zug(ctx, [[-STREIFEN_UEBER, y], [1 + STREIFEN_UEBER, y]], seed);
 }
 
+/* Strichstaerken der vier Linienzeichen, angehoben nach der Sichtpruefung.
+   Gemessen lagen sie bei rund 1,3 Bildpunkten, wenn die Karte voll im Bild
+   steht — der Landweg war praktisch unsichtbar. Angehoben wurde die TINTE,
+   nicht das Band: `anteil` meint laut Katalog die Bandbreite, und ein
+   breiteres Band liefe ueber Ufer und Haeuser hinaus. */
 MALER.sig_handelsstrasse = function (ctx, s) {
-  streifenStift(ctx, 0.30);
+  streifenStift(ctx, 0.44);
   streifenStrich(ctx, 0.5, s);
 };
 MALER.sig_landweg = function (ctx, s) {
-  streifenStift(ctx, 0.16);
+  streifenStift(ctx, 0.28);
   streifenStrich(ctx, 0.5, s);
 };
 MALER.sig_saumpfad = function (ctx, s) {
   // Strichlinie: fuenf Striche je Kachel, der erste beginnt exakt am
   // Kachelanfang — dadurch geht das Muster ueber die Grenze hinweg auf.
-  streifenStift(ctx, 0.14);
+  streifenStift(ctx, 0.22);
   strichlinie(ctx, 0, 0.5, 1, 0.5, 5, 0.55, s);
 };
 MALER.sig_fluss = function (ctx, s) {
@@ -1379,7 +1384,7 @@ MALER.sig_grenze = function (ctx, s) {
   punkt(ctx, 0.80, 0.5, 0.09);
 };
 MALER.sig_seeweg = function (ctx, s) {
-  streifenStift(ctx, 0.09);
+  streifenStift(ctx, 0.16);
   strichlinie(ctx, 0, 0.5, 1, 0.5, 7, 0.45, s);
 };
 

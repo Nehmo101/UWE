@@ -14,10 +14,13 @@
 import { clamp, hashi, rngOf, rr, wpick } from '../core/rng.js';
 // HALF/WATER sind LEBENDE Bindungen (siehe Kopf von core/store.js) — nur
 // innerhalb von Funktionen lesen, nie beim Modulstart in eine Variable kopieren.
-import { HALF, WATER } from '../core/store.js';
+import { S, HALF, WATER } from '../core/store.js';
 import { POOLS, emit, tintOf } from '../core/pools.js';
 import { heightAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, tryPlaceUfer, KULTUR } from './objects.js';
+// I1: Kartenzeichen (siehe generators/zeichen.js). Richtung strukturen.js ->
+// zeichen.js, nie zurueck.
+import { alsKoerper, alsZeichen, punktZeichen } from './zeichen.js';
 
 /* ==========================================================================
    Polygon-Grundlagen (aus areas.js hierher gezogen, Wortlaut unveraendert)
@@ -223,8 +226,44 @@ var BURG_HOLZ = {
   hof: ["langhaus", "kapelle", "scheune"], tabelle: "holzburg", steinbau: false
 };
 
+/* ==========================================================================
+   I1 — Die Kompositstrukturen auf Kartenmassstab
+
+   Jede der drei bekommt EIN Zeichen in ihrer Mitte, so wie eine Siedlung
+   eine Ortssignatur bekommt: das Zinnenrechteck, das Kreuz im Quadrat, der
+   Anker.
+
+   Eine Kennzahl brauchen sie NICHT, und das ist eine Entscheidung, keine
+   Luecke: die Kennzahl der Siedlung existiert nur, weil aus derselben Sache
+   drei verschiedene Zeichen werden koennen (Weiler, Dorf, Stadt). Fuer eine
+   Burg gibt es genau ein Zeichen — eine gezaehlte Kennzahl waere Zustand
+   ohne Wirkung. Der Katalog nennt den naechsten Schritt selbst: eine Burg
+   mit drei Mauerringen verdient auf Regionsmassstab einen eigenen
+   GRUNDRISS-Umriss, kein groesseres Rechteck. Das ist Ausbaustufe.
+
+   Die Werft traegt den Anker und nicht das Zinnenrechteck: was sie auf einer
+   Karte ausmacht, ist der Hafen, nicht das Gebaeude.
+   ========================================================================== */
+var STRUKTUR_ZEICHEN = {
+  burg:    { sache: 'wehrbau', art: 'sig_burg' },
+  kloster: { sache: 'wehrbau', art: 'sig_kloster' },
+  werft:   { sache: 'hafen', art: 'sig_hafen' }
+};
+
+/** Setzt das Kartenzeichen einer Struktur in die Mitte ihres Polygons. */
+function strukturZeichen(el) {
+  var Z = STRUKTUR_ZEICHEN[el.variant];
+  if (!Z || !el.points || el.points.length < 3) return 0;
+  var m = polyCenter(el.points);
+  return punktZeichen(el, Z.sache, el.kennzahl, m.x, m.z, { art: Z.art });
+}
+
 function genBurg(el) {
   var p = el.params, pts = el.points;
+  // I1: siehe strukturZeichen. Im Ueberblendbereich laeuft beides.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) strukturZeichen(el);
+  if (!alsKoerper(mSig)) return;
   var B = p.palisade ? BURG_HOLZ : BURG_STEIN;
   var kanten = ringKanten(pts);
   if (!kanten.length) return;
@@ -576,6 +615,12 @@ function landBau(el, A, occ, pts, kind, a, b, tint) {
 
 function genWerft(el) {
   var p = el.params, pts = el.points;
+  // I1: das Zeichen VOR werftAchse — eine Werft ohne findbare Kaiflucht ist
+  // auf Ortsmassstab nicht baubar, auf Kartenmassstab aber trotzdem ein Ort
+  // am Wasser. Sonst verschwaende sie beim Herauszoomen ersatzlos.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) strukturZeichen(el);
+  if (!alsKoerper(mSig)) return;
   var A = werftAchse(el);
   if (!A) return;
   var occ = newOcc(4);
@@ -742,6 +787,10 @@ function klosterFluegel(R, tiefe) {
 
 function genKloster(el) {
   var p = el.params;
+  // I1: Begruendung wie bei genWerft — erst das Zeichen, dann der Rahmen.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) strukturZeichen(el);
+  if (!alsKoerper(mSig)) return;
   var R = klosterRahmen(el);
   if (!R) return;
   var occ = newOcc(4);
@@ -895,4 +944,5 @@ function istStruktur(variant) {
 export { polyBBox, inPoly, polyArea, polyCenter, randAbstand,
   ringKanten, klosterRahmen, klosterFluegel, werftAchse,
   genBurg, genWerft, genKloster,
+  STRUKTUR_ZEICHEN, strukturZeichen,
   strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE, WERFT_QUERSUCHE };

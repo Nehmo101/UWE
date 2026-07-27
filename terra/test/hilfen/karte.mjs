@@ -83,7 +83,40 @@ export async function testWelt(opt) {
      zwar nur in den Dateien, die eine groessere Karte anlegen. Gefunden
      wurde es beim Bau der Fluesse (Runde J). */
   m.terrain.terrainGeometrienNeu();
+  /* Und die abgeleiteten Felder leeren. terrainGeometrienNeu raeumt seit
+     Runde J die drei Erosionsfelder, aber NICHT die Biommaske — die haengt an
+     der Elementliste und wird sonst erst beim naechsten Commit neu gestempelt.
+
+     Im Alleinlauf einer Testdatei faellt das nicht auf. Im Gesamtlauf schon:
+     die Biomflaechen der VORIGEN Datei stehen dann noch im Feld, terrainColor
+     mischt gegen deren Palette, und eine Pruefung auf eine feste Farbe
+     scheitert an etwas, mit dem sie nichts zu tun hat. Gefunden beim
+     Einhaengen der Signaturpruefungen.
+
+     Eine Testwelt muss frisch sein, sonst prueft man die Reihenfolge der
+     Dateien mit. */
+  m.terrain.rebuildBiomFeld([]);
+  /* Ebenso Tritt und Korridor. `wearAt` faerbt das Gras erdig und geht direkt
+     in terrainColor ein — die Wegspuren der vorigen Testdatei laegen sonst
+     unter der frischen Welt. `corridor` sperrt Platzierungen; ein Rest davon
+     laesst Generatoren an Stellen aussetzen, an denen gar nichts ist. */
+  m.terrain.clearWear();
+  m.terrain.corridor.fill(0);
+  /* Und die Flussstempel. Das ist der teuerste Rest von allen: `rivers` traegt
+     die Einschnitte der vorigen Karte, und `recomputeHeights` weiter unten
+     graebt sie in das frische Gelaende. Das Hoehenfeld einer „neuen" Testwelt
+     haette dann die Taeler der alten.
+
+     Die Bruchkanten benutzen dieselbe Liste (siehe rebuildRivers in
+     core/dirty.js) und sind damit mit erledigt. */
+  m.terrain.rivers.length = 0;
   S.worldSeed = o.seed;
+  /* Maszstab zuruecksetzen. Seit Runde I entscheidet er in `emit`, ob ein Pool
+     ueberhaupt gezeichnet wird — bleibt er aus einer vorigen Datei auf 600 oder
+     2000 stehen, erzeugt JEDER Generator null Koerper, und die Pruefung meldet
+     „nichts erzeugt" statt „falscher Maszstab". Wer eine Testwelt auf
+     Kartenmaszstab will, setzt ihn danach selbst. */
+  S.einheitMeter = Number.isFinite(o.einheitMeter) ? o.einheitMeter : 1;
   S.biom = o.biom;
   S.elements.length = 0;
   S.marker.length = 0;

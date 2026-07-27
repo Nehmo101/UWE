@@ -7,8 +7,11 @@ import { heightAt, slopeAt, biomFeld, biomGewicht } from '../world/terrain.js';
 import { biomHartAn } from '../world/biomfeld.js';
 // I1: Kartenzeichen. signaturen.js haengt an three, core/ und kartenbaum.js —
 // es importiert nichts aus generators/, der Weg ist also zyklusfrei.
-import { zeichenFuer, signaturPlatzierung, streuAbstand, streuRaster,
-  UEBERGABE, BLENDE } from '../render/signaturen.js';
+import { zeichenFuer, signaturPlatzierung, streuAbstand, streuRaster } from '../render/signaturen.js';
+// I1: die geteilten Helfer der Maszstabsverzweigung. Sie lagen bis Runde J
+// hier — jetzt teilen sich fuenf Generatoren eine Datei, statt dass jeder
+// seine eigene Schwelle mitbraechte.
+import { alsKoerper, alsZeichen, punktZeichen } from './zeichen.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
 /* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
@@ -127,7 +130,12 @@ function flaechenZeichen(el, sache, art) {
   var wahl = zeichenFuer(sache, el.kennzahl, m, { art: art });
   if (!wahl || !wahl.length) return;
   var bb = polyBBox(pts), mitte = polyCenter(pts);
-  var platz = signaturPlatzierung(wahl[0], { kante: KARTE.map, massstab: m });
+  /* `biom` gehoert hier hinein und fehlte. Ohne es liegt JEDE Flaechensignatur
+     in der Wiesenpalette — eine Waldmarke im Herbstbiom war grasgruen, eine im
+     Nadelwald ebenso. Genau das sollte der Tint verhindern: die Atlasfelder
+     sind Graustufen, damit dasselbe Zeichen in jedem Biom dessen Farbe
+     annimmt, ohne dass es ein zweites Feld braucht. */
+  var platz = signaturPlatzierung(wahl[0], { kante: KARTE.map, massstab: m, biom: S.biom });
   if (!platz) return;
   var sp = streuAbstand(platz.marke);
   var punkte = streuRaster({
@@ -142,39 +150,6 @@ function flaechenZeichen(el, sache, art) {
       platz.sz * q.skala, platz.tint);
   }
 }
-
-/**
- * I1 — Ortszeichen: EIN Zeichen fuer die ganze Siedlung, in ihrer Mitte.
- *
- * Der Gegensatz zu `flaechenZeichen` ist der Punkt: ein Wald wird gekachelt,
- * weil er eine Flaeche IST; eine Siedlung bekommt einen Punkt, weil sie auf
- * Kartenmaszstab einer ist. Welcher — Weiler, Dorf, Stadt — entscheidet
- * `el.kennzahl`, die Zahl der Baukoerper.
- *
- * `zeichenFuer` kann mehrere Namen liefern: eine grosze Stadt bekommt den
- * Doppelring UND den Zinnenkranz. Deshalb die Schleife statt eines Zugriffs
- * auf [0].
- */
-function ortsZeichen(el) {
-  var m = S.einheitMeter;
-  var mitte = polyCenter(el.points);
-  var wahl = zeichenFuer("ort", el.kennzahl, m);
-  if (!wahl || !wahl.length) return;
-  var y = Math.max(heightAt(mitte.x, mitte.z), WATER);
-  for (var i = 0; i < wahl.length; i++) {
-    var platz = signaturPlatzierung(wahl[i], { kante: KARTE.map, massstab: m });
-    if (!platz) continue;
-    emit(el, wahl[i], mitte.x, y + platz.schwebe, mitte.z, 0,
-      platz.sx, platz.sy, platz.sz, platz.tint);
-  }
-}
-
-/** Zeichnet die Flaeche als Koerper? Unterhalb der Uebergabe immer, im
- *  Ueberblendbereich weiter mit — sonst risse ein Loch, wo beide Darstellungen
- *  ineinanderblenden sollen. */
-function alsKoerper(m) { return m <= UEBERGABE.koerper * BLENDE; }
-/** Zeichnet die Flaeche als Kartenzeichen? Ab der Uebergabe. */
-function alsZeichen(m) { return m >= UEBERGABE.koerper; }
 
 function genWald(el) {
   var p = el.params, pts = el.points;
@@ -419,7 +394,10 @@ function genViertel(el) {
      Element gespeichert wird — nicht hier auf Regionsmaszstab geschaetzt.
      Sonst hinge die Signatur davon ab, mit welchem Maszstab man die Karte
      zuletzt geoeffnet hat. */
-  if (alsZeichen(S.einheitMeter)) ortsZeichen(el);
+  if (alsZeichen(S.einheitMeter)) {
+    var om = polyCenter(pts);
+    punktZeichen(el, "ort", el.kennzahl, om.x, om.z, null);
+  }
   if (!alsKoerper(S.einheitMeter)) return;
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
