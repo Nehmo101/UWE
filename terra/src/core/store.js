@@ -69,6 +69,13 @@ export const S = {
   // J3: Sprachfamilie der Karte fuer den Namensgenerator. "auto" = aus dem
   // Biom/Baustil abgeleitet; ein fester Wert praegt die ganze Karte.
   sprachfamilie: "auto",
+  /* I2: Klimaachse der Karte. Terra hat keinen Breitengrad — die Biom-
+     Ableitung braucht aber eine Richtung, in die es kaelter wird. Statt einen
+     zu erfinden, wird er zur einstellbaren Eigenschaft: `richtung` in Grad,
+     `staerke` als Gefaelle, `grund` als Grundtemperatur (0 = polar, 1 =
+     tropisch), `hoeheKuehl` als Abkuehlung je Hoeheneinheit. Felder wie
+     KLIMA_STANDARD in world/biomfeld.js. */
+  klima: { richtung: 0, staerke: 0.5, grund: 0.5, hoeheKuehl: 0.012 },
   /* D1 — Marker sind BEWUSST kein Elementtyp. Ein Element ist Weltgeometrie
      (Punkte + Parameter + Seed -> Instanzen, Terrainwirkung, Korridore); ein
      Marker ist eine Notiz an einer Koordinate und erzeugt nichts davon. Als

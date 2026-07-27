@@ -5,7 +5,8 @@ import { lerp } from './rng.js';
 import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
 import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
-  refreshTerrainFull, recomputeHeights, computeAO, refreshGrid } from '../world/terrain.js';
+  refreshTerrainFull, recomputeHeights, computeAO, refreshGrid,
+  rebuildBiomFeld } from '../world/terrain.js';
 import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
   genBruch, bruchDaten, bruchMasse, brueche,
   bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
@@ -181,6 +182,12 @@ function stempelRadius(el) {
     return KORRIDOR_R.kloster + elementSpanne(el) * 0.5 *
       Math.max(0, Math.min(KLOSTER_MAX_GROESSE, p.groesse || 1) - 1);
   }
+  /* I2 — Biomflaeche: die Ausfransung greift ueber die Punktbox hinaus, und
+     zwar um weich*(0.5 + 0.30*1.75). Das ist wortgleich die Rechnung aus
+     randZugabe() in world/biomfeld.js — wandert dort eine Zahl, muss sie hier
+     mitwandern, sonst bleibt beim Verschieben ein Streifen alter Faerbung
+     stehen. Gleiche Warnung wie beim Bruch und beim Burgring. */
+  if (el.kind === "flaeche" && el.variant === "biom") return (p.weich || 8) * 1.03 + 2;
   return 3;   // erreicht isHeavy nie einen anderen Fall, bleibt aber definiert
 }
 
@@ -269,6 +276,12 @@ function rebuildAll() {
   // statt refreshTerrainFull(), damit das Gitter nur EINMAL laeuft.
   recomputeHeights(0, VW - 1, 0, VW - 1);
   rebuildCorridors();
+  // I2: vor refreshGrid — die Terrainfarbe liest die Biommaske. Und vor der
+  // Elementschleife weiter unten, denn genWald und genWiese fragen das Biom je
+  // Kandidat ab. Steht sie zu spaet, sieht der erste Aufbau nach dem Laden
+  // anders aus als der zweite; genau der Fehler, den diese Funktion in Runde
+  // I5 schon einmal hatte.
+  rebuildBiomFeld(S.elements);
   computeAO(0, VW - 1, 0, VW - 1);
   refreshGrid(0, VW - 1, 0, VW - 1);
   for (var i = 0; i < S.elements.length; i++) {
@@ -310,6 +323,9 @@ function commit(el, heavy) {
     // nur baseHeightAt, rebuildCorridors schreibt nur corridor/wear).
     rebuildRivers();
     rebuildCorridors();
+    // I2: dieselbe Begruendung wie oben — die Biommaske wird von mehreren
+    // Elementen gemeinsam beschrieben und muss deshalb global neu.
+    rebuildBiomFeld(S.elements);
     // Nur beim Commit EINES Elements reicht dessen Einflussbereich; ohne
     // Element (Loeschen — die alte Lage ist hier nicht mehr greifbar) weiter
     // der volle Neuaufbau.
@@ -334,7 +350,10 @@ function isHeavy(el) {
   // am Hoehenfeld: eine Terrainaenderung darunter muss sie neu rechnen.
   return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" ||
           el.variant === "mauer" || el.variant === "bruch")) ||
-         (el.kind === "flaeche" && (el.variant === "viertel" || istStruktur(el.variant)));
+         // I2: die Biomflaeche faerbt das Terrain und entscheidet ueber die
+         // Bepflanzung — sie muss dieselbe Kette ausloesen wie ein Viertel.
+         (el.kind === "flaeche" && (el.variant === "viertel" || el.variant === "biom" ||
+          istStruktur(el.variant)));
 }
 
 

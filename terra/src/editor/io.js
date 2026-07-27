@@ -199,6 +199,18 @@ function pruefeElemente(liste, wo) {
  * Fassung 3 (hoehenDelta gegen das Seed-Terrain) und Fassung 4
  * (zusaetzlich `kartenGroesse`) werden gelesen.
  */
+/* I2 — Klimaachse feldweise einlesen. Tolerant wie `biom` und `wetter`: jedes
+   fehlende oder unbrauchbare Feld faellt einzeln auf seine Vorgabe zurueck,
+   statt die ganze Karte scheitern zu lassen. Das ist Absicht und in
+   docs/engineering/terra-runde-i-plan.md begruendet — atomar scheitern muss
+   nur, was die Karte traegt, nicht ihr Beiwerk. */
+function klimaGelesen(k) {
+  var v = { richtung: 0, staerke: 0.5, grund: 0.5, hoeheKuehl: 0.012 };
+  if (!k || typeof k !== "object") return v;
+  for (var f in v) if (Number.isFinite(k[f])) v[f] = k[f];
+  return v;
+}
+
 function validiereKarte(text) {
   var d = JSON.parse(text);
   if (!d || !d.elemente || !Array.isArray(d.elemente)) throw new Error("Unbekanntes Format");
@@ -368,6 +380,10 @@ function validiereKarte(text) {
     biom: (typeof d.biom === "string" && BIOME[d.biom]) ? d.biom : "wiese",
     // J3: tolerant wie `biom` — unbekannte Werte fallen auf "auto" zurueck.
     sprachfamilie: typeof d.sprachfamilie === "string" ? d.sprachfamilie : "auto",
+    // I2: Klimaachse, feldweise tolerant. Eine Karte aus einer Fassung ohne
+    // Klima laedt mit den Vorgabewerten — die Biomflaechen selbst stehen als
+    // Elemente in der Liste und haengen nicht daran.
+    klima: klimaGelesen(d.klima),
     // Optionales Feld (ab dieser Runde mitgeschrieben, version bleibt 2):
     // Stand von S.elementSeedCounter beim Speichern. Fehlt es (aeltere
     // v1/v2-Dateien) oder ist es keine endliche Zahl, liefert null — der
@@ -397,6 +413,7 @@ function kartenDaten() {
     kartenGroesse: KARTE.map,
     biom: S.biom,               // tolerantes Zusatzfeld (G5)
     sprachfamilie: S.sprachfamilie,   // tolerantes Zusatzfeld (J3)
+    klima: S.klima,                   // tolerantes Zusatzfeld (I2)
     // Zweite Stimmungsachse neben der Tageszeit — wie `biom` ein optionales,
     // tolerant gelesenes Zusatzfeld. `version` bleibt deshalb 4: ein aelterer
     // Leser ueberliest das Feld und sieht die Karte bei klarem Wetter.
@@ -439,6 +456,9 @@ function uebernehmeKarte(karte) {
   S.biom = karte.biom;
   document.getElementById("biomSel").value = S.biom;
   S.sprachfamilie = karte.sprachfamilie;
+  // I2: Klima VOR dem Aufbau — die Biom-Ableitung liest es, und die Farbe
+  // haengt ueber die Biomflaechen daran.
+  S.klima = karte.klima;
   // Kartengroesse VOR genBase/Delta setzen: genBase schreibt in das dann
   // passend dimensionierte base-Feld, und die Deltaindizes der Datei sind
   // gegen genau dieses VW gerechnet. (v1/v2/v3 liefern hier 256.)

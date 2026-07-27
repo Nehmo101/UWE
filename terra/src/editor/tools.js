@@ -1,5 +1,5 @@
 // Werkzeuge: Definitionen, Parameter-Schemata, aktiver Zustand, Zeichnen-Abschluss.
-import { S, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben }
+import { S, BIOME, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben }
   from '../core/store.js';
 import { commit, isHeavy } from '../core/dirty.js';
 import { pushUndo } from './history.js';
@@ -10,6 +10,17 @@ import { sprachfamilien, familieDerKarte, setzeSprachfamilie } from '../generato
 import { clearPreview, setPreview, rebuildHandles, select, brushRing, waehleMarker }
   from './selection.js';
 import { buildPanel, updateHint } from '../ui/panels.js';
+
+/* I2 — Auswahlliste der Biome fuer das Schema der Biomflaeche. Sie wird aus
+   der Registry abgeleitet und nicht abgeschrieben: die Leiste oben traegt
+   dieselben 25 Eintraege als <optgroup> in index.html, und zwei Listen, die
+   von Hand gleichgehalten werden muessen, laufen beim naechsten Biom
+   auseinander. Reihenfolge ist die der Registry, damit sie stabil ist. */
+function biomListe() {
+  var out = [];
+  for (var k in BIOME) out.push([k, BIOME[k].label || k]);
+  return out;
+}
 
 /** Aktiver Werkzeug-Zustand (frueher lose Globals). */
 export const ed = {
@@ -72,7 +83,9 @@ var VARIANTS = {
      Panel, und die eingespielten Griffe der vier alten Varianten sollen bleiben,
      wo sie sind. */
   flaeche: [["wald", "Wald"], ["feld", "Feld"], ["viertel", "Viertel"], ["wiese", "Wiese"],
-            ["burg", "Burg"], ["werft", "Werft"], ["kloster", "Kloster"]],
+            ["burg", "Burg"], ["werft", "Werft"], ["kloster", "Kloster"],
+            // I2: die Biomflaeche zeichnet nichts, sie faerbt und bepflanzt.
+            ["biom", "Biom"]],
   objekt: [["baeume", "Bäume"], ["haeuser", "Häuser"], ["klassisch", "Klassisch"],
            ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["ruinen", "Ruinen"],
            ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"],
@@ -166,6 +179,19 @@ var PARAMS = {
   "flaeche:wiese": [
     { k: "dichte", l: "Dichte", min: 0.3, max: 2.5, st: 0.05, d: 1.2 },
     { k: "blumen", l: "Blütenanteil", min: 0, max: 1, st: 0.02, d: 0.25 }
+  ],
+  /* I2 — Biomflaeche. Sie erzeugt keine einzige Instanz; ihr ganzer Zweck ist
+     die abgeleitete Maske, aus der terrainColor die Faerbung und genWald/
+     genWiese ihre Bepflanzung ziehen. Deshalb steht sie auch nicht in der
+     Kette von genFlaeche — dort faellt sie durch alle else-if und erzeugt
+     nichts, genau wie eine unbekannte Variante in einer aelteren Fassung.
+
+     `weich` ist bei 32 gedeckelt, nicht bei 64: darueber reichen die 16
+     Mischstufen der Palette nicht mehr, dann wuerde die Stufung sichtbar.
+     Gemessen liegen bei weich=32 rund drei Vertices auf einer Stufe. */
+  "flaeche:biom": [
+    { k: "biom", l: "Biom", o: biomListe(), d: "moor" },
+    { k: "weich", l: "Randbreite", min: 1, max: 32, st: 1, d: 8 }
   ],
   /* --- Kompositstrukturen (generators/strukturen.js) ---------------------
      Der gezeichnete Polygonzug ist bei allen dreien mehr als eine Umrandung:

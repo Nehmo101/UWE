@@ -1,8 +1,10 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { S, BIOME, KARTE } from '../core/store.js';
+import { S, BIOME, KARTE, VW, MAP } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
-import { heightAt, slopeAt } from '../world/terrain.js';
+import { heightAt, slopeAt, biomFeld, biomGewicht } from '../world/terrain.js';
+// I2: harte Biomwahl je Kandidat. biomfeld.js haengt nur an core/ — zyklusfrei.
+import { biomHartAn } from '../world/biomfeld.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
 /* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
@@ -109,10 +111,21 @@ function genWald(el) {
       var x = (cx + 0.5 + (r1 - 0.5) * 0.85) * sp;
       var z = (cz + 0.5 + (r2 - 0.5) * 0.85) * sp;
       if (!inPoly(pts, x, z)) continue;
+      /* I2 — das Biom AN DIESER STELLE, nicht das der Karte. Harte Wahl ohne
+         Mischung: ein halb verschneiter Bluetenbaum ergibt kein Bild, und was
+         zwischen zwei Baumarten liegt, gibt es nicht. Die Abfrage ist eine
+         reine Funktion der Position (das Gitter und der Seed sind fest), der
+         Determinismus bleibt also unangetastet.
+
+         Der ABSTAND `sp` bleibt bewusst beim Elementbiom: er bestimmt das
+         Raster, ueber das diese Schleife laeuft. Liesse man ihn je Kandidat
+         springen, waere das Raster kein Raster mehr. */
+      var VP = (BIOME[biomHartAn(biomFeld, biomGewicht, VW, MAP, x, z,
+        S.biom, S.worldSeed)] || BIOME.wiese).veg;
       // Bäume wachsen in Nestern mit Lichtungen dazwischen, nicht im Raster
       if (fractal(x * 0.04, z * 0.04, el.seed + 21) < schwelle) continue;
       // Biom-Gesamtdichte: zusaetzliche ortsstabile Ablehnung (Schluessel +57)
-      if (V.dichte < 1 && hashi(cx, cz, el.seed + 57) >= V.dichte) continue;
+      if (VP.dichte < 1 && hashi(cx, cz, el.seed + 57) >= VP.dichte) continue;
       var rng = rngOf((hashi(cx, cz, el.seed + 7) * 4294967296) | 0);
       var nadel = r3 < p.mischung;
       var artW = hashi(cx, cz, el.seed + 33);
@@ -121,11 +134,11 @@ function genWald(el) {
           : (artW < 0.94 ? "sumpfbaum" : "bluetenbaum")));
       // Biom-Artgewichte: Behalte-Wahrscheinlichkeit je Art (Schluessel +58);
       // Abgelehntes ersetzt ortsstabil die biomtypische Ersatzart oder faellt aus.
-      if (V.arten) {
-        var behalte = V.arten[kind];
+      if (VP.arten) {
+        var behalte = VP.arten[kind];
         if (behalte !== undefined && hashi(cx, cz, el.seed + 58) >= behalte) {
-          if (!V.ersatz) continue;
-          kind = V.ersatz;
+          if (!VP.ersatz) continue;
+          kind = VP.ersatz;
         }
       }
       var h = tryPlace(occ, x, z, POOLS[kind].radius * 0.8, null);
@@ -137,13 +150,13 @@ function genWald(el) {
       if (ausW < 0.035) tint = [1.28, 0.92, 0.55];        // goldener Baum
       else if (ausW < 0.06) tint = [1.3, 0.78, 0.62];     // roetlicher Baum
       emit(el, kind, x, h - 0.1, z, rng() * 6.28, sc, sc * rr(rng, 0.85, 1.25), sc, tint);
-      if (rng() < p.unterholz * V.unterwuchs * (0.6 + randNaehe(pts, x, z) * 0.8)) {
+      if (rng() < p.unterholz * VP.unterwuchs * (0.6 + randNaehe(pts, x, z) * 0.8)) {
         var bx = x + rr(rng, -sp * 0.5, sp * 0.5), bz = z + rr(rng, -sp * 0.5, sp * 0.5);
         if (!inPoly(pts, bx, bz)) continue;
         var bh = tryPlace(occ, bx, bz, 0.7, null);
         if (bh === null) continue;
         var bs = rr(rng, 0.7, 1.35);
-        var uw = wpick(rng, V.uwTabelle || UW_STANDARD);
+        var uw = wpick(rng, VP.uwTabelle || UW_STANDARD);
         emit(el, uw, bx, bh + (uw === "moos" ? 0.04 : 0), bz, rng() * 6.28,
           bs, bs, bs, tintOf(rng, 0.08));
       }
@@ -208,18 +221,23 @@ function genWiese(el) {
       var r1 = hashi(cx, cz, el.seed), r2 = hashi(cx, cz, el.seed + 1);
       var x = (cx + 0.5 + (r1 - 0.5) * 0.95) * sp, z = (cz + 0.5 + (r2 - 0.5) * 0.95) * sp;
       if (!inPoly(pts, x, z)) continue;
+      // I2: Biom je Kandidat, Begruendung wie in genWald. Die Leitfarben der
+      // Blumennester bleiben beim Elementbiom (LF oben) — ein Nest ist groesser
+      // als eine Zelle, seine Farbe darf nicht mitten im Nest umspringen.
+      var VP = (BIOME[biomHartAn(biomFeld, biomGewicht, VW, MAP, x, z,
+        S.biom, S.worldSeed)] || BIOME.wiese).veg;
       var rng = rngOf((hashi(cx, cz, el.seed + 3) * 4294967296) | 0);
       // Nester und Luecken statt Gleichverteilung
       if (fractal(x * 0.06, z * 0.06, el.seed + 77) < 0.34) continue;
       // Biom-Gesamtdichte (Schluessel +57, wie genWald): im wiese-Pfad
       // kurzgeschlossen, sonst ortsstabile Zusatz-Ablehnung.
-      if (V.dichte < 1 && hashi(cx, cz, el.seed + 57) >= V.dichte) continue;
+      if (VP.dichte < 1 && hashi(cx, cz, el.seed + 57) >= VP.dichte) continue;
       var h = tryPlace(occ, x, z, 0.25, null);
       if (h === null) continue;
       // Blumen wachsen in Nestern mit einer Leitfarbe je Nest
       var nestX = Math.floor(x / 9), nestZ = Math.floor(z / 9);
       var nest = hashi(nestX, nestZ, el.seed + 91);
-      var istBlume = rng() < p.blumen * V.blumen * sstep(0.45, 0.75, nest);
+      var istBlume = rng() < p.blumen * VP.blumen * sstep(0.45, 0.75, nest);
       var kind = istBlume ? "blume" : "gras";
       var sc = rr(rng, 0.75, 1.35);
       var tint = tintOf(rng, 0.1);

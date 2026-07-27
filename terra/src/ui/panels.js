@@ -1,7 +1,7 @@
 // Rechtes Panel, Werkzeugleiste, Hinweiszeile, Toast, Statusanzeige und das
 // HTML-Overlay der Markerbeschriftungen.
 import { Vector3 } from 'three';
-import { S, hydrate } from '../core/store.js';
+import { S, hydrate, KARTE, VW, mkElement, nextSeed } from '../core/store.js';
 import { clamp } from '../core/rng.js';
 import { instanceTotal, schattenAnzahl } from '../core/pools.js';
 import { ed, TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
@@ -16,6 +16,9 @@ import { starteErosion, brichErosionAb, erosionLaeuft, setzeErosionAnzeige }
 // I4: Zielpruefung der Beschriftung. beschriftung.js haengt nur an three und
 // core/ — kein Zyklus.
 import { zielPruefen } from './beschriftung.js';
+// I2: Biom-Ableitung. biomfeld.js haengt nur an core/ — zyklusfrei.
+import { biomeVorschlagen } from '../world/biomfeld.js';
+import { base, abfluss } from '../world/terrain.js';
 import { commit, isHeavy, deleteElement, regenElement, rebuildAll } from '../core/dirty.js';
 import { pushUndo } from '../editor/history.js';
 import { rebuildHandles, clearPreview, getMarkerAuswahl, rebuildMarker } from '../editor/selection.js';
@@ -228,6 +231,76 @@ function elementNamensZeile(target) {
       // Er steht in params und wandert damit von selbst in die Datei.
     },
     function () { return namensVorschlag(target); });
+}
+
+/* ==========================================================================
+   Abschnitt „Biome" (I2)
+
+   Zwei Dinge: die Klimaachse der Karte und der Knopf, der daraus einen
+   Vorschlag macht.
+
+   Der Vorschlag erzeugt POLYGONE, keine Pixelmaske — das ist der Unterschied,
+   auf den es ankommt. Was herauskommt, sind ganz normale Biomflaechen-
+   Elemente, die man danach verschieben, verkleinern, loeschen oder umfaerben
+   kann. Ein Vorschlag, den man weiterbearbeitet, statt eines Bildes, das man
+   uebermalen muesste.
+   ========================================================================== */
+var KLIMA_PARAMS = [
+  { k: "richtung", l: "Kälte kommt aus", min: 0, max: 359, st: 5, d: 0 },
+  { k: "staerke", l: "Klimagefälle", min: 0, max: 1, st: 0.05, d: 0.5 },
+  { k: "grund", l: "Grundwärme", min: 0, max: 1, st: 0.05, d: 0.5 },
+  { k: "hoeheKuehl", l: "Höhenabkühlung", min: 0, max: 0.04, st: 0.002, d: 0.012 }
+];
+
+function baueBiomAbschnitt() {
+  panelEl.appendChild(el("hr"));
+  panelEl.appendChild(el("div", "ph", "Biome"));
+
+  var vorhandene = S.elements.filter(function (e) {
+    return e.kind === "flaeche" && e.variant === "biom";
+  });
+
+  for (var i = 0; i < KLIMA_PARAMS.length; i++) {
+    // Wie bei der Erosion: die Regler wirken erst beim naechsten Vorschlag.
+    // Sie sofort auszuwerten hiesse, 200 ms Ableitung je Reglerpixel.
+    panelEl.appendChild(paramRow(KLIMA_PARAMS[i], S.klima, function () {}));
+  }
+
+  var knopf = el("button", "wide", "Biome vorschlagen");
+  knopf.addEventListener("click", function () {
+    var neu = biomeVorschlagen({ hoehe: base, abfluss: abfluss },
+      VW, KARTE.map, { seed: S.worldSeed, klima: S.klima });
+    if (!neu.length) {
+      toast("Kein Vorschlag — das Gelände ist zu gleichförmig");
+      return;
+    }
+    pushUndo(true);
+    /* Alte Vorschlaege weichen, von Hand gezeichnete NICHT. Unterschieden wird
+       ueber params.ausVorschlag: was der Nutzer angefasst hat, verliert die
+       Marke im Panel — dort wird sie beim Aendern geloescht. Ohne diese
+       Trennung waere ein zweiter Klick auf den Knopf ein stiller Datenverlust. */
+    for (var k = S.elements.length - 1; k >= 0; k--) {
+      var e = S.elements[k];
+      if (e.kind === "flaeche" && e.variant === "biom" && e.params && e.params.ausVorschlag) {
+        deleteElement(e);
+      }
+    }
+    for (var n = 0; n < neu.length; n++) {
+      S.elements.push(mkElement("flaeche", "biom", neu[n].points,
+        { biom: neu[n].biom, weich: 8, ausVorschlag: true }, nextSeed()));
+    }
+    rebuildAll();
+    buildPanel();
+    toast(neu.length + " Biomflächen vorgeschlagen — jede ist ein Element und bleibt änderbar");
+  });
+  panelEl.appendChild(knopf);
+  panelEl.appendChild(el("div", "psub",
+    vorhandene.length
+      ? vorhandene.length + " Biomflächen auf der Karte. Ein neuer Vorschlag "
+        + "ersetzt nur die vorgeschlagenen, nicht die selbst gezeichneten."
+      : "Leitet aus Höhe, Hang, Wassernähe und — falls erodiert wurde — dem "
+        + "Abfluss einen Vorschlag ab. Das Ergebnis sind Elemente, keine Maske: "
+        + "jede Fläche lässt sich danach ziehen, umfärben oder löschen."));
 }
 
 /* ==========================================================================
@@ -611,6 +684,7 @@ function buildPanel() {
     // J3: Das Auswahl-Werkzeug ohne Auswahl ist das Panel der GANZEN Karte —
     // hier gehoert die kartenweite Sprachfamilie hin, nicht in ein Elementschema.
     baueErosionAbschnitt();
+    baueBiomAbschnitt();
     baueNamenAbschnitt();
     return;
   }

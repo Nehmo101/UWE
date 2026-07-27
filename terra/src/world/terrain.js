@@ -3,6 +3,11 @@ import * as THREE from 'three';
 import { clamp, lerp, sstep, DEG, hashi, vnoise, fractal } from '../core/rng.js';
 import { MAP, VW, HALF, WATER, S, BIOME, hoehenProfil } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
+// I2: Biomflaechen. biomfeld.js haengt nur an core/rng.js und core/store.js —
+// es traegt eine eigene Kopie von inPoly/polyBBox, damit kein Rueckimport nach
+// generators/ entsteht (dort haengt areas.js an genau dieser Datei).
+import { biomFeldBauen, biomGewichtAn, biomIndexAn, mischPalette, mischStufe,
+  cacheLeeren as biomCacheLeeren, BIOM_KEINS } from './biomfeld.js';
 
 /* ==========================================================================
    Aenderungserkennung fuer die Historie (H1e)
@@ -78,7 +83,8 @@ function holeSchmutzRegion() {
    (Undo-Stapel beim Groessenwechsel verwerfen) braucht history.js — siehe
    Bericht H1e. */
 var feldLaenge = 0;
-var base, hgt, aoRoh, aoFeld, corridor, wear, abfluss, sediment, haerte;
+var base, hgt, aoRoh, aoFeld, corridor, wear, abfluss, sediment, haerte,
+    biomFeld, biomGewicht;
 function felderSichern() {
   var n = VW * VW;
   if (n <= feldLaenge) return;
@@ -108,6 +114,13 @@ function felderSichern() {
   abfluss = new Float32Array(n);
   sediment = new Float32Array(n);
   haerte = new Float32Array(n); haerte.fill(1);
+  /* I2: abgeleitete Biomflaechen. Laufzeitfelder wie corridor und wear — und
+     aus demselben Grund unbedenklich, anders als die drei Erosionsfelder
+     darueber: Im Speicherformat stehen die POLYGONE, und aus ihnen entsteht
+     dieses Gitter bei jedem Aufbau neu. Die Ableitung ist eine reine Funktion
+     der Elementliste, das Bild nach dem Laden also dasselbe wie davor. */
+  biomFeld = new Uint8Array(n); biomFeld.fill(BIOM_KEINS);
+  biomGewicht = new Uint8Array(n);
   feldLaenge = n;
   // Frisches (genullte) base-Feld ist eine Aenderung wie jede andere. Praktisch
   // folgt sofort verwerfeHistorie() aus io.js, aber der Zaehler soll auch dann
@@ -613,6 +626,18 @@ function computeAO(i0, i1, j0, j1) {
  */
 function terrainColor(h, ny, x, z, out, ao) {
   var P = (BIOME[S.biom] || BIOME.wiese).terrain;
+  /* I2: liegt an dieser Stelle eine Biomflaeche, wird gegen deren Palette
+     gemischt. Der Nachschlag kostet einen Feldzugriff, die Mischung selbst ist
+     vorgerechnet — 16 Stufen je Biompaar, gecacht. Feiner waere wirkungslos:
+     das Gitter hat einen Vertex je Welteinheit, bis `weich` = 16 ist die
+     Quantisierung der POSITION groeber als die der Palette.
+
+     Bei Gewicht 0 — also ueberall dort, wo keine Flaeche liegt — bleibt P die
+     Registry-Palette, und der gesamte Rechenweg darunter ist Bit fuer Bit der
+     bisherige. Genau deshalb steht die Abfrage hier oben und nicht verteilt
+     auf die zwanzig Palettenzugriffe weiter unten. */
+  var bg = biomGewichtAn(biomGewicht, VW, MAP, x, z);
+  if (bg > 0) P = mischPalette(S.biom, biomIndexAn(biomFeld, VW, MAP, x, z), mischStufe(bg));
   var gross = fractal(x * 0.012, z * 0.012, S.worldSeed + 404);
   var fein = fractal(x * 0.052, z * 0.052, S.worldSeed + 505);
   out.copy(P.grasKuehl).lerp(P.grasWarm,
@@ -811,6 +836,44 @@ function wearAt(x, z) {
   var i = clamp(Math.round(x + HALF), 0, VW - 1), j = clamp(Math.round(z + HALF), 0, VW - 1);
   return wear[j * VW + i] / 255;
 }
+/**
+ * I2: leitet die Biomflaechen-Elemente ins Gitter ab.
+ *
+ * Gegenstueck zu rebuildCorridors, an derselben Stelle der Kette und aus
+ * demselben Grund immer global: ein geloeschter Stempel laesst sich nicht
+ * oertlich zuruecknehmen — man weiss nicht, was vorher darunter lag. Der
+ * optionale `box`-Weg (aus biomBox eines Elements) ist da, wird aber nicht
+ * gebraucht: 23 ms fuer eine kartengroesse Flaeche auf 1024² liegen unter dem,
+ * was rebuildCorridors ohnehin kostet.
+ *
+ * biomCacheLeeren am Ende: der Mischcache haelt 16 Stufen je Biompaar und
+ * waere nach einem Biomwechsel der Karte falsch.
+ */
+function rebuildBiomFeld(flaechen, box) {
+  /* subarray, und das ist kein Schoenheitsfehler: felderSichern laesst die
+     Felder nur WACHSEN (`if (n <= feldLaenge) return`). Nach einer 1024er
+     Karte ist biomFeld 1.050.625 Eintraege lang, auch wenn danach eine 256er
+     geladen wird. biomFeldBauen prueft aber `opt.feld.length === VW*VW` und
+     legt bei Abweichung still ein EIGENES Feld an — die Ableitung liefe dann
+     ins Leere, und keine Biomflaeche haette mehr eine Wirkung. Ohne Fehler-
+     meldung, nur ohne Bild.
+
+     Die subarray-Sicht teilt den Puffer, Schreibzugriffe landen also im
+     Original. Sie kostet eine Allokation je Aufbau (ein paar Bytes
+     Kopfstruktur, keine Daten) — der Preis dafuer, dass biomfeld.js seine
+     Laenge streng prueft, statt wie base und hgt einfach ueber j*VW+i zu
+     indizieren. Die Strenge ist dort richtig; hier ist die Sicht die
+     Uebersetzung zwischen beiden Konventionen. */
+  var n = VW * VW;
+  biomFeldBauen(flaechen, VW, MAP, {
+    seed: S.worldSeed,
+    feld: biomFeld.length === n ? biomFeld : biomFeld.subarray(0, n),
+    gewicht: biomGewicht.length === n ? biomGewicht : biomGewicht.subarray(0, n),
+    box: box
+  });
+  biomCacheLeeren();
+}
+
 function stampCorridor(x, z, r) {
   var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
   var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
@@ -961,6 +1024,7 @@ export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, p
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
   inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget,
   abfluss, sediment, haerte, wendeErosionAn,
+  biomFeld, biomGewicht, rebuildBiomFeld,
   hoehenVersion, basisGeaendert, holeSchmutzRegion,
   aktualisiereDetailstufen, setzeLod, lodAn, terrainStufenStatistik,
   holeIndex as terrainIndexSatz };
