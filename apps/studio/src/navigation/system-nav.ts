@@ -7,7 +7,7 @@
  * Kommandozentrale auf dem UWE-Host (Notiz Lasse, Abschnitt D).
  *
  * Was hier bleibt, sind die Studio-eigenen Flächen: KI-Governance, der Verlauf,
- * Tags, Design und das eigene Konto.
+ * Design und das eigene Konto. Tags liegen im Welt-Cockpit (D30).
  *
  * Part of the central navigation contract (see ./types.ts).
  */
@@ -75,24 +75,6 @@ export const SYSTEM_NAV: NavGroup[] = [
         status: "active",
         source: "system",
         keywords: ["command", "nl", "befehl", "intent", "admin", "nl-befehle"],
-      },
-    ],
-  },
-  {
-    id: "system-operations",
-    title: "Betrieb",
-    items: [
-      {
-        id: "system-tags",
-        label: "Tags",
-        href: "/admin/tags",
-        icon: "tags",
-        group: "Betrieb",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["tags"],
       },
     ],
   },

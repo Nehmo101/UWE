@@ -333,6 +333,25 @@ Der sauberste Bereich. Ich schlage hier fast nichts vor.
 >
 > Die Tabelle bleibt als Umzugsliste stehen: Sie sagt, *wohin* jede Kachel geht.
 
+## Stand nach der Umsetzung (Schritt 5)
+
+Abschnitt D ist abgeräumt. Wohin es gegangen ist:
+
+| Wohin | Was |
+|-------|-----|
+| **Brain → System** | D1 System-Hub (Übersicht / Homelab / Diagnose). Die Datenbeschaffung liegt in `packages/host-cockpit`. |
+| **Command Center → Betrieb** | D17 Security, D21 Secrets, D23 Migrationen, D18 Audit-Log, D19 API-Tokens, D20 Webhooks, D33 Einstellungen (bearbeitbar), D7 Einrichtungs-Überblick, SMTP-Zugangsdaten. |
+| **Command Center → bestehende Flächen** | D11 Host Control (`/`), D12 Cloudflare, D13 RTX-Connector (`/connector`, `/runner`), D14 Drucker, D15 Zugänge (`/users`), D22 Backup (Kommandozentrale-Panel). |
+| **Studio → Welt-Cockpit** | D30 Tags (`/worlds/[slug]/tags`, API `/api/tags` mit Studio-Häkchen statt owner-only). |
+| **In Studio geblieben** | D4 Verlauf, D34 Passwort/2FA, `/settings` auf Design und Startseite reduziert, `/admin` als Einstieg zu KI-Gateway, Agent Jobs, AI-Prompt und Hardware-Cockpit. |
+| **Ersatzlos entfernt** | D3, D6, D9, D10, D16, D24–D29, D32 sowie die dazugehörigen Komponenten, Libs und API-Routen. |
+
+Zwei Dinge, die beim Umzug mitgezogen werden mussten und sonst still kaputt
+gegangen wären: der **Schedule-Sync** (Backup, Briefing, Mail-Abruf schreiben
+host-lesbare `schedule.json`, die die systemd-Timer lesen) und die
+**SMTP-Zugangsdaten in der DB**, die gegen `.env` gewinnen und ohne eine
+Lösch-Möglichkeit nicht mehr ablösbar gewesen wären.
+
 | # | Gruppe → Bereich | Pfad | Vorschlag | Begründung | Entscheidung |
 |---|---|---|---|---|---|
 | D1 | Übersicht → System-Hub | `/system` | **behalten** — *der* Betriebseinstieg | 512 Zeilen, Tabs: overview/homelab/diagnose/cloudflare | `→ Brain` |

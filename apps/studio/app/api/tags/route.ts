@@ -3,15 +3,21 @@ import { jsonError } from "@/src/lib/api-response";
 import {
   createTagService,
   ENTITY_TAG_ENTITY_TYPE_LABELS,
-  getAppRepository,
   getTagCoverageStats,
   backfillEntityTagsFromJson,
   prisma,
   suggestTagMerges,
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
-import { requireAdminApiAuth } from "@uwe/security";
-import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+
+/**
+ * Tag-Inventar und Tag-Merge einer Welt.
+ *
+ * Lag unter `/api/admin/tags` und war damit owner-only. Tags sind
+ * Inhaltsverschlagwortung, kein Systemzugriff (Notiz Lasse, D30) — die Route
+ * liegt jetzt bei den Inhalts-APIs und verlangt das Studio-Häkchen.
+ */
 
 function parseTagsInput(value: unknown): string[] {
   if (typeof value !== "string") return [];
@@ -22,11 +28,7 @@ function parseTagsInput(value: unknown): string[] {
 }
 
 export async function GET(request: Request) {
-  const context = await resolveStudioApiAuthContext(request);
-  const authError = requireAdminApiAuth(request, context, {
-    rateLimit: "setup",
-    requiredScopes: ["admin_read"],
-  });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
@@ -39,9 +41,6 @@ export async function GET(request: Request) {
   const similar = tags.findSimilarGroups(inventory);
   const coverage = await getTagCoverageStats(prisma, brainPrisma, worldId ? { worldId } : {});
 
-  const repo = getAppRepository();
-  const worlds = await repo.listWorlds();
-
   return NextResponse.json({
     inventory,
     suggestions,
@@ -49,20 +48,11 @@ export async function GET(request: Request) {
     similar,
     coverage,
     entityTypeLabels: ENTITY_TAG_ENTITY_TYPE_LABELS,
-    worlds: worlds.map((world) => ({
-      id: world.id,
-      name: world.name,
-      slug: world.slug,
-    })),
   });
 }
 
 export async function POST(request: Request) {
-  const context = await resolveStudioApiAuthContext(request);
-  const authError = requireAdminApiAuth(request, context, {
-    rateLimit: "setup",
-    requiredScopes: ["admin_write"],
-  });
+  const authError = await guardStudioApiMutation(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const body = (await request.json()) as {

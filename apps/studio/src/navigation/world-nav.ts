@@ -216,6 +216,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "unverlinkt",
           "wiki",
         ]),
+        item("world-tags", "Tags", `${base}/tags`, "tags", "Freigabe & Betrieb", [
+          "tags",
+          "schlagworte",
+          "aufräumen",
+          "zusammenführen",
+        ]),
         item("world-backup", "Backup", `${base}/backup`, "database-backup", "Freigabe & Betrieb", [
           "backup",
           "sicherung",

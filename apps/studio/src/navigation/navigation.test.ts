@@ -85,12 +85,12 @@ describe("studio navigation", () => {
 
   it("resolves active state for nested routes", () => {
     // Studio's admin routes moved to Brain and the Command Center (Abschnitt D);
-    // the tag manager is the remaining route with a nested path.
-    const sidebar = studioSidebar("/admin/tags/orte");
-    const tagsActive = sidebar
+    // the agent-jobs view is the remaining route with a nested path.
+    const sidebar = studioSidebar("/admin/agent-jobs/run-1");
+    const jobsActive = sidebar
       .flatMap((group) => group.items)
-      .some((item) => item.id === "system-tags" && item.active);
-    assert.ok(tagsActive);
+      .some((item) => item.id === "tools-agent-jobs" && item.active);
+    assert.ok(jobsActive);
   });
 
   it("builds command palette entries from the IA", () => {
