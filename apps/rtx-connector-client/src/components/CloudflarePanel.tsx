@@ -71,7 +71,7 @@ export function CloudflarePanel() {
       {!hasToken ? (
         <div className="connector-banner connector-banner-error">
           Es ist noch kein Tunnel-Token hinterlegt — ohne Token kann der Connector nicht starten und
-          die öffentlichen Adressen (studio./portal./brain.uweanddragons.org) sind offline.
+          die öffentlichen Adressen (studio./portal./brain.uwe.example) sind offline.
         </div>
       ) : null}
 

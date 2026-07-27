@@ -104,5 +104,5 @@ pnpm build:release
 
 Phases 0–2 shipped in PRs #490–#492. Phase 3–5 work (governance UI, host smoke tests,
 audio stop executor, env message cleanup) continues on `cursor/phase3-5-connector-roadmap-98ef`.
-See `docs/engineering/rtx-connector-review-roadmap.md` for the full checklist and remaining
+See `docs/rtx-connector.md` for the full checklist and remaining
 deferred items (LM Studio executor, bundled image worker, live Worker CI E2E).

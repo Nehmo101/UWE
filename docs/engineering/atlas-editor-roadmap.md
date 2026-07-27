@@ -45,7 +45,7 @@ Aufwand: S/M/L. „Andockpunkt" = wo es in der bestehenden Architektur ansetzt.
 |---|---|---|---|
 | 12 | **Ebenen-Panel** — Terrain/Politik/Routen/Objekte/Labels ein-/ausblenden, Deckkraft, Sperren | M | `LAYER_Z` existiert; UI-Panel + Render-Filter in `drawScene`; View-Mode-Layerset fürs Portal |
 | 13 | **Minimap + Lesezeichen** — Übersichtskarte + gespeicherte Kamera-Positionen | S/M | Offscreen-Downscale der Szene; Bookmarks im Doc-`settings` |
-| 14 | **Werkstatt-Layout** — Werkzeug-Schiene · Canvas · andockbarer Inspector rechts · Asset-Shelf unten; Kontext-Mini-Toolbar am selektierten Objekt | L | `atlas.html`-Chrome-Umbau (Owner-Frage aus Gap-Analyse damit entschieden); Mockup: `docs/design/atlas-redesign/atlas-ui-proposals.html` |
+| 14 | **Werkstatt-Layout** — Werkzeug-Schiene · Canvas · andockbarer Inspector rechts · Asset-Shelf unten; Kontext-Mini-Toolbar am selektierten Objekt | L | `atlas.html`-Chrome-Umbau (Owner-Frage aus Gap-Analyse damit entschieden) |
 
 ## Welle 3e — Spielwert
 

@@ -11,13 +11,13 @@ const CREDENTIALS = { apiToken: "cf-token", zoneId: "zone-1" };
 
 const ACTIVE_CONFIG = normalizeManagedChallengeConfig({
   enabled: true,
-  hostnames: ["studio.uweanddragons.org"],
+  hostnames: ["studio.uwe.example"],
   skipPaths: ["/api/health"],
   action: "managed_challenge",
 });
 
 const EXPECTED_EXPRESSION =
-  '(http.host in {"studio.uweanddragons.org"}) and not (starts_with(http.request.uri.path, "/api/health"))';
+  '(http.host in {"studio.uwe.example"}) and not (starts_with(http.request.uri.path, "/api/health"))';
 
 interface RecordedCall {
   url: string;
@@ -171,7 +171,7 @@ describe("applying the challenge", () => {
         id: "uwe-1",
         ref: MANAGED_CHALLENGE_RULE_REF,
         action: "managed_challenge",
-        expression: '(http.host in {"old.uweanddragons.org"})',
+        expression: '(http.host in {"old.uwe.example"})',
         enabled: true,
       },
     ]);

@@ -1,15 +1,15 @@
 # Cloudflare Tunnel - UWE split-hostname deployment (recommended)
-# Landing: https://uweanddragons.org        -> Landing app (:3103) — public entry + sign-in
-# Studio:  https://studio.uweanddragons.org  -> Studio app (:3000)
-# Portal:  https://portal.uweanddragons.org  -> Portal app (:3001)
-# Brain:   https://brain.uweanddragons.org  -> Brain app  (:3002) — owner-only, opt-in (see below)
+# Landing: https://uwe.example        -> Landing app (:3103) — public entry + sign-in
+# Studio:  https://studio.uwe.example  -> Studio app (:3000)
+# Portal:  https://portal.uwe.example  -> Portal app (:3001)
+# Brain:   https://brain.uwe.example  -> Brain app  (:3002) — owner-only, opt-in (see below)
 #
 # The apex is its own process (apps/landing) so the main domain never serves
 # Studio code. It exposes exactly three routes: `/`, `/api/auth/enter` and
 # `/api/health`; anything else 308-redirects to the Studio host.
 #
 # One sign-in on the apex landing is valid on all subdomains when
-# SESSION_COOKIE_DOMAIN=.uweanddragons.org is set (see .env.production.example).
+# SESSION_COOKIE_DOMAIN=.uwe.example is set (see .env.production.example).
 #
 # Remotely-managed tunnels: apply via Cloudflare Zero Trust dashboard or
 #   CLOUDFLARE_API_TOKEN=... bash deploy/scripts/configure-cloudflare-tunnel.sh
@@ -20,25 +20,25 @@ tunnel: uwe-host
 credentials-file: /etc/cloudflared/uwe-host.json
 
 ingress:
-  - hostname: studio.uweanddragons.org
+  - hostname: studio.uwe.example
     service: http://127.0.0.1:3000
-  - hostname: portal.uweanddragons.org
+  - hostname: portal.uwe.example
     service: http://127.0.0.1:3001
   # Legacy /studio and /portal path bookmarks on the apex — keep these BEFORE the
   # apex catch-all below so they still route to their app. Without these rules the
   # landing app would 308 them to the Studio host, which also works but costs a
   # redirect round-trip.
-  - hostname: uweanddragons.org
+  - hostname: uwe.example
     path: /studio
     service: http://127.0.0.1:3000
-  - hostname: uweanddragons.org
+  - hostname: uwe.example
     path: /portal
     service: http://127.0.0.1:3001
   # Apex root = the public landing page in its own app (apps/landing, :3103).
   # Its /api/auth/enter signs the visitor in (Studio, Portal or Brain target)
   # and, with a domain-wide session cookie, the redirect to studio./portal./brain.
   # stays logged in.
-  - hostname: uweanddragons.org
+  - hostname: uwe.example
     service: http://127.0.0.1:3103
   # Brain (Daily Admin OS + Personal Brain, :3002) holds the most sensitive data
   # in the installation. Publishing it is a deliberate opt-in, never a default:
@@ -46,6 +46,6 @@ ingress:
   # deploy/scripts/check-cloudflare-tunnel.sh fails on a Brain ingress unless
   # BRAIN_PUBLIC_TUNNEL=1 is set. Enable 2FA on the owner account first.
   # Uncomment only when you mean it:
-  #   - hostname: brain.uweanddragons.org
+  #   - hostname: brain.uwe.example
   #     service: http://127.0.0.1:3002
   - service: http_status:404

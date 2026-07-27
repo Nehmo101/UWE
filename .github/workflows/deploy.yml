@@ -37,7 +37,16 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event.workflow_run.conclusion == 'success'
+    # Harte Absicherung für ein oeffentliches Repository: Der Runner steht im
+    # privaten Heimnetz. Deployt wird ausschliesslich, wenn der CI-Lauf aus
+    # diesem Repository selbst kam (kein Fork), auf dem Standard-Branch lief und
+    # das Repo unter dem erwarteten Owner haengt. Ohne diese Bedingungen koennte
+    # ein fremder workflow_run-Kontext einen Host-Update ausloesen.
+    if: >-
+      github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && github.event.workflow_run.head_branch == github.event.repository.default_branch
+      && github.repository_owner == 'Nehmo101'
     runs-on: [self-hosted, uwe-deploy]
     # The host-update service builds synchronously (Type=oneshot); give it room
     # on a low-RAM host that may swap during the build.

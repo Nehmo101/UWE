@@ -1,4 +1,4 @@
-// Prisma model -> product boundary mapping (148 models). Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §5.
+// Prisma model -> product boundary mapping (148 models). Canonical spec: docs/engineering/domain-contracts.md §5.
 // Kept in sync with schema.prisma by prisma-model-boundaries.sync.test.ts.
 
 import type { DataDomain, PrivacyClass } from "./domain-boundaries";

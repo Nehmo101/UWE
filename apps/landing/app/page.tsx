@@ -35,7 +35,7 @@ export default async function LandingPage() {
   if (user) {
     // Bereits angemeldet: direkt in die passende App statt erneut auswählen zu
     // lassen. Rollenbewusst, weil die Ziele eigene Origins sind — ein Spieler
-    // auf studio.uweanddragons.org liefe sonst in dessen Zugriffssperre.
+    // auf studio.uwe.example liefe sonst in dessen Zugriffssperre.
     redirect(
       canAccessStudio(user)
         ? `${resolveStudioPublicBaseUrl()}${await studioEntryPath()}`

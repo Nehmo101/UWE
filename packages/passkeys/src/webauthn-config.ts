@@ -5,7 +5,7 @@ export interface WebAuthnRelyingParty {
   /**
    * The RP ID a passkey is permanently bound to. In split-hostname
    * deployments this must be the registrable parent domain (e.g.
-   * `uweanddragons.org`) so one passkey works on the `studio.`, `portal.`
+   * `uwe.example`) so one passkey works on the `studio.`, `portal.`
    * and `brain.` subdomains alike.
    */
   rpId: string;

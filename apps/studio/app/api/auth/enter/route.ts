@@ -26,7 +26,7 @@ import {
 } from "@/src/lib/rate-limit";
 
 /**
- * Unified sign-in endpoint for the uweanddragons.org landing page (served from
+ * Unified sign-in endpoint for the uwe.example landing page (served from
  * the Studio/apex origin). Unlike `/api/auth/login` (Studio-only, gates GMs),
  * this authenticates for a chosen target:
  *   - target "studio" → requires Studio access (owner/admin/dm)
@@ -35,7 +35,7 @@ import {
  *                       today served from the Studio origin (its /life-brain
  *                       route enforces owner access server-side)
  * and sets the (optionally domain-wide) session cookie so the visitor is signed
- * in when redirected to studio./portal.uweanddragons.org. Reuses the same
+ * in when redirected to studio./portal.uwe.example. Reuses the same
  * hardened login state machine as the per-app logins (`@uwe/auth`): rate-limit,
  * Turnstile, 2FA, audit logging.
  */

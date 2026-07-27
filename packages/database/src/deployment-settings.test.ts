@@ -22,9 +22,9 @@ describe("deployment settings", () => {
   it("maps strings and tri-state flags to env keys", () => {
     const overrides = buildDeploymentEnvOverrides(
       normalizeDeploymentSettings({
-        publicAppUrl: "https://uweanddragons.org",
-        studioUrl: "https://studio.uweanddragons.org",
-        portalUrl: "https://portal.uweanddragons.org",
+        publicAppUrl: "https://uwe.example",
+        studioUrl: "https://studio.uwe.example",
+        portalUrl: "https://portal.uwe.example",
         studioPath: "/",
         portalPath: "/",
         trustProxy: "on",
@@ -37,9 +37,9 @@ describe("deployment settings", () => {
       }),
     );
 
-    assert.equal(overrides.PUBLIC_BASE_URL, "https://uweanddragons.org");
-    assert.equal(overrides.NEXT_PUBLIC_STUDIO_URL, "https://studio.uweanddragons.org");
-    assert.equal(overrides.NEXT_PUBLIC_PORTAL_URL, "https://portal.uweanddragons.org");
+    assert.equal(overrides.PUBLIC_BASE_URL, "https://uwe.example");
+    assert.equal(overrides.NEXT_PUBLIC_STUDIO_URL, "https://studio.uwe.example");
+    assert.equal(overrides.NEXT_PUBLIC_PORTAL_URL, "https://portal.uwe.example");
     assert.equal(overrides.STUDIO_PATH, "/");
     assert.equal(overrides.PORTAL_PATH, "/");
     assert.equal(overrides.TRUST_PROXY, "true");
@@ -155,12 +155,12 @@ describe("Cloudflare Managed Challenge settings", () => {
   it("normalises lists and collapses an unknown challenge level", () => {
     const settings = normalizeDeploymentSettings({
       managedChallengeEnabled: true,
-      managedChallengeHostnames: [" studio.uweanddragons.org ", "studio.uweanddragons.org", ""],
+      managedChallengeHostnames: [" studio.uwe.example ", "studio.uwe.example", ""],
       managedChallengeSkipPaths: "not-a-list",
       managedChallengeAction: "block",
     });
 
-    assert.deepEqual(settings.managedChallengeHostnames, ["studio.uweanddragons.org"]);
+    assert.deepEqual(settings.managedChallengeHostnames, ["studio.uwe.example"]);
     assert.deepEqual(settings.managedChallengeSkipPaths, []);
     assert.equal(settings.managedChallengeAction, "managed_challenge");
   });

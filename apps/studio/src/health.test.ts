@@ -37,7 +37,7 @@ describe("studio health response shape", () => {
         studioApiTokenConfigured: true,
       },
       proxy: {
-        publicAppUrl: "https://uweandragons.org",
+        publicAppUrl: "https://uwe.example",
         trustProxy: true,
         cloudflareTunnel: true,
         authRequired: true,

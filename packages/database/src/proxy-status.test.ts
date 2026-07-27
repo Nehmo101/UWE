@@ -5,9 +5,9 @@ import { getProxyStatus } from "./system-status";
 describe("proxy status for split-hostname deployments", () => {
   it("reports root paths and cloudflare summary without legacy /studio /portal mounts", () => {
     const proxy = getProxyStatus({
-      PUBLIC_APP_URL: "https://uweanddragons.org",
-      NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
-      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
+      NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
       TRUST_PROXY: "true",
       CLOUDFLARE_TUNNEL: "true",
       AUTH_REQUIRED: "true",
@@ -16,8 +16,8 @@ describe("proxy status for split-hostname deployments", () => {
     assert.equal(proxy.deploymentModel, "split-hostname");
     assert.equal(proxy.studioPath, "/");
     assert.equal(proxy.portalPath, "/");
-    assert.equal(proxy.studioUrl, "https://studio.uweanddragons.org");
-    assert.equal(proxy.portalUrl, "https://uweanddragons.org");
+    assert.equal(proxy.studioUrl, "https://studio.uwe.example");
+    assert.equal(proxy.portalUrl, "https://uwe.example");
     assert.equal(proxy.cloudflare.tunnelConfigured, true);
     assert.equal(proxy.cloudflare.studioOnSeparateHost, true);
     assert.equal(proxy.cloudflare.portalUrlMatchesPublicBase, true);
@@ -28,7 +28,7 @@ describe("proxy status for split-hostname deployments", () => {
 
   it("reports the Turnstile human-check as enabled when both keys are set", () => {
     const proxy = getProxyStatus({
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
       TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
       TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
     });

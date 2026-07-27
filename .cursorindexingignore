@@ -16,5 +16,4 @@ data/
 *.sqlite
 *.sqlite3
 uploads/
-docs/ai-orchestrator-subagents-prompts.md
 docs/ai-brain-mail/

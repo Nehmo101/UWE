@@ -58,7 +58,7 @@ describe("mail compose — player safety", () => {
       worldId: "w1",
       shareLinkId: "sl1",
       targetLabel: "Kampagne Alpha",
-      publicUrl: "https://uweandragons.org/preview/abc",
+      publicUrl: "https://uwe.example/preview/abc",
     });
 
     assert.equal(draft.containsDmOnlyHint, false);

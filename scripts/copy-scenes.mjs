@@ -29,7 +29,7 @@ const SOURCE = path.join(ROOT, "assets", "scenes");
 
 /**
  * Welche Flächen eine App zeigt. Die Landing hat seit der Apex-Trennung eine
- * eigene App (apps/landing, uweanddragons.org). Studio führt sie weiterhin mit,
+ * eigene App (apps/landing, uwe.example). Studio führt sie weiterhin mit,
  * weil `apps/studio/app/page.tsx` ohne getrennte Hostnamen (unified-path bzw.
  * lokale Entwicklung) nach wie vor die Landing rendert.
  */

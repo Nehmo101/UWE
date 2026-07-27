@@ -2,8 +2,8 @@
 #
 # The recommended Cloudflare deployment now uses split hostnames and does not
 # need Caddy/nginx path rewriting:
-#   uweanddragons.org        -> Portal :3001
-#   studio.uweanddragons.org -> Studio :3000
+#   uwe.example        -> Portal :3001
+#   studio.uwe.example -> Studio :3000
 #
 # Keep this file only for installations that deliberately stay on one hostname
 # with /studio/* path routing. New installs should use config.yml.example.

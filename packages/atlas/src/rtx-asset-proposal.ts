@@ -13,9 +13,9 @@ import {
 } from "./rtx-asset-prompt-context";
 
 export const RTX_ATLAS_ASSET_STYLEGUIDE_PATH =
-  "docs/prompts/atlas-pictogram-styleguide.md";
+  "docs/design/atlas-pictogram-styleguide.md";
 export const RTX_ATLAS_ASSET_CATALOG_PATH =
-  "docs/design/atlas-redesign/asset-catalog.md";
+  "docs/design/atlas-asset-catalog.md";
 export const RTX_ATLAS_ASSET_REGISTRY_EXPORT =
   "@uwe/atlas/assets#GOUACHE_ASSETS";
 

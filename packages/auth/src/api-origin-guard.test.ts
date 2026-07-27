@@ -58,13 +58,13 @@ describe("API origin guard", () => {
 
   it("allows trusted split-hostname origins even when sec-fetch-site is cross-site", () => {
     const env = {
-      PUBLIC_APP_URL: "https://uweandragons.org",
-      NEXT_PUBLIC_PORTAL_URL: "https://portal.uweandragons.org",
-      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweandragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
+      NEXT_PUBLIC_PORTAL_URL: "https://portal.uwe.example",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
     };
     const request = makeRequest({
-      origin: "https://studio.uweandragons.org",
-      host: "uweandragons.org",
+      origin: "https://studio.uwe.example",
+      host: "uwe.example",
       "sec-fetch-site": "cross-site",
     });
 

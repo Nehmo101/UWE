@@ -61,7 +61,7 @@ function StudioLoginFormInner({
   const errorParam = searchParams.get("error");
   const forbidden = errorParam === "forbidden";
   const resetSuccess = searchParams.get("reset") === "success";
-  // Optional prefill forwarded from the uweanddragons.org landing page.
+  // Optional prefill forwarded from the uwe.example landing page.
   const prefillEmail = searchParams.get("email") ?? "";
 
   const [email, setEmail] = useState(

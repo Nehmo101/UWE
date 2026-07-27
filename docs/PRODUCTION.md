@@ -208,7 +208,7 @@ Kopieren Sie `.env.example` nach `.env` (Dev) bzw. pflegen Sie `/etc/uwe/uwe.env
 | `NODE_ENV` | Laufzeitmodus | `production` auf dem Host |
 | `RUN_DB_SEED` | Demo-Welt beim Start | `auto` (Erststart), **`false` in Produktion** |
 | `STUDIO_PORT` / `PORTAL_PORT` | Host-Ports | Nach Bedarf; Studio nicht ungeschützt nach außen öffnen |
-| `PUBLIC_APP_URL` | Öffentliche HTTPS-URL | z. B. `https://uweandragons.org` |
+| `PUBLIC_APP_URL` | Öffentliche HTTPS-URL | z. B. `https://uwe.example` |
 | `TRUST_PROXY` | X-Forwarded-* Header vertrauen | `true` hinter Cloudflare/Reverse Proxy |
 | `CLOUDFLARE_TUNNEL` | Cloudflare-Tunnel-Modus | `true` wenn `cloudflared` vor UWE läuft |
 | `STUDIO_PATH` / `PORTAL_PATH` | Subpath-Routing (`/studio`, `/portal`) | Bevorzugt gegenüber vielen Subdomains |
@@ -242,7 +242,7 @@ Empfohlene Host-`.env`:
 
 ```env
 NODE_ENV=production
-PUBLIC_APP_URL=https://uweandragons.org
+PUBLIC_APP_URL=https://uwe.example
 TRUST_PROXY=true
 CLOUDFLARE_TUNNEL=true
 AUTH_REQUIRED=true

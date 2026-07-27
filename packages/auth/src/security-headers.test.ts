@@ -93,7 +93,7 @@ describe("security headers", () => {
 
     const prodHttps = getUweSecurityHeaders({
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweandragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
       SESSION_COOKIE_SECURE: "true",
     });
     assert.equal(prodHttps["Strict-Transport-Security"], undefined);
@@ -112,7 +112,7 @@ describe("security headers", () => {
     assert.equal(
       wantsStrictTransportSecurity({
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweandragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         SESSION_COOKIE_SECURE: "true",
       }),
       true,
@@ -122,7 +122,7 @@ describe("security headers", () => {
   it("sends HSTS only on secure requests (Cloudflare / HTTPS)", () => {
     const env = {
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweandragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
       SESSION_COOKIE_SECURE: "true",
       TRUST_PROXY: "true",
     };
