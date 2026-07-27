@@ -1,6 +1,18 @@
 # Terra — Runde J: UWE-Übernahme, Namen, KI-Vorgenerierung
 
-Planungsstand 27.07.2026. **Nur Planung, nichts umgesetzt.**
+Planungsstand 27.07.2026.
+
+## Entschieden (Eigentümer, 27.07.2026)
+
+1. **Einbettung: Weg A** — Terra bleibt eigenständig und läuft im Frame.
+2. **Alte Atlas-Welten werden verworfen**, nicht übernommen. Die Migration in
+   J2/Schritt 1 entfällt; stattdessen wird vor dem Ausbau ein Backup gezogen und
+   der Verlust im Changelog vermerkt.
+3. **Keine Sichtbarkeit je Karte.** Alles ist spielersichtbar, wie bei Atlas.
+   Das Feld `sichtbarkeit` entfällt, `TerraKarte` wird entsprechend schlanker,
+   und die Contract-Klassifikation bleibt je Modell (kein Zeilenebenen-Problem).
+4. **Reihenfolge und Umfang** liegen bei der Umsetzung — siehe „Umsetzungsplan"
+   am Ende dieses Dokuments.
 
 Diese Runde beantwortet die Frage, wie Terra in UWE landet. Entscheidung des
 Eigentümers: **Terra ersetzt Atlas-3D vollständig.** Terra übernimmt dessen
@@ -84,22 +96,17 @@ Bewusste Unterschiede zu Atlas:
 - **`TerraFassung`**: Atlas hat keine serverseitige Historie — ein
   „Zurücksetzen" ist dort unwiderruflich. Terra bekommt eine, mit Deckel
   (z. B. 20 Fassungen je Karte, älteste fallen raus).
-- **Sichtbarkeit je Karte**: neues Feld `sichtbarkeit` (`dm` | `spieler`).
-  Atlas hatte das nicht (alles war spielersichtbar), und für Kampagnenkarten ist
-  „diese Region kennen die Spieler noch nicht" die häufigste Anforderung.
+- **Keine Sichtbarkeit je Karte** (Entscheidung 3): alles ist spielersichtbar.
+  Damit bleibt die Contract-Klassifikation je Modell, und das Portal filtert
+  nicht — es zeigt den Kartenbaum der Welt.
 
 ## Rechte und Mandanten
 
 Muster von Atlas übernehmen, aber neu geschrieben: dreifacher Guard je Server
 Action — CSRF/Origin, Rolle (owner/admin/dm), Welt-Zugehörigkeit der Karte.
-Portal liest über den Zugriffskontext der Welt und **filtert auf
-`sichtbarkeit: "spieler"`**.
-
-Die Contract-Klassifikation der neuen Modelle: `dnd_world` mit
-`player_visible` für Karten mit Spielersichtbarkeit — aber weil es jetzt beide
-Fälle gibt, braucht es die Trennung auf Zeilenebene, nicht auf Modellebene. Das
-muss mit `packages/product-contracts` abgestimmt werden (dort ist die Klasse
-heute je Modell fest).
+Portal liest über den Zugriffskontext der Welt. Contract-Klassifikation wie bei
+Atlas: `dnd_world` + `player_visible` für alle vier Modelle — einheitlich, weil
+es keine Sichtbarkeitsunterscheidung gibt.
 
 ## Speichern
 
@@ -170,14 +177,11 @@ gewollt und macht den Ausbau sicher.
 
 ## Reihenfolge (wichtig, sonst bricht es)
 
-1. **Migration schreiben, die Daten übernimmt** — nicht löschen, sondern
-   überführen: aus `Atlas3DNode` + `Atlas3DTerrain` + `Atlas3DObject` +
-   `Atlas3DFeature` je eine `TerraKarte` samt `TerraStand`. Was sich nicht
-   sinnvoll abbilden lässt (Carve-Ops am Globus, Weltwurzeln), wird als
-   **Hinweis in der Kartennotiz** vermerkt statt still verschluckt.
-   *Sollte auf die Übernahme verzichtet werden* — also alte Atlas-Welten
-   verwerfen —, muss das eine ausdrückliche Entscheidung sein, keine
-   Nebenwirkung. Vorher Backup ziehen.
+1. **Backup ziehen und den Verlust dokumentieren.** Entschieden ist, alte
+   Atlas-Welten zu **verwerfen** statt zu übernehmen (Entscheidung 2) — es gibt
+   keine Migration. Vor dem Ausbau also ein vollständiges Backup der Datenbank,
+   und im Changelog ein klarer Satz, dass Atlas-Inhalte mit diesem Schritt
+   entfallen. Der Demo-Seed war der einzige bekannte Nutzer.
 2. **Routen umstellen** (J1), Atlas-Seiten bleiben vorerst erreichbar.
 3. **Navigation umhängen**, Beschriftung auf „Karten".
 4. **Atlas-Seiten entfernen**, Verweise entfernen, Tests entfernen.
@@ -494,3 +498,23 @@ davon ab, was die Brain-Untersuchung ergibt.
 
 Zwischen 3 und 4 sollte eine Weile liegen, in der beides erreichbar ist — nicht
 als Dauerzustand, aber lange genug, um im echten Betrieb zu merken, was fehlt.
+
+
+---
+
+# Umsetzungsplan (Reihenfolge und Umfang)
+
+Entschieden am 27.07.2026, Reihenfolge und Zuschnitt liegen bei der Umsetzung.
+
+| Welle | Inhalt | Warum hier |
+|---|---|---|
+| **1** | **I5 Tests** (Determinismus, Format, Invarianten, Shader-Anker, Registry) + **J3 Namen** | Alles Weitere fasst Generatoren an — ohne Tests ist die Determinismus-Zusage nur eine Behauptung. Namen sind unabhängig, klein und Voraussetzung für J4. |
+| **2** | **I3 Erosion** + **I2 Biomflächen** | Erosion liefert das Abflussfeld, das die Biom-Ableitung als Feuchte braucht. |
+| **3** | **I4 Beschriftung** (mit Wiki-Link) | Sichtbarster Gewinn pro Aufwand, unabhängig von I1. |
+| **4** | **I1 Ebenen-Hierarchie** in drei Schritten: Format und Baum → Höhenableitung → **Signaturen-System** | Der große Wurf. Die maßstabsabhängigen Assets sind ausdrücklicher Wunsch und der Teil, der die Hierarchie sichtbar macht. |
+| **5** | **J1 Einbettung** (Frame) + **J2 Atlas ausbauen** | Braucht Welle 4 als Grundlage. |
+| **6** | **J4 KI-Vorgenerierung** | Braucht Namen (Welle 1), den Weltgenerator und einen reparierten Ollama. |
+
+Nicht in den Wellen, aber vorher zu klären (Umgebung, nicht Terra):
+Ollama-Modellpfad reparieren (zeigt auf ein nicht vorhandenes Laufwerk) und die
+repo-weit rote CI.
