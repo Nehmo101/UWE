@@ -10,7 +10,8 @@ import { baueKartenbaum, mitKarte, legeKindkarteAn, pfadZurWurzel, kinderVon,
   erbWerte, loeseFeld, setzeEigen, erbeWieder, massstabName, massstabInfo,
   leseBaumDatei, schreibeBaumDatei, hoehenNachziehen } from '../world/kartenbaum.js';
 import { rebuildAll } from '../core/dirty.js';
-import { pushUndo, verwerfeHistorie } from './history.js';
+import { pushUndo, verwerfeHistorie, historieKarteParken, historieKarteHolen,
+  verwerfeGeparkteHistorien, schritteInHistorie } from './history.js';
 import { rebuildHandles } from './selection.js';
 // F4: der PNG-Export soll in der komponierten Einstellung aufnehmen. Dafuer
 // braucht er den Modusschalter und updateCamera, um die gedaempfte Fahrt in
@@ -25,7 +26,7 @@ import { buildPanel, toast, setzeKartenWege } from '../ui/panels.js';
 import { setzeBrueckenWege, brueckeAktiv } from './bruecke.js';
 // I4: Zielpruefung der Beschriftungen. beschriftung.js haengt nur an three und
 // core/ — der Import ist zyklusfrei und bleibt es, solange das so ist.
-import { zielPruefen } from '../ui/beschriftung.js';
+import { zielPruefen, anPfadPruefen } from '../ui/beschriftung.js';
 /* J4 — KI-Vorgenerierung. welt.js LIEST nur (siehe weltWuerfeln in
    ui/panels.js); welt-vorgabe.js ist reine Rechnung. Das Einsetzen macht
    diese Datei, weil hier Kartengroesse, Biom, Terrain, Historie und Bild
@@ -194,6 +195,19 @@ function pruefeElemente(liste, wo) {
       // Die geprueften Werte ersetzen die eingelesenen — `zielPruefen` raeumt
       // dabei auch auf (art "keins" leert die Referenz).
       e.params = Object.assign({}, e.params, { ziel: zp.ziel });
+    }
+    /* I4 — die Verknuepfung einer gebogenen Beschriftung. Sie ist nur eine
+       Zahl, aber eine aus einer fremden Datei, und wird deshalb genauso
+       behandelt wie `ziel`: eine Stelle, eine Erlaubnisliste (anPfadPruefen in
+       ui/beschriftung.js), Ablehnung beim LADEN und damit atomar.
+       Der geprueften Zahl folgt bewusst KEINE Existenzpruefung — ein Verweis
+       auf ein geloeschtes Element ist der Normalfall, nicht ein Verstoss; er
+       wird zur Laufzeit aufgeloest und die Beschriftung steht dann gerade
+       (siehe kurveAnhaengen in editor/selection.js). */
+    if (e.params && e.params.anPfad !== undefined) {
+      var ap = anPfadPruefen(e.params.anPfad);
+      if (!ap.ok) throw new Error(wo + " " + k + ": anPfad ungültig — " + ap.grund);
+      e.params = Object.assign({}, e.params, { anPfad: ap.wert });
     }
     if (e.seed !== undefined && !Number.isFinite(e.seed)) throw new Error(wo + " " + k + ": seed ungültig");
     if (e.id !== undefined && !Number.isFinite(e.id)) throw new Error(wo + " " + k + ": id ungültig");
@@ -766,15 +780,34 @@ function wechsleZuKarte(id) {
      frische Wiese statt wie sein Elternteil. */
   var erbe = erbWerte(baum, id);
   for (var f in erbe) if (erbe[f] !== undefined && erbe[f] !== null) karte[f] = erbe[f];
-  pushUndo(true);
+  /* Die Historie gehoert zur KARTE — ein Undo ueber einen Kartenwechsel hinweg
+     wuerde Hoehen der einen Karte in die andere schreiben. Bis hierher wurde
+     sie deshalb verworfen; jetzt wird sie geparkt und beim Zurueckkehren
+     wieder aufgenommen (editor/history.js, Abschnitt „Ein Stapel je Karte").
+
+     Die Reihenfolge ist Pflicht, nicht Geschmack:
+       PARKEN vor uebernehmeKarte, weil dort das Hoehenfeld ersetzt wird und
+         eine noch nicht verbuchte Aenderung sonst in der falschen Karte
+         landete — und weil uebernehmeKarte bei abweichender Kartengroesse
+         verwerfeHistorie() ausloest, das den AKTIVEN Stapel leert (der ist
+         dann bereits abgelegt und leer, der Aufruf laeuft ins Leere).
+       HOLEN nach uebernehmeKarte, weil der Schatten aus dem FERTIGEN
+         Hoehenfeld gezogen werden muss.
+
+     Kein pushUndo(true) mehr an dieser Stelle: es legte einen Schnappschuss
+     an, den die naechste Zeile (verwerfeHistorie) sofort wieder wegwarf. Ein
+     Kartenwechsel ist eine Bewegung, kein Bearbeitungsschritt — er gehoert
+     nicht in den Stapel. Die Buchfuehrung, die pushUndo(true) nebenbei
+     erledigte (hoehenNachtragen, frischer Schatten), machen Parken und Holen. */
+  var vonId = S.aktiveKarte;
+  historieKarteParken(vonId);
   S.aktiveKarte = id;
   S.einheitMeter = n.karte.einheitMeter || 1;
   uebernehmeKarte(karte, n);
-  // Die Historie gehoert zur Karte: ein Undo ueber einen Kartenwechsel hinweg
-  // wuerde Hoehen der einen Karte in die andere schreiben.
-  verwerfeHistorie();
+  var zurueck = historieKarteHolen(id);
   buildPanel();
-  toast("Karte: " + n.karte.titel + " · " + massstabName(S.einheitMeter));
+  toast("Karte: " + n.karte.titel + " · " + massstabName(S.einheitMeter)
+    + (zurueck ? " · " + zurueck + " Schritte Historie zurück" : ""));
   return true;
 }
 
@@ -836,6 +869,12 @@ function baumUebernehmen(text) {
   }
   var wurzel = gelesen.baum.index[gelesen.baum.wurzelId];
   var karte = validiereKarteObjekt(wurzel.karte);
+  /* Ein anderer Baum: die geparkten Undo-Stapel gehoeren zu Karten, die es
+     gleich nicht mehr gibt — ihre Kennungen aber schon ("k0" ist die Wurzel
+     jeder Datei). Erst nach der Pruefung, damit eine unlesbare Datei nichts
+     anfasst. Der AKTIVE Stapel bleibt: Strg+Z holt weiterhin den Stand vor
+     dem Laden zurueck. */
+  verwerfeGeparkteHistorien();
   S.baum = gelesen.baum;
   S.aktiveKarte = gelesen.baum.wurzelId;
   S.einheitMeter = wurzel.karte.einheitMeter || 1;
@@ -1199,6 +1238,16 @@ export function initIO() {
     if (KARTEN_GROESSEN.indexOf(n) < 0) n = KARTE.map;
     this.value = String(KARTE.map);
     if (n === KARTE.map) return;
+    /* Der EINE Weg, auf dem eine Historie wirklich verloren geht (der
+       Kartenwechsel parkt sie seit dieser Runde). Deshalb wird hier vorher
+       gefragt und nicht hinterher gemeldet: die gespeicherten Hoehenfelder
+       passen nach dem Wechsel nicht mehr zur Feldgroesse, und das laesst sich
+       nicht heilen — nur ankuendigen. Ohne Stapel keine Rueckfrage; eine
+       Warnung vor einem Verlust, den es nicht gibt, erzieht zum Wegklicken. */
+    if (schritteInHistorie() &&
+        !confirm("Die Kartengröße zu wechseln verwirft die Historie dieser Karte ("
+          + schritteInHistorie() + " Schritte) — die gespeicherten Höhenfelder "
+          + "passen danach nicht mehr zum neuen Raster. Fortfahren?")) return;
     pushUndo(true);              // ersetzt die Hoehen -> Terrainkopie sichern
     setzeKartenGroesse(n);       // Zahlen + Patchraster + Huellen + Wasser
     genBase(S.worldSeed);
@@ -1252,6 +1301,9 @@ export function initIO() {
       }
       // Ab hier ist alles geprüft: Undo-Punkt setzen und in einem Zug übernehmen.
       pushUndo(true);                    // das Laden ersetzt die Hoehen -> Terrainkopie sichern
+      // Gleiche Begruendung wie in baumUebernehmen: die Ablage gehoert zum
+      // alten Baum, ihre Kennungen kaemen im neuen wieder vor.
+      verwerfeGeparkteHistorien();
       S.baum = gelesen.baum;
       S.aktiveKarte = gelesen.baum.wurzelId;
       var wurzelKnoten = gelesen.baum.index[gelesen.baum.wurzelId];

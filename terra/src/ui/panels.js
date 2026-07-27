@@ -15,13 +15,14 @@ import { starteErosion, brichErosionAb, erosionLaeuft, setzeErosionAnzeige }
   from '../editor/erosion-lauf.js';
 // I4: Zielpruefung der Beschriftung. beschriftung.js haengt nur an three und
 // core/ — kein Zyklus.
-import { zielPruefen } from './beschriftung.js';
+import { zielPruefen, anPfadPruefen } from './beschriftung.js';
 // I2: Biom-Ableitung. biomfeld.js haengt nur an core/ — zyklusfrei.
 import { biomeVorschlagen } from '../world/biomfeld.js';
 import { base, abfluss } from '../world/terrain.js';
 import { commit, isHeavy, deleteElement, regenElement, rebuildAll } from '../core/dirty.js';
 import { pushUndo } from '../editor/history.js';
-import { rebuildHandles, clearPreview, getMarkerAuswahl, rebuildMarker } from '../editor/selection.js';
+import { rebuildHandles, clearPreview, getMarkerAuswahl, rebuildMarker,
+  beschriftungenAktualisieren } from '../editor/selection.js';
 // F4: der Aufnahme-Modus ist ein Kamerazustand, kein Werkzeug — die Leiste
 // zeigt ihn trotzdem an, weil sie der einzige Ort ist, an dem ein Zustand mit
 // Tastenkuerzel sichtbar wird. Zyklusfrei: camera.js importiert nichts aus ui/.
@@ -346,6 +347,11 @@ function baueBiomAbschnitt() {
   var vorhandene = S.elements.filter(function (e) {
     return e.kind === "flaeche" && e.variant === "biom";
   });
+  // I2: Pinselstriche sind die zweite Quelle derselben Maske und gehoeren
+  // deshalb in dieselbe Bilanz — sonst zaehlt das Panel die halbe Karte.
+  var striche = S.elements.filter(function (e) {
+    return e.kind === "pfad" && e.variant === "biompinsel";
+  });
 
   for (var i = 0; i < KLIMA_PARAMS.length; i++) {
     // Wie bei der Erosion: die Regler wirken erst beim naechsten Vorschlag.
@@ -382,9 +388,12 @@ function baueBiomAbschnitt() {
   });
   panelEl.appendChild(knopf);
   panelEl.appendChild(el("div", "psub",
-    vorhandene.length
-      ? vorhandene.length + " Biomflächen auf der Karte. Ein neuer Vorschlag "
-        + "ersetzt nur die vorgeschlagenen, nicht die selbst gezeichneten."
+    vorhandene.length || striche.length
+      ? vorhandene.length + " Biomflächen"
+        + (striche.length ? " und " + striche.length + " Pinselstriche" : "")
+        + " auf der Karte. Ein neuer Vorschlag "
+        + "ersetzt nur die vorgeschlagenen, nicht die selbst gezeichneten "
+        + "und keinen Pinselstrich."
       : "Leitet aus Höhe, Hang, Wassernähe und — falls erodiert wurde — dem "
         + "Abfluss einen Vorschlag ab. Das Ergebnis sind Elemente, keine Maske: "
         + "jede Fläche lässt sich danach ziehen, umfärben oder löschen."));
@@ -452,6 +461,87 @@ function baueZielZeile(obj, applyFn) {
     "Ein Klick auf die Beschriftung öffnet das Ziel in einem neuen Fenster. "
     + "Zugelassen sind nur http- und https-Adressen — geteilte Karten sollen "
     + "keinen Schadklick mitbringen. Im Aufnahme-Modus ist der Klick aus."));
+}
+
+/* ==========================================================================
+   Zeile „Entlang eines Pfades" (I4, eingehaengt in dieser Runde)
+
+   `glyphenAufKurve` konnte seit I4 Text auf eine Kurve setzen, aber es gab
+   keinen Weg, eine Beschriftung mit einer Kurve zu VERKNUEPFEN. Der ist hier:
+   ein Auswahlfeld mit allen Pfaden der Karte. Es steht — wie die Zielzeile —
+   ausserhalb des Parameterschemas, aber aus einem anderen Grund: `anPfad` ist
+   zwar ein Skalar, seine Auswahlliste entsteht aber erst zur Laufzeit aus der
+   Elementliste. Ein Schemaeintrag mit `o:` waere beim Modulstart ausgewertet
+   und zeigte fuer immer die Pfade der leeren Startkarte.
+
+   Nur an einem GEWAEHLTEN Element: eine Verknuepfung gehoert zu genau einer
+   Beschriftung und ist keine Werkzeugeinstellung, die man voreinstellt —
+   dieselbe Begruendung wie bei der Namenszeile.
+   ========================================================================== */
+function pfadBeschreibung(e) {
+  var art = { strasse: "Straße", mauer: "Mauer", fluss: "Fluss", hecke: "Hecke",
+    bruch: "Bruchkante", biompinsel: "Biompinsel" }[e.variant] || e.variant;
+  var name = e.params && e.params.name;
+  return (name ? name + " (" + art + ")" : art + " #" + e.id)
+    + " · " + e.points.length + " Punkte";
+}
+
+function baueAnPfadZeile(target, applyFn) {
+  var row = el("div", "row");
+  var lab = el("label");
+  lab.appendChild(el("span", null, "Entlang eines Pfades"));
+  row.appendChild(lab);
+
+  var sel = el("select");
+  var keins = el("option", null, "gerade setzen");
+  keins.value = "0";
+  sel.appendChild(keins);
+  var kandidaten = S.elements.filter(function (e) {
+    // Der Biompinsel steht bewusst mit in der Liste: er ist ein Pfad wie jeder
+    // andere, und „Moorgürtel" entlang des gepinselten Streifens ist genau
+    // die Beschriftung, die man dort haben will.
+    return e.kind === "pfad" && e.points && e.points.length >= 2;
+  });
+  for (var i = 0; i < kandidaten.length; i++) {
+    var op = el("option", null, pfadBeschreibung(kandidaten[i]));
+    op.value = String(kandidaten[i].id);
+    sel.appendChild(op);
+  }
+  var jetzt = Number.isFinite(target.params.anPfad) ? target.params.anPfad | 0 : 0;
+  /* Verwaister Verweis: das verknuepfte Element ist geloescht. Er wird
+     ANGEZEIGT statt still gelaeutert — wer ihn sieht, weiss, warum die
+     Beschriftung wieder gerade steht, und ein Rueckgaengig holt das Element
+     mitsamt seiner id zurueck. Erst ein Griff ins Feld raeumt ihn weg. */
+  if (jetzt && !kandidaten.some(function (e) { return e.id === jetzt; })) {
+    var tot = el("option", null, "Element #" + jetzt + " — gelöscht");
+    tot.value = String(jetzt);
+    sel.appendChild(tot);
+  }
+  sel.value = String(jetzt);
+  row.appendChild(sel);
+
+  sel.addEventListener("change", function () {
+    var pruef = anPfadPruefen(parseInt(sel.value, 10) || 0);
+    if (!pruef.ok) { toast("Verknüpfung abgelehnt: " + pruef.grund); return; }
+    applyFn(true);
+    if (pruef.wert) target.params.anPfad = pruef.wert;
+    else delete target.params.anPfad;      // „gerade" ist die Abwesenheit des Feldes
+    applyFn();
+    // Sofort statt erst beim naechsten Takt der Bildschleife: der Nutzer soll
+    // die Wirkung seiner Auswahl im selben Augenblick sehen.
+    beschriftungenAktualisieren();
+    buildPanel();
+  });
+
+  panelEl.appendChild(row);
+  panelEl.appendChild(el("div", "psub",
+    kandidaten.length
+      ? "Die Beschriftung läuft dann dem gewählten Pfad entlang statt gerade zu "
+        + "stehen. Ihr Griff bestimmt, WO auf dem Pfad sie sitzt — ziehen "
+        + "verschiebt sie den Fluss hinauf oder hinab. Trägt der Pfad den Text "
+        + "nicht (zu kurz, zu enge Biegung, Kopfstand), steht sie gerade."
+      : "Noch kein Pfad auf der Karte. Straße, Fluss, Mauer, Hecke, Bruchkante "
+        + "oder Biompinsel zeichnen — danach kann eine Beschriftung ihm folgen."));
 }
 
 /* ==========================================================================
@@ -855,6 +945,9 @@ function buildPanel() {
 
   // I4: Klickziel der Beschriftung — von Hand, weil {art, ref} kein Skalar ist.
   if (kind === "marker" && variant === "beschriftung") baueZielZeile(obj, applyFn);
+  // I4: Verknuepfung mit einem Pfad — von Hand, weil die Auswahlliste aus der
+  // Elementliste kommt und erst zur Laufzeit feststeht.
+  if (target && kind === "marker" && variant === "beschriftung") baueAnPfadZeile(target, applyFn);
 
   if (target) {
     panelEl.appendChild(el("hr"));
@@ -901,6 +994,14 @@ function buildPanel() {
       "Steigungen kosten (über 40° praktisch gesperrt), Wasserquerungen sind teuer " +
       "und bekommen von selbst eine Brücke, vorhandene Wege sind billig, Wege bündeln " +
       "sich also. Esc bricht ab."));
+  } else if (kind === "pfad" && variant === "biompinsel") {
+    // I2: eigener Text, weil der Pinsel als einzige Pfadvariante nicht
+    // geklickt, sondern gezogen wird.
+    panelEl.appendChild(el("div", "psub",
+      "Ziehen trägt das gewählte Biom im Kreis auf — für die Nachbearbeitung "
+      + "gezeichneter Biomflächen. Der Strich bleibt ein Element: Punkte ziehen, "
+      + "Biom umstellen, löschen, rückgängig machen, alles wie gewohnt. Die Farbe "
+      + "erscheint beim Loslassen."));
   } else if (kind === "pfad" || kind === "flaeche") {
     panelEl.appendChild(el("div", "psub", "Klicken setzt Punkte, Doppelklick oder Enter schließt ab, " +
       "Esc bricht ab."));
@@ -1007,6 +1108,11 @@ function updateHint() {
   var txt;
   if (ed.draw) txt = "<b>" + ed.draw.points.length + (ed.draw.points.length === 1 ? " Punkt" : " Punkte") +
     "</b> — Doppelklick oder <b>Enter</b> beendet, <b>Esc</b> bricht ab";
+  // I2: der Biompinsel ist eine Pfadvariante, aber keine Zeichnung — sein
+  // Zweig steht deshalb VOR dem allgemeinen Pfadtext.
+  else if (ed.tool === "pfad" && ed.variantOf.pfad === "biompinsel")
+    txt = "<b>Ziehen</b> trägt das Biom „" + (toolParams["pfad:biompinsel"] || {}).biom
+      + "“ im Kreis auf · Radius und Biom im Panel rechts";
   else if (ed.tool === "pfad") txt = "<b>Pfad</b> zeichnen: klicken, Doppelklick beendet";
   else if (ed.tool === "flaeche") txt = "<b>Fläche</b> zeichnen: klicken, Doppelklick schließt das Polygon";
   else if (ed.tool === "objekt") txt = "<b>Klicken</b> platziert, <b>Ziehen</b> streut";

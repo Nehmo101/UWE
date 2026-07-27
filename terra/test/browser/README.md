@@ -68,6 +68,29 @@ Drei Läufe:
 
 Stand 27.07.2026: **20/20 grün**, 0 Seitenfehler in allen drei Läufen.
 
+## `runde-h-bedienung.mjs` — 32 Schritte
+
+Deckt die drei Bedienungsstücke der Runde H ab, die `node --test` nicht sieht,
+weil genau ihre Module dort durch Ersatzmodule getauscht sind:
+
+1. **Biompinsel** (`pfad:biompinsel`) — Variante im Panel, Ring am Zeiger,
+   Ziehen legt ein Element an, die abgeleitete Biommaske trägt danach sein
+   Biom (und nur dort), Strg+Z/Strg+Y nehmen den Strich zurück und wieder her.
+2. **Gebogene Beschriftung** — das Auswahlfeld „Entlang eines Pfades", die
+   Verknüpfung über `params.anPfad`, das flach liegende Quad in der Szene und
+   der Rückfall auf das gerade Sprite, wenn das verknüpfte Element gelöscht
+   wird.
+3. **Historie über einen Kartenwechsel** — ein Schritt auf der Wurzelkarte,
+   Ausschnitt zeichnen, in die Kindkarte springen (dort leerer Stapel, ein
+   Stapel in der Ablage), über die Brotkrume zurück, und der Schritt lässt
+   sich immer noch rückgängig machen.
+
+Der Ausschnitt fragt per `prompt` nach einem Titel — das Skript beantwortet
+Dialoge deshalb selbst (`page.on('dialog', …)`); ohne das legt Playwright auf
+und es entsteht keine Kindkarte.
+
+Stand 28.07.2026: **32/32 grün**, 0 Konsolenwarnungen, 0 Seitenfehler.
+
 ## Was auch das nicht leistet
 
 WebGL läuft hier über SwiftShader, also in Software — rund ein Bild je

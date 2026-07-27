@@ -7,7 +7,7 @@ import { applyBrush, baseHeightAt, setFlattenTarget, heightAt } from '../world/t
 import { cam, groundPoint, rayFrom, rayPlane, autoPitch,
   setAufnahme, istAufnahme, aufnahmeAufMotiv } from './camera.js';
 import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOOLS,
-  auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel }
+  pinselRadius, auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel }
   from './tools.js';
 import { handles, rebuildHandles, updateHandlePositions, setPreview, clearPreview, updateBrushRing,
   brushRing, pickElement, select, auswahlUmschalten, naechstesSegment, aktiverGriff,
@@ -117,6 +117,29 @@ export function initPointer(cv) {
       applyBrush(p, ed.variantOf.terrain, curParams().radius, curParams().staerke, 1 / 60);
       return;
     }
+    /* I2 — Biompinsel. Er ist eine PFADVARIANTE, wird aber wie der
+       Terrainpinsel bedient: druecken, ziehen, loslassen. Der Zweig steht
+       deshalb hier oben bei den Zieh-Werkzeugen und nicht unten bei der
+       Klick-für-Klick-Zeichnung des Pfadwerkzeugs — die Punkte kommen aus dem
+       Zug, nicht aus einzelnen Klicks.
+
+       Kein snapPt: ein Pinselstrich hat keine Stuetzpunkte, die auf ein Raster
+       gehoerten; das Raster taktete nur die Tupfer und liesse eine gerade
+       gezogene Linie stufig werden. */
+    if (ed.tool === "pfad" && ed.variantOf.pfad === "biompinsel") {
+      // Umschalten mitten in einer Pfadzeichnung: die halbe Linie darf nicht
+      // als Vorschau stehenbleiben, waehrend der Pinsel malt.
+      if (ed.draw) cancelDraw();
+      ptr.mode = "biompinsel";
+      pushUndo();
+      var bp = mkElement("pfad", "biompinsel", [{ x: p.x, z: p.z }],
+        copyParams(curParams()), nextSeed());
+      S.elements.push(bp);
+      ptr.pinselEl = bp;
+      ptr.lastX = p.x; ptr.lastZ = p.z;
+      setPreview(bp.points, null, false);
+      return;
+    }
     if (ed.tool === "objekt") {
       ptr.mode = "scatter";
       pushUndo();
@@ -213,6 +236,26 @@ export function initPointer(cv) {
       return;
     }
     if (wasMode === "scatter") { ptr.scatterEl = null; return; }
+    /* I2 — Der Strich ist fertig: EIN schwerer Commit. Waehrend des Zugs
+       laeuft bewusst keiner. Ein Commit stempelt die Biommaske komplett neu,
+       rechnet Hoehen, AO und Gitterfarben im Einflussbereich nach und erzeugt
+       alle Elemente neu — das je Zeigerschritt zu tun hiesse, dieselbe Arbeit
+       dreissigmal je Sekunde zu leisten. Waehrend des Zugs zeigen Ring und
+       Vorschaulinie, was gemalt wird; die Farbe kommt beim Loslassen. Genau
+       die Aufteilung, die auch die Wegsuche und die Regler im Panel benutzen. */
+    if (wasMode === "biompinsel") {
+      var bel = ptr.pinselEl;
+      ptr.pinselEl = null;
+      clearPreview();
+      if (bel) {
+        commit(bel, true);
+        select(bel);
+        toast("Biom „" + (bel.params.biom || "?") + "“ aufgetragen ("
+          + bel.points.length + (bel.points.length === 1 ? " Punkt" : " Punkte")
+          + ") — Radius und Biom im Panel rechts");
+      }
+      return;
+    }
     if (wasMode === "pan" || wasMode === "orbit" || wasMode === "done") return;
     if (e.button !== 0 || dragged) return;
 
@@ -490,6 +533,23 @@ function verarbeiteZeiger(now) {
     updateBrushRing(p, curParams().radius);
     return;
   }
+  /* I2 — Biompinsel im Zug. Aufgebaut wie der Streuzweig darunter: ein neuer
+     Stuetzpunkt erst ab einem Mindestabstand, sonst sammelte ein Zittern
+     hundert Punkte auf derselben Stelle. Der halbe Radius ist genau der
+     Tupferabstand, den die Ableitung benutzt (pinselTupfer in core/dirty.js) —
+     feiner aufzuzeichnen braechte nichts, weil sie ohnehin auf der Kurve
+     zwischen den Stuetzpunkten nachsampelt. Das haelt auch das Element klein:
+     ein langer Strich sind ein paar Dutzend Punkte, nicht ein paar hundert. */
+  if (ptr.mode === "biompinsel" && p && ptr.pinselEl) {
+    var pr = ptr.pinselEl.params.radius || 12;
+    updateBrushRing(p, pr);
+    if (Math.hypot(p.x - ptr.lastX, p.z - ptr.lastZ) > Math.max(1.5, pr * 0.5)) {
+      ptr.pinselEl.points.push({ x: p.x, z: p.z });
+      ptr.lastX = p.x; ptr.lastZ = p.z;
+      setPreview(ptr.pinselEl.points, null, false);
+    }
+    return;
+  }
   /* H4.2: Zugpunkt ziehen. Eigener Zweig VOR dem Bodengriff-Zweig, weil er
      keinen Bodenpunkt braucht (und oben am Stamm auch keinen bekommt):
      ohne Shift schneidet der Mausstrahl eine WAAGERECHTE Ebene auf
@@ -548,7 +608,10 @@ function verarbeiteZeiger(now) {
     }
     return;
   }
-  if (ed.tool === "terrain") updateBrushRing(p, curParams().radius);
+  // I2: den Ring zeigt jedes Werkzeug, das im Kreis malt — Terrain und
+  // Biompinsel. Die Frage beantwortet pinselRadius (editor/tools.js).
+  var pinR = pinselRadius();
+  if (pinR) updateBrushRing(p, pinR);
   else brushRing.visible = false;
   if (ed.draw && p) setPreview(ed.draw.points, snapPt(p), ed.draw.kind === "flaeche");
   /* A2 — Gummiband der Wegsuche: die GERADE Verbindung Start–Maus, nicht der

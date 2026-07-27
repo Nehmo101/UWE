@@ -48,12 +48,83 @@ function beschriftungenAktualisieren() {
     if (!p) continue;
     var pr = e.params || {};
     if (!pr.text) continue;                 // ohne Text gibt es nichts zu zeichnen
-    quellen.push({
+    var q = {
       id: e.id, text: pr.text, klasse: pr.klasse, groesse: pr.groesse,
       ziel: pr.ziel, x: p.x, y: heightAt(p.x, p.z) + 2.2, z: p.z
-    });
+    };
+    kurveAnhaengen(q, pr.anPfad, p);
+    quellen.push(q);
   }
   holeBeschriftungsschicht().abgleichen(quellen);
+}
+
+/* ==========================================================================
+   Die Kurve einer verknuepften Beschriftung (I4, eingehaengt in dieser Runde)
+
+   `params.anPfad` traegt die `el.id` des Elements, an dem die Beschriftung
+   entlanglaufen soll. Hier wird der Verweis aufgeloest — und zwar bei JEDEM
+   Abgleich neu (fuenfmal je Sekunde aus main.js), nicht einmalig gemerkt. Das
+   ist die ganze Antwort auf „was passiert, wenn das Element geloescht wird":
+
+     Element weg  ->  indexOf findet nichts  ->  kein `pfad` in der Quelle
+                  ->  die Schicht baut ein gewoehnliches Sprite.
+
+   Die Beschriftung bleibt also stehen, wo sie steht, und richtet sich wieder
+   gerade auf. Kein Aufraeumen beim Loeschen, keine Rueckverweisliste, kein
+   Zustand, der veralten koennte — dieselbe Haltung wie bei `ed.auswahl`
+   (siehe Konvention in editor/tools.js): jeder LESER filtert, statt sich auf
+   fremdes Aufraeumen zu verlassen. Wird dasselbe Element rueckgaengig wieder
+   hergestellt, traegt es seine alte id (store.js hydrate) und die Verknuepfung
+   lebt von selbst wieder auf.
+
+   WELCHE ELEMENTE. Bis auf Weiteres nur `pfad` — dort IST die Punktfolge die
+   Kurve, und pathSamples liefert genau die Catmull-Rom-Linie, die auch
+   gezeichnet wird. Offen (im Bericht genannt): der Rand einer Flaeche (ein
+   geschlossener Ring braucht einen Anfang und eine Laufrichtung) und der Grat
+   eines Gebirges (den gibt es als Datenstruktur noch gar nicht).
+   ========================================================================== */
+
+/** Kurze, stabile Signatur der Stuetzpunkte — der Schluessel, an dem die
+ *  Beschriftungsschicht erkennt, dass der Pfad sich bewegt hat. Aus den
+ *  PUNKTEN, nicht aus den Samples: das sind wenige Zahlen statt hunderter. */
+function pfadSignatur(el) {
+  var s = String(el.id) + ":";
+  for (var i = 0; i < el.points.length; i++) {
+    s += Math.round(el.points[i].x * 10) + "," + Math.round(el.points[i].z * 10) + ";";
+  }
+  return s;
+}
+
+/** Element mit dieser id — oder null. Lineare Suche ueber die Elementliste:
+ *  eine Karte traegt Hunderte, keine Zehntausende, und ein zweiter Index
+ *  waere ein Zustand, der beim Loeschen veralten kann. */
+function elementMitId(id) {
+  for (var i = 0; i < S.elements.length; i++) if (S.elements[i].id === id) return S.elements[i];
+  return null;
+}
+
+function kurveAnhaengen(q, anPfad, anker) {
+  if (!Number.isFinite(anPfad) || anPfad <= 0) return;
+  if (anPfad === q.id) return;                       // nicht an sich selbst
+  var el = elementMitId(anPfad | 0);
+  if (!el || el.kind !== "pfad" || !el.points || el.points.length < 2) return;
+  var sm = pathSamples(el.points, 2.0);
+  if (sm.length < 2) return;
+  var pfad = [], i;
+  for (i = 0; i < sm.length; i++) pfad.push({ x: sm[i].x, z: sm[i].z });
+  /* Wo auf dem Pfad die Zeile sitzt, sagt der ANKERPUNKT der Beschriftung:
+     der naechstgelegene Samplepunkt gibt seine Bogenlaenge her. Damit behaelt
+     der Griff der Beschriftung auch im gebogenen Fall seine Bedeutung — man
+     schiebt ihn den Fluss entlang, und die Schrift wandert mit. */
+  var best = 0, bd = Infinity;
+  for (i = 0; i < sm.length; i++) {
+    var dx = sm[i].x - anker.x, dz = sm[i].z - anker.z;
+    var d = dx * dx + dz * dz;
+    if (d < bd) { bd = d; best = i; }
+  }
+  q.pfad = pfad;
+  q.pfadStempel = pfadSignatur(el);
+  q.lage = sm.len > 0 ? clamp(sm[best].s / sm.len, 0, 1) : 0.5;
 }
 
 var previewGeo = new THREE.BufferGeometry();

@@ -32,6 +32,10 @@ function genElement(el) {
     // faellt durch alle else-if hindurch und erzeugt schlicht nichts, statt
     // abzustuerzen. Das Speicherformat bleibt damit abwaertskompatibel.
     else if (el.variant === "bruch") genBruch(el);
+    /* I2: „biompinsel" steht hier bewusst NICHT. Der Strich erzeugt keine
+       einzige Instanz und kein Mesh — seine ganze Wirkung ist die abgeleitete
+       Biommaske (siehe biomQuellen weiter unten), genau wie bei der
+       Biomflaeche, die in genFlaeche ebenfalls durch alle Zweige faellt. */
   } else if (el.kind === "flaeche") genFlaeche(el);
   else if (el.kind === "objekt") genObjekt(el);
   else if (el.kind === "ranke") genRanke(el);
@@ -144,6 +148,99 @@ function rebuildCorridors() {
   }
 }
 
+/* ==========================================================================
+   I2 — Der Biompinsel als Quelle des Biomfelds
+
+   Der Pinselstrich ist ein ganz gewoehnliches Pfadelement
+   ({kind:"pfad", variant:"biompinsel", points, params:{biom, radius, weich}}).
+   Gezeichnet wird er wie der Terrainpinsel (ziehen), gespeichert wie die
+   Bruchkante (als Element) und beim Laden nachgestempelt — dieselbe Logik,
+   nur dass er nicht ins Hoehenfeld stempelt, sondern in die Biommaske.
+
+   DAS VERFAHREN. world/biomfeld.js kennt genau eine Quelle: ein Polygon mit
+   {points, params:{biom, weich}}. Es kennt keinen Pinsel und soll auch keinen
+   kennen — dort steht die Rasterung, die Distanztransformation und die
+   Ausfransung, und die sind fuer JEDE Flaeche dieselben. Deshalb wird der
+   Strich HIER in Kreisflaechen uebersetzt: eine je Tupfer entlang der Kurve.
+   Der Pinsel bekommt damit ohne eine einzige neue Zeile in biomfeld.js
+   denselben weichen Rand, dieselbe gebrochene Grenze und dieselbe
+   Ueberlagerungsregel wie eine gezeichnete Biomflaeche.
+
+   Der Preis ist der Aufwand: `stempleFlaeche` laeuft je Tupfer einmal (zwei
+   Chamfer-Durchgaenge ueber die Tupferbox, rund 40x40 Zellen bei Radius 12).
+   Deshalb die beiden Deckel unten — der Tupferabstand ist ein halber Radius
+   (die Ueberlappung laesst die Kette rund erscheinen, die Einbuchtung zwischen
+   zwei Tupfern liegt bei 3 % des Radius), und ein einzelner Strich liefert nie
+   mehr als BIOM_TUPFER_MAX Tupfer; ein sehr langer Strich wird gestreckt statt
+   teuer.
+   ========================================================================== */
+var BIOM_TUPFER_MAX = 320;
+var BIOM_KREIS_ECKEN = 16;
+
+/** Kreispolygon um (x,z). Feste Eckenzahl: die Ausfransung in biomfeld.js
+ *  bricht die Kante ohnehin staerker, als 16 Ecken sie eckig machen. */
+function kreisPolygon(x, z, r) {
+  var pts = [];
+  for (var i = 0; i < BIOM_KREIS_ECKEN; i++) {
+    var a = i / BIOM_KREIS_ECKEN * Math.PI * 2;
+    pts.push({ x: x + Math.cos(a) * r, z: z + Math.sin(a) * r });
+  }
+  return pts;
+}
+
+/** Radius eines Pinselstrichs — geklemmt wie das Schema in editor/tools.js. */
+function pinselRadiusVon(el) {
+  var r = el.params && el.params.radius;
+  return (typeof r === "number" && isFinite(r) && r > 0.5) ? r : 12;
+}
+
+/**
+ * Die Quellen der Biomableitung in Zeichenreihenfolge: Biomflaechen gehen
+ * unveraendert durch, Pinselstriche werden in Kreisflaechen aufgeloest.
+ * Die Reihenfolge ist bedeutungstragend (spaeter gezeichnet gewinnt im Kern,
+ * siehe Ueberlagerungsregel in world/biomfeld.js) und bleibt deshalb exakt
+ * die der Elementliste.
+ */
+function biomQuellen() {
+  var out = [], i, k;
+  for (i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind === "flaeche" && el.variant === "biom") { out.push(el); continue; }
+    if (el.kind !== "pfad" || el.variant !== "biompinsel") continue;
+    if (!el.points || !el.points.length) continue;
+    var p = el.params || {};
+    var r = pinselRadiusVon(el);
+    var mitten = pinselTupfer(el, r);
+    for (k = 0; k < mitten.length; k++) {
+      // Ohne kind/variant: biomfeldBauen laesst genau solche schlichten
+      // Quellen durch (es prueft beide Felder nur, WENN sie da sind).
+      out.push({ points: kreisPolygon(mitten[k].x, mitten[k].z, r),
+        params: { biom: p.biom, weich: p.weich } });
+    }
+  }
+  return out;
+}
+
+/** Tupfermitten eines Strichs: entlang DERSELBEN Kurve, die elementBox
+ *  vermisst (pathSamples), damit die Einflussbox nie zu klein ausfaellt. */
+function pinselTupfer(el, r) {
+  var schritt = Math.max(1, r * 0.5);
+  if (el.points.length < 2) return [{ x: el.points[0].x, z: el.points[0].z }];
+  var sm = pathSamples(el.points, schritt);
+  if (!sm.length) return [{ x: el.points[0].x, z: el.points[0].z }];
+  // Deckel: bei einem sehr langen Strich wird der Abstand gestreckt statt die
+  // Rechnung teuer. Sichtbar wird das erst, wenn die Tupfer sich nicht mehr
+  // ueberlappen — bei 320 Tupfern und Radius 12 waere der Strich 1920
+  // Einheiten lang, also fast acht Mal ueber eine 256er Karte.
+  var jeder = Math.ceil(sm.length / BIOM_TUPFER_MAX);
+  var out = [];
+  for (var i = 0; i < sm.length; i += jeder) out.push({ x: sm[i].x, z: sm[i].z });
+  var letzt = sm[sm.length - 1];
+  var l = out[out.length - 1];
+  if (l.x !== letzt.x || l.z !== letzt.z) out.push({ x: letzt.x, z: letzt.z });
+  return out;
+}
+
 /* --- Bereichsbeschraenkte Terrain-Updates (D3) --------------------------
    Ein schwerer Commit eines EINZELNEN Elements muss das Terrain nur dort
    neu berechnen, wo dieses Element es beeinflussen kann. Die Stempel-
@@ -167,6 +264,11 @@ function stempelRadius(el) {
     // hier darf nichts nachgerechnet werden, sonst wird die Box zu klein und
     // es bleiben Reste der alten Klippe stehen.
     if (el.variant === "bruch") return bruchMasse(p).reichweite;
+    /* I2 — Biompinsel: Tupferradius plus die Ausfransung der Biomkante.
+       Der Aufschlag ist wortgleich der der Biomflaeche weiter unten
+       (randZugabe() in world/biomfeld.js) — wandert dort eine Zahl, muss sie
+       an BEIDEN Stellen mitwandern. */
+    if (el.variant === "biompinsel") return pinselRadiusVon(el) + (p.weich || 8) * 1.03 + 2;
   }
   // Viertel-Gassen stempeln mit gasse*0.5+1.2, per inPoly aufs Polygon geklippt.
   if (el.kind === "flaeche" && el.variant === "viertel") return (p.gasse || 0) * 0.5 + 1.2;
@@ -281,7 +383,7 @@ function rebuildAll() {
   // Kandidat ab. Steht sie zu spaet, sieht der erste Aufbau nach dem Laden
   // anders aus als der zweite; genau der Fehler, den diese Funktion in Runde
   // I5 schon einmal hatte.
-  rebuildBiomFeld(S.elements);
+  rebuildBiomFeld(biomQuellen());
   computeAO(0, VW - 1, 0, VW - 1);
   refreshGrid(0, VW - 1, 0, VW - 1);
   for (var i = 0; i < S.elements.length; i++) {
@@ -325,7 +427,7 @@ function commit(el, heavy) {
     rebuildCorridors();
     // I2: dieselbe Begruendung wie oben — die Biommaske wird von mehreren
     // Elementen gemeinsam beschrieben und muss deshalb global neu.
-    rebuildBiomFeld(S.elements);
+    rebuildBiomFeld(biomQuellen());
     // Nur beim Commit EINES Elements reicht dessen Einflussbereich; ohne
     // Element (Loeschen — die alte Lage ist hier nicht mehr greifbar) weiter
     // der volle Neuaufbau.
@@ -348,8 +450,11 @@ function isHeavy(el) {
   // ihren Kreuzgangfluegeln Korridore — genau das Kriterium, mit dem auch das
   // Viertel hier steht. Zusaetzlich haengen ihre Layouts (Torkante, Kaiflucht)
   // am Hoehenfeld: eine Terrainaenderung darunter muss sie neu rechnen.
+  // I2: der Biompinsel faerbt das Terrain und entscheidet ueber die
+  // Bepflanzung — genau wie die Biomflaeche unten und aus demselben Grund.
   return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" ||
-          el.variant === "mauer" || el.variant === "bruch")) ||
+          el.variant === "mauer" || el.variant === "bruch" ||
+          el.variant === "biompinsel")) ||
          // I2: die Biomflaeche faerbt das Terrain und entscheidet ueber die
          // Bepflanzung — sie muss dieselbe Kette ausloesen wie ein Viertel.
          (el.kind === "flaeche" && (el.variant === "viertel" || el.variant === "biom" ||
@@ -541,4 +646,7 @@ function deleteElement(el) {
 export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildBrueche, rebuildCorridors,
   rebuildAll, commit, isHeavy, deleteElement, refreshArborQuellen,
   rankenNetz, netzGewicht,
+  // I2 — die Uebersetzung des Biompinsels in Flaechenquellen. Exportiert, weil
+  // sie ohne Bild pruefbar ist: sie ist reine Geometrie.
+  biomQuellen, pinselTupfer, kreisPolygon,
   markDirty, flushPack };

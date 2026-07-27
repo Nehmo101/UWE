@@ -84,8 +84,15 @@ var TOOLS = [
   { id: "ausschnitt", g: "⧉", l: "Ausschnitt", key: "0" }
 ];
 var VARIANTS = {
+  /* I2 — der Biompinsel steht am ENDE der Pfadvarianten, aus demselben Grund
+     wie die Bruchkante in H6: eine aeltere Fassung des Editors faellt in
+     genElement durch alle else-if und erzeugt schlicht nichts. Er ist eine
+     PFADVARIANTE und keine eigene Werkzeugkarte, weil er genau das ist, was
+     ein Pfad ist — eine Punktfolge mit einer Wirkung entlang der Kurve. Nur
+     wird sie hier nicht gebaut, sondern gefaerbt. */
   pfad: [["strasse", "Straße"], ["mauer", "Mauer"], ["fluss", "Fluss"],
-         ["hecke", "Hecke / Zaun"], ["bruch", "Bruchkante"]],
+         ["hecke", "Hecke / Zaun"], ["bruch", "Bruchkante"],
+         ["biompinsel", "Biompinsel"]],
   /* Die drei Kompositstrukturen stehen am ENDE der Liste, nicht zwischen den
      Bestandsvarianten: die Reihenfolge ist zugleich die Knopfreihenfolge im
      Panel, und die eingespielten Griffe der vier alten Varianten sollen bleiben,
@@ -159,6 +166,18 @@ var PARAMS = {
     { k: "seite", l: "Abrissseite", o: [["1", "Rechts vom Pfad"], ["-1", "Links vom Pfad"]], d: "1" },
     { k: "wurzeln", l: "Wurzelvorhänge", b: true, d: true },
     { k: "truemmer", l: "Schwebende Trümmer", min: 0, max: 6, st: 1, d: 2 }
+  ],
+  /* I2 — Biompinsel. Dieselben drei Groessen wie die Biomflaeche und das
+     Terrainwerkzeug, und zwar ABSICHTLICH mit denselben Namen und Grenzen:
+     `biom`/`weich` liest die Ableitung in core/dirty.js woertlich wie bei
+     "flaeche:biom" (der Pinsel wird dort in Kreisflaechen uebersetzt),
+     `radius` ist der Pinselradius aus "terrain:*" mit identischer Spanne.
+     Wer vom Terrainpinsel herkommt, findet denselben Regler an derselben
+     Stelle — und die Ableitung braucht keine zweite Formel. */
+  "pfad:biompinsel": [
+    { k: "biom", l: "Biom", o: biomListe(), d: "moor" },
+    { k: "radius", l: "Pinselradius", min: 2, max: 40, st: 0.5, d: 12 },
+    { k: "weich", l: "Randbreite", min: 1, max: 32, st: 1, d: 8 }
   ],
   "flaeche:wald": [
     { k: "dichte", l: "Dichte", min: 0.2, max: 2.5, st: 0.05, d: 1.1 },
@@ -493,6 +512,18 @@ function curParams() {
 
 function copyParams(o) { var c = {}; for (var k in o) c[k] = o[k]; return c; }
 
+/* I2 — Es gibt jetzt ZWEI Pinsel: den Terrainpinsel und den Biompinsel. Beide
+   zeigen denselben Ring, beide malen im Ziehen, beide lesen ihren Radius aus
+   `curParams().radius`. Diese eine Funktion ist die Antwort auf „malt das
+   aktive Werkzeug im Kreis, und wie weit?" — setTool, verarbeiteZeiger und
+   der Zeigerbeginn fragen sie, statt die Bedingung dreimal zu fuehren.
+   Liefert 0, wenn gerade kein Pinsel aktiv ist. */
+function pinselRadius() {
+  if (ed.tool === "terrain") return curParams().radius || 0;
+  if (ed.tool === "pfad" && ed.variantOf.pfad === "biompinsel") return curParams().radius || 0;
+  return 0;
+}
+
 function snapPt(p) {
   if (!S.snap) return { x: p.x, z: p.z };
   return { x: Math.round(p.x / 2) * 2, z: Math.round(p.z / 2) * 2 };
@@ -548,7 +579,8 @@ function setTool(id) {
   for (var i = 0; i < rail.children.length; i++) {
     rail.children[i].classList.toggle("on", rail.children[i].dataset.id === id);
   }
-  if (id !== "terrain") brushRing.visible = false;
+  // I2: der Ring gehoert jetzt beiden Pinseln — die Frage stellt pinselRadius.
+  if (!pinselRadius()) brushRing.visible = false;
   buildPanel();
   updateHint();
 }
@@ -755,6 +787,6 @@ export { TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie
   setzeAusschnittWeg,
   EROSION_PARAMS, erosionRegler,
   schemaKey, defaultsFor, toolParams, curParams,
-  copyParams, snapPt, finishDraw, cancelDraw, setTool,
+  copyParams, snapPt, pinselRadius, finishDraw, cancelDraw, setTool,
   auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel,
   stempelUebernehmen, stempelBibliothekLaden, stempelBibliothekSichern };

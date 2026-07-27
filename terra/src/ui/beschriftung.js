@@ -123,6 +123,49 @@ function zielPruefen(ziel) {
   return { ok: true, ziel: { art: "extern", ref: ref } };
 }
 
+/* ==========================================================================
+   1b — Sicherheit: die Verknüpfung `anPfad`
+
+   Eine gebogene Beschriftung braucht eine Kurve, und die Kurve kommt aus einem
+   ANDEREN Element. Verwiesen wird über dessen stabile `el.id` — Terra vergibt
+   sie fortlaufend (`S.nextId` in core/store.js) und schreibt sie mit in die
+   Datei, sie überlebt also Speichern und Laden.
+
+   Die Zahl kommt damit aus einer fremden Datei und wird wie jedes andere Feld
+   von dort behandelt: geprüft, bevor sie irgendwo landet. Sie ist harmloser
+   als `ziel` (kein Klickziel, kein Schema), aber dieselbe Haltung — es wird
+   beschrieben, was durchgelassen wird:
+
+     fehlt / null / 0   →  keine Verknüpfung (die Beschriftung steht gerade)
+     ganze Zahl 1..MAX  →  Verweis auf ein Element mit dieser id
+     alles andere       →  abgelehnt
+
+   MAX ist keine Willkür: `id` entsteht aus einem Zähler, der bei 1 beginnt.
+   Number.MAX_SAFE_INTEGER wäre die formale Grenze; 2^31 ist die praktische
+   und hält die Zahl in dem Bereich, in dem `| 0` noch dasselbe bedeutet.
+
+   Was NICHT hier geprüft wird: ob es das Element gibt. Das kann diese Funktion
+   gar nicht wissen (sie sieht ein Feld, keine Karte) — und es wäre auch falsch,
+   daran eine Datei scheitern zu lassen: ein Verweis auf ein gelöschtes Element
+   ist kein Angriff, sondern der Normalfall nach einem Entf. Er wird zur
+   Laufzeit aufgelöst, und wenn nichts gefunden wird, steht die Beschriftung
+   gerade da (editor/selection.js).
+   ========================================================================== */
+var ANPFAD_MAX = 2147483647;
+
+/**
+ * Prüft ein `anPfad`-Feld. Rückgabe `{ ok:true, wert:Number }` (0 = keine
+ * Verknüpfung) oder `{ ok:false, grund }`.
+ */
+function anPfadPruefen(v) {
+  if (v === undefined || v === null || v === 0) return { ok: true, wert: 0 };
+  if (typeof v !== "number") return { ok: false, grund: "anPfad ist keine Zahl" };
+  if (!Number.isFinite(v)) return { ok: false, grund: "anPfad ist nicht endlich" };
+  if (!Number.isInteger(v)) return { ok: false, grund: "anPfad ist keine ganze Zahl" };
+  if (v < 0 || v > ANPFAD_MAX) return { ok: false, grund: "anPfad liegt außerhalb des Wertebereichs" };
+  return { ok: true, wert: v | 0 };
+}
+
 /**
  * Die tatsächlich zu öffnende Adresse — oder null.
  * `opt.wikiBasis` ist die Adresse, unter der Wiki-Seiten liegen; solange terra
@@ -350,6 +393,24 @@ function glyphBreiten(zeichen, grad, ctx) {
     out.push(Number.isFinite(b) && b > 0 ? b : zeichenBreite(zeichen[i]) * grad);
   }
   return out;
+}
+
+/**
+ * Setzt die Schrift der Klasse in einen MESSkontext.
+ *
+ * Muss vor jedem `glyphBreiten` mit echtem Kontext laufen: `measureText` misst
+ * mit der zuletzt gesetzten Schrift, und die ist auf einem frischen Canvas
+ * „10px sans-serif". Ohne diese Zeile wurden die Buchstaben mit rund einem
+ * Drittel ihrer wirklichen Breite verplant — `zeichneKette` setzt die richtige
+ * Schrift ja doch, und dann lief die Zeile ineinander. Im Bild sah das aus wie
+ * ein Schriftfehler; es war ein Messfehler.
+ *
+ * Der Kontext gehört dem Aufrufer, deshalb defensiv: ein mitschreibender
+ * Ersatz (Test) oder ein Kontext ohne `font` darf daran nicht scheitern.
+ */
+function schriftMessen(ctx, klasse, groesse) {
+  if (!ctx) return;
+  try { ctx.font = schriftAngabe(klasse, groesse); } catch (e) { /* kein Canvas */ }
 }
 
 /** Der CSS-Wert für ctx.font. */
@@ -782,6 +843,7 @@ function messeBeschriftung(text, klasse, opt) {
   var g = Number.isFinite(opt.groesse) ? clamp(opt.groesse, 0.4, 3) : 1;
   var grad = K.grad * g;
   var t = textFuerKlasse(text, K);
+  schriftMessen(opt.ctx, K, g);            // sonst misst measureText 10px-Standard
   var breiten = glyphBreiten(t, grad, opt.ctx);
   var textBreite = 0;
   for (var i = 0; i < breiten.length; i++) textBreite += breiten[i];
@@ -845,6 +907,156 @@ function beschriftungsBild(text, klasse, opt) {
 
 
 /* ==========================================================================
+   6b — Die gebogene Beschriftung (I4, eingehängt in dieser Runde)
+
+   `glyphenAufKurve` gab es seit I4, aber nichts rief es auf. Der Grund war
+   eine offene Frage, keine offene Rechnung: eine gebogene Beschriftung ist
+   kein Sprite mehr. Sie kann es auch nicht sein — ein Sprite dreht sich zur
+   Kamera, eine Kurve liegt in der Karte.
+
+   DIE ENTSCHEIDUNG. Sie wird zu EINEM Quad, das flach auf der Karte liegt
+   (Drehung −90° um X), und die Krümmung steckt in seiner Textur. Nicht eine
+   Kette von Quads, eines je Glyphe: das wären zwanzig Meshes, zwanzig
+   Materialien und zwanzig Zeichenaufrufe je Beschriftung — für ein Bild, das
+   sich nur ändert, wenn sich der Pfad ändert. Ein gebackenes Quad ist ein
+   Zeichenaufruf und dieselbe Sache, die eine gedruckte Karte tut.
+
+   Das Bild wird deshalb im KARTENSYSTEM gemalt:
+       Bild-x  =  Welt-x / einheitJePixel
+       Bild-y  =  Welt-z / einheitJePixel
+   Bild-y läuft im Canvas nach unten, die Ebene bildet ihre obere Zeile auf
+   −z ab (Norden) — die Zuordnung stimmt also in beide Richtungen, und die
+   Schrift steht in der Aufsicht richtig herum. `einheitJePixel` ist dieselbe
+   Zahl, mit der ein Sprite skaliert wird: eine gerade und eine gebogene
+   Beschriftung derselben Klasse sind damit gleich groß.
+
+   Was `glyphenAufKurve` schon kann und hier gebraucht wird: Laufweite auf der
+   versetzten Basislinie, geglättete Drehung, Kopfstandprüfung, Abbruch bei zu
+   enger Biegung. Alle vier Fälle enden in `tauglich:false` — und das heißt
+   hier: die Beschriftung wird gerade gesetzt, wie zuvor. Ein Pfad, der einen
+   Text nicht trägt, ist kein Fehler.
+   ========================================================================== */
+
+/* Basislinie über der Kurve statt auf ihr: der Pfad ist in aller Regel ein
+   sichtbares Ding (Fluss, Küste, Grat), und Schrift gehört daneben, nicht
+   darüber. 0.30 Schriftgrade sind der Abstand, bei dem die Unterlängen die
+   Linie gerade nicht mehr berühren. Negativ, weil die Normale in einem
+   y-nach-unten-System nach Süden zeigt. */
+var KURVE_VERSATZ = -0.30;
+
+/* Deckel für die Texturkante. Über 2048 px wird eine Beschriftung nicht mehr
+   schöner, nur teurer — und ein Text, der so viel Fläche braucht, sitzt fast
+   immer auf einem Pfad, der ihn ohnehin nicht trägt. */
+var KURVE_MAX_PX = 2048;
+
+/**
+ * Rechnet eine gebogene Beschriftung durch — ohne zu zeichnen.
+ *
+ * opt: { groesse, pfad:[{x,z}] (Weltkoordinaten), lage (0..1),
+ *        einheitJePixel, ctx }
+ * Rückgabe bei Erfolg:
+ *   { tauglich:true, text, glyphen (Canvas-Koordinaten), breite, hoehe,
+ *     mitte:{x,z} (Weltmitte des Quads), grad }
+ * sonst { tauglich:false, grund }.
+ */
+function kurvenBeschriftung(text, klasse, opt) {
+  opt = opt || {};
+  var K = klasseVon(typeof klasse === "string" ? klasse : (klasse && klasse.id));
+  var g = Number.isFinite(opt.groesse) ? clamp(opt.groesse, 0.4, 3) : 1;
+  var grad = K.grad * g;
+  var E = Number.isFinite(opt.einheitJePixel) && opt.einheitJePixel > 0
+    ? opt.einheitJePixel : EINHEIT_JE_PIXEL;
+  var t = textFuerKlasse(text, K);
+  if (!t) return { tauglich: false, grund: "kein Text" };
+  var welt = opt.pfad;
+  if (!Array.isArray(welt) || welt.length < 2) return { tauglich: false, grund: "kein Pfad" };
+
+  // Welt -> Bildpixel. Kein Ursprungsversatz: die Glyphen werden unten anhand
+  // ihrer eigenen Hüllbox verschoben, und bis dahin ist jede Verschiebung eine
+  // zusätzliche Fehlerquelle.
+  var P = [], i;
+  for (i = 0; i < welt.length; i++) {
+    var w = welt[i];
+    if (!w || !Number.isFinite(w.x) || !Number.isFinite(w.z)) continue;
+    P.push({ x: w.x / E, y: w.z / E });
+  }
+  if (P.length < 2) return { tauglich: false, grund: "kein Pfad" };
+
+  schriftMessen(opt.ctx, K, g);            // siehe schriftMessen: sonst 10px-Standard
+  var breiten = glyphBreiten(t, grad, opt.ctx);
+  var res = glyphenAufKurve(t, P, {
+    grad: grad, sperrung: K.sperrung, breiten: breiten,
+    versatz: KURVE_VERSATZ * grad,
+    lage: Number.isFinite(opt.lage) ? opt.lage : 0.5,
+    ctx: opt.ctx
+  });
+  if (!res.tauglich) return { tauglich: false, grund: res.grund };
+
+  /* Hüllbox der gedrehten Glyphen. Konservativ über einen Umkreis je Glyphe
+     statt über vier gedrehte Ecken: der Umkreis ist um höchstens einen halben
+     Saum zu groß, kostet dafür keine Winkelfunktion und kann bei keiner
+     Drehung zu klein werden. */
+  var saum = K.saumBreite * grad;
+  var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (i = 0; i < res.glyphen.length; i++) {
+    var gl = res.glyphen[i];
+    var r = Math.max(gl.breite, grad * 1.42) * 0.5 + saum;
+    if (gl.x - r < minX) minX = gl.x - r;
+    if (gl.x + r > maxX) maxX = gl.x + r;
+    if (gl.y - r < minY) minY = gl.y - r;
+    if (gl.y + r > maxY) maxY = gl.y + r;
+  }
+  if (!(minX <= maxX)) return { tauglich: false, grund: "Pfad liefert keine Zahlen" };
+
+  var rand = grad * 0.25;
+  var breite = Math.ceil(maxX - minX + rand * 2);
+  var hoehe = Math.ceil(maxY - minY + rand * 2);
+  if (breite > KURVE_MAX_PX || hoehe > KURVE_MAX_PX)
+    return { tauglich: false, grund: "Beschriftung zu groß für eine Textur" };
+
+  var dx = rand - minX, dy = rand - minY;
+  var glyphen = [];
+  for (i = 0; i < res.glyphen.length; i++) {
+    var q = res.glyphen[i];
+    glyphen.push({ zeichen: q.zeichen, x: q.x + dx, y: q.y + dy,
+      winkel: q.winkel, breite: q.breite });
+  }
+  return {
+    tauglich: true, grund: "", text: t, glyphen: glyphen,
+    breite: breite, hoehe: hoehe, grad: grad,
+    // Bildmitte zurück in die Welt: die Verschiebung dx/dy rückgängig, dann
+    // mal einheitJePixel. Das ist die Position des Quads.
+    mitte: { x: (breite * 0.5 - dx) * E, z: (hoehe * 0.5 - dy) * E }
+  };
+}
+
+/**
+ * Das Texturbild einer gebogenen Beschriftung. Braucht `document` (oder eine
+ * `canvasFabrik` wie beschriftungsBild). Liefert null, wenn der Pfad den Text
+ * nicht trägt — der Aufrufer setzt dann gerade.
+ */
+function kurvenBild(text, klasse, opt) {
+  opt = opt || {};
+  var mach = opt.canvasFabrik || function () { return document.createElement("canvas"); };
+  var c = mach();
+  var vor = c.getContext("2d");
+  var masse = kurvenBeschriftung(text, klasse, {
+    groesse: opt.groesse, pfad: opt.pfad, lage: opt.lage,
+    einheitJePixel: opt.einheitJePixel, ctx: vor
+  });
+  if (!masse.tauglich) return null;
+  c.width = masse.breite;
+  c.height = masse.hoehe;
+  var ctx = c.getContext("2d");           // nach dem Größenwechsel neu holen
+  if (ctx.clearRect) ctx.clearRect(0, 0, masse.breite, masse.hoehe);
+  // Keine Punktsignatur: sie sagt „hier", und eine gebogene Beschriftung sagt
+  // „entlang" — der Punkt gehört zur geraden Fassung.
+  zeichneKette(ctx, masse.glyphen, klasse, opt.groesse);
+  return { canvas: c, masse: masse };
+}
+
+
+/* ==========================================================================
    7 — Die Schicht in der Szene
 
    Der einzige Teil, der three braucht. Er hält je Beschriftung ein Sprite,
@@ -872,20 +1084,53 @@ function neueSchicht(opt) {
   var einheitJePixel = Number.isFinite(opt.einheitJePixel) ? opt.einheitJePixel : EINHEIT_JE_PIXEL;
   var _v = new THREE.Vector3();
 
-  function baueSprite(q) {
-    var bild = beschriftungsBild(q.text, q.klasse, { groesse: q.groesse, canvasFabrik: opt.canvasFabrik });
-    var tex = new THREE.CanvasTexture(bild.canvas);
+  /** Textur aus einem fertigen Canvas — für beide Bauarten dieselbe. */
+  function textur(canvas) {
+    var tex = new THREE.CanvasTexture(canvas);
     if (THREE.SRGBColorSpace !== undefined) tex.colorSpace = THREE.SRGBColorSpace;
     tex.generateMipmaps = true;
     if (THREE.LinearMipmapLinearFilter !== undefined) tex.minFilter = THREE.LinearMipmapLinearFilter;
     if (THREE.LinearFilter !== undefined) tex.magFilter = THREE.LinearFilter;
     tex.needsUpdate = true;
-    var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
+    return tex;
+  }
+
+  function baueSprite(q) {
+    var bild = beschriftungsBild(q.text, q.klasse, { groesse: q.groesse, canvasFabrik: opt.canvasFabrik });
+    var mat = new THREE.SpriteMaterial({ map: textur(bild.canvas), transparent: true,
+      depthTest: false, depthWrite: false });
     var s = new THREE.Sprite(mat);
     s.scale.set(bild.masse.breite * einheitJePixel, bild.masse.hoehe * einheitJePixel, 1);
     s.renderOrder = 12;
     s.userData.beschriftung = q;
     return { sprite: s, masse: bild.masse };
+  }
+
+  /* Ein Quad, flach auf der Karte. Die Geometrie wird EINMAL angelegt und von
+     allen gebogenen Beschriftungen geteilt (skaliert wird am Mesh); träge,
+     weil dieses Modul auch im Test geladen wird, wo niemand eine Szene will —
+     dieselbe Begründung wie bei `holeBeschriftungsschicht` unten. */
+  var kurvenGeo = null;
+  function baueKurve(q) {
+    var bild = kurvenBild(q.text, q.klasse, {
+      groesse: q.groesse, pfad: q.pfad, lage: q.lage,
+      einheitJePixel: einheitJePixel, canvasFabrik: opt.canvasFabrik
+    });
+    if (!bild) return null;                       // Pfad trägt den Text nicht
+    if (!kurvenGeo) kurvenGeo = new THREE.PlaneGeometry(1, 1);
+    var werte = { map: textur(bild.canvas), transparent: true,
+      depthTest: false, depthWrite: false };
+    // Beidseitig, wo three es kennt: die Karte wird auch von unten betrachtet
+    // (Kamerafahrt unter eine Schwebeinsel), und eine dann unsichtbare
+    // Beschriftung sähe aus wie ein Fehler.
+    if (THREE.DoubleSide !== undefined) werte.side = THREE.DoubleSide;
+    var m = new THREE.Mesh(kurvenGeo, new THREE.MeshBasicMaterial(werte));
+    m.rotation.x = -Math.PI * 0.5;
+    m.scale.set(bild.masse.breite * einheitJePixel, bild.masse.hoehe * einheitJePixel, 1);
+    m.renderOrder = 12;
+    m.frustumCulled = false;      // die geteilte 1x1-Geometrie hat die falsche Hülle
+    m.userData.beschriftung = q;
+    return { sprite: m, masse: bild.masse, mitte: bild.masse.mitte };
   }
 
   /**
@@ -894,6 +1139,15 @@ function neueSchicht(opt) {
    * Der Vergleichsschlüssel enthält alles, was das Bild bestimmt — ändert sich
    * nur die Position, bleibt die Textur stehen (Textur bauen ist teuer).
    */
+  /* Wo das Ding wirklich steht. Für ein Sprite ist das der Ankerpunkt der
+     Beschriftung; für ein gebogenes Quad die Mitte seiner Textur, denn die
+     Kurve bestimmt die Lage, nicht der Anker. Eine Funktion statt zweier
+     Zweige an vier Stellen (Setzen, Nachziehen, Kollision). */
+  function ortVon(e, q) {
+    if (e && e.mitte) return { x: e.mitte.x, y: q.y, z: e.mitte.z };
+    return { x: q.x, y: q.y, z: q.z };
+  }
+
   function abgleichen(quellen) {
     var gesehen = new Set(), i;
     for (i = 0; i < (quellen ? quellen.length : 0); i++) {
@@ -902,18 +1156,31 @@ function neueSchicht(opt) {
       var text = textFuerKlasse(q.text, q.klasse);
       if (!text) continue;                                   // ohne Text keine Beschriftung
       gesehen.add(q.id);
+      /* Der Vergleichsschlüssel enthält alles, was das BILD bestimmt. Bei
+         einer gebogenen Beschriftung gehört der Verlauf dazu (`pfadStempel`,
+         eine kurze Signatur aus den Stützpunkten des verknüpften Elements)
+         und die Lage darauf — sonst bliebe die Textur stehen, wenn der Fluss
+         verschoben wird. Ohne Verknüpfung ändert sich am Schlüssel nichts,
+         und eine Bestandskarte baut exakt dieselben Sprites wie zuvor. */
       var stempel = q.klasse + "|" + (q.groesse || 1) + "|" + text;
+      if (q.pfad) stempel += "|" + (q.pfadStempel || "") + "|" + Math.round((q.lage || 0) * 1000);
       var alt = nachId.get(q.id);
       if (alt && alt.stempel === stempel) {
         alt.quelle = q;
-        alt.sprite.position.set(q.x, q.y, q.z);
+        var o = ortVon(alt, q);
+        alt.sprite.position.set(o.x, o.y, o.z);
         alt.sprite.userData.beschriftung = q;
         continue;
       }
       if (alt) entferne(alt);
-      var neu = baueSprite(q);
-      neu.sprite.position.set(q.x, q.y, q.z);
-      var e = { id: q.id, quelle: q, sprite: neu.sprite, masse: neu.masse, stempel: stempel };
+      // Gebogen, wenn ein Pfad da ist UND er den Text trägt; sonst gerade.
+      // Diese eine Zeile ist der ganze Rückfall: „nicht tauglich" ist kein
+      // Fehler, sondern die kartografisch richtige Antwort (siehe 6b).
+      var neu = (q.pfad ? baueKurve(q) : null) || baueSprite(q);
+      var e = { id: q.id, quelle: q, sprite: neu.sprite, masse: neu.masse,
+        mitte: neu.mitte || null, stempel: stempel };
+      var o2 = ortVon(e, q);
+      neu.sprite.position.set(o2.x, o2.y, o2.z);
       nachId.set(q.id, e);
       eintraege.push(e);
       gruppe.add(neu.sprite);
@@ -955,12 +1222,13 @@ function neueSchicht(opt) {
     for (i = 0; i < eintraege.length; i++) {
       var e = eintraege[i], q = e.quelle;
       var abstand = kamera ? e.sprite.position.distanceTo(kamera.position) : 1;
+      var ort = ortVon(e, q);
       liste.push({
         id: e.id,
         schluessel: e.stempel,
         klasse: q.klasse,
         groesse: q.groesse,
-        x: q.x, y: q.y, z: q.z,
+        x: ort.x, y: ort.y, z: ort.z,
         breitePx: spriteBildhoehe(e.sprite.scale.x, abstand, sicht.fov || 30, sicht.hoehe),
         hoehePx: spriteBildhoehe(e.sprite.scale.y, abstand, sicht.fov || 30, sicht.hoehe)
       });
@@ -1053,7 +1321,7 @@ function holeBeschriftungsschicht() {
 export {
   holeBeschriftungsschicht,
   // Sicherheit
-  zielPruefen, zielUrl, zielOeffnen, ZIEL_ARTEN,
+  zielPruefen, zielUrl, zielOeffnen, ZIEL_ARTEN, anPfadPruefen,
   // Klassen
   KLASSEN, KLASSEN_IDS, klasseVon, prioritaetVon, imMassstab, schriftAngabe, textFuerKlasse,
   // Maße
@@ -1064,6 +1332,7 @@ export {
   loeseKollisionen, bildKaesten, HYSTERESE_PX, TAKT_MS,
   // Zeichnen
   zeichneKette, zeichneSignatur, zeichneBeschriftung, beschriftungsBild,
+  kurvenBeschriftung, kurvenBild, KURVE_VERSATZ, KURVE_MAX_PX,
   // Szene
   neueSchicht, EINHEIT_JE_PIXEL
 };
