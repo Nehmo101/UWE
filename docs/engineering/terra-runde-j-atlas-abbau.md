@@ -1,5 +1,17 @@
 # Terra Runde J — Inventar für den Atlas-Abbau
 
+> **ERLEDIGT (27.07.2026).** Der hier inventarisierte Abbau ist durchgeführt;
+> Atlas 3D existiert nicht mehr. Das Dokument bleibt als Protokoll stehen: es
+> hält fest, WAS es gab, WORAN es hing und WARUM einzelne Dinge (die
+> Frame-Direktiven in `security-headers.ts`, die Prompt-Dateien unter
+> `docs/prompts/atlas-*`, der Asset-Katalog) bewusst stehen geblieben sind.
+> `packages/backup` verweist im Code auf Vorabbefund 1.
+>
+> Abweichungen von der hier vorgeschlagenen Reihenfolge: die Pfade heissen
+> heute `/karten` statt `/atlas3d` (Schritt 4 ging weiter als geplant), die
+> Brain-Actions (Schritt 9) und `packages/atlas` (Schritt 10) blieben
+> ausgeklammert — sie gehören einem anderen Arbeitsstrang.
+
 Aufklärungsstand 27.07.2026. Worktree `C:\git\UWE-terra`, Branch
 `claude/terra-runde-h`, HEAD `1772e842`. **Reines Inventar — an diesem Bericht
 wurde keine einzige Zeile Code geändert.**

@@ -1,10 +1,17 @@
-# Atlas — Asset-Styleguide (Piktogramme & Gouache)
+# Asset-Styleguide (Piktogramme & Gouache)
 
-Verbindlicher Styleguide für die **Karten-Piktogramme** und **Gouache-Assets**
-des Atlas World Builders. Er ergänzt die übergeordnete Stil-Referenz
+> **Diese Datei ist ein Laufzeitpfad, kein blosses Dokument.** Ihr Pfad steht
+> als Konstante im Prompt-Kontext der RTX-Asset-Action (`packages/ai-brain`)
+> und wird von einem Test geprüft. Nicht umbenennen, nicht verschieben.
+>
+> Der Karteneditor, für den sie ursprünglich geschrieben wurde, ist am
+> 27.07.2026 entfallen; die Asset-Erzeugung, die sie als verbindliche Vorgabe
+> in den Prompt gibt, läuft weiter. Deshalb bleibt sie.
+
+Verbindlicher Styleguide für die **Karten-Piktogramme** und **Gouache-Assets**.
+Er ergänzt die übergeordnete Stil-Referenz
 [atlas-style-reference.md](atlas-style-reference.md) (handgezeichnete Tinten-Kartografie)
-um konkrete Regeln und einen Katalog für die Punkt-Symbole und gemalten Assets,
-die in Palette, Editor, Portal-Viewer und später im RTX-Asset-Studio erscheinen.
+um konkrete Regeln und einen Katalog für die Punkt-Symbole und gemalten Assets.
 
 > Ziel: einheitliche, sofort wiedererkennbare Karten-Assets — alte Ink-Glyphen
 > bleiben stabil, neue Gouache-Assets folgen einer gemeinsamen Form-, Farb- und
@@ -236,9 +243,8 @@ Tabelle listet bewusst nur die stabilen Identifikatoren.
    um den Base-centre-Anker, respektiert `scale`, `rotation`, `lineWidth`,
    optional `blur`, und no-oped bei unbekanntem Key.
 
-5. **Tests laufen lassen:** `pnpm --filter @uwe/atlas test`. Bei neuen
-   Persistenzfeldern zusätzlich Datenbank-/Security-Gates aus dem
-   [Gouache-Plan](../engineering/atlas-gouache-plan.md).
+5. **Tests laufen lassen.** Bei neuen Persistenzfeldern zusätzlich die
+   Datenbank- und Security-Gates (`pnpm test:security`).
 
 6. **Static Engine aktualisieren**, wenn die Engine geändert wurde:
    `pnpm --filter @uwe/static-export build:atlas-engine`.
@@ -298,8 +304,6 @@ bei Gouache kommen zusätzlich `style.lineWidth` und `style.blur` hinzu.
 ## Weiterführend
 
 - [atlas-style-reference.md](atlas-style-reference.md) — Gesamt-Stil (Tinte/Pergament)
-- [atlas-orchestrator.md](atlas-orchestrator.md) — Feature-Phasen & Plan
-- [../engineering/atlas-gouache-plan.md](../engineering/atlas-gouache-plan.md) — Gouache-/RTX-Roadmap
 - [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md) — Gouache-Asset-Backlog
 - `packages/atlas/src/glyphs.ts` — kanonische Registry
 - `packages/atlas/src/assets.ts` — kanonische Gouache-Registry

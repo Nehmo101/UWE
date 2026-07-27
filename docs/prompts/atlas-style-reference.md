@@ -1,8 +1,12 @@
-# Atlas — Stil-Referenz (handgezeichnete Tinten-Kartografie)
+# Stil-Referenz (handgezeichnete Tinten-Kartografie)
 
-Visuelle Zielvorgabe für den Atlas-Renderer und die KI-Stil-Presets. Diese Datei
-beschreibt den **Stil** in Worten; sie reproduziert kein urheberrechtlich geschütztes
-Werk.
+> Bleibt erhalten, weil der Asset-Styleguide
+> ([atlas-pictogram-styleguide.md](atlas-pictogram-styleguide.md)) auf sie
+> verweist und dieser als Laufzeitpfad im RTX-Prompt steht. Der Karteneditor,
+> für den sie geschrieben wurde, ist am 27.07.2026 entfallen.
+
+Visuelle Zielvorgabe für die KI-Stil-Presets. Diese Datei beschreibt den
+**Stil** in Worten; sie reproduziert kein urheberrechtlich geschütztes Werk.
 
 ## Referenzbild
 
@@ -42,4 +46,3 @@ folgendem Pfad ab — dann greift der Link automatisch:
   DB-Seed. Regeln, Katalog und „neues Piktogramm hinzufügen": siehe
   [atlas-pictogram-styleguide.md](atlas-pictogram-styleguide.md).
 
-Details und Phasen: siehe Cursor-Plan „Atlas World Builder" und [atlas-orchestrator.md](atlas-orchestrator.md).

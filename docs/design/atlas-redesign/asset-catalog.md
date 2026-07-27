@@ -1,9 +1,11 @@
 # Atlas — Gouache-Asset-Katalog (Backlog)
 
-Wunsch- und Ideenliste für die Gouache-Asset-Bibliothek (Phase 2 des
-[Gouache-Plans](../../engineering/atlas-gouache-plan.md)). **Spezifikation, kein
-Code** — dies ist der Vorrat, aus dem die Asset-Rezepte (`packages/atlas/src/assets.ts`)
-nach und nach entstehen.
+Wunsch- und Ideenliste für die Gouache-Asset-Bibliothek. **Spezifikation,
+kein Code** — dies ist der Vorrat, aus dem die Asset-Rezepte entstehen.
+
+> **Diese Datei ist ein Laufzeitpfad, kein blosses Dokument.** Ihr Pfad steht
+> als Konstante in der RTX-Asset-Action (`packages/ai-brain`, Prompt-Kontext)
+> und wird von einem Test geprüft. Nicht umbenennen, nicht verschieben.
 
 **Umsetzungs-Tags** (wie das Asset in die Engine passt):
 
@@ -201,8 +203,7 @@ römisch/antik (Säulen, Foren) · sumpf-/Stelzenbau (Pfahlbauten).
 Dieselben Assets in Varianten (Parameter, kein neues Rezept): verschneit /
 herbstlich / blühend / verdorrt; Felder bestellt ↔ abgeerntet ↔ überflutet;
 Dorf belebt ↔ verlassen ↔ niedergebrannt; Ruine intakt ↔ verfallen. Koppelbar
-an einen Karten-Jahreszeit-/Zustands-Schalter (siehe
-[improvement-ideas.md](improvement-ideas.md)).
+an einen Karten-Jahreszeit-/Zustands-Schalter.
 
 ---
 

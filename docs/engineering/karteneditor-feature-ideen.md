@@ -1,6 +1,14 @@
-# Atlas 3D — Feature-Roadmap Weltgestaltung & Kartenbau
+# Karteneditor — Ideenkatalog Weltgestaltung & Kartenbau
 
-Kuratierte Ideensammlung für den Ausbau des Atlas-3D-Editors — **rein Weltgestaltung und Kartenbau**, keine UWE-Integrationsthemen. Basis: Deep-Research (Juli 2026) in 2D-Fantasy-Kartentools (Inkarnate, Wonderdraft, Azgaar's Fantasy Map Generator, Watabou Procgen Arcana, Dungeondraft/Dungeon Alchemist, Campaign Cartographer 3+, World Anvil, Nortantis, Fractal Terrains/Wilbur, Songs of the Eons) und 3D-Terrain-/Planeten-/Sandbox-Tools (Gaea, World Machine, World Creator, Houdini, Terragen, SpaceEngine, Astroneer/Enshrouded/No Man's Sky, Townscaper/Tiny Glade, Flowscape, Canvas of Kings, WorldPainter, Dwarf-Fortress-Worldgen, Unreal Landscape Edit Layers, Okami-/Cel-Shading-Techniken).
+> **Aufbewahrt als Recherche, nicht als Fahrplan.** Der Editor, für den diese
+> Liste 2026 zusammengetragen wurde, ist am 27.07.2026 entfallen; alle
+> „✓ umgesetzt"-Marken und der Abschnitt „Stand" beziehen sich auf IHN, nicht
+> auf Terra. Was hier steht, ist trotzdem das Wertvollste aus jener Runde: eine
+> ausgewertete Untersuchung von rund zwanzig Kartenwerkzeugen mit Quellen. Terra
+> baut einiges davon inzwischen selbst (Erosion, Höhenlinien, Biome, Ebenen),
+> anderes ist noch offen. Die Liste dient als Vorrat, nicht als Zusage.
+
+Kuratierte Ideensammlung für einen Weltenbau-Karteneditor — **rein Weltgestaltung und Kartenbau**, keine UWE-Integrationsthemen. Basis: Deep-Research (Juli 2026) in 2D-Fantasy-Kartentools (Inkarnate, Wonderdraft, Azgaar's Fantasy Map Generator, Watabou Procgen Arcana, Dungeondraft/Dungeon Alchemist, Campaign Cartographer 3+, World Anvil, Nortantis, Fractal Terrains/Wilbur, Songs of the Eons) und 3D-Terrain-/Planeten-/Sandbox-Tools (Gaea, World Machine, World Creator, Houdini, Terragen, SpaceEngine, Astroneer/Enshrouded/No Man's Sky, Townscaper/Tiny Glade, Flowscape, Canvas of Kings, WorldPainter, Dwarf-Fortress-Worldgen, Unreal Landscape Edit Layers, Okami-/Cel-Shading-Techniken).
 
 Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, setzt direkt auf vorhandener Substanz auf (SDF-Carve-Ops, Splat-Biome, A\*-Pfade, Siedlungs-Generator, Tusche-Shader, Vererbungssystem).
 
@@ -67,9 +75,9 @@ Aufwand: **[K]** klein · **[M]** mittel · **[G]** groß. **★** = Quick-Win, 
 - **[K] Mess-Werkzeug** — Distanz in Wegstunden (Engine-Substanz laut Vision-Konzept vorhanden).
 - **[M] Sub-Ebene neu ableiten** — gewählten Bereich bei höherem Detail regenerieren (Azgaar Submaps; passt exakt zum Drill-Down).
 
-## Stand
+## Stand (des entfallenen Editors, 07/2026)
 
-**Alle Roadmap-Punkte sind umgesetzt** — die acht ★-Quick-Wins plus die komplette Backlog-Tranche: Erosion (Pass + Brush, Flow-Maske), Fluss-Simulation, Seen, Klima-/Höhen-Ansichten, Höhenlinien, Landmassen-Vorlagen, PNG-Höhenstempel, Seed-Mutation, Bereichsfüllung, Mauer-Werkzeug + gesäumte Straßen, Warp, Namens-Generator, Chronik (generierte Historie v1), Territorien/Zonen, POI-Marker, 24 neue Assets in 5 Gruppen (inkl. Gewässer), Schwerkraft-/Hang-Verhalten über Surface-Snapping, Jahreszeiten, Stil-Themes (Pergament/Sepia/Aquarell), Papierkorn-Overlay, Mess-Werkzeug in Wegstunden, „Sub-Ebene neu ableiten" und der nicht-destruktive Eingriffe-Stack (Carve-Ops ein-/ausblendbar) als Ebenen-Stack v1. Auch die beiden Vollausbauten sind geliefert: echte WFC-Siedlungen (Superposition, AC-3-Propagation, Min-Entropie-Kollaps auf irregulärem Raster, als „WFC-Layout"-Option) und der volle nicht-destruktive Höhen-Layer-Stack (benannte, ein-/ausblendbare, sortierbare Layer mit aktivem Ziel-Layer, Composite-Rendering, Legacy-Migration, Panel „≡ Höhen-Layer").
+**Alle Roadmap-Punkte waren dort umgesetzt** — die acht ★-Quick-Wins plus die komplette Backlog-Tranche: Erosion (Pass + Brush, Flow-Maske), Fluss-Simulation, Seen, Klima-/Höhen-Ansichten, Höhenlinien, Landmassen-Vorlagen, PNG-Höhenstempel, Seed-Mutation, Bereichsfüllung, Mauer-Werkzeug + gesäumte Straßen, Warp, Namens-Generator, Chronik (generierte Historie v1), Territorien/Zonen, POI-Marker, 24 neue Assets in 5 Gruppen (inkl. Gewässer), Schwerkraft-/Hang-Verhalten über Surface-Snapping, Jahreszeiten, Stil-Themes (Pergament/Sepia/Aquarell), Papierkorn-Overlay, Mess-Werkzeug in Wegstunden, „Sub-Ebene neu ableiten" und der nicht-destruktive Eingriffe-Stack (Carve-Ops ein-/ausblendbar) als Ebenen-Stack v1. Auch die beiden Vollausbauten sind geliefert: echte WFC-Siedlungen (Superposition, AC-3-Propagation, Min-Entropie-Kollaps auf irregulärem Raster, als „WFC-Layout"-Option) und der volle nicht-destruktive Höhen-Layer-Stack (benannte, ein-/ausblendbare, sortierbare Layer mit aktivem Ziel-Layer, Composite-Rendering, Legacy-Migration, Panel „≡ Höhen-Layer").
 
 ## Quellen (Auswahl)
 
