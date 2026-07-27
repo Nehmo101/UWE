@@ -1,10 +1,14 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { S, BIOME, KARTE, VW, MAP } from '../core/store.js';
+import { S, BIOME, KARTE, VW, MAP, WATER } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, slopeAt, biomFeld, biomGewicht } from '../world/terrain.js';
 // I2: harte Biomwahl je Kandidat. biomfeld.js haengt nur an core/ — zyklusfrei.
 import { biomHartAn } from '../world/biomfeld.js';
+// I1: Kartenzeichen. signaturen.js haengt an three, core/ und kartenbaum.js —
+// es importiert nichts aus generators/, der Weg ist also zyklusfrei.
+import { zeichenFuer, signaturPlatzierung, streuAbstand, streuRaster,
+  UEBERGABE, BLENDE } from '../render/signaturen.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
 /* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
@@ -96,8 +100,90 @@ function randNaehe(pts, x, z) {
 var UW_STANDARD = [["busch", 5], ["farn", 4], ["moos", 3], ["stumpf", 1],
   ["stammliegend", 1], ["fels", 1]];
 
+/* ==========================================================================
+   I1 — Flaechenzeichen: eine Flaeche als Kartensignatur statt als Bewuchs
+
+   Gemeinsamer Weg fuer Wald, Acker, Sumpf und die uebrigen Flaechen. Was sich
+   je Flaechenart unterscheidet, ist genau eine Zeile — die Sache, die
+   `zeichenFuer` nachschlaegt. Deshalb ein Helfer und keine vier Zweige.
+
+   Gekachelt statt einmal in die Mitte gesetzt: eine einzelne Waldmarke auf
+   einem 200 km breiten Wald saehe aus wie ein Fehler. Das Raster haengt am
+   SCHWERPUNKT der Flaeche (ankerX/ankerZ), nicht am Weltnullpunkt — beim
+   Verschieben sollen die Marken mitwandern, statt durch die Flaeche
+   hindurchzuwandern. Baeume gehoeren dem Boden, ein Kartenzeichen gehoert der
+   Sache.
+   ========================================================================== */
+/* `kante` ist die Kartenkante in WELTEINHEITEN (KARTE.map), nicht in Metern.
+   Der Unterschied kostete beim ersten Versuch die halbe Wirkung: auf einer
+   Kontinentkarte sind 256 Zellen 512 km, und ein Zeichen von 0,6 % davon
+   waere 3 km — auf einer Karte, die insgesamt 256 Welteinheiten misst. Die
+   Zeichen lagen dann als Riesenflecken uebereinander, und in kleinen Polygonen
+   fand das Streuraster gar keinen Platz mehr. Der Maszstab entscheidet, OB ein
+   Zeichen erscheint; wie gross es ist, entscheidet die Karte. */
+function flaechenZeichen(el, sache, art) {
+  var pts = el.points;
+  var m = S.einheitMeter;
+  var wahl = zeichenFuer(sache, el.kennzahl, m, { art: art });
+  if (!wahl || !wahl.length) return;
+  var bb = polyBBox(pts), mitte = polyCenter(pts);
+  var platz = signaturPlatzierung(wahl[0], { kante: KARTE.map, massstab: m });
+  if (!platz) return;
+  var sp = streuAbstand(platz.marke);
+  var punkte = streuRaster({
+    x0: bb.x0, z0: bb.z0, x1: bb.x1, z1: bb.z1, sp: sp,
+    seed: el.seed + 0x51601, ankerX: mitte.x, ankerZ: mitte.z,
+    imInneren: function (x, z) { return inPoly(pts, x, z); }
+  });
+  for (var i = 0; i < punkte.length; i++) {
+    var q = punkte[i];
+    var y = Math.max(heightAt(q.x, q.z), WATER) + platz.schwebe;
+    emit(el, wahl[0], q.x, y, q.z, q.dreh, platz.sx * q.skala, platz.sy,
+      platz.sz * q.skala, platz.tint);
+  }
+}
+
+/**
+ * I1 — Ortszeichen: EIN Zeichen fuer die ganze Siedlung, in ihrer Mitte.
+ *
+ * Der Gegensatz zu `flaechenZeichen` ist der Punkt: ein Wald wird gekachelt,
+ * weil er eine Flaeche IST; eine Siedlung bekommt einen Punkt, weil sie auf
+ * Kartenmaszstab einer ist. Welcher — Weiler, Dorf, Stadt — entscheidet
+ * `el.kennzahl`, die Zahl der Baukoerper.
+ *
+ * `zeichenFuer` kann mehrere Namen liefern: eine grosze Stadt bekommt den
+ * Doppelring UND den Zinnenkranz. Deshalb die Schleife statt eines Zugriffs
+ * auf [0].
+ */
+function ortsZeichen(el) {
+  var m = S.einheitMeter;
+  var mitte = polyCenter(el.points);
+  var wahl = zeichenFuer("ort", el.kennzahl, m);
+  if (!wahl || !wahl.length) return;
+  var y = Math.max(heightAt(mitte.x, mitte.z), WATER);
+  for (var i = 0; i < wahl.length; i++) {
+    var platz = signaturPlatzierung(wahl[i], { kante: KARTE.map, massstab: m });
+    if (!platz) continue;
+    emit(el, wahl[i], mitte.x, y + platz.schwebe, mitte.z, 0,
+      platz.sx, platz.sy, platz.sz, platz.tint);
+  }
+}
+
+/** Zeichnet die Flaeche als Koerper? Unterhalb der Uebergabe immer, im
+ *  Ueberblendbereich weiter mit — sonst risse ein Loch, wo beide Darstellungen
+ *  ineinanderblenden sollen. */
+function alsKoerper(m) { return m <= UEBERGABE.koerper * BLENDE; }
+/** Zeichnet die Flaeche als Kartenzeichen? Ab der Uebergabe. */
+function alsZeichen(m) { return m >= UEBERGABE.koerper; }
+
 function genWald(el) {
   var p = el.params, pts = el.points;
+  var mSig = S.einheitMeter;
+  // I1: ueber der Uebergabe wird der Wald zum Zeichen. Im Ueberblendbereich
+  // laeuft beides — die Signatur blendet ueber `sy` ein, die Baeume bleiben
+  // bis zum oberen Rand stehen.
+  if (alsZeichen(mSig)) flaechenZeichen(el, "wald", p.mischung > 0.6 ? "nadel" : null);
+  if (!alsKoerper(mSig)) return;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var klump = p.klumpen === undefined ? 0.55 : p.klumpen;
   var sp = biomAbstand(V, safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), deckel(14000)));
@@ -173,6 +259,10 @@ var FRUCHT = {
 };
 function genFeld(el) {
   var p = el.params, pts = el.points;
+  // I1: siehe genWald.  waehlt das Zeichen — Weinberg und Obstgarten
+  // haben eigene, Weizen und Kohl teilen sich die Ackersignatur.
+  if (alsZeichen(S.einheitMeter)) flaechenZeichen(el, "acker", p.frucht);
+  if (!alsKoerper(S.einheitMeter)) return;
   var bb = polyBBox(pts), ctr = polyCenter(pts);
   var ext = Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 0.75 + 4;
   var a = p.drehung * DEG, dx = Math.cos(a), dz = Math.sin(a);
@@ -207,6 +297,9 @@ function genFeld(el) {
 
 function genWiese(el) {
   var p = el.params, pts = el.points;
+  // I1: eine Wiese wird auf Kartenmaszstab zur Weidesignatur.
+  if (alsZeichen(S.einheitMeter)) flaechenZeichen(el, "acker", "weide");
+  if (!alsKoerper(S.einheitMeter)) return;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var sp = biomAbstand(V, safeSpacing(pts, 2.6 / p.dichte, deckel(20000)));
   // Blumen-Leitfarben: das Biom darf die modulweite Tabelle ersetzen
@@ -319,10 +412,19 @@ function districtStreets(el) {
 
 function genViertel(el) {
   var p = el.params, pts = el.points;
+  /* I1 — ein Viertel wird auf Kartenmaszstab zur ORTSSIGNATUR, und zwar zu
+     genau EINER: 30 Haeuser ergeben eine Dorfsignatur, nicht 30 Weiler-
+     signaturen. Welche es wird, entscheidet die Kennzahl (Zahl der
+     Baukoerper), die weiter unten auf Ortsmaszstab ermittelt und mit dem
+     Element gespeichert wird — nicht hier auf Regionsmaszstab geschaetzt.
+     Sonst hinge die Signatur davon ab, mit welchem Maszstab man die Karte
+     zuletzt geoeffnet hat. */
+  if (alsZeichen(S.einheitMeter)) ortsZeichen(el);
+  if (!alsKoerper(S.einheitMeter)) return;
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
   var occ = newOcc(4.5);
-  var i, k, s;
+  var i, k, s, baukoerper = 0;
   // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken.
   // Alle Zuege wandern in EIN gemergtes Mesh (1 Draw Call statt 20-40);
   // gesammelt wird in Streets-Index-Reihenfolge, damit die gemergte
@@ -386,11 +488,21 @@ function genViertel(el) {
         var sc = rr(rs, 0.88, 1.14);
         var hyaw = Math.atan2(dx, dz) + rr(rs, -0.05, 0.05);
         emit(el, kind, x, hh - 0.15, z, hyaw, sc, sc * rr(rs, 0.9, 1.25), sc, tintOf(rs));
+        baukoerper++;
         rauchAus(el, kind, x, hh, z, sc);
         emitFensterlicht(el, rs, kind, x, hh - 0.15, z, hyaw, sc);
       }
     }
   }
+  /* I1 — die Kennzahl entsteht HIER, auf Ortsmaszstab, wo die Baukoerper
+     wirklich gesetzt werden. Sie wandert mit dem Element in die Datei und
+     entscheidet spaeter, welche Ortssignatur die Siedlung bekommt.
+
+     Sie auf Regionsmaszstab zu schaetzen waere der naheliegende Fehler: dann
+     haenge die Signatur davon ab, mit welchem Maszstab man die Karte zuletzt
+     geoeffnet hat — genau die Sorte versteckter Zustand, die rebuildAll in
+     Runde I5 einen Tag gekostet hat. */
+  el.kennzahl = baukoerper;
 }
 
 /** Uferzone eines Dorfviertels: Stege und Boote, wo das Polygon ans Wasser grenzt.

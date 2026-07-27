@@ -1038,8 +1038,16 @@ export function serializeElements() {
   var out = [];
   for (var i = 0; i < S.elements.length; i++) {
     var e = S.elements[i];
-    out.push({ id: e.id, kind: e.kind, variant: e.variant, points: e.points,
-      params: e.params, seed: e.seed });
+    var o = { id: e.id, kind: e.kind, variant: e.variant, points: e.points,
+      params: e.params, seed: e.seed };
+    /* I1 — die Kennzahl (Zahl der Baukoerper) entsteht nur auf Ortsmaszstab,
+       entscheidet aber auf Kartenmaszstab ueber die Ortssignatur. Sie MUSS
+       deshalb mitgespeichert werden: wer eine Kontinentkarte oeffnet, laesst
+       genViertel nie im Koerperzweig laufen und haette sie sonst nie.
+       Nur schreiben, wenn es sie gibt — eine Karte ohne Siedlungen ergibt
+       damit byteidentisch dieselbe Datei wie vorher. */
+    if (Number.isFinite(e.kennzahl)) o.kennzahl = e.kennzahl;
+    out.push(o);
   }
   return out;
 }
@@ -1050,6 +1058,7 @@ export function hydrate(list) {
     var d = list[i];
     var el = mkElement(d.kind, d.variant, d.points, d.params, d.seed);
     el.id = d.id || el.id;
+    if (Number.isFinite(d.kennzahl)) el.kennzahl = d.kennzahl;
     S.nextId = Math.max(S.nextId, el.id + 1);
     S.elements.push(el);
   }

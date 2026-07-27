@@ -123,10 +123,56 @@ function setPoolNames() { POOL_NAMES.length = 0; Object.keys(POOLS).forEach(func
 
 /*  x, y, z, pitch, yaw, roll, sx, sy, sz, tintR, tintG, tintB              */
 
+/**
+ * I1 — Liegt der Maszstab im Band des Pools?
+ *
+ * Bewusst eine harte Ja/Nein-Frage und keine Rueckgabe des Blendfaktors: ein
+ * KOERPER kann nicht verblassen (sein `sy` ist echte Geometrie, kein freier
+ * Wert), er kann nur da sein oder nicht. Die weiche Ueberblendung leisten die
+ * Kartenzeichen von ihrer Seite — sie blenden ueber dem Uebergabepunkt ein,
+ * waehrend die Koerper bis zum oberen Rand des Blendbereichs stehen bleiben.
+ * Ein Loch entsteht dadurch nie; ein kurzes Nebeneinander schon, und das ist
+ * die gewollte Ueberblendung.
+ *
+ * Der Grenzfall `sichtbarAb = 0` ist ausdruecklich zugelassen — er heisst
+ * „nach unten offen" und trifft auf jeden der 272 Koerperpools zu.
+ */
+function bandOffen(P, m) {
+  if (!Number.isFinite(m)) return true;              // kein Maszstab gesetzt
+  var ab = P.sichtbarAb, bis = P.sichtbarBis;
+  if (!(bis > 0)) return true;                       // Pool ohne Band
+  // Der Blendbereich zaehlt mit: BLENDE = 1.6 in render/signaturen.js. Die
+  // Zahl steht hier bewusst als Literal statt als Import — pools.js darf
+  // render/ nicht importieren (materials.js importiert pools.js nicht, aber
+  // die Richtung core/ -> render/ ist ohnehin nur fuer terraMat erlaubt).
+  var BLENDE = 1.6;
+  if (m > bis * BLENDE) return false;
+  if (ab > 0 && m < ab / BLENDE) return false;
+  return true;
+}
+
 var _schattenN = new THREE.Vector3();
 function emit(el, pool, x, y, z, yaw, sx, sy, sz, tint, pitch, roll) {
   var a = el.inst[pool];
   if (!a) { a = el.inst[pool] = []; }
+  /* ======================================================================
+     I1 — Maszstabsband durchsetzen, und zwar HIER statt in jedem Generator.
+
+     Jeder Pool traegt sein Band (`sichtbarAb`/`sichtbarBis`); ein Haus ist
+     zwischen 0 und 60 m je Zelle sinnvoll, darueber ist es drei Bildpunkte
+     gross und kostet nur Instanzen. Die Alternative waere gewesen, in jeden
+     der zwoelf Generatoren eine Abfrage zu setzen — und beim naechsten
+     Generator wieder, und den einen zu vergessen.
+
+     Eine Zeile an der Stelle, an der ALLES durchmuss, ist die ehrlichere
+     Loesung. Sie kostet einen Feldzugriff je Instanz und macht aus dem Band
+     eine Zusage statt einer Absichtserklaerung.
+
+     Was ein Generator weiterhin selbst entscheiden muss, ist die andere
+     Haelfte: WELCHES Zeichen an die Stelle des Koerpers tritt. Das kann emit
+     nicht wissen — es sieht einen Pool, keine Sache. */
+  var P = POOLS[pool];
+  if (P && !bandOffen(P, S.einheitMeter)) return;
   // I1: getrennte Deckel — siehe MAX_KARTE_PER_EL in core/store.js.
   if (POOLS[pool] && POOLS[pool].karte) {
     if (el.karteTotal >= MAX_KARTE_PER_EL) return;
