@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import { TurnstileWidget } from "@uwe/shared-ui";
+import { Suspense, useEffect, useState } from "react";
+import { TurnstileWidget, isPasskeySupported, loginWithPasskey } from "@uwe/shared-ui";
 import { readFormFieldValue, redirectAfterAuth } from "@/src/lib/auth-form-utils";
 import { sanitizePortalRedirectPath } from "@/src/lib/portal-redirect";
 import { Alert } from "@/src/components/ui/states";
@@ -15,6 +15,16 @@ import { LoadingState } from "@/src/components/ui/states";
 
 const SHOW_DEV_CREDENTIALS = process.env.NODE_ENV === "development";
 
+/** German copy for the `?error=google_*` codes set by the OAuth callback. */
+const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+  google_disabled: "Google-Login ist derzeit deaktiviert.",
+  google_cancelled: "Google-Anmeldung abgebrochen.",
+  google_failed: "Google-Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
+  google_unknown:
+    "Diese Google-E-Mail ist keinem UWE-Konto zugeordnet. Bitte wende dich an deine Spielleitung.",
+  google_no_access: "Dieses Konto hat keinen Zugriff auf diesen Bereich.",
+};
+
 interface PortalLoginFormProps {
   title?: string;
   lead?: string;
@@ -24,6 +34,12 @@ interface PortalLoginFormProps {
   devDefaultPassword?: string;
   /** Cloudflare Turnstile site key — when set, a "Verify you are human" check is required. */
   turnstileSiteKey?: string | null;
+  /** Whether passkey (WebAuthn) login is enabled in the system settings. */
+  passkeysEnabled?: boolean;
+  /** Whether "Mit Google anmelden" is enabled (toggle + credentials present). */
+  googleLoginEnabled?: boolean;
+  /** Absolute URL of the Studio-origin Google OAuth start endpoint. */
+  googleStartUrl?: string;
 }
 
 function PortalLoginFormInner({
@@ -34,13 +50,17 @@ function PortalLoginFormInner({
   devDefaultEmail,
   devDefaultPassword,
   turnstileSiteKey,
+  passkeysEnabled = false,
+  googleLoginEnabled = false,
+  googleStartUrl,
 }: PortalLoginFormProps) {
   const searchParams = useSearchParams();
   const redirectTo = sanitizePortalRedirectPath(
     searchParams.get("redirect"),
     defaultRedirect,
   );
-  const forbidden = searchParams.get("error") === "forbidden";
+  const errorParam = searchParams.get("error");
+  const forbidden = errorParam === "forbidden";
   const resetSuccess = searchParams.get("reset") === "success";
   // Optional prefill forwarded from the uweanddragons.org landing page.
   const prefillEmail = searchParams.get("email") ?? "";
@@ -52,7 +72,9 @@ function PortalLoginFormInner({
     SHOW_DEV_CREDENTIALS && devDefaultPassword ? devDefaultPassword : "",
   );
   const [error, setError] = useState<string | null>(
-    forbidden ? "Keine Berechtigung für diesen Bereich." : null,
+    forbidden
+      ? "Keine Berechtigung für diesen Bereich."
+      : (errorParam && GOOGLE_ERROR_MESSAGES[errorParam]) || null,
   );
   const [loading, setLoading] = useState(false);
   const [twoFactorChallenge, setTwoFactorChallenge] = useState<{
@@ -62,6 +84,51 @@ function PortalLoginFormInner({
   const turnstileEnabled = Boolean(turnstileSiteKey);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileRefresh, setTurnstileRefresh] = useState(0);
+  // SSR-safe: only show the passkey button once the browser confirmed support.
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false);
+  useEffect(() => {
+    if (passkeysEnabled) {
+      setPasskeyAvailable(isPasskeySupported());
+    }
+  }, [passkeysEnabled]);
+
+  // Google logins with 2FA hand their challenge token over via the URL
+  // fragment (never logged server-side) — pick it up and enter the code step.
+  useEffect(() => {
+    const match = window.location.hash.match(/googleChallenge=([^&]+)/);
+    if (match?.[1]) {
+      setTwoFactorChallenge({ challengeToken: decodeURIComponent(match[1]) });
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
+  }, []);
+
+  async function handlePasskeyLogin() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await loginWithPasskey();
+      if (!result.ok) {
+        if (!result.cancelled) {
+          setError(result.error ?? "Passkey-Anmeldung fehlgeschlagen.");
+        }
+        return;
+      }
+
+      if (result.forcePasswordChange) {
+        redirectAfterAuth(forcePasswordRedirect);
+        return;
+      }
+
+      redirectAfterAuth(redirectTo);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -300,6 +367,28 @@ function PortalLoginFormInner({
           <Button type="submit" disabled={loading || (turnstileEnabled && !turnstileToken)}>
             {loading ? "Anmelden…" : "Anmelden"}
           </Button>
+          {passkeyAvailable ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={handlePasskeyLogin}
+            >
+              Mit Passkey anmelden
+            </Button>
+          ) : null}
+          {googleLoginEnabled && googleStartUrl ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={() => {
+                window.location.assign(googleStartUrl);
+              }}
+            >
+              Mit Google anmelden
+            </Button>
+          ) : null}
         </div>
       </form>
 

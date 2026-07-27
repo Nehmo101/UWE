@@ -43,11 +43,32 @@ export const PORTAL_PUBLIC_API_ALLOWLIST = new Set([
  * `requirePortalApiAuth` via `requireSessionUser`). The `verify` route is NOT
  * delegated — it guards itself directly — so it is deliberately absent here.
  */
-export const PORTAL_DELEGATED_GUARD_ROUTES = new Set([
+export const PORTAL_TWO_FACTOR_DELEGATED_ROUTES = new Set([
   "auth/two-factor/route.ts",
   "auth/two-factor/setup/route.ts",
   "auth/two-factor/activate/route.ts",
   "auth/two-factor/disable/route.ts",
+]);
+
+/**
+ * Portal passkey routes that delegate to `apps/portal/src/lib/passkey-routes.ts`:
+ * the management endpoints are session-gated there via `requirePortalApiAuth`;
+ * the login endpoints are public by design (like `/api/auth/login`) and issue
+ * the session cookie in the same helper.
+ */
+export const PORTAL_PASSKEY_DELEGATED_ROUTES = new Set([
+  "auth/passkey/login/options/route.ts",
+  "auth/passkey/login/verify/route.ts",
+  "auth/passkey/register/options/route.ts",
+  "auth/passkey/register/verify/route.ts",
+  "auth/passkey/credentials/route.ts",
+  "auth/passkey/credentials/[id]/route.ts",
+]);
+
+/** Union of all helper-delegated Portal routes (coverage + filter helpers). */
+export const PORTAL_DELEGATED_GUARD_ROUTES = new Set([
+  ...PORTAL_TWO_FACTOR_DELEGATED_ROUTES,
+  ...PORTAL_PASSKEY_DELEGATED_ROUTES,
 ]);
 
 export function listPortalApiRouteFiles(repoRoot: string): string[] {
@@ -64,14 +85,17 @@ export function readPortalRouteSource(repoRoot: string, relativeRoute: string): 
   return fs.readFileSync(path.join(repoRoot, PORTAL_API_ROOT, relativeRoute), "utf8");
 }
 
-function portalPolicy(twoFactorHelperPath: string): RouteProtectionPolicy {
+function portalPolicy(
+  twoFactorHelperPath: string,
+  passkeyHelperPath: string,
+): RouteProtectionPolicy {
   return {
     guardPattern: PORTAL_AUTH_GUARD_PATTERN,
     publicAllowlist: PORTAL_PUBLIC_API_ALLOWLIST,
-    delegated: {
-      routes: PORTAL_DELEGATED_GUARD_ROUTES,
-      helperPath: twoFactorHelperPath,
-    },
+    delegatedGroups: [
+      { routes: PORTAL_TWO_FACTOR_DELEGATED_ROUTES, helperPath: twoFactorHelperPath },
+      { routes: PORTAL_PASSKEY_DELEGATED_ROUTES, helperPath: passkeyHelperPath },
+    ],
   };
 }
 
@@ -83,7 +107,10 @@ export function assertPortalRouteProtected(
   assertRouteProtected(
     path.join(repoRoot, PORTAL_API_ROOT),
     relativeRoute,
-    portalPolicy(twoFactorHelperPath),
+    portalPolicy(
+      twoFactorHelperPath,
+      path.join(repoRoot, "apps/portal/src/lib/passkey-routes.ts"),
+    ),
   );
 }
 

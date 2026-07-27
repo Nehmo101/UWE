@@ -305,14 +305,14 @@ describe("SettingsService", () => {
   it("resolves session inactivity timeout from settings and env fallback", () => {
     const settings = {
       ...DEFAULT_SYSTEM_SETTINGS,
-      auth: { sessionInactivityTimeoutMinutes: 15 },
+      auth: { ...DEFAULT_SYSTEM_SETTINGS.auth, sessionInactivityTimeoutMinutes: 15 },
     };
 
     assert.equal(resolveSessionInactivityTimeoutMs(settings), 15 * 60 * 1000);
     assert.equal(
       resolveSessionInactivityTimeoutMs({
         ...settings,
-        auth: { sessionInactivityTimeoutMinutes: 0 },
+        auth: { ...DEFAULT_SYSTEM_SETTINGS.auth, sessionInactivityTimeoutMinutes: 0 },
       }),
       0,
     );
@@ -320,7 +320,7 @@ describe("SettingsService", () => {
       resolveSessionInactivityTimeoutMs(
         {
           ...settings,
-          auth: { sessionInactivityTimeoutMinutes: 0 },
+          auth: { ...DEFAULT_SYSTEM_SETTINGS.auth, sessionInactivityTimeoutMinutes: 0 },
         },
         { SESSION_INACTIVITY_TIMEOUT_MINUTES: "45" },
       ),

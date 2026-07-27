@@ -330,6 +330,7 @@ export { createTwoFactorRouteHandlers } from "./two-factor-routes";
 export type {
   CompleteTwoFactorLoginDeps,
   ExistingLoginUser,
+  IssueLoginSessionDeps,
   LoginAttemptAuditInput,
   LoginAuditRequestContext,
   LoginAuthServicePort,
@@ -346,6 +347,11 @@ export type {
   SessionIssuingAuthPort,
   TwoFactorSuccessContext,
 } from "./login-flow";
-export { completeTwoFactorLogin, performLoginFlow } from "./login-flow";
+export {
+  buildAuthSuccessBody,
+  completeTwoFactorLogin,
+  issueLoginSession,
+  performLoginFlow,
+} from "./login-flow";
 
 export const AUTH_PACKAGE_VERSION = "0.2.0";

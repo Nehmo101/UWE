@@ -2,7 +2,6 @@
 // Materialien (Bodenflor, Kronenkarten, Rankenblaetter) teilen dieselben
 // Uniforms und schwingen damit im gleichen Takt. Die GLSL-Seite steckt in
 // materials.js (Wind-Patch); hier leben Uniform und Takt.
-import * as THREE from 'three';
 
 /** Von allen Wind-Materialien geteilte Uniforms. */
 const windUniforms = {

@@ -1,8 +1,7 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
-import * as THREE from 'three';
-import { clamp, lerp, DEG, hashi } from './core/rng.js';
+import { DEG, hashi } from './core/rng.js';
 import { S, HALF, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, getRenderer }
+import { scene, initPipeline, resizePipeline, renderFrame }
   from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull } from './world/terrain.js';
@@ -14,8 +13,8 @@ import { initWater, wasserSichtbar, updateWater, water } from './world/water.js'
 import { initSky, updateSky } from './world/sky.js';
 import { initAtmosphere, setTod, tickAtmosphere, updateBirds, updateRauch,
   setRauchQuellen } from './world/atmosphere.js';
-import { initSelection, updateHandlePositions, rebuildHandles } from './editor/selection.js';
-import { ed, defaultsFor, setTool } from './editor/tools.js';
+import { initSelection, updateHandlePositions } from './editor/selection.js';
+import { defaultsFor } from './editor/tools.js';
 import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
 import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast }
   from './ui/panels.js';

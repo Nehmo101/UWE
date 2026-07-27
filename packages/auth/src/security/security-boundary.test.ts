@@ -225,6 +225,7 @@ describe("security boundary", () => {
     }
 
     const portalTwoFactorHelper = path.join(root, "apps/portal/src/lib/two-factor-routes.ts");
+    const portalPasskeyHelper = path.join(root, "apps/portal/src/lib/passkey-routes.ts");
 
     for (const file of walk(portalApiDir)) {
       const content = fs.readFileSync(file, "utf8");
@@ -249,6 +250,23 @@ describe("security boundary", () => {
           helperContent,
           /requirePortalApiAuth/,
           `${file} delegates to two-factor-routes.ts which must call requirePortalApiAuth`,
+        );
+        continue;
+      }
+      if (normalizedFile.includes("/api/auth/passkey/")) {
+        // Passkey routes are thin delegators: the management endpoints must be
+        // guarded by requirePortalApiAuth in the helper; the public login
+        // endpoints issue the session cookie there (like /api/auth/login).
+        const helperContent = fs.readFileSync(portalPasskeyHelper, "utf8");
+        assert.match(
+          helperContent,
+          /requirePortalApiAuth/,
+          `${file} delegates to passkey-routes.ts which must call requirePortalApiAuth`,
+        );
+        assert.match(
+          helperContent,
+          /SESSION_COOKIE_NAME/,
+          `${file} delegates to passkey-routes.ts which must set the session cookie`,
         );
         continue;
       }

@@ -3,7 +3,7 @@
 // mischen indizierte und nicht indizierte Geometrie und fuellen fehlende
 // Farbattribute auf - beides deckt mergeGeometries aus den Addons nicht ab.
 import * as THREE from 'three';
-import { clamp, lerp, sstep, hashi, vnoise, fractal, rngOf, rr, ri } from '../core/rng.js';
+import { clamp, sstep, hashi } from '../core/rng.js';
 import { TEX } from '../render/textures.js';
 import { definePool, setPoolNames } from '../core/pools.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
@@ -547,7 +547,7 @@ function geoScheune() {
   ]);
 }
 
-function geoBaum2() {
+function _geoBaum2() {
   return mergeGeos([
     part(new CY(0.18, 0.4, 2.6, 6), M(0, 1.3, 0), 0x6f5a44),
     part(new IC(1.9, 1), M(0, 3.6, 0, 0, 0.3, 0, 1, 0.82, 1), 0x7ba055),

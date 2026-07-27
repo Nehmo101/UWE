@@ -9,9 +9,9 @@ import { cam, camera, raycaster, _ndc, rayFrom } from './camera.js';
 import { ed } from './tools.js';
 import { buildPanel } from '../ui/panels.js';
 
-var sceneHooked = null;
+var _sceneHooked = null;
 export function initSelection(scene) {
-  sceneHooked = scene;
+  _sceneHooked = scene;
   scene.add(preview);
   scene.add(handles);
   scene.add(brushRing);

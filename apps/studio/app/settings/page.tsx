@@ -26,6 +26,7 @@ import {
   VisibilityEnum,
 } from "@uwe/database/server";
 import { updateSettingsAction, setWorldGuestModeAction } from "../settings-actions";
+import { SettingsLoginTab } from "./SettingsLoginTab";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
 import { DesignAssistantWizard } from "../../components/DesignAssistantWizard";
 import { CustomThemesManager } from "../../components/CustomThemesManager";
@@ -54,6 +55,7 @@ const TABS = [
   { id: "worlds", label: "Worlds" },
   { id: "portal", label: "Portal" },
   { id: "privacy", label: "Privacy" },
+  { id: "login", label: "Anmeldung" },
   { id: "storage", label: "Storage" },
   { id: "ai", label: "AI" },
   { id: "integrations", label: "Integrationen" },
@@ -443,6 +445,8 @@ export default async function SettingsPage({ searchParams }: Props) {
             <Button type="submit">Speichern</Button>
           </form>
         )}
+
+        {activeTab === "login" && <SettingsLoginTab auth={settings.auth} />}
 
         {activeTab === "storage" && (
           <form action={updateSettingsAction} className={FORM_CLASS}>

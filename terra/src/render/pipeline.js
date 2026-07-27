@@ -14,7 +14,7 @@ scene.fog = new THREE.Fog(0xdfe8f0, 200, 950);
 
 let renderer = null, composer = null, bloomPass = null, gradePass = null,
     kantePass = null, outputPass = null, renderPass = null;
-let depthRT = null, depthCam = null, depthScene = null;
+let depthRT = null, _depthCam = null, _depthScene = null;
 let postAn = true;
 let infoCalls = 0, infoTris = 0;
 
