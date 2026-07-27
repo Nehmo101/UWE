@@ -22,6 +22,7 @@ export const CONNECTOR_NAV: NavGroup[] = [
       connectorItem("command-center", "Command Center", "/", "layout-dashboard", ["start", "host", "hosting", "status", "setup"]),
       connectorItem("connector-host", "RTX-Verbindung", "/connector", "plug", ["rtx", "verbindung", "token"]),
       connectorItem("connector-users", "Zugänge", "/users", "users", ["zugang", "zugaenge", "haekchen", "benutzer", "user", "owner", "konto", "account", "portal", "studio", "brain", "family", "einrichten"]),
+      connectorItem("connector-ops", "Betrieb", "/ops", "shield", ["betrieb", "security", "sicherheit", "secrets", "migrationen", "audit", "log", "api-token", "token", "webhooks", "einstellungen", "settings"]),
       connectorItem("connector-cloudflare", "Cloudflare-Tunnel", "/cloudflare", "cloud", ["cloudflare", "tunnel", "cloudflared", "öffentlich", "public", "domain"]),
       connectorItem("connector-deployment", "Deployment", "/deployment", "settings", ["deployment", "env", "ports", "url", "smtp", "mail", "ki", "einstellungen", "config"]),
       connectorItem("connector-runner", "Runner / Ollama", "/runner", "cpu", ["runner", "ollama", "llm"]),

@@ -364,3 +364,36 @@ export async function getHostEnv(root?: string) {
 export async function setHostEnv(updates: Record<string, string>, root?: string) {
   return invokeCommand<{ ok: boolean; written: string[] }>("set_host_env", { root, updates });
 }
+
+// ── Betrieb (Abschnitt D: was aus Studio hierher gezogen ist) ──────────────
+// Security, Secrets-Status, Migrationen, Audit-Log, API-Tokens, Webhooks und
+// Einstellungen. Ein Aufruf statt sieben Bridges — die Aktion ist der Parameter,
+// Rust und CLI prüfen sie unabhängig voneinander gegen ihre Whitelist.
+
+export type OpsAction =
+  | "security-status"
+  | "secrets-status"
+  | "migration-status"
+  | "audit-log"
+  | "api-tokens-list"
+  | "api-tokens-create"
+  | "api-tokens-revoke"
+  | "webhooks-list"
+  | "webhooks-create"
+  | "webhooks-delete"
+  | "settings-get"
+  | "settings-update";
+
+export interface OpsResult<T = unknown> {
+  ok: boolean;
+  action?: OpsAction;
+  data?: T;
+  message?: string;
+}
+
+export async function opsInvoke<T = unknown>(
+  action: OpsAction,
+  payload?: Record<string, unknown>,
+): Promise<OpsResult<T>> {
+  return invokeCommand<OpsResult<T>>("ops_invoke", { action, payload: payload ?? null });
+}

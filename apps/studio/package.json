@@ -44,7 +44,6 @@
     "@uwe/kitchen": "workspace:*",
     "@uwe/knoteforge-import": "workspace:*",
     "@uwe/mail": "workspace:*",
-    "@uwe/page-ai-review": "workspace:*",
     "@uwe/scan-inbox": "workspace:*",
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",

@@ -449,9 +449,6 @@ importers:
       '@uwe/mail':
         specifier: workspace:*
         version: link:../../packages/mail
-      '@uwe/page-ai-review':
-        specifier: workspace:*
-        version: link:../../packages/page-ai-review
       '@uwe/pdf-campaign-import':
         specifier: workspace:*
         version: link:../../packages/pdf-campaign-import
@@ -1160,28 +1157,6 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  packages/page-ai-review:
-    dependencies:
-      '@uwe/ai-brain':
-        specifier: workspace:*
-        version: link:../ai-brain
-      '@uwe/database':
-        specifier: workspace:*
-        version: link:../database
-    devDependencies:
-      '@types/node':
-        specifier: ^22.15.32
-        version: 22.19.21
-      '@uwe/config':
-        specifier: workspace:*
-        version: link:../config
-      tsx:
-        specifier: ^4.20.3
-        version: 4.22.4
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-
   packages/pdf-campaign-import:
     dependencies:
       '@uwe/database':
@@ -1465,6 +1440,9 @@ importers:
 
   tools/uwe-host-command-center:
     dependencies:
+      '@uwe/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@uwe/connector-client-config':
         specifier: workspace:*
         version: link:../../packages/connector-client-config

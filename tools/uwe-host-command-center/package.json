@@ -13,6 +13,7 @@
     "test": "node --import tsx --test src/server.test.ts src/modules.test.ts src/control.test.ts src/host-update-progress.test.ts src/desktop-host.test.ts src/provision-local-connector.test.ts"
   },
   "dependencies": {
+    "@uwe/auth": "workspace:*",
     "@uwe/connector-client-config": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/host-monitor": "workspace:*"

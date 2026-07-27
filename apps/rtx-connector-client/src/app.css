@@ -250,6 +250,22 @@
   gap: 0.5rem;
 }
 
+/* JSON-Ausgabe der Betriebs-Ansichten — scrollt statt die Seite zu sprengen. */
+.connector-pre {
+  margin: 0.75rem 0 0;
+  max-height: 26rem;
+  overflow: auto;
+  padding: 0.85rem;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--uwe-bg-elevated) 88%, transparent);
+  font-family: var(--uwe-font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .connector-checkbox-row .connector-checkbox {
   gap: 0.45rem;
   padding: 0.5rem 0.75rem;

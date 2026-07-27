@@ -4,7 +4,8 @@ use command_center::{
     backup_host, check_host_update, cloudflare_clear_token, cloudflare_set_token, cloudflare_start,
     list_backups, restore_backup,
     cloudflare_status, cloudflare_stop, create_user, delete_user, get_host_env, get_host_logs,
-    get_host_status, list_users, open_host_target, restart_host, restart_service, set_host_env,
+    get_host_status, list_users, open_host_target, ops_invoke, restart_host, restart_service,
+    set_host_env,
     set_user_password, setup_host, start_host, start_service, stop_host, stop_service, update_host,
     update_user,
 };
@@ -1512,6 +1513,7 @@ pub fn run() {
             test_image,
             test_print,
             get_host_status,
+            ops_invoke,
             setup_host,
             start_host,
             stop_host,
