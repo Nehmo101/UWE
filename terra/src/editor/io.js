@@ -1,17 +1,11 @@
 // Untere Leiste: Seed, Tageszeit, Raster, Effekte, Speichern, Laden, PNG-Export.
-import { S, KARTE, KARTEN_GROESSEN, setKartenGroesse, BIOME, hoehenProfil,
-  hoehenProfilGleich, serializeElements, hydrate, serializeMarker, hydrateMarker,
-  serializeStempel, speicherLesen, speicherSchreiben } from '../core/store.js';
+import { S, KARTE, KARTEN_GROESSEN, setKartenGroesse, BIOME, hoehenProfil, hoehenProfilGleich, serializeElements, hydrate, serializeMarker, hydrateMarker, serializeStempel, speicherLesen, speicherSchreiben } from '../core/store.js';
 import { base, genBase, genBaseIn, terrainGeometrienNeu, basisGeaendert } from '../world/terrain.js';
 // I1: der Kartenbaum. kartenbaum.js haengt nur an core/rng.js und
 // core/store.js — kein Zyklus, auch nicht ueber diesen Import zurueck.
-import { baueKartenbaum, mitKarte, legeKindkarteAn, pfadZurWurzel, kinderVon,
-  leiteKindHoehenAb, handarbeitErmitteln, handarbeitAnwenden,
-  erbWerte, loeseFeld, setzeEigen, erbeWieder, massstabName, massstabInfo,
-  leseBaumDatei, schreibeBaumDatei, hoehenNachziehen } from '../world/kartenbaum.js';
+import { baueKartenbaum, mitKarte, legeKindkarteAn, pfadZurWurzel, kinderVon, leiteKindHoehenAb, handarbeitErmitteln, handarbeitAnwenden, erbWerte, massstabName, leseBaumDatei, schreibeBaumDatei } from '../world/kartenbaum.js';
 import { rebuildAll } from '../core/dirty.js';
-import { pushUndo, verwerfeHistorie, historieKarteParken, historieKarteHolen,
-  verwerfeGeparkteHistorien, schritteInHistorie } from './history.js';
+import { pushUndo, verwerfeHistorie, historieKarteParken, historieKarteHolen, verwerfeGeparkteHistorien, schritteInHistorie } from './history.js';
 import { rebuildHandles } from './selection.js';
 // F4: der PNG-Export soll in der komponierten Einstellung aufnehmen. Dafuer
 // braucht er den Modusschalter und updateCamera, um die gedaempfte Fahrt in
@@ -32,15 +26,11 @@ import { zielPruefen, anPfadPruefen } from '../ui/beschriftung.js';
    diese Datei, weil hier Kartengroesse, Biom, Terrain, Historie und Bild
    ohnehin zusammenlaufen. */
 import { erzeugeWelt } from '../generators/welt.js';
-import { pruefeVorgabe, weltOptionen, sucheSeed, namenAnwenden,
-  herkunftBauen, herkunftGelesen } from '../generators/welt-vorgabe.js';
+import { pruefeVorgabe, weltOptionen, sucheSeed, namenAnwenden, herkunftBauen, herkunftGelesen } from '../generators/welt-vorgabe.js';
 import { clearPreview } from './selection.js';
-import { exportPNG, setPost, getPost, renderFrame,
-  setFarbskript, getFarbskript, setPalette, getPalette, setMalschicht,
-  getMalschicht, setMultiplane, getMultiplane } from '../render/pipeline.js';
+import { exportPNG, setPost, getPost, renderFrame, setFarbskript, getFarbskript, setPalette, getPalette, setMalschicht, getMalschicht, setMultiplane, getMultiplane } from '../render/pipeline.js';
 import { camera } from './camera.js';
-import { preview, handles, brushRing, markerGruppe, auswahlRahmen, rebuildMarker,
-  waehleMarker } from './selection.js';
+import { preview, handles, brushRing, markerGruppe, auswahlRahmen, rebuildMarker, waehleMarker } from './selection.js';
 import { weiteHuellenNeu } from '../core/pools.js';
 import { wasserNeuBauen } from '../world/water.js';
 
@@ -248,6 +238,14 @@ function klimaGelesen(k) {
    wenn er die einzelne Karte pruefen lassen will. Ein zweites JSON.parse je
    Karte waere nicht nur Verschwendung, es waere auch die falsche Zusage: die
    Datei ist einmal geparst, und ab da geht es um Inhalte, nicht um Text. */
+/* Sie hat seit dem Kartenbaum keinen Aufrufer mehr im Produktivcode — der
+   Ladeweg geht ueber leseBaumDatei und prueft dann jede Karte einzeln. Sie
+   bleibt trotzdem: die Testsuite haengt sie sich ueber das Testfenster in
+   terra/test/hilfen/haken.mjs heraus und prueft mit ihr das Verhalten
+   gegenueber einer TEXTdatei, also den Weg, den ein Nutzer mit einer fremden
+   Datei geht. Eine geloeschte Funktion haette diese Pruefung ersatzlos
+   mitgenommen. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function validiereKarte(text) { return validiereKarteObjekt(JSON.parse(text)); }
 
 function validiereKarteObjekt(d) {
@@ -671,7 +669,7 @@ function autosaveMeta() {
     var m = JSON.parse(roh);
     if (!m || !Array.isArray(m.staende)) return { next: 0, staende: [] };
     return { next: (m.next | 0) % AUTOSAVE_SLOTS, staende: m.staende };
-  } catch (e) { return { next: 0, staende: [] }; }
+  } catch (_e) { return { next: 0, staende: [] }; }
 }
 
 /* ==========================================================================
@@ -773,7 +771,7 @@ function wechsleZuKarte(id) {
   if (id === S.aktiveKarte) return true;
   var karte;
   try { karte = validiereKarteObjekt(n.karte); }
-  catch (e) { toast("Karte „" + n.karte.titel + "“ ist unlesbar: " + e.message); return false; }
+  catch (_e) { toast("Karte „" + n.karte.titel + "“ ist unlesbar: " + e.message); return false; }
   /* Geerbte Felder AUFLOESEN, bevor uebernehmeKarte sie liest. Im Eintrag
      einer erbenden Karte steht `biom` gar nicht — validiereKarteObjekt faellt
      dort auf seine eigene Vorgabe zurueck, und das Kind saehe aus wie eine
@@ -819,7 +817,7 @@ function neueKindkarte(polygon, opt) {
   var baum = karteSichern();
   var kind;
   try { kind = legeKindkarteAn(baum, S.aktiveKarte, polygon, opt || {}); }
-  catch (e) { toast(e.message); return null; }
+  catch (_e) { toast(e.message); return null; }
   S.baum = mitKarte(baum, kind);
   wechsleZuKarte(kind.id);
   return kind.id;
@@ -887,7 +885,7 @@ function autosaveSchreiben() {
   if (!autosaveNoetig()) return "gleich";
   var text;
   try { text = baumText(); }
-  catch (e) { return "fehler"; }
+  catch (_e) { return "fehler"; }
   if (text === letzterAutosave) return "gleich";
   if (text.length > AUTOSAVE_MAX) return "zu gross";
   var meta = autosaveMeta();
@@ -936,7 +934,7 @@ function autosaveAnbieten() {
   var stand = neuesterAutosave();
   if (!stand) return;
   var jetzt;
-  try { jetzt = baumText(); } catch (e) { jetzt = null; }
+  try { jetzt = baumText(); } catch (_e) { jetzt = null; }
   if (jetzt !== null) letzterAutosave = jetzt;      // Demostand gilt als geschrieben
   if (stand.text === jetzt) return;
   if (!confirm("Letzten Stand wiederherstellen? (" + zeitText(stand.zeit) + ")")) return;
@@ -947,7 +945,7 @@ function autosaveAnbieten() {
      fehlender nach einem halb gelungenen waere es nicht. */
   pushUndo(true);
   try { baumUebernehmen(stand.text); }
-  catch (err) { toast("Gespeicherter Stand ist unlesbar: " + err.message); return; }
+  catch (_err) { toast("Gespeicherter Stand ist unlesbar: " + err.message); return; }
   letzterAutosave = stand.text;
   toast("Stand vom " + zeitText(stand.zeit) + " wiederhergestellt");
 }
@@ -1088,7 +1086,7 @@ function weltVorgabeAnwenden(roh, opt) {
   var liste;
   try {
     liste = erzeugeWelt(S.worldSeed, weltOptionen(v));
-  } catch (err) {
+  } catch (_err) {
     /* Das Gelaende steht schon neu, die Elemente noch nicht — ein Undo stellt
        beides her (pushUndo(true) oben hat die Hoehen gesichert). Mehr ist
        ehrlich nicht zu retten, und ein halb gebauter Zustand waere schlimmer. */
@@ -1295,7 +1293,7 @@ export function initIO() {
           validiereKarteObjekt(gelesen.baum.karten[kb]);
         }
         karte = validiereKarteObjekt(gelesen.baum.index[gelesen.baum.wurzelId].karte);
-      } catch (err) {
+      } catch (_err) {
         toast("Datei konnte nicht gelesen werden: " + err.message);
         return;
       }
@@ -1487,7 +1485,7 @@ function hoehenkarteImportieren(datei) {
       ctx.drawImage(img, 0, 0, w, h);
       var px;
       try { px = ctx.getImageData(0, 0, w, h).data; }
-      catch (err) { toast("Bilddaten nicht lesbar"); return; }
+      catch (_err) { toast("Bilddaten nicht lesbar"); return; }
 
       // Parameter über prompt() — schlicht, aber ausreichend; die Vorgaben
       // sind so gewählt, dass ein durchschnittlich helles Bild eine Karte mit

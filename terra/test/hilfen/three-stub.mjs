@@ -1366,6 +1366,10 @@ export class Object3D {
     this.userData = {};
     this.layers = { set() {}, enable() {}, mask: 1 };
     this.isObject3D = true;
+    /* Absicht: die beiden Rueckrufe laufen spaeter und in fremdem `this`. Der
+     Verweis ist hier die Sache selbst und keine Abkuerzung — three macht es
+     in Object3D an derselben Stelle genauso. */
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.rotation._onChange(() => { self.quaternion.setFromEuler(self.rotation, false); });
     this.quaternion._onChange(() => { self.rotation.setFromQuaternion(self.quaternion, undefined); });

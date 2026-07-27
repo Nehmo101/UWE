@@ -23,7 +23,7 @@ const werkzeuge = await page.evaluate(() =>
 melde('Werkzeug „Ausschnitt" in der Leiste', werkzeuge.some(w => /Ausschnitt/i.test(w)), werkzeuge.length + ' Werkzeuge');
 
 // Kindkarte ueber den internen Weg anlegen (kein Zeichnen noetig).
-const angelegt = await page.evaluate(async () => {
+await page.evaluate(async () => {
   const S = window.__terraDebug.S;
   const vorher = { elemente: S.elements.length, hoehe: null };
   const t = await import('/src/world/terrain.js');

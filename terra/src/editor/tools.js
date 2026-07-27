@@ -1,14 +1,12 @@
 // Werkzeuge: Definitionen, Parameter-Schemata, aktiver Zustand, Zeichnen-Abschluss.
-import { S, BIOME, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben }
-  from '../core/store.js';
+import { S, BIOME, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben } from '../core/store.js';
 import { commit, isHeavy } from '../core/dirty.js';
 import { pushUndo } from './history.js';
 // J3 — die Auswahlliste der Sprachfamilien kommt aus dem Generator, damit sie
 // an genau EINER Stelle gepflegt wird. namen.js importiert nur core/ und
 // world/ und nichts aus editor/ oder ui/ — der Import ist zyklusfrei.
 import { sprachfamilien, familieDerKarte, setzeSprachfamilie } from '../generators/namen.js';
-import { clearPreview, setPreview, rebuildHandles, select, brushRing, waehleMarker }
-  from './selection.js';
+import { clearPreview, rebuildHandles, select, brushRing, waehleMarker } from './selection.js';
 import { buildPanel, updateHint } from '../ui/panels.js';
 
 /* I2 — Auswahlliste der Biome fuer das Schema der Biomflaeche. Sie wird aus
@@ -640,7 +638,7 @@ function stempelBibliothekLaden() {
       if (Array.isArray(arr)) {
         for (var i = 0; i < arr.length; i++) if (stempelGueltig(arr[i])) S.stempel.push(arr[i]);
       }
-    } catch (e) { /* unlesbar: leere Bibliothek, kein Absturz */ }
+    } catch (_e) { /* unlesbar: leere Bibliothek, kein Absturz */ }
   }
   stempelVariantenNeu();
 }

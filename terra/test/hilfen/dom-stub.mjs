@@ -22,6 +22,11 @@ class TestElement {
     this.textContent = '';
     this.checked = false;
     this._klassen = new Set();
+    /* Absicht: classList wird als Objektliteral mit kurzen Methoden gebaut, damit
+     der Ersatz genauso aussieht wie das echte DOM-Objekt. Eine Pfeilfunktion
+     ginge, aber `add(c) {}` liest sich wie die Vorlage — dafuer braucht es
+     den Verweis auf das umgebende `this`. */
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.classList = {
       add(c) { self._klassen.add(c); },

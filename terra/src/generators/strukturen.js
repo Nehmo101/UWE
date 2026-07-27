@@ -907,7 +907,7 @@ var KLOSTER_MAX_GROESSE = 2;
 var WERFT_QUERSUCHE = 12;
 
 function strukturKorridore(el) {
-  var out = [], i, t, x, z;
+  var out = [], i, t;
   if (!el.points || el.points.length < 3) return out;
   if (el.variant === "burg") {
     var kanten = ringKanten(el.points);

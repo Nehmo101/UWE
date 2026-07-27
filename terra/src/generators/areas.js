@@ -2,7 +2,7 @@
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
 import { S, BIOME, KARTE, VW, MAP, WATER } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
-import { heightAt, slopeAt, biomFeld, biomGewicht } from '../world/terrain.js';
+import { heightAt, biomFeld, biomGewicht } from '../world/terrain.js';
 // I2: harte Biomwahl je Kandidat. biomfeld.js haengt nur an core/ — zyklusfrei.
 import { biomHartAn } from '../world/biomfeld.js';
 // I1: Kartenzeichen. signaturen.js haengt an three, core/ und kartenbaum.js —
@@ -21,8 +21,7 @@ import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
    Deshalb wohnen die reinen Polygonhelfer jetzt dort und werden hier nur noch
    durchgereicht; ihre bisherigen Importeure (selection.js, core/dirty.js)
    bleiben davon unberuehrt. */
-import { polyBBox, inPoly, polyArea, polyCenter,
-  genBurg, genWerft, genKloster } from './strukturen.js';
+import { polyBBox, inPoly, polyArea, polyCenter, genBurg, genWerft, genKloster } from './strukturen.js';
 // Runde H: der Binnensee. see.js zieht core/, world/ und generators/{objects,
 // zeichen,wegsuche} — nie areas.js; der Weg ist zyklusfrei.
 import { genSee } from './see.js';
@@ -405,7 +404,7 @@ function genViertel(el) {
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
   var occ = newOcc(4.5);
-  var i, k, s, baukoerper = 0;
+  var i, k, baukoerper = 0;
   // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken.
   // Alle Zuege wandern in EIN gemergtes Mesh (1 Draw Call statt 20-40);
   // gesammelt wird in Streets-Index-Reihenfolge, damit die gemergte

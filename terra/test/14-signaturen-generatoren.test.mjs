@@ -31,7 +31,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ladeTerra } from './hilfen/laden.mjs';
-import { testWelt, parameterFuer } from './hilfen/karte.mjs';
+import { testWelt } from './hilfen/karte.mjs';
 import { Hasher } from './hilfen/hash.mjs';
 
 const SIG = await ladeTerra('render/signaturen.js');

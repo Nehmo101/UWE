@@ -69,7 +69,7 @@ melde('Knopf „Biome vorschlagen" da', panel.knoepfe.some((k) => /Biome vorschl
 await page.screenshot({ path: ZIEL + '/01-panel.png', timeout: 180000 });
 
 /* --- Erosion wirklich laufen lassen ------------------------------------- */
-const hoehenVorher = await page.evaluate(() => {
+await page.evaluate(() => {
   const S = window.__terraDebug.S;
   return { seed: S.worldSeed, n: S.elements.length };
 });
@@ -152,7 +152,6 @@ if (variante) {
     if (!el) return -1;
     el.params.text = 'Hafen von Ost';
     await new Promise((r) => setTimeout(r, 900));   // der Abgleich laeuft gedrosselt
-    const g = window.__terraDebug.S && document.querySelector('canvas') ? null : null;
     return window.__terraBeschriftungen ? window.__terraBeschriftungen.anzahl : -2;
   });
   melde('Beschriftungsschicht erreichbar (Diagnose)', sprites !== -1,

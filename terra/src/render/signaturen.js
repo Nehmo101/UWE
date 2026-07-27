@@ -55,7 +55,7 @@
    ========================================================================== */
 import * as THREE from 'three';
 import { bildhoehe } from '../core/bild.js';
-import { clamp, lerp, sstep, DEG, hashi } from '../core/rng.js';
+import { clamp, lerp, sstep, hashi } from '../core/rng.js';
 import { KARTE, BIOME } from '../core/store.js';
 // I1: die Maszstabsleiter gehoert der Karte, nicht der Darstellung.
 // kartenbaum.js haengt nur an core/ — kein Zyklus.
@@ -1273,7 +1273,7 @@ MALER.sig_weinberg = function (ctx, s) {
     zug(ctx, [[x, 0.72], [x + 0.14, 0.30]], s + i);
   }
 };
-MALER.sig_obstgarten = function (ctx, s) {
+MALER.sig_obstgarten = function (ctx, _s) {
   pinsel(ctx, DECK_VOLL * 0.9);
   // Punktraster, bewusst REGELMAESSIG (im Gegensatz zur Tundra): eine
   // Pflanzung ist gesetzt, keine Streuung. Der Unterschied traegt die

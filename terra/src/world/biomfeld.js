@@ -100,14 +100,6 @@ function polyBBox(pts) {
   return b;
 }
 
-function inPoly(pts, x, z) {
-  var inside = false;
-  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    var a = pts[i], b = pts[j];
-    if (((a.z > z) !== (b.z > z)) && (x < (b.x - a.x) * (z - a.z) / (b.z - a.z) + a.x)) inside = !inside;
-  }
-  return inside;
-}
 
 /* Bewusst NICHT exportiert: `inPoly` gibt es schon in generators/areas.js,
    und zwei Bezugsquellen fuer dieselbe Funktion sind eine Fehlerquelle. Wer

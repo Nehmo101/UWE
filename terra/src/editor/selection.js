@@ -12,9 +12,7 @@ import { buildPanel } from '../ui/panels.js';
 // I4: die eine Beschriftungsschicht der laufenden Karte.
 import { holeBeschriftungsschicht } from '../ui/beschriftung.js';
 
-var sceneHooked = null;
 export function initSelection(scene) {
-  sceneHooked = scene;
   scene.add(preview);
   scene.add(handles);
   scene.add(brushRing);

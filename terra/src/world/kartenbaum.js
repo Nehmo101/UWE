@@ -1136,8 +1136,10 @@ function inPoly(pts, x, z) {
  *
  * @returns [{ kind, variant, points, params, quelleId, quellElementId, anteil }]
  */
-export function elternVorlage(baum, id, opt) {
-  opt = opt || {};
+export function elternVorlage(baum, id, _opt) {
+  // `_opt` ist reserviert: die Vorlage soll spaeter filtern koennen (nur
+  // Pfade, nur Flaechen). Bis dahin nimmt sie alles.
+
   var n = baum.index[id];
   if (!n || n.elternId === null) return [];
   var e = baum.index[n.elternId];

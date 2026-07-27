@@ -2,15 +2,14 @@
 // dazu die zweite Achse Wetter (klar/bewoelkt/Regen/Schneefall/Sturm) und die
 // bewegten Kleinigkeiten (Voegel, Schornsteinrauch, Wolkenschatten-Drift).
 import * as THREE from 'three';
-import { clamp, lerp, sstep, hashi, rngOf, rr } from '../core/rng.js';
+import { clamp, lerp, rngOf, rr } from '../core/rng.js';
 import { S, BIOME } from '../core/store.js';
 import { terraUniforms, tintedMats, vineMat, setSchnee } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { POOLS } from '../core/pools.js';
 import { schattenMat } from '../core/pools.js';
 import { waterMat } from './water.js';
-import { paintSky, setSonne, setSonnenDir, setWolkenFarben, setSterne, cirrusMat,
-  CLOUD_DRIFT_MITTEL } from './sky.js';
+import { paintSky, setSonne, setSonnenDir, setWolkenFarben, setSterne, cirrusMat, CLOUD_DRIFT_MITTEL } from './sky.js';
 import { setLook } from '../render/pipeline.js';
 import { cam, camera } from '../editor/camera.js';
 // F5: uWindStaerke ist die Wetterachse des Windes (unten geschrieben),

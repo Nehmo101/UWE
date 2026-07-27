@@ -1,10 +1,7 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
-import * as THREE from 'three';
-import { clamp, lerp, DEG, hashi } from './core/rng.js';
+import { DEG, hashi } from './core/rng.js';
 import { S, HALF, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, getRenderer,
-  setPalette, setMalschicht, setMultiplane, PALETTE_STANDARD, MAL_DEZENT }
-  from './render/pipeline.js';
+import { scene, initPipeline, resizePipeline, renderFrame, setPalette, setMalschicht, setMultiplane, PALETTE_STANDARD, MAL_DEZENT } from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull } from './world/terrain.js';
 import './generators/geometry.js';        // registriert alle Objekt-Pools
@@ -13,16 +10,12 @@ import { POOLS } from './core/pools.js';
 import { rebuildAll } from './core/dirty.js';
 import { initWater, wasserSichtbar, updateWater, water } from './world/water.js';
 import { initSky, updateSky } from './world/sky.js';
-import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch,
-  setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
+import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch, setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
 import { initVfx, tickVfx } from './world/vfx.js';
-import { initSelection, updateHandlePositions, rebuildHandles,
-  beschriftungenAktualisieren } from './editor/selection.js';
-import { ed, defaultsFor, setTool } from './editor/tools.js';
+import { initSelection, updateHandlePositions, beschriftungenAktualisieren } from './editor/selection.js';
+import { defaultsFor } from './editor/tools.js';
 import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
-import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast,
-  markerOverlayAktualisieren }
-  from './ui/panels.js';
+import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast, markerOverlayAktualisieren } from './ui/panels.js';
 import { initIO, palettePassend } from './editor/io.js';
 // I3: Erosion laeuft ueber mehrere Bilder und braucht deshalb einen Takt.
 import { tickErosion } from './editor/erosion-lauf.js';

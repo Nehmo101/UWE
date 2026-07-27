@@ -14,7 +14,7 @@ if(!start){fehler.slice(0,6).forEach(f=>console.log(f)); await browser.close(); 
 await page.waitForTimeout(4000);
 melde('kein Seitenfehler beim Start', fehler.length===0, fehler.slice(0,2).join(' | '));
 
-const d = await page.evaluate(async () => {
+await page.evaluate(async () => {
   const P = window.__terraDebug.POOLS;
   const namen = Object.keys(P);
   const sig = namen.filter(n => P[n].karte);
@@ -52,7 +52,6 @@ const gezeichnet = await page.evaluate(async () => {
   const s = await import('/src/render/signaturen.js');
   const p = await import('/src/core/pools.js');
   const St = await import('/src/core/store.js');
-  const d = await import('/src/core/dirty.js');
   const Sx = St.S;
   const el = St.mkElement('objekt', 'baeume', [{x:0,z:0}], {}, 1);
   Sx.elements.push(el);

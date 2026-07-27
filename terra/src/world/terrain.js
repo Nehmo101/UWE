@@ -1,13 +1,12 @@
 // Heightfield-Terrain: Hoehen, Farben, Kruemmungs-AO, Korridore, Fluesse, Pinsel.
 import * as THREE from 'three';
-import { clamp, lerp, sstep, DEG, hashi, vnoise, fractal } from '../core/rng.js';
-import { MAP, VW, HALF, WATER, S, BIOME, hoehenProfil } from '../core/store.js';
+import { clamp, lerp, sstep, DEG, vnoise, fractal } from '../core/rng.js';
+import { MAP, VW, HALF, S, BIOME, hoehenProfil } from '../core/store.js';
 import { terraMat, tintedMats, setzeBiomKarte } from '../render/materials.js';
 // I2: Biomflaechen. biomfeld.js haengt nur an core/rng.js und core/store.js —
 // es traegt eine eigene Kopie von inPoly/polyBBox, damit kein Rueckimport nach
 // generators/ entsteht (dort haengt areas.js an genau dieser Datei).
-import { biomFeldBauen, biomGewichtAn, biomIndexAn, mischPalette, mischStufe,
-  cacheLeeren as biomCacheLeeren, BIOM_KEINS } from './biomfeld.js';
+import { biomFeldBauen, biomGewichtAn, biomIndexAn, mischPalette, mischStufe, cacheLeeren as biomCacheLeeren, BIOM_KEINS } from './biomfeld.js';
 
 /* ==========================================================================
    Aenderungserkennung fuer die Historie (H1e)

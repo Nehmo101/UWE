@@ -112,7 +112,7 @@ function zielPruefen(ziel) {
      kaputte Ports, IDN). Stimmen beide Instanzen nicht überein, wird abgelehnt —
      genau da sitzen die Umgehungen. */
   var u = null;
-  try { u = new URL(ref); } catch (e) { return { ok: false, grund: "ref ist keine gültige Adresse" }; }
+  try { u = new URL(ref); } catch (_e) { return { ok: false, grund: "ref ist keine gültige Adresse" }; }
   if (u.protocol !== "http:" && u.protocol !== "https:") return { ok: false, grund: "nur http: und https: sind erlaubt" };
   if (!u.hostname) return { ok: false, grund: "ref hat keinen Rechnernamen" };
   /* Zugangsdaten in der Adresse sind kein Skriptangriff, aber der klassische
@@ -410,7 +410,7 @@ function glyphBreiten(zeichen, grad, ctx) {
  */
 function schriftMessen(ctx, klasse, groesse) {
   if (!ctx) return;
-  try { ctx.font = schriftAngabe(klasse, groesse); } catch (e) { /* kein Canvas */ }
+  try { ctx.font = schriftAngabe(klasse, groesse); } catch (_e) { /* kein Canvas */ }
 }
 
 /** Der CSS-Wert für ctx.font. */
