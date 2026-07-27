@@ -4,12 +4,13 @@ import { Vector3 } from 'three';
 import { S, hydrate } from '../core/store.js';
 import { clamp } from '../core/rng.js';
 import { instanceTotal, schattenAnzahl } from '../core/pools.js';
-import { ed, TOOLS, VARIANTS, PARAMS, schemaKey, defaultsFor, toolParams, setTool,
+import { ed, TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
+  schemaKey, defaultsFor, toolParams, setTool,
   auswahlElemente, stempelErzeugen, aktuellerStempel }
   from '../editor/tools.js';
 import { commit, isHeavy, deleteElement, regenElement, rebuildAll } from '../core/dirty.js';
 import { pushUndo } from '../editor/history.js';
-import { rebuildHandles, clearPreview, getMarkerAuswahl } from '../editor/selection.js';
+import { rebuildHandles, clearPreview, getMarkerAuswahl, rebuildMarker } from '../editor/selection.js';
 // F4: der Aufnahme-Modus ist ein Kamerazustand, kein Werkzeug — die Leiste
 // zeigt ihn trotzdem an, weil sie der einzige Ort ist, an dem ein Zustand mit
 // Tastenkuerzel sichtbar wird. Zyklusfrei: camera.js importiert nichts aus ui/.
@@ -20,6 +21,9 @@ import { getRenderInfo } from '../render/pipeline.js';
 // generators/ (rng, store, terrain, objects, vines, wegsuche) und nichts aus
 // editor/ oder ui/. Der Einsetzweg darf deshalb hier stehen.
 import { erzeugeWelt } from '../generators/welt.js';
+// J3: der Namensgenerator. Gleiche Begruendung wie oben — namen.js haengt nur
+// an core/ und world/ und importiert nichts aus editor/ oder ui/.
+import { nameFuer, sammleNamen } from '../generators/namen.js';
 
 var panelEl = null;
 export function initPanels() {
@@ -89,7 +93,228 @@ function weltWuerfeln() {
   buildPanel();
   var b = liste.bericht || {};
   toast("Welt gewürfelt: " + liste.length + " Elemente · "
-    + (b.fluesse || 0) + " Flüsse · " + (b.siedlungen || 0) + " Siedlungen");
+    + (b.fluesse || 0) + " Flüsse · " + (b.siedlungen || 0) + " Siedlungen"
+    // J3: der Regionsname ist das Erste, was man von einer Karte wissen will.
+    + (b.region ? " · „" + b.region + "“" : "")
+    + (b.namen ? " · " + b.namen + " Namen" : ""));
+}
+
+
+/* ==========================================================================
+   J3 — Namen im Panel
+
+   Drei Bausteine, alle hier und nicht in tools.js, weil sie DOM erzeugen:
+
+   1. `namensZeile` — ein Textfeld mit einem Würfelknopf daneben. Es gibt kein
+      `.row`-Muster fuer "Eingabe + Knopf" in ui/style.css (die Datei gehoert
+      dieser Runde nicht), deshalb steht die Aufteilung als Inline-Flex hier;
+      Schriftgroesse und Rahmen erben von der globalen input-Regel.
+   2. `nameArtFuer` — welche Wortwelt zu welchem Element gehoert.
+   3. `baueNamenAbschnitt` — Sprachfamilie der Karte plus die Liste aller
+      vergebenen Namen mit Dublettenmarke.
+
+   Der Würfelknopf muss bei JEDEM Druck etwas Neues liefern, obwohl der
+   Generator deterministisch ist. Deshalb ein laufender Zaehler als `index`:
+   der Seed des Elements bleibt unangetastet (die Bestueckung aendert sich
+   nicht), nur der Namensschluessel wandert weiter.
+   ========================================================================== */
+var wuerfelZaehler = 0;
+
+/** Mittelpunkt der Punkte — die Lage, an der ein Element benannt wird. */
+function elementMitte(e) {
+  var p = e.points, x = 0, z = 0;
+  if (!p || !p.length) return { x: 0, z: 0 };
+  for (var i = 0; i < p.length; i++) { x += p[i].x; z += p[i].z; }
+  return { x: x / p.length, z: z / p.length };
+}
+
+var NAME_ART = {
+  "ranke:ranke": "ranke",
+  "pfad:fluss": "fluss", "pfad:bruch": "bruch",
+  "flaeche:wald": "wald",
+  "flaeche:viertel": "ort", "flaeche:burg": "ort", "flaeche:kloster": "ort",
+  "flaeche:werft": "ort",
+  // Objektstreuungen: was gebaut aussieht, bekommt einen Hausnamen; was
+  // gefallen ist, klingt nach Bruchkante; Fels nach Gebirge.
+  "objekt:haeuser": "gasthaus", "objekt:wohnbau": "gasthaus",
+  "objekt:handwerk": "gasthaus", "objekt:hof": "gasthaus",
+  "objekt:ruinen": "bruch", "objekt:ruinen2": "bruch",
+  "objekt:felsen": "gebirge", "objekt:natur2": "gebirge",
+  "objekt:maritim": "ort", "objekt:hafen": "ort", "objekt:arbor": "ranke"
+};
+function nameArtFuer(e) { return NAME_ART[e.kind + ":" + e.variant] || "region"; }
+
+/**
+ * Der Vorschlag fuer EIN Element. Sonderfall Strasse: eine Strasse heisst
+ * nicht nach sich selbst, sondern nach ihrem Ziel — genau wie im
+ * Weltgenerator ("Weg von X nach Y"). Gemessen wird deshalb am ENDPUNKT, und
+ * der Name entsteht als Ortsname.
+ */
+function namensVorschlag(target) {
+  var m = elementMitte(target);
+  if (target.kind === "pfad" && target.variant === "strasse" && target.points.length) {
+    var e = target.points[target.points.length - 1];
+    return "Weg nach " + nameFuer("ort", e.x, e.z, target.seed,
+      { rolle: "panel-ziel", index: ++wuerfelZaehler });
+  }
+  return nameFuer(nameArtFuer(target), m.x, m.z, target.seed,
+    { rolle: "panel", index: ++wuerfelZaehler });
+}
+
+/** Die vier Markerarten auf die Wortwelten abgebildet — eine Gefahrenstelle
+ *  soll nach Abgrund klingen, eine Arbor-Nadel nach Ranke. */
+var MARKER_ART = { ort: "ort", gefahr: "bruch", notiz: "region", arbor: "ranke" };
+
+/**
+ * Textfeld + Würfelknopf. `holen` liefert den aktuellen Text, `setzen(text)`
+ * uebernimmt ihn, `wuerfeln()` liefert einen Vorschlag.
+ */
+function namensZeile(beschriftung, holen, setzen, wuerfeln, hinweis) {
+  var row = el("div", "row");
+  var lab = el("label");
+  lab.appendChild(el("span", null, beschriftung));
+  row.appendChild(lab);
+  var box = el("div");
+  box.style.display = "flex";
+  box.style.gap = "6px";
+  box.style.alignItems = "center";
+  var inp = el("input");
+  inp.type = "text";
+  inp.value = holen() || "";
+  inp.spellcheck = false;
+  inp.style.flex = "1 1 auto";
+  inp.style.minWidth = "0";
+  inp.addEventListener("change", function () { setzen(inp.value); });
+  // Enter uebernimmt sofort und gibt den Fokus frei — sonst wuerde ein
+  // spaeterer Neuaufbau des Panels die Eingabe verschlucken.
+  inp.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") { setzen(inp.value); inp.blur(); }
+  });
+  var b = el("button", null, "🎲");
+  b.title = hinweis || "Neuen Namen vorschlagen — passend zur Lage auf der Karte";
+  b.style.flex = "0 0 auto";
+  b.style.padding = "4px 8px";
+  b.addEventListener("click", function () {
+    var neu = wuerfeln();
+    if (!neu) return;
+    inp.value = neu;
+    setzen(neu);
+  });
+  box.appendChild(inp);
+  box.appendChild(b);
+  row.appendChild(box);
+  return row;
+}
+
+/** Namenszeile fuer ein Element (schreibt in `params.name`). */
+function elementNamensZeile(target) {
+  return namensZeile("Name", function () { return target.params.name || ""; },
+    function (txt) {
+      pushUndo();
+      txt = String(txt || "").trim();
+      // Leerer Text loescht das Feld wieder, statt "" zu speichern — ein
+      // namenloses Element soll auch in der Datei namenlos sein.
+      if (txt) target.params.name = txt; else delete target.params.name;
+      // KEIN commit: der Name erzeugt keine Geometrie und keine Instanzen.
+      // Er steht in params und wandert damit von selbst in die Datei.
+    },
+    function () { return namensVorschlag(target); });
+}
+
+/**
+ * Abschnitt „Namen“: Sprachfamilie der Karte und die Liste alles Benannten.
+ * Die Liste liest ausschliesslich `params.name` und die Markertexte — beides
+ * Felder, die ohnehin gespeichert werden; es gibt kein zweites Verzeichnis,
+ * das veralten koennte.
+ */
+function baueNamenAbschnitt() {
+  panelEl.appendChild(el("hr"));
+  panelEl.appendChild(el("div", "ph", "Namen"));
+  var applyFam = function (mode) {
+    if (mode === true || mode === "vorschau") return;
+    buildPanel();
+    toast("Sprachfamilie: " + aktiveSprachfamilie());
+  };
+  panelEl.appendChild(paramRow(KARTE_PARAMS[0], karteParams, applyFam));
+  panelEl.appendChild(el("div", "psub",
+    "Bestimmt die Wortwelt neuer Namen. „Aus dem Biom“ leitet sie ab "
+    + "(hier: " + aktiveSprachfamilie() + "). Die Lage auf der Karte wählt das "
+    + "Grundwort mit: an einer Furt „-furt“, am Ufer „-hafen“, auf dem Sattel "
+    + "„-scharte“, an einer Bruchkante „-riss“. Einzelne Landstriche sprechen "
+    + "eine Nachbarsprache — so entstehen Sprachgrenzen."));
+
+  var alle = sammleNamen();
+  if (!alle.length) {
+    panelEl.appendChild(el("div", "psub", "Noch nichts benannt. „🎲 Welt würfeln“ "
+      + "benennt alles auf einmal, der Würfelknopf am Element einzeln."));
+    return;
+  }
+  var dubl = 0, i;
+  for (i = 0; i < alle.length; i++) if (alle[i].dublette) dubl++;
+  panelEl.appendChild(el("div", "psub", alle.length + " Namen auf der Karte"
+    + (dubl ? " · " + dubl + " Dublette" + (dubl === 1 ? "" : "n") + " (rot)" : " · keine Dubletten")));
+  var box = el("div");
+  box.style.maxHeight = "220px";
+  box.style.overflowY = "auto";
+  box.style.margin = "4px 0 2px";
+  // Deckel gegen endlose Listen: eine 1024er Karte kann weit ueber hundert
+  // Namen tragen, und das Panel ist keine Tabelle.
+  var deckel = Math.min(alle.length, 120);
+  for (i = 0; i < deckel; i++) {
+    var z = el("div", "psub", alle[i].name + "  —  " + alle[i].was);
+    z.style.margin = "0";
+    z.style.whiteSpace = "nowrap";
+    z.style.overflow = "hidden";
+    z.style.textOverflow = "ellipsis";
+    if (alle[i].dublette) z.style.color = "#c1523c";
+    box.appendChild(z);
+  }
+  panelEl.appendChild(box);
+  if (alle.length > deckel)
+    panelEl.appendChild(el("div", "psub", "… und " + (alle.length - deckel) + " weitere."));
+}
+
+/* ==========================================================================
+   D1/J3 — Markerpanel
+
+   Bisher hatte das Markerwerkzeug gar kein Panel: die Beschriftung lief ueber
+   prompt() beim Doppelklick (editor/pointer.js). Hier steht sie nun als
+   Textfeld mit Würfelknopf — und zwar fuer ALLE Marker, nicht nur den
+   gewaehlten: pointer.js ruft beim Anwaehlen einer Nadel kein buildPanel
+   (und die Datei gehoert dieser Runde nicht), eine Liste bleibt deshalb
+   immer richtig. Den Nachbau bei Anzahl- oder Auswahlwechsel besorgt
+   tickToast weiter unten.
+   ========================================================================== */
+function baueMarkerPanel() {
+  var gewaehlt = getMarkerAuswahl();
+  panelEl.appendChild(el("hr"));
+  if (!S.marker.length) {
+    panelEl.appendChild(el("div", "psub", "Noch keine Nadel gesetzt. Klick auf das "
+      + "Gelände setzt eine — die Beschriftung lässt sich hier ändern oder würfeln."));
+    baueNamenAbschnitt();
+    return;
+  }
+  var deckel = Math.min(S.marker.length, 40);
+  for (var i = 0; i < deckel; i++) {
+    (function (k) {
+      var m = S.marker[k];
+      var zeile = namensZeile((k === gewaehlt ? "▸ " : "") + (k + 1) + ". " + m.art,
+        function () { return m.text; },
+        function (txt) { m.text = String(txt); rebuildMarker(); },
+        function () {
+          return nameFuer(MARKER_ART[m.art] || "region", m.x, m.z,
+            // Marker haben keinen Seed (siehe core/store.js) — die Koordinate
+            // ist ihr stabiler Schluessel.
+            (Math.round(m.x) * 73856093) ^ (Math.round(m.z) * 19349663),
+            { rolle: "marker", index: ++wuerfelZaehler });
+        });
+      panelEl.appendChild(zeile);
+    })(i);
+  }
+  if (S.marker.length > deckel)
+    panelEl.appendChild(el("div", "psub", "… und " + (S.marker.length - deckel)
+      + " weitere Nadeln (Doppelklick auf die Nadel beschriftet sie)."));
+  baueNamenAbschnitt();
 }
 
 function el(tag, cls, txt) {
@@ -222,6 +447,9 @@ function buildPanel() {
       "Shift+Klick nimmt weitere dazu (K macht aus der Auswahl einen Stempel). " +
       "Entf löscht die Auswahl."));
     panelEl.appendChild(el("div", "psub", S.elements.length + " Elemente auf der Karte."));
+    // J3: Das Auswahl-Werkzeug ohne Auswahl ist das Panel der GANZEN Karte —
+    // hier gehoert die kartenweite Sprachfamilie hin, nicht in ein Elementschema.
+    baueNamenAbschnitt();
     return;
   }
   var head = target
@@ -272,6 +500,13 @@ function buildPanel() {
     wrap.appendChild(seg);
     panelEl.appendChild(wrap);
   }
+
+  /* J3 — die Namenszeile steht VOR den Parametern: der Name ist das, was man
+     an einem Element zuerst sucht. Sie erscheint nur an einem gewaehlten
+     Element, denn ein Name gehoert zu EINEM Ding, nicht zur Werkzeugeinstellung
+     (`name` ist deshalb auch kein Eintrag in PARAMS: es hat keinen Default,
+     erbt nichts und darf beim Zeichnen nicht mitkopiert werden). */
+  if (target) panelEl.appendChild(elementNamensZeile(target));
 
   // Parameter
   var defs = PARAMS[schemaKey(kind, variant)] || [];
@@ -325,6 +560,8 @@ function buildPanel() {
       "des ersten Klicks als Ziel."));
   } else if (kind === "stempel") {
     baueStempelPanel();
+  } else if (kind === "marker") {
+    baueMarkerPanel();
   } else if (kind === "wegsuche") {
     // A2: das Werkzeug selbst (zwei Klicks) gehoert nach editor/tools.js und
     // editor/pointer.js. Der Zweig steht hier schon bereit und bleibt bis dahin
@@ -586,12 +823,31 @@ function markerOverlayAktualisieren() {
  *  Sauberer waere in main.js eine eigene Zeile — `markerOverlayAktualisieren()`
  *  ist dafuer exportiert und darf jederzeit direkt aus der Renderschleife
  *  gerufen werden; dann entfaellt der Aufruf hier. */
+/* J3 — das Markerpanel lebendig halten. editor/pointer.js setzt und waehlt
+   Nadeln, ohne buildPanel zu rufen (und die Datei gehoert dieser Runde nicht).
+   Statt dort eine Zeile zu ergaenzen, merkt sich das Panel Anzahl und Auswahl
+   und baut sich nach, wenn sich eines der beiden aendert — zwei
+   Ganzzahlvergleiche je Bild, und nur solange das Markerwerkzeug offen ist.
+   Der Fokus-Test verhindert, dass ein Neuaufbau die gerade laufende Eingabe
+   verschluckt. */
+var mAnzahl = -1, mWahl = -2;
+function markerPanelNachziehen() {
+  if (ed.tool !== "marker" || ed.selected) { mAnzahl = -1; mWahl = -2; return; }
+  var n = S.marker.length, w = getMarkerAuswahl();
+  if (n === mAnzahl && w === mWahl) return;
+  mAnzahl = n; mWahl = w;
+  var akt = document.activeElement;
+  if (akt && panelEl && panelEl.contains(akt)) return;   // Eingabe laeuft
+  buildPanel();
+}
+
 function tickToast(now) {
   if (toastT && now > toastT) {
     document.getElementById("toast").classList.remove("show");
     toastT = 0;
   }
   markerOverlayAktualisieren();
+  markerPanelNachziehen();
 }
 
 export { el, buildRail, paramRow, buildPanel, updateHint, toast, tickToast, updateStats,

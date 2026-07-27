@@ -1,6 +1,6 @@
 // Aenderungs-Orchestrierung: Elemente (neu) erzeugen, Terrain/Korridore
 // nachziehen, geaenderte Pools packen.
-import { S, HALF, VINE_R, clearElement, dropElement } from './store.js';
+import { S, HALF, VW, VINE_R, clearElement, dropElement } from './store.js';
 import { lerp } from './rng.js';
 import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
@@ -259,8 +259,18 @@ function refreshTerrainBereich(el) {
 /** Vollständiger Neuaufbau (Laden, Undo, Seed-Wechsel). */
 function rebuildAll() {
   rebuildRivers();
+  // Reihenfolge ist Pflicht, nicht Geschmack: rebuildCorridors() ruft fuer
+  // Viertel und Werften districtStreets()/werftAchse(), und die lesen
+  // heightAt() — also `hgt`. Stand refreshTerrainFull() davor, arbeiteten die
+  // beiden im ersten Durchlauf nach dem Laden auf dem Hoehenfeld der ZUVOR
+  // geladenen Karte (ohne Flusseinschnitt), erst der zweite Neuaufbau war
+  // richtig. Darum: Hoehen erst schreiben, dann stempeln, dann AO und Farben —
+  // letztere brauchen den frischen Tritt aus rebuildCorridors(). Aufgeteilt
+  // statt refreshTerrainFull(), damit das Gitter nur EINMAL laeuft.
+  recomputeHeights(0, VW - 1, 0, VW - 1);
   rebuildCorridors();
-  refreshTerrainFull();
+  computeAO(0, VW - 1, 0, VW - 1);
+  refreshGrid(0, VW - 1, 0, VW - 1);
   for (var i = 0; i < S.elements.length; i++) {
     var el = S.elements[i];
     genElement(el);

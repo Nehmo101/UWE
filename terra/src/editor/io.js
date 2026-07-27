@@ -349,6 +349,8 @@ function validiereKarte(text) {
     // oder ist der Wert unbekannt, faellt die Karte ohne Fehler auf "wiese"
     // zurueck — aeltere Dateien sehen damit exakt wie bisher aus.
     biom: (typeof d.biom === "string" && BIOME[d.biom]) ? d.biom : "wiese",
+    // J3: tolerant wie `biom` — unbekannte Werte fallen auf "auto" zurueck.
+    sprachfamilie: typeof d.sprachfamilie === "string" ? d.sprachfamilie : "auto",
     // Optionales Feld (ab dieser Runde mitgeschrieben, version bleibt 2):
     // Stand von S.elementSeedCounter beim Speichern. Fehlt es (aeltere
     // v1/v2-Dateien) oder ist es keine endliche Zahl, liefert null — der
@@ -377,6 +379,7 @@ function kartenDaten() {
     format: "terra", version: 4, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
     kartenGroesse: KARTE.map,
     biom: S.biom,               // tolerantes Zusatzfeld (G5)
+    sprachfamilie: S.sprachfamilie,   // tolerantes Zusatzfeld (J3)
     // Zweite Stimmungsachse neben der Tageszeit — wie `biom` ein optionales,
     // tolerant gelesenes Zusatzfeld. `version` bleibt deshalb 4: ein aelterer
     // Leser ueberliest das Feld und sieht die Karte bei klarem Wetter.
@@ -418,6 +421,7 @@ function uebernehmeKarte(karte) {
   // Generatoren lesen S.biom im rebuildAll unten. Select-UI nachfuehren.
   S.biom = karte.biom;
   document.getElementById("biomSel").value = S.biom;
+  S.sprachfamilie = karte.sprachfamilie;
   // Kartengroesse VOR genBase/Delta setzen: genBase schreibt in das dann
   // passend dimensionierte base-Feld, und die Deltaindizes der Datei sind
   // gegen genau dieses VW gerechnet. (v1/v2/v3 liefern hier 256.)

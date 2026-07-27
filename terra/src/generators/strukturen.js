@@ -320,6 +320,29 @@ function genBurg(el) {
   var outX = -te.inX, outZ = -te.inZ;
   var rg = ortsRng(torI, 0, el.seed + 605);
   setzeBau(el, occ, B.tor, te.mx, te.mz, yawT, 1, hoehe, 1, tintOf(rg, 0.04));
+
+  /* --- Pechnasen ueber der Durchfahrt (nur Steinburg) --------------------
+     Der Pool lag bis hierher ohne einen einzigen Aufrufer im Register. Die
+     Reihe haengt an der AUSSENseite des Torriegels, und zwar per emit statt
+     setzeBau: das Ding sitzt in 5 m Hoehe an der Mauer, nicht auf dem Boden,
+     und darf deshalb weder die Bodenhoehe unter sich noch einen occ-Kreis
+     bekommen. Verankert wird an der OBERkante des Riegels (lokal y = 5.0, mit
+     `hoehe` skaliert) und von dort nach unten gehaengt — so bleibt der Sturz
+     unter der Zinne, auch wenn der Nutzer die Mauerhoehe herunterdreht.
+     yaw + PI: die Pechnase kragt nach +z aus, das Torhaus hat sein +z aber im
+     Hof. Lokales +x zeigt nach (outZ, -outX), also genau die Torkante entlang. */
+  if (B.steinbau && POOLS.pechnase) {
+    var yPech = Math.max(heightAt(te.mx, te.mz), WATER + 0.2) - 0.15 + 5.0 * hoehe - 0.95;
+    var yawP = Math.atan2(outX, outZ);
+    for (k = -1; k <= 1; k++) {
+      var u = k * 1.15;
+      var px = te.mx + outZ * u + outX * 1.12, pz = te.mz - outX * u + outZ * 1.12;
+      if (px < -HALF + 1 || px > HALF - 1 || pz < -HALF + 1 || pz > HALF - 1) continue;
+      emit(el, "pechnase", px, yPech, pz, yawP, 1, 1, 1,
+        tintOf(ortsRng(torI, k + 1, el.seed + 606), 0.05));
+    }
+  }
+
   // Liegt vor dem Tor Wasser oder ein Graben? Gemessen 5 m vor der Torachse:
   // entweder unter dem Wasserspiegel (Wassergraben) oder deutlich tiefer als
   // die Torschwelle (Trockengraben, Steilabfall).

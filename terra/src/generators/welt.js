@@ -30,6 +30,10 @@ import { heightAt, slopeAt } from '../world/terrain.js';
 import { tryPlace } from './objects.js';
 import { rankePlatzierbar } from './vines.js';
 import { sucheWeg, vereinfache } from './wegsuche.js';
+/* J3 — Namen. namen.js haengt nur an core/rng, core/store und world/terrain und
+   importiert insbesondere NICHT welt.js zurueck; der Import ist also zyklusfrei
+   und aendert den Modulgraphen dieser Datei nicht nennenswert. */
+import { nameFuer, neueVergabe } from './namen.js';
 
 /* ==========================================================================
    Korridore — warum der Generator eine EIGENE Belegung fuehrt
@@ -69,7 +73,13 @@ var WELT_STANDARD = {
   fluesse: 1,        // Faktor auf die Anzahl der Flusslaeufe
   ranken: 3,         // Anzahl der Arbor-Ranken (wird auf 2..5 geklemmt)
   strassen: true,    // Strassennetz zwischen den Siedlungen bauen?
-  stil: null         // Baustil; null = aus dem Biom ableiten
+  stil: null,        // Baustil; null = aus dem Biom ableiten
+  /* J3 — Namen. `namen: false` liefert eine Welt ohne einen einzigen Namen
+     (fuer Tests, die auf Byteidentitaet mit dem Stand vor dieser Runde
+     pruefen). `sprachfamilie: null` heisst "die der Karte" — S.sprachfamilie
+     bzw. das Biom. */
+  namen: true,
+  sprachfamilie: null
 };
 
 /* Baustil je Biom. Kein Anspruch auf Weltgeschichte — eine Zuordnung, die dem
@@ -304,6 +314,52 @@ function fuegeEin(W, kind, variant, points, params) {
   return el;
 }
 
+/* ==========================================================================
+   J3 — Benennung
+
+   Jeder Name haengt am ELEMENTSEED, nicht an einem laufenden Zaehler: er
+   ueberlebt damit dasselbe wie die Bestueckung. `rolle` trennt gleichseedige
+   Rollen (der Fluss Nr. 2 und die Siedlung Nr. 2 haben verschiedene Seeds,
+   aber die Rolle macht es unabhaengig davon eindeutig).
+
+   Zwei Uebergaben sind wichtig:
+     elemente: W.elemente  — die WACHSENDE Liste dieses Laufs. S.elements zeigt
+       waehrend der Erzeugung noch die alte Karte; nur so weiss eine Siedlung,
+       dass ein Fluss neben ihr liegt, und ein Wald, dass eine Strasse
+       daneben laeuft.
+     korridor: false — dieselbe Begruendung wie bei der Wegsuche weiter unten:
+       die Korridormaske ist zum Erzeugungszeitpunkt die der VORIGEN Karte.
+   ========================================================================== */
+function benenne(W, art, x, z, seed, rolle, index) {
+  if (!W.o.namen) return null;
+  return nameFuer(art, x, z, seed, {
+    worldSeed: W.seed,
+    familie: W.o.sprachfamilie || undefined,
+    index: index, rolle: rolle,
+    vergabe: W.vergabe,
+    elemente: W.elemente,
+    korridor: false
+  });
+}
+
+/* Acht Sektoren, beginnend bei Osten und gegen den Uhrzeigersinn im
+   x/z-System (z zeigt nach Sueden). "Nordost" statt "Nordöstliche" — die
+   Namen werden zusammengesetzt ("Nordostäcker von …"). */
+var RICHTUNG = ["Ost", "Südost", "Süd", "Südwest", "West", "Nordwest", "Nord", "Nordost"];
+function himmelsrichtung(dx, dz) {
+  var a = Math.atan2(dz, dx);
+  var k = Math.round(a / (Math.PI / 4));
+  return RICHTUNG[((k % 8) + 8) % 8];
+}
+
+/** Setzt params.name, wenn ein Name erzeugt wurde. `name` ist ein neues,
+ *  OPTIONALES Parameterfeld — serializeElements nimmt params als Ganzes mit,
+ *  das Dateiformat aendert sich dadurch nicht. */
+function benenneElement(el, name) {
+  if (name) el.params.name = name;
+  return el;
+}
+
 /**
  * Verrauschter Umriss um einen Mittelpunkt — die Standardform aller Flaechen
  * dieses Generators. `regel` (optional) darf jede Ecke ablehnen; sie wird dann
@@ -514,6 +570,14 @@ function merkeFluss(fr, nx, x, z, nr, idx) {
 
 function abschnitteEinsetzen(W, L) {
   var pts = L.punkte, n = pts.length;
+  /* EIN Name je Lauf, nicht je Abschnitt: die zwei bis drei Elemente sind
+     derselbe Fluss, nur mit verschiedener Breite. Gemessen wird in der Mitte
+     des Laufs — dort liegt die Landschaft, die ihn praegt, und nicht die
+     Quelle auf dem Gipfel. */
+  var mitte = pts[n >> 1];
+  var flussName = benenne(W, "fluss", mitte.x, mitte.z,
+    elementSeed(W.seed, 9000 + L.nr), "fluss", L.nr);
+  L.name = flussName;
   // Trennstellen: Zufluesse, die die Menge deutlich anheben (> 25 %) und weit
   // genug von den Enden und voneinander liegen.
   var zu = L.zufluss.slice().sort(function (a, b) { return (a.bei - b.bei) || (a.menge - b.menge); });
@@ -538,10 +602,10 @@ function abschnitteEinsetzen(W, L) {
     var breite = breiteAus(menge);
     var punkte = vereinfache(teil, 1.7, 16);
     if (punkte.length < 2) continue;
-    fuegeEin(W, "pfad", "fluss", punkte, {
+    benenneElement(fuegeEin(W, "pfad", "fluss", punkte, {
       breite: Math.round(breite * 2) / 2,
       tiefe: Math.round(clamp(1.4 + breite * 0.22, 1, 8) * 2) / 2
-    });
+    }), flussName);
     // Belegung: der Flusslauf selbst und ein Uferstreifen sind kein Bauland.
     for (var p = 0; p < teil.length; p += 2) stempel(W.bel, teil[p].x, teil[p].z, breite * 0.6 + 3, B_FLUSS);
   }
@@ -661,7 +725,7 @@ function siedlungEinsetzen(W, ort, nr, stil) {
   var r = (16 + rr(rs, 0, 9)) * gross * Math.sqrt(skala());
   var pts = umriss(ort.x, ort.z, r, ri(rs, 8, 10), 0.30, W.seed + 700 + nr, fest);
   var netz = wpick(rs, [["raster", 3], ["gebogen", 4], ["zellen", 2], ["ring", 2]]);
-  fuegeEin(W, "flaeche", "viertel", pts, {
+  var viertel = fuegeEin(W, "flaeche", "viertel", pts, {
     netz: netz,
     block: Math.round(rr(rs, 14, 26)),
     gasse: Math.round(rr(rs, 2.75, 4.5) * 4) / 4,
@@ -669,6 +733,11 @@ function siedlungEinsetzen(W, ort, nr, stil) {
     dichte: Math.round(rr(rs, 0.9, 1.5) * 20) / 20,
     stil: stil
   });
+  // Der Ortsname entsteht AN DER STELLE der Siedlung — sie stand vorher schon
+  // wegen ihrer Lage da (Furt, Muendung, Bucht, Pass), und genau diese Lage
+  // waehlt nun das Grundwort. Deshalb heisst ein Fischerdorf nicht Steinhalde.
+  ort.name = benenne(W, "ort", ort.x, ort.z, viertel.seed, "ort", nr);
+  benenneElement(viertel, ort.name);
   ort.r = r;
   ort.stil = stil;
   stempel(W.bel, ort.x, ort.z, r + 4, B_ORT);
@@ -684,12 +753,19 @@ function siedlungEinsetzen(W, ort, nr, stil) {
     if (belegt(W.bel, fx, fz, B_ORT | B_FLUSS)) continue;
     if (slopeAt(fx, fz) < COS12) continue;                 // Aecker liegen eben
     var fr = rr(rs, 9, 15) * Math.sqrt(skala());
-    fuegeEin(W, "flaeche", "feld", umriss(fx, fz, fr, ri(rs, 6, 8), 0.24, W.seed + 760 + nr * 4 + v, fest), {
+    var feld = fuegeEin(W, "flaeche", "feld", umriss(fx, fz, fr, ri(rs, 6, 8), 0.24, W.seed + 760 + nr * 4 + v, fest), {
       drehung: Math.round(rr(rs, 0, 180)),
       reihe: Math.round(rr(rs, 2.4, 4.2) * 10) / 10,
       hoehe: Math.round(rr(rs, 0.8, 1.2) * 20) / 20,
       frucht: wpick(rs, [["weizen", 5], ["kohl", 2], ["lavendel", 1], ["brache", 1]])
     });
+    /* Acker haben keinen ERFUNDENEN Namen — sie gehoeren zum Ort und heissen
+       nach ihm. Die Himmelsrichtung kommt aus der tatsaechlichen Lage zum
+       Ortsmittelpunkt: sie macht die beiden Aecker EINER Siedlung
+       unterscheidbar und ist zugleich die Auskunft, die ein Spielleiter am
+       Tisch braucht. */
+    benenneElement(feld, ort.name
+      ? himmelsrichtung(fx - ort.x, fz - ort.z) + "äcker von " + ort.name : null);
     stempel(W.bel, fx, fz, fr + 2, B_ORT);
     gesetzt++;
   }
@@ -772,7 +848,7 @@ function erzeugeStrassen(W, orte) {
     }
     var rw = strom(e, 1, W.seed + 303);
     var breite = Math.round(rr(rw, 5, 8) * 2) / 2;
-    fuegeEin(W, "pfad", "strasse", punkte, {
+    var strasse = fuegeEin(W, "pfad", "strasse", punkte, {
       breite: breite,
       belag: wpick(rw, [["erde", 5], ["stein", 2], ["pflaster", 1]]),
       haeuser: rw() < 0.75,
@@ -780,6 +856,10 @@ function erzeugeStrassen(W, orte) {
       abstand: Math.round(rr(rw, 12, 24)),
       streuung: Math.round(rr(rw, 1, 3) * 5) / 5
     });
+    /* Strassen bekommen keinen erfundenen Namen, sondern ihren wahren: eine
+       Strasse heisst nach dem, was sie verbindet. Deshalb steht hier kein
+       nameFuer-Aufruf — die Ortsnamen liegen schon vor. */
+    if (W.o.namen && a.name && b.name) strasse.params.name = "Weg von " + a.name + " nach " + b.name;
     // Vormerken, damit die naechste Strasse sich anlehnt und die Vegetation
     // nicht auf der Fahrbahn beginnt. Feiner abgetastet als die Stuetzpunkte,
     // sonst blieben zwischen zwei Griffen Luecken.
@@ -867,17 +947,21 @@ function flaechenSetzen(W, kand, anzahl, gesetzt, minAb, art) {
     r = clamp(r, 10, 70);
     var pts = umriss(c.x, c.z, r, ri(rv, 8, 12), 0.34, W.seed + 800 + nr * 3 + (art === "wald" ? 0 : 1), fest);
     if (art === "wald") {
-      fuegeEin(W, "flaeche", "wald", pts, {
+      var wald = fuegeEin(W, "flaeche", "wald", pts, {
         dichte: Math.round(rr(rv, 0.8, 1.6) * 20) / 20,
         klumpen: Math.round(rr(rv, 0.35, 0.75) * 50) / 50,
         mischung: Math.round(rr(rv, 0.1, 0.6) * 50) / 50,
         unterholz: Math.round(rr(rv, 0.2, 0.6) * 50) / 50
       });
+      benenneElement(wald, benenne(W, "wald", c.x, c.z, wald.seed, "wald", nr));
     } else {
-      fuegeEin(W, "flaeche", "wiese", pts, {
+      // Wiesen als "region" benannt: eine Wiese traegt in der Regel keinen
+      // eigenen Namen, wohl aber der Landstrich, auf dem sie liegt.
+      var wiese = fuegeEin(W, "flaeche", "wiese", pts, {
         dichte: Math.round(rr(rv, 0.9, 1.7) * 20) / 20,
         blumen: Math.round(rr(rv, 0.15, 0.5) * 50) / 50
       });
+      benenneElement(wiese, benenne(W, "region", c.x, c.z, wiese.seed, "wiese", nr));
     }
     stempel(W.bel, c.x, c.z, r * 0.7, B_GRUEN);
     c.art = art;
@@ -934,7 +1018,7 @@ function erzeugeRanken(W, orte) {
     var hoehe = Math.round(lerp(120, 300, rang * rang) * rr(rr2, 0.88, 1.12) / 5) * 5;
     var dicke = Math.round(lerp(0.75, 1.6, rang) * rr(rr2, 0.9, 1.15) * 20) / 20;
     var staedtchen = i === 0 || rr2() < 0.4;
-    fuegeEin(W, "ranke", "ranke", [{ x: Math.round(g.x), z: Math.round(g.z) }], {
+    var ranke = fuegeEin(W, "ranke", "ranke", [{ x: Math.round(g.x), z: Math.round(g.z) }], {
       hoehe: clamp(hoehe, 60, 400),
       straenge: ri(rr2, 4, 5),
       dicke: clamp(dicke, 0.5, 2.5),
@@ -951,6 +1035,10 @@ function erzeugeRanken(W, orte) {
       stadtStil: stil,
       stadtDichte: Math.round(rr(rr2, 0.7, 1.3) * 10) / 10
     });
+    /* Ranken tragen die altertuemliche Wortwelt des Arbor-Kults, unabhaengig
+       von der Sprachfamilie der Karte: eine Ranke ist ueberall dasselbe
+       Wesen, und ihr Name soll sich hoerbar von den Ortsnamen abheben. */
+    benenneElement(ranke, benenne(W, "ranke", g.x, g.z, ranke.seed, "ranke", i));
     stempel(W.bel, g.x, g.z, 24, B_ORT);
   }
 }
@@ -975,6 +1063,11 @@ function erzeugeWelt(seed, opt) {
   seed = seed | 0;
   var A = analysiere(seed);
   var W = { seed: seed, o: optionen(opt), A: A, bel: neueBelegung(A), elemente: [] };
+  /* J3: EIN Dublettenregister fuer die ganze Karte. Es traegt die vergebenen
+     Namen und zaehlt, wie oft ein Bestimmungs- bzw. Grundwort schon benutzt
+     wurde — daraus wird in namen.js eine Strafe auf das Gewicht. Ohne das
+     bestuende eine Karte mit sechs Fluessen leicht aus sechsmal "-bach". */
+  W.vergabe = neueVergabe();
 
   // Reihenfolge ist Inhalt, nicht Geschmack:
   //   Fluesse VOR den Siedlungen  — die Orte suchen Muendungen und Furten.
@@ -987,12 +1080,30 @@ function erzeugeWelt(seed, opt) {
   erzeugeVegetation(W);
   erzeugeRanken(W, orte);
 
+  /* Der Name der Karte entsteht ZULETZT: erst jetzt kennt die Lagemessung
+     Fluesse, Strassen, Waelder und Ranken. Gemessen wird an der Kartenmitte,
+     das ist der Ort, den die Karte am ehesten meint. Er haengt am Element,
+     das keines ist — deshalb ein eigener, vom Weltseed abgeleiteter Schluessel. */
+  var region = W.o.namen
+    ? nameFuer("region", 0, 0, elementSeed(seed, 31337), {
+        worldSeed: seed, familie: W.o.sprachfamilie || undefined,
+        rolle: "karte", index: 0, vergabe: W.vergabe,
+        elemente: W.elemente, korridor: false,
+        // Die Karte selbst spricht IMMER die Sprache der Karte — eine
+        // Sprachinsel darf einzelne Orte umbenennen, nicht das Ganze.
+        fremd: false
+      })
+    : null;
+
   var liste = W.elemente;
   liste.ms = ((typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now()) - t0;
+  liste.name = region;
   liste.bericht = {
     fluesse: laeufe.length, siedlungen: orte.length,
     gipfel: A.gipfel.length, senken: A.senken.length, paesse: A.paesse.length,
-    landAnteil: A.landAnteil
+    landAnteil: A.landAnteil,
+    // J3: wie viele Elemente einen Namen tragen und wie die Region heisst.
+    region: region, namen: W.vergabe.anzahl
   };
   return liste;
 }

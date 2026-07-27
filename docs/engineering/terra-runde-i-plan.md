@@ -441,9 +441,24 @@ Umbau der Generatoren droht.
 ### 2. Formatkompatibilität
 Feste Beispieldateien in `terra/test/fixtures/` für v1 (Einzeldatei), v2, v3, v4
 — und künftig v5. Jede muss laden, eine erwartete Elementzahl ergeben und einen
-Speicher-Ladezyklus unverändert überstehen. Dazu die Fehlerfälle: kaputtes JSON,
-NaN in der Kamera, ungültige Zugpunkte, unbekanntes Biom — jeder muss **atomar**
-scheitern, also den Zustand unangetastet lassen.
+Speicher-Ladezyklus unverändert überstehen. Dazu die Fehlerfälle — hier trennt
+der Code bewusst zwei Klassen, und die Tests bilden diese Trennung ab statt sie
+einzuebnen:
+
+- **Atomar scheitern** muss alles, was die Karte selbst trägt: kaputtes JSON,
+  ungültige Zugpunkte, defekte Geometrie- und Höhenfelder. Ein Fehler hier lässt
+  den bisherigen Zustand unangetastet — halb geladen ist schlimmer als gar
+  nicht geladen. 16 Fälle geprüft.
+- **Tolerant auffangen** darf `pruefeKarte` die Beiwerte, deren Verlust keinen
+  Schaden anrichtet: ein unbekanntes Biom fällt auf `wiese`, eine nicht endliche
+  Kamerazahl wird einzeln übersprungen, unbekanntes Wetter fällt in `setWetter`
+  auf `klar`, eine unbekannte Sprachfamilie auf `auto`. Das ist Absicht: eine
+  Karte aus einer neueren Fassung soll in einer älteren öffnen, nur eben ohne
+  die neuen Beiwerte. 3 Fälle geprüft.
+
+(Der ursprüngliche Plansatz verlangte pauschal atomares Scheitern für alle vier
+Fälle. Die Testsuite hat den Widerspruch zum Code aufgedeckt; korrigiert wurde
+der Plan, nicht der Code.)
 
 ### 3. Generator-Invarianten
 Keine Platzierung im Wasser, nichts über 40° Hang, nichts im Korridor;

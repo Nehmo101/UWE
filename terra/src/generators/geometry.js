@@ -70,8 +70,54 @@ function mergeGeos(list) {
   out.setAttribute("color", new THREE.BufferAttribute(col, 3));
   out.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
   out.setIndex(new THREE.BufferAttribute(idx, 1));
+  normalenRetten(out);
   out.computeBoundingSphere();
   return out;
+}
+
+/**
+ * Sicherheitsnetz gegen Normalen der Laenge 0. Die entstehen ueberall dort, wo
+ * computeVertexNormals nur entartete Dreiecke zu addieren hatte — am haeufigsten
+ * hinter `bruchkante` (zwei auf dieselbe Ebene geklappte Ecken ergeben ein
+ * Dreieck ohne Flaeche), vereinzelt auch in flach skalierten Primitiven. Im
+ * Bild sind das unbeleuchtete, also schwarze Vertices; sie fallen erst im
+ * Streiflicht auf und sind dann nicht mehr zuzuordnen.
+ *
+ * Ersatzrichtung ist die Achse vom Schwerpunkt nach aussen: fuer Rand- und
+ * Bruchvertices, wo der Fall auftritt, zeigt sie verlaesslich vom Koerper weg.
+ * Nur INDIZIERTE Vertices werden angefasst — ein Vertex ohne Dreieck wird nie
+ * gezeichnet, den zu reparieren waere Kosmetik an der Messung.
+ * Der Schnelltest laeuft leer durch, wenn nichts zu tun ist (Regelfall).
+ */
+function normalenRetten(g) {
+  var nor = g.attributes.normal.array, pos = g.attributes.position.array;
+  var n = g.attributes.position.count, i, kaputt = 0;
+  for (i = 0; i < n; i++) {
+    var a = nor[i * 3], b = nor[i * 3 + 1], c = nor[i * 3 + 2];
+    if (a * a + b * b + c * c < 1e-12) { kaputt++; break; }
+  }
+  if (!kaputt) return 0;
+  var benutzt = new Uint8Array(n), ix = g.index.array;
+  for (i = 0; i < ix.length; i++) benutzt[ix[i]] = 1;
+  var cx = 0, cy = 0, cz = 0, m = 0;
+  for (i = 0; i < n; i++) {
+    if (!benutzt[i]) continue;
+    cx += pos[i * 3]; cy += pos[i * 3 + 1]; cz += pos[i * 3 + 2]; m++;
+  }
+  if (!m) return 0;
+  cx /= m; cy /= m; cz /= m;
+  var fix = 0;
+  for (i = 0; i < n; i++) {
+    if (!benutzt[i]) continue;
+    var x = nor[i * 3], y = nor[i * 3 + 1], z = nor[i * 3 + 2];
+    if (x * x + y * y + z * z >= 1e-12) continue;
+    var dx = pos[i * 3] - cx, dy = pos[i * 3 + 1] - cy, dz = pos[i * 3 + 2] - cz;
+    var l = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (l < 1e-6) { nor[i * 3] = 0; nor[i * 3 + 1] = 1; nor[i * 3 + 2] = 0; }
+    else { nor[i * 3] = dx / l; nor[i * 3 + 1] = dy / l; nor[i * 3 + 2] = dz / l; }
+    fix++;
+  }
+  return fix;
 }
 
 /** Transformationsmatrix aus Position / Euler / Skalierung. */
@@ -903,6 +949,17 @@ function fachwerk(parts, w, h, versatz, seite, muster, seed, hex) {
  * Indizierte UND nicht indizierte Eingaben sind zulaessig; die Bausteine
  * mischen beides (siehe mergeGeos). Das Ergebnis ist immer indiziert.
  */
+/** Kreuzprodukt der beiden Kanten: kleiner als eine hundertstel Quadrat-
+ *  einheit heisst "keine Flaeche" — bei Bauteilen im Meter-Massstab liegt
+ *  jedes echte Dreieck weit darueber. */
+function dreieckEntartet(pos, a, b, c) {
+  var ax = pos.getX(a), ay = pos.getY(a), az = pos.getZ(a);
+  var ux = pos.getX(b) - ax, uy = pos.getY(b) - ay, uz = pos.getZ(b) - az;
+  var vx = pos.getX(c) - ax, vy = pos.getY(c) - ay, vz = pos.getZ(c) - az;
+  var kx = uy * vz - uz * vy, ky = uz * vx - ux * vz, kz = ux * vy - uy * vx;
+  return kx * kx + ky * ky + kz * kz < 1e-8;
+}
+
 function bruchkante(geo, ebene, seed) {
   var nx = ebene.nx || 0, ny = ebene.ny === undefined ? 1 : ebene.ny, nz = ebene.nz || 0;
   var len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
@@ -925,6 +982,13 @@ function bruchkante(geo, ebene, seed) {
   for (i = 0; i + 2 < anz; i += 3) {
     var a = alt ? alt[i] : i, b = alt ? alt[i + 1] : i + 1, c = alt ? alt[i + 2] : i + 2;
     if (s[a] > 0 && s[b] > 0 && s[c] > 0) continue;      // ganz jenseits: faellt weg
+    // Ein Dreieck mit ZWEI Ecken jenseits behaelt beide — sie landen aber auf
+    // derselben Ebene und liegen dort oft aufeinander. Uebrig bleibt ein
+    // Dreieck ohne Flaeche: unsichtbar, aber computeVertexNormals addiert ihm
+    // eine Normale der Laenge 0, und der Vertex wird schwarz. Gemessen betraf
+    // das bis zu 27 % der Vertices eines Ruinen-Pools. Also hier aussortieren,
+    // wo die Ursache sitzt, statt die Normale hinterher zu flicken.
+    if (dreieckEntartet(pos, a, b, c)) continue;
     behalten.push(a, b, c);
   }
   geo.setIndex(new THREE.BufferAttribute(

@@ -66,6 +66,9 @@ export const S = {
   elementSeedCounter: 0x1234,
   snap: false,
   biom: "wiese",
+  // J3: Sprachfamilie der Karte fuer den Namensgenerator. "auto" = aus dem
+  // Biom/Baustil abgeleitet; ein fester Wert praegt die ganze Karte.
+  sprachfamilie: "auto",
   /* D1 — Marker sind BEWUSST kein Elementtyp. Ein Element ist Weltgeometrie
      (Punkte + Parameter + Seed -> Instanzen, Terrainwirkung, Korridore); ein
      Marker ist eine Notiz an einer Koordinate und erzeugt nichts davon. Als

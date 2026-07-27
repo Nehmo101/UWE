@@ -1,0 +1,37 @@
+{
+  "_fassung": "v2 — erste nummerierte Fassung nach der Modultrennung. Kennzeichen: `version: 2`, Hoehen weiterhin als Vollarray `hoehen`, Elemente mit eigenem `seed`, zusaetzlich das optionale Feld `seedZaehler` (Stand von S.elementSeedCounter). Marker, Stempel, Biom und Wetter gibt es noch nicht.",
+  "format": "terra",
+  "version": 2,
+  "seed": 20260101,
+  "tageszeit": "abend",
+  "raster": false,
+  "seedZaehler": 123456,
+  "kamera": { "x": -20, "z": 30, "dist": 90, "yaw": -1.2, "pitch": -0.55 },
+  "hoehen": [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75],
+  "elemente": [
+    {
+      "id": 5,
+      "kind": "pfad",
+      "variant": "mauer",
+      "points": [{ "x": 10, "z": 60 }, { "x": 55, "z": 66 }, { "x": 84, "z": 46 }],
+      "params": { "hoehe": 1, "dicke": 1.6, "turmAbstand": 26, "torAbstand": 0 },
+      "seed": 111
+    },
+    {
+      "id": 6,
+      "kind": "flaeche",
+      "variant": "feld",
+      "points": [{ "x": 20, "z": 18 }, { "x": 64, "z": 14 }, { "x": 68, "z": 48 }, { "x": 24, "z": 54 }],
+      "params": { "drehung": 30, "reihe": 3.2, "hoehe": 1, "frucht": "weizen" },
+      "seed": 222
+    },
+    {
+      "id": 7,
+      "kind": "objekt",
+      "variant": "felsen",
+      "points": [{ "x": 70, "z": 78 }],
+      "params": { "anzahl": 9, "streuung": 14, "groesse": 1, "frei": false, "nurTyp": "" },
+      "seed": 333
+    }
+  ]
+}

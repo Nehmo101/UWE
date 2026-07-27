@@ -3,6 +3,10 @@ import { S, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreibe
   from '../core/store.js';
 import { commit, isHeavy } from '../core/dirty.js';
 import { pushUndo } from './history.js';
+// J3 — die Auswahlliste der Sprachfamilien kommt aus dem Generator, damit sie
+// an genau EINER Stelle gepflegt wird. namen.js importiert nur core/ und
+// world/ und nichts aus editor/ oder ui/ — der Import ist zyklusfrei.
+import { sprachfamilien, familieDerKarte, setzeSprachfamilie } from '../generators/namen.js';
 import { clearPreview, setPreview, rebuildHandles, select, brushRing, waehleMarker }
   from './selection.js';
 import { buildPanel, updateHint } from '../ui/panels.js';
@@ -330,6 +334,51 @@ PARAMS["wegsuche:strasse"] = PARAMS["pfad:strasse"];
 PARAMS["wegsuche:fluss"] = PARAMS["pfad:fluss"];
 PARAMS["wegsuche:hecke"] = PARAMS["pfad:hecke"];
 
+/* ==========================================================================
+   J3 — KARTENWEITE Parameter
+
+   PARAMS beschreibt Parameter EINES ELEMENTS. Die kartenweiten Einstellungen
+   (Weltseed, Biom, Kartengroesse, Tageszeit, Wetter) sitzen dagegen nicht im
+   Elementschema, sondern als feste Bedienelemente in der unteren Leiste von
+   terra/index.html — und index.html gehoert dieser Runde nicht.
+
+   Deshalb hier ein eigenes, kleines Schema in derselben Schreibweise wie
+   PARAMS (k/l/o/d), das ui/panels.js mit paramRow rendern kann. Der Wert
+   selbst liegt in `S.sprachfamilie`; core/store.js gehoert dieser Runde
+   ebenfalls nicht, das Feld fehlt also in der Deklaration von S und entsteht
+   erst beim ersten Setzen. Alle Leser (namen.js familieDerKarte, das Objekt
+   unten) behandeln "fehlt" wie "auto" — es gibt keinen Zustand, in dem das
+   auffiele.
+
+   Nachzuziehen, wenn die fremden Dateien wieder offen sind (siehe Bericht):
+     core/store.js  in S ergaenzen:  sprachfamilie: "auto",
+     editor/io.js   speichern:       data.sprachfamilie = S.sprachfamilie;
+                    lesen (tolerant, wie `biom`):
+                      sprachfamilie: typeof d.sprachfamilie === "string"
+                        ? d.sprachfamilie : "auto"
+                    uebernehmen:     S.sprachfamilie = karte.sprachfamilie;
+   Bis dahin ueberlebt die Einstellung die Sitzung, aber nicht das Speichern —
+   ohne Folgen fuer bereits vergebene Namen, denn die stehen als Text in
+   params.name bzw. im Markertext und werden mitgespeichert.
+   ========================================================================== */
+var KARTE_PARAMS = [
+  { k: "sprachfamilie", l: "Sprachfamilie der Karte", o: sprachfamilien(), d: "auto" }
+];
+
+/* Ein Objekt mit Zugriffsfaellen statt eines schlichten Verweises auf S:
+   paramRow (ui/panels.js) liest und schreibt `obj[def.k]` — mit diesem Objekt
+   landet der Schreibzugriff direkt in S, ohne dass panels.js davon wissen
+   muss, und ohne eine zweite Kopie des Wertes, die auseinanderlaufen koennte. */
+var karteParams = {};
+Object.defineProperty(karteParams, "sprachfamilie", {
+  enumerable: true,
+  get: function () { return (typeof S.sprachfamilie === "string") ? S.sprachfamilie : "auto"; },
+  set: function (v) { setzeSprachfamilie(v); }
+});
+
+/** Die Familie, die auf dieser Karte tatsaechlich gilt — "auto" aufgeloest. */
+function aktiveSprachfamilie() { return familieDerKarte(); }
+
 function schemaKey(kind, variant) {
   if (PARAMS[kind + ":" + variant]) return kind + ":" + variant;
   return kind + ":*";
@@ -609,7 +658,8 @@ function stempelSetzen(st, pos) {
 // Varianten stehen dadurch beim ersten Aufbau des Panels bereits.
 stempelBibliothekLaden();
 
-export { TOOLS, VARIANTS, PARAMS, schemaKey, defaultsFor, toolParams, curParams,
+export { TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
+  schemaKey, defaultsFor, toolParams, curParams,
   copyParams, snapPt, finishDraw, cancelDraw, setTool,
   auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel,
   stempelUebernehmen, stempelBibliothekLaden, stempelBibliothekSichern };
