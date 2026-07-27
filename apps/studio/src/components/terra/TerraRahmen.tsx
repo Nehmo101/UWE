@@ -17,10 +17,10 @@ import "./terra.css";
  *   - `event.source === iframe.contentWindow`   (wirklich UNSER Frame)
  * Und beim Senden immer `window.location.origin` als Ziel, nie "*".
  *
- * Speichern läuft entprellt (1200 ms wie Atlas) — aber MIT Flush beim
- * Verlassen der Seite. Genau dieser Flush fehlte Atlas
- * (`Atlas3DEditorShell.tsx:178-198`), und genau daran gingen dort die letzten
- * Sekunden Arbeit verloren.
+ * Speichern läuft entprellt (1200 ms) — aber MIT Flush beim Verlassen der
+ * Seite. Dem Vorgänger fehlte genau dieser Flush: der Timer wurde beim
+ * Verlassen abgebrochen, und damit gingen die letzten Sekunden Arbeit
+ * verloren.
  */
 
 export interface TerraRahmenProps {
