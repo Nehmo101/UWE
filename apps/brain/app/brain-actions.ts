@@ -11,8 +11,6 @@ import {
   type ContractStatus,
   type DocumentTemplateCategory,
   type MiniatureCollectionStatus,
-  type PersonalProjectCategory,
-  type PersonalProjectStatus,
   type WorkshopProjectType,
   type WorkshopStatus,
 } from "@uwe/database/server";
@@ -114,51 +112,6 @@ export async function deleteBrainDocumentAction(formData: FormData) {
 
 /* ── Personal Projects (+ steps) ─────────────────────────────────────── */
 
-export async function createProjectAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const name = str(formData.get("name"));
-  if (!name) return;
-
-  await lifeAdmin().createPersonalProject({
-    name,
-    description: str(formData.get("description")),
-    status: (str(formData.get("status")) || "idea") as PersonalProjectStatus,
-    category: (str(formData.get("category")) || "other") as PersonalProjectCategory,
-    nextAction: str(formData.get("nextAction")) || null,
-  });
-  revalidateBrainPaths();
-}
-
-export async function deleteProjectAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await lifeAdmin().deletePersonalProject(id);
-  revalidateBrainPaths();
-}
-
-export async function addProjectStepAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const projectId = str(formData.get("projectId"));
-  const title = str(formData.get("title"));
-  if (projectId && title) await lifeAdmin().addProjectStep(projectId, title);
-  revalidatePath("/projects");
-}
-
-export async function toggleProjectStepAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const stepId = str(formData.get("stepId"));
-  const done = str(formData.get("done")) === "true";
-  if (stepId) await lifeAdmin().setProjectStepDone(stepId, done);
-  revalidatePath("/projects");
-}
-
-export async function deleteProjectStepAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const stepId = str(formData.get("stepId"));
-  if (stepId) await lifeAdmin().deleteProjectStep(stepId);
-  revalidatePath("/projects");
-}
-
 /* ── Workshop ────────────────────────────────────────────────────────── */
 
 export async function createWorkshopAction(formData: FormData) {
@@ -248,20 +201,6 @@ export async function updateBrainDocumentAction(formData: FormData) {
     tags: parseCommaTags(formData),
   });
   revalidateBrainPaths();
-}
-
-export async function updateProjectAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (!id) return;
-  await lifeAdmin().updatePersonalProject(id, {
-    name: str(formData.get("name")),
-    description: str(formData.get("description")),
-    status: (str(formData.get("status")) || "idea") as PersonalProjectStatus,
-    category: (str(formData.get("category")) || "other") as PersonalProjectCategory,
-    nextAction: str(formData.get("nextAction")) || null,
-  });
-  revalidatePath("/projects");
 }
 
 export async function updateWorkshopAction(formData: FormData) {

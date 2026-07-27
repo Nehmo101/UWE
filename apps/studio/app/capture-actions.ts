@@ -215,7 +215,6 @@ export async function triageCaptureAction(formData: FormData) {
   });
 
   revalidateCapturePaths();
-  revalidatePath("/projects");
   revalidatePath("/workshop");
   revalidatePath("/contracts");
   revalidatePath("/hardware");

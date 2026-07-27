@@ -119,7 +119,7 @@ export default async function WorkshopPage({ searchParams }: Props) {
           <Link href="/workshop/recipes">Paint-Anleitungen</Link>
           <Link href="/workshop/print-profiles">Druck-Profile</Link>
           <Link href="/workshop/rental">Terrain-Verleih</Link>
-          <Link href="/miniatures">Miniaturen-Sammlung</Link>
+          <span>Miniaturen-Sammlung: Brain</span>
         </nav>
 
         <Card>

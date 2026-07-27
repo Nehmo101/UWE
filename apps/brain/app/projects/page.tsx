@@ -1,38 +1,63 @@
-import { createLifeAdminService, prisma } from "@uwe/database/server";
+import Link from "next/link";
+import {
+  createLifeAdminService,
+  formatEuroFromCents,
+  PersonalProjectCategoryEnum,
+  PersonalProjectStatusEnum,
+  prisma,
+  PROJECT_CATEGORY_LABELS,
+  PROJECT_STATUS_LABELS,
+  type PersonalProjectCategory,
+  type PersonalProjectStatus,
+} from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
-import {
-  addProjectStepAction,
-  createProjectAction,
-  deleteProjectAction,
-  deleteProjectStepAction,
-  toggleProjectStepAction,
-  updateProjectAction,
-} from "../brain-actions";
+import { createProjectAction } from "../project-actions";
+
+/**
+ * Persönliche Projekte — Abschnitt H4, Brain gewinnt.
+ *
+ * Die Liste hat die Filter der Studio-Fassung bekommen (Kategorie-Kacheln,
+ * Statusfilter) und verlinkt in die Detailseite; Schritte, Notizen, Links und
+ * Kosten stehen dort. Was nicht mitkommt: die Welt-Zuordnung und die
+ * Medien-Bibliothek — beides Studio-Sache.
+ */
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Array<{ value: string; label: string }> = [
-  { value: "idea", label: "Idee" },
-  { value: "planned", label: "Geplant" },
-  { value: "active", label: "Aktiv" },
-  { value: "blocked", label: "Blockiert" },
-  { value: "paused", label: "Pausiert" },
-  { value: "done", label: "Fertig" },
-  { value: "archived", label: "Archiviert" },
-];
+const STATUSES = Object.values(PersonalProjectStatusEnum) as PersonalProjectStatus[];
+const CATEGORIES = Object.values(PersonalProjectCategoryEnum) as PersonalProjectCategory[];
 
-const CATEGORY: Array<{ value: string; label: string }> = [
-  { value: "uwe", label: "UWE" },
-  { value: "hardware_homelab", label: "Hardware/Homelab" },
-  { value: "dnd", label: "D&D" },
-  { value: "art_workshop", label: "Kunst/Werkstatt" },
-  { value: "printing_3d", label: "3D-Druck" },
-  { value: "other", label: "Sonstiges" },
-];
+interface Props {
+  searchParams: Promise<{ category?: string; status?: string }>;
+}
 
-export default async function BrainProjectsPage() {
+function resolveCategory(value: string | undefined): PersonalProjectCategory | null {
+  return CATEGORIES.includes(value as PersonalProjectCategory)
+    ? (value as PersonalProjectCategory)
+    : null;
+}
+
+function resolveStatus(value: string | undefined): PersonalProjectStatus | null {
+  return STATUSES.includes(value as PersonalProjectStatus)
+    ? (value as PersonalProjectStatus)
+    : null;
+}
+
+function chipClass(active: boolean): string {
+  return active ? "brain-btn brain-btn-sm" : "brain-btn brain-btn-ghost brain-btn-sm";
+}
+
+function buildHref(category: string | null, status: string | null): string {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (status) params.set("status", status);
+  const query = params.toString();
+  return query ? `/projects?${query}` : "/projects";
+}
+
+export default async function BrainProjectsPage({ searchParams }: Props) {
   const owner = await getBrainOwner();
   if (!owner) {
     return (
@@ -42,18 +67,61 @@ export default async function BrainProjectsPage() {
     );
   }
 
+  const { category: categoryRaw, status: statusRaw } = await searchParams;
+  const categoryFilter = resolveCategory(categoryRaw);
+  const statusFilter = resolveStatus(statusRaw);
+
   const service = createLifeAdminService(brainPrisma, prisma);
-  const list = await service.listPersonalProjects();
-  const projects = (await Promise.all(list.map((p) => service.getPersonalProject(p.id)))).filter(
-    (p): p is NonNullable<typeof p> => Boolean(p),
-  );
+  const [projects, stats] = await Promise.all([
+    service.listPersonalProjects({
+      category: categoryFilter ?? undefined,
+      status: statusFilter ?? undefined,
+    }),
+    service.getPersonalProjectDashboardStats(),
+  ]);
 
   return (
     <BrainShell
       active="/projects"
       title="Persönliche Projekte"
-      lede={`${projects.length} Projekt(e) — dein Daily Admin OS. Projekte anlegen, Schritte abhaken, den nächsten Zug festhalten.`}
+      lede={`${stats.activeTotal} aktiv · ${stats.openTotal} offen · ${stats.total} gesamt.`}
     >
+      <div className="brain-kpis">
+        {stats.categories.map((summary) => {
+          const active = categoryFilter === summary.category;
+          return (
+            <Link
+              key={summary.category}
+              className="brain-kpi"
+              href={buildHref(active ? null : summary.category, statusFilter)}
+              aria-current={active ? "page" : undefined}
+            >
+              <strong>{summary.active}</strong>
+              <span>
+                {summary.label} · {summary.total} gesamt
+                {active ? " · Filter aktiv" : ""}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+
+      <nav className="brain-form-row" aria-label="Status-Filter">
+        <Link className={chipClass(!statusFilter)} href={buildHref(categoryFilter, null)}>
+          Alle Status
+        </Link>
+        {STATUSES.map((status) => (
+          <Link
+            key={status}
+            className={chipClass(statusFilter === status)}
+            href={buildHref(categoryFilter, statusFilter === status ? null : status)}
+            aria-current={statusFilter === status ? "page" : undefined}
+          >
+            {PROJECT_STATUS_LABELS[status]} · {stats.byStatus[status] ?? 0}
+          </Link>
+        ))}
+      </nav>
+
       <section className="brain-section">
         <h2>Neues Projekt</h2>
         <form action={createProjectAction} className="brain-form brain-card">
@@ -65,32 +133,42 @@ export default async function BrainProjectsPage() {
             Beschreibung
             <textarea name="description" rows={2} />
           </label>
-          <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+          <div className="brain-form-row">
             <label>
               Status
               <select name="status" defaultValue="idea">
-                {STATUS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {PROJECT_STATUS_LABELS[status]}
                   </option>
                 ))}
               </select>
             </label>
             <label>
               Kategorie
-              <select name="category" defaultValue="other">
-                {CATEGORY.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
+              <select name="category" defaultValue={categoryFilter ?? "other"}>
+                {CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {PROJECT_CATEGORY_LABELS[category]}
                   </option>
                 ))}
               </select>
             </label>
+            <label>
+              Kosten (€)
+              <input name="cost" inputMode="decimal" placeholder="0,00" />
+            </label>
           </div>
-          <label>
-            Nächster Schritt
-            <input name="nextAction" placeholder="Was ist als Nächstes zu tun?" />
-          </label>
+          <div className="brain-form-row">
+            <label>
+              Nächster Schritt
+              <input name="nextAction" placeholder="Was ist als Nächstes zu tun?" />
+            </label>
+            <label>
+              Bis wann
+              <input name="nextActionDate" type="date" />
+            </label>
+          </div>
           <div>
             <button type="submit" className="brain-btn">
               Projekt anlegen
@@ -100,112 +178,33 @@ export default async function BrainProjectsPage() {
       </section>
 
       <section className="brain-section">
-        <h2>Projekte · {projects.length}</h2>
+        <h2>
+          Projekte · {projects.length}
+          {categoryFilter ? ` · ${PROJECT_CATEGORY_LABELS[categoryFilter]}` : ""}
+          {statusFilter ? ` · ${PROJECT_STATUS_LABELS[statusFilter]}` : ""}
+        </h2>
         {projects.length === 0 ? (
-          <p className="brain-muted">Noch keine Projekte.</p>
+          <p className="brain-muted">
+            Keine Projekte in dieser Auswahl.{" "}
+            {categoryFilter || statusFilter ? <Link href="/projects">Filter zurücksetzen</Link> : null}
+          </p>
         ) : (
           <ul className="brain-list">
             {projects.map((project) => (
               <li key={project.id} className="brain-row">
                 <div className="brain-row-head">
-                  <strong>{project.name}</strong>
-                  <span className="brain-tag">{project.status}</span>
-                  <span className="brain-muted">{project.category}</span>
-                  <form action={deleteProjectAction} style={{ marginLeft: "auto" }}>
-                    <input type="hidden" name="id" value={project.id} />
-                    <button type="submit" className="brain-btn brain-btn-ghost brain-btn-sm">
-                      Löschen
-                    </button>
-                  </form>
+                  <strong>
+                    <Link href={`/projects/${project.id}`}>{project.name}</Link>
+                  </strong>
+                  <span className="brain-tag">{PROJECT_STATUS_LABELS[project.status]}</span>
+                  <span className="brain-muted">
+                    {PROJECT_CATEGORY_LABELS[project.category]}
+                    {project.costCents ? ` · ${formatEuroFromCents(project.costCents)}` : ""}
+                  </span>
                 </div>
                 {project.nextAction ? (
-                  <p style={{ margin: "0.35rem 0 0" }} className="brain-muted">
-                    Nächster Schritt: {project.nextAction}
-                  </p>
+                  <p className="brain-muted">Nächster Schritt: {project.nextAction}</p>
                 ) : null}
-
-                <details className="brain-edit">
-                  <summary>Bearbeiten</summary>
-                  <form action={updateProjectAction} className="brain-form">
-                    <input type="hidden" name="id" value={project.id} />
-                    <label>
-                      Name
-                      <input name="name" defaultValue={project.name} required />
-                    </label>
-                    <label>
-                      Beschreibung
-                      <textarea name="description" rows={2} defaultValue={project.description} />
-                    </label>
-                    <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
-                      <label>
-                        Status
-                        <select name="status" defaultValue={project.status}>
-                          {STATUS.map((s) => (
-                            <option key={s.value} value={s.value}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Kategorie
-                        <select name="category" defaultValue={project.category}>
-                          {CATEGORY.map((c) => (
-                            <option key={c.value} value={c.value}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <label>
-                      Nächster Schritt
-                      <input name="nextAction" defaultValue={project.nextAction ?? ""} />
-                    </label>
-                    <div>
-                      <button type="submit" className="brain-btn brain-btn-sm">
-                        Speichern
-                      </button>
-                    </div>
-                  </form>
-                </details>
-
-                {project.steps.length > 0 ? (
-                  <ul style={{ listStyle: "none", padding: 0, margin: "0.6rem 0 0", display: "grid", gap: "0.3rem" }}>
-                    {project.steps.map((step) => (
-                      <li key={step.id} className={`brain-step${step.done ? " done" : ""}`}>
-                        <form action={toggleProjectStepAction}>
-                          <input type="hidden" name="stepId" value={step.id} />
-                          <input type="hidden" name="done" value={step.done ? "false" : "true"} />
-                          <button
-                            type="submit"
-                            className="brain-btn brain-btn-ghost brain-btn-sm"
-                            aria-label={step.done ? "Als offen markieren" : "Als erledigt markieren"}
-                          >
-                            {step.done ? "✓" : "○"}
-                          </button>
-                        </form>
-                        <span>{step.title}</span>
-                        <form action={deleteProjectStepAction}>
-                          <input type="hidden" name="stepId" value={step.id} />
-                          <button type="submit" className="brain-btn brain-btn-ghost brain-btn-sm">
-                            ✕
-                          </button>
-                        </form>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-
-                <form action={addProjectStepAction} className="brain-form brain-form-inline" style={{ marginTop: "0.6rem" }}>
-                  <input type="hidden" name="projectId" value={project.id} />
-                  <label style={{ margin: 0 }}>
-                    <input name="title" placeholder="Schritt hinzufügen …" required />
-                  </label>
-                  <button type="submit" className="brain-btn brain-btn-sm">
-                    + Schritt
-                  </button>
-                </form>
               </li>
             ))}
           </ul>

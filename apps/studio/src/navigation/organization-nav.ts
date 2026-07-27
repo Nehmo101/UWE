@@ -14,18 +14,6 @@ export const ORGANIZATION_NAV: NavGroup[] = [
     title: "Arbeit & Projekte",
     items: [
       {
-        id: "org-projects",
-        label: "Projekte",
-        href: "/projects",
-        icon: "kanban",
-        group: "Arbeit & Projekte",
-        section: SECTION,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "organization",
-        keywords: ["projekte", "projects"],
-      },
-      {
         id: "org-contracts",
         label: "Verträge",
         href: "/contracts",
@@ -60,18 +48,6 @@ export const ORGANIZATION_NAV: NavGroup[] = [
         status: "active",
         source: "organization",
         keywords: ["werkstatt", "workshop", "recipes", "rental"],
-      },
-      {
-        id: "org-miniatures",
-        label: "Miniaturen",
-        href: "/miniatures",
-        icon: "layers",
-        group: "Arbeit & Projekte",
-        section: SECTION,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "organization",
-        keywords: ["miniaturen", "miniatures", "sammlung", "collection", "fotovergleich"],
       },
       {
         id: "org-ideas",

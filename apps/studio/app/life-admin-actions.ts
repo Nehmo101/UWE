@@ -5,17 +5,10 @@ import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import type {
   ContractBillingInterval,
   ContractStatus,
-  HardwareStatus,
-  PersonalProjectCategory,
-  PersonalProjectStatus,
 } from "@uwe/database/server";
 import {
   createCalendarService,
   createLifeAdminService,
-  createSettingsService,
-  mergeHardwareRunbookMetadata,
-  parseLinksFromForm,
-  PersonalProjectStatusEnum,
   prisma,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
@@ -50,7 +43,6 @@ function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
 
 function revalidateAdminPaths() {
   revalidatePath("/capture");
-  revalidatePath("/projects");
   revalidatePath("/workshop");
   revalidatePath("/workshop/recipes");
   revalidatePath("/workshop/rental");
@@ -58,102 +50,6 @@ function revalidateAdminPaths() {
   revalidatePath("/contracts");
   revalidatePath("/hardware");
   revalidatePath("/life-brain");
-}
-
-export async function createProjectAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  await lifeAdmin().createPersonalProject({
-    name: String(formData.get("name") || "").trim(),
-    description: String(formData.get("description") || ""),
-    status: (String(formData.get("status") || "idea") as PersonalProjectStatus) || "idea",
-    category: (String(formData.get("category") || "other") as PersonalProjectCategory) || "other",
-    nextAction: String(formData.get("nextAction") || "").trim() || null,
-    nextActionDate: parseOptionalDate(formData.get("nextActionDate")),
-    notes: String(formData.get("notes") || ""),
-    links: parseLinksFromForm(String(formData.get("links") || "")),
-    costCents: parseOptionalInt(formData.get("costCents")),
-    worldId: String(formData.get("worldId") || "").trim() || null,
-  });
-  revalidateAdminPaths();
-  redirect("/projects");
-}
-
-export async function updateProjectAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const id = String(formData.get("id"));
-  await lifeAdmin().updatePersonalProject(id, {
-    name: String(formData.get("name") || "").trim(),
-    description: String(formData.get("description") || ""),
-    status: String(formData.get("status")) as PersonalProjectStatus,
-    category: String(formData.get("category")) as PersonalProjectCategory,
-    nextAction: String(formData.get("nextAction") || "").trim() || null,
-    nextActionDate: parseOptionalDate(formData.get("nextActionDate")),
-    notes: String(formData.get("notes") || ""),
-    links: parseLinksFromForm(String(formData.get("links") || "")),
-    costCents: parseOptionalInt(formData.get("costCents")),
-  });
-  revalidateAdminPaths();
-  revalidatePath(`/projects/${id}`);
-}
-
-export async function updateProjectStatusAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const id = String(formData.get("id"));
-  const status = String(formData.get("status")) as PersonalProjectStatus;
-  if (!id || !Object.values(PersonalProjectStatusEnum).includes(status)) {
-    return;
-  }
-
-  await lifeAdmin().updatePersonalProject(id, { status });
-  revalidateAdminPaths();
-  revalidatePath(`/projects/${id}`);
-}
-
-export async function deleteProjectAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  await lifeAdmin().deletePersonalProject(String(formData.get("id")));
-  revalidateAdminPaths();
-  redirect("/projects");
-}
-
-export async function addProjectStepAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const projectId = String(formData.get("projectId") || "").trim();
-  const title = String(formData.get("title") || "").trim();
-  if (!projectId || !title) {
-    return;
-  }
-  await lifeAdmin().addProjectStep(projectId, title);
-  revalidatePath(`/projects/${projectId}`);
-}
-
-export async function toggleProjectStepAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const projectId = String(formData.get("projectId") || "").trim();
-  const stepId = String(formData.get("stepId") || "").trim();
-  if (!projectId || !stepId) {
-    return;
-  }
-  await lifeAdmin().setProjectStepDone(stepId, formData.get("done") === "1");
-  revalidatePath(`/projects/${projectId}`);
-}
-
-export async function deleteProjectStepAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const projectId = String(formData.get("projectId") || "").trim();
-  const stepId = String(formData.get("stepId") || "").trim();
-  if (!projectId || !stepId) {
-    return;
-  }
-  await lifeAdmin().deleteProjectStep(stepId);
-  revalidatePath(`/projects/${projectId}`);
 }
 
 export async function advanceWorkshopStatusAction(formData: FormData) {
@@ -228,125 +124,6 @@ export async function syncAiUsageContractAction(formData: FormData) {
   await lifeAdmin().syncAiUsageContractExpense({ period });
   revalidateAdminPaths();
   redirect(`/contracts?period=${period}&aiSynced=1`);
-}
-
-export async function createHardwareAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const runbook = String(formData.get("runbook") || "").trim();
-
-  await lifeAdmin().createHardwareDevice({
-    name: String(formData.get("name") || "").trim(),
-    role: String(formData.get("role") || ""),
-    status: (String(formData.get("status") || "planned") as HardwareStatus) || "planned",
-    hostname: String(formData.get("hostname") || "").trim() || null,
-    ipAddress: String(formData.get("ipAddress") || "").trim() || null,
-    localUrl: String(formData.get("localUrl") || "").trim() || null,
-    publicUrl: String(formData.get("publicUrl") || "").trim() || null,
-    operatingSystem: String(formData.get("operatingSystem") || ""),
-    errorNotes: String(formData.get("errorNotes") || "").trim() || null,
-    notes: String(formData.get("notes") || ""),
-    specs: String(formData.get("specs") || "")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean),
-    metadata: mergeHardwareRunbookMetadata(
-      {
-        services: String(formData.get("services") || "")
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean),
-      },
-      runbook,
-    ),
-    setupSteps: String(formData.get("setupSteps") || "")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((label) => ({ label, done: false })),
-  });
-  revalidateAdminPaths();
-  redirect("/hardware");
-}
-
-export async function updateHardwareAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const id = String(formData.get("id"));
-  const servicesRaw = String(formData.get("services") || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const specsRaw = String(formData.get("specs") || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const device = await lifeAdmin().getHardwareDevice(id);
-  const baseMetadata =
-    device?.metadata && typeof device.metadata === "object"
-      ? { ...(device.metadata as Record<string, unknown>) }
-      : {};
-  const runbook = String(formData.get("runbook") || "");
-
-  await lifeAdmin().updateHardwareDevice(id, {
-    name: String(formData.get("name") || "").trim(),
-    role: String(formData.get("role") || ""),
-    status: String(formData.get("status")) as HardwareStatus,
-    hostname: String(formData.get("hostname") || "").trim() || null,
-    ipAddress: String(formData.get("ipAddress") || "").trim() || null,
-    localUrl: String(formData.get("localUrl") || "").trim() || null,
-    publicUrl: String(formData.get("publicUrl") || "").trim() || null,
-    operatingSystem: String(formData.get("operatingSystem") || ""),
-    specs: specsRaw.length > 0 ? specsRaw : null,
-    errorNotes: String(formData.get("errorNotes") || "").trim() || null,
-    notes: String(formData.get("notes") || ""),
-    metadata: mergeHardwareRunbookMetadata(
-      { ...baseMetadata, services: servicesRaw },
-      runbook,
-    ),
-  });
-  revalidateAdminPaths();
-}
-
-export async function addHardwareErrorAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const deviceId = String(formData.get("deviceId"));
-  const affectedRaw = String(formData.get("affectedServices") || "")
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  await lifeAdmin().addHardwareErrorEntry(deviceId, {
-    problem: String(formData.get("problem") || "").trim(),
-    resolution: String(formData.get("resolution") || "").trim() || undefined,
-    affectedServices: affectedRaw.length > 0 ? affectedRaw : undefined,
-  });
-  revalidateAdminPaths();
-}
-
-export async function recordHardwareCheckAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  await lifeAdmin().recordHardwareCheck(String(formData.get("deviceId")));
-  revalidateAdminPaths();
-}
-
-export async function toggleHardwareSetupStepAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const deviceId = String(formData.get("deviceId"));
-  const stepIndex = Number.parseInt(String(formData.get("stepIndex")), 10);
-  await lifeAdmin().toggleHardwareSetupStep(deviceId, stepIndex);
-  revalidateAdminPaths();
-}
-
-export async function deleteHardwareAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  await lifeAdmin().deleteHardwareDevice(String(formData.get("id")));
-  revalidateAdminPaths();
 }
 
 function parseCommaTags(formData: FormData, field = "tags"): string[] {
@@ -469,12 +246,3 @@ export async function deleteLifeBrainFactAction(formData: FormData) {
   revalidateAdminPaths();
 }
 
-export async function setFavoriteWorldAction(formData: FormData) {
-  await requireStudioActionAuth();
-
-  const slug = String(formData.get("favoriteWorldSlug") || "").trim() || null;
-  await createSettingsService(prisma).updateSettings({
-    app: { favoriteWorldSlug: slug },
-  });
-  revalidatePath("/settings");
-}
