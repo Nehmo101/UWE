@@ -11,6 +11,8 @@ import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
   genBruch, bruchDaten, bruchMasse, brueche,
   bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
+// Runde H: die Korridorstempel des Binnensees.
+import { seeKorridore } from '../generators/see.js';
 import { strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE,
   WERFT_QUERSUCHE } from '../generators/strukturen.js';
 import { genObjekt } from '../generators/objects.js';
@@ -135,6 +137,17 @@ function rebuildCorridors() {
           if (inPoly(el.points, ln[k].x, ln[k].z)) stampCorridor(ln[k].x, ln[k].z, el.params.gasse * 0.5 + 1.2);
         }
       }
+    } else if (el.kind === "flaeche" && el.variant === "see" && el.points.length >= 3) {
+      /* Runde H: ein See sperrt seine Flaeche wie ein Flussbett. `tryPlace`
+         kennt nur den MEERESspiegel (h < WATER + 0.35) — ein Bergsee auf
+         Hoehe 20 besteht diese Pruefung anstandslos, und ohne diese Zeile
+         stuenden Baeume im Wasser.
+
+         Die Stempel kommen aus see.js, weil sie am GEZEICHNETEN Uferzug
+         haengen (geschlossene Catmull-Rom-Kurve durch die Griffe) und nicht am
+         Griffpolygon — dazwischen liegt bei wenigen Punkten viel Wasser. */
+      var seeK = seeKorridore(el);
+      for (k = 0; k < seeK.length; k++) stampCorridor(seeK[k].x, seeK[k].z, seeK[k].r);
     } else if (el.kind === "flaeche" && istStruktur(el.variant) && el.points.length >= 3) {
       /* Kompositstrukturen stempeln ihre TRAGENDEN Linien: Mauerring, Kai-
          flucht, Kreuzgangfluegel. Begruendung wie bei den Viertel-Gassen —
@@ -290,6 +303,8 @@ function stempelRadius(el) {
      mitwandern, sonst bleibt beim Verschieben ein Streifen alter Faerbung
      stehen. Gleiche Warnung wie beim Bruch und beim Burgring. */
   if (el.kind === "flaeche" && el.variant === "biom") return (p.weich || 8) * 1.03 + 2;
+  // Runde H: der See stempelt sein Korridorraster mit Radius 3 (see.js).
+  if (el.kind === "flaeche" && el.variant === "see") return 3;
   return 3;   // erreicht isHeavy nie einen anderen Fall, bleibt aber definiert
 }
 

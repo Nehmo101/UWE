@@ -100,7 +100,9 @@ var VARIANTS = {
   flaeche: [["wald", "Wald"], ["feld", "Feld"], ["viertel", "Viertel"], ["wiese", "Wiese"],
             ["burg", "Burg"], ["werft", "Werft"], ["kloster", "Kloster"],
             // I2: die Biomflaeche zeichnet nichts, sie faerbt und bepflanzt.
-            ["biom", "Biom"]],
+            ["biom", "Biom"],
+            // Runde H: der Binnensee. Wasserflaeche + Ufersaum, kein Terraineingriff.
+            ["see", "See"]],
   objekt: [["baeume", "Bäume"], ["haeuser", "Häuser"], ["klassisch", "Klassisch"],
            ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["ruinen", "Ruinen"],
            ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"],
@@ -220,6 +222,18 @@ var PARAMS = {
     { k: "biom", l: "Biom", o: biomListe(), d: "moor" },
     { k: "weich", l: "Randbreite", min: 1, max: 32, st: 1, d: 8 }
   ],
+  /* Runde H — Binnensee. `stau` ist RELATIV: der Wasserspiegel wird bei jeder
+     Erzeugung am Ufer abgelesen (generators/see.js, seeSpiegel), damit ein
+     verschobener See seine neue Mulde fuellt statt seine alte Hoehe mitzunehmen.
+     `einzug` der Fluesse steht bewusst NICHT im Schema — es ist eine abgeleitete
+     Kennzahl des Weltgenerators, kein Regler. */
+  "flaeche:see": [
+    { k: "stau", l: "Aufstau", min: -8, max: 8, st: 0.5, d: 0 },
+    { k: "saum", l: "Ufersaum", min: 0, max: 20, st: 0.5, d: 5 },
+    { k: "ufer", l: "Uferbewuchs", b: true, d: true },
+    { k: "dichte", l: "Dichte am Ufer", min: 0, max: 3, st: 0.05, d: 1 }
+  ],
+
   /* --- Kompositstrukturen (generators/strukturen.js) ---------------------
      Der gezeichnete Polygonzug ist bei allen dreien mehr als eine Umrandung:
      bei der Burg IST er der Mauerring, beim Kloster geben die ersten beiden

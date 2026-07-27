@@ -29,3 +29,5 @@ import './12-bruecke.test.mjs';
 import './13-fluesse.test.mjs';
 import './14-signaturen-generatoren.test.mjs';
 import './15-welt-vorgabe.test.mjs';
+import './16-seen.test.mjs';
+import './18-bedienung.test.mjs';

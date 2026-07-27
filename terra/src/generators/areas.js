@@ -23,6 +23,9 @@ import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
    bleiben davon unberuehrt. */
 import { polyBBox, inPoly, polyArea, polyCenter,
   genBurg, genWerft, genKloster } from './strukturen.js';
+// Runde H: der Binnensee. see.js zieht core/, world/ und generators/{objects,
+// zeichen,wegsuche} — nie areas.js; der Weg ist zyklusfrei.
+import { genSee } from './see.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
    an einen stabilen Schluessel statt an die Zugriffsreihenfolge — sonst
@@ -526,6 +529,10 @@ function genFlaeche(el) {
   else if (el.variant === "burg") genBurg(el);
   else if (el.variant === "werft") genWerft(el);
   else if (el.variant === "kloster") genKloster(el);
+  // Der See haengt am ENDE der Kette, gleiche Begruendung wie bei pfad:bruch:
+  // eine aeltere Fassung faellt durch alle else-if und erzeugt nichts, statt
+  // abzustuerzen — das Speicherformat bleibt abwaertskompatibel.
+  else if (el.variant === "see") genSee(el);
 }
 
 

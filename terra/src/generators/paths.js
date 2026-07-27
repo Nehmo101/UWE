@@ -6,6 +6,10 @@ import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, ri, wpick } from '../cor
 import { S, WATER, COS40, VW, HALF, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
+/* I3/H — die hydraulische Geometrie (Einzugsgebiet -> Breite). erosion.js
+   haengt ausschliesslich an core/rng.js, der Weg ist also zyklusfrei und
+   zieht nichts nach. */
+import { breiteAusFlaeche } from '../world/erosion.js';
 import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 // I1: Kartenzeichen. zeichen.js haengt an core/, world/terrain.js und render/ —
@@ -210,18 +214,34 @@ function strassenZeichen(p) {
 
    Der Katalog will die Breite nach dem ABFLUSS (I3) gestuft haben, und das
    ist die richtige Groesse: ein Fluss wird breit, weil viel Wasser durch ihn
-   laeuft. `abfluss` ist aber ein LAUFZEITfeld der Erosion — nach dem Laden
-   einer Karte steht es auf null, und eine Signatur, die davon abhinge, waere
-   nach dem Laden eine andere als vor dem Speichern. Genau die Sorte
-   versteckter Zustand, die dieses Projekt schon einmal einen Tag gekostet
-   hat.
+   laeuft. Genau hier liegt aber die Falle, die dieses Projekt schon zweimal
+   getroffen hat, und deshalb steht sie hier ausgeschrieben:
 
-   Also `params.breite`, und zwar unter der Wurzel: die Flaeche eines
-   Querschnitts waechst quadratisch mit der Breite, die STRICHSTAERKE auf
-   einer Karte soll das nicht tun. Was ein spaeterer Anschluss an den Abfluss
-   braeuchte, steht im Bericht. */
+   DAS LAUFZEITFELD `abfluss` (world/terrain.js) DARF NICHT GELESEN WERDEN.
+   Es entsteht beim Erodieren und steht nach dem Laden einer Datei auf null.
+   Eine Strichstaerke, die daran haengt, waere nach dem Speichern eine andere
+   als davor — derselbe Fluss auf derselben Karte, nur duenner, ohne dass
+   jemand etwas geaendert haette.
+
+   Gelesen wird stattdessen `params.einzug`: das Einzugsgebiet des Laufs in
+   WELTEINHEITEN², vom Weltgenerator EINMAL aus dem Abflussnetz gerechnet und
+   mit dem Element GESPEICHERT (generators/welt.js, abschnitteEinsetzen). Eine
+   gespeicherte Zahl ist nach dem Laden dieselbe wie vorher — das ist die
+   ganze Bedingung, und sie ist die einzige, die zaehlt.
+
+   `breiteAusFlaeche` steht in world/erosion.js, weil der Weltgenerator
+   dieselbe Kurve fuer die GEOMETRISCHE Breite benutzt; die Strichstaerke ist
+   danach dieselbe Wurzel wie zuvor — die Flaeche eines Querschnitts waechst
+   quadratisch mit der Breite, die Strichstaerke auf einer Karte soll das
+   nicht tun.
+
+   RUECKFALL auf `params.breite`: handgezeichnete Fluesse haben kein
+   Einzugsgebiet (niemand hat ihnen eines ausgerechnet), und Karten aus der
+   Zeit vor dieser Runde auch nicht. Fuer sie bleibt alles, wie es war —
+   dieselbe Zahl, dieselbe Wurzel, dasselbe Bild. */
 function flussBreite(p) {
-  var b = Number.isFinite(p.breite) ? p.breite : 9;
+  var e = Number.isFinite(p.einzug) && p.einzug > 0 ? p.einzug : 0;
+  var b = e ? breiteAusFlaeche(e) : (Number.isFinite(p.breite) ? p.breite : 9);
   return clamp(Math.sqrt(b / 9), 0.55, 2.4);
 }
 

@@ -32,7 +32,12 @@ import { S, KARTE, WATER } from '../core/store.js';
    geladene Karte sieht deshalb nicht anders aus als vor dem Speichern, sie
    wuerde beim NEUEN Wuerfeln nur andere Fluesse bekommen. */
 import { heightAt, slopeAt, abfluss as terrainAbfluss } from '../world/terrain.js';
-import { abflussNetz } from '../world/erosion.js';
+import { abflussNetz, breiteAusFlaeche } from '../world/erosion.js';
+/* Binnenseen (Runde H). see.js traegt beide Haelften: die Ableitung aus der
+   Senkenfuellung (rein, ohne store/three) und den Elementgenerator. Der Import
+   ist zyklusfrei — see.js zieht core/, world/ und generators/{objects,zeichen,
+   wegsuche}, aber nie welt.js. */
+import { seenAusFuellung, SEE_ZIEL_PUNKTE } from './see.js';
 // Nur genutzt, nicht veraendert: tryPlace ist DIE gemeinsame Bodenregel
 // (Kartenrand, Wasser, 40°-Hang). Der Generator ruft sie ohne Belegungsraster
 // und mit ignoreCorridor, weil die Korridormaske zum Erzeugungszeitpunkt noch
@@ -156,6 +161,37 @@ function skala() { return KARTE.map / 256; }
 
 /** Liegt der Punkt weit genug im Land, um ueberhaupt etwas zu tragen? */
 function fest(x, z) { return tryPlace(null, x, z, 0, { ignoreCorridor: true }) !== null; }
+
+/**
+ * Liegt der Punkt in einem Binnensee? Fragt die Seemaske auf dem
+ * Analyseraster ab (siehe erzeugeFluesse/erzeugeSeen).
+ *
+ * Warum das ueberhaupt noetig ist: `tryPlace` — DIE gemeinsame Bodenregel —
+ * kennt genau EIN Gewaesser, naemlich das Meer (`h < WATER + 0.35`). Ein
+ * Bergsee auf Hoehe 2 besteht diese Pruefung mit fliegenden Fahnen, und
+ * solange man ihn nicht sah, war das folgenlos: die Baeume standen halt in
+ * einer trockenen Mulde. Jetzt sieht man sie im Wasser stehen.
+ *
+ * Der Umriss jeder erzeugten Flaeche zieht sich deshalb aus dem See zurueck
+ * (`festAmSee` unten). Das deckt alles ab, was DIESER Generator legt. Fuer
+ * HANDGEZEICHNETE Flaechen ueber einem See braucht es die Korridormaske —
+ * die noetigen Zeilen in core/dirty.js stehen im Bericht.
+ */
+function imSee(W, x, z) {
+  var m = W.seeMaske;
+  if (!m || !W.A) return false;
+  var nx = W.A.nx, half = KARTE.half;
+  var i = Math.round((x + half) / RASTER), j = Math.round((z + half) / RASTER);
+  if (i < 0 || j < 0 || i >= nx || j >= nx) return false;
+  return m[j * nx + i] === 1;
+}
+
+/** Die Umrissregel aller Flaechen dieses Generators: fester Boden UND kein
+ *  See. `umriss` zieht abgelehnte Ecken schrittweise ein — ein Waldrand legt
+ *  sich damit von selbst ans Ufer, genau wie er sich an die Kueste legt. */
+function festAmSee(W) {
+  return function (x, z) { return fest(x, z) && !imSee(W, x, z); };
+}
 
 
 /* ==========================================================================
@@ -489,15 +525,22 @@ var FLUSS_ZIEL_PUNKTE = 16;       // Griffe je Flusselement, siehe Vereinfachung
    Fassung dieses Abschnitts tat genau das und erzeugte auf 256 einen einzigen
    Fluss.
 
-   Ein See braucht deshalb beides: TIEFE und FLAECHE. Zusammenhaengende
-   Fuellgebiete unter der Mindestflaeche sind Bodenwellen, durch die der Bach
-   einfach hindurchlaeuft — der Flussstempel schneidet sein Bett dort ohnehin
-   ein. Die Mindestflaeche wird am Raster bemessen (ein Tausendstel), damit
-   auf jeder Kartengroesse dasselbe VERHAELTNIS von See zu Karte gilt:
-   65 x 65 -> 10 Zellen, 257 x 257 -> 66 Zellen (rund 33 x 33 Welteinheiten). */
-var SEE_TIEFE = 0.6;
-var SEE_ANTEIL = 0.001;
-var SEE_MIN_ZELLEN = 10;
+   Ein See braucht deshalb beides: TIEFE und FLAECHE. Die Regel und ihre
+   Schwellen stehen jetzt in generators/see.js (`seenAusFuellung`), weil dort
+   auch das Polygon entsteht — zwei Stellen mit derselben Schwelle waeren zwei
+   Stellen, an denen ein Bach in einem See endet, den niemand sieht, oder
+   umgekehrt an einem See vorbeilaeuft, der da ist.
+
+   WICHTIG fuer diesen Abschnitt: die Maske, die `seenAusFuellung` liefert,
+   reicht bis zur WASSERLINIE und nicht nur bis zur Kerntiefe. Ein Fluss endet
+   damit genau dort, wo die gezeichnete Wasserflaeche anfaengt, und nicht ein
+   bis zwei Zellen darin. */
+
+/* Wie viele Seen hoechstens Elemente werden. Nicht aus Angst vor der
+   Rechenzeit (die Ableitung ist eine Randverfolgung je Gebiet), sondern aus
+   demselben Grund, aus dem `wunsch` die Fluesse deckelt: eine Karte mit
+   dreissig Tuempeln liest sich nicht als Landschaft, sondern als Fehler. */
+var SEE_MAX = 6;
 
 /* Die Schwelle: wie gross das Einzugsgebiet einer Zelle mindestens sein muss,
    damit dort ein Gerinne beginnt — als ANTEIL DER LANDFLAECHE, nicht als feste
@@ -631,38 +674,14 @@ function landZellen(A) {
   return m;
 }
 
-/**
- * Seemaske: 1, wo ein zusammenhaengendes Fuellgebiet tief UND gross genug ist
- * (siehe SEE_TIEFE). Zusammenhangskomponenten in Vierernachbarschaft, iterativ
- * — dasselbe Muster wie `komponenten` in world/biomfeld.js.
- */
-function seeMaske(A, N) {
-  var nx = A.nx, n = nx * nx;
-  var see = new Uint8Array(n), gesehen = new Uint8Array(n);
-  var stapel = new Int32Array(n), teil = new Int32Array(n);
-  var minZellen = Math.max(SEE_MIN_ZELLEN, Math.round(n * SEE_ANTEIL));
-  for (var s = 0; s < n; s++) {
-    if (gesehen[s]) continue;
-    gesehen[s] = 1;
-    if (!(N.gefuellt[s] - A.h[s] > SEE_TIEFE)) continue;
-    var sp = 0, m = 0;
-    stapel[sp++] = s; teil[m++] = s;
-    while (sp > 0) {
-      var k = stapel[--sp], i = k % nx, j = (k - i) / nx;
-      for (var d = 0; d < 4; d++) {
-        var ni = i + (d === 0 ? 1 : (d === 2 ? -1 : 0));
-        var nj = j + (d === 1 ? 1 : (d === 3 ? -1 : 0));
-        if (ni < 0 || nj < 0 || ni >= nx || nj >= nx) continue;
-        var q = nj * nx + ni;
-        if (gesehen[q]) continue;
-        gesehen[q] = 1;
-        if (!(N.gefuellt[q] - A.h[q] > SEE_TIEFE)) continue;
-        stapel[sp++] = q; teil[m++] = q;
-      }
-    }
-    if (m >= minZellen) for (var t = 0; t < m; t++) see[teil[t]] = 1;
-  }
-  return see;
+/** Seen dieser Karte: Maske (bis zur Wasserlinie) und fertige Polygone.
+ *  Die ganze Regel steht in generators/see.js — hier wird nur das
+ *  Analyseraster durchgereicht. */
+function seenErmitteln(A, N) {
+  return seenAusFuellung(A.h, N.gefuellt, A.nx, {
+    raster: RASTER, half: KARTE.half,
+    zielPunkte: SEE_ZIEL_PUNKTE, maxSeen: SEE_MAX
+  });
 }
 
 /** Verfolgt das Netz von `start` abwaerts. Liefert die Zellkette und den Grund
@@ -710,23 +729,19 @@ function seeAusgang(A, N, see, id) {
   return -1;
 }
 
-/**
- * Breite aus der Einzugsflaeche. Hydraulische Geometrie: der Abfluss waechst
- * mit der Einzugsflaeche ungefaehr wie A^0.8, die Breite mit der Wurzel des
- * Abflusses — zusammen also wie A^0.4. Der Exponent hier ist 0.44, die
- * Konstanten sind daran geeicht, dass der groesste Strom jeder Kartengroesse
- * ungefaehr gleich MAJESTAETISCH wirkt und nicht der Karte nach waechst.
- *
- * Gemessen (Einzugsgebiet in Analysezellen -> Breite in Welteinheiten):
- *      16 (Schwelle einer 256er Karte)  ->  3.0 (Untergrenze des Elements)
- *     108 (Schwelle einer 1024er Karte) ->  4.8
- *   1 200 (groesster Lauf auf 256)      -> 10.7
- *   6 000 (groesster Lauf auf 1024)     -> 20.2
- *  30 000 (ein Strom ueber die ganze Karte) -> 26 (Obergrenze)
- */
+/** Einzugsgebiet in Analysezellen -> in WELTEINHEITEN². Das ist die Groesse,
+ *  die als `params.einzug` mit dem Element gespeichert wird: sie haengt an
+ *  keiner Rechenaufloesung und bleibt deshalb auch dann richtig, wenn das
+ *  Analyseraster einmal feiner wird. */
+function einzugsFlaeche(akkZellen) {
+  return Math.max(1, akkZellen) * RASTER * RASTER;
+}
+
+/** Breite aus der Einzugsflaeche — die hydraulische Geometrie steht in
+ *  world/erosion.js, weil paths.js dieselbe Kurve fuer die Strichstaerke des
+ *  Kartenzeichens braucht (Begruendung dort). */
 function breiteAus(akkZellen) {
-  var flaeche = Math.max(1, akkZellen) * RASTER * RASTER;
-  return clamp(1.5 + Math.pow(flaeche, 0.44) * 0.12, 3, 26);
+  return breiteAusFlaeche(einzugsFlaeche(akkZellen));
 }
 
 /**
@@ -804,7 +819,15 @@ function erzeugeFluesse(W) {
     regen: WF ? WF.regen : null,
     sog: WF ? WF.sog : null
   });
-  var see = seeMaske(A, N);
+  /* Seen ZUERST: der Fluss soll an der Wasserflaeche enden, die danach
+     gezeichnet wird, und nicht an einer Maske, die ein Stueck weiter innen
+     liegt. `W.seen` traegt die Polygone bis zu `erzeugeSeen` weiter — sie
+     werden erst NACH den Fluessen zu Elementen, damit die Flusselemente ihre
+     Listenposition und damit ihre Seeds behalten. */
+  var SE = seenErmitteln(A, N);
+  var see = SE.maske;
+  W.seen = SE.seen;
+  W.seeMaske = SE.maske;
   var akk = N.akk, i, j, id;
   var land = landZellen(A);
   if (land < 64) return laeufe;                    // fast nur Wasser
@@ -976,6 +999,13 @@ function abschnitteEinsetzen(W, L) {
     var teil = pts.slice(a, b + 1);
     if (teil.length < 4) continue;
     var breite = breiteAus(L.akk[b]);
+    /* I3/H — die GESPEICHERTE Abflusskennzahl. `L.akk[b]` ist das
+       Einzugsgebiet am unteren Ende des Abschnitts, also der groesste Abfluss
+       entlang dieses Stuecks (akk waechst flussabwaerts nie). Umgerechnet auf
+       Welteinheiten² wandert sie als `params.einzug` in die Datei — und nur
+       deshalb darf paths.js die Strichstaerke daran haengen: das Laufzeitfeld
+       `abfluss` waere nach dem Laden null. */
+    var einzug = Math.round(einzugsFlaeche(L.akk[b]));
     /* Vereinfachung: dieselbe Funktion, die auch die Strassen der Wegsuche
        eindampft. FLUSS_ZIEL_PUNKTE = 16 Griffe je Element — das ist die
        Groesse, die der Editor als bearbeitbar vorfuehrt (die Waelder des
@@ -986,11 +1016,67 @@ function abschnitteEinsetzen(W, L) {
     if (punkte.length < 2) continue;
     benenneElement(fuegeEin(W, "pfad", "fluss", punkte, {
       breite: Math.round(breite * 2) / 2,
-      tiefe: Math.round(clamp(1.4 + breite * 0.22, 1, 8) * 2) / 2
+      tiefe: Math.round(clamp(1.4 + breite * 0.22, 1, 8) * 2) / 2,
+      einzug: einzug
     }), flussName);
     // Belegung: der Flusslauf selbst und ein Uferstreifen sind kein Bauland.
     for (var p = 0; p < teil.length; p += 2) stempel(W.bel, teil[p].x, teil[p].z, breite * 0.6 + 3, B_FLUSS);
   }
+}
+
+
+/* ==========================================================================
+   2b. Seen — aus der Senke wird ein Element
+
+   Die Ableitung selbst steht in generators/see.js; hier wird sie zu Elementen.
+   Drei Entscheidungen, die dabei fallen:
+
+   NACH DEN FLUESSEN. Nicht, weil ein See spaeter entstuende, sondern weil
+   `elementSeed` an der Listenposition haengt: waeren die Seen vorher
+   eingetragen, saehe jede bestehende Karte anders bestueckt aus, obwohl an den
+   Fluessen nichts geaendert wurde. Die Maske selbst wird dagegen VOR den
+   Fluessen gebraucht (siehe erzeugeFluesse) — Reihenfolge der RECHNUNG und
+   Reihenfolge der LISTE sind zwei verschiedene Dinge.
+
+   `stau: 0`. Der Wasserspiegel wird nicht mitgegeben. Er ergaebe sich aus der
+   Fuellhoehe und waere damit eine zweite Wahrheit neben dem Gelaende — nach
+   dem ersten Verschieben des Sees eine falsche. genSee liest ihn stattdessen
+   bei jeder Erzeugung am Ufer ab (see.js, seeSpiegel); auf einer Kontur, die
+   ohnehin auf der Wasserlinie verfolgt wurde, ist das dieselbe Zahl.
+
+   BELEGUNG. Die Seemaske liegt auf demselben Raster wie `bel` — sie wird
+   deshalb direkt hineinodert statt in Kreisen gestempelt. Damit steht kein
+   Dorf, kein Acker und kein Wald im See.
+   ========================================================================== */
+
+function erzeugeSeen(W) {
+  var seen = W.seen || [];
+  if (!seen.length) return seen;
+  var bel = W.bel, i;
+  // Der See ist kein Bauland — dieselbe Rolle wie das Flussbett.
+  var maske = W.seeMaske;
+  if (maske && maske.length === bel.feld.length) {
+    for (i = 0; i < maske.length; i++) if (maske[i]) bel.feld[i] |= B_FLUSS;
+  }
+  for (i = 0; i < seen.length; i++) {
+    var s = seen[i];
+    var el = fuegeEin(W, "flaeche", "see", s.points, {
+      stau: 0,
+      /* Uferbreite an der Groesse des Sees: ein Tuempel mit fuenf Einheiten
+         Brandungssaum waere zur Haelfte Schaum. Der Radius eines
+         flaechengleichen Kreises ist das ehrlichste Mass dafuer, das ohne
+         eine zweite Rechnung zu haben ist. */
+      saum: Math.round(clamp(Math.sqrt(s.zellen * RASTER * RASTER / Math.PI) * 0.10,
+        1.5, 9) * 2) / 2,
+      ufer: true,
+      dichte: 1
+    });
+    /* Seen tragen Wassernamen — `see` ist in namen.js seit jeher eine
+       gefuehrte Art, sie hatte bisher nur keinen Aufrufer. */
+    benenneElement(el, benenne(W, "see", s.mitte.x, s.mitte.z, el.seed, "see", i));
+    s.el = el;
+  }
+  return seen;
 }
 
 
@@ -1105,7 +1191,7 @@ function siedlungEinsetzen(W, ort, nr, stil) {
   // Die erste Siedlung ist die groesste — eine Karte braucht eine Hauptstadt.
   var gross = nr === 0 ? 1.35 : (nr === 1 ? 1.1 : 1);
   var r = (16 + rr(rs, 0, 9)) * gross * Math.sqrt(skala());
-  var pts = umriss(ort.x, ort.z, r, ri(rs, 8, 10), 0.30, W.seed + 700 + nr, fest);
+  var pts = umriss(ort.x, ort.z, r, ri(rs, 8, 10), 0.30, W.seed + 700 + nr, festAmSee(W));
   var netz = wpick(rs, [["raster", 3], ["gebogen", 4], ["zellen", 2], ["ring", 2]]);
   var viertel = fuegeEin(W, "flaeche", "viertel", pts, {
     netz: netz,
@@ -1135,7 +1221,7 @@ function siedlungEinsetzen(W, ort, nr, stil) {
     if (belegt(W.bel, fx, fz, B_ORT | B_FLUSS)) continue;
     if (slopeAt(fx, fz) < COS12) continue;                 // Aecker liegen eben
     var fr = rr(rs, 9, 15) * Math.sqrt(skala());
-    var feld = fuegeEin(W, "flaeche", "feld", umriss(fx, fz, fr, ri(rs, 6, 8), 0.24, W.seed + 760 + nr * 4 + v, fest), {
+    var feld = fuegeEin(W, "flaeche", "feld", umriss(fx, fz, fr, ri(rs, 6, 8), 0.24, W.seed + 760 + nr * 4 + v, festAmSee(W)), {
       drehung: Math.round(rr(rs, 0, 180)),
       reihe: Math.round(rr(rs, 2.4, 4.2) * 10) / 10,
       hoehe: Math.round(rr(rs, 0.8, 1.2) * 20) / 20,
@@ -1327,7 +1413,7 @@ function flaechenSetzen(W, kand, anzahl, gesetzt, minAb, art) {
     var rv = strom(nr, art === "wald" ? 2 : 3, W.seed + 404);
     var r = (art === "wald" ? rr(rv, 20, 40) * o.waldanteil : rr(rv, 16, 30)) * Math.sqrt(skala());
     r = clamp(r, 10, 70);
-    var pts = umriss(c.x, c.z, r, ri(rv, 8, 12), 0.34, W.seed + 800 + nr * 3 + (art === "wald" ? 0 : 1), fest);
+    var pts = umriss(c.x, c.z, r, ri(rv, 8, 12), 0.34, W.seed + 800 + nr * 3 + (art === "wald" ? 0 : 1), festAmSee(W));
     if (art === "wald") {
       var wald = fuegeEin(W, "flaeche", "wald", pts, {
         dichte: Math.round(rr(rv, 0.8, 1.6) * 20) / 20,
@@ -1459,10 +1545,15 @@ function erzeugeWelt(seed, opt) {
   //     ganzen Laufs und wuerde das Hoehenfeld veraendern, was erzeugeWelt oben
   //     ausdruecklich zusagt nicht zu tun.
   //   Fluesse VOR den Siedlungen  — die Orte suchen Muendungen und Furten.
+  //   Seen NACH den Fluessen      — ihre MASKE entsteht zwar vorher (die
+  //     Verfolgung braucht sie), ihre ELEMENTE kommen danach: `elementSeed`
+  //     haengt an der Listenposition, und eine bestehende Karte soll nicht
+  //     anders bestueckt werden, nur weil jetzt Seen darin stehen.
   //   Strassen NACH den Siedlungen — sie verbinden, was steht.
   //   Vegetation NACH den Strassen — sie weicht den Korridoren aus.
   //   Arbor ZULETZT               — die Ranken sollen die Orte nicht verdraengen.
   var laeufe = erzeugeFluesse(W);
+  var seen = erzeugeSeen(W);
   var orte = erzeugeSiedlungen(W, laeufe);
   erzeugeStrassen(W, orte);
   erzeugeVegetation(W);
@@ -1488,6 +1579,10 @@ function erzeugeWelt(seed, opt) {
   liste.name = region;
   liste.bericht = {
     fluesse: laeufe.length, siedlungen: orte.length,
+    // Runde H: wie viele Binnenseen die Senkenfuellung hergegeben hat. Ohne
+    // diese Zeile ist von aussen nicht zu sehen, ob eine Karte gar keine
+    // Wanne hatte oder ob die Ableitung ausgefallen ist.
+    seen: seen.length,
     // I3: lag ein gemessenes Abflussfeld vor, oder hat es gleichmaessig
     // geregnet? Ohne diese Zeile ist von aussen nicht zu unterscheiden, ob der
     // Rueckfall gegriffen hat — und genau das will man wissen.

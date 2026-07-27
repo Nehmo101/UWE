@@ -623,6 +623,46 @@ export function erosionRegionStarten(hoehen, VW, i0, i1, j0, j1, opt) {
 }
 
 /* ==========================================================================
+   HYDRAULISCHE GEOMETRIE
+
+   Die eine Zahl, die aus einem Einzugsgebiet eine Gewaesserbreite macht — und
+   der Grund, warum sie HIER steht und nicht bei einem ihrer beiden Nutzer:
+
+     generators/welt.js  legt damit die Breite jedes erzeugten Flusslaufs fest;
+     generators/paths.js macht daraus die Strichstaerke des Kartenzeichens.
+
+   Stuende sie in einem der beiden, muesste der andere sie importieren — und
+   der Weg waere in beiden Richtungen falsch herum (der Weltgenerator ist kein
+   Bauteil des Pfadwerkzeugs, und das Pfadwerkzeug erst recht keines des
+   Weltgenerators). Zwei Kopien waeren die schlechtere Antwort: ein Fluss, der
+   im Bild anders breit ist als auf der Karte, ist ein Fehler, den niemand
+   findet, weil man beides nie gleichzeitig sieht.
+
+   Die Formel: der Abfluss waechst mit der Einzugsflaeche ungefaehr wie A^0.8,
+   die Breite mit der Wurzel des Abflusses — zusammen also wie A^0.4. Der
+   Exponent hier ist 0.44, die Konstanten sind daran geeicht, dass der groesste
+   Strom jeder Kartengroesse ungefaehr gleich MAJESTAETISCH wirkt und nicht der
+   Karte nach waechst.
+
+   Gemessen (Einzugsgebiet in Welteinheiten² -> Breite in Welteinheiten):
+        256 (Schwelle einer 256er Karte, 16 Analysezellen)  ->  3.0
+      1 728 (Schwelle einer 1024er Karte)                   ->  4.8
+     19 200 (groesster Lauf auf 256)                        -> 10.7
+     96 000 (groesster Lauf auf 1024)                       -> 20.2
+    480 000 (ein Strom ueber die ganze Karte)               -> 26 (Obergrenze)
+
+   Die Einheit ist WELTEINHEITEN², nicht Rasterzellen. Das ist Absicht: eine
+   Zellzahl haengt am Analyseraster des Weltgenerators, und eine Kennzahl, die
+   mit einem Element gespeichert wird, darf an keiner Rechenaufloesung haengen.
+   ========================================================================== */
+
+/** Gewaesserbreite in Welteinheiten aus dem Einzugsgebiet in Welteinheiten². */
+export function breiteAusFlaeche(flaeche) {
+  var a = flaeche > 1 ? flaeche : 1;
+  return clamp(1.5 + Math.pow(a, 0.44) * 0.12, 3, 26);
+}
+
+/* ==========================================================================
    SENKENFUELLUNG UND ABFLUSSNETZ
 
    Der Bericht zur Tropfenerosion nennt die Luecke beim Namen: ein Tropfen, der
