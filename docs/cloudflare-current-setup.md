@@ -29,9 +29,10 @@ Studio NotFound".
   (e-mail sign-in) when `AUTH_REQUIRED=true`. There is **no separate Cloudflare
   Access sign-in** — a Cloudflare Access policy would add a redundant second
   login and is intentionally not used.
-- **"Verify you are human":** an optional Cloudflare Managed Challenge at the
-  edge (and/or the in-app Turnstile widget, see below) can gate the sites; this
-  is a bot/human check, not a login.
+- **"Verify you are human":** two independent, optional bot/human checks — a
+  Cloudflare **Managed Challenge** at the edge (in front of everything) and the
+  in-app **Turnstile** widget (on the login forms). Both are configured in
+  Studio under System → Cloudflare; neither is a login.
 - The app trusts proxy headers (`TRUST_PROXY=true`) so client IPs and protocol
   are read from Cloudflare headers.
 
@@ -51,6 +52,8 @@ Set on the host (not committed). The in-app status reflects these:
 | `PLAYER_PREVIEW_PUBLIC` | Allow public player preview | `false` |
 | `TRUST_PROXY` | Trust Cloudflare proxy headers | `true` |
 | `CLOUDFLARE_TUNNEL` | Mark tunnel deployment | `true` |
+| `CLOUDFLARE_ZONE_ID` | Zone ID for the edge Managed Challenge (optional — normally stored in UWE) | unset |
+| `CLOUDFLARE_API_TOKEN` | API token with `Zone → Zone WAF → Edit` (optional — normally stored encrypted in UWE) | unset |
 | `SESSION_COOKIE_SECURE` | Secure cookies (HTTPS only) | `true` in production |
 | `SESSION_COOKIE_DOMAIN` | Cookie `Domain` for cross-subdomain SSO | `.uweanddragons.org` (unset = host-only) |
 
@@ -116,14 +119,87 @@ Behaviour:
 Verification module: `packages/auth/src/turnstile.ts`. Live status (booleans
 only, no secrets) is shown under **System → Cloudflare** (`/system/cloudflare`).
 
-### Edge-level alternative (full-page interstitial)
+## Managed Challenge at the edge (full-page interstitial)
 
-For a full-page "Checking your browser / Verify you are human" interstitial in
-front of *everything* (not just login), enable a Cloudflare **Managed Challenge**
-at the edge: Cloudflare dashboard → Security → WAF → custom rule matching the UWE
-hostname(s) with action *Managed Challenge* (or "I'm Under Attack" mode). That is
-a dashboard/WAF setting with no UWE code change and can be combined with the
-in-app Turnstile widget above.
+Where Turnstile guards the login form, the **Managed Challenge** guards
+*everything*: Cloudflare shows the full-page "Checking your browser / Verify you
+are human" interstitial before a request ever reaches the UWE host. Both can run
+at the same time.
+
+UWE owns this itself — no dashboard visit and no host step. It is a single WAF
+custom rule in the zone's `http_request_firewall_custom` phase, created, updated
+and removed by UWE through the Cloudflare API.
+
+### Setting it up (System → Cloudflare)
+
+1. Create an API token at **Cloudflare → My Profile → API Tokens** with
+   **Zone → Zone WAF → Edit** on the UWE zone, and copy the **Zone ID** from the
+   zone's overview page.
+2. Open **System → Cloudflare** in Studio, section *Managed Challenge
+   (Cloudflare Edge)*: paste Zone ID + token, tick **Managed Challenge an der
+   Edge aktivieren**, save.
+3. The status panel above the form reads the rule back from Cloudflare and shows
+   the desired state next to the live one.
+
+That is the whole setup. Saving writes the rule immediately; the token is stored
+encrypted and never rendered back.
+
+### What the rule looks like
+
+| Aspect | Behaviour |
+|---|---|
+| Identity | One rule, `ref: uwe_managed_challenge`. Foreign WAF rules are read, preserved and written back untouched. |
+| Hostnames | The list in the settings form; empty = derived from the configured Landing/Studio/Portal/Brain URLs. |
+| Order | Appended **last**, so a `skip` rule you place in front of it (e.g. for your own IP) still wins. |
+| Level | *Managed Challenge* (Cloudflare picks the lightest sufficient check) or *JS Challenge*. |
+| Exemptions | `/api/health`, `/api/internal`, `/api/agent-jobs` are **always** exempt — the tunnel probes, healthcheck timer and job callbacks are machine clients and would read a challenge page as an outage. More can be added; these cannot be removed. |
+| Default | Off. Enabling is always an explicit decision. |
+
+The generated expression is visible in the status panel, e.g.:
+
+```
+(http.host in {"portal.uweanddragons.org" "studio.uweanddragons.org"})
+  and not (starts_with(http.request.uri.path, "/api/agent-jobs")
+        or starts_with(http.request.uri.path, "/api/health")
+        or starts_with(http.request.uri.path, "/api/internal"))
+```
+
+### Applying it from the host
+
+Every save mirrors the desired state to the host-readable
+`data/cloudflare/managed-challenge.json` (secret-free by design). A host script
+re-applies that file — for the first bootstrap, after someone edited the rule in
+the dashboard, or when the API token lives only in `/etc/uwe/cloudflare.env`:
+
+```bash
+bash /opt/uwe/deploy/scripts/configure-cloudflare-managed-challenge.sh --status
+bash /opt/uwe/deploy/scripts/configure-cloudflare-managed-challenge.sh --dry-run
+bash /opt/uwe/deploy/scripts/configure-cloudflare-managed-challenge.sh
+```
+
+Applying is idempotent: when the edge already matches the desired state nothing
+is written. Credentials come from `/etc/uwe/cloudflare.env`
+(`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`); UWE's own copy in the database
+takes precedence when Studio applies the rule.
+
+Implementation: `packages/cloudflare-edge` (rule model, API client, host config
+file), `apps/studio/src/lib/cloudflare-challenge-sync.ts` (settings → edge).
+
+### Locked out?
+
+The challenge is a bot check, not a login — a normal browser passes it. Should a
+challenge loop ever keep you out of Studio, disable the rule from the host
+(Cloudflare is not in the path there):
+
+```bash
+cd /opt/uwe
+jq '.enabled = false' data/cloudflare/managed-challenge.json > /tmp/mc.json \
+  && mv /tmp/mc.json data/cloudflare/managed-challenge.json \
+  && bash deploy/scripts/configure-cloudflare-managed-challenge.sh
+```
+
+Then turn it off in **System → Cloudflare** too — otherwise the next save
+re-applies the stored desired state.
 
 ## Cookies behind the proxy
 

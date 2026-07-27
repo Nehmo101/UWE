@@ -69,6 +69,28 @@ export interface DeploymentSettings {
   brainPath: string;
   /** Brain reachability — see {@link BrainExposure}. Default `loopback`. */
   brainExposure: BrainExposure;
+  /**
+   * Cloudflare edge **Managed Challenge** — the full-page "Verify you are human"
+   * interstitial in front of the sites. Unlike the flags above this is not an env
+   * overlay: it is desired state UWE pushes to Cloudflare (see `@uwe/cloudflare-edge`).
+   */
+  managedChallengeEnabled: boolean;
+  /** Hostnames the challenge applies to; "" entries and invalid hosts are dropped. */
+  managedChallengeHostnames: string[];
+  /**
+   * *Additional* path prefixes exempt from the challenge. UWE's own machine-client
+   * exemptions (health probes, internal callbacks) are always applied on top —
+   * challenging those would break the tunnel probes and systemd timers.
+   */
+  managedChallengeSkipPaths: string[];
+  /** `managed_challenge` (default) or the stricter `js_challenge`. */
+  managedChallengeAction: string;
+  /** Cloudflare Zone ID of the UWE domain — "" falls back to `CLOUDFLARE_ZONE_ID`. */
+  cloudflareZoneId: string;
+  /** True when a Cloudflare API token is stored in the database (never the value). */
+  cloudflareApiTokenConfigured: boolean;
+  /** Encrypted Cloudflare API token — server-only, stripped before reaching clients. */
+  cloudflareApiTokenEnc?: string | null;
 }
 
 /** Form/API shape for a deployment settings change. */
@@ -92,6 +114,15 @@ export interface DeploymentSettingsInput {
   brainUrl?: string;
   brainPath?: string;
   brainExposure?: BrainExposure;
+  managedChallengeEnabled?: boolean;
+  managedChallengeHostnames?: string[];
+  managedChallengeSkipPaths?: string[];
+  managedChallengeAction?: string;
+  cloudflareZoneId?: string;
+  /** New plaintext Cloudflare API token; empty/undefined keeps the stored one. */
+  cloudflareApiToken?: string;
+  /** When true, removes the stored Cloudflare API token (falls back to env). */
+  clearCloudflareApiToken?: boolean;
 }
 
 export const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
@@ -112,6 +143,13 @@ export const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
   brainUrl: "",
   brainPath: "",
   brainExposure: "loopback",
+  managedChallengeEnabled: false,
+  managedChallengeHostnames: [],
+  managedChallengeSkipPaths: [],
+  managedChallengeAction: "managed_challenge",
+  cloudflareZoneId: "",
+  cloudflareApiTokenConfigured: false,
+  cloudflareApiTokenEnc: null,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -126,6 +164,18 @@ function normalizeString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** Trims a string list, dropping blanks and duplicates. Content validation
+ *  (hostname/path shape) happens in `@uwe/cloudflare-edge`, which owns the rule. */
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const entries = value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter(Boolean);
+  return [...new Set(entries)];
+}
+
 /** Coerces an untrusted value into a valid {@link BrainExposure}; default `loopback`.
  *  Anything unrecognised (e.g. a stray "on") collapses to `loopback`. */
 function normalizeBrainExposure(value: unknown): BrainExposure {
@@ -138,6 +188,10 @@ export function normalizeDeploymentSettings(raw: unknown): DeploymentSettings {
   const secretEnc = typeof stored.turnstileSecretEnc === "string" && stored.turnstileSecretEnc
     ? stored.turnstileSecretEnc
     : null;
+  const cloudflareTokenEnc =
+    typeof stored.cloudflareApiTokenEnc === "string" && stored.cloudflareApiTokenEnc
+      ? stored.cloudflareApiTokenEnc
+      : null;
 
   return {
     publicAppUrl: normalizeString(stored.publicAppUrl),
@@ -157,31 +211,57 @@ export function normalizeDeploymentSettings(raw: unknown): DeploymentSettings {
     brainUrl: normalizeString(stored.brainUrl),
     brainPath: normalizeString(stored.brainPath),
     brainExposure: normalizeBrainExposure(stored.brainExposure),
+    managedChallengeEnabled: stored.managedChallengeEnabled === true,
+    managedChallengeHostnames: normalizeStringList(stored.managedChallengeHostnames),
+    managedChallengeSkipPaths: normalizeStringList(stored.managedChallengeSkipPaths),
+    managedChallengeAction:
+      stored.managedChallengeAction === "js_challenge" ? "js_challenge" : "managed_challenge",
+    cloudflareZoneId: normalizeString(stored.cloudflareZoneId),
+    cloudflareApiTokenConfigured: Boolean(cloudflareTokenEnc),
+    cloudflareApiTokenEnc: cloudflareTokenEnc,
   };
 }
 
-/** Removes the encrypted secret before the settings are sent to a browser client. */
+/** Removes the encrypted secrets before the settings are sent to a browser client. */
 export function sanitizeDeploymentSettingsForClient(settings: DeploymentSettings): DeploymentSettings {
-  return { ...settings, turnstileSecretEnc: undefined };
+  return { ...settings, turnstileSecretEnc: undefined, cloudflareApiTokenEnc: undefined };
 }
 
 /**
- * Merges a validated form input over the existing settings, encrypting a newly supplied
- * Turnstile secret and preserving the stored one when the field is left blank.
+ * Applies a "set, keep or clear" secret field: a blank input keeps the stored
+ * value, a non-blank one replaces it (encrypted), and the clear flag removes it
+ * so the host env takes over again.
+ */
+function nextSecretEnc(
+  existingEnc: string | null | undefined,
+  plaintext: string | undefined,
+  clear: boolean | undefined,
+): string | null {
+  if (clear) {
+    return null;
+  }
+  const secret = plaintext?.trim();
+  return secret ? encryptSecret(secret, resolveTokenEncryptionSecret()) : (existingEnc ?? null);
+}
+
+/**
+ * Merges a validated form input over the existing settings, encrypting newly supplied
+ * secrets and preserving the stored ones when the fields are left blank.
  */
 export function buildDeploymentSettingsUpdate(
   input: DeploymentSettingsInput,
   existing: DeploymentSettings = DEFAULT_DEPLOYMENT_SETTINGS,
 ): DeploymentSettings {
-  let turnstileSecretEnc = existing.turnstileSecretEnc ?? null;
-  if (input.clearTurnstileSecret) {
-    turnstileSecretEnc = null;
-  } else {
-    const secret = input.turnstileSecret?.trim();
-    if (secret) {
-      turnstileSecretEnc = encryptSecret(secret, resolveTokenEncryptionSecret());
-    }
-  }
+  const turnstileSecretEnc = nextSecretEnc(
+    existing.turnstileSecretEnc,
+    input.turnstileSecret,
+    input.clearTurnstileSecret,
+  );
+  const cloudflareApiTokenEnc = nextSecretEnc(
+    existing.cloudflareApiTokenEnc,
+    input.cloudflareApiToken,
+    input.clearCloudflareApiToken,
+  );
 
   return normalizeDeploymentSettings({
     publicAppUrl: input.publicAppUrl ?? existing.publicAppUrl,
@@ -200,6 +280,13 @@ export function buildDeploymentSettingsUpdate(
     brainUrl: input.brainUrl ?? existing.brainUrl,
     brainPath: input.brainPath ?? existing.brainPath,
     brainExposure: input.brainExposure ?? existing.brainExposure,
+    managedChallengeEnabled: input.managedChallengeEnabled ?? existing.managedChallengeEnabled,
+    managedChallengeHostnames:
+      input.managedChallengeHostnames ?? existing.managedChallengeHostnames,
+    managedChallengeSkipPaths: input.managedChallengeSkipPaths ?? existing.managedChallengeSkipPaths,
+    managedChallengeAction: input.managedChallengeAction ?? existing.managedChallengeAction,
+    cloudflareZoneId: input.cloudflareZoneId ?? existing.cloudflareZoneId,
+    cloudflareApiTokenEnc,
   });
 }
 
@@ -266,4 +353,38 @@ export function buildDeploymentEnvOverrides(settings: DeploymentSettings): Recor
 /** Installs the resolved overrides into the shared `@uwe/auth` runtime-config layer. */
 export function applyDeploymentRuntimeOverrides(settings: DeploymentSettings): void {
   setRuntimeEnvOverrides(buildDeploymentEnvOverrides(settings));
+}
+
+/** Cloudflare API credentials for the edge configuration (Managed Challenge). */
+export interface CloudflareEdgeCredentials {
+  apiToken: string | null;
+  zoneId: string | null;
+}
+
+/**
+ * Resolves the Cloudflare API credentials, database first, host env as fallback.
+ *
+ * Deliberately *not* part of {@link buildDeploymentEnvOverrides}: a zone-scoped
+ * Cloudflare API token is far more powerful than the Turnstile secret, so it is
+ * never installed into the process-wide runtime-env overlay. Callers that need it
+ * (the Managed-Challenge apply path) ask for it explicitly.
+ */
+export function resolveCloudflareEdgeCredentials(
+  settings: DeploymentSettings,
+  env: NodeJS.ProcessEnv = process.env,
+): CloudflareEdgeCredentials {
+  let apiToken: string | null = null;
+  if (settings.cloudflareApiTokenEnc) {
+    try {
+      apiToken = decryptSecret(settings.cloudflareApiTokenEnc, resolveTokenEncryptionSecret()) || null;
+    } catch {
+      // A token encrypted under a different key can't be recovered — fall back to env.
+      apiToken = null;
+    }
+  }
+
+  return {
+    apiToken: apiToken ?? (env.CLOUDFLARE_API_TOKEN?.trim() || null),
+    zoneId: settings.cloudflareZoneId.trim() || env.CLOUDFLARE_ZONE_ID?.trim() || null,
+  };
 }
