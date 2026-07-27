@@ -14,7 +14,6 @@ import {
   isPlayerExposableContent,
   isPlayerPortalVisibility,
   isPublishedContentStatus,
-  isSecretVisibleToPlayer,
   mapPublishStatusToContentStatus,
   maskSecretsInUi,
   DEFAULT_SECRET_PLACEHOLDER,
@@ -26,8 +25,6 @@ import {
   type MaskedContent,
   type MaskSecretsOptions,
   type PrivateReferenceTarget,
-  type RevealState,
-  type SecretLevel,
 } from "@uwe/auth/content-access";
 
 export {
@@ -39,7 +36,6 @@ export {
   isPlayerExposableContent,
   isPlayerPortalVisibility,
   isPublishedContentStatus,
-  isSecretVisibleToPlayer,
   mapPublishStatusToContentStatus,
   maskSecretsInUi,
   DEFAULT_SECRET_PLACEHOLDER,
@@ -51,8 +47,6 @@ export {
   type MaskedContent,
   type MaskSecretsOptions,
   type PrivateReferenceTarget,
-  type RevealState,
-  type SecretLevel,
 };
 
 /** Admin / internal metadata keys stripped from player responses. */
@@ -170,7 +164,7 @@ export function sanitizeForPlayer(
  */
 export type SearchIndexContentBlock = Pick<
   ContentBlock,
-  "id" | "pageId" | "content" | "visibility" | "type" | "sortOrder" | "secretLevel" | "revealState"
+  "id" | "pageId" | "content" | "visibility" | "type" | "sortOrder"
 >;
 
 export interface SearchIndexPageInput extends ContentAccessFields {
@@ -186,8 +180,6 @@ export interface SearchIndexPageInput extends ContentAccessFields {
   contentBlocks: SearchIndexContentBlock[];
   world: { slug: string; name: string };
   campaign: { name: string } | null;
-  secretLevel?: SecretLevel | null;
-  revealState?: RevealState | null;
 }
 
 export type SearchIndexScope = "public" | "studio";

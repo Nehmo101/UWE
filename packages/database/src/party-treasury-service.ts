@@ -108,8 +108,6 @@ const PAGE_ACCESS_SELECT = {
   id: true,
   visibility: true,
   publishStatus: true,
-  secretLevel: true,
-  revealState: true,
 } as const;
 
 export class PartyTreasuryService {

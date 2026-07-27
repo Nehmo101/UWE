@@ -52,18 +52,6 @@ enum Visibility {
   archived
 }
 
-enum SecretLevel {
-  none
-  spoiler
-  dm_secret
-}
-
-enum RevealState {
-  hidden
-  preview
-  revealed
-}
-
 enum PublishStatus {
   draft
   internal
@@ -730,8 +718,6 @@ model Page {
   summary         String?
   visibility      Visibility         @default(private)
   publishStatus   PublishStatus      @default(draft) @map("publish_status")
-  secretLevel     SecretLevel        @default(none) @map("secret_level")
-  revealState     RevealState        @default(hidden) @map("reveal_state")
   canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
   prepStatus      DungeonPrepStatus? @map("prep_status")
   questStatus     QuestLifecycleStatus? @map("quest_status")
@@ -803,7 +789,6 @@ model WorldEvent {
   summaryPlayer      String?              @map("summary_player")
   summaryDm          String?              @map("summary_dm")
   visibility         Visibility           @default(private)
-  secretLevel        SecretLevel          @default(none) @map("secret_level")
   sourceType         WorldEventSourceType @default(manual) @map("source_type")
   sourceAiProposalId String?              @map("source_ai_proposal_id")
   gameSessionId      String?              @map("game_session_id")
@@ -1021,8 +1006,6 @@ model ContentBlock {
   sortOrder  Int              @map("sort_order")
   content     String           @default("")
   visibility  Visibility       @default(private)
-  secretLevel SecretLevel      @default(none) @map("secret_level")
-  revealState RevealState      @default(hidden) @map("reveal_state")
   metadata    Json?
   createdAt  DateTime         @default(now()) @map("created_at")
   updatedAt  DateTime         @updatedAt @map("updated_at")
@@ -1046,8 +1029,6 @@ model Asset {
   mimeType    String?    @map("mime_type")
   size        Int        @default(0)
   visibility  Visibility  @default(private)
-  secretLevel SecretLevel @default(none) @map("secret_level")
-  revealState RevealState @default(hidden) @map("reveal_state")
   tags        Json?
   metadata    Json?
   createdAt   DateTime    @default(now()) @map("created_at")

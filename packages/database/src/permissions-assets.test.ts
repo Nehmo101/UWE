@@ -23,29 +23,25 @@ import {
 
 const NON_DM_CONTEXTS: AccessContext[] = ["portal", "preview", "share"];
 
-/** player_visible asset whose secret has NOT been revealed. */
-const hiddenSecretAsset: AssetAccessRecord = {
-  id: "asset-hidden-secret",
-  visibility: "player_visible",
-  secretLevel: "dm_secret",
-  revealState: "hidden",
+/** Never reaches players. */
+const dmOnlyAsset: AssetAccessRecord = {
+  id: "asset-dm-only",
+  visibility: "dm_only",
 };
 
-/** Fully player-exposable asset (no secret). */
+/** Fully player-exposable asset. */
 const exposableAsset: AssetAccessRecord = {
   id: "asset-exposable",
   visibility: "player_visible",
-  secretLevel: "none",
-  revealState: "hidden",
 };
 
 describe("asset permissions: filterAssetsForContext mirrors isAssetAccessible (M8)", () => {
   for (const context of NON_DM_CONTEXTS) {
-    it(`excludes an unrevealed dm_secret player_visible asset in "${context}"`, () => {
+    it(`excludes a dm_only asset in "${context}"`, () => {
       // single-asset check rejects it
-      assert.equal(isAssetAccessible(hiddenSecretAsset, context), false);
-      // list filter now agrees: no metadata leak through the list path
-      assert.deepEqual(filterAssetsForContext([hiddenSecretAsset], context), []);
+      assert.equal(isAssetAccessible(dmOnlyAsset, context), false);
+      // list filter agrees: no metadata leak through the list path
+      assert.deepEqual(filterAssetsForContext([dmOnlyAsset], context), []);
     });
 
     it(`includes a fully player-exposable asset in "${context}"`, () => {
@@ -56,7 +52,7 @@ describe("asset permissions: filterAssetsForContext mirrors isAssetAccessible (M
     });
 
     it(`list filter agrees with the single check element-by-element in "${context}"`, () => {
-      const assets = [hiddenSecretAsset, exposableAsset];
+      const assets = [dmOnlyAsset, exposableAsset];
       const filtered = filterAssetsForContext(assets, context);
       const expected = assets.filter((asset) => isAssetAccessible(asset, context));
       assert.deepEqual(filtered, expected);
@@ -64,37 +60,14 @@ describe("asset permissions: filterAssetsForContext mirrors isAssetAccessible (M
     });
   }
 
-  it("DM context still sees the hidden-secret asset via both paths", () => {
-    assert.equal(isAssetAccessible(hiddenSecretAsset, "dm"), true);
-    assert.deepEqual(filterAssetsForContext([hiddenSecretAsset], "dm"), [
-      hiddenSecretAsset,
-    ]);
-
-    const dmOnlyAsset: AssetAccessRecord = {
-      id: "asset-dm-only",
-      visibility: "dm_only",
-      secretLevel: "none",
-      revealState: "hidden",
-    };
-    // DM sees dm_only assets; players never do (via either path).
+  it("DM sees dm_only assets; players never do — via either path", () => {
     assert.equal(isAssetAccessible(dmOnlyAsset, "dm"), true);
     assert.deepEqual(filterAssetsForContext([dmOnlyAsset], "dm"), [dmOnlyAsset]);
     assert.equal(isAssetAccessible(dmOnlyAsset, "portal"), false);
     assert.deepEqual(filterAssetsForContext([dmOnlyAsset], "portal"), []);
   });
 
-  it("a REVEALED dm_secret player_visible asset is exposable to players via both paths", () => {
-    const revealed: AssetAccessRecord = {
-      id: "asset-revealed",
-      visibility: "player_visible",
-      secretLevel: "dm_secret",
-      revealState: "revealed",
-    };
-    assert.equal(isAssetAccessible(revealed, "portal"), true);
-    assert.deepEqual(filterAssetsForContext([revealed], "portal"), [revealed]);
-  });
-
-  it("assets without secret fields default to fully exposable (secretLevel none)", () => {
+  it("a player_visible asset is exposable to players", () => {
     const plain: Pick<AssetAccessRecord, "id" | "visibility"> = {
       id: "asset-plain",
       visibility: "player_visible",

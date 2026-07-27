@@ -3,8 +3,6 @@ import type {
   ContentBlockType,
   PageType,
   PublishStatus,
-  RevealState,
-  SecretLevel,
   Visibility,
 } from "@uwe/database/enums";
 import { EmptyState } from "./AppShell";
@@ -13,8 +11,6 @@ import {
   CanonicalBadge,
   PageTypeBadge,
   PublishBadge,
-  RevealStateBadge,
-  SecretLevelBadge,
   TagChip,
   VisibilityBadge,
 } from "./StatusBadges";
@@ -155,8 +151,6 @@ export function MetaPanel({
   type,
   tags,
   aliases,
-  secretLevel,
-  revealState,
 }: {
   visibility: Visibility;
   publishStatus: PublishStatus;
@@ -164,8 +158,6 @@ export function MetaPanel({
   type: PageType;
   tags: string[];
   aliases: string[];
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
 }) {
   const dt = "text-xs uppercase tracking-wider text-muted-foreground mb-1";
   const dd = "m-0 mb-3.5";
@@ -185,18 +177,6 @@ export function MetaPanel({
           <dt className={dt}>Publish</dt>
           <dd className={dd}><PublishBadge status={publishStatus} /></dd>
         </div>
-        {secretLevel !== undefined && (
-          <div>
-            <dt className={dt}>Geheimnis</dt>
-            <dd className={dd}><SecretLevelBadge secretLevel={secretLevel} /></dd>
-          </div>
-        )}
-        {revealState !== undefined && secretLevel !== undefined && secretLevel !== "none" && (
-          <div>
-            <dt className={dt}>Enthüllung</dt>
-            <dd className={dd}><RevealStateBadge revealState={revealState} /></dd>
-          </div>
-        )}
         <div>
           <dt className={dt}>Kanon</dt>
           <dd className={dd}><CanonicalBadge status={canonicalStatus} /></dd>

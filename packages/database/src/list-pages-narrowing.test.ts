@@ -63,7 +63,7 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     lazulUserId = users.players.find((p) => p.displayName === "Lazul")!.id;
 
     // A matrix that exercises every branch of canViewPage: each visibility, each
-    // publishStatus that is / isn't "published", and secret/reveal combinations.
+    // publishStatus that is / isn't "published".
     const pages = [
       { slug: "pub-published", visibility: "public", publishStatus: "published" },
       { slug: "pv-published", visibility: "player_visible", publishStatus: "published" },
@@ -80,29 +80,21 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         slug: "secret-hidden",
         visibility: "player_visible",
         publishStatus: "published",
-        secretLevel: "dm_secret",
-        revealState: "hidden",
       },
       {
         slug: "secret-revealed",
         visibility: "player_visible",
         publishStatus: "published",
-        secretLevel: "dm_secret",
-        revealState: "revealed",
       },
       {
         slug: "spoiler-preview",
         visibility: "public",
         publishStatus: "published",
-        secretLevel: "spoiler",
-        revealState: "preview",
       },
       {
         slug: "secret-none-hidden",
         visibility: "player_visible",
         publishStatus: "published",
-        secretLevel: "none",
-        revealState: "hidden",
       },
     ] as const;
 
@@ -114,8 +106,6 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         type: "note",
         visibility: page.visibility,
         publishStatus: page.publishStatus,
-        secretLevel: "secretLevel" in page ? page.secretLevel : "none",
-        revealState: "revealState" in page ? page.revealState : "hidden",
       });
     }
 
@@ -173,7 +163,9 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         "pv-published",
         "specific-published",
         "unlock-published",
+        "secret-hidden",
         "secret-revealed",
+        "spoiler-preview",
         "secret-none-hidden",
       ]),
     );
@@ -188,7 +180,6 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     assert.ok(!narrowed.includes("specific-published"));
     assert.ok(!narrowed.includes("unlock-published"));
     assert.ok(!narrowed.includes("dmonly-published"));
-    assert.ok(!narrowed.includes("secret-hidden"));
   });
 
   it("DM preview-as-player result equals the baseline (non-staff narrowing)", async () => {

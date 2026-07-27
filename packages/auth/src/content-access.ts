@@ -14,10 +14,6 @@ export type ContentStatus = "draft" | "ready" | "published" | "archived";
 
 export type PublishStatusValue = "draft" | "internal" | "review" | "published" | "archived";
 
-export type SecretLevel = "none" | "spoiler" | "dm_secret";
-
-export type RevealState = "hidden" | "preview" | "revealed";
-
 export type ContentBlockTypeValue = string;
 
 /** Visibilities that may appear in public/player APIs when published. */
@@ -37,15 +33,11 @@ export const DM_ONLY_VISIBILITIES: readonly ExtendedVisibility[] = [
 export interface ContentAccessFields {
   visibility: ExtendedVisibility;
   publishStatus: PublishStatusValue;
-  secretLevel?: SecretLevel | null;
-  revealState?: RevealState | null;
 }
 
 export interface ContentBlockAccessFields {
   visibility: ExtendedVisibility;
   type?: ContentBlockTypeValue;
-  secretLevel?: SecretLevel | null;
-  revealState?: RevealState | null;
 }
 
 export function mapPublishStatusToContentStatus(publishStatus: PublishStatusValue): ContentStatus {
@@ -80,19 +72,6 @@ export function isDmOnlyVisibility(visibility: ExtendedVisibility): boolean {
   );
 }
 
-export function isSecretVisibleToPlayer(
-  content: Pick<ContentAccessFields, "secretLevel" | "revealState">,
-): boolean {
-  const secretLevel = content.secretLevel ?? "none";
-  const revealState = content.revealState ?? "hidden";
-
-  if (secretLevel === "none") {
-    return true;
-  }
-
-  return revealState === "revealed";
-}
-
 /** Default placeholder shown in the UI in place of a masked secret. */
 export const DEFAULT_SECRET_PLACEHOLDER =
   "🔒 Verborgenes Geheimnis — für Spieler noch nicht enthüllt.";
@@ -121,11 +100,11 @@ export interface MaskedContent {
  * unrevealed secret text in shared/preview surfaces.
  */
 export function maskSecretsInUi(
-  input: Pick<ContentAccessFields, "secretLevel" | "revealState"> & { content: string },
+  input: { content: string },
   options: MaskSecretsOptions = {},
 ): MaskedContent {
   const audience = options.audience ?? "player";
-  if (audience === "dm" || isSecretVisibleToPlayer(input)) {
+  if (audience === "dm") {
     return { masked: false, content: input.content };
   }
   return { masked: true, content: options.placeholder ?? DEFAULT_SECRET_PLACEHOLDER };
@@ -143,8 +122,7 @@ export function isPlayerExposableContent(content: ContentAccessFields): boolean 
   if (!isPublishedContentStatus(mapPublishStatusToContentStatus(content.publishStatus))) {
     return false;
   }
-
-  return isSecretVisibleToPlayer(content);
+  return true;
 }
 
 export function isBlockPlayerExposable(block: ContentBlockAccessFields): boolean {
@@ -159,8 +137,7 @@ export function isBlockPlayerExposable(block: ContentBlockAccessFields): boolean
   if (!isPlayerPortalVisibility(block.visibility)) {
     return false;
   }
-
-  return isSecretVisibleToPlayer(block);
+  return true;
 }
 
 export function isPagePlayerExposable(page: ContentAccessFields): boolean {
@@ -172,8 +149,6 @@ export interface PrivateReferencePage {
   slug: string;
   visibility: ExtendedVisibility;
   publishStatus: PublishStatusValue;
-  secretLevel?: SecretLevel | null;
-  revealState?: RevealState | null;
   aliases?: unknown;
 }
 
@@ -230,9 +205,6 @@ export function detectPrivateReferences(
       continue;
     }
 
-    if (!isSecretVisibleToPlayer(page)) {
-      results.push({ title: page.title, slug: page.slug, reason: "hidden_secret" });
-    }
   }
 
   return results;

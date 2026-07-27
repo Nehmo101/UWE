@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   CollapsibleSection,
-  SECRET_LEVEL_LABELS,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
 import {
@@ -12,7 +11,6 @@ import {
   getAppRepository,
   parseInGameDate,
   parseWorldCalendarMonths,
-  SecretLevelEnum,
   VisibilityEnum,
 } from "@uwe/database/server";
 import {
@@ -170,22 +168,6 @@ export async function PageChroniclePanel({ worldSlug, pageId, pageSlug, category
             {Object.values(VisibilityEnum).map((value) => (
               <option key={value} value={value}>
                 {VISIBILITY_LABELS[value]}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="chronicle-event-secret-level">Geheimnis-Stufe</Label>
-          <select
-            id="chronicle-event-secret-level"
-            name="secretLevel"
-            defaultValue="none"
-            className={SELECT_CLASS}
-          >
-            {Object.values(SecretLevelEnum).map((value) => (
-              <option key={value} value={value}>
-                {SECRET_LEVEL_LABELS[value]}
               </option>
             ))}
           </select>

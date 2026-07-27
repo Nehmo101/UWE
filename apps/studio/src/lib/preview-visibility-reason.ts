@@ -1,17 +1,14 @@
 import {
   isPlayerPortalVisibility,
   isPublishedContentStatus,
-  isSecretVisibleToPlayer,
   mapPublishStatusToContentStatus,
 } from "@uwe/auth";
 import { PUBLISH_LABELS, VISIBILITY_LABELS } from "@uwe/shared-ui";
-import type { PublishStatus, SecretLevel, RevealState, Visibility } from "@uwe/database/enums";
+import type { PublishStatus, Visibility } from "@uwe/database/enums";
 
 interface PreviewGateFields {
   visibility: Visibility;
   publishStatus: PublishStatus;
-  secretLevel?: SecretLevel | null;
-  revealState?: RevealState | null;
 }
 
 /**
@@ -28,7 +25,7 @@ export function describePreviewVisibilityGate(page: PreviewGateFields): string {
     return `Status ist "${PUBLISH_LABELS[page.publishStatus]}" — nur veröffentlichte Seiten sind für Spieler sichtbar.`;
   }
 
-  if (!isSecretVisibleToPlayer(page)) {
+  if (!true) {
     return "Diese Seite ist als Geheimnis markiert und für Spieler noch nicht enthüllt.";
   }
 

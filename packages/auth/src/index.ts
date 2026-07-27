@@ -95,7 +95,6 @@ export {
   isPlayerExposableContent,
   isPlayerPortalVisibility,
   isPublishedContentStatus,
-  isSecretVisibleToPlayer,
   mapPublishStatusToContentStatus,
   PLAYER_PORTAL_VISIBILITIES,
   type ContentAccessFields,
@@ -103,8 +102,6 @@ export {
   type ContentStatus,
   type ContentVisibility,
   type PrivateReferenceTarget,
-  type RevealState,
-  type SecretLevel,
 } from "./content-access";
 
 export type {

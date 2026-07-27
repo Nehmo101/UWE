@@ -7,11 +7,6 @@ import {
   PUBLISH_LABELS,
   CANONICAL_LABELS,
   BLOCK_TYPE_LABELS,
-  SECRET_LEVEL_LABELS,
-  REVEAL_STATE_LABELS,
-  SecretLevelBadge,
-  RevealStateBadge,
-  SecretReveal,
 } from "@uwe/shared-ui";
 import { EditPageStickyBar } from "../../../../../../components/EditPageStickyBar";
 import { ContentBlockBody } from "../../../../../../components/ContentBlockBody";
@@ -27,8 +22,6 @@ import {
   PublishStatusEnum,
   CanonicalStatusEnum,
   ContentBlockTypeEnum,
-  SecretLevelEnum,
-  RevealStateEnum,
 } from "@uwe/database/server";
 import {
   updatePageAction,
@@ -217,55 +210,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             </Select>
           </div>
 
-          <fieldset className="grid gap-3 rounded-[var(--radius)] border border-border p-4">
-            <legend className="px-1 text-xs text-muted-foreground">Geheimnis &amp; Enthüllung</legend>
-            <p className="m-0 text-xs text-muted-foreground">
-              Aktuell: <SecretLevelBadge secretLevel={page.secretLevel} />
-              {page.secretLevel !== "none" && (
-                <> · <RevealStateBadge revealState={page.revealState} /></>
-              )}
-            </p>
-
-            <div className={FIELD_CLASS}>
-              <Label htmlFor="edit-secret-level">Geheimnis-Level</Label>
-              <Select name="secretLevel" defaultValue={page.secretLevel}>
-                <SelectTrigger id="edit-secret-level">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(SecretLevelEnum).map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {SECRET_LEVEL_LABELS[level]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="m-0 text-xs text-muted-foreground">
-                Steuert zusätzlichen Schutz für veröffentlichte Spieler-Inhalte. „Kein Geheimnis“
-                bedeutet: nur Sichtbarkeit und Publish-Status gelten.
-              </p>
-            </div>
-
-            <div className={FIELD_CLASS}>
-              <Label htmlFor="edit-reveal-state">Enthüllungs-Status</Label>
-              <Select name="revealState" defaultValue={page.revealState}>
-                <SelectTrigger id="edit-reveal-state">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(RevealStateEnum).map((state) => (
-                    <SelectItem key={state} value={state}>
-                      {REVEAL_STATE_LABELS[state]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="m-0 text-xs text-muted-foreground">
-                Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen die Seite im Portal
-                erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für Portal-Zugriff.
-              </p>
-            </div>
-          </fieldset>
 
           <div className={FIELD_CLASS}>
             <Label htmlFor="edit-canonical-status">Kanon-Status</Label>
@@ -342,58 +286,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                     </Select>
                   </div>
 
-                  <fieldset className="grid gap-3 rounded-[var(--radius)] border border-border p-4">
-                    <legend className="px-1 text-xs text-muted-foreground">Geheimnis &amp; Enthüllung</legend>
-                    <p className="m-0 text-xs text-muted-foreground">
-                      Aktuell: <SecretLevelBadge secretLevel={block.secretLevel} />
-                      {block.secretLevel !== "none" && (
-                        <> · <RevealStateBadge revealState={block.revealState} /></>
-                      )}
-                    </p>
-                    <div className={FIELD_CLASS}>
-                      <Label htmlFor={`block-${block.id}-secret-level`}>Geheimnis-Level</Label>
-                      <Select name="secretLevel" defaultValue={block.secretLevel}>
-                        <SelectTrigger id={`block-${block.id}-secret-level`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(SecretLevelEnum).map((level) => (
-                            <SelectItem key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className={FIELD_CLASS}>
-                      <Label htmlFor={`block-${block.id}-reveal-state`}>Enthüllungs-Status</Label>
-                      <Select name="revealState" defaultValue={block.revealState}>
-                        <SelectTrigger id={`block-${block.id}-reveal-state`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(RevealStateEnum).map((state) => (
-                            <SelectItem key={state} value={state}>{REVEAL_STATE_LABELS[state]}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="m-0 text-xs text-muted-foreground">
-                        Nur relevant bei gesetztem Geheimnis-Level. Spieler sehen den Block im
-                        Portal erst bei „Enthüllt“ — „Vorschau“ bleibt wie „Verborgen“ für
-                        Portal-Zugriff.
-                      </p>
-                    </div>
-                  </fieldset>
-
-                  {block.secretLevel !== "none" && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      <strong>Spieler-Vorschau:</strong>
-                      <SecretReveal
-                        content={block.content}
-                        secretLevel={block.secretLevel}
-                        revealState={block.revealState}
-                      />
-                    </div>
-                  )}
-
                   <div className="flex flex-wrap items-center gap-2">
                     <Button type="submit" variant="secondary">Block speichern</Button>
                     <Link
@@ -445,34 +337,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                 <SelectContent>
                   {Object.values(VisibilityEnum).map((v) => (
                     <SelectItem key={v} value={v}>{VISIBILITY_LABELS[v]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className={FIELD_CLASS}>
-              <Label htmlFor="new-block-secret-level">Geheimnis-Level</Label>
-              <Select name="secretLevel" defaultValue="none">
-                <SelectTrigger id="new-block-secret-level">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(SecretLevelEnum).map((level) => (
-                    <SelectItem key={level} value={level}>{SECRET_LEVEL_LABELS[level]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className={FIELD_CLASS}>
-              <Label htmlFor="new-block-reveal-state">Enthüllungs-Status</Label>
-              <Select name="revealState" defaultValue="hidden">
-                <SelectTrigger id="new-block-reveal-state">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(RevealStateEnum).map((state) => (
-                    <SelectItem key={state} value={state}>{REVEAL_STATE_LABELS[state]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

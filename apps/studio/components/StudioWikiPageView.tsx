@@ -208,8 +208,6 @@ export async function StudioWikiPageView({
                       type={dmPage.type}
                       tags={parseStringArray(dmPage.tags)}
                       aliases={parseStringArray(dmPage.aliases)}
-                      secretLevel={dmPage.secretLevel}
-                      revealState={dmPage.revealState}
                     />
                   </SidebarSection>
                   <Collapsible variant="sidebar" title="KI & Assistenz" defaultOpen={false}>

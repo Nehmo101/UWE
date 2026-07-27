@@ -7,8 +7,6 @@ import type {
   PageType,
   PublishStatus,
   QuestLifecycleStatus,
-  RevealState,
-  SecretLevel,
   Visibility,
 } from "@uwe/database/enums";
 
@@ -105,31 +103,9 @@ export const PUBLISH_LABELS: Record<PublishStatus, string> = {
   archived: "Archiviert",
 };
 
-export const SECRET_LEVEL_LABELS: Record<SecretLevel, string> = {
-  none: "Kein Geheimnis",
-  spoiler: "Spoiler",
-  dm_secret: "GM-Geheimnis",
-};
 
-export const SECRET_LEVEL_DESCRIPTIONS: Record<SecretLevel, string> = {
-  none: "Kein zusätzlicher Geheimnis-Schutz — Sichtbarkeit und Publish-Status gelten allein.",
-  spoiler:
-    "Campaign-Spoiler — veröffentlichte Spieler-Inhalte bleiben verborgen, bis der Enthüllungs-Status „Enthüllt“ ist.",
-  dm_secret:
-    "Strenges GM-Geheimnis — erscheint für Spieler erst nach expliziter Enthüllung, auch wenn die Seite veröffentlicht ist.",
-};
 
-export const REVEAL_STATE_LABELS: Record<RevealState, string> = {
-  hidden: "Verborgen",
-  preview: "Vorschau (Teaser)",
-  revealed: "Enthüllt",
-};
 
-export const REVEAL_STATE_DESCRIPTIONS: Record<RevealState, string> = {
-  hidden: "Spieler sehen die Seite nicht, solange ein Geheimnis-Level gesetzt ist.",
-  preview: "Noch nicht für Spieler freigegeben — nur im Studio sichtbar (wie „Verborgen“ für Portal-Zugriff).",
-  revealed: "Geheimnis ist für Spieler freigegeben — die Seite kann im Portal erscheinen (bei passender Sichtbarkeit).",
-};
 
 export const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
   idea: "Idee",
@@ -169,7 +145,6 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   trap: "Falle",
   puzzle: "Rätsel",
   loot: "Loot",
-  secret: "Geheimnis",
   session: "Session",
   quest: "Quest",
   handout: "Handout",
@@ -178,6 +153,7 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   monster: "Monster",
   sound: "Sound",
   map: "Karte",
+  secret: "Geheimnis",
   note: "Notiz",
 };
 
@@ -297,45 +273,7 @@ export function AiReviewedBadge() {
   );
 }
 
-export function SecretLevelBadge({ secretLevel }: { secretLevel: SecretLevel }) {
-  if (secretLevel === "none") {
-    return <span className={`${BADGE_BASE} ${BADGE_TONE.plain}`}>—</span>;
-  }
 
-  const className = `${BADGE_BASE} ${
-    secretLevel === "dm_secret" ? BADGE_TONE.secret : BADGE_TONE.draft
-  }`;
-
-  return (
-    <span
-      className={className}
-      title={SECRET_LEVEL_DESCRIPTIONS[secretLevel]}
-      aria-label={`Geheimnis-Level: ${SECRET_LEVEL_LABELS[secretLevel]}. ${SECRET_LEVEL_DESCRIPTIONS[secretLevel]}`}
-    >
-      {SECRET_LEVEL_LABELS[secretLevel]}
-    </span>
-  );
-}
-
-export function RevealStateBadge({ revealState }: { revealState: RevealState }) {
-  const className = `${BADGE_BASE} ${
-    revealState === "revealed"
-      ? BADGE_TONE.published
-      : revealState === "preview"
-        ? BADGE_TONE.player
-        : BADGE_TONE.secret
-  }`;
-
-  return (
-    <span
-      className={className}
-      title={REVEAL_STATE_DESCRIPTIONS[revealState]}
-      aria-label={`Enthüllungs-Status: ${REVEAL_STATE_LABELS[revealState]}. ${REVEAL_STATE_DESCRIPTIONS[revealState]}`}
-    >
-      {REVEAL_STATE_LABELS[revealState]}
-    </span>
-  );
-}
 
 export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
   const className = `${BADGE_BASE} ${

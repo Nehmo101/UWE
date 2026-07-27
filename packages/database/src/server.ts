@@ -325,8 +325,6 @@ export {
   AssetTypeEnum,
   PageTypeEnum,
   PublishStatusEnum,
-  RevealStateEnum,
-  SecretLevelEnum,
   VisibilityEnum,
 } from "./repository";
 
@@ -334,7 +332,6 @@ export {
   isPlayerExposableContent,
   isBlockPlayerExposable,
   isPagePlayerExposable,
-  isSecretVisibleToPlayer,
   isDmOnlyVisibility,
   isPlayerPortalVisibility,
   mapPublishStatusToContentStatus,
@@ -346,8 +343,6 @@ export {
   type ContentStatus,
   type ContentVisibility,
   type SanitizedPage,
-  type SecretLevel,
-  type RevealState,
 } from "./content-access";
 
 export {

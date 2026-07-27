@@ -36,13 +36,9 @@ export type PageAccessRecord = Pick<
   Page,
   "id" | "visibility" | "publishStatus"
 > & {
-  secretLevel?: Page["secretLevel"] | null;
-  revealState?: Page["revealState"] | null;
 };
 
 export type BlockAccessRecord = Pick<ContentBlock, "visibility" | "type"> & {
-  secretLevel?: ContentBlock["secretLevel"] | null;
-  revealState?: ContentBlock["revealState"] | null;
 };
 
 export function isPortalPageVisibility(visibility: Visibility): boolean {
@@ -130,10 +126,11 @@ export function isPortalAssetVisibility(visibility: Visibility): boolean {
   return isPlayerPortalVisibility(visibility);
 }
 
-export type AssetAccessRecord = Pick<
-  { id: string; visibility: Visibility; secretLevel?: Page["secretLevel"]; revealState?: Page["revealState"] },
-  "id" | "visibility" | "secretLevel" | "revealState"
-> & { publishStatus?: PublishStatus };
+export type AssetAccessRecord = {
+  id: string;
+  visibility: Visibility;
+  publishStatus?: PublishStatus;
+};
 
 /**
  * Player-facing accessibility predicate for a single asset, excluding the
@@ -145,7 +142,7 @@ export type AssetAccessRecord = Pick<
  * and default to a fully exposable asset (`secretLevel: "none"`).
  */
 function isAssetExposableToPlayers(
-  asset: Pick<AssetAccessRecord, "visibility" | "secretLevel" | "revealState" | "publishStatus">,
+  asset: Pick<AssetAccessRecord, "visibility" | "publishStatus">,
   context: AccessContext,
   options?: PageAccessOptions,
 ): boolean {
@@ -164,8 +161,6 @@ function isAssetExposableToPlayers(
   if (!isPlayerExposableContent({
     visibility: asset.visibility,
     publishStatus: asset.publishStatus ?? "published",
-    secretLevel: asset.secretLevel,
-    revealState: asset.revealState,
   })) {
     return false;
   }
@@ -191,7 +186,7 @@ export function isAssetAccessible(
 
 export function filterAssetsForContext<
   T extends Pick<AssetAccessRecord, "visibility"> &
-    Partial<Pick<AssetAccessRecord, "secretLevel" | "revealState" | "publishStatus">>,
+    Partial<Pick<AssetAccessRecord, "publishStatus">>,
 >(
   assets: T[],
   context: AccessContext,

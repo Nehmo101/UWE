@@ -4,7 +4,6 @@ import type { PrismaClient } from "./client";
 import type {
   ContentBlock,
   CanonicalStatus,
-  Page,
   PageType,
   PublishStatus,
   QuestLifecycleStatus,
@@ -131,8 +130,6 @@ type IndexedPage = {
   publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   questStatus?: QuestLifecycleStatus | null;
-  secretLevel?: Page["secretLevel"] | null;
-  revealState?: Page["revealState"] | null;
   campaignId: string | null;
   contentBlocks: SearchIndexContentBlock[];
   world: { slug: string; name: string };
@@ -458,8 +455,6 @@ async function loadPagesForSearchUncached(
       publishStatus: true,
       canonicalStatus: true,
       questStatus: true,
-      secretLevel: true,
-      revealState: true,
       campaignId: true,
       world: { select: { slug: true, name: true } },
       campaign: { select: { name: true } },
@@ -480,8 +475,6 @@ async function loadPagesForSearchUncached(
         content: true,
         visibility: true,
         type: true,
-        secretLevel: true,
-        revealState: true,
         sortOrder: true,
       },
       orderBy: { sortOrder: "asc" },

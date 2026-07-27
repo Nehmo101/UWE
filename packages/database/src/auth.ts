@@ -17,7 +17,6 @@ import {
   filterBlocksForViewer,
   filterPagesForViewer,
   filterPlayerNotesForViewer,
-  isSecretVisibleToPlayer,
   isWorldStaff,
   scopeFromAccessContext,
   sessionExpiresAt,
@@ -888,8 +887,6 @@ export class AuthService {
         summary: true,
         visibility: true,
         publishStatus: true,
-        secretLevel: true,
-        revealState: true,
         questStatus: true,
         updatedAt: true,
       },
@@ -1028,13 +1025,13 @@ export class AuthService {
 
   private canViewWorldEventForPortal(
     ctx: AccessContext,
-    event: Pick<WorldEventWithLinks, "visibility" | "secretLevel">,
+    event: Pick<WorldEventWithLinks, "visibility">,
   ): boolean {
     if (event.visibility !== "player_visible" && event.visibility !== "public") {
       return false;
     }
     if (ctx.effectiveRole === "player") {
-      return isSecretVisibleToPlayer(event);
+      return true;
     }
     return ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm" || ctx.effectiveRole === "admin";
   }
@@ -1268,8 +1265,6 @@ export class AuthService {
     const accessInfo = {
       id: asset.id,
       visibility: asset.visibility,
-      secretLevel: asset.secretLevel,
-      revealState: asset.revealState,
       linkedPageIds: asset.pageLinks.map((link) => link.pageId),
     };
 
@@ -1554,8 +1549,6 @@ export class AuthService {
             id: true,
             visibility: true,
             publishStatus: true,
-            secretLevel: true,
-            revealState: true,
           },
         });
         if (page && !canViewPage(ctx, page)) {
@@ -1603,8 +1596,6 @@ export class AuthService {
             id: true,
             visibility: true,
             publishStatus: true,
-            secretLevel: true,
-            revealState: true,
           },
         });
         if (page && !canViewPage(ctx, page)) {

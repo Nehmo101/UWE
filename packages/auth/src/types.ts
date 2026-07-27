@@ -43,22 +43,16 @@ export interface PageAccessInfo {
   id: string;
   visibility: PageVisibility;
   publishStatus: string;
-  secretLevel?: "none" | "spoiler" | "dm_secret" | null;
-  revealState?: "hidden" | "preview" | "revealed" | null;
 }
 
 export interface ContentBlockAccessInfo {
   visibility: PageVisibility;
   type?: string;
-  secretLevel?: "none" | "spoiler" | "dm_secret" | null;
-  revealState?: "hidden" | "preview" | "revealed" | null;
 }
 
 export interface AssetAccessInfo {
   id: string;
   visibility: PageVisibility;
-  secretLevel?: "none" | "spoiler" | "dm_secret" | null;
-  revealState?: "hidden" | "preview" | "revealed" | null;
   /** Page IDs linked to this asset (for specific_players / unlock_after_session). */
   linkedPageIds?: string[];
 }

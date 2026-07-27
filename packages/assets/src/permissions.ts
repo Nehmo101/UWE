@@ -2,9 +2,6 @@ import type { AssetVisibility } from "./types";
 import {
   isDmOnlyVisibility,
   isPlayerPortalVisibility,
-  isSecretVisibleToPlayer,
-  type RevealState,
-  type SecretLevel,
 } from "@uwe/auth/content-access";
 
 /** Asset visibilities exposed to the legacy player portal filter. */
@@ -21,8 +18,6 @@ export type AssetAccessContext = "dm" | "portal" | "preview";
  */
 export type AssetAccessInput = {
   visibility: AssetVisibility;
-  secretLevel?: SecretLevel | null;
-  revealState?: RevealState | null;
 };
 
 export function isPortalAssetVisibility(visibility: AssetVisibility): boolean {
@@ -45,7 +40,7 @@ export function isAssetAccessible(
     return false;
   }
 
-  return isSecretVisibleToPlayer(asset);
+  return true;
 }
 
 export function filterAssetsForContext<T extends AssetAccessInput>(

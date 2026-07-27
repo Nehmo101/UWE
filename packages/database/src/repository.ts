@@ -22,8 +22,6 @@ import type {
   PageType,
   Prisma,
   PublishStatus,
-  RevealState,
-  SecretLevel,
   Visibility,
 } from "./generated/prisma/client";
 import { pageTypesForNavCategory, type NavCategory } from "./page-types";
@@ -76,8 +74,6 @@ export {
   AssetType as AssetTypeEnum,
   PageType as PageTypeEnum,
   PublishStatus as PublishStatusEnum,
-  RevealState as RevealStateEnum,
-  SecretLevel as SecretLevelEnum,
   Visibility as VisibilityEnum,
 } from "./generated/prisma/client";
 
@@ -101,8 +97,6 @@ export interface CreateContentBlockInput {
   sortOrder: number;
   content?: string;
   visibility?: Visibility;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   metadata?: Prisma.InputJsonValue;
   assetId?: string | null;
 }
@@ -117,8 +111,6 @@ export interface CreatePageInput {
   summary?: string | null;
   visibility?: Visibility;
   publishStatus?: PublishStatus;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
@@ -136,8 +128,6 @@ export interface UpdatePageInput {
   parentPageId?: string | null;
   visibility?: Visibility;
   publishStatus?: PublishStatus;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
@@ -151,8 +141,6 @@ export interface UpdateContentBlockInput {
   sortOrder?: number;
   content?: string;
   visibility?: Visibility;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   metadata?: Prisma.InputJsonValue;
   assetId?: string | null;
 }
@@ -267,8 +255,6 @@ export class UweRepository {
         summary: input.summary ?? null,
         visibility: input.visibility ?? defaults.defaultVisibility,
         publishStatus: input.publishStatus ?? "draft",
-        secretLevel: input.secretLevel ?? "none",
-        revealState: input.revealState ?? "hidden",
         canonicalStatus: input.canonicalStatus ?? defaults.defaultCanonicalStatus,
         prepStatus: input.prepStatus ?? null,
         questStatus: input.questStatus ?? null,
@@ -281,8 +267,6 @@ export class UweRepository {
                 sortOrder: block.sortOrder,
                 content: block.content ?? "",
                 visibility: block.visibility ?? "private",
-                secretLevel: block.secretLevel ?? "none",
-                revealState: block.revealState ?? "hidden",
                 metadata: block.metadata ?? {},
                 assetId: block.assetId ?? null,
               })),
@@ -308,8 +292,6 @@ export class UweRepository {
         parentPageId: input.parentPageId,
         visibility: input.visibility,
         publishStatus: input.publishStatus,
-        secretLevel: input.secretLevel,
-        revealState: input.revealState,
         canonicalStatus: input.canonicalStatus,
         prepStatus: input.prepStatus,
         questStatus: input.questStatus,
@@ -332,8 +314,6 @@ export class UweRepository {
         sortOrder: input.sortOrder,
         content: input.content ?? "",
         visibility: input.visibility ?? "dm_only",
-        secretLevel: input.secretLevel ?? "none",
-        revealState: input.revealState ?? "hidden",
         metadata: input.metadata ?? {},
         assetId: input.assetId ?? null,
       },

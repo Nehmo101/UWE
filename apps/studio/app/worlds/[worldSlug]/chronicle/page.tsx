@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  SECRET_LEVEL_LABELS,
   SidebarSection,
   VISIBILITY_LABELS,
 } from "@uwe/shared-ui";
@@ -14,7 +13,6 @@ import {
   getAppRepository,
   parseInGameDate,
   parseWorldCalendarMonths,
-  SecretLevelEnum,
   VisibilityEnum,
 } from "@uwe/database/server";
 import {
@@ -229,22 +227,6 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
                     {Object.values(VisibilityEnum).map((value) => (
                       <SelectItem key={value} value={value}>
                         {VISIBILITY_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="event-secret-level">Geheimnis-Stufe</Label>
-                <Select name="secretLevel" defaultValue="none">
-                  <SelectTrigger id="event-secret-level">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(SecretLevelEnum).map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {SECRET_LEVEL_LABELS[value]}
                       </SelectItem>
                     ))}
                   </SelectContent>

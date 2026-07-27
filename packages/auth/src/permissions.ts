@@ -9,9 +9,6 @@ import type {
   WorldMemberRole,
   WorldMembership,
 } from "./types";
-import {
-  isSecretVisibleToPlayer,
-} from "./content-access";
 
 const DM_ROLES: ReadonlySet<UweRole> = new Set(["owner", "admin", "dm"]);
 const WORLD_DM_ROLES: ReadonlySet<WorldMemberRole> = new Set(["owner", "dm"]);
@@ -153,10 +150,6 @@ export function canViewPage(ctx: AccessContext, page: PageAccessInfo): boolean {
     return true;
   }
 
-  if (!isSecretVisibleToPlayer(page)) {
-    return false;
-  }
-
   switch (page.visibility) {
     case "dm_only":
       return false;
@@ -192,10 +185,6 @@ export function canViewContentBlock(
   }
 
   if (block.visibility === "archived" || block.visibility === "private" || block.visibility === "dm_only") {
-    return false;
-  }
-
-  if (!isSecretVisibleToPlayer(block)) {
     return false;
   }
 
@@ -241,10 +230,6 @@ export function canViewAsset(ctx: AccessContext, asset: AssetAccessInfo): boolea
 
   if (isWorldStaff(ctx)) {
     return true;
-  }
-
-  if (!isSecretVisibleToPlayer(asset)) {
-    return false;
   }
 
   switch (asset.visibility) {

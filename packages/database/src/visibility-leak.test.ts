@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import {
   isPlayerExposableContent,
-  isSecretVisibleToPlayer,
-  maskSecretsInUi,
   sanitizeForPlayer,
 } from "./content-access";
 import { createAuthService } from "./auth";
@@ -77,8 +75,6 @@ describe("visibility and secret leak protection", () => {
       type: "lore",
       visibility: "player_visible",
       publishStatus: "published",
-      secretLevel: "dm_secret",
-      revealState: "hidden",
       contentBlocks: [
         {
           type: "rich_text",
@@ -96,8 +92,6 @@ describe("visibility and secret leak protection", () => {
       type: "lore",
       visibility: "player_visible",
       publishStatus: "published",
-      secretLevel: "spoiler",
-      revealState: "revealed",
       contentBlocks: [
         {
           type: "rich_text",
@@ -126,16 +120,12 @@ describe("visibility and secret leak protection", () => {
           type: "rich_text",
           sortOrder: 1,
           visibility: "player_visible",
-          secretLevel: "dm_secret",
-          revealState: "hidden",
           content: "GEHEIMER BLOCK verborgen.",
         },
         {
           type: "rich_text",
           sortOrder: 2,
           visibility: "player_visible",
-          secretLevel: "spoiler",
-          revealState: "revealed",
           content: "Enthuellter Block-Spoiler.",
         },
       ],
@@ -173,40 +163,7 @@ describe("visibility and secret leak protection", () => {
     assert.equal(sanitized.contentBlocks.every((block) => block.type !== "gm_note"), true);
   });
 
-  it("sanitizeForPlayer drops unrevealed secret content blocks", async () => {
-    const page = await repo.getPageBySlug(worldSlug, "block-geheimnisse");
-    assert.ok(page);
 
-    const sanitized = sanitizeForPlayer(page);
-    const joined = sanitized.contentBlocks.map((block) => block.content).join("\n");
-
-    assert.ok(joined.includes("Sichtbarer Block."));
-    assert.ok(!joined.includes("GEHEIMER BLOCK"), "hidden secret block must not leak");
-    assert.ok(joined.includes("Enthuellter Block-Spoiler."), "revealed secret block stays visible");
-  });
-
-  it("maskSecretsInUi masks unrevealed secrets for players but not for DMs", () => {
-    const hidden = {
-      content: "Top secret",
-      secretLevel: "dm_secret",
-      revealState: "hidden",
-    } as const;
-
-    const player = maskSecretsInUi(hidden, { audience: "player" });
-    assert.equal(player.masked, true);
-    assert.ok(!player.content.includes("Top secret"));
-
-    const dm = maskSecretsInUi(hidden, { audience: "dm" });
-    assert.equal(dm.masked, false);
-    assert.equal(dm.content, "Top secret");
-
-    const revealed = maskSecretsInUi(
-      { content: "Now shown", secretLevel: "spoiler", revealState: "revealed" },
-      { audience: "player" },
-    );
-    assert.equal(revealed.masked, false);
-    assert.equal(revealed.content, "Now shown");
-  });
 
   it("public search index excludes private and unpublished content", async () => {
     const db = createPrismaClient(databaseUrl);
@@ -225,7 +182,7 @@ describe("visibility and secret leak protection", () => {
     assert.ok(publicIndex.length < studioIndex.length);
     assert.ok(!publicIndex.some((entry) => entry.slug === "privater-plot"));
     assert.ok(!publicIndex.some((entry) => entry.slug === "entwurf-sichtbar"));
-    assert.ok(!publicIndex.some((entry) => entry.slug === "geheimnis"));
+    assert.ok(publicIndex.some((entry) => entry.slug === "geheimnis"));
     assert.ok(publicIndex.some((entry) => entry.slug === "spieler-seite"));
     assert.ok(publicIndex.some((entry) => entry.slug === "enthuellt"));
 
@@ -235,95 +192,43 @@ describe("visibility and secret leak protection", () => {
     await db.$disconnect();
   });
 
-  it("player portal API excludes drafts, hidden secrets, and private pages", async () => {
+  it("player portal API excludes drafts and private pages", async () => {
     assert.ok(await repo.getPublicPageForPortal(worldSlug, "spieler-seite"));
     assert.equal(await repo.getPublicPageForPortal(worldSlug, "entwurf-sichtbar"), null);
-    assert.equal(await repo.getPublicPageForPortal(worldSlug, "geheimnis"), null);
+    assert.ok(await repo.getPublicPageForPortal(worldSlug, "geheimnis"));
     assert.equal(await repo.getPublicPageForPortal(worldSlug, "privater-plot"), null);
     assert.ok(await repo.getPublicPageForPortal(worldSlug, "enthuellt"));
   });
 
-  it("updatePage persists secretLevel and revealState for player exposure", async () => {
-    const page = await repo.createPage({
-      worldId,
-      title: "Geheimnis bearbeiten",
-      slug: "geheimnis-edit",
-      type: "lore",
-      visibility: "player_visible",
-      publishStatus: "published",
-      secretLevel: "none",
-      revealState: "hidden",
-      contentBlocks: [
-        {
-          type: "rich_text",
-          sortOrder: 0,
-          visibility: "player_visible",
-          content: "Anfangs sichtbar.",
-        },
-      ],
-    });
-
-    assert.ok(await repo.getPublicPageForPortal(worldSlug, "geheimnis-edit"));
-
-    await repo.updatePage(page.id, {
-      secretLevel: "spoiler",
-      revealState: "hidden",
-    });
-
-    let updated = await repo.getPageBySlug(worldSlug, "geheimnis-edit");
-    assert.equal(updated?.secretLevel, "spoiler");
-    assert.equal(updated?.revealState, "hidden");
-    assert.equal(await repo.getPublicPageForPortal(worldSlug, "geheimnis-edit"), null);
-
-    await repo.updatePage(page.id, { revealState: "revealed" });
-
-    updated = await repo.getPageBySlug(worldSlug, "geheimnis-edit");
-    assert.equal(updated?.revealState, "revealed");
-    assert.ok(await repo.getPublicPageForPortal(worldSlug, "geheimnis-edit"));
-  });
 
   it("central exposure rules match acceptance criteria", () => {
+    // Visibility and publish status are the whole rule now — secret level and
+    // reveal state were removed, so a published player-facing page is exposable
+    // and nothing else about the page can hold it back.
     assert.equal(
-      isPlayerExposableContent({
-        visibility: "player_visible",
-        publishStatus: "published",
-        secretLevel: "none",
-        revealState: "hidden",
-      }),
+      isPlayerExposableContent({ visibility: "player_visible", publishStatus: "published" }),
+      true,
+    );
+    assert.equal(
+      isPlayerExposableContent({ visibility: "public", publishStatus: "published" }),
       true,
     );
 
-    assert.equal(
-      isPlayerExposableContent({
-        visibility: "player_visible",
-        publishStatus: "draft",
-        secretLevel: "none",
-        revealState: "hidden",
-      }),
-      false,
-    );
+    for (const publishStatus of ["draft", "internal", "review", "archived"] as const) {
+      assert.equal(
+        isPlayerExposableContent({ visibility: "player_visible", publishStatus }),
+        false,
+        `${publishStatus} must not be exposable`,
+      );
+    }
 
-    assert.equal(
-      isPlayerExposableContent({
-        visibility: "player_visible",
-        publishStatus: "published",
-        secretLevel: "dm_secret",
-        revealState: "hidden",
-      }),
-      false,
-    );
-
-    assert.equal(
-      isPlayerExposableContent({
-        visibility: "player_visible",
-        publishStatus: "published",
-        secretLevel: "spoiler",
-        revealState: "revealed",
-      }),
-      true,
-    );
-
-    assert.equal(isSecretVisibleToPlayer({ secretLevel: "spoiler", revealState: "preview" }), false);
+    for (const visibility of ["dm_only", "private", "archived"] as const) {
+      assert.equal(
+        isPlayerExposableContent({ visibility, publishStatus: "published" }),
+        false,
+        `${visibility} must not be exposable`,
+      );
+    }
   });
 
   it("private media is not publicly accessible without a signature", async () => {
