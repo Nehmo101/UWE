@@ -98,13 +98,152 @@ function plateauRandZu(P, ziel) {
   return best;
 }
 
+/* ===== H4: Formhelfer der Mittelachse ====================================
+   Zugpunkte (H4.2) und Kernneigung (H4.3) verschieben die Achse horizontal.
+   Alle Helfer sind rein und ziehen KEINEN Zufall — sie lesen nur el.params
+   bzw. ihre Argumente. Fehlen `zugpunkte` und `kernzug`, liefern sie exakt
+   Nullauslenkung, und der Achsenbau ueberspringt die Addition ganz (er
+   addiert also nicht einmal 0) — der Bestandsverlauf bleibt Bit fuer Bit.
+
+   Datenmodell (RELATIV, bewusst nicht absolut): el.params.zugpunkte =
+   [{ h, dx, dz }, ...] mit h = 0..1 relative Hoehe und dx/dz = horizontale
+   Auslenkung in Welteinheiten GEGENUEBER DEM FUSS. Begruendung: Fuss und
+   Hoehe sind bereits Elementdaten (points[0], params.hoehe). Absolute
+   Punkte muessten beim Verschieben des Fussgriffs und bei jeder
+   Hoehenaenderung nachgerechnet werden — relativ wandert die gezogene Form
+   automatisch mit, und ein Zugpunkt kann nie "neben" der Ranke haengen
+   bleiben. Das Feld ist optional; fehlt es, ist die Achse die bisherige. */
+
+/** Bereinigte, nach Hoehe sortierte Kopie von el.params.zugpunkte.
+ *  io.js prueft params nur grob (Objekt ja/nein), deshalb wird hier
+ *  vollstaendig gefiltert: nicht endliche Werte fliegen raus, h wird auf
+ *  0..1 geklemmt, und Punkte, die weniger als 1e-4 auseinanderliegen,
+ *  fallen weg (sonst wird die Hermite-Steigung unendlich). */
+function zugpunkteVon(el) {
+  var roh = el.params && el.params.zugpunkte;
+  if (!roh || !roh.length) return [];
+  var list = [], i, z;
+  for (i = 0; i < roh.length; i++) {
+    z = roh[i];
+    if (!z || !Number.isFinite(z.h) || !Number.isFinite(z.dx) || !Number.isFinite(z.dz)) continue;
+    list.push({ h: clamp(z.h, 0, 1), dx: z.dx, dz: z.dz });
+  }
+  list.sort(function (a, b) { return a.h - b.h; });
+  var out = [];
+  for (i = 0; i < list.length; i++) {
+    if (out.length && list[i].h - out[out.length - 1].h < 1e-4) continue;
+    out.push(list[i]);
+  }
+  return out;
+}
+
+/** Stuetzstellen der Zugkurve: Fuss (0,0,0) -> Zugpunkte -> Spitze.
+ *  Die Spitze erbt die Auslenkung des obersten Zugpunkts — oberhalb des
+ *  letzten Zugs waechst die Ranke in der eingeschlagenen Richtung weiter,
+ *  statt zur Senkrechten zurueckgerissen zu werden (das saehe nach Gummiband
+ *  aus, nicht nach Wuchs). */
+function zugStuetzen(zp) {
+  var st = [{ h: 0, dx: 0, dz: 0 }];
+  for (var i = 0; i < zp.length; i++) if (zp[i].h > 1e-4) st.push(zp[i]);
+  var top = st[st.length - 1];
+  if (top.h < 1 - 1e-4) st.push({ h: 1, dx: top.dx, dz: top.dz });
+  return st;
+}
+
+/** Horizontale Zug-Auslenkung an relativer Hoehe t.
+ *  CatmullRom in NICHT-uniformer Parametrisierung, geschrieben als kubische
+ *  Hermite mit zentralen Differenzen: die Kurve laeuft exakt durch jeden
+ *  Zugpunkt und bleibt an den Stuetzstellen knickfrei (C1), auch wenn die
+ *  Punkte sehr ungleich ueber die Hoehe verteilt sind. THREE.CatmullRomCurve3
+ *  taugt hier nicht: dessen getPoint(t) parametrisiert ueber den
+ *  Stuetzpunkt-INDEX, nicht ueber die Hoehe — zwei eng benachbarte Zugpunkte
+ *  wuerden damit die halbe Ranke beanspruchen. */
+function zugAuslenkung(st, t, out) {
+  out.x = 0; out.z = 0;
+  if (st.length < 2) return out;
+  var n = st.length, j = 0;
+  while (j < n - 2 && t > st[j + 1].h) j++;
+  var a = st[j], b = st[j + 1], d = b.h - a.h;
+  if (d <= 0) { out.x = b.dx; out.z = b.dz; return out; }
+  var s = clamp((t - a.h) / d, 0, 1);
+  var p0 = st[j - 1] || a, p3 = st[j + 2] || b;
+  var d0 = b.h - p0.h, d3 = p3.h - a.h;
+  var mAx = d0 > 0 ? (b.dx - p0.dx) / d0 : 0, mAz = d0 > 0 ? (b.dz - p0.dz) / d0 : 0;
+  var mBx = d3 > 0 ? (p3.dx - a.dx) / d3 : 0, mBz = d3 > 0 ? (p3.dz - a.dz) / d3 : 0;
+  var s2 = s * s, s3 = s2 * s;
+  var h00 = 2 * s3 - 3 * s2 + 1, h10 = s3 - 2 * s2 + s,
+      h01 = -2 * s3 + 3 * s2, h11 = s3 - s2;
+  out.x = h00 * a.dx + h10 * d * mAx + h01 * b.dx + h11 * d * mBx;
+  out.z = h00 * a.dz + h10 * d * mAz + h01 * b.dz + h11 * d * mBz;
+  return out;
+}
+
+/** Kernneigung (H4.3). KANON: Terra ist der zerbissene Apfel, Arbor der
+ *  Apfelkern — die Triebe wachsen nicht parallel in den Himmel, sondern
+ *  laufen zur Mitte zusammen. Der Kernpunkt ist die Kartenmitte (0,0), die
+ *  Hoehe bleibt unbeschraenkt (der Kern liegt erzaehlerisch weit ueber der
+ *  Karte, ein Zielpunkt in endlicher Hoehe wuerde die Ranken zum Umkippen
+ *  zwingen).
+ *  Die Auslenkung waechst QUADRATISCH mit der Hoehe: linear ergaebe eine
+ *  konstante Neigung, die Ranke stuende schon in der ersten Ringlage schief
+ *  im Erdhuegel und der Wurzelteller passte nicht mehr dazu. Mit t² tritt
+ *  sie senkrecht aus dem Boden und biegt erst mit der Hoehe ab (Tangente am
+ *  Wipfel = 2·kernzug·Abstand) — das ist der Wuchs eines Astes, der dem Kern
+ *  nachwaechst, statt einer umgelegten Stange. */
+function kernAuslenkung(kernzug, bx, bz, t, out) {
+  var f = kernzug * t * t;
+  out.x = -bx * f; out.z = -bz * f;   // proportional zum Abstand Fuss<->Kern
+  return out;
+}
+
+var _zo = { x: 0, z: 0 }, _ko = { x: 0, z: 0 };
+
+/** Stuetzstellen der Zugkurve eines Elements (Bequemlichkeit fuer den Editor). */
+function rankeStuetzen(el) { return zugStuetzen(zugpunkteVon(el)); }
+
+/** Punkt der Sollachse OHNE das fraktale Rauschen: Fuss + Kernneigung + Zug.
+ *  Daran haengen die Zugpunkt-Griffe und die Trefferpruefung des
+ *  Klickstrahls (selection.js) — genRanke setzt dieselben Helfer ein, die
+ *  Griffe sitzen also garantiert auf der Ranke. `st` darf vorberechnet
+ *  uebergeben werden (Trefferpruefung sampelt die Achse vielfach). */
+function rankeAchse(el, t, out, st) {
+  out = out || { x: 0, y: 0, z: 0 };
+  var pt = el.points && el.points[0];
+  if (!pt) { out.x = 0; out.y = 0; out.z = 0; return out; }
+  var p = el.params || {};
+  kernAuslenkung(p.kernzug || 0, pt.x, pt.z, t, _ko);
+  zugAuslenkung(st || rankeStuetzen(el), t, _zo);
+  out.x = pt.x + _ko.x + _zo.x;
+  out.z = pt.z + _ko.z + _zo.z;
+  out.y = heightAt(pt.x, pt.z) - 2.6 + t * (p.hoehe || 0);
+  return out;
+}
+
+/** Wie rankeAchse, aber OHNE den Zuganteil — Bezugspunkt, gegen den ein
+ *  gezogener Griff sein neues dx/dz misst. */
+function rankeKernPunkt(el, t, out) {
+  out = out || { x: 0, y: 0, z: 0 };
+  var pt = el.points && el.points[0];
+  if (!pt) { out.x = 0; out.y = 0; out.z = 0; return out; }
+  var p = el.params || {};
+  kernAuslenkung(p.kernzug || 0, pt.x, pt.z, t, _ko);
+  out.x = pt.x + _ko.x;
+  out.z = pt.z + _ko.z;
+  out.y = heightAt(pt.x, pt.z) - 2.6 + t * (p.hoehe || 0);
+  return out;
+}
+
 function genRanke(el) {
   // Zufalls-Schluessel je Teilsystem (jeweils + el.seed):
-  //   Straenge (Strangindex, 0, +501) — Ringwerte kommen aus fractal, ortsstabil
+  //   Straenge (Strangindex, Fussindex, +501) — Ringwerte kommen aus fractal,
+  //     ortsstabil; der zweite Schluesselplatz traegt seit H4.4 den Fussindex
+  //     (0 = der bisherige Hauptast, darum unveraendert)
   //   Nebentriebe (Triebindex, 0, +503)
   //   Blattbueschel (Hoehenschrittindex, -1, +505), einzelne Blaetter
   //     (Hoehenschrittindex, Blattindex, +505)
-  //   Wurzelteller (Bogenindex, 0, +509)
+  //   Wurzelteller (Bogenindex, Fussindex, +509); Anzahl/Startwinkel der
+  //     ZUSATZ-Fuesse (Fussindex, -1, +509) — Fuss 0 zieht beides wie bisher
+  //     aus rGlob
   //   Plateaus (Plateauindex, -1, +511), Staedtchen-Gebaeude (Plateauindex,
   //     Gebaeudeindex, +513) — dieselbe Systematik traegt auch die
   //     Zusatzindizes bei stadtDichte > 1 —, Zypressen (Plateauindex,
@@ -116,6 +255,17 @@ function genRanke(el) {
   //   Staedtchen-Gassennetz (Plateauindex, -1, +525)
   //   Wendeltreppe (0, 0, +527)
   //   Haengebruecken (Plateauindex des unteren Plateaus, 0, +529)
+  // NEU in H4.4 (bis +531 war vergeben):
+  //   Achsenrauschen der ZUSATZ-Aeste: fractal-Seeds el.seed + 533 + (fi%33)*2
+  //     und +1 darauf, also der reservierte Block +533..+599 (Fuss 0 behaelt
+  //     +3/+9). Ab dem 34. Fuss wiederholt sich das Rauschmuster (Modulo),
+  //     statt in den naechsten Block zu laufen.
+  //   Blattbueschel der Zusatz-Aeste: Starthoehe (Fussindex, -2, +601),
+  //     Bueschel (Fussindex*4096 + Schrittindex, -1, +601), einzelne Blaetter
+  //     (Fussindex*4096 + Schrittindex, Blattindex, +601) — dieselbe
+  //     Systematik wie +505 am Hauptast
+  //   Verwachsungsknoten: Anzahlen (0, 0, +605), Rindenfalten
+  //     (Faltenindex, 2, +605), Moospolster (Moosindex, 3, +605)
   // Elementweit bleibt rGlob NUR fuer einmalige Globalwerte mit fester
   // Draw-Anzahl (Trieb-Anzahl, Bueschel-Starthoehe, Wurzelzahl und
   // -startwinkel) — die sind von Punkten und uebrigen Parametern unabhaengig
@@ -133,34 +283,115 @@ function genRanke(el) {
   var H = p.hoehe;
   var geos = [], i, k, t;
 
+  /* --- H4.4: mehrere Fusspunkte ------------------------------------------
+     el.points darf 1..n Punkte tragen (wie ein Pfad). Aus jedem Fuss waechst
+     ein eigenes Strangbuendel mit eigener Achse; ab `vereinigung` laufen alle
+     Achsen auf die gemeinsame Achse ueber dem Schwerpunkt zu, und der Radius
+     des Hauptbuendels waechst FLAECHENRICHTIG mit: r = sqrt(Σ r_i²). Da alle
+     Aeste dieselbe Elementdicke tragen (r_i = R), ist das r = R·sqrt(n).
+     Radien zu addieren waere falsch — die Ranke wuerde unfoermig fett. */
+  var fuesse = el.points, nF = fuesse.length;
+  var tVer = clamp(p.vereinigung === undefined ? 0.35 : p.vereinigung, 0.15, 0.8);
+  var tVerEnd = Math.min(0.99, tVer + 0.18);   // Ende der Verschmelzungsrampe
+  // sstep ist an beiden Kanten ableitungsfrei -> die Aeste biegen weich ein,
+  // es entsteht kein Knick. Bei einem einzigen Fuss ist die Rampe konstant 0.
+  function verSchmelz(tt) { return nF > 1 ? sstep(tVer, tVerEnd, tt) : 0; }
+  var rSkalaOben = Math.sqrt(nF);
+  function radSkala(tt) { return lerp(1, rSkalaOben, verSchmelz(tt)); }
+  var zx = x0, zz = z0;                 // Schwerpunkt der Fusspunkte
+  if (nF > 1) {
+    zx = 0; zz = 0;
+    for (i = 0; i < nF; i++) { zx += fuesse[i].x; zz += fuesse[i].z; }
+    zx /= nF; zz /= nF;
+  }
+
   // --- Mittelachse mit sanfter seitlicher Auslenkung ---
-  var ctrl = [], NC = 12;
+  // H4.2/H4.3: Zugpunkte und Kernneigung verschieben die Stuetzpunkte
+  // horizontal. Ohne beides bleibt formAktiv false und die Schleife rechnet
+  // exakt den bisherigen Verlauf (sie addiert nicht einmal eine 0).
+  var zug = zugpunkteVon(el);
+  var zugSt = zugStuetzen(zug);
+  var kernzug = p.kernzug || 0;
+  var formAktiv = zug.length > 0 || kernzug > 0;
+  // Wo Zugpunkte die Achse vorgeben, wird das Rauschen gedaempft, damit die
+  // gezogene Form lesbar bleibt; ohne Zugpunkte ist der Faktor exakt 1.
+  var rauschD = zug.length ? 0.65 : 1;
+  // Feinere Stuetzung nur in den NEUEN Faellen: die Vereinigungsrampe (Breite
+  // 0.18) und enge Zugpunkte brauchen mehr als 12 Stuetzstellen, sonst
+  // rundet die CatmullRom sie weg. Der Bestandsfall bleibt bei 12.
+  var NC = (nF > 1 || zug.length) ? 32 : 12;
   var sway = H * 0.06;
-  for (i = 0; i <= NC; i++) {
-    t = i / NC;
-    var f = Math.pow(t, 0.85);
-    ctrl.push(new THREE.Vector3(
-      x0 + (fractal(t * 3.1 + 1.7, 0.5, el.seed + 3) - 0.5) * 2 * sway * f,
-      y0 + t * H,
-      z0 + (fractal(0.5, t * 3.1 + 4.2, el.seed + 9) - 0.5) * 2 * sway * f
-    ));
+
+  /** Rohachse eines Astes um den Fuss (bx,bz,by) mit eigenem Rauschstrom. */
+  function rohAchse(bx, bz, by, sX, sZ) {
+    var pts = [], ii, tt, f, cx, cz;
+    for (ii = 0; ii <= NC; ii++) {
+      tt = ii / NC;
+      f = Math.pow(tt, 0.85);
+      cx = bx + (fractal(tt * 3.1 + 1.7, 0.5, sX) - 0.5) * 2 * sway * f * rauschD;
+      cz = bz + (fractal(0.5, tt * 3.1 + 4.2, sZ) - 0.5) * 2 * sway * f * rauschD;
+      if (formAktiv) {
+        kernAuslenkung(kernzug, bx, bz, tt, _ko);
+        zugAuslenkung(zugSt, tt, _zo);
+        cx += _ko.x + _zo.x;
+        cz += _ko.z + _zo.z;
+      }
+      pts.push(new THREE.Vector3(cx, by + tt * H, cz));
+    }
+    return pts;
+  }
+
+  var ctrl = rohAchse(x0, z0, y0, el.seed + 3, el.seed + 9);
+  // Gemeinsame Achse: gleiche Rauschstroeme wie der Hauptast, aber ueber dem
+  // Schwerpunkt — die Verschmelzung ist damit fuer den Hauptast eine reine
+  // Verschiebung, sein Rauschprofil bleibt oberhalb der Fuge erhalten.
+  var gemCtrl = null;
+  if (nF > 1) {
+    gemCtrl = rohAchse(zx, zz, heightAt(zx, zz) - 2.6, el.seed + 3, el.seed + 9);
+    for (i = 0; i <= NC; i++) ctrl[i].lerp(gemCtrl[i], verSchmelz(i / NC));
   }
   var axis = new THREE.CatmullRomCurve3(ctrl, false, "catmullrom", 0.5);
 
   // --- Straenge: wenige und massiv. Die Umdrehungsrate wechselt ueber die
   //     Hoehe abschnittsweise, der Radius atmet per Rauschen (Verdickungen
-  //     und Einschnuerungen), Grundverjuengung nach oben auf 45 %.
+  //     und Einschnuerungen), Grundverjuengung nach oben auf `dickeOben`
+  //     (Default 0.45 = die frueher fest verdrahteten 45 %).
   var nStr = clamp(Math.round(p.straenge), 3, 5);
   if (glatt) nStr = Math.min(nStr, 3);         // glatt: weniger Straenge (max 3)
   var strandB = glatt ? 1.8 : 1;               // glatt: dafuer breitere Straenge
-  var steigungEff = p.steigung * (glatt ? 2.2 : 1); // glatt: traegere Windung
-  var TURNS = H / (steigungEff * 2 * R);
+  /* --- H4.1: Windungsgrad ueber die Hoehe differenziert -------------------
+     windungUnten/-Oben sind wie p.steigung "Durchmesser je Windung"; 0 heisst
+     "wie Steigung" (Default). Der Sentinel 0 statt eines festen Zahlwerts ist
+     Absicht: defaultsFor ergaenzt fehlende Parameter beim Laden, ein fester
+     Default wuerde Bestandskarten mit abweichender `steigung` umformen.
+     Sind beide Enden gleich (Default), faellt jede Formel unten Zeichen fuer
+     Zeichen auf den Altwert zurueck — lerp(a,a,t) liefert exakt a. */
+  // Math.max haelt die Windung von 0 weg (Division!) und liefert fuer jeden
+  // regulaeren Wert exakt den Operanden zurueck — der Bestandspfad bleibt.
+  var windU = Math.max(0.4, (p.windungUnten ? p.windungUnten : p.steigung) * (glatt ? 2.2 : 1));
+  var windO = Math.max(0.4, (p.windungOben ? p.windungOben : p.steigung) * (glatt ? 2.2 : 1));
+  /** Windungen je Einheit t an der Stelle tt (Hoehe / Durchmesser je Windung). */
+  function turnsProT(tt) { return H / (lerp(windU, windO, tt) * 2 * R); }
+  /* Gesamtwindungszahl = ∫₀¹ turnsProT dt. Fuer die lineare Interpolation der
+     Steigung hat das Integral die geschlossene Form ln(b/a)/(b-a); bei
+     gleichen Enden ist es 1/a, also exakt der bisherige Ausdruck. TURNS
+     traegt weiterhin die Ringzahl (26 Ringe je Windung IM MITTEL) — das
+     Geflecht bleibt damit ueber die ganze Hoehe gleich dicht aufgeloest,
+     genau der Sinn der Steigungsformel. Die Ringe sind bei ungleichen Enden
+     nicht mehr aequidistant in der Windung, aber turnsProT verteilt den
+     Drehwinkel lokal richtig, sodass unten enger und oben weiter gewunden
+     wird (oder umgekehrt). */
+  var TURNS = windU === windO ? H / (windU * 2 * R)
+    : (H / (2 * R)) * Math.log(windO / windU) / (windO - windU);
   var RINGS = clamp(Math.round(TURNS * 26), 72, 240);
+  // Endradius relativ zum Fussradius; 0.45 ist die bisher fest verdrahtete
+  // Verjuengung und daher der Schema-Default.
+  var dickeOben = p.dickeOben === undefined ? 0.45 : clamp(p.dickeOben, 0.2, 1);
   var c = new THREE.Vector3(), n1 = new THREE.Vector3(), n2 = new THREE.Vector3();
-  function wrapAt(tt, kk) {
+  function wrapAt(tt, kk, fi) {
     // Straenge legen sich stellenweise aneinander und laufen wieder auseinander
-    var eng = 0.72 + (fractal(tt * 2.6 + kk * 3.7, 0.5, el.seed + 217) - 0.5) * 0.5;
-    return R * 0.62 * (1 - 0.55 * tt) * eng;
+    var eng = 0.72 + (fractal(tt * 2.6 + kk * 3.7 + fi * 13.1, 0.5, el.seed + 217) - 0.5) * 0.5;
+    return R * 0.62 * lerp(1, dickeOben, tt) * eng;
   }
   var strandDaten = [];
   for (k = 0; k < nStr; k++) {
@@ -174,8 +405,10 @@ function genRanke(el) {
       frameAt(axis, t, c, n1, n2);
       // abschnittsweise wechselnde Umdrehungsrate
       var rate = 0.5 + fractal(t * 3.2, k * 1.7, el.seed + 131) * 1.1;
-      winkel += (TURNS * Math.PI * 2 / RINGS) * rate;
-      var wrap = wrapAt(t, k);
+      winkel += (turnsProT(t) * Math.PI * 2 / RINGS) * rate;
+      // radSkala: oberhalb der Vereinigung traegt dieses Buendel die Summe
+      // der Astquerschnitte (Faktor exakt 1, solange es nur einen Fuss gibt).
+      var wrap = wrapAt(t, k, 0) * radSkala(t);
       var ca = Math.cos(winkel), sa = Math.sin(winkel);
       pts.push(new THREE.Vector3(
         c.x + n1.x * ca * wrap + n2.x * sa * wrap,
@@ -195,7 +428,8 @@ function genRanke(el) {
     geos.push((function (radFL, thickL) {
       return tubeGeo(pts, function (tt, ii) {
         // strandB: glatt-Stil verbreitert die (wenigeren) Straenge x1.8
-        return R * 0.30 * lerp(1, 0.45, tt) * radFL[Math.min(ii, radFL.length - 1)] * thickL * strandB;
+        return R * 0.30 * lerp(1, dickeOben, tt) * radFL[Math.min(ii, radFL.length - 1)] *
+          thickL * strandB * radSkala(tt);
       }, 8, function (tt, ii, col) {
         vineColor(tt, col);
         // Moos und Bewuchs sammeln sich in den Einschnuerungen
@@ -203,6 +437,149 @@ function genRanke(el) {
         if (rf < 0.88) col.lerp(_moosFarbe, (0.88 - rf) * 1.6);
       });
     })(radF, thick));
+  }
+
+  /* --- H4.4: Zusatz-Aeste aus den weiteren Fusspunkten --------------------
+     Bewusst eine EIGENE Schleife statt einer Verallgemeinerung der obigen:
+     das Hauptbuendel bleibt dadurch Zeile fuer Zeile das alte (Ringzahl
+     RINGS ueber die volle Hoehe, Stroeme (k,0,+501)). Ein Zusatzast laeuft
+     nur bis zum Ende der Verschmelzungsrampe; darueber traegt allein das
+     Hauptbuendel weiter, dessen Radius dort per radSkala bereits auf
+     sqrt(Σ r_i²) angewachsen ist. Die Astenden verschwinden im
+     Verwachsungsknoten (weiter unten). */
+  for (var fi = 1; fi < nF; fi++) {
+    var fpt = fuesse[fi];
+    var fo = 533 + (fi % 33) * 2;       // reservierter Block +533..+599
+    var aCtrl = rohAchse(fpt.x, fpt.z, heightAt(fpt.x, fpt.z) - 2.6,
+      el.seed + fo, el.seed + fo + 1);
+    for (i = 0; i <= NC; i++) aCtrl[i].lerp(gemCtrl[i], verSchmelz(i / NC));
+    var aAxis = new THREE.CatmullRomCurve3(aCtrl, false, "catmullrom", 0.5);
+    // Ringzahl proportional zum kuerzeren Weg — gleiche Aufloesung je Windung
+    var RA = clamp(Math.round(TURNS * tVerEnd * 26), 48, 240);
+    var astStraenge = [];
+    for (k = 0; k < nStr; k++) {
+      var rSa = ortsRng(k, fi, el.seed + 501);
+      var aWinkel = k / nStr * Math.PI * 2 + rr(rSa, -0.2, 0.2);
+      var aPts = [], aRadF = [];
+      for (i = 0; i <= RA; i++) {
+        var u = i / RA, at = u * tVerEnd;
+        frameAt(aAxis, at, c, n1, n2);
+        var aRate = 0.5 + fractal(at * 3.2, k * 1.7 + fi * 11.3, el.seed + 131) * 1.1;
+        aWinkel += turnsProT(at) * Math.PI * 2 * (tVerEnd / RA) * aRate;
+        var aWrap = wrapAt(at, k, fi);   // Ast traegt seinen eigenen Radius R
+        var aCa = Math.cos(aWinkel), aSa = Math.sin(aWinkel);
+        aPts.push(new THREE.Vector3(
+          c.x + n1.x * aCa * aWrap + n2.x * aSa * aWrap,
+          c.y,
+          c.z + n1.z * aCa * aWrap + n2.z * aSa * aWrap
+        ));
+        var aAtem = 0.7 + 0.7 * fractal(at * 8.2, k * 2.3 + fi * 7.9, el.seed + 149);
+        if (glatt) aAtem = 1.05 + (aAtem - 1.05) * 0.3;
+        aRadF.push(aAtem);
+      }
+      var aThick = rr(rSa, 1.35, 1.7);
+      astStraenge.push({ pts: aPts, radF: aRadF, thick: aThick });
+      geos.push((function (ptsL, radFL, thickL) {
+        return tubeGeo(ptsL, function (uu, ii) {
+          // uu laeuft 0..1 ueber den Ast, die Verjuengung aber ueber die
+          // ECHTE Hoehe — sonst waere der Ast oben duenner als der Stamm.
+          return R * 0.30 * lerp(1, dickeOben, uu * tVerEnd) *
+            radFL[Math.min(ii, radFL.length - 1)] * thickL * strandB;
+        }, 8, function (uu, ii, col) {
+          vineColor(uu * tVerEnd, col);
+          var rf = radFL[Math.min(ii, radFL.length - 1)];
+          if (rf < 0.88) col.lerp(_moosFarbe, (0.88 - rf) * 1.6);
+        });
+      })(aPts, aRadF, aThick));
+    }
+    // Blattbueschel am Zusatzast — Muster des Hauptastes (dort ab "Grosse
+    // Blaetter"), eigener Strom +601, Ende an der Vereinigung.
+    var rAstStart = ortsRng(fi, -2, el.seed + 601);
+    var aBlattT = 0.06 + rAstStart() * 0.05;
+    var aSchritt = 0;
+    while (aBlattT < tVerEnd - 0.02) {
+      var rAB = ortsRng(fi * 4096 + aSchritt, -1, el.seed + 601);
+      var aStrang = astStraenge[Math.floor(rAB() * astStraenge.length)];
+      var aSi = Math.floor(aBlattT / tVerEnd * RA);
+      var aSp = aStrang.pts[Math.min(aSi, aStrang.pts.length - 1)];
+      frameAt(aAxis, aBlattT, c, n1, n2);
+      var aBuendel = ri(rAB, 3, 7);
+      for (i = 0; i < aBuendel; i++) {
+        var rABl = ortsRng(fi * 4096 + aSchritt, i, el.seed + 601);
+        var aBa = Math.atan2(aSp.z - c.z, aSp.x - c.x) + rr(rABl, -1.1, 1.1);
+        var aGr = rr(rABl, 4, 10.5) * (1 - aBlattT * 0.5) * (p.blattgroesse || 1);
+        emit(el, "rankenblatt",
+          aSp.x + Math.cos(aBa) * 0.4, aSp.y + rr(rABl, -1.2, 1.2), aSp.z + Math.sin(aBa) * 0.4,
+          -aBa + rr(rABl, -0.4, 0.4),
+          aGr, aGr * rr(rABl, 0.5, 0.7), aGr,
+          [0.97, 1.0, 0.86], rr(rABl, -0.15, 0.15), rr(rABl, -0.7, -0.1));
+      }
+      aBlattT += rr(rAB, 0.07, 0.17);
+      aSchritt++;
+    }
+  }
+
+  /* --- H4.4: Verwachsungsknoten ------------------------------------------
+     Ohne ihn saehe die Querschnittsaddition nach Fehler aus: unter der Fuge
+     n Buendel mit Radius R, darueber eines mit sqrt(n)·R. Der Knoten sitzt
+     genau auf dem Ende der Rampe, ueberdeckt die Astenden und verkauft den
+     Radiussprung als Verwachsung — Wulst (Fass mit Sinus-Bauch), ein paar
+     Rindenfalten laengs darueber und etwas Moos aus dem vorhandenen
+     moos-Pool. Kanon: hier laufen die Triebe Arbors zusammen. */
+  if (nF > 1) {
+    var rK = ortsRng(0, 0, el.seed + 605);
+    var tK0 = Math.max(0.01, tVerEnd - 0.055), tK1 = Math.min(0.995, tVerEnd + 0.055);
+    var rKnoten = R * rSkalaOben * lerp(1, dickeOben, tVerEnd);
+    var kPts = [], NK = 16, kTmp = new THREE.Vector3();
+    for (i = 0; i <= NK; i++) {
+      axis.getPoint(lerp(tK0, tK1, i / NK), kTmp);
+      kPts.push(kTmp.clone());
+    }
+    // Bauch: an den Enden 0.80 (steckt im Geflecht, kein sichtbarer Absatz),
+    // in der Mitte bis 1.42 des Buendelradius.
+    function knotenR(ss) {
+      return rKnoten * (0.80 + 0.62 * Math.pow(Math.sin(Math.PI * ss), 1.15)) *
+        (0.97 + hashi(Math.round(ss * 64), 3, el.seed + 605) * 0.07);
+    }
+    geos.push(tubeGeo(kPts, function (ss) { return knotenR(ss); }, 12,
+      function (ss, ii, col) {
+        vineColor(tVerEnd, col);
+        col.multiplyScalar(0.9 + hashi(ii, 11, el.seed + 605) * 0.12);
+        // Moosansatz auf der unteren Haelfte des Wulstes
+        if (ss < 0.5) col.lerp(_moosFarbe, (0.5 - ss) * 0.5);
+      }));
+    var nFalte = ri(rK, 5, 8);
+    for (k = 0; k < nFalte; k++) {
+      var rFa = ortsRng(k, 2, el.seed + 605);
+      var faA = rr(rFa, 0, 6.283), faDreh = rr(rFa, -0.9, 0.9);
+      var faPts = [];
+      for (i = 0; i <= NK; i++) {
+        var fs = i / NK, fw = faA + faDreh * fs;
+        frameAt(axis, lerp(tK0, tK1, fs), c, n1, n2);
+        var fr = knotenR(fs) * 1.02;
+        faPts.push(new THREE.Vector3(
+          c.x + (n1.x * Math.cos(fw) + n2.x * Math.sin(fw)) * fr,
+          c.y,
+          c.z + (n1.z * Math.cos(fw) + n2.z * Math.sin(fw)) * fr));
+      }
+      geos.push(tubeGeo(faPts, function (fs) {
+        return rKnoten * 0.075 * (0.4 + Math.sin(Math.PI * fs));
+      }, 5, function (fs, ii, col) {
+        vineColor(tVerEnd * 0.5, col);
+        col.multiplyScalar(0.86);
+      }));
+    }
+    var nMoos = ri(rK, 4, 7);
+    for (k = 0; k < nMoos; k++) {
+      var rMo = ortsRng(k, 3, el.seed + 605);
+      var mS = rr(rMo, 0.1, 0.55), mW = rr(rMo, 0, 6.283);
+      frameAt(axis, lerp(tK0, tK1, mS), c, n1, n2);
+      var mR = knotenR(mS) * 0.95, mSc = rr(rMo, 0.9, 1.8);
+      emit(el, "moos",
+        c.x + (n1.x * Math.cos(mW) + n2.x * Math.sin(mW)) * mR,
+        c.y, c.z + (n1.z * Math.cos(mW) + n2.z * Math.sin(mW)) * mR,
+        mW, mSc, mSc * rr(rMo, 0.8, 1.2), mSc, [0.85, 0.95, 0.8]);
+    }
   }
 
   // --- Nebentriebe: duenne freie Auslaeufer vom Hauptbuendel ---------------
@@ -215,10 +592,12 @@ function genRanke(el) {
     var tp = [];
     for (i = 0; i <= 10; i++) {
       var q = i / 10;
+      // Ansatz am Buendelrand: radSkala schiebt ihn oberhalb der Vereinigung
+      // nach aussen mit, sonst begaenne der Trieb im Stamminneren.
       tp.push(new THREE.Vector3(
-        c.x + Math.cos(ta) * (R * 0.5 + q * R * rr(rTrieb, 1.2, 2.2)),
+        c.x + Math.cos(ta) * (R * 0.5 * radSkala(tt0) + q * R * rr(rTrieb, 1.2, 2.2)),
         c.y + q * R * rr(rTrieb, 0.8, 2.0) - q * q * R * 0.9,
-        c.z + Math.sin(ta) * (R * 0.5 + q * R * rr(rTrieb, 1.2, 2.2))
+        c.z + Math.sin(ta) * (R * 0.5 * radSkala(tt0) + q * R * rr(rTrieb, 1.2, 2.2))
       ));
     }
     geos.push((function (t0L) {
@@ -256,40 +635,50 @@ function genRanke(el) {
   }
 
   // --- Wurzelteller: ungleichmaessig um den Fuss verteilt, flacher, laenger
-  var nRoot = ri(rGlob, 10, 14);
-  var wStart = rr(rGlob, 0, 6.283);
-  for (k = 0; k < nRoot; k++) {
-    var rW = ortsRng(k, 0, el.seed + 509);
-    var ra = wStart + Math.pow(k / nRoot, rr(rW, 0.7, 1.4)) * Math.PI * 2 + rr(rW, -0.3, 0.3);
-    var rd = R * rr(rW, 1.6, 4.6);
-    var gx = x0 + Math.cos(ra) * rd, gz = z0 + Math.sin(ra) * rd;
-    var gy = heightAt(gx, gz) - 2.4;
-    var attach = R * rr(rW, 0.9, 2.8);
-    var bulk = rr(rW, 0.75, 1.45);
-    var rp = [];
-    for (i = 0; i <= 16; i++) {
-      t = i / 16;
-      var e = t * t * (3 - 2 * t);
-      var swirl = Math.sin(t * Math.PI) * rr(rW, -0.35, 0.35);
-      rp.push(new THREE.Vector3(
-        lerp(gx, x0 + Math.cos(ra) * R * 0.42, e) - Math.sin(ra) * swirl * R,
-        lerp(gy, y0 + attach, e) + Math.sin(t * Math.PI) * R * 0.26,
-        lerp(gz, z0 + Math.sin(ra) * R * 0.42, e) + Math.cos(ra) * swirl * R
-      ));
+  // H4.4: dieselbe Logik je Fusspunkt. Fuss 0 zieht Anzahl und Startwinkel
+  // weiter aus rGlob und in derselben Reihenfolge wie bisher (die beiden
+  // Draws sind die letzten am Globalstrom), weitere Fuesse aus ihrem eigenen
+  // ortsstabilen Strom (fi, -1, +509). Auch Kontaktschatten und Erdhuegel
+  // gehoeren jedem Fuss einzeln — sie stehen ja im Boden.
+  for (var wf = 0; wf < nF; wf++) {
+    var fx0 = fuesse[wf].x, fz0 = fuesse[wf].z;
+    var fy0 = wf === 0 ? y0 : heightAt(fx0, fz0) - 2.6;
+    var rFuss = wf === 0 ? null : ortsRng(wf, -1, el.seed + 509);
+    var nRoot = wf === 0 ? ri(rGlob, 10, 14) : ri(rFuss, 10, 14);
+    var wStart = wf === 0 ? rr(rGlob, 0, 6.283) : rr(rFuss, 0, 6.283);
+    for (k = 0; k < nRoot; k++) {
+      var rW = ortsRng(k, wf, el.seed + 509);
+      var ra = wStart + Math.pow(k / nRoot, rr(rW, 0.7, 1.4)) * Math.PI * 2 + rr(rW, -0.3, 0.3);
+      var rd = R * rr(rW, 1.6, 4.6);
+      var gx = fx0 + Math.cos(ra) * rd, gz = fz0 + Math.sin(ra) * rd;
+      var gy = heightAt(gx, gz) - 2.4;
+      var attach = R * rr(rW, 0.9, 2.8);
+      var bulk = rr(rW, 0.75, 1.45);
+      var rp = [];
+      for (i = 0; i <= 16; i++) {
+        t = i / 16;
+        var e = t * t * (3 - 2 * t);
+        var swirl = Math.sin(t * Math.PI) * rr(rW, -0.35, 0.35);
+        rp.push(new THREE.Vector3(
+          lerp(gx, fx0 + Math.cos(ra) * R * 0.42, e) - Math.sin(ra) * swirl * R,
+          lerp(gy, fy0 + attach, e) + Math.sin(t * Math.PI) * R * 0.26,
+          lerp(gz, fz0 + Math.sin(ra) * R * 0.42, e) + Math.cos(ra) * swirl * R
+        ));
+      }
+      geos.push(tubeGeo(rp, function (tt) {
+        return R * (0.055 + 0.21 * Math.pow(tt, 0.75)) * bulk;
+      }, 7, function (tt, ii, col) { vineColor(tt * 0.1, col); }));
     }
-    geos.push(tubeGeo(rp, function (tt) {
-      return R * (0.055 + 0.21 * Math.pow(tt, 0.75)) * bulk;
-    }, 7, function (tt, ii, col) { vineColor(tt * 0.1, col); }));
+
+    schattenAn(el, fx0, heightAt(fx0, fz0), fz0, R * 5.2);
+
+    // --- Erdhügel, über den die Wurzeln laufen ---
+    var mound = new THREE.Mesh(
+      moundGeo(R * 4.6, R * 1.15, fx0, fz0, (el.seed + 61 + wf * 977) | 0), rockMat);
+    mound.position.set(fx0, heightAt(fx0, fz0), fz0);
+    mound.userData.el = el;
+    groupOf(el).add(mound);
   }
-
-  schattenAn(el, x0, heightAt(x0, z0), z0, R * 5.2);
-
-  // --- Erdhügel, über den die Wurzeln laufen ---
-  var mound = new THREE.Mesh(
-    moundGeo(R * 4.6, R * 1.15, x0, z0, (el.seed + 61) | 0), rockMat);
-  mound.position.set(x0, heightAt(x0, z0), z0);
-  mound.userData.el = el;
-  groupOf(el).add(mound);
 
   // --- Blattplateaus, spiralig um den Stamm gestaffelt ---
   var nPl = clamp(Math.round(p.plateaus), 0, 6);
@@ -311,7 +700,11 @@ function genRanke(el) {
     var ox = Math.cos(pang), oz = Math.sin(pang);
     var g = leafGeo(L, W, cup, thick, 0x62894a, 0x9cba7a, 0x8fb06c, (el.seed + k * 31) | 0);
     var droop = M(0, 0, 0, 0, 0, -0.1);
-    var place = M(c.x + ox * R * 0.45, c.y, c.z + oz * R * 0.45, 0, -pang, 0);
+    // radSkala: sitzt das Plateau oberhalb der Vereinigung, ruecken Ansatz
+    // und Blattwurzel mit dem dickeren Stamm nach aussen (sonst steckte das
+    // Blatt im Geflecht). Bei einem Fuss ist der Faktor exakt 1.
+    var place = M(c.x + ox * R * 0.45 * radSkala(t), c.y,
+      c.z + oz * R * 0.45 * radSkala(t), 0, -pang, 0);
     var full = new THREE.Matrix4().multiplyMatrices(place, droop);
     g.applyMatrix4(full);
     leafGeos.push(g);
@@ -491,13 +884,16 @@ function genRanke(el) {
     var rTr = R * 0.75 + R * 0.30;
     var yTr = heightAt(x0, z0) + 0.3, yEnd = y0 + tZiel * H;
     var thTr = rr(rT, 0, 6.283);
-    var dTh = 0.795 / rTr;              // horizontaler Bogen je Stufe (ds=0.9)
+    // horizontaler Bogen je Stufe (ds=0.9) — haengt am oertlichen Radius,
+    // weil der Stamm oberhalb der Vereinigung dicker wird (Faktor 1 bei
+    // einem Fuss, dann exakt der frueher einmalig berechnete Wert).
     var stufeGeo = new THREE.BoxGeometry(1.2, 0.18, 0.5);
     var cSt = new THREE.Color();
     var lauf = [], nSt = 0;
     while (yTr < yEnd && nSt < 1600) {
       var tTr = clamp((yTr - y0) / H, 0, 1);
       frameAt(axis, tTr, c, n1, n2);
+      var rTrL = rTr * radSkala(tTr);
       var dxT = n1.x * Math.cos(thTr) + n2.x * Math.sin(thTr);
       var dzT = n1.z * Math.cos(thTr) + n2.z * Math.sin(thTr);
       var dlT = Math.sqrt(dxT * dxT + dzT * dzT) || 1;
@@ -505,14 +901,14 @@ function genRanke(el) {
       // heller Holz-/Steinton (KULTUR-Neutral), leicht gekoernt ueber hashi
       cSt.setHex(0xcfc0a2).multiplyScalar(0.94 + hashi(nSt, 7, el.seed + 527) * 0.1);
       geos.push(part(stufeGeo,
-        M(c.x + dxT * rTr, yTr, c.z + dzT * rTr, 0, Math.atan2(-dzT, dxT), 0),
+        M(c.x + dxT * rTrL, yTr, c.z + dzT * rTrL, 0, Math.atan2(-dzT, dxT), 0),
         cSt.getHex()));
       // Handlauf-Stuetzpunkte auf der Aussenseite, jede zweite Stufe
       if (nSt % 2 === 0) {
         lauf.push(new THREE.Vector3(
-          c.x + dxT * (rTr + 0.58), yTr + 0.95, c.z + dzT * (rTr + 0.58)));
+          c.x + dxT * (rTrL + 0.58), yTr + 0.95, c.z + dzT * (rTrL + 0.58)));
       }
-      yTr += 0.42; thTr += dTh; nSt++;
+      yTr += 0.42; thTr += 0.795 / rTrL; nSt++;
     }
     if (lauf.length > 1) {
       geos.push(tubeGeo(lauf, function () { return 0.05; }, 4,
@@ -622,4 +1018,5 @@ function genRanke(el) {
 }
 
 
-export { vineColor, genRanke, rankePlatzierbar };
+export { vineColor, genRanke, rankePlatzierbar,
+  zugpunkteVon, rankeStuetzen, zugAuslenkung, rankeAchse, rankeKernPunkt };

@@ -1,30 +1,83 @@
 // Heightfield-Terrain: Hoehen, Farben, Kruemmungs-AO, Korridore, Fluesse, Pinsel.
 import * as THREE from 'three';
 import { clamp, lerp, sstep, DEG, hashi, vnoise, fractal } from '../core/rng.js';
-import { MAP, VW, HALF, WATER, S, BIOME } from '../core/store.js';
+import { MAP, VW, HALF, WATER, S, BIOME, hoehenProfil } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 
-var base = new Float32Array(VW * VW);   // prozedurale Höhen + Pinsel-Änderungen
-var hgt = new Float32Array(VW * VW);    // base + Flusseinschnitte (Renderhöhe)
+/* --- Hoehenfelder (H1b) -------------------------------------------------
+   Die Felder haengen an VW und muessen beim Wechsel der Kartengroesse
+   mitwachsen. Bewusst NUR WACHSEN, nie schrumpfen:
+
+   editor/history.js (tabu, Runde D) haelt Copy-on-Write-Kopien per
+   `base.slice()` und spielt sie mit `base.set(kopie)` zurueck. Wuerde base
+   beim Verkleinern kuerzer, warfe `set` bei einer laengeren Altkopie einen
+   RangeError — ein harter Absturz beim Rueckgaengigmachen ueber einen
+   Groessenwechsel hinweg. Ein zu langes Feld ist dagegen voellig harmlos:
+   saemtliche Zugriffe laufen ueber j*VW+i und beruehren nur die ersten
+   VW*VW Eintraege, der Rest liegt brach. Der Preis ist etwas Speicher, wenn
+   in einer Sitzung eine grosse Karte benutzt wurde. Die saubere Loesung
+   (Undo-Stapel beim Groessenwechsel verwerfen) braucht history.js — siehe
+   Bericht H1e. */
+var feldLaenge = 0;
+var base, hgt, aoRoh, aoFeld, corridor, wear;
+function felderSichern() {
+  var n = VW * VW;
+  if (n <= feldLaenge) return;
+  base = new Float32Array(n);           // prozedurale Höhen + Pinsel-Änderungen
+  hgt = new Float32Array(n);            // base + Flusseinschnitte (Renderhöhe)
+  aoRoh = new Float32Array(n); aoRoh.fill(1);
+  aoFeld = new Float32Array(n); aoFeld.fill(1);
+  corridor = new Uint8Array(n);
+  // Abnutzung entlang der Wege: 0..255, weich auslaufend, faerbt das Gras erdig.
+  wear = new Uint8Array(n);
+  feldLaenge = n;
+}
+felderSichern();
 
 /**
- * Reine Funktion: schreibt das deterministische Seed-Terrain in das
- * UEBERGEBENE Float32Array `ziel` (Laenge VW*VW), ohne base/AO/Geometrie
- * anzufassen. Grundlage des Delta-Speicherformats v3 (editor/io.js): dort
- * wird ein frisch erzeugtes Seed-Terrain gegen das bearbeitete base gedifft.
- * Determinismus: haengt AUSSCHLIESSLICH an fractal/hashi aus core/rng.js.
+ * Schreibt das deterministische Seed-Terrain in das UEBERGEBENE Float32Array
+ * `ziel` (mindestens VW*VW lang), ohne base/AO/Geometrie anzufassen.
+ * Grundlage des Delta-Speicherformats v3 (editor/io.js): dort wird ein frisch
+ * erzeugtes Seed-Terrain gegen das bearbeitete base gedifft.
+ * Determinismus: haengt AUSSCHLIESSLICH an fractal/hashi aus core/rng.js
+ * sowie an Kartengroesse und Hoehenprofil des Bioms — gleiche Seed + gleiche
+ * Kartengroesse + gleiches Biom ergibt dieselbe Karte.
  * Die Umstellung der Bestueckungs-Zufaelle (generators/) auf ortsstabile
  * Hashes aendert dieses Ergebnis nicht — das Delta-Format bleibt davon
  * unabhaengig korrekt.
  */
 function genBaseIn(ziel, seed) {
+  // H6: die frueheren Literale 26 / 4 / -6 / -22 / 55 kommen jetzt aus der
+  // BIOME-Registry. Fehlt dort das Feld `hoehe` (Stand: alle fuenf Biome),
+  // liefert hoehenProfil() exakt diese Werte zurueck.
+  var HP = hoehenProfil(S.biom);
+  // randBreite 0 = Abrisskante ohne Uebergang. sstep teilt durch (e1-e0),
+  // deshalb hier ein Winzigwert statt einer Fallunterscheidung in der
+  // inneren Schleife (bei 55 rechnerisch identisch zu vorher).
+  var randBreite = HP.randBreite > 0 ? HP.randBreite : 1e-6;
   for (var j = 0; j < VW; j++) {
     for (var i = 0; i < VW; i++) {
       var x = i - HALF, z = j - HALF;
-      var h = fractal(x * 0.006, z * 0.006, seed) * 26 + fractal(x * 0.03, z * 0.03, seed + 77) * 4 - 6;
-      // Rand weich unter den Wasserspiegel ziehen, damit die Karte keine Kante zeigt
+      var h = fractal(x * 0.006, z * 0.006, seed) * HP.amp
+            + fractal(x * 0.03, z * 0.03, seed + 77) * HP.fein + HP.sockel;
+      // Vorbereitete Profilfelder: bei 0 (Standard) wird der Zweig komplett
+      // uebersprungen, der Rechenweg bleibt damit Bit fuer Bit der alte.
+      // Grate: invertiertes Rauschen (Ridge) schaerft Kaemme statt Kuppen.
+      if (HP.grat !== 0) {
+        var rg = fractal(x * 0.011, z * 0.011, seed + 211);
+        h += (1 - Math.abs(rg * 2 - 1)) * HP.grat;
+      }
+      // Terrassen: Hoehe auf ein Raster ziehen, aber nur zu 80 % — die
+      // Restweichheit haelt die Stufenkanten malerisch statt technisch.
+      if (HP.stufe !== 0) h = lerp(h, Math.round(h / HP.stufe) * HP.stufe, 0.8);
+      // Senken/Dolinen: nur die obersten Rauschwerte reissen ein Loch.
+      if (HP.senken !== 0) {
+        h -= sstep(0.62, 1.0, fractal(x * 0.045, z * 0.045, seed + 311)) * HP.senken;
+      }
+      // Rand auf randTiefe ziehen: weich unter den Wasserspiegel (Standard)
+      // oder ueber wenige Kacheln senkrecht ins Bodenlose (Bruchkante, H6).
       var d = Math.min(i, j, MAP - i, MAP - j);
-      h = lerp(-22, h, sstep(0, 55, d));
+      h = lerp(HP.randTiefe, h, sstep(0, randBreite, d));
       ziel[j * VW + i] = h;
     }
   }
@@ -33,37 +86,102 @@ function genBaseIn(ziel, seed) {
 /** Seed-Terrain direkt nach base schreiben — gleiche Rechenreihenfolge wie immer. */
 function genBase(seed) { genBaseIn(base, seed); }
 
-var terrainGeo = new THREE.BufferGeometry();
-(function buildTerrainGeometry() {
-  var n = VW * VW;
+/* ==========================================================================
+   Terrain-Patches (H1a)
+
+   Frueher: EIN Mesh mit VW*VW Vertices und frustumCulled = false. Jetzt ein
+   Raster aus Patches mit fester Kantenlaenge PATCH (64 Kacheln): 4x4 = 16
+   Patches bei MAP 256, 8x8 = 64 bei 512, 16x16 = 256 bei 1024.
+
+   Ueberlappung: Patch (pi,pj) traegt die Gittervertices
+   [pi*64 .. pi*64+64] x [pj*64 .. pj*64+64], also 65x65 Vertices. Die
+   Randreihe gehoert damit ZWEI benachbarten Patches gleichzeitig — der
+   Vertex existiert doppelt.
+
+   Nahtfreiheit: aktualisierePatch() berechnet Hoehe, Normale und Farbe
+   AUSSCHLIESSLICH aus dem globalen Hoehenfeld `hgt` und `aoFeld` ueber die
+   globalen Indizes (i,j) — die Nachbarzugriffe der Normalenberechnung
+   klemmen am GLOBALEN Kartenrand (i>0?i-1:0 / i<VW-1?i+1:VW-1), nicht am
+   Patchrand. Ein doppelter Randvertex durchlaeuft in beiden Patches exakt
+   dieselbe Rechnung mit exakt denselben Eingaben und bekommt deshalb
+   bitgleiche Werte. Es gibt keine Naht, weil es keine abweichende Rechnung
+   gibt. Voraussetzung ist nur, dass refreshGrid JEDEN Patch anfasst, der
+   einen betroffenen Vertex traegt — dafuer sorgt die Patchbereich-Formel
+   unten (ceil(i0/PATCH)-1).
+
+   Alle Patches teilen sich EIN Material (Material-Sharing zwischen nicht
+   instanzierten Meshes ist erlaubt) und EIN Indexattribut (die lokale
+   Topologie ist in jedem Patch dieselbe; hoechster lokaler Index 65*65-1 =
+   4224, deshalb genuegt Uint16 statt des frueheren Uint32).
+   ========================================================================== */
+var PATCH = 64;                 // Kacheln je Patch-Kante (teilt 256/512/1024)
+var PVW = PATCH + 1;            // Vertices je Patch-Kante
+var terrain = new THREE.Group();   // Huelle: alle Patch-Meshes haengen hier drin
+var terraMaterial = terraMat({ vertexColors: true, cloudShadow: true, familie: 'erde' });
+tintedMats.push(terraMaterial);    // genau EINMAL, auch ueber Groessenwechsel
+var patches = [];               // [{geo, mesh, gi0, gj0}], zeilenweise pj*patchN+pi
+var patchN = 0;                 // Patches je Achse
+var patchIndex = null;          // geteiltes Indexattribut aller Patches
+
+function baueEinenPatch(gi0, gj0) {
+  var geo = new THREE.BufferGeometry();
+  var n = PVW * PVW;
   var pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
-  for (var j = 0; j < VW; j++) {
-    for (var i = 0; i < VW; i++) {
-      var k = (j * VW + i) * 3;
-      pos[k] = i - HALF; pos[k + 1] = 0; pos[k + 2] = j - HALF;
+  for (var lj = 0; lj < PVW; lj++) {
+    for (var li = 0; li < PVW; li++) {
+      var k = (lj * PVW + li) * 3;
+      // Weltkoordinaten wie im Einzelmesh — die Meshes bleiben bei (0,0,0),
+      // damit heightAt/Raycast/Gizmos dieselben Koordinaten sehen wie bisher.
+      pos[k] = (gi0 + li) - HALF; pos[k + 1] = 0; pos[k + 2] = (gj0 + lj) - HALF;
       nor[k + 1] = 1; col[k] = col[k + 1] = col[k + 2] = 1;
     }
   }
-  var idx = new Uint32Array(MAP * MAP * 6), o = 0;
-  for (var jj = 0; jj < MAP; jj++) {
-    for (var ii = 0; ii < MAP; ii++) {
-      var a = jj * VW + ii, b = a + 1, c = a + VW, d = c + 1;
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.setIndex(patchIndex);
+  geo.computeBoundingSphere();       // vorlaeufig flach, refreshGrid zieht nach
+  var mesh = new THREE.Mesh(geo, terraMaterial);
+  mesh.frustumCulled = true;         // jetzt sinnvoll: Patches sind klein genug
+  terrain.add(mesh);
+  return { geo: geo, mesh: mesh, gi0: gi0, gj0: gj0 };
+}
+
+/** Baut das Patchraster fuer die aktuelle Kartengroesse neu auf. */
+function bauePatches() {
+  for (var q = 0; q < patches.length; q++) {
+    terrain.remove(patches[q].mesh);
+    patches[q].geo.dispose();        // alle teilen patchIndex und gehen gemeinsam
+  }
+  patches.length = 0;
+  patchN = MAP / PATCH;
+  var idx = new Uint16Array(PATCH * PATCH * 6), o = 0;
+  for (var jj = 0; jj < PATCH; jj++) {
+    for (var ii = 0; ii < PATCH; ii++) {
+      // gleiche Diagonale (b->c) wie im frueheren Einzelmesh, nur lokal
+      // indiziert: identische Dreiecke, identische Umlaufrichtung
+      var a = jj * PVW + ii, b = a + 1, c = a + PVW, d = c + 1;
       idx[o++] = a; idx[o++] = c; idx[o++] = b;
       idx[o++] = b; idx[o++] = c; idx[o++] = d;
     }
   }
-  terrainGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  terrainGeo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
-  terrainGeo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  terrainGeo.setIndex(new THREE.BufferAttribute(idx, 1));
-})();
+  patchIndex = new THREE.BufferAttribute(idx, 1);
+  for (var pj = 0; pj < patchN; pj++) {
+    for (var pi = 0; pi < patchN; pi++) patches.push(baueEinenPatch(pi * PATCH, pj * PATCH));
+  }
+}
+bauePatches();
 
-var terrain = new THREE.Mesh(terrainGeo, terraMat({ vertexColors: true, cloudShadow: true, familie: 'erde' }));
-terrain.frustumCulled = false;
-tintedMats.push(terrain.material);
-
-/** Terrain-Mesh in die Szene haengen (einmal beim Start). */
+/** Terrain-Meshes in die Szene haengen (einmal beim Start). Die Gruppe bleibt
+ *  ueber Groessenwechsel hinweg dieselbe — nur ihre Kinder werden getauscht. */
 function initTerrain(scene) { scene.add(terrain); }
+
+/** Kartengroesse hat sich geaendert: Hoehenfelder und Patchraster nachziehen.
+ *  Der Aufrufer (editor/io.js) ruft danach genBase + rebuildAll. */
+function terrainGeometrienNeu() {
+  felderSichern();
+  bauePatches();
+}
 
 // Farbkonstanten (G5): alle Toene und Zonenschwellen liegen jetzt in der
 // BIOME-Registry (core/store.js). Der Eintrag "wiese" enthaelt exakt die
@@ -78,10 +196,8 @@ var _tc = new THREE.Color(), _tc2 = new THREE.Color();
 
 /* --- Krümmungs-Verdeckung (D1) ---------------------------------------
    Mulden und Grabenkanten sind konkav und werden abgedunkelt, Grate
-   leicht aufgehellt. Danach einmal über die Nachbarschaft glätten.    */
-var aoRoh = new Float32Array(VW * VW);
-var aoFeld = new Float32Array(VW * VW);
-(function () { aoRoh.fill(1); aoFeld.fill(1); })();
+   leicht aufgehellt. Danach einmal über die Nachbarschaft glätten.
+   (aoRoh/aoFeld werden oben in felderSichern() angelegt und mit 1 gefuellt.) */
 
 function computeAO(i0, i1, j0, j1) {
   i0 = clamp(i0 - 1, 0, VW - 1); i1 = clamp(i1 + 1, 0, VW - 1);
@@ -185,19 +301,28 @@ function terrainColor(h, ny, x, z, out, ao) {
 }
 
 /**
- * Aktualisiert Höhe, Normale und Farbe nur im angegebenen Gitterbereich.
- * Die Upload-Range umfasst ganze Zeilen, damit sie zusammenhängend bleibt.
+ * Schreibt Höhe, Normale und Farbe eines Patches im Schnitt des globalen
+ * Bereichs [i0..i1]x[j0..j1] mit dem Patchgebiet. Die Rechnung je Vertex ist
+ * unveraendert aus dem frueheren Einzelmesh uebernommen — nur der Zielindex
+ * ist lokal (lj*PVW+li), waehrend saemtliche Eingaben (hgt, aoFeld, die
+ * Nachbarklemmung am Kartenrand, die Weltkoordinate i-HALF) global bleiben.
+ * Genau das macht die doppelten Randvertices bitgleich und die Naht unsichtbar.
  */
-function refreshGrid(i0, i1, j0, j1) {
-  i0 = clamp(i0 | 0, 0, VW - 1); i1 = clamp(i1 | 0, 0, VW - 1);
-  j0 = clamp(j0 | 0, 0, VW - 1); j1 = clamp(j1 | 0, 0, VW - 1);
-  var pos = terrainGeo.attributes.position, nor = terrainGeo.attributes.normal,
-      col = terrainGeo.attributes.color;
+function aktualisierePatch(p, i0, i1, j0, j1) {
+  var gi0 = p.gi0, gj0 = p.gj0;
+  var liA = Math.max(i0, gi0) - gi0, liB = Math.min(i1, gi0 + PATCH) - gi0;
+  var ljA = Math.max(j0, gj0) - gj0, ljB = Math.min(j1, gj0 + PATCH) - gj0;
+  if (liB < liA || ljB < ljA) return;
+  var pos = p.geo.attributes.position, nor = p.geo.attributes.normal,
+      col = p.geo.attributes.color;
   var P = pos.array, N = nor.array, C = col.array;
-  for (var j = j0; j <= j1; j++) {
+  for (var lj = ljA; lj <= ljB; lj++) {
+    var j = gj0 + lj;
     var jm = (j > 0 ? j - 1 : 0) * VW, jp = (j < VW - 1 ? j + 1 : VW - 1) * VW, jr = j * VW;
-    for (var i = i0; i <= i1; i++) {
-      var id = jr + i, k = id * 3;
+    var lr = lj * PVW;
+    for (var li = liA; li <= liB; li++) {
+      var i = gi0 + li;
+      var id = jr + i, k = (lr + li) * 3;
       var h = hgt[id];
       P[k + 1] = h;
       var hl = hgt[jr + (i > 0 ? i - 1 : 0)], hrr = hgt[jr + (i < VW - 1 ? i + 1 : VW - 1)];
@@ -210,11 +335,38 @@ function refreshGrid(i0, i1, j0, j1) {
       C[k] = _tc.r; C[k + 1] = _tc.g; C[k + 2] = _tc.b;
     }
   }
-  var off = j0 * VW * 3, cnt = (j1 - j0 + 1) * VW * 3;
+  // Upload-Range umfasst ganze Patchzeilen, damit sie zusammenhängend bleibt.
+  var off = ljA * PVW * 3, cnt = (ljB - ljA + 1) * PVW * 3;
   pos.clearUpdateRanges(); pos.addUpdateRange(off, cnt); pos.needsUpdate = true;
   nor.clearUpdateRanges(); nor.addUpdateRange(off, cnt); nor.needsUpdate = true;
   col.clearUpdateRanges(); col.addUpdateRange(off, cnt); col.needsUpdate = true;
-  if (j0 === 0 && j1 === VW - 1) terrainGeo.computeBoundingSphere();
+  // Hoehen haben sich geaendert -> Huellkugel neu. Frueher geschah das nur
+  // beim Vollrefresh (frustumCulled war aus); jetzt haengt das Culling daran,
+  // also nach JEDER Aenderung. Kosten: ein Durchlauf ueber 65*65 Vertices je
+  // beruehrtem Patch — beim Pinseln typischerweise ein bis vier Patches.
+  p.geo.computeBoundingSphere();
+}
+
+/**
+ * Aktualisiert Höhe, Normale und Farbe nur im angegebenen Gitterbereich —
+ * und dort nur in den Patches, die ihn ueberhaupt beruehren.
+ */
+function refreshGrid(i0, i1, j0, j1) {
+  i0 = clamp(i0 | 0, 0, VW - 1); i1 = clamp(i1 | 0, 0, VW - 1);
+  j0 = clamp(j0 | 0, 0, VW - 1); j1 = clamp(j1 | 0, 0, VW - 1);
+  if (i1 < i0 || j1 < j0) return;
+  // Patch p traegt die Vertices [p*PATCH .. p*PATCH+PATCH]. Er ist beteiligt,
+  // wenn dieses Intervall den Bereich schneidet: p >= ceil(i0/PATCH)-1 und
+  // p <= floor(i1/PATCH). Das "-1" ist der Grund, warum eine Aenderung genau
+  // auf einer Patchgrenze BEIDE angrenzenden Patches auffrischt — ohne das
+  // bliebe die doppelte Randreihe des linken Nachbarn stehen (sichtbare Naht).
+  var pi0 = clamp(Math.ceil(i0 / PATCH) - 1, 0, patchN - 1);
+  var pi1 = clamp(Math.floor(i1 / PATCH), 0, patchN - 1);
+  var pj0 = clamp(Math.ceil(j0 / PATCH) - 1, 0, patchN - 1);
+  var pj1 = clamp(Math.floor(j1 / PATCH), 0, patchN - 1);
+  for (var pj = pj0; pj <= pj1; pj++) {
+    for (var pi = pi0; pi <= pi1; pi++) aktualisierePatch(patches[pj * patchN + pi], i0, i1, j0, j1);
+  }
 }
 
 /** Bilineare Höhe an Weltkoordinaten. */
@@ -254,9 +406,7 @@ function baseHeightAt(x, z) {
   return lerp(lerp(a, b, tx), lerp(c, d, tx), tz);
 }
 
-var corridor = new Uint8Array(VW * VW);
-// Abnutzung entlang der Wege: 0..255, weich auslaufend, faerbt das Gras erdig.
-var wear = new Uint8Array(VW * VW);
+// corridor und wear werden oben in felderSichern() angelegt.
 function stampWear(x, z, r) {
   var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
   var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
@@ -366,6 +516,13 @@ function applyBrush(p, mode, radius, strength, dt) {
 
 function setFlattenTarget(v) { flattenTarget = v; }
 
-export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, terrainGeo, initTerrain, terrainColor, computeAO,
+/* `terrain` ist jetzt eine THREE.Group mit den Patch-Meshes statt eines
+   einzelnen Mesh; initTerrain(scene) bleibt unveraendert der einzige Weg,
+   sie in die Szene zu haengen. Der frueher exportierte `terrainGeo` entfaellt
+   ersatzlos — es gibt keine EINE Terraingeometrie mehr, und kein Modul hat
+   ihn je importiert (geprueft ueber das ganze Projekt). Wer die Meshes
+   braucht (Statistik, Debug), liest terrain.children oder terrainPatches. */
+export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, patches as terrainPatches,
+  initTerrain, terrainGeometrienNeu, terrainColor, computeAO,
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
   inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget };

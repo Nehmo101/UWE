@@ -1,7 +1,7 @@
 // InstancedMesh-Pools, Instanz-Emission, Kontaktschatten und Dirty-Packen.
 import * as THREE from 'three';
 import { lerp, sstep } from '../core/rng.js';
-import { S, sceneRef, MAX_INST_PER_EL } from '../core/store.js';
+import { S, sceneRef, MAX_INST_PER_EL, KARTE } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { heightAt, normalAt } from '../world/terrain.js';
@@ -65,11 +65,33 @@ Pool.prototype.ensure = function (n) {
 };
 
 var POOLS = {};
+
+/* --- Huellkugel der Pool-Geometrien (H1b) -------------------------------
+   Pool-Geometrien sind Einheitsformen im Ursprung; ihre Instanzen liegen
+   ueber der ganzen Karte. Three.js kullt InstancedMeshes ueber die
+   Geometrie-Huellkugel, deshalb wird sie hier bewusst auf Kartengroesse
+   aufgeblasen — sonst verschwaende der Culling-Test korrekte Instanzen.
+
+   Radius 460 war auf die 256er-Karte kalibriert (halbe Kartendiagonale 181
+   plus reichlich Reserve nach oben fuer Ranken, Plateaus und Schwebeinseln,
+   Mittelpunkt deshalb bei y = 60). Er waechst jetzt proportional zur
+   Kantenlaenge mit: bei map = 256 kommt exakt 460 heraus, das Verhalten der
+   Standardkarte bleibt unveraendert. Eine zu grosse Kugel kostet nur
+   Culling-Wirkung, eine zu kleine verwirft Sichtbares — deshalb lieber
+   grosszuegig skalieren als knapp rechnen. */
+var huellenGeos = [];
+function huellenRadius() { return 460 * (KARTE.map / 256); }
 /** Hüllkugel über die ganze Karte: Culling verwirft korrekt statt falsch. */
 function weiteHuelle(geo) {
   geo.computeBoundingSphere();
-  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 60, 0), 460);
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 60, 0), huellenRadius());
+  if (huellenGeos.indexOf(geo) < 0) huellenGeos.push(geo);
   return geo;
+}
+/** Nach einem Wechsel der Kartengroesse alle Huellkugeln nachziehen. */
+function weiteHuellenNeu() {
+  var r = huellenRadius();
+  for (var i = 0; i < huellenGeos.length; i++) huellenGeos[i].boundingSphere.radius = r;
 }
 function definePool(name, geo, opts) {
   opts = opts || {};
@@ -225,6 +247,6 @@ var rauchSammler = null;
 function setRauchSammler(fn) { rauchSammler = fn; }
 
 
-export { Pool, POOLS, POOL_NAMES, setPoolNames, weiteHuelle, definePool, emit, schattenAn,
+export { Pool, POOLS, POOL_NAMES, setPoolNames, weiteHuelle, weiteHuellenNeu, definePool, emit, schattenAn,
   rauchAus, tintOf, repack, instanceTotal, schattenMat, schattenAnzahl, packSchatten,
   markDirty, flushPack, setRauchSammler };

@@ -5,6 +5,7 @@ import { S, VINE_R } from '../core/store.js';
 import { heightAt } from '../world/terrain.js';
 import { pathSamples } from '../generators/paths.js';
 import { inPoly } from '../generators/areas.js';
+import { rankeAchse, rankeStuetzen } from '../generators/vines.js';
 import { cam, camera, raycaster, _ndc, rayFrom } from './camera.js';
 import { ed } from './tools.js';
 import { buildPanel } from '../ui/panels.js';
@@ -29,8 +30,37 @@ var dotGeo = new THREE.SphereGeometry(1, 10, 8);
 var dotMatA = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, fog: false });
 var dotMatB = new THREE.MeshBasicMaterial({ color: 0x2d74ab, depthTest: false, fog: false });
 var dotMatC = new THREE.MeshBasicMaterial({ color: 0xe0a83c, depthTest: false, fog: false });
+// Zugpunkte einer Ranke: rankenweiss (VINE_MID aus vines.js), damit sie sich
+// von den blauen Bodengriffen unterscheiden.
+var dotMatD = new THREE.MeshBasicMaterial({ color: 0xf4f1e8, depthTest: false, fog: false });
 var handles = new THREE.Group();
 handles.renderOrder = 901;
+
+/* Aufteilung der Griffleiste: die ersten `punkte` Griffe sind Elementpunkte
+   (Index = Punktindex, alles Bestehende bleibt gueltig), danach folgen die
+   Zugpunkt-Griffe der ausgewaehlten Ranke. pointer.js arbeitet dadurch
+   weiterhin mit EINEM Griffindex und fragt hier nur nach, was er bedeutet. */
+var griffLayout = { punkte: 0, zug: 0, el: null };
+
+/** Zugpunkt-Index eines Griffs, oder -1 wenn es ein Elementpunkt ist. */
+function zugGriffIndex(i) {
+  if (i < griffLayout.punkte || i >= griffLayout.punkte + griffLayout.zug) return -1;
+  return i - griffLayout.punkte;
+}
+/** Ranke, an der die Zugpunkt-Griffe haengen (oder null). */
+function zugGriffElement() { return griffLayout.zug ? griffLayout.el : null; }
+
+/** Zugpunktliste der ausgewaehlten Ranke (Rohdaten, Reihenfolge = Griffindex). */
+function zugpunktListe(el) {
+  return (el && el.kind === "ranke" && el.params && Array.isArray(el.params.zugpunkte))
+    ? el.params.zugpunkte : null;
+}
+
+function griffMat(i) {
+  if (ed.draw) return dotMatA;
+  if (i === aktiverGriff) return dotMatC;
+  return zugGriffIndex(i) >= 0 ? dotMatD : dotMatB;
+}
 
 // Zuletzt angefasster Punktgriff des ausgewaehlten Elements (-1 = keiner).
 // Liegt hier statt an `ed`, damit tools.js unveraendert bleibt; pointer.js
@@ -40,8 +70,7 @@ function setAktiverGriff(idx) {
   aktiverGriff = (typeof idx === "number" && idx >= 0) ? idx : -1;
   // Materialien in place umfaerben, ohne die Meshes neu zu bauen
   for (var i = 0; i < handles.children.length; i++) {
-    handles.children[i].material = ed.draw ? dotMatA
-      : (i === aktiverGriff ? dotMatC : dotMatB);
+    handles.children[i].material = griffMat(i);
   }
   updateHandlePositions();
 }
@@ -75,27 +104,88 @@ function rebuildHandles() {
   var list = [];
   if (ed.draw) list = ed.draw.points;
   else if (ed.selected) list = ed.selected.points;
+  // H4.2: Zugpunkte einer ausgewaehlten Ranke bekommen zusaetzliche Griffe
+  // AUF IHRER WELTHOEHE. Waehrend einer Zeichnung nicht (dort gibt es kein
+  // ausgewaehltes Element).
+  var zugL = ed.draw ? null : zugpunktListe(ed.selected);
+  griffLayout.punkte = list.length;
+  griffLayout.zug = zugL ? zugL.length : 0;
+  griffLayout.el = ed.draw ? null : ed.selected;
+  var gesamt = griffLayout.punkte + griffLayout.zug;
   // Aktiver Griff verfaellt, sobald er ins Leere zeigt (Abwahl, Werkzeugwechsel
   // via setTool, Element geloescht) oder eine Zeichnung laeuft.
-  if (ed.draw || aktiverGriff >= list.length) aktiverGriff = -1;
-  for (var k = 0; k < list.length; k++) {
-    var m = new THREE.Mesh(dotGeo, ed.draw ? dotMatA : (k === aktiverGriff ? dotMatC : dotMatB));
+  if (ed.draw || aktiverGriff >= gesamt) aktiverGriff = -1;
+  for (var k = 0; k < gesamt; k++) {
+    var m = new THREE.Mesh(dotGeo, griffMat(k));
     m.userData.idx = k;
     handles.add(m);
   }
   updateHandlePositions();
 }
 
+var _gp = { x: 0, y: 0, z: 0 };
 function updateHandlePositions() {
   var list = ed.draw ? ed.draw.points : (ed.selected ? ed.selected.points : []);
   var s = clamp(cam.dist * 0.011, 0.5, 3.2);
+  var zugL = griffLayout.zug ? zugpunktListe(griffLayout.el) : null;
+  // Stuetzstellen einmal je Aufruf: die Griffe sollen auf DERSELBEN Sollachse
+  // sitzen, die genRanke baut (rankeAchse ist dort dieselbe Funktion).
+  var st = zugL ? rankeStuetzen(griffLayout.el) : null;
   for (var i = 0; i < handles.children.length; i++) {
+    var zi = zugGriffIndex(i);
+    if (zi >= 0) {
+      var zp = zugL && zugL[zi];
+      if (!zp || !Number.isFinite(zp.h)) continue;
+      rankeAchse(griffLayout.el, clamp(zp.h, 0, 1), _gp, st);
+      handles.children[i].position.set(_gp.x, _gp.y, _gp.z);
+      handles.children[i].scale.setScalar(i === aktiverGriff ? s * 1.45 : s);
+      continue;
+    }
     var p = list[i];
     if (!p) continue;
     handles.children[i].position.set(p.x, heightAt(p.x, p.z) + 0.9, p.z);
     // aktiver Griff etwas groesser, damit er als Ziel von Entf erkennbar ist
     handles.children[i].scale.setScalar(!ed.draw && i === aktiverGriff ? s * 1.45 : s);
   }
+}
+
+var _rt = { x: 0, y: 0, z: 0 }, _pv3 = new THREE.Vector3();
+
+/** Trefferpruefung Klickstrahl <-> Rankenachse (H4.2, Zugpunkt einfuegen).
+ *  Liefert die relative Hoehe des naechstliegenden Achsenpunkts oder -1.
+ *  Reines Sampling gegen den Punkt-Strahl-Abstand: die Achse ist eine
+ *  gestoerte Kurve, ein analytischer Schnitt lohnte den Aufwand nicht. */
+function rankeAchsenTreffer(el, ev, tol) {
+  if (!el || el.kind !== "ranke" || !el.points.length) return -1;
+  // Vorgabe: etwa der halbe Geflechtdurchmesser plus Griffreserve
+  if (!tol) tol = VINE_R * ((el.params && el.params.dicke) || 1) * 1.6;
+  var ray = rayFrom(ev), st = rankeStuetzen(el);
+  var best = -1, bd = tol, N = 96;
+  for (var i = 0; i <= N; i++) {
+    var t = i / N;
+    rankeAchse(el, t, _rt, st);
+    var vx = _rt.x - ray.origin.x, vy = _rt.y - ray.origin.y, vz = _rt.z - ray.origin.z;
+    var pr = vx * ray.direction.x + vy * ray.direction.y + vz * ray.direction.z;
+    if (pr <= 0) continue;                       // hinter der Kamera
+    var dx = vx - ray.direction.x * pr, dy = vy - ray.direction.y * pr,
+        dz = vz - ray.direction.z * pr;
+    var d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (d < bd) { bd = d; best = t; }
+  }
+  return best;
+}
+
+/** Bildschirmpixel je voller Rankenhoehe — Skala fuers Hoehenziehen (Shift).
+ *  Ohne die Projektion fuehlte sich der Zug bei jedem Zoom anders an; die
+ *  Untergrenze faengt die fast senkrechte Aufsicht ab, in der die Ranke auf
+ *  wenige Pixel zusammenfaellt. */
+function zugPixelProHoehe(el) {
+  rankeAchse(el, 0, _rt);
+  _pv3.set(_rt.x, _rt.y, _rt.z).project(camera);
+  var yA = _pv3.y;
+  rankeAchse(el, 1, _rt);
+  _pv3.set(_rt.x, _rt.y, _rt.z).project(camera);
+  return Math.max(60, Math.abs((_pv3.y - yA) * 0.5 * window.innerHeight));
 }
 
 var brushRing = (function () {
@@ -190,7 +280,11 @@ function pickElement(ev, p) {
       }
       tol = 4 + (el.params.streuung || 0);
     } else if (el.kind === "ranke") {
-      d = Math.hypot(el.points[0].x - p.x, el.points[0].z - p.z);
+      // H4.4: eine Ranke kann mehrere Fuesse haben — der naechstgelegene zaehlt.
+      for (var rf = 0; rf < el.points.length; rf++) {
+        var rd = Math.hypot(el.points[rf].x - p.x, el.points[rf].z - p.z);
+        if (rd < d) d = rd;
+      }
       tol = VINE_R * 3;
     }
     if (d <= tol && d < bestD) { bestD = d; best = el; }
@@ -209,4 +303,5 @@ function select(el) {
 
 export { preview, handles, brushRing, setPreview, clearPreview, rebuildHandles,
   updateHandlePositions, updateBrushRing, distToPolyline, naechstesSegment,
-  pickElement, select, aktiverGriff, setAktiverGriff };
+  pickElement, select, aktiverGriff, setAktiverGriff,
+  zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer, zugPixelProHoehe };

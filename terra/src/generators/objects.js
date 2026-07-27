@@ -61,6 +61,20 @@ var KULTUR = {
               ["elfenturm", 2], ["pavillon", 2], ["zwergenhalle", 2], ["schmiedeturm", 1],
               ["scheune", 2], ["windmuehle", 1], ["turm", 1], ["tholos", 1]]
 };
+/* Wehrbau (Objektkatalog, Bündel 1). NUR NEUE Einträge — die Tabellen oben
+   bleiben unangetastet, weil jede Gewichtsänderung dort die Bestückung
+   bestehender Karten umwürfelt (wpick zieht aus der Gesamtsumme). */
+KULTUR.burg = [["burgpalas", 3], ["burgkapelle", 2], ["burgkueche", 2],
+               ["wehrturm", 3], ["bergfried", 1], ["mauerstueck", 4],
+               ["mauerecke", 2], ["mauerdurchlass", 1], ["mauertreppe", 1],
+               ["zwingermauer", 2], ["schildmauer", 1], ["brunnen", 1],
+               ["wehrbanner", 1], ["fass", 1], ["karren", 1]];
+KULTUR.schloss = [["schlossfluegel", 5], ["schlossturmhaube", 2], ["schlossportal", 1],
+                  ["burgpalas", 2], ["haus2", 2], ["villa", 2], ["arkade", 2],
+                  ["laterne", 2], ["zypresse", 2], ["pavillon", 1]];
+KULTUR.holzburg = [["palisade", 6], ["palisadentor", 1], ["wachturm", 3],
+                   ["haus", 3], ["hausC", 2], ["scheune", 2], ["heuhaufen", 1],
+                   ["karren", 1], ["fass", 1]];
 KULTUR.wohn = KULTUR.dorf;          // Rückwärtskompatibilität für alte Karten
 
 var OBJGRUPPEN = {
@@ -74,7 +88,17 @@ var OBJGRUPPEN = {
   ruinen: [["saeule", 5], ["mauer", 3], ["fels", 2]],
   felsen: [["fels", 7], ["busch", 2]],
   werk: [["industrie", 3], ["kran", 2], ["haus", 2]],
-  natur: [["busch", 4], ["blume", 5], ["gras", 6], ["fels", 1]]
+  natur: [["busch", 4], ["blume", 5], ["gras", 6], ["fels", 1]],
+  /* Neue Gruppe, kein Eingriff in die bestehenden: die Wehrbau-Pools sollen
+     streubar sein, bevor genBurg (Bündel 2) sie zu einer Anlage ordnet. Die
+     Einzelstücke (bergfried, torhaus, barbakane, bastion) sind bewusst
+     schwach gewichtet — sie sind teuer und wirken vervielfacht wie Kulisse. */
+  wehrbau: [["mauerstueck", 6], ["mauerecke", 3], ["mauerdurchlass", 2],
+            ["mauerbogen", 2], ["zwingermauer", 3], ["mauertreppe", 2],
+            ["schildmauer", 2], ["wehrturm", 4], ["geschuetzturm", 2],
+            ["bergfried", 1], ["torhaus", 1], ["barbakane", 1], ["bastion", 1],
+            ["kettenturm", 1], ["wappenstein", 1], ["wehrbanner", 2]],
+  palisaden: [["palisade", 7], ["palisadentor", 1], ["wachturm", 2], ["pfosten", 2]]
 };
 /* Ortsstabiler Zufallsstrom je (Klickpunkt i, Inselindex k) — Muster ortsRng
    aus vines.js: der Strom haengt am stabilen Indexpaar statt an der

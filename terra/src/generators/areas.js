@@ -1,6 +1,6 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { S, BIOME } from '../core/store.js';
+import { S, BIOME, KARTE } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
@@ -46,6 +46,15 @@ function polyCenter(pts) {
 }
 
 /** Abstand so vergrößern, dass die Instanzzahl beherrschbar bleibt. */
+/** Instanzdeckel flaechenproportional zur Karte (H1d). Gleicher Faktor und
+ *  gleicher 4x-Deckel wie MAX_INST_PER_EL in store.js, damit die Flaechen-
+ *  deckel nie ueber das Element-Budget hinauswachsen. Bei 256 liefert er
+ *  exakt die alten Werte — grosse Karten sollen groessere Waelder tragen,
+ *  nicht duennere. */
+function deckel(n) {
+  return Math.round(n * Math.min(4, (KARTE.map * KARTE.map) / (256 * 256)));
+}
+
 function safeSpacing(pts, wanted, maxCount) {
   var a = polyArea(pts);
   var need = Math.sqrt(a / Math.max(1, maxCount));
@@ -86,7 +95,7 @@ function genWald(el) {
   var p = el.params, pts = el.points;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var klump = p.klumpen === undefined ? 0.55 : p.klumpen;
-  var sp = safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), 14000);
+  var sp = safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), deckel(14000));
   var schwelle = 0.26 + klump * 0.36;
   var bb = polyBBox(pts), occ = newOcc(4);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
@@ -152,7 +161,7 @@ function genFeld(el) {
   var ext = Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 0.75 + 4;
   var a = p.drehung * DEG, dx = Math.cos(a), dz = Math.sin(a);
   var px = -dz, pz = dx;
-  var rowSp = safeSpacing(pts, p.reihe, 6000) * 1.0;
+  var rowSp = safeSpacing(pts, p.reihe, deckel(6000)) * 1.0;
   var alongSp = 2.6;
   var frucht = FRUCHT[p.frucht] || FRUCHT.weizen;
   var occ = newOcc(2);
@@ -183,7 +192,7 @@ function genFeld(el) {
 function genWiese(el) {
   var p = el.params, pts = el.points;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
-  var sp = safeSpacing(pts, 2.6 / p.dichte, 20000);
+  var sp = safeSpacing(pts, 2.6 / p.dichte, deckel(20000));
   var bb = polyBBox(pts), occ = newOcc(1.5);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
   var d0 = Math.floor(bb.z0 / sp), d1 = Math.ceil(bb.z1 / sp);

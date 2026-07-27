@@ -27,6 +27,7 @@ var VARIANTS = {
   objekt: [["baeume", "Bäume"], ["haeuser", "Häuser"], ["klassisch", "Klassisch"],
            ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["ruinen", "Ruinen"],
            ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"],
+           ["wehrbau", "Wehrbau"], ["palisaden", "Palisaden"],
            ["inseln", "Schwebeinseln"]],
   ranke: [["ranke", "Ranke"]],
   terrain: [["heben", "Anheben"], ["senken", "Absenken"], ["glaetten", "Glätten"], ["ebnen", "Einebnen"]]
@@ -38,6 +39,7 @@ var PARAMS = {
     { k: "haeuser", l: "Häuser am Rand", b: true, d: true },
     { k: "stil", l: "Bebauung", o: [["dorf", "Dorf"], ["klassisch", "Klassisch"],
         ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["werk", "Werkstätten"],
+        ["burg", "Burg"], ["schloss", "Schloss"], ["holzburg", "Holzburg"],
         ["gemischt", "Gemischt"]], d: "dorf" },
     { k: "abstand", l: "Haus-Abstand", min: 5, max: 45, st: 1, d: 14 },
     { k: "streuung", l: "Versatz", min: 0, max: 6, st: 0.2, d: 2 }
@@ -130,8 +132,20 @@ var PARAMS = {
     { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },
     { k: "straenge", l: "Stränge", min: 3, max: 5, st: 1, d: 4 },
     { k: "dicke", l: "Dicke", min: 0.5, max: 2.5, st: 0.05, d: 1 },
+    // H4.1: Endradius relativ zum Fussradius. 0.45 ist die frueher fest
+    // verdrahtete Verjuengung — als Default rendert jede Bestandskarte
+    // unveraendert weiter.
+    { k: "dickeOben", l: "Dicke oben (Anteil)", min: 0.2, max: 1, st: 0.05, d: 0.45 },
     { k: "stil", l: "Stil", o: [["geflochten", "Geflochten"], ["glatt", "Glatt"]], d: "geflochten" },
     { k: "steigung", l: "Steigung (Ø je Windung)", min: 1.2, max: 8, st: 0.1, d: 2.8 },
+    // H4.1: Windung ueber die Hoehe interpoliert. 0 = "wie Steigung" — ein
+    // Sentinel statt eines festen Zahlwerts, weil defaultsFor fehlende
+    // Parameter beim Laden ergaenzt: ein fester Default wuerde jede
+    // Bestandskarte mit abweichender `steigung` umformen.
+    { k: "windungUnten", l: "Windung unten (0 = wie Steigung)", min: 0, max: 8, st: 0.1, d: 0 },
+    { k: "windungOben", l: "Windung oben (0 = wie Steigung)", min: 0, max: 8, st: 0.1, d: 0 },
+    // H4.3 (Kanon): Neigung zur Kartenmitte, dem Apfelkern. 0 = senkrecht.
+    { k: "kernzug", l: "Kernneigung zur Mitte", min: 0, max: 1, st: 0.05, d: 0 },
     { k: "blattgroesse", l: "Blattgröße", min: 0.5, max: 1.8, st: 0.05, d: 1 },
     { k: "plateaus", l: "Blattplateaus", min: 0, max: 6, st: 1, d: 3 },
     { k: "plateau", l: "Plateaugröße", min: 0.5, max: 2, st: 0.05, d: 1 },
@@ -143,10 +157,15 @@ var PARAMS = {
     { k: "stadtStil", l: "Baustil Städtchen", o: [["", "Klassisch kompakt"],
         ["dorf", "Dorf"], ["klassisch", "Klassisch"], ["zwergisch", "Zwergisch"],
         ["elfisch", "Elfisch"], ["werk", "Werkstätten"], ["ruine", "Ruinen"],
+        ["burg", "Burg"], ["schloss", "Schloss"], ["holzburg", "Holzburg"],
         ["gemischt", "Gemischt"]], d: "" },
     { k: "stadtDichte", l: "Stadtdichte", min: 0, max: 2, st: 0.1, d: 1 },
     { k: "treppe", l: "Wendeltreppe", b: true, d: false },
-    { k: "bruecken", l: "Hängebrücken", b: true, d: false }
+    { k: "bruecken", l: "Hängebrücken", b: true, d: false },
+    // H4.4: relative Höhe, ab der mehrere Fußpunkte zu einer Ranke
+    // zusammenwachsen. Bei nur einem Fußpunkt wirkungslos — und mehr als
+    // einen Fußpunkt kann keine Bestandskarte haben.
+    { k: "vereinigung", l: "Vereinigung ab Höhe", min: 0.15, max: 0.8, st: 0.05, d: 0.35 }
   ],
   "terrain:*": [
     { k: "radius", l: "Pinselradius", min: 2, max: 40, st: 0.5, d: 12 },

@@ -200,9 +200,9 @@ function updateHint() {
   else if (ed.tool === "pfad") txt = "<b>Pfad</b> zeichnen: klicken, Doppelklick beendet";
   else if (ed.tool === "flaeche") txt = "<b>Fläche</b> zeichnen: klicken, Doppelklick schließt das Polygon";
   else if (ed.tool === "objekt") txt = "<b>Klicken</b> platziert, <b>Ziehen</b> streut";
-  else if (ed.tool === "ranke") txt = "<b>Klicken</b> pflanzt eine Ranke";
+  else if (ed.tool === "ranke") txt = "<b>Klicken</b> pflanzt eine Ranke · <b>Alt+Klick</b> wächst einen Fuß an die ausgewählte an";
   else if (ed.tool === "terrain") txt = "<b>Ziehen</b> formt das Terrain";
-  else txt = "<b>Klick</b> wählt aus · Griffe ziehen · <b>Entf</b> löscht";
+  else txt = "<b>Klick</b> wählt aus · Griffe ziehen · <b>Doppelklick</b> auf Pfad oder Rankenachse setzt einen Punkt · <b>Shift</b> zieht Zugpunkte in der Höhe · <b>Entf</b> löscht";
   h.innerHTML = txt + "<br>WASD bewegen · Q/E drehen · Rad zoomen · Rechte Maus schwenken";
 }
 

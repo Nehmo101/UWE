@@ -1,8 +1,9 @@
 // Untere Leiste: Seed, Tageszeit, Raster, Effekte, Speichern, Laden, PNG-Export.
-import { S, HALF, BIOME, serializeElements, hydrate } from '../core/store.js';
-import { base, genBase, genBaseIn } from '../world/terrain.js';
+import { S, KARTE, KARTEN_GROESSEN, setKartenGroesse, BIOME, hoehenProfil,
+  hoehenProfilGleich, serializeElements, hydrate } from '../core/store.js';
+import { base, genBase, genBaseIn, terrainGeometrienNeu } from '../world/terrain.js';
 import { rebuildAll } from '../core/dirty.js';
-import { pushUndo } from './history.js';
+import { pushUndo, verwerfeHistorie } from './history.js';
 import { rebuildHandles } from './selection.js';
 import { cam } from './camera.js';
 import { ed } from './tools.js';
@@ -11,11 +12,47 @@ import { buildPanel, toast } from '../ui/panels.js';
 import { exportPNG, setPost, getPost, renderFrame } from '../render/pipeline.js';
 import { camera } from './camera.js';
 import { preview, handles, brushRing } from './selection.js';
+import { weiteHuellenNeu } from '../core/pools.js';
+import { wasserNeuBauen } from '../world/water.js';
 
 // Grenzen beim Übernehmen der gespeicherten Kamera: Zoom wie das Mausrad
 // (pointer.js klemmt tDist auf 25..400), Fokus wie die Tastatursteuerung.
+// Der Fokus haengt an der Kartengroesse und wird deshalb JETZT gelesen, nicht
+// beim Modulstart in eine Konstante kopiert (H1b — HALF ist keine Konstante
+// mehr, sondern eine lebende Bindung aus core/store.js).
 var CAM_DIST_MIN = 25, CAM_DIST_MAX = 400;
-var CAM_FOCUS_MAX = HALF + 40;
+function camFokusMax() { return KARTE.half + 40; }
+
+/* --- Kartengroesse wechseln (H1b) ---------------------------------------
+   setKartenGroesse() in store.js aendert nur Zahlen. Alles, was an diesen
+   Zahlen haengt, muss hier in dieser Reihenfolge nachgezogen werden:
+     1. Zahlen setzen (MAP/VW/HALF/MAX_INST_PER_EL),
+     2. Hoehenfelder + Patchraster neu (terrain.js) — MUSS vor genBase laufen,
+        weil genBase in das neue base-Feld schreibt,
+     3. Huellkugeln der Instanz-Pools (pools.js),
+     4. Wasserebene + Meeresboden (water.js),
+     5. Kamerafokus in die neuen Grenzen klemmen (beim Verkleinern stuende er
+        sonst ausserhalb der Karte).
+   genBase/rebuildAll ruft der jeweilige Aufrufer, weil sich Lade- und
+   UI-Pfad dort unterscheiden. */
+function setzeKartenGroesse(n) {
+  var g = setKartenGroesse(n);
+  terrainGeometrienNeu();
+  // Die gespeicherten Hoehenfelder der Historie passen nach dem Wechsel nicht
+  // mehr zur Feldgroesse — ein Undo darueber hinweg stellte sonst ein fremdes
+  // Terrain her (H1e).
+  verwerfeHistorie();
+  weiteHuellenNeu();
+  wasserNeuBauen();
+  var m = camFokusMax();
+  cam.tFocus.x = Math.max(-m, Math.min(m, cam.tFocus.x));
+  cam.tFocus.z = Math.max(-m, Math.min(m, cam.tFocus.z));
+  cam.focus.x = Math.max(-m, Math.min(m, cam.focus.x));
+  cam.focus.z = Math.max(-m, Math.min(m, cam.focus.z));
+  var sel = document.getElementById("kartenSel");
+  if (sel) sel.value = String(g);
+  return g;
+}
 
 /* --- Speicherformat v3: Hoehen als Delta zum Seed-Terrain -----------------
    Das Seed-Terrain ist deterministisch aus genBaseIn(_, worldSeed)
@@ -32,9 +69,12 @@ var CAM_FOCUS_MAX = HALF + 40;
  * gerundet; als Abweichung zaehlt erst |d| > 0.005, damit Rundungsrauschen
  * keine Eintraege erzeugt.
  */
-function berechneHoehenDelta(aktuell, seedTerrain) {
+function berechneHoehenDelta(aktuell, seedTerrain, anzahl) {
   var delta = [];
-  for (var i = 0; i < aktuell.length; i++) {
+  // Nur die genutzten VW*VW Zellen vergleichen: die Hoehenfelder in
+  // terrain.js wachsen mit der groessten je gewaehlten Kartengroesse mit und
+  // koennen laenger sein als die aktuelle Karte (siehe felderSichern).
+  for (var i = 0; i < anzahl; i++) {
     var d = aktuell[i] - seedTerrain[i];
     if (d > 0.005 || d < -0.005) delta.push(i, Math.round(aktuell[i] * 100) / 100);
   }
@@ -50,12 +90,24 @@ function wendeHoehenDeltaAn(ziel, delta) {
  * Prüft eine geladene Kartendatei VOLLSTÄNDIG und baut temporäre, bereits
  * geprüfte Strukturen auf. Wirft bei jedem Verstoß — der Aufrufer fängt den
  * Fehler und lässt den Editor-Zustand dann komplett unangetastet.
- * Fassung 1 (terra.html, ohne version-Feld), Fassung 2 (hoehen-Vollarray)
- * und Fassung 3 (hoehenDelta gegen das Seed-Terrain) werden gelesen.
+ * Fassung 1 (terra.html, ohne version-Feld), Fassung 2 (hoehen-Vollarray),
+ * Fassung 3 (hoehenDelta gegen das Seed-Terrain) und Fassung 4
+ * (zusaetzlich `kartenGroesse`) werden gelesen.
  */
 function validiereKarte(text) {
   var d = JSON.parse(text);
   if (!d || !d.elemente || !Array.isArray(d.elemente)) throw new Error("Unbekanntes Format");
+  // Kartengroesse (v4). Fehlt das Feld — jede v1/v2/v3-Datei — gilt 256, denn
+  // groesser konnte eine solche Karte nie sein. Unbekannte Werte werden nicht
+  // geraten, sondern als Formatfehler behandelt: eine 700er-Karte gaebe es
+  // sonst als stillschweigend verstuemmelte 256er.
+  var kartenGroesse = 256;
+  if (d.kartenGroesse !== undefined) {
+    if (!Number.isFinite(d.kartenGroesse) || KARTEN_GROESSEN.indexOf(d.kartenGroesse | 0) < 0)
+      throw new Error("Unbekannte Kartengröße");
+    kartenGroesse = d.kartenGroesse | 0;
+  }
+  var zellen = (kartenGroesse + 1) * (kartenGroesse + 1);   // VW*VW der DATEI
   // Akzeptiert wird entweder `hoehen` (Vollarray, v1/v2) ODER `hoehenDelta`
   // (v3, flache Index/Wert-Paare). Enthaelt eine Datei unerwartet beides,
   // gewinnt `hoehen` — die einfachste tolerante Regel.
@@ -70,7 +122,7 @@ function validiereKarte(text) {
     // Höhen: der genutzte Anfang muss aus endlichen Zahlen bestehen. Längere
     // Arrays werden abgeschnitten; kürzere füllt die Übernahme deterministisch
     // über genBase aus dem gespeicherten Seed auf.
-    var n = Math.min(d.hoehen.length, base.length);
+    var n = Math.min(d.hoehen.length, zellen);
     hoehen = new Float32Array(n);
     for (var i = 0; i < n; i++) {
       var h = d.hoehen[i];
@@ -79,12 +131,13 @@ function validiereKarte(text) {
     }
   } else {
     // hoehenDelta: flaches Array gerader Laenge; Indizes ganzzahlig in
-    // [0, base.length), Werte endliche Zahlen.
+    // [0, zellen) — gegen die Kartengroesse DER DATEI geprueft, nicht gegen
+    // base.length (das Feld kann laenger sein, siehe felderSichern).
     if (d.hoehenDelta.length % 2 !== 0) throw new Error("hoehenDelta: ungerade Länge");
     hoehenDelta = [];
     for (var q = 0; q < d.hoehenDelta.length; q += 2) {
       var di = d.hoehenDelta[q], dv = d.hoehenDelta[q + 1];
-      if (typeof di !== "number" || !Number.isInteger(di) || di < 0 || di >= base.length)
+      if (typeof di !== "number" || !Number.isInteger(di) || di < 0 || di >= zellen)
         throw new Error("hoehenDelta: ungültiger Index an Position " + q);
       if (typeof dv !== "number" || !Number.isFinite(dv))
         throw new Error("hoehenDelta: ungültiger Wert an Position " + (q + 1));
@@ -110,6 +163,16 @@ function validiereKarte(text) {
     }
     if (e.params !== undefined && (typeof e.params !== "object" || e.params === null || Array.isArray(e.params)))
       throw new Error("Element " + k + ": params ungültig");
+    // Zugpunkte der Ranken (H4.2) liegen in params und formen die Achse —
+    // vines.js filtert zwar defensiv, aber eine kaputte Datei soll gar nicht
+    // erst uebernommen werden (atomares Laden aus Runde C).
+    if (e.params && Array.isArray(e.params.zugpunkte)) {
+      for (var zq = 0; zq < e.params.zugpunkte.length; zq++) {
+        var zz = e.params.zugpunkte[zq];
+        if (!zz || !Number.isFinite(zz.h) || !Number.isFinite(zz.dx) || !Number.isFinite(zz.dz))
+          throw new Error("Element " + k + ": Zugpunkt " + zq + " ungültig");
+      }
+    }
     if (e.seed !== undefined && !Number.isFinite(e.seed)) throw new Error("Element " + k + ": seed ungültig");
     if (e.id !== undefined && !Number.isFinite(e.id)) throw new Error("Element " + k + ": id ungültig");
     elemente.push({
@@ -124,6 +187,7 @@ function validiereKarte(text) {
 
   return {
     dateiVersion: dateiVersion,
+    kartenGroesse: kartenGroesse,
     seed: d.seed | 0,
     hoehen: hoehen,               // Float32Array (v1/v2) oder null
     hoehenDelta: hoehenDelta,     // flaches Paar-Array (v3) oder null
@@ -172,13 +236,40 @@ export function initIO() {
     this.value = b;
     if (b === S.biom) return;
     pushUndo(true);
+    // H6: hat das neue Biom ein anderes Hoehenprofil (Randabbruch, Amplitude,
+    // Terrassen ...), muss das Basisterrain neu erzeugt werden — sonst zeigt
+    // eine "Aschebrache" die weiche Kueste der Wiese. Solange kein Biom ein
+    // `hoehe`-Feld traegt (Stand dieser Runde), sind beide Profile gleich und
+    // der Zweig springt nie an: der Biomwechsel bleibt exakt wie bisher eine
+    // reine Farb- und Bestueckungsaenderung, die Hoehen bleiben unberuehrt.
+    var profilAlt = hoehenProfil(S.biom), profilNeu = hoehenProfil(b);
+    var formNeu = !hoehenProfilGleich(profilAlt, profilNeu);
     S.biom = b;
+    if (formNeu) genBase(S.worldSeed);
     rebuildAll();
     // Tageszeit erneut anwenden: sobald atmosphere.js den wasserTint der
     // BIOME-Registry konsumiert (Folgerunde), greift er damit sofort beim
     // Wechsel; bis dahin ist das ein harmloses Re-Apply des Presets.
     setTod(getTodName(), true);
-    toast("Biom: " + BIOME[b].label);
+    toast("Biom: " + BIOME[b].label + (formNeu ? " — Gelände neu erzeugt" : ""));
+  });
+  /* Kartengroesse (H1b). Bewusst destruktiv: die Karte wird komplett neu
+     erzeugt. Das Hoehen-Delta des v3/v4-Formats ist gegen ein Seed-Terrain
+     EINER bestimmten Kartengroesse gerechnet — bei anderem VW liegen dieselben
+     Indizes auf voellig anderen Punkten. Die Elemente bleiben erhalten (ihre
+     Koordinaten sind Weltkoordinaten); nur der Pinsel-Anteil der Hoehen geht
+     verloren, worauf der Toast hinweist. */
+  document.getElementById("kartenSel").addEventListener("change", function () {
+    var n = parseInt(this.value, 10) | 0;
+    if (KARTEN_GROESSEN.indexOf(n) < 0) n = KARTE.map;
+    this.value = String(KARTE.map);
+    if (n === KARTE.map) return;
+    pushUndo(true);              // ersetzt die Hoehen -> Terrainkopie sichern
+    setzeKartenGroesse(n);       // Zahlen + Patchraster + Huellen + Wasser
+    genBase(S.worldSeed);
+    rebuildAll();
+    setTod(getTodName(), true);  // Nebel/Wasserfarbe auf die neue Groesse anwenden
+    toast("Kartengröße " + n + " — die Karte wurde neu erzeugt (Höhen aus dem Pinsel gehen verloren)");
   });
   function download(name, blob) {
     var a = document.createElement("a");
@@ -193,13 +284,18 @@ export function initIO() {
     // v3: nur die Abweichungen vom deterministischen Seed-Terrain speichern.
     // Frisches Seed-Terrain in ein temporaeres Array rechnen (laesst
     // base/AO/Geometrie unberuehrt) und gegen das bearbeitete base diffen.
+    var zellen = KARTE.vw * KARTE.vw;
     var seedTerrain = new Float32Array(base.length);
     genBaseIn(seedTerrain, S.worldSeed);
     var data = {
-      format: "terra", version: 3, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
-      biom: S.biom,               // tolerantes Zusatzfeld (G5), version bleibt 3
+      // v4: neues Feld `kartenGroesse`. Sonst formatgleich zu v3 — Leser, die
+      // das Feld nicht kennen, lesen die Karte weiterhin als 256er (was fuer
+      // jede 256er-Datei auch exakt stimmt).
+      format: "terra", version: 4, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
+      kartenGroesse: KARTE.map,
+      biom: S.biom,               // tolerantes Zusatzfeld (G5)
       kamera: { x: cam.tFocus.x, z: cam.tFocus.z, dist: cam.tDist, yaw: cam.tYaw, pitch: cam.tPitch },
-      hoehenDelta: berechneHoehenDelta(base, seedTerrain),
+      hoehenDelta: berechneHoehenDelta(base, seedTerrain, zellen),
       elemente: serializeElements(),
       // Stand des Element-Seed-Zaehlers mitschreiben, damit nextSeed() nach
       // dem Laden keine bereits vergebenen Seeds erneut erzeugt.
@@ -233,6 +329,12 @@ export function initIO() {
       // Generatoren lesen S.biom im rebuildAll unten. Select-UI nachfuehren.
       S.biom = karte.biom;
       document.getElementById("biomSel").value = S.biom;
+      // Kartengroesse VOR genBase/Delta setzen: genBase schreibt in das dann
+      // passend dimensionierte base-Feld, und die Deltaindizes der Datei sind
+      // gegen genau dieses VW gerechnet. (v1/v2/v3 liefern hier 256.)
+      if (karte.kartenGroesse !== KARTE.map) setzeKartenGroesse(karte.kartenGroesse);
+      var kartenSel = document.getElementById("kartenSel");
+      if (kartenSel) kartenSel.value = String(KARTE.map);
       if (karte.hoehenDelta !== null) {
         // v3: erst das komplette Seed-Terrain deterministisch erzeugen —
         // S.worldSeed ist oben bereits gesetzt, genau wie im v1/v2-Ablauf —
@@ -243,7 +345,7 @@ export function initIO() {
         // Kürzere Höhenfelder (ältere/fremde Dateien): erst das komplette Feld
         // deterministisch aus dem geladenen Seed erzeugen, damit keine Reste der
         // vorherigen Karte stehen bleiben — dann die gespeicherten Höhen darüber.
-        if (karte.hoehen.length < base.length) genBase(S.worldSeed);
+        if (karte.hoehen.length < KARTE.vw * KARTE.vw) genBase(S.worldSeed);
         base.set(karte.hoehen);
       }
       hydrate(karte.elemente);
@@ -265,8 +367,9 @@ export function initIO() {
         // Nur endliche Werte übernehmen (ein NaN würde die Dämpfung dauerhaft
         // einfrieren); sonst behält die Kamera ihren jeweiligen bisherigen Wert.
         var kk = karte.kamera;
-        if (Number.isFinite(kk.x)) cam.tFocus.x = Math.max(-CAM_FOCUS_MAX, Math.min(CAM_FOCUS_MAX, kk.x));
-        if (Number.isFinite(kk.z)) cam.tFocus.z = Math.max(-CAM_FOCUS_MAX, Math.min(CAM_FOCUS_MAX, kk.z));
+        var fmax = camFokusMax();
+        if (Number.isFinite(kk.x)) cam.tFocus.x = Math.max(-fmax, Math.min(fmax, kk.x));
+        if (Number.isFinite(kk.z)) cam.tFocus.z = Math.max(-fmax, Math.min(fmax, kk.z));
         if (Number.isFinite(kk.dist)) cam.tDist = Math.max(CAM_DIST_MIN, Math.min(CAM_DIST_MAX, kk.dist));
         if (Number.isFinite(kk.yaw)) cam.tYaw = kk.yaw;
         if (Number.isFinite(kk.pitch)) cam.tPitch = kk.pitch;

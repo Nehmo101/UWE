@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, rngOf, rr } from '../core/rng.js';
 import { S, BIOME } from '../core/store.js';
-import { terraUniforms, tintedMats, vineMat } from '../render/materials.js';
+import { terraUniforms, tintedMats, vineMat, setSchnee } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
 import { POOLS } from '../core/pools.js';
 import { schattenMat } from '../core/pools.js';
@@ -33,6 +33,9 @@ var PRESETS = {
     // G1: Rankenglut tags dezent warm-grau (entspricht dem bisherigen Look),
     // sterne 0 — kein Sternenfeld am Tag.
     rankenGlut: 0.3, rankenGlutFarbe: 0x4a463e, sterne: 0,
+    // H3: Arbor spendet der Welt Licht. Morgens traegt das Tageslicht schon,
+    // die Ranke bleibt aber ein schwacher Nahlicht-Sockel.
+    arborLicht: 0.15, arborFarbe: 0xdfe8f0,
     // F1-Startwert (Feinkalibrierung: F4): aufgehelltes, kuehles Morgenblau —
     // Hue ~20° blauwaerts gegenueber bounce, hell genug fuer den 15-%-Sockel.
     schattenKuehl: 0x96a8c8,
@@ -58,6 +61,8 @@ var PRESETS = {
     schatten: 0.45, wasser: 0x3f93ad, welt: 0xffffff, bounce: 0xe0d8c0,
     // G1: mittags die schwaechste Glut — hartes Licht schluckt das Leuchten.
     rankenGlut: 0.25, rankenGlutFarbe: 0x4a463e, sterne: 0,
+    // H3: mittags aus — hartes Sonnenlicht laesst kein Rankenlicht zu.
+    arborLicht: 0.0, arborFarbe: 0xdfe8f0,
     // F1-Startwert (Feinkalibrierung: F4): neutrales Himmelblau — mittags
     // kommt die Schattenfuellung vom blauen Himmel, nicht von warmem Bounce.
     schattenKuehl: 0x8ea6c4,
@@ -86,6 +91,9 @@ var PRESETS = {
     // G1: in der Daemmerung beginnt die Ranke zu leuchten; sterne 0.15 —
     // die ersten Sterne stehen schon am Abendhimmel.
     rankenGlut: 0.55, rankenGlutFarbe: 0x4a463e, sterne: 0.15,
+    // H3: in der Daemmerung uebernimmt Arbor spuerbar — kuehles Weiss gegen
+    // das orange Restlicht, der staerkste Kalt-Warm-Kontrast des Tages.
+    arborLicht: 0.35, arborFarbe: 0xd8e6ee,
     // F1-Startwert (Feinkalibrierung: F4): kaeltestes und dunkelstes Blau der
     // vier Stimmungen — der Abend lebt vom maximalen Kalt-Warm-Kontrast
     // zwischen orangem Licht und blauvioletten Schatten.
@@ -114,6 +122,9 @@ var PRESETS = {
     schatten: 0.15, wasser: 0xa6bcbb, welt: 0xf4f6f2, bounce: 0xdcd8cc,
     // G1: im Nebel traegt die Glut ein Stueck weiter als am klaren Tag.
     rankenGlut: 0.4, rankenGlutFarbe: 0x4a463e, sterne: 0,
+    // H3: im Dunst traegt das Rankenlicht weiter als am klaren Tag, bleibt
+    // aber schwach — der Nebelanteil (Lichtsaeule) macht hier die Wirkung.
+    arborLicht: 0.15, arborFarbe: 0xe2eced,
     // F1-Startwert (Feinkalibrierung: F4): fast neutral, kaum blaeuer als das
     // Umgebungslicht — Nebel frisst Farbkontrast, kuehle Schatten wuerden
     // hier kuenstlich wirken.
@@ -153,6 +164,10 @@ var PRESETS = {
     // Rankenglut: gazehaft-kuehles Eigenleuchten, mit Abstand der hellste
     // Wert der Nacht (rankenGlut 1.4 gegen fensterlose 0.25..0.55 am Tag).
     rankenGlut: 1.4, rankenGlutFarbe: 0x9ec8e8, sterne: 1,
+    // H3: nachts IST Arbor das Licht der Welt — voller Faktor, Farbe kuehl-
+    // weiss mit einem Stich ins Blaugruene (Kanon: die weissen Triebe
+    // leuchten aus sich heraus). Das warme Fensterglut bleibt der Gegenpol.
+    arborLicht: 1.0, arborFarbe: 0xc4e4e0,
     schattenKuehl: 0x3a4668,
     belichtung: 0.9,
     // Bewusste Ausnahme der ~0.9-Schwellen-Regel: schwelle 0.85 — die Glut
@@ -185,11 +200,13 @@ function mixArr(a, b, e) { return [lerp(a[0], b[0], e), lerp(a[1], b[1], e), ler
 
 var _dir = new THREE.Vector3();
 var _col = new THREE.Color();
+var _luft = new THREE.Color();   // eigener Puffer fuer den Biom-Nachkorrekturblock
 
 /** Blendet zwischen todFrom und todTo und schreibt alles in die Welt. */
 function applyTod(t) {
   var a = todFrom || todTo, b = todTo;
   var e = t * t * (3 - 2 * t);
+  var satFaktor = 1;   // Biom-Nachkorrektur auf grade.satMitte, s. luft-Block unten
 
   _dir.set(lerp(a.sonneDir[0], b.sonneDir[0], e), lerp(a.sonneDir[1], b.sonneDir[1], e),
     lerp(a.sonneDir[2], b.sonneDir[2], e)).normalize();
@@ -257,6 +274,58 @@ function applyTod(t) {
   // kuehles Gazeleuchten als hellster Wert im Bild. Blendet weich mit.
   mixHex(a.rankenGlutFarbe, b.rankenGlutFarbe, e, vineMat.emissive)
     .multiplyScalar(mixNum(a.rankenGlut, b.rankenGlut, e));
+  // H3 — Arbor als Lichtquelle: Staerke und Farbe blenden wie jedes andere
+  // Presetfeld weich mit. Die Rankenpositionen selbst setzt setArborQuellen()
+  // (materials.js), gefuettert aus dem Commit-Nachlauf.
+  terraUniforms.uArborStaerke.value = mixNum(
+    a.arborLicht === undefined ? 0 : a.arborLicht,
+    b.arborLicht === undefined ? 0 : b.arborLicht, e);
+  mixHex(a.arborFarbe === undefined ? 0xdfe8f0 : a.arborFarbe,
+    b.arborFarbe === undefined ? 0xdfe8f0 : b.arborFarbe, e,
+    terraUniforms.uArborFarbe.value);
+
+  /* --- Biom-Atmosphaere (Biomkatalog 28) --------------------------------
+     Nachkorrektur NACH der fertigen Tageszeit-Blende — genau hier, wo auch
+     der wasserTint sitzt. Bewusst NICHT in die Presets hinein: schnappschuss()
+     friert beim Tageszeitwechsel den Ist-Zustand als Blendquelle ein, eine
+     Biom-Nuance in den Presets wuerde beim Ueberblenden doppelt eingerechnet.
+     Post-Blend angewandt bleibt sie ueber jeden Uebergang stabil.
+     Fehlt der luft-Block im Biom, laeuft der ganze Zweig nicht — das Bild ist
+     dann byteidentisch zu vorher. Alle Felder sind einzeln optional.
+     Nachtregel: die Tints wirken nur multiplikativ und duerfen (laut Katalog)
+     nie ueber 1.10 liegen, satMitte ebenso — so bleibt der Kalibrierkorridor
+     (Massen S 0.25–0.50, Werteumfang 0.20–0.85) ueber alle Kombinationen
+     erhalten, ohne dass die Nacht aufgehellt wird. */
+  var L = (BIOME[S.biom] || BIOME.wiese).luft;
+  if (L) {
+    var tw = L.fogWarmTint, tc = L.fogCoolTint, fc;
+    if (tw) { fc = terraUniforms.uFogWarm.value; fc.setRGB(fc.r * tw[0], fc.g * tw[1], fc.b * tw[2]); }
+    if (tc) { fc = terraUniforms.uFogCool.value; fc.setRGB(fc.r * tc[0], fc.g * tc[1], fc.b * tc[2]); }
+    // Mittelwert nachziehen: fogMittel speist scene.fog, den Rauch und den
+    // Horizont der Farbgraduierung.
+    fogMittel.copy(terraUniforms.uFogWarm.value).lerp(terraUniforms.uFogCool.value, 0.5);
+    if (typeof L.fogCapMax === 'number')
+      terraUniforms.uFogCap.value = Math.min(terraUniforms.uFogCap.value, L.fogCapMax);
+    if (sceneHook && sceneHook.fog) {
+      sceneHook.fog.color.copy(fogMittel);
+      if (typeof L.fogNah === 'number') sceneHook.fog.near *= L.fogNah;
+      if (typeof L.fogFern === 'number') sceneHook.fog.far *= L.fogFern;
+    }
+    // Wirksamstes Einzelfeld: der Hemisphaeren-Bodenanteil ist physikalisch
+    // das vom Boden zurueckgeworfene Licht — er verkoppelt Terrainpalette und
+    // Beleuchtung mit einer Zeile.
+    if (L.hemiBoden !== undefined && L.hemiBoden !== null && L.hemiMisch)
+      hemi.groundColor.lerp(_luft.set(L.hemiBoden), clamp(L.hemiMisch, 0, 1));
+    if (typeof L.wolkenschatten === 'number')
+      terraUniforms.uCloudAmt.value *= L.wolkenschatten;
+    if (typeof L.satMitte === 'number') satFaktor = L.satMitte;
+  }
+  // H2a — Schneeauflage: ein einziger Schreibvorgang beschneit die ganze
+  // Szene. Fehlt der Block im Biom, setzt setSchnee uSchneeAuflage = 0 und der
+  // Fragmentzweig faellt komplett weg. io.js ruft nach jedem Biomwechsel
+  // setTod(getTodName(), true) — damit greift der Wechsel sofort.
+  var BS = BIOME[S.biom] || BIOME.wiese;
+  setSchnee(BS.schnee || (BS.luft && BS.luft.schnee) || null);
 
   setLook({
     belichtung: mixNum(a.belichtung, b.belichtung, e),
@@ -266,7 +335,10 @@ function applyTod(t) {
     grade: { lift: mixArr(a.grade.lift, b.grade.lift, e),
       gamma: mixArr(a.grade.gamma, b.grade.gamma, e),
       gain: mixArr(a.grade.gain, b.grade.gain, e),
-      satMitte: mixNum(a.grade.satMitte, b.grade.satMitte, e),
+      // satFaktor ist die Biom-Nachkorrektur (luft.satMitte, neutral = 1) —
+      // die Saettigung wird dadurch nie global angehoben, sondern nur je Biom
+      // nachgezogen; der Katalog deckelt den Faktor bei 1.10.
+      satMitte: mixNum(a.grade.satMitte, b.grade.satMitte, e) * satFaktor,
       satLicht: mixNum(a.grade.satLicht, b.grade.satLicht, e),
       schwarz: mixNum(a.grade.schwarz, b.grade.schwarz, e),
       vignette: mixNum(a.grade.vignette, b.grade.vignette, e) },
@@ -298,7 +370,7 @@ function schnappschuss() {
   // Hex-Farben sind numbers — lerp im Zahlenraum waere falsch. Farbfelder gezielt:
   ['sonne','hemiHimmel','hemiBoden','gegen','fogWarm','fogCool','scheibe','gegenGlow',
    'wolkeOben','wolkeUnten','wolkeRand','wolkeFern','wasser','welt','bounce',
-   'schattenKuehl','rankenGlutFarbe'].forEach(function (k) {
+   'schattenKuehl','rankenGlutFarbe','arborFarbe'].forEach(function (k) {
     s[k] = mixHex(a[k], b[k], e, _col).getHex();
   });
   return s;

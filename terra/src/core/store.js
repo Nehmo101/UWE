@@ -1,13 +1,62 @@
 import * as THREE from 'three';
 // Weltkonstanten und der explizite globale Zustand (statt loser Globals).
 
-export const MAP = 256;                  // Kacheln pro Achse
-export const VW = MAP + 1;               // Vertices pro Achse
-export const HALF = MAP / 2;
+/* ==========================================================================
+   Kartengroesse (H1b) — frueher drei `const`-Exporte, jetzt Laufzeitwerte.
+
+   Warum das keinen Importeur bricht: ES-Module exportieren `let`-Variablen
+   als LEBENDE Bindungen. Wer `import { HALF } from '../core/store.js'`
+   schreibt, liest bei JEDEM Zugriff den aktuellen Wert — Zuweisungen finden
+   ausschliesslich hier in setKartenGroesse() statt. Geprueft wurden alle
+   Importeure (camera.js, pointer.js, objects.js, dirty.js, main.js, io.js,
+   terrain.js): nur io.js kopierte den Wert beim Laden in eine eigene
+   Konstante (CAM_FOCUS_MAX) — dort nachgezogen. Neue Regel fuer alle Module:
+   MAP/VW/HALF/MAX_INST_PER_EL NIE beim Modulstart in eine eigene Variable
+   kopieren, sondern in der Funktion lesen (oder KARTE.* verwenden).
+
+   KARTE ist derselbe Zustand als benanntes Objekt — praktisch fuer Module,
+   die die Groesse als Ganzes brauchen (pools.js Huellkugel, water.js Ebene).
+   KARTE und MAP/VW/HALF sind immer synchron; setKartenGroesse ist die
+   einzige Stelle, die beides schreibt.
+   ========================================================================== */
+export const KARTEN_GROESSEN = [256, 512, 1024];   // erlaubte Kantenlaengen
+export const KARTE = { map: 256, vw: 257, half: 128 };
+export let MAP = 256;                    // Kacheln pro Achse
+export let VW = MAP + 1;                 // Vertices pro Achse
+export let HALF = MAP / 2;
 export const WATER = 0;                  // Wasserspiegel
 export const VINE_R = 6;                 // globaler Rankenradius am Fuss - Massstabsanker
 export const COS40 = Math.cos(40 * Math.PI / 180);
-export const MAX_INST_PER_EL = 24000;    // Sicherheitsnetz je Element
+
+/* H1d — Instanz-Budget flaechenproportional. 24000 war auf die 256er-Karte
+   kalibriert; eine viermal so grosse Flaeche braucht viermal so viele
+   Instanzen, sonst wird eine grosse Wiese duenner statt groesser. Quadratisch
+   mit der Kantenlaenge, aber gedeckelt: jenseits von ~96k Instanzen JE
+   ELEMENT dominiert das Umpacken in pools.repack() (12 Zahlen je Instanz im
+   JS-Array plus Matrix-Upload) alles andere — der Deckel ist ein
+   Reissleinen-Wert, kein Gestaltungsmittel. 256 -> 24000 (unveraendert),
+   512 -> 96000, 1024 -> ebenfalls 96000 (gedeckelt). */
+const MAX_INST_DECKEL = 96000;
+function instanzBudget(map) {
+  return Math.min(MAX_INST_DECKEL, Math.round(24000 * (map * map) / (256 * 256)));
+}
+export let MAX_INST_PER_EL = instanzBudget(KARTE.map);   // Sicherheitsnetz je Element
+
+/**
+ * Setzt die Kartengroesse (256/512/1024). Aendert AUSSCHLIESSLICH die
+ * Zahlenwerte — die abhaengigen Geometrien (Terrain-Patches, Huellkugeln der
+ * Pools, Wasserebene/Meeresboden) zieht der Aufrufer nach, weil store.js
+ * bewusst keine Abhaengigkeit auf world/ und render/ hat. Reihenfolge siehe
+ * editor/io.js (setzeKartenGroesse).
+ */
+export function setKartenGroesse(n) {
+  n = n | 0;
+  if (KARTEN_GROESSEN.indexOf(n) < 0) n = 256;
+  KARTE.map = n; KARTE.vw = n + 1; KARTE.half = n / 2;
+  MAP = KARTE.map; VW = KARTE.vw; HALF = KARTE.half;
+  MAX_INST_PER_EL = instanzBudget(n);
+  return n;
+}
 
 /** Zentraler Zustand: Elemente, Seed, Raster, Biom. */
 export const S = {
@@ -45,6 +94,11 @@ export const S = {
        uwTabelle   eigene wpick-Tabelle fuer den Unterwuchs; null = Standard
      Im wiese-Pfad sind alle Faktoren 1 bzw. null — byteidentisch.
 
+   hoehe — OPTIONALES Hoehenprofil fuer genBaseIn (world/terrain.js, H6).
+     Fehlt das Feld (Stand dieser Runde bei allen fuenf Biomen), gilt
+     HOEHEN_STANDARD, und genBaseIn rechnet Byte fuer Byte wie bisher.
+     Die konkreten Biomwerte setzt ein spaeterer Agent aus dem Biomkatalog.
+
    wasserTint — [r,g,b]-Multiplikator auf die Tageszeit-Wasserfarbe.
      BEWUSST INERT in dieser Runde: water.js/atmosphere.js sind tabu. Die
      Anbindung zieht der Orchestrator nach: in atmosphere.js direkt nach
@@ -52,6 +106,54 @@ export const S = {
      waterMat.color multiplizieren. Bis dahin liest kein Modul dieses Feld.
    ========================================================================== */
 function farbe(hex) { return new THREE.Color(hex); }
+
+/* ==========================================================================
+   Hoehenprofil (H6 / H2). genBaseIn zog den Kartenrand bisher fest ueber
+   `lerp(-22, h, sstep(0, 55, d))` und die Grundform ueber die Literale
+   26 / 4 / -6. Diese fuenf Zahlen stehen jetzt hier und koennen je Biom
+   ueberschrieben werden — erst damit unterscheidet sich eine Aschebrache
+   (senkrechte Abrisskante) wirklich von einer Kueste.
+
+     amp        Amplitude der groben Oktave (Landschaftsmassen)
+     fein       Amplitude der feinen Oktave (Bodenrelief)
+     sockel     konstanter Hoehenversatz (bestimmt den Landanteil)
+     randTiefe  Hoehe, auf die der Kartenrand gezogen wird
+     randBreite Breite des Randabfalls in Kacheln (klein = Abrisskante)
+
+   Vorbereitet, aber in dieser Runde bei allen Biomen 0 und damit ohne jede
+   Wirkung (die Zweige in genBaseIn werden bei 0 komplett uebersprungen —
+   das ist die Bedingung fuer Byte-Identitaet):
+
+     grat       Staerke aufgesetzter Grate (Ridge-Noise, Gebirge)
+     stufe      Hoehe der Terrassenstufen (Terrassenland, 0 = stufenlos)
+     senken     Tiefe eingesenkter Mulden (Dolinen im Karst)
+
+   randBreite = 0 ist erlaubt und bedeutet "Kante ohne Uebergang"; genBaseIn
+   ersetzt die 0 durch einen Winzigwert, damit sstep nicht durch 0 teilt.
+   ========================================================================== */
+export const HOEHEN_STANDARD = {
+  amp: 26, fein: 4, sockel: -6,
+  randTiefe: -22, randBreite: 55,
+  grat: 0, stufe: 0, senken: 0
+};
+
+/** Aufgeloestes Hoehenprofil eines Bioms: Registry-Werte ueber den Standard. */
+export function hoehenProfil(biomName) {
+  var b = BIOME[biomName] || BIOME.wiese;
+  var out = {};
+  for (var k in HOEHEN_STANDARD) out[k] = HOEHEN_STANDARD[k];
+  if (b && b.hoehe) for (var q in b.hoehe) {
+    if (out[q] !== undefined && typeof b.hoehe[q] === "number") out[q] = b.hoehe[q];
+  }
+  return out;
+}
+
+/** Vergleicht zwei aufgeloeste Profile — Biomwechsel muss das Basisterrain
+ *  nur dann neu erzeugen, wenn sich die Form tatsaechlich aendert. */
+export function hoehenProfilGleich(a, b) {
+  for (var k in HOEHEN_STANDARD) if (a[k] !== b[k]) return false;
+  return true;
+}
 
 export const BIOME = {
   wiese: {

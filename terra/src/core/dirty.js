@@ -1,6 +1,7 @@
 // Aenderungs-Orchestrierung: Elemente (neu) erzeugen, Terrain/Korridore
 // nachziehen, geaenderte Pools packen.
-import { S, HALF, clearElement, dropElement } from './store.js';
+import { S, HALF, VINE_R, clearElement, dropElement } from './store.js';
+import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
 import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
   refreshTerrainFull, recomputeHeights, computeAO, refreshGrid } from '../world/terrain.js';
@@ -178,6 +179,7 @@ function rebuildAll() {
     if (isHeavy(el)) el._hgtBox = elementBox(el);
   }
   markDirty();
+  refreshArborQuellen();
 }
 
 /** Regeneriert alle Elemente auf dem aktuellen Terrain — einmalig nach einem
@@ -217,6 +219,9 @@ function commit(el, heavy) {
   } else if (el) {
     regenElement(el);
   }
+  // Auch ein leichtes Commit kann das Licht verschieben (Fuss bewegt, dicke
+  // oder hoehe geaendert) — deshalb in beiden Zweigen nachziehen.
+  refreshArborQuellen();
 }
 
 /** Ändert ein Element das Terrain oder die Sperrflächen? */
@@ -226,11 +231,39 @@ function isHeavy(el) {
 }
 
 
+/**
+ * Meldet die Rankenfuesse als Arbor-Lichtquellen an den Shader (H3).
+ * Kanon: Arbor haelt den zerrissenen Planeten zusammen und spendet der Welt
+ * Licht — die Ranken muessen ihre Umgebung also wirklich aufhellen, nicht nur
+ * selbst hell sein. genRanke darf `el._arbor` setzen (mehrere Fuesse, eigene
+ * Radien); fehlt das Feld, genuegt der erste Punkt.
+ */
+function refreshArborQuellen() {
+  var q = [];
+  for (var i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind !== "ranke" || !el.points.length) continue;
+    if (el._arbor && el._arbor.length) { q.push.apply(q, el._arbor); continue; }
+    var pr = el.params || {};
+    for (var k = 0; k < el.points.length; k++) {
+      q.push({
+        x: el.points[k].x, z: el.points[k].z,
+        radius: VINE_R * (pr.dicke || 1),
+        // Hohe Ranken tragen weiter: 220 Einheiten sind die volle Staerke.
+        staerke: Math.min(1, (pr.hoehe || 0) / 220)
+      });
+    }
+  }
+  setArborQuellen(q);
+}
+
 /** Loeschen mit Dirty-Meldung der betroffenen Pools. */
 function deleteElement(el) {
   markDirty(Object.keys(el.inst));
   dropElement(el);
+  refreshArborQuellen();
 }
 
 export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildCorridors,
-  rebuildAll, commit, isHeavy, deleteElement, markDirty, flushPack };
+  rebuildAll, commit, isHeavy, deleteElement, refreshArborQuellen,
+  markDirty, flushPack };

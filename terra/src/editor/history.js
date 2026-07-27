@@ -73,4 +73,13 @@ function redo() {
 }
 
 
-export { snapshot, pushUndo, restore, undo, redo };
+/** Historie verwerfen — noetig beim Wechsel der Kartengroesse (H1e): die
+ *  gespeicherten Hoehenfelder passen danach nicht mehr zur Feldgroesse, ein
+ *  Undo darueber hinweg wuerde ein inhaltlich fremdes Terrain herstellen. */
+function verwerfeHistorie() {
+  undoStack.length = 0;
+  redoStack.length = 0;
+  letzteTerrainKopie = base.slice();
+}
+
+export { snapshot, pushUndo, restore, undo, redo, verwerfeHistorie };

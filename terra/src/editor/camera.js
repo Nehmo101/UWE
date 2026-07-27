@@ -18,6 +18,13 @@ export const cam = {
 };
 var DAMP = 0.15;
 
+/* Schwenkgrenze: 40 Einheiten ueber den Kartenrand hinaus (H1b).
+   HALF ist seit der Kartengroessen-Umstellung keine Konstante mehr, sondern
+   eine lebende Modulbindung aus core/store.js. Deshalb MUSS der Wert in der
+   Funktion gelesen werden — eine Kopie beim Modulstart wuerde beim Wechsel
+   auf 512/1024 auf der alten Grenze einfrieren. */
+function fokusGrenze() { return HALF + 40; }
+
 export const keys = {};
 export function initKeys(onKey) {
   window.addEventListener("keydown", function (e) {
@@ -65,8 +72,9 @@ function moveFocus(dt) {
   if (keys.KeyA || keys.ArrowLeft) { mx -= rx; mz -= rz; }
   if (mx || mz) {
     var l = Math.sqrt(mx * mx + mz * mz);
-    cam.tFocus.x = clamp(cam.tFocus.x + mx / l * sp, -HALF - 40, HALF + 40);
-    cam.tFocus.z = clamp(cam.tFocus.z + mz / l * sp, -HALF - 40, HALF + 40);
+    var g = fokusGrenze();
+    cam.tFocus.x = clamp(cam.tFocus.x + mx / l * sp, -g, g);
+    cam.tFocus.z = clamp(cam.tFocus.z + mz / l * sp, -g, g);
   }
   if (keys.KeyQ) cam.tYaw += 1.4 * dt;
   if (keys.KeyE) cam.tYaw -= 1.4 * dt;
@@ -115,5 +123,11 @@ function groundPoint(ev) {
 }
 
 
-export { zoomT, autoPitch, updateCamera, moveFocus, raycaster, _ndc, rayFrom,
+/* rayTerrain arbeitet ausschliesslich analytisch gegen das Hoehenfeld
+   (heightAt), NICHT gegen Meshes — die Zerlegung des Terrains in Patches
+   (H1a) laesst ihn deshalb voellig unberuehrt. Die Schrittweite (max 2400
+   Welteinheiten Reichweite) deckt auch eine 1024er-Karte ab, weil der
+   Strahl vom Kamerastandpunkt aus laeuft und die Kamera hoechstens
+   400 Einheiten vom Fokus entfernt steht. */
+export { zoomT, autoPitch, updateCamera, moveFocus, fokusGrenze, raycaster, _ndc, rayFrom,
   rayTerrain, rayPlane, groundPoint };

@@ -643,6 +643,276 @@ function sockel(parts, w, d, hex) {
 }
 
 /* ==========================================================================
+   Wehrbau- und Ausbauhelfer: Zinnen, Arkaden, Treppen, Dachlandschaft,
+   Fachwerk, Bruchkante. Sie tragen Kategorie 1 des Objektkatalogs und werden
+   von den spaeteren Buendeln (Kloster, Verkehr, Ruinen) mitbenutzt.
+   ========================================================================== */
+
+/**
+ * Zinnenkranz. Alle drei Grundrisse setzen dieselbe Merlon-Zelle und
+ * unterscheiden nur die Bahn — als drei Helfer stuende der Merlon dreimal im
+ * Code, und die vierzehn Wehrbau-Pools muessten sich fuer einen entscheiden.
+ * opt.form:
+ *   "rund"  — n Merlonen tangential auf dem Kreis mit Radius w; opt.bogen
+ *             begrenzt den Kranz und opt.mitte dreht ihn (Halbschale der
+ *             Barbakane, die nur nach vorn Zinnen traegt),
+ *   "reihe" — eine gerade Bahn der Laenge w entlang opt.achse ("x" oder "z";
+ *             Aussenseite einer Mauer, deren Innenseite nur eine Brustwehr
+ *             traegt — Mauerschenkel laufen in beide Richtungen), opt.dreh
+ *             kippt die Bahn um die Hochachse (schraege Bastionsfacen),
+ *   sonst   — geschlossener Ring um das Rechteck w x d.
+ * y ist die Oberkante des Wehrgangs, opt.x/opt.z verschieben den Grundriss
+ * (Mauerschenkel sitzen neben dem Ursprung, nicht darauf).
+ */
+function zinnen(parts, w, d, y, hex, n, opt) {
+  opt = opt || {};
+  var hz = opt.hoehe || 0.44, t = opt.staerke || 0.24;
+  var x0 = opt.x || 0, z0 = opt.z || 0, i;
+  if (opt.form === "rund") {
+    var sp = opt.bogen === undefined ? Math.PI * 2 : opt.bogen;
+    var voll = sp >= Math.PI * 2 - 1e-6, mitte = opt.mitte || 0;
+    var br = sp * w / n * 0.56;             // 56 % Deckung, der Rest bleibt Scharte
+    for (i = 0; i < n; i++) {
+      var a = mitte + (voll ? i / n : (n > 1 ? i / (n - 1) : 0.5) - 0.5) * sp;
+      parts.push(part(new BX(t, hz, br),
+        M(x0 + Math.cos(a) * w, y + hz / 2, z0 + Math.sin(a) * w, 0, -a, 0), hex));
+    }
+    return parts;
+  }
+  var bx = w / n * 0.58;
+  if (opt.form === "reihe") {
+    var laengsZ = opt.achse === "z";
+    var dr = opt.dreh || 0, cd = Math.cos(dr), sd = Math.sin(dr);
+    for (i = 0; i < n; i++) {
+      var pu = -w / 2 + (i + 0.5) * (w / n);
+      var ux = laengsZ ? 0 : pu, uz = laengsZ ? pu : 0;
+      parts.push(part(laengsZ ? new BX(t, hz, bx) : new BX(bx, hz, t),
+        M(x0 + ux * cd + uz * sd, y + hz / 2, z0 - ux * sd + uz * cd, 0, dr, 0), hex));
+    }
+    return parts;
+  }
+  for (i = 0; i < n; i++) {
+    var px = x0 - w / 2 + (i + 0.5) * (w / n);
+    parts.push(part(new BX(bx, hz, t), M(px, y + hz / 2, z0 + d / 2 - t / 2), hex));
+    parts.push(part(new BX(bx, hz, t), M(px, y + hz / 2, z0 - d / 2 + t / 2), hex));
+  }
+  var m = Math.max(1, Math.round(n * d / w));
+  for (i = 0; i < m; i++) {
+    var pz = z0 - d / 2 + (i + 0.5) * (d / m), bz = d / m * 0.58;
+    parts.push(part(new BX(t, hz, bz), M(x0 + w / 2 - t / 2, y + hz / 2, pz), hex));
+    parts.push(part(new BX(t, hz, bz), M(x0 - w / 2 + t / 2, y + hz / 2, pz), hex));
+  }
+  return parts;
+}
+
+/**
+ * Arkade: n Halbboegen der lichten Weite spann zwischen n+1 Pfeilern; y ist
+ * die Standflaeche, hoehe die Kaempferhoehe. Die Boegen sind TorusGeometry mit
+ * thetaLength = PI, in z auf die Bautiefe gestreckt — dieselbe Bauweise wie im
+ * Bestand (geoBogen). Aus BX-Segmenten gestueckelt kostete derselbe Bogen mehr
+ * Dreiecke, braeuchte je Segment eine eigene Drehmatrix und liesse am
+ * Pfeileransatz eine Fuge stehen, die der Torus von sich aus schliesst.
+ */
+function bogenreihe(parts, n, spann, hoehe, y, hex, tiefe, pfeilerB) {
+  var pw = pfeilerB || spann * 0.32, t = tiefe || spann * 0.6;
+  var schritt = spann + pw, x0 = -n * schritt / 2;
+  var r = schritt / 2, tube = pw * 0.42;          // Bogen setzt in der Pfeilermitte an
+  var bogen = new THREE.TorusGeometry(r, tube, 5, 7, Math.PI);
+  var i;
+  for (i = 0; i <= n; i++) {
+    parts.push(part(new BX(pw, hoehe, t), M(x0 + i * schritt, y + hoehe / 2, 0), hex));
+  }
+  for (i = 0; i < n; i++) {
+    parts.push(part(bogen, M(x0 + (i + 0.5) * schritt, y + hoehe, 0,
+      0, 0, 0, 1, 1, t / (tube * 2)), hex));
+  }
+  return parts;
+}
+
+/**
+ * Gerader Stufenlauf, ansteigend in +z ab (x, y, z). Jede Stufe ist ein Block
+ * bis zum Boden statt einer schwebenden Platte: gleiche Dreieckszahl, aber der
+ * Lauf bleibt von der Seite geschlossen. wangeHex setzt zwei Schraegwangen.
+ * (Die Wendelvariante haengt in vines.js an der Rankenachse und bleibt dort.)
+ */
+function treppe(parts, n, breite, steigung, x, y, z, hex, wangeHex) {
+  var auftritt = steigung * 1.35, i;
+  for (i = 0; i < n; i++) {
+    var h = steigung * (i + 1);
+    parts.push(part(new BX(breite, h, auftritt),
+      M(x, y + h / 2, z + (i + 0.5) * auftritt), hex));
+  }
+  if (wangeHex !== undefined) {
+    var lauf = n * auftritt, stieg = n * steigung;
+    var lang = Math.sqrt(lauf * lauf + stieg * stieg);
+    var neig = Math.atan2(stieg, lauf);
+    for (var s = -1; s <= 1; s += 2) {
+      parts.push(part(new BX(0.14, 0.34, lang),
+        M(x + s * (breite / 2 + 0.06), y + stieg / 2 + 0.12, z + lauf / 2,
+          -neig, 0, 0), wangeHex));
+    }
+  }
+  return parts;
+}
+
+/**
+ * Walmdach als Sechs-Punkt-Koerper: vier Traufecken und ein in z verkuerzter
+ * First. firstAnteil = 1 ergibt das Giebelprisma, 0 die Pyramide; der
+ * Krueppelwalm liegt dazwischen und ist mit prismGeo allein nicht baubar.
+ */
+function walmGeo(w, h, d, firstAnteil) {
+  var hw = w / 2, hd = d / 2, fd = hd * clamp(firstAnteil, 0, 1);
+  var A = [-hw, 0, -hd], B = [hw, 0, -hd], C = [hw, 0, hd], D = [-hw, 0, hd];
+  var E = [0, h, -fd], F = [0, h, fd];
+  var tri = [D, C, F,  B, A, E,  B, F, C,  B, E, F,
+             A, F, E,  A, D, F,  A, B, C,  A, C, D];
+  var pos = new Float32Array(tri.length * 3);
+  for (var i = 0; i < tri.length; i++) {
+    pos[i * 3] = tri[i][0]; pos[i * 3 + 1] = tri[i][1]; pos[i * 3 + 2] = tri[i][2];
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * Reicheres Dach als dach(): Walm, Krueppelwalm oder Mansarde, dazu Gauben und
+ * Kamine, alles aus der Seed bestimmt. dach() bleibt unveraendert, weil der
+ * Bestand auf seine Proportionen eingemessen ist — neue Bauten nehmen diese
+ * Variante, damit die Dachlinie einer Siedlung nicht viermal dieselbe ist.
+ */
+function dachlandschaft(parts, w, d, y, hex, seed) {
+  var art = Math.floor(hashi(3, 5, seed) * 3);          // 0 Walm, 1 Krueppelwalm, 2 Mansarde
+  // Ueberstand aus der KURZEN Seite: dach() rechnet ihn aus w, was bei den
+  // langgestreckten Bauten hier (Palas, Schlossfluegel) einen Meter Dachrand
+  // ueber der Traufe ergaebe.
+  var ue = Math.min(w, d) * 0.11, dw = w + ue * 2, dd = d + ue * 2;
+  var h = Math.min(w, d) * (0.5 + hashi(5, 7, seed) * 0.3);
+  var knick = new THREE.Color(hex).multiplyScalar(0.86).getHex();
+  var hUnten = art === 2 ? h * 0.58 : h, firstY, i;
+  if (art === 2) {                                       // Mansarde: steil, dann flach
+    parts.push(part(walmGeo(dw, hUnten, dd, 0.5), M(0, y, 0), hex));
+    parts.push(part(new BX(dw * 0.66, 0.12, dd * 0.66), M(0, y + hUnten, 0), knick));
+    parts.push(part(walmGeo(dw * 0.62, h * 0.52, dd * 0.62, 0.7), M(0, y + hUnten, 0), hex));
+    firstY = y + hUnten + h * 0.52;
+  } else {
+    parts.push(part(walmGeo(dw, h, dd, art === 0 ? 0.3 : 0.74), M(0, y, 0), hex));
+    firstY = y + h;
+  }
+  parts.push(part(new BX(dw, 0.10, dd), M(0, y - 0.05, 0), 0x4a4038));    // Untersicht
+  parts.push(part(new BX(w * 1.01, 0.22, d * 1.01), M(0, y - 0.20, 0), 0x3a332c));
+  // Gauben auf den Traufseiten. Der Fusspunkt wird aus der Dachflaeche
+  // gerechnet (die Flanke faellt von x = 0 nach x = dw/2 auf 0 ab), sonst
+  // haengen sie je nach Dachart in der Luft oder stecken im Dach.
+  var nG = Math.floor(hashi(11, 13, seed) * 3), rel = 0.52;
+  for (i = 0; i < nG; i++) {
+    var s = i % 2 === 0 ? 1 : -1;
+    var gx = dw * 0.5 * rel * s, gz = (hashi(i, 23, seed) - 0.5) * dd * 0.5;
+    var gy = y + hUnten * (1 - rel);
+    parts.push(part(prismGeo(0.66, 0.36, 0.72),
+      M(gx, gy, gz, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 0), hex));
+    parts.push(part(new BX(0.32, 0.34, 0.1),
+      M(gx + s * 0.32, gy + 0.17, gz, 0, Math.PI / 2, 0), 0x2e3038));
+  }
+  var nK = 1 + Math.floor(hashi(17, 19, seed) * 2);
+  for (i = 0; i < nK; i++) {
+    var kz = (hashi(i, 29, seed) - 0.5) * dd * 0.55;
+    parts.push(part(new BX(0.3, 1.0, 0.3), M(0.06, firstY - 0.25, kz), 0x9a8e80));
+    parts.push(part(new BX(0.44, 0.1, 0.44), M(0.06, firstY + 0.3, kz), 0x8a7e70));
+    parts.push(part(new BX(0.2, 0.06, 0.2), M(0.06, firstY + 0.33, kz), 0x2a2622));
+  }
+  return parts;
+}
+
+/**
+ * Fachwerkraster auf EINER Wandflaeche: Schwelle, Raehm, Staender und je nach
+ * muster Riegel, Eckstreben oder Andreaskreuze. seite wie bei fenster(): "z" =
+ * die Flaeche blickt in z-Richtung und liegt bei z = versatz, sonst blickt sie
+ * in x-Richtung und liegt bei x = versatz. Aus einer Seed entstehen so ganze
+ * Fassadenfamilien statt der vier handverdrahteten Balken in geoHausB.
+ * muster 0 ist das reine Gitter und dient auch als Fallgitter/Gatter.
+ */
+function fachwerk(parts, w, h, versatz, seite, muster, seed, hex) {
+  var holz = hex === undefined ? 0x6f5a44 : hex;
+  var t = 0.09, ry = seite === "z" ? 0 : Math.PI / 2, i;
+  /** u = Laengskoordinate auf der Wand, v = Hoehe ueber dem Wandfuss. */
+  function balken(bw, bh, u, v, dreh) {
+    parts.push(part(new BX(bw, bh, t),
+      M(seite === "z" ? u : versatz, v, seite === "z" ? versatz : u, 0, ry, dreh || 0), holz));
+  }
+  var felder = Math.max(2, Math.round(w / 1.1) + (hashi(2, 3, seed) < 0.5 ? 0 : 1));
+  var fb = w / felder;
+  balken(w, 0.14, 0, 0.07);                                   // Schwelle
+  balken(w, 0.14, 0, h - 0.07);                               // Raehm
+  for (i = 0; i <= felder; i++) balken(0.13, h, -w / 2 + i * fb, h / 2);   // Staender
+  if (muster === 0) {
+    var rn = Math.max(1, Math.round(h / 0.8));
+    for (i = 1; i < rn; i++) balken(w, 0.11, 0, h * i / rn);
+    return parts;
+  }
+  balken(w, 0.12, 0, h * 0.52);                               // durchlaufender Riegel
+  var dia = Math.sqrt(fb * fb + h * h * 0.25), wink = Math.atan2(h * 0.5, fb);
+  for (i = 0; i < felder; i++) {
+    var u0 = -w / 2 + (i + 0.5) * fb;
+    if (muster === 2 || (muster === 3 && hashi(i, 11, seed) < 0.6)) {
+      balken(dia, 0.11, u0, h * 0.26, wink);                  // Andreaskreuze
+      balken(dia, 0.11, u0, h * 0.26, -wink);
+      balken(dia, 0.11, u0, h * 0.76, wink);
+      balken(dia, 0.11, u0, h * 0.76, -wink);
+    } else if (i === 0 || i === felder - 1) {
+      balken(dia, 0.11, u0, h * 0.26, i === 0 ? wink : -wink);   // Eckstreben
+      balken(dia, 0.11, u0, h * 0.76, i === 0 ? -wink : wink);
+    }
+  }
+  return parts;
+}
+
+/**
+ * Kappt eine fertige Geometrie an einer verrauschten Ebene zu einer gebrochenen
+ * Kante: Vertices jenseits der Ebene werden auf sie zurueckgezogen, komplett
+ * jenseitige Dreiecke fallen weg. Bewusst kein echtes Clipping — bei diesem
+ * Poly-Budget ist das Zackenprofil von einem echten Schnitt nicht zu
+ * unterscheiden, es entstehen aber keine neuen Vertices, und die Vertexfarben
+ * bleiben unangetastet (nur position und index werden geschrieben).
+ * ebene: { nx, ny, nz, wert, rauheit } — die Normale zeigt auf die Seite, die
+ * abbricht, wert ist ihr Abstand vom Ursprung.
+ * Indizierte UND nicht indizierte Eingaben sind zulaessig; die Bausteine
+ * mischen beides (siehe mergeGeos). Das Ergebnis ist immer indiziert.
+ */
+function bruchkante(geo, ebene, seed) {
+  var nx = ebene.nx || 0, ny = ebene.ny === undefined ? 1 : ebene.ny, nz = ebene.nz || 0;
+  var len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+  nx /= len; ny /= len; nz /= len;
+  var wert = ebene.wert || 0, rau = ebene.rauheit === undefined ? 0.4 : ebene.rauheit;
+  var pos = geo.attributes.position, n = pos.count, i;
+  var s = new Float32Array(n);
+  for (i = 0; i < n; i++) {
+    var x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    // Rauschen ueber die QUANTISIERTE Position (Muster geoFels/islandGeo):
+    // doppelt gefuehrte Ecken derselben Stelle bekommen denselben Versatz,
+    // sonst klaffen die Teilflaechen an der Bruchkante auseinander.
+    var qa = Math.round((x * 3.1 + z * 1.7) * 8), qb = Math.round((y * 2.3 + z * 0.9) * 8);
+    var d = x * nx + y * ny + z * nz - wert + (hashi(qa, qb, seed) - 0.5) * rau;
+    s[i] = d;
+    if (d > 0) pos.setXYZ(i, x - nx * d, y - ny * d, z - nz * d);
+  }
+  var alt = geo.index ? geo.index.array : null;
+  var anz = alt ? alt.length : n, behalten = [];
+  for (i = 0; i + 2 < anz; i += 3) {
+    var a = alt ? alt[i] : i, b = alt ? alt[i + 1] : i + 1, c = alt ? alt[i + 2] : i + 2;
+    if (s[a] > 0 && s[b] > 0 && s[c] > 0) continue;      // ganz jenseits: faellt weg
+    behalten.push(a, b, c);
+  }
+  geo.setIndex(new THREE.BufferAttribute(
+    n > 65535 ? new Uint32Array(behalten) : new Uint16Array(behalten), 1));
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  geo.computeBoundingSphere();
+  return geo;
+}
+
+/* ==========================================================================
    Gebaeude, zweite Fassung: Ueberstand, Fenster, Sockel, Stilmerkmale.
    ========================================================================== */
 
@@ -697,7 +967,19 @@ var FENSTER_ANKER = {
   haus2:  [[-0.8, 1.9, 1.3], [0.8, 1.9, 1.3], [1.3, 1.9, 0]],
   villa:  [[-1.35, 1.4, 2.15], [1.35, 1.4, 2.15]],
   zwergenhalle: [[0, 0.85, 1.9]],
-  elfenturm: [[0, 5.2, 1.1], [0, 3.1, 1.05]]
+  elfenturm: [[0, 5.2, 1.1], [0, 3.1, 1.05]],
+  /* Wehrbau (Buendel 1). Nur ACHSPARALLELE Oeffnungen bekommen einen Anker:
+     emitFensterlicht leitet die Blickrichtung aus der dominanten Achse ab und
+     kennt deshalb nur vier Richtungen — der schraege Kuechenschlitz und die
+     Turmscharten dazwischen bekaemen ein verdreht stehendes Lichtquad. */
+  bergfried: [[-0.9, 5.4, 2.06], [0.9, 5.4, 2.06], [2.06, 5.4, 0], [0, 3.2, 2.06]],
+  wehrturm: [[1.22, 2.2, 0], [0, 2.75, 1.22], [-1.22, 3.3, 0]],
+  torhaus: [[3.36, 3.0, 0], [-3.36, 3.0, 0]],
+  burgpalas: [[-2.25, 3.95, 2.28], [-0.75, 3.95, 2.28], [0.75, 3.95, 2.28],
+              [2.25, 3.95, 2.28], [3.58, 3.95, 0]],
+  schlossfluegel: [[-3.0, 1.9, 1.88], [-1.0, 1.9, 1.88], [1.0, 1.9, 1.88], [3.0, 1.9, 1.88],
+                   [-3.0, 4.15, 1.88], [-1.0, 4.15, 1.88], [1.0, 4.15, 1.88], [3.0, 4.15, 1.88]],
+  schlossturmhaube: [[0, 2.7, 1.34]]
 };
 
 /* ==========================================================================
@@ -984,6 +1266,466 @@ definePool("boot", geoBoot(), { radius: 1.3, familie: 'holz' });
 definePool("steg", geoSteg(), { radius: 1.6, familie: 'holz' });
 definePool("fensterlicht", geoFensterlicht(), { radius: 0, ao: 0, dbl: true,
   familie: 'putz', emissive: 0xffc878, emissiveIntensity: 0 });
+
+/* ==========================================================================
+   Kategorie 1 des Objektkatalogs — Wehrbau (Buendel 1). Mauern, Tore, Tuerme,
+   Burg, Schloss. Alle Bauten teilen eine Palette, damit Mauerstueck, Wehrturm
+   und Torhaus als Teile DERSELBEN Burg lesbar bleiben und nicht als drei
+   zufaellig benachbarte Objekte.
+   ========================================================================== */
+var WB_STEIN = 0xbdb7a8,      // Mauerwerk
+    WB_HELL = 0xcdc7b6,       // Abdeckplatten, Zinnen, Gesimse
+    WB_DUNKEL = 0x968f80,     // Sockel und Boeschungen
+    WB_DACH = 0x53707e,       // Schiefer
+    WB_HOLZ = 0x8a7050,
+    WB_HOLZD = 0x6f5a44,
+    WB_EISEN = 0x4c4841,
+    WB_PUTZ = 0xefe7d6,
+    WB_TUCH = 0xb0574e,
+    WB_SCHARTE = 0x2e3038;    // dunkle Oeffnungen, wie das Glas in fenster()
+
+/* --- Mauerwerk: kachelbare Stuecke, die genBurg spaeter aneinanderreiht --- */
+
+function geoMauerstueck() {
+  var parts = [
+    part(new BX(3.2, 2.5, 0.9), M(0, 1.25, 0), WB_STEIN),
+    part(new BX(3.24, 0.18, 1.2), M(0, 2.59, 0), WB_HELL),        // auskragender Wehrgang
+    part(new BX(3.24, 0.5, 0.24), M(0, 2.93, 0.42), WB_STEIN)     // Brustwehr innen
+  ];
+  sockel(parts, 3.2, 0.9, WB_DUNKEL);
+  // Merlonen nur auf der Feldseite: innen laeuft der Wehrgang, dort waere ein
+  // zweiter Zinnenkranz sowohl falsch als auch doppelt so teuer.
+  zinnen(parts, 3.24, 0, 2.68, WB_HELL, 5, { form: "reihe", z: -0.46 });
+  return mergeGeos(parts);
+}
+
+function geoMauerecke() {
+  var parts = [
+    part(new BX(2.6, 2.5, 0.9), M(1.6, 1.25, 0), WB_STEIN),       // Schenkel nach +x
+    part(new BX(0.9, 2.5, 2.6), M(0, 1.25, 1.6), WB_STEIN),       // Schenkel nach +z
+    part(new BX(2.6, 0.18, 1.2), M(1.6, 2.59, 0), WB_HELL),
+    part(new BX(1.2, 0.18, 2.6), M(0, 2.59, 1.6), WB_HELL),
+    part(new CY(0.9, 1.05, 3.9, 8), M(0, 1.95, 0), WB_STEIN),     // Ecktuermchen
+    part(new CY(1.3, 1.3, 0.2, 8), M(0, 4.0, 0), WB_HELL),
+    part(new CY(1.2, 1.35, 0.5, 8), M(0, 0.25, 0), WB_DUNKEL)
+  ];
+  zinnen(parts, 2.6, 0, 2.68, WB_HELL, 4, { form: "reihe", x: 1.6, z: -0.46 });
+  zinnen(parts, 2.6, 0, 2.68, WB_HELL, 4, { form: "reihe", achse: "z", x: -0.46, z: 1.6 });
+  zinnen(parts, 1.16, 0, 4.1, WB_HELL, 7, { form: "rund" });
+  return mergeGeos(parts);
+}
+
+function geoMauerdurchlass() {
+  var parts = [];
+  bogenreihe(parts, 1, 0.8, 1.1, 0, WB_STEIN, 0.9, 1.2);          // Laibung + Pfortenbogen
+  parts.push(part(new BX(3.2, 0.45, 0.9), M(0, 2.28, 0), WB_STEIN));
+  parts.push(part(new BX(3.24, 0.18, 1.2), M(0, 2.59, 0), WB_HELL));
+  parts.push(part(new BX(3.24, 0.5, 0.24), M(0, 2.93, 0.42), WB_STEIN));
+  zinnen(parts, 3.24, 0, 2.68, WB_HELL, 5, { form: "reihe", z: -0.46 });
+  tuer(parts, 0, 0, 0.44, 0.72, 1.6);
+  return mergeGeos(parts);
+}
+
+function geoMauerbogen() {
+  var parts = [];
+  bogenreihe(parts, 3, 1.05, 1.9, 0, WB_STEIN, 0.85, 0.45);        // Blendboegen am Hang
+  parts.push(part(new BX(4.9, 1.45, 0.9), M(0, 3.12, 0), WB_STEIN));
+  parts.push(part(new BX(4.94, 0.18, 1.2), M(0, 3.94, 0), WB_HELL));
+  parts.push(part(new BX(4.94, 0.5, 0.24), M(0, 4.28, 0.42), WB_STEIN));
+  zinnen(parts, 4.94, 0, 4.03, WB_HELL, 7, { form: "reihe", z: -0.46 });
+  return mergeGeos(parts);
+}
+
+function geoSchildmauer() {
+  var parts = [];
+  sockel(parts, 4.6, 1.1, WB_DUNKEL);
+  parts.push(part(new BX(4.6, 5.4, 1.1), M(0, 2.7, 0), WB_STEIN));
+  for (var i = -1; i <= 1; i++) {
+    parts.push(part(new BX(0.55, 4.5, 0.8), M(i * 1.6, 2.25, 0.9), WB_DUNKEL));
+    parts.push(part(prismGeo(0.8, 0.5, 0.55), M(i * 1.6, 4.5, 0.9, 0, Math.PI / 2, 0), WB_DUNKEL));
+  }
+  parts.push(part(new BX(4.9, 0.3, 1.5), M(0, 5.55, 0), WB_HELL));  // Kranzgesims
+  parts.push(part(new BX(4.9, 0.18, 1.5), M(0, 5.34, 0), WB_DUNKEL));
+  return mergeGeos(parts);
+}
+
+function geoZwingermauer() {
+  var parts = [];
+  sockel(parts, 2.4, 0.7, WB_DUNKEL);
+  parts.push(part(new BX(2.4, 1.15, 0.7), M(0, 0.85, 0), WB_STEIN));
+  parts.push(part(new BX(2.44, 0.14, 0.92), M(0, 1.49, 0), WB_HELL));
+  zinnen(parts, 2.44, 0, 1.56, WB_HELL, 5,
+    { form: "reihe", z: -0.34, hoehe: 0.3, staerke: 0.2 });
+  return mergeGeos(parts);
+}
+
+function geoMauertreppe() {
+  var parts = [];
+  treppe(parts, 9, 1.0, 0.28, 0, 0, -1.7, WB_STEIN, WB_HELL);
+  parts.push(part(new BX(1.3, 0.4, 0.6), M(0, 2.72, 1.9), WB_HELL));   // Podest am Wehrgang
+  return mergeGeos(parts);
+}
+
+function geoPechnase() {
+  return mergeGeos([
+    part(new BX(1.0, 0.75, 0.6), M(0, 0.4, 0.3), WB_STEIN),
+    part(new BX(1.06, 0.12, 0.68), M(0, 0.84, 0.3), WB_HELL),
+    part(new BX(0.9, 0.1, 0.5), M(0, 0.03, 0.3), WB_DUNKEL),
+    part(new BX(0.3, 0.12, 0.4), M(0, 0.02, 0.32), 0x2a2622),          // Wurfschlitz
+    part(new CY(0.12, 0.15, 0.66, 6), M(-0.36, 0.06, 0.3, Math.PI / 2, 0, 0), WB_DUNKEL),
+    part(new CY(0.12, 0.15, 0.66, 6), M(0.36, 0.06, 0.3, Math.PI / 2, 0, 0), WB_DUNKEL)
+  ]);
+}
+
+/* --- Tuerme ------------------------------------------------------------- */
+
+function geoWehrturm() {
+  var parts = [
+    part(new CY(1.05, 1.35, 4.6, 10), M(0, 2.3, 0), WB_STEIN),
+    part(new CY(1.45, 1.45, 0.26, 10), M(0, 4.73, 0), WB_HELL),        // Kragplatte
+    part(new CY(1.45, 1.62, 0.5, 10), M(0, 0.25, 0), WB_DUNKEL),
+    part(new CO(1.6, 2.1, 10), M(0, 6.2, 0), WB_DACH),
+    part(new CY(0.05, 0.05, 0.9, 5), M(0, 7.6, 0), WB_EISEN)
+  ];
+  zinnen(parts, 1.32, 0, 4.86, WB_HELL, 9, { form: "rund" });
+  // Scharten achsparallel: emitFensterlicht kennt nur die vier Himmelsrichtungen,
+  // schraeg gesetzte Anker bekaemen ein schief stehendes Lichtquad.
+  var winkel = [0, Math.PI / 2, Math.PI];
+  for (var i = 0; i < 3; i++) {
+    parts.push(part(new BX(0.16, 0.85, 0.28),
+      M(Math.cos(winkel[i]) * 1.18, 2.2 + i * 0.55, Math.sin(winkel[i]) * 1.18,
+        0, -winkel[i], 0), WB_SCHARTE));
+  }
+  return mergeGeos(parts);
+}
+
+function geoGeschuetzturm() {
+  var parts = [
+    part(new CY(2.15, 2.45, 3.0, 12), M(0, 1.5, 0), WB_STEIN),
+    part(new CY(2.55, 2.75, 0.55, 12), M(0, 0.28, 0), WB_DUNKEL),      // Boeschungsfuss
+    part(new CY(2.55, 2.55, 0.3, 12), M(0, 3.15, 0), WB_HELL),         // Kragplatte
+    part(new CY(1.95, 1.95, 0.14, 12), M(0, 3.44, 0), WB_HELL)         // Plattform
+  ];
+  for (var i = 0; i < 5; i++) {
+    var a = i / 5 * Math.PI * 2 + 0.3;
+    parts.push(part(new BX(0.34, 0.5, 0.8),
+      M(Math.cos(a) * 2.2, 1.5, Math.sin(a) * 2.2, 0, -a, 0), WB_SCHARTE));
+  }
+  zinnen(parts, 2.42, 0, 3.3, WB_HELL, 10, { form: "rund" });
+  return mergeGeos(parts);
+}
+
+function geoBergfried() {
+  var parts = [];
+  sockel(parts, 4.0, 4.0, WB_DUNKEL);
+  parts.push(part(new BX(4.0, 7.4, 4.0), M(0, 4.0, 0), WB_STEIN));
+  parts.push(part(new BX(4.3, 0.24, 4.3), M(0, 7.55, 0), WB_HELL));    // Kranzgesims
+  zinnen(parts, 4.3, 4.3, 7.67, WB_HELL, 4);
+  // Walmspitze statt prismGeo: der Bergfried hat vier gleich lange Traufen,
+  // ein Giebelprisma bekaeme zwei Giebelwaende, die es dort nie gibt.
+  parts.push(part(walmGeo(3.0, 2.2, 3.0, 0.2), M(0, 8.11, 0), WB_DACH));
+  fenster(parts, -0.9, 5.4, 2.02, 0.5, 0.8, "z");
+  fenster(parts, 0.9, 5.4, 2.02, 0.5, 0.8, "z");
+  fenster(parts, 2.02, 5.4, 0, 0.5, 0.8, "x");
+  fenster(parts, 0, 3.2, 2.02, 0.42, 0.9, "z");
+  tuer(parts, 0, 1.2, 2.04, 0.9, 1.8);
+  parts.push(part(new BX(1.5, 1.3, 0.5), M(0, 0.6, 2.2), WB_DUNKEL));  // Aufstieg zur Hochtuer
+  return mergeGeos(parts);
+}
+
+/* --- Tore und Vorwerke --------------------------------------------------- */
+
+function geoTorhaus() {
+  var parts = [];
+  for (var s = -1; s <= 1; s += 2) {
+    parts.push(part(new CY(1.15, 1.35, 5.2, 9), M(s * 2.1, 2.6, 0), WB_STEIN));
+    parts.push(part(new CY(1.5, 1.5, 0.24, 9), M(s * 2.1, 5.32, 0), WB_HELL));
+    parts.push(part(new CY(1.45, 1.62, 0.5, 9), M(s * 2.1, 0.25, 0), WB_DUNKEL));
+    parts.push(part(new BX(0.16, 0.85, 0.28), M(s * 3.3, 3.0, 0, 0, s > 0 ? -Math.PI / 2 : Math.PI / 2, 0), WB_SCHARTE));
+    zinnen(parts, 1.38, 0, 5.44, WB_HELL, 8, { form: "rund", x: s * 2.1 });
+  }
+  parts.push(part(new BX(4.2, 2.0, 2.2), M(0, 4.0, 0), WB_STEIN));      // Riegel ueber der Durchfahrt
+  parts.push(part(new BX(4.3, 0.2, 2.5), M(0, 5.1, 0), WB_HELL));
+  zinnen(parts, 4.3, 0, 5.2, WB_HELL, 5, { form: "reihe", z: -1.12 });
+  bogenreihe(parts, 1, 1.9, 1.6, 0, WB_STEIN, 2.2, 1.3);
+  // Fallgitter: das reine Balkenraster (muster 0) IST das Gitter — dafuer
+  // wurde der Musterzweig ohne Streben ueberhaupt vorgesehen.
+  fachwerk(parts, 1.8, 2.7, 1.14, "z", 0, 3, WB_EISEN);
+  tuer(parts, 0, 0, 0.2, 1.5, 2.2);
+  return mergeGeos(parts);
+}
+
+function geoBarbakane() {
+  var parts = [
+    // Halbschale: thetaStart -PI/2 ueber PI baucht nach +z aus, der Zinnenkranz
+    // bekommt mit mitte = PI/2 genau denselben Halbkreis.
+    part(new CY(2.9, 3.15, 2.8, 14, 1, false, -Math.PI / 2, Math.PI), M(0, 1.4, 0), WB_STEIN),
+    part(new BX(6.4, 2.8, 0.8), M(0, 1.4, -0.4), WB_STEIN),             // Rueckwand
+    part(new BX(6.4, 0.24, 1.0), M(0, 2.9, -0.4), WB_HELL),
+    // Deckplatte kragt ueber die Schale (2.9) hinaus, damit der Zinnenkranz
+    // darauf steht statt daneben zu schweben.
+    part(new CY(3.06, 3.06, 0.2, 14, 1, false, -Math.PI / 2, Math.PI), M(0, 2.9, 0), WB_HELL),
+    part(new BX(1.6, 0.3, 2.4), M(0, 1.4, -1.4, -0.5, 0, 0), WB_DUNKEL) // Rampe in den Hof
+  ];
+  zinnen(parts, 2.92, 0, 3.0, WB_HELL, 9, { form: "rund", bogen: Math.PI, mitte: Math.PI / 2 });
+  return mergeGeos(parts);
+}
+
+function geoBastion() {
+  var parts = [
+    part(new CY(2.2, 2.9, 1.0, 6), M(0, 0.5, 0), WB_DUNKEL),            // Boeschungsfuss
+    part(new BX(5.2, 3.0, 1.0), M(0, 2.0, -1.5), WB_STEIN)              // Kehlmauer
+  ];
+  var wink = 0.62;
+  for (var s = -1; s <= 1; s += 2) {
+    parts.push(part(new BX(3.6, 3.0, 1.0), M(s * 1.5, 2.0, 1.1, 0, -s * wink, 0), WB_STEIN));
+    parts.push(part(new BX(3.7, 0.26, 1.4), M(s * 1.5, 3.63, 1.1, 0, -s * wink, 0), WB_HELL));
+    zinnen(parts, 3.4, 0, 3.76, WB_HELL, 4,
+      { form: "reihe", x: s * 1.5, z: 1.1, dreh: -s * wink, hoehe: 0.4 });
+  }
+  parts.push(part(new BX(5.2, 0.26, 1.4), M(0, 3.63, -1.5), WB_HELL));
+  return mergeGeos(parts);
+}
+
+function geoZugbruecke() {
+  var parts = [];
+  for (var i = 0; i < 7; i++) {                     // halb aufgezogenes Brueckenblatt
+    parts.push(part(new BX(0.3, 0.11, 3.4), M(-1.08 + i * 0.36, 0.85, 0.5, -0.38, 0, 0), WB_HOLZ));
+  }
+  parts.push(part(new BX(2.5, 0.14, 0.22), M(0, 0.42, -0.98, -0.38, 0, 0), WB_HOLZD));
+  parts.push(part(new BX(2.5, 0.14, 0.22), M(0, 1.28, 0.98, -0.38, 0, 0), WB_HOLZD));
+  parts.push(part(new BX(0.9, 0.7, 1.1), M(-1.7, 0.35, -1.3), WB_DUNKEL));   // Widerlager
+  parts.push(part(new BX(0.9, 0.7, 1.1), M(1.7, 0.35, -1.3), WB_DUNKEL));
+  for (var s = -1; s <= 1; s += 2) {                // Ketten zum Torhaus
+    parts.push(part(new CY(0.05, 0.05, 2.6, 5), M(s * 1.15, 1.85, 0.4, -0.9, 0, 0), WB_EISEN));
+  }
+  return mergeGeos(parts);
+}
+
+/* --- Bauten im Burghof --------------------------------------------------- */
+
+function geoBurgpalas() {
+  var parts = [];
+  sockel(parts, 7.0, 4.4, WB_DUNKEL);
+  parts.push(part(new BX(7.0, 4.6, 4.4), M(0, 2.7, 0), WB_PUTZ));
+  parts.push(part(new BX(7.2, 0.18, 4.6), M(0, 3.05, 0), WB_HELL));     // Gurtgesims
+  parts.push(part(new BX(7.2, 0.24, 4.6), M(0, 5.1, 0), WB_HELL));      // Kranzgesims
+  dachlandschaft(parts, 7.0, 4.4, 5.24, 0x8a5c48, 91);
+  for (var i = 0; i < 4; i++) {
+    fenster(parts, -2.25 + i * 1.5, 3.95, 2.24, 0.68, 1.1, "z");
+  }
+  fenster(parts, 3.54, 3.95, 0, 0.68, 1.1, "x");
+  parts.push(part(new BX(1.5, 2.3, 0.9), M(-2.0, 2.35, 2.6), WB_PUTZ));  // Erker
+  parts.push(part(prismGeo(1.7, 0.55, 1.1), M(-2.0, 3.5, 2.6, 0, Math.PI / 2, 0), 0x8a5c48));
+  tuer(parts, 1.6, 0.5, 2.26, 0.95, 1.9);
+  return mergeGeos(parts);
+}
+
+function geoBurgkapelle() {
+  var parts = [];
+  sockel(parts, 2.6, 3.4, WB_DUNKEL);
+  parts.push(part(new BX(2.6, 3.0, 3.4), M(0, 1.9, 0), WB_STEIN));
+  // Apsis: halber Zylinder am Chorende, Oeffnungswinkel zum Schiff hin
+  parts.push(part(new CY(1.3, 1.3, 3.0, 9, 1, false, Math.PI / 2, Math.PI),
+    M(0, 1.9, -1.7), WB_STEIN));
+  parts.push(part(prismGeo(2.9, 1.35, 3.9), M(0, 3.4, 0), WB_DACH));
+  parts.push(part(new CO(1.5, 0.9, 9), M(0, 3.55, -1.7), WB_DACH));      // Apsisdach
+  parts.push(part(new CY(0.26, 0.3, 1.1, 6), M(0, 5.2, 0.9), WB_HELL));  // Dachreiter
+  parts.push(part(new CO(0.4, 0.7, 6), M(0, 6.1, 0.9), WB_DACH));
+  parts.push(part(new THREE.TorusGeometry(0.36, 0.08, 4, 9), M(0, 2.9, 1.72), WB_HELL));
+  parts.push(part(new PL(0.62, 0.62), M(0, 2.9, 1.7), 0x6f7f8e));        // Rundfenster
+  tuer(parts, 0, 0, 1.72, 0.8, 1.7);
+  return mergeGeos(parts);
+}
+
+function geoBurgkueche() {
+  var parts = [
+    part(new CY(1.5, 1.75, 2.4, 10), M(0, 1.2, 0), WB_STEIN),
+    part(new CY(1.85, 2.0, 0.5, 10), M(0, 0.25, 0), WB_DUNKEL),
+    part(new CO(1.72, 1.5, 10), M(0, 3.15, 0), WB_DACH),                 // Rauchhaube
+    part(new CY(0.36, 0.44, 1.6, 8), M(0, 4.3, 0), WB_STEIN),            // Schlot
+    part(new CY(0.3, 0.3, 0.16, 8), M(0, 5.14, 0), 0x2a2622),
+    part(new BX(0.5, 0.6, 0.2), M(1.14, 1.6, 0.85, 0, -0.9, 0), WB_SCHARTE)
+  ];
+  tuer(parts, 0, 0, 1.46, 0.9, 1.7);
+  return mergeGeos(parts);
+}
+
+/* --- Holzbefestigung ----------------------------------------------------- */
+
+function geoPalisade() {
+  var parts = [];
+  for (var i = 0; i < 8; i++) {
+    var d = hashi(i, 3, 71);
+    // CY mit radiusTop nahe 0 ist der zugespitzte Pfahl in EINEM Primitiv —
+    // ein zusaetzlicher CO je Pfahl kostete acht weitere Deckel.
+    parts.push(part(new CY(0.02, 0.17 + d * 0.03, 2.2 + d * 0.3, 5),
+      M(-1.19 + i * 0.34, 1.1 + d * 0.15, (hashi(i, 7, 71) - 0.5) * 0.1), WB_HOLZ));
+  }
+  parts.push(part(new BX(2.74, 0.12, 0.1), M(0, 1.55, -0.16), WB_HOLZD));
+  parts.push(part(new BX(2.74, 0.12, 0.1), M(0, 0.75, -0.16), WB_HOLZD));
+  return mergeGeos(parts);
+}
+
+function geoPalisadentor() {
+  var parts = [];
+  for (var s = -1; s <= 1; s += 2) {
+    for (var i = 0; i < 3; i++) {
+      var d = hashi(i + (s > 0 ? 5 : 0), 3, 73);
+      parts.push(part(new CY(0.02, 0.17, 2.2 + d * 0.25, 5),
+        M(s * (1.0 + i * 0.34), 1.1 + d * 0.12, 0), WB_HOLZ));
+    }
+    parts.push(part(new CY(0.24, 0.3, 3.0, 6), M(s * 0.74, 1.5, 0), WB_HOLZD));
+    parts.push(part(new BX(1.1, 0.11, 0.1), M(s * 1.55, 1.5, -0.16), WB_HOLZD));
+  }
+  parts.push(part(new BX(2.1, 0.3, 0.36), M(0, 3.05, 0), WB_HOLZD));      // Sturz
+  parts.push(part(new BX(0.6, 0.26, 0.32), M(0, 3.34, 0), WB_HOLZ));
+  tuer(parts, 0, 0, 0.18, 1.15, 2.4);
+  return mergeGeos(parts);
+}
+
+function geoWachturm() {
+  var parts = [];
+  for (var s = -1; s <= 1; s += 2) {
+    for (var q = -1; q <= 1; q += 2) {
+      parts.push(part(new BX(0.2, 4.2, 0.2), M(s * 0.85, 2.1, q * 0.85), WB_HOLZD));
+    }
+  }
+  // Zwei verschieden ausgesteifte Seiten aus einer Seed: das Geruest wirkt
+  // gebaut statt gespiegelt, ohne dass beide Raster von Hand stehen muessen.
+  fachwerk(parts, 1.9, 4.0, -0.85, "z", 1, 17, WB_HOLZD);
+  fachwerk(parts, 1.9, 4.0, 0.85, "x", 1, 19, WB_HOLZD);
+  parts.push(part(new BX(2.5, 0.16, 2.5), M(0, 4.24, 0), WB_HOLZ));       // Kanzelboden
+  parts.push(part(new BX(2.3, 0.7, 2.3), M(0, 4.67, 0), WB_HOLZ));        // Bruestung
+  parts.push(part(prismGeo(2.7, 0.9, 2.7), M(0, 5.42, 0), 0x7a6248));
+  parts.push(part(new BX(0.09, 4.4, 0.09), M(-0.28, 2.2, 1.3, 0.16, 0, 0), WB_HOLZD));
+  parts.push(part(new BX(0.09, 4.4, 0.09), M(0.28, 2.2, 1.3, 0.16, 0, 0), WB_HOLZD));
+  for (var r = 0; r < 6; r++) {                                          // Leitersprossen
+    parts.push(part(new BX(0.66, 0.07, 0.07), M(0, 0.5 + r * 0.62, 1.24 - r * 0.1), WB_HOLZ));
+  }
+  return mergeGeos(parts);
+}
+
+/* --- Schloss: dieselbe Burg, dreihundert Jahre spaeter -------------------- */
+
+function geoSchlossfluegel() {
+  var parts = [];
+  sockel(parts, 8.6, 3.6, WB_DUNKEL);
+  parts.push(part(new BX(8.6, 5.0, 3.6), M(0, 2.9, 0), WB_PUTZ));
+  parts.push(part(new BX(8.8, 0.18, 3.8), M(0, 3.05, 0), WB_HELL));
+  parts.push(part(new BX(8.8, 0.26, 3.8), M(0, 5.3, 0), WB_HELL));
+  dachlandschaft(parts, 8.6, 3.6, 5.46, 0x5b5a64, 97);
+  parts.push(part(new CY(1.4, 1.55, 6.2, 8), M(4.5, 3.1, 0), WB_PUTZ));   // Eckpavillon
+  parts.push(part(new CO(1.8, 1.7, 8), M(4.5, 7.05, 0), 0x5b5a64));
+  for (var i = 0; i < 4; i++) {
+    var fx = -3.0 + i * 2.0;
+    fenster(parts, fx, 1.9, 1.84, 0.62, 1.2, "z");
+    fenster(parts, fx, 4.15, 1.84, 0.62, 1.0, "z");
+  }
+  tuer(parts, -3.0, 0.5, 1.86, 1.0, 2.0);
+  return mergeGeos(parts);
+}
+
+function geoSchlossturmhaube() {
+  var parts = [
+    part(new CY(1.15, 1.32, 4.4, 10), M(0, 2.2, 0), WB_PUTZ),
+    part(new CY(1.5, 1.5, 0.24, 10), M(0, 4.52, 0), WB_HELL),
+    part(new THREE.SphereGeometry(1.34, 10, 6), M(0, 5.35, 0, 0, 0, 0, 1, 1.2, 1), WB_DACH),
+    part(new CY(0.55, 0.72, 0.85, 8), M(0, 6.55, 0), WB_HELL),            // Laterne
+    part(new CO(0.64, 0.9, 8), M(0, 7.4, 0), WB_DACH),
+    part(new CY(0.045, 0.045, 1.3, 5), M(0, 8.45, 0), WB_EISEN),
+    part(new PL(0.8, 0.42), M(0.4, 8.9, 0, 0, 0, 0.08), WB_TUCH)
+  ];
+  fenster(parts, 0, 2.7, 1.3, 0.55, 0.95, "z");
+  return mergeGeos(parts);
+}
+
+function geoSchlossportal() {
+  // Der Lauf steigt (wie jede treppe()) nach +z, der Portalkoerper steht an
+  // seinem oberen Ende — die Schauseite dieses Pools blickt daher nach -z.
+  var parts = [];
+  treppe(parts, 3, 4.6, 0.28, 0, 0, -1.5, WB_HELL, WB_STEIN);
+  parts.push(part(new BX(5.0, 4.4, 1.2), M(0, 3.04, 0), WB_STEIN));
+  bogenreihe(parts, 1, 1.5, 1.9, 0.84, WB_HELL, 1.34, 0.7);
+  saeulen(parts, 2, -1.95, 3.9, 0.84, 0.95, 0.28, 3.0, WB_HELL);
+  saeulen(parts, 2, -1.35, 2.7, 0.84, 0.95, 0.24, 3.0, WB_HELL);
+  parts.push(part(new BX(5.2, 0.42, 1.5), M(0, 4.05, 0.5), WB_HELL));      // Gebaelk
+  parts.push(part(prismGeo(5.2, 1.2, 1.5), M(0, 4.26, 0.5, 0, Math.PI / 2, 0), WB_HELL));
+  tuer(parts, 0, 0.84, 0.62, 1.4, 2.4);
+  return mergeGeos(parts);
+}
+
+function geoKettenturm() {
+  var parts = [
+    part(new CY(0.95, 1.15, 3.6, 9), M(0, 1.8, 0), WB_STEIN),
+    part(new CY(1.28, 1.28, 0.22, 9), M(0, 3.71, 0), WB_HELL),
+    part(new CY(1.25, 1.42, 0.5, 9), M(0, 0.25, 0), WB_DUNKEL),
+    part(new BX(0.9, 0.55, 0.9), M(2.1, 0.27, 0), WB_DUNKEL),             // Ankerstein
+    part(new BX(0.26, 0.34, 0.26), M(1.02, 1.9, 0), WB_EISEN)             // Kettenoese
+  ];
+  zinnen(parts, 1.16, 0, 3.82, WB_HELL, 8, { form: "rund" });
+  var glied = new THREE.TorusGeometry(0.2, 0.055, 4, 6);
+  for (var i = 0; i < 3; i++) {
+    parts.push(part(glied,
+      M(1.3 + i * 0.34, 1.72 - i * 0.42, 0, 0, i % 2 ? Math.PI / 2 : 0, 0.62), WB_EISEN));
+  }
+  return mergeGeos(parts);
+}
+
+/* --- Aufsaetze ----------------------------------------------------------- */
+
+function geoWehrbanner() {
+  return mergeGeos([
+    part(new CY(0.045, 0.055, 2.6, 5), M(0, 1.3, 0), WB_HOLZD),
+    part(new CO(0.075, 0.2, 5), M(0, 2.7, 0), 0xc0a24e),
+    part(new BX(0.06, 0.06, 0.72), M(0, 2.42, 0.36), WB_HOLZD),           // Ausleger
+    part(new BX(0.62, 0.06, 0.06), M(0, 2.36, 0.36, 0, Math.PI / 2, 0), WB_HOLZD),
+    part(new PL(0.62, 1.1), M(0, 1.8, 0.36, 0, Math.PI / 2, 0), WB_TUCH)
+  ]);
+}
+
+function geoWappenstein() {
+  // Das Relief ist eine hinten abgebrochene IC-Kugel: bruchkante kappt die
+  // Rueckseite, damit es flach in der Tafel sitzt statt davor zu schweben.
+  var relief = bruchkante(new IC(0.22, 0), { nx: 0, ny: 0, nz: -1, wert: -0.02, rauheit: 0.14 }, 83);
+  return mergeGeos([
+    part(new BX(0.66, 0.8, 0.14), M(0, 0.4, 0), WB_HELL),
+    part(new BX(0.8, 0.11, 0.2), M(0, 0.84, 0), WB_STEIN),                // Verdachung
+    part(new BX(0.8, 0.11, 0.2), M(0, -0.03, 0), WB_STEIN),
+    part(relief, M(0, 0.44, 0.06, 0, 0, 0, 1.15, 1.35, 1), WB_TUCH),
+    part(new PL(0.3, 0.38), M(0, 0.44, 0.15), 0xc0a24e)                   // Schildfeld
+  ]);
+}
+
+/* --- Pools. Radien und Familien stammen aus der Katalogtabelle. ----------- */
+definePool("mauerstueck", geoMauerstueck(), { radius: 1.6, familie: 'stein' });
+definePool("mauerecke", geoMauerecke(), { radius: 1.9, familie: 'stein' });
+definePool("mauerdurchlass", geoMauerdurchlass(), { radius: 1.8, familie: 'stein' });
+definePool("mauerbogen", geoMauerbogen(), { radius: 2.4, ao: 0.26, familie: 'stein' });
+definePool("schildmauer", geoSchildmauer(), { radius: 2.4, familie: 'stein' });
+definePool("zwingermauer", geoZwingermauer(), { radius: 1.2, familie: 'stein' });
+definePool("mauertreppe", geoMauertreppe(), { radius: 1.3, ao: 0.26, familie: 'stein' });
+definePool("pechnase", geoPechnase(), { radius: 0.8, familie: 'stein' });
+definePool("wehrturm", geoWehrturm(), { radius: 2.2, familie: 'stein' });
+definePool("geschuetzturm", geoGeschuetzturm(), { radius: 2.6, familie: 'stein' });
+definePool("bergfried", geoBergfried(), { radius: 2.6, ao: 0.24, familie: 'stein' });
+definePool("torhaus", geoTorhaus(), { radius: 3.6, ao: 0.24, familie: 'stein' });
+definePool("barbakane", geoBarbakane(), { radius: 3.2, familie: 'stein' });
+definePool("bastion", geoBastion(), { radius: 3.4, familie: 'stein' });
+definePool("zugbruecke", geoZugbruecke(), { radius: 2.2, familie: 'holz' });
+definePool("burgpalas", geoBurgpalas(), { radius: 4.0, familie: 'putz' });
+definePool("burgkapelle", geoBurgkapelle(), { radius: 2.2, familie: 'stein' });
+definePool("burgkueche", geoBurgkueche(), { radius: 2.0, familie: 'stein' });
+definePool("palisade", geoPalisade(), { radius: 1.4, familie: 'holz' });
+definePool("palisadentor", geoPalisadentor(), { radius: 1.8, familie: 'holz' });
+definePool("wachturm", geoWachturm(), { radius: 1.5, ao: 0.26, familie: 'holz' });
+definePool("schlossfluegel", geoSchlossfluegel(), { radius: 4.6, familie: 'putz' });
+definePool("schlossturmhaube", geoSchlossturmhaube(), { radius: 2.0, familie: 'putz' });
+definePool("schlossportal", geoSchlossportal(), { radius: 3.0, ao: 0.24, familie: 'stein' });
+definePool("kettenturm", geoKettenturm(), { radius: 1.6, familie: 'stein' });
+definePool("wehrbanner", geoWehrbanner(), { radius: 0.4, dbl: true, ao: 0.12,
+  familie: 'stoff', wind: { amp: 0.22 } });
+definePool("wappenstein", geoWappenstein(), { radius: 0.4, ao: 0.2, familie: 'stein' });
 
 setPoolNames();
 

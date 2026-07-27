@@ -35,6 +35,15 @@
       <option value="schnee">Schnee</option>
     </select>
     <div class="sep"></div>
+    <label for="kartenSel">Karte</label>
+    <!-- Kartengröße (H1b). Ein Wechsel erzeugt die Karte neu — das
+         Höhen-Delta des Speicherformats gilt nur je Kartengröße. -->
+    <select id="kartenSel" style="width:auto">
+      <option value="256" selected>Klein (256)</option>
+      <option value="512">Mittel (512)</option>
+      <option value="1024">Groß (1024)</option>
+    </select>
+    <div class="sep"></div>
     <label>Tageszeit</label>
     <button class="tod" data-t="morgen">Morgen</button>
     <button class="tod" data-t="mittag">Mittag</button>

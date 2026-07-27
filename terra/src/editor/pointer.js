@@ -8,20 +8,27 @@ import { cam, groundPoint, rayFrom, rayPlane, autoPitch } from './camera.js';
 import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOOLS }
   from './tools.js';
 import { handles, rebuildHandles, updateHandlePositions, setPreview, updateBrushRing,
-  brushRing, pickElement, select, naechstesSegment, aktiverGriff, setAktiverGriff }
+  brushRing, pickElement, select, naechstesSegment, aktiverGriff, setAktiverGriff,
+  zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer, zugPixelProHoehe }
   from './selection.js';
 import { raycaster, _ndc, camera } from './camera.js';
 import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
-import { rankePlatzierbar } from '../generators/vines.js';
+import { rankePlatzierbar, rankeAchse, rankeKernPunkt } from '../generators/vines.js';
 import { pushUndo, undo, redo } from './history.js';
 import { toast, buildPanel, updateHint } from '../ui/panels.js';
 
 var ptr = { down: false, mode: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, handle: -1,
             grab: null, lastClick: 0, lastCx: -999, lastCy: -999, lastX: 0, lastZ: 0,
-            dragged: false };
+            dragged: false, zug: null };
 var hoverPoint = null;
 var zeigerOffen = false, zeigerX = 0, zeigerY = 0, zeigerZuletzt = 0;
+// Umschalttaste zum letzten Mausereignis — aus dem Event selbst statt aus dem
+// globalen keys-Objekt, damit der Modus auch dann stimmt, wenn der Fokus
+// zwischendurch im Panel lag.
+var zeigerShift = false;
 var _zeigerEv = { clientX: 0, clientY: 0 };
+// Arbeitspunkte fuer die Zugpunkt-Bearbeitung (Achspunkt mit / ohne Zuganteil)
+var _zpA = { x: 0, y: 0, z: 0 }, _zpB = { x: 0, y: 0, z: 0 };
 
 export function initPointer(cv) {
   cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
@@ -47,9 +54,20 @@ export function initPointer(cv) {
       if (hits.length) {
         ptr.mode = "handle";
         ptr.handle = hits[0].object.userData.idx;
+        ptr.zug = null;
         if (!ed.draw) {
           pushUndo();
           setAktiverGriff(ptr.handle);   // Griff bleibt nach dem Loslassen "aktiv" (Entf loescht ihn)
+          // H4.2: Zugpunkt-Griff? Der zieht nicht ueber den Boden, sondern in
+          // einer waagerechten Ebene auf Griffhoehe (bzw. mit Shift in der
+          // Hoehe). Startwerte hier merken, damit das Ziehen absolut bleibt
+          // und nicht Frame fuer Frame aufaddiert.
+          var zIdx = zugGriffIndex(ptr.handle), zEl = zugGriffElement();
+          var zListe = zEl ? zugpunktListe(zEl) : null;
+          if (zIdx >= 0 && zListe && zListe[zIdx]) {
+            ptr.zug = { el: zEl, idx: zIdx, startH: zListe[zIdx].h,
+                        startY: e.clientY, pxProH: zugPixelProHoehe(zEl) };
+          }
         }
         return;
       }
@@ -82,10 +100,29 @@ export function initPointer(cv) {
         toast("Ranke braucht festen, flachen Grund");
         return;
       }
+      /* H4.4: Alt + Klick waechst einen weiteren Fuss an die AUSGEWAEHLTE
+         Ranke an, statt eine neue zu pflanzen. Alt ist hier der klarste
+         Mechanismus: das Rankenwerkzeug kennt nur diese eine Geste, ein
+         Panel-Knopf schiede aus (panels.js ist in dieser Runde tabu) und
+         eine eigene Variante ("Fuss anfuegen") waere ein Moduswechsel, den
+         man beim naechsten Klick vergisst. Dieselbe Platzierungsregel gilt,
+         der Zweig steht deshalb NACH der Pruefung. */
+      if (e.altKey && ed.selected && ed.selected.kind === "ranke") {
+        pushUndo();
+        ed.selected.points.push(rsp);
+        rebuildHandles();
+        commit(ed.selected, isHeavy(ed.selected));
+        toast("Fußpunkt angewachsen (" + ed.selected.points.length + " Füße)");
+        ptr.mode = "done";
+        return;
+      }
       pushUndo();
       var rel = mkElement("ranke", "ranke", [rsp], copyParams(curParams()), nextSeed());
       S.elements.push(rel);
-      regenElement(rel);
+      // commit statt regenElement: bei Ranken haengt an einem Commit mehr als
+      // die Geometrie (dirty.js zieht die Arbor-Lichtquellen nach). isHeavy
+      // ist fuer Ranken false, der Weg bleibt also der leichte.
+      commit(rel, isHeavy(rel));
       select(rel);
       ptr.mode = "done";
       return;
@@ -112,6 +149,7 @@ export function initPointer(cv) {
       return;
     }
     zeigerOffen = true; zeigerX = e.clientX; zeigerY = e.clientY;
+    zeigerShift = e.shiftKey;
   });
 
 
@@ -127,6 +165,7 @@ export function initPointer(cv) {
       return;
     }
     if (wasMode === "handle") {
+      ptr.zug = null;
       if (ed.selected) commit(ed.selected, isHeavy(ed.selected));
       return;
     }
@@ -134,8 +173,6 @@ export function initPointer(cv) {
     if (wasMode === "pan" || wasMode === "orbit" || wasMode === "done") return;
     if (e.button !== 0 || dragged) return;
 
-    var p = groundPoint(e);
-    if (!p) return;
     var now = performance.now();
     // Doppelklick nur, wenn beide Klicks auch am selben Fleck sitzen —
     // sonst beendet schnelles Setzen zweier Punkte versehentlich die Zeichnung.
@@ -143,12 +180,47 @@ export function initPointer(cv) {
       Math.abs(e.clientX - ptr.lastCx) + Math.abs(e.clientY - ptr.lastCy) < 10;
     ptr.lastClick = now; ptr.lastCx = e.clientX; ptr.lastCy = e.clientY;
 
+    /* H4.2: Doppelklick auf die Rankenachse setzt dort einen Zugpunkt. Der
+       Zweig steht bewusst VOR der Bodenpunkt-Pruefung: ein Klick weit oben am
+       Stamm trifft in aller Regel keinen Boden mehr (groundPoint liefert dann
+       null, und der Strahl zeigt womoeglich ueber den Horizont). Die
+       Punkt-Einfuegen-Logik fuer pfad/flaeche (Runde E) bleibt unangetastet —
+       sie sitzt unveraendert weiter unten und greift nur fuer ihre Kinds. */
+    if (isDouble && !ed.draw && ed.tool === "auswahl" && ed.selected &&
+        ed.selected.kind === "ranke") {
+      // Toleranz bestimmt selection.js aus VINE_R und der Rankendicke
+      var th = rankeAchsenTreffer(ed.selected, e);
+      if (th > 0.02 && th < 0.99) {
+        pushUndo();
+        var zEl2 = ed.selected;
+        if (!Array.isArray(zEl2.params.zugpunkte)) zEl2.params.zugpunkte = [];
+        // Der neue Punkt sitzt exakt auf der heutigen Achse (dx/dz = aktuelle
+        // Auslenkung an dieser Hoehe) — das Einfuegen aendert die Form also
+        // nicht, es macht sie nur greifbar.
+        rankeAchse(zEl2, th, _zpA);
+        rankeKernPunkt(zEl2, th, _zpB);
+        var zListe2 = zEl2.params.zugpunkte, zPos = 0;
+        while (zPos < zListe2.length && zListe2[zPos].h < th) zPos++;
+        zListe2.splice(zPos, 0, { h: th, dx: _zpA.x - _zpB.x, dz: _zpA.z - _zpB.z });
+        rebuildHandles();
+        setAktiverGriff(zEl2.points.length + zPos);
+        commit(zEl2, isHeavy(zEl2));
+        toast("Zugpunkt gesetzt — ziehen verschiebt, mit Shift die Höhe");
+        return;
+      }
+    }
+
+    var p = groundPoint(e);
+    if (!p) return;
+
     if (ed.tool === "auswahl") {
       // Doppelklick auf ein Segment des ausgewaehlten Elements: Punkt einfuegen.
       // Nur pfad/flaeche — objekt-Punkte sind Streuzentren ohne Segmentsemantik
-      // (ein "Segment" zwischen zwei Streupunkten existiert visuell nicht),
-      // ranke hat ohnehin nur einen Punkt. Greift nur ohne aktive Zeichnung,
-      // damit die Doppelklick-Semantik "Zeichnen beenden" unberuehrt bleibt.
+      // (ein "Segment" zwischen zwei Streupunkten existiert visuell nicht), und
+      // die Fusspunkte einer Ranke (seit H4.4 mehrere) spannen ebenfalls kein
+      // Segment auf: dort setzt der Doppelklick oben einen Zugpunkt auf die
+      // Achse. Greift nur ohne aktive Zeichnung, damit die
+      // Doppelklick-Semantik "Zeichnen beenden" unberuehrt bleibt.
       if (isDouble && !ed.draw && ed.selected &&
           (ed.selected.kind === "pfad" || ed.selected.kind === "flaeche") &&
           ed.selected.points.length >= 2) {
@@ -212,6 +284,31 @@ function verarbeiteZeiger(now) {
     updateBrushRing(p, curParams().radius);
     return;
   }
+  /* H4.2: Zugpunkt ziehen. Eigener Zweig VOR dem Bodengriff-Zweig, weil er
+     keinen Bodenpunkt braucht (und oben am Stamm auch keinen bekommt):
+     ohne Shift schneidet der Mausstrahl eine WAAGERECHTE Ebene auf
+     Griffhoehe (rayPlane aus camera.js), mit Shift verschiebt die
+     senkrechte Mausbewegung stattdessen die relative Hoehe h. Vorschau
+     ueber regenElement, der Commit kommt beim Loslassen (pointerup). */
+  if (ptr.mode === "handle" && ptr.zug) {
+    var zg = ptr.zug, zL = zugpunktListe(zg.el), zP = zL && zL[zg.idx];
+    if (zP) {
+      if (zeigerShift) {
+        zP.h = clamp(zg.startH + (zg.startY - zeigerY) / zg.pxProH, 0.02, 0.98);
+      } else {
+        rankeAchse(zg.el, zP.h, _zpA);
+        var zPl = rayPlane(rayFrom(_zeigerEv), _zpA.y);
+        if (zPl) {
+          rankeKernPunkt(zg.el, zP.h, _zpB);
+          zP.dx = zPl.x - _zpB.x;
+          zP.dz = zPl.z - _zpB.z;
+        }
+      }
+      updateHandlePositions();
+      regenElement(zg.el);
+    }
+    return;
+  }
   if (ptr.mode === "handle" && p) {
     var list = ed.draw ? ed.draw.points : (ed.selected ? ed.selected.points : null);
     if (list && list[ptr.handle]) {
@@ -268,6 +365,34 @@ function onKey(e) {
   }
   if (e.code === "Enter" || e.code === "NumpadEnter") { finishDraw(); return; }
   if (e.code === "Delete" || e.code === "Backspace") {
+    // H4.2: aktiver Zugpunkt-Griff — nur diesen Zugpunkt loeschen. Steht vor
+    // allen anderen Faellen, weil der Griffindex hinter den Punktgriffen liegt.
+    if (ed.selected && aktiverGriff >= 0) {
+      var zDel = zugGriffIndex(aktiverGriff);
+      var zLDel = zDel >= 0 ? zugpunktListe(ed.selected) : null;
+      if (zLDel && zLDel[zDel]) {
+        pushUndo();
+        zLDel.splice(zDel, 1);
+        setAktiverGriff(-1);
+        rebuildHandles();
+        commit(ed.selected, isHeavy(ed.selected));
+        toast("Zugpunkt gelöscht");
+        return;
+      }
+    }
+    // H4.4: aktiver Fussgriff einer mehrfuessigen Ranke — nur den Fuss
+    // loeschen (Gegenstueck zum Anwachsen per Alt+Klick). Beim letzten Fuss
+    // faellt der Fall durch und loescht wie bisher das ganze Element.
+    if (ed.selected && ed.selected.kind === "ranke" && aktiverGriff >= 0 &&
+        aktiverGriff < ed.selected.points.length && ed.selected.points.length > 1) {
+      pushUndo();
+      ed.selected.points.splice(aktiverGriff, 1);
+      setAktiverGriff(-1);
+      rebuildHandles();
+      commit(ed.selected, isHeavy(ed.selected));
+      toast("Fußpunkt gelöscht");
+      return;
+    }
     // Aktiver Griff an pfad/flaeche: nur den Punkt loeschen, nicht das Element.
     if (ed.selected && aktiverGriff >= 0 && aktiverGriff < ed.selected.points.length &&
         (ed.selected.kind === "pfad" || ed.selected.kind === "flaeche")) {
