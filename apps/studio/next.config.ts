@@ -29,6 +29,27 @@ const nextConfig: NextConfig = {
     "@uwe/static-export",
     "@uwe/env",
   ],
+  async redirects() {
+    /* Die Karten lagen bis Juli 2026 unter /atlas3d. Terra hat den Editor
+       abgeloest, und der Pfad heisst seither nach der Sache — aber gespeicherte
+       Links und Lesezeichen sollen nicht ins Leere laufen.
+
+       `permanent: false` (307) statt 308: die Umbenennung ist jung, und ein
+       dauerhafter Redirect brennt sich in jeden Browsercache ein. Wer sie
+       spaeter zurueckdrehen wollte, kaeme gegen die Caches nicht mehr an. */
+    return [
+      {
+        source: "/worlds/:worldSlug/atlas3d",
+        destination: "/worlds/:worldSlug/karten",
+        permanent: false,
+      },
+      {
+        source: "/worlds/:worldSlug/atlas3d/:rest*",
+        destination: "/worlds/:worldSlug/karten",
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     const portalPath = process.env.PORTAL_PATH?.trim();
     if (!portalPath || portalPath === "/") return [];
