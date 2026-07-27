@@ -23,21 +23,21 @@ test("connector role is opt-in via UWE_RUNTIME_ROLE", () => {
 
 test("resolveConnectorRuntimeConfig requires host url and token", () => {
   assert.equal(resolveConnectorRuntimeConfig({}).ok, false);
-  assert.equal(resolveConnectorRuntimeConfig({ UWE_HOST_URL: "https://uweanddragons.org" }).ok, false);
+  assert.equal(resolveConnectorRuntimeConfig({ UWE_HOST_URL: "https://uwe.example" }).ok, false);
   assert.equal(
     resolveConnectorRuntimeConfig({ UWE_HOST_URL: "not a url", UWE_CONNECTOR_TOKEN: "uwec_x" }).ok,
     false,
   );
 
   const result = resolveConnectorRuntimeConfig({
-    UWE_HOST_URL: "https://uweanddragons.org/",
+    UWE_HOST_URL: "https://uwe.example/",
     UWE_CONNECTOR_TOKEN: "uwec_secret",
     UWE_CONNECTOR_NAME: "RTX Laptop",
     UWE_CONNECTOR_CAPABILITIES: "llm_local, audio_local, bogus",
   });
   assert.equal(result.ok, true);
   if (result.ok) {
-    assert.equal(result.config.hostUrl, "https://uweanddragons.org");
+    assert.equal(result.config.hostUrl, "https://uwe.example");
     assert.equal(result.config.name, "RTX Laptop");
     assert.equal(result.config.transportMode, "queue");
     assert.equal(result.config.queueEnabled, true);
@@ -47,7 +47,7 @@ test("resolveConnectorRuntimeConfig requires host url and token", () => {
 
 test("legacy queue opt-out stays paused and never enables Direct implicitly", () => {
   const result = resolveConnectorRuntimeConfig({
-    UWE_HOST_URL: "https://uweanddragons.org",
+    UWE_HOST_URL: "https://uwe.example",
     UWE_CONNECTOR_TOKEN: "uwec_secret",
     UWE_CONNECTOR_QUEUE_ENABLED: "false",
   });
@@ -60,7 +60,7 @@ test("legacy queue opt-out stays paused and never enables Direct implicitly", ()
 
 test("Direct transport is enabled only by the explicit transport setting", () => {
   const result = resolveConnectorRuntimeConfig({
-    UWE_HOST_URL: "https://uweanddragons.org",
+    UWE_HOST_URL: "https://uwe.example",
     UWE_CONNECTOR_TOKEN: "uwec_secret",
     UWE_CONNECTOR_TRANSPORT: "direct",
     UWE_CONNECTOR_QUEUE_ENABLED: "true",
@@ -74,7 +74,7 @@ test("Direct transport is enabled only by the explicit transport setting", () =>
 
 test("explicit transport wins and derives queue compatibility", () => {
   const result = resolveConnectorRuntimeConfig({
-    UWE_HOST_URL: "https://uweanddragons.org",
+    UWE_HOST_URL: "https://uwe.example",
     UWE_CONNECTOR_TOKEN: "uwec_secret",
     UWE_CONNECTOR_TRANSPORT: " HYBRID ",
     UWE_CONNECTOR_QUEUE_ENABLED: "false",
@@ -88,7 +88,7 @@ test("explicit transport wins and derives queue compatibility", () => {
 
 test("invalid explicit transport falls back safely to queue", () => {
   const result = resolveConnectorRuntimeConfig({
-    UWE_HOST_URL: "https://uweanddragons.org",
+    UWE_HOST_URL: "https://uwe.example",
     UWE_CONNECTOR_TOKEN: "uwec_secret",
     UWE_CONNECTOR_TRANSPORT: "websocket",
     UWE_CONNECTOR_QUEUE_ENABLED: "false",
@@ -112,7 +112,7 @@ test("Direct and Hybrid require https for non-loopback hosts", () => {
     );
     assert.equal(
       resolveConnectorRuntimeConfig({
-        UWE_HOST_URL: "https://uweanddragons.org",
+        UWE_HOST_URL: "https://uwe.example",
         UWE_CONNECTOR_TOKEN: "uwec_secret",
         UWE_CONNECTOR_TRANSPORT: transport,
       }).ok,

@@ -17,7 +17,7 @@ export interface UweRuntimeConfig {
   sessionCookieSameSite: SessionCookieSameSite;
   /**
    * Optional cookie `Domain`. Unset = host-only (default). Set to a registrable
-   * domain (e.g. `.uweanddragons.org`) to share the session across all its
+   * domain (e.g. `.uwe.example`) to share the session across all its
    * subdomains — enables one sign-in on the apex landing to be valid on both
    * `studio.` and `portal.` (SSO). Only set this for domains you fully control.
    */

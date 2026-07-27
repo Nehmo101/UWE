@@ -122,5 +122,4 @@ Die **UWE Theme-Pipeline (Schritte 1–8)** ist auf `main` integriert. Token-Sys
 
 - Theme-Modul: `packages/shared-ui/src/theme/`
 - Visual Polish: `packages/shared-ui/src/uwe-visual-polish.css`
-- Orchestrierung: `docs/design/theme-orchestration.md`
-- Design Audits: `odysseus-ui-audit.md`, `uwe-current-design-audit.md`, `odysseus-license-risk.md`
+- Lizenzlage: `THIRD-PARTY-NOTICES.md`

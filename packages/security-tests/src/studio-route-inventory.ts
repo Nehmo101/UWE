@@ -10,7 +10,7 @@ export const STUDIO_API_ROOT = "apps/studio/app/api";
 
 export const STUDIO_PUBLIC_API_ALLOWLIST = new Set([
   "auth/login/route.ts",
-  // Landing-page (uweanddragons.org) unified sign-in — authenticates in-place
+  // Landing-page (uwe.example) unified sign-in — authenticates in-place
   // for the Studio or Portal target; access is enforced inside the handler.
   "auth/enter/route.ts",
   "auth/logout/route.ts",

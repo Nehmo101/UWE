@@ -220,7 +220,5 @@ Intensity controlled via `--uwe-bg-effect-intensity` and preference slider.
 - [odysseus-ui-architecture-analysis.md](./odysseus-ui-architecture-analysis.md) — full UI system (Phases 1–5 implemented)
 - [theme-orchestration.md](./theme-orchestration.md) — subagent execution order
 - [theme-qa-report.md](./theme-qa-report.md) — regression report
-- [uwe-current-design-audit.md](./uwe-current-design-audit.md)
-- [odysseus-ui-audit.md](./odysseus-ui-audit.md)
-- [odysseus-license-risk.md](./odysseus-license-risk.md)
+- [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md)
 - [theme-migration-notes.md](./theme-migration-notes.md)

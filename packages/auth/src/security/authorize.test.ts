@@ -6,7 +6,7 @@ function makeRequest(
   pathname: string,
   headers: Record<string, string> = {},
 ): Request {
-  return new Request(`http://uweanddragons.org${pathname}`, { headers });
+  return new Request(`http://uwe.example${pathname}`, { headers });
 }
 
 describe("authorize", () => {
@@ -55,7 +55,7 @@ describe("authorize", () => {
 
     const denied = authorize({
       scope: "studio-api",
-      request: makeRequest("/api/brain/run", { host: "uweanddragons.org" }),
+      request: makeRequest("/api/brain/run", { host: "uwe.example" }),
       pathname: "/api/brain/run",
     });
     assert.ok(denied);
@@ -68,7 +68,7 @@ describe("authorize", () => {
     const denied = authorize({
       scope: "studio-api",
       request: makeRequest("/api/brain/run", {
-        host: "uweanddragons.org",
+        host: "uwe.example",
         authorization: "Bearer secret-token",
       }),
       pathname: "/api/brain/run",
@@ -82,7 +82,7 @@ describe("authorize", () => {
     const denied = authorize({
       scope: "studio-api",
       request: makeRequest("/api/brain/run", {
-        host: "uweanddragons.org",
+        host: "uwe.example",
         origin: "https://evil.example",
         "sec-fetch-site": "cross-site",
         authorization: "Bearer secret-token",
@@ -100,8 +100,8 @@ describe("authorize", () => {
     const denied = authorize({
       scope: "studio-api",
       request: makeRequest("/api/import/execute", {
-        host: "uweanddragons.org",
-        "cf-access-authenticated-user-email": "lasset610@gmail.com",
+        host: "uwe.example",
+        "cf-access-authenticated-user-email": "owner@uwe.example",
       }),
       pathname: "/api/import/execute",
     });
@@ -115,10 +115,10 @@ describe("authorize", () => {
     const denied = authorize({
       scope: "studio-api",
       request: makeRequest("/api/import/execute", {
-        host: "studio.uweanddragons.org",
+        host: "studio.uwe.example",
         origin: "https://evil.example",
         "sec-fetch-site": "cross-site",
-        "cf-access-authenticated-user-email": "lasset610@gmail.com",
+        "cf-access-authenticated-user-email": "owner@uwe.example",
       }),
       pathname: "/api/import/execute",
     });

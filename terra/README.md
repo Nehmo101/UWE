@@ -38,6 +38,4 @@ Karten aus der frueheren Einzeldatei-Fassung (`terra.html`) laden weiterhin.
   ~200k Dreiecken deuten auf fehlende GPU-Beschleunigung der Testumgebung.
   Pruefung ueber `WEBGL_debug_renderer_info` (steht dort llvmpipe oder
   SwiftShader, liegt es an der Umgebung); vor dieser Klaerung keine weitere
-  GPU-Optimierung investieren. Naechste Runden laut
-  `docs/engineering/terra-bearbeitungsplan.md`: D (Performance/Ergonomie),
-  E (Editierbarkeit/Format v3), F (Look), G (Setting-Ausbau).
+  GPU-Optimierung investieren.

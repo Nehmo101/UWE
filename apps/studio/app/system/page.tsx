@@ -452,7 +452,7 @@ export default async function SystemHubPage({ searchParams }: Props) {
         <>
           <p className="mb-4 text-sm text-muted-foreground">
             Cloudflare Tunnel, Proxy-Header und Netzwerk-Schutz — relevant für Selfhosting auf{" "}
-            <code>uweandragons.org</code>.
+            <code>uwe.example</code>.
           </p>
 
           <StatusCard

@@ -21,6 +21,3 @@ data/
 *.sqlite3
 uploads/
 
-# Agent context: verbose planning docs (load on demand via docs/)
-docs/ai-orchestrator-subagents-prompts.md
-docs/ai-brain-mail/

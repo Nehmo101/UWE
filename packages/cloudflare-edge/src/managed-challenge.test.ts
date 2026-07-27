@@ -38,13 +38,13 @@ after(() => {
 
 describe("hostname normalisation", () => {
   it("accepts bare hostnames and full URLs", () => {
-    assert.equal(normalizeChallengeHostname("studio.uweanddragons.org"), "studio.uweanddragons.org");
-    assert.equal(normalizeChallengeHostname("  Portal.UweAndDragons.org "), "portal.uweanddragons.org");
+    assert.equal(normalizeChallengeHostname("studio.uwe.example"), "studio.uwe.example");
+    assert.equal(normalizeChallengeHostname("  Portal.UweAndDragons.org "), "portal.uwe.example");
     assert.equal(
-      normalizeChallengeHostname("https://studio.uweanddragons.org/system/cloudflare"),
-      "studio.uweanddragons.org",
+      normalizeChallengeHostname("https://studio.uwe.example/system/cloudflare"),
+      "studio.uwe.example",
     );
-    assert.equal(normalizeChallengeHostname("https://uweanddragons.org:8443/"), "uweanddragons.org");
+    assert.equal(normalizeChallengeHostname("https://uwe.example:8443/"), "uwe.example");
   });
 
   it("rejects anything that could break out of the expression", () => {
@@ -74,12 +74,12 @@ describe("config normalisation", () => {
   it("drops invalid entries, dedupes and sorts", () => {
     const config = normalizeManagedChallengeConfig({
       enabled: true,
-      hostnames: ["portal.uweanddragons.org", "studio.uweanddragons.org", "portal.uweanddragons.org", "nope"],
+      hostnames: ["portal.uwe.example", "studio.uwe.example", "portal.uwe.example", "nope"],
       skipPaths: ["/api/health", "/api/health"],
       action: "js_challenge",
     });
 
-    assert.deepEqual(config.hostnames, ["portal.uweanddragons.org", "studio.uweanddragons.org"]);
+    assert.deepEqual(config.hostnames, ["portal.uwe.example", "studio.uwe.example"]);
     assert.deepEqual(config.skipPaths, ["/api/health"]);
     assert.equal(config.action, "js_challenge");
     assert.equal(config.enabled, true);
@@ -118,23 +118,23 @@ describe("expression builder", () => {
   it("matches the hostnames and exempts the skip paths", () => {
     const config = normalizeManagedChallengeConfig({
       enabled: true,
-      hostnames: ["studio.uweanddragons.org", "portal.uweanddragons.org"],
+      hostnames: ["studio.uwe.example", "portal.uwe.example"],
       skipPaths: ["/api/health"],
     });
 
     assert.equal(
       buildManagedChallengeExpression(config),
-      '(http.host in {"portal.uweanddragons.org" "studio.uweanddragons.org"}) and not (starts_with(http.request.uri.path, "/api/health"))',
+      '(http.host in {"portal.uwe.example" "studio.uwe.example"}) and not (starts_with(http.request.uri.path, "/api/health"))',
     );
   });
 
   it("omits the not-clause when nothing is exempt", () => {
     const config = normalizeManagedChallengeConfig({
       enabled: true,
-      hostnames: ["uweanddragons.org"],
+      hostnames: ["uwe.example"],
       skipPaths: [],
     });
-    assert.equal(buildManagedChallengeExpression(config), '(http.host in {"uweanddragons.org"})');
+    assert.equal(buildManagedChallengeExpression(config), '(http.host in {"uwe.example"})');
   });
 
   it("never emits a bare quote from hostile input", () => {
@@ -156,7 +156,7 @@ describe("rule merge", () => {
   it("appends the UWE rule and keeps foreign rules untouched", () => {
     const config = normalizeManagedChallengeConfig({
       enabled: true,
-      hostnames: ["studio.uweanddragons.org"],
+      hostnames: ["studio.uwe.example"],
       skipPaths: [],
     });
     const merged = mergeManagedChallengeRule(foreign, config);
@@ -176,7 +176,7 @@ describe("rule merge", () => {
     ];
     const config = normalizeManagedChallengeConfig({
       enabled: true,
-      hostnames: ["studio.uweanddragons.org"],
+      hostnames: ["studio.uwe.example"],
       skipPaths: [],
     });
     const merged = mergeManagedChallengeRule(existing, config);
@@ -184,7 +184,7 @@ describe("rule merge", () => {
     assert.equal(merged.length, 2);
     assert.equal(merged[1]?.id, "uwe-1");
     assert.equal(merged[1]?.action, "managed_challenge");
-    assert.equal(merged[1]?.expression, '(http.host in {"studio.uweanddragons.org"})');
+    assert.equal(merged[1]?.expression, '(http.host in {"studio.uwe.example"})');
   });
 
   it("removes the UWE rule when disabled — and only that one", () => {
@@ -215,7 +215,7 @@ describe("host-readable config file", () => {
     const written = writeManagedChallengeConfig(
       normalizeManagedChallengeConfig({
         enabled: true,
-        hostnames: ["studio.uweanddragons.org"],
+        hostnames: ["studio.uwe.example"],
         skipPaths: ["/api/health"],
         action: "managed_challenge",
       }),
@@ -227,7 +227,7 @@ describe("host-readable config file", () => {
 
     const read = readManagedChallengeConfig(dir);
     assert.equal(read.enabled, true);
-    assert.deepEqual(read.hostnames, ["studio.uweanddragons.org"]);
+    assert.deepEqual(read.hostnames, ["studio.uwe.example"]);
     assert.deepEqual(read.skipPaths, ["/api/health"]);
   });
 
@@ -236,7 +236,7 @@ describe("host-readable config file", () => {
     writeManagedChallengeConfig(
       normalizeManagedChallengeConfig({
         enabled: true,
-        hostnames: ["studio.uweanddragons.org"],
+        hostnames: ["studio.uwe.example"],
         apiToken: "must-not-be-written",
       }),
       dir,

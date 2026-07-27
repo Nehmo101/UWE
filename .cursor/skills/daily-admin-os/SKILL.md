@@ -13,11 +13,10 @@ description: Implement Daily Admin OS modules in UWE Studio — Today dashboard,
 
 > **Scope revision 2026-07-03 (owner decision):** meal planner, household inventory (pantry)
 > and document vault (as Scan Inbox with review-based filing) moved from never-build to
-> in-scope. Plans: `docs/rework/scan-inbox-plan.md`, `docs/rework/meal-planner-plan.md`,
-> roadmap `docs/rework/feature-roadmap-2026-07.md`. Older prompt docs still contain the
+> in-scope. Roadmap: `docs/ROADMAP.md`. Older docs may still carry the
 > pre-revision boundary — this file wins.
 
-Source: `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md`, `docs/daily-admin-os.md`.
+Source: `docs/daily-admin-os.md`.
 
 ## Architecture
 
@@ -83,4 +82,3 @@ No `test:security` unless adding API routes with new auth surface.
 ## Related docs
 
 - `docs/daily-admin-os.md`
-- `docs/engineering/product-orchestrator-plan.md` — Subagents 2, 3, 5, 6

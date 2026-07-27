@@ -67,13 +67,13 @@ describe("runtime config", () => {
   it("sets a domain-wide cookie when SESSION_COOKIE_DOMAIN is configured", () => {
     const options = getSessionCookieOptions({
       NODE_ENV: "production",
-      SESSION_COOKIE_DOMAIN: ".uweanddragons.org",
+      SESSION_COOKIE_DOMAIN: ".uwe.example",
     });
-    assert.equal(options.domain, ".uweanddragons.org");
+    assert.equal(options.domain, ".uwe.example");
   });
 
   it("ignores a malformed SESSION_COOKIE_DOMAIN (scheme/path/port)", () => {
-    for (const bad of ["https://uweanddragons.org", "uweanddragons.org/x", "host:3000", "  "]) {
+    for (const bad of ["https://uwe.example", "uwe.example/x", "host:3000", "  "]) {
       const options = getSessionCookieOptions({
         NODE_ENV: "production",
         SESSION_COOKIE_DOMAIN: bad,
@@ -85,7 +85,7 @@ describe("runtime config", () => {
   it("keeps production cookies secure by default", () => {
     const options = getSessionCookieOptions({
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
     });
 
     assert.equal(options.secure, true);
@@ -214,13 +214,13 @@ describe("runtime config", () => {
   });
 
   it("matches trusted origins including PUBLIC_APP_URL host", () => {
-    const env = { PUBLIC_APP_URL: "https://uweanddragons.org" };
+    const env = { PUBLIC_APP_URL: "https://uwe.example" };
     const hosts = getTrustedRequestHosts("localhost:3001", env);
 
     assert.ok(hosts.has("localhost:3001"));
-    assert.ok(hosts.has("uweanddragons.org"));
+    assert.ok(hosts.has("uwe.example"));
     assert.ok(
-      originMatchesTrustedHost("https://uweanddragons.org", "localhost:3001", env),
+      originMatchesTrustedHost("https://uwe.example", "localhost:3001", env),
     );
     assert.equal(
       originMatchesTrustedHost("https://evil.example", "localhost:3001", env),
@@ -240,24 +240,24 @@ describe("runtime config", () => {
 
   it("uses split-hostname URLs with root paths when hosts differ", () => {
     const urls = resolveUweAppUrls({
-      PUBLIC_APP_URL: "https://uweanddragons.org",
-      NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
-      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
+      NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
     });
     assert.equal(urls.deploymentModel, "split-hostname");
     assert.equal(urls.studioPath, "/");
     assert.equal(urls.portalPath, "/");
-    assert.equal(urls.studioUrl, "https://studio.uweanddragons.org");
-    assert.equal(urls.portalUrl, "https://uweanddragons.org");
+    assert.equal(urls.studioUrl, "https://studio.uwe.example");
+    assert.equal(urls.portalUrl, "https://uwe.example");
   });
 
   it("builds portal session href for split-hostname deployments", () => {
     const href = resolvePortalSessionHref({
-      PUBLIC_APP_URL: "https://uweanddragons.org",
-      NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
-      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
+      NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
     });
-    assert.equal(href, "https://uweanddragons.org/auth/worlds");
+    assert.equal(href, "https://uwe.example/auth/worlds");
   });
 
   it("builds portal session href without duplicating mount path", () => {
@@ -270,9 +270,9 @@ describe("runtime config", () => {
   it("builds studio session href on split-hostname studio surface", () => {
     const href = resolveStudioSessionHref(
       {
-        PUBLIC_APP_URL: "https://uweanddragons.org",
-        NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
-        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
       },
       { currentApp: "studio" },
     );
@@ -282,13 +282,13 @@ describe("runtime config", () => {
   it("builds studio session href from portal on split-hostname", () => {
     const href = resolveStudioSessionHref(
       {
-        PUBLIC_APP_URL: "https://uweanddragons.org",
-        NEXT_PUBLIC_PORTAL_URL: "https://uweandragons.org",
-        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
       },
       { currentApp: "portal" },
     );
-    assert.equal(href, "https://studio.uweanddragons.org/today");
+    assert.equal(href, "https://studio.uwe.example/today");
   });
 
   it("builds studio session href for unified-path deployments", () => {

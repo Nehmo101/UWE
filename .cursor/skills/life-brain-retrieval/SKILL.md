@@ -67,4 +67,4 @@ pnpm test:security  # if touching router or API routes
 
 ## Orchestrator
 
-Subagent 4 in `docs/engineering/product-orchestrator-plan.md`. Do not parallel-edit `privacyGuard.ts` with Mail/Calendar AI work.
+Do not parallel-edit `privacyGuard.ts` with Mail/Calendar AI work.

@@ -48,9 +48,9 @@ export const AGENT_JOB_PRESETS: AgentJobPreset[] = [
     id: "backlog_package",
     label: "Backlog-Arbeitspaket umsetzen",
     summary:
-      "Ein Paket aus docs/FEATURE_BACKLOG_PLAN.md implementieren — Ist-Stand prüfen, nicht doppelt bauen.",
+      "Ein Paket aus docs/ROADMAP.md implementieren — Ist-Stand prüfen, nicht doppelt bauen.",
     titleTemplate: "feat: {{paket}}",
-    promptTemplate: `Setze das Backlog-Arbeitspaket "{{paket}}" aus docs/FEATURE_BACKLOG_PLAN.md um.
+    promptTemplate: `Setze das Backlog-Arbeitspaket "{{paket}}" aus docs/ROADMAP.md um.
 
 Scope/Details:
 {{details}}
@@ -108,7 +108,7 @@ Vorgehen: Ursache im Code lokalisieren (nicht nur Symptom), minimaler Fix, Regre
     summary:
       "FEATURE_BACKLOG_PLAN, FEATURE_MATURITY_MATRIX und CURRENT_STATE an den Code-Stand angleichen.",
     titleTemplate: "docs: sync backlog docs ({{mergedPrs}})",
-    promptTemplate: `Gleiche docs/FEATURE_BACKLOG_PLAN.md, docs/FEATURE_MATURITY_MATRIX.md und docs/CURRENT_STATE.md an den aktuellen Code-Stand an. Anlass: gemergte PRs {{mergedPrs}}.
+    promptTemplate: `Gleiche docs/ROADMAP.md, docs/FEATURE_MATURITY_MATRIX.md und docs/CURRENT_STATE.md an den aktuellen Code-Stand an. Anlass: gemergte PRs {{mergedPrs}}.
 
 Verifiziere jeden Status per Grep/Read im Code (nicht raten), hebe Erledigtes auf ✅/Beta, aktualisiere die TL;DR-Zähler konsistent zu den Tabellen. §13-Beschlüsse nicht umformulieren. Gate: \`pnpm docs:check\`.${COMMON_RULES}`,
     fields: [

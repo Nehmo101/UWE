@@ -84,7 +84,6 @@ pnpm build:release    # db:generate + turbo build
 
 ## Implementation packages order
 
-From `docs/ai-brain-mail/IMPLEMENTATION_PACKAGES.md`:
 
 ```txt
 Repo analysis → Production baseline → Cloudflare/Auth → Feature modules → Tests/Hardening
@@ -109,6 +108,6 @@ For large features, ship in small PRs — one package at a time.
 
 ## Related docs
 
-- `docs/REPO_AUDIT.md` — full module map
+- `docs/ARCHITECTURE.md` — full module map
 - `docs/dnd-generator-upgrade.md` — AI workflow
 - `docs/AGENT_JOBS.md` — automated dev jobs

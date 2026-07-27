@@ -18,9 +18,9 @@ function settings(overrides: Partial<DeploymentSettings> = {}): DeploymentSettin
 
 const SPLIT_HOSTNAME_ENV: NodeJS.ProcessEnv = {
   NODE_ENV: "test",
-  PUBLIC_BASE_URL: "https://uweanddragons.org",
-  NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
-  NEXT_PUBLIC_PORTAL_URL: "https://portal.uweanddragons.org",
+  PUBLIC_BASE_URL: "https://uwe.example",
+  NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
+  NEXT_PUBLIC_PORTAL_URL: "https://portal.uwe.example",
 };
 
 describe("managedChallengeConfigFromSettings", () => {
@@ -32,9 +32,9 @@ describe("managedChallengeConfigFromSettings", () => {
 
     assert.equal(config.enabled, true);
     assert.deepEqual(config.hostnames, [
-      "portal.uweanddragons.org",
-      "studio.uweanddragons.org",
-      "uweanddragons.org",
+      "portal.uwe.example",
+      "studio.uwe.example",
+      "uwe.example",
     ]);
   });
 
@@ -42,12 +42,12 @@ describe("managedChallengeConfigFromSettings", () => {
     const config = managedChallengeConfigFromSettings(
       settings({
         managedChallengeEnabled: true,
-        managedChallengeHostnames: ["studio.uweanddragons.org"],
+        managedChallengeHostnames: ["studio.uwe.example"],
       }),
       SPLIT_HOSTNAME_ENV,
     );
 
-    assert.deepEqual(config.hostnames, ["studio.uweanddragons.org"]);
+    assert.deepEqual(config.hostnames, ["studio.uwe.example"]);
   });
 
   it("always keeps the machine-client exemptions and appends the owner's", () => {

@@ -67,12 +67,12 @@ describe("auth-links", () => {
       isLoggedIn: true,
       currentApp: "studio",
       env: {
-        PUBLIC_APP_URL: "https://uweanddragons.org",
-        NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
-        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
       },
     });
-    assert.equal(links.portalHref, "https://uweanddragons.org/auth/worlds");
+    assert.equal(links.portalHref, "https://uwe.example/auth/worlds");
     assert.equal(links.studioHref, "/today");
   });
 
@@ -81,12 +81,12 @@ describe("auth-links", () => {
       isLoggedIn: true,
       currentApp: "portal",
       env: {
-        PUBLIC_APP_URL: "https://uweanddragons.org",
-        NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
-        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
       },
     });
-    assert.equal(links.studioHref, "https://studio.uweanddragons.org/today");
+    assert.equal(links.studioHref, "https://studio.uwe.example/today");
   });
 
   it("links from Studio landing to Portal login when logged out", () => {

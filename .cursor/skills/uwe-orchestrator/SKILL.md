@@ -7,10 +7,10 @@ description: Coordinate UWE product evolution across Daily Admin OS, DnD Studio,
 
 ## Before delegating
 
-1. Read `docs/engineering/product-orchestrator-plan.md` — source of truth for order and work packages.
+1. Read `docs/ROADMAP.md` — planned and in-progress work.
 2. Read `docs/FEATURE_MATURITY_MATRIX.md` — honest feature status.
 3. Check conflict matrix — do not run parallel subagents on same files (`privacyGuard.ts`, `life-admin-service.ts`, `schema.prisma`).
-4. Confirm product boundaries: **no** family/meal/cat/household modules (`docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md`).
+4. Confirm product boundaries: **no** family/meal/cat/household modules (`docs/daily-admin-os.md`).
 
 ## Non-negotiable rules
 

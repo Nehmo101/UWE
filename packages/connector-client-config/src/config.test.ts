@@ -43,13 +43,13 @@ describe("parseConnectorClientConfig", () => {
 
   it("merges partial persisted JSON and normalizes hostUrl", () => {
     const config = parseConnectorClientConfig({
-      hostUrl: "https://uweanddragons.org/",
+      hostUrl: "https://uwe.example/",
       token: "  uwec_secret  ",
       name: "RTX Laptop",
       queueEnabled: false,
     });
 
-    assert.equal(config.hostUrl, "https://uweanddragons.org");
+    assert.equal(config.hostUrl, "https://uwe.example");
     assert.equal(config.token, "uwec_secret");
     assert.equal(config.name, "RTX Laptop");
     assert.equal(config.transportMode, "queue");
@@ -99,7 +99,7 @@ describe("parseConnectorClientConfig", () => {
       );
       assert.equal(
         parseConnectorClientConfig({
-          hostUrl: "https://uweanddragons.org",
+          hostUrl: "https://uwe.example",
           transportMode,
         }).transportMode,
         transportMode,

@@ -3,10 +3,10 @@ import { describe, it } from "node:test";
 import { evaluatePortalMiddleware, evaluateStudioMiddleware } from "./middleware";
 
 function makeRequest(pathname: string, options: { session?: string; headers?: Record<string, string> } = {}) {
-  const headers = new Headers(options.headers ?? { host: "uweanddragons.org" });
+  const headers = new Headers(options.headers ?? { host: "uwe.example" });
   return {
     pathname,
-    url: `https://uweanddragons.org${pathname}`,
+    url: `https://uwe.example${pathname}`,
     headers,
     cookies: {
       get(name: string) {
@@ -23,7 +23,7 @@ const productionPortalEnv = {
   ...process.env,
   NODE_ENV: "production",
   AUTH_REQUIRED: "true",
-  PUBLIC_APP_URL: "https://uweanddragons.org",
+  PUBLIC_APP_URL: "https://uwe.example",
 };
 
 describe("middleware evaluation", () => {
@@ -75,7 +75,7 @@ describe("middleware evaluation", () => {
     const decision = evaluateStudioMiddleware(makeRequest("/api/brain/run"), {
       ...process.env,
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
       CLOUDFLARE_TUNNEL: "true",
       STUDIO_API_TOKEN: "secret",
     });
@@ -87,7 +87,7 @@ describe("middleware evaluation", () => {
     const decision = evaluateStudioMiddleware(makeRequest("/api/unknown"), {
       ...process.env,
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
       CLOUDFLARE_TUNNEL: "true",
     });
     assert.equal(decision.action, "block");
@@ -98,7 +98,7 @@ describe("middleware evaluation", () => {
     const decision = evaluateStudioMiddleware(makeRequest("/api/health"), {
       ...process.env,
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
       CLOUDFLARE_TUNNEL: "true",
       STUDIO_API_TOKEN: "secret",
     });
@@ -110,14 +110,14 @@ describe("middleware evaluation", () => {
       const portalDecision = evaluatePortalMiddleware(makeRequest(pathname), {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
       });
       assert.equal(portalDecision.action, "allow", `portal ${pathname}`);
 
       const studioDecision = evaluateStudioMiddleware(makeRequest(pathname), {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       });
@@ -131,7 +131,7 @@ describe("middleware evaluation", () => {
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       },
@@ -145,7 +145,7 @@ describe("middleware evaluation", () => {
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       },
@@ -159,7 +159,7 @@ describe("middleware evaluation", () => {
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       },
@@ -180,7 +180,7 @@ describe("middleware evaluation", () => {
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       },
@@ -200,7 +200,7 @@ describe("middleware evaluation", () => {
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       },
@@ -210,12 +210,12 @@ describe("middleware evaluation", () => {
 
   it("allows studio app navigation without bearer when STUDIO_API_TOKEN is configured", () => {
     const decision = evaluateStudioMiddleware(
-      makeRequest("/", { headers: { host: "studio.uweandragons.org" } }),
+      makeRequest("/", { headers: { host: "studio.uwe.example" } }),
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweandragons.org",
-        NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "secret",
       },

@@ -81,4 +81,3 @@ Acceptable when features are atomic (e.g. visibility + audit log in one release)
 
 - `packages/database/package.json` — scripts
 - `docs/backup-restore.md` — backup before migrate
-- `docs/PR_REVIEW_LOG.md` — past migration batches

@@ -170,7 +170,6 @@ Zusätzlich aus `uwe-qa-urls.md` (einmal pro Release-Welle, preset-unabhängig):
 - [ ] Banner auf `/hardware` und `/admin/status`
 - [ ] Sidebar komplett auf Deutsch (Abschnitt „Abnahme“ in uwe-qa-urls.md)
 
-Referenz-Screenshots: `docs/design/scraps/today-desktop.png`, `today-mobile.png`
 
 ---
 
@@ -228,7 +227,7 @@ Du bist qa-engineer für UWE.
 Branch: cursor/qa-checklist-runner-adcf (oder Follow-up von main).
 
 1. Lies docs/design/uwe-qa-automation.md (dieses Dokument).
-2. Lies docs/design/uwe-qa-urls.md und docs/design/design-v2-reference.md.
+2. Lies docs/design/uwe-qa-urls.md.
 3. Führe aus:
    pnpm install --frozen-lockfile
    node scripts/qa-smoke.mjs
@@ -243,7 +242,7 @@ Branch: cursor/qa-checklist-runner-adcf (oder Follow-up von main).
    - empfohlene Fixes
 
 Zusätzlich KI/Security-Szenarien (bei KI-PRs): Cloud+Brain blockiert, RTX offline,
-keine Brain-Daten an Cloud — siehe docs/ai-orchestrator-subagents-prompts.md § qa-engineer.
+keine Brain-Daten an Cloud — siehe SECURITY_NOTES.md.
 ```
 
 ---

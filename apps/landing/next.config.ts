@@ -7,7 +7,7 @@ import { getUweStandaloneNextConfig } from "@uwe/config/next-standalone";
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const standalone = getUweStandaloneNextConfig(appDir);
 
-// Die Landing läuft auf dem Apex-Origin (uweanddragons.org, Standard-Port 3103)
+// Die Landing läuft auf dem Apex-Origin (uwe.example, Standard-Port 3103)
 // und wird nie unter einem Sub-Pfad geproxied — deshalb kein basePath. Sie ist
 // bewusst die einzige öffentliche Fläche dieses Origins: Studio, Portal und
 // Brain liegen auf eigenen Subdomains (siehe middleware.ts).

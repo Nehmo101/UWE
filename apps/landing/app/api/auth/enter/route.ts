@@ -26,15 +26,15 @@ import {
 } from "@uwe/security";
 
 /**
- * Anmeldung der Startseite (uweanddragons.org). Anders als `/api/auth/login`
+ * Anmeldung der Startseite (uwe.example). Anders als `/api/auth/login`
  * der jeweiligen App authentifiziert dieser Endpunkt für ein gewähltes Ziel:
  *   - target "studio" → benötigt Studio-Zugriff (owner/admin/dm)
  *   - target "portal" → jeder aktive Benutzer (wie der Portal-Login)
  *   - target "brain"  → owner-only; hier rollen-gated wie Studio, die Brain-App
  *                       prüft die owner-Rolle zusätzlich auf jeder Route
  * und setzt das (domänenweite) Session-Cookie, damit der Besucher beim Sprung
- * auf studio./portal./brain.uweanddragons.org angemeldet ist. Dafür muss
- * SESSION_COOKIE_DOMAIN=.uweanddragons.org gesetzt sein — sonst gilt das Cookie
+ * auf studio./portal./brain.uwe.example angemeldet ist. Dafür muss
+ * SESSION_COOKIE_DOMAIN=.uwe.example gesetzt sein — sonst gilt das Cookie
  * nur für den Apex und der Besucher landet auf der Ziel-Subdomain im Login.
  *
  * Nutzt dieselbe gehärtete Login-Zustandsmaschine wie die App-Logins

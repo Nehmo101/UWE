@@ -55,4 +55,4 @@ AI_LOCAL_ONLY=true  # für Brain — Image Studio separat steuerbar
 
 ## Audit
 
-Siehe `docs/REPO_AUDIT.md` für vollständige Codebase-Analyse.
+Siehe `docs/ARCHITECTURE.md` für vollständige Codebase-Analyse.

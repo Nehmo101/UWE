@@ -3,9 +3,9 @@ import { describe, it } from "node:test";
 import { resolveLegacyPathRedirect } from "./legacy-path-redirects";
 
 const splitEnv = {
-  PUBLIC_APP_URL: "https://uweanddragons.org",
-  NEXT_PUBLIC_PORTAL_URL: "https://uweanddragons.org",
-  NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+  PUBLIC_APP_URL: "https://uwe.example",
+  NEXT_PUBLIC_PORTAL_URL: "https://uwe.example",
+  NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
 };
 
 describe("legacy path redirects", () => {
@@ -13,11 +13,11 @@ describe("legacy path redirects", () => {
     const worlds = resolveLegacyPathRedirect("/studio/worlds", "portal", splitEnv);
     assert.ok(worlds);
     assert.equal(worlds.external, true);
-    assert.equal(worlds.destination, "https://studio.uweanddragons.org/worlds");
+    assert.equal(worlds.destination, "https://studio.uwe.example/worlds");
 
     const root = resolveLegacyPathRedirect("/studio", "portal", splitEnv);
     assert.ok(root);
-    assert.equal(root.destination, "https://studio.uweanddragons.org");
+    assert.equal(root.destination, "https://studio.uwe.example");
   });
 
   it("redirects legacy /portal/* on Portal root to canonical routes", () => {
