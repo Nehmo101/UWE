@@ -239,3 +239,32 @@ Umsetzung: pro Karte ein Stimmungsregler (0 = gedämpft/melancholisch, 1 = leuch
 ### 8. Der eine „Ma"-Moment
 Miyazakis Leerstellen: Jede Karte sollte eine große ruhige Fläche haben dürfen. Der Editor verführt heute zum Vollstellen (jede Fläche wird bestückt).
 Umsetzung: eine unaufdringliche Anzeige „Belegte Fläche: 68 %" mit Zielkorridor — Design-Feedback statt Zwang. Klingt klein, ändert aber das Verhalten beim Bauen.
+
+
+---
+
+## Sichtprüfung (27.07.2026, automatisiert)
+
+Die Chrome-Erweiterung war nicht verbunden; stattdessen lädt ein Playwright-Skript
+(`scratchpad/sichtpruefung.mjs`) den Editor in Chromium, schaltet alle Tageszeiten,
+drei Wetterlagen und fünf Biome durch, schießt Screenshots und protokolliert Konsole
+und Diagnose.
+
+**Ergebnis:** 0 Konsolenmeldungen, 0 Seitenfehler; `terraPatchInfo` meldet alle
+Patches über 47 Materialien vollständig; 12 Screenshots.
+
+**Punkt C10 ist damit geklärt:** `WEBGL_debug_renderer_info` liefert
+`ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)` —
+ein reiner Software-Rasterizer. Die niedrige Bildrate (1–3 fps bei 138 Draw Calls,
+~300k Dreiecken) liegt an der Umgebung, nicht am Code. Auf einer echten GPU ist
+diese Last unkritisch.
+
+**Gefundener Fehler (behoben, Commit f8b514df):** Die Palettenbindung war mit 0.34
+zu stark und ihre Rampe biomblind — Mittag und Abendrot wirkten wie durch
+Milchglas, der Aschekegel bekam cremefarbene Flecken. Die Rampe kommt jetzt aus
+`BIOME[S.biom].terrain` (nach Luminanz sortierte Terrainfarben), Stärke 0.16,
+Multiplane 0.5 → 0.3.
+
+**Weiterhin nur von Hand prüfbar:** Bedienabläufe (Zugpunkte ziehen, Stempel setzen,
+Wegsuche klicken) und die künstlerische Beurteilung gegen echte Filmstills (F7:
+Übermalen).

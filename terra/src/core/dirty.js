@@ -1,11 +1,17 @@
 // Aenderungs-Orchestrierung: Elemente (neu) erzeugen, Terrain/Korridore
 // nachziehen, geaenderte Pools packen.
-import { S, HALF, clearElement, dropElement } from './store.js';
+import { S, HALF, VINE_R, clearElement, dropElement } from './store.js';
+import { lerp } from './rng.js';
+import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
 import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
   refreshTerrainFull, recomputeHeights, computeAO, refreshGrid } from '../world/terrain.js';
-import { pathSamples, genStrasse, genMauer, genFluss, genHecke } from '../generators/paths.js';
+import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
+  genBruch, bruchDaten, bruchMasse, brueche,
+  bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
+import { strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE,
+  WERFT_QUERSUCHE } from '../generators/strukturen.js';
 import { genObjekt } from '../generators/objects.js';
 import { genRanke } from '../generators/vines.js';
 import { defaultsFor } from '../editor/tools.js';
@@ -21,6 +27,10 @@ function genElement(el) {
     else if (el.variant === "mauer") genMauer(el);
     else if (el.variant === "fluss") genFluss(el);
     else if (el.variant === "hecke") genHecke(el);
+    // H6: neue Variante am ENDE der Kette — eine aeltere Fassung des Editors
+    // faellt durch alle else-if hindurch und erzeugt schlicht nichts, statt
+    // abzustuerzen. Das Speicherformat bleibt damit abwaertskompatibel.
+    else if (el.variant === "bruch") genBruch(el);
   } else if (el.kind === "flaeche") genFlaeche(el);
   else if (el.kind === "objekt") genObjekt(el);
   else if (el.kind === "ranke") genRanke(el);
@@ -53,6 +63,43 @@ function rebuildRivers() {
     for (var s = 0; s < sm.length; s++) samples.push({ x: sm[s].x, z: sm[s].z, y: prof[s] });
     rivers.push({ samples: samples, radius: el.params.breite * 0.62 + 2.2, depth: el.params.tiefe });
   }
+  // Bruchkanten benutzen DIESELBE Stempelliste (siehe rebuildBrueche) und
+  // muessen daher nach dem rivers.length = 0 oben laufen. Der Aufruf steht
+  // bewusst hier statt an jeder Aufrufstelle: so ist jeder Weg, der die
+  // Flussstempel erneuert (rebuildAll, commit), automatisch auch fuer die
+  // Bruchstempel korrekt.
+  rebuildBrueche();
+}
+
+/**
+ * Sammelt die Bruchkanten-Stempel (H6). Ein Bruch ist ein Flussstempel mit
+ * sehr grosser Tiefe und asymmetrischem Profil: die Kreiskette aus
+ * bruchDaten() liegt ausschliesslich auf der Abgrundseite, an der
+ * gezeichneten Linie selbst ist das Stempelgewicht exakt 0. Deshalb kommt der
+ * Bruch OHNE jede Aenderung an terrain.js/recomputeHeights aus — er wird
+ * einfach an `rivers` angehaengt und ueber dieselbe Minimum-Regel eingebrannt.
+ * `brueche` behaelt die Eintraege zusaetzlich mit Kantenverlauf und Massen,
+ * damit Werkzeuge sie ohne Neuberechnung lesen koennen.
+ *
+ * In DERSELBEN Schleife entsteht die Bruchmaske (paths.js): das Rasterbild der
+ * Abgrundzonen, mit dem world/water.js Wasserebene und Meeresboden-Teller
+ * aussparen. Sie haengt an genau denselben Stempeln wie die Hoehenwirkung und
+ * kann deshalb nicht gegen die Klippe verrutschen. Gibt es keine Bruchkante,
+ * bleibt die Maske leer und ihr Shaderzweig abgeschaltet.
+ */
+function rebuildBrueche() {
+  brueche.length = 0;
+  bruchMaskeLeeren();
+  for (var i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind !== "pfad" || el.variant !== "bruch" || el.points.length < 2) continue;
+    var d = bruchDaten(el);
+    if (!d) continue;
+    brueche.push(d);
+    rivers.push(d);          // {samples, radius, depth} — genau die rivers-Form
+    bruchMaskeStempeln(d);
+  }
+  bruchMaskeFertig();
 }
 
 /** Baut die Sperrmaske für Straßen, Flüsse, Mauern und Viertel-Gassen neu auf. */
@@ -83,6 +130,15 @@ function rebuildCorridors() {
           if (inPoly(el.points, ln[k].x, ln[k].z)) stampCorridor(ln[k].x, ln[k].z, el.params.gasse * 0.5 + 1.2);
         }
       }
+    } else if (el.kind === "flaeche" && istStruktur(el.variant) && el.points.length >= 3) {
+      /* Kompositstrukturen stempeln ihre TRAGENDEN Linien: Mauerring, Kai-
+         flucht, Kreuzgangfluegel. Begruendung wie bei den Viertel-Gassen —
+         dort steht harte Infrastruktur, in die nachtraeglich kein fremder Wald
+         und keine fremde Streuung hineinwachsen soll. Die Punkte kommen aus
+         strukturen.js, weil ihre Lage aus derselben Layout-Rechnung folgt wie
+         die Bauteile selbst; zwei Rechnungen wuerden auseinanderdriften. */
+      var kor = strukturKorridore(el);
+      for (k = 0; k < kor.length; k++) stampCorridor(kor[k].x, kor[k].z, kor[k].r);
     }
   }
 }
@@ -105,10 +161,42 @@ function stempelRadius(el) {
     // weiter als der Korridor (breite*0.5+1.6).
     if (el.variant === "strasse") return p.breite * 0.5 + 2.1;
     if (el.variant === "mauer") return p.dicke * 0.6 + 1.2;
+    // Bruch (H6): die Stempelkette reicht bis `reichweite` auf die
+    // Abgrundseite. bruchMasse ist DIESELBE Rechnung, die bruchDaten benutzt —
+    // hier darf nichts nachgerechnet werden, sonst wird die Box zu klein und
+    // es bleiben Reste der alten Klippe stehen.
+    if (el.variant === "bruch") return bruchMasse(p).reichweite;
   }
   // Viertel-Gassen stempeln mit gasse*0.5+1.2, per inPoly aufs Polygon geklippt.
   if (el.kind === "flaeche" && el.variant === "viertel") return (p.gasse || 0) * 0.5 + 1.2;
+  /* Kompositstrukturen: DIESELBEN Radien, die strukturKorridore benutzt —
+     wandert dort eine Zahl, muss sie hier mitwandern, sonst wird die Box zu
+     klein und es bleiben Reste des alten Rings stehen (gleiche Warnung wie im
+     Kopf dieses Abschnitts). Der Burg-Ring verdoppelt sich fast, wenn ein
+     Zwinger davorsteht; das Kloster kann ueber `groesse` ueber die Punktbox
+     hinauswachsen, deshalb dort der zusaetzliche Aufschlag. */
+  if (el.kind === "flaeche" && istStruktur(el.variant)) {
+    if (el.variant === "burg") return KORRIDOR_R.burg * (p.zwinger ? 1.9 : 1) + 1.8;
+    if (el.variant === "werft") return KORRIDOR_R.werft + WERFT_QUERSUCHE;
+    return KORRIDOR_R.kloster + elementSpanne(el) * 0.5 *
+      Math.max(0, Math.min(KLOSTER_MAX_GROESSE, p.groesse || 1) - 1);
+  }
   return 3;   // erreicht isHeavy nie einen anderen Fall, bleibt aber definiert
+}
+
+/** Groesste Punktausdehnung eines Elements — Grundlage fuer den `groesse`-
+ *  Aufschlag des Klosters (sein Rechteck skaliert um die Polygonmitte). */
+function elementSpanne(el) {
+  var minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (var i = 0; i < el.points.length; i++) {
+    var q = el.points[i];
+    if (q.x < minX) minX = q.x;
+    if (q.x > maxX) maxX = q.x;
+    if (q.z < minZ) minZ = q.z;
+    if (q.z > maxZ) maxZ = q.z;
+  }
+  if (minX > maxX) return 0;
+  return Math.max(maxX - minX, maxZ - minZ);
 }
 
 /** Einfluss-Box des Elements in Gitterindizes, inklusive Rand — oder null,
@@ -117,7 +205,11 @@ function elementBox(el) {
   // Pfade stempeln entlang der Catmull-Rom-Kurve (Tension 0.5), die zwischen
   // den Stuetzpunkten ueberschwingen kann — deshalb die tatsaechlichen
   // Kurven-Samples vermessen statt nur der Punkte. Viertel-Gassen werden per
-  // inPoly aufs Polygon geklippt, dort genuegt die Punkt-Box.
+  // inPoly aufs Polygon geklippt, dort genuegt die Punkt-Box. Fuer die
+  // Kompositstrukturen gilt dasselbe: Mauerring, Kaiflucht und Klosterrechteck
+  // entstehen AUS den Punkten (die Kaiflucht wird in werftAchse zusaetzlich auf
+  // die Huellbox geklemmt), die Ausdehnung ueber `groesse` steckt im
+  // Stempelradius.
   var pts = el.points;
   if (el.kind === "pfad" && el.points.length >= 2) {
     var sm = pathSamples(el.points, 2.5);
@@ -178,6 +270,7 @@ function rebuildAll() {
     if (isHeavy(el)) el._hgtBox = elementBox(el);
   }
   markDirty();
+  refreshArborQuellen();
 }
 
 /** Regeneriert alle Elemente auf dem aktuellen Terrain — einmalig nach einem
@@ -217,20 +310,206 @@ function commit(el, heavy) {
   } else if (el) {
     regenElement(el);
   }
+  // Auch ein leichtes Commit kann das Licht verschieben (Fuss bewegt, dicke
+  // oder hoehe geaendert) — deshalb in beiden Zweigen nachziehen.
+  refreshArborQuellen();
 }
 
 /** Ändert ein Element das Terrain oder die Sperrflächen? */
 function isHeavy(el) {
-  return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" || el.variant === "mauer")) ||
-         (el.kind === "flaeche" && el.variant === "viertel");
+  // "bruch" schneidet ueber die Stempelkette tief ins Hoehenfeld — schwer.
+  // Burg, Werft und Kloster sperren mit ihrem Mauerring, ihrer Kaiflucht und
+  // ihren Kreuzgangfluegeln Korridore — genau das Kriterium, mit dem auch das
+  // Viertel hier steht. Zusaetzlich haengen ihre Layouts (Torkante, Kaiflucht)
+  // am Hoehenfeld: eine Terrainaenderung darunter muss sie neu rechnen.
+  return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" ||
+          el.variant === "mauer" || el.variant === "bruch")) ||
+         (el.kind === "flaeche" && (el.variant === "viertel" || istStruktur(el.variant)));
 }
 
+
+/* ===== B1 — Arbor-Netzwerk ===============================================
+   Ranken generieren isoliert (Architektur-Invariante: ein Element rechnet
+   aus seinen eigenen Daten). Welche Ranken MITEINANDER verwachsen sind, ist
+   dagegen eine Aussage ueber die ganze Karte und gehoert deshalb hierher —
+   in die Orchestrierung, die ohnehin ueber alle Elemente laeuft.
+
+   Die Analyse liest ausschliesslich `el._netz`, das genRanke veroeffentlicht
+   (Fusspunkte mit Radius, Plateaumitten mit halber Blattlaenge). Sie schreibt
+   nichts zurueck, was die GEOMETRIE beeinflusst — nur `el._netzGrad`, und der
+   wirkt einzig auf die Lichtstaerke (siehe refreshArborQuellen).
+
+   Warum der Netzgrad NICHT in genRanke gelesen wird (die als optional
+   ausgewiesene Kopplung): genRanke muesste dann bei jeder Aenderung eines
+   NACHBARN neu laufen. Das Ein-Element-Dirty-Tracking (regenElement),
+   history.js/restore und die Ladereihenfolge in rebuildAll kennen aber keine
+   Komponenten — ein Element, das ein anderes betritt, wuerde still veralten.
+   Der Netzgrad bleibt darum, wo er nichts kaputtmachen kann: im globalen
+   Lichtpass, der bei jedem Commit ohnehin komplett neu gerechnet wird und
+   ausschliesslich Uniforms schreibt. Der erzaehlerische Effekt aus B1
+   (isolierte Triebe leuchten schwaecher, das vernetzte Zentrum staerker) ist
+   damit vollstaendig da; nur das Ranken-Mesh selbst bleibt unabhaengig. */
+
+/* Kopplungsschwelle am Fuss: Vielfaches der Fussradien. 4.6 ist NICHT
+   gegriffen, sondern genau die Reichweite des Wurzeltellers in vines.js —
+   dort laufen die Wurzeln bis `R * rr(rW, 1.6, 4.6)` und der Erdhuegel ist
+   `moundGeo(R * 4.6, ...)`. Zwei Ranken, deren Wurzelteller einander
+   beruehren, sind also im Bild WIRKLICH zusammengewachsen. */
+var NETZ_WURZEL = 4.6;
+/* Kopplungsschwelle oben: Plateaus gelten als verbunden, wenn sich ihre
+   Blaetter ueberlappen (Summe der halben Blattlaengen) ODER wenn zwischen
+   ihnen eine Haengebruecke moeglich waere. 55 ist dieselbe Spannweite, ab
+   der genRanke innerhalb EINES Elements keine Bruecke mehr baut — die
+   Netzanalyse benutzt damit exakt das Kriterium, das die Geometrie selbst
+   schon kennt, statt eine zweite Zahl zu erfinden. */
+var NETZ_SPANN = 55;
+/* Lichtdaempfung des am schwaechsten vernetzten Triebes. */
+var NETZ_LICHT_MIN = 0.55;
+
+/** Netzgeometrie eines Ranken-Elements. genRanke setzt `_netz`; fehlt es
+ *  (Element noch nie erzeugt), genuegen die Fusspunkte aus el.points. */
+function netzDatenVon(el) {
+  if (el._netz && el._netz.fuesse && el._netz.fuesse.length) return el._netz;
+  var pr = el.params || {}, f = [];
+  for (var i = 0; i < el.points.length; i++) {
+    f.push({ x: el.points[i].x, z: el.points[i].z, r: VINE_R * (pr.dicke || 1) });
+  }
+  return { fuesse: f, plateaus: [] };
+}
+
+/** Sind zwei Rankennetze verbunden? Reine Geometrie, kein Zufall. */
+function netzeVerbunden(a, b) {
+  var i, j, dx, dy, dz, s;
+  var fa = a.fuesse, fb = b.fuesse;
+  for (i = 0; i < fa.length; i++) {
+    for (j = 0; j < fb.length; j++) {
+      dx = fa[i].x - fb[j].x; dz = fa[i].z - fb[j].z;
+      s = NETZ_WURZEL * (fa[i].r + fb[j].r);
+      if (dx * dx + dz * dz < s * s) return true;
+    }
+  }
+  var pa = a.plateaus, pb = b.plateaus;
+  for (i = 0; i < pa.length; i++) {
+    for (j = 0; j < pb.length; j++) {
+      dx = pa[i].x - pb[j].x; dy = pa[i].y - pb[j].y; dz = pa[i].z - pb[j].z;
+      // pa.r/pb.r sind bereits HALBE Blattlaengen — ihre Summe ist der
+      // Beruehrungsabstand der beiden Blaetter.
+      s = Math.max(pa[i].r + pb[j].r, NETZ_SPANN);
+      if (dx * dx + dy * dy + dz * dz < s * s) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * B1 — Zusammenhangskomponenten aller Ranken der Karte.
+ *
+ * Verfahren: Union-Find ueber alle Paare. Aufwand O(n² · (f² + p²)) mit n =
+ * Ranken, f = Fuesse je Ranke (1..wenige), p = Plateaus (0..6) — bei den
+ * realistischen Kartengroessen sind das ein paar hundert Abstandsquadrate
+ * und damit billiger als ein einziges emit(). Deterministisch: keine
+ * Zufallsquelle, und beim Vereinigen gewinnt immer der kleinere Index, die
+ * Komponentenwurzeln haengen also nicht an der Vergleichsreihenfolge.
+ *
+ * `netzGrad` = Komponentengroesse / groesste Komponentengroesse, also 0..1
+ * mit 1 fuer das Zentrum. Diese Normierung ist bewusst RELATIV gewaehlt:
+ * gibt es keine einzige Verwachsung, sind alle Komponenten gleich gross,
+ * jeder Netzgrad ist exakt 1 und die Lichtrechnung bleibt Zahl fuer Zahl die
+ * bisherige. Erst wenn wirklich ein Buendel entsteht, faellt die Peripherie
+ * ab — genau die Aussage von B1 und keine einzige Aenderung darueber hinaus.
+ *
+ * Rueckgabe: [{ el, komponente, groesse, netzGrad }] in Elementreihenfolge.
+ * Nebenwirkung: setzt `el._netzGrad` (nicht serialisiert, siehe
+ * serializeElements-Whitelist in store.js).
+ */
+function rankenNetz() {
+  var ranken = [], daten = [], i, j;
+  for (i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind !== "ranke" || !el.points.length) continue;
+    ranken.push(el);
+    daten.push(netzDatenVon(el));
+  }
+  var n = ranken.length, vater = [];
+  for (i = 0; i < n; i++) vater.push(i);
+  function wurzel(x) {
+    while (vater[x] !== x) { vater[x] = vater[vater[x]]; x = vater[x]; }
+    return x;
+  }
+  for (i = 0; i < n; i++) {
+    for (j = i + 1; j < n; j++) {
+      if (!netzeVerbunden(daten[i], daten[j])) continue;
+      var wi = wurzel(i), wj = wurzel(j);
+      if (wi !== wj) vater[wi < wj ? wj : wi] = wi < wj ? wi : wj;
+    }
+  }
+  var groesse = [], maxG = 1;
+  for (i = 0; i < n; i++) groesse.push(0);
+  for (i = 0; i < n; i++) groesse[wurzel(i)]++;
+  for (i = 0; i < n; i++) if (groesse[i] > maxG) maxG = groesse[i];
+  var out = [];
+  for (i = 0; i < n; i++) {
+    var w = wurzel(i), g = groesse[w], grad = g / maxG;
+    ranken[i]._netzGrad = grad;
+    out.push({ el: ranken[i], komponente: w, groesse: g, netzGrad: grad });
+  }
+  return out;
+}
+
+/** Lichtfaktor aus dem Netzgrad. Bei Netzgrad 1 EXAKT 1 (nicht ueber lerp
+ *  gerechnet — 0.55 ist binaer nicht darstellbar, und der Regelfall soll
+ *  bitgenau die Eins sein). */
+function netzGewicht(grad) {
+  if (!(grad < 1)) return 1;
+  return lerp(NETZ_LICHT_MIN, 1, grad < 0 ? 0 : grad);
+}
+
+/**
+ * Meldet die Rankenfuesse als Arbor-Lichtquellen an den Shader (H3).
+ * Kanon: Arbor haelt den zerrissenen Planeten zusammen und spendet der Welt
+ * Licht — die Ranken muessen ihre Umgebung also wirklich aufhellen, nicht nur
+ * selbst hell sein. genRanke setzt `el._arbor` (mehrere Fuesse, eigene Radien
+ * und die Alterung aus B2); fehlt das Feld — das Element wurde noch nie
+ * erzeugt —, wird dieselbe Formel ersatzweise aus points/params gerechnet.
+ *
+ * B1: Die Staerke jeder Quelle wird mit dem Netzgrad ihres Elements
+ * gewichtet. Die Eintraege werden dabei KOPIERT, nicht in `_arbor`
+ * multipliziert — sonst wuerde sich der Faktor ueber die vielen Aufrufe
+ * dieser Funktion aufmultiplizieren.
+ */
+function refreshArborQuellen() {
+  var netz = rankenNetz();
+  var q = [], i, k;
+  for (i = 0; i < netz.length; i++) {
+    var el = netz[i].el, g = netzGewicht(netz[i].netzGrad);
+    if (el._arbor && el._arbor.length) {
+      for (k = 0; k < el._arbor.length; k++) {
+        var a = el._arbor[k];
+        q.push({ x: a.x, z: a.z, radius: a.radius, staerke: a.staerke * g });
+      }
+      continue;
+    }
+    var pr = el.params || {};
+    for (k = 0; k < el.points.length; k++) {
+      q.push({
+        x: el.points[k].x, z: el.points[k].z,
+        radius: VINE_R * (pr.dicke || 1),
+        // Hohe Ranken tragen weiter: 220 Einheiten sind die volle Staerke.
+        staerke: Math.min(1, (pr.hoehe || 0) / 220) * g
+      });
+    }
+  }
+  setArborQuellen(q);
+}
 
 /** Loeschen mit Dirty-Meldung der betroffenen Pools. */
 function deleteElement(el) {
   markDirty(Object.keys(el.inst));
   dropElement(el);
+  refreshArborQuellen();
 }
 
-export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildCorridors,
-  rebuildAll, commit, isHeavy, deleteElement, markDirty, flushPack };
+export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildBrueche, rebuildCorridors,
+  rebuildAll, commit, isHeavy, deleteElement, refreshArborQuellen,
+  rankenNetz, netzGewicht,
+  markDirty, flushPack };

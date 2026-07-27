@@ -1,15 +1,96 @@
-// Rechtes Panel, Werkzeugleiste, Hinweiszeile, Toast und Statusanzeige.
-import { S } from '../core/store.js';
+// Rechtes Panel, Werkzeugleiste, Hinweiszeile, Toast, Statusanzeige und das
+// HTML-Overlay der Markerbeschriftungen.
+import { Vector3 } from 'three';
+import { S, hydrate } from '../core/store.js';
+import { clamp } from '../core/rng.js';
 import { instanceTotal, schattenAnzahl } from '../core/pools.js';
-import { ed, TOOLS, VARIANTS, PARAMS, schemaKey, defaultsFor, toolParams, setTool }
+import { ed, TOOLS, VARIANTS, PARAMS, schemaKey, defaultsFor, toolParams, setTool,
+  auswahlElemente, stempelErzeugen, aktuellerStempel }
   from '../editor/tools.js';
-import { commit, isHeavy, deleteElement, regenElement } from '../core/dirty.js';
+import { commit, isHeavy, deleteElement, regenElement, rebuildAll } from '../core/dirty.js';
 import { pushUndo } from '../editor/history.js';
-import { rebuildHandles } from '../editor/selection.js';
+import { rebuildHandles, clearPreview, getMarkerAuswahl } from '../editor/selection.js';
+// F4: der Aufnahme-Modus ist ein Kamerazustand, kein Werkzeug — die Leiste
+// zeigt ihn trotzdem an, weil sie der einzige Ort ist, an dem ein Zustand mit
+// Tastenkuerzel sichtbar wird. Zyklusfrei: camera.js importiert nichts aus ui/.
+import { camera, cam, istAufnahme, setAufnahme } from '../editor/camera.js';
+import { heightAt } from '../world/terrain.js';
 import { getRenderInfo } from '../render/pipeline.js';
+// A1: der Weltgenerator. Zyklusfrei — welt.js importiert nur core/, world/ und
+// generators/ (rng, store, terrain, objects, vines, wegsuche) und nichts aus
+// editor/ oder ui/. Der Einsetzweg darf deshalb hier stehen.
+import { erzeugeWelt } from '../generators/welt.js';
 
 var panelEl = null;
-export function initPanels() { panelEl = document.getElementById("panel"); }
+export function initPanels() {
+  panelEl = document.getElementById("panel");
+  baueWeltKnopf();
+}
+
+/* ==========================================================================
+   „Welt würfeln" (A1)
+
+   Der Knopf sitzt in der unteren Leiste bei den anderen Kartenaktionen
+   (Speichern / Laden / PNG) und wird von hier aus eingehaengt, weil
+   terra/index.html in dieser Runde nicht angefasst wird — ein zur Laufzeit
+   erzeugter Knopf ist an dieser Stelle das kleinere Uebel als eine zusaetzlich
+   angefasste Datei. Er steht VOR "Speichern", weil er zur Gruppe "was mit der
+   ganzen Karte passiert" gehoert.
+   ========================================================================== */
+function baueWeltKnopf() {
+  var bar = document.getElementById("bar");
+  if (!bar || document.getElementById("weltBtn")) return;
+  var b = el("button", null, "🎲 Welt würfeln");
+  b.id = "weltBtn";
+  b.title = "Erzeugt aus dem Weltseed eine vollständige Karte: Flüsse, Siedlungen, "
+    + "Straßen, Wälder und Ranken. Ersetzt alle vorhandenen Elemente.";
+  b.addEventListener("click", weltWuerfeln);
+  var vor = document.getElementById("saveBtn");
+  if (vor && vor.parentNode === bar) bar.insertBefore(b, vor);
+  else bar.appendChild(b);
+}
+
+/**
+ * Erzeugt eine ganze Karte und setzt sie ein. Das Gelaende bleibt unangetastet
+ * — der Generator LIEST das Hoehenfeld nur; die Flussbetten schneidet wie
+ * ueblich rebuildAll ueber rivers/recomputeHeights ein.
+ *
+ * pushUndo() ohne Argument genuegt: `base` wird hier nicht ersetzt (nur `hgt`,
+ * und das rechnet recomputeHeights jederzeit aus `base` neu). Der Schnappschuss
+ * teilt sich damit die vorhandene Terrainkopie — genau der Fall, fuer den
+ * history.js das Copy-on-Write hat.
+ */
+function weltWuerfeln() {
+  if (S.elements.length &&
+      !confirm("Die Karte trägt bereits " + S.elements.length + " Elemente. "
+        + "„Welt würfeln“ ersetzt sie vollständig durch eine neu erzeugte Welt "
+        + "(das Geländerelief bleibt erhalten). Fortfahren?")) return;
+  // Kein Zwischen-Toast: die Erzeugung laeuft synchron (gemessen 14 ms auf
+  // einer 256er, 56 ms auf einer 1024er Karte), der Browser kaeme vor dem
+  // Ergebnis ohnehin nicht zum Zeichnen.
+  var liste;
+  try {
+    liste = erzeugeWelt(S.worldSeed, {});
+  } catch (err) {
+    // Bis hierher wurde NICHTS veraendert (erzeugeWelt liest nur) — der Editor
+    // bleibt vollstaendig im alten Zustand, wie beim Laden in io.js.
+    console.error("erzeugeWelt", err);
+    toast("Weltgenerator fehlgeschlagen");
+    return;
+  }
+  if (!liste || !liste.length) { toast("Kein brauchbarer Bauplatz auf dieser Karte"); return; }
+  pushUndo();
+  ed.selected = null;
+  ed.draw = null;
+  clearPreview();            // eine angefangene Zeichnung darf nicht stehenbleiben
+  hydrate(liste);           // leert S.elements und legt die neuen Elemente an
+  rebuildAll();
+  rebuildHandles();
+  buildPanel();
+  var b = liste.bericht || {};
+  toast("Welt gewürfelt: " + liste.length + " Elemente · "
+    + (b.fluesse || 0) + " Flüsse · " + (b.siedlungen || 0) + " Siedlungen");
+}
 
 function el(tag, cls, txt) {
   var n = document.createElement(tag);
@@ -33,6 +114,40 @@ function buildRail() {
       rail.appendChild(b);
     })(TOOLS[i]);
   }
+  baueAufnahmeKarte(rail);
+}
+
+/* ==========================================================================
+   F4 — Aufnahme-Modus als eigene Karte hinter den Werkzeugen
+
+   Bewusst KEIN Eintrag in TOOLS: ein Werkzeug setzt ed.tool, erzeugt Elemente
+   und hat ein Panel — der Aufnahme-Modus tut nichts davon, er stellt die
+   Kamera. Deshalb auch kein dataset.id (pointer.js und selection.js lesen das
+   nirgends fuer diese Karte) und kein Ziffernkuerzel, sondern „C“.
+   Die Karte traegt dieselben Klassen wie ein Werkzeug (`tool card`, `on`),
+   damit sie ohne eine Zeile in ui/style.css — die dieser Runde nicht gehoert —
+   wie die uebrigen aussieht; der zusaetzliche Abstand nach oben (9 px, also
+   zusammen mit dem Flex-Gap doppelter Abstand) ist die einzige Ausnahme und
+   steht als Inline-Stil hier.
+   ========================================================================== */
+function baueAufnahmeKarte(rail) {
+  var b = el("div", "tool card" + (istAufnahme() ? " on" : ""));
+  b.style.marginTop = "9px";
+  b.appendChild(el("div", "g", "⊞"));
+  b.appendChild(el("div", "l", "Aufnahme"));
+  b.appendChild(el("div", "k", "C"));
+  b.title = "Aufnahme-Modus  (C)\n"
+    + "Komponierte Kamera: langes Objektiv (20°), Horizont auf einem Drittel, "
+    + "angehobener Blickpunkt, gedämpfte Fahrt. Zoom, Schwenk und Drehung bleiben "
+    + "frei — nur die Bildaufteilung rastet ein. Mit gewähltem Element richtet C "
+    + "die Einstellung zusätzlich auf dessen ersten Punkt aus.";
+  b.addEventListener("click", function () {
+    var an = setAufnahme(!istAufnahme());
+    toast(an ? "Aufnahme-Modus an — Horizont auf einem Drittel, 20° Objektiv"
+             : "Aufnahme-Modus aus — freie Ansicht");
+    buildRail();
+  });
+  rail.appendChild(b);
 }
 
 /** Erzeugt eine Zeile für einen Parameter und bindet sie an das Zielobjekt. */
@@ -104,7 +219,8 @@ function buildPanel() {
     panelEl.appendChild(el("div", "ph", "Auswahl"));
     panelEl.appendChild(el("div", "psub",
       "Auf ein Element klicken, um seine Punkte und Parameter zu bearbeiten. " +
-      "Entf löscht das ausgewählte Element."));
+      "Shift+Klick nimmt weitere dazu (K macht aus der Auswahl einen Stempel). " +
+      "Entf löscht die Auswahl."));
     panelEl.appendChild(el("div", "psub", S.elements.length + " Elemente auf der Karte."));
     return;
   }
@@ -113,8 +229,24 @@ function buildPanel() {
     : (TOOLS.filter(function (t) { return t.id === ed.tool; })[0] || { l: ed.tool }).l;
   panelEl.appendChild(el("div", "ph", head));
 
-  // Varianten
-  if (VARIANTS[kind] && VARIANTS[kind].length > 1) {
+  /* A3 — Mehrfachauswahl sichtbar machen. Griffe und Parameter zeigen immer
+     nur ed.selected; ohne diese Zeile bliebe voellig verborgen, dass Entf und
+     K gleich mehrere Elemente betreffen. auswahlElemente() filtert gegen
+     S.elements — verwaiste Referenzen zaehlen also nicht mit. */
+  var mehrfach = target ? auswahlElemente() : [];
+  if (mehrfach.length > 1) {
+    panelEl.appendChild(el("div", "psub", mehrfach.length + " Elemente ausgewählt — "
+      + "Parameter und Griffe gelten dem zuletzt gewählten. „Entf“ löscht alle, "
+      + "„K“ macht daraus einen Stempel."));
+  }
+
+  /* Varianten. Schwelle: normalerweise erst ab zwei Varianten (ein einziger
+     Knopf, der nichts umschaltet, ist nur Rauschen) — beim Stempel aber schon
+     ab einem, denn dort IST der Variantenname der Stempelname. Bei genau
+     einem Stempel in der Bibliothek stuende sonst nirgends im Panel, was der
+     naechste Klick eigentlich setzt. */
+  var minVarianten = (kind === "stempel" && !target) ? 1 : 2;
+  if (VARIANTS[kind] && VARIANTS[kind].length >= minVarianten) {
     var seg = el("div", "seg");
     for (var i = 0; i < VARIANTS[kind].length; i++) {
       (function (v) {
@@ -176,6 +308,11 @@ function buildPanel() {
       var heavy = isHeavy(target);
       deleteElement(target);
       ed.selected = null;
+      /* A3: Die Konvention aus tools.js lautet "ed.selected === null <=>
+         ed.auswahl ist leer". Ohne diese Zeile bliebe hier eine Auswahl ohne
+         fuehrendes Element stehen — mitsamt einer Referenz auf das gerade
+         geloeschte Element, das K dann in einen Stempel packen wollte. */
+      ed.auswahl.length = 0;
       rebuildHandles();
       commit(null, heavy);
       buildPanel();
@@ -186,10 +323,93 @@ function buildPanel() {
   } else if (kind === "terrain") {
     panelEl.appendChild(el("div", "psub", "Ziehen verformt das Terrain. „Einebnen“ nimmt die Höhe " +
       "des ersten Klicks als Ziel."));
+  } else if (kind === "stempel") {
+    baueStempelPanel();
+  } else if (kind === "wegsuche") {
+    // A2: das Werkzeug selbst (zwei Klicks) gehoert nach editor/tools.js und
+    // editor/pointer.js. Der Zweig steht hier schon bereit und bleibt bis dahin
+    // unerreichbar — kind ist "wegsuche" nur, wenn TOOLS einen solchen Eintrag
+    // traegt.
+    panelEl.appendChild(el("div", "psub",
+      "Zwei Punkte klicken — dazwischen sucht sich die Straße ihren Verlauf: " +
+      "Steigungen kosten (über 40° praktisch gesperrt), Wasserquerungen sind teuer " +
+      "und bekommen von selbst eine Brücke, vorhandene Wege sind billig, Wege bündeln " +
+      "sich also. Esc bricht ab."));
   } else if (kind === "pfad" || kind === "flaeche") {
     panelEl.appendChild(el("div", "psub", "Klicken setzt Punkte, Doppelklick oder Enter schließt ab, " +
       "Esc bricht ab."));
   }
+}
+
+/* ==========================================================================
+   A3 — Bedienung des Stempelwerkzeugs im Panel
+
+   Die drei Gesten gab es bisher nur als Tastenkuerzel (K/R/M in
+   editor/pointer.js). Tastenkuerzel bleiben sie — die Knoepfe rufen exakt
+   dieselben Funktionen auf und sind die sichtbare Seite derselben Sache; die
+   Beschriftung nennt darum jeweils die Taste mit.
+
+   Drehung und Spiegelung sitzen in einem `.seg`-Streifen, nicht in
+   `.btn`-Zeilen: fuer `.seg button.on` gibt es die aktive Darstellung schon
+   (ui/style.css ist in dieser Runde tabu, `.btn.on` waere ungestylt geblieben)
+   — und beides sind Zustandsschalter, keine einmaligen Aktionen.
+   ========================================================================== */
+function baueStempelPanel() {
+  var st = aktuellerStempel();
+
+  panelEl.appendChild(el("hr"));
+
+  var bK = el("button", "btn", "Stempel aus Auswahl  (K)");
+  bK.title = "Nimmt die im Auswahl-Werkzeug gewählten Elemente (Shift+Klick wählt mehrere) "
+    + "als neue Komposition in die Bibliothek auf.";
+  bK.addEventListener("click", function () {
+    var sel = auswahlElemente();
+    if (!sel.length) {
+      toast("Erst Elemente wählen: Auswahl-Werkzeug, Shift+Klick fügt hinzu");
+      return;
+    }
+    var name = prompt("Name des Stempels (" + sel.length + " Elemente)", ed.variantOf.stempel || "");
+    if (name === null) return;
+    var neu = stempelErzeugen(String(name));
+    if (!neu) { toast("Stempel braucht einen Namen"); return; }
+    toast("Stempel „" + neu.name + "“ gespeichert (" + neu.elemente.length + " Elemente)");
+    buildPanel();
+    updateHint();
+  });
+  panelEl.appendChild(bK);
+
+  var seg = el("div", "seg");
+  var bR = el("button", ed.stempelDrehung ? "on" : "",
+    "Drehen 90° (R) · " + (ed.stempelDrehung * 90) + "°");
+  bR.addEventListener("click", function () {
+    ed.stempelDrehung = (ed.stempelDrehung + 1) & 3;
+    toast("Stempeldrehung " + (ed.stempelDrehung * 90) + "°");
+    buildPanel();
+    updateHint();
+  });
+  var bM = el("button", ed.stempelSpiegel ? "on" : "",
+    "Spiegeln (M) · " + (ed.stempelSpiegel ? "an" : "aus"));
+  bM.addEventListener("click", function () {
+    ed.stempelSpiegel = !ed.stempelSpiegel;
+    toast(ed.stempelSpiegel ? "Stempel gespiegelt" : "Stempel ungespiegelt");
+    buildPanel();
+    updateHint();
+  });
+  seg.appendChild(bR);
+  seg.appendChild(bM);
+  var wrap = el("div", "row");
+  wrap.appendChild(seg);
+  panelEl.appendChild(wrap);
+
+  panelEl.appendChild(el("div", "psub", st
+    ? "Klick setzt „" + st.name + "“ (" + st.elemente.length
+      + (st.elemente.length === 1 ? " Element" : " Elemente")
+      + ") — jedes Mal mit frischen Seeds, die Bestückung wiederholt sich also nicht. "
+      + "Geländehöhen werden nicht mitkopiert: ein Stempel setzt Elemente, kein Relief. "
+      + "Liegt das Ziel anders im Gelände, muss das Terrain dort von Hand nachgezogen werden."
+    : "Noch kein Stempel in der Bibliothek. Mit dem Auswahl-Werkzeug Elemente wählen "
+      + "(Shift+Klick nimmt weitere dazu) und hier „Stempel aus Auswahl“ drücken. "
+      + "Die Bibliothek überdauert die Sitzung und wandert beim Speichern mit der Karte."));
 }
 
 function updateHint() {
@@ -200,9 +420,22 @@ function updateHint() {
   else if (ed.tool === "pfad") txt = "<b>Pfad</b> zeichnen: klicken, Doppelklick beendet";
   else if (ed.tool === "flaeche") txt = "<b>Fläche</b> zeichnen: klicken, Doppelklick schließt das Polygon";
   else if (ed.tool === "objekt") txt = "<b>Klicken</b> platziert, <b>Ziehen</b> streut";
-  else if (ed.tool === "ranke") txt = "<b>Klicken</b> pflanzt eine Ranke";
+  else if (ed.tool === "ranke") txt = "<b>Klicken</b> pflanzt eine Ranke · <b>Alt+Klick</b> wächst einen Fuß an die ausgewählte an";
   else if (ed.tool === "terrain") txt = "<b>Ziehen</b> formt das Terrain";
-  else txt = "<b>Klick</b> wählt aus · Griffe ziehen · <b>Entf</b> löscht";
+  // D1 — Marker: eigener Zweig, sonst faellt das Werkzeug in den Auswahl-Text
+  // und die einzige Geste, die den Text aendert (Doppelklick), bliebe ungenannt.
+  else if (ed.tool === "marker") txt = "<b>Klick</b> setzt eine Nadel · <b>Klick auf eine Nadel</b> " +
+    "wählt sie · <b>Doppelklick</b> ändert den Text · <b>Entf</b> löscht sie";
+  // A3 — Stempel: die beiden Zustandsschalter nennen ihren AKTUELLEN Wert.
+  // Ohne ihn muesste man raten, wie der naechste Klick ausgerichtet ist.
+  else if (ed.tool === "stempel") txt = "<b>Klick</b> setzt " +
+    (aktuellerStempel() ? "„" + aktuellerStempel().name + "“" : "den gewählten Stempel") +
+    " · <b>R</b> dreht (" + (ed.stempelDrehung * 90) + "°) · <b>M</b> spiegelt (" +
+    (ed.stempelSpiegel ? "an" : "aus") + ")";
+  // A2: greift, sobald editor/tools.js ein Werkzeug "wegsuche" fuehrt.
+  else if (ed.tool === "wegsuche") txt = "<b>Wegsuche</b>: erst den Startpunkt klicken, dann das " +
+    "Ziel — der Weg sucht sich seinen Verlauf über das Gelände · <b>Esc</b> bricht ab";
+  else txt = "<b>Klick</b> wählt aus · <b>Shift+Klick</b> wählt mehrere · <b>K</b> macht daraus einen Stempel · Griffe ziehen · <b>Doppelklick</b> auf Pfad oder Rankenachse setzt einen Punkt · <b>Shift</b> zieht Zugpunkte in der Höhe · <b>Entf</b> löscht";
   h.innerHTML = txt + "<br>WASD bewegen · Q/E drehen · Rad zoomen · Rechte Maus schwenken";
 }
 
@@ -226,12 +459,140 @@ function updateStats(fps) {
 }
 
 
-/** Toast-Timer, von der Renderschleife bedient. */
+/* ==========================================================================
+   D1 — Beschriftung der Marker als HTML-Overlay
+
+   editor/selection.js zeichnet die Stecknadeln, aber bewusst keinen Text: eine
+   Schrift im 3D-Bild braeuchte je Marker eine gerenderte Textur (neu bei jeder
+   Textaenderung) und laege schraeg zur Kamera. Ein HTML-Label ist scharf, in
+   jeder Kameralage waagerecht, kostet keine Zeichenaufrufe und wird vom
+   Browser mit Systemschrift und Kerning gesetzt.
+
+   Machart bewusst wie #ui: ein fester Container ueber dem Canvas, der KEINE
+   Zeigerereignisse annimmt (pointer-events:none) — sonst faenge ein Label den
+   Klick ab, mit dem man genau diesen Marker anwaehlen will. z-index 5 liegt
+   ueber dem Canvas (0) und unter dem Bedienrahmen (#ui, 10): Panel und
+   Werkzeugleiste bleiben oben.
+
+   Alles Styling steht hier in JS. ui/style.css ist in dieser Runde tabu; die
+   Werte sind aus .card/.psub uebernommen, damit die Labels wie das uebrige UI
+   aussehen.
+
+   Es gibt kein rebuild: die Labels werden je Bild aus S.marker nachgezogen
+   (Anzahl, Text, Position). Damit stimmen sie ohne einen einzigen zusaetzlichen
+   Aufruf auch nach Laden, Undo, Loeschen und Umbenennen.
+   ========================================================================== */
+var MARKER_TON = { ort: "#7d8a99", gefahr: "#c1523c", notiz: "#b8862a", arbor: "#2f9c8c" };
+var markerBox = null;              // Container-Div, beim ersten Marker angelegt
+var markerLabels = [];             // ein Div je Marker, Index = Index in S.marker
+var _mProj = new Vector3();
+
+function markerBoxHolen() {
+  if (markerBox && markerBox.parentNode) return markerBox;
+  markerBox = document.createElement("div");
+  markerBox.id = "markerLabels";
+  var s = markerBox.style;
+  s.position = "fixed";
+  s.inset = "0";
+  s.pointerEvents = "none";
+  s.zIndex = "5";
+  s.overflow = "hidden";
+  document.body.appendChild(markerBox);
+  return markerBox;
+}
+
+function markerLabelNeu() {
+  var d = document.createElement("div");
+  var s = d.style;
+  s.position = "absolute";
+  // Der Ankerpunkt ist die Nadelspitze: waagerecht mittig, senkrecht darueber.
+  s.transform = "translate(-50%,-100%)";
+  s.whiteSpace = "nowrap";
+  s.font = "600 11.5px/1.35 \"Segoe UI\",Roboto,system-ui,-apple-system,sans-serif";
+  s.color = "#3d4753";
+  s.background = "rgba(255,255,255,.84)";
+  s.border = "1px solid rgba(150,168,186,.34)";
+  s.borderRadius = "9px";
+  s.padding = "2px 8px";
+  s.boxShadow = "0 4px 14px rgba(92,116,140,.16)";
+  s.backdropFilter = "blur(9px)";
+  s.maxWidth = "230px";
+  s.overflow = "hidden";
+  s.textOverflow = "ellipsis";
+  s.pointerEvents = "none";
+  markerBoxHolen().appendChild(d);
+  return d;
+}
+
+/**
+ * Zieht die Beschriftungen aller Marker nach. Wird je Bild aus tickToast
+ * gerufen (siehe dort) und ist fuer den Normalfall — keine Marker — nach zwei
+ * Vergleichen wieder draussen.
+ */
+function markerOverlayAktualisieren() {
+  var n = S.marker.length;
+  if (!n && !markerLabels.length) return;          // haeufigster Fall, sofort raus
+
+  // Anzahl angleichen. Kein vollstaendiger Neuaufbau: die Divs bleiben ueber
+  // Bilder hinweg dieselben, es aendern sich nur left/top.
+  while (markerLabels.length < n) markerLabels.push(markerLabelNeu());
+  while (markerLabels.length > n) {
+    var weg = markerLabels.pop();
+    if (weg.parentNode) weg.parentNode.removeChild(weg);
+  }
+  if (!n) return;
+
+  // Gleiche Skalierung wie die Nadeln in selection.js (updateMarkerPositions):
+  // die Nadel ist rund 7.3 Einheiten hoch, das Label sitzt knapp darueber.
+  var s = clamp(cam.dist * 0.011, 0.5, 3.2);
+  var bw = window.innerWidth, bh = window.innerHeight;
+  var gewaehlt = getMarkerAuswahl();
+
+  for (var i = 0; i < n; i++) {
+    var m = S.marker[i], d = markerLabels[i];
+    if (!m.text) { d.style.display = "none"; continue; }   // unbeschriftet: nur die Nadel
+    var hoch = (i === gewaehlt ? 7.3 * 1.3 : 7.3) * s + 0.6;
+    _mProj.set(m.x, heightAt(m.x, m.z) + hoch, m.z);
+    _mProj.project(camera);
+    /* Hinter der Kamera ausblenden: dort ist w negativ, project() spiegelt x/y
+       am Ursprung und liefert z > 1 — ohne diesen Test klebte das Label eines
+       Markers im Ruecken spiegelverkehrt am Bildrand. Der grosszuegige
+       Randbereich (±1.4) laesst Labels bis knapp ausserhalb stehen, statt sie
+       am Bildrand aufblitzen zu lassen. */
+    if (_mProj.z > 1 || _mProj.x < -1.4 || _mProj.x > 1.4 ||
+        _mProj.y < -1.4 || _mProj.y > 1.4) { d.style.display = "none"; continue; }
+    d.style.display = "block";
+    d.style.left = ((_mProj.x * 0.5 + 0.5) * bw).toFixed(1) + "px";
+    d.style.top = ((-_mProj.y * 0.5 + 0.5) * bh).toFixed(1) + "px";
+    // Text und Farbe nur bei echter Aenderung schreiben: jedes Setzen von
+    // textContent/style loest im Browser ein Neulayout aus, und beides steht
+    // hier in einer Schleife, die 60-mal je Sekunde laeuft.
+    if (d._txt !== m.text) { d._txt = m.text; d.textContent = m.text; }
+    var ton = MARKER_TON[m.art] || MARKER_TON.notiz;
+    if (d._ton !== ton) { d._ton = ton; d.style.borderLeft = "3px solid " + ton; }
+    var aktiv = i === gewaehlt;
+    if (d._aktiv !== aktiv) {
+      d._aktiv = aktiv;
+      d.style.background = aktiv ? "rgba(255,255,255,.97)" : "rgba(255,255,255,.84)";
+      d.style.color = aktiv ? "#2d74ab" : "#3d4753";
+    }
+  }
+}
+
+/** Toast-Timer und Markerbeschriftung, von der Renderschleife bedient.
+ *
+ *  Das Overlay haengt hier mit dran, weil tickToast der einzige Taktgeber ist,
+ *  den ui/panels.js schon besitzt: main.js ruft es in animate() je Bild auf.
+ *  Sauberer waere in main.js eine eigene Zeile — `markerOverlayAktualisieren()`
+ *  ist dafuer exportiert und darf jederzeit direkt aus der Renderschleife
+ *  gerufen werden; dann entfaellt der Aufruf hier. */
 function tickToast(now) {
   if (toastT && now > toastT) {
     document.getElementById("toast").classList.remove("show");
     toastT = 0;
   }
+  markerOverlayAktualisieren();
 }
 
-export { el, buildRail, paramRow, buildPanel, updateHint, toast, tickToast, updateStats };
+export { el, buildRail, paramRow, buildPanel, updateHint, toast, tickToast, updateStats,
+  markerOverlayAktualisieren };

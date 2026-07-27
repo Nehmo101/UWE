@@ -1,14 +1,21 @@
 // Pfad-Werkzeug: Strasse, Mauer, Fluss, Hecke/Zaun.
 import * as THREE from 'three';
-import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, wpick } from '../core/rng.js';
-import { WATER, COS40, groupOf } from '../core/store.js';
+import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
+// VW/HALF sind LEBENDE Bindungen (H1b) — sie duerfen nie beim Modulstart in
+// eine eigene Variable kopiert werden, nur innerhalb von Funktionen gelesen.
+import { WATER, COS40, VW, HALF, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { terraMat, tintedMats } from '../render/materials.js';
-// Zyklusfrei: geometry.js importiert weder paths.js noch areas.js (nur
-// rng/textures/pools/terrain), darf hier also direkt angezapft werden.
-import { mergeGeos } from './geometry.js';
+// Seit der Bruchkanten-Drift (B4) besteht ein Zyklus: geometry.js importiert
+// paths.js als Namensraum, um materials.js die Bruchmasken-Uniforms zu
+// reichen (setBruchQuelle). Er ist harmlos, weil auf beiden Seiten nur
+// Funktionen und lebende Namensraum-Bindungen gelesen werden — nie ein Wert
+// beim Modulstart kopiert. Ein direkter Import von paths.js in materials.js
+// waere dagegen toedlich (Einstieg main -> pipeline -> materials liegt vor
+// paths, FAMILIEN waere dann noch nicht initialisiert).
+import { mergeGeos, tubeGeo } from './geometry.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
    an einen stabilen Schluessel statt an die Zugriffsreihenfolge. Ein
@@ -350,5 +357,421 @@ function genHecke(el) {
 }
 
 
+/* ==========================================================================
+   Bruchkante (H6) — die Form des zerbissenen Planeten
+
+   Kanon: Terra ist auseinandergerissen, Arbor haelt die Stuecke zusammen. Ein
+   Bruch ist eine gezeichnete Linie, an der das Terrain EINSEITIG abreisst —
+   die eine Seite bleibt stehen, die andere faellt ueber `tiefe` ins Nichts.
+
+   Hoehenwirkung OHNE eine Zeile in terrain.js: recomputeHeights wendet die
+   Eintraege aus `rivers` als KREISSTEMPEL je Sample an
+   (w = sstep(R, 0.3R, d), ziel = lerp(base, y - depth, w), Minimum-Regel).
+   Ein einzelner Kreis ist symmetrisch — eine KETTE von Kreisen, deren
+   Mittelpunkte ausschliesslich auf der Abgrundseite liegen, ist es nicht:
+
+       gezeichnete Linie ───────────────────────   d = R  ⇒ w = 0
+                          ( o ) ( o ) ( o ) ( o )  1. Reihe: Kantenrampe (0.7R)
+                         ( o ) ( o ) ( o ) ( o )   Innenreihen: Abgrundsohle
+                          ( o ) ( o ) ( o ) ( o )
+
+   Weil die erste Reihe genau R von der Linie entfernt liegt, ist das Gewicht
+   AN der Linie exakt 0: die stehende Seite bleibt unangetastet, waehrend das
+   Terrain zur anderen Seite hin ueber `breite` auf `tiefe` abfaellt. Damit ist
+   der Bruch genau das, was der Plan beschreibt — „dieselbe Mechanik wie der
+   Flusseinschnitt, nur asymmetrisch".
+
+   `brueche` haelt die Stempel in exakt der rivers-Form ({samples, radius,
+   depth}); angewandt werden sie NICHT hier, sondern von recomputeHeights,
+   nachdem dirty.js/rebuildBrueche sie an `rivers` angehaengt hat.
+   ========================================================================== */
+
+var BRUCH_SCHRITT = 1.4;      // Abtastung entlang der Kante
+
+var brueche = [];             // {el, samples:[{x,z,y}], radius, depth, …}
+
+/**
+ * Alle abgeleiteten Masse eines Bruchs an EINER Stelle — Generator und
+ * dirty.js/stempelRadius lesen dieselbe Rechnung (sonst wird die Einfluss-Box
+ * zu klein und es bleiben Restloecher stehen).
+ */
+function bruchMasse(p) {
+  p = p || {};
+  var breite = clamp(p.breite === undefined ? 6 : p.breite, 2, 20);
+  var tiefe = clamp(p.tiefe === undefined ? 90 : p.tiefe, 40, 200);
+  var zack = clamp(p.zackigkeit === undefined ? 0.5 : p.zackigkeit, 0, 1);
+  // sstep(R, 0.3R, d) laeuft von 0 (d = R) auf 1 (d = 0.3R) — die Rampe misst
+  // 0.7*R. Soll sie `breite` breit sein, ist R = breite / 0.7.
+  var R = breite / 0.7;
+  // Reihenabstand: in der Mitte zwischen zwei Mittelpunkten ist d = 0.275*R,
+  // dort ist w bereits 1 — die Sohle bleibt also luecken- und wellenfrei.
+  var schritt = R * 0.55;
+  var abgrund = clamp(tiefe * 0.55, 20, 70);   // Weite der Abrisszone
+  var reihen = Math.max(2, Math.ceil(abgrund / schritt));
+  var maxOff = R * (1 + zack * 0.6);           // ausgefranste erste Reihe
+  return {
+    R: R, tiefe: tiefe, breite: breite, zack: zack,
+    schritt: schritt, abgrund: abgrund, reihen: reihen,
+    // Reichweite ab der Linie. Bewusst symmetrisch gedacht: die ausgefranste
+    // erste Reihe greift bis R*0.6*zack auf die STEHENDE Seite ueber, und
+    // elementBox legt ohnehin eine quadratische Box um den Pfad.
+    reichweite: maxOff + (reihen - 1) * schritt + R
+  };
+}
+
+/** Ein Innenreihen-Stempel; die Sohle wird dabei leicht gebrochen. */
+function bruchInnen(samples, k, dist, M, seed) {
+  var x = k.x + k.nx * (k.off + dist), z = k.z + k.nz * (k.off + dist);
+  var y = k.y + (fractal(x * 0.05, z * 0.05, seed + 607) - 0.5) * M.tiefe * 0.06 * M.zack;
+  samples.push({ x: x, z: z, y: y });
+}
+
+/**
+ * Kantenverlauf (Grundlage der Ausstattung) und Stempelkette (Grundlage der
+ * Hoehenwirkung) aus EINER Rechnung — so koennen Wurzelvorhaenge und Saum
+ * gar nicht neben der Klippe liegen. Rein deterministisch: ortsstabile
+ * fractal-Aufrufe in Weltkoordinaten, kein sequentieller Elementstrom.
+ */
+function bruchDaten(el) {
+  var p = el.params || {};
+  var sm = pathSamples(el.points, BRUCH_SCHRITT);
+  if (sm.length < 2) return null;
+  var M = bruchMasse(p);
+  // Der Select liefert Strings ("1" / "-1"); fehlt der Parameter, zeigt die
+  // Normale wie bei allen Pfaden nach rechts.
+  var seite = Number(p.seite) < 0 ? -1 : 1;
+  var i;
+  // Hoehenprofil der Kante glaetten wie beim Fluss — die Sohle soll nicht
+  // jeder Bodenwelle folgen. Die stehende Seite bleibt davon unberuehrt
+  // (dort ist w = 0); das Profil setzt ausschliesslich die Abgrundtiefe.
+  var prof = [];
+  for (i = 0; i < sm.length; i++) prof.push(baseHeightAt(sm[i].x, sm[i].z));
+  for (var pass = 0; pass < 8; pass++) {
+    var cp = prof.slice();
+    for (var k = 1; k < prof.length - 1; k++) prof[k] = (cp[k - 1] + cp[k] * 2 + cp[k + 1]) * 0.25;
+  }
+  // Ausgefranste Kante: der Versatz der ERSTEN Stempelreihe wandert per
+  // fractal um R herum. Zwei Oktaven — die grobe reisst Buchten und Nasen in
+  // den Verlauf, die feine nimmt der Silhouette den Zug einer Linie. Bei
+  // zackigkeit = 0 bleibt off = R und die Kante laeuft exakt am Pfad.
+  var kante = [];
+  for (i = 0; i < sm.length; i++) {
+    var s = sm[i];
+    var grob = fractal(s.x * 0.075, s.z * 0.075, el.seed + 601) - 0.5;
+    var fein = fractal(s.x * 0.23, s.z * 0.23, el.seed + 603) - 0.5;
+    kante.push({
+      x: s.x, z: s.z, tx: s.tx, tz: s.tz,
+      nx: -s.tz * seite, nz: s.tx * seite,
+      off: M.R * (1 + (grob * 1.4 + fein * 0.6) * M.zack * 0.6),
+      y: prof[i], s: s.s
+    });
+  }
+  // Stempelkette: erste Reihe fein abgetastet (sie zeichnet die Silhouette),
+  // Innenreihen grob — sie fuellen nur die Sohle und ueberlappen ohnehin.
+  var samples = [];
+  for (i = 0; i < kante.length; i++) {
+    var k0 = kante[i];
+    samples.push({ x: k0.x + k0.nx * k0.off, z: k0.z + k0.nz * k0.off, y: k0.y });
+  }
+  // Schrittweite der Innenreihen ENTLANG der Kante: dieselben 0.55*R wie quer
+  // dazu — der halbe Abstand (0.275*R) liegt unter 0.3*R, dort ist w bereits
+  // 1. Damit ist die Sohle luecken- und wellenfrei ueberdeckt.
+  var jeder = Math.max(1, Math.round(M.schritt / BRUCH_SCHRITT));
+  var letzt = kante.length - 1;
+  for (var r = 1; r < M.reihen; r++) {
+    var dist = M.schritt * r;
+    for (i = 0; i < kante.length; i += jeder) bruchInnen(samples, kante[i], dist, M, el.seed);
+    // Der letzte Punkt muss dabei sein, sonst endet die Sohle vor dem Pfadende.
+    if (letzt % jeder !== 0) bruchInnen(samples, kante[letzt], dist, M, el.seed);
+  }
+  return { el: el, samples: samples, radius: M.R, depth: M.tiefe,
+    kante: kante, masse: M, seite: seite };
+}
+
+/**
+ * Legt den Stempel EINES Bruch-Elements in `brueche` ab (bzw. ersetzt ihn).
+ * genBruch schreibt bewusst NICHT selbst ins Hoehenfeld — das darf nur
+ * recomputeHeights (terrain.js). dirty.js/rebuildBrueche leert `brueche`,
+ * sammelt neu und haengt die Eintraege an `rivers` an.
+ */
+function merkeBruch(d) {
+  for (var i = 0; i < brueche.length; i++) {
+    if (brueche[i].el === d.el) { brueche[i] = d; return d; }
+  }
+  brueche.push(d);
+  return d;
+}
+
+/* ==========================================================================
+   Bruchmaske (H6) — wo faellt die Karte ins Nichts?
+
+   Problem: world/water.js legt EINE kartenfuellende Wasserebene bei y = 0 und
+   einen opaken Meeresboden-Teller bei y = -24 ueber die gesamte Karte. Ein
+   Abgrund wird davon ueberzogen und bei -24 abgeschnitten — er liest sich als
+   tiefer See statt als Klippe ins Nichts, und Wurzelvorhaenge wie schwebende
+   Truemmer unterhalb -24 verschwinden hinter dem Teller.
+
+   Loesung ohne eine Zeile in terrain.js: eine Rastermaske in Gitteraufloesung
+   (VW x VW, eine Zelle je Terrainvertex, also 1 Welteinheit je Texel), die
+   dieselben Stempel rasterisiert, die recomputeHeights ins Hoehenfeld schneidet.
+   water.js sampelt sie als DataTexture in Weltkoordinaten und blendet
+   Wasserebene und Teller dort aus.
+
+   AUFWEITUNG gegenueber dem Hoehenstempel: der Hoehenstempel wirkt mit
+   w = sstep(R, 0.3R, d), die Maske laeuft von 0 bei 1.45*R auf 1 bei 0.55*R.
+   Grund: das Terrain faellt am Bruch praktisch senkrecht — schon bei winzigem
+   Stempelgewicht liegt es unter dem Wasserspiegel. Waere die Maske
+   deckungsgleich mit dem Hoehenstempel, muesste das Wasser innerhalb von
+   Zehntelmetern verschwinden und die Kante treppte. Mit der Aufweitung liegt
+   der 0.5-Wert genau auf der ausgefransten Kante (die erste Stempelreihe hat
+   den Abstand off ~ R zum Pfad) und der weiche Rand von rund +-0.45*R liegt
+   auf der STEHENDEN Seite — dort verdeckt das unveraenderte Terrain die
+   Wasserebene ohnehin, der Uebergang ist also unsichtbar weich.
+   Bekannte Grenze: wird eine Bruchkante mitten ins Meer gezeichnet (stehende
+   Seite unter y = 0), reisst dieser Saum ein rund 0.45*R breites Loch ins
+   Wasser der stehenden Seite. Fuer die Kanonlage (Land reisst auf) irrelevant.
+   ========================================================================== */
+
+var BRUCH_MASKE_AUSSEN = 1.45;   // Faktor auf R: hier ist die Maske 0
+var BRUCH_MASKE_INNEN = 0.55;    // Faktor auf R: hier ist die Maske 1
+
+var bruchMaske = null;           // Uint8Array(VW*VW), 0 = Land, 255 = Abgrund
+var bruchMaskeTex = null;        // DataTexture darauf (nur Rotkanal)
+var bruchMaskeVW = 0;            // Gitterweite, fuer die sie angelegt wurde
+var bruchMaskeAktiv = false;     // traegt die Maske ueberhaupt Marken?
+var bruchMaskeSchmutzig = false; // CPU-Feld seit dem letzten Upload geaendert?
+
+// 1x1-Platzhalter: solange keine Bruchkante existiert, zeigt das Uniform
+// hierauf und es wird KEIN VW*VW-Feld angelegt (bei 1024er Karten immerhin
+// ein Megabyte samt GPU-Upload). unpackAlignment 1, weil eine Bytezeile der
+// Rotkanal-Textur nicht durch 4 teilbar sein muss.
+var BRUCH_LEER = new THREE.DataTexture(new Uint8Array(1), 1, 1,
+  THREE.RedFormat, THREE.UnsignedByteType);
+BRUCH_LEER.unpackAlignment = 1;
+BRUCH_LEER.needsUpdate = true;
+
+/**
+ * Uniform-Buendel der Bruchmaske — dasselbe Muster wie terraUniforms in
+ * render/materials.js: die Objekte sind stabil, nur ihre `.value` wechseln.
+ * Verbraucher (world/water.js) haengen sie einmal beim Kompilieren an ihren
+ * Shader und muessen danach nie wieder etwas nachziehen.
+ *   uBruchStaerke = 0  schaltet den kompletten Fragmentzweig ab (Normalfall).
+ *   uBruchAbb = vec2( 1/VW, (HALF+0.5)/VW )  bildet Welt-XZ auf uv ab:
+ *     uv = weltXZ * x + y — Texel (i,j) liegt auf Weltpunkt (i-HALF, j-HALF),
+ *     sein Mittelpunkt also bei uv = (i+0.5)/VW.
+ */
+var bruchMaskeUniforms = {
+  uBruchMaske: { value: BRUCH_LEER },
+  uBruchAbb: { value: new THREE.Vector2(1 / 257, 128.5 / 257) },
+  uBruchStaerke: { value: 0 }
+};
+
+/**
+ * Legt Maske und Textur an — und legt sie bei ABWEICHENDER Gitterweite NEU an.
+ * Bewusst nicht wie die Hoehenfelder in terrain.js "nur wachsend": die Textur
+ * traegt ihre Groesse selbst, und die Weltabbildung uBruchAbb haengt an genau
+ * dieser Groesse. Ein zu grosses Feld waere hier also nicht harmlos, sondern
+ * verschoebe die Maske gegen die Karte. Deshalb: Laenge != VW*VW -> alles neu.
+ * Die alte Textur wird disposed; die Maske selbst haelt keine Historie (anders
+ * als base/hgt), ein Undo ueber den Groessenwechsel hinweg baut sie ohnehin
+ * ueber rebuildAll -> rebuildBrueche neu auf.
+ */
+function bruchMaskeSichern() {
+  if (bruchMaske && bruchMaskeVW === VW && bruchMaske.length === VW * VW) return;
+  if (bruchMaskeTex) bruchMaskeTex.dispose();
+  bruchMaskeVW = VW;
+  bruchMaske = new Uint8Array(VW * VW);
+  var t = new THREE.DataTexture(bruchMaske, VW, VW, THREE.RedFormat, THREE.UnsignedByteType);
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;      // ohne Mipmaps, sonst braeuchte es
+  t.generateMipmaps = false;             // eine Pyramide je Neuaufbau
+  t.wrapS = THREE.ClampToEdgeWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  t.unpackAlignment = 1;                 // 257 Byte je Zeile, nicht 4-teilbar
+  t.needsUpdate = true;
+  bruchMaskeTex = t;
+  bruchMaskeUniforms.uBruchMaske.value = t;
+  bruchMaskeUniforms.uBruchAbb.value.set(1 / VW, (HALF + 0.5) / VW);
+  bruchMaskeAktiv = false;
+  bruchMaskeSchmutzig = false;
+}
+
+/** Beginn eines Neuaufbaus: Marken loeschen. Ohne vorherige Marken passiert
+ *  gar nichts — auf einer Karte ohne Bruchkante wird nie ein Feld angelegt
+ *  und nie eine Textur hochgeladen. */
+function bruchMaskeLeeren() {
+  if (bruchMaskeAktiv && bruchMaske) { bruchMaske.fill(0); bruchMaskeSchmutzig = true; }
+  bruchMaskeAktiv = false;
+}
+
+/**
+ * Rasterisiert EINEN Bruch (Rueckgabe von bruchDaten) in die Maske. Grundlage
+ * sind genau die Stempel, die auch das Hoehenfeld einschneiden — die Maske
+ * kann dadurch gar nicht neben der Klippe liegen. Ueberlappende Stempel werden
+ * per Maximum verrechnet (wie die Minimum-Regel des Hoehenfelds: der tiefste
+ * Stempel gewinnt).
+ */
+function bruchMaskeStempeln(d) {
+  if (!d || !d.samples || !d.samples.length) return;
+  bruchMaskeSichern();
+  var sm = d.samples, m = bruchMaske, n = bruchMaskeVW;
+  var aussen = d.radius * BRUCH_MASKE_AUSSEN, innen = d.radius * BRUCH_MASKE_INNEN;
+  var aussen2 = aussen * aussen;
+  for (var k = 0; k < sm.length; k++) {
+    // Gitterkoordinaten: Zelle (i,j) liegt auf Weltpunkt (i-HALF, j-HALF).
+    var ci = sm[k].x + HALF, cj = sm[k].z + HALF;
+    var i0 = Math.floor(ci - aussen), i1 = Math.ceil(ci + aussen);
+    var j0 = Math.floor(cj - aussen), j1 = Math.ceil(cj + aussen);
+    if (i0 < 0) i0 = 0;
+    if (j0 < 0) j0 = 0;
+    if (i1 > n - 1) i1 = n - 1;
+    if (j1 > n - 1) j1 = n - 1;
+    for (var j = j0; j <= j1; j++) {
+      var dz = j - cj, zz = dz * dz, reihe = j * n;
+      for (var i = i0; i <= i1; i++) {
+        var dx = i - ci, dd2 = dx * dx + zz;
+        if (dd2 >= aussen2) continue;              // Kreis statt Kachel: spart
+        var v = sstep(aussen, innen, Math.sqrt(dd2)) * 255;   // ~21 % der Wurzeln
+        if (v > m[reihe + i]) m[reihe + i] = v;
+      }
+    }
+  }
+  bruchMaskeAktiv = true;
+  bruchMaskeSchmutzig = true;
+}
+
+/**
+ * Abschluss des Neuaufbaus: Textur hochladen (nur wenn sich wirklich etwas
+ * geaendert hat) und den Shaderzweig scharf schalten. Ohne Bruchkante bleibt
+ * uBruchStaerke auf 0 — der Zweig in water.js faellt uniform-kohaerent weg und
+ * das Bild ist identisch zu einer Fassung ohne diese Maske.
+ */
+function bruchMaskeFertig() {
+  if (bruchMaskeSchmutzig && bruchMaskeTex) {
+    bruchMaskeTex.needsUpdate = true;
+    bruchMaskeSchmutzig = false;
+  }
+  bruchMaskeUniforms.uBruchStaerke.value = bruchMaskeAktiv ? 1 : 0;
+}
+
+/** Maskenwert 0..1 an einem Weltpunkt — fuer Tests und Werkzeuge, die wissen
+ *  muessen, ob ein Punkt ueber dem Abgrund liegt (nearest, ohne Filterung). */
+function bruchMaskeAt(x, z) {
+  if (!bruchMaskeAktiv || !bruchMaske) return 0;
+  var i = Math.round(x + HALF), j = Math.round(z + HALF), n = bruchMaskeVW;
+  if (i < 0 || j < 0 || i > n - 1 || j > n - 1) return 0;
+  return bruchMaske[j * n + i] / 255;
+}
+
+
+// Geteiltes Material der Wurzelvorhaenge — Muster von flussMat: EIN
+// Modul-Material fuer alle Bruch-Elemente, sonst leckt jede Regenerierung
+// eines. Kein userData.eigenesMaterial an den Meshes, damit clearElement
+// (store.js) es nicht disposed.
+var wurzelMat = terraMat({ vertexColors: true, familie: 'holz' });
+tintedMats.push(wurzelMat);
+
+/**
+ * Bruchkante: Hoehenstempel ablegen und die sichtbare Ausstattung setzen —
+ * haengende Wurzelvorhaenge, Felsbrocken am Saum, schwebende Truemmer.
+ * Zufalls-Schluessel wie bei allen Pfaden ortsstabil ueber (rund(s/3.2), Rolle,
+ * seed+N); es bleibt kein elementweiter Strom uebrig.
+ */
+function genBruch(el) {
+  var p = el.params || {};
+  var d = bruchDaten(el);
+  if (!d) return;
+  merkeBruch(d);
+  var kante = d.kante, M = d.masse;
+  var geos = [], occ = newOcc(2.6), i;
+  var schritt = Math.max(1, Math.round(3.2 / BRUCH_SCHRITT));
+  for (i = 0; i < kante.length; i += schritt) {
+    var k = kante[i];
+    var idx = Math.round(k.s / 3.2);
+    // --- Wurzelvorhaenge: Arbor greift ueber die Bruchkante und haelt die
+    //     Stuecke zusammen. Geometrie im Element-Mesh (tubeGeo), nicht als
+    //     Pool: jeder Vorhang haengt anders und wuerde als Instanz auffallen.
+    if (p.wurzeln !== false) {
+      var rw = ortsRng(idx, 0, el.seed + 613);
+      if (rw() < 0.72) {
+        var nS = ri(rw, 2, 4);
+        for (var st = 0; st < nS; st++) {
+          var rs = ortsRng(idx, 10 + st, el.seed + 613);
+          var laengs = rr(rs, -1.5, 1.5);
+          var quer = M.R * rr(rs, 0.10, 0.30);         // knapp ueber die Lippe
+          var ax = k.x + k.tx * laengs + k.nx * quer;
+          var az = k.z + k.tz * laengs + k.nz * quer;
+          var top = heightAt(ax, az) + 0.1;
+          var laenge = clamp(rr(rs, 0.30, 0.75) * M.tiefe, 6, 80);
+          var dick = rr(rs, 0.10, 0.22);
+          var ph = rr(rs, 0, 6.283);
+          var pts = [];
+          for (var q = 0; q <= 9; q++) {
+            var t = q / 9;
+            pts.push(new THREE.Vector3(
+              ax + (fractal(t * 1.7 + ph, idx * 0.9 + st * 2.3, el.seed + 619) - 0.5) * 3 * t
+                 + k.nx * t * t * 1.6,
+              top - t * laenge,
+              az + (fractal(idx * 0.9 + st * 2.3, t * 1.7 + ph, el.seed + 621) - 0.5) * 3 * t
+                 + k.nz * t * t * 1.6));
+          }
+          geos.push(tubeGeo(pts,
+            function (qv) { return dick * (1 - qv * 0.8); }, 4,
+            function (qv, ii, col) {
+              // oben erdig-dunkel, zum frei haengenden Ende hin fahl
+              col.setRGB(lerp(0.33, 0.74, qv), lerp(0.28, 0.71, qv), lerp(0.21, 0.60, qv));
+            }));
+        }
+      }
+    }
+    // --- Felsbrocken am Saum, auf der STEHENDEN Seite: sie stehen auf dem
+    //     Boden und bekommen ueber emit ganz normal ihren Kontaktschatten.
+    var rf = ortsRng(idx, 1, el.seed + 617);
+    if (rf() < 0.55) {
+      var bd = rr(rf, 0.8, 4.2);
+      var bx = k.x - k.nx * bd, bz = k.z - k.nz * bd;
+      var bh = tryPlace(occ, bx, bz, 1.1, { ignoreCorridor: true });
+      if (bh !== null) {
+        var bs = rr(rf, 0.6, 1.7);
+        emit(el, "fels", bx, bh - 0.2, bz, rf() * 6.28,
+          bs, bs * rr(rf, 0.7, 1.5), bs, tintOf(rf, 0.07));
+      }
+    }
+  }
+  // --- Schwebende Truemmer knapp unterhalb des Saums.
+  //     Kontaktschatten: emit (pools.js) legt ihn nur bei |y - heightAt| <=
+  //     2.2 ab. Ueber dem Abgrund liegt die Sohle mindestens 0.7 * tiefe
+  //     (>= 28 Einheiten) unter dem Truemmerstueck — der Bodenschatten
+  //     entfaellt also von selbst, wie bei den Schwebeinseln. Der Guard unten
+  //     faengt den einzigen Sonderfall ab: ein Stueck, das durch den Versatz
+  //     entlang der Kante ueber dem STEHENDEN Land landen wuerde.
+  var proTr = clamp(Math.round(p.truemmer === undefined ? 2 : p.truemmer), 0, 6);
+  if (proTr > 0 && kante.length > 1) {
+    var gesamt = kante[kante.length - 1].s;
+    var nTr = Math.max(1, Math.round(gesamt / (34 / proTr)));
+    for (var tr = 0; tr < nTr; tr++) {
+      var rt = ortsRng(tr, 3, el.seed + 623);
+      var kk = kante[clamp(Math.round((tr + 0.5) / nTr * (kante.length - 1)),
+        0, kante.length - 1)];
+      var weit = kk.off + rr(rt, 1.5, M.abgrund * 0.75);
+      var tx = kk.x + kk.nx * weit + kk.tx * rr(rt, -6, 6);
+      var tz = kk.z + kk.nz * weit + kk.tz * rr(rt, -6, 6);
+      var ty = heightAt(kk.x, kk.z) - rr(rt, 4, M.tiefe * 0.3);
+      if (Math.abs(ty - heightAt(tx, tz)) <= 2.2) continue;   // stuende auf Land
+      var ts = rr(rt, 0.9, 2.6);
+      emit(el, "fels", tx, ty, tz, rt() * 6.28,
+        ts, ts * rr(rt, 0.6, 1.2), ts, tintOf(rt, 0.06));
+    }
+  }
+  if (geos.length) {
+    var mesh = new THREE.Mesh(mergeGeos(geos), wurzelMat);
+    mesh.userData.el = el;
+    groupOf(el).add(mesh);
+  }
+}
+
+
 export { pathCurve, pathSamples, BELAG, bandGeoAusLinie, bandAusLinie, bandMeshAusGeos,
-  genStrasse, genMauer, genFluss, genHecke };
+  genStrasse, genMauer, genFluss, genHecke,
+  brueche, bruchMasse, bruchDaten, genBruch,
+  bruchMaskeUniforms, bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig, bruchMaskeAt };

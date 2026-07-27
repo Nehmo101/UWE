@@ -196,6 +196,78 @@ function texPaint(size, fn) {
   aquarell("aquarellMittel", 5.6, 0.85, 2207);
   aquarell("aquarellFein", 11.0, 0.65, 2213);
 
+  /* --- F2 Malschicht: bildraumfeste Papier- und Pinselstruktur -----------
+     Gegenstueck zu den drei Aquarelltexturen darueber, mit dem GENAU
+     UMGEKEHRTEN Bezugssystem: die Aquarellschicht wird im Shader in
+     WELTkoordinaten abgetastet (Materialidentitaet — der Fels behaelt seine
+     Koernung, egal wie nah man herangeht), diese hier wird im Post-Pass in
+     BILDkoordinaten abgetastet. Auf einem Gemaelde ist der Strich am fernen
+     Berg so breit wie der im Vordergrund; wuerde die Malschicht mitskalieren,
+     verschwaende sie in der Ferne genau dort, wo unser Bild am digitalsten
+     wirkt (Ideenwelle 2, F2).
+
+     Deshalb ist die Textur bewusst NIEDERfrequent: sie beschreibt den
+     Bildtraeger (Papierfaser, Pinselzug, Pigmentgranulation), nicht das
+     Filmkorn. Das Korn im Post-Pass ist hochfrequent und laeuft mit uZeit
+     mit; diese Textur steht still. Beides nebeneinander liest sich als
+     "gemaltes Bild, abgefilmt" — vertauscht man die Rollen, bekommt man
+     entweder ein kribbelndes Papier oder ein statisches Korn, das wie ein
+     verschmutzter Sensor aussieht.
+
+     Kachelbar ueber dieselbe Ueberblendung wie bei aquarell(): an der Kante
+     (g = 1) wird der um eine halbe Periode versetzte Zweitwert genommen, und
+     der stimmt bei u = 0 und u = 1 exakt ueberein. Anders als dort duerfen
+     die Frequenzen je Achse verschieden sein — genau daraus entstehen die
+     langgezogenen Bahnen und Zuege. Rein datentragend, also KEIN sRGB. --- */
+  (function malschichtTextur() {
+    var N = 256;
+    function tile(u, v, fx, fy, sd) {
+      var n1 = fractal(u * fx, v * fy, sd);
+      var n2 = fractal(((u + 0.5) % 1) * fx, ((v + 0.5) % 1) * fy, sd);
+      var g = Math.max(Math.abs(u - 0.5), Math.abs(v - 0.5)) * 2;
+      return lerp(n1, n2, sstep(0.66, 0.98, g));
+    }
+    // Erst rechnen, dann normieren, dann schreiben. Die Normierung ist hier
+    // NICHT kosmetisch: die Schicht wird im Shader multiplikativ um 0.5 herum
+    // aufgetragen (c *= 1 + (wert - 0.5) * ...). Haette ein Kanal einen
+    // Mittelwert von z. B. 0.41 — und fractal() liefert ueber ein endliches
+    // Feld genau solche Abweichungen —, dann verdunkelte die Malschicht das
+    // ganze Bild gleichmaessig, statt es nur zu strukturieren. Also je Kanal
+    // Mittelwert exakt auf 0.5 und Streuung auf SIGMA ziehen.
+    var SIGMA = 0.15;   // ±1σ ≈ 15 % Struktur; bei Staerke 0.12 sind das gut 2 %
+    var kanal = [new Float32Array(N * N), new Float32Array(N * N), new Float32Array(N * N)];
+    for (var j = 0; j < N; j++) {
+      for (var i = 0; i < N; i++) {
+        var u = (i + 0.5) / N, v = (j + 0.5) / N, k = j * N + i;
+        // R — Papierfaser: langgezogene Schoepfrippen plus feine Narbe.
+        kanal[0][k] = (tile(u, v, 4.5, 29.0, 8801) - 0.5) * 0.85
+                    + (tile(u, v, 13.0, 61.0, 8807) - 0.5) * 0.45;
+        // G — Pinselzug: breite Bahnen in einer Vorzugsrichtung, schwache
+        //     Gegenlage, damit es nach Handgelenk aussieht und nicht nach Kamm.
+        kanal[1][k] = (tile(u, v, 2.6, 12.0, 8813) - 0.5) * 1.00
+                    + (tile(u, v, 11.0, 3.1, 8819) - 0.5) * 0.35;
+        // B — Pigmentwolken: sehr niederfrequente Granulation (dort, wo sich
+        //     Farbe in den Papiertaelern sammelt).
+        kanal[2][k] = (tile(u, v, 2.0, 2.3, 8821) - 0.5) * 1.15;
+      }
+    }
+    for (var c = 0; c < 3; c++) {
+      var d = kanal[c], summe = 0, q = 0, p;
+      for (p = 0; p < d.length; p++) summe += d[p];
+      var mittel = summe / d.length;
+      for (p = 0; p < d.length; p++) q += (d[p] - mittel) * (d[p] - mittel);
+      var skala = SIGMA / Math.max(Math.sqrt(q / d.length), 1e-6);
+      for (p = 0; p < d.length; p++) d[p] = 0.5 + (d[p] - mittel) * skala;
+    }
+    texFinish(texPaint(N, function (u, v, o) {
+      var k = Math.floor(v * N) * N + Math.floor(u * N);
+      o[0] = clamp(kanal[0][k], 0, 1);
+      o[1] = clamp(kanal[1][k], 0, 1);
+      o[2] = clamp(kanal[2][k], 0, 1);
+      o[3] = 1;
+    }), "malschicht", true);
+  })();
+
   /* --- Kronenkarten: gemalte Blattmassen-Silhouetten ---------------------
      Geclusterte Ballen, innen dicht, aussen aufgeloest, abgesetzte
      Blattgruppen am Rand. -------------------------------------------- */

@@ -1,10 +1,19 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { S, BIOME } from '../core/store.js';
+import { S, BIOME, KARTE } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
 import { heightAt, slopeAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
+/* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
+   und Struktur-Generatoren"). Sie liegen in einem eigenen Modul, weil ihre
+   Layout-Logik mit der Streulogik dieser Datei nichts gemeinsam hat — und weil
+   der Import damit EINE Richtung hat: areas.js -> strukturen.js, nie zurueck.
+   Deshalb wohnen die reinen Polygonhelfer jetzt dort und werden hier nur noch
+   durchgereicht; ihre bisherigen Importeure (selection.js, core/dirty.js)
+   bleiben davon unberuehrt. */
+import { polyBBox, inPoly, polyArea, polyCenter,
+  genBurg, genWerft, genKloster } from './strukturen.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
    an einen stabilen Schluessel statt an die Zugriffsreihenfolge — sonst
@@ -13,43 +22,46 @@ import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
    arbeiten bereits so (Rasterzellen-Hash) und bleiben unveraendert. */
 function ortsRng(a, b, s) { return rngOf((hashi(a, b, s) * 4294967296) | 0); }
 
-function polyBBox(pts) {
-  var b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity };
-  for (var i = 0; i < pts.length; i++) {
-    if (pts[i].x < b.x0) b.x0 = pts[i].x;
-    if (pts[i].x > b.x1) b.x1 = pts[i].x;
-    if (pts[i].z < b.z0) b.z0 = pts[i].z;
-    if (pts[i].z > b.z1) b.z1 = pts[i].z;
-  }
-  return b;
-}
-
-function inPoly(pts, x, z) {
-  var inside = false;
-  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    var a = pts[i], b = pts[j];
-    if (((a.z > z) !== (b.z > z)) && (x < (b.x - a.x) * (z - a.z) / (b.z - a.z) + a.x)) inside = !inside;
-  }
-  return inside;
-}
-
-function polyArea(pts) {
-  var s = 0;
-  for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) s += (pts[j].x + pts[i].x) * (pts[j].z - pts[i].z);
-  return Math.abs(s * 0.5);
-}
-
-function polyCenter(pts) {
-  var x = 0, z = 0;
-  for (var i = 0; i < pts.length; i++) { x += pts[i].x; z += pts[i].z; }
-  return { x: x / pts.length, z: z / pts.length };
-}
+/* polyBBox/inPoly/polyArea/polyCenter stehen jetzt in strukturen.js (siehe
+   Importblock oben) und werden von dort unveraendert re-exportiert. */
 
 /** Abstand so vergrößern, dass die Instanzzahl beherrschbar bleibt. */
+/** Instanzdeckel flaechenproportional zur Karte (H1d). Gleicher Faktor und
+ *  gleicher 4x-Deckel wie MAX_INST_PER_EL in store.js, damit die Flaechen-
+ *  deckel nie ueber das Element-Budget hinauswachsen. Bei 256 liefert er
+ *  exakt die alten Werte — grosse Karten sollen groessere Waelder tragen,
+ *  nicht duennere. */
+function deckel(n) {
+  return Math.round(n * Math.min(4, (KARTE.map * KARTE.map) / (256 * 256)));
+}
+
 function safeSpacing(pts, wanted, maxCount) {
   var a = polyArea(pts);
   var need = Math.sqrt(a / Math.max(1, maxCount));
   return Math.max(wanted, need);
+}
+
+/**
+ * Biom-Abstandsfaktor (H-Welle 2). `veg.dichte` wirkt konstruktionsbedingt NUR
+ * nach unten (`if (V.dichte < 1 && ...)`), Werte > 1 sind wirkungslos —
+ * Regenwald, Bambus und Pilzwald koennen deshalb ueber `dichte` gar nicht
+ * dichter werden als der Bestand. `veg.abstand` ist der Gegenweg: ein Faktor
+ * auf das FERTIGE Ergebnis von safeSpacing (< 1 verdichtet, > 1 lichtet auf).
+ *
+ * Bewusst NACH safeSpacing und nicht auf dessen `wanted`-Argument: der
+ * Max()-Boden in safeSpacing ist genau die Grenze, die ueberschritten werden
+ * soll. Der Instanzdeckel wird damit umgangen — bei abstand 0.55 (Bambus)
+ * vervierfacht sich die Kandidatenzahl fast; MAX_INST_PER_EL in pools.js
+ * bleibt das Sicherheitsnetz.
+ *
+ * Byteidentitaet: fehlt das Feld (wiese, kueste, alle Runde-G-Biome) oder
+ * steht es auf 1, wird die Multiplikation NICHT ausgefuehrt — kein "* 1",
+ * keine Rundungsschleife, kein veraenderter Float.
+ */
+function biomAbstand(V, sp) {
+  var f = V.abstand;
+  if (f === undefined || f === null || f === 1) return sp;
+  return sp * f;
 }
 
 /** 0 am Polygonkern, 1 nahe dem Rand — Unterwuchs verdichtet sich am Saum. */
@@ -86,7 +98,7 @@ function genWald(el) {
   var p = el.params, pts = el.points;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var klump = p.klumpen === undefined ? 0.55 : p.klumpen;
-  var sp = safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), 14000);
+  var sp = biomAbstand(V, safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), deckel(14000)));
   var schwelle = 0.26 + klump * 0.36;
   var bb = polyBBox(pts), occ = newOcc(4);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
@@ -152,7 +164,7 @@ function genFeld(el) {
   var ext = Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 0.75 + 4;
   var a = p.drehung * DEG, dx = Math.cos(a), dz = Math.sin(a);
   var px = -dz, pz = dx;
-  var rowSp = safeSpacing(pts, p.reihe, 6000) * 1.0;
+  var rowSp = safeSpacing(pts, p.reihe, deckel(6000)) * 1.0;
   var alongSp = 2.6;
   var frucht = FRUCHT[p.frucht] || FRUCHT.weizen;
   var occ = newOcc(2);
@@ -183,7 +195,11 @@ function genFeld(el) {
 function genWiese(el) {
   var p = el.params, pts = el.points;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
-  var sp = safeSpacing(pts, 2.6 / p.dichte, 20000);
+  var sp = biomAbstand(V, safeSpacing(pts, 2.6 / p.dichte, deckel(20000)));
+  // Blumen-Leitfarben: das Biom darf die modulweite Tabelle ersetzen
+  // (Bluetental: rosa/creme). Ohne Feld ist LF exakt dieselbe Referenz wie
+  // frueher — gleiche Laenge, gleiche Werte, gleicher Index.
+  var LF = V.leitfarben || LEITFARBEN;
   var bb = polyBBox(pts), occ = newOcc(1.5);
   var c0 = Math.floor(bb.x0 / sp), c1 = Math.ceil(bb.x1 / sp);
   var d0 = Math.floor(bb.z0 / sp), d1 = Math.ceil(bb.z1 / sp);
@@ -208,7 +224,7 @@ function genWiese(el) {
       var sc = rr(rng, 0.75, 1.35);
       var tint = tintOf(rng, 0.1);
       if (istBlume) {
-        var leit = LEITFARBEN[Math.floor(hashi(nestX, nestZ, el.seed + 93) * LEITFARBEN.length)];
+        var leit = LF[Math.floor(hashi(nestX, nestZ, el.seed + 93) * LF.length)];
         tint = [leit[0] * (0.9 + rng() * 0.2), leit[1] * (0.9 + rng() * 0.2), leit[2] * (0.9 + rng() * 0.2)];
       }
       emit(el, kind, x, h, z, rng() * 6.28, sc, sc * rr(rng, 0.8, 1.3), sc, tint);
@@ -395,8 +411,18 @@ function genFlaeche(el) {
   else if (el.variant === "feld") genFeld(el);
   else if (el.variant === "viertel") genViertel(el);
   else if (el.variant === "wiese") genWiese(el);
+  // Die Kompositstrukturen haengen bewusst am ENDE der Kette (gleiche
+  // Begruendung wie bei pfad:bruch in core/dirty.js): eine aeltere Fassung des
+  // Editors faellt durch alle else-if hindurch und erzeugt schlicht nichts,
+  // statt abzustuerzen — das Speicherformat bleibt abwaertskompatibel.
+  else if (el.variant === "burg") genBurg(el);
+  else if (el.variant === "werft") genWerft(el);
+  else if (el.variant === "kloster") genKloster(el);
 }
 
 
+/* polyBBox/inPoly/polyArea/polyCenter werden hier weiter exportiert, obwohl sie
+   jetzt aus strukturen.js kommen: selection.js und core/dirty.js importieren
+   `inPoly` seit jeher von hier, und ein Umhaengen dort waere reiner Laerm. */
 export { polyBBox, inPoly, polyArea, polyCenter, safeSpacing, genWald, genFeld,
   genWiese, districtStreets, genViertel, genFlaeche };

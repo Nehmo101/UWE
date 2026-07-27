@@ -39,6 +39,37 @@ Haengebruecken. Objekt-Werkzeug: Variante "Schwebeinseln" und "Nur Typ".
 
 ## Offener Stand
 
+- Runde H, Welle 4: die zuletzt offenen Punkte sind erledigt —
+  Struktur-Generatoren fuer Burg, Werft und Kloster (neue Flaechen-
+  Varianten), genBlattstadt mit echtem Gassennetz in Blattkoordinaten,
+  Drift-Animation an Bruchkanten (Shader-Patch aus der Bruchmaske),
+  Detailstufen fuer ferne Terrain-Patches (bis -72 % Dreiecke auf 1024er
+  Karten, nahtfrei ueber angepasste Randindizes) und regionsweises Undo
+  (Pinselstrich auf 1024er: 6,7 kB statt 4,2 MB).
+  Offen bleibt nur die Sichtpruefung im Browser (Checkliste in PR #806).
+
+- Runde H, Welle 3 (Weltausbau + Ghibli-Bildaufbau) ist fertig: VFX-System
+  mit Wetter (Regen/Schnee/Blueten/Sporen/Staub, Arbor-Lichtflug), Godrays,
+  Farbskript, Papierkante, gemalte Wasserstreifen; Weltgenerator ("Welt
+  wuerfeln") und Wegsuche-Werkzeug; Marker mit Beschriftung, Stempel-
+  Bibliothek, Autosave, Hoehenkarten-Import; 164 weitere Objekte (272 Pools);
+  Arbor-Netzwerk und Ranken-Alterung; Palettenbindung, bildraumfeste
+  Malschicht und Multiplane-Tiefenbaender; Aufnahme-Modus (Taste C) und
+  Bewegungsdisziplin (ruhige Karte, wenige Boeen-Nester, seltener fliegende
+  Voegel). Neue Karten starten mit aktivem Ghibli-Bildaufbau, geladene
+  Altkarten bleiben unveraendert.
+
+- Runde H (Weltausbau) ist in Arbeit. Fertig: Kartengroesse 256/512/1024
+  (Terrain in Patches, Format v4), 25 Biome mit eigenen Hoehenprofilen und
+  Schneeauflage, Arbor als echte Lichtquelle (Kanon: der weisse Baum haelt
+  den zerrissenen Planeten zusammen und spendet Licht), Ranken mit
+  Zugpunkten/Kernneigung/Zusammenwachsen, Bruchkanten-Werkzeug samt
+  Wasseraussparung, 58 neue Objekte (Wehrbau, Maritim, Bruecken).
+  Offen: die restlichen Objektbuendel des Katalogs (Arbor-Assets,
+  Biom-Spezifika, Ruinen/Natur/Requisiten) und die Struktur-Generatoren
+  genBurg/genWerft/genBlattstadt. Details in
+  `docs/engineering/terra-objektkatalog.md`.
+
 - Runde G (Setting-Ausbau) ist abgeschlossen: fuenfte Tageszeit Nacht
   (deterministische Sterne, Mond = Sonnenscheibe, selbstleuchtende Ranken,
   Fensterglut 3.2), Ranken-Parameter (dicke, stil geflochten/glatt,
