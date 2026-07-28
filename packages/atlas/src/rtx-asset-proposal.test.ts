@@ -169,8 +169,8 @@ describe("RTX Atlas asset prompt context", () => {
 
     assert.equal(context.styleguidePath, RTX_ATLAS_ASSET_STYLEGUIDE_PATH);
     assert.equal(context.assetCatalogPath, RTX_ATLAS_ASSET_CATALOG_PATH);
-    assert.ok(promptContext.includes("docs/prompts/atlas-pictogram-styleguide.md"));
-    assert.ok(promptContext.includes("docs/design/atlas-redesign/asset-catalog.md"));
+    assert.ok(promptContext.includes("docs/design/atlas-pictogram-styleguide.md"));
+    assert.ok(promptContext.includes("docs/design/atlas-asset-catalog.md"));
     assert.ok(promptContext.includes("@uwe/atlas/assets#GOUACHE_ASSETS"));
     assert.ok(context.existingAssets.some((asset) => asset.key === "g_oak"));
     assert.ok(promptContext.includes("json-recipe"));

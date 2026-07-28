@@ -74,8 +74,8 @@ describe("Portal delegated two-factor routes guard via shared helper", () => {
 
     for (const route of PORTAL_DELEGATED_GUARD_ROUTES) {
       const source = readRoute(route);
-      // The route file itself is a thin delegate to the helper.
-      assert.match(source, /two-factor-routes/);
+      // The route file itself is a thin delegate to its helper.
+      assert.match(source, /two-factor-routes|passkey-routes/);
     }
   });
 });

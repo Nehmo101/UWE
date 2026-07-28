@@ -34,7 +34,7 @@ describe("portal health response shape", () => {
       },
       rateLimiter: { mode: "in-memory" },
       proxy: {
-        publicAppUrl: "https://uweandragons.org",
+        publicAppUrl: "https://uwe.example",
         trustProxy: true,
         cloudflareTunnel: true,
         authRequired: true,

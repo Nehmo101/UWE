@@ -5,7 +5,12 @@ import { auditLog, migrationStatus, secretsStatus, securityStatus } from "./ops/
 import { createApiToken, listApiTokens, revokeApiToken } from "./ops/token-ops";
 import { createWebhook, deleteWebhook, listWebhooks } from "./ops/webhook-ops";
 import { getSettings, updateSettings } from "./ops/settings-ops";
-import { clearSmtp, setSmtp, setupStatus, smtpStatus } from "./ops/setup-ops";
+import {
+  applyManagedChallengeNow,
+  getManagedChallengeStatus,
+  setManagedChallenge,
+} from "./ops/cloudflare-challenge-ops";
+import { clearSmtp, setGoogleLogin, setSmtp, setupStatus, smtpStatus } from "./ops/setup-ops";
 
 loadEnvFromRoot();
 
@@ -42,6 +47,10 @@ const ACTIONS = [
   "smtp-status",
   "smtp-set",
   "smtp-clear",
+  "cloudflare-challenge-status",
+  "cloudflare-challenge-set",
+  "cloudflare-challenge-apply",
+  "google-login-set",
 ] as const;
 
 type OpsAction = (typeof ACTIONS)[number];
@@ -84,6 +93,14 @@ async function run(action: OpsAction, db: ReturnType<typeof createPrismaClient>)
       return setSmtp(db, await readStdinJson());
     case "smtp-clear":
       return clearSmtp(db);
+    case "cloudflare-challenge-status":
+      return getManagedChallengeStatus(db);
+    case "cloudflare-challenge-set":
+      return setManagedChallenge(db, await readStdinJson());
+    case "cloudflare-challenge-apply":
+      return applyManagedChallengeNow(db);
+    case "google-login-set":
+      return setGoogleLogin(db, await readStdinJson());
     default: {
       const exhaustive: never = action;
       return exhaustive;

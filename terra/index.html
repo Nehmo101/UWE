@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>terra — Fantasy-Karteneditor</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./src/ui/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="ui">
+  <div id="rail"></div>
+  <div id="panel" class="card"></div>
+  <div id="bar" class="card">
+    <label for="seed">Seed</label>
+    <input id="seed" type="text" value="1337" spellcheck="false">
+    <button id="seedApply">Übernehmen</button>
+    <div class="sep"></div>
+    <label for="biomSel">Biom</label>
+    <!-- width:auto inline: die globale select-Regel (style.css) setzt 100%
+         fuer Panel-Selects, in der flexiblen Leiste soll er kompakt bleiben -->
+    <!-- 25 Biome aus docs/engineering/terra-biomkatalog.md, gruppiert nach
+         Klima/Charakter. Die VALUES sind die Registry-Schlüssel aus
+         core/store.js und stehen so in gespeicherten Karten — sie dürfen
+         niemals umbenannt werden. `schnee` heißt deshalb weiterhin `schnee`,
+         zeigt aber laut Katalog das Label „Winterwald" (den Namensteil „Eis"
+         übernimmt das eigenständige Biom `eis`). -->
+    <select id="biomSel" style="width:auto">
+      <optgroup label="Gemäßigt">
+        <option value="wiese" selected>Wiese</option>
+        <option value="bluetental">Blütental</option>
+        <option value="bambuswald">Bambuswald</option>
+        <option value="terrassen">Terrassenland</option>
+        <option value="nebelwald">Nebelwald</option>
+      </optgroup>
+      <optgroup label="Trocken">
+        <option value="wueste">Wüste</option>
+        <option value="steppe">Steppe</option>
+        <option value="salzwueste">Salzpfanne</option>
+      </optgroup>
+      <optgroup label="Kalt">
+        <option value="schnee">Winterwald</option>
+        <option value="eis">Ewiges Eis</option>
+        <option value="tundra">Tundra</option>
+        <option value="hochland">Hochland</option>
+      </optgroup>
+      <optgroup label="Feucht">
+        <option value="sumpf">Sumpf</option>
+        <option value="moor">Hochmoor</option>
+        <option value="regenwald">Regenwald</option>
+        <option value="mangrove">Mangrovenküste</option>
+        <option value="pilzwald">Pilzwald</option>
+      </optgroup>
+      <optgroup label="Fels &amp; Küste">
+        <option value="kueste">Küste</option>
+        <option value="kreide">Kreidefelsen</option>
+        <option value="karst">Karst</option>
+        <option value="klippenmeer">Klippenmeer</option>
+        <option value="korallenbank">Korallenbank</option>
+        <option value="meer">Offenes Meer</option>
+      </optgroup>
+      <optgroup label="Besonders">
+        <option value="vulkan">Aschekegel</option>
+        <option value="aschebrache">Aschebrache</option>
+      </optgroup>
+    </select>
+    <div class="sep"></div>
+    <label for="kartenSel">Karte</label>
+    <!-- Kartengröße (H1b). Ein Wechsel erzeugt die Karte neu — das
+         Höhen-Delta des Speicherformats gilt nur je Kartengröße. -->
+    <select id="kartenSel" style="width:auto">
+      <option value="256" selected>Klein (256)</option>
+      <option value="512">Mittel (512)</option>
+      <option value="1024">Groß (1024)</option>
+    </select>
+    <div class="sep"></div>
+    <label>Tageszeit</label>
+    <button class="tod" data-t="morgen">Morgen</button>
+    <button class="tod" data-t="mittag">Mittag</button>
+    <button class="tod" data-t="abend">Abendrot</button>
+    <button class="tod" data-t="nebel">Nebel</button>
+    <button class="tod" data-t="nacht">Nacht</button>
+    <div class="sep"></div>
+    <label for="wetterSel">Wetter</label>
+    <!-- Zweite Stimmungsachse neben der Tageszeit. Die VALUES sind die
+         Schlüssel der WETTER-Tabelle in world/atmosphere.js; der Listener
+         hängt dort in initAtmosphere() (io.js kennt das Wetter nicht).
+         Wirkt auf Wolkendeckung/-farbe, Nebel, Grading, Windstärke,
+         Kontaktschatten und den Partikeltyp aus world/vfx.js. -->
+    <select id="wetterSel" style="width:auto">
+      <option value="klar" selected>klar</option>
+      <option value="bewoelkt">bewölkt</option>
+      <option value="regen">Regen</option>
+      <option value="schneefall">Schneefall</option>
+      <option value="sturm">Sturm</option>
+    </select>
+    <div class="sep"></div>
+    <button id="snapBtn">Raster</button>
+    <button id="fxBtn" class="on">Effekte</button>
+    <div class="sep"></div>
+    <button id="saveBtn">Speichern</button>
+    <button id="loadBtn">Laden</button>
+    <button id="pngBtn">PNG</button>
+    <div class="sep"></div>
+    <!-- D2 — Höhenbild-Import. Steht jetzt statisch hier statt in io.js
+         erzeugt zu werden: die Leiste gehört ins Dokument, nicht in den
+         Code. io.js sucht beide Elemente per id und hängt nur noch die
+         Listener an; findet es sie nicht (Testläufe ohne dieses Dokument),
+         legt es sie weiterhin selbst an. Das versteckte <input> liegt
+         bewusst direkt neben seinem Knopf — display:none, es beeinflusst
+         das Flex-Layout der Leiste nicht. -->
+    <button id="hoehenbildBtn"
+            title="Graustufenbild als Geländehöhe einlesen (PNG/JPG)">Höhenbild</button>
+    <input type="file" id="hoehenbildIn" accept="image/*" style="display:none">
+  </div>
+  <div id="stats" class="card"></div>
+  <div id="hint" class="card"></div>
+  <div id="toast" class="card"></div>
+  <div id="fail" class="card">
+    <b>Die Module konnten nicht geladen werden.</b><br>
+    terra laedt Three.js als ES-Modul vom CDN (jsDelivr, Version gepinnt) und muss
+    ueber einen statischen Server laufen — siehe README.md
+    (<code>python3 -m http.server</code> im Ordner terra/).
+  </div>
+</div>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+<script>
+  // Fallback: wenn die Module (CDN) nicht laden, Hinweis zeigen.
+  setTimeout(function () {
+    if (!window.__terraOk) document.getElementById("fail").style.display = "block";
+  }, 6000);
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

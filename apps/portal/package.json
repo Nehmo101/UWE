@@ -29,6 +29,7 @@
     "@uwe/player-hub": "workspace:*",
     "@uwe/dnd-api": "workspace:*",
     "@uwe/env": "workspace:*",
+    "@uwe/passkeys": "workspace:*",
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/shared-utils": "workspace:*",

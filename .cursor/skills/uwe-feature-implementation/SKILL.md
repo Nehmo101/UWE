@@ -56,7 +56,7 @@ Never top-level-import `isomorphic-dompurify` or `jsdom`. Lazy-init inside a fun
 
 Use skill `daily-admin-os` for Today, Capture, Workshop, Hardware, etc.
 
-Follow product boundaries in `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md` — no family/meal/cat modules.
+Follow product boundaries in `docs/daily-admin-os.md` — no family/meal/cat modules.
 
 ## Life Brain / Image Studio / Calendar / Mail
 
@@ -65,8 +65,7 @@ Follow product boundaries in `docs/prompts/UWE_DAILY_ADMIN_OS_CURSOR_PROMPTS.md`
 | Life Brain retrieval | `life-brain-retrieval`, `docs/life-brain-privacy.md` |
 | Image Studio | `image-studio-workflows`, `docs/IMAGE_STUDIO.md` |
 | Calendar | `docs/CALENDAR_INTEGRATION.md` |
-| Mail | `docs/ai-brain-mail/README.md` |
-| Multi-domain rollout | `docs/engineering/product-orchestrator-plan.md` |
+| Mail | `docs/MAIL_CENTER.md` |
 
 Details: [references/architecture.md](references/architecture.md)
 

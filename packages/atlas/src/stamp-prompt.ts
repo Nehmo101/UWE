@@ -5,7 +5,7 @@
  * generation requests.  The DM's keyword is prepended; the style prompt
  * enforces the map's canonical GOUACHE look (opaque painted map asset with a
  * darker pigment edge on a transparent background) — the binding style rules
- * live in `docs/prompts/atlas-pictogram-styleguide.md` (section "Gouache").
+ * live in `docs/design/atlas-pictogram-styleguide.md` (section "Gouache").
  *
  * `assembleStampPrompt(keyword)` is the canonical assembly function used by
  * both the server action and the unit tests.

@@ -470,6 +470,7 @@ model User {
   twoFactorSecret     TwoFactorSecret?
   twoFactorChallenges TwoFactorChallenge[]
   authIdentities      AuthIdentity[]
+  webAuthnCredentials WebAuthnCredential[]
   aiUsageLogs          AiUsageLog[]
   dashboardLayouts       DashboardLayout[]
   ownedCharacters        Character[]
@@ -498,6 +499,9 @@ model AuthIdentity {
   userId         String   @map("user_id")
   provider       String
   providerUserId String   @map("provider_user_id")
+  /// Provider-reported e-mail at link time — diagnostics only. The identity
+  /// binds to `providerUserId` (e.g. the Google `sub`), never to the e-mail.
+  email          String?
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -1306,6 +1310,10 @@ enum AuditAction {
   mfa_enabled
   mfa_disabled
   mfa_challenge_failed
+  passkey_registered
+  passkey_removed
+  oauth_linked
+  oauth_unlinked
   security_warning_dismissed
   host_update_started
   host_update_completed
@@ -2295,6 +2303,40 @@ model TwoFactorChallenge {
 
   @@index([userId, expiresAt])
   @@map("two_factor_challenges")
+}
+
+model WebAuthnCredential {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  credentialId String    @unique @map("credential_id")
+  publicKey    String    @map("public_key")
+  counter      Int       @default(0)
+  transports   String?
+  deviceType   String?   @map("device_type")
+  backedUp     Boolean   @default(false) @map("backed_up")
+  rpId         String    @map("rp_id")
+  name         String
+  lastUsedAt   DateTime? @map("last_used_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("webauthn_credentials")
+}
+
+model WebAuthnChallenge {
+  id            String    @id @default(cuid())
+  userId        String?   @map("user_id")
+  challengeHash String    @unique @map("challenge_hash")
+  type          String
+  expiresAt     DateTime  @map("expires_at")
+  consumedAt    DateTime? @map("consumed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("webauthn_challenges")
 }
 
 enum InferenceProvider {

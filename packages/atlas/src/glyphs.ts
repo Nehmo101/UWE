@@ -7,7 +7,7 @@
  * here, so adding one entry below makes the pictogram available everywhere
  * automatically — no per-app duplication.
  *
- * Design rules (see `docs/prompts/atlas-pictogram-styleguide.md`):
+ * Design rules (see `docs/design/atlas-pictogram-styleguide.md`):
  *   - Hand-drawn ink cartography look: stroke-only outlines, never filled.
  *   - Drawn in a 24×24 viewBox; structures rest on the ~y=21 baseline.
  *   - `pathData` uses only absolute `M L H V Q C Z` commands, one segment per

@@ -86,7 +86,6 @@ lokal kopiert; es gibt kein CDN.
 ## Artefakte und Rebuild
 
 Der eigenständig öffnbare Prototyp liegt unter
-`docs/artifacts/atlas-3d-prototype.html`. Er enthält das 3D-Bundle als Base64
 und benötigt weder Server noch CDN.
 
 Nach Änderungen an `@uwe/atlas` oder `@uwe/atlas-3d`:

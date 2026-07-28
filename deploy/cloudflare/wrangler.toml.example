@@ -5,7 +5,7 @@
 #   id = "506d04d5c7c545bfac30daeb54f2d8bd"
 #
 # Deploy: npx wrangler deploy
-# Route (Dashboard): status.uweandragons.org/* → uwe-edge-health
+# Route (Dashboard): status.uwe.example/* → uwe-edge-health
 
 name = "uwe-edge-health"
 main = "uwe-edge-health-worker.mjs"
@@ -21,7 +21,7 @@ binding = "HEALTH"
 id = "506d04d5c7c545bfac30daeb54f2d8bd"
 
 [vars]
-UWE_PORTAL_URL = "https://uweanddragons.org"
-UWE_STUDIO_URL = "https://studio.uweanddragons.org"
+UWE_PORTAL_URL = "https://uwe.example"
+UWE_STUDIO_URL = "https://studio.uwe.example"
 UWE_PORTAL_HEALTH_PATH = "/api/health/public"
 UWE_STUDIO_HEALTH_PATH = "/api/health/public"

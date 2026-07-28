@@ -45,6 +45,11 @@ export type LoginFlowFailureReason =
   | "account_inactive"
   | "studio_access_denied"
   | "two_factor_required"
+  | "passkey_invalid"
+  | "login_method_disabled"
+  | "google_oauth_failed"
+  | "google_email_unverified"
+  | "google_email_unknown"
   | "server_error";
 
 /** Request context for an audit entry (structurally matches `AuditRequestContext`). */
@@ -156,16 +161,40 @@ function rateLimitedResponse(message: string, retryAfterSeconds: number): Respon
   return jsonResponse({ error: message }, 429, { "Retry-After": String(retryAfterSeconds) });
 }
 
-function buildAuthSuccessBody(
+/** Success body shared by every login method (password, 2FA, passkey, OAuth). */
+export function buildAuthSuccessBody(
   authUser: AuthUser,
   forcePasswordChange: boolean | null | undefined,
-  responseTarget: string | undefined,
+  responseTarget?: string | undefined,
 ): Record<string, unknown> {
   return {
     user: authUser,
     forcePasswordChange: forcePasswordChange ?? false,
     ...(responseTarget !== undefined ? { target: responseTarget } : {}),
   };
+}
+
+/** Everything needed to issue a session for an already-authenticated user. */
+export interface IssueLoginSessionDeps {
+  auth: SessionIssuingAuthPort;
+  userId: string;
+  ip: string;
+  setSessionCookie(token: string): Promise<void>;
+}
+
+/**
+ * The shared tail of every login method (password, 2FA completion, passkey,
+ * OAuth): `createSession` → `recordSuccessfulLogin` → session cookie. New
+ * login methods call this instead of minting sessions themselves so session-IP
+ * recording and cookie writing stay consistent across methods.
+ */
+export async function issueLoginSession(
+  deps: IssueLoginSessionDeps,
+): Promise<{ id: string; token: string }> {
+  const session = await deps.auth.createSession(deps.userId, { ipAddress: deps.ip });
+  await deps.auth.recordSuccessfulLogin(deps.userId);
+  await deps.setSessionCookie(session.token);
+  return session;
 }
 
 /** Everything the password-login flow needs, injected by each route adapter. */
@@ -365,9 +394,7 @@ export async function performLoginFlow<
       );
     }
 
-    const session = await auth.createSession(user.id, { ipAddress: ip });
-    await auth.recordSuccessfulLogin(user.id);
-    await setSessionCookie(session.token);
+    const session = await issueLoginSession({ auth, userId: user.id, ip, setSessionCookie });
 
     await logLoginAttempt({
       db,
@@ -514,9 +541,7 @@ export async function completeTwoFactorLogin<
       return errorResponse("Ungültige Anmeldedaten.", 401);
     }
 
-    const session = await auth.createSession(user.id, { ipAddress: ip });
-    await auth.recordSuccessfulLogin(user.id);
-    await setSessionCookie(session.token);
+    const session = await issueLoginSession({ auth, userId: user.id, ip, setSessionCookie });
 
     if (onSuccessAudit) {
       await onSuccessAudit({ db, user, session, ip });

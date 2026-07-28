@@ -3,14 +3,14 @@ import type { NextRequest } from "next/server";
 import { applySecurityHeaders, resolveStudioPublicBaseUrl } from "@uwe/auth";
 
 /**
- * Der Apex-Origin (uweanddragons.org) trägt ausschließlich die Startseite.
+ * Der Apex-Origin (uwe.example) trägt ausschließlich die Startseite.
  *
  * Studio, Portal und Brain haben eigene Subdomains und eigene Prozesse; dieser
  * Dienst kennt deren Routen gar nicht. Die Liste unten ist deshalb eine
  * vollständige Allowlist — alles andere ist hier kein „noch nicht gebaut",
  * sondern absichtlich nicht vorhanden.
  *
- * Damit alte Lesezeichen (uweanddragons.org/today) nicht ins Leere laufen,
+ * Damit alte Lesezeichen (uwe.example/today) nicht ins Leere laufen,
  * werden unbekannte Seitenpfade dauerhaft auf denselben Pfad im Studio
  * umgeleitet; unbekannte API-Pfade antworten mit 404.
  */

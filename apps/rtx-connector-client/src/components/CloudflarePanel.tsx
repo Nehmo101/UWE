@@ -12,6 +12,7 @@ import {
 } from "../lib/tauri";
 import { toMessage } from "../lib/connector-runtime-labels";
 import { Button } from "./ui/button";
+import { CloudflareChallengeCard } from "./CloudflareChallengeCard";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 export function CloudflarePanel() {
@@ -71,7 +72,7 @@ export function CloudflarePanel() {
       {!hasToken ? (
         <div className="connector-banner connector-banner-error">
           Es ist noch kein Tunnel-Token hinterlegt — ohne Token kann der Connector nicht starten und
-          die öffentlichen Adressen (studio./portal./brain.uweanddragons.org) sind offline.
+          die öffentlichen Adressen (studio./portal./brain.uwe.example) sind offline.
         </div>
       ) : null}
 
@@ -136,6 +137,8 @@ export function CloudflarePanel() {
           </div>
         </CardFooter>
       </Card>
+
+      <CloudflareChallengeCard />
     </div>
   );
 }

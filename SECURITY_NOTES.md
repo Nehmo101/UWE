@@ -129,5 +129,5 @@ Bei Sicherheitsvorfällen: [SECURITY.md](SECURITY.md) — Reporting a Vulnerabil
 - [README.md — KI-System](README.md#ki-system-brain--rtx)
 - [SECURITY.md — Cloud AI Context Boundaries](SECURITY.md#cloud-ai-context-boundaries)
 - [ADR 006 — KI- und Privacy-Policy](docs/adr/006-ai-privacy-policy.md)
-- [docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md](docs/ai-brain-mail/ENV_AND_DEPLOYMENT.md)
+- [docs/deployment-hardening.md](docs/deployment-hardening.md)
 - [.env.example](.env.example)

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 /**
- * Shared design constants for the uweanddragons.org landing page, split out so
+ * Shared design constants for the uwe.example landing page, split out so
  * both UweLandingPage and UweLandingLoginCard stay well under the module-size
  * budget. Values follow design_handoff_landing_page/README.md (Parchment OS).
  * The type scale below is not exposed as codebase tokens, so exact px are used.

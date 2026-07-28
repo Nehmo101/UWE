@@ -505,6 +505,10 @@ const OPS_ACTIONS: &[&str] = &[
     "smtp-status",
     "smtp-set",
     "smtp-clear",
+    "cloudflare-challenge-status",
+    "cloudflare-challenge-set",
+    "cloudflare-challenge-apply",
+    "google-login-set",
 ];
 
 fn build_ops_command(action: &str) -> Result<Command, String> {

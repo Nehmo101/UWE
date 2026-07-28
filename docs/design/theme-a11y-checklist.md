@@ -84,7 +84,7 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 
 ### Mobile UX
 
-- [ ] **Bottom Nav Abdeckung**: Nicht alle Studio-Welt-Routen und Portal-Wiki-Reader haben Bottom Nav (siehe `docs/REPO_AUDIT.md`).
+- [ ] **Bottom Nav Abdeckung**: Nicht alle Studio-Welt-Routen und Portal-Wiki-Reader haben Bottom Nav (siehe `docs/ARCHITECTURE.md`).
 - [ ] **FAB + Sticky Action Bar**: Auf sehr kleinen Screens kann es an unterem Rand eng werden.
 - [ ] **Portal Wiki Reader**: Kein Bottom Nav auf `/worlds/.../[category]/[slug]`.
 

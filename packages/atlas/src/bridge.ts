@@ -4,7 +4,7 @@
  * (M3). Kept here (not in the app) so the message names and the save/round-trip
  * transforms are single-source and unit-testable without Next.js or Prisma.
  *
- * Direction & origin check (see docs/handoffs/atlas-singlefile/README.md §6):
+ * Direction & origin check:
  *   Editor → Host carry `source: "uwe-atlas"`  (ready | save | visibility | ai-draft-request | plot-fill-proposal-request | handout-request)
  *   Host → Editor carry `source: "uwe-studio"` (saved | ai-draft-result | plot-fill-proposal-result | load)
  */

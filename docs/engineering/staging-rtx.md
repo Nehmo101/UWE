@@ -4,8 +4,8 @@ Stand: 2026-07-02
 
 Runbook für ein **zweites, getrenntes Testsystem** neben der Produktion:
 
-- **`main`** → Produktion auf dem UWE-Host (`studio` / `portal.uweanddragons.org`), Deploy wie gehabt über [`deploy.yml`](../../.github/workflows/deploy.yml).
-- **`dev`** → Staging on-demand auf dem **RTX-PC** (`test.studio` / `test.portal.uweanddragons.org`), eigene Datenbank.
+- **`main`** → Produktion auf dem UWE-Host (`studio` / `portal.uwe.example`), Deploy wie gehabt über [`deploy.yml`](../../.github/workflows/deploy.yml).
+- **`dev`** → Staging on-demand auf dem **RTX-PC** (`test.studio` / `test.portal.uwe.example`), eigene Datenbank.
 
 Der Prod-Host wird davon **nicht angefasst**. Staging läuft nur, wenn der RTX-PC an ist und du es manuell hochfährst.
 
@@ -72,8 +72,8 @@ Bewusst ein **separater** Clone, nicht der Connector-Checkout — Staging soll u
 winget install Cloudflare.cloudflared
 cloudflared tunnel login
 cloudflared tunnel create uwe-test
-cloudflared tunnel route dns uwe-test test.studio.uweanddragons.org
-cloudflared tunnel route dns uwe-test test.portal.uweanddragons.org
+cloudflared tunnel route dns uwe-test test.studio.uwe.example
+cloudflared tunnel route dns uwe-test test.portal.uwe.example
 ```
 
 Config unter `%USERPROFILE%\.cloudflared\config.yml` — Vorlage: [`deploy/rtx-staging/cloudflared-config.yml.example`](../../deploy/rtx-staging/cloudflared-config.yml.example):
@@ -82,9 +82,9 @@ Config unter `%USERPROFILE%\.cloudflared\config.yml` — Vorlage: [`deploy/rtx-s
 tunnel: uwe-test
 credentials-file: C:\Users\<du>\.cloudflared\<uuid>.json
 ingress:
-  - hostname: test.studio.uweanddragons.org
+  - hostname: test.studio.uwe.example
     service: http://localhost:3002
-  - hostname: test.portal.uweanddragons.org
+  - hostname: test.portal.uwe.example
     service: http://localhost:3003
   - service: http_status:404
 ```
@@ -95,8 +95,8 @@ In Cloudflare für **beide** Test-Hostnames eine **Access-Policy** anlegen, die 
 
 Kopiere [`deploy/rtx-staging/uwe-test.env.example`](../../deploy/rtx-staging/uwe-test.env.example) nach `C:\uwe-test\.env` und passe die Werte an (Secrets neu erzeugen mit `openssl rand -base64 32`). Die wichtigen Punkte:
 
-- Ports `3002`/`3003`, URLs auf `test.studio` / `test.portal.uweanddragons.org`.
-- **Eigenes** `SESSION_SECRET` — im Produktions-Build **Pflicht**, sonst bricht der Start ab.
+- Ports `3002`/`3003`, URLs auf `test.studio` / `test.portal.uwe.example`.
+- **Eigene** `SESSION_SECRET` und `UWE_MEDIA_SIGNING_SECRET` — im Produktions-Build **Pflicht**, sonst bricht der Start ab.
 - `DATABASE_URL=file:C:/uwe-test/data/uwe-test.db` — getrennte Datei, Vorwärts-Slashes für Prisma.
 - `NEXT_PUBLIC_*` werden beim **Build** eingebacken; `uwe-test-up.ps1` lädt die `.env` daher vor `build:release` in die Prozess-Umgebung.
 - `AI_INFERENCE_BASE_URL=http://localhost:11434` (lokales Ollama), `CLOUD_AI_PROVIDER=` leer.

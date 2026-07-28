@@ -1,4 +1,4 @@
-// AUTHORITATIVE product-boundary contracts. Canonical spec: docs/rework/three-product-split/02-domain-contracts.md
+// AUTHORITATIVE product-boundary contracts. Canonical spec: docs/engineering/domain-contracts.md
 // Framework-agnostic: no DB clients, IO, providers or app imports.
 
 export const APP_AUDIENCE = {

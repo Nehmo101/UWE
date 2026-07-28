@@ -20,6 +20,7 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/shared-utils": "workspace:*",

@@ -386,7 +386,11 @@ export type OpsAction =
   | "setup-status"
   | "smtp-status"
   | "smtp-set"
-  | "smtp-clear";
+  | "smtp-clear"
+  | "cloudflare-challenge-status"
+  | "cloudflare-challenge-set"
+  | "cloudflare-challenge-apply"
+  | "google-login-set";
 
 export interface OpsResult<T = unknown> {
   ok: boolean;

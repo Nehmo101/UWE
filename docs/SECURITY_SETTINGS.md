@@ -54,4 +54,4 @@ AI_LOCAL_ONLY=true  # ohnehin der einzige Weg — alles läuft über den RTX-Hos
 
 ## Audit
 
-Siehe `docs/REPO_AUDIT.md` für vollständige Codebase-Analyse.
+Siehe `docs/ARCHITECTURE.md` für vollständige Codebase-Analyse.

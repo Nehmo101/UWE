@@ -10,9 +10,9 @@ function makeRequest(url: string) {
 // Split-hostname deployment: Portal on the apex, Studio on a subdomain. This is
 // what activates the legacy-path redirects (see resolveLegacyPathRedirect).
 function enableSplitHostname() {
-  process.env.PUBLIC_APP_URL = "https://uweanddragons.org";
-  process.env.NEXT_PUBLIC_PORTAL_URL = "https://uweanddragons.org";
-  process.env.NEXT_PUBLIC_STUDIO_URL = "https://studio.uweanddragons.org";
+  process.env.PUBLIC_APP_URL = "https://uwe.example";
+  process.env.NEXT_PUBLIC_PORTAL_URL = "https://uwe.example";
+  process.env.NEXT_PUBLIC_STUDIO_URL = "https://studio.uwe.example";
 }
 
 describe("portal middleware legacy redirects", () => {
@@ -43,31 +43,31 @@ describe("portal middleware legacy redirects", () => {
     enableSplitHostname();
 
     const response = await middleware(
-      makeRequest("https://uweanddragons.org/studio/worlds/terra?tab=brain"),
+      makeRequest("https://uwe.example/studio/worlds/terra?tab=brain"),
     );
 
     assert.equal(response.status, 308);
-    assert.equal(response.headers.get("location"), "https://studio.uweanddragons.org/worlds/terra?tab=brain");
+    assert.equal(response.headers.get("location"), "https://studio.uwe.example/worlds/terra?tab=brain");
   });
 
   it("redirects old /portal links to canonical Portal routes", async () => {
     enableSplitHostname();
 
-    const response = await middleware(makeRequest("https://uweanddragons.org/portal/worlds/terra"));
+    const response = await middleware(makeRequest("https://uwe.example/portal/worlds/terra"));
 
     assert.equal(response.status, 308);
-    assert.equal(response.headers.get("location"), "https://uweanddragons.org/worlds/terra");
+    assert.equal(response.headers.get("location"), "https://uwe.example/worlds/terra");
   });
 
   it("keeps Portal content login-required in production", async () => {
     const env = process.env as Record<string, string | undefined>;
     env.NODE_ENV = "production";
     env.AUTH_REQUIRED = "true";
-    env.PUBLIC_APP_URL = "https://uweanddragons.org";
+    env.PUBLIC_APP_URL = "https://uwe.example";
 
-    const response = await middleware(makeRequest("https://uweanddragons.org/worlds/terra"));
+    const response = await middleware(makeRequest("https://uwe.example/worlds/terra"));
 
     assert.equal(response.status, 307);
-    assert.equal(response.headers.get("location"), "https://uweanddragons.org/login?redirect=%2Fworlds%2Fterra");
+    assert.equal(response.headers.get("location"), "https://uwe.example/login?redirect=%2Fworlds%2Fterra");
   });
 });

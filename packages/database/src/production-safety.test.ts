@@ -80,7 +80,7 @@ describe("production safety helpers", () => {
     process.env.AUTH_SECRET = "change-me";
     delete process.env.STUDIO_API_TOKEN;
     process.env.RUN_DB_SEED = "auto";
-    process.env.PUBLIC_APP_URL = "https://uweandragons.org";
+    process.env.PUBLIC_APP_URL = "https://uwe.example";
     process.env.BACKUPS_DIR = backupsDir;
 
     try {

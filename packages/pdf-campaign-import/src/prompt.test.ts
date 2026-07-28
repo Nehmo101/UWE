@@ -23,6 +23,6 @@ test("buildCampaignExtractionPrompt omits an empty context section", () => {
   assert.doesNotMatch(prompt, /campaign_context/);
 });
 
-test("campaign context limit remains suitable for a focused instruction", () => {
-  assert.equal(MAX_CAMPAIGN_CONTEXT_CHARACTERS, 4_000);
+test("campaign context limit allows extensive world briefings", () => {
+  assert.equal(MAX_CAMPAIGN_CONTEXT_CHARACTERS, 32_000);
 });

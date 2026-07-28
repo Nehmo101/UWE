@@ -18,8 +18,6 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/lib/uwe-host-constants.sh")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/lib/uwe-host-platform.sh")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/fedora-host-smoke.sh")));
-    // Legacy uwe-host.service unit is archived as docs only — production uses uwe.service
-    assert.ok(fs.existsSync(path.join(root, "docs/archive/legacy-uwe-host-service.md")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-start.sh")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-stop.sh")));
     assert.ok(fs.existsSync(path.join(root, "scripts/uwe-host-status.sh")));

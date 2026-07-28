@@ -2,7 +2,7 @@
   "name": "@uwe/landing",
   "version": "0.1.0",
   "private": true,
-  "description": "UWE Landing — öffentliche Startseite auf dem Apex-Origin (uweanddragons.org)",
+  "description": "UWE Landing — öffentliche Startseite auf dem Apex-Origin (uwe.example)",
   "scripts": {
     "copy:scenes": "node --import tsx ../../scripts/copy-scenes.mjs",
     "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3103",

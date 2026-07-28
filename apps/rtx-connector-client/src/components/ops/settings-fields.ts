@@ -191,7 +191,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
     id: "auth",
     title: "Anmeldung",
-    description: "Sitzungen aller vier Bereiche.",
+    description: "Sitzungen und Anmeldemethoden aller vier Bereiche.",
     fields: [
       {
         group: "auth",
@@ -201,6 +201,27 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         hint: "0 = kein Auto-Logout.",
         min: 0,
         max: 20160,
+      },
+      {
+        group: "auth",
+        key: "passkeysEnabled",
+        label: "Passkey-Login (Face ID / Touch ID / Sicherheitsschlüssel)",
+        kind: "boolean",
+        hint: "WebAuthn für Studio und Portal. Registrieren unter Account → Sicherheit; braucht HTTPS (oder localhost). Passkeys hängen an der Domain — nach einem Domain-Wechsel neu registrieren.",
+      },
+      {
+        group: "auth",
+        key: "googleLoginEnabled",
+        label: "Google-Login",
+        kind: "boolean",
+        hint: "„Mit Google anmelden“ nur für bestehende Konten — es werden keine neuen angelegt. Braucht Client-ID (unten) und das Client-Secret aus der SMTP-&-Login-Karte.",
+      },
+      {
+        group: "auth",
+        key: "googleClientId",
+        label: "Google Client-ID",
+        kind: "text",
+        hint: "Aus einem kostenlosen Google-Cloud-Projekt (APIs & Dienste → Anmeldedaten → OAuth-Client-ID, Typ Webanwendung).",
       },
     ],
   },

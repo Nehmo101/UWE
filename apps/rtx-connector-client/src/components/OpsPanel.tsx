@@ -6,6 +6,7 @@ import { opsInvoke, type OpsAction } from "../lib/tauri";
 import { toMessage } from "../lib/connector-runtime-labels";
 import { OpsSettingsForm } from "./ops/OpsSettingsForm";
 import { OpsSmtpForm } from "./ops/OpsSmtpForm";
+import { OpsGoogleSecretForm } from "./ops/OpsGoogleSecretForm";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
@@ -38,6 +39,7 @@ const TABS: TabDef[] = [
   { id: "settings", label: "Einstellungen", action: null, hint: "Systemeinstellungen der Datenbank — bearbeitbar." },
   { id: "setup", label: "Einrichtung", action: "setup-status", hint: "Was ist konfiguriert, was fehlt noch — ohne Secret-Werte." },
   { id: "smtp", label: "SMTP", action: null, hint: "Mail-Zugangsdaten in der Datenbank. Leer = es gilt .env." },
+  { id: "google-login", label: "Google-Login", action: null, hint: "Client-Secret für den Google-Login — Schalter und Client-ID stehen unter Einstellungen → Anmeldung." },
 ];
 
 function summarize(data: unknown): { tone: "ok" | "degraded" | "error"; label: string } | null {
@@ -128,6 +130,8 @@ export function OpsPanel() {
             <OpsSettingsForm />
           ) : activeTab.id === "smtp" ? (
             <OpsSmtpForm />
+          ) : activeTab.id === "google-login" ? (
+            <OpsGoogleSecretForm />
           ) : busy ? (
             <p className="connector-muted">Lade …</p>
           ) : data ? (

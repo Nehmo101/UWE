@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
  * Ohne ihn wirft der Hell/Dunkel-Umschalter in der Landing-Nav beim Rendern
  * (`useUweTheme()`) und Next zeigt statt der Seite „Application error".
  *
- * Scope „studio", damit die Wahl beim Sprung auf studio.uweanddragons.org
+ * Scope „studio", damit die Wahl beim Sprung auf studio.uwe.example
  * erhalten bleibt. Bewusst ohne `onPersist`: die Landing ist anonym erreichbar
  * und darf keine Systemeinstellungen schreiben — die Persistenz läuft über
  * localStorage plus das Anti-FOUC-Bootstrap.

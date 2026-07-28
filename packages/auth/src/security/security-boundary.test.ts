@@ -16,14 +16,14 @@ import {
 const root = path.resolve(import.meta.dirname, "../../../..");
 
 function makeRequest(pathname: string, headers: Record<string, string> = {}) {
-  return new Request(`https://uweanddragons.org${pathname}`, { headers });
+  return new Request(`https://uwe.example${pathname}`, { headers });
 }
 
 function makeMiddlewareRequest(pathname: string, headers: Record<string, string> = {}) {
   return {
     pathname,
-    url: `https://uweanddragons.org${pathname}`,
-    headers: new Headers({ host: "uweanddragons.org", ...headers }),
+    url: `https://uwe.example${pathname}`,
+    headers: new Headers({ host: "uwe.example", ...headers }),
     cookies: { get: () => undefined },
   };
 }
@@ -42,7 +42,7 @@ describe("security boundary", () => {
       NODE_ENV: "production",
       AUTH_REQUIRED: "false",
       PLAYER_PREVIEW_PUBLIC: "true",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
     });
     assert.equal(decision.action, "redirect-login");
   });
@@ -51,7 +51,7 @@ describe("security boundary", () => {
     const decision = evaluateStudioMiddleware(makeMiddlewareRequest("/admin/status"), {
       ...process.env,
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweandragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
       CLOUDFLARE_TUNNEL: "true",
       STUDIO_API_TOKEN: "test-token",
     });
@@ -64,7 +64,7 @@ describe("security boundary", () => {
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweandragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "test-token",
       },
@@ -81,7 +81,7 @@ describe("security boundary", () => {
       {
         ...process.env,
         NODE_ENV: "production",
-        PUBLIC_APP_URL: "https://uweanddragons.org",
+        PUBLIC_APP_URL: "https://uwe.example",
         CLOUDFLARE_TUNNEL: "true",
         STUDIO_API_TOKEN: "test-token",
       },
@@ -94,7 +94,7 @@ describe("security boundary", () => {
 
     const denied = authorize({
       scope: "studio-api",
-      request: makeRequest("/api/import/execute", { host: "uweanddragons.org" }),
+      request: makeRequest("/api/import/execute", { host: "uwe.example" }),
       pathname: "/api/import/execute",
     });
     assert.ok(denied);
@@ -120,7 +120,7 @@ describe("security boundary", () => {
     const portalDecision = evaluatePortalMiddleware(makeMiddlewareRequest("/api/not-implemented"), {
       ...process.env,
       NODE_ENV: "production",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
     });
     assert.equal(portalDecision.action, "block");
     assert.equal(portalDecision.status, 404);
@@ -138,8 +138,8 @@ describe("security boundary", () => {
     const forgotDenied = authorize({
       scope: "portal-api",
       request: makeRequest("/api/auth/forgot-password", {
-        host: "uweanddragons.org",
-        origin: "https://uweanddragons.org",
+        host: "uwe.example",
+        origin: "https://uwe.example",
       }),
       pathname: "/api/auth/forgot-password",
       hasSession: false,
@@ -149,8 +149,8 @@ describe("security boundary", () => {
     const resetDenied = authorize({
       scope: "portal-api",
       request: makeRequest("/api/auth/reset-password", {
-        host: "uweanddragons.org",
-        origin: "https://uweanddragons.org",
+        host: "uwe.example",
+        origin: "https://uwe.example",
       }),
       pathname: "/api/auth/reset-password",
       hasSession: false,
@@ -209,6 +209,7 @@ describe("security boundary", () => {
     }
 
     const portalTwoFactorHelper = path.join(root, "apps/portal/src/lib/two-factor-routes.ts");
+    const portalPasskeyHelper = path.join(root, "apps/portal/src/lib/passkey-routes.ts");
 
     for (const file of walk(portalApiDir)) {
       const content = fs.readFileSync(file, "utf8");
@@ -233,6 +234,23 @@ describe("security boundary", () => {
           helperContent,
           /requirePortalApiAuth/,
           `${file} delegates to two-factor-routes.ts which must call requirePortalApiAuth`,
+        );
+        continue;
+      }
+      if (normalizedFile.includes("/api/auth/passkey/")) {
+        // Passkey routes are thin delegators: the management endpoints must be
+        // guarded by requirePortalApiAuth in the helper; the public login
+        // endpoints issue the session cookie there (like /api/auth/login).
+        const helperContent = fs.readFileSync(portalPasskeyHelper, "utf8");
+        assert.match(
+          helperContent,
+          /requirePortalApiAuth/,
+          `${file} delegates to passkey-routes.ts which must call requirePortalApiAuth`,
+        );
+        assert.match(
+          helperContent,
+          /SESSION_COOKIE_NAME/,
+          `${file} delegates to passkey-routes.ts which must set the session cookie`,
         );
         continue;
       }

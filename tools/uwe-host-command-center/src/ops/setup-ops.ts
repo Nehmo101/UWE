@@ -1,3 +1,4 @@
+import { buildGoogleOAuthSettingsUpdate } from "@uwe/database/login-methods-settings";
 import {
   buildMailSmtpCredentialsUpdate,
   createSettingsService,
@@ -79,4 +80,40 @@ export async function clearSmtp(db: PrismaClient): Promise<unknown> {
   const service = createSettingsService(db);
   await service.updateSettings({ mail: { smtpCredentials: null } });
   return (await service.getSettingsForClient()).mail.smtp;
+}
+
+/**
+ * Google-Login setzen — Anmeldemethoden sind Systemeinstellungen und gehören
+ * damit hierher (Abschnitt D33), nicht in Studio. Das Client-Secret läuft wie
+ * das SMTP-Passwort über eine eigene Aktion statt über settings-update, weil
+ * es verschlüsselt zusammengebaut wird und den Host nie wieder verlässt.
+ */
+export async function setGoogleLogin(
+  db: PrismaClient,
+  body: {
+    googleLoginEnabled?: boolean;
+    googleClientId?: string;
+    googleClientSecret?: string;
+    clearGoogleClientSecret?: boolean;
+  },
+): Promise<{ ok: boolean; googleClientSecretConfigured: boolean }> {
+  const service = createSettingsService(db);
+  const current = await service.getSettings();
+  // Nicht mitgesendete Felder bleiben, wie sie sind — die Karte schickt nur das
+  // Secret, Schalter und Client-ID laufen über settings-update.
+  const auth = buildGoogleOAuthSettingsUpdate(
+    {
+      googleLoginEnabled:
+        body.googleLoginEnabled === undefined
+          ? current.auth.googleLoginEnabled
+          : body.googleLoginEnabled === true,
+      googleClientId:
+        body.googleClientId === undefined ? current.auth.googleClientId : String(body.googleClientId),
+      googleClientSecret: body.googleClientSecret,
+      clearGoogleClientSecret: body.clearGoogleClientSecret === true,
+    },
+    current.auth,
+  );
+  await service.updateSettings({ auth });
+  return { ok: true, googleClientSecretConfigured: auth.googleClientSecretConfigured };
 }

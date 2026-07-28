@@ -80,5 +80,4 @@ After `pnpm build:release`, `scripts/bundle-budget-check.mjs` validates Studio s
 ## Related
 
 - Tag cleanup: `docs/engineering/tag-taxonomy.md`
-- Cleanup inventory: `docs/engineering/cleanup-inventory.md`
 - Feature maturity: `docs/FEATURE_MATURITY_MATRIX.md` §11

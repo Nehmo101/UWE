@@ -1,16 +1,23 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MAX_CAMPAIGN_CONTEXT_CHARACTERS,
+  MAX_CAMPAIGN_PDF_BYTES,
+  type CampaignFitChatMessage,
   type CampaignImportPreviewSummary,
 } from "@uwe/pdf-campaign-import";
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
-import { arrayBufferToBase64 } from "@/src/lib/file-base64";
+import type {
+  CampaignAnalysisProgress,
+  CampaignPdfJobStatus,
+} from "@/src/lib/campaign-import-payloads";
 import {
   executeImportCampaignPdfJobAction,
+  getImportCampaignJobStatusAction,
   previewImportCampaignPdfJobAction,
 } from "../import-campaign-actions";
+import { CampaignFitChatCard } from "./CampaignFitChatCard";
 import {
   Alert,
   Button,
@@ -26,6 +33,11 @@ import {
 const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
 const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
+const MAX_PDF_MEGABYTES = Math.floor(MAX_CAMPAIGN_PDF_BYTES / (1024 * 1024));
+const STATUS_POLL_MS = 2_000;
+/** Kein Fortschritts-Update mehr seit dieser Spanne ⇒ Analyse gilt als abgebrochen. */
+const STALE_PROGRESS_MS = 3.5 * 60 * 1000;
+
 interface Props {
   jobId: string;
   onComplete?: () => void;
@@ -38,58 +50,252 @@ function pageTypeLabel(pageType: string | undefined): string {
   return PAGE_TYPE_LABELS[pageType as keyof typeof PAGE_TYPE_LABELS] ?? pageType;
 }
 
+function uploadCampaignPdf(
+  jobId: string,
+  file: File,
+  onProgress: (percent: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/import/campaign-pdf-upload");
+    xhr.responseType = "json";
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      const body = xhr.response as { error?: string } | null;
+      reject(new Error(body?.error || `Upload fehlgeschlagen (HTTP ${xhr.status}).`));
+    };
+    xhr.onerror = () => reject(new Error("Upload fehlgeschlagen — Netzwerkfehler."));
+    const form = new FormData();
+    form.set("jobId", jobId);
+    form.set("file", file);
+    xhr.send(form);
+  });
+}
+
+function ProgressBar({ label, percent }: { label: string; percent: number | null }) {
+  return (
+    <div className="flex flex-col gap-1.5" role="status" aria-live="polite">
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>{label}</span>
+        {percent !== null ? <span>{percent}%</span> : null}
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className={
+            percent !== null
+              ? "h-full rounded-full bg-primary transition-all duration-500"
+              : "h-full w-full animate-pulse rounded-full bg-primary/60"
+          }
+          style={percent !== null ? { width: `${Math.min(100, Math.max(0, percent))}%` } : undefined}
+        />
+      </div>
+    </div>
+  );
+}
+
+function analysisLabel(progress: CampaignAnalysisProgress): string {
+  if (progress.phase === "extracting") {
+    return "Text wird aus der PDF extrahiert…";
+  }
+  if (!progress.totalChunks) {
+    return "Lokale KI analysiert…";
+  }
+  return `Lokale KI analysiert — ${progress.processedChunks} von ${progress.totalChunks} Abschnitten`;
+}
+
+function analysisPercent(progress: CampaignAnalysisProgress): number | null {
+  if (progress.phase === "extracting" || !progress.totalChunks) {
+    return null;
+  }
+  return Math.round((progress.processedChunks / progress.totalChunks) * 100);
+}
+
 export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [contentBase64, setContentBase64] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null);
+  const [hasPdf, setHasPdf] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [campaignContext, setCampaignContext] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [progress, setProgress] = useState<CampaignAnalysisProgress | null>(null);
   const [preview, setPreview] = useState<CampaignImportPreviewSummary | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [resultSummary, setResultSummary] = useState<Record<string, unknown> | null>(null);
   const [undoToken, setUndoToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState<"preview" | "execute" | null>(null);
+  const [executing, setExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fitChatInitial, setFitChatInitial] = useState<CampaignFitChatMessage[] | null>(null);
+  const progressWatchRef = useRef<{ key: string; changedAt: number } | null>(null);
 
-  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const applyFinishedPreview = useCallback((summary: CampaignImportPreviewSummary) => {
+    setAnalyzing(false);
+    setProgress(null);
+    progressWatchRef.current = null;
+    if (summary.totalDocuments > 0) {
+      setPreview(summary);
+      setSelectedIds(new Set(summary.items.map((item) => item.itemId)));
+      setError(null);
+    } else {
+      setPreview(null);
+      setError(summary.errors[0] ?? "Lokale KI hat keine gültigen Kampagnen-Entitäten geliefert.");
+    }
+  }, []);
+
+  const applyStatus = useCallback(
+    (status: CampaignPdfJobStatus) => {
+      setHasPdf(status.hasPdf);
+      if (status.pdfFileName) {
+        setPdfFileName(status.pdfFileName);
+      }
+      if (status.progress) {
+        const key = `${status.progress.phase}:${status.progress.processedChunks}`;
+        const watch = progressWatchRef.current;
+        if (!watch || watch.key !== key) {
+          progressWatchRef.current = { key, changedAt: Date.now() };
+        } else if (Date.now() - watch.changedAt > STALE_PROGRESS_MS) {
+          setAnalyzing(false);
+          setProgress(null);
+          progressWatchRef.current = null;
+          setError("Die Analyse scheint unterbrochen worden zu sein — bitte erneut starten.");
+          return;
+        }
+        setAnalyzing(true);
+        setProgress(status.progress);
+        return;
+      }
+      if (status.preview) {
+        applyFinishedPreview(status.preview);
+        return;
+      }
+      if (status.status === "failed") {
+        setAnalyzing(false);
+        setProgress(null);
+        progressWatchRef.current = null;
+        setError(status.errorMessage ?? "PDF-Kampagnenvorschau fehlgeschlagen.");
+      }
+    },
+    [applyFinishedPreview],
+  );
+
+  // Initialer Status: stellt Upload/Analyse/Vorschau/Chat nach einem Reload wieder her.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await getImportCampaignJobStatusAction(jobId);
+        if (cancelled) return;
+        setFitChatInitial(status.fitChat);
+        applyStatus(status);
+      } catch {
+        if (!cancelled) {
+          setFitChatInitial([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, applyStatus]);
+
+  // Fortschritts-Polling, solange die Analyse läuft.
+  useEffect(() => {
+    if (!analyzing) {
+      return;
+    }
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const status = await getImportCampaignJobStatusAction(jobId);
+        if (!cancelled) {
+          applyStatus(status);
+        }
+      } catch {
+        // Kurzzeitige Netzwerkfehler beim Polling ignorieren.
+      }
+    }, STATUS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [analyzing, jobId, applyStatus]);
+
+  const handleFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (file.size > MAX_CAMPAIGN_PDF_BYTES) {
+        setError(`PDF-Datei ist zu groß (max. ${MAX_PDF_MEGABYTES} MB).`);
+        return;
+      }
+
+      setError(null);
+      setResultSummary(null);
+      setUndoToken(null);
+      setPreview(null);
+      setSelectedIds(new Set());
+      setUploading(true);
+      setUploadPercent(0);
+
+      try {
+        await uploadCampaignPdf(jobId, file, setUploadPercent);
+        setPdfFileName(file.name);
+        setHasPdf(true);
+      } catch (uploadError) {
+        setError(
+          uploadError instanceof Error ? uploadError.message : "Upload fehlgeschlagen.",
+        );
+      } finally {
+        setUploading(false);
+        setUploadPercent(null);
+      }
+    },
+    [jobId],
+  );
+
+  const handleStartAnalysis = useCallback(async () => {
+    if (!hasPdf) {
+      setError("Bitte zuerst eine PDF-Datei hochladen.");
+      return;
+    }
 
     setError(null);
     setResultSummary(null);
     setUndoToken(null);
-    setPreview(null);
-    setSelectedIds(new Set());
-
-    const buffer = await file.arrayBuffer();
-    setContentBase64(arrayBufferToBase64(buffer));
-    setFileName(file.name);
-  }, []);
-
-  const handlePreview = useCallback(async () => {
-    if (!contentBase64) {
-      setError("Bitte zuerst eine PDF-Datei auswählen.");
-      return;
-    }
-
-    setLoading("preview");
-    setError(null);
-    setResultSummary(null);
+    setAnalyzing(true);
+    setProgress({ phase: "extracting", processedChunks: 0, totalChunks: null, startedAt: "" });
+    progressWatchRef.current = null;
 
     try {
-      const response = await previewImportCampaignPdfJobAction(
-        jobId,
-        contentBase64,
-        campaignContext,
-      );
-      setPreview(response.preview);
-      setSelectedIds(new Set(response.preview.items.map((item) => item.itemId)));
+      const response = await previewImportCampaignPdfJobAction(jobId, campaignContext);
+      applyFinishedPreview(response.preview);
     } catch (previewError) {
-      setPreview(null);
-      setSelectedIds(new Set());
-      setError(previewError instanceof Error ? previewError.message : "Vorschau fehlgeschlagen.");
-    } finally {
-      setLoading(null);
+      // Bei sehr langen Analysen kann die Verbindung abreißen, während der
+      // Server weiterarbeitet — erst den Job-Status prüfen, dann Fehler zeigen.
+      try {
+        const status = await getImportCampaignJobStatusAction(jobId);
+        if (status.progress || status.preview) {
+          applyStatus(status);
+          return;
+        }
+      } catch {
+        // Status nicht erreichbar — unten als Fehler behandeln.
+      }
+      setAnalyzing(false);
+      setProgress(null);
+      setError(
+        previewError instanceof Error ? previewError.message : "Vorschau fehlgeschlagen.",
+      );
     }
-  }, [campaignContext, contentBase64, jobId]);
+  }, [applyFinishedPreview, applyStatus, campaignContext, hasPdf, jobId]);
 
   const handleExecute = useCallback(async () => {
     if (!preview) {
@@ -101,7 +307,7 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
       return;
     }
 
-    setLoading("execute");
+    setExecuting(true);
     setError(null);
 
     try {
@@ -112,7 +318,7 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
     } catch (executeError) {
       setError(executeError instanceof Error ? executeError.message : "Import fehlgeschlagen.");
     } finally {
-      setLoading(null);
+      setExecuting(false);
     }
   }, [jobId, onComplete, preview, selectedIds]);
 
@@ -139,6 +345,8 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
     return String(resultSummary.created ?? 0) + " Kampagnenseiten erstellt";
   }, [resultSummary]);
 
+  const busy = uploading || analyzing || executing;
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -146,7 +354,8 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
           <CardTitle>PDF zu Kampagne</CardTitle>
           <CardDescription>
             Die lokale RTX-KI extrahiert Kampagnen-Entitäten. Vorschau und Seiten bleiben
-            ausschließlich im DM-Bereich; gescannte PDFs benötigen vorab OCR.
+            ausschließlich im DM-Bereich; gescannte PDFs benötigen vorab OCR. PDFs bis{" "}
+            {MAX_PDF_MEGABYTES} MB werden direkt auf den UWE-Host hochgeladen.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -158,12 +367,20 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
               type="file"
               accept=".pdf,application/pdf"
               onChange={handleFileChange}
-              disabled={preview !== null}
+              disabled={busy || preview !== null}
               className="text-sm text-foreground"
             />
           </div>
 
-          {fileName ? <p className="text-sm text-muted-foreground">Ausgewählt: {fileName}</p> : null}
+          {uploading ? (
+            <ProgressBar label="PDF wird hochgeladen…" percent={uploadPercent} />
+          ) : null}
+          {!uploading && pdfFileName ? (
+            <p className="text-sm text-muted-foreground">
+              Hochgeladen: {pdfFileName}
+              {hasPdf ? "" : " (Datei bereits verarbeitet)"}
+            </p>
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="campaign-pdf-import-context">Kampagnen-Kontext in der Welt</Label>
@@ -171,32 +388,36 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
               id="campaign-pdf-import-context"
               value={campaignContext}
               onChange={(event) => setCampaignContext(event.target.value)}
-              rows={5}
+              rows={8}
               maxLength={MAX_CAMPAIGN_CONTEXT_CHARACTERS}
-              disabled={preview !== null}
+              disabled={analyzing || preview !== null}
               placeholder={
-                "Die Kampagne spielt w\u00e4hrend des Thronfolgekriegs im Norden Validors."
+                "Die Kampagne spielt während des Thronfolgekriegs im Norden Validors."
               }
             />
             <p className="text-xs text-muted-foreground">
               {
-                "Optional. Dieser Text hilft der lokalen KI bei der Einordnung; es wird kein zus\u00e4tzlicher Welt- oder Brain-Kontext geladen. "
+                "Optional. Dieser Text hilft der lokalen KI bei der Einordnung; es wird kein zusätzlicher Welt- oder Brain-Kontext geladen. "
               }
               {campaignContext.length}/{MAX_CAMPAIGN_CONTEXT_CHARACTERS} Zeichen
             </p>
           </div>
 
+          {analyzing && progress ? (
+            <ProgressBar label={analysisLabel(progress)} percent={analysisPercent(progress)} />
+          ) : null}
+
           <Button
             type="button"
-            onClick={handlePreview}
-            disabled={loading !== null || !contentBase64 || preview !== null}
+            onClick={handleStartAnalysis}
+            disabled={busy || !hasPdf || preview !== null}
             className="self-start"
           >
-            {loading === "preview"
+            {analyzing
               ? "Lokale KI analysiert…"
               : preview
                 ? "Vorschau erstellt"
-                : "Vorschau anzeigen"}
+                : "Analyse starten"}
           </Button>
         </CardContent>
       </Card>
@@ -280,13 +501,17 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
             <Button
               type="button"
               onClick={handleExecute}
-              disabled={loading !== null || !preview.canExecute || selectedIds.size === 0}
+              disabled={busy || !preview.canExecute || selectedIds.size === 0}
               className="self-start"
             >
-              {loading === "execute" ? "Importiert…" : "Import ausführen"}
+              {executing ? "Importiert…" : "Import ausführen"}
             </Button>
           </CardContent>
         </Card>
+      ) : null}
+
+      {fitChatInitial !== null ? (
+        <CampaignFitChatCard jobId={jobId} initialMessages={fitChatInitial} />
       ) : null}
     </div>
   );

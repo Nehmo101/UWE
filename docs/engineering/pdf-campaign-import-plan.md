@@ -243,3 +243,30 @@ lines and that `import-central-service.ts` is untouched.
 only); any cloud opt-in; **new-campaign creation** (existing only); the async `ai_run` deferred
 job; a `targetCampaignId` FK column (metadata JSON instead); markdown/obsidian → campaign
 (PDF only).
+
+## Update: große PDFs, Fortschritt, Einordnungs-Chat
+
+Ausbau nach dem MVP (gleiche Privacy-Invarianten — alles weiterhin `local_rtx`, `dm_only`):
+
+- **300-MB-PDFs.** Der Upload läuft nicht mehr als Base64 durch die Server Action
+  (15-MB-Action-Limit), sondern als `multipart/form-data` über
+  `apps/studio/app/api/import/campaign-pdf-upload/route.ts` auf die Festplatte
+  (`<uploadsRoot>/import-tmp/<jobId>.pdf`, Helper: `apps/studio/src/lib/campaign-pdf-storage.ts`).
+  `extractPdfText` akzeptiert ein `maxBytes`-Override; `MAX_CAMPAIGN_PDF_BYTES = 300 MB`
+  (Package). Die Roh-PDF wird nach erfolgreicher Analyse bzw. nach dem Execute gelöscht.
+  Kontextfeld: `MAX_CAMPAIGN_CONTEXT_CHARACTERS = 32 000`; Chunk-Cap: `MAX_CHUNKS = 400`.
+  Hinweis: Ein Reverse-Proxy vor dem Host (z. B. Cloudflare) kann eigene Upload-/Timeout-Limits
+  setzen — im LAN gilt das 300-MB-Limit direkt.
+- **Fortschrittsbalken.** Die Analyse schreibt nach jedem Chunk einen
+  `campaign_analysis_progress`-Payload in `ImportJob.previewPayload`; das Panel pollt
+  `getImportCampaignJobStatusAction` (2 s) und rendert Upload- (XHR-`onprogress`) und
+  Analyse-Fortschritt. Der Zustand übersteht Seiten-Reloads und Verbindungsabbrüche; eine
+  >3 min stille Analyse gilt als abgebrochen und kann neu gestartet werden. Bei leerem
+  Ergebnis oder Fehlschlag bleibt die PDF liegen, damit ein neuer Versuch ohne Re-Upload geht.
+- **Einordnungs-Konversation.** `campaignFitChatAction`
+  (`apps/studio/app/import-campaign-chat-actions.ts`) + `CampaignFitChatCard`: Chat mit der
+  lokalen KI darüber, wie sich die Kampagne in die Welt einfügt. Prompt-Builder
+  `buildCampaignFitChatPrompt` (Package, `fit-chat.ts`) hängt Welt-/Kampagnenbeschreibung,
+  Nutzer-Kontext und die extrahierten Entitäten an — bewusst **nur** an die lokale Inferenz;
+  der Verlauf wird in `ImportJob.metadata.fitChat` persistiert (Reload-fest).
+  Geteilte Payload-Reader liegen in `apps/studio/src/lib/campaign-import-payloads.ts`.

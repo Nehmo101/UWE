@@ -10,13 +10,17 @@ export const STUDIO_API_ROOT = "apps/studio/app/api";
 
 export const STUDIO_PUBLIC_API_ALLOWLIST = new Set([
   "auth/login/route.ts",
-  // Landing-page (uweanddragons.org) unified sign-in — authenticates in-place
+  // Landing-page (uwe.example) unified sign-in — authenticates in-place
   // for the Studio or Portal target; access is enforced inside the handler.
   "auth/logout/route.ts",
   "auth/setup/route.ts",
   "auth/forgot-password/route.ts",
   "auth/reset-password/route.ts",
   "auth/two-factor/verify/route.ts",
+  // "Mit Google anmelden" — browser redirect flow; auth happens at Google and
+  // in the shared handler (state + nonce + invite-only account policy).
+  "auth/google/start/route.ts",
+  "auth/google/callback/route.ts",
   "health/route.ts",
   "health/public/route.ts",
   "maintenance/status/route.ts",
@@ -24,11 +28,32 @@ export const STUDIO_PUBLIC_API_ALLOWLIST = new Set([
   "spotify/callback/route.ts",
 ]);
 
-export const STUDIO_DELEGATED_GUARD_ROUTES = new Set([
+export const STUDIO_TWO_FACTOR_DELEGATED_ROUTES = new Set([
   "auth/two-factor/route.ts",
   "auth/two-factor/setup/route.ts",
   "auth/two-factor/activate/route.ts",
   "auth/two-factor/disable/route.ts",
+]);
+
+/**
+ * Studio passkey routes delegating to `apps/studio/src/lib/passkey-routes.ts`:
+ * management endpoints are guarded there via `guardStudioMutation`; the login
+ * endpoints are public by design (like `auth/login`) and issue the session
+ * cookie in the same helper.
+ */
+export const STUDIO_PASSKEY_DELEGATED_ROUTES = new Set([
+  "auth/passkey/login/options/route.ts",
+  "auth/passkey/login/verify/route.ts",
+  "auth/passkey/register/options/route.ts",
+  "auth/passkey/register/verify/route.ts",
+  "auth/passkey/credentials/route.ts",
+  "auth/passkey/credentials/[id]/route.ts",
+]);
+
+/** Union of all helper-delegated Studio routes (coverage + filter helpers). */
+export const STUDIO_DELEGATED_GUARD_ROUTES = new Set([
+  ...STUDIO_TWO_FACTOR_DELEGATED_ROUTES,
+  ...STUDIO_PASSKEY_DELEGATED_ROUTES,
 ]);
 
 /** Intentionally public read-only Studio endpoints (health, generator UI helpers). */
@@ -51,14 +76,17 @@ export function readStudioRouteSource(repoRoot: string, relativeRoute: string): 
   return fs.readFileSync(path.join(repoRoot, STUDIO_API_ROOT, relativeRoute), "utf8");
 }
 
-function studioPolicy(twoFactorHelperPath: string): RouteProtectionPolicy {
+function studioPolicy(
+  twoFactorHelperPath: string,
+  passkeyHelperPath: string,
+): RouteProtectionPolicy {
   return {
     guardPattern: STUDIO_AUTH_GUARD_PATTERN,
     publicAllowlist: STUDIO_PUBLIC_API_ALLOWLIST,
-    delegated: {
-      routes: STUDIO_DELEGATED_GUARD_ROUTES,
-      helperPath: twoFactorHelperPath,
-    },
+    delegatedGroups: [
+      { routes: STUDIO_TWO_FACTOR_DELEGATED_ROUTES, helperPath: twoFactorHelperPath },
+      { routes: STUDIO_PASSKEY_DELEGATED_ROUTES, helperPath: passkeyHelperPath },
+    ],
   };
 }
 
@@ -70,7 +98,10 @@ export function assertStudioRouteProtected(
   assertRouteProtected(
     path.join(repoRoot, STUDIO_API_ROOT),
     relativeRoute,
-    studioPolicy(twoFactorHelperPath),
+    studioPolicy(
+      twoFactorHelperPath,
+      path.join(repoRoot, "apps/studio/src/lib/passkey-routes.ts"),
+    ),
   );
 }
 

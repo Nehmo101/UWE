@@ -142,7 +142,7 @@ Detailseite eines Templates mit Lesemodus (Blockübersicht) und umschaltbarem Be
 
 #### `/` — **8/10** _(Design: unklar)_
 
-Öffentliche Landing Page (uweanddragons.org) mit Studio/Portal-Auswahl und In-Place-Login; eingeloggte Nutzer werden zur konfigurierten Startseite umgeleitet. (`apps/studio/app/page.tsx`)
+Öffentliche Landing Page (uwe.example) mit Studio/Portal-Auswahl und In-Place-Login; eingeloggte Nutzer werden zur konfigurierten Startseite umgeleitet. (`apps/studio/app/page.tsx`)
 
 - **Stärken:** Klare Zwei-Wege-IA (Studio für GM, Portal für Spieler) mit Rollen-Badges, Feature-Bullets und deutlich unterschiedlichen Karten-Farbwelten · Durchgängig responsive (clamp()-Spacing, auto-fit-Grid, safe-area-inset im Footer) plus Tastaturbedienung der Karten (role=button, Enter/Space) · Zustände mitgedacht: RTX-Status-Pill online/offline, Theme wird für den ersten Paint serverseitig fixiert (Parchment-Tokens inline)
 - **Schwächen:** Karten sind div[role=button] statt echter Links — kein Mittelklick, kein Fallback ohne JavaScript · Komplett in Inline-Styles gebaut (eigenes Pixel-Spec-Design), liegt außerhalb von v2 und Legacy — Änderungen am Design-System erreichen die Seite nie

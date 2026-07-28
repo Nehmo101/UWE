@@ -302,15 +302,15 @@ describe("user management and login hardening", () => {
       ...process.env,
       NODE_ENV: "production",
       AUTH_REQUIRED: "true",
-      PUBLIC_APP_URL: "https://uweanddragons.org",
+      PUBLIC_APP_URL: "https://uwe.example",
     };
 
     for (const path of ["/worlds", "/players", "/worlds/user-mgmt-a"]) {
       const decision = evaluatePortalMiddleware(
         {
           pathname: path,
-          url: `https://uweanddragons.org${path}`,
-          headers: new Headers({ host: "uweanddragons.org" }),
+          url: `https://uwe.example${path}`,
+          headers: new Headers({ host: "uwe.example" }),
           cookies: { get: () => undefined },
         },
         env,

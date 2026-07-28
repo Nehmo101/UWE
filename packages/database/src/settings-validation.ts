@@ -62,7 +62,12 @@ const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount
 const BRIEFING_KEYS = new Set(["autoBriefingEnabled", "time"]);
 const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const PRIVACY_KEYS = new Set(["maskSecretsInUi", "restrictPublicExport"]);
-const AUTH_KEYS = new Set(["sessionInactivityTimeoutMinutes"]);
+const AUTH_KEYS = new Set([
+  "sessionInactivityTimeoutMinutes",
+  "passkeysEnabled",
+  "googleLoginEnabled",
+  "googleClientId",
+]);
 const MAINTENANCE_KEYS = new Set(["maintenanceMode", "lockPortal", "lockStudio", "message"]);
 
 export interface SettingsValidationResult {
@@ -406,6 +411,23 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
             "settings.auth.sessionInactivityTimeoutMinutes muss zwischen 0 und 1440 liegen (0 = deaktiviert).",
           );
         }
+        return;
+      }
+      if (
+        (key === "passkeysEnabled" || key === "googleLoginEnabled") &&
+        typeof value !== "boolean"
+      ) {
+        sectionErrors.push(`settings.auth.${key} muss true oder false sein.`);
+        return;
+      }
+      if (key === "googleClientId") {
+        if (typeof value !== "string") {
+          sectionErrors.push("settings.auth.googleClientId muss ein Text sein.");
+          return;
+        }
+        if (value.trim().length > 200) {
+          sectionErrors.push("settings.auth.googleClientId ist zu lang (max. 200 Zeichen).");
+        }
       }
     });
     errors.push(...sectionErrors);
@@ -415,6 +437,15 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
         auth.sessionInactivityTimeoutMinutes = Math.round(
           body.auth.sessionInactivityTimeoutMinutes as number,
         );
+      }
+      if (body.auth.passkeysEnabled !== undefined) {
+        auth.passkeysEnabled = body.auth.passkeysEnabled as boolean;
+      }
+      if (body.auth.googleLoginEnabled !== undefined) {
+        auth.googleLoginEnabled = body.auth.googleLoginEnabled as boolean;
+      }
+      if (body.auth.googleClientId !== undefined) {
+        auth.googleClientId = (body.auth.googleClientId as string).trim();
       }
       if (Object.keys(auth).length > 0) {
         update.auth = auth;
