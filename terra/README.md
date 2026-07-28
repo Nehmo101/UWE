@@ -47,6 +47,16 @@ Region/Kontinent); die Hinweisbox unten links laesst sich ausblenden.
 
 ## Offener Stand
 
+- Detailrunde (Nachtrag zur Bedienungsrunde): definePool veredelt jetzt ALLE
+  272 Pools mit zwei deterministischen Farbschichten (Facetten-Tonung je
+  Flaechenrichtung + niederfrequente Farbdrift ueber die Lage) — null
+  zusaetzliche Dreiecke. Strukturell: dichtere Baumkronen (+2 Karten je Art),
+  Fels mit 80 statt 20 Facetten, mehrlappiger Busch, Schornsteine und
+  Rueckwand-Fachwerk an haus/haus2. Dabei behoben: die Seitenfenster von
+  haus/haus2 sassen IN der Wand (samt Fensterlicht-Anker unsichtbar) und
+  stehen jetzt vor der Flaeche; das Glas der x-Seiten-Fenster sank auf der
+  falschen Achse ein.
+
 - Runde H, Welle 4: die zuletzt offenen Punkte sind erledigt —
   Struktur-Generatoren fuer Burg, Werft und Kloster (neue Flaechen-
   Varianten), genBlattstadt mit echtem Gassennetz in Blattkoordinaten,
