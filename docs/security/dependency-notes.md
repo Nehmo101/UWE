@@ -1,7 +1,7 @@
 # Dependency-Notes — Overrides & Build-Script-Allowlist
 
 Dokumentiert nicht offensichtliche Dependency-Entscheidungen im Root der Workspace.
-Geprüft am 2026-07-03.
+Geprüft am 2026-07-03, Overrides für Advisories ergänzt am 2026-07-28.
 
 ## pnpm-Override: `nodemailer: ^9.0.1`
 
@@ -35,6 +35,41 @@ transitiv eine ältere nodemailer-Version anfordert.
 3. Danach `pnpm install` ausführen, Lockfile-Diff prüfen (keine
    nodemailer-Version < 9.0.1 darf auftauchen) und `pnpm audit` laufen
    lassen.
+
+## Overrides gegen Advisories (2026-07-28)
+
+`pnpm audit:prod` meldete acht Befunde der Stufe *high*. Vier Pakete waren die
+Ursache, drei davon nur transitiv erreichbar:
+
+| Paket | Vorher | Nachher | Advisory |
+|-------|--------|---------|----------|
+| `next` | 15.5.19 | 15.5.22 | DoS im App Router, SSRF in Server Actions, SSRF in Rewrites |
+| `sharp` | 0.34.5 | 0.35.3 | geerbte libvips-Lücken |
+| `postcss` | 8.5.15 | 8.5.23 | Path Traversal über `sourceMappingURL` |
+| `fast-uri` | 3.1.2 | 3.1.4 | Host-Confusion (über Prisma) |
+| `linkify-it` | 5.0.1 | 5.0.2 | quadratische Laufzeit bei `mailto:` |
+
+**`next`** und **`sharp`** stehen als direkte Abhängigkeit in den Apps; deren
+Bereiche wurden angehoben (`^15.5.21`, `^0.35.0`). Bei `next` ist der Bereich
+absichtlich präzise: `^15.3.4` hätte den Patch zwar zugelassen, aber nicht
+verlangt — das Lockfile blieb monatelang auf 15.5.19.
+
+**`sharp` zusätzlich als Override**, weil `next` selbst noch 0.34.5 mitbringt.
+
+**`fast-uri` und `linkify-it` mit Major-Deckel** (`>=3.1.4 <4`, `>=5.0.2 <6`).
+Ohne den Deckel zieht pnpm auf 4.x bzw. 6.x — beim ersten Versuch brach damit
+jeder Test in `packages/database` mit `require(...) is not a function`. Gepatcht
+werden soll die Lücke, nicht die Schnittstelle: bei einem Override auf eine
+transitive Abhängigkeit gehört der Major-Deckel dazu, weil der Aufrufer die neue
+Major nicht kennt.
+
+**Ein Folgefehler, der beim Bump auffiel:** `sharp` 0.35 exportiert seine Typen
+anders — bis 0.34 war `typeof import("sharp")` selbst aufrufbar, jetzt ist es der
+Namensraum und der Konstruktor steckt in `default`. `packages/assets/src/image-processing.ts`
+typt entsprechend um; der Laufzeitpfad (`mod.default ?? mod`) bleibt.
+
+**Was offen bleibt:** fünf Befunde der Stufe *moderate* und einer *low*. Die
+Schwelle von `audit:prod` ist `--audit-level high`, sie schlagen also nicht an.
 
 ## `onlyBuiltDependencies` — eine Quelle: `pnpm-workspace.yaml`
 
