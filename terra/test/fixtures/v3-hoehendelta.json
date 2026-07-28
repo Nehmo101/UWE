@@ -1,0 +1,58 @@
+{
+  "_fassung": "v3 — Delta-Fassung. Kennzeichen: `version: 3` und `hoehenDelta` statt `hoehen`: ein flaches Paar-Array [Index, Wert, Index, Wert, ...] mit ausschliesslich den Zellen, die vom deterministisch aus dem Seed erzeugten Terrain abweichen. Dadurch wurden Kartendateien von hunderten Kilobyte auf wenige Kilobyte klein. Neu ausserdem die tolerant gelesenen Zusatzfelder `biom`, `wetter` und `marker`.",
+  "format": "terra",
+  "version": 3,
+  "seed": 4711,
+  "tageszeit": "nebel",
+  "wetter": "regen",
+  "biom": "sumpf",
+  "raster": false,
+  "seedZaehler": 777,
+  "kamera": { "x": 0, "z": 0, "dist": 200, "yaw": 2.1, "pitch": -0.95 },
+  "hoehenDelta": [0, 12.5, 1, 12.25, 258, 11.75, 66048, -3.5],
+  "marker": [
+    { "x": -30, "z": 20, "text": "Alte Furt", "art": "ort" },
+    { "x": 44, "z": -12, "text": "Sumpfloch", "art": "gefahr" }
+  ],
+  "elemente": [
+    {
+      "id": 11,
+      "kind": "pfad",
+      "variant": "fluss",
+      "points": [{ "x": -85, "z": 8 }, { "x": -40, "z": 24 }, { "x": 8, "z": 58 }],
+      "params": { "breite": 9, "tiefe": 4 },
+      "seed": 1001
+    },
+    {
+      "id": 12,
+      "kind": "pfad",
+      "variant": "hecke",
+      "points": [{ "x": -75, "z": -10 }, { "x": -40, "z": 0 }],
+      "params": { "stil": "hecke", "hoehe": 1 },
+      "seed": 1002
+    },
+    {
+      "id": 13,
+      "kind": "flaeche",
+      "variant": "wiese",
+      "points": [{ "x": -62, "z": 66 }, { "x": -16, "z": 62 }, { "x": -12, "z": 92 }, { "x": -66, "z": 94 }],
+      "params": { "dichte": 1.2, "blumen": 0.25 },
+      "seed": 1003
+    },
+    {
+      "id": 14,
+      "kind": "ranke",
+      "variant": "ranke",
+      "points": [{ "x": -30, "z": 20 }],
+      "params": {
+        "hoehe": 190, "straenge": 4, "dicke": 1, "dickeOben": 0.45, "stil": "geflochten",
+        "steigung": 2.8, "windungUnten": 0, "windungOben": 0, "kernzug": 0, "blattgroesse": 1,
+        "plateaus": 3, "plateau": 1, "staedtchen": true, "inseln": 2, "luftwurzeln": false,
+        "stadtStil": "", "stadtDichte": 1, "stadtNetz": "", "stadtRand": false,
+        "stadtBloecke": 20, "treppe": false, "bruecken": false, "vereinigung": 0.35,
+        "zugpunkte": [{ "h": 0.4, "dx": 6, "dz": -3 }, { "h": 0.8, "dx": -4, "dz": 5 }]
+      },
+      "seed": 1004
+    }
+  ]
+}

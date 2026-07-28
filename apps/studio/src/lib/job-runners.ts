@@ -229,7 +229,9 @@ export interface ImportJobPayload {
 
 export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
   const payload = (ctx.job.payload ?? {}) as BrainActionJobPayload;
-  if (!payload.actionId || !payload.worldSlug || !payload.pageSlug || !payload.providerId || !payload.model) {
+  // `pageSlug` ist optional (J4): runBrainAction sucht sich sonst selbst eine
+  // Ankerseite. Eine Terra-Karte hat keine Wiki-Seite.
+  if (!payload.actionId || !payload.worldSlug || !payload.providerId || !payload.model) {
     throw new Error("Brain-Aktions-Job-Payload unvollständig.");
   }
 
@@ -299,7 +301,7 @@ async function getAiSettingsOverrides() {
 export interface BrainActionJobPayload {
   actionId: string;
   worldSlug: string;
-  pageSlug: string;
+  pageSlug?: string;
   providerId: AiProviderId;
   model: string;
   userPrompt?: string;

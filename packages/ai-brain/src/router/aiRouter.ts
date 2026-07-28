@@ -13,7 +13,9 @@ import { runAiTask } from "../providers/registry";
 
 import { createEmptyApiKeyStore, resolveAiBrainSettings } from "../settings";
 
-import { buildTaskPrompt, buildTaskSystemPrompt } from "../tasks";
+import { buildTaskPrompt, buildTaskSystemPrompt, requiresJsonResult } from "../tasks";
+
+import { generateWithJsonRepair, parseModelJson } from "../model-json";
 
 import type { AiContext, AiProvider, AiProviderId, ApiKeyStore } from "../types";
 
@@ -381,39 +383,70 @@ export async function routeAiRequest(
   });
   const cachedResult = getCachedPromptResponse(promptCacheKey);
 
-  // Prefer the outbound connector queue for local generation when an online
-  // connector advertises `llm_local`; fall back to the direct local provider
-  // when no connector is available.
-  const connectorOutcome =
-    !cachedResult && resolution.route === "local_rtx" && !request.useMock
-      ? await tryConnectorLlmGenerate(deps.prisma ?? sharedPrisma, {
-          taskType: request.taskType,
-          explicitModel: request.model,
-          resolvedModel: model,
-          systemPrompt,
-          userPrompt,
-          providerId: resolution.providerId,
-          worldId: context.worldId || undefined,
-          maxTokens: request.maxTokens,
-        })
-      : null;
+  const jsonWanted = requiresJsonResult(request.taskType);
+
+  /**
+   * One generation attempt, whichever backend applies.
+   *
+   * Prefer the outbound connector queue for local generation when an online
+   * connector advertises `llm_local`; fall back to the direct local provider
+   * when no connector is available. Pulled into a closure so the JSON repair
+   * attempt below runs down exactly the same path as the first one — a retry
+   * that silently switched backends would be a different experiment.
+   */
+  async function generateOnce(promptText: string): Promise<AiRouterResult["result"]> {
+    if (resolution.route === "local_rtx" && !request.useMock) {
+      /* The connector's `llm_generate` payload has no response-format field
+         (`tools/uwe-rtx-connector/src/openai-compatible-llm.ts` reads prompt,
+         system, model, maxTokens and ignores the rest), so JSON cannot be
+         enforced on this path — only asked for and repaired. */
+      const outcome = await tryConnectorLlmGenerate(deps.prisma ?? sharedPrisma, {
+        taskType: request.taskType,
+        explicitModel: request.model,
+        resolvedModel: model,
+        systemPrompt,
+        userPrompt: promptText,
+        providerId: resolution.providerId,
+        worldId: context.worldId || undefined,
+        maxTokens: request.maxTokens,
+      });
+      if (outcome) {
+        model = outcome.model;
+        return outcome.result;
+      }
+    }
+
+    const provider = createRoutedProvider(resolution, apiKeyStore, request.useMock);
+    return runAiTask(provider, {
+      model,
+      prompt: promptText,
+      systemPrompt,
+      maxTokens: request.maxTokens,
+      ...(jsonWanted ? { responseFormat: "json" as const } : {}),
+    });
+  }
 
   let result: AiRouterResult["result"];
+  let jsonRepairAttempted = false;
+  let jsonOk = true;
 
   if (cachedResult) {
     result = cachedResult;
-  } else if (connectorOutcome) {
-    result = connectorOutcome.result;
-    model = connectorOutcome.model;
-    setCachedPromptResponse(promptCacheKey, result);
+    jsonOk = jsonWanted ? parseModelJson(result.text).ok : true;
   } else {
-    const provider = createRoutedProvider(resolution, apiKeyStore, request.useMock);
-    result = await runAiTask(provider, {
-      model,
+    /* The repair lives in `generateWithJsonRepair`, which calls `generate` at
+       most twice — the bound is enforced there, in one place, so it cannot
+       quietly grow into a loop here. Only the accepted answer is cached; a
+       rejected first attempt must not be served to the next request. */
+    const outcome = await generateWithJsonRepair({
+      wantsJson: jsonWanted,
       prompt: userPrompt,
-      systemPrompt,
-      maxTokens: request.maxTokens,
+      generate: generateOnce,
     });
+    result = outcome.result;
+    jsonRepairAttempted = outcome.repairAttempted;
+    jsonOk = outcome.ok;
+
     setCachedPromptResponse(promptCacheKey, result);
   }
 
@@ -440,6 +473,12 @@ export async function routeAiRequest(
     contextMode: request.contextMode,
 
     providerMode: "local_rtx",
+
+    jsonMode: {
+      requested: jsonWanted,
+      repairAttempted: jsonRepairAttempted,
+      ok: jsonOk,
+    },
 
   };
 

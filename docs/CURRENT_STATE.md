@@ -77,7 +77,9 @@ Offene Rest-Punkte (Details: [FEATURE_BACKLOG_PLAN.md](FEATURE_BACKLOG_PLAN.md) 
 
 Zuletzt umgesetzt (Roadmap-Welle PR #498+): NL `list_world_members`, `delete_user`, `reset_password`;
 Today-Widget „Projekte nach Domäne“; Projekt-Detail mit Domänen-Modul-Links; EntityTag-Primary-Mode für Tag-Merges;
-Mail-Entwürfe, Kalender-Grid, Ideas-Prompt-CRUD, Atlas-Handout, Zaubergrad-Import, Weltuhr/Chronik-Nav.
+Mail-Entwürfe, Kalender-Grid, Ideas-Prompt-CRUD, Zaubergrad-Import, Weltuhr/Chronik-Nav;
+Terra als Karteneditor unter `/worlds/[slug]/karten` bzw. `/auth/worlds/[slug]/karten` (löst den 3D-Weltenbauer ab,
+dessen Code und Tabellen am 27.07.2026 entfernt wurden — alte Inhalte wurden per Owner-Entscheid verworfen).
 
 **Nicht im Backlog** (bewusst nicht verfolgt): Asset-Level-Secrets, manuelle Browser-QA
 über 9 Theme-Presets, vollständiges Light-Theme-Refactoring, DB↔Client-Theme-Sync,

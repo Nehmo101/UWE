@@ -1,5 +1,5 @@
 import type { PageType } from "./generated/prisma/client";
-import { brainPrisma } from "./brain-client";
+import { brainPrisma, type BrainPrismaClient } from "./brain-client";
 import type {
   ImportSourceType,
   ImportTargetType,
@@ -611,7 +611,16 @@ export async function executeMarkdownImport(
   db: PrismaClient,
   content: string,
   ctx: MarkdownImportContext,
-  options?: { itemIds?: string[] },
+  options?: {
+    itemIds?: string[];
+    /**
+     * Brain client override for tests. Personal-brain and capture targets write
+     * through the process-wide `brainPrisma` singleton by default; tests that
+     * assert document counts need a fully isolated brain DB instead, because
+     * node --test runs test files in parallel against the one shared singleton.
+     */
+    brainDb?: BrainPrismaClient;
+  },
 ): Promise<MarkdownImportExecuteResult> {
   assertSourceSupported(ctx.sourceType);
   assertTargetSupported(ctx.targetType);
@@ -633,7 +642,7 @@ export async function executeMarkdownImport(
     }
   }
 
-  const lifeAdmin = createLifeAdminService(brainPrisma, db);
+  const lifeAdmin = createLifeAdminService(options?.brainDb ?? brainPrisma, db);
   const repo = createUweRepositoryFromClient(db);
 
   switch (ctx.targetType) {

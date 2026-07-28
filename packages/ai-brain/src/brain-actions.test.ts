@@ -19,7 +19,7 @@ import {
 } from "./index";
 
 describe("Brain Actions — catalog", () => {
-  it("defines all P09 target actions plus atlas naming", () => {
+  it("defines all P09 target actions plus the Terra map actions", () => {
     const ids = BRAIN_ACTION_LIST.map((action) => action.id);
     assert.ok(ids.includes("session_recap"));
     assert.ok(ids.includes("next_session_prep"));
@@ -29,11 +29,14 @@ describe("Brain Actions — catalog", () => {
     assert.ok(ids.includes("player_handout"));
     assert.ok(ids.includes("fill_dungeon_room"));
     assert.ok(ids.includes("mail_draft"));
-    assert.ok(ids.includes("atlas_name_regions"), "atlas_name_regions action must be present");
-    assert.ok(ids.includes("atlas_describe_region"), "atlas_describe_region action must be present");
-    assert.ok(ids.includes("atlas_fill_area"), "atlas_fill_area action must be present");
-    assert.ok(ids.includes("atlas_generate_asset_proposal"), "atlas_generate_asset_proposal action must be present");
-    assert.equal(BRAIN_ACTION_LIST.length, 12);
+    assert.ok(ids.includes("terra_name_regions"), "terra_name_regions action must be present");
+    assert.ok(ids.includes("terra_describe_region"), "terra_describe_region action must be present");
+    assert.ok(ids.includes("terra_world_draft"), "terra_world_draft action must be present");
+    // 13 before 28.07.2026: the four Atlas actions were replaced by two Terra
+    // ones. That the retired ids are gone from EVERY file the union lives in —
+    // including the two in @uwe/cookbook that no compiler watches — is checked
+    // in `ai-task-taxonomy.test.ts`, not here.
+    assert.equal(BRAIN_ACTION_LIST.length, 11);
   });
 
   it("marks player-safe actions correctly", () => {
@@ -84,92 +87,61 @@ describe("Brain Actions — proposals", () => {
     assert.equal(proposals[0]?.metadata?.documentType, "world_knowledge");
   });
 
-  it("builds review-only atlas plot-fill proposals from validated JSON", () => {
-    const action = getBrainAction("atlas_fill_area");
+  it("builds review-only text proposals for the two Terra map actions", () => {
+    for (const actionId of ["terra_name_regions", "terra_describe_region"] as const) {
+      const action = getBrainAction(actionId);
+      const proposals = buildProposalsFromResult({
+        action,
+        resultText: "  Nordwald: Immerlicht (Alternative: Blattschatten)  ",
+        pageId: "page-1",
+      });
+
+      assert.equal(proposals.length, 1);
+      assert.equal(proposals[0]?.targetType, action.defaultProposalTarget);
+      // Kein visibility-Feld mehr (Schritt 3b): Vorschläge sind grundsätzlich
+      // review-only und erreichen Spieler nie direkt.
+      assert.equal(proposals[0]?.status, "pending");
+      // Prose in, prose out — no validator, and never applied on its own.
+      assert.equal(proposals[0]?.content, "Nordwald: Immerlicht (Alternative: Blattschatten)");
+      assert.equal(proposals[0]?.metadata?.autoApply, false);
+      assert.equal(proposals[0]?.metadata?.source, "ai_generated");
+    }
+  });
+
+  it("clamps a Terra world draft instead of throwing it away", () => {
+    const action = getBrainAction("terra_world_draft");
     const proposals = buildProposalsFromResult({
       action,
-      resultText: JSON.stringify({
-        schemaVersion: 1,
-        kind: "atlas_plot_fill",
-        biomeKind: "forest",
-        density: 1.25,
-        seed: 77,
-        assets: [{ gouacheKey: "g_oak", weight: 2 }],
-      }),
+      // Markdown fence, an invented biome, a runaway count and a language
+      // family that does not exist — exactly what a small local model does.
+      resultText:
+        '```json\n{"kind":"terra_world_draft","biom":"nebelheide","kartenGroesse":512,' +
+        '"siedlungen":300,"sprachfamilie":"nordisch",' +
+        '"namen":{"region":"Die Graue Küste","orte":["Möwenfurt"]}}\n```',
       pageId: "page-1",
     });
 
     assert.equal(proposals.length, 1);
-    assert.equal(proposals[0]?.targetType, "atlas_plot_fill");
+    assert.equal(proposals[0]?.targetType, "terra_world_draft");
     assert.equal(proposals[0]?.metadata?.autoApply, false);
     assert.equal(proposals[0]?.metadata?.validation, "ok");
-    assert.match(proposals[0]?.content ?? "", /"kind": "atlas_plot_fill"/);
+    assert.ok(Array.isArray(proposals[0]?.metadata?.notices));
+    const entwurf = JSON.parse(proposals[0]?.content ?? "{}");
+    assert.equal(entwurf.biom, "wiese", "unbekanntes Biom faellt auf die Vorgabe");
+    assert.equal(entwurf.siedlungen, 14, "auf den Deckel des Generators geklemmt");
+    assert.equal(entwurf.sprachfamilie, "auto", "erfundene Sprachfamilie abgelehnt");
+    assert.equal(entwurf.kartenGroesse, 512, "was stimmt, bleibt stehen");
+    assert.deepEqual(entwurf.namen.orte, ["Möwenfurt"]);
   });
 
-  it("keeps invalid atlas plot-fill output as a non-applied review artifact", () => {
-    const action = getBrainAction("atlas_fill_area");
+  it("keeps a Terra world draft that carries geometry out of the map", () => {
+    const action = getBrainAction("terra_world_draft");
     const proposals = buildProposalsFromResult({
       action,
-      resultText: '{"kind":"atlas_plot_fill","density":99,"seed":1,"assets":[{"gouacheKey":"missing"}]}',
+      resultText: '{"kind":"terra_world_draft","elemente":[{"kind":"pfad","points":[{"x":1,"z":2}]}]}',
       pageId: "page-1",
     });
 
-    assert.equal(proposals[0]?.targetType, "atlas_plot_fill");
-    assert.equal(proposals[0]?.metadata?.autoApply, false);
-    assert.equal(proposals[0]?.metadata?.validation, "invalid");
-    assert.ok(Array.isArray(proposals[0]?.metadata?.errors));
-  });
-
-  it("builds review-only atlas asset proposals from validated JSON", () => {
-    const action = getBrainAction("atlas_generate_asset_proposal");
-    const proposals = buildProposalsFromResult({
-      action,
-      resultText: JSON.stringify({
-        name: "Verwunschener Leuchtturm",
-        category: "landmark",
-        tags: ["lighthouse", "cliff"],
-        engineTags: ["Landmark", "Stamp"],
-        palette: ["#d8c99c", "#59432a"],
-        outputType: "json-recipe",
-        recipe: {
-          schemaVersion: 1,
-          coordinateSystem: "base-center-normalized",
-          layers: [
-            {
-              id: "ground-shadow",
-              role: "shadow",
-              shape: "ellipse",
-              fill: "#2a1e0c",
-              opacity: 0.18,
-              x: 0,
-              y: 0.06,
-              rx: 0.58,
-              ry: 0.16,
-            },
-          ],
-        },
-      }),
-      pageId: "page-1",
-    });
-
-    assert.equal(proposals.length, 1);
-    assert.equal(proposals[0]?.targetType, "atlas_asset_proposal");
-    assert.equal(proposals[0]?.metadata?.autoApply, false);
-    assert.equal(proposals[0]?.metadata?.validation, "ok");
-    assert.equal(proposals[0]?.metadata?.outputType, "json-recipe");
-    assert.match(proposals[0]?.content ?? "", /"outputType": "json-recipe"/);
-  });
-
-  it("keeps invalid atlas asset output as a non-applied review artifact", () => {
-    const action = getBrainAction("atlas_generate_asset_proposal");
-    const proposals = buildProposalsFromResult({
-      action,
-      resultText: '{"name":"Unsafe","category":"spellbook","outputType":"png-fallback","pngFallback":{"mimeType":"image/jpeg","width":8192,"height":512,"transparentBackground":true}}',
-      pageId: "page-1",
-    });
-
-    assert.equal(proposals[0]?.targetType, "atlas_asset_proposal");
-    assert.equal(proposals[0]?.metadata?.autoApply, false);
     assert.equal(proposals[0]?.metadata?.validation, "invalid");
     assert.ok(Array.isArray(proposals[0]?.metadata?.errors));
   });

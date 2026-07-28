@@ -1,0 +1,20 @@
+/* Terra-Leserahmen (J1). Alles Gestalterische steckt IM Frame
+   (terra/src/ui/style.css); hier steht nur, wie er in der Seite sitzt. */
+
+.terra-leserahmen {
+  position: relative;
+  width: 100%;
+  height: min(72vh, 820px);
+  min-height: 380px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0b0d10;
+}
+
+.terra-leserahmen > iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}

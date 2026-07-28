@@ -168,12 +168,9 @@ export const PRISMA_MODEL_BOUNDARIES = {
   RollTable: U("dnd_world", "dm_only"),
   ResearchSession: B("personal_brain", "database_only", "G6"),
   ResearchSource: B("personal_brain", "database_only", "G6"),
-  Atlas3DWorld: U("dnd_world", "player_visible"),
-  Atlas3DNode: U("dnd_world", "player_visible"),
-  Atlas3DTerrain: U("dnd_world", "player_visible"),
-  Atlas3DFeature: U("dnd_world", "player_visible"),
-  Atlas3DObject: U("dnd_world", "player_visible"),
-  Atlas3DCameraBookmark: U("dnd_world", "player_visible"),
+  // Karten sind vollständig spielersichtbar; der Zugriff hängt allein an der
+  // Weltmitgliedschaft, nie an der einzelnen Karte.
+  TerraKarte: U("dnd_world", "player_visible"),
   AiGatewayConfig: U("ai_control", "dm_only"),
   AiUsageLog: U("ai_control", "dm_only"),
   Tag: U("platform_ops", "dm_only", "database_only", "G7"),

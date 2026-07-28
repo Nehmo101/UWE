@@ -15,7 +15,7 @@ describe("security headers", () => {
     const headers = getUweSecurityHeaders({ NODE_ENV: "development" });
 
     assert.match(headers["Content-Security-Policy"], /default-src 'self'/);
-    // Same-origin framing is allowed (Studio → atlas.html iframe); cross-origin stays blocked.
+    // Same-origin framing is allowed (Studio/Portal → /terra/index.html); cross-origin stays blocked.
     assert.match(headers["Content-Security-Policy"], /frame-ancestors 'self'/);
     assert.equal(headers["X-Content-Type-Options"], "nosniff");
     assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");

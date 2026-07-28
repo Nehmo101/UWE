@@ -1,9 +1,7 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
 import { DEG, hashi } from './core/rng.js';
 import { S, HALF, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame,
-  setPalette, setMalschicht, setMultiplane, PALETTE_STANDARD, MAL_DEZENT }
-  from './render/pipeline.js';
+import { scene, initPipeline, resizePipeline, renderFrame, setPalette, setMalschicht, setMultiplane, PALETTE_STANDARD, MAL_DEZENT } from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull } from './world/terrain.js';
 import './generators/geometry.js';        // registriert alle Objekt-Pools
@@ -12,16 +10,20 @@ import { POOLS } from './core/pools.js';
 import { rebuildAll } from './core/dirty.js';
 import { initWater, wasserSichtbar, updateWater, water } from './world/water.js';
 import { initSky, updateSky } from './world/sky.js';
-import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch,
-  setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
+import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch, setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
 import { initVfx, tickVfx } from './world/vfx.js';
-import { initSelection, updateHandlePositions } from './editor/selection.js';
+import { initSelection, updateHandlePositions, beschriftungenAktualisieren } from './editor/selection.js';
 import { defaultsFor } from './editor/tools.js';
 import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
-import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast,
-  markerOverlayAktualisieren }
-  from './ui/panels.js';
+import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast, markerOverlayAktualisieren } from './ui/panels.js';
 import { initIO, palettePassend } from './editor/io.js';
+// I3: Erosion laeuft ueber mehrere Bilder und braucht deshalb einen Takt.
+import { tickErosion } from './editor/erosion-lauf.js';
+// I4: die Beschriftungsschicht. In die Szene gehaengt wird sie in
+// initSelection, hier braucht die Bildschleife nur das Nachziehen.
+import { holeBeschriftungsschicht } from './ui/beschriftung.js';
+var beschriftungen = holeBeschriftungsschicht();
+var letzterBeschriftungsAbgleich = -1e9;
 import { tickWind } from './world/wind.js';
 
 /* ==========================================================================
@@ -210,6 +212,30 @@ function animate() {
   if (water.visible) updateWater(now * 0.001);
   flushPack();
   updateHandlePositions();
+  // I3: laufende Erosion bekommt ihr Zeitbudget. Steht VOR dem Zeichnen, damit
+  // ein fertig gewordener Lauf im selben Bild sichtbar wird statt einen Frame
+  // spaeter. Ohne Lauf kostet der Aufruf einen Vergleich.
+  tickErosion();
+  /* I4 — Beschriftungselemente in die Schicht spiegeln. Gedrosselt auf fuenf
+     Mal je Sekunde, und zwar bewusst hier statt an jeder Stelle, die Elemente
+     aendert: Anlegen, Loeschen, Undo, Redo, Laden, Welt wuerfeln und das
+     Textfeld im Panel sind sieben Wege, und der achte wird vergessen. Ein
+     Abgleich, der von sich aus nachzieht, kann nicht vergessen werden.
+     `abgleichen` vergleicht ueber einen Stempel aus Klasse, Groesse und Text —
+     ohne Aenderung entsteht kein einziges neues Sprite. */
+  if (now - letzterBeschriftungsAbgleich > 200) {
+    letzterBeschriftungsAbgleich = now;
+    beschriftungenAktualisieren();
+  }
+  /* I4 — Beschriftungen neu bewerten: welche verdeckt welche, was ist im
+     aktuellen Massstab ueberhaupt zugelassen. Die Schicht drosselt selbst auf
+     rund sechsmal je Sekunde; der Aufruf je Bild kostet einen Zeitvergleich.
+     Der Massstab ist bis I1 ein Platzhalter aus der Kameradistanz — die
+     Klassentabelle hat je Klasse ein Fenster, das damit schon jetzt greift. */
+  beschriftungen.nachziehen({
+    camera: camera, breite: window.innerWidth, hoehe: window.innerHeight,
+    fov: camera.fov, massstab: cam.dist * 2
+  }, now);
   tickToast(now);
   // Marker-Beschriftung als HTML-Overlay ueber dem Canvas (D1) — eigene
   // Zeile statt Anhaengsel von tickToast, damit der Taktgeber eindeutig bleibt.

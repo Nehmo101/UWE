@@ -15,6 +15,8 @@ export interface BackupStats {
   pageTemplates: number;
   worldMemberships: number;
   playerNotes: number;
+  /** Terra-Karten (J1) — optional, ältere Archive kennen das Feld nicht. */
+  terraKarten?: number;
   /** Total Daily-Admin-OS records (optional — older backups do not have it). */
   dailyAdminEntities?: number;
 }
@@ -244,6 +246,27 @@ export interface BackupSettingsRecord {
   storage: Record<string, unknown>;
   backup: Record<string, unknown>;
   privacy: Record<string, unknown>;
+}
+
+/**
+ * Terra-Karte (J1). Die Karte selbst steckt vollständig in `daten` — ein
+ * Kartenbaum im Format v5, der alle Ebenen trägt.
+ *
+ * Diese Sektion existiert, weil der Vorgänger sie NIE hatte: `packages/backup`
+ * kannte kein einziges seiner sechs Modelle, `backup:create` sicherte sie also
+ * nie, und niemandem fiel es auf (siehe
+ * docs/engineering/terra-runde-j-atlas-abbau.md, Vorabbefund 1). Sein Löschen
+ * war dadurch unumkehrbar. Terra soll denselben Fehler nicht wiederholen.
+ */
+export interface BackupTerraKarteRecord {
+  id: string;
+  worldId: string;
+  titel: string;
+  /** Kartenbaum im Terra-Format v5: { format, version, wurzel, karten[] }. */
+  daten: unknown;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BackupPlayerNoteRecord {
@@ -507,6 +530,8 @@ export interface BackupData {
   users: BackupUserRecord[];
   pageTemplates?: BackupPageTemplateRecord[];
   playerNotes?: BackupPlayerNoteRecord[];
+  /** Optional — archives created before Terra (J1) omit this section. */
+  terraKarten?: BackupTerraKarteRecord[];
   /** Optional — archives created before Daily Admin OS support omit this section. */
   dailyAdmin?: BackupDailyAdminData;
 }

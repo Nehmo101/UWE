@@ -1,0 +1,6 @@
+{
+  "name": "terra-tests",
+  "private": true,
+  "type": "module",
+  "main": "./index.mjs"
+}

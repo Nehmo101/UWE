@@ -1,0 +1,10 @@
+# Fremdcode bleibt so, wie er ausgeliefert wurde.
+#
+# terra/vendor/ traegt three 0.185.1 unveraendert (siehe terra/vendor/HERKUNFT.md).
+# Ohne diese Zeile schriebe Git unter Windows CRLF in die Arbeitskopie, und die
+# Zusage „Byte fuer Byte wie ausgeliefert" waere keine mehr — ein Vergleich mit
+# der Quelle schluege fehl, obwohl niemand etwas geaendert haette.
+#
+# `binary` waere zu grob: die Dateien sollen lesbar bleiben und in einem Diff
+# auftauchen, wenn jemand die Fassung wechselt.
+terra/vendor/** -text

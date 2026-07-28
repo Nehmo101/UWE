@@ -1,5 +1,13 @@
 # Was Terra von Atlas-3D übernehmen sollte
 
+> **Aufbewahrt als Begründungsquelle.** Atlas-3D ist am 27.07.2026 vollständig
+> entfernt worden; dieses Dokument ist der letzte Ort, an dem nachlesbar ist,
+> WARUM Terras Ebenen-Hierarchie, sein Vererbungsmodell und seine
+> Generatoren so aussehen, wie sie aussehen. Wer es löscht, behält die
+> Entscheidungen und verliert ihre Gründe. Die Codeverweise auf
+> `packages/atlas-3d` zeigen ins Leere — nachschlagbar bleiben sie über die
+> Historie bis Commit `6823a134`.
+
 Planungsstand 27.07.2026 — **nur Planung, nichts umgesetzt.** Grundlage ist die
 Atlas-3D-Analyse (`packages/atlas-3d`, 86 Module; sechs Prisma-Modelle) im
 Vergleich mit Terra nach Runde H.

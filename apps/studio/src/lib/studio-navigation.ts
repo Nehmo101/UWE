@@ -28,7 +28,7 @@ export function worldDmToolQuickLinks(worldSlug: string): { label: string; href:
     "world-roll-tables",
     "world-print-center",
     "world-ai-runs",
-    "world-atlas3d",
+    "world-terra",
     "world-magic-items",
   ]);
   return canonicalWorldNavItems(worldSlug)
@@ -57,7 +57,7 @@ export type WorldNavKey =
   | "backup"
   | "new-page"
   | "radar"
-  | "atlas"
+  | "karten"
   | "magic-items"
   | "prepare-session"
   | "one-shot"
@@ -137,7 +137,7 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
       items: [
         { key: "brain", label: "Brain Store", href: `${base}/brain` },
         { key: "graph", label: "Wissensgraph", href: `${base}/graph` },
-        { key: "atlas", label: "Atlas 3D", href: `${base}/atlas3d` },
+        { key: "karten", label: "Karten", href: `${base}/karten` },
         { key: "inspector", label: "Kanon & Leaks", href: `${base}/inspector` },
         { key: "quality", label: "Wiki-Pflege", href: `${base}/quality` },
         { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },
@@ -169,7 +169,7 @@ export function worldBottomNavKey(active: WorldNavKey, isSearching = false): Wor
     active === "pages" ||
     active === "new-page" ||
     active === "graph" ||
-    active === "atlas" ||
+    active === "karten" ||
     active === "magic-items" ||
     isSearching
   ) {
@@ -290,7 +290,7 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   if (normalized.startsWith(`${base}/notes`)) return "notes";
   if (normalized.startsWith(`${base}/soundboard`)) return "soundboard";
   if (normalized.startsWith(`${base}/graph`)) return "graph";
-  if (normalized.startsWith(`${base}/atlas`)) return "atlas";
+  if (normalized.startsWith(`${base}/karten`)) return "karten";
   if (normalized.startsWith(`${base}/magic-items`)) return "magic-items";
   if (normalized.startsWith(`${base}/inspector`)) return "inspector";
   if (normalized.startsWith(`${base}/quality`)) return "quality";

@@ -1,0 +1,25 @@
+{
+  "_fassung": "v1 — Einzeldatei-Fassung (terra.html, vor der Modultrennung). Kennzeichen: KEIN Feld `version` (io.js liest dann dateiVersion 1), Hoehen als Vollarray `hoehen`, keine Marker, keine Stempel, kein `biom`, kein `wetter`, kein `seedZaehler`. Die Elemente tragen noch keine `seed`-Werte — validiereKarte setzt dafuer 0 ein. Das Hoehenarray ist absichtlich KUERZER als 257*257: io.js erlaubt das ausdruecklich und fuellt den Rest deterministisch aus dem Seed nach (uebernehmeKarte). So bleibt die Beispieldatei klein.",
+  "format": "terra",
+  "seed": 4711,
+  "tageszeit": "morgen",
+  "raster": true,
+  "kamera": { "x": 12, "z": -8, "dist": 150, "yaw": 0.4, "pitch": -0.8 },
+  "hoehen": [3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6],
+  "elemente": [
+    {
+      "id": 1,
+      "kind": "pfad",
+      "variant": "strasse",
+      "points": [{ "x": -60, "z": -40 }, { "x": -10, "z": -20 }, { "x": 30, "z": -10 }],
+      "params": { "breite": 6, "belag": "erde", "haeuser": true, "stil": "dorf", "abstand": 14, "streuung": 2 }
+    },
+    {
+      "id": 2,
+      "kind": "flaeche",
+      "variant": "wald",
+      "points": [{ "x": -70, "z": 10 }, { "x": -30, "z": 6 }, { "x": -26, "z": 44 }, { "x": -66, "z": 48 }],
+      "params": { "dichte": 1.1, "klumpen": 0.55, "mischung": 0.25, "unterholz": 0.35 }
+    }
+  ]
+}

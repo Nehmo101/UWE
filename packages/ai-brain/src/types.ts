@@ -53,12 +53,26 @@ export interface AiModel {
   contextWindow?: number;
 }
 
+/**
+ * How the answer must be shaped. `"json"` asks the provider to ENFORCE a JSON
+ * object at protocol level where the protocol knows how (OpenAI-family
+ * `response_format`, Ollama `format`, Gemini `responseMimeType`).
+ *
+ * Not every backend can: the Anthropic Messages API has no JSON mode, and the
+ * RTX Host Connector's `llm_generate` payload has no field for it. For those
+ * the flag is a no-op and the prompt plus the router's single repair attempt
+ * carry the weight. Nothing downstream may assume the answer IS JSON because
+ * this was set — `parseModelJson` still has to succeed.
+ */
+export type GenerateResponseFormat = "text" | "json";
+
 export interface GenerateTextOptions {
   model: string;
   prompt: string;
   systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
+  responseFormat?: GenerateResponseFormat;
 }
 
 export interface GenerateTextUsage {

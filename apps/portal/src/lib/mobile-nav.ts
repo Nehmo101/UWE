@@ -19,7 +19,7 @@ export type PortalAuthBottomNavActive =
  * Thumb-zone IA (final): inside a world the bar carries the four primary
  * player destinations — Start (dashboard), Wiki, Charaktere, Questlog — plus
  * "Mehr" (opens the drawer with the full world nav: Sessions, Handouts,
- * Timeline, Graph, Notizen, Atlas, …). The graph stays in the drawer: it is an
+ * Timeline, Graph, Notizen, Karten, …). The graph stays in the drawer: it is an
  * exploration tool, not a per-session target, and five slots is the thumb-zone
  * budget. Outside a world scope the bar anchors on Welten + Account.
  */
@@ -62,7 +62,7 @@ const WORLD_DRAWER_SECTIONS = new Set([
   "timeline",
   "treasury",
   "soundboard",
-  "atlas3d",
+  "karten",
 ]);
 
 /** Resolve bottom-nav active tab from the current authenticated portal pathname. */

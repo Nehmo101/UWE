@@ -8,7 +8,7 @@ import {
 } from "@uwe/auth";
 import {
   createAuthService,
-  createPrismaClient,
+  prisma,
 } from "@uwe/database/server";
 import {
   parseFormDataOrThrow,
@@ -29,19 +29,14 @@ async function getAuthContext(worldSlug: string) {
     throw new Error("Nicht angemeldet");
   }
 
-  const db = createPrismaClient();
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world) {
-      throw new Error("Welt nicht gefunden");
-    }
-    assertPortalCanReadWorld(ctx, world.id);
-  } finally {
-    await db.$disconnect();
+  const world = await prisma.world.findUnique({
+    where: { slug: worldSlug },
+    select: { id: true },
+  });
+  if (!world) {
+    throw new Error("Welt nicht gefunden");
   }
+  assertPortalCanReadWorld(ctx, world.id);
 
   return { user, ctx };
 }
@@ -59,27 +54,24 @@ export async function createPlayerNoteAction(formData: FormData) {
   const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
   const { ctx } = await getAuthContext(worldSlug);
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
+  const auth = createAuthService(prisma);
 
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world || !canCreatePlayerNote(ctx)) {
-      throw new Error("Keine Berechtigung zum Kommentieren");
-    }
-
-    await auth.createPlayerNoteForViewer(worldSlug, ctx, {
-      campaignId,
-      content,
-      pageId: pageId ?? null,
-      gameSessionId: gameSessionId ?? null,
-    });
-  } finally {
-    await db.$disconnect();
+  // Geteilter Client (main) + Häkchenmodell ohne Gastkommentare (unsere Seite):
+  // canCreatePlayerNote kennt nur noch den Zugriffskontext.
+  const world = await prisma.world.findUnique({
+    where: { slug: worldSlug },
+    select: { id: true },
+  });
+  if (!world || !canCreatePlayerNote(ctx)) {
+    throw new Error("Keine Berechtigung zum Kommentieren");
   }
+
+  await auth.createPlayerNoteForViewer(worldSlug, ctx, {
+    campaignId,
+    content,
+    pageId: pageId ?? null,
+    gameSessionId: gameSessionId ?? null,
+  });
 
   revalidatePath(path);
   revalidatePath(`/auth/worlds/${worldSlug}`);
@@ -91,19 +83,14 @@ export async function submitPlayerNoteAction(formData: FormData) {
   const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
   const { ctx } = await getAuthContext(worldSlug);
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
+  const auth = createAuthService(prisma);
 
-  try {
-    const note = await auth.getPlayerNoteService().getByIdForWorld(worldSlug, noteId);
-    if (!note || !canEditPlayerNote(ctx, note)) {
-      throw new Error("Keine Berechtigung");
-    }
-
-    await auth.submitPlayerNoteForViewer(worldSlug, noteId, ctx);
-  } finally {
-    await db.$disconnect();
+  const note = await auth.getPlayerNoteService().getByIdForWorld(worldSlug, noteId);
+  if (!note || !canEditPlayerNote(ctx, note)) {
+    throw new Error("Keine Berechtigung");
   }
+
+  await auth.submitPlayerNoteForViewer(worldSlug, noteId, ctx);
 
   revalidatePath(path);
 }
@@ -117,19 +104,14 @@ export async function updatePlayerNoteAction(formData: FormData) {
   const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
   const { ctx } = await getAuthContext(worldSlug);
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
+  const auth = createAuthService(prisma);
 
-  try {
-    const note = await auth.getPlayerNoteService().getByIdForWorld(worldSlug, noteId);
-    if (!note || !canEditPlayerNote(ctx, note)) {
-      throw new Error("Keine Berechtigung");
-    }
-
-    await auth.updatePlayerNoteForViewer(worldSlug, noteId, ctx, content);
-  } finally {
-    await db.$disconnect();
+  const note = await auth.getPlayerNoteService().getByIdForWorld(worldSlug, noteId);
+  if (!note || !canEditPlayerNote(ctx, note)) {
+    throw new Error("Keine Berechtigung");
   }
+
+  await auth.updatePlayerNoteForViewer(worldSlug, noteId, ctx, content);
 
   revalidatePath(path);
 }

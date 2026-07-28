@@ -2,7 +2,7 @@
 
 import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService, prisma } from "@uwe/database/server";
 import { parseFormDataOrThrow, playerCharacterBlockSchema } from "@uwe/security";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
@@ -21,31 +21,26 @@ export async function updatePlayerCharacterBlockAction(formData: FormData) {
     throw new Error("Nicht angemeldet");
   }
 
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
+  const auth = createAuthService(prisma);
 
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world) {
-      throw new Error("Welt nicht gefunden");
-    }
-    assertPortalCanReadWorld(ctx, world.id);
+  const world = await prisma.world.findUnique({
+    where: { slug: worldSlug },
+    select: { id: true },
+  });
+  if (!world) {
+    throw new Error("Welt nicht gefunden");
+  }
+  assertPortalCanReadWorld(ctx, world.id);
 
-    const updated = await auth.updatePlayerCharacterBlockForViewer(
-      worldSlug,
-      pageSlug,
-      blockId,
-      content,
-      ctx,
-    );
-    if (!updated) {
-      throw new Error("Keine Berechtigung");
-    }
-  } finally {
-    await db.$disconnect();
+  const updated = await auth.updatePlayerCharacterBlockForViewer(
+    worldSlug,
+    pageSlug,
+    blockId,
+    content,
+    ctx,
+  );
+  if (!updated) {
+    throw new Error("Keine Berechtigung");
   }
 
   revalidatePath(path);

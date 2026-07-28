@@ -24,6 +24,7 @@ import type {
   BackupSoundboardButtonPageLinkRecord,
   BackupSoundboardButtonRecord,
   BackupStats,
+  BackupTerraKarteRecord,
   BackupType,
   BackupUserRecord,
   BackupWorldMembershipRecord,
@@ -65,6 +66,7 @@ function collectStats(data: BackupData): BackupStats {
     pageTemplates: data.pageTemplates?.length ?? 0,
     worldMemberships: data.worldMemberships.length,
     playerNotes: data.playerNotes?.length ?? 0,
+    terraKarten: data.terraKarten?.length ?? 0,
     dailyAdminEntities: countDailyAdminEntities(data.dailyAdmin),
   };
 }
@@ -556,6 +558,16 @@ export async function collectBackupData(
       ? await db.pageTemplate.findMany({ where: { isSystem: false } })
       : [];
 
+  /**
+   * Terra-Karten (J1). Weltgebunden, deshalb in jedem Backup-Umfang dabei,
+   * der Welten mitnimmt — kein Schalter, keine Bedingung. Der Vorgänger stand
+   * hier nie, und genau deshalb war sein Löschen unumkehrbar.
+   */
+  const terraKarten = await db.terraKarte.findMany({
+    where: { worldId: { in: worldIds } },
+    orderBy: { createdAt: "asc" },
+  });
+
   const playerNotes =
     scope.includePlayerNotes === true
       ? await db.playerNote.findMany({
@@ -820,6 +832,17 @@ export async function collectBackupData(
         isActive: template.isActive,
         createdAt: template.createdAt.toISOString(),
         updatedAt: template.updatedAt.toISOString(),
+      }),
+    ),
+    terraKarten: terraKarten.map(
+      (karte): BackupTerraKarteRecord => ({
+        id: karte.id,
+        worldId: karte.worldId,
+        titel: karte.titel,
+        daten: karte.daten,
+        version: karte.version,
+        createdAt: karte.createdAt.toISOString(),
+        updatedAt: karte.updatedAt.toISOString(),
       }),
     ),
     playerNotes: playerNotes.map(

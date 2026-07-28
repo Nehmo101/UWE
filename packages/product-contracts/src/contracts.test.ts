@@ -107,7 +107,7 @@ describe("prisma model boundaries", () => {
   it("maps a known-good sample correctly", () => {
     assert.equal(PRISMA_MODEL_BOUNDARIES.PersonalBrainDocument.privacyClass, "owner_private_local");
     assert.equal(PRISMA_MODEL_BOUNDARIES.ContentBlock.privacyClass, "dm_only");
-    assert.equal(PRISMA_MODEL_BOUNDARIES.Atlas3DWorld.privacyClass, "player_visible");
+    assert.equal(PRISMA_MODEL_BOUNDARIES.TerraKarte.privacyClass, "player_visible");
     assert.equal(PRISMA_MODEL_BOUNDARIES.DndApiCacheEntry.privacyClass, "public");
   });
 });

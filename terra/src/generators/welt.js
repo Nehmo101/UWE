@@ -22,7 +22,22 @@ import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '.
 // KARTE statt MAP/HALF — Kartengroesse ist seit H1b ein Laufzeitwert (H1b-Regel:
 // nie beim Modulstart in eine eigene Konstante kopieren).
 import { S, KARTE, WATER } from '../core/store.js';
-import { heightAt, slopeAt } from '../world/terrain.js';
+/* `abfluss` ist eines der drei Erosions-Messfelder. world/terrain.js verbietet
+   Generatoren im Kommentar zu felderSichern ausdruecklich, diese Felder zu
+   lesen — mit einer benannten Ausnahme: "Erlaubt sind Auswertungen, deren
+   Ergebnis der Nutzer sieht und die gespeichert werden." Genau das ist der
+   Weltgenerator. Er liest den Abfluss EINMAL, macht daraus Flusselemente, und
+   die Elemente stehen danach in der Datei. Nach dem Laden ist das Feld null und
+   der Generator regnet gleichmaessig (siehe Abschnitt 2, RUECKFALL) — eine
+   geladene Karte sieht deshalb nicht anders aus als vor dem Speichern, sie
+   wuerde beim NEUEN Wuerfeln nur andere Fluesse bekommen. */
+import { heightAt, slopeAt, abfluss as terrainAbfluss } from '../world/terrain.js';
+import { abflussNetz, breiteAusFlaeche } from '../world/erosion.js';
+/* Binnenseen (Runde H). see.js traegt beide Haelften: die Ableitung aus der
+   Senkenfuellung (rein, ohne store/three) und den Elementgenerator. Der Import
+   ist zyklusfrei — see.js zieht core/, world/ und generators/{objects,zeichen,
+   wegsuche}, aber nie welt.js. */
+import { seenAusFuellung, SEE_ZIEL_PUNKTE } from './see.js';
 // Nur genutzt, nicht veraendert: tryPlace ist DIE gemeinsame Bodenregel
 // (Kartenrand, Wasser, 40°-Hang). Der Generator ruft sie ohne Belegungsraster
 // und mit ignoreCorridor, weil die Korridormaske zum Erzeugungszeitpunkt noch
@@ -30,6 +45,10 @@ import { heightAt, slopeAt } from '../world/terrain.js';
 import { tryPlace } from './objects.js';
 import { rankePlatzierbar } from './vines.js';
 import { sucheWeg, vereinfache } from './wegsuche.js';
+/* J3 — Namen. namen.js haengt nur an core/rng, core/store und world/terrain und
+   importiert insbesondere NICHT welt.js zurueck; der Import ist also zyklusfrei
+   und aendert den Modulgraphen dieser Datei nicht nennenswert. */
+import { nameFuer, neueVergabe } from './namen.js';
 
 /* ==========================================================================
    Korridore — warum der Generator eine EIGENE Belegung fuehrt
@@ -69,7 +88,21 @@ var WELT_STANDARD = {
   fluesse: 1,        // Faktor auf die Anzahl der Flusslaeufe
   ranken: 3,         // Anzahl der Arbor-Ranken (wird auf 2..5 geklemmt)
   strassen: true,    // Strassennetz zwischen den Siedlungen bauen?
-  stil: null         // Baustil; null = aus dem Biom ableiten
+  stil: null,        // Baustil; null = aus dem Biom ableiten
+  /* J3 — Namen. `namen: false` liefert eine Welt ohne einen einzigen Namen
+     (fuer Tests, die auf Byteidentitaet mit dem Stand vor dieser Runde
+     pruefen). `sprachfamilie: null` heisst "die der Karte" — S.sprachfamilie
+     bzw. das Biom. */
+  namen: true,
+  sprachfamilie: null,
+  /* I3 — Abflussfeld fuer die Flusserzeugung.
+       undefined  das Laufzeitfeld aus world/terrain.js nehmen, falls es zur
+                  aktuellen Kartengroesse passt (Regelfall)
+       null       ausdruecklich KEINS — gleichmaessiger Regen (Rueckfall)
+       Float32Array  ein eigenes Feld, VW*VW, Zeilen-Major
+     Der dritte Fall ist der, an dem die Pruefungen haengen: nur so laesst sich
+     dieselbe Karte mit und ohne Abfluss vergleichen. */
+  abfluss: undefined
 };
 
 /* Baustil je Biom. Kein Anspruch auf Weltgeschichte — eine Zuordnung, die dem
@@ -99,7 +132,28 @@ function optionen(opt) {
   var o = {}, k;
   for (k in WELT_STANDARD) o[k] = WELT_STANDARD[k];
   if (opt) for (k in WELT_STANDARD) if (opt[k] !== undefined) o[k] = opt[k];
+  // `abfluss: null` heisst "ausdruecklich keins" und muss deshalb an der
+  // undefined-Regel oben vorbei.
+  if (opt && Object.prototype.hasOwnProperty.call(opt, 'abfluss')) o.abfluss = opt.abfluss;
   return o;
+}
+
+/**
+ * Welches Abflussfeld gilt? Nur eines mit GENAU der Laenge des aktuellen
+ * Gitters — und das ist keine Formalie, sondern die Lehre aus dem Fehler, den
+ * Ebene 6 fuer das Biomfeld festhaelt: felderSichern laesst die Felder nur
+ * WACHSEN. Nach einer 1024er Karte ist `abfluss` 1 050 625 Eintraege lang, auch
+ * wenn danach eine 256er geladen wird — und dann steht dort ein Feld in der
+ * Zeilenordnung der GROSSEN Karte. Es zu lesen ergaebe keinen Fehler, nur
+ * Unsinn. Gleiche Laenge heisst dagegen: die letzte Belegung galt dieser
+ * Groesse, die Zeilenordnung stimmt.
+ */
+function abflussFeld(o) {
+  if (o.abfluss === null) return null;
+  var f = o.abfluss === undefined ? terrainAbfluss : o.abfluss;
+  var n = KARTE.vw * KARTE.vw;
+  if (!f || f.length !== n) return null;
+  return f;
 }
 
 /** Faktor gegenueber der 256er-Karte (Laengenmass, nicht Flaechenmass). */
@@ -107,6 +161,37 @@ function skala() { return KARTE.map / 256; }
 
 /** Liegt der Punkt weit genug im Land, um ueberhaupt etwas zu tragen? */
 function fest(x, z) { return tryPlace(null, x, z, 0, { ignoreCorridor: true }) !== null; }
+
+/**
+ * Liegt der Punkt in einem Binnensee? Fragt die Seemaske auf dem
+ * Analyseraster ab (siehe erzeugeFluesse/erzeugeSeen).
+ *
+ * Warum das ueberhaupt noetig ist: `tryPlace` — DIE gemeinsame Bodenregel —
+ * kennt genau EIN Gewaesser, naemlich das Meer (`h < WATER + 0.35`). Ein
+ * Bergsee auf Hoehe 2 besteht diese Pruefung mit fliegenden Fahnen, und
+ * solange man ihn nicht sah, war das folgenlos: die Baeume standen halt in
+ * einer trockenen Mulde. Jetzt sieht man sie im Wasser stehen.
+ *
+ * Der Umriss jeder erzeugten Flaeche zieht sich deshalb aus dem See zurueck
+ * (`festAmSee` unten). Das deckt alles ab, was DIESER Generator legt. Fuer
+ * HANDGEZEICHNETE Flaechen ueber einem See braucht es die Korridormaske —
+ * die noetigen Zeilen in core/dirty.js stehen im Bericht.
+ */
+function imSee(W, x, z) {
+  var m = W.seeMaske;
+  if (!m || !W.A) return false;
+  var nx = W.A.nx, half = KARTE.half;
+  var i = Math.round((x + half) / RASTER), j = Math.round((z + half) / RASTER);
+  if (i < 0 || j < 0 || i >= nx || j >= nx) return false;
+  return m[j * nx + i] === 1;
+}
+
+/** Die Umrissregel aller Flaechen dieses Generators: fester Boden UND kein
+ *  See. `umriss` zieht abgelehnte Ecken schrittweise ein — ein Waldrand legt
+ *  sich damit von selbst ans Ufer, genau wie er sich an die Kueste legt. */
+function festAmSee(W) {
+  return function (x, z) { return fest(x, z) && !imSee(W, x, z); };
+}
 
 
 /* ==========================================================================
@@ -304,6 +389,52 @@ function fuegeEin(W, kind, variant, points, params) {
   return el;
 }
 
+/* ==========================================================================
+   J3 — Benennung
+
+   Jeder Name haengt am ELEMENTSEED, nicht an einem laufenden Zaehler: er
+   ueberlebt damit dasselbe wie die Bestueckung. `rolle` trennt gleichseedige
+   Rollen (der Fluss Nr. 2 und die Siedlung Nr. 2 haben verschiedene Seeds,
+   aber die Rolle macht es unabhaengig davon eindeutig).
+
+   Zwei Uebergaben sind wichtig:
+     elemente: W.elemente  — die WACHSENDE Liste dieses Laufs. S.elements zeigt
+       waehrend der Erzeugung noch die alte Karte; nur so weiss eine Siedlung,
+       dass ein Fluss neben ihr liegt, und ein Wald, dass eine Strasse
+       daneben laeuft.
+     korridor: false — dieselbe Begruendung wie bei der Wegsuche weiter unten:
+       die Korridormaske ist zum Erzeugungszeitpunkt die der VORIGEN Karte.
+   ========================================================================== */
+function benenne(W, art, x, z, seed, rolle, index) {
+  if (!W.o.namen) return null;
+  return nameFuer(art, x, z, seed, {
+    worldSeed: W.seed,
+    familie: W.o.sprachfamilie || undefined,
+    index: index, rolle: rolle,
+    vergabe: W.vergabe,
+    elemente: W.elemente,
+    korridor: false
+  });
+}
+
+/* Acht Sektoren, beginnend bei Osten und gegen den Uhrzeigersinn im
+   x/z-System (z zeigt nach Sueden). "Nordost" statt "Nordöstliche" — die
+   Namen werden zusammengesetzt ("Nordostäcker von …"). */
+var RICHTUNG = ["Ost", "Südost", "Süd", "Südwest", "West", "Nordwest", "Nord", "Nordost"];
+function himmelsrichtung(dx, dz) {
+  var a = Math.atan2(dz, dx);
+  var k = Math.round(a / (Math.PI / 4));
+  return RICHTUNG[((k % 8) + 8) % 8];
+}
+
+/** Setzt params.name, wenn ein Name erzeugt wurde. `name` ist ein neues,
+ *  OPTIONALES Parameterfeld — serializeElements nimmt params als Ganzes mit,
+ *  das Dateiformat aendert sich dadurch nicht. */
+function benenneElement(el, name) {
+  if (name) el.params.name = name;
+  return el;
+}
+
 /**
  * Verrauschter Umriss um einen Mittelpunkt — die Standardform aller Flaechen
  * dieses Generators. `regel` (optional) darf jede Ecke ablehnen; sie wird dann
@@ -331,220 +462,673 @@ function umriss(cx, cz, r, ecken, wob, seed, regel) {
 
 
 /* ==========================================================================
-   2. Fluesse — steilster Abstieg von den Gipfeln
+   2. Fluesse — dem Wasser nach, nicht dem Zufall
 
-   Von jeder Quelle laeuft ein Lauf dem Gefaelle nach, bis er Wasser, einen
-   anderen Lauf, eine Senke oder den Kartenrand erreicht. Zusammenfluesse
-   entstehen echt: ein Lauf, der einem anderen zu nahe kommt, endet dort — und
-   gibt seine Wassermenge weiter. Aus der Menge folgt die Breite, und weil die
-   Menge an jedem Zufluss springt, wird der Lauf dort in einen breiteren
-   Abschnitt geteilt. Der Bruch in der Breite liegt damit genau an der Stelle,
-   an der er auch in der Natur liegt.
+   Bis hierher war ein Fluss: nimm einen zufaellig gewaehlten der hoechsten
+   Gipfel, laufe steilsten Abstieg. Das ergibt einen Strich, der bergab geht,
+   aber keinen Fluss: er beginnt, wo nichts zusammenlaeuft, er wird breiter,
+   weil er lang ist, und zwei davon laufen parallel ins selbe Meer.
+
+   Jetzt entsteht er umgekehrt — aus dem Wasser, das da ist:
+
+     1. SENKENFUELLUNG (world/erosion.js). Auf dem Analyseraster wird ein
+        zweites, gefuelltes Hoehenfeld gerechnet. Es veraendert das Gelaende
+        nicht (Begruendung dort im Kopf); es liefert nur die Zusage, ohne die
+        keine Verfolgung durchhaelt: jede Zelle hat einen echt tieferen
+        Nachbarn, es gibt kein Steckenbleiben.
+     2. ABFLUSSNETZ. Je Zelle die Richtung des steilsten Gefaelles auf dem
+        GEFUELLTEN Feld, daraus das Einzugsgebiet jeder Zelle. `akk[id]` ist
+        damit die Flaeche, die ueber id abfliesst — in Zellen, und weil der
+        Regen unten auf Mittelwert 1 normiert wird, auch mit gewichtetem Regen.
+     3. REGEN AUS DEM GEMESSENEN ABFLUSS. Hat die Erosion gelaufen, traegt jede
+        Zelle nicht 1, sondern 1 + Anteil des dort gemessenen Abflusses. Das
+        verschiebt die Einzugsgebiete dorthin, wo wirklich Wasser lief, und
+        damit die Quellen und den Talweg. Ohne Erosionslauf faellt der Term weg
+        und es regnet gleichmaessig — siehe RUECKFALL.
+     4. QUELLEN sind die KOEPFE des Gerinnenetzes: Zellen ueber der Schwelle,
+        ueber denen keine weitere Zelle ueber der Schwelle liegt. Ein Fluss
+        beginnt damit genau dort, wo genug zusammengekommen ist.
+     5. VERFOLGUNG entlang der Abflussrichtungen bis ins Meer, an den
+        Kartenrand, in einen See oder in einen schon gelegten Lauf.
+
+   RUECKFALL. `abfluss` ist ein LAUFZEITfeld: nach dem Laden einer Datei steht
+   es auf null (Absicht, siehe world/terrain.js, felderSichern). Der Generator
+   faellt deshalb nicht auf das alte Verfahren zurueck, sondern auf
+   gleichmaessigen Regen — dasselbe Netz, nur ohne die Gewichtung. Es entstehen
+   weiterhin Fluesse, und sie liegen weiterhin in Taelern; sie wissen nur nicht,
+   wo das Wasser zuletzt wirklich lief. Ein zweites, voellig anderes Verfahren
+   fuer den halben Fall waere doppelte Pflege fuer weniger Ergebnis.
+
+   WARUM DER GENERATOR DIE EROSION NICHT SELBST ANWIRFT. Sie kostet auf 1024²
+   rund 456 ms, also das Achtfache des ganzen Weltgenerators, und sie
+   VERAENDERT das Hoehenfeld — erzeugeWelt sagt aber im Kopf zu, nichts zu
+   veraendern, und der Editor haengt daran (Undo, Vorschau, Abbruch). Die
+   Erosion hat ihren eigenen Knopf mit Zeitschnitt und Fortschritt; wer sie
+   gelaufen hat, bekommt gewachsene Fluesse, wer nicht, bekommt gute.
+
+   WARUM AUF DEM ANALYSERASTER (jede vierte Welteinheit) und nicht auf dem
+   Terraingitter: Faktor 16 an Zellen (66 049 statt 1 050 625 auf einer 1024er
+   Karte), und die Schrittweite von 4 Welteinheiten liegt ohnehin dicht an der
+   frueheren Abtastweite von 3. Das Analyseraster steht zudem schon.
    ========================================================================== */
 
-var FLUSS_SCHRITT = 3.0;          // Abtastweite eines Laufs in Welteinheiten
-var FLUSS_MAX = 900;              // harter Deckel der Schritte je Lauf
-// Arbeitsspeicher der Richtungsabtastung — einmal angelegt statt je Schritt
-// (ein Lauf macht bis zu 900 Schritte, eine Karte bis zu zwoelf Laeufe).
-var _zx = new Float64Array(16), _zz = new Float64Array(16), _zh = new Float64Array(16);
+var FLUSS_MAX = 900;              // harter Deckel der Zellen je Lauf
+var FLUSS_ZIEL_PUNKTE = 16;       // Griffe je Flusselement, siehe Vereinfachung
 
-function laufeAb(W, sx, sz, nr, flussRaster) {
-  var A = W.A, half = KARTE.half, nx = A.nx;
-  var pts = [{ x: sx, z: sz }];
-  var x = sx, z = sz, hier = heightAt(x, z);
-  var dx = 0, dz = 0;             // letzte Richtung (Traegheit gegen Zickzack)
-  var ende = "deckel", trifft = -1, trifftIdx = -1;
-  for (var s = 0; s < FLUSS_MAX; s++) {
-    // 16 Richtungen absuchen. Bewertet wird die Zielhoehe, dazu zwei
-    // Korrekturen: ein feines Rauschen (Maeander — ein Fluss folgt nicht der
-    // Rechenmitte) und ein Traegheitsbonus fuer die bisherige Richtung.
-    //
-    // BEIDE sind an die oertliche Reliefspanne gekoppelt, nicht an feste
-    // Zahlen. Grund (gemessen): auf einer 256er Wiese liegt das ganze Land in
-    // einem Hoehenband von rund 12 Einheiten, ein Schritt faellt oft nur um
-    // 0.2 — ein festes Rauschen von +-0.4 wuerde das Gefaelle vollstaendig
-    // uebertoenen, der Lauf irrte und endete nach wenigen Schritten in einer
-    // Scheinsenke. Im Gebirge waere dasselbe Rauschen wirkungslos. Relativ
-    // gerechnet maeandert der Fluss in der Ebene weit und folgt im engen Tal
-    // der Sohle.
-    var zx = _zx, zz2 = _zz, zh = _zh;
-    var gueltig = 0, hLo = 1e9, hHi = -1e9, k, a, cx, cz;
-    for (k = 0; k < 16; k++) {
-      a = k / 16 * Math.PI * 2;
-      cx = Math.cos(a); cz = Math.sin(a);
-      var px = x + cx * FLUSS_SCHRITT, pz = z + cz * FLUSS_SCHRITT;
-      if (px < -half + 2 || px > half - 2 || pz < -half + 2 || pz > half - 2) { zh[k] = 1e9; continue; }
-      var hk = heightAt(px, pz);
-      zx[k] = px; zz2[k] = pz; zh[k] = hk; gueltig++;
-      if (hk < hLo) hLo = hk;
-      if (hk > hHi) hHi = hk;
-    }
-    if (!gueltig) { ende = "rand"; break; }
-    var relief = Math.max(0.08, hHi - hLo);
-    var bestW = 1e9, bx = 0, bz = 0, bdx = 0, bdz = 0;
-    for (k = 0; k < 16; k++) {
-      if (zh[k] >= 1e9) continue;
-      a = k / 16 * Math.PI * 2;
-      cx = Math.cos(a); cz = Math.sin(a);
-      var w = zh[k]
-        + (fractal(zx[k] * 0.05, zz2[k] * 0.05, W.seed + 331 + nr) - 0.5) * relief * 0.55
-        - (cx * dx + cz * dz) * relief * 0.30;
-      if (w < bestW) { bestW = w; bx = zx[k]; bz = zz2[k]; bdx = cx; bdz = cz; }
-    }
-    x = bx; z = bz; dx = bdx; dz = bdz;
-    var hNeu = heightAt(x, z);
-    pts.push({ x: x, z: z });
-    // Zusammenfluss: liegt der neue Punkt auf einem fremden Lauf, endet dieser
-    // hier. Der Rasterspeicher haelt je Zelle Lauf- und Punktindex.
-    var gi = Math.round((x + half) / RASTER), gj = Math.round((z + half) / RASTER);
-    if (gi >= 0 && gj >= 0 && gi < nx && gj < nx) {
-      var gid = gj * nx + gi;
-      if (flussRaster.lauf[gid] >= 0 && flussRaster.lauf[gid] !== nr) {
-        trifft = flussRaster.lauf[gid]; trifftIdx = flussRaster.idx[gid];
-        ende = "zufluss"; break;
-      }
-    }
-    if (hNeu < WATER + 0.15) { ende = "muendung"; break; }
-    if (x < -half + 6 || x > half - 6 || z < -half + 6 || z > half - 6) { ende = "rand"; break; }
-    // Kein Gefaelle mehr: hier steht das Wasser. Ein Versuch mit doppeltem
-    // Schritt darf noch ueber eine flache Schwelle springen (sonst enden
-    // Laeufe in jeder Bodenwelle), danach ist es ein See.
-    if (hNeu > hier - 0.005) {
-      var raus = false;
-      for (var q = 0; q < 16; q++) {
-        var aq = q / 16 * Math.PI * 2;
-        var qx = x + Math.cos(aq) * FLUSS_SCHRITT * 2.2, qz = z + Math.sin(aq) * FLUSS_SCHRITT * 2.2;
-        if (qx < -half + 6 || qx > half - 6 || qz < -half + 6 || qz > half - 6) continue;
-        if (heightAt(qx, qz) < hier - 0.05) {
-          x = qx; z = qz; hNeu = heightAt(x, z); pts.push({ x: x, z: z }); raus = true; break;
+/* Was ein SEE ist — und was nur eine Mulde.
+
+   Die Senkenfuellung sagt je Zelle, um wie viel sie angehoben werden musste.
+   Diese Zahl allein taugt NICHT als Seekriterium, und das ist gemessen: auf
+   einer 256er Wiese liegen rund 10 % der Rasterzellen ueber 0.6 Welteinheiten
+   Auffuellung, verteilt auf Dutzende winziger Mulden. Wer an jeder davon einen
+   Fluss enden laesst, bekommt Laeufe von vier Zellen Laenge — die erste
+   Fassung dieses Abschnitts tat genau das und erzeugte auf 256 einen einzigen
+   Fluss.
+
+   Ein See braucht deshalb beides: TIEFE und FLAECHE. Die Regel und ihre
+   Schwellen stehen jetzt in generators/see.js (`seenAusFuellung`), weil dort
+   auch das Polygon entsteht — zwei Stellen mit derselben Schwelle waeren zwei
+   Stellen, an denen ein Bach in einem See endet, den niemand sieht, oder
+   umgekehrt an einem See vorbeilaeuft, der da ist.
+
+   WICHTIG fuer diesen Abschnitt: die Maske, die `seenAusFuellung` liefert,
+   reicht bis zur WASSERLINIE und nicht nur bis zur Kerntiefe. Ein Fluss endet
+   damit genau dort, wo die gezeichnete Wasserflaeche anfaengt, und nicht ein
+   bis zwei Zellen darin. */
+
+/* Wie viele Seen hoechstens Elemente werden. Nicht aus Angst vor der
+   Rechenzeit (die Ableitung ist eine Randverfolgung je Gebiet), sondern aus
+   demselben Grund, aus dem `wunsch` die Fluesse deckelt: eine Karte mit
+   dreissig Tuempeln liest sich nicht als Landschaft, sondern als Fehler. */
+var SEE_MAX = 6;
+
+/* Die Schwelle: wie gross das Einzugsgebiet einer Zelle mindestens sein muss,
+   damit dort ein Gerinne beginnt — als ANTEIL DER LANDFLAECHE, nicht als feste
+   Zellenzahl.
+
+   Das ist die Antwort auf "die Schwelle muss mit der Kartengroesse mitwachsen",
+   und sie ist die einzige, die sich selbst erklaert: ein Fluss ist auf jeder
+   Karte etwas, das ein Fuenfzigstel des Landes entwaessert. Damit bleibt die
+   DICHTE des Gerinnenetzes ueber alle Kartengroessen gleich (die Zahl der
+   Netzkoepfe liegt bei rund Landflaeche / (2 * Schwelle), also konstant), und
+   die Kartengroesse entscheidet nur noch darueber, wie viele davon gezeichnet
+   werden — das tut `wunsch`.
+
+   Gegenprobe mit einem Quantil ueber die Abflusswerte (erst so gebaut,
+   gemessen und verworfen): auf einer 256er Karte mit wenig Land liegt das
+   97,5. Perzentil bei einem Einzugsgebiet, das erst kurz vor der Muendung
+   erreicht wird — es entstand EIN Fluss von acht Zellen Laenge. Ein Quantil
+   misst die Verteilung, nicht die Landschaft. */
+var SCHWELLE_ANTEIL = 0.002;
+var SCHWELLE_MIN = 16;            // Zellen; darunter ist es keine Rinne
+
+/* Der gemessene Abfluss wirkt an ZWEI Stellen, und sie tun Verschiedenes:
+
+   REGEN_ABFLUSS wichtet, wie viel Wasser eine Zelle beisteuert. 3 heisst: die
+     nasseste Zelle der Karte zaehlt wie vier trockene. Das verschiebt die
+     Einzugsgebiete und damit die Quellen und die Breiten — nicht aber den WEG,
+     denn der haengt am gefuellten Hoehenfeld.
+
+   SOG_* wichtet die Richtungswahl: unter zwei absteigenden Nachbarn gewinnt
+     der nassere. Das ist der Teil, der den Verlauf selbst bewegt — Wasser
+     folgt der Rinne, die es gegraben hat. Die Spanne 0.55 (staubtrocken) bis
+     2.2 (Hauptrinne) heisst: eine Rinne darf ein rund viermal flacheres
+     Gefaelle haben und trotzdem gewaehlt werden. Mehr waere gefaehrlich — die
+     Tropfenbahnen sind eine Stichprobe, keine Flaechendeckung, und ein zu
+     starker Sog naehte den Fluss an einen einzelnen Tropfen.
+
+   Gemessen bei GLEICHER Auswahl (dieselben Startzellen, dasselbe Gelaende,
+   einmal mit und einmal ohne Sog; gemittelt wird der logarithmierte gemessene
+   Abfluss entlang der Bahn) ueber die Seeds 4711/1337/2024 auf 256:
+   Faktor 1.085 / 1.066 / 1.036. Der Sog fuehrt die Laeufe also durch messbar
+   nasseres Gelaende — aber nur um wenige Prozent, und das ist die ehrliche
+   Auskunft dieser Runde: die Hauptwirkung der Erosion auf die Fluesse laeuft
+   gar nicht ueber dieses Messfeld, sondern ueber das GELAENDE, das sie dabei
+   umgraebt. Die Rinne steht danach im Hoehenfeld, und dort findet die
+   Verfolgung sie ohnehin. Der Sog ist die Zugabe fuer die Faelle, in denen
+   zwei Rinnen aehnlich steil sind. Die Pruefung steht in
+   terra/test/13-fluesse.test.mjs; ein Vergleich ueber zwei GEWUERFELTE Karten
+   taugt dafuer nicht, weil dort auch die Auswahl der gezeichneten Laeufe
+   wechselt und staerker streut als der Effekt selbst. */
+var REGEN_ABFLUSS = 3;
+var SOG_TROCKEN = 0.55;
+var SOG_NASS = 2.2;
+
+/* Maeanderamplitude in Zellen, und wie oft der [1 2 1]-Mittelwert ueber den
+   Zug laeuft. Beides erklaert sich unten an der Stelle, an der es angewendet
+   wird. */
+/* Wieviel ein Zusammenfluss gegenueber blosser Lauflaenge wert ist. Begruendung
+   und Messung stehen unten bei der Auswahl. 3.0 heisst: ein Nebenfluss darf
+   ein Drittel so lang sein wie ein eigenstaendiger Lauf und wird trotzdem
+   gezogen. Bis zu dieser Runde stand hier 2.2 — die Anhebung ist die zweite
+   Haelfte der Stellschraube an minZufluss (siehe dort): erst seit getrimmte
+   Nebenflusskandidaten die Schwelle ueberhaupt ueberleben, hat ein hoeherer
+   Bonus etwas zu gewinnen. 2.2 verlor gemessen weiter (ein 13-Zellen-Zufluss
+   auf 512: 13 x 2.2 = 28.6 gegen eigenstaendige Taeler von 31 bis 35 Zellen),
+   3.5 brachte gegenueber 3.0 nichts Nennenswertes mehr (Summe ueber die
+   Messseeds 18 statt 17) — der Kandidatenvorrat ist dann erschoepft. */
+var ZUFLUSS_BONUS = 3.0;
+
+var MAEANDER = 1.1;
+var GLATT_PASSE = 3;
+
+/**
+ * Regen- und Sogfeld auf dem Analyseraster aus dem gemessenen Abflussfeld.
+ * Liefert null, wenn keines vorliegt — dann regnet es gleichmaessig und die
+ * Richtungswahl haengt allein am Gefaelle.
+ *
+ * Drei Dinge sind hier wichtig:
+ *
+ * SUMMIEREN, NICHT ABTASTEN. Das Abflussfeld liegt auf dem Terraingitter (eine
+ * Zelle je Welteinheit) und ist duenn: eine Tropfenbahn ist ein bis zwei Zellen
+ * breit. Wer je Analysezelle EINEN Gitterpunkt abliest, verfehlt drei von vier
+ * Bahnen. Summiert wird deshalb der ganze 4x4-Block.
+ *
+ * LOGARITHMISCH gegen das Maximum, exakt wie die Feuchte in world/biomfeld.js:
+ * die Verteilung ist extrem schief (ein Hauptlauf traegt Groessenordnungen
+ * mehr als jede Hangrinne), linear normiert waere alles ausser dem Hauptlauf
+ * null.
+ *
+ * REGEN NORMIERT AUF MITTELWERT 1. Ohne das truege `akk` bei erodiertem
+ * Gelaende ein Vielfaches, die Schwelle und die Breitenformel haetten je nach
+ * Vorgeschichte eine andere Eichung, und derselbe Fluss waere nach einem
+ * Erosionslauf ploetzlich doppelt so breit. Nach der Normierung bleibt `akk`
+ * die Einzugsflaeche in Zellen — der Abfluss verschiebt nur, WO sie liegt.
+ * Der SOG wird bewusst NICHT normiert: bei ihm zaehlt das Verhaeltnis
+ * benachbarter Zellen, und das ist gegen jede gemeinsame Skalierung immun.
+ */
+function wasserFelder(W, A) {
+  var feld = W.abfluss;
+  if (!feld) return null;
+  var VW = KARTE.vw, nx = A.nx, n = nx * nx;
+  var regen = new Float32Array(n), sog = new Float32Array(n), max = 0;
+  var i, j, gi, gj, id;
+  for (j = 0; j < nx; j++) {
+    var g0 = j * RASTER - (RASTER >> 1);
+    for (i = 0; i < nx; i++) {
+      var f0 = i * RASTER - (RASTER >> 1), s = 0;
+      for (gj = g0; gj < g0 + RASTER; gj++) {
+        if (gj < 0 || gj >= VW) continue;
+        for (gi = f0; gi < f0 + RASTER; gi++) {
+          if (gi < 0 || gi >= VW) continue;
+          s += feld[gj * VW + gi];
         }
       }
-      if (!raus) { ende = "senke"; break; }
+      regen[j * nx + i] = s;
+      if (s > max) max = s;
     }
-    hier = hNeu;
   }
-  return { punkte: pts, ende: ende, trifft: trifft, trifftIdx: trifftIdx, nr: nr };
+  if (!(max > 0)) return null;              // erodiert, aber nichts gemessen
+  var logRef = Math.log(1 + max) || 1;
+  var summe = 0;
+  for (id = 0; id < n; id++) {
+    var t = clamp(Math.log(1 + regen[id]) / logRef, 0, 1);
+    regen[id] = 1 + REGEN_ABFLUSS * t;
+    sog[id] = SOG_TROCKEN + (SOG_NASS - SOG_TROCKEN) * t;
+    summe += regen[id];
+  }
+  var f = n / summe;                        // Mittelwert auf 1 ziehen, s. o.
+  for (id = 0; id < n; id++) regen[id] *= f;
+  return { regen: regen, sog: sog };
 }
 
-function laufLaenge(pts) {
-  var l = 0;
-  for (var i = 1; i < pts.length; i++) l += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z);
-  return l;
+/** Zahl der Landzellen im Inneren des Analyserasters. */
+function landZellen(A) {
+  var nx = A.nx, m = 0;
+  for (var j = 1; j < nx - 1; j++) {
+    for (var i = 1; i < nx - 1; i++) if (!A.wasser[j * nx + i]) m++;
+  }
+  return m;
 }
 
-/** Breite aus der Wassermenge (hier: eingesammelte Lauflaenge). Wurzelgesetz —
- *  doppelte Breite braucht die vierfache Menge, so wirkt kein Bach wie ein Strom. */
-function breiteAus(menge) { return clamp(3.2 + Math.sqrt(Math.max(0, menge)) * 0.52, 3, 26); }
+/** Seen dieser Karte: Maske (bis zur Wasserlinie) und fertige Polygone.
+ *  Die ganze Regel steht in generators/see.js — hier wird nur das
+ *  Analyseraster durchgereicht. */
+function seenErmitteln(A, N) {
+  return seenAusFuellung(A.h, N.gefuellt, A.nx, {
+    raster: RASTER, half: KARTE.half,
+    zielPunkte: SEE_ZIEL_PUNKTE, maxSeen: SEE_MAX
+  });
+}
+
+/** Verfolgt das Netz von `start` abwaerts. Liefert die Zellkette und den Grund
+ *  des Endes. `belegt` (optional) haelt die Zellen schon gelegter Laeufe. */
+function laufeNetz(A, N, see, start, belegt) {
+  var zellen = [start], id = start;
+  /* `trifft`/`trifftIdx` sagen, IN WELCHEN Lauf und an welcher Stelle dieser
+     hier muendet. Sie werden hier von niemandem gelesen — die Breite kommt aus
+     `akk`, nicht aus einer Zuflussbuchhaltung. Sie stehen trotzdem im
+     Ergebnis, weil sie ohne jede Rechnung anfallen und die einzige Auskunft
+     sind, mit der sich die Baumstruktur des gezeichneten Netzes nachtraeglich
+     rekonstruieren laesst (Benennung nach Flusssystem, Beschriftung entlang
+     des Hauptstrangs). */
+  var ende = "deckel", trifft = -1, trifftIdx = -1;
+  for (var s = 0; s < FLUSS_MAX; s++) {
+    var t = N.ziel[id];
+    // Kein Ziel mehr: entweder ist die Zelle Meer (dann ist es eine Muendung)
+    // oder sie liegt am Gitterrand (dann laeuft das Wasser aus der Karte).
+    if (t < 0) { ende = A.wasser[id] ? "muendung" : "rand"; break; }
+    if (belegt && belegt.lauf[t] >= 0) {
+      zellen.push(t);
+      trifft = belegt.lauf[t]; trifftIdx = belegt.idx[t];
+      ende = "zufluss"; break;
+    }
+    zellen.push(t);
+    if (A.wasser[t]) { ende = "muendung"; break; }
+    // Der Fluss endet AM See — er soll nicht als Band ueber die Wasserflaeche
+    // gezeichnet werden. Was unterhalb weiterlaeuft, wird als eigener Lauf am
+    // Seeausgang neu begonnen (siehe seeAusgang).
+    if (see[t]) { ende = "see"; break; }
+    id = t;
+  }
+  return { zellen: zellen, ende: ende, trifft: trifft, trifftIdx: trifftIdx };
+}
+
+/** Erste Zelle unterhalb eines Sees, die nicht mehr unter Wasser steht.
+ *  -1, wenn der See ins Meer oder aus der Karte laeuft. */
+function seeAusgang(A, N, see, id) {
+  for (var s = 0; s < FLUSS_MAX; s++) {
+    var t = N.ziel[id];
+    if (t < 0 || A.wasser[t]) return -1;
+    if (!see[t]) return t;
+    id = t;
+  }
+  return -1;
+}
+
+/** Einzugsgebiet in Analysezellen -> in WELTEINHEITEN². Das ist die Groesse,
+ *  die als `params.einzug` mit dem Element gespeichert wird: sie haengt an
+ *  keiner Rechenaufloesung und bleibt deshalb auch dann richtig, wenn das
+ *  Analyseraster einmal feiner wird. */
+function einzugsFlaeche(akkZellen) {
+  return Math.max(1, akkZellen) * RASTER * RASTER;
+}
+
+/** Breite aus der Einzugsflaeche — die hydraulische Geometrie steht in
+ *  world/erosion.js, weil paths.js dieselbe Kurve fuer die Strichstaerke des
+ *  Kartenzeichens braucht (Begruendung dort). */
+function breiteAus(akkZellen) {
+  return breiteAusFlaeche(einzugsFlaeche(akkZellen));
+}
+
+/**
+ * Maeander: der Zug wird quer zu seiner Richtung ausgelenkt, ortsstabil aus
+ * `fractal`, mit einer Wellenlaenge von rund 50 Welteinheiten.
+ *
+ * Warum ueberhaupt: ein Talweg auf einem Gitter ist der kuerzeste Weg bergab,
+ * und der ist gerade. Ein Fluss ist es nicht — er hat mehr Wasser als Gefaelle
+ * und legt den Ueberschuss in Schlingen an.
+ *
+ * Warum an die FLACHHEIT gekoppelt: genau das ist der Unterschied zwischen der
+ * Schlucht und der Aue. Im Steilhang (ny unter cos 12°) ist die Auslenkung
+ * null, der Lauf bleibt in der Rinne; in der Ebene (ueber cos 5°) hat er die
+ * volle Amplitude von gut einer Zelle. Ohne diese Kopplung klettert der Fluss
+ * im Gebirge aus seinem eigenen Tal.
+ */
+function maeandere(pts, ny, W) {
+  var n = pts.length;
+  if (n < 5) return pts;
+  var out = [pts[0]];
+  for (var i = 1; i < n - 1; i++) {
+    var p = pts[i];
+    var tx = pts[i + 1].x - pts[i - 1].x, tz = pts[i + 1].z - pts[i - 1].z;
+    var l = Math.hypot(tx, tz);
+    if (!(l > 1e-6)) { out.push(p); continue; }
+    var flach = sstep(COS12, COS5, ny[i]);
+    var a = (fractal(p.x * 0.02, p.z * 0.02, W.seed + 331) - 0.5) * 2
+          * MAEANDER * RASTER * flach;
+    out.push({ x: p.x - tz / l * a, z: p.z + tx / l * a });
+  }
+  out.push(pts[n - 1]);
+  return out;
+}
+
+/**
+ * Gleitender [1 2 1]-Mittelwert ueber einen OFFENEN Zug, Enden fest.
+ *
+ * Dieselbe Antwort wie `randGlaetten` in world/biomfeld.js auf dasselbe
+ * Problem, und aus demselben Grund keine Kosmetik: der Weg des steilsten
+ * Abstiegs auf einem Gitter besteht aus Schritten in acht Richtungen, also aus
+ * 45°-Treppen. Douglas-Peucker macht daraus keine Kurve, sondern behaelt jede
+ * Ecke, die weiter als die Toleranz aussen liegt — die Punktzahl bleibt hoch
+ * UND das Bild bleibt eckig. Erst nach der Glaettung darf die Vereinfachung
+ * grob werden.
+ *
+ * Der Kern ist derselbe wie beim Hoehenprofil der Flussstempel in
+ * core/dirty.js (rebuildRivers), damit im ganzen Haus dieselbe Kurve entsteht.
+ */
+function glaetteZug(pts, passe) {
+  var n = pts.length;
+  if (n < 3) return pts;
+  var a = pts;
+  for (var p = 0; p < passe; p++) {
+    var b = new Array(n);
+    b[0] = a[0]; b[n - 1] = a[n - 1];
+    for (var i = 1; i < n - 1; i++) {
+      b[i] = { x: (a[i - 1].x + a[i].x * 2 + a[i + 1].x) * 0.25,
+               z: (a[i - 1].z + a[i].z * 2 + a[i + 1].z) * 0.25 };
+    }
+    a = b;
+  }
+  return a;
+}
 
 function erzeugeFluesse(W) {
-  var A = W.A, o = W.o;
-  var nx = A.nx;
-  var flussRaster = { lauf: new Int32Array(nx * nx).fill(-1), idx: new Int32Array(nx * nx) };
+  var A = W.A, o = W.o, nx = A.nx, n = nx * nx, half = KARTE.half;
   var laeufe = [];
-  var wunsch = Math.round((2 + 2.4 * skala()) * o.fluesse);
-  wunsch = clamp(wunsch, 0, 12);
-  if (!wunsch || !A.gipfel.length) return laeufe;
+  var wunsch = clamp(Math.round((2 + 2.4 * skala()) * o.fluesse), 0, 12);
+  if (!wunsch) return laeufe;
 
-  // Quellen: aus den hoechsten Gipfeln, mit Mindestabstand, seed-gewuerfelt
-  // durchgeschuettelt (sonst laegen bei jeder Karte alle Quellen im hoechsten
-  // Massiv). Der Strom haengt am Weltseed, nicht an der Aufrufreihenfolge.
-  var rq = strom(0, 0, W.seed + 4711);
-  var kandidaten = A.gipfel.slice(0, Math.max(wunsch * 5, 24));
-  var quellen = [], minAb = 34 * Math.sqrt(skala());
-  for (var i = 0; i < kandidaten.length && quellen.length < wunsch; i++) {
-    // Ueberspringen mit fester Wahrscheinlichkeit statt echtem Mischen: das
-    // haelt die Reihenfolge nach Hoehe grob erhalten (hohe Gipfel bleiben die
-    // wahrscheinlicheren Quellen), streut aber ueber das Massiv.
-    if (rq() < 0.25 && kandidaten.length - i > wunsch - quellen.length) continue;
-    var g = kandidaten[i], frei = true;
-    for (var q = 0; q < quellen.length; q++) {
-      if (Math.hypot(quellen[q].x - g.x, quellen[q].z - g.z) < minAb) { frei = false; break; }
-    }
-    if (frei) quellen.push(g);
+  var WF = wasserFelder(W, A);
+  W.abflussGenutzt = !!WF;
+  var N = abflussNetz(A.h, nx, nx, {
+    aussen: A.wasser,
+    regen: WF ? WF.regen : null,
+    sog: WF ? WF.sog : null
+  });
+  /* Seen ZUERST: der Fluss soll an der Wasserflaeche enden, die danach
+     gezeichnet wird, und nicht an einer Maske, die ein Stueck weiter innen
+     liegt. `W.seen` traegt die Polygone bis zu `erzeugeSeen` weiter — sie
+     werden erst NACH den Fluessen zu Elementen, damit die Flusselemente ihre
+     Listenposition und damit ihre Seeds behalten. */
+  var SE = seenErmitteln(A, N);
+  var see = SE.maske;
+  W.seen = SE.seen;
+  W.seeMaske = SE.maske;
+  var akk = N.akk, i, j, id;
+  var land = landZellen(A);
+  if (land < 64) return laeufe;                    // fast nur Wasser
+  var schwelle = Math.max(SCHWELLE_MIN, land * SCHWELLE_ANTEIL);
+
+  /* Koepfe des Gerinnenetzes. Eine Zelle ueber der Schwelle ist ein Kopf, wenn
+     NICHTS ueber der Schwelle in sie entwaessert — dort faengt der sichtbare
+     Lauf an. Ohne diese Bedingung waere jede Zelle des Netzes eine Quelle. */
+  var starkerZufluss = new Uint8Array(n);
+  for (id = 0; id < n; id++) {
+    if (akk[id] >= schwelle && N.ziel[id] >= 0) starkerZufluss[N.ziel[id]] = 1;
   }
-
-  for (var s = 0; s < quellen.length; s++) {
-    var lauf = laufeAb(W, quellen[s].x, quellen[s].z, laeufe.length, flussRaster);
-    if (lauf.punkte.length < 8) continue;            // Rinnsal, keine Karte wert
-    lauf.eigen = laufLaenge(lauf.punkte);
-    if (lauf.eigen < 40) continue;
-    lauf.zufluss = [];
-    var nr = laeufe.length;
-    lauf.nr = nr;
-    laeufe.push(lauf);
-    // In das Zusammenfluss-Raster eintragen (mit einer Zelle Toleranz, damit
-    // ein anderer Lauf ihn auch quer trifft).
-    for (var p = 0; p < lauf.punkte.length; p++) {
-      var pt = lauf.punkte[p];
-      merkeFluss(flussRaster, nx, pt.x, pt.z, nr, p);
-    }
-  }
-
-  // Wassermengen: rueckwaerts, weil ein Lauf nur in einen FRUEHEREN muenden
-  // kann (das Raster kennt spaetere noch nicht). Damit ist jeder Zufluss
-  // fertig gerechnet, bevor sein Ziel drankommt.
-  for (var t = laeufe.length - 1; t >= 0; t--) {
-    var L = laeufe[t];
-    L.gesamt = L.eigen;
-    for (var zz = 0; zz < L.zufluss.length; zz++) L.gesamt += L.zufluss[zz].menge;
-    if (L.trifft >= 0 && laeufe[L.trifft]) {
-      laeufe[L.trifft].zufluss.push({ bei: L.trifftIdx, menge: L.gesamt });
+  var offen = [], istKopf = new Uint8Array(n);
+  for (j = 1; j < nx - 1; j++) {
+    for (i = 1; i < nx - 1; i++) {
+      id = j * nx + i;
+      if (A.wasser[id] || akk[id] < schwelle || starkerZufluss[id]) continue;
+      offen.push(id); istKopf[id] = 1;
     }
   }
 
-  // Elemente bauen: je Lauf ein bis drei Abschnitte, geteilt an den groessten
-  // Zufluessen. Die Abschnitte teilen sich den Trennpunkt, das Wasserband
-  // laeuft also ohne Luecke weiter — nur breiter.
+  /* Rohlaeufe: erst OHNE Ruecksicht aufeinander verfolgen. Nur so kennt jeder
+     Lauf sein wahres Ende und sein wahres Einzugsgebiet — und danach laesst
+     sich entscheiden, welcher der Hauptstrang ist und welcher der Zufluss.
+     Die Warteschlange waechst dabei: wer in einem See endet, setzt an dessen
+     Ausgang einen neuen Kopf. Ohne das fehlte unterhalb jedes Sees der ganze
+     Unterlauf — dort ist naemlich kein Netzkopf mehr, weil oberhalb reichlich
+     Wasser ankommt. */
+  var roh = [];
+  for (var w = 0; w < offen.length && roh.length < 4000; w++) {
+    var b = laufeNetz(A, N, see, offen[w], null);
+    b.kopf = offen[w];
+    b.muendungsZelle = b.zellen[b.zellen.length - 1];
+    b.endAkk = akk[b.muendungsZelle];
+    roh.push(b);
+    if (b.ende === "see") {
+      var aus = seeAusgang(A, N, see, b.muendungsZelle);
+      if (aus >= 0 && !istKopf[aus]) { istKopf[aus] = 1; offen.push(aus); }
+    }
+  }
+
+  /* Vorauswahl: die laengsten Rohlaeufe. Nur eine Sparmassnahme fuer die
+     Auswahl darunter, die je Runde ueber alle Kandidaten geht — ein Lauf, der
+     schon UNGETRIMMT zu den kurzen gehoert, wird getrimmt nicht laenger. */
+  roh.sort(function (p, q) {
+    return (q.zellen.length - p.zellen.length) || (q.endAkk - p.endAkk) || (p.kopf - q.kopf);
+  });
+  if (roh.length > 200) roh.length = 200;
+
+  /* Mindestlaenge, an der Kartengroesse bemessen: 10 % der Rasterkante, nie
+     unter 10 Zellen. Auf einer 256er Karte sind das 40 Welteinheiten (genau
+     die Grenze, die auch das alte Verfahren zog), auf einer 1024er 104 —
+     kuerzer ist auf der jeweiligen Karte kein Fluss, sondern ein Strich. */
+  var minZellen = Math.max(10, Math.round(nx * 0.10));
+  /* Die Stellschraube dieser Runde (Bedienung, Teil 3): ein Lauf, der in einem
+     schon gelegten MUENDET, darf halb so kurz sein wie ein eigenstaendiger.
+
+     Der Befund der Flussrunde stand schon im Kommentar der Auswahl unten:
+     trotz ZUFLUSS_BONUS blieben es 0 bis 3 Muendungen je Karte, ein hoeherer
+     Bonus aenderte NICHTS (bei 3.0 gemessen: dieselben Zahlen) — "was dann
+     noch fehlt, sind Nebenfluesse UNTER der Mindestlaenge". Der Bonus konnte
+     also gar nicht mehr greifen: der Nebenfluss wird am Zusammenfluss
+     abgeschnitten, faellt damit unter minZellen und wurde eine Zeile VOR der
+     Bonusrechnung endgueltig verworfen. Nicht der Bonus war zu klein, die
+     Schwelle stand davor.
+
+     Warum die halbe Mindestlaenge fuer Muendende vertretbar ist: die
+     Mindestlaenge schuetzt vor dem "Strich" — einer kurzen, isolierten Linie,
+     die als Fehler liest. Ein kurzer Lauf, der sichtbar in einen groesseren
+     muendet, ist kein Strich, sondern ein Nebenfluss: er ist an beiden Enden
+     verankert (Quelle im Gelaende, Muendung im Netz). Unter etwa 6 Zellen
+     (24 Welteinheiten) traegt aber auch ein Nebenfluss kein Element mehr —
+     nach Glaettung und Vereinfachung bleibt davon kaum ein Bogen uebrig.
+
+     Die Schwelle allein reichte gemessen NICHT (nur 512/Seed 7 verbesserte
+     sich): die freigeschalteten Kandidaten verloren danach den Gewichtsvergleich
+     gegen laengere eigenstaendige Taeler. Deshalb gehoert die Anhebung von
+     ZUFLUSS_BONUS auf 3.0 (siehe oben) zu DERSELBEN Aenderung — jede Haelfte
+     ist ohne die andere wirkungslos, und genau das war der Befund der
+     Flussrunde: Bonus 3.0 wurde damals schon einmal gemessen und brachte
+     nichts, weil die Schwelle davor stand.
+
+     Messung (2 Groessen x 5 Seeds 4711/1337/2024/7/99, Zusammenfluesse je
+     Karte, abfluss: null, jeweils vorher -> nachher beide Haelften):
+       256:  0/0/1/0/1  ->  0/0/1/0/2   (Seed 7: fast nur Wasser, 0 Laeufe)
+       512:  4/3/2/1/3  ->  4/3/3/3/4
+     Auf 512 muendet damit rund die Haelfte der sieben Laeufe je Karte, und
+     keine Karte liegt mehr unter 3. Auf 256 ist wenig zu holen, und das ist
+     ehrlich gemessen GEOGRAPHIE, nicht Auswahl: die kleinen Karten entwaessern
+     radial in getrennten Becken zum Meer (die Diagnose je Runde zeigte dort
+     KEINEN einzigen muendenden Kandidaten — auch nicht bei halbierter
+     Kopfschwelle SCHWELLE_ANTEIL, das wurde ausprobiert und verworfen).
+     Die Zahl der Laeufe je Karte (wunsch) bleibt gleich; es aendert sich nur,
+     WELCHE gewaehlt werden — mehr davon muenden. */
+  var minZufluss = Math.max(6, minZellen >> 1);
+  var belegt = { lauf: new Int32Array(n).fill(-1), idx: new Int32Array(n) };
+
+  /* AUSWAHL UND LEGEN IN EINEM: je Runde wird der Kandidat gelegt, dessen
+     GETRIMMTER Lauf am meisten wiegt (Laenge, mit Zuschlag fuer eine Muendung
+     in einen schon gelegten Lauf — siehe unten).
+
+     Der Umweg ueber "trimmen, dann waehlen" ist der Kern und war die dritte
+     Fassung dieser Stelle. Erst wurde nach Endeinzugsgebiet sortiert und ein
+     Praefix genommen — mit dem Ergebnis, dass sich unter den ersten zwoelf
+     Kandidaten ein Dutzend Quellaeste DESSELBEN Oberlaufs draengten, die
+     einander nach drei Zellen trafen: gemessen auf 1024/4711 blieb von
+     zwoelf gewaehlten Laeufen genau EINER uebrig. Getrimmt gemessen faellt
+     genau diese Sorte Kandidat sofort durch, und die naechste Runde nimmt
+     stattdessen den laengsten Ast, der noch irgendwo eigenes Land hat.
+
+     Dass die Bewertung mit jeder Runde neu laeuft, kostet nichts Nennenswertes
+     (Kandidaten x Runden x Lauflaenge, also einige Hunderttausend Schritte)
+     und ist der Grund, warum sich die Laeufe ueber die Karte verteilen, ohne
+     dass eine Mindestabstandsregel noetig waere: der Abstand entsteht aus der
+     Sache, nicht aus einer Zahl.
+
+     Ein Kandidat unter der ABSOLUTEN Untergrenze (minZufluss) ist ENDGUELTIG
+     erledigt — `belegt` waechst nur, sein getrimmter Lauf kann also nie wieder
+     laenger werden. Zwischen minZufluss und minZellen dagegen nur UEBERSPRUNGEN,
+     nicht verworfen: sein Ende kann in einer spaeteren Runde noch zu "zufluss"
+     werden (ein neu gelegter Lauf kreuzt seinen Weg), und dann gilt fuer ihn
+     die niedrigere Schwelle. Das endgueltige Verwerfen an dieser Stelle war
+     der Grund, warum der ZUFLUSS_BONUS ins Leere lief (siehe minZufluss oben). */
+  var tot = new Uint8Array(roh.length), bestW = 0;
+  while (laeufe.length < wunsch) {
+    var bestI = -1, bestL = null;
+    bestW = 0;
+    for (var r = 0; r < roh.length; r++) {
+      if (tot[r]) continue;
+      var K = laufeNetz(A, N, see, roh[r].kopf, belegt);
+      if (K.zellen.length < minZufluss) { tot[r] = 1; continue; }
+      if (K.zellen.length < minZellen && K.ende !== "zufluss") continue;
+      /* Ein Lauf, der in einem schon gelegten MUENDET, zaehlt mehr als seine
+         Laenge. Gemessen ohne diesen Bonus: ueber neun Karten (3 Groessen x 3
+         Seeds) entstand GENAU EIN Zusammenfluss — der laengste noch freie Zug
+         ist fast immer ein eigenes Tal, nie ein Nebenfluss, weil der Nebenfluss
+         am Zusammenfluss abgeschnitten wird und damit kuerzer ist. Das Netz war
+         also da, man sah es nur nie. Die Muendung ist aber das, was ein
+         Flusssystem als System lesbar macht; sie ist mehr wert als dieselbe
+         Strichlaenge irgendwo allein im Gelaende. Der Wert des Bonus und die
+         zugehoerige Schwelle minZufluss sind EINE Stellschraube mit zwei
+         Haelften — Messung und Begruendung stehen oben bei minZufluss. */
+      var wert = K.zellen.length * (K.ende === "zufluss" ? ZUFLUSS_BONUS : 1);
+      if (wert > bestW) { bestW = wert; bestL = K; bestI = r; }
+    }
+    if (bestI < 0) break;
+    tot[bestI] = 1;
+    var L = bestL;
+    L.nr = laeufe.length;
+    L.akk = new Float64Array(L.zellen.length);
+    var ny = new Float64Array(L.zellen.length);
+    var pts = [];
+    for (var k = 0; k < L.zellen.length; k++) {
+      var zk = L.zellen[k], zi = zk % nx, zj = (zk - zi) / nx;
+      pts.push({ x: zi * RASTER - half, z: zj * RASTER - half });
+      L.akk[k] = akk[zk];
+      ny[k] = A.ny[zk];
+    }
+    // Maeander VOR der Glaettung: die Glaettung nimmt der Auslenkung die
+    // Ecken, die Auslenkung ist danach eine Schlinge statt eines Zickzacks.
+    L.punkte = glaetteZug(maeandere(pts, ny, W), GLATT_PASSE);
+    laeufe.push(L);
+    for (var p2 = 0; p2 < L.zellen.length; p2++) {
+      var zz = L.zellen[p2];
+      if (belegt.lauf[zz] < 0) { belegt.lauf[zz] = L.nr; belegt.idx[zz] = p2; }
+    }
+  }
+
   for (var e = 0; e < laeufe.length; e++) abschnitteEinsetzen(W, laeufe[e]);
   return laeufe;
 }
 
-function merkeFluss(fr, nx, x, z, nr, idx) {
-  var half = KARTE.half;
-  var i0 = Math.round((x + half) / RASTER), j0 = Math.round((z + half) / RASTER);
-  for (var dj = -1; dj <= 1; dj++) {
-    for (var di = -1; di <= 1; di++) {
-      var i = i0 + di, j = j0 + dj;
-      if (i < 0 || j < 0 || i >= nx || j >= nx) continue;
-      var id = j * nx + i;
-      if (fr.lauf[id] < 0) { fr.lauf[id] = nr; fr.idx[id] = idx; }
-    }
-  }
-}
-
+/**
+ * Ein Lauf wird zu einem bis drei Flusselementen. Geteilt wird dort, wo das
+ * Einzugsgebiet SPRINGT — also an den groessten Zufluessen. Der Bruch in der
+ * Breite liegt damit genau an der Stelle, an der er auch in der Natur liegt,
+ * und die Abschnitte teilen sich den Trennpunkt, das Wasserband laeuft also
+ * ohne Luecke weiter.
+ *
+ * Die Breite kommt aus `akk`, nicht aus der Buchfuehrung ueber die
+ * GEZEICHNETEN Zufluesse. Das ist der stille Gewinn dieser Runde: ein Fluss
+ * ist auch dann richtig breit, wenn seine Nebenfluesse unter der Schwelle
+ * geblieben und deshalb gar nicht auf der Karte sind.
+ */
 function abschnitteEinsetzen(W, L) {
-  var pts = L.punkte, n = pts.length;
-  // Trennstellen: Zufluesse, die die Menge deutlich anheben (> 25 %) und weit
-  // genug von den Enden und voneinander liegen.
-  var zu = L.zufluss.slice().sort(function (a, b) { return (a.bei - b.bei) || (a.menge - b.menge); });
-  var trenn = [];
-  for (var i = 0; i < zu.length; i++) {
-    var bei = zu[i].bei;
-    if (bei < 10 || bei > n - 10) continue;
-    if (trenn.length && bei - trenn[trenn.length - 1] < 14) continue;
-    if (zu[i].menge < L.eigen * 0.25) continue;
-    trenn.push(bei);
-    if (trenn.length >= 2) break;
+  var pts = L.punkte, n = pts.length, i;
+  /* EIN Name je Lauf, nicht je Abschnitt: die zwei bis drei Elemente sind
+     derselbe Fluss, nur mit verschiedener Breite. Gemessen wird in der Mitte
+     des Laufs — dort liegt die Landschaft, die ihn praegt, und nicht die
+     Quelle am Hang. */
+  var mitte = pts[n >> 1];
+  var flussName = benenne(W, "fluss", mitte.x, mitte.z,
+    elementSeed(W.seed, 9000 + L.nr), "fluss", L.nr);
+  L.name = flussName;
+
+  // Spruenge im Einzugsgebiet suchen: mindestens ein Viertel mehr auf einen
+  // Schritt, weit genug von den Enden und voneinander.
+  var kandidaten = [];
+  for (i = 10; i < n - 10; i++) {
+    if (L.akk[i] > L.akk[i - 1] * 1.25) kandidaten.push({ bei: i, sprung: L.akk[i] / L.akk[i - 1] });
   }
+  kandidaten.sort(function (a, b) { return (b.sprung - a.sprung) || (a.bei - b.bei); });
+  var trenn = [];
+  for (i = 0; i < kandidaten.length && trenn.length < 2; i++) {
+    var bei = kandidaten[i].bei, frei = true;
+    for (var t = 0; t < trenn.length; t++) if (Math.abs(trenn[t] - bei) < 14) frei = false;
+    if (frei) trenn.push(bei);
+  }
+  trenn.sort(function (a, b) { return a - b; });
+
   var grenzen = [0].concat(trenn, [n - 1]);
   for (var s = 0; s < grenzen.length - 1; s++) {
     var a = grenzen[s], b = grenzen[s + 1];
     var teil = pts.slice(a, b + 1);
     if (teil.length < 4) continue;
-    // Menge an dieser Stelle: eigene Laufstrecke bis zum Abschnittsende plus
-    // alle Zufluesse, die davor muenden.
-    var menge = laufLaenge(pts.slice(0, b + 1));
-    for (var z2 = 0; z2 < L.zufluss.length; z2++) if (L.zufluss[z2].bei <= b) menge += L.zufluss[z2].menge;
-    var breite = breiteAus(menge);
-    var punkte = vereinfache(teil, 1.7, 16);
+    var breite = breiteAus(L.akk[b]);
+    /* I3/H — die GESPEICHERTE Abflusskennzahl. `L.akk[b]` ist das
+       Einzugsgebiet am unteren Ende des Abschnitts, also der groesste Abfluss
+       entlang dieses Stuecks (akk waechst flussabwaerts nie). Umgerechnet auf
+       Welteinheiten² wandert sie als `params.einzug` in die Datei — und nur
+       deshalb darf paths.js die Strichstaerke daran haengen: das Laufzeitfeld
+       `abfluss` waere nach dem Laden null. */
+    var einzug = Math.round(einzugsFlaeche(L.akk[b]));
+    /* Vereinfachung: dieselbe Funktion, die auch die Strassen der Wegsuche
+       eindampft. FLUSS_ZIEL_PUNKTE = 16 Griffe je Element — das ist die
+       Groesse, die der Editor als bearbeitbar vorfuehrt (die Waelder des
+       Generators haben 8 bis 12), und genau die Begruendung, mit der
+       world/biomfeld.js seine ZIEL_PUNKTE gewaehlt hat. Ein Lauf ueber die
+       ganze Karte hat vor der Vereinfachung bis zu 900 Punkte. */
+    var punkte = vereinfache(teil, 1.7, FLUSS_ZIEL_PUNKTE);
     if (punkte.length < 2) continue;
-    fuegeEin(W, "pfad", "fluss", punkte, {
+    benenneElement(fuegeEin(W, "pfad", "fluss", punkte, {
       breite: Math.round(breite * 2) / 2,
-      tiefe: Math.round(clamp(1.4 + breite * 0.22, 1, 8) * 2) / 2
-    });
+      tiefe: Math.round(clamp(1.4 + breite * 0.22, 1, 8) * 2) / 2,
+      einzug: einzug
+    }), flussName);
     // Belegung: der Flusslauf selbst und ein Uferstreifen sind kein Bauland.
     for (var p = 0; p < teil.length; p += 2) stempel(W.bel, teil[p].x, teil[p].z, breite * 0.6 + 3, B_FLUSS);
   }
+}
+
+
+/* ==========================================================================
+   2b. Seen — aus der Senke wird ein Element
+
+   Die Ableitung selbst steht in generators/see.js; hier wird sie zu Elementen.
+   Drei Entscheidungen, die dabei fallen:
+
+   NACH DEN FLUESSEN. Nicht, weil ein See spaeter entstuende, sondern weil
+   `elementSeed` an der Listenposition haengt: waeren die Seen vorher
+   eingetragen, saehe jede bestehende Karte anders bestueckt aus, obwohl an den
+   Fluessen nichts geaendert wurde. Die Maske selbst wird dagegen VOR den
+   Fluessen gebraucht (siehe erzeugeFluesse) — Reihenfolge der RECHNUNG und
+   Reihenfolge der LISTE sind zwei verschiedene Dinge.
+
+   `stau: 0`. Der Wasserspiegel wird nicht mitgegeben. Er ergaebe sich aus der
+   Fuellhoehe und waere damit eine zweite Wahrheit neben dem Gelaende — nach
+   dem ersten Verschieben des Sees eine falsche. genSee liest ihn stattdessen
+   bei jeder Erzeugung am Ufer ab (see.js, seeSpiegel); auf einer Kontur, die
+   ohnehin auf der Wasserlinie verfolgt wurde, ist das dieselbe Zahl.
+
+   BELEGUNG. Die Seemaske liegt auf demselben Raster wie `bel` — sie wird
+   deshalb direkt hineinodert statt in Kreisen gestempelt. Damit steht kein
+   Dorf, kein Acker und kein Wald im See.
+   ========================================================================== */
+
+function erzeugeSeen(W) {
+  var seen = W.seen || [];
+  if (!seen.length) return seen;
+  var bel = W.bel, i;
+  // Der See ist kein Bauland — dieselbe Rolle wie das Flussbett.
+  var maske = W.seeMaske;
+  if (maske && maske.length === bel.feld.length) {
+    for (i = 0; i < maske.length; i++) if (maske[i]) bel.feld[i] |= B_FLUSS;
+  }
+  for (i = 0; i < seen.length; i++) {
+    var s = seen[i];
+    var el = fuegeEin(W, "flaeche", "see", s.points, {
+      stau: 0,
+      /* Uferbreite an der Groesse des Sees: ein Tuempel mit fuenf Einheiten
+         Brandungssaum waere zur Haelfte Schaum. Der Radius eines
+         flaechengleichen Kreises ist das ehrlichste Mass dafuer, das ohne
+         eine zweite Rechnung zu haben ist. */
+      saum: Math.round(clamp(Math.sqrt(s.zellen * RASTER * RASTER / Math.PI) * 0.10,
+        1.5, 9) * 2) / 2,
+      ufer: true,
+      dichte: 1
+    });
+    /* Seen tragen Wassernamen — `see` ist in namen.js seit jeher eine
+       gefuehrte Art, sie hatte bisher nur keinen Aufrufer. */
+    benenneElement(el, benenne(W, "see", s.mitte.x, s.mitte.z, el.seed, "see", i));
+    s.el = el;
+  }
+  return seen;
 }
 
 
@@ -578,7 +1162,7 @@ function erzeugeSiedlungen(W, laeufe) {
   for (f = 0; f < laeufe.length; f++) {
     var L = laeufe[f];
     for (p = 0; p < L.punkte.length; p++) markiere(flussMarke, nx, L.punkte[p].x, L.punkte[p].z);
-    if (L.ende === "muendung" || L.ende === "senke") {
+    if (L.ende === "muendung" || L.ende === "see") {
       var letzt = L.punkte[L.punkte.length - 1];
       markiere(muendMarke, nx, letzt.x, letzt.z);
     }
@@ -659,9 +1243,9 @@ function siedlungEinsetzen(W, ort, nr, stil) {
   // Die erste Siedlung ist die groesste — eine Karte braucht eine Hauptstadt.
   var gross = nr === 0 ? 1.35 : (nr === 1 ? 1.1 : 1);
   var r = (16 + rr(rs, 0, 9)) * gross * Math.sqrt(skala());
-  var pts = umriss(ort.x, ort.z, r, ri(rs, 8, 10), 0.30, W.seed + 700 + nr, fest);
+  var pts = umriss(ort.x, ort.z, r, ri(rs, 8, 10), 0.30, W.seed + 700 + nr, festAmSee(W));
   var netz = wpick(rs, [["raster", 3], ["gebogen", 4], ["zellen", 2], ["ring", 2]]);
-  fuegeEin(W, "flaeche", "viertel", pts, {
+  var viertel = fuegeEin(W, "flaeche", "viertel", pts, {
     netz: netz,
     block: Math.round(rr(rs, 14, 26)),
     gasse: Math.round(rr(rs, 2.75, 4.5) * 4) / 4,
@@ -669,6 +1253,11 @@ function siedlungEinsetzen(W, ort, nr, stil) {
     dichte: Math.round(rr(rs, 0.9, 1.5) * 20) / 20,
     stil: stil
   });
+  // Der Ortsname entsteht AN DER STELLE der Siedlung — sie stand vorher schon
+  // wegen ihrer Lage da (Furt, Muendung, Bucht, Pass), und genau diese Lage
+  // waehlt nun das Grundwort. Deshalb heisst ein Fischerdorf nicht Steinhalde.
+  ort.name = benenne(W, "ort", ort.x, ort.z, viertel.seed, "ort", nr);
+  benenneElement(viertel, ort.name);
   ort.r = r;
   ort.stil = stil;
   stempel(W.bel, ort.x, ort.z, r + 4, B_ORT);
@@ -684,12 +1273,19 @@ function siedlungEinsetzen(W, ort, nr, stil) {
     if (belegt(W.bel, fx, fz, B_ORT | B_FLUSS)) continue;
     if (slopeAt(fx, fz) < COS12) continue;                 // Aecker liegen eben
     var fr = rr(rs, 9, 15) * Math.sqrt(skala());
-    fuegeEin(W, "flaeche", "feld", umriss(fx, fz, fr, ri(rs, 6, 8), 0.24, W.seed + 760 + nr * 4 + v, fest), {
+    var feld = fuegeEin(W, "flaeche", "feld", umriss(fx, fz, fr, ri(rs, 6, 8), 0.24, W.seed + 760 + nr * 4 + v, festAmSee(W)), {
       drehung: Math.round(rr(rs, 0, 180)),
       reihe: Math.round(rr(rs, 2.4, 4.2) * 10) / 10,
       hoehe: Math.round(rr(rs, 0.8, 1.2) * 20) / 20,
       frucht: wpick(rs, [["weizen", 5], ["kohl", 2], ["lavendel", 1], ["brache", 1]])
     });
+    /* Acker haben keinen ERFUNDENEN Namen — sie gehoeren zum Ort und heissen
+       nach ihm. Die Himmelsrichtung kommt aus der tatsaechlichen Lage zum
+       Ortsmittelpunkt: sie macht die beiden Aecker EINER Siedlung
+       unterscheidbar und ist zugleich die Auskunft, die ein Spielleiter am
+       Tisch braucht. */
+    benenneElement(feld, ort.name
+      ? himmelsrichtung(fx - ort.x, fz - ort.z) + "äcker von " + ort.name : null);
     stempel(W.bel, fx, fz, fr + 2, B_ORT);
     gesetzt++;
   }
@@ -772,7 +1368,7 @@ function erzeugeStrassen(W, orte) {
     }
     var rw = strom(e, 1, W.seed + 303);
     var breite = Math.round(rr(rw, 5, 8) * 2) / 2;
-    fuegeEin(W, "pfad", "strasse", punkte, {
+    var strasse = fuegeEin(W, "pfad", "strasse", punkte, {
       breite: breite,
       belag: wpick(rw, [["erde", 5], ["stein", 2], ["pflaster", 1]]),
       haeuser: rw() < 0.75,
@@ -780,6 +1376,10 @@ function erzeugeStrassen(W, orte) {
       abstand: Math.round(rr(rw, 12, 24)),
       streuung: Math.round(rr(rw, 1, 3) * 5) / 5
     });
+    /* Strassen bekommen keinen erfundenen Namen, sondern ihren wahren: eine
+       Strasse heisst nach dem, was sie verbindet. Deshalb steht hier kein
+       nameFuer-Aufruf — die Ortsnamen liegen schon vor. */
+    if (W.o.namen && a.name && b.name) strasse.params.name = "Weg von " + a.name + " nach " + b.name;
     // Vormerken, damit die naechste Strasse sich anlehnt und die Vegetation
     // nicht auf der Fahrbahn beginnt. Feiner abgetastet als die Stuetzpunkte,
     // sonst blieben zwischen zwei Griffen Luecken.
@@ -865,19 +1465,23 @@ function flaechenSetzen(W, kand, anzahl, gesetzt, minAb, art) {
     var rv = strom(nr, art === "wald" ? 2 : 3, W.seed + 404);
     var r = (art === "wald" ? rr(rv, 20, 40) * o.waldanteil : rr(rv, 16, 30)) * Math.sqrt(skala());
     r = clamp(r, 10, 70);
-    var pts = umriss(c.x, c.z, r, ri(rv, 8, 12), 0.34, W.seed + 800 + nr * 3 + (art === "wald" ? 0 : 1), fest);
+    var pts = umriss(c.x, c.z, r, ri(rv, 8, 12), 0.34, W.seed + 800 + nr * 3 + (art === "wald" ? 0 : 1), festAmSee(W));
     if (art === "wald") {
-      fuegeEin(W, "flaeche", "wald", pts, {
+      var wald = fuegeEin(W, "flaeche", "wald", pts, {
         dichte: Math.round(rr(rv, 0.8, 1.6) * 20) / 20,
         klumpen: Math.round(rr(rv, 0.35, 0.75) * 50) / 50,
         mischung: Math.round(rr(rv, 0.1, 0.6) * 50) / 50,
         unterholz: Math.round(rr(rv, 0.2, 0.6) * 50) / 50
       });
+      benenneElement(wald, benenne(W, "wald", c.x, c.z, wald.seed, "wald", nr));
     } else {
-      fuegeEin(W, "flaeche", "wiese", pts, {
+      // Wiesen als "region" benannt: eine Wiese traegt in der Regel keinen
+      // eigenen Namen, wohl aber der Landstrich, auf dem sie liegt.
+      var wiese = fuegeEin(W, "flaeche", "wiese", pts, {
         dichte: Math.round(rr(rv, 0.9, 1.7) * 20) / 20,
         blumen: Math.round(rr(rv, 0.15, 0.5) * 50) / 50
       });
+      benenneElement(wiese, benenne(W, "region", c.x, c.z, wiese.seed, "wiese", nr));
     }
     stempel(W.bel, c.x, c.z, r * 0.7, B_GRUEN);
     c.art = art;
@@ -934,7 +1538,7 @@ function erzeugeRanken(W, orte) {
     var hoehe = Math.round(lerp(120, 300, rang * rang) * rr(rr2, 0.88, 1.12) / 5) * 5;
     var dicke = Math.round(lerp(0.75, 1.6, rang) * rr(rr2, 0.9, 1.15) * 20) / 20;
     var staedtchen = i === 0 || rr2() < 0.4;
-    fuegeEin(W, "ranke", "ranke", [{ x: Math.round(g.x), z: Math.round(g.z) }], {
+    var ranke = fuegeEin(W, "ranke", "ranke", [{ x: Math.round(g.x), z: Math.round(g.z) }], {
       hoehe: clamp(hoehe, 60, 400),
       straenge: ri(rr2, 4, 5),
       dicke: clamp(dicke, 0.5, 2.5),
@@ -951,6 +1555,10 @@ function erzeugeRanken(W, orte) {
       stadtStil: stil,
       stadtDichte: Math.round(rr(rr2, 0.7, 1.3) * 10) / 10
     });
+    /* Ranken tragen die altertuemliche Wortwelt des Arbor-Kults, unabhaengig
+       von der Sprachfamilie der Karte: eine Ranke ist ueberall dasselbe
+       Wesen, und ihr Name soll sich hoerbar von den Ortsnamen abheben. */
+    benenneElement(ranke, benenne(W, "ranke", g.x, g.z, ranke.seed, "ranke", i));
     stempel(W.bel, g.x, g.z, 24, B_ORT);
   }
 }
@@ -975,24 +1583,75 @@ function erzeugeWelt(seed, opt) {
   seed = seed | 0;
   var A = analysiere(seed);
   var W = { seed: seed, o: optionen(opt), A: A, bel: neueBelegung(A), elemente: [] };
+  W.abfluss = abflussFeld(W.o);
+  /* J3: EIN Dublettenregister fuer die ganze Karte. Es traegt die vergebenen
+     Namen und zaehlt, wie oft ein Bestimmungs- bzw. Grundwort schon benutzt
+     wurde — daraus wird in namen.js eine Strafe auf das Gewicht. Ohne das
+     bestuende eine Karte mit sechs Fluessen leicht aus sechsmal "-bach". */
+  W.vergabe = neueVergabe();
 
   // Reihenfolge ist Inhalt, nicht Geschmack:
+  //   Erosion VOR dem Wuerfeln    — nicht hier, sondern beim Nutzer: die
+  //     Fluesse lesen `abfluss`, wenn eines vorliegt (siehe Abschnitt 2). Der
+  //     Generator stoesst sie nicht selbst an; sie kostet das Achtfache dieses
+  //     ganzen Laufs und wuerde das Hoehenfeld veraendern, was erzeugeWelt oben
+  //     ausdruecklich zusagt nicht zu tun.
   //   Fluesse VOR den Siedlungen  — die Orte suchen Muendungen und Furten.
+  //   Seen NACH den Fluessen      — ihre MASKE entsteht zwar vorher (die
+  //     Verfolgung braucht sie), ihre ELEMENTE kommen danach: `elementSeed`
+  //     haengt an der Listenposition, und eine bestehende Karte soll nicht
+  //     anders bestueckt werden, nur weil jetzt Seen darin stehen.
   //   Strassen NACH den Siedlungen — sie verbinden, was steht.
   //   Vegetation NACH den Strassen — sie weicht den Korridoren aus.
   //   Arbor ZULETZT               — die Ranken sollen die Orte nicht verdraengen.
   var laeufe = erzeugeFluesse(W);
+  var seen = erzeugeSeen(W);
   var orte = erzeugeSiedlungen(W, laeufe);
   erzeugeStrassen(W, orte);
   erzeugeVegetation(W);
   erzeugeRanken(W, orte);
 
+  /* Der Name der Karte entsteht ZULETZT: erst jetzt kennt die Lagemessung
+     Fluesse, Strassen, Waelder und Ranken. Gemessen wird an der Kartenmitte,
+     das ist der Ort, den die Karte am ehesten meint. Er haengt am Element,
+     das keines ist — deshalb ein eigener, vom Weltseed abgeleiteter Schluessel. */
+  var region = W.o.namen
+    ? nameFuer("region", 0, 0, elementSeed(seed, 31337), {
+        worldSeed: seed, familie: W.o.sprachfamilie || undefined,
+        rolle: "karte", index: 0, vergabe: W.vergabe,
+        elemente: W.elemente, korridor: false,
+        // Die Karte selbst spricht IMMER die Sprache der Karte — eine
+        // Sprachinsel darf einzelne Orte umbenennen, nicht das Ganze.
+        fremd: false
+      })
+    : null;
+
   var liste = W.elemente;
   liste.ms = ((typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now()) - t0;
+  liste.name = region;
   liste.bericht = {
     fluesse: laeufe.length, siedlungen: orte.length,
+    // Runde H: wie viele Binnenseen die Senkenfuellung hergegeben hat. Ohne
+    // diese Zeile ist von aussen nicht zu sehen, ob eine Karte gar keine
+    // Wanne hatte oder ob die Ableitung ausgefallen ist.
+    seen: seen.length,
+    // I3: lag ein gemessenes Abflussfeld vor, oder hat es gleichmaessig
+    // geregnet? Ohne diese Zeile ist von aussen nicht zu unterscheiden, ob der
+    // Rueckfall gegriffen hat — und genau das will man wissen.
+    abflussGenutzt: !!W.abflussGenutzt,
+    // Runde H (Bedienung, Teil 3): wie viele der gezeichneten Laeufe in einem
+    // ANDEREN Lauf muenden. Das ist die Kennzahl, an der die Auswahl unten
+    // gemessen wird (siehe ZUFLUSS_BONUS / minZufluss) — ohne sie liesse
+    // sich "das Netz hat Y-Muendungen" nur am Bild ablesen.
+    zusammenfluesse: (function (l) {
+      var m = 0;
+      for (var zi = 0; zi < l.length; zi++) if (l[zi].ende === "zufluss") m++;
+      return m;
+    })(laeufe),
     gipfel: A.gipfel.length, senken: A.senken.length, paesse: A.paesse.length,
-    landAnteil: A.landAnteil
+    landAnteil: A.landAnteil,
+    // J3: wie viele Elemente einen Namen tragen und wie die Region heisst.
+    region: region, namen: W.vergabe.anzahl
   };
   return liste;
 }
