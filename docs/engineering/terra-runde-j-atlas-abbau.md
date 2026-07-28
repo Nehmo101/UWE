@@ -2,9 +2,10 @@
 
 > **ERLEDIGT (27.07.2026).** Der hier inventarisierte Abbau ist durchgeführt;
 > Atlas 3D existiert nicht mehr. Das Dokument bleibt als Protokoll stehen: es
-> hält fest, WAS es gab, WORAN es hing und WARUM einzelne Dinge (die
-> Frame-Direktiven in `security-headers.ts`, die Prompt-Dateien unter
-> `docs/prompts/atlas-*`, der Asset-Katalog) bewusst stehen geblieben sind.
+> hält fest, WAS es gab, WORAN es hing und WARUM einzelne Dinge (etwa die
+> Frame-Direktiven in `security-headers.ts`) bewusst stehen geblieben sind.
+> Die Prompt-Dateien unter `docs/prompts/atlas-*` und der Asset-Katalog wurden
+> inzwischen doch entfernt (finaler 2D-Paket-Abbau, `ab8708ae`).
 > `packages/backup` verweist im Code auf Vorabbefund 1.
 >
 > Abweichungen von der hier vorgeschlagenen Reihenfolge: die Pfade heissen

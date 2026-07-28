@@ -14,13 +14,14 @@ Daten liegen in SQLite (PostgreSQL optional), die KI läuft standardmäßig loka
 
 ---
 
-## Die vier Oberflächen
+## Die fünf Oberflächen
 
 | App | Port | Zielgruppe | Inhalt |
 |---|---|---|---|
 | **Studio** (`apps/studio`) | 3000 | Spielleitung, Owner | Weltbearbeitung, Admin, KI, Daily Admin OS. `dm_only`-Inhalte sind hier bewusst sichtbar. |
 | **Portal** (`apps/portal`) | 3001 | Mitspieler:innen | Spieler-Wiki. Zeigt ausschließlich freigegebene, gefilterte Inhalte. |
-| **Brain** (`apps/brain`) | 3002 | nur Owner | Privater Wissens- und Daily-Admin-Bereich. Owner-only, lokal. |
+| **Brain** (`apps/brain`) | 3002 | nur Owner | Privater Wissens- und Daily-Admin-Bereich inkl. Mail-Center. Owner-only, lokal. |
+| **Family** (`apps/family`) | 3004 | Haushalt | Geteilter Familienbereich: Verträge, Dokumente, Küche, Kalender (`uwe-family.db`). |
 | **Landing** (`apps/landing`) | 3103 | öffentlich | Startseite auf dem Apex-Origin. Genau drei Routen, keine Inhalte. |
 
 Dazu kommt der **Command Center** (`apps/rtx-connector-client`, Tauri) als
@@ -72,8 +73,10 @@ pnpm bootstrap:owner
 apps/studio    → DM-App          — Weltbearbeitung, Admin, KI, Daily Admin OS
 apps/portal    → Spieler-Wiki    — nur gefilterte, freigegebene Inhalte
 apps/brain     → Owner-Bereich   — privater Daily-Admin- und Wissensbereich
+apps/family    → Familienbereich — geteilte Haushaltsdaten (uwe-family.db)
 apps/landing   → Startseite      — Apex-Origin, genau drei Routen
 packages/*     → gesamte Fachlogik
+terra/         → Karteneditor    — eigenständige ES-Module, per Copy eingebettet
 ```
 
 **Goldene Regel:** Fachlogik gehört in `packages/`, nie in Next.js Route Handler
@@ -92,12 +95,17 @@ oder React-Komponenten.
 | `@uwe/mcp` | MCP-Server für Studio, Portal und Brain |
 | `@uwe/assets` | Upload-Pfade, MIME-Validierung |
 
-Fachliche Feature-Pakete: `agent-jobs`, `atlas`, `atlas-3d`, `atlas-editor`,
-`backup`, `brain-assistant`, `calendar`, `cloudflare-edge`, `connector`,
-`cookbook`, `dnd-api`, `host-monitor`, `image-studio`, `kitchen`, `mail`,
-`mail-core`, `page-ai-review`, `passkeys`, `pdf-campaign-import`, `player-hub`,
-`roll-tables`, `scan-inbox`, `soundboard`, `static-export`, `theme-studio`,
-`web-search`.
+Fachliche Feature-Pakete: `agent-jobs`, `backup`, `brain-assistant`,
+`calendar`, `cloudflare-edge`, `connector`, `cookbook`, `daily-cockpit`,
+`dnd-api`, `host-cockpit`, `host-monitor`, `image-studio`, `kitchen`,
+`knoteforge-import`, `mail`, `mail-core`, `passkeys`, `pdf-campaign-import`,
+`player-hub`, `roll-tables`, `scan-inbox`, `soundboard`, `static-export`,
+`theme-studio`, `web-search`.
+
+Der Karteneditor **Terra** lebt als eigenständiges ES-Modul-Projekt unter
+`terra/` (außerhalb des pnpm-Workspace) und wird per `scripts/copy-terra.mjs`
+nach Studio/Portal kopiert; die Atlas-/Atlas-3D-Editoren wurden am 2026-07-27
+vollständig entfernt (siehe `docs/engineering/terra-runde-j-atlas-abbau.md`).
 
 ### Wohin neuer Code gehört
 
@@ -129,9 +137,10 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Funktionsumfang
 
 **Studio** — Welten, Seiten und Wiki-Struktur mit Sichtbarkeitssteuerung;
-Charakterbögen und Statblocks; Atlas- und Atlas-3D-Karteneditoren; Bildstudio;
-Etiketten und Drucklisten; Soundboard; Sitzungsplanung; Import von
-Kampagnen-PDFs; Admin-Bereich mit API-Tokens, Rollen, Audit-Log und Agent-Jobs.
+Charakterbögen und Statblocks; Terra-Karteneditor (Three.js, unter
+`/worlds/:slug/karten`); Bildstudio; Etiketten und Drucklisten; Soundboard;
+Sitzungsplanung; Import von Kampagnen-PDFs; Admin-Bereich mit API-Tokens,
+Häkchen-Zugangsverwaltung und Agent-Jobs.
 
 **Portal** — Lesesicht auf freigegebene Welteninhalte, Charakterbögen der
 eigenen Figur, Spieler-Hub. Kein Zugriff auf `dm_only`.

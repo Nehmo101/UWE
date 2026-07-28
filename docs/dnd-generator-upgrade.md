@@ -172,4 +172,4 @@ pnpm test
 
 - [daily-admin-os.md](daily-admin-os.md) — Daily Admin OS Integration
 - [life-brain-privacy.md](life-brain-privacy.md) — Gleiche Privacy-Regeln für Life-Brain
-- [ai-brain-mail/SMOKE_TESTS.md](ai-brain-mail/SMOKE_TESTS.md) — Gesamt-Smoke-Tests
+- `ai-brain-mail/SMOKE_TESTS.md` — Gesamt-Smoke-Tests (Datei entfernt)

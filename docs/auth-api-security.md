@@ -118,9 +118,13 @@ Public exposure checks surface when `PUBLIC_BASE_URL` / `CLOUDFLARE_TUNNEL` indi
 - `maskSecretValue()` / `maskTokenForDisplay()` for UI
 - Audit metadata strips `token`, `password`, `authorization`, prompt bodies
 
-## 2FA Preparation
+## 2FA (TOTP)
 
-Models `TwoFactorSecret` and `TwoFactorChallenge` are schema-ready. Login flow integration is **not** active yet — enable in a follow-up PR.
+Fully active in the login flow: `performLoginFlow` issues a `challengeToken`
+when the account has 2FA enabled, `completeTwoFactorLogin` verifies the TOTP
+code (rate-limited per IP + challenge). Shared route orchestration lives in
+`packages/auth/src/two-factor-routes.ts`; Studio wires it under
+`/api/auth/two-factor/*`. Models: `TwoFactorSecret`, `TwoFactorChallenge`.
 
 ## Password reset (self-service)
 

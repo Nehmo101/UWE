@@ -51,6 +51,33 @@ function checkMarkdownFile(relativePath) {
     }
   }
 
+  issues.push(...checkRelativeMarkdownLinks(relativePath, content));
+
+  return issues;
+}
+
+/**
+ * Broken relative .md links rot silently: docs-check.yml only ever WARNED about
+ * them, so 25 dead links accumulated by 2026-07. This makes them a hard error —
+ * scoped to relative links onto .md targets inside the repo, so external URLs
+ * and anchors stay out of scope.
+ */
+function checkRelativeMarkdownLinks(relativePath, content) {
+  const issues = [];
+  const linkRe = /\[[^\]]*\]\(([^)\s]+?\.md)(#[^)]*)?\)/g;
+  for (const match of content.matchAll(linkRe)) {
+    const target = match[1];
+    if (/^[a-z]+:\/\//i.test(target) || target.startsWith("mailto:")) {
+      continue;
+    }
+    const base = target.startsWith("/")
+      ? path.join(root, target)
+      : path.join(root, path.dirname(relativePath), target);
+    if (!fs.existsSync(base)) {
+      const line = content.slice(0, match.index).split("\n").length;
+      issues.push(`${relativePath}:${line}: broken relative link -> ${target}`);
+    }
+  }
   return issues;
 }
 
