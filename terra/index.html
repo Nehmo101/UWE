@@ -37,11 +37,12 @@
   <div id="rail"></div>
   <div id="panel" class="card"></div>
   <div id="bar" class="card">
-    <label for="seed">Seed</label>
-    <input id="seed" type="text" value="1337" spellcheck="false">
-    <button id="seedApply">Übernehmen</button>
+    <label for="seed" title="Startwert des Zufalls — gleicher Seed, gleiches Gelände">Seed</label>
+    <input id="seed" type="text" value="1337" spellcheck="false"
+           title="Startwert des Zufalls — gleicher Seed, gleiches Gelände">
+    <button id="seedApply" title="Erzeugt das Basisgelände neu aus dem Seed (Elemente bleiben)">Übernehmen</button>
     <div class="sep"></div>
-    <label for="biomSel">Biom</label>
+    <label for="biomSel" title="Grundstimmung der Karte: Farben, Bewuchs, Höhenprofil">Biom</label>
     <!-- width:auto inline: die globale select-Regel (style.css) setzt 100%
          fuer Panel-Selects, in der flexiblen Leiste soll er kompakt bleiben -->
     <!-- 25 Biome aus docs/engineering/terra-biomkatalog.md, gruppiert nach
@@ -90,23 +91,24 @@
       </optgroup>
     </select>
     <div class="sep"></div>
-    <label for="kartenSel">Karte</label>
+    <label for="kartenSel" title="Kantenlänge der Karte in Zellen — ein Wechsel erzeugt das Gelände neu">Karte</label>
     <!-- Kartengröße (H1b). Ein Wechsel erzeugt die Karte neu — das
          Höhen-Delta des Speicherformats gilt nur je Kartengröße. -->
-    <select id="kartenSel" style="width:auto">
+    <select id="kartenSel" style="width:auto"
+            title="Kantenlänge der Karte in Zellen — ein Wechsel erzeugt das Gelände neu">
       <option value="256" selected>Klein (256)</option>
       <option value="512">Mittel (512)</option>
       <option value="1024">Groß (1024)</option>
     </select>
     <div class="sep"></div>
-    <label>Tageszeit</label>
-    <button class="tod" data-t="morgen">Morgen</button>
-    <button class="tod" data-t="mittag">Mittag</button>
-    <button class="tod" data-t="abend">Abendrot</button>
-    <button class="tod" data-t="nebel">Nebel</button>
-    <button class="tod" data-t="nacht">Nacht</button>
+    <label title="Licht und Stimmung der Szene">Tageszeit</label>
+    <button class="tod" data-t="morgen" title="Weiches, warmes Morgenlicht">Morgen</button>
+    <button class="tod" data-t="mittag" title="Neutrales Tageslicht">Mittag</button>
+    <button class="tod" data-t="abend" title="Tiefe Sonne, warme Farben">Abendrot</button>
+    <button class="tod" data-t="nebel" title="Diffuses Licht, kurze Sicht">Nebel</button>
+    <button class="tod" data-t="nacht" title="Sterne, Mond, selbstleuchtende Ranken">Nacht</button>
     <div class="sep"></div>
-    <label for="wetterSel">Wetter</label>
+    <label for="wetterSel" title="Zweite Stimmungsachse: Wolken, Niederschlag, Wind">Wetter</label>
     <!-- Zweite Stimmungsachse neben der Tageszeit. Die VALUES sind die
          Schlüssel der WETTER-Tabelle in world/atmosphere.js; der Listener
          hängt dort in initAtmosphere() (io.js kennt das Wetter nicht).
@@ -120,12 +122,22 @@
       <option value="sturm">Sturm</option>
     </select>
     <div class="sep"></div>
-    <button id="snapBtn">Raster</button>
-    <button id="fxBtn" class="on">Effekte</button>
+    <button id="snapBtn" title="Punkte rasten auf ein 2-Einheiten-Gitter ein">Raster</button>
+    <button id="fxBtn" class="on" title="Nachbearbeitung (Bloom, Kanten, Farbklima) an/aus">Effekte</button>
+    <!-- Bedienungsrunde: Wolken- und Vollbild-Schalter. Verdrahtung in
+         editor/io.js; der Wolkenzustand gehört zur Karte (S.wolken). -->
+    <button id="wolkenBtn" class="on" title="Wolken und ihre Bodenschatten an/aus">Wolken</button>
+    <button id="vollbildBtn" title="Editor im Vollbild (Esc beendet)">Vollbild</button>
     <div class="sep"></div>
-    <button id="saveBtn">Speichern</button>
-    <button id="loadBtn">Laden</button>
-    <button id="pngBtn">PNG</button>
+    <button id="saveBtn" title="Speichert die Karte — im Studio in die Datenbank, als Datei nur mit gesetztem JSON-Häkchen">Speichern</button>
+    <!-- Bedienungsrunde: der JSON-Download hängt am Häkchen statt an jedem
+         Klick auf „Speichern“. Ohne Datenbank (Doppelklick auf index.html)
+         setzt io.js das Häkchen fest. -->
+    <label class="chk" title="Beim Speichern zusätzlich eine JSON-Datei herunterladen">
+      <input type="checkbox" id="jsonChk"> JSON
+    </label>
+    <button id="loadBtn" title="Karte aus einer JSON-Datei laden">Laden</button>
+    <button id="pngBtn" title="Aktuelle Ansicht als PNG-Bild exportieren">PNG</button>
     <div class="sep"></div>
     <!-- D2 — Höhenbild-Import. Steht jetzt statisch hier statt in io.js
          erzeugt zu werden: die Leiste gehört ins Dokument, nicht in den

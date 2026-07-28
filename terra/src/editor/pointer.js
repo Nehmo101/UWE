@@ -21,6 +21,10 @@ import { holeBeschriftungsschicht } from '../ui/beschriftung.js';
 import { raycaster, _ndc, camera } from './camera.js';
 import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
 import { rankePlatzierbar, rankeAchse, rankeKernPunkt } from '../generators/vines.js';
+// Bedienungsrunde: Objekte auf Blattplateaus. plateauHoeheAt liest die von
+// genRanke veroeffentlichten Plateau-Rahmen (el.plateaus) — zyklusfrei,
+// objects.js importiert nichts aus editor/.
+import { plateauHoeheAt } from '../generators/objects.js';
 import { sucheWeg } from '../generators/wegsuche.js';
 import { pushUndo, undo, redo } from './history.js';
 import { toast, buildPanel, updateHint, buildRail } from '../ui/panels.js';
@@ -47,6 +51,34 @@ var _zpA = { x: 0, y: 0, z: 0 }, _zpB = { x: 0, y: 0, z: 0 };
    ist der ganze Zustand, den das Werkzeug braucht.
    ========================================================================== */
 var wegStart = null;
+
+/* ==========================================================================
+   Bedienungsrunde — Objekte auf Blattplateaus
+
+   Der Mausstrahl wird gegen die elementeigenen Ranken-Meshes geworfen (die
+   Blaetter liegen dort als Geometrie); ein Treffer zaehlt nur, wenn
+   plateauHoeheAt an der Stelle wirklich eine Blattoberflaeche kennt — sonst
+   traefe auch der Stamm oder ein herabhaengender Bewuchsstrang. Rueckgabe ist
+   der Bodenpunkt AUF dem Blatt (x/z), oder null.
+   ========================================================================== */
+function plateauPunkt(ev) {
+  var meshes = [], i, c;
+  for (i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind !== "ranke" || !el.group) continue;
+    if (!Array.isArray(el.plateaus) || !el.plateaus.length) continue;
+    for (c = 0; c < el.group.children.length; c++) meshes.push(el.group.children[c]);
+  }
+  if (!meshes.length) return null;
+  rayFrom(ev);
+  var hits = raycaster.intersectObjects(meshes, true);
+  for (i = 0; i < hits.length; i++) {
+    var pkt = hits[i].point;
+    var ph = plateauHoeheAt(pkt.x, pkt.z);
+    if (ph !== null && Math.abs(ph - pkt.y) < 3.5) return { x: pkt.x, z: pkt.z };
+  }
+  return null;
+}
 
 /** Bricht eine begonnene Suche ab. Liefert true, wenn wirklich eine lief. */
 function wegAbbrechen() {
@@ -106,6 +138,29 @@ export function initPointer(cv) {
                         startY: e.clientY, pxProH: zugPixelProHoehe(zEl) };
           }
         }
+        return;
+      }
+    }
+    /* Bedienungsrunde: Klick auf ein Blattplateau setzt das Objekt DORT oben
+       auf. Der Zweig steht VOR der Bodenpunkt-Pruefung, weil der Strahl hoch
+       am Blatt oft keinen (oder einen weit dahinterliegenden) Boden trifft.
+       Das Element merkt sich die Lage in params.aufPlateau — genObjekt
+       platziert dann ueber die Blattoberflaeche statt ueber heightAt, auch
+       bei jedem spaeteren Neuaufbau. Kein snapPt: das Raster gehoert zum
+       Boden, auf einem Blatt schoebe es den Punkt womoeglich ueber den Rand. */
+    if (ed.tool === "objekt" && ed.variantOf.objekt !== "inseln") {
+      var pp = plateauPunkt(e);
+      if (pp) {
+        ptr.mode = "scatter";
+        pushUndo();
+        var pel = mkElement("objekt", ed.variantOf.objekt, [{ x: pp.x, z: pp.z }],
+          copyParams(curParams()), nextSeed());
+        pel.params.aufPlateau = true;
+        S.elements.push(pel);
+        regenElement(pel);
+        ptr.scatterEl = pel;
+        ptr.lastX = pp.x; ptr.lastZ = pp.z;
+        select(pel);
         return;
       }
     }
@@ -617,13 +672,19 @@ function verarbeiteZeiger(now) {
     }
     return;
   }
-  if (ptr.mode === "scatter" && p && ptr.scatterEl) {
-    var d = Math.hypot(p.x - ptr.lastX, p.z - ptr.lastZ);
-    if (d > Math.max(2.5, ptr.scatterEl.params.streuung * 0.8)) {
-      var sp2 = snapPt(p);
-      ptr.scatterEl.points.push(sp2);
-      ptr.lastX = sp2.x; ptr.lastZ = sp2.z;
-      regenElement(ptr.scatterEl);
+  if (ptr.mode === "scatter" && ptr.scatterEl) {
+    // Bedienungsrunde: eine Plateau-Streuung zieht ihre Punkte vom Blatt,
+    // nicht vom Boden darunter — dort landete der Zug sonst im Nichts.
+    var aufBlatt = !!ptr.scatterEl.params.aufPlateau;
+    var sq = aufBlatt ? plateauPunkt(_zeigerEv) : p;
+    if (sq) {
+      var d = Math.hypot(sq.x - ptr.lastX, sq.z - ptr.lastZ);
+      if (d > Math.max(2.5, ptr.scatterEl.params.streuung * 0.8)) {
+        var sp2 = aufBlatt ? { x: sq.x, z: sq.z } : snapPt(sq);
+        ptr.scatterEl.points.push(sp2);
+        ptr.lastX = sp2.x; ptr.lastZ = sp2.z;
+        regenElement(ptr.scatterEl);
+      }
     }
     return;
   }
@@ -642,8 +703,14 @@ function verarbeiteZeiger(now) {
 
 function onKey(e) {
   if (e.ctrlKey || e.metaKey) {
-    if (e.code === "KeyZ" && !e.shiftKey) { e.preventDefault(); undo(); return; }
-    if (e.code === "KeyY" || (e.code === "KeyZ" && e.shiftKey)) { e.preventDefault(); redo(); return; }
+    /* Undo/Redo ueber e.key statt e.code: e.code nennt die PHYSISCHE Taste,
+       und auf QWERTZ sitzt das aufgedruckte Z auf der physischen KeyY —
+       Strg+Z loeste dort ein Redo aus. e.key folgt der Tastaturbelegung und
+       trifft damit QWERTZ und QWERTY gleichermassen; Strg+Shift+Z bleibt als
+       zweiter Redo-Weg erhalten. */
+    var taste = typeof e.key === "string" ? e.key.toLowerCase() : "";
+    if (taste === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
+    if (taste === "y" || (taste === "z" && e.shiftKey)) { e.preventDefault(); redo(); return; }
     return;
   }
   for (var i = 0; i < TOOLS.length; i++) {

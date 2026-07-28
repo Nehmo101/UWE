@@ -505,7 +505,12 @@ function initPipeline(camera) {
     antialias: true,
     preserveDrawingBuffer: true,   // fuer den PNG-Export
     powerPreference: 'high-performance',
-    alpha: false
+    alpha: false,
+    // Bedienungsrunde: Stencil fuer die Fluss-Kreuzungen (flussMat in
+    // generators/paths.js zeichnet je Pixel genau EINE Flussflaeche). Gilt
+    // fuer den Direktpfad (Effekte aus); der Composer-Pfad bekommt seinen
+    // Puffer am Render-Target unten.
+    stencil: true
   });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -519,7 +524,11 @@ function initPipeline(camera) {
   var w = window.innerWidth, h = window.innerHeight;
   var pr = renderer.getPixelRatio();
   composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
-    Math.round(w * pr), Math.round(h * pr), { type: THREE.HalfFloatType, samples: 4 }));
+    Math.round(w * pr), Math.round(h * pr),
+    // stencilBuffer: siehe Renderer-Option oben — ohne ihn liefe der
+    // Fluss-Stencil im Composer-Pfad ins Leere und Kreuzungen blendeten
+    // wieder doppelt.
+    { type: THREE.HalfFloatType, samples: 4, stencilBuffer: true }));
   renderPass = new RenderPass(scene, camera);
   // Bloom-Startwerte gelten nur bis zum ersten setLook — die Tageszeit-Presets
   // (atmosphere.js) ueberschreiben Staerke/Radius/Schwelle ab dem ersten

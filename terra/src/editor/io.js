@@ -17,7 +17,7 @@ import { buildPanel, toast, setzeKartenWege } from '../ui/panels.js';
 // J1: die Einbettung. Gleiche Richtung wie setzeKartenWege oben — io.js meldet
 // seine Wege an, bruecke.js importiert NICHTS aus terra. Ausserhalb eines
 // Rahmens (Doppelklick, Node-Tests) bleibt das Modul vollstaendig still.
-import { setzeBrueckenWege, brueckeAktiv } from './bruecke.js';
+import { setzeBrueckenWege, brueckeAktiv, brueckeSofort } from './bruecke.js';
 // I4: Zielpruefung der Beschriftungen. beschriftung.js haengt nur an three und
 // core/ — der Import ist zyklusfrei und bleibt es, solange das so ist.
 import { zielPruefen, anPfadPruefen } from '../ui/beschriftung.js';
@@ -416,6 +416,9 @@ function validiereKarteObjekt(d) {
     biom: (typeof d.biom === "string" && BIOME[d.biom]) ? d.biom : "wiese",
     // J3: tolerant wie `biom` — unbekannte Werte fallen auf "auto" zurueck.
     sprachfamilie: typeof d.sprachfamilie === "string" ? d.sprachfamilie : "auto",
+    // Bedienungsrunde: Wolkenschalter, tolerant — nur ein ausdrueckliches
+    // false schaltet ab, jede Datei ohne das Feld zeigt Wolken wie bisher.
+    wolken: d.wolken !== false,
     /* J4: Herkunftsvermerk. Tolerant wie `biom` und `wetter` — was nicht
        stimmt, wird null. Der enthaltene Parametersatz laeuft durch DIESELBE
        Klemmung wie ein frischer, damit eine von Hand veraenderte Datei nichts
@@ -470,6 +473,9 @@ function kartenDaten() {
     // dem Laden keine bereits vergebenen Seeds erneut erzeugt.
     seedZaehler: S.elementSeedCounter
   };
+  // Bedienungsrunde: nur ein ABGESCHALTETER Wolkenhimmel wird vermerkt — eine
+  // Karte mit Wolken ergibt byteidentisch dieselbe Datei wie bisher.
+  if (S.wolken === false) data.wolken = false;
   // D1/A3: die neuen Felder nur schreiben, wenn es etwas zu schreiben gibt.
   // Eine Karte ohne Marker und ohne Stempel ergibt dadurch byteidentisch
   // dieselbe Datei wie vor dieser Runde.
@@ -505,6 +511,12 @@ function uebernehmeKarte(karte, knoten) {
   S.biom = karte.biom;
   document.getElementById("biomSel").value = S.biom;
   S.sprachfamilie = karte.sprachfamilie;
+  // Bedienungsrunde: Wolkenschalter der Karte. sky.js liest ihn je Bild,
+  // atmosphere.js gated den Bodenschatten — beide sehen den Wert ueber S;
+  // der setTod-Aufruf weiter unten wendet den Schatten sofort an.
+  S.wolken = karte.wolken !== false;
+  var wolkenBtn = document.getElementById("wolkenBtn");
+  if (wolkenBtn) wolkenBtn.classList.toggle("on", S.wolken !== false);
   // J4: der Vermerk gehoert zur Karte und wird mit ihr ersetzt — sonst erbte
   // eine handgebaute Karte die Herkunft der zuvor geladenen.
   herkunftsVermerk = karte.herkunft;
@@ -650,7 +662,10 @@ var letzteBaseKopie = null;
 function autosaveNoetig() {
   var sicht = JSON.stringify({ e: serializeElements(), m: serializeMarker(),
     s: S.worldSeed, b: S.biom, g: KARTE.map, z: S.elementSeedCounter,
-    t: S.stempel.length });
+    t: S.stempel.length,
+    // Bedienungsrunde: der Wolkenschalter gehoert zur Karte — ohne ihn in der
+    // Probe uebersaehe der Autosave ein Umschalten ohne weitere Aenderung.
+    w: S.wolken !== false });
   var n = KARTE.vw * KARTE.vw;
   var gleich = (letzteSicht === sicht) && letzteBaseKopie && letzteBaseKopie.length === n;
   if (gleich) {
@@ -1160,7 +1175,40 @@ export function initIO() {
     massstabName: massstabName,
     wechsle: wechsleZuKarte,
     nachziehen: function () { zieheKarteNach(false); },
-    neuAbleiten: function () { zieheKarteNach(true); }
+    neuAbleiten: function () { zieheKarteNach(true); },
+    /* Bedienungsrunde — Name und Massstab der AKTIVEN Karte, fuer den
+       Kartenkopf im Panel (baueKarteKopf in ui/panels.js). Der Titel wird
+       ohne Baum-Neuaufbau direkt am Knoten geaendert: karteSichern traegt
+       ihn beim naechsten Sichern ohnehin weiter (frisch.titel = n.karte.titel).
+       Der Lese-Weg erzwingt KEINEN Baum — ohne Baum heisst die Karte
+       schlicht „Karte", wie es aktiverBaum() auch taete. */
+    titel: function () {
+      var n = S.baum && S.baum.index[S.aktiveKarte];
+      return (n && n.karte.titel) || "Karte";
+    },
+    benenne: function (titel) {
+      titel = String(titel || "").trim();
+      if (!titel) { toast("Der Kartenname darf nicht leer sein"); return; }
+      var n = aktiverBaum().index[S.aktiveKarte];
+      if (!n) return;
+      n.karte.titel = titel;
+      buildPanel();
+      toast("Karte heißt jetzt „" + titel + "“");
+    },
+    massstab: function () { return S.einheitMeter || 1; },
+    setzeMassstab: function (m) {
+      if (!Number.isFinite(m) || m <= 0) return;
+      if (m === S.einheitMeter) return;
+      /* Wie in weltVorgabeAnwenden: der Massstab steht in S UND im
+         Baumeintrag, und der Neuaufbau entscheidet ueber Koerper vs.
+         Kartenzeichen (alsKoerper/alsZeichen lesen S.einheitMeter). */
+      S.einheitMeter = m;
+      var n = aktiverBaum().index[S.aktiveKarte];
+      if (n) n.karte.einheitMeter = m;
+      rebuildAll();
+      buildPanel();
+      toast("Maßstab: " + massstabName(m) + " · " + m + " m je Zelle");
+    }
   });
   /* J1: dieselben zwei Wege, die auch Datei-Speichern und Datei-Laden nehmen.
      Die Bruecke bekommt bewusst KEINEN dritten Ladeweg — baumUebernehmen ist
@@ -1265,10 +1313,39 @@ export function initIO() {
     document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
   }
+  /* Bedienungsrunde — Speichern ohne Zwangs-Download.
+
+     Eingebettet (Studio) ist die Datenbank der Speicherort: der Knopf stoesst
+     die Bruecke SOFORT an (sonst wartete die Entprellung), und die JSON-Datei
+     kommt nur noch, wenn das Haekchen „JSON" gesetzt ist. Ohne Rahmen
+     (Doppelklick auf index.html) bleibt der Download der einzige Speicherweg —
+     das Haekchen ist dort gesetzt und gesperrt, damit der Knopf nie ins Leere
+     klickt. */
+  var jsonChk = document.getElementById("jsonChk");
+  if (jsonChk) {
+    if (brueckeAktiv()) {
+      jsonChk.checked = false;
+    } else {
+      jsonChk.checked = true;
+      jsonChk.disabled = true;
+      var jsonLabel = jsonChk.closest ? jsonChk.closest("label") : null;
+      if (jsonLabel) jsonLabel.title = "Ohne Datenbank ist die JSON-Datei der einzige Speicherweg";
+    }
+  }
   document.getElementById("saveBtn").addEventListener("click", function () {
-    download("terra-karte.json",
-      new Blob([baumText()], { type: "application/json" }));
-    toast("Karte gespeichert");
+    var jsonAuch = !jsonChk || jsonChk.checked;
+    if (jsonAuch) {
+      download("terra-karte.json",
+        new Blob([baumText()], { type: "application/json" }));
+    }
+    if (brueckeAktiv()) {
+      brueckeSofort();
+      toast(jsonAuch ? "In der Datenbank gespeichert · JSON-Datei heruntergeladen"
+                     : "In der Datenbank gespeichert");
+    } else {
+      toast(jsonAuch ? "Karte als JSON-Datei gespeichert"
+                     : "JSON-Download ist abgewählt — nichts gespeichert");
+    }
   });
   document.getElementById("loadBtn").addEventListener("click", function () {
     document.getElementById("fileIn").click();
@@ -1385,6 +1462,42 @@ export function initIO() {
     this.classList.toggle("on", getPost());
     toast(getPost() ? "Nachbearbeitung an" : "Nachbearbeitung aus");
   });
+
+  /* Bedienungsrunde — Wolken an/aus. Der Zustand lebt als S.wolken in der
+     Karte (tolerant gespeichert); sky.js zieht die Sichtbarkeit je Bild nach,
+     und setTod(…, true) rechnet den Wolken-Bodenschatten sofort neu (dieselbe
+     Nachfuehrung wie beim Biomwechsel). */
+  var wolkenBtn = document.getElementById("wolkenBtn");
+  if (wolkenBtn) {
+    wolkenBtn.classList.toggle("on", S.wolken !== false);
+    wolkenBtn.addEventListener("click", function () {
+      S.wolken = S.wolken === false;
+      this.classList.toggle("on", S.wolken !== false);
+      setTod(getTodName(), true);
+      toast(S.wolken !== false ? "Wolken an" : "Wolken aus");
+    });
+  }
+
+  /* Bedienungsrunde — Vollbild. Der Editor legt sich samt Bedienrahmen ueber
+     den ganzen Bildschirm; im Studio-Rahmen erlaubt das iframe den Wechsel
+     (allow="fullscreen" in TerraRahmen.tsx). Der Knopfzustand haengt am
+     fullscreenchange-Ereignis, weil auch Esc das Vollbild beendet. */
+  var vollbildBtn = document.getElementById("vollbildBtn");
+  if (vollbildBtn) {
+    vollbildBtn.addEventListener("click", function () {
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+      } else if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(function () {
+          toast("Vollbild wurde vom Browser abgelehnt");
+        });
+      }
+    });
+    document.addEventListener("fullscreenchange", function () {
+      vollbildBtn.classList.toggle("on", !!document.fullscreenElement);
+      vollbildBtn.textContent = document.fullscreenElement ? "Vollbild verlassen" : "Vollbild";
+    });
+  }
 
   /* ------------------------------------------------------------------------
      D2 — Höhenkarte importieren

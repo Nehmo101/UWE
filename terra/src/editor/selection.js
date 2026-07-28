@@ -2,6 +2,10 @@
 import * as THREE from 'three';
 import { clamp } from '../core/rng.js';
 import { S, VINE_R } from '../core/store.js';
+// Bedienungsrunde: Klick auf Instanz-Objekte (Haeuser, Baeume …) waehlt ihr
+// Element — dafuer braucht pickElement die Pool-Meshes. Zyklusfrei: pools.js
+// importiert nichts aus editor/.
+import { POOLS, POOL_NAMES } from '../core/pools.js';
 import { heightAt } from '../world/terrain.js';
 import { pathSamples } from '../generators/paths.js';
 import { inPoly } from '../generators/areas.js';
@@ -487,25 +491,69 @@ function zugPixelProHoehe(el) {
   return Math.max(60, Math.abs((_pv3.y - yA) * 0.5 * window.innerHeight));
 }
 
+/* Bedienungsrunde: der Setz-Ring ist jetzt eine Gruppe aus drei Teilen —
+   dunkler Aussenring (Kontrastsaum, auf hellem Gelaende sonst unsichtbar),
+   heller Hauptring (96 statt 64 Segmente, folgt dem Gelaende feiner) und ein
+   Mittelpunkt-Kreuz, das die EXAKTE Setzstelle zeigt. Nach aussen bleibt
+   `brushRing` dasselbe Objekt mit derselben `visible`-Bedienung. */
+var BRUSH_N = 96;
 var brushRing = (function () {
-  var N = 64, pos = new Float32Array((N + 1) * 3);
-  var g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  var l = new THREE.LineLoop(g, new THREE.LineBasicMaterial({
-    color: 0xffffff, transparent: true, opacity: 0.8, depthTest: false, fog: false
+  var gruppe = new THREE.Group();
+  gruppe.renderOrder = 902;
+  gruppe.visible = false;
+  function ringLinie(farbe, deckkraft) {
+    var g = new THREE.BufferGeometry();
+    g.setAttribute("position",
+      new THREE.BufferAttribute(new Float32Array((BRUSH_N + 1) * 3), 3));
+    var l = new THREE.LineLoop(g, new THREE.LineBasicMaterial({
+      color: farbe, transparent: true, opacity: deckkraft, depthTest: false, fog: false
+    }));
+    l.frustumCulled = false;
+    return l;
+  }
+  var saum = ringLinie(0x1f2823, 0.5);
+  saum.renderOrder = 902;
+  var ring = ringLinie(0xffffff, 0.92);
+  ring.renderOrder = 903;
+  // Mittelpunkt: kleines Kreuz aus zwei Linien (4 Segmente als LineSegments).
+  var kg = new THREE.BufferGeometry();
+  kg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(4 * 3), 3));
+  var kern = new THREE.LineSegments(kg, new THREE.LineBasicMaterial({
+    color: 0xe0a83c, transparent: true, opacity: 0.95, depthTest: false, fog: false
   }));
-  l.frustumCulled = false; l.renderOrder = 902; l.visible = false;
-  return l;
+  kern.frustumCulled = false;
+  kern.renderOrder = 904;
+  gruppe.add(saum);
+  gruppe.add(ring);
+  gruppe.add(kern);
+  gruppe.userData = { saum: saum, ring: ring, kern: kern };
+  return gruppe;
 })();
 function updateBrushRing(p, r) {
   if (!p) { brushRing.visible = false; return; }
-  var arr = brushRing.geometry.attributes.position.array, N = 64;
-  for (var i = 0; i <= N; i++) {
-    var a = i / N * Math.PI * 2;
-    var x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
-    arr[i * 3] = x; arr[i * 3 + 1] = heightAt(x, z) + 0.35; arr[i * 3 + 2] = z;
+  var teile = brushRing.userData;
+  var arrR = teile.ring.geometry.attributes.position.array;
+  var arrS = teile.saum.geometry.attributes.position.array;
+  for (var i = 0; i <= BRUSH_N; i++) {
+    var a = i / BRUSH_N * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+    var x = p.x + ca * r, z = p.z + sa * r;
+    var y = heightAt(x, z);
+    arrR[i * 3] = x; arrR[i * 3 + 1] = y + 0.35; arrR[i * 3 + 2] = z;
+    // Saum knapp AUSSEN und minimal tiefer: er rahmt den hellen Ring.
+    var xs = p.x + ca * (r + 0.45), zs = p.z + sa * (r + 0.45);
+    arrS[i * 3] = xs; arrS[i * 3 + 1] = heightAt(xs, zs) + 0.3; arrS[i * 3 + 2] = zs;
   }
-  brushRing.geometry.attributes.position.needsUpdate = true;
+  teile.ring.geometry.attributes.position.needsUpdate = true;
+  teile.saum.geometry.attributes.position.needsUpdate = true;
+  // Kreuz an der exakten Setzstelle, mit dem Radius leicht mitwachsend.
+  var k = Math.max(0.7, Math.min(2.2, r * 0.12));
+  var ky = heightAt(p.x, p.z) + 0.4;
+  var arrK = teile.kern.geometry.attributes.position.array;
+  arrK[0] = p.x - k; arrK[1] = ky; arrK[2] = p.z;
+  arrK[3] = p.x + k; arrK[4] = ky; arrK[5] = p.z;
+  arrK[6] = p.x; arrK[7] = ky; arrK[8] = p.z - k;
+  arrK[9] = p.x; arrK[10] = ky; arrK[11] = p.z + k;
+  teile.kern.geometry.attributes.position.needsUpdate = true;
   brushRing.visible = true;
 }
 
@@ -547,6 +595,21 @@ function naechstesSegment(el, x, z, tol) {
   return { index: bestI, px: bx, pz: bz };
 }
 
+/** Instanz-Treffer -> Element: repack (core/pools.js) schreibt die Instanzen
+ *  eines Pools in ELEMENTREIHENFOLGE — der Instanzindex laesst sich also
+ *  eindeutig auf das besitzende Element zurueckrechnen. */
+function elementVonPoolTreffer(poolName, instanceId) {
+  var k = 0;
+  for (var e = 0; e < S.elements.length; e++) {
+    var a = S.elements[e].inst[poolName];
+    if (!a) continue;
+    var n = a.length / 12;
+    if (instanceId < k + n) return S.elements[e];
+    k += n;
+  }
+  return null;
+}
+
 function pickElement(ev, p) {
   // erst echte Meshes (Ranken, Plateaus) treffen
   rayFrom(ev);                       // setzt _ndc für den Raycaster
@@ -556,10 +619,31 @@ function pickElement(ev, p) {
       for (var c = 0; c < S.elements[i].group.children.length; c++) meshes.push(S.elements[i].group.children[c]);
     }
   }
-  if (meshes.length) {
+  /* Bedienungsrunde: zusaetzlich die Instanz-Pools — ein Klick AUF ein Haus
+     oder einen Baum soll dessen Element treffen, nicht erst ein Klick in die
+     Naehe seines unsichtbaren Streuzentrums. Ausgenommen: Kartenzeichen
+     (Tinte, kein Gegenstand) und Kleinstpools wie das Fensterlicht. */
+  var poolMeshes = [], poolNamen = [];
+  for (var pn = 0; pn < POOL_NAMES.length; pn++) {
+    var P = POOLS[POOL_NAMES[pn]];
+    if (!P || !P.mesh || !P.count || P.karte || P.radius < 0.4) continue;
+    poolMeshes.push(P.mesh);
+    poolNamen.push(POOL_NAMES[pn]);
+  }
+  if (meshes.length || poolMeshes.length) {
     raycaster.setFromCamera(_ndc, camera);
-    var hits = raycaster.intersectObjects(meshes, false);
-    if (hits.length && hits[0].object.userData.el) return hits[0].object.userData.el;
+    var hits = raycaster.intersectObjects(meshes.concat(poolMeshes), true);
+    for (var h = 0; h < hits.length; h++) {
+      var o = hits[h].object;
+      if (o.userData && o.userData.el) return o.userData.el;
+      if (hits[h].instanceId !== undefined) {
+        var pi = poolMeshes.indexOf(o);
+        if (pi >= 0) {
+          var et = elementVonPoolTreffer(poolNamen[pi], hits[h].instanceId);
+          if (et) return et;
+        }
+      }
+    }
   }
   if (!p) return null;
   var best = null, bestD = Infinity;

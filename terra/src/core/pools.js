@@ -98,7 +98,12 @@ var POOLS = {};
    Culling-Wirkung, eine zu kleine verwirft Sichtbares — deshalb lieber
    grosszuegig skalieren als knapp rechnen. */
 var huellenGeos = [];
-function huellenRadius() { return 460 * (KARTE.map / 256); }
+/* Bedienungsrunde: Untergrenze 1100 — der Ranken-Hoehenregler reicht jetzt
+   bis 1000 (editor/tools.js), und die Instanzen der Blattstaedtchen sitzen
+   dann weit ueber der alten 460er-Kugel einer 256er-Karte; sie wuerden vom
+   Culling faelschlich verworfen. Eine zu grosse Kugel kostet nur
+   Culling-Wirkung (siehe oben), eine zu kleine schluckt Sichtbares. */
+function huellenRadius() { return Math.max(460 * (KARTE.map / 256), 1100); }
 /** Hüllkugel über die ganze Karte: Culling verwirft korrekt statt falsch. */
 function weiteHuelle(geo) {
   geo.computeBoundingSphere();
