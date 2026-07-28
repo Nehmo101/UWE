@@ -38,6 +38,10 @@ const APP_AREAS = {
   studio: ["landing", "studio"],
   portal: ["portal"],
   brain: ["brain"],
+  // Family teilt sich den Szenen-Scope mit Brain (siehe FamilyShell: SceneHero
+  // area="brain") — ohne eigene Kopie liefe die Bühne auf dem Family-Origin
+  // ins 404.
+  family: ["brain"],
 };
 
 /** Das Handout-Thumbnail zeigt nur das Portal. */

@@ -3,7 +3,7 @@
  * Verify Prisma/libsql runtime modules resolve inside a Next.js standalone output.
  *
  * Usage:
- *   node scripts/check-standalone-prisma-deps.mjs [studio|portal|landing]
+ *   node scripts/check-standalone-prisma-deps.mjs [studio|portal|family|landing]
  */
 import { createRequire } from "node:module";
 import fs from "node:fs";
@@ -18,7 +18,7 @@ const REQUIRED_MODULES = [
   "pg",
 ];
 
-const KNOWN_APPS = ["studio", "portal", "landing"];
+const KNOWN_APPS = ["studio", "portal", "family", "landing"];
 
 const app = process.argv[2] ?? "studio";
 if (!KNOWN_APPS.includes(app)) {

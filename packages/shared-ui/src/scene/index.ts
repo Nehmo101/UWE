@@ -5,6 +5,7 @@ export {
   type CrossAppTarget,
 } from "./CrossAppBottomNav";
 export { readClientAppUrls, type ClientAppUrls } from "./clientAppUrls";
+export { AppUrlsProvider, useClientAppUrls } from "./AppUrlsProvider";
 export { SceneHero, type SceneHeroProps } from "./SceneHero";
 export { PaintedScene, SceneContent, type PaintedSceneProps, type SceneVeil } from "./PaintedScene";
 export { AppAccentScope, type AccentApp, type AccentScopeLayout } from "./AppAccentScope";

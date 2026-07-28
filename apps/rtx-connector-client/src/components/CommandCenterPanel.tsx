@@ -24,6 +24,7 @@ import {
   type ConnectorRuntimeStatus,
   type LocalHostActionResult,
   type LocalHostLogsResult,
+  type LocalHostServiceId,
   type LocalHostStatus,
   type LocalHostUpdateInfo,
   type HostBackupEntry,
@@ -115,6 +116,7 @@ const LOG_TARGETS = [
   { id: "studio", label: "Studio" },
   { id: "portal", label: "Portal" },
   { id: "brain", label: "Brain" },
+  { id: "family", label: "Family" },
   { id: "landing", label: "Startseite" },
 ] as const satisfies ReadonlyArray<{ id: LocalHostLogsResult["target"]; label: string }>;
 
@@ -288,7 +290,7 @@ export function CommandCenterPanel({
   }
 
   async function runServiceAction(
-    serviceId: "studio" | "portal" | "brain" | "landing",
+    serviceId: LocalHostServiceId,
     action: "start" | "stop" | "restart",
   ) {
     setBusyService(`${serviceId}:${action}`);

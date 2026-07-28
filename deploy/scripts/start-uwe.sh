@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts UWE Studio, Portal and the Apex-Startseite after build.
+# Starts UWE Studio, Portal, the Apex-Startseite and — wenn gebaut — Family.
 # Used by systemd (see deploy/systemd/).
 set -Eeuo pipefail
 
@@ -50,13 +50,16 @@ fi
 UWE_HOME="${UWE_HOME:-/opt/uwe}"
 STUDIO_PORT="${STUDIO_PORT:-${PORT:-3000}}"
 PORTAL_PORT="${PORTAL_PORT:-3001}"
+FAMILY_PORT="${FAMILY_PORT:-3004}"
 LANDING_PORT="${LANDING_PORT:-3103}"
 HOST_BIND="${HOST:-${HOSTNAME:-0.0.0.0}}"
 STUDIO_DIR="$UWE_HOME/apps/studio/.next/standalone"
 PORTAL_DIR="$UWE_HOME/apps/portal/.next/standalone"
+FAMILY_DIR="$UWE_HOME/apps/family/.next/standalone"
 LANDING_DIR="$UWE_HOME/apps/landing/.next/standalone"
 STUDIO_SERVER="$STUDIO_DIR/apps/studio/server.js"
 PORTAL_SERVER="$PORTAL_DIR/apps/portal/server.js"
+FAMILY_SERVER="$FAMILY_DIR/apps/family/server.js"
 LANDING_SERVER="$LANDING_DIR/apps/landing/server.js"
 REPAIR_CMD="sudo bash ${UWE_HOME}/deploy/scripts/setup-uwe-host.sh --repair"
 
@@ -71,6 +74,7 @@ echo "UWE start: UWE_ENV=$UWE_ENV"
 echo "UWE start: node=$("$NODE_BIN" --version) path=$NODE_BIN"
 echo "UWE start: studio standalone=$STUDIO_DIR port=$STUDIO_PORT"
 echo "UWE start: portal standalone=$PORTAL_DIR port=$PORTAL_PORT"
+echo "UWE start: family standalone=$FAMILY_DIR port=$FAMILY_PORT"
 echo "UWE start: landing standalone=$LANDING_DIR port=$LANDING_PORT"
 echo "UWE start: bind=$HOST_BIND"
 
@@ -96,11 +100,12 @@ fi
 
 STUDIO_PID=""
 PORTAL_PID=""
+FAMILY_PID=""
 LANDING_PID=""
 
 cleanup() {
   local pid
-  for pid in "$STUDIO_PID" "$PORTAL_PID" "$LANDING_PID"; do
+  for pid in "$STUDIO_PID" "$PORTAL_PID" "$FAMILY_PID" "$LANDING_PID"; do
     if [[ -n "$pid" ]]; then
       kill "$pid" 2>/dev/null || true
     fi
@@ -134,6 +139,23 @@ echo "Starting Portal on PORT=$PORTAL_PORT"
 ) &
 PORTAL_PID=$!
 
+# Family ist optional: die App ist häkchen-gegated (`Family`) und nicht jede
+# Installation baut sie. Liegt ein Standalone-Build vor, läuft sie mit — sonst
+# zeigt jeder Family-Link ins Leere. Anders als Studio/Portal bindet sie auf
+# Loopback: erreichbar über den Tunnel/Reverse-Proxy, nicht direkt im LAN.
+if [[ -f "$FAMILY_SERVER" ]]; then
+  echo "Starting Family on PORT=$FAMILY_PORT (bind=127.0.0.1)"
+  (
+    cd "$FAMILY_DIR"
+    export PORT="$FAMILY_PORT"
+    export HOSTNAME="127.0.0.1"
+    exec "$NODE_BIN" apps/family/server.js
+  ) &
+  FAMILY_PID=$!
+else
+  echo "Family standalone build fehlt — Family wird nicht gestartet (baut mit: pnpm build)."
+fi
+
 if [[ "$LANDING_AVAILABLE" -eq 1 ]]; then
   echo "Starting Landing on PORT=$LANDING_PORT"
   (
@@ -145,7 +167,15 @@ if [[ "$LANDING_AVAILABLE" -eq 1 ]]; then
   LANDING_PID=$!
 fi
 
-# shellcheck disable=SC2086  # LANDING_PID is intentionally unquoted: empty = not started
-wait -n "$STUDIO_PID" "$PORTAL_PID" $LANDING_PID
+# Nur gestartete Dienste beobachten: `wait -n` mit einer leeren PID bräche ab.
+WAIT_PIDS=("$STUDIO_PID" "$PORTAL_PID")
+if [[ -n "$FAMILY_PID" ]]; then
+  WAIT_PIDS+=("$FAMILY_PID")
+fi
+if [[ -n "$LANDING_PID" ]]; then
+  WAIT_PIDS+=("$LANDING_PID")
+fi
+
+wait -n "${WAIT_PIDS[@]}"
 echo "UWE process exited — stopping remaining services." >&2
 exit 1

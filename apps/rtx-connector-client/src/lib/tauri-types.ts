@@ -204,8 +204,14 @@ export interface ConnectorPrinterStore {
   printers: ConnectorPrinterProfile[];
 }
 
+/**
+ * Vom Host verwaltete Dienste — Spiegel von `HOST_SERVICE_IDS`
+ * (tools/uwe-host-command-center/src/desktop-host-types.ts).
+ */
+export type LocalHostServiceId = "studio" | "portal" | "brain" | "family" | "landing";
+
 export interface LocalHostService {
-  id: "studio" | "portal" | "brain" | "landing";
+  id: LocalHostServiceId;
   label: string;
   state: "online" | "starting" | "stopped" | "error";
   healthy: boolean;
@@ -275,6 +281,6 @@ export interface LocalHostUpdateInfo {
 }
 
 export interface LocalHostLogsResult {
-  target: "studio" | "portal" | "brain" | "landing" | "command-center";
+  target: LocalHostServiceId | "command-center";
   lines: string[];
 }

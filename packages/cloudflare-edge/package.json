@@ -13,7 +13,8 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/assets": "workspace:*"
+    "@uwe/assets": "workspace:*",
+    "@uwe/auth": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",

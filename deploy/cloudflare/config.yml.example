@@ -2,6 +2,7 @@
 # Landing: https://uwe.example        -> Landing app (:3103) — public entry + sign-in
 # Studio:  https://studio.uwe.example  -> Studio app (:3000)
 # Portal:  https://portal.uwe.example  -> Portal app (:3001)
+# Family:  https://family.uwe.example  -> Family app (:3004) — Häkchen `Family`
 # Brain:   https://brain.uwe.example  -> Brain app  (:3002) — owner-only, opt-in (see below)
 #
 # The apex is its own process (apps/landing) so the main domain never serves
@@ -24,6 +25,12 @@ ingress:
     service: http://127.0.0.1:3000
   - hostname: portal.uwe.example
     service: http://127.0.0.1:3001
+  # Family (gemeinsamer Haushaltsbereich, :3004). Jede Seite und jede Route
+  # prüft das Häkchen `Family` server-seitig; ohne Sitzung leitet die App auf
+  # ihre eigene /login-Seite um. Der Hostname muss mit NEXT_PUBLIC_FAMILY_URL
+  # übereinstimmen — sonst zeigen alle Family-Links auf localhost:3004.
+  - hostname: family.uwe.example
+    service: http://127.0.0.1:3004
   # Legacy /studio and /portal path bookmarks on the apex — keep these BEFORE the
   # apex catch-all below so they still route to their app. Without these rules the
   # landing app would 308 them to the Studio host, which also works but costs a

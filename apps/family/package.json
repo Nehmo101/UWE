@@ -4,8 +4,8 @@
   "private": true,
   "description": "UWE Family \u2014 shared household app (Vertr\u00e4ge, Dokumente, K\u00fcche, Haushalt, Kalender), gated on the family checkbox",
   "scripts": {
-    "dev": "next dev --port 3004 --hostname 127.0.0.1",
-    "build": "next build",
+    "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3004 --hostname 127.0.0.1",
+    "build": "node --import tsx ../../scripts/copy-scenes.mjs && next build",
     "start": "next start --port 3004 --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test 'src/**/*.test.ts'"

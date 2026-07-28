@@ -93,7 +93,21 @@ describe("self-hosting setup", () => {
     assert.match(start, /apps\/landing\/\.next\/standalone/);
     assert.match(start, /Starting Landing on PORT=/);
     assert.match(start, /exec "\$NODE_BIN" apps\/landing\/server\.js/);
-    assert.match(start, /wait -n "\$STUDIO_PID" "\$PORTAL_PID" \$LANDING_PID/);
+    // Startseite und Family sind beide optional, deshalb sammelt das Skript die
+    // tatsächlich gestarteten PIDs ein, statt eine leere Variable an `wait -n`
+    // zu reichen — das bräche den Dienst beim Start.
+    assert.match(start, /WAIT_PIDS\+=\("\$LANDING_PID"\)/);
+    assert.match(start, /wait -n "\$\{WAIT_PIDS\[@\]\}"/);
+  });
+
+  it("start-uwe.sh startet Family, wenn ein Standalone-Build vorliegt", () => {
+    const start = fs.readFileSync(path.join(root, "deploy/scripts/start-uwe.sh"), "utf8");
+    assert.match(start, /FAMILY_PORT="\$\{FAMILY_PORT:-3004\}"/);
+    assert.match(start, /apps\/family\/\.next\/standalone/);
+    assert.match(start, /exec "\$NODE_BIN" apps\/family\/server\.js/);
+    // Family trägt Haushaltsdaten und ist über den Tunnel erreichbar, nicht im LAN.
+    assert.match(start, /export HOSTNAME="127\.0\.0\.1"/);
+    assert.match(start, /WAIT_PIDS\+=\("\$FAMILY_PID"\)/);
   });
 
   it("Landing-Standalone bekommt Runtime-Deps und wird geprüft", () => {

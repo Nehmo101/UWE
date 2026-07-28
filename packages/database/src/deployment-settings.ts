@@ -70,6 +70,12 @@ export interface DeploymentSettings {
   /** Brain reachability — see {@link BrainExposure}. Default `loopback`. */
   brainExposure: BrainExposure;
   /**
+   * NEXT_PUBLIC_FAMILY_URL — Origin der Family-App; "" erbt aus der Host-`.env`
+   * und fällt dort auf den Loopback-Standard zurück. Ohne diesen Wert zeigt
+   * jeder Family-Link (Landing, Bottom-Nav) auf `http://localhost:3004`.
+   */
+  familyUrl: string;
+  /**
    * Cloudflare edge **Managed Challenge** — the full-page "Verify you are human"
    * interstitial in front of the sites. Unlike the flags above this is not an env
    * overlay: it is desired state UWE pushes to Cloudflare (see `@uwe/cloudflare-edge`).
@@ -114,6 +120,7 @@ export interface DeploymentSettingsInput {
   brainUrl?: string;
   brainPath?: string;
   brainExposure?: BrainExposure;
+  familyUrl?: string;
   managedChallengeEnabled?: boolean;
   managedChallengeHostnames?: string[];
   managedChallengeSkipPaths?: string[];
@@ -143,6 +150,7 @@ export const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
   brainUrl: "",
   brainPath: "",
   brainExposure: "loopback",
+  familyUrl: "",
   managedChallengeEnabled: false,
   managedChallengeHostnames: [],
   managedChallengeSkipPaths: [],
@@ -211,6 +219,7 @@ export function normalizeDeploymentSettings(raw: unknown): DeploymentSettings {
     brainUrl: normalizeString(stored.brainUrl),
     brainPath: normalizeString(stored.brainPath),
     brainExposure: normalizeBrainExposure(stored.brainExposure),
+    familyUrl: normalizeString(stored.familyUrl),
     managedChallengeEnabled: stored.managedChallengeEnabled === true,
     managedChallengeHostnames: normalizeStringList(stored.managedChallengeHostnames),
     managedChallengeSkipPaths: normalizeStringList(stored.managedChallengeSkipPaths),
@@ -280,6 +289,7 @@ export function buildDeploymentSettingsUpdate(
     brainUrl: input.brainUrl ?? existing.brainUrl,
     brainPath: input.brainPath ?? existing.brainPath,
     brainExposure: input.brainExposure ?? existing.brainExposure,
+    familyUrl: input.familyUrl ?? existing.familyUrl,
     managedChallengeEnabled: input.managedChallengeEnabled ?? existing.managedChallengeEnabled,
     managedChallengeHostnames:
       input.managedChallengeHostnames ?? existing.managedChallengeHostnames,
@@ -337,6 +347,11 @@ export function buildDeploymentEnvOverrides(settings: DeploymentSettings): Recor
   if (settings.brainExposure !== "loopback") {
     out.BRAIN_EXPOSURE = settings.brainExposure;
   }
+
+  // Family ist häkchen-gegated, nicht owner-privat — die Origin ist deshalb eine
+  // gewöhnliche Deployment-Angabe. Ohne sie fällt jeder Family-Link auf den
+  // Loopback-Standard zurück (resolveFamilyPublicBaseUrl).
+  setString("NEXT_PUBLIC_FAMILY_URL", settings.familyUrl);
 
   if (settings.turnstileSecretEnc) {
     try {

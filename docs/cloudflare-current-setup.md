@@ -14,6 +14,7 @@ origin and in its own process:
 - Studio (DM/admin) — `https://studio.uwe.example` (`apps/studio`, `:3000`)
 - Portal (players) — `https://portal.uwe.example` (`apps/portal`, `:3001`)
 - Brain (owner-only) — `https://brain.uwe.example` (`apps/brain`, `:3002`)
+- Family (Häkchen `Family`) — `https://family.uwe.example` (`apps/family`, `:3004`)
 
 Recent work aligned the URL/config layer to this split-hostname model. Path-based
 routing under one host (`/studio`, `/portal`) is supported as a fallback (Studio
@@ -24,6 +25,11 @@ Studio NotFound".
 
 ## Cloudflare Tunnel
 
+- **Einrichtung ohne Dashboard:** Kommandozentrale → Cloudflare → „Öffentliche
+  Adressen" zeigt, welcher Hostname auf welche App zeigt, und setzt Ingress und
+  DNS in einem Schritt. Die Hostnamen kommen aus derselben Konfiguration wie die
+  Links in der App, Family also inklusive. Auf einem Linux-Host ohne
+  Kommandozentrale erledigt das `deploy/scripts/configure-cloudflare-tunnel.sh`.
 - A Cloudflare Tunnel fronts both apps (outbound from the host; no inbound ports).
 - **Access / login:** both Studio and Portal are gated by UWE's own login
   (e-mail sign-in) when `AUTH_REQUIRED=true`. There is **no separate Cloudflare
@@ -48,6 +54,8 @@ Set on the host (not committed). The in-app status reflects these:
 | `PORTAL_PATH` | Portal mount path (path-routing mode) | `/portal` or `/` (split host) |
 | `NEXT_PUBLIC_STUDIO_URL` | Absolute Studio URL for cross-app links | `https://studio.uwe.example` |
 | `NEXT_PUBLIC_PORTAL_URL` | Absolute Portal URL for cross-app links | `https://portal.uwe.example` |
+| `NEXT_PUBLIC_FAMILY_URL` | Absolute Family URL for cross-app links. Optional — ohne Wert leitet UWE `family.<apex>` aus den Geschwister-Hostnamen ab | unset (oder abweichender Hostname) |
+| `FAMILY_PORT` | Port der Family-App (`apps/family`) | `3004` |
 | `AUTH_REQUIRED` | Enforce login | `true` |
 | `PLAYER_PREVIEW_PUBLIC` | Allow public player preview | `false` |
 | `TRUST_PROXY` | Trust Cloudflare proxy headers | `true` |

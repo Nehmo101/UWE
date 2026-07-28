@@ -19,6 +19,7 @@ const INTERESTING_KEYS = new Set([
   "NODE_ENV",
   "STUDIO_PORT",
   "PORTAL_PORT",
+  "FAMILY_PORT",
   "LANDING_PORT",
   "PORT",
   "PUBLIC_APP_URL",

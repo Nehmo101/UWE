@@ -6,6 +6,7 @@ set -euo pipefail
 PUBLIC_URL="${PUBLIC_APP_URL:-${PUBLIC_BASE_URL:-}}"
 STUDIO_URL="${NEXT_PUBLIC_STUDIO_URL:-}"
 PORTAL_URL="${NEXT_PUBLIC_PORTAL_URL:-}"
+FAMILY_URL="${NEXT_PUBLIC_FAMILY_URL:-}"
 TUNNEL_CONFIG="${CLOUDFLARED_CONFIG:-/etc/cloudflared/config.yml}"
 
 while [[ $# -gt 0 ]]; do
@@ -31,6 +32,7 @@ if [[ -f /etc/uwe/uwe.env ]]; then
   PUBLIC_URL="${PUBLIC_URL:-${PUBLIC_APP_URL:-${PUBLIC_BASE_URL:-}}}"
   STUDIO_URL="${STUDIO_URL:-${NEXT_PUBLIC_STUDIO_URL:-}}"
   PORTAL_URL="${PORTAL_URL:-${NEXT_PUBLIC_PORTAL_URL:-}}"
+  FAMILY_URL="${FAMILY_URL:-${NEXT_PUBLIC_FAMILY_URL:-}}"
 fi
 
 PORTAL_URL="${PORTAL_URL:-$PUBLIC_URL}"
@@ -38,7 +40,7 @@ PORTAL_URL="${PORTAL_URL:-$PUBLIC_URL}"
 # Apex-Domain aus der konfigurierten öffentlichen URL ableiten, damit die
 # Ingress-Checks unten ohne fest verdrahteten Hostnamen auskommen. Ohne
 # PUBLIC_APP_URL greifen nur die generischen Hostname-Prüfungen.
-APEX_DOMAIN="$(printf '%s' "$PUBLIC_URL" | sed -E 's#^[a-z]+://##; s#/.*$##; s#:[0-9]+$##; s#^(studio|portal|brain)\.##')"
+APEX_DOMAIN="$(printf '%s' "$PUBLIC_URL" | sed -E 's#^[a-z]+://##; s#/.*$##; s#:[0-9]+$##; s#^(studio|portal|brain|family)\.##')"
 apex_re() { printf '%s' "$1" | sed 's/\./\\./g'; }
 
 status_ok=0
@@ -107,6 +109,27 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
     report ok "Split-Hostname-Ingress: portal-Hostname konfiguriert"
   elif [[ -n "$PORTAL_URL" && "$PORTAL_URL" == *"portal."* ]]; then
     report warn "NEXT_PUBLIC_PORTAL_URL zeigt auf einen portal-Hostnamen — Tunnel-Ingress fehlt lokal (Remote-Tunnel im Dashboard prüfen)"
+  fi
+  # Family ist häkchen-gegated, aber ausdrücklich für den Haushalt gedacht: ein
+  # fehlender Ingress ist kein Sicherheitsproblem, sondern ein toter Link. UWE
+  # leitet die Family-Adresse aus dem Split-Hostname-Layout ab, wenn
+  # NEXT_PUBLIC_FAMILY_URL fehlt (resolveFamilyPublicBaseUrl) — geprüft wird
+  # deshalb genau der Hostname, auf den die Links tatsächlich zeigen.
+  family_host=""
+  if [[ -n "$FAMILY_URL" ]]; then
+    family_host="$(printf '%s' "$FAMILY_URL" | sed -E 's#^[a-z]+://##; s#/.*$##; s#:[0-9]+$##')"
+  elif [[ -n "$APEX_DOMAIN" ]]; then
+    family_host="family.${APEX_DOMAIN}"
+  fi
+  case "$family_host" in
+    "" | localhost | 127.* | ::1) family_host="" ;;
+  esac
+  if grep -qE "hostname:[[:space:]]*family\." "$TUNNEL_CONFIG" 2>/dev/null; then
+    report ok "Split-Hostname-Ingress: family-Hostname konfiguriert"
+  elif [[ -n "$family_host" ]]; then
+    report warn "Family-Links zeigen auf ${family_host}, im Tunnel fehlt der Ingress — einrichten: bash deploy/scripts/configure-cloudflare-tunnel.sh"
+  else
+    report warn "Family bleibt lokal (http://localhost:3004) — ohne öffentliche Domain gibt es keinen Family-Hostnamen"
   fi
   if grep -qE "hostname:[[:space:]]*studio\." "$TUNNEL_CONFIG" 2>/dev/null; then
     report ok "Split-Hostname-Ingress: studio-Hostname konfiguriert"
