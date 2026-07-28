@@ -55,7 +55,6 @@ export async function saveAiResultAsIdea(
     content: input.content,
     sourcePageId: input.sourcePageId,
     taskType: input.taskType,
-    visibility: "dm_only",
     metadata: buildSaveMetadata({
       taskType: input.taskType,
       providerId: input.providerId ?? "ollama",
@@ -85,7 +84,6 @@ export async function saveAiResultAsContentBlock(
     type: "ai_summary",
     sortOrder,
     content: input.content,
-    visibility: "dm_only",
     metadata: JSON.parse(
       JSON.stringify(
         buildSaveMetadata({

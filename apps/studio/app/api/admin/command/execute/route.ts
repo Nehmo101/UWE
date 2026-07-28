@@ -25,12 +25,8 @@ function isNlCommandIntent(value: unknown): value is NlCommandIntent {
     case "set_lock_portal":
     case "set_lock_studio":
       return typeof record.enabled === "boolean";
-    case "assign_world_role":
-      return (
-        typeof record.userQuery === "string" &&
-        typeof record.worldQuery === "string" &&
-        typeof record.role === "string"
-      );
+    case "assign_world":
+      return typeof record.userQuery === "string" && typeof record.worldQuery === "string";
     case "remove_world_membership":
       return typeof record.userQuery === "string" && typeof record.worldQuery === "string";
     case "disable_user":
@@ -40,8 +36,12 @@ function isNlCommandIntent(value: unknown): value is NlCommandIntent {
       return typeof record.email === "string";
     case "create_world":
       return typeof record.name === "string";
-    case "set_user_role":
-      return typeof record.userQuery === "string" && typeof record.role === "string";
+    case "set_user_access":
+      return (
+        typeof record.userQuery === "string" &&
+        typeof record.area === "string" &&
+        typeof record.enabled === "boolean"
+      );
     default:
       return true;
   }

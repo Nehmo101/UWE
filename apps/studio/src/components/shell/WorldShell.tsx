@@ -1,22 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import type { ResolvedNavGroup } from "@uwe/shared-utils/navigation";
 import { persistWorldLastRoute } from "@/src/lib/world-last-route";
 import { worldCommands, worldLiveNav, worldSidebar } from "../../navigation/world-nav";
-import { readHiddenNavIds } from "../../lib/nav-visibility-prefs";
 import { AppShell } from "./AppShell";
-
-function filterNavGroups(groups: ResolvedNavGroup[], hidden: Set<string>): ResolvedNavGroup[] {
-  return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => !hidden.has(item.id)),
-    }))
-    .filter((group) => group.items.length > 0);
-}
 
 export interface WorldShellProps {
   worldSlug: string;
@@ -24,7 +13,6 @@ export interface WorldShellProps {
   breadcrumb?: React.ReactNode;
   contextPanel?: React.ReactNode;
   footer?: React.ReactNode;
-  openReviewCount?: number;
   navMode?: "full" | "live";
   liveSessionId?: string;
   children: React.ReactNode;
@@ -37,34 +25,24 @@ export function WorldShell({
   breadcrumb,
   contextPanel,
   footer,
-  openReviewCount,
   navMode = "full",
   liveSessionId,
   children,
 }: WorldShellProps) {
   const pathname = usePathname() ?? `/worlds/${worldSlug}/dashboard`;
-  const [hiddenNavIds, setHiddenNavIds] = useState<Set<string>>(() => new Set());
-
   useEffect(() => {
     if (pathname) {
       persistWorldLastRoute(worldSlug, pathname);
     }
   }, [pathname, worldSlug]);
 
-  useEffect(() => {
-    setHiddenNavIds(readHiddenNavIds());
-    const onChange = () => setHiddenNavIds(readHiddenNavIds());
-    window.addEventListener("uwe:nav-visibility-changed", onChange);
-    return () => window.removeEventListener("uwe:nav-visibility-changed", onChange);
-  }, []);
-
-  const groups = useMemo(() => {
-    const base =
+  const groups = useMemo(
+    () =>
       navMode === "live" && liveSessionId
         ? worldLiveNav(worldSlug, liveSessionId, pathname)
-        : worldSidebar(worldSlug, pathname, openReviewCount);
-    return navMode === "live" ? base : filterNavGroups(base, hiddenNavIds);
-  }, [hiddenNavIds, liveSessionId, navMode, openReviewCount, pathname, worldSlug]);
+        : worldSidebar(worldSlug, pathname),
+    [liveSessionId, navMode, pathname, worldSlug],
+  );
 
   return (
     <AppShell

@@ -11,7 +11,6 @@ function createMockBrainStore(): BrainStoreService {
         id: "doc-1",
         title: "Canon Fact",
         content: "The dragon sleeps under the mountain.",
-        visibility: "dm_only",
         documentType: "canon_facts",
         pageId: null,
         status: "published",
@@ -27,7 +26,6 @@ function createMockBrainStore(): BrainStoreService {
         embedding: null,
         document: {
           title: "Canon Fact",
-          visibility: "dm_only",
           documentType: "canon_facts",
         },
       },
@@ -41,7 +39,6 @@ describe("createDbBrainKnowledgeSource", () => {
     const entries = await source.findRelevant({
       worldId: "world-1",
       taskType: "summarize_page",
-      allowDmOnly: true,
     });
     assert.equal(entries.length, 1);
     assert.equal(entries[0]?.sourceType, "brain_document:canon_facts");
@@ -52,7 +49,6 @@ describe("createDbBrainKnowledgeSource", () => {
     const entries = await source.findRelevant({
       worldId: "world-1",
       taskType: "summarize_page",
-      allowDmOnly: true,
       query: "dragon mountain",
       maxEntries: 4,
     });

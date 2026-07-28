@@ -18,7 +18,7 @@ describe("wiki export", () => {
     }
   });
 
-  it("exports markdown without dm_only pages", async () => {
+  it("exports every page of the world as markdown", async () => {
     databaseUrl = createTestDatabaseUrl();
     outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-wiki-export-"));
     const repo = createUweRepository(databaseUrl);
@@ -33,13 +33,10 @@ describe("wiki export", () => {
       title: "Public Town",
       slug: "public-town",
       type: "location",
-      visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "public",
           content: "Visible to everyone.",
         },
       ],
@@ -47,17 +44,14 @@ describe("wiki export", () => {
 
     await repo.createPage({
       worldId: world.id,
-      title: "Secret Lair",
-      slug: "secret-lair",
+      title: "Second Town",
+      slug: "second-town",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
-          content: "Hidden from portal export.",
+          content: "Also exported.",
         },
       ],
     });
@@ -66,16 +60,14 @@ describe("wiki export", () => {
       worldSlug,
       outputDir,
       format: "markdown",
-      context: "portal",
     });
 
-    assert.equal(result.pageCount, 1);
+    assert.equal(result.pageCount, 2);
     assert.ok(fs.existsSync(path.join(outputDir, "public-town.md")));
-    assert.equal(fs.existsSync(path.join(outputDir, "secret-lair.md")), false);
+    assert.ok(fs.existsSync(path.join(outputDir, "second-town.md")));
 
     const markdown = fs.readFileSync(path.join(outputDir, "public-town.md"), "utf8");
     assert.match(markdown, /title: Public Town/);
     assert.match(markdown, /Visible to everyone/);
-    assert.doesNotMatch(markdown, /Secret Lair/);
   });
 });

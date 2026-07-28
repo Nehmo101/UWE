@@ -89,10 +89,6 @@ export default async function WorldDashboardPage({ params }: Props) {
                 Sichtbare Seiten: <strong>{overview.portal.visiblePageCount}</strong>
               </li>
               <li>
-                Aktive Share-Links: <strong>{overview.portal.activeShareLinkCount}</strong>
-              </li>
-              <li>
-                Gastmodus: <strong>{overview.world.guestModeEnabled ? "an" : "aus"}</strong>
               </li>
               <li>
                 <Link href={`/worlds/${worldSlug}/inspector`} className="hover:underline">
@@ -128,7 +124,6 @@ export default async function WorldDashboardPage({ params }: Props) {
         overview={{
           counts: overview.counts,
           portal: overview.portal,
-          world: overview.world,
           nextSession: overview.nextSession
             ? {
                 id: overview.nextSession.id,
@@ -144,8 +139,6 @@ export default async function WorldDashboardPage({ params }: Props) {
             title: page.title,
             slug: page.slug,
             type: page.type,
-            visibility: page.visibility,
-            publishStatus: page.publishStatus,
             updatedAt: page.updatedAt.toISOString(),
           })),
         }}

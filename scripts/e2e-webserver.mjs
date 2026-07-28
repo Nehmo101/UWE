@@ -19,7 +19,6 @@ const env = {
   SESSION_SECRET: `e2e-${"x".repeat(28)}`,
   UWE_SETUP_TOKEN: `setup-${"y".repeat(28)}`,
   PUBLIC_BASE_URL: `http://127.0.0.1:${port}`,
-  UWE_MEDIA_SIGNING_SECRET: `e2e-media-${"m".repeat(24)}`,
   SESSION_COOKIE_SECURE: "false",
   // E2E runs the production build over plain HTTP (SESSION_COOKIE_SECURE=false),
   // which enforceEnvSafetyAtBoot() would otherwise abort. Test-only opt-out.

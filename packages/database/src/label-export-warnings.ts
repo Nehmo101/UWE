@@ -43,13 +43,6 @@ export function analyzeLabelExportWarnings(
         message: `Sehr kleine Schrift (${element.style?.fontSize ?? "?"} pt) bei ${element.type}-Element.`,
       });
     }
-
-    if (element.dmOnly) {
-      warnings.push({
-        code: "dm_only",
-        message: `DM-only Element (${element.type}) — nur in DM-Export sichtbar.`,
-      });
-    }
   }
 
   return warnings;

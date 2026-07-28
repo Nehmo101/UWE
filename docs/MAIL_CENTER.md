@@ -1,6 +1,9 @@
 # Mail Center — UWE Kommunikationsmodul
 
-Das Mail Center ist **kein Gmail-Ersatz**, sondern ein reviewbarer Versand für UWE-Kontexte.
+Seit H10 ist die Arbeit geteilt: das **Postfach** (IMAP-Empfang, Reader, Triage,
+Regeln, Mail-Chat) liegt in **Brain** unter `/mail`, hinter dem Häkchen `Brain`.
+In **Studio** bleibt der reviewbare **Vorlagen-Versand** für DM-Kontexte — dieses
+Dokument beschreibt den Studio-Teil.
 
 ## Flows (immer mit Vorschau + manueller Freigabe)
 
@@ -24,12 +27,16 @@ Das Mail Center ist **kein Gmail-Ersatz**, sondern ein reviewbarer Versand für 
 - **Send Logs** — `MailMessageLog` mit Status, Empfängern, optional Body-Preview
 - **SMTP** — nur serverseitig aus `.env`, nie im Repo
 
-## Routen
+## Routen (Studio)
 
-- `/mail` — Status, Logs, Kommunikations-Flows
-- `/mail/compose?kind=…` — Entwurf mit Vorschau
+- `/mail/compose?kind=…` — Entwurf mit Vorschau (Vorlagen füllt die Seite
+  serverseitig über `createMailComposeService`)
 - `/api/mail/send` — Versand (Studio-auth)
-- `/api/mail/compose` — Server-seitiger Entwurf
+- `/api/mail/recipients` — Empfänger-Gruppen, Spieler-Sync (`sync_players`)
+
+Die früheren Lese-Routen (`/api/mail/inbox`, `/status`, `/logs`, `/templates`,
+`/accounts`, `/compose`, `/test`) sind mit H10 entfallen — Postfach-Lesen läuft
+über Brains `/api/mail/**`, und die Compose-Seite braucht keinen API-Umweg.
 
 ## Sicherheit
 

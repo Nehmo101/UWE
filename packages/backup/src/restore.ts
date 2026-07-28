@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { generateSessionToken } from "@uwe/auth/server";
 import type { PrismaClient } from "@uwe/database/server";
 import type { BrainPrismaClient } from "@uwe/database/brain-client";
+import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import { createSettingsService, pickUniqueSlug } from "@uwe/database/server";
 import { extractBackupAssets } from "./archive";
 import { previewRestore } from "./restore-preview";
@@ -21,6 +21,7 @@ function remapId(idMap: Map<string, string>, oldId: string): string {
 export async function executeRestore(
   db: PrismaClient,
   brainDb: BrainPrismaClient,
+  familyDb: FamilyPrismaClient,
   bundle: BackupBundle,
   options: RestoreExecuteOptions,
   zipBuffer?: Buffer,
@@ -71,7 +72,6 @@ export async function executeRestore(
           data: {
             name: world.name,
             description: world.description,
-            guestModeEnabled: world.guestModeEnabled,
           },
         });
         idMap.set(world.id, existing.id);
@@ -93,7 +93,6 @@ export async function executeRestore(
             name: world.name,
             slug,
             description: world.description,
-            guestModeEnabled: world.guestModeEnabled,
           },
         });
         result.created++;
@@ -124,7 +123,6 @@ export async function executeRestore(
         name: world.name,
         slug: world.slug,
         description: world.description,
-        guestModeEnabled: world.guestModeEnabled,
       },
     });
     result.created++;
@@ -246,8 +244,6 @@ export async function executeRestore(
           data: {
             title: page.title,
             summary: page.summary,
-            visibility: page.visibility as never,
-            publishStatus: page.publishStatus as never,
             canonicalStatus: page.canonicalStatus as never,
             prepStatus: page.prepStatus as never,
             tags: page.tags as never,
@@ -272,8 +268,6 @@ export async function executeRestore(
             slug,
             type: page.type as never,
             summary: page.summary,
-            visibility: page.visibility as never,
-            publishStatus: page.publishStatus as never,
             canonicalStatus: page.canonicalStatus as never,
             prepStatus: page.prepStatus as never,
             tags: page.tags as never,
@@ -300,8 +294,6 @@ export async function executeRestore(
         slug: page.slug,
         type: page.type as never,
         summary: page.summary,
-        visibility: page.visibility as never,
-        publishStatus: page.publishStatus as never,
         canonicalStatus: page.canonicalStatus as never,
         prepStatus: page.prepStatus as never,
         tags: page.tags as never,
@@ -326,7 +318,6 @@ export async function executeRestore(
         type: block.type as never,
         sortOrder: block.sortOrder,
         content: block.content,
-        visibility: block.visibility as never,
         metadata: block.metadata as never,
       },
     });
@@ -369,7 +360,6 @@ export async function executeRestore(
         storageKey: asset.storageKey.replace(asset.worldId, worldId),
         mimeType: asset.mimeType,
         size: asset.size,
-        visibility: asset.visibility as never,
         tags: asset.tags as never,
         metadata: asset.metadata as never,
       },
@@ -509,7 +499,6 @@ export async function executeRestore(
         volume: button.volume,
         loop: button.loop,
         tags: button.tags as never,
-        visibility: button.visibility as never,
         sortOrder: button.sortOrder,
       },
     });
@@ -550,7 +539,11 @@ export async function executeRestore(
         id: remapId(idMap, user.id),
         displayName: user.displayName,
         email: user.email ?? null,
-        role: user.role as never,
+        isOwner: user.isOwner === true,
+        portalAccess: user.portalAccess === true,
+        studioAccess: user.studioAccess === true,
+        brainAccess: user.brainAccess === true,
+        familyAccess: user.familyAccess === true,
         forcePasswordChange: true,
       },
     });
@@ -590,7 +583,6 @@ export async function executeRestore(
         id: remapId(idMap, membership.id),
         userId,
         worldId,
-        role: membership.role as never,
         characterName: membership.characterName ?? null,
       },
     });
@@ -602,53 +594,7 @@ export async function executeRestore(
     });
   }
 
-  for (const access of bundle.data.pagePlayerAccess ?? []) {
-    const userId = idMap.get(access.userId);
-    const pageId = idMap.get(access.pageId);
-    if (!userId || !pageId) continue;
 
-    const existing = await db.pagePlayerAccess.findFirst({
-      where: { userId, pageId },
-    });
-    if (existing) {
-      result.skipped++;
-      continue;
-    }
-
-    await db.pagePlayerAccess.create({
-      data: {
-        id: remapId(idMap, access.id),
-        pageId,
-        userId,
-      },
-    });
-    result.created++;
-  }
-
-  for (const unlock of bundle.data.sessionUnlocks ?? []) {
-    const userId = idMap.get(unlock.userId);
-    const pageId = idMap.get(unlock.pageId);
-    if (!userId || !pageId) continue;
-
-    const existing = await db.sessionUnlock.findFirst({
-      where: { userId, pageId },
-    });
-    if (existing) {
-      result.skipped++;
-      continue;
-    }
-
-    await db.sessionUnlock.create({
-      data: {
-        id: remapId(idMap, unlock.id),
-        pageId,
-        userId,
-        unlockedAt: new Date(unlock.unlockedAt),
-        sessionLabel: unlock.sessionLabel ?? null,
-      },
-    });
-    result.created++;
-  }
 
   for (const template of bundle.data.pageTemplates ?? []) {
     if (template.isSystem) continue;
@@ -671,7 +617,6 @@ export async function executeRestore(
         name: template.name,
         description: template.description,
         pageType: template.pageType as never,
-        defaultVisibility: template.defaultVisibility as never,
         titlePlaceholder: template.titlePlaceholder,
         blocks: template.blocks as never,
         isSystem: false,
@@ -726,42 +671,10 @@ export async function executeRestore(
         gameSessionId,
         userId,
         content: note.content,
-        visibility: note.visibility as never,
         status: note.status as never,
       },
     });
     result.created++;
-  }
-
-  for (const link of bundle.data.shareLinks ?? []) {
-    const worldId = idMap.get(link.worldId);
-    const targetId = idMap.get(link.targetId);
-    if (!worldId || !targetId) continue;
-
-    const newToken = generateSessionToken();
-    await db.shareLink.create({
-      data: {
-        id: remapId(idMap, link.id),
-        worldId,
-        targetType: link.targetType as never,
-        targetId,
-        token: newToken,
-        expiresAt: link.expiresAt ? new Date(link.expiresAt) : null,
-        passwordHash: null,
-        readOnly: link.readOnly,
-        logAccess: link.logAccess,
-        enabled: link.enabled,
-      },
-    });
-    result.created++;
-    result.items.push({
-      entityType: "shareLink",
-      identifier: newToken,
-      status: "created",
-      error: link.hasPassword
-        ? "Neuer Token generiert; Passwort muss neu gesetzt werden."
-        : "Neuer Share-Link-Token generiert.",
-    });
   }
 
   // Daily Admin OS section is optional — archives created before it existed restore unchanged.
@@ -922,10 +835,10 @@ export async function executeRestore(
     }
 
     for (const expense of dailyAdmin.contractExpenses ?? []) {
-      const existing = await brainDb.contractExpense.findUnique({ where: { id: expense.id } });
+      const existing = await familyDb.contractExpense.findUnique({ where: { id: expense.id } });
       if (existing) continue;
 
-      await brainDb.contractExpense.create({
+      await familyDb.contractExpense.create({
         data: {
           id: remapId(idMap, expense.id),
           name: expense.name,

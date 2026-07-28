@@ -33,7 +33,6 @@ export async function GET(request: Request) {
     const ctx = buildAccessContext({
       user,
       worldMembership: null,
-      guestModeEnabled: false,
     });
 
     if (!canViewAuditLog(ctx)) {
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
         actorUserId: user?.id ?? null,
         action: "authz_denied",
         targetType: "system",
-        metadata: { endpoint: "portal_audit_log", role: ctx.effectiveRole },
+        metadata: { endpoint: "portal_audit_log", access: ctx.user?.access ?? null },
       });
 
       return NextResponse.json({ error: "Keine Berechtigung für Audit Log." }, { status: 403 });

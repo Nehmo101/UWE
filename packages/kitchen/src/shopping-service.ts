@@ -4,7 +4,7 @@
  * in `ingredient-merge.ts`; hier kommt nur die Persistenz + Skalierung dazu.
  */
 import { toPrismaJsonValue } from "@uwe/database/server";
-import type { BrainPrismaClient as PrismaClient } from "@uwe/database/brain-client";
+import type { FamilyPrismaClient as PrismaClient } from "@uwe/database/family-client";
 import type { IngredientUnit, ShoppingCategory } from "./kitchen-types";
 import {
   consolidateIngredients,

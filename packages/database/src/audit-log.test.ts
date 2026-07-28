@@ -5,7 +5,7 @@ import { createAuthService } from "./auth";
 import { createAuditLogService, logAuditEvent, redactAuditMetadata } from "./audit-log-service";
 import { createPrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
-import { createUweRepository } from "./repository";
+import {} from "./repository";
 
 describe("Audit log", () => {
   let databaseUrl: string;
@@ -44,57 +44,6 @@ describe("Audit log", () => {
     await db.$disconnect();
   });
 
-  it("logs visibility_changed for page updates", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const repo = createUweRepository(databaseUrl);
-    const audit = createAuditLogService(db);
-
-    const world = await repo.createWorld({
-      name: "Audit Visibility World",
-      slug: "audit-visibility",
-    });
-
-    const page = await repo.createPage({
-      worldId: world.id,
-      title: "Hidden Lore",
-      slug: "hidden-lore",
-      type: "lore",
-      visibility: "dm_only",
-      publishStatus: "published",
-      contentBlocks: [
-        {
-          type: "rich_text",
-          sortOrder: 0,
-          visibility: "dm_only",
-          content: "DM only content.",
-        },
-      ],
-    });
-
-    await logAuditEvent(db, {
-      action: "visibility_changed",
-      targetType: "page",
-      targetId: page.id,
-      worldId: world.id,
-      metadata: {
-        from: "dm_only",
-        to: "player_visible",
-        title: page.title,
-      },
-    });
-
-    const entries = await audit.list({
-      actions: ["visibility_changed"],
-      worldId: world.id,
-      limit: 5,
-    });
-
-    assert.equal(entries.length, 1);
-    assert.equal(entries[0]!.targetId, page.id);
-    assert.equal((entries[0]!.metadataJson as { to: string }).to, "player_visible");
-
-    await db.$disconnect();
-  });
 
   it("logs secret_revealed without leaking secret values", async () => {
     const db = createPrismaClient(databaseUrl);
@@ -147,15 +96,14 @@ describe("Audit log", () => {
         id: "player-1",
         displayName: "Player",
         email: "player@example.com",
-        role: "player",
+        isOwner: false,
+        access: { portal: true, studio: false, brain: false, family: false },
       },
       worldMembership: {
         userId: "player-1",
         worldId: "world-1",
-        role: "player",
         characterName: null,
       },
-      guestModeEnabled: false,
     });
 
     const ownerCtx = buildAccessContext({
@@ -163,15 +111,14 @@ describe("Audit log", () => {
         id: "owner-1",
         displayName: "Owner",
         email: "owner@example.com",
-        role: "owner",
+        isOwner: true,
+        access: { portal: true, studio: true, brain: true, family: true },
       },
       worldMembership: {
         userId: "owner-1",
         worldId: "world-1",
-        role: "owner",
         characterName: null,
       },
-      guestModeEnabled: false,
     });
 
     const dmCtx = buildAccessContext({
@@ -179,15 +126,14 @@ describe("Audit log", () => {
         id: "dm-1",
         displayName: "DM",
         email: "dm@example.com",
-        role: "dm",
+        isOwner: false,
+        access: { portal: true, studio: true, brain: false, family: false },
       },
       worldMembership: {
         userId: "dm-1",
         worldId: "world-1",
-        role: "dm",
         characterName: null,
       },
-      guestModeEnabled: false,
     });
 
     assert.equal(canViewAuditLog(playerCtx), false);
@@ -204,7 +150,8 @@ describe("Audit log", () => {
       displayName: "Audit Test User",
       email: "audit-user@example.com",
       password: "test-password-123",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     const entries = await audit.list({

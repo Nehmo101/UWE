@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { createPrismaClient } from "@uwe/database/server";
 import { createBrainPrismaClient } from "@uwe/database/brain-client";
+import { createFamilyPrismaClient } from "@uwe/database/family-client";
 import { executeRestore } from "./restore";
 import { readBackupZip } from "./archive";
 
@@ -22,11 +23,13 @@ async function main() {
   const bundle = readBackupZip(zipBuffer);
   const db = createPrismaClient(process.env.DATABASE_URL);
   const brainDb = createBrainPrismaClient();
+  const familyDb = createFamilyPrismaClient();
 
   try {
     const result = await executeRestore(
       db,
       brainDb,
+      familyDb,
       bundle,
       {
         confirmed: true,
@@ -49,6 +52,7 @@ async function main() {
   } finally {
     await db.$disconnect();
     await brainDb.$disconnect();
+    await familyDb.$disconnect();
   }
 }
 

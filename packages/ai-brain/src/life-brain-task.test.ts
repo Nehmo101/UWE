@@ -13,7 +13,6 @@ function makeContext(promptContext: string): AiContext {
     promptContext,
     truncated: false,
     datenschutzMode: true,
-    allowDmOnly: true,
   };
 }
 

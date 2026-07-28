@@ -4,10 +4,8 @@ import {
 } from "@uwe/database/settings-service";
 
 export const STUDIO_LANDING_PAGE_OPTIONS = [
-  { path: "/today", label: "Heute-Dashboard" },
   { path: "/worlds", label: "Welten" },
   { path: "/continue", label: "Mach weiter" },
-  { path: "/capture", label: "Capture-Inbox" },
 ] as const satisfies ReadonlyArray<{ path: StudioLandingPagePath; label: string }>;
 
 export type { StudioLandingPagePath };
@@ -19,7 +17,7 @@ export function normalizeStudioLandingPage(value: string | null | undefined): St
   if (trimmed && ALLOWED.has(trimmed)) {
     return trimmed as StudioLandingPagePath;
   }
-  return "/today";
+  return "/worlds";
 }
 
 export function resolveStudioLandingPath(

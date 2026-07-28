@@ -105,9 +105,8 @@ fn run_host_command(
             stderr
         });
     }
-    extract_result_payload(&stdout).ok_or_else(|| {
-        "Antwort der Host-Steuerung konnte nicht gelesen werden.".to_string()
-    })
+    extract_result_payload(&stdout)
+        .ok_or_else(|| "Antwort der Host-Steuerung konnte nicht gelesen werden.".to_string())
 }
 
 /// Like `run_host_command`, but streams the child's stdout line-by-line: every
@@ -180,8 +179,7 @@ fn run_host_command_streaming(
         });
     }
 
-    result_payload
-        .ok_or_else(|| "Host-Steuerung lieferte kein Ergebnis zurück.".to_string())
+    result_payload.ok_or_else(|| "Host-Steuerung lieferte kein Ergebnis zurück.".to_string())
 }
 
 async fn run_host_command_async(
@@ -288,7 +286,11 @@ fn build_user_admin_command(action: &str, extra_args: &[&str]) -> Result<Command
     Ok(command)
 }
 
-fn run_user_admin(action: &str, extra_args: &[&str], stdin_json: Option<String>) -> Result<Value, String> {
+fn run_user_admin(
+    action: &str,
+    extra_args: &[&str],
+    stdin_json: Option<String>,
+) -> Result<Value, String> {
     let mut command = build_user_admin_command(action, extra_args)?;
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     if stdin_json.is_some() {
@@ -307,9 +309,9 @@ fn run_user_admin(action: &str, extra_args: &[&str], stdin_json: Option<String>)
         }
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|error| format!("Benutzerverwaltung konnte nicht abgeschlossen werden: {error}"))?;
+    let output = child.wait_with_output().map_err(|error| {
+        format!("Benutzerverwaltung konnte nicht abgeschlossen werden: {error}")
+    })?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -418,9 +420,9 @@ fn run_cloudflare(action: &str, stdin_json: Option<String>) -> Result<Value, Str
         }
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|error| format!("Cloudflare-Steuerung konnte nicht abgeschlossen werden: {error}"))?;
+    let output = child.wait_with_output().map_err(|error| {
+        format!("Cloudflare-Steuerung konnte nicht abgeschlossen werden: {error}")
+    })?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -440,7 +442,10 @@ fn run_cloudflare(action: &str, stdin_json: Option<String>) -> Result<Value, Str
         .ok_or_else(|| "Antwort der Cloudflare-Steuerung konnte nicht gelesen werden.".to_string())
 }
 
-async fn run_cloudflare_async(action: &'static str, stdin_json: Option<String>) -> Result<Value, String> {
+async fn run_cloudflare_async(
+    action: &'static str,
+    stdin_json: Option<String>,
+) -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(move || run_cloudflare(action, stdin_json))
         .await
         .map_err(|error| format!("Cloudflare-Steuerung wurde unerwartet beendet: {error}"))?
@@ -471,6 +476,120 @@ pub async fn cloudflare_start() -> Result<Value, String> {
 #[tauri::command]
 pub async fn cloudflare_stop() -> Result<Value, String> {
     run_cloudflare_async("stop", None).await
+}
+
+// ── Operations (Abschnitt D: was aus Studio hierher gezogen ist) ───────────
+// Security, Secrets-Status, Migrationen, Audit-Log, API-Tokens, Webhooks und
+// Einstellungen. Eine Brücke statt sieben: die Aktion kommt als Parameter, die
+// CLI prüft sie gegen ihre eigene Whitelist. Nutzlast (teils geheim) geht über
+// stdin, nie als Prozessargument.
+
+const OPS_CLI_REL: &str = "tools/uwe-host-command-center/src/ops-cli.ts";
+
+/// Actions the frontend may invoke. The CLI validates independently; this list
+/// keeps a compromised renderer from reaching a future action it should not.
+const OPS_ACTIONS: &[&str] = &[
+    "security-status",
+    "secrets-status",
+    "migration-status",
+    "audit-log",
+    "api-tokens-list",
+    "api-tokens-create",
+    "api-tokens-revoke",
+    "webhooks-list",
+    "webhooks-create",
+    "webhooks-delete",
+    "settings-get",
+    "settings-update",
+    "setup-status",
+    "smtp-status",
+    "smtp-set",
+    "smtp-clear",
+    "cloudflare-challenge-status",
+    "cloudflare-challenge-set",
+    "cloudflare-challenge-apply",
+    "google-login-set",
+];
+
+fn build_ops_command(action: &str) -> Result<Command, String> {
+    if !OPS_ACTIONS.contains(&action) {
+        return Err(format!("Unbekannte Betriebs-Aktion: {action}"));
+    }
+
+    let root = resolve_monorepo_root();
+    let script = root.join(OPS_CLI_REL);
+    if !script.exists() {
+        return Err(format!(
+            "Betriebs-Werkzeuge nicht gefunden: {}. Bitte einen aktuellen UWE-Projektordner auswählen.",
+            script.display()
+        ));
+    }
+
+    let mut command = Command::new("node");
+    configure_hidden_process(&mut command);
+    command
+        .arg("--import")
+        .arg("tsx")
+        .arg(OPS_CLI_REL)
+        .arg(action)
+        .current_dir(&root);
+    Ok(command)
+}
+
+fn run_ops(action: &str, stdin_json: Option<String>) -> Result<Value, String> {
+    let mut command = build_ops_command(action)?;
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    if stdin_json.is_some() {
+        command.stdin(Stdio::piped());
+    }
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("Betriebs-Werkzeuge konnten nicht gestartet werden: {error}"))?;
+
+    if let Some(payload) = stdin_json {
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(payload.as_bytes())
+                .map_err(|error| format!("Daten konnten nicht übergeben werden: {error}"))?;
+        }
+    }
+
+    let output = child.wait_with_output().map_err(|error| {
+        format!("Betriebs-Werkzeuge konnten nicht abgeschlossen werden: {error}")
+    })?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            "Betriebs-Werkzeuge sind fehlgeschlagen.".to_string()
+        } else {
+            stderr
+        });
+    }
+
+    stdout
+        .lines()
+        .rev()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .find_map(|line| serde_json::from_str::<Value>(line).ok())
+        .ok_or_else(|| "Antwort der Betriebs-Werkzeuge konnte nicht gelesen werden.".to_string())
+}
+
+#[tauri::command]
+pub async fn ops_invoke(action: String, payload: Option<Value>) -> Result<Value, String> {
+    let stdin_json = match payload {
+        Some(value) => Some(
+            serde_json::to_string(&value)
+                .map_err(|error| format!("Daten konnten nicht serialisiert werden: {error}"))?,
+        ),
+        None => None,
+    };
+
+    tauri::async_runtime::spawn_blocking(move || run_ops(&action, stdin_json))
+        .await
+        .map_err(|error| format!("Betriebs-Werkzeuge wurden unerwartet beendet: {error}"))?
 }
 
 // ── Host env editor ────────────────────────────────────────────────────────

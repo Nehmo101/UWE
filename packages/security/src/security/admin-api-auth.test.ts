@@ -12,7 +12,7 @@ function mockStudioRequest(path = "/api/backup"): Request {
 describe("studio role api auth", () => {
   it("blocks player session on studio API routes", () => {
     const context: ApiAuthContext = {
-      user: { id: "1", displayName: "P", email: null, role: "player" },
+      user: { id: "1", displayName: "P", email: null, isOwner: false, access: { portal: true, studio: false, brain: false, family: false } },
       apiTokenId: null,
       apiTokenScopes: null,
       authMethod: "session",
@@ -24,7 +24,7 @@ describe("studio role api auth", () => {
 
   it("allows dm session on studio API routes", () => {
     const context: ApiAuthContext = {
-      user: { id: "2", displayName: "DM", email: null, role: "dm" },
+      user: { id: "2", displayName: "DM", email: null, isOwner: false, access: { portal: true, studio: true, brain: false, family: false } },
       apiTokenId: null,
       apiTokenScopes: null,
       authMethod: "session",
@@ -35,7 +35,7 @@ describe("studio role api auth", () => {
 
   it("blocks dm session on admin API routes", () => {
     const context: ApiAuthContext = {
-      user: { id: "2", displayName: "DM", email: null, role: "dm" },
+      user: { id: "2", displayName: "DM", email: null, isOwner: false, access: { portal: true, studio: true, brain: false, family: false } },
       apiTokenId: null,
       apiTokenScopes: null,
       authMethod: "session",
@@ -49,7 +49,7 @@ describe("studio role api auth", () => {
 describe("admin api auth", () => {
   it("blocks player session on admin routes", () => {
     const context: ApiAuthContext = {
-      user: { id: "1", displayName: "P", email: null, role: "player" },
+      user: { id: "1", displayName: "P", email: null, isOwner: false, access: { portal: true, studio: false, brain: false, family: false } },
       apiTokenId: null,
       apiTokenScopes: null,
       authMethod: "session",
@@ -59,9 +59,9 @@ describe("admin api auth", () => {
     assert.equal(denied?.status, 403);
   });
 
-  it("allows admin session", () => {
+  it("allows the owner session", () => {
     const context: ApiAuthContext = {
-      user: { id: "1", displayName: "A", email: null, role: "admin" },
+      user: { id: "1", displayName: "A", email: null, isOwner: true, access: { portal: true, studio: true, brain: true, family: true } },
       apiTokenId: null,
       apiTokenScopes: null,
       authMethod: "session",

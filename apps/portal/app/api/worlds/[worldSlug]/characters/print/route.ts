@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isWorldStaff } from "@uwe/auth";
+import { isDm } from "@uwe/auth";
 import {
   buildCharacterSheetMarkdown,
   buildCharacterSheetPrintHtml,
@@ -48,7 +48,7 @@ export async function GET(
 
     const inventory = createPartyTreasuryService(db);
     const inventoryItems = (await inventory.listItemsForCharacter(character.id))
-      .filter((item) => isWorldStaff(ctx) || !isInventoryItemDmOnly(item))
+      .filter((item) => isDm(ctx) || !isInventoryItemDmOnly(item))
       .map((item) => ({
         name: item.name,
         quantity: item.quantity,

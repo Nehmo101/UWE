@@ -42,36 +42,6 @@ enum DungeonPrepStatus {
   skipped
 }
 
-enum Visibility {
-  private
-  dm_only
-  player_visible
-  public
-  specific_players
-  unlock_after_session
-  archived
-}
-
-enum SecretLevel {
-  none
-  spoiler
-  dm_secret
-}
-
-enum RevealState {
-  hidden
-  preview
-  revealed
-}
-
-enum PublishStatus {
-  draft
-  internal
-  review
-  published
-  archived
-}
-
 enum CanonicalStatus {
   idea
   draft
@@ -95,7 +65,6 @@ enum ContentBlockType {
   relation
   timeline
   statblock
-  gm_note
   player_text
   ai_summary
 }
@@ -110,40 +79,10 @@ enum AssetType {
   other
 }
 
-enum UserRole {
-  owner
-  admin
-  dm
-  player
-  readonly
-  guest
-}
-
 enum UserStatus {
   invited
   active
   disabled
-}
-
-enum WorldMemberRole {
-  owner
-  dm
-  co_dm
-  player
-}
-
-enum ContentReviewStatus {
-  pending
-  approved
-  rejected
-  superseded
-}
-
-enum ContentReviewSourceType {
-  ai_proposal
-  co_dm_change
-  player_note
-  portal_unlock
 }
 
 enum GameSessionStatus {
@@ -225,12 +164,6 @@ enum ShareTargetType {
   page
   handout
   asset
-}
-
-enum BrainVisibility {
-  dm_only
-  player_visible
-  public
 }
 
 enum BrainSource {
@@ -510,7 +443,11 @@ model User {
   displayName         String     @map("display_name")
   email               String?    @unique
   passwordHash        String?    @map("password_hash")
-  role                UserRole   @default(player)
+  isOwner             Boolean    @default(false) @map("is_owner")
+  portalAccess        Boolean    @default(false) @map("portal_access")
+  studioAccess        Boolean    @default(false) @map("studio_access")
+  brainAccess         Boolean    @default(false) @map("brain_access")
+  familyAccess        Boolean    @default(false) @map("family_access")
   status              UserStatus @default(active)
   emailVerifiedAt     DateTime?  @map("email_verified_at")
   lastLoginAt         DateTime?  @map("last_login_at")
@@ -524,8 +461,6 @@ model User {
 
   sessions            Session[]
   worldMemberships    WorldMembership[]
-  pageAccess          PagePlayerAccess[]
-  sessionUnlocks      SessionUnlock[]
   playerQuestFlags      PlayerQuestFlag[]
   sessionAvailabilities SessionAvailability[]
   playerNotes         PlayerNote[]
@@ -536,11 +471,7 @@ model User {
   twoFactorChallenges TwoFactorChallenge[]
   authIdentities      AuthIdentity[]
   webAuthnCredentials WebAuthnCredential[]
-  contentReviewsProposed ContentReview[] @relation("ContentReviewProposedBy")
-  contentReviewsReviewed ContentReview[] @relation("ContentReviewReviewedBy")
-  aiUserGrant          AiUserGrant?
   aiUsageLogs          AiUsageLog[]
-  reviewComments         ReviewComment[]
   dashboardLayouts       DashboardLayout[]
   ownedCharacters        Character[]
   bugReports             BugReport[]
@@ -599,7 +530,6 @@ model WorldMembership {
   id            String          @id @default(cuid())
   userId        String          @map("user_id")
   worldId       String          @map("world_id")
-  role          WorldMemberRole
   characterName String?         @map("character_name")
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
@@ -609,18 +539,6 @@ model WorldMembership {
 
   @@unique([userId, worldId])
   @@map("world_memberships")
-}
-
-model PagePlayerAccess {
-  id     String @id @default(cuid())
-  pageId String @map("page_id")
-  userId String @map("user_id")
-
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([pageId, userId])
-  @@map("page_player_access")
 }
 
 model PlayerQuestFlag {
@@ -655,27 +573,11 @@ model SessionAvailability {
   @@map("session_availabilities")
 }
 
-model SessionUnlock {
-  id           String   @id @default(cuid())
-  pageId       String   @map("page_id")
-  userId       String   @map("user_id")
-  unlockedAt   DateTime @default(now()) @map("unlocked_at")
-  sessionLabel String?  @map("session_label")
-
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([pageId, userId])
-  @@map("session_unlocks")
-}
-
 model World {
   id               String   @id @default(cuid())
   name             String
   slug             String   @unique
   description      String?
-  guestModeEnabled     Boolean  @default(false) @map("guest_mode_enabled")
-  guestCommentsEnabled Boolean  @default(false) @map("guest_comments_enabled")
   isSandbox            Boolean  @default(false) @map("is_sandbox")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
@@ -691,7 +593,6 @@ model World {
   printLists        PrintList[]
   soundboardButtons SoundboardButton[]
   playerNotes       PlayerNote[]
-  shareLinks        ShareLink[]
   spotifyConnection SpotifyConnection?
   brainDocuments    BrainDocument[]
   brainFacts        BrainFact[]
@@ -701,7 +602,6 @@ model World {
   generatorOutputs    GeneratorOutput[]
   imageStudioProjects ImageStudioProject[]
   dndBeyondReferences DndBeyondReference[]
-  contentReviews      ContentReview[]
   terraKarten         TerraKarte[]
   worldCalendar       WorldCalendar?
   worldEvents         WorldEvent[]
@@ -752,10 +652,6 @@ model Page {
   slug            String
   type            PageType
   summary         String?
-  visibility      Visibility         @default(private)
-  publishStatus   PublishStatus      @default(draft) @map("publish_status")
-  secretLevel     SecretLevel        @default(none) @map("secret_level")
-  revealState     RevealState        @default(hidden) @map("reveal_state")
   canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
   prepStatus      DungeonPrepStatus? @map("prep_status")
   questStatus     QuestLifecycleStatus? @map("quest_status")
@@ -772,8 +668,6 @@ model Page {
   contentBlocks    ContentBlock[]
   outgoingLinks    PageLink[]         @relation("SourcePage")
   incomingLinks    PageLink[]         @relation("TargetPage")
-  playerAccess       PagePlayerAccess[]
-  sessionUnlocks     SessionUnlock[]
   playerQuestFlags    PlayerQuestFlag[]
   gameSessionLinks       GameSessionPageLink[]
   soundboardButtonLinks  SoundboardButtonPageLink[]
@@ -824,8 +718,6 @@ model WorldEvent {
   title              String
   summaryPlayer      String?              @map("summary_player")
   summaryDm          String?              @map("summary_dm")
-  visibility         Visibility           @default(private)
-  secretLevel        SecretLevel          @default(none) @map("secret_level")
   sourceType         WorldEventSourceType @default(manual) @map("source_type")
   sourceAiProposalId String?              @map("source_ai_proposal_id")
   gameSessionId      String?              @map("game_session_id")
@@ -1042,9 +934,6 @@ model ContentBlock {
   type       ContentBlockType
   sortOrder  Int              @map("sort_order")
   content     String           @default("")
-  visibility  Visibility       @default(private)
-  secretLevel SecretLevel      @default(none) @map("secret_level")
-  revealState RevealState      @default(hidden) @map("reveal_state")
   metadata    Json?
   createdAt  DateTime         @default(now()) @map("created_at")
   updatedAt  DateTime         @updatedAt @map("updated_at")
@@ -1067,9 +956,6 @@ model Asset {
   storageKey  String     @map("storage_key")
   mimeType    String?    @map("mime_type")
   size        Int        @default(0)
-  visibility  Visibility  @default(private)
-  secretLevel SecretLevel @default(none) @map("secret_level")
-  revealState RevealState @default(hidden) @map("reveal_state")
   tags        Json?
   metadata    Json?
   createdAt   DateTime    @default(now()) @map("created_at")
@@ -1235,7 +1121,6 @@ model SoundboardButton {
   volume      Float            @default(1.0)
   loop        Boolean          @default(false)
   tags        Json?
-  visibility  Visibility       @default(dm_only)
   sortOrder   Int              @default(0) @map("sort_order")
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
@@ -1291,84 +1176,6 @@ model PlayerNote {
   @@map("player_notes")
 }
 
-model ContentReview {
-  id               String                  @id @default(cuid())
-  worldId          String                  @map("world_id")
-  sourceType       ContentReviewSourceType @map("source_type")
-  sourceId         String                  @map("source_id")
-  status           ContentReviewStatus     @default(pending)
-  title            String
-  summary          String                  @default("")
-  diff             Json?
-  payload          Json?
-  proposedByUserId String?                 @map("proposed_by_user_id")
-  reviewedByUserId String?                 @map("reviewed_by_user_id")
-  reviewedAt       DateTime?               @map("reviewed_at")
-  rejectReason     String?                 @map("reject_reason")
-  targetHref       String?                 @map("target_href")
-  createdAt        DateTime                @default(now()) @map("created_at")
-  updatedAt        DateTime                @updatedAt @map("updated_at")
-
-  world      World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  proposedBy User?           @relation("ContentReviewProposedBy", fields: [proposedByUserId], references: [id], onDelete: SetNull)
-  reviewedBy User?           @relation("ContentReviewReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  comments   ReviewComment[]
-
-  @@unique([sourceType, sourceId])
-  @@index([worldId, status])
-  @@index([status, createdAt])
-  @@map("content_reviews")
-}
-
-model ReviewComment {
-  id        String   @id @default(cuid())
-  reviewId  String   @map("review_id")
-  userId    String   @map("user_id")
-  content   String
-  createdAt DateTime @default(now()) @map("created_at")
-
-  review ContentReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([reviewId, createdAt])
-  @@map("review_comments")
-}
-
-model ShareLink {
-  id           String          @id @default(cuid())
-  worldId      String          @map("world_id")
-  targetType   ShareTargetType @map("target_type")
-  targetId     String          @map("target_id")
-  token        String          @unique
-  expiresAt    DateTime?       @map("expires_at")
-  passwordHash String?         @map("password_hash")
-  readOnly     Boolean         @default(true) @map("read_only")
-  logAccess    Boolean         @default(false) @map("log_access")
-  enabled      Boolean         @default(true)
-  createdAt    DateTime        @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
-
-  world      World             @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  accessLogs ShareAccessLog[]
-
-  @@index([worldId])
-  @@index([targetType, targetId])
-  @@map("share_links")
-}
-
-model ShareAccessLog {
-  id          String   @id @default(cuid())
-  shareLinkId String   @map("share_link_id")
-  accessedAt  DateTime @default(now()) @map("accessed_at")
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
-
-  shareLink ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
-
-  @@index([shareLinkId, accessedAt])
-  @@map("share_access_logs")
-}
-
 model SpotifyConnection {
   id                    String   @id @default(cuid())
   worldId               String   @unique @map("world_id")
@@ -1401,7 +1208,6 @@ enum ActivityAction {
   content_updated
   content_deleted
   content_restored
-  visibility_changed
   inspector_fix_applied
   template_created
   template_updated
@@ -1470,13 +1276,12 @@ enum AuditAction {
   user_deleted
   user_enabled
   password_reset
-  user_role_changed
+  user_access_changed
   password_changed
   user_invited
   content_created
   content_updated
   content_deleted
-  visibility_changed
   secret_revealed
   import_started
   import_completed
@@ -1595,7 +1400,6 @@ model PageTemplate {
   name              String
   description       String     @default("")
   pageType          PageType   @map("page_type")
-  defaultVisibility Visibility @default(dm_only) @map("default_visibility")
   titlePlaceholder  String     @default("") @map("title_placeholder")
   blocks            Json
   isSystem          Boolean    @default(false) @map("is_system")
@@ -1711,7 +1515,6 @@ model BrainDocument {
   title         String
   content       String            @default("")
   documentType  BrainDocumentType @default(general) @map("document_type")
-  visibility    BrainVisibility   @default(dm_only)
   source        BrainSource       @default(manual)
   status        BrainStatus       @default(draft)
   trustLevel    Float?            @map("trust_level")
@@ -1726,7 +1529,6 @@ model BrainDocument {
   chunks      BrainChunk[]
 
   @@index([worldId, status])
-  @@index([worldId, visibility])
   @@index([worldId, documentType])
   @@index([pageId])
   @@index([gameSessionId])
@@ -1759,7 +1561,6 @@ model BrainFact {
   factType      BrainFactType   @default(custom) @map("fact_type")
   title         String
   content       String          @default("")
-  visibility    BrainVisibility @default(dm_only)
   source        BrainSource     @default(manual)
   status        BrainStatus     @default(draft)
   confidence    Float?
@@ -1773,7 +1574,6 @@ model BrainFact {
   page        Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
 
   @@index([worldId, status])
-  @@index([worldId, visibility])
   @@index([worldId, factType])
   @@index([pageId])
   @@index([gameSessionId])
@@ -2501,11 +2301,6 @@ model TwoFactorChallenge {
   @@map("two_factor_challenges")
 }
 
-/// A registered WebAuthn passkey (platform authenticator: Face ID, Touch ID,
-/// Windows Hello, …). `credentialId`/`publicKey` are base64url as produced by
-/// the WebAuthn verifier. `rpId` records the relying-party ID the passkey was
-/// bound to — a passkey is permanently tied to it, so the stored value lets
-/// login filter out credentials from a previous domain and surface why.
 model WebAuthnCredential {
   id           String    @id @default(cuid())
   userId       String    @map("user_id")
@@ -2527,9 +2322,6 @@ model WebAuthnCredential {
   @@map("webauthn_credentials")
 }
 
-/// Short-lived server-issued WebAuthn challenge. Stored hashed (like session
-/// and 2FA tokens); `userId` is null for usernameless login ceremonies where
-/// the user is only known after the authenticator responds.
 model WebAuthnChallenge {
   id            String    @id @default(cuid())
   userId        String?   @map("user_id")
@@ -2646,38 +2438,6 @@ model AiGatewayConfig {
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
   @@map("ai_gateway_config")
-}
-
-model AiCloudProvider {
-  id           String   @id @default(cuid())
-  providerId   String   @map("provider_id")
-  label        String
-  baseUrl      String?  @map("base_url")
-  defaultModel String?  @map("default_model")
-  apiKeyEnc    String?  @map("api_key_enc")
-  isEnabled    Boolean  @default(true) @map("is_enabled")
-  priority     Int      @default(0)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  @@unique([providerId])
-  @@index([isEnabled, priority])
-  @@map("ai_cloud_providers")
-}
-
-model AiUserGrant {
-  id                   String   @id @default(cuid())
-  userId               String   @unique @map("user_id")
-  permissions          Json     @default("[]")
-  cloudFallbackAllowed Boolean  @default(false) @map("cloud_fallback_allowed")
-  dailyBudgetUsd       Float?   @map("daily_budget_usd")
-  grantedBy            String?  @map("granted_by")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("ai_user_grants")
 }
 
 model AiUsageLog {
@@ -2911,8 +2671,6 @@ enum PantryLocation {
   spices
 }
 
-/// Terra-Karte — eine Zeile je Karte, der ganze Kartenbaum als eine JSON-Datei.
-/// Spiegel des SQLite-Zweigs; siehe dort fuer die ausfuehrliche Begruendung.
 model TerraKarte {
   id      String @id @default(cuid())
   worldId String @map("world_id")
@@ -2928,4 +2686,16 @@ model TerraKarte {
 
   @@index([worldId])
   @@map("terra_karten")
+}
+
+enum FamilyChatScope {
+  /// Sichtbar für alle mit dem Häkchen `Family` — füttert das Family-Brain.
+  shared
+  /// Nur für die schreibende Person (G19) — getrennt über `ownerUserId`.
+  private
+}
+
+enum FamilyChatRole {
+  user
+  assistant
 }

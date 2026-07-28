@@ -14,14 +14,15 @@ export interface SettingsTab {
 export interface SettingsShellProps {
   title: string;
   description?: React.ReactNode;
-  tabs: SettingsTab[];
+  /** Sub-navigation. Omit when the surface has only one panel. */
+  tabs?: SettingsTab[];
   children: React.ReactNode;
 }
 
 /**
  * Content-level settings layout (rendered inside StudioShell/SystemShell):
  * a left tab list plus the active settings panel. Keeps a constant reading
- * width and stable sub-navigation.
+ * width and stable sub-navigation. Without tabs it is a plain reading column.
  */
 export function SettingsShell({ title, description, tabs, children }: SettingsShellProps) {
   return (
@@ -31,8 +32,9 @@ export function SettingsShell({ title, description, tabs, children }: SettingsSh
         {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
       <div className="flex flex-col gap-6 md:flex-row">
-        <nav className="flex shrink-0 flex-col gap-1 md:w-56">
-          {tabs.map((tab) => (
+        {tabs && tabs.length > 0 ? (
+          <nav className="flex shrink-0 flex-col gap-1 md:w-56">
+            {tabs.map((tab) => (
             <Link
               key={tab.id}
               href={tab.href}
@@ -42,10 +44,11 @@ export function SettingsShell({ title, description, tabs, children }: SettingsSh
                 tab.active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted",
               )}
             >
-              {tab.label}
-            </Link>
-          ))}
-        </nav>
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         <div className="min-w-0 flex-1">{children}</div>
       </div>
     </div>

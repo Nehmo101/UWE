@@ -59,6 +59,7 @@ export function PortalShell({
         studioUrl: urls.studio,
         portalUrl: urls.portal,
         brainUrl: urls.brain,
+        familyUrl: urls.family,
       });
 
   return (

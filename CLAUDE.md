@@ -8,6 +8,7 @@ UWE (Universeller Welten-Editor) ist ein selbst-gehostetes Alltags- und Hobby-Be
 apps/studio   → DM-App (Port 3000) — Weltbearbeitung, Admin, AI, Daily Admin OS
 apps/portal   → Spieler-Wiki (Port 3001) — nur gefilterte, freigegebene Inhalte
 apps/brain    → Owner-only Brain (Port 3002) — privater Daily-Admin-/Wissensbereich
+apps/family   → Family (Port 3004) — gemeinsamer Haushalt, Häkchen `Family`
 apps/landing  → Öffentliche Startseite (Port 3103) — Apex-Origin, genau drei Routen
 packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 ```
@@ -50,7 +51,9 @@ Schnell-Gate ohne Security/Audit: `pnpm ci:check`
 
 Details: [SECURITY.md](SECURITY.md) und `.cursor/rules/security.mdc`.
 
-Kernregeln: keine Secrets in Source; `dm_only` nie ins Portal; Filtering in `packages/database/src/permissions.ts`; Cloud-AI ohne Kampagnen/Brain-Kontext; CSP nicht ohne Review schwächen.
+Kernregeln: keine Secrets in Source; Zugang = vier Häkchen pro E-Mail (`packages/auth/src/area-access.ts`); Inhalt = Welt-Zuordnung (`packages/auth/src/permissions.ts`); jede KI-Aktion über den RTX-Host, kein Cloud-Provider; CSP nicht ohne Review schwächen.
+
+**Zugangsmodell in einem Satz:** Das Häkchen sagt, welche App (Portal / Studio / Brain / Family). Die Welt-Zuordnung sagt, welche Welt. Sonst nichts. `owner` ist die einzige verbliebene Rolle — für Betrieb, Restore und das Command Center.
 
 ## TypeScript / React Konventionen
 
@@ -77,13 +80,22 @@ Die CSP ist umgebungsabhängig: Der Dev-Zweig enthält bereits `'unsafe-eval'`, 
 
 ```bash
 cp -n .env.example .env
-pnpm --filter @uwe/database db:deploy
+# Es sind drei Datenbanken — der Seed braucht alle drei, sonst bricht er ab.
+pnpm --filter @uwe/database db:deploy          # uwe.db
+pnpm --filter @uwe/database db:deploy:brain    # uwe-brain.db
+pnpm --filter @uwe/database db:deploy:family   # uwe-family.db
 pnpm --filter @uwe/database db:seed
 # Login: dm@uwe.local / uwe-dev
 ```
 
+Der Seed-Nutzer trägt die Häkchen `Portal` und `Studio`. Für Brain oder Family
+das jeweilige Häkchen im Command Center setzen.
+
 ## Aktive Runtime-Wahrheit
 
+- **Datenbanken**: `uwe.db` (D&D), `uwe-brain.db` (owner-privat), `uwe-family.db` (Family).
+  Die Aufteilung kommt aus `PRISMA_MODEL_BOUNDARIES`; `scripts/generate-brain-schema-split.mjs`
+  schreibt daraus die drei Prisma-Schemata.
 - **UWE Host**: Linux + Node.js 22 + `pnpm` + `systemd` (`deploy/systemd/uwe.service`).
 - **RTX Host Connector**: optionaler **outbound** Worker (`tools/uwe-rtx-connector`).
 - **Cloudflare Tunnel / Access**: optional davor.
@@ -113,4 +125,4 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
 - [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain`
-- [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (23 Skills)
+- [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (24 Skills)

@@ -5,7 +5,6 @@ import { getUweRuntimeConfig, isPublicExposureConfigured } from "@uwe/auth";
 import type { PrismaClient } from "./client";
 import type { ActivityAction } from "./generated/prisma/client";
 import { createActivityLogService } from "./activity-log-service";
-import { SettingsService } from "./settings-service";
 import { getSystemStatus, type SystemStatus } from "./system-status";
 import { assessStudioSecurity, type StudioSecurityAssessment } from "./studio-security";
 import {
@@ -14,7 +13,6 @@ import {
 } from "./production-safety";
 
 const SECURITY_AUDIT_ACTIONS: ActivityAction[] = [
-  "visibility_changed",
   "backup_created",
   "backup_restored",
   "seed_applied",
@@ -49,11 +47,13 @@ export interface SecurityWarning {
   description: string;
 }
 
-export interface UserRoleCounts {
+/** How many accounts hold each checkbox — the replacement for the role tally. */
+export interface AreaAccessCounts {
   owner: number;
-  admin: number;
-  dm: number;
-  player: number;
+  portal: number;
+  studio: number;
+  brain: number;
+  family: number;
 }
 
 export interface EnvSecretStatus {
@@ -70,7 +70,7 @@ export interface SecurityDashboardStatus {
     portalAuthRequired: boolean;
     message: string;
   };
-  roleCounts: UserRoleCounts;
+  accessCounts: AreaAccessCounts;
   networkProtection: {
     checklist: string[];
     note: string;
@@ -272,21 +272,16 @@ function assessRtxServiceToken(
   };
 }
 
-export async function getUserRoleCounts(db: PrismaClient): Promise<UserRoleCounts> {
-  const grouped = await db.user.groupBy({
-    by: ["role"],
-    _count: { role: true },
-  });
+export async function getAreaAccessCounts(db: PrismaClient): Promise<AreaAccessCounts> {
+  const [owner, portal, studio, brain, family] = await Promise.all([
+    db.user.count({ where: { isOwner: true } }),
+    db.user.count({ where: { portalAccess: true } }),
+    db.user.count({ where: { studioAccess: true } }),
+    db.user.count({ where: { brainAccess: true } }),
+    db.user.count({ where: { familyAccess: true } }),
+  ]);
 
-  const counts: UserRoleCounts = { owner: 0, admin: 0, dm: 0, player: 0 };
-  for (const entry of grouped) {
-    if (entry.role === "owner") counts.owner = entry._count.role;
-    else if (entry.role === "admin") counts.admin = entry._count.role;
-    else if (entry.role === "dm") counts.dm = entry._count.role;
-    else if (entry.role === "player") counts.player = entry._count.role;
-  }
-
-  return counts;
+  return { owner, portal, studio, brain, family };
 }
 
 export function buildSecurityWarnings(input: {
@@ -402,12 +397,10 @@ export async function getSecurityDashboardStatus(
   const defaultModel = resolveDefaultModel(env);
   const system = await getSystemStatus(db);
   const studioSecurity = assessStudioSecurity(system, env);
-  const settings = await new SettingsService(db).getSettings();
-
   const sessionSecret = assessSessionSecret(env);
   const setupToken = assessSetupToken(env);
   const rtxServiceToken = assessRtxServiceToken(env, aiEnabled);
-  const roleCounts = await getUserRoleCounts(db);
+  const accessCounts = await getAreaAccessCounts(db);
 
   const authActive = runtime.authRequired && sessionSecret.configured && sessionSecret.strong;
 
@@ -454,8 +447,6 @@ export async function getSecurityDashboardStatus(
     `Portal AUTH_REQUIRED: ${runtime.authRequired ? "ja" : "nein"}`,
     `Studio öffentlich erreichbar: ${studioSecurity.publicExposureConfigured ? "ja" : "nein"}`,
     `Studio API Token: ${studioSecurity.checks.studioApiTokenConfigured ? "gesetzt" : "fehlt"}`,
-    `Gastzugang Portal: ${settings.portal.guestAccessEnabled ? "aktiv" : "deaktiviert"}`,
-    `Öffentliche Share-Links: ${settings.portal.publicSharingEnabled ? "aktiv" : "deaktiviert"}`,
   ];
 
   const warnings = buildSecurityWarnings({
@@ -479,7 +470,7 @@ export async function getSecurityDashboardStatus(
           ? "AUTH_REQUIRED=true, aber Session-Secret fehlt oder ist unsicher."
           : "Portal-Login ist optional — für öffentliches Portal AUTH_REQUIRED=true setzen.",
     },
-    roleCounts,
+    accessCounts,
     networkProtection: {
       checklist: [
         "AUTH_REQUIRED=true — Zugang zu Studio & Portal über den UWE-Login (E-Mail)?",

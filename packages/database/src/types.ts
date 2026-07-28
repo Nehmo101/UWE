@@ -2,8 +2,6 @@
 export type PageCategory = "lore" | "locations" | "npcs" | "dungeons";
 
 /** Who may see a page in the player portal. */
-export type PageVisibility = "dm_only" | "player_visible" | "public";
-
 export interface World {
   id: string;
   slug: string;
@@ -27,7 +25,6 @@ export interface Page {
   aliases: string[];
   tags: string[];
   relations: PageRelation[];
-  visibility: PageVisibility;
 }
 
 export interface PagePath {

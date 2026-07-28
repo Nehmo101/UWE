@@ -1,5 +1,5 @@
 import type { PrismaClient } from "./client";
-import type { CanonicalStatus, PageType, PublishStatus } from "./generated/prisma/client";
+import type { CanonicalStatus, PageType } from "./generated/prisma/client";
 import { buildPageUrl } from "./page-types";
 import { isOpenQuest } from "./quest-lifecycle-service";
 
@@ -7,7 +7,6 @@ export type WorldOpenItemCategory =
   | "open_quest"
   | "session_plot"
   | "draft_npc"
-  | "open_puzzle"
   | "prepared_content"
   | "played_awaiting_canon";
 
@@ -25,7 +24,6 @@ export const WORLD_OPEN_ITEM_CATEGORY_LABELS: Record<WorldOpenItemCategory, stri
   open_quest: "Offene Quests",
   session_plot: "Session-Plots",
   draft_npc: "NPCs in Arbeit",
-  open_puzzle: "Offene Rätsel",
   prepared_content: "Vorbereitet, noch nicht gespielt",
   played_awaiting_canon: "Gespielt — Kanon noch offen",
 };
@@ -55,7 +53,6 @@ export class WorldOpenItemsService {
           type: true,
           summary: true,
           questStatus: true,
-          publishStatus: true,
           canonicalStatus: true,
           updatedAt: true,
         },
@@ -93,29 +90,14 @@ export class WorldOpenItemsService {
         });
       }
 
-      if (
-        page.type === "npc" &&
-        (page.publishStatus === "draft" || page.canonicalStatus === "draft")
-      ) {
+      if (page.type === "npc" && page.canonicalStatus === "draft") {
         items.push({
           id: `npc-${page.id}`,
           category: "draft_npc",
           title: page.title,
           summary: page.summary,
           href: buildPageUrl(world.slug, page.type as PageType, page.slug),
-          meta: `${labelPublish(page.publishStatus)} · ${labelCanon(page.canonicalStatus)}`,
-          updatedAt: page.updatedAt,
-        });
-      }
-
-      if (page.type === "puzzle" && page.publishStatus === "draft") {
-        items.push({
-          id: `puzzle-${page.id}`,
-          category: "open_puzzle",
-          title: page.title,
-          summary: page.summary,
-          href: buildPageUrl(world.slug, page.type as PageType, page.slug),
-          meta: "Entwurf",
+          meta: labelCanon(page.canonicalStatus),
           updatedAt: page.updatedAt,
         });
       }
@@ -144,11 +126,7 @@ export class WorldOpenItemsService {
         });
       }
 
-      if (
-        page.type === "npc" &&
-        page.updatedAt.getTime() < staleCutoff &&
-        page.publishStatus !== "published"
-      ) {
+      if (page.type === "npc" && page.updatedAt.getTime() < staleCutoff) {
         const exists = items.some((item) => item.id === `npc-${page.id}`);
         if (!exists) {
           items.push({
@@ -196,9 +174,6 @@ export class WorldOpenItemsService {
   }
 }
 
-function labelPublish(status: PublishStatus): string {
-  return status === "published" ? "Veröffentlicht" : "Entwurf";
-}
 
 function labelCanon(status: CanonicalStatus): string {
   switch (status) {
@@ -228,7 +203,6 @@ export function groupOpenItemsByCategory(
     open_quest: items.filter((item) => item.category === "open_quest"),
     session_plot: items.filter((item) => item.category === "session_plot"),
     draft_npc: items.filter((item) => item.category === "draft_npc"),
-    open_puzzle: items.filter((item) => item.category === "open_puzzle"),
     prepared_content: items.filter((item) => item.category === "prepared_content"),
     played_awaiting_canon: items.filter((item) => item.category === "played_awaiting_canon"),
   };

@@ -2,28 +2,28 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createPrismaClient } from "@uwe/database/server";
 import {
-  createTestBrainClient,
+  createTestFamilyClient,
   createTestDatabaseUrl,
-  type BrainPrismaClient,
+  type FamilyPrismaClient,
 } from "@uwe/database/test-helpers";
 import { createKitchenService, KitchenService } from "./recipe-service";
 
 describe("KitchenService recipe CRUD", () => {
   let databaseUrl: string;
   let db: ReturnType<typeof createPrismaClient>;
-  let brainDb: BrainPrismaClient;
+  let familyDb: FamilyPrismaClient;
   let service: KitchenService;
 
   before(() => {
     databaseUrl = createTestDatabaseUrl();
     db = createPrismaClient(databaseUrl);
-    brainDb = createTestBrainClient();
-    service = createKitchenService(brainDb, db);
+    familyDb = createTestFamilyClient();
+    service = createKitchenService(familyDb, db);
   });
 
   after(async () => {
     await db.$disconnect();
-    await brainDb.$disconnect();
+    await familyDb.$disconnect();
   });
 
   it("creates a recipe with ingredients and normalized names", async () => {
@@ -116,7 +116,7 @@ describe("KitchenService recipe CRUD", () => {
     );
 
     // Alte Zutaten sind wirklich ersetzt, nicht dupliziert.
-    const ingredientCount = await brainDb.recipeIngredient.count({ where: { recipeId: recipe.id } });
+    const ingredientCount = await familyDb.recipeIngredient.count({ where: { recipeId: recipe.id } });
     assert.equal(ingredientCount, 2);
   });
 

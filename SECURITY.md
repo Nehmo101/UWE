@@ -47,17 +47,29 @@ UWE uses **native email/password authentication** with opaque database-backed se
 
 ---
 
-## Roles
+## Access
 
-| Role | Studio | Admin (`/admin/*`) | Portal |
-|------|--------|-------------------|--------|
-| `owner` | ✓ | ✓ | session-based content |
-| `admin` | ✓ | ✓ | session-based content |
-| `dm` | ✓ | ✗ | session-based content |
-| `player` | ✗ (login rejected) | ✗ | own visibility only |
-| `readonly` / `guest` | ✗ | ✗ | public/guest wiki only |
+The role enum is gone (Notiz Lasse, 2026-07-26). Access is four checkboxes per
+e-mail address, set by the owner in the Command Center — there is no
+self-registration and no anonymous guest.
 
-Player accounts **cannot** access Studio. DM accounts **cannot** access admin APIs without `owner`/`admin` role.
+| Checkbox | Grants |
+|---|---|
+| `portal` | the Spieler-Portal, for every world the address is assigned to |
+| `studio` | the DM workspace, and with it every world |
+| `brain` | the owner-private Brain product |
+| `family` | the Family product |
+
+Plus one flag that is not an area: **`isOwner`** — operations, restore, host
+control, `/admin/*`. The first account created at setup gets the owner flag and
+all four checkboxes.
+
+Two axes, and that is all: *the checkbox says which app, the world assignment
+says which world.*
+
+- `packages/auth/src/area-access.ts` — the checkboxes and the Studio route gate
+- `packages/auth/src/permissions.ts` — `canViewWorldContent`, the single content rule
+- Command Center → **Zugänge** — where the checkboxes are set
 
 ---
 
@@ -97,13 +109,23 @@ Full matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 ---
 
-## DM-Only & Portal Leak Protection
+## World Boundary
 
-- **`dm_only`** pages, blocks, assets, soundboard buttons, session fields, and secret page *titles* are filtered server-side for Portal, search, graph, backlinks, related pages, and static export
-- **`player_visible`** (Studio label: *"Portal sichtbar"*) and **`public`** content on **published** pages is readable by anyone who can reach `/worlds/*` (no login required) — this is intentional
-- Hard regression tests: `packages/database/src/visibility-security.test.ts`, `pnpm test:leaks`
-- Studio **World Inspector** audits portal-visible content and offers one-click fixes
-- **Public Leak Scanner** (`/admin/status`) flags accidental DM-only markers on public routes
+Per-item visibility is gone. There is exactly one content rule left:
+
+> **Whoever is assigned to a world sees everything in it.**
+
+No `dm_only`, no `player_visible`, no draft state, no per-page grant, no share
+link, no guest mode. What still has to hold:
+
+- The world boundary itself — `scopeFromAccessContext` only carries a membership
+  over when it belongs to *that* world. Without it, a member of world A could
+  read world B.
+- An anonymous visitor gets nothing at all; every route needs a session.
+- Hard regression tests: `packages/auth/src/security/authz.test.ts`,
+  `apps/portal/src/lib/world-access.test.ts`, `pnpm test:security`
+- Studio **World Inspector** still audits content quality (broken wikilinks,
+  unassigned pages) — its exposure half is gone with visibility.
 
 ---
 
@@ -216,7 +238,7 @@ Foundation-Welle unverändert.
 - **Rate limiting** — login, share-password, and setup attempts are rate limited per IP (in-memory, per process; use reverse-proxy limits or `setRateLimitStore()` for multi-instance deployments)
 - **Settings API validation** — partial settings updates are validated at runtime; unknown keys and invalid enum/path values are rejected with HTTP 400
 - **CSRF protection** — sensitive Studio API routes reject cross-origin browser requests
-- **Backups** — password hashes, session tokens, and API keys stripped; Zip Slip protection; optional AES-256-GCM encryption (`UWE_BACKUP_ENCRYPTION_KEY`); role-based access (OWNER/ADMIN create, OWNER-only restore)
+- **Backups** — password hashes, session tokens, and API keys stripped; Zip Slip protection; optional AES-256-GCM encryption (`UWE_BACKUP_ENCRYPTION_KEY`); Studio checkbox creates and downloads, owner-only restore
 - **AI keys** — environment only; never in database or client responses
 - **Webhook SSRF protection** — blocks private/localhost targets
 - **Spotify playback** — OAuth and Web API playback control are Studio-only; the Portal may display Spotify buttons but does not trigger playback
@@ -230,9 +252,9 @@ Foundation-Welle unverändert.
 | Risk | Severity | Mitigation |
 |------|----------|------------|
 | Studio exposed without layered auth | Critical | Session login + Cloudflare Access + `STUDIO_API_TOKEN` |
-| Accidental `player_visible` publish | High | Inspector + Leak Scanner + DM training on visibility labels |
+| Assigning the wrong person to a world | High | Zugänge tile shows every address and its worlds; assignment is the only content gate |
 | Cloudflare Access misconfiguration | High | Manual policy review per [docs/cloudflare-access.md](docs/cloudflare-access.md) |
-| DM-only leak via code regression | Critical | `pnpm test:leaks`, `visibility-security.test.ts` in CI |
+| Cross-world read via code regression | Critical | `authz.test.ts`, `world-access.test.ts`, `pnpm test:security` in CI |
 | Multi-instance rate limit bypass | Medium | Proxy-level rate limits or `setRateLimitStore()` |
 | SQLite concurrent writes | Medium | Single-writer; backup during low activity |
 | `AUTH_SECRET` rotation | High | Invalidates Spotify tokens, share passwords — reconnect after rotate |
@@ -243,7 +265,7 @@ Foundation-Welle unverändert.
 
 **Additional considerations:**
 
-- **`player_visible` means "no login required"** — published pages/blocks/assets/soundboard buttons with visibility `player_visible` (or `public`) are readable by anyone who can reach the Portal's `/worlds/*` routes. This is by design; the Studio UI labels this visibility as "Portal sichtbar" (für Spieler freigegeben) to make the consequence explicit. `dm_only` content is never served on those routes
+- **A world assignment shows everything** — once an address is assigned to a world, it reads every page, block and asset in it. There is no draft state left: what exists in a world, its members see. Preparation that nobody should read happens outside UWE, or in a world nobody is assigned to yet.
 - **Portal sessions** — opaque database-backed tokens (httpOnly, SameSite=Lax, Secure in production); token hashes stored at rest via SHA-256; they are not derived from `AUTH_SECRET`
 - **Share links** — public URLs grant read access to specific content; review active links regularly
 

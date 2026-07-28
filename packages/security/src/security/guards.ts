@@ -2,8 +2,8 @@ import { timingSafeEqual } from "node:crypto";
 import type { ApiTokenScope, AuthUser } from "@uwe/auth";
 import {
   evaluateAdminGate,
-  getRequiredRolesForApiPath,
-  hasAnyRole,
+  getRequiredAccessForApiPath,
+  satisfiesStudioRouteAccess,
   isApiTokenFormat,
   parseBearerToken,
   type AdminGateResult,
@@ -120,8 +120,8 @@ export function requireStudioRoleApiAuth(
       }
     })();
 
-  const requiredRoles = getRequiredRolesForApiPath(pathname);
-  if (!requiredRoles) {
+  const requiredAccess = getRequiredAccessForApiPath(pathname);
+  if (!requiredAccess) {
     return null;
   }
 
@@ -133,8 +133,12 @@ export function requireStudioRoleApiAuth(
     return unauthorized("Anmeldung erforderlich.");
   }
 
-  if (!hasAnyRole(context.user, requiredRoles)) {
-    return forbidden("Kein Studio-Zugriff für diese Rolle.");
+  if (!satisfiesStudioRouteAccess(context.user, requiredAccess)) {
+    return forbidden(
+      requiredAccess === "owner"
+        ? "Nur der Owner hat Zugriff auf diese Route."
+        : "Kein Zugang zum Bereich Studio.",
+    );
   }
 
   return null;
@@ -169,8 +173,8 @@ export function requireRestoreOwnerAuth(
     return base;
   }
 
-  // An authenticated OWNER session (browser or session-authenticated) is always sufficient.
-  if (context?.user?.role === "owner") {
+  // An authenticated owner session (browser or session-authenticated) is always sufficient.
+  if (context?.user?.isOwner) {
     return null;
   }
 
@@ -211,8 +215,8 @@ export function requireOwnerApiAuth(
     return unauthorized("Owner-Zugriff erfordert Anmeldung.");
   }
 
-  if (context.user.role !== "owner") {
-    return forbidden("Nur OWNER darf Host-Updates auslösen.");
+  if (!context.user.isOwner) {
+    return forbidden("Nur der Owner darf Host-Updates auslösen.");
   }
 
   return null;

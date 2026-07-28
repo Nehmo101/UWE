@@ -6,7 +6,6 @@ import {
   prisma,
   type ContentBlockType,
   type PageType,
-  type Visibility,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -17,10 +16,9 @@ function templateService() {
 
 /**
  * Parse template blocks from the repeating form fields
- * (blockType_N / blockVisibility_N / blockContent_N / blockRemove_N).
  */
 function blocksFromFormData(formData: FormData) {
-  const blocks: { type: ContentBlockType; visibility: Visibility; content: string }[] = [];
+  const blocks: Array<{ type: ContentBlockType; content: string }> = [];
 
   for (let index = 0; index < 20; index += 1) {
     const type = formData.get(`blockType_${index}`);
@@ -34,7 +32,6 @@ function blocksFromFormData(formData: FormData) {
 
     blocks.push({
       type: String(type) as ContentBlockType,
-      visibility: String(formData.get(`blockVisibility_${index}`) ?? "dm_only") as Visibility,
       content,
     });
   }
@@ -56,7 +53,6 @@ export async function createTemplateAction(formData: FormData) {
       name: String(formData.get("name") || "").trim(),
       description: String(formData.get("description") || ""),
       pageType: String(formData.get("pageType")) as PageType,
-      defaultVisibility: String(formData.get("defaultVisibility")) as Visibility,
       titlePlaceholder: String(formData.get("titlePlaceholder") || ""),
       blocks: blocksFromFormData(formData),
     });
@@ -78,7 +74,6 @@ export async function updateTemplateAction(formData: FormData) {
       name: String(formData.get("name") || "").trim(),
       description: String(formData.get("description") || ""),
       pageType: String(formData.get("pageType")) as PageType,
-      defaultVisibility: String(formData.get("defaultVisibility")) as Visibility,
       titlePlaceholder: String(formData.get("titlePlaceholder") || ""),
       blocks: blocksFromFormData(formData),
     });

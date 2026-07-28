@@ -10,6 +10,7 @@ import {
 } from "@uwe/database/server";
 import { createPasskeyCredentialStore } from "@uwe/database/passkeys";
 import {
+  canAccessPortal,
   getSessionCookieOptionsForRequest,
   SESSION_COOKIE_NAME,
   sessionExpiresAt,
@@ -29,9 +30,9 @@ import {
 
 /**
  * Portal passkey (WebAuthn) route handlers. The shared login/registration flow
- * lives in `@uwe/passkeys`; this file injects the Portal-specific pieces. The
- * Portal accepts any active user, so no `hasAccess` predicate is set (mirrors
- * the Portal password login).
+ * lives in `@uwe/passkeys`; this file injects the Portal-specific pieces.
+ * Zugang ist das Häkchen `Portal` — dieselbe Prüfung wie im Passwort-Login
+ * (`hasAccess: canAccessPortal`); ein Passkey umgeht das Häkchen nicht.
  */
 function jsonError(message: string, status: number): NextResponse {
   return NextResponse.json({ error: message }, { status });
@@ -49,6 +50,7 @@ const handlers = createPasskeyRouteHandlers({
   createDb: createPrismaClient,
   createStore: createPasskeyCredentialStore,
   createAuthService,
+  hasAccess: canAccessPortal,
   isPasskeysEnabled: async (db) =>
     (await createSettingsService(db).getSettings()).auth.passkeysEnabled,
   setSessionCookie: async (token, request) => {

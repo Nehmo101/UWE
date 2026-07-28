@@ -50,15 +50,15 @@ export type AiTaskType =
   | "answer_mail_question"
   | "generate_theme_palette";
 
-/** Audience for context visibility filtering. */
-export type ContextAudience = "dm_internal" | "player_visible" | "mail";
-
-export type BrainVisibility = "dm_only" | "player_visible" | "public";
+/**
+ * Label on a built AI context, for the debug view. It no longer filters
+ * anything: per-item visibility is gone, so a context contains whatever the
+ * world contains.
+ */
 
 export interface AiContextBlock {
   blockId: string;
   type: string;
-  visibility: string;
   content: string;
 }
 
@@ -81,7 +81,6 @@ export interface AiContextPage {
   pageType: string;
   tags: string[];
   aliases: string[];
-  visibility: string;
   canonicalStatus: string;
   summary?: string | null;
   contentBlocks: AiContextBlock[];
@@ -113,7 +112,6 @@ export interface AiContextBrainEntry {
   entryId: string;
   title: string;
   content: string;
-  visibility: BrainVisibility;
   sourceType: string;
   objectRef?: string | null;
   trustLevel?: string | null;
@@ -123,15 +121,12 @@ export interface AiContextDebugItem {
   kind: "world" | "campaign" | "session" | "page" | "brain";
   id: string;
   title: string;
-  visibility?: string;
   charCount: number;
   included: boolean;
   reason?: string;
 }
 
 export interface AiContextDebug {
-  audience: ContextAudience;
-  allowDmOnly: boolean;
   maxChars: number;
   totalChars: number;
   truncated: boolean;
@@ -167,6 +162,5 @@ export interface AiContext {
   promptContext: string;
   truncated: boolean;
   datenschutzMode: boolean;
-  allowDmOnly: boolean;
   debug?: AiContextDebug;
 }

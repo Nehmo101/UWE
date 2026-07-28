@@ -13,7 +13,7 @@ import {
   type MorningBriefingFacts,
 } from "./morning-briefing-prompt";
 import { loadStudioPersonalBrainPromptContext } from "./personal-brain-ai-context";
-import { getTodayDashboardData } from "./today-dashboard";
+import { getTodayDashboardData } from "@uwe/daily-cockpit";
 
 export const MORNING_BRIEFING_TAG = "morning-briefing";
 
@@ -121,7 +121,7 @@ export interface MorningBriefingResult {
  */
 export async function generateMorningBriefing(
   db: PrismaClient,
-  user: { userId: string; role: string },
+  user: { userId: string },
 ): Promise<MorningBriefingResult> {
   const now = new Date();
   const facts = await collectMorningBriefingFacts(db, now);
@@ -136,7 +136,7 @@ export async function generateMorningBriefing(
     },
     {
       user,
-      providerMode: "auto",
+      providerMode: "local_rtx",
       contextMode: "personal_brain",
       taskType: "generate_briefing",
       userPrompt,

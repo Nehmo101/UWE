@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { VISIBILITY_LABELS } from "@uwe/shared-ui";
 import {
   validateSoundboardButton,
   type SoundSourceType,
@@ -27,7 +26,6 @@ export interface SoundboardButtonFormValues {
   volume: number;
   loop: boolean;
   tags: string;
-  visibility: string;
   linkedPageIds: string[];
 }
 
@@ -72,7 +70,6 @@ function readFormValues(form: HTMLFormElement): SoundboardButtonFormValues {
     volume: Number(formData.get("volume") ?? 1),
     loop: formData.get("loop") === "on",
     tags: String(formData.get("tags") ?? ""),
-    visibility: String(formData.get("visibility") ?? "dm_only"),
     linkedPageIds: formData.getAll("linkedPageIds").map((value) => String(value)),
   };
 }
@@ -98,7 +95,6 @@ export function SoundboardButtonForm({
       volume: initialValues?.volume ?? 1,
       loop: initialValues?.loop ?? false,
       tags: initialValues?.tags ?? "",
-      visibility: initialValues?.visibility ?? "dm_only",
       linkedPageIds: initialValues?.linkedPageIds ?? [],
     }),
     [initialValues],
@@ -294,24 +290,6 @@ export function SoundboardButtonForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="soundboard-button-visibility">Sichtbarkeit</Label>
-        <select
-          id="soundboard-button-visibility"
-          name="visibility"
-          defaultValue={defaults.visibility}
-          className={NATIVE_SELECT_CLASS}
-        >
-          {Object.entries(VISIBILITY_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-muted-foreground">
-          „Portal sichtbar“ ist im Spielerportal für angemeldete Spieler sichtbar. DM-only Sounds erscheinen dort nicht — Playback-Steuerung (insbesondere Spotify) bleibt Studio-seitig.
-        </span>
-      </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="soundboard-button-linkedPageIds">

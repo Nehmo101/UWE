@@ -1,13 +1,12 @@
 import Link from "next/link";
-import type { PortalDashboardPage, PortalGameSessionView } from "@uwe/database/server";
+import type { PortalGameSessionView } from "@uwe/database/server";
 
 interface SessionRecapFeedProps {
   worldSlug: string;
   session: PortalGameSessionView;
-  newlyUnlocked: PortalDashboardPage[];
 }
 
-export function SessionRecapFeed({ worldSlug, session, newlyUnlocked }: SessionRecapFeedProps) {
+export function SessionRecapFeed({ worldSlug, session }: SessionRecapFeedProps) {
   return (
     <div className="portal-recap-feed">
       <section className="auth-block">
@@ -33,18 +32,6 @@ export function SessionRecapFeed({ worldSlug, session, newlyUnlocked }: SessionR
         </section>
       )}
 
-      {newlyUnlocked.length > 0 && (
-        <section className="auth-block">
-          <h2>Neu freigeschaltet</h2>
-          <ul className="auth-page-list">
-            {newlyUnlocked.map((page) => (
-              <li key={page.id}>
-                <Link href={`/auth/worlds/${worldSlug}/${page.slug}`}>{page.title}</Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       {session.linkedPages.length > 0 && (
         <section className="auth-block">

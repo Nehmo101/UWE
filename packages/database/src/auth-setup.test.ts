@@ -29,7 +29,8 @@ describe("owner bootstrap setup", () => {
       password: "secure-password-1",
     });
 
-    assert.equal(owner.role, "owner");
+    assert.equal(owner.isOwner, true);
+    assert.deepEqual(owner.access, { portal: true, studio: true, brain: true, family: true });
     assert.equal(await auth.hasOwnerUser(), true);
     assert.equal(await auth.isSetupAvailable(), false);
 

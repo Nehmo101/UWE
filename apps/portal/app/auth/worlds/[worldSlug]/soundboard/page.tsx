@@ -57,7 +57,6 @@ export default async function PortalSoundboardPage({ params }: Props) {
     volume: button.volume,
     loop: button.loop,
     tags: button.tags,
-    visibility: button.visibility,
     linkedPages: button.linkedPages.map((page) => ({
       title: page.title,
       href: `/auth/worlds/${worldSlug}/${page.slug}`,
@@ -71,7 +70,7 @@ export default async function PortalSoundboardPage({ params }: Props) {
     <>
       <PageHeader
         title="Soundboard"
-        summary={`Ambient, Musik und Effekte für deine Rolle (${ctx.effectiveRole}) — nur freigegebene Sounds.`}
+        summary="Ambient, Musik und Effekte dieser Welt."
       />
 
       <div className="mb-4 grid gap-3">

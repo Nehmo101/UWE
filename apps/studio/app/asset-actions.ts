@@ -11,7 +11,6 @@ import {
   storeAssetTagProposals,
   toPrismaJsonValue,
   type AssetType,
-  type Visibility,
 } from "@uwe/database/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -51,7 +50,6 @@ export async function updateAssetAction(formData: FormData) {
     title: String(formData.get("title")),
     description: String(formData.get("description") || "") || null,
     type: formData.get("type") as AssetType,
-    visibility: formData.get("visibility") as Visibility,
     tags: formData.has("tags")
       ? String(formData.get("tags") || "")
           .split(",")

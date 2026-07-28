@@ -7,11 +7,9 @@ import { createPrismaClient } from "./client";
 import {
   getBackupFreshnessStatus,
   getProductionSafetyWarnings,
-  isPublicPortalExposureEnabled,
   isRunDbSeedUnsafe,
   isWeakAuthSecret,
 } from "./production-safety";
-import { createSettingsService } from "./settings-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 
 describe("production safety helpers", () => {
@@ -47,20 +45,6 @@ describe("production safety helpers", () => {
         process.env.RUN_DB_SEED = previous;
       }
     }
-  });
-
-  it("detects public portal exposure from settings", async () => {
-    const service = createSettingsService(createPrismaClient(databaseUrl));
-
-    await service.updateSettings({
-      portal: { guestAccessEnabled: false, publicSharingEnabled: false },
-    });
-    assert.equal(isPublicPortalExposureEnabled(await service.getSettings()), false);
-
-    await service.updateSettings({
-      portal: { publicSharingEnabled: true },
-    });
-    assert.equal(isPublicPortalExposureEnabled(await service.getSettings()), true);
   });
 
   it("detects missing and stale backup files", () => {

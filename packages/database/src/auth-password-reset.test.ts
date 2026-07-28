@@ -20,7 +20,8 @@ describe("auth password reset flow", () => {
       displayName: "Reset Flow User",
       email: "reset-flow@uwe.local",
       password: "original-password",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       actorUserId: "bootstrap",
     });
     userId = user.id;

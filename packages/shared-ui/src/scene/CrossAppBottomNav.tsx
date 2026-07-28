@@ -2,17 +2,22 @@ import { MobileBottomNav, type BottomNavItem } from "../MobileComponents";
 
 /**
  * Mobile Bottom-Nav über die Produktgrenzen: Start ◆ / Studio ☀ / Portal ✦ /
- * Brain ☾ — wie im Handoff (Abschnitt „5 · Mobil").
+ * Brain ☾ / Family ⌂ — wie im Handoff (Abschnitt „5 · Mobil"), seit Abschnitt G
+ * um Family erweitert.
  *
- * Die vier Ziele liegen auf **verschiedenen Origins**, jeder Wechsel ist also
- * ein voller Seitenaufbau. Mit einer domainweiten Session
+ * Die Ziele liegen auf **verschiedenen Origins**, jeder Wechsel ist also ein
+ * voller Seitenaufbau. Mit einer domainweiten Session
  * (SESSION_COOKIE_DOMAIN) bleibt man dabei angemeldet.
+ *
+ * Die Leiste zeigt die Produkte, nicht die Berechtigungen: wer ein Häkchen
+ * nicht hat, landet auf der Anmeldung der jeweiligen App. Der Zugang wird
+ * server-seitig geprüft, nicht durch Ausblenden.
  *
  * Sie ersetzt nicht die App-Navigation: die vollständige Navigation der
  * jeweiligen App steckt weiterhin in der Schublade (MobileNav) der Topbar.
  */
 
-export type CrossAppTarget = "start" | "studio" | "portal" | "brain";
+export type CrossAppTarget = "start" | "studio" | "portal" | "brain" | "family";
 
 export interface CrossAppBottomNavProps {
   /** Welche Fläche gerade offen ist. */
@@ -22,8 +27,11 @@ export interface CrossAppBottomNavProps {
   studioUrl: string;
   portalUrl: string;
   brainUrl: string;
+  familyUrl: string;
   /** Brain ausblenden, wenn ein Deployment es nicht zeigen will. */
   brainVisible?: boolean;
+  /** Dito für Family. */
+  familyVisible?: boolean;
 }
 
 export function crossAppBottomNavItems({
@@ -32,7 +40,9 @@ export function crossAppBottomNavItems({
   studioUrl,
   portalUrl,
   brainUrl,
+  familyUrl,
   brainVisible = true,
+  familyVisible = true,
 }: CrossAppBottomNavProps): BottomNavItem[] {
   const items: BottomNavItem[] = [
     { label: "Start", href: startUrl, icon: "◆", active: active === "start" },
@@ -41,6 +51,9 @@ export function crossAppBottomNavItems({
   ];
   if (brainVisible) {
     items.push({ label: "Brain", href: brainUrl, icon: "☾", active: active === "brain" });
+  }
+  if (familyVisible) {
+    items.push({ label: "Family", href: familyUrl, icon: "⌂", active: active === "family" });
   }
   return items;
 }

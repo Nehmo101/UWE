@@ -42,11 +42,10 @@ export async function saveOneShotDraftAction(formData: FormData): Promise<void> 
     type: "quest",
     summary: outline.hook,
     canonicalStatus: "draft",
-    publishStatus: "draft",
     questStatus: "open",
     contentBlocks: [
-      { type: "player_text", sortOrder: 0, content: outline.playerBrief, visibility: "player_visible" },
-      { type: "gm_note", sortOrder: 1, content: serializeOneShotOutline(outline), visibility: "dm_only" },
+      { type: "player_text", sortOrder: 0, content: outline.playerBrief },
+      { type: "rich_text", sortOrder: 1, content: serializeOneShotOutline(outline) },
     ],
   });
 

@@ -1,4 +1,4 @@
-import type { ContractBillingInterval, ContractExpense } from "./generated/prisma-brain/client";
+import type { ContractBillingInterval, ContractExpense } from "./generated/prisma-family/client";
 
 export const BILLING_INTERVAL_LABELS: Record<ContractBillingInterval, string> = {
   monthly: "Monatlich",

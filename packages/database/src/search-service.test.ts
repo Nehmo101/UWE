@@ -33,7 +33,6 @@ describe("UWE global search", () => {
     worldId = world.id;
     worldSlug = world.slug;
 
-    await auth.setWorldGuestMode(worldId, true);
 
     const campaign = await repo.createCampaign({
       worldId,
@@ -46,28 +45,31 @@ describe("UWE global search", () => {
       displayName: "Search DM",
       email: "search-dm@uwe.local",
       password: "uwe-dev",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
     dmUserId = dm.id;
 
     await auth.createWorldMembership({
       userId: dmUserId,
       worldId,
-      role: "owner",
     });
 
     const player = await auth.createUser({
       displayName: "Search Player",
       email: "search-player@uwe.local",
       password: "uwe-dev",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
     await auth.createWorldMembership({
       userId: playerUserId,
       worldId,
-      role: "player",
     });
 
     await repo.createPage({
@@ -77,15 +79,12 @@ describe("UWE global search", () => {
       slug: "marktplatz",
       type: "location",
       summary: "Ein belebter Platz in der Stadt.",
-      visibility: "public",
-      publishStatus: "published",
       tags: ["stadt", "markt"],
       aliases: ["Markt"],
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "public",
           content: "Händler bieten Gewürze und Stoffe an.",
         },
       ],
@@ -97,15 +96,12 @@ describe("UWE global search", () => {
       slug: "geheime-verschwoerung",
       type: "lore",
       summary: "Nur für den GM.",
-      visibility: "dm_only",
-      publishStatus: "published",
       tags: ["geheim", "plot"],
       aliases: ["Verschwörer"],
       contentBlocks: [
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Der Rat plant einen Putsch gegen den König.",
         },
       ],
@@ -117,15 +113,12 @@ describe("UWE global search", () => {
       slug: "verlorene-reliquie",
       type: "quest",
       summary: "Die Gruppe muss das Artefakt finden.",
-      visibility: "player_visible",
-      publishStatus: "published",
       questStatus: "open",
       tags: ["quest", "artefakt"],
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Ein alter Magier sucht Helfer für eine gefährliche Mission.",
         },
       ],
@@ -137,15 +130,12 @@ describe("UWE global search", () => {
       slug: "gefallener-turm",
       type: "quest",
       summary: "Diese Quest wurde bereits abgeschlossen.",
-      visibility: "player_visible",
-      publishStatus: "published",
       questStatus: "completed",
       tags: ["quest"],
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Der Turm wurde befreit.",
         },
       ],
@@ -157,21 +147,17 @@ describe("UWE global search", () => {
       slug: "elara",
       type: "npc",
       summary: "Eine bekannte Magierin.",
-      visibility: "player_visible",
-      publishStatus: "published",
       tags: ["magier", "verbündet"],
       aliases: ["Elara die Weise"],
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Elara hilft der Gruppe mit Arkane Einblicke.",
         },
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 1,
-          visibility: "dm_only",
           content: "Elara ist eigentlich ein Doppelagent.",
         },
       ],
@@ -182,13 +168,10 @@ describe("UWE global search", () => {
       title: "Unveröffentlichter Entwurf",
       slug: "entwurf",
       type: "note",
-      visibility: "public",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "public",
           content: "Dieser Entwurf darf nicht erscheinen.",
         },
       ],
@@ -204,14 +187,14 @@ describe("UWE global search", () => {
   it("lets DM find all content including dm_only pages and block text", async () => {
     const db = createPrismaClient(databaseUrl);
 
-    const byTitle = await searchForWikiContext(db, "dm", {
+    const byTitle = await searchForWikiContext(db, {
       query: "Verschwörung",
       worldSlug,
       urlMode: "studio",
     });
     assert.ok(byTitle.some((result) => result.slug === "geheime-verschwoerung"));
 
-    const byTag = await searchForWikiContext(db, "dm", {
+    const byTag = await searchForWikiContext(db, {
       query: "plot",
       worldSlug,
       entityFilter: "labels",
@@ -220,7 +203,7 @@ describe("UWE global search", () => {
     assert.ok(byTag.some((result) => result.slug === "geheime-verschwoerung"));
     assert.ok(byTag[0]?.matchedFields.includes("tags"));
 
-    const byAlias = await searchForWikiContext(db, "dm", {
+    const byAlias = await searchForWikiContext(db, {
       query: "Verschwörer",
       worldSlug,
       urlMode: "studio",
@@ -228,7 +211,7 @@ describe("UWE global search", () => {
     assert.ok(byAlias.some((result) => result.slug === "geheime-verschwoerung"));
     assert.ok(byAlias[0]?.matchedFields.includes("aliases"));
 
-    const byContent = await searchForWikiContext(db, "dm", {
+    const byContent = await searchForWikiContext(db, {
       query: "Doppelagent",
       worldSlug,
       entityFilter: "content_blocks",
@@ -237,7 +220,7 @@ describe("UWE global search", () => {
     assert.ok(byContent.some((result) => result.slug === "elara"));
     assert.ok(byContent[0]?.matchedFields.includes("content"));
 
-    const byNpcFilter = await searchForWikiContext(db, "dm", {
+    const byNpcFilter = await searchForWikiContext(db, {
       query: "Elara",
       worldSlug,
       entityFilter: "npcs",
@@ -245,7 +228,7 @@ describe("UWE global search", () => {
     });
     assert.ok(byNpcFilter.some((result) => result.slug === "elara"));
 
-    const byQuestFilter = await searchForWikiContext(db, "dm", {
+    const byQuestFilter = await searchForWikiContext(db, {
       query: "Reliquie",
       worldSlug,
       entityFilter: "quests",
@@ -265,7 +248,7 @@ describe("UWE global search", () => {
     // them with their page by id. Elara's second (dm_only) block content must
     // surface only on Elara, and a different page's block must not bleed onto
     // it — guards the per-page bucketing of the chunked loader.
-    const elaraBlock = await searchForWikiContext(db, "dm", {
+    const elaraBlock = await searchForWikiContext(db, {
       query: "Doppelagent",
       worldSlug,
       entityFilter: "content_blocks",
@@ -277,7 +260,7 @@ describe("UWE global search", () => {
       "block content must attach only to its own page",
     );
 
-    const marktBlock = await searchForWikiContext(db, "dm", {
+    const marktBlock = await searchForWikiContext(db, {
       query: "Gewürze",
       worldSlug,
       entityFilter: "content_blocks",
@@ -295,7 +278,7 @@ describe("UWE global search", () => {
   it("filters quests by lifecycle status", async () => {
     const db = createPrismaClient(databaseUrl);
 
-    const completedOnly = await searchForWikiContext(db, "dm", {
+    const completedOnly = await searchForWikiContext(db, {
       query: "quest",
       worldSlug,
       entityFilter: "quests",
@@ -309,7 +292,7 @@ describe("UWE global search", () => {
     );
     assert.ok(completedOnly.every((result) => result.questStatus === "completed"));
 
-    const openOnly = await searchForWikiContext(db, "dm", {
+    const openOnly = await searchForWikiContext(db, {
       query: "quest",
       worldSlug,
       entityFilter: "quests",
@@ -322,7 +305,7 @@ describe("UWE global search", () => {
       false,
     );
 
-    const nonQuests = await searchForWikiContext(db, "dm", {
+    const nonQuests = await searchForWikiContext(db, {
       query: "Marktplatz",
       worldSlug,
       questStatusFilter: "open",
@@ -333,7 +316,7 @@ describe("UWE global search", () => {
     await db.$disconnect();
   });
 
-  it("shows players only allowed content without dm_only titles or secret snippets", async () => {
+  it("gives an assigned player the whole world in search", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
@@ -345,17 +328,14 @@ describe("UWE global search", () => {
       worldSlug,
       urlMode: "auth-portal",
     });
-    assert.equal(
-      results.some((result) => result.slug === "geheime-verschwoerung"),
-      false,
-    );
+    assert.ok(results.some((result) => result.slug === "geheime-verschwoerung"));
 
     const secretContent = await searchForAuthContext(db, ctx!, {
       query: "Doppelagent",
       worldSlug,
       urlMode: "auth-portal",
     });
-    assert.equal(secretContent.length, 0);
+    assert.ok(secretContent.length > 0);
 
     const publicResult = await searchForAuthContext(db, ctx!, {
       query: "Marktplatz",
@@ -375,14 +355,14 @@ describe("UWE global search", () => {
     await db.$disconnect();
   });
 
-  it("denies anonymous guest search when guest mode is disabled", async () => {
+  it("denies anonymous search — there is no guest mode left", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "guest");
-    assert.equal(ctx.guestModeEnabled, false);
+    assert.equal(ctx.user, null);
+    assert.equal(ctx.worldMembership, null);
 
     const results = await searchForAuthContext(db, ctx, {
       query: "Markt",
@@ -398,7 +378,7 @@ describe("UWE global search", () => {
   it("filters portal legacy search to published public and player_visible pages", async () => {
     const db = createPrismaClient(databaseUrl);
 
-    const results = await searchForWikiContext(db, "portal", {
+    const results = await searchForWikiContext(db, {
       query: "Elara",
       worldSlug,
       urlMode: "portal",
@@ -412,34 +392,12 @@ describe("UWE global search", () => {
     await db.$disconnect();
   });
 
-  it("supports campaign and visibility filters for DM search", async () => {
-    const db = createPrismaClient(databaseUrl);
-
-    const campaignResults = await searchForWikiContext(db, "dm", {
-      query: "Markt",
-      worldSlug,
-      campaignId,
-      urlMode: "studio",
-    });
-    assert.ok(campaignResults.some((result) => result.slug === "marktplatz"));
-    assert.equal(campaignResults.some((result) => result.slug === "elara"), false);
-
-    const dmOnly = await searchForWikiContext(db, "dm", {
-      query: "Verschwörung",
-      worldSlug,
-      visibilityFilter: ["dm_only"],
-      urlMode: "studio",
-    });
-    assert.ok(dmOnly.every((result) => result.visibility === "dm_only"));
-
-    await db.$disconnect();
-  });
 
   it("filters by canonical status for DM search", async () => {
     const db = createPrismaClient(databaseUrl);
     const repo = createUweRepository(databaseUrl);
 
-    const notCanon = await searchForWikiContext(db, "dm", {
+    const notCanon = await searchForWikiContext(db, {
       query: "Verschwörung",
       worldSlug,
       canonicalStatusFilter: "canon",
@@ -451,7 +409,7 @@ describe("UWE global search", () => {
     assert.ok(page);
     await repo.updatePage(page!.id, { canonicalStatus: "canon" });
 
-    const canonOnly = await searchForWikiContext(db, "dm", {
+    const canonOnly = await searchForWikiContext(db, {
       query: "Verschwörung",
       worldSlug,
       canonicalStatusFilter: "canon",
@@ -486,14 +444,11 @@ describe("search index memoization", () => {
       slug: "drachenhort",
       type: "location",
       summary: "Ein Hort voller Gold.",
-      visibility: "public",
-      publishStatus: "published",
       tags: ["drache"],
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "public",
           content: "Ursprünglicher Blocktext über einen Wächter.",
         },
       ],

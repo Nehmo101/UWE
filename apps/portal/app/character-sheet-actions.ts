@@ -129,6 +129,8 @@ async function assertPortalCharacterOwner(worldSlug: string, characterId: string
     throw new Error("Nicht angemeldet");
   }
 
+  // Geteilter Client (main) + Häkchenmodell (unsere Seite): Besitz zeigt die
+  // Welt-Zuordnung, nicht mehr eine Rolle.
   const auth = createAuthService(prisma);
   const world = await prisma.world.findUnique({
     where: { slug: worldSlug },
@@ -143,7 +145,7 @@ async function assertPortalCharacterOwner(worldSlug: string, characterId: string
   if (
     !character ||
     character.ownerUserId !== ctx.user?.id ||
-    ctx.effectiveRole !== "player" ||
+    ctx.worldMembership === null ||
     ctx.previewAsUserId
   ) {
     throw new Error("Keine Berechtigung");

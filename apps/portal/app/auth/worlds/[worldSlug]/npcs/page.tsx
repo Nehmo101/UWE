@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GlobalSearchForm, PageTypeBadge, VisibilityBadge } from "@uwe/shared-ui";
+import { GlobalSearchForm, PageTypeBadge } from "@uwe/shared-ui";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { getAccessContextForWorld } from "@/src/lib/auth";
@@ -45,7 +45,7 @@ export default async function AuthWorldNpcsPage({ params, searchParams }: Props)
     <>
       <PageHeader
         title="NPCs"
-        summary={`Bekannte Nicht-Spieler-Charaktere, die für deine Rolle (${ctx.effectiveRole}) freigeschaltet sind.`}
+        summary="Alle Nicht-Spieler-Charaktere dieser Welt."
       />
 
       <GlobalSearchForm
@@ -64,7 +64,6 @@ export default async function AuthWorldNpcsPage({ params, searchParams }: Props)
               <strong>{page.title}</strong>
               <div className="mt-1 flex flex-wrap gap-2">
                 <PageTypeBadge type={page.type} />
-                <VisibilityBadge visibility={page.visibility} />
               </div>
               {page.summary ? (
                 <p className="mt-2 text-sm text-muted-foreground">{page.summary}</p>

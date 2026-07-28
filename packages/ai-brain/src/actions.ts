@@ -1,4 +1,4 @@
-import type { AiTaskType, ContextAudience } from "./types";
+import type { AiTaskType } from "./types";
 
 /** Curated UWE Brain cookbook actions (P09). */
 export type BrainActionId =
@@ -32,7 +32,6 @@ export interface BrainActionDefinition {
   taskType: AiTaskType;
   requiresSession: boolean;
   playerSafe: boolean;
-  audience: ContextAudience;
   defaultProposalTarget: AiProposalTargetType;
   defaultProposalLabel: string;
 }
@@ -45,7 +44,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "summarize_session",
     requiresSession: true,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "session_summary_dm",
     defaultProposalLabel: "Session-Recap (DM)",
   },
@@ -56,7 +54,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "prepare_next_session",
     requiresSession: true,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "page_content_block",
     defaultProposalLabel: "Session-Vorbereitung",
   },
@@ -67,7 +64,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "improve_lore_text",
     requiresSession: false,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "page_content_block",
     defaultProposalLabel: "Erweiterter Lore-Text",
   },
@@ -79,7 +75,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "create_knowledge_text",
     requiresSession: false,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "brain_document",
     defaultProposalLabel: "Wissenstext",
   },
@@ -90,7 +85,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "prepare_canon_check",
     requiresSession: false,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "idea_page",
     defaultProposalLabel: "Kanonprüfung",
   },
@@ -101,7 +95,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "create_player_handout",
     requiresSession: false,
     playerSafe: true,
-    audience: "player_visible",
     defaultProposalTarget: "brain_document",
     defaultProposalLabel: "Spieler-Handout",
   },
@@ -112,7 +105,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "fill_dungeon_room",
     requiresSession: false,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "page_content_block",
     defaultProposalLabel: "Rauminhalt",
   },
@@ -123,7 +115,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "prepare_mail_draft",
     requiresSession: true,
     playerSafe: true,
-    audience: "mail",
     defaultProposalTarget: "mail_draft",
     defaultProposalLabel: "Mail-Entwurf",
   },
@@ -140,7 +131,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "terra_name_regions",
     requiresSession: false,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "terra_region_names",
     defaultProposalLabel: "Namensvorschläge zur Karte",
   },
@@ -152,7 +142,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "terra_describe_region",
     requiresSession: false,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "terra_region_description",
     defaultProposalLabel: "Regionsbeschreibung (Entwurf)",
   },
@@ -164,7 +153,6 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     taskType: "terra_world_draft",
     requiresSession: false,
     playerSafe: false,
-    audience: "dm_internal",
     defaultProposalTarget: "terra_world_draft",
     defaultProposalLabel: "Terra-Kartenentwurf (Parameter)",
   },

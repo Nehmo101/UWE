@@ -31,7 +31,8 @@ const USER: FakeUser = {
   id: "user-1",
   displayName: "Ada",
   email: "ada@example.com",
-  role: "dm",
+  isOwner: false,
+  access: { portal: true, studio: true, brain: false, family: false },
   forcePasswordChange: false,
 };
 
@@ -84,7 +85,8 @@ function buildLoginDeps(
         id: user.id,
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: false,
+        access: { portal: true, studio: true, brain: false, family: false },
       }),
       createSession: async (userId, options) => {
         recorded.sessions.push({ userId, options });
@@ -145,7 +147,13 @@ describe("performLoginFlow", () => {
 
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), {
-      user: { id: "user-1", displayName: "Ada", email: "ada@example.com", role: "dm" },
+      user: {
+        id: "user-1",
+        displayName: "Ada",
+        email: "ada@example.com",
+        isOwner: false,
+        access: { portal: true, studio: true, brain: false, family: false },
+      },
       forcePasswordChange: false,
     });
     assert.deepEqual(recorded.sessions, [
@@ -243,7 +251,8 @@ function buildCompleteDeps(
         id: user.id,
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: false,
+        access: { portal: true, studio: true, brain: false, family: false },
       }),
       createSession: async (userId, options) => {
         recorded.sessions.push({ userId, options });
@@ -287,7 +296,13 @@ describe("completeTwoFactorLogin", () => {
 
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), {
-      user: { id: "user-1", displayName: "Ada", email: "ada@example.com", role: "dm" },
+      user: {
+        id: "user-1",
+        displayName: "Ada",
+        email: "ada@example.com",
+        isOwner: false,
+        access: { portal: true, studio: true, brain: false, family: false },
+      },
       forcePasswordChange: false,
       target: "portal",
     });

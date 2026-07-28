@@ -21,29 +21,11 @@ describe("page-templates", () => {
     assert.equal(new Set(ids).size, ids.length);
   });
 
-  it("never marks gm_note blocks as player-visible", () => {
+  it("only uses known block types", () => {
+    const known = new Set(["rich_text", "html", "player_text", "statblock", "image", "handout"]);
     for (const template of PAGE_TEMPLATES) {
       for (const block of template.blocks) {
-        if (block.type === "gm_note") {
-          assert.equal(
-            block.visibility,
-            "dm_only",
-            `template ${template.id} leaks gm_note block`,
-          );
-        }
-      }
-    }
-  });
-
-  it("keeps secret content out of player-visible blocks", () => {
-    for (const template of PAGE_TEMPLATES) {
-      for (const block of template.blocks) {
-        if (block.visibility === "player_visible") {
-          assert.ok(
-            !/geheim|wahre (motivation|agenda)|wendungen/i.test(block.content),
-            `template ${template.id} has secret prompts in a player-visible block`,
-          );
-        }
+        assert.ok(known.has(block.type), `template ${template.id}: ${block.type}`);
       }
     }
   });

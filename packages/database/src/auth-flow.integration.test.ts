@@ -32,7 +32,8 @@ describe("auth flow integration", () => {
       email: "flow-owner@uwe.local",
       password: "setup-password-1",
     });
-    assert.equal(owner.role, "owner");
+    assert.equal(owner.isOwner, true);
+    assert.deepEqual(owner.access, { portal: true, studio: true, brain: true, family: true });
     assert.equal(await auth.isSetupAvailable(), false);
 
     await assert.rejects(

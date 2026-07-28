@@ -9,6 +9,9 @@ import {
   resolveLoginFailureReason,
 } from "@uwe/database/server";
 import {
+  canAccessBrain,
+  canAccessFamily,
+  canAccessPortal,
   canAccessStudio,
   completeTwoFactorLogin,
   getSessionCookieOptionsForRequest,
@@ -41,22 +44,27 @@ import {
  * (`@uwe/auth`): Rate-Limit, Turnstile, 2FA, Audit-Log.
  */
 
-type Target = "studio" | "portal" | "brain";
+type Target = "studio" | "portal" | "brain" | "family";
 type AuditSurface = "studio" | "portal";
 
 function parseTarget(value: unknown): Target | null {
-  return value === "studio" || value === "portal" || value === "brain" ? value : null;
+  return value === "studio" || value === "portal" || value === "brain" || value === "family"
+    ? value
+    : null;
 }
 
-// Portal steht jedem authentifizierten aktiven Benutzer offen; Studio und Brain
-// sind rollen-gated. Brain zusätzlich owner-only — das erzwingt die Brain-App
-// selbst auf jeder Route.
+// Jedes Ziel hat sein eigenes Häkchen. Die Ziel-App prüft es auf jeder Route
+// erneut — hier steht es, damit ein Login ohne Häkchen gar nicht erst gelingt.
 function hasTargetAccess(target: Target, user: AuthUser): boolean {
-  return target === "portal" ? true : canAccessStudio(user);
+  if (target === "portal") return canAccessPortal(user);
+  if (target === "brain") return canAccessBrain(user);
+  if (target === "family") return canAccessFamily(user);
+  return canAccessStudio(user);
 }
 
-// Audit- und Login-Flow unterscheiden nur studio vs. portal; Brain wird als
-// "studio" protokolliert. Das genaue Ziel geht über responseTarget zurück.
+// Audit- und Login-Flow unterscheiden nur studio vs. portal; Brain und Family
+// werden als "studio" protokolliert. Das genaue Ziel geht über responseTarget
+// zurück.
 function auditSurfaceFor(target: Target): AuditSurface {
   return target === "portal" ? "portal" : "studio";
 }

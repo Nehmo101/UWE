@@ -35,7 +35,7 @@ import {
   type LoginRateLimitOptions,
   type LoginRateLimitResult,
   type SessionIssuingAuthPort,
-  type UweRole,
+  type AreaAccess,
 } from "@uwe/auth";
 import type { WebAuthnRelyingParty } from "./webauthn-config";
 
@@ -74,7 +74,10 @@ export interface PasskeyLoginCredentialPort {
     id: string;
     displayName: string;
     email: string | null;
-    role: UweRole;
+    // Häkchenmodell statt Rolle: wer wohin darf, sagen die vier Flags — die
+    // eigentliche Prüfung ist das injizierte hasAccess-Prädikat der App.
+    isOwner: boolean;
+    access?: AreaAccess | null;
     status: "invited" | "active" | "disabled";
     forcePasswordChange: boolean;
   };
@@ -168,7 +171,7 @@ export interface PasskeyRouteDeps<TDb extends PasskeyDbHandle> {
   createAuthService(db: TDb): SessionIssuingAuthPort;
   /** Reads the `auth.passkeysEnabled` system setting. */
   isPasskeysEnabled(db: TDb): Promise<boolean>;
-  /** Per-surface access predicate (omit on the Portal: any active user). */
+  /** Per-surface access predicate — im Häkchenmodell setzt ihn jede Fläche (Portal: canAccessPortal). */
   hasAccess?(user: AuthUser): boolean;
   /** Writes the session cookie for the issued session (request-aware options). */
   setSessionCookie(token: string, request: Request): Promise<void>;

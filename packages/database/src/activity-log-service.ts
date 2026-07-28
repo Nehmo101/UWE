@@ -19,7 +19,6 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   content_updated: "Geändert",
   content_deleted: "Gelöscht",
   content_restored: "Wiederhergestellt",
-  visibility_changed: "Sichtbarkeit geändert",
   inspector_fix_applied: "Inspector-Fix",
   template_created: "Template erstellt",
   template_updated: "Template geändert",

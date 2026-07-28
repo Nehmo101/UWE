@@ -1,32 +1,23 @@
 import type { PrismaClient } from "./client";
 import type {
-  AssetType,
   CanonicalStatus,
   ContentBlockType,
   PageType,
-  PublishStatus,
-  ShareTargetType,
-  Visibility,
 } from "./generated/prisma/client";
 import { normalizeLookupKey, parseWikiLinks } from "./page-service";
 import { buildPageUrl } from "./page-types";
-import {
-  isPageAccessible,
-  isPortalAssetVisibility,
-  isPortalBlockVisibility,
-  type PortalAccessOptions,
-} from "./permissions";
 import { SettingsService } from "./settings-service";
-import { isShareLinkActive } from "./share-link-service";
 import { getExtendedCanonFindings, mergeCanonFindings } from "./canon-conflict-service";
 
 /**
- * World Inspector: audits a world for two things —
+ * World Inspector: audits a world for content quality — broken wiki links,
+ * ambiguous names, contradictory pages, orphans, pages without a campaign,
+ * and canon conflicts.
  *
- * 1. Safety: what exactly is exposed to players via the portal and share
- *    links, and whether anything looks like an accidental leak.
- * 2. Canon: content quality warnings (broken wiki links, duplicate names,
- *    contradictory pages, inconsistent visibility/publish states).
+ * It used to have a second half that audited *exposure*: which pages and
+ * assets reached the portal and whether anything leaked. With per-item
+ * visibility gone there is nothing to audit — every world member sees
+ * everything in their world by design.
  *
  * Everything is read-only and built from existing data — no AI, no
  * external services.
@@ -35,15 +26,9 @@ import { getExtendedCanonFindings, mergeCanonFindings } from "./canon-conflict-s
 export type InspectorSeverity = "critical" | "warning" | "info";
 
 export type InspectorFindingCode =
-  | "gm_note_player_visible"
-  | "secret_page_portal_visible"
-  | "share_link_unprotected"
-  | "hidden_link_in_portal_page"
   | "broken_wiki_link"
   | "duplicate_name"
   | "contradictory_page"
-  | "visible_but_unpublished"
-  | "published_but_dm_only"
   | "orphan_page"
   | "uncategorized_page"
   | "deprecated_player_visible"
@@ -53,13 +38,7 @@ export type InspectorFindingCode =
   | "world_rule_terra_tower";
 
 /** Fix actions that can be applied directly from a finding (see inspector-fix-service). */
-export type InspectorFixAction =
-  | "set_block_dm_only"
-  | "set_page_dm_only"
-  | "publish_page"
-  | "set_page_player_visible"
-  | "remove_broken_wiki_link"
-  | "assign_page_campaign";
+export type InspectorFixAction = "remove_broken_wiki_link" | "assign_page_campaign";
 
 export interface InspectorFixSuggestion {
   action: InspectorFixAction;
@@ -85,7 +64,6 @@ export interface InspectorBlockInput {
   /** DB id — optional so synthetic test fixtures stay simple. */
   id?: string;
   type: ContentBlockType;
-  visibility: Visibility;
   content: string;
 }
 
@@ -94,8 +72,6 @@ export interface InspectorPageInput {
   title: string;
   slug: string;
   type: PageType;
-  visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   aliases: string[];
   campaignId?: string | null;
@@ -114,50 +90,13 @@ function findingId(
   return [code, ...parts.filter(Boolean)].join(":");
 }
 
-export interface InspectorShareLinkInput {
-  id: string;
-  targetType: ShareTargetType;
-  targetTitle: string;
-  enabled: boolean;
-  expiresAt: Date | null;
-  hasPassword: boolean;
-}
-
-export interface PortalVisiblePage {
-  title: string;
-  href: string;
-  visibility: Visibility;
-  visibleBlockCount: number;
-  hiddenBlockCount: number;
-}
-
-export interface PortalVisibleAsset {
-  title: string;
-  type: AssetType;
-  visibility: Visibility;
-}
-
-export interface ShareLinkOverview {
-  id: string;
-  targetType: ShareTargetType;
-  targetTitle: string;
-  active: boolean;
-  hasPassword: boolean;
-  expiresAt: Date | null;
-}
-
 export interface WorldInspectorReport {
   worldSlug: string;
   portal: {
     portalEnabled: boolean;
-    publicSharingEnabled: boolean;
-    guestModeEnabled: boolean;
   };
-  visiblePages: PortalVisiblePage[];
-  visibleAssets: PortalVisibleAsset[];
-  dmOnlyAssetCount: number;
-  shareLinks: ShareLinkOverview[];
-  safetyFindings: InspectorFinding[];
+  pageCount: number;
+  assetCount: number;
   canonFindings: InspectorFinding[];
 }
 
@@ -294,43 +233,6 @@ export function buildCanonFindings(
     }
 
     if (
-      (page.visibility === "public" || page.visibility === "player_visible") &&
-      page.publishStatus === "draft"
-    ) {
-      findings.push({
-        id: findingId("visible_but_unpublished", [page.id]),
-        code: "visible_but_unpublished",
-        severity: "info",
-        message: `„${page.title}" ist für Spieler freigegeben, aber noch ein Entwurf — im Portal nicht sichtbar.`,
-        pageTitle: page.title,
-        href,
-        pageId: page.id,
-        fixes: [
-          { action: "publish_page", label: "Seite veröffentlichen" },
-          { action: "set_page_dm_only", label: "Auf Nur GM setzen" },
-        ],
-      });
-    }
-
-    if (page.publishStatus === "published" && page.visibility === "dm_only") {
-      findings.push({
-        id: findingId("published_but_dm_only", [page.id]),
-        code: "published_but_dm_only",
-        severity: "info",
-        message: `„${page.title}" ist veröffentlicht, aber DM-only — Spieler sehen sie nicht.`,
-        pageTitle: page.title,
-        href,
-        pageId: page.id,
-        fixes: [
-          {
-            action: "set_page_player_visible",
-            label: "Für angemeldete Spieler im Portal freigeben",
-          },
-        ],
-      });
-    }
-
-    if (
       options.campaigns &&
       options.campaigns.length > 0 &&
       page.campaignId === null
@@ -390,101 +292,6 @@ export function buildCanonFindings(
   return sortFindings(findings);
 }
 
-/** Safety findings: anything that looks like an accidental leak towards players. */
-export function buildSafetyFindings(
-  worldSlug: string,
-  pages: InspectorPageInput[],
-  shareLinks: InspectorShareLinkInput[],
-  portalOptions: PortalAccessOptions,
-): InspectorFinding[] {
-  const findings: InspectorFinding[] = [];
-  const titleIndex = buildTitleIndex(pages);
-  const pageById = new Map(pages.map((page) => [page.id, page]));
-
-  for (const page of pages) {
-    const href = studioHref(worldSlug, page);
-    const portalVisible = isPageAccessible(page, "portal", portalOptions);
-
-    for (const [blockIndex, block] of page.blocks.entries()) {
-      if (block.type === "gm_note" && isPortalBlockVisibility(block.visibility)) {
-        findings.push({
-          id: findingId("gm_note_player_visible", [page.id, block.id ?? String(blockIndex)]),
-          code: "gm_note_player_visible",
-          severity: "critical",
-          message: `GM-Notiz auf „${page.title}" ist als spielersichtbar markiert — Inhalt prüfen!`,
-          pageTitle: page.title,
-          href,
-          pageId: page.id,
-          blockId: block.id,
-          fixes: block.id
-            ? [{ action: "set_block_dm_only", label: "Block auf Nur GM setzen" }]
-            : [],
-        });
-      }
-    }
-
-    if (page.type === "secret" && portalVisible) {
-      findings.push({
-        id: findingId("secret_page_portal_visible", [page.id]),
-        code: "secret_page_portal_visible",
-        severity: "critical",
-        message: `Geheimnis-Seite „${page.title}" ist im Portal sichtbar.`,
-        pageTitle: page.title,
-        href,
-        pageId: page.id,
-        fixes: [{ action: "set_page_dm_only", label: "Seite auf Nur GM setzen" }],
-      });
-    }
-
-    if (portalVisible) {
-      const visibleContent = page.blocks
-        .filter((block) => isPortalBlockVisibility(block.visibility))
-        .map((block) => block.content)
-        .join("\n");
-
-      const hiddenTargets = new Set<string>();
-      for (const link of parseWikiLinks(visibleContent)) {
-        const targets = titleIndex.get(normalizeLookupKey(link.target)) ?? [];
-        for (const target of targets) {
-          const resolved = pageById.get(target.id);
-          if (resolved && !isPageAccessible(resolved, "portal", portalOptions)) {
-            hiddenTargets.add(resolved.title);
-          }
-        }
-      }
-
-      for (const hiddenTitle of hiddenTargets) {
-        findings.push({
-          id: findingId("hidden_link_in_portal_page", [page.id, normalizeLookupKey(hiddenTitle)]),
-          code: "hidden_link_in_portal_page",
-          severity: "info",
-          message: `„${page.title}" verlinkt sichtbar auf die verborgene Seite „${hiddenTitle}" — Spieler sehen einen „Verborgen"-Platzhalter.`,
-          pageTitle: page.title,
-          href,
-          pageId: page.id,
-          fixes: [],
-        });
-      }
-    }
-  }
-
-  for (const link of shareLinks) {
-    const active = isShareLinkActive({ enabled: link.enabled, expiresAt: link.expiresAt });
-    if (active && !link.hasPassword && !link.expiresAt) {
-      findings.push({
-        id: findingId("share_link_unprotected", [link.id]),
-        code: "share_link_unprotected",
-        severity: "warning",
-        message: `Share-Link für „${link.targetTitle}" ist aktiv, läuft nie ab und hat kein Passwort.`,
-        pageTitle: link.targetTitle,
-        fixes: [],
-      });
-    }
-  }
-
-  return sortFindings(findings);
-}
-
 export class WorldInspectorService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -493,25 +300,14 @@ export class WorldInspectorService {
     if (!world) return null;
 
     const settings = await new SettingsService(this.db).getSettings();
-    const portalOptions: PortalAccessOptions = {
-      publicSharingEnabled: settings.portal.publicSharingEnabled,
-    };
 
-    const [rawPages, rawShareLinks, assets, explicitLinks, campaigns] = await Promise.all([
+    const [rawPages, assetCount, explicitLinks, campaigns] = await Promise.all([
       this.db.page.findMany({
         where: { worldId: world.id },
         include: { contentBlocks: { orderBy: { sortOrder: "asc" } } },
         orderBy: [{ title: "asc" }],
       }),
-      this.db.shareLink.findMany({
-        where: { worldId: world.id },
-        orderBy: { createdAt: "desc" },
-      }),
-      this.db.asset.findMany({
-        where: { worldId: world.id },
-        select: { id: true, title: true, type: true, visibility: true },
-        orderBy: [{ title: "asc" }],
-      }),
+      this.db.asset.count({ where: { worldId: world.id } }),
       this.db.pageLink.findMany({
         where: { sourcePage: { worldId: world.id } },
         select: { sourcePageId: true, targetPageId: true },
@@ -528,76 +324,23 @@ export class WorldInspectorService {
       title: page.title,
       slug: page.slug,
       type: page.type,
-      visibility: page.visibility,
-      publishStatus: page.publishStatus,
       canonicalStatus: page.canonicalStatus,
       aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
       campaignId: page.campaignId,
       blocks: page.contentBlocks.map((block) => ({
         id: block.id,
         type: block.type,
-        visibility: block.visibility,
         content: block.content,
       })),
     }));
-
-    const pageTitleById = new Map(pages.map((page) => [page.id, page.title]));
-    const assetTitleById = new Map(assets.map((asset) => [asset.id, asset.title]));
-
-    const shareLinkInputs: InspectorShareLinkInput[] = rawShareLinks.map((link) => ({
-      id: link.id,
-      targetType: link.targetType,
-      targetTitle:
-        pageTitleById.get(link.targetId) ??
-        assetTitleById.get(link.targetId) ??
-        "Unbekanntes Ziel",
-      enabled: link.enabled,
-      expiresAt: link.expiresAt,
-      hasPassword: Boolean(link.passwordHash),
-    }));
-
-    const visiblePages: PortalVisiblePage[] = pages
-      .filter((page) => isPageAccessible(page, "portal", portalOptions))
-      .map((page) => {
-        const visibleBlockCount = page.blocks.filter((block) =>
-          isPortalBlockVisibility(block.visibility),
-        ).length;
-        return {
-          title: page.title,
-          href: studioHref(worldSlug, page),
-          visibility: page.visibility,
-          visibleBlockCount,
-          hiddenBlockCount: page.blocks.length - visibleBlockCount,
-        };
-      });
-
-    const visibleAssets: PortalVisibleAsset[] = assets
-      .filter((asset) => isPortalAssetVisibility(asset.visibility))
-      .map((asset) => ({
-        title: asset.title,
-        type: asset.type,
-        visibility: asset.visibility,
-      }));
 
     return {
       worldSlug,
       portal: {
         portalEnabled: settings.portal.portalEnabled,
-        publicSharingEnabled: settings.portal.publicSharingEnabled,
-        guestModeEnabled: world.guestModeEnabled,
       },
-      visiblePages,
-      visibleAssets,
-      dmOnlyAssetCount: assets.length - visibleAssets.length,
-      shareLinks: shareLinkInputs.map((link) => ({
-        id: link.id,
-        targetType: link.targetType,
-        targetTitle: link.targetTitle,
-        active: isShareLinkActive({ enabled: link.enabled, expiresAt: link.expiresAt }),
-        hasPassword: link.hasPassword,
-        expiresAt: link.expiresAt,
-      })),
-      safetyFindings: buildSafetyFindings(worldSlug, pages, shareLinkInputs, portalOptions),
+      pageCount: pages.length,
+      assetCount,
       canonFindings: mergeCanonFindings(
         buildCanonFindings(worldSlug, pages, explicitLinks, { campaigns }),
         await getExtendedCanonFindings(this.db, worldSlug, pages),

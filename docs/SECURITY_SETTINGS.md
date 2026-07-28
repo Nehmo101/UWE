@@ -4,7 +4,7 @@ Sicherheitsrichtlinien für neue UWE-Integrationen (Image Studio, Kalender, DnD 
 
 ## Grundsätze
 
-1. **Brain/Wissen bleibt lokal** — keine Weltdaten an Cloud-KI unless explizit im User-Prompt (Image Studio: nur Bild-Prompt).
+1. **Alles bleibt lokal** — es gibt keinen Cloud-Anbieter mehr (N.3). Jeder Prompt geht an den RTX-Host, also verlässt auch Welt- und Brain-Kontext den Host nicht.
 2. **Secrets nur serverseitig** — ENV, nie Frontend, nie API-Response.
 3. **Admin-only** — Studio erfordert Session-Login (`owner`/`admin`/`dm`) plus optional `STUDIO_API_TOKEN` / Cloudflare Access bei öffentlicher Exposition.
 4. **Deaktivierbar** — jedes Feature per ENV abschaltbar.
@@ -45,12 +45,11 @@ Sicherheitsrichtlinien für neue UWE-Integrationen (Image Studio, Kalender, DnD 
 ## Empfehlungen Production
 
 ```env
-IMAGE_STUDIO_ALLOW_CLOUD=false
 AGENT_JOBS_AUTO_MERGE=false
 AGENT_JOBS_ENABLED=true  # nur wenn GitHub Token gesetzt
 STUDIO_API_TOKEN=<strong-random>
 SESSION_COOKIE_SECURE=true
-AI_LOCAL_ONLY=true  # für Brain — Image Studio separat steuerbar
+AI_LOCAL_ONLY=true  # ohnehin der einzige Weg — alles läuft über den RTX-Host
 ```
 
 ## Audit

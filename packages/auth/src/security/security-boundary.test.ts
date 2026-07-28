@@ -158,22 +158,6 @@ describe("security boundary", () => {
     assert.equal(resetDenied, null);
   });
 
-  it("documents that dm_only content is filtered at repository layer for portal", () => {
-    const repoTest = fs.readFileSync(
-      path.join(root, "packages/database/src/repository.test.ts"),
-      "utf8",
-    );
-    assert.match(repoTest, /getPublicPageForPortal/);
-    assert.match(repoTest, /dm_only|player_visible/);
-
-    const searchTest = fs.readFileSync(
-      path.join(root, "packages/database/src/search-service.test.ts"),
-      "utf8",
-    );
-    assert.match(searchTest, /dm_only/);
-    assert.match(searchTest, /players only allowed content/);
-  });
-
   it("requires authorize() in all API route handlers", () => {
     const studioApiDir = path.join(root, "apps/studio/app/api");
     const portalApiDir = path.join(root, "apps/portal/app/api");

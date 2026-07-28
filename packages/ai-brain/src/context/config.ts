@@ -1,6 +1,5 @@
 export interface ContextBuilderConfig {
   maxChars: number;
-  allowDmOnlyDefault: boolean;
 }
 
 const DEFAULT_MAX_CHARS = 24_000;
@@ -13,8 +12,5 @@ export function resolveContextBuilderConfig(
 
   return {
     maxChars: overrides?.maxChars ?? (Number.isFinite(parsedMax) ? parsedMax : DEFAULT_MAX_CHARS),
-    allowDmOnlyDefault:
-      overrides?.allowDmOnlyDefault ??
-      (process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT !== "false"),
   };
 }

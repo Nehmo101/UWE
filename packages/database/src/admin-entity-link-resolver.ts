@@ -5,6 +5,11 @@ import type {
   AdminLinkSourceType,
   AdminLinkTargetType,
 } from "./generated/prisma-brain/client";
+// Die Family-Modelle (Vertraege, Dokumente, Kueche, Haushalt, Kalender,
+// Scan-Eingang) liegen seit Abschnitt G in uwe-family.db. Der Singleton statt
+// eines weiteren Konstruktor-Parameters: sonst muesste jede Aufrufstelle im
+// Repo einen dritten Client durchreichen.
+import { familyPrisma } from "./family-client";
 
 export const ADMIN_LINK_RELATION_LABELS: Record<string, string> = {
   promoted_to: "Übernommen aus",
@@ -98,7 +103,7 @@ async function resolveEntityTitle(
       return { title: workshop?.title || "Werkstatt" };
     }
     case "contract_expense": {
-      const contract = await brainDb.contractExpense.findUnique({ where: { id }, select: { name: true } });
+      const contract = await familyPrisma.contractExpense.findUnique({ where: { id }, select: { name: true } });
       return { title: contract?.name || "Vertrag" };
     }
     case "hardware_device": {

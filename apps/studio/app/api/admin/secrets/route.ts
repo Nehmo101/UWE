@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { brainPrisma } from "@uwe/database/brain-client";
-import { canAccessSecurityDashboard } from "@uwe/auth";
 import {
   assertSecretsStatusHasNoSecrets,
   getSecretsStatusSnapshot,
@@ -24,7 +23,7 @@ export async function GET(request: Request) {
     return authError;
   }
 
-  if (context.authMethod === "session" && context.user && !canAccessSecurityDashboard(context.user.role)) {
+  if (context.authMethod === "session" && context.user && !context.user.isOwner) {
     return NextResponse.json(
       { error: "Nur OWNER/ADMIN dürfen den Secrets-Status sehen." },
       { status: 403 },

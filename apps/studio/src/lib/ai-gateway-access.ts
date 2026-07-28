@@ -23,15 +23,10 @@ async function resolveGatewayFeatureAccess(
     return { allowed: false, message: "KI ist systemweit deaktiviert." };
   }
 
-  if (user.role === "owner" || user.role === "admin" || user.role === "dm") {
-    return { allowed: true, message: "" };
-  }
-
-  const grant = await service.getUserGrant(user.id);
-  if (!grant?.permissions.includes(permission)) {
-    return { allowed: false, message: blockedMessage };
-  }
-
+  // Per-user AI grants existed to ration cloud spend. With the RTX host as the
+  // only backend there is nothing to ration: whoever reaches the app may use it.
+  void permission;
+  void blockedMessage;
   return { allowed: true, message: "" };
 }
 

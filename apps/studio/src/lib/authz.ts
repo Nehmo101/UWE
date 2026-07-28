@@ -15,18 +15,12 @@ import { getAppRepository } from "@uwe/database/server";
 
 export const STUDIO_TRUSTED_SCOPE: AuthzScope = { studioTrusted: true };
 
-export function studioWorldTarget(
-  world: Pick<WorldAuthTarget, "id"> & Partial<Pick<WorldAuthTarget, "guestModeEnabled">>,
-): WorldAuthTarget {
-  return {
-    id: world.id,
-    guestModeEnabled: world.guestModeEnabled ?? false,
-    membership: null,
-  };
+export function studioWorldTarget(world: Pick<WorldAuthTarget, "id">): WorldAuthTarget {
+  return { id: world.id, membership: null };
 }
 
 export function assertStudioTrusted(): void {
-  assertCanEditWorld(null, { id: "studio", guestModeEnabled: false, membership: null }, STUDIO_TRUSTED_SCOPE);
+  assertCanEditWorld(null, { id: "studio", membership: null }, STUDIO_TRUSTED_SCOPE);
 }
 
 export function assertStudioCanReadWorld(world: WorldAuthTarget): void {
@@ -93,8 +87,6 @@ export async function requireStudioContentEdit(
   const worldTarget = studioWorldTarget(world);
   const content: ContentAuthTarget = {
     id: page.id,
-    visibility: page.visibility,
-    publishStatus: page.publishStatus,
     type: page.type,
   };
   assertStudioCanEditContent(content, worldTarget);

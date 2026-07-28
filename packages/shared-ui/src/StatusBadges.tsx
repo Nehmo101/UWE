@@ -5,11 +5,7 @@ import type {
   DungeonPrepStatus,
   GameSessionStatus,
   PageType,
-  PublishStatus,
   QuestLifecycleStatus,
-  RevealState,
-  SecretLevel,
-  Visibility,
 } from "@uwe/database/enums";
 
 /** Shared shape for every status/type badge in this file. */
@@ -71,65 +67,12 @@ export function TagChip({ tag }: { tag: string }) {
   );
 }
 
-export const VISIBILITY_LABELS: Record<Visibility, string> = {
-  private: "Privat",
-  dm_only: "Nur GM",
-  player_visible: "Portal sichtbar",
-  public: "Share-Link",
-  specific_players: "Bestimmte Spieler",
-  unlock_after_session: "Nach Session",
-  archived: "Archiviert",
-};
 
-/**
- * Full explanations for visibility values. Portal content requires an
- * authenticated UWE user; these texts make the publication consequence clear.
- */
-export const VISIBILITY_DESCRIPTIONS: Record<Visibility, string> = {
-  private: "Streng privat — nur im Studio sichtbar, Standard für neue Inhalte.",
-  dm_only: "Nur im Studio sichtbar. Erscheint niemals im Player-Portal oder in Exporten.",
-  player_visible:
-    "Für eingeloggte Spieler im Portal sichtbar, sobald die Seite veröffentlicht ist.",
-  public:
-    "Wie Portal-sichtbar, zusätzlich für explizite Share-Link-Freigaben markiert; Share-Routen brauchen ebenfalls Login.",
-  specific_players: "Nur für eingeloggte Spieler mit Freigabe sichtbar.",
-  unlock_after_session: "Wird nach der verknüpften Session für Spieler freigeschaltet.",
-  archived: "Archiviert — für Spieler ausgeblendet, im Studio weiterhin auffindbar.",
-};
 
-export const PUBLISH_LABELS: Record<PublishStatus, string> = {
-  draft: "Entwurf",
-  internal: "Intern",
-  review: "Review",
-  published: "Veröffentlicht",
-  archived: "Archiviert",
-};
 
-export const SECRET_LEVEL_LABELS: Record<SecretLevel, string> = {
-  none: "Kein Geheimnis",
-  spoiler: "Spoiler",
-  dm_secret: "GM-Geheimnis",
-};
 
-export const SECRET_LEVEL_DESCRIPTIONS: Record<SecretLevel, string> = {
-  none: "Kein zusätzlicher Geheimnis-Schutz — Sichtbarkeit und Publish-Status gelten allein.",
-  spoiler:
-    "Campaign-Spoiler — veröffentlichte Spieler-Inhalte bleiben verborgen, bis der Enthüllungs-Status „Enthüllt“ ist.",
-  dm_secret:
-    "Strenges GM-Geheimnis — erscheint für Spieler erst nach expliziter Enthüllung, auch wenn die Seite veröffentlicht ist.",
-};
 
-export const REVEAL_STATE_LABELS: Record<RevealState, string> = {
-  hidden: "Verborgen",
-  preview: "Vorschau (Teaser)",
-  revealed: "Enthüllt",
-};
 
-export const REVEAL_STATE_DESCRIPTIONS: Record<RevealState, string> = {
-  hidden: "Spieler sehen die Seite nicht, solange ein Geheimnis-Level gesetzt ist.",
-  preview: "Noch nicht für Spieler freigegeben — nur im Studio sichtbar (wie „Verborgen“ für Portal-Zugriff).",
-  revealed: "Geheimnis ist für Spieler freigegeben — die Seite kann im Portal erscheinen (bei passender Sichtbarkeit).",
-};
 
 export const CANONICAL_LABELS: Record<CanonicalStatus, string> = {
   idea: "Idee",
@@ -169,7 +112,6 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   trap: "Falle",
   puzzle: "Rätsel",
   loot: "Loot",
-  secret: "Geheimnis",
   session: "Session",
   quest: "Quest",
   handout: "Handout",
@@ -178,6 +120,7 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   monster: "Monster",
   sound: "Sound",
   map: "Karte",
+  secret: "Geheimnis",
   note: "Notiz",
 };
 
@@ -234,7 +177,6 @@ export const BLOCK_TYPE_LABELS: Record<ContentBlockType, string> = {
   relation: "Beziehung",
   timeline: "Timeline",
   statblock: "Statblock",
-  gm_note: "GM-Notiz",
   player_text: "Spielertext",
   ai_summary: "KI-Zusammenfassung",
 };
@@ -249,41 +191,6 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   other: "Sonstiges",
 };
 
-export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
-  const className = `${BADGE_BASE} ${
-    visibility === "dm_only"
-      ? BADGE_TONE.secret
-      : visibility === "player_visible"
-        ? BADGE_TONE.player
-        : visibility === "public"
-          ? BADGE_TONE.public
-          : BADGE_TONE.plain
-  }`;
-
-  return (
-    <span
-      className={className}
-      title={VISIBILITY_DESCRIPTIONS[visibility]}
-      aria-label={`Sichtbarkeit: ${VISIBILITY_LABELS[visibility]}. ${VISIBILITY_DESCRIPTIONS[visibility]}`}
-    >
-      {VISIBILITY_LABELS[visibility]}
-    </span>
-  );
-}
-
-export function PublishBadge({ status }: { status: PublishStatus }) {
-  const className = `${BADGE_BASE} ${
-    status === "published"
-      ? BADGE_TONE.published
-      : status === "draft"
-        ? BADGE_TONE.draft
-        : status === "review"
-          ? BADGE_TONE.warning
-          : BADGE_TONE.plain
-  }`;
-
-  return <span className={className}>{PUBLISH_LABELS[status]}</span>;
-}
 
 /** Shown after a page passed through the KI review workflow. */
 export function AiReviewedBadge() {
@@ -297,45 +204,7 @@ export function AiReviewedBadge() {
   );
 }
 
-export function SecretLevelBadge({ secretLevel }: { secretLevel: SecretLevel }) {
-  if (secretLevel === "none") {
-    return <span className={`${BADGE_BASE} ${BADGE_TONE.plain}`}>—</span>;
-  }
 
-  const className = `${BADGE_BASE} ${
-    secretLevel === "dm_secret" ? BADGE_TONE.secret : BADGE_TONE.draft
-  }`;
-
-  return (
-    <span
-      className={className}
-      title={SECRET_LEVEL_DESCRIPTIONS[secretLevel]}
-      aria-label={`Geheimnis-Level: ${SECRET_LEVEL_LABELS[secretLevel]}. ${SECRET_LEVEL_DESCRIPTIONS[secretLevel]}`}
-    >
-      {SECRET_LEVEL_LABELS[secretLevel]}
-    </span>
-  );
-}
-
-export function RevealStateBadge({ revealState }: { revealState: RevealState }) {
-  const className = `${BADGE_BASE} ${
-    revealState === "revealed"
-      ? BADGE_TONE.published
-      : revealState === "preview"
-        ? BADGE_TONE.player
-        : BADGE_TONE.secret
-  }`;
-
-  return (
-    <span
-      className={className}
-      title={REVEAL_STATE_DESCRIPTIONS[revealState]}
-      aria-label={`Enthüllungs-Status: ${REVEAL_STATE_LABELS[revealState]}. ${REVEAL_STATE_DESCRIPTIONS[revealState]}`}
-    >
-      {REVEAL_STATE_LABELS[revealState]}
-    </span>
-  );
-}
 
 export function CanonicalBadge({ status }: { status: CanonicalStatus }) {
   const className = `${BADGE_BASE} ${
@@ -396,6 +265,41 @@ export const RTX_STATE_DESCRIPTIONS: Record<RtxConnectorState, string> = {
   starting: "RTX Connector wird gestartet — bitte kurz warten.",
   error: "RTX Connector meldet einen Fehler. Prüfe den Systemstatus.",
 };
+
+/**
+ * Die Felder der RTX-Bereitschaft, die für die Anzeige zählen.
+ *
+ * Absichtlich strukturell statt `RtxReadinessStatus` aus `@uwe/ai-brain`: so
+ * bleibt shared-ui frei von einer Abhängigkeit auf ein Logik-Paket, und beide
+ * Apps rechnen trotzdem mit derselben Funktion. Vorher lag sie nur in Studio —
+ * Brain hätte sie für das Mail-Center abschreiben müssen.
+ */
+export interface RtxReadinessLike {
+  ready: boolean;
+  agentStatus?: string;
+  connectorDegraded?: boolean;
+  urlAllowed?: boolean;
+}
+
+/** Bereitschaft des RTX-Hosts auf den Zustand des Abzeichens abbilden. */
+export function mapRtxReadinessToConnectorState(status: RtxReadinessLike): RtxConnectorState {
+  if (status.agentStatus === "disabled" && !status.ready) {
+    return "disabled";
+  }
+  if (status.connectorDegraded && status.ready) {
+    return "starting";
+  }
+  if (status.ready) {
+    return "online";
+  }
+  if (status.agentStatus === "starting") {
+    return "starting";
+  }
+  if (status.agentStatus === "error" || status.urlAllowed === false) {
+    return "error";
+  }
+  return "offline";
+}
 
 /** Per-state tone for the RTX status badge (badge chrome + dot fill). */
 const RTX_TONE: Record<RtxConnectorState, { badge: string; dot: string }> = {

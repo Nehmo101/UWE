@@ -1,4 +1,4 @@
-import type { ContentBlockType, PageType, Visibility } from "./generated/prisma/client";
+import type { ContentBlockType, PageType } from "./generated/prisma/client";
 import { slugifyDe } from "./slug-utils";
 
 /**
@@ -12,7 +12,6 @@ import { slugifyDe } from "./slug-utils";
 
 export interface PageTemplateBlock {
   type: ContentBlockType;
-  visibility: Visibility;
   content: string;
 }
 
@@ -21,7 +20,6 @@ export interface PageTemplate {
   name: string;
   description: string;
   pageType: PageType;
-  defaultVisibility: Visibility;
   titlePlaceholder: string;
   blocks: PageTemplateBlock[];
 }
@@ -32,12 +30,10 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     name: "Leere Seite",
     description: "Freie Seite ohne Vorlage – Typ und Inhalt selbst bestimmen.",
     pageType: "lore",
-    defaultVisibility: "dm_only",
     titlePlaceholder: "Seitentitel",
     blocks: [
       {
         type: "rich_text",
-        visibility: "player_visible",
         content: "",
       },
     ],
@@ -47,12 +43,10 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     name: "NPC",
     description: "Nicht-Spieler-Charakter mit Spieler-Beschreibung und DM-Geheimnissen.",
     pageType: "npc",
-    defaultVisibility: "dm_only",
     titlePlaceholder: "Name des NPCs",
     blocks: [
       {
         type: "rich_text",
-        visibility: "player_visible",
         content: [
           "## Erscheinung",
           "Wie wirkt diese Person auf den ersten Blick?",
@@ -65,8 +59,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         ].join("\n"),
       },
       {
-        type: "gm_note",
-        visibility: "dm_only",
+        type: "rich_text",
         content: [
           "## Wahre Motivation",
           "Was will dieser NPC wirklich?",
@@ -85,12 +78,10 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     name: "Ort",
     description: "Stadt, Dorf oder Schauplatz mit Atmosphäre und DM-Hooks.",
     pageType: "location",
-    defaultVisibility: "dm_only",
     titlePlaceholder: "Name des Ortes",
     blocks: [
       {
         type: "rich_text",
-        visibility: "player_visible",
         content: [
           "## Beschreibung",
           "Was sehen, hören und riechen die Charaktere hier?",
@@ -103,8 +94,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         ].join("\n"),
       },
       {
-        type: "gm_note",
-        visibility: "dm_only",
+        type: "rich_text",
         content: [
           "## Geheimnisse & Hooks",
           "- ",
@@ -120,12 +110,10 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     name: "Fraktion",
     description: "Organisation oder Gruppierung mit öffentlichem Ruf und wahrer Agenda.",
     pageType: "faction",
-    defaultVisibility: "dm_only",
     titlePlaceholder: "Name der Fraktion",
     blocks: [
       {
         type: "rich_text",
-        visibility: "player_visible",
         content: [
           "## Öffentliches Bild",
           "Wofür ist diese Fraktion bekannt?",
@@ -138,8 +126,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         ].join("\n"),
       },
       {
-        type: "gm_note",
-        visibility: "dm_only",
+        type: "rich_text",
         content: [
           "## Wahre Agenda",
           "Was verfolgt die Fraktion im Verborgenen?",
@@ -155,12 +142,10 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     name: "Quest",
     description: "Auftrag mit Ziel, Belohnung und verborgenen Wendungen.",
     pageType: "quest",
-    defaultVisibility: "dm_only",
     titlePlaceholder: "Name der Quest",
     blocks: [
       {
         type: "rich_text",
-        visibility: "player_visible",
         content: [
           "## Auftrag",
           "Wer gibt die Quest und was soll erreicht werden?",
@@ -173,8 +158,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         ].join("\n"),
       },
       {
-        type: "gm_note",
-        visibility: "dm_only",
+        type: "rich_text",
         content: [
           "## Wendungen",
           "Was läuft anders, als die Gruppe denkt?",
@@ -191,12 +175,10 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     name: "Session-Plan",
     description: "Vorbereitungsseite für den nächsten Spielabend (DM-only).",
     pageType: "session",
-    defaultVisibility: "dm_only",
     titlePlaceholder: "Session-Titel",
     blocks: [
       {
         type: "rich_text",
-        visibility: "dm_only",
         content: [
           "## Recap",
           "Wo hat die Gruppe zuletzt aufgehört?",
@@ -214,8 +196,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         ].join("\n"),
       },
       {
-        type: "gm_note",
-        visibility: "dm_only",
+        type: "rich_text",
         content: [
           "## Notfall-Ideen",
           "Falls die Gruppe abbiegt:",
@@ -229,19 +210,16 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     name: "Handout",
     description: "Spieler-Handout, z. B. Brief, Aushang oder Notiz.",
     pageType: "handout",
-    defaultVisibility: "player_visible",
     titlePlaceholder: "Titel des Handouts",
     blocks: [
       {
         type: "rich_text",
-        visibility: "player_visible",
         content: [
           "Text des Handouts, so wie die Spieler ihn lesen sollen.",
         ].join("\n"),
       },
       {
-        type: "gm_note",
-        visibility: "dm_only",
+        type: "rich_text",
         content: [
           "## Kontext für den DM",
           "Wann und wie bekommen die Spieler dieses Handout?",

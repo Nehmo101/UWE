@@ -41,7 +41,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       displayName: "DM",
       email: "dm-backlink@test.local",
       password: "test",
-      role: "dm",
+      portalAccess: true,
+      studioAccess: true,
     });
     dmUserId = dm.id;
 
@@ -49,12 +50,13 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       displayName: "Player",
       email: "player-backlink@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
-    await auth.createWorldMembership({ userId: dm.id, worldId, role: "dm" });
-    await auth.createWorldMembership({ userId: player.id, worldId, role: "player" });
+    await auth.createWorldMembership({ userId: dm.id, worldId });
+    await auth.createWorldMembership({ userId: player.id, worldId });
 
     // Focus page every source links to. Player-visible + published so both a DM
     // and a player may read it (backlinks require the focus page to be readable).
@@ -63,11 +65,9 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Zielort",
       slug: "zielort",
       type: "location",
-      visibility: "player_visible",
-      publishStatus: "published",
       aliases: ["Zieldorf"],
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Der Zielort." },
+        { type: "rich_text", sortOrder: 0, content: "Der Zielort." },
       ],
     });
     focusPageId = focus.id;
@@ -78,10 +78,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle A",
       slug: "quelle-a",
       type: "lore",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Weg nach [[Zielort]]." },
+        { type: "rich_text", sortOrder: 0, content: "Weg nach [[Zielort]]." },
       ],
     });
 
@@ -92,11 +90,9 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle B",
       slug: "quelle-b",
       type: "lore",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Nichts zu sehen." },
-        { type: "gm_note", sortOrder: 1, visibility: "dm_only", content: "Geheim: [[Zielort]]." },
+        { type: "rich_text", sortOrder: 0, content: "Nichts zu sehen." },
+        { type: "rich_text", sortOrder: 1, content: "Geheim: [[Zielort]]." },
       ],
     });
 
@@ -107,10 +103,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Geheime Quelle",
       slug: "geheime-quelle",
       type: "lore",
-      visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
-        { type: "gm_note", sortOrder: 0, visibility: "dm_only", content: "Führt zu [[Zielort]]." },
+        { type: "rich_text", sortOrder: 0, content: "Führt zu [[Zielort]]." },
       ],
     });
 
@@ -121,10 +115,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle D",
       slug: "quelle-d",
       type: "lore",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Reise nach [[Zieldorf]]." },
+        { type: "rich_text", sortOrder: 0, content: "Reise nach [[Zieldorf]]." },
       ],
     });
 
@@ -134,10 +126,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Abseits",
       slug: "abseits",
       type: "lore",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Kein Bezug." },
+        { type: "rich_text", sortOrder: 0, content: "Kein Bezug." },
       ],
     });
 
@@ -168,15 +158,11 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
     assert.deepEqual(titles, ["Geheime Quelle", "Quelle A", "Quelle B", "Quelle D"]);
   });
 
-  it("player sees only visible-block, visible-page backlinks (no leak)", async () => {
-    const titles = await backlinkTitles(playerUserId);
-    // Quelle B links only from a dm_only block; Geheime Quelle is a dm_only page.
-    assert.deepEqual(titles, ["Quelle A", "Quelle D"]);
-    assert.ok(!titles.includes("Quelle B"));
-    assert.ok(!titles.includes("Geheime Quelle"));
+  it("an assigned player sees the same backlinks as the DM", async () => {
+    assert.deepEqual(await backlinkTitles(playerUserId), await backlinkTitles(dmUserId));
   });
 
-  it("neighbour graph for a player excludes dm_only sources", async () => {
+  it("neighbour graph for a player covers the whole neighbourhood", async () => {
     const db = createPrismaClient(databaseUrl);
     try {
       const auth = createAuthService(db);
@@ -189,8 +175,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       assert.ok(titles.includes("Zielort"));
       assert.ok(titles.includes("Quelle A"));
       assert.ok(titles.includes("Quelle D"));
-      assert.ok(!titles.includes("Geheime Quelle"));
-      assert.ok(!titles.includes("Quelle B"));
+      assert.ok(titles.includes("Geheime Quelle"));
       // Every edge must touch the focus and only visible nodes.
       const nodeIds = new Set(graph.nodes.map((node) => node.id));
       for (const edge of graph.edges) {
@@ -217,10 +202,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle E",
       slug: "quelle-e",
       type: "lore",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "player_visible", content: "Neuer Pfad nach [[Zielort]]." },
+        { type: "rich_text", sortOrder: 0, content: "Neuer Pfad nach [[Zielort]]." },
       ],
     });
     const versionAfter = await repo.getWorldGraphVersion(worldSlug);

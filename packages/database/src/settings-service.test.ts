@@ -3,13 +3,11 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
-import { createPage, createWorld } from "./repository";
 import {
   DEFAULT_SYSTEM_SETTINGS,
   createSettingsService,
   getPersistentPathConfiguration,
   getSystemSettingsSnapshotSafe,
-  isGuestPortalAccessAllowed,
   resolveEffectiveExportsPath,
   resolveLocalOnlyMode,
   resolveSessionInactivityTimeoutMs,
@@ -38,7 +36,6 @@ describe("SettingsService", () => {
     assert.equal(settings.app.themePreferences?.brain?.themeId, "uwe-ghibli-nacht");
     assert.equal(settings.app.frostedGlass, false);
     assert.equal(settings.app.motionEnabled, true);
-    assert.equal(settings.worlds.defaultVisibility, "dm_only");
     assert.equal(settings.portal.portalEnabled, true);
     assert.equal(settings.ai.localOnlyMode, false);
   });
@@ -49,8 +46,7 @@ describe("SettingsService", () => {
 
     await service.updateSettings({
       app: { theme: "light" },
-      worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
-      portal: { guestAccessEnabled: false, publicSharingEnabled: false },
+      worlds: { defaultCanonicalStatus: "canon" },
       ai: { localOnlyMode: true },
       storage: { uploadsPath: "./custom-uploads", exportsPath: "./custom-exports" },
       backup: { backupsPath: "./custom-backups" },
@@ -58,9 +54,7 @@ describe("SettingsService", () => {
 
     const reloaded = await service.getSettings();
     assert.equal(reloaded.app.theme, "light");
-    assert.equal(reloaded.worlds.defaultVisibility, "player_visible");
     assert.equal(reloaded.worlds.defaultCanonicalStatus, "canon");
-    assert.equal(reloaded.portal.guestAccessEnabled, false);
     assert.equal(reloaded.ai.localOnlyMode, true);
     assert.equal(reloaded.storage.uploadsPath, "./custom-uploads");
     assert.equal(reloaded.storage.exportsPath, "./custom-exports");
@@ -101,55 +95,25 @@ describe("SettingsService", () => {
     }
   });
 
-  it("uses default visibility when creating pages", async () => {
+
+  it("gives an anonymous visitor no world context at all", async () => {
     const db = createPrismaClient(databaseUrl);
-    const service = createSettingsService(db);
-
-    await service.updateSettings({
-      worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
-    });
-
-    const world = await createWorld(
-      { name: "Settings Test", slug: "settings-test", description: null },
-      databaseUrl,
-    );
-
-    const page = await createPage(
-      {
-        worldId: world.id,
-        title: "Default Page",
-        slug: "default-page",
-        type: "lore",
-      },
-      databaseUrl,
-    );
-
-    assert.equal(page.visibility, "player_visible");
-    assert.equal(page.canonicalStatus, "canon");
-  });
-
-  it("keeps portal guest access disabled regardless of settings", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const service = createSettingsService(db);
     const auth = createAuthService(db);
 
     await db.world.create({
       data: {
         name: "Guest World",
         slug: "guest-world",
-        guestModeEnabled: true,
       },
     });
 
-    await service.updateSettings({
-      portal: { guestAccessEnabled: true },
-    });
-
-    const settings = await service.getSettings();
+    // There is no guest mode and no guest-access setting left to turn on: the
+    // four checkboxes decide who gets in, and an anonymous visitor has none.
     const ctx = await auth.buildAccessContextForWorld("guest-world");
     assert.ok(ctx);
-    assert.equal(isGuestPortalAccessAllowed(settings, true), false);
-    assert.equal(ctx.guestModeEnabled, false);
+    assert.equal(ctx.user, null);
+    assert.equal(ctx.worldMembership, null);
+    assert.deepEqual(await auth.listPagesForViewer("guest-world", ctx), []);
   });
 
   it("exposes local-only mode from settings", async () => {
@@ -195,8 +159,7 @@ describe("SettingsService", () => {
 
     await service.updateSettings({
       app: { theme: "light" },
-      worlds: { defaultVisibility: "player_visible", defaultCanonicalStatus: "canon" },
-      portal: { guestAccessEnabled: false, publicSharingEnabled: false },
+      worlds: { defaultCanonicalStatus: "canon" },
       ai: { localOnlyMode: true, enabled: false },
     });
 
@@ -206,27 +169,26 @@ describe("SettingsService", () => {
 
     const settings = await service.getSettings();
     assert.equal(settings.app.theme, "dark");
-    assert.equal(settings.worlds.defaultVisibility, "player_visible");
     assert.equal(settings.worlds.defaultCanonicalStatus, "canon");
-    assert.equal(settings.portal.guestAccessEnabled, false);
-    assert.equal(settings.portal.publicSharingEnabled, false);
     assert.equal(settings.ai.localOnlyMode, true);
     assert.equal(settings.ai.enabled, false);
   });
 
-  it("never exposes API keys in client settings", async () => {
+  it("kennt keine Cloud-Provider-Schlüssel mehr", async () => {
+    // Seit N.3 gibt es keinen Cloud-Anbieter — ein gesetzter Fremd-Key darf
+    // weder in den Client-Einstellungen auftauchen noch dort einen Platzhalter
+    // erzeugen.
     const original = process.env.OPENAI_API_KEY;
     process.env.OPENAI_API_KEY = "super-secret-key";
 
     try {
       const service = createSettingsService(createPrismaClient(databaseUrl));
       const clientSettings = await service.getSettingsForClient();
-      const openAi = clientSettings.ai.providerKeyPlaceholders.find((p) => p.id === "openai");
+      const serialized = JSON.stringify(clientSettings);
 
-      assert.ok(openAi);
-      assert.equal(openAi.configured, true);
-      assert.equal(openAi.source, "env");
-      assert.ok(!JSON.stringify(clientSettings).includes("super-secret-key"));
+      assert.ok(!serialized.includes("super-secret-key"));
+      assert.ok(!serialized.includes("providerKeyPlaceholders"));
+      assert.ok(!serialized.includes("cloudApiKeys"));
     } finally {
       if (original === undefined) {
         delete process.env.OPENAI_API_KEY;

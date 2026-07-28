@@ -27,7 +27,6 @@ export async function GET(request: Request, { params }: RouteParams) {
   const { worldSlug } = parsedParams.data;
   const url = new URL(request.url);
   const campaignSlug = url.searchParams.get("campaign");
-  const accessContext = url.searchParams.get("accessContext") === "portal" ? "portal" : "dm";
 
   const { db, brain, repo } = brainService();
   try {
@@ -43,11 +42,9 @@ export async function GET(request: Request, { params }: RouteParams) {
     const [documents, facts, summary] = await Promise.all([
       brain.listDocuments(worldSlug, {
         campaignId: campaign?.id,
-        accessContext,
       }),
       brain.listFacts(worldSlug, {
         campaignId: campaign?.id,
-        accessContext,
       }),
       brain.getWorldSummary(worldSlug),
     ]);
@@ -74,7 +71,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     content?: string;
     documentType?: string;
     factType?: string;
-    visibility?: string;
     source?: string;
     status?: string;
     campaignId?: string | null;
@@ -100,7 +96,6 @@ export async function POST(request: Request, { params }: RouteParams) {
         title: body.title.trim(),
         content: body.content ?? "",
         documentType: (body.documentType as never) ?? "general",
-        visibility: (body.visibility as never) ?? "dm_only",
         source: (body.source as never) ?? "manual",
         status: (body.status as never) ?? "draft",
         campaignId: body.campaignId ?? null,
@@ -115,7 +110,6 @@ export async function POST(request: Request, { params }: RouteParams) {
       title: body.title.trim(),
       content: body.content ?? "",
       factType: (body.factType as never) ?? "custom",
-      visibility: (body.visibility as never) ?? "dm_only",
       source: (body.source as never) ?? "manual",
       status: (body.status as never) ?? "draft",
       campaignId: body.campaignId ?? null,

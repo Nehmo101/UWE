@@ -17,7 +17,11 @@ describe("evaluateMaintenanceForRequest", () => {
       displayName: "Owner",
       email: "maint-owner@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
     const session = await auth.createSession(owner.id);
 
@@ -52,7 +56,8 @@ describe("evaluateMaintenanceForRequest", () => {
       displayName: "DM",
       email: "maint-dm@example.com",
       password: "test-password-123",
-      role: "dm",
+      portalAccess: true,
+      studioAccess: true,
     });
     const session = await auth.createSession(dm.id);
 

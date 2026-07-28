@@ -2,8 +2,6 @@ import type {
   ContentBlockType,
   PageType,
   Prisma,
-  PublishStatus,
-  Visibility,
 } from "@uwe/database/server";
 
 /** Lifecycle status for each import candidate. */
@@ -52,8 +50,6 @@ export interface KnoteForgeExportEntity {
   gmContent?: string | null;
   tags?: string[];
   aliases?: string[];
-  visibility?: string | null;
-  publishStatus?: string | null;
   parentId?: string | null;
   relations?: Array<{
     targetId: string;
@@ -96,7 +92,6 @@ export interface MappedContentBlockDraft {
   type: ContentBlockType;
   sortOrder: number;
   content: string;
-  visibility: Visibility;
   metadata?: Prisma.InputJsonValue;
 }
 
@@ -107,8 +102,6 @@ export interface MappedPageDraft {
   slug: string;
   type: PageType;
   summary?: string | null;
-  visibility: Visibility;
-  publishStatus: PublishStatus;
   tags: string[];
   aliases: string[];
   contentBlocks: MappedContentBlockDraft[];
@@ -185,8 +178,6 @@ export interface ImportUndoPageUpdate {
     slug: string;
     type: string;
     summary: string | null;
-    visibility: string;
-    publishStatus: string;
     canonicalStatus: string;
     tags: unknown;
     aliases: unknown;

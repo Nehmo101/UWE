@@ -39,7 +39,11 @@ export async function PATCH(request: Request, context: RouteContext) {
   const body = (await request.json()) as {
     displayName?: string;
     email?: string | null;
-    role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+    isOwner?: boolean;
+    portalAccess?: boolean;
+    studioAccess?: boolean;
+    brainAccess?: boolean;
+    familyAccess?: boolean;
     status?: "invited" | "active" | "disabled";
     forcePasswordChange?: boolean;
   };
@@ -62,7 +66,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     if (code === "LAST_OWNER_ROLE") {
       return NextResponse.json(
-        { error: "Die Rolle des letzten Owners kann nicht geändert werden." },
+        { error: "Dem letzten Owner kann die Owner-Rolle nicht entzogen werden." },
         { status: 400 },
       );
     }

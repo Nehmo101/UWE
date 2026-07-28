@@ -13,7 +13,6 @@ import {
 } from "./page-template-service";
 import { isSeedApplied } from "./seed-tracker";
 import {
-  isPublicPortalExposureEnabled,
   isRunDbSeedUnsafe,
   isWeakAuthSecret,
 } from "./production-safety";
@@ -100,7 +99,6 @@ export interface TrustStatus {
   authSecretConfigured: boolean;
   authSecretLooksWeak: boolean;
   runDbSeedDisabled: boolean;
-  publicPortalSharingEnabled: boolean;
   exposureHint: string;
 }
 
@@ -295,7 +293,6 @@ export async function getSystemStatus(
     }
   }
 
-  let publicPortalSharingEnabled = false;
   let mailStatus: MailStatus = {
     enabled: false,
     configured: false,
@@ -305,7 +302,6 @@ export async function getSystemStatus(
   if (databaseStatus.ok) {
     try {
       const settings = await new SettingsService(db).getSettings();
-      publicPortalSharingEnabled = isPublicPortalExposureEnabled(settings);
       mailStatus = {
         enabled: settings.mail.enabled,
         configured: settings.mail.smtp.configured,
@@ -313,7 +309,7 @@ export async function getSystemStatus(
         message: settings.mail.smtp.message,
       };
     } catch {
-      publicPortalSharingEnabled = false;
+      // Settings are optional for the status snapshot — mail stays "unknown".
     }
   }
 
@@ -337,7 +333,6 @@ export async function getSystemStatus(
       authSecretConfigured: Boolean(authSecret?.trim()),
       authSecretLooksWeak: isWeakAuthSecret(authSecret),
       runDbSeedDisabled: !isRunDbSeedUnsafe(),
-      publicPortalSharingEnabled,
       exposureHint:
         "Studio erzwingt den UWE-Login (E-Mail) wenn AUTH_REQUIRED=true — optional Reverse-Proxy/VPN oder eine „Ich bin ein Mensch“-Prüfung (Cloudflare Turnstile/Managed Challenge) davor.",
     },

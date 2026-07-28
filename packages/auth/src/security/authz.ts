@@ -1,19 +1,5 @@
-import {
-  buildAccessContext,
-  canViewAsset,
-  canViewContentBlock,
-  canViewPage,
-  isDmOrOwner,
-} from "../permissions";
-import type {
-  AccessContext,
-  AssetAccessInfo,
-  AuthUser,
-  ContentBlockAccessInfo,
-  PageAccessInfo,
-  PageVisibility,
-  WorldMembership,
-} from "../types";
+import { canAccessStudio } from "../area-access";
+import type { AccessContext, AuthUser, WorldMembership } from "../types";
 
 /** Thrown when an authorization check fails. */
 export class AuthorizationError extends Error {
@@ -26,29 +12,9 @@ export class AuthorizationError extends Error {
   }
 }
 
-const KNOWN_VISIBILITIES: ReadonlySet<PageVisibility> = new Set([
-  "dm_only",
-  "player_visible",
-  "public",
-  "specific_players",
-  "unlock_after_session",
-  "archived",
-]);
-
-const KNOWN_PUBLISH_STATUSES: ReadonlySet<string> = new Set([
-  "draft",
-  "internal",
-  "review",
-  "published",
-  "archived",
-]);
-
-const DM_WORLD_ROLES: ReadonlySet<WorldMembership["role"]> = new Set(["owner", "dm"]);
-
-/** World target for authorization checks — membership is the requesting user's role in this world. */
+/** World target for authorization checks — membership is the requesting user's assignment to this world. */
 export interface WorldAuthTarget {
   id: string;
-  guestModeEnabled: boolean;
   /** Requesting user's membership in this world, or null if none. */
   membership: WorldMembership | null;
 }
@@ -56,13 +22,8 @@ export interface WorldAuthTarget {
 /** Content (page) target for authorization checks. */
 export interface ContentAuthTarget {
   id: string;
-  visibility: string;
-  publishStatus: string;
   type?: string;
 }
-
-/** Secret page target — same shape as content, type should be "secret". */
-export type SecretAuthTarget = ContentAuthTarget & { type: "secret" };
 
 /** Media upload target scoped to a world. */
 export interface MediaUploadTarget {
@@ -80,76 +41,38 @@ export interface AIUsageContext {
 
 /** Optional scope modifiers for authorization checks. */
 export interface AuthzScope {
-  unlockedPageIds?: Iterable<string>;
-  specificPlayerPageIds?: Iterable<string>;
   previewAsUserId?: string | null;
   /** Studio runs behind network trust — grants DM-equivalent access. */
   studioTrusted?: boolean;
 }
 
-function normalizeVisibility(visibility: string): PageVisibility | null {
-  return KNOWN_VISIBILITIES.has(visibility as PageVisibility)
-    ? (visibility as PageVisibility)
-    : null;
+/**
+ * The Studio checkbox is what makes someone a DM — it reaches every world. The
+ * owner flag deliberately does not stand in for it: it governs operations
+ * (restore, host, Command Center), not which app someone may open. The first
+ * owner gets all four checkboxes at setup.
+ */
+function hasStudioAccess(user: AuthUser | null): boolean {
+  return user !== null && canAccessStudio(user);
 }
 
-function normalizePublishStatus(status: string): string | null {
-  return KNOWN_PUBLISH_STATUSES.has(status) ? status : null;
-}
-
-function toPageAccessInfo(content: ContentAuthTarget): PageAccessInfo | null {
-  const visibility = normalizeVisibility(content.visibility);
-  const publishStatus = normalizePublishStatus(content.publishStatus);
-  if (!visibility || !publishStatus) {
-    return null;
-  }
-  return { id: content.id, visibility, publishStatus };
-}
-
-function isGlobalOwner(user: AuthUser | null): boolean {
-  return user?.role === "owner";
-}
-
-function isGlobalDm(user: AuthUser | null): boolean {
-  return user?.role === "owner" || user?.role === "admin" || user?.role === "dm";
-}
-
-function hasDmWorldRole(membership: WorldMembership | null | undefined): boolean {
-  return membership !== null && membership !== undefined && DM_WORLD_ROLES.has(membership.role);
-}
-
-function isGlobalAdmin(user: AuthUser | null): boolean {
-  return user?.role === "owner" || user?.role === "admin";
-}
-
-function toAccessContext(
-  user: AuthUser | null,
-  world: WorldAuthTarget,
-  scope?: AuthzScope,
-): AccessContext {
-  return buildAccessContext({
-    user,
-    worldMembership: membershipForUser(user, world),
-    guestModeEnabled: world.guestModeEnabled,
-    unlockedPageIds: scope?.unlockedPageIds,
-    specificPlayerPageIds: scope?.specificPlayerPageIds,
-    preview: scope?.previewAsUserId ? { previewAsUserId: scope.previewAsUserId } : undefined,
-  });
-}
-
-/** Build an AuthzScope from an existing AccessContext. */
+/**
+ * Builds an AuthzScope from an existing AccessContext for a specific world.
+ *
+ * The membership only carries over when it actually belongs to `worldId`. An
+ * access context is built for one world; passing its membership on to a
+ * different world would let a member of world A read world B (the world
+ * boundary is now the only access rule, so this check is load-bearing).
+ */
 export function scopeFromAccessContext(
   ctx: AccessContext,
   worldId: string,
 ): AuthzScope & { world: WorldAuthTarget } {
+  const membership =
+    ctx.worldMembership?.worldId === worldId ? ctx.worldMembership : null;
+
   return {
-    world: {
-      id: worldId,
-      guestModeEnabled: ctx.guestModeEnabled,
-      membership: ctx.worldMembership,
-    },
-    unlockedPageIds: ctx.unlockedPageIds,
-    specificPlayerPageIds: ctx.specificPlayerPageIds,
+    world: { id: worldId, membership },
     previewAsUserId: ctx.previewAsUserId,
   };
 }
@@ -169,155 +92,57 @@ export function canReadWorld(
   world: WorldAuthTarget,
   scope?: Pick<AuthzScope, "studioTrusted">,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
+  if (scope?.studioTrusted || hasStudioAccess(user)) {
     return true;
   }
 
-  if (isGlobalDm(user)) {
-    return true;
-  }
-
-  if (membershipForUser(user, world)) {
-    return true;
-  }
-
-  if (!world.guestModeEnabled) {
-    return false;
-  }
-
-  return true;
+  return membershipForUser(user, world) !== null;
 }
 
+/** Editing a world is the Studio checkbox — a Portal-only assignment reads. */
 export function canEditWorld(
   user: AuthUser | null,
-  world: WorldAuthTarget,
+  _world: WorldAuthTarget,
   scope?: Pick<AuthzScope, "studioTrusted">,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (user?.role === "dm") {
-    return true;
-  }
-
-  // Admin manages system but does not auto-edit world canon without world DM role.
-  if (isGlobalAdmin(user)) {
-    return false;
-  }
-
-  return hasDmWorldRole(membershipForUser(user, world));
+  return Boolean(scope?.studioTrusted) || hasStudioAccess(user);
 }
 
+/** No per-page gate left: whoever may read the world reads everything in it. */
 export function canReadContent(
   user: AuthUser | null,
-  content: ContentAuthTarget,
+  _content: ContentAuthTarget,
   world: WorldAuthTarget,
   scope?: AuthzScope,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (!canReadWorld(user, world, scope)) {
-    return false;
-  }
-
-  const pageInfo = toPageAccessInfo(content);
-  if (!pageInfo) {
-    return false;
-  }
-
-  const ctx = toAccessContext(user, world, scope);
-  return canViewPage(ctx, pageInfo);
+  return canReadWorld(user, world, scope);
 }
 
 export function canEditContent(
   user: AuthUser | null,
-  content: ContentAuthTarget,
+  _content: ContentAuthTarget,
   world: WorldAuthTarget,
   scope?: AuthzScope,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (!canEditWorld(user, world, scope)) {
-    return false;
-  }
-
-  const membership = membershipForUser(user, world);
-  if (membership?.role === "co_dm") {
-    return false;
-  }
-
-  const ctx = toAccessContext(user, world, scope);
-  return isDmOrOwner(ctx);
+  return canEditWorld(user, world, scope);
 }
 
 export function canReadContentBlock(
   user: AuthUser | null,
-  block: ContentBlockAccessInfo & { visibility: string },
   content: ContentAuthTarget,
   world: WorldAuthTarget,
   scope?: AuthzScope,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  const pageInfo = toPageAccessInfo(content);
-  if (!pageInfo) {
-    return false;
-  }
-
-  const blockVisibility = normalizeVisibility(block.visibility);
-  if (!blockVisibility) {
-    return false;
-  }
-
-  const ctx = toAccessContext(user, world, scope);
-  return canViewContentBlock(ctx, { visibility: blockVisibility }, pageInfo);
-}
-
-export function canRevealSecret(
-  user: AuthUser | null,
-  secret: SecretAuthTarget,
-  world: WorldAuthTarget,
-  scope?: AuthzScope,
-): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (secret.type !== "secret") {
-    return false;
-  }
-
-  return canReadContent(user, secret, world, scope);
+  return canReadContent(user, content, world, scope);
 }
 
 export function canReadAsset(
   user: AuthUser | null,
-  asset: AssetAccessInfo & { visibility: string },
+  asset: { id: string },
   world: WorldAuthTarget,
   scope?: AuthzScope,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (!canReadWorld(user, world, scope)) {
-    return false;
-  }
-
-  const visibility = normalizeVisibility(asset.visibility);
-  if (!visibility) {
-    return false;
-  }
-
-  const ctx = toAccessContext(user, world, scope);
-  return canViewAsset(ctx, { ...asset, visibility });
+  return canReadContent(user, asset, world, scope);
 }
 
 export function canUploadMedia(
@@ -327,38 +152,18 @@ export function canUploadMedia(
 ): boolean {
   const world: WorldAuthTarget = {
     id: target.worldId,
-    guestModeEnabled: false,
     membership: target.membership ?? null,
   };
   return canEditWorld(user, world, scope);
 }
 
+/** AI is a Studio tool: a Portal assignment alone does not unlock it. */
 export function canUseAI(
   user: AuthUser | null,
-  context: AIUsageContext,
+  _context: AIUsageContext,
   scope?: Pick<AuthzScope, "studioTrusted">,
 ): boolean {
-  if (scope?.studioTrusted || isGlobalOwner(user)) {
-    return true;
-  }
-
-  if (user?.role === "dm") {
-    return true;
-  }
-
-  if (hasDmWorldRole(context.membership)) {
-    return true;
-  }
-
-  if (context.membership?.role === "co_dm") {
-    return true;
-  }
-
-  if (context.includesBrainData || context.includesPrivateContent) {
-    return false;
-  }
-
-  return false;
+  return Boolean(scope?.studioTrusted) || hasStudioAccess(user);
 }
 
 export function assertCanReadWorld(
@@ -400,17 +205,6 @@ export function assertCanEditContent(
 ): void {
   if (!canEditContent(user, content, world, scope)) {
     throw new AuthorizationError("Keine Berechtigung zum Bearbeiten dieses Inhalts", user ? 403 : 401);
-  }
-}
-
-export function assertCanRevealSecret(
-  user: AuthUser | null,
-  secret: SecretAuthTarget,
-  world: WorldAuthTarget,
-  scope?: AuthzScope,
-): void {
-  if (!canRevealSecret(user, secret, world, scope)) {
-    throw new AuthorizationError("Keine Berechtigung zum Anzeigen dieses Geheimnisses", user ? 403 : 401);
   }
 }
 

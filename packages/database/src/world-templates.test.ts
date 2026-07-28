@@ -51,6 +51,5 @@ describe("world template seed helpers", () => {
     assert.ok(seed);
     const defaults = seedPageDefaults(seed);
     assert.equal(defaults.pageType, "faction");
-    assert.equal(defaults.visibility, "dm_only");
   });
 });

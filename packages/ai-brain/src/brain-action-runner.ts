@@ -9,7 +9,6 @@ import {
 } from "./actions";
 import { toAiRunContextSnapshot } from "./context/debug";
 import { buildProposalsFromResult } from "./proposals";
-import { resolveServerAllowDmOnly } from "./privacy";
 import {
   legacyContextMode,
   providerIdToMode,
@@ -33,7 +32,6 @@ export interface RunBrainActionInput {
   model: string;
   userPrompt?: string;
   sessionId?: string;
-  allowDmOnly?: boolean;
   useMock?: boolean;
   userId?: string;
   gatewayUser?: AiGatewayUserContext;
@@ -138,8 +136,6 @@ export async function runBrainAction(
       datenschutzMode: settings.datenschutzMode,
       localOnly: settings.localOnly,
       sessionId: input.sessionId,
-      audience: action.audience,
-      allowDmOnly: resolveServerAllowDmOnly(settings, false, action.playerSafe),
     };
 
     const routerInput = {
@@ -150,8 +146,6 @@ export async function runBrainAction(
       pageSlug: anchor.pageSlug,
       sessionId: input.sessionId,
       model: input.model,
-      cloudProviderId:
-        providerIdToMode(input.providerId) === "cloud" ? input.providerId : undefined,
       userPrompt: input.userPrompt,
       useMock: input.useMock,
       apiKeyStore,

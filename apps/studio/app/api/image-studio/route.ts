@@ -14,7 +14,6 @@ import { dispatchJob } from "@/src/lib/job-executor";
 import { aiPolicyErrorResponse } from "@/src/lib/ai-security";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { z } from "zod";
-import { validateImageContextForProvider } from "@uwe/image-studio";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 
 const imageStudioCreateSchema = z.object({
@@ -22,12 +21,10 @@ const imageStudioCreateSchema = z.object({
   title: optionalString,
   prompt: nonEmptyString.max(10_000),
   task: z.enum(["generate", "edit", "inpaint", "remove_background", "variant"]),
-  providerMode: optionalString,
   linkTargetType: optionalString,
   linkTargetId: optionalString,
   contextMode: z.enum(["prompt_only", "page_context", "brain_context", "object_context"]).optional(),
   contextSnippet: optionalString,
-  cloudContextApproved: z.boolean().optional(),
 });
 
 export async function GET(request: Request) {
@@ -51,7 +48,7 @@ export async function POST(request: Request) {
 
   try {
     enforceAiAccessPolicy({
-      role: "owner",
+      studioAccess: true,
       studioTrusted: true,
       userKey: resolveClientIp(request.headers),
     });
@@ -68,20 +65,9 @@ export async function POST(request: Request) {
   if (!parsed.success) return parsed.response;
 
   const body = parsed.data;
+  // Kein Kontext-Datenschutz-Check mehr: seit N.3 rendert nur der lokale
+  // RTX-Host, der Prompt verlässt den Host nicht.
   const contextMode = (body.contextMode ?? "prompt_only") as ImageStudioPromptContextMode;
-
-  if (body.providerMode === "cloud" || config.allowCloud) {
-    try {
-      validateImageContextForProvider("cloud", contextMode, {
-        cloudContextApproved: body.cloudContextApproved,
-      });
-    } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Datenschutzfehler" },
-        { status: 403 },
-      );
-    }
-  }
 
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(body.worldSlug);
@@ -130,11 +116,9 @@ export async function POST(request: Request) {
       worldSlug: world.slug,
       task: body.task,
       prompt: body.prompt,
-      providerMode: body.providerMode,
       title: body.title,
       contextMode,
       contextSnippet: body.contextSnippet,
-      cloudContextApproved: body.cloudContextApproved,
     },
     relatedType: "image_studio_project",
     relatedId: project.id,

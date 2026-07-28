@@ -10,7 +10,7 @@ export interface MaintenanceGateSettings {
 }
 
 export interface MaintenanceGateContext {
-  userRole: "owner" | "admin" | "dm" | "player" | "readonly" | "guest" | null;
+  /** Only the owner works through maintenance mode. */
   isOwner: boolean;
 }
 
@@ -73,13 +73,9 @@ function isStudioLocked(settings: MaintenanceGateSettings): boolean {
 }
 
 export function resolveMaintenanceGateContext(input: {
-  userRole?: MaintenanceGateContext["userRole"];
+  isOwner?: boolean;
 } = {}): MaintenanceGateContext {
-  const userRole = input.userRole ?? null;
-  return {
-    userRole,
-    isOwner: userRole === "owner",
-  };
+  return { isOwner: input.isOwner === true };
 }
 
 export function evaluateMaintenanceGate(input: MaintenanceGateInput): MaintenanceGateDecision {

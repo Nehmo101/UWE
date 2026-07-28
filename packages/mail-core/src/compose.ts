@@ -14,15 +14,7 @@ export interface HandoutSource {
   assetId: string;
   title: string;
   description: string | null;
-  visibility: string;
   publicUrl?: string;
-}
-
-export interface ShareLinkSource {
-  worldId: string;
-  shareLinkId: string;
-  targetLabel: string;
-  publicUrl: string;
 }
 
 export interface SessionReminderSource {
@@ -111,10 +103,6 @@ export function composeSessionRecapMail(source: SessionRecapSource): MailDraft {
 export function composeHandoutMail(source: HandoutSource): MailDraft {
   const warnings: string[] = [];
 
-  if (source.visibility === "dm_only") {
-    warnings.push("Dieses Handout ist als DM-only markiert und sollte nicht an Spieler gesendet werden.");
-  }
-
   const description = source.description?.trim() ?? "";
   const linkLine = source.publicUrl ? `\n\nLink: ${source.publicUrl}` : "";
   const bodyText = `${source.title}\n\n${description || "Handout für die Kampagne."}${linkLine}`;
@@ -139,26 +127,10 @@ export function composeHandoutMail(source: HandoutSource): MailDraft {
     sourceId: source.assetId,
     worldId: source.worldId,
     warnings,
-    containsDmOnlyHint: source.visibility === "dm_only",
-  };
-}
-
-export function composeShareLinkMail(source: ShareLinkSource): MailDraft {
-  const bodyText = `${source.targetLabel}\n\nVorschau-Link: ${source.publicUrl}`;
-  const bodyHtml = `<h2>${escapeHtml(source.targetLabel)}</h2>\n<p><a href="${escapeHtml(source.publicUrl)}">${escapeHtml(source.publicUrl)}</a></p>`;
-
-  return {
-    kind: "share_link",
-    subject: `Vorschau: ${source.targetLabel}`,
-    bodyText,
-    bodyHtml,
-    sourceType: "share_link",
-    sourceId: source.shareLinkId,
-    worldId: source.worldId,
-    warnings: [],
     containsDmOnlyHint: false,
   };
 }
+
 
 export function composeSessionReminderMail(source: SessionReminderSource): MailDraft {
   const bodyText = `Session ${source.sessionNumber}: ${source.sessionTitle}\n\nTermin: ${source.sessionDate}\n\nBitte bestätige deine Teilnahme.`;
@@ -250,7 +222,6 @@ export function composeMail(
   source:
     | SessionRecapSource
     | HandoutSource
-    | ShareLinkSource
     | SessionReminderSource
     | ContractReminderSource
     | BackupWarningSource
@@ -264,8 +235,6 @@ export function composeMail(
       return composeSessionReminderMail(source as SessionReminderSource);
     case "handout":
       return composeHandoutMail(source as HandoutSource);
-    case "share_link":
-      return composeShareLinkMail(source as ShareLinkSource);
     case "contract_reminder":
       return composeContractReminderMail(source as ContractReminderSource);
     case "backup_warning":

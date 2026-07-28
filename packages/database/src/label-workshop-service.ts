@@ -75,8 +75,6 @@ export function buildWorkshopLabelContent(
     summary: project.description ?? undefined,
     imageAssetId: options?.imageAssetId ?? null,
     sourceTitle: project.title,
-    containsDmOnly: false,
-    dmOnlyBlockCount: 0,
     editorMode: "visual",
   };
 
@@ -118,8 +116,6 @@ export function buildFilamentLabelContent(
     title,
     text: lines.join("\n").slice(0, 300),
     sourceTitle: title,
-    containsDmOnly: false,
-    dmOnlyBlockCount: 0,
     elements: defaultElementsForMode(
       { title, text: lines.join("\n").slice(0, 300) },
       "text_only",

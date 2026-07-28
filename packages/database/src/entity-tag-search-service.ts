@@ -3,6 +3,11 @@ import type { BrainPrismaClient } from "./brain-client";
 import type { EntityTagEntityType, PageType } from "./generated/prisma/client";
 import { buildPageUrl } from "./page-types";
 import { ENTITY_TAG_ENTITY_TYPE_LABELS, normalizeTagKey } from "./tag-service";
+// Die Family-Modelle (Vertraege, Dokumente, Kueche, Haushalt, Kalender,
+// Scan-Eingang) liegen seit Abschnitt G in uwe-family.db. Der Singleton statt
+// eines weiteren Konstruktor-Parameters: sonst muesste jede Aufrufstelle im
+// Repo einen dritten Client durchreichen.
+import { familyPrisma } from "./family-client";
 
 export interface EntityTagSearchResult {
   id: string;
@@ -184,7 +189,7 @@ async function loadEntitySummaries(
       break;
     }
     case "contract": {
-      const rows = await brainDb.contractExpense.findMany({
+      const rows = await familyPrisma.contractExpense.findMany({
         where: { id: { in: entityIds } },
         select: { id: true, name: true },
       });

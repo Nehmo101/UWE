@@ -1,12 +1,7 @@
 import fs from "node:fs";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { NextResponse } from "next/server";
-import {
-  resolveAssetFilePath,
-  requiresSignedMediaAccess,
-  verifySignedMediaToken,
-  buildAssetDownloadHeaders,
-} from "@uwe/assets";
+import { resolveAssetFilePath, buildAssetDownloadHeaders } from "@uwe/assets";
 import {
   createAuthService,
   createPrismaClient,
@@ -42,7 +37,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const token = await getSessionToken();
-  if (!token && ctx.effectiveRole !== "guest") {
+  if (!token && ctx.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -67,16 +62,6 @@ export async function GET(request: Request, context: RouteContext) {
     const asset = await auth.getAssetForViewer(worldSlug, assetId, ctx);
     if (!asset) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    if (requiresSignedMediaAccess(asset.visibility)) {
-      const signature = new URL(request.url).searchParams.get("sig");
-      if (
-        !signature ||
-        !verifySignedMediaToken(signature, { assetId: asset.id, worldSlug })
-      ) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
-      }
     }
 
     let filePath: string;

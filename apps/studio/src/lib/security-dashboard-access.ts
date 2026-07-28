@@ -1,14 +1,11 @@
 import { cookies } from "next/headers";
-import {
-  canAccessSecurityDashboard,
-  SESSION_COOKIE_NAME,
-} from "@uwe/auth";
+import { SESSION_COOKIE_NAME } from "@uwe/auth";
 import { createAuthService } from "@uwe/database/server";
 import type { PrismaClient } from "@uwe/database/server";
 
 export interface SecurityDashboardAccess {
   allowed: boolean;
-  userRole: string | null;
+  isOwner: boolean;
   displayName: string | null;
   reason: string;
 }
@@ -22,9 +19,9 @@ export async function resolveSecurityDashboardAccess(
   if (!token) {
     return {
       allowed: false,
-      userRole: null,
+      isOwner: false,
       displayName: null,
-      reason: "Kein Portal-Login — nur OWNER/ADMIN mit gültiger Session.",
+      reason: "Kein Portal-Login — nur der Owner mit gültiger Session.",
     };
   }
 
@@ -34,25 +31,24 @@ export async function resolveSecurityDashboardAccess(
   if (!session) {
     return {
       allowed: false,
-      userRole: null,
+      isOwner: false,
       displayName: null,
       reason: "Session abgelaufen oder ungültig — bitte im Portal anmelden.",
     };
   }
 
-  const role = session.user.role;
-  if (!canAccessSecurityDashboard(role)) {
+  if (!session.user.isOwner) {
     return {
       allowed: false,
-      userRole: role,
+      isOwner: false,
       displayName: session.user.displayName,
-      reason: `Rolle ${role} hat keinen Zugriff — nur OWNER und ADMIN.`,
+      reason: "Kein Zugriff — das Sicherheits-Dashboard ist owner-only.",
     };
   }
 
   return {
     allowed: true,
-    userRole: role,
+    isOwner: true,
     displayName: session.user.displayName,
     reason: "Zugriff erlaubt",
   };

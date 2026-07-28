@@ -1,5 +1,5 @@
 import type { PrismaClient } from "./client";
-import type { PageType, Visibility } from "./generated/prisma/client";
+import type { PageType } from "./generated/prisma/client";
 import { PAGE_TEMPLATES, type PageTemplateBlock } from "./page-templates";
 import { createActivityLogService } from "./activity-log-service";
 import { runSeedOnce } from "./seed-tracker";
@@ -23,7 +23,6 @@ export interface PageTemplateView {
   name: string;
   description: string;
   pageType: PageType;
-  defaultVisibility: Visibility;
   titlePlaceholder: string;
   blocks: PageTemplateBlock[];
   isSystem: boolean;
@@ -36,7 +35,6 @@ export interface PageTemplateInput {
   name: string;
   description?: string;
   pageType: PageType;
-  defaultVisibility?: Visibility;
   titlePlaceholder?: string;
   blocks: PageTemplateBlock[];
 }
@@ -57,15 +55,6 @@ const BLOCK_TYPES = new Set([
   "ai_summary",
 ]);
 
-const VISIBILITIES = new Set([
-  "dm_only",
-  "player_visible",
-  "public",
-  "specific_players",
-  "unlock_after_session",
-  "archived",
-]);
-
 export function parseTemplateBlocks(value: unknown): PageTemplateBlock[] {
   if (!Array.isArray(value)) {
     throw new Error("Template-Blöcke müssen ein Array sein.");
@@ -77,16 +66,11 @@ export function parseTemplateBlocks(value: unknown): PageTemplateBlock[] {
     }
     const block = raw as Record<string, unknown>;
     const type = String(block.type ?? "");
-    const visibility = String(block.visibility ?? "");
     if (!BLOCK_TYPES.has(type)) {
       throw new Error(`Block ${index + 1}: unbekannter Block-Typ „${type}“.`);
     }
-    if (!VISIBILITIES.has(visibility)) {
-      throw new Error(`Block ${index + 1}: unbekannte Sichtbarkeit „${visibility}“.`);
-    }
     return {
       type: type as PageTemplateBlock["type"],
-      visibility: visibility as PageTemplateBlock["visibility"],
       content: String(block.content ?? ""),
     };
   });
@@ -98,7 +82,6 @@ type DbTemplate = {
   name: string;
   description: string;
   pageType: PageType;
-  defaultVisibility: Visibility;
   titlePlaceholder: string;
   blocks: unknown;
   isSystem: boolean;
@@ -113,7 +96,6 @@ function toView(template: DbTemplate): PageTemplateView {
     name: template.name,
     description: template.description,
     pageType: template.pageType,
-    defaultVisibility: template.defaultVisibility,
     titlePlaceholder: template.titlePlaceholder,
     blocks: parseTemplateBlocks(template.blocks),
     isSystem: template.isSystem,
@@ -141,7 +123,6 @@ export async function ensureSystemPageTemplates(db: PrismaClient): Promise<{ app
             name: template.name,
             description: template.description,
             pageType: template.pageType,
-            defaultVisibility: template.defaultVisibility,
             titlePlaceholder: template.titlePlaceholder,
             blocks: JSON.parse(JSON.stringify(template.blocks)),
             isSystem: true,
@@ -213,7 +194,6 @@ export class PageTemplateService {
         name: input.name,
         description: input.description ?? "",
         pageType: input.pageType,
-        defaultVisibility: input.defaultVisibility ?? "dm_only",
         titlePlaceholder: input.titlePlaceholder ?? "",
         blocks: JSON.parse(JSON.stringify(blocks)),
         isSystem: false,
@@ -248,7 +228,6 @@ export class PageTemplateService {
         name: input.name,
         description: input.description,
         pageType: input.pageType,
-        defaultVisibility: input.defaultVisibility,
         titlePlaceholder: input.titlePlaceholder,
         blocks: blocks ? JSON.parse(JSON.stringify(blocks)) : undefined,
       },
@@ -278,7 +257,6 @@ export class PageTemplateService {
         name: `${existing.name} (Kopie)`,
         description: existing.description,
         pageType: existing.pageType,
-        defaultVisibility: existing.defaultVisibility,
         titlePlaceholder: existing.titlePlaceholder,
         blocks: existing.blocks ?? [],
         isSystem: false,

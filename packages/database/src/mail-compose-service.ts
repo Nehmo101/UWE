@@ -5,21 +5,20 @@ import {
   composeHandoutMail,
   composeSessionRecapMail,
   composeSessionReminderMail,
-  composeShareLinkMail,
   composeSystemWarningMail,
   composeTerrainRentalMail,
   type HandoutSource,
   type MailComposeKind,
   type MailDraft,
   type SessionRecapSource,
-  type ShareLinkSource,
 } from "@uwe/mail-core";
 import type { PrismaClient } from "./client";
-import { buildShareUrl } from "./share-link-service";
 import { BACKUP_CHECK_INTERVAL_DAYS } from "./calendar-aggregation-service";
 import { buildContractAlerts } from "./contract-expense-utils";
 import { createMailTemplateService } from "./mail-template-service";
 import { renderMailTemplate } from "./mail-utils";
+// Die Family-Modelle liegen seit Abschnitt G in uwe-family.db.
+import { familyPrisma } from "./family-client";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -109,7 +108,6 @@ export class MailComposeService {
         worldId: true,
         title: true,
         description: true,
-        visibility: true,
       },
     });
 
@@ -122,9 +120,8 @@ export class MailComposeService {
       assetId: asset.id,
       title: asset.title,
       description: asset.description,
-      visibility: asset.visibility,
       publicUrl:
-        portalBaseUrl && asset.visibility !== "dm_only"
+        portalBaseUrl
           ? `${portalBaseUrl.replace(/\/$/, "")}/worlds/${worldSlug}/assets/${asset.id}`
           : undefined,
     };
@@ -132,44 +129,8 @@ export class MailComposeService {
     return composeHandoutMail(source);
   }
 
-  async composeShareLink(
-    worldSlug: string,
-    shareLinkId: string,
-    portalBaseUrl?: string,
-  ): Promise<MailDraft | null> {
-    const link = await this.db.shareLink.findFirst({
-      where: {
-        id: shareLinkId,
-        world: { slug: worldSlug },
-      },
-      select: {
-        id: true,
-        worldId: true,
-        token: true,
-        targetType: true,
-        targetId: true,
-      },
-    });
-
-    if (!link) {
-      return null;
-    }
-
-    const targetLabel = await this.resolveShareTargetLabel(link.targetType, link.targetId);
-    const publicUrl = buildShareUrl(link.token, portalBaseUrl);
-
-    const source: ShareLinkSource = {
-      worldId: link.worldId,
-      shareLinkId: link.id,
-      targetLabel,
-      publicUrl,
-    };
-
-    return composeShareLinkMail(source);
-  }
-
   async composeContractReminder(contractId: string): Promise<MailDraft | null> {
-    const contract = await this.brainDb.contractExpense.findUnique({ where: { id: contractId } });
+    const contract = await familyPrisma.contractExpense.findUnique({ where: { id: contractId } });
     if (!contract) {
       return null;
     }
@@ -273,9 +234,6 @@ export class MailComposeService {
       case "handout":
         if (!options.worldSlug || !options.sourceId) return null;
         return this.composeHandout(options.worldSlug, options.sourceId, options.portalBaseUrl);
-      case "share_link":
-        if (!options.worldSlug || !options.sourceId) return null;
-        return this.composeShareLink(options.worldSlug, options.sourceId, options.portalBaseUrl);
       case "contract_reminder":
         if (!options.sourceId) return null;
         return this.composeContractReminder(options.sourceId);

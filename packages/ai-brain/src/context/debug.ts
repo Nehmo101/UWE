@@ -7,15 +7,12 @@ import type {
   AiContextPage,
   AiContextSession,
   AiContextWorld,
-  ContextAudience,
 } from "../types";
 import { serializePageForBudget } from "./budget";
 import { serializeBrainEntries } from "./brain-knowledge-source";
 import { serializeSession } from "./sessionContext";
 
 export interface BuildDebugInput {
-  audience: ContextAudience;
-  allowDmOnly: boolean;
   maxChars: number;
   totalChars: number;
   truncated: boolean;
@@ -24,7 +21,7 @@ export interface BuildDebugInput {
   session?: AiContextSession;
   pages: AiContextPage[];
   brainEntries: AiContextBrainEntry[];
-  excludedPages?: Array<{ pageId: string; title: string; visibility: string; reason: string }>;
+  excludedPages?: Array<{ pageId: string; title: string; reason: string }>;
 }
 
 export function buildContextDebug(input: BuildDebugInput): AiContextDebug {
@@ -53,7 +50,7 @@ export function buildContextDebug(input: BuildDebugInput): AiContextDebug {
   }
 
   if (input.session) {
-    const serialized = serializeSession(input.session, { allowDmOnly: input.allowDmOnly });
+    const serialized = serializeSession(input.session);
     items.push({
       kind: "session",
       id: input.session.sessionId,
@@ -68,7 +65,6 @@ export function buildContextDebug(input: BuildDebugInput): AiContextDebug {
       kind: "page",
       id: page.pageId,
       title: page.title,
-      visibility: page.visibility,
       charCount: serializePageForBudget(page).length,
       included: true,
     });
@@ -79,7 +75,6 @@ export function buildContextDebug(input: BuildDebugInput): AiContextDebug {
       kind: "page",
       id: excluded.pageId,
       title: excluded.title,
-      visibility: excluded.visibility,
       charCount: 0,
       included: false,
       reason: excluded.reason,
@@ -91,15 +86,12 @@ export function buildContextDebug(input: BuildDebugInput): AiContextDebug {
       kind: "brain",
       id: entry.entryId,
       title: entry.title,
-      visibility: entry.visibility,
       charCount: entry.content.length,
       included: true,
     });
   }
 
   return {
-    audience: input.audience,
-    allowDmOnly: input.allowDmOnly,
     maxChars: input.maxChars,
     totalChars: input.totalChars,
     truncated: input.truncated,
@@ -115,15 +107,12 @@ export function toAiRunContextSnapshot(context: AiContext): Record<string, unkno
     worldId: context.worldId,
     primaryPageId: context.primaryPageId,
     sessionId: context.sessionId ?? null,
-    audience: context.debug?.audience ?? (context.allowDmOnly ? "dm_internal" : "player_visible"),
-    allowDmOnly: context.allowDmOnly,
     truncated: context.truncated,
     promptContext: context.promptContext,
     sources: context.sources,
     brainSources: (context.brainEntries ?? []).map((entry) => ({
       entryId: entry.entryId,
       title: entry.title,
-      visibility: entry.visibility,
       sourceType: entry.sourceType,
     })),
     debug: context.debug ?? null,
@@ -142,7 +131,6 @@ export function estimatePromptContextLength(parts: {
   session?: AiContextSession;
   pages: AiContextPage[];
   brainEntries: AiContextBrainEntry[];
-  allowDmOnly: boolean;
 }): number {
   const worldBlock = parts.world
     ? [`# Welt: ${parts.world.name}`, parts.world.description ?? ""].filter(Boolean).join("\n")
@@ -151,7 +139,7 @@ export function estimatePromptContextLength(parts: {
     ? [`# Kampagne: ${parts.campaign.name}`, parts.campaign.description ?? ""].filter(Boolean).join("\n")
     : "";
   const sessionBlock = parts.session
-    ? serializeSession(parts.session, { allowDmOnly: parts.allowDmOnly })
+    ? serializeSession(parts.session)
     : "";
   const pageContext = parts.pages.map(serializePageForBudget).join("\n\n");
   const brainContext = serializeBrainEntries(parts.brainEntries);

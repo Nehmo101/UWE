@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { createTestBrainClient, type BrainPrismaClient } from "@uwe/database/test-helpers";
+import { createTestFamilyClient, type FamilyPrismaClient } from "@uwe/database/test-helpers";
 import {
   createPantryService,
   rankRecipesByPantry,
@@ -61,11 +61,11 @@ describe("rankRecipesByPantry (pure)", () => {
 });
 
 describe("PantryService (integration)", () => {
-  let db: BrainPrismaClient;
+  let db: FamilyPrismaClient;
   let service: PantryService;
 
   before(() => {
-    db = createTestBrainClient();
+    db = createTestFamilyClient();
     service = createPantryService(db);
   });
 

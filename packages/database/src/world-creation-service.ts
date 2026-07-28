@@ -16,7 +16,6 @@ export interface CreateWorldRequest {
   name: string;
   slug?: string;
   description?: string | null;
-  guestModeEnabled?: boolean;
   isSandbox?: boolean;
   templateId?: WorldTemplateId | string | null;
 }
@@ -26,7 +25,6 @@ export interface CreatedWorldResult {
   name: string;
   slug: string;
   description: string | null;
-  guestModeEnabled: boolean;
   isSandbox: boolean;
   templateId: WorldTemplateId;
   seededPageCount: number;
@@ -52,7 +50,6 @@ export class WorldCreationService {
     }
 
     const isSandbox = input.isSandbox ?? false;
-    const guestModeEnabled = isSandbox ? false : (input.guestModeEnabled ?? false);
 
     const existingSlugs = (await this.db.world.findMany({ select: { slug: true } })).map(
       (world) => world.slug,
@@ -65,7 +62,6 @@ export class WorldCreationService {
         name,
         slug,
         description: input.description?.trim() || null,
-        guestModeEnabled,
         isSandbox,
       },
     });
@@ -82,7 +78,6 @@ export class WorldCreationService {
       await auth.createWorldMembership({
         userId,
         worldId: world.id,
-        role: "owner",
       });
 
       seededPageCount = await this.applyWorldTemplate(world.id, template);
@@ -109,7 +104,6 @@ export class WorldCreationService {
       worldId: world.id,
       metadata: {
         slug: world.slug,
-        guestModeEnabled: world.guestModeEnabled,
         isSandbox: world.isSandbox,
         templateId,
         seededPageCount,
@@ -122,7 +116,6 @@ export class WorldCreationService {
       name: world.name,
       slug: world.slug,
       description: world.description,
-      guestModeEnabled: world.guestModeEnabled,
       isSandbox: world.isSandbox,
       templateId,
       seededPageCount,
@@ -155,7 +148,7 @@ export class WorldCreationService {
     let created = 0;
 
     for (const seed of template.seedPages) {
-      const { pageType, visibility } = seedPageDefaults(seed);
+      const { pageType } = seedPageDefaults(seed);
       const basePageSlug = seed.slug?.trim() || slugifyPageTitle(seed.title);
       const pageSlug = pickUniqueSlug(basePageSlug || "seite", [...existingPageSlugs]);
       existingPageSlugs.add(pageSlug);
@@ -168,14 +161,11 @@ export class WorldCreationService {
           title: seed.title,
           slug: pageSlug,
           type: pageType,
-          visibility,
-          publishStatus: "draft",
           canonicalStatus: "draft",
           contentBlocks: {
             create: blocks.map((block) => ({
               type: block.type as ContentBlockType,
               sortOrder: block.sortOrder,
-              visibility: block.visibility,
               content: block.content,
             })),
           },

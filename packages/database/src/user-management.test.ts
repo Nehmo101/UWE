@@ -14,7 +14,6 @@ describe("user management and login hardening", () => {
   let databaseUrl: string;
   let auth: ReturnType<typeof createAuthService>;
   let repo: ReturnType<typeof createUweRepository>;
-  let worldAId: string;
   let worldASlug: string;
   let worldBSlug: string;
   let adminUserId: string;
@@ -37,18 +36,16 @@ describe("user management and login hardening", () => {
       slug: "user-mgmt-b",
       description: "Secondary test world",
     });
-    worldAId = worldA.id;
     worldASlug = worldA.slug;
     worldBSlug = worldB.slug;
 
-    await auth.setWorldGuestMode(worldA.id, false);
-    await auth.setWorldGuestMode(worldB.id, false);
 
     const admin = await auth.createUser({
       displayName: "Mgmt Admin",
       email: "mgmt-admin@uwe.local",
       password: TEST_PASSWORD,
-      role: "admin",
+      portalAccess: true,
+      studioAccess: true,
       status: "active",
     });
     adminUserId = admin.id;
@@ -57,7 +54,8 @@ describe("user management and login hardening", () => {
       displayName: "Mgmt Player",
       email: "mgmt-player@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
     playerUserId = player.id;
@@ -66,7 +64,6 @@ describe("user management and login hardening", () => {
     await auth.upsertWorldMembership({
       userId: playerUserId,
       worldId: worldA.id,
-      role: "player",
       characterName: "Testchar",
     });
 
@@ -75,13 +72,10 @@ describe("user management and login hardening", () => {
       title: "Player Lore",
       slug: "player-lore",
       type: "note",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Known to players.",
         },
       ],
@@ -92,13 +86,10 @@ describe("user management and login hardening", () => {
       title: "Specific Secret",
       slug: "specific-secret",
       type: "note",
-      visibility: "specific_players",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "specific_players",
           content: "Only for granted players.",
         },
       ],
@@ -106,7 +97,6 @@ describe("user management and login hardening", () => {
 
     const specificPage = await repo.getPageBySlug(worldASlug, "specific-secret");
     assert.ok(specificPage);
-    await auth.grantPagePlayerAccess(specificPage.id, playerUserId);
 
     await db.$disconnect();
   });
@@ -131,7 +121,8 @@ describe("user management and login hardening", () => {
       displayName: "Disabled User",
       email: "disabled@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
     await service.disableUser(disabled.id, adminUserId);
@@ -163,7 +154,8 @@ describe("user management and login hardening", () => {
       displayName: "Temp Player",
       email: "temp-player@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
 
@@ -190,7 +182,8 @@ describe("user management and login hardening", () => {
       displayName: "Delete Me",
       email: "delete-me@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
 
@@ -211,7 +204,8 @@ describe("user management and login hardening", () => {
       displayName: "Self Delete",
       email: "self-delete@uwe.local",
       password: TEST_PASSWORD,
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       status: "active",
     });
 
@@ -239,7 +233,11 @@ describe("user management and login hardening", () => {
       displayName: "Sole Owner",
       email: "sole-owner@uwe.local",
       password: TEST_PASSWORD,
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
       status: "active",
     });
 
@@ -285,41 +283,14 @@ describe("user management and login hardening", () => {
     await db.$disconnect();
   });
 
-  it("hides specific_players content without PagePlayerAccess", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const service = createAuthService(db);
-
-    const other = await service.createUser({
-      displayName: "Other Player",
-      email: "other-player@uwe.local",
-      password: TEST_PASSWORD,
-      role: "player",
-      status: "active",
-    });
-    await service.upsertWorldMembership({
-      userId: other.id,
-      worldId: worldAId,
-      role: "player",
-    });
-
-    const ctx = await service.buildAccessContextForWorld(worldASlug, { userId: other.id });
-    assert.ok(ctx);
-
-    const pages = await service.listPagesForViewer(worldASlug, ctx);
-    const slugs = pages.map((page) => page.slug);
-
-    assert.ok(slugs.includes("player-lore"));
-    assert.ok(!slugs.includes("specific-secret"));
-    await db.$disconnect();
-  });
-
   it("blocks players from admin gate", () => {
     const denied = evaluateAdminGate({
       user: {
         id: playerUserId,
         displayName: "Mgmt Player",
         email: playerEmail,
-        role: "player",
+        isOwner: false,
+        access: { portal: true, studio: false, brain: false, family: false },
       },
     });
     assert.ok(denied);

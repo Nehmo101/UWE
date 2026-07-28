@@ -9,6 +9,7 @@ import {
   resolveLoginFailureReason,
 } from "@uwe/database/server";
 import {
+  canAccessPortal,
   getSessionCookieOptionsForRequest,
   performLoginFlow,
   SESSION_COOKIE_NAME,
@@ -47,8 +48,9 @@ export async function POST(request: Request) {
         where: { email: normalizedEmail },
         select: { id: true, status: true },
       }),
-    // Portal is open to any authenticated active user; access is not role-gated.
-    hasAccess: () => true,
+    // Only addresses with the Portal checkbox get in — there is no anonymous
+    // and no „any active account" path left (Notiz Lasse, 2026-07-26).
+    hasAccess: canAccessPortal,
     clientIpFromHeaders,
     loginRateKey: (ip, normalizedEmail) => `login:${ip}:${normalizedEmail}`,
     rateLimitOptions: RATE_LIMIT_PRESETS.login,

@@ -88,7 +88,6 @@ export async function createLabelFromSourceAction(formData: FormData) {
     ? await repo().getCampaignBySlug(worldSlug, campaignSlug)
     : null;
 
-  const includeDmOnly = formData.get("includeDmOnly") === "on";
   const sourceRef = String(formData.get("sourceRef") || "");
   const colonIdx = sourceRef.indexOf(":");
   const sourceTypeRaw = colonIdx >= 0 ? sourceRef.slice(0, colonIdx) : "";
@@ -106,7 +105,6 @@ export async function createLabelFromSourceAction(formData: FormData) {
     sourceId,
     templateId: String(formData.get("templateId")),
     title: String(formData.get("title") || "") || undefined,
-    includeDmOnly,
     layoutSettings: {
       mode: parseLayoutMode(formData.get("layoutMode")),
       truncateToPage: formData.get("truncateToPage") === "on",
@@ -198,8 +196,6 @@ export async function updateLabelAction(formData: FormData) {
     imageAssetId: existing.content
       ? (existing.content as { imageAssetId?: string }).imageAssetId
       : null,
-    containsDmOnly: (existing.content as { containsDmOnly?: boolean })?.containsDmOnly,
-    dmOnlyBlockCount: (existing.content as { dmOnlyBlockCount?: number })?.dmOnlyBlockCount,
   };
 
   if (elements.length > 0) {
@@ -228,7 +224,6 @@ export async function updateLabelAction(formData: FormData) {
     const { tryAiShortenLabelText } = await import("@/src/lib/label-ai-shorten");
     const shortened = await tryAiShortenLabelText(sourceText, {
       userId: actor?.id,
-      role: actor?.role,
     });
     if (shortened) {
       content = {

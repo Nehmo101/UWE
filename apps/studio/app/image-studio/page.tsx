@@ -51,7 +51,6 @@ export default async function ImageStudioPage({ searchParams }: Props) {
       worlds={worlds.map((world) => ({ slug: world.slug, name: world.name }))}
       operationLabels={IMAGE_STUDIO_OPERATION_LABELS}
       defaultWorldSlug={worlds[0]?.slug}
-      defaultProviderMode={config.defaultProviderMode}
       enabled={config.enabled}
       pageId={pageId}
       linkTargetType="page"

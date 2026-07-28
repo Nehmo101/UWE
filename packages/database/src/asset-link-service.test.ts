@@ -38,8 +38,6 @@ describe("asset link service", () => {
       title: "NPC Portrait",
       slug: "npc-portrait",
       type: "npc",
-      visibility: "dm_only",
-      publishStatus: "draft",
     });
     pageId = page.id;
 
@@ -49,7 +47,6 @@ describe("asset link service", () => {
       type: "image",
       storageKey: `${worldId}/test-portrait.png`,
       mimeType: "image/png",
-      visibility: "dm_only",
     });
     assetId = asset.id;
 

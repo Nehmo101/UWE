@@ -32,6 +32,7 @@ import { RunnersPanel } from "./components/RunnersPanel";
 import { SecurityPanel } from "./components/SecurityPanel";
 import { SetupWizard } from "./components/SetupWizard";
 import { SpotifyPanel } from "./components/SpotifyPanel";
+import { OpsPanel } from "./components/OpsPanel";
 import { UsersPanel } from "./components/UsersPanel";
 import { UweReleasePanel } from "./components/UweReleasePanel";
 import { ConnectorShell } from "./components/shell/ConnectorShell";
@@ -470,6 +471,8 @@ export default function App() {
         return renderHost();
       case "/users":
         return <UsersPanel />;
+      case "/ops":
+        return <OpsPanel />;
       case "/cloudflare":
         return <CloudflarePanel />;
       case "/deployment":

@@ -46,8 +46,6 @@ describe("page links repository", () => {
       title: "Validori",
       slug: "validori",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [],
     });
 
@@ -56,8 +54,6 @@ describe("page links repository", () => {
       title: "Turm",
       slug: "turm",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [],
     });
 

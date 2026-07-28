@@ -1,5 +1,3 @@
-import type { UweRole } from "./types";
-import { ADMIN_ACCESS_ROLES } from "./roles";
 
 export const API_TOKEN_PREFIX = "uwe_";
 export const API_TOKEN_PREFIX_DISPLAY_LENGTH = 12;
@@ -61,13 +59,14 @@ export function hasApiTokenScope(
   return requiredList.every((scope) => grantedScopes.includes(scope));
 }
 
-export function assertAdminScopesForRole(
-  role: UweRole,
+/** Admin scopes are the owner's to hand out — nobody else can mint them. */
+export function assertAdminScopesForOwner(
+  isOwner: boolean,
   scopes: readonly ApiTokenScope[],
 ): void {
   const needsAdmin = scopes.some((scope) => ADMIN_SCOPES.has(scope));
-  if (needsAdmin && !ADMIN_ACCESS_ROLES.includes(role as (typeof ADMIN_ACCESS_ROLES)[number])) {
-    throw new Error("Admin scopes require owner or admin role.");
+  if (needsAdmin && !isOwner) {
+    throw new Error("Admin scopes require the owner.");
   }
 }
 

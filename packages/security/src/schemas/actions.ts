@@ -51,7 +51,6 @@ export const brainCreateDocumentSchema = z.object({
   title: nonEmptyString.max(500),
   content: z.string().max(100_000).optional().default(""),
   documentType: z.string().max(64).optional().default("general"),
-  visibility: z.string().max(64).optional().default("dm_only"),
   campaignId: optionalNullableIdSchema,
 });
 
@@ -60,7 +59,6 @@ export const brainCreateFactSchema = z.object({
   title: nonEmptyString.max(500),
   content: z.string().max(100_000).optional().default(""),
   factType: z.string().max(64).optional().default("custom"),
-  visibility: z.string().max(64).optional().default("dm_only"),
   campaignId: optionalNullableIdSchema,
 });
 
@@ -70,7 +68,6 @@ export const brainUpdateDocumentSchema = z.object({
   title: z.string().max(500).optional().default(""),
   content: z.string().max(100_000).optional().default(""),
   documentType: z.string().max(64).optional().default("general"),
-  visibility: z.string().max(64).optional().default("dm_only"),
   status: z.string().max(64).optional().default("draft"),
 });
 
@@ -80,7 +77,6 @@ export const brainUpdateFactSchema = z.object({
   title: z.string().max(500).optional().default(""),
   content: z.string().max(100_000).optional().default(""),
   factType: z.string().max(64).optional().default("custom"),
-  visibility: z.string().max(64).optional().default("dm_only"),
   status: z.string().max(64).optional().default("draft"),
 });
 
@@ -149,10 +145,6 @@ export const captureIdSchema = z.object({
 });
 
 export const INSPECTOR_FIX_ACTIONS = [
-  "set_block_dm_only",
-  "set_page_dm_only",
-  "publish_page",
-  "set_page_player_visible",
   "remove_broken_wiki_link",
   "assign_page_campaign",
 ] as const;
@@ -430,12 +422,9 @@ export const SETTINGS_TABS = [
 export const settingsUpdateSchema = z.object({
   tab: z.enum(SETTINGS_TABS).optional().default("general"),
   theme: z.string().max(64).optional(),
-  defaultVisibility: z.string().max(64).optional(),
   defaultCanonicalStatus: z.string().max(64).optional(),
   favoriteWorldSlug: optionalSlugSchema,
   portalEnabled: formCheckboxSchema.optional(),
-  guestAccessEnabled: formCheckboxSchema.optional(),
-  publicSharingEnabled: formCheckboxSchema.optional(),
   restrictPublicExport: formCheckboxSchema.optional(),
   uploadsPath: z.string().max(1000).optional(),
   exportsPath: z.string().max(1000).optional(),
@@ -446,12 +435,6 @@ export const settingsUpdateSchema = z.object({
   mailLogBody: formCheckboxSchema.optional(),
   backupsPath: z.string().max(1000).optional(),
   autoBackupEnabled: formCheckboxSchema.optional(),
-});
-
-export const worldGuestModeSchema = z.object({
-  worldId: idSchema,
-  guestModeEnabled: formCheckboxSchema,
-  tab: z.string().max(64).optional().default("worlds"),
 });
 
 export const shareLinkCreateSchema = z.object({
@@ -492,7 +475,6 @@ export const soundboardButtonInputSchema = z.object({
   volume: z.coerce.number().min(0).max(1).optional().default(1),
   loop: formCheckboxSchema,
   tags: z.string().max(2000).optional().default(""),
-  visibility: z.string().max(64).optional(),
   linkedPageIds: z.union([z.string(), z.array(z.string())]).optional(),
 });
 
@@ -515,7 +497,6 @@ export const pageTemplateCreateSchema = z.object({
   name: nonEmptyString.max(200),
   description: z.string().max(5000).optional().default(""),
   pageType: z.string().max(64),
-  defaultVisibility: z.string().max(64),
   titlePlaceholder: z.string().max(500).optional().default(""),
 });
 
@@ -539,8 +520,6 @@ export const pageUpdateSchema = z.object({
   slug: slugSchema,
   type: z.string().max(64),
   summary: z.string().max(5000).optional(),
-  visibility: z.string().max(64),
-  publishStatus: z.string().max(64),
   canonicalStatus: z.string().max(64),
   tags: z.string().max(2000).optional().default(""),
   aliases: z.string().max(2000).optional().default(""),
@@ -555,8 +534,6 @@ export const pageCreateSchema = z.object({
   slug: z.string().max(120).optional().default(""),
   initialContent: z.string().max(100_000).optional().default(""),
   summary: z.string().max(5000).optional(),
-  visibility: z.string().max(64).optional(),
-  publishStatus: z.string().max(64).optional(),
   canonicalStatus: z.string().max(64).optional(),
   tags: z.string().max(2000).optional().default(""),
 });
@@ -569,7 +546,6 @@ export const contentBlockUpdateSchema = z.object({
   type: z.string().max(64),
   sortOrder: z.coerce.number().int().min(0).max(9999),
   content: z.string().max(100_000).optional().default(""),
-  visibility: z.string().max(64),
 });
 
 export const contentBlockCreateSchema = z.object({
@@ -579,7 +555,6 @@ export const contentBlockCreateSchema = z.object({
   category: z.string().max(64),
   type: z.string().max(64).optional(),
   content: z.string().max(100_000).optional().default(""),
-  visibility: z.string().max(64).optional(),
 });
 
 export const contentBlockDeleteSchema = z.object({
@@ -601,7 +576,6 @@ export const assetUpdateSchema = z.object({
   title: nonEmptyString.max(500),
   description: z.string().max(5000).optional(),
   type: z.string().max(64),
-  visibility: z.string().max(64),
   tags: z.string().max(2000).optional(),
 });
 
@@ -649,8 +623,6 @@ export const dungeonEntityUpdateSchema = z.object({
   title: nonEmptyString.max(500),
   prepStatus: z.string().max(64),
   summary: z.string().max(5000).optional(),
-  visibility: z.string().max(64).optional(),
-  publishStatus: z.string().max(64).optional(),
 });
 
 export const dungeonAssetLinkSchema = z.object({

@@ -14,7 +14,6 @@ interface ImageStudioJobFormProps {
   worlds: WorldOption[];
   operationLabels: Record<string, string>;
   defaultWorldSlug?: string;
-  defaultProviderMode: string;
   enabled: boolean;
   pageId?: string;
   projectId?: string;
@@ -83,7 +82,6 @@ export function ImageStudioJobForm({
   worlds,
   operationLabels,
   defaultWorldSlug = "",
-  defaultProviderMode,
   enabled,
   pageId,
   projectId,
@@ -236,29 +234,6 @@ export function ImageStudioJobForm({
           ))}
         </select>
       </label>
-
-      <label className={FIELD_CLASS}>
-        Provider
-        <select
-          name="providerMode"
-          defaultValue={requiresLocalProvider ? "local_rtx" : defaultProviderMode}
-          key={task}
-          className={NATIVE_SELECT_CLASS}
-        >
-          <option value="auto" disabled={requiresLocalProvider}>
-            Auto (RTX → Cloud)
-          </option>
-          <option value="local_rtx">Nur RTX (lokal)</option>
-          <option value="cloud" disabled={requiresLocalProvider}>
-            Cloud
-          </option>
-        </select>
-      </label>
-      {requiresLocalProvider && (
-        <p className="text-sm text-muted-foreground">
-          Inpaint/Edit erfordert RTX — Cloud ist für diese Operation deaktiviert.
-        </p>
-      )}
 
       {showVariantCount && (
         <label className={FIELD_CLASS}>

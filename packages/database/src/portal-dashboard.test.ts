@@ -3,7 +3,7 @@ import { after, before, describe, it } from "node:test";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
 import { createGameSessionService } from "./game-session";
-import { createPortalDashboardService } from "./portal-dashboard-service";
+import {} from "./portal-dashboard-service";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { createUweRepository } from "./repository";
 
@@ -38,14 +38,14 @@ describe("portal dashboard", () => {
       displayName: "Dash Player",
       email: "dash-player@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
     playerUserId = player.id;
 
     await auth.createWorldMembership({
       userId: player.id,
       worldId: world.id,
-      role: "player",
       characterName: "Lyra",
     });
 
@@ -55,8 +55,6 @@ describe("portal dashboard", () => {
       title: "Den Turm erkunden",
       slug: "den-turm-erkunden",
       type: "quest",
-      visibility: "player_visible",
-      publishStatus: "published",
     });
     questPageId = quest.id;
 
@@ -66,8 +64,6 @@ describe("portal dashboard", () => {
       title: "DM Geheimnis",
       slug: "dm-geheimnis",
       type: "lore",
-      visibility: "dm_only",
-      publishStatus: "published",
     });
     dmOnlyPageId = secret.id;
 
@@ -226,60 +222,4 @@ describe("portal dashboard", () => {
     await db.$disconnect();
   });
 
-  it("auto-unlocks linked unlock_after_session pages when recap is published", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const repo = createUweRepository(databaseUrl);
-    const auth = createAuthService(db);
-    const sessions = createGameSessionService(databaseUrl);
-
-    const world = await repo.getWorldBySlug(worldSlug);
-    assert.ok(world);
-    const campaign = (await repo.listCampaignsByWorld(worldSlug))[0];
-    assert.ok(campaign);
-
-    const locked = await repo.createPage({
-      worldId: world.id,
-      campaignId: campaign.id,
-      title: "Nach Session 2",
-      slug: "nach-session-2",
-      type: "note",
-      visibility: "unlock_after_session",
-      publishStatus: "published",
-    });
-
-    const session2 = await sessions.create({
-      worldId: world.id,
-      campaignId: campaign.id,
-      title: "Session 2",
-      sessionNumber: 2,
-      status: "played",
-      summaryPlayer: "Boss besiegt",
-      linkedPageIds: [locked.id],
-    });
-
-    const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
-    assert.ok(playerCtx);
-
-    const before = await auth.listPagesForViewer(worldSlug, playerCtx);
-    assert.ok(!before.some((page) => page.id === locked.id));
-
-    await sessions.publishRecap(session2.id);
-
-    const playerCtxAfter = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
-    assert.ok(playerCtxAfter);
-
-    const after = await auth.listPagesForViewer(worldSlug, playerCtxAfter);
-    assert.ok(after.some((page) => page.id === locked.id));
-
-    const dashboard = createPortalDashboardService(db);
-    const unlocked = await dashboard.listNewlyUnlockedPagesForSession(
-      worldSlug,
-      playerCtxAfter,
-      2,
-      "Session 2: Session 2",
-    );
-    assert.ok(unlocked.some((page) => page.id === locked.id));
-
-    await db.$disconnect();
-  });
 });

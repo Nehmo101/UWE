@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "./AppShell";
 import { MobileFilterSheet } from "./MobileComponents";
-import { PageTypeBadge, PUBLISH_LABELS, QuestStatusBadge, VisibilityBadge } from "./StatusBadges";
+import { PageTypeBadge, QuestStatusBadge } from "./StatusBadges";
 import type {
   PageType,
-  PublishStatus,
   QuestLifecycleStatus,
-  Visibility,
 } from "@uwe/database/enums";
 
 const MATCH_FIELD_LABELS: Record<string, string> = {
@@ -26,8 +24,6 @@ export interface SearchResultViewModel {
   worldSlug: string;
   worldName: string;
   campaignName: string | null;
-  visibility: Visibility;
-  publishStatus?: PublishStatus;
   /** Quest lifecycle status; `null` counts as open. Only rendered for quest results. */
   questStatus?: QuestLifecycleStatus | null;
   href: string;
@@ -39,15 +35,12 @@ export function SearchResultsList({
   results,
   query,
   showWorld = false,
-  showVisibility = false,
-  showPublish = false,
   showLabelActions = false,
 }: {
   results: SearchResultViewModel[];
   query?: string;
   showWorld?: boolean;
   showVisibility?: boolean;
-  showPublish?: boolean;
   /** Studio: optional „Label erstellen“ link per result */
   showLabelActions?: boolean;
 }) {
@@ -95,7 +88,6 @@ export function SearchResultsList({
                   {result.type === "quest" && result.questStatus !== undefined && (
                     <QuestStatusBadge status={result.questStatus} />
                   )}
-                  {showVisibility && <VisibilityBadge visibility={result.visibility} />}
                 </div>
               </header>
 
@@ -108,9 +100,6 @@ export function SearchResultsList({
                 )}
                 {!showWorld && result.campaignName && (
                   <span>{result.campaignName}</span>
-                )}
-                {showPublish && result.publishStatus && (
-                  <span>{PUBLISH_LABELS[result.publishStatus] ?? result.publishStatus}</span>
                 )}
               </div>
 

@@ -587,16 +587,6 @@ export class GraphEngine {
       ctx.strokeStyle = sel ? this.chrome.ink : withAlpha(this.chrome.ink, 0.35);
       ctx.stroke();
 
-      // Sichtbarkeits-Punkt (Nur-GM = Terracotta)
-      if (n.visibility === "dm_only" || n.visibility === "private") {
-        ctx.beginPath();
-        ctx.arc(x + r * 0.72, y - r * 0.72, 3, 0, Math.PI * 2);
-        ctx.fillStyle = this.chrome.dmOnly;
-        ctx.fill();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = this.chrome.ring;
-        ctx.stroke();
-      }
 
       // Label
       const bigEnough = n.deg >= 3 || n.category === "session";

@@ -73,7 +73,7 @@ describe("auth-links", () => {
       },
     });
     assert.equal(links.portalHref, "https://uwe.example/auth/worlds");
-    assert.equal(links.studioHref, "/today");
+    assert.equal(links.studioHref, "/worlds");
   });
 
   it("links to studio dashboard from portal on split-hostname deployment", () => {
@@ -86,7 +86,7 @@ describe("auth-links", () => {
         NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
       },
     });
-    assert.equal(links.studioHref, "https://studio.uwe.example/today");
+    assert.equal(links.studioHref, "https://studio.uwe.example/worlds");
   });
 
   it("links from Studio landing to Portal login when logged out", () => {

@@ -33,13 +33,14 @@
     "test:security": "pnpm --filter @uwe/database db:generate && pnpm --filter @uwe/security-tests test && node --import tsx --test scripts/studio-route-auth.test.ts scripts/security-leaks.test.ts",
     "test:auth": "pnpm --filter @uwe/auth test && pnpm --filter @uwe/database db:generate && node --import tsx --test packages/database/src/password-security.test.ts packages/database/src/auth-setup.test.ts",
     "test:authz": "pnpm --filter @uwe/security-tests test:authz && node --import tsx --test scripts/studio-route-auth.test.ts",
-    "test:leaks": "pnpm --filter @uwe/security-tests test:leaks && node --import tsx --test scripts/security-leaks.test.ts",
+    "test:leaks": "node --import tsx --test scripts/security-leaks.test.ts",
     "secret:scan": "node scripts/secret-scan.mjs",
     "audit:prod": "pnpm --config.minimumReleaseAge=0 dlx pnpm@11.14.0 --pm-on-fail=ignore audit --prod --audit-level high",
     "release:check": "node --import tsx --test scripts/release.test.ts",
     "dev:studio": "pnpm --filter @uwe/studio dev",
     "dev:portal": "pnpm --filter @uwe/portal dev",
     "dev:brain": "pnpm --filter @uwe/brain dev",
+    "dev:family": "pnpm --filter @uwe/family dev",
     "export:static": "pnpm --filter @uwe/database db:generate && node --import tsx packages/static-export/src/cli.ts",
     "export:wiki": "pnpm --filter @uwe/database db:generate && node --import tsx packages/static-export/src/wiki-cli.ts",
     "backup:create": "pnpm --filter @uwe/database db:generate && node --import tsx packages/backup/src/cli.ts",
@@ -79,13 +80,6 @@
     "tsx": "^4.22.4",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "@hono/node-server": ">=1.19.13",
-      "nodemailer": "^9.0.1",
-      "postcss": ">=8.5.10"
-    }
   },
   "packageManager": "pnpm@10.12.1",
   "engines": {

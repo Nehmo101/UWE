@@ -1,6 +1,7 @@
 # Security Testing
 
-Automated security tests for UWE ensure that private campaign content never leaks through public portal paths and that sensitive Studio API routes stay protected.
+Automated security tests for UWE ensure that world content never crosses the
+world boundary and that sensitive Studio API routes stay protected.
 
 ## Quick start
 
@@ -11,10 +12,10 @@ pnpm --filter @uwe/database db:generate
 # Full security suite (authz + leak scanner)
 pnpm test:security
 
-# Role matrix + route guards only
+# Access matrix + route guards only
 pnpm test:authz
 
-# Public leak scanner only
+# Coverage inventory only (are the guard tests still there?)
 pnpm test:leaks
 ```
 
@@ -24,65 +25,39 @@ Pull requests with code changes run `pnpm test:security` as part of `pnpm ci:lig
 
 | Suite | Command | Scope |
 |-------|---------|--------|
-| **Role matrix** | part of `test:authz` | Anonymous, PLAYER, DM, ADMIN, OWNER access to pages, blocks, assets |
-| **Route authorization** | part of `test:authz` | Studio `/admin`, `/api/admin/*`, `/api/import/*`, `/api/brain/*`, `/api/ai/*`, search, Portal `/worlds/*`, player management |
+| **Access matrix** | part of `test:authz` | Anonymous, world member, and Studio access to pages, blocks, assets, both worlds |
+| **Route authorization** | part of `test:authz` | Studio `/admin`, `/api/admin/*`, `/api/import/*`, `/api/brain/*`, `/api/ai/*`, search, Portal `/auth/worlds/*` |
 | **Studio route inventory** | part of `test:authz` | Every Studio API route must call `requireStudioApiAuth`, `requireRestoreOwnerAuth`, or be explicitly allowlisted |
-| **Public leak scanner** | `test:leaks` | All anonymous portal data paths scanned for private test markers |
-| **Leak smoke inventory** | part of `test:leaks` | Ensures portal visibility, share-link, search, graph, asset, and permission leak tests stay present |
+| **Portal route inventory** | part of `test:authz` | Every Portal API route must call a recognized guard |
+| **Treasury authorization** | part of `test:authz` | Player-safe item filtering and move permissions |
+| **Coverage inventory** | `test:leaks` | Ensures the guard tests themselves stay present
 
 Package: `@uwe/security-tests` (`packages/security-tests/`).
 
-## Role mapping
+## Access mapping
 
-UWE uses four runtime roles (`owner`, `dm`, `player`, `guest`). The security suite maps the requested test roles as follows:
+There is no role enum. The suite exercises the three shapes the model allows:
 
-| Test role | UWE implementation | Notes |
+| Test actor | UWE implementation | Sees |
 |-----------|-------------------|--------|
-| **anonymous** | No session → `guest` | Public `/worlds/*` portal context |
-| **PLAYER** | `player` world membership | Authenticated `/auth/worlds/*` |
-| **DM** | `dm` system + world membership | Full world content in Studio/Portal |
-| **ADMIN** | System `owner`, world `dm` on public world | Daily Admin OS operator; system owner fallback applies on worlds without membership |
-| **OWNER** | System + world `owner` | Full control including private worlds |
+| **anonymous** | No session | Nothing — every route needs a session |
+| **world member** | `portal` checkbox + `WorldMembership` | Everything in that world, nothing in others |
+| **Studio user** | `studio` checkbox | Every world, with or without an assignment |
 
-There is no separate `ADMIN` enum in Prisma — “Admin” in the UI refers to the Daily Admin OS cockpit, not a distinct permission bit.
+`isOwner` is tested separately as the gate on `/admin/*`, restore, and host control.
 
 ## Test fixtures
 
 Each run seeds an isolated SQLite database with labeled content:
 
-| Fixture | Visibility / status | Marker string |
-|---------|---------------------|---------------|
-| Public page | `public`, published | `__PUBLIC_MARKER_OK__` |
-| Player-visible page | `player_visible`, published | `__PLAYER_VISIBLE_MARKER_OK__` |
-| DM-only page | `dm_only`, published | `__DM_ONLY_SECRET_SHOULD_NOT_LEAK__` |
-| Private draft | `player_visible`, draft | `__PRIVATE_DRAFT_SHOULD_NOT_LEAK__` |
-| Hidden secret | `unlock_after_session`, not unlocked | `__HIDDEN_SECRET_SHOULD_NOT_LEAK__` |
-| Revealed secret | `unlock_after_session`, unlocked for test player | `__REVEALED_SECRET_MARKER__` |
-| Public media | `public` asset | file contains public marker |
-| Private media | `dm_only` asset | `__PRIVATE_MEDIA_SHOULD_NOT_LEAK__` |
+Content carries marker strings so a cross-world read is visible in any response
+body. Two worlds are seeded:
 
-Two worlds are seeded:
+- **`sec-public-world`** — the test member is assigned here
+- **`sec-private-world`** — the test member is **not** assigned; anything from
+  this world showing up in their responses is the regression the suite exists for
 
-- **`sec-public-world`** — guest mode enabled; primary leak-scan target
-- **`sec-private-world`** — guest mode disabled; DM-only content only
-
-## Public leak scanner
-
-The scanner simulates every anonymous portal data path (no HTTP server required):
-
-- World and page listings (`listPagesForContext`, `getPublicPageForPortal`)
-- Asset listings and single-asset fetches
-- Portal search (`search` with `portal` context)
-- Portal graph (`buildWorldGraph` with `portal` context)
-
-It fails immediately if any response body contains:
-
-- `__DM_ONLY_SECRET_SHOULD_NOT_LEAK__`
-- `__PRIVATE_DRAFT_SHOULD_NOT_LEAK__`
-- `__HIDDEN_SECRET_SHOULD_NOT_LEAK__`
-- `__PRIVATE_MEDIA_SHOULD_NOT_LEAK__`
-
-A dedicated regression test asserts the scanner would catch a deliberate poisoned payload.
+Markers live in `packages/security-tests/src/markers.ts`.
 
 ## Route coverage notes
 
@@ -93,12 +68,12 @@ A dedicated regression test asserts the scanner would catch a deliberate poisone
 | `/api/search/*` | `apps/studio/app/search/page.tsx` + `apps/studio/app/api/command/search/route.ts` |
 | `/players/*` | Not implemented — players managed via `WorldMembership` and `POST /api/mail/recipients` (`sync_players`) |
 
-Studio API routes require session login (or bearer token) plus CSRF protection; optional `STUDIO_API_TOKEN` for extra hardening. Portal `/worlds/*` relies on repository visibility filters and optional production middleware (`AUTH_REQUIRED`).
+Studio API routes require session login (or bearer token) plus CSRF protection; optional `STUDIO_API_TOKEN` for extra hardening. Portal `/auth/worlds/*` requires a session and a world assignment — there is no anonymous tree.
 
 ## Acceptance criteria
 
-- **DM-only leak:** `public-leak-scanner.test.ts` fails if `__DM_ONLY_SECRET_SHOULD_NOT_LEAK__` appears on anonymous paths.
-- **Role matrix:** `role-matrix.test.ts` covers all five roles against pages, blocks, assets, and both worlds.
+- **Cross-world read:** `role-matrix.test.ts` and `authz-integration.test.ts` fail if a member of one world reads the other.
+- **Anonymous read:** every actor without a session must get nothing.
 - **pnpm integration:** `pnpm test:security`, `pnpm test:authz`, `pnpm test:leaks` at repo root.
 - **CI gate:** `.github/workflows/pr-check.yml` runs `pnpm test:security` via `pnpm ci:light:pr:gate` on code PRs; `.github/workflows/ci.yml` runs the full `pnpm quality` gate (including security, `pnpm secret:scan`, and `pnpm audit:prod`) on `main`.
 
@@ -106,13 +81,13 @@ Studio API routes require session login (or bearer token) plus CSRF protection; 
 
 1. Add a unique marker to `packages/security-tests/src/markers.ts`.
 2. Seed content in `packages/security-tests/src/fixtures/security-fixture.ts`.
-3. Extend `ROLE_MATRIX` in `role-matrix.test.ts` if visibility rules change.
-4. Add the new data path to `scanPublicPortalForLeaks()` in `public-leak-scanner.ts`.
-5. For new Studio API routes, add the file to `STUDIO_PROTECTED_API_ROUTES` in `route-authz.test.ts`.
+3. Extend the matrix in `role-matrix.test.ts` if the access rules change.
+4. For new Studio API routes, add the file to `STUDIO_PROTECTED_API_ROUTES` in `route-authz.test.ts`.
 
 ## Related tests elsewhere
 
-- `packages/database/src/visibility-security.test.ts` — hard portal visibility guarantees
+- `packages/database/src/authz-integration.test.ts` — hard world-boundary guarantees
+- `apps/portal/src/lib/world-access.test.ts` — the Portal world gate
 - `packages/database/src/auth.test.ts` — auth integration
 - `packages/auth/src/permissions.test.ts` — permission unit tests
 - `apps/studio/src/lib/studio-api-auth.test.ts` — CSRF / bearer token guard

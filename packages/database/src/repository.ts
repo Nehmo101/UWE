@@ -2,11 +2,9 @@ import {
   createAssetRecord,
   deleteAssetRecord,
   getAssetById,
-  getAssetForContext,
   linkAssetToContentBlock,
   linkAssetToPage,
   listAssetsByWorld,
-  listAssetsForContext,
   listAssetsForPage,
   unlinkAssetFromPage,
   updateAssetRecord,
@@ -21,24 +19,10 @@ import type {
   PageLink,
   PageType,
   Prisma,
-  PublishStatus,
-  RevealState,
-  SecretLevel,
-  Visibility,
 } from "./generated/prisma/client";
 import { pageTypesForNavCategory, type NavCategory } from "./page-types";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray, toJsonArray, withParsedArrays } from "./json-utils";
-import {
-  filterBlocksForContext,
-  isPageAccessible,
-  isPortalPageVisibility,
-  isPublishedForPortal,
-  PORTAL_BLOCK_VISIBILITIES,
-  PORTAL_PAGE_VISIBILITIES,
-  type AccessContext,
-  type PortalAccessOptions,
-} from "./permissions";
 import { SettingsService } from "./settings-service";
 import {
   searchForWikiContext,
@@ -65,8 +49,6 @@ export type {
   Page,
   PageLink,
   PageType,
-  PublishStatus,
-  Visibility,
   World,
 } from "./generated/prisma/client";
 
@@ -75,10 +57,6 @@ export {
   ContentBlockType as ContentBlockTypeEnum,
   AssetType as AssetTypeEnum,
   PageType as PageTypeEnum,
-  PublishStatus as PublishStatusEnum,
-  RevealState as RevealStateEnum,
-  SecretLevel as SecretLevelEnum,
-  Visibility as VisibilityEnum,
 } from "./generated/prisma/client";
 
 export type { CreateAssetInput, UpdateAssetInput } from "./asset-repository";
@@ -100,9 +78,6 @@ export interface CreateContentBlockInput {
   type: ContentBlockType;
   sortOrder: number;
   content?: string;
-  visibility?: Visibility;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   metadata?: Prisma.InputJsonValue;
   assetId?: string | null;
 }
@@ -115,10 +90,6 @@ export interface CreatePageInput {
   slug: string;
   type: PageType;
   summary?: string | null;
-  visibility?: Visibility;
-  publishStatus?: PublishStatus;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
@@ -134,10 +105,6 @@ export interface UpdatePageInput {
   summary?: string | null;
   campaignId?: string | null;
   parentPageId?: string | null;
-  visibility?: Visibility;
-  publishStatus?: PublishStatus;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
@@ -150,9 +117,6 @@ export interface UpdateContentBlockInput {
   type?: ContentBlockType;
   sortOrder?: number;
   content?: string;
-  visibility?: Visibility;
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
   metadata?: Prisma.InputJsonValue;
   assetId?: string | null;
 }
@@ -189,13 +153,6 @@ export class UweRepository {
       this.settingsService = new SettingsService(this.db);
     }
     return this.settingsService;
-  }
-
-  private async getPortalAccessOptions(): Promise<PortalAccessOptions> {
-    const settings = await this.getSettingsService().getSettings();
-    return {
-      publicSharingEnabled: settings.portal.publicSharingEnabled,
-    };
   }
 
   async listWorlds() {
@@ -265,10 +222,6 @@ export class UweRepository {
         slug: input.slug,
         type: input.type,
         summary: input.summary ?? null,
-        visibility: input.visibility ?? defaults.defaultVisibility,
-        publishStatus: input.publishStatus ?? "draft",
-        secretLevel: input.secretLevel ?? "none",
-        revealState: input.revealState ?? "hidden",
         canonicalStatus: input.canonicalStatus ?? defaults.defaultCanonicalStatus,
         prepStatus: input.prepStatus ?? null,
         questStatus: input.questStatus ?? null,
@@ -280,9 +233,6 @@ export class UweRepository {
                 type: block.type,
                 sortOrder: block.sortOrder,
                 content: block.content ?? "",
-                visibility: block.visibility ?? "private",
-                secretLevel: block.secretLevel ?? "none",
-                revealState: block.revealState ?? "hidden",
                 metadata: block.metadata ?? {},
                 assetId: block.assetId ?? null,
               })),
@@ -306,10 +256,6 @@ export class UweRepository {
         summary: input.summary,
         campaignId: input.campaignId,
         parentPageId: input.parentPageId,
-        visibility: input.visibility,
-        publishStatus: input.publishStatus,
-        secretLevel: input.secretLevel,
-        revealState: input.revealState,
         canonicalStatus: input.canonicalStatus,
         prepStatus: input.prepStatus,
         questStatus: input.questStatus,
@@ -331,9 +277,6 @@ export class UweRepository {
         type: input.type,
         sortOrder: input.sortOrder,
         content: input.content ?? "",
-        visibility: input.visibility ?? "dm_only",
-        secretLevel: input.secretLevel ?? "none",
-        revealState: input.revealState ?? "hidden",
         metadata: input.metadata ?? {},
         assetId: input.assetId ?? null,
       },
@@ -347,7 +290,6 @@ export class UweRepository {
         type: input.type,
         sortOrder: input.sortOrder,
         content: input.content,
-        visibility: input.visibility,
         metadata: input.metadata,
         assetId: input.assetId,
       },
@@ -417,25 +359,20 @@ export class UweRepository {
     return pages.map((page) => withParsedArrays(page));
   }
 
-  async listPagesForContext(
+  /**
+   * World page index with an optional free-text narrowing. There used to be an
+   * access-context argument here that filtered by visibility; who may read a
+   * world is now decided before this call.
+   */
+  async listPagesForWorldIndex(
     worldSlug: string,
-    context: AccessContext,
     options?: { campaignId?: string | null; type?: PageType; navCategory?: NavCategory; query?: string },
   ): Promise<PageSummary[]> {
-    const pages = await this.listPagesByWorld(worldSlug, {
+    const filtered = await this.listPagesByWorld(worldSlug, {
       campaignId: options?.campaignId,
       type: options?.type,
       navCategory: options?.navCategory,
     });
-
-    const portalOptions =
-      context === "portal" || context === "preview"
-        ? await this.getPortalAccessOptions()
-        : undefined;
-
-    const filtered = pages.filter((page) =>
-      isPageAccessible(page, context, portalOptions),
-    );
 
     if (!options?.query?.trim()) {
       return filtered;
@@ -507,61 +444,12 @@ export class UweRepository {
     ].join(":");
   }
 
-  async listPagesWithBlocksForGraph(
-    worldSlug: string,
-    context: AccessContext,
-    options?: { campaignId?: string | null; types?: PageType[] },
-  ): Promise<PageWithBlocks[]> {
-    const pages = await this.listPagesWithBlocksForGraphUnfiltered(worldSlug, options);
-
-    const portalOptions =
-      context === "portal" || context === "preview"
-        ? await this.getPortalAccessOptions()
-        : undefined;
-
-    return pages
-      .filter((page) => isPageAccessible(page, context, portalOptions))
-      .map((page) => ({
-        ...page,
-        contentBlocks: filterBlocksForContext(page.contentBlocks, context, portalOptions),
-      }));
-  }
-
-  async search(
-    context: AccessContext,
-    options: SearchOptions,
-  ): Promise<SearchResultItem[]> {
-    if (context === "dm" && !options.worldSlug) {
+  async search(options: SearchOptions): Promise<SearchResultItem[]> {
+    if (!options.worldSlug) {
       return searchGlobalForDm(this.db, options);
     }
 
-    const portalOptions =
-      context === "portal" || context === "preview"
-        ? await this.getPortalAccessOptions()
-        : undefined;
-
-    return searchForWikiContext(this.db, context, options, portalOptions);
-  }
-
-  async getPageForContext(
-    worldSlug: string,
-    pageSlug: string,
-    context: AccessContext,
-  ): Promise<PageWithBlocks | null> {
-    const page = await this.getPageBySlug(worldSlug, pageSlug);
-    if (!page) return null;
-
-    const portalOptions =
-      context === "portal" || context === "preview"
-        ? await this.getPortalAccessOptions()
-        : undefined;
-
-    if (!isPageAccessible(page, context, portalOptions)) return null;
-
-    return {
-      ...page,
-      contentBlocks: filterBlocksForContext(page.contentBlocks, context, portalOptions),
-    };
+    return searchForWikiContext(this.db, options);
   }
 
   async listWorldsWithGuestMode() {
@@ -573,16 +461,8 @@ export class UweRepository {
         name: true,
         slug: true,
         description: true,
-        guestModeEnabled: true,
       },
     });
-  }
-
-  async getPublicPageForPortal(
-    worldSlug: string,
-    pageSlug: string,
-  ): Promise<PublicPage | null> {
-    return this.getPageForContext(worldSlug, pageSlug, "portal");
   }
 
   async getDmPage(worldSlug: string, pageSlug: string): Promise<PageWithBlocks | null> {
@@ -591,13 +471,6 @@ export class UweRepository {
 
   async getWorldPageIndex(worldSlug: string): Promise<PageSummary[]> {
     return this.listPagesByWorld(worldSlug);
-  }
-
-  async getWorldPageIndexForContext(
-    worldSlug: string,
-    context: AccessContext,
-  ): Promise<PageSummary[]> {
-    return this.listPagesForContext(worldSlug, context);
   }
 
   async createPageLink(input: {
@@ -720,14 +593,14 @@ export class UweRepository {
         outgoingLinks: {
           include: {
             targetPage: {
-              select: { id: true, title: true, slug: true, visibility: true, canonicalStatus: true },
+              select: { id: true, title: true, slug: true, canonicalStatus: true },
             },
           },
         },
         incomingLinks: {
           include: {
             sourcePage: {
-              select: { id: true, title: true, slug: true, visibility: true, canonicalStatus: true },
+              select: { id: true, title: true, slug: true, canonicalStatus: true },
             },
           },
         },
@@ -759,7 +632,6 @@ export class UweRepository {
     const textTypes = new Set<ContentBlockType>([
       "rich_text",
       "html",
-      "gm_note",
       "player_text",
       "ai_summary",
     ]);
@@ -786,7 +658,6 @@ export class UweRepository {
           type: "rich_text",
           sortOrder: nextSort,
           content,
-          visibility: "dm_only",
         },
       });
     }
@@ -803,10 +674,8 @@ export class UweRepository {
     content: string;
     sourcePageId?: string;
     taskType?: string;
-    visibility?: Visibility;
     metadata?: Record<string, unknown>;
   }) {
-    const defaults = await this.getSettingsService().getWorldDefaults();
 
     const blockMetadata = {
       source: "ai_brain",
@@ -822,8 +691,6 @@ export class UweRepository {
         slug: input.slug,
         type: input.type,
         summary: input.summary ?? null,
-        visibility: input.visibility ?? defaults.defaultVisibility,
-        publishStatus: "draft",
         canonicalStatus: "idea",
         contentBlocks: {
           create: [
@@ -831,7 +698,6 @@ export class UweRepository {
               type: "rich_text",
               sortOrder: 0,
               content: input.content,
-              visibility: input.visibility ?? "dm_only",
               metadata: blockMetadata,
             },
           ],
@@ -846,14 +712,12 @@ export class UweRepository {
   }
 
   async getDashboardStats() {
-    const [worldCount, pageCount, publishedCount, draftCount] = await Promise.all([
+    const [worldCount, pageCount] = await Promise.all([
       this.db.world.count(),
       this.db.page.count(),
-      this.db.page.count({ where: { publishStatus: "published" } }),
-      this.db.page.count({ where: { publishStatus: "draft" } }),
     ]);
 
-    return { worldCount, pageCount, publishedCount, draftCount };
+    return { worldCount, pageCount };
   }
 
   /** Most recently edited pages across all worlds — for the DM dashboard. */
@@ -908,18 +772,6 @@ export class UweRepository {
 
   async linkAssetToContentBlock(blockId: string, assetId: string | null) {
     return linkAssetToContentBlock(this.db, blockId, assetId);
-  }
-
-  async listAssetsForContext(
-    worldSlug: string,
-    context: AccessContext,
-    options?: { type?: AssetType },
-  ) {
-    return listAssetsForContext(this.db, worldSlug, context, options);
-  }
-
-  async getAssetForContext(assetId: string, context: AccessContext) {
-    return getAssetForContext(this.db, assetId, context);
   }
 
   async listAssetsForPage(pageId: string) {
@@ -1006,19 +858,9 @@ export async function listPagesByWorld(worldSlug: string, databaseUrl?: string) 
   return createUweRepository(databaseUrl).listPagesByWorld(worldSlug);
 }
 
-export async function getPublicPageForPortal(
-  worldSlug: string,
-  pageSlug: string,
-  databaseUrl?: string,
-) {
-  return createUweRepository(databaseUrl).getPublicPageForPortal(worldSlug, pageSlug);
-}
-
 export async function getDmPage(worldSlug: string, pageSlug: string, databaseUrl?: string) {
   return createUweRepository(databaseUrl).getDmPage(worldSlug, pageSlug);
 }
-
-export { PORTAL_BLOCK_VISIBILITIES, PORTAL_PAGE_VISIBILITIES, isPortalPageVisibility, isPublishedForPortal };
 
 export async function getDbWorldBySlug(worldSlug: string, databaseUrl?: string) {
   return createUweRepository(databaseUrl).getWorldBySlug(worldSlug);

@@ -1,5 +1,5 @@
 import type { AccessContext } from "./types";
-import { isDmOrOwner } from "./permissions";
+import { isDm } from "./permissions";
 
 export type PlayerNoteStatus =
   | "draft"
@@ -17,23 +17,12 @@ export interface PlayerNoteAccessInfo {
   visibility: PlayerNoteVisibility;
 }
 
-export function canCreatePlayerNote(
-  ctx: AccessContext,
-  guestCommentsEnabled: boolean,
-): boolean {
+/** Anyone assigned to the world may write notes in it. */
+export function canCreatePlayerNote(ctx: AccessContext): boolean {
   if (ctx.previewAsUserId) {
     return false;
   }
-
-  if (ctx.effectiveRole === "player") {
-    return ctx.worldMembership !== null;
-  }
-
-  if (ctx.effectiveRole === "guest") {
-    return guestCommentsEnabled && ctx.guestModeEnabled && ctx.user !== null;
-  }
-
-  return false;
+  return ctx.user !== null && ctx.worldMembership !== null;
 }
 
 export function canViewPlayerNote(
@@ -44,7 +33,7 @@ export function canViewPlayerNote(
     return false;
   }
 
-  if (isDmOrOwner(ctx)) {
+  if (isDm(ctx)) {
     return true;
   }
 
@@ -56,15 +45,13 @@ export function canViewPlayerNote(
     return false;
   }
 
-  if (
-    ctx.effectiveRole === "player" &&
+  // A note's own visibility survives the visibility purge: it protects the
+  // author, not the world. Party notes are the only ones others get to read.
+  return (
+    ctx.worldMembership !== null &&
     note.status === "accepted" &&
     note.visibility === "party"
-  ) {
-    return true;
-  }
-
-  return false;
+  );
 }
 
 export function canEditPlayerNote(
@@ -83,7 +70,7 @@ export function canEditPlayerNote(
 }
 
 export function canModeratePlayerNote(ctx: AccessContext): boolean {
-  return isDmOrOwner(ctx) && !ctx.previewAsUserId;
+  return isDm(ctx);
 }
 
 export function filterPlayerNotesForViewer<T extends PlayerNoteAccessInfo>(

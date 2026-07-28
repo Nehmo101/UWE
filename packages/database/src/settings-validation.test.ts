@@ -38,7 +38,7 @@ describe("validateSettingsUpdate", () => {
   it("accepts a valid partial update", () => {
     const result = validateSettingsUpdate({
       app: { theme: "light" },
-      worlds: { defaultVisibility: "player_visible" },
+      worlds: { defaultCanonicalStatus: "canon" },
     });
 
     assert.equal(result.ok, true);
@@ -46,7 +46,7 @@ describe("validateSettingsUpdate", () => {
 
     assert.deepEqual(result.value, {
       app: { theme: "light" },
-      worlds: { defaultVisibility: "player_visible" },
+      worlds: { defaultCanonicalStatus: "canon" },
     });
   });
 

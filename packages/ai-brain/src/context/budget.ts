@@ -24,7 +24,6 @@ export function serializePageForBudget(page: AiContextPage): string {
   return [
     `## ${page.title} (${page.pageId})`,
     `Typ: ${page.pageType}`,
-    `Sichtbarkeit: ${page.visibility}`,
     `Kanon: ${page.canonicalStatus}`,
     page.summary ? `Zusammenfassung: ${page.summary}` : "",
     page.tags.length ? `Tags: ${page.tags.join(", ")}` : "",
@@ -57,7 +56,6 @@ export function truncateContextPages(
             {
               blockId: "truncated",
               type: "truncated",
-              visibility: page.visibility,
               content: `${serialized.slice(0, remaining - 20)}… [gekürzt]`,
             },
           ],

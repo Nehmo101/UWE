@@ -10,7 +10,7 @@ import { createUweRepository, type UweRepository } from "./repository";
 
 /**
  * WS3 safety net: `listPagesForViewer` pre-narrows the SQL for non-staff
- * viewers (publishStatus/visibility) and then still runs `filterPagesForViewer`
+ * viewers (visibility) and then still runs `filterPagesForViewer`
  * in JS as the authoritative gate. This suite proves the SQL pre-narrowing is a
  * behaviour-preserving optimisation: for every viewer, the returned set is
  * byte-for-byte the same as a plain `findMany`-then-`filterPagesForViewer`
@@ -55,55 +55,22 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
       description: "listPagesForViewer narrowing equivalence",
     });
     worldSlug = world.slug;
-    await auth.setWorldGuestMode(world.id, true);
 
     const users = await seedAuthUsers(auth, repo, world.id);
     dmUserId = users.dm.id;
     amanUserId = users.players.find((p) => p.displayName === "Aman")!.id;
     lazulUserId = users.players.find((p) => p.displayName === "Lazul")!.id;
 
-    // A matrix that exercises every branch of canViewPage: each visibility, each
-    // publishStatus that is / isn't "published", and secret/reveal combinations.
+    // A matrix that exercises every branch of canViewPage: one page per
+    // visibility value.
     const pages = [
-      { slug: "pub-published", visibility: "public", publishStatus: "published" },
-      { slug: "pv-published", visibility: "player_visible", publishStatus: "published" },
-      { slug: "dmonly-published", visibility: "dm_only", publishStatus: "published" },
-      { slug: "private-published", visibility: "private", publishStatus: "published" },
-      { slug: "archived-visibility", visibility: "archived", publishStatus: "published" },
-      { slug: "pv-draft", visibility: "player_visible", publishStatus: "draft" },
-      { slug: "pv-internal", visibility: "player_visible", publishStatus: "internal" },
-      { slug: "pv-review", visibility: "player_visible", publishStatus: "review" },
-      { slug: "pub-archived-status", visibility: "public", publishStatus: "archived" },
-      { slug: "specific-published", visibility: "specific_players", publishStatus: "published" },
-      { slug: "unlock-published", visibility: "unlock_after_session", publishStatus: "published" },
-      {
-        slug: "secret-hidden",
-        visibility: "player_visible",
-        publishStatus: "published",
-        secretLevel: "dm_secret",
-        revealState: "hidden",
-      },
-      {
-        slug: "secret-revealed",
-        visibility: "player_visible",
-        publishStatus: "published",
-        secretLevel: "dm_secret",
-        revealState: "revealed",
-      },
-      {
-        slug: "spoiler-preview",
-        visibility: "public",
-        publishStatus: "published",
-        secretLevel: "spoiler",
-        revealState: "preview",
-      },
-      {
-        slug: "secret-none-hidden",
-        visibility: "player_visible",
-        publishStatus: "published",
-        secretLevel: "none",
-        revealState: "hidden",
-      },
+      { slug: "pub-page" },
+      { slug: "pv-page" },
+      { slug: "dmonly-page" },
+      { slug: "private-page" },
+      { slug: "archived-page" },
+      { slug: "specific-page" },
+      { slug: "unlock-page" },
     ] as const;
 
     for (const page of pages) {
@@ -112,22 +79,10 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         title: page.slug,
         slug: page.slug,
         type: "note",
-        visibility: page.visibility,
-        publishStatus: page.publishStatus,
-        secretLevel: "secretLevel" in page ? page.secretLevel : "none",
-        revealState: "revealState" in page ? page.revealState : "hidden",
       });
     }
 
     // Aman is granted the specific-players page and has unlocked the unlock page.
-    const specific = await db.page.findFirstOrThrow({
-      where: { world: { slug: worldSlug }, slug: "specific-published" },
-    });
-    const unlock = await db.page.findFirstOrThrow({
-      where: { world: { slug: worldSlug }, slug: "unlock-published" },
-    });
-    await auth.grantPagePlayerAccess(specific.id, amanUserId);
-    await auth.unlockPageForUser(unlock.id, amanUserId, "Session 1");
   });
 
   after(async () => {
@@ -138,57 +93,29 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
     assert.ok(ctx);
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
-    // Staff must see the full world, including archived/private/draft/secret.
+    // Staff must see the full world, including archived and private pages.
     assert.deepEqual(
       new Set(await narrowedSlugs(ctx)),
       new Set([
-        "pub-published",
-        "pv-published",
-        "dmonly-published",
-        "private-published",
-        "archived-visibility",
-        "pv-draft",
-        "pv-internal",
-        "pv-review",
-        "pub-archived-status",
-        "specific-published",
-        "unlock-published",
-        "secret-hidden",
-        "secret-revealed",
-        "spoiler-preview",
-        "secret-none-hidden",
+        "pub-page",
+        "pv-page",
+        "dmonly-page",
+        "private-page",
+        "archived-page",
+        "specific-page",
+        "unlock-page",
       ]),
     );
   });
 
-  it("granted player result equals the baseline and only exposes allowed pages", async () => {
-    const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
-    assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
-    assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
-    assert.deepEqual(
-      new Set(await narrowedSlugs(ctx)),
-      new Set([
-        "pub-published",
-        "pv-published",
-        "specific-published",
-        "unlock-published",
-        "secret-revealed",
-        "secret-none-hidden",
-      ]),
-    );
-  });
-
-  it("ungranted player result equals the baseline (specific/unlock stay hidden)", async () => {
-    const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: lazulUserId });
-    assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
-    const narrowed = await narrowedSlugs(ctx);
-    assert.deepEqual(narrowed, await baselineSlugs(ctx));
-    assert.ok(!narrowed.includes("specific-published"));
-    assert.ok(!narrowed.includes("unlock-published"));
-    assert.ok(!narrowed.includes("dmonly-published"));
-    assert.ok(!narrowed.includes("secret-hidden"));
+  it("an assigned player sees the whole world, same as the baseline", async () => {
+    for (const userId of [amanUserId, lazulUserId]) {
+      const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId });
+      assert.ok(ctx);
+      assert.equal(ctx.user?.access.studio, false);
+      assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
+      assert.equal((await narrowedSlugs(ctx)).length, 7);
+    }
   });
 
   it("DM preview-as-player result equals the baseline (non-staff narrowing)", async () => {
@@ -197,14 +124,15 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
       preview: { previewAsUserId: amanUserId },
     });
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
+    assert.equal(ctx.previewAsUserId, amanUserId);
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
   });
 
-  it("guest result equals the baseline", async () => {
+  it("anonymous result equals the baseline — an anonymous visitor gets nothing", async () => {
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "guest");
+    assert.equal(ctx.user, null);
     assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
+    assert.deepEqual(await narrowedSlugs(ctx), []);
   });
 });

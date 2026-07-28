@@ -1,4 +1,4 @@
-import type { CanonicalStatus, Visibility } from "./generated/prisma/client";
+import type { CanonicalStatus } from "./generated/prisma/client";
 import type { UweSystemSettingsUpdate } from "./settings-service";
 import {
   MAIL_INBOX_LIMIT_MAX,
@@ -15,15 +15,6 @@ import {
   validateSection,
 } from "./settings-validation-helpers";
 
-const VISIBILITY_VALUES = new Set<Visibility>([
-  "private",
-  "dm_only",
-  "player_visible",
-  "public",
-  "specific_players",
-  "unlock_after_session",
-  "archived",
-]);
 
 const CANONICAL_STATUS_VALUES = new Set<CanonicalStatus>([
   "idea",
@@ -53,9 +44,9 @@ const TOP_LEVEL_KEYS = new Set([
   "maintenance",
 ]);
 
-const WORLDS_KEYS = new Set(["defaultVisibility", "defaultCanonicalStatus"]);
+const WORLDS_KEYS = new Set(["defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
-const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
+const PORTAL_KEYS = new Set(["portalEnabled"]);
 const AI_KEYS = new Set(["localOnlyMode", "enabled", "generalChatSystemPrompt"]);
 const MAIL_KEYS = new Set([
   "enabled",
@@ -65,12 +56,7 @@ const MAIL_KEYS = new Set([
   "autoSyncEnabled",
   "autoSyncIntervalMinutes",
 ]);
-const IMAGE_STUDIO_KEYS = new Set([
-  "enabled",
-  "defaultProviderMode",
-  "allowCloud",
-  "backgroundRemovalEnabled",
-]);
+const IMAGE_STUDIO_KEYS = new Set(["enabled", "backgroundRemovalEnabled"]);
 const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
 const BRIEFING_KEYS = new Set(["autoBriefingEnabled", "time"]);
@@ -119,9 +105,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
 
   if ("worlds" in body) {
     const sectionErrors = validateSection(body.worlds, WORLDS_KEYS, "settings.worlds", (key, value, sectionErrors) => {
-      if (key === "defaultVisibility") {
-        requireEnum(value, VISIBILITY_VALUES, "settings.worlds.defaultVisibility", sectionErrors);
-      }
       if (key === "defaultCanonicalStatus") {
         requireEnum(value, CANONICAL_STATUS_VALUES, "settings.worlds.defaultCanonicalStatus", sectionErrors);
       }
@@ -129,9 +112,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
     errors.push(...sectionErrors);
     if (sectionErrors.length === 0 && isRecord(body.worlds)) {
       const worlds: NonNullable<UweSystemSettingsUpdate["worlds"]> = {};
-      if (body.worlds.defaultVisibility !== undefined) {
-        worlds.defaultVisibility = body.worlds.defaultVisibility as Visibility;
-      }
       if (body.worlds.defaultCanonicalStatus !== undefined) {
         worlds.defaultCanonicalStatus = body.worlds.defaultCanonicalStatus as CanonicalStatus;
       }
@@ -169,24 +149,12 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       if (key === "portalEnabled") {
         requireBoolean(value, "settings.portal.portalEnabled", sectionErrors);
       }
-      if (key === "guestAccessEnabled") {
-        requireBoolean(value, "settings.portal.guestAccessEnabled", sectionErrors);
-      }
-      if (key === "publicSharingEnabled") {
-        requireBoolean(value, "settings.portal.publicSharingEnabled", sectionErrors);
-      }
     });
     errors.push(...sectionErrors);
     if (sectionErrors.length === 0 && isRecord(body.portal)) {
       const portal: NonNullable<UweSystemSettingsUpdate["portal"]> = {};
       if (body.portal.portalEnabled !== undefined) {
         portal.portalEnabled = body.portal.portalEnabled as boolean;
-      }
-      if (body.portal.guestAccessEnabled !== undefined) {
-        portal.guestAccessEnabled = body.portal.guestAccessEnabled as boolean;
-      }
-      if (body.portal.publicSharingEnabled !== undefined) {
-        portal.publicSharingEnabled = body.portal.publicSharingEnabled as boolean;
       }
       if (Object.keys(portal).length > 0) {
         update.portal = portal;
@@ -293,23 +261,8 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       IMAGE_STUDIO_KEYS,
       "settings.imageStudio",
       (key, value, sectionErrors) => {
-        if (
-          key === "enabled" ||
-          key === "allowCloud" ||
-          key === "backgroundRemovalEnabled"
-        ) {
+        if (key === "enabled" || key === "backgroundRemovalEnabled") {
           requireBoolean(value, `settings.imageStudio.${key}`, sectionErrors);
-        }
-        if (key === "defaultProviderMode") {
-          if (
-            value !== "auto" &&
-            value !== "local_rtx" &&
-            value !== "cloud"
-          ) {
-            sectionErrors.push(
-              "settings.imageStudio.defaultProviderMode muss auto, local_rtx oder cloud sein.",
-            );
-          }
         }
       },
     );
@@ -318,15 +271,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       const imageStudio: NonNullable<UweSystemSettingsUpdate["imageStudio"]> = {};
       if (body.imageStudio.enabled !== undefined) {
         imageStudio.enabled = body.imageStudio.enabled as boolean;
-      }
-      if (body.imageStudio.defaultProviderMode !== undefined) {
-        imageStudio.defaultProviderMode = body.imageStudio.defaultProviderMode as
-          | "auto"
-          | "local_rtx"
-          | "cloud";
-      }
-      if (body.imageStudio.allowCloud !== undefined) {
-        imageStudio.allowCloud = body.imageStudio.allowCloud as boolean;
       }
       if (body.imageStudio.backgroundRemovalEnabled !== undefined) {
         imageStudio.backgroundRemovalEnabled = body.imageStudio.backgroundRemovalEnabled as boolean;

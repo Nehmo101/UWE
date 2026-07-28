@@ -107,7 +107,6 @@ export async function applySrdEquipmentToItemAction(formData: FormData) {
     type: "rich_text",
     sortOrder: page.contentBlocks.length,
     content,
-    visibility: "player_visible",
   });
 
   revalidatePath(editPath(worldSlug, category, pageSlug));

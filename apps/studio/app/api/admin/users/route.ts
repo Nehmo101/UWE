@@ -38,9 +38,21 @@ export async function POST(request: Request) {
     displayName?: string;
     email?: string | null;
     password?: string | null;
-    role?: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+    isOwner?: boolean;
+    portalAccess?: boolean;
+    studioAccess?: boolean;
+    brainAccess?: boolean;
+    familyAccess?: boolean;
     status?: "invited" | "active" | "disabled";
     invite?: boolean;
+  };
+
+  const access = {
+    isOwner: body.isOwner === true,
+    portalAccess: body.portalAccess === true,
+    studioAccess: body.studioAccess === true,
+    brainAccess: body.brainAccess === true,
+    familyAccess: body.familyAccess === true,
   };
 
   const displayName = body.displayName?.trim();
@@ -59,7 +71,7 @@ export async function POST(request: Request) {
     const invited = await service.createInvite({
       displayName,
       email,
-      role: body.role,
+      ...access,
       actorUserId: actor.id,
     });
 
@@ -83,7 +95,7 @@ export async function POST(request: Request) {
     displayName,
     email: body.email ?? null,
     password: body.password ?? null,
-    role: body.role,
+    ...access,
     status: body.status,
     actorUserId: actor.id,
   });

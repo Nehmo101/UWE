@@ -1,7 +1,7 @@
 import type { LabelPrintStatus, Prisma } from "./generated/prisma/client";
 import { createPrismaClient, prisma, type PrismaClient } from "./client";
 import type { LabelWithRelations } from "./label-service";
-import { normalizeLabel } from "./label-service";
+import {} from "./label-service";
 
 export type { LabelPrintStatus } from "./generated/prisma/client";
 
@@ -282,22 +282,15 @@ export function createPrintListService(databaseUrl?: string): PrintListService {
 export function summarizePrintList(list: PrintListWithItems): {
   labelCount: number;
   totalCopies: number;
-  hasDmOnly: boolean;
 } {
   let totalCopies = 0;
-  let hasDmOnly = false;
 
   for (const item of list.items) {
     totalCopies += item.copies;
-    const parsed = normalizeLabel(item.label);
-    if (parsed.content.containsDmOnly) {
-      hasDmOnly = true;
-    }
   }
 
   return {
     labelCount: list.items.length,
     totalCopies,
-    hasDmOnly,
   };
 }

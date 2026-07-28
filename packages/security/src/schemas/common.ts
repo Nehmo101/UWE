@@ -57,14 +57,12 @@ export const shareVerifyBodySchema = z.object({
   password: z.string().max(512).optional(),
 });
 
-export const AI_PROVIDER_IDS = [
-  "ollama",
-  "openai_compatible",
-  "openai",
-  "anthropic",
-  "gemini",
-  "openrouter",
-] as const;
+/**
+ * Die beiden lokalen Inferenz-Backends. Cloud-Anbieter sind mit N.3 entfallen —
+ * eine Anfrage, die einen davon nennt, wird hier abgewiesen statt später still
+ * auf den lokalen Weg umgebogen.
+ */
+export const AI_PROVIDER_IDS = ["ollama", "openai_compatible"] as const;
 
 export const AI_TASK_TYPES = [
   "summarize_page",
@@ -98,7 +96,6 @@ export const aiGenerateBodySchema = z.object({
   providerId: aiProviderIdSchema,
   model: nonEmptyString.max(200),
   userPrompt: optionalString,
-  allowDmOnly: z.boolean().optional(),
   sessionId: idSchema.optional(),
   useMock: z.boolean().optional(),
   discardProposalId: idSchema.optional(),
@@ -108,7 +105,6 @@ export const aiContextBodySchema = z.object({
   taskType: aiTaskTypeSchema,
   worldSlug: slugSchema,
   pageSlug: slugSchema,
-  allowDmOnly: z.boolean().optional(),
   sessionId: idSchema.optional(),
 });
 
@@ -169,7 +165,6 @@ export const brainRunBodySchema = z.object({
   model: nonEmptyString.max(200),
   userPrompt: optionalString,
   sessionId: idSchema.optional(),
-  allowDmOnly: z.boolean().optional(),
   useMock: z.boolean().optional(),
 });
 
@@ -255,7 +250,6 @@ export const createWorldBodySchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: slugSchema.optional(),
   description: z.string().trim().max(500).optional(),
-  guestModeEnabled: z.boolean().optional(),
   isSandbox: z.boolean().optional(),
   templateId: worldTemplateIdSchema.optional(),
 });
@@ -266,7 +260,6 @@ export const passthroughBodySchema = z.object({}).passthrough();
 export const uploadMetadataSchema = z.object({
   title: z.string().trim().max(500).optional(),
   description: z.string().trim().max(5000).optional(),
-  visibility: z.enum(["dm_only", "player_visible", "public"]).optional().default("dm_only"),
   pageId: idSchema.optional().nullable(),
   type: z
     .enum(["image", "audio", "video", "document", "map", "token", "other"])

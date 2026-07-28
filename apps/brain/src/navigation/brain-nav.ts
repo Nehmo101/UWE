@@ -68,21 +68,14 @@ export const BRAIN_NAV_SECTIONS: BrainNavSection[] = [
   {
     title: "Verwaltung",
     links: [
-      {
-        href: "/contracts",
-        label: "Verträge",
-        icon: "€",
-        keywords: ["contracts", "abos", "kündigung", "finanzen", "kosten"],
-      },
       { href: "/hardware", label: "Hardware", icon: "▣", keywords: ["geräte", "devices", "inventar"] },
-      {
-        href: "/documents",
-        label: "Dokumente",
-        icon: "▦",
-        keywords: ["documents", "papiere", "scan", "ablage"],
-      },
       { href: "/mail", label: "Mail", icon: "✉", keywords: ["email", "postfach", "nachrichten"] },
-      { href: "/calendar", label: "Kalender", icon: "◷", keywords: ["calendar", "termine", "events"] },
+      {
+        href: "/system",
+        label: "System",
+        icon: "⚙",
+        keywords: ["status", "homelab", "diagnose", "host", "betrieb", "rtx", "cloudflare"],
+      },
     ],
   },
 ];

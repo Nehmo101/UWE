@@ -138,8 +138,6 @@ async function executeFromBundle(
           title: draft.title,
           type: draft.type,
           summary: draft.summary,
-          visibility: draft.visibility,
-          publishStatus: draft.publishStatus,
           tags: draft.tags,
           aliases: draft.aliases,
         });
@@ -149,7 +147,6 @@ async function executeFromBundle(
             type: block.type,
             sortOrder: block.sortOrder,
             content: block.content,
-            visibility: block.visibility,
             metadata: block.metadata,
           });
           addedBlockIds.push(createdBlock.id);
@@ -166,8 +163,6 @@ async function executeFromBundle(
             slug: existingPage.slug,
             type: existingPage.type,
             summary: existingPage.summary,
-            visibility: existingPage.visibility,
-            publishStatus: existingPage.publishStatus,
             canonicalStatus: existingPage.canonicalStatus,
             tags: existingPage.tags,
             aliases: existingPage.aliases,
@@ -199,15 +194,12 @@ async function executeFromBundle(
         slug,
         type: draft.type,
         summary: draft.summary,
-        visibility: draft.visibility,
-        publishStatus: draft.publishStatus,
         tags: draft.tags,
         aliases: draft.aliases,
         contentBlocks: draft.contentBlocks.map((block) => ({
           type: block.type,
           sortOrder: block.sortOrder,
           content: block.content,
-          visibility: block.visibility,
           metadata: block.metadata,
         })),
       });

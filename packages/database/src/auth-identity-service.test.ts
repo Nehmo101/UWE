@@ -17,7 +17,7 @@ describe("auth identity service", () => {
         displayName: "Google User",
         email: "google@uwe.local",
         passwordHash: "hash",
-        role: "player",
+        portalAccess: true,
       },
     });
     const other = await db.user.create({
@@ -25,7 +25,7 @@ describe("auth identity service", () => {
         displayName: "Other User",
         email: "other@uwe.local",
         passwordHash: null,
-        role: "player",
+        portalAccess: true,
       },
     });
     await db.user.create({
@@ -33,7 +33,7 @@ describe("auth identity service", () => {
         displayName: "Disabled User",
         email: "disabled@uwe.local",
         passwordHash: "hash",
-        role: "player",
+        portalAccess: true,
         status: "disabled",
       },
     });

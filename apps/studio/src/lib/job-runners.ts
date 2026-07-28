@@ -24,6 +24,7 @@ import {
   type JobView,
 } from "@uwe/database/server";
 import { brainPrisma, createBrainPrismaClient } from "@uwe/database/brain-client";
+import { createFamilyPrismaClient } from "@uwe/database/family-client";
 import {
   AI_TASK_LABELS,
   generateAiTaskBySlug,
@@ -66,7 +67,6 @@ import {
   type CreateBackupOptions,
 } from "@uwe/backup";
 import { listStudioBackups } from "./backup-paths";
-import { createPageAiReviewService, type PageAiReviewJobPayload } from "@uwe/page-ai-review";
 
 export interface JobRunnerContext {
   jobs: JobService;
@@ -265,7 +265,6 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
     gatewayUser: gatewayUser ?? undefined,
     useMock,
     options: {
-      allowDmOnly: settings.localOnly,
       datenschutzMode: settings.datenschutzMode,
       localOnly: settings.localOnly,
     },
@@ -307,7 +306,6 @@ export interface BrainActionJobPayload {
   model: string;
   userPrompt?: string;
   sessionId?: string;
-  allowDmOnly?: boolean;
   useMock?: boolean;
 }
 
@@ -421,10 +419,9 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
   const payload = (ctx.job.payload ?? {}) as AiRunJobPayload &
     BrainActionJobPayload &
     DeferredAiPromptJobPayload &
-    PageAiReviewJobPayload & {
-      pageReviewRefine?: boolean;
-      parentProposalId?: string;
-      refineUserPrompt?: string;
+    {
+      originalContent?: string;
+      previousPublishStatus?: string;
     };
   if (payload.deferredAiPrompt) {
     return runDeferredAiPromptJob(ctx);
@@ -490,7 +487,7 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
 
   const started = Date.now();
 
-  let gatewayUser: { userId: string; role: string } | undefined;
+  let gatewayUser: { userId: string } | undefined;
   const resolved = await resolveGatewayUserById(ctx.job.userId);
   if (resolved) {
     gatewayUser = resolved;
@@ -507,7 +504,6 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       user: gatewayUser,
       feature: "AI_DND_USE",
       options: {
-        allowDmOnly: settings.localOnly,
         datenschutzMode: settings.datenschutzMode,
         localOnly: settings.localOnly,
         sessionId: payload.sessionId,
@@ -534,24 +530,6 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       durationMs,
     });
 
-    const pageAiReview = createPageAiReviewService(prisma);
-
-    if (payload.pageReviewRefine && payload.parentProposalId) {
-      await pageAiReview.onRefineReady(
-        payload.parentProposalId,
-        result.text,
-        payload.refineUserPrompt ?? payload.userPrompt ?? "",
-      );
-      await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Verfeinerung abgeschlossen");
-      return {
-        aiRunId: completedRun.id,
-        runId: completedRun.id,
-        context,
-        result,
-        parentProposalId: payload.parentProposalId,
-      };
-    }
-
     const originalContent =
       payload.originalContent ?? combineBlockContent(page.contentBlocks);
 
@@ -563,13 +541,7 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
       taskType: payload.taskType,
       resultText: result.text,
       originalContent,
-      previousPublishStatus: payload.previousPublishStatus ?? page.publishStatus,
-      title: payload.pageReview ? `Review: ${page.title}` : undefined,
     });
-
-    if (payload.pageReview) {
-      await pageAiReview.onProposalReady(proposal.id);
-    }
 
     await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Aufgabe abgeschlossen");
 
@@ -598,7 +570,6 @@ export interface AiRunJobPayload {
   providerId: AiProviderId;
   model: string;
   userPrompt?: string;
-  allowDmOnly?: boolean;
   sessionId?: string;
   useMock?: boolean;
   discardProposalId?: string;
@@ -735,7 +706,7 @@ export async function runCanonCheckJob(ctx: JobRunnerContext): Promise<Record<st
     throw new Error(`Welt ${payload.worldSlug} nicht gefunden.`);
   }
 
-  const findings = [...report.safetyFindings, ...report.canonFindings];
+  const findings = report.canonFindings;
 
   return {
     worldSlug: payload.worldSlug,
@@ -754,6 +725,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
   const { bundle, zipBuffer } = await loadBackupForRestore(payload);
   const db = createPrismaClient();
   const brainDb = createBrainPrismaClient();
+  const familyDb = createFamilyPrismaClient();
 
   await ctx.jobs.updateProgress(ctx.jobId, 20, "Safety-Backup vor Restore erstellen");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
@@ -771,6 +743,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
     result = await executeRestore(
       db,
       brainDb,
+      familyDb,
       bundle,
       {
         confirmed: true,
@@ -788,6 +761,7 @@ export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record
   } finally {
     await db.$disconnect();
     await brainDb.$disconnect();
+    await familyDb.$disconnect();
   }
 
   await createActivityLogService(prisma).log({

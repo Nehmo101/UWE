@@ -4,7 +4,7 @@ import { useState } from "react";
 import { RichTextBlockEditor } from "./RichTextBlockEditor";
 import { ContentBlockImageField, type BlockImageAsset } from "./ContentBlockImageField";
 
-const RICH_TEXT_TYPES = new Set(["rich_text", "gm_note"]);
+const RICH_TEXT_TYPES = new Set(["rich_text", "rich_text"]);
 
 export interface BlockTypeOption {
   value: string;

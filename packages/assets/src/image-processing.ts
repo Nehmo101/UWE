@@ -27,12 +27,20 @@ export function shouldGenerateThumbnails(): boolean {
   return parseBoolEnv("UWE_UPLOAD_GENERATE_THUMBNAILS", true);
 }
 
-type SharpModule = typeof import("sharp");
+/**
+ * Der Konstruktor, nicht das Modul.
+ *
+ * Bis sharp 0.34 war `typeof import("sharp")` selbst aufrufbar. Seit 0.35 ist
+ * es der Namensraum, und der Konstruktor steckt in `default` — `sharp(buffer)`
+ * typte danach nicht mehr. Der Laufzeitpfad (`mod.default ?? mod`) bleibt, weil
+ * er beide Modulformate abdeckt.
+ */
+type SharpConstructor = (typeof import("sharp"))["default"];
 
-async function loadSharp(): Promise<SharpModule | null> {
+async function loadSharp(): Promise<SharpConstructor | null> {
   try {
     const mod = await import("sharp");
-    return mod.default ?? mod;
+    return mod.default ?? (mod as unknown as SharpConstructor);
   } catch {
     return null;
   }

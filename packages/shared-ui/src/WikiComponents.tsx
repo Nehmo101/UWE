@@ -7,7 +7,6 @@ export interface WikiNavItem {
   title: string;
   href: string;
   category: PageCategory;
-  visibility?: PageVisibility;
 }
 
 export interface WikiSidebarProps {

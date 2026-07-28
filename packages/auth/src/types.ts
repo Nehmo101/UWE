@@ -1,23 +1,45 @@
-/** Global user role (system-wide default). */
-export type UweRole = "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+/**
+ * The four areas a person can be let into. One checkbox each, set by the owner
+ * in the Command Center — there is no self-service registration.
+ */
+export type UweArea = "portal" | "studio" | "brain" | "family";
 
-/** Role within a specific world. */
-export type WorldMemberRole = "owner" | "dm" | "co_dm" | "player";
+export const UWE_AREAS = ["portal", "studio", "brain", "family"] as const satisfies readonly UweArea[];
 
-export type PageVisibility =
-  | "private"
-  | "dm_only"
-  | "player_visible"
-  | "public"
-  | "specific_players"
-  | "unlock_after_session"
-  | "archived";
+/** Which of the four areas an address is allowed to enter. */
+export type AreaAccess = Record<UweArea, boolean>;
+
+export const NO_AREA_ACCESS: AreaAccess = {
+  portal: false,
+  studio: false,
+  brain: false,
+  family: false,
+};
 
 export interface AuthUser {
   id: string;
   displayName: string;
   email: string | null;
-  role: UweRole;
+  /** Operations, restore and the Command Center. The one role that is left. */
+  isOwner: boolean;
+  access: AreaAccess;
+}
+
+/**
+ * Anything an {@link AuthUser} can be built from: a raw `User` row with its four
+ * `*Access` columns, or a user object that already carries a shaped `access`.
+ * Missing flags read as `false` — the permissive shape stays fail-closed.
+ */
+export interface AuthUserSource {
+  id: string;
+  displayName: string;
+  email: string | null;
+  isOwner: boolean;
+  access?: AreaAccess | null;
+  portalAccess?: boolean | null;
+  studioAccess?: boolean | null;
+  brainAccess?: boolean | null;
+  familyAccess?: boolean | null;
 }
 
 /** User record safe for API/UI responses — never includes secrets or hashes. */
@@ -32,35 +54,14 @@ export interface SafeUser extends AuthUser {
   hasPassword?: boolean;
 }
 
+/**
+ * A world assignment. No role values: it says that person X belongs to world Y,
+ * nothing more. What they may do there follows from their Studio checkbox.
+ */
 export interface WorldMembership {
   userId: string;
   worldId: string;
-  role: WorldMemberRole;
   characterName: string | null;
-}
-
-export interface PageAccessInfo {
-  id: string;
-  visibility: PageVisibility;
-  publishStatus: string;
-  secretLevel?: "none" | "spoiler" | "dm_secret" | null;
-  revealState?: "hidden" | "preview" | "revealed" | null;
-}
-
-export interface ContentBlockAccessInfo {
-  visibility: PageVisibility;
-  type?: string;
-  secretLevel?: "none" | "spoiler" | "dm_secret" | null;
-  revealState?: "hidden" | "preview" | "revealed" | null;
-}
-
-export interface AssetAccessInfo {
-  id: string;
-  visibility: PageVisibility;
-  secretLevel?: "none" | "spoiler" | "dm_secret" | null;
-  revealState?: "hidden" | "preview" | "revealed" | null;
-  /** Page IDs linked to this asset (for specific_players / unlock_after_session). */
-  linkedPageIds?: string[];
 }
 
 /**
@@ -70,15 +71,8 @@ export interface AssetAccessInfo {
 export interface AccessContext {
   user: AuthUser | null;
   worldMembership: WorldMembership | null;
-  /** Effective role after applying preview-as-player overrides. */
-  effectiveRole: UweRole;
-  guestModeEnabled: boolean;
-  /** When set, DM/owner views content as this player would see it. */
+  /** When set, a Studio user views content as this player would see it. */
   previewAsUserId: string | null;
-  /** Page IDs unlocked for the effective viewer via session unlocks. */
-  unlockedPageIds: ReadonlySet<string>;
-  /** Page IDs the effective viewer may access via specific_players grants. */
-  specificPlayerPageIds: ReadonlySet<string>;
 }
 
 export interface PreviewOptions {

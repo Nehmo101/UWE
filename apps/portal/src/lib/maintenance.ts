@@ -27,7 +27,7 @@ export async function enforcePortalMaintenance(pathname: string): Promise<void> 
     settings: settingsSnapshot.settings,
     surface: "portal",
     pathname,
-    context: resolveMaintenanceGateContext({ userRole: user?.role ?? null }),
+    context: resolveMaintenanceGateContext({ isOwner: user?.isOwner === true }),
   });
 
   if (decision.blocked) {

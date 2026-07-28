@@ -4,7 +4,6 @@ import {
   BRAIN_FACT_TYPE_LABELS,
   BRAIN_SOURCE_LABELS,
   BRAIN_STATUS_LABELS,
-  BRAIN_VISIBILITY_LABELS,
   buildPageUrl,
   createBrainStoreService,
   createPrismaClient,
@@ -157,21 +156,6 @@ export default async function StudioBrainFactPage({ params }: Props) {
                 </Select>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="fact-visibility">Sichtbarkeit</Label>
-                <Select name="visibility" defaultValue={fact.visibility}>
-                  <SelectTrigger id="fact-visibility">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="fact-status">Status</Label>

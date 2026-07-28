@@ -53,8 +53,16 @@ Remove imports you added but no longer use. Run `pnpm lint` after every edit pas
 |--------|-------------|
 | `SESSION_COOKIE_NAME`, `PREVIEW_COOKIE_NAME` | `@uwe/auth` or `packages/auth/src/session` |
 | `getUweRuntimeConfig`, `getSessionCookieOptions` | `@uwe/auth` or `packages/auth/src/runtime-config` |
+| `canAccessPortal/Studio/Brain/Family`, `isOwner`, `requireArea` | `@uwe/auth` or `packages/auth/src/area-access` |
+| `canViewWorldContent`, `isDm`, `buildAccessContext` | `@uwe/auth` or `packages/auth/src/permissions` |
+| `canReadWorld`, `scopeFromAccessContext` | `@uwe/auth` or `packages/auth/src/security/authz` |
 
 Do not import `SESSION_COOKIE_NAME` from `runtime-config` in new code — use `session` or the `@uwe/auth` barrel.
+
+**Zugangsmodell:** Es gibt kein Rollen-Enum mehr. Vier Boolean-Häkchen pro
+E-Mail (`portal` / `studio` / `brain` / `family`) plus `isOwner` für Betrieb und
+`/admin/*`. Innerhalb einer Welt gilt genau eine Regel: wer zugeordnet ist,
+sieht alles. Details: `.cursor/skills/auth-access/SKILL.md`.
 
 ### 3. Prisma client missing (typecheck / test)
 

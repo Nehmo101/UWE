@@ -32,14 +32,11 @@ describe("wikitext convert service", () => {
       title: "Gandalf",
       slug: "gandalf",
       type: "npc",
-      visibility: "dm_only",
-      publishStatus: "draft",
       aliases: ["Mithrandir"],
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "#Der Zauberer\nEr wohnt zeitweise im Schwarzen Turm.",
         },
       ],
@@ -50,19 +47,15 @@ describe("wikitext convert service", () => {
       title: "Schwarzer Turm",
       slug: "schwarzer-turm",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Mithrandir besuchte den Turm oft.\n\n\nSehr oft.",
         },
         {
           type: "statblock",
           sortOrder: 1,
-          visibility: "dm_only",
           content: "Gandalf HP 100",
         },
       ],
@@ -153,10 +146,8 @@ describe("wikitext convert service", () => {
       title: "Seite A",
       slug: "seite-a",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Erwähnt Seite B." },
+        { type: "rich_text", sortOrder: 0, content: "Erwähnt Seite B." },
       ],
     });
     await repo.createPage({
@@ -164,10 +155,8 @@ describe("wikitext convert service", () => {
       title: "Seite B",
       slug: "seite-b",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Erwähnt Seite A." },
+        { type: "rich_text", sortOrder: 0, content: "Erwähnt Seite A." },
       ],
     });
 
@@ -193,13 +182,10 @@ describe("wikitext convert service", () => {
       title: "Handelsposten",
       slug: "handelsposten",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Hier trifft man den Händler. Kategorie: NPC ist dort oft zu Gast.",
         },
       ],
@@ -218,10 +204,8 @@ describe("wikitext convert service", () => {
       title: "Kategorie: Fraktion — Rote Hand",
       slug: "rote-hand",
       type: "note",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Eine Gilde von Dieben." },
+        { type: "rich_text", sortOrder: 0, content: "Eine Gilde von Dieben." },
       ],
     });
     await repo.createPage({
@@ -229,11 +213,9 @@ describe("wikitext convert service", () => {
       title: "Namenloser Krieger",
       slug: "namenloser-krieger",
       type: "note",
-      visibility: "dm_only",
-      publishStatus: "draft",
       tags: ["npc"],
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Kämpft an der Grenze." },
+        { type: "rich_text", sortOrder: 0, content: "Kämpft an der Grenze." },
       ],
     });
 
@@ -259,13 +241,10 @@ describe("wikitext convert service", () => {
       title: "Thalindor Golsa",
       slug: "thalindor-golsa",
       type: "note",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Kategorie: NPC — ein Händler der verborgenen Rebellion.",
         },
       ],

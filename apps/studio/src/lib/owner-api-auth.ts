@@ -3,7 +3,6 @@ import { createDevBypassAuthUser, getCurrentAuthUser, studioAuthRequired } from 
 
 export interface OwnerApiUser {
   userId: string;
-  role: string;
 }
 
 /**
@@ -17,12 +16,11 @@ export interface OwnerApiUser {
 export async function resolveOwnerApiUser(): Promise<OwnerApiUser | null> {
   const user = await getCurrentAuthUser();
   if (user) {
-    return user.role === "owner" ? { userId: user.id, role: user.role } : null;
+    return user.isOwner ? { userId: user.id } : null;
   }
 
   if (!studioAuthRequired()) {
-    const bypass = createDevBypassAuthUser();
-    return { userId: bypass.id, role: bypass.role };
+    return { userId: createDevBypassAuthUser().id };
   }
   return null;
 }

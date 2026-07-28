@@ -31,7 +31,7 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 | `uwe-feature-implementation` | End-to-end feature delivery |
 | `api-routes` | Studio/Portal REST routes, guards |
 | `react-next-ui` | App Router, shared-ui, forms |
-| `auth-rbac-visibility` | Sessions, roles, visibility filters |
+| `auth-access` | Sessions, Zugangs-Häkchen, Welt-Zuordnung |
 | `ai-agent-proposal-workflow` | AI router, Review/Apply, Agent Jobs |
 | `local-first-privacy` | RTX-only, no cloud brain context |
 | `uwe-brain` | DnD Brain + Life Brain |

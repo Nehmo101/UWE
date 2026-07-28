@@ -24,22 +24,29 @@ const OO = DOMAIN_ACCESS_MODE.opaqueOrchestration;
 export const AUDIENCE_DOMAIN_ACCESS = {
   portal: {
     dnd_world: FP, dnd_brain: N, portal_player: SP, personal_brain: N,
-    admin_life: N, platform_auth: SP, platform_ops: N, assets: FP,
+    admin_life: N, family: N, platform_auth: SP, platform_ops: N, assets: FP,
     jobs: SP, integrations: N, ai_control: N, shared_reference: R,
   },
   studio: {
     dnd_world: RW, dnd_brain: RW, portal_player: SP, personal_brain: N,
-    admin_life: N, platform_auth: SP, platform_ops: N, assets: RW,
+    admin_life: N, family: N, platform_auth: SP, platform_ops: N, assets: RW,
     jobs: SP, integrations: SP, ai_control: SP, shared_reference: R,
   },
   brain: {
     dnd_world: N, dnd_brain: N, portal_player: N, personal_brain: RW,
-    admin_life: RW, platform_auth: SP, platform_ops: N, assets: N,
+    admin_life: RW, family: N, platform_auth: SP, platform_ops: N, assets: N,
     jobs: SP, integrations: N, ai_control: SP, shared_reference: N,
+  },
+  // Family sieht ausschliesslich Family-Daten. Kein Welt-Wissen, kein
+  // Owner-Brain — die Trennung ist der Zweck der eigenen App (Abschnitt G14).
+  family: {
+    dnd_world: N, dnd_brain: N, portal_player: N, personal_brain: N,
+    admin_life: N, family: RW, platform_auth: SP, platform_ops: N, assets: N,
+    jobs: N, integrations: N, ai_control: SP, shared_reference: N,
   },
   platform: {
     dnd_world: OO, dnd_brain: OO, portal_player: OO, personal_brain: OO,
-    admin_life: OO, platform_auth: RW, platform_ops: RW, assets: OO,
+    admin_life: OO, family: OO, platform_auth: RW, platform_ops: RW, assets: OO,
     jobs: RW, integrations: RW, ai_control: RW, shared_reference: RW,
   },
 } as const satisfies Record<AppAudience, Record<DataDomain, DomainAccessMode>>;

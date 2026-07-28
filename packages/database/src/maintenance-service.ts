@@ -1,5 +1,5 @@
 import { prisma, type PrismaClient } from "./client";
-import { brainPrisma, type BrainPrismaClient } from "./brain-client";
+import { familyPrisma, type FamilyPrismaClient } from "./family-client";
 
 /**
  * Haushalts-Cockpit: wiederkehrende Wartungs-/Haushaltsaufgaben (Müll, Rauchmelder,
@@ -132,7 +132,7 @@ function byNextDue(a: MaintenanceTaskRecord, b: MaintenanceTaskRecord): number {
 }
 
 export class MaintenanceService {
-  constructor(private readonly db: BrainPrismaClient) {}
+  constructor(private readonly db: FamilyPrismaClient) {}
 
   /** Alle Aufgaben, sortiert nach Fälligkeit (ohne Fälligkeit zuletzt). */
   async list(): Promise<MaintenanceTaskRecord[]> {
@@ -215,8 +215,8 @@ export class MaintenanceService {
 }
 
 export function createMaintenanceService(
-  brainDb: BrainPrismaClient = brainPrisma,
+  familyDb: FamilyPrismaClient = familyPrisma,
   _coreDb: PrismaClient = prisma,
 ): MaintenanceService {
-  return new MaintenanceService(brainDb);
+  return new MaintenanceService(familyDb);
 }

@@ -60,7 +60,7 @@ export class MailRecipientService {
     const memberships = await this.db.worldMembership.findMany({
       where: {
         worldId: world.id,
-        role: "player",
+        user: { studioAccess: false },
       },
       include: {
         user: {

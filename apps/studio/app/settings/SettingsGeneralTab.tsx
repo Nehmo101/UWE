@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SettingsCollapsiblePanel } from "@/components/SettingsCollapsiblePanel";
 import { updateSettingsAction } from "../settings-actions";
 import { normalizeStudioLandingPage, STUDIO_LANDING_PAGE_OPTIONS } from "@/src/lib/studio-landing";
@@ -17,13 +16,6 @@ export function SettingsGeneralTab({ defaultLandingPage }: SettingsGeneralTabPro
   const landingPage = normalizeStudioLandingPage(defaultLandingPage);
   return (
     <div className="grid gap-3">
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold tracking-tight">App Settings</h2>
-        <p className="text-sm text-muted-foreground">
-          Visuelle Themes unter <Link href="/settings?tab=appearance">Design &amp; Theme</Link>.
-        </p>
-      </section>
-
       <SettingsCollapsiblePanel
         title="Studio-Startseite"
         summary="Wohin angemeldete Nutzer von / weitergeleitet werden"
@@ -56,17 +48,6 @@ export function SettingsGeneralTab({ defaultLandingPage }: SettingsGeneralTabPro
         </form>
       </SettingsCollapsiblePanel>
 
-      <SettingsCollapsiblePanel
-        title="Abgrenzung zu Admin"
-        summary="Settings vs. /admin — was gehört wohin"
-        defaultOpen={false}
-      >
-        <p className="text-sm text-muted-foreground">
-          <strong>Settings:</strong> persönliche Präferenzen, Portal-Theme, Speicher, Briefing.{" "}
-          <strong>Admin:</strong> Nutzer, Security, KI-Gateway, Webhooks. Routing-Policy:{" "}
-          <Link href="/admin/ai-gateway">KI-Gateway</Link>.
-        </p>
-      </SettingsCollapsiblePanel>
     </div>
   );
 }

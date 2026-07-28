@@ -8,7 +8,6 @@ interface PageBlockSnapshot {
   type: string;
   sortOrder: number;
   content: string;
-  visibility: string;
   metadata: unknown;
 }
 
@@ -23,8 +22,6 @@ export interface PageContentReplaceSnapshot {
     slug: string;
     type: string;
     summary: string | null;
-    visibility: string;
-    publishStatus: string;
     canonicalStatus: string;
     aiReviewedAt?: Date | null;
     tags: unknown;
@@ -51,8 +48,6 @@ export async function capturePageContentReplaceUndo(db: PrismaClient, pageId: st
       slug: page.slug,
       type: page.type,
       summary: page.summary,
-      visibility: page.visibility,
-      publishStatus: page.publishStatus,
       canonicalStatus: page.canonicalStatus,
       aiReviewedAt: page.aiReviewedAt,
       tags: page.tags,
@@ -65,7 +60,6 @@ export async function capturePageContentReplaceUndo(db: PrismaClient, pageId: st
       type: block.type,
       sortOrder: block.sortOrder,
       content: block.content,
-      visibility: block.visibility,
       metadata: block.metadata,
     })),
   };
@@ -97,7 +91,6 @@ export async function restorePageContentReplaceUndo(
   await db.page.update({
     where: { id: data.id },
     data: {
-      publishStatus: data.publishStatus as never,
       canonicalStatus: data.canonicalStatus as never,
       aiReviewedAt: data.aiReviewedAt ?? null,
       tags: toPrismaJsonValue(data.tags),
@@ -115,7 +108,6 @@ export async function restorePageContentReplaceUndo(
         type: block.type as never,
         sortOrder: block.sortOrder,
         content: block.content,
-        visibility: block.visibility as never,
         metadata: toPrismaJsonValue(block.metadata),
       })),
     });

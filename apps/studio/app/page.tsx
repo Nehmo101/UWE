@@ -2,6 +2,7 @@ import {
   getTurnstileConfig,
   getUweDeploymentModel,
   resolveBrainPublicBaseUrl,
+  resolveFamilyPublicBaseUrl,
   resolvePortalPublicBaseUrl,
   resolveStudioPublicBaseUrl,
 } from "@uwe/auth";
@@ -47,6 +48,7 @@ export default async function StudioRootPage() {
       studioAppUrl={resolveStudioPublicBaseUrl()}
       portalAppUrl={resolvePortalPublicBaseUrl()}
       brainAppUrl={resolveBrainPublicBaseUrl()}
+      familyAppUrl={resolveFamilyPublicBaseUrl()}
       turnstileSiteKey={turnstile.enabled ? turnstile.siteKey : null}
       rtxOnline
       // Serverseitig berechnet und durchgereicht: ein clientseitiger Wert

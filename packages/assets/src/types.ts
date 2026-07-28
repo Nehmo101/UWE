@@ -8,14 +8,6 @@ export type AssetType =
   | "video"
   | "other";
 
-export type AssetVisibility =
-  | "dm_only"
-  | "player_visible"
-  | "public"
-  | "specific_players"
-  | "unlock_after_session"
-  | "archived";
-
 export interface AssetRecord {
   id: string;
   worldId: string;
@@ -26,7 +18,6 @@ export interface AssetRecord {
   storageKey: string;
   mimeType: string | null;
   size: number;
-  visibility: AssetVisibility;
   tags: string[];
   metadata: Record<string, unknown> | null;
   createdAt: Date;
@@ -42,7 +33,6 @@ export interface CreateAssetInput {
   storageKey: string;
   mimeType?: string | null;
   size?: number;
-  visibility?: AssetVisibility;
   tags?: string[];
   metadata?: Record<string, unknown> | null;
 }
@@ -51,7 +41,6 @@ export interface UpdateAssetInput {
   title?: string;
   description?: string | null;
   type?: AssetType;
-  visibility?: AssetVisibility;
   campaignId?: string | null;
   tags?: string[];
   metadata?: Record<string, unknown> | null;

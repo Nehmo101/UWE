@@ -151,16 +151,6 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
             />
           </div>
 
-          <div className={FIELD_CLASS}>
-            <Label htmlFor="new-room-dm-notes">DM-Notizen</Label>
-            <Textarea
-              id="new-room-dm-notes"
-              name="dmNotes"
-              rows={4}
-              placeholder="Geheime Hinweise, DCs, Trigger…"
-            />
-          </div>
-
           <div>
             <Button type="submit">Raum anlegen</Button>
           </div>

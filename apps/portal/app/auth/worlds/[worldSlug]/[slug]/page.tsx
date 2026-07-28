@@ -11,7 +11,6 @@ import { canCreatePlayerNote, canEditPlayerCharacterBlock } from "@uwe/auth";
 import {
   BLOCK_TYPE_LABELS,
   PageTypeBadge,
-  VisibilityBadge,
   WikiContent,
 } from "@uwe/shared-ui";
 import {
@@ -90,9 +89,9 @@ export default async function AuthWorldPageDetail({ params }: Props) {
 
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { guestCommentsEnabled: true },
+      select: { id: true },
     });
-    canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx, world.guestCommentsEnabled));
+    canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx));
 
     if (visiblePage.type === "player_character") {
       canEditCharacter = visiblePage.contentBlocks.some((block) =>
@@ -107,7 +106,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
           characterSheet &&
             ctx.user &&
             characterSheet.ownerUserId === ctx.user.id &&
-            ctx.effectiveRole === "player" &&
+            ctx.worldMembership !== null &&
             !ctx.previewAsUserId,
         );
         if (characterSheet) {
@@ -147,7 +146,6 @@ export default async function AuthWorldPageDetail({ params }: Props) {
         <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <PageTypeBadge type={page.type} />
-          <VisibilityBadge visibility={page.visibility} />
           {page.type === "quest" ? (
             <Badge variant="default">
               {QUEST_LIFECYCLE_LABELS[(page.questStatus ?? "open") as QuestLifecycleStatus]}
@@ -163,7 +161,6 @@ export default async function AuthWorldPageDetail({ params }: Props) {
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">{BLOCK_TYPE_LABELS[block.type]}</Badge>
-                <VisibilityBadge visibility={block.visibility} />
               </div>
             </CardHeader>
             <CardContent>

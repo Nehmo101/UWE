@@ -1,18 +1,55 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveImageProviderConfig } from "./index";
+import { resolveImageProviderConfig, runImageStudioTask } from "./index";
 
 describe("resolveImageProviderConfig", () => {
-  it("disables cloud by default", () => {
+  it("ist standardmäßig aktiv und nutzt die Connector-Queue", () => {
     const config = resolveImageProviderConfig({});
-    assert.equal(config.allowCloud, false);
     assert.equal(config.enabled, true);
+    assert.equal(config.useConnectorImage, true);
   });
 
-  it("defaults connector image routing on unless RTX_USE_CONNECTOR_IMAGE=false", () => {
-    const config = resolveImageProviderConfig({});
-    assert.equal(config.useConnectorImage, true);
-    const disabled = resolveImageProviderConfig({ RTX_USE_CONNECTOR_IMAGE: "false" });
-    assert.equal(disabled.useConnectorImage, false);
+  it("respektiert RTX_USE_CONNECTOR_IMAGE=false", () => {
+    assert.equal(resolveImageProviderConfig({ RTX_USE_CONNECTOR_IMAGE: "false" }).useConnectorImage, false);
+  });
+
+  it("respektiert IMAGE_STUDIO_ENABLED=false", () => {
+    assert.equal(resolveImageProviderConfig({ IMAGE_STUDIO_ENABLED: "false" }).enabled, false);
+  });
+});
+
+describe("runImageStudioTask", () => {
+  it("ist ohne Connector nicht verfügbar — es gibt keinen Ausweichweg", async () => {
+    const result = await runImageStudioTask(
+      { task: "generate", prompt: "Ein Waldtempel" },
+      { enabled: true, useConnectorImage: true },
+    );
+    assert.equal(result.success, false);
+    assert.equal(result.providerUsed, "disabled");
+    assert.match(result.error ?? "", /RTX Host Connector/);
+  });
+
+  it("reicht den zusammengebauten Prompt an die Connector-Brücke durch", async () => {
+    let seen = "";
+    const result = await runImageStudioTask(
+      {
+        task: "generate",
+        prompt: "Ein Waldtempel",
+        contextMode: "brain_context",
+        contextSnippet: "Moos und Nebel",
+      },
+      {
+        enabled: true,
+        useConnectorImage: true,
+        connectorImageGenerate: async (request) => {
+          seen = request.prompt;
+          return { success: true, providerUsed: "local_rtx", imageBase64: "x" };
+        },
+      },
+    );
+    assert.equal(result.success, true);
+    assert.equal(result.providerUsed, "local_rtx");
+    // Privater Kontext darf mitgehen: er verlässt den Host nicht.
+    assert.match(seen, /\[Kontext: Moos und Nebel\]/);
   });
 });

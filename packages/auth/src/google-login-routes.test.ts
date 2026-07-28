@@ -42,7 +42,8 @@ function activeUser(overrides: Partial<GoogleIdentityUserPort> = {}): GoogleIden
     id: "user-1",
     displayName: "Test-DM",
     email: "dm@uwe.local",
-    role: "dm",
+    isOwner: false,
+    access: { portal: true, studio: true, brain: false, family: false },
     status: "active",
     forcePasswordChange: false,
     ...overrides,
@@ -103,7 +104,8 @@ function buildHarness(overrides: Partial<GoogleLoginRouteDeps<FakeDb>> = {}): Ha
         id: user.id,
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: user.isOwner,
+        access: user.access ?? { portal: false, studio: false, brain: false, family: false },
       }),
       createSession: async () => ({ id: "session-1", token: "session-token" }),
       recordSuccessfulLogin: async () => {},
@@ -118,7 +120,7 @@ function buildHarness(overrides: Partial<GoogleLoginRouteDeps<FakeDb>> = {}): Ha
     }),
     getSessionUserId: async () => harness.sessionUserId,
     hasTargetAccess: (target, user) =>
-      target === "portal" ? true : user.role === "dm" || user.role === "owner" || user.role === "admin",
+      target === "portal" ? true : user.access?.studio === true,
     clientIpFromHeaders: () => "203.0.113.9",
     checkRateLimitAsync: async () => ({ allowed: true, retryAfterSeconds: 0 }),
     rateLimitOptions: { maxAttempts: 10, windowMs: 60_000 },
@@ -281,7 +283,7 @@ describe("google callback login", () => {
     const harness = buildHarness();
     harness.identityByProvider.set("google-sub-1", {
       userId: "user-1",
-      user: activeUser({ role: "player" }),
+      user: activeUser({ access: { portal: true, studio: false, brain: false, family: false } }),
     });
     const handlers = createGoogleLoginRouteHandlers(harness.deps);
 
@@ -317,7 +319,7 @@ describe("google callback login", () => {
     const harness = buildHarness();
     harness.identityByProvider.set("google-sub-1", {
       userId: "user-1",
-      user: activeUser({ role: "player" }),
+      user: activeUser({ access: { portal: true, studio: false, brain: false, family: false } }),
     });
     const handlers = createGoogleLoginRouteHandlers(harness.deps);
 

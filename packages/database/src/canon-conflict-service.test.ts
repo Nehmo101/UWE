@@ -14,8 +14,6 @@ function page(overrides: Partial<CanonConflictPageInput> & Pick<CanonConflictPag
     title: overrides.title,
     slug: overrides.slug ?? overrides.id,
     type: overrides.type ?? "lore",
-    visibility: overrides.visibility ?? "dm_only",
-    publishStatus: overrides.publishStatus ?? "draft",
     canonicalStatus: overrides.canonicalStatus ?? "draft",
     content: overrides.content ?? "",
   };
@@ -28,8 +26,6 @@ describe("canon conflict service", () => {
         id: "p1",
         title: "Alte Lore",
         canonicalStatus: "deprecated",
-        publishStatus: "published",
-        visibility: "player_visible",
       }),
     ]);
 
@@ -43,8 +39,6 @@ describe("canon conflict service", () => {
         id: "npc1",
         title: "Gareth",
         type: "npc",
-        visibility: "player_visible",
-        publishStatus: "published",
         content: "Gareth ist tot seit Session 3.",
       }),
     ]);
@@ -71,8 +65,6 @@ describe("canon conflict service", () => {
         id: "p2",
         title: "Draft Handout",
         canonicalStatus: "draft",
-        publishStatus: "published",
-        visibility: "public",
       }),
     ]);
 

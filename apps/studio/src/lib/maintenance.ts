@@ -27,7 +27,7 @@ export async function enforceStudioMaintenance(pathname: string): Promise<void> 
     settings: settingsSnapshot.settings,
     surface: "studio",
     pathname,
-    context: resolveMaintenanceGateContext({ userRole: user?.role ?? null }),
+    context: resolveMaintenanceGateContext({ isOwner: user?.isOwner === true }),
   });
 
   if (decision.blocked) {

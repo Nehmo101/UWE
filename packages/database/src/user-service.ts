@@ -1,24 +1,29 @@
-import type { SafeUser, UweRole, WorldMemberRole } from "@uwe/auth";
-import { toSafeUser } from "@uwe/auth";
+import type { AreaAccess, SafeUser } from "@uwe/auth";
+import { toAreaAccess, toSafeUser } from "@uwe/auth";
 import {
-  generateOpaqueToken,
   hashOpaqueToken,
   hashPassword,
-  verifyOpaqueToken,
   verifyPassword,
 } from "@uwe/auth/server";
 import type { PrismaClient } from "./client";
-import type { UserRole } from "./generated/prisma/client";
 import { logAuditEvent } from "./audit-log-service";
-
-const DEFAULT_INVITE_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const DEFAULT_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+import {
+  acceptInvite,
+  createInvite,
+  createPasswordResetToken,
+  resetPasswordWithToken,
+  type CreateInviteInput,
+} from "./user-invite-service";
 
 export const USER_SAFE_SELECT = {
   id: true,
   displayName: true,
   email: true,
-  role: true,
+  isOwner: true,
+  portalAccess: true,
+  studioAccess: true,
+  brainAccess: true,
+  familyAccess: true,
   status: true,
   emailVerifiedAt: true,
   lastLoginAt: true,
@@ -32,25 +37,32 @@ export interface AdminUserView extends SafeUser {
   worldMemberships: Array<{
     id: string;
     worldId: string;
-    role: WorldMemberRole;
     characterName: string | null;
     world: { id: string; name: string; slug: string };
   }>;
 }
 
-export interface CreateManagedUserInput {
+/** The four checkboxes, all optional so callers only set what they mean. */
+export interface AreaAccessInput {
+  portalAccess?: boolean;
+  studioAccess?: boolean;
+  brainAccess?: boolean;
+  familyAccess?: boolean;
+}
+
+export interface CreateManagedUserInput extends AreaAccessInput {
   displayName: string;
   email?: string | null;
   password?: string | null;
-  role?: UserRole;
+  isOwner?: boolean;
   status?: "invited" | "active" | "disabled";
   actorUserId: string;
 }
 
-export interface UpdateManagedUserInput {
+export interface UpdateManagedUserInput extends AreaAccessInput {
   displayName?: string;
   email?: string | null;
-  role?: UserRole;
+  isOwner?: boolean;
   status?: "invited" | "active" | "disabled";
   forcePasswordChange?: boolean;
 }
@@ -110,7 +122,6 @@ export class UserService {
       worldMemberships: user.worldMemberships.map((membership) => ({
         id: membership.id,
         worldId: membership.worldId,
-        role: membership.role,
         characterName: membership.characterName,
         world: membership.world,
       })),
@@ -140,7 +151,6 @@ export class UserService {
       worldMemberships: user.worldMemberships.map((membership) => ({
         id: membership.id,
         worldId: membership.worldId,
-        role: membership.role,
         characterName: membership.characterName,
         world: membership.world,
       })),
@@ -171,7 +181,11 @@ export class UserService {
         displayName: input.displayName.trim(),
         email: input.email?.trim().toLowerCase() ?? null,
         passwordHash,
-        role: input.role ?? "player",
+        isOwner: input.isOwner ?? false,
+        portalAccess: input.portalAccess ?? false,
+        studioAccess: input.studioAccess ?? false,
+        brainAccess: input.brainAccess ?? false,
+        familyAccess: input.familyAccess ?? false,
         status: input.status ?? "active",
       },
       select: USER_SAFE_SELECT,
@@ -185,7 +199,8 @@ export class UserService {
       metadata: {
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: user.isOwner,
+        access: toAreaAccess(user),
       },
     });
 
@@ -213,9 +228,9 @@ export class UserService {
       }
     }
 
-    if (input.role && input.role !== existing.role && existing.role === "owner") {
+    if (input.isOwner === false && existing.isOwner) {
       const ownerCount = await this.db.user.count({
-        where: { role: "owner", status: "active", id: { not: userId } },
+        where: { isOwner: true, status: "active", id: { not: userId } },
       });
       if (ownerCount === 0) {
         throw new Error("LAST_OWNER_ROLE");
@@ -227,7 +242,11 @@ export class UserService {
       data: {
         ...(input.displayName !== undefined ? { displayName: input.displayName.trim() } : {}),
         ...(input.email !== undefined ? { email: input.email?.trim().toLowerCase() ?? null } : {}),
-        ...(input.role !== undefined ? { role: input.role } : {}),
+        ...(input.isOwner !== undefined ? { isOwner: input.isOwner } : {}),
+        ...(input.portalAccess !== undefined ? { portalAccess: input.portalAccess } : {}),
+        ...(input.studioAccess !== undefined ? { studioAccess: input.studioAccess } : {}),
+        ...(input.brainAccess !== undefined ? { brainAccess: input.brainAccess } : {}),
+        ...(input.familyAccess !== undefined ? { familyAccess: input.familyAccess } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
         ...(input.forcePasswordChange !== undefined
           ? { forcePasswordChange: input.forcePasswordChange }
@@ -236,16 +255,15 @@ export class UserService {
       select: USER_SAFE_SELECT,
     });
 
-    if (input.role !== undefined && input.role !== existing.role) {
+    if (hasAccessChanged(existing, updated)) {
       await logAuditEvent(this.db, {
         actorUserId: actorUserId ?? undefined,
-        action: "user_role_changed",
+        action: "user_access_changed",
         targetType: "user",
         targetId: userId,
         metadata: {
-          from: existing.role,
-          to: input.role,
-          scope: "global",
+          from: { isOwner: existing.isOwner, access: toAreaAccess(existing) },
+          to: { isOwner: updated.isOwner, access: toAreaAccess(updated) },
         },
       });
     }
@@ -263,9 +281,9 @@ export class UserService {
       return true;
     }
 
-    if (user.role === "owner") {
+    if (user.isOwner) {
       const activeOwners = await this.db.user.count({
-        where: { role: "owner", status: "active", id: { not: userId } },
+        where: { isOwner: true, status: "active", id: { not: userId } },
       });
       if (activeOwners === 0) {
         throw new Error("LAST_OWNER");
@@ -308,9 +326,9 @@ export class UserService {
       throw new Error("CANNOT_DELETE_SELF");
     }
 
-    if (user.role === "owner") {
+    if (user.isOwner) {
       const activeOwners = await this.db.user.count({
-        where: { role: "owner", status: "active", id: { not: userId } },
+        where: { isOwner: true, status: "active", id: { not: userId } },
       });
       if (activeOwners === 0) {
         throw new Error("LAST_OWNER");
@@ -327,7 +345,8 @@ export class UserService {
       metadata: {
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: user.isOwner,
+        access: toAreaAccess(user),
       },
     });
 
@@ -366,7 +385,6 @@ export class UserService {
   async upsertWorldMembership(input: {
     userId: string;
     worldId: string;
-    role: WorldMemberRole;
     characterName?: string | null;
   }) {
     return this.db.worldMembership.upsert({
@@ -379,11 +397,9 @@ export class UserService {
       create: {
         userId: input.userId,
         worldId: input.worldId,
-        role: input.role,
         characterName: input.characterName ?? null,
       },
       update: {
-        role: input.role,
         characterName: input.characterName !== undefined ? input.characterName : undefined,
       },
       include: {
@@ -518,47 +534,8 @@ export class UserService {
     return "ok";
   }
 
-  async createInvite(input: {
-    displayName: string;
-    email: string;
-    role?: UserRole;
-    actorUserId: string;
-    expiresAt?: Date;
-  }): Promise<InviteUserResult> {
-    const inviteToken = generateOpaqueToken();
-    const inviteTokenHash = hashOpaqueToken(inviteToken);
-    const expiresAt = input.expiresAt ?? new Date(Date.now() + DEFAULT_INVITE_TOKEN_TTL_MS);
-
-    const user = await this.db.user.create({
-      data: {
-        displayName: input.displayName.trim(),
-        email: input.email.trim().toLowerCase(),
-        role: input.role ?? "player",
-        status: "invited",
-        inviteTokenHash,
-        inviteTokenExpiresAt: expiresAt,
-      },
-      select: USER_SAFE_SELECT,
-    });
-
-    await logAuditEvent(this.db, {
-      actorUserId: input.actorUserId,
-      action: "user_invited",
-      targetType: "user",
-      targetId: user.id,
-      metadata: {
-        displayName: user.displayName,
-        email: user.email,
-        role: user.role,
-        expiresAt: expiresAt.toISOString(),
-      },
-    });
-
-    return {
-      user: toSafeUser(user),
-      inviteToken,
-      expiresAt,
-    };
+  async createInvite(input: CreateInviteInput): Promise<InviteUserResult> {
+    return createInvite(this.db, input);
   }
 
   async acceptInvite(input: {
@@ -566,63 +543,14 @@ export class UserService {
     inviteToken: string;
     password: string;
   }): Promise<SafeUser | null> {
-    const user = await this.db.user.findUnique({
-      where: { email: input.email.trim().toLowerCase() },
-    });
-
-    if (!user?.inviteTokenHash || !user.inviteTokenExpiresAt) {
-      return null;
-    }
-
-    if (user.inviteTokenExpiresAt <= new Date()) {
-      return null;
-    }
-
-    if (!verifyOpaqueToken(input.inviteToken, user.inviteTokenHash)) {
-      return null;
-    }
-
-    const passwordHash = await hashPassword(input.password);
-    const updated = await this.db.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        status: "active",
-        inviteTokenHash: null,
-        inviteTokenExpiresAt: null,
-        forcePasswordChange: false,
-      },
-      select: USER_SAFE_SELECT,
-    });
-
-    return toSafeUser(updated);
+    return acceptInvite(this.db, input);
   }
 
   async createPasswordResetToken(input: {
     email: string;
     expiresAt?: Date;
   }): Promise<{ resetToken: string; expiresAt: Date } | null> {
-    const user = await this.db.user.findUnique({
-      where: { email: input.email.trim().toLowerCase() },
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    const resetToken = generateOpaqueToken();
-    const resetTokenHash = hashOpaqueToken(resetToken);
-    const expiresAt = input.expiresAt ?? new Date(Date.now() + DEFAULT_RESET_TOKEN_TTL_MS);
-
-    await this.db.user.update({
-      where: { id: user.id },
-      data: {
-        resetTokenHash,
-        resetTokenExpiresAt: expiresAt,
-      },
-    });
-
-    return { resetToken, expiresAt };
+    return createPasswordResetToken(this.db, input);
   }
 
   async resetPasswordWithToken(input: {
@@ -630,48 +558,7 @@ export class UserService {
     resetToken: string;
     newPassword: string;
   }): Promise<boolean> {
-    const user = await this.db.user.findUnique({
-      where: { email: input.email.trim().toLowerCase() },
-    });
-
-    if (!user?.resetTokenHash || !user.resetTokenExpiresAt) {
-      return false;
-    }
-
-    if (user.resetTokenExpiresAt <= new Date()) {
-      return false;
-    }
-
-    if (!verifyOpaqueToken(input.resetToken, user.resetTokenHash)) {
-      return false;
-    }
-
-    const passwordHash = await hashPassword(input.newPassword);
-
-    await this.db.$transaction([
-      this.db.user.update({
-        where: { id: user.id },
-        data: {
-          passwordHash,
-          resetTokenHash: null,
-          resetTokenExpiresAt: null,
-          forcePasswordChange: false,
-        },
-      }),
-      this.db.session.deleteMany({ where: { userId: user.id } }),
-    ]);
-
-    await logAuditEvent(this.db, {
-      action: "password_reset",
-      targetType: "user",
-      targetId: user.id,
-      metadata: {
-        displayName: user.displayName,
-        method: "reset_token",
-      },
-    });
-
-    return true;
+    return resetPasswordWithToken(this.db, input);
   }
 
   /** Internal auth lookup — never expose the returned record via API. */
@@ -684,6 +571,19 @@ export function createUserService(db: PrismaClient): UserService {
   return new UserService(db);
 }
 
-export function isGlobalAdminRole(role: UweRole): boolean {
-  return role === "owner" || role === "admin";
+interface AccessSnapshot {
+  isOwner: boolean;
+  portalAccess: boolean;
+  studioAccess: boolean;
+  brainAccess: boolean;
+  familyAccess: boolean;
+}
+
+function hasAccessChanged(before: AccessSnapshot, after: AccessSnapshot): boolean {
+  const from = toAreaAccess(before);
+  const to = toAreaAccess(after);
+  return (
+    before.isOwner !== after.isOwner ||
+    (Object.keys(from) as Array<keyof AreaAccess>).some((area) => from[area] !== to[area])
+  );
 }

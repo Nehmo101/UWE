@@ -7,12 +7,12 @@ test.describe("Studio runtime perf", () => {
     await loginStudioForShellTests(page);
   });
 
-  test("records Web Vitals for /today", async ({ page }) => {
-    await page.goto("/today");
-    await expect(page.getByRole("heading", { name: "Heute", exact: true })).toBeVisible();
+  test("records Web Vitals for /worlds", async ({ page }) => {
+    await page.goto("/worlds");
+    await expect(page.getByRole("heading", { name: "Welten", exact: true })).toBeVisible();
 
     const vitals = await measureWebVitals(page);
-    recordPerfResult({ route: "studio:/today", ...vitals });
+    recordPerfResult({ route: "studio:/worlds", ...vitals });
 
     // Sanity: a metric was captured. Budget enforcement is done by
     // scripts/perf-budget-check.mjs against the recorded results file.

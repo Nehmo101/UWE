@@ -30,10 +30,7 @@ export async function runDesignAssistantTurnAction(
 ): Promise<ThemeGeneratorTurnResult> {
   await requireStudioActionAuth();
   const currentUser = await getCurrentAuthUser();
-  const user = {
-    userId: currentUser?.id ?? "system",
-    role: currentUser?.role ?? "owner",
-  };
+  const user = { userId: currentUser?.id ?? "system" };
 
   return runThemeGeneratorTurn(
     {
@@ -47,7 +44,7 @@ export async function runDesignAssistantTurnAction(
         { repo: createUweRepository() },
         {
           user,
-          providerMode: "auto",
+          providerMode: "local_rtx",
           contextMode: "general_chat",
           taskType: "generate_theme_palette",
           feature: "AI_KNOWLEDGE_USE",

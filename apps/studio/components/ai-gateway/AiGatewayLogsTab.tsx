@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect } from "react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
-import type { AdminUserOption, GatewayDashboard, SimulationCase, UsageLogEntry } from "./types";
+import type { AdminUserOption, GatewayDashboard, UsageLogEntry } from "./types";
 
 /** TODO(design-kit): Controlled Selects (User, Erfolg, Privacy-Feature) bleiben nativ — Kit-Select
     (Radix) ist hier direkt an lokalen State/Props gebunden, siehe gleiches Muster in JobsWorkspace.tsx. */
@@ -19,11 +19,6 @@ export function AiGatewayLogsTab({
   filteredUsage,
   usageLoading,
   loadFilteredUsage,
-  simulationForm,
-  setSimulationForm,
-  simulationCases,
-  simulationLoading,
-  runRoutingSimulation,
   runFallbackTest,
 }: {
   data: GatewayDashboard;
@@ -35,13 +30,6 @@ export function AiGatewayLogsTab({
   filteredUsage: UsageLogEntry[] | null;
   usageLoading: boolean;
   loadFilteredUsage: () => Promise<void>;
-  simulationForm: { simulateRtxOffline: boolean; privacyFeature: string; userId: string };
-  setSimulationForm: Dispatch<
-    SetStateAction<{ simulateRtxOffline: boolean; privacyFeature: string; userId: string }>
-  >;
-  simulationCases: SimulationCase[] | null;
-  simulationLoading: boolean;
-  runRoutingSimulation: () => Promise<void>;
   runFallbackTest: () => Promise<void>;
 }) {
   useEffect(() => {
@@ -108,48 +96,9 @@ export function AiGatewayLogsTab({
             </select>
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={simulationForm.simulateRtxOffline}
-              onChange={(e) =>
-                setSimulationForm((f) => ({ ...f, simulateRtxOffline: e.target.checked }))
-              }
-              className="h-4 w-4 rounded border-input"
-            />
-            RTX offline simulieren
-          </label>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ai-gateway-logs-privacy-feature">Privacy-Feature</Label>
-            <select
-              id="ai-gateway-logs-privacy-feature"
-              className={NATIVE_SELECT_CLASS}
-              value={simulationForm.privacyFeature}
-              onChange={(e) =>
-                setSimulationForm((f) => ({ ...f, privacyFeature: e.target.value }))
-              }
-            >
-              {Object.keys(data.config.privacyRules).map((feature) => (
-                <option key={feature} value={feature}>
-                  {feature}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void runRoutingSimulation()}
-            disabled={simulationLoading}
-          >
-            Routing simulieren
-          </Button>
           <Button type="button" variant="secondary" onClick={() => void runFallbackTest()}>
-            Fallback-Test
+            RTX-Erreichbarkeit prüfen
           </Button>
           <Button
             type="button"
@@ -160,15 +109,6 @@ export function AiGatewayLogsTab({
             Filter anwenden
           </Button>
         </div>
-        {simulationCases && (
-          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
-            {simulationCases.map((c) => (
-              <li key={c.id}>
-                {c.passed ? "✓" : "✗"} {c.label} — {c.detail}
-              </li>
-            ))}
-          </ul>
-        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

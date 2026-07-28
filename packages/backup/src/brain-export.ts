@@ -3,27 +3,25 @@ import { BRAIN_MODEL_NAMES } from "@uwe/product-contracts";
 
 /**
  * Non-destructive export of the owner-private Brain data (the models mapped to
- * `uwe-brain.db` in @uwe/product-contracts). This is the first, safe half of the
- * physical Wave-5 migration: read every Brain model out of the shared `uwe.db`
- * into a portable bundle. It NEVER writes to or deletes the source — the actual
- * cutover into a separate `uwe-brain.db` and the eventual drop of the old tables
- * are separate, individually-verified steps (see docs/engineering/brain-migration-runbook.md).
+ * `uwe-brain.db` in @uwe/product-contracts). It NEVER writes to or deletes the
+ * source (see docs/engineering/brain-migration-runbook.md).
  *
  * The key set is pinned to BRAIN_MODEL_NAMES at compile time (explicit Record)
  * and cross-checked at test time, so a new Brain model cannot silently escape
  * the export.
+ *
+ * Die geteilten Family-Modelle liegen seit Abschnitt G in `uwe-family.db` und
+ * haben ihren eigenen Export (`family-export.ts`) — sie gehören nicht mehr
+ * hierher.
  */
 export const BRAIN_EXPORT_MODEL_KEYS = [
   "MailTemplate", "MailRecipientGroup", "MailRecipient", "MailMessageLog", "MailAccount",
   "MailFolder", "MailInboxMessage", "MailAttachment", "MailPriorityScore", "MailAiAction",
   "MailUnsubscribeRequest", "MailAuditLog", "MailDraft", "MailRule", "MailVipSender",
   "CaptureEntry", "PersonalProject", "ProjectStep", "ProjectImage", "WorkshopProject",
-  "WorkshopPaintRecipe", "WorkshopPrintProfile", "WorkshopTerrainRental", "ContractExpense",
+  "WorkshopPaintRecipe", "WorkshopPrintProfile", "WorkshopTerrainRental",
   "HardwareDevice", "PersonalBrainDocument", "PersonalBrainChunk", "PersonalBrainFact",
-  "AdminEntityLink", "CalendarFeed", "CalendarEvent", "MiniatureCollectionItem",
-  "DocumentTemplate", "ResearchSession", "ResearchSource", "Recipe", "RecipeIngredient",
-  "MealPlanWeek", "MealPlanEntry", "ShoppingList", "ShoppingListItem", "BringConnection",
-  "ScanDocument", "MaintenanceTask", "PantryItem",
+  "AdminEntityLink", "MiniatureCollectionItem", "ResearchSession", "ResearchSource",
   "BrainAssistantProfile", "BrainChatConversation", "BrainChatMessage", "BrainChatAttachment",
 ] as const;
 
@@ -56,28 +54,14 @@ function brainModelReaders(db: BrainPrismaClient): BrainModelReaders {
     WorkshopPaintRecipe: () => db.workshopPaintRecipe.findMany(),
     WorkshopPrintProfile: () => db.workshopPrintProfile.findMany(),
     WorkshopTerrainRental: () => db.workshopTerrainRental.findMany(),
-    ContractExpense: () => db.contractExpense.findMany(),
     HardwareDevice: () => db.hardwareDevice.findMany(),
     PersonalBrainDocument: () => db.personalBrainDocument.findMany(),
     PersonalBrainChunk: () => db.personalBrainChunk.findMany(),
     PersonalBrainFact: () => db.personalBrainFact.findMany(),
     AdminEntityLink: () => db.adminEntityLink.findMany(),
-    CalendarFeed: () => db.calendarFeed.findMany(),
-    CalendarEvent: () => db.calendarEvent.findMany(),
     MiniatureCollectionItem: () => db.miniatureCollectionItem.findMany(),
-    DocumentTemplate: () => db.documentTemplate.findMany(),
     ResearchSession: () => db.researchSession.findMany(),
     ResearchSource: () => db.researchSource.findMany(),
-    Recipe: () => db.recipe.findMany(),
-    RecipeIngredient: () => db.recipeIngredient.findMany(),
-    MealPlanWeek: () => db.mealPlanWeek.findMany(),
-    MealPlanEntry: () => db.mealPlanEntry.findMany(),
-    ShoppingList: () => db.shoppingList.findMany(),
-    ShoppingListItem: () => db.shoppingListItem.findMany(),
-    BringConnection: () => db.bringConnection.findMany(),
-    ScanDocument: () => db.scanDocument.findMany(),
-    MaintenanceTask: () => db.maintenanceTask.findMany(),
-    PantryItem: () => db.pantryItem.findMany(),
     BrainAssistantProfile: () => db.brainAssistantProfile.findMany(),
     BrainChatConversation: () => db.brainChatConversation.findMany(),
     BrainChatMessage: () => db.brainChatMessage.findMany(),

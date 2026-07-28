@@ -1,7 +1,7 @@
 import type { SystemStatus } from "./system-status";
 import type { RtxExposureAssessment, StudioSecurityAssessment } from "./studio-security";
 import { countOpenSetupSteps, type HardwareUrlWarning } from "./hardware-utils";
-import type { UserRoleCounts } from "./security-dashboard";
+import type { AreaAccessCounts } from "./security-dashboard";
 
 export type HomelabServiceId =
   | "uwe_studio"
@@ -251,7 +251,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 5,
-          instruction: "Studio /today und /hardware öffnen — System-Ampel muss grün sein",
+          instruction: "Brain /today und /system öffnen — System-Ampel muss grün sein",
         },
       ],
     },
@@ -428,7 +428,8 @@ export function buildHomelabSecurityChecklist(input: {
   system: SystemStatus;
   studioSecurity: StudioSecurityAssessment;
   rtxExposure: RtxExposureAssessment;
-  roleCounts: UserRoleCounts;
+  accessCounts: AreaAccessCounts;
+  totalUsers: number;
   hardwareUrlWarnings: HardwareUrlWarning[];
   env?: NodeJS.ProcessEnv;
 }): HomelabSecurityCheckItem[] {
@@ -439,12 +440,8 @@ export function buildHomelabSecurityChecklist(input: {
     input.rtxExposure.severity === "critical" ||
     input.hardwareUrlWarnings.some((warning) => warning.field === "publicUrl");
 
-  const ownerCount = input.roleCounts.owner;
-  const totalUsers =
-    input.roleCounts.owner +
-    input.roleCounts.admin +
-    input.roleCounts.dm +
-    input.roleCounts.player;
+  const ownerCount = input.accessCounts.owner;
+  const totalUsers = input.totalUsers;
 
   return [
     {
@@ -459,10 +456,13 @@ export function buildHomelabSecurityChecklist(input: {
     },
     {
       id: "allowed_users",
-      label: "Erlaubte User (Owner/Admin)",
+      label: "Erlaubte Zugänge",
       ok: ownerCount >= 1 && totalUsers <= 20,
       severity: ownerCount === 0 ? "error" : totalUsers > 20 ? "warn" : "ok",
-      message: `${totalUsers} User gesamt (${ownerCount} Owner, ${input.roleCounts.admin} Admin, ${input.roleCounts.dm} DM, ${input.roleCounts.player} Player)`,
+      message:
+        `${totalUsers} Konten gesamt (${ownerCount} Owner · ` +
+        `Portal ${input.accessCounts.portal} · Studio ${input.accessCounts.studio} · ` +
+        `Brain ${input.accessCounts.brain} · Family ${input.accessCounts.family})`,
       manual: false,
     },
     {

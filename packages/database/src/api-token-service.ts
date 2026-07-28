@@ -1,7 +1,7 @@
 import type { PrismaClient } from "./client";
-import type { ApiTokenScopeName, UserRole } from "./generated/prisma/client";
+import type { ApiTokenScopeName } from "./generated/prisma/client";
 import {
-  assertAdminScopesForRole,
+  assertAdminScopesForOwner,
   getApiTokenPrefix,
   type ApiTokenScope,
 } from "@uwe/auth";
@@ -27,7 +27,8 @@ export interface ApiTokenView {
 
 export interface CreateApiTokenInput {
   userId: string;
-  userRole: UserRole;
+  /** Whether the creating/owning account is the owner (admin scopes need it). */
+  isOwner: boolean;
   name: string;
   scopes: ApiTokenScope[];
   expiresAt?: Date | null;
@@ -42,7 +43,8 @@ export interface CreateApiTokenResult {
 export interface ResolvedApiToken {
   id: string;
   userId: string;
-  userRole: UserRole;
+  /** Whether the creating/owning account is the owner (admin scopes need it). */
+  isOwner: boolean;
   scopes: ApiTokenScope[];
   name: string;
 }
@@ -85,7 +87,7 @@ export class ApiTokenService {
   }
 
   async create(input: CreateApiTokenInput): Promise<CreateApiTokenResult> {
-    assertAdminScopesForRole(input.userRole, input.scopes);
+    assertAdminScopesForOwner(input.isOwner, input.scopes);
 
     const plaintextToken = generateApiTokenValue();
     const tokenHash = hashApiToken(plaintextToken);
@@ -136,7 +138,7 @@ export class ApiTokenService {
   async rotate(
     tokenId: string,
     actorUserId: string,
-    userRole: UserRole,
+    isOwner: boolean,
   ): Promise<CreateApiTokenResult> {
     const existing = await this.db.apiToken.findUnique({
       where: { id: tokenId },
@@ -149,7 +151,7 @@ export class ApiTokenService {
     const scopes = existing.scopes.map((entry) => fromScopeName(entry.scope));
     const created = await this.create({
       userId: existing.userId,
-      userRole,
+      isOwner,
       name: `${existing.name} (rotiert)`,
       scopes,
       expiresAt: existing.expiresAt,
@@ -218,7 +220,7 @@ export class ApiTokenService {
     return {
       id: record.id,
       userId: record.userId,
-      userRole: record.user.role,
+      isOwner: record.user.isOwner,
       scopes: record.scopes.map((entry) => fromScopeName(entry.scope)),
       name: record.name,
     };

@@ -55,10 +55,9 @@ describe("page template service (DB-backed)", () => {
       name: "Tavernen-Special",
       description: "Eigene Vorlage",
       pageType: "location",
-      defaultVisibility: "dm_only",
       blocks: [
-        { type: "rich_text", visibility: "player_visible", content: "## Schankraum" },
-        { type: "gm_note", visibility: "dm_only", content: "## Geheimgang" },
+        { type: "rich_text", content: "## Schankraum" },
+        { type: "rich_text", content: "## Geheimgang" },
       ],
     });
     assert.equal(created.isSystem, false);
@@ -101,7 +100,7 @@ describe("page template service (DB-backed)", () => {
         name: "Kaputt 2",
         pageType: "lore",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        blocks: [{ type: "bogus", visibility: "dm_only", content: "" } as any],
+        blocks: [{ type: "bogus", content: "" } as any],
       }),
       /unbekannter Block-Typ/,
     );

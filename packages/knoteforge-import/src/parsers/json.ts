@@ -48,8 +48,6 @@ function parseEntity(raw: unknown, index: number): KnoteForgeExport["entities"][
     gmContent: asOptionalString(raw.gmContent),
     tags: asStringArray(raw.tags),
     aliases: asStringArray(raw.aliases),
-    visibility: asOptionalString(raw.visibility),
-    publishStatus: asOptionalString(raw.publishStatus),
     parentId: asOptionalString(raw.parentId),
     relations: Array.isArray(raw.relations)
       ? raw.relations
@@ -152,8 +150,6 @@ function parseRawInputEntry(
     title: titleFromRawInput(raw),
     content: asOptionalString(raw.raw_text) ?? "",
     gmContent: asOptionalString(raw.structured_preview) ?? undefined,
-    visibility: "dm_only",
-    publishStatus: "draft",
     metadata,
   };
 }

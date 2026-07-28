@@ -151,6 +151,7 @@ function normalizeAppPath(
 const DEV_STUDIO_URL = "http://localhost:3000";
 const DEV_PORTAL_URL = "http://localhost:3001";
 const DEV_BRAIN_URL = "http://localhost:3002";
+const DEV_FAMILY_URL = "http://localhost:3004";
 
 function parsePublicUrlHost(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -250,6 +251,18 @@ export function resolveBrainPublicBaseUrl(env: NodeJS.ProcessEnv = process.env):
   return DEV_BRAIN_URL;
 }
 
+/**
+ * Public base URL der Family-App (Abschnitt G). Wie Brain eine eigene lokale
+ * App, nur nicht owner-privat: Zugang hat, wer das Häkchen `Family` trägt.
+ * Ohne `NEXT_PUBLIC_FAMILY_URL` zeigt der Link auf den Loopback-Standard und
+ * ist von außen absichtlich nicht erreichbar — dieser Resolver berechnet nur
+ * das Ziel, nicht die Erreichbarkeit.
+ */
+export function resolveFamilyPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const explicit = withRuntimeEnvOverrides(env).NEXT_PUBLIC_FAMILY_URL?.trim()?.replace(/\/$/, "");
+  return explicit || DEV_FAMILY_URL;
+}
+
 /** Logged-in Portal entry — relative on Portal, absolute when linked from Studio. */
 export function resolvePortalSessionHref(
   env: NodeJS.ProcessEnv = process.env,
@@ -291,8 +304,13 @@ export function resolvePortalLoginHref(
   return `${resolvePortalPublicBaseUrl(env)}/login`;
 }
 
-/** Logged-in Studio work area — not the marketing landing at `/`. */
-export const STUDIO_SESSION_ENTRY_PATH = "/today";
+/**
+ * Logged-in Studio work area — not the marketing landing at `/`.
+ *
+ * Die Welten-Liste, nicht mehr „Heute": das Daily Admin OS liegt in Brain
+ * (Abschnitt H1), Studio ist DM-Werkzeug.
+ */
+export const STUDIO_SESSION_ENTRY_PATH = "/worlds";
 
 /** Legacy unified-path mount; `/studio` redirects to {@link STUDIO_SESSION_ENTRY_PATH}. */
 const STUDIO_LEGACY_MOUNT_PATH = "/studio";

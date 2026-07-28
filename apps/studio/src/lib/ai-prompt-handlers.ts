@@ -3,7 +3,6 @@ import {
   AiPrivacyError,
   AiProviderError,
   AiRouterError,
-  contextModeRequiresLocalContext,
   InferenceUrlBlockedError,
   isRtxReadinessReady,
   resolveAiBrainSettings,
@@ -84,7 +83,7 @@ export type AiPromptExecutionResult =
 
 export async function executeAiPrompt(
   body: AiPromptRequestBody,
-  user?: { userId: string; role: string },
+  user?: { userId: string },
 ): Promise<AiPromptExecutionResult> {
   const prompt = body.prompt?.trim();
   if (!prompt) {
@@ -120,11 +119,9 @@ export async function executeAiPrompt(
     throw new Error("KI ist deaktiviert.");
   }
 
-  const needsLocalRtx =
-    body.providerMode === "local_rtx" ||
-    (body.providerMode === "auto" && contextModeRequiresLocalContext(body.contextMode));
-
-  if (needsLocalRtx && contextModeRequiresLocalContext(body.contextMode)) {
+  // Every request needs the RTX host now — there is no other backend to fall
+  // back to, so an offline host always means "queue it and retry later".
+  {
     const rtxReady = await isRtxReadinessReady({ useMock: body.useMock, prisma });
     if (!rtxReady) {
       const jobs = createJobService(prisma);
@@ -162,7 +159,7 @@ export async function executeAiPrompt(
     );
   }
 
-  const gatewayUser = { userId: user.userId, role: user.role };
+  const gatewayUser = { userId: user.userId };
 
   const routed = await executeAiGatewayRequest(
     {
@@ -173,7 +170,7 @@ export async function executeAiPrompt(
     },
     {
       user: gatewayUser,
-      providerMode: body.providerMode,
+      providerMode: "local_rtx",
       contextMode: body.contextMode,
       taskType: resolvePromptTaskType(body.contextMode),
       worldSlug: body.worldSlug?.trim() || undefined,
@@ -230,7 +227,7 @@ export function aiPromptErrorResponse(error: unknown): NextResponse {
 
 export async function postAiPrompt(
   body: AiPromptRequestBody,
-  user?: { userId: string; role: string },
+  user?: { userId: string },
 ) {
   try {
     const result = await executeAiPrompt(body, user);

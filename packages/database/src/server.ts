@@ -27,7 +27,6 @@ export {
   createPage,
   getPageBySlug,
   listPagesByWorld,
-  getPublicPageForPortal,
   getDmPage,
   getDbWorldBySlug,
   getDbPageById,
@@ -39,10 +38,6 @@ export {
   listPageLinksForPage,
   updatePageLink,
   deletePageLink,
-  PORTAL_BLOCK_VISIBILITIES,
-  PORTAL_PAGE_VISIBILITIES,
-  isPortalPageVisibility,
-  isPublishedForPortal,
 } from "./repository";
 
 export {
@@ -285,8 +280,6 @@ export type {
   Page as DbPage,
   PageLink as DbPageLink,
   PageType,
-  PublishStatus,
-  Visibility,
   World as DbWorld,
   CreateWorldInput,
   CreateCampaignInput,
@@ -324,52 +317,9 @@ export {
   ContentBlockTypeEnum,
   AssetTypeEnum,
   PageTypeEnum,
-  PublishStatusEnum,
-  RevealStateEnum,
-  SecretLevelEnum,
-  VisibilityEnum,
 } from "./repository";
 
-export {
-  isPlayerExposableContent,
-  isBlockPlayerExposable,
-  isPagePlayerExposable,
-  isSecretVisibleToPlayer,
-  isDmOnlyVisibility,
-  isPlayerPortalVisibility,
-  mapPublishStatusToContentStatus,
-  sanitizeForPlayer,
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-  PLAYER_PORTAL_VISIBILITIES,
-  type ContentAccessFields,
-  type ContentStatus,
-  type ContentVisibility,
-  type SanitizedPage,
-  type SecretLevel,
-  type RevealState,
-} from "./content-access";
-
-export {
-  buildPublicSearchIndex,
-  buildStudioSearchIndex,
-  buildSearchIndexForScope,
-} from "./search-index";
-
-export {
-  filterBlocksForContext,
-  filterAssetsForContext,
-  isPageAccessible,
-  isPortalAssetVisibility,
-  isPortalBlockVisibility,
-  isAssetAccessible,
-  shouldHidePageTitle,
-  PORTAL_ASSET_VISIBILITIES,
-  type AccessContext,
-  type ShareAccessGrant,
-  type PortalAccessOptions,
-  type PageAccessOptions,
-} from "./permissions";
+export { sanitizeForPlayer, type SanitizedPage } from "./content-access";
 
 export {
   NAV_CATEGORIES,
@@ -417,7 +367,6 @@ export {
   UserService,
   createUserService,
   USER_SAFE_SELECT,
-  isGlobalAdminRole,
 } from "./user-service";
 export {
   evaluatePortalAccessForUser,
@@ -787,14 +736,6 @@ export type {
   SetupSettingSource,
 } from "./owner-setup-service";
 
-export { getAdminOnboardingChecklist } from "./admin-onboarding-checklist-service";
-
-export type {
-  AdminChecklistItem,
-  AdminOnboardingChecklist,
-  ChecklistItemStatus as AdminChecklistItemStatus,
-} from "./admin-onboarding-checklist-service";
-
 export {
   CAMPAIGN_JOB_PRESETS,
   resolveCampaignPresetHref,
@@ -843,7 +784,6 @@ export type {
 export {
   createPortalDashboardService,
   PortalDashboardService,
-  sessionUnlockLabel,
   navCategoryForPageType as portalDashboardNavCategory,
 } from "./portal-dashboard-service";
 
@@ -866,7 +806,6 @@ export {
   createWorldInspectorService,
   WorldInspectorService,
   buildCanonFindings,
-  buildSafetyFindings,
   sortFindings,
 } from "./world-inspector";
 
@@ -877,9 +816,6 @@ export type {
   InspectorFixAction,
   InspectorFixSuggestion,
   InspectorSeverity,
-  PortalVisibleAsset,
-  PortalVisiblePage,
-  ShareLinkOverview,
   WorldInspectorReport,
 } from "./world-inspector";
 
@@ -980,7 +916,6 @@ export {
   LabelSourceTypeEnum,
   normalizeLabel,
   applyLayoutToContent,
-  assertPlayerSafeExport,
   buildLabelContentFromPage,
   buildLabelContentFromBlock,
   buildLabelContentFromAsset,
@@ -1082,14 +1017,7 @@ export {
 
 export type { LabelFitStatus, LabelFitResult, LabelFitOptions } from "./label-fit-service";
 
-export {
-  analyzeLabelSafety,
-  stripDmOnlyForPlayer,
-  removeDmOnlyElements,
-  removeImagesFromContent,
-} from "./label-safety";
 
-export type { LabelSafetyWarning, LabelSafetyReport } from "./label-safety";
 
 export {
   resolveLabelImageProvider,
@@ -1132,22 +1060,7 @@ export {
   type LabelExportWarning,
 } from "./label-export-warnings";
 
-export {
-  createShareLinkService,
-  ShareLinkService,
-  buildShareUrl,
-  isShareLinkActive,
-} from "./share-link-service";
 
-export type {
-  CreateShareLinkInput,
-  UpdateShareLinkInput,
-  ShareLinkValidationResult,
-  ShareResolvedTarget,
-  ShareAccessMeta,
-  ShareLink as DbShareLink,
-  ShareTargetType,
-} from "./share-link-service";
 
 export {
   createSettingsService,
@@ -1163,15 +1076,11 @@ export {
   resolveEffectiveBackupsPath,
   resolveEffectiveExportsPath,
   resolveSessionInactivityTimeoutMs,
-  buildAiProviderKeyUpdate,
-  resolveDecryptedProviderKeys,
   getPersistentPathConfiguration,
-  isGuestPortalAccessAllowed,
   isMaintenanceModeActive,
   isPortalLocked,
   isStudioLocked,
   isPortalGloballyEnabled,
-  isPublicSharingEnabled,
   resolveLocalOnlyMode,
 } from "./settings-service";
 
@@ -1231,25 +1140,12 @@ export type {
 export {
   getBackupFreshnessStatus,
   getProductionSafetyWarnings,
-  isPublicPortalExposureEnabled,
   isRunDbSeedUnsafe,
   isStudioApiTokenMissing,
   isWeakAuthSecret,
 } from "./production-safety";
 
 export type { ProductionSafetyWarning } from "./production-safety";
-
-export {
-  getOwnerCockpitSnapshot,
-  OWNER_COCKPIT_ERROR_SOURCE_LABELS,
-} from "./owner-cockpit-service";
-
-export type {
-  OwnerCockpitAiUsageSummary,
-  OwnerCockpitErrorItem,
-  OwnerCockpitSnapshot,
-  OwnerCockpitWorldRow,
-} from "./owner-cockpit-service";
 
 export {
   listUnifiedActivity,
@@ -1268,7 +1164,7 @@ export {
   assertSecurityDashboardHasNoSecrets,
   buildSecurityWarnings,
   getSecurityDashboardStatus,
-  getUserRoleCounts,
+  getAreaAccessCounts,
 } from "./security-dashboard";
 
 export type {
@@ -1276,15 +1172,9 @@ export type {
   SecurityDashboardStatus,
   SecurityWarning,
   SecurityWarningSeverity,
-  UserRoleCounts,
+  AreaAccessCounts,
 } from "./security-dashboard";
 
-export { scanPublicContentLeaks } from "./public-leak-scanner";
-export type {
-  PublicLeakFinding,
-  PublicLeakScanResult,
-  PublicLeakSeverity,
-} from "./public-leak-scanner";
 
 export type {
   UweSystemSettings,
@@ -1294,7 +1184,6 @@ export type {
   CampaignSettings,
   PortalSettings,
   AiSettings,
-  AiProviderKeyPlaceholder,
   StorageSettings,
   BackupSettings,
   BriefingSettings,
@@ -1305,7 +1194,6 @@ export type {
   ImageStudioPortalSettings,
   MailSmtpStatus,
   MailSmtpStoredCredentials,
-  AiProviderStoredKey,
   PersistentPathConfiguration,
   PersistentPathEntry,
   PersistentPathSource,
@@ -1317,7 +1205,6 @@ export {
   createSoundboardService,
   SoundboardService,
   extractYouTubeVideoId,
-  isSoundboardButtonVisibleInPortal,
   resolveThumbnail,
   toDmSoundboardButtonView,
   toPortalSoundboardButtonView,
@@ -1382,28 +1269,9 @@ export {
   type StudioWorldDashboardWidgetType,
 } from "./dashboard-layout-types";
 
-export {
-  createReviewService,
-  ReviewService,
-  CONTENT_REVIEW_STATUS_LABELS,
-  CONTENT_REVIEW_SOURCE_LABELS,
-} from "./review-service";
 
-export type {
-  ContentReviewView,
-  ReviewCommentView,
-  CreateContentReviewInput,
-  ListReviewsOptions,
-} from "./review-service";
 
-export {
-  resolveReview,
-  syncAiProposalReview,
-  syncPlayerNoteReview,
-  createPortalUnlockReview,
-} from "./review-bridge";
 
-export type { ResolveReviewResult } from "./review-bridge";
 
 export {
   createSpotifyConnectionService,
@@ -1594,7 +1462,7 @@ export {
 
 export type { ResolvedAdminEntityLink } from "./admin-entity-link-resolver";
 
-export type { ContractBillingInterval } from "./generated/prisma-brain/client";
+export type { ContractBillingInterval } from "./generated/prisma-family/client";
 
 export {
   buildAiUsageContractName,
@@ -1754,10 +1622,7 @@ export {
 export {
   assertPersonalBrainLocalOnly,
   isPersonalBrainContextAllowedForProvider,
-  CLOUD_ALLOWED_CONTEXT_MODES,
 } from "./personal-brain-privacy";
-
-export type { CloudAllowedContextMode } from "./personal-brain-privacy";
 
 export {
   DEFAULT_GENERATOR_PRESETS,
@@ -1797,25 +1662,19 @@ export type {
 export {
   createBrainStoreService,
   BrainStoreService,
-  BRAIN_VISIBILITY_LABELS,
   BRAIN_STATUS_LABELS,
   BRAIN_SOURCE_LABELS,
   BRAIN_DOCUMENT_TYPE_LABELS,
   BRAIN_FACT_TYPE_LABELS,
-  PORTAL_BRAIN_VISIBILITIES,
-  filterBrainByVisibility,
-  isPortalBrainVisibility,
   BrainDocumentTypeEnum,
   BrainFactTypeEnum,
   BrainLinkSourceTypeEnum,
   BrainLinkTargetTypeEnum,
   BrainSourceEnum,
   BrainStatusEnum,
-  BrainVisibilityEnum,
 } from "./brain-store-service";
 
 export type {
-  BrainAccessContext,
   BrainDocumentWithRelations,
   BrainFactWithRelations,
   CreateBrainDocumentInput,
@@ -1833,7 +1692,6 @@ export type {
   BrainLinkTargetType,
   BrainSource,
   BrainStatus,
-  BrainVisibility,
 } from "./brain-store-service";
 
 export {
@@ -2060,12 +1918,9 @@ export {
   createDocumentTemplateService,
   DocumentTemplateService,
   DOCUMENT_TEMPLATE_CATEGORY_LABELS,
-  DOCUMENT_TEMPLATE_BRAIN_CATEGORY,
   DocumentTemplateCategoryEnum,
   extractDocumentTemplateVariables,
   normalizeDocumentTemplateVariables,
-  fillDocumentTemplate,
-  MissingTemplateVariablesError,
 } from "./document-template-service";
 
 export type {
@@ -2074,9 +1929,6 @@ export type {
   ListDocumentTemplatesOptions,
   DocumentTemplate,
   DocumentTemplateCategory,
-  FillDocumentTemplateInput,
-  FillDocumentTemplateOptions,
-  FilledDocumentTemplate,
 } from "./document-template-service";
 
 export { buildDocumentPrintHtml, buildDocumentPrintStyles } from "./document-print-export";

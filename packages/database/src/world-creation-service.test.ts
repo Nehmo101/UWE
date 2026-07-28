@@ -39,19 +39,21 @@ describe("world creation service", () => {
       displayName: "World Owner",
       email: "world-owner@uwe.local",
       password: "test-password-123456",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createWorldCreationService(db);
     const world = await service.createWorldForUser(owner.id, {
       name: "Neue Kampagne",
       description: "Testwelt",
-      guestModeEnabled: true,
     });
 
     assert.equal(world.name, "Neue Kampagne");
     assert.equal(world.slug, "neue-kampagne");
-    assert.equal(world.guestModeEnabled, true);
     assert.equal(world.isSandbox, false);
     assert.equal(world.templateId, "blank");
     assert.equal(world.seededPageCount, 0);
@@ -60,7 +62,7 @@ describe("world creation service", () => {
     const membership = await db.worldMembership.findUnique({
       where: { userId_worldId: { userId: owner.id, worldId: world.id } },
     });
-    assert.equal(membership?.role, "owner");
+    assert.ok(membership);
 
     await db.$disconnect();
   });
@@ -73,7 +75,11 @@ describe("world creation service", () => {
       displayName: "DnD Owner",
       email: "dnd-owner@uwe.local",
       password: "test-password-123456",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createWorldCreationService(db);
@@ -109,7 +115,11 @@ describe("world creation service", () => {
       displayName: "Wargame Owner",
       email: "wargame-owner@uwe.local",
       password: "test-password-123456",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createWorldCreationService(db);
@@ -137,19 +147,21 @@ describe("world creation service", () => {
       displayName: "Sandbox Owner",
       email: "sandbox-owner@uwe.local",
       password: "test-password-123456",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createWorldCreationService(db);
     const world = await service.createWorldForUser(owner.id, {
       name: "Sandbox Test",
       templateId: "wiki",
-      guestModeEnabled: true,
       isSandbox: true,
     });
 
     assert.equal(world.isSandbox, true);
-    assert.equal(world.guestModeEnabled, false);
     assert.equal(world.seededPageCount, 3);
 
     const accessible = await auth.listAccessibleWorldsForUser(owner.id);
@@ -168,7 +180,11 @@ describe("world creation service", () => {
       displayName: "Owner 2",
       email: "world-owner-2@uwe.local",
       password: "test-password-123456",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const service = createWorldCreationService(db);

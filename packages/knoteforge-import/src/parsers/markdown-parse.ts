@@ -233,7 +233,6 @@ export function markdownDocumentsToEntities(
       tags,
       aliases: parseTags(document.frontmatter.aliases),
       visibility: document.frontmatter.visibility ?? null,
-      publishStatus: document.frontmatter.publishstatus ?? null,
       metadata: {
         importFormat: "markdown",
         ...(document.frontmatter.source ? { sourceFile: document.frontmatter.source } : {}),

@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import {
-  createBrainStoreService,
-  filterBrainByVisibility,
-  isPortalBrainVisibility,
-} from "./brain-store-service";
+import { createBrainStoreService } from "./brain-store-service";
 import { createPrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
 import { createUweRepository } from "./repository";
@@ -42,8 +38,6 @@ describe("UWE brain store", () => {
       title: "Test Location",
       slug: "test-location",
       type: "location",
-      visibility: "player_visible",
-      publishStatus: "published",
     });
     pageId = page.id;
 
@@ -54,7 +48,6 @@ describe("UWE brain store", () => {
       title: "DM-only lore document",
       content: "Secret background for the location.",
       documentType: "location_facts",
-      visibility: "dm_only",
       source: "manual",
       status: "canonical",
     });
@@ -69,7 +62,6 @@ describe("UWE brain store", () => {
       title: "Player-visible recap",
       content: "The party visited the town square.",
       documentType: "session_summary",
-      visibility: "player_visible",
       source: "session_summary",
       status: "canonical",
     });
@@ -84,7 +76,6 @@ describe("UWE brain store", () => {
       title: "Hidden NPC motive",
       content: "The mayor is secretly a werewolf.",
       factType: "npc",
-      visibility: "dm_only",
       status: "canonical",
     });
     factId = fact.id;
@@ -94,7 +85,6 @@ describe("UWE brain store", () => {
       title: "Public town fact",
       content: "The town is known for its market.",
       factType: "location",
-      visibility: "public",
       status: "canonical",
     });
 
@@ -115,24 +105,8 @@ describe("UWE brain store", () => {
 
   it("lists all documents for DM context", async () => {
     const brain = createBrainStoreService(databaseUrl);
-    const documents = await brain.listDocuments(worldSlug, { accessContext: "dm" });
+    const documents = await brain.listDocuments(worldSlug, {});
     assert.ok(documents.length >= 2);
-  });
-
-  it("filters documents by portal visibility", async () => {
-    const brain = createBrainStoreService(databaseUrl);
-    const portalDocs = await brain.listDocuments(worldSlug, { accessContext: "portal" });
-    assert.ok(portalDocs.every((doc) => isPortalBrainVisibility(doc.visibility)));
-    assert.ok(portalDocs.some((doc) => doc.visibility === "player_visible"));
-    assert.ok(!portalDocs.some((doc) => doc.visibility === "dm_only"));
-  });
-
-  it("filters facts by portal visibility", async () => {
-    const brain = createBrainStoreService(databaseUrl);
-    const portalFacts = await brain.listFacts(worldSlug, { accessContext: "portal" });
-    assert.ok(portalFacts.every((fact) => isPortalBrainVisibility(fact.visibility)));
-    assert.ok(portalFacts.some((fact) => fact.visibility === "public"));
-    assert.ok(!portalFacts.some((fact) => fact.visibility === "dm_only"));
   });
 
   it("creates and updates a brain document", async () => {
@@ -179,44 +153,7 @@ describe("UWE brain store", () => {
     assert.ok(summary.linkCount >= 1);
   });
 
-  it("persists and queries visibility correctly", async () => {
-    const brain = createBrainStoreService(databaseUrl);
-    const created = await brain.createDocument({
-      worldId,
-      title: "Visibility test doc",
-      visibility: "player_visible",
-      status: "draft",
-    });
-    assert.equal(created.visibility, "player_visible");
 
-    const fetched = await brain.getDocumentById(created.id);
-    assert.ok(fetched);
-    assert.equal(fetched.visibility, "player_visible");
-
-    const portalDocs = await brain.listDocuments(worldSlug, { accessContext: "portal" });
-    assert.ok(portalDocs.some((doc) => doc.id === created.id));
-
-    const dmOnly = await brain.createFact({
-      worldId,
-      title: "Secret fact",
-      visibility: "dm_only",
-      status: "draft",
-    });
-    const portalFacts = await brain.listFacts(worldSlug, { accessContext: "portal" });
-    assert.ok(!portalFacts.some((fact) => fact.id === dmOnly.id));
-  });
-
-  it("filterBrainByVisibility helper respects context", () => {
-    const items = [
-      { id: "1", visibility: "dm_only" as const },
-      { id: "2", visibility: "player_visible" as const },
-      { id: "3", visibility: "public" as const },
-    ];
-    const portal = filterBrainByVisibility(items, "portal");
-    assert.equal(portal.length, 2);
-    const dm = filterBrainByVisibility(items, "dm");
-    assert.equal(dm.length, 3);
-  });
 
   it("updates a brain fact", async () => {
     const brain = createBrainStoreService(databaseUrl);

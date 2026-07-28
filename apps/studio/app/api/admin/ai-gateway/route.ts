@@ -1,15 +1,10 @@
 import { guardStudioAdminApiRequest } from "@/src/lib/studio-admin-auth";
 import {
-  deleteAiCloudProvider,
-  deleteAiUserGrant,
   getAiGatewayAccessStatus,
   getAiGatewayDashboard,
   getAiGatewayUsage,
   patchAiGatewayConfig,
   postAiGatewayFallbackTest,
-  postAiGatewaySimulate,
-  upsertAiCloudProvider,
-  upsertAiUserGrant,
 } from "@/src/lib/ai-gateway-handlers";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
@@ -59,35 +54,12 @@ export async function POST(request: Request) {
   const action = url.searchParams.get("action");
   const body = (await request.json()) as Record<string, unknown>;
 
+  void body;
+
   switch (action) {
-    case "provider":
-      return upsertAiCloudProvider(user, body as Parameters<typeof upsertAiCloudProvider>[1]);
-    case "user-grant":
-      return upsertAiUserGrant(user, body as Parameters<typeof upsertAiUserGrant>[1]);
     case "fallback-test":
       return postAiGatewayFallbackTest(user);
-    case "simulate":
-      return postAiGatewaySimulate(user, body as Parameters<typeof postAiGatewaySimulate>[1]);
     default:
       return Response.json({ error: "Unbekannte Aktion." }, { status: 400 });
   }
-}
-
-export async function DELETE(request: Request) {
-  const { error: authError } = await guardStudioAdminApiRequest(request, { rateLimit: "setup" });
-  if (authError) return authError;
-
-  const user = await getCurrentAuthUser();
-  const url = new URL(request.url);
-  const providerId = url.searchParams.get("providerId");
-  const userId = url.searchParams.get("userId");
-
-  if (providerId) {
-    return deleteAiCloudProvider(user, providerId);
-  }
-  if (userId) {
-    return deleteAiUserGrant(user, userId);
-  }
-
-  return Response.json({ error: "providerId oder userId erforderlich." }, { status: 400 });
 }

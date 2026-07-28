@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient, Visibility, SecretLevel, WorldEventSourceType, WorldEventEntityRole } from "./generated/prisma/client";
+import type { Prisma, PrismaClient, WorldEventSourceType, WorldEventEntityRole } from "./generated/prisma/client";
 import type { InGameDate } from "./world-calendar-service";
 import { parseInGameDate } from "./world-calendar-service";
 
@@ -23,7 +23,7 @@ export type WorldEventWithLinks = Prisma.WorldEventGetPayload<{
   include: {
     entityLinks: {
       include: {
-        page: { select: { id: true; title: true; slug: true; type: true; visibility: true; secretLevel: true; publishStatus: true; playerAccess: true } };
+        page: { select: { id: true; title: true; slug: true; type: true } };
       };
     };
   };
@@ -36,8 +36,6 @@ export interface CreateWorldEventInput {
   title: string;
   summaryPlayer?: string | null;
   summaryDm?: string | null;
-  visibility?: Visibility;
-  secretLevel?: SecretLevel;
   sourceType?: WorldEventSourceType;
   sourceAiProposalId?: string | null;
   gameSessionId?: string | null;
@@ -60,10 +58,6 @@ export class WorldEventService {
                 title: true,
                 slug: true,
                 type: true,
-                visibility: true,
-                secretLevel: true,
-                publishStatus: true,
-                playerAccess: true,
               },
             },
           },
@@ -86,10 +80,6 @@ export class WorldEventService {
                 title: true,
                 slug: true,
                 type: true,
-                visibility: true,
-                secretLevel: true,
-                publishStatus: true,
-                playerAccess: true,
               },
             },
           },
@@ -111,10 +101,6 @@ export class WorldEventService {
                 title: true,
                 slug: true,
                 type: true,
-                visibility: true,
-                secretLevel: true,
-                publishStatus: true,
-                playerAccess: true,
               },
             },
           },
@@ -143,8 +129,6 @@ export class WorldEventService {
         title: input.title,
         summaryPlayer: input.summaryPlayer ?? null,
         summaryDm: input.summaryDm ?? null,
-        visibility: input.visibility ?? "private",
-        secretLevel: input.secretLevel ?? "none",
         sourceType: input.sourceType ?? "manual",
         sourceAiProposalId: input.sourceAiProposalId ?? null,
         gameSessionId: input.gameSessionId ?? null,
@@ -167,10 +151,6 @@ export class WorldEventService {
                 title: true,
                 slug: true,
                 type: true,
-                visibility: true,
-                secretLevel: true,
-                publishStatus: true,
-                playerAccess: true,
               },
             },
           },

@@ -40,7 +40,6 @@ export interface LabelExportOptions {
   imageUrl?: string | null;
   imageUrls?: Record<string, string>;
   worldName?: string;
-  includeDmOnly?: boolean;
 }
 
 export interface LabelExportRenderOptions {
@@ -228,7 +227,7 @@ function renderElementsHtml(
   }
 
   const visibleElements = elements
-    .filter((el) => el.visible && (!el.dmOnly || options.includeDmOnly))
+    .filter((el) => el.visible)
     .sort((a, b) => a.zIndex - b.zIndex);
 
   const safeArea = renderOpts.showSafeArea
@@ -236,9 +235,7 @@ function renderElementsHtml(
     : "";
 
   const dmWarning =
-    options.content.containsDmOnly && (options.content.dmOnlyBlockCount ?? 0) > 0
-      ? `<div class="label-dm-warning">Enthält ${options.content.dmOnlyBlockCount} DM-only Element(e).</div>`
-      : "";
+    "";
 
   const cropClass = renderOpts.showCropMarks ? " label-crop-marks" : "";
 
@@ -260,9 +257,7 @@ function renderLegacyBody(options: LabelExportOptions): string {
   const mode = layoutSettings.mode;
 
   const dmWarning =
-    content.containsDmOnly && (content.dmOnlyBlockCount ?? 0) > 0
-      ? `<div class="label-dm-warning">Enthält ${content.dmOnlyBlockCount} DM-only Element(e).</div>`
-      : "";
+    "";
 
   const imageSection =
     mode !== "text_only" && imageUrl
@@ -421,7 +416,7 @@ export async function renderLabelPdfAsync(
   const elements = ensureLabelElements(options.content, options.layoutSettings);
   const imageUrls = options.imageUrls ?? {};
 
-  for (const element of elements.filter((el) => el.visible && (!el.dmOnly || options.includeDmOnly))) {
+  for (const element of elements.filter((el) => el.visible)) {
     const x = element.x * 72;
     const y = h - element.y * 72 - element.height * 72;
     const elW = element.width * 72;
@@ -689,7 +684,7 @@ export function renderLabelSvg(
   }
 
   const body = elements
-    .filter((el) => el.visible && (!el.dmOnly || options.includeDmOnly))
+    .filter((el) => el.visible)
     .sort((a, b) => a.zIndex - b.zIndex)
     .map((el) => elementToSvg(el, imageUrls, dpi))
     .join("\n");

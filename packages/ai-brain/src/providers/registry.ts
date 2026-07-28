@@ -10,13 +10,7 @@ import type {
 } from "../types";
 import { getProviderDefinition } from "../settings";
 import type { ApiKeyStore } from "../types";
-import { AnthropicProvider, GeminiProvider } from "./cloud-providers";
-import {
-  OllamaProvider,
-  OpenAiCompatibleProvider,
-  OpenAiProvider,
-  OpenRouterProvider,
-} from "./openai-family";
+import { OllamaProvider, OpenAiCompatibleProvider } from "./openai-family";
 
 export class MockAiProvider implements AiProvider {
   readonly id: AiProviderId;
@@ -103,55 +97,19 @@ export function createProvider(
       return new OllamaProvider(baseUrl, undefined, timeoutMs);
     case "openai_compatible":
       return new OpenAiCompatibleProvider(baseUrl, apiKey, timeoutMs);
-    case "openai":
-      return new OpenAiProvider(baseUrl, apiKey, timeoutMs);
-    case "openrouter":
-      return new OpenRouterProvider(baseUrl, apiKey, timeoutMs);
-    case "anthropic":
-      return new AnthropicProvider(baseUrl, apiKey);
-    case "gemini":
-      return new GeminiProvider(baseUrl, apiKey);
     default:
       throw new Error(`Unbekannter Provider: ${providerId satisfies never}`);
   }
 }
 
 function resolveProviderBaseUrl(providerId: AiProviderId): string | undefined {
-  switch (providerId) {
-    case "ollama":
-      return process.env.OLLAMA_BASE_URL;
-    case "openai_compatible":
-      return process.env.OPENAI_COMPATIBLE_BASE_URL;
-    case "openai":
-      return process.env.OPENAI_BASE_URL;
-    case "anthropic":
-      return process.env.ANTHROPIC_BASE_URL;
-    case "gemini":
-      return process.env.GEMINI_BASE_URL;
-    case "openrouter":
-      return process.env.OPENROUTER_BASE_URL;
-    default:
-      return undefined;
-  }
+  return providerId === "ollama"
+    ? process.env.OLLAMA_BASE_URL
+    : process.env.OPENAI_COMPATIBLE_BASE_URL;
 }
 
 function defaultBaseUrl(providerId: AiProviderId): string {
-  switch (providerId) {
-    case "ollama":
-      return "http://localhost:11434";
-    case "openai_compatible":
-      return "http://localhost:8080/v1";
-    case "openai":
-      return "https://api.openai.com/v1";
-    case "anthropic":
-      return "https://api.anthropic.com/v1";
-    case "gemini":
-      return "https://generativelanguage.googleapis.com/v1beta";
-    case "openrouter":
-      return "https://openrouter.ai/api/v1";
-    default:
-      throw new Error(`Keine Default-URL für ${providerId satisfies never}`);
-  }
+  return providerId === "ollama" ? "http://localhost:11434" : "http://localhost:8080/v1";
 }
 
 export async function runAiTask(

@@ -1,10 +1,6 @@
 import type { AccessContext } from "@uwe/auth";
-import { canReadContent, canViewPage, filterBlocksForViewer, scopeFromAccessContext } from "@uwe/auth";
+import { filterBlocksForViewer, filterPagesForViewer } from "@uwe/auth";
 import type { AuthService } from "./auth";
-import {
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-} from "./content-access";
 import { parseStringArray } from "./json-utils";
 import { buildPageUrl } from "./page-types";
 import {
@@ -24,9 +20,7 @@ import type { PageSummary, PageWithBlocks, UweRepository } from "./repository";
 function resolveViewerLinks(
   content: string,
   worldSlug: string,
-  ctx: AccessContext,
   allPages: PageSummary[],
-  scope: ReturnType<typeof scopeFromAccessContext>,
 ): PageViewLink[] {
   return parseWikiLinks(content).map((raw) => {
     const displayText = raw.label ?? raw.target;
@@ -40,10 +34,6 @@ function resolveViewerLinks(
 
     if (!target) {
       return { displayText, status: "broken" as const };
-    }
-
-    if (!canReadContent(ctx.user, target, scope.world, scope)) {
-      return { displayText: raw.label ?? "Verborgen", status: "hidden" as const };
     }
 
     return {
@@ -118,7 +108,6 @@ export async function buildPageViewForViewer(
   worldSlug: string,
   pageSlug: string,
   ctx: AccessContext,
-  options?: { warnPrivateReferences?: boolean },
 ): Promise<PageViewData | null> {
   const page = await auth.getPageForViewer(worldSlug, pageSlug, ctx);
   if (!page) {
@@ -135,57 +124,37 @@ export async function buildPageViewForViewer(
 
   const { pages: indexedPages, pageIndex: allPages, blockTargets } =
     await getWorldWikiGraph(repo, worldSlug);
-  const scope = scopeFromAccessContext(ctx, page.worldId);
   const combinedContent = combineBlockContent(page.contentBlocks);
-  const links = resolveViewerLinks(combinedContent, worldSlug, ctx, allPages, scope);
+  const links = resolveViewerLinks(combinedContent, worldSlug, allPages);
 
-  const viewerPages: PageWithBlocks[] = indexedPages
-    .filter((candidate) => canViewPage(ctx, candidate))
-    .map((candidate) => ({
-      ...candidate,
-      contentBlocks: filterBlocksForViewer(ctx, candidate.contentBlocks, candidate),
-    }));
+  const viewerPages: PageWithBlocks[] = filterPagesForViewer(ctx, indexedPages).map((candidate) => ({
+    ...candidate,
+    contentBlocks: filterBlocksForViewer(ctx, candidate.contentBlocks),
+  }));
 
-  const visibleNodes = viewerPages.map((candidate) => pageToWikiNode(worldSlug, candidate, "preview"));
-  const node = pageToWikiNode(worldSlug, page, "preview");
+  const visibleNodes = viewerPages.map((candidate) => pageToWikiNode(worldSlug, candidate));
+  const node = pageToWikiNode(worldSlug, page);
 
   // Backlinks from the cached, pre-parsed wikilink graph (H2). A page is a
-  // backlink of the focus page iff one of its viewer-visible blocks contains a
-  // wikilink that resolves — by the same first-match over the world page index
-  // as resolveViewerLinks — to the focus page, AND the focus page is itself
-  // readable by the viewer (the gate resolveViewerLinks applies before marking a
-  // link "resolved"; it is constant across candidates here). Slugs are unique per
-  // world, so "resolves to focus page id" is exactly the original href match.
-  const focusEntry = allPages.find((candidate) => candidate.id === page.id) ?? page;
-  const focusReadable = canReadContent(ctx.user, focusEntry, scope.world, scope);
-
+  // backlink of the focus page iff one of its blocks contains a wikilink that
+  // resolves — by the same first-match over the world page index as
+  // resolveViewerLinks — to the focus page. Slugs are unique per world, so
+  // "resolves to focus page id" is exactly the original href match.
   const backlinks: PageViewBacklink[] = [];
-  if (focusReadable) {
-    for (const candidate of viewerPages) {
-      if (candidate.id === node.id) continue;
-      const linksToTarget = candidate.contentBlocks.some((block) =>
-        blockTargets.get(block.id)?.includes(page.id),
-      );
-      if (linksToTarget) {
-        backlinks.push({
-          title: candidate.title,
-          href: buildPageUrl(worldSlug, candidate.type, candidate.slug),
-        });
-      }
+  for (const candidate of viewerPages) {
+    if (candidate.id === node.id) continue;
+    const linksToTarget = candidate.contentBlocks.some((block) =>
+      blockTargets.get(block.id)?.includes(page.id),
+    );
+    if (linksToTarget) {
+      backlinks.push({
+        title: candidate.title,
+        href: buildPageUrl(worldSlug, candidate.type, candidate.slug),
+      });
     }
   }
 
   backlinks.sort((a, b) => a.title.localeCompare(b.title));
-
-  let privateReferenceWarning: string | null = null;
-  if (options?.warnPrivateReferences ?? Boolean(ctx.previewAsUserId)) {
-    const dmPage = await repo.getPageBySlug(worldSlug, pageSlug);
-    if (dmPage) {
-      privateReferenceWarning = formatPrivateReferenceWarning(
-        detectPrivateReferences(combinedContent, allPages),
-      );
-    }
-  }
 
   return {
     page: node,
@@ -193,6 +162,5 @@ export async function buildPageViewForViewer(
     backlinks,
     relatedPages: buildRelatedPages(node, links, backlinks, visibleNodes),
     html,
-    privateReferenceWarning,
   };
 }

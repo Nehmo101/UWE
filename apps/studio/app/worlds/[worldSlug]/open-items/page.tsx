@@ -23,7 +23,6 @@ const CATEGORY_ORDER: WorldOpenItemCategory[] = [
   "played_awaiting_canon",
   "prepared_content",
   "draft_npc",
-  "open_puzzle",
 ];
 
 export default async function WorldOpenItemsPage({ params }: Props) {

@@ -11,9 +11,12 @@ import {
 import {
   createTestBrainClient,
   createTestBrainDatabaseUrl,
+  createTestFamilyClient,
+  createTestFamilyDatabaseUrl,
   createTestDatabaseUrl,
 } from "@uwe/database/test-helpers";
 import { createBrainPrismaClient } from "@uwe/database/brain-client";
+import { createFamilyPrismaClient } from "@uwe/database/family-client";
 import { createPrismaClient, createUweRepository } from "@uwe/database/server";
 import {
   createBackupBundle,
@@ -42,6 +45,9 @@ describe("UWE backup and restore", () => {
     // createBrainPrismaClient() (no arg → BRAIN_DATABASE_URL). Point it at an
     // isolated, migrated Brain DB so the source Brain data lives there too.
     process.env.BRAIN_DATABASE_URL = createTestBrainDatabaseUrl();
+    // Dasselbe für die geteilte Family-DB, die createBackupBundle über
+    // FAMILY_DATABASE_URL liest.
+    process.env.FAMILY_DATABASE_URL = createTestFamilyDatabaseUrl();
 
     const repo = createUweRepository(databaseUrl);
     const world = await repo.createWorld({
@@ -63,7 +69,6 @@ describe("UWE backup and restore", () => {
       title: "Backup Page",
       slug: "backup-page",
       type: "lore",
-      visibility: "dm_only",
       contentBlocks: [
         {
           type: "rich_text",
@@ -88,7 +93,6 @@ describe("UWE backup and restore", () => {
       storageKey: assetStorageKey,
       mimeType: "image/png",
       size: 8,
-      visibility: "dm_only",
     });
 
     await repo.linkAssetToPage(
@@ -104,14 +108,14 @@ describe("UWE backup and restore", () => {
         displayName: "Backup Player",
         email: "player-backup@uwe.local",
         passwordHash: "hashed-not-exported",
-        role: "player",
+        portalAccess: true,
+        studioAccess: false,
       },
     });
     await db.worldMembership.create({
       data: {
         userId: player.id,
         worldId: world.id,
-        role: "player",
         characterName: "Test PC",
       },
     });
@@ -224,12 +228,13 @@ describe("UWE backup and restore", () => {
 
     const targetDb = createPrismaClient(targetDbUrl);
     const targetBrainDb = createTestBrainClient();
+    const targetFamilyDb = createTestFamilyClient();
     const bundle = loadBackupFromBuffer(zipBuffer, "roundtrip.zip");
 
     const preview = await previewRestoreOnly(targetDb, bundle);
     assert.equal(preview.stats.new, preview.items.filter((item) => item.status === "new").length);
 
-    const result = await executeRestore(targetDb, targetBrainDb, bundle, {
+    const result = await executeRestore(targetDb, targetBrainDb, targetFamilyDb, bundle, {
       confirmed: true,
       autoResolveSlugConflicts: true,
     }, zipBuffer, targetUploads);
@@ -306,10 +311,12 @@ describe("UWE backup and restore", () => {
     process.env.UWE_UPLOADS_ROOT = targetUploads;
     const targetDb = createPrismaClient(targetDbUrl);
     const targetBrainDb = createTestBrainClient();
+    const targetFamilyDb = createTestFamilyClient();
 
     await executeRestore(
       targetDb,
       targetBrainDb,
+      targetFamilyDb,
       loadBackupFromBuffer(zipBuffer, "terra-roundtrip.zip"),
       { confirmed: true, autoResolveSlugConflicts: true },
       zipBuffer,
@@ -348,6 +355,7 @@ describe("UWE backup and restore", () => {
     // Daily-admin/Brain rows are owner-private and live in the Brain DB that
     // createBackupBundle reads via BRAIN_DATABASE_URL (set in before()).
     const brainDb = createBrainPrismaClient();
+    const familyDb = createFamilyPrismaClient();
     const world = await db.world.findUniqueOrThrow({ where: { slug: worldSlug } });
 
     const captureStorageKey = buildStorageKey("_capture", "capture-photo.png");
@@ -394,7 +402,7 @@ describe("UWE backup and restore", () => {
     await brainDb.workshopTerrainRental.create({
       data: { terrainSetName: "Dungeon-Set", workshopProjectId: workshopProject.id },
     });
-    await brainDb.contractExpense.create({
+    await familyDb.contractExpense.create({
       data: { name: "Internet-Vertrag", vendor: "ISP", amountCents: 3999 },
     });
     await brainDb.hardwareDevice.create({
@@ -449,9 +457,10 @@ describe("UWE backup and restore", () => {
     const targetUploads = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-da-restore-"));
     const targetDb = createPrismaClient(targetDbUrl);
     const targetBrainDb = createTestBrainClient();
+    const targetFamilyDb = createTestFamilyClient();
     const loaded = loadBackupFromBuffer(zipBuffer, "daily-admin-roundtrip.zip");
 
-    const result = await executeRestore(targetDb, targetBrainDb, loaded, {
+    const result = await executeRestore(targetDb, targetBrainDb, targetFamilyDb, loaded, {
       confirmed: true,
       autoResolveSlugConflicts: true,
     }, zipBuffer, targetUploads);
@@ -463,7 +472,7 @@ describe("UWE backup and restore", () => {
     assert.equal(await targetBrainDb.workshopPaintRecipe.count(), 1);
     assert.equal(await targetBrainDb.workshopPrintProfile.count(), 1);
     assert.equal(await targetBrainDb.workshopTerrainRental.count(), 1);
-    assert.equal(await targetBrainDb.contractExpense.count(), 1);
+    assert.equal(await targetFamilyDb.contractExpense.count(), 1);
     assert.equal(await targetBrainDb.hardwareDevice.count(), 1);
     assert.equal(await targetBrainDb.personalBrainDocument.count(), 1);
     assert.equal(await targetBrainDb.personalBrainChunk.count(), 1);
@@ -505,8 +514,9 @@ describe("UWE backup and restore", () => {
     const targetDbUrl = createTestDatabaseUrl();
     const targetDb = createPrismaClient(targetDbUrl);
     const targetBrainDb = createTestBrainClient();
+    const targetFamilyDb = createTestFamilyClient();
 
-    const result = await executeRestore(targetDb, targetBrainDb, bundle, {
+    const result = await executeRestore(targetDb, targetBrainDb, targetFamilyDb, bundle, {
       confirmed: true,
       autoResolveSlugConflicts: true,
     });

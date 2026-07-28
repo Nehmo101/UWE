@@ -1,7 +1,6 @@
 import type { PrismaClient } from "./client";
 import { getProductionSafetyWarnings } from "./production-safety";
-import { isPageAccessible, type PortalAccessOptions } from "./permissions";
-import { SettingsService } from "./settings-service";
+import {} from "./settings-service";
 import { getSystemStatus } from "./system-status";
 import { createWorldInspectorService, type InspectorSeverity } from "./world-inspector";
 
@@ -98,10 +97,6 @@ export async function buildNextActions(db: PrismaClient): Promise<NextActionItem
   }
 
   // Per-world content findings.
-  const settings = await new SettingsService(db).getSettings();
-  const portalOptions: PortalAccessOptions = {
-    publicSharingEnabled: settings.portal.publicSharingEnabled,
-  };
   const worlds = await db.world.findMany({ orderBy: { name: "asc" } });
   const inspector = createWorldInspectorService(db);
 
@@ -109,7 +104,7 @@ export async function buildNextActions(db: PrismaClient): Promise<NextActionItem
     const report = await inspector.inspectWorld(world.slug);
     if (!report) continue;
 
-    const allFindings = [...report.safetyFindings, ...report.canonFindings];
+    const allFindings = report.canonFindings;
     const critical = allFindings.filter((finding) => finding.severity === "critical").length;
     const warnings = allFindings.filter((finding) => finding.severity === "warning").length;
 
@@ -128,7 +123,7 @@ export async function buildNextActions(db: PrismaClient): Promise<NextActionItem
 
     const pages = await db.page.findMany({
       where: { worldId: world.id },
-      select: { id: true, visibility: true, publishStatus: true, campaignId: true },
+      select: { id: true, campaignId: true },
     });
 
     const campaignCount = await db.campaign.count({ where: { worldId: world.id } });
@@ -145,19 +140,6 @@ export async function buildNextActions(db: PrismaClient): Promise<NextActionItem
       }
     }
 
-    const portalVisible = pages.filter((page) =>
-      isPageAccessible(page, "portal", portalOptions),
-    ).length;
-    if (portalVisible > 0) {
-      actions.push({
-        id: `portal-visible:${world.slug}`,
-        severity: "info",
-        title: `${world.name}: ${portalVisible} Portal-sichtbare Seiten`,
-        description:
-          "Diese Seiten sind nach Login im Portal sichtbar — im Inspector auf Freigaben prüfen.",
-        href: `/worlds/${world.slug}/inspector`,
-      });
-    }
   }
 
   return actions.sort(

@@ -25,7 +25,7 @@ import {
 /** Only prose blocks are converted — statblocks, images etc. stay untouched. */
 const CONVERTIBLE_BLOCK_TYPES: ContentBlockType[] = [
   "rich_text",
-  "gm_note",
+  "rich_text",
   "player_text",
 ];
 

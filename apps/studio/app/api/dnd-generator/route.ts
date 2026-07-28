@@ -134,7 +134,7 @@ export async function GET(request: Request) {
           .map((b) => b.content)
           .join("\n"),
         dmNotes: page.contentBlocks
-          .filter((b) => b.type === "gm_note")
+          .filter((b) => b.type === "rich_text")
           .map((b) => b.content)
           .join("\n"),
       };

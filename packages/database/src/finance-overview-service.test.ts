@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import type { ContractExpense } from "./generated/prisma-brain/client";
+import type { ContractExpense } from "./generated/prisma-family/client";
 import {
   createFinanceOverviewService,
   groupByInterval,
   rankReviewCandidates,
   toFinanceContractView,
 } from "./finance-overview-service";
-import { createTestBrainClient } from "./test-helpers";
+import { createTestFamilyClient } from "./test-helpers";
 
 function makeContract(overrides: Partial<ContractExpense>): ContractExpense {
   const now = new Date("2026-07-01T00:00:00.000Z");
@@ -94,10 +94,10 @@ describe("groupByInterval (pure)", () => {
 });
 
 describe("finance overview (integration)", () => {
-  let db: ReturnType<typeof createTestBrainClient>;
+  let db: ReturnType<typeof createTestFamilyClient>;
 
   before(() => {
-    db = createTestBrainClient();
+    db = createTestFamilyClient();
   });
 
   after(async () => {

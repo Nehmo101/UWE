@@ -2,12 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
-import {
-  ADMIN_ACCESS_ROLES,
-  getSessionCookieOptions,
-  hasAnyRole,
-  STUDIO_ACCESS_ROLES,
-} from "@uwe/auth";
+import { canAccessStudio, getSessionCookieOptions, isOwner } from "@uwe/auth";
 import { requireStudioApiAuth } from "./studio-api-auth";
 
 function makeRequest(
@@ -35,13 +30,15 @@ describe("studio auth integration", () => {
       displayName: "DM",
       email: "dm@test.local",
       password: "correct-password",
-      role: "dm",
+      portalAccess: true,
+      studioAccess: true,
     });
     const player = await auth.createUser({
       displayName: "Player",
       email: "player@test.local",
       password: "correct-password",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     dmSessionToken = (await auth.createSession(dm.id)).token;
@@ -68,11 +65,15 @@ describe("studio auth integration", () => {
     assert.equal(options.sameSite, "lax");
   });
 
-  it("allows dm studio role membership checks", () => {
-    assert.ok(hasAnyRole({ role: "dm" }, STUDIO_ACCESS_ROLES));
-    assert.ok(!hasAnyRole({ role: "player" }, STUDIO_ACCESS_ROLES));
-    assert.ok(hasAnyRole({ role: "admin" }, ADMIN_ACCESS_ROLES));
-    assert.ok(!hasAnyRole({ role: "dm" }, ADMIN_ACCESS_ROLES));
+  it("gates Studio on the checkbox and admin on the owner flag", () => {
+    const dm = { isOwner: false, access: { portal: true, studio: true, brain: false, family: false } };
+    const player = { isOwner: false, access: { portal: true, studio: false, brain: false, family: false } };
+    const owner = { isOwner: true, access: { portal: true, studio: true, brain: true, family: true } };
+
+    assert.ok(canAccessStudio(dm));
+    assert.ok(!canAccessStudio(player));
+    assert.ok(isOwner(owner));
+    assert.ok(!isOwner(dm));
   });
 
   it("blocks cross-site browser API requests via CSRF guard", () => {
@@ -93,7 +94,7 @@ describe("studio auth integration", () => {
     assert.equal(result, null);
   });
 
-  it("creates distinct sessions for dm and player roles", () => {
+  it("creates distinct sessions for a DM and a player", () => {
     assert.notEqual(dmSessionToken, playerSessionToken);
     assert.ok(dmSessionToken.length > 0);
     assert.ok(playerSessionToken.length > 0);

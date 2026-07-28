@@ -1,12 +1,17 @@
-import { AiPrivacyError } from "../types";
-import {
-  CLOUD_ALLOWED_CONTEXT_MODES,
-  LOCAL_ONLY_CONTEXT_MODES,
-  type AiContextMode,
-  type AiProviderMode,
-  type AiResolvedRoute,
-  AiRouterError,
-} from "./types";
+import { type AiContextMode, AiRouterError } from "./types";
+
+/**
+ * Context guard for AI requests.
+ *
+ * This module used to enforce the local-vs-cloud privacy rules: which context
+ * modes were allowed to leave the host, and which were permanently pinned to
+ * local inference. That whole question disappeared when cloud providers were
+ * removed — every AI action in UWE runs on the RTX host, so there is no route
+ * to police. A signpost is unnecessary once the road is gone.
+ *
+ * What remains are the two checks that were never about privacy: a context mode
+ * must get the input it needs, and the RTX host must actually be reachable.
+ */
 
 const CONTEXT_MODE_LABELS: Record<AiContextMode, string> = {
   general_chat: "Allgemeiner Chat",
@@ -17,52 +22,11 @@ const CONTEXT_MODE_LABELS: Record<AiContextMode, string> = {
   mail: "Private E-Mail",
 };
 
-const PROVIDER_MODE_LABELS: Record<AiProviderMode, string> = {
-  auto: "Automatisch",
-  local_rtx: "Lokale RTX",
-  cloud: "Cloud",
-};
-
-export function contextModeRequiresLocalContext(contextMode: AiContextMode): boolean {
-  return LOCAL_ONLY_CONTEXT_MODES.includes(contextMode);
+export function contextModeLabel(contextMode: AiContextMode): string {
+  return CONTEXT_MODE_LABELS[contextMode];
 }
 
-export function isCloudRouteAllowedForContext(contextMode: AiContextMode): boolean {
-  return CLOUD_ALLOWED_CONTEXT_MODES.includes(contextMode);
-}
-
-/**
- * Server-side validation of provider + context mode combinations.
- * Only personal_brain is permanently cloud-blocked.
- * DnD/world modes (brain, current_object, current_object_plus_brain) may go to
- * cloud when admin gateway policy allows (CLOUD_ALLOWED_CONTEXT_MODES).
- */
-export function validateProviderContextCombination(
-  providerMode: AiProviderMode,
-  contextMode: AiContextMode,
-): void {
-  if (providerMode === "cloud" && !isCloudRouteAllowedForContext(contextMode)) {
-    throw new AiPrivacyError(
-      `Cloud-KI darf private Inhalte niemals erhalten. „${CONTEXT_MODE_LABELS[contextMode]}" ist lokal-exklusiv — kein Cloud-Routing erlaubt. Nutze lokale RTX.`,
-    );
-  }
-}
-
-/**
- * Validates resolved route against context mode (second line of defense after routing).
- * Only personal_brain is blocked on cloud route; DnD modes are allowed when policy permits.
- */
-export function validateResolvedRouteForContext(
-  route: AiResolvedRoute,
-  contextMode: AiContextMode,
-): void {
-  if (route === "cloud" && !isCloudRouteAllowedForContext(contextMode)) {
-    throw new AiPrivacyError(
-      `Interner Datenschutzfehler: Cloud-Route für „${CONTEXT_MODE_LABELS[contextMode]}" blockiert. Lokal-exklusiver Kontext darf nicht an Cloud-Provider gesendet werden.`,
-    );
-  }
-}
-
+/** Object-scoped context modes need a page to work with. */
 export function validateContextModeRequirements(
   contextMode: AiContextMode,
   pageSlug?: string,
@@ -78,28 +42,15 @@ export function validateContextModeRequirements(
 }
 
 /**
- * Enforces RTX requirement based on provider mode and context mode.
- * - Local-only modes (personal_brain, mail) in auto mode: always require RTX
- *   (no cloud fallback, privacy law).
- * - explicit local_rtx: requires RTX regardless of context.
- * - DnD/world modes (brain, current_object, …) in auto mode: RTX preferred,
- *   cloud fallback allowed when RTX is offline (handled by gateway policy).
+ * The RTX host is the only backend. When it is offline there is nothing to fall
+ * back to, so every request fails fast with a message that points at the cause.
  */
-export function validateLocalRtxRequired(
-  providerMode: AiProviderMode,
-  contextMode: AiContextMode,
-  rtxOnline: boolean,
-): void {
-  const needsRtx =
-    providerMode === "local_rtx" ||
-    (providerMode === "auto" && LOCAL_ONLY_CONTEXT_MODES.includes(contextMode));
-
-  if (needsRtx && !rtxOnline) {
-    const contextLabel = CONTEXT_MODE_LABELS[contextMode];
-    throw new AiRouterError(
-      providerMode === "local_rtx"
-        ? `Lokale RTX-Inference ist nicht erreichbar. Bitte RTX-PC prüfen oder Provider auf „${PROVIDER_MODE_LABELS.auto}" setzen.`
-        : `Für „${contextLabel}" ist lokale RTX erforderlich, aber RTX ist offline. Cloud-Fallback ist aus Datenschutzgründen nicht erlaubt.`,
-    );
+export function validateLocalRtxRequired(contextMode: AiContextMode, rtxOnline: boolean): void {
+  if (rtxOnline) {
+    return;
   }
+
+  throw new AiRouterError(
+    `Lokale RTX-Inference ist nicht erreichbar — „${CONTEXT_MODE_LABELS[contextMode]}" kann nicht ausgeführt werden. Bitte den RTX-Host prüfen.`,
+  );
 }

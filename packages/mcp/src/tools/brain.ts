@@ -11,8 +11,8 @@
  *  - UWE_MCP_BRAIN_ALLOW_CONTENT=true: the owner consciously unlocks content
  *    tools for this session.
  *
- * `apps/brain` itself only serves `/api/health`; its data API lives in Studio
- * under `/api/life-brain/*`, which is what the content tools call.
+ * `apps/brain` serves its own data API under `/api/life-brain/*` — das war bis
+ * Abschnitt H2 Studios Route. Die Inhalts-Tools rufen sie dort auf.
  */
 import type { ToolDefinition, ToolResult } from "../protocol/types";
 import {

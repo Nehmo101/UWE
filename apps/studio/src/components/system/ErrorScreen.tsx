@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "../ui/button";
@@ -35,12 +37,12 @@ export function ErrorScreen({ error, reset }: ErrorScreenProps) {
         action={
           <div className="flex justify-center gap-2">
             <Button onClick={reset}>Erneut versuchen</Button>
-            <a
-              href="/today"
+            <Link
+              href="/worlds"
               className="inline-flex h-9 items-center rounded-[var(--radius)] border border-border px-4 text-sm hover:bg-muted"
             >
               Zum Start
-            </a>
+            </Link>
           </div>
         }
       />

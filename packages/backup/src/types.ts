@@ -14,7 +14,6 @@ export interface BackupStats {
   soundboardButtons: number;
   pageTemplates: number;
   worldMemberships: number;
-  shareLinks: number;
   playerNotes: number;
   /** Terra-Karten (J1) — optional, ältere Archive kennen das Feld nicht. */
   terraKarten?: number;
@@ -34,7 +33,6 @@ export interface BackupManifest {
   includesAuthSessions: boolean;
   includesSettings: boolean;
   includesPlayerNotes?: boolean;
-  shareLinkTokensRegenerated?: boolean;
   encrypted?: boolean;
   stats: BackupStats;
   assetFiles: string[];
@@ -44,7 +42,11 @@ export interface BackupUserRecord {
   id: string;
   displayName: string;
   email: string | null;
-  role: string;
+  isOwner: boolean;
+  portalAccess: boolean;
+  studioAccess: boolean;
+  brainAccess: boolean;
+  familyAccess: boolean;
 }
 
 export interface BackupWorldRecord {
@@ -52,7 +54,6 @@ export interface BackupWorldRecord {
   name: string;
   slug: string;
   description: string | null;
-  guestModeEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,8 +77,6 @@ export interface BackupPageRecord {
   slug: string;
   type: string;
   summary: string | null;
-  visibility: string;
-  publishStatus: string;
   canonicalStatus: string;
   prepStatus: string | null;
   tags: unknown;
@@ -93,7 +92,6 @@ export interface BackupContentBlockRecord {
   type: string;
   sortOrder: number;
   content: string;
-  visibility: string;
   metadata: unknown;
   createdAt: string;
   updatedAt: string;
@@ -118,7 +116,6 @@ export interface BackupAssetRecord {
   storageKey: string;
   mimeType: string | null;
   size: number;
-  visibility: string;
   tags: unknown;
   metadata: unknown;
   createdAt: string;
@@ -216,7 +213,6 @@ export interface BackupSoundboardButtonRecord {
   volume: number;
   loop: boolean;
   tags: unknown;
-  visibility: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -233,25 +229,12 @@ export interface BackupWorldMembershipRecord {
   id: string;
   userId: string;
   worldId: string;
-  role: string;
   characterName: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface BackupPagePlayerAccessRecord {
-  id: string;
-  pageId: string;
-  userId: string;
-}
 
-export interface BackupSessionUnlockRecord {
-  id: string;
-  pageId: string;
-  userId: string;
-  unlockedAt: string;
-  sessionLabel: string | null;
-}
 
 export interface BackupSettingsRecord {
   app: Record<string, unknown>;
@@ -263,20 +246,6 @@ export interface BackupSettingsRecord {
   storage: Record<string, unknown>;
   backup: Record<string, unknown>;
   privacy: Record<string, unknown>;
-}
-
-export interface BackupShareLinkRecord {
-  id: string;
-  worldId: string;
-  targetType: string;
-  targetId: string;
-  expiresAt: string | null;
-  hasPassword: boolean;
-  readOnly: boolean;
-  logAccess: boolean;
-  enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 /**
@@ -308,7 +277,6 @@ export interface BackupPlayerNoteRecord {
   gameSessionId: string | null;
   userId: string;
   content: string;
-  visibility: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -320,7 +288,6 @@ export interface BackupPageTemplateRecord {
   name: string;
   description: string;
   pageType: string;
-  defaultVisibility: string;
   titlePlaceholder: string;
   blocks: unknown;
   isSystem: boolean;
@@ -560,11 +527,8 @@ export interface BackupData {
   soundboardButtons: BackupSoundboardButtonRecord[];
   soundboardButtonPageLinks: BackupSoundboardButtonPageLinkRecord[];
   worldMemberships: BackupWorldMembershipRecord[];
-  pagePlayerAccess: BackupPagePlayerAccessRecord[];
-  sessionUnlocks: BackupSessionUnlockRecord[];
   users: BackupUserRecord[];
   pageTemplates?: BackupPageTemplateRecord[];
-  shareLinks?: BackupShareLinkRecord[];
   playerNotes?: BackupPlayerNoteRecord[];
   /** Optional — archives created before Terra (J1) omit this section. */
   terraKarten?: BackupTerraKarteRecord[];

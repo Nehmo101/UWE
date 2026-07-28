@@ -8,6 +8,8 @@ import ts from "typescript";
 const studioRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const repoRoot = dirname(dirname(studioRoot));
 const portalRoot = join(repoRoot, "apps", "portal");
+const brainRoot = join(repoRoot, "apps", "brain");
+const familyRoot = join(repoRoot, "apps", "family");
 
 /**
  * Canonical Server-Action auth guards. Every mutating Server Action must invoke
@@ -18,6 +20,8 @@ const portalRoot = join(repoRoot, "apps", "portal");
  */
 const STUDIO_ACTION_GUARD = "requireStudioActionAuth";
 const PORTAL_ACTION_GUARD = "requirePortalActionAuth";
+const BRAIN_ACTION_GUARD = "requireBrainActionAuth";
+const FAMILY_ACTION_GUARD = "requireFamilyActionAuth";
 
 interface AltGuardExemption {
   /** Stronger guard the module's exported actions rely on instead of the canonical one. */
@@ -233,9 +237,12 @@ describe("studio server actions", () => {
         `PUBLIC_ACTION_ALLOWLIST with justification:\n  ${unguarded.join("\n  ")}`,
     );
 
-    // Sanity floor: guard against the scanner silently matching nothing.
+    // Sanity floor gegen einen still ins Leere laufenden Scanner — kein Zielwert.
+    // Die Zahl sinkt, wenn Bereiche Studio verlassen: mit Abschnitt G sind
+    // Küche, Haushalt, Scan-Eingang, Verträge und Dokumente nach Family
+    // gewandert. Nur senken, wenn der Rückgang erklärbar ist.
     assert.ok(
-      scannedActions >= 200,
+      scannedActions >= 150,
       `expected to scan the full Studio action surface, only scanned ${scannedActions}`,
     );
   });
@@ -288,5 +295,51 @@ describe("portal server actions", () => {
       scannedActions > 0,
       `expected to scan Portal actions, only scanned ${scannedActions}`,
     );
+  });
+});
+
+describe("brain server actions", () => {
+  it("marks all action modules as server-only", async () => {
+    await assertServerOnly(join(brainRoot, "app"));
+  });
+
+  it("guards every exported Server Action with requireBrainActionAuth", async () => {
+    const { scannedActions, unguarded } = await scanActionGuards(
+      join(brainRoot, "app"),
+      BRAIN_ACTION_GUARD,
+      new Map(),
+    );
+
+    assert.equal(
+      unguarded.length,
+      0,
+      `Brain Server Actions without ${BRAIN_ACTION_GUARD} (directly or via an ` +
+        `in-module wrapper):\n  ${unguarded.join("\n  ")}`,
+    );
+
+    assert.ok(scannedActions > 0, `expected to scan Brain actions, only scanned ${scannedActions}`);
+  });
+});
+
+describe("family server actions", () => {
+  it("marks all action modules as server-only", async () => {
+    await assertServerOnly(join(familyRoot, "app"));
+  });
+
+  it("guards every exported Server Action with requireFamilyActionAuth", async () => {
+    const { scannedActions, unguarded } = await scanActionGuards(
+      join(familyRoot, "app"),
+      FAMILY_ACTION_GUARD,
+      new Map(),
+    );
+
+    assert.equal(
+      unguarded.length,
+      0,
+      `Family Server Actions without ${FAMILY_ACTION_GUARD} (directly or via an ` +
+        `in-module wrapper):\n  ${unguarded.join("\n  ")}`,
+    );
+
+    assert.ok(scannedActions > 0, `expected to scan Family actions, only scanned ${scannedActions}`);
   });
 });

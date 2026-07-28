@@ -35,7 +35,7 @@ graph TD
   Portal --> SafeRender["Serverseitig gefiltertes Rendering<br/>keine DM-only Inhalte"]
 
   Core --> Database["@uwe/database<br/>Prisma, Repositories, Rendering, Wikilinks"]
-  Core --> Auth["@uwe/auth / @uwe/security<br/>Rollen, Rechte, Leak-Tests"]
+  Core --> Auth["@uwe/auth / @uwe/security<br/>Zugänge, Welt-Grenze, Guards"]
   Core --> Assets["@uwe/assets<br/>Uploads, MIME, Pfade"]
   Core --> UI["@uwe/shared-ui<br/>gemeinsame React-Komponenten"]
 
@@ -76,28 +76,30 @@ flowchart LR
 - **Portal ist die Spieler-Ausgabe.** Es rendert nur veröffentlichte und freigegebene Inhalte. DM-only Inhalte dürfen dort nicht erscheinen.
 - **Persistente Daten bleiben auf dem UWE Host.** Datenbank, Uploads, Backups und Exporte liegen lokal/self-hosted.
 - **Der RTX Host Connector ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` bleibt nur als **deprecated** Kompatibilität bestehen.
-- **Cloud-KI darf kein Brain/Weltwissen erhalten.** Cloud-Fallback ist nur für allgemeinen Chat ohne UWE-Kontext vorgesehen.
+- **Es gibt keine Cloud-KI.** Jede KI-Aktion läuft über den RTX-Host (Notiz Lasse, N.3). Anbieter, Schlüssel und Fallback-Pfade sind entfernt — nicht abgeschaltet.
 
 ---
 
-## 3. Content- und Sichtbarkeits-Flow
+## 3. Zugangs- und Content-Flow
+
+Zwei Achsen, mehr nicht: das **Häkchen** sagt, welche App; die **Welt-Zuordnung**
+sagt, welche Welt. Sichtbarkeit pro Inhalt gibt es nicht mehr
+(Notiz Lasse, 2026-07-26).
 
 ```mermaid
 flowchart TD
-  Capture["Capture / Import / Quick Create"] --> Draft["Entwurf / Rohinhalt"]
-  Draft --> Review["DM Review<br/>Kanon, Links, Sichtbarkeit"]
-  Review --> Visibility{"Sichtbarkeit?"}
+  Address["E-Mail-Adresse<br/>(nur der Owner legt an)"] --> Checkboxes{"Häkchen im<br/>Command Center"}
 
-  Visibility -->|dm_only| DMOnly["Nur Studio<br/>DM-Geheimnisse, Notizen, Spoiler"]
-  Visibility -->|player_visible| PortalContent["Portal sichtbar<br/>für Spieler freigegeben (ohne Login lesbar)"]
-  Visibility -->|public| PublicContent["Öffentlich / Exportfähig"]
+  Checkboxes -->|portal| PortalApp["Portal"]
+  Checkboxes -->|studio| StudioApp["Studio — erreicht jede Welt"]
+  Checkboxes -->|brain| BrainApp["Brain"]
+  Checkboxes -->|family| FamilyApp["Family"]
 
-  PortalContent --> Published{"Published?"}
-  PublicContent --> Published
+  PortalApp --> Assignment{"Welt zugeordnet?"}
+  Assignment -->|ja| WorldContent["Sieht alles in dieser Welt"]
+  Assignment -->|nein| Nothing["Sieht nichts"]
 
-  Published -->|ja| Portal["Live Portal /worlds/*"]
-  Published -->|ja| StaticExport["Static Export"]
-  Published -->|nein| Hidden["Nicht im Portal sichtbar"]
+  StudioApp --> WorldContent
 
   DMOnly -.->|muss blockiert werden| Portal
   DMOnly -.->|muss blockiert werden| StaticExport
@@ -124,7 +126,7 @@ graph TD
   Packages --> SharedUI["shared-ui<br/>gemeinsame UI"]
   Packages --> SharedUtils["shared-utils<br/>Slugs / Lookup-Keys"]
   Packages --> DatabasePkg["database<br/>Prisma, Schema, Repositories, Wikilinks"]
-  Packages --> AuthPkg["auth<br/>Rollen / Berechtigungen"]
+  Packages --> AuthPkg["auth<br/>Zugänge / Welt-Grenze"]
   Packages --> SecurityPkg["security / security-tests<br/>Leak- und Authz-Tests"]
   Packages --> AssetsPkg["assets<br/>Uploads / Assettypen"]
   Packages --> StaticExportPkg["static-export<br/>HTML-Export"]
@@ -153,12 +155,12 @@ graph TD
 
 | Bereich | Darf schreiben? | Darf lesen? | Hauptverantwortung |
 |---|---:|---:|---|
-| **UWE Studio** | Ja | Alles, abhängig von Rolle/Schutz | DM-Editor, Admin-Cockpit, Generatoren, Exporte, Backups |
-| **UWE Portal** | Nein / sehr begrenzt | Nur player-safe Inhalte | Spieler-Wiki, Handouts, öffentliche oder authentifizierte Ansicht |
-| **Static Export** | Nein | Nur exportierte player-safe Inhalte | Statisches Hosting ohne Serverlogik |
+| **UWE Studio** | Ja | Alles — das Studio-Häkchen erreicht jede Welt | DM-Editor, Admin-Cockpit, Generatoren, Exporte, Backups |
+| **UWE Portal** | Nein / sehr begrenzt | Alles in den zugeordneten Welten | Spieler-Wiki, Handouts — Login immer erforderlich |
+| **Static Export** | Nein | Was bewusst exportiert wurde | Statisches Hosting ohne Serverlogik |
 | **UWE Core Packages** | Indirekt über Apps | Ja | Datenlogik, Auth, Rendering, Security, Assets |
 | **RTX Host Connector** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz (outbound Worker); alter inbound `RTX-Agent` nur deprecated |
-| **Cloud-KI** | Nein | Nur allgemeiner Chat ohne UWE-Kontext | Optionaler Fallback für nicht-sensitive Allgemeinfragen |
+| **Cloud-KI** | — | — | Entfällt: seit N.3 gibt es keinen Cloud-Anbieter mehr |
 
 ---
 
@@ -199,7 +201,7 @@ flowchart TD
 Neue Features sollten möglichst klar einer dieser Schichten zugeordnet werden:
 
 1. **Studio Feature** — alles, was DM/Admin-Bearbeitung, Generierung, Import, Review oder Wartung betrifft.
-2. **Portal Feature** — alles, was Spieler sehen oder nutzen sollen. Immer mit Sichtbarkeits- und Leak-Tests denken.
+2. **Portal Feature** — alles, was Spieler sehen oder nutzen sollen. Immer die Welt-Grenze mitdenken (`scopeFromAccessContext`).
 3. **Core Package** — wiederverwendbare Logik, die nicht direkt UI-spezifisch ist.
 4. **Integration Package** — externe APIs, Agenten, Mail, Kalender, Spotify, DnD-APIs.
 5. **Host-Tooling/Deploy** — Command-Center-Orchestrator für Windows oder `deploy/scripts/setup-uwe-host.sh` + systemd für Linux. Keine duplizierte Geschäftslogik in den Oberflächen.

@@ -62,7 +62,6 @@ export async function POST(request: Request, context: RouteContext) {
   const metadata = parsedMetadata.data;
   const title = metadata.title || file.name || "Unbenannt";
   const description = metadata.description || null;
-  const visibility = metadata.visibility;
   const pageId = metadata.pageId ?? null;
 
   const mimeType = file.type || inferMimeTypeFromFilename(file.name);
@@ -101,7 +100,6 @@ export async function POST(request: Request, context: RouteContext) {
     storageKey,
     mimeType: validated.mimeType,
     size: buffer.length,
-    visibility,
   });
 
   if (pageId) {
@@ -118,7 +116,6 @@ export async function POST(request: Request, context: RouteContext) {
       type: asset.type,
       mimeType: asset.mimeType,
       size: asset.size,
-      visibility,
     },
   });
 

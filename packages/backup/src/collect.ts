@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@uwe/database/server";
 import type { BrainPrismaClient } from "@uwe/database/brain-client";
+import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import { createSettingsService } from "@uwe/database/server";
 import { sanitizeBackupData, sanitizeSettingsForBackup } from "./sanitize";
 import type {
@@ -16,12 +17,9 @@ import type {
   BackupPrintListItemRecord,
   BackupPrintListRecord,
   BackupPageLinkRecord,
-  BackupPagePlayerAccessRecord,
   BackupPageRecord,
   BackupPageTemplateRecord,
   BackupPlayerNoteRecord,
-  BackupSessionUnlockRecord,
-  BackupShareLinkRecord,
   BackupSettingsRecord,
   BackupSoundboardButtonPageLinkRecord,
   BackupSoundboardButtonRecord,
@@ -67,7 +65,6 @@ function collectStats(data: BackupData): BackupStats {
     soundboardButtons: data.soundboardButtons.length,
     pageTemplates: data.pageTemplates?.length ?? 0,
     worldMemberships: data.worldMemberships.length,
-    shareLinks: data.shareLinks?.length ?? 0,
     playerNotes: data.playerNotes?.length ?? 0,
     terraKarten: data.terraKarten?.length ?? 0,
     dailyAdminEntities: countDailyAdminEntities(data.dailyAdmin),
@@ -77,6 +74,7 @@ function collectStats(data: BackupData): BackupStats {
 /** Daily Admin OS data is global (not world-scoped) — collected only for full backups. */
 async function collectDailyAdminData(
   brainDb: BrainPrismaClient,
+  familyDb: FamilyPrismaClient,
 ): Promise<BackupDailyAdminData> {
   const [
     captureEntries,
@@ -98,7 +96,7 @@ async function collectDailyAdminData(
     brainDb.workshopPaintRecipe.findMany(),
     brainDb.workshopPrintProfile.findMany(),
     brainDb.workshopTerrainRental.findMany(),
-    brainDb.contractExpense.findMany(),
+    familyDb.contractExpense.findMany(),
     brainDb.hardwareDevice.findMany(),
     brainDb.personalBrainDocument.findMany(),
     brainDb.personalBrainChunk.findMany(),
@@ -419,6 +417,7 @@ async function collectPageIds(
 export async function collectBackupData(
   db: PrismaClient,
   brainDb: BrainPrismaClient,
+  familyDb: FamilyPrismaClient,
   scope: CollectScope,
 ): Promise<{ data: BackupData; stats: BackupStats; settings?: BackupSettingsRecord }> {
   const { worldIds, campaignIds } = await resolveScopeIds(db, scope);
@@ -535,18 +534,10 @@ export async function collectBackupData(
     where: { worldId: { in: worldIds } },
   });
 
-  const pagePlayerAccess = await db.pagePlayerAccess.findMany({
-    where: { pageId: { in: [...pageIds] } },
-  });
 
-  const sessionUnlocks = await db.sessionUnlock.findMany({
-    where: { pageId: { in: [...pageIds] } },
-  });
 
   const userIds = new Set<string>();
   for (const membership of worldMemberships) userIds.add(membership.userId);
-  for (const access of pagePlayerAccess) userIds.add(access.userId);
-  for (const unlock of sessionUnlocks) userIds.add(unlock.userId);
 
   const users = await db.user.findMany({
     where: { id: { in: [...userIds] } },
@@ -554,7 +545,11 @@ export async function collectBackupData(
       id: true,
       displayName: true,
       email: true,
-      role: true,
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     },
   });
 
@@ -562,10 +557,6 @@ export async function collectBackupData(
     scope.type === "full"
       ? await db.pageTemplate.findMany({ where: { isSystem: false } })
       : [];
-
-  const shareLinks = await db.shareLink.findMany({
-    where: { worldId: { in: worldIds } },
-  });
 
   /**
    * Terra-Karten (J1). Weltgebunden, deshalb in jedem Backup-Umfang dabei,
@@ -592,7 +583,16 @@ export async function collectBackupData(
     playerNotes.length > 0
       ? await db.user.findMany({
           where: { id: { in: [...userIds] } },
-          select: { id: true, displayName: true, email: true, role: true },
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            isOwner: true,
+            portalAccess: true,
+            studioAccess: true,
+            brainAccess: true,
+            familyAccess: true,
+          },
         })
       : [];
 
@@ -602,7 +602,7 @@ export async function collectBackupData(
   }
 
   const dailyAdmin =
-    scope.type === "full" ? await collectDailyAdminData(brainDb) : undefined;
+    scope.type === "full" ? await collectDailyAdminData(brainDb, familyDb) : undefined;
 
   const data: BackupData = sanitizeBackupData({
     dailyAdmin,
@@ -612,7 +612,6 @@ export async function collectBackupData(
         name: world.name,
         slug: world.slug,
         description: world.description,
-        guestModeEnabled: world.guestModeEnabled,
         createdAt: world.createdAt.toISOString(),
         updatedAt: world.updatedAt.toISOString(),
       }),
@@ -638,8 +637,6 @@ export async function collectBackupData(
         slug: page.slug,
         type: page.type,
         summary: page.summary,
-        visibility: page.visibility,
-        publishStatus: page.publishStatus,
         canonicalStatus: page.canonicalStatus,
         prepStatus: page.prepStatus,
         tags: page.tags,
@@ -656,7 +653,6 @@ export async function collectBackupData(
         type: block.type,
         sortOrder: block.sortOrder,
         content: block.content,
-        visibility: block.visibility,
         metadata: block.metadata,
         createdAt: block.createdAt.toISOString(),
         updatedAt: block.updatedAt.toISOString(),
@@ -683,7 +679,6 @@ export async function collectBackupData(
         storageKey: asset.storageKey,
         mimeType: asset.mimeType,
         size: asset.size,
-        visibility: asset.visibility,
         tags: asset.tags,
         metadata: asset.metadata,
         createdAt: asset.createdAt.toISOString(),
@@ -789,7 +784,6 @@ export async function collectBackupData(
         volume: button.volume,
         loop: button.loop,
         tags: button.tags,
-        visibility: button.visibility,
         sortOrder: button.sortOrder,
         createdAt: button.createdAt.toISOString(),
         updatedAt: button.updatedAt.toISOString(),
@@ -808,26 +802,9 @@ export async function collectBackupData(
         id: membership.id,
         userId: membership.userId,
         worldId: membership.worldId,
-        role: membership.role,
         characterName: membership.characterName,
         createdAt: membership.createdAt.toISOString(),
         updatedAt: membership.updatedAt.toISOString(),
-      }),
-    ),
-    pagePlayerAccess: pagePlayerAccess.map(
-      (access): BackupPagePlayerAccessRecord => ({
-        id: access.id,
-        pageId: access.pageId,
-        userId: access.userId,
-      }),
-    ),
-    sessionUnlocks: sessionUnlocks.map(
-      (unlock): BackupSessionUnlockRecord => ({
-        id: unlock.id,
-        pageId: unlock.pageId,
-        userId: unlock.userId,
-        unlockedAt: unlock.unlockedAt.toISOString(),
-        sessionLabel: unlock.sessionLabel,
       }),
     ),
     users: [...mergedUsers.values()].map(
@@ -835,7 +812,11 @@ export async function collectBackupData(
         id: user.id,
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: user.isOwner,
+        portalAccess: user.portalAccess,
+        studioAccess: user.studioAccess,
+        brainAccess: user.brainAccess,
+        familyAccess: user.familyAccess,
       }),
     ),
     pageTemplates: pageTemplates.map(
@@ -845,28 +826,12 @@ export async function collectBackupData(
         name: template.name,
         description: template.description,
         pageType: template.pageType,
-        defaultVisibility: template.defaultVisibility,
         titlePlaceholder: template.titlePlaceholder,
         blocks: template.blocks,
         isSystem: template.isSystem,
         isActive: template.isActive,
         createdAt: template.createdAt.toISOString(),
         updatedAt: template.updatedAt.toISOString(),
-      }),
-    ),
-    shareLinks: shareLinks.map(
-      (link): BackupShareLinkRecord => ({
-        id: link.id,
-        worldId: link.worldId,
-        targetType: link.targetType,
-        targetId: link.targetId,
-        expiresAt: toIso(link.expiresAt),
-        hasPassword: Boolean(link.passwordHash),
-        readOnly: link.readOnly,
-        logAccess: link.logAccess,
-        enabled: link.enabled,
-        createdAt: link.createdAt.toISOString(),
-        updatedAt: link.updatedAt.toISOString(),
       }),
     ),
     terraKarten: terraKarten.map(
@@ -889,7 +854,6 @@ export async function collectBackupData(
         gameSessionId: note.gameSessionId,
         userId: note.userId,
         content: note.content,
-        visibility: note.visibility,
         status: note.status,
         createdAt: note.createdAt.toISOString(),
         updatedAt: note.updatedAt.toISOString(),

@@ -11,7 +11,6 @@ export interface AiProposal {
   content: string;
   targetType: AiProposalTargetType;
   targetId?: string | null;
-  visibility?: "dm_only" | "player_visible" | "public";
   status: AiProposalStatus;
   metadata?: Record<string, unknown>;
 }
@@ -47,7 +46,6 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
         content: body,
         targetType: "mail_draft",
         targetId: sessionId ?? pageId ?? null,
-        visibility: "player_visible",
         status: "pending",
         metadata: {
           subject,
@@ -66,7 +64,6 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
         content: resultText.trim(),
         targetType: "session_summary_dm",
         targetId: sessionId,
-        visibility: "dm_only",
         status: "pending",
       },
     ];
@@ -80,7 +77,6 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
         content: resultText.trim(),
         targetType: "brain_document",
         targetId: pageId ?? null,
-        visibility: "player_visible",
         status: "pending",
         metadata: {
           documentType: "general",
@@ -98,7 +94,6 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
         content: resultText.trim(),
         targetType: "brain_document",
         targetId: pageId ?? null,
-        visibility: "dm_only",
         status: "pending",
         metadata: {
           documentType: "world_knowledge",
@@ -120,7 +115,6 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
         content: resultText.trim(),
         targetType: action.defaultProposalTarget,
         targetId: pageId ?? null,
-        visibility: "dm_only",
         status: "pending",
         metadata: {
           source: "ai_generated",
@@ -152,7 +146,6 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
           : resultText.trim(),
         targetType: "terra_world_draft",
         targetId: pageId ?? null,
-        visibility: "dm_only",
         status: "pending",
         metadata: {
           source: "ai_generated",
@@ -174,7 +167,6 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
       content: resultText.trim(),
       targetType: action.defaultProposalTarget,
       targetId: pageId ?? sessionId ?? null,
-      visibility: action.playerSafe ? "player_visible" : "dm_only",
       status: "pending",
     },
   ];

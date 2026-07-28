@@ -7,15 +7,13 @@ import {
   GAME_SESSION_STATUS_LABELS,
   DashboardWidgetGrid,
   PageTypeBadge,
-  PublishBadge,
-  VisibilityBadge,
   WorldCockpitCard,
   WorldCockpitHeader,
   WorldCockpitTabs,
   WorldCockpitTag,
 } from "@uwe/shared-ui";
 import { type DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
-import type { GameSessionStatus, PageType, PublishStatus, Visibility } from "@uwe/database/enums";
+import type { GameSessionStatus, PageType } from "@uwe/database/enums";
 import { buildPageUrl } from "@uwe/database/page-types";
 import {
   Card,
@@ -46,7 +44,6 @@ export interface WorldDashboardClientProps {
     counts: {
       pages: number;
       campaigns: number;
-      drafts: number;
       assets: number;
       gameSessions: number;
       byCategory: { npcs: number; orte: number };
@@ -54,9 +51,7 @@ export interface WorldDashboardClientProps {
     portal: {
       portalEnabled: boolean;
       visiblePageCount: number;
-      activeShareLinkCount: number;
     };
-    world: { guestModeEnabled: boolean };
     nextSession: {
       id: string;
       sessionNumber: number;
@@ -74,8 +69,6 @@ export interface WorldDashboardClientProps {
       title: string;
       slug: string;
       type: PageType;
-      visibility: Visibility;
-      publishStatus: PublishStatus;
       updatedAt: string;
     }>;
   };
@@ -158,8 +151,7 @@ export function WorldDashboardClient({
               <strong>{overview.counts.pages}</strong> Seiten gesamt
             </p>
             <p className="text-sm text-muted-foreground">
-              {overview.counts.byCategory.npcs} NPCs · {overview.counts.byCategory.orte} Orte ·{" "}
-              {overview.counts.drafts} Entwürfe
+              {overview.counts.byCategory.npcs} NPCs · {overview.counts.byCategory.orte} Orte
             </p>
             <Link className={cn(buttonVariants({ variant: "ghost" }))} href={worldWikiPath(worldSlug)}>
               Seitenliste →
@@ -173,7 +165,7 @@ export function WorldDashboardClient({
               <strong>{overview.portal.visiblePageCount}</strong> sichtbare Seiten
             </p>
             <p className="text-sm text-muted-foreground">
-              {overview.portal.activeShareLinkCount} Share-Links · Portal{" "}
+              Portal{" "}
               {overview.portal.portalEnabled ? "aktiv" : "aus"}
             </p>
             <Link className={cn(buttonVariants({ variant: "ghost" }))} href={`/worlds/${worldSlug}/inspector`}>
@@ -241,10 +233,8 @@ export function WorldDashboardClient({
                             <PageTypeBadge type={page.type} />
                           </td>
                           <td className={TD_CLASS}>
-                            <VisibilityBadge visibility={page.visibility} />
                           </td>
                           <td className={TD_CLASS}>
-                            <PublishBadge status={page.publishStatus} />
                           </td>
                           <td className={cn(TD_CLASS, "text-muted-foreground")}>
                             {RELATIVE_FORMAT.format(new Date(page.updatedAt))}

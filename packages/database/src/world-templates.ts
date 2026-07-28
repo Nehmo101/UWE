@@ -1,4 +1,4 @@
-import type { PageType, Visibility } from "./generated/prisma/client";
+import type { PageType } from "./generated/prisma/client";
 import { getPageTemplate } from "./page-templates";
 
 /** Archetype selected when creating a new world (distinct from page templates). */
@@ -20,7 +20,6 @@ export interface WorldTemplateSeedPage {
   /** Override first block content when the archetype needs custom starter text. */
   starterContent?: string;
   pageType?: PageType;
-  visibility?: Visibility;
 }
 
 export interface WorldTemplateCampaignSeed {
@@ -81,7 +80,6 @@ const WORLD_TEMPLATES: WorldTemplateDefinition[] = [
           "- [[Themenbereich]]",
           "- [[Referenz]]",
         ].join("\n"),
-        visibility: "player_visible",
       },
       {
         title: "Themenbereich",
@@ -94,14 +92,12 @@ const WORLD_TEMPLATES: WorldTemplateDefinition[] = [
           "## Offene Fragen",
           "- ",
         ].join("\n"),
-        visibility: "player_visible",
       },
       {
         title: "Referenz",
         slug: "referenz",
         pageTemplateId: "handout",
         starterContent: "Kurzreferenz oder Glossar-Einträge für das Projekt.",
-        visibility: "player_visible",
       },
     ],
   },
@@ -123,7 +119,6 @@ const WORLD_TEMPLATES: WorldTemplateDefinition[] = [
           "2. Konfrontation",
           "3. Auflösung",
         ].join("\n"),
-        visibility: "dm_only",
       },
       { title: "Protagonist", slug: "protagonist", pageTemplateId: "npc" },
       { title: "Schauplatz", slug: "schauplatz", pageTemplateId: "ort" },
@@ -138,7 +133,6 @@ const WORLD_TEMPLATES: WorldTemplateDefinition[] = [
           "## Entwurf",
           "",
         ].join("\n"),
-        visibility: "dm_only",
       },
     ],
   },
@@ -172,14 +166,12 @@ const WORLD_TEMPLATES: WorldTemplateDefinition[] = [
           "## Siegbedingungen",
           "- ",
         ].join("\n"),
-        visibility: "dm_only",
       },
       {
         title: "Einheitenreferenz",
         slug: "einheitenreferenz",
         pageTemplateId: "handout",
         starterContent: "Kurzreferenz für Einheiten, Werte und Spezialregeln.",
-        visibility: "player_visible",
       },
     ],
   },
@@ -221,14 +213,13 @@ export interface AppliedWorldTemplateResult {
 /** Build content blocks for a seed page from a page template slug. */
 export function buildSeedPageBlocks(
   seed: WorldTemplateSeedPage,
-): Array<{ type: string; sortOrder: number; visibility: Visibility; content: string }> {
+): Array<{ type: string; sortOrder: number; content: string }> {
   const pageTemplate = getPageTemplate(seed.pageTemplateId);
   if (!pageTemplate) {
     return [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: seed.visibility ?? "dm_only",
         content: seed.starterContent ?? "",
       },
     ];
@@ -237,18 +228,15 @@ export function buildSeedPageBlocks(
   return pageTemplate.blocks.map((block, index) => ({
     type: block.type,
     sortOrder: index,
-    visibility: block.visibility,
     content: index === 0 ? (seed.starterContent ?? block.content) : block.content,
   }));
 }
 
 export function seedPageDefaults(seed: WorldTemplateSeedPage): {
   pageType: PageType;
-  visibility: Visibility;
 } {
   const pageTemplate = getPageTemplate(seed.pageTemplateId);
   return {
     pageType: seed.pageType ?? pageTemplate?.pageType ?? "lore",
-    visibility: seed.visibility ?? pageTemplate?.defaultVisibility ?? "dm_only",
   };
 }

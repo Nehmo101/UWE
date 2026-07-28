@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  composeHandoutMail,
   composeSessionRecapMail,
-  composeShareLinkMail,
 } from "./compose";
 
 describe("mail compose — player safety", () => {
@@ -39,29 +37,4 @@ describe("mail compose — player safety", () => {
     assert.match(draft.bodyText, /Spieler-Recap noch nicht/i);
   });
 
-  it("handout mail flags dm_only visibility", () => {
-    const draft = composeHandoutMail({
-      worldId: "w1",
-      assetId: "a1",
-      title: "Geheime Karte",
-      description: "Nur für den DM.",
-      visibility: "dm_only",
-    });
-
-    assert.equal(draft.containsDmOnlyHint, true);
-    assert.ok(draft.warnings.some((w) => /DM-only/i.test(w)));
-    assert.match(draft.bodyText, /Geheime Karte/);
-  });
-
-  it("share link compose does not mark dm_only hint", () => {
-    const draft = composeShareLinkMail({
-      worldId: "w1",
-      shareLinkId: "sl1",
-      targetLabel: "Kampagne Alpha",
-      publicUrl: "https://uwe.example/preview/abc",
-    });
-
-    assert.equal(draft.containsDmOnlyHint, false);
-    assert.match(draft.bodyText, /preview\/abc/);
-  });
 });

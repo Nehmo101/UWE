@@ -26,8 +26,6 @@ describe("world-overview", () => {
       title: "Hafenstadt",
       slug: "hafenstadt",
       type: "location",
-      visibility: "public",
-      publishStatus: "published",
     });
 
     await repo.createPage({
@@ -35,8 +33,6 @@ describe("world-overview", () => {
       title: "Geheimer Kult",
       slug: "geheimer-kult",
       type: "faction",
-      visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     await repo.createPage({
@@ -44,8 +40,6 @@ describe("world-overview", () => {
       title: "Kapitänin Mara",
       slug: "kapitaenin-mara",
       type: "npc",
-      visibility: "player_visible",
-      publishStatus: "published",
     });
 
     await db.gameSession.create({
@@ -72,7 +66,7 @@ describe("world-overview", () => {
     assert.equal(await service.getWorldOverview("does-not-exist"), null);
   });
 
-  it("aggregates page counts by category and publish status", async () => {
+  it("aggregates page counts by category", async () => {
     const overview = await service.getWorldOverview("overview-test");
     assert.ok(overview);
 
@@ -80,18 +74,15 @@ describe("world-overview", () => {
     assert.equal(overview.counts.byCategory.orte, 1);
     assert.equal(overview.counts.byCategory.npcs, 1);
     assert.equal(overview.counts.byCategory.fraktionen, 1);
-    assert.equal(overview.counts.published, 2);
-    assert.equal(overview.counts.drafts, 1);
     assert.equal(overview.counts.gameSessions, 2);
   });
 
-  it("counts only portal-visible pages for the portal status", async () => {
+  it("counts every page for the portal status", async () => {
     const overview = await service.getWorldOverview("overview-test");
     assert.ok(overview);
 
-    // Hafenstadt (public/published) + Mara (player_visible/published);
-    // Geheimer Kult (dm_only/draft) must never be counted.
-    assert.equal(overview.portal.visiblePageCount, 2);
+    // Every world member sees every page — the count is simply all pages.
+    assert.equal(overview.portal.visiblePageCount, 3);
   });
 
   it("finds the next upcoming session", async () => {

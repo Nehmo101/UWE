@@ -23,7 +23,6 @@ export function worldDmToolQuickLinks(worldSlug: string): { label: string; href:
     "world-prepare-session",
     "world-one-shot",
     "world-open-items",
-    "world-page-review",
     "world-quality",
     "world-inspector",
     "world-roll-tables",
@@ -58,7 +57,6 @@ export type WorldNavKey =
   | "backup"
   | "new-page"
   | "radar"
-  | "page-review"
   | "karten"
   | "magic-items"
   | "prepare-session"
@@ -173,7 +171,6 @@ export function worldBottomNavKey(active: WorldNavKey, isSearching = false): Wor
     active === "graph" ||
     active === "karten" ||
     active === "magic-items" ||
-    active === "page-review" ||
     isSearching
   ) {
     return "content";
@@ -229,8 +226,7 @@ export function campaignNavItems(
 
 /** Resolve icon-rail active id from Studio path. */
 export function resolveStudioRailActiveId(activePath: string): string | undefined {
-  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/today";
-  if (normalized.startsWith("/today")) return "today";
+  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/worlds";
   if (normalized.startsWith("/worlds") || normalized.startsWith("/search")) return "worlds";
   if (
     normalized.startsWith("/capture") ||
@@ -239,8 +235,7 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/workshop") ||
     normalized.startsWith("/projects") ||
     normalized.startsWith("/ideas") ||
-    normalized.startsWith("/bugs") ||
-    normalized.startsWith("/contracts")
+    normalized.startsWith("/bugs")
   ) {
     return "create";
   }
@@ -248,17 +243,13 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/ai") ||
     normalized.startsWith("/image-studio") ||
     normalized.startsWith("/mail") ||
-    normalized.startsWith("/calendar") ||
     normalized.startsWith("/brain") ||
     normalized.startsWith("/life-brain") ||
-    normalized.startsWith("/admin/reviews") ||
-    normalized.startsWith("/admin/agent-jobs") ||
-    normalized.startsWith("/system/rtx-connector")
+    normalized.startsWith("/admin/agent-jobs")
   ) {
     return "media-ai";
   }
   if (
-    normalized.startsWith("/system") ||
     normalized.startsWith("/admin") ||
     normalized.startsWith("/jobs") ||
     normalized.startsWith("/backup") ||
@@ -301,7 +292,6 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   if (normalized.startsWith(`${base}/graph`)) return "graph";
   if (normalized.startsWith(`${base}/karten`)) return "karten";
   if (normalized.startsWith(`${base}/magic-items`)) return "magic-items";
-  if (normalized.startsWith(`${base}/page-review`)) return "page-review";
   if (normalized.startsWith(`${base}/inspector`)) return "inspector";
   if (normalized.startsWith(`${base}/quality`)) return "quality";
   if (normalized.startsWith(`${base}/brain`)) return "brain";
@@ -334,14 +324,8 @@ export const STUDIO_PALETTE_EXTRA: {
   group: string;
   keywords?: string[];
 }[] = [
-  { id: "kitchen-pantry", label: "Vorratskammer", href: "/kitchen/pantry", group: "Werkzeuge / Küche", keywords: ["pantry", "vorrat"] },
-  { id: "kitchen-plan", label: "Essensplan", href: "/kitchen/plan", group: "Werkzeuge / Küche", keywords: ["plan", "meal"] },
-  { id: "kitchen-shopping", label: "Einkaufsliste", href: "/kitchen/shopping", group: "Werkzeuge / Küche", keywords: ["shopping", "einkauf"] },
   { id: "workshop-rental", label: "Terrain-Verleih", href: "/workshop/rental", group: "Organisation / Werkstatt", keywords: ["rental", "verleih"] },
   { id: "workshop-print-profiles", label: "Druckprofile", href: "/workshop/print-profiles", group: "Organisation / Werkstatt", keywords: ["print", "3d"] },
-  { id: "admin-audit-log", label: "Audit Log", href: "/admin/audit-log", group: "System / Sicherheit", keywords: ["audit", "security"] },
-  { id: "system-health", label: "Health-Ampel", href: "/system/health", group: "System / Betrieb", keywords: ["health", "performance"] },
-  { id: "system-version", label: "Version & Updates", href: "/system/version", group: "System / Betrieb", keywords: ["version", "build"] },
   { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },
   { id: "mail-compose", label: "E-Mail verfassen", href: "/mail/compose", group: "AI & Generatoren / Mail", keywords: ["mail", "compose", "email"] },
   { id: "life-brain", label: "Life Brain", href: "/life-brain", group: "Knowledge & Brain", keywords: ["life", "personal", "brain"] },

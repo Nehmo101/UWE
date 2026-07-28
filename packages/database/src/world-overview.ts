@@ -2,13 +2,9 @@ import type { PrismaClient } from "./client";
 import type {
   GameSessionStatus,
   PageType,
-  PublishStatus,
-  Visibility,
 } from "./generated/prisma/client";
 import { navCategoryForPageType, type NavCategory } from "./page-types";
-import { isPageAccessible } from "./permissions";
 import { SettingsService } from "./settings-service";
-import { isShareLinkActive } from "./share-link-service";
 
 /**
  * World Overview: aggregates everything a DM needs at a glance for one world.
@@ -20,8 +16,6 @@ export interface WorldOverviewPage {
   title: string;
   slug: string;
   type: PageType;
-  visibility: Visibility;
-  publishStatus: PublishStatus;
   updatedAt: Date;
 }
 
@@ -46,22 +40,17 @@ export interface WorldOverviewData {
     name: string;
     slug: string;
     description: string | null;
-    guestModeEnabled: boolean;
   };
   counts: {
     pages: number;
     byCategory: Record<NavCategory, number>;
-    published: number;
-    drafts: number;
     campaigns: number;
     assets: number;
     gameSessions: number;
   };
   portal: {
     portalEnabled: boolean;
-    publicSharingEnabled: boolean;
     visiblePageCount: number;
-    activeShareLinkCount: number;
   };
   nextSession: WorldOverviewSession | null;
   openPlots: WorldOverviewOpenPlot[];
@@ -88,7 +77,7 @@ export class WorldOverviewService {
 
     const settings = await new SettingsService(this.db).getSettings();
 
-    const [pages, campaignCount, assetCount, gameSessions, notesForReview, shareLinks] =
+    const [pages, campaignCount, assetCount, gameSessions, notesForReview] =
       await Promise.all([
         this.db.page.findMany({
           where: { worldId: world.id },
@@ -97,8 +86,6 @@ export class WorldOverviewService {
             title: true,
             slug: true,
             type: true,
-            visibility: true,
-            publishStatus: true,
             updatedAt: true,
           },
         }),
@@ -119,26 +106,12 @@ export class WorldOverviewService {
         this.db.playerNote.count({
           where: { worldId: world.id, status: "visible_to_dm" },
         }),
-        this.db.shareLink.findMany({
-          where: { worldId: world.id },
-          select: { enabled: true, expiresAt: true },
-        }),
       ]);
 
     const byCategory: Record<NavCategory, number> = { ...EMPTY_CATEGORY_COUNTS };
-    let published = 0;
-    let drafts = 0;
-    let visiblePageCount = 0;
-
-    const portalOptions = {
-      publicSharingEnabled: settings.portal.publicSharingEnabled,
-    };
 
     for (const page of pages) {
       byCategory[navCategoryForPageType(page.type)] += 1;
-      if (page.publishStatus === "published") published += 1;
-      if (page.publishStatus === "draft") drafts += 1;
-      if (isPageAccessible(page, "portal", portalOptions)) visiblePageCount += 1;
     }
 
     const upcoming = gameSessions
@@ -175,22 +148,17 @@ export class WorldOverviewService {
         name: world.name,
         slug: world.slug,
         description: world.description,
-        guestModeEnabled: world.guestModeEnabled,
       },
       counts: {
         pages: pages.length,
         byCategory,
-        published,
-        drafts,
         campaigns: campaignCount,
         assets: assetCount,
         gameSessions: gameSessions.length,
       },
       portal: {
         portalEnabled: settings.portal.portalEnabled,
-        publicSharingEnabled: settings.portal.publicSharingEnabled,
-        visiblePageCount,
-        activeShareLinkCount: shareLinks.filter((link) => isShareLinkActive(link)).length,
+        visiblePageCount: pages.length,
       },
       nextSession,
       openPlots,

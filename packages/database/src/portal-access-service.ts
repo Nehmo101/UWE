@@ -1,10 +1,4 @@
-import {
-  ADMIN_ACCESS_ROLES,
-  STUDIO_ACCESS_ROLES,
-  hasAnyRole,
-  type SafeUser,
-  type UweRole,
-} from "@uwe/auth";
+import { canAccessPortal, canAccessStudio, type SafeUser } from "@uwe/auth";
 import type { PrismaClient } from "./client";
 import { createAuthService } from "./auth";
 import { isPortalGloballyEnabled, SettingsService } from "./settings-service";
@@ -15,7 +9,7 @@ export type PortalAccessCheckId =
   | "user_active"
   | "password_configured"
   | "email_configured"
-  | "role_allowed"
+  | "portal_access"
   | "world_membership"
   | "accessible_world";
 
@@ -44,18 +38,9 @@ export interface PortalAccessEvaluation {
   blockers: string[];
 }
 
-const PORTAL_LOGIN_ROLES: readonly UweRole[] = [
-  "owner",
-  "admin",
-  "dm",
-  "player",
-  "readonly",
-  "guest",
-];
-
 function summarizeChecks(checks: PortalAccessCheck[]): PortalAccessSummary {
   const required = checks.filter((check) =>
-    ["portal_enabled", "user_active", "password_configured", "email_configured", "role_allowed"].includes(
+    ["portal_enabled", "user_active", "password_configured", "email_configured", "portal_access"].includes(
       check.id,
     ),
   );
@@ -76,7 +61,7 @@ export async function evaluatePortalAccessForUser(
     select: {
       ...USER_SAFE_SELECT,
       worldMemberships: {
-        include: { world: { select: { id: true, name: true, slug: true, guestModeEnabled: true } } },
+        include: { world: { select: { id: true, name: true, slug: true } } },
         orderBy: [{ world: { name: "asc" } }],
       },
     },
@@ -116,27 +101,27 @@ export async function evaluatePortalAccessForUser(
       detail: user.email ? undefined : "E-Mail fehlt — Portal-Login benötigt eine E-Mail-Adresse.",
     },
     {
-      id: "role_allowed",
-      label: "Rolle erlaubt Portal-Login",
-      pass: PORTAL_LOGIN_ROLES.includes(user.role),
-      detail: PORTAL_LOGIN_ROLES.includes(user.role)
+      id: "portal_access",
+      label: "Häkchen „Portal“ gesetzt",
+      pass: canAccessPortal(authUser),
+      detail: canAccessPortal(authUser)
         ? undefined
-        : `Rolle „${user.role}“ ist für Portal-Login nicht vorgesehen.`,
+        : "Ohne das Portal-Häkchen im Command Center kommt niemand ins Portal.",
     },
   ];
 
-  const hasGlobalWorldAccess = hasAnyRole(authUser, [...ADMIN_ACCESS_ROLES, ...STUDIO_ACCESS_ROLES]);
+  const hasGlobalWorldAccess = canAccessStudio(authUser);
   const membershipCount = user.worldMemberships.length;
   checks.push({
     id: "world_membership",
-    label: "Welt-Mitgliedschaft oder DM/Admin-Rolle",
+    label: "Welt-Zuordnung oder Studio-Häkchen",
     pass: hasGlobalWorldAccess || membershipCount > 0,
     detail:
       hasGlobalWorldAccess || membershipCount > 0
         ? hasGlobalWorldAccess
-          ? "Globale Studio-Rolle sieht alle Welten."
-          : `${membershipCount} Mitgliedschaft(en).`
-        : "Keine Welt zugeordnet — Spieler sehen keine Welten im Portal.",
+          ? "Studio-Zugang sieht alle Welten."
+          : `${membershipCount} Zuordnung(en).`
+        : "Keine Welt zugeordnet — ohne Zuordnung sieht man im Portal nichts.",
   });
 
   const accessibleWorldsRaw = await auth.listAccessibleWorldsForUser(userId);
@@ -160,7 +145,7 @@ export async function evaluatePortalAccessForUser(
 
   const loginReady = checks
     .filter((check) =>
-      ["portal_enabled", "user_active", "password_configured", "email_configured", "role_allowed"].includes(
+      ["portal_enabled", "user_active", "password_configured", "email_configured", "portal_access"].includes(
         check.id,
       ),
     )
@@ -177,7 +162,7 @@ export async function evaluatePortalAccessForUser(
 }
 
 export function portalAccessBadgeFromUser(
-  user: Pick<SafeUser, "status" | "role" | "hasPassword"> & {
+  user: Pick<SafeUser, "status" | "access" | "hasPassword"> & {
     email?: string | null;
     worldMemberships?: Array<{ worldId: string }>;
   },
@@ -186,7 +171,8 @@ export function portalAccessBadgeFromUser(
   if (options.portalEnabled === false) return { label: "Portal aus", tone: "muted" };
   if (user.status !== "active") return { label: "Inaktiv", tone: "danger" };
   if (!user.hasPassword || !user.email?.trim()) return { label: "Login unvollständig", tone: "warning" };
-  if (!hasAnyRole(user, [...ADMIN_ACCESS_ROLES, ...STUDIO_ACCESS_ROLES]) && (user.worldMemberships?.length ?? 0) === 0) {
+  if (!canAccessPortal(user)) return { label: "Kein Portal-Häkchen", tone: "warning" };
+  if (!canAccessStudio(user) && (user.worldMemberships?.length ?? 0) === 0) {
     return { label: "Keine Welten", tone: "warning" };
   }
   return { label: "Portal bereit", tone: "success" };

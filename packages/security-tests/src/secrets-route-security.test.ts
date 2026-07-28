@@ -14,7 +14,7 @@ describe("admin secrets route security", () => {
   it("requires admin API auth on secrets status JSON", () => {
     const source = read("apps/studio/app/api/admin/secrets/route.ts");
     assert.match(source, /requireAdminApiAuth/);
-    assert.match(source, /canAccessSecurityDashboard/);
+    assert.match(source, /context\.user\.isOwner/);
     assert.match(source, /assertSecretsStatusHasNoSecrets/);
     assert.doesNotMatch(source, /decryptSecret|passwordEnc|apiKeyEnc/);
   });
@@ -33,9 +33,12 @@ describe("admin secrets route security", () => {
     assert.doesNotMatch(source, /decryptSecret|passwordEnc|apiKeyEnc/);
   });
 
-  it("secrets status page stays read-only", () => {
-    const source = read("apps/studio/app/admin/secrets/page.tsx");
-    assert.match(source, /Read-only/);
-    assert.doesNotMatch(source, /<form|type="password"|revealSecret/i);
+  it("the Command Center secrets view returns metadata only", () => {
+    // The Studio page moved to the Command Center (Abschnitt D). The invariant
+    // is unchanged: this surface never returns a plaintext secret.
+    const source = read("tools/uwe-host-command-center/src/ops/status-ops.ts");
+    assert.match(source, /getSecretsStatusSnapshot/);
+    // Identifiers, not prose — the file's own comment says what it never returns.
+    assert.doesNotMatch(source, /\b(revealSecret|decryptSecret|plaintextSecret)\b/);
   });
 });

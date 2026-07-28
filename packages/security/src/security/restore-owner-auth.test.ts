@@ -11,9 +11,15 @@ function mockRestoreRequest(headers: Record<string, string> = {}): Request {
   });
 }
 
-function contextFor(role: ApiAuthContext["user"] extends null ? never : string): ApiAuthContext {
+function contextFor(kind: "owner" | "studio"): ApiAuthContext {
   return {
-    user: { id: "1", displayName: "U", email: null, role: role as never },
+    user: {
+      id: "1",
+      displayName: "U",
+      email: null,
+      isOwner: kind === "owner",
+      access: { portal: true, studio: true, brain: kind === "owner", family: kind === "owner" },
+    },
     apiTokenId: null,
     apiTokenScopes: null,
     authMethod: "session",
@@ -36,15 +42,9 @@ describe("requireRestoreOwnerAuth (destructive restore owner gate)", () => {
     assert.equal(requireRestoreOwnerAuth(mockRestoreRequest(), contextFor("owner")), null);
   });
 
-  it("rejects a dm session even when RESTORE_OWNER_TOKEN is unset", () => {
+  it("rejects a Studio session even when RESTORE_OWNER_TOKEN is unset", () => {
     delete process.env.RESTORE_OWNER_TOKEN;
-    const denied = requireRestoreOwnerAuth(mockRestoreRequest(), contextFor("dm"));
-    assert.ok(denied);
-    assert.equal(denied?.status, 403);
-  });
-
-  it("rejects an admin session (restore is owner-only)", () => {
-    const denied = requireRestoreOwnerAuth(mockRestoreRequest(), contextFor("admin"));
+    const denied = requireRestoreOwnerAuth(mockRestoreRequest(), contextFor("studio"));
     assert.ok(denied);
     assert.equal(denied?.status, 403);
   });
@@ -75,9 +75,9 @@ describe("requireRestoreOwnerAuth (destructive restore owner gate)", () => {
     assert.equal(denied?.status, 403);
   });
 
-  it("still rejects a dm session even if a valid owner token is present but the caller is a logged-in non-owner", () => {
+  it("still rejects a Studio session even if a valid owner token is present but the caller is a logged-in non-owner", () => {
     process.env.RESTORE_OWNER_TOKEN = "secret-owner-token";
-    const denied = requireRestoreOwnerAuth(mockRestoreRequest(), contextFor("dm"));
+    const denied = requireRestoreOwnerAuth(mockRestoreRequest(), contextFor("studio"));
     assert.ok(denied);
     assert.equal(denied?.status, 403);
   });

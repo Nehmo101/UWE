@@ -10,10 +10,13 @@ import { PRIVATE_LEAK_MARKERS, SECURITY_MARKERS } from "./markers";
 import { createSecurityFixture, type SecurityFixture } from "./fixtures/security-fixture";
 
 /**
- * Treasury-Authz: Der Gruppenschatz ist Spieler-Inhalt (wie player_visible).
- * dm_only-Items (properties.dmOnly), DM-Notizen (properties.dmNotes) und Items
- * mit nicht sichtbarer verlinkter Seite dürfen nie im Portal landen. Spieler
- * bewegen Items nur zwischen Schatzkammer und EIGENEM Charakter.
+ * Treasury-Authz: Der Gruppenschatz gehört der Welt — wer ihr zugeordnet ist,
+ * sieht ihn. Zwei Dinge bleiben GM-intern und dürfen nie im Portal landen:
+ * Items mit `properties.dmOnly` und DM-Notizen in `properties.dmNotes`.
+ * Spieler bewegen Items nur zwischen Schatzkammer und EIGENEM Charakter.
+ *
+ * Die frühere dritte Regel — Items, deren verlinkte Seite für die Person nicht
+ * sichtbar war — ist mit der Seiten-Sichtbarkeit entfallen.
  */
 describe("treasury authorization and player-safe filtering", () => {
   let fixture: SecurityFixture;
@@ -25,7 +28,6 @@ describe("treasury authorization and player-safe filtering", () => {
   let safeItemId: string;
   let notesItemId: string;
   let dmOnlyItemId: string;
-  let hiddenArtifactItemId: string;
   let dmCarriedItemId: string;
 
   async function contextFor(
@@ -90,21 +92,21 @@ describe("treasury authorization and player-safe filtering", () => {
     });
     dmOnlyItemId = dmOnlyItem.id;
 
-    // Item, das auf eine dm_only-Seite verlinkt (verstecktes Artefakt per Seite).
-    const dmOnlyPage = await fixture.db.page.findFirstOrThrow({
+    // Item, das auf eine Wiki-Seite verlinkt — mit der Seiten-Sichtbarkeit ist
+    // das kein Versteck mehr, es zählt als normales Item.
+    const linkedPage = await fixture.db.page.findFirstOrThrow({
       where: {
         slug: fixture.content.slugs.dmOnlyPage,
         world: { slug: fixture.content.publicWorldSlug },
       },
       select: { id: true },
     });
-    const hiddenArtifactItem = await treasury.addItem({
+    await treasury.addItem({
       worldId: publicWorldId,
       treasuryId: publicTreasury.id,
-      name: `Artefakt der Geheimnisse ${SECURITY_MARKERS.DM_ONLY}`,
-      pageId: dmOnlyPage.id,
+      name: "Artefakt der Geheimnisse",
+      pageId: linkedPage.id,
     });
-    hiddenArtifactItemId = hiddenArtifactItem.id;
 
     // Guest-disabled Welt mit DM-Schatz.
     const privateTreasury = await treasury.getOrCreateForWorld(privateWorldId);
@@ -143,7 +145,7 @@ describe("treasury authorization and player-safe filtering", () => {
   });
 
   describe("getForViewer", () => {
-    it("hides dm-only items, hidden artifacts, and dm notes from players", async () => {
+    it("hides dm-only items and dm notes from players", async () => {
       const ctx = await contextFor(fixture.content.publicWorldSlug, fixture.users.player.id);
       const view = await treasury.getForViewer(fixture.content.publicWorldSlug, ctx);
       assert.ok(view);
@@ -151,7 +153,10 @@ describe("treasury authorization and player-safe filtering", () => {
       const names = view.items.map((item) => item.name);
       assert.ok(names.includes("Heiltrank"));
       assert.ok(names.includes("Seil"));
-      assert.equal(view.items.length, 2);
+      // Das an eine Seite verknüpfte Artefakt ist jetzt sichtbar, das
+      // dmOnly-markierte nicht.
+      assert.equal(view.items.length, 3);
+      assert.ok(!names.some((name) => name.startsWith("Verstecktes Artefakt")));
 
       const serialized = JSON.stringify(view);
       for (const marker of PRIVATE_LEAK_MARKERS) {
@@ -186,7 +191,7 @@ describe("treasury authorization and player-safe filtering", () => {
       );
       const view = await treasury.getForViewer(fixture.content.publicWorldSlug, ctx);
       assert.ok(view);
-      assert.equal(view.items.length, 2);
+      assert.equal(view.items.length, 3);
 
       const serialized = JSON.stringify(view);
       for (const marker of PRIVATE_LEAK_MARKERS) {
@@ -278,17 +283,6 @@ describe("treasury authorization and player-safe filtering", () => {
       assert.equal(
         await treasury.moveItemForViewer(fixture.content.publicWorldSlug, ctx, {
           itemId: dmOnlyItemId,
-          targetCharacterId: playerCharacterId,
-        }),
-        null,
-      );
-    });
-
-    it("denies players taking hidden artifacts linked to dm-only pages", async () => {
-      const ctx = await contextFor(fixture.content.publicWorldSlug, fixture.users.player.id);
-      assert.equal(
-        await treasury.moveItemForViewer(fixture.content.publicWorldSlug, ctx, {
-          itemId: hiddenArtifactItemId,
           targetCharacterId: playerCharacterId,
         }),
         null,

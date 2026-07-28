@@ -134,13 +134,15 @@ export function loadConfig(surface: McpSurface, env: NodeJS.ProcessEnv = process
     return { ...shared, primary: portal, dataApi: studioEndpoint(env) };
   }
 
+  // Brain serves its own `/api/life-brain/*` since Abschnitt H2 — `dataApi` is
+  // the same origin as `primary`, not Studio's.
   const brain = resolveEndpoint(
     env,
     "brain",
     ["UWE_BRAIN_URL", "NEXT_PUBLIC_BRAIN_URL"],
     ["UWE_BRAIN_TOKEN", "UWE_MCP_TOKEN"],
   );
-  return { ...shared, primary: brain, dataApi: studioEndpoint(env) };
+  return { ...shared, primary: brain, dataApi: brain };
 }
 
 /** True for loopback origins — used to warn about tokenless remote access. */

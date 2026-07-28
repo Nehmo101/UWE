@@ -4,7 +4,6 @@ import type { PrismaClient } from "./client";
 import { buildBrainSection } from "./owner-setup-brain-section";
 import { getAdminStatus, type AdminStatus } from "./admin-status";
 import { createConnectorService } from "./connector-service";
-import { scanPublicContentLeaks, type PublicLeakScanResult } from "./public-leak-scanner";
 import { SettingsService, getPersistentPathConfiguration } from "./settings-service";
 import { getSystemStatus, type SystemStatus } from "./system-status";
 import { UWE_VERSION } from "./version";
@@ -49,14 +48,14 @@ export interface SetupSectionStatus {
 export interface OwnerSetupSnapshot {
   ok: boolean;
   canEdit: boolean;
-  role: string;
+  isOwner: boolean;
   timestamp: string;
   sections: SetupSectionStatus[];
 }
 
 export interface OwnerSetupOptions {
   env?: NodeJS.ProcessEnv;
-  role?: string;
+  isOwner?: boolean;
   canEdit?: boolean;
 }
 
@@ -164,24 +163,6 @@ function buildAccessSection(
       href: "/admin/setup?tab=access#portal",
     },
     {
-      id: "guest-access",
-      label: "Gastzugang Portal",
-      configured: settings.portal.guestAccessEnabled,
-      displayValue: boolLabel(settings.portal.guestAccessEnabled),
-      source: "db",
-      editable: true,
-      href: "/admin/setup?tab=access#portal",
-    },
-    {
-      id: "public-sharing",
-      label: "Öffentliche Freigabe",
-      configured: settings.portal.publicSharingEnabled,
-      displayValue: boolLabel(settings.portal.publicSharingEnabled),
-      source: "db",
-      editable: true,
-      href: "/admin/setup?tab=access#portal",
-    },
-    {
       id: "auth-required",
       label: "Login erforderlich",
       configured: system.proxy.authRequired,
@@ -231,10 +212,7 @@ function buildAccessSection(
   if (!settings.portal.portalEnabled) {
     nextSteps.push("Portal aktivieren, wenn Spieler Wiki-Zugang brauchen.");
   }
-  nextSteps.push("Benutzer und Rollen unter Zugriff → Benutzer verwalten.");
-  if (system.trust.publicPortalSharingEnabled) {
-    nextSteps.push("Öffentliche Portal-Freigabe ist aktiv — Sichtbarkeit regelmäßig prüfen.");
-  }
+  nextSteps.push("Zugänge im Command Center vergeben (Portal / Studio / Brain / Family).");
 
   const level: SetupSectionLevel =
     !system.trust.authSecretConfigured || system.trust.authSecretLooksWeak
@@ -669,10 +647,8 @@ async function buildPrinterSection(db: PrismaClient): Promise<SetupSectionStatus
 
 function buildDiagnoseSection(
   admin: AdminStatus,
-  publicLeaks: PublicLeakScanResult,
   envIssues: ReturnType<typeof validateUweEnvironment>,
 ): SetupSectionStatus {
-  const leakOk = publicLeaks.criticalCount === 0;
   const envOk = envIssues.filter((issue) => issue.severity === "error").length === 0;
 
   const settingsItems: SetupSettingItem[] = [
@@ -683,17 +659,6 @@ function buildDiagnoseSection(
       displayValue: admin.ok ? "OK" : "Einschränkungen",
       source: "env",
       editable: false,
-    },
-    {
-      id: "leak-scanner",
-      label: "Leak-Scanner",
-      configured: leakOk,
-      displayValue: leakOk
-        ? "keine kritischen Leaks"
-        : `${publicLeaks.criticalCount} kritisch · ${publicLeaks.findingCount} gesamt`,
-      source: "env",
-      editable: false,
-      href: "/system?tab=diagnose",
     },
     {
       id: "env-validation",
@@ -716,22 +681,19 @@ function buildDiagnoseSection(
   ];
 
   const nextSteps: string[] = [];
-  if (!leakOk) {
-    nextSteps.push("Leak-Scanner-Hinweise unter /system?tab=diagnose prüfen.");
-  }
   if (!envOk) {
     nextSteps.push("ENV-Warnungen beheben — Details im Diagnose-Dashboard.");
   }
   nextSteps.push("Vollständiges Diagnose-Dashboard: /system?tab=diagnose");
 
-  const level: SetupSectionLevel = admin.ok ? "ok" : leakOk ? "degraded" : "error";
+  const level: SetupSectionLevel = admin.ok ? "ok" : envOk ? "degraded" : "error";
 
   return {
     id: "diagnose",
     title: "Diagnose",
     level,
     statusLabel: level === "ok" ? "Gesund" : "Prüfen",
-    message: "Health, Leak-Scanner und ENV-Validierung — ohne Secrets.",
+    message: "Health und ENV-Validierung — ohne Secrets.",
     nextSteps,
     settings: settingsItems,
   };
@@ -743,14 +705,13 @@ export async function getOwnerSetupSnapshot(
 ): Promise<OwnerSetupSnapshot> {
   const env = options.env ?? process.env;
   const canEdit = options.canEdit ?? false;
-  const role = options.role ?? "unknown";
+  const isOwner = options.isOwner ?? false;
 
-  const [system, settings, admin, userCount, publicLeaks, envIssues] = await Promise.all([
+  const [system, settings, admin, userCount, envIssues] = await Promise.all([
     getSystemStatus(db, { env }),
     new SettingsService(db).getSettings(),
     getAdminStatus(db, brainPrisma, { env }),
     db.user.count(),
-    scanPublicContentLeaks(db),
     Promise.resolve(validateUweEnvironment(env)),
   ]);
 
@@ -762,7 +723,7 @@ export async function getOwnerSetupSnapshot(
     Promise.resolve(buildMailSection(system, settings)),
     buildRtxSection(db, admin, settings, env),
     buildPrinterSection(db),
-    Promise.resolve(buildDiagnoseSection(admin, publicLeaks, envIssues)),
+    Promise.resolve(buildDiagnoseSection(admin, envIssues)),
   ]);
 
   const ok = sections.every((section) => section.level === "ok" || section.level === "disabled");
@@ -770,7 +731,7 @@ export async function getOwnerSetupSnapshot(
   return {
     ok,
     canEdit,
-    role,
+    isOwner,
     timestamp: new Date().toISOString(),
     sections,
   };

@@ -8,7 +8,7 @@
  * and unified reverse-proxy layouts (/studio/*, /players/*, /public-assets/*).
  */
 
-export type UweAppSurface = "portal" | "studio" | "brain";
+export type UweAppSurface = "portal" | "studio" | "brain" | "family";
 
 /**
  * Public routes on the owner-only Brain surface. Everything else is protected
@@ -16,6 +16,13 @@ export type UweAppSurface = "portal" | "studio" | "brain";
  * handlers (`requireBrainOwnerAuth`), never in the middleware.
  */
 export const BRAIN_PUBLIC_ROUTES = ["/login", "/api/health", "/api/health/*"] as const;
+
+/**
+ * Public routes on the Family surface. Same shape as Brain — the difference is
+ * which checkbox the handlers require (`family` instead of `brain`), and that
+ * is enforced server-side, never in the middleware.
+ */
+export const FAMILY_PUBLIC_ROUTES = BRAIN_PUBLIC_ROUTES;
 
 export type RouteAccess = "public" | "protected" | "protected-session";
 
@@ -176,8 +183,6 @@ export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/maintenance/status",
   "/api/maintenance/evaluate",
   "/api/auth/login",
-  // Landing-page (uwe.example) unified sign-in for Studio & Portal targets.
-  "/api/auth/enter",
   "/api/auth/logout",
   "/api/auth/setup",
   "/api/auth/forgot-password",
@@ -317,11 +322,12 @@ function classifyApiRoute(resolved: string, surface: UweAppSurface): RouteClassi
     return { access: "protected", unknownApi: true, pathname: resolved };
   }
 
-  if (surface === "brain") {
+  if (surface === "brain" || surface === "family") {
     if (matchesAny(resolved, BRAIN_PUBLIC_ROUTES)) {
       return { access: "public", unknownApi: false, pathname: resolved };
     }
-    // Owner-only surface: every other API is protected; unknown APIs deny-by-default.
+    // Checkbox-gated surface: every other API is protected; unknown APIs
+    // deny-by-default.
     const known = matchesAny(resolved, PROTECTED_ROUTE_PREFIXES);
     return { access: "protected", unknownApi: !known, pathname: resolved };
   }
@@ -355,12 +361,12 @@ function classifyAppRoute(resolved: string, surface: UweAppSurface): RouteClassi
     return { access: "protected", unknownApi: false, pathname: resolved };
   }
 
-  if (surface === "brain") {
+  if (surface === "brain" || surface === "family") {
     if (matchesAny(resolved, BRAIN_PUBLIC_ROUTES)) {
       return { access: "public", unknownApi: false, pathname: resolved };
     }
-    // Owner-only pages: require a session (redirect to /login); the handler then
-    // enforces the owner role. Deny-by-default for everything non-public.
+    // Checkbox-gated pages: require a session (redirect to /login); the handler
+    // then enforces the checkbox. Deny-by-default for everything non-public.
     return { access: "protected-session", unknownApi: false, pathname: resolved };
   }
 

@@ -32,7 +32,7 @@ const newsreader = Newsreader({
 
 export const metadata: Metadata = {
   title: "UWE Brain",
-  description: "Universeller Welten-Editor — privater Brain-Bereich (owner-only)",
+  description: "Universeller Welten-Editor — privater Brain-Bereich",
 };
 
 export const viewport: Viewport = {

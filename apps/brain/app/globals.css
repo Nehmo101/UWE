@@ -13,6 +13,7 @@
   --color-background: var(--uwe-bg);
   --color-foreground: var(--uwe-fg);
   --color-card: var(--uwe-card, var(--uwe-card-bg));
+  --color-card-foreground: var(--uwe-fg);
   --color-border: var(--uwe-border);
   --color-primary: var(--uwe-accent);
   --color-primary-foreground: var(--uwe-on-accent);
@@ -20,6 +21,24 @@
   --color-sidebar-foreground: var(--uwe-sidebar-fg);
   --color-muted: var(--uwe-panel);
   --color-muted-foreground: var(--uwe-fg-muted);
+  /* Ab hier: nachgezogen für das Mail-Center (H10). Ohne diese Brücken fallen
+     `bg-secondary`, `bg-destructive`, `border-input` und `ring-ring` auf
+     Tailwind-Vorgaben zurück — die Oberfläche rendert dann farblos statt im
+     UWE-Theme, und zwar lautlos: kein Build-Fehler, kein Test schlägt an.
+     Die Zuordnungen sind dieselben wie in Studios globals.css. */
+  --color-secondary: var(--uwe-panel);
+  --color-secondary-foreground: var(--uwe-fg);
+  --color-accent: var(--uwe-accent-muted, var(--uwe-accent));
+  --color-accent-foreground: var(--uwe-on-accent);
+  --color-destructive: var(--uwe-danger);
+  --color-destructive-foreground: var(--uwe-danger-fg, var(--uwe-on-accent));
+  --color-input: var(--uwe-input-bg, var(--uwe-border));
+  --color-ring: var(--uwe-focus-ring, var(--uwe-accent));
+  --color-popover: var(--uwe-panel);
+  --color-popover-foreground: var(--uwe-fg);
+  --color-success: var(--uwe-success);
+  --color-warning: var(--uwe-warning);
+  --color-info: var(--uwe-info);
   --radius: var(--uwe-radius-md, 0.625rem);
 }
 
@@ -659,5 +678,48 @@ body {
   .brain-chat-rec {
     animation: none;
     outline: 2px solid var(--uwe-accent);
+  }
+}
+
+/*
+ * Mail-Center: die einzige Brain-Seite, die die volle Höhe braucht.
+ *
+ * `.uwe-main` scrollt selbst und polstert großzügig — richtig für Textseiten,
+ * falsch für einen Mail-Client, dessen Liste und Reader je eigene Scrollflächen
+ * haben. Statt eine Höhe aus der Kopfleiste zu rechnen (die umbricht und keine
+ * feste Höhe hat), wird `.uwe-main` für diese eine Seite per `:has()` zur
+ * Flex-Spalte: Überschrift oben, Client füllt den Rest. Die Höhe kommt aus dem
+ * Raster des Shells — keine Zahl, die beim nächsten Kopfzeilen-Umbau nachgeführt
+ * werden muss.
+ */
+.uwe-main:has(> .uwe-mail-center-frame) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.uwe-mail-center-frame {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  /* Bis an die Kanten: die Polsterung von `.uwe-main` wird seitlich
+     zurückgenommen, damit Rail, Liste und Reader die volle Breite haben. */
+  margin: 0.75rem -2rem 0;
+  border-top: 1px solid var(--uwe-border);
+}
+
+@media (max-width: 960px) {
+  .uwe-mail-center-frame {
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+
+  /* Unten liegt die App-Leiste fest über dem Inhalt — der Rahmen endet darüber,
+     sonst verschwindet die letzte Nachricht dahinter. */
+  .uwe-shell[data-has-bottom-nav="true"] .uwe-main:has(> .uwe-mail-center-frame) {
+    padding-bottom: calc(4.25rem + var(--uwe-safe-bottom));
   }
 }

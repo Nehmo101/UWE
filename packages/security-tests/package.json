@@ -6,8 +6,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs",
-    "test:authz": "node --import tsx --test src/role-matrix.test.ts src/route-authz.test.ts",
-    "test:leaks": "node --import tsx --test src/public-leak-scanner.test.ts"
+    "test:authz": "node --import tsx --test src/role-matrix.test.ts src/route-authz.test.ts src/portal-route-authz.test.ts src/treasury-authz.test.ts"
   },
   "dependencies": {
     "@uwe/assets": "workspace:*",

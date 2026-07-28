@@ -5,7 +5,7 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { canReadWorld } from "@uwe/auth";
-import type { AuthUser, UweRole, WorldMembership } from "@uwe/auth";
+import type { AreaAccess, AuthUser, WorldMembership } from "@uwe/auth";
 
 const libDir = dirname(fileURLToPath(import.meta.url));
 const portalRoot = dirname(libDir);
@@ -21,67 +21,55 @@ const worldLayout = join(
 
 const WORLD_ID = "world-1";
 
-function authUser(role: UweRole, id = "u-1"): AuthUser {
-  return { id, displayName: role, email: null, role };
-}
-
-function membership(userId: string, role: WorldMembership["role"] = "player"): WorldMembership {
-  return { userId, worldId: WORLD_ID, role, characterName: null };
-}
-
-function target(options: { guestModeEnabled?: boolean; membership?: WorldMembership | null } = {}) {
+function authUser(label: string, access: Partial<AreaAccess>, id = "u-1"): AuthUser {
   return {
-    id: WORLD_ID,
-    guestModeEnabled: options.guestModeEnabled ?? false,
-    membership: options.membership ?? null,
+    id,
+    displayName: label,
+    email: null,
+    isOwner: false,
+    access: { portal: false, studio: false, brain: false, family: false, ...access },
   };
+}
+
+const player = (id = "u-1") => authUser("player", { portal: true }, id);
+const dm = () => authUser("dm", { portal: true, studio: true }, "u-dm");
+
+function membership(userId: string): WorldMembership {
+  return { userId, worldId: WORLD_ID, characterName: null };
+}
+
+function target(options: { membership?: WorldMembership | null } = {}) {
+  return { id: WORLD_ID, membership: options.membership ?? null };
 }
 
 /**
  * The gate `getAccessContextForWorld` applies before returning a context.
  * These cases pin the property that B2 fixed: a logged-in player must not reach
- * a world they are not a member of just by guessing its slug.
+ * a world they are not assigned to just by guessing its slug.
  */
 describe("portal world read gate", () => {
-  it("denies a player without membership when guest mode is off", () => {
-    assert.equal(canReadWorld(authUser("player"), target()), false);
+  it("denies a Portal user without a world assignment", () => {
+    assert.equal(canReadWorld(player(), target()), false);
   });
 
-  it("denies a readonly user without membership", () => {
-    assert.equal(canReadWorld(authUser("readonly"), target()), false);
-  });
-
-  it("denies an anonymous visitor when guest mode is off", () => {
+  it("denies an anonymous visitor — guest mode is gone", () => {
     assert.equal(canReadWorld(null, target()), false);
+    assert.equal(canReadWorld(null, target({ membership: membership("u-1") })), false);
   });
 
-  it("allows a player who holds a membership in that world", () => {
-    assert.equal(
-      canReadWorld(authUser("player"), target({ membership: membership("u-1") })),
-      true,
-    );
+  it("allows a player who is assigned to that world", () => {
+    assert.equal(canReadWorld(player(), target({ membership: membership("u-1") })), true);
   });
 
-  it("ignores a membership that belongs to a different user", () => {
+  it("ignores an assignment that belongs to a different user", () => {
     assert.equal(
-      canReadWorld(authUser("player", "u-1"), target({ membership: membership("someone-else") })),
+      canReadWorld(player("u-1"), target({ membership: membership("someone-else") })),
       false,
     );
   });
 
-  it("allows any viewer once guest mode is enabled for the world", () => {
-    assert.equal(canReadWorld(authUser("player"), target({ guestModeEnabled: true })), true);
-    assert.equal(canReadWorld(null, target({ guestModeEnabled: true })), true);
-  });
-
-  it("keeps owner/admin/dm access to every world (DM preview must not break)", () => {
-    for (const role of ["owner", "admin", "dm"] as const) {
-      assert.equal(
-        canReadWorld(authUser(role), target()),
-        true,
-        `${role} must keep cross-world read access`,
-      );
-    }
+  it("keeps Studio access to every world (DM preview must not break)", () => {
+    assert.equal(canReadWorld(dm(), target()), true);
   });
 });
 
@@ -97,15 +85,10 @@ describe("portal world gate wiring", () => {
     assert.match(
       gate,
       /canReadWorld\(/,
-      "the world-membership check must live in the shared access-context helper, " +
+      "the world-assignment check must live in the shared access-context helper, " +
         "because a Next.js layout does not re-run for every navigation in its segment",
     );
     assert.match(gate, /isSandbox/, "sandbox worlds must stay out of the Portal");
-    assert.match(
-      gate,
-      /ctx\.guestModeEnabled/,
-      "use the settings-aware guest flag from the context, not the raw world column",
-    );
   });
 
   it("gates the world layout so a foreign world name is not disclosed", async () => {

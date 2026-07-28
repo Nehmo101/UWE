@@ -5,7 +5,6 @@ import {
   createSoundboardService,
   getAppRepository,
   type SoundSourceType,
-  type Visibility,
 } from "@uwe/database/server";
 import { assertValidSoundboardButton } from "@uwe/soundboard";
 import { revalidatePath } from "next/cache";
@@ -54,7 +53,6 @@ function parseButtonInput(formData: FormData) {
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean),
-    visibility: (formData.get("visibility") as Visibility) ?? "dm_only",
     linkedPageIds: parseLinkedPageIds(formData),
   };
 }
@@ -100,7 +98,6 @@ export async function createSoundboardButtonAction(formData: FormData) {
     volume: input.volume,
     loop: input.loop,
     tags: input.tags,
-    visibility: input.visibility,
     sortOrder,
     linkedPageIds: input.linkedPageIds,
   });
@@ -134,7 +131,6 @@ export async function updateSoundboardButtonAction(formData: FormData) {
     volume: input.volume,
     loop: input.loop,
     tags: input.tags,
-    visibility: input.visibility,
     linkedPageIds: input.linkedPageIds,
   });
 

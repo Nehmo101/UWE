@@ -27,7 +27,11 @@ export interface PasskeyCredentialWithUser {
     id: string;
     displayName: string;
     email: string | null;
-    role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+    isOwner: boolean;
+    portalAccess: boolean;
+    studioAccess: boolean;
+    brainAccess: boolean;
+    familyAccess: boolean;
     status: "invited" | "active" | "disabled";
     forcePasswordChange: boolean;
   };
@@ -191,7 +195,11 @@ export class PasskeyCredentialStore {
         id: record.user.id,
         displayName: record.user.displayName,
         email: record.user.email,
-        role: record.user.role,
+        isOwner: record.user.isOwner,
+        portalAccess: record.user.portalAccess,
+        studioAccess: record.user.studioAccess,
+        brainAccess: record.user.brainAccess,
+        familyAccess: record.user.familyAccess,
         status: record.user.status,
         forcePasswordChange: record.user.forcePasswordChange,
       },

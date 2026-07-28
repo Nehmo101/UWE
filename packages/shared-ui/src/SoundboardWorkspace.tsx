@@ -30,7 +30,6 @@ export interface SoundboardButtonView {
   volume: number;
   loop: boolean;
   tags: string[];
-  visibility: string;
   linkedPages: SoundboardLinkedPage[];
 }
 

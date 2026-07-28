@@ -138,14 +138,12 @@ function ensureHostDirectories(paths: HostPaths): void {
 export function buildLocalHostEnv(paths: HostPaths): string {
   const sessionSecret = randomBytes(48).toString("base64url");
   const setupToken = randomBytes(32).toString("base64url");
-  const mediaSecret = randomBytes(48).toString("base64url");
   return [
     "# Managed initial local-host configuration for UWE Command Center.",
     "# Existing files are preserved and can be edited in Studio later.",
     "NODE_ENV=production",
     `SESSION_SECRET=${sessionSecret}`,
     `UWE_SETUP_TOKEN=${setupToken}`,
-    `UWE_MEDIA_SIGNING_SECRET=${mediaSecret}`,
     "UWE_RUNTIME_ROLE=host",
     "RUN_DB_SEED=false",
     "AUTH_REQUIRED=true",
@@ -170,6 +168,7 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     // Owner-private Brain DB lives next to uwe.db so both are found deterministically
     // (the Next standalone build can't reliably resolve brain-client's relative default).
     `BRAIN_DATABASE_URL=file:${toPosixPath(path.join(paths.data, "uwe-brain.db"))}`,
+    `FAMILY_DATABASE_URL=file:${toPosixPath(path.join(paths.data, "uwe-family.db"))}`,
     `UWE_DATA_DIR=${toPosixPath(paths.data)}`,
     `UWE_UPLOADS_DIR=${toPosixPath(paths.uploads)}`,
     `UWE_BACKUP_DIR=${toPosixPath(paths.backups)}`,
@@ -413,6 +412,7 @@ export async function setupHost(
     { phase: "prisma", label: "Prisma-Client generieren", run: () => runWorkspaceCommand(paths, "Prisma Client", ["--filter", "@uwe/database", "db:generate"]) },
     { phase: "migrate", label: "Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Datenbankmigration", ["--filter", "@uwe/database", "db:deploy"]) },
     { phase: "migrate-brain", label: "Brain-Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Brain-Datenbankmigration", ["--filter", "@uwe/database", "db:deploy:brain"]) },
+    { phase: "migrate-family", label: "Family-Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Family-Datenbankmigration", ["--filter", "@uwe/database", "db:deploy:family"]) },
     {
       phase: "seed",
       label: "Demo-Grundbestand einspielen",

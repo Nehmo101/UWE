@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return parsed.response;
 
   const user = await getCurrentAuthUser();
-  const gatewayUser = user ? { userId: user.id, role: user.role } : undefined;
+  const gatewayUser = user ? { userId: user.id } : undefined;
 
   return postAiPrompt(parsed.data as unknown as AiPromptRequestBody, gatewayUser);
 }

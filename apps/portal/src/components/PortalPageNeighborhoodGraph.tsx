@@ -13,7 +13,7 @@ export async function PortalPageNeighborhoodGraph({
   pageId,
 }: PortalPageNeighborhoodGraphProps) {
   const repo = getAppRepository();
-  const pageGraph = await buildPageGraph(repo, worldSlug, pageId, "portal", "neighbors");
+  const pageGraph = await buildPageGraph(repo, worldSlug, pageId, "neighbors");
   const nodes = remapPortalGraphHrefs(worldSlug, pageGraph.nodes);
 
   return (

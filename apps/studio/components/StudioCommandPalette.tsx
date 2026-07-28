@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import type { NavCommand } from "@uwe/shared-utils/navigation";
 import { CommandPalette, type CommandPaletteAction } from "@/src/components/ui/command-palette";
 import { studioCommandPaletteCommands } from "@/src/lib/studio-navigation";
-import { generateMorningBriefingAction } from "@/app/briefing-actions";
 
 interface StudioCommandPaletteProps {
   worlds: { name: string; slug: string }[];
@@ -22,24 +21,13 @@ interface StudioCommandPaletteProps {
  * explicit without a context provider or prop-drilling through every shell wrapper.
  */
 
-/** Aktions-Befehle (führen etwas aus statt zu navigieren) — überall per Cmd/⌘+K. */
-const ACTION_COMMANDS: CommandPaletteAction[] = [
-  {
-    id: "action-briefing",
-    label: "Morning Briefing erstellen",
-    group: "Aktionen",
-    icon: "sparkles",
-    keywords: ["briefing", "ki", "zusammenfassung", "heute", "tag", "agenda"],
-    run: async () => {
-      try {
-        await generateMorningBriefingAction();
-      } finally {
-        // Feedback per Navigation: /today zeigt den Briefing-Status.
-        window.location.assign("/today");
-      }
-    },
-  },
-];
+/**
+ * Aktions-Befehle (führen etwas aus statt zu navigieren) — überall per Cmd/⌘+K.
+ *
+ * Aktuell leer: der einzige Eintrag war das Morning Briefing, und das gehört zum
+ * Daily Admin OS in Brain (Abschnitt H1).
+ */
+const ACTION_COMMANDS: CommandPaletteAction[] = [];
 
 const RESERVED_TOP_LEVEL = new Set(["worlds", "search", "backup", "settings", "api"]);
 

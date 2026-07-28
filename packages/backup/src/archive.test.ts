@@ -60,7 +60,6 @@ describe("backup zip slip protection", () => {
           type: "image",
           mimeType: "image/png",
           size: 3,
-          visibility: "dm_only",
         },
       ],
     };

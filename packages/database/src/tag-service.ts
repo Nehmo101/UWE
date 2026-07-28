@@ -3,6 +3,11 @@ import type { BrainPrismaClient } from "./brain-client";
 import type { EntityTagEntityType } from "./generated/prisma/client";
 import { createEntityTagService } from "./entity-tag-service";
 import { asMetadataRecord, parseStringArray, parseTagsFromMetadata, toPrismaJsonValue } from "./json-utils";
+// Die Family-Modelle (Vertraege, Dokumente, Kueche, Haushalt, Kalender,
+// Scan-Eingang) liegen seit Abschnitt G in uwe-family.db. Der Singleton statt
+// eines weiteren Konstruktor-Parameters: sonst muesste jede Aufrufstelle im
+// Repo einen dritten Client durchreichen.
+import { familyPrisma } from "./family-client";
 
 /** When true, tag merges update EntityTag only (Json dual-write skipped). Requires completed backfill. */
 export function isEntityTagsPrimaryMode(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -33,8 +38,6 @@ export interface TagReference {
   entityId: string;
   title: string;
   worldId?: string | null;
-  publishStatus?: string | null;
-  visibility?: string | null;
 }
 
 export interface TagInventoryEntry {
@@ -128,8 +131,6 @@ interface JsonTagEntityRow {
   title: string;
   tags: unknown;
   worldId?: string | null;
-  publishStatus?: string | null;
-  visibility?: string | null;
 }
 
 async function loadJsonTagEntities(
@@ -147,8 +148,6 @@ async function loadJsonTagEntities(
           title: true,
           tags: true,
           worldId: true,
-          publishStatus: true,
-          visibility: true,
         },
       });
     case "asset":
@@ -159,7 +158,6 @@ async function loadJsonTagEntities(
           title: true,
           tags: true,
           worldId: true,
-          visibility: true,
         },
       });
     case "soundboard_button":
@@ -218,7 +216,7 @@ async function loadJsonTagEntities(
           })),
         );
     case "contract":
-      return brainDb.contractExpense.findMany({
+      return familyPrisma.contractExpense.findMany({
         select: { id: true, name: true, metadata: true },
       }).then((rows) =>
         rows.map((row) => ({
@@ -331,12 +329,10 @@ function mergeTagInventories(
       }
       existing.references.push(ref);
       existing.count++;
-      if (ref.publishStatus !== "draft") {
+      if (true) {
         existing.onlyOnDrafts = false;
       }
-      if (ref.visibility !== "dm_only") {
         existing.onlyDmOnly = false;
-      }
     }
   }
 
@@ -367,12 +363,10 @@ async function collectJsonGapTagInventory(
     }
     entry.count++;
     entry.references.push(ref);
-    if (ref.publishStatus !== "draft") {
+    if (true) {
       entry.onlyOnDrafts = false;
     }
-    if (ref.visibility !== "dm_only") {
       entry.onlyDmOnly = false;
-    }
   };
 
   for (const entityType of TAG_BACKFILL_ENTITY_TYPES) {
@@ -389,8 +383,6 @@ async function collectJsonGapTagInventory(
           entityId: row.id,
           title: row.title,
           worldId: row.worldId,
-          publishStatus: row.publishStatus ?? null,
-          visibility: row.visibility ?? null,
         });
       }
     }
@@ -497,7 +489,7 @@ async function mergeMetadataEntityTags(
   }
 
   if (entityType === "contract") {
-    const rows = await brainDb.contractExpense.findMany({
+    const rows = await familyPrisma.contractExpense.findMany({
       select: { id: true, metadata: true },
     });
     for (const row of rows) {
@@ -511,7 +503,7 @@ async function mergeMetadataEntityTags(
       const next = replaceTagsByNormalizedKeys(tags, options.fromKeys, options.toTag);
       if (!next) continue;
       if (!skipJsonWrite) {
-        await brainDb.contractExpense.update({
+        await familyPrisma.contractExpense.update({
           where: { id: row.id },
           data: { metadata: toPrismaJsonValue({ ...metadata, tags: next }) },
         });
@@ -610,12 +602,10 @@ async function collectEntityTagInventory(
     }
     entry.count++;
     entry.references.push(ref);
-    if (ref.publishStatus !== "draft") {
+    if (true) {
       entry.onlyOnDrafts = false;
     }
-    if (ref.visibility !== "dm_only") {
       entry.onlyDmOnly = false;
-    }
   };
 
   for (const link of links) {
@@ -625,8 +615,6 @@ async function collectEntityTagInventory(
       entityId: link.entityId,
       title: meta?.title ?? link.entityId,
       worldId: link.worldId,
-      publishStatus: meta?.publishStatus ?? null,
-      visibility: meta?.visibility ?? null,
     });
   }
 

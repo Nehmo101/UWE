@@ -50,6 +50,7 @@ export {
 export { ViewEditToggle, type ViewEditToggleProps } from "./ViewEditToggle";
 
 export { NavSearch, type NavSearchProps } from "./NavSearch";
+export { NavIcon, resolveLucideIcon, type NavIconProps } from "./NavIcon";
 export type { NavSearchEntry, NavSearchHit } from "@uwe/shared-utils/nav-search";
 
 export {
@@ -153,31 +154,22 @@ export {
   GAME_SESSION_STATUS_LABELS,
   PAGE_TYPE_LABELS,
   PLAYER_NOTE_STATUS_LABELS,
-  PUBLISH_LABELS,
   QUEST_STATUS_DESCRIPTIONS,
   QUEST_STATUS_LABELS,
-  REVEAL_STATE_DESCRIPTIONS,
-  REVEAL_STATE_LABELS,
   RTX_STATE_DESCRIPTIONS,
   RTX_STATE_LABELS,
-  SECRET_LEVEL_DESCRIPTIONS,
-  SECRET_LEVEL_LABELS,
-  VISIBILITY_DESCRIPTIONS,
-  VISIBILITY_LABELS,
   AssetTypeBadge,
   CanonicalBadge,
   DungeonPrepStatusBadge,
   GameSessionStatusBadge,
   PageTypeBadge,
   PlayerNoteStatusBadge,
-  PublishBadge,
   AiReviewedBadge,
   QuestStatusBadge,
-  RevealStateBadge,
   RtxStatusBadge,
-  SecretLevelBadge,
+  mapRtxReadinessToConnectorState,
+  type RtxReadinessLike,
   TagChip,
-  VisibilityBadge,
   type RtxConnectorState,
 } from "./StatusBadges";
 
@@ -187,7 +179,6 @@ export {
   type ContentBlockViewModel,
 } from "./ContentBlocks";
 
-export { SecretReveal, type SecretRevealProps } from "./SecretReveal";
 
 export {
   ThemePicker,

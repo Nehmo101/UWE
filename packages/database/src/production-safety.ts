@@ -4,7 +4,6 @@ import { resolveBackupsDirFromEnv } from "@uwe/assets";
 import { isWeakSecret as isWeakAuthSecret } from "@uwe/env";
 import type { PrismaClient } from "./client";
 import type { InspectorSeverity } from "./world-inspector";
-import { SettingsService, type UweSystemSettings } from "./settings-service";
 import {
   getUweRuntimeConfig,
   isPublicExposureConfigured,
@@ -41,10 +40,6 @@ export function isRunDbSeedUnsafe(): boolean {
 
 export function isStudioApiTokenMissing(): boolean {
   return !process.env.STUDIO_API_TOKEN?.trim();
-}
-
-export function isPublicPortalExposureEnabled(settings: UweSystemSettings): boolean {
-  return settings.portal.publicSharingEnabled || settings.portal.guestAccessEnabled;
 }
 
 export function getBackupFreshnessStatus(
@@ -101,7 +96,6 @@ export async function getProductionSafetyWarnings(
   db: PrismaClient,
 ): Promise<ProductionSafetyWarning[]> {
   const warnings: ProductionSafetyWarning[] = [];
-  const settings = await new SettingsService(db).getSettings();
   const backupFreshness = getBackupFreshnessStatus();
 
   const sessionSecret =
@@ -236,19 +230,6 @@ export async function getProductionSafetyWarnings(
       title: "Studio geschützt",
       description: studioSecurity.message,
       href: "/system?tab=diagnose",
-    });
-  }
-
-  if (isPublicPortalExposureEnabled(settings)) {
-    const enabled: string[] = [];
-    if (settings.portal.guestAccessEnabled) enabled.push("Gastzugang");
-    if (settings.portal.publicSharingEnabled) enabled.push("öffentliche Share-Links");
-    warnings.push({
-      id: "production:portal-sharing",
-      severity: "warning",
-      title: "Öffentliche Portal-/Share-Funktionen aktiv",
-      description: `Aktiv: ${enabled.join(", ")}. Prüfe bewusst, welche Inhalte und Links dadurch erreichbar sind.`,
-      href: "/settings",
     });
   }
 

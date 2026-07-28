@@ -15,10 +15,6 @@ import {
   LoadingState,
 } from "@/src/components/ui";
 
-// Radix Select erlaubt keinen Item-Wert value="" — das Welt-Filterfeld mit
-// echtem Leerwert ("Alle Welten") bleibt natives <select>, gestylt wie Kit-Input.
-const NATIVE_SELECT_CLASS =
-  "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
 const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
@@ -50,12 +46,6 @@ interface SimilarTagGroup {
   reason: string;
 }
 
-interface WorldOption {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 interface TagsResponse {
   inventory: TagInventoryEntry[];
   suggestions: TagMergeSuggestion[];
@@ -72,12 +62,18 @@ interface TagsResponse {
     totalEntityTags: number;
   };
   entityTypeLabels?: Record<string, string>;
-  worlds: WorldOption[];
 }
 
-export function TagAdminWorkspace() {
+/**
+ * Tag-Aufräumer einer Welt.
+ *
+ * Lag früher unter `/admin/tags` mit einem „Alle Welten"-Filter. Tags sind
+ * Inhaltsverschlagwortung, keine Systemkonfiguration — die Fläche gehört
+ * deshalb ins Welt-Cockpit (Notiz Lasse, D30). Die Welt kommt von der Route,
+ * nicht aus einem Dropdown.
+ */
+export function TagAdminWorkspace({ worldId }: { worldId: string }) {
   const [data, setData] = useState<TagsResponse | null>(null);
-  const [worldId, setWorldId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mergeToTag, setMergeToTag] = useState("");
@@ -91,11 +87,10 @@ export function TagAdminWorkspace() {
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams();
-    if (worldId) params.set("worldId", worldId);
+    const params = new URLSearchParams({ worldId });
 
     try {
-      const response = await fetch(studioApiUrl(`/api/admin/tags?${params.toString()}`));
+      const response = await fetch(studioApiUrl(`/api/tags?${params.toString()}`));
       if (!response.ok) {
         throw new Error(`Tags konnten nicht geladen werden (${response.status}).`);
       }
@@ -117,12 +112,12 @@ export function TagAdminWorkspace() {
     setMergeStatus(null);
 
     try {
-      const response = await fetch(studioApiUrl("/api/admin/tags"), {
+      const response = await fetch(studioApiUrl("/api/tags"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "merge",
-          worldId: worldId || null,
+          worldId,
           fromTags: mergeFromTags,
           toTag: mergeToTag,
         }),
@@ -161,12 +156,12 @@ export function TagAdminWorkspace() {
     setBackfillStatus(null);
 
     try {
-      const response = await fetch(studioApiUrl("/api/admin/tags"), {
+      const response = await fetch(studioApiUrl("/api/tags"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "backfill",
-          worldId: worldId || null,
+          worldId,
         }),
       });
 
@@ -194,28 +189,7 @@ export function TagAdminWorkspace() {
   return (
     <>
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filter</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="tag-admin-world">Welt (optional)</Label>
-            {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
-                "Alle Welten" — natives Select beibehalten. */}
-            <select
-              id="tag-admin-world"
-              value={worldId}
-              onChange={(event) => setWorldId(event.target.value)}
-              className={NATIVE_SELECT_CLASS}
-            >
-              <option value="">Alle Welten</option>
-              {data?.worlds.map((world) => (
-                <option key={world.id} value={world.id}>
-                  {world.name} ({world.slug})
-                </option>
-              ))}
-            </select>
-          </div>
+        <CardContent className="flex flex-wrap items-end gap-3 pt-6">
           <Button type="button" variant="secondary" onClick={() => void loadTags()}>
             Aktualisieren
           </Button>

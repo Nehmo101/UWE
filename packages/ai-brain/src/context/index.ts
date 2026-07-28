@@ -9,12 +9,6 @@ export {
 } from "./context-builder";
 
 export { resolveContextBuilderConfig, type ContextBuilderConfig } from "./config";
-export {
-  audienceAllowsDmOnly,
-  filterBrainVisibility,
-  resolveContextAudience,
-  shouldIncludeVisibility,
-} from "./visibility";
 export { truncateContextPages, serializePageForBudget } from "./budget";
 export {
   buildContextDebug,

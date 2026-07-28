@@ -11,7 +11,7 @@ import {
 } from "@uwe/database/server";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
-import { Alert, buttonVariants, Card, CardContent } from "@/src/components/ui";
+import { buttonVariants, Card, CardContent } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string; labelId: string }>;
@@ -20,7 +20,7 @@ interface Props {
 
 export default async function StudioLabelPreviewPage({ params, searchParams }: Props) {
   const { worldSlug, labelId } = await params;
-  const { includeDmOnly } = await searchParams;
+  const {} = await searchParams;
   const repo = getAppRepository();
   const labelService = createLabelService();
 
@@ -51,7 +51,6 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
         : null,
       imageUrls,
       worldName: world.name,
-      includeDmOnly: includeDmOnly === "1",
     },
     true,
   );
@@ -110,11 +109,6 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
       />
 
       <div className="flex flex-col gap-6">
-        {parsed.content.containsDmOnly && includeDmOnly !== "1" && (
-          <Alert tone="warning">
-            Enthält DM-only Inhalte. <Link href={`?includeDmOnly=1`}>In Vorschau anzeigen</Link>
-          </Alert>
-        )}
 
         <Card>
           <CardContent className="p-6">

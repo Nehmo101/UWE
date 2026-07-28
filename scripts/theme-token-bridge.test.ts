@@ -28,6 +28,7 @@ const BRIDGES = [
   "apps/studio/app/globals.css",
   "apps/portal/app/globals.css",
   "apps/brain/app/globals.css",
+  "apps/family/app/globals.css",
   "apps/rtx-connector-client/src/styles/globals.css",
 ] as const;
 

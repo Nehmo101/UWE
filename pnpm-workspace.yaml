@@ -9,3 +9,16 @@ onlyBuiltDependencies:
   - prisma
   - "@prisma/engines"
   - better-sqlite3
+
+# Version-Overrides (CVE-Pins; Begründungen: docs/security/dependency-notes.md).
+# Hier statt in package.json#pnpm.overrides: pnpm 11 liest nur noch diese Datei.
+overrides:
+  "@hono/node-server": ">=2.0.10 <3"
+  "dompurify": ">=3.4.12 <4"
+  "fast-uri": ">=3.1.4 <4"
+  "hono": ">=4.12.27 <5"
+  "linkify-it": ">=5.0.2 <6"
+  "nodemailer": "^9.0.1"
+  "postcss": ">=8.5.18"
+  "sharp": ">=0.35.0"
+  "valibot": ">=1.4.2 <2"

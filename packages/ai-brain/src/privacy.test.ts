@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   contextContainsLocalKnowledge,
-  resolveServerAllowDmOnly,
-  validateProviderForContext,
+  extractDmOnlyPhrases,
+  validatePlayerRecapContent,
 } from "./privacy";
 import { AiPrivacyError } from "./types";
 import type { AiContext } from "./types";
@@ -18,7 +18,6 @@ function emptyContext(overrides: Partial<AiContext> = {}): AiContext {
     promptContext: "",
     truncated: false,
     datenschutzMode: false,
-    allowDmOnly: false,
     ...overrides,
   };
 }
@@ -36,78 +35,47 @@ describe("privacy — local knowledge detection", () => {
   });
 });
 
-describe("privacy — resolveServerAllowDmOnly", () => {
-  it("never allows DM-only for cloud route", () => {
-    assert.equal(resolveServerAllowDmOnly({ localOnly: true }, true), false);
+describe("privacy — player recap must not echo GM session text", () => {
+  const session = {
+    sessionId: "s1",
+    title: "Der Turm",
+    sessionNumber: 3,
+    date: null,
+    status: "summarized" as const,
+    summaryDm: "Der Magister ist in Wahrheit ein Doppelgänger.",
+    summaryPlayer: null,
+    notes: "Nepurga zieht die Fäden.",
+    openPlots: null,
+    playerDecisions: null,
+    linkedPageIds: [],
+  };
+
+  it("collects the session's GM-only fields as forbidden phrases", () => {
+    const phrases = extractDmOnlyPhrases(emptyContext({ session }));
+    assert.deepEqual(phrases, [session.summaryDm, session.notes]);
   });
 
-  it("blocks DM-only for player-safe tasks", () => {
-    assert.equal(resolveServerAllowDmOnly({ localOnly: true }, false, true), false);
+  it("collects nothing without a session", () => {
+    assert.deepEqual(extractDmOnlyPhrases(emptyContext()), []);
   });
 
-  it("allows DM-only only when localOnly and local route", () => {
-    assert.equal(resolveServerAllowDmOnly({ localOnly: true }, false), true);
-    assert.equal(resolveServerAllowDmOnly({ localOnly: false }, false), false);
-  });
-});
-
-describe("privacy — cloud provider validation", () => {
-  const pageWithContent = [
-    {
-      pageId: "p1",
-      title: "Test",
-      pageType: "npc",
-      visibility: "player_visible" as const,
-      canonicalStatus: "canon" as const,
-      summary: null,
-      tags: [],
-      aliases: [],
-      contentBlocks: [
-        { blockId: "b1", type: "text", visibility: "player_visible" as const, content: "Hello" },
-      ],
-    },
-  ];
-
-  it("blocks cloud when context has pages (legacy: no contextMode/allowLocalContextOnCloud)", () => {
+  it("rejects a recap that repeats a GM phrase", () => {
     assert.throws(
       () =>
-        validateProviderForContext(
-          "openai",
-          emptyContext({ pages: pageWithContent }),
-          { datenschutzMode: false, localOnly: false },
+        validatePlayerRecapContent(
+          "Die Gruppe erfuhr: Der Magister ist in Wahrheit ein Doppelgänger.",
+          extractDmOnlyPhrases(emptyContext({ session })),
         ),
       (error: unknown) => error instanceof AiPrivacyError,
     );
   });
 
-  it("allows cloud for DnD brain context when allowLocalContextOnCloud=true (W0 policy)", () => {
+  it("accepts a recap that stays on player-facing events", () => {
     assert.doesNotThrow(() =>
-      validateProviderForContext(
-        "openai",
-        emptyContext({ pages: pageWithContent }),
-        { datenschutzMode: false, localOnly: false, allowLocalContextOnCloud: true },
+      validatePlayerRecapContent(
+        "Die Gruppe erreichte den Turm und sprach mit dem Magister.",
+        extractDmOnlyPhrases(emptyContext({ session })),
       ),
-    );
-  });
-
-  it("still blocks cloud for DnD context when datenschutzMode is active", () => {
-    assert.throws(
-      () =>
-        validateProviderForContext(
-          "openai",
-          emptyContext({ pages: pageWithContent }),
-          { datenschutzMode: true, localOnly: false, allowLocalContextOnCloud: true },
-        ),
-      (error: unknown) => error instanceof AiPrivacyError,
-    );
-  });
-
-  it("allows cloud for empty context", () => {
-    assert.doesNotThrow(() =>
-      validateProviderForContext("openai", emptyContext(), {
-        datenschutzMode: false,
-        localOnly: false,
-      }),
     );
   });
 });

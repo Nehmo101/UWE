@@ -2,7 +2,7 @@
   "name": "@uwe/mail",
   "version": "1.0.0",
   "private": true,
-  "description": "UWE Mail Center — SMTP transport, compose and diagnostics",
+  "description": "UWE Mail Center \u2014 SMTP transport, compose and diagnostics",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -12,18 +12,23 @@
     "./portal": "./src/portal/index.ts",
     "./rules": "./src/rules/index.ts",
     "./sync": "./src/sync/sync-plan.ts",
-    "./search": "./src/search/query-parser.ts"
+    "./search": "./src/search/query-parser.ts",
+    "./ai": "./src/ai/index.ts",
+    "./sanitize": "./src/sanitize/mail-html.ts",
+    "./sync-account": "./src/sync/sync-account.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/ai-brain": "workspace:*",
     "@uwe/assets": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/mail-core": "workspace:*",
     "imapflow": "^1.0.187",
+    "isomorphic-dompurify": "^3.18.0",
     "mailparser": "^3.9.12",
     "nodemailer": "^9.0.1"
   },

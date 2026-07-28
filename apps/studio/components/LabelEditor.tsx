@@ -87,7 +87,6 @@ export interface LabelEditorAsset {
   id: string;
   title: string;
   url: string;
-  visibility: string;
 }
 
 interface Props {
@@ -285,7 +284,6 @@ export function LabelEditor({
         id: asset.id,
         title: asset.title,
         url: `/api/assets/${asset.id}/file`,
-        visibility: "player_visible",
       };
       setLocalAssets((current) => [...current, entry]);
       dispatch({
@@ -388,7 +386,7 @@ export function LabelEditor({
               return (
                 <div
                   key={element.id}
-                  className={`uwe-label-editor-element uwe-label-el-${element.type}${isSelected ? " is-selected" : ""}${element.dmOnly ? " is-dm-only" : ""}`}
+                  className={`uwe-label-editor-element uwe-label-el-${element.type}${isSelected ? " is-selected" : ""}`}
                   style={{
                     left: `${(element.x / CANVAS_W) * 100}%`,
                     top: `${(element.y / CANVAS_H) * 100}%`,
@@ -660,7 +658,6 @@ export function LabelEditor({
                       {localAssets.map((asset) => (
                         <option key={asset.id} value={asset.id}>
                           {asset.title}
-                          {asset.visibility === "dm_only" ? " (DM)" : ""}
                         </option>
                       ))}
                     </select>
@@ -694,12 +691,6 @@ export function LabelEditor({
                           borderRadius: 4,
                         }}
                       />
-                      {localAssets.find((a) => a.id === selected.imageAssetId)?.visibility ===
-                        "dm_only" && (
-                        <p className="mt-0.5 text-xs text-warning">
-                          DM-only Asset — nicht in Spieler-Labels exportieren.
-                        </p>
-                      )}
                       {!selected.visible && (
                         <p className="mt-0.5 text-xs text-warning">
                           Element ist ausgeblendet — erscheint nicht im Export.
@@ -815,20 +806,6 @@ export function LabelEditor({
                   }
                 />
                 Sichtbar
-              </label>
-              <label className="flex items-center gap-2 text-warning">
-                <input
-                  type="checkbox"
-                  checked={selected.dmOnly ?? false}
-                  onChange={(e) =>
-                    dispatch({
-                      type: "update_element",
-                      id: selected.id,
-                      patch: { dmOnly: e.target.checked },
-                    })
-                  }
-                />
-                DM-only
               </label>
             </div>
           )}

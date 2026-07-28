@@ -24,13 +24,13 @@ export async function seedAuthUsers(
     displayName: "DM User",
     email: "dm@uwe.local",
     password: DEV_SEED_PASSWORD,
-    role: "dm",
+    portalAccess: true,
+    studioAccess: true,
   });
 
   await auth.createWorldMembership({
     userId: dm.id,
     worldId,
-    role: "owner",
   });
 
   const playerDefs = [
@@ -47,13 +47,12 @@ export async function seedAuthUsers(
       displayName: def.displayName,
       email: def.email,
       password: DEV_SEED_PASSWORD,
-      role: "player",
+      portalAccess: true,
     });
 
     await auth.createWorldMembership({
       userId: user.id,
       worldId,
-      role: "player",
       characterName: def.characterName,
     });
 
@@ -79,7 +78,7 @@ export async function seedAuthDemoContent(
   auth: AuthService,
   repo: UweRepository,
   worldId: string,
-  playerUserIds: Record<string, string>,
+  _playerUserIds: Record<string, string>,
 ) {
   const secretForAman = await repo.createPage({
     worldId,
@@ -87,19 +86,14 @@ export async function seedAuthDemoContent(
     slug: "amans-geheimnis",
     type: "note",
     summary: "Nur für Aman freigegeben.",
-    visibility: "specific_players",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "specific_players",
         content: "Du hast einen verborgenen Hinweis im Turm gefunden.",
       },
     ],
   });
-
-  await auth.grantPagePlayerAccess(secretForAman.id, playerUserIds.aman);
 
   const sessionLocked = await repo.createPage({
     worldId,
@@ -107,19 +101,14 @@ export async function seedAuthDemoContent(
     slug: "nach-der-ersten-session",
     type: "note",
     summary: "Wird nach Session 1 freigeschaltet.",
-    visibility: "unlock_after_session",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "unlock_after_session",
         content: "Nach der ersten Session erfahrt ihr von der Verschwörung.",
       },
     ],
   });
-
-  await auth.unlockPageForUser(sessionLocked.id, playerUserIds.lazul, "Session 1");
 
   await repo.createPage({
     worldId,
@@ -127,13 +116,10 @@ export async function seedAuthDemoContent(
     slug: "archivierte-notiz",
     type: "note",
     summary: "Sollte im Portal nicht erscheinen.",
-    visibility: "archived",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "public",
         content: "Archivierter Inhalt.",
       },
     ],

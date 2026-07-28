@@ -24,8 +24,6 @@ import {
   type AiTaskType,
 } from "@uwe/ai-brain";
 import {
-  filterContextForViewer,
-  resolveEffectiveAllowDmOnly,
 } from "@uwe/security";
 import { enqueueAndDispatch, runJob } from "./job-executor";
 import { jsonError } from "./api-response";
@@ -120,7 +118,6 @@ export async function postContext(body: {
   taskType: AiTaskType;
   worldSlug: string;
   pageSlug: string;
-  allowDmOnly?: boolean;
   sessionId?: string;
 }) {
   try {
@@ -128,28 +125,19 @@ export async function postContext(body: {
     const overrides = await getAiSettingsOverrides();
     const settings = resolveAiBrainSettings(await createApiKeyStore(), overrides);
 
-    const allowDmOnly = resolveEffectiveAllowDmOnly({
-      clientAllowDmOnly: body.allowDmOnly,
-      localOnly: settings.localOnly,
-      routeIsCloud: false,
-    });
-
     const context = await buildAiContextBySlug(
       repo,
       body.taskType,
       body.worldSlug,
       body.pageSlug,
       {
-        allowDmOnly,
         datenschutzMode: settings.datenschutzMode,
         localOnly: settings.localOnly,
         sessionId: body.sessionId,
       },
     );
 
-    const filtered = filterContextForViewer(context, allowDmOnly, false);
-
-    return NextResponse.json({ context: filtered });
+    return NextResponse.json({ context });
   } catch (error) {
     return handleAiError(error);
   }
@@ -163,7 +151,6 @@ export async function postGenerate(
     providerId: AiProviderId;
     model: string;
     userPrompt?: string;
-    allowDmOnly?: boolean;
     sessionId?: string;
     useMock?: boolean;
     discardProposalId?: string;

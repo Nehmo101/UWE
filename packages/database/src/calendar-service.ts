@@ -3,9 +3,9 @@ import type {
   CalendarFeedDirection,
   CalendarFeedType,
   Prisma,
-} from "./generated/prisma-brain/client";
+} from "./generated/prisma-family/client";
 import type { PrismaClient } from "./client";
-import type { BrainPrismaClient } from "./brain-client";
+import type { FamilyPrismaClient } from "./family-client";
 import { toPrismaJsonValue } from "./json-utils";
 import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./token-crypto";
 
@@ -15,13 +15,13 @@ export type {
   CalendarEventKind,
   CalendarFeedType,
   CalendarFeedDirection,
-} from "./generated/prisma-brain/client";
+} from "./generated/prisma-family/client";
 
 export {
   CalendarEventKind as CalendarEventKindEnum,
   CalendarFeedType as CalendarFeedTypeEnum,
   CalendarFeedDirection as CalendarFeedDirectionEnum,
-} from "./generated/prisma-brain/client";
+} from "./generated/prisma-family/client";
 
 export const CALENDAR_EVENT_KIND_LABELS: Record<CalendarEventKind, string> = {
   session: "Spielsession",
@@ -89,25 +89,25 @@ export interface ListCalendarEventsForAggregationOptions {
 
 export class CalendarService {
   constructor(
-    private readonly brainDb: BrainPrismaClient,
+    private readonly familyDb: FamilyPrismaClient,
     private readonly coreDb: PrismaClient,
     private readonly encryptionSecret: string = resolveTokenEncryptionSecret(),
   ) {}
 
   async listFeeds(includeDisabled = false) {
-    return this.brainDb.calendarFeed.findMany({
+    return this.familyDb.calendarFeed.findMany({
       where: includeDisabled ? undefined : { enabled: true },
       orderBy: { name: "asc" },
     });
   }
 
   async getFeed(id: string) {
-    return this.brainDb.calendarFeed.findUnique({ where: { id } });
+    return this.familyDb.calendarFeed.findUnique({ where: { id } });
   }
 
   async createFeed(input: CreateCalendarFeedInput) {
     const password = input.password?.trim();
-    return this.brainDb.calendarFeed.create({
+    return this.familyDb.calendarFeed.create({
       data: {
         name: input.name.trim(),
         type: input.type,
@@ -126,7 +126,7 @@ export class CalendarService {
   }
 
   async updateFeed(id: string, input: Partial<CreateCalendarFeedInput>) {
-    return this.brainDb.calendarFeed.update({
+    return this.familyDb.calendarFeed.update({
       where: { id },
       data: {
         ...(input.name != null ? { name: input.name.trim() } : {}),
@@ -150,7 +150,7 @@ export class CalendarService {
   }
 
   async deleteFeed(id: string) {
-    await this.brainDb.calendarFeed.delete({ where: { id } });
+    await this.familyDb.calendarFeed.delete({ where: { id } });
   }
 
   async listEvents(options: ListCalendarEventsOptions = {}) {
@@ -163,7 +163,7 @@ export class CalendarService {
       if (options.from) where.startAt.gte = options.from;
       if (options.to) where.startAt.lte = options.to;
     }
-    return this.brainDb.calendarEvent.findMany({
+    return this.familyDb.calendarEvent.findMany({
       where,
       orderBy: { startAt: "asc" },
       take: options.limit ?? 500,
@@ -193,7 +193,7 @@ export class CalendarService {
       if (options.to) where.startAt.lte = options.to;
     }
 
-    return this.brainDb.calendarEvent.findMany({
+    return this.familyDb.calendarEvent.findMany({
       where,
       orderBy: { startAt: "asc" },
       take: options.limit ?? 500,
@@ -203,10 +203,10 @@ export class CalendarService {
 
   async createEvent(input: CreateCalendarEventInput) {
     const feed = input.feedId
-      ? await this.brainDb.calendarFeed.findUnique({ where: { id: input.feedId } })
+      ? await this.familyDb.calendarFeed.findUnique({ where: { id: input.feedId } })
       : null;
 
-    return this.brainDb.calendarEvent.create({
+    return this.familyDb.calendarEvent.create({
       data: {
         feedId: input.feedId ?? null,
         worldId: input.worldId ?? null,
@@ -232,7 +232,7 @@ export class CalendarService {
   }
 
   async updateEvent(id: string, input: Partial<CreateCalendarEventInput>) {
-    const existing = await this.brainDb.calendarEvent.findUnique({
+    const existing = await this.familyDb.calendarEvent.findUnique({
       where: { id },
       include: { feed: true },
     });
@@ -242,11 +242,11 @@ export class CalendarService {
 
     const feedId = input.feedId !== undefined ? input.feedId : existing.feedId;
     const feed = feedId
-      ? await this.brainDb.calendarFeed.findUnique({ where: { id: feedId } })
+      ? await this.familyDb.calendarFeed.findUnique({ where: { id: feedId } })
       : existing.feed;
     const effectiveKind = input.kind ?? existing.kind;
 
-    return this.brainDb.calendarEvent.update({
+    return this.familyDb.calendarEvent.update({
       where: { id },
       data: {
         ...(input.feedId !== undefined ? { feedId: input.feedId } : {}),
@@ -273,7 +273,7 @@ export class CalendarService {
   }
 
   async deleteEvent(id: string) {
-    await this.brainDb.calendarEvent.delete({ where: { id } });
+    await this.familyDb.calendarEvent.delete({ where: { id } });
   }
 
   async upsertExternalEvent(
@@ -281,7 +281,7 @@ export class CalendarService {
     externalUid: string,
     input: CreateCalendarEventInput,
   ) {
-    const existing = await this.brainDb.calendarEvent.findFirst({
+    const existing = await this.familyDb.calendarEvent.findFirst({
       where: { feedId, externalUid },
     });
     const payload = {
@@ -299,12 +299,12 @@ export class CalendarService {
 
   async deleteExternalEventsNotInUids(feedId: string, uids: string[]) {
     if (uids.length === 0) {
-      await this.brainDb.calendarEvent.deleteMany({
+      await this.familyDb.calendarEvent.deleteMany({
         where: { feedId, kind: "external" },
       });
       return;
     }
-    await this.brainDb.calendarEvent.deleteMany({
+    await this.familyDb.calendarEvent.deleteMany({
       where: {
         feedId,
         kind: "external",
@@ -319,7 +319,7 @@ export class CalendarService {
   ) {
     // Read-modify-write der Feed-Metadaten in einer Transaktion, damit
     // parallele Sync-Läufe sich nicht gegenseitig überschreiben (Lost Update).
-    return this.brainDb.$transaction(async (tx) => {
+    return this.familyDb.$transaction(async (tx) => {
       const feed = await tx.calendarFeed.findUnique({ where: { id: feedId } });
       if (!feed) return null;
       const current =
@@ -340,7 +340,7 @@ export class CalendarService {
   }
 
   async markFeedSynced(feedId: string, error: string | null = null) {
-    return this.brainDb.calendarFeed.update({
+    return this.familyDb.calendarFeed.update({
       where: { id: feedId },
       data: {
         lastSyncAt: new Date(),
@@ -350,7 +350,7 @@ export class CalendarService {
   }
 
   async ensureLocalFeed(): Promise<{ id: string }> {
-    const existing = await this.brainDb.calendarFeed.findFirst({
+    const existing = await this.familyDb.calendarFeed.findFirst({
       where: { type: "local" },
     });
     if (existing) return { id: existing.id };
@@ -364,7 +364,7 @@ export class CalendarService {
   }
 
   async listPendingWriteBackEvents(feedId: string) {
-    return this.brainDb.calendarEvent.findMany({
+    return this.familyDb.calendarEvent.findMany({
       where: { feedId, caldavPending: true },
       orderBy: { updatedAt: "asc" },
     });
@@ -374,7 +374,7 @@ export class CalendarService {
     eventId: string,
     remote: { remoteHref: string; remoteEtag?: string | null },
   ) {
-    return this.brainDb.calendarEvent.update({
+    return this.familyDb.calendarEvent.update({
       where: { id: eventId },
       data: {
         remoteHref: remote.remoteHref,
@@ -385,7 +385,7 @@ export class CalendarService {
   }
 
   async markEventPendingWrite(eventId: string) {
-    return this.brainDb.calendarEvent.update({
+    return this.familyDb.calendarEvent.update({
       where: { id: eventId },
       data: { caldavPending: true },
     });
@@ -397,20 +397,20 @@ export class CalendarService {
   }
 
   async unsyncSessionFromCalendar(sessionId: string) {
-    const linked = await this.brainDb.calendarEvent.findMany({
+    const linked = await this.familyDb.calendarEvent.findMany({
       where: { sessionId },
       select: { id: true },
     });
     if (linked.length === 0) {
       return { removed: 0 };
     }
-    await this.brainDb.calendarEvent.deleteMany({ where: { sessionId } });
+    await this.familyDb.calendarEvent.deleteMany({ where: { sessionId } });
     return { removed: linked.length };
   }
 
   async syncSessionToCalendar(sessionId: string) {
     // gameSession lives in the core DB; its calendarEvents back-relation was
-    // severed by the split, so the linked event is fetched from brainDb below.
+    // severed by the split, so the linked event is fetched from familyDb below.
     const session = await this.coreDb.gameSession.findUnique({
       where: { id: sessionId },
     });
@@ -428,7 +428,7 @@ export class CalendarService {
     const startAt = session.date;
     const endAt = new Date(startAt.getTime() + 4 * 60 * 60 * 1000);
 
-    const existing = await this.brainDb.calendarEvent.findFirst({
+    const existing = await this.familyDb.calendarEvent.findFirst({
       where: { sessionId: session.id },
     });
 
@@ -480,7 +480,7 @@ export class CalendarService {
     const now = options.now ?? new Date();
     const horizonMs = (options.horizonDays ?? 90) * 86_400_000;
 
-    const contracts = await this.brainDb.contractExpense.findMany({
+    const contracts = await this.familyDb.contractExpense.findMany({
       where: { status: { in: ["active", "review"] } },
     });
     const localFeed = await this.ensureLocalFeed();
@@ -523,7 +523,7 @@ export class CalendarService {
       }
     }
 
-    const pruned = await this.brainDb.calendarEvent.deleteMany({
+    const pruned = await this.familyDb.calendarEvent.deleteMany({
       where: {
         feedId: localFeed.id,
         externalUid: { startsWith: "uwe-contract-", notIn: activeUids },
@@ -535,8 +535,8 @@ export class CalendarService {
 }
 
 export function createCalendarService(
-  brainDb: BrainPrismaClient,
+  familyDb: FamilyPrismaClient,
   coreDb: PrismaClient,
 ): CalendarService {
-  return new CalendarService(brainDb, coreDb);
+  return new CalendarService(familyDb, coreDb);
 }

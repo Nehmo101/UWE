@@ -7,12 +7,10 @@ import {
   MetaPanel,
   SidebarSection,
   TagChip,
-  VisibilityBadge,
   WikiContent,
 } from "@uwe/shared-ui";
 import { AiBrainSidebar } from "@/components/AiBrainSidebar";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
-import { ShareLinkPanel } from "@/components/ShareLinkPanel";
 import { Alert, buttonVariants } from "@/src/components/ui";
 import {
   buildPageGraph,
@@ -20,20 +18,16 @@ import {
   buildPageUrl,
   createAuthService,
   createPrismaClient,
-  createShareLinkService,
   getAppRepository,
   navCategoryForPageType,
   NAV_CATEGORY_LABELS,
   parseStringArray,
   type NavCategory,
   type PageWithBlocks,
-  type ShareTargetType,
 } from "@uwe/database/server";
 import { buildPageGraphForViewer } from "@uwe/database/graph-service";
 import { buildPageViewForViewer } from "@uwe/database/page-viewer-service";
-import { getShareLinkPublicUrl } from "@/src/lib/share-url";
 import { pagePreviewHref } from "@/src/lib/page-preview";
-import { describePreviewVisibilityGate } from "@/src/lib/preview-visibility-reason";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { PreviewAsPlayerControls } from "@/src/components/PreviewAsPlayerControls";
 import { WikiContextPanel } from "@/src/components/wiki";
@@ -45,8 +39,8 @@ function renderPreviewNotVisible(worldSlug: string, page: PageWithBlocks) {
   return (
     <div className="page">
       <EmptyState
-        title="Für Spieler noch nicht sichtbar"
-        description={`Diese Seite existiert, ist aktuell aber nicht für Spieler sichtbar. ${describePreviewVisibilityGate(page)}`}
+        title="Für diesen Spieler nicht zugänglich"
+        description="Die Seite existiert, die Vorschau-Person ist dieser Welt aber nicht zugeordnet."
         action={
           <Link className={buttonVariants({ variant: "default" })} href={pageHref}>
             Zurück zur DM-Ansicht
@@ -121,53 +115,17 @@ export async function StudioWikiPageView({
           "neighbors",
         );
       } else {
-        view = await buildPageView(repo, worldSlug, slug, "preview");
+        view = await buildPageView(repo, worldSlug, slug);
         if (!view) return renderPreviewNotVisible(worldSlug, rawPage);
-        pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "preview", "neighbors");
+        pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "neighbors");
       }
     } else {
-      view = await buildPageView(repo, worldSlug, slug, "dm");
+      view = await buildPageView(repo, worldSlug, slug);
       if (!view) notFound();
-      pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "dm", "neighbors");
+      pageGraph = await buildPageGraph(repo, worldSlug, rawPage.id, "neighbors");
     }
 
-    const shareTargetType: ShareTargetType =
-      rawPage.type === "handout" ? "handout" : "page";
-    const returnPath = buildPageUrl(worldSlug, rawPage.type, slug);
     const pageHref = buildPageUrl(worldSlug, rawPage.type, slug);
-
-    let shareLinks: Array<{
-      id: string;
-      token: string;
-      enabled: boolean;
-      expiresAt: string | null;
-      readOnly: boolean;
-      logAccess: boolean;
-      hasPassword: boolean;
-      createdAt: string;
-    }> = [];
-    let previewHref: string | undefined;
-
-    const shareService = createShareLinkService(db);
-    const links = await shareService.listShareLinksForTarget(
-      world.id,
-      shareTargetType,
-      rawPage.id,
-    );
-    shareLinks = links.map((link) => ({
-      id: link.id,
-      token: link.token,
-      enabled: link.enabled,
-      expiresAt: link.expiresAt?.toISOString() ?? null,
-      readOnly: link.readOnly,
-      logAccess: link.logAccess,
-      hasPassword: Boolean(link.passwordHash),
-      createdAt: link.createdAt.toISOString(),
-    }));
-    const activeLink = links.find((link) => link.enabled);
-    if (activeLink) {
-      previewHref = getShareLinkPublicUrl(activeLink.token);
-    }
 
     const dmPage = isPlayerPreview ? null : rawPage;
     const useMockAi = process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
@@ -190,11 +148,6 @@ export async function StudioWikiPageView({
                 {previewPlayers.find((player) => player.id === previewUserId)?.characterName ??
                   previewPlayers.find((player) => player.id === previewUserId)?.displayName ??
                   "Spieler"}
-              </p>
-            )}
-            {view.privateReferenceWarning && (
-              <p className="mt-2 font-semibold">
-                {view.privateReferenceWarning}
               </p>
             )}
             {showPreviewControls && (
@@ -242,27 +195,12 @@ export async function StudioWikiPageView({
                 <>
                   <SidebarSection title="Metadaten">
                     <MetaPanel
-                      visibility={dmPage.visibility}
-                      publishStatus={dmPage.publishStatus}
                       canonicalStatus={dmPage.canonicalStatus}
                       type={dmPage.type}
                       tags={parseStringArray(dmPage.tags)}
                       aliases={parseStringArray(dmPage.aliases)}
-                      secretLevel={dmPage.secretLevel}
-                      revealState={dmPage.revealState}
                     />
                   </SidebarSection>
-                  <Collapsible variant="sidebar" title="Freigabe" defaultOpen={false}>
-                    <ShareLinkPanel
-                      worldId={world.id}
-                      worldSlug={worldSlug}
-                      targetType={shareTargetType}
-                      targetId={rawPage.id}
-                      returnPath={returnPath}
-                      links={shareLinks}
-                      previewHref={previewHref}
-                    />
-                  </Collapsible>
                   <Collapsible variant="sidebar" title="KI & Assistenz" defaultOpen={false}>
                     <MobileAiPromptPanel
                       worldSlug={worldSlug}
@@ -289,7 +227,6 @@ export async function StudioWikiPageView({
             meta={
               !isPlayerPreview && dmPage ? (
                 <>
-                  <VisibilityBadge visibility={dmPage.visibility} />
                   {view.page.tags.map((tag) => (
                     <TagChip key={tag} tag={tag} />
                   ))}

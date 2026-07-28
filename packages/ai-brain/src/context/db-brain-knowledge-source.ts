@@ -42,7 +42,6 @@ function chunkToEntry(
     id: result.chunkId,
     title: result.documentTitle,
     content: result.content,
-    visibility: result.visibility,
     sourceType: `brain_chunk:${result.documentType}`,
     objectRef: result.documentId ? `document:${result.documentId}` : null,
     trustLevel: result.matchMode,
@@ -56,7 +55,6 @@ export function createDbBrainKnowledgeSource(
   return {
     async findRelevant(query: BrainKnowledgeQuery): Promise<BrainKnowledgeEntry[]> {
       const maxEntries = query.maxEntries ?? DEFAULT_MAX_ENTRIES;
-      const accessContext = query.allowDmOnly ? "dm" : "portal";
       const searchQuery = query.query?.trim();
 
       if (searchQuery) {
@@ -65,7 +63,6 @@ export function createDbBrainKnowledgeSource(
           query: searchQuery,
           limit: maxEntries,
           campaignId: query.campaignId,
-          accessContext,
         });
 
         if (chunks.length > 0) {
@@ -81,13 +78,11 @@ export function createDbBrainKnowledgeSource(
           pageId: query.pageId,
           gameSessionId: query.sessionId,
           campaignId: query.campaignId,
-          accessContext,
         }),
         brainStore.listFacts(worldSlug, {
           pageId: query.pageId,
           gameSessionId: query.sessionId,
           campaignId: query.campaignId,
-          accessContext,
         }),
       ]);
 
@@ -103,7 +98,6 @@ export function createDbBrainKnowledgeSource(
           id: doc.id,
           title: doc.title,
           content: doc.content,
-          visibility: doc.visibility,
           sourceType: `brain_document:${doc.documentType}`,
           objectRef: doc.pageId ? `page:${doc.pageId}` : null,
           trustLevel: doc.status,
@@ -112,7 +106,6 @@ export function createDbBrainKnowledgeSource(
           id: fact.id,
           title: fact.title,
           content: fact.content,
-          visibility: fact.visibility,
           sourceType: `brain_fact:${fact.factType}`,
           objectRef: fact.pageId ? `page:${fact.pageId}` : null,
           trustLevel: fact.status,

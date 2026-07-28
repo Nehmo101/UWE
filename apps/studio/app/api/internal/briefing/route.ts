@@ -43,7 +43,7 @@ async function resolveBriefingUserId(): Promise<string | null> {
   }
 
   const fallback = await prisma.user.findFirst({
-    where: { role: { in: ["owner", "admin"] }, status: "active" },
+    where: { isOwner: true, status: "active" },
     orderBy: { createdAt: "asc" },
     select: { id: true },
   });

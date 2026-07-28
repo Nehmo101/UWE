@@ -67,7 +67,6 @@ describe("backup security", () => {
           type: "image",
           mimeType: "image/png",
           size: 3,
-          visibility: "dm_only",
         },
       ],
     };
@@ -122,7 +121,6 @@ describe("backup security", () => {
           type: "image",
           mimeType: "image/png",
           size: 40,
-          visibility: "public",
         },
       ],
     };
@@ -189,7 +187,7 @@ describe("backup security", () => {
         worldMemberships: [],
         pagePlayerAccess: [],
         sessionUnlocks: [],
-        users: [{ id: "1", displayName: "Hacker", email: null, role: "owner", passwordHash: "x" }],
+        users: [{ id: "1", displayName: "Hacker", email: null, isOwner: true, access: { portal: true, studio: true, brain: true, family: true }, passwordHash: "x" }],
       },
     };
 

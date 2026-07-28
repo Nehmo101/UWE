@@ -20,7 +20,11 @@ export interface AuthIdentityWithUser {
     id: string;
     displayName: string;
     email: string | null;
-    role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+    isOwner: boolean;
+    portalAccess: boolean;
+    studioAccess: boolean;
+    brainAccess: boolean;
+    familyAccess: boolean;
     status: "invited" | "active" | "disabled";
     forcePasswordChange: boolean;
   };
@@ -36,7 +40,11 @@ export interface ActiveUserForOAuthLink {
   id: string;
   displayName: string;
   email: string | null;
-  role: "owner" | "admin" | "dm" | "player" | "readonly" | "guest";
+  isOwner: boolean;
+    portalAccess: boolean;
+    studioAccess: boolean;
+    brainAccess: boolean;
+    familyAccess: boolean;
   status: "invited" | "active" | "disabled";
   forcePasswordChange: boolean;
 }
@@ -45,7 +53,11 @@ const USER_SELECT = {
   id: true,
   displayName: true,
   email: true,
-  role: true,
+  isOwner: true,
+  portalAccess: true,
+  studioAccess: true,
+  brainAccess: true,
+  familyAccess: true,
   status: true,
   forcePasswordChange: true,
 } as const;

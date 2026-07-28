@@ -6,8 +6,6 @@ import {
   createPrismaClient,
   createWorldEventService,
   getAppRepository,
-  VisibilityEnum,
-  SecretLevelEnum,
 } from "@uwe/database/server";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
@@ -37,8 +35,6 @@ export async function createWorldEventAction(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const summaryPlayer = String(formData.get("summaryPlayer") || "").trim() || null;
   const summaryDm = String(formData.get("summaryDm") || "").trim() || null;
-  const visibility = String(formData.get("visibility") || "private") as (typeof VisibilityEnum)[keyof typeof VisibilityEnum];
-  const secretLevel = String(formData.get("secretLevel") || "none") as (typeof SecretLevelEnum)[keyof typeof SecretLevelEnum];
   const pageId = String(formData.get("pageId") || "") || null;
   const pageSlug = String(formData.get("pageSlug") || "");
   const category = String(formData.get("category") || "");
@@ -69,8 +65,6 @@ export async function createWorldEventAction(formData: FormData) {
       inGameDate: parseInGameDateFromForm(formData),
       summaryPlayer,
       summaryDm,
-      visibility,
-      secretLevel,
       linkedPages: pageId ? [{ pageId, role: "involved" }] : undefined,
     });
   } finally {

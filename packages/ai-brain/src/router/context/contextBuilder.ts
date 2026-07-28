@@ -49,7 +49,7 @@ function rebuildPromptContext(context: AiContext, mode: AiContextMode): string {
   }
 
   if (context.session && mode !== "general_chat" && mode !== "brain") {
-    parts.push(serializeSession(context.session, { allowDmOnly: context.allowDmOnly }));
+    parts.push(serializeSession(context.session));
   }
 
   const includeBrain =
@@ -130,7 +130,6 @@ function applyContextMode(context: AiContext, mode: AiContextMode): AiContext {
         promptContext: context.promptContext,
         truncated: false,
         datenschutzMode: context.datenschutzMode,
-        allowDmOnly: true,
       };
 
     // Mail content travels in the user prompt; no wiki/brain context is loaded.
@@ -147,7 +146,6 @@ function applyContextMode(context: AiContext, mode: AiContextMode): AiContext {
         promptContext: "",
         truncated: false,
         datenschutzMode: true,
-        allowDmOnly: false,
       };
 
     default:
@@ -193,7 +191,6 @@ export async function buildRouterContext(
             : "",
         truncated: false,
         datenschutzMode: input.options?.datenschutzMode ?? true,
-        allowDmOnly: input.contextMode === "personal_brain",
       },
       input.contextMode,
     );
@@ -211,7 +208,6 @@ export async function buildRouterContext(
           promptContext: "",
           truncated: false,
           datenschutzMode: input.options?.datenschutzMode ?? false,
-          allowDmOnly: input.options?.allowDmOnly ?? false,
         },
         input.contextMode,
       );
@@ -245,7 +241,6 @@ export async function buildRouterContext(
         promptContext: "",
         truncated: false,
         datenschutzMode: input.options?.datenschutzMode ?? false,
-        allowDmOnly: input.options?.allowDmOnly ?? false,
       };
     }
   } else if (input.pageSlug && input.worldSlug) {
@@ -264,7 +259,6 @@ export async function buildRouterContext(
     const brainRaw = await brainSource.findRelevant({
       worldId: world.id,
       taskType: input.taskType,
-      allowDmOnly: input.options?.allowDmOnly ?? true,
       maxEntries: 8,
       query: input.options?.retrievalQuery?.trim() || undefined,
     });
@@ -283,7 +277,6 @@ export async function buildRouterContext(
         entryId: entry.id,
         title: entry.title,
         content: entry.content,
-        visibility: entry.visibility,
         sourceType: entry.sourceType,
         objectRef: entry.objectRef,
         trustLevel: entry.trustLevel,
@@ -293,7 +286,6 @@ export async function buildRouterContext(
       promptContext: "",
       truncated: false,
       datenschutzMode: input.options?.datenschutzMode ?? false,
-      allowDmOnly: input.options?.allowDmOnly ?? true,
     };
   } else {
     throw new Error(

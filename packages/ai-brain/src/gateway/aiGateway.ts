@@ -19,11 +19,9 @@ import {
   resolveRequiredPermission,
   isMasterAdminRole,
   resolveFeatureModelOverride,
-  prisma as sharedPrisma,
 } from "@uwe/database/server";
 import type { AiRouterRequest, AiRouterResult } from "../router/types";
 import { routeAiRequest, type AiRouterDeps } from "../router/aiRouter";
-import { checkRtxReadiness } from "../router/health/rtxReadiness";
 import type { AiProviderMode } from "../router/types";
 import { AiRouterError } from "../router/types";
 import {
@@ -33,9 +31,8 @@ import {
   type ImageProviderMode,
 } from "@uwe/image-studio";
 import type { CreateUsageLogInput } from "@uwe/database/server";
-import { buildGatewayImageProviderConfig } from "./aiGatewayImageConfig";
+import { resolveConnectorAwareImageProviderConfig } from "./aiGatewayImageConfig";
 import { createGatewayApiKeyStore } from "./apiKeyStore";
-import { createApiKeyStoreFromEnv } from "../settings";
 
 export { createGatewayApiKeyStore } from "./apiKeyStore";
 export { resolveConnectorAwareImageProviderConfig } from "./aiGatewayImageConfig";
@@ -63,13 +60,11 @@ export {
 
 export interface AiGatewayUserContext {
   userId: string;
-  role: string;
 }
 
 /** Fallback actor for background/system AI jobs without a real user session. */
 export const AI_GATEWAY_SYSTEM_USER: AiGatewayUserContext = {
   userId: "system",
-  role: "owner",
 };
 
 function resolveGatewayUsageUserId(user: AiGatewayUserContext): string | null {
@@ -132,13 +127,11 @@ export async function executeAiGatewayRequest(
 
   await gateway.assertFeatureAccess({
     userId: request.user.userId,
-    role: request.user.role,
     feature: request.feature,
     contextMode: request.contextMode,
     taskType: request.taskType,
   });
 
-  await gateway.assertBudgetAvailable(request.user.userId);
 
   const config = await gateway.getConfig();
   const privacyCategory = resolveFeatureCategory({
@@ -148,45 +141,22 @@ export async function executeAiGatewayRequest(
   });
   const privacyLevel = config.privacyRules[privacyCategory] ?? DEFAULT_PRIVACY_RULES[privacyCategory];
 
-  if (privacyLevel === "LOCAL_REQUIRED" && request.providerMode === "cloud") {
-    throw new AiRouterError(
-      `Privacy-Regel „${privacyCategory}“ erfordert lokale RTX — Cloud ist nicht erlaubt.`,
-    );
-  }
 
-  if (privacyLevel === "CLOUD_FORBIDDEN" && request.providerMode === "cloud") {
-    throw new AiRouterError(
-      `Privacy-Regel „${privacyCategory}“ verbietet Cloud-KI für diesen Kontext.`,
-    );
-  }
 
-  const cloudFallbackAllowed = await gateway.isCloudFallbackAllowed({
-    userId: request.user.userId,
-    role: request.user.role,
-    contextMode: request.contextMode,
-    feature: request.feature,
-    taskType: request.taskType,
-  });
 
-  const effectiveProviderMode = resolveEffectiveProviderMode(
-    config,
-    request.providerMode,
-    cloudFallbackAllowed,
-    privacyLevel,
-  );
+  assertGatewayEnabled(config);
 
   const apiKeyStore = request.apiKeyStore ?? (await createGatewayApiKeyStore(gateway));
 
   const routerRequest: AiRouterRequest = {
     ...request,
-    providerMode: applyFeatureProviderMode(effectiveProviderMode, resolveFeatureModelOverride(config, privacyCategory)?.providerId),
-    cloudProviderId: (() => { const o = resolveFeatureModelOverride(config, privacyCategory); return o?.providerId && o.providerId !== "local_rtx" ? o.providerId as AiRouterRequest["cloudProviderId"] : request.cloudProviderId; })(),
+    providerMode: "local_rtx",
     model: resolveFeatureModelOverride(config, privacyCategory)?.model ?? request.model,
     apiKeyStore,
     options: {
       ...request.options,
-      localOnly: config.routingMode === "LOCAL_ONLY" || !cloudFallbackAllowed,
-      datenschutzMode: privacyLevel !== "CLOUD_ALLOWED",
+      localOnly: true,
+      datenschutzMode: true,
     },
   };
 
@@ -195,10 +165,7 @@ export async function executeAiGatewayRequest(
   let errorMessage: string | undefined;
 
   try {
-    result = await routeAiRequestWithGatewayRouting(deps, routerRequest, {
-      cloudFallbackAllowed,
-      routingMode: config.routingMode,
-    });
+    result = await routeAiRequest(deps, routerRequest);
   } catch (error) {
     success = false;
     errorMessage = error instanceof Error ? error.message : "Unbekannter Fehler";
@@ -237,7 +204,7 @@ export async function executeAiGatewayRequest(
         userId: resolveGatewayUsageUserId(request.user),
         feature: request.feature ?? privacyCategory,
         taskType: request.taskType,
-        provider: request.cloudProviderId ?? "unknown",
+        provider: "local_rtx",
         model: request.model ?? "unknown",
         route: "unknown",
         contextMode: request.contextMode,
@@ -256,7 +223,7 @@ export async function executeAiGatewayRequest(
     ...result,
     gatewayMeta: {
       routingMode: config.routingMode,
-      cloudFallbackUsed: result.route === "cloud",
+      cloudFallbackUsed: false,
       privacyCategory,
       privacyLevel,
       durationMs: Date.now() - started,
@@ -317,18 +284,14 @@ async function prepareAiGatewayExecution(
   config: AiGatewayConfigRecord;
   privacyCategory: AiFeatureCategory;
   privacyLevel: AiPrivacyLevel;
-  cloudFallbackAllowed: boolean;
-  effectiveProviderMode: "auto" | "local_rtx" | "cloud";
 }> {
   await gateway.assertFeatureAccess({
     userId: input.user.userId,
-    role: input.user.role,
     feature: input.feature,
     contextMode: input.contextMode,
     taskType: input.taskType,
   });
 
-  await gateway.assertBudgetAvailable(input.user.userId);
 
   const config = await gateway.getConfig();
   const privacyCategory = resolveFeatureCategory({
@@ -338,40 +301,11 @@ async function prepareAiGatewayExecution(
   });
   const privacyLevel = config.privacyRules[privacyCategory] ?? DEFAULT_PRIVACY_RULES[privacyCategory];
 
-  const requested = (input.requestedProviderMode ?? "auto") as AiProviderMode;
-  if (privacyLevel === "LOCAL_REQUIRED" && requested === "cloud") {
-    throw new AiRouterError(
-      `Privacy-Regel „${privacyCategory}“ erfordert lokale RTX — Cloud ist nicht erlaubt.`,
-    );
-  }
-  if (privacyLevel === "CLOUD_FORBIDDEN" && requested === "cloud") {
-    throw new AiRouterError(
-      `Privacy-Regel „${privacyCategory}“ verbietet Cloud-KI für diesen Kontext.`,
-    );
-  }
 
-  const cloudFallbackAllowed = await gateway.isCloudFallbackAllowed({
-    userId: input.user.userId,
-    role: input.user.role,
-    contextMode: input.contextMode,
-    feature: input.feature,
-    taskType: input.taskType,
-  });
 
-  const effectiveProviderMode = resolveEffectiveProviderMode(
-    config,
-    requested,
-    cloudFallbackAllowed,
-    privacyLevel,
-  );
+  assertGatewayEnabled(config);
 
-  return {
-    config,
-    privacyCategory,
-    privacyLevel,
-    cloudFallbackAllowed,
-    effectiveProviderMode,
-  };
+  return { config, privacyCategory, privacyLevel };
 }
 
 /**
@@ -393,25 +327,14 @@ export async function executeAiGatewayImageRequest(
     requestedProviderMode: request.providerMode,
   });
 
-  const imageConfig = await buildGatewayImageProviderConfig(
-    gateway,
-    prepared.cloudFallbackAllowed,
-    prepared.privacyLevel,
-    prepared.config,
-  );
+  const imageConfig = await resolveConnectorAwareImageProviderConfig();
 
   let result: ImageStudioResult | undefined;
   let success = true;
   let errorMessage: string | undefined;
 
   try {
-    result = await runImageStudioTask(
-      {
-        ...request,
-        providerMode: prepared.effectiveProviderMode,
-      },
-      imageConfig,
-    );
+    result = await runImageStudioTask({ ...request, providerMode: "local_rtx" }, imageConfig);
     if (!result.success) {
       success = false;
       errorMessage = result.error ?? "Bildgenerierung fehlgeschlagen.";
@@ -423,28 +346,19 @@ export async function executeAiGatewayImageRequest(
     throw error;
   } finally {
     const durationMs = Date.now() - started;
-    const route =
-      result?.providerUsed === "cloud"
-        ? "cloud"
-        : result?.providerUsed === "local_rtx"
-          ? "local_rtx"
-          : "unknown";
+    const route = result?.providerUsed === "local_rtx" ? "local_rtx" : "unknown";
     const logInput: CreateUsageLogInput = {
       userId: request.user.userId,
       feature,
       taskType: `image_${request.task}`,
       provider: result?.providerUsed ?? "unknown",
-      model: imageConfig.cloudModel ?? "image-studio",
+      model: "image-studio",
       route,
       contextMode: request.contextMode ?? "prompt_only",
       inputTokens: null,
       outputTokens: null,
-      estimatedCostUsd: estimateCostUsd({
-        providerId: "openai",
-        route,
-        promptChars: request.prompt.length + (request.contextSnippet?.length ?? 0),
-        resultChars: result?.imageBase64 ? Math.ceil(result.imageBase64.length * 0.75) : 0,
-      }),
+      // Der RTX-Host kostet nichts — das Feld bleibt für die Historie.
+      estimatedCostUsd: 0,
       success,
       errorMessage: success ? undefined : errorMessage,
       durationMs,
@@ -460,7 +374,7 @@ export async function executeAiGatewayImageRequest(
     ...result,
     gatewayMeta: {
       routingMode: prepared.config.routingMode,
-      cloudFallbackUsed: result.providerUsed === "cloud",
+      cloudFallbackUsed: false,
       privacyCategory: prepared.privacyCategory,
       privacyLevel: prepared.privacyLevel,
       durationMs: Date.now() - started,
@@ -521,82 +435,14 @@ export async function executeAiGatewayResearchJob<T>(
   }
 }
 
-function applyFeatureProviderMode(baseMode: AiProviderMode, providerId?: string | null): AiProviderMode {
-  return providerId === "local_rtx" ? "local_rtx" : baseMode;
-}
-function resolveEffectiveProviderMode(
-  config: AiGatewayConfigRecord,
-  requested: AiProviderMode,
-  cloudFallbackAllowed: boolean,
-  privacyLevel: AiPrivacyLevel,
-): AiProviderMode {
+/**
+ * The gateway used to choose between local and cloud providers under budget and
+ * privacy policy. Cloud providers are gone — the RTX host is the only backend —
+ * so the only decision left is whether AI is switched on at all.
+ */
+function assertGatewayEnabled(config: AiGatewayConfigRecord): void {
   if (config.routingMode === "DISABLED") {
     throw new AiGatewayDisabledError("KI ist systemweit deaktiviert.");
   }
-  if (config.routingMode === "LOCAL_ONLY" || privacyLevel === "LOCAL_REQUIRED") {
-    return "local_rtx";
-  }
-  if (privacyLevel === "CLOUD_FORBIDDEN") {
-    return requested === "cloud" ? "local_rtx" : requested === "local_rtx" ? "local_rtx" : "auto";
-  }
-  if (config.routingMode === "CLOUD_ONLY") {
-    return "cloud";
-  }
-  if (requested === "cloud") {
-    return cloudFallbackAllowed ? "cloud" : "local_rtx";
-  }
-  if (requested === "local_rtx") {
-    return "local_rtx";
-  }
-  // LOCAL_THEN_CLOUD + auto
-  return "auto";
 }
 
-async function routeAiRequestWithGatewayRouting(
-  deps: AiRouterDeps,
-  request: AiRouterRequest,
-  options: { cloudFallbackAllowed: boolean; routingMode: AiRoutingMode },
-): Promise<AiRouterResult> {
-  const apiKeyStore = request.apiKeyStore ?? createApiKeyStoreFromEnv();
-
-  if (options.routingMode === "CLOUD_ONLY") {
-    if (request.options?.localOnly || request.contextMode !== "general_chat") {
-      throw new AiRouterError(
-        "Cloud-only-Routing ist für diesen Kontextmodus nicht erlaubt.",
-      );
-    }
-    return routeAiRequest(deps, { ...request, providerMode: "cloud", apiKeyStore });
-  }
-
-  if (options.routingMode === "LOCAL_ONLY" || !options.cloudFallbackAllowed) {
-    if (request.providerMode === "auto") {
-      const rtxHealth = await checkRtxReadiness({
-        useMock: request.useMock,
-        prisma: deps.prisma ?? sharedPrisma,
-      });
-      if (!rtxHealth.ready) {
-        throw new AiRouterError(
-          rtxHealth.message ||
-            "Lokale RTX-Inference ist nicht erreichbar. Cloud-Fallback ist nicht freigeschaltet.",
-        );
-      }
-      return routeAiRequest(deps, { ...request, providerMode: "local_rtx", apiKeyStore });
-    }
-  }
-
-  // Standard path — routeAiRequest handles auto local→cloud when allowed
-  if (request.providerMode === "auto" && !options.cloudFallbackAllowed) {
-    const rtxHealth = await checkRtxReadiness({
-      useMock: request.useMock,
-      prisma: deps.prisma ?? sharedPrisma,
-    });
-    if (!rtxHealth.ready) {
-      throw new AiRouterError(
-        "RTX offline und Cloud-Fallback nicht erlaubt. Bitte RTX prüfen oder Master-Admin kontaktieren.",
-      );
-    }
-    return routeAiRequest(deps, { ...request, providerMode: "local_rtx", apiKeyStore });
-  }
-
-  return routeAiRequest(deps, request);
-}

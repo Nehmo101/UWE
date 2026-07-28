@@ -12,6 +12,7 @@ import {
 } from "../lib/tauri";
 import { toMessage } from "../lib/connector-runtime-labels";
 import { Button } from "./ui/button";
+import { CloudflareChallengeCard } from "./CloudflareChallengeCard";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 export function CloudflarePanel() {
@@ -136,6 +137,8 @@ export function CloudflarePanel() {
           </div>
         </CardFooter>
       </Card>
+
+      <CloudflareChallengeCard />
     </div>
   );
 }

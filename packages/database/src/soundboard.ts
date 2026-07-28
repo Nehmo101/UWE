@@ -5,11 +5,10 @@ import {
   getYouTubeThumbnailUrl,
   type SpotifyCoverFetchOptions,
 } from "@uwe/soundboard";
-import type { Prisma, SoundSourceType, Visibility } from "./generated/prisma/client";
+import type { Prisma, SoundSourceType } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray, toJsonArray } from "./json-utils";
 import type { PageSummary } from "./repository";
-import { isPortalAssetVisibility } from "./permissions";
 
 export { extractYouTubeVideoId } from "@uwe/soundboard";
 
@@ -28,7 +27,6 @@ export interface CreateSoundboardButtonInput {
   volume?: number;
   loop?: boolean;
   tags?: string[];
-  visibility?: Visibility;
   sortOrder?: number;
   linkedPageIds?: string[];
 }
@@ -43,7 +41,6 @@ export interface UpdateSoundboardButtonInput {
   volume?: number;
   loop?: boolean;
   tags?: string[];
-  visibility?: Visibility;
   sortOrder?: number;
   linkedPageIds?: string[];
 }
@@ -74,7 +71,6 @@ export interface PortalSoundboardButtonView {
   volume: number;
   loop: boolean;
   tags: string[];
-  visibility: Visibility;
   sortOrder: number;
   linkedPages: PageSummary[];
   createdAt: Date;
@@ -108,7 +104,6 @@ export function toDmSoundboardButtonView(button: SoundboardButtonWithLinks): DmS
     volume: button.volume,
     loop: button.loop,
     tags: parseStringArray(button.tags),
-    visibility: button.visibility,
     sortOrder: button.sortOrder,
     linkedPages: mapLinkedPages(button),
     createdAt: button.createdAt,
@@ -182,9 +177,6 @@ async function resolveSpotifyThumbnailForWrite(
   );
 }
 
-export function isSoundboardButtonVisibleInPortal(visibility: Visibility): boolean {
-  return isPortalAssetVisibility(visibility);
-}
 
 export interface SoundboardServiceOptions {
   spotifyCoverOptions?: SpotifyCoverFetchOptions;
@@ -233,7 +225,7 @@ export class SoundboardService {
     options?: { campaignId?: string | null },
   ): Promise<SoundboardButtonWithLinks[]> {
     const buttons = await this.listByWorld(worldSlug, options);
-    return buttons.filter((button) => isSoundboardButtonVisibleInPortal(button.visibility));
+    return buttons;
   }
 
   async getById(buttonId: string): Promise<SoundboardButtonWithLinks | null> {
@@ -290,7 +282,6 @@ export class SoundboardService {
         volume: input.volume ?? 1.0,
         loop: input.loop ?? false,
         tags: toJsonArray(input.tags ?? []),
-        visibility: input.visibility ?? "dm_only",
         sortOrder: input.sortOrder ?? 0,
         linkedPages: linkedPageIds.length
           ? {
@@ -349,7 +340,6 @@ export class SoundboardService {
         volume: input.volume,
         loop: input.loop,
         tags: input.tags ? toJsonArray(input.tags) : undefined,
-        visibility: input.visibility,
         sortOrder: input.sortOrder,
       },
       include: this.buttonInclude(),

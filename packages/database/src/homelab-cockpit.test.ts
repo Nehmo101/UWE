@@ -41,7 +41,6 @@ function baseSystem(overrides: Partial<SystemStatus> = {}): SystemStatus {
       authSecretConfigured: true,
       authSecretLooksWeak: false,
       runDbSeedDisabled: true,
-      publicPortalSharingEnabled: false,
       exposureHint: "",
     },
     proxy: {
@@ -160,7 +159,8 @@ describe("homelab cockpit", () => {
         endpoints: [],
         nextSteps: [],
       },
-      roleCounts: { owner: 1, admin: 0, dm: 0, player: 0 },
+      accessCounts: { owner: 1, portal: 1, studio: 1, brain: 1, family: 1 },
+      totalUsers: 1,
       hardwareUrlWarnings: [
         {
           deviceId: "1",

@@ -4,14 +4,14 @@ import { getBrainOwner } from "./page-owner";
 export class BrainActionAuthError extends Error {
   readonly status = 403;
   constructor() {
-    super("Der Brain-Bereich ist nur für den System-Owner.");
+    super("Kein Zugang zum Bereich Brain.");
     this.name = "BrainActionAuthError";
   }
 }
 
 /**
  * Owner guard for every mutating Brain Server Action. Brain data is strictly
- * owner-only, so — unlike Studio's trusted-scope guard — this asserts the global
+ * gated on the `brain` checkbox, so — unlike Studio's trusted-scope guard — this asserts the
  * owner role. Middleware gates page loads; actions must re-check here.
  */
 export async function requireBrainActionAuth() {

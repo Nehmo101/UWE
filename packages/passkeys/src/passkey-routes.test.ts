@@ -120,7 +120,8 @@ function activeCredential(
       id: "user-1",
       displayName: "Test-DM",
       email: "dm@uwe.local",
-      role: "dm",
+      isOwner: false,
+      access: { portal: true, studio: true, brain: false, family: false },
       status: "active",
       forcePasswordChange: false,
     },
@@ -190,7 +191,8 @@ function buildHarness(overrides: Partial<PasskeyRouteDeps<FakeDb>> = {}): Harnes
         id: user.id,
         displayName: user.displayName,
         email: user.email,
-        role: user.role,
+        isOwner: user.isOwner,
+        access: user.access ?? { portal: false, studio: false, brain: false, family: false },
       }),
       createSession: async () => ({ id: "session-1", token: "session-token" }),
       recordSuccessfulLogin: async () => {},
@@ -325,7 +327,7 @@ describe("passkey login verify", () => {
   });
 
   it("denies users without surface access", async () => {
-    const harness = buildHarness({ hasAccess: (user) => user.role === "owner" });
+    const harness = buildHarness({ hasAccess: (user) => user.isOwner });
     harness.store.credentials.set("cred-1", activeCredential());
     const handlers = createPasskeyRouteHandlers(harness.deps);
     const challenge = await seedChallenge(harness.store);

@@ -53,7 +53,7 @@ export default async function ContinuePage() {
 
       <p className="text-sm text-muted-foreground">
         Mehr Kontext im{" "}
-        <Link href="/today">Heute-Dashboard</Link> oder in der{" "}
+        <Link href="/worlds">Heute-Dashboard</Link> oder in der{" "}
         <Link href="/capture">Capture-Inbox</Link>.
       </p>
     </StudioShell>

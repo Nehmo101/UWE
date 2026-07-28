@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 import {
   SidebarSection,
   StatGrid,
-  VisibilityBadge,
-  ASSET_TYPE_LABELS,
 } from "@uwe/shared-ui";
 import {
   createWorldInspectorService,
@@ -24,7 +22,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  EmptyState,
   NavIcon,
 } from "@/src/components/ui";
 
@@ -45,10 +42,7 @@ const SEVERITY_BADGE_VARIANT: Record<InspectorSeverity, "danger" | "warning" | "
   info: "info",
 };
 
-const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 function OkNote({ children }: { children: React.ReactNode }) {
   return (
@@ -124,13 +118,8 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
   const report = await createWorldInspectorService(prisma).inspectWorld(worldSlug);
   if (!report) notFound();
 
-  const criticalCount =
-    report.safetyFindings.filter((f) => f.severity === "critical").length +
-    report.canonFindings.filter((f) => f.severity === "critical").length;
-  const warningCount =
-    report.safetyFindings.filter((f) => f.severity === "warning").length +
-    report.canonFindings.filter((f) => f.severity === "warning").length;
-  const activeShareLinks = report.shareLinks.filter((link) => link.active);
+  const criticalCount = report.canonFindings.filter((f) => f.severity === "critical").length;
+  const warningCount = report.canonFindings.filter((f) => f.severity === "warning").length;
 
   return (
     <WorldShell
@@ -138,7 +127,7 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
       worldName={world.name}
       breadcrumb={
         <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Kanon & Leaks", `/worlds/${worldSlug}/inspector`)}
+          items={worldSectionBreadcrumb(world.name, worldSlug, "Kanon", `/worlds/${worldSlug}/inspector`)}
         />
       }
       contextPanel={
@@ -146,13 +135,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
           <ul className="flex flex-col gap-2 text-sm">
             <li>
               Portal: <strong>{report.portal.portalEnabled ? "aktiv" : "deaktiviert"}</strong>
-            </li>
-            <li>
-              Öffentliches Teilen:{" "}
-              <strong>{report.portal.publicSharingEnabled ? "an" : "aus"}</strong>
-            </li>
-            <li>
-              Gastmodus: <strong>{report.portal.guestModeEnabled ? "an" : "aus"}</strong>
             </li>
             <li>
               <Link href="/settings">Einstellungen öffnen →</Link>
@@ -163,7 +145,7 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
     >
       <PageHeader
         title="Inspektor"
-        summary="Prüft Spieler-Leaks und Kanon-Konflikte — inkl. veralteter Portal-Inhalte, NPC-Tod vs. Sichtbarkeit und welt-spezifischer Regeln."
+        summary="Prüft Kanon-Konflikte — tote Wikilinks, mehrdeutige Namen, widersprüchliche Seiten, Waisen und welt-spezifische Regeln."
       />
       {fixApplied && <OkNote>{fixApplied}</OkNote>}
       {fixError && (
@@ -176,126 +158,14 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
         stats={[
           { label: "Kritisch", value: criticalCount },
           { label: "Warnungen", value: warningCount },
-          { label: "Sichtbare Seiten", value: report.visiblePages.length },
-          { label: "Aktive Share-Links", value: activeShareLinks.length },
+          { label: "Seiten", value: report.pageCount },
+          { label: "Assets", value: report.assetCount },
         ]}
       />
 
       <InspectorDiagnosePanel worldSlug={worldSlug} />
 
       <div className="flex flex-col gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Portal-Sicherheit</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FindingList
-              findings={report.safetyFindings}
-              emptyText="Keine Auffälligkeiten — DM-Inhalte bleiben verborgen."
-              worldSlug={worldSlug}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Im Portal sichtbare Seiten</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {report.visiblePages.length === 0 ? (
-              <EmptyState
-                title="Nichts veröffentlicht"
-                description="Aktuell ist keine Seite dieser Welt im Player Portal sichtbar."
-              />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Titel</th>
-                      <th className={TH_CLASS}>Sichtbarkeit</th>
-                      <th className={TH_CLASS}>Sichtbare Blöcke</th>
-                      <th className={TH_CLASS}>Gefilterte Blöcke</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.visiblePages.map((page) => (
-                      <tr key={page.href}>
-                        <td className={TD_CLASS}>
-                          <Link href={page.href}>{page.title}</Link>
-                        </td>
-                        <td className={TD_CLASS}>
-                          <VisibilityBadge visibility={page.visibility} />
-                        </td>
-                        <td className={TD_CLASS}>{page.visibleBlockCount}</td>
-                        <td className={TD_CLASS}>{page.hiddenBlockCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Share-Links</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {report.shareLinks.length === 0 ? (
-              <OkNote>Keine Share-Links vorhanden.</OkNote>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Ziel</th>
-                      <th className={TH_CLASS}>Status</th>
-                      <th className={TH_CLASS}>Passwort</th>
-                      <th className={TH_CLASS}>Ablauf</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.shareLinks.map((link) => (
-                      <tr key={link.id}>
-                        <td className={TD_CLASS}>{link.targetTitle}</td>
-                        <td className={TD_CLASS}>{link.active ? "Aktiv" : "Inaktiv"}</td>
-                        <td className={TD_CLASS}>{link.hasPassword ? "Ja" : "Nein"}</td>
-                        <td className={TD_CLASS}>
-                          {link.expiresAt ? DATE_FORMAT.format(link.expiresAt) : "Nie"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Sichtbare Assets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {report.visibleAssets.length === 0 ? (
-              <OkNote>
-                Keine Assets im Portal sichtbar ({report.dmOnlyAssetCount} DM-only).
-              </OkNote>
-            ) : (
-              <ul className="flex flex-col gap-1 text-sm">
-                {report.visibleAssets.map((asset, index) => (
-                  <li key={`${asset.title}-${index}`}>
-                    {asset.title}{" "}
-                    <span className="text-muted-foreground">({ASSET_TYPE_LABELS[asset.type]})</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>Kanon-Warnungen</CardTitle>

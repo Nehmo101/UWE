@@ -1,5 +1,5 @@
 import type { AccessContext } from "@uwe/auth";
-import { filterPagesForViewer } from "@uwe/auth";
+import {} from "@uwe/auth";
 import type { PrismaClient } from "./client";
 import type { PageType, QuestLifecycleStatus } from "./generated/prisma/client";
 import type { PortalGameSessionView } from "./game-session";
@@ -128,7 +128,7 @@ export class PortalDashboardService {
     if (!world) return null;
 
     const characterName =
-      ctx.user && ctx.worldMembership?.role === "player"
+      ctx.user && ctx.worldMembership !== null
         ? ctx.worldMembership.characterName
         : null;
 
@@ -246,60 +246,10 @@ export class PortalDashboardService {
   }
 
   /** Pages unlocked for the viewer since a session recap was published. */
-  async listNewlyUnlockedPagesForSession(
-    worldSlug: string,
-    ctx: AccessContext,
-    sessionNumber: number,
-    sessionLabel: string,
-  ): Promise<PortalDashboardPage[]> {
-    if (!ctx.user) return [];
-
-    const world = await this.db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world) return [];
-
-    const unlocks = await this.db.sessionUnlock.findMany({
-      where: {
-        userId: ctx.user.id,
-        OR: [
-          { sessionLabel },
-          { sessionLabel: `Session ${sessionNumber}` },
-        ],
-        page: { worldId: world.id },
-      },
-      include: {
-        page: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            type: true,
-            summary: true,
-            updatedAt: true,
-            visibility: true,
-            publishStatus: true,
-            secretLevel: true,
-            revealState: true,
-          },
-        },
-      },
-      orderBy: { unlockedAt: "desc" },
-    });
-
-    const pages = unlocks.map((unlock) => unlock.page);
-    return filterPagesForViewer(ctx, pages).map(toDashboardPage);
-  }
 }
 
 export function createPortalDashboardService(db: PrismaClient): PortalDashboardService {
   return new PortalDashboardService(db);
-}
-
-/** Build a session label used when auto-unlocking content after recap publish. */
-export function sessionUnlockLabel(sessionNumber: number, title: string): string {
-  return `Session ${sessionNumber}: ${title}`;
 }
 
 export { navCategoryForPageType };

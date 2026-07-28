@@ -1,4 +1,4 @@
-export type RoutingMode = "LOCAL_ONLY" | "LOCAL_THEN_CLOUD" | "CLOUD_ONLY" | "DISABLED";
+export type RoutingMode = "LOCAL_ONLY" | "DISABLED";
 export type PrivacyLevel = "CLOUD_ALLOWED" | "CLOUD_FORBIDDEN" | "LOCAL_REQUIRED";
 
 export interface AdminUserOption {

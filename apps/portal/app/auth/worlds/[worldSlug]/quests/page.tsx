@@ -5,7 +5,6 @@ import {
   GlobalSearchForm,
   PageTypeBadge,
   QuestStatusBadge,
-  VisibilityBadge,
 } from "@uwe/shared-ui";
 import {
   createAuthService,
@@ -125,7 +124,7 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
     <>
       <PageHeader
         title="Questlog"
-        summary={`Quests, die für deine Rolle (${ctx.effectiveRole}) freigeschaltet sind — filterbar nach Status.`}
+        summary="Alle Quests dieser Welt — filterbar nach Status."
       />
 
       <p className="mb-4 text-sm text-muted-foreground">
@@ -202,7 +201,6 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
                 </div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   <PageTypeBadge type={page.type} />
-                  <VisibilityBadge visibility={page.visibility} />
                   <QuestStatusBadge status={page.questStatus ?? null} />
                 </div>
                 {page.summary ? (

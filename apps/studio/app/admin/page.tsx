@@ -6,7 +6,7 @@ import {
   type ProductionSafetyWarning,
 } from "@uwe/database/server";
 import { resolveUweAppUrls } from "@uwe/auth";
-import { getAdminDashboardStatus } from "@/src/lib/admin-dashboard-status";
+import { getAdminDashboardStatus } from "@uwe/host-cockpit";
 import { ADMIN_HUB_SECTIONS } from "@/src/navigation/system-nav";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
 import { Alert, buttonVariants, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
@@ -26,7 +26,7 @@ export default async function AdminOverviewPage() {
     <SystemShell
       breadcrumb={
         <BreadcrumbTrail
-          items={[{ label: "Heute", href: "/today" }, { label: "Admin" }]}
+          items={[{ label: "Admin" }]}
         />
       }
     >
@@ -96,8 +96,8 @@ export default async function AdminOverviewPage() {
                 Portal öffnen
               </a>
             ) : (
-              <Link className={buttonVariants({ variant: "secondary" })} href="/settings?tab=portal">
-                Portal konfigurieren
+              <Link className={buttonVariants({ variant: "secondary" })} href="/settings">
+                Einstellungen
               </Link>
             )}
             {appUrls.studioUrl ? (
@@ -109,25 +109,12 @@ export default async function AdminOverviewPage() {
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">System & Betrieb</h2>
+          <h2 className="text-lg font-semibold tracking-tight">System &amp; Betrieb</h2>
           <p className="text-sm text-muted-foreground">
-            Status, Diagnose und Cloudflare zentral im System-Hub — erweiterte Karten für RTX, Mail und
-            Brain.
+            Status, Homelab und Diagnose liegen in <strong>Brain &rarr; System</strong>. Host-Setup,
+            Cloudflare, RTX-Verbindung, Drucker, Secrets, Migrationen, Tokens und Backups laufen
+            über die <strong>Kommandozentrale</strong> auf dem UWE-Host.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Link className={buttonVariants({ variant: "default" })} href="/system">
-              System-Hub
-            </Link>
-            <Link className={buttonVariants({ variant: "outline" })} href="/system?tab=diagnose">
-              Diagnose
-            </Link>
-            <Link className={buttonVariants({ variant: "outline" })} href="/system/cloudflare">
-              Cloudflare
-            </Link>
-            <Link className={buttonVariants({ variant: "outline" })} href="/system?tab=diagnose">
-              Erweiterte Karten
-            </Link>
-          </div>
         </section>
       </div>
     </SystemShell>

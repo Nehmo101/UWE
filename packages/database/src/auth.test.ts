@@ -28,7 +28,6 @@ describe("UWE auth and permissions", () => {
     });
     worldSlug = world.slug;
 
-    await auth.setWorldGuestMode(world.id, true);
 
     const users = await seedAuthUsers(auth, repo, world.id);
     dmUserId = users.dm.id;
@@ -47,13 +46,10 @@ describe("UWE auth and permissions", () => {
       title: "Public Notice",
       slug: "public-notice",
       type: "note",
-      visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "public",
           content: "Public bulletin.",
         },
       ],
@@ -64,19 +60,15 @@ describe("UWE auth and permissions", () => {
       title: "Player Lore",
       slug: "player-lore",
       type: "note",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Known to the party.",
         },
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 1,
-          visibility: "dm_only",
           content: "Hidden GM note.",
         },
       ],
@@ -95,7 +87,7 @@ describe("UWE auth and permissions", () => {
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
     assert.ok(ctx);
-    assert.ok(ctx.effectiveRole === "owner" || ctx.effectiveRole === "dm");
+    assert.equal(ctx.user?.access.studio, true);
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     const slugs = pages.map((page) => page.slug);
@@ -112,13 +104,14 @@ describe("UWE auth and permissions", () => {
     await db.$disconnect();
   });
 
-  it("shows players only allowed portal content", async () => {
+  it("shows an assigned player every page of the world", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "player");
+    assert.equal(ctx.user?.access.studio, false);
+    assert.ok(ctx.worldMembership);
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     const slugs = pages.map((page) => page.slug);
@@ -126,46 +119,29 @@ describe("UWE auth and permissions", () => {
     assert.ok(slugs.includes("public-notice"));
     assert.ok(slugs.includes("player-lore"));
     assert.ok(slugs.includes("amans-geheimnis"));
-    assert.ok(!slugs.includes("archivierte-notiz"));
+    assert.ok(slugs.includes("archivierte-notiz"));
 
     const playerLore = await auth.getPageForViewer(worldSlug, "player-lore", ctx);
     assert.ok(playerLore);
-    assert.equal(playerLore.contentBlocks.length, 1);
-    assert.equal(playerLore.contentBlocks[0]?.visibility, "player_visible");
+    assert.ok(playerLore.contentBlocks.length >= 1);
 
     await db.$disconnect();
   });
 
-  it("denies anonymous viewers when guest mode is disabled", async () => {
+  it("denies anonymous viewers — there is no guest mode left", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug);
     assert.ok(ctx);
-    assert.equal(ctx.effectiveRole, "guest");
-    assert.equal(ctx.guestModeEnabled, false);
+    assert.equal(ctx.user, null);
+    assert.equal(ctx.worldMembership, null);
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     assert.deepEqual(
       pages.map((page) => page.slug),
       [],
     );
-
-    await db.$disconnect();
-  });
-
-  it("restricts specific-player pages to granted users", async () => {
-    const db = createPrismaClient(databaseUrl);
-    const auth = createAuthService(db);
-
-    const amanCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
-    const lazulCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: lazulUserId });
-
-    assert.ok(amanCtx);
-    assert.ok(lazulCtx);
-
-    assert.ok(await auth.getPageForViewer(worldSlug, "amans-geheimnis", amanCtx!));
-    assert.equal(await auth.getPageForViewer(worldSlug, "amans-geheimnis", lazulCtx!), null);
 
     await db.$disconnect();
   });
@@ -180,18 +156,17 @@ describe("UWE auth and permissions", () => {
     });
 
     assert.ok(previewCtx);
-    assert.equal(previewCtx.effectiveRole, "player");
+    assert.equal(previewCtx.previewAsUserId, amanUserId);
 
     const pages = await auth.listPagesForViewer(worldSlug, previewCtx);
     const slugs = pages.map((page) => page.slug);
 
     assert.ok(slugs.includes("amans-geheimnis"));
-    assert.ok(!slugs.includes("archivierte-notiz"));
-    assert.equal(await auth.getPageForViewer(worldSlug, "player-lore", previewCtx)?.then(Boolean), true);
+    assert.ok(slugs.includes("archivierte-notiz"));
 
     const previewBlocks = await auth.getPageForViewer(worldSlug, "player-lore", previewCtx);
     assert.ok(previewBlocks);
-    assert.equal(previewBlocks.contentBlocks.length, 1);
+    assert.ok(previewBlocks.contentBlocks.length >= 1);
 
     await db.$disconnect();
   });
@@ -281,7 +256,7 @@ describe("UWE auth and permissions", () => {
     await db.$disconnect();
   });
 
-  it("hides dm_only handouts, npcs and timeline events from players", async () => {
+  it("shows handouts, npcs and timeline events to assigned players", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
     const repo = createUweRepository(databaseUrl);
@@ -293,13 +268,10 @@ describe("UWE auth and permissions", () => {
       title: "Geheimer NPC",
       slug: "geheimer-npc",
       type: "npc",
-      visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Nur für den GM.",
         },
       ],
@@ -310,13 +282,10 @@ describe("UWE auth and permissions", () => {
       title: "Geheimes Handout",
       slug: "geheimes-handout",
       type: "handout",
-      visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Nur für den GM.",
         },
       ],
@@ -328,7 +297,6 @@ describe("UWE auth and permissions", () => {
       inGameDate: { year: 1, month: 1, day: 1 },
       title: "GM Geheimnis",
       summaryPlayer: "Nur GM",
-      visibility: "dm_only",
     });
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
@@ -336,11 +304,11 @@ describe("UWE auth and permissions", () => {
 
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
     const slugs = pages.map((page) => page.slug);
-    assert.ok(!slugs.includes("geheimer-npc"));
-    assert.ok(!slugs.includes("geheimes-handout"));
+    assert.ok(slugs.includes("geheimer-npc"));
+    assert.ok(slugs.includes("geheimes-handout"));
 
     const timeline = await auth.listWorldEventsForViewer(worldSlug, ctx);
-    assert.ok(!timeline.some((event) => event.title === "GM Geheimnis"));
+    assert.ok(timeline.some((event) => event.title === "GM Geheimnis"));
 
     await db.$disconnect();
   });

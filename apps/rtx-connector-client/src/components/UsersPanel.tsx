@@ -3,33 +3,41 @@ import { useCallback, useEffect, useState } from "react";
 import { HealthBadge } from "@uwe/shared-ui";
 
 import {
+  COMMAND_CENTER_AREAS,
+  COMMAND_CENTER_AREA_LABELS,
   createUser,
   deleteUser,
   listUsers,
   setUserPassword,
   updateUser,
+  type CommandCenterArea,
+  type CommandCenterAreaAccess,
   type CommandCenterUser,
-  type CommandCenterUserRole,
 } from "../lib/tauri";
 import { toMessage } from "../lib/connector-runtime-labels";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
-const ROLE_OPTIONS: { value: CommandCenterUserRole; label: string }[] = [
-  { value: "owner", label: "Owner (voller Zugriff, Brain)" },
-  { value: "admin", label: "Admin" },
-  { value: "dm", label: "DM (Studio)" },
-  { value: "player", label: "Player (Portal)" },
-];
-
-const ROLE_LABEL: Record<string, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  dm: "DM",
-  player: "Player",
-  readonly: "Readonly",
-  guest: "Gast",
+const NO_ACCESS: CommandCenterAreaAccess = {
+  portal: false,
+  studio: false,
+  brain: false,
+  family: false,
 };
+
+const ALL_ACCESS: CommandCenterAreaAccess = {
+  portal: true,
+  studio: true,
+  brain: true,
+  family: true,
+};
+
+function summarize(user: CommandCenterUser): string {
+  const granted = COMMAND_CENTER_AREAS.filter((area) => user.access?.[area]).map(
+    (area) => COMMAND_CENTER_AREA_LABELS[area],
+  );
+  return granted.length > 0 ? granted.join(" · ") : "kein Zugang";
+}
 
 export function UsersPanel() {
   const [users, setUsers] = useState<CommandCenterUser[]>([]);
@@ -40,10 +48,11 @@ export function UsersPanel() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // Default to the least-privileged role so a user added without touching the
-  // dropdown never silently becomes an owner. When no owner exists yet, the
-  // create form pre-selects owner (see refresh) to smooth first-run setup.
-  const [role, setRole] = useState<CommandCenterUserRole>("player");
+  // Default to Portal only, so an address added without touching a checkbox
+  // never silently gets Studio, Brain or Family. When no owner exists yet, the
+  // create form pre-selects owner + everything (see refresh) for first-run setup.
+  const [isOwner, setIsOwner] = useState(false);
+  const [access, setAccess] = useState<CommandCenterAreaAccess>({ ...NO_ACCESS, portal: true });
 
   const [pwUserId, setPwUserId] = useState<string | null>(null);
   const [pwValue, setPwValue] = useState("");
@@ -52,11 +61,13 @@ export function UsersPanel() {
     setError(null);
     try {
       const result = await listUsers();
-      if (!result.ok) throw new Error(result.message ?? "Benutzer konnten nicht geladen werden.");
+      if (!result.ok) throw new Error(result.message ?? "Zugänge konnten nicht geladen werden.");
       const nextUsers = result.users ?? [];
       setUsers(nextUsers);
-      // First-run convenience: if there is no owner yet, pre-select the owner role.
-      if (!nextUsers.some((user) => user.role === "owner")) setRole("owner");
+      if (!nextUsers.some((user) => user.isOwner)) {
+        setIsOwner(true);
+        setAccess({ ...ALL_ACCESS });
+      }
     } catch (nextError) {
       setError(toMessage(nextError));
     }
@@ -66,19 +77,21 @@ export function UsersPanel() {
     void refresh();
   }, [refresh]);
 
-  const ownerExists = users.some((user) => user.role === "owner");
+  const ownerExists = users.some((user) => user.isOwner);
 
   async function submitCreate() {
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
-      const result = await createUser({ displayName, email, password, role });
-      if (!result.ok) throw new Error(result.message ?? "Benutzer konnte nicht angelegt werden.");
-      setMessage(`${ROLE_LABEL[role] ?? role} „${displayName}" wurde angelegt.`);
+      const result = await createUser({ displayName, email, password, isOwner, ...access });
+      if (!result.ok) throw new Error(result.message ?? "Zugang konnte nicht angelegt werden.");
+      setMessage(`„${displayName}" wurde angelegt.`);
       setDisplayName("");
       setEmail("");
       setPassword("");
+      setIsOwner(false);
+      setAccess({ ...NO_ACCESS, portal: true });
       await refresh();
     } catch (nextError) {
       setError(toMessage(nextError));
@@ -104,15 +117,34 @@ export function UsersPanel() {
     }
   }
 
-  async function changeRole(user: CommandCenterUser, nextRole: CommandCenterUserRole) {
-    if (nextRole === user.role) return;
+  async function toggleArea(user: CommandCenterUser, area: CommandCenterArea, enabled: boolean) {
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
-      const result = await updateUser({ id: user.id, role: nextRole });
-      if (!result.ok) throw new Error(result.message ?? "Rolle konnte nicht geändert werden.");
-      setMessage(`Rolle von „${user.displayName}" ist jetzt ${ROLE_LABEL[nextRole] ?? nextRole}.`);
+      const result = await updateUser({ id: user.id, [area]: enabled });
+      if (!result.ok) throw new Error(result.message ?? "Zugang konnte nicht geändert werden.");
+      setMessage(
+        `„${user.displayName}" ${enabled ? "hat jetzt" : "hat nicht mehr"} ${
+          COMMAND_CENTER_AREA_LABELS[area]
+        }.`,
+      );
+      await refresh();
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleOwner(user: CommandCenterUser, enabled: boolean) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await updateUser({ id: user.id, isOwner: enabled });
+      if (!result.ok) throw new Error(result.message ?? "Owner konnte nicht geändert werden.");
+      setMessage(`„${user.displayName}" ist ${enabled ? "jetzt" : "nicht mehr"} Owner.`);
       await refresh();
     } catch (nextError) {
       setError(toMessage(nextError));
@@ -128,7 +160,7 @@ export function UsersPanel() {
     setMessage(null);
     try {
       const result = await deleteUser(user.id);
-      if (!result.ok) throw new Error(result.message ?? "Benutzer konnte nicht gelöscht werden.");
+      if (!result.ok) throw new Error(result.message ?? "Zugang konnte nicht gelöscht werden.");
       setMessage(`„${user.displayName}" wurde gelöscht.`);
       await refresh();
     } catch (nextError) {
@@ -145,13 +177,16 @@ export function UsersPanel() {
     <div className="command-center-stack">
       <section className="command-center-hero is-attention">
         <div>
-          <span className="connector-kicker">BENUTZER · OWNER · ZUGÄNGE</span>
-          <h3>Benutzer & Owner verwalten</h3>
-          <p>Lege den Owner und alle weiteren Benutzer direkt hier an — ohne die Studio-Weboberfläche.</p>
+          <span className="connector-kicker">ZUGÄNGE · E-MAIL-ALLOWLIST</span>
+          <h3>Zugänge verwalten</h3>
+          <p>
+            Pro E-Mail-Adresse entscheiden vier Häkchen, welche App sie betreten darf. Es gibt keine
+            Selbstregistrierung — Konten legst nur du hier an.
+          </p>
         </div>
         <div className="command-center-hero-status">
           <HealthBadge status={ownerExists ? "ok" : "error"} label={ownerExists ? "Owner vorhanden" : "Kein Owner"} />
-          <small>{users.length} Benutzer</small>
+          <small>{users.length} Adressen</small>
         </div>
       </section>
 
@@ -159,13 +194,13 @@ export function UsersPanel() {
       {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
       {!ownerExists ? (
         <div className="connector-banner connector-banner-error">
-          Es existiert noch kein Owner-Account. Lege zuerst einen Benutzer mit der Rolle „Owner&quot; an —
-          nur der Owner erreicht den privaten Brain-Bereich.
+          Es existiert noch kein Owner-Account. Lege zuerst eine Adresse mit dem Häkchen „Owner&quot; an —
+          nur der Owner darf Wiederherstellung und Host-Steuerung auslösen.
         </div>
       ) : null}
 
       <Card>
-        <CardHeader><CardTitle>Neuen Benutzer / Owner anlegen</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Neue Adresse freischalten</CardTitle></CardHeader>
         <CardContent>
           <div className="connector-form-grid">
             <label className="connector-field">
@@ -180,51 +215,81 @@ export function UsersPanel() {
               <span>Passwort (min. 8 Zeichen)</span>
               <input className="connector-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" />
             </label>
-            <label className="connector-field">
-              <span>Rolle</span>
-              <select className="connector-select" value={role} onChange={(event) => setRole(event.target.value as CommandCenterUserRole)}>
-                {ROLE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+            <fieldset className="connector-field">
+              <span>Zugänge</span>
+              <div className="connector-checkbox-row">
+                {COMMAND_CENTER_AREAS.map((area) => (
+                  <label key={area} className="connector-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={access[area]}
+                      onChange={(event) =>
+                        setAccess((current) => ({ ...current, [area]: event.target.checked }))
+                      }
+                    />
+                    {COMMAND_CENTER_AREA_LABELS[area]}
+                  </label>
                 ))}
-              </select>
-            </label>
+                <label className="connector-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={isOwner}
+                    onChange={(event) => setIsOwner(event.target.checked)}
+                  />
+                  Owner
+                </label>
+              </div>
+            </fieldset>
           </div>
         </CardContent>
         <CardFooter>
           <Button variant="primary" onClick={submitCreate} disabled={createDisabled}>
-            {busy ? "Wird angelegt …" : "Benutzer anlegen"}
+            {busy ? "Wird angelegt …" : "Adresse freischalten"}
           </Button>
         </CardFooter>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Bestehende Benutzer</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Freigeschaltete Adressen</CardTitle></CardHeader>
         <CardContent>
           {users.length === 0 ? (
-            <p className="connector-muted">Noch keine Benutzer.</p>
+            <p className="connector-muted">Noch keine Adresse freigeschaltet.</p>
           ) : (
             <ul className="command-center-user-list">
               {users.map((user) => (
                 <li key={user.id} className="command-center-user-row">
                   <div className="command-center-user-main">
-                    <HealthBadge status={user.role === "owner" ? "ok" : "degraded"} label={ROLE_LABEL[user.role] ?? user.role} />
+                    <HealthBadge status={user.isOwner ? "ok" : "degraded"} label={user.isOwner ? "Owner" : summarize(user)} />
                     <div>
                       <strong>{user.displayName}</strong>
                       <p className="connector-muted">{user.email ?? "—"}</p>
                     </div>
                   </div>
+                  <div className="connector-checkbox-row">
+                    {COMMAND_CENTER_AREAS.map((area) => (
+                      <label key={area} className="connector-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={user.access?.[area] ?? false}
+                          disabled={busy}
+                          onChange={(event) => void toggleArea(user, area, event.target.checked)}
+                          aria-label={`${COMMAND_CENTER_AREA_LABELS[area]} für ${user.displayName}`}
+                        />
+                        {COMMAND_CENTER_AREA_LABELS[area]}
+                      </label>
+                    ))}
+                    <label className="connector-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={user.isOwner}
+                        disabled={busy}
+                        onChange={(event) => void toggleOwner(user, event.target.checked)}
+                        aria-label={`Owner für ${user.displayName}`}
+                      />
+                      Owner
+                    </label>
+                  </div>
                   <div className="connector-actions">
-                    <select
-                      className="connector-select"
-                      value={user.role}
-                      onChange={(event) => changeRole(user, event.target.value as CommandCenterUserRole)}
-                      disabled={busy}
-                      aria-label={`Rolle von ${user.displayName}`}
-                    >
-                      {ROLE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{ROLE_LABEL[option.value] ?? option.value}</option>
-                      ))}
-                    </select>
                     <Button variant="ghost" onClick={() => { setPwUserId(pwUserId === user.id ? null : user.id); setPwValue(""); }} disabled={busy}>
                       Passwort ändern
                     </Button>

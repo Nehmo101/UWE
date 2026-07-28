@@ -6,7 +6,7 @@ import {
   rankContinuations,
   type Continuation,
 } from "./continue-work-service";
-import { createTestBrainClient } from "./test-helpers";
+import { createTestBrainClient, createTestFamilyClient } from "./test-helpers";
 
 function cont(overrides: Partial<Continuation>): Continuation {
   return {
@@ -41,9 +41,11 @@ describe("rankContinuations (pure)", () => {
 
 describe("continue-work service (integration)", () => {
   let db: ReturnType<typeof createTestBrainClient>;
+  let familyDb: ReturnType<typeof createTestFamilyClient>;
 
   before(async () => {
     db = createTestBrainClient();
+    familyDb = createTestFamilyClient();
     await db.captureEntry.create({ data: { title: "Idee", content: "Brotrezept ändern", captureType: "quick_note", status: "inbox" } });
     await db.personalProject.create({
       data: { name: "UWE Feature", status: "active", nextAction: "Radar testen", updatedAt: new Date("2026-07-02") },
@@ -69,7 +71,7 @@ describe("continue-work service (integration)", () => {
         status: "archived",
       },
     });
-    await db.scanDocument.create({
+    await familyDb.scanDocument.create({
       data: {
         title: "Abgelegt",
         status: "filed",
@@ -77,17 +79,18 @@ describe("continue-work service (integration)", () => {
         mimeType: "image/jpeg",
       },
     });
-    await db.scanDocument.create({
+    await familyDb.scanDocument.create({
       data: { title: "Stromrechnung", status: "proposal_ready", storageKey: "_scan/x", mimeType: "image/jpeg" },
     });
   });
 
   after(async () => {
     await db.$disconnect();
+    await familyDb.$disconnect();
   });
 
   it("aggregates open work into a ranked continuation list", async () => {
-    const items = await createContinueWorkService(db).getContinuations(10);
+    const items = await createContinueWorkService(db, familyDb).getContinuations(10);
     const kinds = items.map((i) => i.kind);
     assert.ok(kinds.includes("capture"));
     assert.ok(kinds.includes("project"));

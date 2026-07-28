@@ -9,7 +9,6 @@ import {
   BRAIN_DOCUMENT_TYPE_LABELS,
   BRAIN_SOURCE_LABELS,
   BRAIN_STATUS_LABELS,
-  BRAIN_VISIBILITY_LABELS,
 } from "@uwe/database/brain-constants";
 import { buildPageUrl } from "@uwe/database/page-types";
 import type { PageType } from "@uwe/database/enums";
@@ -27,7 +26,6 @@ interface Props {
     title: string;
     content: string;
     documentType: keyof typeof BRAIN_DOCUMENT_TYPE_LABELS;
-    visibility: keyof typeof BRAIN_VISIBILITY_LABELS;
     status: keyof typeof BRAIN_STATUS_LABELS;
     source: keyof typeof BRAIN_SOURCE_LABELS;
     chunks: unknown[];
@@ -43,7 +41,7 @@ export function BrainDocumentClient({ worldSlug, document }: Props) {
     <Card className="flex flex-col gap-4 p-4">
       <p className="text-sm text-muted-foreground">
         {BRAIN_DOCUMENT_TYPE_LABELS[document.documentType]} ·{" "}
-        {BRAIN_VISIBILITY_LABELS[document.visibility]} · {BRAIN_STATUS_LABELS[document.status]}
+        {BRAIN_STATUS_LABELS[document.status]}
       </p>
       {document.content ? (
         <p className="whitespace-pre-wrap">{document.content}</p>
@@ -93,21 +91,6 @@ export function BrainDocumentClient({ worldSlug, document }: Props) {
           className={SELECT_CLASS}
         >
           {Object.entries(BRAIN_DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="brain-document-visibility">Sichtbarkeit</Label>
-        <select
-          id="brain-document-visibility"
-          name="visibility"
-          defaultValue={document.visibility}
-          className={SELECT_CLASS}
-        >
-          {Object.entries(BRAIN_VISIBILITY_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>

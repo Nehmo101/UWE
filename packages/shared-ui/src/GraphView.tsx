@@ -5,7 +5,7 @@ import { ArrowRight, Lock, LockOpen, Maximize, Minus, Plus, Search, X } from "lu
 import type { GraphEdge, GraphNode, GraphNodeCategory } from "@uwe/database/graph-types";
 import { GRAPH_NODE_CATEGORY_LABELS } from "@uwe/database/graph-types";
 import { GraphEngine, GRAPH_CATEGORY_COLORS, isGraphPositionCacheValid } from "./graph-engine";
-import { PageTypeBadge, VisibilityBadge } from "./StatusBadges";
+import { PageTypeBadge } from "./StatusBadges";
 
 export interface GraphViewProps {
   nodes: GraphNode[];
@@ -401,7 +401,6 @@ export function GraphView({
             <div className="flex flex-wrap items-center gap-[9px]">
               <span className={DOT_BASE} style={{ background: catCssColor(selected.category) }} />
               <PageTypeBadge type={selected.type} />
-              <VisibilityBadge visibility={selected.visibility} />
             </div>
             <button
               type="button"

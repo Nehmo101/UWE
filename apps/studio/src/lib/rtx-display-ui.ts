@@ -1,31 +1,15 @@
 import type { RtxReadinessStatus } from "@uwe/ai-brain/router";
-import type { RtxConnectorState } from "@uwe/shared-ui";
+import { mapRtxReadinessToConnectorState, type RtxConnectorState } from "@uwe/shared-ui";
+
+// Der Mapper liegt seit H10 in shared-ui — Brain braucht ihn für das
+// Mail-Center. Re-Export, damit die Studio-Importe unverändert stimmen.
+export { mapRtxReadinessToConnectorState };
 
 export type RtxReadinessSourceLabel = "connector" | "inference";
 
 export interface StudioRtxDisplayState {
   status: RtxReadinessStatus;
   connectorState: RtxConnectorState;
-}
-
-/** Map unified RTX readiness to the shared UI badge state. */
-export function mapRtxReadinessToConnectorState(status: RtxReadinessStatus): RtxConnectorState {
-  if (status.agentStatus === "disabled" && !status.ready) {
-    return "disabled";
-  }
-  if (status.connectorDegraded && status.ready) {
-    return "starting";
-  }
-  if (status.ready) {
-    return "online";
-  }
-  if (status.agentStatus === "starting") {
-    return "starting";
-  }
-  if (status.agentStatus === "error" || !status.urlAllowed) {
-    return "error";
-  }
-  return "offline";
 }
 
 export function resolveRtxReadinessSourceLabel(status: RtxReadinessStatus): RtxReadinessSourceLabel {

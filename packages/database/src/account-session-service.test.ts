@@ -20,7 +20,8 @@ describe("account-session-service", () => {
       displayName: "Session Viewer",
       email: "session-viewer@uwe.local",
       password: "session-password",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
       actorUserId: "bootstrap",
     });
     userId = user.id;

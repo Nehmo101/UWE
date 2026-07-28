@@ -1,4 +1,3 @@
-import { brainPrisma } from "./brain-client";
 import type {
   GameSessionStatus,
   Prisma,
@@ -7,6 +6,8 @@ import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray } from "./json-utils";
 import type { PageSummary } from "./repository";
 import { createCalendarService } from "./calendar-service";
+// Der Kalender liegt seit Abschnitt G in uwe-family.db.
+import { familyPrisma } from "./family-client";
 
 export type {
   GameSession,
@@ -325,12 +326,12 @@ export class GameSessionService {
 
   /** Overridable seam for tests. Performs the actual calendar sync. */
   protected async runCalendarSync(sessionId: string): Promise<void> {
-    await createCalendarService(brainPrisma, this.db).syncSessionToCalendar(sessionId);
+    await createCalendarService(familyPrisma, this.db).syncSessionToCalendar(sessionId);
   }
 
   /** Overridable seam for tests. Performs the actual calendar unsync. */
   protected async runCalendarUnsync(sessionId: string): Promise<void> {
-    await createCalendarService(brainPrisma, this.db).unsyncSessionFromCalendar(sessionId);
+    await createCalendarService(familyPrisma, this.db).unsyncSessionFromCalendar(sessionId);
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {
@@ -402,67 +403,7 @@ export class GameSessionService {
       status: "summarized",
     });
 
-    await this.unlockLinkedSessionContent(session);
-
     return session;
-  }
-
-  /**
-   * After a recap is published, unlock `unlock_after_session` pages linked to
-   * the session for every player in the world.
-   */
-  private async unlockLinkedSessionContent(session: GameSessionWithLinks): Promise<void> {
-    const linkedPageIds = session.linkedPages.map((link) => link.pageId);
-    if (linkedPageIds.length === 0) {
-      return;
-    }
-
-    const unlockPages = await this.db.page.findMany({
-      where: {
-        id: { in: linkedPageIds },
-        worldId: session.worldId,
-        visibility: "unlock_after_session",
-        publishStatus: "published",
-      },
-      select: { id: true },
-    });
-
-    if (unlockPages.length === 0) {
-      return;
-    }
-
-    const players = await this.db.worldMembership.findMany({
-      where: { worldId: session.worldId, role: "player" },
-      select: { userId: true },
-    });
-
-    if (players.length === 0) {
-      return;
-    }
-
-    const sessionLabel = `Session ${session.sessionNumber}: ${session.title}`;
-
-    for (const page of unlockPages) {
-      for (const membership of players) {
-        await this.db.sessionUnlock.upsert({
-          where: {
-            pageId_userId: {
-              pageId: page.id,
-              userId: membership.userId,
-            },
-          },
-          create: {
-            pageId: page.id,
-            userId: membership.userId,
-            sessionLabel,
-          },
-          update: {
-            unlockedAt: new Date(),
-            sessionLabel,
-          },
-        });
-      }
-    }
   }
 
   async listPublishedForPortal(worldSlug: string): Promise<GameSessionWithLinks[]> {

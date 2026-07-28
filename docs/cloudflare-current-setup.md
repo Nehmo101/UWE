@@ -2,7 +2,7 @@
 
 How UWE is exposed via Cloudflare, the expected environment configuration, and
 how to verify it in-app. The live status (read-only, no secrets) is shown under
-**System → Cloudflare** (`/system/cloudflare`), backed by `getProxyStatus()` in
+der **Kommandozentrale → Cloudflare** (Studios System-Bereich ist seit Abschnitt D dorthin gezogen), backed by `getProxyStatus()` in
 `packages/database/src/system-status.ts`.
 
 ## Architecture: split hostnames (preferred)
@@ -32,7 +32,7 @@ Studio NotFound".
 - **"Verify you are human":** two independent, optional bot/human checks — a
   Cloudflare **Managed Challenge** at the edge (in front of everything) and the
   in-app **Turnstile** widget (on the login forms). Both are configured in
-  Studio under System → Cloudflare; neither is a login.
+  the Command Center's Cloudflare panel; neither is a login.
 - The app trusts proxy headers (`TRUST_PROXY=true`) so client IPs and protocol
   are read from Cloudflare headers.
 
@@ -117,7 +117,7 @@ Behaviour:
   production.
 
 Verification module: `packages/auth/src/turnstile.ts`. Live status (booleans
-only, no secrets) is shown under **System → Cloudflare** (`/system/cloudflare`).
+only, no secrets) is shown in the **Command Center → Cloudflare** panel.
 
 ## Managed Challenge at the edge (full-page interstitial)
 
@@ -130,12 +130,12 @@ UWE owns this itself — no dashboard visit and no host step. It is a single WAF
 custom rule in the zone's `http_request_firewall_custom` phase, created, updated
 and removed by UWE through the Cloudflare API.
 
-### Setting it up (System → Cloudflare)
+### Setting it up (Kommandozentrale → Cloudflare)
 
 1. Create an API token at **Cloudflare → My Profile → API Tokens** with
    **Zone → Zone WAF → Edit** on the UWE zone, and copy the **Zone ID** from the
    zone's overview page.
-2. Open **System → Cloudflare** in Studio, section *Managed Challenge
+2. Open **Cloudflare** in the Command Center, card *Managed Challenge
    (Cloudflare Edge)*: paste Zone ID + token, tick **Managed Challenge an der
    Edge aktivieren**, save.
 3. The status panel above the form reads the rule back from Cloudflare and shows
@@ -198,7 +198,7 @@ jq '.enabled = false' data/cloudflare/managed-challenge.json > /tmp/mc.json \
   && bash deploy/scripts/configure-cloudflare-managed-challenge.sh
 ```
 
-Then turn it off in **System → Cloudflare** too — otherwise the next save
+Then turn it off in the **Command Center → Cloudflare** card too — otherwise the next save
 re-applies the stored desired state.
 
 ## Cookies behind the proxy
@@ -221,7 +221,7 @@ re-applies the stored desired state.
 - `https://…/studio` (or the studio host) opens Studio.
 - `https://…/portal` (or the portal host) opens the Portal login / "Meine Welten".
 - `/portal` never lands in Studio NotFound — Studio exposes a defensive redirect shim at `apps/studio/app/portal/page.tsx` that sends visitors to `NEXT_PUBLIC_PORTAL_URL` (split hostname) or the unified `PORTAL_PATH` mount.
-- **System → Cloudflare** shows tunnel/access/routing status (booleans only).
+- The **Command Center → Cloudflare** panel shows tunnel/access/routing status (booleans only).
 
 ## Verification status (2026-06-30, host uwe-host)
 

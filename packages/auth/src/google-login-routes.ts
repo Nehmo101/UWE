@@ -19,7 +19,7 @@
  * work across origins in every deployment model; the token is single-use,
  * short-lived, and useless without the TOTP code.
  */
-import type { AuthUser } from "./types";
+import type { AreaAccess, AuthUser } from "./types";
 import {
   buildGoogleAuthUrl,
   encodeGoogleState,
@@ -55,7 +55,10 @@ export interface GoogleIdentityUserPort {
   id: string;
   displayName: string;
   email: string | null;
-  role: AuthUser["role"];
+  // Häkchenmodell statt Rolle — dieselbe Form wie AuthUserSource, damit der
+  // Login-Flow den Benutzer unverändert übernehmen kann.
+  isOwner: boolean;
+  access?: AreaAccess | null;
   status: "invited" | "active" | "disabled";
   forcePasswordChange: boolean;
 }

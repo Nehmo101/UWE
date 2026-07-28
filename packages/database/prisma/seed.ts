@@ -43,7 +43,6 @@ async function main() {
     nepurga: result.pages.nepurga,
   });
 
-  await auth.setWorldGuestMode(result.world.id, true);
 
   const users = await seedAuthUsers(auth, repo, result.world.id);
 

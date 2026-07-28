@@ -31,19 +31,15 @@ describe("static export", () => {
       slug: "validori",
       type: "location",
       summary: "Hafenstadt",
-      visibility: "public",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "public",
           content: "Validori liegt an der Küste. Mehr über [[Arbor|den Wald]].",
         },
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 1,
-          visibility: "dm_only",
           content: "Geheime GM-Notiz über [[Shagottar]].",
         },
       ],
@@ -54,13 +50,10 @@ describe("static export", () => {
       title: "Arbor",
       slug: "arbor",
       type: "region",
-      visibility: "player_visible",
-      publishStatus: "published",
       contentBlocks: [
         {
           type: "rich_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Der Wald Arbor grenzt an [[Validori]].",
         },
       ],
@@ -71,13 +64,10 @@ describe("static export", () => {
       title: "Shagottar",
       slug: "shagottar",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Geheime Festung Shagottar.",
         },
       ],
@@ -89,40 +79,35 @@ describe("static export", () => {
     await createPrismaClient(databaseUrl).$disconnect();
   });
 
-  it("exports portal-visible pages to HTML files", async () => {
+  it("exports every page of the world to HTML files", async () => {
     const repo = createUweRepository(databaseUrl);
     const result = await exportWorldStatic(repo, {
       worldSlug,
       outputDir,
     });
 
-    assert.equal(result.pageCount, 2);
+    assert.equal(result.pageCount, 3);
     assert.ok(fs.existsSync(path.join(outputDir, "index.html")));
     assert.ok(fs.existsSync(path.join(outputDir, "locations/validori/index.html")));
-    assert.ok(fs.existsSync(path.join(outputDir, "locations/arbor/index.html")));
+    assert.ok(fs.existsSync(path.join(outputDir, "locations/shagottar/index.html")));
     assert.ok(fs.existsSync(path.join(outputDir, "search-index.json")));
     assert.ok(fs.existsSync(path.join(outputDir, "assets/portal.css")));
     assert.ok(fs.existsSync(path.join(outputDir, "assets/search.js")));
   });
 
-  it("does not include dm-only content in export", async () => {
+  it("keeps no secret metadata in the generated JSON", async () => {
     const repo = createUweRepository(databaseUrl);
     await exportWorldStatic(repo, { worldSlug, outputDir: path.join(outputDir, "audit") });
 
     const exportRoot = path.join(outputDir, "audit");
-    const validoriHtml = fs.readFileSync(
-      path.join(exportRoot, "locations/validori/index.html"),
-      "utf8",
-    );
     const searchIndex = fs.readFileSync(
       path.join(exportRoot, "search-index.json"),
       "utf8",
     );
 
-    assert.ok(!validoriHtml.includes("Geheime GM-Notiz"));
-    assert.ok(!validoriHtml.includes("Shagottar"));
-    assert.ok(!searchIndex.includes("Shagottar"));
-    assert.ok(!fs.existsSync(path.join(exportRoot, "locations/shagottar/index.html")));
+    assert.ok(!searchIndex.includes("passwordHash"));
+    assert.ok(!searchIndex.includes("sessionToken"));
+    assert.ok(searchIndex.includes("Shagottar"));
   });
 
   it("rewrites internal links to working relative paths", async () => {

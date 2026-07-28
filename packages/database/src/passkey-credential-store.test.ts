@@ -18,7 +18,8 @@ describe("passkey credential store", () => {
         displayName: "Passkey User",
         email: "passkey@uwe.local",
         passwordHash: "hash",
-        role: "dm",
+        studioAccess: true,
+        portalAccess: true,
       },
     });
     const other = await db.user.create({
@@ -26,7 +27,7 @@ describe("passkey credential store", () => {
         displayName: "Other User",
         email: "other@uwe.local",
         passwordHash: "hash",
-        role: "player",
+        portalAccess: true,
       },
     });
     const disabled = await db.user.create({
@@ -34,7 +35,7 @@ describe("passkey credential store", () => {
         displayName: "Disabled User",
         email: "disabled@uwe.local",
         passwordHash: "hash",
-        role: "player",
+        portalAccess: true,
         status: "disabled",
       },
     });

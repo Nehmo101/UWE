@@ -1,4 +1,4 @@
-import type { BrainAccessContext, BrainDocumentType, BrainVisibility } from "@uwe/database/server";
+import type { BrainDocumentType } from "@uwe/database/server";
 
 export type EmbeddingProviderId = "ollama" | "openai_compatible" | "mock" | "disabled";
 
@@ -57,7 +57,6 @@ export interface SemanticSearchOptions {
   worldSlug: string;
   limit?: number;
   minScore?: number;
-  accessContext?: BrainAccessContext;
   campaignId?: string | null;
 }
 
@@ -68,7 +67,6 @@ export interface SemanticSearchResult {
   content: string;
   chunkIndex: number;
   score: number;
-  visibility: BrainVisibility;
   documentType: BrainDocumentType;
   matchMode: "semantic" | "keyword";
 }

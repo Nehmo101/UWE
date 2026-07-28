@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ASSET_TYPE_LABELS, AssetTypeBadge, VisibilityBadge } from "@uwe/shared-ui";
+import { ASSET_TYPE_LABELS, AssetTypeBadge } from "@uwe/shared-ui";
 import { ASSET_TYPES } from "@uwe/assets";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
@@ -45,7 +45,7 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
     <>
       <PageHeader
         title="Handouts & Medien"
-        summary={`Medien und Handouts, die für deine Rolle (${ctx.effectiveRole}) sichtbar sind.`}
+        summary="Alle Medien und Handouts dieser Welt."
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -80,7 +80,6 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
               <strong>{asset.title}</strong>
               <div className="flex flex-wrap gap-2">
                 <AssetTypeBadge type={asset.type} />
-                <VisibilityBadge visibility={asset.visibility} />
               </div>
               {asset.description ? <p className="text-sm text-muted-foreground">{asset.description}</p> : null}
             </div>

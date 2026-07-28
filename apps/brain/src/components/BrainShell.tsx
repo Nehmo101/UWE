@@ -14,7 +14,7 @@ import { BrainNavSearch } from "./BrainNavSearch";
 const NAV_DRAWER_ID = "uwe-brain-nav-drawer";
 
 /**
- * Shell shared by every owner-only Brain surface. It carries the same chrome
+ * Shell shared by every Brain surface. It carries the same chrome
  * grammar as Studio and Portal ("Gemalte Welt"); Brain simply defaults to the
  * night half of the pair via its own theme scope (see app/layout.tsx).
  *
@@ -115,6 +115,7 @@ export function BrainShell({
           studioUrl={urls.studio}
           portalUrl={urls.portal}
           brainUrl={urls.brain}
+          familyUrl={urls.family}
         />
       </div>
     </AppAccentScope>
@@ -123,6 +124,6 @@ export function BrainShell({
 
 export function BrainDenied() {
   return (
-    <p className="brain-muted">Dieser Bereich ist ausschließlich für den System-Owner.</p>
+    <p className="brain-muted">Dieser Bereich braucht das Häkchen &bdquo;Brain&ldquo;.</p>
   );
 }

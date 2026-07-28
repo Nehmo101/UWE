@@ -21,14 +21,12 @@ export function entityToCreatePageInput(
     slug: context.slug,
     type: kindToPageType(entity.kind),
     summary: entity.summary?.trim() || null,
-    visibility: "dm_only",
     tags: entity.tags?.slice() ?? [],
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
         content: entity.body,
-        visibility: "dm_only",
         metadata: {
           source: "pdf-campaign-import",
           importJobId: context.importJobId,

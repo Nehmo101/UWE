@@ -31,7 +31,6 @@ export interface SecurityFixtureContent {
     publicPage: string;
     playerVisiblePage: string;
     dmOnlyPage: string;
-    privateDraftPage: string;
     hiddenSecretPage: string;
     revealedSecretPage: string;
   };
@@ -57,12 +56,12 @@ const TEST_PASSWORD = "uwe-security-test";
 /**
  * Seeds two worlds (public + private) with labeled content for security tests.
  *
- * Role mapping (UWE has no separate ADMIN role — see docs/security-testing.md):
- * - owner  → world owner (OWNER)
- * - admin  → system owner with world DM membership (ADMIN)
- * - dm     → DM
- * - player → PLAYER
- * - anonymous → no session (guest)
+ * There is no role enum any more (see docs/engineering/access-model.md). The
+ * fixture seeds the three shapes the model allows:
+ * - owner  → owner flag plus all four checkboxes
+ * - dm     → Studio checkbox, reaches every world
+ * - player → Portal checkbox, assigned to the public world only
+ * - anonymous → no session, sees nothing
  */
 export async function createSecurityFixture(): Promise<SecurityFixture> {
   const databaseUrl = createTestDatabaseUrl();
@@ -85,65 +84,67 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     description: "Guest-disabled world with DM-only content",
   });
 
-  await auth.setWorldGuestMode(publicWorld.id, true);
-  await auth.setWorldGuestMode(privateWorld.id, false);
 
   const owner = await auth.createUser({
     displayName: "Security Owner",
     email: "sec-owner@uwe.local",
     password: TEST_PASSWORD,
-    role: "owner",
+    isOwner: true,
+    portalAccess: true,
+    studioAccess: true,
+    brainAccess: true,
+    familyAccess: true,
   });
   await auth.createWorldMembership({
     userId: owner.id,
     worldId: publicWorld.id,
-    role: "owner",
   });
   await auth.createWorldMembership({
     userId: owner.id,
     worldId: privateWorld.id,
-    role: "owner",
   });
 
   const admin = await auth.createUser({
     displayName: "Security Admin",
     email: "sec-admin@uwe.local",
     password: TEST_PASSWORD,
-    role: "owner",
+    isOwner: true,
+    portalAccess: true,
+    studioAccess: true,
+    brainAccess: true,
+    familyAccess: true,
   });
   await auth.createWorldMembership({
     userId: admin.id,
     worldId: publicWorld.id,
-    role: "dm",
   });
 
   const dm = await auth.createUser({
     displayName: "Security DM",
     email: "sec-dm@uwe.local",
     password: TEST_PASSWORD,
-    role: "dm",
+    portalAccess: true,
+    studioAccess: true,
   });
   await auth.createWorldMembership({
     userId: dm.id,
     worldId: publicWorld.id,
-    role: "dm",
   });
   await auth.createWorldMembership({
     userId: dm.id,
     worldId: privateWorld.id,
-    role: "dm",
   });
 
   const player = await auth.createUser({
     displayName: "Security Player",
     email: "sec-player@uwe.local",
     password: TEST_PASSWORD,
-    role: "player",
+    portalAccess: true,
+    studioAccess: false,
   });
   await auth.createWorldMembership({
     userId: player.id,
     worldId: publicWorld.id,
-    role: "player",
     characterName: "Testspieler",
   });
 
@@ -151,7 +152,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     publicPage: "oeffentliche-notiz",
     playerVisiblePage: "spieler-sichtbar",
     dmOnlyPage: "nur-dm",
-    privateDraftPage: "privater-entwurf",
     hiddenSecretPage: "verborgenes-geheimnis",
     revealedSecretPage: "enthuelltes-geheimnis",
   };
@@ -161,13 +161,10 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Öffentliche Notiz",
     slug: slugs.publicPage,
     type: "note",
-    visibility: "public",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "public",
         content: SECURITY_MARKERS.PUBLIC,
       },
     ],
@@ -178,20 +175,11 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Spieler sichtbar",
     slug: slugs.playerVisiblePage,
     type: "note",
-    visibility: "player_visible",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "player_visible",
         content: SECURITY_MARKERS.PLAYER_VISIBLE,
-      },
-      {
-        type: "gm_note",
-        sortOrder: 1,
-        visibility: "dm_only",
-        content: SECURITY_MARKERS.DM_ONLY,
       },
     ],
   });
@@ -201,31 +189,11 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Nur DM",
     slug: slugs.dmOnlyPage,
     type: "lore",
-    visibility: "dm_only",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "dm_only",
         content: SECURITY_MARKERS.DM_ONLY,
-      },
-    ],
-  });
-
-  await repo.createPage({
-    worldId: publicWorld.id,
-    title: "Privater Entwurf",
-    slug: slugs.privateDraftPage,
-    type: "note",
-    visibility: "player_visible",
-    publishStatus: "draft",
-    contentBlocks: [
-      {
-        type: "rich_text",
-        sortOrder: 0,
-        visibility: "player_visible",
-        content: SECURITY_MARKERS.PRIVATE_DRAFT,
       },
     ],
   });
@@ -235,49 +203,38 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Verborgenes Geheimnis",
     slug: slugs.hiddenSecretPage,
     type: "secret",
-    visibility: "unlock_after_session",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "unlock_after_session",
         content: SECURITY_MARKERS.HIDDEN_SECRET,
       },
     ],
   });
 
-  const revealedSecret = await repo.createPage({
+  await repo.createPage({
     worldId: publicWorld.id,
     title: "Enthülltes Geheimnis",
     slug: slugs.revealedSecretPage,
     type: "secret",
-    visibility: "unlock_after_session",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "player_text",
         sortOrder: 0,
-        visibility: "unlock_after_session",
         content: SECURITY_MARKERS.REVEALED_SECRET,
       },
     ],
   });
-
-  await auth.unlockPageForUser(revealedSecret.id, player.id, "Session 1");
 
   await repo.createPage({
     worldId: privateWorld.id,
     title: "Private Welt DM-only",
     slug: "private-dm-only",
     type: "lore",
-    visibility: "dm_only",
-    publishStatus: "published",
     contentBlocks: [
       {
         type: "rich_text",
         sortOrder: 0,
-        visibility: "dm_only",
         content: SECURITY_MARKERS.DM_ONLY,
       },
     ],
@@ -304,7 +261,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     storageKey: publicStorageKey,
     mimeType: "image/png",
     size: SECURITY_MARKERS.PUBLIC.length,
-    visibility: "public",
   });
 
   const privateMedia = await repo.createAsset({
@@ -314,7 +270,6 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     storageKey: privateStorageKey,
     mimeType: "image/png",
     size: SECURITY_MARKERS.PRIVATE_MEDIA.length,
-    visibility: "dm_only",
   });
 
   void hiddenSecret;

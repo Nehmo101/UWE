@@ -1,8 +1,7 @@
 import { headers } from "next/headers";
 import {
   authorize,
-  hasAnyRole,
-  STUDIO_ACCESS_ROLES,
+  canAccessStudio,
   type AuthorizeDenied,
 } from "@uwe/auth";
 import { getCurrentAuthUser, studioAuthRequired } from "./auth";
@@ -26,16 +25,16 @@ export class StudioActionAuthError extends Error {
  *
  *  1. **Origin/CSRF** via `authorize({ scope: "studio-action" })` — rejects
  *     cross-site invocations and honours `STUDIO_API_TOKEN`.
- *  2. **Role** — the session user must hold a Studio role
- *     (`STUDIO_ACCESS_ROLES`: owner/admin/dm).
+ *  2. **Access** — the session user must hold the Studio checkbox.
  *
  * Layer 2 is not optional and must not be delegated to the middleware: the
  * Studio middleware only checks that *a* session cookie exists, and
- * `POST /api/auth/enter` (public, Studio origin) issues a valid `uwe_session`
- * to ANY active user when `target: "portal"` — including role `player`. Without
- * the role check here, such a session could invoke every Studio Server Action,
+ * `POST /api/auth/enter` on the landing origin issues a valid `uwe_session` to
+ * ANY active user when `target: "portal"` — including Portal-only accounts. When the
+ * session cookie is shared across origins, such a session reaches Studio.
+ * Without the access check here it could invoke every Studio Server Action,
  * because pages (`enforceStudioPageAuth`) and API routes
- * (`guardStudioApiRequest`) are the only other places a role is verified and
+ * (`guardStudioApiRequest`) are the only other places access is verified and
  * Server Actions pass through neither.
  *
  * Modules that need a narrower gate (owner-only, admin-only) additionally call
@@ -79,10 +78,10 @@ async function requireStudioActionRole(): Promise<void> {
     });
   }
 
-  if (!hasAnyRole(user, STUDIO_ACCESS_ROLES)) {
+  if (!canAccessStudio(user)) {
     throw new StudioActionAuthError({
       status: 403,
-      error: "Kein Studio-Zugriff für diese Rolle.",
+      error: "Kein Zugang zum Bereich Studio.",
     });
   }
 }

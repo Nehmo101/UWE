@@ -1,4 +1,4 @@
-import type { PageType, Visibility } from "./generated/prisma/client";
+import type { PageType, } from "./generated/prisma/client";
 
 /** Graph filter categories aligned with UWE content types. */
 export type GraphNodeCategory =
@@ -46,7 +46,6 @@ export interface GraphNode {
   slug: string;
   type: PageType;
   category: GraphNodeCategory;
-  visibility: Visibility;
   tags: string[];
   href: string;
   campaignId: string | null;
@@ -66,7 +65,6 @@ export interface GraphFilters {
   campaignId?: string | null;
   categories?: GraphNodeCategory[];
   tags?: string[];
-  visibilities?: Visibility[];
   focusPageId?: string;
   mode?: GraphViewMode;
 }

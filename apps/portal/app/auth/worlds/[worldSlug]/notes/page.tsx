@@ -38,7 +38,7 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
   try {
     const world = await db.world.findUnique({
       where: { slug: worldSlug },
-      select: { id: true, name: true, guestCommentsEnabled: true },
+      select: { id: true, name: true },
     });
     if (!world) {
       notFound();
@@ -47,7 +47,7 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
     assertPortalCanReadWorld(ctx, world.id);
 
     notes = await auth.listPlayerNotesForViewer(worldSlug, ctx);
-    canComment = canCreatePlayerNote(ctx, world.guestCommentsEnabled);
+    canComment = canCreatePlayerNote(ctx);
 
     const campaigns = await db.campaign.findMany({
       where: { world: { slug: worldSlug } },

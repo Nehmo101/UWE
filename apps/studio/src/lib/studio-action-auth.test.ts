@@ -4,8 +4,8 @@ import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { STUDIO_ACCESS_ROLES, hasAnyRole } from "@uwe/auth";
-import type { AuthUser, UweRole } from "@uwe/auth";
+import { canAccessStudio } from "@uwe/auth";
+import type { AreaAccess, AuthUser } from "@uwe/auth";
 
 const libDir = dirname(fileURLToPath(import.meta.url));
 
@@ -14,41 +14,47 @@ const libDir = dirname(fileURLToPath(import.meta.url));
  * plain node:test process. These tests therefore cover the two halves that make
  * the guard correct:
  *
- *  1. the role predicate itself (pure, importable), and
- *  2. a source-level assertion that the guard actually performs the role check
+ *  1. the access predicate itself (pure, importable), and
+ *  2. a source-level assertion that the guard actually performs the access check
  *     — the regression that B1 fixed was precisely a guard that looked complete
  *     but never resolved a user.
  *
  * The "every action calls the guard" half lives in `server-actions.test.ts`.
  */
-function authUser(role: UweRole): AuthUser {
-  return { id: `u-${role}`, displayName: role, email: null, role };
+function authUser(label: string, access: Partial<AreaAccess>): AuthUser {
+  return {
+    id: `u-${label}`,
+    displayName: label,
+    email: null,
+    isOwner: false,
+    access: { portal: false, studio: false, brain: false, family: false, ...access },
+  };
 }
 
-describe("studio action role predicate", () => {
-  it("admits the three Studio operator roles", () => {
-    for (const role of ["owner", "admin", "dm"] as const) {
-      assert.equal(
-        hasAnyRole(authUser(role), STUDIO_ACCESS_ROLES),
-        true,
-        `${role} must keep Studio action access`,
-      );
-    }
+describe("studio action access predicate", () => {
+  it("admits anyone holding the Studio checkbox", () => {
+    assert.equal(canAccessStudio(authUser("dm", { portal: true, studio: true })), true);
+    assert.equal(canAccessStudio(authUser("studio-only", { studio: true })), true);
   });
 
-  it("rejects portal-only and anonymous roles", () => {
-    for (const role of ["player", "readonly", "guest"] as const) {
+  it("rejects accounts without it", () => {
+    for (const [label, access] of [
+      ["portal-only", { portal: true }],
+      ["brain-only", { brain: true }],
+      ["family-only", { family: true }],
+      ["nothing", {}],
+    ] as const) {
       assert.equal(
-        hasAnyRole(authUser(role), STUDIO_ACCESS_ROLES),
+        canAccessStudio(authUser(label, access)),
         false,
-        `${role} must not reach Studio Server Actions`,
+        `${label} must not reach Studio Server Actions`,
       );
     }
   });
 });
 
 describe("studio action guard wiring", () => {
-  it("resolves the session user and enforces a Studio role", async () => {
+  it("resolves the session user and enforces Studio access", async () => {
     const source = await readFile(join(libDir, "studio-action-auth.ts"), "utf8");
 
     // Layer 1: Origin/CSRF.
@@ -58,9 +64,9 @@ describe("studio action guard wiring", () => {
       "guard must keep the Origin/CSRF check",
     );
 
-    // Layer 2: the role check. A guard that only calls authorize() is the exact
+    // Layer 2: the access check. A guard that only calls authorize() is the exact
     // hole this test exists for — POST /api/auth/enter hands a valid session
-    // cookie on the Studio origin to any active user, including role "player".
+    // cookie on the Studio origin to any active user, including Portal-only ones.
     assert.match(
       source,
       /getCurrentAuthUser\(\)/,
@@ -68,13 +74,13 @@ describe("studio action guard wiring", () => {
     );
     assert.match(
       source,
-      /hasAnyRole\([^)]*STUDIO_ACCESS_ROLES\)/,
-      "guard must enforce STUDIO_ACCESS_ROLES",
+      /canAccessStudio\(user\)/,
+      "guard must enforce the Studio checkbox",
     );
     assert.match(
       source,
       /status:\s*403/,
-      "a non-Studio role must be denied with 403",
+      "an account without Studio access must be denied with 403",
     );
     assert.match(
       source,

@@ -18,11 +18,19 @@ export async function resolveStudioApiAuthContext(request: Request): Promise<Api
       const resolved = await tokenService.resolveFromBearer(bearer, request.headers);
       if (resolved) {
         return {
+          // An API token acts for its owning account. It carries no area
+          // checkboxes of its own — its scopes are the gate.
           user: {
             id: resolved.userId,
             displayName: resolved.name,
             email: null,
-            role: resolved.userRole,
+            isOwner: resolved.isOwner,
+            access: {
+              portal: false,
+              studio: true,
+              brain: false,
+              family: false,
+            },
           },
           apiTokenId: resolved.id,
           apiTokenScopes: resolved.scopes,
@@ -88,7 +96,7 @@ function readRequestPathname(request: Request): string {
   }
 }
 
-/** CSRF + role gate for Studio API routes (strict STUDIO_ACCESS_ROLES / admin paths). */
+/** CSRF + access gate for Studio API routes (Studio checkbox, owner for /api/admin). */
 export async function guardStudioApiRequest(
   request: Request,
   options: StudioGuardOptions = {},
@@ -108,7 +116,7 @@ export async function guardStudioApiMutation(
   return guardStudioApiRequest(request, options);
 }
 
-/** Admin Studio API routes — CSRF + ADMIN_ACCESS_ROLES or scoped API token. */
+/** Admin Studio API routes — CSRF + owner session or scoped API token. */
 export async function guardStudioAdminApiRequest(
   request: Request,
   options: StudioGuardOptions & { requiredScopes?: readonly import("@uwe/auth").ApiTokenScope[] } = {},

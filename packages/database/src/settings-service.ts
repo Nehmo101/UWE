@@ -1,4 +1,4 @@
-import type { CanonicalStatus, Prisma, PrismaClient, Visibility } from "./generated/prisma/client";
+import type { CanonicalStatus, Prisma, PrismaClient } from "./generated/prisma/client";
 import { getMailConfigStatus, getMailConfigStatusFromSmtpConfig, mergeSmtpConfig } from "@uwe/mail-core";
 import { resolveImageStudioConfigStatus } from "./integrations-service";
 import { prisma } from "./client";
@@ -24,13 +24,9 @@ import {
   normalizeCustomThemes,
   type CustomThemeRecord,
 } from "./custom-theme-preferences";
-import { normalizeHiddenNavIds } from "./settings-validation-helpers";
-import { buildProviderKeyPlaceholders } from "./settings-service-providers";
 
 // Abwärtskompatible öffentliche API: extrahierte Helfer über dieses Modul re-exportieren.
 export {
-  buildAiProviderKeyUpdate,
-  resolveDecryptedProviderKeys,
 } from "./settings-service-providers";
 export {
   getPersistentPathConfiguration,
@@ -63,7 +59,7 @@ export const BACKGROUND_PATTERN_VALUES: readonly BackgroundPattern[] = [
   "subtle-noise",
 ] as const;
 
-export const STUDIO_LANDING_PAGE_PATHS = ["/today", "/worlds", "/continue", "/capture"] as const;
+export const STUDIO_LANDING_PAGE_PATHS = ["/worlds", "/continue"] as const;
 
 export type StudioLandingPagePath = (typeof STUDIO_LANDING_PAGE_PATHS)[number];
 
@@ -89,12 +85,9 @@ export interface AppSettings {
   lastActiveWorldSlug?: string | null;
   /** UWE_VERSION the owner last acknowledged on the Startklar page. */
   startklarSeenVersion?: string | null;
-  /** Sidebar nav item ids hidden via System → Navigation (persisted in DB). */
-  hiddenNavIds?: string[];
 }
 
 export interface WorldSettings {
-  defaultVisibility: Visibility;
   defaultCanonicalStatus: CanonicalStatus;
 }
 
@@ -104,29 +97,12 @@ export interface CampaignSettings {
 
 export interface PortalSettings {
   portalEnabled: boolean;
-  guestAccessEnabled: boolean;
-  publicSharingEnabled: boolean;
-}
-
-export interface AiProviderKeyPlaceholder {
-  id: string;
-  label: string;
-  configured: boolean;
-  source: "env" | "db" | "none";
-}
-
-/** Encrypted API key stored in system settings (never sent to clients). */
-export interface AiProviderStoredKey {
-  providerId: string;
-  keyEnc: string;
 }
 
 export interface AiSettings {
   localOnlyMode: boolean;
   enabled: boolean;
-  providerKeyPlaceholders: AiProviderKeyPlaceholder[];
   /** Encrypted provider API keys stored in DB. Never sent to clients. */
-  cloudApiKeys?: AiProviderStoredKey[] | null;
   /** Active owner-edited system prompt for general chat (empty = built-in default). */
   generalChatSystemPrompt?: string | null;
 }
@@ -241,20 +217,15 @@ export interface MailSettings {
 
 export interface ImageStudioPortalSettings {
   enabled?: boolean;
-  defaultProviderMode?: "auto" | "local_rtx" | "cloud";
-  allowCloud?: boolean;
   backgroundRemovalEnabled?: boolean;
 }
 
 export interface ImageStudioSettings {
   enabled: boolean;
-  defaultProviderMode: "auto" | "local_rtx" | "cloud";
-  allowCloud: boolean;
   backgroundRemovalEnabled: boolean;
   rtxAgentConfigured: boolean;
   connectorImageEnabled: boolean;
   localImageBackendReady: boolean;
-  cloudApiKeyConfigured: boolean;
   source: "portal" | "env";
   message: string;
 }
@@ -264,7 +235,7 @@ export type UweSystemSettingsUpdate = {
   worlds?: Partial<WorldSettings>;
   campaigns?: Partial<CampaignSettings>;
   portal?: Partial<PortalSettings>;
-  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "cloudApiKeys" | "generalChatSystemPrompt">>;
+  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "generalChatSystemPrompt">>;
   mail?: Partial<
     Pick<
       MailSettings,
@@ -304,14 +275,8 @@ function readImageStudioSettingsInput(stored: unknown): ImageStudioPortalSetting
     return undefined;
   }
   const imageStudio = stored as Record<string, unknown>;
-  const provider = imageStudio.defaultProviderMode;
   return {
     enabled: typeof imageStudio.enabled === "boolean" ? imageStudio.enabled : undefined,
-    defaultProviderMode:
-      provider === "auto" || provider === "local_rtx" || provider === "cloud"
-        ? provider
-        : undefined,
-    allowCloud: typeof imageStudio.allowCloud === "boolean" ? imageStudio.allowCloud : undefined,
     backgroundRemovalEnabled:
       typeof imageStudio.backgroundRemovalEnabled === "boolean"
         ? imageStudio.backgroundRemovalEnabled
@@ -323,13 +288,10 @@ function buildImageStudioSettings(stored?: ImageStudioPortalSettings): ImageStud
   const status = resolveImageStudioConfigStatus(process.env, stored);
   return {
     enabled: status.enabled,
-    defaultProviderMode: status.defaultProviderMode,
-    allowCloud: status.allowCloud,
     backgroundRemovalEnabled: status.backgroundRemovalEnabled,
     rtxAgentConfigured: status.rtxAgentConfigured,
     connectorImageEnabled: status.connectorImageEnabled,
     localImageBackendReady: status.localImageBackendReady,
-    cloudApiKeyConfigured: status.cloudApiKeyConfigured,
     source: status.source,
     message: status.message,
   };
@@ -426,7 +388,7 @@ function normalizeDefaultLandingPage(value: unknown): StudioLandingPagePath {
       return trimmed as StudioLandingPagePath;
     }
   }
-  return "/today";
+  return "/worlds";
 }
 
 function normalizeAppSettings(app: AppSettings): AppSettings {
@@ -436,7 +398,6 @@ function normalizeAppSettings(app: AppSettings): AppSettings {
     frostedGlass: app.frostedGlass !== false,
     motionEnabled: app.motionEnabled !== false,
     defaultLandingPage: normalizeDefaultLandingPage(app.defaultLandingPage),
-    hiddenNavIds: normalizeHiddenNavIds(app.hiddenNavIds),
     themePreferences: normalizeAppThemePreferences(app.themePreferences),
     customThemes: normalizeCustomThemes(app.customThemes),
   };
@@ -448,11 +409,10 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     backgroundPattern: "none",
     frostedGlass: false,
     motionEnabled: true,
-    defaultLandingPage: "/today",
+    defaultLandingPage: "/worlds",
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
     startklarSeenVersion: null,
-    hiddenNavIds: [],
     customThemes: [],
     themePreferences: {
       studio: {
@@ -485,7 +445,6 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     },
   },
   worlds: {
-    defaultVisibility: "dm_only",
     defaultCanonicalStatus: "draft",
   },
   campaigns: {
@@ -493,14 +452,10 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   },
   portal: {
     portalEnabled: true,
-    guestAccessEnabled: true,
-    publicSharingEnabled: true,
   },
   ai: {
     localOnlyMode: false,
     enabled: true,
-    providerKeyPlaceholders: buildProviderKeyPlaceholders(),
-    cloudApiKeys: null,
     generalChatSystemPrompt: null,
   },
   mail: buildMailSettings(),
@@ -571,20 +526,12 @@ function mergeSettings(
         ? {
             localOnlyMode: Boolean((stored.ai as unknown as AiSettings).localOnlyMode),
             enabled: (stored.ai as unknown as AiSettings).enabled ?? base.ai.enabled,
-            cloudApiKeys: Array.isArray((stored.ai as unknown as AiSettings).cloudApiKeys)
-              ? ((stored.ai as unknown as AiSettings).cloudApiKeys as AiProviderStoredKey[])
-              : null,
             generalChatSystemPrompt:
               typeof (stored.ai as unknown as AiSettings).generalChatSystemPrompt === "string"
                 ? (stored.ai as unknown as AiSettings).generalChatSystemPrompt
                 : null,
           }
         : {}),
-      providerKeyPlaceholders: buildProviderKeyPlaceholders(
-        isRecord(stored.ai)
-          ? ((stored.ai as unknown as AiSettings).cloudApiKeys ?? null)
-          : null,
-      ),
     },
     mail: buildMailSettings(readMailSettingsInput(stored.mail)),
     imageStudio: buildImageStudioSettings(readImageStudioSettingsInput(stored.imageStudio)),
@@ -628,10 +575,7 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       uploadsPath: settings.storage.uploadsPath ?? "",
       exportsPath: settings.storage.exportsPath ?? "",
     },
-    ai: {
-      ...settings.ai,
-      providerKeyPlaceholders: buildProviderKeyPlaceholders(settings.ai.cloudApiKeys),
-    },
+    ai: { ...settings.ai },
     mail: buildMailSettings({
       enabled: settings.mail.enabled,
       fromDisplayName: settings.mail.fromDisplayName,
@@ -643,8 +587,6 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
     }),
     imageStudio: buildImageStudioSettings({
       enabled: settings.imageStudio.enabled,
-      defaultProviderMode: settings.imageStudio.defaultProviderMode,
-      allowCloud: settings.imageStudio.allowCloud,
       backgroundRemovalEnabled: settings.imageStudio.backgroundRemovalEnabled,
     }),
     privacy: {
@@ -721,23 +663,14 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
       ...normalized.mail,
       smtpCredentials: undefined,
     },
-    ai: {
-      ...normalized.ai,
-      cloudApiKeys: undefined,
-    },
+    // Der KI-Block braucht kein Stripping mehr — Cloud-Schlüssel gibt es seit
+    // Schritt 8b nicht; das Google-Client-Secret (Login) bleibt serverseitig.
     auth: {
       ...normalized.auth,
       googleClientSecretEnc: undefined,
     },
     deployment: sanitizeDeploymentSettingsForClient(normalized.deployment),
   };
-}
-
-export function isGuestPortalAccessAllowed(
-  _settings: UweSystemSettings,
-  _worldGuestModeEnabled: boolean,
-): boolean {
-  return false;
 }
 
 export function isMaintenanceModeActive(settings: UweSystemSettings): boolean {
@@ -754,10 +687,6 @@ export function isStudioLocked(settings: UweSystemSettings): boolean {
 
 export function isPortalGloballyEnabled(settings: UweSystemSettings): boolean {
   return settings.portal.portalEnabled;
-}
-
-export function isPublicSharingEnabled(settings: UweSystemSettings): boolean {
-  return settings.portal.publicSharingEnabled;
 }
 
 export function resolveLocalOnlyMode(settings: UweSystemSettings): boolean {
@@ -796,19 +725,7 @@ export class SettingsService {
       worlds: { ...current.worlds, ...update.worlds },
       campaigns: { ...current.campaigns, ...update.campaigns },
       portal: { ...current.portal, ...update.portal },
-      ai: {
-        ...current.ai,
-        ...update.ai,
-        cloudApiKeys:
-          update.ai?.cloudApiKeys !== undefined
-            ? update.ai.cloudApiKeys
-            : current.ai.cloudApiKeys,
-        providerKeyPlaceholders: buildProviderKeyPlaceholders(
-          update.ai?.cloudApiKeys !== undefined
-            ? update.ai.cloudApiKeys
-            : current.ai.cloudApiKeys,
-        ),
-      },
+      ai: { ...current.ai, ...update.ai },
       mail: buildMailSettings({
         enabled: update.mail?.enabled ?? current.mail.enabled,
         fromDisplayName: update.mail?.fromDisplayName ?? current.mail.fromDisplayName,
@@ -824,9 +741,6 @@ export class SettingsService {
       }),
       imageStudio: buildImageStudioSettings({
         enabled: update.imageStudio?.enabled ?? current.imageStudio.enabled,
-        defaultProviderMode:
-          update.imageStudio?.defaultProviderMode ?? current.imageStudio.defaultProviderMode,
-        allowCloud: update.imageStudio?.allowCloud ?? current.imageStudio.allowCloud,
         backgroundRemovalEnabled:
           update.imageStudio?.backgroundRemovalEnabled ??
           current.imageStudio.backgroundRemovalEnabled,

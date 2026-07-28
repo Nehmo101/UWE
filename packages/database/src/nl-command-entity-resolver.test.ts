@@ -3,8 +3,8 @@ import { before, describe, it } from "node:test";
 import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
 import {
-  parseUserRoleToken,
-  parseWorldMemberRoleToken,
+  areaLabel,
+  parseAreaToken,
   resolveUserQuery,
   resolveWorldQuery,
 } from "./nl-command-entity-resolver";
@@ -17,20 +17,19 @@ describe("nl-command-entity-resolver", () => {
     databaseUrl = createTestDatabaseUrl();
   });
 
-  it("parses world member role aliases", () => {
-    assert.equal(parseWorldMemberRoleToken("spielerin"), "player");
-    assert.equal(parseWorldMemberRoleToken("co-dm"), "co_dm");
-    assert.equal(parseWorldMemberRoleToken("dm"), "dm");
+  it("parses area aliases", () => {
+    assert.equal(parseAreaToken("portal"), "portal");
+    assert.equal(parseAreaToken("Spielerportal"), "portal");
+    assert.equal(parseAreaToken("dm-studio"), "studio");
+    assert.equal(parseAreaToken("Spielleitung"), "studio");
+    assert.equal(parseAreaToken("brain"), "brain");
+    assert.equal(parseAreaToken("Familie"), "family");
+    assert.equal(parseAreaToken("superheld"), null);
   });
 
-  it("parses global user role aliases", () => {
-    assert.equal(parseUserRoleToken("spieler"), "player");
-    assert.equal(parseUserRoleToken("admin"), "admin");
-    assert.equal(parseUserRoleToken("Administrator"), "admin");
-    assert.equal(parseUserRoleToken("Spielleiterin"), "dm");
-    assert.equal(parseUserRoleToken("read-only"), "readonly");
-    assert.equal(parseUserRoleToken("besitzer"), "owner");
-    assert.equal(parseUserRoleToken("superheld"), null);
+  it("labels areas", () => {
+    assert.equal(areaLabel("portal"), "Portal");
+    assert.equal(areaLabel("family"), "Family");
   });
 
   it("resolves users by email and display name", async () => {
@@ -40,7 +39,8 @@ describe("nl-command-entity-resolver", () => {
       displayName: "Carina Test",
       email: "carina-resolver@example.com",
       password: "test-password-123",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     const byEmail = await resolveUserQuery(db, "carina-resolver@example.com");
@@ -62,7 +62,11 @@ describe("nl-command-entity-resolver", () => {
       displayName: "World Resolver Owner",
       email: "world-resolver-owner@example.com",
       password: "test-password-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
     void owner;
 

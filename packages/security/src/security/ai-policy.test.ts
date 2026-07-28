@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, beforeEach } from "node:test";
 
-import type { AiContext } from "./inference/ai-context-types";
-
 import {
   assertFetchUrlAllowed,
   assertUserProvidedFetchUrlAllowed,
@@ -14,10 +12,8 @@ import {
   canUseAi,
   enforceAiAccessPolicy,
   enforceAiRequestLimits,
-  filterContextForViewer,
   requireAiRole,
   resetAiRateLimit,
-  resolveEffectiveAllowDmOnly,
   validatePromptLength,
   AiAccessDeniedError,
   AiPolicyViolationError,
@@ -25,68 +21,30 @@ import {
 import { formatAiPromptLog, redactAiSecrets, sanitizeAiLogPayload } from "./ai-logging";
 import { rejectClientWorkerUrl } from "./rtx-boundary";
 
-function emptyContext(overrides: Partial<AiContext> = {}): AiContext {
-  return {
-    taskType: "summarize_page",
-    worldId: "w1",
-    primaryPageId: "p1",
-    pages: [
-      {
-        pageId: "p1",
-        title: "Geheime Insel",
-        pageType: "location",
-        visibility: "dm_only",
-        canonicalStatus: "draft",
-        summary: "DM-only summary",
-        tags: [],
-        aliases: [],
-        contentBlocks: [
-          {
-            blockId: "b1",
-            type: "gm_note",
-            content: "Geheimer Plot",
-            visibility: "dm_only",
-          },
-        ],
-        relations: [],
-        backlinks: [],
-      },
-    ],
-    sources: [],
-    promptContext: "Geheimer Plot",
-    truncated: false,
-    datenschutzMode: false,
-    allowDmOnly: true,
-    ...overrides,
-  };
-}
 
-describe("ai-policy — role enforcement", () => {
-  it("allows owner, admin, and dm roles", () => {
-    assert.equal(canUseAi("owner"), true);
-    assert.equal(canUseAi("admin"), true);
-    assert.equal(canUseAi("dm"), true);
+describe("ai-policy — access enforcement", () => {
+  it("allows the Studio checkbox", () => {
+    assert.equal(canUseAi({ studioAccess: true }), true);
   });
 
-  it("denies player and guest roles", () => {
-    assert.equal(canUseAi("player"), false);
-    assert.equal(canUseAi("guest"), false);
+  it("denies everyone without it", () => {
+    assert.equal(canUseAi({ studioAccess: false }), false);
   });
 
-  it("blocks player AI usage", () => {
+  it("blocks AI usage without Studio access", () => {
     assert.throws(
-      () => requireAiRole({ role: "player" }),
+      () => requireAiRole({ studioAccess: false }),
       (error: unknown) => error instanceof AiAccessDeniedError,
     );
   });
 
-  it("allows dm AI usage", () => {
-    assert.doesNotThrow(() => requireAiRole({ role: "dm", userKey: "dm-1" }));
+  it("allows AI usage with Studio access", () => {
+    assert.doesNotThrow(() => requireAiRole({ studioAccess: true, userKey: "dm-1" }));
   });
 
   it("treats studio-trusted requests as owner-level", () => {
     assert.doesNotThrow(() =>
-      enforceAiAccessPolicy({ role: "guest", studioTrusted: true, userKey: "studio" }),
+      enforceAiAccessPolicy({ studioAccess: false, studioTrusted: true, userKey: "studio" }),
     );
   });
 });
@@ -163,36 +121,6 @@ describe("ai-policy — request limits", () => {
   });
 });
 
-describe("ai-policy — DM-only context", () => {
-  it("includes DM-only content only when server allows it", () => {
-    const allowed = filterContextForViewer(emptyContext(), true, false);
-    assert.match(allowed.promptContext, /Geheimer Plot/);
-
-    const denied = filterContextForViewer(emptyContext(), false, false);
-    assert.doesNotMatch(denied.promptContext, /Geheimer Plot/);
-  });
-
-  it("never trusts client allowDmOnly flag over server policy", () => {
-    assert.equal(
-      resolveEffectiveAllowDmOnly({
-        clientAllowDmOnly: true,
-        localOnly: false,
-        routeIsCloud: false,
-      }),
-      false,
-    );
-
-    assert.equal(
-      resolveEffectiveAllowDmOnly({
-        clientAllowDmOnly: true,
-        localOnly: true,
-        routeIsCloud: false,
-      }),
-      true,
-    );
-  });
-});
-
 describe("ai-policy — logging redaction", () => {
   it("redacts secrets from logs", () => {
     const input =
@@ -239,11 +167,11 @@ describe("ai-policy — rate limiting", () => {
       AI_RATE_LIMIT_WINDOW_MS: "60000",
     } as NodeJS.ProcessEnv;
 
-    enforceAiAccessPolicy({ role: "dm", userKey: "user-a" }, env);
-    enforceAiAccessPolicy({ role: "dm", userKey: "user-a" }, env);
+    enforceAiAccessPolicy({ studioAccess: true, userKey: "user-a" }, env);
+    enforceAiAccessPolicy({ studioAccess: true, userKey: "user-a" }, env);
 
     assert.throws(
-      () => enforceAiAccessPolicy({ role: "dm", userKey: "user-a" }, env),
+      () => enforceAiAccessPolicy({ studioAccess: true, userKey: "user-a" }, env),
       /Rate-Limit/,
     );
   });

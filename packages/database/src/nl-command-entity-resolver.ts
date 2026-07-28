@@ -1,6 +1,5 @@
-import type { WorldMemberRole } from "@uwe/auth";
+import { UWE_AREA_LABELS, type UweArea } from "@uwe/auth";
 import type { PrismaClient } from "./client";
-import type { UserRole } from "./generated/prisma/client";
 
 export interface ResolvedUser {
   id: string;
@@ -18,86 +17,33 @@ export type EntityResolveResult<T> =
   | { ok: true; entity: T }
   | { ok: false; code: "not_found" | "ambiguous"; candidates: Array<{ id: string; label: string }> };
 
-const WORLD_MEMBER_ROLE_ALIASES: Record<string, WorldMemberRole> = {
-  player: "player",
-  spieler: "player",
-  spielerin: "player",
-  spielerinnen: "player",
-  spielern: "player",
-  dm: "dm",
-  co_dm: "co_dm",
-  "co-dm": "co_dm",
-  codm: "co_dm",
-  co: "co_dm",
-  owner: "owner",
-  besitzer: "owner",
-  weltbesitzer: "owner",
+/**
+ * Area names as people actually type them. The role aliases that used to live
+ * here are gone with the role enum — what is left is the four checkboxes.
+ */
+const AREA_ALIASES: Record<string, UweArea> = {
+  portal: "portal",
+  spielerportal: "portal",
+  wiki: "portal",
+  studio: "studio",
+  dm: "studio",
+  dmstudio: "studio",
+  spielleitung: "studio",
+  brain: "brain",
+  hirn: "brain",
+  wissen: "brain",
+  family: "family",
+  familie: "family",
+  haushalt: "family",
 };
 
-const USER_ROLE_ALIASES: Record<string, UserRole> = {
-  player: "player",
-  spieler: "player",
-  spielerin: "player",
-  dm: "dm",
-  spielleiter: "dm",
-  spielleiterin: "dm",
-  admin: "admin",
-  administrator: "admin",
-  administratorin: "admin",
-  owner: "owner",
-  besitzer: "owner",
-  besitzerin: "owner",
-  readonly: "readonly",
-  guest: "guest",
-  gast: "guest",
-};
-
-export function parseWorldMemberRoleToken(token: string): WorldMemberRole | null {
-  const normalized = token.trim().toLowerCase().replace(/\s+/g, "_");
-  return WORLD_MEMBER_ROLE_ALIASES[normalized] ?? null;
+export function parseAreaToken(token: string): UweArea | null {
+  const normalized = token.trim().toLowerCase().replace(/[\s._-]+/g, "");
+  return AREA_ALIASES[normalized] ?? null;
 }
 
-export function parseUserRoleToken(token: string): UserRole | null {
-  const normalized = token.trim().toLowerCase().replace(/[\s-]+/g, "");
-  return USER_ROLE_ALIASES[normalized] ?? null;
-}
-
-export function worldMemberRoleLabel(role: WorldMemberRole): string {
-  switch (role) {
-    case "player":
-      return "Spieler";
-    case "dm":
-      return "DM";
-    case "co_dm":
-      return "Co-DM";
-    case "owner":
-      return "Welt-Besitzer";
-    default: {
-      const _exhaustive: never = role;
-      return _exhaustive;
-    }
-  }
-}
-
-export function userRoleLabel(role: UserRole): string {
-  switch (role) {
-    case "owner":
-      return "Owner";
-    case "admin":
-      return "Admin";
-    case "dm":
-      return "DM";
-    case "player":
-      return "Spieler";
-    case "readonly":
-      return "Nur-Lesen";
-    case "guest":
-      return "Gast";
-    default: {
-      const _exhaustive: never = role;
-      return _exhaustive;
-    }
-  }
+export function areaLabel(area: UweArea): string {
+  return UWE_AREA_LABELS[area];
 }
 
 function normalizeQuery(query: string): string {

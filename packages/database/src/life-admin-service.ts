@@ -1,5 +1,6 @@
 import type { PrismaClient } from "./client";
 import type { BrainPrismaClient } from "./brain-client";
+import type { FamilyPrismaClient } from "./family-client";
 import {
   createLifeAdminSubServices,
   type LifeAdminSubServices,
@@ -106,8 +107,8 @@ export class LifeAdminService {
   private readonly links: LifeAdminSubServices["links"];
   private readonly today: LifeAdminSubServices["today"];
 
-  constructor(brainDb: BrainPrismaClient, coreDb: PrismaClient) {
-    const services = createLifeAdminSubServices(brainDb, coreDb);
+  constructor(brainDb: BrainPrismaClient, coreDb: PrismaClient, familyDb?: FamilyPrismaClient) {
+    const services = createLifeAdminSubServices(brainDb, coreDb, familyDb);
     this.capture = services.capture;
     this.project = services.project;
     this.workshop = services.workshop;
@@ -396,6 +397,7 @@ export class LifeAdminService {
 export function createLifeAdminService(
   brainDb: BrainPrismaClient,
   coreDb: PrismaClient,
+  familyDb?: FamilyPrismaClient,
 ): LifeAdminService {
-  return new LifeAdminService(brainDb, coreDb);
+  return new LifeAdminService(brainDb, coreDb, familyDb);
 }

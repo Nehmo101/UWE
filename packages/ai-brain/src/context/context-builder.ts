@@ -20,13 +20,6 @@ import {
 import { resolveContextBuilderConfig } from "./config";
 import { buildContextDebug, estimatePromptContextLength } from "./debug";
 import { loadSessionContext, serializeSession } from "./sessionContext";
-import {
-  filterBrainVisibility,
-  resolveContextAudience,
-  shouldIncludeVisibility,
-} from "./visibility";
-
-const DM_ONLY_VISIBILITIES = new Set(["dm_only"]);
 
 function parseStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -72,29 +65,17 @@ export function createContextBuilder(
 async function buildContextPage(
   repo: UweRepository,
   pageId: string,
-  allowDmOnly: boolean,
 ): Promise<AiContextPage | null> {
   const page = await repo.getPageWithLinks(pageId);
   if (!page) {
     return null;
   }
 
-  if (!shouldIncludeVisibility(page.visibility, allowDmOnly)) {
-    return null;
-  }
-
-  const contentBlocks: AiContextBlock[] = page.contentBlocks
-    .filter((block) => shouldIncludeVisibility(block.visibility, allowDmOnly))
-    .map((block) => ({
-      blockId: block.id,
-      type: block.type,
-      visibility: block.visibility,
-      content: block.content,
-    }));
-
-  if (contentBlocks.length === 0 && !allowDmOnly && DM_ONLY_VISIBILITIES.has(page.visibility)) {
-    return null;
-  }
+  const contentBlocks: AiContextBlock[] = page.contentBlocks.map((block) => ({
+    blockId: block.id,
+    type: block.type,
+    content: block.content,
+  }));
 
   const relations = [
     ...page.outgoingLinks.map((link) => ({
@@ -124,7 +105,6 @@ async function buildContextPage(
     pageType: page.type,
     tags: parseStringArray(page.tags),
     aliases: parseStringArray(page.aliases),
-    visibility: page.visibility,
     canonicalStatus: page.canonicalStatus,
     summary: page.summary,
     contentBlocks,
@@ -181,15 +161,6 @@ async function buildContext(
   });
 
   const datenschutzMode = options.datenschutzMode ?? false;
-  const localOnly = options.localOnly ?? datenschutzMode;
-  const audience = resolveContextAudience(taskType, options.audience);
-  let allowDmOnly = options.allowDmOnly ?? localOnly;
-  if (!config.allowDmOnlyDefault) {
-    allowDmOnly = false;
-  }
-  if (audience !== "dm_internal") {
-    allowDmOnly = false;
-  }
   const maxChars = config.maxChars;
 
   const primaryPage = await repo.getPageById(pageId);
@@ -218,7 +189,7 @@ async function buildContext(
 
   const sessionId = await resolveSessionId(repo, worldId, pageId, taskType, options.sessionId);
   const session = sessionId
-    ? await loadSessionContext(repo, sessionId, { allowDmOnly })
+    ? await loadSessionContext(repo, sessionId)
     : null;
 
   const pageIds = new Set<string>([pageId]);
@@ -233,39 +204,20 @@ async function buildContext(
   }
 
   const primaryWithLinks = await repo.getPageWithLinks(pageId);
-  const excludedPages: Array<{ pageId: string; title: string; visibility: string; reason: string }> =
-    [];
+  const excludedPages: Array<{ pageId: string; title: string; reason: string }> = [];
 
   if (primaryWithLinks) {
     for (const link of primaryWithLinks.outgoingLinks) {
-      if (shouldIncludeVisibility(link.targetPage.visibility, allowDmOnly)) {
-        pageIds.add(link.targetPage.id);
-      } else {
-        excludedPages.push({
-          pageId: link.targetPage.id,
-          title: link.targetPage.title,
-          visibility: link.targetPage.visibility,
-          reason: "Sichtbarkeit ausgeschlossen",
-        });
-      }
+      pageIds.add(link.targetPage.id);
     }
     for (const link of primaryWithLinks.incomingLinks) {
-      if (shouldIncludeVisibility(link.sourcePage.visibility, allowDmOnly)) {
-        pageIds.add(link.sourcePage.id);
-      } else {
-        excludedPages.push({
-          pageId: link.sourcePage.id,
-          title: link.sourcePage.title,
-          visibility: link.sourcePage.visibility,
-          reason: "Sichtbarkeit ausgeschlossen",
-        });
-      }
+      pageIds.add(link.sourcePage.id);
     }
   }
 
   const pages: AiContextPage[] = [];
   for (const id of pageIds) {
-    const contextPage = await buildContextPage(repo, id, allowDmOnly);
+    const contextPage = await buildContextPage(repo, id);
     if (contextPage) {
       pages.push(contextPage);
     }
@@ -283,14 +235,10 @@ async function buildContext(
     sessionId,
     pageId,
     taskType,
-    allowDmOnly,
     maxEntries: 8,
     query: options.retrievalQuery?.trim() || undefined,
   });
-  const brainEntries = filterBrainVisibility(
-    brainRaw.map(toContextBrainEntry),
-    allowDmOnly,
-  );
+  const brainEntries = brainRaw.map(toContextBrainEntry);
 
   const { pages: limitedPages, truncated: pagesTruncated } = truncateContextPages(
     pages,
@@ -303,7 +251,6 @@ async function buildContext(
           session: session ?? undefined,
           pages: [],
           brainEntries,
-          allowDmOnly,
         }),
     ),
   );
@@ -323,7 +270,7 @@ async function buildContext(
 
   const worldBlock = world ? serializeWorld(world) : "";
   const campaignBlock = campaign ? serializeCampaign(campaign) : "";
-  const sessionBlock = session ? serializeSession(session, { allowDmOnly }) : "";
+  const sessionBlock = session ? serializeSession(session) : "";
   const brainBlock = serializeBrainEntries(brainEntries);
   const pageContext = limitedPages.map(serializePageForBudget).join("\n\n");
   let promptContext = [worldBlock, campaignBlock, sessionBlock, brainBlock, pageContext]
@@ -338,8 +285,6 @@ async function buildContext(
   const totalChars = promptContext.length;
 
   const debug = buildContextDebug({
-    audience,
-    allowDmOnly,
     maxChars,
     totalChars,
     truncated,
@@ -365,7 +310,6 @@ async function buildContext(
     promptContext,
     truncated,
     datenschutzMode,
-    allowDmOnly,
     debug,
   };
 }

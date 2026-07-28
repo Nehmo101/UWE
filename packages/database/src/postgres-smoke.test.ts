@@ -33,7 +33,7 @@ describe("postgres smoke", { skip: !postgresUrl }, () => {
       email: "postgres-owner@uwe.local",
       password: "postgres-test-password",
     });
-    assert.equal(owner.role, "owner");
+    assert.equal(owner.isOwner, true);
     assert.equal(await auth.isSetupAvailable(), false);
 
     const session = await auth.createSession(owner.id);

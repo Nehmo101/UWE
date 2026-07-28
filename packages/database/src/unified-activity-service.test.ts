@@ -26,7 +26,11 @@ describe("unified activity service", () => {
       email: "owner-cockpit@test.local",
       displayName: "Owner Cockpit",
       password: "test-pass-123",
-      role: "owner",
+      isOwner: true,
+      portalAccess: true,
+      studioAccess: true,
+      brainAccess: true,
+      familyAccess: true,
     });
 
     const activity = createActivityLogService(db);
@@ -99,7 +103,8 @@ describe("unified activity service", () => {
       email: `audit-actor-${Date.now()}@test.local`,
       displayName: "Audit Actor",
       password: "test-pass-123",
-      role: "admin",
+      portalAccess: true,
+      studioAccess: true,
     });
 
     const audit = createAuditLogService(db);

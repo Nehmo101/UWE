@@ -2,21 +2,13 @@ import type {
   CanonicalStatus,
   ContentBlockType,
   PageType,
-  PublishStatus,
-  RevealState,
-  SecretLevel,
-  Visibility,
 } from "@uwe/database/enums";
 import { EmptyState } from "./AppShell";
 import {
   BLOCK_TYPE_LABELS,
   CanonicalBadge,
   PageTypeBadge,
-  PublishBadge,
-  RevealStateBadge,
-  SecretLevelBadge,
   TagChip,
-  VisibilityBadge,
 } from "./StatusBadges";
 
 export interface ContentBlockViewModel {
@@ -24,7 +16,6 @@ export interface ContentBlockViewModel {
   type: ContentBlockType;
   sortOrder: number;
   content: string;
-  visibility: Visibility;
   assetId?: string | null;
   metadata?: Record<string, unknown> | null;
 }
@@ -88,10 +79,8 @@ function renderGalleryBlock(block: ContentBlockViewModel) {
 
 export function ContentBlockList({
   blocks,
-  showVisibility = false,
 }: {
   blocks: ContentBlockViewModel[];
-  showVisibility?: boolean;
 }) {
   if (blocks.length === 0) {
     return (
@@ -114,7 +103,6 @@ export function ContentBlockList({
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
               {BLOCK_TYPE_LABELS[block.type]}
             </span>
-            {showVisibility && <VisibilityBadge visibility={block.visibility} />}
           </header>
           {renderBlockBody(block)}
         </article>
@@ -149,23 +137,15 @@ function renderBlockBody(block: ContentBlockViewModel) {
 }
 
 export function MetaPanel({
-  visibility,
-  publishStatus,
   canonicalStatus,
   type,
   tags,
   aliases,
-  secretLevel,
-  revealState,
 }: {
-  visibility: Visibility;
-  publishStatus: PublishStatus;
   canonicalStatus: CanonicalStatus;
   type: PageType;
   tags: string[];
   aliases: string[];
-  secretLevel?: SecretLevel;
-  revealState?: RevealState;
 }) {
   const dt = "text-xs uppercase tracking-wider text-muted-foreground mb-1";
   const dd = "m-0 mb-3.5";
@@ -177,26 +157,6 @@ export function MetaPanel({
           <dt className={dt}>Typ</dt>
           <dd className={dd}><PageTypeBadge type={type} /></dd>
         </div>
-        <div>
-          <dt className={dt}>Sichtbarkeit</dt>
-          <dd className={dd}><VisibilityBadge visibility={visibility} /></dd>
-        </div>
-        <div>
-          <dt className={dt}>Publish</dt>
-          <dd className={dd}><PublishBadge status={publishStatus} /></dd>
-        </div>
-        {secretLevel !== undefined && (
-          <div>
-            <dt className={dt}>Geheimnis</dt>
-            <dd className={dd}><SecretLevelBadge secretLevel={secretLevel} /></dd>
-          </div>
-        )}
-        {revealState !== undefined && secretLevel !== undefined && secretLevel !== "none" && (
-          <div>
-            <dt className={dt}>Enthüllung</dt>
-            <dd className={dd}><RevealStateBadge revealState={revealState} /></dd>
-          </div>
-        )}
         <div>
           <dt className={dt}>Kanon</dt>
           <dd className={dd}><CanonicalBadge status={canonicalStatus} /></dd>

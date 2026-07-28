@@ -2,7 +2,7 @@
   "name": "@uwe/brain",
   "version": "0.1.0",
   "private": true,
-  "description": "UWE Brain \u2014 owner-only private daily-admin and personal-knowledge app (local/LAN only)",
+  "description": "UWE Brain \u2014 private daily-admin and personal-knowledge app, gated on the brain checkbox (local/LAN only)",
   "scripts": {
     "copy:scenes": "node --import tsx ../../scripts/copy-scenes.mjs",
     "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3002 --hostname 127.0.0.1",
@@ -17,17 +17,22 @@
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/brain-assistant": "workspace:*",
+    "@uwe/calendar": "workspace:*",
+    "@uwe/daily-cockpit": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
+    "@uwe/host-cockpit": "workspace:*",
     "@uwe/mail": "workspace:*",
     "@uwe/mail-core": "workspace:*",
     "@uwe/product-contracts": "workspace:*",
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
-    "next": "^15.3.4",
+    "isomorphic-dompurify": "^3.18.0",
+    "next": "^15.5.21",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tailwindcss": "^4.3.1"
+    "tailwindcss": "^4.3.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

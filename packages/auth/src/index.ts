@@ -1,118 +1,58 @@
 export type {
   AccessContext,
-  AssetAccessInfo,
+  AreaAccess,
   AuthUser,
-  ContentBlockAccessInfo,
-  PageAccessInfo,
+  AuthUserSource,
   PreviewOptions,
   SafeUser,
-  UweRole,
-  WorldMemberRole,
+  UweArea,
   WorldMembership,
-  PageVisibility,
 } from "./types";
+
+export { NO_AREA_ACCESS, UWE_AREAS } from "./types";
 
 export { toSafeUser, stripSensitiveUserFields } from "./safe-user";
 
 export {
-  ADMIN_ACCESS_ROLES,
   AuthRequiredError,
-  ForbiddenRoleError,
-  STUDIO_ACCESS_ROLES,
-  canAccessAdmin,
+  ForbiddenAccessError,
+  UWE_AREA_LABELS,
+  canAccessBrain,
+  canAccessFamily,
+  canAccessPortal,
   canAccessStudio,
-  getRequiredRolesForApiPath,
-  getRequiredRolesForPagePath,
-  hasAnyRole,
-  isContentEditorRole,
+  getRequiredAccessForApiPath,
+  getRequiredAccessForPagePath,
+  hasAreaAccess,
   isOwner,
+  requireArea,
   requireOwner,
-  requireRole,
   requireUser,
-} from "./roles";
+  satisfiesStudioRouteAccess,
+  toAreaAccess,
+  toAuthUser,
+} from "./area-access";
 
-export type { AdminAccessRole, StudioAccessRole } from "./roles";
-
-export {
-  SECURITY_DASHBOARD_ROLES,
-  SECURITY_ROLE_LABELS,
-  canAccessSecurityDashboard,
-  isSecurityDashboardRole,
-} from "./security-access";
+export type { StudioRouteAccess } from "./area-access";
 
 export {
   buildAccessContext,
-  canChangeVisibility,
   canEditContent as canEditContentRole,
   canPreviewAsPlayer,
-  canPublishContent,
-  canViewAsset,
   canViewAuditLog,
-  canViewContentBlock,
-  canViewPage,
+  canViewWorldContent,
   filterAssetsForViewer,
   filterBlocksForViewer,
   filterPagesForViewer,
-  isCoDm,
-  isDmOrOwner,
-  isWorldStaff,
-  resolveEffectiveRole,
+  isDm,
+  isOwner as isContextOwner,
 } from "./permissions";
-
-export {
-  ROLE_CAPABILITY_LABELS,
-  WORLD_MEMBER_ROLE_LABELS,
-  buildRoleCapabilityMatrix,
-  canAccessSystemAdmin,
-  canApproveReviews,
-  canDirectlyEditCanon,
-  canEditOwnPlayerNotes,
-  canGrantPortalUnlocks,
-  canManageApiTokens,
-  canManageBackups,
-  canManageSecurity,
-  canManageUsers,
-  canModeratePlayerNotes,
-  hasCapability,
-  listCapabilities,
-  mustSubmitProposal,
-} from "./role-capabilities";
-
-export type {
-  CapabilityContext,
-  RoleCapability,
-  RoleCapabilityMatrixRow,
-  UweRoleId,
-  WorldRoleId,
-} from "./role-capabilities";
-
-export {
-  detectPrivateReferences,
-  formatPrivateReferenceWarning,
-  isBlockPlayerExposable,
-  isDmOnlyVisibility,
-  isPagePlayerExposable,
-  isPlayerExposableContent,
-  isPlayerPortalVisibility,
-  isPublishedContentStatus,
-  isSecretVisibleToPlayer,
-  mapPublishStatusToContentStatus,
-  PLAYER_PORTAL_VISIBILITIES,
-  type ContentAccessFields,
-  type ContentBlockAccessFields,
-  type ContentStatus,
-  type ContentVisibility,
-  type PrivateReferenceTarget,
-  type RevealState,
-  type SecretLevel,
-} from "./content-access";
 
 export type {
   AIUsageContext,
   AuthzScope,
   ContentAuthTarget,
   MediaUploadTarget,
-  SecretAuthTarget,
   WorldAuthTarget,
 } from "./security/authz";
 
@@ -125,7 +65,6 @@ export {
   assertCanReadContentWithContext,
   assertCanReadWorld,
   assertCanReadWorldWithContext,
-  assertCanRevealSecret,
   assertCanUploadMedia,
   assertCanUseAI,
   canEditContent,
@@ -133,7 +72,6 @@ export {
   canReadContent,
   canReadContentBlock,
   canReadWorld,
-  canRevealSecret,
   canUploadMedia,
   canUseAI,
   scopeFromAccessContext,
@@ -181,6 +119,7 @@ export {
   resolvePortalSessionHref,
   resolvePortalLoginHref,
   resolveBrainPublicBaseUrl,
+  resolveFamilyPublicBaseUrl,
   resolveStudioPublicBaseUrl,
   resolveStudioSessionHref,
   STUDIO_SESSION_ENTRY_PATH,
@@ -243,7 +182,7 @@ export {
   API_TOKEN_PREFIX_DISPLAY_LENGTH,
   API_TOKEN_SCOPES,
   API_TOKEN_SCOPE_LABELS,
-  assertAdminScopesForRole,
+  assertAdminScopesForOwner,
   getApiTokenPrefix,
   hasApiTokenScope,
   isApiTokenFormat,
@@ -255,10 +194,8 @@ export {
 
 export {
   evaluateAdminGate,
-  isAdminRole,
-  requireAdminRole,
-  requirePlayerBlocked,
-  requireStudioRole,
+  requireOwnerAccess,
+  requireStudioAccess,
   type AdminGateContext,
   type AdminGateDenied,
   type AdminGateResult,
@@ -284,6 +221,7 @@ export {
   PUBLIC_STUDIO_API_ROUTES,
   PROTECTED_ROUTE_PREFIXES,
   BRAIN_PUBLIC_ROUTES,
+  FAMILY_PUBLIC_ROUTES,
   classifyRoute,
   isApiRoute,
   isGuestWikiPath,
@@ -300,6 +238,7 @@ export {
   evaluatePortalMiddleware,
   evaluateStudioMiddleware,
   evaluateBrainMiddleware,
+  evaluateFamilyMiddleware,
   getMiddlewareMatcher,
 } from "./security/middleware";
 

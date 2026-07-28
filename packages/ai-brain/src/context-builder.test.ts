@@ -9,22 +9,16 @@ import {
 } from "@uwe/database/server";
 import {
   buildAiContext,
-  createContextBuilder,
   resolveContextBuilderConfig,
   toAiRunContextSnapshot,
-  type BrainKnowledgeEntry,
-  type BrainKnowledgeSource,
 } from "./index";
 
 describe("Context Builder — config and budget", () => {
   const originalMax = process.env.BRAIN_MAX_CONTEXT_CHARS;
-  const originalAllow = process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT;
 
   afterEach(() => {
     if (originalMax === undefined) delete process.env.BRAIN_MAX_CONTEXT_CHARS;
     else process.env.BRAIN_MAX_CONTEXT_CHARS = originalMax;
-    if (originalAllow === undefined) delete process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT;
-    else process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT = originalAllow;
   });
 
   it("reads BRAIN_MAX_CONTEXT_CHARS from env", () => {
@@ -44,14 +38,11 @@ describe("Context Builder — config and budget", () => {
         title: "Lange Seite",
         slug: "lang",
         type: "lore",
-        visibility: "public",
-        publishStatus: "published",
         canonicalStatus: "canon",
         contentBlocks: [
           {
             type: "rich_text",
             sortOrder: 0,
-            visibility: "public",
             content: "A".repeat(800),
           },
         ],
@@ -60,7 +51,6 @@ describe("Context Builder — config and budget", () => {
     );
 
     const context = await buildAiContext(repo, "summarize_page", world.id, page.id, {
-      allowDmOnly: false,
       maxChars: 300,
     });
 
@@ -141,89 +131,5 @@ describe("Context Builder — brain knowledge source", () => {
     await createPrismaClient(databaseUrl).$disconnect();
   });
 
-  it("includes brain entries and filters dm_only for player audience", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const seeded = await seedTerraWorld(repo);
-
-    const mockBrainSource: BrainKnowledgeSource = {
-      async findRelevant() {
-        const entries: BrainKnowledgeEntry[] = [
-          {
-            id: "brain-public",
-            title: "Öffentliches Wissen",
-            content: "Spieler dürfen das wissen.",
-            visibility: "public",
-            sourceType: "fact",
-          },
-          {
-            id: "brain-secret",
-            title: "DM-Geheimnis",
-            content: "Nur für den DM.",
-            visibility: "dm_only",
-            sourceType: "fact",
-          },
-        ];
-        return entries;
-      },
-    };
-
-    const builder = createContextBuilder(repo, { brainSource: mockBrainSource });
-
-    const dmContext = await builder.build({
-      taskType: "summarize_page",
-      worldId: seeded.world.id,
-      pageId: seeded.pages.arbor.id,
-      options: { allowDmOnly: true },
-    });
-
-    assert.equal(dmContext.brainEntries?.length, 2);
-    assert.ok(dmContext.promptContext.includes("Öffentliches Wissen"));
-    assert.ok(dmContext.promptContext.includes("DM-Geheimnis"));
-
-    const playerContext = await builder.build({
-      taskType: "generate_player_recap",
-      worldId: seeded.world.id,
-      pageId: seeded.pages.arbor.id,
-      options: { allowDmOnly: true },
-    });
-
-    assert.equal(playerContext.brainEntries?.length, 1);
-    assert.equal(playerContext.brainEntries?.[0]?.entryId, "brain-public");
-    assert.ok(!playerContext.promptContext.includes("DM-Geheimnis"));
-    assert.equal(playerContext.debug?.audience, "player_visible");
-  });
 });
 
-describe("Context Builder — BRAIN_ALLOW_DM_ONLY_CONTEXT guard", () => {
-  const originalAllow = process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT;
-
-  afterEach(() => {
-    if (originalAllow === undefined) delete process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT;
-    else process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT = originalAllow;
-  });
-
-  it("blocks dm_only when BRAIN_ALLOW_DM_ONLY_CONTEXT is false", async () => {
-    process.env.BRAIN_ALLOW_DM_ONLY_CONTEXT = "false";
-    const databaseUrl = createTestDatabaseUrl();
-    const repo = createUweRepository(databaseUrl);
-    const seeded = await seedTerraWorld(repo);
-
-    const context = await buildAiContext(
-      repo,
-      "find_open_threads",
-      seeded.world.id,
-      seeded.pages.validori.id,
-      { allowDmOnly: true, localOnly: true },
-    );
-
-    assert.equal(context.allowDmOnly, false);
-    assert.ok(
-      context.pages.every((page) =>
-        page.contentBlocks.every((block) => block.visibility !== "dm_only"),
-      ),
-    );
-
-    const { createPrismaClient } = await import("@uwe/database/server");
-    await createPrismaClient(databaseUrl).$disconnect();
-  });
-});

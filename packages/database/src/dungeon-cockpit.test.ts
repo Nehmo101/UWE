@@ -4,7 +4,6 @@ import { createAuthService } from "./auth";
 import { createPrismaClient } from "./client";
 import {
   createDungeonCockpitService,
-  toPortalRoomCockpitView,
 } from "./dungeon-cockpit";
 import { buildWorldWikiIndex } from "./page-service";
 import { createTestDatabaseUrl } from "./test-helpers";
@@ -39,13 +38,13 @@ describe("UWE dungeon cockpit", () => {
       displayName: "Player",
       email: "player-dungeon@test.local",
       password: "test",
-      role: "player",
+      portalAccess: true,
+      studioAccess: false,
     });
 
     await auth.createWorldMembership({
       userId: player.id,
       worldId: world.id,
-      role: "player",
     });
 
     const dungeon = await dungeons.createWithGeneratedSlug({
@@ -72,33 +71,27 @@ describe("UWE dungeon cockpit", () => {
       title: "Eingangshalle",
       slug: "eingangshalle",
       type: "room",
-      visibility: "player_visible",
       prepStatus: "ready",
       contentBlocks: [
         {
           type: "player_text",
           sortOrder: 0,
-          visibility: "player_visible",
           content: "Ihr betretet eine hallende Halle mit Blick auf [[Geheimes Heiligtum]].",
         },
         {
           type: "rich_text",
           sortOrder: 1,
-          visibility: "player_visible",
           content: "Staubige Säulen säumen den Weg.",
         },
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 2,
-          visibility: "dm_only",
           content: "Geheime Falle: DC 15 Wahrnehmung.",
         },
       ],
     });
     roomId = room.id;
     roomSlug = room.slug;
-
-    await repo.updatePage(room.id, { publishStatus: "published" });
 
     const encounter = await dungeons.createWithGeneratedSlug({
       worldId: world.id,
@@ -114,13 +107,10 @@ describe("UWE dungeon cockpit", () => {
       title: "Geheimes Heiligtum",
       slug: "geheimes-heiligtum",
       type: "location",
-      visibility: "dm_only",
-      publishStatus: "published",
       contentBlocks: [
         {
-          type: "gm_note",
+          type: "rich_text",
           sortOrder: 0,
-          visibility: "dm_only",
           content: "Nur für den GM sichtbar.",
         },
       ],
@@ -159,7 +149,7 @@ describe("UWE dungeon cockpit", () => {
   it("builds dungeon > level > room hierarchy", async () => {
     const dungeons = createDungeonCockpitService(databaseUrl);
     const repo = createUweRepository(databaseUrl);
-    const wikiIndex = await buildWorldWikiIndex(repo, worldSlug, "dm");
+    const wikiIndex = await buildWorldWikiIndex(repo, worldSlug);
 
     const overview = await dungeons.getDungeonOverview(
       worldSlug,
@@ -201,20 +191,6 @@ describe("UWE dungeon cockpit", () => {
     assert.equal(encounterPage.type, "encounter");
   });
 
-  it("does not expose dm_only dungeon info in portal room view", async () => {
-    const dungeons = createDungeonCockpitService(databaseUrl);
-    const repo = createUweRepository(databaseUrl);
-    const wikiIndex = await buildWorldWikiIndex(repo, worldSlug, "portal");
-
-    const portalView = await dungeons.getRoomForPortal(worldSlug, roomSlug, wikiIndex);
-    assert.ok(portalView);
-
-    assert.ok(!portalView.html.includes("Geheime Falle"));
-    assert.equal(portalView.readAloud.length, 1);
-    assert.equal(portalView.playerDescription.length, 1);
-    assert.ok(portalView.html.includes("wiki-link-hidden") || portalView.html.includes("Geheimes Heiligtum"));
-  });
-
   it("links assets to dungeon and room pages", async () => {
     const dungeons = createDungeonCockpitService(databaseUrl);
     const repo = createUweRepository(databaseUrl);
@@ -224,7 +200,6 @@ describe("UWE dungeon cockpit", () => {
       title: "Tempel-Karte",
       type: "map",
       storageKey: "maps/temple.png",
-      visibility: "dm_only",
     });
 
     await dungeons.linkAsset(dungeonId, asset.id);
@@ -233,7 +208,7 @@ describe("UWE dungeon cockpit", () => {
     const overview = await dungeons.getDungeonOverview(
       worldSlug,
       "verlassener-tempel",
-      await buildWorldWikiIndex(repo, worldSlug, "dm"),
+      await buildWorldWikiIndex(repo, worldSlug),
     );
     assert.ok(overview);
     assert.equal(overview.assets.length, 1);
@@ -244,7 +219,7 @@ describe("UWE dungeon cockpit", () => {
       "verlassener-tempel",
       "ebene-1",
       roomSlug,
-      await buildWorldWikiIndex(repo, worldSlug, "dm"),
+      await buildWorldWikiIndex(repo, worldSlug),
     );
     assert.ok(room);
     assert.equal(room.assets.length, 1);
@@ -254,7 +229,7 @@ describe("UWE dungeon cockpit", () => {
   it("resolves wiki links in dungeon room text for DM view", async () => {
     const dungeons = createDungeonCockpitService(databaseUrl);
     const repo = createUweRepository(databaseUrl);
-    const wikiIndex = await buildWorldWikiIndex(repo, worldSlug, "dm");
+    const wikiIndex = await buildWorldWikiIndex(repo, worldSlug);
 
     const room = await dungeons.getRoomCockpit(
       worldSlug,
@@ -268,25 +243,4 @@ describe("UWE dungeon cockpit", () => {
     assert.ok(room.html.includes("Geheimes Heiligtum"));
   });
 
-  it("portal mapper strips dm-only blocks from room sections", async () => {
-    const repo = createUweRepository(databaseUrl);
-    const db = createPrismaClient(databaseUrl);
-
-    const room = await db.page.findUnique({
-      where: { id: roomId },
-      include: {
-        contentBlocks: { orderBy: { sortOrder: "asc" } },
-        campaign: true,
-        assetPageLinks: { include: { asset: true } },
-      },
-    });
-    assert.ok(room);
-
-    const wikiIndex = await buildWorldWikiIndex(repo, worldSlug, "portal");
-    const portalView = toPortalRoomCockpitView(room, [], worldSlug, wikiIndex);
-
-    assert.equal(portalView.readAloud.length, 1);
-    assert.equal(portalView.playerDescription.length, 1);
-    assert.ok(!portalView.html.includes("Geheime Falle"));
-  });
 });

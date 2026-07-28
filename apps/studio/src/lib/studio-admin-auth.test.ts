@@ -22,7 +22,7 @@ describe("resolveStudioApiAuthContext dev bypass", () => {
     try {
       const context = await resolveStudioApiAuthContext(mockStudioRequest());
       assert.equal(context.user?.id, "dev-bypass");
-      assert.equal(context.user?.role, "owner");
+      assert.equal(context.user?.isOwner, true);
       assert.equal(context.authMethod, "session");
 
       const denied = requireAdminApiAuth(mockStudioRequest(), context, {

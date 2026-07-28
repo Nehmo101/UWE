@@ -50,7 +50,6 @@ describe("LabelPrintQueueService", () => {
       printListId: list.id,
       printerId: "p1",
       targetConnectorId: owner.id,
-      includeDmOnly: true,
     });
 
     await assert.rejects(

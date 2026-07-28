@@ -56,11 +56,13 @@ export async function createPlayerNoteAction(formData: FormData) {
   const { ctx } = await getAuthContext(worldSlug);
   const auth = createAuthService(prisma);
 
+  // Geteilter Client (main) + Häkchenmodell ohne Gastkommentare (unsere Seite):
+  // canCreatePlayerNote kennt nur noch den Zugriffskontext.
   const world = await prisma.world.findUnique({
     where: { slug: worldSlug },
-    select: { guestCommentsEnabled: true },
+    select: { id: true },
   });
-  if (!world || !canCreatePlayerNote(ctx, world.guestCommentsEnabled)) {
+  if (!world || !canCreatePlayerNote(ctx)) {
     throw new Error("Keine Berechtigung zum Kommentieren");
   }
 

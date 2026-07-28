@@ -38,21 +38,10 @@ describe("activity log + undo basis", () => {
       targetHref: "/worlds/audit-test/lore/erste-seite",
       summary: "Seite „Erste Seite“ erstellt.",
     });
-    await activity.log({
-      worldId,
-      worldSlug: "audit-test",
-      action: "visibility_changed",
-      targetType: "page",
-      targetId: "p1",
-      summary: "Sichtbarkeit geändert.",
-      details: { from: "dm_only", to: "player_visible" },
-    });
 
     const entries = await activity.list({ worldId });
-    assert.ok(entries.length >= 2);
-    assert.equal(entries[0].action, "visibility_changed");
-    assert.equal(entries[0].details && (entries[0].details as { to: string }).to, "player_visible");
-    assert.equal(entries[1].targetHref, "/worlds/audit-test/lore/erste-seite");
+    assert.ok(entries.length >= 1);
+    assert.equal(entries[0].targetHref, "/worlds/audit-test/lore/erste-seite");
   });
 
   it("survives deletion of the logged object (no FK to content)", async () => {
@@ -61,8 +50,6 @@ describe("activity log + undo basis", () => {
       title: "Kurzlebig",
       slug: "kurzlebig",
       type: "note",
-      visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     await activity.log({
@@ -86,11 +73,9 @@ describe("activity log + undo basis", () => {
       title: "Wiederkehrer",
       slug: "wiederkehrer",
       type: "lore",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Inhalt A" },
-        { type: "gm_note", sortOrder: 1, visibility: "dm_only", content: "Notiz B" },
+        { type: "rich_text", sortOrder: 0, content: "Inhalt A" },
+        { type: "rich_text", sortOrder: 1, content: "Notiz B" },
       ],
     });
 
@@ -117,11 +102,9 @@ describe("activity log + undo basis", () => {
       title: "Blockhalter",
       slug: "blockhalter",
       type: "lore",
-      visibility: "dm_only",
-      publishStatus: "draft",
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, visibility: "dm_only", content: "Bleibt." },
-        { type: "rich_text", sortOrder: 1, visibility: "dm_only", content: "Wird gelöscht." },
+        { type: "rich_text", sortOrder: 0, content: "Bleibt." },
+        { type: "rich_text", sortOrder: 1, content: "Wird gelöscht." },
       ],
     });
 
@@ -148,12 +131,10 @@ describe("activity log + undo basis", () => {
       title: "Einmaliger",
       slug: "einmaliger",
       type: "lore",
-      visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     const entry = await undo.capturePageUpdate(page.id);
-    await db.page.update({ where: { id: page.id }, data: { visibility: "player_visible" } });
+    await db.page.update({ where: { id: page.id }, data: { summary: "geändert" } });
 
     const first = await undo.undo(entry.id);
     assert.equal(first.ok, true);
@@ -190,15 +171,12 @@ describe("activity log + undo basis", () => {
       title: "Import Ziel",
       slug: "import-ziel",
       type: "note",
-      visibility: "dm_only",
-      publishStatus: "draft",
       summary: "Alt",
     });
     await repo.createContentBlock(page.id, {
       type: "rich_text",
       sortOrder: 0,
       content: "Bestehend",
-      visibility: "dm_only",
     });
 
     const created = await repo.createPage({
@@ -206,15 +184,12 @@ describe("activity log + undo basis", () => {
       title: "Import Neu",
       slug: "import-neu",
       type: "note",
-      visibility: "dm_only",
-      publishStatus: "draft",
     });
 
     const addedBlock = await repo.createContentBlock(page.id, {
       type: "rich_text",
       sortOrder: 1,
       content: "Neu aus Import",
-      visibility: "dm_only",
     });
 
     const entry = await undo.captureImportExecute({
@@ -233,8 +208,6 @@ describe("activity log + undo basis", () => {
             slug: page.slug,
             type: page.type,
             summary: "Alt",
-            visibility: page.visibility,
-            publishStatus: page.publishStatus,
             canonicalStatus: page.canonicalStatus,
             tags: page.tags,
             aliases: page.aliases,

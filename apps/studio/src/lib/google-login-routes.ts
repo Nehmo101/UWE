@@ -12,6 +12,7 @@ import {
 import { createAuthIdentityService } from "@uwe/database/auth-identities";
 import { resolveGoogleOAuthConfig } from "@uwe/database/login-methods-settings";
 import {
+  canAccessPortal,
   canAccessStudio,
   getOAuthStateCookieOptions,
   getSessionCookieOptionsForRequest,
@@ -70,7 +71,10 @@ const handlers = createGoogleLoginRouteHandlers({
   createTwoFactorService,
   getSessionUserId: async (request) =>
     (await getUserFromRequestCookieHeader(request.headers.get("cookie")))?.id ?? null,
-  hasTargetAccess: (target, user) => (target === "portal" ? true : canAccessStudio(user)),
+  // Häkchenmodell: auch das Portal ist ein Häkchen, kein „jeder aktive
+  // Benutzer" — dieselbe Regel wie der Passwort-Login über /api/auth/enter.
+  hasTargetAccess: (target, user) =>
+    target === "portal" ? canAccessPortal(user) : canAccessStudio(user),
   clientIpFromHeaders,
   checkRateLimitAsync,
   rateLimitOptions: RATE_LIMIT_PRESETS.login,

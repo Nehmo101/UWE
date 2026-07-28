@@ -1,5 +1,5 @@
 import { buildPagePath } from "./store";
-import type { Page, PageCategory, PagePath, PageVisibility, World } from "./types";
+import type { Page, PageCategory, PagePath, World } from "./types";
 import type { WikiStore } from "./store";
 import { normalizeLookupKey } from "./slug-utils";
 
@@ -59,24 +59,10 @@ export function pageHref(store: WikiStore, page: Page): string | undefined {
   return buildPagePath(page, world.slug);
 }
 
-export function isPlayerVisible(visibility: PageVisibility): boolean {
-  return visibility === "player_visible" || visibility === "public";
-}
-
-export function listPlayerVisiblePages(store: WikiStore, worldId: string): Page[] {
-  return listPagesInWorld(store, worldId).filter((p) => isPlayerVisible(p.visibility));
-}
-
 /** Build lookup index: normalized key → page (title + aliases, scoped to world). */
-export function buildPageLookupIndex(
-  store: WikiStore,
-  worldId: string,
-  options?: { playerVisibleOnly?: boolean },
-): Map<string, Page> {
+export function buildPageLookupIndex(store: WikiStore, worldId: string): Map<string, Page> {
   const index = new Map<string, Page>();
-  const pages = listPagesInWorld(store, worldId).filter(
-    (p) => !options?.playerVisibleOnly || isPlayerVisible(p.visibility),
-  );
+  const pages = listPagesInWorld(store, worldId);
 
   for (const page of pages) {
     index.set(normalizeLookupKey(page.title), page);
@@ -95,8 +81,6 @@ export function resolvePageByLinkTarget(
   store: WikiStore,
   worldId: string,
   target: string,
-  options?: { playerVisibleOnly?: boolean },
 ): Page | undefined {
-  const index = buildPageLookupIndex(store, worldId, options);
-  return index.get(normalizeLookupKey(target));
+  return buildPageLookupIndex(store, worldId).get(normalizeLookupKey(target));
 }

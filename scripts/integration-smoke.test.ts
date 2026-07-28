@@ -73,12 +73,12 @@ describe("integration smoke — core Studio routes", () => {
     "apps/studio/app/studio/page.tsx",
     "apps/studio/app/worlds/page.tsx",
     "apps/studio/app/brain/page.tsx",
-    "apps/studio/app/mail/page.tsx",
-    "apps/studio/app/backup/page.tsx",
+    // Das Mail-Center liegt seit H10 in Brain (siehe unten) — in Studio bleibt
+    // nur das Verfassen aus Vorlagen.
+    "apps/studio/app/mail/compose/page.tsx",
+    "apps/studio/app/worlds/[worldSlug]/backup/page.tsx",
     "apps/studio/app/jobs/page.tsx",
     "apps/studio/app/settings/page.tsx",
-    "apps/studio/app/admin/status/page.tsx",
-    "apps/studio/app/admin/cookbook/page.tsx",
     "apps/studio/app/admin/ai-prompt/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/dashboard/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/brain/page.tsx",
@@ -123,8 +123,6 @@ describe("integration smoke — Portal routes", () => {
   const portalRoutes = [
     "apps/portal/app/page.tsx",
     "apps/portal/app/login/page.tsx",
-    "apps/portal/app/worlds/page.tsx",
-    "apps/portal/app/worlds/[worldSlug]/page.tsx",
     "apps/portal/app/auth/worlds/(hub)/page.tsx",
   ];
 
@@ -133,6 +131,38 @@ describe("integration smoke — Portal routes", () => {
       assert.ok(exists(route), `Missing portal route: ${route}`);
     });
   }
+});
+
+describe("integration smoke — Brain-Routen", () => {
+  // Das Mail-Center ist mit H10 aus Studio hierher gezogen. Damit der Umzug
+  // nicht unbemerkt zurückfällt, steht die Fläche hier: die Seite, die
+  // Oberfläche und die drei Routen, ohne die der Client nichts anzeigt.
+  const brainRoutes = [
+    "apps/brain/app/mail/page.tsx",
+    "apps/brain/src/components/mail/MailCenter.tsx",
+    "apps/brain/app/api/mail/messages/route.ts",
+    "apps/brain/app/api/mail/messages/[id]/route.ts",
+    "apps/brain/app/api/mail/actions/route.ts",
+    "apps/brain/app/api/mail/sync/route.ts",
+    "apps/brain/src/lib/mail-api.ts",
+  ];
+
+  for (const route of brainRoutes) {
+    it(`includes ${route}`, () => {
+      assert.ok(exists(route), `Missing Brain route: ${route}`);
+    });
+  }
+
+  it("Studio hat kein zweites Mail-Center mehr", () => {
+    assert.ok(!exists("apps/studio/app/mail/page.tsx"), "Studios Mail-Center ist zurück — H10 rückgängig?");
+    assert.ok(!exists("apps/studio/components/mail"), "Studios Mail-Komponenten sind zurück — H10 rückgängig?");
+  });
+
+  it("Brains Sync läuft ohne Job-Executor", () => {
+    const sync = read("apps/brain/app/api/mail/sync/route.ts");
+    assert.match(sync, /syncMailAccount/, "Brain muss den geteilten Sync aus @uwe/mail aufrufen");
+    assert.doesNotMatch(sync, /enqueueAndDispatch|job-executor/, "Brain hat keinen Job-Executor");
+  });
 });
 
 describe("integration smoke — minimal app access paths", () => {
@@ -206,11 +236,10 @@ describe("integration smoke — minimal app access paths", () => {
     assert.match(portalShim, /redirect\(/);
   });
 
-  it("keeps DM-only content covered by public leak regression tests", () => {
-    const visibilityTest = read("packages/database/src/visibility-security.test.ts");
-    assert.match(visibilityTest, /dm_only content must NEVER be readable through portal contexts/);
-    assert.match(visibilityTest, /hides dm_only pages from portal page listings/);
-    assert.match(visibilityTest, /dm_only block leaked into portal page/);
+  it("keeps the access model covered by the role matrix", () => {
+    const roleMatrix = read("packages/security-tests/src/role-matrix.test.ts");
+    assert.match(roleMatrix, /whoever is assigned to a world sees/);
+    assert.match(roleMatrix, /anonymous/);
   });
 });
 
@@ -279,9 +308,8 @@ describe("integration smoke — DnD generator AI tasks", () => {
     assert.match(actionsSource, /fill_dungeon_room/);
   });
 
-  it("blocks cloud provider when context has local knowledge", () => {
+  it("keeps the local-knowledge detector for privacy checks", () => {
     assert.match(privacySource, /contextContainsLocalKnowledge/);
-    assert.match(privacySource, /isCloudProvider/);
   });
 });
 
@@ -294,7 +322,6 @@ describe("integration smoke — AI security policy module", () => {
     const policy = read("packages/security/src/security/ai-policy.ts");
     assert.match(policy, /requireAiRole|canUseAi/);
     assert.match(policy, /validatePromptLength/);
-    assert.match(policy, /resolveEffectiveAllowDmOnly/);
   });
 
   it("protects unauthenticated AI routes", () => {
@@ -311,14 +338,13 @@ describe("integration smoke — security test coverage", () => {
     "packages/ai-brain/src/privacy.test.ts",
     "packages/ai-brain/src/router/router.test.ts",
     "packages/ai-brain/src/inference.test.ts",
-    "packages/database/src/visibility-security.test.ts",
     "packages/database/src/production-safety.test.ts",
     "packages/database/src/security-dashboard.test.ts",
-    "packages/auth/src/security-access.test.ts",
+    "packages/auth/src/area-access.test.ts",
+    "packages/auth/src/admin-gate.test.ts",
     "packages/database/src/system-status.test.ts",
     "apps/studio/src/lib/studio-api-auth.test.ts",
     "apps/studio/src/admin-status.test.ts",
-    "packages/security-tests/src/public-leak-scanner.test.ts",
     "packages/security-tests/src/role-matrix.test.ts",
     "packages/security-tests/src/route-authz.test.ts",
   ];
@@ -333,9 +359,8 @@ describe("integration smoke — security test coverage", () => {
 describe("integration smoke — Media, Calendar, DnD & Agent routes", () => {
   const integrationRoutes = [
     "apps/studio/app/image-studio/page.tsx",
-    "apps/studio/app/calendar/page.tsx",
+    "apps/family/app/calendar/page.tsx",
     "apps/studio/app/admin/agent-jobs/page.tsx",
-    "apps/studio/app/admin/security/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/dnd-api/page.tsx",
     "apps/studio/app/api/image-studio/route.ts",
     "apps/studio/app/api/calendar/events/route.ts",
@@ -453,8 +478,8 @@ describe("integration smoke — agent CI quality gate", () => {
     assert.ok(exists("packages/database/src/perf-smoke.test.ts"));
     assert.ok(exists("packages/database/src/tag-service.ts"));
     assert.ok(exists("scripts/migration-check.mjs"));
-    assert.ok(exists("apps/studio/app/admin/tags/page.tsx"));
-    assert.ok(exists("apps/studio/app/api/admin/tags/route.ts"));
+    assert.ok(exists("apps/studio/app/worlds/[worldSlug]/tags/page.tsx"));
+    assert.ok(exists("apps/studio/app/api/tags/route.ts"));
     assert.ok(exists("scripts/bundle-budget-check.mjs"));
   });
 
