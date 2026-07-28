@@ -5,7 +5,7 @@ Geprüft am 2026-07-03, Overrides für Advisories ergänzt am 2026-07-28.
 
 ## pnpm-Override: `nodemailer: ^9.0.1`
 
-**Wo:** Root-`package.json` → `pnpm.overrides.nodemailer`.
+**Wo:** `pnpm-workspace.yaml` → `overrides` (bis 2026-07-28: Root-`package.json` → `pnpm.overrides`).
 
 **Herkunft:** Eingeführt über PR #341 (Merge-Commit `9b88e58`, Branch
 `cursor/backlog-b3-owner-cockpit-c636`) — ohne dokumentierte Begründung im
@@ -68,8 +68,19 @@ anders — bis 0.34 war `typeof import("sharp")` selbst aufrufbar, jetzt ist es 
 Namensraum und der Konstruktor steckt in `default`. `packages/assets/src/image-processing.ts`
 typt entsprechend um; der Laufzeitpfad (`mod.default ?? mod`) bleibt.
 
-**Was offen bleibt:** fünf Befunde der Stufe *moderate* und einer *low*. Die
-Schwelle von `audit:prod` ist `--audit-level high`, sie schlagen also nicht an.
+**Nachtrag (gleicher Tag):** auch die restlichen sechs Befunde (fünf *moderate*,
+ein *low*) sind geschlossen — `hono` (drei Advisories, u. a. XSS über `cx()`),
+`@hono/node-server` (Memory-Leak; der alte Pin `>=1.19.13` ließ 2.0.8 durch,
+weil 2.x das `>=` erfüllt), `valibot` (`flatten()`-Wurf) und `dompurify`
+(`CUSTOM_ELEMENT_HANDLING`-Bypass — das ist die Bibliothek unter dem
+Mail-Reader-Sanitizer). Alle vier transitiv, alle als Override mit
+Major-Deckel. `pnpm audit --prod` meldet damit: keine bekannten Lücken.
+
+**Die Overrides liegen jetzt in `pnpm-workspace.yaml`, nicht mehr in
+`package.json#pnpm.overrides`.** pnpm 10 liest beide Orte, pnpm 11 nur noch die
+Workspace-Datei — beim Umstieg wären die Pins sonst still weggefallen
+(`audit:prod` warnte bereits, weil es per `dlx` pnpm 11 benutzt). Gleiches
+Muster wie bei `onlyBuiltDependencies`, siehe unten.
 
 ## `onlyBuiltDependencies` — eine Quelle: `pnpm-workspace.yaml`
 
