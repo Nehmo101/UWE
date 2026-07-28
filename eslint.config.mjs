@@ -51,7 +51,7 @@ const config = [
   {
     settings: {
       next: {
-        rootDir: ["apps/studio/", "apps/portal/", "apps/brain/"],
+        rootDir: ["apps/studio/", "apps/portal/", "apps/brain/", "apps/family/", "apps/landing/"],
       },
     },
     rules: {

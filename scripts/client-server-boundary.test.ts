@@ -21,7 +21,14 @@ const root = path.resolve(import.meta.dirname, "..");
 
 const SERVER_ONLY_SPECIFIERS = ["@uwe/database/server"];
 
-const SCAN_ROOTS = ["apps/studio", "apps/portal", "packages/shared-ui"];
+const SCAN_ROOTS = [
+  "apps/studio",
+  "apps/portal",
+  "apps/brain",
+  "apps/family",
+  "apps/landing",
+  "packages/shared-ui",
+];
 
 const SKIP_DIRS = new Set([
   "node_modules",
