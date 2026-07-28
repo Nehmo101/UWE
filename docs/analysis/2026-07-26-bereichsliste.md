@@ -67,11 +67,11 @@ Jeder Schritt ist ein eigener Commit mit grünem Gate.
 | **3b — `visibility` raus** | ✅ fertig | `2ee64ca` | 320 Dateien, −8.090 Zeilen; inkl. `PagePlayerAccess`, `SessionUnlock`, `gm_note`, Signierte-Medien-URLs, Leak-Scanner |
 | **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ✅ fertig | folgt | Rollen-Enum, Capability-Matrix, Welt-Rollen und Gastmodus raus; Kachel „Zugänge" im Command Center |
 | **5 — Studio-System abräumen** (Abschnitt D) | ✅ fertig | `0d1c75a0`…`ab893857` | System-Hub, Einrichtung/Backup ins Command Center, Tag-Aufräumer ins Welt-Cockpit |
-| **6 — Brain/Studio-Doppelungen** (Abschnitt H) | 🟡 fast | `2cfafd30`…`5db4593c` | H1–H6, H8 erledigt; H10 halb, H7/H9/H11 an Family gebunden |
+| **6 — Brain/Studio-Doppelungen** (Abschnitt H) | 🟡 fast | `2cfafd30`…`5db4593c` | H1–H9 und H11 erledigt; **nur H10 (Mail) offen** — Umfang und offene Entscheidungen siehe Abschnitt H |
 | **7 — Family bauen** (Abschnitt G) | ✅ fertig | `3720cd27`, `27068dd7`, `d27a8ffc`, folgt | DB, App, die 14 Modelle und die drei Flächen; offen bleibt nur, Küche/Haushalt/Scan aus Studio nachzuziehen |
 
-**Bisher entfernt: ~19.700 Zeilen** über 700 Dateien. Nach jedem Schritt:
-`pnpm lint` grün, `pnpm typecheck` 44/44, `pnpm test:ci` 45/45, `pnpm test:security` grün.
+**Bisher entfernt: ~26.000 Zeilen.** Nach jedem Schritt: `pnpm lint` grün,
+`pnpm typecheck` 47/47, `pnpm test:ci` 48/48, `pnpm test:security` grün.
 
 > **`pnpm audit:prod` schlägt fehl — vorbestehend, keine Regression.** 19 Advisories
 > (1 low, 10 moderate, 8 high) aus Abhängigkeiten. Mit `git stash` auf dem
@@ -900,7 +900,41 @@ Verträgen und Projekten.
 | H3 Capture | ✅ erledigt | Brain hat Filter, KI-Vorschlag und Triage; Studios `/capture`, `/api/capture/**` und der globale Erfassen-Knopf sind weg. Ohne Bild-Upload in eine Welt — das bleibt DM-Arbeit. |
 | H2 Life Brain | ✅ erledigt | Brain hat Suche mit Kategoriefilter (server-seitig, kein Client-Fetch) und die Index-Lage. `/api/life-brain/search` liegt jetzt in Brain, und der MCP-Brain-Server liest sie dort statt in Studio. Studios `/life-brain/**` samt Chat ist weg — Brains `/ki-chat` kann mehr. |
 | H5 Werkstatt | ✅ erledigt | Alle vier Bereiche liegen in Brain: Projekte mit Status- und Art-Filter, Detailseite mit Material, Farben, Filamenten und STL-Links, Farbrezepte, Druckprofile und Terrain-Verleih. Der iCal-Feed der Rückgaben ist mitgewandert. Ohne Welt-Zuordnung und ohne Foto-Upload. |
-| H10 Mail | 🟡 halb | Brain hat jetzt Ordner (Posteingang, Markiert, Gesendet, Archiv, Papierkorb), Volltextsuche und die Prioritäten-Einstufung — dieselbe Quelle wie Studio (`@uwe/mail/portal`). Studios Mail-Center bleibt vorerst: die Zeilenzahlen in der Tabelle oben zählen nur die Seiten, nicht die 17 Komponenten darunter (Reader, Triage, Regeln, Entwürfe, Mail-Chat, Tastaturkürzel). Erst wenn Brain die hat, kann es weg. `/mail/compose` bleibt ohnehin in Studio: Session-Recap und Handout sind DM-Arbeit. |
+| H10 Mail | 🟡 halb — **der einzige offene Punkt** | Brain hat Ordner (Posteingang, Markiert, Gesendet, Archiv, Papierkorb), Volltextsuche und die Prioritäten-Einstufung — dieselbe Quelle wie Studio (`@uwe/mail/portal`). Studios Mail-Center bleibt: die Zeilenzahlen in der Tabelle oben zählen nur die Seiten, nicht die 20 Komponenten darunter. `/mail/compose` bleibt ohnehin in Studio (Session-Recap und Handout sind DM-Arbeit). Details unten. |
+
+### Was H10 noch braucht
+
+Der Umzug ist gut vermessen, aber groß: **~5.150 Zeilen Oberfläche**
+(`apps/studio/components/mail/**`, 20 Dateien) plus **~1.600 Zeilen API**
+(20 Routen unter `/api/admin/mail/**`, 4 unter `/api/mail/**`).
+
+Was dafür spricht, dass es geht: die Kopplung an Studio ist **flach**. Die
+Mail-Komponenten haben ihre eigene UI-Schicht (`mail-ui.tsx`); aus dem
+Design-Kit brauchen sie nur `NavIcon`, und nur `MailSettings.tsx` greift
+darüber hinaus (Card/buttonVariants/cn). Dazu drei Helfer: `studio-api-url`,
+`poll-job`, `mail-chat-prompt`.
+
+Was noch zu entscheiden ist:
+
+1. **Theme-Tokens.** Brains `@theme`-Block ist eine Teilmenge von Studios; die
+   Mail-Komponenten benutzen `bg-secondary`, `bg-destructive`, `border-input`,
+   `ring-ring`. Die Brücken müssen in `apps/brain/app/globals.css` nachgezogen
+   werden, sonst rendert die Oberfläche farblos.
+2. **Sync-Job.** Studios `/api/admin/mail/sync` reiht `mail_sync` in die
+   Job-Queue und stößt sie im selben Prozess an (`dispatchJob`). Brain hat
+   keinen Executor. Die Route hat aber schon einen synchronen Zweig
+   (`body.sync === true` → `service.syncAccount`) — für Brain ist der der
+   naheliegende Weg, kostet aber die Fortschrittsanzeige bei langen Syncs.
+   Der systemd-Timer `uwe-mail-sync.timer` muss dann mit umziehen.
+3. **API-Token-Zugang.** Die Mail-Routen hängen an den Studio-Scopes
+   `mail_read` / `mail_send`. Niemand außerhalb von Studio benutzt sie
+   (geprüft) — mit dem Umzug auf Brains Häkchen-Guard entfällt der
+   Token-Weg. Das ist vertretbar, sollte aber bewusst entschieden sein.
+
+Und der eigentliche Grund, warum es hier steht statt erledigt zu sein: für die
+20 Client-Komponenten gibt es **keinen Test**. Ein Umzug zwischen zwei Apps mit
+unterschiedlichen Theme-Tokens bricht sie still — das gehört einmal im Browser
+durchgeklickt, bevor Studios Fassung gelöscht wird.
 | H7 / H9 / H11 | ✅ erledigt | Verträge, Dokumente und Kalender sind Family-Seiten; beide alten Fassungen sind weg (Schritt 7d). |
 
 Muster für die offenen Punkte: die Fachlogik liegt bereits in `packages/`
