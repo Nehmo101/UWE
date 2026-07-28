@@ -8,8 +8,17 @@ import { TEX } from '../render/textures.js';
 import { cam, camera } from '../editor/camera.js';
 // Bruchmaske (H6). Zyklusfrei: generators/paths.js zieht rng/store/pools/
 // terrain/objects/materials/geometry — keines davon importiert world/water.js
-// (geprueft: water.js wird nur von main.js und editor/io.js importiert).
+// (geprueft: water.js wird nur von main.js, editor/io.js und
+// world/atmosphere.js importiert).
 import { bruchMaskeUniforms } from '../generators/paths.js';
+// Seeflaechen (Nachtrag Runde H): see.js exportiert Materialien, Uniforms und
+// Anmeldeliste; water.js — der Besitzer der Wogenformel — patcht sie unten.
+// Dieselbe Richtung wie bruchMaskeUniforms eine Zeile hoeher, und aus
+// demselben Grund zyklusfrei: see.js zieht rng/store/pools/terrain/biomfeld/
+// wegsuche/objects/zeichen/materials — keines davon importiert world/water.js.
+// Die Gegenrichtung (see.js -> water.js) drehte die Modulreihenfolge von
+// main.js um; Pruefung 19 haelt fest, dass sie nicht existiert.
+import { seeWogen, seeWogenAufraeumen } from '../generators/see.js';
 
 /* --- Masse mit der Kartengroesse (H1b) ----------------------------------
    Beide Flaechen muessen die Karte plus Sichtweite ueberdecken, sonst
@@ -152,6 +161,95 @@ function setStreifen(staerke) {
   streifUniforms.uStreifStaerke.value =
     (typeof staerke === 'number' && staerke > 0) ? staerke : 0;
 }
+
+/* --- C4b: die Seeflaeche lebt (Nachtrag Runde H) --------------------------
+   Die Binnenseen (generators/see.js) standen bisher voellig still: keine
+   Wogen, keine Himmelsstreifen. Beides kommt aus DIESEM Modul, denn hier
+   stehen die neun Wogenkonstanten, und sie duerfen nur hier stehen (C4).
+
+   Anders als beim Meer laeuft die Bewegung NICHT ueber die CPU: das Meer
+   verschiebt je Bild ~1100 Stuetzpunkte und laedt den Puffer neu hoch — fuer
+   eine kartenfuellende Ebene mit einem einzigen Mesh ist das der richtige
+   Weg. Seen sind viele kleine Meshes (je bis ~320 Punkte), die mit Undo
+   kommen und gehen; eine CPU-Schleife darueber muesste eine Liste pflegen
+   UND je Bild Puffer hochladen. Stattdessen verschiebt der VERTEXSHADER mit
+   exakt derselben Formel (wogeGLSL — die eine Quelle fuer alles, was wogt),
+   gedaempft ueber uSeeWoge. Je Bild kostet das nur die Uhr: see.js schreibt
+   uSeeZeit pro gerendertem Seemesh in onBeforeRender (siehe dort), ohne See
+   laeuft nichts.
+
+   Die Daempfung sitzt NUR in der Verschiebung, nicht in der Kammsuche der
+   Streifen: eine gleichmaessig skalierte Woge hat ihre Kaemme an denselben
+   Stellen, die Striche sitzen also auch gedaempft exakt auf den Kaemmen.
+
+   Objektraum == Weltraum: see.js baut seine Flaechen in Weltkoordinaten und
+   haengt sie in eine unverschobene Elementgruppe — `transformed.xz` IST die
+   Weltlage, ohne modelMatrix-Umweg. Die Streifen im Fragment nutzen wie beim
+   Meer das Varying vTerraW aus terraPatch (3).
+
+   Der Saum bekommt nur die Verschiebung (gleiche Uhr, gleiche Formel — er
+   klebt dadurch auf der Flaeche), die Streifen nur die Flaeche: eine
+   Brandungsborte mit Himmelsstrichen darauf waere doppelt gemalt.          */
+var SEE_WOGE_ANKER = '#include <begin_vertex>';
+
+var SEE_STREIF_FRAG =
+  'float terraSeeH = terraWoge( vTerraW.xz, uSeeZeit );\n' +
+  'float terraSeeStreif = smoothstep( uStreifSchwelle, uStreifSchwelle + 0.16, terraSeeH );\n' +
+  'float terraSeeL = 0.55 + 0.45 * sin( vTerraW.x * 0.0105 - vTerraW.z * 0.0082\n' +
+  '  + uSeeZeit * 0.11 );\n' +
+  'terraSeeStreif *= smoothstep( 0.35, 0.95, terraSeeL );\n' +
+  'float terraSeeB = 1.0 - abs( dot( normalize( vViewPosition ), normal ) );\n' +
+  'terraSeeStreif *= 0.15 + 0.85 * terraSeeB * terraSeeB;\n' +
+  'reflectedLight.indirectDiffuse += uHorizont * ( terraSeeStreif * uSeeStreif );\n';
+
+function patchSeeWoge(shader, streifen) {
+  shader.uniforms.uSeeZeit = seeWogen.uniforms.uSeeZeit;
+  shader.uniforms.uSeeWoge = seeWogen.uniforms.uSeeWoge;
+  if (shader.vertexShader.indexOf(SEE_WOGE_ANKER) < 0) {
+    console.warn('terra: Shader-Patch "seewoge" fand seinen Anker nicht — ' +
+      'die Seeflaeche steht still.');
+  } else {
+    shader.vertexShader = 'uniform float uSeeZeit;\nuniform float uSeeWoge;\n' + wogeGLSL() +
+      shader.vertexShader.replace(SEE_WOGE_ANKER, SEE_WOGE_ANKER +
+        '\ntransformed.y += terraWoge( transformed.xz, uSeeZeit ) * uSeeWoge;');
+  }
+  if (!streifen) return;
+  shader.uniforms.uHorizont = terraUniforms.uHorizont;
+  shader.uniforms.uSeeStreif = seeWogen.uniforms.uSeeStreif;
+  shader.uniforms.uStreifSchwelle = streifUniforms.uStreifSchwelle;
+  // vTerraW liefert Patch (3) von terraPatch (Weltposition als Varying).
+  if (shader.fragmentShader.indexOf('varying vec3 vTerraW;') < 0) {
+    console.warn('terra: Shader-Patch "seestreifen" findet kein vTerraW — ' +
+      'der See bleibt ohne gemalte Himmelsspiegelung.');
+    return;
+  }
+  var anker = '#include <lights_fragment_end>';
+  if (shader.fragmentShader.indexOf(anker) < 0) {
+    console.warn('terra: Shader-Patch "seestreifen" fand seinen Anker nicht — ' +
+      'der See bleibt ohne gemalte Himmelsspiegelung.');
+    return;
+  }
+  shader.fragmentShader = 'uniform vec3 uHorizont;\nuniform float uSeeZeit;\n' +
+    'uniform float uSeeStreif;\nuniform float uStreifSchwelle;\n' + wogeGLSL() +
+    shader.fragmentShader.replace(anker, anker + '\n' + SEE_STREIF_FRAG);
+}
+
+/** Umhuellt onBeforeCompile/customProgramCacheKey wie himmelsStreifen oben;
+ *  der Cache-Schluessel MUSS mitwachsen (Begruendung bei bruchAusschnitt). */
+function seeWogenAnbinden(mat, streifen) {
+  var vorher = mat.onBeforeCompile;
+  mat.onBeforeCompile = function (shader) {
+    if (vorher) vorher.call(this, shader);
+    patchSeeWoge(shader, streifen);
+  };
+  var schluessel = mat.customProgramCacheKey;
+  mat.customProgramCacheKey = function () {
+    return (schluessel ? schluessel.call(this) : '') + '|seewoge' + (streifen ? 's' : '');
+  };
+  return mat;
+}
+seeWogenAnbinden(seeWogen.flaecheMat, true);
+seeWogenAnbinden(seeWogen.saumMat, false);
 
 /* --- Bruchzonen aussparen (H6) -------------------------------------------
    Kanon: Terra ist auseinandergerissen. Eine Bruchkante (generators/paths.js)
@@ -306,6 +404,9 @@ function updateWater(t) {
   // Dieselbe Zeit treibt die gemalten Himmelsstreifen im Shader (C4) — nur so
   // sitzen sie auf den Kaemmen, die hier verschoben werden.
   streifUniforms.uWasserZeit.value = t;
+  // See-Anmeldeliste nachfuehren (geloeschte Seeflaechen austragen). Hinter
+  // dem Groessen-Vergleich kostet der Zweig ohne Seen genau diesen Vergleich.
+  if (seeWogen.aktive.size > 0) seeWogenAufraeumen();
   var p = waterGeo.attributes.position, arr = p.array;
   for (var i = 0; i < p.count; i++) {
     var x = waterBaseXZ[i * 2], z = waterBaseXZ[i * 2 + 1];

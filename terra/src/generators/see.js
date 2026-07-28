@@ -457,6 +457,86 @@ var saumMat = terraMat({
 });
 tintedMats.push(saumMat);
 
+/* ==========================================================================
+   Anmeldung bei der Wogenrechnung (Nachtrag Runde H): die Seeflaeche lebt
+
+   Der Befund der Seen-Runde: keine Wogen, keine gemalten Himmelsstreifen.
+   Das Rezept dafuer BESITZT world/water.js (die Wogenformel WOGE samt ihrem
+   GLSL-Zwilling und der Streifen-Patch) — aber see.js darf water.js nicht
+   importieren: water.js zieht generators/paths.js und wird selbst erst von
+   main.js (nach den Generatoren) ausgewertet; ein Import von hier aus drehte
+   diese Reihenfolge um und liefe Richtung Zyklus.
+
+   Deshalb dasselbe Muster wie bruchMaskeUniforms (paths.js -> water.js):
+   der GENERATOR exportiert ein Buendel, world/water.js — der Besitzer der
+   Formel — importiert es beim Modulstart und patcht die beiden
+   Modulmaterialien (onBeforeCompile-Umhuellung wie bei himmelsStreifen).
+   see.js kennt water.js weiterhin nicht; die Prüfung 19 haelt die Richtung
+   fest.
+
+   Drei Teile:
+
+     uniforms   uSeeZeit ist die Uhr (Sekunden, dieselbe Zeitbasis wie die
+                Meereswogen in main.js: performance.now()*0.001). uSeeWoge
+                daempft die Vertikalbewegung GEGENUEBER dem Meer (Faktor auf
+                terraWoge, dessen Betrag bis 0.78 reicht — 0.20 ergibt gut
+                ±0.16 Einheiten leisen Gang: ein Bergsee wogt weniger als
+                eine Kueste). uSeeStreif ist die gedaempfte Streifenstaerke
+                (Meer: 0.30).
+
+     onBeforeRender  Die Uhr schreibt jedes Seemesh SELBST, unmittelbar bevor
+                es gezeichnet wird — kein Eintrag in der Renderschleife, kein
+                Import in main.js. Ohne See existiert kein Traeger fuer den
+                Aufruf, der Zweig laeuft also buchstaeblich nie; ein See
+                ausserhalb des Bildes (Frustum) schreibt ebenfalls nichts.
+                Die Kosten MIT See: ein Funktionsaufruf und ein
+                performance.now() je gerendertem Seemesh und Bild.
+
+     aktive     Die angemeldeten Meshes. clearElement (store.js) haengt beim
+                Regenerieren/Loeschen die Kinder aus ihrer Gruppe aus (parent
+                wird null), kennt diese Liste aber nicht — aufgeraeumt wird
+                deshalb hier: bei jeder Anmeldung, auf Abruf ueber
+                seeWogenAufraeumen() (updateWater in water.js ruft es je Bild,
+                hinter einem groessen-Vergleich), und damit deterministisch:
+                Elemente kommen und gehen mit Undo, die Liste waechst nie
+                ueber die lebenden Seeflaechen hinaus. Die Geometrie selbst
+                gibt clearElement frei; hier haengt nur die Huelle kurz nach.
+
+   `zeitSchreiber` zaehlt die Uhrschreibvorgaenge — fuer die Pruefungen (und
+   fuer die Kostenmessung im Bericht), wie patchInfo in materials.js.
+   ========================================================================== */
+var seeWogen = {
+  uniforms: {
+    uSeeZeit:   { value: 0 },
+    uSeeWoge:   { value: 0.20 },
+    uSeeStreif: { value: 0.16 }
+  },
+  flaecheMat: seeMat,
+  saumMat: saumMat,
+  aktive: new Set(),
+  zeitSchreiber: 0
+};
+
+function seeZeit() {
+  seeWogen.zeitSchreiber++;
+  seeWogen.uniforms.uSeeZeit.value = performance.now() * 0.001;
+}
+
+/** Wirft ausgehaengte Meshes (parent null, siehe clearElement) aus der
+ *  Anmeldeliste und liefert die Zahl der verbliebenen. */
+function seeWogenAufraeumen() {
+  seeWogen.aktive.forEach(function (m) { if (!m.parent) seeWogen.aktive.delete(m); });
+  return seeWogen.aktive.size;
+}
+
+function seeAnmelden(mesh) {
+  seeWogenAufraeumen();
+  mesh.onBeforeRender = seeZeit;
+  seeWogen.aktive.add(mesh);
+}
+
+export { seeWogen, seeWogenAufraeumen };
+
 /** Ortsstabiler Zufallsstrom — Muster aus paths.js/areas.js. */
 function ortsRng(a, b, s) { return rngOf((hashi(a, b, s) * 4294967296) | 0); }
 
@@ -791,6 +871,9 @@ function wasserFlaeche(el, pts, y) {
   mesh.userData.el = el;
   // Wie das Flusswasser: ueber der Wasserebene (4), unter den Kartenzeichen (6).
   mesh.renderOrder = 5;
+  // Bei der Wogenrechnung anmelden (Nachtrag Runde H): water.js hat seeMat
+  // beim Modulstart gepatcht, das Mesh muss nur noch die Uhr stellen.
+  seeAnmelden(mesh);
   groupOf(el).add(mesh);
 }
 
@@ -835,6 +918,9 @@ function saumBand(el, rand, y, saum) {
   var mesh = new THREE.Mesh(g, saumMat);
   mesh.userData.el = el;
   mesh.renderOrder = 6;
+  // Auch der Saum wogt mit — DIESELBE Formel und Uhr wie die Flaeche, sonst
+  // risse die Brandung bei jeder Welle von ihrer Wasserflaeche ab.
+  seeAnmelden(mesh);
   groupOf(el).add(mesh);
 }
 
