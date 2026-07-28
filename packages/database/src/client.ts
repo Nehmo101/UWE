@@ -39,9 +39,18 @@ const globalForPrisma = globalThis as unknown as {
  * setting it once on any connection is enough; busy_timeout is per-connection,
  * so we apply it whenever a client is created. Best-effort: a failure here must
  * never crash client creation.
+ *
+ * The promise is kept so callers can wait for it — see `whenPragmasApplied`.
+ * Measured before that existed: `PRAGMA busy_timeout` read back **0**
+ * immediately after `createPrismaClient()` and only became 5000 after ~300 ms.
+ * A caller that created a client and wrote straight away therefore ran with
+ * exactly the timeout this function is meant to prevent, and lost the race
+ * with SQLITE_BUSY instead of waiting.
  */
+const pragmasApplied = new WeakMap<SqlitePrismaClient, Promise<void>>();
+
 function applySqlitePragmas(client: SqlitePrismaClient): void {
-  void (async () => {
+  const done = (async () => {
     try {
       await client.$queryRawUnsafe("PRAGMA journal_mode = WAL");
       await client.$queryRawUnsafe("PRAGMA busy_timeout = 5000");
@@ -50,6 +59,23 @@ function applySqlitePragmas(client: SqlitePrismaClient): void {
       console.warn("[uwe/database] failed to apply SQLite pragmas", error);
     }
   })();
+
+  pragmasApplied.set(client, done);
+}
+
+/**
+ * Resolves once the SQLite pragmas of `client` have been applied.
+ *
+ * Await this before the first write on a **freshly created** client. The shared
+ * client (`prisma` / `getSharedPrismaClient`) is built at module load, so its
+ * pragmas are long settled by the time any request arrives — there, awaiting is
+ * a no-op and callers need not bother.
+ *
+ * Never rejects: a failed pragma is logged and the client stays usable, same as
+ * before.
+ */
+export async function whenPragmasApplied(client: PrismaClient): Promise<void> {
+  await pragmasApplied.get(client as SqlitePrismaClient);
 }
 
 function createSqliteClient(url: string): SqlitePrismaClient {

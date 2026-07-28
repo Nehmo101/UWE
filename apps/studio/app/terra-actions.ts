@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createPrismaClient } from "@uwe/database/server";
+import { prisma } from "@uwe/database/server";
 import { createTerraService } from "@uwe/database/terra";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
@@ -28,6 +28,25 @@ import { requireStudioWorldEdit } from "@/src/lib/authz";
  * postMessage-Brücke (`terra/src/editor/bruecke.js`). Der Frame besitzt keine
  * Route und keine Sitzung; er kann nur Nachrichten schicken, die die
  * Elternkomponente entgegennimmt und hier gegen die vollen Guards prüfen lässt.
+ *
+ * DATENBANK: der geteilte Client (`prisma`), nicht `createPrismaClient()`.
+ * Der Unterschied ist kein Stilfrage — diese Datei hat ihn zweimal falsch
+ * gehabt:
+ *
+ *   1. Jede Action baute ihre EIGENE SQLite-Verbindung auf. Die Fabrik warnt
+ *      davor an ihrer eigenen Definition („avoids lock storms from per-request
+ *      clients"); SQLite serialisiert Schreiber, und vier Verbindungen je
+ *      Bedienschritt konkurrieren um dieselbe Sperre.
+ *   2. Keine davon wurde je getrennt. Jeder Speichervorgang, jedes Umbenennen,
+ *      jedes Löschen liess eine offene Verbindung zurück — ein Leck, das mit
+ *      der Sitzungsdauer waechst. Gefunden im e2e-Lauf: zwei „Neue Karte"
+ *      kurz hintereinander blockierten sich ueber zwanzig Sekunden.
+ *
+ * Der geteilte Client behebt beides auf einmal: eine Verbindung je Prozess,
+ * nichts zu trennen, nichts zu lecken. Und weil er beim Modulstart entsteht,
+ * sind seine Pragmas (WAL, busy_timeout) laengst gesetzt, wenn die erste
+ * Anfrage eintrifft — bei einem frisch erzeugten Client sind sie das
+ * nachweislich NICHT (siehe whenPragmasApplied in packages/database).
  */
 
 export interface TerraSpeichernErgebnis {
@@ -81,7 +100,7 @@ export async function speichereTerraKarteAction(formData: FormData): Promise<Ter
     }
 
     const titelRoh = formData.get("titel");
-    const terra = createTerraService(createPrismaClient());
+    const terra = createTerraService(prisma);
     const ergebnis = await terra.speichere(worldSlug, karteId, {
       daten,
       erwarteteVersion,
@@ -110,7 +129,7 @@ export async function erstelleTerraKarteAction(formData: FormData): Promise<Terr
   await requireStudioWorldEdit(worldSlug);
 
   try {
-    const terra = createTerraService(createPrismaClient());
+    const terra = createTerraService(prisma);
     const karte = await terra.erstelle(worldSlug, { titel: String(formData.get("titel") ?? "") });
     revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true, karteId: karte.id };
@@ -127,7 +146,7 @@ export async function benenneTerraKarteAction(formData: FormData): Promise<Terra
 
   const karteId = String(formData.get("karteId"));
   try {
-    const terra = createTerraService(createPrismaClient());
+    const terra = createTerraService(prisma);
     const ok = await terra.benenne(worldSlug, karteId, String(formData.get("titel") ?? ""));
     if (!ok) throw new Error("Karte gehört nicht zu dieser Welt");
     revalidatePath(`/worlds/${worldSlug}/karten`);
@@ -145,7 +164,7 @@ export async function loescheTerraKarteAction(formData: FormData): Promise<Terra
 
   const karteId = String(formData.get("karteId"));
   try {
-    const terra = createTerraService(createPrismaClient());
+    const terra = createTerraService(prisma);
     const ok = await terra.loesche(worldSlug, karteId);
     if (!ok) throw new Error("Karte gehört nicht zu dieser Welt");
     revalidatePath(`/worlds/${worldSlug}/karten`);
