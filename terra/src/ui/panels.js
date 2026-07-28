@@ -7,6 +7,7 @@ import { instanceTotal, schattenAnzahl } from '../core/pools.js';
 import { ed, TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
   EROSION_PARAMS, erosionRegler,
   schemaKey, defaultsFor, toolParams, setTool,
+  genZeichenMarker,
   auswahlElemente, stempelErzeugen, aktuellerStempel }
   from '../editor/tools.js';
 // I3: der Erosionstreiber. Zyklusfrei nur in DIESER Richtung — erosion-lauf.js
@@ -481,6 +482,13 @@ function baueZielZeile(obj, applyFn) {
 function pfadBeschreibung(e) {
   var art = { strasse: "Straße", mauer: "Mauer", fluss: "Fluss", hecke: "Hecke",
     bruch: "Bruchkante", biompinsel: "Biompinsel" }[e.variant] || e.variant;
+  // Runde H (Bedienung): Flaechen stehen mit ihrem RAND in der Liste — der
+  // Zusatz sagt, woran die Zeile entlanglaufen wird.
+  if (e.kind === "flaeche") {
+    art = ({ wald: "Wald", feld: "Feld", viertel: "Viertel", wiese: "Wiese",
+      burg: "Burg", werft: "Werft", kloster: "Kloster", biom: "Biomfläche",
+      see: "See" }[e.variant] || e.variant) + "-Rand";
+  }
   var name = e.params && e.params.name;
   return (name ? name + " (" + art + ")" : art + " #" + e.id)
     + " · " + e.points.length + " Punkte";
@@ -489,7 +497,10 @@ function pfadBeschreibung(e) {
 function baueAnPfadZeile(target, applyFn) {
   var row = el("div", "row");
   var lab = el("label");
-  lab.appendChild(el("span", null, "Entlang eines Pfades"));
+  // Runde H (Bedienung): auch der RAND einer Flaeche traegt jetzt eine Zeile —
+  // der alte Wortlaut bleibt Praefix, damit bestehende Pruefungen (Browsertest
+  // runde-h-bedienung) die Zeile weiter finden.
+  lab.appendChild(el("span", null, "Entlang eines Pfades / Flächenrands"));
   row.appendChild(lab);
 
   var sel = el("select");
@@ -500,7 +511,11 @@ function baueAnPfadZeile(target, applyFn) {
     // Der Biompinsel steht bewusst mit in der Liste: er ist ein Pfad wie jeder
     // andere, und „Moorgürtel" entlang des gepinselten Streifens ist genau
     // die Beschriftung, die man dort haben will.
-    return e.kind === "pfad" && e.points && e.points.length >= 2;
+    // Runde H (Bedienung): Flaechen ebenso — ihr Rand ist die Kurve (seeUmriss
+    // + ringFenster, siehe editor/selection.js kurveAnhaengen). „Seename am
+    // Ufer entlang" ist der Fall, fuer den das gebaut wurde.
+    return (e.kind === "pfad" && e.points && e.points.length >= 2)
+        || (e.kind === "flaeche" && e.points && e.points.length >= 3);
   });
   for (var i = 0; i < kandidaten.length; i++) {
     var op = el("option", null, pfadBeschreibung(kandidaten[i]));
@@ -536,12 +551,14 @@ function baueAnPfadZeile(target, applyFn) {
   panelEl.appendChild(row);
   panelEl.appendChild(el("div", "psub",
     kandidaten.length
-      ? "Die Beschriftung läuft dann dem gewählten Pfad entlang statt gerade zu "
-        + "stehen. Ihr Griff bestimmt, WO auf dem Pfad sie sitzt — ziehen "
-        + "verschiebt sie den Fluss hinauf oder hinab. Trägt der Pfad den Text "
-        + "nicht (zu kurz, zu enge Biegung, Kopfstand), steht sie gerade."
-      : "Noch kein Pfad auf der Karte. Straße, Fluss, Mauer, Hecke, Bruchkante "
-        + "oder Biompinsel zeichnen — danach kann eine Beschriftung ihm folgen."));
+      ? "Die Beschriftung läuft dann dem gewählten Pfad oder Flächenrand "
+        + "entlang statt gerade zu stehen. Ihr Griff bestimmt, WO sie sitzt — "
+        + "ziehen verschiebt sie den Fluss hinauf oder das Ufer entlang. Trägt "
+        + "die Kurve den Text nicht (zu kurz, zu enge Biegung, Kopfstand), "
+        + "steht sie gerade."
+      : "Noch kein Pfad und keine Fläche auf der Karte. Straße, Fluss, See, "
+        + "Wald oder Biompinsel zeichnen — danach kann eine Beschriftung der "
+        + "Kurve folgen."));
 }
 
 /* ==========================================================================
@@ -935,6 +952,12 @@ function buildPanel() {
   var applyFn = function (mode) {
     if (mode === true) { if (target) pushUndo(); return; }
     if (!target) return;
+    /* Runde H (Bedienung): Kartenzeichen-Marker gehen NICHT ueber
+       regenElement/commit — genElement (core/dirty.js) kennt ihren Zweig noch
+       nicht und wuerde die Instanz nur leeren (die fehlende Zeile steht in
+       editor/tools.js beim Erzeuger). genZeichenMarker ist Vorschau und
+       Commit in einem: leicht genug fuer jeden Reglerpixel. */
+    if (kind === "marker" && variant === "zeichen") { genZeichenMarker(target); return; }
     if (mode === "vorschau") { regenElement(target); return; }
     commit(target, isHeavy(target));
   };

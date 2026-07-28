@@ -255,7 +255,7 @@ var FRUCHT = {
 var FRUCHT_ART = { wein: "sig_weinberg" };
 function genFeld(el) {
   var p = el.params, pts = el.points;
-  // I1: siehe genWald.  waehlt das Zeichen — Weinberg und Obstgarten
+  // I1: siehe genWald. `frucht` waehlt das Zeichen — Weinberg und Obstgarten
   // haben eigene, Weizen und Kohl teilen sich die Ackersignatur.
   if (alsZeichen(S.einheitMeter)) flaechenZeichen(el, "acker", FRUCHT_ART[p.frucht]);
   if (!alsKoerper(S.einheitMeter)) return;

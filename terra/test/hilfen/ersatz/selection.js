@@ -36,3 +36,5 @@ export function markerTreffer() { return -1; }
 export function waehleMarker(i) { aufrufe.waehleMarker++; markerAuswahl = i; }
 export function getMarkerAuswahl() { return markerAuswahl; }
 export function rebuildAuswahlRahmen() {}
+// I4/Runde H: der Beschriftungsabgleich ist Szenenarbeit — im Test ein Zaehler.
+export function beschriftungenAktualisieren() { aufrufe.beschriftungenAktualisieren = (aufrufe.beschriftungenAktualisieren || 0) + 1; }

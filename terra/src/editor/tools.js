@@ -1,6 +1,17 @@
 // Werkzeuge: Definitionen, Parameter-Schemata, aktiver Zustand, Zeichnen-Abschluss.
-import { S, BIOME, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben } from '../core/store.js';
+import { S, WATER, BIOME, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben,
+  clearElement } from '../core/store.js';
+import { clamp, DEG } from '../core/rng.js';
 import { commit, isHeavy } from '../core/dirty.js';
+import { emit, markDirty } from '../core/pools.js';
+import { heightAt } from '../world/terrain.js';
+/* Runde H (Bedienung): das Werkzeug fuer handgesetzte Kartenzeichen. Die
+   Uebersetzung „Zeichenname -> Platzierung/Band" liegt in generators/zeichen.js
+   und render/signaturen.js — hier wird nur gerufen, nie gerechnet. Beide
+   Importe sind zyklusfrei: zeichen.js und signaturen.js ziehen core/, world/
+   und render/, nie editor/. */
+import { kartenPlatz, bandZeichen } from '../generators/zeichen.js';
+import { zeichenDaten } from '../render/signaturen.js';
 import { pushUndo } from './history.js';
 // J3 — die Auswahlliste der Sprachfamilien kommt aus dem Generator, damit sie
 // an genau EINER Stelle gepflegt wird. namen.js importiert nur core/ und
@@ -117,12 +128,16 @@ var VARIANTS = {
   ranke: [["ranke", "Ranke"]],
   terrain: [["heben", "Anheben"], ["senken", "Absenken"], ["glaetten", "Glätten"], ["ebnen", "Einebnen"]],
   // D1: die vier Markerarten (Farbe der Stecknadel, siehe MARKER_ARTEN in store.js)
-  // I4: „Beschriftung" ist die einzige Markervariante, die ein ELEMENT anlegt
+  // I4: „Beschriftung" ist eine Markervariante, die ein ELEMENT anlegt
   // statt einer Nadel in der flachen S.marker-Liste. Der Unterschied ist
   // gewollt und steht im Namen: eine Nadel ist eine Notiz fuer den Bauenden,
   // eine Beschriftung gehoert ins Bild und in den PNG-Export.
+  // Runde H (Bedienung): „Kartenzeichen" ist die zweite solche Variante — sie
+  // macht die im Katalog als „Q = H" (von Hand gesetzt) gefuehrten Signaturen
+  // erreichbar (sig_hauptstadt, sig_arborknoten, sig_grenze, sig_seeweg).
+  // Der Katalog selbst nennt das Marker-Werkzeug als den Weg dorthin.
   marker: [["ort", "Ort"], ["gefahr", "Gefahr"], ["notiz", "Notiz"], ["arbor", "Arbor"],
-    ["beschriftung", "Beschriftung"]],
+    ["beschriftung", "Beschriftung"], ["zeichen", "Kartenzeichen"]],
   // A3: DYNAMISCH — stempelVariantenNeu() haelt die Liste an der Bibliothek.
   // Die Werte sind die Stempelnamen; panels.js baut daraus ohne Zusatzcode
   // die Variantenknoepfe, weil es diese Tabelle ohnehin schon rendert.
@@ -189,8 +204,11 @@ var PARAMS = {
     { k: "drehung", l: "Reihenrichtung", min: 0, max: 180, st: 1, d: 30 },
     { k: "reihe", l: "Reihenabstand", min: 1.6, max: 9, st: 0.1, d: 3.2 },
     { k: "hoehe", l: "Wuchshöhe", min: 0.4, max: 2, st: 0.05, d: 1 },
+    // "wein" kam in Runde J dazu: die Weinbergsignatur (sig_weinberg) haengt
+    // an der Fruchtart, und ohne den Eintrag war sie nur ueber geladene
+    // Karten mit frucht:"wein" erreichbar — nie ueber die Bedienung.
     { k: "frucht", l: "Frucht", o: [["weizen", "Weizen"], ["kohl", "Kohl"], ["lavendel", "Lavendel"],
-        ["brache", "Brache"]], d: "weizen" }
+        ["wein", "Wein"], ["brache", "Brache"]], d: "weizen" }
   ],
   "flaeche:viertel": [
     { k: "netz", l: "Wegenetz", o: [["raster", "Raster"], ["gebogen", "Gebogen"], ["zellen", "Zellen"],
@@ -334,6 +352,26 @@ var PARAMS = {
       ["gewaesser", "Gewässer"], ["gebirge", "Gebirge"], ["gefahr", "Gefahr"],
       ["arbor", "Arbor"]] },
     { k: "groesse", l: "Größe", min: 0.4, max: 3, st: 0.05, d: 1 }
+  ],
+  /* Runde H (Bedienung) — handgesetzte Kartenzeichen. Angeboten werden GENAU
+     die vier Zeichen, die der Signaturenkatalog unter Q = H fuehrt: sie haben
+     kein Element und keine Ableitung, aus der sie sonst entstuenden — das
+     Werkzeug hier IST ihre einzige Quelle. Alle uebrigen Zeichen entstehen
+     aus Elementen oder Ableitungen und wuerden hier nur Dubletten stiften.
+       Punktzeichen: Hauptstadt, Arborknoten — ein Quad an der Klickstelle.
+       Linienzeichen (streifen im Katalog): Grenze, Seeweg — ein kurzes,
+       gerades Bandstueck durch die Klickstelle; `dreh` richtet es aus,
+       `laenge` bemisst es. Mehrere hintereinander ergeben den Zug — dieselbe
+       Bedienung wie beim Setzen einzelner Nadeln.
+     `dreh` in Grad (0 = Ost, gegen den Uhrzeiger in der Aufsicht), die
+     Umrechnung nach Bogenmass macht genZeichenMarker. */
+  "marker:zeichen": [
+    { k: "art", l: "Zeichen", d: "sig_hauptstadt", o: [
+      ["sig_hauptstadt", "Hauptstadt"], ["sig_arborknoten", "Arborknoten"],
+      ["sig_grenze", "Grenze (Linie)"], ["sig_seeweg", "Seeweg (Linie)"]] },
+    { k: "groesse", l: "Größe", min: 0.4, max: 3, st: 0.05, d: 1 },
+    { k: "dreh", l: "Drehung (Grad)", min: 0, max: 360, st: 5, d: 0 },
+    { k: "laenge", l: "Länge (nur Linien)", min: 10, max: 200, st: 5, d: 60 }
   ],
   "ranke:ranke": [
     { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },
@@ -539,6 +577,96 @@ function pinselRadius() {
 function snapPt(p) {
   if (!S.snap) return { x: p.x, z: p.z };
   return { x: Math.round(p.x / 2) * 2, z: Math.round(p.z / 2) * 2 };
+}
+
+/* ==========================================================================
+   Runde H (Bedienung) — handgesetzte Kartenzeichen (marker:zeichen)
+
+   Ein Element, dessen EINZIGE Wirkung eine Signatur-Instanz ist: kein Mesh,
+   kein Terraineingriff, kein Korridor. Es laeuft ueber dieselbe Kette wie
+   jedes Generator-Zeichen — kartenPlatz (Band, Groesse, Tint, Schwebe) und
+   emit (Maszstabsband, Instanzdeckel). Damit gilt die Uebergabe von selbst:
+   unterhalb von UEBERGABE.koerper/BLENDE verwirft emit die Instanz bzw.
+   liefert kartenPlatz null, und das handgesetzte Zeichen verschwindet wie
+   jedes andere, wenn die Karte in den Ortsmaszstab wechselt.
+
+   WARUM DIE FUNKTION HIER LIEGT und nicht in generators/zeichen.js, wo sie
+   sachlich hingehoert: zeichen.js wird in dieser Runde parallel bearbeitet
+   und ist fuer diesen Zweig tabu. core/dirty.js importiert tools.js bereits
+   (defaultsFor) — der Umzug nach zeichen.js ist spaeter ein Dreizeiler.
+
+   WAS NOCH FEHLT (die eine Zeile in core/dirty.js, ebenfalls tabu — exakter
+   Wortlaut im Rundenbericht): genElement laesst marker-Elemente heute durch
+   alle else-if fallen; nach clearElement bleibt das Zeichen dadurch leer.
+   Bis die Zeile
+       else if (el.kind === "marker" && el.variant === "zeichen") genZeichenMarker(el);
+   dort steht (Import: defaultsFor um genZeichenMarker ergaenzen), heilt
+   zeichenMarkerNachziehen den Zustand: es laeuft im selben Fuenf-je-Sekunde-
+   Takt wie der Beschriftungsabgleich (editor/selection.js) und erkennt am
+   frischen `el.inst`-Objekt, dass ein clearElement die Instanzen genommen
+   hat. Der WeakSet-Schluessel ist BEWUSST das inst-Objekt und nicht das
+   Element: clearElement ersetzt inst durch ein neues Objekt, und genau dieser
+   Tausch IST das Signal „hier wurde geleert".
+   ========================================================================== */
+var zeichenErzeugt = new WeakSet();
+
+/**
+ * Erzeugt die Signatur-Instanz eines marker:zeichen-Elements (und raeumt
+ * vorher auf). Liefert die Zahl gesetzter Zeichen — 0 heisst „Maszstab
+ * ausserhalb des Bandes" oder „unbekannter Zeichenname", beides regulaer.
+ */
+function genZeichenMarker(el) {
+  var vorher = el.inst ? Object.keys(el.inst) : [];
+  clearElement(el);
+  zeichenErzeugt.add(el.inst);            // auch ein leeres Ergebnis ist eines
+  var p = el.points && el.points[0];
+  var pr = el.params || {};
+  /* Erlaubnisliste ueber den Katalog: `art` kommt aus einer (womoeglich
+     fremden) Datei und wird nur als Schluessel akzeptiert, den der Katalog
+     kennt. zeichenDaten prueft per hasOwnProperty — ein "__proto__" oder ein
+     Tippfehler faellt hier durch, lange bevor er einen Poolnamen wird. */
+  var Z = p ? zeichenDaten(pr.art) : null;
+  var n = 0;
+  if (Z) {
+    var g = Number.isFinite(pr.groesse) ? clamp(pr.groesse, 0.4, 3) : 1;
+    var dreh = (Number.isFinite(pr.dreh) ? pr.dreh : 0) * DEG;
+    if (Z.streifen) {
+      // Linienzeichen: ein gerades Bandstueck durch den Klickpunkt.
+      var halb = (Number.isFinite(pr.laenge) ? clamp(pr.laenge, 10, 200) : 60) * 0.5;
+      var dx = Math.cos(dreh), dz = -Math.sin(dreh);   // 0 Grad = Ost, Aufsicht
+      var linie = [{ x: p.x - dx * halb, z: p.z - dz * halb },
+                   { x: p.x + dx * halb, z: p.z + dz * halb }];
+      if (bandZeichen(el, pr.art, linie, { skala: g })) n = 1;
+    } else {
+      var pl = kartenPlatz(pr.art, { skala: g, dreh: dreh });
+      if (pl) {
+        var y = Math.max(heightAt(p.x, p.z), WATER) + pl.schwebe;
+        emit(el, pr.art, p.x, y, p.z, pl.yaw, pl.sx, pl.sy, pl.sz, pl.tint);
+        n = 1;
+      }
+    }
+  }
+  // Wie regenElement in core/dirty.js: alte UND neue Pools packen lassen —
+  // ein Wechsel der `art` muss auch den verlassenen Pool aufraeumen.
+  markDirty(vorher.concat(el.inst ? Object.keys(el.inst) : []));
+  return n;
+}
+
+/**
+ * Selbstheilung: erzeugt jedes marker:zeichen-Element neu, dessen Instanzen
+ * ein clearElement (schwerer Commit, Undo, Laden) genommen hat. Aufgerufen im
+ * Beschriftungs-Takt aus editor/selection.js. Liefert die Zahl der Neubauten.
+ */
+function zeichenMarkerNachziehen() {
+  var n = 0;
+  for (var i = 0; i < S.elements.length; i++) {
+    var e = S.elements[i];
+    if (e.kind !== "marker" || e.variant !== "zeichen") continue;
+    if (e.inst && zeichenErzeugt.has(e.inst)) continue;
+    genZeichenMarker(e);
+    n++;
+  }
+  return n;
 }
 
 /* I1 — der Ausschnitt erzeugt kein Element, sondern eine Kindkarte. Das
@@ -800,5 +928,6 @@ export { TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie
   EROSION_PARAMS, erosionRegler,
   schemaKey, defaultsFor, toolParams, curParams,
   copyParams, snapPt, pinselRadius, finishDraw, cancelDraw, setTool,
+  genZeichenMarker, zeichenMarkerNachziehen,
   auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel,
   stempelUebernehmen, stempelBibliothekLaden, stempelBibliothekSichern };

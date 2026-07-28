@@ -598,9 +598,16 @@ var SOG_NASS = 2.2;
    Zug laeuft. Beides erklaert sich unten an der Stelle, an der es angewendet
    wird. */
 /* Wieviel ein Zusammenfluss gegenueber blosser Lauflaenge wert ist. Begruendung
-   und Messung stehen unten bei der Auswahl. 2.2 heisst: ein Nebenfluss darf
-   halb so lang sein wie ein eigenstaendiger Lauf und wird trotzdem gezogen. */
-var ZUFLUSS_BONUS = 2.2;
+   und Messung stehen unten bei der Auswahl. 3.0 heisst: ein Nebenfluss darf
+   ein Drittel so lang sein wie ein eigenstaendiger Lauf und wird trotzdem
+   gezogen. Bis zu dieser Runde stand hier 2.2 — die Anhebung ist die zweite
+   Haelfte der Stellschraube an minZufluss (siehe dort): erst seit getrimmte
+   Nebenflusskandidaten die Schwelle ueberhaupt ueberleben, hat ein hoeherer
+   Bonus etwas zu gewinnen. 2.2 verlor gemessen weiter (ein 13-Zellen-Zufluss
+   auf 512: 13 x 2.2 = 28.6 gegen eigenstaendige Taeler von 31 bis 35 Zellen),
+   3.5 brachte gegenueber 3.0 nichts Nennenswertes mehr (Summe ueber die
+   Messseeds 18 statt 17) — der Kandidatenvorrat ist dann erschoepft. */
+var ZUFLUSS_BONUS = 3.0;
 
 var MAEANDER = 1.1;
 var GLATT_PASSE = 3;
@@ -882,6 +889,47 @@ function erzeugeFluesse(W) {
      die Grenze, die auch das alte Verfahren zog), auf einer 1024er 104 —
      kuerzer ist auf der jeweiligen Karte kein Fluss, sondern ein Strich. */
   var minZellen = Math.max(10, Math.round(nx * 0.10));
+  /* Die Stellschraube dieser Runde (Bedienung, Teil 3): ein Lauf, der in einem
+     schon gelegten MUENDET, darf halb so kurz sein wie ein eigenstaendiger.
+
+     Der Befund der Flussrunde stand schon im Kommentar der Auswahl unten:
+     trotz ZUFLUSS_BONUS blieben es 0 bis 3 Muendungen je Karte, ein hoeherer
+     Bonus aenderte NICHTS (bei 3.0 gemessen: dieselben Zahlen) — "was dann
+     noch fehlt, sind Nebenfluesse UNTER der Mindestlaenge". Der Bonus konnte
+     also gar nicht mehr greifen: der Nebenfluss wird am Zusammenfluss
+     abgeschnitten, faellt damit unter minZellen und wurde eine Zeile VOR der
+     Bonusrechnung endgueltig verworfen. Nicht der Bonus war zu klein, die
+     Schwelle stand davor.
+
+     Warum die halbe Mindestlaenge fuer Muendende vertretbar ist: die
+     Mindestlaenge schuetzt vor dem "Strich" — einer kurzen, isolierten Linie,
+     die als Fehler liest. Ein kurzer Lauf, der sichtbar in einen groesseren
+     muendet, ist kein Strich, sondern ein Nebenfluss: er ist an beiden Enden
+     verankert (Quelle im Gelaende, Muendung im Netz). Unter etwa 6 Zellen
+     (24 Welteinheiten) traegt aber auch ein Nebenfluss kein Element mehr —
+     nach Glaettung und Vereinfachung bleibt davon kaum ein Bogen uebrig.
+
+     Die Schwelle allein reichte gemessen NICHT (nur 512/Seed 7 verbesserte
+     sich): die freigeschalteten Kandidaten verloren danach den Gewichtsvergleich
+     gegen laengere eigenstaendige Taeler. Deshalb gehoert die Anhebung von
+     ZUFLUSS_BONUS auf 3.0 (siehe oben) zu DERSELBEN Aenderung — jede Haelfte
+     ist ohne die andere wirkungslos, und genau das war der Befund der
+     Flussrunde: Bonus 3.0 wurde damals schon einmal gemessen und brachte
+     nichts, weil die Schwelle davor stand.
+
+     Messung (2 Groessen x 5 Seeds 4711/1337/2024/7/99, Zusammenfluesse je
+     Karte, abfluss: null, jeweils vorher -> nachher beide Haelften):
+       256:  0/0/1/0/1  ->  0/0/1/0/2   (Seed 7: fast nur Wasser, 0 Laeufe)
+       512:  4/3/2/1/3  ->  4/3/3/3/4
+     Auf 512 muendet damit rund die Haelfte der sieben Laeufe je Karte, und
+     keine Karte liegt mehr unter 3. Auf 256 ist wenig zu holen, und das ist
+     ehrlich gemessen GEOGRAPHIE, nicht Auswahl: die kleinen Karten entwaessern
+     radial in getrennten Becken zum Meer (die Diagnose je Runde zeigte dort
+     KEINEN einzigen muendenden Kandidaten — auch nicht bei halbierter
+     Kopfschwelle SCHWELLE_ANTEIL, das wurde ausprobiert und verworfen).
+     Die Zahl der Laeufe je Karte (wunsch) bleibt gleich; es aendert sich nur,
+     WELCHE gewaehlt werden — mehr davon muenden. */
+  var minZufluss = Math.max(6, minZellen >> 1);
   var belegt = { lauf: new Int32Array(n).fill(-1), idx: new Int32Array(n) };
 
   /* AUSWAHL UND LEGEN IN EINEM: je Runde wird der Kandidat gelegt, dessen
@@ -903,8 +951,13 @@ function erzeugeFluesse(W) {
      dass eine Mindestabstandsregel noetig waere: der Abstand entsteht aus der
      Sache, nicht aus einer Zahl.
 
-     Ein einmal zu kurz geratener Kandidat ist ENDGUELTIG erledigt — `belegt`
-     waechst nur, sein getrimmter Lauf kann also nie wieder laenger werden. */
+     Ein Kandidat unter der ABSOLUTEN Untergrenze (minZufluss) ist ENDGUELTIG
+     erledigt — `belegt` waechst nur, sein getrimmter Lauf kann also nie wieder
+     laenger werden. Zwischen minZufluss und minZellen dagegen nur UEBERSPRUNGEN,
+     nicht verworfen: sein Ende kann in einer spaeteren Runde noch zu "zufluss"
+     werden (ein neu gelegter Lauf kreuzt seinen Weg), und dann gilt fuer ihn
+     die niedrigere Schwelle. Das endgueltige Verwerfen an dieser Stelle war
+     der Grund, warum der ZUFLUSS_BONUS ins Leere lief (siehe minZufluss oben). */
   var tot = new Uint8Array(roh.length), bestW = 0;
   while (laeufe.length < wunsch) {
     var bestI = -1, bestL = null;
@@ -912,7 +965,8 @@ function erzeugeFluesse(W) {
     for (var r = 0; r < roh.length; r++) {
       if (tot[r]) continue;
       var K = laufeNetz(A, N, see, roh[r].kopf, belegt);
-      if (K.zellen.length < minZellen) { tot[r] = 1; continue; }
+      if (K.zellen.length < minZufluss) { tot[r] = 1; continue; }
+      if (K.zellen.length < minZellen && K.ende !== "zufluss") continue;
       /* Ein Lauf, der in einem schon gelegten MUENDET, zaehlt mehr als seine
          Laenge. Gemessen ohne diesen Bonus: ueber neun Karten (3 Groessen x 3
          Seeds) entstand GENAU EIN Zusammenfluss — der laengste noch freie Zug
@@ -920,11 +974,9 @@ function erzeugeFluesse(W) {
          am Zusammenfluss abgeschnitten wird und damit kuerzer ist. Das Netz war
          also da, man sah es nur nie. Die Muendung ist aber das, was ein
          Flusssystem als System lesbar macht; sie ist mehr wert als dieselbe
-         Strichlaenge irgendwo allein im Gelaende. Mit dem Bonus sind es auf
-         denselben neun Karten 0 bis 3 Muendungen je Karte. Hoeher als 2.2 zu
-         gehen bringt nichts mehr (bei 3.0 gemessen: dieselben Zahlen) — was
-         dann noch fehlt, sind Nebenfluesse UNTER der Mindestlaenge, und die
-         waeren als Element nicht mehr brauchbar. */
+         Strichlaenge irgendwo allein im Gelaende. Der Wert des Bonus und die
+         zugehoerige Schwelle minZufluss sind EINE Stellschraube mit zwei
+         Haelften — Messung und Begruendung stehen oben bei minZufluss. */
       var wert = K.zellen.length * (K.ende === "zufluss" ? ZUFLUSS_BONUS : 1);
       if (wert > bestW) { bestW = wert; bestL = K; bestI = r; }
     }
@@ -1587,6 +1639,15 @@ function erzeugeWelt(seed, opt) {
     // geregnet? Ohne diese Zeile ist von aussen nicht zu unterscheiden, ob der
     // Rueckfall gegriffen hat — und genau das will man wissen.
     abflussGenutzt: !!W.abflussGenutzt,
+    // Runde H (Bedienung, Teil 3): wie viele der gezeichneten Laeufe in einem
+    // ANDEREN Lauf muenden. Das ist die Kennzahl, an der die Auswahl unten
+    // gemessen wird (siehe ZUFLUSS_BONUS / minZufluss) — ohne sie liesse
+    // sich "das Netz hat Y-Muendungen" nur am Bild ablesen.
+    zusammenfluesse: (function (l) {
+      var m = 0;
+      for (var zi = 0; zi < l.length; zi++) if (l[zi].ende === "zufluss") m++;
+      return m;
+    })(laeufe),
     gipfel: A.gipfel.length, senken: A.senken.length, paesse: A.paesse.length,
     landAnteil: A.landAnteil,
     // J3: wie viele Elemente einen Namen tragen und wie die Region heisst.

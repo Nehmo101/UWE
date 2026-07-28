@@ -25,7 +25,7 @@ import { genRanke } from '../generators/vines.js';
 // emittiert ausschliesslich die Formen, die objects.js nicht kennt, es kann
 // also nichts doppelt entstehen.
 import { reliefFormZeichen } from '../generators/zeichen.js';
-import { defaultsFor } from '../editor/tools.js';
+import { defaultsFor, genZeichenMarker } from '../editor/tools.js';
 
 function genElement(el) {
   clearElement(el);
@@ -62,6 +62,14 @@ function genElement(el) {
     }
   }
   else if (el.kind === "ranke") genRanke(el);
+  /* Runde J — handgesetzte Kartenzeichen. Marker-Elemente fielen bisher durch
+     alle Zweige (dokumentiertes abwaertskompatibles Verhalten aus H6); die
+     Variante "zeichen" ist die erste, die eine Instanz erzeugt. Sie steht am
+     ENDE der Kette, aus demselben Grund wie pfad:bruch: eine aeltere Fassung
+     erzeugt schlicht nichts, statt abzustuerzen. Bis zu dieser Zeile heilte
+     zeichenMarkerNachziehen den Zustand ueber den 5-Hz-Abgleich — jetzt
+     entsteht die Instanz wie bei jedem Element im Commit. */
+  else if (el.kind === "marker" && el.variant === "zeichen") genZeichenMarker(el);
 }
 
 /** Erzeugt ein Element neu und merkt sich nur die betroffenen Pools. */

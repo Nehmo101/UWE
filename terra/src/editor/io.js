@@ -1086,10 +1086,13 @@ function weltVorgabeAnwenden(roh, opt) {
   var liste;
   try {
     liste = erzeugeWelt(S.worldSeed, weltOptionen(v));
-  } catch (_err) {
+  } catch (err) {
     /* Das Gelaende steht schon neu, die Elemente noch nicht — ein Undo stellt
        beides her (pushUndo(true) oben hat die Hoehen gesichert). Mehr ist
-       ehrlich nicht zu retten, und ein halb gebauter Zustand waere schlimmer. */
+       ehrlich nicht zu retten, und ein halb gebauter Zustand waere schlimmer.
+       (Vorher stand hier `catch (_err)` neben einem Zugriff auf `err` — der
+       Fehlerpfad selbst warf einen ReferenceError. Beim Einbau von Runde H
+       aufgefallen und behoben.) */
     console.error("erzeugeWelt", err);
     rebuildAll();
     return { ok: false, hinweise: g.hinweise, meldung: "Weltgenerator fehlgeschlagen" };

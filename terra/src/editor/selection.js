@@ -5,12 +5,21 @@ import { S, VINE_R } from '../core/store.js';
 import { heightAt } from '../world/terrain.js';
 import { pathSamples } from '../generators/paths.js';
 import { inPoly } from '../generators/areas.js';
+/* Runde H (Bedienung): der Rand einer Flaeche als Beschriftungskurve. seeUmriss
+   liest nur el.points und liefert die geschlossene Catmull-Rom-Kurve DURCH die
+   Griffe — exakt die Kurve, die ein See als Ufer zeichnet. Dieselbe Frage
+   („Griffe oder geglaettete Kurve?"), dieselbe Antwort, eine Funktion. Der
+   Import ist zyklusfrei: see.js zieht core/, world/ und generators/, nie
+   editor/. */
+import { seeUmriss } from '../generators/see.js';
 import { rankeAchse, rankeStuetzen } from '../generators/vines.js';
 import { cam, camera, raycaster, _ndc, rayFrom } from './camera.js';
-import { ed } from './tools.js';
+import { ed, zeichenMarkerNachziehen } from './tools.js';
 import { buildPanel } from '../ui/panels.js';
 // I4: die eine Beschriftungsschicht der laufenden Karte.
-import { holeBeschriftungsschicht } from '../ui/beschriftung.js';
+// Runde H (Bedienung): ringFenster schneidet aus dem geschlossenen Ring das
+// offene Stueck aus, auf dem die Zeile laeuft (Anfang = Ankerpunkt).
+import { holeBeschriftungsschicht, ringFenster } from '../ui/beschriftung.js';
 
 export function initSelection(scene) {
   scene.add(preview);
@@ -38,6 +47,15 @@ export function initSelection(scene) {
    Bewuchs, ohne dass sie vom Boden abhebt.
    ========================================================================== */
 function beschriftungenAktualisieren() {
+  /* Runde H (Bedienung): handgesetzte Kartenzeichen (marker:zeichen) haengen
+     am selben Selbstheilungs-Takt wie die Beschriftungen — main.js ruft diese
+     Funktion fuenfmal je Sekunde, und genau das ist der Abgleich, „der von
+     sich aus nachzieht und nicht vergessen werden kann" (Kommentar dort).
+     Noetig, weil genElement in core/dirty.js den Durchfall-Zweig fuer
+     marker-Elemente (noch) nicht kennt: jeder schwere Commit, jedes Undo und
+     jedes Laden leert die Instanzen des Zeichens, ohne sie neu zu erzeugen.
+     zeichenMarkerNachziehen erkennt genau das und setzt sie wieder. */
+  zeichenMarkerNachziehen();
   var quellen = [];
   for (var i = 0; i < S.elements.length; i++) {
     var e = S.elements[i];
@@ -75,11 +93,26 @@ function beschriftungenAktualisieren() {
    hergestellt, traegt es seine alte id (store.js hydrate) und die Verknuepfung
    lebt von selbst wieder auf.
 
-   WELCHE ELEMENTE. Bis auf Weiteres nur `pfad` — dort IST die Punktfolge die
-   Kurve, und pathSamples liefert genau die Catmull-Rom-Linie, die auch
-   gezeichnet wird. Offen (im Bericht genannt): der Rand einer Flaeche (ein
-   geschlossener Ring braucht einen Anfang und eine Laufrichtung) und der Grat
-   eines Gebirges (den gibt es als Datenstruktur noch gar nicht).
+   WELCHE ELEMENTE. `pfad` — dort IST die Punktfolge die Kurve, und
+   pathSamples liefert genau die Catmull-Rom-Linie, die auch gezeichnet wird.
+   Seit dieser Runde auch `flaeche`: ihr Rand wird ueber seeUmriss zur
+   geschlossenen Catmull-Rom-Kurve DURCH die Griffe (dieselbe Kurve, die ein
+   See als Ufer zeichnet), und ringFenster (ui/beschriftung.js) schneidet das
+   offene Stueck heraus, dessen Mitte dem Ankerpunkt der Beschriftung am
+   naechsten liegt — der Griff behaelt also auch am Ring seine Bedeutung: man
+   schiebt ihn das Ufer entlang, und die Schrift wandert mit. Die
+   Laufrichtung entscheidet die Sehne des Fensters in glyphenAufKurve, wie
+   bei jedem Pfad.
+
+   BEWUSST OFFEN: der Grat eines Gebirges. `gratPunkte` (generators/zeichen.js)
+   liefert Kammpunkte MIT Richtung, aber als lose Rasterpunkte — eine Kette
+   daraus zu verbinden heisst, unter mehreren Kaemmen, Verzweigungen und
+   Luecken den einen Zug zu raten. Ein halber Grat, der falsch verbindet,
+   waere schlechter als keiner. Dazu kommt das Datenmodell: `anPfad` verweist
+   auf eine `el.id`, und ein Grat IST kein Element — er ist eine Ableitung
+   aus dem Hoehenfeld ohne Identitaet, auf die ein gespeicherter Verweis
+   zeigen koennte. Solange das so ist, traegt eine Gebirgsbeschriftung ihre
+   Kurve am ehesten ueber einen von Hand gezogenen Pfad entlang des Kamms.
    ========================================================================== */
 
 /** Kurze, stabile Signatur der Stuetzpunkte — der Schluessel, an dem die
@@ -105,7 +138,18 @@ function kurveAnhaengen(q, anPfad, anker) {
   if (!Number.isFinite(anPfad) || anPfad <= 0) return;
   if (anPfad === q.id) return;                       // nicht an sich selbst
   var el = elementMitId(anPfad | 0);
-  if (!el || el.kind !== "pfad" || !el.points || el.points.length < 2) return;
+  if (!el || !el.points) return;
+  if (el.kind === "flaeche") {
+    if (el.points.length < 3) return;
+    // Ring durch die Griffe (siehe Kopfkommentar), Fenster um den Anker.
+    var f = ringFenster(seeUmriss(el), anker);
+    if (!f) return;
+    q.pfad = f.pfad;
+    q.pfadStempel = pfadSignatur(el);
+    q.lage = f.lage;
+    return;
+  }
+  if (el.kind !== "pfad" || el.points.length < 2) return;
   var sm = pathSamples(el.points, 2.0);
   if (sm.length < 2) return;
   var pfad = [], i;

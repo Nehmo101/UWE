@@ -1057,6 +1057,108 @@ function kurvenBild(text, klasse, opt) {
 
 
 /* ==========================================================================
+   6c — Der Ringanfang: Beschriftung am Rand einer Flaeche
+
+   Der offene Fall aus dem I4-Bericht: „ein geschlossener Ring braucht einen
+   Anfang und eine Laufrichtung." Beide Antworten stehen hier, und beide sind
+   dieselben wie bei den Pfaden:
+
+   DER ANFANG ist der Ankerpunkt der Beschriftung — genau die Idee, mit der
+   `lage` bei Pfaden funktioniert (editor/selection.js, kurveAnhaengen): der
+   Griff der Beschriftung sagt, WO auf der Kurve die Zeile sitzt. Am Ring
+   wird dazu die dem Anker naechstgelegene Stelle gesucht und ein FENSTER um
+   sie herum ausgeschnitten (Vorgabe: der halbe Umfang, mittig auf dem
+   Anker, lage = 0.5). Man schiebt den Griff am Ufer entlang, und die
+   Schrift wandert mit — dieselbe Bedienung wie am Fluss.
+
+   DIE LAUFRICHTUNG entscheidet die Sehne des Fensters, und zwar nicht hier:
+   `glyphenAufKurve` kehrt den Pfad um, wenn seine Sehne nach links zeigt
+   (Kopfstand, Teil 1). Ein geschlossener Ring hat keine brauchbare Sehne
+   (Anfang = Ende), das FENSTER aber sehr wohl — genau deshalb wird hier ein
+   offenes Stueck ausgeschnitten statt der ganze Ring durchgereicht. Die
+   Leserichtung ergibt sich damit von selbst, egal ob der Anker am Nord-
+   oder Suedufer sitzt.
+
+   Die Funktion ist bewusst REIN (Punkte hinein, Punkte heraus, kein Zugriff
+   auf Elemente oder die Karte): sie ist damit ohne Browser pruefbar, und die
+   Wahl der Ringkurve (die geglaettete Catmull-Rom-Kurve DURCH die Griffe,
+   dieselbe, die ein See als Ufer zeichnet — generators/see.js, seeUmriss)
+   bleibt Sache des Aufrufers in editor/selection.js.
+   ========================================================================== */
+
+/**
+ * Schneidet aus einem geschlossenen Ring das Fenster aus, auf dem eine
+ * Beschriftung laufen soll.
+ *
+ * ring  : [{x,z}] der Reihe nach; ein doppelter Schlusspunkt (= Anfangspunkt)
+ *         wird erkannt und entfernt. Weniger als drei Punkte: kein Ring.
+ * anker : {x,z} — der Punkt der Beschriftung; die naechstgelegene Ringstelle
+ *         wird die Fenstermitte.
+ * opt   : { anteil } Fensterlaenge als Anteil des Umfangs (Vorgabe 0.5 — der
+ *         halbe Umfang; mehr wuerde die Zeile um die Rueckseite der Flaeche
+ *         fuehren, weniger liesse lange Namen unnoetig frueh scheitern).
+ *
+ * Rueckgabe: { pfad:[{x,z}], lage:0.5 } oder null (kein brauchbarer Ring).
+ */
+function ringFenster(ring, anker, opt) {
+  opt = opt || {};
+  var anteil = Number.isFinite(opt.anteil) ? clamp(opt.anteil, 0.1, 0.9) : 0.5;
+  var P = [], i, p, l;
+  for (i = 0; i < (ring ? ring.length : 0); i++) {
+    p = ring[i];
+    if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.z)) continue;
+    l = P[P.length - 1];
+    if (l && Math.abs(l.x - p.x) < 1e-9 && Math.abs(l.z - p.z) < 1e-9) continue;
+    P.push({ x: p.x, z: p.z });
+  }
+  if (P.length > 1) {
+    var a0 = P[0], aN = P[P.length - 1];
+    if (Math.abs(a0.x - aN.x) < 1e-9 && Math.abs(a0.z - aN.z) < 1e-9) P.pop();
+  }
+  var n = P.length;
+  if (n < 3) return null;
+  var U = 0;
+  for (i = 0; i < n; i++) {
+    U += Math.hypot(P[(i + 1) % n].x - P[i].x, P[(i + 1) % n].z - P[i].z);
+  }
+  if (!(U > 1e-6)) return null;
+
+  // Die dem Anker naechstgelegene Ringstuetze. Der Ring kommt dicht gesampelt
+  // herein (See-Ufer: rund alle drei Einheiten) — die Stuetze reicht, ein
+  // Lotfusspunkt auf dem Segment braechte nur Scheingenauigkeit.
+  var best = 0, bd = Infinity;
+  if (anker && Number.isFinite(anker.x) && Number.isFinite(anker.z)) {
+    for (i = 0; i < n; i++) {
+      var dx = P[i].x - anker.x, dz = P[i].z - anker.z, d = dx * dx + dz * dz;
+      if (d < bd) { bd = d; best = i; }
+    }
+  }
+
+  /* Vom Ankerpunkt die halbe Fensterlaenge rueckwaerts, dann die ganze
+     vorwaerts einsammeln. Stuetzengenau, nicht bogenlaengengenau — das
+     Fenster darf um ein Segment laenger sein, die Zeile sitzt ueber `lage`
+     ohnehin mittig. */
+  var halb = U * anteil * 0.5;
+  var startI = best, acc = 0, vor;
+  while (acc < halb) {
+    vor = (startI + n - 1) % n;
+    acc += Math.hypot(P[startI].x - P[vor].x, P[startI].z - P[vor].z);
+    startI = vor;
+    if (startI === best) break;                       // einmal herum: ganzer Ring
+  }
+  var pfad = [P[startI]], idx = startI, s = 0;
+  while (s < halb * 2 && pfad.length <= n) {
+    var nxt = (idx + 1) % n;
+    s += Math.hypot(P[nxt].x - P[idx].x, P[nxt].z - P[idx].z);
+    pfad.push(P[nxt]);
+    idx = nxt;
+  }
+  if (pfad.length < 2) return null;
+  return { pfad: pfad, lage: 0.5 };
+}
+
+
+/* ==========================================================================
    7 — Die Schicht in der Szene
 
    Der einzige Teil, der three braucht. Er hält je Beschriftung ein Sprite,
@@ -1327,7 +1429,7 @@ export {
   // Maße
   zeichenBreite, glyphBreiten, messeBeschriftung, spriteBildhoehe,
   // Kurve
-  glyphenAufKurve, glyphenGerade,
+  glyphenAufKurve, glyphenGerade, ringFenster,
   // Kollision
   loeseKollisionen, bildKaesten, HYSTERESE_PX, TAKT_MS,
   // Zeichnen

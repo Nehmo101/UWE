@@ -28,6 +28,11 @@ export function finishDraw() {}
 export function cancelDraw() {}
 export function setTool() {}
 export function auswahlElemente() { return []; }
+/* Runde H (Bedienung): handgesetzte Kartenzeichen. Im Node-Test entstehen
+   keine Signatur-Instanzen (kein Atlas, keine Szene) — die Logik prueft der
+   Browsertest (test/browser/runde-h-voll.mjs). */
+export function genZeichenMarker() { return 0; }
+export function zeichenMarkerNachziehen() { return 0; }
 export function aktuellerStempel() { return null; }
 export function stempelErzeugen() { return null; }
 export function stempelSetzen() {}

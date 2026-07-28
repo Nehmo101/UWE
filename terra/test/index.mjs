@@ -32,3 +32,6 @@ import './15-welt-vorgabe.test.mjs';
 import './16-seen.test.mjs';
 import './17-kartenbild.test.mjs';
 import './18-bedienung.test.mjs';
+import './19-wasser-nebel.test.mjs';
+import './20-kartenbild-voll.test.mjs';
+import './21-bedienung-voll.test.mjs';

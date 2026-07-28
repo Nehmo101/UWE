@@ -7,7 +7,8 @@ import { applyBrush, baseHeightAt, setFlattenTarget, heightAt } from '../world/t
 import { cam, groundPoint, rayFrom, rayPlane, autoPitch,
   setAufnahme, istAufnahme, aufnahmeAufMotiv } from './camera.js';
 import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOOLS,
-  pinselRadius, auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel }
+  pinselRadius, auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel,
+  genZeichenMarker }
   from './tools.js';
 import { handles, rebuildHandles, updateHandlePositions, setPreview, clearPreview, updateBrushRing,
   brushRing, pickElement, select, auswahlUmschalten, naechstesSegment, aktiverGriff,
@@ -313,6 +314,26 @@ export function initPointer(cv) {
         select(bel);
         beschriftungenAktualisieren();
         toast("Beschriftung gesetzt — Text und Ziel im Panel rechts");
+        return;
+      }
+      /* Runde H (Bedienung) — die Variante „zeichen" setzt ein handgesetztes
+         Kartenzeichen (Katalog Q = H). Wie „beschriftung" ein ELEMENT, keine
+         Nadel; die Instanz erzeugt genZeichenMarker sofort — kein commit():
+         genElement in core/dirty.js kennt den Zweig noch nicht und wuerde die
+         frische Instanz gleich wieder leeren (siehe tools.js, dort steht auch
+         die fehlende Zeile fuer dirty.js). */
+      if (ed.variantOf.marker === "zeichen") {
+        var zg0 = groundPoint(e);
+        if (!zg0) return;
+        pushUndo();
+        var zel = mkElement("marker", "zeichen", [snapPt(zg0)],
+          copyParams(curParams()), nextSeed());
+        S.elements.push(zel);
+        var zn = genZeichenMarker(zel);
+        select(zel);
+        toast(zn
+          ? "Kartenzeichen gesetzt — Art, Größe und Drehung im Panel rechts"
+          : "Kartenzeichen gesetzt — auf diesem Maßstab unsichtbar (erscheint auf Kartenmaßstab)");
         return;
       }
       var mi = markerTreffer(e);
