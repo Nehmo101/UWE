@@ -73,7 +73,9 @@ describe("integration smoke — core Studio routes", () => {
     "apps/studio/app/studio/page.tsx",
     "apps/studio/app/worlds/page.tsx",
     "apps/studio/app/brain/page.tsx",
-    "apps/studio/app/mail/page.tsx",
+    // Das Mail-Center liegt seit H10 in Brain (siehe unten) — in Studio bleibt
+    // nur das Verfassen aus Vorlagen.
+    "apps/studio/app/mail/compose/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/backup/page.tsx",
     "apps/studio/app/jobs/page.tsx",
     "apps/studio/app/settings/page.tsx",
@@ -129,6 +131,38 @@ describe("integration smoke — Portal routes", () => {
       assert.ok(exists(route), `Missing portal route: ${route}`);
     });
   }
+});
+
+describe("integration smoke — Brain-Routen", () => {
+  // Das Mail-Center ist mit H10 aus Studio hierher gezogen. Damit der Umzug
+  // nicht unbemerkt zurückfällt, steht die Fläche hier: die Seite, die
+  // Oberfläche und die drei Routen, ohne die der Client nichts anzeigt.
+  const brainRoutes = [
+    "apps/brain/app/mail/page.tsx",
+    "apps/brain/src/components/mail/MailCenter.tsx",
+    "apps/brain/app/api/mail/messages/route.ts",
+    "apps/brain/app/api/mail/messages/[id]/route.ts",
+    "apps/brain/app/api/mail/actions/route.ts",
+    "apps/brain/app/api/mail/sync/route.ts",
+    "apps/brain/src/lib/mail-api.ts",
+  ];
+
+  for (const route of brainRoutes) {
+    it(`includes ${route}`, () => {
+      assert.ok(exists(route), `Missing Brain route: ${route}`);
+    });
+  }
+
+  it("Studio hat kein zweites Mail-Center mehr", () => {
+    assert.ok(!exists("apps/studio/app/mail/page.tsx"), "Studios Mail-Center ist zurück — H10 rückgängig?");
+    assert.ok(!exists("apps/studio/components/mail"), "Studios Mail-Komponenten sind zurück — H10 rückgängig?");
+  });
+
+  it("Brains Sync läuft ohne Job-Executor", () => {
+    const sync = read("apps/brain/app/api/mail/sync/route.ts");
+    assert.match(sync, /syncMailAccount/, "Brain muss den geteilten Sync aus @uwe/mail aufrufen");
+    assert.doesNotMatch(sync, /enqueueAndDispatch|job-executor/, "Brain hat keinen Job-Executor");
+  });
 });
 
 describe("integration smoke — minimal app access paths", () => {

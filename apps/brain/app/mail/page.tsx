@@ -1,66 +1,57 @@
-import Link from "next/link";
-import { createMailAccountService, getSystemSettings, prisma } from "@uwe/database/server";
-import { createMailPortalService, type MailFolderKey } from "@uwe/mail/portal";
-import { MAIL_PRIORITY_LABELS } from "@uwe/mail/portal-types";
 import { brainPrisma } from "@uwe/database/brain-client";
+import {
+  createMailAccountService,
+  createMailLogService,
+  createMailService,
+  getSystemSettings,
+  prisma,
+} from "@uwe/database/server";
+import { checkRtxReadiness } from "@uwe/ai-brain/router";
+import { createMailPortalService } from "@uwe/mail/portal";
+import { MAIL_PRIORITY_CATEGORIES, MAIL_PRIORITY_LABELS } from "@uwe/mail/portal-types";
+import { mapRtxReadinessToConnectorState, type RtxConnectorState } from "@uwe/shared-ui";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
+import { MailCenter } from "@/src/components/mail/MailCenter";
 import {
-  addMailAccountAction,
-  archiveMailAction,
-  deleteMailAccountAction,
-  sendMailAction,
-  syncMailAction,
-} from "../brain-actions";
+  senderNameFromAddress,
+  type MailCategoryVM,
+  type MailCenterData,
+  type MailFolderKey,
+  type MailFolderVM,
+  type MailMessageVM,
+} from "@/src/components/mail/mail-types";
 
 /**
- * Mail-Center — Abschnitt H10, Brain gewinnt.
+ * Mail-Center — H10, Brain gewinnt.
  *
- * Gegenüber der bisherigen Brain-Fassung neu: die Ordner der Studio-Seite
- * (Posteingang, Markiert, Gesendet, Archiv, Papierkorb), die Volltextsuche und
- * die Prioritäten-Einstufung. Beides kommt aus `@uwe/mail/portal` — dieselbe
- * Quelle, die Studio benutzt hat.
+ * Das hier ist Studios Mail-Center, nicht mehr die schlanke Brain-Fassung: der
+ * Reader, die Triage, Regeln und VIP-Absender, Entwürfe, der Mail-Chat und die
+ * Tastaturkürzel sind mitgekommen. Der Grund für den Umzug ist der gleiche wie
+ * bei Verträgen und Kalender — ein Postfach ist Alltag, und Alltag ist
+ * owner-privat. In Studio hing es an API-Token-Scopes, hier am Häkchen `Brain`.
  *
- * Die Vorlagen-Fassung (`/mail/compose?kind=session_recap` …) bleibt in Studio:
- * Session-Recap und Handout sind DM-Arbeit, kein Alltag.
+ * In Studio bleibt `/mail/compose`: Session-Recap und Handout sind DM-Arbeit.
  */
 
 export const dynamic = "force-dynamic";
 
-const FOLDERS: Array<{ key: MailFolderKey; label: string }> = [
-  { key: "inbox", label: "Posteingang" },
-  { key: "marked", label: "Markiert" },
-  { key: "sent", label: "Gesendet" },
-  { key: "archive", label: "Archiv" },
-  { key: "trash", label: "Papierkorb" },
-];
-
-interface Props {
-  searchParams: Promise<{ folder?: string; q?: string }>;
-}
+const HIGH_PRIORITY_THRESHOLD = 70;
+const VALID_FOLDERS: MailFolderKey[] = ["inbox", "marked", "drafts", "sent", "archive", "trash"];
 
 function parseFolder(value: string | undefined): MailFolderKey {
-  return FOLDERS.some((entry) => entry.key === value) ? (value as MailFolderKey) : "inbox";
+  if (value && VALID_FOLDERS.includes(value as MailFolderKey)) {
+    return value as MailFolderKey;
+  }
+  return "inbox";
 }
 
-function folderHref(folder: MailFolderKey, query: string): string {
-  const params = new URLSearchParams();
-  if (folder !== "inbox") params.set("folder", folder);
-  if (query) params.set("q", query);
-  const search = params.toString();
-  return search ? `/mail?${search}` : "/mail";
-}
-
-function formatWhen(value: Date): string {
-  return new Date(value).toLocaleString("de-DE", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-export default async function BrainMailPage({ searchParams }: Props) {
+export default async function BrainMailPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ folder?: string; account?: string; q?: string }>;
+}) {
+  // Erst das Häkchen, dann die Daten — für andere wird das Postfach nicht geladen.
   const owner = await getBrainOwner();
   if (!owner) {
     return (
@@ -71,250 +62,195 @@ export default async function BrainMailPage({ searchParams }: Props) {
   }
 
   const params = await searchParams;
-  const folder = parseFolder(params.folder);
+  const activeFolder = parseFolder(params.folder);
+  const selectedAccountId = params.account && params.account !== "all" ? params.account : null;
   const query = params.q?.trim() ?? "";
 
-  const service = createMailAccountService(brainPrisma);
   const portal = createMailPortalService(brainPrisma);
-  const settings = await getSystemSettings(prisma);
-  const limit = settings.mail.inboxLimit;
+  const accountService = createMailAccountService(brainPrisma);
+  const mailService = createMailService(prisma);
 
-  const [accounts, result, sent] = await Promise.all([
-    service.listAccounts(),
-    folder === "sent"
-      ? Promise.resolve({ items: [], nextCursor: null })
-      : portal.searchMessages({
-          q: query || undefined,
-          folder: folder === "marked" ? "marked" : folder,
-          markedOnly: folder === "marked",
-          limit,
-        }),
-    folder === "sent" ? portal.listSentMessages({ limit }) : Promise.resolve([]),
-  ]);
+  const systemSettings = await getSystemSettings(prisma);
+  const inboxLimit = systemSettings.mail.inboxLimit;
 
-  const inbox = folder === "sent" ? sent : result.items;
-  const unread = inbox.filter((message) => !message.isRead).length;
+  const searchQuery = {
+    accountId: selectedAccountId ?? undefined,
+    q: query || undefined,
+    limit: inboxLimit,
+    folder: activeFolder === "marked" ? ("marked" as const) : activeFolder,
+    markedOnly: activeFolder === "marked",
+  };
 
-  const syncAction = (
-    <form action={syncMailAction}>
-      <input type="hidden" name="accountId" value="all" />
-      <button type="submit" className="brain-btn brain-btn-sm" disabled={accounts.length === 0}>
-        ↻ Synchronisieren
-      </button>
-    </form>
-  );
+  const [portalAccounts, portalResult, sentMessages, drafts, logs, config, rtxStatus] =
+    await Promise.all([
+      portal.listAccounts(),
+      activeFolder === "sent" || activeFolder === "drafts"
+        ? Promise.resolve({ items: [], nextCursor: null })
+        : portal.searchMessages(searchQuery),
+      activeFolder === "sent" || activeFolder === "inbox"
+        ? portal.listSentMessages({ accountId: selectedAccountId ?? undefined, limit: inboxLimit })
+        : Promise.resolve([]),
+      accountService.listDrafts(),
+      createMailLogService(brainPrisma).list({ limit: 10 }),
+      mailService.getConfigStatus(),
+      checkRtxReadiness({ prisma }).catch(() => null),
+    ]);
+
+  const portalMessages = portalResult.items;
+  const rtxState: RtxConnectorState = rtxStatus
+    ? mapRtxReadinessToConnectorState(rtxStatus)
+    : "offline";
+
+  const accounts = portalAccounts.map((account) => ({
+    id: account.id,
+    label: account.label,
+    email: account.username,
+    imapHost: account.imapHost,
+    smtpHost: account.smtpHost,
+    lastImapSyncAt: account.lastImapSyncAt ? account.lastImapSyncAt.toISOString() : null,
+    imapSyncError: account.imapSyncError,
+    syncEnabled: account.syncEnabled,
+    ok: !account.imapSyncError,
+  }));
+
+  const mapMessage = (message: {
+    id: string;
+    accountId: string;
+    accountLabel?: string | null;
+    fromAddress: string;
+    subject: string;
+    snippet: string | null;
+    receivedAt: Date;
+    isRead: boolean;
+    hasAttachments: boolean;
+    hasUnsubscribeTarget: boolean;
+    priority: {
+      priority: number;
+      category: import("@uwe/mail/portal-types").MailPriorityCategory;
+      explanation: string;
+    } | null;
+  }): MailMessageVM => ({
+    id: message.id,
+    accountId: message.accountId,
+    accountLabel: message.accountLabel ?? null,
+    fromAddress: message.fromAddress,
+    senderName: senderNameFromAddress(message.fromAddress),
+    subject: message.subject,
+    snippet: message.snippet,
+    receivedAt: message.receivedAt.toISOString(),
+    isRead: message.isRead,
+    hasAttachments: message.hasAttachments,
+    hasUnsubscribeTarget: message.hasUnsubscribeTarget,
+    priority: message.priority
+      ? {
+          category: message.priority.category,
+          priority: message.priority.priority,
+          explanation: message.priority.explanation,
+        }
+      : null,
+  });
+
+  const asSentVM = (entry: Parameters<typeof mapMessage>[0]) =>
+    mapMessage({ ...entry, accountLabel: null, hasUnsubscribeTarget: false, priority: null });
+
+  const messages: MailMessageVM[] =
+    activeFolder === "sent" ? sentMessages.map(asSentVM) : portalMessages.map(mapMessage);
+
+  const unreadCount = messages.filter((message) => !message.isRead).length;
+  const markedCount = portalMessages.filter(
+    (message) => (message.priority?.priority ?? 0) >= HIGH_PRIORITY_THRESHOLD,
+  ).length;
+  const triageCount = portalMessages.filter((message) => message.priority).length;
+
+  const folders: MailFolderVM[] = [
+    {
+      key: "inbox",
+      name: "Posteingang",
+      icon: "inbox",
+      count: activeFolder === "inbox" ? messages.length : null,
+      active: activeFolder === "inbox",
+    },
+    {
+      key: "marked",
+      name: "Markiert",
+      icon: "star",
+      count: markedCount || null,
+      active: activeFolder === "marked",
+    },
+    {
+      key: "drafts",
+      name: "Entwürfe",
+      icon: "pencil-line",
+      count: drafts.length || null,
+      active: activeFolder === "drafts",
+    },
+    {
+      key: "sent",
+      name: "Gesendet",
+      icon: "send",
+      count: sentMessages.length || null,
+      active: activeFolder === "sent",
+    },
+    { key: "archive", name: "Archiv", icon: "archive", count: null, active: activeFolder === "archive" },
+    { key: "trash", name: "Papierkorb", icon: "trash-2", count: null, active: activeFolder === "trash" },
+  ];
+
+  const categories: MailCategoryVM[] = MAIL_PRIORITY_CATEGORIES.map((key) => ({
+    key,
+    name: MAIL_PRIORITY_LABELS[key],
+    count: portalMessages.filter((message) => message.priority?.category === key).length,
+  })).filter((category) => category.count > 0);
+
+  const data: MailCenterData = {
+    rtxState,
+    accounts,
+    messages,
+    sentMessages: sentMessages.map(asSentVM),
+    drafts: drafts.map((draft) => ({
+      id: draft.id,
+      subject: draft.subject,
+      status: draft.status,
+      updatedAt: draft.updatedAt.toISOString(),
+    })),
+    logs: logs.map((log) => ({
+      id: log.id,
+      createdAt: log.createdAt.toISOString(),
+      status: log.status,
+      subject: log.subject,
+      recipients: log.toAddresses,
+      errorMessage: log.errorMessage ?? null,
+    })),
+    config: {
+      enabled: config.enabled,
+      configured: config.configured,
+      host: config.host,
+      port: config.port,
+      fromAddress: config.fromAddress,
+      useMock: config.useMock,
+      message: config.message,
+    },
+    folders,
+    categories,
+    activeCategory: null,
+    activeFolder,
+    selectedAccountId,
+    query,
+    autoSyncEnabled: systemSettings.mail.autoSyncEnabled,
+    autoSyncIntervalMinutes: systemSettings.mail.autoSyncIntervalMinutes,
+    counts: {
+      inbox: portalMessages.length,
+      unread: unreadCount,
+      drafts: drafts.length,
+      triage: triageCount,
+      sent: sentMessages.length,
+    },
+  };
 
   return (
-    <BrainShell
-      active="/mail"
-      title="Mail-Center"
-      lede={`${accounts.length} Konto/Konten · ${inbox.length} Nachricht(en)${unread ? ` · ${unread} ungelesen` : ""} — echter Mail-Client (IMAP-Empfang, SMTP-Versand), lokal auf deiner Hardware.`}
-      actions={syncAction}
-    >
-      <nav className="brain-form-row" aria-label="Ordner">
-        {FOLDERS.map((entry) => (
-          <Link
-            key={entry.key}
-            href={folderHref(entry.key, query)}
-            aria-current={folder === entry.key ? "page" : undefined}
-            className={
-              folder === entry.key ? "brain-btn brain-btn-sm" : "brain-btn brain-btn-ghost brain-btn-sm"
-            }
-          >
-            {entry.label}
-          </Link>
-        ))}
-      </nav>
-
-      <form method="get" action="/mail" className="brain-form-row" role="search">
-        {folder === "inbox" ? null : <input type="hidden" name="folder" value={folder} />}
-        <input name="q" defaultValue={query} placeholder="Betreff, Absender, Text …" />
-        <button type="submit" className="brain-btn brain-btn-sm">
-          Suchen
-        </button>
-        {query ? (
-          <Link className="brain-btn brain-btn-ghost brain-btn-sm" href={folderHref(folder, "")}>
-            Zurücksetzen
-          </Link>
-        ) : null}
-      </form>
-      {accounts.length === 0 ? (
-        <p className="brain-muted" style={{ marginBottom: "1.25rem" }}>
-          Noch kein Mail-Konto eingerichtet — füge unten eines hinzu, dann kannst du synchronisieren und senden.
-        </p>
-      ) : null}
-
-      <section className="brain-section">
-        <details className="brain-edit" style={{ marginTop: 0 }}>
-          <summary>Neue Nachricht verfassen</summary>
-          <form action={sendMailAction} className="brain-form">
-            <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
-              <label>
-                Von (Konto)
-                <select name="accountId" defaultValue={accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? ""} required>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.label} · {account.username}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                An (kommagetrennt)
-                <input name="to" required placeholder="name@beispiel.de, …" />
-              </label>
-            </div>
-            <label>
-              CC (optional)
-              <input name="cc" placeholder="kopie@beispiel.de" />
-            </label>
-            <label>
-              Betreff
-              <input name="subject" placeholder="Betreff" />
-            </label>
-            <label>
-              Text
-              <textarea name="bodyText" rows={6} />
-            </label>
-            <div>
-              <button type="submit" className="brain-btn" disabled={accounts.length === 0}>
-                Senden
-              </button>
-            </div>
-          </form>
-        </details>
-      </section>
-
-      <section className="brain-section">
-        <h2>
-          {FOLDERS.find((entry) => entry.key === folder)?.label} · {inbox.length}
-          {query ? ` · Suche „${query}"` : ""}
-        </h2>
-        {inbox.length === 0 ? (
-          <p className="brain-muted">
-            {query
-              ? "Nichts gefunden."
-              : "Keine Nachrichten. Klicke oben auf Synchronisieren, um dein Postfach abzurufen."}
-          </p>
-        ) : (
-          <ul className="brain-list">
-            {inbox.map((message) => (
-              <li key={message.id} className="brain-row" style={message.isRead ? undefined : { borderColor: "var(--uwe-accent)" }}>
-                <div className="brain-row-head">
-                  <Link href={`/mail/${message.id}`} style={{ fontWeight: message.isRead ? 400 : 700 }}>
-                    {message.subject || "(kein Betreff)"}
-                  </Link>
-                  {message.isRead ? null : <span className="brain-tag">neu</span>}
-                  {message.priority?.category ? (
-                    <span className="brain-tag">
-                      {MAIL_PRIORITY_LABELS[message.priority.category] ?? message.priority.category}
-                    </span>
-                  ) : null}
-                  <span className="brain-muted">
-                    {message.fromAddress} · {formatWhen(message.receivedAt)}
-                  </span>
-                  <form action={archiveMailAction} style={{ marginLeft: "auto" }}>
-                    <input type="hidden" name="id" value={message.id} />
-                    <button type="submit" className="brain-btn brain-btn-ghost brain-btn-sm">
-                      Archivieren
-                    </button>
-                  </form>
-                </div>
-                {message.snippet ? (
-                  <Link href={`/mail/${message.id}`} className="brain-muted" style={{ display: "block", marginTop: "0.3rem", textDecoration: "none" }}>
-                    {message.snippet}
-                  </Link>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="brain-section">
-        <h2>Konten · {accounts.length}</h2>
-        {accounts.length > 0 ? (
-          <ul className="brain-list" style={{ marginBottom: "0.85rem" }}>
-            {accounts.map((account) => (
-              <li key={account.id} className="brain-row">
-                <div className="brain-row-head">
-                  <strong>{account.label}</strong>
-                  {account.isDefault ? <span className="brain-tag">Standard</span> : null}
-                  <span className="brain-muted">
-                    {account.username} · SMTP {account.smtpHost}
-                    {account.imapHost ? ` · IMAP ${account.imapHost}` : " · kein IMAP"}
-                    {account.imapSyncError ? " · ⚠ Sync-Fehler" : ""}
-                  </span>
-                  <span className="brain-head-actions" style={{ marginLeft: "auto" }}>
-                    <form action={syncMailAction}>
-                      <input type="hidden" name="accountId" value={account.id} />
-                      <button type="submit" className="brain-btn brain-btn-ghost brain-btn-sm">
-                        ↻ Sync
-                      </button>
-                    </form>
-                    <form action={deleteMailAccountAction}>
-                      <input type="hidden" name="id" value={account.id} />
-                      <button type="submit" className="brain-btn brain-btn-ghost brain-btn-sm">
-                        Löschen
-                      </button>
-                    </form>
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <details className="brain-edit" style={{ marginTop: 0 }}>
-          <summary>Konto hinzufügen</summary>
-          <form action={addMailAccountAction} className="brain-form">
-            <label>
-              Bezeichnung
-              <input name="label" required placeholder="z. B. Privat (GMX)" />
-            </label>
-            <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "2fr 1fr" }}>
-              <label>
-                SMTP-Host
-                <input name="smtpHost" required placeholder="mail.gmx.net" />
-              </label>
-              <label>
-                SMTP-Port
-                <input name="smtpPort" type="number" placeholder="587" />
-              </label>
-            </div>
-            <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "2fr 1fr" }}>
-              <label>
-                IMAP-Host (für Empfang)
-                <input name="imapHost" placeholder="imap.gmx.net" />
-              </label>
-              <label>
-                IMAP-Port
-                <input name="imapPort" type="number" placeholder="993" />
-              </label>
-            </div>
-            <label>
-              Benutzername / E-Mail
-              <input name="username" required placeholder="name@gmx.de" autoComplete="off" />
-            </label>
-            <label>
-              Passwort
-              <input name="password" type="password" required autoComplete="new-password" />
-            </label>
-            <label style={{ flexDirection: "row", alignItems: "center", gap: "0.4rem" }}>
-              <input name="isDefault" type="checkbox" style={{ width: "auto" }} />
-              Als Standard-Konto
-            </label>
-            <p className="brain-muted" style={{ margin: 0 }}>
-              Das Passwort wird verschlüsselt lokal gespeichert (nie in die Cloud). Bei Anbietern mit 2FA ist meist ein
-              App-Passwort nötig.
-            </p>
-            <div>
-              <button type="submit" className="brain-btn">
-                Konto speichern
-              </button>
-            </div>
-          </form>
-        </details>
-      </section>
+    <BrainShell active="/mail" title="Mail-Center">
+      <div className="uwe-mail-center-frame">
+        <MailCenter data={data} />
+      </div>
     </BrainShell>
   );
 }

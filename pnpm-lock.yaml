@@ -85,6 +85,9 @@ importers:
       '@uwe/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
+      isomorphic-dompurify:
+        specifier: ^3.18.0
+        version: 3.18.0
       next:
         specifier: ^15.3.4
         version: 15.5.19(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -97,6 +100,9 @@ importers:
       tailwindcss:
         specifier: ^4.3.1
         version: 4.3.2
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^22.15.32
@@ -1211,6 +1217,9 @@ importers:
 
   packages/mail:
     dependencies:
+      '@uwe/ai-brain':
+        specifier: workspace:*
+        version: link:../ai-brain
       '@uwe/assets':
         specifier: workspace:*
         version: link:../assets
@@ -1226,6 +1235,9 @@ importers:
       imapflow:
         specifier: ^1.0.187
         version: 1.4.1
+      isomorphic-dompurify:
+        specifier: ^3.18.0
+        version: 3.18.0
       mailparser:
         specifier: ^3.9.12
         version: 3.9.12

@@ -50,6 +50,7 @@ export {
 export { ViewEditToggle, type ViewEditToggleProps } from "./ViewEditToggle";
 
 export { NavSearch, type NavSearchProps } from "./NavSearch";
+export { NavIcon, resolveLucideIcon, type NavIconProps } from "./NavIcon";
 export type { NavSearchEntry, NavSearchHit } from "@uwe/shared-utils/nav-search";
 
 export {
@@ -160,6 +161,8 @@ export {
   AiReviewedBadge,
   QuestStatusBadge,
   RtxStatusBadge,
+  mapRtxReadinessToConnectorState,
+  type RtxReadinessLike,
   TagChip,
   type RtxConnectorState,
 } from "./StatusBadges";

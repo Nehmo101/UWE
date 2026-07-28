@@ -266,6 +266,41 @@ export const RTX_STATE_DESCRIPTIONS: Record<RtxConnectorState, string> = {
   error: "RTX Connector meldet einen Fehler. Prüfe den Systemstatus.",
 };
 
+/**
+ * Die Felder der RTX-Bereitschaft, die für die Anzeige zählen.
+ *
+ * Absichtlich strukturell statt `RtxReadinessStatus` aus `@uwe/ai-brain`: so
+ * bleibt shared-ui frei von einer Abhängigkeit auf ein Logik-Paket, und beide
+ * Apps rechnen trotzdem mit derselben Funktion. Vorher lag sie nur in Studio —
+ * Brain hätte sie für das Mail-Center abschreiben müssen.
+ */
+export interface RtxReadinessLike {
+  ready: boolean;
+  agentStatus?: string;
+  connectorDegraded?: boolean;
+  urlAllowed?: boolean;
+}
+
+/** Bereitschaft des RTX-Hosts auf den Zustand des Abzeichens abbilden. */
+export function mapRtxReadinessToConnectorState(status: RtxReadinessLike): RtxConnectorState {
+  if (status.agentStatus === "disabled" && !status.ready) {
+    return "disabled";
+  }
+  if (status.connectorDegraded && status.ready) {
+    return "starting";
+  }
+  if (status.ready) {
+    return "online";
+  }
+  if (status.agentStatus === "starting") {
+    return "starting";
+  }
+  if (status.agentStatus === "error" || status.urlAllowed === false) {
+    return "error";
+  }
+  return "offline";
+}
+
 /** Per-state tone for the RTX status badge (badge chrome + dot fill). */
 const RTX_TONE: Record<RtxConnectorState, { badge: string; dot: string }> = {
   online: {

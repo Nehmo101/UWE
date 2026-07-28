@@ -79,10 +79,16 @@ Die CSP ist umgebungsabhängig: Der Dev-Zweig enthält bereits `'unsafe-eval'`, 
 
 ```bash
 cp -n .env.example .env
-pnpm --filter @uwe/database db:deploy
+# Es sind drei Datenbanken — der Seed braucht alle drei, sonst bricht er ab.
+pnpm --filter @uwe/database db:deploy          # uwe.db
+pnpm --filter @uwe/database db:deploy:brain    # uwe-brain.db
+pnpm --filter @uwe/database db:deploy:family   # uwe-family.db
 pnpm --filter @uwe/database db:seed
 # Login: dm@uwe.local / uwe-dev
 ```
+
+Der Seed-Nutzer trägt die Häkchen `Portal` und `Studio`. Für Brain oder Family
+das jeweilige Häkchen im Command Center setzen.
 
 ## Aktive Runtime-Wahrheit
 

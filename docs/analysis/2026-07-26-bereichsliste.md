@@ -67,7 +67,7 @@ Jeder Schritt ist ein eigener Commit mit grünem Gate.
 | **3b — `visibility` raus** | ✅ fertig | `2ee64ca` | 320 Dateien, −8.090 Zeilen; inkl. `PagePlayerAccess`, `SessionUnlock`, `gm_note`, Signierte-Medien-URLs, Leak-Scanner |
 | **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ✅ fertig | folgt | Rollen-Enum, Capability-Matrix, Welt-Rollen und Gastmodus raus; Kachel „Zugänge" im Command Center |
 | **5 — Studio-System abräumen** (Abschnitt D) | ✅ fertig | `0d1c75a0`…`ab893857` | System-Hub, Einrichtung/Backup ins Command Center, Tag-Aufräumer ins Welt-Cockpit |
-| **6 — Brain/Studio-Doppelungen** (Abschnitt H) | 🟡 fast | `2cfafd30`…`5db4593c` | H1–H9 und H11 erledigt; **nur H10 (Mail) offen** — Umfang und offene Entscheidungen siehe Abschnitt H |
+| **6 — Brain/Studio-Doppelungen** (Abschnitt H) | ✅ fertig | `2cfafd30`…`5db4593c`, folgt | H1–H11 erledigt; H10 (Mail-Center nach Brain) zuletzt — Hergang siehe Abschnitt H |
 | **7 — Family bauen** (Abschnitt G) | ✅ fertig | `3720cd27`, `27068dd7`, `d27a8ffc`, folgt | DB, App, die 14 Modelle und die drei Flächen; offen bleibt nur, Küche/Haushalt/Scan aus Studio nachzuziehen |
 
 **Bisher entfernt: ~26.000 Zeilen.** Nach jedem Schritt: `pnpm lint` grün,
@@ -900,42 +900,64 @@ Verträgen und Projekten.
 | H3 Capture | ✅ erledigt | Brain hat Filter, KI-Vorschlag und Triage; Studios `/capture`, `/api/capture/**` und der globale Erfassen-Knopf sind weg. Ohne Bild-Upload in eine Welt — das bleibt DM-Arbeit. |
 | H2 Life Brain | ✅ erledigt | Brain hat Suche mit Kategoriefilter (server-seitig, kein Client-Fetch) und die Index-Lage. `/api/life-brain/search` liegt jetzt in Brain, und der MCP-Brain-Server liest sie dort statt in Studio. Studios `/life-brain/**` samt Chat ist weg — Brains `/ki-chat` kann mehr. |
 | H5 Werkstatt | ✅ erledigt | Alle vier Bereiche liegen in Brain: Projekte mit Status- und Art-Filter, Detailseite mit Material, Farben, Filamenten und STL-Links, Farbrezepte, Druckprofile und Terrain-Verleih. Der iCal-Feed der Rückgaben ist mitgewandert. Ohne Welt-Zuordnung und ohne Foto-Upload. |
-| H10 Mail | 🟡 halb — **der einzige offene Punkt** | Brain hat Ordner (Posteingang, Markiert, Gesendet, Archiv, Papierkorb), Volltextsuche und die Prioritäten-Einstufung — dieselbe Quelle wie Studio (`@uwe/mail/portal`). Studios Mail-Center bleibt: die Zeilenzahlen in der Tabelle oben zählen nur die Seiten, nicht die 20 Komponenten darunter. `/mail/compose` bleibt ohnehin in Studio (Session-Recap und Handout sind DM-Arbeit). Details unten. |
+| H10 Mail | ✅ fertig | Studios Mail-Center liegt jetzt in Brain — Reader, Triage, Regeln und VIP-Absender, Entwürfe, Mail-Chat, Tastaturkürzel. `/mail/compose` bleibt in Studio: Session-Recap, Handout und Welt-Mails sind DM-Arbeit. Details unten. |
 
-### Was H10 noch braucht
+### Wie H10 gelaufen ist
 
-Der Umzug ist gut vermessen, aber groß: **~5.150 Zeilen Oberfläche**
-(`apps/studio/components/mail/**`, 20 Dateien) plus **~1.600 Zeilen API**
-(20 Routen unter `/api/admin/mail/**`, 4 unter `/api/mail/**`).
+**Verschoben:** 18 Komponenten nach `apps/brain/src/components/mail/`, 22 Routen
+nach `apps/brain/app/api/mail/**`. Studios `components/mail`, `app/mail/page.tsx`
+und `/api/admin/mail/**` sind weg.
 
-Was dafür spricht, dass es geht: die Kopplung an Studio ist **flach**. Die
-Mail-Komponenten haben ihre eigene UI-Schicht (`mail-ui.tsx`); aus dem
-Design-Kit brauchen sie nur `NavIcon`, und nur `MailSettings.tsx` greift
-darüber hinaus (Card/buttonVariants/cn). Dazu drei Helfer: `studio-api-url`,
-`poll-job`, `mail-chat-prompt`.
+**Was dabei in Pakete gewandert ist** — weil es zwei Apps brauchten und damit
+sichtbar wurde, dass es nie in eine App-Datei gehörte:
 
-Was noch zu entscheiden ist:
+| Von | Nach | Warum |
+|-----|------|-------|
+| `studio/src/components/ui/icon.tsx` | `@uwe/shared-ui` → `NavIcon` | Studio und Portal hielten dieselbe Datei doppelt; `NavSearch` nimmt den Renderer bis heute als Prop, gerade weil keiner geteilt war. Beide Apps re-exportieren. |
+| `studio/src/lib/mail-portal-ai.ts` u. a. (4 Dateien) | `@uwe/mail/ai` | Keine Zeile davon kannte Studio — alles `@uwe/ai-brain` und `@uwe/database`. |
+| Mail-Teil von `studio/src/lib/sanitize-html.ts` | `@uwe/mail/sanitize` | Der allgemeine Sanitizer bleibt in Studio (Wiki), der Mail-Teil ist Domänenlogik. |
+| `runMailSyncJob` (85 Zeilen in `integration-job-runners.ts`) | `@uwe/mail/sync-account` | Studios Job-Runner ist jetzt ein 20-Zeilen-Wrapper, Brain ruft dieselbe Funktion direkt. |
+| `mapRtxReadinessToConnectorState` | `@uwe/shared-ui` | Strukturell typisiert, damit shared-ui nicht von `@uwe/ai-brain` abhängt. |
 
-1. **Theme-Tokens.** Brains `@theme`-Block ist eine Teilmenge von Studios; die
-   Mail-Komponenten benutzen `bg-secondary`, `bg-destructive`, `border-input`,
-   `ring-ring`. Die Brücken müssen in `apps/brain/app/globals.css` nachgezogen
-   werden, sonst rendert die Oberfläche farblos.
-2. **Sync-Job.** Studios `/api/admin/mail/sync` reiht `mail_sync` in die
-   Job-Queue und stößt sie im selben Prozess an (`dispatchJob`). Brain hat
-   keinen Executor. Die Route hat aber schon einen synchronen Zweig
-   (`body.sync === true` → `service.syncAccount`) — für Brain ist der der
-   naheliegende Weg, kostet aber die Fortschrittsanzeige bei langen Syncs.
-   Der systemd-Timer `uwe-mail-sync.timer` muss dann mit umziehen.
-3. **API-Token-Zugang.** Die Mail-Routen hängen an den Studio-Scopes
-   `mail_read` / `mail_send`. Niemand außerhalb von Studio benutzt sie
-   (geprüft) — mit dem Umzug auf Brains Häkchen-Guard entfällt der
-   Token-Weg. Das ist vertretbar, sollte aber bewusst entschieden sein.
+**Die drei offenen Entscheidungen, und wie sie ausgegangen sind:**
 
-Und der eigentliche Grund, warum es hier steht statt erledigt zu sein: für die
-20 Client-Komponenten gibt es **keinen Test**. Ein Umzug zwischen zwei Apps mit
-unterschiedlichen Theme-Tokens bricht sie still — das gehört einmal im Browser
-durchgeklickt, bevor Studios Fassung gelöscht wird.
-| H7 / H9 / H11 | ✅ erledigt | Verträge, Dokumente und Kalender sind Family-Seiten; beide alten Fassungen sind weg (Schritt 7d). |
+1. **Theme-Tokens** — dreizehn `@theme`-Brücken in `apps/brain/app/globals.css`
+   nachgezogen (`secondary`, `destructive`, `input`, `ring`, `success` …). Ohne
+   sie rendert die Oberfläche farblos, und zwar lautlos: kein Build-Fehler, kein
+   Test schlägt an. Genau der Grund, warum das nicht ohne Browser ging.
+2. **Sync ohne Job-Executor** — Brains `/api/mail/sync` läuft im Request. Kostet
+   die Prozentanzeige (der Balken bleibt unbestimmt), kostet **nicht** den
+   automatischen Sync: der läuft weiter über Studios Host-Timer
+   (`uwe-mail-sync.sh` → `/api/internal/mail-sync`), der die Postfächer füllt,
+   egal welche App sie anzeigt.
+3. **API-Token-Zugang** — entfallen. Die Mail-Routen hingen an den Scopes
+   `mail_read`/`mail_send`; in Brain gilt das Häkchen. Geprüft: außer Studios
+   eigener Oberfläche hat niemand diese Routen aufgerufen.
+
+**Zwei echte Fehler, die erst der Browser gefunden hat:**
+
+- `isomorphic-dompurify` zieht jsdom nach, das seine Datendateien zur Laufzeit
+  relativ zum Paketverzeichnis sucht. Gebündelt suchte es unter `apps/brain/`
+  und fand nichts — **jede Nachricht mit HTML antwortete mit 500**. Studio hatte
+  `jsdom` und `isomorphic-dompurify` längst in `serverExternalPackages`; Brain
+  fehlte der Eintrag. Typecheck, Lint und Build waren dabei durchgehend grün.
+- Die Attrappen in den Einstellungen: drei Schalter (automatische Triage,
+  lokale Entwürfe, **Cloud-Fallback**) und ein „Speichern"-Knopf, alle reiner
+  `useState` ohne Persistenz — und der Cloud-Schalter versprach seit N.3 etwas,
+  das es nicht mehr gibt. Ersetzt durch die Tatsachen.
+
+**Neu als Netz:** Brain hatte als einzige App keine Routen-Auth-Inventur. Mit 22
+Mail-Routen auf einen Schlag wäre eine vergessene Guard-Zeile teuer geworden —
+`packages/security-tests/src/brain-route-authz.test.ts` prüft jetzt jede
+Brain-Route und zusätzlich, dass keine schreibende Mail-Route am Lese-Guard
+hängt (Same-Origin steckt nur im Mutations-Guard).
+
+**Im Browser abgenommen** (Chromium, angemeldet, Testpostfach mit drei
+Nachrichten): Liste mit Ungelesen-Zählern und Filter-Chips, Reader mit
+Nachrichtendetail, geblockter Tracking-Pixel, Antwort-Fenster, Volltextsuche,
+Archivieren (Nachricht wandert nachweislich von Posteingang nach Archiv),
+Einstellungen mit Konten/Regeln/SMTP-Diagnose, Mobilansicht. Konsole am Ende
+ohne Fehler.
 
 Muster für die offenen Punkte: die Fachlogik liegt bereits in `packages/`
 (`CaptureTriageService`, `createLifeAdminService`, `@uwe/mail`), Brain braucht

@@ -6,9 +6,7 @@ import {
   type CaptureType,
   type MiniatureCollectionStatus,
 } from "@uwe/database/server";
-import { createMailPortalService } from "@uwe/mail/portal";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireBrainActionAuth } from "@/src/lib/brain-action-auth";
 import { lifeAdmin, revalidateBrainPaths, str } from "@/src/lib/brain-action-shared";
 
@@ -184,126 +182,7 @@ export async function deleteMiniatureAction(formData: FormData) {
   revalidatePath("/miniatures");
 }
 
-/* ══ Mail client: send (SMTP), sync (IMAP), read & message actions ═══ */
+/* Die acht Mail-Actions sind mit H10 entfallen: das Mail-Center spricht seine
+   eigene API unter /api/mail/**, formularbasierte Server-Actions daneben wären
+   ein zweiter Weg zum selben Postfach. */
 
-function mailPortal() {
-  return createMailPortalService(brainPrisma);
-}
-
-function parseAddresses(formData: FormData, field = "to"): string[] {
-  return str(formData.get(field))
-    .split(/[,;\n]/)
-    .map((a) => a.trim())
-    .filter(Boolean);
-}
-
-function parsePort(value: FormDataEntryValue | null): number | null {
-  const n = Number.parseInt(str(value), 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-export async function addMailAccountAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const label = str(formData.get("label"));
-  const smtpHost = str(formData.get("smtpHost"));
-  const username = str(formData.get("username"));
-  // Password is stored encrypted (encryptSecret); never trim (may be significant).
-  const password = String(formData.get("password") ?? "");
-  if (!label || !smtpHost || !username || !password) return;
-  await mailPortal().createAccount(
-    {
-      label,
-      smtpHost,
-      smtpPort: parsePort(formData.get("smtpPort")),
-      imapHost: str(formData.get("imapHost")) || null,
-      imapPort: parsePort(formData.get("imapPort")),
-      username,
-      password,
-      isDefault: str(formData.get("isDefault")) === "on",
-    },
-    owner.id,
-  );
-  revalidatePath("/mail");
-}
-
-export async function deleteMailAccountAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await mailPortal().deleteAccount(id, owner.id);
-  revalidatePath("/mail");
-}
-
-export async function syncMailAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const service = mailPortal();
-  const accountId = str(formData.get("accountId"));
-  if (accountId && accountId !== "all") {
-    await service.syncAccount(accountId, owner.id);
-  } else {
-    const accounts = await service.listAccounts();
-    for (const account of accounts) {
-      try {
-        await service.syncAccount(account.id, owner.id);
-      } catch {
-        // One account failing must not abort the rest (errors are audit-logged).
-      }
-    }
-  }
-  revalidatePath("/mail");
-}
-
-export async function sendMailAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const accountId = str(formData.get("accountId"));
-  const to = parseAddresses(formData, "to");
-  if (!accountId) throw new Error("Bitte ein Absender-Konto wählen.");
-  if (to.length === 0) throw new Error("Mindestens ein Empfänger ist erforderlich.");
-  const result = await mailPortal().sendDirect(
-    {
-      accountId,
-      to,
-      cc: parseAddresses(formData, "cc"),
-      subject: str(formData.get("subject")) || "(kein Betreff)",
-      bodyText: str(formData.get("bodyText")),
-    },
-    owner.id,
-  );
-  if (!result.ok) {
-    throw new Error(`Versand fehlgeschlagen: ${result.error ?? "unbekannter Fehler"}`);
-  }
-  const back = str(formData.get("returnTo"));
-  revalidatePath("/mail");
-  if (back) redirect(back);
-}
-
-export async function setMailReadAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  const read = str(formData.get("read")) !== "false";
-  if (id) await mailPortal().setMessageRead(id, read, owner.id);
-  revalidatePath("/mail");
-}
-
-export async function setMailStarredAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  const starred = str(formData.get("starred")) === "true";
-  if (id) await mailPortal().setMessageStarred(id, starred, owner.id);
-  revalidatePath("/mail");
-}
-
-export async function archiveMailAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await mailPortal().archiveMessage(id, owner.id);
-  revalidatePath("/mail");
-  redirect("/mail");
-}
-
-export async function trashMailAction(formData: FormData) {
-  const owner = await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await mailPortal().trashMessage(id, owner.id);
-  revalidatePath("/mail");
-  redirect("/mail");
-}

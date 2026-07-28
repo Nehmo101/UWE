@@ -8,7 +8,6 @@ import {
   createCalendarService,
   createDevAgentJobService,
   createImageStudioService,
-  createMailAccountService,
   createPrismaClient,
   createResearchService,
   createUweRepositoryFromClient,
@@ -30,7 +29,7 @@ import type { ImageStudioTask } from "@uwe/image-studio";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 import { appendResearchSources } from "@uwe/ai-brain";
 import { buildResearchReport, resolveSearxngUrl, searchSearxng } from "@uwe/web-search";
-import { describeImapError } from "@uwe/mail";
+import { syncMailAccount } from "@uwe/mail/sync-account";
 import type { JobRunnerContext } from "./job-runners";
 import { resolveGatewayUserById } from "./ai-gateway-user";
 import { synthesizeResearchReportViaGateway } from "./research-synthesis";
@@ -225,68 +224,19 @@ export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<stri
     throw new Error("Mail-Sync: accountId fehlt.");
   }
 
-  const db = createPrismaClient();
-  const mail = createMailAccountService(brainPrisma);
-
-  await ctx.jobs.updateProgress(ctx.jobId, 5, "IMAP Postfach synchronisieren");
-  await assertNotCancelled(ctx.jobs, ctx.jobId);
-
-  try {
-    const result = await mail.syncInbox(payload.accountId, {
-      limit: payload.limit ?? 50,
-      fullSync: payload.fullSync ?? false,
-      mailbox: payload.mailbox,
-      onProgress: async (progress) => {
-        const pct = progress.total > 0 ? Math.round((progress.processed / progress.total) * 90) + 5 : 50;
-        await ctx.jobs.updateProgress(ctx.jobId, Math.min(pct, 95), progress.phase);
-        await assertNotCancelled(ctx.jobs, ctx.jobId);
-      },
-    });
-
-    // Apply user rules + local auto-triage to newly-synced INBOX messages so the
-    // Mail Center reflects filters/priorities immediately (all local, no LLM).
-    let ruleMoved = 0;
-    let triaged = 0;
-    const createdIds = "createdIds" in result ? (result.createdIds as string[]) : [];
-    if (!payload.mailbox && createdIds.length > 0) {
-      try {
-        const { createMailRuleService, autoTriageNewMessages } = await import("@uwe/mail");
-        const ruleService = createMailRuleService(brainPrisma);
-        const { skipAiTriageIds, movedIds } = await ruleService.applyRules(createdIds);
-        ruleMoved = movedIds.length;
-        const vipSenders = await ruleService.listVipAddresses();
-        const trashedSet = new Set(movedIds);
-        const triageTargets = createdIds.filter((id) => !trashedSet.has(id));
-        const { scored } = await autoTriageNewMessages(brainPrisma, triageTargets, {
-          vipSenders,
-          skipIds: skipAiTriageIds,
-        });
-        triaged = scored;
-      } catch {
-        // Rules/triage are best-effort; a failure must not fail the sync.
-      }
-    }
-
-    // Best-effort Sent-folder sync on primary-inbox syncs so "Gesendet" reflects
-    // real server mail. A failure here must not fail the INBOX sync.
-    let sentImported = 0;
-    if (!payload.mailbox) {
-      try {
-        const sent = await mail.syncSentFolder(payload.accountId, { limit: payload.limit ?? 50 });
-        sentImported = "imported" in sent ? sent.imported : 0;
-      } catch {
-        sentImported = 0;
-      }
-    }
-
-    await ctx.jobs.updateProgress(ctx.jobId, 100, `${result.imported} Nachrichten synchronisiert`);
-    await db.$disconnect();
-    return { ...result, sentImported, ruleMoved, triaged };
-  } catch (error) {
-    await mail.markImapSyncError(payload.accountId, describeImapError(error));
-    await db.$disconnect();
-    throw error;
-  }
+  // Der Sync selbst liegt in @uwe/mail — Brain ruft dieselbe Funktion direkt
+  // auf. Hier bleibt nur, was den Job ausmacht: Fortschritt melden und auf
+  // Abbruch prüfen.
+  const result = await syncMailAccount(brainPrisma, payload.accountId, {
+    limit: payload.limit ?? 50,
+    fullSync: payload.fullSync ?? false,
+    mailbox: payload.mailbox,
+    onProgress: async (percent, phase) => {
+      await ctx.jobs.updateProgress(ctx.jobId, percent, phase);
+      await assertNotCancelled(ctx.jobs, ctx.jobId);
+    },
+  });
+  return { ...result };
 }
 
 export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {

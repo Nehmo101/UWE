@@ -14,6 +14,15 @@ const standalone = getUweStandaloneNextConfig(appDir);
 const nextConfig: NextConfig = {
   output: "standalone",
   ...standalone,
+  // jsdom (über isomorphic-dompurify) lädt Datendateien zur Laufzeit relativ
+  // zum eigenen Paketverzeichnis. Gebündelt sucht es sie unter `apps/brain/`
+  // und findet nichts — der Mail-Reader antwortet dann mit 500, sobald eine
+  // Nachricht HTML enthält. Studio hat denselben Eintrag aus demselben Grund.
+  serverExternalPackages: [
+    ...(standalone.serverExternalPackages ?? []),
+    "jsdom",
+    "isomorphic-dompurify",
+  ],
   transpilePackages: [
     "@uwe/shared-ui",
     "@uwe/auth",
