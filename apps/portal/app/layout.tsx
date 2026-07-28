@@ -3,7 +3,9 @@ import { headers } from "next/headers";
 import { Space_Mono, Newsreader } from "next/font/google";
 import { isPortalGloballyEnabled, resolveThemePreferencesForScope } from "@uwe/database/server";
 import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
+import { resolveCrossAppUrls } from "@uwe/auth";
 import {
+  AppUrlsProvider,
   ThemeBootstrapScript,
   ThemeDocumentSync,
   buildVisualThemeHtmlAttributes,
@@ -98,10 +100,12 @@ export default async function RootLayout({
         >
           <ThemeDocumentSync theme={serverTheme} />
           {portalEnabled ? (
-            <>
+            // Produkt-Origins zur Laufzeit, nicht aus dem Build — siehe
+            // AppUrlsProvider.
+            <AppUrlsProvider value={resolveCrossAppUrls()}>
               {children}
               <PortalSessionChrome />
-            </>
+            </AppUrlsProvider>
           ) : (
             <main className="page">
               <div className="card">

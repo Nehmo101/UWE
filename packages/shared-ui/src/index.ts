@@ -95,9 +95,11 @@ export {
 
 export {
   AppAccentScope,
+  AppUrlsProvider,
   CrossAppBottomNav,
   crossAppBottomNavItems,
   readClientAppUrls,
+  useClientAppUrls,
   PaintedScene,
   SceneContent,
   SceneHero,

@@ -313,6 +313,48 @@ describe("family link target", () => {
     );
   });
 
+  it("derives family.<apex> from the sibling hostnames in a split-hostname deployment", () => {
+    // Ohne Ableitung stünde hier der Loopback-Standard, den ein Besucher von
+    // portal.uwe.example nie erreicht.
+    assert.equal(
+      resolveFamilyPublicBaseUrl({
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://portal.uwe.example",
+      }),
+      "https://family.uwe.example",
+    );
+  });
+
+  it("lets an explicit family URL win over the derived one", () => {
+    assert.equal(
+      resolveFamilyPublicBaseUrl({
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://portal.uwe.example",
+        NEXT_PUBLIC_FAMILY_URL: "https://haushalt.uwe.example",
+      }),
+      "https://haushalt.uwe.example",
+    );
+  });
+
+  it("does not derive from port-based or single-host layouts", () => {
+    // Ports auf einem Host: der Geschwister-Hostname sagt nichts über Family.
+    assert.equal(
+      resolveFamilyPublicBaseUrl({
+        NEXT_PUBLIC_STUDIO_URL: "http://studio.fritz.box:3000",
+        NEXT_PUBLIC_PORTAL_URL: "http://portal.fritz.box:3001",
+      }),
+      "http://localhost:3004",
+    );
+    // Pfad-Layout auf einem Origin ist kein Split-Hostname-Deployment.
+    assert.equal(
+      resolveFamilyPublicBaseUrl({
+        NEXT_PUBLIC_STUDIO_URL: "https://uwe.example/studio",
+        NEXT_PUBLIC_PORTAL_URL: "https://uwe.example/portal",
+      }),
+      "http://localhost:3004",
+    );
+  });
+
   it("rebases the loopback login redirect onto the public family origin", () => {
     // Family binds to 127.0.0.1, so `request.nextUrl` carries the loopback host
     // and port — a tunnel visitor would otherwise be sent to localhost:3004.

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { studioCommands, studioSidebar } from "../../navigation/studio-nav";
-import { crossAppBottomNavItems, readClientAppUrls } from "@uwe/shared-ui";
+import { crossAppBottomNavItems, useClientAppUrls } from "@uwe/shared-ui";
 import { AppShell } from "./AppShell";
 
 export interface StudioShellProps {
@@ -17,8 +17,8 @@ export interface StudioShellProps {
 /** Top-level Studio shell — global product navigation. */
 export function StudioShell({ breadcrumb, contextPanel, footer, children }: StudioShellProps) {
   const pathname = usePathname() ?? "/worlds";
+  const urls = useClientAppUrls();
   const appUrls = useMemo(() => {
-    const urls = readClientAppUrls();
     return {
       startUrl: urls.start,
       studioUrl: urls.studio,
@@ -26,7 +26,7 @@ export function StudioShell({ breadcrumb, contextPanel, footer, children }: Stud
       brainUrl: urls.brain,
       familyUrl: urls.family,
     };
-  }, []);
+  }, [urls]);
   const groups = useMemo(() => studioSidebar(pathname), [pathname]);
 
   return (

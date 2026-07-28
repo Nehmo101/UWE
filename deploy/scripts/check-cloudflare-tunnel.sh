@@ -111,14 +111,25 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
     report warn "NEXT_PUBLIC_PORTAL_URL zeigt auf einen portal-Hostnamen — Tunnel-Ingress fehlt lokal (Remote-Tunnel im Dashboard prüfen)"
   fi
   # Family ist häkchen-gegated, aber ausdrücklich für den Haushalt gedacht: ein
-  # fehlender Ingress ist kein Sicherheitsproblem, sondern ein toter Link — die
-  # Family-Kacheln zeigen dann auf einen Hostnamen, den niemand erreicht.
+  # fehlender Ingress ist kein Sicherheitsproblem, sondern ein toter Link. UWE
+  # leitet die Family-Adresse aus dem Split-Hostname-Layout ab, wenn
+  # NEXT_PUBLIC_FAMILY_URL fehlt (resolveFamilyPublicBaseUrl) — geprüft wird
+  # deshalb genau der Hostname, auf den die Links tatsächlich zeigen.
+  family_host=""
+  if [[ -n "$FAMILY_URL" ]]; then
+    family_host="$(printf '%s' "$FAMILY_URL" | sed -E 's#^[a-z]+://##; s#/.*$##; s#:[0-9]+$##')"
+  elif [[ -n "$APEX_DOMAIN" ]]; then
+    family_host="family.${APEX_DOMAIN}"
+  fi
+  case "$family_host" in
+    "" | localhost | 127.* | ::1) family_host="" ;;
+  esac
   if grep -qE "hostname:[[:space:]]*family\." "$TUNNEL_CONFIG" 2>/dev/null; then
     report ok "Split-Hostname-Ingress: family-Hostname konfiguriert"
-  elif [[ -n "$FAMILY_URL" && "$FAMILY_URL" == *"family."* ]]; then
-    report warn "NEXT_PUBLIC_FAMILY_URL zeigt auf einen family-Hostnamen — Tunnel-Ingress fehlt lokal (Remote-Tunnel im Dashboard prüfen)"
-  elif [[ -z "$FAMILY_URL" || "$FAMILY_URL" == *"localhost"* || "$FAMILY_URL" == *"127.0.0.1"* ]]; then
-    report warn "NEXT_PUBLIC_FAMILY_URL nicht gesetzt — alle Family-Links zeigen auf http://localhost:3004"
+  elif [[ -n "$family_host" ]]; then
+    report warn "Family-Links zeigen auf ${family_host}, im Tunnel fehlt der Ingress — einrichten: bash deploy/scripts/configure-cloudflare-tunnel.sh"
+  else
+    report warn "Family bleibt lokal (http://localhost:3004) — ohne öffentliche Domain gibt es keinen Family-Hostnamen"
   fi
   if grep -qE "hostname:[[:space:]]*studio\." "$TUNNEL_CONFIG" 2>/dev/null; then
     report ok "Split-Hostname-Ingress: studio-Hostname konfiguriert"

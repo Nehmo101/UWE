@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import type { NavGroup } from "@uwe/shared-utils/navigation";
 import { navGroupsToCommands, resolveNavGroups } from "@uwe/shared-utils/navigation";
 import { PORTAL_NAV, portalWorldNav } from "../../navigation/portal-nav";
-import { crossAppBottomNavItems, readClientAppUrls } from "@uwe/shared-ui";
+import { crossAppBottomNavItems, useClientAppUrls } from "@uwe/shared-ui";
 import { AppShell } from "./AppShell";
 
 export interface PortalShellProps {
@@ -50,7 +50,7 @@ export function PortalShell({
   // Handoff, Abschnitt „5 · Mobil": die Bottom-Nav schaltet zwischen den
   // Produkten. Die Welt-/Portal-Navigation bleibt in der Schublade erreichbar.
   // Gast-/Share-Ansichten (eigene navGroups) bekommen keine Produktleiste.
-  const urls = readClientAppUrls();
+  const urls = useClientAppUrls();
   const bottomNav = navGroups
     ? undefined
     : crossAppBottomNavItems({

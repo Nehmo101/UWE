@@ -3,7 +3,9 @@ import { headers } from "next/headers";
 import { Space_Mono, Newsreader } from "next/font/google";
 import { getAppRepository, resolveThemePreferencesForScope } from "@uwe/database/server";
 import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
+import { resolveCrossAppUrls } from "@uwe/auth";
 import {
+  AppUrlsProvider,
   ThemeBootstrapScript,
   ThemeDocumentSync,
   TopBarSessionMount,
@@ -120,7 +122,10 @@ export default async function RootLayout({
           customThemes={customThemes}
         >
           <ThemeDocumentSync theme={serverTheme} />
-          {children}
+          {/* Die Produkt-Origins kommen aus der Laufzeit-Umgebung, nicht aus dem
+              Build: eine nachträglich gesetzte oder abgeleitete Family-Adresse
+              erreicht ein fertiges Client-Bundle sonst nie. */}
+          <AppUrlsProvider value={resolveCrossAppUrls()}>{children}</AppUrlsProvider>
           <StudioCommandPalette worlds={worlds} canRunAdminCommands={canRunAdminCommands} />
           <TopBarSessionMount>
             <StudioSessionChrome />

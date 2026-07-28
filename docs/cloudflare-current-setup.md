@@ -49,7 +49,7 @@ Set on the host (not committed). The in-app status reflects these:
 | `PORTAL_PATH` | Portal mount path (path-routing mode) | `/portal` or `/` (split host) |
 | `NEXT_PUBLIC_STUDIO_URL` | Absolute Studio URL for cross-app links | `https://studio.uwe.example` |
 | `NEXT_PUBLIC_PORTAL_URL` | Absolute Portal URL for cross-app links | `https://portal.uwe.example` |
-| `NEXT_PUBLIC_FAMILY_URL` | Absolute Family URL for cross-app links — unset, alle Family-Links zeigen auf `http://localhost:3004` | `https://family.uwe.example` |
+| `NEXT_PUBLIC_FAMILY_URL` | Absolute Family URL for cross-app links. Optional — ohne Wert leitet UWE `family.<apex>` aus den Geschwister-Hostnamen ab | unset (oder abweichender Hostname) |
 | `FAMILY_PORT` | Port der Family-App (`apps/family`) | `3004` |
 | `AUTH_REQUIRED` | Enforce login | `true` |
 | `PLAYER_PREVIEW_PUBLIC` | Allow public player preview | `false` |
