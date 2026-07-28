@@ -1,4 +1,7 @@
-export type RoutingMode = "LOCAL_ONLY" | "DISABLED";
+// Mirrors AiRoutingMode in @uwe/database — kept as a literal so this client
+// bundle never imports server code. LOCAL_THEN_CLOUD/CLOUD_ONLY survive in the
+// DB column even though the cloud path is gone.
+export type RoutingMode = "LOCAL_ONLY" | "LOCAL_THEN_CLOUD" | "CLOUD_ONLY" | "DISABLED";
 export type PrivacyLevel = "CLOUD_ALLOWED" | "CLOUD_FORBIDDEN" | "LOCAL_REQUIRED";
 
 export interface AdminUserOption {
@@ -34,24 +37,6 @@ export interface GatewayDashboard {
     perUserDailyBudgetUsd: number | null;
     updatedAt: string;
   };
-  providers: Array<{
-    id: string;
-    providerId: string;
-    label: string;
-    hasApiKey: boolean;
-    isEnabled: boolean;
-    defaultModel: string | null;
-    priority: number;
-  }>;
-  budget: {
-    dailySpentUsd: number;
-    monthlySpentUsd: number;
-    userDailySpentUsd: number;
-    dailyLimitUsd: number | null;
-    monthlyLimitUsd: number | null;
-    userDailyLimitUsd: number | null;
-    withinBudget: boolean;
-  };
   rtxHealth: {
     ready: boolean;
     message?: string;
@@ -60,14 +45,6 @@ export interface GatewayDashboard {
     connectorOnlineCount?: number;
     connectorDegraded?: boolean;
   };
-  userGrants: Array<{
-    id: string;
-    userId: string;
-    displayName: string;
-    email: string | null;
-    permissions: string[];
-    cloudFallbackAllowed: boolean;
-  }>;
   recentUsage: UsageLogEntry[];
 }
 
