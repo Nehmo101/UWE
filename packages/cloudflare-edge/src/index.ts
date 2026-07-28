@@ -38,6 +38,29 @@ export {
 } from "./config-file";
 
 export {
+  buildTunnelIngressPlan,
+  decodeTunnelToken,
+  ingressMatchesPlan,
+  mergeTunnelIngress,
+  planToIngressRules,
+  type MergedIngress,
+  type TunnelIdentity,
+  type TunnelIngressPlan,
+  type TunnelIngressRule,
+  type TunnelRoutePlan,
+} from "./tunnel-ingress";
+
+export {
+  applyTunnelIngress,
+  fetchTunnelIngressState,
+  type ApplyTunnelIngressResult,
+  type DnsOutcome,
+  type DnsRecordResult,
+  type TunnelApiOptions,
+  type TunnelIngressState,
+} from "./tunnel-client";
+
+export {
   applyManagedChallenge,
   fetchManagedChallengeState,
   hasCloudflareCredentials,

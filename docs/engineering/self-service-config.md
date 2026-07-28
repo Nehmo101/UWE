@@ -53,6 +53,28 @@ Wiederherstellungs-/Bootstrap-Pfad, kein laufender Schritt.
 | Domänenlogik (Regel, Ausdruck, API-Client) | `packages/cloudflare-edge/src/{managed-challenge,ruleset-client}.ts` |
 | Host-Skript liest JSON | `deploy/scripts/configure-cloudflare-managed-challenge.sh` → `pnpm cloudflare:challenge` |
 
+### Cloudflare Tunnel-Routen („Öffentliche Adressen")
+
+Zweite Variante ohne systemd-Timer: der Ziel-Zustand liegt bei Cloudflare, die
+Eingaben liegen bereits vor. Die Kommandozentrale liest das Tunnel-Token aus
+ihrem Datenverzeichnis (daraus Account- und Tunnel-ID) und das API-Token aus den
+Deployment-Einstellungen, plant die Routen und setzt Ingress **und** DNS in einem
+Schritt. Wiederholbar ohne Nebenwirkung; fremde Routen im Tunnel bleiben stehen.
+
+Wichtig: Die Soll-Hostnamen kommen aus denselben Resolvern wie die Links in der
+App (`resolveFamilyPublicBaseUrl` & Geschwister). Genau daran scheiterte Family
+vorher — Link-Ziel und Ingress waren getrennt gepflegt, also lief der Link auf
+`localhost:3004`, während im Tunnel gar keine Family-Route stand.
+
+| Schritt | Datei |
+|---|---|
+| Soll-Routen planen (rein, testbar) | `packages/cloudflare-edge/src/tunnel-ingress.ts` |
+| Ingress + DNS anwenden (API-Client) | `packages/cloudflare-edge/src/tunnel-client.ts` |
+| Op (Token lesen, Zugangsdaten auflösen) | `tools/uwe-host-command-center/src/ops/cloudflare-tunnel-ops.ts` |
+| CLI-Aktion | `cloudflare-tunnel-status` / `cloudflare-tunnel-apply` in `ops-cli.ts` |
+| UI | `apps/rtx-connector-client/src/components/CloudflareRoutesCard.tsx` |
+| Bootstrap-/Wiederherstellungspfad (Host) | `deploy/scripts/configure-cloudflare-tunnel.sh` |
+
 ### Auto-Briefing
 
 | Schritt | Datei |

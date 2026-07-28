@@ -25,6 +25,11 @@ Studio NotFound".
 
 ## Cloudflare Tunnel
 
+- **Einrichtung ohne Dashboard:** Kommandozentrale → Cloudflare → „Öffentliche
+  Adressen" zeigt, welcher Hostname auf welche App zeigt, und setzt Ingress und
+  DNS in einem Schritt. Die Hostnamen kommen aus derselben Konfiguration wie die
+  Links in der App, Family also inklusive. Auf einem Linux-Host ohne
+  Kommandozentrale erledigt das `deploy/scripts/configure-cloudflare-tunnel.sh`.
 - A Cloudflare Tunnel fronts both apps (outbound from the host; no inbound ports).
 - **Access / login:** both Studio and Portal are gated by UWE's own login
   (e-mail sign-in) when `AUTH_REQUIRED=true`. There is **no separate Cloudflare
