@@ -11,7 +11,7 @@ import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
    zieht nichts nach. */
 import { breiteAusFlaeche } from '../world/erosion.js';
 import { newOcc, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
-import { terraMat, tintedMats } from '../render/materials.js';
+import { terraMat, tintedMats, terraUniforms } from '../render/materials.js';
 // I1: Kartenzeichen. zeichen.js haengt an core/, world/terrain.js und render/ —
 // nie an generators/, der Weg ist also zyklusfrei (dieselbe Richtung, die
 // areas.js zu signaturen.js nimmt).
@@ -176,6 +176,81 @@ var flussMat = terraMat({
   vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide
 });
 tintedMats.push(flussMat);
+
+/* --- Bedienungsrunde: Kreuzungen ohne Doppelblendung ----------------------
+   Wo sich zwei Flussbaender ueberlappen (Kreuzung, Muendung), blendete das
+   transparente Material ZWEIMAL — der Schnittbereich stand als hellere
+   Keilflaeche im Bild. Der Stencil-Puffer loest das je Pixel: der erste
+   Fluss-Fragment schreibt die Marke 1, jedes weitere Fluss-Fragment am selben
+   Pixel faellt am NotEqual-Test durch. Ein Pixel traegt damit genau EINE
+   Flussflaeche. Andere Materialien ruehren den Stencil nicht an; ohne
+   Stencil-Puffer (aeltere Konfiguration) sind die Operationen wirkungslos
+   und es bleibt beim alten Bild — render/pipeline.js legt den Puffer an. */
+flussMat.stencilWrite = true;
+flussMat.stencilRef = 1;
+flussMat.stencilFunc = THREE.NotEqualStencilFunc;
+flussMat.stencilZPass = THREE.ReplaceStencilOp;
+
+/* --- Bedienungsrunde: Fliessbewegung --------------------------------------
+   Ein Fluss stand bisher voellig still. Die Bewegung kommt als Shader-Patch
+   nach dem Muster von world/water.js (himmelsStreifen): helle Striche und
+   Ufergischt wandern die BOGENLAENGE des Bandes entlang — bergab, denn die
+   Laufrichtung steckt im Vorzeichen des Attributs `terraFluss.x`, das
+   genFluss aus dem Hoehenprofil bestimmt. `terraFluss.y` ist die
+   Querkoordinate (-1 linkes Ufer, +1 rechtes): am Rand traegt die Gischt,
+   in der Mitte bleibt der Glanz dezent. Die Farbe ist wie beim Meer die
+   Horizontfarbe des Himmels (terraUniforms.uHorizont) — morgens warm,
+   nachts kuehl, ohne eigene Nachfuehrung. */
+var flussUniforms = { uFlussZeit: { value: 0 } };
+
+/** Uhr der Fliessanimation — main.js stellt sie je Bild. */
+function setFlussZeit(t) { flussUniforms.uFlussZeit.value = t; }
+
+var FLUSS_FRAG =
+  'float terraFlussKamm = sin( vTerraFluss.x * 0.42 - uFlussZeit * 2.1\n' +
+  '  + sin( vTerraFluss.x * 0.11 + vTerraFluss.y * 1.7 ) * 1.3 ) * 0.5 + 0.5;\n' +
+  'float terraFlussStrich = smoothstep( 0.62, 0.97, terraFlussKamm );\n' +
+  'float terraFlussRand = smoothstep( 0.55, 0.95, abs( vTerraFluss.y ) );\n' +
+  'float terraFlussGischt = smoothstep( 0.35, 0.95,\n' +
+  '  sin( vTerraFluss.x * 0.9 - uFlussZeit * 3.4 + vTerraFluss.y * 2.4 ) * 0.5 + 0.5 );\n' +
+  'float terraFlussGlanz = terraFlussStrich * ( 0.10 + 0.10 * terraFlussRand )\n' +
+  '  + terraFlussGischt * terraFlussRand * 0.10;\n' +
+  'reflectedLight.indirectDiffuse += uHorizont * terraFlussGlanz;\n';
+
+function patchFlussBewegung(shader) {
+  var ankerV = '#include <begin_vertex>';
+  var ankerF = '#include <lights_fragment_end>';
+  // BEIDE Anker vorab pruefen: ein halb angewandter Patch (Varying nur im
+  // Fragment) waere ein Compilerfehler statt eines stillen Rueckfalls.
+  if (shader.vertexShader.indexOf(ankerV) < 0 ||
+      shader.fragmentShader.indexOf(ankerF) < 0) {
+    console.warn('terra: Shader-Patch "flussbewegung" fand seinen Anker nicht — ' +
+      'die Fluesse stehen still.');
+    return;
+  }
+  shader.uniforms.uFlussZeit = flussUniforms.uFlussZeit;
+  shader.uniforms.uHorizont = terraUniforms.uHorizont;
+  shader.vertexShader = 'attribute vec2 terraFluss;\nvarying vec2 vTerraFluss;\n' +
+    shader.vertexShader.replace(ankerV, ankerV + '\nvTerraFluss = terraFluss;');
+  shader.fragmentShader = 'varying vec2 vTerraFluss;\nuniform float uFlussZeit;\n' +
+    'uniform vec3 uHorizont;\n' +
+    shader.fragmentShader.replace(ankerF, ankerF + '\n' + FLUSS_FRAG);
+}
+
+/* Umhuellung wie himmelsStreifen (water.js): terraPatch laeuft zuerst, der
+   Cache-Schluessel MUSS mitwachsen — sonst teilte sich flussMat sein Programm
+   mit einem ungepatchten terraMat. */
+(function () {
+  var vorher = flussMat.onBeforeCompile;
+  flussMat.onBeforeCompile = function (shader) {
+    if (vorher) vorher.call(this, shader);
+    patchFlussBewegung(shader);
+  };
+  var schluessel = flussMat.customProgramCacheKey;
+  flussMat.customProgramCacheKey = function () {
+    return (schluessel ? schluessel.call(this) : '') + '|fluss';
+  };
+})();
 
 var BELAG = { erde: [1.02, 0.98, 0.9], stein: [0.9, 0.92, 0.95], pflaster: [0.82, 0.84, 0.86] };
 
@@ -416,9 +491,13 @@ function genFluss(el) {
     var cp = prof.slice();
     for (var k = 1; k < prof.length - 1; k++) prof[k] = (cp[k - 1] + cp[k] * 2 + cp[k + 1]) * 0.25;
   }
-  var pos = [], col = [], idx = [];
+  var pos = [], col = [], idx = [], fluss = [];
   var wc = new THREE.Color(0x6fb5c4), tmp = new THREE.Color();
   var wSurf = [];
+  // Bedienungsrunde: Laufrichtung der Fliessanimation aus dem geglaetteten
+  // Profil — das Wasser wandert zum tieferen Ende, egal in welcher Richtung
+  // der Pfad gezeichnet wurde.
+  var sDir = prof[0] >= prof[prof.length - 1] ? 1 : -1;
   for (i = 0; i < sm.length; i++) {
     var s = sm[i];
     var y = prof[i] - p.tiefe * 0.42;
@@ -429,6 +508,9 @@ function genFluss(el) {
     col.push(tmp.r, tmp.g, tmp.b);
     pos.push(s.x - nx * hw, y, s.z - nz * hw);
     col.push(tmp.r, tmp.g, tmp.b);
+    // (Bogenlaenge mit Laufrichtungs-Vorzeichen, Querlage -1/+1) je Vertex —
+    // das Attribut liest der Patch patchFlussBewegung.
+    fluss.push(sDir * s.s, 1, sDir * s.s, -1);
     if (i > 0) {
       var a = (i - 1) * 2, b = a + 1, c = i * 2, d = c + 1;
       idx.push(a, c, b, b, c, d);
@@ -437,6 +519,7 @@ function genFluss(el) {
   var g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(col), 3));
+  g.setAttribute("terraFluss", new THREE.BufferAttribute(new Float32Array(fluss), 2));
   g.setIndex(idx);
   g.computeVertexNormals();
   var mesh = new THREE.Mesh(g, flussMat);
@@ -930,7 +1013,7 @@ function genBruch(el) {
 
 
 export { pathCurve, pathSamples, BELAG, bandGeoAusLinie, bandAusLinie, bandMeshAusGeos,
-  strassenZeichen, flussBreite, uebergangsZeichen,
+  strassenZeichen, flussBreite, uebergangsZeichen, setFlussZeit,
   genStrasse, genMauer, genFluss, genHecke,
   brueche, bruchMasse, bruchDaten, genBruch,
   bruchMaskeUniforms, bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig, bruchMaskeAt };

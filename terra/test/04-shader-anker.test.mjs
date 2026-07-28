@@ -32,12 +32,14 @@ import { ANKERLISTE, echteThreeQuelle, includesVon } from './hilfen/three-quelle
      water.js      Wasser ueber terraMat, Schaum ueber Basic  -> phong + basic
      sky.js        Himmelskuppel/Wolken als Basic-Material    -> basic
      vfx.js        Partikel als MeshBasicMaterial (InstancedMesh) -> basic
+     paths.js      Fliessbewegung am Flussmaterial (terraMat) -> phong
      pipeline.js   eigene ShaderPasses, keine Chunk-Anker     -> keins */
 const PATCHDATEIEN = [
   { datei: 'render/materials.js', programme: ['phong'] },
   { datei: 'world/water.js', programme: ['phong', 'basic'] },
   { datei: 'world/sky.js', programme: ['basic', 'sprite'] },
   { datei: 'world/vfx.js', programme: ['basic'] },
+  { datei: 'generators/paths.js', programme: ['phong'] },
   { datei: 'render/pipeline.js', programme: ['basic', 'phong', 'depth'] }
 ];
 
@@ -187,7 +189,8 @@ test('Ebene 4 — die gepatchten Anker sind vollstaendig erfasst', () => {
       'opaque_fragment', 'uv_vertex'],
     'world/sky.js': ['map_fragment', 'map_pars_fragment'],
     'world/water.js': ['lights_fragment_end', 'alphatest_fragment'],
-    'world/vfx.js': ['project_vertex', 'uv_vertex', 'color_fragment']
+    'world/vfx.js': ['project_vertex', 'uv_vertex', 'color_fragment'],
+    'generators/paths.js': ['begin_vertex', 'lights_fragment_end']
   };
   for (const datei of Object.keys(pflicht)) {
     const gefunden = new Set(ankerVon(datei));

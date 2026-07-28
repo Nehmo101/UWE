@@ -607,6 +607,40 @@ hr { border: 0; border-top: 1px solid var(--uwe-border-muted); margin: 13px 0; }
 /* Hervorgehobene Taste/Geste im Hinweis: Akzent, wie UWE Zustaende markiert. */
 #hint b { font-weight: 700; color: var(--uwe-accent); }
 
+/* Bedienungsrunde: Schliessknopf der Hinweisbox. Klein, in der Ecke, ohne
+   eigene Kartenoptik — er gehoert zur Box, nicht neben sie. */
+#hint { padding-right: 26px; }
+.hintZu {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--uwe-fg-subtle);
+  font: inherit;
+  font-size: var(--uwe-text-sm);
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+}
+.hintZu:hover { color: var(--uwe-fg); }
+
+/* Der ?-Knopf an der Stelle der ausgeblendeten Hinweisbox. */
+#hintZeigen {
+  position: absolute;
+  left: var(--uwe-spacing-lg);
+  bottom: calc(var(--terra-leiste-hoehe, 60px) + var(--uwe-spacing-lg) * 2);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font: inherit;
+  font-size: var(--uwe-text-sm);
+  font-weight: 700;
+  color: var(--uwe-fg-muted);
+  cursor: pointer;
+}
+#hintZeigen:hover { color: var(--uwe-fg); }
+
 #toast {
   position: absolute;
   left: 50%;

@@ -397,10 +397,16 @@ function geoFeldreihe() {
 }
 
 function geoBusch() {
+  /* Detailrunde: zwei versetzte Nebenlappen und eine dritte Silhouettenkarte
+     — der Busch war aus der Naehe ein einzelner Ball mit Kreuzquad, jetzt
+     liest er sich als gewachsene Gruppe. */
   return mergeGeos([
     part(new PL(1.5, 1.25), M(0, 0.62, 0), 0x5d7845),
     part(new PL(1.5, 1.25), M(0, 0.62, 0, 0, Math.PI / 2, 0), 0x526b3d),
-    part(new IC(0.52, 0), M(0, 0.55, 0, 0, 0.4, 0, 1.15, 0.8, 1.15), 0x587442)
+    part(new PL(1.2, 1.05), M(0.18, 0.5, 0.12, 0, 0.8, 0.1), 0x61804a),
+    part(new IC(0.52, 0), M(0, 0.55, 0, 0, 0.4, 0, 1.15, 0.8, 1.15), 0x587442),
+    part(new IC(0.34, 0), M(0.46, 0.38, 0.3, 0, 1.3, 0, 1.1, 0.72, 1.1), 0x5e7a48),
+    part(new IC(0.28, 0), M(-0.42, 0.32, -0.24, 0, 2.3, 0, 1.12, 0.7, 1.12), 0x516b3e)
   ]);
 }
 
@@ -620,13 +626,19 @@ function geoScheune() {
 
 
 function geoFels() {
-  var g = new IC(0.95, 0);
+  /* Detailrunde: eine Subdivisionsstufe mehr (20 -> 80 Dreiecke). Der Fels
+     ist eines der haeufigsten Streuobjekte und war als Ikosaeder sofort als
+     solcher zu erkennen; mit 80 Facetten und derselben ortsstabilen
+     Verzerrung bekommt er Bruchkanten statt Wuerfelseiten. Die zweite,
+     feinere Hash-Lage bricht die glatten Subdivisionsflaechen zusaetzlich. */
+  var g = new IC(0.95, 1);
   var p = g.attributes.position;
   for (var i = 0; i < p.count; i++) {
     var qx = Math.round(p.getX(i) * 30), qy = Math.round(p.getY(i) * 30), qz = Math.round(p.getZ(i) * 30);
-    p.setXYZ(i, p.getX(i) * (0.8 + hashi(qx, qz, 5) * 0.5),
-      p.getY(i) * (0.5 + hashi(qy, qx, 9) * 0.35) + 0.42,
-      p.getZ(i) * (0.8 + hashi(qz, qy, 13) * 0.5));
+    var fein = 0.94 + hashi(qx + qy, qz - qy, 21) * 0.12;
+    p.setXYZ(i, p.getX(i) * (0.8 + hashi(qx, qz, 5) * 0.5) * fein,
+      p.getY(i) * (0.5 + hashi(qy, qx, 9) * 0.35) * fein + 0.42,
+      p.getZ(i) * (0.8 + hashi(qz, qy, 13) * 0.5) * fein);
   }
   g.computeVertexNormals();
   return part(g, null, 0xb0aca2);
@@ -683,8 +695,14 @@ function dach(parts, w, d, h, y, hex, reet) {
 function fenster(parts, x, y, z, w, h, seite) {
   var ry = seite === "z" ? 0 : Math.PI / 2;
   var t = 0.06;
+  /* Detailrunde: das Glas sinkt entlang der BLICKACHSE ein. Fuer die x-Seite
+     sass der Versatz bisher auf der z-Achse (also quer zur Scheibe) — das
+     Glas stand dort VOR dem Rahmen. Eingesenkt wird zur Bauwerksmitte hin,
+     deshalb das Vorzeichen aus der Lage. */
+  var sx = seite === "z" ? 0 : (x >= 0 ? 0.05 : -0.05);
+  var sz = seite === "z" ? 0.05 : 0;
   parts.push(part(new BX(w, h, 0.10), M(x, y, z, 0, ry, 0), 0xe8e0cc));            // Rahmen
-  parts.push(part(new BX(w - t * 2, h - t * 2, 0.16), M(x, y, z - (seite === "z" ? 0.05 : 0),
+  parts.push(part(new BX(w - t * 2, h - t * 2, 0.16), M(x - sx, y, z - sz,
     0, ry, 0), 0x2e3038));                                                          // Glas, eingesenkt
   parts.push(part(new BX(0.04, h - t * 2, 0.12), M(x, y, z, 0, ry, 0), 0xd8d0ba)); // Sprosse
   parts.push(part(new BX(w - t * 2, 0.04, 0.12), M(x, y, z, 0, ry, 0), 0xd8d0ba));
@@ -1205,9 +1223,23 @@ function geoHausB(roofHex, variante, reet) {
   parts.push(part(new BX(0.09, 1.9, 0.09), M(1.36, 1.35, 1.18), 0x6f5a44));
   parts.push(part(new BX(2.75, 0.09, 0.09), M(0, 2.22, 1.19), 0x6f5a44));
   parts.push(part(new BX(0.09, 1.6, 0.09), M(0.62, 1.3, 1.19, 0, 0, 0.5), 0x6f5a44));
+  /* Detailrunde: das Fachwerk hoert nicht an der Schauseite auf — Eckstiele
+     und Rahmholz auch an der Rueckwand, dazu ein Schornstein mit Kopfplatte
+     (jedes Dorf war bisher rauchlos gebaut). Alles Quader: +9 Teile je Haus,
+     im Instanzhaushalt unsichtbar. */
+  parts.push(part(new BX(0.09, 1.9, 0.09), M(-1.36, 1.35, -1.18), 0x6f5a44));
+  parts.push(part(new BX(0.09, 1.9, 0.09), M(1.36, 1.35, -1.18), 0x6f5a44));
+  parts.push(part(new BX(2.75, 0.09, 0.09), M(0, 2.22, -1.19), 0x6f5a44));
+  parts.push(part(new BX(0.09, 1.6, 0.09), M(-0.58, 1.3, -1.19, 0, 0, -0.5), 0x6f5a44));
+  parts.push(part(new BX(0.34, 1.1, 0.34), M(0.78, 3.3, -0.45), 0x8a8278));
+  parts.push(part(new BX(0.46, 0.1, 0.46), M(0.78, 3.88, -0.45), 0x6e685e));
   dach(parts, 2.8, 2.4, 1.5, 2.35, roofHex, reet);
   fenster(parts, -0.7, 1.55, 1.21, 0.55, 0.6, "z");
-  fenster(parts, 1.21, 1.55, -0.55, 0.55, 0.6, "x");
+  /* Detailrunde: das Seitenfenster sass bei x = 1.21 IN der 1.4 tiefen Wand
+     und war seit jeher unsichtbar (samt seines Fensterlicht-Ankers, siehe
+     FENSTER_ANKER unten). Jetzt sitzt es wie die Frontfenster knapp VOR der
+     Flaeche. */
+  fenster(parts, 1.41, 1.55, -0.55, 0.55, 0.6, "x");
   tuer(parts, 0.55, 0.5, 1.22, 0.68, 1.25);
   if (variante === 1) {           // Schuppen-Anbau
     parts.push(part(new BX(1.3, 1.1, 1.5), M(-1.9, 0.55, -0.2), 0xcbb896));
@@ -1234,7 +1266,14 @@ function geoStadthausB(roofHex) {
   dach(parts, 2.9, 2.5, 1.3, 2.8, roofHex, false);
   fenster(parts, -0.8, 1.9, 1.26, 0.5, 0.66, "z");
   fenster(parts, 0.8, 1.9, 1.26, 0.5, 0.66, "z");
-  fenster(parts, 1.26, 1.9, 0, 0.5, 0.66, "x");
+  /* Detailrunde: Fenstersimse unter den Frontfenstern, ein Schornstein auf
+     dem Ziegeldach — und das Seitenfenster sass bei x = 1.26 IN der 1.45
+     tiefen Wand (unsichtbar, wie beim Fachwerkhaus). */
+  parts.push(part(new BX(0.62, 0.07, 0.16), M(-0.8, 1.53, 1.3), 0xd6cab2));
+  parts.push(part(new BX(0.62, 0.07, 0.16), M(0.8, 1.53, 1.3), 0xd6cab2));
+  parts.push(part(new BX(0.36, 1.0, 0.36), M(-0.85, 3.7, -0.5), 0x9a9288));
+  parts.push(part(new BX(0.48, 0.1, 0.48), M(-0.85, 4.22, -0.5), 0x7c766c));
+  fenster(parts, 1.46, 1.9, 0, 0.5, 0.66, "x");
   tuer(parts, 0, 0.5, 1.27, 0.7, 1.3);
   return mergeGeos(parts);
 }
@@ -1242,8 +1281,11 @@ function geoStadthausB(roofHex) {
 /* --- Fensterlicht-Anker: lokale Position + Blickrichtung je Haustyp ------
    Beim Platzieren entscheidet die Element-Seed, welche Fenster gluehen. -- */
 var FENSTER_ANKER = {
-  haus:   [[-0.7, 1.55, 1.24], [1.24, 1.55, -0.55]],
-  haus2:  [[-0.8, 1.9, 1.3], [0.8, 1.9, 1.3], [1.3, 1.9, 0]],
+  // Detailrunde: die Seitenfenster-Anker sind mit den Fenstern selbst vor die
+  // Wandflaeche gerueckt (x 1.24 -> 1.44 bzw. 1.3 -> 1.5) — beide lagen wie
+  // ihre Fenster IN der Wand und haben nie geleuchtet.
+  haus:   [[-0.7, 1.55, 1.24], [1.44, 1.55, -0.55]],
+  haus2:  [[-0.8, 1.9, 1.3], [0.8, 1.9, 1.3], [1.5, 1.9, 0]],
   villa:  [[-1.35, 1.4, 2.15], [1.35, 1.4, 2.15]],
   zwergenhalle: [[0, 0.85, 1.9]],
   elfenturm: [[0, 5.2, 1.1], [0, 3.1, 1.05]],
@@ -1345,23 +1387,28 @@ function geoBaumArt(o) {
   return mergeGeos(parts);
 }
 
+/* Detailrunde: je Art zwei Kronenkarten mehr (eine Karte = 2 Dreiecke — die
+   dichteren Kronen sind praktisch geschenkt). Aus jedem Blickwinkel stehen
+   damit mehr Silhouetten hintereinander, die Krone liest sich als Volumen
+   statt als Fächer; die Huellkugel-Normalen buegeln das Licht wie bisher
+   ueber alle Karten hinweg glatt. */
 var BAUM_LAUBBREIT = { stammOben: 0.16, stammUnten: 0.34, stammH: 2.4, rinde: 0x6f5a44,
-  karten: 4, kroneW: 4.2, kroneH: 3.4, kroneY: 2.0, lehne: 0.15, laub: 0x87a45c, seed: 41 };
+  karten: 6, kroneW: 4.2, kroneH: 3.4, kroneY: 2.0, lehne: 0.15, laub: 0x87a45c, seed: 41 };
 var BAUM_LAUBHOCH = { stammOben: 0.13, stammUnten: 0.26, stammH: 3.4, rinde: 0x7a6450,
-  karten: 3, kroneW: 2.6, kroneH: 4.4, kroneY: 2.6, lehne: 0.08, laub: 0x7d9a52, seed: 43 };
+  karten: 5, kroneW: 2.6, kroneH: 4.4, kroneY: 2.6, lehne: 0.08, laub: 0x7d9a52, seed: 43 };
 // oval (Default 1, s. kugelNormalen): nur die schlanken Arten stauchen die
 // y-Differenz — Nadel ist ~1.8x, Zypresse ~4x hoeher als breit, ohne Stauchung
 // wuerden ihre Flanken fast nur Auf-/Abwaertsnormalen bekommen.
 var BAUM_NADEL = { stammOben: 0.10, stammUnten: 0.24, stammH: 1.4, rinde: 0x5f4c3c,
-  karten: 3, kroneW: 2.6, kroneH: 4.8, kroneY: 0.9, lehne: 0.04, laub: 0x4e6b48, seed: 47,
+  karten: 5, kroneW: 2.6, kroneH: 4.8, kroneY: 0.9, lehne: 0.04, laub: 0x4e6b48, seed: 47,
   oval: 0.55 };
 var BAUM_ZYPRESSE = { stammOben: 0.08, stammUnten: 0.16, stammH: 0.8, rinde: 0x6d5a45,
-  karten: 3, kroneW: 1.3, kroneH: 5.4, kroneY: 0.55, lehne: 0.05, laub: 0x3f5f45, seed: 53,
+  karten: 5, kroneW: 1.3, kroneH: 5.4, kroneY: 0.55, lehne: 0.05, laub: 0x3f5f45, seed: 53,
   oval: 0.45 };
 var BAUM_SUMPF = { stammOben: 0.2, stammUnten: 0.42, stammH: 2.8, rinde: 0x5c5244,
-  karten: 5, kroneW: 4.6, kroneH: 3.0, kroneY: 2.6, lehne: 0.42, laub: 0x6e8258, seed: 59 };
+  karten: 7, kroneW: 4.6, kroneH: 3.0, kroneY: 2.6, lehne: 0.42, laub: 0x6e8258, seed: 59 };
 var BAUM_BLUETE = { stammOben: 0.12, stammUnten: 0.26, stammH: 1.9, rinde: 0x7a6450,
-  karten: 4, kroneW: 3.4, kroneH: 2.8, kroneY: 1.7, lehne: 0.12, laub: 0xe3bfc6, seed: 61 };
+  karten: 6, kroneW: 3.4, kroneH: 2.8, kroneY: 1.7, lehne: 0.12, laub: 0xe3bfc6, seed: 61 };
 
 /* --- Unterwuchs -------------------------------------------------------- */
 function geoFarn() {
@@ -1550,7 +1597,9 @@ definePool("heuhaufen", geoHeuhaufen(), { radius: 1.1, familie: 'stoff' });
 definePool("marktstand", geoMarktstand(), { radius: 1.4, familie: 'stoff' });
 definePool("boot", geoBoot(), { radius: 1.3, familie: 'holz' });
 definePool("steg", geoSteg(), { radius: 1.6, familie: 'holz' });
-definePool("fensterlicht", geoFensterlicht(), { radius: 0, ao: 0, dbl: true,
+// detail: 0 — das Gluehquad ist eine Lichtflaeche, keine bemalte Oberflaeche;
+// die Facetten-Tonung der Detailrunde (core/pools.js) wuerde nur die Glut trueben.
+definePool("fensterlicht", geoFensterlicht(), { radius: 0, ao: 0, dbl: true, detail: 0,
   familie: 'putz', emissive: 0xffc878, emissiveIntensity: 0 });
 
 /* ==========================================================================

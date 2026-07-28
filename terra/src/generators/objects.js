@@ -5,7 +5,7 @@ import { clamp, hashi, rngOf, rr, ri, wpick } from '../core/rng.js';
 import { S, HALF, WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf } from '../core/pools.js';
 import { heightAt, slopeAt, inCorridor } from '../world/terrain.js';
-import { FENSTER_ANKER, LICHT_ANKER, islandGeo } from './geometry.js';
+import { FENSTER_ANKER, LICHT_ANKER, islandGeo, leafSurface, leafHalfWidth } from './geometry.js';
 import { rockMat } from '../render/materials.js';
 // I1: Kartenzeichen (siehe generators/zeichen.js). Die Richtung ist
 // objects.js -> zeichen.js, nie zurueck.
@@ -111,6 +111,78 @@ function tryPlaceFrei(occ, x, z, r) {
   if (occ && !occFree(occ, x, z, r)) return null;
   if (occ) occAdd(occ, x, z, r);
   return heightAt(x, z);
+}
+
+/* ==========================================================================
+   Objekte AUF Blattplateaus (Bedienungsrunde)
+
+   genRanke legt seine Plateau-Rahmen ({ L, W, cup, full }) als Laufzeitfeld
+   `el.plateaus` ab (generators/vines.js) — dieselben Matrizen, mit denen die
+   Blattstadt baut. `plateauHoeheAt` beantwortet daraus die Frage „liegt ueber
+   (x,z) eine Blattoberflaeche, und wie hoch?“ — das heightAt-Surrogat fuer
+   von Hand gesetzte Objekte (params.aufPlateau, siehe genObjekt).
+
+   WARUM DIE FUNKTION HIER LIEGT und nicht in vines.js, wo die Plateaus
+   entstehen: vines.js importiert objects.js (occFree/occAdd/KULTUR) — die
+   Gegenrichtung waere ein Zyklus. Gebraucht werden nur leafSurface/
+   leafHalfWidth (geometry.js, laengst ein Import dieses Moduls) und die am
+   Element hinterlegten Matrizen.
+
+   Die Umkehrung Welt -> Blatt braucht eine Hoehe, die erst das Ergebnis ist
+   (die Kippmatrix mischt x und y). Deshalb ein Fixpunkt: mit der Hoehe der
+   Blattmitte starten, in Blattkoordinaten wandeln, die Oberflaechenhoehe
+   ablesen, wiederholen. Der Kippwinkel ist klein (droop -0.1 rad), drei
+   Runden genuegen; die Rueckprobe am Ende verwirft alles, was nicht wirklich
+   senkrecht unter/ueber dem Blatt liegt.
+   ========================================================================== */
+var _plV = new THREE.Vector3();
+
+/** Hoechste Blattoberflaeche ueber (x,z) in Welthoehe — oder null. */
+function plateauHoeheAt(x, z) {
+  var best = null;
+  for (var i = 0; i < S.elements.length; i++) {
+    var e = S.elements[i];
+    if (e.kind !== "ranke" || !Array.isArray(e.plateaus)) continue;
+    for (var k = 0; k < e.plateaus.length; k++) {
+      var P = e.plateaus[k];
+      if (!P || !P.full || !(P.L > 0)) continue;
+      if (!P.inv) P.inv = new THREE.Matrix4().copy(P.full).invert();
+      // Starthoehe: die Blattmitte in Welthoehe.
+      _plV.set(0.5 * P.L, leafSurface(0.5, 0, P.L, P.cup), 0).applyMatrix4(P.full);
+      var y = _plV.y, u = 0, v = 0, ok = false;
+      for (var it = 0; it < 3; it++) {
+        _plV.set(x, y, z).applyMatrix4(P.inv);
+        u = _plV.x / P.L;
+        if (!(u > 0.03 && u < 0.99)) { ok = false; break; }
+        var hw = leafHalfWidth(u) * P.W;
+        if (!(hw > 1e-6)) { ok = false; break; }
+        v = _plV.z / hw;
+        if (!(v > -1 && v < 1)) { ok = false; break; }
+        _plV.set(u * P.L, leafSurface(u, v, P.L, P.cup), v * hw).applyMatrix4(P.full);
+        y = _plV.y;
+        ok = true;
+      }
+      if (!ok) continue;
+      // Rueckprobe: der Fixpunkt muss wirklich ueber (x,z) gelandet sein.
+      var dx = _plV.x - x, dz = _plV.z - z;
+      if (dx * dx + dz * dz > 1.5 * 1.5) continue;
+      if (best === null || _plV.y > best) best = _plV.y;
+    }
+  }
+  return best;
+}
+
+/**
+ * Platzierung auf der Blattoberflaeche — das tryPlace der Plateaus. Wasser-,
+ * Hang- und Korridorregel entfallen (alles Terrainbegriffe); es bleiben
+ * Blattkontur (in plateauHoeheAt) und Belegungsraster.
+ */
+function tryPlacePlateau(occ, x, z, r) {
+  var h = plateauHoeheAt(x, z);
+  if (h === null) return null;
+  if (occ && !occFree(occ, x, z, r)) return null;
+  if (occ) occAdd(occ, x, z, r);
+  return h;
 }
 
 var KULTUR = {
@@ -581,6 +653,10 @@ function genObjekt(el) {
   var aufWasser = el.variant === "maritim" || el.variant === "wasserflora";
   var amUfer = el.variant === "hafen" || el.variant === "ufer2";
   var schwebt = el.variant === "schwebend";
+  // Vom Zeiger auf einem Blattplateau gesetzt (editor/pointer.js): die ganze
+  // Streuung landet auf der Blattoberflaeche statt auf dem Terrain darunter.
+  // Bestandskarten tragen das Feld nicht und laufen unveraendert.
+  var aufPlateau = !!p.aufPlateau;
   for (var i = 0; i < el.points.length; i++) {
     var pt = el.points[i];
     var rng = rngOf((el.seed + i * 7919) | 0);
@@ -593,7 +669,8 @@ function genObjekt(el) {
       // die gewichtete Gruppen-Auswahl zurück — kein Crash.
       var kind = (p.nurTyp && POOLS[p.nurTyp]) ? p.nurTyp : wpick(rng, table);
       var r = POOLS[kind].radius * 0.85, h = null, ufer = null;
-      if (aufWasser) h = tryPlaceWasser(occ, x, z, r);
+      if (aufPlateau) h = tryPlacePlateau(occ, x, z, r);
+      else if (aufWasser) h = tryPlaceWasser(occ, x, z, r);
       else if (amUfer) { ufer = tryPlaceUfer(occ, x, z, r); if (ufer) h = ufer.h; }
       else if (schwebt) {
         h = tryPlaceFrei(occ, x, z, r);
@@ -663,6 +740,7 @@ function emitFensterlicht(el, rng, kind, x, y, z, yaw, sc) {
 }
 
 export { newOcc, occFree, occAdd, tryPlace, tryPlaceWasser, tryPlaceUfer, tryPlaceFrei,
+  plateauHoeheAt, tryPlacePlateau,
   KULTUR, OBJGRUPPEN, genObjekt, genInseln, emitFensterlicht, emitLicht,
   OBJEKT_ZEICHEN, POOL_ZEICHEN, punkteBox, streuWeite,
   reliefZeichen, kuestenZeichen, objektZeichen };
