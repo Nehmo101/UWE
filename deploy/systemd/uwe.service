@@ -1,5 +1,5 @@
 [Unit]
-Description=UWE — Universeller Welten-Editor (Studio + Portal + Family)
+Description=UWE — Universeller Welten-Editor (Studio + Portal + Family + Startseite)
 Documentation=file:///opt/uwe/docs/UWE_HOST_LINUX_STARTUP.md
 After=network-online.target
 Wants=network-online.target

@@ -2,10 +2,16 @@
 # Richtet den empfohlenen UWE-Split-Hostname-Ingress im Cloudflare Tunnel ein —
 # inklusive der DNS-Einträge, die jeder Hostname braucht.
 #
-# Die Hostnamen kommen aus der Host-Konfiguration (/etc/uwe/uwe.env), nicht aus
-# einer Beispieldomain: PUBLIC_BASE_URL nennt den Apex, NEXT_PUBLIC_*_URL die
-# einzelnen Apps. Fehlt eine App-URL, gilt die dokumentierte Konvention
+# Die Hostnamen kommen aus der Host-Konfiguration (PUBLIC_BASE_URL,
+# NEXT_PUBLIC_*_URL in /etc/uwe/uwe.env), nicht aus einem fest verdrahteten
+# Beispielnamen — sonst schreibt der Aufruf eine Konfiguration für eine fremde
+# Domain und der echte Apex bleibt auf seinem alten Ingress (typischerweise
+# Studio) stehen. Fehlt eine App-URL, gilt die dokumentierte Konvention
 # `<app>.<apex>` (deploy/cloudflare/config.yml.example).
+#
+# Auf einem Windows-Host mit Kommandozentrale macht dasselbe die Karte
+# „Öffentliche Adressen" (Cloudflare-Bereich) — dieses Skript ist der Weg für
+# Linux-Hosts und der Wiederherstellungspfad.
 #
 # Requires CLOUDFLARE_API_TOKEN mit: Account → Cloudflare Tunnel → Edit
 #                                    Zone → DNS → Edit
@@ -13,23 +19,27 @@
 # Usage:
 #   CLOUDFLARE_API_TOKEN=... bash deploy/scripts/configure-cloudflare-tunnel.sh
 #   CLOUDFLARE_API_TOKEN=... bash deploy/scripts/configure-cloudflare-tunnel.sh --dry-run
+#   bash deploy/scripts/configure-cloudflare-tunnel.sh --apex-domain meine-domain.tld --dry-run
 #
 # Optional overrides:
 #   CLOUDFLARE_ACCOUNT_ID  (default: decoded from running cloudflared token or uwe.env)
 #   CLOUDFLARE_TUNNEL_ID   (default: decoded from running cloudflared token or uwe.env)
 #   CLOUDFLARE_ZONE_ID     (default: über die Cloudflare-API zum Apex ermittelt)
+#   UWE_APEX_DOMAIN        (default: host part of PUBLIC_BASE_URL / PUBLIC_APP_URL)
 #   BRAIN_PUBLIC_TUNNEL=1  (Brain ist owner-only — nur mit diesem Opt-in im Tunnel)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UWE_HOME="${UWE_HOME:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 DRY_RUN=false
+APEX_DOMAIN_ARG=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=true; shift ;;
+    --apex-domain) APEX_DOMAIN_ARG="${2:-}"; shift 2 ;;
     -h | --help)
-      echo "Usage: CLOUDFLARE_API_TOKEN=... $0 [--dry-run]"
+      echo "Usage: CLOUDFLARE_API_TOKEN=... $0 [--apex-domain meine-domain.tld] [--dry-run]"
       exit 0
       ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
@@ -53,9 +63,12 @@ CLOUDFLARE_ZONE_ID="${CLOUDFLARE_ZONE_ID:-}"
 
 # ── Hostnamen aus der Host-Konfiguration ───────────────────────────────────
 
-# Hostname aus einer URL: Schema, Pfad, Port und Benutzerteil fallen weg.
+# Hostname aus einer konfigurierten URL ziehen (Schema, Pfad und Port entfernen).
+# Erst kleinschreiben, dann zerlegen — sonst überlebt ein „HTTPS://" das Schema-Muster.
 url_host() {
-  printf '%s' "${1:-}" | sed -E 's#^[a-z]+://##; s#/.*$##; s#^[^@]*@##; s#:[0-9]+$##' | tr '[:upper:]' '[:lower:]'
+  printf '%s' "${1:-}" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's#^[[:space:]]+##; s#[[:space:]]+$##; s#^[a-z]+://##; s#^[^@]*@##; s#/.*$##; s#:[0-9]+$##'
 }
 
 # Nur echte öffentliche Hostnamen taugen als Tunnel-Ingress.
@@ -64,34 +77,55 @@ is_public_host() {
   [[ -n "$host" && "$host" == *.* && "$host" != "localhost" && ! "$host" =~ ^127\. && "$host" != "::1" ]]
 }
 
-APEX_HOST="$(url_host "${PUBLIC_BASE_URL:-${PUBLIC_APP_URL:-}}")"
 STUDIO_HOST="$(url_host "${NEXT_PUBLIC_STUDIO_URL:-}")"
 PORTAL_HOST="$(url_host "${NEXT_PUBLIC_PORTAL_URL:-}")"
 FAMILY_HOST="$(url_host "${NEXT_PUBLIC_FAMILY_URL:-}")"
 BRAIN_HOST="$(url_host "${NEXT_PUBLIC_BRAIN_URL:-}")"
 
-# Ohne Apex lässt sich nichts ableiten — dann muss die Konfiguration her.
-if ! is_public_host "$APEX_HOST"; then
-  # Der Apex steckt sonst noch in einer App-URL: studio.example.org → example.org
+APEX_DOMAIN="${APEX_DOMAIN_ARG:-${UWE_APEX_DOMAIN:-}}"
+if [[ -z "$APEX_DOMAIN" ]]; then
+  APEX_DOMAIN="${PUBLIC_BASE_URL:-${PUBLIC_APP_URL:-}}"
+fi
+# Immer normalisieren (auch beim --apex-domain-Argument): Cloudflare-Ingress
+# vergleicht Hostnamen kleingeschrieben, und eine übergebene URL soll ebenso
+# funktionieren wie ein reiner Hostname. Ein studio./portal./brain./family.-Präfix
+# gehört zur Subdomain, nicht zum Apex.
+APEX_DOMAIN="$(url_host "$APEX_DOMAIN" | sed -E 's#^(studio|portal|brain|family)\.##')"
+
+# Ohne Apex steckt er sonst noch in einer App-URL: studio.example.org → example.org
+if [[ -z "$APEX_DOMAIN" ]]; then
   for candidate in "$STUDIO_HOST" "$PORTAL_HOST"; do
     if is_public_host "$candidate"; then
-      APEX_HOST="${candidate#*.}"
+      APEX_DOMAIN="${candidate#*.}"
       break
     fi
   done
 fi
 
-if ! is_public_host "$APEX_HOST"; then
-  echo "[FAIL] Öffentliche Domain nicht ermittelbar." >&2
-  echo "Setze PUBLIC_BASE_URL (z. B. https://uwe.example) in /etc/uwe/uwe.env." >&2
+if [[ -z "$APEX_DOMAIN" ]]; then
+  echo "[FAIL] Apex-Domain nicht ermittelbar." >&2
+  echo "Setze PUBLIC_BASE_URL in /etc/uwe/uwe.env oder übergib --apex-domain <domain>." >&2
   exit 1
 fi
 
-is_public_host "$STUDIO_HOST" || STUDIO_HOST="studio.${APEX_HOST}"
-is_public_host "$PORTAL_HOST" || PORTAL_HOST="portal.${APEX_HOST}"
+case "$APEX_DOMAIN" in
+  localhost | 127.0.0.1 | *.local | uwe.example | *.uwe.example)
+    echo "[FAIL] Apex-Domain '$APEX_DOMAIN' ist ein Platzhalter oder lokal — das wäre keine öffentliche Route." >&2
+    echo "Setze PUBLIC_BASE_URL auf die echte Domain (z. B. https://uwe.example → deine Domain)." >&2
+    exit 1
+    ;;
+esac
+
+if ! is_public_host "$APEX_DOMAIN"; then
+  echo "[FAIL] Apex-Domain '$APEX_DOMAIN' ist kein öffentlicher Hostname." >&2
+  exit 1
+fi
+
+is_public_host "$STUDIO_HOST" || STUDIO_HOST="studio.${APEX_DOMAIN}"
+is_public_host "$PORTAL_HOST" || PORTAL_HOST="portal.${APEX_DOMAIN}"
 # Family folgt derselben Konvention wie der Link-Resolver in @uwe/auth
 # (resolveFamilyPublicBaseUrl) — sonst zeigten die Family-Links ins Leere.
-is_public_host "$FAMILY_HOST" || FAMILY_HOST="family.${APEX_HOST}"
+is_public_host "$FAMILY_HOST" || FAMILY_HOST="family.${APEX_DOMAIN}"
 
 STUDIO_PORT="${STUDIO_PORT:-3000}"
 PORTAL_PORT="${PORTAL_PORT:-3001}"
@@ -104,12 +138,8 @@ LANDING_PORT="${LANDING_PORT:-3103}"
 BRAIN_IN_TUNNEL=false
 case "${BRAIN_PUBLIC_TUNNEL:-}" in
   1 | true | TRUE | yes | on)
-    if is_public_host "$BRAIN_HOST"; then
-      BRAIN_IN_TUNNEL=true
-    else
-      BRAIN_HOST="brain.${APEX_HOST}"
-      BRAIN_IN_TUNNEL=true
-    fi
+    is_public_host "$BRAIN_HOST" || BRAIN_HOST="brain.${APEX_DOMAIN}"
+    BRAIN_IN_TUNNEL=true
     ;;
 esac
 
@@ -157,8 +187,9 @@ fi
 
 # ── Ingress ────────────────────────────────────────────────────────────────
 
-# Reihenfolge zählt: die App-Hostnamen zuerst, dann die Alt-Pfade auf dem Apex,
-# dann der Apex selbst (Startseite) und zuletzt der 404-Fallback.
+# Reihenfolge zählt: Die Pfad-Regeln des Apex (/studio, /portal) müssen vor dem
+# Apex-Catch-all stehen, sonst fängt die Startseite sie ab. Der Apex selbst zeigt
+# zuletzt auf die Landing-App — nicht auf Studio.
 build_ingress_json() {
   python3 - "$@" <<'PY'
 import json, sys
@@ -185,27 +216,27 @@ PY
 }
 
 CONFIG_JSON="$(build_ingress_json \
-  "$STUDIO_HOST" "$PORTAL_HOST" "$FAMILY_HOST" "$APEX_HOST" \
+  "$STUDIO_HOST" "$PORTAL_HOST" "$FAMILY_HOST" "$APEX_DOMAIN" \
   "$STUDIO_PORT" "$PORTAL_PORT" "$FAMILY_PORT" "$LANDING_PORT" \
   "$BRAIN_HOST" "$BRAIN_PORT" "$BRAIN_IN_TUNNEL")"
 
 # Jeder geroutete Hostname braucht auch einen DNS-Eintrag auf den Tunnel.
-DNS_HOSTS=("$STUDIO_HOST" "$PORTAL_HOST" "$FAMILY_HOST" "$APEX_HOST")
+DNS_HOSTS=("$STUDIO_HOST" "$PORTAL_HOST" "$FAMILY_HOST" "$APEX_DOMAIN")
 if [[ "$BRAIN_IN_TUNNEL" == true ]]; then
   DNS_HOSTS+=("$BRAIN_HOST")
 fi
 
 echo "Account:  $CLOUDFLARE_ACCOUNT_ID"
 echo "Tunnel:   $CLOUDFLARE_TUNNEL_ID"
-echo "Ingress:  $STUDIO_HOST → :$STUDIO_PORT"
-echo "          $PORTAL_HOST → :$PORTAL_PORT"
-echo "          $FAMILY_HOST → :$FAMILY_PORT"
+echo "Ingress:  ${STUDIO_HOST} → :${STUDIO_PORT}"
+echo "          ${PORTAL_HOST} → :${PORTAL_PORT}"
+echo "          ${FAMILY_HOST} → :${FAMILY_PORT}"
 if [[ "$BRAIN_IN_TUNNEL" == true ]]; then
-  echo "          $BRAIN_HOST → :$BRAIN_PORT (Opt-in BRAIN_PUBLIC_TUNNEL)"
+  echo "          ${BRAIN_HOST} → :${BRAIN_PORT} (Opt-in BRAIN_PUBLIC_TUNNEL)"
 else
   echo "          (Brain bleibt lokal — Opt-in BRAIN_PUBLIC_TUNNEL=1 fehlt)"
 fi
-echo "          $APEX_HOST (/studio, /portal, default → Landing :$LANDING_PORT)"
+echo "          ${APEX_DOMAIN} (/studio, /portal, default → Startseite :${LANDING_PORT})"
 
 if [[ "$DRY_RUN" == true ]]; then
   echo "$CONFIG_JSON" | python3 -m json.tool
@@ -251,6 +282,8 @@ elif expr == "first-id":
     print(result[0]["id"] if result else "")
 elif expr == "first-content":
     print(result[0].get("content", "") if result else "")
+elif expr == "first-type":
+    print(result[0].get("type", "") if result else "")
 PY
 }
 
@@ -264,7 +297,7 @@ echo "[OK] Tunnel-Konfiguration aktualisiert (Version ${version})"
 # ── DNS ────────────────────────────────────────────────────────────────────
 
 if [[ -z "$CLOUDFLARE_ZONE_ID" ]]; then
-  zone_response="$(cf_api GET "/zones?name=${APEX_HOST}")"
+  zone_response="$(cf_api GET "/zones?name=${APEX_DOMAIN}")"
   # Kein harter Abbruch: der Ingress steht bereits, und die DNS-Einträge können
   # aus einer früheren Einrichtung stammen. Fehlt das Zone-Recht, sagen wir das
   # und laufen bis zu den Probes weiter — die zeigen, ob es trotzdem passt.
@@ -272,7 +305,7 @@ if [[ -z "$CLOUDFLARE_ZONE_ID" ]]; then
 fi
 
 if [[ -z "$CLOUDFLARE_ZONE_ID" ]]; then
-  echo "[WARN] Zone zu ${APEX_HOST} nicht lesbar — DNS-Einträge bitte im Dashboard prüfen" >&2
+  echo "[WARN] Zone zu ${APEX_DOMAIN} nicht lesbar — DNS-Einträge bitte im Dashboard prüfen" >&2
   echo "       (Token-Recht: Zone → DNS → Edit)." >&2
 else
   TUNNEL_TARGET="${CLOUDFLARE_TUNNEL_ID}.cfargotunnel.com"
@@ -280,6 +313,7 @@ else
     record_response="$(cf_api GET "/zones/${CLOUDFLARE_ZONE_ID}/dns_records?name=${host}")"
     record_id="$(cf_field "$record_response" first-id || true)"
     record_content="$(cf_field "$record_response" first-content || true)"
+    record_type="$(cf_field "$record_response" first-type || true)"
     record_body="$(python3 - "$host" "$TUNNEL_TARGET" <<'PY'
 import json, sys
 print(json.dumps({
@@ -292,6 +326,9 @@ PY
 )"
     if [[ -n "$record_id" && "$record_content" == "$TUNNEL_TARGET" ]]; then
       echo "  DNS $host → $TUNNEL_TARGET (unverändert)"
+    elif [[ -n "$record_id" && ( "$record_type" != "CNAME" || "$record_content" != *".cfargotunnel.com" ) ]]; then
+      # Fremder Eintrag (eigene Seite, anderer Dienst) — nicht still umbiegen.
+      echo "[WARN] DNS $host zeigt auf ${record_content:-?} (${record_type:-?}) — unangetastet gelassen. Im Dashboard prüfen." >&2
     elif [[ -n "$record_id" ]]; then
       if cf_field "$(cf_api PUT "/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${record_id}" "$record_body")" "" ; then
         echo "  DNS $host → $TUNNEL_TARGET (aktualisiert)"
@@ -324,6 +361,8 @@ probe "https://${PORTAL_HOST}/api/health/public"
 # Family antwortet ohne Sitzung mit einer Weiterleitung auf /login — jede
 # Antwort außer 000 belegt, dass Tunnel und DNS stehen.
 probe "https://${FAMILY_HOST}/api/health"
-probe "https://${APEX_HOST}/api/health"
+# Die Apex-Health kommt aus der Landing-App: sie meldet "app":"UWE Landing".
+# Steht dort "UWE Studio", zeigt der Apex-Ingress noch auf Studio.
+probe "https://${APEX_DOMAIN}/api/health"
 
 echo "[OK] Fertig. Prüfe danach: bash $UWE_HOME/deploy/scripts/check-cloudflare-tunnel.sh"

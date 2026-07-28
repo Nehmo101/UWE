@@ -15,7 +15,11 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 // ohne diesen Eintrag 404en sie im Standalone-Build. Family ebenso: sie liest
 // die Family-Datenbank und wird auf dem Host aus dem Standalone-Output
 // gestartet (deploy/scripts/start-uwe.sh).
-const APPS = ["studio", "portal", "brain", "family"];
+// Landing gehört dazu, weil der Apex-Origin ein eigener Standalone-Prozess ist
+// (start-uwe.sh startet ihn auf LANDING_PORT): ohne die materialisierten
+// Prisma-/libsql-Module startet er nicht, und die Hauptdomain fiele auf den
+// Studio-Ingress zurück.
+const APPS = ["studio", "portal", "brain", "family", "landing"];
 const DEPLOY_DIR = path.join(ROOT, ".cache", "standalone-prisma-deps");
 
 function copyPath(src, dest, { dereference = false } = {}) {
