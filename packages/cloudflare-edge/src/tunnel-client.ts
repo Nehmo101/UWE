@@ -33,7 +33,7 @@ export interface TunnelIngressState {
   message: string;
 }
 
-export type DnsOutcome = "unchanged" | "created" | "updated" | "failed";
+export type DnsOutcome = "unchanged" | "created" | "updated" | "conflict" | "failed";
 
 export interface DnsRecordResult {
   hostname: string;
@@ -63,6 +63,7 @@ interface TunnelConfigPayload {
 
 interface DnsRecordPayload {
   id?: string;
+  type?: string;
   content?: string;
   proxied?: boolean;
 }
@@ -195,9 +196,20 @@ async function resolveZoneId(
   };
 }
 
+/** True, wenn ein Eintrag auf irgendeinen Cloudflare-Tunnel zeigt. */
+function pointsAtATunnel(record: DnsRecordPayload): boolean {
+  return record.type === "CNAME" && (record.content ?? "").endsWith(".cfargotunnel.com");
+}
+
 /**
  * Stellt einen proxied CNAME auf den Tunnel sicher. Ein passender Eintrag wird
  * nicht angefasst — Wiederholen ist damit folgenlos.
+ *
+ * Fremde Einträge werden **nicht** überschrieben: Zeigt der Hostname schon
+ * woanders hin (A-Record einer anderen Seite, CNAME auf einen fremden Dienst),
+ * meldet die Funktion einen Konflikt, statt die Adresse still umzubiegen. Nur
+ * einen Eintrag, der bereits auf einen Tunnel zeigt, richtet sie auf den
+ * eigenen aus — das ist erkennbar dieselbe Absicht.
  */
 async function ensureDnsRecord(
   apiToken: string,
@@ -224,6 +236,14 @@ async function ensureDnsRecord(
   const existing = lookup.payload.result?.[0] ?? null;
   if (existing?.content === target && existing.proxied === true) {
     return { hostname, outcome: "unchanged", message: "DNS zeigt bereits auf den Tunnel." };
+  }
+
+  if (existing && !pointsAtATunnel(existing)) {
+    return {
+      hostname,
+      outcome: "conflict",
+      message: `Bestehender ${existing.type ?? "DNS"}-Eintrag zeigt auf ${existing.content ?? "etwas anderes"} — nicht überschrieben. Im Cloudflare-Dashboard prüfen.`,
+    };
   }
 
   const body = { type: "CNAME", name: hostname, content: target, proxied: true };
@@ -330,14 +350,26 @@ export async function applyTunnelIngress(
   }
 
   const failed = dns.filter((record) => record.outcome === "failed");
-  const touched = dns.filter((record) => record.outcome !== "unchanged").length;
+  const conflicts = dns.filter((record) => record.outcome === "conflict");
+  const touched = dns.filter(
+    (record) => record.outcome === "created" || record.outcome === "updated",
+  ).length;
+
+  const problems = [
+    failed.length > 0
+      ? `${failed.length} DNS-Eintrag/-Einträge fehlgeschlagen: ${failed.map((record) => record.hostname).join(", ")}`
+      : "",
+    conflicts.length > 0
+      ? `Fremde DNS-Einträge unangetastet: ${conflicts.map((record) => record.hostname).join(", ")}`
+      : "",
+  ].filter(Boolean);
 
   return {
-    ok: failed.length === 0,
+    ok: problems.length === 0,
     changed: changed || touched > 0,
     message:
-      failed.length > 0
-        ? `${failed.length} DNS-Eintrag/-Einträge fehlgeschlagen: ${failed.map((record) => record.hostname).join(", ")}`
+      problems.length > 0
+        ? problems.join(" · ")
         : changed || touched > 0
           ? `Routen aktiv: ${plan.routes.map((route) => route.hostname).join(", ")}.`
           : "Tunnel und DNS waren bereits korrekt eingerichtet.",

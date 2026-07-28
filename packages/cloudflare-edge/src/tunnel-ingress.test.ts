@@ -151,6 +151,54 @@ describe("tunnel apply", () => {
     assert.ok(created.every((call) => (call.body as { proxied: boolean }).proxied === true));
   });
 
+  it("never overwrites a foreign DNS record", async () => {
+    const calls: { method: string; url: string; body: unknown }[] = [];
+    const plan = buildTunnelIngressPlan(SPLIT_HOSTNAME_ENV);
+    const result = await applyTunnelIngress("token", IDENTITY, plan, "zone-1", {
+      fetchImpl: fakeFetch(
+        {
+          "GET /cfd_tunnel": { success: true, result: { config: { ingress: planToIngressRules(plan) } } },
+          // Der Apex trägt bereits eine fremde Seite — die darf UWE nicht umbiegen.
+          "GET /dns_records": {
+            success: true,
+            result: [{ id: "rec", type: "A", content: "203.0.113.10", proxied: true }],
+          },
+        },
+        calls,
+      ),
+    });
+
+    assert.equal(result.ok, false, "ein Konflikt darf nicht als Erfolg gemeldet werden");
+    assert.ok(result.dns.every((record) => record.outcome === "conflict"));
+    assert.match(result.message, /Fremde DNS-Einträge unangetastet/);
+    assert.equal(
+      calls.filter((call) => call.method === "POST" || call.method === "PUT").length,
+      0,
+      "kein Schreibzugriff bei fremdem Eintrag",
+    );
+  });
+
+  it("retargets a record that already points at another tunnel", async () => {
+    const calls: { method: string; url: string; body: unknown }[] = [];
+    const plan = buildTunnelIngressPlan(SPLIT_HOSTNAME_ENV);
+    const result = await applyTunnelIngress("token", IDENTITY, plan, "zone-1", {
+      fetchImpl: fakeFetch(
+        {
+          "GET /cfd_tunnel": { success: true, result: { config: { ingress: planToIngressRules(plan) } } },
+          "GET /dns_records": {
+            success: true,
+            result: [{ id: "rec", type: "CNAME", content: "alt.cfargotunnel.com", proxied: true }],
+          },
+          "PUT /dns_records": { success: true, result: { id: "rec" } },
+        },
+        calls,
+      ),
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.dns.every((record) => record.outcome === "updated"));
+  });
+
   it("reports a missing tunnel permission instead of pretending success", async () => {
     const failing = (async () =>
       new Response(JSON.stringify({ success: false, errors: [{ message: "Authentication error" }] }), {
@@ -179,7 +227,7 @@ describe("tunnel apply", () => {
           "GET /cfd_tunnel": { success: true, result: { config: { ingress: planToIngressRules(plan) } } },
           "GET /dns_records": {
             success: true,
-            result: [{ id: "rec", content: "tun.cfargotunnel.com", proxied: true }],
+            result: [{ id: "rec", type: "CNAME", content: "tun.cfargotunnel.com", proxied: true }],
           },
         },
         calls,
