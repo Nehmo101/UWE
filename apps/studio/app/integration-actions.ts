@@ -11,7 +11,6 @@ import {
 } from "@uwe/assets";
 import {
   adoptAssetToTarget,
-  createCalendarService,
   createDevAgentJobService,
   createDndApiService,
   createImageStudioService,
@@ -21,12 +20,10 @@ import {
   getSystemSettings,
   prisma,
   resolveAgentJobsConfig,
-  resolveCalendarConfig,
   resolveEffectiveUploadsPath,
   syncImageStudioProjectLinksToAsset,
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
-import { familyPrisma } from "@uwe/database/family-client";
 import type { ImageStudioLinkTargetType } from "@uwe/database/server";
 import { fillAgentJobPreset, getAgentJobPreset } from "@uwe/agent-jobs";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
@@ -377,170 +374,6 @@ export async function createAgentJobFromPresetAction(formData: FormData) {
   const { title, prompt } = fillAgentJobPreset(preset, values);
 
   await enqueueAgentJob(title, prompt, provider);
-}
-
-export async function createCalendarEventAction(formData: FormData) {
-  const calConfig = resolveCalendarConfig();
-  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
-
-  await requireStudioActionAuth();
-
-  const calendar = createCalendarService(familyPrisma, prisma);
-  const feedIdInput = String(formData.get("feedId") ?? "");
-  const localFeed = await calendar.ensureLocalFeed();
-  const feedId = feedIdInput || localFeed.id;
-
-  const event = await calendar.createEvent({
-    feedId,
-    title: String(formData.get("title") ?? ""),
-    description: String(formData.get("description") ?? "") || null,
-    startAt: new Date(String(formData.get("startAt") ?? "")),
-    endAt: formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null,
-    allDay: formData.get("allDay") === "on",
-    kind: (String(formData.get("kind") ?? "personal") as "session" | "prep" | "personal" | "dnd"),
-    worldId: String(formData.get("worldId") ?? "") || null,
-  });
-
-  const feed = await calendar.getFeed(feedId);
-  if (feed?.type === "caldav" && feed.direction === "read_write") {
-    await calendar.markEventPendingWrite(event.id);
-    const jobs = createJobService(prisma);
-    const job = await jobs.enqueue({
-      type: "calendar_sync",
-      title: `Kalender-Sync: ${feed.name}`,
-      payload: { feedId: feed.id },
-    });
-    void dispatchJob(job.id);
-  }
-
-  revalidatePath("/calendar");
-}
-
-export async function createCalendarFeedAction(formData: FormData) {
-  const calConfig = resolveCalendarConfig();
-  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
-
-  await requireStudioActionAuth();
-
-  const type = String(formData.get("type") ?? "ical_url") as
-    | "caldav"
-    | "ical_url"
-    | "familywall";
-  if (type === "caldav" && !calConfig.caldavEnabled) {
-    throw new Error("CalDAV ist deaktiviert. Setze CALENDAR_CALDAV_ENABLED=true.");
-  }
-  if (type === "familywall" && !calConfig.familywallEnabled) {
-    throw new Error("FamilyWall-Feeds sind deaktiviert.");
-  }
-
-  const calendar = createCalendarService(familyPrisma, prisma);
-  const readWrite = formData.get("readWrite") === "on";
-  const feed = await calendar.createFeed({
-    name: String(formData.get("name") ?? ""),
-    type,
-    url: String(formData.get("url") ?? "") || null,
-    caldavUrl: String(formData.get("caldavUrl") ?? "") || null,
-    username: String(formData.get("username") ?? "") || null,
-    password: String(formData.get("password") ?? "") || null,
-    direction: type === "caldav" && readWrite ? "read_write" : "read_only",
-  });
-
-  const jobs = createJobService(prisma);
-  const job = await jobs.enqueue({
-    type: "calendar_sync",
-    title: `Kalender-Sync: ${feed.name}`,
-    payload: { feedId: feed.id },
-  });
-  void dispatchJob(job.id);
-  revalidatePath("/calendar");
-}
-
-export async function updateCalendarEventAction(formData: FormData) {
-  const calConfig = resolveCalendarConfig();
-  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
-
-  await requireStudioActionAuth();
-
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Event-ID fehlt.");
-
-  const calendar = createCalendarService(familyPrisma, prisma);
-  const updated = await calendar.updateEvent(id, {
-    title: String(formData.get("title") ?? ""),
-    description: String(formData.get("description") ?? "") || null,
-    startAt: new Date(String(formData.get("startAt") ?? "")),
-    endAt: formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null,
-    allDay: formData.get("allDay") === "on",
-    kind: (String(formData.get("kind") ?? "personal") as "session" | "prep" | "personal" | "dnd"),
-  });
-
-  const feed = updated.feedId ? await calendar.getFeed(updated.feedId) : null;
-  if (feed?.type === "caldav" && feed.direction === "read_write") {
-    await calendar.markEventPendingWrite(updated.id);
-    const jobs = createJobService(prisma);
-    const job = await jobs.enqueue({
-      type: "calendar_sync",
-      title: `Kalender-Sync: ${feed.name}`,
-      payload: { feedId: feed.id },
-    });
-    void dispatchJob(job.id);
-  }
-
-  revalidatePath("/calendar");
-}
-
-export async function deleteCalendarEventAction(formData: FormData) {
-  const calConfig = resolveCalendarConfig();
-  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
-
-  await requireStudioActionAuth();
-
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Event-ID fehlt.");
-
-  const calendar = createCalendarService(familyPrisma, prisma);
-  const existing = await familyPrisma.calendarEvent.findUnique({
-    where: { id },
-    include: { feed: true },
-  });
-  if (!existing) throw new Error("Termin nicht gefunden.");
-
-  await calendar.deleteEvent(id);
-
-  if (existing.feed?.type === "caldav" && existing.feed.direction === "read_write") {
-    const jobs = createJobService(prisma);
-    const job = await jobs.enqueue({
-      type: "calendar_sync",
-      title: `Kalender-Sync: ${existing.feed.name}`,
-      payload: { feedId: existing.feed.id },
-    });
-    void dispatchJob(job.id);
-  }
-
-  revalidatePath("/calendar");
-}
-
-export async function syncCalendarFeedAction(formData: FormData) {
-  const calConfig = resolveCalendarConfig();
-  if (!calConfig.enabled) throw new Error("Kalender ist deaktiviert.");
-
-  await requireStudioActionAuth();
-
-  const feedId = String(formData.get("feedId") ?? "");
-  if (!feedId) throw new Error("Feed-ID fehlt.");
-
-  const calendar = createCalendarService(familyPrisma, prisma);
-  const feed = await calendar.getFeed(feedId);
-  if (!feed) throw new Error("Feed nicht gefunden.");
-
-  const jobs = createJobService(prisma);
-  const job = await jobs.enqueue({
-    type: "calendar_sync",
-    title: `Kalender-Sync: ${feed.name}`,
-    payload: { feedId: feed.id },
-  });
-  void dispatchJob(job.id);
-  revalidatePath("/calendar");
 }
 
 export async function addDndBeyondReferenceAction(formData: FormData) {

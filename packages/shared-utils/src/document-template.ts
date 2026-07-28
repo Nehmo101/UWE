@@ -1,8 +1,10 @@
 /**
- * Client-safe helpers mirroring packages/database document-template-service
- * (extractDocumentTemplateVariables / renderTemplate). Die autoritative
- * Substitution mit Pflichtfeld-Validierung läuft server-seitig über
- * fillDocumentTemplate; hier nur Live-Vorschau.
+ * Platzhalter-Helfer für Dokumentvorlagen — client-sicher.
+ *
+ * Die autoritative Substitution mit Pflichtfeld-Prüfung liegt server-seitig in
+ * `fillDocumentTemplate` (@uwe/database). Hier steht nur, was auch im Browser
+ * laufen muss: Platzhalter finden und eine Live-Vorschau rendern. Beide Seiten
+ * benutzen dasselbe Muster — sonst driften Vorschau und Ergebnis auseinander.
  */
 
 const PLACEHOLDER_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
@@ -16,6 +18,7 @@ export const DOCUMENT_TEMPLATE_CATEGORY_LABELS = {
 
 export type DocumentTemplateCategoryKey = keyof typeof DOCUMENT_TEMPLATE_CATEGORY_LABELS;
 
+/** Alle `{{platzhalter}}` im Text, eindeutig und alphabetisch. */
 export function extractTemplateVariables(body: string): string[] {
   const keys = new Set<string>();
   for (const match of body.matchAll(PLACEHOLDER_PATTERN)) {
@@ -24,15 +27,15 @@ export function extractTemplateVariables(body: string): string[] {
   return Array.from(keys).sort();
 }
 
+/** Vorschau: setzt ein, was da ist, und lässt Fehlendes leer. */
 export function renderDocumentTemplate(body: string, values: Record<string, string>): string {
   return body.replace(PLACEHOLDER_PATTERN, (_match, key: string) => values[key] ?? "");
 }
 
-/** Ergebnis von generateDocumentFromTemplateAction (Server Action). */
-export type GenerateDocumentActionResult =
-  | { ok: true; documentId: string; title: string }
-  | { ok: false; error: string };
-
+/**
+ * Das `variables`-Json-Feld einer Vorlage kann eine Liste oder ein Objekt sein
+ * (historisch beides geschrieben) — hier wird daraus immer eine sortierte Liste.
+ */
 export function normalizeTemplateVariables(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((entry): entry is string => typeof entry === "string");

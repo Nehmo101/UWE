@@ -5,7 +5,7 @@ import { TurnstileWidget } from "./TurnstileWidget";
 import { readFormFieldValue, redirectAfterAuth } from "./auth-form-utils";
 import { FONT_MONO, FONT_SERIF, LEADING, TEXT_2XL, TEXT_BASE, TEXT_SM, TEXT_XS, eyebrowStyle } from "./landing-shared";
 
-export type LandingTarget = "studio" | "portal" | "brain";
+export type LandingTarget = "studio" | "portal" | "brain" | "family";
 
 export interface UweLandingLoginCardProps {
   target: LandingTarget;
@@ -34,8 +34,10 @@ const TARGETS: Record<LandingTarget, TargetCopy> = {
     eyebrow: "Für Spielleiter · Nur GM",
     title: "UWE Studio",
     desc: "Melde dich als GM an, um dein Kampagnen-Cockpit zu öffnen.",
+    // Studios Einstieg ist seit Schritt 6 die Weltenliste; `/today` gibt es
+    // nicht mehr (die Tagesübersicht liegt in Brain).
+    entryPath: "/worlds",
     submit: "Als GM anmelden",
-    entryPath: "/today",
     passwordPath: "/account/password",
   },
   portal: {
@@ -47,15 +49,23 @@ const TARGETS: Record<LandingTarget, TargetCopy> = {
     entryPath: "/auth/worlds",
     passwordPath: "/auth/account/password",
   },
-  // Brain lebt heute im Studio-Origin (Routen liegen im Studio-Baum). Der Login
-  // ist owner/GM-gegated; das Ziel ist der private Alltags-/Wissensbereich.
   brain: {
     accent: "#5c5470",
     eyebrow: "Nur Owner · privat & lokal",
     title: "UWE Brain",
     desc: "Melde dich als Owner an, um deinen privaten Alltags- und Wissensbereich zu öffnen.",
     submit: "Als Owner anmelden",
-    entryPath: "/life-brain",
+    entryPath: "/",
+    passwordPath: "/account/password",
+  },
+  // Family braucht nur das Häkchen `Family` — keine Rolle, keine Welt.
+  family: {
+    accent: "#3f6b8c",
+    eyebrow: "Für den Haushalt · lokal",
+    title: "UWE Family",
+    desc: "Melde dich an, um Verträge, Dokumente, Kalender und den gemeinsamen Chat zu öffnen.",
+    submit: "Anmelden",
+    entryPath: "/",
     passwordPath: "/account/password",
   },
 };

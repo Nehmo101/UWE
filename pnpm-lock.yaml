@@ -143,6 +143,9 @@ importers:
       '@uwe/shared-ui':
         specifier: workspace:*
         version: link:../../packages/shared-ui
+      '@uwe/shared-utils':
+        specifier: workspace:*
+        version: link:../../packages/shared-utils
       next:
         specifier: ^15.3.4
         version: 15.5.19(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)

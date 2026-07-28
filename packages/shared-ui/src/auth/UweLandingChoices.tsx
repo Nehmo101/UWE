@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * Die drei Produktkarten der Landing.
+ * Die Produktkarten der Landing.
  *
  * Eigene Datei, damit UweLandingPage.tsx unter dem 700-Zeilen-Budget bleibt
  * (scripts/file-size-budget-check.mjs). Layout und Maße stehen in
  * auth/uwe-landing.css — mobil sind es Zeilen-Buttons, ab 960px Glaskarten.
  */
 
-export type LandingTarget = "studio" | "portal" | "brain";
+export type LandingTarget = "studio" | "portal" | "brain" | "family";
 
 interface Choice {
   target: LandingTarget;
@@ -45,20 +45,35 @@ const CHOICES: Choice[] = [
     eyebrow: "Nur Owner",
     glyph: "☾",
     name: "UWE Brain",
-    copy: "Dein privater Alltag und dein Wissen — Mail, Kalender, Finanzen. Nie in der Cloud.",
+    copy: "Dein privater Alltag und dein Wissen — Mail, Projekte, Werkstatt. Nie in der Cloud.",
     cta: "Brain öffnen →",
     accent: "#6b628c",
+  },
+  {
+    target: "family",
+    eyebrow: "Für den Haushalt",
+    glyph: "⌂",
+    name: "UWE Family",
+    copy: "Gemeinsam statt privat — Verträge, Dokumente, Kalender und ein Chat für alle im Haus.",
+    cta: "Family öffnen →",
+    accent: "#3f6b8c",
   },
 ];
 
 export function UweLandingChoices({
   onOpen,
   brainVisible,
+  familyVisible = true,
 }: {
   onOpen: (target: LandingTarget) => void;
   brainVisible: boolean;
+  familyVisible?: boolean;
 }) {
-  const visible = brainVisible ? CHOICES : CHOICES.filter((c) => c.target !== "brain");
+  const visible = CHOICES.filter(
+    (choice) =>
+      (choice.target !== "brain" || brainVisible) &&
+      (choice.target !== "family" || familyVisible),
+  );
 
   return (
     <div className="uwe-lp-choices">

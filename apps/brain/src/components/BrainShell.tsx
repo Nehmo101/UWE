@@ -115,6 +115,7 @@ export function BrainShell({
           studioUrl={urls.studio}
           portalUrl={urls.portal}
           brainUrl={urls.brain}
+          familyUrl={urls.family}
         />
       </div>
     </AppAccentScope>

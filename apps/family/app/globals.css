@@ -661,3 +661,77 @@ body {
     outline: 2px solid var(--uwe-accent);
   }
 }
+
+/* ── Kalender-Monatsraster ──────────────────────────────────────────── */
+/*
+ * Sieben Spalten, Montag zuerst. Auf schmalen Geräten schrumpfen die Zellen
+ * mit, statt zu scrollen — ein Monat, der seitlich wegläuft, ist keine
+ * Übersicht mehr.
+ */
+.family-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin: 0.75rem 0 0;
+}
+
+.family-cal-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--uwe-fg-muted, var(--uwe-fg));
+}
+
+.family-cal-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: 4.5rem;
+  padding: 0.3rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-card-bg);
+  overflow: hidden;
+}
+
+.family-cal-day-empty {
+  border-style: dashed;
+  opacity: 0.35;
+}
+
+.family-cal-day-today {
+  border-color: var(--uwe-accent);
+}
+
+.family-cal-daynum {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.family-cal-event {
+  display: block;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--uwe-accent);
+  color: var(--uwe-accent);
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-decoration: none;
+  /* Lange Titel dürfen die Zelle nicht sprengen. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Kontrollkästchen mit Beschriftung daneben statt darunter. */
+.family-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: center;
+  gap: 0.4rem;
+}
+
+.family-check input {
+  width: auto;
+}

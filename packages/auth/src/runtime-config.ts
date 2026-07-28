@@ -151,6 +151,7 @@ function normalizeAppPath(
 const DEV_STUDIO_URL = "http://localhost:3000";
 const DEV_PORTAL_URL = "http://localhost:3001";
 const DEV_BRAIN_URL = "http://localhost:3002";
+const DEV_FAMILY_URL = "http://localhost:3004";
 
 function parsePublicUrlHost(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -248,6 +249,18 @@ export function resolveBrainPublicBaseUrl(env: NodeJS.ProcessEnv = process.env):
     return explicitBrain;
   }
   return DEV_BRAIN_URL;
+}
+
+/**
+ * Public base URL der Family-App (Abschnitt G). Wie Brain eine eigene lokale
+ * App, nur nicht owner-privat: Zugang hat, wer das Häkchen `Family` trägt.
+ * Ohne `NEXT_PUBLIC_FAMILY_URL` zeigt der Link auf den Loopback-Standard und
+ * ist von außen absichtlich nicht erreichbar — dieser Resolver berechnet nur
+ * das Ziel, nicht die Erreichbarkeit.
+ */
+export function resolveFamilyPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const explicit = withRuntimeEnvOverrides(env).NEXT_PUBLIC_FAMILY_URL?.trim()?.replace(/\/$/, "");
+  return explicit || DEV_FAMILY_URL;
 }
 
 /** Logged-in Portal entry — relative on Portal, absolute when linked from Studio. */

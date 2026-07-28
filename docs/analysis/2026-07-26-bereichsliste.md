@@ -68,7 +68,7 @@ Jeder Schritt ist ein eigener Commit mit grünem Gate.
 | **4 — Zugangsmodell, vier Häkchen** (M13, N.1) | ✅ fertig | folgt | Rollen-Enum, Capability-Matrix, Welt-Rollen und Gastmodus raus; Kachel „Zugänge" im Command Center |
 | **5 — Studio-System abräumen** (Abschnitt D) | ✅ fertig | `0d1c75a0`…`ab893857` | System-Hub, Einrichtung/Backup ins Command Center, Tag-Aufräumer ins Welt-Cockpit |
 | **6 — Brain/Studio-Doppelungen** (Abschnitt H) | 🟡 fast | `2cfafd30`…`5db4593c` | H1–H6, H8 erledigt; H10 halb, H7/H9/H11 an Family gebunden |
-| **7 — Family bauen** (Abschnitt G) | 🟡 fast | `3720cd27`, `27068dd7`, folgt | DB, App und die 14 Modelle stehen; Verträge/Dokumente/Kalender als Family-Seiten fehlen noch |
+| **7 — Family bauen** (Abschnitt G) | ✅ fertig | `3720cd27`, `27068dd7`, `d27a8ffc`, folgt | DB, App, die 14 Modelle und die drei Flächen; offen bleibt nur, Küche/Haushalt/Scan aus Studio nachzuziehen |
 
 **Bisher entfernt: ~19.700 Zeilen** über 700 Dateien. Nach jedem Schritt:
 `pnpm lint` grün, `pnpm typecheck` 44/44, `pnpm test:ci` 45/45, `pnpm test:security` grün.
@@ -824,8 +824,30 @@ So muss keine Aufrufstelle im Repo einen dritten Client durchreichen, und Tests
 können trotzdem eine isolierte Family-DB einsetzen — ein reiner Singleton-Zugriff
 hätte die Tests gegen die echte Datei laufen lassen.
 
-Offen bleibt aus Abschnitt G: Verträge, Dokumente und Kalender als Family-Seiten
-(H7 / H9 / H11) — die Daten liegen richtig, die Fläche fehlt noch.
+| 7d Flächen | ✅ erledigt | Verträge, Dokumente und Kalender sind Family-Seiten (H7 / H9 / H11); Brains und Studios Fassungen sind weg, dazu Studios `/finance` als dritte Tür auf dieselben Zeilen. Family steht jetzt auch in der Produktleiste und auf der Startseite. |
+
+Was dabei zusammengelegt wurde:
+
+- **Verträge**: Studios Liste (voller Feldsatz) + Brains Formular + Studios
+  Finanzauswertung ergeben eine Seite — Auswertung oben, Liste unten. Die
+  KI-Kosten-Kachel ist entfallen: seit N.3 läuft alles über den RTX-Host und
+  kostet nichts, sie zeigte nur noch Nullen.
+- **Dokumente**: Brain hatte die Vorlagenpflege, Studio den Generator. Jetzt
+  beides auf einer Seite. Der Generator füllt im Browser und man kopiert das
+  Ergebnis — der alte Pfad legte es als Life-Brain-Dokument ab, was für einen
+  geteilten Bereich der falsche Speicher wäre. Damit fielen
+  `generateDocument`, `fillDocumentTemplate` und `MissingTemplateVariablesError`
+  ersatzlos weg; die Platzhalter-Helfer stehen jetzt in `@uwe/shared-utils` und
+  werden von Vorschau und Speichern gemeinsam benutzt.
+- **Kalender**: eigenes Monatsraster in Family-Optik (Studios Raster hing am
+  shadcn-Kit und konnte nicht mitkommen), Liste mit Bearbeiten, fremde Feeds
+  schreibgeschützt. Termin-Actions in Studio sind weg; die Feed-API
+  (`/api/calendar/feeds`) bleibt, weil der MCP-Server sie liest.
+
+Nicht mitgewandert und weiter offen: Küche, Haushalt, Scan-Eingang und die
+Bring-Anbindung liegen als Daten in `uwe-family.db`, ihre Oberfläche steht aber
+noch in Studio. Ebenso ist `scripts/ux-audit/pages-data.mjs` ein Schnappschuss
+vom Analysestand und kennt die seit Schritt 5 entfernten Seiten noch.
 
 ---
 
@@ -867,7 +889,7 @@ Verträgen und Projekten.
 | H2 Life Brain | ✅ erledigt | Brain hat Suche mit Kategoriefilter (server-seitig, kein Client-Fetch) und die Index-Lage. `/api/life-brain/search` liegt jetzt in Brain, und der MCP-Brain-Server liest sie dort statt in Studio. Studios `/life-brain/**` samt Chat ist weg — Brains `/ki-chat` kann mehr. |
 | H5 Werkstatt | ✅ erledigt | Alle vier Bereiche liegen in Brain: Projekte mit Status- und Art-Filter, Detailseite mit Material, Farben, Filamenten und STL-Links, Farbrezepte, Druckprofile und Terrain-Verleih. Der iCal-Feed der Rückgaben ist mitgewandert. Ohne Welt-Zuordnung und ohne Foto-Upload. |
 | H10 Mail | 🟡 halb | Brain hat jetzt Ordner (Posteingang, Markiert, Gesendet, Archiv, Papierkorb), Volltextsuche und die Prioritäten-Einstufung — dieselbe Quelle wie Studio (`@uwe/mail/portal`). Studios Mail-Center bleibt vorerst: die Zeilenzahlen in der Tabelle oben zählen nur die Seiten, nicht die 17 Komponenten darunter (Reader, Triage, Regeln, Entwürfe, Mail-Chat, Tastaturkürzel). Erst wenn Brain die hat, kann es weg. `/mail/compose` bleibt ohnehin in Studio: Session-Recap und Handout sind DM-Arbeit. |
-| H7 / H9 / H11 | ⬜ offen | Verträge, Dokumente und Kalender warten auf Family (Abschnitt G) — erst danach fallen beide Fassungen weg. |
+| H7 / H9 / H11 | ✅ erledigt | Verträge, Dokumente und Kalender sind Family-Seiten; beide alten Fassungen sind weg (Schritt 7d). |
 
 Muster für die offenen Punkte: die Fachlogik liegt bereits in `packages/`
 (`CaptureTriageService`, `createLifeAdminService`, `@uwe/mail`), Brain braucht

@@ -2,6 +2,7 @@ import {
   canAccessStudio,
   getTurnstileConfig,
   resolveBrainPublicBaseUrl,
+  resolveFamilyPublicBaseUrl,
   resolvePortalPublicBaseUrl,
   resolveStudioPublicBaseUrl,
 } from "@uwe/auth";
@@ -13,7 +14,7 @@ import { UweLandingPage, dayIndex } from "@uwe/shared-ui";
 import { redirect } from "next/navigation";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
-// Die öffentliche Startseite liest Studio-/Portal-/Brain-Origin und den
+// Die öffentliche Startseite liest Studio-/Portal-/Brain-/Family-Origin und den
 // Turnstile-Key aus der Laufzeit-Umgebung — deshalb pro Anfrage rendern.
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,7 @@ export default async function LandingPage() {
       studioAppUrl={resolveStudioPublicBaseUrl()}
       portalAppUrl={resolvePortalPublicBaseUrl()}
       brainAppUrl={resolveBrainPublicBaseUrl()}
+      familyAppUrl={resolveFamilyPublicBaseUrl()}
       turnstileSiteKey={turnstile.enabled ? turnstile.siteKey : null}
       rtxOnline
       // Serverseitig berechnet und durchgereicht: ein clientseitiger Wert

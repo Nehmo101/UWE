@@ -41,6 +41,11 @@ export interface UweLandingPageProps {
    * way.
    */
   brainAppUrl: string;
+  /**
+   * Absolute base URL der Family-App. Wie Brain eine eigene lokale App; der
+   * Zugang hängt am Häkchen `Family`, nicht an einer Rolle.
+   */
+  familyAppUrl: string;
   /** Cloudflare Turnstile site key — when set, sign-in requires a human check. */
   turnstileSiteKey?: string | null;
   /** RTX host reachability shown in the nav status pill. Defaults to true. */
@@ -51,6 +56,8 @@ export interface UweLandingPageProps {
    * changing the component contract.
    */
   brainVisible?: boolean;
+  /** Dito für Family. */
+  familyVisible?: boolean;
   /**
    * Tagesindex der Szenen-Rotation, serverseitig aus `dayIndex()` berechnet und
    * durchgereicht. Ein clientseitig ermittelter Wert würde um Mitternacht bzw.
@@ -63,15 +70,22 @@ export function UweLandingPage({
   studioAppUrl,
   portalAppUrl,
   brainAppUrl,
+  familyAppUrl,
   turnstileSiteKey,
   rtxOnline = true,
   brainVisible = true,
+  familyVisible = true,
   sceneIndex,
 }: UweLandingPageProps) {
   const [view, setView] = useState<View>("choose");
 
-  const appUrlFor = (target: LandingTarget) =>
-    target === "studio" ? studioAppUrl : target === "brain" ? brainAppUrl : portalAppUrl;
+  const APP_URLS: Record<LandingTarget, string> = {
+    studio: studioAppUrl,
+    portal: portalAppUrl,
+    brain: brainAppUrl,
+    family: familyAppUrl,
+  };
+  const appUrlFor = (target: LandingTarget) => APP_URLS[target];
 
   return (
     <AppAccentScope app="studio" layout="block">
@@ -112,7 +126,11 @@ export function UweLandingPage({
                 <h1 className="uwe-lp-title">Universeller Welten-Editor</h1>
                 <p className="uwe-lp-lede">Läuft lokal auf deiner Hardware.</p>
               </div>
-              <UweLandingChoices onOpen={setView} brainVisible={brainVisible} />
+              <UweLandingChoices
+                onOpen={setView}
+                brainVisible={brainVisible}
+                familyVisible={familyVisible}
+              />
             </>
           ) : (
             <div className="uwe-lp-login-wrap">
@@ -132,7 +150,9 @@ export function UweLandingPage({
           studioUrl={studioAppUrl}
           portalUrl={portalAppUrl}
           brainUrl={brainAppUrl}
+          familyUrl={familyAppUrl}
           brainVisible={brainVisible}
+          familyVisible={familyVisible}
         />
 
         <footer className="uwe-lp-footer">

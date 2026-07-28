@@ -119,6 +119,7 @@ export {
   resolvePortalSessionHref,
   resolvePortalLoginHref,
   resolveBrainPublicBaseUrl,
+  resolveFamilyPublicBaseUrl,
   resolveStudioPublicBaseUrl,
   resolveStudioSessionHref,
   STUDIO_SESSION_ENTRY_PATH,

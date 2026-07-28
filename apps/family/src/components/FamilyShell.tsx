@@ -25,7 +25,7 @@ export function FamilyShell({
   active,
   title,
   lede,
-  eyebrow = "Owner-Bereich · privat",
+  eyebrow = "Gemeinsamer Bereich",
   actions,
   /**
    * Tagesindex der Szenen-Rotation. Ohne ihn bleibt der Kopf eine schlichte
@@ -72,7 +72,7 @@ export function FamilyShell({
             </span>
             <span>
               <strong>UWE Family</strong>
-              <small>Persönliches Wissen &amp; Daily Admin</small>
+              <small>Gemeinsames Wissen &amp; Haushalt</small>
             </span>
           </Link>
           <FamilyNavSearch />
@@ -113,11 +113,12 @@ export function FamilyShell({
           </main>
         </div>
         <CrossAppBottomNav
-          active="brain"
+          active="family"
           startUrl={urls.start}
           studioUrl={urls.studio}
           portalUrl={urls.portal}
           brainUrl={urls.brain}
+          familyUrl={urls.family}
         />
       </div>
     </AppAccentScope>
@@ -126,6 +127,6 @@ export function FamilyShell({
 
 export function FamilyDenied() {
   return (
-    <p className="family-muted">Dieser Bereich braucht das Häkchen &bdquo;Brain&ldquo;.</p>
+    <p className="family-muted">Dieser Bereich braucht das Häkchen &bdquo;Family&ldquo;.</p>
   );
 }

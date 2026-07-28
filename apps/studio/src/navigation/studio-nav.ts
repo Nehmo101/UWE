@@ -185,18 +185,6 @@ export const TOOLS_NAV: NavGroup[] = [
         keywords: ["weiter", "fortsetzen", "offen", "aufgehört", "projekte"],
       },
       {
-        id: "tools-finance",
-        label: "Finanzen / Abos",
-        href: "/finance",
-        icon: "wallet",
-        group: TOOLS_DAILY,
-        section: TOOLS,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "studio",
-        keywords: ["finanzen", "abos", "kosten", "verträge", "kündigung"],
-      },
-      {
         id: "tools-household",
         label: "Haushalt",
         href: "/household",

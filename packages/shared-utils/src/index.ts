@@ -38,3 +38,11 @@ export {
   type NavSearchHit,
   type NavSearchOptions,
 } from "./nav-search";
+
+export {
+  DOCUMENT_TEMPLATE_CATEGORY_LABELS,
+  extractTemplateVariables,
+  renderDocumentTemplate,
+  normalizeTemplateVariables,
+  type DocumentTemplateCategoryKey,
+} from "./document-template";

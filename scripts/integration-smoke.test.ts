@@ -325,7 +325,7 @@ describe("integration smoke — security test coverage", () => {
 describe("integration smoke — Media, Calendar, DnD & Agent routes", () => {
   const integrationRoutes = [
     "apps/studio/app/image-studio/page.tsx",
-    "apps/studio/app/calendar/page.tsx",
+    "apps/family/app/calendar/page.tsx",
     "apps/studio/app/admin/agent-jobs/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/dnd-api/page.tsx",
     "apps/studio/app/api/image-studio/route.ts",

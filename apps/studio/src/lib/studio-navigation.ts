@@ -235,8 +235,7 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/workshop") ||
     normalized.startsWith("/projects") ||
     normalized.startsWith("/ideas") ||
-    normalized.startsWith("/bugs") ||
-    normalized.startsWith("/contracts")
+    normalized.startsWith("/bugs")
   ) {
     return "create";
   }
@@ -244,7 +243,6 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/ai") ||
     normalized.startsWith("/image-studio") ||
     normalized.startsWith("/mail") ||
-    normalized.startsWith("/calendar") ||
     normalized.startsWith("/brain") ||
     normalized.startsWith("/life-brain") ||
     normalized.startsWith("/admin/agent-jobs")

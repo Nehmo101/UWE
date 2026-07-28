@@ -170,7 +170,10 @@ export function MailSettings({ accounts, config, logs, worlds, rtxState }: MailS
             >
               Systemwarnung
             </Link>
-            <Link href="/contracts" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+            <Link
+              href="/mail/compose?kind=contract_reminder"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
               Vertragserinnerung
             </Link>
             <Link

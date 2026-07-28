@@ -1,18 +1,9 @@
 "use server";
 import { brainPrisma } from "@uwe/database/brain-client";
-// Vorlagen und Kalender liegen seit Abschnitt G in uwe-family.db; das erzeugte
-// Dokument bleibt owner-privat und geht deshalb weiter ins Brain.
-import { familyPrisma } from "@uwe/database/family-client";
 import {
-  createCalendarService,
-  createDocumentTemplateService,
   createMiniatureCollectionService,
-  prisma,
-  type CalendarEventKind,
   type CaptureStatus,
   type CaptureType,
-  type ContractStatus,
-  type DocumentTemplateCategory,
   type MiniatureCollectionStatus,
 } from "@uwe/database/server";
 import { createMailPortalService } from "@uwe/mail/portal";
@@ -26,21 +17,6 @@ function parseCommaTags(formData: FormData, field = "tags"): string[] {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
-}
-
-/** Euro input ("9,99" or "9.99") → cents; accepts comma as decimal separator. */
-function parseEuroToCents(value: FormDataEntryValue | null): number | null {
-  const raw = str(value).replace(",", ".");
-  if (!raw) return null;
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) ? Math.round(parsed * 100) : null;
-}
-
-function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
-  const raw = str(value);
-  if (!raw) return null;
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /* ── Capture ─────────────────────────────────────────────────────────── */
@@ -115,31 +91,6 @@ export async function deleteBrainDocumentAction(formData: FormData) {
 
 /* ── Workshop ────────────────────────────────────────────────────────── */
 
-/* ── Contracts ───────────────────────────────────────────────────────── */
-
-export async function createContractAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const name = str(formData.get("name"));
-  if (!name) return;
-
-  await lifeAdmin().createContractExpense({
-    name,
-    vendor: str(formData.get("vendor")),
-    status: (str(formData.get("status")) || "active") as ContractStatus,
-    amountCents: parseEuroToCents(formData.get("amount")),
-    nextPaymentDate: parseOptionalDate(formData.get("nextPaymentDate")),
-    notes: str(formData.get("notes")),
-  });
-  revalidateBrainPaths();
-}
-
-export async function deleteContractAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await lifeAdmin().deleteContractExpense(id);
-  revalidateBrainPaths();
-}
-
 /* ── Hardware ────────────────────────────────────────────────────────── */
 
 /* ══ Edit (update) actions ═══════════════════════════════════════════ */
@@ -179,21 +130,6 @@ export async function updateBrainDocumentAction(formData: FormData) {
     content: str(formData.get("content")),
     category: str(formData.get("category")) || null,
     tags: parseCommaTags(formData),
-  });
-  revalidateBrainPaths();
-}
-
-export async function updateContractAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (!id) return;
-  await lifeAdmin().updateContractExpense(id, {
-    name: str(formData.get("name")),
-    vendor: str(formData.get("vendor")),
-    status: (str(formData.get("status")) || "active") as ContractStatus,
-    amountCents: parseEuroToCents(formData.get("amount")),
-    nextPaymentDate: parseOptionalDate(formData.get("nextPaymentDate")),
-    notes: str(formData.get("notes")),
   });
   revalidateBrainPaths();
 }
@@ -246,90 +182,6 @@ export async function deleteMiniatureAction(formData: FormData) {
   const id = str(formData.get("id"));
   if (id) await miniatures().deleteItem(id);
   revalidatePath("/miniatures");
-}
-
-/* ══ Document templates ══════════════════════════════════════════════ */
-
-function templates() {
-  return createDocumentTemplateService(familyPrisma, brainPrisma);
-}
-
-export async function createTemplateAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const name = str(formData.get("name"));
-  if (!name) return;
-  await templates().createTemplate({
-    name,
-    category: (str(formData.get("category")) || "other") as DocumentTemplateCategory,
-    body: str(formData.get("body")),
-  });
-  revalidatePath("/documents");
-}
-
-export async function updateTemplateAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (!id) return;
-  await templates().updateTemplate(id, {
-    name: str(formData.get("name")),
-    category: (str(formData.get("category")) || "other") as DocumentTemplateCategory,
-    body: str(formData.get("body")),
-  });
-  revalidatePath("/documents");
-}
-
-export async function deleteTemplateAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await templates().deleteTemplate(id);
-  revalidatePath("/documents");
-}
-
-/* ══ Calendar events ═════════════════════════════════════════════════ */
-
-function calendar() {
-  return createCalendarService(familyPrisma, prisma);
-}
-
-export async function createEventAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const title = str(formData.get("title"));
-  const startAt = parseOptionalDate(formData.get("startAt"));
-  if (!title || !startAt) return;
-  await calendar().createEvent({
-    title,
-    startAt,
-    endAt: parseOptionalDate(formData.get("endAt")),
-    allDay: str(formData.get("allDay")) === "on",
-    location: str(formData.get("location")) || null,
-    description: str(formData.get("description")) || null,
-    kind: (str(formData.get("kind")) || "personal") as CalendarEventKind,
-  });
-  revalidatePath("/calendar");
-}
-
-export async function updateEventAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (!id) return;
-  const startAt = parseOptionalDate(formData.get("startAt"));
-  await calendar().updateEvent(id, {
-    title: str(formData.get("title")),
-    ...(startAt ? { startAt } : {}),
-    endAt: parseOptionalDate(formData.get("endAt")),
-    allDay: str(formData.get("allDay")) === "on",
-    location: str(formData.get("location")) || null,
-    description: str(formData.get("description")) || null,
-    kind: (str(formData.get("kind")) || "personal") as CalendarEventKind,
-  });
-  revalidatePath("/calendar");
-}
-
-export async function deleteEventAction(formData: FormData) {
-  await requireBrainActionAuth();
-  const id = str(formData.get("id"));
-  if (id) await calendar().deleteEvent(id);
-  revalidatePath("/calendar");
 }
 
 /* ══ Mail client: send (SMTP), sync (IMAP), read & message actions ═══ */

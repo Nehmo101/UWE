@@ -24,6 +24,7 @@ export function StudioShell({ breadcrumb, contextPanel, footer, children }: Stud
       studioUrl: urls.studio,
       portalUrl: urls.portal,
       brainUrl: urls.brain,
+      familyUrl: urls.family,
     };
   }, []);
   const groups = useMemo(() => studioSidebar(pathname), [pathname]);

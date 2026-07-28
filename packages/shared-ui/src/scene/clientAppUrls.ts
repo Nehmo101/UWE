@@ -4,7 +4,7 @@
  * Warum nicht `readPublicAppUrls`/`resolveUweAppUrls`: die lesen `process.env`
  * als Objekt. Next inlined im Client-Bundle aber nur **literale** Zugriffe der
  * Form `process.env.NEXT_PUBLIC_X` — ein dynamischer Property-Zugriff bliebe
- * leer. Deshalb stehen die drei Namen hier ausgeschrieben.
+ * leer. Deshalb stehen die Namen hier ausgeschrieben.
  *
  * Die Fallbacks sind die Dev-Ports aus AGENTS.md; in Produktion setzt das
  * Deployment die NEXT_PUBLIC_*-Werte (Build-Zeit).
@@ -16,6 +16,8 @@ export interface ClientAppUrls {
   studio: string;
   portal: string;
   brain: string;
+  /** Family (Abschnitt G) — eigener Origin, Zugang über das Häkchen `Family`. */
+  family: string;
 }
 
 export function readClientAppUrls(): ClientAppUrls {
@@ -25,5 +27,6 @@ export function readClientAppUrls(): ClientAppUrls {
     studio,
     portal: process.env.NEXT_PUBLIC_PORTAL_URL || "http://localhost:3001",
     brain: process.env.NEXT_PUBLIC_BRAIN_URL || "http://localhost:3002",
+    family: process.env.NEXT_PUBLIC_FAMILY_URL || "http://localhost:3004",
   };
 }
