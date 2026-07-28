@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h | --help)
-      echo "Usage: $0 [--public-url https://uweanddragons.org]"
+      echo "Usage: $0 [--public-url https://uwe.example]"
       exit 0
       ;;
     *)
@@ -34,6 +34,12 @@ if [[ -f /etc/uwe/uwe.env ]]; then
 fi
 
 PORTAL_URL="${PORTAL_URL:-$PUBLIC_URL}"
+
+# Apex-Domain aus der konfigurierten öffentlichen URL ableiten, damit die
+# Ingress-Checks unten ohne fest verdrahteten Hostnamen auskommen. Ohne
+# PUBLIC_APP_URL greifen nur die generischen Hostname-Prüfungen.
+APEX_DOMAIN="$(printf '%s' "$PUBLIC_URL" | sed -E 's#^[a-z]+://##; s#/.*$##; s#:[0-9]+$##; s#^(studio|portal|brain)\.##')"
+apex_re() { printf '%s' "$1" | sed 's/\./\\./g'; }
 
 status_ok=0
 status_warn=0
@@ -90,30 +96,34 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
       report fail "Tunnel-Konfiguration zeigt auf den Brain-Port (:${brain_port}) — Brain ist owner-only/lokal; für öffentliche Freischaltung BRAIN_PUBLIC_TUNNEL=1 setzen"
     fi
   fi
-  if printf '%s\n' "$active_ingress" | grep -qiE 'hostname:[[:space:]]*brain\.|brain\.uweanddragons\.org'; then
+  if printf '%s\n' "$active_ingress" | grep -qiE 'hostname:[[:space:]]*brain\.'; then
     if [[ "$brain_opt_in" == "1" ]]; then
       report warn "Brain-Hostname im Tunnel — bewusst per BRAIN_PUBLIC_TUNNEL=1 freigeschaltet (owner-gated)"
     else
       report fail "Tunnel-Konfiguration enthält einen Brain-Hostname — für öffentliche Freischaltung BRAIN_PUBLIC_TUNNEL=1 setzen"
     fi
   fi
-  if grep -q 'portal\.uweanddragons\.org' "$TUNNEL_CONFIG" 2>/dev/null; then
-    report ok "Split-Hostname-Ingress: portal.uweanddragons.org konfiguriert"
-  elif [[ -n "$PORTAL_URL" && "$PORTAL_URL" == *"portal.uweanddragons.org"* ]]; then
-    report warn "NEXT_PUBLIC_PORTAL_URL=portal.uweanddragons.org — Tunnel-Ingress fehlt lokal (Remote-Tunnel im Dashboard prüfen)"
+  if grep -qE "hostname:[[:space:]]*portal\." "$TUNNEL_CONFIG" 2>/dev/null; then
+    report ok "Split-Hostname-Ingress: portal-Hostname konfiguriert"
+  elif [[ -n "$PORTAL_URL" && "$PORTAL_URL" == *"portal."* ]]; then
+    report warn "NEXT_PUBLIC_PORTAL_URL zeigt auf einen portal-Hostnamen — Tunnel-Ingress fehlt lokal (Remote-Tunnel im Dashboard prüfen)"
   fi
-  if grep -q 'studio\.uweanddragons\.org' "$TUNNEL_CONFIG" 2>/dev/null; then
-    report ok "Split-Hostname-Ingress: studio.uweanddragons.org konfiguriert"
+  if grep -qE "hostname:[[:space:]]*studio\." "$TUNNEL_CONFIG" 2>/dev/null; then
+    report ok "Split-Hostname-Ingress: studio-Hostname konfiguriert"
   elif grep -q '/studio' "$TUNNEL_CONFIG" 2>/dev/null; then
     report warn "Legacy-Pfad-Ingress erkannt — empfohlen: Split-Hostnames (deploy/cloudflare/config.yml.example)"
   fi
   # Der Apex trägt nur die Startseite (apps/landing, :3103). Zeigt er auf den
   # Studio-Port, liefert die Hauptdomain wieder die komplette Studio-Oberfläche
   # aus — genau die Kopplung, die die eigene Landing-App auflöst.
-  apex_service="$(awk '/hostname:[[:space:]]*uweanddragons\.org[[:space:]]*$/{found=1;next} found&&/service:/{print;exit}' "$TUNNEL_CONFIG" 2>/dev/null)"
+  apex_service=""
+  if [[ -n "$APEX_DOMAIN" ]]; then
+    apex_service="$(awk -v re="hostname:[[:space:]]*$(apex_re "$APEX_DOMAIN")[[:space:]]*$" \
+      '$0 ~ re {found=1;next} found&&/service:/{print;exit}' "$TUNNEL_CONFIG" 2>/dev/null)"
+  fi
   if [[ -n "$apex_service" ]]; then
     if printf '%s' "$apex_service" | grep -q '3103'; then
-      report ok "Apex-Ingress: uweanddragons.org → Startseiten-App (:3103)"
+      report ok "Apex-Ingress: ${APEX_DOMAIN} → Startseiten-App (:3103)"
     else
       report warn "Apex-Ingress zeigt nicht auf die Startseiten-App (:3103):${apex_service}"
     fi
@@ -196,6 +206,25 @@ elif [[ -n "$PUBLIC_URL" ]]; then
   else
     report warn "Studio-API-Probe $studio_probe → HTTP $studio_code"
   fi
+fi
+
+# Managed Challenge (edge "Verify you are human") — desired state as UWE stored it.
+# A challenge that also covered /api/health would make every probe above look
+# like an outage, so the exemption is checked explicitly.
+CHALLENGE_CONFIG="${UWE_DATA_DIR:-${UWE_HOME:-/opt/uwe}/data}/cloudflare/managed-challenge.json"
+if [[ -f "$CHALLENGE_CONFIG" ]]; then
+  challenge_enabled="$(grep -o '"enabled"[[:space:]]*:[[:space:]]*[a-z]*' "$CHALLENGE_CONFIG" | grep -o '[a-z]*$' || echo "false")"
+  if [[ "$challenge_enabled" == "true" ]]; then
+    if grep -q '"/api/health"' "$CHALLENGE_CONFIG"; then
+      report ok "Managed Challenge aktiviert — /api/health ausgenommen"
+    else
+      report fail "Managed Challenge aktiviert, aber /api/health nicht ausgenommen — Probes und Timer scheitern"
+    fi
+  else
+    report ok "Managed Challenge nicht aktiviert (UWE → System → Cloudflare)"
+  fi
+else
+  report ok "Managed Challenge nie konfiguriert — kein Edge-Challenge-Gate"
 fi
 
 echo ""

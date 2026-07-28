@@ -13,7 +13,7 @@ const BRAIN_SECURITY_HEADER_OPTIONS: SecurityHeaderOptions = { allowMicrophone: 
 // `request.nextUrl` to `localhost:<port>` and ignores the forwarded Host header —
 // a login redirect built from it would send a tunnel visitor to an unreachable
 // `https://localhost:3102/login`. When a public Brain origin is configured
-// (NEXT_PUBLIC_BRAIN_URL, e.g. https://brain.uweanddragons.org) rebase the login
+// (NEXT_PUBLIC_BRAIN_URL, e.g. https://brain.uwe.example) rebase the login
 // redirect onto it; local-only deployments (loopback origin) keep the raw URL,
 // which a local browser can still reach.
 function buildBrainLoginUrl(request: NextRequest, redirectPath: string, pathname: string): URL {

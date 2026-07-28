@@ -92,6 +92,6 @@ Start-Process cloudflared -ArgumentList @('tunnel', 'run', $Tunnel)
 
 Write-Host ""
 Write-Host "[uwe-test] Staging live:"
-Write-Host "  Studio -> https://test.studio.uweanddragons.org  (lokal :3002)"
-Write-Host "  Portal -> https://test.portal.uweanddragons.org  (lokal :3003)"
+Write-Host "  Studio -> https://test.studio.uwe.example  (lokal :3002)"
+Write-Host "  Portal -> https://test.portal.uwe.example  (lokal :3003)"
 Write-Host "  Stoppen: .\uwe-test-down.ps1"

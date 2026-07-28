@@ -1,6 +1,6 @@
 # UWE QA URL-Checkliste (Teil 7)
 
-Stand: Juni 2026 · Produktions-Host: **uweandragons.org**
+Stand: Juni 2026 · Produktions-Host: **uwe.example**
 
 Manuelle Browser-QA nach UI-Refresh und IA-Konsolidierung. Alle Studio-Routen bleiben erreichbar; einige leiten auf neue Hub-Seiten um.
 
@@ -8,10 +8,10 @@ Manuelle Browser-QA nach UI-Refresh und IA-Konsolidierung. Alle Studio-Routen bl
 
 | Umgebung | Portal | Studio (Unified Path) | Studio (Subdomain) |
 |----------|--------|------------------------|---------------------|
-| Produktion | `https://uweandragons.org` | `https://uweandragons.org/studio` | `https://studio.uweandragons.org` |
+| Produktion | `https://uwe.example` | `https://uwe.example/studio` | `https://studio.uwe.example` |
 | Lokal | `http://localhost:3001` | `http://localhost:3000` | — |
 
-Setze `PUBLIC_APP_URL=https://uweandragons.org` und ggf. `NEXT_PUBLIC_STUDIO_URL` gemäß `docs/cloudflare-access.md`.
+Setze `PUBLIC_APP_URL=https://uwe.example` und ggf. `NEXT_PUBLIC_STUDIO_URL` gemäß `docs/cloudflare-access.md`.
 
 ---
 
@@ -19,11 +19,11 @@ Setze `PUBLIC_APP_URL=https://uweandragons.org` und ggf. `NEXT_PUBLIC_STUDIO_URL
 
 | # | URL | Erwartung |
 |---|-----|-----------|
-| 1 | `https://uweandragons.org/api/health/public` | HTTP 200, `{ ok: true }` |
-| 2 | `https://uweandragons.org/api/health` | HTTP 200 (Portal, kein Access-Redirect) |
-| 3 | `https://uweandragons.org/studio/api/health` | HTTP 200 nach Studio-Login / Access |
-| 4 | `https://uweandragons.org/studio/login` | Login-Formular |
-| 5 | `https://uweandragons.org/studio/api/brain/run` (ohne Auth) | 401/403 oder Cloudflare Access |
+| 1 | `https://uwe.example/api/health/public` | HTTP 200, `{ ok: true }` |
+| 2 | `https://uwe.example/api/health` | HTTP 200 (Portal, kein Access-Redirect) |
+| 3 | `https://uwe.example/studio/api/health` | HTTP 200 nach Studio-Login / Access |
+| 4 | `https://uwe.example/studio/login` | Login-Formular |
+| 5 | `https://uwe.example/studio/api/brain/run` (ohne Auth) | 401/403 oder Cloudflare Access |
 
 Demo-Login (lokal/Seed): `dm@uwe.local` / `uwe-dev`
 
@@ -136,12 +136,12 @@ Nach Login: Sidebar zeigt **Heute · Welten · Leben · Werkstatt · Wissen · M
 
 | # | URL | Check |
 |---|-----|-------|
-| 200 | `https://uweandragons.org/` | Landing / Gast-Wiki |
-| 201 | `https://uweandragons.org/worlds` | Öffentliche Welten |
-| 202 | `https://uweandragons.org/worlds/terra` | Gast-Wiki Terra |
-| 203 | `https://uweandragons.org/login` | Spieler-Login |
-| 204 | `https://uweandragons.org/auth/worlds` | Meine Welten (eingeloggt) |
-| 205 | `https://uweandragons.org/auth/worlds/terra` | Spieler-Dashboard |
+| 200 | `https://uwe.example/` | Landing / Gast-Wiki |
+| 201 | `https://uwe.example/worlds` | Öffentliche Welten |
+| 202 | `https://uwe.example/worlds/terra` | Gast-Wiki Terra |
+| 203 | `https://uwe.example/login` | Spieler-Login |
+| 204 | `https://uwe.example/auth/worlds` | Meine Welten (eingeloggt) |
+| 205 | `https://uwe.example/auth/worlds/terra` | Spieler-Dashboard |
 
 Kein `dm_only`-Leak in Portal-HTML oder `/api/*`-Antworten (siehe `pnpm test:security`).
 

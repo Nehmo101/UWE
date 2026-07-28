@@ -45,7 +45,6 @@ Adjust only in `perf-budgets.ts`. If CI fails on slow runners, increase budget w
 
 ### 4. Cleanup discipline
 
-- List candidates in `docs/engineering/cleanup-inventory.md`
 - No drive-by deletes — use `pnpm test:leaks` for security-critical paths
 - Split large services in focused PRs
 
@@ -61,6 +60,5 @@ pnpm quality
 ## References
 
 - `docs/engineering/performance.md`
-- `docs/engineering/cleanup-inventory.md`
 - `docs/FEATURE_MATURITY_MATRIX.md` §11, §13
 - `.cursor/skills/ci-quality-gate/SKILL.md`

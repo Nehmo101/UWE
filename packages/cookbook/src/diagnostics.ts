@@ -1,4 +1,12 @@
-/** Serve/runtime diagnosis patterns — UWE-native, inspired by operational playbooks (not Odysseus code). */
+/**
+ * Serve/runtime diagnosis patterns.
+ *
+ * Struktur und Meldungstexte sind UWE-eigen. Die Idee einer Muster→Diagnose-Tabelle
+ * und zwei der Fehlermuster orientieren sich an Odysseus' `cookbook-diagnosis.js`
+ * (AGPL-3.0-or-later); die Muster selbst matchen fremde Werkzeug-Ausgaben
+ * (llama.cpp/vLLM) und beschreiben Tatsachen, keine schutzfähige Ausdrucksform.
+ * Siehe THIRD-PARTY-NOTICES.md.
+ */
 
 import type { ServeDiagnosis } from "./types";
 

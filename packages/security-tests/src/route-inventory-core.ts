@@ -51,8 +51,11 @@ export interface RouteProtectionPolicy {
   guardPattern: RegExp;
   /** Routes intentionally public — must NOT reference a guard. */
   publicAllowlist: ReadonlySet<string>;
-  /** Optional set of routes that delegate their guard to a shared helper module. */
-  delegated?: DelegatedGuardConfig;
+  /**
+   * Optional groups of routes that delegate their guard to a shared helper
+   * module (one group per helper, e.g. two-factor-routes.ts, passkey-routes.ts).
+   */
+  delegatedGroups?: readonly DelegatedGuardConfig[];
 }
 
 /**
@@ -75,11 +78,14 @@ export function assertRouteProtected(
     return;
   }
 
-  if (policy.delegated?.routes.has(relativeRoute)) {
-    const helperContent = fs.readFileSync(policy.delegated.helperPath, "utf8");
+  for (const group of policy.delegatedGroups ?? []) {
+    if (!group.routes.has(relativeRoute)) {
+      continue;
+    }
+    const helperContent = fs.readFileSync(group.helperPath, "utf8");
     if (!policy.guardPattern.test(helperContent)) {
       throw new Error(
-        `${relativeRoute} delegates to ${path.basename(policy.delegated.helperPath)} which must call an auth guard`,
+        `${relativeRoute} delegates to ${path.basename(group.helperPath)} which must call an auth guard`,
       );
     }
     return;

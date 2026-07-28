@@ -8,6 +8,7 @@ import {
   readClientAppUrls,
 } from "@uwe/shared-ui";
 import { BrainNav } from "./BrainNav";
+import { BrainNavSearch } from "./BrainNavSearch";
 
 /** Verbindet Umschalter, Hintergrund und Schublade — muss dokumentweit eindeutig sein. */
 const NAV_DRAWER_ID = "uwe-brain-nav-drawer";
@@ -58,7 +59,7 @@ export function BrainShell({
           aria-label="Navigation ein- oder ausblenden"
         />
         <label className="uwe-sidebar-backdrop" htmlFor={NAV_DRAWER_ID} aria-hidden />
-        <header className="uwe-topbar">
+        <header className="uwe-topbar flex-wrap md:flex-nowrap">
           <label className="uwe-mobile-nav-toggle" htmlFor={NAV_DRAWER_ID} aria-hidden>
             ☰
           </label>
@@ -71,6 +72,7 @@ export function BrainShell({
               <small>Persönliches Wissen &amp; Daily Admin</small>
             </span>
           </Link>
+          <BrainNavSearch />
           <span className="uwe-topbar-end">
             <span className="brain-owner-badge">Nur Owner</span>
             <ThemeModeToggle />

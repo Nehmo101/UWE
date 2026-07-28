@@ -10,7 +10,7 @@ export type ServiceState = "online" | "starting" | "stopped" | "error";
 
 /**
  * Vom Host verwaltete Dienste. „landing" ist die öffentliche Startseite auf dem
- * Apex-Origin (uweanddragons.org) — ein eigener Prozess, damit die Hauptdomain
+ * Apex-Origin (uwe.example) — ein eigener Prozess, damit die Hauptdomain
  * keinen Studio-Code ausliefert. Die Reihenfolge hier ist zugleich die Start-
  * und Anzeigereihenfolge im Command Center.
  */

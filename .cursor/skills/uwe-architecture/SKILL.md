@@ -81,7 +81,7 @@ The `@uwe/database/server` barrel (`packages/database/src/server.ts`) is large (
 ## Canonical docs
 
 - [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) — full product + runtime diagrams
-- [docs/REPO_AUDIT.md](../../../docs/REPO_AUDIT.md) — module inventory
+- [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) — module inventory
 - [docs/ROADMAP.md](../../../docs/ROADMAP.md) — product maturity
 - [docs/engineering/TECHNICAL_ROADMAP.md](../../../docs/engineering/TECHNICAL_ROADMAP.md) — refactor order
 

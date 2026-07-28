@@ -1,6 +1,6 @@
 /**
  * Optional Cloudflare Worker: probes UWE public endpoints and stores last result in KV.
- * Does not replace cloudflared — runs on a separate route (e.g. status.uweandragons.org).
+ * Does not replace cloudflared — runs on a separate route (e.g. status.uwe.example).
  */
 
 const DEFAULT_PATHS = {
@@ -57,11 +57,11 @@ const worker = {
 export default worker;
 
 async function runChecks(env) {
-  const portalBase = (env.UWE_PORTAL_URL || env.UWE_PUBLIC_URL || "https://uweanddragons.org").replace(
+  const portalBase = (env.UWE_PORTAL_URL || env.UWE_PUBLIC_URL || "https://uwe.example").replace(
     /\/$/,
     "",
   );
-  const studioBase = (env.UWE_STUDIO_URL || "https://studio.uweanddragons.org").replace(/\/$/, "");
+  const studioBase = (env.UWE_STUDIO_URL || "https://studio.uwe.example").replace(/\/$/, "");
   const portalPath = env.UWE_PORTAL_HEALTH_PATH || DEFAULT_PATHS.portal;
   const studioPath = env.UWE_STUDIO_HEALTH_PATH || DEFAULT_PATHS.studio;
 

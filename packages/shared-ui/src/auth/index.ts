@@ -25,3 +25,11 @@ export {
   type PasswordStrengthResult,
 } from "./password-strength";
 export { formatForgotPasswordError } from "./forgot-password-errors";
+export {
+  isPasskeySupported,
+  loginWithPasskey,
+  registerPasskey,
+  type PasskeyLoginResult,
+  type PasskeyLoginSuccessUser,
+  type PasskeyRegisterResult,
+} from "./passkey-client";

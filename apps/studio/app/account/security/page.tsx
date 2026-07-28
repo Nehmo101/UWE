@@ -3,8 +3,13 @@ import { redirect } from "next/navigation";
 import {
   AUDIT_ACTION_LABELS,
   createAuditLogService,
+  getAppRepository,
   prisma,
 } from "@uwe/database/server";
+import { createAuthIdentityService } from "@uwe/database/auth-identities";
+import { resolveLoginMethodsPublicConfig } from "@uwe/database/login-methods-settings";
+import { GoogleAccountLinkCard } from "@/src/components/GoogleAccountLinkCard";
+import { PasskeySettingsPanel } from "@/src/components/PasskeySettingsPanel";
 import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
 import { BreadcrumbTrail, SystemShell } from "@/src/components/shell";
 import {
@@ -29,6 +34,10 @@ export default async function AccountSecurityPage() {
     actions: ["login_success", "login_failed"],
     limit: 10,
   });
+  const settings = await getAppRepository().getSystemSettings();
+  const loginMethods = resolveLoginMethodsPublicConfig(settings.auth);
+  const identities = await createAuthIdentityService(prisma).listForUser(user.id);
+  const googleIdentity = identities.find((identity) => identity.provider === "google") ?? null;
 
   return (
     <SystemShell
@@ -56,6 +65,37 @@ export default async function AccountSecurityPage() {
               Passwort ändern
             </Link>
           </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6 max-w-md">
+        <CardHeader>
+          <CardTitle>Passkeys</CardTitle>
+          <CardDescription>
+            Anmeldung per Face ID, Touch ID, Fingerabdruck oder Sicherheitsschlüssel.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PasskeySettingsPanel
+            enabled={settings.auth.passkeysEnabled}
+            disabledHint="Passkey-Login ist deaktiviert. Aktiviere es unter Einstellungen → Anmeldung."
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6 max-w-md">
+        <CardHeader>
+          <CardTitle>Verknüpfte Konten</CardTitle>
+          <CardDescription>Anmeldung über externe Konten (Google).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GoogleAccountLinkCard
+            enabled={loginMethods.googleLoginEnabled}
+            linked={Boolean(googleIdentity)}
+            linkedEmail={googleIdentity?.email}
+            startUrl="/api/auth/google/start?target=studio&intent=link"
+            unlinkUrl="/api/auth/google/unlink"
+          />
         </CardContent>
       </Card>
 

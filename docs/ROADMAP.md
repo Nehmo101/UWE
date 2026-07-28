@@ -115,5 +115,5 @@ Siehe `docs/daily-admin-os.md` — Cockpit-Module teils UI-only, Brain/Mail teil
 ## Verwandte Dokumente
 
 - [SECURITY.md](../SECURITY.md) — Self-Hosting Checklist
-- [docs/REPO_AUDIT.md](./REPO_AUDIT.md) — Architektur-Inventar
+- [docs/ARCHITECTURE.md](./ARCHITECTURE.md) — Architektur-Inventar
 - [CHANGELOG.md](../CHANGELOG.md) — Release-Historie

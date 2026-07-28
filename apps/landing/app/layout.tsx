@@ -52,7 +52,7 @@ export default async function RootLayout({
 }>) {
   // Die Landing führt in Studio, Portal und Brain — der Hell/Dunkel-Umschalter
   // in ihrer Nav nutzt deshalb den Studio-Scope, damit die Wahl beim Sprung auf
-  // studio.uweanddragons.org erhalten bleibt.
+  // studio.uwe.example erhalten bleibt.
   let serverThemePreferences: UweThemePreferences | null = null;
   let updatedAt: string | null = null;
   let visualThemeAttrs: VisualThemeHtmlAttributes | undefined;

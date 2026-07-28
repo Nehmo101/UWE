@@ -58,7 +58,7 @@ export function CloudflarePanel() {
         <div>
           <span className="connector-kicker">CLOUDFLARE · TUNNEL · ÖFFENTLICHE HOSTS</span>
           <h3>Cloudflare-Tunnel</h3>
-          <p>Startet den lokalen cloudflared-Connector, der Studio, Portal und Brain öffentlich erreichbar macht.</p>
+          <p>Startet den lokalen cloudflared-Connector, der Startseite, Studio, Portal und Brain öffentlich erreichbar macht.</p>
         </div>
         <div className="command-center-hero-status">
           <HealthBadge status={running ? "ok" : "degraded"} label={running ? "Tunnel läuft" : "Tunnel gestoppt"} />
@@ -71,7 +71,7 @@ export function CloudflarePanel() {
       {!hasToken ? (
         <div className="connector-banner connector-banner-error">
           Es ist noch kein Tunnel-Token hinterlegt — ohne Token kann der Connector nicht starten und
-          die öffentlichen Adressen (studio./portal./brain.uweanddragons.org) sind offline.
+          die öffentlichen Adressen (studio./portal./brain.uwe.example) sind offline.
         </div>
       ) : null}
 

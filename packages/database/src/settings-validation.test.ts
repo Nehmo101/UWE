@@ -50,6 +50,36 @@ describe("validateSettingsUpdate", () => {
     });
   });
 
+  it("accepts the passkeysEnabled auth toggle", () => {
+    const result = validateSettingsUpdate({
+      auth: { passkeysEnabled: true },
+    });
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    assert.deepEqual(result.value.auth, { passkeysEnabled: true });
+  });
+
+  it("rejects a non-boolean passkeysEnabled value", () => {
+    const result = validateSettingsUpdate({
+      auth: { passkeysEnabled: "yes" },
+    });
+
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+
+    assert.ok(result.errors.some((error) => error.includes("settings.auth.passkeysEnabled")));
+  });
+
+  it("rejects unknown auth keys", () => {
+    const result = validateSettingsUpdate({
+      auth: { passkeyRpId: "evil.example" },
+    });
+
+    assert.equal(result.ok, false);
+  });
+
   it("rejects unknown top-level keys", () => {
     const result = validateSettingsUpdate({
       app: { theme: "dark" },

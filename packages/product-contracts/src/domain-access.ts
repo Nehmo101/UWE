@@ -1,4 +1,4 @@
-// Audience x DataDomain access matrix. Canonical spec: docs/rework/three-product-split/02-domain-contracts.md §3.
+// Audience x DataDomain access matrix. Canonical spec: docs/engineering/domain-contracts.md §3.
 
 import type { AppAudience, DataDomain } from "./domain-boundaries";
 

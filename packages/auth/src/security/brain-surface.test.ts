@@ -6,8 +6,8 @@ import { evaluateBrainMiddleware } from "./middleware";
 function makeRequest(pathname: string, options: { session?: string } = {}) {
   return {
     pathname,
-    url: `https://brain.uweanddragons.org${pathname}`,
-    headers: new Headers({ host: "brain.uweanddragons.org" }),
+    url: `https://brain.uwe.example${pathname}`,
+    headers: new Headers({ host: "brain.uwe.example" }),
     cookies: {
       get(name: string) {
         return name === "uwe_session" && options.session ? { value: options.session } : undefined;

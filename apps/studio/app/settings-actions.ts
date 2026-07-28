@@ -1,6 +1,8 @@
 "use server";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import { requireOwner } from "@/src/lib/auth";
+import { buildGoogleOAuthSettingsUpdate } from "@uwe/database/login-methods-settings";
 import {
   createAuthService,
   prisma,
@@ -107,6 +109,26 @@ export async function updateSettingsAction(formData: FormData) {
         })(),
       };
       break;
+    case "login":
+      update.auth = {
+        passkeysEnabled: parseBoolean(formData.get("passkeysEnabled")),
+      };
+      break;
+    case "login-google": {
+      // Google client credentials are owner-only (precedent: system/cloudflare).
+      await requireOwner();
+      const current = await repo().getSystemSettings();
+      update.auth = buildGoogleOAuthSettingsUpdate(
+        {
+          googleLoginEnabled: parseBoolean(formData.get("googleLoginEnabled")),
+          googleClientId: String(formData.get("googleClientId") || ""),
+          googleClientSecret: String(formData.get("googleClientSecret") || ""),
+          clearGoogleClientSecret: parseBoolean(formData.get("clearGoogleClientSecret")),
+        },
+        current.auth,
+      );
+      break;
+    }
     case "storage":
       update.storage = {
         uploadsPath: String(formData.get("uploadsPath") || ""),
@@ -237,6 +259,12 @@ export async function updateSettingsAction(formData: FormData) {
   if (validationInput.mail) {
     delete (validationInput.mail as { smtpCredentials?: unknown }).smtpCredentials;
   }
+  if (validationInput.auth) {
+    // Assembled server-side by buildGoogleOAuthSettingsUpdate — not client input.
+    delete (validationInput.auth as { googleClientSecretEnc?: unknown }).googleClientSecretEnc;
+    delete (validationInput.auth as { googleClientSecretConfigured?: unknown })
+      .googleClientSecretConfigured;
+  }
   const validation = validateSettingsUpdate(validationInput);
   if (!validation.ok) {
     throw new Error(`Ungültige Einstellungen: ${validation.errors.join(" ")}`);
@@ -264,7 +292,8 @@ export async function updateSettingsAction(formData: FormData) {
   }
 
   revalidatePath("/settings");
-  const redirectTab = tab === "landing" ? "general" : tab;
+  const redirectTab =
+    tab === "landing" ? "general" : tab === "login-google" ? "login" : tab;
   redirect(`/settings?tab=${redirectTab}&saved=1`);
 }
 

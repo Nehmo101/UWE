@@ -131,7 +131,7 @@ Studio + Portal `next.config.ts`:
 
 ## 5. Manuelle Cloudflare Access Checkliste
 
-Vor Go-Live auf `uweandragons.org` (oder ähnlich):
+Vor Go-Live auf `uwe.example` (oder ähnlich):
 
 ### Cloudflare Tunnel / DNS
 

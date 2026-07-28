@@ -12,13 +12,13 @@ import { UweLandingLoginCard } from "./UweLandingLoginCard";
 // ein CSS-Import hier bräche den Node-Test-Runner des Pakets.
 
 /**
- * Einstiegsseite von UWE (uweanddragons.org). Eine Seite, zwei Zustände:
+ * Einstiegsseite von UWE (uwe.example). Eine Seite, zwei Zustände:
  *   - "choose": gemalte Szene + Hero + drei Produktkarten
  *   - "studio" | "portal" | "brain": die Anmeldekarte des jeweiligen Ziels
  *
  * Die Anmeldung läuft unverändert gegen die echte UWE-Core-Auth
  * (POST /api/auth/enter auf dem Apex-/Studio-Origin) und navigiert danach zum
- * eigenen Origin der Ziel-App. Mit SESSION_COOKIE_DOMAIN=.uweanddragons.org
+ * eigenen Origin der Ziel-App. Mit SESSION_COOKIE_DOMAIN=.uwe.example
  * gilt eine Anmeldung hier auf allen Produkt-Subdomains (SSO).
  *
  * Design: design_handoff_ghibli_redesign/README.md, Abschnitt „1 · Landing".
@@ -86,7 +86,7 @@ export function UweLandingPage({
             aria-label="UWE — zur Auswahl"
           >
             <strong>◆ UWE</strong>
-            <small>uweanddragons.org</small>
+            <small>uwe.example</small>
           </button>
           <div className="uwe-lp-nav-end">
             <span className="uwe-lp-rtx" data-online={rtxOnline ? "true" : "false"}>

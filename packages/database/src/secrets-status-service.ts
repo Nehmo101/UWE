@@ -381,6 +381,18 @@ async function buildDbEncryptedSection(
     });
   }
 
+  if (settings.auth.googleClientSecretEnc) {
+    items.push(
+      assessDbEncryptedSecret({
+        id: "google-oauth-client-secret",
+        label: "Google OAuth Client-Secret",
+        payload: settings.auth.googleClientSecretEnc,
+        encryptionSecret,
+        href: "/settings?tab=login",
+      }),
+    );
+  }
+
   for (const storedKey of settings.ai.cloudApiKeys ?? []) {
     items.push(
       assessDbEncryptedSecret({

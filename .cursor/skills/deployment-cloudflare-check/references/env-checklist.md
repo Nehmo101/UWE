@@ -128,4 +128,4 @@ See `docs/backup-restore.md`.
 - `docs/deployment-hardening.md` — Linux laptop + systemd
 - `docs/PRODUCTION.md` — release checklist
 - `docs/security/DEPLOYMENT_SECURITY.md` — architecture overview
-- `docs/cloudflare-access.md` — Access policies for uweandragons.org
+- `docs/cloudflare-access.md` — Access policies for uwe.example

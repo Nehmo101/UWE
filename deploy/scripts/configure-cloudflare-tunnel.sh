@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Apply recommended UWE split-hostname Cloudflare Tunnel ingress via Cloudflare API.
-# Requires CLOUDFLARE_API_TOKEN with Cloudflare Tunnel Edit + DNS Edit (zone uweanddragons.org).
+# Requires CLOUDFLARE_API_TOKEN with Cloudflare Tunnel Edit + DNS Edit (zone uwe.example).
 #
 # Usage:
 #   CLOUDFLARE_API_TOKEN=... bash deploy/scripts/configure-cloudflare-tunnel.sh
@@ -85,25 +85,25 @@ read -r -d '' CONFIG_JSON <<'EOF' || true
   "config": {
     "ingress": [
       {
-        "hostname": "studio.uweanddragons.org",
+        "hostname": "studio.uwe.example",
         "service": "http://127.0.0.1:3000"
       },
       {
-        "hostname": "portal.uweanddragons.org",
+        "hostname": "portal.uwe.example",
         "service": "http://127.0.0.1:3001"
       },
       {
-        "hostname": "uweanddragons.org",
+        "hostname": "uwe.example",
         "path": "/studio",
         "service": "http://127.0.0.1:3000"
       },
       {
-        "hostname": "uweanddragons.org",
+        "hostname": "uwe.example",
         "path": "/portal",
         "service": "http://127.0.0.1:3001"
       },
       {
-        "hostname": "uweanddragons.org",
+        "hostname": "uwe.example",
         "service": "http://127.0.0.1:3103"
       },
       {
@@ -116,9 +116,9 @@ EOF
 
 echo "Account:  $CLOUDFLARE_ACCOUNT_ID"
 echo "Tunnel:   $CLOUDFLARE_TUNNEL_ID"
-echo "Ingress:  studio.uweanddragons.org → :3000"
-echo "          portal.uweanddragons.org → :3001"
-echo "          uweanddragons.org (/studio, /portal, default → Landing :3103)"
+echo "Ingress:  studio.uwe.example → :3000"
+echo "          portal.uwe.example → :3001"
+echo "          uwe.example (/studio, /portal, default → Landing :3103)"
 
 if [[ "$DRY_RUN" == true ]]; then
   echo "$CONFIG_JSON" | python3 -m json.tool
@@ -157,8 +157,8 @@ probe() {
 }
 
 echo "[OK] Probes:"
-probe "https://studio.uweanddragons.org/api/health/public"
-probe "https://portal.uweanddragons.org/api/health/public"
-probe "https://uweanddragons.org/api/health"
+probe "https://studio.uwe.example/api/health/public"
+probe "https://portal.uwe.example/api/health/public"
+probe "https://uwe.example/api/health"
 
 echo "[OK] Fertig. Prüfe danach: bash $UWE_HOME/deploy/scripts/check-cloudflare-tunnel.sh"

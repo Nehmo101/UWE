@@ -9,8 +9,7 @@ Geprüft am 2026-07-03.
 
 **Herkunft:** Eingeführt über PR #341 (Merge-Commit `9b88e58`, Branch
 `cursor/backlog-b3-owner-cockpit-c636`) — ohne dokumentierte Begründung im
-Commit oder CHANGELOG. Laut `docs/engineering/cleanup-inventory.md` und
-`docs/engineering/TECHNICAL_ROADMAP.md` gab es zuvor doppelte `pnpm`-Blöcke
+Commit oder CHANGELOG. Laut `docs/engineering/TECHNICAL_ROADMAP.md` gab es zuvor doppelte `pnpm`-Blöcke
 in der Root-`package.json`, die auf diesen einen Override zusammengeführt
 wurden.
 

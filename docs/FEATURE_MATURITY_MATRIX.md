@@ -203,7 +203,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 **Runtime vs. Doku**
 
 - **Runtime:** Admin-Prompt → SQLite → `dispatchAgentJob` → GHA / Cursor Cloud.
-- **Orchestrator/Subagents:** Nur Markdown in `docs/ai-orchestrator-subagents-prompts.md`, `docs/ai-brain-mail/` — **kein** In-App-Orchestrator.
+- **Orchestrator/Subagents:** Keine In-App-Orchestrierung — Agent-Jobs werden extern (GHA / Cursor Cloud) ausgeführt.
 
 **Sicherheitsgrenzen (bestehend + verstärkt)**
 

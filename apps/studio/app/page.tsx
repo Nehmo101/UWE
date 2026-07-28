@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 /**
  * Wurzel des Studio-Origins.
  *
- * Bei getrennten Hostnamen (studio./portal.uweanddragons.org) liegt die
+ * Bei getrennten Hostnamen (studio./portal.uwe.example) liegt die
  * öffentliche Startseite in ihrer eigenen App auf dem Apex (`apps/landing`) —
  * Studio zeigt hier deshalb keine Landing mehr, sondern führt direkt in den
  * Arbeitsbereich bzw. zum Login. Ohne getrennte Hostnamen (unified-path oder

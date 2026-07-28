@@ -1,0 +1,31 @@
+{
+  "name": "@uwe/mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UWE MCP servers — Studio, Portal and Brain exposed as Model Context Protocol tools over the existing HTTP APIs",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "uwe-mcp-studio": "./src/bin/studio.ts",
+    "uwe-mcp-portal": "./src/bin/portal.ts",
+    "uwe-mcp-brain": "./src/bin/brain.ts"
+  },
+  "scripts": {
+    "start:studio": "tsx src/bin/studio.ts",
+    "start:portal": "tsx src/bin/portal.ts",
+    "start:brain": "tsx src/bin/brain.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

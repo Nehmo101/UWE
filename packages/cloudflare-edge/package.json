@@ -1,0 +1,24 @@
+{
+  "name": "@uwe/cloudflare-edge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare edge configuration UWE owns itself — Managed Challenge WAF rule, host-readable config and the Cloudflare Rulesets API client",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "@uwe/assets": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}
