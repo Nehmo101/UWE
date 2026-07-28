@@ -2,14 +2,20 @@
 
 Offizielle Anleitung für den **UWE Production Host** unter Linux (Ubuntu, Debian und Fedora 44).
 
-UWE besteht aus zwei Web-Apps:
+`uwe.service` startet drei Web-Apps:
 
 | App | Standard-Port | Zweck |
 |-----|---------------|-------|
 | **Studio** | 3000 | Spielleiter-Editor (DM) |
 | **Portal** | 3001 | Spieler-Wiki |
+| **Startseite** | 3103 | Öffentlicher Apex-Origin (`apps/landing`) — genau drei Routen |
 
-Nach dem Setup sind beide im **Heimnetz** erreichbar (`HOST=0.0.0.0`).
+Nach dem Setup sind alle drei im **Heimnetz** erreichbar (`HOST=0.0.0.0`).
+
+Die Startseite ist ein eigener Prozess, damit die Hauptdomain nie Studio-Code
+ausliefert. Zeigt der Cloudflare-Apex-Ingress noch auf `:3000`, landet die
+Hauptdomain trotzdem in Studio — die Ingress-Seite davon steht in
+[cloudflare-current-setup.md](./cloudflare-current-setup.md).
 
 ---
 
@@ -22,7 +28,7 @@ Nach dem Setup sind beide im **Heimnetz** erreichbar (`HOST=0.0.0.0`).
 | `/var/lib/uwe` | SQLite-Datenbank, Uploads, Exports |
 | `/var/log/uwe` | Anwendungslogs |
 | `/var/backups/uwe` | Backups |
-| `uwe.service` | Offizieller Studio-/Portal-Dienst |
+| `uwe.service` | Offizieller Studio-/Portal-/Startseiten-Dienst |
 | `uwe-rtx-connector.service` | Optionaler outbound RTX Connector; nur mit gültiger Connector-`.env` aktiviert |
 
 Es gibt **keinen** parallelen Legacy-Flow mehr (`uwe-host.service`, `.uwe-host`, repo-lokale `.env` für Production).
@@ -483,7 +489,7 @@ Datei-Logs (falls konfiguriert): `/var/log/uwe/`
 | `deploy/scripts/lib/uwe-host-platform.sh` | OS-, apt/dnf-, Firewalld/UFW- und SELinux-Abstraktion |
 | `deploy/scripts/lib/uwe-host-deps.sh` | Node/pnpm/Prisma/Build-Dependencies |
 | `deploy/scripts/lib/uwe-host-ai-diagnostics.sh` | Optionale AI-Fehleranalyse |
-| `deploy/scripts/start-uwe.sh` | Startet Studio + Portal (von systemd aufgerufen) |
+| `deploy/scripts/start-uwe.sh` | Startet Studio + Portal + Startseite (von systemd aufgerufen) |
 | `deploy/systemd/uwe.service` | Referenz-Unit (wird vom Setup-Script nach `/etc/systemd/system/` geschrieben) |
 | `deploy/systemd/uwe-rtx-connector.service` | Optionale outbound Connector-Unit |
 | `scripts/uwe-host-*.sh` | Convenience-Wrapper um `uwe.service` |

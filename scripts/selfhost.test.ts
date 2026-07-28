@@ -83,6 +83,48 @@ describe("self-hosting setup", () => {
     assert.doesNotMatch(start, /pnpm not found/);
   });
 
+  // Der Apex-Origin ist eine eigene App (apps/landing). Wird sie hier nicht
+  // gestartet, lauscht auf LANDING_PORT niemand und der Tunnel-Ingress der
+  // Hauptdomain bleibt zwangsläufig auf Studio stehen — genau der Zustand, den
+  // apps/landing beseitigen soll.
+  it("start-uwe.sh startet die Apex-Startseite auf LANDING_PORT", () => {
+    const start = fs.readFileSync(path.join(root, "deploy/scripts/start-uwe.sh"), "utf8");
+    assert.match(start, /LANDING_PORT="\$\{LANDING_PORT:-3103\}"/);
+    assert.match(start, /apps\/landing\/\.next\/standalone/);
+    assert.match(start, /Starting Landing on PORT=/);
+    assert.match(start, /exec "\$NODE_BIN" apps\/landing\/server\.js/);
+    assert.match(start, /wait -n "\$STUDIO_PID" "\$PORTAL_PID" \$LANDING_PID/);
+  });
+
+  it("Landing-Standalone bekommt Runtime-Deps und wird geprüft", () => {
+    const materialize = fs.readFileSync(
+      path.join(root, "scripts/materialize-standalone-prisma-deps.mjs"),
+      "utf8",
+    );
+    assert.match(materialize, /const APPS = \[[^\]]*"landing"[^\]]*\]/);
+
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    assert.match(pkg.scripts["build:standalone-check"], /check-standalone-prisma-deps\.mjs landing/);
+
+    const deps = fs.readFileSync(path.join(root, "deploy/scripts/lib/uwe-host-deps.sh"), "utf8");
+    assert.match(deps, /verify_standalone_runtime_deps "landing"/);
+  });
+
+  it("configure-cloudflare-tunnel.sh leitet Hostnamen aus der Host-Konfiguration ab", () => {
+    const configure = fs.readFileSync(
+      path.join(root, "deploy/scripts/configure-cloudflare-tunnel.sh"),
+      "utf8",
+    );
+    // Fest verdrahtete Beispiel-Hostnamen würden eine fremde Domain
+    // konfigurieren und den echten Apex unverändert auf Studio lassen.
+    assert.doesNotMatch(configure, /"hostname": "[^"]*uwe\.example"/);
+    assert.match(configure, /PUBLIC_BASE_URL/);
+    assert.match(configure, /--apex-domain/);
+    assert.match(configure, /LANDING_PORT/);
+  });
+
   it("uwe.service reference unit limits restart loops and pins node path", () => {
     const unit = fs.readFileSync(path.join(root, "deploy/systemd/uwe.service"), "utf8");
     assert.match(unit, /StartLimitIntervalSec=300/);

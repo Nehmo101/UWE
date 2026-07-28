@@ -183,6 +183,7 @@ UWE_MAIL_DIR=${UWE_DATA_DIR}/mail
 UWE_BRIEFING_DIR=${UWE_DATA_DIR}/briefings
 STUDIO_PORT=${STUDIO_PORT}
 PORTAL_PORT=${PORTAL_PORT}
+LANDING_PORT=${LANDING_PORT}
 RUN_DB_SEED=false
 AUTH_SECRET=CHANGE_ME_generate_with_openssl_rand_base64_32
 EOF
@@ -241,6 +242,7 @@ ensure_env_file() {
   upsert_env_var_if_missing UWE_BRIEFING_DIR "${UWE_DATA_DIR}/briefings" "$UWE_ENV_FILE"
   upsert_env_var_if_missing STUDIO_PORT "$STUDIO_PORT" "$UWE_ENV_FILE"
   upsert_env_var_if_missing PORTAL_PORT "$PORTAL_PORT" "$UWE_ENV_FILE"
+  upsert_env_var_if_missing LANDING_PORT "$LANDING_PORT" "$UWE_ENV_FILE"
   upsert_env_var_if_missing RUN_DB_SEED false "$UWE_ENV_FILE"
 
   ensure_secret_var AUTH_SECRET "openssl rand -base64 32" "$UWE_ENV_FILE" "$force_recreate"
@@ -262,7 +264,8 @@ verify_http_healthchecks() {
   for url in \
     "http://127.0.0.1:${STUDIO_PORT}/api/health" \
     "http://127.0.0.1:${STUDIO_PORT}/setup" \
-    "http://127.0.0.1:${PORTAL_PORT}/api/health"; do
+    "http://127.0.0.1:${PORTAL_PORT}/api/health" \
+    "http://127.0.0.1:${LANDING_PORT}/api/health"; do
     code="$(http_status_code "$url")"
     if [[ "$code" == "500" || "$code" == "502" || "$code" == "504" ]]; then
       die "HTTP $code für $url — Service nicht gesund. Siehe: journalctl -u $SYSTEMD_UNIT -n 80"
@@ -305,7 +308,7 @@ write_systemd_unit() {
 
   cat >"$unit_path" <<EOF
 [Unit]
-Description=UWE — Universeller Welten-Editor (Studio + Portal)
+Description=UWE — Universeller Welten-Editor (Studio + Portal + Startseite)
 Documentation=file://${UWE_HOME}/docs/UWE_HOST_LINUX_STARTUP.md
 After=network-online.target
 Wants=network-online.target
@@ -475,10 +478,19 @@ run_healthcheck() {
     healthcheck_item "Port ${PORTAL_PORT}" fail "not listening"
   fi
 
+  # Der Apex-Origin (Startseite) ist ein eigener Prozess. Lauscht er nicht, zeigt
+  # die Hauptdomain am Ende wieder Studio — genau die Kopplung, die apps/landing auflöst.
+  if ss -ltnp 2>/dev/null | grep -q ":${LANDING_PORT}\b"; then
+    healthcheck_item "Port ${LANDING_PORT}" ok "listening"
+  else
+    healthcheck_item "Port ${LANDING_PORT}" fail "not listening (Apex-Startseite)"
+  fi
+
   for url in \
     "http://127.0.0.1:${STUDIO_PORT}/api/health" \
     "http://127.0.0.1:${STUDIO_PORT}/setup" \
-    "http://127.0.0.1:${PORTAL_PORT}/api/health"; do
+    "http://127.0.0.1:${PORTAL_PORT}/api/health" \
+    "http://127.0.0.1:${LANDING_PORT}/api/health"; do
     code="$(http_status_code "$url")"
     if [[ "$code" =~ ^[23] ]]; then
       healthcheck_item "HTTP $url" ok "$code"
@@ -500,7 +512,7 @@ run_healthcheck() {
   fi
 
   if [[ -f "$UWE_HOME/scripts/check-standalone-prisma-deps.mjs" ]] && id "$SERVICE_USER" >/dev/null 2>&1; then
-    for app in studio portal; do
+    for app in studio portal landing; do
       if [[ -d "$UWE_HOME/apps/$app/.next/standalone" ]]; then
         if run_as_uwe "node '$UWE_HOME/scripts/check-standalone-prisma-deps.mjs' '$app'" >/dev/null 2>&1; then
           healthcheck_item "Standalone Prisma ($app)" ok "modules resolve"
@@ -517,6 +529,7 @@ run_healthcheck() {
   echo "LAN Setup-URL: http://${lan_ip}:${STUDIO_PORT}/setup"
   echo "LAN Studio:    http://${lan_ip}:${STUDIO_PORT}/"
   echo "LAN Portal:    http://${lan_ip}:${PORTAL_PORT}/"
+  echo "LAN Startseite:http://${lan_ip}:${LANDING_PORT}/"
   echo "========================================"
 }
 
@@ -526,7 +539,7 @@ print_diagnostics() {
   echo ""
   systemctl status "$SYSTEMD_UNIT" --no-pager || true
   echo ""
-  ss -tulpn | grep -E ":${STUDIO_PORT}|:${PORTAL_PORT}" || warn "Kein Prozess lauscht auf Port ${STUDIO_PORT}/${PORTAL_PORT}."
+  ss -tulpn | grep -E ":${STUDIO_PORT}|:${PORTAL_PORT}|:${LANDING_PORT}" || warn "Kein Prozess lauscht auf Port ${STUDIO_PORT}/${PORTAL_PORT}/${LANDING_PORT}."
   echo ""
   log "HTTP-Test"
   curl -i --max-time 8 "http://127.0.0.1:${STUDIO_PORT}/api/health" 2>/dev/null | head -n 20 || \

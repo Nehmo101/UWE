@@ -525,6 +525,14 @@ verify_all_standalone_runtime_deps() {
   else
     warn "Portal-Standalone fehlt — überspringe Portal-Runtime-Prüfung."
   fi
+  # Die Startseite ist ein eigener Prozess auf dem Apex-Origin. Fehlt ihr
+  # Standalone-Build, startet sie nicht und die Hauptdomain fällt auf den
+  # Studio-Ingress zurück — deshalb hier laut, aber nicht tödlich.
+  if [[ -d "$UWE_HOME/apps/landing/.next/standalone" ]]; then
+    verify_standalone_runtime_deps "landing"
+  else
+    warn "Landing-Standalone fehlt — Apex-Startseite wird nicht starten."
+  fi
 }
 
 run_deploy_steps() {

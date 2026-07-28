@@ -42,8 +42,8 @@ Set on the host (not committed). The in-app status reflects these:
 
 | Variable | Purpose | Recommended |
 |---|---|---|
-| `PUBLIC_BASE_URL` | Public origin of the deployment (the apex/landing origin) | `https://uwe.example` (or studio host) |
-| `LANDING_PORT` | Port of the apex landing app (`apps/landing`) | `3103` |
+| `PUBLIC_BASE_URL` | Public origin of the deployment (the apex/landing origin). `configure-cloudflare-tunnel.sh` derives every ingress hostname from this. | `https://uwe.example` (or studio host) |
+| `LANDING_PORT` | Port of the apex landing app (`apps/landing`), started by `deploy/scripts/start-uwe.sh` | `3103` |
 | `STUDIO_PATH` | Studio mount path (path-routing mode) | `/studio` or `/` (split host) |
 | `PORTAL_PATH` | Portal mount path (path-routing mode) | `/portal` or `/` (split host) |
 | `NEXT_PUBLIC_STUDIO_URL` | Absolute Studio URL for cross-app links | `https://studio.uwe.example` |
@@ -61,7 +61,11 @@ Set on the host (not committed). The in-app status reflects these:
 
 The apex `https://uwe.example` serves the public **landing page** from its
 own app (`apps/landing`, `:3103`) — deliberately *not* from the Studio container,
-so the main domain never ships Studio code. A visitor chooses **UWE Studio**,
+so the main domain never ships Studio code. Two things must line up for that:
+`deploy/scripts/start-uwe.sh` runs the landing process on `LANDING_PORT`, and the
+tunnel's apex ingress points at that port. If either is missing the apex falls
+back to whatever the ingress still names — in practice Studio (see the
+troubleshooting section below). A visitor chooses **UWE Studio**,
 **UWE Portal** or **UWE Brain** and signs in in place; the landing's
 `POST /api/auth/enter` authenticates against UWE Core (Studio/Brain targets
 require GM access; Portal accepts any active user), then the browser is sent to
@@ -209,6 +213,42 @@ re-applies the stored desired state.
 - CSRF is enforced on mutations (same-origin checks); cross-origin Studio API
   requests are rejected at the middleware.
 
+## Die Hauptdomain zeigt weiterhin Studio
+
+Das häufigste Symptom nach der Aufteilung in eine eigene Landing-App. Es hat
+genau zwei mögliche Ursachen — beide sind schnell zu unterscheiden:
+
+```bash
+# 1) Läuft die Startseite überhaupt auf dem Host?
+curl -s http://127.0.0.1:3103/api/health      # erwartet: {"status":"ok","app":"UWE Landing",…}
+
+# 2) Wohin zeigt der Apex-Ingress?
+curl -s https://<deine-domain>/api/health     # "UWE Landing" = richtig, "UWE Studio" = Ingress falsch
+```
+
+- **`curl` auf `:3103` schlägt fehl (Connection refused)** — die Landing-App
+  läuft nicht. Sie wird von `deploy/scripts/start-uwe.sh` zusammen mit Studio und
+  Portal gestartet; fehlt ihr Standalone-Build, meldet der Journal-Log
+  `Landing standalone build missing`. Reparatur:
+  `sudo bash /opt/uwe/deploy/scripts/setup-uwe-host.sh --repair`.
+- **`:3103` antwortet, die Domain aber meldet `"app":"UWE Studio"`** — der
+  Tunnel-Ingress der Hauptdomain steht noch auf `:3000`. Anwenden:
+
+  ```bash
+  CLOUDFLARE_API_TOKEN=... bash /opt/uwe/deploy/scripts/configure-cloudflare-tunnel.sh --dry-run
+  CLOUDFLARE_API_TOKEN=... bash /opt/uwe/deploy/scripts/configure-cloudflare-tunnel.sh
+  ```
+
+  Das Script nimmt die Hostnamen aus `PUBLIC_BASE_URL` / `NEXT_PUBLIC_STUDIO_URL`
+  / `NEXT_PUBLIC_PORTAL_URL` in `/etc/uwe/uwe.env` (oder aus `--apex-domain`) —
+  ohne gesetzte `PUBLIC_BASE_URL` bricht es ab, statt eine fremde Domain zu
+  konfigurieren. Der `--dry-run` zeigt die Ingress-Liste vorher an.
+
+Bleibt die Domain danach bei Studio, obwohl beide Checks stimmen, liegt davor
+noch eine **Redirect Rule / Page Rule** in der Cloudflare-Zone (Rules →
+Redirect Rules). Die gehört nicht UWE und muss im Dashboard entfernt werden;
+UWE verwaltet in der Zone ausschließlich die WAF-Regel `uwe_managed_challenge`.
+
 ## Acceptance checks
 
 - `https://uwe.example/` opens the landing chooser; `/api/health` there
@@ -234,6 +274,7 @@ Live checks on this host:
 | `portal.uwe.example` | **pending** — DNS + Tunnel-Ingress via Dashboard oder `configure-cloudflare-tunnel.sh` |
 | UWE env | `NEXT_PUBLIC_STUDIO_URL=https://studio.uwe.example`, `NEXT_PUBLIC_PORTAL_URL=https://portal.uwe.example` |
 | Studio root | HTTP 200 (nach Service-Neustart mit aktuellem Build) |
+| Landing-Prozess (`:3103`) | seit 2026-07-28 von `uwe.service` gestartet — davor lief er auf dem Linux-Host gar nicht, weshalb der Apex zwangsläufig auf dem Studio-Ingress stehen blieb |
 
 Apply tunnel ingress:
 
