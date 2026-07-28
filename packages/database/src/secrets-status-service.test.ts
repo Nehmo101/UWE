@@ -40,11 +40,15 @@ describe("secrets status service", () => {
       assert.equal(authItem.maskedHint, "nur ENV");
       assert.equal(authItem.status, "set");
 
-      const openAi = snapshot.sections
+      // Ein übrig gebliebener Cloud-Schlüssel wird als Altlast gemeldet — mit
+      // Namen, aber ohne Wert und ohne Last-4: der Wert soll niemanden mehr
+      // interessieren, der Schlüssel gehört gelöscht.
+      const stale = snapshot.sections
         .find((section) => section.id === "host-env")
-        ?.items.find((item) => item.id === "openai-api-key");
-      assert.ok(openAi);
-      assert.equal(openAi?.maskedHint, "••••••ghij");
+        ?.items.find((item) => item.id === "stale-cloud-key:openai-api-key");
+      assert.ok(stale);
+      assert.equal(stale?.maskedHint, null);
+      assert.match(stale?.description ?? "", /RTX-Host/);
       assert.ok(!JSON.stringify(snapshot).includes(secret));
       assert.ok(!JSON.stringify(snapshot).includes("sk-openai-test-key-abcdefghij"));
     } finally {
@@ -59,24 +63,13 @@ describe("secrets status service", () => {
     const rotatedKey = "rotated-encryption-key-32chars!!";
 
     try {
-      const encrypted = encryptSecret("provider-key-value-xyz9", originalKey);
-      await db.systemSettings.upsert({
-        where: { id: "default" },
-        create: {
-          id: "default",
-          settings: {
-            ai: {
-              cloudApiKeys: [{ providerId: "openai", keyEnc: encrypted }],
-            },
-          },
-        },
-        update: {
-          settings: {
-            ai: {
-              cloudApiKeys: [{ providerId: "openai", keyEnc: encrypted }],
-            },
-          },
-        },
+      // Ein DB-verschlüsseltes Secret genügt. Der Inference-Endpunkt eignet
+      // sich, weil die Momentaufnahme ihn erst beim Zusammenbauen entschlüsselt
+      // — ein Feld, das schon beim Laden der Einstellungen entschlüsselt wird,
+      // würde vorher werfen und nie im Bericht landen.
+      const encrypted = encryptSecret("inference-key-value-xyz9", originalKey);
+      const endpoint = await db.inferenceEndpoint.create({
+        data: { name: "Test-Endpunkt", baseUrl: "http://localhost:11434", apiKeyEnc: encrypted },
       });
 
       const snapshot = await getSecretsStatusSnapshot(db, brainDb, {
@@ -93,7 +86,7 @@ describe("secrets status service", () => {
       );
       const dbItem = snapshot.sections
         .flatMap((section) => section.items)
-        .find((item) => item.id === "ai-provider-key:openai");
+        .find((item) => item.id === `inference-endpoint:${endpoint.id}`);
       assert.ok(dbItem);
       assert.equal(dbItem.status, "decrypt_failed");
     } finally {

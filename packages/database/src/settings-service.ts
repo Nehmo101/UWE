@@ -24,12 +24,9 @@ import {
   normalizeCustomThemes,
   type CustomThemeRecord,
 } from "./custom-theme-preferences";
-import { buildProviderKeyPlaceholders } from "./settings-service-providers";
 
 // Abwärtskompatible öffentliche API: extrahierte Helfer über dieses Modul re-exportieren.
 export {
-  buildAiProviderKeyUpdate,
-  resolveDecryptedProviderKeys,
 } from "./settings-service-providers";
 export {
   getPersistentPathConfiguration,
@@ -102,25 +99,10 @@ export interface PortalSettings {
   portalEnabled: boolean;
 }
 
-export interface AiProviderKeyPlaceholder {
-  id: string;
-  label: string;
-  configured: boolean;
-  source: "env" | "db" | "none";
-}
-
-/** Encrypted API key stored in system settings (never sent to clients). */
-export interface AiProviderStoredKey {
-  providerId: string;
-  keyEnc: string;
-}
-
 export interface AiSettings {
   localOnlyMode: boolean;
   enabled: boolean;
-  providerKeyPlaceholders: AiProviderKeyPlaceholder[];
   /** Encrypted provider API keys stored in DB. Never sent to clients. */
-  cloudApiKeys?: AiProviderStoredKey[] | null;
   /** Active owner-edited system prompt for general chat (empty = built-in default). */
   generalChatSystemPrompt?: string | null;
 }
@@ -243,7 +225,7 @@ export type UweSystemSettingsUpdate = {
   worlds?: Partial<WorldSettings>;
   campaigns?: Partial<CampaignSettings>;
   portal?: Partial<PortalSettings>;
-  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "cloudApiKeys" | "generalChatSystemPrompt">>;
+  ai?: Partial<Pick<AiSettings, "localOnlyMode" | "enabled" | "generalChatSystemPrompt">>;
   mail?: Partial<
     Pick<
       MailSettings,
@@ -464,8 +446,6 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
   ai: {
     localOnlyMode: false,
     enabled: true,
-    providerKeyPlaceholders: buildProviderKeyPlaceholders(),
-    cloudApiKeys: null,
     generalChatSystemPrompt: null,
   },
   mail: buildMailSettings(),
@@ -531,20 +511,12 @@ function mergeSettings(
         ? {
             localOnlyMode: Boolean((stored.ai as unknown as AiSettings).localOnlyMode),
             enabled: (stored.ai as unknown as AiSettings).enabled ?? base.ai.enabled,
-            cloudApiKeys: Array.isArray((stored.ai as unknown as AiSettings).cloudApiKeys)
-              ? ((stored.ai as unknown as AiSettings).cloudApiKeys as AiProviderStoredKey[])
-              : null,
             generalChatSystemPrompt:
               typeof (stored.ai as unknown as AiSettings).generalChatSystemPrompt === "string"
                 ? (stored.ai as unknown as AiSettings).generalChatSystemPrompt
                 : null,
           }
         : {}),
-      providerKeyPlaceholders: buildProviderKeyPlaceholders(
-        isRecord(stored.ai)
-          ? ((stored.ai as unknown as AiSettings).cloudApiKeys ?? null)
-          : null,
-      ),
     },
     mail: buildMailSettings(readMailSettingsInput(stored.mail)),
     imageStudio: buildImageStudioSettings(readImageStudioSettingsInput(stored.imageStudio)),
@@ -588,10 +560,7 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
       uploadsPath: settings.storage.uploadsPath ?? "",
       exportsPath: settings.storage.exportsPath ?? "",
     },
-    ai: {
-      ...settings.ai,
-      providerKeyPlaceholders: buildProviderKeyPlaceholders(settings.ai.cloudApiKeys),
-    },
+    ai: { ...settings.ai },
     mail: buildMailSettings({
       enabled: settings.mail.enabled,
       fromDisplayName: settings.mail.fromDisplayName,
@@ -671,10 +640,6 @@ export function sanitizeSettingsForClient(settings: UweSystemSettings): UweSyste
       ...normalized.mail,
       smtpCredentials: undefined,
     },
-    ai: {
-      ...normalized.ai,
-      cloudApiKeys: undefined,
-    },
     deployment: sanitizeDeploymentSettingsForClient(normalized.deployment),
   };
 }
@@ -731,19 +696,7 @@ export class SettingsService {
       worlds: { ...current.worlds, ...update.worlds },
       campaigns: { ...current.campaigns, ...update.campaigns },
       portal: { ...current.portal, ...update.portal },
-      ai: {
-        ...current.ai,
-        ...update.ai,
-        cloudApiKeys:
-          update.ai?.cloudApiKeys !== undefined
-            ? update.ai.cloudApiKeys
-            : current.ai.cloudApiKeys,
-        providerKeyPlaceholders: buildProviderKeyPlaceholders(
-          update.ai?.cloudApiKeys !== undefined
-            ? update.ai.cloudApiKeys
-            : current.ai.cloudApiKeys,
-        ),
-      },
+      ai: { ...current.ai, ...update.ai },
       mail: buildMailSettings({
         enabled: update.mail?.enabled ?? current.mail.enabled,
         fromDisplayName: update.mail?.fromDisplayName ?? current.mail.fromDisplayName,

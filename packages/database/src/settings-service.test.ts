@@ -174,19 +174,21 @@ describe("SettingsService", () => {
     assert.equal(settings.ai.enabled, false);
   });
 
-  it("never exposes API keys in client settings", async () => {
+  it("kennt keine Cloud-Provider-Schlüssel mehr", async () => {
+    // Seit N.3 gibt es keinen Cloud-Anbieter — ein gesetzter Fremd-Key darf
+    // weder in den Client-Einstellungen auftauchen noch dort einen Platzhalter
+    // erzeugen.
     const original = process.env.OPENAI_API_KEY;
     process.env.OPENAI_API_KEY = "super-secret-key";
 
     try {
       const service = createSettingsService(createPrismaClient(databaseUrl));
       const clientSettings = await service.getSettingsForClient();
-      const openAi = clientSettings.ai.providerKeyPlaceholders.find((p) => p.id === "openai");
+      const serialized = JSON.stringify(clientSettings);
 
-      assert.ok(openAi);
-      assert.equal(openAi.configured, true);
-      assert.equal(openAi.source, "env");
-      assert.ok(!JSON.stringify(clientSettings).includes("super-secret-key"));
+      assert.ok(!serialized.includes("super-secret-key"));
+      assert.ok(!serialized.includes("providerKeyPlaceholders"));
+      assert.ok(!serialized.includes("cloudApiKeys"));
     } finally {
       if (original === undefined) {
         delete process.env.OPENAI_API_KEY;

@@ -76,7 +76,7 @@ flowchart LR
 - **Portal ist die Spieler-Ausgabe.** Es rendert nur veröffentlichte und freigegebene Inhalte. DM-only Inhalte dürfen dort nicht erscheinen.
 - **Persistente Daten bleiben auf dem UWE Host.** Datenbank, Uploads, Backups und Exporte liegen lokal/self-hosted.
 - **Der RTX Host Connector ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` bleibt nur als **deprecated** Kompatibilität bestehen.
-- **Cloud-KI darf kein Brain/Weltwissen erhalten.** Cloud-Fallback ist nur für allgemeinen Chat ohne UWE-Kontext vorgesehen.
+- **Es gibt keine Cloud-KI.** Jede KI-Aktion läuft über den RTX-Host (Notiz Lasse, N.3). Anbieter, Schlüssel und Fallback-Pfade sind entfernt — nicht abgeschaltet.
 
 ---
 
@@ -160,7 +160,7 @@ graph TD
 | **Static Export** | Nein | Was bewusst exportiert wurde | Statisches Hosting ohne Serverlogik |
 | **UWE Core Packages** | Indirekt über Apps | Ja | Datenlogik, Auth, Rendering, Security, Assets |
 | **RTX Host Connector** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz (outbound Worker); alter inbound `RTX-Agent` nur deprecated |
-| **Cloud-KI** | Nein | Nur allgemeiner Chat ohne UWE-Kontext | Optionaler Fallback für nicht-sensitive Allgemeinfragen |
+| **Cloud-KI** | — | — | Entfällt: seit N.3 gibt es keinen Cloud-Anbieter mehr |
 
 ---
 

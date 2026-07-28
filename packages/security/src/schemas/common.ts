@@ -57,14 +57,12 @@ export const shareVerifyBodySchema = z.object({
   password: z.string().max(512).optional(),
 });
 
-export const AI_PROVIDER_IDS = [
-  "ollama",
-  "openai_compatible",
-  "openai",
-  "anthropic",
-  "gemini",
-  "openrouter",
-] as const;
+/**
+ * Die beiden lokalen Inferenz-Backends. Cloud-Anbieter sind mit N.3 entfallen —
+ * eine Anfrage, die einen davon nennt, wird hier abgewiesen statt später still
+ * auf den lokalen Weg umgebogen.
+ */
+export const AI_PROVIDER_IDS = ["ollama", "openai_compatible"] as const;
 
 export const AI_TASK_TYPES = [
   "summarize_page",

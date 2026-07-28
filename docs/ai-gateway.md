@@ -20,11 +20,13 @@ User Prompt
 | Modus | Verhalten |
 |-------|-----------|
 | `LOCAL_ONLY` | Nur RTX/lokale Inference |
-| `LOCAL_THEN_CLOUD` | RTX bevorzugt, Cloud nur mit Master-Admin-Freigabe |
-| `CLOUD_ONLY` | Nur Cloud-Provider |
+| `LOCAL_THEN_CLOUD` | Historisch — verhält sich seit N.3 wie `LOCAL_ONLY` |
+| `CLOUD_ONLY` | Historisch — es gibt keinen Cloud-Anbieter mehr |
 | `DISABLED` | KI systemweit aus |
 
-**Standard:** `LOCAL_THEN_CLOUD`
+**Standard:** `LOCAL_THEN_CLOUD`. Der Modus entscheidet seit dem Wegfall der
+Cloud-Anbieter (N.3) nur noch zwischen „an" und „aus" — die Werte bleiben, weil
+sie in der Datenbank stehen; ein Enum-Umbau wäre eine Migration ohne Nutzen.
 
 ## Privacy-Level
 

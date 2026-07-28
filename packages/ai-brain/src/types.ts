@@ -2,13 +2,12 @@ import type { AiTaskType } from "@uwe/security/inference";
 
 export const AI_BRAIN_VERSION = "1.0.0";
 
-export type AiProviderId =
-  | "ollama"
-  | "openai_compatible"
-  | "openai"
-  | "anthropic"
-  | "gemini"
-  | "openrouter";
+/**
+ * Die beiden lokalen Inferenz-Backends. Cloud-Anbieter (OpenAI, Anthropic,
+ * Gemini, OpenRouter) sind mit N.3 ersatzlos entfallen — jede KI-Aktion läuft
+ * über den RTX-Host.
+ */
+export type AiProviderId = "ollama" | "openai_compatible";
 
 // The AI task taxonomy and the AI context shape now live in the low-level
 // `@uwe/security` layer (`@uwe/security/inference`) so the security guards can

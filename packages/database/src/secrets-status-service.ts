@@ -219,6 +219,35 @@ function buildBootstrapSection(env: NodeJS.ProcessEnv, system: Awaited<ReturnTyp
   };
 }
 
+/**
+ * Übrig gebliebene Cloud-Anbieter-Schlüssel.
+ *
+ * Seit N.3 nutzt UWE keinen Cloud-Anbieter mehr — diese Variablen werden
+ * nirgends gelesen. Wer sie noch auf dem Host stehen hat, soll das sehen und
+ * sie löschen können: ein unbenutzter Schlüssel ist trotzdem ein Schlüssel.
+ */
+const REMOVED_CLOUD_KEY_ENVS = [
+  "CLOUD_AI_API_KEY",
+  "OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "GEMINI_API_KEY",
+  "OPENROUTER_API_KEY",
+] as const;
+
+function buildStaleCloudKeyItems(env: NodeJS.ProcessEnv): SecretsStatusItem[] {
+  return REMOVED_CLOUD_KEY_ENVS.filter((key) => env[key]?.trim()).map((key) => ({
+    id: `stale-cloud-key:${key.toLowerCase().replace(/_/g, "-")}`,
+    label: key,
+    description:
+      "Wird nicht mehr benutzt — UWE spricht ausschließlich den RTX-Host an. Aus der .env entfernen.",
+    source: "env" as const,
+    status: "set" as const,
+    maskedHint: null,
+    envKey: key,
+    bootstrap: false,
+  }));
+}
+
 function buildHostEnvSection(env: NodeJS.ProcessEnv): SecretsStatusSection {
   const items: SecretsStatusItem[] = [
     assessEnvSecret({
@@ -245,41 +274,7 @@ function buildHostEnvSection(env: NodeJS.ProcessEnv): SecretsStatusSection {
       description: "Bearer für direkten RTX-Worker (optional).",
       href: "/system/rtx-connector",
     }),
-    assessEnvSecret({
-      id: "cloud-ai-api-key",
-      label: "CLOUD_AI_API_KEY",
-      envKey: "CLOUD_AI_API_KEY",
-      env,
-      href: "/admin/ai-gateway",
-    }),
-    assessEnvSecret({
-      id: "openai-api-key",
-      label: "OPENAI_API_KEY",
-      envKey: "OPENAI_API_KEY",
-      env,
-      href: "/settings?tab=ai",
-    }),
-    assessEnvSecret({
-      id: "anthropic-api-key",
-      label: "ANTHROPIC_API_KEY",
-      envKey: "ANTHROPIC_API_KEY",
-      env,
-      href: "/settings?tab=ai",
-    }),
-    assessEnvSecret({
-      id: "gemini-api-key",
-      label: "GEMINI_API_KEY",
-      envKey: "GEMINI_API_KEY",
-      env,
-      href: "/settings?tab=ai",
-    }),
-    assessEnvSecret({
-      id: "openrouter-api-key",
-      label: "OPENROUTER_API_KEY",
-      envKey: "OPENROUTER_API_KEY",
-      env,
-      href: "/settings?tab=ai",
-    }),
+    ...buildStaleCloudKeyItems(env),
     assessEnvSecret({
       id: "spotify-client-id",
       label: "SPOTIFY_CLIENT_ID",
@@ -377,18 +372,6 @@ async function buildDbEncryptedSection(
       href: "/admin/setup?tab=mail",
       bootstrap: false,
     });
-  }
-
-  for (const storedKey of settings.ai.cloudApiKeys ?? []) {
-    items.push(
-      assessDbEncryptedSecret({
-        id: `ai-provider-key:${storedKey.providerId}`,
-        label: `KI-Provider (${storedKey.providerId})`,
-        payload: storedKey.keyEnc,
-        encryptionSecret,
-        href: "/settings?tab=ai",
-      }),
-    );
   }
 
   for (const endpoint of inferenceEndpoints) {

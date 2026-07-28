@@ -16,30 +16,6 @@ const PROVIDER_DEFINITIONS: Omit<AiProviderSettings, "enabled" | "hasApiKey">[] 
     baseUrl: "http://localhost:8080/v1",
     defaultModel: "local-model",
   },
-  {
-    id: "openai",
-    label: "OpenAI",
-    isLocal: false,
-    defaultModel: "gpt-4o-mini",
-  },
-  {
-    id: "anthropic",
-    label: "Anthropic",
-    isLocal: false,
-    defaultModel: "claude-3-5-haiku-latest",
-  },
-  {
-    id: "gemini",
-    label: "Google Gemini",
-    isLocal: false,
-    defaultModel: "gemini-2.0-flash",
-  },
-  {
-    id: "openrouter",
-    label: "OpenRouter",
-    isLocal: false,
-    defaultModel: "openrouter/auto",
-  },
 ];
 
 export class InMemoryApiKeyStore implements ApiKeyStore {
@@ -62,27 +38,19 @@ export class InMemoryApiKeyStore implements ApiKeyStore {
   }
 }
 
+/**
+ * Der Key-Store bleibt als Form erhalten: ein OpenAI-kompatibles lokales
+ * Backend kann einen Schlüssel verlangen (LM Studio hinter einem Reverse-Proxy
+ * etwa). Cloud-Anbieter-Schlüssel gibt es nicht mehr — er wird ausschließlich
+ * aus `AI_INFERENCE_API_KEY` befüllt, also aus der Inferenz-Konfiguration des
+ * eigenen Hosts.
+ */
 export function createApiKeyStoreFromEnv(): InMemoryApiKeyStore {
   const store = new InMemoryApiKeyStore();
-  const cloudProvider = process.env.CLOUD_AI_PROVIDER?.trim() as AiProviderId | undefined;
-  const cloudKey = process.env.CLOUD_AI_API_KEY?.trim();
-  if (cloudProvider && cloudKey && isCloudProvider(cloudProvider)) {
-    store.set(cloudProvider, cloudKey);
+  const localKey = process.env.AI_INFERENCE_API_KEY?.trim();
+  if (localKey) {
+    store.set("openai_compatible", localKey);
   }
-
-  const envMap: Partial<Record<AiProviderId, string | undefined>> = {
-    openai: process.env.OPENAI_API_KEY,
-    anthropic: process.env.ANTHROPIC_API_KEY,
-    gemini: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY,
-    openrouter: process.env.OPENROUTER_API_KEY,
-  };
-
-  for (const [providerId, key] of Object.entries(envMap)) {
-    if (key) {
-      store.set(providerId as AiProviderId, key);
-    }
-  }
-
   return store;
 }
 
@@ -138,27 +106,9 @@ function resolveProviderBaseUrlFromEnv(providerId: AiProviderId): string | undef
     return inference.baseUrl;
   }
 
-  switch (providerId) {
-    case "ollama":
-      return process.env.OLLAMA_BASE_URL ?? process.env.AI_INFERENCE_BASE_URL;
-    case "openai_compatible":
-      return process.env.OPENAI_COMPATIBLE_BASE_URL ?? process.env.AI_INFERENCE_BASE_URL;
-    case "openai":
-      return process.env.OPENAI_BASE_URL;
-    case "anthropic":
-      return process.env.ANTHROPIC_BASE_URL;
-    case "gemini":
-      return process.env.GEMINI_BASE_URL;
-    case "openrouter":
-      return process.env.OPENROUTER_BASE_URL;
-    default:
-      return undefined;
-  }
-}
-
-export function isCloudProvider(providerId: AiProviderId): boolean {
-  const def = PROVIDER_DEFINITIONS.find((p) => p.id === providerId);
-  return def ? !def.isLocal : true;
+  return providerId === "ollama"
+    ? (process.env.OLLAMA_BASE_URL ?? process.env.AI_INFERENCE_BASE_URL)
+    : (process.env.OPENAI_COMPATIBLE_BASE_URL ?? process.env.AI_INFERENCE_BASE_URL);
 }
 
 export function getProviderDefinition(providerId: AiProviderId) {
