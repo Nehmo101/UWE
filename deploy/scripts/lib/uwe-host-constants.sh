@@ -17,5 +17,7 @@ UWE_DEFAULT_LOG_DIR="/var/log/uwe"
 UWE_DEFAULT_BACKUP_DIR="/var/backups/uwe"
 UWE_DEFAULT_STUDIO_PORT="3000"
 UWE_DEFAULT_PORTAL_PORT="3001"
+# Apex-Origin (apps/landing) — eigener Prozess, damit die Hauptdomain nie Studio ausliefert.
+UWE_DEFAULT_LANDING_PORT="3103"
 UWE_DEFAULT_SYSTEMD_UNIT="uwe.service"
 UWE_DEFAULT_LEGACY_SYSTEMD_UNIT="uwe-host.service"
