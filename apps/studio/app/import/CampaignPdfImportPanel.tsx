@@ -281,7 +281,12 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
 
     try {
       const response = await previewImportCampaignPdfJobAction(jobId, campaignContext);
-      applyFinishedPreview(response.preview);
+      if (response.preview) {
+        applyFinishedPreview(response.preview);
+        return;
+      }
+      // Analyse läuft jetzt als Hintergrund-Job — der Fortschritt kommt über
+      // das Polling in `applyStatus`, `analyzing` bleibt so lange gesetzt.
     } catch (previewError) {
       // Bei sehr langen Analysen kann die Verbindung abreißen, während der
       // Server weiterarbeitet — erst den Job-Status prüfen, dann Fehler zeigen.

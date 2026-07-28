@@ -9,12 +9,18 @@
 export const MAX_OCR_PAGES = 120;
 
 /**
- * Wie viele Seiten in einen `vision_extract`-Job gehen. Die Connector-Queue
- * transportiert Base64-JSON; mehrere Seiten pro Job sparen Round-Trips, aber
- * jede Seite kostet ~200–400 KB Base64. Vier Seiten sind der Kompromiss aus
- * Payload-Größe und Kontext, den das 32K-Fenster des Modells trägt.
+ * Wie viele Seiten in einen `vision_extract`-Job gehen.
+ *
+ * Eine Seite pro Job, obwohl das Modell mehrseitig könnte: nur so lässt sich
+ * jede Ausgabe — und damit jede erkannte Bildbox — eindeutig einer PDF-Seite
+ * zuordnen. Das ist die Voraussetzung dafür, Karten und Abbildungen später der
+ * richtigen Wiki-Seite anzuhängen. Nebeneffekte: der Fortschritt zählt echte
+ * Seiten, und die Base64-Payload pro Queue-Job bleibt klein.
+ *
+ * Die GPU-Lane arbeitet ohnehin seriell, der Mehraufwand ist also Queue-
+ * Latenz pro Seite — klein gegen die Inferenzzeit einer Buchseite.
  */
-export const OCR_PAGES_PER_JOB = 4;
+export const OCR_PAGES_PER_JOB = 1;
 
 export interface OcrPagePlan {
   /** 1-basierte Seiten, die tatsächlich durch OCR gehen. */

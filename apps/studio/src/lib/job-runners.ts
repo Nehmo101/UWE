@@ -23,6 +23,10 @@ import {
   type JobService,
   type JobView,
 } from "@uwe/database/server";
+import {
+  isCampaignPdfAnalysisPayload,
+  runCampaignPdfAnalysisJob,
+} from "./campaign-import-job";
 import { brainPrisma, createBrainPrismaClient } from "@uwe/database/brain-client";
 import { createFamilyPrismaClient } from "@uwe/database/family-client";
 import {
@@ -163,6 +167,12 @@ export interface BackupCreateBody {
 }
 
 export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
+  // PDF→Kampagne teilt sich den Job-Typ, bringt aber eine eigene Payload mit
+  // und eine eigene Ausführung (OCR + Chunk-Analyse) — siehe campaign-import-job.ts.
+  if (isCampaignPdfAnalysisPayload(ctx.job.payload)) {
+    return runCampaignPdfAnalysisJob(ctx);
+  }
+
   const payload = (ctx.job.payload ?? {}) as ImportJobPayload;
   if (!payload.format || !payload.content || !payload.worldSlug) {
     throw new Error("Import-Payload unvollständig.");

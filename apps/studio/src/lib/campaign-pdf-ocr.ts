@@ -2,10 +2,12 @@ import "server-only";
 
 import { createConnectorWorkflowService, prisma, readPdfTextLayer } from "@uwe/database/server";
 import { isConnectorVisionAvailable, runConnectorVisionExtract } from "@uwe/ai-brain/router";
-import { downscaleImageForVision } from "@uwe/assets";
+import { cropImageRegion, downscaleImageForVision } from "@uwe/assets";
 import {
   assessTextLayer,
+  boxToPixelRect,
   buildOcrPrompt,
+  isCroppableRegionType,
   isUnlimitedOcrModel,
   joinOcrPages,
   planOcrPages,
@@ -15,6 +17,7 @@ import {
   type DetectedRegion,
   type OcrPagePlan,
 } from "@uwe/pdf-ocr";
+import { writeCampaignImportFigure } from "./campaign-pdf-storage";
 
 /**
  * OCR-Lauf für den Kampagnen-Import: PDF-Seiten rendern und über den
@@ -37,11 +40,25 @@ export interface CampaignOcrProgress {
   processedPages: number;
 }
 
+/**
+ * Eine zugeschnittene Abbildung. Die Bilddaten liegen als Datei neben der PDF
+ * (`index` ist ihr Schlüssel); hier steht nur, was in die JSON-Vorschau passt.
+ */
+export interface CampaignOcrFigure {
+  index: number;
+  pageNumber: number;
+  type: string;
+  width: number;
+  height: number;
+}
+
 export interface CampaignOcrResult {
-  /** Zusammengefügtes Markdown aller OCR-Seiten. */
+  /** Zusammengefügtes Markdown aller OCR-Seiten, mit Seiten-Markern. */
   markdown: string;
   /** Erkannte Abbildungen/Tabellen mit Seitenbezug. */
   regions: DetectedRegion[];
+  /** Tatsächlich zugeschnittene und abgelegte Abbildungen. */
+  figures: CampaignOcrFigure[];
   model: string;
   plan: OcrPagePlan;
   /** Seiten, die kein Ergebnis geliefert haben (Modell lieferte leeren Text). */
@@ -72,6 +89,7 @@ export async function isCampaignOcrAvailable(): Promise<boolean> {
  * denselben Fortschrittsbalken bedienen kann wie die Chunk-Analyse.
  */
 export async function runCampaignPdfOcr(input: {
+  jobId: string;
   buffer: Buffer;
   pageCount: number;
   worldId?: string;
@@ -86,11 +104,12 @@ export async function runCampaignPdfOcr(input: {
   const model = await documentOcrModel();
   const plan = planOcrPages(input.pageCount);
   if (plan.pages.length === 0) {
-    return { markdown: "", regions: [], model, plan, emptyPages: [] };
+    return { markdown: "", regions: [], figures: [], model, plan, emptyPages: [] };
   }
 
   const pageResults: { pageNumber: number; markdown: string }[] = [];
   const regions: DetectedRegion[] = [];
+  const figures: CampaignOcrFigure[] = [];
   const emptyPages: number[] = [];
   let processedPages = 0;
 
@@ -123,20 +142,21 @@ export async function runCampaignPdfOcr(input: {
       ...(input.worldId ? { worldId: input.worldId } : {}),
     });
 
-    // Mehrseitige Batches liefern eine zusammenhängende Ausgabe; die Boxen
-    // werden deshalb der ersten Seite des Batches zugeordnet. Das reicht,
-    // solange `regions` nur gezählt und nicht zugeschnitten wird — für einen
-    // echten Zuschnitt bräuchte es Batches von einer Seite.
-    const stripped = stripDetectionMarkers(routed.text, rendered[0]?.pageNumber ?? batch[0] ?? 1);
+    // Ein Batch ist eine Seite (OCR_PAGES_PER_JOB = 1), die Zuordnung von
+    // Ausgabe und Boxen zur Seite ist damit eindeutig.
+    const page = rendered[0];
+    const pageNumber = page?.pageNumber ?? batch[0] ?? batchIndex + 1;
+    const stripped = stripDetectionMarkers(routed.text, pageNumber);
     if (stripped.markdown.trim()) {
-      pageResults.push({
-        pageNumber: rendered[0]?.pageNumber ?? batch[0] ?? batchIndex + 1,
-        markdown: stripped.markdown,
-      });
+      pageResults.push({ pageNumber, markdown: stripped.markdown });
     } else {
       emptyPages.push(...batch);
     }
     regions.push(...stripped.regions);
+
+    if (page) {
+      figures.push(...(await cropPageFigures(input.jobId, page, stripped.regions, figures.length)));
+    }
 
     processedPages += batch.length;
     await input.onProgress?.({
@@ -146,7 +166,53 @@ export async function runCampaignPdfOcr(input: {
     });
   }
 
-  return { markdown: joinOcrPages(pageResults), regions, model, plan, emptyPages };
+  return {
+    // Mit Seiten-Markern: der Chunker gibt sie weiter, und beim Execute steht
+    // damit fest, aus welchen Seiten eine Entität stammt.
+    markdown: joinOcrPages(pageResults, { pageMarkers: true }),
+    regions,
+    figures,
+    model,
+    plan,
+    emptyPages,
+  };
+}
+
+/**
+ * Schneidet die Abbildungen einer gerenderten Seite zu und legt sie neben der
+ * PDF ab. Fehlschläge einzelner Zuschnitte werden übersprungen — eine fehlende
+ * Karte darf den Import nicht kippen.
+ */
+async function cropPageFigures(
+  jobId: string,
+  page: { pageNumber: number; png: Buffer; width: number; height: number },
+  regions: readonly DetectedRegion[],
+  startIndex: number,
+): Promise<CampaignOcrFigure[]> {
+  const figures: CampaignOcrFigure[] = [];
+  for (const region of regions) {
+    if (!isCroppableRegionType(region.type)) {
+      continue;
+    }
+    const rect = boxToPixelRect(region.box, { width: page.width, height: page.height });
+    if (!rect) {
+      continue;
+    }
+    const cropped = await cropImageRegion({ buffer: page.png, rect });
+    if (!cropped) {
+      continue;
+    }
+    const index = startIndex + figures.length;
+    await writeCampaignImportFigure(jobId, index, cropped);
+    figures.push({
+      index,
+      pageNumber: page.pageNumber,
+      type: region.type,
+      width: rect.width,
+      height: rect.height,
+    });
+  }
+  return figures;
 }
 
 /** Für Meldungen in der Vorschau: sagt, ob wirklich das OCR-Modell lief. */
@@ -164,6 +230,8 @@ export interface AcquiredCampaignText {
   /** Hinweise für den Nutzer (OCR-Grund, Seiten-Cap, leere Seiten). */
   notes: string[];
   regions: DetectedRegion[];
+  /** Zugeschnittene Abbildungen, beim Execute als Assets übernommen. */
+  figures: CampaignOcrFigure[];
   model: string | null;
 }
 
@@ -173,6 +241,7 @@ export interface AcquiredCampaignText {
  * OCR. Das ersetzt den bisherigen harten Abbruch bei textlosen PDFs.
  */
 export async function acquireCampaignPdfText(input: {
+  jobId: string;
   buffer: Buffer;
   maxBytes: number;
   worldId?: string;
@@ -188,11 +257,13 @@ export async function acquireCampaignPdfText(input: {
       pageCount: layer.pageCount,
       notes: [],
       regions: [],
+      figures: [],
       model: null,
     };
   }
 
   const ocr = await runCampaignPdfOcr({
+    jobId: input.jobId,
     buffer: input.buffer,
     pageCount: layer.pageCount,
     ...(input.worldId ? { worldId: input.worldId } : {}),
@@ -208,6 +279,11 @@ export async function acquireCampaignPdfText(input: {
   if (ocr.emptyPages.length > 0) {
     notes.push(`Ohne Ergebnis blieben die Seiten: ${ocr.emptyPages.join(", ")}.`);
   }
+  if (ocr.figures.length > 0) {
+    notes.push(
+      `${ocr.figures.length} Abbildungen zugeschnitten — sie werden beim Import an die passenden Seiten gehängt.`,
+    );
+  }
 
   return {
     text: ocr.markdown,
@@ -215,6 +291,7 @@ export async function acquireCampaignPdfText(input: {
     pageCount: layer.pageCount,
     notes,
     regions: ocr.regions,
+    figures: ocr.figures,
     model: ocr.model,
   };
 }

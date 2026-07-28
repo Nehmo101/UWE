@@ -98,12 +98,54 @@ export function normalizeOcrMarkdown(text: string): string {
     .trim();
 }
 
-/** Fügt die Seiten-Ergebnisse zu einem Dokument zusammen. */
-export function joinOcrPages(pages: readonly { pageNumber: number; markdown: string }[]): string {
+/**
+ * Unsichtbarer Herkunftsvermerk pro Seite. Er überlebt das Chunking, sodass
+ * später feststeht, aus welchen PDF-Seiten ein Chunk — und damit eine daraus
+ * extrahierte Entität — stammt. Genau das braucht der Bild-Zuschnitt, um eine
+ * Abbildung der richtigen Wiki-Seite zuzuordnen.
+ *
+ * Ein HTML-Kommentar, weil er in Markdown nichts rendert und die lokale KI ihn
+ * ohnehin nie zu sehen bekommt (`stripPageMarkers` läuft vor dem Prompt).
+ */
+export function buildPageMarker(pageNumber: number): string {
+  return `<!-- uwe:page ${pageNumber} -->`;
+}
+
+const PAGE_MARKER = /<!--\s*uwe:page\s+(\d+)\s*-->/g;
+
+/** Seitenzahlen, die in diesem Textstück vermerkt sind — aufsteigend, ohne Dubletten. */
+export function readPageNumbers(text: string): number[] {
+  const found = new Set<number>();
+  for (const match of text.matchAll(PAGE_MARKER)) {
+    const parsed = Number(match[1]);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      found.add(parsed);
+    }
+  }
+  return [...found].sort((a, b) => a - b);
+}
+
+/** Entfernt die Marker — muss vor jedem Modell-Prompt laufen. */
+export function stripPageMarkers(text: string): string {
+  return normalizeOcrMarkdown(text.replace(PAGE_MARKER, ""));
+}
+
+/**
+ * Fügt die Seiten-Ergebnisse zu einem Dokument zusammen. Mit `pageMarkers`
+ * bekommt jede Seite ihren Herkunftsvermerk vorangestellt.
+ */
+export function joinOcrPages(
+  pages: readonly { pageNumber: number; markdown: string }[],
+  options: { pageMarkers?: boolean } = {},
+): string {
   return pages
     .slice()
     .sort((a, b) => a.pageNumber - b.pageNumber)
-    .map((page) => page.markdown.trim())
+    .map((page) => {
+      const markdown = page.markdown.trim();
+      if (!markdown) return "";
+      return options.pageMarkers ? `${buildPageMarker(page.pageNumber)}\n${markdown}` : markdown;
+    })
     .filter(Boolean)
     .join("\n\n");
 }

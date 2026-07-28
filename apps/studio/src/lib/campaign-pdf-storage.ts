@@ -58,3 +58,50 @@ export async function deleteCampaignImportPdf(jobId: string): Promise<void> {
     // Datei existiert nicht mehr — nichts zu tun.
   }
 }
+
+/**
+ * Von der OCR zugeschnittene Abbildungen liegen bis zum Execute daneben: Die
+ * Vorschau-Payload ist JSON in der DB und kann keine Bilddaten tragen, und erst
+ * beim Execute ist klar, welche Entitäten der Nutzer überhaupt übernimmt.
+ */
+function figureFileName(jobId: string, index: number): string {
+  return `${assertSafeJobId(jobId)}-fig-${index}.jpg`;
+}
+
+export async function writeCampaignImportFigure(
+  jobId: string,
+  index: number,
+  buffer: Buffer,
+): Promise<void> {
+  const dir = await resolveCampaignImportDir();
+  await fs.promises.mkdir(dir, { recursive: true });
+  await fs.promises.writeFile(path.join(dir, figureFileName(jobId, index)), buffer);
+}
+
+export async function readCampaignImportFigure(
+  jobId: string,
+  index: number,
+): Promise<Buffer | null> {
+  try {
+    const dir = await resolveCampaignImportDir();
+    return await fs.promises.readFile(path.join(dir, figureFileName(jobId, index)));
+  } catch {
+    return null;
+  }
+}
+
+/** Räumt alle Zuschnitte eines Jobs ab — nach Execute oder bei Abbruch. */
+export async function deleteCampaignImportFigures(jobId: string): Promise<void> {
+  const safeJobId = assertSafeJobId(jobId);
+  try {
+    const dir = await resolveCampaignImportDir();
+    const entries = await fs.promises.readdir(dir);
+    await Promise.all(
+      entries
+        .filter((entry) => entry.startsWith(`${safeJobId}-fig-`))
+        .map((entry) => fs.promises.unlink(path.join(dir, entry)).catch(() => undefined)),
+    );
+  } catch {
+    // Verzeichnis fehlt — nichts zu tun.
+  }
+}

@@ -26,6 +26,7 @@ import { ImagePanel } from "./components/ImagePanel";
 import { SpeechPanel } from "./components/SpeechPanel";
 import { JobsPanel } from "./components/JobsPanel";
 import { LogsPanel } from "./components/LogsPanel";
+import { DocumentOcrPanel } from "./components/DocumentOcrPanel";
 import { ModelLibraryPanel } from "./components/ModelLibraryPanel";
 import { PrintersPanel } from "./components/PrintersPanel";
 import { RunnersPanel } from "./components/RunnersPanel";
@@ -379,6 +380,13 @@ export default function App() {
   function renderModels() {
     return (
       <>
+        {/* Steht bewusst vorn: ohne dieses Modell fallen PDF-Import und
+            Scan-Inbox auf den reinen Textlayer zurück. */}
+        <DocumentOcrPanel
+          store={modelStore}
+          onPullModel={runOllamaPull}
+          onEnableForUwe={enableModelForUwe}
+        />
         <CookbookPanel
           onLoadDashboard={loadCookbookDashboard}
           onPullModel={runOllamaPull}

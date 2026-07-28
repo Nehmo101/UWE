@@ -5,6 +5,7 @@
  * läuft über den bestehenden `vision_extract`-Connector-Job und bleibt beim
  * Aufrufer (Studio-Action), damit hier weder Prisma noch der AI-Router hängen.
  */
+export * from "./crop";
 export * from "./markers";
 export * from "./model";
 export * from "./plan";

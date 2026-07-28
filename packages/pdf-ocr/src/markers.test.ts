@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { joinOcrPages, normalizeOcrMarkdown, stripDetectionMarkers } from "./markers";
+import {
+  buildPageMarker,
+  joinOcrPages,
+  normalizeOcrMarkdown,
+  readPageNumbers,
+  stripDetectionMarkers,
+  stripPageMarkers,
+} from "./markers";
 
 test("entfernt die DeepSeek-Schreibweise und behält den Typ aus dem ref-Block", () => {
   const raw = "# Die Taverne\n<|ref|>figure<|/ref|><|det|>[[12, 40, 380, 520]]<|/det|>\nText danach.";
@@ -59,4 +66,44 @@ test("joinOcrPages sortiert nach Seitenzahl und lässt Leerseiten weg", () => {
   ]);
 
   assert.equal(joined, "erste\n\nzweite");
+});
+
+test("Seiten-Marker überstehen das Zusammenfügen und lassen sich auslesen", () => {
+  const joined = joinOcrPages(
+    [
+      { pageNumber: 7, markdown: "# Kapitel" },
+      { pageNumber: 8, markdown: "Fortsetzung" },
+    ],
+    { pageMarkers: true },
+  );
+
+  assert.deepEqual(readPageNumbers(joined), [7, 8]);
+  assert.ok(joined.includes("# Kapitel"));
+});
+
+test("ohne die Option bleibt das Markdown markerfrei", () => {
+  const joined = joinOcrPages([{ pageNumber: 3, markdown: "Text" }]);
+
+  assert.deepEqual(readPageNumbers(joined), []);
+  assert.equal(joined, "Text");
+});
+
+test("stripPageMarkers entfernt die Marker restlos", () => {
+  const withMarkers = joinOcrPages(
+    [
+      { pageNumber: 1, markdown: "Erste Seite" },
+      { pageNumber: 2, markdown: "Zweite Seite" },
+    ],
+    { pageMarkers: true },
+  );
+  const stripped = stripPageMarkers(withMarkers);
+
+  assert.equal(stripped, "Erste Seite\n\nZweite Seite");
+  assert.deepEqual(readPageNumbers(stripped), []);
+});
+
+test("readPageNumbers liefert sortierte Seiten ohne Dubletten", () => {
+  const text = `${buildPageMarker(9)} a ${buildPageMarker(2)} b ${buildPageMarker(9)}`;
+
+  assert.deepEqual(readPageNumbers(text), [2, 9]);
 });

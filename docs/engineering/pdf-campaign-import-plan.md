@@ -342,15 +342,60 @@ aber darauf hin, dass die Layout-Treue eingeschränkt ist.
 
 ### Grenzen
 
-- **Kein Fortschritt innerhalb eines Batches.** Vier Seiten sind eine Einheit;
-  der Balken springt pro Block, nicht pro Seite.
 - **`MAX_OCR_PAGES = 120`.** Darüber wird abgeschnitten und in `notes` gemeldet —
   nicht still. Grund: `LANE_CONCURRENCY.gpu = 1`, ein 400-Seiten-Band würde den
   Connector für alle anderen Aufgaben blockieren.
-- **Die Analyse läuft weiterhin synchron in der Server Action.** Für große
-  Bände wäre der `Job`-Runner der richtige Ort; das ist bewusst nicht Teil
-  dieser Runde.
-- **`regions` werden erfasst, aber noch nicht zugeschnitten.** Karten und
-  Abbildungen landen als Zähler in `extractionMeta`; der Zuschnitt über
-  `@uwe/assets` ist der nächste sinnvolle Schritt.
 - **Ollama muss llama.cpp ≥ Build 168 tragen**, sonst lädt das Modell nicht.
+- **Abbildungen hängen an der PDF-Seite, nicht am Absatz.** Trägt eine Seite eine
+  Karte und drei Absätze, bekommen alle daraus erzeugten Wiki-Seiten die Karte.
+  Welcher Absatz zu welcher Karte gehört, ist aus dem Layout nicht sicher
+  ableitbar — lieber einmal zu viel angehängt (`dm_only`, per Undo entfernbar)
+  als die Karte zu verlieren.
+
+## Update: Hintergrund-Job, Bild-Zuschnitt, Command-Center-Einrichtung
+
+### Analyse läuft als `Job`, nicht mehr in der Server Action
+
+`apps/studio/src/lib/campaign-import-job.ts` — `runCampaignPdfAnalysis` trägt die
+komplette Analyse. `previewImportCampaignPdfJobAction` prüft nur noch (Auth,
+PDF vorhanden, Kontextlänge, läuft schon?) und legt einen `Job` vom Typ `import`
+mit der Payload `{ kind: "campaign_pdf_analysis", … }` an; `runImportJob`
+verzweigt über `isCampaignPdfAnalysisPayload` dorthin.
+
+Warum: OCR über ein Abenteuerbuch ist Minuten- bis Stundenarbeit auf der
+seriellen GPU-Lane. Synchron hieß das Timeouts, ein abgebrochener Request ließ
+die Analyse verwaist weiterlaufen, und ein Neustart hinterließ hängenden
+Fortschritt. Jetzt greifen Cancel (`isCancelled` zwischen den Chunks), der
+Boot-Sweep für unterbrochene Jobs und `Job.progress` in der Job-Übersicht.
+
+Die Action gibt `{ preview: null, started: true }` zurück, wenn der Lauf startet;
+das Panel verfolgt den Fortschritt über das bereits vorhandene Polling. Liegt
+schon eine Vorschau vor, kommt sie unverändert sofort zurück.
+
+### Karten und Abbildungen werden Assets
+
+`OCR_PAGES_PER_JOB` ist jetzt **1**. Nur so ist jede Ausgabe — und damit jede
+`<|det|>`-Box — eindeutig einer PDF-Seite zuzuordnen; das ist die Voraussetzung
+für den Zuschnitt. Nebeneffekt: der Fortschritt zählt echte Seiten.
+
+Kette: `boxToPixelRect` (normierte 0–999-Koordinaten → Pixel, auf die Seite
+beschnitten) → `isCroppableRegionType` (nur `figure`/`image`/`map`/`chart`/
+`diagram`, kein Text) → `cropImageRegion` (`@uwe/assets`, sharp → JPEG) →
+Ablage neben der PDF unter `import-tmp/<jobId>-fig-<n>.jpg`.
+
+Beim Execute übernimmt `apps/studio/src/lib/campaign-figure-assets.ts` sie als
+`Asset` (dm_only, Provenienz in `metadata`) und hängt sie per `image`-Block an
+die Seiten, deren Quell-Chunk dieselbe PDF-Seite abdeckte.
+
+Die Zuordnung Chunk → PDF-Seite läuft über unsichtbare Marker
+(`<!-- uwe:page N -->`), die `joinOcrPages` einfügt. Sie überstehen das Chunking,
+werden per `readPageNumbers` ausgelesen und per `stripPageMarkers` entfernt,
+**bevor** der Chunk an die lokale KI geht — das Modell sieht sie nie.
+
+### Command Center: Einrichtungsansicht
+
+`apps/rtx-connector-client/src/components/DocumentOcrPanel.tsx`, ganz oben unter
+*Modelle*. Drei Schritte mit Status-Badge: Modell laden (Pull-Befehl im Klartext,
+Kopierknopf, Ein-Klick-Pull mit Fortschrittsbalken), für UWE freigeben, im
+Studio als Vision-Slot wählen. Dazu Unlimited-OCR als Katalog-Eintrag in
+`@uwe/cookbook` mit neuem Anwendungsfall `document_ocr`.

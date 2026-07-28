@@ -40,6 +40,10 @@ export const USE_CASE_LABELS: Record<CookbookUseCaseId, { label: string; descrip
     label: "Player-safe Rewrite",
     description: "Spieler-Handouts und Recaps ohne DM-Leaks.",
   },
+  document_ocr: {
+    label: "Dokumenten-OCR",
+    description: "PDFs und Scans layout-treu lesen — Grundlage für den Kampagnen-Import.",
+  },
   theme_design: {
     label: "Design-Assistent",
     description: "Farbpaletten/Themes im Fragebogen-Chat als striktes JSON erzeugen.",
@@ -372,6 +376,25 @@ export const COOKBOOK_MODEL_REGISTRY: CookbookModelEntry[] = [
     engines: ["ollama", "rtx_agent", "docker_ollama"],
     useCases: ["deep_research"],
     summary: "Kein Chat-Modell, sondern für Embeddings/Retrieval — winziger VRAM-Bedarf.",
+  },
+  {
+    id: "unlimited-ocr",
+    label: "Unlimited-OCR",
+    family: "unlimited-ocr",
+    // 3,3 Mrd. Parameter MoE, davon ~0,5 Mrd. aktiv — daher der kleine
+    // VRAM-Bedarf trotz der Gesamtgröße.
+    paramsB: 3.3,
+    contextLength: 32768,
+    isMoe: true,
+    isMultimodal: true,
+    tags: ["vision", "multimodal", "ocr", "document"],
+    ollamaTags: ["frob/unlimited-ocr:q8_0", "frob/unlimited-ocr:f16", "frob/unlimited-ocr"],
+    minVramGbQ4: 5,
+    recommendedQuant: "Q8_0",
+    engines: ["ollama", "rtx_agent", "docker_ollama"],
+    useCases: ["document_ocr"],
+    summary:
+      "Liest PDF-Seiten layout-treu als Markdown — mehrspaltig, mit Tabellen und Bildboxen. Basis für PDF→Kampagne und die Scan-Inbox.",
   },
   {
     id: "llava:7b",
