@@ -63,6 +63,29 @@ export const FAMILY_NAV_SECTIONS: FamilyNavSection[] = [
     ],
   },
   {
+    title: "Alltag",
+    links: [
+      {
+        href: "/kitchen",
+        label: "Küche",
+        icon: "◍",
+        keywords: ["küche", "rezepte", "kochen", "essen", "wochenplan", "einkauf", "vorrat"],
+      },
+      {
+        href: "/household",
+        label: "Haushalt",
+        icon: "⌂",
+        keywords: ["haushalt", "wartung", "müll", "aufgaben", "termine"],
+      },
+      {
+        href: "/scan-inbox",
+        label: "Scan-Eingang",
+        icon: "▤",
+        keywords: ["scan", "post", "briefe", "rechnungen", "ocr", "belege"],
+      },
+    ],
+  },
+  {
     title: "Verwaltung",
     links: [
       {

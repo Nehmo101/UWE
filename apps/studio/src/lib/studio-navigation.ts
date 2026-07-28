@@ -324,9 +324,6 @@ export const STUDIO_PALETTE_EXTRA: {
   group: string;
   keywords?: string[];
 }[] = [
-  { id: "kitchen-pantry", label: "Vorratskammer", href: "/kitchen/pantry", group: "Werkzeuge / Küche", keywords: ["pantry", "vorrat"] },
-  { id: "kitchen-plan", label: "Essensplan", href: "/kitchen/plan", group: "Werkzeuge / Küche", keywords: ["plan", "meal"] },
-  { id: "kitchen-shopping", label: "Einkaufsliste", href: "/kitchen/shopping", group: "Werkzeuge / Küche", keywords: ["shopping", "einkauf"] },
   { id: "workshop-rental", label: "Terrain-Verleih", href: "/workshop/rental", group: "Organisation / Werkstatt", keywords: ["rental", "verleih"] },
   { id: "workshop-print-profiles", label: "Druckprofile", href: "/workshop/print-profiles", group: "Organisation / Werkstatt", keywords: ["print", "3d"] },
   { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },

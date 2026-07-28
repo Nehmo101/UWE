@@ -13,10 +13,13 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "@uwe/ai-brain": "workspace:*",
+    "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
+    "@uwe/kitchen": "workspace:*",
     "@uwe/product-contracts": "workspace:*",
+    "@uwe/scan-inbox": "workspace:*",
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/shared-utils": "workspace:*",

@@ -844,10 +844,22 @@ Was dabei zusammengelegt wurde:
   schreibgeschützt. Termin-Actions in Studio sind weg; die Feed-API
   (`/api/calendar/feeds`) bleibt, weil der MCP-Server sie liest.
 
-Nicht mitgewandert und weiter offen: Küche, Haushalt, Scan-Eingang und die
-Bring-Anbindung liegen als Daten in `uwe-family.db`, ihre Oberfläche steht aber
-noch in Studio. Ebenso ist `scripts/ux-audit/pages-data.mjs` ein Schnappschuss
-vom Analysestand und kennt die seit Schritt 5 entfernten Seiten noch.
+| 7e Alltag | ✅ erledigt | Küche (Rezepte, Wochenplan, Einkauf, Vorrat), Haushalt und Scan-Eingang sind aus Studio nach Family gezogen — samt Bring-Anbindung, Rezeptbild- und Scan-Datei-Routen. Studio hat damit keine Family-Daten mehr außer der Kalender-API (die der MCP-Server liest) und dem Session→Kalender-Sync. |
+
+Beim Umzug mitgenommen statt nachgebaut: die vier Action-Dateien laufen fast
+unverändert weiter — nur der Guard wechselt von `requireStudioActionAuth` zu
+`requireFamilyActionAuth`, die Routen heißen in Family genauso. Neu geschrieben
+wurden nur die Seiten, weil Studios Fassungen am Design-Kit hängen und Family
+mit einfachem CSS arbeitet.
+
+Zwei Netze sind dabei entstanden, die vorher fehlten: der Server-Action-Test
+prüft jetzt auch Brain und Family (nicht mehr nur Studio und Portal), und
+Family hat eine eigene API-Route-Inventur wie Studio und Portal. Der
+Zähl-Mindestwert im Studio-Test ist von 200 auf 150 gesunken — der Rückgang ist
+erklärbar, nicht übersehen.
+
+Weiter offen: `scripts/ux-audit/pages-data.mjs` ist ein Schnappschuss vom
+Analysestand und kennt die seit Schritt 5 entfernten Seiten noch.
 
 ---
 
