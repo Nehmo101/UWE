@@ -126,7 +126,12 @@ var UW_STANDARD = [["busch", 5], ["farn", 4], ["moos", 3], ["stumpf", 1],
    Zeichen lagen dann als Riesenflecken uebereinander, und in kleinen Polygonen
    fand das Streuraster gar keinen Platz mehr. Der Maszstab entscheidet, OB ein
    Zeichen erscheint; wie gross es ist, entscheidet die Karte. */
-function flaechenZeichen(el, sache, art) {
+/* J: der vierte Parameter `biom` — fuer BIOMflaechen. Ihre Marke soll in der
+   Palette IHRES Bioms liegen (eine Karstschraffur im Karstgrau, nicht im
+   Wiesengruen), waehrend Wald/Acker/Weide weiter das Kartenbiom tragen.
+   Ohne Angabe faellt er auf S.biom zurueck — alle Bestandsaufrufer bleiben
+   unveraendert. */
+function flaechenZeichen(el, sache, art, biom) {
   var pts = el.points;
   var m = S.einheitMeter;
   var wahl = zeichenFuer(sache, el.kennzahl, m, { art: art });
@@ -137,7 +142,8 @@ function flaechenZeichen(el, sache, art) {
      Nadelwald ebenso. Genau das sollte der Tint verhindern: die Atlasfelder
      sind Graustufen, damit dasselbe Zeichen in jedem Biom dessen Farbe
      annimmt, ohne dass es ein zweites Feld braucht. */
-  var platz = signaturPlatzierung(wahl[0], { kante: KARTE.map, massstab: m, biom: S.biom });
+  var platz = signaturPlatzierung(wahl[0], { kante: KARTE.map, massstab: m,
+    biom: biom === undefined ? S.biom : biom });
   if (!platz) return;
   var sp = streuAbstand(platz.marke);
   var punkte = streuRaster({
@@ -232,13 +238,26 @@ var LEITFARBEN = [[1.25, 0.72, 0.85], [1.3, 1.15, 0.55], [1.1, 1.1, 1.15], [0.8,
 
 var FRUCHT = {
   weizen: [1.05, 1.0, 0.82], kohl: [0.86, 0.99, 0.83],
-  lavendel: [0.95, 0.92, 1.08], brache: [1.0, 0.96, 0.9]
+  lavendel: [0.95, 0.92, 1.08], brache: [1.0, 0.96, 0.9],
+  // J: Rebzeilen — sattes Blattgruen auf hellem Boden. Das Schema in
+  // editor/tools.js kennt die Art noch nicht (die eine Zeile dort steht im
+  // Bericht); eine geladene Karte mit frucht:"wein" traegt sie aber schon.
+  wein: [0.84, 1.02, 0.78]
 };
+/* J: die Uebersetzung Fruchtart -> Kartenzeichen. Bisher wurde `p.frucht`
+   WOERTLICH als `art` durchgereicht — "weizen" ist aber kein Zeichenname,
+   nachArt fiel also bei JEDER Frucht auf die Vorgabe sig_acker zurueck, und
+   sig_weinberg war tot. Nur der Wein bekommt ein eigenes Zeichen: Weizen,
+   Kohl und Brache SIND Acker, und Lavendel zum Obstgarten umzudeuten waere
+   eine falsche Aussage (eine Pflanzung aus Baeumen ist etwas anderes als ein
+   Bluetenfeld) — er bleibt ehrlich beim Ackerkaro. Eintraege ohne Zuordnung
+   liefern undefined, und nachArt waehlt wie bisher die Vorgabe. */
+var FRUCHT_ART = { wein: "sig_weinberg" };
 function genFeld(el) {
   var p = el.params, pts = el.points;
   // I1: siehe genWald.  waehlt das Zeichen — Weinberg und Obstgarten
   // haben eigene, Weizen und Kohl teilen sich die Ackersignatur.
-  if (alsZeichen(S.einheitMeter)) flaechenZeichen(el, "acker", p.frucht);
+  if (alsZeichen(S.einheitMeter)) flaechenZeichen(el, "acker", FRUCHT_ART[p.frucht]);
   if (!alsKoerper(S.einheitMeter)) return;
   var bb = polyBBox(pts), ctr = polyCenter(pts);
   var ext = Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 0.75 + 4;
@@ -515,6 +534,56 @@ function dorfUfer(el, pts) {
   }
 }
 
+/* ==========================================================================
+   J — Flaechenzeichen der Biomflaechen
+
+   Eine Biomflaeche erzeugt keine Koerper (ihre ganze Wirkung ist die
+   Biommaske, siehe core/dirty.js) und fiel deshalb auf Kartenmassstab ganz
+   aus dem Bild: die Flaeche faerbt zwar das Gelaende um, aber eine Karte
+   sagt ihre Flaechenarten mit ZEICHEN, und die fehlten. Dabei weiss die
+   Biomflaeche als einziges Element ihr Biom woertlich (params.biom) — die
+   Zuordnung ist eine Tabelle, keine Ableitung.
+
+   Eingetragen ist nur, was der Katalog als Flaechenzeichen kennt und was
+   sich ehrlich zuordnen laesst. Biome ohne Eintrag (Wiese, Hochland, die
+   Waldbiome, ...) bekommen BEWUSST keins: ihre Aussage traegt der
+   Flaechenton der Biompalette (terrainColor mischt sie ohnehin), und ein
+   Waldzeichen auf einer Regenwald-BIOMflaeche laege doppelt unter den
+   Zeichen der tatsaechlichen Waldelemente darin.
+
+   `punkt: true` (nur der Vulkan): ein Vulkan ist auf einer Karte ein Berg,
+   kein Muster — EIN Zeichen am Schwerpunkt statt einer Kachelstreuung. Das
+   ist zugleich der im Signaturenkatalog notierte Ausloeser fuer sig_vulkan
+   (`hoehe.grat` hoch, Senke in der Mitte — das Vulkan-Biom). */
+var BIOM_FLAECHENZEICHEN = {
+  sumpf:      { sache: "nass",    art: "sig_sumpf" },
+  moor:       { sache: "nass",    art: "sig_moor" },
+  mangrove:   { sache: "nass",    art: "sig_sumpf" },
+  wueste:     { sache: "trocken", art: "sig_wueste" },
+  salzwueste: { sache: "trocken", art: "sig_salzpfanne" },
+  tundra:     { sache: "kalt",    art: "sig_tundra" },
+  schnee:     { sache: "kalt",    art: "sig_eis" },
+  eis:        { sache: "kalt",    art: "sig_eis" },
+  karst:      { sache: "karst",   art: "sig_karst" },
+  kreide:     { sache: "karst",   art: "sig_karst" },
+  vulkan:     { sache: "gebirge", art: "sig_vulkan", punkt: true }
+};
+
+function genBiomflaeche(el) {
+  if (!alsZeichen(S.einheitMeter)) return;
+  var biom = el.params && el.params.biom;
+  var Z = BIOM_FLAECHENZEICHEN[biom];
+  if (!Z) return;                        // Flaechenton traegt das Biom
+  if (Z.punkt) {
+    var m = polyCenter(el.points);
+    punktZeichen(el, Z.sache, null, m.x, m.z, { art: Z.art, biom: biom });
+    return;
+  }
+  // Tint aus der Palette des FLAECHENbioms, nicht des Kartenbioms — die
+  // Salzpfanne liegt im Salzweiss, auch wenn die Karte eine Wiese ist.
+  flaechenZeichen(el, Z.sache, Z.art, biom);
+}
+
 function genFlaeche(el) {
   if (el.points.length < 3) return;
   if (el.variant === "wald") genWald(el);
@@ -532,6 +601,10 @@ function genFlaeche(el) {
   // eine aeltere Fassung faellt durch alle else-if und erzeugt nichts, statt
   // abzustuerzen — das Speicherformat bleibt abwaertskompatibel.
   else if (el.variant === "see") genSee(el);
+  // J: die Biomflaeche stand bisher ABSICHTLICH in keinem Zweig (ihre Wirkung
+  // ist die Maske). Jetzt traegt sie auf Kartenmassstab ihr Flaechenzeichen —
+  // am Ende der Kette aus demselben Abwaertskompatibilitaets-Grund.
+  else if (el.variant === "biom") genBiomflaeche(el);
 }
 
 
@@ -539,4 +612,7 @@ function genFlaeche(el) {
    jetzt aus strukturen.js kommen: selection.js und core/dirty.js importieren
    `inPoly` seit jeher von hier, und ein Umhaengen dort waere reiner Laerm. */
 export { polyBBox, inPoly, polyArea, polyCenter, safeSpacing, genWald, genFeld,
-  genWiese, districtStreets, genViertel, genFlaeche };
+  genWiese, districtStreets, genViertel, genFlaeche,
+  // J: exportiert fuer die Pruefung (20-kartenbild-voll) — die Tabelle ist
+  // Daten, und tote Eintraege sollen dort auffallen, nicht im Bild.
+  BIOM_FLAECHENZEICHEN, genBiomflaeche, FRUCHT_ART };

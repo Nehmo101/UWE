@@ -5,8 +5,10 @@
    hoert Terra auf, Gelaende zu zeigen, und faengt an, eine Karte zu zeigen.
    Drei Dinge machen das aus, und alle drei stehen hier auf dem Pruefstand:
 
-   1  DAS BAND. Beruhigung und Schummerung teilen sich Schwelle und Rampe.
-      Unterhalb der Schwelle sind beide exakt 0 — nicht „fast".
+   1  DAS BAND. Seit Runde J zwei getrennte: die Beruhigung haengt an der
+      Uebergabe Koerper -> Karte (60..96), die Schummerung an der
+      Kontinentstufe (600..960). Unterhalb ihrer jeweiligen Schwelle sind
+      beide exakt 0 — nicht „fast".
    2  DIE BERUHIGUNG. Sie ersetzt jeden Feinanteil durch seinen MITTELWERT.
       Gemessen wird deshalb beides: dass die Koernung verschwindet (der
       Kontrast zwischen Nachbarzellen faellt deutlich) und dass die Flaeche
@@ -47,20 +49,32 @@ test('I6 — die Beruhigung blendet ein, sie schaltet nicht', async () => {
   const w = await testWelt({ seed: 4711, biom: 'wiese' });
   const T = w.m.terrain;
   assert.equal(T.ruheFaktor(1), 0);
-  assert.equal(T.ruheFaktor(60), 0, 'Auf Regionsmassstab ist noch nichts zu beruhigen');
+  assert.equal(T.ruheFaktor(60), 0, 'Bis zur Uebergabe ist nichts zu beruhigen');
   assert.equal(T.ruheFaktor(T.RUHE_AB), 0, 'Genau AUF der Schwelle noch 0');
   assert.equal(T.ruheFaktor(T.RUHE_AB - 1e-6), 0);
-  assert.ok(T.ruheFaktor(700) > 0 && T.ruheFaktor(700) < 1, 'Rampe fehlt');
+  assert.ok(T.ruheFaktor(78) > 0 && T.ruheFaktor(78) < 1, 'Rampe fehlt');
   assert.equal(T.ruheFaktor(T.RUHE_VOLL), 1);
   assert.equal(T.ruheFaktor(4000), 1);
   assert.equal(T.ruheFaktor(undefined), 0, 'Ohne Massstab keine Beruhigung');
-  // Eine Geste, ein Band: sonst gaebe es einen Massstabsbereich, in dem die
-  // Flaeche schon glatt, aber noch unschattiert ist.
-  assert.equal(T.RUHE_AB, T.RELIEF_AB);
-  assert.equal(T.RUHE_VOLL, T.RELIEF_VOLL);
-  for (const m of [1, 60, 599, 600, 700, 900, 960, 2000, 4000]) {
-    assert.equal(T.ruheFaktor(m), T.reliefFaktor(m), 'Baender laufen bei ' + m + ' auseinander');
-  }
+  /* J — NEU GEEICHT: die Baender sind seit Runde J GETRENNT. Die Beruhigung
+     haengt an der Uebergabe Koerper -> Karte (RUHE_AB = UEBERGABE.koerper =
+     60, Rampe bis 96 = dieselbe halbe Groessenordnung wie die Zeichen), die
+     Schummerung bleibt an der Kontinentstufe (600). Der alte Einwand — ein
+     Bereich „glatt, aber unschattiert" — beschrieb eine Flaeche ohne
+     Zeichen; seit die Kartenzeichen ab 60 uebernehmen, ist die ruhige
+     Flaeche zwischen 96 und 600 genau das gewollte Kartenbild, und das
+     Terrain traegt dort weiter echtes Licht. Beide Baender muessen weich
+     blenden, beide Schwellen sind einzeln festgehalten. */
+  assert.equal(T.RUHE_AB, SIG.UEBERGABE.koerper, 'Beruhigung haengt an der Uebergabe');
+  assert.equal(T.RUHE_VOLL, SIG.UEBERGABE.koerper * SIG.BLENDE);
+  assert.equal(T.RELIEF_AB, 600, 'Schummerung bleibt an der Kontinentstufe');
+  assert.equal(T.RELIEF_VOLL, 960);
+  // Und die Trennung ist wirklich eine: auf Regionsmassstab ist die Flaeche
+  // schon ganz ruhig, waehrend die Schummerung noch stumm ist.
+  assert.equal(T.ruheFaktor(250), 1);
+  assert.equal(T.reliefFaktor(250), 0);
+  assert.equal(T.reliefFaktor(600), 0);
+  assert.ok(T.reliefFaktor(700) > 0 && T.reliefFaktor(700) < 1, 'Schummer-Rampe fehlt');
 });
 
 test('I6 — unterhalb der Schwelle ist die Farbe bitgleich, unabhaengig geprueft', async () => {
@@ -91,9 +105,13 @@ test('I6 — unterhalb der Schwelle ist die Farbe bitgleich, unabhaengig gepruef
   try {
     const a = hash(1);
     assert.equal(hash(4), a, 'Ortsmassstab');
-    assert.equal(hash(60), a, 'Uebergabe an die Karte');
-    assert.equal(hash(250), a, 'Regionsmassstab');
+    // J: die Schwelle liegt seit der Neueichung auf der Uebergabe (60).
+    // Der Pruefpunkt 250 ist deshalb von der linken auf die rechte Seite
+    // gewandert — die Aussage („unterhalb bitgleich, oberhalb wirksam")
+    // ist dieselbe geblieben.
+    assert.equal(hash(59.999), a, 'knapp unter der Uebergabe');
     assert.equal(hash(T.RUHE_AB), a, 'genau auf der Schwelle');
+    assert.notEqual(hash(250), a, 'Auf Regionsmassstab MUSS die Beruhigung wirken');
     assert.notEqual(hash(2000), a, 'Auf Kontinentmassstab MUSS sich etwas aendern');
   } finally { S.einheitMeter = 1; }
 });

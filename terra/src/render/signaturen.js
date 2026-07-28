@@ -216,6 +216,12 @@ var ZEICHEN = {
   sig_dorf:       z('bauwerk', 0.006, UEBERGABE.voll,   'E', 'tinte'),
   sig_stadt:      z('bauwerk', 0.009, UEBERGABE.voll,   'E', 'tinte'),
   sig_stadtmauer: z('bauwerk', 0.013, UEBERGABE.nah,    'E', 'tinte'),
+  /* Quelle 'H' = von Hand gesetzt. Stand Runde J erreicht das im BILD noch
+     nichts: das Werkzeug fuer handgesetzte Zeichen existiert nicht (es ist
+     bewusst offen geblieben, niemand baut es parallel). Der Eintrag bleibt
+     trotzdem vollstaendig — Atlasfeld, Band, Waehler (waehleOrt/opt.hauptstadt
+     bzw. Sache `grenze`) stehen bereit, damit das Werkzeug spaeter nur noch
+     emittieren muss. Gilt wortgleich fuer sig_seeweg weiter unten. */
   sig_hauptstadt: z('bauwerk', 0.012, UEBERGABE.voll,   'H', 'tinte'),
   sig_burg:       z('bauwerk', 0.007, UEBERGABE.gross,  'E', 'tinte'),
   sig_kloster:    z('bauwerk', 0.006, UEBERGABE.gross,  'E', 'tinte'),
@@ -279,6 +285,8 @@ var ZEICHEN = {
   sig_kueste:         z('linie', 0.0045, UEBERGABE.voll,   'A', 'wasser', { streifen: true }),
   sig_grenze:         z('linie', 0.0028, UEBERGABE.voll,   'H', 'grenze',
     { streifen: true, strich: true }),
+  // Wie sig_hauptstadt: Quelle 'H', wartet auf das Werkzeug fuer
+  // handgesetzte Zeichen (offen, siehe Kommentar dort).
   sig_seeweg:         z('linie', 0.0018, UEBERGABE.voll,   'H', 'wasser',
     { streifen: true, strich: true }),
   /* I6 — der GRUNDRISS, den der Katalog als naechsten Schritt nennt: „eine

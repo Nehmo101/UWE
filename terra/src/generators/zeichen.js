@@ -510,6 +510,291 @@ function istRasterGipfel(H, ni, nj, i, j, schwelle) {
   return hm - tief > schwelle;
 }
 
+/* ==========================================================================
+   4b — Die restlichen Reliefformen: Klippe, Schlucht, Pass, Krater (Runde J)
+
+   gratPunkte kennt zwei Formen: Kamm (quer zum Kamm ein Hochpunkt) und
+   Gipfel (hoeher als alle Nachbarn). Vier Zeichen des Katalogs brauchen mehr,
+   und alle vier sind mit DENSELBEN vier Profilachsen zu haben — es sind nur
+   andere Vorzeichenkombinationen derselben acht Abfragen:
+
+     KLIPPE    = die Kante, an der EINE Seite stuerzt und die andere eben
+                 bleibt. Ein Kamm faellt nach beiden Seiten (min beider Faelle
+                 ueber der Schwelle); die Klippe faellt nur nach einer
+                 (max weit ueber der Schwelle, die andere Seite nahe null).
+                 Zusaetzlich muss es hinter der Kante WEITER hinuntergehen
+                 (Probe bei 2d): sonst feuerte jede flache Bodenstufe.
+     SCHLUCHT  = das Negativ des Grats: auf einer Achse steigen BEIDE Seiten
+                 (min beider Anstiege ueber der Schwelle). Die Schlucht
+                 laeuft senkrecht zu dieser Achse.
+     PASS      = Sattelpunkt: auf einer Achse ein Minimum (beide Seiten
+                 steigen), auf der SENKRECHTEN ein Maximum (beide fallen) —
+                 geprueft nur auf den zwei echten Senkrechtpaaren (0°/90°,
+                 45°/135°). Er ist selten und darf es sein: Kandidaten werden
+                 entdoppelt (nur der staerkste in einer Nachbarschaft bleibt),
+                 und lieber faellt einer weg als dass ein falscher steht.
+     KRATER    = geschlossener Ring aus Kammpunkten um eine Senke. Gesucht
+                 wird von der SENKE aus (Rasterminimum), nicht vom Ring: um
+                 einen Kandidaten werden Ringe wachsender Radien mit 16
+                 Peilungen abgetastet; ein Krater liegt vor, wenn fast alle
+                 Peilungen deutlich ueber der Senke liegen UND es hinter dem
+                 Ring wieder hinuntergeht. Beides zusammen unterscheidet den
+                 Krater von einer gewoehnlichen Mulde (deren Umgebung steigt
+                 hinter dem Rand weiter). Die Anforderung ist bewusst streng —
+                 14 von 16 Peilungen ueber der Schwelle, 10 von 16 fallen
+                 aussen ab; auf gewachsenem Gelaende findet das so gut wie nie
+                 etwas, und genau so soll es sein.
+
+   Vorrang bei Mehrdeutigkeit: Pass > Gipfel > Grat > Klippe > Schlucht.
+   Ein Sattel IST auf seiner Kammachse ein Gratpunkt — er soll aber als Pass
+   lesen; eine Klippe ist nie zugleich Grat (die ebene Seite schliesst den
+   beidseitigen Fall aus).
+
+   WICHTIG fuer den Bestand: gratPunkte oben bleibt unangetastet — seine
+   Ergebnisse sind in 14-signaturen-generatoren an Dachprofil und Kegel
+   festgenagelt, und generators/objects.js zeichnet daraus weiter Grat und
+   Gipfel. reliefFormen liefert AUSSCHLIESSLICH die vier neuen Formen;
+   reliefFormZeichen emittiert nur sie. Dadurch kann core/dirty.js den Aufruf
+   ZUSAETZLICH zur bestehenden reliefZeichen-Kette in objects.js anstossen,
+   ohne dass ein Punkt doppelt gezeichnet wird.
+   ========================================================================== */
+
+var TAU2 = Math.PI * 2;
+var KLIPPE_STEIL = 2.2;    // die stuerzende Seite: Vielfaches der Schwelle
+var KLIPPE_EBEN = 0.55;    // die ebene Seite: hoechstens dieser Bruchteil
+var PASS_ABSTAND = 2.5;    // Entdoppelung: Vielfaches der Abtastweite
+var KRATER_PEILUNGEN = 16;
+var KRATER_RING_MIN = 14;  // Peilungen, die ueber der Senke liegen muessen
+var KRATER_AUSSEN_MIN = 10; // Peilungen, hinter denen es wieder abfaellt
+
+/**
+ * Die vier neuen Reliefformen im Rechteck. Gleiche Optionen wie gratPunkte
+ * (x0/z0/x1/z1, sp, d, maxN, schwelleAnteil), gleiche Deterministik: festes
+ * Weltraster, keine Zufallsquelle, reine Funktion des Hoehenfelds.
+ *
+ * Rueckgabe: { punkte: [{x, z, h, dx, dz, typ, mass}], krater: [{x, z, r,
+ * tiefe}] }. `dx/dz` ist die LAUFRICHTUNG des Zeichens: bei der Klippe die
+ * Kante, bei der Schlucht ihr Verlauf, beim Pass der Weg ueber den Sattel
+ * (die Achse, auf der es nach beiden Seiten hinuntergeht).
+ */
+function reliefFormen(o) {
+  var sp = Number.isFinite(o.sp) && o.sp > 0 ? o.sp : 4;
+  var d = Number.isFinite(o.d) && o.d > 0 ? o.d : sp;
+  var maxN = Number.isFinite(o.maxN) ? o.maxN : 160;
+  var ni = Math.max(1, Math.min(96, Math.ceil((o.x1 - o.x0) / sp)));
+  var nj = Math.max(1, Math.min(96, Math.ceil((o.z1 - o.z0) / sp)));
+  var i, j, k;
+  var H = new Float64Array((ni + 1) * (nj + 1));
+  var hMin = Infinity, hMax = -Infinity;
+  for (j = 0; j <= nj; j++) {
+    for (i = 0; i <= ni; i++) {
+      var hx = o.x0 + (o.x1 - o.x0) * (i / ni), hz = o.z0 + (o.z1 - o.z0) * (j / nj);
+      var h = heightAt(hx, hz);
+      H[j * (ni + 1) + i] = h;
+      if (h < hMin) hMin = h;
+      if (h > hMax) hMax = h;
+    }
+  }
+  var spanne = hMax - hMin;
+  var anteil = Number.isFinite(o.schwelleAnteil) ? o.schwelleAnteil : 0.04;
+  var schwelle = Math.max(0.08, spanne * anteil);
+
+  var kanten = [], paesse = [];
+  for (j = 0; j <= nj; j++) {
+    for (i = 0; i <= ni; i++) {
+      var x = o.x0 + (o.x1 - o.x0) * (i / ni), z = o.z0 + (o.z1 - o.z0) * (j / nj);
+      var hm = H[j * (ni + 1) + i];
+      // Unter Wasser zeichnet die Karte Gewaesser, keine Reliefformen.
+      if (hm < WATER + 0.5) continue;
+      // Acht Abfragen, je Achse beide Seiten — dieselben wie in gratPunkte.
+      var fallMin = [0, 0, 0, 0], fallA = [0, 0, 0, 0], fallB = [0, 0, 0, 0];
+      var steigMin = [0, 0, 0, 0];
+      for (k = 0; k < GRAT_ACHSEN.length; k++) {
+        var ax = GRAT_ACHSEN[k][0] * d, az = GRAT_ACHSEN[k][1] * d;
+        var a = heightAt(x + ax, z + az), b = heightAt(x - ax, z - az);
+        fallA[k] = hm - a; fallB[k] = hm - b;
+        fallMin[k] = Math.min(fallA[k], fallB[k]);
+        steigMin[k] = Math.min(a - hm, b - hm);
+      }
+      // Pass: die zwei echten Senkrechtpaare der vier Achsen.
+      var sattel = 0, sattelK = -1;
+      for (k = 0; k < 2; k++) {
+        var m1 = Math.min(steigMin[k], fallMin[k + 2]);   // Kamm auf k+2
+        var m2 = Math.min(steigMin[k + 2], fallMin[k]);   // Kamm auf k
+        if (m1 > sattel) { sattel = m1; sattelK = k + 2; }
+        if (m2 > sattel) { sattel = m2; sattelK = k; }
+      }
+      if (sattel > schwelle) {
+        // sattelK ist die FALLachse — genau die Richtung, in der der Weg
+        // ueber den Sattel laeuft.
+        paesse.push({ x: x, z: z, h: hm, dx: GRAT_ACHSEN[sattelK][0],
+          dz: GRAT_ACHSEN[sattelK][1], typ: 'pass', mass: sattel });
+        continue;
+      }
+      // Gipfel und Grat gehoeren gratPunkte/objects.js — hier nur erkennen,
+      // um sie NICHT faelschlich als Klippe oder Schlucht zu fuehren.
+      var istGrat = false;
+      for (k = 0; k < 4; k++) if (fallMin[k] > schwelle) { istGrat = true; break; }
+      if (istGrat || istRasterGipfel(H, ni, nj, i, j, schwelle)) continue;
+      // Klippe: eine Seite stuerzt, die andere bleibt eben — und hinter der
+      // Kante geht es weiter hinunter (Probe bei 2d gegen die Bodenstufe).
+      var klippe = false, klippeK = 0, klippeMass = 0;
+      for (k = 0; k < 4; k++) {
+        var kx = GRAT_ACHSEN[k][0] * d, kz = GRAT_ACHSEN[k][1] * d;
+        var steilSeite = 0;
+        if (fallA[k] > KLIPPE_STEIL * schwelle && Math.abs(fallB[k]) < KLIPPE_EBEN * schwelle) steilSeite = 1;
+        else if (fallB[k] > KLIPPE_STEIL * schwelle && Math.abs(fallA[k]) < KLIPPE_EBEN * schwelle) steilSeite = -1;
+        if (!steilSeite) continue;
+        var tiefer = heightAt(x + steilSeite * 2 * kx, z + steilSeite * 2 * kz);
+        if (!(tiefer < hm - 1.2 * schwelle)) continue;   // nur eine Bodenstufe
+        var mass = steilSeite > 0 ? fallA[k] : fallB[k];
+        if (mass > klippeMass) { klippeMass = mass; klippeK = k; klippe = true; }
+      }
+      if (klippe) {
+        // Die Kante laeuft SENKRECHT zur Sturzachse.
+        var KA = GRAT_ACHSEN[klippeK];
+        kanten.push({ x: x, z: z, h: hm, dx: -KA[1], dz: KA[0],
+          typ: 'klippe', mass: klippeMass });
+        continue;
+      }
+      // Schlucht: beide Seiten steigen. Sie laeuft senkrecht zur Steigachse.
+      var steig = 0, steigK = -1;
+      for (k = 0; k < 4; k++) if (steigMin[k] > steig) { steig = steigMin[k]; steigK = k; }
+      if (steig > schwelle) {
+        var SA = GRAT_ACHSEN[steigK];
+        kanten.push({ x: x, z: z, h: hm, dx: -SA[1], dz: SA[0],
+          typ: 'schlucht', mass: steig });
+      }
+    }
+  }
+  /* Ausduennen QUER zur Laufrichtung. Eine Klippenwand und ein Schluchtgrund
+     sind im Profil BAENDER (jede Rasterspalte innerhalb der Stuetzweite
+     erfuellt die Bedingung), gezeichnet werden soll aber EINE Linie. Die
+     Regel ist anisotrop: laengs der Kante bleibt jeder Punkt (dort sitzt
+     Zahn an Zahn), quer zur Kante gewinnt in einem Streifen von einer
+     Stuetzweite der staerkste Punkt. Sortierung nach Mass mit Orts-Tiebreak
+     — deterministisch, keine Reihenfolgeabhaengigkeit. */
+  kanten.sort(function (p, q) { return q.mass - p.mass || p.x - q.x || p.z - q.z; });
+  /* Der Deckel gilt JE FORM, nicht ueber alles: Klippenpunkte sind an einer
+     langen Wand zahlreich und ihr Mass ist gross — ein gemeinsamer Deckel
+     liesse die stillere Schlucht und den seltenen Pass schlicht verhungern
+     (genau das ist beim ersten Bilddurchgang passiert). */
+  var punkte = [], jeForm = { klippe: 0, schlucht: 0 };
+  for (i = 0; i < kanten.length; i++) {
+    var kp = kanten[i];
+    if (jeForm[kp.typ] >= maxN) continue;
+    var freiK = true;
+    for (j = 0; j < punkte.length; j++) {
+      var pj = punkte[j];
+      if (pj.typ !== kp.typ) continue;
+      var vx = kp.x - pj.x, vz = kp.z - pj.z;
+      var laengs = vx * pj.dx + vz * pj.dz;
+      var quer = vx * -pj.dz + vz * pj.dx;
+      if (Math.abs(laengs) < sp * 0.55 && Math.abs(quer) < d * 1.1) { freiK = false; break; }
+    }
+    if (freiK) { punkte.push(kp); jeForm[kp.typ]++; }
+  }
+  // Paesse entdoppeln: nur der staerkste Sattel einer Nachbarschaft bleibt.
+  paesse.sort(function (p, q) { return q.mass - p.mass || p.x - q.x || p.z - q.z; });
+  var minAbst2 = (PASS_ABSTAND * sp) * (PASS_ABSTAND * sp), zaehlP = 0;
+  for (i = 0; i < paesse.length && zaehlP < maxN; i++) {
+    var pa = paesse[i], frei = true;
+    for (j = 0; j < punkte.length; j++) {
+      if (punkte[j].typ !== 'pass') continue;
+      var pdx = punkte[j].x - pa.x, pdz = punkte[j].z - pa.z;
+      if (pdx * pdx + pdz * pdz < minAbst2) { frei = false; break; }
+    }
+    if (frei) { punkte.push(pa); zaehlP++; }
+  }
+  return { punkte: punkte, krater: kraterSuche(o, H, ni, nj, d, schwelle) };
+}
+
+/** Kratersuche von der Senke aus — Begruendung im Abschnittskopf oben. */
+function kraterSuche(o, H, ni, nj, d, schwelle) {
+  var aus = [], i, j, k, r;
+  var b = ni + 1;
+  for (j = 1; j < nj; j++) {
+    for (i = 1; i < ni; i++) {
+      var hm = H[j * b + i], senke = true;
+      for (var dj = -1; dj <= 1 && senke; dj++) {
+        for (var di = -1; di <= 1; di++) {
+          if (di === 0 && dj === 0) continue;
+          if (H[(j + dj) * b + (i + di)] <= hm) { senke = false; break; }
+        }
+      }
+      if (!senke) continue;
+      var cx = o.x0 + (o.x1 - o.x0) * (i / ni), cz = o.z0 + (o.z1 - o.z0) * (j / nj);
+      // Ringe wachsender Radien; der erste, der traegt, gewinnt.
+      for (r = 2 * d; r <= 4 * d; r += d) {
+        var innen = 0, aussen = 0;
+        for (k = 0; k < KRATER_PEILUNGEN; k++) {
+          var w = (k / KRATER_PEILUNGEN) * TAU2;
+          var ux = Math.cos(w), uz = Math.sin(w);
+          var hr = heightAt(cx + ux * r, cz + uz * r);
+          if (hr - hm > schwelle) innen++;
+          if (heightAt(cx + ux * (r + d), cz + uz * (r + d)) < hr - 0.25 * schwelle) aussen++;
+        }
+        if (innen >= KRATER_RING_MIN && aussen >= KRATER_AUSSEN_MIN) {
+          aus.push({ x: cx, z: cz, r: r, tiefe: schwelle });
+          break;
+        }
+      }
+      if (aus.length >= 4) return aus;   // mehr Krater traegt kein Suchfeld
+    }
+  }
+  return aus;
+}
+
+/**
+ * Emittiert die vier neuen Reliefformen einer Fels-Streuung — und NUR sie
+ * (Grat und Gipfel zeichnet weiterhin reliefZeichen in objects.js; die
+ * Begruendung fuer die Teilung steht im Abschnittskopf).
+ *
+ * `bb` ist das Suchrechteck { x0, z0, x1, z1 } — in der Praxis die
+ * Klickpunktbox des Elements plus Streuweite, wie sie objects.js fuer die
+ * Gratsuche benutzt (core/dirty.js reicht genau diese Box herein).
+ *
+ * Rueckgabe: Zahl der gesetzten Zeichen. 0 ist regulaer — flaches Gelaende
+ * hat keine Klippen, und unterhalb der Uebergabe zeichnet niemand Karte.
+ */
+function reliefFormZeichen(el, bb) {
+  if (!alsZeichen(S.einheitMeter)) return 0;
+  if (!bb || !(bb.x1 > bb.x0) || !(bb.z1 > bb.z0)) return 0;
+  // Abtastweite an der Zeichengroesse, wie in reliefZeichen (objects.js):
+  // ein Zeichen, das dichter als seine Kantenlaenge sitzt, ueberdeckt sich.
+  var pl = kartenPlatz('sig_klippe') || kartenPlatz('sig_krater');
+  if (!pl) return 0;
+  var sp = Math.max(pl.marke * 0.8, 1.2);
+  /* Stuetzweite BEWUSST doppelt so gross wie die Abtastweite. Die Gratsuche
+     kommt mit d = sp aus, weil ein Kamm eine LINIE ist; Klippenwand und
+     Schluchtgrund sind Formen MIT BREITE, und eine Sonde, die nur eine halbe
+     Zeichenlaenge weit schaut, landet mitten in der Wand statt dahinter —
+     bei feiner Abtastung (kleine Karte, naher Massstab) fand die Erkennung
+     dann gar nichts. Der Preis ist eine Ortsunschaerfe von hoechstens 2 sp,
+     und die frisst das Ausduennen quer zur Kante gleich wieder. */
+  var f = reliefFormen({ x0: bb.x0, z0: bb.z0, x1: bb.x1, z1: bb.z1,
+    sp: sp, d: sp * 2, maxN: 96 });
+  var n = 0, i, g;
+  for (i = 0; i < f.punkte.length; i++) {
+    g = f.punkte[i];
+    var dreh = Math.atan2(-g.dz, g.dx);
+    if (g.typ === 'klippe') {
+      n += punktZeichen(el, 'kante', null, g.x, g.z, { art: 'sig_klippe', dreh: dreh });
+    } else if (g.typ === 'schlucht') {
+      n += punktZeichen(el, 'kante', null, g.x, g.z, { art: 'sig_schlucht', dreh: dreh });
+    } else if (g.typ === 'pass') {
+      n += punktZeichen(el, 'pass', null, g.x, g.z, { art: 'sig_pass', dreh: dreh });
+    }
+  }
+  for (i = 0; i < f.krater.length; i++) {
+    g = f.krater[i];
+    // EIN Ringzeichen am Zentrum — das Atlasfeld IST der Ring; seine Groesse
+    // regelt wie bei allen Zeichen der Bildraum, nicht der Kraterradius.
+    n += punktZeichen(el, 'gebirge', null, g.x, g.z, { art: 'sig_krater' });
+  }
+  return n;
+}
+
 
 /* ==========================================================================
    5 — Die Wasserlinie: eine Kueste ist keine Sache, die jemand zeichnet
@@ -602,5 +887,6 @@ export {
   pfadMasse, pfadPunkt, bandGeoZeichen, bandZeichen, kettenZeichen, linienZeichen,
   umrissZeichen,
   kartenBandMat,
-  GRAT_ACHSEN, gratPunkte, istRasterGipfel
+  GRAT_ACHSEN, gratPunkte, istRasterGipfel,
+  reliefFormen, reliefFormZeichen
 };

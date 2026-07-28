@@ -7,6 +7,12 @@ import { terraMat, tintedMats, setzeBiomKarte } from '../render/materials.js';
 // es traegt eine eigene Kopie von inPoly/polyBBox, damit kein Rueckimport nach
 // generators/ entsteht (dort haengt areas.js an genau dieser Datei).
 import { biomFeldBauen, biomGewichtAn, biomIndexAn, mischPalette, mischStufe, cacheLeeren as biomCacheLeeren, BIOM_KEINS } from './biomfeld.js';
+// J: die Uebergabepunkte der Massstabsleiter. Nur zwei Konstanten (UEBERGABE,
+// BLENDE) — signaturen.js haengt an three, core/ und world/kartenbaum.js und
+// importiert selbst nie aus world/terrain.js, der Graph bleibt azyklisch.
+// Gebraucht werden sie fuer RUHE_AB: die Beruhigung beginnt an der Uebergabe
+// Koerper -> Karte, nicht erst auf Kontinentmassstab (Begruendung dort).
+import { UEBERGABE, BLENDE } from '../render/signaturen.js';
 
 /* ==========================================================================
    Aenderungserkennung fuer die Historie (H1e)
@@ -82,7 +88,7 @@ function holeSchmutzRegion() {
    (Undo-Stapel beim Groessenwechsel verwerfen) braucht history.js — siehe
    Bericht H1e. */
 var feldLaenge = 0;
-var base, hgt, aoRoh, aoFeld, corridor, wear, abfluss, sediment, haerte,
+var base, hgt, aoRoh, aoFeld, corridor, wear, ufer, abfluss, sediment, haerte,
     biomFeld, biomGewicht;
 function felderSichern() {
   var n = VW * VW;
@@ -94,6 +100,13 @@ function felderSichern() {
   corridor = new Uint8Array(n);
   // Abnutzung entlang der Wege: 0..255, weich auslaufend, faerbt das Gras erdig.
   wear = new Uint8Array(n);
+  /* J: der nasse Uferstreifen der Binnenseen, 0..255 wie `wear`. Ein
+     Laufzeitfeld aus demselben Grund wie wear/corridor: es entsteht bei jedem
+     Aufbau aus den See-Elementen neu (core/dirty.js stempelt es in
+     rebuildCorridors entlang des Uferzugs) und steht deshalb NICHT im
+     Speicherformat. Wo kein See liegt, ist es exakt 0, und terrainColor
+     betritt seinen Zweig nicht — die Bitgleichheits-Zusage bleibt. */
+  ufer = new Uint8Array(n);
   /* I3: Ergebnisfelder der Erosion. Sie wachsen mit base/hgt mit und stehen
      auch ohne gelaufene Erosion bereit (Abfluss und Sediment 0, Haerte neutral
      1) — wer sie liest, darf das bedingungslos tun.
@@ -746,18 +759,35 @@ function reliefFaktor(m) {
    Saum, der Felsdurchbruch am Steilhang, der Grundton der Landmasse und die
    Biompalette.
 
-   --- Warum dasselbe Band wie die Schummerung ---------------------------
-   RELIEF_AB = 600 ist nicht irgendeine Zahl: es ist `ab` der Stufe
-   „kontinent" aus MASSSTAB_LEITER (world/kartenbaum.js). Beruhigung und
-   Schummerung sind EINE Geste — das Bild hoert auf, Gelaende zu sein, und
-   faengt an, Karte zu sein —, also teilen sie sich Schwelle und Rampe. Zwei
-   Baender nebeneinander erzeugten nur einen Massstabsbereich, in dem die
-   Flaeche schon glatt, aber noch unschattiert ist: eine Karte aus Farbfeldern
-   ohne Relief.
+   --- Warum die Beruhigung an der UEBERGABE beginnt, nicht bei 600 -------
+   Bis Runde I6 teilte sie sich Schwelle und Rampe mit der Schummerung
+   (RELIEF_AB = 600). Das war ausdruecklich ein Trade-off, im Commit als der
+   schwaechste Punkt der Runde benannt: auf 250 m/Zelle blieb das Gelaende
+   verrauscht, weil ein frueherer Start die Bitgleichheits-Zusage bei genau
+   600 haette neu eichen muessen. Jetzt ist geeicht (die Hash-Pruefpunkte in
+   14-signaturen-generatoren liegen bei 60 und 59,999, der Wert bei 600 ist
+   NEU aufgenommen), und die Beruhigung haengt dort, wo sie inhaltlich
+   hingehoert: an der UEBERGABE Koerper -> Karte (UEBERGABE.koerper = 60 aus
+   render/signaturen.js). Ab dort zeichnet Terra Zeichen statt Koerper, und
+   eine Karte aus Zeichen verdient eine ruhige Flaeche — nicht erst zwei
+   Groessenordnungen spaeter. Die Rampe ist dieselbe halbe Groessenordnung
+   wie die der Zeichen (BLENDE = 1.6): bei 96 m/Zelle, wo der letzte Koerper
+   ausgeblendet ist, ist die Flaeche ganz beruhigt. Eine Geste, ein Band —
+   nur haengt das Band jetzt an der Uebergabe statt an der Kontinentstufe.
+
+   Die Schummerung bleibt bewusst bei 600: zwischen 96 und 600 ist das
+   Terrain ein BELEUCHTETES Mesh mit echten Normalen — seine Formen traegt
+   das Szenenlicht, und die Reliefgruppe der Zeichen (Grat, Gipfel) steht
+   darauf. Erst auf Kontinentmassstab, wo die Kamera so weit weg ist, dass
+   die Geometrie im Bild flach wird, ersetzt die kartografische Schummerung
+   das Licht. Der alte Einwand („ein Bereich, der glatt, aber unschattiert
+   ist") beschrieb eine Flaeche OHNE Zeichen; seit die Reliefzeichen ab 60
+   uebernehmen, ist er gegenstandslos. Beide Baender blenden weich (sstep),
+   17-kartenbild prueft beide getrennt.
 
    --- Und warum das unterhalb der Schwelle NICHTS aendert ---------------
    Kein zweiter Rechenweg und kein `if`, sondern zwei Zahlen, die exakt 0
-   bzw. exakt 1.0 sind. `ruhe` ist unterhalb von 600 m/Zelle exakt 0 (sstep
+   bzw. exakt 1.0 sind. `ruhe` ist unterhalb von 60 m/Zelle exakt 0 (sstep
    klemmt auf 0, nicht auf eine kleine Zahl), und daraus folgt Bit fuer Bit:
 
      ruhig(w, m, 0)  =  w + (m - w) * 0  =  w + 0  =  w
@@ -772,11 +802,13 @@ function reliefFaktor(m) {
 
    Dieselbe Zusage wie bei den Biomflaechen und beim Reliefzweig.
    14-signaturen-generatoren haelt sie gegen einen Hash fest, der vor beiden
-   Eingriffen aufgenommen wurde (bei 1, 599.999 und 600 m/Zelle);
-   17-kartenbild prueft sie noch einmal ohne Hash, indem es die Massstaebe
-   1, 4, 60, 250 und 600 gegeneinander vergleicht.
+   Eingriffen aufgenommen wurde (bei 1, 59.999 und 60 m/Zelle) und pinnt den
+   Zustand OBERHALB gegen einen neu geeichten Hash bei 600; 17-kartenbild
+   prueft sie noch einmal ohne Hash, indem es die Massstaebe 1, 4, 59.999
+   und 60 gegeneinander vergleicht.
    ========================================================================== */
-var RUHE_AB = RELIEF_AB, RUHE_VOLL = RELIEF_VOLL;
+var RUHE_AB = UEBERGABE.koerper;           // 60 — die Uebergabe Koerper -> Karte
+var RUHE_VOLL = UEBERGABE.koerper * BLENDE; // 96 — dieselbe Rampe wie die Zeichen
 var RUHE_SPRENKEL = 0.25;   // Rest der Flecken-Oktaven bei voller Ruhe
 var RUHE_DRIFT = 0.40;      // Rest der Farbdrift
 
@@ -810,9 +842,10 @@ var RUHE_M_WERT = 0.066;
  *  unterhalb der Schwelle, und `w + (m - w) * 0` ist Bit fuer Bit `w`. */
 function ruhig(w, m, s) { return w + (m - w) * s; }
 
-/** Staerke der Beruhigung bei diesem Massstab. Eigene Funktion statt eines
- *  Alias auf reliefFaktor, damit die Pruefung beide Baender getrennt
- *  nachrechnen kann, falls sie einmal auseinanderlaufen. */
+/** Staerke der Beruhigung bei diesem Massstab. Seit der Neueichung ein
+ *  ANDERES Band als reliefFaktor: die Beruhigung laeuft ueber [60, 96]
+ *  (Uebergabe Koerper -> Karte), die Schummerung weiter ueber [600, 960]
+ *  (Kontinentstufe). Beide weich, beide getrennt pruefbar. */
 function ruheFaktor(m) {
   if (!Number.isFinite(m) || m <= RUHE_AB) return 0;
   return sstep(RUHE_AB, RUHE_VOLL, m);
@@ -949,6 +982,28 @@ function terrainColor(h, ny, x, z, out, ao) {
   if (wtr > 0.01) {
     var frans = fractal(x * 0.35, z * 0.35, S.worldSeed + 505) * 0.5;
     out.lerp(P.tritt, clamp(wtr * 1.05 - frans, 0, 0.7) * dKorn);
+  }
+  /* J — das nasse Seeufer. Das Meer bekommt seinen feuchten Saum ueber die
+     Hoehe relativ zu WATER (Sand und Brandung weiter unten); ein Bergsee
+     liegt hoeher, sein Ufer ging bisher hart in Gras ueber. `ufer` stempelt
+     core/dirty.js entlang des Uferzugs jedes See-Elements — der Commit-Weg,
+     kein Nebenzustand, das Band wandert also mit dem See mit.
+     Der Ton ist NICHT die Trittspur (erdig ist nicht nass): Erde Richtung
+     Tiefwasser gezogen ergibt den dunklen, satten Boden, in dem Wasser
+     steht. Ausgefranst wie die Trittspur, damit die Linie nicht zum
+     Gummiring wird; mit dKorn ausgeblendet, denn auf Kartenmassstab waere
+     ein drei Zellen breiter Saum ein kilometerbreiter Ring — dort zeichnet
+     sig_kueste die Uferlinie. Ohne See ist `ufer` exakt 0 und der Zweig
+     wird nie betreten: der Rechenweg bleibt Bit fuer Bit der alte. */
+  var nass = uferAt(x, z);
+  if (nass > 0.01) {
+    var ufrans = fractal(x * 0.31, z * 0.31, S.worldSeed + 913) * 0.45;
+    var nassW = clamp(nass * 1.1 - ufrans, 0, 0.75) * dKorn;
+    if (nassW > 0) {
+      _tc2.copy(P.erde).lerp(P.tiefe, 0.38);
+      out.lerp(_tc2, nassW * 0.55);
+      out.multiplyScalar(1 - nassW * 0.12);
+    }
   }
 
   if (h < 0.35) {                                          // Meeresgrund
@@ -1140,10 +1195,35 @@ function stampWear(x, z, r) {
     }
   }
 }
-function clearWear() { wear.fill(0); }
+/** Leert Trittspur UND Uferstreifen. Beide sind dasselbe Laufzeitpaar: sie
+ *  entstehen ausschliesslich in rebuildCorridors (core/dirty.js) neu, und
+ *  jeder Aufrufer, der die eine Maske frisch braucht, braucht auch die
+ *  andere frisch — auch die Testwelt, die hierueber ihre Isolation holt. */
+function clearWear() { wear.fill(0); ufer.fill(0); }
 function wearAt(x, z) {
   var i = clamp(Math.round(x + HALF), 0, VW - 1), j = clamp(Math.round(z + HALF), 0, VW - 1);
   return wear[j * VW + i] / 255;
+}
+/** Stempelt den nassen Uferstreifen — dieselbe Max-Regel und derselbe weiche
+ *  Auslauf wie stampWear, nur ins `ufer`-Feld. Gerufen von core/dirty.js
+ *  entlang des Uferzugs eines Sees (rebuildCorridors). */
+function stampUfer(x, z, r) {
+  var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
+  var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
+  for (var j = b0; j <= b1; j++) {
+    for (var i = a0; i <= a1; i++) {
+      var dx = (i - HALF) - x, dz = (j - HALF) - z;
+      var d = Math.sqrt(dx * dx + dz * dz);
+      if (d > r) continue;
+      var w = Math.round(sstep(r, r * 0.3, d) * 255);
+      var id = j * VW + i;
+      if (w > ufer[id]) ufer[id] = w;
+    }
+  }
+}
+function uferAt(x, z) {
+  var i = clamp(Math.round(x + HALF), 0, VW - 1), j = clamp(Math.round(z + HALF), 0, VW - 1);
+  return ufer[j * VW + i] / 255;
 }
 /**
  * I2: leitet die Biomflaechen-Elemente ins Gitter ab.
@@ -1340,7 +1420,8 @@ function setFlattenTarget(v) { flattenTarget = v; }
    Nutzerschalter, `terrainStufenStatistik` liefert Kennzahlen fuer die
    Statistikanzeige, `terrainIndexSatz` den geteilten Indexpuffer einer
    (Stufe, Randmuster)-Kombination fuer Testabzug und Debugansicht. */
-export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, patches as terrainPatches,
+export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt,
+  stampUfer, uferAt, terrain, patches as terrainPatches,
   initTerrain, terrainGeometrienNeu, terrainColor, computeAO,
   RELIEF_AB, RELIEF_VOLL, RELIEF_TIEFE, RELIEF_LICHT, reliefFaktor,
   RUHE_AB, RUHE_VOLL, RUHE_SPRENKEL, RUHE_DRIFT, ruheFaktor,

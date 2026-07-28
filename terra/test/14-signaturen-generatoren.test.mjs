@@ -650,9 +650,25 @@ test('I1 — das Kuestenband liegt auf der Wasserlinie', () => {
 /* Aufgenommen am 27.07.2026 mit genau der Schleife unten, BEVOR der
    Reliefzweig in terrainColor eingebaut wurde. Er ist der Beleg fuer die
    Zusage „unterhalb der Schwelle bitgleich zum Bestand" — jede Aenderung an
-   der Farbrechnung unterhalb von 600 m/Zelle bricht ihn. */
+   der Farbrechnung unterhalb der Schwelle bricht ihn.
+
+   NEU GEEICHT am 28.07.2026 (Runde J): die Beruhigung beginnt seither bei
+   RUHE_AB = 60 (UEBERGABE.koerper, die Uebergabe Koerper -> Karte) statt bei
+   600. Die Pruefpunkte dieser Zusage sind deshalb von 600/599.999 auf
+   60/59.999 gewandert — der HASH selbst ist derselbe geblieben, denn
+   unterhalb von 60 hat sich kein Float geaendert. Die Aussage bleibt gleich
+   stark: bitgleich unterhalb der Schwelle, wirksam oberhalb — nur liegt die
+   Schwelle jetzt dort, wo die Karte vom Koerper uebernimmt. */
 const FARBHASH_VOR_RELIEF =
   '496d7c63a8a64b2c0c68483eeedffedb4bdc71658bbb7c18b3f83720c83bdf10';
+/* Der zweite Teil der Neueichung: bei genau 600 war die Farbe frueher per
+   Hash an den Bestand genagelt; dieselbe Stelle ist jetzt voll beruhigt und
+   wird auf den NEUEN Zustand genagelt (aufgenommen am 28.07.2026, terra
+   Runde J, Seed 4711/wiese). Von 96 (RUHE_VOLL) bis 600 (RELIEF_AB) ist die
+   Rechnung konstant — die Beruhigung ist ausgereizt, die Schummerung hat
+   noch nicht begonnen —, deshalb haelt EIN Hash beide Pruefpunkte. */
+const FARBHASH_KARTE_RUHIG =
+  'd2db16f957fd17dbd6f3ba222eed68d60f3c9de4fc27e5bbc16033e68a093dfc';
 
 async function farbHash(m) {
   const w = await testWelt({ seed: 4711, biom: 'wiese' });
@@ -677,9 +693,19 @@ async function farbHash(m) {
 test('I1 — unterhalb der Schwelle ist die Terrainfarbe bitgleich zum Bestand', async () => {
   assert.equal(await farbHash(1), FARBHASH_VOR_RELIEF,
     'Die Farbrechnung auf Ortsmassstab hat sich geaendert');
-  assert.equal(await farbHash(600), FARBHASH_VOR_RELIEF,
+  // J: die Pruefpunkte lagen bei 600/599.999, solange dort die Beruhigung
+  // begann. Seit RUHE_AB = UEBERGABE.koerper liegen sie bei 60/59.999 —
+  // Begruendung bei FARBHASH_VOR_RELIEF.
+  assert.equal(await farbHash(60), FARBHASH_VOR_RELIEF,
     'Genau AUF der Schwelle darf noch nichts passieren');
-  assert.equal(await farbHash(599.999), FARBHASH_VOR_RELIEF);
+  assert.equal(await farbHash(59.999), FARBHASH_VOR_RELIEF);
+  // Und oberhalb ist sie WIRKSAM — dieselbe Staerke der Aussage wie vorher,
+  // jetzt beidseitig genagelt: der voll beruhigte Zustand haengt an seinem
+  // eigenen Hash, von RUHE_VOLL bis zum Beginn der Schummerung konstant.
+  assert.equal(await farbHash(96), FARBHASH_KARTE_RUHIG,
+    'Bei RUHE_VOLL muss die Beruhigung vollstaendig wirken');
+  assert.equal(await farbHash(600), FARBHASH_KARTE_RUHIG,
+    'Zwischen 96 und 600 darf sich nichts mehr aendern (Schummerung erst ab 600)');
 });
 
 test('I1 — der Reliefzweig blendet ein statt zu schalten', () => {
@@ -715,8 +741,9 @@ test('I1 — oberhalb der Schwelle schummert sie messbar und aus Nordwest', asyn
   };
   /* Gleiche Stelle, nur anderer Massstab: der Unterschied ist die
      Schummerung — und seit I6 zusaetzlich die Beruhigung (RUHE_AB in
-     world/terrain.js). Beide haengen am selben Band, beide sind unterhalb
-     von 600 m/Zelle exakt 0. */
+     world/terrain.js). Seit Runde J laufen die Baender getrennt (Beruhigung
+     ab 60, Schummerung ab 600); bei den Messpunkten 1 und 2000 sind beide
+     unterhalb bzw. oberhalb, die Messung traegt also unveraendert. */
   const messe = (x, z) => {
     const unten = farbe(x, z, 1), oben = farbe(x, z, 2000);
     return (oben.r + oben.g + oben.b) / (unten.r + unten.g + unten.b);

@@ -4,19 +4,27 @@ import { S, HALF, VW, VINE_R, clearElement, dropElement } from './store.js';
 import { lerp } from './rng.js';
 import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
-import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
+import { rivers, corridor, stampCorridor, stampWear, clearWear, stampUfer,
+  baseHeightAt,
   refreshTerrainFull, recomputeHeights, computeAO, refreshGrid,
   rebuildBiomFeld } from '../world/terrain.js';
 import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
   genBruch, bruchDaten, bruchMasse, brueche,
   bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
-// Runde H: die Korridorstempel des Binnensees.
-import { seeKorridore } from '../generators/see.js';
+// Runde H: die Korridorstempel des Binnensees. Runde J dazu: der geglaettete
+// Uferzug — an ihm haengt der nasse Uferstreifen (stampUfer, terrain.js).
+import { seeKorridore, seeUmriss } from '../generators/see.js';
 import { strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE,
   WERFT_QUERSUCHE } from '../generators/strukturen.js';
-import { genObjekt } from '../generators/objects.js';
+import { genObjekt, OBJEKT_ZEICHEN, POOL_ZEICHEN, punkteBox, streuWeite } from '../generators/objects.js';
 import { genRanke } from '../generators/vines.js';
+// Runde J: die vier neuen Reliefformen (Klippe, Schlucht, Pass, Krater).
+// Der Aufruf steht HIER und nicht in objects.js, damit dessen bestehende
+// Grat-/Gipfelkette (reliefZeichen) unangetastet bleibt — reliefFormZeichen
+// emittiert ausschliesslich die Formen, die objects.js nicht kennt, es kann
+// also nichts doppelt entstehen.
+import { reliefFormZeichen } from '../generators/zeichen.js';
 import { defaultsFor } from '../editor/tools.js';
 
 function genElement(el) {
@@ -39,7 +47,20 @@ function genElement(el) {
        Biommaske (siehe biomQuellen weiter unten), genau wie bei der
        Biomflaeche, die in genFlaeche ebenfalls durch alle Zweige faellt. */
   } else if (el.kind === "flaeche") genFlaeche(el);
-  else if (el.kind === "objekt") genObjekt(el);
+  else if (el.kind === "objekt") {
+    genObjekt(el);
+    /* J — Klippe, Schlucht, Pass und Krater einer Fels-Streuung. Dieselbe
+       Variantenwahl wie objektZeichen in objects.js (nurTyp gewinnt vor der
+       Gruppe), dieselbe Suchbox wie dessen Gratsuche (Klickpunkte plus
+       Streuweite). reliefFormZeichen prueft Massstab und Band selbst und
+       emittiert NUR die vier Formen, die reliefZeichen nicht kennt. */
+    if (el.points.length) {
+      var nurTyp = el.params && el.params.nurTyp;
+      var OZ = (nurTyp && POOL_ZEICHEN[nurTyp]) || OBJEKT_ZEICHEN[el.variant]
+        || OBJEKT_ZEICHEN.baeume;
+      if (OZ.relief) reliefFormZeichen(el, punkteBox(el.points, streuWeite(el)));
+    }
+  }
   else if (el.kind === "ranke") genRanke(el);
 }
 
@@ -148,6 +169,26 @@ function rebuildCorridors() {
          Griffpolygon — dazwischen liegt bei wenigen Punkten viel Wasser. */
       var seeK = seeKorridore(el);
       for (k = 0; k < seeK.length; k++) stampCorridor(seeK[k].x, seeK[k].z, seeK[k].r);
+      /* J — das nasse Ufer: ein Streifen `ufer`-Stempel entlang des
+         GEGLAETTETEN Uferzugs (nicht des Griffpolygons — dazwischen liegt
+         bei wenigen Griffen viel Wasser, dieselbe Begruendung wie bei den
+         Korridorstempeln). terrainColor zieht das Gras dort Richtung
+         nasser, dunkler Erde. Der Weg ueber DIESE Funktion ist der Punkt:
+         sie laeuft bei jedem schweren Commit und beim Laden komplett neu,
+         ein verschobener oder geloeschter See nimmt sein Ufer also mit —
+         kein Nebenzustand. Halber Stempelabstand zum Radius, damit der
+         Streifen lueckenlos bleibt. */
+      var uferR = 2.8;
+      var uz = seeUmriss(el);
+      for (k = 0; k < uz.length; k++) {
+        var ua = uz[k], ub = uz[(k + 1) % uz.length];
+        var ul = Math.hypot(ub.x - ua.x, ub.z - ua.z);
+        var un = Math.max(1, Math.ceil(ul / (uferR * 0.5)));
+        for (var uq = 0; uq < un; uq++) {
+          var ut = uq / un;
+          stampUfer(ua.x + (ub.x - ua.x) * ut, ua.z + (ub.z - ua.z) * ut, uferR);
+        }
+      }
     } else if (el.kind === "flaeche" && istStruktur(el.variant) && el.points.length >= 3) {
       /* Kompositstrukturen stempeln ihre TRAGENDEN Linien: Mauerring, Kai-
          flucht, Kreuzgangfluegel. Begruendung wie bei den Viertel-Gassen —
@@ -304,6 +345,10 @@ function stempelRadius(el) {
      stehen. Gleiche Warnung wie beim Bruch und beim Burgring. */
   if (el.kind === "flaeche" && el.variant === "biom") return (p.weich || 8) * 1.03 + 2;
   // Runde H: der See stempelt sein Korridorraster mit Radius 3 (see.js).
+  // Runde J: dazu der nasse Uferstreifen (stampUfer, Radius 2.8) — der
+  // Korridorradius bleibt der groessere. Dass der geglaettete Uferzug ueber
+  // die GRIFFbox hinausschwingen kann, faengt nicht dieser Radius, sondern
+  // elementBox ab: dort wird fuer den See der Uferzug selbst vermessen.
   if (el.kind === "flaeche" && el.variant === "see") return 3;
   return 3;   // erreicht isHeavy nie einen anderen Fall, bleibt aber definiert
 }
@@ -338,6 +383,15 @@ function elementBox(el) {
   if (el.kind === "pfad" && el.points.length >= 2) {
     var sm = pathSamples(el.points, 2.5);
     if (sm.length) pts = sm;
+  }
+  /* J — der See: sein Uferzug ist eine geschlossene Catmull-Rom-Kurve durch
+     die Griffe und kann an spitzen Ecken ueber die Griffbox hinausschwingen.
+     Der Uferstreifen wird ENTLANG dieser Kurve gestempelt; die Box muss also
+     die Kurve vermessen, nicht die Griffe — sonst bliebe beim Verschieben
+     ein Rest des alten nassen Saums stehen. */
+  if (el.kind === "flaeche" && el.variant === "see" && el.points.length >= 3) {
+    var uzb = seeUmriss(el);
+    if (uzb.length >= 3) pts = uzb;
   }
   var minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (var i = 0; i < pts.length; i++) {
@@ -472,8 +526,14 @@ function isHeavy(el) {
           el.variant === "biompinsel")) ||
          // I2: die Biomflaeche faerbt das Terrain und entscheidet ueber die
          // Bepflanzung — sie muss dieselbe Kette ausloesen wie ein Viertel.
+         // J: der See ist schwer, und das schliesst eine Luecke der Seen-Runde:
+         // seine Korridorstempel (rebuildCorridors) und seit J sein nasser
+         // Uferstreifen entstehen NUR in der schweren Kette. Ohne diesen
+         // Eintrag wurden beide erst beim naechsten fremden schweren Commit
+         // oder beim Laden gestempelt — ein frisch gezeichneter oder
+         // verschobener See sperrte nichts und traegt kein Ufer.
          (el.kind === "flaeche" && (el.variant === "viertel" || el.variant === "biom" ||
-          istStruktur(el.variant)));
+          el.variant === "see" || istStruktur(el.variant)));
 }
 
 
