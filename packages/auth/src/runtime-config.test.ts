@@ -9,6 +9,8 @@ import {
   isPublicExposureConfigured,
   isRequestSecure,
   originMatchesTrustedHost,
+  rebaseUrlOnPublicOrigin,
+  resolveFamilyPublicBaseUrl,
   resolvePortalSessionHref,
   resolveStudioSessionHref,
   resolveUweAppUrls,
@@ -299,6 +301,37 @@ describe("runtime config", () => {
       { currentApp: "studio" },
     );
     assert.equal(href, "/studio");
+  });
+});
+
+describe("family link target", () => {
+  it("falls back to the loopback default and honours NEXT_PUBLIC_FAMILY_URL", () => {
+    assert.equal(resolveFamilyPublicBaseUrl({}), "http://localhost:3004");
+    assert.equal(
+      resolveFamilyPublicBaseUrl({ NEXT_PUBLIC_FAMILY_URL: "https://family.uwe.example/" }),
+      "https://family.uwe.example",
+    );
+  });
+
+  it("rebases the loopback login redirect onto the public family origin", () => {
+    // Family binds to 127.0.0.1, so `request.nextUrl` carries the loopback host
+    // and port — a tunnel visitor would otherwise be sent to localhost:3004.
+    const rebased = rebaseUrlOnPublicOrigin(
+      new URL("http://localhost:3004/kitchen"),
+      "https://family.uwe.example",
+    );
+    assert.equal(rebased.toString(), "https://family.uwe.example/kitchen");
+  });
+
+  it("keeps the request URL for loopback and malformed public origins", () => {
+    assert.equal(
+      rebaseUrlOnPublicOrigin(new URL("http://localhost:3004/login"), "http://localhost:3004").toString(),
+      "http://localhost:3004/login",
+    );
+    assert.equal(
+      rebaseUrlOnPublicOrigin(new URL("http://localhost:3004/login"), "nicht-mal-eine-url").toString(),
+      "http://localhost:3004/login",
+    );
   });
 });
 

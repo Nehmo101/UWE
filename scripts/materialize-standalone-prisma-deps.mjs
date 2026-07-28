@@ -12,8 +12,10 @@ import process from "node:process";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 // Brain gehört dazu, seit es eigene public/-Assets ausliefert (Szenenbilder) —
-// ohne diesen Eintrag 404en sie im Standalone-Build.
-const APPS = ["studio", "portal", "brain"];
+// ohne diesen Eintrag 404en sie im Standalone-Build. Family ebenso: sie liest
+// die Family-Datenbank und wird auf dem Host aus dem Standalone-Output
+// gestartet (deploy/scripts/start-uwe.sh).
+const APPS = ["studio", "portal", "brain", "family"];
 const DEPLOY_DIR = path.join(ROOT, ".cache", "standalone-prisma-deps");
 
 function copyPath(src, dest, { dereference = false } = {}) {

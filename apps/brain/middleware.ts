@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { applySecurityHeaders, evaluateBrainMiddleware, resolveBrainPublicBaseUrl } from "@uwe/auth";
+import {
+  applySecurityHeaders,
+  evaluateBrainMiddleware,
+  rebaseUrlOnPublicOrigin,
+  resolveBrainPublicBaseUrl,
+} from "@uwe/auth";
 import type { SecurityHeaderOptions } from "@uwe/auth/security-headers";
 import { isBrainEntryEnabled, resolveBrainExposure } from "@/src/lib/exposure";
 
@@ -17,23 +22,10 @@ const BRAIN_SECURITY_HEADER_OPTIONS: SecurityHeaderOptions = { allowMicrophone: 
 // redirect onto it; local-only deployments (loopback origin) keep the raw URL,
 // which a local browser can still reach.
 function buildBrainLoginUrl(request: NextRequest, redirectPath: string, pathname: string): URL {
-  const loginUrl = request.nextUrl.clone();
-  const publicBase = resolveBrainPublicBaseUrl(process.env);
-  try {
-    const base = new URL(publicBase);
-    const host = base.hostname.toLowerCase();
-    if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
-      loginUrl.protocol = base.protocol;
-      // Set hostname and port separately: the URL `host` setter leaves an existing
-      // port in place when the new value omits one, which would keep Brain's raw
-      // :3102 (unreachable through the tunnel). `base.port` is "" for a default
-      // https origin, which correctly clears it.
-      loginUrl.hostname = base.hostname;
-      loginUrl.port = base.port;
-    }
-  } catch {
-    // Malformed public URL — fall back to the request-derived origin.
-  }
+  const loginUrl = rebaseUrlOnPublicOrigin(
+    request.nextUrl.clone(),
+    resolveBrainPublicBaseUrl(process.env),
+  );
   loginUrl.pathname = redirectPath;
   loginUrl.search = "";
   loginUrl.searchParams.set("redirect", pathname);

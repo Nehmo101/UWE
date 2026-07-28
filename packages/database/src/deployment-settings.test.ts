@@ -10,7 +10,7 @@ import {
   resolveCloudflareEdgeCredentials,
   sanitizeDeploymentSettingsForClient,
 } from "./deployment-settings";
-import { getTurnstileConfig } from "@uwe/auth";
+import { getTurnstileConfig, resolveFamilyPublicBaseUrl } from "@uwe/auth";
 
 describe("deployment settings", () => {
   afterEach(() => setRuntimeEnvOverrides(null));
@@ -126,6 +126,21 @@ describe("deployment settings", () => {
     assert.equal(overrides.CLOUDFLARE_TUNNEL, undefined);
     assert.ok(!("BRAIN_TUNNEL" in overrides));
     assert.ok(!("BRAIN_PUBLIC" in overrides));
+  });
+
+  it("Family origin becomes NEXT_PUBLIC_FAMILY_URL and reaches the link resolver", () => {
+    assert.equal(DEFAULT_DEPLOYMENT_SETTINGS.familyUrl, "");
+    // Unset = pure env fallback (the loopback default of resolveFamilyPublicBaseUrl).
+    assert.equal(resolveFamilyPublicBaseUrl({}), "http://localhost:3004");
+
+    const settings = normalizeDeploymentSettings({ familyUrl: " https://family.uwe.example " });
+    assert.equal(
+      buildDeploymentEnvOverrides(settings).NEXT_PUBLIC_FAMILY_URL,
+      "https://family.uwe.example",
+    );
+
+    applyDeploymentRuntimeOverrides(settings);
+    assert.equal(resolveFamilyPublicBaseUrl({}), "https://family.uwe.example");
   });
 
   it("public Brain exposure is carried through as an env override", () => {

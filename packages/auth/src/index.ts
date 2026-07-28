@@ -114,6 +114,7 @@ export {
   isRequestSecure,
   isSplitHostnameDeployment,
   originMatchesTrustedHost,
+  rebaseUrlOnPublicOrigin,
   resolveUweAppUrls,
   resolvePortalPublicBaseUrl,
   resolvePortalSessionHref,

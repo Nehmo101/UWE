@@ -11,10 +11,11 @@ export type ServiceState = "online" | "starting" | "stopped" | "error";
 /**
  * Vom Host verwaltete Dienste. „landing" ist die öffentliche Startseite auf dem
  * Apex-Origin (uwe.example) — ein eigener Prozess, damit die Hauptdomain
- * keinen Studio-Code ausliefert. Die Reihenfolge hier ist zugleich die Start-
- * und Anzeigereihenfolge im Command Center.
+ * keinen Studio-Code ausliefert. „family" ist der gemeinsame Haushaltsbereich
+ * (Häkchen `Family`). Die Reihenfolge hier ist zugleich die Start- und
+ * Anzeigereihenfolge im Command Center.
  */
-export const HOST_SERVICE_IDS = ["studio", "portal", "brain", "landing"] as const;
+export const HOST_SERVICE_IDS = ["studio", "portal", "brain", "family", "landing"] as const;
 
 export type HostServiceId = (typeof HOST_SERVICE_IDS)[number];
 

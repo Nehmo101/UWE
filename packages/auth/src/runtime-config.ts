@@ -263,6 +263,36 @@ export function resolveFamilyPublicBaseUrl(env: NodeJS.ProcessEnv = process.env)
   return explicit || DEV_FAMILY_URL;
 }
 
+/**
+ * Setzt eine aus der Anfrage abgeleitete URL auf die konfigurierte öffentliche
+ * Origin um. Brain und Family binden auf Loopback
+ * (`next start --hostname 127.0.0.1`), deshalb löst Next `request.nextUrl` auf
+ * `localhost:<port>` auf und ignoriert den weitergereichten Host-Header — ein
+ * daraus gebauter Redirect schickt Tunnel-Besucher auf ein unerreichbares
+ * `http://localhost:3004/login`.
+ *
+ * Ist eine echte (nicht-Loopback) öffentliche Origin konfiguriert, übernimmt sie
+ * Protokoll, Hostname und Port. Rein lokale Installationen behalten die
+ * unveränderte URL — die erreicht ein lokaler Browser weiterhin.
+ */
+export function rebaseUrlOnPublicOrigin(url: URL, publicBaseUrl: string): URL {
+  try {
+    const base = new URL(publicBaseUrl);
+    if (!isLoopbackUrl(base.toString())) {
+      url.protocol = base.protocol;
+      // Hostname und Port getrennt setzen: der `host`-Setter lässt einen
+      // vorhandenen Port stehen, wenn der neue Wert keinen nennt — die URL
+      // behielte sonst den Loopback-Port, der durch den Tunnel nicht
+      // erreichbar ist. `base.port` ist "" bei Standard-HTTPS und löscht ihn.
+      url.hostname = base.hostname;
+      url.port = base.port;
+    }
+  } catch {
+    // Malformed public URL — fall back to the request-derived origin.
+  }
+  return url;
+}
+
 /** Logged-in Portal entry — relative on Portal, absolute when linked from Studio. */
 export function resolvePortalSessionHref(
   env: NodeJS.ProcessEnv = process.env,
