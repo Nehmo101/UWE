@@ -506,6 +506,62 @@ describe("UWE backup and restore", () => {
     fs.rmSync(targetUploads, { recursive: true, force: true });
   });
 
+  it("volle Backups tragen den kompletten Brain-/Family-Export ohne Mail-Credentials", async () => {
+    const brainDb = createBrainPrismaClient();
+    const familyDb = createFamilyPrismaClient();
+
+    await brainDb.mailAccount.create({
+      data: {
+        label: "Hauptkonto",
+        smtpHost: "smtp.example.org",
+        username: "lasse@example.org",
+        passwordEnc: "enc:super-geheim",
+      },
+    });
+    await brainDb.mailDraft.create({
+      data: { subject: "Entwurf", bodyText: "Hallo" },
+    });
+    await familyDb.recipe.create({
+      data: { title: "Pfannkuchen", steps: [] },
+    });
+    await brainDb.$disconnect();
+    await familyDb.$disconnect();
+
+    const bundle = await createBackupBundle(databaseUrl, { type: "full" });
+
+    assert.ok(bundle.brainExport, "Full-Backup muss den Brain-Export enthalten");
+    assert.ok(bundle.familyExport, "Full-Backup muss den Family-Export enthalten");
+    assert.equal(bundle.manifest.includesBrainExport, true);
+    assert.equal(bundle.manifest.includesFamilyExport, true);
+    assert.ok(bundle.brainExport!.counts.MailAccount >= 1);
+    assert.ok(bundle.brainExport!.counts.MailDraft >= 1);
+    assert.ok(bundle.familyExport!.counts.Recipe >= 1);
+
+    // Credentials dürfen den Export nie verlassen — weder als Feld noch im JSON.
+    const exportedAccount = bundle.brainExport!.models.MailAccount[0] as Record<string, unknown>;
+    assert.equal("passwordEnc" in exportedAccount, false);
+    assert.equal("oauthTokenEnc" in exportedAccount, false);
+    assert.equal(exportedAccount.username, "lasse@example.org");
+    assert.equal(findSecretIssuesInJson(JSON.stringify(bundle)).length, 0);
+
+    // ZIP-Roundtrip: beide Exporte überleben Schreiben und Lesen.
+    const zipPath = path.join(backupsDir, "full-export-roundtrip.zip");
+    writeBackupZip(bundle, zipPath, uploadsRoot);
+    const reloaded = readBackupZip(fs.readFileSync(zipPath));
+    assert.ok(reloaded.brainExport);
+    assert.ok(reloaded.familyExport);
+    assert.ok(reloaded.brainExport!.counts.MailAccount >= 1);
+    assert.ok(reloaded.familyExport!.counts.Recipe >= 1);
+
+    // Welt-Backups bleiben schlank — kein Voll-Export.
+    const worldBundle = await createBackupBundle(databaseUrl, {
+      type: "world",
+      worldSlug,
+    });
+    assert.equal(worldBundle.brainExport, undefined);
+    assert.equal(worldBundle.familyExport, undefined);
+  });
+
   it("restores legacy archives without a daily admin section", async () => {
     const bundle = await createBackupBundle(databaseUrl, { type: "full" });
     delete bundle.data.dailyAdmin;

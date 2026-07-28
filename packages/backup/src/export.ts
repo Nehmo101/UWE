@@ -4,6 +4,9 @@ import { createPrismaClient } from "@uwe/database/server";
 import { createBrainPrismaClient } from "@uwe/database/brain-client";
 import { createFamilyPrismaClient } from "@uwe/database/family-client";
 import { collectBackupData } from "./collect";
+import { collectBrainExport, type BrainExportBundle } from "./brain-export";
+import { collectFamilyExport, type FamilyExportBundle } from "./family-export";
+import { sanitizeExportModels } from "./sanitize";
 import { readBackupZip, writeBackupZip } from "./archive";
 import { writeFileAtomic } from "./atomic-write";
 import {
@@ -48,6 +51,19 @@ export async function createBackupBundle(
       includePlayerNotes: options.includePlayerNotes,
     });
 
+    // Full backups additionally carry the COMPLETE Brain/Family exports.
+    // data.dailyAdmin covers only the models the selective restore knows; the
+    // Atlas teardown showed that everything outside it is unrecoverable after
+    // a destructive migration (terra-runde-j-atlas-abbau.md, Vorabbefund 1).
+    let brainExport: BrainExportBundle | undefined;
+    let familyExport: FamilyExportBundle | undefined;
+    if (options.type === "full") {
+      const rawBrain = await collectBrainExport(brainDb);
+      brainExport = { ...rawBrain, models: sanitizeExportModels(rawBrain.models) };
+      const rawFamily = await collectFamilyExport(familyDb);
+      familyExport = { ...rawFamily, models: sanitizeExportModels(rawFamily.models) };
+    }
+
     const manifest: BackupManifest = {
       version: "1.0",
       uweVersion: UWE_VERSION,
@@ -60,12 +76,14 @@ export async function createBackupBundle(
       includesAuthSessions: false,
       includesSettings: Boolean(settings),
       includesPlayerNotes: Boolean(options.includePlayerNotes && (data.playerNotes?.length ?? 0) > 0),
+      includesBrainExport: Boolean(brainExport),
+      includesFamilyExport: Boolean(familyExport),
       encrypted: Boolean(options.encrypt || encryptionKeyConfigured()),
       stats,
       assetFiles: [],
     };
 
-    const bundle: BackupBundle = { manifest, data, settings };
+    const bundle: BackupBundle = { manifest, data, settings, brainExport, familyExport };
     validateBackupBundleOrThrow(bundle);
     return bundle;
   } finally {
