@@ -105,6 +105,11 @@ function analysisLabel(progress: CampaignAnalysisProgress): string {
   if (progress.phase === "extracting") {
     return "Text wird aus der PDF extrahiert…";
   }
+  if (progress.phase === "ocr") {
+    return progress.totalChunks
+      ? `Lokale OCR liest die Seiten — ${progress.processedChunks} von ${progress.totalChunks} Blöcken`
+      : "Lokale OCR liest die Seiten…";
+  }
   if (!progress.totalChunks) {
     return "Lokale KI analysiert…";
   }
@@ -430,6 +435,11 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
       {preview?.errors.map((previewError) => (
         <Alert key={previewError} tone="danger" role="alert">
           {previewError}
+        </Alert>
+      ))}
+      {preview?.notes.map((note) => (
+        <Alert key={note} tone="info">
+          {note}
         </Alert>
       ))}
       {resultLabel ? (

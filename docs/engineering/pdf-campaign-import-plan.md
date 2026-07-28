@@ -239,7 +239,8 @@ lines and that `import-central-service.ts` is untouched.
   Mitigated by title dedupe, tolerant parser, "Erfinde nichts hinzu" prompt, and human
   preview + per-item selection + full undo before/after any write.
 
-**Left out of MVP:** OCR for scanned PDFs; D&D statblock/mechanics schemas (free-text `body`
+**Left out of MVP** (der OCR-Punkt ist inzwischen erledigt, siehe „Update: Unlimited-OCR"
+unten)**:** OCR for scanned PDFs; D&D statblock/mechanics schemas (free-text `body`
 only); any cloud opt-in; **new-campaign creation** (existing only); the async `ai_run` deferred
 job; a `targetCampaignId` FK column (metadata JSON instead); markdown/obsidian → campaign
 (PDF only).
@@ -270,3 +271,86 @@ Ausbau nach dem MVP (gleiche Privacy-Invarianten — alles weiterhin `local_rtx`
   Nutzer-Kontext und die extrahierten Entitäten an — bewusst **nur** an die lokale Inferenz;
   der Verlauf wird in `ImportJob.metadata.fitChat` persistiert (Reload-fest).
   Geteilte Payload-Reader liegen in `apps/studio/src/lib/campaign-import-payloads.ts`.
+
+## Update: Unlimited-OCR als Extraktionspfad
+
+Bewertung und Begründung: [docs/analysis/2026-07-28-unlimited-ocr-pdf-import.md](../analysis/2026-07-28-unlimited-ocr-pdf-import.md).
+
+Die Textgewinnung war die Qualitätsgrenze des Imports — nicht das lokale Modell.
+`extractPdfText` las nur den Textlayer: Scans scheiterten hart, und mehrspaltige
+Abenteuerbände wurden zu flachem Text in kaputter Lesereihenfolge, den der Chunker
+blind alle 6 000 Zeichen schnitt. Beides ist jetzt ersetzt.
+
+### Neues Package `packages/pdf-ocr`
+
+Rein (kein Prisma, kein AI-Router), Tests ohne RTX:
+
+| Datei | Aufgabe |
+|---|---|
+| `src/model.ts` | `UNLIMITED_OCR_MODEL`, `buildOcrPrompt`, `isUnlimitedOcrModel`, `resolveDocumentOcrModel` |
+| `src/text-layer.ts` | `assessTextLayer` — `usable` / `absent` / `sparse` / `garbled` |
+| `src/render.ts` | `renderPdfPages`, `readPdfPageCount` (pdf-parse `getScreenshot`) |
+| `src/plan.ts` | `planOcrPages` — `MAX_OCR_PAGES = 120`, `OCR_PAGES_PER_JOB = 4` |
+| `src/markers.ts` | `stripDetectionMarkers` — trennt Markdown von `<|det|>`-Boxen |
+
+**Keine neue Abhängigkeit.** `pdf-parse@2.4.5` war bereits im Baum und bringt
+`@napi-rs/canvas` mit; das Rendern von PDF-Seiten braucht weder pdfjs-dist noch
+mupdf noch poppler. Verkleinert wird mit dem vorhandenen `downscaleImageForVision`.
+
+### Datenfluss
+
+```
+PDF → readPdfTextLayer  ──usable──→  Text (schneller Weg, unverändert)
+          │
+          └─absent/sparse/garbled─→ planOcrPages → renderPdfPages
+                → downscaleImageForVision → vision_extract (Unlimited-OCR)
+                → stripDetectionMarkers → joinOcrPages → Markdown
+                                                    ↓
+                              chunkCampaignText (Überschriften statt 6 000 Zeichen)
+                                                    ↓
+                                    routeAiRequest(local_rtx) wie bisher
+```
+
+Orchestrierung: `apps/studio/src/lib/campaign-pdf-ocr.ts` (`acquireCampaignPdfText`).
+Das Package bleibt rein; Prisma und Connector hängen nur an der Studio-Seite.
+
+### Ersetzte Standards
+
+| Vorher | Jetzt |
+|---|---|
+| `PdfExtractError` ohne Code | `PdfExtractErrorCode` + `isMissingTextLayerError` — der OCR-Fallback hängt nicht mehr an einer Fehlermeldung |
+| Harter Abbruch bei textloser PDF | `readPdfTextLayer` liefert Text + Seitenzahl, ohne zu werfen |
+| `chunkPdfText` blind alle 6 000 Zeichen | `chunkCampaignText` → Überschriften-Schnitt, sobald Struktur da ist |
+| `vision_extract` Default `llava` | Unlimited-OCR; `VISION_MODEL_PATTERNS` kennt `unlimited-ocr` und `deepseek-ocr` |
+| Scan-Inbox mit generischem Vision-Prompt | derselbe `buildOcrPrompt` + dasselbe Modell wie der Kampagnen-Import |
+| Vorschau kannte nur `errors` (rot) | zusätzlich `notes` (`tone="info"`) für OCR-Herkunft, Seiten-Cap, leere Seiten |
+
+### Betrieb (Self-Service)
+
+Die Modellwahl läuft über den **bestehenden `vision`-Workflow-Slot**
+(Command Center → Modelle). Kein neues Setting, keine host-lesbare Datei: der
+Modellname reist im `vision_extract`-Payload zum Connector. Einziger manueller
+Host-Schritt bleibt einmalig:
+
+```bash
+ollama pull frob/unlimited-ocr:q8_0
+```
+
+Ohne gesetzten Slot gilt `UNLIMITED_OCR_MODEL` als Vorgabe. Steht dort ein
+generisches Vision-Modell, läuft der Import weiter — die Vorschau weist dann
+aber darauf hin, dass die Layout-Treue eingeschränkt ist.
+
+### Grenzen
+
+- **Kein Fortschritt innerhalb eines Batches.** Vier Seiten sind eine Einheit;
+  der Balken springt pro Block, nicht pro Seite.
+- **`MAX_OCR_PAGES = 120`.** Darüber wird abgeschnitten und in `notes` gemeldet —
+  nicht still. Grund: `LANE_CONCURRENCY.gpu = 1`, ein 400-Seiten-Band würde den
+  Connector für alle anderen Aufgaben blockieren.
+- **Die Analyse läuft weiterhin synchron in der Server Action.** Für große
+  Bände wäre der `Job`-Runner der richtige Ort; das ist bewusst nicht Teil
+  dieser Runde.
+- **`regions` werden erfasst, aber noch nicht zugeschnitten.** Karten und
+  Abbildungen landen als Zähler in `extractionMeta`; der Zuschnitt über
+  `@uwe/assets` ist der nächste sinnvolle Schritt.
+- **Ollama muss llama.cpp ≥ Build 168 tragen**, sonst lädt das Modell nicht.

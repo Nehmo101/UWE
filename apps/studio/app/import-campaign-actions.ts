@@ -6,16 +6,16 @@ import {
   createImportJobService,
   createUndoService,
   createUweRepositoryFromClient,
-  extractPdfText,
   pickUniqueSlug,
   prisma,
   slugifyPageTitle,
 } from "@uwe/database/server";
+import { acquireCampaignPdfText, type CampaignOcrProgress } from "@/src/lib/campaign-pdf-ocr";
 import { brainPrisma } from "@uwe/database/brain-client";
 import {
   buildCampaignExtractionPrompt,
   buildCampaignPreview,
-  chunkPdfText,
+  chunkCampaignText,
   dedupeEntitiesByTitle,
   entityToCreatePageInput,
   MAX_CAMPAIGN_CONTEXT_CHARACTERS,
@@ -151,8 +151,29 @@ export async function previewImportCampaignPdfJobAction(
       totalChunks: null,
       startedAt,
     });
-    const text = await extractPdfText(buffer, { maxBytes: MAX_CAMPAIGN_PDF_BYTES });
-    const chunks = chunkPdfText(text);
+    const acquired = await acquireCampaignPdfText({
+      buffer,
+      maxBytes: MAX_CAMPAIGN_PDF_BYTES,
+      ...(job.targetWorldId ? { worldId: job.targetWorldId } : {}),
+      onOcrProgress: async (ocrProgress: CampaignOcrProgress) => {
+        await writeProgress(jobId, {
+          phase: "ocr",
+          processedChunks: ocrProgress.processedBatches,
+          totalChunks: ocrProgress.totalBatches,
+          startedAt,
+        });
+      },
+    });
+    const text = acquired.text;
+    if (!text.trim()) {
+      return markPreviewFailed(
+        jobId,
+        "Aus der PDF ließ sich kein Text gewinnen — weder Textlayer noch OCR haben etwas geliefert.",
+      );
+    }
+    // Überschriften-Schnitt, sobald die Extraktion Struktur liefert (OCR-Pfad);
+    // bei flachem Textlayer bleibt es beim bisherigen Absatz-Schnitt.
+    const chunks = chunkCampaignText(text);
     const useMock = process.env.NODE_ENV !== "production" && process.env.AI_USE_MOCK === "true";
     const repo = createUweRepositoryFromClient(prisma);
     const extracted: ExtractedCampaignEntity[] = [];
@@ -191,7 +212,7 @@ export async function previewImportCampaignPdfJobAction(
     }
 
     const entities = dedupeEntitiesByTitle(extracted);
-    const basePreview = buildCampaignPreview(entities);
+    const basePreview = buildCampaignPreview(entities, acquired.notes);
     const preview =
       entities.length > 0
         ? basePreview
@@ -203,6 +224,10 @@ export async function previewImportCampaignPdfJobAction(
     const processedCharacters = chunks.reduce((total, chunk) => total + chunk.length, 0);
     const extractionMeta = {
       aiRoute: "local_rtx",
+      textSource: acquired.source,
+      ocrModel: acquired.model,
+      pageCount: acquired.pageCount,
+      detectedRegions: acquired.regions.length,
       chunkCount: chunks.length,
       maxChunks: MAX_CHUNKS,
       sourceCharacters: text.length,
@@ -226,6 +251,8 @@ export async function previewImportCampaignPdfJobAction(
     revalidatePath("/import");
     return { preview: toCampaignPreviewSummary(preview) };
   } catch (error) {
+    // CampaignOcrUnavailableError trägt bereits eine fertige Nutzermeldung und
+    // fällt hier unter `instanceof Error`.
     const message =
       error instanceof AiRouterError
         ? "Lokale RTX ist offline — der Kampagnen-Import kann nicht in die Cloud ausweichen."

@@ -844,9 +844,12 @@ export {
 
 export {
   extractPdfText,
+  isMissingTextLayerError,
   normalizePdfTextForImport,
   PdfExtractError,
+  readPdfTextLayer,
 } from "./pdf-text-extract";
+export type { PdfExtractErrorCode, PdfTextLayer } from "./pdf-text-extract";
 
 export {
   createGameSessionService,

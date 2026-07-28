@@ -18,8 +18,13 @@ import {
 export const CAMPAIGN_PREVIEW_KIND = "campaign_entities";
 export const CAMPAIGN_PROGRESS_KIND = "campaign_analysis_progress";
 
+/** Phasen einer Analyse. `ocr` läuft nur, wenn der Textlayer nicht taugt. */
+export const CAMPAIGN_ANALYSIS_PHASES = ["extracting", "ocr", "analyzing"] as const;
+
+export type CampaignAnalysisPhase = (typeof CAMPAIGN_ANALYSIS_PHASES)[number];
+
 export interface CampaignAnalysisProgress {
-  phase: "extracting" | "analyzing";
+  phase: CampaignAnalysisPhase;
   processedChunks: number;
   totalChunks: number | null;
   startedAt: string;
@@ -84,13 +89,13 @@ export function readStoredPreview(previewPayload: unknown): CampaignImportPrevie
   if (!record || !entities) {
     return null;
   }
-  const preview = buildCampaignPreview(entities);
-  const errors = Array.isArray(record.errors)
-    ? record.errors.filter((error): error is string => typeof error === "string")
-    : [];
+  const stringList = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+
+  const preview = buildCampaignPreview(entities, stringList(record.notes));
   return {
     ...preview,
-    errors,
+    errors: stringList(record.errors),
     canExecute: preview.canExecute && record.canExecute !== false,
   };
 }
@@ -107,7 +112,7 @@ export function readAnalysisProgress(previewPayload: unknown): CampaignAnalysisP
   if (record?.kind !== CAMPAIGN_PROGRESS_KIND) {
     return null;
   }
-  const phase = record.phase === "extracting" || record.phase === "analyzing" ? record.phase : null;
+  const phase = CAMPAIGN_ANALYSIS_PHASES.find((candidate) => candidate === record.phase) ?? null;
   if (!phase) {
     return null;
   }

@@ -151,7 +151,7 @@ Advertised today:
 | `llm_local` | A reachable Ollama model reports `chat`. |
 | `image_generation` | `UWE_CONNECTOR_IMAGE_CMD` is configured and image jobs are not disabled. |
 | `embedding_local` | A reachable Ollama model reports `embeddings`. |
-| `vision_local` | A reachable, UWE-enabled model is vision-capable. |
+| `vision_local` | A reachable, UWE-enabled model is vision-capable — either Ollama reports the `vision` capability, or the model name matches a known family (`unlimited-ocr`, `deepseek-ocr`, `llava`, `minicpm-v`, `qwen2.5-vl`, `moondream`, `bakllava`, `llama3.2-vision`). |
 | `stt_local` | `UWE_CONNECTOR_STT_CMD` is configured and `UWE_CONNECTOR_STT` is not `false`. |
 | `file_cache` | Never in practice — the name is protocol-reserved, but no `file_cache` job type or executor exists yet. Keep it disabled. |
 | `system_info` | Enabled by default for connector maintenance/model refresh. |
@@ -270,3 +270,27 @@ checklist above instead of expecting green physical-print E2E in GitHub Cloud.
 See [connector-security.md](connector-security.md). Unknown capability names are
 normalized away, and host/admin `allowedCapabilities` can now cap the effective
 capabilities that a connector may use for queue claims.
+
+## Document OCR (Unlimited-OCR)
+
+Most `vision_extract` work in UWE is document parsing — the PDF→campaign import
+and the Family scan inbox — not general image description. Both send
+[baidu/Unlimited-OCR](https://github.com/baidu/Unlimited-OCR) (MIT) as the
+`model` in the job payload, so the connector needs it locally:
+
+```bash
+ollama pull frob/unlimited-ocr:q8_0    # ~4 GB, 32K context, text + image
+```
+
+Requires an Ollama built on llama.cpp **build 168 (2026-07-01) or newer** — the
+architecture was mainlined in PR #24969. Older builds fail to load the model.
+
+The model is chosen through the existing **`vision` workflow slot** (Command
+Center → Modelle), so it is configurable from UWE with no extra host step. With
+no slot default set, `UNLIMITED_OCR_MODEL` applies. A generic vision model in
+that slot still works, but the campaign import preview will note that layout
+fidelity is reduced.
+
+Prompts come from `@uwe/pdf-ocr` (`buildOcrPrompt`): Unlimited-OCR gets the
+prompt it was trained on (`<image>document parsing.`), anything else gets a
+plain-language instruction instead — the `<image>` token would only confuse it.
