@@ -1,4 +1,4 @@
-import type { AiTaskType, ContextAudience } from "@uwe/security/inference";
+import type { AiTaskType } from "@uwe/security/inference";
 
 export const AI_BRAIN_VERSION = "1.0.0";
 
@@ -17,7 +17,6 @@ export type AiProviderId =
 // keep the same import paths and type identity.
 export type {
   AiTaskType,
-  ContextAudience,
   AiContextBlock,
   AiContextRelation,
   AiContextBacklink,
@@ -107,7 +106,6 @@ export interface BuildAiContextOptions {
   datenschutzMode?: boolean;
   localOnly?: boolean;
   sessionId?: string;
-  audience?: ContextAudience;
   /** User/task text for semantic brain retrieval (reduces full-document dumps). */
   retrievalQuery?: string;
 }

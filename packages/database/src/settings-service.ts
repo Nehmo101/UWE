@@ -24,7 +24,6 @@ import {
   normalizeCustomThemes,
   type CustomThemeRecord,
 } from "./custom-theme-preferences";
-import { normalizeHiddenNavIds } from "./settings-validation-helpers";
 import { buildProviderKeyPlaceholders } from "./settings-service-providers";
 
 // Abwärtskompatible öffentliche API: extrahierte Helfer über dieses Modul re-exportieren.
@@ -89,8 +88,6 @@ export interface AppSettings {
   lastActiveWorldSlug?: string | null;
   /** UWE_VERSION the owner last acknowledged on the Startklar page. */
   startklarSeenVersion?: string | null;
-  /** Sidebar nav item ids hidden via System → Navigation (persisted in DB). */
-  hiddenNavIds?: string[];
 }
 
 export interface WorldSettings {
@@ -228,20 +225,15 @@ export interface MailSettings {
 
 export interface ImageStudioPortalSettings {
   enabled?: boolean;
-  defaultProviderMode?: "auto" | "local_rtx" | "cloud";
-  allowCloud?: boolean;
   backgroundRemovalEnabled?: boolean;
 }
 
 export interface ImageStudioSettings {
   enabled: boolean;
-  defaultProviderMode: "auto" | "local_rtx" | "cloud";
-  allowCloud: boolean;
   backgroundRemovalEnabled: boolean;
   rtxAgentConfigured: boolean;
   connectorImageEnabled: boolean;
   localImageBackendReady: boolean;
-  cloudApiKeyConfigured: boolean;
   source: "portal" | "env";
   message: string;
 }
@@ -291,14 +283,8 @@ function readImageStudioSettingsInput(stored: unknown): ImageStudioPortalSetting
     return undefined;
   }
   const imageStudio = stored as Record<string, unknown>;
-  const provider = imageStudio.defaultProviderMode;
   return {
     enabled: typeof imageStudio.enabled === "boolean" ? imageStudio.enabled : undefined,
-    defaultProviderMode:
-      provider === "auto" || provider === "local_rtx" || provider === "cloud"
-        ? provider
-        : undefined,
-    allowCloud: typeof imageStudio.allowCloud === "boolean" ? imageStudio.allowCloud : undefined,
     backgroundRemovalEnabled:
       typeof imageStudio.backgroundRemovalEnabled === "boolean"
         ? imageStudio.backgroundRemovalEnabled
@@ -310,13 +296,10 @@ function buildImageStudioSettings(stored?: ImageStudioPortalSettings): ImageStud
   const status = resolveImageStudioConfigStatus(process.env, stored);
   return {
     enabled: status.enabled,
-    defaultProviderMode: status.defaultProviderMode,
-    allowCloud: status.allowCloud,
     backgroundRemovalEnabled: status.backgroundRemovalEnabled,
     rtxAgentConfigured: status.rtxAgentConfigured,
     connectorImageEnabled: status.connectorImageEnabled,
     localImageBackendReady: status.localImageBackendReady,
-    cloudApiKeyConfigured: status.cloudApiKeyConfigured,
     source: status.source,
     message: status.message,
   };
@@ -423,7 +406,6 @@ function normalizeAppSettings(app: AppSettings): AppSettings {
     frostedGlass: app.frostedGlass !== false,
     motionEnabled: app.motionEnabled !== false,
     defaultLandingPage: normalizeDefaultLandingPage(app.defaultLandingPage),
-    hiddenNavIds: normalizeHiddenNavIds(app.hiddenNavIds),
     themePreferences: normalizeAppThemePreferences(app.themePreferences),
     customThemes: normalizeCustomThemes(app.customThemes),
   };
@@ -439,7 +421,6 @@ export const DEFAULT_SYSTEM_SETTINGS: UweSystemSettings = {
     favoriteWorldSlug: null,
     lastActiveWorldSlug: null,
     startklarSeenVersion: null,
-    hiddenNavIds: [],
     customThemes: [],
     themePreferences: {
       studio: {
@@ -622,8 +603,6 @@ function normalizeSettings(settings: UweSystemSettings): UweSystemSettings {
     }),
     imageStudio: buildImageStudioSettings({
       enabled: settings.imageStudio.enabled,
-      defaultProviderMode: settings.imageStudio.defaultProviderMode,
-      allowCloud: settings.imageStudio.allowCloud,
       backgroundRemovalEnabled: settings.imageStudio.backgroundRemovalEnabled,
     }),
     privacy: {
@@ -780,9 +759,6 @@ export class SettingsService {
       }),
       imageStudio: buildImageStudioSettings({
         enabled: update.imageStudio?.enabled ?? current.imageStudio.enabled,
-        defaultProviderMode:
-          update.imageStudio?.defaultProviderMode ?? current.imageStudio.defaultProviderMode,
-        allowCloud: update.imageStudio?.allowCloud ?? current.imageStudio.allowCloud,
         backgroundRemovalEnabled:
           update.imageStudio?.backgroundRemovalEnabled ??
           current.imageStudio.backgroundRemovalEnabled,

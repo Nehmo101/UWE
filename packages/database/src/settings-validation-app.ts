@@ -1,6 +1,6 @@
 import type { BackgroundPattern, ThemeAppearance, UweSystemSettingsUpdate } from "./settings-service";
 import { BACKGROUND_PATTERN_VALUES, STUDIO_LANDING_PAGE_PATHS } from "./settings-service";
-import { isRecord, parseHiddenNavIdsUpdate, requireBoolean, requireEnum, validateSection } from "./settings-validation-helpers";
+import { isRecord, requireBoolean, requireEnum, validateSection } from "./settings-validation-helpers";
 
 const THEME_VALUES = new Set<ThemeAppearance>(["dark", "light", "system"]);
 const BACKGROUND_PATTERN_SET = new Set<BackgroundPattern>(BACKGROUND_PATTERN_VALUES);
@@ -14,7 +14,6 @@ const APP_KEYS = new Set([
   "defaultLandingPage",
   "favoriteWorldSlug",
   "lastActiveWorldSlug",
-  "hiddenNavIds",
 ]);
 
 export function validateAppSettingsSection(
@@ -100,12 +99,6 @@ export function validateAppSettingsSection(
         typeof appBody.lastActiveWorldSlug === "string"
           ? appBody.lastActiveWorldSlug.trim() || null
           : null;
-    }
-  }
-  if (appBody.hiddenNavIds !== undefined) {
-    const hiddenNavIds = parseHiddenNavIdsUpdate(appBody.hiddenNavIds, appErrors);
-    if (hiddenNavIds !== undefined) {
-      app.hiddenNavIds = hiddenNavIds;
     }
   }
 

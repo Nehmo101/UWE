@@ -31,7 +31,7 @@ import {
   type ImageProviderMode,
 } from "@uwe/image-studio";
 import type { CreateUsageLogInput } from "@uwe/database/server";
-import { buildGatewayImageProviderConfig } from "./aiGatewayImageConfig";
+import { resolveConnectorAwareImageProviderConfig } from "./aiGatewayImageConfig";
 import { createGatewayApiKeyStore } from "./apiKeyStore";
 
 export { createGatewayApiKeyStore } from "./apiKeyStore";
@@ -284,8 +284,6 @@ async function prepareAiGatewayExecution(
   config: AiGatewayConfigRecord;
   privacyCategory: AiFeatureCategory;
   privacyLevel: AiPrivacyLevel;
-  cloudFallbackAllowed: boolean;
-  effectiveProviderMode: "auto" | "local_rtx" | "cloud";
 }> {
   await gateway.assertFeatureAccess({
     userId: input.user.userId,
@@ -307,13 +305,7 @@ async function prepareAiGatewayExecution(
 
   assertGatewayEnabled(config);
 
-  return {
-    config,
-    privacyCategory,
-    privacyLevel,
-    cloudFallbackAllowed: false,
-    effectiveProviderMode: "local_rtx" as AiProviderMode,
-  };
+  return { config, privacyCategory, privacyLevel };
 }
 
 /**
@@ -335,25 +327,14 @@ export async function executeAiGatewayImageRequest(
     requestedProviderMode: request.providerMode,
   });
 
-  const imageConfig = await buildGatewayImageProviderConfig(
-    gateway,
-    prepared.cloudFallbackAllowed,
-    prepared.privacyLevel,
-    prepared.config,
-  );
+  const imageConfig = await resolveConnectorAwareImageProviderConfig();
 
   let result: ImageStudioResult | undefined;
   let success = true;
   let errorMessage: string | undefined;
 
   try {
-    result = await runImageStudioTask(
-      {
-        ...request,
-        providerMode: prepared.effectiveProviderMode,
-      },
-      imageConfig,
-    );
+    result = await runImageStudioTask({ ...request, providerMode: "local_rtx" }, imageConfig);
     if (!result.success) {
       success = false;
       errorMessage = result.error ?? "Bildgenerierung fehlgeschlagen.";
@@ -365,28 +346,19 @@ export async function executeAiGatewayImageRequest(
     throw error;
   } finally {
     const durationMs = Date.now() - started;
-    const route =
-      result?.providerUsed === "cloud"
-        ? "cloud"
-        : result?.providerUsed === "local_rtx"
-          ? "local_rtx"
-          : "unknown";
+    const route = result?.providerUsed === "local_rtx" ? "local_rtx" : "unknown";
     const logInput: CreateUsageLogInput = {
       userId: request.user.userId,
       feature,
       taskType: `image_${request.task}`,
       provider: result?.providerUsed ?? "unknown",
-      model: imageConfig.cloudModel ?? "image-studio",
+      model: "image-studio",
       route,
       contextMode: request.contextMode ?? "prompt_only",
       inputTokens: null,
       outputTokens: null,
-      estimatedCostUsd: estimateCostUsd({
-        providerId: "openai",
-        route,
-        promptChars: request.prompt.length + (request.contextSnippet?.length ?? 0),
-        resultChars: result?.imageBase64 ? Math.ceil(result.imageBase64.length * 0.75) : 0,
-      }),
+      // Der RTX-Host kostet nichts — das Feld bleibt für die Historie.
+      estimatedCostUsd: 0,
       success,
       errorMessage: success ? undefined : errorMessage,
       durationMs,
@@ -402,7 +374,7 @@ export async function executeAiGatewayImageRequest(
     ...result,
     gatewayMeta: {
       routingMode: prepared.config.routingMode,
-      cloudFallbackUsed: result.providerUsed === "cloud",
+      cloudFallbackUsed: false,
       privacyCategory: prepared.privacyCategory,
       privacyLevel: prepared.privacyLevel,
       durationMs: Date.now() - started,

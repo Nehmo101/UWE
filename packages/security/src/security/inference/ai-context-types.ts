@@ -48,7 +48,6 @@ export type AiTaskType =
  * anything: per-item visibility is gone, so a context contains whatever the
  * world contains.
  */
-export type ContextAudience = "dm_internal" | "player_visible" | "mail";
 
 export interface AiContextBlock {
   blockId: string;
@@ -121,7 +120,6 @@ export interface AiContextDebugItem {
 }
 
 export interface AiContextDebug {
-  audience: ContextAudience;
   maxChars: number;
   totalChars: number;
   truncated: boolean;

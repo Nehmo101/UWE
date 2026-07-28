@@ -2,52 +2,48 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   assembleImageStudioPrompt,
-  ImageStudioPrivacyError,
+  isLocalOnlyImageContext,
   scanPromptForPrivateDataLeak,
-  validateImageContextForProvider,
 } from "./prompt-privacy";
 
-describe("image studio prompt privacy", () => {
-  it("blocks cloud with private page context unless approved", () => {
-    assert.throws(
-      () => validateImageContextForProvider("cloud", "page_context"),
-      ImageStudioPrivacyError,
-    );
-  });
-
-  it("allows cloud with prompt_only context", () => {
-    assert.doesNotThrow(() => validateImageContextForProvider("cloud", "prompt_only"));
-  });
-
-  it("strips private context for cloud provider", () => {
+describe("image studio prompt assembly", () => {
+  it("hängt den Kontext an, wenn einer gewählt ist", () => {
     const result = assembleImageStudioPrompt({
       prompt: "A forest temple",
       contextMode: "brain_context",
-      contextSnippet: "Secret villain: Malachar",
-      providerMode: "cloud",
-      resolvedProvider: "cloud",
+      contextSnippet: "Der Tempel gehört den Grauen Wächtern",
     });
+    assert.equal(result.contextIncluded, true);
+    assert.match(result.prompt, /\[Kontext: Der Tempel gehört den Grauen Wächtern\]/);
+  });
 
+  it("lässt den Prompt in Ruhe, wenn kein Kontext gewählt ist", () => {
+    const result = assembleImageStudioPrompt({
+      prompt: "  A forest temple  ",
+      contextMode: "prompt_only",
+      contextSnippet: "wird ignoriert",
+    });
     assert.equal(result.contextIncluded, false);
     assert.equal(result.prompt, "A forest temple");
-    assert.ok(result.warnings.length > 0);
   });
 
-  it("includes context for local RTX", () => {
-    const result = assembleImageStudioPrompt({
-      prompt: "A forest temple",
-      contextMode: "page_context",
-      contextSnippet: "Ancient elven ruins",
-      providerMode: "local_rtx",
-      resolvedProvider: "local_rtx",
-    });
+  it("kennt die Kontexte mit privaten Inhalten", () => {
+    assert.equal(isLocalOnlyImageContext("brain_context"), true);
+    assert.equal(isLocalOnlyImageContext("prompt_only"), false);
+  });
+});
 
-    assert.equal(result.contextIncluded, true);
-    assert.match(result.prompt, /Ancient elven ruins/);
+describe("scanPromptForPrivateDataLeak", () => {
+  it("meldet eingebettete Kontext-Blöcke und Brain-Referenzen", () => {
+    assert.deepEqual(scanPromptForPrivateDataLeak("[Kontext: irgendwas]"), [
+      "Eingebetteter Kontext-Block im Prompt",
+    ]);
+    assert.deepEqual(scanPromptForPrivateDataLeak("aus dem life-brain"), [
+      "Brain/Welt-Referenz im Prompt",
+    ]);
   });
 
-  it("detects private data markers in cloud prompts", () => {
-    const warnings = scanPromptForPrivateDataLeak("Generate art for dm_only NPC Malachar");
-    assert.ok(warnings.length > 0);
+  it("meldet nichts bei einem gewöhnlichen Prompt", () => {
+    assert.deepEqual(scanPromptForPrivateDataLeak("Ein Drache über einem See"), []);
   });
 });

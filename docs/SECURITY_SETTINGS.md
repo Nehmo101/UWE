@@ -45,12 +45,11 @@ Sicherheitsrichtlinien für neue UWE-Integrationen (Image Studio, Kalender, DnD 
 ## Empfehlungen Production
 
 ```env
-IMAGE_STUDIO_ALLOW_CLOUD=false
 AGENT_JOBS_AUTO_MERGE=false
 AGENT_JOBS_ENABLED=true  # nur wenn GitHub Token gesetzt
 STUDIO_API_TOKEN=<strong-random>
 SESSION_COOKIE_SECURE=true
-AI_LOCAL_ONLY=true  # für Brain — Image Studio separat steuerbar
+AI_LOCAL_ONLY=true  # ohnehin der einzige Weg — alles läuft über den RTX-Host
 ```
 
 ## Audit

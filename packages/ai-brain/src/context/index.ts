@@ -9,9 +9,6 @@ export {
 } from "./context-builder";
 
 export { resolveContextBuilderConfig, type ContextBuilderConfig } from "./config";
-export {
-  resolveContextAudience,
-} from "./visibility";
 export { truncateContextPages, serializePageForBudget } from "./budget";
 export {
   buildContextDebug,

@@ -1,12 +1,18 @@
-import type { ImageProviderMode } from "./index";
-
-/** Context modes for Image Studio prompt assembly. */
+/** Kontext-Modi beim Zusammenbauen eines Image-Studio-Prompts. */
 export type ImageStudioPromptContextMode =
   | "prompt_only"
   | "page_context"
   | "brain_context"
   | "object_context";
 
+/**
+ * Kontexte, die private Inhalte mitschicken.
+ *
+ * Solange der einzige Weg der lokale RTX-Host ist, verlässt keiner davon das
+ * Haus — die Unterscheidung bleibt trotzdem, weil sie beschreibt, *was* im
+ * Prompt steht, und weil ein zweiter Weg sonst unbemerkt privaten Kontext
+ * mitnehmen könnte.
+ */
 export const LOCAL_ONLY_IMAGE_CONTEXT_MODES: ImageStudioPromptContextMode[] = [
   "page_context",
   "brain_context",
@@ -14,7 +20,7 @@ export const LOCAL_ONLY_IMAGE_CONTEXT_MODES: ImageStudioPromptContextMode[] = [
 ];
 
 export const IMAGE_CONTEXT_MODE_LABELS: Record<ImageStudioPromptContextMode, string> = {
-  prompt_only: "Nur Prompt (Cloud-sicher)",
+  prompt_only: "Nur Prompt",
   page_context: "Seiten-Kontext",
   brain_context: "Brain/Welt-Kontext",
   object_context: "Aktuelles Objekt",
@@ -27,35 +33,14 @@ export class ImageStudioPrivacyError extends Error {
   }
 }
 
-export function isCloudImageProvider(mode: ImageProviderMode): boolean {
-  return mode === "cloud";
-}
-
 export function isLocalOnlyImageContext(mode: ImageStudioPromptContextMode): boolean {
   return LOCAL_ONLY_IMAGE_CONTEXT_MODES.includes(mode);
-}
-
-export function validateImageContextForProvider(
-  providerMode: ImageProviderMode,
-  contextMode: ImageStudioPromptContextMode,
-  options?: { cloudContextApproved?: boolean },
-): void {
-  if (!isCloudImageProvider(providerMode)) return;
-
-  if (isLocalOnlyImageContext(contextMode) && !options?.cloudContextApproved) {
-    throw new ImageStudioPrivacyError(
-      `Cloud-Bildgenerierung darf keinen privaten Kontext („${IMAGE_CONTEXT_MODE_LABELS[contextMode]}“) erhalten. Nutze lokale RTX oder wähle „Nur Prompt“.`,
-    );
-  }
 }
 
 export interface AssembleImagePromptInput {
   prompt: string;
   contextMode?: ImageStudioPromptContextMode;
   contextSnippet?: string | null;
-  providerMode: ImageProviderMode;
-  resolvedProvider: ImageProviderMode;
-  cloudContextApproved?: boolean;
 }
 
 export interface AssembledImagePrompt {
@@ -66,51 +51,19 @@ export interface AssembledImagePrompt {
 }
 
 /**
- * Builds the final prompt sent to image providers.
- * Private world/brain/object context is stripped for cloud unless explicitly approved.
+ * Baut den Prompt, der an den RTX-Host geht. Kontext wird angehängt, wenn einer
+ * gewählt ist und ein Textausschnitt vorliegt — sonst bleibt es beim Prompt.
  */
 export function assembleImageStudioPrompt(input: AssembleImagePromptInput): AssembledImagePrompt {
   const contextMode = input.contextMode ?? "prompt_only";
-  const warnings: string[] = [];
   const snippet = input.contextSnippet?.trim() ?? "";
-
-  if (
-    isCloudImageProvider(input.resolvedProvider) &&
-    isLocalOnlyImageContext(contextMode) &&
-    !input.cloudContextApproved
-  ) {
-    if (snippet) {
-      warnings.push("Privater Kontext wurde für Cloud-Provider entfernt.");
-    }
-    return {
-      prompt: input.prompt.trim(),
-      contextMode: "prompt_only",
-      contextIncluded: false,
-      warnings,
-    };
-  }
-
-  if (isCloudImageProvider(input.providerMode) && isLocalOnlyImageContext(contextMode)) {
-    validateImageContextForProvider(input.providerMode, contextMode, {
-      cloudContextApproved: input.cloudContextApproved,
-    });
-  }
-
-  if (isCloudImageProvider(input.resolvedProvider)) {
-    return {
-      prompt: input.prompt.trim(),
-      contextMode: "prompt_only",
-      contextIncluded: false,
-      warnings,
-    };
-  }
 
   if (snippet && contextMode !== "prompt_only") {
     return {
       prompt: `${input.prompt.trim()}\n\n[Kontext: ${snippet}]`,
       contextMode,
       contextIncluded: true,
-      warnings,
+      warnings: [],
     };
   }
 
@@ -118,18 +71,21 @@ export function assembleImageStudioPrompt(input: AssembleImagePromptInput): Asse
     prompt: input.prompt.trim(),
     contextMode,
     contextIncluded: false,
-    warnings,
+    warnings: [],
   };
 }
 
-/** Detects obvious private-data markers pasted into user prompts for cloud routes. */
+/**
+ * Findet offensichtliche Marker privater Daten in einem Prompt.
+ *
+ * Bleibt als Diagnose erhalten, obwohl kein Prompt mehr das Haus verlässt: die
+ * Meldung hilft beim Nachvollziehen, was in einem Prompt gelandet ist.
+ */
 export function scanPromptForPrivateDataLeak(prompt: string): string[] {
   const warnings: string[] = [];
   const patterns: Array<{ regex: RegExp; message: string }> = [
     { regex: /\[kontext:/i, message: "Eingebetteter Kontext-Block im Prompt" },
-    { regex: /dm_only|player_visible/i, message: "Sichtbarkeits-Marker im Prompt" },
     { regex: /brain document|life-brain|welt-kontext/i, message: "Brain/Welt-Referenz im Prompt" },
-    { regex: /secret level|geheimnis/i, message: "Geheimnis-Referenz im Prompt" },
   ];
 
   for (const { regex, message } of patterns) {

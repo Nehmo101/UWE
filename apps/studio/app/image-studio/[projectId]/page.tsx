@@ -134,7 +134,6 @@ export default async function ImageStudioProjectPage({ params, searchParams }: P
                 worlds={worlds.map((entry) => ({ slug: entry.slug, name: entry.name }))}
                 operationLabels={IMAGE_STUDIO_OPERATION_LABELS}
                 defaultWorldSlug={world.slug}
-                defaultProviderMode={config.defaultProviderMode}
                 enabled={config.enabled}
                 projectId={project.id}
                 defaultPrompt={project.prompt ?? ""}

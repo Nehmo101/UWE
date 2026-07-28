@@ -1,19 +1,18 @@
-import type {
-  AiGatewayConfigRecord,
-  AiGatewayService,
-  AiPrivacyLevel,
-} from "@uwe/database/server";
-import {
-  prisma as sharedPrisma,
-  resolveFeatureModelOverride,
-} from "@uwe/database/server";
+import { prisma as sharedPrisma } from "@uwe/database/server";
 import {
   isConnectorImageAvailable,
   runConnectorImageGenerate,
 } from "../router/providers/connectorQueueProvider";
 import { resolveImageProviderConfig, type ImageStudioProviderConfig } from "@uwe/image-studio";
-import { createGatewayApiKeyStore } from "./apiKeyStore";
 
+/**
+ * Bild-Konfiguration des Gateways.
+ *
+ * Früher wählte sie zwischen lokalem Backend und einem Cloud-Anbieter — mit
+ * Routing-Modus, Cloud-Fallback und API-Key-Store. Seit N.3 gibt es nur noch
+ * den RTX-Host über die Connector-Queue, also bleibt genau eine Entscheidung:
+ * ist der Connector da oder nicht.
+ */
 export async function resolveConnectorAwareImageProviderConfig(options?: {
   prisma?: typeof sharedPrisma;
   env?: NodeJS.ProcessEnv;
@@ -29,30 +28,5 @@ export async function resolveConnectorAwareImageProviderConfig(options?: {
     connectorImageGenerate: useConnectorImage
       ? (request) => runConnectorImageGenerate(prisma, request)
       : undefined,
-  };
-}
-
-export async function buildGatewayImageProviderConfig(
-  gateway: AiGatewayService,
-  cloudFallbackAllowed: boolean,
-  privacyLevel: AiPrivacyLevel,
-  config: AiGatewayConfigRecord,
-  prisma: typeof sharedPrisma = sharedPrisma,
-): Promise<ImageStudioProviderConfig> {
-  const base = await resolveConnectorAwareImageProviderConfig({ prisma });
-  const apiKeyStore = await createGatewayApiKeyStore(gateway);
-  const cloudApiKey = apiKeyStore.get("openai") ?? base.cloudApiKey ?? undefined;
-  const allowCloud =
-    config.routingMode !== "LOCAL_ONLY" &&
-    config.routingMode !== "DISABLED" &&
-    config.cloudFallbackEnabled &&
-    cloudFallbackAllowed &&
-    privacyLevel === "CLOUD_ALLOWED";
-
-  return {
-    ...base,
-    allowCloud: allowCloud && Boolean(cloudApiKey),
-    cloudApiKey,
-    cloudModel: resolveFeatureModelOverride(config, "image_generation")?.model ?? base.cloudModel,
   };
 }

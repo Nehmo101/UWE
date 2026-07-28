@@ -73,7 +73,7 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
   let activeProjectId = payload.projectId;
 
   try {
-    await ctx.jobs.updateProgress(ctx.jobId, 10, "Provider auswählen");
+    await ctx.jobs.updateProgress(ctx.jobId, 10, "RTX-Host anfragen");
     await assertNotCancelled(ctx.jobs, ctx.jobId);
 
     const result = await executeAiGatewayImageRequest({
@@ -81,12 +81,10 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       feature: "AI_IMAGE_USE",
       task: payload.task,
       prompt: payload.prompt,
-      providerMode: payload.providerMode as "auto" | "local_rtx" | "cloud" | undefined,
       sourceImageBase64: payload.sourceImageBase64,
       maskBase64: payload.maskBase64,
       contextMode: payload.contextMode,
       contextSnippet: payload.contextSnippet,
-      cloudContextApproved: payload.cloudContextApproved,
     });
 
     if (!result.success || !result.imageBase64) {

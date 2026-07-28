@@ -7,14 +7,12 @@ import type {
   AiContextPage,
   AiContextSession,
   AiContextWorld,
-  ContextAudience,
 } from "../types";
 import { serializePageForBudget } from "./budget";
 import { serializeBrainEntries } from "./brain-knowledge-source";
 import { serializeSession } from "./sessionContext";
 
 export interface BuildDebugInput {
-  audience: ContextAudience;
   maxChars: number;
   totalChars: number;
   truncated: boolean;
@@ -94,7 +92,6 @@ export function buildContextDebug(input: BuildDebugInput): AiContextDebug {
   }
 
   return {
-    audience: input.audience,
     maxChars: input.maxChars,
     totalChars: input.totalChars,
     truncated: input.truncated,
@@ -110,7 +107,6 @@ export function toAiRunContextSnapshot(context: AiContext): Record<string, unkno
     worldId: context.worldId,
     primaryPageId: context.primaryPageId,
     sessionId: context.sessionId ?? null,
-    audience: context.debug?.audience ?? ("dm_internal"),
     truncated: context.truncated,
     promptContext: context.promptContext,
     sources: context.sources,

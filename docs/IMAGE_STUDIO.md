@@ -4,11 +4,11 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 
 ## Features (Phase 1 — nutzbar)
 
-- **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate`, `variant`, `inpaint`, `edit`, `remove_background` (lokaler RTX Worker / Connector)
-- Provider-Routing: lokaler RTX Worker oder outbound RTX Host Connector → optional Cloud (OpenAI DALL-E, nur generate/variant)
+- **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate`, `variant`, `inpaint`, `edit`, `remove_background`
+- Ein Weg: die outbound RTX-Host-Connector-Queue. Cloud-Anbieter gibt es seit N.3 nicht mehr
 - Projekt-/Versions-Tracking mit **reviewbare Drafts** (`metadata.reviewStatus`)
 - Ergebnis als Asset in Medienbibliothek — **automatische Verknüpfung** zu verlinkten Seiten/Entitäten
-- **Prompt-Datenschutz:** `contextMode` steuert ob Welt-/Brain-Kontext an Provider geht (Cloud: nur `prompt_only`)
+- **Prompt-Kontext:** `contextMode` steuert, ob Welt-/Brain-Kontext im Prompt landet — er verlässt den Host ohnehin nicht
 - Medienzuordnung zu Seiten, Labels, Sessions, Capture, Werkstatt, Hardware, Verträge (via `ImageStudioLink`)
 - Mobile-first Admin-UI unter `/image-studio`
 
@@ -19,36 +19,29 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 | Variable | Default | Beschreibung |
 |----------|---------|--------------|
 | `IMAGE_STUDIO_ENABLED` | `true` | Feature aktiv |
-| `IMAGE_STUDIO_DEFAULT_PROVIDER` | `auto` | `auto` \| `local_rtx` \| `cloud` |
-| `IMAGE_STUDIO_ALLOW_CLOUD` | `false` | Cloud-KI bewusst aktivieren |
 | `IMAGE_STUDIO_BG_REMOVAL` | `true` | Background-Removal Task erlaubt |
-| `IMAGE_STUDIO_CLOUD_MODEL` | `dall-e-3` | Cloud-Modell |
+| `RTX_USE_CONNECTOR_IMAGE` | `true` | Connector-Queue benutzen; `false` schaltet Image Studio praktisch ab |
 | `RTX_BASE_URL` | — | Direkter RTX Worker Endpoint `/v1/images` |
 | `RTX_SERVICE_TOKEN` | — | Bearer Token |
 
 ## Routing
 
-1. **auto**: RTX Healthcheck → bei Erfolg lokal, sonst Cloud (wenn erlaubt).
-2. **local_rtx**: Nur lokaler RTX Worker / Connector — kein Cloud-Fallback.
-3. **cloud**: Nur wenn `IMAGE_STUDIO_ALLOW_CLOUD=true` und API-Key gesetzt.
-
-Brain/Weltdaten werden **nicht** an Cloud gesendet — nur der Bild-Prompt im Modus `prompt_only`.
+Es gibt nur einen Weg: die outbound RTX-Host-Connector-Queue. Ist sie nicht da,
+meldet Image Studio das und tut nichts — ein Ausweichweg wäre genau der
+Cloud-Weg, den es nach N.3 nicht mehr geben soll.
 
 ### Prompt-Kontext (`contextMode`)
 
-| Modus | Cloud | RTX |
-|-------|-------|-----|
-| `prompt_only` | ✅ | ✅ |
-| `page_context` | ❌ | ✅ |
-| `brain_context` | ❌ | ✅ |
-| `object_context` | ❌ | ✅ |
+`prompt_only` schickt nur den Prompt, die anderen Modi hängen einen Welt-,
+Brain- oder Objekt-Ausschnitt an. Alle sind erlaubt: der Prompt geht an den
+eigenen Host.
 
-Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImageStudioPrompt()`, `validateImageContextForProvider()`.
+Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImageStudioPrompt()`.
 
 ## RTX Bild-Endpoint (Legacy)
 
-> Image Studio ist **Beta** — Masken-Canvas für Inpainting vorhanden; Cloud-Edit/Fehler-
-> handling teils unvollständig — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
+> Image Studio ist **Beta** — Masken-Canvas für Inpainting vorhanden, das
+> Fehlerhandling ist stellenweise dünn — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 
 Der lokale Bild-Worker sollte Endpoint `POST /v1/images` implementieren. Der aktive
 Weg ist der outbound RTX Host Connector ([rtx-connector.md](rtx-connector.md));
@@ -81,6 +74,6 @@ Response: `{ "image": "<base64>", "mime_type": "image/png" }`
 
 ## Offene TODOs
 
-- Cloud-Edit/`failed`-Handling in allen Pfaden vereinheitlichen
+- `failed`-Handling in allen Pfaden vereinheitlichen
 
 **Erledigt:** Generate/Variant/Inpaint-API, Masken-Canvas (`ImageStudioMaskCanvas`), Seiten-Link aus Editor, Label-Druck-Integration (Basis).

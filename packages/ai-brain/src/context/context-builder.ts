@@ -20,10 +20,6 @@ import {
 import { resolveContextBuilderConfig } from "./config";
 import { buildContextDebug, estimatePromptContextLength } from "./debug";
 import { loadSessionContext, serializeSession } from "./sessionContext";
-import {
-  resolveContextAudience,
-} from "./visibility";
-
 
 function parseStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -165,7 +161,6 @@ async function buildContext(
   });
 
   const datenschutzMode = options.datenschutzMode ?? false;
-  const audience = resolveContextAudience(taskType, options.audience);
   const maxChars = config.maxChars;
 
   const primaryPage = await repo.getPageById(pageId);
@@ -290,7 +285,6 @@ async function buildContext(
   const totalChars = promptContext.length;
 
   const debug = buildContextDebug({
-    audience,
     maxChars,
     totalChars,
     truncated,

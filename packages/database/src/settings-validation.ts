@@ -46,7 +46,7 @@ const TOP_LEVEL_KEYS = new Set([
 
 const WORLDS_KEYS = new Set(["defaultCanonicalStatus"]);
 const CAMPAIGNS_KEYS = new Set(["inheritWorldDefaults"]);
-const PORTAL_KEYS = new Set(["portalEnabled", "guestAccessEnabled", "publicSharingEnabled"]);
+const PORTAL_KEYS = new Set(["portalEnabled"]);
 const AI_KEYS = new Set(["localOnlyMode", "enabled", "generalChatSystemPrompt"]);
 const MAIL_KEYS = new Set([
   "enabled",
@@ -56,12 +56,7 @@ const MAIL_KEYS = new Set([
   "autoSyncEnabled",
   "autoSyncIntervalMinutes",
 ]);
-const IMAGE_STUDIO_KEYS = new Set([
-  "enabled",
-  "defaultProviderMode",
-  "allowCloud",
-  "backgroundRemovalEnabled",
-]);
+const IMAGE_STUDIO_KEYS = new Set(["enabled", "backgroundRemovalEnabled"]);
 const STORAGE_KEYS = new Set(["uploadsPath", "exportsPath"]);
 const BACKUP_KEYS = new Set(["backupsPath", "autoBackupEnabled", "retentionCount"]);
 const BRIEFING_KEYS = new Set(["autoBriefingEnabled", "time"]);
@@ -148,12 +143,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
     const sectionErrors = validateSection(body.portal, PORTAL_KEYS, "settings.portal", (key, value, sectionErrors) => {
       if (key === "portalEnabled") {
         requireBoolean(value, "settings.portal.portalEnabled", sectionErrors);
-      }
-      if (key === "guestAccessEnabled") {
-        requireBoolean(value, "settings.portal.guestAccessEnabled", sectionErrors);
-      }
-      if (key === "publicSharingEnabled") {
-        requireBoolean(value, "settings.portal.publicSharingEnabled", sectionErrors);
       }
     });
     errors.push(...sectionErrors);
@@ -267,23 +256,8 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       IMAGE_STUDIO_KEYS,
       "settings.imageStudio",
       (key, value, sectionErrors) => {
-        if (
-          key === "enabled" ||
-          key === "allowCloud" ||
-          key === "backgroundRemovalEnabled"
-        ) {
+        if (key === "enabled" || key === "backgroundRemovalEnabled") {
           requireBoolean(value, `settings.imageStudio.${key}`, sectionErrors);
-        }
-        if (key === "defaultProviderMode") {
-          if (
-            value !== "auto" &&
-            value !== "local_rtx" &&
-            value !== "cloud"
-          ) {
-            sectionErrors.push(
-              "settings.imageStudio.defaultProviderMode muss auto, local_rtx oder cloud sein.",
-            );
-          }
         }
       },
     );
@@ -292,15 +266,6 @@ export function validateSettingsUpdate(body: unknown): ValidateSettingsUpdateRes
       const imageStudio: NonNullable<UweSystemSettingsUpdate["imageStudio"]> = {};
       if (body.imageStudio.enabled !== undefined) {
         imageStudio.enabled = body.imageStudio.enabled as boolean;
-      }
-      if (body.imageStudio.defaultProviderMode !== undefined) {
-        imageStudio.defaultProviderMode = body.imageStudio.defaultProviderMode as
-          | "auto"
-          | "local_rtx"
-          | "cloud";
-      }
-      if (body.imageStudio.allowCloud !== undefined) {
-        imageStudio.allowCloud = body.imageStudio.allowCloud as boolean;
       }
       if (body.imageStudio.backgroundRemovalEnabled !== undefined) {
         imageStudio.backgroundRemovalEnabled = body.imageStudio.backgroundRemovalEnabled as boolean;

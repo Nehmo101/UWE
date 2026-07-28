@@ -297,44 +297,34 @@ export function resolveDndApiConfig(env: NodeJS.ProcessEnv = process.env): DndAp
   };
 }
 
+/**
+ * Image Studio kennt seit N.3 nur noch einen Weg: den RTX-Host über die
+ * outbound Connector-Queue. Der Anbieter-Modus und das Cloud-Zubehör
+ * (`allowCloud`, API-Key) sind ersatzlos entfallen — was bleibt, ist an/aus und
+ * ob der Hintergrund-Entferner benutzt werden darf.
+ */
 export interface ImageStudioConfig {
   enabled: boolean;
-  defaultProviderMode: "auto" | "local_rtx" | "cloud";
-  allowCloud: boolean;
   backgroundRemovalEnabled: boolean;
 }
 
 export interface ImageStudioConfigStatus extends ImageStudioConfig {
   rtxAgentConfigured: boolean;
-  /** Local image generation routes through the outbound RTX Host Connector queue. */
+  /** Bildgenerierung läuft über die outbound RTX-Connector-Queue. */
   connectorImageEnabled: boolean;
-  /** Connector queue or legacy RTX worker URL configured. */
   localImageBackendReady: boolean;
-  cloudApiKeyConfigured: boolean;
   source: "portal" | "env";
   message: string;
 }
 
 export interface ImageStudioPortalOverrides {
   enabled?: boolean;
-  defaultProviderMode?: ImageStudioConfig["defaultProviderMode"];
-  allowCloud?: boolean;
   backgroundRemovalEnabled?: boolean;
 }
 
-const IMAGE_STUDIO_PROVIDER_MODES = new Set<ImageStudioConfig["defaultProviderMode"]>([
-  "auto",
-  "local_rtx",
-  "cloud",
-]);
-
 function resolveEnvImageStudioConfig(env: NodeJS.ProcessEnv): ImageStudioConfig {
-  const provider = env.IMAGE_STUDIO_DEFAULT_PROVIDER?.trim() as ImageStudioConfig["defaultProviderMode"];
   return {
     enabled: env.IMAGE_STUDIO_ENABLED !== "false",
-    defaultProviderMode:
-      provider && IMAGE_STUDIO_PROVIDER_MODES.has(provider) ? provider : "auto",
-    allowCloud: env.IMAGE_STUDIO_ALLOW_CLOUD === "true",
     backgroundRemovalEnabled: env.IMAGE_STUDIO_BG_REMOVAL !== "false",
   };
 }
@@ -348,14 +338,8 @@ export function resolveImageStudioConfig(
     return envConfig;
   }
 
-  const provider = portal.defaultProviderMode;
   return {
     enabled: portal.enabled ?? envConfig.enabled,
-    defaultProviderMode:
-      provider && IMAGE_STUDIO_PROVIDER_MODES.has(provider)
-        ? provider
-        : envConfig.defaultProviderMode,
-    allowCloud: portal.allowCloud ?? envConfig.allowCloud,
     backgroundRemovalEnabled:
       portal.backgroundRemovalEnabled ?? envConfig.backgroundRemovalEnabled,
   };
@@ -368,33 +352,26 @@ export function resolveImageStudioConfigStatus(
   const config = resolveImageStudioConfig(env, portal);
   const rtxAgentConfigured = Boolean(env.RTX_BASE_URL?.trim());
   const connectorImageEnabled = env.RTX_USE_CONNECTOR_IMAGE !== "false";
-  const localImageBackend = connectorImageEnabled;
-  const cloudApiKeyConfigured = Boolean(
-    env.CLOUD_AI_API_KEY?.trim() || env.OPENAI_API_KEY?.trim(),
-  );
   const fromPortal = portal !== undefined && portal !== null;
 
-  let message = "Konfiguration aus Umgebungsvariablen.";
-  if (fromPortal) {
-    message = "Portal-Einstellungen aktiv — ENV-Werte als Fallback.";
-  }
+  let message = fromPortal
+    ? "Portal-Einstellungen aktiv — ENV-Werte als Fallback."
+    : "Konfiguration aus Umgebungsvariablen.";
   if (!config.enabled) {
     message = "Image Studio ist deaktiviert.";
-  } else if (!localImageBackend && !config.allowCloud) {
-    message = "Kein lokaler Bild-Backend (RTX Connector) und Cloud deaktiviert — keine Bildgenerierung möglich.";
-  } else if (!localImageBackend && config.allowCloud && !cloudApiKeyConfigured) {
-    message = "Lokaler Bild-Backend fehlt — Cloud erlaubt, aber kein API-Key konfiguriert.";
-  } else if (connectorImageEnabled) {
+  } else if (!connectorImageEnabled) {
     message =
-      "Bildgenerierung über RTX Host Connector (image_generate) — Connector muss image_generation werben.";
+      "Kein Bild-Backend: die RTX-Connector-Queue ist abgeschaltet (RTX_USE_CONNECTOR_IMAGE=false).";
+  } else {
+    message =
+      "Bildgenerierung über RTX Host Connector (image_generate) — der Connector muss image_generation anbieten.";
   }
 
   return {
     ...config,
     rtxAgentConfigured,
     connectorImageEnabled,
-    localImageBackendReady: localImageBackend,
-    cloudApiKeyConfigured,
+    localImageBackendReady: connectorImageEnabled,
     source: fromPortal ? "portal" : "env",
     message,
   };

@@ -27,7 +27,6 @@ import { brainPrisma } from "@uwe/database/brain-client";
 import type { ImageStudioLinkTargetType } from "@uwe/database/server";
 import { fillAgentJobPreset, getAgentJobPreset } from "@uwe/agent-jobs";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
-import { validateImageContextForProvider } from "@uwe/image-studio";
 import { dispatchJob } from "@/src/lib/job-executor";
 import {
   assertStudioCanUseAI,
@@ -39,8 +38,6 @@ export async function createImageStudioJobAction(formData: FormData) {
   const settings = await getSystemSettings();
   const config = {
     enabled: settings.imageStudio.enabled,
-    defaultProviderMode: settings.imageStudio.defaultProviderMode,
-    allowCloud: settings.imageStudio.allowCloud,
     backgroundRemovalEnabled: settings.imageStudio.backgroundRemovalEnabled,
   };
   if (!config.enabled) throw new Error("Image Studio ist deaktiviert.");
@@ -54,7 +51,6 @@ export async function createImageStudioJobAction(formData: FormData) {
     | "remove_background"
     | "variant";
   const title = String(formData.get("title") ?? "") || undefined;
-  const providerMode = String(formData.get("providerMode") ?? "") || undefined;
   const sourceImageBase64 = String(formData.get("sourceImageBase64") ?? "") || undefined;
   const maskBase64 = String(formData.get("maskBase64") ?? "") || undefined;
   const pageId = String(formData.get("pageId") ?? "") || undefined;
@@ -64,7 +60,6 @@ export async function createImageStudioJobAction(formData: FormData) {
   const contextMode = (String(formData.get("contextMode") ?? "prompt_only") ||
     "prompt_only") as ImageStudioPromptContextMode;
   const contextSnippet = String(formData.get("contextSnippet") ?? "") || undefined;
-  const cloudContextApproved = formData.get("cloudContextApproved") === "on";
   const variantCountRaw = Number.parseInt(String(formData.get("variantCount") ?? "1"), 10);
   const variantCount = task === "variant"
     ? Math.min(4, Math.max(1, Number.isFinite(variantCountRaw) ? variantCountRaw : 1))
@@ -73,22 +68,11 @@ export async function createImageStudioJobAction(formData: FormData) {
   assertStudioCanUseAI();
   await requireStudioWorldEdit(worldSlug);
 
-  const effectiveProvider = (providerMode as "auto" | "local_rtx" | "cloud" | undefined) ?? "auto";
   if ((task === "inpaint" || task === "edit" || task === "remove_background") && !sourceImageBase64) {
     throw new Error("Quellbild ist für diese Operation erforderlich.");
   }
   if (task === "inpaint" && !maskBase64) {
     throw new Error("Maske ist für Inpainting erforderlich.");
-  }
-  if (
-    (task === "inpaint" || task === "edit" || task === "remove_background") &&
-    (effectiveProvider === "cloud" || (effectiveProvider === "auto" && config.allowCloud))
-  ) {
-    throw new Error("Inpaint/Edit ist nur mit lokalem RTX verfügbar.");
-  }
-
-  if (effectiveProvider === "cloud" || (effectiveProvider === "auto" && config.allowCloud)) {
-    validateImageContextForProvider("cloud", contextMode, { cloudContextApproved });
   }
 
   const repo = getAppRepository();
@@ -140,13 +124,11 @@ export async function createImageStudioJobAction(formData: FormData) {
         worldSlug: world.slug,
         task,
         prompt,
-        providerMode,
         title: variantTitle,
         sourceImageBase64,
         maskBase64,
         contextMode,
         contextSnippet,
-        cloudContextApproved,
       },
       relatedType: "image_studio_project",
       relatedId: projectId,

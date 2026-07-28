@@ -47,7 +47,6 @@ describe("AI Brain — buildAiContext", () => {
     assert.equal(context.primaryPageId, seeded.pages.validori.id);
     assert.ok(context.sources.some((source) => source.pageId === seeded.pages.validori.id));
     assert.ok(context.debug);
-    assert.equal(context.debug?.audience, "dm_internal");
   });
 
   it("includes session context for summarize_session", async () => {

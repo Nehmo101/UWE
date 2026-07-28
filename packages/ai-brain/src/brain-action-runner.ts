@@ -136,7 +136,6 @@ export async function runBrainAction(
       datenschutzMode: settings.datenschutzMode,
       localOnly: settings.localOnly,
       sessionId: input.sessionId,
-      audience: action.audience,
     };
 
     const routerInput = {
