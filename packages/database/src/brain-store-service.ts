@@ -8,7 +8,7 @@ import type {
   BrainVisibility,
   Prisma,
 } from "./generated/prisma/client";
-import { createPrismaClient, type PrismaClient } from "./client";
+import { createPrismaClient, getSharedPrismaClient, type PrismaClient } from "./client";
 
 export type {
   BrainDocument,
@@ -651,5 +651,14 @@ function resolveStatuses(
 }
 
 export function createBrainStoreService(databaseUrl?: string): BrainStoreService {
-  return new BrainStoreService(createPrismaClient(databaseUrl));
+  // Without an explicit URL, use the process-wide singleton. This factory is
+  // called per request all over Studio (pages, routes, Server Actions, job
+  // runners); a fresh client per call was never disconnected anywhere, so each
+  // call leaked an open SQLite connection — see
+  // scripts/server-action-db-client.test.ts for the measured cost. Callers
+  // that pass a URL (isolated test databases) still get their own client and
+  // must disconnect it themselves.
+  return new BrainStoreService(
+    databaseUrl ? createPrismaClient(databaseUrl) : getSharedPrismaClient(),
+  );
 }

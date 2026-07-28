@@ -5,15 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createAuthService,
-  createPrismaClient,
+  prisma,
   getAppRepository,
   buildPageUrl,
 } from "@uwe/database/server";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 
 function notes() {
-  const db = createPrismaClient();
-  return { db, auth: createAuthService(db) };
+  return { auth: createAuthService(prisma) };
 }
 
 export async function acceptPlayerNoteAction(formData: FormData) {
@@ -23,12 +22,8 @@ export async function acceptPlayerNoteAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, auth } = notes();
-  try {
-    await auth.getPlayerNoteService().accept(noteId);
-  } finally {
-    await db.$disconnect();
-  }
+  const { auth } = notes();
+  await auth.getPlayerNoteService().accept(noteId);
 
   revalidatePath(`/worlds/${worldSlug}/notes`);
 }
@@ -40,12 +35,8 @@ export async function hidePlayerNoteAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, auth } = notes();
-  try {
-    await auth.getPlayerNoteService().hide(noteId);
-  } finally {
-    await db.$disconnect();
-  }
+  const { auth } = notes();
+  await auth.getPlayerNoteService().hide(noteId);
 
   revalidatePath(`/worlds/${worldSlug}/notes`);
 }
@@ -57,12 +48,8 @@ export async function deletePlayerNoteAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, auth } = notes();
-  try {
-    await auth.getPlayerNoteService().softDelete(noteId);
-  } finally {
-    await db.$disconnect();
-  }
+  const { auth } = notes();
+  await auth.getPlayerNoteService().softDelete(noteId);
 
   revalidatePath(`/worlds/${worldSlug}/notes`);
 }
@@ -79,28 +66,23 @@ export async function adoptPlayerNoteAsContentBlockAction(formData: FormData) {
     await requireStudioWorldEdit(worldSlug);
   }
 
-  const { db, auth } = notes();
-  let page: { slug: string; type: Parameters<typeof buildPageUrl>[1] } | null = null;
+  const { auth } = notes();
 
-  try {
-    const note = await auth.getPlayerNoteForDm(worldSlug, noteId);
-    if (!note) {
-      throw new Error("Notiz nicht gefunden");
-    }
-
-    const pageId = targetPageId || note.pageId;
-    if (!pageId) {
-      throw new Error("Keine Zielseite angegeben");
-    }
-
-    await auth.getPlayerNoteService().adoptAsContentBlock(noteId, pageId);
-    page = await db.page.findUnique({
-      where: { id: pageId },
-      select: { slug: true, type: true },
-    });
-  } finally {
-    await db.$disconnect();
+  const note = await auth.getPlayerNoteForDm(worldSlug, noteId);
+  if (!note) {
+    throw new Error("Notiz nicht gefunden");
   }
+
+  const pageId = targetPageId || note.pageId;
+  if (!pageId) {
+    throw new Error("Keine Zielseite angegeben");
+  }
+
+  await auth.getPlayerNoteService().adoptAsContentBlock(noteId, pageId);
+  const page = await prisma.page.findUnique({
+    where: { id: pageId },
+    select: { slug: true, type: true },
+  });
 
   revalidatePath(`/worlds/${worldSlug}/notes`);
   if (page) {
@@ -116,17 +98,11 @@ export async function adoptPlayerNoteAsPageAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, auth } = notes();
-  let pageId: string | null = null;
-
-  try {
-    const result = await auth.getPlayerNoteService().adoptAsPage(noteId, {
-      title: title || undefined,
-    });
-    pageId = result.pageId;
-  } finally {
-    await db.$disconnect();
-  }
+  const { auth } = notes();
+  const result = await auth.getPlayerNoteService().adoptAsPage(noteId, {
+    title: title || undefined,
+  });
+  const pageId: string | null = result.pageId;
 
   revalidatePath(`/worlds/${worldSlug}/notes`);
   if (pageId) {

@@ -25,20 +25,59 @@
  */
 import { execSync, spawn } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const studioPort = process.env.E2E_STUDIO_PORT ?? "3199";
 const portalPort = process.env.E2E_PORTAL_PORT ?? "3200";
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-e2e-"));
 const databaseUrl = `file:${path.join(tempDir, "e2e.db")}`;
+const brainDatabasePath = path.join(tempDir, "e2e-brain.db");
+const brainDatabaseUrl = `file:${brainDatabasePath}`;
 const stateFile = path.join(tempDir, "e2e-state.json");
+
+/**
+ * Provision the owner-private Brain database (PR #783 split it out of uwe.db).
+ * `prisma migrate deploy` below only covers DATABASE_URL; without a migrated
+ * Brain DB the seed dies in ensureSystemMailTemplates() with
+ * `no such table: main.mail_templates`, because the `brainPrisma` singleton
+ * would fall back to packages/database/data/uwe-brain.db (absent in CI, the
+ * developer's real DB locally — both wrong for E2E). Applies the SQL
+ * migrations via node:sqlite so no sqlite3 CLI is needed and FTS5 works —
+ * same approach as scripts/run-node-tests.mjs.
+ */
+function provisionBrainDatabase() {
+  const brainMigrationsDir = path.join(
+    root,
+    "packages",
+    "database",
+    "prisma",
+    "brain",
+    "migrations",
+  );
+  const migrations = fs
+    .readdirSync(brainMigrationsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(brainMigrationsDir, entry.name, "migration.sql"))
+    .filter((sqlPath) => fs.existsSync(sqlPath))
+    .sort();
+  const db = new DatabaseSync(brainDatabasePath);
+  try {
+    for (const sqlPath of migrations) db.exec(fs.readFileSync(sqlPath, "utf8"));
+  } finally {
+    db.close();
+  }
+  console.log(`[e2e] Brain database ready (${migrations.length} migrations) at ${brainDatabaseUrl}`);
+}
 
 const env = {
   ...process.env,
   DATABASE_URL: databaseUrl,
+  BRAIN_DATABASE_URL: brainDatabaseUrl,
   SESSION_SECRET: `e2e-${"x".repeat(28)}`,
   UWE_SETUP_TOKEN: `setup-${"y".repeat(28)}`,
   STUDIO_API_TOKEN: `e2e-studio-api-${"z".repeat(20)}`,
@@ -74,6 +113,7 @@ function run(command, args, cwd) {
 
 console.log(`[e2e] Preparing shared database at ${databaseUrl}`);
 run("npx", ["prisma", "migrate", "deploy"], path.join(root, "packages/database"));
+provisionBrainDatabase();
 
 if (process.env.E2E_NO_SEED !== "1") {
   run("pnpm", ["exec", "tsx", "prisma/seed.ts"], path.join(root, "packages/database"));
@@ -81,24 +121,41 @@ if (process.env.E2E_NO_SEED !== "1") {
 
 fs.writeFileSync(
   stateFile,
-  JSON.stringify({ databaseUrl, studioPort, portalPort }, null, 2),
+  JSON.stringify({ databaseUrl, brainDatabaseUrl, studioPort, portalPort }, null, 2),
   "utf8",
 );
 
 console.log("[e2e] Building Studio and Portal…");
-run("pnpm", ["exec", "next", "build"], path.join(root, "apps/studio"));
-run("pnpm", ["exec", "next", "build"], path.join(root, "apps/portal"));
+// Via each app's `build` script, NOT `next build` directly: the script first
+// runs copy-scenes and copy-terra (scripts/copy-terra.mjs), which materialize
+// public/scenes and public/terra. Skipping them ships a Studio/Portal without
+// /terra/index.html — the Terra specs would then fail on a black frame.
+run("pnpm", ["run", "build"], path.join(root, "apps/studio"));
+run("pnpm", ["run", "build"], path.join(root, "apps/portal"));
+
+/**
+ * Resolve the `next` CLI entry point for an app and spawn it with the current
+ * Node binary. NOT `spawn("pnpm", …)`: on Windows pnpm is a `.CMD` shim that
+ * spawn(shell:false) cannot start (ENOENT), and going through a shell would
+ * mean SIGTERM hits the shell wrapper instead of the server on cleanup.
+ */
+function spawnNext(app, args, extraEnv) {
+  const appDir = path.join(root, "apps", app);
+  const appRequire = createRequire(pathToFileURL(path.join(appDir, "package.json")));
+  const nextBin = appRequire.resolve("next/dist/bin/next");
+  return spawn(process.execPath, [nextBin, ...args], {
+    cwd: appDir,
+    env: { ...env, ...extraEnv },
+    stdio: "inherit",
+  });
+}
 
 const children = [
-  spawn("pnpm", ["exec", "next", "start", "--port", studioPort], {
-    cwd: path.join(root, "apps/studio"),
-    env: { ...env, PUBLIC_BASE_URL: env.NEXT_PUBLIC_STUDIO_URL },
-    stdio: "inherit",
+  spawnNext("studio", ["start", "--port", studioPort], {
+    PUBLIC_BASE_URL: env.NEXT_PUBLIC_STUDIO_URL,
   }),
-  spawn("pnpm", ["exec", "next", "start", "--port", portalPort], {
-    cwd: path.join(root, "apps/portal"),
-    env: { ...env, PUBLIC_BASE_URL: env.NEXT_PUBLIC_PORTAL_URL },
-    stdio: "inherit",
+  spawnNext("portal", ["start", "--port", portalPort], {
+    PUBLIC_BASE_URL: env.NEXT_PUBLIC_PORTAL_URL,
   }),
 ];
 

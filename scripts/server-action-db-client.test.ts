@@ -55,18 +55,13 @@ const ACTION_DIRS = [
  * the whole process. Every removal from this list has to drop the matching
  * disconnect in the same edit.
  */
-const CREATE_UND_DISCONNECT = [
-  "apps/portal/app/character-actions.ts",
-  "apps/portal/app/character-sheet-actions.ts",
-  "apps/portal/app/note-actions.ts",
-  "apps/portal/app/player-hub-actions.ts",
-  "apps/portal/app/question-actions.ts",
-  "apps/portal/app/treasury-actions.ts",
-  "apps/studio/app/brain-actions.ts",
-  "apps/studio/app/note-actions.ts",
-  "apps/studio/app/settings-actions.ts",
-  "apps/studio/app/share-actions.ts",
-  "apps/studio/app/world-calendar-actions.ts",
+const CREATE_UND_DISCONNECT: string[] = [
+  // 2026-07-28: emptied — all eleven former entries now use the shared
+  // `prisma` client (and dropped their matching `$disconnect()` in the same
+  // change). brain-actions.ts turned out not to be a legitimate own-client
+  // case either: its client pointed at the core DB (no URL argument) and was
+  // never used for a single query — world-brain writes go through
+  // createBrainStoreService(), which now runs on the shared client itself.
 ];
 
 function actionFiles(): string[] {

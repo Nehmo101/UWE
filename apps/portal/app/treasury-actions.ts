@@ -2,7 +2,7 @@
 
 import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
-import { createPartyTreasuryService, createPrismaClient } from "@uwe/database/server";
+import { createPartyTreasuryService, prisma } from "@uwe/database/server";
 import {
   parseFormDataOrThrow,
   treasuryItemAssignSchema,
@@ -29,18 +29,13 @@ export async function assignTreasuryItemToCharacterAction(formData: FormData) {
     throw new Error("Nicht angemeldet");
   }
 
-  const db = createPrismaClient();
-  try {
-    const treasury = createPartyTreasuryService(db);
-    const moved = await treasury.moveItemForViewer(parsed.worldSlug, ctx, {
-      itemId: parsed.itemId,
-      targetCharacterId: parsed.characterId,
-    });
-    if (!moved) {
-      throw new Error("Keine Berechtigung");
-    }
-  } finally {
-    await db.$disconnect();
+  const treasury = createPartyTreasuryService(prisma);
+  const moved = await treasury.moveItemForViewer(parsed.worldSlug, ctx, {
+    itemId: parsed.itemId,
+    targetCharacterId: parsed.characterId,
+  });
+  if (!moved) {
+    throw new Error("Keine Berechtigung");
   }
 
   revalidateTreasuryPaths(parsed.worldSlug, parsed.returnPath);
@@ -57,18 +52,13 @@ export async function returnTreasuryItemFromCharacterAction(formData: FormData) 
     throw new Error("Nicht angemeldet");
   }
 
-  const db = createPrismaClient();
-  try {
-    const treasury = createPartyTreasuryService(db);
-    const moved = await treasury.moveItemForViewer(parsed.worldSlug, ctx, {
-      itemId: parsed.itemId,
-      targetCharacterId: null,
-    });
-    if (!moved) {
-      throw new Error("Keine Berechtigung");
-    }
-  } finally {
-    await db.$disconnect();
+  const treasury = createPartyTreasuryService(prisma);
+  const moved = await treasury.moveItemForViewer(parsed.worldSlug, ctx, {
+    itemId: parsed.itemId,
+    targetCharacterId: null,
+  });
+  if (!moved) {
+    throw new Error("Keine Berechtigung");
   }
 
   revalidateTreasuryPaths(parsed.worldSlug, parsed.returnPath);

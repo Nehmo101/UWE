@@ -5,14 +5,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createBrainStoreService,
-  createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
+// createBrainStoreService() and getAppRepository() both run on the shared
+// prisma client — the world-brain tables live in the core DB, not in the
+// owner-private Brain DB (that one is reached via `brainPrisma`, not here).
 function getBrainDeps() {
-  const db = createPrismaClient();
-  return { db, brain: createBrainStoreService(), repo: getAppRepository() };
+  return { brain: createBrainStoreService(), repo: getAppRepository() };
 }
 
 export async function createBrainDocumentAction(formData: FormData) {
@@ -30,27 +31,22 @@ export async function createBrainDocumentAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, brain, repo } = getBrainDeps();
-  let documentId: string | null = null;
+  const { brain, repo } = getBrainDeps();
 
-  try {
-    const world = await repo.getWorldBySlug(worldSlug);
-    if (!world) throw new Error("Welt nicht gefunden");
+  const world = await repo.getWorldBySlug(worldSlug);
+  if (!world) throw new Error("Welt nicht gefunden");
 
-    const document = await brain.createDocument({
-      worldId: world.id,
-      title,
-      content,
-      documentType: documentType as never,
-      visibility: visibility as never,
-      campaignId,
-      status: "draft",
-      source: "manual",
-    });
-    documentId = document.id;
-  } finally {
-    await db.$disconnect();
-  }
+  const document = await brain.createDocument({
+    worldId: world.id,
+    title,
+    content,
+    documentType: documentType as never,
+    visibility: visibility as never,
+    campaignId,
+    status: "draft",
+    source: "manual",
+  });
+  const documentId: string | null = document.id;
 
   revalidatePath(`/worlds/${worldSlug}/brain`);
   if (documentId) {
@@ -73,27 +69,22 @@ export async function createBrainFactAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, brain, repo } = getBrainDeps();
-  let factId: string | null = null;
+  const { brain, repo } = getBrainDeps();
 
-  try {
-    const world = await repo.getWorldBySlug(worldSlug);
-    if (!world) throw new Error("Welt nicht gefunden");
+  const world = await repo.getWorldBySlug(worldSlug);
+  if (!world) throw new Error("Welt nicht gefunden");
 
-    const fact = await brain.createFact({
-      worldId: world.id,
-      title,
-      content,
-      factType: factType as never,
-      visibility: visibility as never,
-      campaignId,
-      status: "draft",
-      source: "manual",
-    });
-    factId = fact.id;
-  } finally {
-    await db.$disconnect();
-  }
+  const fact = await brain.createFact({
+    worldId: world.id,
+    title,
+    content,
+    factType: factType as never,
+    visibility: visibility as never,
+    campaignId,
+    status: "draft",
+    source: "manual",
+  });
+  const factId: string | null = fact.id;
 
   revalidatePath(`/worlds/${worldSlug}/brain`);
   if (factId) {
@@ -113,18 +104,14 @@ export async function updateBrainDocumentAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, brain } = getBrainDeps();
-  try {
-    await brain.updateDocument(documentId, {
-      title,
-      content,
-      documentType: documentType as never,
-      visibility: visibility as never,
-      status: status as never,
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  const { brain } = getBrainDeps();
+  await brain.updateDocument(documentId, {
+    title,
+    content,
+    documentType: documentType as never,
+    visibility: visibility as never,
+    status: status as never,
+  });
 
   revalidatePath(`/worlds/${worldSlug}/brain`);
   revalidatePath(`/worlds/${worldSlug}/brain/${documentId}`);
@@ -142,18 +129,14 @@ export async function updateBrainFactAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const { db, brain } = getBrainDeps();
-  try {
-    await brain.updateFact(factId, {
-      title,
-      content,
-      factType: factType as never,
-      visibility: visibility as never,
-      status: status as never,
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  const { brain } = getBrainDeps();
+  await brain.updateFact(factId, {
+    title,
+    content,
+    factType: factType as never,
+    visibility: visibility as never,
+    status: status as never,
+  });
 
   revalidatePath(`/worlds/${worldSlug}/brain`);
   revalidatePath(`/worlds/${worldSlug}/brain/facts/${factId}`);

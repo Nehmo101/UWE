@@ -2,7 +2,7 @@
 
 import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService, prisma } from "@uwe/database/server";
 import {
   createQuestFlagService,
   createSessionAvailabilityService,
@@ -25,19 +25,14 @@ async function requireWritableViewer(worldSlug: string) {
     throw new Error("Im Vorschau-Modus sind keine Änderungen möglich.");
   }
 
-  const db = createPrismaClient();
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world) {
-      throw new Error("Welt nicht gefunden.");
-    }
-    assertPortalCanReadWorld(ctx, world.id);
-  } finally {
-    await db.$disconnect();
+  const world = await prisma.world.findUnique({
+    where: { slug: worldSlug },
+    select: { id: true },
+  });
+  if (!world) {
+    throw new Error("Welt nicht gefunden.");
   }
+  assertPortalCanReadWorld(ctx, world.id);
 
   return ctx;
 }
@@ -50,24 +45,19 @@ export async function setQuestPriorityAction(formData: FormData) {
 
   const ctx = await requireWritableViewer(worldSlug);
 
-  const db = createPrismaClient();
-  try {
-    // Nur Quests flaggen, die für den Viewer sichtbar sind.
-    const auth = createAuthService(db);
-    const pages = await auth.listPagesForViewer(worldSlug, ctx);
-    const quest = pages.find((page) => page.id === pageId && page.type === "quest");
-    if (!quest) {
-      throw new Error("Quest nicht gefunden oder nicht freigeschaltet.");
-    }
-
-    await createQuestFlagService(db).upsert({
-      pageId,
-      userId: ctx.user!.id,
-      priority,
-    });
-  } finally {
-    await db.$disconnect();
+  // Nur Quests flaggen, die für den Viewer sichtbar sind.
+  const auth = createAuthService(prisma);
+  const pages = await auth.listPagesForViewer(worldSlug, ctx);
+  const quest = pages.find((page) => page.id === pageId && page.type === "quest");
+  if (!quest) {
+    throw new Error("Quest nicht gefunden oder nicht freigeschaltet.");
   }
+
+  await createQuestFlagService(prisma).upsert({
+    pageId,
+    userId: ctx.user!.id,
+    priority,
+  });
 
   revalidatePath(`/auth/worlds/${worldSlug}/quests`);
 }
@@ -83,23 +73,18 @@ export async function setSessionAvailabilityAction(formData: FormData) {
 
   const ctx = await requireWritableViewer(worldSlug);
 
-  const db = createPrismaClient();
-  try {
-    // Nur für Sessions abstimmen, die der Viewer sehen darf.
-    const auth = createAuthService(db);
-    const session = await auth.getGameSessionForViewer(worldSlug, sessionId, ctx);
-    if (!session) {
-      throw new Error("Session nicht gefunden oder nicht sichtbar.");
-    }
-
-    await createSessionAvailabilityService(db).upsertVote({
-      sessionId,
-      userId: ctx.user!.id,
-      status,
-    });
-  } finally {
-    await db.$disconnect();
+  // Nur für Sessions abstimmen, die der Viewer sehen darf.
+  const auth = createAuthService(prisma);
+  const session = await auth.getGameSessionForViewer(worldSlug, sessionId, ctx);
+  if (!session) {
+    throw new Error("Session nicht gefunden oder nicht sichtbar.");
   }
+
+  await createSessionAvailabilityService(prisma).upsertVote({
+    sessionId,
+    userId: ctx.user!.id,
+    status,
+  });
 
   revalidatePath(`/auth/worlds/${worldSlug}/sessions`);
 }

@@ -64,6 +64,16 @@ describe("parseChangelog", () => {
     assert.equal(findReleaseForVersion(releases, "9.9.9"), null);
   });
 
+  it("parses CRLF line endings the same as LF", () => {
+    // On Windows checkouts (core.autocrlf) the CHANGELOG arrives with CRLF;
+    // the parser must not depend on the checkout OS.
+    const releases = parseChangelog(SAMPLE.replace(/\n/g, "\r\n"));
+    assert.deepEqual(releases, parseChangelog(SAMPLE));
+    assert.equal(releases.length, 2);
+    assert.equal(releases[1]!.date, "2026-06-11");
+    assert.equal(releases[1]!.url, "https://github.com/uwe/uwe/releases/tag/v0.1.0");
+  });
+
   it("loads the project CHANGELOG when present", () => {
     const releases = getChangelogReleases();
     assert.ok(releases.length >= 1);
