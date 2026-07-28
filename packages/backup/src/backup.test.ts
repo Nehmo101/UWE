@@ -115,6 +115,17 @@ describe("UWE backup and restore", () => {
         characterName: "Test PC",
       },
     });
+    // Terra-Karte (J1) — siehe den Test weiter unten: der Vorgänger stand nie
+    // im logischen Export, und niemandem fiel es auf. Der Seed hier sorgt dafür,
+    // dass jeder Backup-Lauf dieser Datei eine Terra-Karte zu sehen bekommt.
+    await db.terraKarte.create({
+      data: {
+        worldId: world.id,
+        titel: "Backup-Karte",
+        daten: { format: "terra", version: 5, wurzel: "k0", karten: [{ id: "k0", elternId: null }] },
+        version: 3,
+      },
+    });
     await db.$disconnect();
   });
 
@@ -255,6 +266,67 @@ describe("UWE backup and restore", () => {
 
     await targetDb.$disconnect();
     fs.rmSync(targetUploads, { recursive: true, force: true });
+  });
+
+  /**
+   * Die Lücke, die der Vorgänger hatte. `packages/backup` kannte kein einziges
+   * seiner sechs Modelle — `backup:create` sicherte sie nie, und der einzige
+   * Vollständigkeitstest im Repo bewacht ausschließlich die Brain-DB. Sein
+   * Löschen war dadurch unumkehrbar
+   * (docs/engineering/terra-runde-j-atlas-abbau.md, Vorabbefund 1).
+   *
+   * Dieser Test ist die Gegenmaßnahme: Terra-Karten müssen in jedem
+   * weltbezogenen Backup stehen und einen Restore überleben — samt
+   * Versionszähler, sonst begänne die Konflikterkennung danach wieder bei 1.
+   */
+  it("sichert Terra-Karten und stellt sie samt Fassung wieder her", async () => {
+    const sourceBundle = await createBackupBundle(databaseUrl, {
+      type: "world",
+      worldSlug,
+    });
+
+    assert.equal(sourceBundle.manifest.stats.terraKarten, 1);
+    const gesichert = sourceBundle.data.terraKarten ?? [];
+    assert.equal(gesichert.length, 1);
+    assert.equal(gesichert[0]?.titel, "Backup-Karte");
+    assert.equal(gesichert[0]?.version, 3);
+    assert.deepEqual(gesichert[0]?.daten, {
+      format: "terra",
+      version: 5,
+      wurzel: "k0",
+      karten: [{ id: "k0", elternId: null }],
+    });
+
+    const zipPath = path.join(backupsDir, "terra-roundtrip.zip");
+    writeBackupZip(sourceBundle, zipPath, uploadsRoot);
+    const zipBuffer = fs.readFileSync(zipPath);
+
+    const targetDbUrl = createTestDatabaseUrl();
+    const targetUploads = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-terra-restore-"));
+    process.env.UWE_UPLOADS_ROOT = targetUploads;
+    const targetDb = createPrismaClient(targetDbUrl);
+    const targetBrainDb = createTestBrainClient();
+
+    await executeRestore(
+      targetDb,
+      targetBrainDb,
+      loadBackupFromBuffer(zipBuffer, "terra-roundtrip.zip"),
+      { confirmed: true, autoResolveSlugConflicts: true },
+      zipBuffer,
+      targetUploads,
+    );
+
+    const wiederhergestellt = await targetDb.terraKarte.findFirst({ where: { titel: "Backup-Karte" } });
+    assert.ok(wiederhergestellt, "die Terra-Karte hat den Restore überlebt");
+    assert.equal(wiederhergestellt.version, 3, "der Versionszähler reist mit");
+    assert.deepEqual(wiederhergestellt.daten, gesichert[0]?.daten);
+
+    const zielWelt = await targetDb.world.findUnique({ where: { slug: worldSlug } });
+    assert.equal(wiederhergestellt.worldId, zielWelt?.id, "die Karte hängt an der neuen Welt-Id");
+
+    await targetDb.$disconnect();
+    fs.rmSync(targetUploads, { recursive: true, force: true });
+    process.env.UWE_UPLOADS_ROOT = uploadsRoot;
   });
 
   it("exports campaign-scoped backups", async () => {

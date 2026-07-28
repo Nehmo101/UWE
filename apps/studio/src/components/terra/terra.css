@@ -1,0 +1,183 @@
+/* Terra-Rahmen (J1). Bewusst knapp: alles Gestalterische steckt IM Frame
+   (terra/src/ui/style.css). Hier steht nur, wie der Rahmen in der Seite
+   sitzt und wie der Speicherzustand aussieht. */
+
+.terra-rahmen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.terra-rahmen-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.terra-rahmen-zustand {
+  font-variant-numeric: tabular-nums;
+}
+
+.terra-rahmen-zustand[data-art="fehler"],
+.terra-rahmen-zustand[data-art="konflikt"] {
+  color: var(--destructive, #b3261e);
+  font-weight: 600;
+}
+
+.terra-rahmen-flaeche {
+  position: relative;
+  width: 100%;
+  /* Der Editor braucht Höhe; 100vh minus Kopfzeilen/Breadcrumb der Hülle. */
+  height: min(78vh, 900px);
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0b0d10;
+}
+
+.terra-rahmen-flaeche > iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.terra-rahmen-hinweis {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #e8e2d4;
+  pointer-events: none;
+}
+
+/* „Karte beschreiben" (J4). Unter dem Frame, nicht daneben: das Bild ist die
+   Hauptsache, die Beschreibung ein Werkzeug, das man einmal benutzt. */
+
+.terra-entwurf {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.terra-entwurf-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.terra-entwurf-feld > span {
+  font-weight: 600;
+}
+
+.terra-entwurf-feld > textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.5rem;
+  border: 1px solid var(--input, var(--border));
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.terra-entwurf-zeile {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.terra-entwurf-zeile > label,
+.terra-entwurf-gitter > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.terra-entwurf-zeile > label {
+  max-width: 9rem;
+}
+
+.terra-entwurf button {
+  align-self: start;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--secondary, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.terra-entwurf button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terra-entwurf-vorschau {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.terra-entwurf-gitter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
+.terra-entwurf-hinweis,
+.terra-entwurf-meldung,
+.terra-entwurf-ergebnis {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.terra-entwurf-meldung {
+  color: var(--destructive, #b3261e);
+}
+
+.terra-entwurf-notizen {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.terra-entwurf-notizen ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+/* „Texte zur Karte": Namensvorschläge und Regionsbeschreibung. Die Ausgabe ist
+   Prosa und wird von Hand übernommen — deshalb <pre>: Zeilenumbrüche des
+   Modells sind die Gliederung, und ein Umformatieren würde sie zerreden. */
+
+.terra-text-ausgabe {
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted, transparent);
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

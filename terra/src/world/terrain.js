@@ -2,7 +2,17 @@
 import * as THREE from 'three';
 import { clamp, lerp, sstep, DEG, vnoise, fractal } from '../core/rng.js';
 import { MAP, VW, HALF, S, BIOME, hoehenProfil } from '../core/store.js';
-import { terraMat, tintedMats } from '../render/materials.js';
+import { terraMat, tintedMats, setzeBiomKarte } from '../render/materials.js';
+// I2: Biomflaechen. biomfeld.js haengt nur an core/rng.js und core/store.js —
+// es traegt eine eigene Kopie von inPoly/polyBBox, damit kein Rueckimport nach
+// generators/ entsteht (dort haengt areas.js an genau dieser Datei).
+import { biomFeldBauen, biomGewichtAn, biomIndexAn, mischPalette, mischStufe, cacheLeeren as biomCacheLeeren, BIOM_KEINS } from './biomfeld.js';
+// J: die Uebergabepunkte der Massstabsleiter. Nur zwei Konstanten (UEBERGABE,
+// BLENDE) — signaturen.js haengt an three, core/ und world/kartenbaum.js und
+// importiert selbst nie aus world/terrain.js, der Graph bleibt azyklisch.
+// Gebraucht werden sie fuer RUHE_AB: die Beruhigung beginnt an der Uebergabe
+// Koerper -> Karte, nicht erst auf Kontinentmassstab (Begruendung dort).
+import { UEBERGABE, BLENDE } from '../render/signaturen.js';
 
 /* ==========================================================================
    Aenderungserkennung fuer die Historie (H1e)
@@ -78,7 +88,8 @@ function holeSchmutzRegion() {
    (Undo-Stapel beim Groessenwechsel verwerfen) braucht history.js — siehe
    Bericht H1e. */
 var feldLaenge = 0;
-var base, hgt, aoRoh, aoFeld, corridor, wear;
+var base, hgt, aoRoh, aoFeld, corridor, wear, ufer, abfluss, sediment, haerte,
+    biomFeld, biomGewicht;
 function felderSichern() {
   var n = VW * VW;
   if (n <= feldLaenge) return;
@@ -89,6 +100,39 @@ function felderSichern() {
   corridor = new Uint8Array(n);
   // Abnutzung entlang der Wege: 0..255, weich auslaufend, faerbt das Gras erdig.
   wear = new Uint8Array(n);
+  /* J: der nasse Uferstreifen der Binnenseen, 0..255 wie `wear`. Ein
+     Laufzeitfeld aus demselben Grund wie wear/corridor: es entsteht bei jedem
+     Aufbau aus den See-Elementen neu (core/dirty.js stempelt es in
+     rebuildCorridors entlang des Uferzugs) und steht deshalb NICHT im
+     Speicherformat. Wo kein See liegt, ist es exakt 0, und terrainColor
+     betritt seinen Zweig nicht — die Bitgleichheits-Zusage bleibt. */
+  ufer = new Uint8Array(n);
+  /* I3: Ergebnisfelder der Erosion. Sie wachsen mit base/hgt mit und stehen
+     auch ohne gelaufene Erosion bereit (Abfluss und Sediment 0, Haerte neutral
+     1) — wer sie liest, darf das bedingungslos tun.
+
+     LAUFZEITFELDER, bewusst nicht im Speicherformat. Die Hoehenaenderung der
+     Erosion steckt ohnehin im `hoehenDelta` (Format v3), diese drei sind
+     daraus abgeleitete Messwerte. Sie nach dem Laden neu zu erzeugen hiesse,
+     die Erosion noch einmal laufen zu lassen — 456 ms, und das Ergebnis wuerde
+     auf dem bereits erodierten Gelaende ein anderes sein als beim ersten Mal.
+
+     Daraus folgt eine Regel, die einzuhalten ist: KEIN Generator darf diese
+     Felder lesen. Sonst saehe eine Karte nach dem Laden anders aus als vor dem
+     Speichern — genau die Sorte versteckter Zustand, die `rebuildAll` in
+     Runde I5 einen Tag gekostet hat. Erlaubt sind Auswertungen, deren Ergebnis
+     der Nutzer sieht und die gespeichert werden: die Biom-Ableitung macht aus
+     `abfluss` Polygone, und die Polygone liegen danach in der Datei. */
+  abfluss = new Float32Array(n);
+  sediment = new Float32Array(n);
+  haerte = new Float32Array(n); haerte.fill(1);
+  /* I2: abgeleitete Biomflaechen. Laufzeitfelder wie corridor und wear — und
+     aus demselben Grund unbedenklich, anders als die drei Erosionsfelder
+     darueber: Im Speicherformat stehen die POLYGONE, und aus ihnen entsteht
+     dieses Gitter bei jedem Aufbau neu. Die Ableitung ist eine reine Funktion
+     der Elementliste, das Bild nach dem Laden also dasselbe wie davor. */
+  biomFeld = new Uint8Array(n); biomFeld.fill(BIOM_KEINS);
+  biomGewicht = new Uint8Array(n);
   feldLaenge = n;
   // Frisches (genullte) base-Feld ist eine Aenderung wie jede andere. Praktisch
   // folgt sofort verwerfeHistorie() aus io.js, aber der Zaehler soll auch dann
@@ -109,19 +153,34 @@ felderSichern();
  * Hashes aendert dieses Ergebnis nicht — das Delta-Format bleibt davon
  * unabhaengig korrekt.
  */
-function genBaseIn(ziel, seed) {
+/**
+ * @param groesse  I1: Kartengroesse in Zellen, falls das Ziel NICHT die
+ *   aktuelle Karte ist. Der Kartenbaum braucht das: um eine Kindkarte
+ *   abzuleiten, muss zuerst das Gelaende der ELTERNkarte stehen, und die hat
+ *   im Allgemeinen eine andere Groesse als die gerade geoeffnete. Ohne den
+ *   Parameter rechnete die Ableitung auf einem Gitter der falschen Kantenlaenge
+ *   — das Ergebnis waere nicht falsch aussehend, sondern schlicht versetzt.
+ *   Fehlt der Parameter, gilt wie bisher die aktuelle Karte, und der Rechenweg
+ *   ist Bit fuer Bit der alte.
+ * @param biom  desgleichen fuer das Hoehenprofil: eine Elternkarte mit
+ *   Karstprofil ergibt ein anderes Gelaende als eine mit Wiesenprofil, und
+ *   S.biom steht beim Ableiten schon auf dem der KINDkarte.
+ */
+function genBaseIn(ziel, seed, groesse, biom) {
+  var MAP_L = Number.isFinite(groesse) && groesse > 0 ? (groesse | 0) : MAP;
+  var VW_L = MAP_L + 1, HALF_L = MAP_L / 2;
   // H6: die frueheren Literale 26 / 4 / -6 / -22 / 55 kommen jetzt aus der
   // BIOME-Registry. Fehlt dort das Feld `hoehe`, liefert hoehenProfil() exakt
   // diese Werte zurueck — das gilt seit H-Welle 2 noch fuer wiese, kueste,
   // sumpf und schnee; die uebrigen 21 Biome tragen ein eigenes Profil.
-  var HP = hoehenProfil(S.biom);
+  var HP = hoehenProfil(typeof biom === "string" ? biom : S.biom);
   // randBreite 0 = Abrisskante ohne Uebergang. sstep teilt durch (e1-e0),
   // deshalb hier ein Winzigwert statt einer Fallunterscheidung in der
   // inneren Schleife (bei 55 rechnerisch identisch zu vorher).
   var randBreite = HP.randBreite > 0 ? HP.randBreite : 1e-6;
-  for (var j = 0; j < VW; j++) {
-    for (var i = 0; i < VW; i++) {
-      var x = i - HALF, z = j - HALF;
+  for (var j = 0; j < VW_L; j++) {
+    for (var i = 0; i < VW_L; i++) {
+      var x = i - HALF_L, z = j - HALF_L;
       var h = fractal(x * 0.006, z * 0.006, seed) * HP.amp
             + fractal(x * 0.03, z * 0.03, seed + 77) * HP.fein + HP.sockel;
       // Vorbereitete Profilfelder: bei 0 (Standard) wird der Zweig komplett
@@ -146,15 +205,15 @@ function genBaseIn(ziel, seed) {
       }
       // Rand auf randTiefe ziehen: weich unter den Wasserspiegel (Standard)
       // oder ueber wenige Kacheln senkrecht ins Bodenlose (Bruchkante, H6).
-      var d = Math.min(i, j, MAP - i, MAP - j);
+      var d = Math.min(i, j, MAP_L - i, MAP_L - j);
       h = lerp(HP.randTiefe, h, sstep(0, randBreite, d));
-      ziel[j * VW + i] = h;
+      ziel[j * VW_L + i] = h;
     }
   }
   // H1e: nur der Schreibpfad AUF base zaehlt. io.js laesst sich hier auch ein
   // frisches Vergleichsfeld fuellen (Seed-Terrain fuers v3-Delta) — das ist
   // kein Undo-relevanter Vorgang und darf den Zaehler nicht bewegen.
-  if (ziel === base) basisGeaendert(0, VW - 1, 0, VW - 1);
+  if (ziel === base) basisGeaendert(0, VW_L - 1, 0, VW_L - 1);
 }
 
 /** Seed-Terrain direkt nach base schreiben — gleiche Rechenreihenfolge wie immer. */
@@ -538,6 +597,25 @@ function initTerrain(scene) { scene.add(terrain); }
  *  Der Aufrufer (editor/io.js) ruft danach genBase + rebuildAll. */
 function terrainGeometrienNeu() {
   felderSichern();
+  /* I3 — die drei Messfelder der Erosion leeren.
+     felderSichern() laesst Felder nur WACHSEN: nach einer 1024er Karte bleibt
+     `abfluss` 1.050.625 Eintraege lang, auch wenn danach eine 256er geladen
+     wird. Darin steht dann ein Feld in der ZEILENORDNUNG der grossen Karte —
+     dieselben Bytes, aber jede Zeile an der falschen Stelle. Wer das liest,
+     bekommt kein leeres Feld, sondern ein plausibel aussehendes falsches.
+
+     Genau dieser Fehlertyp hat schon einmal dafuer gesorgt, dass Biomflaechen
+     nach einer groesseren Karte still wirkungslos waren (siehe die
+     Regressionspruefung in terra/test/09-einbettung.test.mjs). Deshalb hier
+     an der Quelle: ein Groessenwechsel entwertet die Messung, also wird sie
+     verworfen statt umgedeutet.
+
+     `haerte` faellt auf 1 zurueck, nicht auf 0 — das ist der neutrale Wert
+     (siehe felderSichern). Ein Haertefeld voller Nullen hiesse „ueberall
+     weich" und waere eine Aussage, keine fehlende. */
+  abfluss.fill(0);
+  sediment.fill(0);
+  haerte.fill(1);
   bauePatches();
 }
 
@@ -551,6 +629,227 @@ function terrainGeometrienNeu() {
 var COS50 = Math.cos(50 * DEG), COS58 = Math.cos(58 * DEG);
 var COS_BAND_A = Math.cos(52 * DEG), COS_BAND_B = Math.cos(35 * DEG);
 var _tc = new THREE.Color(), _tc2 = new THREE.Color();
+
+/* ==========================================================================
+   I1 — Reliefschattierung: der einzige Eingriff des Signaturenkatalogs in
+   diese Datei
+
+   Der Katalog fuehrt sie ausdruecklich NICHT als Zeichen und nicht als Pool,
+   sondern als TERRAINFARBE: „schraeg von Nordwest beleuchtet, in die
+   vorhandene terrainColor eingerechnet, sobald der Massstab ueber etwa
+   600 m/Zelle liegt". Auf Kontinentmassstab ersetzt sie die gesamte
+   Objektdarstellung des Gelaendes — dort steht kein einziger Felsen mehr,
+   und ohne sie waere ein Gebirge ein Farbfleck.
+
+   --- Warum von Nordwest ------------------------------------------------
+   Kartografische Konvention seit dem Kupferstich, und sie ist Konvention
+   geworden, weil sie funktioniert: bei Licht von links oben liest das Auge
+   Erhebungen als Erhebungen. Bei Licht von rechts unten kippt das Bild in
+   die Hohlform um (Relief-Inversion) — dieselbe Karte zeigt dann Taeler, wo
+   Berge sind.
+
+   --- Warum eine eigene Ableitung und nicht das uebergebene `ny` ---------
+   `ny` ist die y-Komponente der Vertexnormalen aus der Nachbarschaft von
+   EINER Gitterzelle. Sie traegt jede Bodenwelle mit und weiss nichts ueber
+   die Richtung des Hangs. Eine Schummerung braucht beides: die Richtung,
+   und einen Stuetzabstand, der zum Massstab passt. Auf 2000 m je Zelle ist
+   eine Welle von zwei Einheiten ein Vier-Kilometer-Huegel — sie GEHOERT ins
+   Bild, aber geglaettet, sonst rauscht die halbe Karte.
+
+   --- Und warum das unterhalb der Schwelle nichts kostet ----------------
+   Die Berechnung steht hinter einem einzigen `if`, das unterhalb von 600
+   m/Zelle gar nicht betreten wird. Der Rechenweg von terrainColor bleibt
+   dort Bit fuer Bit der bisherige: kein zusaetzlicher Faktor, keine
+   Multiplikation mit 1, kein veraenderter Float. Dieselbe Zusage, die die
+   Biomflaechen weiter oben geben, und 14-signaturen-generatoren haelt sie
+   gegen einen Hash fest, der VOR diesem Eingriff aufgenommen wurde.
+   ========================================================================== */
+var RELIEF_AB = 600;              // m je Zelle, ab hier beginnt die Schummerung
+var RELIEF_VOLL = RELIEF_AB * 1.6;  // dieselbe halbe Groessenordnung wie BLENDE
+var RELIEF_STUETZ = 2.5;          // Stuetzabstand der Ableitung in Welteinheiten
+/* Ueberhoehung. 2,0 ist gemessen und nicht geschaetzt: Terras Gelaende hat
+   auf einem gewachsenen Hang ein Gefaelle um 0,2 je Welteinheit, und mit
+   Faktor 1 laege der Unterschied zwischen Sonnen- und Schattenflanke bei
+   knapp 5 % — sichtbar im Diagramm, unsichtbar im Bild. Mit 2,0 sind es rund
+   19 %, und das ist der Kontrast, an dem eine Schummerung ihren Zweck
+   erfuellt: die Karte lesbar zu machen, ohne wie eine Fotografie auszusehen.
+   Kartografische Schummerungen ueberhoehen seit je; eine massstabsgetreue
+   waere auf jedem Uebersichtsblatt unsichtbar. */
+var RELIEF_UEBERHOEHUNG = 2.0;
+/* I6 — nachgemessen auf dem echten Hoehenfeld (Seed 4711, 15.500
+   Stuetzstellen), nicht nach Gefuehl nachgezogen. Die Zahlen vorher:
+   0.30 / 0.16 ohne Klemme ergab eine mittlere Helligkeitsaenderung von 14,1 %
+   — die Schummerung war also nie zu schwach. Zwei andere Dinge stimmten
+   nicht:
+
+   1. Sie war UNSYMMETRISCH und zog die ganze Karte mit sich. Mittelwert
+      0.918: eine Kontinentkarte war allein durch die Schummerung 8 % dunkler
+      als dasselbe Gelaende aus der Naehe. Auf der frueher verrauschten
+      Flaeche fiel das nicht auf, auf der beruhigten schon.
+   2. Die Schattenseite war UNGEDECKELT. `ab / RELIEF_LY` faellt unter -1,
+      sobald eine Flanke ganz vom Licht wegzeigt; das Fuenfte Perzentil lag
+      bei 0.63, der dunkelste Punkt bei 0.59 — 41 % Abzug, ein schwarzes Loch
+      im Gebirge. Kartografische Schummerungen deckeln ihre Tiefe seit je;
+      der helle Ast ist durch `ab <= 1 - RELIEF_LY` von selbst gedeckelt, der
+      dunkle war es nicht.
+
+   Jetzt 0.28 / 0.22 mit Deckel: mittlere Aenderung 13,6 % (also praktisch
+   dieselbe Lesbarkeit), Spanne 0.72 bis 1.22 statt 0.59 bis 1.16, Mittelwert
+   0.946. Der Median liegt bei 0.995 — die Ebene behaelt ihre Farbe. */
+var RELIEF_TIEFE = 0.28;          // wie dunkel die Schattenseite hoechstens wird
+var RELIEF_LICHT = 0.22;          // wie hell die Sonnenseite hoechstens wird
+/* Lichtrichtung: Nordwest ist (-x, -z), die Hoehe darueber knapp 40 Grad.
+   Normiert, damit das Skalarprodukt unten direkt der Lambertfaktor ist. */
+var RELIEF_LX = -0.5054, RELIEF_LY = 0.6998, RELIEF_LZ = -0.5054;
+
+/** Staerke der Schummerung bei diesem Massstab: 0 unterhalb der Schwelle,
+ *  ueber eine halbe Groessenordnung auf 1. Getrennt exportiert, damit die
+ *  Pruefung die Schwelle nachrechnen kann, ohne Farben zu vergleichen. */
+function reliefFaktor(m) {
+  if (!Number.isFinite(m) || m <= RELIEF_AB) return 0;
+  return sstep(RELIEF_AB, RELIEF_VOLL, m);
+}
+
+/* ==========================================================================
+   I6 — Die Beruhigung: warum eine Kontinentkarte weniger braucht
+
+   Die Farbrechnung darunter ist fuer den ORT gebaut. Sie legt auf jeden
+   Quadratmeter eine Handschrift: Farbdrift ueber die Wiese, Stoerkanten an
+   den Zonengrenzen, Gesteinsbaender am Hang, Brandung am Ufer, Trittspuren
+   am Weg, Aquarellkorn im Wert. Auf einem Meter je Zelle ist das der
+   Unterschied zwischen einer gemalten und einer gerechneten Landschaft.
+
+   Auf 2000 m je Zelle ist es Rauschen. Die Frequenzen rechnen sich in
+   Bildpunkte um (eine Kartenkante von 256 Zellen auf rund 900 Bildpunkten,
+   also gut drei Punkte je Welteinheit):
+
+     vnoise 0.55  ~1,8 Einheiten   ~6 px    Korn
+     h*0.55       Gesteinsband     ~5 px    Korn
+     fractal 0.35 Trittsaum        ~10 px   Korn
+     fractal 0.22 Stoerkante       ~15 px   Flimmern
+     fractal 0.16 Wertoktave       ~20 px   Flimmern
+     fractal 0.09 Stoerkante       ~37 px   Flimmern
+     fractal 0.055 Erdflecken      ~60 px   Sprenkel
+     fractal 0.052 Trockenflecken  ~63 px   Sprenkel
+     fractal 0.025 Farbdrift       ~132 px  Landschaftswelle
+     fractal 0.012 Grundton        ~275 px  Landmasse
+
+   Eine Karte lebt von Flaechen, die man unterscheiden kann. Drei Klassen,
+   drei Behandlungen:
+
+     KORN und FLIMMERN (alles bis einschliesslich der Stoerkanten, dazu
+     Brandungssaum und Trittspur) geht ganz. Bei den Stoerkanten ist das
+     nicht nur eine Ersparnis: ohne sie folgt eine Zonengrenze exakt der
+     Hoehenlinie, und genau das ist eine Hoehenschichtkarte.
+
+     SPRENKEL (die beiden Fleckenoktaven) behalten ein Viertel ihrer
+     Streuung. Ganz ohne sie waere die Flaeche eine einzige Farbe, und eine
+     Karte ist kein Farbfeld.
+
+     Die FARBDRIFT behaelt zwei Fuenftel. Sie ist auf diesem Massstab keine
+     Stoerung mehr, sondern der Grund, warum zwei Landstriche derselben
+     Hoehenzone nicht identisch aussehen.
+
+   „Geht ganz" und „behaelt ein Viertel" meinen dabei immer den MITTELWERT
+   und nie die Null — der Abschnitt darunter erklaert, warum das der ganze
+   Unterschied zwischen einer beruhigten und einer ausgewaschenen Karte ist.
+
+   Unangetastet bleiben die grossen Zuege, die eine Karte ueberhaupt erst
+   lesbar machen: Wasser, Meeresgrund, die Hoehenzonen samt ihrem dunklen
+   Saum, der Felsdurchbruch am Steilhang, der Grundton der Landmasse und die
+   Biompalette.
+
+   --- Warum die Beruhigung an der UEBERGABE beginnt, nicht bei 600 -------
+   Bis Runde I6 teilte sie sich Schwelle und Rampe mit der Schummerung
+   (RELIEF_AB = 600). Das war ausdruecklich ein Trade-off, im Commit als der
+   schwaechste Punkt der Runde benannt: auf 250 m/Zelle blieb das Gelaende
+   verrauscht, weil ein frueherer Start die Bitgleichheits-Zusage bei genau
+   600 haette neu eichen muessen. Jetzt ist geeicht (die Hash-Pruefpunkte in
+   14-signaturen-generatoren liegen bei 60 und 59,999, der Wert bei 600 ist
+   NEU aufgenommen), und die Beruhigung haengt dort, wo sie inhaltlich
+   hingehoert: an der UEBERGABE Koerper -> Karte (UEBERGABE.koerper = 60 aus
+   render/signaturen.js). Ab dort zeichnet Terra Zeichen statt Koerper, und
+   eine Karte aus Zeichen verdient eine ruhige Flaeche — nicht erst zwei
+   Groessenordnungen spaeter. Die Rampe ist dieselbe halbe Groessenordnung
+   wie die der Zeichen (BLENDE = 1.6): bei 96 m/Zelle, wo der letzte Koerper
+   ausgeblendet ist, ist die Flaeche ganz beruhigt. Eine Geste, ein Band —
+   nur haengt das Band jetzt an der Uebergabe statt an der Kontinentstufe.
+
+   Die Schummerung bleibt bewusst bei 600: zwischen 96 und 600 ist das
+   Terrain ein BELEUCHTETES Mesh mit echten Normalen — seine Formen traegt
+   das Szenenlicht, und die Reliefgruppe der Zeichen (Grat, Gipfel) steht
+   darauf. Erst auf Kontinentmassstab, wo die Kamera so weit weg ist, dass
+   die Geometrie im Bild flach wird, ersetzt die kartografische Schummerung
+   das Licht. Der alte Einwand („ein Bereich, der glatt, aber unschattiert
+   ist") beschrieb eine Flaeche OHNE Zeichen; seit die Reliefzeichen ab 60
+   uebernehmen, ist er gegenstandslos. Beide Baender blenden weich (sstep),
+   17-kartenbild prueft beide getrennt.
+
+   --- Und warum das unterhalb der Schwelle NICHTS aendert ---------------
+   Kein zweiter Rechenweg und kein `if`, sondern zwei Zahlen, die exakt 0
+   bzw. exakt 1.0 sind. `ruhe` ist unterhalb von 60 m/Zelle exakt 0 (sstep
+   klemmt auf 0, nicht auf eine kleine Zahl), und daraus folgt Bit fuer Bit:
+
+     ruhig(w, m, 0)  =  w + (m - w) * 0  =  w + 0  =  w
+     w * (1 - 0)     =  w * 1.0          =  w
+     v + 0.066 * 0   =  v + 0            =  v
+
+   `x * 1.0 === x` und `x + 0.0 === x` gelten in IEEE-754 fuer jeden endlichen
+   Float ohne Rundung (fuer x = -0 liefert die Addition +0 — kommt hier nicht
+   vor, alle Gewichte sind nichtnegativ, und selbst dann waere die Summe
+   dieselbe). Ein `if (ruhe > 0)` waere derselbe Beweis mit mehr Zeilen; ein
+   Faktor wie 0.999 waere KEIN Beweis, sondern eine Hoffnung.
+
+   Dieselbe Zusage wie bei den Biomflaechen und beim Reliefzweig.
+   14-signaturen-generatoren haelt sie gegen einen Hash fest, der vor beiden
+   Eingriffen aufgenommen wurde (bei 1, 59.999 und 60 m/Zelle) und pinnt den
+   Zustand OBERHALB gegen einen neu geeichten Hash bei 600; 17-kartenbild
+   prueft sie noch einmal ohne Hash, indem es die Massstaebe 1, 4, 59.999
+   und 60 gegeneinander vergleicht.
+   ========================================================================== */
+var RUHE_AB = UEBERGABE.koerper;           // 60 — die Uebergabe Koerper -> Karte
+var RUHE_VOLL = UEBERGABE.koerper * BLENDE; // 96 — dieselbe Rampe wie die Zeichen
+var RUHE_SPRENKEL = 0.25;   // Rest der Flecken-Oktaven bei voller Ruhe
+var RUHE_DRIFT = 0.40;      // Rest der Farbdrift
+
+/* --- Der Mittelwert, nicht die Null --------------------------------------
+   Der erste Anlauf hat die Feinanteile einfach WEGGELASSEN. Ergebnis: die
+   Karte war bei 2000 m/Zelle 8,7 % dunkler als dasselbe Gelaende bei 1 m —
+   und zwar deshalb, weil fast jede dieser Feinheiten die Flaeche im Mittel
+   AUFHELLT (Trockengras, Erdflecken und der gelbe Driftpol liegen ueber dem
+   Grundton). Wer sie streicht, streicht auch ihren Mittelwert.
+
+   Eine Beruhigung ist aber kein Abzug, sondern ein Tiefpass: jede Feinheit
+   wird durch IHREN MITTELWERT ersetzt. Die Flaeche verliert die Streuung und
+   behaelt die Lage — dieselbe Farbe, dieselbe Helligkeit, nur ohne Koernung.
+
+   Die Zahlen sind gemessen, nicht geschaetzt: 614.400 Stuetzstellen ueber
+   sechs Seeds durch dieselbe Kette sstep(a, b, fractal(...)) (die Randver-
+   teilung von fractal haengt nicht an der Frequenz, deshalb genuegt eine
+   Messung je Schwellenpaar). Notiert ist bereits das FERTIGE Gewicht, also
+   inklusive des Faktors dahinter. */
+var RUHE_M_TROCKEN = 0.185;   // E[sstep(0.54,0.86,f)] * 0.7  = 0.264 * 0.7
+var RUHE_M_ERDE    = 0.056;   // E[sstep(0.68,0.90,f)] * 0.34 = 0.164 * 0.34
+var RUHE_M_GELB    = 0.042;   // E[sstep(0.55,0.85,f)] * 0.16 = 0.263 * 0.16
+var RUHE_M_BLAU    = 0.037;   // E[sstep(0.45,0.15,f)] * 0.16 = 0.233 * 0.16
+var RUHE_M_OASE    = 0.455;   // E[sstep(0.35,0.75,f)] — nur der Rauschfaktor
+/* Erwartungswert der beiden entfernten Wertoktaven: E[fractal] = 0.5129 mal
+   0.08 plus E[vnoise] = 0.4998 mal 0.05. Ohne diesen Ausgleich wuerde die
+   Karte allein durch das fehlende Korn um 6,6 % nachdunkeln. */
+var RUHE_M_WERT = 0.066;
+
+/** Ein Feinanteil, in Richtung seines Mittelwerts gezogen. `s` ist 0
+ *  unterhalb der Schwelle, und `w + (m - w) * 0` ist Bit fuer Bit `w`. */
+function ruhig(w, m, s) { return w + (m - w) * s; }
+
+/** Staerke der Beruhigung bei diesem Massstab. Seit der Neueichung ein
+ *  ANDERES Band als reliefFaktor: die Beruhigung laeuft ueber [60, 96]
+ *  (Uebergabe Koerper -> Karte), die Schummerung weiter ueber [600, 960]
+ *  (Kontinentstufe). Beide weich, beide getrennt pruefbar. */
+function ruheFaktor(m) {
+  if (!Number.isFinite(m) || m <= RUHE_AB) return 0;
+  return sstep(RUHE_AB, RUHE_VOLL, m);
+}
 
 /* --- Krümmungs-Verdeckung (D1) ---------------------------------------
    Mulden und Grabenkanten sind konkav und werden abgedunkelt, Grate
@@ -594,30 +893,67 @@ function computeAO(i0, i1, j0, j1) {
  */
 function terrainColor(h, ny, x, z, out, ao) {
   var P = (BIOME[S.biom] || BIOME.wiese).terrain;
+  /* I2: liegt an dieser Stelle eine Biomflaeche, wird gegen deren Palette
+     gemischt. Der Nachschlag kostet einen Feldzugriff, die Mischung selbst ist
+     vorgerechnet — 16 Stufen je Biompaar, gecacht. Feiner waere wirkungslos:
+     das Gitter hat einen Vertex je Welteinheit, bis `weich` = 16 ist die
+     Quantisierung der POSITION groeber als die der Palette.
+
+     Bei Gewicht 0 — also ueberall dort, wo keine Flaeche liegt — bleibt P die
+     Registry-Palette, und der gesamte Rechenweg darunter ist Bit fuer Bit der
+     bisherige. Genau deshalb steht die Abfrage hier oben und nicht verteilt
+     auf die zwanzig Palettenzugriffe weiter unten. */
+  var bg = biomGewichtAn(biomGewicht, VW, MAP, x, z);
+  if (bg > 0) P = mischPalette(S.biom, biomIndexAn(biomFeld, VW, MAP, x, z), mischStufe(bg));
+  /* I6 — die Regler der Beruhigung. Unterhalb von RUHE_AB ist `ruhe` exakt 0;
+     dann sind `sFleck`/`sDrift` exakt 0 (ruhig() ist die Identitaet) und
+     `dKorn` exakt 1.0 (die Multiplikation ist die Identitaet). Siehe den
+     Abschnitt bei RUHE_AB. */
+  var ruhe = ruheFaktor(S.einheitMeter);
+  var dKorn = 1 - ruhe;                        // Korn verschwindet ganz
+  var sFleck = ruhe * (1 - RUHE_SPRENKEL);     // Flecken behalten 25 % Streuung
+  var sDrift = ruhe * (1 - RUHE_DRIFT);        // Drift behaelt 40 %
   var gross = fractal(x * 0.012, z * 0.012, S.worldSeed + 404);
   var fein = fractal(x * 0.052, z * 0.052, S.worldSeed + 505);
+  // Der Grundton bleibt unangetastet: 0.012 sind rund 275 Bildpunkte, das ist
+  // die Landmasse selbst — und der Hoehenanteil daneben ist ohnehin Struktur.
   out.copy(P.grasKuehl).lerp(P.grasWarm,
     clamp(sstep(0.34, 0.72, gross) * 0.8 + sstep(1, 17, h) * 0.35, 0, 1));
-  out.lerp(P.grasTrocken, sstep(0.54, 0.86, fein) * 0.7);
-  out.lerp(P.erde, sstep(0.68, 0.9, fractal(x * 0.055, z * 0.055, S.worldSeed + 717)) * 0.34);
+  out.lerp(P.grasTrocken, ruhig(sstep(0.54, 0.86, fein) * 0.7, RUHE_M_TROCKEN, sFleck));
+  out.lerp(P.erde, ruhig(sstep(0.68, 0.9, fractal(x * 0.055, z * 0.055, S.worldSeed + 717)) * 0.34,
+    RUHE_M_ERDE, sFleck));
 
   // Oasen-Logik (nur wueste, oase > 0 — im wiese-Pfad springt der Zweig nie
   // an): unter Hoehe ~2 zieht es die Senken Richtung gedaempftem Gruen;
   // das grobe Rauschen macht die Flecken spaerlich statt zum Ring.
-  if (P.oase > 0) out.lerp(P.oaseFarbe, sstep(2.4, 0.8, h) * sstep(0.35, 0.75, gross) * P.oase);
+  // I6: mit `gross` gesteuert, also gross genug fuer eine Karte — sie werden
+  // wie die Sprenkel dezenter, aber nicht abgeschafft. Eine Wuestenkarte
+  // ohne ihre Oasen waere eine leere Karte.
+  if (P.oase > 0) {
+    out.lerp(P.oaseFarbe,
+      sstep(2.4, 0.8, h) * ruhig(sstep(0.35, 0.75, gross), RUHE_M_OASE, sFleck) * P.oase);
+  }
 
   // F2: grobe Farbdrift ueber die Landschaftsmassen. f = 0.025 ergibt eine
   // Wellenlaenge von ~40 Welteinheiten (Zielkorridor 30–50); Seed fest an
   // worldSeed + 1102 gebunden — deterministisch wie alle anderen Oktaven,
   // kein Math.random. Hue-Wirkung: wenige Grad Richtung Gelb bzw. Blaugruen.
   var drift = fractal(x * 0.025, z * 0.025, S.worldSeed + 1102);
-  out.lerp(P.driftGelb, sstep(0.55, 0.85, drift) * 0.16);
-  out.lerp(P.driftBlau, sstep(0.45, 0.15, drift) * 0.16);
+  // I6: die Drift ist mit ~132 Bildpunkten Wellenlaenge der grossraeumigste
+  // Feinanteil und auf einer Kontinentkarte kein Rauschen mehr, sondern der
+  // Grund, warum zwei Landstriche derselben Hoehenzone verschieden aussehen.
+  // Sie behaelt deshalb 40 % ihrer Streuung, statt ganz zu verschwinden.
+  out.lerp(P.driftGelb, ruhig(sstep(0.55, 0.85, drift) * 0.16, RUHE_M_GELB, sDrift));
+  out.lerp(P.driftBlau, ruhig(sstep(0.45, 0.15, drift) * 0.16, RUHE_M_BLAU, sDrift));
 
   // Zonengrenzen: staerker gestoert (Zungen und Inseln) und mit dunklem Saum
+  // I6: die Stoerung faellt auf Kartenmassstab ganz weg. Ihre beiden Oktaven
+  // liegen bei 15 und 37 Bildpunkten — sie machen aus einer Schneegrenze
+  // keinen Zungenrand mehr, sondern einen Flimmersaum. Ohne sie folgt die
+  // Grenze exakt der Hoehenlinie, und genau das ist eine Hoehenschichtkarte.
   var stoer = (fractal(x * 0.09, z * 0.09, S.worldSeed + 606) - 0.5) * 2.6
             + (fractal(x * 0.22, z * 0.22, S.worldSeed + 607) - 0.5) * 0.9;
-  var hg = h + stoer;
+  var hg = h + stoer * dKorn;
   out.lerp(P.sand, sstep(P.sandA, P.sandB, hg));
   out.lerp(P.fels, sstep(P.felsA, P.felsB, hg));
   out.lerp(P.schnee, sstep(P.schneeA, P.schneeB, hg));
@@ -633,13 +969,41 @@ function terrainColor(h, ny, x, z, out, ao) {
   var steil = 1 - sstep(COS_BAND_A, COS_BAND_B, ny);
   if (steil > 0) {
     var band = fractal(h * 0.55 + x * 0.01, z * 0.01, S.worldSeed + 808);
-    out.multiplyScalar(1 + steil * (band - 0.5) * 0.34);
+    // I6: das Band laeuft ueber die HOEHE (h * 0.55) und wird damit umso
+    // feiner, je steiler der Hang ist — auf Kartenmassstab ein Streifenmuster
+    // von wenigen Bildpunkten quer ueber jedes Gebirge. Es faellt weg; was
+    // das Gebirge auf der Karte erzaehlt, ist die Schummerung.
+    out.multiplyScalar(1 + steil * (band - 0.5) * 0.34 * dKorn);
   }
   // Abnutzung entlang der Wege: getretenes Gras wird erdig, Rand ausgefranst
+  // I6: eine Trittspur ist auf 2000 m je Zelle zwei Kilometer breit. Sie
+  // faellt weg — der Weg selbst steht auf dieser Karte als Liniensignatur.
   var wtr = wearAt(x, z);
   if (wtr > 0.01) {
     var frans = fractal(x * 0.35, z * 0.35, S.worldSeed + 505) * 0.5;
-    out.lerp(P.tritt, clamp(wtr * 1.05 - frans, 0, 0.7));
+    out.lerp(P.tritt, clamp(wtr * 1.05 - frans, 0, 0.7) * dKorn);
+  }
+  /* J — das nasse Seeufer. Das Meer bekommt seinen feuchten Saum ueber die
+     Hoehe relativ zu WATER (Sand und Brandung weiter unten); ein Bergsee
+     liegt hoeher, sein Ufer ging bisher hart in Gras ueber. `ufer` stempelt
+     core/dirty.js entlang des Uferzugs jedes See-Elements — der Commit-Weg,
+     kein Nebenzustand, das Band wandert also mit dem See mit.
+     Der Ton ist NICHT die Trittspur (erdig ist nicht nass): Erde Richtung
+     Tiefwasser gezogen ergibt den dunklen, satten Boden, in dem Wasser
+     steht. Ausgefranst wie die Trittspur, damit die Linie nicht zum
+     Gummiring wird; mit dKorn ausgeblendet, denn auf Kartenmassstab waere
+     ein drei Zellen breiter Saum ein kilometerbreiter Ring — dort zeichnet
+     sig_kueste die Uferlinie. Ohne See ist `ufer` exakt 0 und der Zweig
+     wird nie betreten: der Rechenweg bleibt Bit fuer Bit der alte. */
+  var nass = uferAt(x, z);
+  if (nass > 0.01) {
+    var ufrans = fractal(x * 0.31, z * 0.31, S.worldSeed + 913) * 0.45;
+    var nassW = clamp(nass * 1.1 - ufrans, 0, 0.75) * dKorn;
+    if (nassW > 0) {
+      _tc2.copy(P.erde).lerp(P.tiefe, 0.38);
+      out.lerp(_tc2, nassW * 0.55);
+      out.multiplyScalar(1 - nassW * 0.12);
+    }
   }
 
   if (h < 0.35) {                                          // Meeresgrund
@@ -654,16 +1018,60 @@ function terrainColor(h, ny, x, z, out, ao) {
   var brA = P.brandungA === undefined ? 0.8 : P.brandungA;
   var brB = P.brandungB === undefined ? 0.3 : P.brandungB;
   var brS = P.brandungStaerke === undefined ? 0.5 : P.brandungStaerke;
+  // I6: der Saum liegt in einem Hoehenband von rund einer halben Einheit —
+  // an einer Kueste sind das ein bis zwei Zellen, auf Kartenmassstab also
+  // ein heller Faden von einem Bildpunkt rings um jede Landmasse. Er faellt
+  // weg; die Kuestenlinie zeichnet auf dieser Stufe sig_kueste.
   var surf = sstep(brA, brB, h) * sstep(-0.6, 0.06, h);
-  if (surf > 0) out.lerp(P.brandung, surf * brS);
+  if (surf > 0) out.lerp(P.brandung, surf * brS * dKorn);
 
   // F2: dieselbe grobe Drift moduliert auch den Value um +-5 % — die
   // Helligkeitswelle folgt damit exakt der Farbwelle (ein Waschgang, wie beim
   // Nass-in-nass-Lauf), statt ein zweites unabhaengiges Muster zu stapeln.
-  var v = 0.94 + fractal(x * 0.16, z * 0.16, S.worldSeed + 909) * 0.08
-        + vnoise(x * 0.55, z * 0.55, S.worldSeed + 313) * 0.05
-        + (drift - 0.5) * 0.10;
-  out.multiplyScalar(v * (ao === undefined ? 1 : ao));
+  /* I6: die beiden Wertoktaven sind Korn (20 und 6 Bildpunkte) und gehen
+     ganz; der Driftanteil folgt der Farbdrift, also demselben Daempfer wie
+     oben — sonst liefen Farbwelle und Helligkeitswelle auseinander, und
+     genau ihr Gleichlauf ist der Nass-in-nass-Effekt von F2. Der Ausgleich
+     ganz hinten ersetzt den Mittelwert der entfernten Oktaven; er ist bei
+     ruhe = 0 exakt +0.0 und damit wirkungslos. */
+  var v = 0.94 + fractal(x * 0.16, z * 0.16, S.worldSeed + 909) * 0.08 * dKorn
+        + vnoise(x * 0.55, z * 0.55, S.worldSeed + 313) * 0.05 * dKorn
+        + ruhig((drift - 0.5) * 0.10, 0, sDrift)
+        + RUHE_M_WERT * ruhe;
+  /* I6: die Kruemmungs-Verdeckung misst EINE Gitterzelle. Auf Ortsmassstab
+     ist sie die Mulde unter der Hecke, auf Kartenmassstab ein Grieseln in
+     jeder Bodenwelle — und ihre Aufgabe (Formen sichtbar machen) uebernimmt
+     dort die Schummerung mit ihrem breiten Stuetzabstand. Sie laeuft deshalb
+     gegen 1 aus. Bei ruhe = 0 ist `ao + (1 - ao) * 0` wieder exakt `ao`. */
+  out.multiplyScalar(v * (ao === undefined ? 1 : ao + (1 - ao) * ruhe));
+
+  /* I1 — Reliefschattierung. Die Begruendung steht oben bei RELIEF_AB; hier
+     zaehlt nur, dass der ganze Block hinter EINEM Vergleich liegt. Unterhalb
+     von 600 m je Zelle wird er nicht betreten, und der Rueckgabewert ist
+     derselbe Float wie vorher. */
+  if (S.einheitMeter > RELIEF_AB) {
+    var st = reliefFaktor(S.einheitMeter);
+    var rd = RELIEF_STUETZ;
+    // Gefaelle ueber einen breiten Stuetzabstand: das ist die Glaettung, die
+    // aus Bodenwellen Landschaftsformen macht.
+    var gx = (heightAt(x + rd, z) - heightAt(x - rd, z)) / (2 * rd);
+    var gz = (heightAt(x, z + rd) - heightAt(x, z - rd)) / (2 * rd);
+    var rnx = -gx * RELIEF_UEBERHOEHUNG, rnz = -gz * RELIEF_UEBERHOEHUNG;
+    var rinv = 1 / Math.sqrt(rnx * rnx + 1 + rnz * rnz);
+    var lam = (rnx * RELIEF_LX + RELIEF_LY + rnz * RELIEF_LZ) * rinv;
+    // Bezug ist die EBENE Flaeche (lam = RELIEF_LY), nicht die Null: eine
+    // Ebene soll ihre Farbe behalten und nicht pauschal nachdunkeln.
+    var ab = lam - RELIEF_LY;
+    var rt = ab > 0
+      ? (ab / (1 - RELIEF_LY)) * RELIEF_LICHT
+      : (ab / RELIEF_LY) * RELIEF_TIEFE;
+    // Deckel der Schattenseite (siehe oben bei RELIEF_TIEFE): eine Flanke,
+    // die ganz vom Licht wegzeigt, wird genau RELIEF_TIEFE dunkler und nicht
+    // dunkler. Der helle Ast braucht keinen — er ist durch seinen Nenner
+    // bereits auf RELIEF_LICHT begrenzt.
+    if (rt < -RELIEF_TIEFE) rt = -RELIEF_TIEFE;
+    out.multiplyScalar(1 + st * rt);
+  }
 }
 
 /**
@@ -787,11 +1195,86 @@ function stampWear(x, z, r) {
     }
   }
 }
-function clearWear() { wear.fill(0); }
+/** Leert Trittspur UND Uferstreifen. Beide sind dasselbe Laufzeitpaar: sie
+ *  entstehen ausschliesslich in rebuildCorridors (core/dirty.js) neu, und
+ *  jeder Aufrufer, der die eine Maske frisch braucht, braucht auch die
+ *  andere frisch — auch die Testwelt, die hierueber ihre Isolation holt. */
+function clearWear() { wear.fill(0); ufer.fill(0); }
 function wearAt(x, z) {
   var i = clamp(Math.round(x + HALF), 0, VW - 1), j = clamp(Math.round(z + HALF), 0, VW - 1);
   return wear[j * VW + i] / 255;
 }
+/** Stempelt den nassen Uferstreifen — dieselbe Max-Regel und derselbe weiche
+ *  Auslauf wie stampWear, nur ins `ufer`-Feld. Gerufen von core/dirty.js
+ *  entlang des Uferzugs eines Sees (rebuildCorridors). */
+function stampUfer(x, z, r) {
+  var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
+  var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
+  for (var j = b0; j <= b1; j++) {
+    for (var i = a0; i <= a1; i++) {
+      var dx = (i - HALF) - x, dz = (j - HALF) - z;
+      var d = Math.sqrt(dx * dx + dz * dz);
+      if (d > r) continue;
+      var w = Math.round(sstep(r, r * 0.3, d) * 255);
+      var id = j * VW + i;
+      if (w > ufer[id]) ufer[id] = w;
+    }
+  }
+}
+function uferAt(x, z) {
+  var i = clamp(Math.round(x + HALF), 0, VW - 1), j = clamp(Math.round(z + HALF), 0, VW - 1);
+  return ufer[j * VW + i] / 255;
+}
+/**
+ * I2: leitet die Biomflaechen-Elemente ins Gitter ab.
+ *
+ * Gegenstueck zu rebuildCorridors, an derselben Stelle der Kette und aus
+ * demselben Grund immer global: ein geloeschter Stempel laesst sich nicht
+ * oertlich zuruecknehmen — man weiss nicht, was vorher darunter lag. Der
+ * optionale `box`-Weg (aus biomBox eines Elements) ist da, wird aber nicht
+ * gebraucht: 23 ms fuer eine kartengroesse Flaeche auf 1024² liegen unter dem,
+ * was rebuildCorridors ohnehin kostet.
+ *
+ * biomCacheLeeren am Ende: der Mischcache haelt 16 Stufen je Biompaar und
+ * waere nach einem Biomwechsel der Karte falsch.
+ */
+function rebuildBiomFeld(flaechen, box) {
+  /* subarray, und das ist kein Schoenheitsfehler: felderSichern laesst die
+     Felder nur WACHSEN (`if (n <= feldLaenge) return`). Nach einer 1024er
+     Karte ist biomFeld 1.050.625 Eintraege lang, auch wenn danach eine 256er
+     geladen wird. biomFeldBauen prueft aber `opt.feld.length === VW*VW` und
+     legt bei Abweichung still ein EIGENES Feld an — die Ableitung liefe dann
+     ins Leere, und keine Biomflaeche haette mehr eine Wirkung. Ohne Fehler-
+     meldung, nur ohne Bild.
+
+     Die subarray-Sicht teilt den Puffer, Schreibzugriffe landen also im
+     Original. Sie kostet eine Allokation je Aufbau (ein paar Bytes
+     Kopfstruktur, keine Daten) — der Preis dafuer, dass biomfeld.js seine
+     Laenge streng prueft, statt wie base und hgt einfach ueber j*VW+i zu
+     indizieren. Die Strenge ist dort richtig; hier ist die Sicht die
+     Uebersetzung zwischen beiden Konventionen. */
+  var n = VW * VW;
+  biomFeldBauen(flaechen, VW, MAP, {
+    seed: S.worldSeed,
+    feld: biomFeld.length === n ? biomFeld : biomFeld.subarray(0, n),
+    gewicht: biomGewicht.length === n ? biomGewicht : biomGewicht.subarray(0, n),
+    box: box
+  });
+  biomCacheLeeren();
+  /* I6: dieselben zwei Felder an die GPU. Ab hier gilt eine Biomflaeche
+     nicht mehr nur fuer die Terrainfarbe (CPU, mischPalette), sondern auch
+     fuer Schneeauflage, Schneekante und Aufbruch aller BAUKOERPER darauf —
+     Daecher, Mauern, Felsen, Baeume. Vorher trugen die eine Schneemenge, die
+     Biomflaechen faerbten aber nur den Boden um; eine Wuestenflaeche in einer
+     Winterkarte hatte verschneite Palmen.
+
+     Die Uebergabe steht hier und nicht in dirty.js, weil hier die einzige
+     Stelle ist, an der beide Felder frisch UND ihre Kantenlaenge bekannt
+     sind. Kosten: ein Durchlauf ueber VW*VW mit zwei Byteschreibern (0,8 ms
+     auf 1024²) plus ein Texturupload. */
+  setzeBiomKarte(biomFeld, biomGewicht, VW, MAP);
+}
+
 function stampCorridor(x, z, r) {
   var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
   var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
@@ -885,6 +1368,38 @@ function applyBrush(p, mode, radius, strength, dt) {
   refreshGrid(i0 - m, i1 + m, j0 - m, j1 + m);
 }
 
+/**
+ * Uebernimmt ein Erosionsergebnis — global oder Fenster, die Struktur ist
+ * dieselbe — nach base und in die drei Messfelder, und zieht Hoehen, AO und
+ * Gitter im beruehrten Bereich nach.
+ *
+ * Der Saum von zwei bzw. drei Zellen ist derselbe wie in applyBrush: eine
+ * Hoehenaenderung an der Kante beeinflusst die Normale ihrer Nachbarn, und AO
+ * schaut noch eine Zelle weiter. Ohne den Saum bliebe an der Fenstergrenze des
+ * Pinsels eine sichtbare Beleuchtungsnaht stehen.
+ *
+ * Der Aufrufer hat vorher pushUndo(true) gerufen: die Erosion ist EIN
+ * Historienschritt, nicht einer je Bild. basisGeaendert meldet die Box an die
+ * Regionslogik aus H1e, damit der Schnappschuss klein bleibt.
+ */
+function wendeErosionAn(e) {
+  var i0 = e.i0, j0 = e.j0, w = e.w, hh = e.h;
+  for (var jl = 0; jl < hh; jl++) {
+    var q = jl * w, z = (j0 + jl) * VW + i0;
+    for (var il = 0; il < w; il++) {
+      base[z + il] = e.hoehe[q + il];
+      abfluss[z + il] = e.abfluss[q + il];
+      sediment[z + il] = e.sediment[q + il];
+      haerte[z + il] = e.haerte[q + il];
+    }
+  }
+  var i1 = i0 + w - 1, j1 = j0 + hh - 1;
+  basisGeaendert(i0, i1, j0, j1);
+  recomputeHeights(i0 - 2, i1 + 2, j0 - 2, j1 + 2);
+  computeAO(i0 - 3, i1 + 3, j0 - 3, j1 + 3);
+  refreshGrid(i0 - 2, i1 + 2, j0 - 2, j1 + 2);
+}
+
 function setFlattenTarget(v) { flattenTarget = v; }
 
 /* `terrain` ist jetzt eine THREE.Group mit den Patch-Meshes statt eines
@@ -905,10 +1420,15 @@ function setFlattenTarget(v) { flattenTarget = v; }
    Nutzerschalter, `terrainStufenStatistik` liefert Kennzahlen fuer die
    Statistikanzeige, `terrainIndexSatz` den geteilten Indexpuffer einer
    (Stufe, Randmuster)-Kombination fuer Testabzug und Debugansicht. */
-export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt, terrain, patches as terrainPatches,
+export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt,
+  stampUfer, uferAt, terrain, patches as terrainPatches,
   initTerrain, terrainGeometrienNeu, terrainColor, computeAO,
+  RELIEF_AB, RELIEF_VOLL, RELIEF_TIEFE, RELIEF_LICHT, reliefFaktor,
+  RUHE_AB, RUHE_VOLL, RUHE_SPRENKEL, RUHE_DRIFT, ruheFaktor,
   refreshGrid, heightAt, slopeAt, normalAt, baseHeightAt, corridor, stampCorridor,
   inCorridor, rivers, recomputeHeights, refreshTerrainFull, applyBrush, setFlattenTarget,
+  abfluss, sediment, haerte, wendeErosionAn,
+  biomFeld, biomGewicht, rebuildBiomFeld,
   hoehenVersion, basisGeaendert, holeSchmutzRegion,
   aktualisiereDetailstufen, setzeLod, lodAn, terrainStufenStatistik,
   holeIndex as terrainIndexSatz };

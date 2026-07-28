@@ -46,7 +46,10 @@ export function parseChangelog(content: string): ChangelogRelease[] {
   let currentRelease: ChangelogRelease | null = null;
   let currentSection: ChangelogSection | null = null;
 
-  for (const line of content.split("\n")) {
+  // Split on CRLF as well as LF: with git's autocrlf the CHANGELOG is checked
+  // out with CRLF on Windows, and a trailing "\r" would silently defeat the
+  // `$`-anchored heading regexes. Parsing must not depend on the checkout OS.
+  for (const line of content.split(/\r\n|\n/)) {
     const linkMatch = line.match(LINK_REF);
     if (linkMatch) {
       linkRefs.set(linkMatch[1]!, linkMatch[2]!);

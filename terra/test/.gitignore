@@ -1,0 +1,4 @@
+# Optionale, lokal abgelegte Kopie der gepinnten Three-Fassung. Siehe
+# README.md („Optional: gegen die echte Three-Datei pruefen"). Gehoert nicht
+# ins Projekt — terra hat keinen Build-Schritt und traegt keinen Fremdcode.
+.three/

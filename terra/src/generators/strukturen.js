@@ -14,10 +14,13 @@
 import { clamp, hashi, rngOf, rr, wpick } from '../core/rng.js';
 // HALF/WATER sind LEBENDE Bindungen (siehe Kopf von core/store.js) — nur
 // innerhalb von Funktionen lesen, nie beim Modulstart in eine Variable kopieren.
-import { HALF, WATER } from '../core/store.js';
+import { S, HALF, WATER } from '../core/store.js';
 import { POOLS, emit, tintOf } from '../core/pools.js';
 import { heightAt } from '../world/terrain.js';
 import { newOcc, occAdd, tryPlace, tryPlaceUfer, KULTUR } from './objects.js';
+// I1: Kartenzeichen (siehe generators/zeichen.js). Richtung strukturen.js ->
+// zeichen.js, nie zurueck.
+import { alsKoerper, alsZeichen, punktZeichen, umrissZeichen } from './zeichen.js';
 
 /* ==========================================================================
    Polygon-Grundlagen (aus areas.js hierher gezogen, Wortlaut unveraendert)
@@ -223,8 +226,53 @@ var BURG_HOLZ = {
   hof: ["langhaus", "kapelle", "scheune"], tabelle: "holzburg", steinbau: false
 };
 
+/* ==========================================================================
+   I1 — Die Kompositstrukturen auf Kartenmassstab
+
+   Jede der drei bekommt EIN Zeichen in ihrer Mitte, so wie eine Siedlung
+   eine Ortssignatur bekommt: das Zinnenrechteck, das Kreuz im Quadrat, der
+   Anker.
+
+   Eine Kennzahl brauchen sie NICHT, und das ist eine Entscheidung, keine
+   Luecke: die Kennzahl der Siedlung existiert nur, weil aus derselben Sache
+   drei verschiedene Zeichen werden koennen (Weiler, Dorf, Stadt). Fuer eine
+   Burg gibt es genau ein Zeichen — eine gezaehlte Kennzahl waere Zustand
+   ohne Wirkung.
+
+   I6 — die Ausbaustufe, die hier frueher als offen notiert war, ist gebaut:
+   zum Punktzeichen kommt der GRUNDRISS. Er kostet nichts an neuer
+   Information (das Polygon liegt im Element und ist die Quelle aller
+   Mauerringe weiter unten) und laeuft ueber dieselbe Bandmechanik wie ein
+   Weg — siehe umrissZeichen in generators/zeichen.js. Beide Zeichen laufen
+   nebeneinander: der Umriss verblasst ab 1200 m je Zelle, das Punktzeichen
+   bleibt. Genau so staffelt eine Kartenreihe ihre Auskunft.
+
+   Die Werft traegt den Anker und nicht das Zinnenrechteck: was sie auf einer
+   Karte ausmacht, ist der Hafen, nicht das Gebaeude.
+   ========================================================================== */
+var STRUKTUR_ZEICHEN = {
+  burg:    { sache: 'wehrbau', art: 'sig_burg' },
+  kloster: { sache: 'wehrbau', art: 'sig_kloster' },
+  werft:   { sache: 'hafen', art: 'sig_hafen' }
+};
+
+/** Setzt das Kartenzeichen einer Struktur: Grundriss plus Punktzeichen in
+ *  der Mitte des Polygons. */
+function strukturZeichen(el) {
+  var Z = STRUKTUR_ZEICHEN[el.variant];
+  if (!Z || !el.points || el.points.length < 3) return 0;
+  var m = polyCenter(el.points);
+  var n = punktZeichen(el, Z.sache, el.kennzahl, m.x, m.z, { art: Z.art });
+  if (umrissZeichen(el, el.points)) n++;
+  return n;
+}
+
 function genBurg(el) {
   var p = el.params, pts = el.points;
+  // I1: siehe strukturZeichen. Im Ueberblendbereich laeuft beides.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) strukturZeichen(el);
+  if (!alsKoerper(mSig)) return;
   var B = p.palisade ? BURG_HOLZ : BURG_STEIN;
   var kanten = ringKanten(pts);
   if (!kanten.length) return;
@@ -320,6 +368,29 @@ function genBurg(el) {
   var outX = -te.inX, outZ = -te.inZ;
   var rg = ortsRng(torI, 0, el.seed + 605);
   setzeBau(el, occ, B.tor, te.mx, te.mz, yawT, 1, hoehe, 1, tintOf(rg, 0.04));
+
+  /* --- Pechnasen ueber der Durchfahrt (nur Steinburg) --------------------
+     Der Pool lag bis hierher ohne einen einzigen Aufrufer im Register. Die
+     Reihe haengt an der AUSSENseite des Torriegels, und zwar per emit statt
+     setzeBau: das Ding sitzt in 5 m Hoehe an der Mauer, nicht auf dem Boden,
+     und darf deshalb weder die Bodenhoehe unter sich noch einen occ-Kreis
+     bekommen. Verankert wird an der OBERkante des Riegels (lokal y = 5.0, mit
+     `hoehe` skaliert) und von dort nach unten gehaengt — so bleibt der Sturz
+     unter der Zinne, auch wenn der Nutzer die Mauerhoehe herunterdreht.
+     yaw + PI: die Pechnase kragt nach +z aus, das Torhaus hat sein +z aber im
+     Hof. Lokales +x zeigt nach (outZ, -outX), also genau die Torkante entlang. */
+  if (B.steinbau && POOLS.pechnase) {
+    var yPech = Math.max(heightAt(te.mx, te.mz), WATER + 0.2) - 0.15 + 5.0 * hoehe - 0.95;
+    var yawP = Math.atan2(outX, outZ);
+    for (k = -1; k <= 1; k++) {
+      var u = k * 1.15;
+      var px = te.mx + outZ * u + outX * 1.12, pz = te.mz - outX * u + outZ * 1.12;
+      if (px < -HALF + 1 || px > HALF - 1 || pz < -HALF + 1 || pz > HALF - 1) continue;
+      emit(el, "pechnase", px, yPech, pz, yawP, 1, 1, 1,
+        tintOf(ortsRng(torI, k + 1, el.seed + 606), 0.05));
+    }
+  }
+
   // Liegt vor dem Tor Wasser oder ein Graben? Gemessen 5 m vor der Torachse:
   // entweder unter dem Wasserspiegel (Wassergraben) oder deutlich tiefer als
   // die Torschwelle (Trockengraben, Steilabfall).
@@ -553,6 +624,12 @@ function landBau(el, A, occ, pts, kind, a, b, tint) {
 
 function genWerft(el) {
   var p = el.params, pts = el.points;
+  // I1: das Zeichen VOR werftAchse — eine Werft ohne findbare Kaiflucht ist
+  // auf Ortsmassstab nicht baubar, auf Kartenmassstab aber trotzdem ein Ort
+  // am Wasser. Sonst verschwaende sie beim Herauszoomen ersatzlos.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) strukturZeichen(el);
+  if (!alsKoerper(mSig)) return;
   var A = werftAchse(el);
   if (!A) return;
   var occ = newOcc(4);
@@ -719,6 +796,10 @@ function klosterFluegel(R, tiefe) {
 
 function genKloster(el) {
   var p = el.params;
+  // I1: Begruendung wie bei genWerft — erst das Zeichen, dann der Rahmen.
+  var mSig = S.einheitMeter;
+  if (alsZeichen(mSig)) strukturZeichen(el);
+  if (!alsKoerper(mSig)) return;
   var R = klosterRahmen(el);
   if (!R) return;
   var occ = newOcc(4);
@@ -872,4 +953,5 @@ function istStruktur(variant) {
 export { polyBBox, inPoly, polyArea, polyCenter, randAbstand,
   ringKanten, klosterRahmen, klosterFluegel, werftAchse,
   genBurg, genWerft, genKloster,
+  STRUKTUR_ZEICHEN, strukturZeichen,
   strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE, WERFT_QUERSUCHE };

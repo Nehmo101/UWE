@@ -55,7 +55,27 @@ export {
   validatePlayerRecapContent,
   extractDmOnlyPhrases,
 } from "./privacy";
-export { AI_TASK_LABELS, buildTaskPrompt, buildTaskSystemPrompt } from "./tasks";
+export {
+  AI_TASK_LABELS,
+  buildTaskPrompt,
+  buildTaskSystemPrompt,
+  JSON_RESULT_TASKS,
+  requiresJsonResult,
+} from "./tasks";
+/* The one reader for model JSON. Exported so nobody writes a fourth
+   `raw.match(/\{[\s\S]*\}/)` — there were three before 28.07.2026. */
+export {
+  buildJsonRepairPrompt,
+  extractJsonObjectText,
+  generateWithJsonRepair,
+  parseModelJson,
+  readModelJson,
+  stripCodeFence,
+  type ModelJsonFailure,
+  type ModelJsonFailureReason,
+  type ModelJsonResult,
+  type ModelJsonSuccess,
+} from "./model-json";
 export {
   appendResearchSources,
   buildResearchSynthesisPrompt,

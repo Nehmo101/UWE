@@ -1,78 +1,707 @@
-/* terra — unveraendertes UI-Layout der Einzeldatei */
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#e9eff3;
-    font:13px/1.45 "Segoe UI",Roboto,system-ui,-apple-system,"Helvetica Neue",sans-serif;
-    color:#3d4753;-webkit-font-smoothing:antialiased;user-select:none}
-  canvas{display:block;position:fixed;left:0;top:0;z-index:0}
-  #ui{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:10}
-  #ui>*{pointer-events:auto}
-  .card{background:rgba(255,255,255,.84);border:1px solid rgba(150,168,186,.34);
-    border-radius:16px;box-shadow:0 6px 20px rgba(92,116,140,.13);backdrop-filter:blur(9px)}
+/* ============================================================================
+ * terra — Bedienoberflaeche im UWE-Design („Gemalte Welt")
+ * ----------------------------------------------------------------------------
+ * Terra laeuft als Frame unter /worlds/:slug/karten in UWE. Damit es
+ * dort nicht wie ein fremdes Programm im Fenster wirkt, uebernimmt diese Datei
+ * die Gestaltungssprache des Produkts: Farbwelt, Schrift, Radien, Kantenstaerke,
+ * Zustaende.
+ *
+ * Die Quelle ist nicht geraten, sondern das Theme-Paar, das UWE selbst als
+ * Voreinstellung fuer Studio und Portal fuehrt:
+ *   packages/shared-ui/src/theme/themes-ghibli.ts    — Farbtokens Tag/Nacht
+ *   packages/shared-ui/src/design-v2/ghibli-shell.css — Radien, Kanten, Glas
+ *   packages/shared-ui/src/design-v2/app-accent.css   — Akzent je App
+ *   packages/shared-ui/src/theme/tokens.ts            — Schrift, Schatten, Raster
+ * Die Tokennamen sind deshalb bewusst UWEs Namen (--uwe-*) und nicht eigene:
+ * ein spaeterer Themenwechsel ist dann eine Stelle und nicht dreissig.
+ *
+ * HELL/DUNKEL — die folgenreiche Stelle. UWE kennt keinen „Dunkelmodus" als
+ * Schalter, sondern zwei Theme-IDs eines Paars: `uwe-ghibli-tag` und
+ * `uwe-ghibli-nacht` (themes-ghibli.ts:95-113). Das Attribut dafuer steht auf
+ * <html>. Terra folgt hier demselben Vokabular, braucht dafuer aber kein
+ * JavaScript: die Farbwerte stehen in `light-dark()`, und die drei Regeln
+ * darunter drehen nur noch `color-scheme`. Damit gilt
+ *   - kein Attribut       -> Terra folgt der Systemeinstellung,
+ *   - data-uwe-theme=tag  -> Tag,
+ *   - data-uwe-theme=nacht-> Nacht.
+ * Setzt der einbettende Rahmen (oder Terras eigene Tageszeit-Umschaltung) das
+ * Attribut, zieht die Oberflaeche ohne weiteren Code mit. Siehe
+ * docs/engineering/terra-design-abgleich.md, Abschnitt „Nachzuziehen".
+ * ==========================================================================*/
 
-  /* linke Werkzeugleiste */
-  #rail{position:absolute;left:16px;top:16px;width:66px;display:flex;flex-direction:column;gap:9px}
-  .tool{height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:3px;cursor:pointer;transition:.16s;position:relative;color:#55606d}
-  .tool:hover{background:rgba(255,255,255,.95);transform:translateY(-1px)}
-  .tool .g{font-size:19px;line-height:1}
-  .tool .l{font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;opacity:.62}
-  .tool .k{position:absolute;top:5px;right:8px;font-size:8.5px;opacity:.38}
-  .tool.on{background:#fff;border-color:#9dc0dc;color:#2d74ab;box-shadow:0 8px 22px rgba(88,132,176,.24)}
+:root {
+  /* Ohne Attribut folgt Terra dem Betriebssystem. Das faerbt zugleich die
+     nativen Bedienelemente (Rollbalken, aufgeklappte <select>-Listen) mit —
+     die bekommt man mit CSS sonst nicht sauber. */
+  color-scheme: light dark;
 
-  /* rechtes Parameter-Panel */
-  #panel{position:absolute;right:16px;top:62px;width:250px;max-height:calc(100% - 152px);
-    overflow-y:auto;overflow-x:hidden;padding:14px 15px 16px}
-  #panel::-webkit-scrollbar{width:7px}
-  #panel::-webkit-scrollbar-thumb{background:rgba(140,160,180,.4);border-radius:4px}
-  .ph{font-size:11px;letter-spacing:.09em;text-transform:uppercase;opacity:.5;margin:0 0 10px}
-  .psub{font-size:11.5px;opacity:.62;margin:-4px 0 12px;line-height:1.4}
-  .row{margin:0 0 12px}
-  .row label{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:5px}
-  .row label b{font-weight:600;opacity:.55;font-variant-numeric:tabular-nums}
-  input[type=range]{width:100%;height:16px;-webkit-appearance:none;background:transparent;margin:0}
-  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:#dbe3ea}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;
-    border-radius:50%;background:#fff;border:2px solid #7fa9cc;box-shadow:0 1px 4px rgba(80,110,140,.3)}
-  input[type=range]::-moz-range-track{height:4px;border-radius:3px;background:#dbe3ea}
-  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;
-    border:2px solid #7fa9cc}
-  select,input[type=text],input[type=number]{width:100%;padding:6px 8px;border-radius:9px;
-    border:1px solid rgba(150,168,186,.5);background:rgba(255,255,255,.9);font:inherit;font-size:12px;color:#3d4753}
-  select:focus,input:focus{outline:2px solid rgba(127,169,204,.45);outline-offset:0}
-  .seg{display:flex;flex-wrap:wrap;gap:5px}
-  .seg button{flex:1 1 auto;min-width:52px;padding:6px 4px;border-radius:9px;font:inherit;font-size:11px;
-    border:1px solid rgba(150,168,186,.45);background:rgba(255,255,255,.72);cursor:pointer;color:#4b5561}
-  .seg button:hover{background:#fff}
-  .seg button.on{background:#2d74ab;border-color:#2d74ab;color:#fff}
-  .chk{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer}
-  .chk input{width:15px;height:15px;accent-color:#2d74ab}
-  .btn{display:block;width:100%;padding:8px;border-radius:10px;border:1px solid rgba(150,168,186,.45);
-    background:rgba(255,255,255,.8);cursor:pointer;font:inherit;font-size:12px;color:#44505d;margin-top:7px}
-  .btn:hover{background:#fff}
-  .btn.warn:hover{background:#fff0f0;border-color:#e0a5a5;color:#a34b4b}
-  hr{border:0;border-top:1px solid rgba(150,168,186,.3);margin:13px 0}
+  /* --- Farbwelt (themes-ghibli.ts:29-93) --------------------------------- */
+  /* light-dark(Tag, Nacht) — die Handoff-Namen stehen als Kommentar dahinter,
+     damit ein Abgleich mit UWE ohne Raetselraten funktioniert. */
+  --uwe-bg: light-dark(#f1e8d4, #100e16);                    /* --ground */
+  --uwe-bg-elevated: light-dark(#fbf6ea, #12101a);
+  --uwe-surface: light-dark(rgba(251, 246, 234, .88), rgba(18, 16, 26, .74));  /* --panel */
+  --uwe-panel: light-dark(rgba(251, 246, 234, .92), rgba(14, 12, 20, .92));    /* --chrome */
+  --uwe-border: light-dark(#e0d4ba, rgba(225, 215, 195, .17));                 /* --panel-bd */
+  --uwe-border-muted: light-dark(rgba(224, 212, 186, .7), rgba(225, 215, 195, .1));
+  --uwe-fg: light-dark(#211d17, #f1e8d4);                    /* --ink  */
+  --uwe-fg-muted: light-dark(#4a4336, #c9bfaf);              /* --ink2 */
+  --uwe-fg-subtle: light-dark(#8a7d64, #948b78);             /* --ink3 */
 
-  /* untere Leiste */
-  #bar{position:absolute;left:0;right:0;bottom:16px;margin:0 auto;width:fit-content;
-    max-width:calc(100% - 32px);display:flex;align-items:center;justify-content:center;
-    flex-wrap:wrap;gap:8px;padding:9px 12px}
-  #bar .sep{width:1px;height:24px;background:rgba(150,168,186,.35)}
-  #bar label{font-size:11px;opacity:.55;letter-spacing:.04em}
-  #seed{width:88px;text-align:center;font-variant-numeric:tabular-nums}
-  #bar button{padding:7px 11px;border-radius:9px;border:1px solid rgba(150,168,186,.45);
-    background:rgba(255,255,255,.75);cursor:pointer;font:inherit;font-size:12px;color:#48535f}
-  #bar button:hover{background:#fff}
-  #bar button.on{background:#2d74ab;border-color:#2d74ab;color:#fff}
+  /* Akzent: Terra haengt unter den Kartenpfaden von Studio, also der
+     Studio-/Landing-Akzent Terrakotta (app-accent.css:24-33). Ueber der
+     gruenen Landschaft steht er als Gegenfarbe, statt in ihr zu verschwinden. */
+  --uwe-accent: light-dark(#c2622b, #e8a670);                /* --acc     */
+  --uwe-accent-muted: light-dark(rgba(194, 98, 43, .13), rgba(232, 166, 112, .16)); /* --acc-bg */
+  --uwe-on-accent: light-dark(#fbf5e6, #211d17);
+  --uwe-link: light-dark(#1a5c4f, #7fd0b4);                  /* --teal  */
+  --uwe-danger: light-dark(#a8541b, #e8a670);                /* --terra */
+  --uwe-warning: #e0b15a;                                    /* in beiden Modi gleich */
 
-  /* Statusanzeige */
-  #stats{position:absolute;right:16px;top:16px;padding:7px 11px;font-size:11px;
-    font-variant-numeric:tabular-nums;opacity:.85;letter-spacing:.02em}
-  #stats span{opacity:.5}
-  #hint{position:absolute;left:16px;bottom:76px;max-width:300px;padding:8px 12px;font-size:11.5px;
-    line-height:1.5;opacity:.9}
-  #hint b{font-weight:600;color:#2d74ab}
-  #toast{position:absolute;left:50%;top:24px;transform:translateX(-50%);padding:9px 16px;font-size:12px;
-    opacity:0;transition:opacity .35s;pointer-events:none!important}
-  #toast.show{opacity:1}
-  #fail{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:22px 26px;
-    max-width:460px;display:none;line-height:1.6}
+  /* Eingabeflaeche und Fokus. Die 55/22 % sind die Werte, die UWEs Engine zur
+     Laufzeit einsetzt (resolveColorTokens.ts:96-101) — nicht die 20 % aus dem
+     toten Vorab-Fallback in uwe-components.css:8. */
+  --uwe-input-bg: light-dark(rgba(33, 29, 23, .08), rgba(241, 232, 212, .07));  /* --field */
+  --uwe-focus-ring: color-mix(in srgb, var(--uwe-accent) 55%, transparent);
+  --uwe-focus-shadow: color-mix(in srgb, var(--uwe-accent) 22%, transparent);
+
+  /* Tinte/Papier-Paar fuer Hauptaktionen (ghibli-shell.css:43-44, 62-63).
+     Terra hat heute keinen Knopf in dieser Rolle — das Token steht bereit,
+     damit ein spaeteres `.wide.primaer` nichts erfinden muss. */
+  --uwe-btn-bg: light-dark(#211d17, #f1e8d4);
+  --uwe-btn-ink: light-dark(#f1e8d4, #211d17);
+  --uwe-chrome-bd: light-dark(#211d17, rgba(225, 215, 195, .22));
+
+  /* --- Kanten, Radien, Glas (ghibli-shell.css:18-35) --------------------- */
+  --uwe-radius-sm: 6px;
+  --uwe-radius-btn: 9px;    /* Handoff: Buttons  */
+  --uwe-radius-tile: 12px;  /* Handoff: Kacheln  */
+  --uwe-radius-card: 14px;  /* Handoff: Karten   */
+  --uwe-radius-pill: 999px;
+  --uwe-border-width: 1.5px;
+  --uwe-border-width-chrome: 2px;
+  --uwe-glass-blur: 13px;
+
+  /* --- Schatten: in UWE bewusst theme-unabhaengig (tokens.ts:171-173) ---- */
+  --uwe-shadow-sm: 0 1px 2px rgba(0, 0, 0, .22);
+  --uwe-shadow-md: 0 4px 14px rgba(0, 0, 0, .28);
+  --uwe-shadow-lg: 0 16px 40px rgba(0, 0, 0, .38);
+
+  /* --- Abstandsraster 4/8 (tokens.ts:162-167) ---------------------------- */
+  --uwe-spacing-xs: 4px;
+  --uwe-spacing-sm: 8px;
+  --uwe-spacing-md: 12px;
+  --uwe-spacing-lg: 16px;
+  --uwe-spacing-xl: 24px;
+
+  /* --- Schrift ----------------------------------------------------------- */
+  /* UWEs Ghibli-Themes laufen auf Space Mono (ghibli-shell.css:77-80). Terra
+     hat keinen Bauschritt und die CSP verbietet fremde Hosts — der Webfont
+     faellt also aus. Das ist kein Verlust, weil UWEs eigene Kette den Ausfall
+     schon vorsieht: `var(--uwe-font-space-mono, ui-monospace)`. Ohne die
+     Variable greift `ui-monospace`, unter Windows also Cascadia Mono bzw.
+     Consolas — beide sicher vorhanden, beide schmal genug fuer das 250-px-Panel.
+     Die Variable bleibt vorne in der Kette: reicht der Rahmen sie irgendwann
+     durch, schaltet Terra ohne Aenderung auf die echte Schrift um. */
+  --uwe-font-family: var(--uwe-font-space-mono, ui-monospace), "Cascadia Mono",
+    "Cascadia Code", "SF Mono", Consolas, monospace;
+  /* Newsreader traegt in UWE Ueberschriften; Georgia ist der Fallback der
+     Produktkette (tokens.ts:193) und unter Windows immer da. */
+  --uwe-font-serif: var(--uwe-font-newsreader, Georgia), "Iowan Old Style",
+    "Palatino Linotype", serif;
+
+  --uwe-text-2xs: 10px;
+  --uwe-text-xs: 11.5px;
+  --uwe-text-sm: 12px;
+  --uwe-text-base: 13px;
+  --uwe-tracking-eyebrow: .12em;
+  --uwe-tracking-tight: -.02em;
+
+  /* --- Waschungen fuer Zustaende ----------------------------------------- */
+  /* UWE wischt Hover mit 12 % Akzent und markiert den gewaehlten Eintrag mit
+     `--uwe-accent-muted` (uwe-components.css:39-44, ghibli-shell.css:145-153).
+     Beide Werte sind DURCHSICHTIG. In UWE liegen sie auf einer deckenden Seite,
+     hier ueber einer gemalten Szene — als alleiniger Hintergrund liessen sie das
+     Bild durch und der Akzenttext haette keinen Grund mehr, auf dem er liest.
+     Sie werden deshalb ueber die Papierflaeche GELEGT, nicht an ihre Stelle
+     gesetzt; die Regeln unten benutzen dafuer durchgehend zwei Ebenen. */
+  --uwe-wash-hover: color-mix(in srgb, var(--uwe-accent) 12%, transparent);
+  --uwe-wash-hover-stark: color-mix(in srgb, var(--uwe-accent) 20%, transparent);
+  --uwe-wash-warn: color-mix(in srgb, var(--uwe-danger) 12%, transparent);
+
+  /* --- Bewegung: kurz und funktional (README.md:131) --------------------- */
+  --uwe-transition-fast: .12s ease;
+  --uwe-transition: .15s ease;
+}
+
+/* Das Attribut ist UWEs Vokabular (ghibli-shell.css:38-39 / 57-58). Es dreht
+   hier nur noch `color-scheme` — die Farbwerte oben ziehen automatisch mit. */
+html[data-uwe-theme="uwe-ghibli-tag"] { color-scheme: light; }
+html[data-uwe-theme="uwe-ghibli-nacht"] { color-scheme: dark; }
+/* Alle uebrigen UWE-Themes (Parchment OS, Dark Fantasy, …) faerbt Terra nicht
+   nach — ihre Tokens stehen als Inline-Style auf dem <html> des Rahmens und
+   erreichen den Frame nicht. Terra bleibt dann beim hellen Papier. */
+
+/* ============================================================================
+ * Grundlagen
+ * ==========================================================================*/
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--uwe-bg);
+  font: var(--uwe-text-base) / 1.45 var(--uwe-font-family);
+  color: var(--uwe-fg);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+canvas { display: block; position: fixed; left: 0; top: 0; z-index: 0; }
+#ui { position: fixed; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 10; }
+#ui > * { pointer-events: auto; }
+
+/* Die Glaskarte ist UWEs `.uwe-glass-surface` (ghibli-shell.css:170-177).
+   Einzige Abweichung: `--uwe-shadow-md` statt `-sm`. UWEs Karten liegen auf
+   einer ruhigen Dokumentflaeche, Terras schweben ueber einer gemalten Szene mit
+   eigenem Kontrast — mit dem 1-px-Schatten verloeren sie dort die Kante. Der
+   Wert ist trotzdem UWEs eigener, kein erfundener. */
+.card {
+  background: var(--uwe-surface);
+  border: var(--uwe-border-width) solid var(--uwe-border);
+  border-radius: var(--uwe-radius-card);
+  box-shadow: var(--uwe-shadow-md);
+  backdrop-filter: blur(var(--uwe-glass-blur)) saturate(1.05);
+  -webkit-backdrop-filter: blur(var(--uwe-glass-blur)) saturate(1.05);
+}
+
+/* Sichtbarer Tastaturfokus, einmal fuer alles. Form und Staerke sind UWEs
+   kanonische Regel (uwe.css:627-640): 2 px Ring, 2 px Abstand, 4 px Schein. */
+:focus-visible {
+  outline: 2px solid var(--uwe-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--uwe-focus-shadow);
+}
+
+::selection { background: color-mix(in srgb, var(--uwe-accent) 28%, transparent); }
+
+/* ============================================================================
+ * Linke Werkzeugleiste
+ * Die Breite (66 px) bleibt, wie sie war — sie trifft zufaellig genau UWEs
+ * `--uwe-sidebar-width-collapsed` (tokens.ts / spacing.css: 4.125rem).
+ * ==========================================================================*/
+#rail {
+  position: absolute;
+  left: var(--uwe-spacing-lg);
+  top: var(--uwe-spacing-lg);
+  width: 66px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-spacing-sm);
+}
+
+.tool {
+  height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  position: relative;
+  color: var(--uwe-fg-muted);
+  border-radius: var(--uwe-radius-tile);
+  transition: background var(--uwe-transition), border-color var(--uwe-transition),
+    color var(--uwe-transition);
+}
+
+/* Hover ist UWEs Rail-Knopf (uwe-components.css:39-44): Rahmen 35 % zum Akzent,
+   Flaeche 12 % Akzent. Kein Anheben mehr — UWE hebt Karten an, nicht Knoepfe. */
+.tool:hover {
+  color: var(--uwe-fg);
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  background: linear-gradient(var(--uwe-wash-hover), var(--uwe-wash-hover)), var(--uwe-surface);
+}
+
+.tool:active { transform: translateY(1px); }
+
+.tool .g { font-size: 19px; line-height: 1; }
+
+.tool .l {
+  font-size: 8.5px;
+  letter-spacing: var(--uwe-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--uwe-fg-subtle);
+}
+
+.tool .k {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  font-size: var(--uwe-text-2xs);
+  color: var(--uwe-fg-subtle);
+  opacity: .7;
+}
+
+/* Gewaehltes Werkzeug: UWEs Muster fuer den aktiven Navigationseintrag
+   (ghibli-shell.css:145-153) — Akzentschrift auf gedaempfter Akzentflaeche,
+   fett. Bewusst keine Vollfaerbung: ein dauerhaft leuchtender Block neben acht
+   ruhigen waere ueber der gemalten Szene der lauteste Punkt im Bild. */
+.tool.on {
+  background: linear-gradient(var(--uwe-accent-muted), var(--uwe-accent-muted)), var(--uwe-surface);
+  border-color: var(--uwe-accent);
+  color: var(--uwe-accent);
+  font-weight: 700;
+}
+
+.tool.on .l,
+.tool.on .k { color: var(--uwe-accent); }
+
+/* ============================================================================
+ * Rechtes Parameterpanel
+ * ==========================================================================*/
+#panel {
+  position: absolute;
+  right: var(--uwe-spacing-lg);
+  top: 62px;
+  width: 250px;
+  max-height: calc(100% - 152px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 15px var(--uwe-spacing-lg);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--uwe-fg) 28%, transparent) transparent;
+}
+
+#panel::-webkit-scrollbar { width: 7px; }
+#panel::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--uwe-fg) 28%, transparent);
+  border-radius: var(--uwe-radius-sm);
+}
+
+/* Abschnittsueberschrift = UWEs „Eyebrow": Grossbuchstaben, 0.12em Laufweite,
+   gedaempfte Tinte (README.md:55, ghibli-shell.css:137-143). */
+.ph {
+  font-size: var(--uwe-text-xs);
+  letter-spacing: var(--uwe-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--uwe-fg-subtle);
+  margin: 0 0 var(--uwe-spacing-sm);
+}
+
+.psub {
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-fg-muted);
+  margin: -4px 0 var(--uwe-spacing-md);
+  line-height: 1.5;
+}
+
+.row { margin: 0 0 var(--uwe-spacing-md); }
+
+.row label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--uwe-spacing-sm);
+  font-size: var(--uwe-text-xs);
+  margin-bottom: 5px;
+  color: var(--uwe-fg-muted);
+}
+
+.row label b {
+  font-weight: 700;
+  color: var(--uwe-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Regler ---------------------------------------------------------------
+   Die Spur liest die Eingabeflaeche (--uwe-input-bg = Tinte auf transparent),
+   der Griff ist Papier mit Akzentkante. Damit dreht der Regler mit dem Modus,
+   ohne dass eine zweite Farbe gepflegt werden muss. */
+input[type=range] {
+  width: 100%;
+  height: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  margin: 0;
+  border-radius: var(--uwe-radius-pill);
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--uwe-radius-pill);
+  background: var(--uwe-input-bg);
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--uwe-bg-elevated);
+  border: 2px solid var(--uwe-accent);
+  box-shadow: var(--uwe-shadow-sm);
+}
+
+input[type=range]::-moz-range-track {
+  height: 4px;
+  border-radius: var(--uwe-radius-pill);
+  background: var(--uwe-input-bg);
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--uwe-bg-elevated);
+  border: 2px solid var(--uwe-accent);
+}
+
+/* --- Felder --------------------------------------------------------------- */
+select,
+input[type=text],
+input[type=number] {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--uwe-radius-btn);
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-bg-elevated);
+  font: inherit;
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg);
+  transition: border-color var(--uwe-transition), box-shadow var(--uwe-transition);
+}
+
+/* Formularfelder tragen in UWE den schmaleren 3-px-Schein ohne Outline
+   (apps/studio/app/globals.css:276-277). */
+select:focus-visible,
+input:focus-visible {
+  outline: none;
+  border-color: var(--uwe-focus-ring);
+  box-shadow: 0 0 0 3px var(--uwe-focus-shadow);
+}
+
+/* ============================================================================
+ * Knoepfe — eine Formensprache fuer Panel und Leiste
+ * Grundform: Papier mit warmer Kante, 9 px Radius (Handoff-Rhythmus).
+ * Hover: Kante zum Akzent, Flaeche mit 12 % Akzent gewaschen.
+ * Aktiv:  1 px nach unten (UWEs Konvention, uwe-landing.css:215).
+ * ==========================================================================*/
+button.wide,
+.seg button,
+.btn,
+#bar button {
+  font: inherit;
+  border-radius: var(--uwe-radius-btn);
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-bg-elevated);
+  color: var(--uwe-fg-muted);
+  cursor: pointer;
+  transition: background var(--uwe-transition), border-color var(--uwe-transition),
+    color var(--uwe-transition);
+}
+
+button.wide:hover,
+.seg button:hover,
+.btn:hover,
+#bar button:hover {
+  color: var(--uwe-fg);
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  background: linear-gradient(var(--uwe-wash-hover), var(--uwe-wash-hover)), var(--uwe-bg-elevated);
+}
+
+button.wide:active,
+.seg button:active,
+.btn:active,
+#bar button:active { transform: translateY(1px); }
+
+button.wide:disabled,
+.seg button:disabled,
+.btn:disabled,
+#bar button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+  background: var(--uwe-bg-elevated);
+  border-color: var(--uwe-border-muted);
+  color: var(--uwe-fg-subtle);
+  transform: none;
+}
+
+/* Panelbreiter Knopf fuer Kartenaktionen. Gleiche Formensprache wie
+   `.seg button`, nur ueber die volle Breite — er gehoert nicht in eine Gruppe,
+   sondern loest allein etwas aus. */
+button.wide {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: var(--uwe-text-sm);
+  margin: 0 0 var(--uwe-spacing-sm);
+}
+
+/* Warnender Knopf: `--uwe-danger`. Im Nachtmodus faellt der Wert mit dem
+   Akzent zusammen — das ist UWEs eigene Entscheidung (themes-ghibli.ts:77),
+   nicht ein Fehler hier. Die Kante haelt ihn trotzdem auseinander. */
+button.wide.warn,
+.btn.warn { color: var(--uwe-danger); border-color: color-mix(in srgb, var(--uwe-danger) 40%, transparent); }
+
+button.wide.warn:hover,
+.btn.warn:hover {
+  color: var(--uwe-danger);
+  border-color: var(--uwe-danger);
+  background: linear-gradient(var(--uwe-wash-warn), var(--uwe-wash-warn)), var(--uwe-bg-elevated);
+}
+
+/* Hauptaktion in Tinte/Papier — UWEs `primary` (README.md:122). Terra vergibt
+   die Klasse heute nicht; die Regel steht bereit, damit sie es kann. */
+button.wide.primaer {
+  background: var(--uwe-btn-bg);
+  border-color: var(--uwe-btn-bg);
+  color: var(--uwe-btn-ink);
+  font-weight: 700;
+}
+
+button.wide.primaer:hover { filter: brightness(1.12); background: var(--uwe-btn-bg); }
+
+/* Fortschritt eines mehrbildrigen Laufs. Bewusst ohne Uebergang auf der
+   Breite: der Balken wird bis zu 60-mal je Sekunde gesetzt, eine Animation
+   darauf liefe der Wahrheit immer hinterher. */
+.fortschritt {
+  height: 5px;
+  border-radius: var(--uwe-radius-pill);
+  background: var(--uwe-input-bg);
+  overflow: hidden;
+  margin: 0 0 var(--uwe-spacing-sm);
+}
+
+.fortschrittBalken { height: 100%; width: 0; background: var(--uwe-accent); }
+
+/* Brotkrume des Kartenbaums. Umbricht, statt zu scrollen: eine tiefe
+   Hierarchie soll man lesen koennen, ohne seitwaerts zu ziehen.
+   Die Verweise tragen `--uwe-link` (Teal) — in UWE die Farbe fuer Verweise,
+   abgesetzt vom Akzent, der Zustaende markiert. */
+.krume { font-size: var(--uwe-text-xs); line-height: 1.6; margin: 0 0 6px; }
+.krumeLink { color: var(--uwe-link); cursor: pointer; }
+.krumeLink:hover { text-decoration: underline; }
+.krumeHier { font-weight: 700; color: var(--uwe-fg); }
+.krumeTrenner { color: var(--uwe-fg-subtle); margin: 0 4px; }
+
+/* --- Knopfgruppe ---------------------------------------------------------- */
+.seg { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.seg button {
+  flex: 1 1 auto;
+  min-width: 52px;
+  padding: 6px 4px;
+  font-size: var(--uwe-text-xs);
+}
+
+/* Gewaehlter Eintrag: dasselbe Muster wie das gewaehlte Werkzeug. */
+.seg button.on,
+#bar button.on {
+  background: linear-gradient(var(--uwe-accent-muted), var(--uwe-accent-muted)),
+    var(--uwe-bg-elevated);
+  border-color: var(--uwe-accent);
+  color: var(--uwe-accent);
+  font-weight: 700;
+}
+
+.seg button.on:hover,
+#bar button.on:hover {
+  color: var(--uwe-accent);
+  border-color: var(--uwe-accent);
+  background: linear-gradient(var(--uwe-wash-hover-stark), var(--uwe-wash-hover-stark)),
+    var(--uwe-bg-elevated);
+}
+
+.chk {
+  display: flex;
+  align-items: center;
+  gap: var(--uwe-spacing-sm);
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg-muted);
+  cursor: pointer;
+}
+
+.chk input { width: 15px; height: 15px; accent-color: var(--uwe-accent); }
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  font-size: var(--uwe-text-sm);
+  margin-top: 7px;
+}
+
+hr { border: 0; border-top: 1px solid var(--uwe-border-muted); margin: 13px 0; }
+
+/* ============================================================================
+ * Untere Leiste
+ * ==========================================================================*/
+#bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--uwe-spacing-lg);
+  margin: 0 auto;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  /* Enger als das Panel: die Leiste traegt rund zwanzig Bedienelemente in einer
+     Zeile. Die Laufschrift ist breiter als die vorherige Fliessschrift — ohne
+     das knappere Raster braeche sie eine Zeile frueher um. */
+  gap: 6px;
+  padding: var(--uwe-spacing-sm) var(--uwe-spacing-md);
+}
+
+#bar .sep { width: 1px; height: 22px; background: var(--uwe-border); }
+
+#bar label {
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-fg-subtle);
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+#bar button { padding: 6px 10px; font-size: var(--uwe-text-xs); }
+#bar select { padding: 5px 7px; font-size: var(--uwe-text-xs); }
+
+#seed { width: 88px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ============================================================================
+ * Statusanzeige, Hinweis, Toast, Fehlerbild
+ * ==========================================================================*/
+#stats {
+  position: absolute;
+  right: var(--uwe-spacing-lg);
+  top: var(--uwe-spacing-lg);
+  padding: 7px 11px;
+  font-size: var(--uwe-text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+  color: var(--uwe-fg-muted);
+}
+
+#stats span { color: var(--uwe-fg-subtle); }
+
+#hint {
+  position: absolute;
+  left: var(--uwe-spacing-lg);
+  /* Ueber der unteren Leiste, gemessen statt geraten: die Leiste bricht je
+     nach Fensterbreite auf zwei Reihen um, und ein fester Abstand liesse den
+     Hinweis dann auf ihr liegen. `--terra-leiste-hoehe` schreibt
+     ui/panels.js (leistenHoeheMessen); der Rueckfallwert deckt den Fall ab,
+     dass noch nicht gemessen wurde. */
+  bottom: calc(var(--terra-leiste-hoehe, 60px) + var(--uwe-spacing-lg) * 2);
+  max-width: 300px;
+  padding: 8px var(--uwe-spacing-md);
+  font-size: var(--uwe-text-xs);
+  line-height: 1.55;
+  color: var(--uwe-fg-muted);
+}
+
+/* Hervorgehobene Taste/Geste im Hinweis: Akzent, wie UWE Zustaende markiert. */
+#hint b { font-weight: 700; color: var(--uwe-accent); }
+
+#toast {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  padding: 9px var(--uwe-spacing-lg);
+  font-size: var(--uwe-text-sm);
+  font-weight: 700;
+  color: var(--uwe-fg);
+  opacity: 0;
+  transition: opacity .35s ease;
+  pointer-events: none !important;
+}
+
+#toast.show { opacity: 1; }
+
+#fail {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 22px 26px;
+  max-width: 460px;
+  display: none;
+  line-height: 1.6;
+  color: var(--uwe-fg-muted);
+}
+
+/* Das Fehlerbild ist die einzige Stelle mit einer echten Ueberschrift — sie
+   traegt deshalb die Leseschrift des Produkts (ghibli-shell.css:82-88). */
+#fail b {
+  display: block;
+  margin-bottom: var(--uwe-spacing-sm);
+  font-family: var(--uwe-font-serif);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: var(--uwe-tracking-tight);
+  color: var(--uwe-fg);
+}
+
+#fail code {
+  font-family: var(--uwe-font-family);
+  background: var(--uwe-input-bg);
+  border-radius: var(--uwe-radius-sm);
+  padding: 1px 5px;
+}
+
+/* ============================================================================
+ * Bewegung abschaltbar — UWEs Konvention kennt zwei Wege (app-accent.css:170-178):
+ * die Systemeinstellung und das Attribut `data-uwe-motion="off"`. Terra
+ * beachtet beide, damit der Rahmen die Wahl durchreichen kann.
+ * ==========================================================================*/
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+
+  .tool:active,
+  button.wide:active,
+  .seg button:active,
+  .btn:active,
+  #bar button:active { transform: none; }
+}
+
+html[data-uwe-motion="off"] * {
+  transition-duration: .01ms !important;
+  animation-duration: .01ms !important;
+}
+
+/* ============================================================================
+ * Marker-Beschriftungen (D1) — HTML-Overlay ueber dem Bild
+ *
+ * Sie standen bis zur Angleichung vollstaendig als Inline-Stil in
+ * panels.js:markerLabelNeu. Inline schlaegt jede Regel hier, deshalb waren sie
+ * die einzige Stelle, die nach dem Themenwechsel im alten Blaugrau blieb.
+ * Jetzt traegt das Element die Klasse; inline bleibt nur die Mechanik
+ * (Verankerung, Umbruchsperre, Breitengrenze, Klickdurchlaessigkeit).
+ *
+ * Der linke Farbstreifen wird weiterhin je Marker gesetzt und ist Absicht: die
+ * vier Toene stehen fuer Ort, Gefahr, Notiz und Arbor. Sie bedeuten etwas und
+ * duerfen deshalb nicht mit dem Thema drehen.
+ * ==========================================================================*/
+.markerLabel {
+  font: 700 var(--uwe-text-xs)/1.35 var(--uwe-font-family);
+  color: var(--uwe-fg);
+  background: var(--uwe-surface);
+  border: var(--uwe-border-width) solid var(--uwe-border);
+  border-radius: var(--uwe-radius-btn);
+  box-shadow: var(--uwe-shadow-sm);
+  backdrop-filter: blur(var(--uwe-glass-blur));
+}
+/* Die gewaehlte Nadel: deckender Grund, damit sie sich vom Bild loest, und der
+   Akzent als Schrift — dieselbe Sprache wie das gewaehlte Werkzeug in der Leiste. */
+.markerLabel.aktiv {
+  background: var(--uwe-bg-elevated);
+  color: var(--uwe-accent);
+}

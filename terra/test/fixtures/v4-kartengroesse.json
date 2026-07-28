@@ -1,0 +1,75 @@
+{
+  "_fassung": "v4 — aktuelle Fassung (kartenDaten() in editor/io.js schreibt sie). Kennzeichen gegenueber v3: das Feld `kartenGroesse` (256/512/1024). Alles Weitere sind tolerant gelesene Zusatzfelder, die die Versionsnummer bewusst NICHT erhoeht haben: `stempel` (Bibliothek in der Karte), `farbskript`, `palette`, `malschicht`, `multiplane`. Ein aelterer Leser ueberliest sie. Dieses Beispiel ist eine 512er-Karte — damit prueft der Test zugleich den Wechsel der Kartengroesse beim Laden.",
+  "format": "terra",
+  "version": 4,
+  "seed": 90210,
+  "kartenGroesse": 512,
+  "tageszeit": "nacht",
+  "wetter": "schneefall",
+  "biom": "schnee",
+  "raster": true,
+  "seedZaehler": -55555,
+  "kamera": { "x": -100, "z": 60, "dist": 320, "yaw": 0.15, "pitch": -0.42 },
+  "hoehenDelta": [0, 20.5, 514, 19.75, 263168, -12.25],
+  "farbskript": { "licht": 16773100, "mitte": 10066329, "schatten": 2237246, "staerke": 0.35 },
+  "palette": { "farben": [16777215, 13421772, 8947848, 4473924], "staerke": 0.4 },
+  "malschicht": { "staerke": 0.12 },
+  "multiplane": { "staerke": 0.25 },
+  "marker": [{ "x": 0, "z": 0, "text": "Mitte", "art": "notiz" }],
+  "stempel": [
+    {
+      "name": "Kleiner Hain",
+      "anker": { "x": 0, "z": 0 },
+      "elemente": [
+        {
+          "kind": "objekt",
+          "variant": "baeume",
+          "points": [{ "x": 0, "z": 0 }],
+          "params": { "anzahl": 5, "streuung": 6, "groesse": 1, "frei": false, "nurTyp": "" }
+        }
+      ]
+    }
+  ],
+  "elemente": [
+    {
+      "id": 21,
+      "kind": "pfad",
+      "variant": "bruch",
+      "points": [{ "x": 58, "z": -82 }, { "x": 84, "z": -46 }],
+      "params": { "tiefe": 90, "breite": 6, "zackigkeit": 0.5, "seite": "1", "wurzeln": true, "truemmer": 2 },
+      "seed": 2001
+    },
+    {
+      "id": 22,
+      "kind": "flaeche",
+      "variant": "viertel",
+      "points": [{ "x": -20, "z": -40 }, { "x": 20, "z": -44 }, { "x": 24, "z": -10 }, { "x": -16, "z": -6 }],
+      "params": { "netz": "raster", "block": 21, "gasse": 3.5, "drehung": 20, "dichte": 1, "stil": "dorf" },
+      "seed": 2002
+    },
+    {
+      "id": 23,
+      "kind": "flaeche",
+      "variant": "burg",
+      "points": [{ "x": 54, "z": -76 }, { "x": 84, "z": -78 }, { "x": 87, "z": -50 }, { "x": 57, "z": -48 }],
+      "params": { "mauerhoehe": 1, "turmAbstand": 22, "zwinger": false, "palisade": false, "dichte": 1 },
+      "seed": 2003
+    },
+    {
+      "id": 24,
+      "kind": "flaeche",
+      "variant": "kloster",
+      "points": [{ "x": -86, "z": 30 }, { "x": -56, "z": 28 }, { "x": -53, "z": 58 }, { "x": -84, "z": 60 }],
+      "params": { "groesse": 1, "kirche": "kapelle", "garten": 0.5 },
+      "seed": 2004
+    },
+    {
+      "id": 25,
+      "kind": "objekt",
+      "variant": "inseln",
+      "points": [{ "x": 0, "z": -62 }],
+      "params": { "anzahl": 2, "hoehe": 24, "groesse": 1, "streuung": 18, "baeumchen": true },
+      "seed": 2005
+    }
+  ]
+}

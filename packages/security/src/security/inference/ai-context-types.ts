@@ -27,10 +27,17 @@ export type AiTaskType =
   | "create_player_handout"
   | "fill_dungeon_room"
   | "prepare_mail_draft"
-  | "atlas_name_region"
-  | "atlas_describe_region"
-  | "atlas_fill_area"
-  | "atlas_generate_asset_proposal"
+  /* Terra map text tasks. They were called `atlas_name_region` (singular!) and
+     `atlas_describe_region` until 28.07.2026 — Atlas is gone, the two tasks
+     are not: naming and describing a map region works for any map. The two
+     that WERE Atlas (`atlas_fill_area`, `atlas_generate_asset_proposal`) sat on
+     the gouache asset registry and the AtlasObject payload and were dropped
+     with it. The old plural/singular trap (`atlas_name_regions` as action id,
+     `atlas_name_region` as task type) died with the rename: action id and task
+     type are now the same string. */
+  | "terra_name_regions"
+  | "terra_describe_region"
+  | "terra_world_draft"
   | "simulate_faction"
   | "generate_structured_npc"
   | "generate_structured_quest"

@@ -2,7 +2,7 @@
 
 import { requirePortalActionAuth } from "@/src/lib/portal-action-auth";
 import { revalidatePath } from "next/cache";
-import { createPrismaClient } from "@uwe/database/server";
+import { prisma } from "@uwe/database/server";
 import { createPlayerQuestionService } from "@uwe/database/player-questions";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
@@ -34,30 +34,25 @@ export async function askPlayerQuestionAction(formData: FormData) {
     throw new Error("Nicht angemeldet");
   }
 
-  const db = createPrismaClient();
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world) {
-      throw new Error("Welt nicht gefunden");
-    }
-    assertPortalCanReadWorld(ctx, world.id);
-
-    const authorName =
-      ctx.worldMembership?.characterName?.trim() || user.displayName || "Spieler";
-
-    const service = createPlayerQuestionService(db);
-    await service.ask({
-      worldSlug,
-      authorUserId: user.id,
-      authorName,
-      question,
-    });
-  } finally {
-    await db.$disconnect();
+  const world = await prisma.world.findUnique({
+    where: { slug: worldSlug },
+    select: { id: true },
+  });
+  if (!world) {
+    throw new Error("Welt nicht gefunden");
   }
+  assertPortalCanReadWorld(ctx, world.id);
+
+  const authorName =
+    ctx.worldMembership?.characterName?.trim() || user.displayName || "Spieler";
+
+  const service = createPlayerQuestionService(prisma);
+  await service.ask({
+    worldSlug,
+    authorUserId: user.id,
+    authorName,
+    question,
+  });
 
   revalidatePath(`/auth/worlds/${worldSlug}/questions`);
   revalidatePath(`/auth/worlds/${worldSlug}`);

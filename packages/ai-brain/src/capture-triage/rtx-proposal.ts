@@ -1,4 +1,5 @@
 import type { CaptureAiProposal, CaptureProposalTarget } from "@uwe/database/server";
+import { readModelJson } from "../model-json";
 
 const VALID_TARGETS = new Set<CaptureProposalTarget>([
   "personal_project",
@@ -43,13 +44,16 @@ export function parseRtxCaptureProposalResponse(
   raw: string,
   fallback: CaptureAiProposal,
 ): CaptureAiProposal {
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  /* Was `raw.match(/\{[\s\S]*\}/)` — greedy to the LAST brace in the answer,
+     so any prose containing a `}` after the object swallowed it and the whole
+     proposal fell back. `readModelJson` strips fences and scans to the
+     BALANCED brace instead; same shared reader as the Brain proposals. */
+  const parsed = readModelJson(raw);
+  if (!parsed) {
     return fallback;
   }
 
   try {
-    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
     const suggestedTarget = String(parsed.suggestedTarget ?? fallback.suggestedTarget);
     const confidence = String(parsed.confidence ?? fallback.confidence);
     const tags = Array.isArray(parsed.suggestedTags)

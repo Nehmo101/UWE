@@ -2,7 +2,7 @@
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 
 import {
-  createPrismaClient,
+  prisma,
   createShareLinkService,
   type ShareTargetType,
 } from "@uwe/database/server";
@@ -29,20 +29,15 @@ export async function createShareLinkAction(formData: FormData) {
 
   const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
 
-  const db = createPrismaClient();
-  try {
-    await createShareLinkService(db).createShareLink({
-      worldId,
-      targetType,
-      targetId,
-      expiresAt,
-      password,
-      readOnly,
-      logAccess,
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  await createShareLinkService(prisma).createShareLink({
+    worldId,
+    targetType,
+    targetId,
+    expiresAt,
+    password,
+    readOnly,
+    logAccess,
+  });
 
   revalidatePath(returnPath);
   revalidateWorldRootAndWiki(worldSlug);
@@ -65,18 +60,13 @@ export async function updateShareLinkAction(formData: FormData) {
   const readOnly = formData.get("readOnly") !== "off";
   const logAccess = formData.get("logAccess") === "on";
 
-  const db = createPrismaClient();
-  try {
-    await createShareLinkService(db).updateShareLink(linkId, {
-      expiresAt: expiresAtRaw ? new Date(expiresAtRaw) : null,
-      password: password || undefined,
-      clearPassword,
-      readOnly,
-      logAccess,
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  await createShareLinkService(prisma).updateShareLink(linkId, {
+    expiresAt: expiresAtRaw ? new Date(expiresAtRaw) : null,
+    password: password || undefined,
+    clearPassword,
+    readOnly,
+    logAccess,
+  });
 
   revalidatePath(returnPath);
 }
@@ -92,12 +82,7 @@ export async function disableShareLinkAction(formData: FormData) {
     assertStudioTrusted();
   }
 
-  const db = createPrismaClient();
-  try {
-    await createShareLinkService(db).disableShareLink(linkId);
-  } finally {
-    await db.$disconnect();
-  }
+  await createShareLinkService(prisma).disableShareLink(linkId);
 
   revalidatePath(returnPath);
 }

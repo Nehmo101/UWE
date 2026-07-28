@@ -46,6 +46,13 @@ export class AnthropicProvider implements AiProvider {
     ];
   }
 
+  /**
+   * No `responseFormat` handling: the Anthropic Messages API has no JSON mode
+   * flag — structured output there means tool use, which would change the
+   * request shape for every task, not just the JSON ones. This provider is
+   * therefore one of the two places where JSON is only *asked* for; the
+   * router's single repair attempt and the clamping validators carry it.
+   */
   async generateText(options: GenerateTextOptions): Promise<GenerateTextResult> {
     const data = await this.fetchJson<{
       content?: Array<{ type: string; text?: string }>;
@@ -122,6 +129,12 @@ export class GeminiProvider implements AiProvider {
         generationConfig: {
           temperature: options.temperature ?? 0.7,
           maxOutputTokens: options.maxTokens ?? 2048,
+          // Gemini's own JSON mode. Without a responseSchema it still only
+          // guarantees "valid JSON", not the right shape — the validators own
+          // the shape.
+          ...(options.responseFormat === "json"
+            ? { responseMimeType: "application/json" }
+            : {}),
         },
       }),
     });

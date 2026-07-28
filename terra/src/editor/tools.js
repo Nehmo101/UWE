@@ -1,11 +1,35 @@
 // Werkzeuge: Definitionen, Parameter-Schemata, aktiver Zustand, Zeichnen-Abschluss.
-import { S, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben }
-  from '../core/store.js';
+import { S, WATER, BIOME, mkElement, nextSeed, stempelGueltig, speicherLesen, speicherSchreiben,
+  clearElement } from '../core/store.js';
+import { clamp, DEG } from '../core/rng.js';
 import { commit, isHeavy } from '../core/dirty.js';
+import { emit, markDirty } from '../core/pools.js';
+import { heightAt } from '../world/terrain.js';
+/* Runde H (Bedienung): das Werkzeug fuer handgesetzte Kartenzeichen. Die
+   Uebersetzung „Zeichenname -> Platzierung/Band" liegt in generators/zeichen.js
+   und render/signaturen.js — hier wird nur gerufen, nie gerechnet. Beide
+   Importe sind zyklusfrei: zeichen.js und signaturen.js ziehen core/, world/
+   und render/, nie editor/. */
+import { kartenPlatz, bandZeichen } from '../generators/zeichen.js';
+import { zeichenDaten } from '../render/signaturen.js';
 import { pushUndo } from './history.js';
-import { clearPreview, rebuildHandles, select, brushRing, waehleMarker }
-  from './selection.js';
+// J3 — die Auswahlliste der Sprachfamilien kommt aus dem Generator, damit sie
+// an genau EINER Stelle gepflegt wird. namen.js importiert nur core/ und
+// world/ und nichts aus editor/ oder ui/ — der Import ist zyklusfrei.
+import { sprachfamilien, familieDerKarte, setzeSprachfamilie } from '../generators/namen.js';
+import { clearPreview, rebuildHandles, select, brushRing, waehleMarker } from './selection.js';
 import { buildPanel, updateHint } from '../ui/panels.js';
+
+/* I2 — Auswahlliste der Biome fuer das Schema der Biomflaeche. Sie wird aus
+   der Registry abgeleitet und nicht abgeschrieben: die Leiste oben traegt
+   dieselben 25 Eintraege als <optgroup> in index.html, und zwei Listen, die
+   von Hand gleichgehalten werden muessen, laufen beim naechsten Biom
+   auseinander. Reihenfolge ist die der Registry, damit sie stabil ist. */
+function biomListe() {
+  var out = [];
+  for (var k in BIOME) out.push([k, BIOME[k].label || k]);
+  return out;
+}
 
 /** Aktiver Werkzeug-Zustand (frueher lose Globals). */
 export const ed = {
@@ -58,17 +82,36 @@ var TOOLS = [
      Taste 9: 1..6 sind seit jeher belegt, 7 (Marker) und 8 (Stempel) kamen in
      D1/A3 dazu — 9 ist die naechste freie Ziffer (0 bleibt frei, onKey liest
      nur Digit/Numpad der hier eingetragenen Tasten). */
-  { id: "wegsuche", g: "⤳", l: "Wegsuche", key: "9" }
+  { id: "wegsuche", g: "⤳", l: "Wegsuche", key: "9" },
+  /* I1 — Ausschnitt: ein Polygon zeichnen und daraus eine KINDKARTE machen.
+     Kein Element, sondern der einzige Weg, eine neue Karte anzulegen — und
+     weil es nur einen Weg gibt, gibt es auch nur eine Stelle, an der die
+     Baumregeln durchgesetzt werden.
+     Taste 0: die letzte freie Ziffer. Danach ist die Reihe voll; ein elftes
+     Werkzeug braucht eine andere Belegung, und das ist gut so — zehn sind
+     bereits an der Grenze dessen, was eine Leiste ohne Gruppierung traegt. */
+  { id: "ausschnitt", g: "⧉", l: "Ausschnitt", key: "0" }
 ];
 var VARIANTS = {
+  /* I2 — der Biompinsel steht am ENDE der Pfadvarianten, aus demselben Grund
+     wie die Bruchkante in H6: eine aeltere Fassung des Editors faellt in
+     genElement durch alle else-if und erzeugt schlicht nichts. Er ist eine
+     PFADVARIANTE und keine eigene Werkzeugkarte, weil er genau das ist, was
+     ein Pfad ist — eine Punktfolge mit einer Wirkung entlang der Kurve. Nur
+     wird sie hier nicht gebaut, sondern gefaerbt. */
   pfad: [["strasse", "Straße"], ["mauer", "Mauer"], ["fluss", "Fluss"],
-         ["hecke", "Hecke / Zaun"], ["bruch", "Bruchkante"]],
+         ["hecke", "Hecke / Zaun"], ["bruch", "Bruchkante"],
+         ["biompinsel", "Biompinsel"]],
   /* Die drei Kompositstrukturen stehen am ENDE der Liste, nicht zwischen den
      Bestandsvarianten: die Reihenfolge ist zugleich die Knopfreihenfolge im
      Panel, und die eingespielten Griffe der vier alten Varianten sollen bleiben,
      wo sie sind. */
   flaeche: [["wald", "Wald"], ["feld", "Feld"], ["viertel", "Viertel"], ["wiese", "Wiese"],
-            ["burg", "Burg"], ["werft", "Werft"], ["kloster", "Kloster"]],
+            ["burg", "Burg"], ["werft", "Werft"], ["kloster", "Kloster"],
+            // I2: die Biomflaeche zeichnet nichts, sie faerbt und bepflanzt.
+            ["biom", "Biom"],
+            // Runde H: der Binnensee. Wasserflaeche + Ufersaum, kein Terraineingriff.
+            ["see", "See"]],
   objekt: [["baeume", "Bäume"], ["haeuser", "Häuser"], ["klassisch", "Klassisch"],
            ["zwergisch", "Zwergisch"], ["elfisch", "Elfisch"], ["ruinen", "Ruinen"],
            ["felsen", "Felsen"], ["werk", "Werk"], ["natur", "Kleinzeug"],
@@ -85,7 +128,16 @@ var VARIANTS = {
   ranke: [["ranke", "Ranke"]],
   terrain: [["heben", "Anheben"], ["senken", "Absenken"], ["glaetten", "Glätten"], ["ebnen", "Einebnen"]],
   // D1: die vier Markerarten (Farbe der Stecknadel, siehe MARKER_ARTEN in store.js)
-  marker: [["ort", "Ort"], ["gefahr", "Gefahr"], ["notiz", "Notiz"], ["arbor", "Arbor"]],
+  // I4: „Beschriftung" ist eine Markervariante, die ein ELEMENT anlegt
+  // statt einer Nadel in der flachen S.marker-Liste. Der Unterschied ist
+  // gewollt und steht im Namen: eine Nadel ist eine Notiz fuer den Bauenden,
+  // eine Beschriftung gehoert ins Bild und in den PNG-Export.
+  // Runde H (Bedienung): „Kartenzeichen" ist die zweite solche Variante — sie
+  // macht die im Katalog als „Q = H" (von Hand gesetzt) gefuehrten Signaturen
+  // erreichbar (sig_hauptstadt, sig_arborknoten, sig_grenze, sig_seeweg).
+  // Der Katalog selbst nennt das Marker-Werkzeug als den Weg dorthin.
+  marker: [["ort", "Ort"], ["gefahr", "Gefahr"], ["notiz", "Notiz"], ["arbor", "Arbor"],
+    ["beschriftung", "Beschriftung"], ["zeichen", "Kartenzeichen"]],
   // A3: DYNAMISCH — stempelVariantenNeu() haelt die Liste an der Bibliothek.
   // Die Werte sind die Stempelnamen; panels.js baut daraus ohne Zusatzcode
   // die Variantenknoepfe, weil es diese Tabelle ohnehin schon rendert.
@@ -130,6 +182,18 @@ var PARAMS = {
     { k: "wurzeln", l: "Wurzelvorhänge", b: true, d: true },
     { k: "truemmer", l: "Schwebende Trümmer", min: 0, max: 6, st: 1, d: 2 }
   ],
+  /* I2 — Biompinsel. Dieselben drei Groessen wie die Biomflaeche und das
+     Terrainwerkzeug, und zwar ABSICHTLICH mit denselben Namen und Grenzen:
+     `biom`/`weich` liest die Ableitung in core/dirty.js woertlich wie bei
+     "flaeche:biom" (der Pinsel wird dort in Kreisflaechen uebersetzt),
+     `radius` ist der Pinselradius aus "terrain:*" mit identischer Spanne.
+     Wer vom Terrainpinsel herkommt, findet denselben Regler an derselben
+     Stelle — und die Ableitung braucht keine zweite Formel. */
+  "pfad:biompinsel": [
+    { k: "biom", l: "Biom", o: biomListe(), d: "moor" },
+    { k: "radius", l: "Pinselradius", min: 2, max: 40, st: 0.5, d: 12 },
+    { k: "weich", l: "Randbreite", min: 1, max: 32, st: 1, d: 8 }
+  ],
   "flaeche:wald": [
     { k: "dichte", l: "Dichte", min: 0.2, max: 2.5, st: 0.05, d: 1.1 },
     { k: "klumpen", l: "Klumpigkeit", min: 0, max: 1, st: 0.02, d: 0.55 },
@@ -140,8 +204,11 @@ var PARAMS = {
     { k: "drehung", l: "Reihenrichtung", min: 0, max: 180, st: 1, d: 30 },
     { k: "reihe", l: "Reihenabstand", min: 1.6, max: 9, st: 0.1, d: 3.2 },
     { k: "hoehe", l: "Wuchshöhe", min: 0.4, max: 2, st: 0.05, d: 1 },
+    // "wein" kam in Runde J dazu: die Weinbergsignatur (sig_weinberg) haengt
+    // an der Fruchtart, und ohne den Eintrag war sie nur ueber geladene
+    // Karten mit frucht:"wein" erreichbar — nie ueber die Bedienung.
     { k: "frucht", l: "Frucht", o: [["weizen", "Weizen"], ["kohl", "Kohl"], ["lavendel", "Lavendel"],
-        ["brache", "Brache"]], d: "weizen" }
+        ["wein", "Wein"], ["brache", "Brache"]], d: "weizen" }
   ],
   "flaeche:viertel": [
     { k: "netz", l: "Wegenetz", o: [["raster", "Raster"], ["gebogen", "Gebogen"], ["zellen", "Zellen"],
@@ -158,6 +225,31 @@ var PARAMS = {
     { k: "dichte", l: "Dichte", min: 0.3, max: 2.5, st: 0.05, d: 1.2 },
     { k: "blumen", l: "Blütenanteil", min: 0, max: 1, st: 0.02, d: 0.25 }
   ],
+  /* I2 — Biomflaeche. Sie erzeugt keine einzige Instanz; ihr ganzer Zweck ist
+     die abgeleitete Maske, aus der terrainColor die Faerbung und genWald/
+     genWiese ihre Bepflanzung ziehen. Deshalb steht sie auch nicht in der
+     Kette von genFlaeche — dort faellt sie durch alle else-if und erzeugt
+     nichts, genau wie eine unbekannte Variante in einer aelteren Fassung.
+
+     `weich` ist bei 32 gedeckelt, nicht bei 64: darueber reichen die 16
+     Mischstufen der Palette nicht mehr, dann wuerde die Stufung sichtbar.
+     Gemessen liegen bei weich=32 rund drei Vertices auf einer Stufe. */
+  "flaeche:biom": [
+    { k: "biom", l: "Biom", o: biomListe(), d: "moor" },
+    { k: "weich", l: "Randbreite", min: 1, max: 32, st: 1, d: 8 }
+  ],
+  /* Runde H — Binnensee. `stau` ist RELATIV: der Wasserspiegel wird bei jeder
+     Erzeugung am Ufer abgelesen (generators/see.js, seeSpiegel), damit ein
+     verschobener See seine neue Mulde fuellt statt seine alte Hoehe mitzunehmen.
+     `einzug` der Fluesse steht bewusst NICHT im Schema — es ist eine abgeleitete
+     Kennzahl des Weltgenerators, kein Regler. */
+  "flaeche:see": [
+    { k: "stau", l: "Aufstau", min: -8, max: 8, st: 0.5, d: 0 },
+    { k: "saum", l: "Ufersaum", min: 0, max: 20, st: 0.5, d: 5 },
+    { k: "ufer", l: "Uferbewuchs", b: true, d: true },
+    { k: "dichte", l: "Dichte am Ufer", min: 0, max: 3, st: 0.05, d: 1 }
+  ],
+
   /* --- Kompositstrukturen (generators/strukturen.js) ---------------------
      Der gezeichnete Polygonzug ist bei allen dreien mehr als eine Umrandung:
      bei der Burg IST er der Mauerring, beim Kloster geben die ersten beiden
@@ -249,6 +341,38 @@ var PARAMS = {
     { k: "streuung", l: "Streuradius", min: 5, max: 40, st: 0.5, d: 18 },
     { k: "baeumchen", l: "Bäumchen obendrauf", b: true, d: true }
   ],
+  /* I4 — Kartenbeschriftung. `text` braucht ein Textfeld; paramRow hat dafuer
+     den Zweig `def.txt` bekommen. Das Klickziel steht bewusst NICHT im Schema:
+     es ist ein verschachteltes Objekt ({art, ref}), und das Schema kennt nur
+     Skalare. Die Zielzeile baut ui/panels.js von Hand und laesst sie durch
+     zielPruefen laufen, bevor sie ins Element geht. */
+  "marker:beschriftung": [
+    { k: "text", l: "Text", txt: true, d: "" },
+    { k: "klasse", l: "Klasse", d: "ort", o: [["ort", "Ort"], ["region", "Region"],
+      ["gewaesser", "Gewässer"], ["gebirge", "Gebirge"], ["gefahr", "Gefahr"],
+      ["arbor", "Arbor"]] },
+    { k: "groesse", l: "Größe", min: 0.4, max: 3, st: 0.05, d: 1 }
+  ],
+  /* Runde H (Bedienung) — handgesetzte Kartenzeichen. Angeboten werden GENAU
+     die vier Zeichen, die der Signaturenkatalog unter Q = H fuehrt: sie haben
+     kein Element und keine Ableitung, aus der sie sonst entstuenden — das
+     Werkzeug hier IST ihre einzige Quelle. Alle uebrigen Zeichen entstehen
+     aus Elementen oder Ableitungen und wuerden hier nur Dubletten stiften.
+       Punktzeichen: Hauptstadt, Arborknoten — ein Quad an der Klickstelle.
+       Linienzeichen (streifen im Katalog): Grenze, Seeweg — ein kurzes,
+       gerades Bandstueck durch die Klickstelle; `dreh` richtet es aus,
+       `laenge` bemisst es. Mehrere hintereinander ergeben den Zug — dieselbe
+       Bedienung wie beim Setzen einzelner Nadeln.
+     `dreh` in Grad (0 = Ost, gegen den Uhrzeiger in der Aufsicht), die
+     Umrechnung nach Bogenmass macht genZeichenMarker. */
+  "marker:zeichen": [
+    { k: "art", l: "Zeichen", d: "sig_hauptstadt", o: [
+      ["sig_hauptstadt", "Hauptstadt"], ["sig_arborknoten", "Arborknoten"],
+      ["sig_grenze", "Grenze (Linie)"], ["sig_seeweg", "Seeweg (Linie)"]] },
+    { k: "groesse", l: "Größe", min: 0.4, max: 3, st: 0.05, d: 1 },
+    { k: "dreh", l: "Drehung (Grad)", min: 0, max: 360, st: 5, d: 0 },
+    { k: "laenge", l: "Länge (nur Linien)", min: 10, max: 200, st: 5, d: 60 }
+  ],
   "ranke:ranke": [
     { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },
     { k: "straenge", l: "Stränge", min: 3, max: 5, st: 1, d: 4 },
@@ -330,6 +454,78 @@ PARAMS["wegsuche:strasse"] = PARAMS["pfad:strasse"];
 PARAMS["wegsuche:fluss"] = PARAMS["pfad:fluss"];
 PARAMS["wegsuche:hecke"] = PARAMS["pfad:hecke"];
 
+/* ==========================================================================
+   J3 — KARTENWEITE Parameter
+
+   PARAMS beschreibt Parameter EINES ELEMENTS. Die kartenweiten Einstellungen
+   (Weltseed, Biom, Kartengroesse, Tageszeit, Wetter) sitzen dagegen nicht im
+   Elementschema, sondern als feste Bedienelemente in der unteren Leiste von
+   terra/index.html — und index.html gehoert dieser Runde nicht.
+
+   Deshalb hier ein eigenes, kleines Schema in derselben Schreibweise wie
+   PARAMS (k/l/o/d), das ui/panels.js mit paramRow rendern kann. Der Wert
+   selbst liegt in `S.sprachfamilie`; core/store.js gehoert dieser Runde
+   ebenfalls nicht, das Feld fehlt also in der Deklaration von S und entsteht
+   erst beim ersten Setzen. Alle Leser (namen.js familieDerKarte, das Objekt
+   unten) behandeln "fehlt" wie "auto" — es gibt keinen Zustand, in dem das
+   auffiele.
+
+   Nachzuziehen, wenn die fremden Dateien wieder offen sind (siehe Bericht):
+     core/store.js  in S ergaenzen:  sprachfamilie: "auto",
+     editor/io.js   speichern:       data.sprachfamilie = S.sprachfamilie;
+                    lesen (tolerant, wie `biom`):
+                      sprachfamilie: typeof d.sprachfamilie === "string"
+                        ? d.sprachfamilie : "auto"
+                    uebernehmen:     S.sprachfamilie = karte.sprachfamilie;
+   Bis dahin ueberlebt die Einstellung die Sitzung, aber nicht das Speichern —
+   ohne Folgen fuer bereits vergebene Namen, denn die stehen als Text in
+   params.name bzw. im Markertext und werden mitgespeichert.
+   ========================================================================== */
+var KARTE_PARAMS = [
+  { k: "sprachfamilie", l: "Sprachfamilie der Karte", o: sprachfamilien(), d: "auto" }
+];
+
+/* --- Erosion (I3) --------------------------------------------------------
+   Fuenf Regler von zweiundzwanzig Werten aus EROSION_STANDARD. Die Auswahl ist
+   nicht willkuerlich: Es sind die, deren Wirkung man im Bild ohne Erklaerung
+   erkennt. Kapazitaet, Traegheit und Verdunstung aendern das Ergebnis
+   ebenfalls, aber niemand kann vorhersagen wie — solche Regler stiften nur
+   Ratlosigkeit und stehen deshalb nicht im Panel. Wer sie braucht, ruft
+   starteErosion mit eigenen Werten.
+
+   Sitzungswerte, bewusst NICHT im Speicherformat: Erosion ist eine einmalige
+   Handlung, ihr Ergebnis steckt danach im Hoehenfeld (Format v3 als
+   `hoehenDelta`). Die Regler noch einmal mitzuspeichern hiesse, einen Zustand
+   zu fuehren, den nichts liest. */
+var EROSION_PARAMS = [
+  { k: "staerke", l: "Stärke", min: 0, max: 2, st: 0.05, d: 1 },
+  { k: "tropfenDichte", l: "Tropfen je Zelle", min: 0, max: 0.15, st: 0.005, d: 0.05 },
+  { k: "merkmalGroesse", l: "Rinnenbreite", min: 1, max: 6, st: 0.5, d: 2 },
+  { k: "haerteVarianz", l: "Härtevarianz", min: 0, max: 0.9, st: 0.05, d: 0.35 },
+  { k: "boeschung", l: "Böschungswinkel", min: 22, max: 52, st: 1, d: 34 }
+];
+
+var erosionRegler = {};
+(function () {
+  for (var i = 0; i < EROSION_PARAMS.length; i++) {
+    erosionRegler[EROSION_PARAMS[i].k] = EROSION_PARAMS[i].d;
+  }
+})();
+
+/* Ein Objekt mit Zugriffsfaellen statt eines schlichten Verweises auf S:
+   paramRow (ui/panels.js) liest und schreibt `obj[def.k]` — mit diesem Objekt
+   landet der Schreibzugriff direkt in S, ohne dass panels.js davon wissen
+   muss, und ohne eine zweite Kopie des Wertes, die auseinanderlaufen koennte. */
+var karteParams = {};
+Object.defineProperty(karteParams, "sprachfamilie", {
+  enumerable: true,
+  get: function () { return (typeof S.sprachfamilie === "string") ? S.sprachfamilie : "auto"; },
+  set: function (v) { setzeSprachfamilie(v); }
+});
+
+/** Die Familie, die auf dieser Karte tatsaechlich gilt — "auto" aufgeloest. */
+function aktiveSprachfamilie() { return familieDerKarte(); }
+
 function schemaKey(kind, variant) {
   if (PARAMS[kind + ":" + variant]) return kind + ":" + variant;
   return kind + ":*";
@@ -366,15 +562,132 @@ function curParams() {
 
 function copyParams(o) { var c = {}; for (var k in o) c[k] = o[k]; return c; }
 
+/* I2 — Es gibt jetzt ZWEI Pinsel: den Terrainpinsel und den Biompinsel. Beide
+   zeigen denselben Ring, beide malen im Ziehen, beide lesen ihren Radius aus
+   `curParams().radius`. Diese eine Funktion ist die Antwort auf „malt das
+   aktive Werkzeug im Kreis, und wie weit?" — setTool, verarbeiteZeiger und
+   der Zeigerbeginn fragen sie, statt die Bedingung dreimal zu fuehren.
+   Liefert 0, wenn gerade kein Pinsel aktiv ist. */
+function pinselRadius() {
+  if (ed.tool === "terrain") return curParams().radius || 0;
+  if (ed.tool === "pfad" && ed.variantOf.pfad === "biompinsel") return curParams().radius || 0;
+  return 0;
+}
+
 function snapPt(p) {
   if (!S.snap) return { x: p.x, z: p.z };
   return { x: Math.round(p.x / 2) * 2, z: Math.round(p.z / 2) * 2 };
 }
 
+/* ==========================================================================
+   Runde H (Bedienung) — handgesetzte Kartenzeichen (marker:zeichen)
+
+   Ein Element, dessen EINZIGE Wirkung eine Signatur-Instanz ist: kein Mesh,
+   kein Terraineingriff, kein Korridor. Es laeuft ueber dieselbe Kette wie
+   jedes Generator-Zeichen — kartenPlatz (Band, Groesse, Tint, Schwebe) und
+   emit (Maszstabsband, Instanzdeckel). Damit gilt die Uebergabe von selbst:
+   unterhalb von UEBERGABE.koerper/BLENDE verwirft emit die Instanz bzw.
+   liefert kartenPlatz null, und das handgesetzte Zeichen verschwindet wie
+   jedes andere, wenn die Karte in den Ortsmaszstab wechselt.
+
+   WARUM DIE FUNKTION HIER LIEGT und nicht in generators/zeichen.js, wo sie
+   sachlich hingehoert: zeichen.js wird in dieser Runde parallel bearbeitet
+   und ist fuer diesen Zweig tabu. core/dirty.js importiert tools.js bereits
+   (defaultsFor) — der Umzug nach zeichen.js ist spaeter ein Dreizeiler.
+
+   WAS NOCH FEHLT (die eine Zeile in core/dirty.js, ebenfalls tabu — exakter
+   Wortlaut im Rundenbericht): genElement laesst marker-Elemente heute durch
+   alle else-if fallen; nach clearElement bleibt das Zeichen dadurch leer.
+   Bis die Zeile
+       else if (el.kind === "marker" && el.variant === "zeichen") genZeichenMarker(el);
+   dort steht (Import: defaultsFor um genZeichenMarker ergaenzen), heilt
+   zeichenMarkerNachziehen den Zustand: es laeuft im selben Fuenf-je-Sekunde-
+   Takt wie der Beschriftungsabgleich (editor/selection.js) und erkennt am
+   frischen `el.inst`-Objekt, dass ein clearElement die Instanzen genommen
+   hat. Der WeakSet-Schluessel ist BEWUSST das inst-Objekt und nicht das
+   Element: clearElement ersetzt inst durch ein neues Objekt, und genau dieser
+   Tausch IST das Signal „hier wurde geleert".
+   ========================================================================== */
+var zeichenErzeugt = new WeakSet();
+
+/**
+ * Erzeugt die Signatur-Instanz eines marker:zeichen-Elements (und raeumt
+ * vorher auf). Liefert die Zahl gesetzter Zeichen — 0 heisst „Maszstab
+ * ausserhalb des Bandes" oder „unbekannter Zeichenname", beides regulaer.
+ */
+function genZeichenMarker(el) {
+  var vorher = el.inst ? Object.keys(el.inst) : [];
+  clearElement(el);
+  zeichenErzeugt.add(el.inst);            // auch ein leeres Ergebnis ist eines
+  var p = el.points && el.points[0];
+  var pr = el.params || {};
+  /* Erlaubnisliste ueber den Katalog: `art` kommt aus einer (womoeglich
+     fremden) Datei und wird nur als Schluessel akzeptiert, den der Katalog
+     kennt. zeichenDaten prueft per hasOwnProperty — ein "__proto__" oder ein
+     Tippfehler faellt hier durch, lange bevor er einen Poolnamen wird. */
+  var Z = p ? zeichenDaten(pr.art) : null;
+  var n = 0;
+  if (Z) {
+    var g = Number.isFinite(pr.groesse) ? clamp(pr.groesse, 0.4, 3) : 1;
+    var dreh = (Number.isFinite(pr.dreh) ? pr.dreh : 0) * DEG;
+    if (Z.streifen) {
+      // Linienzeichen: ein gerades Bandstueck durch den Klickpunkt.
+      var halb = (Number.isFinite(pr.laenge) ? clamp(pr.laenge, 10, 200) : 60) * 0.5;
+      var dx = Math.cos(dreh), dz = -Math.sin(dreh);   // 0 Grad = Ost, Aufsicht
+      var linie = [{ x: p.x - dx * halb, z: p.z - dz * halb },
+                   { x: p.x + dx * halb, z: p.z + dz * halb }];
+      if (bandZeichen(el, pr.art, linie, { skala: g })) n = 1;
+    } else {
+      var pl = kartenPlatz(pr.art, { skala: g, dreh: dreh });
+      if (pl) {
+        var y = Math.max(heightAt(p.x, p.z), WATER) + pl.schwebe;
+        emit(el, pr.art, p.x, y, p.z, pl.yaw, pl.sx, pl.sy, pl.sz, pl.tint);
+        n = 1;
+      }
+    }
+  }
+  // Wie regenElement in core/dirty.js: alte UND neue Pools packen lassen —
+  // ein Wechsel der `art` muss auch den verlassenen Pool aufraeumen.
+  markDirty(vorher.concat(el.inst ? Object.keys(el.inst) : []));
+  return n;
+}
+
+/**
+ * Selbstheilung: erzeugt jedes marker:zeichen-Element neu, dessen Instanzen
+ * ein clearElement (schwerer Commit, Undo, Laden) genommen hat. Aufgerufen im
+ * Beschriftungs-Takt aus editor/selection.js. Liefert die Zahl der Neubauten.
+ */
+function zeichenMarkerNachziehen() {
+  var n = 0;
+  for (var i = 0; i < S.elements.length; i++) {
+    var e = S.elements[i];
+    if (e.kind !== "marker" || e.variant !== "zeichen") continue;
+    if (e.inst && zeichenErzeugt.has(e.inst)) continue;
+    genZeichenMarker(e);
+    n++;
+  }
+  return n;
+}
+
+/* I1 — der Ausschnitt erzeugt kein Element, sondern eine Kindkarte. Das
+   passiert in editor/io.js, wo der Kartenbaum wohnt. Hier steht nur die
+   Anmeldung: io.js importiert tools.js, der umgekehrte Weg waere ein Zyklus.
+   Dasselbe Muster wie bei der Fortschrittsanzeige der Erosion. */
+var ausschnittWeg = null;
+function setzeAusschnittWeg(fn) { ausschnittWeg = fn; }
+
 function finishDraw() {
   if (!ed.draw) return;
-  var min = ed.draw.kind === "flaeche" ? 3 : 2;
+  var min = (ed.draw.kind === "flaeche" || ed.draw.kind === "ausschnitt") ? 3 : 2;
   if (ed.draw.points.length < min) { cancelDraw(); return; }
+  if (ed.draw.kind === "ausschnitt") {
+    var pts = ed.draw.points.slice();
+    ed.draw = null;
+    clearPreview();
+    updateHint();
+    if (ausschnittWeg) ausschnittWeg(pts);
+    return;
+  }
   pushUndo();
   var el = mkElement(ed.draw.kind, ed.draw.variant, ed.draw.points.slice(),
     copyParams(toolParams[ed.draw.kind + ":" + ed.draw.variant]), nextSeed());
@@ -406,7 +719,8 @@ function setTool(id) {
   for (var i = 0; i < rail.children.length; i++) {
     rail.children[i].classList.toggle("on", rail.children[i].dataset.id === id);
   }
-  if (id !== "terrain") brushRing.visible = false;
+  // I2: der Ring gehoert jetzt beiden Pinseln — die Frage stellt pinselRadius.
+  if (!pinselRadius()) brushRing.visible = false;
   buildPanel();
   updateHint();
 }
@@ -452,7 +766,7 @@ function stempelBibliothekLaden() {
       if (Array.isArray(arr)) {
         for (var i = 0; i < arr.length; i++) if (stempelGueltig(arr[i])) S.stempel.push(arr[i]);
       }
-    } catch { /* unlesbar: leere Bibliothek, kein Absturz */ }
+    } catch (_e) { /* unlesbar: leere Bibliothek, kein Absturz */ }
   }
   stempelVariantenNeu();
 }
@@ -609,7 +923,11 @@ function stempelSetzen(st, pos) {
 // Varianten stehen dadurch beim ersten Aufbau des Panels bereits.
 stempelBibliothekLaden();
 
-export { TOOLS, VARIANTS, PARAMS, schemaKey, defaultsFor, toolParams, curParams,
-  copyParams, snapPt, finishDraw, cancelDraw, setTool,
+export { TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
+  setzeAusschnittWeg,
+  EROSION_PARAMS, erosionRegler,
+  schemaKey, defaultsFor, toolParams, curParams,
+  copyParams, snapPt, pinselRadius, finishDraw, cancelDraw, setTool,
+  genZeichenMarker, zeichenMarkerNachziehen,
   auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel,
   stempelUebernehmen, stempelBibliothekLaden, stempelBibliothekSichern };

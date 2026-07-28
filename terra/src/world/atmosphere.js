@@ -9,8 +9,7 @@ import { TEX } from '../render/textures.js';
 import { POOLS } from '../core/pools.js';
 import { schattenMat } from '../core/pools.js';
 import { waterMat } from './water.js';
-import { paintSky, setSonne, setSonnenDir, setWolkenFarben, setSterne, cirrusMat,
-  CLOUD_DRIFT_MITTEL } from './sky.js';
+import { paintSky, setSonne, setSonnenDir, setWolkenFarben, setSterne, cirrusMat, CLOUD_DRIFT_MITTEL } from './sky.js';
 import { setLook } from '../render/pipeline.js';
 import { cam, camera } from '../editor/camera.js';
 // F5: uWindStaerke ist die Wetterachse des Windes (unten geschrieben),
@@ -311,6 +310,73 @@ function mischeWetter() {
   return e;
 }
 
+/* ==========================================================================
+   Kartenmaßstab: der Hoehennebel gibt die Karte frei (Nachtrag)
+
+   Auf Ortsmaßstab ist der Nebel Stimmung — Tiefenstaffelung, Uebergang zum
+   Himmel, die halbe Wirkung jedes Presets. Auf Kontinentmaßstab ist er Physik
+   am falschen Ort: eine Karte hat keinen Dunst, und mit fogFern um 1000
+   Einheiten lag bei weit herausgezogener Kamera die halbe Karte im Milchglas.
+
+   DIE SCHWELLE ist 600 m je Zelle — nicht irgendeine Zahl, sondern `ab` der
+   Stufe „kontinent" aus MASSSTAB_LEITER (world/kartenbaum.js), dieselbe
+   Schwelle und dieselbe Rampe wie die Schummerung (RELIEF_AB in
+   world/terrain.js; Faktor 1.6 = eine halbe Groessenordnung, wie BLENDE in
+   render/signaturen.js). Schummerung und Nebelfreigabe sind EINE Geste — das
+   GELAENDE hoert auf, raeumlich zu sein: wo die Reliefschattierung das
+   projizierte Licht ersetzt, ersetzt nichts mehr die Luftperspektive.
+   Bewusst NICHT die fruehere Uebergabe Koerper -> Karte (60, seit Runde J
+   die Schwelle der Beruhigung): zwischen 60 und 600 traegt das Bild zwar
+   Zeichen, aber noch echtes Gelaende mit Tiefe — und der Nebel traegt dort
+   weiterhin den Uebergang der Wasserebene zum Himmel (world/water.js
+   kalkuliert seinen 872-Einheiten-Saum ausdruecklich gegen fogFern); eine
+   Freigabe ab 60 risse diese Kante auf halben Maßstaeben auf. Bewusst als
+   Zahl mit dieser Begruendung statt als Import aus kartenbaum.js: die
+   Leiter aendert sich nicht beilaeufig, und Pruefung 19 haelt beide Zahlen
+   gegeneinander fest.
+
+   WIE GEDAEMPFT WIRD: zwei Handgriffe, beide oberhalb der Schwelle weich
+   (Smoothstep ueber 600..960) und unterhalb EXAKT null — der Block in
+   applyTod steht hinter einem einzigen Vergleich und wird dort gar nicht
+   betreten; der Rechenweg darunter bleibt Bit fuer Bit der bisherige
+   (dieselbe Zusage wie ruhig()/reliefFaktor in terrain.js).
+
+     uFogCap * (1 - d)      Der Nebeldeckel der terra-Materialien faellt auf
+                            exakt 0 (der Shader rechnet fogFactor =
+                            min(fogFactor, uFogCap), der Nebelzweig wird zur
+                            Nullsumme). Traegt Terrain, Wasser und alle
+                            Instanzen — fast das ganze Bild.
+     fog.near/far + d*60000 Der lineare Standardnebel (Voegel, Rauch, alles
+                            ohne terraPatch) rueckt hinter jede Sichtweite;
+                            smoothstep(near, far, d) ist fuer alles unter
+                            60 km exakt 0. Die NEBELFARBEN bleiben stehen:
+                            fogMittel speist weiter Horizont und Rauch.
+
+   Der Punkt in applyTod ist das LETZTE Wort ueber die Distanzen — nach
+   Tageszeit, Biom-luft und Wetter. Mit Absicht: Regen darf die Sicht einer
+   Ortskarte verkuerzen, aber keine Kontinentkarte vernebeln.
+
+   DAS NEBEL-PRESET wird mitgedaempft, mit voller Haerte. Entschieden und
+   begruendet: „Nebel" ist auf Kartenmaßstab kein Dunst mehr, sondern truebes
+   Licht — flache Sonne, engster Werteumfang, entsaettigte Grade, helle
+   Palette bleiben alle stehen und unterscheiden das Preset weiterhin klar
+   von Mittag. Ein Sonderrest Distanznebel nur fuer dieses Preset waere genau
+   der Bildmangel, der hier behoben wird, und ein zweiter Rechenweg dazu.
+   ========================================================================== */
+var NEBEL_KARTE_AB = 600;                    // m je Zelle, ab hier gibt der Nebel frei
+var NEBEL_KARTE_VOLL = NEBEL_KARTE_AB * 1.6; // dieselbe halbe Groessenordnung wie BLENDE
+var NEBEL_KARTE_WEIT = 60000;                // wohin near/far bei voller Freigabe ruecken
+
+/** Staerke der Freigabe bei diesem Maßstab: exakt 0 bis einschliesslich
+ *  NEBEL_KARTE_AB, Smoothstep bis exakt 1 ab NEBEL_KARTE_VOLL. Getrennt
+ *  exportiert, damit die Pruefung die Schwelle nachrechnen kann. */
+function nebelDaempfung(m) {
+  if (!Number.isFinite(m) || m <= NEBEL_KARTE_AB) return 0;
+  if (m >= NEBEL_KARTE_VOLL) return 1;
+  var t = (m - NEBEL_KARTE_AB) / (NEBEL_KARTE_VOLL - NEBEL_KARTE_AB);
+  return t * t * (3 - 2 * t);
+}
+
 /* --- Lichtaufbau: Sonne, Hemisphaere, schwaches kuehles Gegenlicht ------- */
 var sun = new THREE.DirectionalLight(0xfff2dc, 2.6);
 var hemi = new THREE.HemisphereLight(0xbfd8ee, 0xcbb896, 0.9);
@@ -496,6 +562,19 @@ function applyTod(t) {
     sceneHook.fog.color.copy(fogMittel);
     sceneHook.fog.near *= W.fogNah;
     sceneHook.fog.far *= W.fogFern;
+  }
+
+  /* --- Kartenmaßstab-Nachkorrektur (Begruendung oben bei NEBEL_KARTE_AB) --
+     NACH allen drei Achsen: der Maßstab hat ueber die Distanzen das letzte
+     Wort. Unterhalb der Schwelle ist d exakt 0 und der Block wird nicht
+     betreten — kein zusaetzlicher Faktor, kein veraenderter Float.        */
+  var nebelFrei = nebelDaempfung(S.einheitMeter);
+  if (nebelFrei > 0) {
+    terraUniforms.uFogCap.value *= 1 - nebelFrei;
+    if (sceneHook && sceneHook.fog) {
+      sceneHook.fog.near += nebelFrei * NEBEL_KARTE_WEIT;
+      sceneHook.fog.far += nebelFrei * NEBEL_KARTE_WEIT;
+    }
   }
   // Windstaerke: wind.js exportiert die geteilten Uniforms, der Wind-Patch in
   // materials.js multipliziert die Auslenkung damit. Ein reiner Schreibzugriff
@@ -990,4 +1069,6 @@ function setRauchQuellen(punkte) {
 export { PRESETS, WETTER, setTod, getTodName, setWetter, getWetterName,
   getWolkenTempo, applyTod, tickAtmosphere, initAtmosphere,
   updateBirds, updateRauch, setRauchQuellen, sun, hemi, rimLight, fogMittel,
-  birdMesh, boeeWert, BIRD_FLOCKS, BIRD_PER };
+  birdMesh, boeeWert, BIRD_FLOCKS, BIRD_PER,
+  // Nachtrag: Nebelfreigabe auf Kartenmaßstab — exportiert fuer Pruefung 19.
+  nebelDaempfung, NEBEL_KARTE_AB, NEBEL_KARTE_VOLL, NEBEL_KARTE_WEIT };

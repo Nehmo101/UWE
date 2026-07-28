@@ -249,8 +249,9 @@ describe("connectorQueueProvider", () => {
     assert.equal(workflowSlotForTask("create_knowledge_text"), "dnd");
     assert.equal(workflowSlotForTask("summarize_page"), "analysis");
     assert.equal(workflowSlotForTask("prepare_mail_draft"), "chat");
-    assert.equal(workflowSlotForTask("atlas_fill_area"), "dnd");
-    assert.equal(workflowSlotForTask("atlas_generate_asset_proposal"), "dnd");
+    assert.equal(workflowSlotForTask("terra_name_regions"), "dnd");
+    assert.equal(workflowSlotForTask("terra_describe_region"), "dnd");
+    assert.equal(workflowSlotForTask("terra_world_draft"), "dnd");
 
     assert.equal(await resolveConnectorWorkflowModel(isolated, "create_npc"), null);
 

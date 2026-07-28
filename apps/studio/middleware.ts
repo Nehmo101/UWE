@@ -213,8 +213,18 @@ export async function middleware(request: NextRequest) {
   );
 }
 
+/**
+ * `terra/` steht im Negativ-Lookahead, weil `apps/studio/public/terra/` rund
+ * 90 statische Dateien hat (Editor + mitgeliefertes three.js). Ohne den
+ * Eintrag liefe die Middleware bei jedem Laden des Karteneditors 90-mal.
+ *
+ * Der Ordner trägt AUSSCHLIESSLICH Programmcode — kein Weltinhalt. Die Karte
+ * reist über die postMessage-Brücke von der geschützten Elternseite herein
+ * (siehe terra/src/editor/bruecke.js); der Frame hat weder Route noch Sitzung.
+ * Öffentlich erreichbar ist damit dasselbe, was jedes JS-Bundle ohnehin ist.
+ */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|atlas/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|terra/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

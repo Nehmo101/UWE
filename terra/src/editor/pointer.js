@@ -7,13 +7,17 @@ import { applyBrush, baseHeightAt, setFlattenTarget, heightAt } from '../world/t
 import { cam, groundPoint, rayFrom, rayPlane, autoPitch,
   setAufnahme, istAufnahme, aufnahmeAufMotiv } from './camera.js';
 import { ed, setTool, finishDraw, cancelDraw, curParams, copyParams, snapPt, TOOLS,
-  auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel }
+  pinselRadius, auswahlElemente, stempelErzeugen, stempelSetzen, aktuellerStempel,
+  genZeichenMarker }
   from './tools.js';
 import { handles, rebuildHandles, updateHandlePositions, setPreview, clearPreview, updateBrushRing,
   brushRing, pickElement, select, auswahlUmschalten, naechstesSegment, aktiverGriff,
   setAktiverGriff, zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer,
-  zugPixelProHoehe, markerTreffer, waehleMarker, getMarkerAuswahl, rebuildMarker }
+  zugPixelProHoehe, markerTreffer, waehleMarker, getMarkerAuswahl, rebuildMarker,
+  beschriftungenAktualisieren }
   from './selection.js';
+// I4: Klick und Zeigerwechsel auf einer Beschriftung.
+import { holeBeschriftungsschicht } from '../ui/beschriftung.js';
 import { raycaster, _ndc, camera } from './camera.js';
 import { regenElement, regenAlleElemente, commit, isHeavy, deleteElement } from '../core/dirty.js';
 import { rankePlatzierbar, rankeAchse, rankeKernPunkt } from '../generators/vines.js';
@@ -24,7 +28,6 @@ import { toast, buildPanel, updateHint, buildRail } from '../ui/panels.js';
 var ptr = { down: false, mode: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, handle: -1,
             grab: null, lastClick: 0, lastCx: -999, lastCy: -999, lastX: 0, lastZ: 0,
             dragged: false, zug: null };
-var _hoverPoint = null;
 var zeigerOffen = false, zeigerX = 0, zeigerY = 0, zeigerZuletzt = 0;
 // Umschalttaste zum letzten Mausereignis — aus dem Event selbst statt aus dem
 // globalen keys-Objekt, damit der Modus auch dann stimmt, wenn der Fokus
@@ -112,6 +115,29 @@ export function initPointer(cv) {
       pushUndo();
       setFlattenTarget(baseHeightAt(p.x, p.z));
       applyBrush(p, ed.variantOf.terrain, curParams().radius, curParams().staerke, 1 / 60);
+      return;
+    }
+    /* I2 — Biompinsel. Er ist eine PFADVARIANTE, wird aber wie der
+       Terrainpinsel bedient: druecken, ziehen, loslassen. Der Zweig steht
+       deshalb hier oben bei den Zieh-Werkzeugen und nicht unten bei der
+       Klick-für-Klick-Zeichnung des Pfadwerkzeugs — die Punkte kommen aus dem
+       Zug, nicht aus einzelnen Klicks.
+
+       Kein snapPt: ein Pinselstrich hat keine Stuetzpunkte, die auf ein Raster
+       gehoerten; das Raster taktete nur die Tupfer und liesse eine gerade
+       gezogene Linie stufig werden. */
+    if (ed.tool === "pfad" && ed.variantOf.pfad === "biompinsel") {
+      // Umschalten mitten in einer Pfadzeichnung: die halbe Linie darf nicht
+      // als Vorschau stehenbleiben, waehrend der Pinsel malt.
+      if (ed.draw) cancelDraw();
+      ptr.mode = "biompinsel";
+      pushUndo();
+      var bp = mkElement("pfad", "biompinsel", [{ x: p.x, z: p.z }],
+        copyParams(curParams()), nextSeed());
+      S.elements.push(bp);
+      ptr.pinselEl = bp;
+      ptr.lastX = p.x; ptr.lastZ = p.z;
+      setPreview(bp.points, null, false);
       return;
     }
     if (ed.tool === "objekt") {
@@ -210,6 +236,26 @@ export function initPointer(cv) {
       return;
     }
     if (wasMode === "scatter") { ptr.scatterEl = null; return; }
+    /* I2 — Der Strich ist fertig: EIN schwerer Commit. Waehrend des Zugs
+       laeuft bewusst keiner. Ein Commit stempelt die Biommaske komplett neu,
+       rechnet Hoehen, AO und Gitterfarben im Einflussbereich nach und erzeugt
+       alle Elemente neu — das je Zeigerschritt zu tun hiesse, dieselbe Arbeit
+       dreissigmal je Sekunde zu leisten. Waehrend des Zugs zeigen Ring und
+       Vorschaulinie, was gemalt wird; die Farbe kommt beim Loslassen. Genau
+       die Aufteilung, die auch die Wegsuche und die Regler im Panel benutzen. */
+    if (wasMode === "biompinsel") {
+      var bel = ptr.pinselEl;
+      ptr.pinselEl = null;
+      clearPreview();
+      if (bel) {
+        commit(bel, true);
+        select(bel);
+        toast("Biom „" + (bel.params.biom || "?") + "“ aufgetragen ("
+          + bel.points.length + (bel.points.length === 1 ? " Punkt" : " Punkte")
+          + ") — Radius und Biom im Panel rechts");
+      }
+      return;
+    }
     if (wasMode === "pan" || wasMode === "orbit" || wasMode === "done") return;
     if (e.button !== 0 || dragged) return;
 
@@ -255,6 +301,41 @@ export function initPointer(cv) {
        dahinter keinen Boden mehr findet: das Auswaehlen und Umbenennen eines
        bestehenden Markers braucht keinen Bodenpunkt, nur das Setzen. */
     if (ed.tool === "marker") {
+      /* I4 — die Variante „beschriftung" legt ein ELEMENT an, keine Nadel.
+         Der Zweig steht ganz vorn, weil markerTreffer() nur die flache
+         S.marker-Liste kennt und eine Beschriftung dort nie auftauchen wird. */
+      if (ed.variantOf.marker === "beschriftung") {
+        var bp0 = groundPoint(e);
+        if (!bp0) return;
+        pushUndo();
+        var bel = mkElement("marker", "beschriftung", [snapPt(bp0)],
+          copyParams(curParams()), nextSeed());
+        S.elements.push(bel);
+        select(bel);
+        beschriftungenAktualisieren();
+        toast("Beschriftung gesetzt — Text und Ziel im Panel rechts");
+        return;
+      }
+      /* Runde H (Bedienung) — die Variante „zeichen" setzt ein handgesetztes
+         Kartenzeichen (Katalog Q = H). Wie „beschriftung" ein ELEMENT, keine
+         Nadel; die Instanz erzeugt genZeichenMarker sofort — kein commit():
+         genElement in core/dirty.js kennt den Zweig noch nicht und wuerde die
+         frische Instanz gleich wieder leeren (siehe tools.js, dort steht auch
+         die fehlende Zeile fuer dirty.js). */
+      if (ed.variantOf.marker === "zeichen") {
+        var zg0 = groundPoint(e);
+        if (!zg0) return;
+        pushUndo();
+        var zel = mkElement("marker", "zeichen", [snapPt(zg0)],
+          copyParams(curParams()), nextSeed());
+        S.elements.push(zel);
+        var zn = genZeichenMarker(zel);
+        select(zel);
+        toast(zn
+          ? "Kartenzeichen gesetzt — Art, Größe und Drehung im Panel rechts"
+          : "Kartenzeichen gesetzt — auf diesem Maßstab unsichtbar (erscheint auf Kartenmaßstab)");
+        return;
+      }
       var mi = markerTreffer(e);
       if (mi >= 0) {
         waehleMarker(mi);
@@ -280,6 +361,20 @@ export function initPointer(cv) {
       toast("Marker gesetzt (" + S.marker.length + " auf der Karte)");
       return;
     }
+
+    /* I4 — Klick auf eine Beschriftung. Steht VOR groundPoint, weil eine
+       Beschriftung ueber dem Horizont oder ueber Wasser haengen kann, wo der
+       Strahl keinen Boden mehr trifft; ohne diese Reihenfolge waere sie dort
+       nicht anklickbar.
+
+       Treffer per Raycast auf das Sprite statt ueber ein HTML-Overlay: kein
+       DOM-Abgleich, funktioniert im Vollbild und waehrend einer Kamerafahrt.
+       Im Aufnahme-Modus liefert klick() immer false — das Bild soll ein Bild
+       sein und keine Bedienoberflaeche. */
+    // rayFrom setzt den geteilten `raycaster` und liefert dessen Strahl —
+    // gebraucht wird hier der Raycaster selbst (intersectObjects).
+    rayFrom(e);
+    if (holeBeschriftungsschicht().klick(raycaster, { aufnahme: istAufnahme() })) return;
 
     var p = groundPoint(e);
     if (!p) return;
@@ -407,9 +502,12 @@ export function initPointer(cv) {
       select(getroffen);
       return;
     }
-    if (ed.tool === "pfad" || ed.tool === "flaeche") {
+    // I1: der Ausschnitt zeichnet wie eine Flaeche — Klick setzt Punkte,
+    // Doppelklick schliesst. Was danach entsteht, ist keine Flaeche, sondern
+    // eine Karte; das entscheidet finishDraw, nicht dieser Zweig.
+    if (ed.tool === "pfad" || ed.tool === "flaeche" || ed.tool === "ausschnitt") {
       if (isDouble) { finishDraw(); return; }
-      if (!ed.draw) ed.draw = { kind: ed.tool, variant: ed.variantOf[ed.tool], points: [] };
+      if (!ed.draw) ed.draw = { kind: ed.tool, variant: ed.variantOf[ed.tool] || "", points: [] };
       ed.draw.points.push(snapPt(p));
       rebuildHandles();
       setPreview(ed.draw.points, null, ed.tool === "flaeche");
@@ -448,11 +546,27 @@ function verarbeiteZeiger(now) {
   zeigerZuletzt = now; zeigerOffen = false;
   _zeigerEv.clientX = zeigerX; _zeigerEv.clientY = zeigerY;
   var p = groundPoint(_zeigerEv);
-  _hoverPoint = p;
 
   if (ptr.mode === "brush" && p) {
     applyBrush(p, ed.variantOf.terrain, curParams().radius, curParams().staerke, 1 / 60);
     updateBrushRing(p, curParams().radius);
+    return;
+  }
+  /* I2 — Biompinsel im Zug. Aufgebaut wie der Streuzweig darunter: ein neuer
+     Stuetzpunkt erst ab einem Mindestabstand, sonst sammelte ein Zittern
+     hundert Punkte auf derselben Stelle. Der halbe Radius ist genau der
+     Tupferabstand, den die Ableitung benutzt (pinselTupfer in core/dirty.js) —
+     feiner aufzuzeichnen braechte nichts, weil sie ohnehin auf der Kurve
+     zwischen den Stuetzpunkten nachsampelt. Das haelt auch das Element klein:
+     ein langer Strich sind ein paar Dutzend Punkte, nicht ein paar hundert. */
+  if (ptr.mode === "biompinsel" && p && ptr.pinselEl) {
+    var pr = ptr.pinselEl.params.radius || 12;
+    updateBrushRing(p, pr);
+    if (Math.hypot(p.x - ptr.lastX, p.z - ptr.lastZ) > Math.max(1.5, pr * 0.5)) {
+      ptr.pinselEl.points.push({ x: p.x, z: p.z });
+      ptr.lastX = p.x; ptr.lastZ = p.z;
+      setPreview(ptr.pinselEl.points, null, false);
+    }
     return;
   }
   /* H4.2: Zugpunkt ziehen. Eigener Zweig VOR dem Bodengriff-Zweig, weil er
@@ -513,7 +627,10 @@ function verarbeiteZeiger(now) {
     }
     return;
   }
-  if (ed.tool === "terrain") updateBrushRing(p, curParams().radius);
+  // I2: den Ring zeigt jedes Werkzeug, das im Kreis malt — Terrain und
+  // Biompinsel. Die Frage beantwortet pinselRadius (editor/tools.js).
+  var pinR = pinselRadius();
+  if (pinR) updateBrushRing(p, pinR);
   else brushRing.visible = false;
   if (ed.draw && p) setPreview(ed.draw.points, snapPt(p), ed.draw.kind === "flaeche");
   /* A2 — Gummiband der Wegsuche: die GERADE Verbindung Start–Maus, nicht der

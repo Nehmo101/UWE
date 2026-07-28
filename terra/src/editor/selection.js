@@ -5,19 +5,168 @@ import { S, VINE_R } from '../core/store.js';
 import { heightAt } from '../world/terrain.js';
 import { pathSamples } from '../generators/paths.js';
 import { inPoly } from '../generators/areas.js';
+/* Runde H (Bedienung): der Rand einer Flaeche als Beschriftungskurve. seeUmriss
+   liest nur el.points und liefert die geschlossene Catmull-Rom-Kurve DURCH die
+   Griffe — exakt die Kurve, die ein See als Ufer zeichnet. Dieselbe Frage
+   („Griffe oder geglaettete Kurve?"), dieselbe Antwort, eine Funktion. Der
+   Import ist zyklusfrei: see.js zieht core/, world/ und generators/, nie
+   editor/. */
+import { seeUmriss } from '../generators/see.js';
 import { rankeAchse, rankeStuetzen } from '../generators/vines.js';
 import { cam, camera, raycaster, _ndc, rayFrom } from './camera.js';
-import { ed } from './tools.js';
+import { ed, zeichenMarkerNachziehen } from './tools.js';
 import { buildPanel } from '../ui/panels.js';
+// I4: die eine Beschriftungsschicht der laufenden Karte.
+// Runde H (Bedienung): ringFenster schneidet aus dem geschlossenen Ring das
+// offene Stueck aus, auf dem die Zeile laeuft (Anfang = Ankerpunkt).
+import { holeBeschriftungsschicht, ringFenster } from '../ui/beschriftung.js';
 
-var _sceneHooked = null;
 export function initSelection(scene) {
-  _sceneHooked = scene;
   scene.add(preview);
   scene.add(handles);
   scene.add(brushRing);
   scene.add(markerGruppe);
   scene.add(auswahlRahmen);
+  // I4: Beschriftungen liegen IN der Szene und nicht als HTML darueber —
+  // das war der ganze Zweck: sie sollen im PNG-Export erscheinen.
+  scene.add(holeBeschriftungsschicht().gruppe);
+  beschriftungenAktualisieren();
+}
+
+/* ==========================================================================
+   Beschriftungselemente in die Schicht spiegeln (I4)
+
+   Gegenstueck zu rebuildMarker: dort die flache S.marker-Liste, hier die
+   Elemente mit kind "marker" und variant "beschriftung". Zwei Listen, zwei
+   Funktionen — sie sehen aehnlich aus, meinen aber Verschiedenes, und das
+   soll man im Code sehen.
+
+   Die Hoehe kommt aus heightAt und nicht aus dem Element: eine Beschriftung
+   soll ueber dem Gelaende schweben, auch nachdem die Erosion darunter ein Tal
+   gegraben hat. Der Zuschlag von 2,2 Einheiten haelt sie ueber niedrigem
+   Bewuchs, ohne dass sie vom Boden abhebt.
+   ========================================================================== */
+function beschriftungenAktualisieren() {
+  /* Runde H (Bedienung): handgesetzte Kartenzeichen (marker:zeichen) haengen
+     am selben Selbstheilungs-Takt wie die Beschriftungen — main.js ruft diese
+     Funktion fuenfmal je Sekunde, und genau das ist der Abgleich, „der von
+     sich aus nachzieht und nicht vergessen werden kann" (Kommentar dort).
+     Noetig, weil genElement in core/dirty.js den Durchfall-Zweig fuer
+     marker-Elemente (noch) nicht kennt: jeder schwere Commit, jedes Undo und
+     jedes Laden leert die Instanzen des Zeichens, ohne sie neu zu erzeugen.
+     zeichenMarkerNachziehen erkennt genau das und setzt sie wieder. */
+  zeichenMarkerNachziehen();
+  var quellen = [];
+  for (var i = 0; i < S.elements.length; i++) {
+    var e = S.elements[i];
+    if (e.kind !== "marker" || e.variant !== "beschriftung") continue;
+    var p = e.points && e.points[0];
+    if (!p) continue;
+    var pr = e.params || {};
+    if (!pr.text) continue;                 // ohne Text gibt es nichts zu zeichnen
+    var q = {
+      id: e.id, text: pr.text, klasse: pr.klasse, groesse: pr.groesse,
+      ziel: pr.ziel, x: p.x, y: heightAt(p.x, p.z) + 2.2, z: p.z
+    };
+    kurveAnhaengen(q, pr.anPfad, p);
+    quellen.push(q);
+  }
+  holeBeschriftungsschicht().abgleichen(quellen);
+}
+
+/* ==========================================================================
+   Die Kurve einer verknuepften Beschriftung (I4, eingehaengt in dieser Runde)
+
+   `params.anPfad` traegt die `el.id` des Elements, an dem die Beschriftung
+   entlanglaufen soll. Hier wird der Verweis aufgeloest — und zwar bei JEDEM
+   Abgleich neu (fuenfmal je Sekunde aus main.js), nicht einmalig gemerkt. Das
+   ist die ganze Antwort auf „was passiert, wenn das Element geloescht wird":
+
+     Element weg  ->  indexOf findet nichts  ->  kein `pfad` in der Quelle
+                  ->  die Schicht baut ein gewoehnliches Sprite.
+
+   Die Beschriftung bleibt also stehen, wo sie steht, und richtet sich wieder
+   gerade auf. Kein Aufraeumen beim Loeschen, keine Rueckverweisliste, kein
+   Zustand, der veralten koennte — dieselbe Haltung wie bei `ed.auswahl`
+   (siehe Konvention in editor/tools.js): jeder LESER filtert, statt sich auf
+   fremdes Aufraeumen zu verlassen. Wird dasselbe Element rueckgaengig wieder
+   hergestellt, traegt es seine alte id (store.js hydrate) und die Verknuepfung
+   lebt von selbst wieder auf.
+
+   WELCHE ELEMENTE. `pfad` — dort IST die Punktfolge die Kurve, und
+   pathSamples liefert genau die Catmull-Rom-Linie, die auch gezeichnet wird.
+   Seit dieser Runde auch `flaeche`: ihr Rand wird ueber seeUmriss zur
+   geschlossenen Catmull-Rom-Kurve DURCH die Griffe (dieselbe Kurve, die ein
+   See als Ufer zeichnet), und ringFenster (ui/beschriftung.js) schneidet das
+   offene Stueck heraus, dessen Mitte dem Ankerpunkt der Beschriftung am
+   naechsten liegt — der Griff behaelt also auch am Ring seine Bedeutung: man
+   schiebt ihn das Ufer entlang, und die Schrift wandert mit. Die
+   Laufrichtung entscheidet die Sehne des Fensters in glyphenAufKurve, wie
+   bei jedem Pfad.
+
+   BEWUSST OFFEN: der Grat eines Gebirges. `gratPunkte` (generators/zeichen.js)
+   liefert Kammpunkte MIT Richtung, aber als lose Rasterpunkte — eine Kette
+   daraus zu verbinden heisst, unter mehreren Kaemmen, Verzweigungen und
+   Luecken den einen Zug zu raten. Ein halber Grat, der falsch verbindet,
+   waere schlechter als keiner. Dazu kommt das Datenmodell: `anPfad` verweist
+   auf eine `el.id`, und ein Grat IST kein Element — er ist eine Ableitung
+   aus dem Hoehenfeld ohne Identitaet, auf die ein gespeicherter Verweis
+   zeigen koennte. Solange das so ist, traegt eine Gebirgsbeschriftung ihre
+   Kurve am ehesten ueber einen von Hand gezogenen Pfad entlang des Kamms.
+   ========================================================================== */
+
+/** Kurze, stabile Signatur der Stuetzpunkte — der Schluessel, an dem die
+ *  Beschriftungsschicht erkennt, dass der Pfad sich bewegt hat. Aus den
+ *  PUNKTEN, nicht aus den Samples: das sind wenige Zahlen statt hunderter. */
+function pfadSignatur(el) {
+  var s = String(el.id) + ":";
+  for (var i = 0; i < el.points.length; i++) {
+    s += Math.round(el.points[i].x * 10) + "," + Math.round(el.points[i].z * 10) + ";";
+  }
+  return s;
+}
+
+/** Element mit dieser id — oder null. Lineare Suche ueber die Elementliste:
+ *  eine Karte traegt Hunderte, keine Zehntausende, und ein zweiter Index
+ *  waere ein Zustand, der beim Loeschen veralten kann. */
+function elementMitId(id) {
+  for (var i = 0; i < S.elements.length; i++) if (S.elements[i].id === id) return S.elements[i];
+  return null;
+}
+
+function kurveAnhaengen(q, anPfad, anker) {
+  if (!Number.isFinite(anPfad) || anPfad <= 0) return;
+  if (anPfad === q.id) return;                       // nicht an sich selbst
+  var el = elementMitId(anPfad | 0);
+  if (!el || !el.points) return;
+  if (el.kind === "flaeche") {
+    if (el.points.length < 3) return;
+    // Ring durch die Griffe (siehe Kopfkommentar), Fenster um den Anker.
+    var f = ringFenster(seeUmriss(el), anker);
+    if (!f) return;
+    q.pfad = f.pfad;
+    q.pfadStempel = pfadSignatur(el);
+    q.lage = f.lage;
+    return;
+  }
+  if (el.kind !== "pfad" || el.points.length < 2) return;
+  var sm = pathSamples(el.points, 2.0);
+  if (sm.length < 2) return;
+  var pfad = [], i;
+  for (i = 0; i < sm.length; i++) pfad.push({ x: sm[i].x, z: sm[i].z });
+  /* Wo auf dem Pfad die Zeile sitzt, sagt der ANKERPUNKT der Beschriftung:
+     der naechstgelegene Samplepunkt gibt seine Bogenlaenge her. Damit behaelt
+     der Griff der Beschriftung auch im gebogenen Fall seine Bedeutung — man
+     schiebt ihn den Fluss entlang, und die Schrift wandert mit. */
+  var best = 0, bd = Infinity;
+  for (i = 0; i < sm.length; i++) {
+    var dx = sm[i].x - anker.x, dz = sm[i].z - anker.z;
+    var d = dx * dx + dz * dz;
+    if (d < bd) { bd = d; best = i; }
+  }
+  q.pfad = pfad;
+  q.pfadStempel = pfadSignatur(el);
+  q.lage = sm.len > 0 ? clamp(sm[best].s / sm.len, 0, 1) : 0.5;
 }
 
 var previewGeo = new THREE.BufferGeometry();
@@ -486,4 +635,5 @@ export { preview, handles, brushRing, setPreview, clearPreview, rebuildHandles,
   pickElement, select, auswahlUmschalten, aktiverGriff, setAktiverGriff,
   zugGriffIndex, zugGriffElement, zugpunktListe, rankeAchsenTreffer, zugPixelProHoehe,
   markerGruppe, rebuildMarker, updateMarkerPositions, markerTreffer, waehleMarker,
-  getMarkerAuswahl, auswahlRahmen, rebuildAuswahlRahmen };
+  getMarkerAuswahl, auswahlRahmen, rebuildAuswahlRahmen,
+  beschriftungenAktualisieren };

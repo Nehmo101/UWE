@@ -2208,4 +2208,3 @@ export type {
   UpsertUserGrantInput,
 } from "./ai-gateway-service";
 
-export type { AtlasNodeLevel } from "./generated/prisma/client";

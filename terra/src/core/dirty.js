@@ -1,20 +1,31 @@
 // Aenderungs-Orchestrierung: Elemente (neu) erzeugen, Terrain/Korridore
 // nachziehen, geaenderte Pools packen.
-import { S, HALF, VINE_R, clearElement, dropElement } from './store.js';
+import { S, HALF, VW, VINE_R, clearElement, dropElement } from './store.js';
 import { lerp } from './rng.js';
 import { setArborQuellen } from '../render/materials.js';
 import { markDirty, flushPack } from './pools.js';
-import { rivers, corridor, stampCorridor, stampWear, clearWear, baseHeightAt,
-  refreshTerrainFull, recomputeHeights, computeAO, refreshGrid } from '../world/terrain.js';
+import { rivers, corridor, stampCorridor, stampWear, clearWear, stampUfer,
+  baseHeightAt,
+  refreshTerrainFull, recomputeHeights, computeAO, refreshGrid,
+  rebuildBiomFeld } from '../world/terrain.js';
 import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
   genBruch, bruchDaten, bruchMasse, brueche,
   bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
+// Runde H: die Korridorstempel des Binnensees. Runde J dazu: der geglaettete
+// Uferzug — an ihm haengt der nasse Uferstreifen (stampUfer, terrain.js).
+import { seeKorridore, seeUmriss } from '../generators/see.js';
 import { strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE,
   WERFT_QUERSUCHE } from '../generators/strukturen.js';
-import { genObjekt } from '../generators/objects.js';
+import { genObjekt, OBJEKT_ZEICHEN, POOL_ZEICHEN, punkteBox, streuWeite } from '../generators/objects.js';
 import { genRanke } from '../generators/vines.js';
-import { defaultsFor } from '../editor/tools.js';
+// Runde J: die vier neuen Reliefformen (Klippe, Schlucht, Pass, Krater).
+// Der Aufruf steht HIER und nicht in objects.js, damit dessen bestehende
+// Grat-/Gipfelkette (reliefZeichen) unangetastet bleibt — reliefFormZeichen
+// emittiert ausschliesslich die Formen, die objects.js nicht kennt, es kann
+// also nichts doppelt entstehen.
+import { reliefFormZeichen } from '../generators/zeichen.js';
+import { defaultsFor, genZeichenMarker } from '../editor/tools.js';
 
 function genElement(el) {
   clearElement(el);
@@ -31,9 +42,34 @@ function genElement(el) {
     // faellt durch alle else-if hindurch und erzeugt schlicht nichts, statt
     // abzustuerzen. Das Speicherformat bleibt damit abwaertskompatibel.
     else if (el.variant === "bruch") genBruch(el);
+    /* I2: „biompinsel" steht hier bewusst NICHT. Der Strich erzeugt keine
+       einzige Instanz und kein Mesh — seine ganze Wirkung ist die abgeleitete
+       Biommaske (siehe biomQuellen weiter unten), genau wie bei der
+       Biomflaeche, die in genFlaeche ebenfalls durch alle Zweige faellt. */
   } else if (el.kind === "flaeche") genFlaeche(el);
-  else if (el.kind === "objekt") genObjekt(el);
+  else if (el.kind === "objekt") {
+    genObjekt(el);
+    /* J — Klippe, Schlucht, Pass und Krater einer Fels-Streuung. Dieselbe
+       Variantenwahl wie objektZeichen in objects.js (nurTyp gewinnt vor der
+       Gruppe), dieselbe Suchbox wie dessen Gratsuche (Klickpunkte plus
+       Streuweite). reliefFormZeichen prueft Massstab und Band selbst und
+       emittiert NUR die vier Formen, die reliefZeichen nicht kennt. */
+    if (el.points.length) {
+      var nurTyp = el.params && el.params.nurTyp;
+      var OZ = (nurTyp && POOL_ZEICHEN[nurTyp]) || OBJEKT_ZEICHEN[el.variant]
+        || OBJEKT_ZEICHEN.baeume;
+      if (OZ.relief) reliefFormZeichen(el, punkteBox(el.points, streuWeite(el)));
+    }
+  }
   else if (el.kind === "ranke") genRanke(el);
+  /* Runde J — handgesetzte Kartenzeichen. Marker-Elemente fielen bisher durch
+     alle Zweige (dokumentiertes abwaertskompatibles Verhalten aus H6); die
+     Variante "zeichen" ist die erste, die eine Instanz erzeugt. Sie steht am
+     ENDE der Kette, aus demselben Grund wie pfad:bruch: eine aeltere Fassung
+     erzeugt schlicht nichts, statt abzustuerzen. Bis zu dieser Zeile heilte
+     zeichenMarkerNachziehen den Zustand ueber den 5-Hz-Abgleich — jetzt
+     entsteht die Instanz wie bei jedem Element im Commit. */
+  else if (el.kind === "marker" && el.variant === "zeichen") genZeichenMarker(el);
 }
 
 /** Erzeugt ein Element neu und merkt sich nur die betroffenen Pools. */
@@ -130,6 +166,37 @@ function rebuildCorridors() {
           if (inPoly(el.points, ln[k].x, ln[k].z)) stampCorridor(ln[k].x, ln[k].z, el.params.gasse * 0.5 + 1.2);
         }
       }
+    } else if (el.kind === "flaeche" && el.variant === "see" && el.points.length >= 3) {
+      /* Runde H: ein See sperrt seine Flaeche wie ein Flussbett. `tryPlace`
+         kennt nur den MEERESspiegel (h < WATER + 0.35) — ein Bergsee auf
+         Hoehe 20 besteht diese Pruefung anstandslos, und ohne diese Zeile
+         stuenden Baeume im Wasser.
+
+         Die Stempel kommen aus see.js, weil sie am GEZEICHNETEN Uferzug
+         haengen (geschlossene Catmull-Rom-Kurve durch die Griffe) und nicht am
+         Griffpolygon — dazwischen liegt bei wenigen Punkten viel Wasser. */
+      var seeK = seeKorridore(el);
+      for (k = 0; k < seeK.length; k++) stampCorridor(seeK[k].x, seeK[k].z, seeK[k].r);
+      /* J — das nasse Ufer: ein Streifen `ufer`-Stempel entlang des
+         GEGLAETTETEN Uferzugs (nicht des Griffpolygons — dazwischen liegt
+         bei wenigen Griffen viel Wasser, dieselbe Begruendung wie bei den
+         Korridorstempeln). terrainColor zieht das Gras dort Richtung
+         nasser, dunkler Erde. Der Weg ueber DIESE Funktion ist der Punkt:
+         sie laeuft bei jedem schweren Commit und beim Laden komplett neu,
+         ein verschobener oder geloeschter See nimmt sein Ufer also mit —
+         kein Nebenzustand. Halber Stempelabstand zum Radius, damit der
+         Streifen lueckenlos bleibt. */
+      var uferR = 2.8;
+      var uz = seeUmriss(el);
+      for (k = 0; k < uz.length; k++) {
+        var ua = uz[k], ub = uz[(k + 1) % uz.length];
+        var ul = Math.hypot(ub.x - ua.x, ub.z - ua.z);
+        var un = Math.max(1, Math.ceil(ul / (uferR * 0.5)));
+        for (var uq = 0; uq < un; uq++) {
+          var ut = uq / un;
+          stampUfer(ua.x + (ub.x - ua.x) * ut, ua.z + (ub.z - ua.z) * ut, uferR);
+        }
+      }
     } else if (el.kind === "flaeche" && istStruktur(el.variant) && el.points.length >= 3) {
       /* Kompositstrukturen stempeln ihre TRAGENDEN Linien: Mauerring, Kai-
          flucht, Kreuzgangfluegel. Begruendung wie bei den Viertel-Gassen —
@@ -141,6 +208,99 @@ function rebuildCorridors() {
       for (k = 0; k < kor.length; k++) stampCorridor(kor[k].x, kor[k].z, kor[k].r);
     }
   }
+}
+
+/* ==========================================================================
+   I2 — Der Biompinsel als Quelle des Biomfelds
+
+   Der Pinselstrich ist ein ganz gewoehnliches Pfadelement
+   ({kind:"pfad", variant:"biompinsel", points, params:{biom, radius, weich}}).
+   Gezeichnet wird er wie der Terrainpinsel (ziehen), gespeichert wie die
+   Bruchkante (als Element) und beim Laden nachgestempelt — dieselbe Logik,
+   nur dass er nicht ins Hoehenfeld stempelt, sondern in die Biommaske.
+
+   DAS VERFAHREN. world/biomfeld.js kennt genau eine Quelle: ein Polygon mit
+   {points, params:{biom, weich}}. Es kennt keinen Pinsel und soll auch keinen
+   kennen — dort steht die Rasterung, die Distanztransformation und die
+   Ausfransung, und die sind fuer JEDE Flaeche dieselben. Deshalb wird der
+   Strich HIER in Kreisflaechen uebersetzt: eine je Tupfer entlang der Kurve.
+   Der Pinsel bekommt damit ohne eine einzige neue Zeile in biomfeld.js
+   denselben weichen Rand, dieselbe gebrochene Grenze und dieselbe
+   Ueberlagerungsregel wie eine gezeichnete Biomflaeche.
+
+   Der Preis ist der Aufwand: `stempleFlaeche` laeuft je Tupfer einmal (zwei
+   Chamfer-Durchgaenge ueber die Tupferbox, rund 40x40 Zellen bei Radius 12).
+   Deshalb die beiden Deckel unten — der Tupferabstand ist ein halber Radius
+   (die Ueberlappung laesst die Kette rund erscheinen, die Einbuchtung zwischen
+   zwei Tupfern liegt bei 3 % des Radius), und ein einzelner Strich liefert nie
+   mehr als BIOM_TUPFER_MAX Tupfer; ein sehr langer Strich wird gestreckt statt
+   teuer.
+   ========================================================================== */
+var BIOM_TUPFER_MAX = 320;
+var BIOM_KREIS_ECKEN = 16;
+
+/** Kreispolygon um (x,z). Feste Eckenzahl: die Ausfransung in biomfeld.js
+ *  bricht die Kante ohnehin staerker, als 16 Ecken sie eckig machen. */
+function kreisPolygon(x, z, r) {
+  var pts = [];
+  for (var i = 0; i < BIOM_KREIS_ECKEN; i++) {
+    var a = i / BIOM_KREIS_ECKEN * Math.PI * 2;
+    pts.push({ x: x + Math.cos(a) * r, z: z + Math.sin(a) * r });
+  }
+  return pts;
+}
+
+/** Radius eines Pinselstrichs — geklemmt wie das Schema in editor/tools.js. */
+function pinselRadiusVon(el) {
+  var r = el.params && el.params.radius;
+  return (typeof r === "number" && isFinite(r) && r > 0.5) ? r : 12;
+}
+
+/**
+ * Die Quellen der Biomableitung in Zeichenreihenfolge: Biomflaechen gehen
+ * unveraendert durch, Pinselstriche werden in Kreisflaechen aufgeloest.
+ * Die Reihenfolge ist bedeutungstragend (spaeter gezeichnet gewinnt im Kern,
+ * siehe Ueberlagerungsregel in world/biomfeld.js) und bleibt deshalb exakt
+ * die der Elementliste.
+ */
+function biomQuellen() {
+  var out = [], i, k;
+  for (i = 0; i < S.elements.length; i++) {
+    var el = S.elements[i];
+    if (el.kind === "flaeche" && el.variant === "biom") { out.push(el); continue; }
+    if (el.kind !== "pfad" || el.variant !== "biompinsel") continue;
+    if (!el.points || !el.points.length) continue;
+    var p = el.params || {};
+    var r = pinselRadiusVon(el);
+    var mitten = pinselTupfer(el, r);
+    for (k = 0; k < mitten.length; k++) {
+      // Ohne kind/variant: biomfeldBauen laesst genau solche schlichten
+      // Quellen durch (es prueft beide Felder nur, WENN sie da sind).
+      out.push({ points: kreisPolygon(mitten[k].x, mitten[k].z, r),
+        params: { biom: p.biom, weich: p.weich } });
+    }
+  }
+  return out;
+}
+
+/** Tupfermitten eines Strichs: entlang DERSELBEN Kurve, die elementBox
+ *  vermisst (pathSamples), damit die Einflussbox nie zu klein ausfaellt. */
+function pinselTupfer(el, r) {
+  var schritt = Math.max(1, r * 0.5);
+  if (el.points.length < 2) return [{ x: el.points[0].x, z: el.points[0].z }];
+  var sm = pathSamples(el.points, schritt);
+  if (!sm.length) return [{ x: el.points[0].x, z: el.points[0].z }];
+  // Deckel: bei einem sehr langen Strich wird der Abstand gestreckt statt die
+  // Rechnung teuer. Sichtbar wird das erst, wenn die Tupfer sich nicht mehr
+  // ueberlappen — bei 320 Tupfern und Radius 12 waere der Strich 1920
+  // Einheiten lang, also fast acht Mal ueber eine 256er Karte.
+  var jeder = Math.ceil(sm.length / BIOM_TUPFER_MAX);
+  var out = [];
+  for (var i = 0; i < sm.length; i += jeder) out.push({ x: sm[i].x, z: sm[i].z });
+  var letzt = sm[sm.length - 1];
+  var l = out[out.length - 1];
+  if (l.x !== letzt.x || l.z !== letzt.z) out.push({ x: letzt.x, z: letzt.z });
+  return out;
 }
 
 /* --- Bereichsbeschraenkte Terrain-Updates (D3) --------------------------
@@ -166,6 +326,11 @@ function stempelRadius(el) {
     // hier darf nichts nachgerechnet werden, sonst wird die Box zu klein und
     // es bleiben Reste der alten Klippe stehen.
     if (el.variant === "bruch") return bruchMasse(p).reichweite;
+    /* I2 — Biompinsel: Tupferradius plus die Ausfransung der Biomkante.
+       Der Aufschlag ist wortgleich der der Biomflaeche weiter unten
+       (randZugabe() in world/biomfeld.js) — wandert dort eine Zahl, muss sie
+       an BEIDEN Stellen mitwandern. */
+    if (el.variant === "biompinsel") return pinselRadiusVon(el) + (p.weich || 8) * 1.03 + 2;
   }
   // Viertel-Gassen stempeln mit gasse*0.5+1.2, per inPoly aufs Polygon geklippt.
   if (el.kind === "flaeche" && el.variant === "viertel") return (p.gasse || 0) * 0.5 + 1.2;
@@ -181,6 +346,18 @@ function stempelRadius(el) {
     return KORRIDOR_R.kloster + elementSpanne(el) * 0.5 *
       Math.max(0, Math.min(KLOSTER_MAX_GROESSE, p.groesse || 1) - 1);
   }
+  /* I2 — Biomflaeche: die Ausfransung greift ueber die Punktbox hinaus, und
+     zwar um weich*(0.5 + 0.30*1.75). Das ist wortgleich die Rechnung aus
+     randZugabe() in world/biomfeld.js — wandert dort eine Zahl, muss sie hier
+     mitwandern, sonst bleibt beim Verschieben ein Streifen alter Faerbung
+     stehen. Gleiche Warnung wie beim Bruch und beim Burgring. */
+  if (el.kind === "flaeche" && el.variant === "biom") return (p.weich || 8) * 1.03 + 2;
+  // Runde H: der See stempelt sein Korridorraster mit Radius 3 (see.js).
+  // Runde J: dazu der nasse Uferstreifen (stampUfer, Radius 2.8) — der
+  // Korridorradius bleibt der groessere. Dass der geglaettete Uferzug ueber
+  // die GRIFFbox hinausschwingen kann, faengt nicht dieser Radius, sondern
+  // elementBox ab: dort wird fuer den See der Uferzug selbst vermessen.
+  if (el.kind === "flaeche" && el.variant === "see") return 3;
   return 3;   // erreicht isHeavy nie einen anderen Fall, bleibt aber definiert
 }
 
@@ -214,6 +391,15 @@ function elementBox(el) {
   if (el.kind === "pfad" && el.points.length >= 2) {
     var sm = pathSamples(el.points, 2.5);
     if (sm.length) pts = sm;
+  }
+  /* J — der See: sein Uferzug ist eine geschlossene Catmull-Rom-Kurve durch
+     die Griffe und kann an spitzen Ecken ueber die Griffbox hinausschwingen.
+     Der Uferstreifen wird ENTLANG dieser Kurve gestempelt; die Box muss also
+     die Kurve vermessen, nicht die Griffe — sonst bliebe beim Verschieben
+     ein Rest des alten nassen Saums stehen. */
+  if (el.kind === "flaeche" && el.variant === "see" && el.points.length >= 3) {
+    var uzb = seeUmriss(el);
+    if (uzb.length >= 3) pts = uzb;
   }
   var minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (var i = 0; i < pts.length; i++) {
@@ -259,8 +445,24 @@ function refreshTerrainBereich(el) {
 /** Vollständiger Neuaufbau (Laden, Undo, Seed-Wechsel). */
 function rebuildAll() {
   rebuildRivers();
+  // Reihenfolge ist Pflicht, nicht Geschmack: rebuildCorridors() ruft fuer
+  // Viertel und Werften districtStreets()/werftAchse(), und die lesen
+  // heightAt() — also `hgt`. Stand refreshTerrainFull() davor, arbeiteten die
+  // beiden im ersten Durchlauf nach dem Laden auf dem Hoehenfeld der ZUVOR
+  // geladenen Karte (ohne Flusseinschnitt), erst der zweite Neuaufbau war
+  // richtig. Darum: Hoehen erst schreiben, dann stempeln, dann AO und Farben —
+  // letztere brauchen den frischen Tritt aus rebuildCorridors(). Aufgeteilt
+  // statt refreshTerrainFull(), damit das Gitter nur EINMAL laeuft.
+  recomputeHeights(0, VW - 1, 0, VW - 1);
   rebuildCorridors();
-  refreshTerrainFull();
+  // I2: vor refreshGrid — die Terrainfarbe liest die Biommaske. Und vor der
+  // Elementschleife weiter unten, denn genWald und genWiese fragen das Biom je
+  // Kandidat ab. Steht sie zu spaet, sieht der erste Aufbau nach dem Laden
+  // anders aus als der zweite; genau der Fehler, den diese Funktion in Runde
+  // I5 schon einmal hatte.
+  rebuildBiomFeld(biomQuellen());
+  computeAO(0, VW - 1, 0, VW - 1);
+  refreshGrid(0, VW - 1, 0, VW - 1);
   for (var i = 0; i < S.elements.length; i++) {
     var el = S.elements[i];
     genElement(el);
@@ -300,6 +502,9 @@ function commit(el, heavy) {
     // nur baseHeightAt, rebuildCorridors schreibt nur corridor/wear).
     rebuildRivers();
     rebuildCorridors();
+    // I2: dieselbe Begruendung wie oben — die Biommaske wird von mehreren
+    // Elementen gemeinsam beschrieben und muss deshalb global neu.
+    rebuildBiomFeld(biomQuellen());
     // Nur beim Commit EINES Elements reicht dessen Einflussbereich; ohne
     // Element (Loeschen — die alte Lage ist hier nicht mehr greifbar) weiter
     // der volle Neuaufbau.
@@ -322,9 +527,21 @@ function isHeavy(el) {
   // ihren Kreuzgangfluegeln Korridore — genau das Kriterium, mit dem auch das
   // Viertel hier steht. Zusaetzlich haengen ihre Layouts (Torkante, Kaiflucht)
   // am Hoehenfeld: eine Terrainaenderung darunter muss sie neu rechnen.
+  // I2: der Biompinsel faerbt das Terrain und entscheidet ueber die
+  // Bepflanzung — genau wie die Biomflaeche unten und aus demselben Grund.
   return (el.kind === "pfad" && (el.variant === "strasse" || el.variant === "fluss" ||
-          el.variant === "mauer" || el.variant === "bruch")) ||
-         (el.kind === "flaeche" && (el.variant === "viertel" || istStruktur(el.variant)));
+          el.variant === "mauer" || el.variant === "bruch" ||
+          el.variant === "biompinsel")) ||
+         // I2: die Biomflaeche faerbt das Terrain und entscheidet ueber die
+         // Bepflanzung — sie muss dieselbe Kette ausloesen wie ein Viertel.
+         // J: der See ist schwer, und das schliesst eine Luecke der Seen-Runde:
+         // seine Korridorstempel (rebuildCorridors) und seit J sein nasser
+         // Uferstreifen entstehen NUR in der schweren Kette. Ohne diesen
+         // Eintrag wurden beide erst beim naechsten fremden schweren Commit
+         // oder beim Laden gestempelt — ein frisch gezeichneter oder
+         // verschobener See sperrte nichts und traegt kein Ufer.
+         (el.kind === "flaeche" && (el.variant === "viertel" || el.variant === "biom" ||
+          el.variant === "see" || istStruktur(el.variant)));
 }
 
 
@@ -512,4 +729,7 @@ function deleteElement(el) {
 export { genElement, regenElement, regenAlleElemente, rebuildRivers, rebuildBrueche, rebuildCorridors,
   rebuildAll, commit, isHeavy, deleteElement, refreshArborQuellen,
   rankenNetz, netzGewicht,
+  // I2 — die Uebersetzung des Biompinsels in Flaechenquellen. Exportiert, weil
+  // sie ohne Bild pruefbar ist: sie ist reine Geometrie.
+  biomQuellen, pinselTupfer, kreisPolygon,
   markDirty, flushPack };

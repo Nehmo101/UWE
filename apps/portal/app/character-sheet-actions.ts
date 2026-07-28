@@ -9,7 +9,7 @@ import {
   createAuthService,
   createCharacterService,
   createCharacterSpellService,
-  createPrismaClient,
+  prisma,
   DEFAULT_ABILITY_SCORES,
   extractCharacterProficiencyFormInput,
   extractOpen5eSpellDescription,
@@ -129,33 +129,27 @@ async function assertPortalCharacterOwner(worldSlug: string, characterId: string
     throw new Error("Nicht angemeldet");
   }
 
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    if (!world) {
-      throw new Error("Welt nicht gefunden");
-    }
-    assertPortalCanReadWorld(ctx, world.id);
-
-    const character = await auth.getCharacterForViewer(worldSlug, characterId, ctx);
-    if (
-      !character ||
-      character.ownerUserId !== ctx.user?.id ||
-      ctx.effectiveRole !== "player" ||
-      ctx.previewAsUserId
-    ) {
-      throw new Error("Keine Berechtigung");
-    }
-
-    return { db, auth, character, ctx };
-  } catch (error) {
-    await db.$disconnect();
-    throw error;
+  const auth = createAuthService(prisma);
+  const world = await prisma.world.findUnique({
+    where: { slug: worldSlug },
+    select: { id: true },
+  });
+  if (!world) {
+    throw new Error("Welt nicht gefunden");
   }
+  assertPortalCanReadWorld(ctx, world.id);
+
+  const character = await auth.getCharacterForViewer(worldSlug, characterId, ctx);
+  if (
+    !character ||
+    character.ownerUserId !== ctx.user?.id ||
+    ctx.effectiveRole !== "player" ||
+    ctx.previewAsUserId
+  ) {
+    throw new Error("Keine Berechtigung");
+  }
+
+  return { auth, character, ctx };
 }
 
 function revalidateCharacterPaths(worldSlug: string, path: string) {
@@ -175,30 +169,25 @@ export async function updateCharacterSheetAction(formData: FormData) {
     throw new Error("Nicht angemeldet");
   }
 
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
+  const auth = createAuthService(prisma);
 
-  try {
-    const world = await db.world.findUnique({
-      where: { slug: parsed.worldSlug },
-      select: { id: true },
-    });
-    if (!world) {
-      throw new Error("Welt nicht gefunden");
-    }
-    assertPortalCanReadWorld(ctx, world.id);
+  const world = await prisma.world.findUnique({
+    where: { slug: parsed.worldSlug },
+    select: { id: true },
+  });
+  if (!world) {
+    throw new Error("Welt nicht gefunden");
+  }
+  assertPortalCanReadWorld(ctx, world.id);
 
-    const updated = await auth.updateCharacterForOwner(
-      parsed.worldSlug,
-      parsed.characterId,
-      buildUpdateInput(parsed),
-      ctx,
-    );
-    if (!updated) {
-      throw new Error("Keine Berechtigung");
-    }
-  } finally {
-    await db.$disconnect();
+  const updated = await auth.updateCharacterForOwner(
+    parsed.worldSlug,
+    parsed.characterId,
+    buildUpdateInput(parsed),
+    ctx,
+  );
+  if (!updated) {
+    throw new Error("Keine Berechtigung");
   }
 
   revalidateCharacterPaths(parsed.worldSlug, path);
@@ -208,26 +197,22 @@ export async function applyPortalLevelUpAction(formData: FormData) {
   await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterLevelUpApplySchema);
   const path = resolveReturnPath(parsed);
-  const { db, auth, ctx } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
+  const { auth, ctx } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
 
-  try {
-    const characters = createCharacterService(db);
-    const record = await characters.getById(parsed.characterId);
-    if (!record) {
-      throw new Error("Charakter nicht gefunden");
-    }
+  const characters = createCharacterService(prisma);
+  const record = await characters.getById(parsed.characterId);
+  if (!record) {
+    throw new Error("Charakter nicht gefunden");
+  }
 
-    const updated = await auth.updateCharacterForOwner(
-      parsed.worldSlug,
-      parsed.characterId,
-      buildLevelUpUpdateInput(record, parsed),
-      ctx,
-    );
-    if (!updated) {
-      throw new Error("Keine Berechtigung");
-    }
-  } finally {
-    await db.$disconnect();
+  const updated = await auth.updateCharacterForOwner(
+    parsed.worldSlug,
+    parsed.characterId,
+    buildLevelUpUpdateInput(record, parsed),
+    ctx,
+  );
+  if (!updated) {
+    throw new Error("Keine Berechtigung");
   }
 
   revalidateCharacterPaths(parsed.worldSlug, path);
@@ -237,24 +222,20 @@ export async function addSpellAction(formData: FormData) {
   await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSpellAddSchema);
   const path = resolveReturnPath(parsed);
-  const { db, character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
+  const { character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
 
-  try {
-    const characters = createCharacterService(db);
-    await characters.upsertSpell({
-      characterId: character.id,
-      spellKey: parsed.spellKey,
-      spellLevel: parsed.spellLevel ?? 0,
-      prepared: parsePreparedFlag(parsed.prepared ?? true),
-      source: parsed.source ?? "open5e",
-      displayName: parsed.displayName ?? null,
-      school: parsed.school ?? null,
-      description: parsed.description ?? "",
-      notes: parsed.notes ?? "",
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  const characters = createCharacterService(prisma);
+  await characters.upsertSpell({
+    characterId: character.id,
+    spellKey: parsed.spellKey,
+    spellLevel: parsed.spellLevel ?? 0,
+    prepared: parsePreparedFlag(parsed.prepared ?? true),
+    source: parsed.source ?? "open5e",
+    displayName: parsed.displayName ?? null,
+    school: parsed.school ?? null,
+    description: parsed.description ?? "",
+    notes: parsed.notes ?? "",
+  });
 
   revalidateCharacterPaths(parsed.worldSlug, path);
 }
@@ -263,14 +244,10 @@ export async function removeSpellAction(formData: FormData) {
   await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSpellRemoveSchema);
   const path = resolveReturnPath(parsed);
-  const { db, character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
+  const { character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
 
-  try {
-    const spells = createCharacterSpellService(db);
-    await spells.removeSpell(character.id, parsed.spellKey);
-  } finally {
-    await db.$disconnect();
-  }
+  const spells = createCharacterSpellService(prisma);
+  await spells.removeSpell(character.id, parsed.spellKey);
 
   revalidateCharacterPaths(parsed.worldSlug, path);
 }
@@ -279,18 +256,14 @@ export async function togglePreparedAction(formData: FormData) {
   await requirePortalActionAuth();
   const parsed = parseFormDataOrThrow(formData, characterSpellTogglePreparedSchema);
   const path = resolveReturnPath(parsed);
-  const { db, character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
+  const { character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
 
-  try {
-    const characters = createCharacterService(db);
-    await characters.upsertSpell({
-      characterId: character.id,
-      spellKey: parsed.spellKey,
-      prepared: parsePreparedFlag(parsed.prepared ?? true),
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  const characters = createCharacterService(prisma);
+  await characters.upsertSpell({
+    characterId: character.id,
+    spellKey: parsed.spellKey,
+    prepared: parsePreparedFlag(parsed.prepared ?? true),
+  });
 
   revalidateCharacterPaths(parsed.worldSlug, path);
 }
@@ -310,23 +283,19 @@ export async function addHomebrewSpellAction(formData: FormData) {
     throw new Error("Homebrew-Zauber unvollständig.");
   }
 
-  const { db, character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
-  try {
-    const characters = createCharacterService(db);
-    await characters.upsertSpell({
-      characterId: character.id,
-      spellKey: homebrew.spellKey,
-      spellLevel: homebrew.spellLevel,
-      prepared: homebrew.prepared,
-      source: homebrew.source,
-      displayName: homebrew.displayName,
-      school: homebrew.school,
-      description: homebrew.description,
-      notes: homebrew.notes,
-    });
-  } finally {
-    await db.$disconnect();
-  }
+  const { character } = await assertPortalCharacterOwner(parsed.worldSlug, parsed.characterId);
+  const characters = createCharacterService(prisma);
+  await characters.upsertSpell({
+    characterId: character.id,
+    spellKey: homebrew.spellKey,
+    spellLevel: homebrew.spellLevel,
+    prepared: homebrew.prepared,
+    source: homebrew.source,
+    displayName: homebrew.displayName,
+    school: homebrew.school,
+    description: homebrew.description,
+    notes: homebrew.notes,
+  });
 
   revalidateCharacterPaths(parsed.worldSlug, path);
 }

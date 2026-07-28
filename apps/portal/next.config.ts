@@ -14,7 +14,23 @@ const nextConfig: NextConfig = {
   output: "standalone",
   basePath,
   ...standalone,
-  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env", "@uwe/atlas-3d"],
+  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env"],
+  async redirects() {
+    // Gegenstueck zu apps/studio/next.config.ts — dieselbe Begruendung, dieselbe
+    // Wahl von 307 statt 308. Die Ansicht im Portal ist die lesende.
+    return [
+      {
+        source: "/auth/worlds/:worldSlug/atlas3d",
+        destination: "/auth/worlds/:worldSlug/karten",
+        permanent: false,
+      },
+      {
+        source: "/auth/worlds/:worldSlug/atlas3d/:rest*",
+        destination: "/auth/worlds/:worldSlug/karten",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

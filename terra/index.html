@@ -6,11 +6,28 @@
 <title>terra — Fantasy-Karteneditor</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./src/ui/style.css">
+<!--
+  J1 — three liegt seit Runde J MIT im Baum (terra/vendor/three/, Fassung
+  0.185.1, unveraendert von jsdelivr geholt).
+
+  Der Grund ist die Content-Security-Policy von UWE: sie setzt
+  `script-src 'self'`, und ein CDN steht nicht darin. Terra bliebe im Frame
+  schwarz. Die CSP zu loechern waere der falsche Weg — sie gilt fuer die
+  ganze Anwendung, nicht nur fuer diese Seite.
+
+  Zwei Zugaben, die es umsonst dazu gibt: Terra laesst sich weiterhin per
+  Doppelklick auf diese Datei oeffnen (relative Pfade tun das, CDN-Pfade
+  taeten es auch, aber nur online), und der Editor laeuft jetzt ohne Netz.
+
+  Die Fassung ist weiterhin GEPINNT — terra/test/04-shader-anker.test.mjs
+  prueft die Shader-Anker gegen genau diese Dateien. Ein Wechsel der Fassung
+  ist ein bewusster Schritt mit einem Testlauf, kein Nebeneffekt.
+-->
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
   }
 }
 </script>

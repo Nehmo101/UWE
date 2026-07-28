@@ -1,24 +1,36 @@
 // Untere Leiste: Seed, Tageszeit, Raster, Effekte, Speichern, Laden, PNG-Export.
-import { S, KARTE, KARTEN_GROESSEN, setKartenGroesse, BIOME, hoehenProfil,
-  hoehenProfilGleich, serializeElements, hydrate, serializeMarker, hydrateMarker,
-  serializeStempel, speicherLesen, speicherSchreiben } from '../core/store.js';
-import { base, genBase, genBaseIn, terrainGeometrienNeu } from '../world/terrain.js';
+import { S, KARTE, KARTEN_GROESSEN, setKartenGroesse, BIOME, hoehenProfil, hoehenProfilGleich, serializeElements, hydrate, serializeMarker, hydrateMarker, serializeStempel, speicherLesen, speicherSchreiben } from '../core/store.js';
+import { base, genBase, genBaseIn, terrainGeometrienNeu, basisGeaendert } from '../world/terrain.js';
+// I1: der Kartenbaum. kartenbaum.js haengt nur an core/rng.js und
+// core/store.js — kein Zyklus, auch nicht ueber diesen Import zurueck.
+import { baueKartenbaum, mitKarte, legeKindkarteAn, pfadZurWurzel, kinderVon, leiteKindHoehenAb, handarbeitErmitteln, handarbeitAnwenden, erbWerte, massstabName, leseBaumDatei, schreibeBaumDatei } from '../world/kartenbaum.js';
 import { rebuildAll } from '../core/dirty.js';
-import { pushUndo, verwerfeHistorie } from './history.js';
+import { pushUndo, verwerfeHistorie, historieKarteParken, historieKarteHolen, verwerfeGeparkteHistorien, schritteInHistorie } from './history.js';
 import { rebuildHandles } from './selection.js';
 // F4: der PNG-Export soll in der komponierten Einstellung aufnehmen. Dafuer
 // braucht er den Modusschalter und updateCamera, um die gedaempfte Fahrt in
 // einem Rutsch vorzuspulen (siehe kameraVorspulen weiter unten).
 import { cam, setAufnahme, istAufnahme, updateCamera } from './camera.js';
-import { ed, stempelUebernehmen } from './tools.js';
+import { ed, stempelUebernehmen, setzeAusschnittWeg, setTool } from './tools.js';
 import { setTod, getTodName, setWetter, getWetterName } from '../world/atmosphere.js';
-import { buildPanel, toast } from '../ui/panels.js';
-import { exportPNG, setPost, getPost, renderFrame,
-  setFarbskript, getFarbskript, setPalette, getPalette, setMalschicht,
-  getMalschicht, setMultiplane, getMultiplane } from '../render/pipeline.js';
+import { buildPanel, toast, setzeKartenWege } from '../ui/panels.js';
+// J1: die Einbettung. Gleiche Richtung wie setzeKartenWege oben — io.js meldet
+// seine Wege an, bruecke.js importiert NICHTS aus terra. Ausserhalb eines
+// Rahmens (Doppelklick, Node-Tests) bleibt das Modul vollstaendig still.
+import { setzeBrueckenWege, brueckeAktiv } from './bruecke.js';
+// I4: Zielpruefung der Beschriftungen. beschriftung.js haengt nur an three und
+// core/ — der Import ist zyklusfrei und bleibt es, solange das so ist.
+import { zielPruefen, anPfadPruefen } from '../ui/beschriftung.js';
+/* J4 — KI-Vorgenerierung. welt.js LIEST nur (siehe weltWuerfeln in
+   ui/panels.js); welt-vorgabe.js ist reine Rechnung. Das Einsetzen macht
+   diese Datei, weil hier Kartengroesse, Biom, Terrain, Historie und Bild
+   ohnehin zusammenlaufen. */
+import { erzeugeWelt } from '../generators/welt.js';
+import { pruefeVorgabe, weltOptionen, sucheSeed, namenAnwenden, herkunftBauen, herkunftGelesen } from '../generators/welt-vorgabe.js';
+import { clearPreview } from './selection.js';
+import { exportPNG, setPost, getPost, renderFrame, setFarbskript, getFarbskript, setPalette, getPalette, setMalschicht, getMalschicht, setMultiplane, getMultiplane } from '../render/pipeline.js';
 import { camera } from './camera.js';
-import { preview, handles, brushRing, markerGruppe, auswahlRahmen, rebuildMarker,
-  waehleMarker } from './selection.js';
+import { preview, handles, brushRing, markerGruppe, auswahlRahmen, rebuildMarker, waehleMarker } from './selection.js';
 import { weiteHuellenNeu } from '../core/pools.js';
 import { wasserNeuBauen } from '../world/water.js';
 
@@ -160,6 +172,33 @@ function pruefeElemente(liste, wo) {
           throw new Error(wo + " " + k + ": Zugpunkt " + zq + " ungültig");
       }
     }
+    /* I4 — das Klickziel einer Beschriftung. Die Pruefung sitzt HIER und
+       nirgends sonst: Karten sollen geteilt werden, und eine fremde Datei darf
+       keinen `javascript:`-Klick mitbringen. `zielPruefen` ist eine
+       Erlaubnisliste (nur http und https), keine Verbotsliste — eine
+       Verbotsliste haette man mit der naechsten Kodierung wieder umgangen.
+       Abgelehnt wird beim LADEN und damit atomar, wie alles andere in dieser
+       Funktion: lieber gar nicht geladen als halb. */
+    if (e.params && e.params.ziel !== undefined) {
+      var zp = zielPruefen(e.params.ziel);
+      if (!zp.ok) throw new Error(wo + " " + k + ": ziel ungültig — " + zp.grund);
+      // Die geprueften Werte ersetzen die eingelesenen — `zielPruefen` raeumt
+      // dabei auch auf (art "keins" leert die Referenz).
+      e.params = Object.assign({}, e.params, { ziel: zp.ziel });
+    }
+    /* I4 — die Verknuepfung einer gebogenen Beschriftung. Sie ist nur eine
+       Zahl, aber eine aus einer fremden Datei, und wird deshalb genauso
+       behandelt wie `ziel`: eine Stelle, eine Erlaubnisliste (anPfadPruefen in
+       ui/beschriftung.js), Ablehnung beim LADEN und damit atomar.
+       Der geprueften Zahl folgt bewusst KEINE Existenzpruefung — ein Verweis
+       auf ein geloeschtes Element ist der Normalfall, nicht ein Verstoss; er
+       wird zur Laufzeit aufgeloest und die Beschriftung steht dann gerade
+       (siehe kurveAnhaengen in editor/selection.js). */
+    if (e.params && e.params.anPfad !== undefined) {
+      var ap = anPfadPruefen(e.params.anPfad);
+      if (!ap.ok) throw new Error(wo + " " + k + ": anPfad ungültig — " + ap.grund);
+      e.params = Object.assign({}, e.params, { anPfad: ap.wert });
+    }
     if (e.seed !== undefined && !Number.isFinite(e.seed)) throw new Error(wo + " " + k + ": seed ungültig");
     if (e.id !== undefined && !Number.isFinite(e.id)) throw new Error(wo + " " + k + ": id ungültig");
     elemente.push({
@@ -182,8 +221,34 @@ function pruefeElemente(liste, wo) {
  * Fassung 3 (hoehenDelta gegen das Seed-Terrain) und Fassung 4
  * (zusaetzlich `kartenGroesse`) werden gelesen.
  */
-function validiereKarte(text) {
-  var d = JSON.parse(text);
+/* I2 — Klimaachse feldweise einlesen. Tolerant wie `biom` und `wetter`: jedes
+   fehlende oder unbrauchbare Feld faellt einzeln auf seine Vorgabe zurueck,
+   statt die ganze Karte scheitern zu lassen. Das ist Absicht und in
+   docs/engineering/terra-runde-i-plan.md begruendet — atomar scheitern muss
+   nur, was die Karte traegt, nicht ihr Beiwerk. */
+function klimaGelesen(k) {
+  var v = { richtung: 0, staerke: 0.5, grund: 0.5, hoeheKuehl: 0.012 };
+  if (!k || typeof k !== "object") return v;
+  for (var f in v) if (Number.isFinite(k[f])) v[f] = k[f];
+  return v;
+}
+
+/* I1: in zwei Funktionen getrennt. Der Kartenbaum liest eine Datei mit
+   MEHREREN Karten darin — er hat also bereits ein Objekt und keinen Text mehr,
+   wenn er die einzelne Karte pruefen lassen will. Ein zweites JSON.parse je
+   Karte waere nicht nur Verschwendung, es waere auch die falsche Zusage: die
+   Datei ist einmal geparst, und ab da geht es um Inhalte, nicht um Text. */
+/* Sie hat seit dem Kartenbaum keinen Aufrufer mehr im Produktivcode — der
+   Ladeweg geht ueber leseBaumDatei und prueft dann jede Karte einzeln. Sie
+   bleibt trotzdem: die Testsuite haengt sie sich ueber das Testfenster in
+   terra/test/hilfen/haken.mjs heraus und prueft mit ihr das Verhalten
+   gegenueber einer TEXTdatei, also den Weg, den ein Nutzer mit einer fremden
+   Datei geht. Eine geloeschte Funktion haette diese Pruefung ersatzlos
+   mitgenommen. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function validiereKarte(text) { return validiereKarteObjekt(JSON.parse(text)); }
+
+function validiereKarteObjekt(d) {
   if (!d || !d.elemente || !Array.isArray(d.elemente)) throw new Error("Unbekanntes Format");
   // Kartengroesse (v4). Fehlt das Feld — jede v1/v2/v3-Datei — gilt 256, denn
   // groesser konnte eine solche Karte nie sein. Unbekannte Werte werden nicht
@@ -349,6 +414,17 @@ function validiereKarte(text) {
     // oder ist der Wert unbekannt, faellt die Karte ohne Fehler auf "wiese"
     // zurueck — aeltere Dateien sehen damit exakt wie bisher aus.
     biom: (typeof d.biom === "string" && BIOME[d.biom]) ? d.biom : "wiese",
+    // J3: tolerant wie `biom` — unbekannte Werte fallen auf "auto" zurueck.
+    sprachfamilie: typeof d.sprachfamilie === "string" ? d.sprachfamilie : "auto",
+    /* J4: Herkunftsvermerk. Tolerant wie `biom` und `wetter` — was nicht
+       stimmt, wird null. Der enthaltene Parametersatz laeuft durch DIESELBE
+       Klemmung wie ein frischer, damit eine von Hand veraenderte Datei nichts
+       durchreicht, was der Frame nicht selbst geprueft haette. */
+    herkunft: herkunftGelesen(d.herkunft),
+    // I2: Klimaachse, feldweise tolerant. Eine Karte aus einer Fassung ohne
+    // Klima laedt mit den Vorgabewerten — die Biomflaechen selbst stehen als
+    // Elemente in der Liste und haengen nicht daran.
+    klima: klimaGelesen(d.klima),
     // Optionales Feld (ab dieser Runde mitgeschrieben, version bleibt 2):
     // Stand von S.elementSeedCounter beim Speichern. Fehlt es (aeltere
     // v1/v2-Dateien) oder ist es keine endliche Zahl, liefert null — der
@@ -377,6 +453,8 @@ function kartenDaten() {
     format: "terra", version: 4, seed: S.worldSeed, tageszeit: getTodName(), raster: S.snap,
     kartenGroesse: KARTE.map,
     biom: S.biom,               // tolerantes Zusatzfeld (G5)
+    sprachfamilie: S.sprachfamilie,   // tolerantes Zusatzfeld (J3)
+    klima: S.klima,                   // tolerantes Zusatzfeld (I2)
     // Zweite Stimmungsachse neben der Tageszeit — wie `biom` ein optionales,
     // tolerant gelesenes Zusatzfeld. `version` bleibt deshalb 4: ein aelterer
     // Leser ueberliest das Feld und sieht die Karte bei klarem Wetter.
@@ -397,6 +475,14 @@ function kartenDaten() {
   // dieselbe Datei wie vor dieser Runde.
   if (S.marker.length) data.marker = serializeMarker();
   if (S.stempel.length) data.stempel = serializeStempel();
+  /* J4: woraus diese Karte entstanden ist. Tolerantes Zusatzfeld nach dem
+     Muster von `marker`/`stempel` — nur schreiben, wenn es etwas zu schreiben
+     gibt; eine von Hand gebaute Karte ergibt damit byteidentisch dieselbe
+     Datei wie zuvor, und `version` bleibt 4. Enthaelt den geprueften
+     Parametersatz und den benutzten Seed (zusammen reproduzieren sie die
+     Karte), aber NICHT den Prompt — Begruendung in
+     generators/welt-vorgabe.js. */
+  if (herkunftsVermerk) data.herkunft = herkunftsVermerk;
   // F1-F3 (Ghibli-Bildaufbau) nach demselben Muster: die 20er-Farbrampe
   // wuerde jede Datei aufblaehen, obwohl der Zweig bei staerke 0 gar nicht
   // laeuft. Fehlt das Feld beim Laden, setzt uebernehmeKarte auf 0 zurueck.
@@ -411,20 +497,44 @@ function kartenDaten() {
  * das Laden aus einer Datei und die Wiederherstellung eines Autosave-Standes;
  * den Undo-Punkt setzt der Aufrufer vorher (das Übernehmen ersetzt die Höhen).
  */
-function uebernehmeKarte(karte) {
+function uebernehmeKarte(karte, knoten) {
   S.worldSeed = karte.seed;
   document.getElementById("seed").value = String(S.worldSeed);
   // Biom VOR dem Terrain-/Elementaufbau setzen — terrainColor und die
   // Generatoren lesen S.biom im rebuildAll unten. Select-UI nachfuehren.
   S.biom = karte.biom;
   document.getElementById("biomSel").value = S.biom;
+  S.sprachfamilie = karte.sprachfamilie;
+  // J4: der Vermerk gehoert zur Karte und wird mit ihr ersetzt — sonst erbte
+  // eine handgebaute Karte die Herkunft der zuvor geladenen.
+  herkunftsVermerk = karte.herkunft;
+  // I2: Klima VOR dem Aufbau — die Biom-Ableitung liest es, und die Farbe
+  // haengt ueber die Biomflaechen daran.
+  S.klima = karte.klima;
   // Kartengroesse VOR genBase/Delta setzen: genBase schreibt in das dann
   // passend dimensionierte base-Feld, und die Deltaindizes der Datei sind
   // gegen genau dieses VW gerechnet. (v1/v2/v3 liefern hier 256.)
   if (karte.kartenGroesse !== KARTE.map) setzeKartenGroesse(karte.kartenGroesse);
   var kartenSel = document.getElementById("kartenSel");
   if (kartenSel) kartenSel.value = String(KARTE.map);
-  if (karte.hoehenDelta !== null) {
+  /* I1 — dritter Zweig: eine Kindkarte wuerfelt ihr Gelaende NICHT. Es wird
+     aus der Elternkarte abgeleitet, sonst passte es nicht zu dem, was auf ihr
+     zu sehen war, und die Hierarchie waere eine Luege. `hoehenDelta` ist hier
+     die Handarbeit GEGEN die Ableitung, nicht die Abweichung vom Seed-Terrain
+     — ein Kind hat kein eigenes Seed-Terrain. */
+  if (knoten && knoten.karte.hoehenQuelle === "abgeleitet") {
+    var ab = leiteHoehenFuer(S.baum, knoten.id);
+    if (ab) {
+      base.set(ab.subarray(0, Math.min(ab.length, base.length)));
+      handarbeitAnwenden(base, karte.hoehenDelta || []);
+      basisGeaendert(0, KARTE.vw - 1, 0, KARTE.vw - 1);
+    } else {
+      // Verwaist: der Elternteil fehlt, es gibt nichts abzuleiten. Lieber ein
+      // eigenes Gelaende aus dem Seed als eine leere Karte.
+      genBase(S.worldSeed);
+      wendeHoehenDeltaAn(base, karte.hoehenDelta || []);
+    }
+  } else if (karte.hoehenDelta !== null) {
     // v3: erst das komplette Seed-Terrain deterministisch erzeugen —
     // S.worldSeed ist oben bereits gesetzt, genau wie im v1/v2-Ablauf —
     // dann die gespeicherten Deltapaare darueber.
@@ -559,16 +669,223 @@ function autosaveMeta() {
     var m = JSON.parse(roh);
     if (!m || !Array.isArray(m.staende)) return { next: 0, staende: [] };
     return { next: (m.next | 0) % AUTOSAVE_SLOTS, staende: m.staende };
-  } catch { return { next: 0, staende: [] }; }
+  } catch (_e) { return { next: 0, staende: [] }; }
 }
 
-/** Schreibt den aktuellen Stand in den Ring. Liefert "ok" | "gleich" |
+/* ==========================================================================
+   I1 — Der Kartenbaum
+
+   Terra kannte bisher genau eine Karte. Jetzt haelt `S.baum` alle Karten der
+   Datei und `S.aktiveKarte` die, die gerade in S und im Hoehenfeld steht.
+
+   Warum das hier steht und nicht in einem eigenen Modul: io.js besitzt bereits
+   die Serialisierung einer Karte (kartenDaten/uebernehmeKarte/validiereKarte).
+   Der Baum ist deren Fortsetzung. Ein eigenes Modul haette einen Zyklus
+   gebaut — panels.js braeuchte es, es braeuchte io.js, und io.js braucht
+   panels.js. Genau diese Sorte Ring hat in Runde H schon einmal den Modulstart
+   zerlegt.
+
+   Die eine Regel, die man kennen muss: der Eintrag der AKTIVEN Karte im Baum
+   ist veraltet, solange man sie bearbeitet. Der Wahrheitswert steht in S und
+   in `base`. karteSichern() schreibt ihn zurueck — und zwar vor jedem
+   Kartenwechsel und vor jedem Speichern. Wer eine dritte Stelle findet, an der
+   der Baum gelesen wird, muss vorher sichern.
+   ========================================================================== */
+
+/** Der Baum der Sitzung; legt beim ersten Zugriff einen mit genau der
+ *  aktuellen Karte an. So verhaelt sich Terra ohne geladene Baumdatei wie
+ *  bisher, ohne dass irgendwo ein Sonderfall stehen muss. */
+function aktiverBaum() {
+  if (!S.baum) {
+    var eintrag = kartenDaten();
+    eintrag.id = "k0";
+    eintrag.elternId = null;
+    eintrag.titel = "Karte";
+    eintrag.einheitMeter = S.einheitMeter;
+    eintrag.hoehenQuelle = "eigen";
+    eintrag.eigen = {};
+    S.baum = baueKartenbaum([eintrag]);
+    S.aktiveKarte = "k0";
+  }
+  return S.baum;
+}
+
+/** Schreibt den JETZIGEN Stand in den Eintrag der aktiven Karte zurueck. */
+function karteSichern() {
+  var baum = aktiverBaum();
+  var n = baum.index[S.aktiveKarte];
+  if (!n) return baum;
+  var frisch = kartenDaten();
+  /* Die Baumfelder ueberleben — sie beschreiben die STELLUNG der Karte im
+     Baum, und die aendert sich beim Bearbeiten nicht. kartenDaten() weiss von
+     ihnen nichts und wuerde sie sonst stillschweigend loeschen. */
+  frisch.id = n.id;
+  frisch.elternId = n.elternId;
+  frisch.titel = n.karte.titel;
+  frisch.einheitMeter = n.karte.einheitMeter;
+  frisch.hoehenQuelle = n.karte.hoehenQuelle;
+  frisch.ausschnitt = n.karte.ausschnitt;
+  frisch.rahmen = n.karte.rahmen;
+  frisch.eigen = n.karte.eigen;
+  /* Bei einer abgeleiteten Karte ist `hoehenDelta` die HANDARBEIT gegen die
+     Ableitung, nicht die Abweichung vom Seed-Terrain. Ein Kind hat kein
+     eigenes Seed-Terrain — sein Gelaende kommt aus dem Elternteil. */
+  if (n.karte.hoehenQuelle === "abgeleitet") {
+    var ab = leiteHoehenFuer(baum, n.id);
+    if (ab) frisch.hoehenDelta = handarbeitErmitteln(base, ab, KARTE.vw * KARTE.vw);
+  }
+  var karten = baum.karten.slice();
+  for (var i = 0; i < karten.length; i++) if (karten[i].id === n.id) karten[i] = frisch;
+  S.baum = baueKartenbaum(karten, { wurzelId: baum.wurzelId });
+  return S.baum;
+}
+
+/** Die abgeleiteten Hoehen einer Kindkarte — ohne ihre Handarbeit.
+ *  Rechnet die Kette von der Wurzel herab, weil auch die Elternkarte
+ *  abgeleitet sein kann (Kontinent -> Landschaft -> Stadt). */
+function leiteHoehenFuer(baum, id) {
+  var pfad = pfadZurWurzel(baum, id);
+  if (pfad.length < 2) return null;
+  var wurzel = baum.index[pfad[0]].karte;
+  var vw = ((wurzel.kartenGroesse | 0) || 256) + 1;
+  var hoehen = new Float32Array(vw * vw);
+  genBaseIn(hoehen, wurzel.seed | 0, (wurzel.kartenGroesse | 0) || 256, wurzel.biom);
+  wendeHoehenDeltaAn(hoehen, wurzel.hoehenDelta || []);
+  for (var i = 1; i < pfad.length; i++) {
+    var r = leiteKindHoehenAb(baum, pfad[i], hoehen);
+    hoehen = r.hoehen;
+    if (i < pfad.length - 1) {
+      // Zwischenstufe: ihre eigene Handarbeit gehoert dazu, sonst leitet die
+      // naechste Stufe aus einem Gelaende ab, das so nie zu sehen war.
+      handarbeitAnwenden(hoehen, baum.index[pfad[i]].karte.hoehenDelta || []);
+    }
+  }
+  return hoehen;
+}
+
+/** Wechselt die aktive Karte. Sichert die bisherige, laedt die neue. */
+function wechsleZuKarte(id) {
+  var baum = karteSichern();
+  var n = baum.index[id];
+  if (!n) { toast("Karte „" + id + "“ gibt es nicht"); return false; }
+  if (id === S.aktiveKarte) return true;
+  var karte;
+  try { karte = validiereKarteObjekt(n.karte); }
+  catch (_e) { toast("Karte „" + n.karte.titel + "“ ist unlesbar: " + e.message); return false; }
+  /* Geerbte Felder AUFLOESEN, bevor uebernehmeKarte sie liest. Im Eintrag
+     einer erbenden Karte steht `biom` gar nicht — validiereKarteObjekt faellt
+     dort auf seine eigene Vorgabe zurueck, und das Kind saehe aus wie eine
+     frische Wiese statt wie sein Elternteil. */
+  var erbe = erbWerte(baum, id);
+  for (var f in erbe) if (erbe[f] !== undefined && erbe[f] !== null) karte[f] = erbe[f];
+  /* Die Historie gehoert zur KARTE — ein Undo ueber einen Kartenwechsel hinweg
+     wuerde Hoehen der einen Karte in die andere schreiben. Bis hierher wurde
+     sie deshalb verworfen; jetzt wird sie geparkt und beim Zurueckkehren
+     wieder aufgenommen (editor/history.js, Abschnitt „Ein Stapel je Karte").
+
+     Die Reihenfolge ist Pflicht, nicht Geschmack:
+       PARKEN vor uebernehmeKarte, weil dort das Hoehenfeld ersetzt wird und
+         eine noch nicht verbuchte Aenderung sonst in der falschen Karte
+         landete — und weil uebernehmeKarte bei abweichender Kartengroesse
+         verwerfeHistorie() ausloest, das den AKTIVEN Stapel leert (der ist
+         dann bereits abgelegt und leer, der Aufruf laeuft ins Leere).
+       HOLEN nach uebernehmeKarte, weil der Schatten aus dem FERTIGEN
+         Hoehenfeld gezogen werden muss.
+
+     Kein pushUndo(true) mehr an dieser Stelle: es legte einen Schnappschuss
+     an, den die naechste Zeile (verwerfeHistorie) sofort wieder wegwarf. Ein
+     Kartenwechsel ist eine Bewegung, kein Bearbeitungsschritt — er gehoert
+     nicht in den Stapel. Die Buchfuehrung, die pushUndo(true) nebenbei
+     erledigte (hoehenNachtragen, frischer Schatten), machen Parken und Holen. */
+  var vonId = S.aktiveKarte;
+  historieKarteParken(vonId);
+  S.aktiveKarte = id;
+  S.einheitMeter = n.karte.einheitMeter || 1;
+  uebernehmeKarte(karte, n);
+  var zurueck = historieKarteHolen(id);
+  buildPanel();
+  toast("Karte: " + n.karte.titel + " · " + massstabName(S.einheitMeter)
+    + (zurueck ? " · " + zurueck + " Schritte Historie zurück" : ""));
+  return true;
+}
+
+/** Legt aus einem Polygon auf der AKTIVEN Karte eine Kindkarte an und wechselt
+ *  hinein. Der Ausschnitt ist damit das einzige Werkzeug, das eine neue Karte
+ *  erzeugt — es gibt keinen zweiten Weg, und deshalb auch keine zweite Stelle,
+ *  an der die Baumregeln durchgesetzt werden muessten. */
+function neueKindkarte(polygon, opt) {
+  var baum = karteSichern();
+  var kind;
+  try { kind = legeKindkarteAn(baum, S.aktiveKarte, polygon, opt || {}); }
+  catch (_e) { toast(e.message); return null; }
+  S.baum = mitKarte(baum, kind);
+  wechsleZuKarte(kind.id);
+  return kind.id;
+}
+
+/**
+ * Die beiden Wege, wenn sich die Elternkarte geaendert hat.
+ *
+ * `verwerfen = false` — Nachziehen: die neue Elternform uebernehmen, die
+ *   eigene Handarbeit behalten. Der Regelfall, und der Grund, warum die
+ *   Handarbeit ueberhaupt als Delta GEGEN die Ableitung gespeichert wird und
+ *   nicht als absolute Hoehe: nur so laesst sie sich auf ein anderes
+ *   Untergelaende umsetzen.
+ * `verwerfen = true` — Neu ableiten: alles zurueck auf die reine Ableitung.
+ *   Der Ausstieg, wenn man sich vertan hat.
+ */
+function zieheKarteNach(verwerfen) {
+  var baum = karteSichern();
+  var n = baum.index[S.aktiveKarte];
+  if (!n || n.elternId === null) { toast("Die Wurzelkarte leitet sich aus nichts ab"); return; }
+  var ab = leiteHoehenFuer(baum, n.id);
+  if (!ab) { toast("Die Elternkarte fehlt — es gibt nichts abzuleiten"); return; }
+  pushUndo(true);
+  base.set(ab.subarray(0, Math.min(ab.length, base.length)));
+  if (!verwerfen) handarbeitAnwenden(base, n.karte.hoehenDelta || []);
+  basisGeaendert(0, KARTE.vw - 1, 0, KARTE.vw - 1);
+  rebuildAll();
+  buildPanel();
+  toast(verwerfen ? "Gelände neu aus der Elternkarte abgeleitet"
+                  : "Elternform nachgezogen, Handarbeit behalten");
+}
+
+/** Der ganze Baum als Dateitext — der Stand, der gespeichert wird. Sichert
+ *  vorher die aktive Karte, sonst fehlte in der Datei genau das, woran man
+ *  gerade gearbeitet hat. */
+function baumText() {
+  return JSON.stringify(schreibeBaumDatei(karteSichern()));
+}
+
+/** Gegenstueck zu baumText fuer Autosave und Datei: liest, prueft ALLE Karten
+ *  und uebernimmt erst danach. Wirft, wenn irgendetwas nicht stimmt — der
+ *  Aufrufer haelt den Zustand bis dahin unangetastet. */
+function baumUebernehmen(text) {
+  var gelesen = leseBaumDatei(JSON.parse(text));
+  for (var i = 0; i < gelesen.baum.karten.length; i++) {
+    validiereKarteObjekt(gelesen.baum.karten[i]);
+  }
+  var wurzel = gelesen.baum.index[gelesen.baum.wurzelId];
+  var karte = validiereKarteObjekt(wurzel.karte);
+  /* Ein anderer Baum: die geparkten Undo-Stapel gehoeren zu Karten, die es
+     gleich nicht mehr gibt — ihre Kennungen aber schon ("k0" ist die Wurzel
+     jeder Datei). Erst nach der Pruefung, damit eine unlesbare Datei nichts
+     anfasst. Der AKTIVE Stapel bleibt: Strg+Z holt weiterhin den Stand vor
+     dem Laden zurueck. */
+  verwerfeGeparkteHistorien();
+  S.baum = gelesen.baum;
+  S.aktiveKarte = gelesen.baum.wurzelId;
+  S.einheitMeter = wurzel.karte.einheitMeter || 1;
+  return uebernehmeKarte(karte, wurzel);
+}
+
+/** Schreibt den Stand in den Ring. Liefert "ok" | "gleich" |
  *  "zu gross" | "fehler" — der Aufrufer entscheidet ueber die Meldung. */
 function autosaveSchreiben() {
   if (!autosaveNoetig()) return "gleich";
   var text;
-  try { text = JSON.stringify(kartenDaten()); }
-  catch { return "fehler"; }
+  try { text = baumText(); }
+  catch (_e) { return "fehler"; }
   if (text === letzterAutosave) return "gleich";
   if (text.length > AUTOSAVE_MAX) return "zu gross";
   var meta = autosaveMeta();
@@ -617,15 +934,18 @@ function autosaveAnbieten() {
   var stand = neuesterAutosave();
   if (!stand) return;
   var jetzt;
-  try { jetzt = JSON.stringify(kartenDaten()); } catch { jetzt = null; }
+  try { jetzt = baumText(); } catch (_e) { jetzt = null; }
   if (jetzt !== null) letzterAutosave = jetzt;      // Demostand gilt als geschrieben
   if (stand.text === jetzt) return;
   if (!confirm("Letzten Stand wiederherstellen? (" + zeitText(stand.zeit) + ")")) return;
-  var karte;
-  try { karte = validiereKarte(stand.text); }
-  catch { toast("Gespeicherter Stand ist unlesbar"); return; }
+  /* pushUndo VOR dem Versuch: baumUebernehmen prueft zwar alle Karten, bevor
+     es irgendetwas anfasst, aber der Undo-Punkt kostet nichts und deckt auch
+     den Fall ab, dass jemand die Reihenfolge dort spaeter aendert. Ein
+     ueberzaehliger Punkt nach einem gescheiterten Laden ist harmlos; ein
+     fehlender nach einem halb gelungenen waere es nicht. */
   pushUndo(true);
-  uebernehmeKarte(karte);
+  try { baumUebernehmen(stand.text); }
+  catch (_err) { toast("Gespeicherter Stand ist unlesbar: " + err.message); return; }
   letzterAutosave = stand.text;
   toast("Stand vom " + zeitText(stand.zeit) + " wiederhergestellt");
 }
@@ -694,7 +1014,168 @@ function kameraStandSetzen(s) {
    wird. */
 var komponiertExport = true;
 
+/* ==========================================================================
+   J4 — eine Karte aus einer Beschreibung
+
+   Die Brain-Aktion `terra_world_draft` liefert einen geprueften
+   Parametersatz, die Bruecke reicht ihn herein, generators/welt-vorgabe.js
+   prueft ihn ein zweites Mal und rechnet ihn um — hier wird er ANGEWENDET.
+
+   Warum in dieser Datei: eine Vorgabe kann Kartengroesse, Biom, Seed, Klima,
+   Sprachfamilie, Massstab, Tageszeit und Wetter aendern. Genau diese acht
+   Dinge zieht io.js beim Laden einer Datei ebenfalls nach, in genau dieser
+   Reihenfolge (uebernehmeKarte). Ein zweiter Weg daneben waere eine zweite
+   Wahrheit ueber den Kartenzustand.
+
+   ANDERS ALS „Welt wuerfeln“ (ui/panels.js) wird hier das GELAENDE NEU
+   erzeugt: Biom, Kartengroesse und Seed duerfen sich aendern, und ohne neues
+   Basisterrain waere ein Reliefwunsch („Gebirge im Norden“) sinnlos. Die
+   Rueckfrage sagt das ausdruecklich.
+
+   Die Rueckfrage stellt der FRAME, nicht die Elternseite: nur er weiss, wie
+   viele Elemente auf der Karte stehen. Dieselbe Haltung wie bei weltWuerfeln
+   und beim Biomwechsel.
+   ========================================================================== */
+
+/** Herkunftsvermerk der aktiven Karte (tolerantes Zusatzfeld `herkunft`).
+ *  null = die Karte ist nicht aus einer Beschreibung entstanden. */
+var herkunftsVermerk = null;
+
+/**
+ * Wendet eine Weltvorgabe an. Liefert { ok, bericht, hinweise, meldung } —
+ * nie ein throw nach aussen, damit die Bruecke immer quittieren kann.
+ *
+ * @param roh  Parametersatz, ungeprueft (er kam per postMessage herein)
+ * @param opt  { laufId, seed }
+ */
+function weltVorgabeAnwenden(roh, opt) {
+  opt = opt || {};
+  var g = pruefeVorgabe(roh);
+  var v = g.vorgabe;
+
+  if (S.elements.length &&
+      !confirm("Die Karte trägt bereits " + S.elements.length + " Elemente. "
+        + "„Karte beschreiben“ ersetzt sie vollständig durch eine neu erzeugte Welt "
+        + "und erzeugt auch das Geländerelief neu — von Hand modellierte Höhen "
+        + "gehen dabei verloren. Fortfahren?")) {
+    return { ok: false, hinweise: g.hinweise, meldung: "abgebrochen" };
+  }
+
+  var startSeed = Number.isFinite(opt.seed) ? (opt.seed | 0) : S.worldSeed;
+  var suche = sucheSeed(v, startSeed);
+
+  pushUndo(true);                       // ersetzt die Hoehen -> Terrainkopie sichern
+  S.worldSeed = suche.seed;
+  var seedFeld = document.getElementById("seed");
+  if (seedFeld) seedFeld.value = String(S.worldSeed);
+  S.biom = v.biom;
+  var biomSel = document.getElementById("biomSel");
+  if (biomSel) biomSel.value = S.biom;
+  S.sprachfamilie = v.sprachfamilie;
+  S.klima = { richtung: v.klima.richtung, staerke: v.klima.staerke,
+              grund: v.klima.grund, hoeheKuehl: v.klima.hoeheKuehl };
+  if (v.kartenGroesse !== KARTE.map) setzeKartenGroesse(v.kartenGroesse);
+  /* Der Massstab steht im Baumeintrag, nicht in der Datei der Einzelkarte
+     (karteSichern liest ihn von dort zurueck) — beides setzen, sonst faellt
+     er beim naechsten Sichern auf den alten Wert. */
+  S.einheitMeter = v.einheitMeter;
+  var baum = aktiverBaum(), knoten = baum.index[S.aktiveKarte];
+  if (knoten) knoten.karte.einheitMeter = v.einheitMeter;
+  genBase(S.worldSeed);
+
+  var liste;
+  try {
+    liste = erzeugeWelt(S.worldSeed, weltOptionen(v));
+  } catch (err) {
+    /* Das Gelaende steht schon neu, die Elemente noch nicht — ein Undo stellt
+       beides her (pushUndo(true) oben hat die Hoehen gesichert). Mehr ist
+       ehrlich nicht zu retten, und ein halb gebauter Zustand waere schlimmer.
+       (Vorher stand hier `catch (_err)` neben einem Zugriff auf `err` — der
+       Fehlerpfad selbst warf einen ReferenceError. Beim Einbau von Runde H
+       aufgefallen und behoben.) */
+    console.error("erzeugeWelt", err);
+    rebuildAll();
+    return { ok: false, hinweise: g.hinweise, meldung: "Weltgenerator fehlgeschlagen" };
+  }
+  if (!liste || !liste.length) {
+    rebuildAll();
+    return { ok: false, hinweise: g.hinweise, meldung: "Kein brauchbarer Bauplatz auf dieser Karte" };
+  }
+
+  // Freie Namen des Modells VOR dem Einsetzen: danach haengen die Elemente in
+  // S.elements und in den Pools, und eine Umbenennung muesste dort nachziehen.
+  var freie = namenAnwenden(liste, v.namen);
+
+  ed.selected = null;
+  ed.auswahl.length = 0;
+  ed.draw = null;
+  clearPreview();
+  hydrate(liste);
+  rebuildAll();
+  rebuildHandles();
+  buildPanel();
+  setTod(v.tageszeit, true);
+  setWetter(v.wetter, true);
+  var wetterSel = document.getElementById("wetterSel");
+  if (wetterSel) wetterSel.value = getWetterName();
+
+  var b = liste.bericht || {};
+  var region = v.namen.region || b.region || null;
+  herkunftsVermerk = herkunftBauen(v, {
+    seed: S.worldSeed,
+    laufId: opt.laufId,
+    zeit: new Date().toISOString()
+  });
+
+  toast("Karte beschrieben: " + liste.length + " Elemente · "
+    + (b.fluesse || 0) + " Flüsse · " + (b.siedlungen || 0) + " Siedlungen"
+    + (region ? " · „" + region + "“" : ""));
+
+  return {
+    ok: true,
+    hinweise: g.hinweise,
+    bericht: {
+      elemente: liste.length,
+      fluesse: b.fluesse || 0,
+      siedlungen: b.siedlungen || 0,
+      namen: b.namen || 0,
+      freieNamen: freie,
+      region: region,
+      seed: S.worldSeed,
+      seedGesucht: suche.geprueft,
+      kartenGroesse: KARTE.map,
+      biom: S.biom
+    }
+  };
+}
+
 export function initIO() {
+  /* I1: das Ausschnitt-Werkzeug meldet sein fertiges Polygon hierher. Die
+     Richtung ist Absicht — io.js kennt tools.js, nicht umgekehrt. */
+  /* I1: die Wege in den Baum. Gleiche Richtung wie oben — das Panel bekommt
+     sie gereicht, statt io.js zu importieren. */
+  setzeKartenWege({
+    pfad: pfadZurWurzel,
+    kinder: kinderVon,
+    massstabName: massstabName,
+    wechsle: wechsleZuKarte,
+    nachziehen: function () { zieheKarteNach(false); },
+    neuAbleiten: function () { zieheKarteNach(true); }
+  });
+  /* J1: dieselben zwei Wege, die auch Datei-Speichern und Datei-Laden nehmen.
+     Die Bruecke bekommt bewusst KEINEN dritten Ladeweg — baumUebernehmen ist
+     genau der Weg des Dateidialogs (leseBaumDatei -> validiereKarteObjekt je
+     Karte -> uebernehmeKarte), nur ohne FileReader davor. */
+  /* J4: der dritte Weg. Die Bruecke ruft ihn, wenn eine Weltvorgabe
+     hereinkommt; ohne ihn antwortete sie mit einer Absage statt zu bauen. */
+  setzeBrueckenWege({ text: baumText, uebernehmen: baumUebernehmen,
+    vorgabe: weltVorgabeAnwenden });
+  setzeAusschnittWeg(function (punkte) {
+    var titel = prompt("Titel der neuen Karte", "Ausschnitt");
+    if (titel === null) return;                       // Abbruch legt nichts an
+    var id = neueKindkarte(punkte, { titel: String(titel) || "Ausschnitt" });
+    if (id) setTool("auswahl");
+  });
   document.getElementById("seedApply").addEventListener("click", function () {
     var v = document.getElementById("seed").value.trim();
     var s = 0;
@@ -758,6 +1239,16 @@ export function initIO() {
     if (KARTEN_GROESSEN.indexOf(n) < 0) n = KARTE.map;
     this.value = String(KARTE.map);
     if (n === KARTE.map) return;
+    /* Der EINE Weg, auf dem eine Historie wirklich verloren geht (der
+       Kartenwechsel parkt sie seit dieser Runde). Deshalb wird hier vorher
+       gefragt und nicht hinterher gemeldet: die gespeicherten Hoehenfelder
+       passen nach dem Wechsel nicht mehr zur Feldgroesse, und das laesst sich
+       nicht heilen — nur ankuendigen. Ohne Stapel keine Rueckfrage; eine
+       Warnung vor einem Verlust, den es nicht gibt, erzieht zum Wegklicken. */
+    if (schritteInHistorie() &&
+        !confirm("Die Kartengröße zu wechseln verwirft die Historie dieser Karte ("
+          + schritteInHistorie() + " Schritte) — die gespeicherten Höhenfelder "
+          + "passen danach nicht mehr zum neuen Raster. Fortfahren?")) return;
     pushUndo(true);              // ersetzt die Hoehen -> Terrainkopie sichern
     setzeKartenGroesse(n);       // Zahlen + Patchraster + Huellen + Wasser
     genBase(S.worldSeed);
@@ -776,7 +1267,7 @@ export function initIO() {
   }
   document.getElementById("saveBtn").addEventListener("click", function () {
     download("terra-karte.json",
-      new Blob([JSON.stringify(kartenDaten())], { type: "application/json" }));
+      new Blob([baumText()], { type: "application/json" }));
     toast("Karte gespeichert");
   });
   document.getElementById("loadBtn").addEventListener("click", function () {
@@ -789,16 +1280,39 @@ export function initIO() {
     rd.onload = function () {
       // Erst vollständig validieren — schlägt das fehl, bleibt der Zustand
       // (Höhen, Elemente, Seed, Kamera, Undo-Stapel) komplett unverändert.
-      var karte;
+      /* I1 — der Ladeweg geht seit dem Kartenbaum IMMER ueber leseBaumDatei.
+         Sie normiert v1 bis v4 zu einem Baum mit genau einer Wurzelkarte, so
+         dass es hier keinen zweiten Zweig braucht — und keinen zweiten Zweig
+         zu haben, ist der eigentliche Gewinn: der Ladeweg ist die Stelle, an
+         der Terra am meisten Formatgeschichte traegt.
+
+         Jede Karte des Baums wird geprueft, bevor irgendetwas uebernommen
+         wird. Erst wenn ALLE durchgehen, wird der Zustand angefasst — atomar
+         wie bisher, nur jetzt ueber die ganze Datei statt ueber eine Karte. */
+      var gelesen, karte;
       try {
-        karte = validiereKarte(rd.result);
-      } catch {
-        toast("Datei konnte nicht gelesen werden");
+        gelesen = leseBaumDatei(JSON.parse(rd.result));
+        for (var kb = 0; kb < gelesen.baum.karten.length; kb++) {
+          validiereKarteObjekt(gelesen.baum.karten[kb]);
+        }
+        karte = validiereKarteObjekt(gelesen.baum.index[gelesen.baum.wurzelId].karte);
+      } catch (_err) {
+        toast("Datei konnte nicht gelesen werden: " + err.message);
         return;
       }
       // Ab hier ist alles geprüft: Undo-Punkt setzen und in einem Zug übernehmen.
       pushUndo(true);                    // das Laden ersetzt die Hoehen -> Terrainkopie sichern
-      var stempelZahl = uebernehmeKarte(karte);
+      // Gleiche Begruendung wie in baumUebernehmen: die Ablage gehoert zum
+      // alten Baum, ihre Kennungen kaemen im neuen wieder vor.
+      verwerfeGeparkteHistorien();
+      S.baum = gelesen.baum;
+      S.aktiveKarte = gelesen.baum.wurzelId;
+      var wurzelKnoten = gelesen.baum.index[gelesen.baum.wurzelId];
+      S.einheitMeter = wurzelKnoten.karte.einheitMeter || 1;
+      var stempelZahl = uebernehmeKarte(karte, wurzelKnoten);
+      if (gelesen.warnungen && gelesen.warnungen.length) {
+        toast("Kartenbaum mit Anmerkungen: " + gelesen.warnungen[0]);
+      }
       toast((karte.dateiVersion < 2 ? "Karte geladen (ältere Fassung)" : "Karte geladen")
         + (karte.marker.length ? " · " + karte.marker.length + " Marker" : "")
         + (stempelZahl ? " · " + stempelZahl + " Stempel übernommen" : ""));
@@ -928,7 +1442,12 @@ export function initIO() {
   // ohne Toast und ohne Rueckfrage: ein beforeunload-Dialog ist in modernen
   // Browsern ohnehin nicht frei gestaltbar und hier auch nicht gewollt.
   window.addEventListener("beforeunload", function () { autosaveSchreiben(); });
-  setTimeout(autosaveAnbieten, 600);
+  /* J1: im eingebetteten Rahmen NICHT anbieten. Dort ist die Wahrheit die
+     Karte aus der Datenbank, die die Bruecke gerade hereingereicht hat — der
+     Ringpuffer im localStorage dieser Herkunft gehoert einer anderen Sitzung
+     und wuerde die Karte beim Bestaetigen ueberschreiben. Der Autosave selbst
+     laeuft weiter; nur die Rueckfrage entfaellt. */
+  setTimeout(function () { if (!brueckeAktiv()) autosaveAnbieten(); }, 600);
 }
 
 /**
@@ -969,7 +1488,7 @@ function hoehenkarteImportieren(datei) {
       ctx.drawImage(img, 0, 0, w, h);
       var px;
       try { px = ctx.getImageData(0, 0, w, h).data; }
-      catch { toast("Bilddaten nicht lesbar"); return; }
+      catch (_err) { toast("Bilddaten nicht lesbar"); return; }
 
       // Parameter über prompt() — schlicht, aber ausreichend; die Vorgaben
       // sind so gewählt, dass ein durchschnittlich helles Bild eine Karte mit

@@ -298,7 +298,7 @@ function IdeaListColumn({ ideas, selectedId, onSelect, view, lifecycleFilter, mo
         <WorkspaceContextFields {...workspaceContext} />
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="idea-create-title">{view === "prompts" ? "Neuer Prompt (Titel)" : "Neue Idee (Überschrift)"}</Label>
-          <Input id="idea-create-title" name="title" required placeholder={view === "prompts" ? "z. B. Atlas-Orchestrator Subagent" : "z. B. Dark-Mode für Portal"} />
+          <Input id="idea-create-title" name="title" required placeholder={view === "prompts" ? "z. B. Kartenzeichen-Subagent" : "z. B. Dark-Mode für Portal"} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="idea-create-body">Beschreibung</Label>

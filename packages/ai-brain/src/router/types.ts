@@ -42,6 +42,19 @@ export interface AiRouterRequest {
   maxTokens?: number;
 }
 
+/**
+ * What the JSON requirement did to this request. Present on every result so a
+ * run record can answer "why is this answer prose?" without guessing:
+ * `requested` false means the task never wanted JSON, `repairAttempted` true
+ * with `ok` false means the model failed twice and the validators took over.
+ */
+export interface AiJsonModeReport {
+  requested: boolean;
+  repairAttempted: boolean;
+  /** Whether the returned text parses as a JSON object. Only meaningful when `requested`. */
+  ok: boolean;
+}
+
 export interface AiRouterResult {
   context: AiContext;
   result: GenerateTextResult;
@@ -50,6 +63,7 @@ export interface AiRouterResult {
   providerId: AiProviderId;
   contextMode: AiContextMode;
   providerMode: AiProviderMode;
+  jsonMode: AiJsonModeReport;
 }
 
 export interface ProviderResolution {

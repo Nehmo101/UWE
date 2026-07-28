@@ -4,12 +4,14 @@
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const migrationsDir = path.join(root, "packages/database/prisma/migrations");
-const schemaPath = path.join(root, "packages/database/prisma/schema.prisma");
+const databaseDir = path.join(root, "packages/database");
+const migrationsDir = path.join(databaseDir, "prisma/migrations");
+const schemaPath = path.join(databaseDir, "prisma/schema.prisma");
 
 function fail(message) {
   console.error(`migration-check: ${message}`);
@@ -39,20 +41,42 @@ for (const folder of migrationFolders) {
   }
 }
 
-const validate = spawnSync(
-  "pnpm",
-  ["--filter", "@uwe/database", "exec", "prisma", "validate"],
-  { cwd: root, stdio: "inherit", shell: false },
-);
+// Run the Prisma CLI through the current Node binary instead of spawning
+// `pnpm`. On Windows, `pnpm` is a `.CMD` shim that spawnSync(shell:false)
+// cannot execute (ENOENT / EINVAL) — same reason run-node-tests.mjs spawns
+// `process.execPath` directly. Resolving the CLI entry point from
+// packages/database also keeps us on the exact prisma version that package
+// declares, and cuts pnpm's exit-code normalization out of the loop (see the
+// drift check below, which relies on prisma's own exit codes).
+const databaseRequire = createRequire(pathToFileURL(path.join(databaseDir, "package.json")));
+let prismaCli;
+try {
+  prismaCli = databaseRequire.resolve("prisma/build/index.js");
+} catch {
+  fail("prisma CLI not found — run `pnpm install` first");
+}
 
+function runPrisma(args, options = {}) {
+  return spawnSync(process.execPath, [prismaCli, ...args], {
+    cwd: databaseDir,
+    shell: false,
+    ...options,
+  });
+}
+
+const validate = runPrisma(["validate"], { stdio: "inherit" });
+
+if (validate.error) {
+  fail(`prisma validate could not run: ${validate.error.message}`);
+}
 if (validate.status !== 0) {
   fail("prisma validate failed");
 }
 
 // Schema ↔ migrations drift check: detect when schema.prisma describes a state
 // that the migrations do not produce (i.e. someone edited the schema without
-// running `prisma migrate dev`). `pnpm --filter @uwe/database exec` runs with
-// cwd = packages/database, so the relative ./prisma paths resolve there.
+// running `prisma migrate dev`). cwd is packages/database, so the relative
+// ./prisma paths resolve there.
 // `--exit-code`: 0 = in sync, 2 = drift detected, other = CLI/tooling error.
 //
 // This WARNS by default rather than failing, because the repository currently
@@ -60,13 +84,8 @@ if (validate.status !== 0) {
 // data-touching migration. Set UWE_STRICT_MIGRATION_DRIFT=1 to make drift fatal
 // once the schema and migrations are back in sync.
 const strictDrift = process.env.UWE_STRICT_MIGRATION_DRIFT === "1";
-const drift = spawnSync(
-  "pnpm",
+const drift = runPrisma(
   [
-    "--filter",
-    "@uwe/database",
-    "exec",
-    "prisma",
     "migrate",
     "diff",
     "--from-migrations",
@@ -75,19 +94,16 @@ const drift = spawnSync(
     "./prisma/schema.prisma",
     "--exit-code",
   ],
-  { cwd: root, encoding: "utf8", shell: false },
+  { encoding: "utf8" },
 );
 
-// pnpm normalizes prisma's exit code (2 = drift) to 1, so we cannot distinguish
-// drift from a tooling error by status alone; treat any non-zero as "not in
-// sync" and surface prisma's own output for context.
 const driftOutput = `${drift.stdout ?? ""}${drift.stderr ?? ""}`.trim();
 
 if (drift.error) {
   const message = `prisma migrate diff could not run: ${drift.error.message}`;
   if (strictDrift) fail(message);
   console.warn(`migration-check: WARN — ${message}`);
-} else if (drift.status !== 0) {
+} else if (drift.status === 2) {
   const hint =
     "schema.prisma may contain changes not captured by the migrations — run " +
     "`pnpm --filter @uwe/database exec prisma migrate dev` to create a migration.";
@@ -97,6 +113,10 @@ if (drift.error) {
   }
   console.warn(`migration-check: WARN — ${hint}`);
   if (driftOutput) console.warn(driftOutput);
+} else if (drift.status !== 0) {
+  // Not drift — the CLI itself failed. Never hide that behind a drift warning.
+  if (driftOutput) console.error(driftOutput);
+  fail(`prisma migrate diff failed (exit ${drift.status})`);
 } else {
   console.log(
     `migration-check: OK (${migrationFolders.length} migrations, schema valid, no drift)`,

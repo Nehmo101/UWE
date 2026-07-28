@@ -425,8 +425,8 @@ const RECOMMENDATION_META: Record<
   },
   location_missing_map: {
     title: "Karten für Orte hinterlegen",
-    description: "Orte und Regionen mit einer Karte im Atlas verknüpfen.",
-    pathSuffix: "/atlas",
+    description: "Orte und Regionen mit einer Karte in Terra verknüpfen.",
+    pathSuffix: "/karten",
   },
   quest_missing_status: {
     title: "Quest-Status setzen",

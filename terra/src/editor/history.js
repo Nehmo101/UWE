@@ -226,12 +226,180 @@ function redo() {
  *  Undo darueber hinweg wuerde ein inhaltlich fremdes Terrain herstellen.
  *  (Regions-Schnappschuesse traegen ihr VW mit und wuerden sich zusaetzlich
  *  selbst verweigern — der Stapel wird trotzdem geleert, weil ein halb
- *  wirksames Rueckgaengig schlimmer waere als gar keines.) */
+ *  wirksames Rueckgaengig schlimmer waere als gar keines.)
+ *
+ *  Betrifft NUR den Stapel der Karte, auf der man gerade steht. Die geparkten
+ *  Stapel anderer Karten bleiben liegen: deren Hoehenfelder haben mit dieser
+ *  Groessenaenderung nichts zu tun, und sie werden beim Zurueckkehren ohnehin
+ *  gegen ihr eigenes VW geprueft (siehe historieKarteHolen).
+ *
+ *  Liefert die Zahl der verworfenen Schritte — der Aufrufer entscheidet, ob
+ *  das eine Meldung wert ist. Bewusst kein Toast von hier aus: diese Funktion
+ *  laeuft auch mitten in einem Ladevorgang, und eine Meldung ueber eine
+ *  Historie, die der Nutzer gerade selbst ersetzt, ist keine Nachricht. */
 function verwerfeHistorie() {
+  var n = undoStack.length + redoStack.length;
   undoStack.length = 0;
   redoStack.length = 0;
   offen = null;
   schattenNeu();
+  return n;
 }
 
-export { snapshot, pushUndo, restore, undo, redo, verwerfeHistorie };
+
+/* ==========================================================================
+   H1e/I1 — Ein Stapel JE KARTE
+
+   Bis hierher wurde die Historie beim Wechsel der Karte weggeworfen. Das war
+   sicher und richtig begruendet — ein Undo, das Hoehen der einen Karte in die
+   andere schriebe, waere schlimmer als gar keines —, aber unbequem: wer sich
+   in eine Kindkarte verklickt, verliert seinen Stapel.
+
+   Die Loesung ist kein Umbau der Schnappschuesse, sondern eine Ablage. Beim
+   Wechsel wird der aktuelle Stapel unter der Kennung seiner Karte GEPARKT,
+   beim Zurueckkehren wieder hervorgeholt. Der Stapel bleibt damit immer bei
+   seinem Hoehenfeld — genau die Zusage, die das Verwerfen erzwungen hatte.
+
+   WARUM DAS TRAEGT. Die Kette der Schnappschuesse ist inkrementell (siehe
+   ganz oben): Schnappschuss k muss die Aenderung zwischen k und k+1
+   zuruecknehmen koennen. Zwischen Parken und Zurueckkehren passiert mit DIESER
+   Karte aber nichts: `wechsleZuKarte` sichert sie vorher vollstaendig
+   (karteSichern) und stellt sie beim Zurueckkommen aus demselben Eintrag
+   wieder her. Das Hoehenfeld ist danach Zelle fuer Zelle dasselbe, die Kette
+   also geschlossen. Drei Dinge sichern das ab:
+     1. `hoehenNachtragen()` VOR dem Parken — eine noch nicht verbuchte
+        Aenderung gehoert in den offenen Schnappschuss dieser Karte, nicht in
+        den der naechsten.
+     2. `offen` wandert MIT in die Ablage; ohne ihn faende die naechste
+        Aenderung nach der Rueckkehr keinen Schnappschuss zum Nachtragen.
+     3. `schattenNeu()` NACH dem Holen — `base` ist zwischenzeitlich komplett
+        ersetzt worden, der Schatten muss frisch gezogen werden.
+   Zusaetzlich traegt jeder Eintrag sein VW und wird bei Abweichung verworfen
+   statt angewandt (Guertel und Hosentraeger: die Kartengroesse einer geparkten
+   Karte kann sich nicht aendern, ohne dass sie aktiv ist — aber ein halb
+   wirksames Rueckgaengig ist der eine Fehler, den man nicht bemerken wuerde).
+
+   DER SPEICHER — die eigentliche Frage. Ein Vollschnappschuss auf einer 1024er
+   Karte ist 4,2 MB; bei Stapeltiefe 40 waeren das 168 MB JE KARTE, und ein
+   Baum hat beliebig viele. Deshalb zwei Deckel:
+     - hoechstens PARK_MAX_KARTEN geparkte Stapel (die zuletzt benutzten),
+     - hoechstens PARK_MAX_BYTES ueber alle geparkten zusammen.
+   Der Regelfall kostet fast nichts: seit H1e sind die Hoehenanteile
+   Regionsausschnitte von wenigen Kilobyte, ein voller 40er-Stapel liegt
+   typisch bei 1-2 MB. Der Deckel greift erst, wo jemand wirklich mehrfach das
+   ganze Gelaende ersetzt hat — und dort ist er richtig.
+   ========================================================================== */
+var geparkt = new Map();                 // karteId -> { undo, redo, offen, vw }
+var PARK_MAX_KARTEN = 3;
+var PARK_MAX_BYTES = 32 * 1024 * 1024;
+
+/** Ungefaehre Groesse eines Schnappschusses in Byte. Die beiden Zeichenketten
+ *  zaehlen mit einem Byte je Zeichen (JSON ist ASCII), der Hoehenanteil mit
+ *  vier Byte je Float. Genauer muss es nicht sein — es geht um eine Schranke,
+ *  nicht um eine Bilanz. */
+function schnappGroesse(s) {
+  var n = (s.el ? s.el.length : 0) + (s.mk ? s.mk.length : 0);
+  if (s.h) n += (s.h.werte ? s.h.werte.length : s.h.length) * 4;
+  return n;
+}
+
+function stapelGroesse(e) {
+  var n = 0, i;
+  for (i = 0; i < e.undo.length; i++) n += schnappGroesse(e.undo[i]);
+  for (i = 0; i < e.redo.length; i++) n += schnappGroesse(e.redo[i]);
+  return n;
+}
+
+/** Aeltestes zuerst hinauswerfen, bis beide Deckel eingehalten sind.
+ *  Map bewahrt die Einfuegereihenfolge; `historieKarteParken` loescht vor dem
+ *  Setzen, ein erneut geparkter Stapel rutscht damit ans Ende — die Ablage ist
+ *  also nach letzter Benutzung geordnet. Liefert die Kennungen der
+ *  aufgegebenen Stapel, damit der Aufrufer es sagen kann. */
+function parkAufraeumen() {
+  var raus = [], bytes = 0, e;
+  var schluessel = Array.from(geparkt.keys());
+  for (var i = 0; i < schluessel.length; i++) bytes += stapelGroesse(geparkt.get(schluessel[i]));
+  var k = 0;
+  while (k < schluessel.length && (geparkt.size > PARK_MAX_KARTEN || bytes > PARK_MAX_BYTES)) {
+    e = geparkt.get(schluessel[k]);
+    bytes -= stapelGroesse(e);
+    geparkt.delete(schluessel[k]);
+    raus.push(schluessel[k]);
+    k++;
+  }
+  return raus;
+}
+
+/**
+ * Den Stapel der Karte `id` ablegen und mit einem leeren weiterarbeiten.
+ * Aufzurufen BEVOR das Hoehenfeld der neuen Karte geladen wird.
+ * Liefert die Zahl der abgelegten Schritte.
+ */
+function historieKarteParken(id) {
+  hoehenNachtragen();                    // Punkt 1 der Begruendung oben
+  var n = undoStack.length + redoStack.length;
+  if (typeof id === "string" && id && n) {
+    geparkt.delete(id);                  // erneut geparkt = zuletzt benutzt
+    geparkt.set(id, { undo: undoStack, redo: redoStack, offen: offen, vw: VW });
+    var raus = parkAufraeumen();
+    if (raus.length) {
+      toast("Undo-Stapel von " + raus.join(", ") + " aufgegeben (Speichergrenze)");
+    }
+  } else if (typeof id === "string" && id) {
+    geparkt.delete(id);                  // nichts zu parken: alten Eintrag raeumen
+  }
+  undoStack = [];
+  redoStack = [];
+  offen = null;
+  return n;
+}
+
+/**
+ * Den Stapel der Karte `id` wieder aufnehmen. Aufzurufen NACHDEM ihr
+ * Hoehenfeld steht. Liefert die Zahl der zurueckgeholten Schritte.
+ */
+function historieKarteHolen(id) {
+  var e = (typeof id === "string" && id) ? geparkt.get(id) : null;
+  if (e) geparkt.delete(id);
+  undoStack = [];
+  redoStack = [];
+  offen = null;
+  schattenNeu();                         // Punkt 3 der Begruendung oben
+  if (!e) return 0;
+  if (e.vw !== VW) {
+    // Kann im heutigen Ablauf nicht vorkommen; wenn doch, ist Wegwerfen die
+    // einzige richtige Antwort — und der Nutzer erfaehrt, warum.
+    toast("Historie dieser Karte passt nicht mehr zur Kartengröße und wurde verworfen");
+    return 0;
+  }
+  undoStack = e.undo;
+  redoStack = e.redo;
+  offen = e.offen;
+  return undoStack.length + redoStack.length;
+}
+
+/** Die ABLAGE leeren — beim Laden einer anderen Datei. Die Kennungen des alten
+ *  Baums kommen im neuen fast sicher wieder vor ("k0" ist die Wurzel jeder
+ *  Datei); ein liegengebliebener Stapel wuerde dort wieder aufgenommen und
+ *  schriebe die Elemente einer fremden Karte zurueck.
+ *  Der AKTIVE Stapel bleibt bewusst stehen: er gehoert zu dem Stand, den der
+ *  Ladevorgang gerade ersetzt, und genau der soll sich mit Strg+Z
+ *  zurueckholen lassen — so war es vor dieser Aenderung und so bleibt es.
+ *  Liefert die Zahl der aufgegebenen Stapel. */
+function verwerfeGeparkteHistorien() {
+  var n = geparkt.size;
+  geparkt.clear();
+  return n;
+}
+
+/** Nur fuer Pruefungen: wie viele Stapel liegen in der Ablage? */
+function geparkteHistorien() { return geparkt.size; }
+
+/** Wie viele Schritte haengen am aktiven Stapel? Fuer die Rueckfrage vor einem
+ *  Groessenwechsel — dem einzigen Weg, auf dem eine Historie noch verloren
+ *  geht (editor/io.js). */
+function schritteInHistorie() { return undoStack.length + redoStack.length; }
+
+export { snapshot, pushUndo, restore, undo, redo, verwerfeHistorie,
+  historieKarteParken, historieKarteHolen, verwerfeGeparkteHistorien,
+  geparkteHistorien, schritteInHistorie };

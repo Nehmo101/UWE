@@ -5,7 +5,7 @@ import { requireOwner } from "@/src/lib/auth";
 import { buildGoogleOAuthSettingsUpdate } from "@uwe/database/login-methods-settings";
 import {
   createAuthService,
-  createPrismaClient,
+  prisma,
   getAppRepository,
   mapServerBackgroundToClient,
   resolveThemePreferencesForScope,
@@ -304,11 +304,8 @@ export async function setWorldGuestModeAction(formData: FormData) {
   const enabled = parseBoolean(formData.get("guestModeEnabled"));
   const tab = String(formData.get("tab") || "worlds");
 
-  const db = createPrismaClient();
-  const auth = createAuthService(db);
-
+  const auth = createAuthService(prisma);
   await auth.setWorldGuestMode(worldId, enabled);
-  await db.$disconnect();
 
   revalidatePath("/settings");
   redirect(`/settings?tab=${tab}&saved=1`);

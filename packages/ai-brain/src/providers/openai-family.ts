@@ -35,6 +35,11 @@ export class OllamaProvider extends BaseHttpProvider {
           { role: "user", content: options.prompt },
         ],
         stream: false,
+        /* Ollama's grammar-constrained decoding. `format: "json"` makes the
+           runtime itself unable to emit a non-JSON token, which is a stronger
+           guarantee than any prompt — this is the one backend where the JSON
+           requirement is genuinely enforced rather than requested. */
+        ...(options.responseFormat === "json" ? { format: "json" } : {}),
         options: {
           temperature: options.temperature ?? 0.7,
           num_predict: options.maxTokens ?? 2048,

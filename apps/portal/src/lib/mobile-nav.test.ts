@@ -72,12 +72,12 @@ describe("portal mobile nav (login-first contract)", () => {
     assert.ok(quests.some((item) => item.label === "Quests" && item.active));
   });
 
-  it("marks Mehr active on drawer-only routes (sessions, graph, atlas)", () => {
+  it("marks Mehr active on drawer-only routes (sessions, graph, karten)", () => {
     for (const path of [
       "/auth/worlds/terra/sessions",
       "/auth/worlds/terra/sessions/abc123",
       "/auth/worlds/terra/graph",
-      "/auth/worlds/terra/atlas3d",
+      "/auth/worlds/terra/karten",
       "/auth/worlds/terra/assets",
     ]) {
       const nav = resolvePortalAuthBottomNav(path, "terra");

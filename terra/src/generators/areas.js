@@ -1,8 +1,17 @@
 // Flaechen-Werkzeug: Wald, Feld, Wiese, Viertel samt innerem Wegenetz.
 import { clamp, lerp, sstep, DEG, hashi, fractal, rngOf, rr, ri, wpick } from '../core/rng.js';
-import { S, BIOME, KARTE } from '../core/store.js';
+import { S, BIOME, KARTE, VW, MAP, WATER } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
-import { heightAt } from '../world/terrain.js';
+import { heightAt, biomFeld, biomGewicht } from '../world/terrain.js';
+// I2: harte Biomwahl je Kandidat. biomfeld.js haengt nur an core/ — zyklusfrei.
+import { biomHartAn } from '../world/biomfeld.js';
+// I1: Kartenzeichen. signaturen.js haengt an three, core/ und kartenbaum.js —
+// es importiert nichts aus generators/, der Weg ist also zyklusfrei.
+import { zeichenFuer, signaturPlatzierung, streuAbstand, streuRaster } from '../render/signaturen.js';
+// I1: die geteilten Helfer der Maszstabsverzweigung. Sie lagen bis Runde J
+// hier — jetzt teilen sich fuenf Generatoren eine Datei, statt dass jeder
+// seine eigene Schwelle mitbraechte.
+import { alsKoerper, alsZeichen, punktZeichen } from './zeichen.js';
 import { newOcc, occAdd, tryPlace, KULTUR, emitFensterlicht } from './objects.js';
 import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
 /* Die drei Kompositstrukturen des Objektkatalogs (Abschnitt "Kompositstrukturen
@@ -12,8 +21,10 @@ import { bandGeoAusLinie, bandMeshAusGeos } from './paths.js';
    Deshalb wohnen die reinen Polygonhelfer jetzt dort und werden hier nur noch
    durchgereicht; ihre bisherigen Importeure (selection.js, core/dirty.js)
    bleiben davon unberuehrt. */
-import { polyBBox, inPoly, polyArea, polyCenter,
-  genBurg, genWerft, genKloster } from './strukturen.js';
+import { polyBBox, inPoly, polyArea, polyCenter, genBurg, genWerft, genKloster } from './strukturen.js';
+// Runde H: der Binnensee. see.js zieht core/, world/ und generators/{objects,
+// zeichen,wegsuche} — nie areas.js; der Weg ist zyklusfrei.
+import { genSee } from './see.js';
 
 /* Ortsstabiler Zufallsstrom: bindet alle Draws EINER Platzierungsentscheidung
    an einen stabilen Schluessel statt an die Zugriffsreihenfolge — sonst
@@ -94,8 +105,68 @@ function randNaehe(pts, x, z) {
 var UW_STANDARD = [["busch", 5], ["farn", 4], ["moos", 3], ["stumpf", 1],
   ["stammliegend", 1], ["fels", 1]];
 
+/* ==========================================================================
+   I1 — Flaechenzeichen: eine Flaeche als Kartensignatur statt als Bewuchs
+
+   Gemeinsamer Weg fuer Wald, Acker, Sumpf und die uebrigen Flaechen. Was sich
+   je Flaechenart unterscheidet, ist genau eine Zeile — die Sache, die
+   `zeichenFuer` nachschlaegt. Deshalb ein Helfer und keine vier Zweige.
+
+   Gekachelt statt einmal in die Mitte gesetzt: eine einzelne Waldmarke auf
+   einem 200 km breiten Wald saehe aus wie ein Fehler. Das Raster haengt am
+   SCHWERPUNKT der Flaeche (ankerX/ankerZ), nicht am Weltnullpunkt — beim
+   Verschieben sollen die Marken mitwandern, statt durch die Flaeche
+   hindurchzuwandern. Baeume gehoeren dem Boden, ein Kartenzeichen gehoert der
+   Sache.
+   ========================================================================== */
+/* `kante` ist die Kartenkante in WELTEINHEITEN (KARTE.map), nicht in Metern.
+   Der Unterschied kostete beim ersten Versuch die halbe Wirkung: auf einer
+   Kontinentkarte sind 256 Zellen 512 km, und ein Zeichen von 0,6 % davon
+   waere 3 km — auf einer Karte, die insgesamt 256 Welteinheiten misst. Die
+   Zeichen lagen dann als Riesenflecken uebereinander, und in kleinen Polygonen
+   fand das Streuraster gar keinen Platz mehr. Der Maszstab entscheidet, OB ein
+   Zeichen erscheint; wie gross es ist, entscheidet die Karte. */
+/* J: der vierte Parameter `biom` — fuer BIOMflaechen. Ihre Marke soll in der
+   Palette IHRES Bioms liegen (eine Karstschraffur im Karstgrau, nicht im
+   Wiesengruen), waehrend Wald/Acker/Weide weiter das Kartenbiom tragen.
+   Ohne Angabe faellt er auf S.biom zurueck — alle Bestandsaufrufer bleiben
+   unveraendert. */
+function flaechenZeichen(el, sache, art, biom) {
+  var pts = el.points;
+  var m = S.einheitMeter;
+  var wahl = zeichenFuer(sache, el.kennzahl, m, { art: art });
+  if (!wahl || !wahl.length) return;
+  var bb = polyBBox(pts), mitte = polyCenter(pts);
+  /* `biom` gehoert hier hinein und fehlte. Ohne es liegt JEDE Flaechensignatur
+     in der Wiesenpalette — eine Waldmarke im Herbstbiom war grasgruen, eine im
+     Nadelwald ebenso. Genau das sollte der Tint verhindern: die Atlasfelder
+     sind Graustufen, damit dasselbe Zeichen in jedem Biom dessen Farbe
+     annimmt, ohne dass es ein zweites Feld braucht. */
+  var platz = signaturPlatzierung(wahl[0], { kante: KARTE.map, massstab: m,
+    biom: biom === undefined ? S.biom : biom });
+  if (!platz) return;
+  var sp = streuAbstand(platz.marke);
+  var punkte = streuRaster({
+    x0: bb.x0, z0: bb.z0, x1: bb.x1, z1: bb.z1, sp: sp,
+    seed: el.seed + 0x51601, ankerX: mitte.x, ankerZ: mitte.z,
+    imInneren: function (x, z) { return inPoly(pts, x, z); }
+  });
+  for (var i = 0; i < punkte.length; i++) {
+    var q = punkte[i];
+    var y = Math.max(heightAt(q.x, q.z), WATER) + platz.schwebe;
+    emit(el, wahl[0], q.x, y, q.z, q.dreh, platz.sx * q.skala, platz.sy,
+      platz.sz * q.skala, platz.tint);
+  }
+}
+
 function genWald(el) {
   var p = el.params, pts = el.points;
+  var mSig = S.einheitMeter;
+  // I1: ueber der Uebergabe wird der Wald zum Zeichen. Im Ueberblendbereich
+  // laeuft beides — die Signatur blendet ueber `sy` ein, die Baeume bleiben
+  // bis zum oberen Rand stehen.
+  if (alsZeichen(mSig)) flaechenZeichen(el, "wald", p.mischung > 0.6 ? "nadel" : null);
+  if (!alsKoerper(mSig)) return;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var klump = p.klumpen === undefined ? 0.55 : p.klumpen;
   var sp = biomAbstand(V, safeSpacing(pts, 6.5 / p.dichte * (1 - 0.28 * klump), deckel(14000)));
@@ -109,10 +180,21 @@ function genWald(el) {
       var x = (cx + 0.5 + (r1 - 0.5) * 0.85) * sp;
       var z = (cz + 0.5 + (r2 - 0.5) * 0.85) * sp;
       if (!inPoly(pts, x, z)) continue;
+      /* I2 — das Biom AN DIESER STELLE, nicht das der Karte. Harte Wahl ohne
+         Mischung: ein halb verschneiter Bluetenbaum ergibt kein Bild, und was
+         zwischen zwei Baumarten liegt, gibt es nicht. Die Abfrage ist eine
+         reine Funktion der Position (das Gitter und der Seed sind fest), der
+         Determinismus bleibt also unangetastet.
+
+         Der ABSTAND `sp` bleibt bewusst beim Elementbiom: er bestimmt das
+         Raster, ueber das diese Schleife laeuft. Liesse man ihn je Kandidat
+         springen, waere das Raster kein Raster mehr. */
+      var VP = (BIOME[biomHartAn(biomFeld, biomGewicht, VW, MAP, x, z,
+        S.biom, S.worldSeed)] || BIOME.wiese).veg;
       // Bäume wachsen in Nestern mit Lichtungen dazwischen, nicht im Raster
       if (fractal(x * 0.04, z * 0.04, el.seed + 21) < schwelle) continue;
       // Biom-Gesamtdichte: zusaetzliche ortsstabile Ablehnung (Schluessel +57)
-      if (V.dichte < 1 && hashi(cx, cz, el.seed + 57) >= V.dichte) continue;
+      if (VP.dichte < 1 && hashi(cx, cz, el.seed + 57) >= VP.dichte) continue;
       var rng = rngOf((hashi(cx, cz, el.seed + 7) * 4294967296) | 0);
       var nadel = r3 < p.mischung;
       var artW = hashi(cx, cz, el.seed + 33);
@@ -121,11 +203,11 @@ function genWald(el) {
           : (artW < 0.94 ? "sumpfbaum" : "bluetenbaum")));
       // Biom-Artgewichte: Behalte-Wahrscheinlichkeit je Art (Schluessel +58);
       // Abgelehntes ersetzt ortsstabil die biomtypische Ersatzart oder faellt aus.
-      if (V.arten) {
-        var behalte = V.arten[kind];
+      if (VP.arten) {
+        var behalte = VP.arten[kind];
         if (behalte !== undefined && hashi(cx, cz, el.seed + 58) >= behalte) {
-          if (!V.ersatz) continue;
-          kind = V.ersatz;
+          if (!VP.ersatz) continue;
+          kind = VP.ersatz;
         }
       }
       var h = tryPlace(occ, x, z, POOLS[kind].radius * 0.8, null);
@@ -137,13 +219,13 @@ function genWald(el) {
       if (ausW < 0.035) tint = [1.28, 0.92, 0.55];        // goldener Baum
       else if (ausW < 0.06) tint = [1.3, 0.78, 0.62];     // roetlicher Baum
       emit(el, kind, x, h - 0.1, z, rng() * 6.28, sc, sc * rr(rng, 0.85, 1.25), sc, tint);
-      if (rng() < p.unterholz * V.unterwuchs * (0.6 + randNaehe(pts, x, z) * 0.8)) {
+      if (rng() < p.unterholz * VP.unterwuchs * (0.6 + randNaehe(pts, x, z) * 0.8)) {
         var bx = x + rr(rng, -sp * 0.5, sp * 0.5), bz = z + rr(rng, -sp * 0.5, sp * 0.5);
         if (!inPoly(pts, bx, bz)) continue;
         var bh = tryPlace(occ, bx, bz, 0.7, null);
         if (bh === null) continue;
         var bs = rr(rng, 0.7, 1.35);
-        var uw = wpick(rng, V.uwTabelle || UW_STANDARD);
+        var uw = wpick(rng, VP.uwTabelle || UW_STANDARD);
         emit(el, uw, bx, bh + (uw === "moos" ? 0.04 : 0), bz, rng() * 6.28,
           bs, bs, bs, tintOf(rng, 0.08));
       }
@@ -156,10 +238,27 @@ var LEITFARBEN = [[1.25, 0.72, 0.85], [1.3, 1.15, 0.55], [1.1, 1.1, 1.15], [0.8,
 
 var FRUCHT = {
   weizen: [1.05, 1.0, 0.82], kohl: [0.86, 0.99, 0.83],
-  lavendel: [0.95, 0.92, 1.08], brache: [1.0, 0.96, 0.9]
+  lavendel: [0.95, 0.92, 1.08], brache: [1.0, 0.96, 0.9],
+  // J: Rebzeilen — sattes Blattgruen auf hellem Boden. Das Schema in
+  // editor/tools.js kennt die Art noch nicht (die eine Zeile dort steht im
+  // Bericht); eine geladene Karte mit frucht:"wein" traegt sie aber schon.
+  wein: [0.84, 1.02, 0.78]
 };
+/* J: die Uebersetzung Fruchtart -> Kartenzeichen. Bisher wurde `p.frucht`
+   WOERTLICH als `art` durchgereicht — "weizen" ist aber kein Zeichenname,
+   nachArt fiel also bei JEDER Frucht auf die Vorgabe sig_acker zurueck, und
+   sig_weinberg war tot. Nur der Wein bekommt ein eigenes Zeichen: Weizen,
+   Kohl und Brache SIND Acker, und Lavendel zum Obstgarten umzudeuten waere
+   eine falsche Aussage (eine Pflanzung aus Baeumen ist etwas anderes als ein
+   Bluetenfeld) — er bleibt ehrlich beim Ackerkaro. Eintraege ohne Zuordnung
+   liefern undefined, und nachArt waehlt wie bisher die Vorgabe. */
+var FRUCHT_ART = { wein: "sig_weinberg" };
 function genFeld(el) {
   var p = el.params, pts = el.points;
+  // I1: siehe genWald. `frucht` waehlt das Zeichen — Weinberg und Obstgarten
+  // haben eigene, Weizen und Kohl teilen sich die Ackersignatur.
+  if (alsZeichen(S.einheitMeter)) flaechenZeichen(el, "acker", FRUCHT_ART[p.frucht]);
+  if (!alsKoerper(S.einheitMeter)) return;
   var bb = polyBBox(pts), ctr = polyCenter(pts);
   var ext = Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 0.75 + 4;
   var a = p.drehung * DEG, dx = Math.cos(a), dz = Math.sin(a);
@@ -194,6 +293,9 @@ function genFeld(el) {
 
 function genWiese(el) {
   var p = el.params, pts = el.points;
+  // I1: eine Wiese wird auf Kartenmaszstab zur Weidesignatur.
+  if (alsZeichen(S.einheitMeter)) flaechenZeichen(el, "acker", "weide");
+  if (!alsKoerper(S.einheitMeter)) return;
   var V = (BIOME[S.biom] || BIOME.wiese).veg;
   var sp = biomAbstand(V, safeSpacing(pts, 2.6 / p.dichte, deckel(20000)));
   // Blumen-Leitfarben: das Biom darf die modulweite Tabelle ersetzen
@@ -208,18 +310,23 @@ function genWiese(el) {
       var r1 = hashi(cx, cz, el.seed), r2 = hashi(cx, cz, el.seed + 1);
       var x = (cx + 0.5 + (r1 - 0.5) * 0.95) * sp, z = (cz + 0.5 + (r2 - 0.5) * 0.95) * sp;
       if (!inPoly(pts, x, z)) continue;
+      // I2: Biom je Kandidat, Begruendung wie in genWald. Die Leitfarben der
+      // Blumennester bleiben beim Elementbiom (LF oben) — ein Nest ist groesser
+      // als eine Zelle, seine Farbe darf nicht mitten im Nest umspringen.
+      var VP = (BIOME[biomHartAn(biomFeld, biomGewicht, VW, MAP, x, z,
+        S.biom, S.worldSeed)] || BIOME.wiese).veg;
       var rng = rngOf((hashi(cx, cz, el.seed + 3) * 4294967296) | 0);
       // Nester und Luecken statt Gleichverteilung
       if (fractal(x * 0.06, z * 0.06, el.seed + 77) < 0.34) continue;
       // Biom-Gesamtdichte (Schluessel +57, wie genWald): im wiese-Pfad
       // kurzgeschlossen, sonst ortsstabile Zusatz-Ablehnung.
-      if (V.dichte < 1 && hashi(cx, cz, el.seed + 57) >= V.dichte) continue;
+      if (VP.dichte < 1 && hashi(cx, cz, el.seed + 57) >= VP.dichte) continue;
       var h = tryPlace(occ, x, z, 0.25, null);
       if (h === null) continue;
       // Blumen wachsen in Nestern mit einer Leitfarbe je Nest
       var nestX = Math.floor(x / 9), nestZ = Math.floor(z / 9);
       var nest = hashi(nestX, nestZ, el.seed + 91);
-      var istBlume = rng() < p.blumen * V.blumen * sstep(0.45, 0.75, nest);
+      var istBlume = rng() < p.blumen * VP.blumen * sstep(0.45, 0.75, nest);
       var kind = istBlume ? "blume" : "gras";
       var sc = rr(rng, 0.75, 1.35);
       var tint = tintOf(rng, 0.1);
@@ -301,10 +408,22 @@ function districtStreets(el) {
 
 function genViertel(el) {
   var p = el.params, pts = el.points;
+  /* I1 — ein Viertel wird auf Kartenmaszstab zur ORTSSIGNATUR, und zwar zu
+     genau EINER: 30 Haeuser ergeben eine Dorfsignatur, nicht 30 Weiler-
+     signaturen. Welche es wird, entscheidet die Kennzahl (Zahl der
+     Baukoerper), die weiter unten auf Ortsmaszstab ermittelt und mit dem
+     Element gespeichert wird — nicht hier auf Regionsmaszstab geschaetzt.
+     Sonst hinge die Signatur davon ab, mit welchem Maszstab man die Karte
+     zuletzt geoeffnet hat. */
+  if (alsZeichen(S.einheitMeter)) {
+    var om = polyCenter(pts);
+    punktZeichen(el, "ort", el.kennzahl, om.x, om.z, null);
+  }
+  if (!alsKoerper(S.einheitMeter)) return;
   if (!el.streets) el.streets = districtStreets(el);
   var streets = el.streets;
   var occ = newOcc(4.5);
-  var i, k;
+  var i, k, baukoerper = 0;
   // Gassen als durchgehendes Band bauen und als Sperrflaeche vormerken.
   // Alle Zuege wandern in EIN gemergtes Mesh (1 Draw Call statt 20-40);
   // gesammelt wird in Streets-Index-Reihenfolge, damit die gemergte
@@ -368,11 +487,21 @@ function genViertel(el) {
         var sc = rr(rs, 0.88, 1.14);
         var hyaw = Math.atan2(dx, dz) + rr(rs, -0.05, 0.05);
         emit(el, kind, x, hh - 0.15, z, hyaw, sc, sc * rr(rs, 0.9, 1.25), sc, tintOf(rs));
+        baukoerper++;
         rauchAus(el, kind, x, hh, z, sc);
         emitFensterlicht(el, rs, kind, x, hh - 0.15, z, hyaw, sc);
       }
     }
   }
+  /* I1 — die Kennzahl entsteht HIER, auf Ortsmaszstab, wo die Baukoerper
+     wirklich gesetzt werden. Sie wandert mit dem Element in die Datei und
+     entscheidet spaeter, welche Ortssignatur die Siedlung bekommt.
+
+     Sie auf Regionsmaszstab zu schaetzen waere der naheliegende Fehler: dann
+     haenge die Signatur davon ab, mit welchem Maszstab man die Karte zuletzt
+     geoeffnet hat — genau die Sorte versteckter Zustand, die rebuildAll in
+     Runde I5 einen Tag gekostet hat. */
+  el.kennzahl = baukoerper;
 }
 
 /** Uferzone eines Dorfviertels: Stege und Boote, wo das Polygon ans Wasser grenzt.
@@ -405,6 +534,56 @@ function dorfUfer(el, pts) {
   }
 }
 
+/* ==========================================================================
+   J — Flaechenzeichen der Biomflaechen
+
+   Eine Biomflaeche erzeugt keine Koerper (ihre ganze Wirkung ist die
+   Biommaske, siehe core/dirty.js) und fiel deshalb auf Kartenmassstab ganz
+   aus dem Bild: die Flaeche faerbt zwar das Gelaende um, aber eine Karte
+   sagt ihre Flaechenarten mit ZEICHEN, und die fehlten. Dabei weiss die
+   Biomflaeche als einziges Element ihr Biom woertlich (params.biom) — die
+   Zuordnung ist eine Tabelle, keine Ableitung.
+
+   Eingetragen ist nur, was der Katalog als Flaechenzeichen kennt und was
+   sich ehrlich zuordnen laesst. Biome ohne Eintrag (Wiese, Hochland, die
+   Waldbiome, ...) bekommen BEWUSST keins: ihre Aussage traegt der
+   Flaechenton der Biompalette (terrainColor mischt sie ohnehin), und ein
+   Waldzeichen auf einer Regenwald-BIOMflaeche laege doppelt unter den
+   Zeichen der tatsaechlichen Waldelemente darin.
+
+   `punkt: true` (nur der Vulkan): ein Vulkan ist auf einer Karte ein Berg,
+   kein Muster — EIN Zeichen am Schwerpunkt statt einer Kachelstreuung. Das
+   ist zugleich der im Signaturenkatalog notierte Ausloeser fuer sig_vulkan
+   (`hoehe.grat` hoch, Senke in der Mitte — das Vulkan-Biom). */
+var BIOM_FLAECHENZEICHEN = {
+  sumpf:      { sache: "nass",    art: "sig_sumpf" },
+  moor:       { sache: "nass",    art: "sig_moor" },
+  mangrove:   { sache: "nass",    art: "sig_sumpf" },
+  wueste:     { sache: "trocken", art: "sig_wueste" },
+  salzwueste: { sache: "trocken", art: "sig_salzpfanne" },
+  tundra:     { sache: "kalt",    art: "sig_tundra" },
+  schnee:     { sache: "kalt",    art: "sig_eis" },
+  eis:        { sache: "kalt",    art: "sig_eis" },
+  karst:      { sache: "karst",   art: "sig_karst" },
+  kreide:     { sache: "karst",   art: "sig_karst" },
+  vulkan:     { sache: "gebirge", art: "sig_vulkan", punkt: true }
+};
+
+function genBiomflaeche(el) {
+  if (!alsZeichen(S.einheitMeter)) return;
+  var biom = el.params && el.params.biom;
+  var Z = BIOM_FLAECHENZEICHEN[biom];
+  if (!Z) return;                        // Flaechenton traegt das Biom
+  if (Z.punkt) {
+    var m = polyCenter(el.points);
+    punktZeichen(el, Z.sache, null, m.x, m.z, { art: Z.art, biom: biom });
+    return;
+  }
+  // Tint aus der Palette des FLAECHENbioms, nicht des Kartenbioms — die
+  // Salzpfanne liegt im Salzweiss, auch wenn die Karte eine Wiese ist.
+  flaechenZeichen(el, Z.sache, Z.art, biom);
+}
+
 function genFlaeche(el) {
   if (el.points.length < 3) return;
   if (el.variant === "wald") genWald(el);
@@ -418,6 +597,14 @@ function genFlaeche(el) {
   else if (el.variant === "burg") genBurg(el);
   else if (el.variant === "werft") genWerft(el);
   else if (el.variant === "kloster") genKloster(el);
+  // Der See haengt am ENDE der Kette, gleiche Begruendung wie bei pfad:bruch:
+  // eine aeltere Fassung faellt durch alle else-if und erzeugt nichts, statt
+  // abzustuerzen — das Speicherformat bleibt abwaertskompatibel.
+  else if (el.variant === "see") genSee(el);
+  // J: die Biomflaeche stand bisher ABSICHTLICH in keinem Zweig (ihre Wirkung
+  // ist die Maske). Jetzt traegt sie auf Kartenmassstab ihr Flaechenzeichen —
+  // am Ende der Kette aus demselben Abwaertskompatibilitaets-Grund.
+  else if (el.variant === "biom") genBiomflaeche(el);
 }
 
 
@@ -425,4 +612,7 @@ function genFlaeche(el) {
    jetzt aus strukturen.js kommen: selection.js und core/dirty.js importieren
    `inPoly` seit jeher von hier, und ein Umhaengen dort waere reiner Laerm. */
 export { polyBBox, inPoly, polyArea, polyCenter, safeSpacing, genWald, genFeld,
-  genWiese, districtStreets, genViertel, genFlaeche };
+  genWiese, districtStreets, genViertel, genFlaeche,
+  // J: exportiert fuer die Pruefung (20-kartenbild-voll) — die Tabelle ist
+  // Daten, und tote Eintraege sollen dort auffallen, nicht im Bild.
+  BIOM_FLAECHENZEICHEN, genBiomflaeche, FRUCHT_ART };

@@ -39,8 +39,7 @@ async function logLabelActivity(
   targetHref: string,
 ) {
   try {
-    const { createPrismaClient } = await import("@uwe/database/server");
-    const db = createPrismaClient();
+    const { prisma: db } = await import("@uwe/database/server");
     await db.activityLog.create({
       data: {
         worldId,

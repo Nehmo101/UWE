@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   advanceInGameDate,
-  createPrismaClient,
+  prisma,
   createWorldCalendarService,
   getAppRepository,
   parseInGameDate,
@@ -73,34 +73,29 @@ export async function updateWorldCalendarAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const db = createPrismaClient();
-  try {
-    const repo = getAppRepository();
-    const world = await repo.getWorldBySlug(worldSlug);
-    if (!world) {
-      throw new Error("Welt nicht gefunden.");
-    }
-
-    const calendars = createWorldCalendarService(db);
-    const holidays = parseHolidayRows(formData);
-
-    await calendars.upsertForWorld({
-      worldId: world.id,
-      name,
-      epochLabel,
-      daysPerWeek: Math.floor(daysPerWeek),
-      months: parseMonthRows(formData),
-      dayNames: parseDayNameRows(formData),
-      currentDate: {
-        year: Math.floor(year),
-        month: Math.floor(month),
-        day: Math.floor(day),
-      },
-      settings: serializeWorldCalendarSettings({ holidays }),
-    });
-  } finally {
-    await db.$disconnect();
+  const repo = getAppRepository();
+  const world = await repo.getWorldBySlug(worldSlug);
+  if (!world) {
+    throw new Error("Welt nicht gefunden.");
   }
+
+  const calendars = createWorldCalendarService(prisma);
+  const holidays = parseHolidayRows(formData);
+
+  await calendars.upsertForWorld({
+    worldId: world.id,
+    name,
+    epochLabel,
+    daysPerWeek: Math.floor(daysPerWeek),
+    months: parseMonthRows(formData),
+    dayNames: parseDayNameRows(formData),
+    currentDate: {
+      year: Math.floor(year),
+      month: Math.floor(month),
+      day: Math.floor(day),
+    },
+    settings: serializeWorldCalendarSettings({ holidays }),
+  });
 
   revalidatePath(`/worlds/${worldSlug}/calendar`);
   redirect(`/worlds/${worldSlug}/calendar?saved=1`);
@@ -118,31 +113,26 @@ export async function advanceWorldCalendarAction(formData: FormData) {
 
   await requireStudioWorldEdit(worldSlug);
 
-  const db = createPrismaClient();
-  try {
-    const repo = getAppRepository();
-    const world = await repo.getWorldBySlug(worldSlug);
-    if (!world) {
-      throw new Error("Welt nicht gefunden.");
-    }
-
-    const calendars = createWorldCalendarService(db);
-    let calendar = await calendars.getByWorldId(world.id);
-    if (!calendar) {
-      calendar = await calendars.upsertForWorld({ worldId: world.id });
-    }
-
-    const months = parseWorldCalendarMonths(calendar.months);
-    const current = parseInGameDate(calendar.currentDate);
-    const next = advanceInGameDate(current, Math.floor(advanceDays), months);
-
-    await calendars.upsertForWorld({
-      worldId: world.id,
-      currentDate: next,
-    });
-  } finally {
-    await db.$disconnect();
+  const repo = getAppRepository();
+  const world = await repo.getWorldBySlug(worldSlug);
+  if (!world) {
+    throw new Error("Welt nicht gefunden.");
   }
+
+  const calendars = createWorldCalendarService(prisma);
+  let calendar = await calendars.getByWorldId(world.id);
+  if (!calendar) {
+    calendar = await calendars.upsertForWorld({ worldId: world.id });
+  }
+
+  const months = parseWorldCalendarMonths(calendar.months);
+  const current = parseInGameDate(calendar.currentDate);
+  const next = advanceInGameDate(current, Math.floor(advanceDays), months);
+
+  await calendars.upsertForWorld({
+    worldId: world.id,
+    currentDate: next,
+  });
 
   revalidatePath(`/worlds/${worldSlug}/calendar`);
   revalidatePath(`/worlds/${worldSlug}/chronicle`);

@@ -113,6 +113,16 @@ export async function timedHealthCheck(
   }
 }
 
+/**
+ * Body for every OpenAI-shaped chat endpoint (OpenAI, OpenRouter, and the
+ * `openai_compatible` local servers — LM Studio, llama.cpp, vLLM, Ollama's
+ * `/v1`).
+ *
+ * `response_format: {type:"json_object"}` is the protocol-level JSON grammar.
+ * Servers that do not implement it ignore the field (it is additive JSON), so
+ * this is safe to send unconditionally when JSON was asked for — the router's
+ * repair attempt is what covers those.
+ */
 export function buildChatCompletionBody(options: GenerateTextOptions) {
   return {
     model: options.model,
@@ -125,6 +135,9 @@ export function buildChatCompletionBody(options: GenerateTextOptions) {
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? 2048,
     stream: false,
+    ...(options.responseFormat === "json"
+      ? { response_format: { type: "json_object" as const } }
+      : {}),
   };
 }
 

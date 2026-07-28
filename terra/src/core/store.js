@@ -41,6 +41,13 @@ function instanzBudget(map) {
   return Math.min(MAX_INST_DECKEL, Math.round(24000 * (map * map) / (256 * 256)));
 }
 export let MAX_INST_PER_EL = instanzBudget(KARTE.map);   // Sicherheitsnetz je Element
+/* I1 — eigenes Budget fuer Kartenzeichen, und zwar aus einem einfachen Grund:
+   ein Wald kostet 4000 Instanzen, seine Waldsignatur kostet eine. Liefen beide
+   gegen denselben Deckel, wuerde im Uebergangsbereich (beide Darstellungen
+   ueberblenden) das Kartenzeichen von den Baeumen verdraengt — ausgerechnet
+   dort, wo es sichtbar werden soll. 400 traegt ein gekacheltes Waldpolygon
+   bequem und liegt zwei Groeszenordnungen unter dem Koerperbudget. */
+export const MAX_KARTE_PER_EL = 400;
 
 /**
  * Setzt die Kartengroesse (256/512/1024). Aendert AUSSCHLIESSLICH die
@@ -66,6 +73,35 @@ export const S = {
   elementSeedCounter: 0x1234,
   snap: false,
   biom: "wiese",
+  // J3: Sprachfamilie der Karte fuer den Namensgenerator. "auto" = aus dem
+  // Biom/Baustil abgeleitet; ein fester Wert praegt die ganze Karte.
+  sprachfamilie: "auto",
+  /* I2: Klimaachse der Karte. Terra hat keinen Breitengrad — die Biom-
+     Ableitung braucht aber eine Richtung, in die es kaelter wird. Statt einen
+     zu erfinden, wird er zur einstellbaren Eigenschaft: `richtung` in Grad,
+     `staerke` als Gefaelle, `grund` als Grundtemperatur (0 = polar, 1 =
+     tropisch), `hoeheKuehl` als Abkuehlung je Hoeheneinheit. Felder wie
+     KLIMA_STANDARD in world/biomfeld.js. */
+  klima: { richtung: 0, staerke: 0.5, grund: 0.5, hoeheKuehl: 0.012 },
+  /* I1 — Ebenen-Hierarchie. `baum` haelt ALLE Karten der Datei, `aktiveKarte`
+     nennt die, die gerade in S und im Hoehenfeld steht.
+
+     Wichtig zum Verstaendnis: der Eintrag der aktiven Karte im Baum ist
+     VERALTET, solange man sie bearbeitet — der Wahrheitswert steht in S und
+     in `base`. Erst karteSichern() (editor/io.js) schreibt ihn zurueck. Diese
+     Trennung ist Absicht: den Baum bei jeder Aenderung mitzupflegen hiesse,
+     zwei Fassungen derselben Karte zu fuehren, und die laufen auseinander.
+
+     Vor dem ersten Laden ist `baum` null — dann verhaelt sich Terra wie
+     bisher, mit genau einer Karte. */
+  baum: null,
+  aktiveKarte: null,
+  /* Maszstab der aktiven Karte in Weltmetern je Gitterzelle. Kein Levelname:
+     eine Karte mit 8 m/Zelle soll nicht in eine Schublade gezwungen werden
+     (siehe docs/engineering/terra-signaturenkatalog.md). 1 ist der Bestand —
+     eine Welteinheit ist ein Meter, und damit sieht jede bisherige Karte aus
+     wie bisher. */
+  einheitMeter: 1,
   /* D1 — Marker sind BEWUSST kein Elementtyp. Ein Element ist Weltgeometrie
      (Punkte + Parameter + Seed -> Instanzen, Terrainwirkung, Korridore); ein
      Marker ist eine Notiz an einer Koordinate und erzeugt nichts davon. Als
@@ -951,6 +987,7 @@ export function mkElement(kind, variant, points, params, seed) {
     schatten: [],           // abgeleitete Kontaktschatten (nicht gespeichert)
     rauch: [],              // Schornsteinpositionen für den Rauch
     total: 0,
+    karteTotal: 0,      // I1: eigener Zaehler fuer Kartenzeichen
     group: null,            // eigene Meshes (Ranken, Flusswasser)
     streets: null           // Viertel: erzeugtes Wegenetz
   };
@@ -966,6 +1003,7 @@ export function clearElement(el) {
   el.schatten.length = 0;
   el.rauch.length = 0;
   el.total = 0;
+  el.karteTotal = 0;
   if (el.group) {
     for (var i = el.group.children.length - 1; i >= 0; i--) {
       var c = el.group.children[i];
@@ -1000,8 +1038,16 @@ export function serializeElements() {
   var out = [];
   for (var i = 0; i < S.elements.length; i++) {
     var e = S.elements[i];
-    out.push({ id: e.id, kind: e.kind, variant: e.variant, points: e.points,
-      params: e.params, seed: e.seed });
+    var o = { id: e.id, kind: e.kind, variant: e.variant, points: e.points,
+      params: e.params, seed: e.seed };
+    /* I1 — die Kennzahl (Zahl der Baukoerper) entsteht nur auf Ortsmaszstab,
+       entscheidet aber auf Kartenmaszstab ueber die Ortssignatur. Sie MUSS
+       deshalb mitgespeichert werden: wer eine Kontinentkarte oeffnet, laesst
+       genViertel nie im Koerperzweig laufen und haette sie sonst nie.
+       Nur schreiben, wenn es sie gibt — eine Karte ohne Siedlungen ergibt
+       damit byteidentisch dieselbe Datei wie vorher. */
+    if (Number.isFinite(e.kennzahl)) o.kennzahl = e.kennzahl;
+    out.push(o);
   }
   return out;
 }
@@ -1012,6 +1058,7 @@ export function hydrate(list) {
     var d = list[i];
     var el = mkElement(d.kind, d.variant, d.points, d.params, d.seed);
     el.id = d.id || el.id;
+    if (Number.isFinite(d.kennzahl)) el.kennzahl = d.kennzahl;
     S.nextId = Math.max(S.nextId, el.id + 1);
     S.elements.push(el);
   }
@@ -1111,13 +1158,13 @@ export function speicherLesen(schluessel) {
   try {
     if (typeof localStorage === "undefined") return null;
     return localStorage.getItem(schluessel);
-  } catch { return null; }
+  } catch (_e) { return null; }
 }
 export function speicherSchreiben(schluessel, wert) {
   try {
     if (typeof localStorage === "undefined") return false;
     localStorage.setItem(schluessel, wert);
     return true;
-  } catch { return false; }     // Kontingent voll oder Speicher gesperrt
+  } catch (_e) { return false; }     // Kontingent voll oder Speicher gesperrt
 }
 

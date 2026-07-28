@@ -15,6 +15,7 @@
     "./types": "./src/types.ts",
     "./router": "./src/router/index.ts",
     "./cookbook-bridge": "./src/cookbook-bridge.ts",
+    "./proposal-validators": "./src/proposal-validators/index.ts",
     "./gateway": "./src/gateway/index.ts",
     "./theme-generator": "./src/theme-generator/index.ts",
     "./one-shot": "./src/dnd-generator/one-shot.ts"
@@ -24,7 +25,6 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/atlas": "workspace:*",
     "@uwe/connector": "workspace:*",
     "@uwe/cookbook": "workspace:*",
     "@uwe/database": "workspace:*",
