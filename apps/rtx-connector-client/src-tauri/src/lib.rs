@@ -2,12 +2,10 @@ mod command_center;
 
 use command_center::{
     backup_host, check_host_update, cloudflare_clear_token, cloudflare_set_token, cloudflare_start,
-    list_backups, restore_backup,
     cloudflare_status, cloudflare_stop, create_user, delete_user, get_host_env, get_host_logs,
-    get_host_status, list_users, open_host_target, ops_invoke, restart_host, restart_service,
-    set_host_env,
-    set_user_password, setup_host, start_host, start_service, stop_host, stop_service, update_host,
-    update_user,
+    get_host_status, list_backups, list_users, open_host_target, ops_invoke, restart_host,
+    restart_service, restore_backup, set_host_env, set_user_password, setup_host, start_host,
+    start_service, stop_host, stop_service, update_host, update_user,
 };
 
 use std::{
@@ -51,6 +49,13 @@ fn configure_hidden_process(command: &mut Command) {
     #[cfg(target_os = "windows")]
     {
         command.creation_flags(CREATE_NO_WINDOW);
+    }
+    // Auf Linux gibt es kein Konsolenfenster zu verstecken. Ohne diese Zeile
+    // ist `command` dort ein unbenutzter Parameter und die Übersetzung warnt —
+    // gezielt hier statt per allow(), damit echte Warnungen sichtbar bleiben.
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = command;
     }
 }
 #[cfg(target_os = "windows")]

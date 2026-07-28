@@ -105,9 +105,8 @@ fn run_host_command(
             stderr
         });
     }
-    extract_result_payload(&stdout).ok_or_else(|| {
-        "Antwort der Host-Steuerung konnte nicht gelesen werden.".to_string()
-    })
+    extract_result_payload(&stdout)
+        .ok_or_else(|| "Antwort der Host-Steuerung konnte nicht gelesen werden.".to_string())
 }
 
 /// Like `run_host_command`, but streams the child's stdout line-by-line: every
@@ -180,8 +179,7 @@ fn run_host_command_streaming(
         });
     }
 
-    result_payload
-        .ok_or_else(|| "Host-Steuerung lieferte kein Ergebnis zurück.".to_string())
+    result_payload.ok_or_else(|| "Host-Steuerung lieferte kein Ergebnis zurück.".to_string())
 }
 
 async fn run_host_command_async(
@@ -288,7 +286,11 @@ fn build_user_admin_command(action: &str, extra_args: &[&str]) -> Result<Command
     Ok(command)
 }
 
-fn run_user_admin(action: &str, extra_args: &[&str], stdin_json: Option<String>) -> Result<Value, String> {
+fn run_user_admin(
+    action: &str,
+    extra_args: &[&str],
+    stdin_json: Option<String>,
+) -> Result<Value, String> {
     let mut command = build_user_admin_command(action, extra_args)?;
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     if stdin_json.is_some() {
@@ -307,9 +309,9 @@ fn run_user_admin(action: &str, extra_args: &[&str], stdin_json: Option<String>)
         }
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|error| format!("Benutzerverwaltung konnte nicht abgeschlossen werden: {error}"))?;
+    let output = child.wait_with_output().map_err(|error| {
+        format!("Benutzerverwaltung konnte nicht abgeschlossen werden: {error}")
+    })?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -418,9 +420,9 @@ fn run_cloudflare(action: &str, stdin_json: Option<String>) -> Result<Value, Str
         }
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|error| format!("Cloudflare-Steuerung konnte nicht abgeschlossen werden: {error}"))?;
+    let output = child.wait_with_output().map_err(|error| {
+        format!("Cloudflare-Steuerung konnte nicht abgeschlossen werden: {error}")
+    })?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -440,7 +442,10 @@ fn run_cloudflare(action: &str, stdin_json: Option<String>) -> Result<Value, Str
         .ok_or_else(|| "Antwort der Cloudflare-Steuerung konnte nicht gelesen werden.".to_string())
 }
 
-async fn run_cloudflare_async(action: &'static str, stdin_json: Option<String>) -> Result<Value, String> {
+async fn run_cloudflare_async(
+    action: &'static str,
+    stdin_json: Option<String>,
+) -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(move || run_cloudflare(action, stdin_json))
         .await
         .map_err(|error| format!("Cloudflare-Steuerung wurde unerwartet beendet: {error}"))?

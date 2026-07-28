@@ -169,6 +169,51 @@ jobs:
           sudo apt-get install -y shellcheck
           shellcheck -S warning deploy/scripts/setup-uwe-host.sh deploy/scripts/fedora-host-smoke.sh deploy/scripts/lib/uwe-host-constants.sh deploy/scripts/lib/uwe-host-platform.sh deploy/scripts/lib/uwe-host-preflight.sh deploy/scripts/lib/uwe-host-deps.sh deploy/scripts/lib/uwe-host-connector-install.sh deploy/scripts/start-uwe.sh
 
+  rust:
+    # Der Tauri-Client wurde bisher nur beim Release gebaut. Dadurch konnten sich
+    # Formatabweichungen unbemerkt einschleichen — sie fielen erst auf, als
+    # jemand `cargo fmt` auf dem ganzen Crate laufen ließ. Prüfen, sobald Rust
+    # angefasst wird, ist billiger als ein roter Release-Build.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'apps/rtx-connector-client/src-tauri/**'
+              - '.github/workflows/ci.yml'
+
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.filter.outputs.rust == 'true'
+        with:
+          components: rustfmt, clippy
+
+      - uses: swatinem/rust-cache@v2
+        if: steps.filter.outputs.rust == 'true'
+        with:
+          workspaces: "apps/rtx-connector-client/src-tauri -> target"
+
+      - name: GTK/WebKit für den Tauri-Build
+        if: steps.filter.outputs.rust == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+
+      - name: cargo fmt --check
+        if: steps.filter.outputs.rust == 'true'
+        working-directory: apps/rtx-connector-client/src-tauri
+        run: cargo fmt --check
+
+      - name: cargo clippy
+        if: steps.filter.outputs.rust == 'true'
+        working-directory: apps/rtx-connector-client/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
   e2e:
     # Only run on manual trigger or schedule — not on every push to main.
     # Skipped jobs do not fail the workflow, so deploy.yml still triggers.

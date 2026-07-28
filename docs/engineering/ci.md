@@ -20,6 +20,7 @@ PR gate runs **`file-size:check`** first (~5 s, no install), then a single **`fa
 | `security-*` | 20 min | ~5–10 min |
 | `shellcheck` | 5 min | ~1 min (deploy scripts only) |
 | `fedora-host-smoke` | 10 min | ~1–3 min (only host/deploy changes; also scheduled/manual on main) |
+| `rust` | 20 min | ~2–5 min (nur bei Änderungen am Tauri-Client; `cargo fmt --check` + `clippy -D warnings`) |
 
 ## Cost strategy
 
@@ -264,7 +265,7 @@ From GitHub Actions usage on a busy agent day (~200 runs):
 | **Copilot review** | ~12% | Runs on many PRs in parallel with PR Check |
 | **Deploy / Docs** | ~1% | Deploy is self-hosted; Docs Check is cheap |
 
-**Mitigations in place:** lint fail-fast job, affected-package PR gate, Turbo cache keyed by lockfile, no `^build` before typecheck/test, shellcheck only when deploy scripts change, concurrency cancel on PR pushes (avoids duplicate green runs but wastes minutes when agents push faster than CI finishes).
+**Mitigations in place:** lint fail-fast job, affected-package PR gate, Turbo cache keyed by lockfile, no `^build` before typecheck/test, shellcheck only when deploy scripts change, Rust checks only when the Tauri client changes, concurrency cancel on PR pushes (avoids duplicate green runs but wastes minutes when agents push faster than CI finishes).
 
 **Manual levers:** reduce agent push frequency per branch; disable Copilot auto-review on `cursor/*` branches if not needed; batch merges to `main` to avoid duplicate full gates.
 
