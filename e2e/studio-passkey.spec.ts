@@ -34,7 +34,7 @@ async function passwordLogin(page: Page, baseURL: string): Promise<void> {
   await page.getByLabel("E-Mail").fill("dm@uwe.local");
   await page.getByLabel("Passwort").fill("uwe-dev");
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
-  await expect(page).toHaveURL(/\/today/);
+  await expect(page).toHaveURL(/\/worlds/);
 }
 
 async function setPasskeysToggle(page: Page, baseURL: string, enabled: boolean): Promise<void> {
@@ -73,7 +73,7 @@ test.describe("Studio passkeys", () => {
       await page.goto(`${base}/logout`);
       await page.goto(`${base}/login`);
       await page.getByRole("button", { name: "Mit Passkey anmelden" }).first().click();
-      await expect(page).toHaveURL(/\/today/);
+      await expect(page).toHaveURL(/\/worlds/);
 
       // Cleanup: remove the credential so reruns start clean.
       await page.goto(`${base}/account/security`);

@@ -6,7 +6,7 @@ test.describe("Studio auth", () => {
     await page.getByLabel("E-Mail").fill("dm@uwe.local");
     await page.getByLabel("Passwort").fill("uwe-dev");
     await page.getByRole("button", { name: "Anmelden" }).click();
-    await expect(page).toHaveURL(/\/today/);
+    await expect(page).toHaveURL(/\/worlds/);
   });
 
   test("invalid login shows error", async ({ page }) => {
@@ -18,7 +18,7 @@ test.describe("Studio auth", () => {
   });
 
   test("protected route redirects to login", async ({ page }) => {
-    await page.goto("/today");
+    await page.goto("/worlds");
     await expect(page).toHaveURL(/\/login/);
   });
 });

@@ -5,7 +5,7 @@ export async function loginStudio(page: Page): Promise<void> {
   await page.getByLabel("E-Mail").fill("dm@uwe.local");
   await page.getByLabel("Passwort").fill("uwe-dev");
   await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/today/);
+  await expect(page).toHaveURL(/\/worlds/);
 }
 
 /** Establishes a Studio session cookie (UWE e-mail login) for shell/API tests. */
