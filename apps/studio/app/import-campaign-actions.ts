@@ -1,6 +1,9 @@
 "use server";
 
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import {
+  requireStudioActionAuth,
+  requireStudioAiActionAuth,
+} from "@/src/lib/studio-action-auth";
 import { AiRouterError, routeAiRequest } from "@uwe/ai-brain";
 import {
   createImportJobService,
@@ -112,7 +115,7 @@ export async function previewImportCampaignPdfJobAction(
   jobId: string,
   campaignContext = "",
 ): Promise<{ preview: CampaignImportPreviewSummary }> {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
 
   const job = await requireCampaignPdfJob(jobId);
   const storedPreview = readStoredPreview(job.previewPayload);
@@ -240,7 +243,7 @@ export async function executeImportCampaignPdfJobAction(
   jobId: string,
   itemIds: string[],
 ): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
 
   const job = await requireCampaignPdfJob(jobId);
   if (job.status !== "preview") {

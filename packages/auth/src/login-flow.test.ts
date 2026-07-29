@@ -87,6 +87,7 @@ function buildLoginDeps(
         email: user.email,
         isOwner: false,
         access: { portal: true, studio: true, brain: false, family: false },
+        aiAccess: false,
       }),
       createSession: async (userId, options) => {
         recorded.sessions.push({ userId, options });
@@ -153,6 +154,7 @@ describe("performLoginFlow", () => {
         email: "ada@example.com",
         isOwner: false,
         access: { portal: true, studio: true, brain: false, family: false },
+        aiAccess: false,
       },
       forcePasswordChange: false,
     });
@@ -253,6 +255,7 @@ function buildCompleteDeps(
         email: user.email,
         isOwner: false,
         access: { portal: true, studio: true, brain: false, family: false },
+        aiAccess: false,
       }),
       createSession: async (userId, options) => {
         recorded.sessions.push({ userId, options });
@@ -302,6 +305,7 @@ describe("completeTwoFactorLogin", () => {
         email: "ada@example.com",
         isOwner: false,
         access: { portal: true, studio: true, brain: false, family: false },
+        aiAccess: false,
       },
       forcePasswordChange: false,
       target: "portal",

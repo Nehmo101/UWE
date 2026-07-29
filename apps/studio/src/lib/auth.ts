@@ -117,6 +117,9 @@ export function createDevBypassAuthUser(): AuthUser {
     email: null,
     isOwner: true,
     access: { portal: true, studio: true, brain: true, family: true },
+    // Wie die Häkchen: im vertrauten Netz ohne Anmeldung ist der Betreiber
+    // der Owner, und der darf die KI ohnehin.
+    aiAccess: true,
   };
 }
 

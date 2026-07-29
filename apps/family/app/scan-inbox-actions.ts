@@ -1,6 +1,9 @@
 "use server";
 
-import { requireFamilyActionAuth } from "@/src/lib/family-action-auth";
+import {
+  requireFamilyActionAuth,
+  requireFamilyAiActionAuth,
+} from "@/src/lib/family-action-auth";
 import { revalidatePath } from "next/cache";
 import {
   createConnectorService,
@@ -51,7 +54,7 @@ export async function analyzeWithTextAction(formData: FormData): Promise<void> {
  * Ohne Online-Vision-Connector wird der Scan auf `waiting_for_rtx` gesetzt.
  */
 export async function autoAnalyzeAction(formData: FormData): Promise<void> {
-  await requireFamilyActionAuth();
+  await requireFamilyAiActionAuth();
   const id = String(formData.get("id"));
   const scan = await service().get(id);
   if (!scan) throw new Error("Scan nicht gefunden.");

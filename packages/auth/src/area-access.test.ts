@@ -1,17 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  AiAccessDeniedError,
   AuthRequiredError,
   ForbiddenAccessError,
   canAccessBrain,
   canAccessFamily,
   canAccessPortal,
   canAccessStudio,
+  canUseRtxAi,
   getRequiredAccessForApiPath,
   getRequiredAccessForPagePath,
   isOwner,
   requireArea,
   requireOwner,
+  requireRtxAi,
   requireUser,
   satisfiesStudioRouteAccess,
   toAreaAccess,
@@ -25,6 +28,7 @@ function user(overrides: Partial<AuthUser> = {}): AuthUser {
     email: "test@uwe.local",
     isOwner: false,
     access: { ...NO_AREA_ACCESS },
+    aiAccess: false,
     ...overrides,
   };
 }
@@ -95,5 +99,105 @@ describe("area access", () => {
       brain: false,
       family: false,
     });
+  });
+});
+
+/**
+ * G-KI — wer darf den RTX-Host beschäftigen.
+ *
+ * Der Punkt, an dem hier alles hängt, ist die Trennung: die vier Häkchen sagen
+ * WELCHE APP, das KI-Flag sagt, ob jemand darin Inferenz auslösen darf. Wer
+ * beides in einen Topf wirft, baut entweder ein fünftes App-Häkchen (dann
+ * stimmt der Satz „das Häkchen sagt, welche App" nicht mehr) oder gibt jedem
+ * mit Studio-Häkchen die KI (dann ist die Einstellung wirkungslos).
+ */
+describe("canUseRtxAi", () => {
+  const dmMitKi = user({ id: "dm-ai", access: { ...NO_AREA_ACCESS, portal: true, studio: true }, aiAccess: true });
+
+  it("der Owner darf immer — auch ohne gesetztes Flag", () => {
+    assert.equal(canUseRtxAi(owner), true);
+    assert.equal(canUseRtxAi(user({ isOwner: true, aiAccess: false })), true);
+  });
+
+  it("ein Studio-Konto ohne Flag darf nicht", () => {
+    assert.equal(canUseRtxAi(dm), false);
+  });
+
+  it("mit Flag darf es", () => {
+    assert.equal(canUseRtxAi(dmMitKi), true);
+  });
+
+  it("requireRtxAi trennt „nicht angemeldet“ von „nicht freigeschaltet“", () => {
+    assert.throws(() => requireRtxAi(null), AuthRequiredError);
+    assert.throws(() => requireRtxAi(dm), AiAccessDeniedError);
+    assert.doesNotThrow(() => requireRtxAi(dmMitKi));
+    assert.doesNotThrow(() => requireRtxAi(owner));
+  });
+});
+
+describe("KI-Routen", () => {
+  const dmMitKi = user({ id: "dm-ai", access: { ...NO_AREA_ACCESS, portal: true, studio: true }, aiAccess: true });
+
+  it("erkennt die Routen, die Inferenz auslösen", () => {
+    for (const pfad of [
+      "/api/ai/generate",
+      "/api/ai",
+      "/api/brain/run",
+      "/api/dnd-generator",
+      "/api/inference/test-prompt",
+      "/api/image-studio",
+      "/api/research",
+      "/api/worlds/nordmark/brain",
+      "/api/worlds/nordmark/inspector/diagnose",
+    ]) {
+      assert.equal(getRequiredAccessForApiPath(pfad), "ai", pfad);
+    }
+  });
+
+  it("lässt benachbarte Routen in Ruhe — Lesen ist nicht Erzeugen", () => {
+    // Wer eine erzeugte Seite ansehen darf, muss sie nicht erzeugen dürfen.
+    for (const pfad of [
+      "/api/worlds/nordmark/pages",
+      "/api/jobs",
+      "/api/import/formats",
+      "/api/backup",
+      "/api/assets/a1/file",
+    ]) {
+      assert.equal(getRequiredAccessForApiPath(pfad), "studio", pfad);
+    }
+  });
+
+  it("/api/admin/* bleibt owner-only, auch wenn dort KI läuft", () => {
+    assert.equal(getRequiredAccessForApiPath("/api/admin/ai-gateway"), "owner");
+  });
+
+  it("öffentliche Routen bleiben öffentlich", () => {
+    assert.equal(getRequiredAccessForApiPath("/api/health"), null);
+  });
+
+  it("Seiten, die ohne KI leer wären, verlangen das Flag", () => {
+    assert.equal(getRequiredAccessForPagePath("/worlds/nordmark/ai-runs"), "ai");
+    assert.equal(getRequiredAccessForPagePath("/worlds/nordmark/brain"), "ai");
+    assert.equal(getRequiredAccessForPagePath("/worlds/nordmark/one-shot"), "ai");
+    // Eine Seite, die bloss ein KI-Bedienfeld enthält, nicht: sie zeigt auch
+    // ohne KI ihren Inhalt.
+    assert.equal(getRequiredAccessForPagePath("/worlds/nordmark/pages"), "studio");
+  });
+
+  it("„ai“ verlangt BEIDES — Studio-Häkchen und KI-Flag", () => {
+    assert.equal(satisfiesStudioRouteAccess(dmMitKi, "ai"), true);
+    assert.equal(satisfiesStudioRouteAccess(dm, "ai"), false, "Studio ohne Flag");
+    // Portal-Konto mit KI-Flag: das Flag ersetzt das Studio-Häkchen nicht.
+    assert.equal(
+      satisfiesStudioRouteAccess(user({ access: { ...NO_AREA_ACCESS, portal: true }, aiAccess: true }), "ai"),
+      false,
+      "Flag ohne Studio-Häkchen",
+    );
+    assert.equal(satisfiesStudioRouteAccess(owner, "ai"), true);
+  });
+
+  it("„studio“ bleibt unverändert — das KI-Flag verengt nichts anderes", () => {
+    assert.equal(satisfiesStudioRouteAccess(dm, "studio"), true);
+    assert.equal(satisfiesStudioRouteAccess(player, "studio"), false);
   });
 });

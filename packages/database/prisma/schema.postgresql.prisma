@@ -448,6 +448,11 @@ model User {
   studioAccess        Boolean    @default(false) @map("studio_access")
   brainAccess         Boolean    @default(false) @map("brain_access")
   familyAccess        Boolean    @default(false) @map("family_access")
+  /// Darf die RTX-KI benutzen (G-KI). KEIN fuenftes App-Haekchen: die vier
+  /// oben sagen, welche App diese Adresse betreten darf, dieses Feld sagt, ob
+  /// sie darin die lokale Inferenz ausloesen darf. Der Owner braucht es nicht
+  /// — `isOwner` geht immer vor.
+  aiAccess            Boolean    @default(false) @map("ai_access")
   status              UserStatus @default(active)
   emailVerifiedAt     DateTime?  @map("email_verified_at")
   lastLoginAt         DateTime?  @map("last_login_at")

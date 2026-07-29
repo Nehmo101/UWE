@@ -21,6 +21,7 @@ const ownerUser: AuthUser = {
   email: "owner@test",
   isOwner: true,
   access: { portal: true, studio: true, brain: true, family: true },
+  aiAccess: false,
 };
 
 /** Portal checkbox only — a player. */
@@ -30,6 +31,7 @@ const userA: AuthUser = {
   email: "a@test",
   isOwner: false,
   access: { ...NO_AREA_ACCESS, portal: true },
+  aiAccess: false,
 };
 
 /** Studio checkbox, no world assignment anywhere — a DM. */
@@ -39,6 +41,7 @@ const dmUser: AuthUser = {
   email: "dm@test",
   isOwner: false,
   access: { ...NO_AREA_ACCESS, portal: true, studio: true },
+  aiAccess: false,
 };
 
 const membershipA: WorldMembership = {

@@ -36,6 +36,9 @@ function summarize(user: CommandCenterUser): string {
   const granted = COMMAND_CENTER_AREAS.filter((area) => user.access?.[area]).map(
     (area) => COMMAND_CENTER_AREA_LABELS[area],
   );
+  // Die KI steht hinter einem Trennstrich, nicht in der Reihe der Apps: sie
+  // ist kein Ort, den jemand betritt, sondern etwas, das er auslösen darf.
+  if (user.aiAccess) granted.push("RTX-KI");
   return granted.length > 0 ? granted.join(" · ") : "kein Zugang";
 }
 
@@ -53,6 +56,9 @@ export function UsersPanel() {
   // create form pre-selects owner + everything (see refresh) for first-run setup.
   const [isOwner, setIsOwner] = useState(false);
   const [access, setAccess] = useState<CommandCenterAreaAccess>({ ...NO_ACCESS, portal: true });
+  // Die RTX-KI ist beim Anlegen aus, wie jedes andere Recht auch. Wer sie
+  // braucht, bekommt sie bewusst — nicht als Beifang des Studio-Häkchens.
+  const [aiAccess, setAiAccess] = useState(false);
 
   const [pwUserId, setPwUserId] = useState<string | null>(null);
   const [pwValue, setPwValue] = useState("");
@@ -67,6 +73,7 @@ export function UsersPanel() {
       if (!nextUsers.some((user) => user.isOwner)) {
         setIsOwner(true);
         setAccess({ ...ALL_ACCESS });
+        setAiAccess(true);
       }
     } catch (nextError) {
       setError(toMessage(nextError));
@@ -84,7 +91,7 @@ export function UsersPanel() {
     setError(null);
     setMessage(null);
     try {
-      const result = await createUser({ displayName, email, password, isOwner, ...access });
+      const result = await createUser({ displayName, email, password, isOwner, ...access, ai: aiAccess });
       if (!result.ok) throw new Error(result.message ?? "Zugang konnte nicht angelegt werden.");
       setMessage(`„${displayName}" wurde angelegt.`);
       setDisplayName("");
@@ -92,6 +99,7 @@ export function UsersPanel() {
       setPassword("");
       setIsOwner(false);
       setAccess({ ...NO_ACCESS, portal: true });
+      setAiAccess(false);
       await refresh();
     } catch (nextError) {
       setError(toMessage(nextError));
@@ -128,6 +136,24 @@ export function UsersPanel() {
         `„${user.displayName}" ${enabled ? "hat jetzt" : "hat nicht mehr"} ${
           COMMAND_CENTER_AREA_LABELS[area]
         }.`,
+      );
+      await refresh();
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleAi(user: CommandCenterUser, enabled: boolean) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await updateUser({ id: user.id, ai: enabled });
+      if (!result.ok) throw new Error(result.message ?? "RTX-KI konnte nicht geändert werden.");
+      setMessage(
+        `„${user.displayName}" ${enabled ? "darf jetzt" : "darf nicht mehr"} die RTX-KI benutzen.`,
       );
       await refresh();
     } catch (nextError) {
@@ -180,7 +206,9 @@ export function UsersPanel() {
           <span className="connector-kicker">ZUGÄNGE · E-MAIL-ALLOWLIST</span>
           <h3>Zugänge verwalten</h3>
           <p>
-            Pro E-Mail-Adresse entscheiden vier Häkchen, welche App sie betreten darf. Es gibt keine
+            Pro E-Mail-Adresse entscheiden vier Häkchen, welche App sie betreten darf. Das fünfte,
+            „RTX-KI&quot;, entscheidet etwas anderes: ob diese Adresse den RTX-Host beschäftigen darf —
+            Generatoren, Bildstudio, Assistent. Der Owner darf es immer. Es gibt keine
             Selbstregistrierung — Konten legst nur du hier an.
           </p>
         </div>
@@ -233,6 +261,14 @@ export function UsersPanel() {
                 <label className="connector-checkbox">
                   <input
                     type="checkbox"
+                    checked={aiAccess}
+                    onChange={(event) => setAiAccess(event.target.checked)}
+                  />
+                  RTX-KI
+                </label>
+                <label className="connector-checkbox">
+                  <input
+                    type="checkbox"
                     checked={isOwner}
                     onChange={(event) => setIsOwner(event.target.checked)}
                   />
@@ -278,6 +314,19 @@ export function UsersPanel() {
                         {COMMAND_CENTER_AREA_LABELS[area]}
                       </label>
                     ))}
+                    <label className="connector-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={user.isOwner || user.aiAccess}
+                        // Beim Owner steht das Häkchen fest an: er darf die KI
+                        // über `isOwner`, das Feld daneben ändert daran nichts.
+                        // Ein abwählbares Häkchen ohne Wirkung wäre eine Lüge.
+                        disabled={busy || user.isOwner}
+                        onChange={(event) => void toggleAi(user, event.target.checked)}
+                        aria-label={`RTX-KI für ${user.displayName}`}
+                      />
+                      RTX-KI
+                    </label>
                     <label className="connector-checkbox">
                       <input
                         type="checkbox"

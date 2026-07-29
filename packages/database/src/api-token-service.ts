@@ -45,6 +45,15 @@ export interface ResolvedApiToken {
   userId: string;
   /** Whether the creating/owning account is the owner (admin scopes need it). */
   isOwner: boolean;
+  /**
+   * Whether the owning account may use the RTX AI (G-KI).
+   *
+   * Reist mit, damit ein Token kein Schleichweg wird: wer die KI selbst nicht
+   * benutzen darf, darf sie auch nicht über ein Token benutzen, das er sich
+   * ausstellt. Die Scopes regeln, WAS ein Token darf — dieses Feld regelt, was
+   * sein Besitzer überhaupt dürfte.
+   */
+  aiAccess: boolean;
   scopes: ApiTokenScope[];
   name: string;
 }
@@ -221,6 +230,7 @@ export class ApiTokenService {
       id: record.id,
       userId: record.userId,
       isOwner: record.user.isOwner,
+      aiAccess: record.user.aiAccess,
       scopes: record.scopes.map((entry) => fromScopeName(entry.scope)),
       name: record.name,
     };

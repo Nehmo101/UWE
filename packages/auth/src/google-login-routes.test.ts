@@ -106,6 +106,7 @@ function buildHarness(overrides: Partial<GoogleLoginRouteDeps<FakeDb>> = {}): Ha
         email: user.email,
         isOwner: user.isOwner,
         access: user.access ?? { portal: false, studio: false, brain: false, family: false },
+        aiAccess: false,
       }),
       createSession: async () => ({ id: "session-1", token: "session-token" }),
       recordSuccessfulLogin: async () => {},

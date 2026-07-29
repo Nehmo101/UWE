@@ -81,6 +81,8 @@ describe("toSafeUser", () => {
       email: "test@example.com",
       isOwner: false,
       access: { portal: true, studio: false, brain: false, family: false },
+      // Fehlt in der Eingabe → fail-closed `false`, nicht `undefined`.
+      aiAccess: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-02T00:00:00.000Z",
       forcePasswordChange: true,

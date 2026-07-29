@@ -1,10 +1,11 @@
+import { canUseRtxAi } from "@uwe/auth";
 import { getFamilyUser } from "./page-family";
 
 /** Thrown when someone without the family checkbox reaches a mutating action. */
 export class FamilyActionAuthError extends Error {
   readonly status = 403;
-  constructor() {
-    super("Kein Zugang zum Bereich Family.");
+  constructor(message = "Kein Zugang zum Bereich Family.") {
+    super(message);
     this.name = "FamilyActionAuthError";
   }
 }
@@ -18,6 +19,21 @@ export async function requireFamilyActionAuth() {
   const user = await getFamilyUser();
   if (!user) {
     throw new FamilyActionAuthError();
+  }
+  return user;
+}
+
+/**
+ * Family-Action, die den RTX-Host beschäftigt (G-KI) — die Beleg-Analyse im
+ * Scan-Postfach. Das Family-Häkchen bringt jemanden in den Bereich; ob er
+ * darin Inferenz auslösen darf, sagt das KI-Flag. Der Owner geht durch.
+ */
+export async function requireFamilyAiActionAuth() {
+  const user = await requireFamilyActionAuth();
+  if (!canUseRtxAi(user)) {
+    throw new FamilyActionAuthError(
+      "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+    );
   }
   return user;
 }

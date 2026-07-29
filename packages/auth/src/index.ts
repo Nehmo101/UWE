@@ -14,6 +14,7 @@ export { NO_AREA_ACCESS, UWE_AREAS } from "./types";
 export { toSafeUser, stripSensitiveUserFields } from "./safe-user";
 
 export {
+  AiAccessDeniedError,
   AuthRequiredError,
   ForbiddenAccessError,
   UWE_AREA_LABELS,
@@ -21,12 +22,16 @@ export {
   canAccessFamily,
   canAccessPortal,
   canAccessStudio,
+  canUseRtxAi,
   getRequiredAccessForApiPath,
   getRequiredAccessForPagePath,
   hasAreaAccess,
+  isAiStudioApiPath,
+  isAiStudioPagePath,
   isOwner,
   requireArea,
   requireOwner,
+  requireRtxAi,
   requireUser,
   satisfiesStudioRouteAccess,
   toAreaAccess,

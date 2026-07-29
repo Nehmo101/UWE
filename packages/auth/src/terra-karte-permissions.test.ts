@@ -32,6 +32,7 @@ function user(id: string, overrides: Partial<AuthUser> = {}): AuthUser {
     email: `${id}@test`,
     isOwner: false,
     access: access({ portal: true }),
+    aiAccess: false,
     ...overrides,
   };
 }

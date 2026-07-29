@@ -28,6 +28,7 @@ function authUser(label: string, access: Partial<AreaAccess>, id = "u-1"): AuthU
     email: null,
     isOwner: false,
     access: { portal: false, studio: false, brain: false, family: false, ...access },
+    aiAccess: false,
   };
 }
 

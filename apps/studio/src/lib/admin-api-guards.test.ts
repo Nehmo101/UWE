@@ -13,6 +13,7 @@ const studioUser = {
   email: "dm@test",
   isOwner: false,
   access: { portal: true, studio: true, brain: false, family: false },
+  aiAccess: false,
 };
 
 const ownerUser = {
@@ -21,6 +22,7 @@ const ownerUser = {
   email: "owner@test",
   isOwner: true,
   access: { portal: true, studio: true, brain: true, family: true },
+  aiAccess: false,
 };
 
 describe("owner-only admin API guards", () => {

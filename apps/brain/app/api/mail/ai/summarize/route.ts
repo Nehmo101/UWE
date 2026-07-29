@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { generateMailSummary } from "@uwe/mail/ai";
 import { brainPrisma } from "@uwe/database/brain-client";
-import { requireBrainMailMutation, mailApiError } from "@/src/lib/mail-api";
+import { requireBrainMailAi, mailApiError } from "@/src/lib/mail-api";
 
 export async function POST(request: Request) {
-  const auth = await requireBrainMailMutation(request);
+  const auth = await requireBrainMailAi(request);
   if (auth.error) return auth.error;
 
   let body: { messageId?: string };

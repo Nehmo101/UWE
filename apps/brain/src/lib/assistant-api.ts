@@ -23,7 +23,9 @@ export async function guardAssistantApi(
   request: Request,
   preset: keyof typeof RATE_LIMIT_PRESETS = "ai",
 ): Promise<Response | null> {
-  const authError = await requireBrainOwnerAuth();
+  // Jede Assistenz-Route beschäftigt den RTX-Host — Chat, Transkription,
+  // Anhang-Auswertung gleichermassen. Deshalb hier pauschal `requireAi`.
+  const authError = await requireBrainOwnerAuth({ requireAi: true });
   if (authError) return authError;
 
   const csrfError = requireSameOriginMutation(request);

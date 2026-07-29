@@ -74,6 +74,10 @@ describe("Brain-Mail-Mutationen prüfen die Herkunft", () => {
    * Same-Origin und Rate-Limit stecken in `requireBrainMailMutation`. Wer beim
    * Anlegen einer Route die falsche Hälfte erwischt, macht das Postfach für
    * jede Seite erreichbar, die der angemeldete Owner nebenbei offen hat.
+   *
+   * `requireBrainMailAi` zählt mit: es RUFT `requireBrainMailMutation` auf und
+   * legt das KI-Flag obendrauf. Es abzulehnen hiesse, die strengere Prüfung zu
+   * bestrafen.
    */
   for (const relativeRoute of routes) {
     const source = readRoute(relativeRoute);
@@ -85,8 +89,9 @@ describe("Brain-Mail-Mutationen prüfen die Herkunft", () => {
     it(`${relativeRoute} (${mutatingHandlers.join(", ")}) nutzt den Mutations-Guard`, () => {
       assert.match(
         source,
-        /requireBrainMailMutation/,
-        `${relativeRoute} schreibt, prüft aber nicht die Herkunft — requireBrainMailMutation verwenden.`,
+        /requireBrainMail(?:Mutation|Ai)/,
+        `${relativeRoute} schreibt, prüft aber nicht die Herkunft — requireBrainMailMutation ` +
+          `(oder requireBrainMailAi für KI-Routen) verwenden.`,
       );
     });
   }

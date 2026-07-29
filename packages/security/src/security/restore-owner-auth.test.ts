@@ -19,6 +19,7 @@ function contextFor(kind: "owner" | "studio"): ApiAuthContext {
       email: null,
       isOwner: kind === "owner",
       access: { portal: true, studio: true, brain: kind === "owner", family: kind === "owner" },
+      aiAccess: false,
     },
     apiTokenId: null,
     apiTokenScopes: null,

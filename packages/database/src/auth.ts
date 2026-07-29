@@ -82,12 +82,16 @@ import { USER_SAFE_SELECT } from "./user-service";
 
 const SESSION_ACTIVITY_TOUCH_THROTTLE_MS = 60_000;
 
-/** The four checkboxes, all optional so callers only set what they mean. */
+/**
+ * Die vier Häkchen plus das KI-Flag, alle optional. `aiAccess` ist kein
+ * fünftes Häkchen — siehe `packages/auth/src/area-access.ts`.
+ */
 export interface AreaAccessInput {
   portalAccess?: boolean;
   studioAccess?: boolean;
   brainAccess?: boolean;
   familyAccess?: boolean;
+  aiAccess?: boolean;
 }
 
 export interface CreateUserInput extends AreaAccessInput {
@@ -166,6 +170,7 @@ export class AuthService {
         studioAccess: input.studioAccess ?? false,
         brainAccess: input.brainAccess ?? false,
         familyAccess: input.familyAccess ?? false,
+        aiAccess: input.aiAccess ?? false,
         status: input.status ?? "active",
       },
       select: USER_SAFE_SELECT,
@@ -244,6 +249,9 @@ export class AuthService {
       studioAccess: true,
       brainAccess: true,
       familyAccess: true,
+      // Der Owner geht über `canUseRtxAi` ohnehin durch; gesetzt wird es
+      // trotzdem, damit die Zeile das Gleiche sagt wie die Oberfläche.
+      aiAccess: true,
     });
   }
 
@@ -328,6 +336,7 @@ export class AuthService {
         studioAccess: input.studioAccess ?? undefined,
         brainAccess: input.brainAccess ?? undefined,
         familyAccess: input.familyAccess ?? undefined,
+        aiAccess: input.aiAccess ?? undefined,
         status: input.status ?? undefined,
       },
     });
@@ -337,6 +346,9 @@ export class AuthService {
       toAreaAccess(existing).studio !== toAreaAccess(updated).studio ||
       toAreaAccess(existing).brain !== toAreaAccess(updated).brain ||
       toAreaAccess(existing).family !== toAreaAccess(updated).family ||
+      // Wer den RTX-Host beschäftigen darf, ist eine Rechteänderung und
+      // gehört ins Audit — genau wie die Häkchen darüber.
+      existing.aiAccess !== updated.aiAccess ||
       existing.isOwner !== updated.isOwner;
 
     if (accessChanged) {
@@ -346,8 +358,8 @@ export class AuthService {
         targetType: "user",
         targetId: userId,
         metadata: {
-          from: { isOwner: existing.isOwner, access: toAreaAccess(existing) },
-          to: { isOwner: updated.isOwner, access: toAreaAccess(updated) },
+          from: { isOwner: existing.isOwner, access: toAreaAccess(existing), aiAccess: existing.aiAccess },
+          to: { isOwner: updated.isOwner, access: toAreaAccess(updated), aiAccess: updated.aiAccess },
         },
       });
     }

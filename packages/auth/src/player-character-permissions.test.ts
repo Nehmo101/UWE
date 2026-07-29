@@ -10,6 +10,7 @@ const playerUser: AuthUser = {
   email: "player@test.local",
   isOwner: false,
   access: { ...NO_AREA_ACCESS, portal: true },
+  aiAccess: false,
 };
 
 function playerCtx() {
@@ -62,6 +63,7 @@ describe("player character permissions", () => {
         email: null,
         isOwner: false,
         access: { ...NO_AREA_ACCESS, portal: true, studio: true },
+        aiAccess: false,
       },
       worldMembership: { userId: "dm-1", worldId: "w-1", characterName: null },
       preview: { previewAsUserId: playerUser.id },
@@ -80,6 +82,7 @@ describe("player character permissions", () => {
         email: null,
         isOwner: false,
         access: { ...NO_AREA_ACCESS, portal: true, studio: true },
+        aiAccess: false,
       },
       worldMembership: { userId: "dm-2", worldId: "w-1", characterName: null },
     });
