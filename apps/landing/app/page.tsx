@@ -52,7 +52,6 @@ export default async function LandingPage() {
       brainAppUrl={resolveBrainPublicBaseUrl()}
       familyAppUrl={resolveFamilyPublicBaseUrl()}
       turnstileSiteKey={turnstile.enabled ? turnstile.siteKey : null}
-      rtxOnline
       // Serverseitig berechnet und durchgereicht: ein clientseitiger Wert
       // erzeugte um Mitternacht bzw. bei abweichender Serverzone einen
       // Hydration-Mismatch.

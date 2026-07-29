@@ -19,17 +19,6 @@
   }
 }
 
-/* Expanding ring behind the RTX status dot when the host is online. */
-@keyframes uweLpPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(47, 154, 118, 0.45);
-  }
-  60% {
-    box-shadow: 0 0 0 6px rgba(47, 154, 118, 0);
-  }
-}
-
 /* --- Rahmen --------------------------------------------------------------- */
 
 .uwe-lp-root {
@@ -77,48 +66,10 @@
   letter-spacing: -0.02em;
 }
 
-.uwe-lp-brand small {
-  font-size: 11.5px;
-  color: var(--uwe-hero-sub, var(--uwe-fg-muted));
-  text-shadow: var(--uwe-hero-sh, none);
-}
-
 .uwe-lp-nav-end {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.uwe-lp-rtx {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: var(--uwe-radius-pill, 999px);
-  border: var(--uwe-border-width, 1.5px) solid var(--uwe-border);
-  background: var(--uwe-card-bg);
-  backdrop-filter: blur(var(--uwe-glass-blur, 13px));
-  -webkit-backdrop-filter: blur(var(--uwe-glass-blur, 13px));
-  font-size: 11.5px;
-  color: var(--uwe-fg-muted);
-}
-
-.uwe-lp-rtx-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: var(--uwe-radius-pill, 999px);
-  background: #2f9a76;
-  box-shadow: 0 0 8px rgba(47, 154, 118, 0.8);
-}
-
-.uwe-lp-rtx[data-online="false"] .uwe-lp-rtx-dot {
-  background: var(--uwe-warning);
-  box-shadow: none;
-  animation: none;
-}
-
-.uwe-lp-rtx[data-online="true"] .uwe-lp-rtx-dot {
-  animation: uweLpPulse 2.4s ease infinite;
 }
 
 /* --- Hero ----------------------------------------------------------------- */
@@ -141,33 +92,14 @@
   animation: uweLpFadeUp 0.45s ease both;
 }
 
-.uwe-lp-eyebrow-long {
-  display: none;
-}
-
-.uwe-lp-eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--uwe-dm-only);
-  text-shadow: var(--uwe-hero-sh, none);
-}
-
 .uwe-lp-title {
-  margin: 8px 0 6px;
+  margin: 8px 0 14px;
   font-family: var(--uwe-font-newsreader, Georgia), serif;
   font-weight: 500;
   font-size: 32px;
   line-height: 1.1;
   letter-spacing: -0.02em;
   color: var(--uwe-hero-ink, var(--uwe-fg));
-  text-shadow: var(--uwe-hero-sh, none);
-}
-
-.uwe-lp-lede {
-  margin: 0 0 14px;
-  font-size: 11.5px;
-  color: var(--uwe-hero-sub, var(--uwe-fg-muted));
   text-shadow: var(--uwe-hero-sh, none);
 }
 
@@ -240,25 +172,6 @@
   display: none;
 }
 
-/* --- Footer --------------------------------------------------------------- */
-
-.uwe-lp-footer {
-  position: relative;
-  z-index: 1;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 16px 20px calc(16px + var(--uwe-safe-bottom, 0px));
-  border-top: 1px solid var(--uwe-border);
-  background: var(--uwe-panel);
-  font-size: 10.5px;
-  color: var(--uwe-fg-subtle);
-  text-align: center;
-}
-
 /* --- Anmeldeansicht ------------------------------------------------------- */
 
 .uwe-lp-login-wrap {
@@ -318,10 +231,6 @@
     font-size: 17px;
   }
 
-  .uwe-lp-rtx {
-    display: flex;
-  }
-
   .uwe-lp-hero {
     margin-top: 9vh;
     text-align: center;
@@ -332,28 +241,10 @@
     margin-top: auto;
   }
 
-  /* Ab hier trägt die Zeile die Langfassung. */
-  .uwe-lp-eyebrow-long {
-    display: inline;
-  }
-
-  .uwe-lp-eyebrow-short {
-    display: none;
-  }
-
-  .uwe-lp-eyebrow {
-    font-size: 12.5px;
-    letter-spacing: 0.2em;
-  }
-
   .uwe-lp-title {
     margin: 14px 0 10px;
     font-size: clamp(46px, 5vw, 72px);
     line-height: 1.05;
-  }
-
-  .uwe-lp-lede {
-    font-size: 13.5px;
   }
 
   .uwe-lp-choices {
@@ -417,11 +308,6 @@
   .uwe-lp-card-arrow {
     display: none;
   }
-
-  .uwe-lp-footer {
-    padding: 20px 44px calc(20px + var(--uwe-safe-bottom, 0px));
-    font-size: 11.5px;
-  }
 }
 
 /* Ruhe ist Teil des Looks — bei reduzierter Bewegung friert alles ein. */
@@ -434,10 +320,10 @@
   }
 }
 
-/* Die app-übergreifende Produktleiste ist mobil fixiert — der Fuß der Landing
-   braucht darunter Platz, sonst verdeckt sie ihn. */
+/* Die app-übergreifende Produktleiste ist mobil fixiert — die Auswahl braucht
+   darunter Platz, sonst verdeckt sie die letzte Karte. */
 @media (max-width: 959px) {
-  .uwe-lp-footer {
-    padding-bottom: calc(76px + var(--uwe-safe-bottom, 0px));
+  .uwe-lp-choices {
+    margin-bottom: calc(76px + var(--uwe-safe-bottom, 0px));
   }
 }
