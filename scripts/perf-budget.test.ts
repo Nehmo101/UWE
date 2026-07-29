@@ -26,7 +26,7 @@ describe("runtime perf budget tooling", () => {
     ]);
     assert.equal(result.ok, false);
     assert.equal(result.failures.length, 1);
-    assert.match(result.failures[0], /studio:\/today lcp/);
+    assert.match(result.failures[0], /studio:\/worlds lcp/);
   });
 
   it("ignores unbudgeted routes and missing metrics", () => {
