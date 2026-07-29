@@ -85,11 +85,11 @@ im vollständigen Mirror auf:
 
 | Alt | Neu |
 |---|---|
-| `lasset610@gmail.com` (89 Commits, Autor + Committer) | `114261361+Nehmo101@users.noreply.github.com` |
-| `lasse@fedora.fritz.box` / Name `Lasse` | dito |
-| `uwe@uwe-host.fritz.box` / Name `uwe` | dito |
+| private Mailadresse (89 Commits, Autor + Committer) | `114261361+Nehmo101@users.noreply.github.com` |
+| lokale Adresse des Arbeitsrechners (Klarname im Namensfeld) | dito |
+| lokale Adresse des Host-Systems | dito |
 
-Die beiden `fritz.box`-Adressen verrieten zusätzlich den Vornamen und zwei
+Die beiden lokalen Adressen verrieten zusätzlich den Vornamen und zwei
 interne Hostnamen. Verifiziert: Inhalt bit-identisch (Tree-Hash von `main`
 unverändert), Commit-Zahl unverändert, `git fsck` fehlerfrei. Verbleibende
 Identitäten sind ausschließlich Bot- und Noreply-Adressen.
@@ -150,7 +150,7 @@ dahin ist der Rewrite wirkungslos.
       ```bash
       git fetch origin && git reset --hard origin/main
       ```
-- [ ] Der Commit-Autor auf dem Host war `uwe@uwe-host.fritz.box`. Falls dort
+- [ ] Der Commit-Autor auf dem Host war eine lokale Adresse. Falls dort
       automatisiert committet wird, die Identität ebenfalls umstellen:
       ```bash
       sudo -u uwe git config --global user.email "114261361+Nehmo101@users.noreply.github.com"
@@ -167,6 +167,5 @@ dahin ist der Rewrite wirkungslos.
   den Clone auf ~13 MB drücken, aber jeder Cloner bräuchte `git-lfs`, und der
   GitHub-Free-Tier hat 1 GB Bandbreite pro Monat. Bei einem öffentlichen Repo
   ist das schnell erschöpft. 87 MB Clone-Größe ist der bessere Kompromiss.
-- **`terra.html` entfernen.** Bewusst eingefrorene v1-Referenz (siehe E34 in
-  `docs/analysis/2026-07-26-bereichsliste.md`), von `terra/README.md` und den
-  Test-Fixtures referenziert.
+- **`terra.html` entfernen.** Bewusst eingefrorene v1-Referenz, von
+  `terra/README.md` und den Test-Fixtures referenziert.

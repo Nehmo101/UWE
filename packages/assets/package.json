@@ -13,7 +13,6 @@
     "test": "node --import tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@uwe/auth": "workspace:*",
     "adm-zip": "^0.6.0",
     "sharp": "^0.35.0"
   },
