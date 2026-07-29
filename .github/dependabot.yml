@@ -1,0 +1,93 @@
+# Dependabot-Konfiguration.
+#
+# Gruppierte Updates halten die PR-Zahl klein — ein Monorepo mit ~40 Paketen
+# erzeugt sonst zweistellige PR-Wellen pro Woche.
+#
+# Achtung: CVE-Pins stehen in `pnpm-workspace.yaml` unter `overrides`
+# (Begründungen in docs/security/dependency-notes.md). Wenn Dependabot ein
+# Paket anhebt, das dort gepinnt ist, muss der Override mitgezogen werden —
+# sonst bleibt die alte Version transitiv erzwungen.
+version: 2
+
+updates:
+  # --- npm / pnpm-Workspace --------------------------------------------------
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+    groups:
+      # Sicherheitsrelevante Updates einzeln und sofort sichtbar halten.
+      next:
+        patterns:
+          - "next"
+          - "@next/*"
+          - "eslint-config-next"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+      typescript-eslint:
+        patterns:
+          - "typescript"
+          - "eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+          - "@eslint/*"
+      testing:
+        patterns:
+          - "@playwright/*"
+          - "playwright"
+          - "vitest"
+          - "@vitest/*"
+          - "tsx"
+      # Alles Übrige gebündelt — Patch- und Minor-Updates zusammen.
+      sonstige-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # --- GitHub Actions --------------------------------------------------------
+  # Hält die auf Commit-SHA gepinnten Actions aktuell. Ohne diesen Block
+  # veralten die Pins still.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # --- Rust / Tauri (Command Center) -----------------------------------------
+  - package-ecosystem: cargo
+    directory: "/apps/rtx-connector-client/src-tauri"
+    schedule:
+      interval: monthly
+      time: "05:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps(tauri)"
+    groups:
+      cargo:
+        patterns:
+          - "*"

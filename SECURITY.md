@@ -19,11 +19,55 @@ Detailed security documents live in [docs/security/](docs/security/):
 
 ## Reporting a Vulnerability
 
-UWE is a private/self-hosted project. If you discover a security issue:
+UWE is a self-hosted project maintained in the open. If you discover a security
+issue, please report it **privately**:
 
-1. **Do not** open a public issue with exploit details.
-2. Contact the maintainers directly with a description of the issue, steps to reproduce, and potential impact.
-3. Allow reasonable time for a fix before public disclosure.
+**→ [Report a vulnerability](https://github.com/Nehmo101/UWE/security/advisories/new)**
+(GitHub → Security → Advisories → Report a vulnerability)
+
+This channel is private and reaches the maintainers only. Please include:
+
+- a description of the issue and its potential impact,
+- steps to reproduce, ideally against a fresh `pnpm db:seed` checkout,
+- the affected surface (Studio / Portal / Brain / Family / Landing / Command Center)
+  and the commit or version you tested.
+
+**Please do not** open a public issue with exploit details, and allow reasonable
+time for a fix before public disclosure.
+
+### What to expect
+
+| | |
+|---|---|
+| First response | within 7 days |
+| Assessment and plan | within 14 days |
+| Fix or mitigation | depends on severity; coordinated with the reporter |
+
+UWE is a hobby project maintained by a single person in their spare time — there
+is no paid security team and no bug bounty. Reports are taken seriously
+regardless.
+
+### Especially interesting
+
+Findings that break one of UWE's core invariants carry the most weight:
+
+- `dm_only` content reaching the **Portal**
+- `owner_private_local` content leaving the **host**
+- Bypassing the four-checkbox area access (`packages/auth/src/area-access.ts`)
+  or the world assignment (`packages/auth/src/permissions.ts`)
+- Session, CSRF, or API-token weaknesses
+- Anything that turns a self-hosted instance into an open relay or a path into
+  the host's LAN
+
+### Out of scope
+
+- Findings that require an already-compromised host or an existing `owner` session
+- The seeded demo credentials (`dm@uwe.local` / `uwe-dev`) — the demo seed
+  refuses to run with `NODE_ENV=production`, and the credential hints render
+  only in development
+- Missing hardening on a deliberately unauthenticated deployment
+  (`AUTH_REQUIRED=false` is an opt-out the operator chooses)
+- Automated scanner output without a demonstrated impact
 
 ---
 

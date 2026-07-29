@@ -1,0 +1,84 @@
+name: Fehlerbericht
+description: Etwas funktioniert nicht wie erwartet
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für den Bericht. Bitte **keine** Sicherheitslücken hier melden —
+        dafür gibt es den privaten Weg in [SECURITY.md](../blob/main/SECURITY.md).
+
+  - type: textarea
+    id: was-passiert
+    attributes:
+      label: Was passiert?
+      description: Beschreib das fehlerhafte Verhalten.
+    validations:
+      required: true
+
+  - type: textarea
+    id: erwartet
+    attributes:
+      label: Was hattest du erwartet?
+    validations:
+      required: true
+
+  - type: textarea
+    id: schritte
+    attributes:
+      label: Schritte zum Nachstellen
+      placeholder: |
+        1. Studio öffnen unter …
+        2. Auf … klicken
+        3. Fehler erscheint
+    validations:
+      required: true
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: Betroffene Oberfläche
+      multiple: true
+      options:
+        - Studio (3000)
+        - Portal (3001)
+        - Brain (3002)
+        - Family (3004)
+        - Landing (3103)
+        - Command Center (Tauri)
+        - Build / CI
+        - Unklar
+    validations:
+      required: true
+
+  - type: textarea
+    id: umgebung
+    attributes:
+      label: Umgebung
+      description: Node-Version, pnpm-Version, Betriebssystem, Datenbank (SQLite/PostgreSQL).
+      placeholder: |
+        Node: 22.x
+        pnpm: 10.x
+        OS: Debian 13
+        DB: SQLite
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs oder Fehlermeldung
+      description: Relevanter Auszug. Wird automatisch als Code formatiert.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: vorab
+    attributes:
+      label: Vorab geprüft
+      options:
+        - label: Ich habe nach bestehenden Issues zum selben Problem gesucht.
+          required: true
+        - label: Der Auszug enthält keine Zugangsdaten, Tokens oder personenbezogenen Daten.
+          required: true

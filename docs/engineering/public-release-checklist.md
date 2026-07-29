@@ -1,0 +1,110 @@
+# Checkliste: Repo öffentlich schalten
+
+Stand: 2026-07-29
+
+Diese Liste deckt ab, was **nicht** im Repository liegt, sondern in den
+GitHub-Einstellungen geklickt werden muss. Der Dateianteil (LICENSE,
+CONTRIBUTING, CODE_OF_CONDUCT, Templates, Dependabot, SHA-Pinning) ist im
+Repository erledigt.
+
+Reihenfolge ist bewusst: Punkt 1 muss **vor** dem Umschalten passieren, alles
+Weitere direkt danach.
+
+---
+
+## 1. Vor dem Umschalten — Fork-PR-Freigabe
+
+**Der wichtigste Punkt.** Am Repo hängt ein self-hosted Runner auf dem UWE-Host
+(Label `uwe-deploy`, `uwe`-User mit NOPASSWD-sudoers). Bei `pull_request` führt
+GitHub die Workflow-Datei **aus dem PR-Branch** aus — ein Fork-PR kann sich also
+einen Job mit `runs-on: [self-hosted, uwe-deploy]` selbst schreiben.
+
+> **Settings → Actions → General → Fork pull request workflows from outside
+> collaborators → „Require approval for all external contributors"**
+
+Ohne diese Einstellung genügt ein einziger gemergter Fremd-PR, damit die Person
+danach ohne Freigabe Code auf dem Host im LAN ausführen kann. Hintergrund und
+Zusatzmaßnahmen: [self-hosted-ci.md](self-hosted-ci.md#pflicht-einstellung-im-öffentlichen-repo).
+
+Ebenfalls unter **Settings → Actions → General** prüfen:
+
+- **Workflow permissions** → „Read repository contents and packages permissions"
+  (nicht Read *and write*).
+- „Allow GitHub Actions to create and approve pull requests" → **aus**, außer es
+  wird gebraucht.
+
+---
+
+## 2. Direkt nach dem Umschalten — Security-Features
+
+**Settings → Code security**
+
+- [ ] **Private vulnerability reporting** → aktivieren.
+      `SECURITY.md` und `.github/ISSUE_TEMPLATE/config.yml` verlinken bereits
+      auf `/security/advisories/new` — ohne diese Einstellung läuft der Link ins Leere.
+- [ ] **Dependabot alerts** → aktivieren.
+- [ ] **Dependabot security updates** → aktivieren.
+      (Die Versions-Updates kommen aus `.github/dependabot.yml`.)
+- [ ] **Secret scanning** → aktivieren. Scannt die **komplette History**
+      serverseitig — das ist der eigentliche Backstop hinter `pnpm secret:scan`.
+- [ ] **Push protection** → aktivieren. Blockt versehentlich gepushte
+      Zugangsdaten, bevor sie öffentlich werden.
+- [ ] **CodeQL** (Default Setup) → für ein öffentliches Repo kostenlos.
+
+---
+
+## 3. Branch Protection für `main`
+
+**Settings → Rules → Rulesets** (oder Branch protection rules)
+
+- [ ] Direkte Pushes auf `main` unterbinden, PR verlangen.
+- [ ] Required status checks: die Jobs aus `pr-check.yml`.
+- [ ] „Require branches to be up to date before merging".
+- [ ] Force-Push auf `main` blocken — **erst nach** dem History-Rewrite setzen,
+      sonst blockt die Regel den Rewrite-Push selbst.
+- [ ] Löschen von `main` blocken.
+
+---
+
+## 4. Sichtbarkeit und Auffindbarkeit
+
+- [ ] **Description** setzen — ohne sie erscheint das Repo in der Suche nackt.
+- [ ] **Topics** vergeben, z. B. `self-hosted`, `nextjs`, `typescript`,
+      `dnd`, `ttrpg`, `monorepo`, `prisma`, `local-first`, `personal-knowledge-management`.
+- [ ] **Discussions** aktivieren — `.github/ISSUE_TEMPLATE/config.yml` verweist
+      darauf. Ohne Aktivierung ist der Link tot.
+- [ ] Entscheiden, ob **Wiki** und **Projects** an bleiben (bei ungenutzt: aus).
+
+---
+
+## 5. Nach dem History-Rewrite
+
+Der Rewrite ersetzt `lasset610@gmail.com` durch
+`114261361+Nehmo101@users.noreply.github.com`. Danach:
+
+- [ ] **GitHub → Settings → Emails → „Keep my email address private"** aktivieren.
+- [ ] Lokal auf allen Arbeitsrechnern:
+      ```bash
+      git config --global user.email "114261361+Nehmo101@users.noreply.github.com"
+      ```
+      Sonst trägt der nächste Commit die private Adresse wieder ein.
+- [ ] Auf dem UWE-Host (`/opt/uwe`) einmal frisch ziehen — die alte History ist
+      dort nach dem Rewrite nicht mehr anschlussfähig:
+      ```bash
+      git fetch origin && git reset --hard origin/main
+      ```
+- [ ] Offene PRs und alte Klone: neu ziehen. Alle Commit-SHAs haben sich geändert.
+
+---
+
+## Bewusst nicht gemacht
+
+- **Assets nach Git LFS.** `assets/scenes/` (74 MB) wird von
+  `scripts/copy-scenes.mjs` in jedes `public/scenes/` kopiert und von
+  `pickScene.test.ts` geprüft — die Bilder sind aktiv in Benutzung. LFS würde
+  den Clone auf ~13 MB drücken, aber jeder Cloner bräuchte `git-lfs`, und der
+  GitHub-Free-Tier hat 1 GB Bandbreite pro Monat. Bei einem öffentlichen Repo
+  ist das schnell erschöpft. 87 MB Clone-Größe ist der bessere Kompromiss.
+- **`terra.html` entfernen.** Bewusst eingefrorene v1-Referenz (siehe E34 in
+  `docs/analysis/2026-07-26-bereichsliste.md`), von `terra/README.md` und den
+  Test-Fixtures referenziert.
