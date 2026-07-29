@@ -142,6 +142,7 @@ export function InstallWizard({ config, onConfigSaved, onCompleted, onDismiss }:
           email: email.trim(),
           password,
           isOwner: true,
+          ai: true,
           ...accessFor(apps),
         });
         if (!created.ok) {
