@@ -46,10 +46,19 @@ Danach:
 ```bash
 pnpm dev            # alle Apps
 pnpm dev:studio     # nur Studio (Port 3000)
+pnpm dev:portal     # nur Portal (Port 3001)
+pnpm dev:brain      # nur Brain  (Port 3002)
+pnpm dev:family     # nur Family (Port 3004)
 ```
 
 Seed-Login: `dm@uwe.local` / `uwe-dev`. Der Seed-Nutzer trägt die Häkchen
 `Portal` und `Studio`; `Brain` und `Family` setzt du im Command Center.
+
+Für einen echten Owner-Account statt der Seed-Daten:
+
+```bash
+pnpm bootstrap:owner
+```
 
 Der Demo-Seed verweigert den Dienst bei `NODE_ENV=production` — die
 Demo-Zugangsdaten sind ausschließlich für lokale Entwicklung.

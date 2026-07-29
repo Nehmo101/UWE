@@ -2,6 +2,17 @@
 
 Stand: v0.1.x. Sicheres Backup/Restore für UWE-Daten.
 
+## Backup anlegen
+
+```bash
+pnpm backup:create
+```
+
+Ein Backup umfasst Datenbank und Uploads. Zeitpläne werden nicht hier, sondern
+in den Studio-Einstellungen gesetzt — der Host liest sie über das
+Self-Service-Muster ([engineering/self-service-config.md](engineering/self-service-config.md)).
+Wiederherstellung: [backup-restore.md](backup-restore.md).
+
 ## Sicherheitsmodell
 
 | Aktion | OWNER | ADMIN (dm) | PLAYER |
