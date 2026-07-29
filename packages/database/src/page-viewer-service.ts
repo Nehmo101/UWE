@@ -16,45 +16,7 @@ import {
   type WikiPageNode,
 } from "./page-service";
 import type { PageSummary, PageWithBlocks, UweRepository } from "./repository";
-
-const HTML_ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-};
-
-function escapeHtml(text: string): string {
-  return text.replace(/[&<>"']/g, (character) => HTML_ESCAPES[character] ?? character);
-}
-
-/**
- * Blöcke, die ein Asset tragen, werden als Bild gerendert. Ohne das blieben sie
- * unsichtbar: `renderBlockContentForViewer` kennt nur `block.content`, und ein
- * Bildblock hat dort nichts stehen — er wurde am Ende von `filter(Boolean)`
- * verworfen. Betrifft alle Bildblöcke, nicht nur die aus dem PDF-Import.
- *
- * Sicherheit: `filterBlocksForViewer` hat vorher schon alles entfernt, was der
- * Betrachter nicht sehen darf — hier kommen nur freigegebene Blöcke an.
- */
-const ASSET_BLOCK_TYPES = new Set(["image", "gallery", "map", "handout"]);
-
-function renderAssetBlockHtml(
-  block: { type: string; assetId: string | null; content: string | null },
-  captionHtml: string,
-): string {
-  if (!block.assetId || !ASSET_BLOCK_TYPES.has(block.type)) {
-    return captionHtml;
-  }
-  const src = `/api/assets/${encodeURIComponent(block.assetId)}/file`;
-  const alt = escapeHtml((block.content ?? "").trim() || "Bild zur Seite");
-  const caption = captionHtml ? `<figcaption>${captionHtml}</figcaption>` : "";
-  return `<figure class="wiki-figure"><img src="${escapeHtml(src)}" alt="${alt}" loading="lazy" />${caption}</figure>`;
-}
-
-/** Nur für Tests — die Bild-Auszeichnung ohne DB und Auth prüfbar machen. */
-export const __testing = { renderAssetBlockHtml };
+import { renderAssetBlockHtml, studioAssetUrl } from "./content-block-html";
 
 function resolveViewerLinks(
   content: string,
@@ -162,7 +124,7 @@ export async function buildPageViewForViewer(
         ctx,
         renderCtx,
       );
-      return renderAssetBlockHtml(block, html);
+      return renderAssetBlockHtml(block, html, { assetUrl: studioAssetUrl });
     }),
   );
   const html = blockHtmlParts.filter(Boolean).join("\n\n");

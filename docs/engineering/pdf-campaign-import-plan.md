@@ -415,16 +415,49 @@ Dazu eine globale CSS-Begrenzung in `apps/studio/app/wiki.css`. Die vorhandene
 `.wiki-content img`-Regel steckt in `@media (max-width: 960px)` — auf dem Desktop
 hätte ein 1600 px breiter Seiten-Zuschnitt das Layout gesprengt.
 
-**Nicht geändert:** Das Portal hat einen eigenen Renderpfad
-(`apps/portal/app/auth/worlds/[worldSlug]/[slug]/page.tsx` ruft
-`renderBlockContentForViewer` direkt auf) und zeigt Bildblöcke weiterhin nicht.
-Für den Kampagnen-Import ist das folgenlos, aber es ist eine Inkonsistenz:
-Gibt ein DM eine Seite für Spieler frei, sähen sie den Text ohne die Bilder.
-Das Portal anzufassen gehört bewusst in eine eigene Runde mit Security-Review.
+### Das Portal zeigt Bildblöcke ebenfalls
 
-**Ebenfalls offen:** Die Import-Vorschau nennt die Zahl der Zuschnitte, zeigt
-aber keine Miniaturbilder. Dafür bräuchte es eine Route, die die noch nicht als
-Asset registrierten Dateien aus `import-tmp` ausliefert.
+Der erste Wurf hatte nur den Studio-Pfad erwischt: Das Portal rendert über
+`renderBlockContentForViewer` direkt statt über `buildPageViewForViewer`. Ein DM,
+der eine Seite für Spieler freigibt, hätte ihnen den Text ohne die Karten gezeigt.
+
+Die Auszeichnung liegt deshalb jetzt in `packages/database/src/content-block-html.ts`
+und wird von beiden Apps benutzt. Die Asset-URL kommt vom Aufrufer, weil die
+Verträge sich unterscheiden:
+
+| App | URL | Zugriffsregel |
+|---|---|---|
+| Studio | `/api/assets/<id>/file` | Studio-Häkchen (DM sieht ohnehin alles) |
+| Portal | `/api/assets/<id>/file?world=<slug>` | Welt-Zuordnung |
+
+Die Portal-Route (`apps/portal/app/api/assets/[assetId]/file/route.ts`) **gab es
+bereits**. Sie bindet das Asset über `getAssetForViewer` per
+`where: { id, world: { slug } }` an die Welt und prüft `canReadAsset` — eine
+Asset-ID aus einer fremden Welt läuft ins Leere, auch wenn der Nutzer für die
+angegebene Welt berechtigt ist. Der `world`-Parameter ist deshalb Pflicht, und
+`portalAssetUrl(worldSlug)` setzt ihn.
+
+Sichtbarkeit bleibt unverändert: `filterBlocksForViewer` greift vor dem Rendern.
+Ein Bildblock erscheint genau dann, wenn die Textblöcke derselben Seite
+erscheinen — es entsteht kein neuer Pfad, über den dm_only-Inhalt ins Portal
+gelangt. Auch das Portal bekam die globale `figure.wiki-figure`-CSS-Regel, aus
+demselben Grund wie Studio.
+
+### Miniaturbilder in der Import-Vorschau
+
+Neue Route `apps/studio/app/api/import/campaign-figure/route.ts`. Nötig, weil die
+Zuschnitte zum Vorschau-Zeitpunkt noch kein Asset sind — sie liegen als
+Zwischenmaterial in `import-tmp` und haben keine reguläre URL.
+
+Damit daraus kein beliebiger Datei-Leser wird, greifen zwei Prüfungen: Der Job
+muss ein PDF-zu-Kampagne-Job sein, **und** der angefragte Index muss in dessen
+`extractionMeta.figures` stehen. Pfad-Traversal deckt `assertSafeJobId` im
+Storage-Helper ab. `Cache-Control: no-store`, weil das Material nach dem Execute
+verschwindet.
+
+Das Panel zeigt die Zuschnitte als Karte „Gefundene Abbildungen" mit Seitenzahl
+und Typ. Der Zustand kommt über `CampaignPdfJobStatus.figures`, also denselben
+Poll-Endpunkt wie der Fortschritt — die Galerie übersteht damit einen Reload.
 
 ### Command Center: Einrichtungsansicht
 

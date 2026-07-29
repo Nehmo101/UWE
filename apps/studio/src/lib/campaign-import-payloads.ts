@@ -30,6 +30,13 @@ export interface CampaignAnalysisProgress {
   startedAt: string;
 }
 
+/** Von der OCR zugeschnittene Abbildung, für die Vorschau-Miniaturen. */
+export interface CampaignFigurePreview {
+  index: number;
+  pageNumber: number;
+  type: string;
+}
+
 export interface CampaignPdfJobStatus {
   status: ImportJobStatus;
   errorMessage: string | null;
@@ -37,7 +44,32 @@ export interface CampaignPdfJobStatus {
   hasPdf: boolean;
   progress: CampaignAnalysisProgress | null;
   preview: CampaignImportPreviewSummary | null;
+  /** Leer, wenn der Textlayer taugte — dann lief keine OCR. */
+  figures: CampaignFigurePreview[];
   fitChat: CampaignFitChatMessage[];
+}
+
+/** Abbildungs-Metadaten aus `extractionMeta.figures` der Vorschau. */
+export function readFigurePreviews(previewPayload: unknown): CampaignFigurePreview[] {
+  const record = recordFrom(previewPayload);
+  const meta = record ? recordFrom(record.extractionMeta) : null;
+  if (!Array.isArray(meta?.figures)) {
+    return [];
+  }
+  const figures: CampaignFigurePreview[] = [];
+  for (const entry of meta.figures) {
+    const value = recordFrom(entry);
+    if (!value) continue;
+    const index = typeof value.index === "number" ? value.index : null;
+    const pageNumber = typeof value.pageNumber === "number" ? value.pageNumber : null;
+    if (index == null || pageNumber == null) continue;
+    figures.push({
+      index,
+      pageNumber,
+      type: typeof value.type === "string" ? value.type : "figure",
+    });
+  }
+  return figures;
 }
 
 export function recordFrom(value: unknown): Record<string, unknown> | null {
@@ -148,6 +180,7 @@ export function jobToCampaignStatus(job: ImportJob, hasPdf: boolean): CampaignPd
     hasPdf,
     progress: readAnalysisProgress(job.previewPayload),
     preview: storedPreview ? toCampaignPreviewSummary(storedPreview) : null,
+    figures: readFigurePreviews(job.previewPayload),
     fitChat: readFitChatTranscript(job.metadata),
   };
 }

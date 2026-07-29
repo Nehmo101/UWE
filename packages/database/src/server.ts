@@ -843,6 +843,14 @@ export {
 } from "./canon-conflict-service";
 
 export {
+  escapeHtmlAttribute,
+  portalAssetUrl,
+  renderAssetBlockHtml,
+  studioAssetUrl,
+} from "./content-block-html";
+export type { AssetBlockLike, RenderAssetBlockOptions } from "./content-block-html";
+
+export {
   extractPdfText,
   isMissingTextLayerError,
   normalizePdfTextForImport,

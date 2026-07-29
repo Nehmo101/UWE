@@ -10,6 +10,7 @@ import {
 import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
 import type {
   CampaignAnalysisProgress,
+  CampaignFigurePreview,
   CampaignPdfJobStatus,
 } from "@/src/lib/campaign-import-payloads";
 import {
@@ -138,6 +139,7 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
   const [executing, setExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fitChatInitial, setFitChatInitial] = useState<CampaignFitChatMessage[] | null>(null);
+  const [figures, setFigures] = useState<CampaignFigurePreview[]>([]);
   const progressWatchRef = useRef<{ key: string; changedAt: number } | null>(null);
 
   const applyFinishedPreview = useCallback((summary: CampaignImportPreviewSummary) => {
@@ -157,6 +159,7 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
   const applyStatus = useCallback(
     (status: CampaignPdfJobStatus) => {
       setHasPdf(status.hasPdf);
+      setFigures(status.figures);
       if (status.pdfFileName) {
         setPdfFileName(status.pdfFileName);
       }
@@ -447,6 +450,37 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
           {note}
         </Alert>
       ))}
+      {figures.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gefundene Abbildungen ({figures.length})</CardTitle>
+            <CardDescription>
+              Karten und Illustrationen aus der PDF. Sie werden beim Import an die Seiten
+              gehängt, die aus derselben PDF-Seite stammen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {figures.map((figure) => (
+                <li key={figure.index} className="flex flex-col gap-1">
+                  {/* Zwischenmaterial ohne Asset-Eintrag — eigene Route,
+                      deshalb kein next/image. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/import/campaign-figure?jobId=${encodeURIComponent(jobId)}&index=${figure.index}`}
+                    alt={`Abbildung von Seite ${figure.pageNumber}`}
+                    loading="lazy"
+                    className="w-full rounded-md border border-border bg-muted object-contain"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Seite {figure.pageNumber} · {figure.type}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       {resultLabel ? (
         <Alert tone="success">
           {resultLabel}
