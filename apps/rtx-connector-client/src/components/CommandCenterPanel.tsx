@@ -618,7 +618,7 @@ export function CommandCenterPanel({
             </label>
           </div>
           <p className="connector-muted">
-            Ohne den Haken „Dienste und Tunnel beim Beenden stoppen" laufen Studio, Portal,
+            Ohne den Haken „Dienste und Tunnel beim Beenden stoppen“ laufen Studio, Portal,
             Brain, Familie, Startseite und der Cloudflare-Tunnel als Hintergrundprozesse
             weiter — uweanddragons.org bleibt dann öffentlich erreichbar, obwohl das Command
             Center geschlossen ist.
