@@ -1163,8 +1163,8 @@ importers:
         specifier: workspace:*
         version: link:../mail-core
       imapflow:
-        specifier: ^1.6.4
-        version: 1.6.4
+        specifier: ^1.6.5
+        version: 1.6.5
       isomorphic-dompurify:
         specifier: ^3.20.0
         version: 3.20.0
@@ -1203,8 +1203,8 @@ importers:
         specifier: workspace:*
         version: link:../env
       imapflow:
-        specifier: ^1.6.4
-        version: 1.6.4
+        specifier: ^1.6.5
+        version: 1.6.5
       mailparser:
         specifier: ^3.9.14
         version: 3.9.14
@@ -4709,8 +4709,8 @@ packages:
     resolution: {integrity: sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw==}
     engines: {node: '>= 4'}
 
-  imapflow@1.6.4:
-    resolution: {integrity: sha512-4KTjkhmyIyeFlTyNuQRQ0pl5LwkBlzoTq2vG9zjF0HqQ0+GIYVaIWq2joOCOXERbyXNI5EuqlyGXQh3NUTqoFQ==}
+  imapflow@1.6.5:
+    resolution: {integrity: sha512-5XgLcfl6blDju2SP7TgTv4WIlTt7zxXYcfjznJFmfFrogHR2XzHGlS9s2wdqxv9ZJ5CPaRnig7KaK7qNoJPmlg==}
 
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
@@ -9300,7 +9300,7 @@ snapshots:
 
   ignore@7.0.6: {}
 
-  imapflow@1.6.4:
+  imapflow@1.6.5:
     dependencies:
       '@zone-eu/mailsplit': 5.4.14
       encoding-japanese: 2.2.0
