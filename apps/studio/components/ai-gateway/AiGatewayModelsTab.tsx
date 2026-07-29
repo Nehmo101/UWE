@@ -55,13 +55,6 @@ export function AiGatewayModelsTab({
                         >
                           <option value="">— Standard —</option>
                           <option value="local_rtx">RTX (lokal)</option>
-                          {data.providers
-                            .filter((p) => p.isEnabled)
-                            .map((p) => (
-                              <option key={p.providerId} value={p.providerId}>
-                                {p.label}
-                              </option>
-                            ))}
                         </select>
                       )}
                     </td>

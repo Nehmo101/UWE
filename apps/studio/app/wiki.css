@@ -15,6 +15,28 @@
   border-bottom: 1px dashed color-mix(in srgb, var(--uwe-wiki-link, #38bdf8) 40%, transparent);
 }
 
+/* Bildblöcke (u. a. die aus dem PDF-Import ausgeschnittenen Karten). Die
+   Begrenzung muss global gelten: die Regel weiter unten steckt in einer
+   Mobil-Media-Query, ein 1600px breiter Seiten-Zuschnitt würde das
+   Desktop-Layout sonst sprengen. */
+.wiki-content figure.wiki-figure {
+  margin: 1.5rem 0;
+}
+
+.wiki-content figure.wiki-figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--uwe-border-muted, rgba(148, 163, 184, 0.15));
+}
+
+.wiki-content figure.wiki-figure figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--uwe-muted-foreground, rgba(148, 163, 184, 0.9));
+}
+
 .wiki-content a.wiki-link:hover {
   color: var(--uwe-wiki-link-hover, #7dd3fc);
   border-bottom-style: solid;

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { erstelleTerraKarteAction, loescheTerraKarteAction } from "@/app/terra-actions";
+import { benenneTerraKarteAction, erstelleTerraKarteAction, loescheTerraKarteAction } from "@/app/terra-actions";
 
 /**
  * Übersicht der Terra-Karten einer Welt.
@@ -36,6 +36,23 @@ export function TerraKartenListe({ worldSlug, karten }: TerraKartenListeProps) {
       } else {
         setFehler(antwort.error ?? "Anlegen fehlgeschlagen");
       }
+    });
+  }
+
+  function umbenennen(karteId: string, titel: string) {
+    const neu = window.prompt("Neuer Name der Karte", titel);
+    if (neu === null) return;
+    const geputzt = neu.trim();
+    if (!geputzt || geputzt === titel) return;
+    setFehler(null);
+    starte(async () => {
+      const form = new FormData();
+      form.set("worldSlug", worldSlug);
+      form.set("karteId", karteId);
+      form.set("titel", geputzt);
+      const antwort = await benenneTerraKarteAction(form);
+      if (antwort.ok) router.refresh();
+      else setFehler(antwort.error ?? "Umbenennen fehlgeschlagen");
     });
   }
 
@@ -81,6 +98,15 @@ export function TerraKartenListe({ worldSlug, karten }: TerraKartenListeProps) {
               <span className="text-xs text-muted-foreground">
                 Fassung {karte.version} · {karte.updatedAt}
               </span>
+              <button
+                type="button"
+                onClick={() => umbenennen(karte.id, karte.titel)}
+                disabled={laeuft}
+                className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
+                data-testid="terra-karte-umbenennen"
+              >
+                Umbenennen
+              </button>
               <button
                 type="button"
                 onClick={() => loeschen(karte.id, karte.titel)}

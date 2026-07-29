@@ -313,6 +313,14 @@ function empfange(ereignis) {
 }
 
 /**
+ * Bedienungsrunde: Sofortmeldung von außen — der Speichern-Knopf (io.js)
+ * schickt den offenen Stand ohne die Ruhezeit an die Elternseite, die ihn in
+ * die Datenbank schreibt. Außerhalb eines Rahmens (Doppelklick, Tests) tut
+ * der Aufruf nichts; im Lesemodus ebenso.
+ */
+export function brueckeSofort() { fluss(); }
+
+/**
  * Läuft Terra eingebettet? Einzige Auskunft, die dieses Modul nach außen gibt.
  * editor/io.js fragt sie, um das Autosave-Angebot zu unterdrücken: im Rahmen
  * ist die Wahrheit die Karte aus der Datenbank, nicht der Ringpuffer im

@@ -1532,7 +1532,14 @@ function genRanke(el) {
   // ist Zeichen fuer Zeichen der Altwert. Junge Ranken tragen weniger (und
   // unter alter 0.18 gar keine) Plateaus; die Hoehenformel `fr` haengt wie
   // bisher an nPl, die verbliebenen Plateaus RUTSCHEN also nur.
-  var nPl = clamp(Math.round(p.plateaus * A.plateau), 0, 6);
+  /* Bedienungsrunde: der Plateau-Deckel folgt der DICKE. Im Bestandsbereich
+     (dicke bis 2.5) ist er exakt die alte 6 — Bestandskarten rendern
+     byteidentisch, denn ihr Regler reichte ohnehin nur bis 6. Erst eine
+     dickere Wurzel (Regler bis 8) traegt mehr, bis zu 12: eine Karte um EINE
+     riesige Wurzel herum braucht genau diese Staffel. */
+  var plMax = 6 + Math.round(Math.max(0, ((p.dicke || 1) - 2.5)) * 1.1);
+  if (plMax > 12) plMax = 12;
+  var nPl = clamp(Math.round(p.plateaus * A.plateau), 0, plMax);
   /* --- Schalter der Blattstadt (genBlattstadt, oben) ----------------------
      "" (Default und jeder unbekannte Wert) heisst WIE BISHER: die Bebauung
      bleibt Wort fuer Wort der alte Inline-Block am Ende der Plateau-Schleife,
@@ -1738,6 +1745,13 @@ function genRanke(el) {
     }
   }
 
+  /* Bedienungsrunde: die Plateau-Rahmen als Laufzeitfeld veroeffentlichen —
+     objects.js beantwortet daraus plateauHoeheAt (Objekte AUF Blattplateaus).
+     Wie el._arbor/el._netz unten kein Speicherfeld: serializeElements schreibt
+     eine Whitelist, das Feld bleibt reine Laufzeit und entsteht bei jedem
+     genRanke-Lauf frisch aus denselben deterministischen Matrizen. */
+  el.plateaus = plateauDaten;
+
   /* --- Blattstaedtchen: zweiter Durchgang (genBlattstadt) -----------------
      Bewusst NACH der Plateau-Schleife: die Brueckenanker haengen an den
      NACHBARplateaus, und plateauDaten ist erst hier vollstaendig. Im
@@ -1919,7 +1933,9 @@ function genRanke(el) {
   }
 
   // --- Schwebeinseln ---
-  var nIsl = clamp(Math.round(p.inseln * A.insel), 0, 4);
+  // Bedienungsrunde: Deckel 4 -> 8, im Gleichschritt mit dem Regler
+  // (editor/tools.js). Bestandskarten liegen bei hoechstens 4 — unveraendert.
+  var nIsl = clamp(Math.round(p.inseln * A.insel), 0, 8);
   var islGeos = [];
   for (k = 0; k < nIsl; k++) {
     // Ein Strom je Insel (Baeume laufen sequentiell mit — sie gehoeren zur

@@ -18,4 +18,11 @@ export interface ExtractedCampaignEntity {
   summary?: string | null;
   body: string;
   tags?: string[];
+  /**
+   * PDF-Seiten, aus denen der Chunk stammte, der diese Entität ergab. Nur beim
+   * OCR-Pfad gesetzt (der Textlayer kennt keine Seitengrenzen). Dient dazu, die
+   * auf denselben Seiten erkannten Abbildungen der richtigen Wiki-Seite
+   * anzuhängen — nicht vom Modell befüllt, sondern aus den Seiten-Markern.
+   */
+  sourcePages?: number[];
 }

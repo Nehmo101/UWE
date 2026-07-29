@@ -184,8 +184,11 @@ async function runOllamaVision(
   if (images.length === 0) {
     throw new Error("vision_extract: 'images' (Base64) fehlt im Payload.");
   }
-  // Vision-fähiges Ollama-Modell (llava, minicpm-v, qwen2.5-vl …); Default über Slot.
-  const model = asString(payload.model, "llava");
+  // Vision-fähiges Ollama-Modell; der Host schickt es normalerweise explizit
+  // (Vision-Slot bzw. Dokumenten-OCR-Vorgabe). Der Fallback ist Unlimited-OCR,
+  // weil der überwiegende Teil der Vision-Jobs in UWE Dokument-Parsing ist —
+  // llava taugt dafür nicht.
+  const model = asString(payload.model, "frob/unlimited-ocr:q8_0");
   const maxTokens = asNumber(payload.maxTokens);
   const messages = [{ role: "user", content: prompt, images }];
 

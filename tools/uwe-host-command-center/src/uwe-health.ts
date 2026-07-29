@@ -1,3 +1,4 @@
+import { resolveFamilyPublicBaseUrl } from "@uwe/auth";
 import {
   collectServiceStatus,
   type HostSeverity,
@@ -99,6 +100,14 @@ function brainQuickLink(): UweQuickLink | null {
   return { label: "Brain (privat)", href: `${base}${path}`, external: true };
 }
 
+/** Family-Einstieg. Die Adresse kommt aus demselben Resolver wie die Links in
+ *  der App (NEXT_PUBLIC_FAMILY_URL, sonst aus dem Split-Hostname-Layout
+ *  abgeleitet) — damit zeigt die Kommandozentrale dorthin, wo Family wirklich
+ *  erreichbar ist. */
+function familyQuickLink(): UweQuickLink {
+  return { label: "Family", href: resolveFamilyPublicBaseUrl(), external: true };
+}
+
 function buildLinks(studioPort: number, portalPort: number, studioUp: boolean): UweQuickLink[] {
   const studioBase = `http://127.0.0.1:${studioPort}`;
   const portalBase = `http://127.0.0.1:${portalPort}`;
@@ -111,6 +120,7 @@ function buildLinks(studioPort: number, portalPort: number, studioUp: boolean): 
     if (brain) {
       links.push(brain);
     }
+    links.push(familyQuickLink());
     // Kein Link mehr auf Studios Systembereich: Einrichtung, Host Control,
     // Backup und Cloudflare liegen im Command Center selbst (Abschnitt D).
     links.push({ label: "Admin", href: `${studioBase}/admin`, external: true });

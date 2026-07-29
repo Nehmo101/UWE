@@ -21,6 +21,7 @@ export type * from "./tauri-types";
 
 import type { ConnectorClientConfig } from "@uwe/connector-client-config";
 import type { ConnectorModelProfileStore } from "@uwe/connector-model-profile";
+import type { LocalHostServiceId } from "./tauri-types";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -192,21 +193,21 @@ export async function restoreBackup(name: string, root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("restore_backup", { root, name });
 }
 
-export async function startService(service: "studio" | "portal" | "brain" | "landing", root?: string) {
+export async function startService(service: LocalHostServiceId, root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("start_service", { root, service });
 }
 
-export async function stopService(service: "studio" | "portal" | "brain" | "landing", root?: string) {
+export async function stopService(service: LocalHostServiceId, root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("stop_service", { root, service });
 }
 
-export async function restartService(service: "studio" | "portal" | "brain" | "landing", root?: string) {
+export async function restartService(service: LocalHostServiceId, root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("restart_service", { root, service });
 }
 
 export async function getHostLogs(
   root?: string,
-  target: "studio" | "portal" | "brain" | "landing" | "command-center" = "command-center",
+  target: LocalHostServiceId | "command-center" = "command-center",
 ) {
   return invokeCommand<import("./tauri-types").LocalHostLogsResult>("get_host_logs", {
     root,
@@ -214,7 +215,7 @@ export async function getHostLogs(
   });
 }
 
-export async function openHostTarget(root: string | undefined, target: "studio" | "portal" | "brain" | "landing") {
+export async function openHostTarget(root: string | undefined, target: LocalHostServiceId) {
   return invokeCommand<{ ok: boolean; message: string }>("open_host_target", { root, target });
 }
 
@@ -390,6 +391,8 @@ export type OpsAction =
   | "cloudflare-challenge-status"
   | "cloudflare-challenge-set"
   | "cloudflare-challenge-apply"
+  | "cloudflare-tunnel-status"
+  | "cloudflare-tunnel-apply"
   | "google-login-set";
 
 export interface OpsResult<T = unknown> {

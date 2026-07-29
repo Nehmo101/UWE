@@ -9,6 +9,9 @@ import { setRauchSammler, flushPack } from './core/pools.js';
 import { POOLS } from './core/pools.js';
 import { rebuildAll } from './core/dirty.js';
 import { initWater, wasserSichtbar, updateWater, water } from './world/water.js';
+// Bedienungsrunde: die Uhr der Fluss-Fliessanimation (Shader-Patch an
+// flussMat). paths.js liegt laengst im Modulgraphen (geometry.js zieht es).
+import { setFlussZeit } from './generators/paths.js';
 import { initSky, updateSky } from './world/sky.js';
 import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch, setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
 import { initVfx, tickVfx } from './world/vfx.js';
@@ -210,6 +213,9 @@ function animate() {
   tickVfx(now * 0.001, vfxFokus);
   water.visible = wasserSichtbar(scene.fog.far);
   if (water.visible) updateWater(now * 0.001);
+  // Fluesse fliessen unabhaengig von der Sichtbarkeit des Meeres — die Uhr
+  // kostet einen Uniform-Schreibzugriff je Bild.
+  setFlussZeit(now * 0.001);
   flushPack();
   updateHandlePositions();
   // I3: laufende Erosion bekommt ihr Zeitbudget. Steht VOR dem Zeichnen, damit

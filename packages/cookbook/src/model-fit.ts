@@ -17,6 +17,8 @@ const USE_CASE_CONTEXT: Record<CookbookUseCaseId, number> = {
   canon_check: 12288,
   player_safe_rewrite: 4096,
   theme_design: 8192,
+  // Ganze Buchseiten als Bild plus Markdown-Ausgabe — das Modell bringt 32K mit.
+  document_ocr: 32768,
 };
 
 const USE_CASE_MIN_SCORE: Record<CookbookUseCaseId, number> = {
@@ -29,6 +31,9 @@ const USE_CASE_MIN_SCORE: Record<CookbookUseCaseId, number> = {
   player_safe_rewrite: 50,
   // Reliable structured JSON needs a capable model — on par with generation.
   theme_design: 55,
+  // OCR ist ein Spezialmodell, kein Allrounder: die Eignung entscheidet der
+  // Katalog-Eintrag, nicht die allgemeine Stärke. Entsprechend niedrige Hürde.
+  document_ocr: 40,
 };
 
 function scoreToLevel(score: number): ModelFitLevel {

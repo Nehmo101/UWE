@@ -1,34 +1,28 @@
 "use server";
 
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
-import { AiRouterError, routeAiRequest } from "@uwe/ai-brain";
 import {
   createImportJobService,
   createUndoService,
   createUweRepositoryFromClient,
-  extractPdfText,
   pickUniqueSlug,
   prisma,
   slugifyPageTitle,
 } from "@uwe/database/server";
+import { enqueueAndDispatch } from "@/src/lib/job-executor";
+import {
+  CAMPAIGN_PDF_ANALYSIS_KIND,
+  type CampaignPdfAnalysisPayload,
+} from "@/src/lib/campaign-import-job";
 import { brainPrisma } from "@uwe/database/brain-client";
 import {
-  buildCampaignExtractionPrompt,
-  buildCampaignPreview,
-  chunkPdfText,
-  dedupeEntitiesByTitle,
   entityToCreatePageInput,
   MAX_CAMPAIGN_CONTEXT_CHARACTERS,
   MAX_CAMPAIGN_PDF_BYTES,
-  MAX_CHUNKS,
-  parseCampaignEntities,
   toCampaignPreviewSummary,
-  type CampaignImportPreview,
   type CampaignImportPreviewSummary,
-  type ExtractedCampaignEntity,
 } from "@uwe/pdf-campaign-import";
 import {
-  buildPreviewPayload,
   buildProgressPayload,
   jobToCampaignStatus,
   readAnalysisProgress,
@@ -40,10 +34,15 @@ import {
   type CampaignPdfJobStatus,
 } from "@/src/lib/campaign-import-payloads";
 import {
+  deleteCampaignImportFigures,
   deleteCampaignImportPdf,
   hasCampaignImportPdf,
-  readCampaignImportPdf,
 } from "@/src/lib/campaign-pdf-storage";
+import {
+  attachCampaignFigures,
+  readCampaignFigures,
+  type CreatedCampaignPage,
+} from "@/src/lib/campaign-figure-assets";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -68,35 +67,8 @@ async function requireCampaignPdfJob(jobId: string) {
   return job;
 }
 
-function mockEntityForChunk(chunk: string, index: number): ExtractedCampaignEntity {
-  return {
-    kind: "note",
-    title: "Mock-Entität " + (index + 1),
-    summary: "Lokale Mock-Vorschau für den PDF-Kampagnenimport.",
-    body: chunk.slice(0, 2_000),
-    tags: ["PDF-Import", "Mock"],
-  };
-}
-
 async function writeProgress(jobId: string, progress: CampaignAnalysisProgress): Promise<void> {
   await importJobs().updateJob(jobId, { previewPayload: buildProgressPayload(progress) });
-}
-
-async function markPreviewFailed(
-  jobId: string,
-  message: string,
-): Promise<{ preview: CampaignImportPreviewSummary }> {
-  const preview: CampaignImportPreview = {
-    ...buildCampaignPreview([]),
-    errors: [message],
-    canExecute: false,
-  };
-  await importJobs().updateJob(jobId, {
-    previewPayload: buildPreviewPayload(preview, { aiRoute: "local_rtx" }),
-  });
-  await importJobs().markFailed(jobId, message);
-  revalidatePath("/import");
-  return { preview: toCampaignPreviewSummary(preview) };
 }
 
 /** Poll-Endpunkt für das Panel: Upload-/Analyse-/Vorschau-Zustand des Jobs. */
@@ -108,16 +80,23 @@ export async function getImportCampaignJobStatusAction(
   return jobToCampaignStatus(job, await hasCampaignImportPdf(jobId));
 }
 
+/**
+ * Startet die Analyse. Sie läuft als Hintergrund-`Job` (siehe
+ * `campaign-import-job.ts`) — ein Abenteuerband mit OCR dauert zu lange für
+ * eine Server Action. Liegt bereits eine Vorschau vor, kommt sie sofort
+ * zurück; sonst meldet die Antwort nur, dass der Lauf gestartet ist, und das
+ * Panel verfolgt den Fortschritt über `getImportCampaignJobStatusAction`.
+ */
 export async function previewImportCampaignPdfJobAction(
   jobId: string,
   campaignContext = "",
-): Promise<{ preview: CampaignImportPreviewSummary }> {
+): Promise<{ preview: CampaignImportPreviewSummary | null; started: boolean }> {
   await requireStudioActionAuth();
 
   const job = await requireCampaignPdfJob(jobId);
   const storedPreview = readStoredPreview(job.previewPayload);
   if (storedPreview && storedPreview.totalDocuments > 0) {
-    return { preview: toCampaignPreviewSummary(storedPreview) };
+    return { preview: toCampaignPreviewSummary(storedPreview), started: false };
   }
 
   const runningProgress = readAnalysisProgress(job.previewPayload);
@@ -132,108 +111,34 @@ export async function previewImportCampaignPdfJobAction(
     );
   }
 
-  const buffer = await readCampaignImportPdf(jobId);
-  if (!buffer) {
+  if (!(await hasCampaignImportPdf(jobId))) {
     throw new Error("Keine hochgeladene PDF gefunden — bitte zuerst die PDF-Datei hochladen.");
   }
-  if (buffer.length > MAX_CAMPAIGN_PDF_BYTES) {
-    return markPreviewFailed(
-      jobId,
-      `PDF-Datei ist zu groß (max. ${Math.floor(MAX_CAMPAIGN_PDF_BYTES / (1024 * 1024))} MB).`,
-    );
-  }
 
-  const startedAt = new Date().toISOString();
-  try {
-    await writeProgress(jobId, {
-      phase: "extracting",
-      processedChunks: 0,
-      totalChunks: null,
-      startedAt,
-    });
-    const text = await extractPdfText(buffer, { maxBytes: MAX_CAMPAIGN_PDF_BYTES });
-    const chunks = chunkPdfText(text);
-    const useMock = process.env.NODE_ENV !== "production" && process.env.AI_USE_MOCK === "true";
-    const repo = createUweRepositoryFromClient(prisma);
-    const extracted: ExtractedCampaignEntity[] = [];
+  // Sichtbarer Startzustand, bevor der Runner das erste Mal schreibt — sonst
+  // sähe das Panel zwischen Klick und erstem Fortschritt einen leeren Job.
+  await writeProgress(jobId, {
+    phase: "extracting",
+    processedChunks: 0,
+    totalChunks: null,
+    startedAt: new Date().toISOString(),
+  });
 
-    await writeProgress(jobId, {
-      phase: "analyzing",
-      processedChunks: 0,
-      totalChunks: chunks.length,
-      startedAt,
-    });
+  await enqueueAndDispatch({
+    type: "import",
+    title: `PDF-Kampagnenanalyse: ${job.fileName || readPdfFileName(job.metadata) || "import.pdf"}`,
+    ...(job.targetWorldId ? { worldId: job.targetWorldId } : {}),
+    payload: {
+      kind: CAMPAIGN_PDF_ANALYSIS_KIND,
+      importJobId: jobId,
+      campaignContext: normalizedCampaignContext,
+      worldId: job.targetWorldId ?? null,
+      maxBytes: MAX_CAMPAIGN_PDF_BYTES,
+    } satisfies CampaignPdfAnalysisPayload,
+  });
 
-    for (const [index, chunk] of chunks.entries()) {
-      const routed = await routeAiRequest(
-        { repo, prisma },
-        {
-          providerMode: "local_rtx",
-          contextMode: "general_chat",
-          taskType: "create_knowledge_text",
-          userPrompt: buildCampaignExtractionPrompt(chunk, normalizedCampaignContext),
-          useMock,
-          maxTokens: 4_096,
-        },
-      );
-      const chunkEntities = parseCampaignEntities(routed.result.text);
-      extracted.push(
-        ...(useMock && chunkEntities.length === 0
-          ? [mockEntityForChunk(chunk, index)]
-          : chunkEntities),
-      );
-      await writeProgress(jobId, {
-        phase: "analyzing",
-        processedChunks: index + 1,
-        totalChunks: chunks.length,
-        startedAt,
-      });
-    }
-
-    const entities = dedupeEntitiesByTitle(extracted);
-    const basePreview = buildCampaignPreview(entities);
-    const preview =
-      entities.length > 0
-        ? basePreview
-        : {
-            ...basePreview,
-            errors: ["Lokale KI hat keine gültigen Kampagnen-Entitäten geliefert."],
-            canExecute: false,
-          };
-    const processedCharacters = chunks.reduce((total, chunk) => total + chunk.length, 0);
-    const extractionMeta = {
-      aiRoute: "local_rtx",
-      chunkCount: chunks.length,
-      maxChunks: MAX_CHUNKS,
-      sourceCharacters: text.length,
-      processedCharacters,
-      truncated: chunks.length === MAX_CHUNKS && processedCharacters < text.trim().length,
-      useMock,
-      campaignContext: normalizedCampaignContext || null,
-    };
-
-    await importJobs().updateJob(jobId, {
-      status: "preview",
-      previewPayload: buildPreviewPayload(preview, extractionMeta),
-      errorMessage: null,
-    });
-    if (entities.length > 0) {
-      // Erfolgreiche Analyse: die (bis zu 300 MB große) Roh-PDF wird nicht
-      // mehr gebraucht. Bei leerem Ergebnis bleibt sie für einen neuen
-      // Versuch mit anderem Kontext liegen.
-      await deleteCampaignImportPdf(jobId);
-    }
-    revalidatePath("/import");
-    return { preview: toCampaignPreviewSummary(preview) };
-  } catch (error) {
-    const message =
-      error instanceof AiRouterError
-        ? "Lokale RTX ist offline — der Kampagnen-Import kann nicht in die Cloud ausweichen."
-        : error instanceof Error
-          ? error.message
-          : "PDF-Kampagnenvorschau fehlgeschlagen.";
-    return markPreviewFailed(jobId, message);
-  }
+  revalidatePath("/import");
+  return { preview: null, started: true };
 }
 
 export async function executeImportCampaignPdfJobAction(
@@ -268,6 +173,9 @@ export async function executeImportCampaignPdfJobAction(
   const takenSlugs = new Set(existingPages.map((page) => page.slug));
   const createdPageIds: string[] = [];
 
+  const sourceFile = job.fileName || readPdfFileName(job.metadata) || "import.pdf";
+  const createdPages: CreatedCampaignPage[] = [];
+
   await importJobs().markExecuting(jobId);
   try {
     for (const entity of selected) {
@@ -279,11 +187,28 @@ export async function executeImportCampaignPdfJobAction(
           campaignId: context.campaignId,
           slug,
           importJobId: jobId,
-          sourceFile: job.fileName || readPdfFileName(job.metadata) || "import.pdf",
+          sourceFile,
         }),
       );
       createdPageIds.push(page.id);
+      createdPages.push({
+        pageId: page.id,
+        title: entity.title,
+        sourcePages: entity.sourcePages ?? [],
+      });
     }
+
+    // Karten und Abbildungen der zugehörigen PDF-Seiten anhängen. Scheitert das,
+    // scheitert der ganze Execute — die erzeugten Seiten hängen am selben
+    // Undo-Eintrag und würden sonst halb bebildert zurückbleiben.
+    const figureResult = await attachCampaignFigures(repo, {
+      jobId,
+      worldId: context.worldId,
+      campaignId: context.campaignId,
+      sourceFile,
+      figures: readCampaignFigures(job.previewPayload),
+      pages: createdPages,
+    });
 
     const resultSummary = {
       created: createdPageIds.length,
@@ -292,6 +217,7 @@ export async function executeImportCampaignPdfJobAction(
       skipped: entities.length - createdPageIds.length,
       createdIds: createdPageIds,
       campaignId: context.campaignId,
+      createdAssets: figureResult.createdAssetIds.length,
     };
     const undoEntry = await createUndoService(brainPrisma, prisma).captureImportCentralExecute({
       targetType: "campaign",
@@ -302,6 +228,7 @@ export async function executeImportCampaignPdfJobAction(
     const undoToken = undoEntry?.id ?? null;
     await importJobs().markCompleted(jobId, resultSummary, undoToken);
     await deleteCampaignImportPdf(jobId);
+    await deleteCampaignImportFigures(jobId);
     revalidatePath("/import");
     return { resultSummary, undoToken };
   } catch (error) {

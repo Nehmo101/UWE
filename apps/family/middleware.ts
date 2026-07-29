@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { applySecurityHeaders, evaluateFamilyMiddleware } from "@uwe/auth";
+import {
+  applySecurityHeaders,
+  evaluateFamilyMiddleware,
+  rebaseUrlOnPublicOrigin,
+  resolveFamilyPublicBaseUrl,
+} from "@uwe/auth";
 
 /**
  * Family ist häkchen-gegated wie Brain, nur mit einem anderen Häkchen. Das
@@ -10,9 +15,16 @@ import { applySecurityHeaders, evaluateFamilyMiddleware } from "@uwe/auth";
  *
  * Die Anmeldung selbst passiert auf der UWE-Hauptorigin — Family hat kein
  * eigenes Anmeldeformular, sondern teilt sich das Sitzungs-Cookie.
+ *
+ * Family bindet auf Loopback, deshalb wird der Redirect auf die konfigurierte
+ * öffentliche Family-Origin (NEXT_PUBLIC_FAMILY_URL) umgesetzt — sonst landet
+ * ein Besucher von family.uwe.example ohne Sitzung auf `localhost:3004/login`.
  */
 function buildFamilyLoginUrl(request: NextRequest, pathname: string): URL {
-  const loginUrl = request.nextUrl.clone();
+  const loginUrl = rebaseUrlOnPublicOrigin(
+    request.nextUrl.clone(),
+    resolveFamilyPublicBaseUrl(process.env),
+  );
   loginUrl.pathname = "/login";
   loginUrl.search = "";
   loginUrl.searchParams.set("redirect", pathname);

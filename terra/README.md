@@ -28,16 +28,34 @@ Punkt ein.
 
 Untere Leiste: Seed, Biom (Wiese/Wueste/Kueste/Sumpf/Schnee), Tageszeit
 (Morgen/Mittag/Abendrot/Nebel/Nacht), Raster, Effekte (Nachbearbeitung
-an/aus), Speichern/Laden (JSON, Formatversion 3 mit Hoehen-Delta) und
-PNG-Export. Karten aus der frueheren Einzeldatei-Fassung (`terra.html`, v1)
-und der v2-Fassung laden weiterhin; ihre Bestueckung wuerfelt unter v3
-einmalig um (ortsstabile Zufallsschluessel).
+an/aus), Wolken an/aus, Vollbild, Speichern/Laden (JSON, Formatversion 3
+mit Hoehen-Delta) und PNG-Export. Eingebettet im Studio speichert
+„Speichern" in die Datenbank; die JSON-Datei kommt nur mit gesetztem
+JSON-Haekchen (im Einzelbetrieb ist sie der einzige Speicherweg und das
+Haekchen fest gesetzt). Karten aus der frueheren Einzeldatei-Fassung
+(`terra.html`, v1) und der v2-Fassung laden weiterhin; ihre Bestueckung
+wuerfelt unter v3 einmalig um (ortsstabile Zufallsschluessel).
 
-Ranken: Parameter fuer Dicke, Stil (geflochten/glatt), Luftwurzeln,
+Ranken: Parameter fuer Dicke (bis 8 — der Plateau-Deckel waechst mit, bis
+12 Blattplateaus), Hoehe bis 1000, Stil (geflochten/glatt), Luftwurzeln,
 Stadt-Baustil und -Dichte auf den Blattplateaus, Wendeltreppe und
-Haengebruecken. Objekt-Werkzeug: Variante "Schwebeinseln" und "Nur Typ".
+Haengebruecken. Objekt-Werkzeug: Variante "Schwebeinseln" und "Nur Typ"
+(nach Objektart gegliedert); ein Klick auf ein Blattplateau setzt die
+Streuung OBEN auf der Blattflaeche ab (params.aufPlateau). Das Karten-Panel
+(Auswahl ohne Auswahl) traegt Kartenname und Massstab (Ort/Landschaft/
+Region/Kontinent); die Hinweisbox unten links laesst sich ausblenden.
 
 ## Offener Stand
+
+- Detailrunde (Nachtrag zur Bedienungsrunde): definePool veredelt jetzt ALLE
+  272 Pools mit zwei deterministischen Farbschichten (Facetten-Tonung je
+  Flaechenrichtung + niederfrequente Farbdrift ueber die Lage) — null
+  zusaetzliche Dreiecke. Strukturell: dichtere Baumkronen (+2 Karten je Art),
+  Fels mit 80 statt 20 Facetten, mehrlappiger Busch, Schornsteine und
+  Rueckwand-Fachwerk an haus/haus2. Dabei behoben: die Seitenfenster von
+  haus/haus2 sassen IN der Wand (samt Fensterlicht-Anker unsichtbar) und
+  stehen jetzt vor der Flaeche; das Glas der x-Seiten-Fenster sank auf der
+  falschen Achse ein.
 
 - Runde H, Welle 4: die zuletzt offenen Punkte sind erledigt —
   Struktur-Generatoren fuer Burg, Werft und Kloster (neue Flaechen-

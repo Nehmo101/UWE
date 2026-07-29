@@ -20,6 +20,7 @@ const USE_CASE_ORDER: CookbookUseCaseId[] = [
   "session_prep",
   "canon_check",
   "player_safe_rewrite",
+  "document_ocr",
 ];
 
 function pickEngine(model: CookbookModelEntry): CookbookRecommendation["engineId"] {

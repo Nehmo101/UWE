@@ -1,11 +1,12 @@
 // Rechtes Panel, Werkzeugleiste, Hinweiszeile, Toast, Statusanzeige und das
 // HTML-Overlay der Markerbeschriftungen.
 import { Vector3 } from 'three';
-import { S, hydrate, KARTE, VW, mkElement, nextSeed } from '../core/store.js';
+import { S, hydrate, KARTE, VW, mkElement, nextSeed,
+  speicherLesen, speicherSchreiben } from '../core/store.js';
 import { clamp } from '../core/rng.js';
 import { instanceTotal, schattenAnzahl } from '../core/pools.js';
 import { ed, TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
-  EROSION_PARAMS, erosionRegler,
+  EROSION_PARAMS, erosionRegler, nurTypOptionen,
   schemaKey, defaultsFor, toolParams, setTool,
   genZeichenMarker,
   auswahlElemente, stempelErzeugen, aktuellerStempel }
@@ -249,6 +250,69 @@ function elementNamensZeile(target) {
    ========================================================================== */
 var kartenWege = null;
 function setzeKartenWege(w) { kartenWege = w; }
+
+/* ==========================================================================
+   Bedienungsrunde — Kopf der aktiven Karte: Name und Massstab
+
+   Beides sass bisher nirgends in der Bedienung: der Kartentitel stand nur im
+   Baum (aenderbar allein beim Anlegen eines Ausschnitts), und der Massstab
+   entstand ausschliesslich beim Ableiten einer Kindkarte. Hier bekommen beide
+   eine Zeile im Karten-Panel (Auswahl-Werkzeug ohne Auswahl) — zugleich die
+   Antwort auf „wie erzeuge ich eine Kontinentkarte": Massstab waehlen.
+   Die Schreibwege liegen in editor/io.js (kartenWege.benenne/setzeMassstab),
+   wo Baum und Kartenzustand wohnen.
+   ========================================================================== */
+function baueKarteKopf() {
+  if (!kartenWege || !kartenWege.benenne) return;
+  panelEl.appendChild(el("hr"));
+  panelEl.appendChild(el("div", "ph", "Karte"));
+  panelEl.appendChild(namensZeile("Kartenname",
+    function () { return kartenWege.titel(); },
+    function (txt) { kartenWege.benenne(txt); },
+    function () {
+      return nameFuer("region", 0, 0, S.worldSeed,
+        { rolle: "kartenname", index: ++wuerfelZaehler });
+    },
+    "Neuen Kartennamen vorschlagen"));
+
+  var row = el("div", "row");
+  var lab = el("label");
+  lab.appendChild(el("span", null, "Maßstab (m je Zelle)"));
+  row.appendChild(lab);
+  var sel = el("select");
+  var stufen = [
+    ["1", "Ort — 1 m je Zelle"],
+    ["8", "Landschaft — 8 m je Zelle"],
+    ["120", "Region — 120 m je Zelle"],
+    ["1000", "Kontinent — 1000 m je Zelle"]
+  ];
+  var jetzt = kartenWege.massstab();
+  var passt = false;
+  for (var i = 0; i < stufen.length; i++) {
+    if (parseFloat(stufen[i][0]) === jetzt) passt = true;
+    var op = el("option", null, stufen[i][1]);
+    op.value = stufen[i][0];
+    sel.appendChild(op);
+  }
+  if (!passt) {
+    var opX = el("option", null, jetzt + " m je Zelle");
+    opX.value = String(jetzt);
+    sel.appendChild(opX);
+  }
+  sel.value = String(jetzt);
+  sel.addEventListener("change", function () {
+    var m = parseFloat(sel.value);
+    if (Number.isFinite(m) && m > 0) kartenWege.setzeMassstab(m);
+  });
+  row.appendChild(sel);
+  panelEl.appendChild(row);
+  panelEl.appendChild(el("div", "psub",
+    "Der Maßstab macht aus derselben Karte einen Ort, eine Region oder einen "
+    + "Kontinent: ab Regionsmaßstab zeichnen die Elemente Kartenzeichen statt "
+    + "Baukörper. Für eine Stadt AUF einer Kontinentkarte mit dem Werkzeug "
+    + "„Ausschnitt“ (Taste 0) ein Polygon ziehen — daraus entsteht eine "
+    + "feinere Kindkarte."));
+}
 
 function baueKartenAbschnitt() {
   if (!S.baum || !kartenWege) return;
@@ -800,17 +864,40 @@ function paramRow(def, obj, apply) {
     row.appendChild(lab);
     return row;
   }
-  if (def.o) {
+  if (def.o || def.og) {
     var l2 = el("label");
     l2.appendChild(el("span", null, def.l));
     row.appendChild(l2);
     var sel = el("select");
-    for (var i = 0; i < def.o.length; i++) {
-      var op = el("option", null, def.o[i][1]);
-      op.value = def.o[i][0];
-      sel.appendChild(op);
+    var fuege = function (ziel, liste) {
+      for (var i = 0; i < liste.length; i++) {
+        var op = el("option", null, liste[i][1]);
+        op.value = liste[i][0];
+        ziel.appendChild(op);
+      }
+    };
+    if (def.o) fuege(sel, def.o);
+    /* Bedienungsrunde: def.og = [[Gruppenlabel, Eintraege], …] baut
+       <optgroup>-Abschnitte — gebraucht von der nach Objektart gefilterten
+       „Nur Typ"-Liste (nurTypOptionen in editor/tools.js). */
+    if (def.og) {
+      for (var gi = 0; gi < def.og.length; gi++) {
+        var og = el("optgroup");
+        og.label = def.og[gi][0];
+        fuege(og, def.og[gi][1]);
+        sel.appendChild(og);
+      }
     }
     sel.value = obj[def.k];
+    /* Wert ausserhalb der Liste (z. B. nurTyp aus einer fremden Datei): als
+       eigener Eintrag zeigen statt still auf den ersten zu springen — sonst
+       saehe das Panel etwas anderes als das Element. */
+    if (sel.value !== String(obj[def.k])) {
+      var opX = el("option", null, String(obj[def.k]));
+      opX.value = obj[def.k];
+      sel.appendChild(opX);
+      sel.value = obj[def.k];
+    }
     sel.addEventListener("change", function () { apply(true); obj[def.k] = sel.value; apply(); });
     row.appendChild(sel);
     return row;
@@ -879,6 +966,7 @@ function buildPanel() {
     // hier gehoert die kartenweite Sprachfamilie hin, nicht in ein Elementschema.
     // I1: der Baum steht ganz oben — wo man ist, beantwortet man vor allem
     // anderen. Erosion und Biome gelten immer nur der Karte, auf der man steht.
+    baueKarteKopf();
     baueKartenAbschnitt();
     baueErosionAbschnitt();
     baueBiomAbschnitt();
@@ -919,9 +1007,15 @@ function buildPanel() {
             var nd = defaultsFor(target.kind, v[0]);
             for (var k in nd) if (target.params[k] === undefined) target.params[k] = nd[k];
             commit(target, true);
-          } else {
+          }
+          /* Werkzeug-Variante IMMER mitziehen (Bedienungsrunde): nach dem
+             Platzieren ist das frische Element ausgewaehlt, und der
+             Varianten-Klick aenderte bisher nur target.variant — der naechste
+             Klick setzte dann wieder die ALTE Werkzeug-Variante. Jetzt gilt:
+             was man zuletzt gewaehlt hat, wird auch als naechstes gesetzt. */
+          if (ed.variantOf[kind] !== undefined) {
             ed.variantOf[kind] = v[0];
-            if (ed.draw) ed.draw.variant = v[0];
+            if (ed.draw && ed.draw.kind === kind) ed.draw.variant = v[0];
           }
           buildPanel();
           updateHint();
@@ -962,8 +1056,16 @@ function buildPanel() {
     commit(target, isHeavy(target));
   };
   for (var d = 0; d < defs.length; d++) {
-    if (obj[defs[d].k] === undefined) obj[defs[d].k] = defs[d].d;
-    panelEl.appendChild(paramRow(defs[d], obj, applyFn));
+    var def = defs[d];
+    /* Bedienungsrunde: die „Nur Typ"-Liste folgt der gewaehlten Objektart —
+       zuerst die Pools der Gruppe, dahinter alles Uebrige, gegliedert per
+       optgroup. Das Schema selbst bleibt unveraendert (Defaults, Laden). */
+    if (kind === "objekt" && def.k === "nurTyp") {
+      var nt = nurTypOptionen(variant);
+      def = { k: def.k, l: def.l, d: def.d, o: nt.o, og: nt.og };
+    }
+    if (obj[def.k] === undefined) obj[def.k] = def.d;
+    panelEl.appendChild(paramRow(def, obj, applyFn));
   }
 
   // I4: Klickziel der Beschriftung — von Hand, weil {art, ref} kein Skalar ist.
@@ -1125,9 +1227,44 @@ if (typeof window !== "undefined") {
   window.addEventListener("resize", leistenHoeheMessen);
 }
 
+/* ==========================================================================
+   Bedienungsrunde — die Hinweiszeile laesst sich ausblenden
+
+   Wer die Gesten kennt, will die Box nicht dauerhaft im Bild. Das × blendet
+   sie aus (im Browser-Speicher gemerkt, ueberdauert die Sitzung); an ihrer
+   Stelle bleibt ein kleiner ?-Knopf, der sie zurueckholt.
+   ========================================================================== */
+var HINWEIS_KEY = "terra.hinweis.aus";
+var hinweisAus = speicherLesen(HINWEIS_KEY) === "1";
+
+function hinweisZeigenKnopf() {
+  var z = document.getElementById("hintZeigen");
+  if (z) return z;
+  var ui = document.getElementById("ui");
+  if (!ui) return null;
+  z = el("button", "card", "?");
+  z.id = "hintZeigen";
+  z.title = "Bedienhinweise wieder einblenden";
+  z.addEventListener("click", function () {
+    hinweisAus = false;
+    speicherSchreiben(HINWEIS_KEY, "0");
+    updateHint();
+  });
+  ui.appendChild(z);
+  return z;
+}
+
 function updateHint() {
   leistenHoeheMessen();
   var h = document.getElementById("hint");
+  var zeig = hinweisZeigenKnopf();
+  if (hinweisAus) {
+    h.style.display = "none";
+    if (zeig) zeig.style.display = "";
+    return;
+  }
+  if (zeig) zeig.style.display = "none";
+  h.style.display = "";
   var txt;
   if (ed.draw) txt = "<b>" + ed.draw.points.length + (ed.draw.points.length === 1 ? " Punkt" : " Punkte") +
     "</b> — Doppelklick oder <b>Enter</b> beendet, <b>Esc</b> bricht ab";
@@ -1156,6 +1293,14 @@ function updateHint() {
     "Ziel — der Weg sucht sich seinen Verlauf über das Gelände · <b>Esc</b> bricht ab";
   else txt = "<b>Klick</b> wählt aus · <b>Shift+Klick</b> wählt mehrere · <b>K</b> macht daraus einen Stempel · Griffe ziehen · <b>Doppelklick</b> auf Pfad oder Rankenachse setzt einen Punkt · <b>Shift</b> zieht Zugpunkte in der Höhe · <b>Entf</b> löscht";
   h.innerHTML = txt + "<br>WASD bewegen · Q/E drehen · Rad zoomen · Rechte Maus schwenken";
+  var zu = el("button", "hintZu", "×");
+  zu.title = "Hinweise ausblenden — der kleine ?-Knopf unten links holt sie zurück";
+  zu.addEventListener("click", function () {
+    hinweisAus = true;
+    speicherSchreiben(HINWEIS_KEY, "1");
+    updateHint();
+  });
+  h.appendChild(zu);
 }
 
 var toastT = 0;

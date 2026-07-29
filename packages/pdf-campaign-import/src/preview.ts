@@ -7,6 +7,13 @@ export interface CampaignImportPreview {
   entities: ExtractedCampaignEntity[];
   totalDocuments: number;
   errors: string[];
+  /**
+   * Hinweise zum Lauf, die kein Fehler sind — etwa dass die Seiten über OCR
+   * gelesen wurden oder wie viele Seiten der Cap abgeschnitten hat. Getrennt
+   * von `errors`, weil die UI Fehler rot rendert und ein geglückter OCR-Lauf
+   * nicht als Fehlschlag aussehen darf.
+   */
+  notes: string[];
   canExecute: boolean;
 }
 
@@ -31,6 +38,7 @@ function excerpt(entity: ExtractedCampaignEntity): string {
 
 export function buildCampaignPreview(
   entities: readonly ExtractedCampaignEntity[],
+  notes: readonly string[] = [],
 ): CampaignImportPreview {
   const copiedEntities = entities.map((entity) => ({ ...entity, tags: entity.tags?.slice() }));
   const items = copiedEntities.map((entity, index) => ({
@@ -47,6 +55,7 @@ export function buildCampaignPreview(
     entities: copiedEntities,
     totalDocuments: copiedEntities.length,
     errors: [],
+    notes: [...notes],
     canExecute: copiedEntities.length > 0,
   };
 }

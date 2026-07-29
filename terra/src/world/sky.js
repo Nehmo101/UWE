@@ -2,6 +2,10 @@
 // Zirrenschicht und Cumulus-Billboards in drei Tiefenlagen.
 import * as THREE from 'three';
 import { clamp, lerp, sstep, hashi, rngOf, rr } from '../core/rng.js';
+// Bedienungsrunde: der Wolkenschalter lebt als S.wolken im Kartenzustand —
+// eine Quelle fuer Billboards (hier), Bodenschatten (atmosphere.js) und
+// Speicherformat (io.js).
+import { S } from '../core/store.js';
 import { TEX } from '../render/textures.js';
 import { cam, camera } from '../editor/camera.js';
 
@@ -308,9 +312,20 @@ function initSky(scene) {
   scene.add(cirrusMesh);
 }
 
-/** Pro Frame: Kuppel folgt der Kamera, Wolken und Zirren driften. */
+/** Pro Frame: Kuppel folgt der Kamera, Wolken und Zirren driften.
+ *
+ *  Bedienungsrunde: `S.wolken === false` schaltet beide Wolkenschichten ab
+ *  (Kartenfeld, tolerant gespeichert — editor/io.js). Die Sichtbarkeit wird
+ *  hier je Bild nachgezogen statt in einem Setter: der Zustand hat genau
+ *  EINE Quelle (S), und die Kuppel folgt der Kamera auch ohne Wolken. Der
+ *  Bodenschatten der Wolken haengt an derselben Quelle (atmosphere.js,
+ *  uCloudAmt). */
 function updateSky(dt) {
   skyGroup.position.copy(camera.position);
+  var an = S.wolken !== false;
+  cloudMesh.visible = an;
+  cirrusMesh.visible = an;
+  if (!an) return;                 // stehende Wolken kosten dann auch nichts
   updateClouds(dt);
   updateCirren(dt);
 }

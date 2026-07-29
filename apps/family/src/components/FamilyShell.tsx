@@ -5,8 +5,8 @@ import {
   CrossAppBottomNav,
   SceneHero,
   ThemeModeToggle,
-  readClientAppUrls,
 } from "@uwe/shared-ui";
+import { resolveCrossAppUrls } from "@uwe/auth";
 import { FamilyNav } from "./FamilyNav";
 import { FamilyNavSearch } from "./FamilyNavSearch";
 
@@ -42,7 +42,9 @@ export function FamilyShell({
   sceneIndex?: number;
   children: ReactNode;
 }) {
-  const urls = readClientAppUrls();
+  // Server-Komponente: die Origins kommen aus der Laufzeit-Umgebung
+  // (inkl. abgeleiteter Family-Adresse), nicht aus dem Build.
+  const urls = resolveCrossAppUrls();
 
   return (
     // Family teilt sich Akzent, Szenen und den Bottom-Nav-Slot mit Brain: beide

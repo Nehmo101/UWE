@@ -40,7 +40,7 @@ import {
  * so `applyDesktopHostUpdate` can size the combined update progress bar (stop →
  * sync → setup steps → start) without importing the step list itself.
  */
-export const HOST_SETUP_STEP_COUNT = 10;
+export const HOST_SETUP_STEP_COUNT = 11;
 
 export type {
   DesktopHostActionResult,
@@ -55,7 +55,7 @@ export type {
 export { HOST_SERVICE_IDS, isHostServiceId, parseServicePort } from "./desktop-host-types.ts";
 
 /**
- * Die vier Host-Dienste mit ihren konfigurierten Ports. Ports kommen aus der
+ * Die Host-Dienste mit ihren konfigurierten Ports. Ports kommen aus der
  * `.env` des Projektordners; die Vorgaben entsprechen der Standardinstallation.
  */
 function serviceDefinitions(paths: HostPaths): ServiceDefinition[] {
@@ -64,6 +64,7 @@ function serviceDefinitions(paths: HostPaths): ServiceDefinition[] {
     { id: "studio", label: "UWE Studio", port: parseServicePort(env.STUDIO_PORT, 3000) },
     { id: "portal", label: "UWE Portal", port: parseServicePort(env.PORTAL_PORT, 3001) },
     { id: "brain", label: "UWE Brain", port: parseServicePort(env.BRAIN_PORT, 3102) },
+    { id: "family", label: "UWE Family", port: parseServicePort(env.FAMILY_PORT, 3004) },
     { id: "landing", label: "UWE Startseite", port: parseServicePort(env.LANDING_PORT, 3103) },
   ];
 }
@@ -153,6 +154,7 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     "CLOUDFLARE_TUNNEL=false",
     "STUDIO_PORT=3000",
     "PORTAL_PORT=3001",
+    "FAMILY_PORT=3004",
     // Öffentliche Startseite auf dem Apex-Origin — eigener Prozess, damit die
     // Hauptdomain keine Studio-Routen ausliefert.
     "LANDING_PORT=3103",
@@ -164,6 +166,10 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     "NEXT_PUBLIC_BRAIN_URL=",
     "BRAIN_PATH=/life-brain",
     "BRAIN_EXPOSURE=loopback",
+    // Family: eigener Origin, Zugang über das Häkchen `Family`. Der Wert ist die
+    // Adresse, auf die jeder Family-Link zeigt — bei öffentlicher Installation
+    // hier den Tunnel-Hostnamen eintragen (z. B. https://family.uwe.example).
+    "NEXT_PUBLIC_FAMILY_URL=http://127.0.0.1:3004",
     `DATABASE_URL=file:${toPosixPath(paths.database)}`,
     // Owner-private Brain DB lives next to uwe.db so both are found deterministically
     // (the Next standalone build can't reliably resolve brain-client's relative default).
@@ -281,6 +287,7 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
     fs.existsSync(path.join(root, "apps", "studio", ".next", "BUILD_ID")) &&
     fs.existsSync(path.join(root, "apps", "portal", ".next", "BUILD_ID")) &&
     fs.existsSync(path.join(root, "apps", "brain", ".next", "BUILD_ID")) &&
+    fs.existsSync(path.join(root, "apps", "family", ".next", "BUILD_ID")) &&
     fs.existsSync(path.join(root, "apps", "landing", ".next", "BUILD_ID"));
   const databaseReady = fs.existsSync(database);
   const services = await Promise.all(
@@ -435,6 +442,7 @@ export async function setupHost(
     { phase: "studio-build", label: "Studio-Produktions-Build", run: () => runWorkspaceCommand(paths, "Studio Produktions-Build", ["--filter", "@uwe/studio", "build"]) },
     { phase: "portal-build", label: "Portal-Produktions-Build", run: () => runWorkspaceCommand(paths, "Portal Produktions-Build", ["--filter", "@uwe/portal", "build"]) },
     { phase: "brain-build", label: "Brain-Produktions-Build", run: () => runWorkspaceCommand(paths, "Brain Produktions-Build", ["--filter", "@uwe/brain", "build"]) },
+    { phase: "family-build", label: "Family-Produktions-Build", run: () => runWorkspaceCommand(paths, "Family Produktions-Build", ["--filter", "@uwe/family", "build"]) },
     { phase: "landing-build", label: "Startseiten-Produktions-Build", run: () => runWorkspaceCommand(paths, "Startseite Produktions-Build", ["--filter", "@uwe/landing", "build"]) },
   ];
 
@@ -458,11 +466,12 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   const env = readEnvFile(paths.envFile);
   const databaseModules = path.join(paths.root, "packages", "database", "node_modules");
   env.NODE_PATH = [databaseModules, env.NODE_PATH].filter(Boolean).join(path.delimiter);
-  // Brain is owner-private: bind it to loopback so it is reachable only locally or
-  // through the (owner-gated) Cloudflare tunnel — never directly on the LAN. Studio
-  // and Portal keep Next's default bind.
+  // Brain is owner-private and Family is checkbox-gated household data: bind both
+  // to loopback so they are reachable only locally or through the Cloudflare
+  // tunnel — never directly on the LAN. Studio, Portal and the landing page keep
+  // Next's default bind.
   const startArgs = [nextCli, "start", "--port", String(service.port)];
-  if (service.id === "brain") startArgs.push("--hostname", "127.0.0.1");
+  if (service.id === "brain" || service.id === "family") startArgs.push("--hostname", "127.0.0.1");
   const child = spawn(process.execPath, startArgs, {
     cwd: appRoot,
     env,
@@ -501,7 +510,7 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
   const readiness = await Promise.all(definitions.map((service) => waitForHealth(`http://127.0.0.1:${service.port}`)));
   const status = await collectDesktopHostStatus(root);
   const ok = readiness.every(Boolean);
-  return { ok, message: ok ? "Studio, Portal, Brain und Startseite laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
+  return { ok, message: ok ? "Studio, Portal, Brain, Family und Startseite laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
 }
 
 export async function stopHost(rootInput?: string): Promise<DesktopHostActionResult> {
@@ -514,10 +523,10 @@ export async function stopHost(rootInput?: string): Promise<DesktopHostActionRes
     fs.rmSync(file, { force: true });
   }
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { ok: true, message: "Studio, Portal, Brain und Startseite wurden gestoppt.", status: await collectDesktopHostStatus(root) };
+  return { ok: true, message: "Studio, Portal, Brain, Family und Startseite wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
-/** Start a single host service (studio | portal | brain | landing) without touching the others. */
+/** Start a single host service (studio | portal | brain | family | landing) without touching the others. */
 export async function startHostService(rootInput: string | undefined, serviceId: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
@@ -602,31 +611,29 @@ export function readLogs(rootInput: string | undefined, target: string | undefin
   return { target: safeTarget, lines: readLogTail(file, 200) };
 }
 
+/**
+ * Port- und Origin-Variable je Dienst. Die Startseite hat keine eigene
+ * NEXT_PUBLIC_*-Variable: sie *ist* der Apex-Origin, den PUBLIC_BASE_URL nennt.
+ */
+const TARGET_ENV_KEYS: Record<HostServiceId, { portKey: string; portFallback: number; urlKey: string }> = {
+  studio: { portKey: "STUDIO_PORT", portFallback: 3000, urlKey: "NEXT_PUBLIC_STUDIO_URL" },
+  portal: { portKey: "PORTAL_PORT", portFallback: 3001, urlKey: "NEXT_PUBLIC_PORTAL_URL" },
+  brain: { portKey: "BRAIN_PORT", portFallback: 3102, urlKey: "NEXT_PUBLIC_BRAIN_URL" },
+  family: { portKey: "FAMILY_PORT", portFallback: 3004, urlKey: "NEXT_PUBLIC_FAMILY_URL" },
+  landing: { portKey: "LANDING_PORT", portFallback: 3103, urlKey: "PUBLIC_BASE_URL" },
+};
+
 export function desktopHostTargetUrl(rootInput: string | undefined, target: string | undefined): string {
   const paths = pathsFor(resolveDesktopHostRoot(rootInput));
   const env = readEnvFile(paths.envFile);
-  const port = target === "portal"
-    ? parseServicePort(env.PORTAL_PORT, 3001)
-    : target === "brain"
-      ? parseServicePort(env.BRAIN_PORT, 3102)
-      : target === "landing"
-        ? parseServicePort(env.LANDING_PORT, 3103)
-        : parseServicePort(env.STUDIO_PORT, 3000);
+  const keys = TARGET_ENV_KEYS[isHostServiceId(target) ? target : "studio"];
+  const port = parseServicePort(env[keys.portKey], keys.portFallback);
   // Prefer the configured public origin (Cloudflare tunnel) when it is a real
   // non-loopback URL. With a domain-scoped session cookie (SESSION_COOKIE_DOMAIN),
   // a raw 127.0.0.1 origin can't hold the login session, so opening the public
   // hostname keeps the owner logged in. Falls back to loopback for local-only
   // deployments where no public URL is set.
-  // Die Startseite hat keine eigene NEXT_PUBLIC_*-Variable: sie *ist* der
-  // Apex-Origin, den PUBLIC_BASE_URL benennt.
-  const publicUrl =
-    target === "portal"
-      ? env.NEXT_PUBLIC_PORTAL_URL?.trim()
-      : target === "brain"
-        ? env.NEXT_PUBLIC_BRAIN_URL?.trim()
-        : target === "landing"
-          ? env.PUBLIC_BASE_URL?.trim()
-          : env.NEXT_PUBLIC_STUDIO_URL?.trim();
+  const publicUrl = env[keys.urlKey]?.trim();
   if (publicUrl) {
     try {
       const parsed = new URL(publicUrl);

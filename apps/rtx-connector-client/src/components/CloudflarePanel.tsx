@@ -13,6 +13,7 @@ import {
 import { toMessage } from "../lib/connector-runtime-labels";
 import { Button } from "./ui/button";
 import { CloudflareChallengeCard } from "./CloudflareChallengeCard";
+import { CloudflareRoutesCard } from "./CloudflareRoutesCard";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 export function CloudflarePanel() {
@@ -59,7 +60,7 @@ export function CloudflarePanel() {
         <div>
           <span className="connector-kicker">CLOUDFLARE · TUNNEL · ÖFFENTLICHE HOSTS</span>
           <h3>Cloudflare-Tunnel</h3>
-          <p>Startet den lokalen cloudflared-Connector, der Startseite, Studio, Portal und Brain öffentlich erreichbar macht.</p>
+          <p>Startet den lokalen cloudflared-Connector, der Startseite, Studio, Portal und Family öffentlich erreichbar macht (Brain nur nach Opt-in).</p>
         </div>
         <div className="command-center-hero-status">
           <HealthBadge status={running ? "ok" : "degraded"} label={running ? "Tunnel läuft" : "Tunnel gestoppt"} />
@@ -72,7 +73,7 @@ export function CloudflarePanel() {
       {!hasToken ? (
         <div className="connector-banner connector-banner-error">
           Es ist noch kein Tunnel-Token hinterlegt — ohne Token kann der Connector nicht starten und
-          die öffentlichen Adressen (studio./portal./brain.uwe.example) sind offline.
+          die öffentlichen Adressen (studio., portal. und family. deiner Domain) sind offline.
         </div>
       ) : null}
 
@@ -137,6 +138,8 @@ export function CloudflarePanel() {
           </div>
         </CardFooter>
       </Card>
+
+      <CloudflareRoutesCard />
 
       <CloudflareChallengeCard />
     </div>

@@ -152,6 +152,9 @@ importers:
       '@uwe/kitchen':
         specifier: workspace:*
         version: link:../../packages/kitchen
+      '@uwe/pdf-ocr':
+        specifier: workspace:*
+        version: link:../../packages/pdf-ocr
       '@uwe/product-contracts':
         specifier: workspace:*
         version: link:../../packages/product-contracts
@@ -540,6 +543,9 @@ importers:
       '@uwe/pdf-campaign-import':
         specifier: workspace:*
         version: link:../../packages/pdf-campaign-import
+      '@uwe/pdf-ocr':
+        specifier: workspace:*
+        version: link:../../packages/pdf-ocr
       '@uwe/player-hub':
         specifier: workspace:*
         version: link:../../packages/player-hub
@@ -824,6 +830,9 @@ importers:
       '@uwe/assets':
         specifier: workspace:*
         version: link:../assets
+      '@uwe/auth':
+        specifier: workspace:*
+        version: link:../auth
     devDependencies:
       '@types/node':
         specifier: ^22.19.21
@@ -1295,6 +1304,25 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.19.21
+      '@uwe/config':
+        specifier: workspace:*
+        version: link:../config
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/pdf-ocr:
+    dependencies:
+      pdf-parse:
+        specifier: ^2.4.5
+        version: 2.4.5
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

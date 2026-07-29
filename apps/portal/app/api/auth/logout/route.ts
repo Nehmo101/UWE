@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
-import { getSessionCookieOptionsForRequest, PREVIEW_COOKIE_NAME, SESSION_COOKIE_NAME } from "@uwe/auth";
+import {
+  getSessionCookieClearVariants,
+  PREVIEW_COOKIE_NAME,
+  readSessionTokensFromCookieHeader,
+  SESSION_COOKIE_NAME,
+} from "@uwe/auth";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 
 export async function POST(request: Request) {
@@ -9,21 +14,25 @@ export async function POST(request: Request) {
   if (authError) return authError;
 
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const cookieOptions = getSessionCookieOptionsForRequest(request);
+  // Every token the browser presented, not just the one `cookies()` collapses to.
+  const tokens = readSessionTokensFromCookieHeader(request.headers.get("cookie"));
 
-  if (token) {
+  if (tokens.length > 0) {
     const db = createPrismaClient();
     const auth = createAuthService(db);
     try {
-      await auth.deleteSession(token);
+      for (const token of tokens) {
+        await auth.deleteSession(token);
+      }
     } finally {
       await db.$disconnect();
     }
   }
 
-  cookieStore.set(SESSION_COOKIE_NAME, "", { ...cookieOptions, maxAge: 0 });
-  cookieStore.set(PREVIEW_COOKIE_NAME, "", { ...cookieOptions, maxAge: 0 });
+  for (const options of getSessionCookieClearVariants(request)) {
+    cookieStore.set(SESSION_COOKIE_NAME, "", { ...options, maxAge: 0 });
+    cookieStore.set(PREVIEW_COOKIE_NAME, "", { ...options, maxAge: 0 });
+  }
 
   return NextResponse.json({ ok: true });
 }

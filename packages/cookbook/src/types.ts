@@ -16,7 +16,8 @@ export type CookbookUseCaseId =
   | "session_prep"
   | "canon_check"
   | "player_safe_rewrite"
-  | "theme_design";
+  | "theme_design"
+  | "document_ocr";
 
 export type ModelFitLevel = "excellent" | "good" | "marginal" | "poor" | "unsupported";
 

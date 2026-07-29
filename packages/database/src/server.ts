@@ -843,10 +843,21 @@ export {
 } from "./canon-conflict-service";
 
 export {
+  escapeHtmlAttribute,
+  portalAssetUrl,
+  renderAssetBlockHtml,
+  studioAssetUrl,
+} from "./content-block-html";
+export type { AssetBlockLike, RenderAssetBlockOptions } from "./content-block-html";
+
+export {
   extractPdfText,
+  isMissingTextLayerError,
   normalizePdfTextForImport,
   PdfExtractError,
+  readPdfTextLayer,
 } from "./pdf-text-extract";
+export type { PdfExtractErrorCode, PdfTextLayer } from "./pdf-text-extract";
 
 export {
   createGameSessionService,

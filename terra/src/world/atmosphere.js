@@ -454,7 +454,11 @@ function applyTod(t) {
     sceneHook.fog.near = mixNum(a.fogNah, b.fogNah, e);
     sceneHook.fog.far = mixNum(a.fogFern, b.fogFern, e);
   }
-  terraUniforms.uCloudAmt.value = mixNum(a.wolkenschatten, b.wolkenschatten, e) * W.wolkenschatten;
+  // Bedienungsrunde: abgeschaltete Wolken (S.wolken === false, siehe sky.js)
+  // werfen auch keinen Bodenschatten — sonst zoege ein unsichtbarer Himmel
+  // wandernde Flecken uebers Land.
+  terraUniforms.uCloudAmt.value = mixNum(a.wolkenschatten, b.wolkenschatten, e)
+    * W.wolkenschatten * (S.wolken === false ? 0 : 1);
   // Fensterglut: warme Emission bei Abendrot, Morgen, Nebel und (am
   // staerksten) in der Nacht
   var glut = mixNum(a.fenster === undefined ? 0 : a.fenster,

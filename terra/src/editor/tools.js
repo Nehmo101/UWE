@@ -12,6 +12,10 @@ import { heightAt } from '../world/terrain.js';
    und render/, nie editor/. */
 import { kartenPlatz, bandZeichen } from '../generators/zeichen.js';
 import { zeichenDaten } from '../render/signaturen.js';
+/* Bedienungsrunde: die „Nur Typ"-Auswahl wird nach der Objektart gefiltert —
+   die Gruppen- und Kulturtabellen sind die Quelle. Zyklusfrei: objects.js
+   zieht generators/, core/, world/ und render/, nie editor/. */
+import { OBJGRUPPEN, KULTUR } from '../generators/objects.js';
 import { pushUndo } from './history.js';
 // J3 — die Auswahlliste der Sprachfamilien kommt aus dem Generator, damit sie
 // an genau EINER Stelle gepflegt wird. namen.js importiert nur core/ und
@@ -159,7 +163,9 @@ var PARAMS = {
     { k: "streuung", l: "Versatz", min: 0, max: 6, st: 0.2, d: 2 }
   ],
   "pfad:mauer": [
-    { k: "hoehe", l: "Höhe", min: 0.5, max: 2.5, st: 0.05, d: 1 },
+    // Bedienungsrunde: Obergrenze 2.5 -> 6 — Mauern duerfen deutlich hoeher.
+    // genMauer (paths.js) liest den Wert ungeklemmt, der Default bleibt 1.
+    { k: "hoehe", l: "Höhe", min: 0.5, max: 6, st: 0.05, d: 1 },
     { k: "dicke", l: "Dicke", min: 0.8, max: 4, st: 0.1, d: 1.6 },
     { k: "turmAbstand", l: "Turm alle", min: 8, max: 80, st: 1, d: 26 },
     { k: "torAbstand", l: "Tor alle (0 = keins)", min: 0, max: 200, st: 5, d: 0 }
@@ -257,7 +263,8 @@ var PARAMS = {
      die Kaiflucht. Die Parameter beschreiben deshalb bewusst die ANLAGE
      (Mauerhoehe, Hellingen, Hofgroesse) und nicht eine Streudichte. */
   "flaeche:burg": [
-    { k: "mauerhoehe", l: "Mauerhöhe", min: 0.6, max: 2, st: 0.05, d: 1 },
+    // Bedienungsrunde: 2 -> 4, wie die freie Mauer (pfad:mauer, dort bis 6).
+    { k: "mauerhoehe", l: "Mauerhöhe", min: 0.6, max: 4, st: 0.05, d: 1 },
     { k: "turmAbstand", l: "Turm alle", min: 8, max: 60, st: 1, d: 22 },
     { k: "zwinger", l: "Zwinger (Vormauer)", b: true, d: false },
     { k: "palisade", l: "Holzburg statt Stein", b: true, d: false },
@@ -286,6 +293,9 @@ var PARAMS = {
     // gefüllt, dieses Schema aber schon beim Modul-Import ausgewertet —
     // die Namen sind mit den definePool-Aufrufen in generators/geometry.js
     // abgeglichen und müssen bei Umbenennungen dort mitgezogen werden.
+    // Bedienungsrunde: das Panel zeigt diese Liste NICHT mehr roh an, sondern
+    // gefiltert nach der gewählten Objektart (nurTypOptionen unten) — die
+    // Einträge hier bleiben die Label-Quelle und der Rückfall.
     { k: "nurTyp", l: "Nur Typ", d: "", o: [
       ["", "(Gruppe)"],
       ["baum", "Laubbaum"], ["baum2", "Laubbaum hoch"], ["nadelbaum", "Nadelbaum"],
@@ -373,10 +383,15 @@ var PARAMS = {
     { k: "dreh", l: "Drehung (Grad)", min: 0, max: 360, st: 5, d: 0 },
     { k: "laenge", l: "Länge (nur Linien)", min: 10, max: 200, st: 5, d: 60 }
   ],
+  /* Bedienungsrunde: die Obergrenzen von hoehe/dicke/blattgroesse/plateau(s)
+     sind deutlich angehoben — eine Karte darf um EINE riesige Wurzel herum
+     gebaut sein. Die Defaults bleiben unveraendert, Bestandskarten rendern
+     byteidentisch; der Plateau-Deckel in genRanke (vines.js) waechst mit der
+     Dicke mit (bis 12 Plateaus ab dicke > 2.5). */
   "ranke:ranke": [
-    { k: "hoehe", l: "Höhe", min: 60, max: 400, st: 5, d: 190 },
+    { k: "hoehe", l: "Höhe", min: 60, max: 1000, st: 5, d: 190 },
     { k: "straenge", l: "Stränge", min: 3, max: 5, st: 1, d: 4 },
-    { k: "dicke", l: "Dicke", min: 0.5, max: 2.5, st: 0.05, d: 1 },
+    { k: "dicke", l: "Dicke", min: 0.5, max: 8, st: 0.05, d: 1 },
     // H4.1: Endradius relativ zum Fussradius. 0.45 ist die frueher fest
     // verdrahtete Verjuengung — als Default rendert jede Bestandskarte
     // unveraendert weiter.
@@ -391,11 +406,11 @@ var PARAMS = {
     { k: "windungOben", l: "Windung oben (0 = wie Steigung)", min: 0, max: 8, st: 0.1, d: 0 },
     // H4.3 (Kanon): Neigung zur Kartenmitte, dem Apfelkern. 0 = senkrecht.
     { k: "kernzug", l: "Kernneigung zur Mitte", min: 0, max: 1, st: 0.05, d: 0 },
-    { k: "blattgroesse", l: "Blattgröße", min: 0.5, max: 1.8, st: 0.05, d: 1 },
-    { k: "plateaus", l: "Blattplateaus", min: 0, max: 6, st: 1, d: 3 },
-    { k: "plateau", l: "Plateaugröße", min: 0.5, max: 2, st: 0.05, d: 1 },
+    { k: "blattgroesse", l: "Blattgröße", min: 0.5, max: 4, st: 0.05, d: 1 },
+    { k: "plateaus", l: "Blattplateaus (Deckel wächst mit der Dicke)", min: 0, max: 12, st: 1, d: 3 },
+    { k: "plateau", l: "Plateaugröße", min: 0.5, max: 4, st: 0.05, d: 1 },
     { k: "staedtchen", l: "Städtchen darauf", b: true, d: true },
-    { k: "inseln", l: "Schwebeinseln", min: 0, max: 4, st: 1, d: 2 },
+    { k: "inseln", l: "Schwebeinseln", min: 0, max: 8, st: 1, d: 2 },
     { k: "luftwurzeln", l: "Luftwurzeln", b: true, d: false },
     // "" = alter hartkodierter Gebaeudemix (byteidentisch fuer Bestandskarten);
     // die uebrigen Werte sind KULTUR-Tabellen aus generators/objects.js.
@@ -453,6 +468,82 @@ VARIANTS.wegsuche = [["strasse", "Straße"], ["fluss", "Fluss"], ["hecke", "Heck
 PARAMS["wegsuche:strasse"] = PARAMS["pfad:strasse"];
 PARAMS["wegsuche:fluss"] = PARAMS["pfad:fluss"];
 PARAMS["wegsuche:hecke"] = PARAMS["pfad:hecke"];
+
+/* ==========================================================================
+   Bedienungsrunde — „Nur Typ" nach Objektart gefiltert
+
+   Der Wunsch: erst die ART waehlen (Baeume, Ruinen, Hafen …), dann DARIN ein
+   konkretes Objekt setzen. Die rohe Gesamtliste im Schema oben bleibt
+   Label-Quelle und Rueckfall; hier entsteht daraus zur Laufzeit eine
+   gegliederte Auswahl: zuerst die Pools der gewaehlten Gruppe (OBJGRUPPEN in
+   objects.js — exakt die Pools, aus denen der Klick sonst gewichtet mischt),
+   danach alles Uebrige aus Gruppen- und Kulturtabellen. Pools ohne Eintrag in
+   der kuratierten Liste bekommen ihren Namen mit grossem Anfangsbuchstaben —
+   besser ein nuechternes Label als ein unerreichbares Objekt.
+   ========================================================================== */
+var _nurTypLabels = null, _nurTypAlle = null;
+
+function nurTypLabels() {
+  if (_nurTypLabels) return _nurTypLabels;
+  _nurTypLabels = {};
+  var defs = PARAMS["objekt:*"];
+  for (var i = 0; i < defs.length; i++) {
+    if (defs[i].k !== "nurTyp") continue;
+    for (var k = 0; k < defs[i].o.length; k++) {
+      if (defs[i].o[k][0]) _nurTypLabels[defs[i].o[k][0]] = defs[i].o[k][1];
+    }
+  }
+  return _nurTypLabels;
+}
+
+function poolLabel(name) {
+  var L = nurTypLabels();
+  return L[name] || (name.charAt(0).toUpperCase() + name.slice(1));
+}
+
+/** Alle per Streuung erreichbaren Pools: kuratierte Liste + Gruppen + Kulturen. */
+function nurTypAlle() {
+  if (_nurTypAlle) return _nurTypAlle;
+  var menge = {}, name, q, g, i;
+  for (name in nurTypLabels()) menge[name] = 1;
+  var quellen = [OBJGRUPPEN, KULTUR];
+  for (q = 0; q < quellen.length; q++) {
+    for (g in quellen[q]) {
+      for (i = 0; i < quellen[q][g].length; i++) menge[quellen[q][g][i][0]] = 1;
+    }
+  }
+  _nurTypAlle = Object.keys(menge);
+  return _nurTypAlle;
+}
+
+/**
+ * Auswahlliste fuer das Panel: { o: flache Eintraege, og: [[Gruppenlabel,
+ * Eintraege], …] }. ui/panels.js reicht beides an paramRow durch (der
+ * optgroup-Zweig dort baut daraus ein gegliedertes Select).
+ */
+function nurTypOptionen(variant) {
+  var g = [], rest = [], inGruppe = {}, i;
+  var gruppe = OBJGRUPPEN[variant];
+  if (gruppe) {
+    for (i = 0; i < gruppe.length; i++) {
+      var n = gruppe[i][0];
+      if (inGruppe[n]) continue;
+      inGruppe[n] = 1;
+      g.push([n, poolLabel(n)]);
+    }
+  }
+  var alle = nurTypAlle();
+  for (i = 0; i < alle.length; i++) {
+    if (!inGruppe[alle[i]]) rest.push([alle[i], poolLabel(alle[i])]);
+  }
+  var sortiere = function (a, b) { return a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0; };
+  g.sort(sortiere);
+  rest.sort(sortiere);
+  var og = [];
+  if (g.length) og.push(["Objekte dieser Art", g]);
+  if (rest.length) og.push(["Alle weiteren Objekte", rest]);
+  return { o: [["", "(Gruppe — gewichtete Mischung)"]], og: og };
+}
 
 /* ==========================================================================
    J3 — KARTENWEITE Parameter
@@ -571,6 +662,10 @@ function copyParams(o) { var c = {}; for (var k in o) c[k] = o[k]; return c; }
 function pinselRadius() {
   if (ed.tool === "terrain") return curParams().radius || 0;
   if (ed.tool === "pfad" && ed.variantOf.pfad === "biompinsel") return curParams().radius || 0;
+  /* Bedienungsrunde: auch das Objekt-Werkzeug zeigt seinen Wirkkreis — den
+     Streuradius. Bei Streuung 0 bleibt ein kleiner Zielring stehen, denn
+     gerade dann kommt es auf die exakte Setzstelle an. */
+  if (ed.tool === "objekt") return Math.max(curParams().streuung || 0, 1.2);
   return 0;
 }
 
@@ -924,6 +1019,7 @@ function stempelSetzen(st, pos) {
 stempelBibliothekLaden();
 
 export { TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
+  nurTypOptionen,
   setzeAusschnittWeg,
   EROSION_PARAMS, erosionRegler,
   schemaKey, defaultsFor, toolParams, curParams,

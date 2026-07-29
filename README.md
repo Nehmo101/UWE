@@ -20,8 +20,8 @@ Daten liegen in SQLite (PostgreSQL optional), die KI läuft standardmäßig loka
 |---|---|---|---|
 | **Studio** (`apps/studio`) | 3000 | Spielleitung, Owner | Weltbearbeitung, Admin, KI, Daily Admin OS. `dm_only`-Inhalte sind hier bewusst sichtbar. |
 | **Portal** (`apps/portal`) | 3001 | Mitspieler:innen | Spieler-Wiki. Zeigt ausschließlich freigegebene, gefilterte Inhalte. |
-| **Brain** (`apps/brain`) | 3002 | nur Owner | Privater Wissens- und Daily-Admin-Bereich inkl. Mail-Center. Owner-only, lokal. |
-| **Family** (`apps/family`) | 3004 | Haushalt | Geteilter Familienbereich: Verträge, Dokumente, Küche, Kalender (`uwe-family.db`). |
+| **Brain** (`apps/brain`) | 3002 | nur Owner | Privater Wissens- und Daily-Admin-Bereich. Owner-only, lokal. |
+| **Family** (`apps/family`) | 3004 | Häkchen `Family` | Gemeinsamer Haushalt — Kalender, Küche, Dokumente, Chat. |
 | **Landing** (`apps/landing`) | 3103 | öffentlich | Startseite auf dem Apex-Origin. Genau drei Routen, keine Inhalte. |
 
 Dazu kommt der **Command Center** (`apps/rtx-connector-client`, Tauri) als
@@ -46,8 +46,8 @@ pnpm dev
 ```
 
 Danach erreichbar: Studio auf <http://localhost:3000>, Portal auf
-<http://localhost:3001>, Brain auf <http://localhost:3002>, Landing auf
-<http://localhost:3103>.
+<http://localhost:3001>, Brain auf <http://localhost:3002>, Family auf
+<http://localhost:3004>, Landing auf <http://localhost:3103>.
 
 Seed-Login: `dm@uwe.local` / `uwe-dev`.
 
@@ -57,6 +57,7 @@ Einzelne Apps starten:
 pnpm dev:studio    # nur Studio
 pnpm dev:portal    # nur Portal
 pnpm dev:brain     # nur Brain
+pnpm dev:family    # nur Family
 ```
 
 Für einen echten Owner-Account statt der Seed-Daten:

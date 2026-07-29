@@ -8,6 +8,7 @@ import { AiGatewayModelsTab } from "./ai-gateway/AiGatewayModelsTab";
 import { AiGatewayOverviewCard } from "./ai-gateway/AiGatewayOverviewCard";
 import { AI_GATEWAY_TABS } from "./ai-gateway/constants";
 import { useAiGateway } from "./ai-gateway/use-ai-gateway";
+import type { GatewayDashboard } from "./ai-gateway/types";
 
 /**
  * KI-Gateway.
@@ -18,8 +19,8 @@ import { useAiGateway } from "./ai-gateway/use-ai-gateway";
  * to police, no key to store and no spend to cap. What is left is choosing the
  * local model per feature and reading the usage log.
  */
-export function AiGatewayWizard() {
-  const gateway = useAiGateway();
+export function AiGatewayWizard({ initialData }: { initialData?: GatewayDashboard | null }) {
+  const gateway = useAiGateway(initialData);
   const { data, loading, error, message, loadAdminUsers } = gateway;
 
   useEffect(() => {

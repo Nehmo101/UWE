@@ -18,11 +18,23 @@ import {
 export const CAMPAIGN_PREVIEW_KIND = "campaign_entities";
 export const CAMPAIGN_PROGRESS_KIND = "campaign_analysis_progress";
 
+/** Phasen einer Analyse. `ocr` läuft nur, wenn der Textlayer nicht taugt. */
+export const CAMPAIGN_ANALYSIS_PHASES = ["extracting", "ocr", "analyzing"] as const;
+
+export type CampaignAnalysisPhase = (typeof CAMPAIGN_ANALYSIS_PHASES)[number];
+
 export interface CampaignAnalysisProgress {
-  phase: "extracting" | "analyzing";
+  phase: CampaignAnalysisPhase;
   processedChunks: number;
   totalChunks: number | null;
   startedAt: string;
+}
+
+/** Von der OCR zugeschnittene Abbildung, für die Vorschau-Miniaturen. */
+export interface CampaignFigurePreview {
+  index: number;
+  pageNumber: number;
+  type: string;
 }
 
 export interface CampaignPdfJobStatus {
@@ -32,7 +44,32 @@ export interface CampaignPdfJobStatus {
   hasPdf: boolean;
   progress: CampaignAnalysisProgress | null;
   preview: CampaignImportPreviewSummary | null;
+  /** Leer, wenn der Textlayer taugte — dann lief keine OCR. */
+  figures: CampaignFigurePreview[];
   fitChat: CampaignFitChatMessage[];
+}
+
+/** Abbildungs-Metadaten aus `extractionMeta.figures` der Vorschau. */
+export function readFigurePreviews(previewPayload: unknown): CampaignFigurePreview[] {
+  const record = recordFrom(previewPayload);
+  const meta = record ? recordFrom(record.extractionMeta) : null;
+  if (!Array.isArray(meta?.figures)) {
+    return [];
+  }
+  const figures: CampaignFigurePreview[] = [];
+  for (const entry of meta.figures) {
+    const value = recordFrom(entry);
+    if (!value) continue;
+    const index = typeof value.index === "number" ? value.index : null;
+    const pageNumber = typeof value.pageNumber === "number" ? value.pageNumber : null;
+    if (index == null || pageNumber == null) continue;
+    figures.push({
+      index,
+      pageNumber,
+      type: typeof value.type === "string" ? value.type : "figure",
+    });
+  }
+  return figures;
 }
 
 export function recordFrom(value: unknown): Record<string, unknown> | null {
@@ -84,13 +121,13 @@ export function readStoredPreview(previewPayload: unknown): CampaignImportPrevie
   if (!record || !entities) {
     return null;
   }
-  const preview = buildCampaignPreview(entities);
-  const errors = Array.isArray(record.errors)
-    ? record.errors.filter((error): error is string => typeof error === "string")
-    : [];
+  const stringList = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+
+  const preview = buildCampaignPreview(entities, stringList(record.notes));
   return {
     ...preview,
-    errors,
+    errors: stringList(record.errors),
     canExecute: preview.canExecute && record.canExecute !== false,
   };
 }
@@ -107,7 +144,7 @@ export function readAnalysisProgress(previewPayload: unknown): CampaignAnalysisP
   if (record?.kind !== CAMPAIGN_PROGRESS_KIND) {
     return null;
   }
-  const phase = record.phase === "extracting" || record.phase === "analyzing" ? record.phase : null;
+  const phase = CAMPAIGN_ANALYSIS_PHASES.find((candidate) => candidate === record.phase) ?? null;
   if (!phase) {
     return null;
   }
@@ -143,6 +180,7 @@ export function jobToCampaignStatus(job: ImportJob, hasPdf: boolean): CampaignPd
     hasPdf,
     progress: readAnalysisProgress(job.previewPayload),
     preview: storedPreview ? toCampaignPreviewSummary(storedPreview) : null,
+    figures: readFigurePreviews(job.previewPayload),
     fitChat: readFitChatTranscript(job.metadata),
   };
 }

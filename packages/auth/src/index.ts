@@ -97,6 +97,7 @@ export {
   DEFAULT_SESSION_TTL_MS,
   PREVIEW_COOKIE_NAME,
   SESSION_COOKIE_NAME,
+  readSessionTokensFromCookieHeader,
   sessionExpiresAt,
 } from "./session";
 
@@ -104,6 +105,7 @@ export type { SessionCookieOptions, SessionCookieSameSite, UweRuntimeConfig } fr
 export {
   getAllowedCorsOrigins,
   getOAuthStateCookieOptions,
+  getSessionCookieClearVariants,
   getSessionCookieOptions,
   getSessionCookieOptionsForRequest,
   getTrustedRequestHosts,
@@ -114,6 +116,8 @@ export {
   isRequestSecure,
   isSplitHostnameDeployment,
   originMatchesTrustedHost,
+  rebaseUrlOnPublicOrigin,
+  resolveCrossAppUrls,
   resolveUweAppUrls,
   resolvePortalPublicBaseUrl,
   resolvePortalSessionHref,
@@ -125,7 +129,7 @@ export {
   STUDIO_SESSION_ENTRY_PATH,
 } from "./runtime-config";
 
-export type { UweAppUrls, UweDeploymentModel } from "./runtime-config";
+export type { UweAppUrls, UweCrossAppUrls, UweDeploymentModel } from "./runtime-config";
 
 export {
   getRuntimeEnvOverrides,

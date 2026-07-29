@@ -1,6 +1,6 @@
 // InstancedMesh-Pools, Instanz-Emission, Kontaktschatten und Dirty-Packen.
 import * as THREE from 'three';
-import { lerp, sstep } from '../core/rng.js';
+import { lerp, sstep, hashi } from '../core/rng.js';
 import { S, sceneRef, MAX_INST_PER_EL, MAX_KARTE_PER_EL, KARTE } from '../core/store.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 import { TEX } from '../render/textures.js';
@@ -22,6 +22,56 @@ function shadeVertical(geo, strength) {
     // und Spitzen werden heller als ihre Basis (gemalte Hintergruende tun das
     // durchgehend, und es kostet nichts)
     var f = lerp(1 - strength, 1, sstep(0, 0.6, t)) * (1 + sstep(0.72, 1, t) * 0.10);
+    col.setXYZ(i, col.getX(i) * f, col.getY(i) * f, col.getZ(i) * f);
+  }
+  col.needsUpdate = true;
+  return geo;
+}
+
+/* ==========================================================================
+   Detailrunde — Veredelung ALLER Pool-Geometrien
+
+   „Detailgrad in allen Assets verbessern“ heisst bei 272 Pools nicht 272
+   Handgriffe, sondern eine Stelle, durch die alles muss: definePool. Zwei
+   Farbschichten, beide deterministisch (hashi) und OHNE ein einziges
+   zusaetzliches Dreieck — der Instanzhaushalt bleibt unangetastet:
+
+   1. FACETTEN-TONUNG. Vertices gleicher Flaechenrichtung teilen sich einen
+      Hash aus der quantisierten Normale — jede Wand, jede Dachflaeche, jede
+      Kartenseite bekommt ihren eigenen, leicht abweichenden Ton. Genau das
+      unterscheidet einen gemalten Klotz von einem CAD-Klotz: Flaechen sind
+      Platten mit eigener Mischung, keine identisch gefuellten Polygone.
+
+   2. KOERNUNG. Ein zweiter Hash ueber die quantisierte LAGE im Asset laesst
+      den Ton innerhalb einer Flaeche langsam driften (die Vertexfarben
+      interpolieren dazwischen) — die niederfrequente Farbdrift, die Terrain
+      und Malschicht laengst tragen (Runde F), jetzt auch auf den Objekten.
+
+   Beide Schichten sind mittelwertneutral (±4.5 % bzw. ±3.4 % um 1) und
+   aendern die Gesamthelligkeit praktisch nicht. Kartenzeichen (Tinte auf
+   Papier, opts.karte) und ausdruecklich ausgenommene Pools (opts.detail 0,
+   z. B. das Fensterlicht-Quad) bleiben unberuehrt.
+   ========================================================================== */
+function detailVeredeln(geo) {
+  if (!geo.attributes || !geo.attributes.position || !geo.attributes.color) return geo;
+  var pos = geo.attributes.position, nor = geo.attributes.normal, col = geo.attributes.color;
+  var n = pos.count;
+  for (var i = 0; i < n; i++) {
+    var f = 1;
+    if (nor) {
+      // Normale auf ein 1/7-Raster quantisiert: alle Vertices einer ebenen
+      // Flaeche landen im selben Topf, weich gekruemmte Flaechen wechseln
+      // den Ton in breiten Baendern statt je Vertex.
+      var qx = Math.round(nor.getX(i) * 7), qy = Math.round(nor.getY(i) * 7),
+          qz = Math.round(nor.getZ(i) * 7);
+      f *= 0.955 + hashi(qx * 31 + qz, qy * 17 + qx, 71) * 0.09;
+    }
+    // Lage auf 1/3-Einheiten quantisiert — grob genug, dass benachbarte
+    // Vertices grosser Flaechen verschiedene Werte ziehen und die
+    // Interpolation daraus eine weiche Drift macht.
+    var px = Math.round(pos.getX(i) * 3), py = Math.round(pos.getY(i) * 3),
+        pz = Math.round(pos.getZ(i) * 3);
+    f *= 0.966 + hashi(px * 13 + py, pz * 7 + px, 77) * 0.068;
     col.setXYZ(i, col.getX(i) * f, col.getY(i) * f, col.getZ(i) * f);
   }
   col.needsUpdate = true;
@@ -98,7 +148,12 @@ var POOLS = {};
    Culling-Wirkung, eine zu kleine verwirft Sichtbares — deshalb lieber
    grosszuegig skalieren als knapp rechnen. */
 var huellenGeos = [];
-function huellenRadius() { return 460 * (KARTE.map / 256); }
+/* Bedienungsrunde: Untergrenze 1100 — der Ranken-Hoehenregler reicht jetzt
+   bis 1000 (editor/tools.js), und die Instanzen der Blattstaedtchen sitzen
+   dann weit ueber der alten 460er-Kugel einer 256er-Karte; sie wuerden vom
+   Culling faelschlich verworfen. Eine zu grosse Kugel kostet nur
+   Culling-Wirkung (siehe oben), eine zu kleine schluckt Sichtbares. */
+function huellenRadius() { return Math.max(460 * (KARTE.map / 256), 1100); }
 /** Hüllkugel über die ganze Karte: Culling verwirft korrekt statt falsch. */
 function weiteHuelle(geo) {
   geo.computeBoundingSphere();
@@ -113,6 +168,11 @@ function weiteHuellenNeu() {
 }
 function definePool(name, geo, opts) {
   opts = opts || {};
+  // Detailrunde: erst die Veredelung (liest normal, schreibt color), dann das
+  // vertikale Abdunkeln — beide multiplizieren nur, die Reihenfolge ist
+  // fachlich egal, so herum bleibt shadeVertical das letzte Wort ueber die
+  // Boden-zu-First-Rampe.
+  if (!opts.karte && opts.detail !== 0) detailVeredeln(geo);
   shadeVertical(geo, opts.ao === undefined ? 0.3 : opts.ao);
   weiteHuelle(geo);
   POOLS[name] = new Pool(name, geo, opts);
