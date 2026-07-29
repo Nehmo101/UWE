@@ -32,11 +32,18 @@ test('DIAGNOSE — wo laufen die Plattformen auseinander', async () => {
                  Math.cbrt(7.3), Math.hypot(0.3, 0.7), Math.tanh(0.9)];
 
   // Erzwungener Fehlschlag: nur so landen die Werte sicher im CI-Log.
+  // Rohwerte der ersten Farben — zeigt die Groessenordnung der Abweichung.
+  const roh = [];
+  for (let k = 0; k < 4; k++) {
+    w.m.terrain.terrainColor(k * 0.37, 0.5 + (k % 7) * 0.05, k - 100, 100 - k, c, 1);
+    roh.push(c.r.toExponential(17), c.g.toExponential(17), c.b.toExponential(17));
+  }
+
   const bericht = [
     'hgt=' + H_HGT,
     'farbe-konst=' + H_FARBE,
     'three=' + THREE.REVISION,
-    'math=' + probe.map((x) => x.toExponential(17)).join(','),
+    'roh=' + roh.join(','),
   ].join(' || ');
   assert.equal(bericht, 'ABSICHTLICH-ROT', 'DIAGNOSEWERTE');
 });
