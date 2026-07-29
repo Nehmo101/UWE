@@ -26,7 +26,7 @@
     "@uwe/shared-utils": "workspace:*",
     "@uwe/soundboard": "workspace:*",
     "lucide-react": "^1.27.0",
-    "next": "^15.5.21"
+    "next": "^16.2.12"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",
