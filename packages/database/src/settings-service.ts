@@ -27,8 +27,6 @@ import {
 
 // Abwärtskompatible öffentliche API: extrahierte Helfer über dieses Modul re-exportieren.
 export {
-} from "./settings-service-providers";
-export {
   getPersistentPathConfiguration,
   resolveEffectiveBackupsPath,
   resolveEffectiveExportsPath,
