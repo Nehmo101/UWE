@@ -372,9 +372,7 @@ Schreibweisen müssen gesucht werden.
 | `packages/database/src/server.ts:2211` | `export type { AtlasNodeLevel } …` |
 | `packages/product-contracts/src/prisma-model-boundaries.ts:166-171` | 6 Modelleinträge |
 | `packages/product-contracts/src/contracts.test.ts:96` | harter Verweis auf `.Atlas3DWorld` |
-| `scripts/ux-audit/pages-data.mjs:2151-2187, 3215-3252` | 4 Routen-Einträge, davon 2 auf gelöschte Dateien |
-| `scripts/ux-audit/issue-manifest.json:1056-1073, 1536-1548` | dieselben 4 als Issue-Daten |
-| `scripts/ux-audit/close-phase-c-issues.mjs:69` | „Graph/Atlas-Performance" |
+| `scripts/ux-audit/**` | 3 Fundstellen — der Ordner wurde vor der Veröffentlichung entfernt |
 | `docs/CURRENT_STATE.md:80` | „Atlas-Handout" |
 | `apps/studio/app/ideas/IdeaWorkspaceClient.tsx:301` | Placeholder-Beispieltext „z. B. Atlas-Orchestrator Subagent" |
 | `CHANGELOG.md` | **keine** Atlas-Treffer |
