@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --import tsx
 /**
- * UWE RTX Host Connector — CLI entry.
+ * UWE Maschinenraum — CLI entry.
  *
  *   pnpm connector:start        # from the repo root
  *   tsx tools/uwe-rtx-connector/src/index.ts start

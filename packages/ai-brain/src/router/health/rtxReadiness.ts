@@ -8,7 +8,7 @@ export type RtxReadinessSource = RtxHealthStatus["source"] | "connector";
 
 export interface RtxReadinessStatus extends Omit<RtxHealthStatus, "source"> {
   source: RtxReadinessSource;
-  /** True when readiness comes from an outbound RTX Host Connector heartbeat. */
+  /** True when readiness comes from an outbound Maschinenraum heartbeat. */
   connectorReady?: boolean;
   connectorOnlineCount?: number;
   connectorDegraded?: boolean;
@@ -76,8 +76,8 @@ export async function checkRtxReadiness(
 
   if (connectorAvailable) {
     const connectorMessage = degradedConnector?.lastError
-      ? `RTX Connector bereit (${modelCount} Modell(e)), meldet aber einen Fehler.`
-      : `RTX Connector bereit (${modelCount} Modell(e)).`;
+      ? `Maschinenraum bereit (${modelCount} Modell(e)), meldet aber einen Fehler.`
+      : `Maschinenraum bereit (${modelCount} Modell(e)).`;
 
     return {
       ...direct,

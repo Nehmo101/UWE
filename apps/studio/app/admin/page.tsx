@@ -112,7 +112,7 @@ export default async function AdminOverviewPage() {
           <h2 className="text-lg font-semibold tracking-tight">System &amp; Betrieb</h2>
           <p className="text-sm text-muted-foreground">
             Status, Homelab und Diagnose liegen in <strong>Brain &rarr; System</strong>. Host-Setup,
-            Cloudflare, RTX-Verbindung, Drucker, Secrets, Migrationen, Tokens und Backups laufen
+            Cloudflare, Maschinenraum-Verbindung, Drucker, Secrets, Migrationen, Tokens und Backups laufen
             über die <strong>Kommandozentrale</strong> auf dem UWE-Host.
           </p>
         </section>

@@ -1,6 +1,6 @@
 /**
  * Connector service — host-side source of truth for the worker registry and
- * the outbound job queue consumed by RTX Host Connectors.
+ * the outbound job queue consumed by Maschinenräume.
  *
  * The host never reaches out to a connector. Connectors authenticate with a
  * token (only its hash is stored), send heartbeats, claim jobs that match their
@@ -220,7 +220,7 @@ export class ConnectorService {
     const token = generateConnectorToken();
     const connector = await this.db.connector.create({
       data: {
-        name: name.trim() || "RTX Host Connector",
+        name: name.trim() || "UWE Maschinenraum",
         tokenHash: hashConnectorToken(token),
       },
     });
@@ -627,7 +627,7 @@ export interface WaitForConnectorJobOptions {
  * Poll a connector job until it reaches a terminal state. Resolves with the
  * completed job, or throws `ConnectorJobWaitError` on failure/expiry/timeout.
  *
- * The host never executes the job itself — an online RTX Host Connector claims
+ * The host never executes the job itself — an online Maschinenraum claims
  * and completes it through the queue. This helper only observes the job row.
  */
 export async function waitForConnectorJob(

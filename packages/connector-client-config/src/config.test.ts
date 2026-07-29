@@ -16,7 +16,7 @@ describe("defaultConnectorClientConfig", () => {
 
     assert.equal(config.hostUrl, "");
     assert.equal(config.token, "");
-    assert.equal(config.name, "RTX Host Connector");
+    assert.equal(config.name, "UWE Maschinenraum");
     assert.equal(config.transportMode, "queue");
     assert.equal(config.queueEnabled, true);
     assert.equal(config.wizardCompleted, false);

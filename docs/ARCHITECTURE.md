@@ -30,7 +30,7 @@ graph TD
   UWE --> Portal["UWE Portal<br/>Spieler-Wiki / Handouts"]
   UWE --> Core["UWE Core<br/>Shared Packages / Datenlogik"]
   UWE --> Export["Static Export<br/>player-sichere HTML-Ausgabe"]
-  UWE --> Integrations["Optionale Integrationen<br/>RTX Host Connector, Spotify, Kalender, Mail, DnD-APIs"]
+  UWE --> Integrations["Optionale Integrationen<br/>Maschinenraum, Spotify, Kalender, Mail, DnD-APIs"]
 
   Studio --> DMWorkflows["Welten, Seiten, Sessions, Inspector,<br/>Templates, Labels, Soundboard, Backups"]
   Studio --> AdminOS["Daily Admin OS<br/>Today, Capture, Projekte, Verträge,<br/>Hardware, Life-Brain"]
@@ -46,7 +46,7 @@ graph TD
   Core --> UI["@uwe/shared-ui<br/>gemeinsame React-Komponenten"]
 
   Export --> StaticSite["exports/<world>-static<br/>HTML, CSS, JS, Search Index"]
-  Integrations --> RTX["RTX Host Connector<br/>optionaler outbound KI-Worker"]
+  Integrations --> RTX["Maschinenraum<br/>optionaler outbound KI-Worker"]
   Integrations --> Spotify["Spotify Web API<br/>DM-seitiges Soundboard"]
   Integrations --> Calendar["Kalender / Mail / Jobs<br/>Admin- und Automationsfunktionen"]
 ```
@@ -68,7 +68,7 @@ flowchart LR
   Core --> Backups["data/backups<br/>Backup-ZIPs"]
   Studio --> Exports["exports/<world>-static<br/>Static HTML Export"]
 
-  Studio -->|optional, outbound Connector| RTX["RTX Host Connector<br/>Ollama / lokale KI"]
+  Studio -->|optional, outbound Connector| RTX["Maschinenraum<br/>Ollama / lokale KI"]
   Studio -->|optional| Spotify["Spotify Web API"]
   Studio -->|optional| MailCalendar["Mail / Kalender / Jobs"]
 
@@ -81,7 +81,7 @@ flowchart LR
 - **Studio ist die Schreib- und Admin-Oberfläche.** Hier entstehen Inhalte, Imports, Generator-Ausgaben, Inspector-Fixes, Backups und Exporte.
 - **Portal ist die Spieler-Ausgabe.** Es rendert nur veröffentlichte und freigegebene Inhalte. DM-only Inhalte dürfen dort nicht erscheinen.
 - **Persistente Daten bleiben auf dem UWE Host.** Datenbank, Uploads, Backups und Exporte liegen lokal/self-hosted.
-- **Der RTX Host Connector ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` bleibt nur als **deprecated** Kompatibilität bestehen.
+- **Der Maschinenraum ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` bleibt nur als **deprecated** Kompatibilität bestehen.
 - **Es gibt keine Cloud-KI.** Jede KI-Aktion läuft über den RTX-Host (Notiz Lasse, N.3). Anbieter, Schlüssel und Fallback-Pfade sind entfernt — nicht abgeschaltet.
 
 ---
@@ -165,7 +165,7 @@ graph TD
 | **UWE Portal** | Nein / sehr begrenzt | Alles in den zugeordneten Welten | Spieler-Wiki, Handouts — Login immer erforderlich |
 | **Static Export** | Nein | Was bewusst exportiert wurde | Statisches Hosting ohne Serverlogik |
 | **UWE Core Packages** | Indirekt über Apps | Ja | Datenlogik, Auth, Rendering, Security, Assets |
-| **RTX Host Connector** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz (outbound Worker); alter inbound `RTX-Agent` nur deprecated |
+| **Maschinenraum** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz (outbound Worker); alter inbound `RTX-Agent` nur deprecated |
 | **Cloud-KI** | — | — | Entfällt: seit N.3 gibt es keinen Cloud-Anbieter mehr |
 
 ---
@@ -175,7 +175,7 @@ graph TD
 Es gibt zwei aktive, bewusst getrennte Betriebsmodelle: Das **UWE Command
 Center** betreibt Hosting und RTX auf einem Windows-PC; der **Linux-Split-Host**
 bleibt für Always-on- und öffentliche Installationen erhalten. Beide verwenden
-dieselben Apps, Datenregeln und den outbound-only RTX Connector.
+dieselben Apps, Datenregeln und den outbound-only Maschinenraum.
 
 ```mermaid
 flowchart TD
@@ -197,7 +197,7 @@ flowchart TD
   Access --> StudioProtected["Studio schützen (Auth + Access)"]
   Access --> PortalPublic["Portal darf offener sein,<br/>aber nur player-safe Content"]
 
-  Service -.->|optional, outbound| Connector["RTX Host Connector<br/>verbindet sich zum Host"]
+  Service -.->|optional, outbound| Connector["Maschinenraum<br/>verbindet sich zum Host"]
 ```
 
 ---
@@ -268,11 +268,11 @@ flowchart LR
   Core --> Data["Lokale Daten<br/>DB + Uploads + Backups"]
   Core --> Portal["Spieler lesen<br/>UWE Portal"]
   Core --> Export["Static Export"]
-  Studio --> RTX["Optional RTX Host Connector<br/>lokale KI (outbound)"]
+  Studio --> RTX["Optional Maschinenraum<br/>lokale KI (outbound)"]
 
   Data --> Studio
   Data --> Portal
   Data --> Export
 ```
 
-**UWE = Studio zum Erstellen, Core zum Absichern/Verwalten, Portal/Export zum sicheren Teilen, RTX Host Connector für lokale KI.** Läuft als Linux Host mit `systemd` (kein Docker, kein Windows-Installer).
+**UWE = Studio zum Erstellen, Core zum Absichern/Verwalten, Portal/Export zum sicheren Teilen, Maschinenraum für lokale KI.** Läuft als Linux Host mit `systemd` (kein Docker, kein Windows-Installer).

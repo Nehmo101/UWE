@@ -1,11 +1,11 @@
 # Connector security
 
-The RTX Host Connector is a **worker**, never a user. Its access is deliberately
+The Maschinenraum is a **worker**, never a user. Its access is deliberately
 narrow.
 
 ## Token authentication
 
-- A connector token is generated on the host (Studio → System → RTX Connector) or
+- A connector token is generated on the host (Command Center → Maschinenraum) or
   set manually. Format: `uwec_…`.
 - The host stores **only the SHA-256 hash** (`Connector.tokenHash`), never the
   plaintext. The raw token is shown exactly once.

@@ -3,9 +3,10 @@ mod command_center;
 use command_center::{
     backup_host, check_host_update, cloudflare_clear_token, cloudflare_set_token, cloudflare_start,
     cloudflare_status, cloudflare_stop, create_user, delete_user, get_host_env, get_host_logs,
-    get_host_status, list_backups, list_users, open_host_target, ops_invoke, restart_host,
-    restart_service, restore_backup, set_host_env, set_user_password, setup_host, start_host,
-    start_service, stop_host, stop_service, update_host, update_user,
+    get_host_status, get_install_selection, list_backups, list_users, open_host_target, ops_invoke,
+    restart_host, restart_service, restore_backup, set_host_env, set_install_selection,
+    set_user_password, setup_host, start_host, start_service, stop_host, stop_service, update_host,
+    update_user,
 };
 
 use std::{
@@ -124,7 +125,7 @@ impl Default for ConnectorClientConfig {
         Self {
             host_url: String::new(),
             token: String::new(),
-            name: "RTX Host Connector".to_string(),
+            name: "UWE Maschinenraum".to_string(),
             queue_enabled: true,
             transport_mode: default_transport_mode(),
             wizard_completed: false,
@@ -709,7 +710,7 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     config.queue_enabled = config.transport_mode != "direct";
 
     if config.name.is_empty() {
-        config.name = "RTX Host Connector".to_string();
+        config.name = "UWE Maschinenraum".to_string();
     }
 
     if config.tray_mode.is_empty() {
@@ -1414,7 +1415,7 @@ async fn test_host_connection(
                     ok: false,
                     status: "error".to_string(),
                     message: format!(
-                        "Host hat das Connector-Token abgelehnt (HTTP {}). Token im Studio unter System → RTX Connector pruefen.",
+                        "Host hat das Connector-Token abgelehnt (HTTP {}). Token im Command Center unter Maschinenraum pruefen.",
                         status.as_u16()
                     ),
                     checked_at,
@@ -1544,7 +1545,9 @@ pub fn run() {
             restart_service,
             update_user,
             list_backups,
-            restore_backup
+            restore_backup,
+            get_install_selection,
+            set_install_selection
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

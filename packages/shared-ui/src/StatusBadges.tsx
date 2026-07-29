@@ -250,20 +250,20 @@ export function AssetTypeBadge({ type }: { type: AssetType }) {
 export type RtxConnectorState = "online" | "offline" | "disabled" | "starting" | "error";
 
 export const RTX_STATE_LABELS: Record<RtxConnectorState, string> = {
-  online: "RTX online",
-  offline: "RTX offline",
-  disabled: "RTX deaktiviert",
-  starting: "RTX startet",
-  error: "RTX Fehler",
+  online: "Maschinenraum online",
+  offline: "Maschinenraum offline",
+  disabled: "Maschinenraum deaktiviert",
+  starting: "Maschinenraum startet",
+  error: "Maschinenraum Fehler",
 };
 
 export const RTX_STATE_DESCRIPTIONS: Record<RtxConnectorState, string> = {
-  online: "RTX Connector verbunden — lokale KI ist verfügbar.",
+  online: "Maschinenraum verbunden — lokale KI ist verfügbar.",
   offline:
-    "RTX Connector nicht erreichbar. KI-Jobs werden vorgemerkt und starten automatisch, sobald RTX wieder online ist — kein Cloud-Fallback.",
-  disabled: "RTX Connector deaktiviert. Aktiviere ihn, um lokale KI zu nutzen.",
-  starting: "RTX Connector wird gestartet — bitte kurz warten.",
-  error: "RTX Connector meldet einen Fehler. Prüfe den Systemstatus.",
+    "Maschinenraum nicht erreichbar. KI-Jobs werden vorgemerkt und starten automatisch, sobald RTX wieder online ist — kein Cloud-Fallback.",
+  disabled: "Maschinenraum deaktiviert. Aktiviere ihn, um lokale KI zu nutzen.",
+  starting: "Maschinenraum wird gestartet — bitte kurz warten.",
+  error: "Maschinenraum meldet einen Fehler. Prüfe den Systemstatus.",
 };
 
 /**
@@ -348,7 +348,7 @@ export function RtxStatusBadge({
       className={`${BADGE_BASE} ${tone.badge}${className ? ` ${className}` : ""}`}
       data-rtx-state={state}
       title={RTX_STATE_DESCRIPTIONS[state]}
-      aria-label={`RTX-Status: ${RTX_STATE_LABELS[state]}. ${RTX_STATE_DESCRIPTIONS[state]}`}
+      aria-label={`Maschinenraum-Status: ${RTX_STATE_LABELS[state]}. ${RTX_STATE_DESCRIPTIONS[state]}`}
     >
       <span className={`inline-block h-2 w-2 rounded-full ${tone.dot}`} aria-hidden />
       {label ?? RTX_STATE_LABELS[state]}

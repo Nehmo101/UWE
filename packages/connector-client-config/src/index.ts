@@ -1,5 +1,5 @@
 /**
- * @uwe/connector-client-config — RTX Connector Client local settings.
+ * @uwe/connector-client-config — Command Center local settings.
  *
  * Types, defaults, validation, and UI helpers. No filesystem I/O; Tauri owns persistence.
  */

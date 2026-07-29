@@ -1,7 +1,7 @@
 /**
  * Connector-local Spotify session store + playback helpers.
  *
- * Spotify OAuth lives ONLY on the RTX Connector Client (never on the UWE host).
+ * Spotify OAuth lives ONLY on the Command Center (never on the UWE host).
  * The user authenticates once here; the resulting tokens are persisted to
  * `<dataDir>/spotify-session.json` and refreshed on demand using the OAuth
  * helpers from `@uwe/soundboard`. The host only ever enqueues Spotify jobs that

@@ -44,7 +44,7 @@ Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImag
 > Fehlerhandling ist stellenweise dünn — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 
 Der lokale Bild-Worker sollte Endpoint `POST /v1/images` implementieren. Der aktive
-Weg ist der outbound RTX Host Connector ([rtx-connector.md](rtx-connector.md));
+Weg ist der outbound Maschinenraum ([rtx-connector.md](rtx-connector.md));
 für direkte Worker-Endpunkte sind `RTX_BASE_URL` / `RTX_SERVICE_TOKEN` die aktuellen
 Namen:
 

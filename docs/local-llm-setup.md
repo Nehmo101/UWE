@@ -1,6 +1,6 @@
-# Local LLM setup (RTX Connector)
+# Local LLM setup (Maschinenraum)
 
-The RTX Host Connector discovers local AI providers and reports them to the host.
+The Maschinenraum discovers local AI providers and reports them to the host.
 Discovery is best-effort and offline-safe: a provider that is not running is
 reported as `unavailable`, never an error or a crash.
 
@@ -16,7 +16,7 @@ Model capabilities are inferred from the name (`chat`, `vision`, `embeddings`).
 
 ## What the host sees
 
-For each connector the host UI (System → RTX Connector) shows:
+For each connector the host UI (Command Center → Maschinenraum) shows:
 
 - which local models are available and from which provider,
 - whether the connector advertises `llm_local` / `embedding_local`,

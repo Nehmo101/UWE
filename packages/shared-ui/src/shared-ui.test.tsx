@@ -226,7 +226,7 @@ describe("shared-ui components", () => {
     assert.match(online, /--uwe-success/);
     assert.match(online, /data-rtx-state="online"/);
     assert.match(online, /bg-\[var\(--uwe-success\)\]/);
-    assert.match(online, /RTX online/);
+    assert.match(online, /Maschinenraum online/);
     assert.match(online, /title="/);
 
     const offline = renderToStaticMarkup(
@@ -234,7 +234,7 @@ describe("shared-ui components", () => {
     );
     assert.match(offline, /data-rtx-state="offline"/);
     assert.match(offline, /RTX offline · 0\/1/);
-    assert.match(offline, /aria-label="RTX-Status: RTX offline/);
+    assert.match(offline, /aria-label="Maschinenraum-Status: Maschinenraum offline/);
   });
 
   it("renders distinct visual tones per RTX state", () => {

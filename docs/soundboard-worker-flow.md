@@ -1,7 +1,7 @@
 # Soundboard ↔ worker flow
 
 The browser never talks to the RTX machine directly. A soundboard action becomes a
-queued connector job that the RTX Host Connector claims and plays locally.
+queued connector job that the Maschinenraum claims and plays locally.
 
 ## Flow
 
@@ -9,9 +9,9 @@ queued connector job that the RTX Host Connector claims and plays locally.
 User klickt Soundbutton
   → Host prüft Auth/Berechtigung
   → Host erstellt Queue-Job (sound_play / sound_stop / sound_stop_all / sound_volume)
-  → RTX Connector claimt den Job (Lane: audio)
-  → RTX Connector spielt lokal ab oder triggert Spotify
-  → RTX Connector meldet complete/fail
+  → Maschinenraum claimt den Job (Lane: audio)
+  → Maschinenraum spielt lokal ab oder triggert Spotify
+  → Maschinenraum meldet complete/fail
   → UI zeigt Status
 ```
 
@@ -32,11 +32,11 @@ degraded response (HTTP 200), **not** an error:
 
 ```json
 { "queued": false, "degraded": true,
-  "message": "RTX Connector offline — lokale Audioausgabe ist pausiert." }
+  "message": "Maschinenraum offline — lokale Audioausgabe ist pausiert." }
 ```
 
 The soundboard UI stays usable (browser playback and editing continue) and shows
-the offline notice with a link to **System → RTX Connector**.
+the offline notice with a link to the **Maschinenraum** in the Command Center.
 
 ## Spotify
 

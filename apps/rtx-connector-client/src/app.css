@@ -127,6 +127,13 @@
   background: color-mix(in srgb, var(--uwe-danger) 10%, transparent);
 }
 
+/* Teilerfolg: die Aktion lief durch, aber ein Nachlauf-Schritt meldet etwas —
+   z. B. Installation fertig, Owner-Konto aber nicht angelegt. */
+.connector-banner-warning {
+  border-color: color-mix(in srgb, var(--uwe-warning) 55%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-warning) 12%, transparent);
+}
+
 .connector-content {
   display: flex;
   flex-direction: column;
@@ -318,6 +325,58 @@
 
 .connector-wizard-card {
   width: min(42rem, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+/* Auswahl der Bereiche im Ersteinrichtungs-Assistenten. Eine Karte je App,
+   damit Beschreibung und Port neben dem Häkchen stehen statt darunter. */
+.install-app-grid {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.install-app-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--uwe-card-bg) 70%, transparent);
+}
+
+.install-app-option.is-selected {
+  border-color: color-mix(in srgb, var(--uwe-accent) 55%, var(--uwe-border));
+  background: var(--uwe-accent-muted);
+}
+
+.install-app-option input {
+  margin-top: 0.25rem;
+  flex: none;
+}
+
+.install-app-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.install-app-title {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.install-app-title small {
+  color: var(--uwe-fg-subtle);
+}
+
+.install-app-tagline {
+  color: var(--uwe-fg-muted);
+  font-weight: 600;
 }
 
 .connector-empty-state {

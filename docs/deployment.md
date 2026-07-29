@@ -1,6 +1,6 @@
 # Deployment
 
-UWE deploys as a single **Linux Host** plus an optional **RTX Host Connector**.
+UWE deploys as a single **Linux Host** plus an optional **Maschinenraum**.
 There is no Docker image and no Windows installer in the active product path
 (see [removed-legacy-runtime.md](removed-legacy-runtime.md)).
 
@@ -14,7 +14,7 @@ Internet ──(Cloudflare Tunnel, optional)── UWE Host (Linux, always-on)
                                               └── Job queue + worker registry
                                                     ▲
                                                     │ outbound only
-                                          RTX Host Connector (optional)
+                                          Maschinenraum (optional)
                                               └── local AI / audio / spotify
 ```
 
@@ -41,7 +41,7 @@ sudo systemctl restart uwe.service
 # or: sudo bash deploy/scripts/setup-uwe-host.sh --quick
 ```
 
-## RTX Connector deployment
+## Maschinenraum deployment
 
 Optional and independent of the host lifecycle. Create a token in Studio, fill
 `tools/uwe-rtx-connector/.env`, run `pnpm connector:start`. The connector can come

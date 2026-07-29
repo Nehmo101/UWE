@@ -220,6 +220,25 @@ export interface LocalHostService {
   message: string;
 }
 
+/**
+ * Auswahl des Ersteinrichtungs-Assistenten — Spiegel von `InstallSelection`
+ * (tools/uwe-host-command-center/src/install-selection.ts).
+ */
+export interface LocalHostInstallSelection {
+  version: number;
+  apps: LocalHostServiceId[];
+  seedDemoContent: boolean;
+  updatedAt: string | null;
+}
+
+export interface LocalHostInstallSelectionResult {
+  ok: boolean;
+  selection: LocalHostInstallSelection;
+  /** `false`, solange der Assistent nie gelaufen ist. */
+  persisted: boolean;
+  file: string;
+}
+
 export interface LocalHostStatus {
   collectedAt: string;
   overall: "ready" | "attention" | "error";
@@ -232,6 +251,8 @@ export interface LocalHostStatus {
     envReady: boolean;
     databaseReady: boolean;
     buildReady: boolean;
+    apps: LocalHostServiceId[];
+    selectionPersisted: boolean;
     message: string;
   };
   host: {

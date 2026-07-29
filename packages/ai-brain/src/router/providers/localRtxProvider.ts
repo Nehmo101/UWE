@@ -14,7 +14,7 @@ export interface LocalRtxProviderOptions extends CreateProviderOptions {
  * Factory for the local RTX inference provider.
  *
  * Active path: direct Ollama/LM Studio via `AI_INFERENCE_BASE_URL` (and the
- * outbound RTX Host Connector for queued jobs). The legacy inbound RTX Agent
+ * outbound Maschinenraum for queued jobs). The legacy inbound RTX Agent
  * (`RTX_AGENT_URL` → `/api/chat`) has been removed; LLM inference no longer
  * routes through it. See `docs/removed-legacy-runtime.md`.
  */

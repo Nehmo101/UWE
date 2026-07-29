@@ -310,7 +310,7 @@ export interface ImageStudioConfig {
 
 export interface ImageStudioConfigStatus extends ImageStudioConfig {
   rtxAgentConfigured: boolean;
-  /** Bildgenerierung läuft über die outbound RTX-Connector-Queue. */
+  /** Bildgenerierung läuft über die outbound Maschinenraum-Queue. */
   connectorImageEnabled: boolean;
   localImageBackendReady: boolean;
   source: "portal" | "env";
@@ -361,10 +361,10 @@ export function resolveImageStudioConfigStatus(
     message = "Image Studio ist deaktiviert.";
   } else if (!connectorImageEnabled) {
     message =
-      "Kein Bild-Backend: die RTX-Connector-Queue ist abgeschaltet (RTX_USE_CONNECTOR_IMAGE=false).";
+      "Kein Bild-Backend: die Maschinenraum-Queue ist abgeschaltet (RTX_USE_CONNECTOR_IMAGE=false).";
   } else {
     message =
-      "Bildgenerierung über RTX Host Connector (image_generate) — der Connector muss image_generation anbieten.";
+      "Bildgenerierung über Maschinenraum (image_generate) — der Connector muss image_generation anbieten.";
   }
 
   return {

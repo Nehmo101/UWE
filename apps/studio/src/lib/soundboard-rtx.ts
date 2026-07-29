@@ -99,7 +99,7 @@ export async function dispatchSoundboardRtx(
           degraded: true,
           uncertain: true,
           message:
-            "Der RTX Connector hat die Sound-Aktion angenommen, aber das Ergebnis konnte nicht bestätigt werden. Sie wird nicht erneut ausgeführt.",
+            "Der Maschinenraum hat die Sound-Aktion angenommen, aber das Ergebnis konnte nicht bestätigt werden. Sie wird nicht erneut ausgeführt.",
         });
       }
     }

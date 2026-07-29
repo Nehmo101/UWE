@@ -191,14 +191,14 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
     },
     {
       id: "rtx_connector",
-      label: "RTX Host Connector",
+      label: "Maschinenraum",
       ok: rtxConnectorOk,
       severity: rtxConnectorSeverity,
       message: !inference.enabled
         ? "KI deaktiviert — Connector optional"
         : rtx.ready
           ? rtx.message
-          : rtx.message || "RTX Host Connector nicht bereit — System → RTX Connector prüfen",
+          : rtx.message || "Maschinenraum nicht bereit — im Command Center unter Maschinenraum prüfen",
     },
     {
       id: "ollama",
@@ -210,7 +210,7 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
         : ollamaOk
           ? inference.message
           : rtx.ready
-            ? "Inference über RTX Host Connector bereit"
+            ? "Inference über Maschinenraum bereit"
             : inference.message || "Ollama/Inference offline",
     },
     {
@@ -242,7 +242,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 3,
-          instruction: "RTX-Rechner: Ollama + outbound RTX Host Connector starten (Legacy inbound RTX Agent ist deprecated)",
+          instruction: "RTX-Rechner: Ollama + outbound Maschinenraum starten (Legacy inbound RTX Agent ist deprecated)",
         },
         {
           order: 4,
@@ -329,7 +329,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 4,
-          instruction: "RTX Connector Logs (oder Legacy RTX Agent Konsole, falls noch genutzt)",
+          instruction: "Maschinenraum Logs (oder Legacy RTX Agent Konsole, falls noch genutzt)",
         },
       ],
     },
@@ -397,7 +397,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
     },
     {
       id: "check_rtx_connector",
-      title: "RTX Host Connector prüfen",
+      title: "Maschinenraum prüfen",
       summary: "Outbound Connector — Token, Heartbeat und lokale Executors auf dem RTX-Rechner.",
       steps: [
         {
@@ -407,7 +407,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 2,
-          instruction: "Studio: System → RTX Connector — Token und Online-Status prüfen",
+          instruction: "Command Center → Maschinenraum — Token und Online-Status prüfen",
         },
         {
           order: 3,
@@ -504,8 +504,8 @@ export function buildHomelabSecurityChecklist(input: {
       ok: !publicExposure || input.system.proxy.cloudflareTunnel,
       severity: publicExposure && !input.system.proxy.cloudflareTunnel ? "warn" : "unknown",
       message: publicExposure
-        ? "Nur 443/80 via Cloudflare — SSH und RTX Host Connector nur LAN/VPN"
-        : "Lokal: Studio 3000, Portal 3001, RTX Host Connector nur LAN",
+        ? "Nur 443/80 via Cloudflare — SSH und Maschinenraum nur LAN/VPN"
+        : "Lokal: Studio 3000, Portal 3001, Maschinenraum nur LAN",
       manual: true,
     },
   ];

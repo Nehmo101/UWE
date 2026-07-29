@@ -111,7 +111,7 @@ export async function tryDispatchSpotifyConnector(
         delivery: "direct",
         requestId: direct.requestId,
         via: "rtx-connector",
-        message: "Spotify-Aktion direkt an den RTX Connector übergeben.",
+        message: "Spotify-Aktion direkt an den Maschinenraum übergeben.",
       });
     } catch (error) {
       if (!(error instanceof DirectConnectorDispatchError)) throw error;
@@ -124,7 +124,7 @@ export async function tryDispatchSpotifyConnector(
           degraded: true,
           uncertain: true,
           message:
-            "Der RTX Connector hat die Spotify-Aktion angenommen, aber das Ergebnis konnte nicht bestätigt werden. Sie wird nicht erneut ausgeführt.",
+            "Der Maschinenraum hat die Spotify-Aktion angenommen, aber das Ergebnis konnte nicht bestätigt werden. Sie wird nicht erneut ausgeführt.",
         });
       }
     }
@@ -147,7 +147,7 @@ export async function tryDispatchSpotifyConnector(
     delivery: "queue",
     jobId: job.id,
     via: "rtx-connector",
-    message: "Spotify-Aktion an die RTX Connector Queue übergeben.",
+    message: "Spotify-Aktion an die Maschinenraum-Queue übergeben.",
   });
 }
 

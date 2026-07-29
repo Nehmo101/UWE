@@ -32,6 +32,7 @@ import { PrintersPanel } from "./components/PrintersPanel";
 import { RunnersPanel } from "./components/RunnersPanel";
 import { SecurityPanel } from "./components/SecurityPanel";
 import { SetupWizard } from "./components/SetupWizard";
+import { InstallWizard } from "./components/install/InstallWizard";
 import { SpotifyPanel } from "./components/SpotifyPanel";
 import { OpsPanel } from "./components/OpsPanel";
 import { UsersPanel } from "./components/UsersPanel";
@@ -50,6 +51,7 @@ import {
   exitApp,
   getConnectorStatus,
   getCookbookDashboard,
+  getHostStatus,
   getModelStore,
   getPrinterStore,
   listConnectorJobs,
@@ -97,6 +99,7 @@ export default function App() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<HostConnectionTestResult | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [showInstallWizard, setShowInstallWizard] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [quitting, setQuitting] = useState(false);
@@ -210,12 +213,36 @@ export default function App() {
 
   const runTestRunner = useCallback(async (id: RunnerId) => testRunner(id), []);
 
+  /**
+   * Ersteinrichtung beim Start aufspringen lassen, solange auf diesem Rechner
+   * keine benutzbare Installation liegt und der Nutzer den Assistenten nicht
+   * bereits durchlaufen oder auf „Später" gesetzt hat.
+   *
+   * Bewusst an `buildReady`/`databaseReady` festgemacht statt an „Auswahl schon
+   * geschrieben": bricht die Einrichtung nach dem Schreiben der Auswahl ab, muss
+   * der Assistent beim nächsten Start wieder da sein — sonst bleibt der Rechner
+   * halb eingerichtet zurück. Fertige Bestandsinstallationen ohne Auswahl-Datei
+   * erfüllen beide Flags und werden dadurch nie behelligt.
+   */
+  const maybeOpenInstallWizard = useCallback(async (nextConfig: ConnectorClientConfig) => {
+    if (nextConfig.installWizardCompleted) return;
+    try {
+      const status = await getHostStatus(nextConfig.localHostRoot || undefined);
+      if (status.installation.buildReady && status.installation.databaseReady) return;
+      setShowInstallWizard(true);
+    } catch {
+      // Kein lesbarer Projektordner: dann ist das Command Center nicht der
+      // Installer dieses Rechners — Overlay bleibt zu.
+    }
+  }, []);
+
   useEffect(() => {
     void (async () => {
       const result = await refreshFromBackend();
       setBootstrapped(true);
       if (!result) return;
       const { nextConfig, nextRuntimeStatus } = result;
+      void maybeOpenInstallWizard(nextConfig);
       if (nextConfig.autoStartHost) {
         void startHost(nextConfig.localHostRoot || undefined).catch((nextError) => {
           setError(toMessage(nextError));
@@ -233,7 +260,7 @@ export default function App() {
           .catch((nextError) => setError(toMessage(nextError)));
       }
     })();
-  }, [refreshFromBackend]);
+  }, [maybeOpenInstallWizard, refreshFromBackend]);
 
   // The X button (window close) is intercepted in Rust, which emits
   // `app-close-requested` and keeps the window open. We ask the user here and
@@ -473,6 +500,7 @@ export default function App() {
             onStartConnector={runStartConnector}
             onStopConnector={runStopConnector}
             onOpenConnector={() => setActivePath("/connector")}
+            onOpenInstallWizard={() => setShowInstallWizard(true)}
           />
         );
       case "/connector":
@@ -535,6 +563,19 @@ export default function App() {
     </>
   );
 
+  const installWizardOverlay = showInstallWizard ? (
+    <InstallWizard
+      config={config}
+      onConfigSaved={setConfig}
+      onCompleted={() => {
+        setShowInstallWizard(false);
+        void refreshFromBackend();
+        setNotice("Ersteinrichtung abgeschlossen.");
+      }}
+      onDismiss={() => setShowInstallWizard(false)}
+    />
+  ) : null;
+
   const wizardOverlay = showWizard ? (
     <SetupWizard
       initialConfig={config}
@@ -567,7 +608,7 @@ export default function App() {
         <h2 id="quit-confirm-title">Command Center beenden?</h2>
         <p className="connector-muted">
           Die Steuerungs-App wird vollständig geschlossen. Laufende UWE-Dienste (Studio, Portal)
-          bleiben im Hintergrund aktiv; die aktive RTX-Verbindung wird beim Beenden getrennt.
+          bleiben im Hintergrund aktiv; der laufende Maschinenraum wird beim Beenden getrennt.
         </p>
         <div className="connector-actions connector-modal-actions">
           <Button variant="ghost" onClick={() => setShowQuitConfirm(false)} disabled={quitting} autoFocus>
@@ -581,9 +622,12 @@ export default function App() {
     </div>
   ) : null;
 
+  // Ersteinrichtung zuerst: solange sie offen ist, hat kein anderes Overlay
+  // etwas zu melden — auf diesem Rechner existiert noch keine Installation.
   const overlay = (
     <>
-      {wizardOverlay}
+      {installWizardOverlay}
+      {installWizardOverlay ? null : wizardOverlay}
       {quitOverlay}
     </>
   );

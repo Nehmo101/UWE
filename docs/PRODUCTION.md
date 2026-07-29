@@ -2,7 +2,7 @@
 
 Anleitung für den produktiven Betrieb von **UWE (Universeller Welten-Editor)** auf
 dem aktiven Zielpfad: **Linux Host + `pnpm` + `systemd`**, optional hinter einem
-**Cloudflare Tunnel**, mit optionalem **outbound RTX Host Connector** für lokale KI.
+**Cloudflare Tunnel**, mit optionalem **outbound Maschinenraum** für lokale KI.
 
 > Docker und der Windows-One-Click-Installer wurden aus dem aktiven Produktpfad
 > entfernt — siehe [removed-legacy-runtime.md](./removed-legacy-runtime.md).
@@ -225,7 +225,7 @@ Vollständige Liste inkl. Brain/Inferenz/Connector: `.env.example` und
 ### Cloudflare Tunnel
 
 Cloudflare darf **nur auf UWE** zeigen — niemals auf Ollama, LM Studio oder einen
-RTX-Inference-Endpoint. Der RTX Host Connector verbindet sich ohnehin **outbound**
+RTX-Inference-Endpoint. Der Maschinenraum verbindet sich ohnehin **outbound**
 und braucht keinen eingehenden Port.
 
 **Daily Admin OS / Life-Brain:** Persönliches Life-Brain und DnD-Brain dürfen nur

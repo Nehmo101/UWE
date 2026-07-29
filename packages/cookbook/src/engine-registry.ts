@@ -31,12 +31,12 @@ export const COOKBOOK_ENGINES: Record<CookbookEngineId, CookbookEngineDefinition
     id: "rtx_agent",
     label: "UWE RTX Agent (Legacy)",
     description:
-      "Deprecated inbound GPU-PC-Proxy (RTX_AGENT_URL). Standalone-Tool entfernt — bevorzugt outbound RTX Host Connector. Brain-Daten bleiben auf dem UWE-Host.",
+      "Deprecated inbound GPU-PC-Proxy (RTX_AGENT_URL). Standalone-Tool entfernt — bevorzugt outbound Maschinenraum. Brain-Daten bleiben auf dem UWE-Host.",
     isLocal: true,
     defaultPort: 8787,
     healthPath: "/health",
     setupHints: [
-      "Deprecated: stattdessen outbound RTX Host Connector (tools/uwe-rtx-connector) nutzen",
+      "Deprecated: stattdessen outbound Maschinenraum (tools/uwe-rtx-connector) nutzen",
       "Nur Bestands-Setups: RTX_AGENT_URL und RTX_AGENT_TOKEN in UWE .env setzen",
       "Nur private/heimbüro-IPs — keine öffentlichen URLs",
     ],

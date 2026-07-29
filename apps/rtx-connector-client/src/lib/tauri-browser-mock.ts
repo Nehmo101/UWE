@@ -5,7 +5,13 @@ import {
 import { validateHostUrl, type ConnectorClientConfig } from "@uwe/connector-client-config";
 
 import { buildMockCookbookDashboard, buildMockRunners, buildMockRuntimeStatus } from "./tauri-mock-fixtures";
-import { buildMockHostAction, buildMockHostStatus, buildMockHostUpdate } from "./tauri-mock-host";
+import {
+  buildMockHostAction,
+  buildMockHostStatus,
+  buildMockHostUpdate,
+  readMockInstallSelection,
+  writeMockInstallSelection,
+} from "./tauri-mock-host";
 import {
   appendMockLog,
   nowTimestamp,
@@ -246,8 +252,18 @@ export async function invokeBrowserMock<T>(command: string, args?: Record<string
     }
     case "get_host_status":
       return buildMockHostStatus(false) as T;
-    case "setup_host":
-      return buildMockHostAction("Browser-Vorschau: Einrichtung simuliert.") as T;
+    case "get_install_selection": {
+      const { selection, persisted } = readMockInstallSelection();
+      return { ok: true, selection, persisted, file: "(Browser-Vorschau)" } as T;
+    }
+    case "set_install_selection":
+      return { ok: true, selection: writeMockInstallSelection(args?.selection) } as T;
+    case "setup_host": {
+      const { selection } = readMockInstallSelection();
+      return buildMockHostAction(
+        `Browser-Vorschau: Einrichtung simuliert (${selection.apps.join(", ")}).`,
+      ) as T;
+    }
     case "start_host":
       return buildMockHostAction("Browser-Vorschau: UWE gestartet.", true) as T;
     case "stop_host":

@@ -56,7 +56,7 @@ describe("homelab today alert aggregation", () => {
       serviceStatuses: [
         {
           id: "rtx_connector",
-          label: "RTX Host Connector",
+          label: "Maschinenraum",
           ok: false,
           severity: "error",
           message: "offline",

@@ -76,7 +76,7 @@ class ConnectorPreferredEmbeddingProvider implements EmbeddingProvider {
       return {
         ok: true,
         provider: this.id,
-        message: "RTX Host Connector (embedding_local) bereit",
+        message: "Maschinenraum (embedding_local) bereit",
         latencyMs: 1,
       };
     }

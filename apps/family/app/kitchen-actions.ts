@@ -187,7 +187,7 @@ export async function toggleMealCookedAction(formData: FormData) {
 /**
  * Fordert über die Connector-Queue (lokale RTX-Inferenz) einen KI-Wochen-
  * vorschlag an und legt ihn als Entwurf auf der Woche ab. Nie Auto-Apply —
- * der Owner übernimmt Einträge einzeln. Ist kein RTX-Connector online oder die
+ * der Owner übernimmt Einträge einzeln. Ist kein Maschinenraum online oder die
  * Antwort unlesbar, wird der Grund als Query-Flag zurückgereicht.
  */
 export async function suggestWeekAction(formData: FormData) {

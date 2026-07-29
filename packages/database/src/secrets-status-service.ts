@@ -502,7 +502,7 @@ async function buildDbHashedSection(db: PrismaClient): Promise<SecretsStatusSect
     },
     {
       id: "connector-tokens",
-      label: "RTX-Connector-Tokens (gehasht)",
+      label: "Maschinenraum-Tokens (gehasht)",
       description: "Connector authentifiziert sich mit Token — nur Hash in der DB.",
       source: "db-hashed",
       status: connectorCount > 0 ? "set" : "missing",

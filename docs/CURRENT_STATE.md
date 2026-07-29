@@ -13,7 +13,7 @@ Stand: 2026-07-28 (Doku-Sync nach Abspeckung N.3 / Häkchen-Modell / Family / At
   `deploy/scripts/setup-uwe-host.sh`) **oder** Windows über den Command Center
   (`apps/rtx-connector-client`, Tauri — startet Studio/Portal/Brain/Landing als
   Kind-Prozesse, Daten unter `%LOCALAPPDATA%\UWE\rtx-connector-client\host`).
-- **RTX Host Connector** — optionaler **outbound** Worker (`tools/uwe-rtx-connector`,
+- **Maschinenraum** — optionaler **outbound** Worker (`tools/uwe-rtx-connector`,
   `pnpm connector:start`). Öffnet keinen Port am RTX-PC, verbindet sich ausschließlich
   ausgehend zum Host. Siehe [rtx-connector.md](rtx-connector.md).
 - **Cloudflare Tunnel / Access** — optional davor; Studio/Portal/Landing, Brain nur

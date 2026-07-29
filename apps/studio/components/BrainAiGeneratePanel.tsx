@@ -13,7 +13,7 @@ export function BrainAiGeneratePanel({ worldSlug, campaignId: _campaignId }: Pro
       <h2 className="text-lg font-semibold tracking-tight">KI-Wissensgenerierung</h2>
       <p className="text-sm text-muted-foreground" style={{ marginTop: 0 }}>
         Brain-Aktionen für diese Welt — Ergebnisse immer als Review-Proposal übernehmen. Läuft über
-        den RTX Connector (lokal), nicht über veraltete Ollama-Direktauswahl.
+        den Maschinenraum (lokal), nicht über veraltete Ollama-Direktauswahl.
       </p>
       <AiBrainSidebar
         worldSlug={worldSlug}

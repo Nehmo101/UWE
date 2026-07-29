@@ -15,7 +15,7 @@ export interface SystemdUnitSpec {
 /** The UWE units and timers the Command Center watches by default. */
 export const DEFAULT_UWE_UNITS: SystemdUnitSpec[] = [
   { unit: "uwe.service", label: "UWE Dienst", kind: "service" },
-  { unit: "uwe-rtx-connector.service", label: "RTX Connector", kind: "service", optional: true },
+  { unit: "uwe-rtx-connector.service", label: "Maschinenraum", kind: "service", optional: true },
   { unit: "uwe-healthcheck.timer", label: "Healthcheck", kind: "timer" },
   { unit: "uwe-backup.timer", label: "Backup", kind: "timer" },
   { unit: "uwe-briefing.timer", label: "Auto-Briefing", kind: "timer" },

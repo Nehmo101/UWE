@@ -17,7 +17,7 @@ export function AssistantStatus({ capabilities }: { capabilities: AssistantCapab
     return (
       <p className="brain-callout brain-callout-warn" role="note">
         Lokale KI ist offline. Der Brain-Assistent hat bewusst keinen Cloud-Fallback — bitte den
-        Command Center bzw. den RTX Connector starten.
+        Command Center bzw. den Maschinenraum starten.
       </p>
     );
   }

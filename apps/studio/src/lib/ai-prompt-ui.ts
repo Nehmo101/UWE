@@ -28,12 +28,12 @@ export const CONTEXT_LABELS: Record<AiContextMode, string> = {
 
 export const HINT_CLOUD_NO_BRAIN =
   "Cloud-KI darf persönliches Life-Brain nicht nutzen.";
-export const HINT_RTX_NOT_READY = "Der RTX Connector ist aktuell nicht bereit.";
+export const HINT_RTX_NOT_READY = "Der Maschinenraum ist aktuell nicht bereit.";
 export const HINT_LOCAL_READY = "Lokale KI bereit.";
-export const HINT_RTX_DISABLED = "RTX Connector deaktiviert.";
-export const HINT_RTX_UNREACHABLE = "RTX Connector nicht erreichbar.";
+export const HINT_RTX_DISABLED = "Maschinenraum deaktiviert.";
+export const HINT_RTX_UNREACHABLE = "Maschinenraum nicht erreichbar.";
 export const HINT_LOCAL_NOT_READY =
-  "Lokale KI ist aktuell nicht bereit. Bitte RTX Connector aktivieren oder allgemeinen Cloud-Chat nutzen.";
+  "Lokale KI ist aktuell nicht bereit. Bitte Maschinenraum aktivieren oder allgemeinen Cloud-Chat nutzen.";
 export const HINT_PERSONAL_BRAIN_LOCAL_ONLY =
   "Persönliches Life-Brain ist nur mit lokaler RTX verfügbar — kein Cloud-Fallback.";
 export const HINT_OBJECT_NEEDS_PAGE =
@@ -277,9 +277,9 @@ export function computePromptUiState(
   if (caps.rtxState === "disabled") {
     hints.push(HINT_RTX_DISABLED);
   } else if (caps.rtxState === "starting" && provider !== "cloud") {
-    hints.push("RTX Connector wird gestartet — bitte kurz warten.");
+    hints.push("Maschinenraum wird gestartet — bitte kurz warten.");
   } else if (caps.rtxState === "error" && provider !== "cloud") {
-    hints.push("RTX Connector meldet einen Fehler — Systemstatus prüfen.");
+    hints.push("Maschinenraum meldet einen Fehler — Systemstatus prüfen.");
   } else if (caps.rtxState === "offline" && provider !== "cloud") {
     hints.push(HINT_RTX_UNREACHABLE);
   }
@@ -369,10 +369,10 @@ export function sanitizeAiErrorMessage(message: string): string {
     return "Lokales Modell nicht erreichbar — Ollama/LM Studio auf dem RTX-Rechner starten und das Modell laden.";
   }
   if (/Ollama .+ HTTP/i.test(message)) {
-    return "Lokale KI (RTX) antwortet nicht — RTX Connector und Ollama auf dem RTX-Rechner prüfen.";
+    return "Lokale KI (RTX) antwortet nicht — Maschinenraum und Ollama auf dem RTX-Rechner prüfen.";
   }
   if (/Kein lokaler LLM-Provider/i.test(message)) {
-    return "RTX Connector meldet keinen lokalen LLM-Provider — Ollama-URL in der Connector-Konfiguration prüfen.";
+    return "Maschinenraum meldet keinen lokalen LLM-Provider — Ollama-URL in der Connector-Konfiguration prüfen.";
   }
   return message;
 }

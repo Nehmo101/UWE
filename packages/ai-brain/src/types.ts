@@ -59,7 +59,7 @@ export interface AiModel {
  * `response_format`, Ollama `format`, Gemini `responseMimeType`).
  *
  * Not every backend can: the Anthropic Messages API has no JSON mode, and the
- * RTX Host Connector's `llm_generate` payload has no field for it. For those
+ * Maschinenraum's `llm_generate` payload has no field for it. For those
  * the flag is a no-op and the prompt plus the router's single repair attempt
  * carry the weight. Nothing downstream may assume the answer IS JSON because
  * this was set — `parseModelJson` still has to succeed.

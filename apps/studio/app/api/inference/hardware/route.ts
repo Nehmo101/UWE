@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 /**
  * Deprecated: this endpoint used to call the legacy inbound RTX Agent
  * (`${RTX_AGENT_URL}/api/hardware`) directly. That inbound path is removed.
- * Hardware/system info now comes from the outbound RTX Host Connector
+ * Hardware/system info now comes from the outbound Maschinenraum
  * (`connector_refresh_models` / `system_info`) via the connector queue. See the
  * cookbook runner in `tools/uwe-rtx-connector` and `docs/rtx-connector.md`.
  */
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       error: "gone",
       message:
         "Dieser Endpunkt ist entfernt. Der inbound RTX Agent (RTX_AGENT_URL) wird nicht mehr direkt aufgerufen. " +
-        "Hardware-Infos liefert der outbound RTX Host Connector (tools/uwe-rtx-connector, system_info). " +
+        "Hardware-Infos liefert der outbound Maschinenraum (tools/uwe-rtx-connector, system_info). " +
         "Siehe docs/rtx-connector.md.",
     },
     { status: 410 },

@@ -9,7 +9,7 @@ Runbook für ein **zweites, getrenntes Testsystem** neben der Produktion:
 
 Der Prod-Host wird davon **nicht angefasst**. Staging läuft nur, wenn der RTX-PC an ist und du es manuell hochfährst.
 
-> Warum der RTX-PC und nicht der Host: Der 4-GB-Host muss schon für **einen** Build die laufenden Apps stoppen (siehe [self-hosted-ci.md](self-hosted-ci.md) → Deploy-Runner). Ein zweites Dauer-System hätte dort keinen RAM. Der RTX-PC hat Reserven und ist ohnehin vorhanden (Ollama, RTX-Connector).
+> Warum der RTX-PC und nicht der Host: Der 4-GB-Host muss schon für **einen** Build die laufenden Apps stoppen (siehe [self-hosted-ci.md](self-hosted-ci.md) → Deploy-Runner). Ein zweites Dauer-System hätte dort keinen RAM. Der RTX-PC hat Reserven und ist ohnehin vorhanden (Ollama, Maschinenraum).
 
 Die einsatzfertigen Vorlagen (Skripte, `.env`, Tunnel-Config) liegen unter [`deploy/rtx-staging/`](../../deploy/rtx-staging/); dieses Dokument erklärt Aufbau und Betrieb.
 
@@ -51,7 +51,7 @@ Browser ──▶ Cloudflare Edge ──▶ (ausgehender Tunnel) ──▶ RTX-P
 
 ## Einmalige Einrichtung (RTX-PC, Windows)
 
-Voraussetzungen: Windows, Node 22, `pnpm`, Git — auf dem RTX-PC bereits vorhanden (RTX-Connector-Setup).
+Voraussetzungen: Windows, Node 22, `pnpm`, Git — auf dem RTX-PC bereits vorhanden (Maschinenraum-Setup).
 
 > **Einmalig zuerst:** Der `dev`-Branch muss auf `origin` existieren. Falls nicht, einmal von einem beliebigen Checkout aus anlegen: `git checkout -b dev main && git push -u origin dev`.
 

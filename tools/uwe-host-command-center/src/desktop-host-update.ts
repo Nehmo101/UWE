@@ -5,9 +5,10 @@ import path from "node:path";
 import {
   collectDesktopHostStatus,
   commandCenterDataRoot,
-  HOST_SETUP_STEP_COUNT,
+  getInstallSelection,
   resolveDesktopHostRoot,
   setupHost,
+  setupStepCount,
   startHost,
   stopHost,
   type DesktopHostActionResult,
@@ -340,7 +341,10 @@ export async function applyDesktopHostUpdate(rootInput?: string): Promise<Deskto
     // One continuous progress run across the whole update: optional stop, the
     // repository sync, all setup build steps, and an optional restart. setupHost
     // is told not to own progress so its steps extend this same 1..total counter.
-    beginHostProgress((wasRunning ? 1 : 0) + 1 + HOST_SETUP_STEP_COUNT + (wasRunning ? 1 : 0));
+    // The step count follows this installation's app selection, so a Studio-only
+    // host doesn't advertise build steps it will never run.
+    const setupSteps = setupStepCount(getInstallSelection(root).selection);
+    beginHostProgress((wasRunning ? 1 : 0) + 1 + setupSteps + (wasRunning ? 1 : 0));
     if (wasRunning) {
       reportHostStep("stop", "Laufende Dienste stoppen");
       await stopHost(root);

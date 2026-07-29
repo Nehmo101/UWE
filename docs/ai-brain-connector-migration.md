@@ -1,11 +1,11 @@
-# AI Brain -> RTX Connector migration notes
+# AI Brain -> Maschinenraum migration notes
 
 Date: 2026-06-27
 Status: connector queue provider implemented; direct/hybrid transport available
 
 ## Current state
 
-The outbound RTX Host Connector queue already has job catalogue entries for:
+The outbound Maschinenraum queue already has job catalogue entries for:
 
 - `llm_generate`
 - `embedding_generate`
@@ -37,7 +37,7 @@ equivalent connection affinity before relying on direct delivery.
 
 ## Connector queue provider (implemented)
 
-Local LLM inference now prefers the outbound RTX Host Connector queue:
+Local LLM inference now prefers the outbound Maschinenraum queue:
 
 - `packages/ai-brain/src/router/providers/connectorQueueProvider.ts`
   - `isConnectorLlmAvailable(prisma)` / `isConnectorEmbeddingAvailable(prisma)` —
@@ -69,7 +69,7 @@ Cloud/privacy rules are unchanged — the connector is just another local backen
   imports.
 - `apps/studio/app/api/inference/hardware/route.ts` no longer calls the old
   inbound agent hardware endpoint; it returns **410 Gone** and points to the
-  outbound RTX Host Connector (`tools/uwe-rtx-connector`, `system_info`).
+  outbound Maschinenraum (`tools/uwe-rtx-connector`, `system_info`).
 - `packages/cookbook/src/recommendations.ts` no longer recommends the legacy
   `rtx_agent` engine — Ollama / OpenAI-compatible / connector only.
 

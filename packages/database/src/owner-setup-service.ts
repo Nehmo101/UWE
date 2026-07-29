@@ -488,7 +488,7 @@ async function buildRtxSection(
   const settingsItems: SetupSettingItem[] = [
     {
       id: "connectors",
-      label: "RTX Host Connectors",
+      label: "Maschinenräume",
       configured: connectors.length > 0,
       displayValue: `${connectors.length} registriert · ${liveConnectors.length} live (${onlineConnectors} online)`,
       source: "db",
@@ -535,7 +535,7 @@ async function buildRtxSection(
 
   const nextSteps: string[] = [];
   if (connectors.length === 0) {
-    nextSteps.push("RTX Host Connector anlegen unter RTX & Hardware → Connector.");
+    nextSteps.push("Maschinenraum anlegen: Command Center → Maschinenraum.");
   } else if (liveConnectors.length === 0) {
     nextSteps.push("Connector-Token im RTX-Client eintragen und Dienst starten.");
   } else if (!connectorLlmReady) {
@@ -560,14 +560,14 @@ async function buildRtxSection(
         : "degraded";
 
   const statusMessage = connectorLlmReady
-    ? "RTX Host Connector meldet lokale KI-Fähigkeit."
+    ? "Maschinenraum meldet lokale KI-Fähigkeit."
     : liveConnectors.length > 0
       ? "Connector verbunden, aber lokale Inference noch nicht bereit."
       : admin.rtxExposure.message;
 
   return {
     id: "rtx",
-    title: "RTX & Hardware",
+    title: "Maschinenraum & Hardware",
     level,
     statusLabel: level === "ok" ? "Verbunden" : level === "degraded" ? "Teilweise" : "Warnung",
     message: statusMessage,

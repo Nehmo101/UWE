@@ -20,7 +20,7 @@ export const CONNECTOR_NAV: NavGroup[] = [
     title: "UWE Command Center",
     items: [
       connectorItem("command-center", "Command Center", "/", "layout-dashboard", ["start", "host", "hosting", "status", "setup"]),
-      connectorItem("connector-host", "RTX-Verbindung", "/connector", "plug", ["rtx", "verbindung", "token"]),
+      connectorItem("connector-host", "Maschinenraum", "/connector", "plug", ["maschinenraum", "rtx", "connector", "verbindung", "token", "gpu"]),
       connectorItem("connector-users", "Zugänge", "/users", "users", ["zugang", "zugaenge", "haekchen", "benutzer", "user", "owner", "konto", "account", "portal", "studio", "brain", "family", "einrichten"]),
       connectorItem("connector-ops", "Betrieb", "/ops", "shield", ["betrieb", "security", "sicherheit", "secrets", "migrationen", "audit", "log", "api-token", "token", "webhooks", "einstellungen", "settings"]),
       connectorItem("connector-cloudflare", "Cloudflare-Tunnel", "/cloudflare", "cloud", ["cloudflare", "tunnel", "cloudflared", "öffentlich", "public", "domain"]),

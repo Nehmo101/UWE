@@ -157,8 +157,8 @@ export async function cmdTestPrint(dataDir: string, printerId?: string): Promise
   const dir = await mkdtemp(join(tmpdir(), "uwe-print-test-"));
   const filePath = join(dir, isWindows ? "uwe-testdruck.html" : "uwe-testdruck.txt");
   const contents = isWindows
-    ? "<html><body><h1>UWE RTX Connector — Testdruck</h1></body></html>"
-    : "UWE RTX Connector — Testdruck\n";
+    ? "<html><body><h1>UWE Maschinenraum — Testdruck</h1></body></html>"
+    : "UWE Maschinenraum — Testdruck\n";
   try {
     await writeFile(filePath, contents, "utf8");
     if (isWindows) {

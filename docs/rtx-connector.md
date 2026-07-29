@@ -1,15 +1,42 @@
-# RTX Host Connector
+# UWE Maschinenraum (Engine Room)
 
-The **RTX Host Connector** is an optional local worker for the RTX PC (Windows or
-Linux). It connects **outbound** to the UWE Host, receives queue or direct work,
-runs it locally where an executor really exists, and reports results.
+The **Maschinenraum** is an optional local worker for the machine that has the
+hardware — usually the RTX PC (Windows or Linux). It connects **outbound** to the
+UWE Host, receives queue or direct work, runs it locally where an executor really
+exists, and reports results.
 
 It is **never required** for UWE to be online.
+
+## Naming
+
+Formerly **„RTX Host Connector" / „RTX Connector"**. The name was renamed in
+2026-07 because it describes far more than a GPU: local LLMs and embeddings,
+document OCR, image generation, audio playback, Spotify control, dictation and
+label printing. „RTX" is an NVIDIA brand and none of the non-GPU executors need
+one. The Command Center is the bridge; the Maschinenraum is where the work
+happens.
+
+Renamed is the **product name only**. Everything a running installation depends
+on is deliberately unchanged, so no host, token or config migration is needed:
+
+| Frozen | Value |
+|---|---|
+| Repository paths | `tools/uwe-rtx-connector`, `apps/rtx-connector-client` |
+| Package names | `@uwe/rtx-connector-client`, `@uwe/connector-client-config` |
+| Environment variables | `UWE_CONNECTOR_*`, `UWE_HOST_URL` |
+| Token prefix | `uwec_…` |
+| systemd unit | `uwe-rtx-connector.service` |
+| Windows AppData root | `%LOCALAPPDATA%\UWE\rtx-connector-client` |
+| Release assets | `UWE_Command_Center_<version>_x64-setup.exe` |
+
+In the UI the surface is called **Maschinenraum** (Command Center → sidebar).
+The token field stays labelled „Connector-Token" because it maps 1:1 to
+`UWE_CONNECTOR_TOKEN`.
 
 ## Direction of communication
 
 ```text
-RTX Connector  ----->  UWE Host        (correct: outbound only)
+Maschinenraum  ----->  UWE Host        (correct: outbound only)
 ```
 
 The connector either polls the host or holds an outbound Streaming-HTTP response
@@ -19,7 +46,7 @@ RTX API and no DB replication.
 
 ## Setup
 
-1. In Studio open **System -> RTX Connector** and create a connector token. It is
+1. In the Command Center open **Maschinenraum** and create a connector token. It is
    shown once; only its SHA-256 hash is stored on the host.
 2. On the RTX machine (repo checked out, `pnpm install` done):
 
@@ -135,7 +162,7 @@ The host stores capability policy separately:
   restriction; `[]` denies all connector-served capabilities for that connector.
 - `capabilities`: effective, job-claimable capabilities used by queue matching.
 
-Owner/admin UI: **Studio → System → RTX Connector** — per-connector „Host-Freigabe“
+Owner/admin UI: **Command Center → Maschinenraum** — per-connector „Host-Freigabe“
 (`ConnectorCapabilityGovernance`). API: `PATCH /api/admin/connectors/[id]` with
 `action: "set-allowed-capabilities"`.
 
@@ -248,7 +275,7 @@ Run this checklist on a homelab with UWE Host + RTX connector before relying on
 physical label output:
 
 1. **Connector env** — copy `tools/uwe-rtx-connector/.env.example` to `.env` and set:
-   - `UWE_CONNECTOR_TOKEN` (from Studio → System → RTX Connector)
+   - `UWE_CONNECTOR_TOKEN` (from Command Center → Maschinenraum)
    - `UWE_CONNECTOR_PRINTERS` or install CUPS and verify `lpstat -p`
    - optional `UWE_CONNECTOR_PRINT_CMD` for Windows/custom spoolers
 2. **Start connector** — `pnpm connector:start` (or desktop client); confirm heartbeat in Studio.

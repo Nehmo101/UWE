@@ -39,7 +39,7 @@ describe("checkRtxReadiness", () => {
     assert.equal(status.ready, true);
     assert.equal(status.source, "connector");
     assert.equal(status.connectorReady, true);
-    assert.match(status.message, /RTX Connector bereit/);
+    assert.match(status.message, /Maschinenraum bereit/);
   });
 
   it("returns direct inference status when no prisma client is provided", async () => {

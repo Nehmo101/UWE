@@ -1,5 +1,4 @@
 import { spawn, spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -24,6 +23,8 @@ import {
 export { deriveOwnedServiceState } from "./desktop-host-system.ts";
 
 import {
+  HOST_SERVICE_IDS,
+  HOST_SERVICE_LABELS,
   isHostServiceId,
   parseServicePort,
   type DesktopHostActionResult,
@@ -34,13 +35,21 @@ import {
   type HostServiceId,
   type ServiceDefinition,
 } from "./desktop-host-types.ts";
+import {
+  readInstallSelectionState,
+  writeInstallSelection,
+  type InstallSelection,
+  type InstallSelectionState,
+} from "./install-selection.ts";
+import { buildSetupPlan } from "./setup-plan.ts";
+import {
+  buildLocalHostEnv,
+  ensureRequiredLocalEnv,
+  readEnvFile,
+  resolveDatabasePath,
+} from "./host-env-file.ts";
 
-/**
- * Number of discrete steps `setupHost` reports progress for. Kept as a constant
- * so `applyDesktopHostUpdate` can size the combined update progress bar (stop →
- * sync → setup steps → start) without importing the step list itself.
- */
-export const HOST_SETUP_STEP_COUNT = 11;
+export { buildLocalHostEnv, resolveDatabasePath } from "./host-env-file.ts";
 
 export type {
   DesktopHostActionResult,
@@ -52,21 +61,59 @@ export type {
   ServiceDefinition,
   ServiceState,
 } from "./desktop-host-types.ts";
-export { HOST_SERVICE_IDS, isHostServiceId, parseServicePort } from "./desktop-host-types.ts";
+export {
+  HOST_SERVICE_IDS,
+  HOST_SERVICE_LABELS,
+  isHostServiceId,
+  parseServicePort,
+} from "./desktop-host-types.ts";
+export {
+  defaultInstallSelection,
+  readInstallSelection,
+  readInstallSelectionState,
+  type InstallSelection,
+  type InstallSelectionState,
+} from "./install-selection.ts";
+export { buildSetupPlan, setupStepCount } from "./setup-plan.ts";
+
+/** Standard-Port je Dienst, falls die `.env` keinen (gültigen) Wert nennt. */
+const SERVICE_PORT_ENV: Record<HostServiceId, { key: string; fallback: number }> = {
+  studio: { key: "STUDIO_PORT", fallback: 3000 },
+  portal: { key: "PORTAL_PORT", fallback: 3001 },
+  brain: { key: "BRAIN_PORT", fallback: 3102 },
+  family: { key: "FAMILY_PORT", fallback: 3004 },
+  landing: { key: "LANDING_PORT", fallback: 3103 },
+};
 
 /**
- * Die Host-Dienste mit ihren konfigurierten Ports. Ports kommen aus der
- * `.env` des Projektordners; die Vorgaben entsprechen der Standardinstallation.
+ * Die Dienste **dieser** Installation mit ihren konfigurierten Ports. Ports
+ * kommen aus der `.env` des Projektordners, die Auswahl aus der Assistenten-
+ * Wahl neben den Host-Daten. Nicht gewählte Apps tauchen dadurch weder im
+ * Status noch beim Start auf — sonst meldete eine Brain-lose Installation
+ * dauerhaft „Brain gestoppt" und käme nie auf `buildReady`.
  */
-function serviceDefinitions(paths: HostPaths): ServiceDefinition[] {
+function serviceDefinitions(paths: HostPaths, apps?: readonly HostServiceId[]): ServiceDefinition[] {
   const env = readEnvFile(paths.envFile);
-  return [
-    { id: "studio", label: "UWE Studio", port: parseServicePort(env.STUDIO_PORT, 3000) },
-    { id: "portal", label: "UWE Portal", port: parseServicePort(env.PORTAL_PORT, 3001) },
-    { id: "brain", label: "UWE Brain", port: parseServicePort(env.BRAIN_PORT, 3102) },
-    { id: "family", label: "UWE Family", port: parseServicePort(env.FAMILY_PORT, 3004) },
-    { id: "landing", label: "UWE Startseite", port: parseServicePort(env.LANDING_PORT, 3103) },
-  ];
+  const selected = apps ?? readInstallSelectionState(paths.dataRoot).selection.apps;
+  return HOST_SERVICE_IDS.filter((id) => selected.includes(id)).map((id) => ({
+    id,
+    label: HOST_SERVICE_LABELS[id],
+    port: parseServicePort(env[SERVICE_PORT_ENV[id].key], SERVICE_PORT_ENV[id].fallback),
+  }));
+}
+
+/** Die Auswahl dieser Installation (Vorgabe „alles", solange keine Datei existiert). */
+export function getInstallSelection(rootInput?: string): InstallSelectionState {
+  return readInstallSelectionState(pathsFor(resolveDesktopHostRoot(rootInput)).dataRoot);
+}
+
+/** Schreibt die Auswahl des Ersteinrichtungs-Assistenten. */
+export function setInstallSelection(rootInput: string | undefined, input: unknown): InstallSelection {
+  const paths = pathsFor(resolveDesktopHostRoot(rootInput));
+  ensureHostDirectories(paths);
+  const selection = writeInstallSelection(paths.dataRoot, input);
+  appendOperationLog(paths, `App-Auswahl gespeichert: ${selection.apps.join(", ")}.`);
+  return selection;
 }
 
 export function argumentValue(argv: string[], name: string): string | undefined {
@@ -102,10 +149,6 @@ export function resolveDesktopHostRoot(input?: string): string {
   }
 }
 
-function toPosixPath(value: string): string {
-  return value.replace(/\\/g, "/");
-}
-
 function pathsFor(root: string): HostPaths {
   const dataRoot = commandCenterDataRoot();
   return {
@@ -134,113 +177,6 @@ function ensureHostDirectories(paths: HostPaths): void {
   ]) {
     fs.mkdirSync(directory, { recursive: true });
   }
-}
-
-export function buildLocalHostEnv(paths: HostPaths): string {
-  const sessionSecret = randomBytes(48).toString("base64url");
-  const setupToken = randomBytes(32).toString("base64url");
-  return [
-    "# Managed initial local-host configuration for UWE Command Center.",
-    "# Existing files are preserved and can be edited in Studio later.",
-    "NODE_ENV=production",
-    `SESSION_SECRET=${sessionSecret}`,
-    `UWE_SETUP_TOKEN=${setupToken}`,
-    "UWE_RUNTIME_ROLE=host",
-    "RUN_DB_SEED=false",
-    "AUTH_REQUIRED=true",
-    "SESSION_COOKIE_SECURE=false",
-    "SESSION_COOKIE_SAMESITE=lax",
-    "TRUST_PROXY=false",
-    "CLOUDFLARE_TUNNEL=false",
-    "STUDIO_PORT=3000",
-    "PORTAL_PORT=3001",
-    "FAMILY_PORT=3004",
-    // Öffentliche Startseite auf dem Apex-Origin — eigener Prozess, damit die
-    // Hauptdomain keine Studio-Routen ausliefert.
-    "LANDING_PORT=3103",
-    "NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:3000",
-    "PUBLIC_BASE_URL=http://127.0.0.1:3000",
-    "NEXT_PUBLIC_PORTAL_URL=http://127.0.0.1:3001",
-    "# Brain: owner-only on every route; reachability is a deliberate choice (ADR 004/007).",
-    "# Empty NEXT_PUBLIC_BRAIN_URL = share the Studio origin; entry is /life-brain.",
-    "NEXT_PUBLIC_BRAIN_URL=",
-    "BRAIN_PATH=/life-brain",
-    "BRAIN_EXPOSURE=loopback",
-    // Family: eigener Origin, Zugang über das Häkchen `Family`. Der Wert ist die
-    // Adresse, auf die jeder Family-Link zeigt — bei öffentlicher Installation
-    // hier den Tunnel-Hostnamen eintragen (z. B. https://family.uwe.example).
-    "NEXT_PUBLIC_FAMILY_URL=http://127.0.0.1:3004",
-    `DATABASE_URL=file:${toPosixPath(paths.database)}`,
-    // Owner-private Brain DB lives next to uwe.db so both are found deterministically
-    // (the Next standalone build can't reliably resolve brain-client's relative default).
-    `BRAIN_DATABASE_URL=file:${toPosixPath(path.join(paths.data, "uwe-brain.db"))}`,
-    `FAMILY_DATABASE_URL=file:${toPosixPath(path.join(paths.data, "uwe-family.db"))}`,
-    `UWE_DATA_DIR=${toPosixPath(paths.data)}`,
-    `UWE_UPLOADS_DIR=${toPosixPath(paths.uploads)}`,
-    `UWE_BACKUP_DIR=${toPosixPath(paths.backups)}`,
-    `UWE_EXPORT_DIR=${toPosixPath(paths.exports)}`,
-    "AI_INFERENCE_ENABLED=true",
-    "AI_INFERENCE_PROVIDER=ollama",
-    "AI_INFERENCE_BASE_URL=http://127.0.0.1:11434",
-    "AI_INFERENCE_ALLOW_PUBLIC_URL=false",
-    "UWE_AI_CLOUD_FALLBACK=false",
-    "BRAIN_EMBEDDINGS_ENABLED=true",
-    "BRAIN_EMBEDDING_PROVIDER=ollama",
-    "BRAIN_EMBEDDING_MODEL=nomic-embed-text",
-    "",
-  ].join("\n");
-}
-
-function ensureRequiredLocalEnv(paths: HostPaths): void {
-  const content = fs.readFileSync(paths.envFile, "utf8");
-  const env = readEnvFile(paths.envFile);
-  const studioPort = parseServicePort(env.STUDIO_PORT, 3000);
-  const publicBaseUrl = env.PUBLIC_BASE_URL?.trim() || `http://127.0.0.1:${studioPort}`;
-  let loopback = false;
-  try {
-    const hostname = new URL(publicBaseUrl).hostname.toLowerCase();
-    loopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-  } catch {
-    // The central environment validator reports malformed URLs with full context.
-  }
-  const defaults = [
-    ["PUBLIC_BASE_URL", publicBaseUrl],
-    ...(loopback ? [["TRUST_PROXY", "false"], ["CLOUDFLARE_TUNNEL", "false"]] : []),
-  ];
-  const missing = defaults.filter(([key]) => !new RegExp(`^${key}=`, "m").test(content));
-  if (missing.length === 0) return;
-  fs.appendFileSync(
-    paths.envFile,
-    `\n# Required runtime defaults for the local all-in-one host.\n${missing.map(([key, value]) => `${key}=${value}`).join("\n")}\n`,
-    "utf8",
-  );
-  appendOperationLog(paths, `Fehlende lokale Laufzeitwerte ergänzt: ${missing.map(([key]) => key).join(", ")}.`);
-}
-
-function readEnvFile(envFile: string): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  if (!fs.existsSync(envFile)) return env;
-  for (const line of fs.readFileSync(envFile, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const separator = trimmed.indexOf("=");
-    if (separator < 1) continue;
-    const key = trimmed.slice(0, separator).trim();
-    let value = trimmed.slice(separator + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    env[key] = value;
-  }
-  return env;
-}
-
-export function resolveDatabasePath(root: string, envFile: string, fallback: string): string {
-  const value = readEnvFile(envFile).DATABASE_URL?.trim();
-  if (!value?.startsWith("file:")) return fallback;
-  const raw = value.slice("file:".length);
-  if (/^[A-Za-z]:[\\/]/.test(raw) || path.isAbsolute(raw)) return path.normalize(raw);
-  return path.resolve(root, "packages", "database", raw);
 }
 
 function validateRepo(root: string): boolean {
@@ -283,15 +219,17 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
   const envReady = fs.existsSync(paths.envFile);
   const database = resolveDatabasePath(root, paths.envFile, paths.database);
   const dependenciesReady = fs.existsSync(path.join(root, "node_modules", ".modules.yaml"));
-  const buildReady =
-    fs.existsSync(path.join(root, "apps", "studio", ".next", "BUILD_ID")) &&
-    fs.existsSync(path.join(root, "apps", "portal", ".next", "BUILD_ID")) &&
-    fs.existsSync(path.join(root, "apps", "brain", ".next", "BUILD_ID")) &&
-    fs.existsSync(path.join(root, "apps", "family", ".next", "BUILD_ID")) &&
-    fs.existsSync(path.join(root, "apps", "landing", ".next", "BUILD_ID"));
+  const { selection, persisted } = readInstallSelectionState(paths.dataRoot);
+  // Nur die gewählten Apps zählen: eine Installation ohne Family darf nicht an
+  // einem fehlenden Family-Build hängen bleiben.
+  const buildReady = selection.apps.every((app) =>
+    fs.existsSync(path.join(root, "apps", app, ".next", "BUILD_ID")),
+  );
   const databaseReady = fs.existsSync(database);
   const services = await Promise.all(
-    serviceDefinitions(paths).map((service) => serviceStatus(paths, service.id, service.label, service.port)),
+    serviceDefinitions(paths, selection.apps).map((service) =>
+      serviceStatus(paths, service.id, service.label, service.port),
+    ),
   );
   const installed = repoReady && dependenciesReady && envReady && databaseReady && buildReady;
   const allOnline = services.every((service) => service.healthy);
@@ -312,6 +250,8 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
       envReady,
       databaseReady,
       buildReady,
+      apps: selection.apps,
+      selectionPersisted: persisted,
       message: !repoReady
         ? "UWE-Projektordner nicht gefunden."
         : installed
@@ -386,7 +326,7 @@ function runWorkspaceCommand(paths: HostPaths, label: string, args: string[], ex
 
 export async function setupHost(
   rootInput?: string,
-  options: { ownProgress?: boolean } = {},
+  options: { ownProgress?: boolean; selection?: unknown } = {},
 ): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
@@ -394,11 +334,17 @@ export async function setupHost(
     return { ok: false, message: `Kein vollständiges UWE-Repository unter ${root}.`, status: await collectDesktopHostStatus(root) };
   }
   ensureHostDirectories(paths);
+  // Eine mitgegebene Auswahl (Ersteinrichtungs-Assistent) wird zuerst
+  // festgeschrieben, damit Status, Start und ein späteres „Reparieren" ohne
+  // erneutes Nachfragen denselben Umfang sehen.
+  const selection = options.selection
+    ? writeInstallSelection(paths.dataRoot, options.selection)
+    : readInstallSelectionState(paths.dataRoot).selection;
   if (!fs.existsSync(paths.envFile)) {
     fs.writeFileSync(paths.envFile, buildLocalHostEnv(paths), { encoding: "utf8", flag: "wx" });
     appendOperationLog(paths, "Sichere lokale .env angelegt.");
   }
-  ensureRequiredLocalEnv(paths);
+  ensureRequiredLocalEnv(paths, (line) => appendOperationLog(paths, line));
   const database = resolveDatabasePath(root, paths.envFile, paths.database);
   const seedPendingFile = path.join(paths.runtime, "seed-pending");
   const freshDatabase = !fs.existsSync(database);
@@ -406,53 +352,39 @@ export async function setupHost(
   if (freshDatabase) {
     fs.mkdirSync(path.dirname(database), { recursive: true });
     fs.closeSync(fs.openSync(database, "wx"));
-    fs.writeFileSync(seedPendingFile, new Date().toISOString(), "utf8");
     appendOperationLog(paths, "Leere SQLite-Datei für Prisma unter Windows angelegt.");
   }
+  // Die Vormerkung existiert für den Fall, dass die Einrichtung nach dem Anlegen
+  // der leeren Datei abbricht — der nächste Lauf holt den Seed dann nach. Ohne
+  // gewählte Demo-Inhalte gibt es nichts vorzumerken, sonst bliebe die Datei für
+  // immer liegen und ein späteres Ja würde in eine längst gefüllte DB seeden.
+  if (freshDatabase && selection.seedDemoContent) {
+    fs.writeFileSync(seedPendingFile, new Date().toISOString(), "utf8");
+  } else if (!selection.seedDemoContent) {
+    fs.rmSync(seedPendingFile, { force: true });
+  }
 
-  // Ordered, fixed-length step list so the progress bar has a stable total
-  // (HOST_SETUP_STEP_COUNT). The seed step is always present in the sequence but
-  // only runs when a fresh/pending database needs it — the bar still advances so
-  // "how far are we" stays truthful across both first-run and repair setups.
-  const steps: Array<{ phase: string; label: string; run: () => void }> = [
-    { phase: "install", label: "Abhängigkeiten installieren", run: () => runWorkspaceCommand(paths, "Abhängigkeiten", ["install", "--frozen-lockfile"]) },
-    { phase: "prisma", label: "Prisma-Client generieren", run: () => runWorkspaceCommand(paths, "Prisma Client", ["--filter", "@uwe/database", "db:generate"]) },
-    { phase: "migrate", label: "Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Datenbankmigration", ["--filter", "@uwe/database", "db:deploy"]) },
-    { phase: "migrate-brain", label: "Brain-Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Brain-Datenbankmigration", ["--filter", "@uwe/database", "db:deploy:brain"]) },
-    { phase: "migrate-family", label: "Family-Datenbank migrieren", run: () => runWorkspaceCommand(paths, "Family-Datenbankmigration", ["--filter", "@uwe/database", "db:deploy:family"]) },
-    {
-      phase: "seed",
-      label: "Demo-Grundbestand einspielen",
-      run: () => {
-        if (!seedRequired) return;
-        runWorkspaceCommand(paths, "Demo-Grundbestand", ["--filter", "@uwe/database", "db:seed"], { UWE_ALLOW_PROD_SEED: "1" });
-        fs.rmSync(seedPendingFile, { force: true });
-      },
-    },
-    {
-      phase: "connector",
-      label: "Lokalen RTX-Connector einrichten",
-      run: () => runWorkspaceCommand(
-        paths,
-        "Lokaler RTX-Connector",
-        ["exec", "tsx", "tools/uwe-host-command-center/src/provision-local-connector.ts", "--root", root],
-        { UWE_COMMAND_CENTER_DATA_DIR: paths.dataRoot },
-      ),
-    },
-    { phase: "studio-build", label: "Studio-Produktions-Build", run: () => runWorkspaceCommand(paths, "Studio Produktions-Build", ["--filter", "@uwe/studio", "build"]) },
-    { phase: "portal-build", label: "Portal-Produktions-Build", run: () => runWorkspaceCommand(paths, "Portal Produktions-Build", ["--filter", "@uwe/portal", "build"]) },
-    { phase: "brain-build", label: "Brain-Produktions-Build", run: () => runWorkspaceCommand(paths, "Brain Produktions-Build", ["--filter", "@uwe/brain", "build"]) },
-    { phase: "family-build", label: "Family-Produktions-Build", run: () => runWorkspaceCommand(paths, "Family Produktions-Build", ["--filter", "@uwe/family", "build"]) },
-    { phase: "landing-build", label: "Startseiten-Produktions-Build", run: () => runWorkspaceCommand(paths, "Startseite Produktions-Build", ["--filter", "@uwe/landing", "build"]) },
-  ];
+  // Der Plan kennt Reihenfolge und Länge (= Total des Fortschrittsbalkens); hier
+  // wird er nur noch ausgeführt. Der Seed-Schritt steht fest in der Liste, läuft
+  // aber nur bei frischer oder vorgemerkter Datenbank — der Balken rückt trotzdem
+  // vor, damit „wie weit sind wir" bei Erst- und Reparatureinrichtung gleich
+  // ehrlich bleibt.
+  const steps = buildSetupPlan(selection, { root, dataRoot: paths.dataRoot });
 
   if (options.ownProgress ?? true) beginHostProgress(steps.length);
   for (const step of steps) {
     reportHostStep(step.phase, step.label);
-    step.run();
+    if (step.kind === "seed" && !seedRequired) continue;
+    runWorkspaceCommand(paths, step.logLabel, step.args, step.env ?? {});
+    if (step.kind === "seed") fs.rmSync(seedPendingFile, { force: true });
   }
 
-  return { ok: true, message: "UWE wurde vollständig eingerichtet und ist startklar.", status: await collectDesktopHostStatus(root) };
+  const installed = selection.apps.map((app) => HOST_SERVICE_LABELS[app]).join(", ");
+  return {
+    ok: true,
+    message: `UWE wurde eingerichtet und ist startklar: ${installed}.`,
+    status: await collectDesktopHostStatus(root),
+  };
 }
 
 function spawnService(paths: HostPaths, service: ServiceDefinition): number {
@@ -510,20 +442,28 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
   const readiness = await Promise.all(definitions.map((service) => waitForHealth(`http://127.0.0.1:${service.port}`)));
   const status = await collectDesktopHostStatus(root);
   const ok = readiness.every(Boolean);
-  return { ok, message: ok ? "Studio, Portal, Brain, Family und Startseite laufen." : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.", status };
+  return {
+    ok,
+    message: ok
+      ? `${definitions.map((service) => service.label).join(", ")} ${definitions.length === 1 ? "läuft" : "laufen"}.`
+      : "Mindestens ein Dienst wurde gestartet, ist aber noch nicht erreichbar. Bitte Logs prüfen.",
+    status,
+  };
 }
 
 export async function stopHost(rootInput?: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
-  for (const service of serviceDefinitions(paths)) {
-    const file = pidFile(paths, service.id);
+  // Bewusst über ALLE bekannten Dienste, nicht nur die gewählten: wer eine App
+  // nachträglich abwählt, soll ihren noch laufenden Prozess trotzdem loswerden.
+  for (const id of HOST_SERVICE_IDS) {
+    const file = pidFile(paths, id);
     const pid = readPid(file);
     if (pid) stopProcess(pid);
     fs.rmSync(file, { force: true });
   }
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { ok: true, message: "Studio, Portal, Brain, Family und Startseite wurden gestoppt.", status: await collectDesktopHostStatus(root) };
+  return { ok: true, message: "Alle UWE-Dienste wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
 /** Start a single host service (studio | portal | brain | family | landing) without touching the others. */
@@ -550,7 +490,9 @@ export async function startHostService(rootInput: string | undefined, serviceId:
 export async function stopHostService(rootInput: string | undefined, serviceId: string): Promise<DesktopHostActionResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
-  const def = serviceDefinitions(paths).find((service) => service.id === serviceId);
+  // Über alle bekannten Dienste — auch eine nachträglich abgewählte App muss
+  // sich noch stoppen lassen.
+  const def = serviceDefinitions(paths, HOST_SERVICE_IDS).find((service) => service.id === serviceId);
   if (!def) return { ok: false, message: `Unbekannter Dienst: ${serviceId}`, status: await collectDesktopHostStatus(root) };
   const file = pidFile(paths, def.id);
   const pid = readPid(file);

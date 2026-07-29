@@ -1,6 +1,6 @@
 # UWE Command Center
 
-**Tauri 2** Desktop-App für lokales UWE-Hosting und den **UWE RTX Connector**.
+**Tauri 2** Desktop-App für lokales UWE-Hosting und den **UWE Maschinenraum**.
 Der technische Paketname und der AppData-Pfad bleiben für Updates kompatibel.
 
 ## All-in-one Scope
@@ -64,7 +64,7 @@ Details: [`../../docs/command-center.md`](../../docs/command-center.md).
   `bestFor`) und Workflow-Standards pro Anwendungsfall (chat, code, dnd, analysis,
   embedding, vision → `{ connectorId, modelId }`). Heartbeat-Modelle tragen dafür
   jetzt eine stabile Profil-`id`. Das alte `/admin/cookbook` leitet auf die
-  RTX-Connector-Seite um; Online-/Cloud-KI bleibt in Einstellungen + AI Gateway.
+  Maschinenraum-Seite um; Online-/Cloud-KI bleibt in Einstellungen + AI Gateway.
 
 ## Linux
 

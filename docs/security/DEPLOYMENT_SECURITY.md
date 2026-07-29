@@ -19,7 +19,7 @@ Home LAN (NOT in Tunnel)
    `---> Ollama / LM Studio / optional RTX Worker   http://192.168.x.x:11434
 ```
 
-**Critical rule:** The Cloudflare Tunnel must point **only** to UWE (Studio + Portal). Never expose Ollama, LM Studio, the RTX Host Connector, or any direct RTX worker endpoint to the internet.
+**Critical rule:** The Cloudflare Tunnel must point **only** to UWE (Studio + Portal). Never expose Ollama, LM Studio, the Maschinenraum, or any direct RTX worker endpoint to the internet.
 
 ## Recommended Cloudflare Setup
 

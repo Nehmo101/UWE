@@ -233,7 +233,7 @@ export function AiBrainSidebar({
       }
       setModel(picked.name);
       setStatus(
-        `Connector-Modell „${picked.displayName?.trim() || picked.name}" gewählt (${picked.connectorName}). Ausführung läuft über die RTX-Queue.`,
+        `Connector-Modell „${picked.displayName?.trim() || picked.name}" gewählt (${picked.connectorName}). Ausführung läuft über die Maschinenraum-Queue.`,
       );
     },
     [connectorModels, availableProviders],
@@ -484,7 +484,7 @@ export function AiBrainSidebar({
       {showConnectorPicker && isStoreVariant && (
         <>
           <p className="ai-brain-meta">
-            Modell vom RTX Connector — Ausführung über die lokale RTX-Queue. Standards auf der{" "}
+            Modell vom Maschinenraum — Ausführung über die lokale Maschinenraum-Queue. Standards auf der{" "}
             <span className="ai-brain-strong">Kommandozentrale</span> auf dem Host.
           </p>
           <ConnectorModelPicker
@@ -501,8 +501,8 @@ export function AiBrainSidebar({
         <details className="ai-brain-context">
           <summary>Connector-Modelle ({connectorModels.length})</summary>
           <p className="ai-brain-meta">
-            Vom RTX Connector gemeldete Modelle. Auswahl setzt das Modell für diesen Run; die
-            Ausführung läuft lokal über die RTX-Queue. Standards pflegst du auf der{" "}
+            Vom Maschinenraum gemeldete Modelle. Auswahl setzt das Modell für diesen Run; die
+            Ausführung läuft lokal über die Maschinenraum-Queue. Standards pflegst du auf der{" "}
             <span className="ai-brain-strong">Kommandozentrale</span> auf dem Host.
           </p>
           <ConnectorModelPicker

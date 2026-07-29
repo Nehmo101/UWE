@@ -232,12 +232,12 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
           <CardContent>
             {rtxAudioOnline ? (
               <Alert tone="success">
-                RTX Connector online — Sounds können lokal über den RTX-PC ausgegeben werden.
+                Maschinenraum online — Sounds können lokal über den RTX-PC ausgegeben werden.
               </Alert>
             ) : (
               <p className="text-sm text-muted-foreground">
                 {CONNECTOR_OFFLINE_MESSAGE} Soundboard-UI und Browser-Wiedergabe bleiben verfügbar.{" "}
-                <span>RTX Connector in der Kommandozentrale einrichten</span>
+                <span>Maschinenraum in der Kommandozentrale einrichten</span>
               </p>
             )}
           </CardContent>
