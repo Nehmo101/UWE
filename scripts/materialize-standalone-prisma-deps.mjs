@@ -28,8 +28,16 @@ function copyPath(src, dest, { dereference = false } = {}) {
     fs.rmSync(dest, { recursive: true, force: true });
   }
 
-  const flags = dereference ? ["-rL"] : ["-a"];
-  execFileSync("cp", [...flags, src, dest], { stdio: "inherit" });
+  // Früher `cp -a` bzw. `cp -rL`. fs.cpSync macht dasselbe ohne Unix-Werkzeuge:
+  // `verbatimSymlinks` kopiert Symlinks als Symlinks (das ist der `-a`-Fall, den
+  // @libsql/core braucht), `dereference` folgt ihnen (der `-rL`-Fall). Auf einem
+  // Windows-Runner gibt es kein `cp` im PATH — vorher brach der Release-Build
+  // dort ab, bevor die Prisma-Module im Standalone-Baum landeten.
+  fs.cpSync(src, dest, {
+    recursive: true,
+    preserveTimestamps: true,
+    ...(dereference ? { dereference: true } : { verbatimSymlinks: true }),
+  });
 }
 
 function mergePnpmStore(srcStore, destStore) {
@@ -134,11 +142,21 @@ function materializeApp(app) {
 fs.rmSync(DEPLOY_DIR, { recursive: true, force: true });
 fs.mkdirSync(DEPLOY_DIR, { recursive: true });
 
-execFileSync(
-  "pnpm",
-  ["--filter", "@uwe/database", "deploy", "--legacy", "--prod", DEPLOY_DIR],
-  { cwd: ROOT, stdio: "inherit" },
-);
+// Auf Windows ist pnpm eine Batch-Datei, die execFileSync nicht direkt startet —
+// vorher scheiterte der Release-Build hier mit `spawnSync pnpm ENOENT`. Statt
+// `shell: true` (das die Argumente unescaped verkettet und DEP0190 auslöst) wird
+// cmd.exe explizit als Programm aufgerufen. Gleiches Muster wie `pnpmCommand`
+// in tools/uwe-host-command-center/src/desktop-host-system.ts.
+const pnpmArgs = ["--filter", "@uwe/database", "deploy", "--legacy", "--prod", DEPLOY_DIR];
+const pnpm =
+  process.platform === "win32"
+    ? {
+        command: process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe",
+        args: ["/d", "/s", "/c", "corepack", "pnpm", ...pnpmArgs],
+      }
+    : { command: "corepack", args: ["pnpm", ...pnpmArgs] };
+
+execFileSync(pnpm.command, pnpm.args, { cwd: ROOT, stdio: "inherit" });
 
 let materialized = 0;
 for (const app of APPS) {
