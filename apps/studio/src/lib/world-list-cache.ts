@@ -18,7 +18,14 @@ export const getStudioWorldList: () => Promise<StudioWorldListItem[]> =
     tags: [WORLD_LIST_CACHE_TAG],
   });
 
-/** Invalidate the cached world list after a world is created. */
+/**
+ * Invalidate the cached world list after a world is created.
+ *
+ * Next 16 macht das zweite Argument zur Pflicht. `"max"` ist der von Next
+ * genannte Ersatz fuer den alten Ein-Argument-Aufruf; `updateTag` waere die
+ * andere Variante, laesst sich hier aber nicht nutzen — der einzige Aufrufer
+ * ist der Route Handler unter app/api/worlds, und `updateTag` wirft dort.
+ */
 export function revalidateStudioWorldList(): void {
-  revalidateTag(WORLD_LIST_CACHE_TAG);
+  revalidateTag(WORLD_LIST_CACHE_TAG, "max");
 }

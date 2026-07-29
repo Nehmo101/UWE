@@ -1,13 +1,5 @@
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-
-import { FlatCompat } from "@eslint/eslintrc";
-
-const repoRoot = path.dirname(fileURLToPath(import.meta.url));
-
-const compat = new FlatCompat({
-  baseDirectory: repoRoot,
-});
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
 /**
  * Flat ESLint config for the whole UWE monorepo.
@@ -47,7 +39,8 @@ const config = [
       "**/*.d.ts",
     ],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
   {
     settings: {
       next: {
@@ -64,6 +57,24 @@ const config = [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+
+      // eslint-config-next 16 bringt eslint-plugin-react-hooks v7 mit, und damit
+      // den Regelsatz des React Compilers. Der findet im Bestand rund 90 Stellen
+      // — ganz ueberwiegend `set-state-in-effect`, also useEffect-Bloecke, die
+      // synchron setState rufen. Das sind keine Fehler im heutigen Verhalten,
+      // aber sie kosten Renderdurchlaeufe.
+      //
+      // Sie stehen bewusst auf "warn" statt "error": als Fehler wuerden sie das
+      // Upgrade blockieren, als "off" waeren sie unsichtbar. Das Warnungsbudget
+      // in `pnpm lint` (--max-warnings) friert den Bestand ein — wie
+      // scripts/file-size-baseline.json bei den Dateigroessen. Neue Verstoesse
+      // brechen die CI, der Bestand kann Stueck fuer Stueck abgetragen werden.
+      // Danach das Budget senken, nie anheben.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/incompatible-library": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
     },
   },
 ];

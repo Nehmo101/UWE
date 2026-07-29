@@ -4,8 +4,8 @@
   "private": true,
   "description": "UWE Family — shared household app (Verträge, Dokumente, Küche, Haushalt, Kalender), gated on the family checkbox",
   "scripts": {
-    "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3004 --hostname 127.0.0.1",
-    "build": "node --import tsx ../../scripts/copy-scenes.mjs && next build",
+    "dev": "node --import tsx ../../scripts/copy-scenes.mjs && next dev --port 3004 --hostname 127.0.0.1 --webpack",
+    "build": "node --import tsx ../../scripts/copy-scenes.mjs && next build --webpack",
     "start": "next start --port 3004 --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test 'src/**/*.test.ts'"
@@ -23,7 +23,7 @@
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/shared-utils": "workspace:*",
-    "next": "^15.5.21",
+    "next": "^16.2.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3"
