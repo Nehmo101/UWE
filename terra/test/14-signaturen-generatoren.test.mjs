@@ -647,28 +647,75 @@ test('I1 — das Kuestenband liegt auf der Wasserlinie', () => {
    5 — Reliefschattierung
    ========================================================================== */
 
-/* Aufgenommen am 27.07.2026 mit genau der Schleife unten, BEVOR der
-   Reliefzweig in terrainColor eingebaut wurde. Er ist der Beleg fuer die
-   Zusage „unterhalb der Schwelle bitgleich zum Bestand" — jede Aenderung an
-   der Farbrechnung unterhalb der Schwelle bricht ihn.
+/* Der BESTAND der Farbrechnung — aufgenommen als Kennzahlen statt als Hash.
+
+   Urspruenglich stand hier ein Hash, aufgenommen am 27.07.2026 BEVOR der
+   Reliefzweig in terrainColor eingebaut wurde. Er lief ueber die volle
+   64-Bit-Mantisse und war damit plattformabhaengig: gemessen am 29.07.2026
+   zwischen Windows und dem Linux-CI-Runner weichen einzelne Farbwerte um
+   genau 1 ULP ab — 1.11e-16 relativ, das sind 2.8e-14 einer 8-Bit-Farbstufe.
+   Das Hoehenfeld ist auf beiden Plattformen bitgleich und die three-Fassung
+   dieselbe; es ist reines Rundungsrauschen der letzten Stelle. Der Hash machte
+   daraus einen dauerhaft roten Test, obwohl sich an der Rechnung nichts
+   geaendert hatte. Vor dem Hashen zu kuerzen hilft nicht — das verschiebt die
+   Rundungsgrenze nur, und bei 7803 Werten liegt einer nah genug daran, um
+   trotzdem zu kippen.
+
+   Die Zusage ist deshalb zweigeteilt. Dass sich unterhalb der Schwelle nichts
+   aendert, wird als Selbstvergleich geprueft — Hash gegen Hash im selben Lauf,
+   dort gilt bitgleich woertlich und auf jeder Plattform. Dass die Rechnung
+   dieselbe geblieben ist wie damals, wird an diesen Kennzahlen gemessen, mit
+   1e-12 relativer Toleranz.
 
    NEU GEEICHT am 28.07.2026 (Runde J): die Beruhigung beginnt seither bei
    RUHE_AB = 60 (UEBERGABE.koerper, die Uebergabe Koerper -> Karte) statt bei
-   600. Die Pruefpunkte dieser Zusage sind deshalb von 600/599.999 auf
-   60/59.999 gewandert — der HASH selbst ist derselbe geblieben, denn
-   unterhalb von 60 hat sich kein Float geaendert. Die Aussage bleibt gleich
-   stark: bitgleich unterhalb der Schwelle, wirksam oberhalb — nur liegt die
-   Schwelle jetzt dort, wo die Karte vom Koerper uebernimmt. */
-const FARBHASH_VOR_RELIEF =
-  '496d7c63a8a64b2c0c68483eeedffedb4bdc71658bbb7c18b3f83720c83bdf10';
-/* Der zweite Teil der Neueichung: bei genau 600 war die Farbe frueher per
-   Hash an den Bestand genagelt; dieselbe Stelle ist jetzt voll beruhigt und
-   wird auf den NEUEN Zustand genagelt (aufgenommen am 28.07.2026, terra
-   Runde J, Seed 4711/wiese). Von 96 (RUHE_VOLL) bis 600 (RELIEF_AB) ist die
-   Rechnung konstant — die Beruhigung ist ausgereizt, die Schummerung hat
-   noch nicht begonnen —, deshalb haelt EIN Hash beide Pruefpunkte. */
-const FARBHASH_KARTE_RUHIG =
-  'd2db16f957fd17dbd6f3ba222eed68d60f3c9de4fc27e5bbc16033e68a093dfc';
+   600. Die Pruefpunkte sind deshalb von 600/599.999 auf 60/59.999 gewandert.
+   Kennzahlen aufgenommen am 29.07.2026, Seed 4711 / wiese, unveraenderte
+   Messpunkte. */
+const BESTAND_VOR_RELIEF = {
+  summe: 1922.9031718169108, quadrate: 731.81426713438873, n: 7803,
+};
+/* Der zweite Teil der Neueichung: bei genau 600 war die Farbe frueher an den
+   Bestand genagelt; dieselbe Stelle ist jetzt voll beruhigt. Von 96
+   (RUHE_VOLL) bis 600 (RELIEF_AB) ist die Rechnung konstant — die Beruhigung
+   ist ausgereizt, die Schummerung hat noch nicht begonnen. */
+const BESTAND_KARTE_RUHIG = {
+  summe: 1899.8192212031693, quadrate: 703.84743277677853, n: 7803,
+};
+
+/* Zwei Kennzahlen ueber dieselben Farbwerte: Summe und Summe der Quadrate.
+   Sie dienen dem Vergleich mit dem BESTAND — dafuer taugt ein Hash nicht mehr,
+   siehe BESTAND_VOR_RELIEF. Eine Aenderung der Farbrechnung verschiebt beide
+   Summen weit ausserhalb der Toleranz; eine Verschiebung der letzten Bitstelle
+   nicht. */
+async function farbSummen(m) {
+  const w = await testWelt({ seed: 4711, biom: 'wiese' });
+  const THREE = await import('three');
+  const { VW, HALF } = w.m.store;
+  S.einheitMeter = m;
+  const c = new THREE.Color();
+  let summe = 0, quadrate = 0, n = 0;
+  for (let j = 2; j < VW - 2; j += 5) {
+    for (let i = 2; i < VW - 2; i += 5) {
+      const id = j * VW + i;
+      const hh = w.m.terrain.hgt[id];
+      const nx = (w.m.terrain.hgt[id - 1] - w.m.terrain.hgt[id + 1]) * 0.5;
+      const nz = (w.m.terrain.hgt[id - VW] - w.m.terrain.hgt[id + VW]) * 0.5;
+      const ny = 1 / Math.sqrt(nx * nx + 1 + nz * nz);
+      w.m.terrain.terrainColor(hh, ny, i - HALF, j - HALF, c, 1);
+      for (const v of [c.r, c.g, c.b]) { summe += v; quadrate += v * v; n++; }
+    }
+  }
+  return { summe, quadrate, n };
+}
+
+/* Relativer Vergleich mit Toleranz. 1e-12 liegt vier Groessenordnungen ueber
+   dem Plattformrauschen (~1e-16 relativ) und weit unter jeder Aenderung, die
+   eine echte Anpassung der Farbrechnung ausloesen wuerde. */
+function gleichAuf12(ist, soll, was) {
+  const abw = Math.abs(ist - soll) / Math.abs(soll);
+  assert.ok(abw < 1e-12, was + ': ' + ist + ' weicht um ' + abw.toExponential(2) + ' ab');
+}
 
 async function farbHash(m) {
   const w = await testWelt({ seed: 4711, biom: 'wiese' });
@@ -690,22 +737,36 @@ async function farbHash(m) {
   return h.hex();
 }
 
-test('I1 — unterhalb der Schwelle ist die Terrainfarbe bitgleich zum Bestand', async () => {
-  assert.equal(await farbHash(1), FARBHASH_VOR_RELIEF,
-    'Die Farbrechnung auf Ortsmassstab hat sich geaendert');
+test('I1 — unterhalb der Schwelle ist die Terrainfarbe unveraendert', async () => {
+  /* Teil 1 — KONSTANZ unterhalb der Schwelle. Das ist ein Vergleich der
+     Werte gegeneinander, innerhalb desselben Laufs: hier gilt bitgleich
+     woertlich, auf jeder Plattform. */
+  const basis = await farbHash(1);
   // J: die Pruefpunkte lagen bei 600/599.999, solange dort die Beruhigung
-  // begann. Seit RUHE_AB = UEBERGABE.koerper liegen sie bei 60/59.999 —
-  // Begruendung bei FARBHASH_VOR_RELIEF.
-  assert.equal(await farbHash(60), FARBHASH_VOR_RELIEF,
+  // begann. Seit RUHE_AB = UEBERGABE.koerper liegen sie bei 60/59.999.
+  assert.equal(await farbHash(60), basis,
     'Genau AUF der Schwelle darf noch nichts passieren');
-  assert.equal(await farbHash(59.999), FARBHASH_VOR_RELIEF);
-  // Und oberhalb ist sie WIRKSAM — dieselbe Staerke der Aussage wie vorher,
-  // jetzt beidseitig genagelt: der voll beruhigte Zustand haengt an seinem
-  // eigenen Hash, von RUHE_VOLL bis zum Beginn der Schummerung konstant.
-  assert.equal(await farbHash(96), FARBHASH_KARTE_RUHIG,
-    'Bei RUHE_VOLL muss die Beruhigung vollstaendig wirken');
-  assert.equal(await farbHash(600), FARBHASH_KARTE_RUHIG,
+  assert.equal(await farbHash(59.999), basis,
+    'Knapp unter der Schwelle ebenso wenig');
+
+  /* Teil 2 — WIRKSAMKEIT oberhalb, ebenfalls als Selbstvergleich: der voll
+     beruhigte Zustand ist von RUHE_VOLL bis zum Beginn der Schummerung
+     konstant, und er unterscheidet sich vom Zustand darunter. */
+  const ruhig = await farbHash(96);
+  assert.notEqual(ruhig, basis, 'Bei RUHE_VOLL muss die Beruhigung wirken');
+  assert.equal(await farbHash(600), ruhig,
     'Zwischen 96 und 600 darf sich nichts mehr aendern (Schummerung erst ab 600)');
+
+  /* Teil 3 — BESTAND. Gegen die aufgenommenen Kennzahlen, mit Toleranz statt
+     Hash: siehe BESTAND_VOR_RELIEF. */
+  const v = await farbSummen(1);
+  assert.equal(v.n, BESTAND_VOR_RELIEF.n, 'Andere Anzahl Messpunkte');
+  gleichAuf12(v.summe, BESTAND_VOR_RELIEF.summe, 'Farbsumme auf Ortsmassstab');
+  gleichAuf12(v.quadrate, BESTAND_VOR_RELIEF.quadrate, 'Quadratsumme auf Ortsmassstab');
+
+  const r = await farbSummen(96);
+  gleichAuf12(r.summe, BESTAND_KARTE_RUHIG.summe, 'Farbsumme im ruhigen Zustand');
+  gleichAuf12(r.quadrate, BESTAND_KARTE_RUHIG.quadrate, 'Quadratsumme im ruhigen Zustand');
 });
 
 test('I1 — der Reliefzweig blendet ein statt zu schalten', () => {
