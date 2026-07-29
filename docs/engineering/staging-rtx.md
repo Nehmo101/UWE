@@ -4,7 +4,7 @@ Stand: 2026-07-02
 
 Runbook für ein **zweites, getrenntes Testsystem** neben der Produktion:
 
-- **`main`** → Produktion auf dem UWE-Host (`studio` / `portal.uwe.example`), Deploy wie gehabt über [`deploy.yml`](../../.github/workflows/deploy.yml).
+- **`main`** → Produktion auf dem UWE-Host (`studio` / `portal.uwe.example`). Der automatische Deploy über `deploy.yml` ist entfernt (Host stillgelegt); ausgerollt wird derzeit von Hand bzw. über das Command Center.
 - **`dev`** → Staging on-demand auf dem **RTX-PC** (`test.studio` / `test.portal.uwe.example`), eigene Datenbank.
 
 Der Prod-Host wird davon **nicht angefasst**. Staging läuft nur, wenn der RTX-PC an ist und du es manuell hochfährst.
@@ -42,7 +42,7 @@ Browser ──▶ Cloudflare Edge ──▶ (ausgehender Tunnel) ──▶ RTX-P
 | Secrets | `/etc/uwe/uwe.env` | eigene `.env` (**nie** die Prod-Werte) |
 | Erreichbarkeit | Host-Tunnel → `studio`/`portal.…` | RTX-Tunnel → `test.studio`/`test.portal.…` |
 | Zugriffsschutz | Cloudflare Access | Cloudflare Access (nur Owner-Mail) |
-| Deploy | automatisch (`deploy.yml` nach CI auf `main`) | manuell/on-demand (`uwe-test-up.ps1`) |
+| Deploy | derzeit von Hand (automatischer Workflow entfernt) | manuell/on-demand (`uwe-test-up.ps1`) |
 | Cloud-AI | nach Konfiguration | aus (lokales Ollama) |
 
 **Grundregel:** Alles Zustandsbehaftete und alle Secrets werden gedoppelt; nur der Git-Object-Store ist maschinenlokal. Ein Test-Leak darf niemals Prod-Zugriff bedeuten.
@@ -151,7 +151,7 @@ Default bleibt: Staging läuft auf Demo-Seed, **ohne** echte Daten auf dem RTX-P
 Feature-Branch
    └─▶ dev            → RTX hochziehen (uwe-test-up.ps1), inkl. Migration testen
         └─▶ (grün)    → dev nach main mergen
-             └─▶ main → Prod-Deploy läuft automatisch (deploy.yml)
+             └─▶ main → Prod-Deploy derzeit von Hand
 ```
 
 Der eigentliche Nutzen ist nicht „UI angucken", sondern **Prisma-Migrationen gegen realistische Daten laufen zu lassen, bevor sie Prod-Daten anfassen**. Genau da tut ein kaputtes Schema am meisten weh.
@@ -173,7 +173,6 @@ Der eigentliche Nutzen ist nicht „UI angucken", sondern **Prisma-Migrationen g
 | Datei | Zweck |
 |-------|--------|
 | [`deploy/rtx-staging/`](../../deploy/rtx-staging/) | Up/Down-Skripte, `.env`- und Tunnel-Vorlage (Windows) |
-| [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) | Prod-Deploy auf `main` (unberührt) |
 | [self-hosted-ci.md](self-hosted-ci.md) | Deploy-Runner, RAM-Grenzen des Hosts |
 | [rtx-connector.md](../rtx-connector.md) | Outbound-Prinzip des RTX-PCs |
 | [backup-restore.md](../backup-restore.md) | Backup-Inhalte, Restore-Wege |
