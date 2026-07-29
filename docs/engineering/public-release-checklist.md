@@ -77,23 +77,62 @@ Ebenfalls unter **Settings → Actions → General** prüfen:
 
 ---
 
-## 5. Nach dem History-Rewrite
+## 5. History-Rewrite — Stand und Restarbeit
 
-Der Rewrite ersetzt `lasset610@gmail.com` durch
-`114261361+Nehmo101@users.noreply.github.com`. Danach:
+**Erledigt am 2026-07-29.** Umgeschrieben wurden alle 2261 Commits über alle
+33 Branches. Drei Identitäten waren betroffen — die letzten beiden fielen erst
+im vollständigen Mirror auf:
+
+| Alt | Neu |
+|---|---|
+| `lasset610@gmail.com` (89 Commits, Autor + Committer) | `114261361+Nehmo101@users.noreply.github.com` |
+| `lasse@fedora.fritz.box` / Name `Lasse` | dito |
+| `uwe@uwe-host.fritz.box` / Name `uwe` | dito |
+
+Die beiden `fritz.box`-Adressen verrieten zusätzlich den Vornamen und zwei
+interne Hostnamen. Verifiziert: Inhalt bit-identisch (Tree-Hash von `main`
+unverändert), Commit-Zahl unverändert, `git fsck` fehlerfrei. Verbleibende
+Identitäten sind ausschließlich Bot- und Noreply-Adressen.
+
+### Offen — sonst war der Rewrite wirkungslos
+
+> **Der Rewrite allein entfernt die Adresse nicht von GitHub.**
+
+GitHub verwaltet `refs/pull/*` selbst; diese Refs sind schreibgeschützt und
+zeigen weiterhin auf die **alten** Commits. Ein Scan des Server-Stands nach dem
+Push findet dort noch **36 Treffer** der alten Adressen. Solange das so ist, ist
+die E-Mail über `refs/pull/N/head` und über direkte Commit-SHA-URLs abrufbar —
+für jeden, sobald das Repo öffentlich ist.
+
+- [ ] **GitHub Support kontaktieren** (<https://support.github.com/contact>) und
+      um das Aufräumen verwaister Objekte und veralteter PR-Refs nach einem
+      History-Rewrite bitten. Dafür gibt es keine API und keine Einstellung.
+- [ ] **Erst danach das Repo öffentlich schalten.** Vorher ist der Rewrite
+      kosmetisch.
+- [ ] Alternative, falls Support zu langsam ist: neues Repo anlegen, nur die
+      umgeschriebene History pushen, das alte Repo löschen. Kostet Issues, PRs
+      und Stars — dafür sofort und vollständig.
+
+### Danach
 
 - [ ] **GitHub → Settings → Emails → „Keep my email address private"** aktivieren.
 - [ ] Lokal auf allen Arbeitsrechnern:
       ```bash
       git config --global user.email "114261361+Nehmo101@users.noreply.github.com"
+      git config --global user.name "VordenkerEnte"
       ```
       Sonst trägt der nächste Commit die private Adresse wieder ein.
-- [ ] Auf dem UWE-Host (`/opt/uwe`) einmal frisch ziehen — die alte History ist
-      dort nach dem Rewrite nicht mehr anschlussfähig:
+- [ ] Auf dem **UWE-Host** (`/opt/uwe`) frisch ziehen — die alte History ist dort
+      nicht mehr anschlussfähig, der Deploy-Job würde sonst scheitern:
       ```bash
       git fetch origin && git reset --hard origin/main
       ```
-- [ ] Offene PRs und alte Klone: neu ziehen. Alle Commit-SHAs haben sich geändert.
+- [ ] Der Commit-Autor auf dem Host war `uwe@uwe-host.fritz.box`. Falls dort
+      automatisiert committet wird, die Identität ebenfalls umstellen:
+      ```bash
+      sudo -u uwe git config --global user.email "114261361+Nehmo101@users.noreply.github.com"
+      ```
+- [ ] Alte Klone auf anderen Rechnern neu ziehen. Alle Commit-SHAs sind neu.
 
 ---
 
