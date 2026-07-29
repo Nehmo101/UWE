@@ -447,7 +447,7 @@ export async function runConnectorImageGenerate(
       error:
         error instanceof Error
           ? error.message
-          : "Bildgenerierung über RTX Host Connector fehlgeschlagen.",
+          : "Bildgenerierung über Maschinenraum fehlgeschlagen.",
       metadata,
     };
   }

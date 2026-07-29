@@ -163,6 +163,28 @@ export async function setupHost(root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("setup_host", { root });
 }
 
+/** Welche UWE-Apps diese Installation betreibt (Ersteinrichtungs-Assistent). */
+export async function getInstallSelection(root?: string) {
+  return invokeCommand<import("./tauri-types").LocalHostInstallSelectionResult>(
+    "get_install_selection",
+    { root },
+  );
+}
+
+/**
+ * Schreibt die App-Auswahl. Muss **vor** `setupHost` laufen: die Einrichtung
+ * liest die gespeicherte Auswahl, um Migrationen und Builds zu bestimmen.
+ */
+export async function setInstallSelection(
+  selection: Pick<import("./tauri-types").LocalHostInstallSelection, "apps" | "seedDemoContent">,
+  root?: string,
+) {
+  return invokeCommand<{
+    ok: boolean;
+    selection: import("./tauri-types").LocalHostInstallSelection;
+  }>("set_install_selection", { root, selection });
+}
+
 export async function startHost(root?: string) {
   return invokeCommand<import("./tauri-types").LocalHostActionResult>("start_host", { root });
 }

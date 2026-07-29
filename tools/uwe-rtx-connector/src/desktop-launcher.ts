@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --import tsx
 /**
- * UWE RTX Host Connector — desktop launcher.
+ * UWE Maschinenraum — desktop launcher.
  *
  * Long-running entry point spawned by the Tauri desktop client
  * (`apps/rtx-connector-client`). It reuses the same wiring as the CLI

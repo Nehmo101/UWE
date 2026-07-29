@@ -2,7 +2,7 @@
   "name": "@uwe/connector-client-config",
   "version": "0.1.0",
   "private": true,
-  "description": "UWE RTX Connector Client local settings — types, validation, and UI helpers (no filesystem I/O; Tauri handles persistence)",
+  "description": "UWE Command Center local settings — types, validation, and UI helpers (no filesystem I/O; Tauri handles persistence)",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

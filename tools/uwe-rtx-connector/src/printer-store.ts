@@ -1,5 +1,5 @@
 /**
- * Persisted printer selection store for the UWE RTX Connector Client.
+ * Persisted printer selection store for the UWE Command Center.
  *
  * The connector discovers printers installed on the RTX host (Windows spooler
  * via `Get-Printer`, or CUPS via `lpstat`) but — mirroring the model store —

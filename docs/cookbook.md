@@ -7,7 +7,7 @@ Native local model management for UWE Studio — **not** an Odysseus sidecar. Th
 | Component | Package / path | Purpose |
 |-----------|----------------|---------|
 | Model registry | `packages/cookbook/src/model-registry.ts` | Curated catalog with VRAM estimates and use-case tags |
-| Engine registry | `packages/cookbook/src/engine-registry.ts` | Ollama, OpenAI-compatible, RTX Connector/Worker, Docker, LM Studio |
+| Engine registry | `packages/cookbook/src/engine-registry.ts` | Ollama, OpenAI-compatible, Maschinenraum/Worker, Docker, LM Studio |
 | Hardware profile | `packages/cookbook/src/hardware-profile.ts` | RAM/CPU/GPU probe (`nvidia-smi` or `COOKBOOK_GPU_*` env) |
 | Model fit score | `packages/cookbook/src/model-fit.ts` | 0–100 score from VRAM/RAM vs model size |
 | Runtime health | `packages/cookbook/src/runtime-health.ts` | Ollama tags, Docker probe, engine status |
@@ -77,9 +77,9 @@ docker run -d --gpus all -v ollama:/root/.ollama -p 11434:11434 --name ollama ol
 docker exec -it ollama ollama pull llama3.1:8b
 ```
 
-### RTX Host Connector (UWE host ← GPU PC, outbound)
+### Maschinenraum (UWE host ← GPU PC, outbound)
 
-On the GPU machine, run the **outbound RTX Host Connector** (`pnpm connector:start`,
+On the GPU machine, run the **outbound Maschinenraum** (`pnpm connector:start`,
 `tools/uwe-rtx-connector`). It connects outbound to the host and opens no inbound port.
 See [rtx-connector.md](rtx-connector.md).
 

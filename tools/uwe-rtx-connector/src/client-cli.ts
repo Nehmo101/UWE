@@ -1,5 +1,5 @@
 /**
- * One-shot CLI helpers for the RTX Connector desktop client (Tauri invokes these).
+ * One-shot CLI helpers for the Maschinenraum desktop client (Tauri invokes these).
  *
  *   tsx tools/uwe-rtx-connector/src/client-cli.ts <command> [args]
  *

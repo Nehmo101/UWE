@@ -53,7 +53,7 @@ export interface ImageStudioResult {
 
 /**
  * Vom Host eingehängte Brücke, die einen `image_generate`-Job über die
- * outbound RTX-Connector-Queue schickt. Der Host hat DB- und Queue-Zugriff,
+ * outbound Maschinenraum-Queue schickt. Der Host hat DB- und Queue-Zugriff,
  * dieses Paket bleibt dadurch abhängigkeitsfrei.
  */
 export type ConnectorImageGenerate = (
@@ -98,7 +98,7 @@ async function runLocalImageTask(
     success: false,
     providerUsed: "local_rtx",
     error:
-      "Kein lokales Bild-Backend: RTX Host Connector mit image_generation erforderlich (outbound Connector-Queue).",
+      "Kein lokales Bild-Backend: Maschinenraum mit image_generation erforderlich (outbound Connector-Queue).",
   };
 }
 
@@ -114,7 +114,7 @@ export async function runImageStudioTask(
       success: false,
       providerUsed: "disabled",
       error:
-        "Image Studio nicht verfügbar — der RTX Host Connector (image_generation) ist offline.",
+        "Image Studio nicht verfügbar — der Maschinenraum (image_generation) ist offline.",
     };
   }
 

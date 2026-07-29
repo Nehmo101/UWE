@@ -212,7 +212,7 @@ export async function StudioWikiPageView({
                   </Collapsible>
                   <Collapsible variant="sidebar" title="Brain-Aktionen" defaultOpen={false}>
                     <p className="mt-0 text-sm text-muted-foreground">
-                      Strukturierte Brain-Aktionen mit Review-Proposal — läuft über RTX Connector.
+                      Strukturierte Brain-Aktionen mit Review-Proposal — läuft über Maschinenraum.
                     </p>
                     <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} variant="store" />
                   </Collapsible>

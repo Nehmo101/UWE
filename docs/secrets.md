@@ -29,7 +29,7 @@ Also set:
 | `STUDIO_API_TOKEN` | Bearer token for sensitive Studio APIs |
 | `SMTP_PASSWORD`, `CLOUD_AI_API_KEY`, provider API keys | Feature-specific secrets |
 
-`RTX_BASE_URL` and `RTX_SERVICE_TOKEN` must be set together or not at all. For local LLM work prefer direct Ollama/LM Studio through `AI_INFERENCE_BASE_URL` and the outbound RTX Host Connector.
+`RTX_BASE_URL` and `RTX_SERVICE_TOKEN` must be set together or not at all. For local LLM work prefer direct Ollama/LM Studio through `AI_INFERENCE_BASE_URL` and the outbound Maschinenraum.
 
 ## Development defaults
 

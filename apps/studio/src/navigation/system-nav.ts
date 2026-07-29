@@ -2,7 +2,7 @@
  * System area navigation — was von Studios Betriebsfläche übrig ist.
  *
  * Betrieb und Einrichtung laufen nicht mehr im Browser: der System-Hub liegt in
- * Brain (`/system`), Host-Setup, Cloudflare, RTX-Verbindung, Drucker, Secrets,
+ * Brain (`/system`), Host-Setup, Cloudflare, Maschinenraum-Verbindung, Drucker, Secrets,
  * Migrationen, Tokens, Webhooks, Einstellungen und Backups laufen über die
  * Kommandozentrale auf dem UWE-Host (Notiz Lasse, Abschnitt D).
  *

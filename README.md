@@ -171,7 +171,7 @@ durch Tests abgesichert:
 - Lokale Inferenz läuft über Ollama, LM Studio, llama.cpp oder einen
   RTX-Host-Connector.
 
-Der **RTX Host Connector** (`tools/uwe-rtx-connector`) ist ein optionaler Worker,
+Der **Maschinenraum** (`tools/uwe-rtx-connector`) ist ein optionaler Worker,
 der sich **ausgehend** beim Host meldet. Es gibt keinen eingehenden Port und
 keinen inbound Agent.
 
@@ -329,7 +329,7 @@ Inhalte. Details:
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Geplant und in Arbeit |
 | [docs/PRODUCTION.md](docs/PRODUCTION.md) | Produktionsbetrieb und Updates |
 | [docs/daily-admin-os.md](docs/daily-admin-os.md) | Daily Admin OS |
-| [docs/rtx-connector.md](docs/rtx-connector.md) | Ausgehender RTX Host Connector |
+| [docs/rtx-connector.md](docs/rtx-connector.md) | Ausgehender Maschinenraum |
 | [docs/engineering/ci.md](docs/engineering/ci.md) | CI-Workflows und lokale Gates |
 | [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) | Self-Service-Konfiguration |
 | [docs/engineering/database-service-map.md](docs/engineering/database-service-map.md) | Service-Index von `@uwe/database` |

@@ -26,7 +26,7 @@ describe("runImageStudioTask", () => {
     );
     assert.equal(result.success, false);
     assert.equal(result.providerUsed, "disabled");
-    assert.match(result.error ?? "", /RTX Host Connector/);
+    assert.match(result.error ?? "", /Maschinenraum/);
   });
 
   it("reicht den zusammengebauten Prompt an die Connector-Brücke durch", async () => {

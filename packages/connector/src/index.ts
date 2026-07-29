@@ -1,8 +1,8 @@
 /**
- * @uwe/connector — shared core for the UWE Host ↔ RTX Host Connector model.
+ * @uwe/connector — shared core for the UWE Host ↔ Maschinenraum model.
  *
  * The host is the source of truth: it owns the queue, the worker registry and
- * the connector tokens. The RTX Host Connector is an optional outbound worker.
+ * the connector tokens. The Maschinenraum is an optional outbound worker.
  * This package holds only framework-agnostic logic shared by both sides.
  */
 

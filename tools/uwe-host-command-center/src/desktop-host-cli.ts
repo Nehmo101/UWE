@@ -2,10 +2,12 @@ import {
   argumentValue,
   backupHost,
   collectDesktopHostStatus,
+  getInstallSelection,
   listBackups,
   openTarget,
   readLogs,
   restoreBackup,
+  setInstallSelection,
   setupHost,
   startHost,
   startHostService,
@@ -43,7 +45,9 @@ type HostAction =
   | "stop-service"
   | "restart-service"
   | "list-backups"
-  | "restore-backup";
+  | "restore-backup"
+  | "get-install-selection"
+  | "set-install-selection";
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -60,8 +64,20 @@ async function main(): Promise<void> {
   let result: unknown;
   try {
     switch (action) {
+      // `setup` liest immer die gespeicherte Auswahl. Der Assistent schreibt sie
+      // vorher über `set-install-selection` — bewusst zwei Aufrufe statt stdin,
+      // damit der minutenlange Einrichtungslauf keine offene Eingabe braucht.
       case "setup":
         result = await setupHost(root);
+        break;
+      case "get-install-selection":
+        result = { ok: true, ...getInstallSelection(root) };
+        break;
+      case "set-install-selection":
+        result = {
+          ok: true,
+          selection: setInstallSelection(root, JSON.parse(await readStdin()) as unknown),
+        };
         break;
       case "start":
         result = await startHost(root);

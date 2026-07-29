@@ -1,5 +1,5 @@
 /**
- * Model metadata shared between the UWE Host and the RTX Host Connector.
+ * Model metadata shared between the UWE Host and the Maschinenraum.
  *
  * `ConnectorModelInfo` is the per-model payload sent on every heartbeat. The
  * connector only ever sends models the user has explicitly enabled for UWE

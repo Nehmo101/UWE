@@ -146,7 +146,7 @@ export async function runAssistantTurn(
   const rtxReady = await isRtxReadinessReady({ useMock: input.useMock, prisma: deps.db });
   if (!rtxReady) {
     return unavailable(
-      "Lokale KI ist offline. Der Brain-Assistent nutzt niemals Cloud-KI — bitte den Command Center bzw. RTX Connector starten.",
+      "Lokale KI ist offline. Der Brain-Assistent nutzt niemals Cloud-KI — bitte den Command Center bzw. Maschinenraum starten.",
     );
   }
 

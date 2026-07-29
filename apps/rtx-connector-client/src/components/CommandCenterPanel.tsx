@@ -33,8 +33,15 @@ import { humanizeConnectionStatus, toHealthBadgeStatus, toMessage } from "../lib
 import { useHostActionProgress } from "../lib/useHostActionProgress";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
-
-type HostAction = "setup" | "start" | "stop" | "restart" | "backup";
+import { HostBackupsCard, HostLogsCard } from "./command-center/HostMaintenanceCards";
+import {
+  busyLabel,
+  formatBytes,
+  formatDuration,
+  stateLabel,
+  type BusyState,
+  type HostAction,
+} from "./command-center/host-format";
 
 interface CommandCenterPanelProps {
   config: ConnectorClientConfig;
@@ -43,6 +50,8 @@ interface CommandCenterPanelProps {
   onStartConnector: () => Promise<void>;
   onStopConnector: () => Promise<void>;
   onOpenConnector: () => void;
+  /** Ersteinrichtungs-Assistent erneut öffnen (App-Auswahl ändern). */
+  onOpenInstallWizard: () => void;
 }
 
 const ACTIONS: Record<HostAction, (root?: string) => Promise<LocalHostActionResult>> = {
@@ -53,73 +62,6 @@ const ACTIONS: Record<HostAction, (root?: string) => Promise<LocalHostActionResu
   backup: backupHost,
 };
 
-function formatBytes(bytes: number | null): string {
-  if (bytes == null || !Number.isFinite(bytes)) return "-";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let index = 0;
-  while (value >= 1024 && index < units.length - 1) {
-    value /= 1024;
-    index += 1;
-  }
-  return `${value.toLocaleString("de-DE", { maximumFractionDigits: 1 })} ${units[index]}`;
-}
-
-function formatDuration(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return days ? `${days} Tage, ${hours} Std.` : `${hours} Std., ${minutes} Min.`;
-}
-
-function stateLabel(status: LocalHostStatus | null): string {
-  if (!status) return "Status wird geladen";
-  if (status.overall === "ready") return "Alles bereit";
-  if (status.overall === "error") return "Eingriff erforderlich";
-  if (!status.installation.buildReady || !status.installation.databaseReady || !status.installation.envReady) return "Einrichtung erforderlich";
-  return "Bereit zum Start";
-}
-
-type BusyState = HostAction | "refresh" | "settings" | "all" | "check-update" | "update";
-
-/** Human-readable heading for the progress/status bar while an action runs. */
-function busyLabel(busy: BusyState, status: LocalHostStatus | null): string {
-  switch (busy) {
-    case "setup":
-      return status?.installation.buildReady ? "UWE wird repariert und neu gebaut" : "UWE wird eingerichtet";
-    case "update":
-      return "Update wird installiert";
-    case "check-update":
-      return "Suche nach UWE-Updates";
-    case "all":
-      return "UWE-Dienste werden umgeschaltet";
-    case "start":
-      return "Dienst wird gestartet";
-    case "stop":
-      return "Dienst wird gestoppt";
-    case "restart":
-      return "Dienste werden neu gestartet";
-    case "backup":
-      return "Backup wird erstellt";
-    case "settings":
-      return "Einstellungen werden gespeichert";
-    case "refresh":
-      return "Status wird geladen";
-    default:
-      return "Aktion läuft";
-  }
-}
-
-/** Auswählbare Host-Logs. „landing" ist die Startseite auf dem Apex-Origin. */
-const LOG_TARGETS = [
-  { id: "command-center", label: "Einrichtung" },
-  { id: "studio", label: "Studio" },
-  { id: "portal", label: "Portal" },
-  { id: "brain", label: "Brain" },
-  { id: "family", label: "Family" },
-  { id: "landing", label: "Startseite" },
-] as const satisfies ReadonlyArray<{ id: LocalHostLogsResult["target"]; label: string }>;
-
 export function CommandCenterPanel({
   config,
   connectorStatus,
@@ -127,6 +69,7 @@ export function CommandCenterPanel({
   onStartConnector,
   onStopConnector,
   onOpenConnector,
+  onOpenInstallWizard,
 }: CommandCenterPanelProps) {
   const [status, setStatus] = useState<LocalHostStatus | null>(null);
   const [root, setRoot] = useState(config.localHostRoot);
@@ -137,7 +80,7 @@ export function CommandCenterPanel({
   // Queue-Umweg", die Speicherlogik erhält eine explizite "direct"-Wahl aus dem
   // Verbindungs-Panel und setzt sonst hybrid (Direct mit Queue-Fallback).
   const [directAiTransport, setDirectAiTransport] = useState(config.transportMode !== "queue");
-  const [busy, setBusy] = useState<HostAction | "refresh" | "settings" | "all" | "check-update" | "update" | null>(null);
+  const [busy, setBusy] = useState<BusyState | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logTarget, setLogTarget] = useState<LocalHostLogsResult["target"]>("command-center");
@@ -232,7 +175,7 @@ export function CommandCenterPanel({
       onConfigSaved(saved);
       setMessage(
         transportChanged && connectorStatus.status === "running"
-          ? "Command-Center-Einstellungen gespeichert. Der neue KI-Transport greift nach einem Neustart der RTX-Verbindung."
+          ? "Command-Center-Einstellungen gespeichert. Der neue KI-Transport greift nach einem Neustart des Maschinenraums."
           : "Command-Center-Einstellungen gespeichert.",
       );
       await refresh(saved.localHostRoot);
@@ -285,7 +228,7 @@ export function CommandCenterPanel({
         return;
       }
       if (config.hostUrl && config.token) await onStartConnector();
-      setMessage(config.hostUrl && config.token ? "UWE und RTX-Verbindung laufen." : "UWE läuft. Für RTX fehlt noch der Connector-Token.");
+      setMessage(config.hostUrl && config.token ? "UWE und Maschinenraum laufen." : "UWE läuft. Für den Maschinenraum fehlt noch der Token.");
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -301,7 +244,7 @@ export function CommandCenterPanel({
       if (connectorStatus.status === "running") await onStopConnector();
       const result = await stopHost(root || undefined);
       setStatus(result.status);
-      setMessage("UWE und RTX-Verbindung wurden gestoppt.");
+      setMessage("UWE und Maschinenraum wurden gestoppt.");
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -498,6 +441,11 @@ export function CommandCenterPanel({
         <Button variant="primary" onClick={startEverything} disabled={busy !== null || hostOnline}>Alles starten</Button>
         <Button variant="secondary" onClick={stopEverything} disabled={busy !== null || (!hostAnyRunning && connectorStatus.status !== "running")}>Alles stoppen</Button>
         <Button variant="accent" onClick={() => runAction("setup")} disabled={busy !== null}>{status?.installation.buildReady ? "Reparieren / neu bauen" : "UWE einrichten"}</Button>
+        {/* Der Assistent ist der Weg, die installierten Bereiche zu ändern —
+            „Reparieren" baut bewusst nur den bestehenden Umfang neu. */}
+        <Button variant="secondary" onClick={onOpenInstallWizard} disabled={busy !== null}>
+          {status?.installation.selectionPersisted ? "Bereiche ändern" : "Ersteinrichtung"}
+        </Button>
         <Button
           variant={updateInfo?.updateAvailable ? "primary" : "secondary"}
           onClick={() => (updateInfo?.updateAvailable ? runInstallUpdate() : runCheckUpdate())}
@@ -580,7 +528,7 @@ export function CommandCenterPanel({
           </Card>
         ))}
         <Card>
-          <CardHeader><CardTitle>Lokale RTX</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Maschinenraum</CardTitle></CardHeader>
           <CardContent>
             <div className="connector-stack">
               <HealthBadge status={toHealthBadgeStatus(connectorStatus)} label={humanizeConnectionStatus(connectorStatus.connectionStatus)} />
@@ -588,7 +536,7 @@ export function CommandCenterPanel({
               {status?.gpu.available ? <strong>{status.gpu.name}</strong> : <span className="connector-muted">Keine NVIDIA-GPU erkannt</span>}
             </div>
           </CardContent>
-          <CardFooter><Button variant="ghost" onClick={onOpenConnector}>RTX einrichten</Button></CardFooter>
+          <CardFooter><Button variant="ghost" onClick={onOpenConnector}>Maschinenraum einrichten</Button></CardFooter>
         </Card>
         {/* Brain is now a host-managed service (id "brain", :3102) and appears in the
             services grid above like Studio and Portal — no separate hardcoded card. */}
@@ -601,6 +549,12 @@ export function CommandCenterPanel({
             <ul className="command-center-checklist">
               {installChecks.map(([label, ok]) => <li key={label} className={ok ? "is-ok" : "is-missing"}><span>{ok ? "✓" : "–"}</span><strong>{label}</strong></li>)}
             </ul>
+            {status ? (
+              <p className="connector-muted">
+                Installierte Bereiche: <strong>{status.installation.apps.join(" · ")}</strong>
+                {status.installation.selectionPersisted ? "" : " (Vorgabe — Assistent lief noch nicht)"}
+              </p>
+            ) : null}
             <p className="connector-muted">{status?.installation.message ?? "Status wird ermittelt."}</p>
           </CardContent>
           <CardFooter>
@@ -654,55 +608,25 @@ export function CommandCenterPanel({
           </div>
           <p className="connector-muted">
             Direktzustellung schickt KI-Anfragen ohne Warteschlangen-Umweg über die lokale
-            Verbindung an den RTX Connector; die Queue bleibt als Fallback aktiv. Empfohlen,
-            wenn UWE und RTX auf demselben Rechner laufen. Greift beim nächsten Start der
-            RTX-Verbindung.
+            Verbindung an den Maschinenraum; die Queue bleibt als Fallback aktiv. Empfohlen,
+            wenn UWE und der Maschinenraum auf demselben Rechner laufen. Greift beim nächsten
+            Start des Maschinenraums.
           </p>
           {status ? <p className="connector-muted">Stand: {status.branch ?? "detached"} · {status.revision ?? "unbekannt"} · Daten: {status.dataDir}</p> : null}
         </CardContent>
         <CardFooter><Button variant="primary" onClick={saveSettings} disabled={busy !== null}>Einstellungen speichern</Button></CardFooter>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Backups</CardTitle></CardHeader>
-        <CardContent>
-          {backups.length === 0 ? (
-            <p className="connector-muted">Noch keine Backups. Über „Backup erstellen&quot; wird eines angelegt.</p>
-          ) : (
-            <ul className="command-center-user-list">
-              {backups.map((backup) => (
-                <li key={backup.name} className="command-center-user-row">
-                  <div className="command-center-user-main">
-                    <div>
-                      <strong>{backup.name}</strong>
-                      <p className="connector-muted">{formatBytes(backup.sizeBytes)} · {new Date(backup.createdAt).toLocaleString("de-DE")}</p>
-                    </div>
-                  </div>
-                  <Button variant="secondary" onClick={() => runRestore(backup.name)} disabled={busy !== null}>Wiederherstellen</Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-        <CardFooter>
-          <div className="connector-actions">
-            <Button variant="ghost" onClick={() => runAction("backup").then(() => void loadBackups())} disabled={busy !== null || !status?.installation.databaseReady}>Backup erstellen</Button>
-            <Button variant="ghost" onClick={() => void loadBackups()} disabled={busy !== null}>Liste neu laden</Button>
-          </div>
-        </CardFooter>
-      </Card>
+      <HostBackupsCard
+        backups={backups}
+        disabled={busy !== null}
+        canBackup={Boolean(status?.installation.databaseReady)}
+        onCreate={() => void runAction("backup").then(() => void loadBackups())}
+        onReload={() => void loadBackups()}
+        onRestore={(name) => void runRestore(name)}
+      />
 
-      <Card>
-        <CardHeader><CardTitle>Host-Logs</CardTitle></CardHeader>
-        <CardContent>
-          <div className="connector-actions">
-            {LOG_TARGETS.map(({ id, label }) => (
-              <Button key={id} variant={logTarget === id ? "secondary" : "ghost"} onClick={() => loadLogs(id)}>{label}</Button>
-            ))}
-          </div>
-          <pre className="connector-log-output">{logs.length ? logs.join("\n") : "Noch keine Logzeilen geladen."}</pre>
-        </CardContent>
-      </Card>
+      <HostLogsCard target={logTarget} lines={logs} onSelect={(next) => void loadLogs(next)} />
     </div>
   );
 }

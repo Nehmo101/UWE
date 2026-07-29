@@ -1,22 +1,24 @@
 # UWE Command Center
 
 Das **UWE Command Center** ist die zentrale Desktop-Anlaufstation für ein
-All-in-one-Setup: UWE Studio, UWE Portal, Datenhaltung und lokale RTX-Leistung
-laufen auf demselben Windows-PC und werden aus einer Oberfläche bedient.
+All-in-one-Setup: UWE Studio, UWE Portal, Datenhaltung und lokale Rechenleistung
+laufen auf demselben PC und werden aus einer Oberfläche bedient.
 
-Der bisherige Produktname „UWE RTX Connector Client“ bleibt nur in internen
-Paket-, Release- und Datenpfaden erhalten. Dadurch bleiben bestehende
-Konfigurationen, Tokens, Modelle und Updater-Installationen kompatibel.
+Die früheren Produktnamen „UWE RTX Connector Client“ (App) und „RTX Host
+Connector“ (Worker) heißen heute **UWE Command Center** und **Maschinenraum**.
+In internen Paket-, Release- und Datenpfaden bleiben die alten Bezeichner
+bewusst stehen — dadurch bleiben bestehende Konfigurationen, Tokens, Modelle und
+Updater-Installationen kompatibel. Details: [rtx-connector.md](./rtx-connector.md).
 
 ## Verantwortungsgrenzen
 
 | Baustein | Verantwortung |
 |---|---|
-| Command-Center-UI | Status, Einrichtung, Start/Stopp, Neustart, Backup, Logs und RTX-Konfiguration |
+| Command-Center-UI | Ersteinrichtung, Status, Start/Stopp, Neustart, Backup, Logs und Maschinenraum-Konfiguration |
 | Desktop-Host-Steuerung | Ein idempotenter lokaler Orchestrator für Studio und Portal |
 | UWE Studio | Source of Truth, Admin, Daten und Connector-Tokens |
 | UWE Portal | Spieleransicht; weiterhin strikt player-safe |
-| RTX Connector | Outbound-only Worker für Ollama, Audio, Bilder und lokale Geräte |
+| Maschinenraum | Outbound-only Worker für Ollama, Audio, Bilder und lokale Geräte |
 
 Es wird bewusst **kein zweiter lokaler Webserver** für das Command Center
 gestartet. Die Tauri-App ruft dieselbe kleine Host-Steuerung auf, die auch ohne
@@ -26,11 +28,12 @@ UI diagnostiziert werden kann. Das reduziert Ports, Prozesse und Fehlerquellen.
 
 ```text
 UWE Command Center
+  ├─ Ersteinrichtung       → Bereiche wählen, alles in einem Durchgang installieren
   ├─ Einrichten/Reparieren → pnpm, Prisma, Migration, optional Seed, Release-Build
-  ├─ Starten/Stoppen       → Studio/Portal auf den in .env festgelegten Ports
+  ├─ Starten/Stoppen       → gewählte Apps auf den in .env festgelegten Ports
   ├─ Überwachen            → Healthchecks, Prozesse, CPU/RAM/Disk/GPU, Logs
   ├─ Sichern               → SQLite-Backup in AppData
-  └─ RTX verbinden         → ausgehender Connector zum lokalen Studio
+  └─ Maschinenraum         → ausgehender Worker zum lokalen Studio
 ```
 
 Das Command Center führt absichtlich **kein stilles** `git pull` aus. Updates
@@ -60,20 +63,71 @@ zufällig, Cookies bleiben bei lokalem HTTP funktionsfähig und die Ports lassen
 sich über `STUDIO_PORT`/`PORTAL_PORT` ändern (Standard 3000/3001). So kann
 eine installierte Instanz konfliktfrei neben einem Dev-Server laufen.
 
+## Ersteinrichtungs-Assistent (1-Klick-Installation)
+
+Beim allerersten Start springt der Assistent von selbst auf und fragt, **was auf
+diesem Rechner laufen soll**. Aus der Antwort wird eine vollständige lokale
+Installation — ohne einen einzigen Host-Befehl von Hand.
+
+```text
+Schritt 1  Bereiche wählen   → Studio · Portal · Brain · Family · Startseite
+                               (Vorlagen: Komplett / Nur D&D / Nur privat / Haushalt)
+                               + Demo-Grundbestand ja/nein
+Schritt 2  Owner-Konto       → Name, E-Mail, Passwort (optional, später nachholbar)
+Schritt 3  Jetzt installieren → ein Klick, Fortschritt live
+Schritt 4  Fertig            → Links auf die installierten Bereiche
+```
+
+Was „Jetzt installieren“ in einem Durchgang erledigt:
+
+1. Auswahl festschreiben (`install-selection.json` neben den Host-Daten).
+2. Abhängigkeiten installieren, Prisma-Clients generieren.
+3. **Nur die gebrauchten Datenbanken** migrieren: `uwe.db` immer (Konten und
+   Einstellungen), `uwe-brain.db` nur mit Brain, `uwe-family.db` nur mit Family.
+4. Optional den Demo-Grundbestand einspielen — nur bei frischer Datenbank,
+   bestehende Daten werden nie überschrieben.
+5. Den lokalen Maschinenraum idempotent registrieren.
+6. Produktions-Builds **nur der gewählten Apps** erzeugen.
+7. Owner-Konto anlegen (mit den Häkchen der gewählten Bereiche) und auf Wunsch
+   direkt starten.
+
+Die Auswahl ist danach die verbindliche Wahrheit für „gehört dazu": Statuskarten,
+`Alles starten` und der Fortschrittsbalken beim Update zeigen nur die
+installierten Bereiche. Ohne Brain wartet UWE also nicht auf einen Brain-Build,
+der nie kommt.
+
+**Nachträglich ändern:** Command Center → **Bereiche ändern**. Der Assistent
+läuft dann erneut; die zusätzlichen Datenbanken und Builds werden nachgezogen.
+Abgewählte Bereiche werden nur nicht mehr gestartet — ihre Daten bleiben liegen.
+
+**Bestandsinstallationen** bleiben unberührt: Fehlt die Auswahl-Datei, gilt „alle
+Apps“ und der Assistent springt nicht auf. Ein „Später“ merkt sich der Client in
+`installWizardCompleted`.
+
+CLI-Äquivalent (ohne Oberfläche prüfbar):
+
+```bash
+node tools/uwe-host-command-center/src/desktop-host-cli.ts get-install-selection --root /pfad/zu/UWE
+echo '{"apps":["studio","portal"],"seedDemoContent":false}' \
+  | node tools/uwe-host-command-center/src/desktop-host-cli.ts set-install-selection --root /pfad/zu/UWE
+node tools/uwe-host-command-center/src/desktop-host-cli.ts setup --root /pfad/zu/UWE
+```
+
 ## Bedienung
 
 1. UWE-Projektordner wählen und Einstellungen speichern.
 2. **UWE einrichten** ausführen. Das installiert Abhängigkeiten, migriert die
    Datenbank, registriert idempotent einen lokalen Connector und erzeugt die
    Produktions-Builds. Eine vorherige Remote-Konfiguration wird einmalig gesichert.
-3. **Alles starten** startet Studio, Portal und die bereits provisionierte RTX-Verbindung.
-4. Unter **RTX einrichten** Ollama, Modelle und optionale lokale
+3. **Alles starten** startet die gewählten Apps und den bereits provisionierten
+   Maschinenraum.
+4. Unter **Maschinenraum** Ollama, Modelle und optionale lokale
    Executor konfigurieren.
 5. Optional unter **Lokales Hosting** den Haken **KI-Jobs direkt zustellen
    (Hybrid-Transport)** setzen: KI-Anfragen gehen dann ohne Warteschlangen-Umweg
    über die lokale Verbindung an den Connector, die Queue bleibt als Fallback.
-   Empfohlen im All-in-one-Setup (UWE und RTX auf demselben Rechner); greift beim
-   nächsten Start der RTX-Verbindung. Der Haken entspricht dem Transport-Feld
+   Empfohlen im All-in-one-Setup (UWE und Maschinenraum auf demselben Rechner);
+   greift beim nächsten Start des Maschinenraums. Der Haken entspricht dem Transport-Feld
    unter „Verbindung“ (`hybrid`/`queue`; eine dort gewählte reine
    Direktverbindung bleibt erhalten).
 
@@ -104,7 +158,7 @@ Details: [docs/engineering/rtx-connector-release.md](./engineering/rtx-connector
 ## Sicherheit
 
 - Studio, Portal und Ollama werden nicht automatisch ins Internet exponiert.
-- Der RTX Connector bleibt outbound-only; auf dem RTX-PC wird kein API-Port
+- Der Maschinenraum bleibt outbound-only; auf dem RTX-PC wird kein API-Port
   geöffnet.
 - Secrets werden weder in Statusantworten noch in Logs ausgegeben.
 - UWE-Daten und Modelle bleiben außerhalb des Git-Checkouts erhalten.

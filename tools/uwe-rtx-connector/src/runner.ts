@@ -354,7 +354,7 @@ export class ConnectorRunner {
   }
 
   async start(): Promise<void> {
-    log.info(`RTX Host Connector startet → ${this.config.hostUrl}`, { name: this.config.name });
+    log.info(`Maschinenraum startet → ${this.config.hostUrl}`, { name: this.config.name });
     await this.refresh();
     log.info("Lokale Fähigkeiten erkannt.", {
       capabilities: this.snapshot.capabilities,
@@ -433,6 +433,6 @@ export class ConnectorRunner {
     } catch {
       // Host may be unreachable during shutdown — that is fine.
     }
-    log.info("RTX Host Connector beendet.");
+    log.info("Maschinenraum beendet.");
   }
 }

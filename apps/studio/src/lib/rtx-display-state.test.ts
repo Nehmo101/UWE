@@ -51,6 +51,6 @@ describe("rtx display state", () => {
   it("labels connector and inference sources", () => {
     assert.equal(resolveRtxReadinessSourceLabel(status({ source: "connector" })), "connector");
     assert.equal(resolveRtxReadinessSourceLabel(status({ source: "inference" })), "inference");
-    assert.equal(rtxReadinessSourceLabelDe(status({ source: "connector" })), "RTX Host Connector");
+    assert.equal(rtxReadinessSourceLabelDe(status({ source: "connector" })), "Maschinenraum");
   });
 });

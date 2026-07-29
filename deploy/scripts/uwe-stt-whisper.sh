@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reference speech-to-text wrapper for the UWE RTX Host Connector.
+# Reference speech-to-text wrapper for the UWE Maschinenraum.
 #
 # UWE ships no speech engine on purpose: Ollama has no audio endpoint, and
 # pinning one Python/whisper stack would put a manual install step back on the

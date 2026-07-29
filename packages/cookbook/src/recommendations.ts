@@ -26,7 +26,7 @@ const USE_CASE_ORDER: CookbookUseCaseId[] = [
 function pickEngine(model: CookbookModelEntry): CookbookRecommendation["engineId"] {
   // The legacy inbound RTX Agent (`RTX_AGENT_URL`) is no longer a recommended
   // engine — local inference runs via Ollama / OpenAI-compatible servers and the
-  // outbound RTX Host Connector queue.
+  // outbound Maschinenraum queue.
   if (process.env.AI_INFERENCE_PROVIDER === "openai_compatible") {
     return "openai_compatible";
   }

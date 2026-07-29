@@ -93,7 +93,7 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
 
 /**
  * Resolve the connector-side runtime config from the environment. Used by the
- * RTX Host Connector process; the host never calls this.
+ * Maschinenraum process; the host never calls this.
  */
 export function resolveConnectorRuntimeConfig(
   env: NodeJS.ProcessEnv = process.env,
@@ -118,7 +118,7 @@ export function resolveConnectorRuntimeConfig(
     return { ok: false, reason: "UWE_CONNECTOR_TOKEN fehlt — am Host erzeugen und hier eintragen." };
   }
 
-  const name = env.UWE_CONNECTOR_NAME?.trim() || "RTX Host Connector";
+  const name = env.UWE_CONNECTOR_NAME?.trim() || "UWE Maschinenraum";
   const rawTransportMode = env.UWE_CONNECTOR_TRANSPORT?.trim().toLowerCase();
   const legacyQueueDisabled = env.UWE_CONNECTOR_QUEUE_ENABLED?.trim().toLowerCase() === "false";
   const transportMode: ConnectorTransportMode = isConnectorTransportMode(rawTransportMode)

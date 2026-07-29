@@ -29,7 +29,7 @@ Hauptdomain trotzdem in Studio — die Ingress-Seite davon steht in
 | `/var/log/uwe` | Anwendungslogs |
 | `/var/backups/uwe` | Backups |
 | `uwe.service` | Offizieller Studio-/Portal-/Startseiten-Dienst |
-| `uwe-rtx-connector.service` | Optionaler outbound RTX Connector; nur mit gültiger Connector-`.env` aktiviert |
+| `uwe-rtx-connector.service` | Optionaler outbound Maschinenraum; nur mit gültiger Connector-`.env` aktiviert |
 
 Es gibt **keinen** parallelen Legacy-Flow mehr (`uwe-host.service`, `.uwe-host`, repo-lokale `.env` für Production).
 

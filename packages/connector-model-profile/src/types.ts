@@ -1,5 +1,5 @@
 /**
- * Persisted model profile store for the UWE RTX Connector Client.
+ * Persisted model profile store for the UWE Command Center.
  *
  * The connector discovers local models (Ollama / LM Studio / llama.cpp APIs and
  * `.gguf` files on disk) but only shares the ones the user explicitly enables.

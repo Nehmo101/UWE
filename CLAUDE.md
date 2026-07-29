@@ -100,7 +100,14 @@ das jeweilige Häkchen im Command Center setzen.
   Die Aufteilung kommt aus `PRISMA_MODEL_BOUNDARIES`; `scripts/generate-brain-schema-split.mjs`
   schreibt daraus die drei Prisma-Schemata.
 - **UWE Host**: Linux + Node.js 22 + `pnpm` + `systemd` (`deploy/systemd/uwe.service`).
-- **RTX Host Connector**: optionaler **outbound** Worker (`tools/uwe-rtx-connector`).
+- **Maschinenraum**: optionaler **outbound** Worker (`tools/uwe-rtx-connector`).
+  Früher „RTX Host Connector“ — umbenannt wurde nur der Produktname; Ordner,
+  Paketnamen, `UWE_CONNECTOR_*`, Token-Präfix `uwec_` und die systemd-Unit
+  bleiben eingefroren ([docs/rtx-connector.md](docs/rtx-connector.md)).
+- **UWE Command Center**: Desktop-App (`apps/rtx-connector-client`) mit
+  Ersteinrichtungs-Assistent. Welche Apps eine Installation betreibt, steht in
+  `install-selection.json` neben den Host-Daten und steuert Migrationen, Builds,
+  Statuskarten und Start ([docs/command-center.md](docs/command-center.md)).
 - **Cloudflare Tunnel / Access**: optional davor.
 - **CI/Agenten**: nur GitHub Cloud.
 - **Kein** Docker, **kein** Windows-One-Click-Installer, **kein** inbound RTX-Agent als aktiver Pfad.

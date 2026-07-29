@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       connector,
       token,
       warning:
-        "Das Connector-Token wird nur einmal angezeigt. Trage es als UWE_CONNECTOR_TOKEN im RTX Connector ein — es wird nicht erneut ausgegeben.",
+        "Das Connector-Token wird nur einmal angezeigt. Trage es als UWE_CONNECTOR_TOKEN im Maschinenraum ein — es wird nicht erneut ausgegeben.",
     },
     { status: 201 },
   );

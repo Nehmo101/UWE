@@ -106,7 +106,7 @@ export interface CreateConnectorRunnerOptions {
  * Merge the Tauri-owned client config (`config.json`) and the persisted Spotify
  * session into `process.env`, so capability detection and executors pick up the
  * local audio/image commands and the Spotify token/device the user configured
- * in the RTX Connector Client. Existing process env values always win, mirroring
+ * in the Command Center. Existing process env values always win, mirroring
  * `loadConnectorEnvFile` (so the desktop shell may still override via env).
  *
  * Spotify tokens stay on disk and in `process.env` only — never logged. The

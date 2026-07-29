@@ -8,7 +8,7 @@ import { enforceRateLimit } from "@uwe/security";
 /**
  * Connector API authentication.
  *
- * RTX Host Connectors authenticate exclusively with their connector token
+ * Maschinenräume authenticate exclusively with their connector token
  * (Authorization: Bearer uwec_…). This is deliberately separate from the user
  * session / Studio API token flow — a connector is a worker, never a user, and
  * must not be able to read admin or user data. Only the token hash is stored,
@@ -48,7 +48,7 @@ export async function authenticateConnector(request: Request): Promise<Connector
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "Connector ist deaktiviert. Im Studio unter System → RTX Connector reaktivieren." },
+        { error: "Maschinenraum ist deaktiviert. Im Command Center unter Maschinenraum reaktivieren." },
         { status: 403 },
       ),
     };

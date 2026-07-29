@@ -76,7 +76,7 @@ Diese Datei war die **Source of Truth** für geplante, aber noch nicht produktio
 | Wave 3 — Legacy design-v2 Wrapper bereinigt; Settings/Admin/Portal auth/share | ✅ done |
 | Wave 4 — V1 shared-ui shells + Auth-UI + E2E + legacy-ui-disconnected | ✅ done |
 
-Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, Portal, RTX Connector) nutzen denselben Typ.
+Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, Portal, Maschinenraum) nutzen denselben Typ.
 
 ### Image Studio (`docs/IMAGE_STUDIO.md`)
 

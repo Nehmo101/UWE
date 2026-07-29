@@ -71,10 +71,10 @@ Siehe [life-brain-privacy.md](./life-brain-privacy.md).
 
 ## Homelab Cockpit (`/hardware`)
 
-- **Service-Status:** UWE Studio, Portal, DB, Cloudflare Tunnel, RTX Host Connector, Ollama, Backup
+- **Service-Status:** UWE Studio, Portal, DB, Cloudflare Tunnel, Maschinenraum, Ollama, Backup
 - **Runbooks:** Nach Neustart, UWE starten, Logs/SSH/Cloudflare/DB/RTX prüfen
 - **Security Checklist:** SSH, User, Cloudflare Access, RTX nicht öffentlich, Secrets, Firewall
 - **Fehlerhistorie:** pro Gerät in `metadata.errorHistory` — aggregiert auf der Hardware-Seite
 - **Today:** System-Ampel mit live DB/Backup/Cloudflare; kritische Homelab-Warnungen verlinken auf `/hardware`
 
-RTX Host Connector und Ollama dürfen **niemals** öffentlich exponiert werden — URL-Warnungen auf Gerätekarten und in `/today`.
+Maschinenraum und Ollama dürfen **niemals** öffentlich exponiert werden — URL-Warnungen auf Gerätekarten und in `/today`.

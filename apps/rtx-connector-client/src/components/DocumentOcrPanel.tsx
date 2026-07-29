@@ -205,7 +205,7 @@ export function DocumentOcrPanel({ store, onPullModel, onEnableForUwe }: Props) 
 
           <StepRow state="todo" title="3 · Im Studio als Vision-Modell wählen">
             <p className="connector-muted">
-              Studio → System → RTX Connector → Workflow-Modelle: Slot <code>Vision</code> auf
+              Command Center → Modelle → Workflow-Modelle: Slot <code>Vision</code> auf
               dieses Modell setzen. Ohne gesetzten Slot nimmt UWE ohnehin Unlimited-OCR als
               Vorgabe — die Wahl ist nur nötig, wenn dort ein anderes Modell steht.
             </p>

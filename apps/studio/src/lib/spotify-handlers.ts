@@ -51,8 +51,8 @@ export async function getSpotifyStatus(worldSlug: string) {
       configured: true,
       connected: true,
       via: "rtx-connector",
-      spotifyDisplayName: "RTX Connector",
-      message: "RTX Connector",
+      spotifyDisplayName: "Maschinenraum",
+      message: "Maschinenraum",
     });
   }
 

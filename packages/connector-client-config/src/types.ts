@@ -1,5 +1,5 @@
 /**
- * Persisted local settings for the UWE RTX Connector Client (Tauri desktop app).
+ * Persisted local settings for the UWE Command Center (Tauri desktop app).
  * This package defines the shape and validation only — persistence is handled by Tauri.
  */
 
@@ -20,8 +20,14 @@ export interface ConnectorClientConfig {
   transportMode: ConnectorTransportMode;
   /** Compatibility projection. Prefer `transportMode` in new code. */
   queueEnabled: boolean;
-  /** First-run setup wizard has been completed. */
+  /** Connection wizard (host URL, token, name) has been completed or dismissed. */
   wizardCompleted: boolean;
+  /**
+   * First-run install wizard ("Was soll installiert werden?") has been completed
+   * or explicitly postponed. Separate from `wizardCompleted`: one sets up the
+   * local UWE installation, the other the outbound Maschinenraum connection.
+   */
+  installWizardCompleted: boolean;
   /** Connect to the host automatically when the client starts. */
   autoConnect: boolean;
   /** Start the client window minimized. */
@@ -40,7 +46,7 @@ export interface ConnectorClientConfig {
   privacyMode: boolean;
   /**
    * Spotify application client id used for the connector-local OAuth flow.
-   * Spotify auth lives only on the RTX Connector Client — never on the host.
+   * Spotify auth lives only on the Command Center — never on the host.
    * Empty until the user pastes their Spotify app credentials.
    */
   spotifyClientId: string;

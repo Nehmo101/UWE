@@ -1,7 +1,7 @@
 /**
  * Read the Tauri-owned `config.json` from the connector client data directory.
  *
- * The Tauri shell persists the RTX Connector Client settings (host URL, token,
+ * The Tauri shell persists the Command Center settings (host URL, token,
  * Spotify OAuth credentials, audio/image commands). The Node connector core and
  * the one-shot CLI helpers need a subset of those settings — Spotify OAuth
  * credentials and the local audio/image commands — to wire executors and run

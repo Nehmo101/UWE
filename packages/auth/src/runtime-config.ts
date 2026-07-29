@@ -2,8 +2,19 @@
 // Agents often colocate these with getSessionCookieOptions / getUweRuntimeConfig.
 export { PREVIEW_COOKIE_NAME, SESSION_COOKIE_NAME } from "./session";
 import { withRuntimeEnvOverrides } from "./runtime-env-overrides";
+import type { SessionCookieSameSite } from "./runtime-env-parse";
+import {
+  isLoopbackUrl,
+  normalizeAppPath,
+  normalizeCookieDomain,
+  normalizePublicAppUrl,
+  parseAllowedCorsOrigins,
+  parseBoolEnv,
+  parsePublicUrlHost,
+  parseSameSite,
+} from "./runtime-env-parse";
 
-export type SessionCookieSameSite = "lax" | "strict" | "none";
+export type { SessionCookieSameSite } from "./runtime-env-parse";
 
 export interface UweRuntimeConfig {
   isProduction: boolean;
@@ -52,118 +63,14 @@ export interface SessionCookieOptions {
   domain?: string;
 }
 
-function parseBoolEnv(value: string | undefined, defaultValue: boolean): boolean {
-  if (value === undefined || value.trim() === "") {
-    return defaultValue;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "true" || normalized === "1" || normalized === "yes") {
-    return true;
-  }
-  if (normalized === "false" || normalized === "0" || normalized === "no") {
-    return false;
-  }
-
-  return defaultValue;
-}
-
-function parseSameSite(value: string | undefined): SessionCookieSameSite {
-  const normalized = value?.trim().toLowerCase();
-  if (normalized === "strict" || normalized === "none") {
-    return normalized;
-  }
-  return "lax";
-}
-
-/**
- * Normalize SESSION_COOKIE_DOMAIN. Empty/unset → null (host-only cookie).
- * Accepts `example.org` or `.example.org` (leading dot = all subdomains).
- */
-function normalizeCookieDomain(value: string | undefined): string | null {
-  const trimmed = value?.trim().toLowerCase();
-  if (!trimmed) {
-    return null;
-  }
-  // Guard against obvious mistakes (scheme, path, port, whitespace).
-  if (/[/:\s]/.test(trimmed)) {
-    return null;
-  }
-  return trimmed;
-}
-
-function parseAllowedCorsOrigins(value: string | undefined): string[] {
-  if (!value?.trim()) {
-    return [];
-  }
-
-  const origins: string[] = [];
-  for (const part of value.split(",")) {
-    const origin = part.trim();
-    if (!origin) {
-      continue;
-    }
-
-    try {
-      origins.push(new URL(origin).toString().replace(/\/$/, ""));
-    } catch {
-      // ignore invalid origins — default remains same-origin only
-    }
-  }
-
-  return origins;
-}
-
-function normalizePublicAppUrl(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const url = new URL(trimmed);
-    return url.toString().replace(/\/$/, "");
-  } catch {
-    return null;
-  }
-}
-
 export function isProductionEnv(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.NODE_ENV?.trim() === "production";
-}
-
-function normalizeAppPath(
-  value: string | undefined,
-  fallback: string,
-  options?: { allowRoot?: boolean },
-): string {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return fallback;
-  }
-  if (trimmed === "/") {
-    return options?.allowRoot ? "/" : fallback;
-  }
-  const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return withLeading.replace(/\/+$/, "") || fallback;
 }
 
 const DEV_STUDIO_URL = "http://localhost:3000";
 const DEV_PORTAL_URL = "http://localhost:3001";
 const DEV_BRAIN_URL = "http://localhost:3002";
 const DEV_FAMILY_URL = "http://localhost:3004";
-
-function parsePublicUrlHost(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return null;
-  }
-  try {
-    return new URL(trimmed).host.toLowerCase();
-  } catch {
-    return null;
-  }
-}
 
 /** True when Portal and Studio are configured on different public hostnames. */
 export function isSplitHostnameDeployment(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -515,16 +422,6 @@ export function resolveUweAppUrls(env: NodeJS.ProcessEnv = process.env): UweAppU
     portalPath: pathInfo.portalPath,
     deploymentModel: pathInfo.deploymentModel,
   };
-}
-
-function isLoopbackUrl(value: string | null): boolean {
-  if (!value) return false;
-  try {
-    const hostname = new URL(value).hostname.toLowerCase();
-    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-  } catch {
-    return false;
-  }
 }
 
 export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRuntimeConfig {

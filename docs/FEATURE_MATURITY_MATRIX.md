@@ -77,7 +77,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 
 - **Docker** und **Windows-One-Click-Installer** — entfernt ([removed-legacy-runtime.md](removed-legacy-runtime.md)).
 - **Inbound RTX-Agent** — Standalone-Tool entfernt; nur noch deprecateter
-  Client-Shim. Aktiv: outbound **RTX Host Connector** + direktes Ollama/LM Studio.
+  Client-Shim. Aktiv: outbound **Maschinenraum** + direktes Ollama/LM Studio.
 
 ---
 
@@ -488,7 +488,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | UI-Stack | Tailwind v4, shadcn-style Primitives, Lucide React, Design V2 default-on |
 | Studio | `StudioShell`, `WorldShell`, `SystemShell`, `SettingsShell` — Wave 1–2 |
 | Portal | `PortalShell` (AppShell) + design-v2 `PortalShellV2` bridge — Wave 1 |
-| RTX Connector | `ConnectorShell` + `connector-nav.ts` — Wave 2 |
+| Maschinenraum | `ConnectorShell` + `connector-nav.ts` — Wave 2 |
 | Nutzbar | **Ja** (Studio/Portal/Connector) |
 
 Wave-Übersicht:

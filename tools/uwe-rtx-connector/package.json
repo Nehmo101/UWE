@@ -2,7 +2,7 @@
   "name": "@uwe/rtx-connector",
   "version": "1.0.0",
   "private": true,
-  "description": "UWE RTX Host Connector — optional outbound worker that claims jobs from the UWE Host (local AI, audio, spotify). Never required for UWE to be online.",
+  "description": "UWE Maschinenraum (formerly RTX Host Connector) — optional outbound worker that claims jobs from the UWE Host (local AI, audio, spotify). Never required for UWE to be online.",
   "type": "module",
   "bin": {
     "uwe-rtx-connector": "./src/index.ts"

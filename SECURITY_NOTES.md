@@ -1,4 +1,4 @@
-# Sicherheitsnotizen — KI-System (Brain, RTX Connector, Cloud)
+# Sicherheitsnotizen — KI-System (Brain, Maschinenraum, Cloud)
 
 > **Ergänzung zu [SECURITY.md](SECURITY.md)** — nicht die alleinige Source of Truth. Für Auth/API/Uploads siehe SECURITY.md; für QA-Matrix siehe [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md). Historischer Review: [docs/security/SECURITY_REVIEW.md](docs/security/SECURITY_REVIEW.md).
 
@@ -9,7 +9,7 @@
 > Brain-Inhalte sind hart local-only; D&D-Kontext ist konfigurierbar und hat
 > den Default `CLOUD_ALLOWED`, nachdem `dm_only` entfernt wurde.
 
-Gilt für UWE Studio, Brain, RTX Host Connector / lokale RTX Worker und Cloud-KI.
+Gilt für UWE Studio, Brain, Maschinenraum / lokale RTX Worker und Cloud-KI.
 
 ---
 
@@ -20,7 +20,7 @@ UWE ist **alleiniger Besitzer** aller Kampagnen- und Brain-Daten. Die Architektu
 | Komponente | Speichert UWE-Daten? | Erreichbarkeit |
 |------------|----------------------|----------------|
 | **UWE Host** (Laptop) | Ja — DB, Brain, Embeddings, Mail | Studio/Portal optional über Tunnel/Proxy; Brain nur lokal/LAN |
-| **RTX Host Connector / lokaler RTX Worker** (RTX-PC) | Nein — nur Inferenz-/Job-Worker | Connector outbound; direkte Worker nur Heimnetz, Token-geschützt |
+| **Maschinenraum / lokaler RTX Worker** (RTX-PC) | Nein — nur Inferenz-/Job-Worker | Connector outbound; direkte Worker nur Heimnetz, Token-geschützt |
 | **Cloud-KI** | Keine UWE-Source-of-Truth; verarbeitet nur policy-konformen, minimierten Kontext | Internet |
 
 **Grundregel:** Die persistente Source of Truth bleibt lokal in UWE. Der
@@ -58,7 +58,7 @@ Die Durchsetzung erfolgt **serverseitig** (Privacy Guard / AI Router) — nicht 
 
 ## RTX nicht öffentlich exposen
 
-Der RTX Host Connector arbeitet outbound und braucht keinen öffentlichen Port. Direkte RTX Worker, Ollama oder LM Studio dürfen ebenfalls **nicht** über das Internet erreichbar sein:
+Der Maschinenraum arbeitet outbound und braucht keinen öffentlichen Port. Direkte RTX Worker, Ollama oder LM Studio dürfen ebenfalls **nicht** über das Internet erreichbar sein:
 
 - Kein Port-Forwarding am Router auf den RTX-PC
 - Kein Cloudflare-Tunnel zu Ollama, LM Studio oder direkten RTX Worker-Endpunkten
@@ -72,7 +72,7 @@ Cloudflare leitet **nur** an UWE weiter, nicht an lokale RTX-Dienste.
 ## Token verwenden
 
 - `RTX_SERVICE_TOKEN` muss **lang/zufällig** sein, wenn ein direkter RTX Worker-Endpunkt genutzt wird
-- Connector-Tokens werden im Studio erzeugt und vom RTX Host Connector outbound verwendet
+- Connector-Tokens werden im Studio erzeugt und vom Maschinenraum outbound verwendet
 - Token nur in `.env` auf Server/RTX-PC — **nie** in Git, Frontend, URLs oder Logs
 - Jeder Request an sensible direkte Worker-Endpunkte erfordert `Authorization: Bearer <token>`
 - Fehlender oder falscher Token → Request abgelehnt

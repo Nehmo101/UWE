@@ -35,7 +35,7 @@ const WIZARD_STEPS: WizardStep[] = [
   {
     id: 2,
     title: "Connector Token",
-    description: "Füge den Token aus Studio → System → RTX Connector ein.",
+    description: "Füge den Token aus dem Command Center → Maschinenraum ein.",
   },
   {
     id: 3,

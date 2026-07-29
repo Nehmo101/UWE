@@ -1,4 +1,4 @@
-# UWE RTX Host Connector
+# UWE Maschinenraum
 
 Optional **outbound** worker for the RTX PC (Windows or Linux). It connects to
 the UWE Host, receives work through the queue, a direct stream, or both, runs it
@@ -6,12 +6,12 @@ locally (AI, audio, spotify) and reports results.
 
 The connector is **never required** for UWE to be online. The website, Studio
 and Portal run entirely on the host. When the connector is offline, local
-AI/audio simply show "RTX Connector offline".
+AI/audio simply show "Maschinenraum offline".
 
 ## Direction of communication
 
 ```
-RTX Connector  ───────▶  UWE Host        (correct: outbound only)
+Maschinenraum  ───────▶  UWE Host        (correct: outbound only)
 ```
 
 The connector either polls the host or opens a persistent outbound
@@ -20,7 +20,7 @@ RTX machine, so no public port, SSH or HTTP server is opened on the RTX side.
 
 ## Quick start
 
-1. In Studio open **System → RTX Connector** and create a connector token.
+1. In Studio open **System → Maschinenraum** and create a connector token.
 2. On the RTX machine, with the repo checked out and `pnpm install` run:
 
    ```bash

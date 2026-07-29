@@ -10,7 +10,7 @@ import {
   type ConnectorTransportMode,
 } from "./types";
 
-const DEFAULT_CONNECTOR_NAME = "RTX Host Connector";
+const DEFAULT_CONNECTOR_NAME = "UWE Maschinenraum";
 
 const trayModeSchema = z.enum(CONNECTOR_TRAY_MODES);
 const transportModeSchema = z.enum(CONNECTOR_TRANSPORT_MODES);
@@ -22,6 +22,7 @@ const connectorClientConfigSchema = z.object({
   queueEnabled: z.boolean(),
   transportMode: transportModeSchema,
   wizardCompleted: z.boolean(),
+  installWizardCompleted: z.boolean(),
   autoConnect: z.boolean(),
   minimizedStart: z.boolean(),
   autostartWindows: z.boolean(),
@@ -61,6 +62,7 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     queueEnabled: true,
     transportMode: "queue",
     wizardCompleted: false,
+    installWizardCompleted: false,
     autoConnect: true,
     minimizedStart: false,
     autostartWindows: false,
@@ -127,6 +129,10 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
       typeof input.wizardCompleted === "boolean"
         ? input.wizardCompleted
         : defaults.wizardCompleted,
+    installWizardCompleted:
+      typeof input.installWizardCompleted === "boolean"
+        ? input.installWizardCompleted
+        : defaults.installWizardCompleted,
     autoConnect:
       typeof input.autoConnect === "boolean" ? input.autoConnect : defaults.autoConnect,
     minimizedStart:

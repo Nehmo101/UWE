@@ -1,5 +1,5 @@
 /**
- * Connector capabilities — what a worker (RTX Host Connector) is able to do
+ * Connector capabilities — what a worker (Maschinenraum) is able to do
  * locally. Reported by the connector on every heartbeat; the host uses them to
  * decide which queued jobs a connector may claim.
  */

@@ -42,12 +42,12 @@ pnpm test:security
 pnpm build:release
 ```
 
-The checks target the Linux Host + outbound RTX Connector path.
+The checks target the Linux Host + outbound Maschinenraum path.
 
 ## Production (systemd, recommended)
 
 A one-shot setup script detects `/etc/os-release` and provisions Node, dependencies,
-the database, `uwe.service`, firewall rules and optional host-update/RTX Connector
+the database, `uwe.service`, firewall rules and optional host-update/Maschinenraum
 assets:
 
 ```bash

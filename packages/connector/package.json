@@ -2,7 +2,7 @@
   "name": "@uwe/connector",
   "version": "1.0.0",
   "private": true,
-  "description": "UWE Connector core — runtime roles, worker capabilities, queue lane/priority logic, and connector token hashing shared between UWE Host and the RTX Host Connector",
+  "description": "UWE Connector core — runtime roles, worker capabilities, queue lane/priority logic, and connector token hashing shared between UWE Host and the Maschinenraum (formerly RTX Host Connector)",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

@@ -58,7 +58,7 @@ export async function executeMailChat(
     return {
       kind: "unavailable",
       message:
-        "Lokale RTX-Inference ist offline. Der Mail-Assistent nutzt niemals Cloud-KI — bitte RTX Connector starten.",
+        "Lokale RTX-Inference ist offline. Der Mail-Assistent nutzt niemals Cloud-KI — bitte Maschinenraum starten.",
     };
   }
 

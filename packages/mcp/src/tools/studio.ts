@@ -123,7 +123,7 @@ function readTools(context: ToolContext): ToolDefinition[] {
       name: "studio_ai_models",
       title: "KI-Modelle auflisten",
       description:
-        "Verfügbare KI-Modelle je Provider (lokaler RTX-Connector, Cloud-Provider). Zeigt, was der AI-Router gerade anbieten kann.",
+        "Verfügbare KI-Modelle je Provider (lokaler Maschinenraum, Cloud-Provider). Zeigt, was der AI-Router gerade anbieten kann.",
       inputSchema: objectSchema({
         provider: stringArg("Optionaler Provider-Filter, z. B. 'local_rtx'."),
       }),

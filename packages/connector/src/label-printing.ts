@@ -1,5 +1,5 @@
 /**
- * Shared label-printing types and helpers for UWE Host ↔ RTX Connector.
+ * Shared label-printing types and helpers for UWE Host ↔ Maschinenraum.
  */
 
 export const LABEL_PRINT_FORMATS = ["pdf", "html"] as const;

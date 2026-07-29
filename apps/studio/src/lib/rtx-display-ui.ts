@@ -20,7 +20,7 @@ export function resolveRtxReadinessSourceLabel(status: RtxReadinessStatus): RtxR
 export function rtxReadinessSourceLabelDe(status: RtxReadinessStatus): string {
   switch (resolveRtxReadinessSourceLabel(status)) {
     case "connector":
-      return "RTX Host Connector";
+      return "Maschinenraum";
     default:
       return "Direkt (Inference)";
   }
@@ -38,14 +38,14 @@ export function rtxReadinessNextSteps(status: RtxReadinessStatus, inferenceEnabl
   if (!status.ready && inferenceEnabled) {
     if (status.source === "connector") {
       return [
-        "RTX Host Connector auf dem RTX-Rechner starten (Desktop-Client oder pnpm connector:start).",
-        "Token unter System → RTX Connector prüfen und Connector online melden.",
+        "Maschinenraum auf dem RTX-Rechner starten (Desktop-Client oder pnpm connector:start).",
+        "Token im Command Center unter Maschinenraum prüfen und Verbindung online melden.",
         "Brain-/Objekt-KI blockiert bei RTX offline — Allgemeiner Cloud-Chat bleibt möglich.",
       ];
     }
     return [
       "Prüfe, ob Ollama/LM Studio auf dem RTX-Rechner läuft (AI_INFERENCE_BASE_URL).",
-      "Optional: RTX Host Connector unter System → RTX Connector einrichten.",
+      "Optional: Maschinenraum im Command Center einrichten.",
       "Brain-/Objekt-KI blockiert bei RTX offline — Allgemeiner Cloud-Chat bleibt möglich.",
     ];
   }

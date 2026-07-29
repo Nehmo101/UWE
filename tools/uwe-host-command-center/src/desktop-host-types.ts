@@ -19,6 +19,15 @@ export const HOST_SERVICE_IDS = ["studio", "portal", "brain", "family", "landing
 
 export type HostServiceId = (typeof HOST_SERVICE_IDS)[number];
 
+/** Anzeigename je Dienst — eine Quelle für Statuskarten, Logs und Einrichtungsplan. */
+export const HOST_SERVICE_LABELS: Record<HostServiceId, string> = {
+  studio: "UWE Studio",
+  portal: "UWE Portal",
+  brain: "UWE Brain",
+  family: "UWE Family",
+  landing: "UWE Startseite",
+};
+
 export function isHostServiceId(value: unknown): value is HostServiceId {
   return typeof value === "string" && (HOST_SERVICE_IDS as readonly string[]).includes(value);
 }
@@ -45,6 +54,14 @@ export interface DesktopHostStatus {
     envReady: boolean;
     databaseReady: boolean;
     buildReady: boolean;
+    /** Installierte Apps laut Auswahl des Ersteinrichtungs-Assistenten. */
+    apps: HostServiceId[];
+    /**
+     * `false`, solange der Assistent nie gelaufen ist. Zusammen mit
+     * `buildReady` entscheidet das Command Center daraus, ob der
+     * Ersteinrichtungs-Assistent beim Start aufgehen soll.
+     */
+    selectionPersisted: boolean;
     message: string;
   };
   host: {

@@ -106,7 +106,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
           <SidebarSection title="Kontext">
             <p className="text-sm text-muted-foreground">
               Brain-Wissen wird dauerhaft in UWE gespeichert — getrennt vom privaten Life-Brain.
-              KI-Generierung läuft über den RTX Connector (lokal, kein Cloud-Fallback für Weltwissen).
+              KI-Generierung läuft über den Maschinenraum (lokal, kein Cloud-Fallback für Weltwissen).
             </p>
           </SidebarSection>
         </>

@@ -639,6 +639,27 @@ pub async fn get_host_env(root: Option<String>) -> Result<Value, String> {
     run_host_command_async("get-env", root, None).await
 }
 
+// ── Install selection ──────────────────────────────────────────────────────
+// Which UWE apps this installation runs (Studio / Portal / Brain / Family /
+// landing page) plus the demo-seed choice. Written once by the first-run
+// install wizard and read by setup, status, start and stop.
+
+#[tauri::command]
+pub async fn get_install_selection(root: Option<String>) -> Result<Value, String> {
+    run_host_command_async("get-install-selection", root, None).await
+}
+
+#[tauri::command]
+pub async fn set_install_selection(root: Option<String>, selection: Value) -> Result<Value, String> {
+    let body = serde_json::to_string(&selection)
+        .map_err(|error| format!("App-Auswahl konnte nicht serialisiert werden: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || {
+        run_host_command_with_stdin("set-install-selection", root, body)
+    })
+    .await
+    .map_err(|error| format!("Host-Aktion wurde unerwartet beendet: {error}"))?
+}
+
 #[tauri::command]
 pub async fn set_host_env(root: Option<String>, updates: Value) -> Result<Value, String> {
     let body = serde_json::to_string(&updates)
