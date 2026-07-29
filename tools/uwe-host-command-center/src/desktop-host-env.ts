@@ -9,7 +9,13 @@ import { resolveDesktopHostRoot } from "./desktop-host.ts";
  * frontend can mask them. Writing preserves the rest of the file (comments, order,
  * unlisted keys) and only touches the listed keys.
  */
-export type HostEnvGroup = "Ports" | "Öffentliche URLs" | "Auth & Sicherheit" | "KI" | "Mail";
+export type HostEnvGroup =
+  | "Ports"
+  | "Öffentliche URLs"
+  | "Auth & Sicherheit"
+  | "KI"
+  | "Mail"
+  | "Grenzen";
 export type HostEnvKind = "text" | "number" | "boolean" | "password";
 
 export interface HostEnvField {
@@ -35,6 +41,10 @@ export const HOST_ENV_FIELDS: HostEnvField[] = [
   { key: "CLOUDFLARE_TUNNEL", label: "Cloudflare-Tunnel aktiv", group: "Auth & Sicherheit", kind: "boolean" },
   { key: "BRAIN_PUBLIC_TUNNEL", label: "Brain öffentlich (Opt-in)", group: "Auth & Sicherheit", kind: "boolean", help: "Brain über den Tunnel veröffentlichen (owner-gated, 2FA vorausgesetzt)." },
   { key: "BRAIN_EXPOSURE", label: "Brain-Bindung", group: "Auth & Sicherheit", kind: "text", help: "loopback | lan | off" },
+  { key: "TRUST_PROXY", label: "Proxy-Header vertrauen", group: "Auth & Sicherheit", kind: "boolean", help: "Nur an, wenn UWE hinter Tunnel oder Reverse Proxy steht — dann stammt die Client-IP aus X-Forwarded-For. Direkt am Netz an zu lassen, würde jedem erlauben, seine IP zu fälschen (Rate-Limits, Audit-Log)." },
+  { key: "SESSION_COOKIE_SECURE", label: "Session-Cookie nur über HTTPS", group: "Auth & Sicherheit", kind: "boolean", help: "An, sobald UWE über https erreichbar ist. Achtung: an, während du über http zugreifst, heißt kein Login mehr — der Browser sendet das Cookie dann nicht." },
+  { key: "PLAYER_PREVIEW_PUBLIC", label: "Spielervorschau ohne Login", group: "Auth & Sicherheit", kind: "boolean", help: "Öffnet die Vorschau-Links der Spielersicht für alle, die die URL haben. Aus lassen, wenn das Portal nicht öffentlich sein soll." },
+  { key: "MAX_UPLOAD_MB", label: "Maximale Upload-Größe (MB)", group: "Grenzen", kind: "number", help: "Gilt für jeden Datei-Upload. Standard 50, erlaubt sind 1 bis 2048." },
   { key: "AI_INFERENCE_PROVIDER", label: "KI-Provider", group: "KI", kind: "text" },
   { key: "AI_INFERENCE_BASE_URL", label: "KI-Basis-URL", group: "KI", kind: "text" },
   { key: "UWE_AI_CLOUD_FALLBACK", label: "Cloud-Fallback erlauben", group: "KI", kind: "boolean" },

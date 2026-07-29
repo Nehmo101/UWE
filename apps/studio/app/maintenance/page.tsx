@@ -1,6 +1,7 @@
 import { getSystemSettingsSnapshot } from "@uwe/database/server";
 import { MaintenanceRecoveryPoller } from "@uwe/shared-ui";
 import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
+import { commandCenterHint } from "@/src/lib/command-center-hint";
 
 export default async function MaintenancePage() {
   const { settings } = await getSystemSettingsSnapshot();
@@ -21,8 +22,7 @@ export default async function MaintenancePage() {
           automatisch neu.
         </p>
         <p className="text-sm text-muted-foreground">
-          Owner-Konten können Studio weiterhin nutzen, um den Notfallmodus in den{" "}
-          <a href="/settings?tab=maintenance">Einstellungen</a> zu deaktivieren.
+          Owner-Konten können Studio weiterhin nutzen. {commandCenterHint("Notfallmodus")}
         </p>
       </section>
     </SystemShell>

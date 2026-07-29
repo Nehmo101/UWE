@@ -22,8 +22,11 @@ export const CONNECTOR_NAV: NavGroup[] = [
       connectorItem("command-center", "Command Center", "/", "layout-dashboard", ["start", "host", "hosting", "status", "setup"]),
       connectorItem("connector-host", "RTX-Verbindung", "/connector", "plug", ["rtx", "verbindung", "token"]),
       connectorItem("connector-users", "Zugänge", "/users", "users", ["zugang", "zugaenge", "haekchen", "benutzer", "user", "owner", "konto", "account", "portal", "studio", "brain", "family", "einrichten"]),
-      connectorItem("connector-ops", "Betrieb", "/ops", "shield", ["betrieb", "security", "sicherheit", "secrets", "migrationen", "audit", "log", "api-token", "token", "webhooks", "einstellungen", "settings"]),
-      connectorItem("connector-cloudflare", "Cloudflare-Tunnel", "/cloudflare", "cloud", ["cloudflare", "tunnel", "cloudflared", "öffentlich", "public", "domain"]),
+      // Die Schlagwörter sind der eigentliche Weg hierher: Wer „Passkey" oder
+      // „Turnstile" sucht, kennt weder den Reiter „Betrieb" noch die
+      // Cloudflare-Seite. Neue Einstellung heißt: neues Schlagwort.
+      connectorItem("connector-ops", "Betrieb", "/ops", "shield", ["betrieb", "security", "sicherheit", "secrets", "migrationen", "audit", "log", "api-token", "token", "webhooks", "einstellungen", "settings", "anmeldung", "login", "passkey", "passkeys", "webauthn", "face id", "touch id", "google-login", "auto-logout", "backup", "briefing", "notfallmodus", "wartungsmodus", "privatsphäre", "mail", "smtp", "speicher", "ki", "portal"]),
+      connectorItem("connector-cloudflare", "Cloudflare", "/cloudflare", "cloud", ["cloudflare", "tunnel", "cloudflared", "öffentlich", "public", "domain", "dns", "routen", "turnstile", "captcha", "bot", "botschutz", "challenge", "waf", "menschprüfung"]),
       connectorItem("connector-deployment", "Deployment", "/deployment", "settings", ["deployment", "env", "ports", "url", "smtp", "mail", "ki", "einstellungen", "config"]),
       connectorItem("connector-runner", "Runner / Ollama", "/runner", "cpu", ["runner", "ollama", "llm"]),
       connectorItem("connector-models", "Modelle", "/models", "boxes", ["modelle", "models"]),

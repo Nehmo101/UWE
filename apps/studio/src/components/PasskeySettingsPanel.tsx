@@ -6,6 +6,7 @@ import { Alert } from "@/src/components/ui/states";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
+import { commandCenterHint } from "@/src/lib/command-center-hint";
 
 interface PasskeyCredential {
   id: string;
@@ -33,7 +34,7 @@ function formatDate(value: string | null): string {
 
 export function PasskeySettingsPanel({
   enabled,
-  disabledHint = "Passkey-Login ist derzeit deaktiviert (Einstellungen → Anmeldung).",
+  disabledHint = `Passkey-Login ist derzeit deaktiviert. ${commandCenterHint("Anmeldung")}`,
 }: PasskeySettingsPanelProps) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [credentials, setCredentials] = useState<PasskeyCredential[]>([]);

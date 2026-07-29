@@ -11,6 +11,7 @@ import {
   setManagedChallenge,
 } from "./ops/cloudflare-challenge-ops";
 import { applyTunnelIngressNow, getTunnelIngressStatus } from "./ops/cloudflare-tunnel-ops";
+import { getTurnstileStatus, setTurnstile } from "./ops/turnstile-ops";
 import { clearSmtp, setGoogleLogin, setSmtp, setupStatus, smtpStatus } from "./ops/setup-ops";
 
 loadEnvFromRoot();
@@ -53,6 +54,8 @@ const ACTIONS = [
   "cloudflare-challenge-apply",
   "cloudflare-tunnel-status",
   "cloudflare-tunnel-apply",
+  "turnstile-status",
+  "turnstile-set",
   "google-login-set",
 ] as const;
 
@@ -106,6 +109,10 @@ async function run(action: OpsAction, db: ReturnType<typeof createPrismaClient>)
       return getTunnelIngressStatus(db);
     case "cloudflare-tunnel-apply":
       return applyTunnelIngressNow(db);
+    case "turnstile-status":
+      return getTurnstileStatus(db);
+    case "turnstile-set":
+      return setTurnstile(db, await readStdinJson());
     case "google-login-set":
       return setGoogleLogin(db, await readStdinJson());
     default: {

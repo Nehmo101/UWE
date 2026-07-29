@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { getCurrentAuthUser } from "@/src/lib/auth";
+import { commandCenterHint } from "@/src/lib/command-center-hint";
 import { formatStudioDateTime } from "@/src/lib/format";
 
 export default async function AccountSecurityPage() {
@@ -78,7 +79,7 @@ export default async function AccountSecurityPage() {
         <CardContent>
           <PasskeySettingsPanel
             enabled={settings.auth.passkeysEnabled}
-            disabledHint="Passkey-Login ist deaktiviert. Aktiviere es unter Einstellungen → Anmeldung."
+            disabledHint={`Passkey-Login ist deaktiviert. ${commandCenterHint("Anmeldung")}`}
           />
         </CardContent>
       </Card>

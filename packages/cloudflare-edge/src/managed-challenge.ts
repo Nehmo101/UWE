@@ -48,13 +48,20 @@ export interface ManagedChallengeConfig {
 /**
  * Paths that must stay reachable without a browser challenge: the tunnel and
  * uptime probes (`deploy/scripts/check-cloudflare-tunnel.sh`, the edge health
- * worker) and the agent-job callbacks are machine clients — a challenge page
- * would read as a hard outage to them.
+ * worker), the agent-job callbacks and the RTX connector are machine clients —
+ * a challenge page would read as a hard outage to them.
+ *
+ * `/api/connectors` covers the connector's whole surface (`heartbeat`,
+ * `claim-job`, `config`, the per-job `complete`/`fail` callbacks — see
+ * `tools/uwe-rtx-connector/src/host-client.ts`). It polls over the public
+ * origin, so without this exemption switching the challenge on would silently
+ * cut the RTX host off and every AI job would queue up forever.
  */
 export const DEFAULT_MANAGED_CHALLENGE_SKIP_PATHS: readonly string[] = [
   "/api/health",
   "/api/internal",
   "/api/agent-jobs",
+  "/api/connectors",
 ];
 
 export const DEFAULT_MANAGED_CHALLENGE_CONFIG: ManagedChallengeConfig = {
