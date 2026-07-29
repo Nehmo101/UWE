@@ -12,7 +12,7 @@
     "test": "node --import tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.3.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
@@ -21,7 +21,7 @@
     "next": "^15.5.21",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tailwindcss": "^4.3.1"
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

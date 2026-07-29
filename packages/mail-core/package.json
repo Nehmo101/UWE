@@ -16,9 +16,9 @@
   "dependencies": {
     "@uwe/assets": "workspace:*",
     "@uwe/env": "workspace:*",
-    "imapflow": "^1.0.187",
-    "mailparser": "^3.9.12",
-    "nodemailer": "^9.0.1"
+    "imapflow": "^1.6.4",
+    "mailparser": "^3.9.14",
+    "nodemailer": "^9.0.3"
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",
