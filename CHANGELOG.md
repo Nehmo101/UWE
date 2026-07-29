@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dienste enden mit dem Command Center** — Beenden der App (Dialog *und* Tray-„Beenden") stoppt Studio, Portal, Brain, Familie, Startseite und trennt den Cloudflare-Tunnel; die öffentliche Seite bleibt nicht länger ohne laufende Steuerungs-App erreichbar. Neue Einstellung `stopServicesOnExit` (Standard **an**, auch für bestehende Konfigurationsdateien) macht das alte Verhalten bewusst wählbar. Als Absicherung gegen Absturz und `taskkill` hängen alle Kindprozesse in einem Windows Job Object mit `KILL_ON_JOB_CLOSE`; „Im Browser öffnen" bricht per `CREATE_BREAKAWAY_FROM_JOB` daraus aus. „Alles stoppen" schließt jetzt den Tunnel mit ein
 - **Visibility labels sharpened** — `player_visible` is now labeled "Portal (ohne Login)" and `public` "Öffentlich (Share-Link)" across Studio; badges carry explanatory tooltips and the page editors show a hint that these contents are readable on `/worlds/*` without login once published (internal enum semantics unchanged)
 
 ## [0.1.0] - 2026-06-11

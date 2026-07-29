@@ -1,13 +1,16 @@
 mod command_center;
+mod process_guard;
 
 use command_center::{
     backup_host, check_host_update, cloudflare_clear_token, cloudflare_set_token, cloudflare_start,
     cloudflare_status, cloudflare_stop, create_user, delete_user, get_host_env, get_host_logs,
-    get_host_status, get_install_selection, list_backups, list_users, open_host_target, ops_invoke,
-    restart_host, restart_service, restore_backup, set_host_env, set_install_selection,
-    set_user_password, setup_host, start_host, start_service, stop_host, stop_service, update_host,
-    update_user,
+    get_host_status, get_install_selection, kill_tracked_service_processes, list_backups,
+    list_users, open_host_target, ops_invoke, restart_host, restart_service, restore_backup,
+    set_host_env, set_install_selection, set_user_password, setup_host,
+    shutdown_hosted_services_blocking, start_host, start_service, stop_host, stop_service,
+    update_host, update_user,
 };
+use process_guard::install_child_process_guard;
 
 use std::{
     fs,
@@ -45,6 +48,22 @@ const CONFIG_FILE_NAME: &str = "config.json";
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+/// Wie `configure_hidden_process`, aber der Kindprozess löst sich aus dem Job
+/// Object des Command Centers (siehe `process_guard`). Nur für Aufrufe, deren
+/// Ergebnis den Nutzer überleben soll — konkret „Im Browser öffnen", das über
+/// `cmd /c start "" <url>` einen Browser startet. Ohne diesen Ausbruch würde das
+/// Beenden des Command Centers den gerade geöffneten Browser mit abschießen.
+fn configure_breakaway_process(command: &mut Command) {
+    #[cfg(target_os = "windows")]
+    {
+        command.creation_flags(CREATE_NO_WINDOW | process_guard::CREATE_BREAKAWAY_FROM_JOB);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = command;
+    }
+}
 
 fn configure_hidden_process(command: &mut Command) {
     #[cfg(target_os = "windows")]
@@ -110,6 +129,16 @@ struct ConnectorClientConfig {
     /// Start the Cloudflare tunnel connector when the Command Center starts.
     #[serde(default)]
     auto_start_tunnel: bool,
+    /// Stop the hosted services and the Cloudflare tunnel when the Command
+    /// Center quits. Defaults to `true` — including for config files written
+    /// before this field existed, which is deliberate: the public site must not
+    /// stay reachable without its control app running.
+    #[serde(default = "default_stop_services_on_exit")]
+    stop_services_on_exit: bool,
+}
+
+fn default_stop_services_on_exit() -> bool {
+    true
 }
 
 fn default_spotify_redirect_uri() -> String {
@@ -144,6 +173,7 @@ impl Default for ConnectorClientConfig {
             local_host_root: String::new(),
             auto_start_host: false,
             auto_start_tunnel: false,
+            stop_services_on_exit: default_stop_services_on_exit(),
         }
     }
 }
@@ -837,7 +867,13 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => show_main_window(app),
-            "quit" => app.exit(0),
+            "quit" => {
+                // Denselben geordneten Weg nehmen wie der Beenden-Dialog. Läuft
+                // asynchron, weil der Teardown Node-Prozesse abwartet und der
+                // Menü-Handler nicht blockieren darf.
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move { quit_with_teardown(app).await });
+            }
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
@@ -1112,8 +1148,39 @@ fn test_print(printer_id: Option<String>) -> Result<serde_json::Value, String> {
 /// the close prompt (the X button asks before quitting instead of hiding to the
 /// tray). `app.exit` drives `RunEvent::Exit`, which tears down the spawned Node
 /// connector process too.
+///
+/// Unless `stopServicesOnExit` is switched off, the hosted services and the
+/// Cloudflare tunnel are shut down *before* the app goes away — the ordered path,
+/// so Next.js gets to close its handles instead of being killed. The Windows job
+/// object from `process_guard` is the backstop for everything that skips this
+/// path (crash, `taskkill`); it kills, it does not shut down gracefully.
+///
+/// Teardown failures never block the quit: the user asked to close the app, and
+/// leaving it open with half-stopped services is the worse outcome. Anything left
+/// behind is caught by the job object moments later.
 #[tauri::command]
-fn exit_app(app: tauri::AppHandle) {
+async fn exit_app(app: tauri::AppHandle) {
+    quit_with_teardown(app).await;
+}
+
+/// Shared quit path for the confirm dialog and the tray's „Beenden": stop the
+/// hosted services and the tunnel in an orderly fashion, then quit. Without this,
+/// the tray entry would leave the teardown to `RunEvent::Exit`, which only kills
+/// by PID — the services would never get to close their handles.
+async fn quit_with_teardown(app: tauri::AppHandle) {
+    let config = read_config_from_disk().unwrap_or_default();
+
+    if config.stop_services_on_exit {
+        let root = Some(config.local_host_root.trim().to_string()).filter(|root| !root.is_empty());
+        let problems =
+            tauri::async_runtime::spawn_blocking(move || shutdown_hosted_services_blocking(root))
+                .await
+                .unwrap_or_else(|error| vec![format!("Teardown abgebrochen: {error}")]);
+        for problem in &problems {
+            eprintln!("[command-center] Beenden: {problem}");
+        }
+    }
+
     app.exit(0);
 }
 
@@ -1453,6 +1520,13 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState::default())
         .setup(|app| {
+            // Vor dem ersten Kindprozess: alles, was von hier aus gestartet wird,
+            // soll mit dem Command Center verschwinden. Scheitert das, bleibt nur
+            // der geordnete Weg über `exit_app` — kein Grund, den Start
+            // abzubrechen.
+            if let Err(error) = install_child_process_guard() {
+                eprintln!("[command-center] Prozess-Absicherung inaktiv: {error}");
+            }
             setup_tray(app)?;
             if let Ok(config) = read_config_from_disk() {
                 if config.tray_mode == "start_in_tray" || config.minimized_start {
@@ -1559,6 +1633,18 @@ pub fn run() {
                         terminate_child(&mut child_slot);
                     }
                 }
+
+                // Catch quit paths that bypass `exit_app` — above all the tray's
+                // "Beenden", which calls `app.exit(0)` directly. Kills by stored
+                // PID without starting Node, so it stays fast enough for a
+                // shutdown handler; a no-op once `exit_app` has already cleaned
+                // up, because it removes the PID files as it goes.
+                let stop_on_exit = read_config_from_disk()
+                    .map(|config| config.stop_services_on_exit)
+                    .unwrap_or_else(|_| default_stop_services_on_exit());
+                if stop_on_exit {
+                    kill_tracked_service_processes();
+                }
             }
         });
 }
@@ -1584,6 +1670,26 @@ mod transport_config_tests {
         let config = parse_config_json(LEGACY_CONFIG).expect("legacy config should parse");
         assert_eq!(config.transport_mode, "queue");
         assert!(!config.queue_enabled);
+    }
+
+    /// Bestandsrechner haben `stopServicesOnExit` nicht in der Datei. Fällt der
+    /// Wert dort auf `false`, bleiben Dienste und Tunnel nach dem Beenden stehen
+    /// und die öffentliche Seite erreichbar — genau der Zustand, den die
+    /// Einstellung beseitigt. Der Standard muss also anziehen, nicht abschalten.
+    #[test]
+    fn defaults_stop_services_on_exit_for_configs_without_the_field() {
+        let config = parse_config_json(LEGACY_CONFIG).expect("legacy config should parse");
+        assert!(config.stop_services_on_exit);
+    }
+
+    #[test]
+    fn honours_an_explicit_opt_out_of_stopping_services() {
+        let raw = LEGACY_CONFIG.replace(
+            "\"trayMode\": \"normal\"",
+            "\"trayMode\": \"normal\",\n        \"stopServicesOnExit\": false",
+        );
+        let config = parse_config_json(&raw).expect("opt-out config should parse");
+        assert!(!config.stop_services_on_exit);
     }
 
     #[test]
