@@ -82,6 +82,7 @@ function Pool(name, geo, opts) {
   this.name = name;
   this.geo = geo;
   this.radius = opts.radius;
+  this.rauchAnker = opts.rauchAnker || null;
   /* I1 — Massstabsband in Weltmetern je Gitterzelle. Fehlen die Felder, gilt
      das Vorgabeband des Bestands: alle 272 vorhandenen Pools bleiben damit
      ohne eine einzige Aenderung genau dort, wo sie heute schon sind (Ort bis
@@ -122,6 +123,8 @@ Pool.prototype.ensure = function (n) {
   var cap = Math.max(256, this.cap * 2, Math.ceil(n * 1.35));
   if (this.mesh) { sceneRef.scene.remove(this.mesh); this.mesh.dispose(); }
   var m = new THREE.InstancedMesh(this.geo, this.mat, cap);
+  // Der echte Welt-Radius folgt nach dem Packen aus Poolradius und Instanzskala.
+  m.userData.terraDepthDetail = true;
   m.frustumCulled = true;
   m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
@@ -257,8 +260,27 @@ function schattenAn(el, x, bh, z, groesse) {
     _schattenN.x, _schattenN.y, _schattenN.z);
 }
 /** Merkt sich Schornsteine, aus denen später Rauch steigt. */
+function poolRauchSetzen(el, kind, anker, x, y, z, sc) {
+  var ix = x, iy = y, iz = z, yaw = 0, sx = sc, sy = sc, sz = sc;
+  var inst = el.inst && el.inst[kind];
+  if (inst && inst.length >= 12) {
+    var o = inst.length - 12;
+    ix = inst[o]; iy = inst[o + 1]; iz = inst[o + 2]; yaw = inst[o + 4];
+    sx = inst[o + 6]; sy = inst[o + 7]; sz = inst[o + 8];
+  }
+  var lx = anker[0] * sx, lz = anker[2] * sz;
+  var cy = Math.cos(yaw), sn = Math.sin(yaw);
+  el.rauch.push(ix + lx * cy + lz * sn, iy + anker[1] * sy,
+    iz - lx * sn + lz * cy);
+}
+
 function rauchAus(el, kind, x, y, z, sc) {
   if (el.rauch.length > 60) return;
+  var pool = POOLS[kind];
+  if (pool && pool.rauchAnker) {
+    poolRauchSetzen(el, kind, pool.rauchAnker, x, y, z, sc);
+    return;
+  }
   if (kind === "industrie") el.rauch.push(x - 1.3 * sc, y + 6.3 * sc, z + 0.6 * sc);
   else if (kind === "schmiedeturm") el.rauch.push(x + 1.0 * sc, y + 6.5 * sc, z + 0.3 * sc);
   else if (kind === "zwergenhalle") el.rauch.push(x, y + 4.2 * sc, z);
@@ -287,7 +309,7 @@ function repack(names) {
     }
     if (total === 0) { if (pool.mesh) pool.mesh.count = 0; pool.count = 0; continue; }
     pool.ensure(total);
-    var mesh = pool.mesh, k = 0;
+    var mesh = pool.mesh, k = 0, maxWeltRadius = 0;
     for (e = 0; e < S.elements.length; e++) {
       var a = S.elements[e].inst[name];
       if (!a) continue;
@@ -295,6 +317,9 @@ function repack(names) {
         _io.position.set(a[i], a[i + 1], a[i + 2]);
         _io.rotation.set(a[i + 3], a[i + 4], a[i + 5], "YXZ");
         _io.scale.set(a[i + 6], a[i + 7], a[i + 8]);
+        var instSkala = Math.max(Math.abs(a[i + 6]), Math.abs(a[i + 7]),
+          Math.abs(a[i + 8]));
+        maxWeltRadius = Math.max(maxWeltRadius, pool.radius * instSkala);
         _io.updateMatrix();
         mesh.setMatrixAt(k, _io.matrix);
         _ic.setRGB(a[i + 9], a[i + 10], a[i + 11]);
@@ -303,6 +328,12 @@ function repack(names) {
       }
     }
     mesh.count = k;
+    /* Unter einer Welteinheit erzeugen Blumen, Grasbueschel und Kleinteile
+       im halbaufgeloesten Tiefenpass nur flimmernde Einzelpixel. Das
+       Farbbild behaelt sie vollstaendig; grosse Skalierungen bleiben durch
+       maxWeltRadius sicher im Tiefenbild. */
+    mesh.userData.terraDepthDetail = maxWeltRadius >= 1.0;
+
     pool.count = k;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;

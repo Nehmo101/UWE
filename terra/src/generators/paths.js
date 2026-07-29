@@ -5,7 +5,8 @@ import { clamp, lerp, sstep, hashi, fractal, rngOf, rr, ri, wpick } from '../cor
 // eine eigene Variable kopiert werden, nur innerhalb von Funktionen gelesen.
 import { S, WATER, COS40, VW, HALF, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf, rauchAus } from '../core/pools.js';
-import { heightAt, baseHeightAt, slopeAt } from '../world/terrain.js';
+import { heightAt, baseHeightAt, slopeAt, terrainColor } from '../world/terrain.js';
+import { WEG_PROFIL_PUNKTE, wegrandProfil } from '../assets/wegrand-profil.js';
 /* I3/H — die hydraulische Geometrie (Einzugsgebiet -> Breite). erosion.js
    haengt ausschliesslich an core/rng.js, der Weg ist also zyklusfrei und
    zieht nichts nach. */
@@ -58,6 +59,12 @@ function pathSamples(points, step) {
   return out;
 }
 
+var _wegBodenTon = new THREE.Color();
+function wegrandBodenFarbe(x, z, h) {
+  terrainColor(h, 0.96, x, z, _wegBodenTon);
+  return [_wegBodenTon.r, _wegBodenTon.g, _wegBodenTon.b];
+}
+
 
 /* ==========================================================================
    Durchgehendes Wegband: folgt der Terrainhoehe, franst an den Raendern
@@ -76,7 +83,6 @@ function bandGeoAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
   var pos = [], col = [], idx = [];
   var n = linie.length;
   if (n < 2) return null;
-  var holz = [0.58, 0.47, 0.35];
   var istBruecke = new Array(n);
   var deckHoehe = new Array(n);
   // 1) Wasserquerungen finden und Deckhoehe der Bruecke bestimmen
@@ -108,20 +114,33 @@ function bandGeoAusLinie(el, linie, halbBreite, grundFarbe, seed, opts) {
     var fL = halbBreite * (1 + (fractal(q2.x * 0.3 + 9, q2.z * 0.3, seed) - 0.5) * 0.7);
     var fR = halbBreite * (1 + (fractal(q2.x * 0.3, q2.z * 0.3 + 9, seed + 3) - 0.5) * 0.7);
     var y = deckHoehe[i];
-    var yL = istBruecke[i] ? y : heightAt(q2.x + nx * fL, q2.z + nz * fL) + 0.1 - einsinken;
-    var yR = istBruecke[i] ? y : heightAt(q2.x - nx * fR, q2.z - nz * fR) + 0.1 - einsinken;
-    var f = istBruecke[i] ? holz : grundFarbe;
     var vv = 0.92 + hashi(i, 3, seed) * 0.14;
-    pos.push(q2.x + nx * fL, yL, q2.z + nz * fL);
-    col.push(f[0] * vv * 0.92, f[1] * vv * 0.92, f[2] * vv * 0.92);
-    pos.push(q2.x, y + (istBruecke[i] ? 0 : 0.045), q2.z);
-    col.push(f[0] * vv, f[1] * vv, f[2] * vv);
-    pos.push(q2.x - nx * fR, yR, q2.z - nz * fR);
-    col.push(f[0] * vv * 0.92, f[1] * vv * 0.92, f[2] * vv * 0.92);
+    var profil = wegrandProfil({
+      x: q2.x,
+      z: q2.z,
+      nx: nx,
+      nz: nz,
+      links: fL,
+      rechts: fR,
+      deck: y,
+      einsinken: einsinken,
+      variation: vv,
+      farbe: grundFarbe,
+      bruecke: istBruecke[i],
+      hoeheAt: heightAt,
+      bodenFarbe: wegrandBodenFarbe
+    });
+    for (var p = 0; p < profil.length; p++) {
+      var pp = profil[p];
+      pos.push(pp.x, pp.y, pp.z);
+      col.push(pp.farbe[0], pp.farbe[1], pp.farbe[2]);
+    }
     if (i > 0) {
-      var A = (i - 1) * 3, B = i * 3;
-      idx.push(A, B, A + 1, A + 1, B, B + 1);
-      idx.push(A + 1, B + 1, A + 2, A + 2, B + 1, B + 2);
+      var A = (i - 1) * WEG_PROFIL_PUNKTE, B = i * WEG_PROFIL_PUNKTE;
+      for (var quer = 0; quer < WEG_PROFIL_PUNKTE - 1; quer++) {
+        idx.push(A + quer, B + quer, A + quer + 1);
+        idx.push(A + quer + 1, B + quer, B + quer + 1);
+      }
     }
     // 3) Brueckenausstattung: Pfaehle und Gelaender
     if (istBruecke[i] && (i % 3 === 1)) {

@@ -1,9 +1,9 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
 import { DEG, hashi } from './core/rng.js';
-import { S, HALF, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, setPalette, setMalschicht, setMultiplane, PALETTE_STANDARD, MAL_DEZENT } from './render/pipeline.js';
+import { S, HALF, VW, setScene, mkElement, nextSeed } from './core/store.js';
+import { scene, initPipeline, resizePipeline, renderFrame, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
-import { genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull } from './world/terrain.js';
+import { base, genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull, basisGeaendert } from './world/terrain.js';
 import './generators/geometry.js';        // registriert alle Objekt-Pools
 import { setRauchSammler, flushPack } from './core/pools.js';
 import { POOLS } from './core/pools.js';
@@ -12,6 +12,7 @@ import { initWater, wasserSichtbar, updateWater, water } from './world/water.js'
 // Bedienungsrunde: die Uhr der Fluss-Fliessanimation (Shader-Patch an
 // flussMat). paths.js liegt laengst im Modulgraphen (geometry.js zieht es).
 import { setFlussZeit } from './generators/paths.js';
+import { tickFlugrouten } from './generators/flugrouten.js';
 import { initSky, updateSky } from './world/sky.js';
 import { initAtmosphere, setTod, setWetter, tickAtmosphere, updateBirds, updateRauch, setRauchQuellen, getWolkenTempo } from './world/atmosphere.js';
 import { initVfx, tickVfx } from './world/vfx.js';
@@ -19,7 +20,7 @@ import { initSelection, updateHandlePositions, beschriftungenAktualisieren } fro
 import { defaultsFor } from './editor/tools.js';
 import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
 import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast, markerOverlayAktualisieren } from './ui/panels.js';
-import { initIO, palettePassend } from './editor/io.js';
+import { initIO, palettePassend, setzeKartenGroesseFuerSchau } from './editor/io.js';
 // I3: Erosion laeuft ueber mehrere Bilder und braucht deshalb einen Takt.
 import { tickErosion } from './editor/erosion-lauf.js';
 // I4: die Beschriftungsschicht. In die Szene gehaengt wird sie in
@@ -28,6 +29,16 @@ import { holeBeschriftungsschicht } from './ui/beschriftung.js';
 var beschriftungen = holeBeschriftungsschicht();
 var letzterBeschriftungsAbgleich = -1e9;
 import { tickWind } from './world/wind.js';
+import { tickWeltschildkroeten } from './generators/weltschildkroete.js';
+import { ARCHITEKTUR_STILE, architekturAssetId } from './assets/architektur-katalog.js';
+import { erstelleLuftschauPlan } from './generators/luftschau.js';
+import {
+  ASSET_SCHAU_KARTENGROESSE,
+  erzeugeAssetSchau
+} from './generators/asset-schau.js';
+
+var SCHAU_MODUS = new URLSearchParams(window.location.search).get("schau");
+var SCHAU_BLICK = new URLSearchParams(window.location.search).get("blick");
 
 /* ==========================================================================
    Startkarte (unveraendert portiert — gleiche Seed, gleiche Karte)
@@ -66,9 +77,116 @@ function ring(c, r, n, wob, seed) {
   return out;
 }
 
+/**
+ * Reproduzierbare Katalogansicht fuer visuelle Regressionen. Sie bleibt ueber
+ * `?schau=architektur` erreichbar, ohne die normale Startkarte anzutasten.
+ */
+function architekturSchauMap() {
+  document.body.classList.add("architektur-schaukasten");
+  var rollen = [
+    ["wohnhaus", -6, 4, 1.50],
+    ["rathaus", 0, 0, 1.36],
+    ["palast", 7, -3, 1.18]
+  ];
+  for (var i = 0; i < ARCHITEKTUR_STILE.length; i++) {
+    var stil = ARCHITEKTUR_STILE[i];
+    var spalte = i % 4, zeile = Math.floor(i / 4);
+    var ziel = findLand(-62 + spalte * 36, -32 + zeile * 32, 1.5, 15);
+    for (var r = 0; r < rollen.length; r++) {
+      var rolle = rollen[r];
+      var bauplatz = findLand(ziel.x + rolle[1], ziel.z + rolle[2], 1.5, 15);
+      addEl("objekt", stil.id, [{ x: bauplatz.x, z: bauplatz.z }], {
+        anzahl: 1, streuung: 0, groesse: rolle[3], frei: true,
+        nurTyp: architekturAssetId(stil.id, rolle[0])
+      });
+    }
+    addEl("marker", "beschriftung", [{ x: ziel.x, z: ziel.z + 7 }],
+      { text: stil.label, klasse: "ort", groesse: 1.70 });
+  }
+  return { x: -8, z: 12, dist: 160, pitch: 48 * DEG, yaw: 0 };
+}
+
 /** Kleine Beispielkarte, damit beim Öffnen sofort etwas zu sehen ist. */
+/**
+ * Die Vollkatalogkarte braucht ruhigen, trockenen Boden: auf dem normalen
+ * Seed-Terrain verschwanden sonst ausgerechnet kleine Requisiten im Wasser.
+ * Eine minimale breite Welle verhindert zugleich den Eindruck einer
+ * technischen grauen Testplatte.
+ */
+function assetSchauGelaende() {
+  for (var j = 0; j < VW; j++) {
+    for (var i = 0; i < VW; i++) {
+      base[j * VW + i] = 5.6 + Math.sin(i * 0.045) * 0.12
+        + Math.cos(j * 0.038) * 0.12;
+    }
+  }
+  basisGeaendert(0, VW - 1, 0, VW - 1);
+}
+
+/**
+ * Museumskarte fuer die Abnahme: jeder der 505 physischen Pools genau einmal,
+ * die animierte Landschildkroete als zusaetzliche Hero-Landmarke daneben.
+ */
+function assetSchauMap() {
+  document.body.classList.add("asset-schaukasten");
+  document.title = "terra - vollstaendige Asset-Schau (505/505)";
+  var legende = document.createElement("aside");
+  legende.className = "assetSchauLegende";
+  legende.innerHTML = "<strong>Asset-Schau &middot; 505 / 505</strong>"
+    + "<span>12 &times; 18 Architektur &middot; 289 Umwelt-, Kultur- und Weltassets</span>";
+  document.body.appendChild(legende);
+  var schau = erzeugeAssetSchau({ hoeheAn: heightAt, markiere: false });
+  var archBlock = schau.layout.blocks[0];
+  var heroX = archBlock.minX - 40;
+  var heroZ = archBlock.maxZ - 35;
+  addEl("objekt", "weltschildkroete", [{ x: heroX, z: heroZ }], {
+    groesse: 0.96,
+    drehung: 112,
+    kopfbewegung: 0.78
+  });
+  if (SCHAU_BLICK === "architektur") {
+    return { x: 0, z: -82, dist: 255, pitch: 50 * DEG, yaw: 0, fov: 31 };
+  }
+  if (SCHAU_BLICK === "welt-links") {
+    return { x: -112, z: 103, dist: 190, pitch: 46 * DEG, yaw: 0, fov: 31 };
+  }
+  if (SCHAU_BLICK === "welt-rechts") {
+    return { x: 108, z: 103, dist: 190, pitch: 46 * DEG, yaw: 0, fov: 31 };
+  }
+  if (SCHAU_BLICK === "held") {
+    return {
+      x: heroX + 1.8, z: heroZ - 0.8, dist: 76, pitch: 29 * DEG,
+      yaw: 0.46, fov: 31, hebung: 7.5
+    };
+  }
+
+  return {
+    x: 0,
+    z: 0,
+    dist: 400,
+    pitch: 60 * DEG,
+    yaw: 0,
+    fov: 35
+  };
+}
+
+function luftSchauMap() {
+  document.title = "terra - Luftarchipel, Flugrouten und Riesenbambus";
+  var plan = erstelleLuftschauPlan();
+  for (var i = 0; i < plan.elements.length; i++) {
+    var spec = plan.elements[i];
+    addEl(spec.kind, spec.variant, spec.points, spec.params);
+  }
+  return plan.kamera;
+}
+
 function demoMap() {
   // Blickrichtung der Startkamera, damit die Komposition sofort sitzt
+  if (SCHAU_MODUS === "assets") return assetSchauMap();
+  if (SCHAU_MODUS === "luft") return luftSchauMap();
+  if (SCHAU_MODUS === "architektur") {
+    return architekturSchauMap();
+  }
   var vx = -Math.sin(0.85), vz = -Math.cos(0.85);      // vom Fokus weg
   var px = -vz, pz = vx;                                // quer dazu
 
@@ -84,6 +202,8 @@ function demoMap() {
   var klass = bei(-46, -52, 2.5, 12);
   var zwerg = bei(78, -46, 3, 16);
   var elfen = bei(30, 104, 2, 12);
+  var schild = bei(12, -34, 2.5, 12);
+  var bluetenhain = findLand(schild.x - 32, schild.z + 23, 1.5, 13);
 
   addEl("ranke", "ranke", [{ x: v1.x, z: v1.z }],
     { hoehe: 215, straenge: 5, plateaus: 3, staedtchen: true, inseln: 2 });
@@ -95,21 +215,27 @@ function demoMap() {
     { x: (v1.x + town.x) / 2 + 10, z: (v1.z + town.z) / 2 - 8 },
     { x: town.x - 6, z: town.z - 4 },
     { x: town.x + 44, z: town.z + 22 }
-  ], { breite: 6, abstand: 15, haeuser: true, stil: "dorf" });
+  ], { breite: 6, abstand: 15, haeuser: true, stil: "windweiden" });
 
   // vier Siedlungen in vier Baustilen
   addEl("flaeche", "viertel", ring(town, 30, 9, 0.26, 11),
-    { netz: "gebogen", block: 21, gasse: 3.5, dichte: 1.25, stil: "dorf" });
+    { netz: "gebogen", block: 21, gasse: 3.5, dichte: 1.25, stil: "windweiden" });
   addEl("flaeche", "viertel", ring(klass, 24, 8, 0.2, 71),
-    { netz: "raster", block: 20, gasse: 4, dichte: 1.1, stil: "klassisch", drehung: 40 });
+    { netz: "raster", block: 20, gasse: 4, dichte: 1.1, stil: "pilzmarken", drehung: 40 });
   addEl("flaeche", "viertel", ring(zwerg, 20, 7, 0.24, 83),
-    { netz: "zellen", block: 17, gasse: 4, dichte: 1.2, stil: "zwergisch" });
+    { netz: "zellen", block: 17, gasse: 4, dichte: 1.2, stil: "tiefenzwerge" });
   addEl("flaeche", "viertel", ring(elfen, 22, 8, 0.28, 97),
-    { netz: "ring", block: 16, gasse: 3, dichte: 1.0, stil: "elfisch" });
+    { netz: "ring", block: 16, gasse: 3, dichte: 1.0, stil: "mondelfen" });
 
+  addEl("flaeche", "biom", ring(schild, 48, 12, 0.22, 107),
+    { biom: "bluetental", weich: 14 });
   addEl("flaeche", "wald", ring(wood, 44, 11, 0.3, 23), { dichte: 1.3, mischung: 0.28 });
   addEl("flaeche", "feld", ring(field, 28, 7, 0.2, 41), { drehung: 55, reihe: 3.2 });
   addEl("flaeche", "wiese", ring(meadow, 26, 8, 0.25, 57), { dichte: 1.4, blumen: 0.45 });
+  addEl("flaeche", "wiese", ring(schild, 40, 10, 0.24, 67),
+    { dichte: 1.2, blumen: 0.62 });
+  addEl("objekt", "baeume", [{ x: bluetenhain.x, z: bluetenhain.z }],
+    { anzahl: 5, streuung: 14, groesse: 0.94, frei: false, nurTyp: "bluetenbaum" });
   addEl("pfad", "hecke", [
     { x: field.x - 26, z: field.z + 26 },
     { x: field.x + 8, z: field.z + 34 },
@@ -117,8 +243,10 @@ function demoMap() {
   ], { stil: "hecke" });
   addEl("objekt", "haeuser", [{ x: field.x + 20, z: field.z - 14 }],
     { anzahl: 1, streuung: 0, groesse: 1.15, frei: false, nurTyp: "windmuehle" });
+  addEl("objekt", "weltschildkroete", [{ x: schild.x, z: schild.z }],
+    { groesse: 1.2, drehung: 145, kopfbewegung: 0.82 });
 
-  return { x: town.x + vx * 42, z: town.z + vz * 42 };
+  return { x: town.x + vx * 28, z: town.z + vz * 28, dist: 124, pitch: 36 * DEG };
 }
 
 
@@ -134,13 +262,12 @@ const renderer = initPipeline(camera);
    (Dateien vor dieser Runde), setzt io.js auf 0 und die Karte sieht exakt so
    aus wie frueher. Werte bewusst zurueckhaltend: die Bindung soll das Bild
    auf eine Palette ziehen, nicht postern. */
-setMalschicht(MAL_DEZENT);
 // 0.5 nahm in der Sichtpruefung sichtbar Kontrast (Mittag wirkte wie durch
-// Milchglas); 0.3 staffelt die Tiefe, ohne das Bild zu verhangen.
-setMultiplane(0.3);
+// Milchglas); 0.42 staffelt Vorder-, Mittel- und Hintergrund noch klar.
+setMultiplane(SCHAU_MODUS === "assets" ? 0.12 : 0.42);
 // Die Farbrampe kommt aus dem Biom (palettePassend in io.js) — die
 // Standardrampe hier waere biomblind und zoege dunkle Biome Richtung Creme.
-setPalette(PALETTE_STANDARD, 0.16);
+setPalette(PALETTE_STANDARD, 0.26);
 initTerrain(scene);
 initWater(scene);
 initSky(scene);
@@ -154,11 +281,18 @@ setRauchSammler(setRauchQuellen);
 initPointer(renderer.domElement);
 initKeys(onKey);
 initIO();
+if (SCHAU_MODUS === "luft") {
+  S.biom = "luftarchipel";
+  var biomSelect = document.getElementById("biomSel");
+  if (biomSelect) biomSelect.value = S.biom;
+}
+if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(ASSET_SCHAU_KARTENGROESSE);
 // Farbrampe des Startbioms setzen (F1) — muss nach initIO stehen, weil die
 // Funktion dort lebt und BIOME liest.
 palettePassend();
 
 genBase(S.worldSeed);
+if (SCHAU_MODUS === "assets") assetSchauGelaende();
 refreshTerrainFull();
 var c = demoMap();
 rebuildAll();
@@ -167,11 +301,17 @@ flushPack();
 cam.tFocus.x = cam.focus.x = c.x;
 cam.tFocus.z = cam.focus.z = c.z;
 cam.focusY = heightAt(cam.focus.x, cam.focus.z);
-cam.tDist = cam.dist = 120;
-cam.tYaw = cam.yaw = 0.85;
-cam.tPitch = cam.pitch = 42 * DEG;
+cam.tDist = cam.dist = c.dist || 120;
+cam.tYaw = cam.yaw = c.yaw === undefined ? 0.85 : c.yaw;
+cam.tPitch = cam.pitch = c.pitch || 38 * DEG;
+if (Number.isFinite(c.fov)) {
+  cam.tFov = cam.fov = c.fov;
+  camera.fov = c.fov;
+  camera.updateProjectionMatrix();
+}
+if (Number.isFinite(c.hebung)) cam.tHebung = cam.hebung = c.hebung;
 
-setTod("mittag", true);
+setTod(SCHAU_MODUS === "assets" || SCHAU_MODUS === "luft" ? "mittag" : "morgen", true);
 setWetter("klar", true);       // Standardwetter; waehlt bei "klar" den Biom-VFX
 buildRail();
 buildPanel();
@@ -208,6 +348,8 @@ function animate() {
   updateSky(dt * getWolkenTempo());
   tickWind(now * 0.001);
   updateBirds(dt, now * 0.001);
+  tickWeltschildkroeten(now * 0.001);
+  tickFlugrouten(now * 0.001);
   updateRauch(now * 0.001);
   vfxFokus.x = cam.focus.x; vfxFokus.y = cam.focusY; vfxFokus.z = cam.focus.z;
   tickVfx(now * 0.001, vfxFokus);

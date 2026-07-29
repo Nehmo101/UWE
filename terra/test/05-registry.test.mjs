@@ -16,8 +16,19 @@ import { testWelt } from './hilfen/karte.mjs';
 
 const welt = await testWelt({ seed: 4711 });
 const { BIOME, HOEHEN_STANDARD } = welt.m.store;
+const LUFTWERKZEUGE = await ladeTerra('editor/luftwerkzeuge.js');
+LUFTWERKZEUGE.registriereLuftbiom(BIOME);
 const POOLS = welt.m.pools.POOLS;
 const OBJEKTE = welt.m.objects;
+const ARCHITEKTUR = await ladeTerra('assets/architektur-katalog.js');
+const ARCHITEKTUR_NAMEN = ARCHITEKTUR.ARCHITEKTUR_ASSET_NAMEN;
+const ARCHITEKTUR_SET = new Set(ARCHITEKTUR_NAMEN);
+const FLOTTE = await ladeTerra('assets/steampunk-luftflotte.js');
+const INSELN = await ladeTerra('assets/luftinsel-assets.js');
+const BAMBUS = await ladeTerra('assets/hochbambus-assets.js');
+const NEUE_LUFT_ASSET_NAMEN = FLOTTE.STEAMPUNK_LUFTFLOTTEN_NAMEN.concat(
+  Object.values(INSELN.LUFTINSEL_POOL_IDS), Object.values(BAMBUS.HOCHBAMBUS_POOL_IDS));
+const DYNAMISCHE_POOL_SET = new Set(ARCHITEKTUR_NAMEN.concat(NEUE_LUFT_ASSET_NAMEN));
 
 function quelltext(rel) { return fs.readFileSync(path.join(SRC, rel), 'utf8'); }
 
@@ -151,13 +162,29 @@ test('Ebene 5 — keine doppelten Poolnamen', async () => {
     .matchAll(/definePool\(\s*["']([a-zA-Z0-9_]+)["']/g)].map((m) => m[1]);
   const sig = await ladeTerra('render/signaturen.js');
   const zeichen = sig.ZEICHEN_NAMEN.map((n) => 'sig_' + n.replace(/^sig_/, ''));
-  const namen = literal.concat(zeichen);
+  const namen = literal.concat(zeichen, ARCHITEKTUR_NAMEN, NEUE_LUFT_ASSET_NAMEN);
   const doppelt = namen.filter((n, i) => namen.indexOf(n) !== i);
   assert.deepEqual([...new Set(doppelt)], [],
     'Dieser Name wird zweimal vergeben — der zuerst gebaute Pool waere unsichtbar');
   assert.equal(namen.length, Object.keys(POOLS).length,
-    'Koerper (' + literal.length + ') + Kartenzeichen (' + zeichen.length + ') decken sich '
+    'Koerper (' + literal.length + ') + Kartenzeichen (' + zeichen.length
+    + ') + Architektur (' + ARCHITEKTUR_NAMEN.length + ') decken sich '
     + 'nicht mit der Registry (' + Object.keys(POOLS).length + ') — ein Name wurde ueberschrieben');
+});
+
+test('Ebene 5 - neue dynamische Assetkataloge sind vollstaendig registriert', () => {
+  assert.equal(NEUE_LUFT_ASSET_NAMEN.length, 17);
+  assert.deepEqual(NEUE_LUFT_ASSET_NAMEN.filter((name) => !POOLS[name]), [],
+    'Diese Luftwelt-Assets fehlen in der Pool-Registry');
+});
+
+test('Ebene 5 - der dynamische Architekturkatalog ist vollstaendig registriert', () => {
+  assert.equal(ARCHITEKTUR_NAMEN.length, 216);
+  assert.deepEqual(ARCHITEKTUR_NAMEN.filter((name) => !POOLS[name]), [],
+    'Diese Architektur-Assets fehlen in der Pool-Registry');
+  assert.deepEqual(Object.keys(POOLS)
+    .filter((name) => name.startsWith('arch_') && !ARCHITEKTUR_SET.has(name)), [],
+    'Diese arch_-Pools gehoeren nicht zum stabilen Architektur-Katalog');
 });
 
 test('Ebene 5 — POOL_NAMES deckt sich mit POOLS', () => {
@@ -179,8 +206,11 @@ test('Ebene 5 — jeder Pool hat Material, Radius und Geometrie', () => {
 
 test('Ebene 5 — jede in geometry.js genannte Materialfamilie existiert', async () => {
   const materials = await ladeTerra('render/materials.js');
-  const benutzt = [...new Set([...quelltext('generators/geometry.js')
-    .matchAll(/familie:\s*['"]([a-zA-Z]+)['"]/g)].map((m) => m[1]))];
+  const benutzt = [...new Set([
+    ...[...quelltext('generators/geometry.js')
+      .matchAll(/familie:\s*['"]([a-zA-Z]+)['"]/g)].map((m) => m[1]),
+    ...ARCHITEKTUR.ARCHITEKTUR_STILE.map((stil) => stil.familie)
+  ])];
   assert.ok(benutzt.length > 5, 'Die Suche nach Familien hat kaum etwas gefunden');
   assert.deepEqual(benutzt.filter((f) => !materials.FAMILIEN[f]), [],
     'Diese Familien kennt render/materials.js nicht — die Malschicht bliebe aus');
@@ -198,6 +228,10 @@ function unerreichbarePools() {
     const alle = (ALLE_QUELLEN.match(new RegExp('["\']' + name + '["\']', 'g')) || []).length;
     const definitionen = (ALLE_QUELLEN.match(
       new RegExp('definePool\\(\\s*["\']' + name + '["\']', 'g')) || []).length;
+    /* Dynamische Architektur-IDs stehen nie vollstaendig im Quelltext; ihre
+       echte Registrierung prueft der gesonderte Katalogtest oben. */
+    if (DYNAMISCHE_POOL_SET.has(name)) continue;
+
     if (alle - definitionen <= 0) out.push(name);
   }
   return out;

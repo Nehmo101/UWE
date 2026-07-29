@@ -498,11 +498,17 @@ function terraPatch(shader, opts) {
         '\t\tmin( terraArborN * uArborStaerke, 1.0 ) * 0.45 );\n'
       : '';
     var fogNeu = fogChunk.replace(fogKey,
-      'float terraDicht = 1.0 + 1.0 * ( 1.0 - smoothstep( 0.5, 10.0, vTerraW.y ) );\n' +
+      'float terraTal = 1.0 - smoothstep( 0.5, 10.0, vTerraW.y );\n' +
+      '\tfloat terraHoch = smoothstep( 42.0, 185.0, vTerraW.y );\n' +
+      '\tfloat terraDicht = 1.0 + terraTal + terraHoch * 0.12;\n' +
       '\tfogFactor = 1.0 - pow( max( 1.0 - fogFactor, 0.0 ), terraDicht );\n' +
       '\tfogFactor = min( fogFactor, uFogCap );\n' +
       '\tfloat terraSonne = pow( max( dot( normalize( vTerraW - cameraPosition ), uSunDir ), 0.0 ), 2.0 );\n' +
       '\tvec3 terraFogCol = mix( uFogCool, uFogWarm, terraSonne );\n' +
+      '\tfloat terraFern = smoothstep( 0.18, 0.78, fogFactor );\n' +
+      '\tterraFogCol = mix( terraFogCol, uFogCool, terraFern * terraHoch * 0.18 );\n' +
+      '\tfloat terraFogLum = dot( terraFogCol, vec3( 0.299, 0.587, 0.114 ) );\n' +
+      '\tterraFogCol = mix( terraFogCol, vec3( terraFogLum ), terraFern * 0.055 );\n' +
       arborDunst +
       '\tgl_FragColor.rgb = mix( gl_FragColor.rgb, terraFogCol, fogFactor );');
     shader.fragmentShader = shader.fragmentShader.replace(fogInc, fogNeu);

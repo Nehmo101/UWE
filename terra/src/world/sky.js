@@ -177,6 +177,7 @@ var _cirObj = new THREE.Object3D();
 
 /* --- Cumulus: Billboards mit vertikalem Farbverlauf --------------------- */
 var CLOUD_N = 40, CLOUD_BLOBS = 4;
+var LUFT_WOLKEN_ABSENKUNG = [145, 90, 25];
 var cloudGeo = new THREE.PlaneGeometry(1, 1);
 var cloudUniforms = {
   uWolkeOben: { value: new THREE.Color(0xffffff) },
@@ -194,7 +195,11 @@ cloudMat.onBeforeCompile = function (shader) {
       shader.fragmentShader.indexOf('#include <map_pars_fragment>') >= 0) {
     shader.fragmentShader = 'uniform vec3 uWolkeOben;\nuniform vec3 uWolkeUnten;\n' +
       shader.fragmentShader.replace(anker, anker +
-        '\n#ifdef USE_MAP\ndiffuseColor.rgb *= mix( uWolkeUnten, uWolkeOben, smoothstep( 0.12, 0.85, vMapUv.y ) );\n#endif');
+        '\n#ifdef USE_MAP\nfloat terraWolkenHoehe = smoothstep( 0.08, 0.92, vMapUv.y );\n' +
+        'float terraWolkenKern = 1.0 - abs( vMapUv.y * 2.0 - 1.0 );\n' +
+        'vec3 terraWolkenFarbe = mix( uWolkeUnten, uWolkeOben, terraWolkenHoehe * terraWolkenHoehe );\n' +
+        'diffuseColor.rgb *= terraWolkenFarbe * ( 0.91 + terraWolkenKern * 0.09 );\n' +
+        'diffuseColor.a *= smoothstep( 0.035, 0.18, diffuseColor.a );\n#endif');
   } else {
     console.warn('terra: Shader-Patch "wolkenverlauf" fand seinen Anker nicht.');
   }
@@ -279,7 +284,10 @@ function updateClouds(dt) {
     for (var b = 0; b < CLOUD_BLOBS; b++) {
       var bl = c.blobs[b];
       var px = c.x + bl.ox * c.s, pz = c.z + bl.oz * c.s;
-      _cloudObj.position.set(px, c.y + bl.oy * c.s * 0.5, pz);
+      // Im Luftarchipel ziehen die nahen Wolken deutlich unter den Inseln vorbei:
+      // dieselben Instanzen, aber eine echte Vorder-/Mittel-/Fernstaffelung im Raum.
+      var luftAbsenkung = S.biom === 'luftarchipel' ? LUFT_WOLKEN_ABSENKUNG[c.lage] : 0;
+      _cloudObj.position.set(px, c.y - luftAbsenkung + bl.oy * c.s * 0.5, pz);
       // Billboard: bleibt aufrecht, dreht sich nur zur Kamera
       _cloudObj.rotation.set(0, Math.atan2(camera.position.x - px, camera.position.z - pz), 0);
       _cloudObj.scale.set(c.s * bl.s * 2.1, c.s * bl.s * 1.25, 1);

@@ -16,6 +16,7 @@ import { zeichenDaten } from '../render/signaturen.js';
    die Gruppen- und Kulturtabellen sind die Quelle. Zyklusfrei: objects.js
    zieht generators/, core/, world/ und render/, nie editor/. */
 import { OBJGRUPPEN, KULTUR } from '../generators/objects.js';
+import { ARCHITEKTUR_STILE, ARCHITEKTUR_ASSET_LABELS } from '../assets/architektur-katalog.js';
 import { pushUndo } from './history.js';
 // J3 — die Auswahlliste der Sprachfamilien kommt aus dem Generator, damit sie
 // an genau EINER Stelle gepflegt wird. namen.js importiert nur core/ und
@@ -23,6 +24,7 @@ import { pushUndo } from './history.js';
 import { sprachfamilien, familieDerKarte, setzeSprachfamilie } from '../generators/namen.js';
 import { clearPreview, rebuildHandles, select, brushRing, waehleMarker } from './selection.js';
 import { buildPanel, updateHint } from '../ui/panels.js';
+import { registriereLuftWerkzeuge } from './luftwerkzeuge.js';
 
 /* I2 — Auswahlliste der Biome fuer das Schema der Biomflaeche. Sie wird aus
    der Registry abgeleitet und nicht abgeschrieben: die Leiste oben traegt
@@ -444,6 +446,31 @@ var PARAMS = {
     { k: "staerke", l: "Stärke", min: 0.05, max: 3, st: 0.05, d: 0.8 }
   ]
 };
+
+PARAMS["objekt:weltschildkroete"] = [
+  { k: "groesse", l: "Gr\u00f6\u00dfe", min: 0.55, max: 2.2, st: 0.05, d: 1 },
+  { k: "drehung", l: "Drehung", min: 0, max: 359, st: 1, d: 35 },
+  { k: "kopfbewegung", l: "Kopfbewegung", min: 0, max: 1, st: 0.05, d: 0.65 }
+];
+VARIANTS.objekt.push(["weltschildkroete", "Weltschildkr\u00f6te \u00b7 Schloss"]);
+registriereLuftWerkzeuge(VARIANTS, PARAMS);
+
+function ergaenzeArchitekturOption(schema, key, option) {
+  var defs = PARAMS[schema] || [];
+  for (var i = 0; i < defs.length; i++) {
+    if (defs[i].k !== key || !defs[i].o) continue;
+    defs[i].o.push(option);
+    return;
+  }
+}
+
+for (var architekturIndex = 0; architekturIndex < ARCHITEKTUR_STILE.length; architekturIndex++) {
+  var architektur = ARCHITEKTUR_STILE[architekturIndex];
+  VARIANTS.objekt.push([architektur.id, architektur.label]);
+  ergaenzeArchitekturOption("pfad:strasse", "stil", [architektur.id, architektur.label]);
+  ergaenzeArchitekturOption("flaeche:viertel", "stil", [architektur.id, architektur.label]);
+  ergaenzeArchitekturOption("ranke:ranke", "stadtStil", [architektur.id, architektur.label]);
+}
 /* ==========================================================================
    A2 — Wegsuche: Varianten und Parameter als VERWEIS auf die Pfad-Schemata
 
@@ -498,7 +525,7 @@ function nurTypLabels() {
 
 function poolLabel(name) {
   var L = nurTypLabels();
-  return L[name] || (name.charAt(0).toUpperCase() + name.slice(1));
+  return ARCHITEKTUR_ASSET_LABELS[name] || L[name] || (name.charAt(0).toUpperCase() + name.slice(1));
 }
 
 /** Alle per Streuung erreichbaren Pools: kuratierte Liste + Gruppen + Kulturen. */
@@ -662,6 +689,7 @@ function copyParams(o) { var c = {}; for (var k in o) c[k] = o[k]; return c; }
 function pinselRadius() {
   if (ed.tool === "terrain") return curParams().radius || 0;
   if (ed.tool === "pfad" && ed.variantOf.pfad === "biompinsel") return curParams().radius || 0;
+  if (ed.tool === "objekt" && ed.variantOf.objekt === "weltschildkroete") return 15 * (curParams().groesse || 1);
   /* Bedienungsrunde: auch das Objekt-Werkzeug zeigt seinen Wirkkreis — den
      Streuradius. Bei Streuung 0 bleibt ein kleiner Zielring stehen, denn
      gerade dann kommt es auf die exakte Setzstelle an. */

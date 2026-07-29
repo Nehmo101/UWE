@@ -41,7 +41,7 @@ export const TERRA_BIOME = [
   "wiese", "wueste", "kueste", "sumpf", "schnee", "eis", "moor", "meer",
   "hochland", "steppe", "vulkan", "salzwueste", "regenwald", "bambuswald",
   "mangrove", "kreide", "tundra", "karst", "bluetental", "aschebrache",
-  "pilzwald", "terrassen", "nebelwald", "klippenmeer", "korallenbank",
+  "pilzwald", "terrassen", "nebelwald", "klippenmeer", "korallenbank", "luftarchipel",
 ] as const;
 export type TerraBiome = (typeof TERRA_BIOME)[number];
 

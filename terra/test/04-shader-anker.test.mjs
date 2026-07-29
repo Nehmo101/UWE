@@ -199,6 +199,20 @@ test('Ebene 4 — die gepatchten Anker sind vollstaendig erfasst', () => {
   }
 });
 
+test('Ebene 4 — Wetter-VFX bindet alle im Biomkern verwendeten Uniforms', () => {
+  const src = quelltext('world/vfx.js');
+  const typen = {
+    uBiomAn: 'float', uBiomKarte: 'sampler2D', uBiomLut: 'sampler2D',
+    uBiomAbb: 'vec2', uBiomZeilen: 'float'
+  };
+  for (const [name, typ] of Object.entries(typen)) {
+    assert.match(src, new RegExp('uniform\\s+' + typ + '\\s+' + name + ';'),
+      name + ' wird im Wetterkern benutzt, aber nicht im GLSL-Kopf deklariert');
+    assert.ok(src.includes('shader.uniforms.' + name + ' = terraUniforms.' + name + ';'),
+      name + ' wird im Wetterkern benutzt, aber nicht an terraUniforms gebunden');
+  }
+});
+
 test('Ebene 4 — jeder Patch meldet sich, wenn sein Anker fehlt', () => {
   /* Die Projektkonvention lautet: kein stiller Ausfall. Jede Datei, die
      Anker ersetzt, muss auch den Fehlerfall behandeln — geprueft ueber die

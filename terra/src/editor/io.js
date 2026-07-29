@@ -105,6 +105,10 @@ function setzeKartenGroesse(n) {
   return g;
 }
 
+/* Bewusst eigener Exportname: die Format-Tests oeffnen den internen Helfer
+   ueber ihr Testfenster; die Asset-Schau braucht denselben sicheren Pfad. */
+export const setzeKartenGroesseFuerSchau = setzeKartenGroesse;
+
 /* --- Speicherformat v3: Hoehen als Delta zum Seed-Terrain -----------------
    Das Seed-Terrain ist deterministisch aus genBaseIn(_, worldSeed)
    reproduzierbar; nur vom Pinsel veraenderte Zellen weichen ab. v3 speichert

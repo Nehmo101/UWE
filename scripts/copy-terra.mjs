@@ -43,7 +43,7 @@ const APPS = ["studio", "portal"];
  * Was mitkommt. Bewusst eine Positivliste: `terra/test/` (Node-Tests,
  * Browser-Proben, Fixtures) und die README gehören nicht ins Web.
  */
-const TEILE = ["index.html", "src", "vendor"];
+const TEILE = ["index.html", "src", "vendor", "assets"];
 
 function kopiereBaum(von, nach, zaehler) {
   const stat = fs.statSync(von);

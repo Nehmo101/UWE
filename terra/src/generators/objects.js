@@ -4,8 +4,13 @@ import * as THREE from 'three';
 import { clamp, hashi, rngOf, rr, ri, wpick } from '../core/rng.js';
 import { S, HALF, WATER, COS40, groupOf } from '../core/store.js';
 import { POOLS, emit, tintOf } from '../core/pools.js';
+import { ARCHITEKTUR_STIL_TABELLEN } from '../assets/architektur-katalog.js';
 import { heightAt, slopeAt, inCorridor } from '../world/terrain.js';
 import { FENSTER_ANKER, LICHT_ANKER, islandGeo, leafSurface, leafHalfWidth } from './geometry.js';
+import { genWeltschildkroete } from './weltschildkroete.js';
+import { genLuftarchipelObjekt, genRiesenbambusObjekt } from './luftobjekte.js';
+import { baueAssetSchauLayout, setzeAssetSchauInstanzen } from './asset-schau.js';
+import { baueAssetSchauMeshes } from './asset-schau-meshes.js';
 import { rockMat } from '../render/materials.js';
 // I1: Kartenzeichen (siehe generators/zeichen.js). Die Richtung ist
 // objects.js -> zeichen.js, nie zurueck.
@@ -369,6 +374,17 @@ var OBJGRUPPEN = {
   schwebend: [["moewe", 6], ["sporenlaterne", 4], ["lichtbluete", 3],
               ["schwebefels", 2], ["sturzwurzel", 2], ["rankengleiter", 1]]
 };
+
+/*
+ * Die 12 neuen Architekturwelten sind gleichzeitig Kultur (fuer Viertel,
+ * Strassen und Blattstaedte) und Objektgruppe (fuer freie Streuung). Beide
+ * Registry-Zweige verweisen auf dieselben unveraenderlichen Tabellen.
+ */
+for (var architekturStil in ARCHITEKTUR_STIL_TABELLEN) {
+  KULTUR[architekturStil] = ARCHITEKTUR_STIL_TABELLEN[architekturStil];
+  OBJGRUPPEN[architekturStil] = ARCHITEKTUR_STIL_TABELLEN[architekturStil];
+}
+
 /* ==========================================================================
    I1 — Was aus einer Objektstreuung wird, wenn man herauszoomt
 
@@ -429,8 +445,11 @@ var OBJEKT_ZEICHEN = {
   requisiten:  { auf: 'Hausrat geht in der Ortssignatur auf' },
   schwebend:   { auf: 'Fliegendes traegt keine Karte — eine Moewe ist kein Ort' }
 };
-/* Fallback wie im Koerperzweig: eine unbekannte Variante (alte Karte, Gruppe
-   entfernt) streut Baeume und bekommt folglich das Waldzeichen. */
+for (var architekturZeichen in ARCHITEKTUR_STIL_TABELLEN) {
+  OBJEKT_ZEICHEN[architekturZeichen] = { sache: 'ort' };
+}
+OBJEKT_ZEICHEN.weltschildkroete = { sache: 'wehrbau', art: 'sig_burg' };
+/* Unbekannte Varianten alter Karten streuen Baeume und erhalten das Waldzeichen. */
 var OBJEKT_ZEICHEN_VORGABE = OBJEKT_ZEICHEN.baeume;
 
 /* Zwingt der Nutzer ueber `nurTyp` genau EINE Poolsorte, dann ist DAS die
@@ -628,10 +647,29 @@ function genInseln(el) {
 }
 
 function genObjekt(el) {
+  // Vollstaendiger Katalogmodus: keine Streuung und keine Biomeinschraenkung,
+  // sondern genau eine Instanz jedes physischen Pools im stabilen Schauraster.
+  if (el.variant === "asset-schau") {
+    var layout = el.assetSchauLayout || baueAssetSchauLayout();
+    el.assetSchauLayout = layout;
+    setzeAssetSchauInstanzen(el, layout, { hoeheAn: heightAt });
+    baueAssetSchauMeshes(el, layout);
+    el.kennzahl = layout.counts.physical;
+    return;
+  }
+  // Animierte Hero-Landmarke: ein eigenes Mesh-Ensemble statt Poolstreuung.
+  if (el.variant === "weltschildkroete") {
+    el.kennzahl = Math.max(1, el.points.length);
+    if (alsZeichen(S.einheitMeter)) objektZeichen(el);
+    if (alsKoerper(S.einheitMeter)) genWeltschildkroete(el);
+    return;
+  }
   // Schwebeinseln VOR der normalen Poolstreuung: eigener Zweig ohne
   // Bodenregeln, ohne OBJGRUPPEN-Tabelle (der Fallback auf "baeume" darf
   // fuer diese Variante nie greifen).
   if (el.variant === "inseln") { genInseln(el); return; }
+  if (el.variant === "luftinseln") { genLuftarchipelObjekt(el); return; }
+  if (el.variant === "bambushain") { genRiesenbambusObjekt(el); return; }
   /* I1 — ueber der Uebergabe wird aus der Streuung EIN Kartenzeichen (bzw.
      eine Kammfolge oder ein Kuestenband, siehe OBJEKT_ZEICHEN). Im
      Ueberblendbereich laeuft beides; darunter aendert sich nichts, und zwar

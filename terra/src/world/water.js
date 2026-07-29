@@ -109,12 +109,30 @@ var streifUniforms = {
 var STREIF_FRAG =
   'float terraStreifH = terraWoge( vTerraW.xz, uWasserZeit );\n' +
   'float terraStreif = smoothstep( uStreifSchwelle, uStreifSchwelle + 0.16, terraStreifH );\n' +
-  'float terraStreifL = 0.55 + 0.45 * sin( vTerraW.x * 0.0105 - vTerraW.z * 0.0082\n' +
-  '  + uWasserZeit * 0.11 );\n' +
-  'terraStreif *= smoothstep( 0.35, 0.95, terraStreifL );\n' +
+  'float terraStreifL = 0.50 + 0.30 * sin( vTerraW.x * 0.0105 - vTerraW.z * 0.0082\n' +
+  '  + uWasserZeit * 0.11 ) + 0.20 * sin( vTerraW.x * 0.021 - vTerraW.z * 0.017\n' +
+  '  - uWasserZeit * 0.07 );\n' +
+  'terraStreif *= smoothstep( 0.38, 0.82, terraStreifL );\n' +
   'float terraStreifB = 1.0 - abs( dot( normalize( vViewPosition ), normal ) );\n' +
   'terraStreif *= 0.15 + 0.85 * terraStreifB * terraStreifB;\n' +
-  'reflectedLight.indirectDiffuse += uHorizont * ( terraStreif * uStreifStaerke );\n';
+  'float terraWasserLuft = smoothstep( 0.18, 0.92, terraStreifB );\n' +
+  'reflectedLight.indirectDiffuse += uHorizont * uStreifStaerke\n' +
+  '  * ( terraStreif + terraWasserLuft * 0.055 );\n';
+
+/** Leitet die Normale direkt aus der bereits verformten Wasseroberflaeche ab.
+ *  So reagieren Kammlicht und Fresnel auf dieselbe Woge, ohne Normalmap,
+ *  zusaetzliche Textur oder CPU-Puffer-Upload. */
+function patchWasserNormale(shader) {
+  var anker = '#include <normal_fragment_maps>';
+  if (shader.fragmentShader.indexOf(anker) < 0) {
+    console.warn('terra: Shader-Patch "wassernormale" fand seinen Anker nicht.');
+    return;
+  }
+  shader.fragmentShader = shader.fragmentShader.replace(anker, anker +
+    '\nvec3 terraWasserN = normalize( cross( dFdx( vViewPosition ), dFdy( vViewPosition ) ) );' +
+    '\nif ( dot( terraWasserN, normal ) < 0.0 ) terraWasserN = -terraWasserN;' +
+    '\nnormal = normalize( mix( normal, terraWasserN, 0.68 ) );');
+}
 
 function patchHimmelsStreifen(shader) {
   shader.uniforms.uHorizont = terraUniforms.uHorizont;
@@ -147,6 +165,7 @@ function himmelsStreifen(mat) {
   var vorher = mat.onBeforeCompile;
   mat.onBeforeCompile = function (shader) {
     if (vorher) vorher.call(this, shader);
+    patchWasserNormale(shader);
     patchHimmelsStreifen(shader);
   };
   var schluessel = mat.customProgramCacheKey;
@@ -195,12 +214,15 @@ var SEE_WOGE_ANKER = '#include <begin_vertex>';
 var SEE_STREIF_FRAG =
   'float terraSeeH = terraWoge( vTerraW.xz, uSeeZeit );\n' +
   'float terraSeeStreif = smoothstep( uStreifSchwelle, uStreifSchwelle + 0.16, terraSeeH );\n' +
-  'float terraSeeL = 0.55 + 0.45 * sin( vTerraW.x * 0.0105 - vTerraW.z * 0.0082\n' +
-  '  + uSeeZeit * 0.11 );\n' +
-  'terraSeeStreif *= smoothstep( 0.35, 0.95, terraSeeL );\n' +
+  'float terraSeeL = 0.50 + 0.30 * sin( vTerraW.x * 0.0105 - vTerraW.z * 0.0082\n' +
+  '  + uSeeZeit * 0.11 ) + 0.20 * sin( vTerraW.x * 0.021 - vTerraW.z * 0.017\n' +
+  '  - uSeeZeit * 0.07 );\n' +
+  'terraSeeStreif *= smoothstep( 0.38, 0.82, terraSeeL );\n' +
   'float terraSeeB = 1.0 - abs( dot( normalize( vViewPosition ), normal ) );\n' +
   'terraSeeStreif *= 0.15 + 0.85 * terraSeeB * terraSeeB;\n' +
-  'reflectedLight.indirectDiffuse += uHorizont * ( terraSeeStreif * uSeeStreif );\n';
+  'float terraSeeLuft = smoothstep( 0.18, 0.92, terraSeeB );\n' +
+  'reflectedLight.indirectDiffuse += uHorizont * uSeeStreif\n' +
+  '  * ( terraSeeStreif + terraSeeLuft * 0.045 );\n';
 
 function patchSeeWoge(shader, streifen) {
   shader.uniforms.uSeeZeit = seeWogen.uniforms.uSeeZeit;
@@ -214,6 +236,7 @@ function patchSeeWoge(shader, streifen) {
         '\ntransformed.y += terraWoge( transformed.xz, uSeeZeit ) * uSeeWoge;');
   }
   if (!streifen) return;
+  patchWasserNormale(shader);
   shader.uniforms.uHorizont = terraUniforms.uHorizont;
   shader.uniforms.uSeeStreif = seeWogen.uniforms.uSeeStreif;
   shader.uniforms.uStreifSchwelle = streifUniforms.uStreifSchwelle;

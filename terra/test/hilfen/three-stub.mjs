@@ -1450,7 +1450,22 @@ export class Mesh extends Object3D {
     this.isMesh = true;
   }
 }
-export class Line extends Mesh { constructor(g, m) { super(g, m); this.type = 'Line'; this.isLine = true; } }
+export class Line extends Mesh {
+  constructor(g, m) { super(g, m); this.type = 'Line'; this.isLine = true; }
+  computeLineDistances() {
+    const pos = this.geometry && this.geometry.attributes.position;
+    if (!pos) return this;
+    const dist = new Float32Array(pos.count);
+    for (let i = 1; i < pos.count; i++) {
+      const dx = pos.getX(i) - pos.getX(i - 1);
+      const dy = pos.getY(i) - pos.getY(i - 1);
+      const dz = pos.getZ(i) - pos.getZ(i - 1);
+      dist[i] = dist[i - 1] + Math.hypot(dx, dy, dz);
+    }
+    this.geometry.setAttribute('lineDistance', new BufferAttribute(dist, 1));
+    return this;
+  }
+}
 export class LineLoop extends Line { constructor(g, m) { super(g, m); this.type = 'LineLoop'; } }
 export class LineSegments extends Line { constructor(g, m) { super(g, m); this.type = 'LineSegments'; } }
 export class Points extends Mesh { constructor(g, m) { super(g, m); this.type = 'Points'; this.isPoints = true; } }
@@ -1547,6 +1562,13 @@ export class MeshStandardMaterial extends MeshPhongMaterial {
 }
 export class LineBasicMaterial extends Material {
   constructor(o) { super(); this.type = 'LineBasicMaterial'; this.linewidth = 1; if (o) this.setValues(o); }
+}
+export class LineDashedMaterial extends LineBasicMaterial {
+  constructor(o) {
+    super(); this.type = 'LineDashedMaterial';
+    this.scale = 1; this.dashSize = 3; this.gapSize = 1;
+    if (o) this.setValues(o);
+  }
 }
 export class PointsMaterial extends Material {
   constructor(o) { super(); this.type = 'PointsMaterial'; this.size = 1; this.map = null; this.alphaTest = 0; if (o) this.setValues(o); }
@@ -1674,6 +1696,14 @@ export class DirectionalLight extends Light {
   }
 }
 export class AmbientLight extends Light {}
+export class PointLight extends Light {
+  constructor(color, intensity, distance = 0, decay = 2) {
+    super(color, intensity);
+    this.type = 'PointLight';
+    this.distance = distance;
+    this.decay = decay;
+  }
+}
 export class Raycaster {
   constructor() { this.ray = { origin: new Vector3(), direction: new Vector3() }; this.params = {}; }
   setFromCamera() {}

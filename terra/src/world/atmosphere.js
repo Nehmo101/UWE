@@ -17,6 +17,7 @@ import { cam, camera } from '../editor/camera.js';
 // Boeen-Spiegel bei den Voegeln (siehe boeeWert weiter unten).
 import { windUniforms, windVerstaerkung } from './wind.js';
 import { setVfx } from './vfx.js';
+import { initWeltleben, tickWeltleben } from './weltleben.js';
 
 /* ==========================================================================
    Tageszeit-Presets. Jedes definiert die komplette Stimmung: Sonne,
@@ -766,6 +767,7 @@ function tickAtmosphere(raw) {
   // schneller, im Schneefall langsamer (derselbe Faktor wie fuer sky.js).
   terraUniforms.uCloudDrift.value.x +=
     CLOUD_DRIFT_MITTEL * raw * 0.006 * wetterMix.wolkenTempo;
+  tickWeltleben(Math.min(0.05, raw), performance.now() * 0.001);
 }
 
 function initAtmosphere(scene) {
@@ -775,6 +777,7 @@ function initAtmosphere(scene) {
   scene.add(rimLight);
   scene.add(birdMesh);
   scene.add(rauchMesh);
+  initWeltleben(scene);
   // Wetterauswahl selbst verdrahten: io.js bedient Biom, Kartengroesse und
   // die Tageszeit-Knoepfe, kennt das Wetter aber nicht. Der Listener sitzt
   // deshalb hier, wo auch die Presets liegen.

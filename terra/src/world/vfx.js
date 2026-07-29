@@ -201,7 +201,15 @@ const KOPF_WETTER = [
   'uniform vec3  uFarbB;',
   'uniform float uWindKopplung;',
   'uniform float uWindStaerke;',
-  'uniform vec2  uForm;'
+  'uniform vec2  uForm;',
+  /* Biomflaechen werden im Wetterkern an der Partikel-Weltposition gelesen.
+     Die Uniforms muessen deshalb nicht nur im Three-Uniformobjekt, sondern
+     auch im GLSL-Kopf des MeshBasicMaterial-Vertexshaders deklariert sein. */
+  'uniform float uBiomAn;',
+  'uniform sampler2D uBiomKarte;',
+  'uniform sampler2D uBiomLut;',
+  'uniform vec2 uBiomAbb;',
+  'uniform float uBiomZeilen;'
 ].join('\n');
 
 const KOPF_ARBOR = [
@@ -407,6 +415,11 @@ const vfxMat = new THREE.MeshBasicMaterial({
 vfxMat.onBeforeCompile = function (shader) {
   for (var k in vfxUniforms) shader.uniforms[k] = vfxUniforms[k];
   shader.uniforms.uWindStaerke = windUniforms.uWindStaerke;
+  shader.uniforms.uBiomAn = terraUniforms.uBiomAn;
+  shader.uniforms.uBiomKarte = terraUniforms.uBiomKarte;
+  shader.uniforms.uBiomLut = terraUniforms.uBiomLut;
+  shader.uniforms.uBiomAbb = terraUniforms.uBiomAbb;
+  shader.uniforms.uBiomZeilen = terraUniforms.uBiomZeilen;
   vfxPatch(shader, false);
 };
 vfxMat.customProgramCacheKey = function () { return 'terraVfx'; };

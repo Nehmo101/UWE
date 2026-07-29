@@ -432,6 +432,15 @@ export function initPointer(cv) {
     if (holeBeschriftungsschicht().klick(raycaster, { aufnahme: istAufnahme() })) return;
 
     var p = groundPoint(e);
+    /* Schwebende Objekte koennen oberhalb des Horizonts liegen. Dort hat der
+       Strahl keinen Bodenpunkt, die echte 3D-Auswahl darf aber trotzdem
+       treffen (Luftinseln, Flugschiffe und Flugzuege). */
+    if (!p && ed.tool === "auswahl") {
+      var luftTreffer = pickElement(e, null);
+      if (e.shiftKey && luftTreffer) auswahlUmschalten(luftTreffer);
+      else select(luftTreffer);
+      return;
+    }
     if (!p) return;
 
     /* ======================================================================

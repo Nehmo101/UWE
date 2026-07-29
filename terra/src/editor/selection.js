@@ -1,11 +1,12 @@
 // Auswahl, Punktgriffe, Zeichenvorschau und Pinselring.
 import * as THREE from 'three';
 import { clamp } from '../core/rng.js';
-import { S, VINE_R } from '../core/store.js';
+import { S, VINE_R, WATER } from '../core/store.js';
 // Bedienungsrunde: Klick auf Instanz-Objekte (Haeuser, Baeume …) waehlt ihr
 // Element — dafuer braucht pickElement die Pool-Meshes. Zyklusfrei: pools.js
 // importiert nichts aus editor/.
 import { POOLS, POOL_NAMES } from '../core/pools.js';
+import { auswahlKontur, aktualisiereAuswahlKontur } from './selection-outline.js';
 import { heightAt } from '../world/terrain.js';
 import { pathSamples } from '../generators/paths.js';
 import { inPoly } from '../generators/areas.js';
@@ -214,7 +215,10 @@ function zugpunktListe(el) {
 function griffMat(i) {
   if (ed.draw) return dotMatA;
   if (i === aktiverGriff) return dotMatC;
-  return zugGriffIndex(i) >= 0 ? dotMatD : dotMatB;
+  if (zugGriffIndex(i) >= 0) return dotMatD;
+  if (griffLayout.el && griffLayout.el.kind === "pfad" &&
+      griffLayout.el.variant === "flugroute") return dotMatD;
+  return dotMatB;
 }
 
 // Zuletzt angefasster Punktgriff des ausgewaehlten Elements (-1 = keiner).
@@ -376,6 +380,7 @@ function markerTreffer(ev) {
    Griff-Zugs der einzige Fall, in dem der Rahmen hinterherhinkte.
    ========================================================================== */
 var auswahlRahmen = new THREE.Group();
+auswahlRahmen.add(auswahlKontur);
 var rahmenMat = new THREE.LineBasicMaterial({
   color: 0x2d74ab, transparent: true, opacity: 0.85, depthTest: false, fog: false
 });
@@ -383,6 +388,7 @@ var rahmenMat = new THREE.LineBasicMaterial({
 function leereRahmen() {
   for (var i = auswahlRahmen.children.length - 1; i >= 0; i--) {
     var c = auswahlRahmen.children[i];
+    if (c === auswahlKontur) continue;
     if (c.geometry) c.geometry.dispose();     // Geometrie ist je Rahmen eigen
     auswahlRahmen.remove(c);
   }
@@ -423,9 +429,31 @@ function rebuildAuswahlRahmen() {
 }
 
 var _gp = { x: 0, y: 0, z: 0 };
+
+/** Hoehe eines Flugrouten-Griffs. Die Elementpunkte liegen absichtlich nur in
+ *  X/Z in der Datei; im Editor gehoeren ihre Griffe aber an den sichtbaren
+ *  Luftkorridor und nicht als riesige blaue Kugeln auf den Meeresgrund. */
+function flugroutenGriffHoehe(el, p) {
+  var route = el && el.flugroute && el.flugroute.route;
+  if (route && route.length) {
+    var best = route[0], bd = Infinity;
+    for (var i = 0; i < route.length; i++) {
+      var dx = route[i].x - p.x, dz = route[i].z - p.z;
+      var d = dx * dx + dz * dz;
+      if (d < bd) { bd = d; best = route[i]; }
+    }
+    return best.y;
+  }
+  var h = el && el.params && Number.isFinite(el.params.hoehe) ? el.params.hoehe : 55;
+  return Math.max(heightAt(p.x, p.z), WATER) + h;
+}
+
 function updateHandlePositions() {
   var list = ed.draw ? ed.draw.points : (ed.selected ? ed.selected.points : []);
   var s = clamp(cam.dist * 0.011, 0.5, 3.2);
+  var luftRoute = !ed.draw && ed.selected && ed.selected.kind === "pfad" &&
+    ed.selected.variant === "flugroute";
+  var griffS = luftRoute ? s * 0.56 : s;
   var zugL = griffLayout.zug ? zugpunktListe(griffLayout.el) : null;
   // Stuetzstellen einmal je Aufruf: die Griffe sollen auf DERSELBEN Sollachse
   // sitzen, die genRanke baut (rankeAchse ist dort dieselbe Funktion).
@@ -442,14 +470,18 @@ function updateHandlePositions() {
     }
     var p = list[i];
     if (!p) continue;
-    handles.children[i].position.set(p.x, heightAt(p.x, p.z) + 0.9, p.z);
+    var py = luftRoute ? flugroutenGriffHoehe(ed.selected, p) :
+      heightAt(p.x, p.z) + 0.9;
+    handles.children[i].position.set(p.x, py, p.z);
     // aktiver Griff etwas groesser, damit er als Ziel von Entf erkennbar ist
-    handles.children[i].scale.setScalar(!ed.draw && i === aktiverGriff ? s * 1.45 : s);
+    handles.children[i].scale.setScalar(
+      !ed.draw && i === aktiverGriff ? griffS * 1.45 : griffS);
   }
   // D1: Nadeln haengen an derselben Kameradistanz wie die Griffe und werden
   // deshalb hier mitgezogen. main.js ruft updateHandlePositions ohnehin je
   // Bild auf — so kommt die Markeranzeige ohne Aenderung an main.js aus.
   updateMarkerPositions();
+  aktualisiereAuswahlKontur(ed.selected, ed.tool === "auswahl");
 }
 
 var _rt = { x: 0, y: 0, z: 0 }, _pv3 = new THREE.Vector3();

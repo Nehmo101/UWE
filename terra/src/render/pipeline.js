@@ -1,11 +1,11 @@
 // Render-Pipeline: Renderer, EffectComposer (Render → Bloom → Strahlen →
-// Graduierung → Kante/Baender/Palette/Malschicht/Korn/Papierkante →
+// Graduierung → Kante/Baender/Palette/weiche Papierkante →
 // OutputPass) plus ein halbaufgeloester Depth-only-Prepass, der die
 // Kantenandeutung, die Himmelsmaske der Godrays UND die Tiefenbaender speist.
 // Der OutputPass steht zwingend am Ende — er erledigt Tone Mapping und
 // Farbraumkonversion.
 //
-// Warum F1/F2/F3 (Ideenwelle 2) im vorhandenen Kante-Pass sitzen und nicht in
+// Warum F1/F3 (Ideenwelle 2) im vorhandenen Kante-Pass sitzen und nicht in
 // eigenen Passes:
 //   (1) Sie brauchen genau das, was dieser Pass schon hat — die
 //       halbaufgeloeste Tiefentextur, uNahFern und die Texelgroesse. Ein
@@ -14,14 +14,10 @@
 //       ein HalfFloat-Target in Bildschirmgroesse. Drei davon kosten mehr
 //       Bandbreite als die gesamte Rechnung, die sie tragen sollen.
 //   (3) Die Reihenfolge im Pass bildet die Malerei ab:
-//       Kante → Tiefenbaender (F3) → Palettenbindung (F1) → Malschicht (F2)
-//       → Filmkorn → Papierkante. Die Palettenbindung ist damit der LETZTE
-//       Farbschritt vor dem OutputPass; was danach kommt, ist kein Farbwert
-//       mehr, sondern Bildtraeger (Papier, Pinsel) und Aufnahme (Korn) — auf
-//       einem echten Bild liegen die auch UEBER dem Pigment. Laege die
-//       Bindung hinter dem Korn, quantisierte sie ein animiertes Rauschen zu
-//       flackernden Bloecken.
-// Alle drei Zweige sind uniform-kohaerent mit Staerke 0 abgeschaltet; ohne
+//       Kante → Tiefenbaender (F3) → weich interpolierte Palettenbindung (F1)
+//       → Papierkante. Es liegt bewusst keine bildschirmfeste Textur und kein
+//       Dither ueber dem Pigment; die Aquarellstruktur bleibt materiallokal.
+// Beide Zweige sind uniform-kohaerent mit Staerke 0 abgeschaltet; ohne
 // Aufruf der Setter ist das Bild byteidentisch zum Stand vor dieser Runde.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -35,9 +31,6 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 // Zyklusfrei: render/materials.js zieht nur textures.js und world/wind.js,
 // keines davon importiert render/pipeline.js.
 import { terraUniforms } from './materials.js';
-// F2: die bildraumfeste Malschicht-Textur. Zyklusfrei — textures.js zieht nur
-// three und core/rng.js, und materials.js (oben) laedt es ohnehin schon.
-import { TEX } from './textures.js';
 
 export const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xdfe8f0, 200, 950);
@@ -238,8 +231,7 @@ const StrahlenShader = {
 };
 
 /* --- Kantenandeutung (Sobel ueber die Tiefe), Tiefenbaender (F3),
-       Palettenbindung (F1), bildraumfeste Malschicht (F2), animiertes Korn
-       und Papierkante ------------------------------------------------------
+       weich interpolierte Palettenbindung (F1) und Papierkante -------------
 
    Tiefenmass: linDepth() liefert fuer eine Weltdistanz d bei near n, far f
    naeherungsweise t = 2d / (d + f), also t = 1 auf dem Clearwert (Himmel).
@@ -249,7 +241,7 @@ const StrahlenShader = {
    Genau das ist die Vorgabe "Bandgrenzen im Nebel verstecken": ueber der
    ersten Grenze setzt der Nebel gerade ein, die zweite liegt in seinem
    Kern, die dritte dahinter, wo ohnehin alles Nebelfarbe ist. */
-const KanteKornShader = {
+const KanteBildShader = {
   uniforms: {
     tDiffuse: { value: null },
     tDepth: { value: null },
@@ -261,8 +253,6 @@ const KanteKornShader = {
     uNahFern: { value: new THREE.Vector2(0.5, 3000) },
     uKante: { value: 0.16 },
     uKanteFarbe: { value: new THREE.Color(0x2e2418) },
-    uKorn: { value: 0.025 },
-    uZeit: { value: 0 },
     // C3 Papierkante: unregelmaessig auslaufender Blattrand. Ergaenzt die
     // Vignette der Graduierung (die weiter aus den Presets kommt und weiter
     // abdunkelt) — hier wird zum Rand hin AUFgehellt, damit das Bild wie auf
@@ -289,12 +279,6 @@ const KanteKornShader = {
     // damit LinearFilter + ClampToEdge exakt zwischen den Stuetzstellen
     // interpoliert und die Randfarben nicht halbiert werden.
     uPaletteSkala: { value: new THREE.Vector2(19 / 20, 0.5 / 20) },
-    uPaletteStufen: { value: 14 },
-    uPaletteQuant: { value: 0.6 },
-    // --- F2 bildraumfeste Malschicht -------------------------------------
-    tMal: { value: null },
-    uMalStaerke: { value: 0 },
-    uMalKachel: { value: new THREE.Vector2(4, 2.5) }   // Kacheln pro Bildbreite/-hoehe
   },
   vertexShader: [
     'varying vec2 vUv;',
@@ -307,40 +291,18 @@ const KanteKornShader = {
     'uniform sampler2D tDiffuse; uniform sampler2D tDepth;',
     'uniform vec2 uTexel; uniform vec2 uPixel; uniform vec2 uNahFern;',
     'uniform float uKante; uniform vec3 uKanteFarbe;',
-    'uniform float uKorn; uniform float uZeit;',
     'uniform float uPapier; uniform vec3 uPapierFarbe;',
     'uniform float uMultiStaerke; uniform vec3 uMultiGrenzen;',
     'uniform float uMultiWeite; uniform float uMultiWeich;',
     'uniform vec4 uBandSat; uniform vec4 uBandKon; uniform vec4 uBandHeb;',
     'uniform sampler2D tRampe; uniform float uPaletteStaerke;',
-    'uniform vec2 uPaletteSkala; uniform float uPaletteStufen;',
-    'uniform float uPaletteQuant;',
-    'uniform sampler2D tMal; uniform float uMalStaerke; uniform vec2 uMalKachel;',
+    'uniform vec2 uPaletteSkala;',
     'varying vec2 vUv;',
     'const vec3 LUMA = vec3( 0.2126, 0.7152, 0.0722 );',
     'float linDepth( vec2 uv ) {',
     '  float z = texture2D( tDepth, uv ).x;',
     '  float n = uNahFern.x, f = uNahFern.y;',
     '  return ( 2.0 * n ) / ( f + n - z * ( f - n ) );',
-    '}',
-    'float korn( vec2 p ) {',
-    '  return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) + uZeit * 61.7 ) * 43758.5453 );',
-    '}',
-    '// Ortsfestes Rauschen OHNE uZeit: Papier flimmert nicht.',
-    'float papierRauschen( vec2 p ) {',
-    '  return fract( sin( dot( p, vec2( 269.5, 183.3 ) ) ) * 43758.5453 );',
-    '}',
-    '// Geordnetes 4x4-Bayer, geschlossene Form statt Konstantenfeld — dieselbe',
-    '// Matrix wie der Ranken-Dither in materials.js:',
-    '//    0  8  2 10 / 12  4 14  6 /  3 11  1  9 / 15  7 13  5   (Rueckgabe k/16)',
-    '// Rein aus gl_FragCoord, ohne Zeit und ohne Textur, also deterministisch',
-    '// und zeitstabil. Das mod(.,4) vorweg haelt das Argument von fract() klein;',
-    '// bei Bildkoordinaten um 2000 verloere ein y*y direkt sonst die Aufloesung.',
-    'float bayer4( vec2 p ) {',
-    '  vec2 q = mod( floor( p ), 4.0 );',
-    '  vec2 h = floor( q * 0.5 );',
-    '  return fract( h.x * 0.5 + h.y * h.y * 0.75 ) * 0.25',
-    '       + fract( q.x * 0.5 + q.y * q.y * 0.75 );',
     '}',
     'void main() {',
     '  vec4 tex = texture2D( tDiffuse, vUv );',
@@ -361,6 +323,14 @@ const KanteKornShader = {
     '  float kante = smoothstep( 0.012, 0.06, sqrt( gx * gx + gy * gy ) / max( mitte, 0.02 ) );',
     '  kante *= 1.0 - smoothstep( 0.35, 0.8, mitte );      // in der Ferne ausblenden',
     '  c = mix( c, uKanteFarbe * c, kante * uKante );',
+    '  // Asymmetrische Tiefenlippe: verdichtet nur die Unterkante eines',
+    '  // Vordergrundobjekts. Verwendet die vorhandenen Sobel-Taps, kostet also',
+    '  // weder weitere Texturzugriffe noch einen Pass und erdet Silhouetten.',
+    '  float untenFern = max( max( bl, b ), br );',
+    '  float fussTiefe = max( untenFern - mitte, 0.0 ) / max( mitte, 0.02 );',
+    '  float fussKante = smoothstep( 0.008, 0.055, fussTiefe );',
+    '  fussKante *= 1.0 - smoothstep( 0.30, 0.72, mitte );',
+    '  c *= 1.0 - fussKante * uKante * 0.16;',
     '  // --- F3 Multiplane: Tiefe in Baender quantisieren ---------------------',
     '  // Ghibli staffelt in Vordergrund / Mittelgrund / Ferne / Himmel, jede',
     '  // Ebene mit eigener Saettigung, eigenem Wertebereich und eigener',
@@ -433,43 +403,10 @@ const KanteKornShader = {
     '        vec2( pl * uPaletteSkala.x + uPaletteSkala.y, 0.5 ) ).rgb;',
     '      float rl = max( dot( rampe, LUMA ), 0.0001 );',
     '      g = mix( g, rampe * ( mix( rl, pl, 0.55 ) / rl ), bind );',
-    '      // (b) Milde Quantisierung mit geordnetem Dither. Der Dither macht',
-    '      //     aus harten Stufen eine Mischung benachbarter Toene — genau',
-    '      //     der Unterschied zwischen Palette und Poster.',
-    '      if ( uPaletteQuant > 0.0 && uPaletteStufen > 1.5 ) {',
-    '        float bs = bayer4( gl_FragCoord.xy ) + 1.0 / 32.0;',
-    '        vec3 stufig = floor( g * uPaletteStufen + bs ) / uPaletteStufen;',
-    '        g = mix( g, stufig, bind * uPaletteQuant );',
-    '      }',
     '    }',
     '    c = pow( max( g, 0.0 ), vec3( 2.2 ) );',
     '  }',
-    '  // --- F2 bildraumfeste Malschicht --------------------------------------',
-    '  // In BILDkoordinaten abgetastet (vUv * Kachelzahl), also schrumpft die',
-    '  // Koernung mit der Entfernung NICHT — im Gegensatz zur Aquarellschicht',
-    '  // der Materialien, die in Welteinheiten laeuft und in der Ferne',
-    '  // verschwindet. Beides existiert nebeneinander: die Welttextur traegt',
-    '  // die Materialidentitaet, diese hier den Bildtraeger.',
-    '  // Abgrenzung zum Filmkorn zwei Zeilen weiter unten: das Korn ist',
-    '  // hochfrequent (ein Pixel) und laeuft mit uZeit, die Malschicht ist',
-    '  // niederfrequent (Kachel ~340 px) und STEHT STILL. Nur so lesen sie',
-    '  // sich als Papier unter der Farbe plus Filmschicht darueber statt als',
-    '  // ein einziges, undefiniertes Rauschen.',
-    '  if ( uMalStaerke > 0.0 ) {',
-    '    vec3 mal = texture2D( tMal, vUv * uMalKachel ).rgb;',
-    '    float traeger = mal.r * 0.50 + mal.g * 0.32 + mal.b * 0.18;   // Mittel ~0.5',
-    '    float ml = dot( c, LUMA );',
-    '    // Multiplikativ und weich: in den tiefsten Tiefen aus (dort ist keine',
-    '    // Farbe, die das Papier tragen koennte), in den Lichtern halbiert',
-    '    // (Papierweiss bleibt Papierweiss).',
-    '    float tor = smoothstep( 0.015, 0.22, ml ) * ( 1.0 - 0.55 * smoothstep( 0.72, 1.0, ml ) );',
-    '    c *= 1.0 + ( traeger - 0.5 ) * 1.8 * uMalStaerke * tor;',
-    '    c = max( c, vec3( 0.0 ) );',
-    '  }',
-    '  // Korn: fein, animiert, in den Tiefen staerker als in den Lichtern',
-    '  float lum = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );',
-    '  float n = korn( gl_FragCoord.xy * 0.7 );',
-    '  c += ( n - 0.5 ) * uKorn * ( 1.25 - min( lum, 1.0 ) );',
+    '  float lum = dot( c, LUMA );',
     '  // --- C3 Papierkante ---------------------------------------------------',
     '  // Radius wie bei der Vignette (vUv-Abstand, also elliptisch: Ecken frueh,',
     '  // Kantenmitten spaet), aber fransig gestoert. Drei teilerfremde',
@@ -482,18 +419,13 @@ const KanteKornShader = {
     '    float wellig = sin( pw *  3.0 + 0.7 ) * 0.013',
     '                 + sin( pw *  7.0 - 1.9 ) * 0.008',
     '                 + sin( pw * 17.0 + 2.6 ) * 0.004;',
-    '    float faser = ( papierRauschen( gl_FragCoord.xy * 0.31 ) - 0.5 ) * 0.011',
-    '                + ( papierRauschen( gl_FragCoord.xy * 0.07 ) - 0.5 ) * 0.018;',
-    '    float rand = smoothstep( 0.44, 0.68, length( pp ) + wellig + faser );',
+    '    float rand = smoothstep( 0.44, 0.68, length( pp ) + wellig );',
     '    // Die Aufhellung folgt der oertlichen Helligkeit (lum von oben): auf',
     '    // Papier zeigt sich das Blatt dort, wo Licht darauf faellt. Ohne die',
     '    // Kopplung risse der Rand in der Nacht die dunklen Ecken auf — eine',
     '    // Ecke bei Luminanz 0.02 wuerde sonst um mehr als das Doppelte heller.',
     '    float papierG = rand * uPapier * ( 0.25 + 0.75 * smoothstep( 0.0, 0.35, lum ) );',
     '    c = mix( c, uPapierFarbe, papierG );',
-    '    // Feine Koernung, die zum Rand hin zunimmt: die Malschicht laeuft aus.',
-    '    c += ( papierRauschen( gl_FragCoord.xy * 1.63 + 11.0 ) - 0.5 )',
-    '       * uPapier * 0.09 * rand;',
     '  }',
     '  gl_FragColor = vec4( c, tex.a );',
     '}'
@@ -512,7 +444,11 @@ function initPipeline(camera) {
     // Puffer am Render-Target unten.
     stencil: true
   });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  /* Die 505er-Abnahmekarte zeigt fast eine Million Dreiecke gleichzeitig.
+     1,5x bleibt auf Retina sauber, halbiert gegenueber 2x aber fast die
+     Postprocessing-Pixellast. Normale Editorkarten behalten volle 2x. */
+  var assetSchauDpr = new URLSearchParams(location.search).get('schau') === 'assets' ? 1.5 : 2;
+  renderer.setPixelRatio(Math.min(assetSchauDpr, window.devicePixelRatio || 1));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;   // weiches Ausrollen der Lichter
@@ -542,7 +478,7 @@ function initPipeline(camera) {
   // auf den letzten AKTIVEN Pass) — der Nachtzustand kostet damit nichts.
   strahlenPass.enabled = false;
   gradePass = new ShaderPass(GradeShader);
-  kantePass = new ShaderPass(KanteKornShader);
+  kantePass = new ShaderPass(KanteBildShader);
   outputPass = new OutputPass();
   composer.addPass(renderPass);
   composer.addPass(bloomPass);
@@ -584,16 +520,10 @@ function resizePipeline(camera) {
   bildmasse(w, h);
 }
 
-/* Bildgroesse in CSS-Pixeln merken und die davon abhaengigen Uniforms setzen.
-   uPixel und die Kachelzahl der Malschicht muessen bei jedem Resize neu
-   gerechnet werden, sonst waechst bzw. schrumpft die Malschicht mit dem
-   Fenster — sie soll aber eine feste Groesse AUF DEM BILD haben. */
-var bildW = 0, bildH = 0;
+/* Bildpixelmass fuer die weiche Tiefenstaffel. */
 function bildmasse(w, h) {
-  bildW = w; bildH = h;
   if (!kantePass) return;
   kantePass.uniforms.uPixel.value.set(1 / w, 1 / h);
-  kantePass.uniforms.uMalKachel.value.set(w / malschicht.kachel, h / malschicht.kachel);
 }
 
 /* --- C1: Zustand der Strahlen zwischen setLook und renderFrame ------------
@@ -657,16 +587,11 @@ var farbskript = { licht: new THREE.Color(0xffffff), mitte: new THREE.Color(0xff
   schatten: new THREE.Color(0xffffff), staerke: 0 };
 var papierStaerke = 0.16;
 
-/* --- F1/F2/F3: Bildlook der KARTE, zweite Staffel -------------------------
+/* --- F1/F3: Bildlook der KARTE, zweite Staffel ----------------------------
    Gleiche Bauart wie C2/C3 darueber: JS-Zustand, den wendeBildlookAn() in die
-   Uniforms schiebt. Alle drei Staerken stehen auf 0 — ohne Setteraufruf ist
-   das Bild byteidentisch zum Stand vor dieser Runde.
-
-   Zur F2-Vorgabe "Default dezent": der dezente Richtwert ist MAL_DEZENT
-   (0.12); als DEFAULT steht trotzdem 0, weil Byteidentitaet ohne Aufruf die
-   verbindlichere Zusage ist. Eine Karte oder ein Preset, das die Malschicht
-   will, ruft setMalschicht(0.12). */
-const MAL_DEZENT = 0.12;
+   Uniforms schiebt. Beide Staerken stehen auf 0 — ohne Setteraufruf ist
+   das Bild byteidentisch zum Stand vor dieser Runde. */
+const MAL_DEZENT = 0; // Kartenformat-Kompatibilitaet; Vollbildstruktur bleibt aus.
 
 /* Standardrampe (F1): 20 Stuetzstellen, entsaettigt, Kalt→Warm ueber die
    Luminanz — tiefe Toene blaeulich, Lichter cremig. Das ist dieselbe
@@ -692,7 +617,7 @@ const PALETTE_STANDARD = [
 ];
 
 var palette = { farben: PALETTE_STANDARD.slice(), n: PALETTE_STANDARD.length,
-  staerke: 0, stufen: 14, quant: 0.6 };
+  staerke: 0, stufen: 14, quant: 0 };
 var rampeTex = null;
 var malschicht = { staerke: 0, kachel: 340 };   // kachel in Bildpixeln
 var multiplane = {
@@ -763,12 +688,6 @@ function wendeBildlookAn() {
   k.tRampe.value = rampeTex;
   k.uPaletteStaerke.value = palette.staerke;
   k.uPaletteSkala.value.set((palette.n - 1) / palette.n, 0.5 / palette.n);
-  k.uPaletteStufen.value = palette.stufen;
-  k.uPaletteQuant.value = palette.quant;
-  // F2 — TEX.malschicht existiert seit dem Modulstart von textures.js.
-  k.tMal.value = TEX.malschicht || null;
-  k.uMalStaerke.value = malschicht.staerke;
-  if (bildW > 0) k.uMalKachel.value.set(bildW / malschicht.kachel, bildH / malschicht.kachel);
   // F3
   var m = multiplane, b = m.baender;
   k.uMultiStaerke.value = m.staerke;
@@ -820,7 +739,7 @@ function setPapierkante(staerke) {
 }
 function getPapierkante() { return papierStaerke; }
 
-/* --- F1/F2/F3: oeffentliche Regler --------------------------------------- */
+/* --- F1/F3: oeffentliche Regler --------------------------------------- */
 
 /** Zahl lesen, klemmen; alles Nicht-Endliche faellt auf `standard` zurueck. */
 function zahl(wert, min, max, standard) {
@@ -835,10 +754,8 @@ function zahl(wert, min, max, standard) {
  *                Fehlt es oder ist es zu kurz, bleibt die bisherige Rampe.
  * @param staerke 0..1. 0 (Default, auch bei fehlendem Wert) schaltet den
  *                Zweig ganz ab — das Bild ist dann byteidentisch.
- * @param opt     optional { stufen, quant } zum Feinabgleich der milden
- *                Quantisierung: `stufen` = Helligkeitsstufen je Kanal
- *                (2..64, Default 14), `quant` = Anteil der Quantisierung an
- *                der Bindung (0..1, Default 0.6).
+ * @param opt     optionales altes Kartenformat-Feld. `stufen` wird weiterhin
+ *                mitgefuehrt; `quant` bleibt aus, damit kein Dither entsteht.
  * Sinnvoller Einsatz: 16–32 Stuetzstellen, staerke 0.25–0.45. Darueber wird
  * es Cel — die Lichter- und Tiefendaempfung im Shader haelt das lange auf,
  * aber nicht beliebig.
@@ -846,10 +763,9 @@ function zahl(wert, min, max, standard) {
 function setPalette(farben, staerke, opt) {
   if (Array.isArray(farben) && farben.length >= 2) rampeBauen(farben);
   palette.staerke = zahl(staerke, 0, 1, 0);
-  if (opt) {
-    palette.stufen = Math.round(zahl(opt.stufen, 2, 64, palette.stufen));
-    palette.quant = zahl(opt.quant, 0, 1, palette.quant);
-  }
+  if (opt) palette.stufen = Math.round(zahl(opt.stufen, 2, 64, palette.stufen));
+  // quant bleibt im Kartenformat lesbar, wirkt aber nicht mehr als Pixel-Dither.
+  palette.quant = 0;
   wendeBildlookAn();
 }
 
@@ -860,20 +776,15 @@ function getPalette() {
 }
 
 /**
- * F2 — bildraumfeste Malschicht. Argument: Zahl (= Staerke) oder
- * { staerke, kachel }. `kachel` ist die Kantenlaenge der Struktur in
- * Bildpixeln (64..2048, Default 340) — GROESSER heisst groebere Pinselzuege,
- * und weil sie in Bildkoordinaten liegt, bleibt sie in der Ferne genauso
- * grob wie im Vordergrund. Dezenter Richtwert: 0.12.
+ * Alte Karten koennen weiterhin ein `malschicht`-Feld enthalten. Es wird
+ * bewusst nur gelesen und mit Staerke 0 zurueckgegeben: bildraumfeste
+ * Vollbildstruktur ist kein Bestandteil des Looks mehr.
  */
 function setMalschicht(cfg) {
-  if (typeof cfg === 'number' || cfg === undefined || cfg === null) {
-    malschicht.staerke = zahl(cfg, 0, 1, 0);
-  } else {
-    malschicht.staerke = zahl(cfg.staerke, 0, 1, 0);
+  // Kompatibilitaet fuer alte Kartendateien: Strukturstaerke bleibt aus.
+  malschicht.staerke = 0;
+  if (cfg && typeof cfg === 'object')
     malschicht.kachel = zahl(cfg.kachel, 64, 2048, malschicht.kachel);
-  }
-  wendeBildlookAn();
 }
 function getMalschicht() {
   return { staerke: malschicht.staerke, kachel: malschicht.kachel };
@@ -931,7 +842,7 @@ function getPost() { return postAn; }
 
 /* --- Depth-only-Prepass: Materialtausch statt zweitem Voll-Rendering -----
    Frueher lief hier die komplette Szene mit echten Materialien durch den
-   Fragment-Shader (Phong, Nebel, Aquarell-Malschicht), obwohl niemand die
+   Fragment-Shader (Phong, Nebel, materiallokale Aquarellstruktur), obwohl niemand die
    Farbausgabe des depthRT liest — nur der Z-Buffer zaehlt. Der Tausch auf
    MeshDepthMaterial spart diesen kompletten Shading-Durchlauf. Objekte ohne
    depthWrite (Himmel, Sonne, Wolken, Wasser, Rauch, Kontaktschatten, Pfade)
@@ -982,6 +893,12 @@ function prepassAn() {
     if (!m) return;
     // Mehrfachmaterialien kommen hier nicht vor; falls doch, rendern sie
     // unveraendert weiter — das entspricht exakt dem alten Prepass.
+    if (o.userData && o.userData.terraDepthDetail === false) {
+      // Mikrodetails bleiben im Farbbild voll erhalten. Im halbaufgeloesten
+      // Tiefenbild waeren sie hoechstens ein verrauschter Einzelpixel und
+      // verdoppeln sonst Draw Call und Dreieckslast ohne lesbare Kontur.
+      o.visible = false; prepassVersteckt.push(o); return;
+    }
     if (Array.isArray(m)) return;
     if (m.depthWrite === false) {
       // Schrieb noch nie Tiefe → der Draw Call ist im Prepass reine Kost.
@@ -1043,10 +960,9 @@ function strahlenVorbereiten(camera) {
 }
 
 /** Ein Frame: Depth-only-Prepass (bei aktiver Post), dann Composer oder Direktbild. */
-function renderFrame(camera, zeit) {
+function renderFrame(camera) {
   renderer.info.reset();
   if (postAn) {
-    kantePass.uniforms.uZeit.value = zeit % 61;
     strahlenVorbereiten(camera);
     prepassAn();
     renderer.setRenderTarget(depthRT);
@@ -1063,7 +979,7 @@ function renderFrame(camera, zeit) {
 
 function getRenderInfo() { return { calls: infoCalls, triangles: infoTris }; }
 
-/** PNG-Export: liefert das fertig komponierte Bild (inkl. Bloom, Grade, Korn). */
+/** PNG-Export: liefert das fertig komponierte Bild (inkl. Bloom und Grade). */
 function exportPNG(name) {
   var url = renderer.domElement.toDataURL('image/png');
   var a = document.createElement('a');

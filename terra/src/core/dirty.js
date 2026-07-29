@@ -12,6 +12,7 @@ import { pathSamples, genStrasse, genMauer, genFluss, genHecke,
   genBruch, bruchDaten, bruchMasse, brueche,
   bruchMaskeLeeren, bruchMaskeStempeln, bruchMaskeFertig } from '../generators/paths.js';
 import { genFlaeche, districtStreets, inPoly } from '../generators/areas.js';
+import { genFlugroute } from '../generators/flugrouten.js';
 // Runde H: die Korridorstempel des Binnensees. Runde J dazu: der geglaettete
 // Uferzug — an ihm haengt der nasse Uferstreifen (stampUfer, terrain.js).
 import { seeKorridore, seeUmriss } from '../generators/see.js';
@@ -42,6 +43,7 @@ function genElement(el) {
     // faellt durch alle else-if hindurch und erzeugt schlicht nichts, statt
     // abzustuerzen. Das Speicherformat bleibt damit abwaertskompatibel.
     else if (el.variant === "bruch") genBruch(el);
+    else if (el.variant === "flugroute") genFlugroute(el);
     /* I2: „biompinsel" steht hier bewusst NICHT. Der Strich erzeugt keine
        einzige Instanz und kein Mesh — seine ganze Wirkung ist die abgeleitete
        Biommaske (siehe biomQuellen weiter unten), genau wie bei der

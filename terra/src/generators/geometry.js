@@ -5,7 +5,14 @@
 import * as THREE from 'three';
 import { clamp, sstep, hashi } from '../core/rng.js';
 import { TEX } from '../render/textures.js';
-import { definePool, setPoolNames } from '../core/pools.js';
+import { definePool as poolDefinieren, setPoolNames } from '../core/pools.js';
+import { registriereArchitekturPools } from '../assets/architektur-geometrie.js';
+import { registriereSteampunkLuftflotte } from '../assets/steampunk-luftflotte.js';
+import { registriereLuftinselPools } from '../assets/luftinsel-assets.js';
+import { registriereHochbambusPools } from '../assets/hochbambus-assets.js';
+import { veredleUmweltGeometrie } from '../assets/umwelt-geometrie.js';
+import { veredleBestandBau } from '../assets/bestand-bau-veredelung.js';
+import { veredleBestandKatalog } from '../assets/bestand-katalog-veredelung.js';
 // I1: die Kartenzeichen. Umgekehrter Weg waere ein Zyklus — siehe unten.
 import { registriereSignaturPools } from '../render/signaturen.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
@@ -33,6 +40,18 @@ setBruchQuelle(PFADE);
 const DRIFT_LEICHT = 0.55;
 const DRIFT_BROCKEN = 0.28;
 
+
+/**
+ * Gemeinsamer Poolweg fuer die schwaecheren Umweltassets. Die Veredelung
+ * liefert weiterhin genau eine Geometrie; Architektur und Kartenzeichen
+ * werden mangels passender Kennung unveraendert durchgereicht.
+ */
+function definePool(name, geo, opts) {
+  geo = veredleUmweltGeometrie(name, geo);
+  geo = veredleBestandBau(name, geo);
+  geo = veredleBestandKatalog(name, geo);
+  poolDefinieren(name, geo, opts);
+}
 /** Fügt Geometrien (position/normal/color/uv, indiziert oder nicht) zu einer zusammen. */
 function mergeGeos(list) {
   var vTot = 0, iTot = 0, g, i, k;
@@ -5724,6 +5743,52 @@ LICHT_ANKER.saftzapfer = [0, 0.56, 0.42, 0.7];
    entstuende genau der Auswertungszyklus, der in Runde H schon einmal die
    ganze App am Start gehindert hat (siehe die Notiz zu setBruchQuelle oben).
    Die Richtung ist also geometry.js -> signaturen.js, nie zurueck. */
+
+/* --- Kollisionsradien der Architektur-Pools -----------------------------
+   Die Katalogradien beschreiben den urspruenglichen Grundkoerper. Fassaden,
+   Balkone, Portale, Wurzeln und Kulturornamente ragen teilweise darueber
+   hinaus. Der Radius wird deshalb GENAU EINMAL beim Poolaufbau aus der fertig
+   zusammengefuehrten Geometrie bestimmt. Platzierungen lesen danach nur den
+   gespeicherten Poolwert; es gibt keine Vertexmessung im Generatorlauf.
+
+   Gemessen wird die maximale Entfernung in der x/z-Ebene. Das ist die kleinste
+   drehungsunabhaengige Kollisionsscheibe um den Instanzursprung. Fuenf Prozent
+   Reserve halten Rahmen und sehr flache Ausleger sicher aus dem Nachbarpool;
+   ein bereits grosszuegigerer Katalogradius wird niemals verkleinert. */
+var ARCHITEKTUR_RADIUS_RESERVE = 1.05;
+
+function architekturKollisionsradius(name, geo, katalogRadius) {
+  var basis = Number(katalogRadius);
+  if (!Number.isFinite(basis) || basis <= 0) {
+    throw new TypeError("Ungueltiger Architektur-Katalogradius fuer " + name);
+  }
+  var position = geo && geo.attributes && geo.attributes.position;
+  if (!position || position.itemSize < 3 || position.count <= 0) {
+    throw new TypeError("Architektur-Pool ohne messbare Geometrie: " + name);
+  }
+  var maxQuadrat = 0;
+  for (var i = 0; i < position.count; i++) {
+    var x = position.getX(i), z = position.getZ(i);
+    if (!Number.isFinite(x) || !Number.isFinite(z)) {
+      throw new TypeError("Nicht-endliche Architektur-Geometrie: " + name);
+    }
+    var quadrat = x * x + z * z;
+    if (quadrat > maxQuadrat) maxQuadrat = quadrat;
+  }
+  var geometrieRadius = Math.sqrt(maxQuadrat) * ARCHITEKTUR_RADIUS_RESERVE;
+  return Math.ceil(Math.max(basis, geometrieRadius) * 100) / 100;
+}
+
+function definiereArchitekturPool(name, geo, opts) {
+  var optionen = Object.assign({}, opts);
+  optionen.radius = architekturKollisionsradius(name, geo, optionen.radius);
+  definePool(name, geo, optionen);
+}
+
+registriereArchitekturPools(definiereArchitekturPool);
+registriereSteampunkLuftflotte(definePool);
+registriereLuftinselPools(definePool);
+registriereHochbambusPools(definePool);
 registriereSignaturPools(definePool);
 setPoolNames();
 

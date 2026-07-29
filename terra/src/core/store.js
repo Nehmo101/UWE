@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { erstelleLuftarchipelBiom } from './luftbiom.js';
 // Weltkonstanten und der explizite globale Zustand (statt loser Globals).
 
 /* ==========================================================================
@@ -963,7 +964,8 @@ export const BIOME = {
         ["stammliegend", 1]]
     },
     wasserTint: [1.10, 1.25, 1.15]
-  }
+  },
+  luftarchipel: erstelleLuftarchipelBiom()
 };
 
 /** Szene wird von main gesetzt; Module holen sie hier. */
