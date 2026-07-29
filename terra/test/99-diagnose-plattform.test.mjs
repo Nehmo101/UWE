@@ -26,11 +26,6 @@ test('DIAGNOSE — wo laufen die Plattformen auseinander', async () => {
   }
   const H_FARBE = ch.hex();
 
-  // 3) Roh-Werte einzelner Math-Funktionen, die in der Kette vorkommen.
-  const probe = [Math.sin(0.7), Math.cos(1.3), Math.pow(0.7, 2.3),
-                 Math.exp(1.7), Math.log(3.1), Math.atan2(0.3, 0.7),
-                 Math.cbrt(7.3), Math.hypot(0.3, 0.7), Math.tanh(0.9)];
-
   // Erzwungener Fehlschlag: nur so landen die Werte sicher im CI-Log.
   // Rohwerte der ersten Farben — zeigt die Groessenordnung der Abweichung.
   const roh = [];
