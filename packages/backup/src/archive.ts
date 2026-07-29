@@ -3,9 +3,13 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import { resolveAssetFilePath, ZipSecurityError, assertSafeZipEntryName, resolveZipImportPolicy, detectFileKind } from "@uwe/assets";
 import type { BackupBundle, BackupManifest } from "./types";
+import type { BrainExportBundle } from "./brain-export";
+import type { FamilyExportBundle } from "./family-export";
 import {
   BACKUP_ASSETS_DIR,
+  BACKUP_BRAIN_EXPORT_FILE,
   BACKUP_DATA_FILE,
+  BACKUP_FAMILY_EXPORT_FILE,
   BACKUP_MANIFEST_FILE,
   assetZipPath,
 } from "./paths";
@@ -19,6 +23,19 @@ export function writeBackupZip(
 
   zip.addFile(BACKUP_MANIFEST_FILE, Buffer.from(JSON.stringify(bundle.manifest, null, 2), "utf8"));
   zip.addFile(BACKUP_DATA_FILE, Buffer.from(JSON.stringify(bundle.data, null, 2), "utf8"));
+
+  if (bundle.brainExport) {
+    zip.addFile(
+      BACKUP_BRAIN_EXPORT_FILE,
+      Buffer.from(JSON.stringify(bundle.brainExport, null, 2), "utf8"),
+    );
+  }
+  if (bundle.familyExport) {
+    zip.addFile(
+      BACKUP_FAMILY_EXPORT_FILE,
+      Buffer.from(JSON.stringify(bundle.familyExport, null, 2), "utf8"),
+    );
+  }
 
   const copiedAssets: string[] = [];
 
@@ -67,7 +84,17 @@ export function parseBackupZip(zip: AdmZip): BackupBundle {
   const manifest = JSON.parse(manifestEntry.getData().toString("utf8")) as BackupManifest;
   const data = JSON.parse(dataEntry.getData().toString("utf8")) as BackupBundle["data"];
 
-  return { manifest, data };
+  // Optional — archives created before the full-export wiring omit these.
+  const brainEntry = zip.getEntry(BACKUP_BRAIN_EXPORT_FILE);
+  const familyEntry = zip.getEntry(BACKUP_FAMILY_EXPORT_FILE);
+  const brainExport = brainEntry
+    ? (JSON.parse(brainEntry.getData().toString("utf8")) as BrainExportBundle)
+    : undefined;
+  const familyExport = familyEntry
+    ? (JSON.parse(familyEntry.getData().toString("utf8")) as FamilyExportBundle)
+    : undefined;
+
+  return { manifest, data, brainExport, familyExport };
 }
 
 /**

@@ -16,6 +16,12 @@ const SECRET_FIELD_NAMES = new Set([
   "refresh_token_encrypted",
   "accesstokenencrypted",
   "refreshtokenencrypted",
+  // MailAccount credentials (uwe-brain.db). Encrypted at rest, but a backup
+  // must not carry them anyway — after restore the operator re-enters them.
+  "passwordenc",
+  "password_enc",
+  "oauthtokenenc",
+  "oauth_token_enc",
 ]);
 
 const SECRET_VALUE_PATTERNS = [
@@ -95,6 +101,23 @@ function sanitizeDailyAdminData(dailyAdmin: BackupDailyAdminData): BackupDailyAd
     personalBrainFacts: dailyAdmin.personalBrainFacts.map((fact) => sanitizeRecord(fact)),
     adminEntityLinks: dailyAdmin.adminEntityLinks.map((link) => sanitizeRecord(link)),
   };
+}
+
+/**
+ * Sanitizes every row of a full-DB export bundle (brain-export/family-export).
+ * Rows come straight from Prisma, so each one runs through the same
+ * field-level secret filter as the classic backup sections.
+ */
+export function sanitizeExportModels<K extends string>(
+  models: Record<K, unknown[]>,
+): Record<K, unknown[]> {
+  const result = {} as Record<K, unknown[]>;
+  for (const key of Object.keys(models) as K[]) {
+    result[key] = models[key].map((row) =>
+      row && typeof row === "object" ? sanitizeRecord(row as object) : row,
+    );
+  }
+  return result;
 }
 
 export function findSecretIssuesInJson(json: string): string[] {
