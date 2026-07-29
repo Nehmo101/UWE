@@ -69,6 +69,13 @@ eine installierte Instanz konfliktfrei neben einem Dev-Server laufen.
 3. **Alles starten** startet Studio, Portal und die bereits provisionierte RTX-Verbindung.
 4. Unter **RTX einrichten** Ollama, Modelle und optionale lokale
    Executor konfigurieren.
+5. Optional unter **Lokales Hosting** den Haken **KI-Jobs direkt zustellen
+   (Hybrid-Transport)** setzen: KI-Anfragen gehen dann ohne Warteschlangen-Umweg
+   über die lokale Verbindung an den Connector, die Queue bleibt als Fallback.
+   Empfohlen im All-in-one-Setup (UWE und RTX auf demselben Rechner); greift beim
+   nächsten Start der RTX-Verbindung. Der Haken entspricht dem Transport-Feld
+   unter „Verbindung“ (`hybrid`/`queue`; eine dort gewählte reine
+   Direktverbindung bleibt erhalten).
 
 Entwicklungs- und Build-Befehle:
 

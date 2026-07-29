@@ -133,6 +133,10 @@ export function CommandCenterPanel({
   const [autoStartHost, setAutoStartHost] = useState(config.autoStartHost);
   const [autoStartTunnel, setAutoStartTunnel] = useState(config.autoStartTunnel);
   const [autostartApp, setAutostartApp] = useState(config.autostartWindows);
+  // "Direktzustellung" bündelt direct + hybrid: der Haken steht für "KI-Jobs ohne
+  // Queue-Umweg", die Speicherlogik erhält eine explizite "direct"-Wahl aus dem
+  // Verbindungs-Panel und setzt sonst hybrid (Direct mit Queue-Fallback).
+  const [directAiTransport, setDirectAiTransport] = useState(config.transportMode !== "queue");
   const [busy, setBusy] = useState<HostAction | "refresh" | "settings" | "all" | "check-update" | "update" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -190,6 +194,12 @@ export function CommandCenterPanel({
     void refresh(config.localHostRoot);
   }, [config.localHostRoot, refresh]);
 
+  // Nach Einrichtung/Speichern liefert der Parent eine frisch gelesene Config —
+  // der Haken folgt dann dem persistierten Transport statt einem alten Entwurf.
+  useEffect(() => {
+    setDirectAiTransport(config.transportMode !== "queue");
+  }, [config.transportMode]);
+
   useEffect(() => {
     // While a user-initiated action is running, skip the poll. Otherwise poll in
     // the background: it must NOT set `busy`, so the action buttons stay enabled.
@@ -210,11 +220,21 @@ export function CommandCenterPanel({
         autoStartHost,
         autoStartTunnel,
         autostartWindows: autostartApp,
+        transportMode: directAiTransport
+          ? config.transportMode === "direct"
+            ? "direct"
+            : "hybrid"
+          : "queue",
         hostUrl: config.hostUrl || status?.services.find((service) => service.id === "studio")?.url || "http://127.0.0.1:3000",
       });
       const saved = await writeConfig(next);
+      const transportChanged = saved.transportMode !== config.transportMode;
       onConfigSaved(saved);
-      setMessage("Command-Center-Einstellungen gespeichert.");
+      setMessage(
+        transportChanged && connectorStatus.status === "running"
+          ? "Command-Center-Einstellungen gespeichert. Der neue KI-Transport greift nach einem Neustart der RTX-Verbindung."
+          : "Command-Center-Einstellungen gespeichert.",
+      );
       await refresh(saved.localHostRoot);
     } catch (nextError) {
       setError(toMessage(nextError));
@@ -627,7 +647,17 @@ export function CommandCenterPanel({
               <input type="checkbox" checked={autoStartTunnel} onChange={(event) => setAutoStartTunnel(event.target.checked)} />
               <span>Cloudflare-Tunnel automatisch starten</span>
             </label>
+            <label className="connector-checkbox">
+              <input type="checkbox" checked={directAiTransport} onChange={(event) => setDirectAiTransport(event.target.checked)} />
+              <span>KI-Jobs direkt zustellen (Hybrid-Transport)</span>
+            </label>
           </div>
+          <p className="connector-muted">
+            Direktzustellung schickt KI-Anfragen ohne Warteschlangen-Umweg über die lokale
+            Verbindung an den RTX Connector; die Queue bleibt als Fallback aktiv. Empfohlen,
+            wenn UWE und RTX auf demselben Rechner laufen. Greift beim nächsten Start der
+            RTX-Verbindung.
+          </p>
           {status ? <p className="connector-muted">Stand: {status.branch ?? "detached"} · {status.revision ?? "unbekannt"} · Daten: {status.dataDir}</p> : null}
         </CardContent>
         <CardFooter><Button variant="primary" onClick={saveSettings} disabled={busy !== null}>Einstellungen speichern</Button></CardFooter>
