@@ -41,23 +41,32 @@ async function auditGatewayChange(
   });
 }
 
-export async function getAiGatewayDashboard(_user: AuthUser | null) {
-  const denied = requireMasterAdmin(_user);
-  if (denied) return denied;
-
+/**
+ * Dashboard payload as plain data, so the page can render it server-side instead of
+ * leaving the wizard to client-fetch its own first paint (an API auth error would
+ * otherwise surface inside an already-rendered admin page).
+ */
+export async function loadAiGatewayDashboard() {
   const service = gatewayService();
   const [status, usageLogs] = await Promise.all([
     getAiGatewayStatusForClient(service),
     service.listUsageLogs({ limit: 50 }),
   ]);
 
-  return NextResponse.json({
+  return {
     ...status,
     recentUsage: usageLogs.map((entry) => ({
       ...entry,
       createdAt: entry.createdAt.toISOString(),
     })),
-  });
+  };
+}
+
+export async function getAiGatewayDashboard(_user: AuthUser | null) {
+  const denied = requireMasterAdmin(_user);
+  if (denied) return denied;
+
+  return NextResponse.json(await loadAiGatewayDashboard());
 }
 
 export async function patchAiGatewayConfig(

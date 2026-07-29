@@ -97,6 +97,7 @@ export {
   DEFAULT_SESSION_TTL_MS,
   PREVIEW_COOKIE_NAME,
   SESSION_COOKIE_NAME,
+  readSessionTokensFromCookieHeader,
   sessionExpiresAt,
 } from "./session";
 
@@ -104,6 +105,7 @@ export type { SessionCookieOptions, SessionCookieSameSite, UweRuntimeConfig } fr
 export {
   getAllowedCorsOrigins,
   getOAuthStateCookieOptions,
+  getSessionCookieClearVariants,
   getSessionCookieOptions,
   getSessionCookieOptionsForRequest,
   getTrustedRequestHosts,

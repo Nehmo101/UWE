@@ -1,6 +1,7 @@
 "use client";
 
 import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { studioApiFetch } from "@/src/lib/studio-api-fetch";
 import { EmptyState, LoadingState } from "@uwe/shared-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
@@ -116,7 +117,10 @@ export function AiBrainSidebar({
   }, [settings]);
 
   const loadSettings = useCallback(async () => {
-    const response = await fetch(studioApiUrl("/api/ai/settings"));
+    const response = await studioApiFetch("/api/ai/settings");
+    // An error body has no `settings`, so reading it threw an unhandled rejection
+    // inside this callback and left the sidebar unusable on every wiki page.
+    if (!response.ok) return;
     const data = (await response.json()) as { settings: AiBrainSettings };
     setSettings(data.settings);
     setAllowDmOnly(data.settings.localOnly);
@@ -129,7 +133,7 @@ export function AiBrainSidebar({
   }, []);
 
   const loadActions = useCallback(async () => {
-    const response = await fetch(studioApiUrl("/api/brain/actions"));
+    const response = await studioApiFetch("/api/brain/actions");
     if (!response.ok) return;
     const data = (await response.json()) as { actions: BrainActionDefinition[] };
     setActions(data.actions);
@@ -166,7 +170,7 @@ export function AiBrainSidebar({
     });
     if (pageSlug) params.set("pageSlug", pageSlug);
 
-    const response = await fetch(studioApiUrl(`/api/brain/runs?${params.toString()}`));
+    const response = await studioApiFetch(`/api/brain/runs?${params.toString()}`);
     if (!response.ok) return;
     const data = (await response.json()) as { runs: AiRunView[] };
     setRecentRuns(data.runs);
@@ -197,7 +201,7 @@ export function AiBrainSidebar({
 
   const loadConnectorModels = useCallback(async () => {
     try {
-      const response = await fetch(studioApiUrl("/api/admin/connector-workflow"), {
+      const response = await studioApiFetch("/api/admin/connector-workflow", {
         headers: { Accept: "application/json" },
       });
       if (!response.ok) {
@@ -263,7 +267,7 @@ export function AiBrainSidebar({
     try {
       const useMock =
         process.env.NEXT_PUBLIC_AI_USE_MOCK === "true" || model === "mock-model";
-      const response = await fetch(studioApiUrl("/api/brain/run"), {
+      const response = await studioApiFetch("/api/brain/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -325,7 +329,7 @@ export function AiBrainSidebar({
     setLoading(true);
     setStatus(null);
     try {
-      const response = await fetch(studioApiUrl(`/api/brain/runs/${run.id}`), {
+      const response = await studioApiFetch(`/api/brain/runs/${run.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -353,7 +357,7 @@ export function AiBrainSidebar({
     setLoading(true);
     setStatus(null);
     try {
-      const response = await fetch(studioApiUrl(`/api/brain/runs/${run.id}`), {
+      const response = await studioApiFetch(`/api/brain/runs/${run.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "discard" }),
