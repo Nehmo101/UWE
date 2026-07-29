@@ -3,7 +3,7 @@
  * system components. Three switchable screens: Today, World overview, Wiki page.
  * Exported to window for index.html to mount.
  */
-const { Button, Card, StatCard, Badge, Tag, EmptyState, PageHeader, Breadcrumb,
+const { Button, Card, StatCard, Badge, Tag, PageHeader, Breadcrumb,
         VisibilityBadge, PageTypeBadge, RtxStatusBadge, SecretReveal } = window.UWEDesignSystem_f43eab;
 
 const Icon = ({ n, s = 16 }) => React.createElement("i", { "data-lucide": n, style: { width: s, height: s, display: "inline-flex", flex: "none" } });
@@ -156,6 +156,10 @@ function WikiPageScreen() {
       <aside>
         <Card title="Metadaten">
           <dl style={{ margin: 0, display: "grid", gap: 10 }}>
+            {/* Die Elemente stehen als Werte in Label/Wert-Tupeln, nicht in einer
+                Render-Liste — gerendert wird unten einzeln als {v}. react/jsx-key
+                sieht nur das Array-Literal und kann das nicht unterscheiden. */}
+            {/* eslint-disable-next-line react/jsx-key */}
             {[["Typ", <PageTypeBadge type="location" />], ["Sichtbarkeit", <VisibilityBadge visibility="player_visible" />], ["Publish", <Badge tone="accent">Veröffentlicht</Badge>], ["Kanon", <Badge tone="success">Kanon</Badge>]].map(([k, v]) => (
               <div key={k}>
                 <dt style={{ fontSize: "var(--uwe-text-2xs)", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--uwe-fg-muted)", marginBottom: 4 }}>{k}</dt>

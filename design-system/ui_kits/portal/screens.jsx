@@ -2,8 +2,8 @@
  * Login gate → world hub → article. Only player-visible content is shown; GM
  * secrets appear blurred behind a reveal. Exported to window for index.html.
  */
-const { Button, Card, Badge, Tag, EmptyState, PageHeader, Breadcrumb,
-        VisibilityBadge, PageTypeBadge, SecretReveal, Brand } = window.UWEDesignSystem_f43eab;
+const { Button, Breadcrumb,
+        VisibilityBadge, PageTypeBadge, SecretReveal } = window.UWEDesignSystem_f43eab;
 
 const PIcon = ({ n, s = 16 }) => React.createElement("i", { "data-lucide": n, style: { width: s, height: s, display: "inline-flex", flex: "none" } });
 
