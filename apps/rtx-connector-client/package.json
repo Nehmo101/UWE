@@ -15,29 +15,29 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.0.0",
+    "@tauri-apps/api": "2.11.1",
     "@uwe/connector-client-config": "workspace:*",
     "@uwe/connector-model-profile": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/shared-utils": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.22.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "lucide-react": "^1.27.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.1",
-    "@tauri-apps/cli": "2.0.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "2.11.4",
     "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@uwe/config": "workspace:*",
-    "@vitejs/plugin-react": "^6.0.3",
-    "tailwindcss": "^4.3.1",
-    "tsx": "^4.22.4",
+    "@vitejs/plugin-react": "^6.0.4",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.1",
     "typescript": "^5.9.3",
-    "vite": "^8.1.0"
+    "vite": "^8.1.5"
   }
 }
