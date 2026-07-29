@@ -131,6 +131,28 @@ node tools/uwe-host-command-center/src/desktop-host-cli.ts setup --root /pfad/zu
    unter „Verbindung“ (`hybrid`/`queue`; eine dort gewählte reine
    Direktverbindung bleibt erhalten).
 
+### Lebensdauer der Dienste
+
+Das Command Center ist der Schalter für die öffentliche Erreichbarkeit: läuft es
+nicht, läuft nichts. Beenden — über den Bestätigungsdialog des X-Knopfes oder
+**Beenden** im Tray-Menü — stoppt Studio, Portal, Brain, Familie und Startseite
+und trennt den Cloudflare-Tunnel. Danach ist `uweanddragons.org` offline.
+
+- **Weiterlaufen lassen** heißt minimieren, nicht schließen: bei `trayMode`
+  `minimize_to_tray` verschwindet das Fenster in den Tray, die Dienste bleiben.
+- Mit **Dienste und Tunnel beim Beenden stoppen** (`stopServicesOnExit`, unter
+  *Lokales Hosting*) lässt sich das abschalten. Standard ist **an**, auch für
+  Konfigurationsdateien von vor der Einstellung — sonst bliebe die öffentliche
+  Seite nach dem Beenden erreichbar, ohne dass jemand sie noch steuert.
+- Zusammen mit **automatisch starten** für Apps und Tunnel gilt die Regel in
+  beide Richtungen: Command Center offen = Seite erreichbar.
+- Abstürze und `taskkill` decken kein Aufräumcode ab. Dafür hängen alle
+  Kindprozesse in einem Windows Job Object mit `KILL_ON_JOB_CLOSE`: verschwindet
+  der App-Prozess auf beliebige Weise, nimmt Windows Dienste und Tunnel mit.
+  Ausnahme ist **Im Browser öffnen** — dieser Teilbaum bricht per
+  `CREATE_BREAKAWAY_FROM_JOB` aus dem Job aus, damit das Beenden des Command
+  Centers nicht den geöffneten Browser mit abschießt.
+
 Entwicklungs- und Build-Befehle:
 
 ```powershell

@@ -39,6 +39,7 @@ const connectorClientConfigSchema = z.object({
   localHostRoot: z.string(),
   autoStartHost: z.boolean(),
   autoStartTunnel: z.boolean(),
+  stopServicesOnExit: z.boolean(),
 });
 
 const partialConnectorClientConfigSchema = connectorClientConfigSchema.partial();
@@ -79,6 +80,7 @@ export function defaultConnectorClientConfig(): ConnectorClientConfig {
     localHostRoot: "",
     autoStartHost: false,
     autoStartTunnel: false,
+    stopServicesOnExit: true,
   };
 }
 
@@ -176,6 +178,14 @@ function mergeWithDefaults(json: unknown): Record<string, unknown> {
       typeof input.autoStartHost === "boolean" ? input.autoStartHost : defaults.autoStartHost,
     autoStartTunnel:
       typeof input.autoStartTunnel === "boolean" ? input.autoStartTunnel : defaults.autoStartTunnel,
+    // Fehlt der Schlüssel (Konfigurationsdateien von vor dieser Änderung), gilt
+    // der sichere Standard aus `defaults`: beim Beenden wird abgeräumt. Sonst
+    // bliebe auf Bestandsrechnern genau das Loch offen, das damit zugeht —
+    // öffentlich erreichbare Dienste ohne laufendes Command Center.
+    stopServicesOnExit:
+      typeof input.stopServicesOnExit === "boolean"
+        ? input.stopServicesOnExit
+        : defaults.stopServicesOnExit,
   };
 }
 

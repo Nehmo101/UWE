@@ -66,6 +66,16 @@ describe("parseConnectorClientConfig", () => {
     assert.equal(config.autoStartHost, true);
   });
 
+  // Ohne diesen Standard bliebe auf Bestandsrechnern (Konfiguration ohne das
+  // Feld) die öffentliche Seite nach dem Beenden des Command Centers online.
+  it("stops services on exit unless explicitly opted out", () => {
+    assert.equal(parseConnectorClientConfig({}).stopServicesOnExit, true);
+    assert.equal(
+      parseConnectorClientConfig({ stopServicesOnExit: false }).stopServicesOnExit,
+      false,
+    );
+  });
+
 
   it("parses transport modes and derives queueEnabled", () => {
     const direct = parseConnectorClientConfig({ transportMode: "DIRECT", queueEnabled: true });

@@ -607,15 +607,20 @@ export default function App() {
       <div className="connector-modal">
         <h2 id="quit-confirm-title">Command Center beenden?</h2>
         <p className="connector-muted">
-          Die Steuerungs-App wird vollständig geschlossen. Laufende UWE-Dienste (Studio, Portal)
-          bleiben im Hintergrund aktiv; der laufende Maschinenraum wird beim Beenden getrennt.
+          {config.stopServicesOnExit
+            ? "Die Steuerungs-App wird vollständig geschlossen. Studio, Portal, Brain, Familie und Startseite werden gestoppt, der Cloudflare-Tunnel wird getrennt — uweanddragons.org ist danach nicht mehr erreichbar. Auch der laufende Maschinenraum wird getrennt."
+            : "Die Steuerungs-App wird vollständig geschlossen. Laufende UWE-Dienste (Studio, Portal) bleiben im Hintergrund aktiv und uweanddragons.org bleibt erreichbar; der laufende Maschinenraum wird beim Beenden getrennt."}
         </p>
         <div className="connector-actions connector-modal-actions">
           <Button variant="ghost" onClick={() => setShowQuitConfirm(false)} disabled={quitting} autoFocus>
             Abbrechen
           </Button>
           <Button variant="accent" onClick={confirmQuit} disabled={quitting}>
-            {quitting ? "Wird beendet …" : "Beenden"}
+            {quitting
+              ? config.stopServicesOnExit
+                ? "Dienste werden gestoppt …"
+                : "Wird beendet …"
+              : "Beenden"}
           </Button>
         </div>
       </div>

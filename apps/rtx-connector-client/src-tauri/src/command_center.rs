@@ -7,7 +7,10 @@ use std::{
 use serde_json::Value;
 use tauri::Emitter;
 
-use super::{configure_hidden_process, connector_app_data_dir, resolve_monorepo_root};
+use super::{
+    configure_breakaway_process, configure_hidden_process, connector_app_data_dir,
+    resolve_monorepo_root,
+};
 
 /// Tauri event channel for live host-action progress. The desktop host CLI emits
 /// determinate `{step, total, label}` events for the long actions (setup /
@@ -45,7 +48,14 @@ fn build_host_command(
     }
 
     let mut command = Command::new("node");
-    configure_hidden_process(&mut command);
+    // `open` startet über die CLI einen Browser bzw. Explorer. Dieser Teilbaum
+    // muss aus dem Job Object ausbrechen, sonst nimmt das Beenden des Command
+    // Centers den geöffneten Browser mit.
+    if action == "open" {
+        configure_breakaway_process(&mut command);
+    } else {
+        configure_hidden_process(&mut command);
+    }
     command
         .arg(DESKTOP_HOST_CLI_REL)
         .arg(action)
@@ -476,6 +486,85 @@ pub async fn cloudflare_start() -> Result<Value, String> {
 #[tauri::command]
 pub async fn cloudflare_stop() -> Result<Value, String> {
     run_cloudflare_async("stop", None).await
+}
+
+// ── Teardown beim Beenden ──────────────────────────────────────────────────
+
+/// Fährt Tunnel und gehostete Dienste geordnet herunter. Blockierend, gedacht
+/// für den Beenden-Pfad: erst der Tunnel (damit von außen sofort nichts mehr
+/// hereinkommt), dann die Next.js-Dienste, damit laufende Anfragen nicht
+/// mitten im Schreiben abgeschnitten werden.
+///
+/// Fehler werden gesammelt statt weitergeworfen — ein hängender Teilschritt darf
+/// das Beenden nicht verhindern. Was hier liegen bleibt, fängt das Job Object aus
+/// `process_guard` ab, sobald der Prozess verschwindet.
+pub fn shutdown_hosted_services_blocking(root: Option<String>) -> Vec<String> {
+    let mut problems = Vec::new();
+
+    if let Err(error) = run_cloudflare("stop", None) {
+        problems.push(format!("Cloudflare-Tunnel: {error}"));
+    }
+    if let Err(error) = run_host_command("stop", root, None) {
+        problems.push(format!("UWE-Dienste: {error}"));
+    }
+
+    problems
+}
+
+/// Letzte Absicherung auf dem Beenden-Pfad: die vom Host-Controller
+/// hinterlegten PIDs direkt abschießen, ohne Node zu starten.
+///
+/// Läuft in `RunEvent::Exit` — also auch für Beenden-Wege, die nicht durch
+/// `exit_app` gehen (Tray-Menü) — und muss deshalb schnell und ohne
+/// Fehlerbehandlung durchlaufen. Der geordnete Weg hat die PID-Dateien in der
+/// Regel bereits entfernt; dann ist das hier ein No-op.
+pub fn kill_tracked_service_processes() {
+    let Ok(data_dir) = connector_app_data_dir() else {
+        return;
+    };
+    let runtime_dir = data_dir.join("host").join("runtime");
+    let Ok(entries) = std::fs::read_dir(&runtime_dir) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("pid") {
+            continue;
+        }
+        let Ok(raw) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(pid) = raw.trim().parse::<u32>() else {
+            continue;
+        };
+        if pid == 0 {
+            continue;
+        }
+        kill_process_tree(pid);
+        let _ = std::fs::remove_file(&path);
+    }
+}
+
+fn kill_process_tree(pid: u32) {
+    #[cfg(target_os = "windows")]
+    {
+        let mut command = Command::new("taskkill");
+        configure_hidden_process(&mut command);
+        let _ = command
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = Command::new("kill")
+            .args(["-TERM", &format!("-{pid}")])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
 }
 
 // ── Operations (Abschnitt D: was aus Studio hierher gezogen ist) ───────────

@@ -6,6 +6,7 @@ import { HealthBadge } from "@uwe/shared-ui";
 import {
   backupHost,
   checkHostUpdate,
+  cloudflareStop,
   getHostLogs,
   getHostStatus,
   listBackups,
@@ -75,6 +76,7 @@ export function CommandCenterPanel({
   const [root, setRoot] = useState(config.localHostRoot);
   const [autoStartHost, setAutoStartHost] = useState(config.autoStartHost);
   const [autoStartTunnel, setAutoStartTunnel] = useState(config.autoStartTunnel);
+  const [stopServicesOnExit, setStopServicesOnExit] = useState(config.stopServicesOnExit);
   const [autostartApp, setAutostartApp] = useState(config.autostartWindows);
   // "Direktzustellung" bündelt direct + hybrid: der Haken steht für "KI-Jobs ohne
   // Queue-Umweg", die Speicherlogik erhält eine explizite "direct"-Wahl aus dem
@@ -162,6 +164,7 @@ export function CommandCenterPanel({
         localHostRoot: root,
         autoStartHost,
         autoStartTunnel,
+        stopServicesOnExit,
         autostartWindows: autostartApp,
         transportMode: directAiTransport
           ? config.transportMode === "direct"
@@ -242,9 +245,13 @@ export function CommandCenterPanel({
     setError(null);
     try {
       if (connectorStatus.status === "running") await onStopConnector();
+      // Erst den Tunnel, dann die Dienste: sonst zeigt uweanddragons.org für die
+      // Dauer des Stopps 502 statt schlicht offline zu sein. „Alles" schließt den
+      // Tunnel ein — ein laufender Tunnel ohne Dienste ist kein gestopptes UWE.
+      await cloudflareStop();
       const result = await stopHost(root || undefined);
       setStatus(result.status);
-      setMessage("UWE und Maschinenraum wurden gestoppt.");
+      setMessage("UWE, Tunnel und Maschinenraum wurden gestoppt.");
     } catch (nextError) {
       setError(toMessage(nextError));
     } finally {
@@ -602,10 +609,20 @@ export function CommandCenterPanel({
               <span>Cloudflare-Tunnel automatisch starten</span>
             </label>
             <label className="connector-checkbox">
+              <input type="checkbox" checked={stopServicesOnExit} onChange={(event) => setStopServicesOnExit(event.target.checked)} />
+              <span>Dienste und Tunnel beim Beenden stoppen</span>
+            </label>
+            <label className="connector-checkbox">
               <input type="checkbox" checked={directAiTransport} onChange={(event) => setDirectAiTransport(event.target.checked)} />
               <span>KI-Jobs direkt zustellen (Hybrid-Transport)</span>
             </label>
           </div>
+          <p className="connector-muted">
+            Ohne den Haken „Dienste und Tunnel beim Beenden stoppen" laufen Studio, Portal,
+            Brain, Familie, Startseite und der Cloudflare-Tunnel als Hintergrundprozesse
+            weiter — uweanddragons.org bleibt dann öffentlich erreichbar, obwohl das Command
+            Center geschlossen ist.
+          </p>
           <p className="connector-muted">
             Direktzustellung schickt KI-Anfragen ohne Warteschlangen-Umweg über die lokale
             Verbindung an den Maschinenraum; die Queue bleibt als Fallback aktiv. Empfohlen,

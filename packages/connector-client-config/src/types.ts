@@ -99,6 +99,13 @@ export interface ConnectorClientConfig {
   autoStartHost: boolean;
   /** Start the Cloudflare tunnel connector automatically with the Command Center. */
   autoStartTunnel: boolean;
+  /**
+   * Tear down the hosted Next.js services and the Cloudflare tunnel when the
+   * Command Center quits. Default on: the public site must not stay reachable
+   * without its control app running. Turning it off leaves the services and the
+   * tunnel behind as detached background processes.
+   */
+  stopServicesOnExit: boolean;
 }
 
 /** Default Spotify OAuth redirect URI for the connector-local loopback flow. */
