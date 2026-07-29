@@ -56,6 +56,8 @@ Kernregeln: keine Secrets in Source; Zugang = vier Häkchen pro E-Mail (`package
 
 **Zugangsmodell in einem Satz:** Das Häkchen sagt, welche App (Portal / Studio / Brain / Family). Die Welt-Zuordnung sagt, welche Welt. Sonst nichts. `owner` ist die einzige verbliebene Rolle — für Betrieb, Restore und das Command Center.
 
+**Ein Flag daneben:** `User.aiAccess` — darf diese Adresse die RTX-KI benutzen. Kein fünftes App-Häkchen, sondern eine Fähigkeit des Kontos; einstellbar im Command Center, Owner geht immer durch (`canUseRtxAi`). Durchgesetzt zentral: Pfadregel für KI-API-Routen, `require*AiActionAuth` für KI-Server-Actions. Details: [docs/engineering/access-model.md](docs/engineering/access-model.md).
+
 ## TypeScript / React Konventionen
 
 - Strict Typing, kein `any` außer bei untyped Externals.

@@ -14,6 +14,7 @@ export { NO_AREA_ACCESS, UWE_AREAS } from "./types";
 export { toSafeUser, stripSensitiveUserFields } from "./safe-user";
 
 export {
+  AiAccessDeniedError,
   AuthRequiredError,
   ForbiddenAccessError,
   UWE_AREA_LABELS,
@@ -21,12 +22,16 @@ export {
   canAccessFamily,
   canAccessPortal,
   canAccessStudio,
+  canUseRtxAi,
   getRequiredAccessForApiPath,
   getRequiredAccessForPagePath,
   hasAreaAccess,
+  isAiStudioApiPath,
+  isAiStudioPagePath,
   isOwner,
   requireArea,
   requireOwner,
+  requireRtxAi,
   requireUser,
   satisfiesStudioRouteAccess,
   toAreaAccess,
@@ -92,6 +97,16 @@ export {
 } from "./player-note-permissions";
 
 export { canEditPlayerCharacterBlock } from "./player-character-permissions";
+
+export type { TerraKarteAccessInfo } from "./terra-karte-permissions";
+export {
+  canCreateTerraKarte,
+  canDeleteTerraKarte,
+  canEditTerraKarte,
+  canSubmitTerraKarte,
+  canViewTerraKarte,
+  canWithdrawTerraKarte,
+} from "./terra-karte-permissions";
 
 export {
   DEFAULT_SESSION_TTL_MS,

@@ -19,12 +19,17 @@ loadEnvFromRoot();
  * Per address there are four checkboxes — Portal, Studio, Brain, Family — plus
  * the owner flag. The role enum is gone (Notiz Lasse, 2026-07-26).
  *
+ * Dazu kommt `ai`: darf diese Adresse die RTX-KI benutzen (G-KI)? Das ist
+ * KEIN fünftes App-Häkchen — die vier sagen, welche App jemand betreten darf,
+ * `ai` sagt, ob er darin die lokale Inferenz auslösen darf. Es wird deshalb
+ * getrennt gelesen und nicht in die Häkchen-Schleife gemischt.
+ *
  * Actions:
  *   list                      → { ok, users: [...] }
  *   create   (stdin JSON)     → { ok, user }      body: { displayName, email, password,
- *                                                          portal, studio, brain, family, isOwner }
+ *                                                          portal, studio, brain, family, ai, isOwner }
  *   update   (stdin JSON)     → { ok, user }      body: { id, displayName, email, status,
- *                                                          portal, studio, brain, family, isOwner }
+ *                                                          portal, studio, brain, family, ai, isOwner }
  *   set-password (stdin JSON) → { ok }            body: { id, password }
  *   delete <id>               → { ok, deletedId }
  */
@@ -37,16 +42,25 @@ interface AreaInput {
   studio?: unknown;
   brain?: unknown;
   family?: unknown;
+  /** RTX-KI. Kein App-Häkchen — siehe Modulkopf. */
+  ai?: unknown;
 }
 
-/** Reads the four checkboxes. `undefined` means „leave as is" on update. */
-function readAreas(input: AreaInput): Partial<Record<`${Area}Access`, boolean>> {
-  const out: Partial<Record<`${Area}Access`, boolean>> = {};
+/**
+ * Reads the four checkboxes plus the AI flag. `undefined` means „leave as is"
+ * on update — deshalb kein `?? false`: ein Update, das `ai` nicht mitschickt,
+ * darf es nicht stillschweigend abschalten.
+ */
+function readAreas(input: AreaInput): Partial<Record<`${Area}Access` | "aiAccess", boolean>> {
+  const out: Partial<Record<`${Area}Access` | "aiAccess", boolean>> = {};
   for (const area of AREAS) {
     const value = input[area];
     if (value !== undefined) {
       out[`${area}Access`] = value === true;
     }
+  }
+  if (input.ai !== undefined) {
+    out.aiAccess = input.ai === true;
   }
   return out;
 }

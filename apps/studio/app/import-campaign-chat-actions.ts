@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import { requireStudioAiActionAuth } from "@/src/lib/studio-action-auth";
 import { AiRouterError, routeAiRequest } from "@uwe/ai-brain";
 import {
   createImportJobService,
@@ -29,7 +29,7 @@ export async function campaignFitChatAction(
   jobId: string,
   messages: CampaignFitChatMessage[],
 ): Promise<{ reply: string; transcript: CampaignFitChatMessage[] }> {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
 
   const importJobs = createImportJobService(prisma);
   const job = await importJobs.getJob(jobId);

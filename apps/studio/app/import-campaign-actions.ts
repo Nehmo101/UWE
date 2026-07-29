@@ -1,6 +1,9 @@
 "use server";
 
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import {
+  requireStudioActionAuth,
+  requireStudioAiActionAuth,
+} from "@/src/lib/studio-action-auth";
 import {
   createImportJobService,
   createUndoService,
@@ -91,7 +94,10 @@ export async function previewImportCampaignPdfJobAction(
   jobId: string,
   campaignContext = "",
 ): Promise<{ preview: CampaignImportPreviewSummary | null; started: boolean }> {
-  await requireStudioActionAuth();
+  // KI-Guard, obwohl die Analyse inzwischen als Hintergrund-Job läuft: der
+  // Klick hier ist es, der den RTX-Host beschäftigt — dass die Arbeit
+  // asynchron passiert, ändert nichts daran, wer sie ausgelöst hat.
+  await requireStudioAiActionAuth();
 
   const job = await requireCampaignPdfJob(jobId);
   const storedPreview = readStoredPreview(job.previewPayload);
@@ -145,7 +151,7 @@ export async function executeImportCampaignPdfJobAction(
   jobId: string,
   itemIds: string[],
 ): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
 
   const job = await requireCampaignPdfJob(jobId);
   if (job.status !== "preview") {

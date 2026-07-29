@@ -42,6 +42,42 @@ export function canAccessFamily(user: Pick<AuthUser, "access">): boolean {
   return hasAreaAccess(user, "family");
 }
 
+/**
+ * Darf diese Adresse die RTX-KI benutzen (G-KI)?
+ *
+ * Die vier Häkchen sagen, WELCHE APP jemand betreten darf. Dieses Flag sagt
+ * etwas anderes: ob er darin die lokale Inferenz auslösen darf. Beides ist
+ * nötig — das Häkchen bringt ihn in die App, das Flag lässt ihn den RTX-Host
+ * beschäftigen.
+ *
+ * Der Owner geht immer durch. Er richtet das Flag ein; ein Owner, der sich
+ * selbst aussperren könnte, wäre eine Falle ohne Nutzen.
+ */
+export function canUseRtxAi(user: Pick<AuthUser, "isOwner" | "aiAccess">): boolean {
+  return isOwner(user) || user.aiAccess === true;
+}
+
+export class AiAccessDeniedError extends Error {
+  readonly code = "AI_ACCESS_DENIED";
+
+  constructor(
+    message = "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+  ) {
+    super(message);
+    this.name = "AiAccessDeniedError";
+  }
+}
+
+/** Throwing variant for Server Actions and handlers. */
+export function requireRtxAi(user: Pick<AuthUser, "isOwner" | "aiAccess"> | null): void {
+  if (!user) {
+    throw new AuthRequiredError();
+  }
+  if (!canUseRtxAi(user)) {
+    throw new AiAccessDeniedError();
+  }
+}
+
 export class AuthRequiredError extends Error {
   readonly code = "AUTH_REQUIRED";
 
@@ -83,8 +119,14 @@ export function requireOwner(user: AuthUser | null): AuthUser {
   return resolved;
 }
 
-/** What a request must bring to pass a Studio route gate. */
-export type StudioRouteAccess = "public" | "studio" | "owner";
+/**
+ * What a request must bring to pass a Studio route gate.
+ *
+ * `"ai"` ist Studio PLUS das KI-Flag — nicht statt dessen. Eine KI-Route
+ * verlangt beides: hereinkommen (Studio-Häkchen) und den RTX-Host beschäftigen
+ * dürfen (`aiAccess`).
+ */
+export type StudioRouteAccess = "public" | "studio" | "ai" | "owner";
 
 function normalizeApiPathname(pathname: string): string {
   const withoutQuery = pathname.split("?")[0]?.split("#")[0] ?? pathname;
@@ -115,6 +157,48 @@ function isPublicStudioApiPath(pathname: string): boolean {
   );
 }
 
+/**
+ * Studio-Routen, die den RTX-Host beschäftigen (G-KI).
+ *
+ * Diese Liste ist die EINZIGE Stelle, an der steht, was als KI-Route gilt —
+ * es gibt keinen zweiten Ort, an dem eine Route sich selbst als KI-Route
+ * bezeichnen könnte. Der Grund ist der Ausfallmodus: eine vergessene Prüfung
+ * in einer einzelnen Route fällt niemandem auf, weil die Route weiter
+ * funktioniert. Sie funktioniert nur für zu viele Leute.
+ *
+ * Aufgenommen wird ein Pfad, wenn ein Aufruf dort Inferenz auslöst. NICHT
+ * aufgenommen wird, was bloß KI-Ergebnisse LIEST oder KI-nahe Nachbarschaft
+ * hat: Ergebnislisten, Jobübersichten, Import-Formate. Wer eine erzeugte Seite
+ * ansehen darf, muss sie nicht selbst erzeugen dürfen.
+ */
+const AI_STUDIO_API_PATTERNS: readonly RegExp[] = [
+  /^\/api\/ai(\/|$)/,
+  /^\/api\/brain(\/|$)/,
+  /^\/api\/dnd-generator(\/|$)/,
+  /^\/api\/inference(\/|$)/,
+  /^\/api\/image-studio(\/|$)/,
+  /^\/api\/research(\/|$)/,
+  /^\/api\/worlds\/[^/]+\/brain(\/|$)/,
+  /^\/api\/worlds\/[^/]+\/inspector\/diagnose$/,
+];
+
+/** Seiten, die ohne KI nichts anzeigen — dort ist die Sperre ehrlicher als eine leere Oberfläche. */
+const AI_STUDIO_PAGE_PATTERNS: readonly RegExp[] = [
+  /^\/worlds\/[^/]+\/ai-runs(\/|$)/,
+  /^\/worlds\/[^/]+\/brain(\/|$)/,
+  /^\/worlds\/[^/]+\/one-shot(\/|$)/,
+];
+
+export function isAiStudioApiPath(pathname: string): boolean {
+  const normalized = normalizeApiPathname(pathname);
+  return AI_STUDIO_API_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+export function isAiStudioPagePath(pathname: string): boolean {
+  const normalized = pathname.split("?")[0]?.split("#")[0]?.replace(/\/$/, "") || "/";
+  return AI_STUDIO_PAGE_PATTERNS.some((pattern) => pattern.test(normalized.toLowerCase()));
+}
+
 export function getRequiredAccessForApiPath(pathname: string): StudioRouteAccess | null {
   const normalized = normalizeApiPathname(pathname);
   if (!normalized.startsWith("/api/")) {
@@ -123,8 +207,14 @@ export function getRequiredAccessForApiPath(pathname: string): StudioRouteAccess
   if (isPublicStudioApiPath(normalized)) {
     return null;
   }
+  // Owner zuerst: `/api/admin/*` bleibt owner-only, auch wenn dort KI läuft.
+  // Der Owner geht durch `canUseRtxAi` ohnehin durch, die Reihenfolge kostet
+  // ihn also nichts — sie hält nur die strengere Stufe oben.
   if (normalized.startsWith("/api/admin")) {
     return "owner";
+  }
+  if (isAiStudioApiPath(normalized)) {
+    return "ai";
   }
   return "studio";
 }
@@ -136,12 +226,15 @@ export function getRequiredAccessForPagePath(pathname: string): StudioRouteAcces
   if (pathname === "/ideas" || pathname.startsWith("/ideas/")) {
     return "owner";
   }
+  if (isAiStudioPagePath(pathname)) {
+    return "ai";
+  }
   return "studio";
 }
 
 /** Does `user` satisfy the access level a Studio route asks for? */
 export function satisfiesStudioRouteAccess(
-  user: Pick<AuthUser, "isOwner" | "access">,
+  user: Pick<AuthUser, "isOwner" | "access" | "aiAccess">,
   required: StudioRouteAccess,
 ): boolean {
   if (required === "public") {
@@ -149,6 +242,11 @@ export function satisfiesStudioRouteAccess(
   }
   if (required === "owner") {
     return isOwner(user);
+  }
+  if (required === "ai") {
+    // Beides, nicht eines von beiden: hereinkommen UND den Host beschäftigen
+    // dürfen. Der Owner geht über canUseRtxAi durch, hat aber ohnehin Studio.
+    return canAccessStudio(user) && canUseRtxAi(user);
   }
   return canAccessStudio(user);
 }
@@ -177,5 +275,9 @@ export function toAuthUser(user: AuthUserSource): AuthUser {
     email: user.email,
     isOwner: user.isOwner === true,
     access: toAreaAccess(user),
+    // Fehlend liest als `false` — dieselbe fail-closed-Regel wie bei den
+    // Häkchen. Eine Quelle, die das Feld nicht kennt, schaltet die KI nicht
+    // versehentlich frei.
+    aiAccess: user.aiAccess === true,
   };
 }

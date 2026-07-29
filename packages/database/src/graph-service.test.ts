@@ -180,6 +180,7 @@ describe("graph-service", () => {
         email: "player@test.local",
         isOwner: false,
         access: { portal: true, studio: false, brain: false, family: false },
+        aiAccess: false,
       },
       worldMembership: {
         userId: "player-1",

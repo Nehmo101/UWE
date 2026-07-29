@@ -10,14 +10,17 @@ import {
 const owner = {
   isOwner: true,
   access: { portal: true, studio: true, brain: true, family: true },
+  aiAccess: false,
 };
 const dm = {
   isOwner: false,
   access: { portal: true, studio: true, brain: false, family: false },
+  aiAccess: false,
 };
 const player = {
   isOwner: false,
   access: { portal: true, studio: false, brain: false, family: false },
+  aiAccess: false,
 };
 
 describe("backup permissions", () => {

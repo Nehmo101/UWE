@@ -1,6 +1,9 @@
 "use server";
 
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import {
+  requireStudioActionAuth,
+  requireStudioAiActionAuth,
+} from "@/src/lib/studio-action-auth";
 import {
   applyAutoFitToContent,
   createLabelService,
@@ -219,6 +222,10 @@ export async function updateLabelAction(formData: FormData) {
   } else if (action === "restore_original") {
     content = restoreOriginalText(content);
   } else if (action === "ai_shorten") {
+    // Nur DIESER Zweig beschäftigt den RTX-Host. Die Prüfung sitzt deshalb im
+    // Zweig und nicht am Kopf der Action: „Etikett bearbeiten" ist keine
+    // KI-Funktion und darf es auch für Konten ohne KI-Häkchen nicht werden.
+    await requireStudioAiActionAuth();
     const sourceText = content.originalText || content.text || "";
     const actor = await getCurrentAuthUser();
     const { tryAiShortenLabelText } = await import("@/src/lib/label-ai-shorten");

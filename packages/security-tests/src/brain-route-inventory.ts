@@ -15,12 +15,16 @@ export const BRAIN_API_ROOT = "apps/brain/app/api";
  * - `guardAssistantApi` — KI-Chat, zusätzlich Same-Origin und Rate-Limit.
  * - `requireBrainMailApi` / `requireBrainMailMutation` — Mail-Center (H10),
  *   ebenfalls mit Same-Origin und Rate-Limit bei Mutationen.
+ * - `requireBrainMailAi` — Mail-Routen, die den RTX-Host beschäftigen (G-KI).
+ *   Es ruft `requireBrainMailMutation` in sich auf und verlangt zusätzlich das
+ *   KI-Flag; es ist damit die STRENGERE Variante, keine Alternative.
  *
  * Rollen und Welt-Zuordnung gibt es hier nicht: Brain ist owner-privat, das
- * Häkchen ist die ganze Prüfung.
+ * Häkchen ist die ganze Prüfung — beim KI-Flag kommt die Frage dazu, ob die
+ * Adresse den RTX-Host überhaupt beschäftigen darf.
  */
 export const BRAIN_AUTH_GUARD_PATTERN =
-  /requireBrainOwnerAuth|guardAssistantApi|requireBrainMail(?:Api|Mutation)/;
+  /requireBrainOwnerAuth|guardAssistantApi|requireBrainMail(?:Api|Mutation|Ai)/;
 
 /**
  * Absichtlich öffentliche Brain-Endpunkte.

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import { requireStudioAiActionAuth } from "@/src/lib/studio-action-auth";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { createUweRepository } from "@uwe/database/server";
 import { executeAiGatewayRequest } from "@uwe/ai-brain";
@@ -28,7 +28,7 @@ export interface DesignAssistantTurnRequest {
 export async function runDesignAssistantTurnAction(
   request: DesignAssistantTurnRequest,
 ): Promise<ThemeGeneratorTurnResult> {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
   const currentUser = await getCurrentAuthUser();
   const user = { userId: currentUser?.id ?? "system" };
 

@@ -10,6 +10,7 @@ function user(overrides: Partial<AuthUser>): AuthUser {
     email: null,
     isOwner: false,
     access: { ...NO_AREA_ACCESS },
+    aiAccess: false,
     ...overrides,
   };
 }

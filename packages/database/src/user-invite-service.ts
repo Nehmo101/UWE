@@ -45,6 +45,7 @@ export async function createInvite(
       studioAccess: input.studioAccess ?? false,
       brainAccess: input.brainAccess ?? false,
       familyAccess: input.familyAccess ?? false,
+      aiAccess: input.aiAccess ?? false,
       status: "invited",
       inviteTokenHash,
       inviteTokenExpiresAt: expiresAt,

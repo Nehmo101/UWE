@@ -124,6 +124,8 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "terra",
           "map",
           "weltkarte",
+          "entwurf",
+          "bauen",
         ]),
       ],
     },

@@ -24,6 +24,7 @@ export const USER_SAFE_SELECT = {
   studioAccess: true,
   brainAccess: true,
   familyAccess: true,
+  aiAccess: true,
   status: true,
   emailVerifiedAt: true,
   lastLoginAt: true,
@@ -42,12 +43,18 @@ export interface AdminUserView extends SafeUser {
   }>;
 }
 
-/** The four checkboxes, all optional so callers only set what they mean. */
+/**
+ * Die vier Häkchen plus das KI-Flag, alle optional — der Aufrufer setzt nur,
+ * was er meint. `aiAccess` ist bewusst KEIN fünftes Häkchen: die vier sagen,
+ * welche App die Adresse betreten darf, `aiAccess` sagt, ob sie darin die
+ * RTX-KI auslösen darf.
+ */
 export interface AreaAccessInput {
   portalAccess?: boolean;
   studioAccess?: boolean;
   brainAccess?: boolean;
   familyAccess?: boolean;
+  aiAccess?: boolean;
 }
 
 export interface CreateManagedUserInput extends AreaAccessInput {
@@ -186,6 +193,7 @@ export class UserService {
         studioAccess: input.studioAccess ?? false,
         brainAccess: input.brainAccess ?? false,
         familyAccess: input.familyAccess ?? false,
+        aiAccess: input.aiAccess ?? false,
         status: input.status ?? "active",
       },
       select: USER_SAFE_SELECT,
@@ -247,6 +255,7 @@ export class UserService {
         ...(input.studioAccess !== undefined ? { studioAccess: input.studioAccess } : {}),
         ...(input.brainAccess !== undefined ? { brainAccess: input.brainAccess } : {}),
         ...(input.familyAccess !== undefined ? { familyAccess: input.familyAccess } : {}),
+        ...(input.aiAccess !== undefined ? { aiAccess: input.aiAccess } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
         ...(input.forcePasswordChange !== undefined
           ? { forcePasswordChange: input.forcePasswordChange }
@@ -577,6 +586,7 @@ interface AccessSnapshot {
   studioAccess: boolean;
   brainAccess: boolean;
   familyAccess: boolean;
+  aiAccess: boolean;
 }
 
 function hasAccessChanged(before: AccessSnapshot, after: AccessSnapshot): boolean {
@@ -584,6 +594,9 @@ function hasAccessChanged(before: AccessSnapshot, after: AccessSnapshot): boolea
   const to = toAreaAccess(after);
   return (
     before.isOwner !== after.isOwner ||
+    // Das KI-Flag gehört ins Audit wie die Häkchen: „wer darf den RTX-Host
+    // beschäftigen" ist eine Rechteänderung, keine Einstellung.
+    before.aiAccess !== after.aiAccess ||
     (Object.keys(from) as Array<keyof AreaAccess>).some((area) => from[area] !== to[area])
   );
 }

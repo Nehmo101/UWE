@@ -10,11 +10,46 @@ Review-Queue) — alle drei sind entfernt.
 | **Häkchen** | `User.portalAccess` / `studioAccess` / `brainAccess` / `familyAccess` | Welche App darf diese Adresse betreten? |
 | **Welt-Zuordnung** | `WorldMembership` (ohne Rollenwert) | Welche Welt sieht sie? |
 
-Dazu ein Flag, das keine Achse ist: **`User.isOwner`** — Betrieb, Restore,
-Host-Steuerung, `/admin/*`. Das erste Konto aus `/setup` bekommt das Owner-Flag
-und alle vier Häkchen.
+Dazu zwei Flags, die keine Achse sind:
+
+- **`User.isOwner`** — Betrieb, Restore, Host-Steuerung, `/admin/*`. Das erste
+  Konto aus `/setup` bekommt es zusammen mit allen vier Häkchen.
+- **`User.aiAccess`** — darf diese Adresse die **RTX-KI** benutzen (G-KI)?
 
 > Das Häkchen sagt, welche App. Die Welt-Zuordnung sagt, welche Welt. Sonst nichts.
+
+## Die RTX-KI ist kein fünftes Häkchen
+
+Der Satz oben soll gelten bleiben, deshalb sitzt `aiAccess` **neben** den vier
+Häkchen und nicht in ihnen. Der Unterschied ist nicht kosmetisch:
+
+| | Häkchen | `aiAccess` |
+|---|---|---|
+| Beantwortet | Welche App darf ich betreten? | Darf ich darin den RTX-Host beschäftigen? |
+| Eins je | App | Konto |
+| Ohne es | Ich komme nicht rein | Ich komme rein, die KI-Funktionen fehlen |
+
+Eine KI-Route verlangt **beides**: das Häkchen der App bringt jemanden herein,
+`aiAccess` lässt ihn Inferenz auslösen. Der Owner geht immer durch
+(`canUseRtxAi` prüft `isOwner` zuerst) — er richtet das Flag schliesslich ein.
+
+**Wo es durchgesetzt wird**, drei Stellen, alle zentral:
+
+| Fläche | Mechanik |
+|---|---|
+| Studio-API-Routen | Pfadregel in `getRequiredAccessForApiPath` → `"ai"`. Eine Liste, keine Prüfung je Route. |
+| Server Actions | `requireStudioAiActionAuth` / `requireBrainAiActionAuth` / `requireFamilyAiActionAuth`. Eine Action kennt ihren Pfad nicht und muss sich selbst melden — `apps/studio/src/lib/server-actions.test.ts` prüft statisch, dass jedes Modul mit KI-Import den Guard nennt. |
+| API-Tokens | `aiAccess` reist vom Token-BESITZER mit (`ResolvedApiToken`). Ein Token ist kein Schleichweg um das Häkchen. |
+
+Nicht aufgenommen wird, was KI-Ergebnisse bloss **liest** — Ergebnislisten,
+Jobübersichten, eine erzeugte Seite. Wer etwas ansehen darf, muss es nicht
+erzeugen dürfen.
+
+**Bestandsdaten:** die Migration `20260729140000_user_ai_access` setzt das Flag
+einmalig für alle Konten mit Studio-Häkchen. Grund: diese Konten benutzen die
+KI heute schon; ein Vorgabewert von `false` wäre für sie keine Rechteklärung,
+sondern ein Ausfall. Neue Konten bekommen nichts stillschweigend — ab hier ist
+es eine Entscheidung im Command Center.
 
 ## Inhaltsregel
 
@@ -32,6 +67,7 @@ passiert außerhalb von UWE — oder in einer Welt, der noch niemand zugeordnet 
 | Frage | Code |
 |---|---|
 | Darf die Adresse diese App öffnen? | `packages/auth/src/area-access.ts` |
+| Darf sie die RTX-KI benutzen? | `packages/auth/src/area-access.ts` → `canUseRtxAi` / `requireRtxAi` |
 | Darf die Session diese Studio-Route? | `getRequiredAccessForApiPath` / `getRequiredAccessForPagePath` + `satisfiesStudioRouteAccess` |
 | Darf dieser Kontext den Welt-Inhalt lesen? | `packages/auth/src/permissions.ts` → `canViewWorldContent` |
 | Darf dieser Nutzer *diese* Welt lesen? | `packages/auth/src/security/authz.ts` → `canReadWorld`, `scopeFromAccessContext` |
@@ -43,6 +79,9 @@ Welt A auch Welt B — die Welt-Grenze ist die einzige verbliebene Inhaltsregel.
 ## Wo die Häkchen gesetzt werden
 
 Command Center → **Zugänge** (`apps/rtx-connector-client`, Panel `UsersPanel`).
+Dort steht neben den vier App-Häkchen auch **RTX-KI** — beim Owner fest
+angehakt und nicht abwählbar, weil `isOwner` ohnehin vorgeht und ein
+wirkungsloses Häkchen eine Lüge wäre.
 Backend ist `tools/uwe-host-command-center/src/user-admin-cli.ts` mit den
 Aktionen `list` / `create` / `update` / `set-password` / `delete`. Es gibt keine
 Selbstregistrierung: Konten legt nur der Owner an.

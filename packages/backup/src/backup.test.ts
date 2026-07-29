@@ -336,6 +336,86 @@ describe("UWE backup and restore", () => {
     process.env.UWE_UPLOADS_ROOT = uploadsRoot;
   });
 
+  /**
+   * J5. Der Vorgabewert der Spalte `status` ist `freigegeben` — was beim
+   * Restore fehlt, wird also nicht leer, sondern ABGENOMMEN. Ein Entwurf, der
+   * den Zustand nicht mitbrächte, käme als fertige Weltkarte zurück und stünde
+   * bei allen Spielern im Portal, ohne dass ihn je jemand abgenommen hätte.
+   *
+   * Genau das prüft dieser Test — und zwar am Restore, nicht nur am Bündel:
+   * das Bündel könnte den Zustand tragen und der Restore ihn trotzdem
+   * wegwerfen.
+   */
+  it("ein Spieler-Entwurf überlebt den Restore als Entwurf, nicht als Weltkarte", async () => {
+    const quellDb = createPrismaClient(databaseUrl);
+    const welt = await quellDb.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
+    const autor = await quellDb.user.findFirst({ where: { email: "player-backup@uwe.local" }, select: { id: true } });
+    assert.ok(welt && autor, "Testwelt und Spieler stehen aus dem before()-Block bereit");
+
+    await quellDb.terraKarte.create({
+      data: {
+        worldId: welt.id,
+        titel: "Entwurf im Backup",
+        daten: { format: "terra", version: 5, wurzel: "k0", karten: [{ id: "k0", elternId: null }] },
+        version: 2,
+        status: "eingereicht",
+        autorUserId: autor.id,
+        autorName: "Test PC",
+        eingereichtAm: new Date("2026-07-29T10:00:00.000Z"),
+        rueckmeldung: "Bitte den Fluss prüfen.",
+      },
+    });
+    await quellDb.$disconnect();
+
+    const bundle = await createBackupBundle(databaseUrl, { type: "world", worldSlug });
+    const gesichert = (bundle.data.terraKarten ?? []).find((k) => k.titel === "Entwurf im Backup");
+    assert.ok(gesichert, "der Entwurf steht im Bündel");
+    assert.equal(gesichert.status, "eingereicht");
+    assert.equal(gesichert.autorName, "Test PC");
+    assert.equal(gesichert.rueckmeldung, "Bitte den Fluss prüfen.");
+
+    const zipPath = path.join(backupsDir, "terra-entwurf-roundtrip.zip");
+    writeBackupZip(bundle, zipPath, uploadsRoot);
+    const zipBuffer = fs.readFileSync(zipPath);
+
+    const targetDbUrl = createTestDatabaseUrl();
+    const targetUploads = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-terra-entwurf-"));
+    process.env.UWE_UPLOADS_ROOT = targetUploads;
+    const targetDb = createPrismaClient(targetDbUrl);
+    const targetBrainDb = createTestBrainClient();
+    const targetFamilyDb = createTestFamilyClient();
+
+    await executeRestore(
+      targetDb,
+      targetBrainDb,
+      targetFamilyDb,
+      loadBackupFromBuffer(zipBuffer, "terra-entwurf-roundtrip.zip"),
+      { confirmed: true, autoResolveSlugConflicts: true },
+      zipBuffer,
+      targetUploads,
+    );
+
+    const wieder = await targetDb.terraKarte.findFirst({ where: { titel: "Entwurf im Backup" } });
+    assert.ok(wieder, "der Entwurf hat den Restore überlebt");
+    assert.equal(wieder.status, "eingereicht", "er ist NICHT stillschweigend abgenommen worden");
+    assert.equal(wieder.autorName, "Test PC");
+    assert.equal(wieder.rueckmeldung, "Bitte den Fluss prüfen.");
+    assert.ok(wieder.eingereichtAm instanceof Date);
+
+    // Der Autor wird auf die neue Nutzer-Id umgeschrieben, nicht blind kopiert.
+    const zielAutor = await targetDb.user.findFirst({ where: { email: "player-backup@uwe.local" } });
+    assert.equal(wieder.autorUserId, zielAutor?.id ?? null);
+
+    // Und die Karte des Spielleiters aus demselben Bündel bleibt abgenommen.
+    const dmKarte = await targetDb.terraKarte.findFirst({ where: { titel: "Backup-Karte" } });
+    assert.equal(dmKarte?.status, "freigegeben");
+    assert.equal(dmKarte?.autorUserId, null);
+
+    await targetDb.$disconnect();
+    fs.rmSync(targetUploads, { recursive: true, force: true });
+    process.env.UWE_UPLOADS_ROOT = uploadsRoot;
+  });
+
   it("exports campaign-scoped backups", async () => {
     const bundle = await createBackupBundle(databaseUrl, {
       type: "campaign",

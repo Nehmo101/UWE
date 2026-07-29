@@ -261,6 +261,12 @@ export interface CommandCenterUser {
   email: string | null;
   isOwner: boolean;
   access: CommandCenterAreaAccess;
+  /**
+   * Darf die RTX-KI benutzen (G-KI). Kein fünftes Feld in `access`: die vier
+   * dort sagen, welche App diese Adresse betreten darf, dieses sagt, ob sie
+   * darin die lokale Inferenz auslösen darf. Der Owner geht immer durch.
+   */
+  aiAccess: boolean;
   status: string;
   hasPassword: boolean;
   createdAt: string;
@@ -279,6 +285,7 @@ export async function createUser(user: {
   studio: boolean;
   brain: boolean;
   family: boolean;
+  ai: boolean;
 }) {
   return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("create_user", {
     user,
@@ -294,6 +301,8 @@ export async function updateUser(user: {
   studio?: boolean;
   brain?: boolean;
   family?: boolean;
+  /** Weglassen heisst „unverändert" — nicht „abschalten". */
+  ai?: boolean;
   status?: "invited" | "active" | "disabled";
 }) {
   return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("update_user", {

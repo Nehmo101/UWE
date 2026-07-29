@@ -40,6 +40,21 @@ export default async function TerraKartePage({ params }: Props) {
     <WorldShell worldSlug={worldSlug} worldName={world.name} breadcrumb={<BreadcrumbTrail items={breadcrumb} />}>
       <div className="space-y-3">
         <h1 className="text-xl font-semibold">{karte.titel}</h1>
+        {/* Herkunft und Zustand stehen über dem Frame, nicht darin: der
+            Spielleiter soll wissen, ob er in seine eigene Karte schreibt oder
+            in den Entwurf eines Spielers, BEVOR er die Maus anfasst. Die
+            Abnahme selbst sitzt in der Liste — ein Knopf neben dem Editor
+            würde zum Durchwinken einladen. */}
+        {karte.autorName || karte.status !== "freigegeben" ? (
+          <p className="text-sm text-muted-foreground" data-testid="terra-karte-herkunft">
+            {karte.autorName ? `Gebaut von ${karte.autorName}. ` : ""}
+            {karte.status === "eingereicht"
+              ? "Eingereicht — wartet auf deine Abnahme."
+              : karte.status === "entwurf"
+                ? "Entwurf — noch nicht eingereicht."
+                : "Abgenommen."}
+          </p>
+        ) : null}
         <TerraRahmen worldSlug={worldSlug} karteId={karte.id} version={karte.version} daten={karte.daten ?? null} />
       </div>
     </WorldShell>

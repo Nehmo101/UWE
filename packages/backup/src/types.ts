@@ -269,6 +269,19 @@ export interface BackupTerraKarteRecord {
   /** Kartenbaum im Terra-Format v5: { format, version, wurzel, karten[] }. */
   daten: unknown;
   version: number;
+  /**
+   * Abnahmezustand (J5). Optional, weil Archive von vor J5 die Spalte nicht
+   * kennen — beim Restore fällt das auf `freigegeben` zurück, was für damalige
+   * Karten stimmt: vor J5 gab es nur abgenommene Karten.
+   */
+  status?: "entwurf" | "eingereicht" | "freigegeben";
+  /** `null` = im Studio entstanden. */
+  autorUserId?: string | null;
+  autorName?: string | null;
+  eingereichtAm?: string | null;
+  entschiedenAm?: string | null;
+  entschiedenVonUserId?: string | null;
+  rueckmeldung?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -20,6 +20,14 @@ export async function resolveStudioApiAuthContext(request: Request): Promise<Api
         return {
           // An API token acts for its owning account. It carries no area
           // checkboxes of its own — its scopes are the gate.
+          //
+          // Das KI-Flag ist die Ausnahme, und sie ist bewusst: es kommt vom
+          // BESITZER des Tokens, nicht aus dem Token. Sonst wäre ein Token der
+          // Schleichweg um das Häkchen — wer die KI nicht benutzen darf, stellt
+          // sich sonst eins aus und benutzt sie doch. Der `ai_invoke`-Scope
+          // sagt weiterhin, ob dieses Token KI-Routen ansprechen darf; dieses
+          // Feld sagt, ob sein Besitzer es überhaupt dürfte. Beides muss
+          // stimmen.
           user: {
             id: resolved.userId,
             displayName: resolved.name,
@@ -31,6 +39,7 @@ export async function resolveStudioApiAuthContext(request: Request): Promise<Api
               brain: false,
               family: false,
             },
+            aiAccess: resolved.aiAccess,
           },
           apiTokenId: resolved.id,
           apiTokenScopes: resolved.scopes,

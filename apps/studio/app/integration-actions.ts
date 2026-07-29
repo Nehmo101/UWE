@@ -1,6 +1,9 @@
 "use server";
 
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import {
+  requireStudioActionAuth,
+  requireStudioAiActionAuth,
+} from "@/src/lib/studio-action-auth";
 import fs from "node:fs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -34,7 +37,7 @@ import {
 } from "@/src/lib/authz";
 
 export async function createImageStudioJobAction(formData: FormData) {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
   const settings = await getSystemSettings();
   const config = {
     enabled: settings.imageStudio.enabled,
@@ -143,7 +146,7 @@ export async function createImageStudioJobAction(formData: FormData) {
 }
 
 export async function retryImageStudioProjectAction(formData: FormData) {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
   const settings = await getSystemSettings();
   if (!settings.imageStudio.enabled) throw new Error("Image Studio ist deaktiviert.");
 
@@ -189,7 +192,7 @@ export async function retryImageStudioProjectAction(formData: FormData) {
 }
 
 export async function saveImageStudioDraftAction(formData: FormData) {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
   const settings = await getSystemSettings();
   if (!settings.imageStudio.enabled) throw new Error("Image Studio ist deaktiviert.");
 
@@ -325,7 +328,7 @@ export async function createAgentJobAction(formData: FormData) {
   const config = resolveAgentJobsConfig();
   if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
 
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
   assertStudioCanUseAI();
 
   const title = String(formData.get("title") ?? "");
@@ -339,7 +342,7 @@ export async function createAgentJobFromPresetAction(formData: FormData) {
   const config = resolveAgentJobsConfig();
   if (!config.enabled) throw new Error("Agent Jobs sind deaktiviert.");
 
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
   assertStudioCanUseAI();
 
   const presetId = String(formData.get("preset") ?? "");

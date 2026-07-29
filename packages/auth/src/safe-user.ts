@@ -38,6 +38,8 @@ export function toSafeUser(user: Record<string, unknown>): SafeUser {
     email: typeof user.email === "string" ? user.email : null,
     isOwner: user.isOwner === true,
     access: toAreaAccess(user as Parameters<typeof toAreaAccess>[0]),
+    // Fail-closed wie die Häkchen: was die Quelle nicht mitbringt, ist `false`.
+    aiAccess: user.aiAccess === true,
   };
 
   const createdAt = toIsoString(user.createdAt);

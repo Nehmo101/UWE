@@ -291,6 +291,7 @@ describe("user management and login hardening", () => {
         email: playerEmail,
         isOwner: false,
         access: { portal: true, studio: false, brain: false, family: false },
+        aiAccess: false,
       },
     });
     assert.ok(denied);

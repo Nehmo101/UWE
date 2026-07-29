@@ -98,6 +98,7 @@ describe("Audit log", () => {
         email: "player@example.com",
         isOwner: false,
         access: { portal: true, studio: false, brain: false, family: false },
+        aiAccess: false,
       },
       worldMembership: {
         userId: "player-1",
@@ -113,6 +114,7 @@ describe("Audit log", () => {
         email: "owner@example.com",
         isOwner: true,
         access: { portal: true, studio: true, brain: true, family: true },
+        aiAccess: false,
       },
       worldMembership: {
         userId: "owner-1",
@@ -128,6 +130,7 @@ describe("Audit log", () => {
         email: "dm@example.com",
         isOwner: false,
         access: { portal: true, studio: true, brain: false, family: false },
+        aiAccess: false,
       },
       worldMembership: {
         userId: "dm-1",

@@ -8,7 +8,10 @@ import {
   getAppRepository,
   type Prisma,
 } from "@uwe/database/server";
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import {
+  requireStudioActionAuth,
+  requireStudioAiActionAuth,
+} from "@/src/lib/studio-action-auth";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
 import { postGeneratorAction } from "@/src/lib/generator-handlers";
 
@@ -90,7 +93,7 @@ export async function upsertFactionStateAction(formData: FormData) {
  * und werden erst nach Freigabe als WorldEvents in die Chronik übernommen.
  */
 export async function simulateAllFactionsAction(formData: FormData) {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
 
   const worldSlug = String(formData.get("worldSlug"));
   await requireStudioWorldEdit(worldSlug);

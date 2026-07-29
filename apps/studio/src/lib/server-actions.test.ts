@@ -23,6 +23,58 @@ const PORTAL_ACTION_GUARD = "requirePortalActionAuth";
 const BRAIN_ACTION_GUARD = "requireBrainActionAuth";
 const FAMILY_ACTION_GUARD = "requireFamilyActionAuth";
 
+/**
+ * KI-Varianten der Guards (G-KI). Sie rufen den kanonischen Guard IN SICH auf
+ * und zählen deshalb hier als gleichwertig — sonst meldete der Scanner jede
+ * KI-Action als ungeschützt, obwohl sie strenger geprüft ist als die anderen.
+ */
+const AI_ACTION_GUARDS: Record<string, string> = {
+  [STUDIO_ACTION_GUARD]: "requireStudioAiActionAuth",
+  [BRAIN_ACTION_GUARD]: "requireBrainAiActionAuth",
+  [FAMILY_ACTION_GUARD]: "requireFamilyAiActionAuth",
+};
+
+/**
+ * Importe, deren Aufruf den RTX-Host beschäftigt. Ein Action-Modul, das eines
+ * davon nennt, muss den KI-Guard nennen — welche seiner Actions ihn bekommen,
+ * entscheidet weiterhin der Autor, aber er muss die Frage stellen.
+ *
+ * Geprüft wird der DIREKTE Import des Moduls, nicht der ganze Importbaum. Das
+ * ist Absicht und wurde gemessen: transitiv erreichen 44 von 65 Studio-Modulen
+ * ein KI-Paket, weil ein einziger geteilter Helfer es hereinzieht. Ein Test,
+ * der fast alles meldet, wird weggeklickt und schützt dann nichts mehr.
+ *
+ * Der Preis dafür sind die zweite Liste unten: ein Helfer, der KI auslöst,
+ * ohne selbst ein KI-Paket zu sein, muss hier eingetragen werden. Wer einen
+ * neuen baut, trägt ihn ein — dieselbe Sorgfalt, die er ohnehin für den Guard
+ * braucht.
+ */
+const AI_IMPORT_PATTERNS: readonly RegExp[] = [
+  /@uwe\/(ai-brain|brain-assistant|image-studio|page-ai-review|agent-jobs|web-search|theme-studio)/,
+  // Studio-eigene Helfer, die hinter der Fassade Inferenz starten.
+  /@\/src\/lib\/generator-handlers/,
+  /@\/src\/lib\/ai-handlers/,
+  /@\/src\/lib\/brain-handlers/,
+  /@\/src\/lib\/ai-gateway-handlers/,
+  /@\/src\/lib\/label-ai-shorten/,
+  /@\/src\/lib\/research-synthesis/,
+];
+
+/**
+ * Action-Module mit KI-Paket im Importbaum, die BEWUSST keinen KI-Guard
+ * tragen. Jeder Eintrag braucht einen Grund — er ist eine Entscheidung, kein
+ * Versehen.
+ */
+const AI_GUARD_EXEMPTIONS = new Map<string, string>([
+  [
+    "life-admin-actions.ts",
+    "Die Embedding-Jobs sind eine Nebenwirkung des Speicherns owner-privater " +
+      "Notizen, keine vom Nutzer ausgelöste KI-Funktion. Wer eine Life-Brain-Notiz " +
+      "anlegen darf, muss sie auch indizieren lassen dürfen — sonst wäre der " +
+      "Datensatz halb geschrieben.",
+  ],
+]);
+
 interface AltGuardExemption {
   /** Stronger guard the module's exported actions rely on instead of the canonical one. */
   guard: string;
@@ -174,6 +226,7 @@ async function scanActionGuards(
   canonicalGuard: string,
   altGuards: Map<string, AltGuardExemption>,
 ): Promise<GuardScanResult> {
+  const aiGuard = AI_ACTION_GUARDS[canonicalGuard];
   const actionFiles = await collectActionFiles(appDir);
   let scannedActions = 0;
   const unguarded: string[] = [];
@@ -184,7 +237,8 @@ async function scanActionGuards(
     const fns = collectTopLevelFns(source, file);
 
     const exemption = altGuards.get(rel);
-    const seedGuards = exemption ? [canonicalGuard, exemption.guard] : [canonicalGuard];
+    const seedGuards = [canonicalGuard, ...(aiGuard ? [aiGuard] : [])];
+    if (exemption) seedGuards.push(exemption.guard);
     const guardSet = buildGuardReferenceSet(fns, seedGuards);
 
     for (const fn of fns) {
@@ -341,5 +395,85 @@ describe("family server actions", () => {
     );
 
     assert.ok(scannedActions > 0, `expected to scan Family actions, only scanned ${scannedActions}`);
+  });
+});
+
+/**
+ * G-KI — wer den RTX-Host beschäftigen darf, ist im Command Center einstellbar
+ * (`User.aiAccess`). Bei den API-Routen trägt eine zentrale Pfadregel diese
+ * Prüfung (`getRequiredAccessForApiPath` → `"ai"`); eine Server Action kennt
+ * ihren Pfad zur Laufzeit aber nicht und muss sich selbst melden.
+ *
+ * Genau das prüft dieser Block — und zwar gegen den unauffälligen Ausfallmodus:
+ * eine vergessene KI-Prüfung fällt niemandem auf, weil die Funktion weiter
+ * läuft. Sie läuft nur für zu viele Leute. Ein Test, der erst beim Benutzen
+ * anschlägt, käme dafür zu spät.
+ *
+ * Geprüft wird auf MODUL-Ebene, nicht je Action: erreicht ein Action-Modul ein
+ * KI-Paket, muss es den KI-Guard nennen. Welche seiner Actions ihn bekommen,
+ * bleibt die Entscheidung des Autors — die Frage stellen muss er trotzdem.
+ */
+describe("RTX-KI guards", () => {
+  const APPS: Array<{ label: string; root: string; guard: string }> = [
+    { label: "Studio", root: studioRoot, guard: AI_ACTION_GUARDS[STUDIO_ACTION_GUARD]! },
+    { label: "Brain", root: brainRoot, guard: AI_ACTION_GUARDS[BRAIN_ACTION_GUARD]! },
+    { label: "Family", root: familyRoot, guard: AI_ACTION_GUARDS[FAMILY_ACTION_GUARD]! },
+  ];
+
+  /**
+   * Nennt dieses Modul einen Import, der den RTX-Host beschäftigt? Direkt —
+   * siehe die Begründung an AI_IMPORT_PATTERNS.
+   */
+  function usesAiImport(source: string): boolean {
+    return AI_IMPORT_PATTERNS.some((pattern) => pattern.test(source));
+  }
+
+  for (const app of APPS) {
+    it(`${app.label}: jedes Action-Modul mit KI-Import nennt ${app.guard}`, async () => {
+      const appDir = join(app.root, "app");
+      const files = await collectActionFiles(appDir);
+      const missing: string[] = [];
+      let withAiPath = 0;
+
+      for (const file of files) {
+        const rel = relative(appDir, file).split(sep).join("/");
+        const source = await readFile(file, "utf8");
+        if (!usesAiImport(source)) continue;
+        withAiPath++;
+        if (AI_GUARD_EXEMPTIONS.has(rel)) continue;
+
+        if (!referencesIdentifier(source, app.guard)) {
+          missing.push(rel);
+        }
+      }
+
+      assert.equal(
+        missing.length,
+        0,
+        `${app.label}-Action-Module, die den RTX-Host beschäftigen, aber ${app.guard} nicht nennen. ` +
+          `Entweder den Guard auf die KI-Actions setzen, oder das Modul mit Begründung in ` +
+          `AI_GUARD_EXEMPTIONS eintragen:\n  ${missing.join("\n  ")}`,
+      );
+
+      assert.ok(
+        withAiPath > 0,
+        `${app.label}: kein einziges Action-Modul mit KI-Import gefunden — der Scanner läuft ins Leere.`,
+      );
+    });
+  }
+
+  it("kein toter Eintrag in AI_GUARD_EXEMPTIONS", async () => {
+    // Ein Modul, das den Guard inzwischen selbst nennt, braucht keine Ausnahme
+    // mehr — und eine stehengebliebene Ausnahme verdeckt beim nächsten Umbau
+    // eine echte Lücke.
+    for (const [rel] of AI_GUARD_EXEMPTIONS) {
+      const file = join(studioRoot, "app", rel);
+      const source = await readFile(file, "utf8").catch(() => null);
+      assert.ok(source !== null, `AI_GUARD_EXEMPTIONS verweist auf ein Modul, das es nicht gibt: ${rel}`);
+      assert.ok(
+        !referencesIdentifier(source, AI_ACTION_GUARDS[STUDIO_ACTION_GUARD]!),
+        `${rel} nennt den KI-Guard inzwischen selbst — Eintrag aus AI_GUARD_EXEMPTIONS entfernen.`,
+      );
+    }
   });
 });

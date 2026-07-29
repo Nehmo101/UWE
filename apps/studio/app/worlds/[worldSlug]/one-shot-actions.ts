@@ -12,11 +12,11 @@ import {
   serializeOneShotOutline,
   type OneShotTone,
 } from "@uwe/ai-brain";
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import { requireStudioAiActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
 export async function saveOneShotDraftAction(formData: FormData): Promise<void> {
-  await requireStudioActionAuth();
+  await requireStudioAiActionAuth();
   const worldSlug = String(formData.get("worldSlug") || "");
   const worldId = String(formData.get("worldId") || "");
   const worldName = String(formData.get("worldName") || "");

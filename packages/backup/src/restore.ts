@@ -633,13 +633,32 @@ export async function executeRestore(
 
   /**
    * Terra-Karten (J1). Die Karte steckt vollständig in `daten`; es gibt
-   * nichts zu verknüpfen außer der Welt. `version` reist mit, damit die
-   * Konflikterkennung nach einem Restore nicht bei 1 wieder anfängt und
-   * einen noch offenen Editor-Reiter blind überschreiben ließe.
+   * nichts zu verknüpfen außer der Welt und — seit J5 — ihrem Autor.
+   * `version` reist mit, damit die Konflikterkennung nach einem Restore nicht
+   * bei 1 wieder anfängt und einen noch offenen Editor-Reiter blind
+   * überschreiben ließe.
+   *
+   * J5, zwei Dinge, die hier leicht schiefgehen:
+   *
+   *   ZUSTAND. Ohne `status` fiele die Zeile auf den Vorgabewert
+   *   `freigegeben` zurück — ein noch nicht abgenommener Entwurf käme als
+   *   fertige Weltkarte zurück und stünde bei allen im Portal. Archive von
+   *   VOR J5 tragen das Feld nicht; für sie ist `freigegeben` richtig, weil es
+   *   damals nichts anderes gab.
+   *
+   *   AUTOR. Ist der Autor nicht Teil des Archivs (weltweiser Umfang ohne
+   *   Nutzer), wird das Feld `null` statt die Karte zu überspringen. Die Karte
+   *   ist Weltinhalt und soll nicht an einer fehlenden Person hängen; sie
+   *   verliert nur ihren Schreiber. `autorName` bleibt als Spur stehen.
    */
   for (const karte of bundle.data.terraKarten ?? []) {
     const worldId = idMap.get(karte.worldId);
     if (!worldId) continue;
+
+    const autorUserId = karte.autorUserId ? idMap.get(karte.autorUserId) ?? null : null;
+    const entschiedenVonUserId = karte.entschiedenVonUserId
+      ? idMap.get(karte.entschiedenVonUserId) ?? null
+      : null;
 
     await db.terraKarte.create({
       data: {
@@ -648,6 +667,13 @@ export async function executeRestore(
         titel: karte.titel,
         daten: karte.daten as never,
         version: karte.version,
+        status: karte.status ?? "freigegeben",
+        autorUserId,
+        autorName: karte.autorName ?? null,
+        eingereichtAm: karte.eingereichtAm ? new Date(karte.eingereichtAm) : null,
+        entschiedenAm: karte.entschiedenAm ? new Date(karte.entschiedenAm) : null,
+        entschiedenVonUserId,
+        rueckmeldung: karte.rueckmeldung ?? null,
       },
     });
     result.created++;

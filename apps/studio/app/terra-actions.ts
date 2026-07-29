@@ -5,6 +5,7 @@ import { prisma } from "@uwe/database/server";
 import { createTerraService } from "@uwe/database/terra";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
+import { getCurrentAuthUser } from "@/src/lib/auth";
 
 /**
  * Terra — Server Actions für den Karteneditor.
@@ -23,6 +24,12 @@ import { requireStudioWorldEdit } from "@/src/lib/authz";
  *
  * Terra-Inhalte sind vollständig spielersichtbar (Owner-Entscheid 2026-07-21,
  * unverändert für Terra übernommen), es gibt deshalb keine Sichtbarkeitslogik.
+ *
+ * Seit J5 bauen auch Spieler Karten (im Portal, siehe
+ * `apps/portal/app/terra-actions.ts`). Für die Actions hier ändert das nichts
+ * an den Rechten — der Spielleiter darf jede Karte seiner Welt anfassen,
+ * gleich wer sie gebaut hat. Dazu kommen zwei neue Actions, die es vorher
+ * nicht brauchte: `gibTerraKarteFrei` und `weiseTerraKarteZurueck`.
  *
  * Woher die Daten kommen: aus dem gleich-origin <iframe> über die
  * postMessage-Brücke (`terra/src/editor/bruecke.js`). Der Frame besitzt keine
@@ -171,5 +178,60 @@ export async function loescheTerraKarteAction(formData: FormData): Promise<Terra
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Löschen fehlgeschlagen" };
+  }
+}
+
+/* --- J5: Abnahme von Spielerkarten ------------------------------------- */
+
+/**
+ * Nimmt eine Karte ab. Sie wird damit Weltinhalt wie jede andere — im Portal
+ * für alle Weltmitglieder sichtbar, für ihren Autor nicht mehr beschreibbar.
+ *
+ * Der Autor bleibt an der Karte vermerkt. Wer sie gebaut hat, ist Teil der
+ * Welt-Geschichte und nicht bloss eine Durchgangsstation.
+ */
+export async function gibTerraKarteFreiAction(formData: FormData): Promise<TerraSpeichernErgebnis> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const karteId = String(formData.get("karteId"));
+  try {
+    const user = await getCurrentAuthUser();
+    const terra = createTerraService(prisma);
+    const ok = await terra.gibFrei(worldSlug, karteId, user?.id ?? null);
+    if (!ok) throw new Error("Karte gehört nicht zu dieser Welt");
+    revalidatePath(`/worlds/${worldSlug}/karten`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Freigeben fehlgeschlagen" };
+  }
+}
+
+/**
+ * Gibt eine Spielerkarte an ihren Autor zurück — mit Rückmeldung, die er im
+ * Portal über seinem Entwurf liest.
+ *
+ * Nur bei Karten mit Autor: eine im Studio angelegte Karte hat niemanden, an
+ * den sie zurückgehen könnte. Der Service setzt diese Grenze im `where`.
+ */
+export async function weiseTerraKarteZurueckAction(formData: FormData): Promise<TerraSpeichernErgebnis> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const karteId = String(formData.get("karteId"));
+  try {
+    const user = await getCurrentAuthUser();
+    const terra = createTerraService(prisma);
+    const ok = await terra.weiseZurueck(worldSlug, karteId, {
+      entschiedenVonUserId: user?.id ?? null,
+      rueckmeldung: String(formData.get("rueckmeldung") ?? ""),
+    });
+    if (!ok) throw new Error("Diese Karte lässt sich nicht zurückgeben — sie hat keinen Spieler-Autor");
+    revalidatePath(`/worlds/${worldSlug}/karten`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Zurückgeben fehlgeschlagen" };
   }
 }

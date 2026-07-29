@@ -44,6 +44,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     studioAccess?: boolean;
     brainAccess?: boolean;
     familyAccess?: boolean;
+    /**
+     * RTX-KI (G-KI). Weglassen heisst „unverändert" — `updateUser` schreibt
+     * nur, was gesetzt ist. Ein Teil-Update darf das Recht nicht nebenbei
+     * abräumen.
+     */
+    aiAccess?: boolean;
     status?: "invited" | "active" | "disabled";
     forcePasswordChange?: boolean;
   };
