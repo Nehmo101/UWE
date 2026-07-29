@@ -104,14 +104,37 @@ Push findet dort noch **36 Treffer** der alten Adressen. Solange das so ist, ist
 die E-Mail über `refs/pull/N/head` und über direkte Commit-SHA-URLs abrufbar —
 für jeden, sobald das Repo öffentlich ist.
 
-- [ ] **GitHub Support kontaktieren** (<https://support.github.com/contact>) und
-      um das Aufräumen verwaister Objekte und veralteter PR-Refs nach einem
-      History-Rewrite bitten. Dafür gibt es keine API und keine Einstellung.
-- [ ] **Erst danach das Repo öffentlich schalten.** Vorher ist der Rewrite
-      kosmetisch.
-- [ ] Alternative, falls Support zu langsam ist: neues Repo anlegen, nur die
-      umgeschriebene History pushen, das alte Repo löschen. Kostet Issues, PRs
-      und Stars — dafür sofort und vollständig.
+Betroffen sind **159 distinkte Commits**, erreichbar über **575 der 621**
+PR-Refs. `refs/pull/*` lassen sich nicht selbst löschen — kein Git-Befehl, keine
+API, keine Einstellung.
+
+### Entschieden: neues Repository (Weg B)
+
+Das aktuelle Repo hat **0 Forks, 0 Stars, 0 Watcher, 0 offene Issues** — extern
+hat es nie jemand gesehen. Ein Neuanfang kostet daher nichts, wirkt sofort und
+vollständig (ein neues Repo hat gar keine PR-Refs), und niemand muss auf GitHub
+Support warten.
+
+- [ ] Aktuelles Repo in **`UWE-archiv`** umbenennen und **privat lassen** — so
+      bleiben die 202 Issues und 621 PRs als Nachschlagewerk erhalten.
+- [ ] Neues Repo **`UWE`** anlegen (gleicher Name, damit die Links in
+      `SECURITY.md`, `README.md` und `.github/ISSUE_TEMPLATE/config.yml`
+      gültig bleiben).
+- [ ] Die **umgeschriebene** History dorthin pushen — nicht aus einem alten
+      Klon, sonst kommen die alten Commits zurück.
+- [ ] Erst danach öffentlich schalten und die Punkte 1–4 dieser Liste abarbeiten.
+
+**Umzug, der dabei anfällt:**
+
+- Self-hosted Runner neu registrieren (hängt am alten Repo, Label `uwe-deploy`)
+- Secrets neu setzen: `CURSOR_API_KEY`, `STUDIO_API_TOKEN`,
+  `STUDIO_CALLBACK_URL`, `TAURI_SIGNING_PRIVATE_KEY` (+ Passwort)
+- `/opt/uwe` auf dem Host auf die neue Remote-URL umstellen
+- Der Owner-Check in `deploy.yml` (`repository_owner == 'Nehmo101'`) bleibt gültig
+
+*Verworfene Alternative (Weg A):* GitHub Support um das Aufräumen verwaister
+Objekte bitten. Kostenlos und ohne Umzug, aber Wartezeit von Tagen, und bis
+dahin ist der Rewrite wirkungslos.
 
 ### Danach
 
