@@ -55,7 +55,10 @@ export const SYSTEM_NAV: NavGroup[] = [
         id: "system-activity",
         label: "Verlauf",
         href: "/admin/activity",
-        icon: "history",
+        // Dasselbe Glyph wie das fruehere "history" — Lucide 1.27 hat es im
+        // Registry auf "rotate-ccw-clock" umbenannt, "History" ist nur noch ein
+        // Alias auf dem Direktexport und faellt aus `icons` heraus.
+        icon: "rotate-ccw-clock",
         group: "Übersicht",
         section: SECTION,
         permission: ["owner", "admin"],
