@@ -1,6 +1,7 @@
 /* TEMPORÄR — Diagnose der Plattform-Divergenz im Terrainfarb-Hash.
    Wird nach der Auswertung wieder entfernt. */
 import test from 'node:test';
+import assert from 'node:assert/strict';
 import { testWelt } from './hilfen/karte.mjs';
 import { Hasher } from './hilfen/hash.mjs';
 
@@ -33,4 +34,13 @@ test('DIAGNOSE — wo laufen die Plattformen auseinander', async () => {
 
   // 4) Version von three.
   console.log('DIAG three        =', THREE.REVISION);
+
+  // Erzwungener Fehlschlag: nur so landen die Werte sicher im CI-Log.
+  const bericht = [
+    'hgt=' + hh.hex(),
+    'farbe-konst=' + ch.hex(),
+    'three=' + THREE.REVISION,
+    'math=' + probe.map((x) => x.toExponential(17)).join(','),
+  ].join(' || ');
+  assert.equal(bericht, 'ABSICHTLICH-ROT', 'DIAGNOSEWERTE');
 });
