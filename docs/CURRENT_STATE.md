@@ -32,7 +32,7 @@ GitHub-Checks grün sind:
 
 - `pr-check.yml` → `pnpm ci:light` (jeder PR; einziger Required Check)
 - `ci.yml` → volles `pnpm quality` + Postgres-Smoke (auf `main`; E2E/Perf scheduled)
-- `security.yml`, `docs-check.yml` (scheduled/Pfad-gefiltert), `deploy.yml` (self-hosted Runner auf dem Host)
+- `security.yml`, `docs-check.yml` (scheduled/Pfad-gefiltert). Ein automatischer Deploy-Workflow existiert nicht mehr — der Host ist stillgelegt.
 
 Lokale Befehle (`pnpm ci:light` / `pnpm quality`) sind **optionale Vorprüfung**, kein
 Pflicht- oder Self-hosted-Gate. Details: [engineering/ci.md](engineering/ci.md).

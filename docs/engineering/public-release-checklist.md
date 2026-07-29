@@ -130,7 +130,7 @@ Support warten.
 - Secrets neu setzen: `CURSOR_API_KEY`, `STUDIO_API_TOKEN`,
   `STUDIO_CALLBACK_URL`, `TAURI_SIGNING_PRIVATE_KEY` (+ Passwort)
 - `/opt/uwe` auf dem Host auf die neue Remote-URL umstellen
-- Der Owner-Check in `deploy.yml` (`repository_owner == 'Nehmo101'`) bleibt gültig
+- Erledigt: Runner abgemeldet und `deploy.yml` entfernt — der Host ist stillgelegt
 
 *Verworfene Alternative (Weg A):* GitHub Support um das Aufräumen verwaister
 Objekte bitten. Kostenlos und ohne Umzug, aber Wartezeit von Tagen, und bis

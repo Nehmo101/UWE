@@ -220,7 +220,7 @@ jobs:
 
   e2e:
     # Only run on manual trigger or schedule — not on every push to main.
-    # Skipped jobs do not fail the workflow, so deploy.yml still triggers.
+    # Skipped jobs do not fail the workflow.
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30

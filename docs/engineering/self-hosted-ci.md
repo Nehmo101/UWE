@@ -7,10 +7,14 @@ Stand: 2026-06-26
 > für **CI** sind hier nur als Referenz/Notfalloption dokumentiert und werden
 > derzeit **nicht** verwendet. Ein PR ist mergebar, wenn seine GitHub-Checks grün sind.
 >
-> **Ausnahme — aktiv:** Für **Deployment** (`deploy.yml`) läuft sehr wohl ein
-> kleiner self-hosted Runner auf dem UWE-Host (Label `uwe-deploy`). Er führt
-> **kein** CI aus, sondern stößt nur den Host-Update an. Siehe Abschnitt
-> [Deploy-Runner](#deploy-runner-aktiv-auf-dem-uwe-host).
+> **Auch der Deploy-Runner ist inzwischen inaktiv.** Bis 2026-07 stieß ein
+> kleiner Runner auf dem Linux-Host (Label `uwe-deploy`) nach grünem CI den
+> Host-Update an. Der Host ist stillgelegt, der Runner abgemeldet und der
+> Workflow `deploy.yml` mit dem Wechsel ins öffentliche Repository entfernt —
+> er hätte sonst bei jedem CI-Lauf einen Job erzeugt, der mangels Runner in der
+> Warteschlange verfällt. Der Abschnitt [Deploy-Runner](#deploy-runner-stillgelegt--aufbau-als-referenz)
+> beschreibt den Aufbau weiterhin, für den Fall einer Reaktivierung; die
+> Host-Skripte unter `deploy/` sind unverändert vorhanden.
 
 Dieses Dokument hält Entscheidungen und Planung für **CI ohne GitHub Actions Minuten** fest — für den Fall, dass Billing-Limits erreicht sind oder keine weiteren Kosten gewünscht sind.
 
@@ -185,7 +189,7 @@ SSD empfohlen — Builds auf HDD sind sehr langsam.
 
 ---
 
-## Deploy-Runner (aktiv auf dem UWE-Host)
+## Deploy-Runner (stillgelegt — Aufbau als Referenz)
 
 > Dies ist **getrennt** von einem CI-Runner. Der Deploy-Runner führt **kein**
 > `pnpm quality` und keine Builds im Runner-Prozess aus — er löst nur den
