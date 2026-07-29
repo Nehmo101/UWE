@@ -147,6 +147,8 @@ export async function attachCampaignFigures(
         // Hinter den Textblock des Imports (sortOrder 0).
         sortOrder: 1 + result.attachedBlocks,
         assetId: asset.id,
+        // Dient als Bildunterschrift und Alternativtext im Seiten-HTML.
+        content: `${input.sourceFile}, Seite ${figure.pageNumber}`,
         metadata: {
           source: "pdf-campaign-import",
           importJobId: input.jobId,

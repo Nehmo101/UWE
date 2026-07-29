@@ -392,6 +392,40 @@ Die Zuordnung Chunk → PDF-Seite läuft über unsichtbare Marker
 werden per `readPageNumbers` ausgelesen und per `stripPageMarkers` entfernt,
 **bevor** der Chunk an die lokale KI geht — das Modell sieht sie nie.
 
+### Bildblöcke werden jetzt auch angezeigt
+
+Beim Nachprüfen fiel auf, dass der Zuschnitt zwar in der DB landete, auf der
+Seite aber **unsichtbar** blieb: `buildPageViewForViewer` reichte nur
+`block.content` an den Renderer, und ein Bildblock hat dort nichts stehen — er
+wurde am Ende von `filter(Boolean)` verworfen. Das betraf alle Bildblöcke, nicht
+nur die aus dem Import; der Editor (`ContentBlockImageField`) konnte sie seit
+jeher anlegen, die Leseansicht zeigte sie nie.
+
+`page-viewer-service.ts` rendert Blöcke mit `assetId` jetzt als
+`<figure class="wiki-figure"><img src="/api/assets/<id>/file"></figure>`, mit dem
+Blocktext als Bildunterschrift und Alternativtext. Beides HTML-maskiert, die
+Asset-ID zusätzlich URL-kodiert.
+
+Sichtbarkeit ändert sich dadurch nicht: `filterBlocksForViewer` entfernt vorher
+schon alles, was der Betrachter nicht sehen darf, und die Regel ist pro Welt
+alles-oder-nichts. Ein Bildblock erscheint damit genau dann, wenn die Textblöcke
+derselben Seite erscheinen.
+
+Dazu eine globale CSS-Begrenzung in `apps/studio/app/wiki.css`. Die vorhandene
+`.wiki-content img`-Regel steckt in `@media (max-width: 960px)` — auf dem Desktop
+hätte ein 1600 px breiter Seiten-Zuschnitt das Layout gesprengt.
+
+**Nicht geändert:** Das Portal hat einen eigenen Renderpfad
+(`apps/portal/app/auth/worlds/[worldSlug]/[slug]/page.tsx` ruft
+`renderBlockContentForViewer` direkt auf) und zeigt Bildblöcke weiterhin nicht.
+Für den Kampagnen-Import ist das folgenlos, aber es ist eine Inkonsistenz:
+Gibt ein DM eine Seite für Spieler frei, sähen sie den Text ohne die Bilder.
+Das Portal anzufassen gehört bewusst in eine eigene Runde mit Security-Review.
+
+**Ebenfalls offen:** Die Import-Vorschau nennt die Zahl der Zuschnitte, zeigt
+aber keine Miniaturbilder. Dafür bräuchte es eine Route, die die noch nicht als
+Asset registrierten Dateien aus `import-tmp` ausliefert.
+
 ### Command Center: Einrichtungsansicht
 
 `apps/rtx-connector-client/src/components/DocumentOcrPanel.tsx`, ganz oben unter
