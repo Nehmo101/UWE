@@ -1,6 +1,6 @@
 # Multi-platform bundle artifacts for experiments.
 # Product Windows releases (GitHub Releases + uwe-v* tags) use uwe-windows-release.yml.
-name: RTX Connector Release
+name: Maschinenraum Release
 
 on:
   workflow_dispatch:

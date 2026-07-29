@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Install and conditionally start the optional outbound RTX Connector service.
+# Install and conditionally start the optional outbound Maschinenraum service.
+# The unit keeps its historical name uwe-rtx-connector.service on purpose.
 # shellcheck shell=bash
 
 readonly RTX_CONNECTOR_UNIT="uwe-rtx-connector.service"
@@ -39,7 +40,7 @@ install_rtx_connector_unit() {
   local connector_data="$UWE_DATA_DIR/rtx-connector"
 
   if [[ ! -f "$source_unit" ]]; then
-    die "RTX-Connector-Unit fehlt: $source_unit"
+    die "Maschinenraum-Unit fehlt: $source_unit"
   fi
 
   install -d -m 750 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$connector_data"
