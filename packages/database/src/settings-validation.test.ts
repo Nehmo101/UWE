@@ -214,3 +214,70 @@ describe("validateSettingsUpdate", () => {
     assert.ok(result.errors.some((error) => error.includes("settings.briefing.time")));
   });
 });
+
+/**
+ * Abdeckungs-Inventar: Systemeinstellungen werden seit Abschnitt D33 nicht mehr
+ * in Studio gepflegt, sondern in der Kommandozentrale (`SETTINGS_GROUPS` in
+ * `apps/rtx-connector-client/src/components/ops/settings-fields.ts`). Beide
+ * Seiten können nicht gemeinsam getestet werden — die Kommandozentrale ist ein
+ * Frontend und darf `@uwe/database` nicht importieren.
+ *
+ * Also wird hier die schreibbare Fläche festgenagelt. Wer eine Einstellung
+ * ergänzt, bricht diesen Test und wird damit an das zugehörige Feld erinnert:
+ * eine Einstellung ohne Feld ist eine, die niemand findet.
+ *
+ * `app` steht bewusst nicht in der Liste — Design und Startseite bleiben in
+ * Studio, wo man sie sieht.
+ */
+const SETTINGS_WRITABLE_BY_COMMAND_CENTER: Record<string, string[]> = {
+  worlds: ["defaultCanonicalStatus"],
+  campaigns: ["inheritWorldDefaults"],
+  portal: ["portalEnabled"],
+  ai: ["localOnlyMode", "enabled", "generalChatSystemPrompt"],
+  mail: [
+    "enabled",
+    "fromDisplayName",
+    "logBody",
+    "inboxLimit",
+    "autoSyncEnabled",
+    "autoSyncIntervalMinutes",
+  ],
+  imageStudio: ["enabled", "backgroundRemovalEnabled"],
+  storage: ["uploadsPath", "exportsPath"],
+  backup: ["backupsPath", "autoBackupEnabled", "retentionCount"],
+  briefing: ["autoBriefingEnabled", "time"],
+  privacy: ["maskSecretsInUi", "restrictPublicExport"],
+  auth: [
+    "sessionInactivityTimeoutMinutes",
+    "passkeysEnabled",
+    "googleLoginEnabled",
+    "googleClientId",
+  ],
+  maintenance: ["maintenanceMode", "lockPortal", "lockStudio", "message"],
+};
+
+describe("Kommandozentrale-Abdeckung", () => {
+  it("akzeptiert jede Einstellung, für die die Kommandozentrale ein Feld hat", () => {
+    for (const [group, keys] of Object.entries(SETTINGS_WRITABLE_BY_COMMAND_CENTER)) {
+      for (const key of keys) {
+        // Ein bewusst falscher Typ: Der Validator darf über den *Wert* meckern,
+        // aber niemals über den Schlüssel — sonst hat die Karte ein Feld, das
+        // beim Speichern kommentarlos abprallt.
+        const result = validateSettingsUpdate({ [group]: { [key]: undefined } });
+        const unknownKeyError = result.ok
+          ? undefined
+          : result.errors.find((error) => error.includes("Unbekannt") || error.includes("unknown"));
+        assert.equal(unknownKeyError, undefined, `settings.${group}.${key} wird abgelehnt`);
+      }
+    }
+  });
+
+  it("kennt keine schreibbare Einstellung ohne Feld in der Kommandozentrale", () => {
+    // Ein unbekannter Gruppenname muss abgelehnt werden. Schlägt das fehl, ist
+    // der Validator offener geworden als das Inventar hier abbildet.
+    const result = validateSettingsUpdate({ nichtImInventar: { irgendwas: true } });
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+    assert.ok(result.errors.some((error) => error.includes("nichtImInventar")));
+  });
+});

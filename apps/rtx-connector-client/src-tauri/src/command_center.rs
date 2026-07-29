@@ -510,6 +510,8 @@ const OPS_ACTIONS: &[&str] = &[
     "cloudflare-challenge-apply",
     "cloudflare-tunnel-status",
     "cloudflare-tunnel-apply",
+    "turnstile-status",
+    "turnstile-set",
     "google-login-set",
 ];
 

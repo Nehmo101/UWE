@@ -21,11 +21,17 @@ describe("ops bridge imports", () => {
     for (const name of [
       "resolveCloudflareEdgeCredentials",
       "buildDeploymentSettingsUpdate",
+      "buildDeploymentEnvOverrides",
       "sanitizeDeploymentSettingsForClient",
       "normalizeDeploymentSettings",
     ]) {
       assert.ok(name in deployment, `Export fehlt zur Laufzeit: ${name}`);
     }
+  });
+
+  it("resolves the auth package for the Turnstile status", async () => {
+    const auth = await import("@uwe/auth");
+    assert.equal(typeof auth.getTurnstileConfig, "function");
   });
 
   it("loads every Cloudflare ops module", async () => {
@@ -36,5 +42,9 @@ describe("ops bridge imports", () => {
     const tunnel = await import("./cloudflare-tunnel-ops.ts");
     assert.equal(typeof tunnel.getTunnelIngressStatus, "function");
     assert.equal(typeof tunnel.applyTunnelIngressNow, "function");
+
+    const turnstile = await import("./turnstile-ops.ts");
+    assert.equal(typeof turnstile.getTurnstileStatus, "function");
+    assert.equal(typeof turnstile.setTurnstile, "function");
   });
 });

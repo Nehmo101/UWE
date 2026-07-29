@@ -14,6 +14,7 @@ import { toMessage } from "../lib/connector-runtime-labels";
 import { Button } from "./ui/button";
 import { CloudflareChallengeCard } from "./CloudflareChallengeCard";
 import { CloudflareRoutesCard } from "./CloudflareRoutesCard";
+import { CloudflareTurnstileCard } from "./CloudflareTurnstileCard";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 export function CloudflarePanel() {
@@ -58,9 +59,13 @@ export function CloudflarePanel() {
     <div className="command-center-stack">
       <section className={`command-center-hero ${running ? "is-ready" : "is-attention"}`}>
         <div>
-          <span className="connector-kicker">CLOUDFLARE · TUNNEL · ÖFFENTLICHE HOSTS</span>
-          <h3>Cloudflare-Tunnel</h3>
-          <p>Startet den lokalen cloudflared-Connector, der Startseite, Studio, Portal und Family öffentlich erreichbar macht (Brain nur nach Opt-in).</p>
+          <span className="connector-kicker">CLOUDFLARE · TUNNEL · ROUTEN · BOT-SCHUTZ</span>
+          <h3>Cloudflare</h3>
+          <p>
+            Der lokale cloudflared-Connector macht Startseite, Studio, Portal und Family öffentlich
+            erreichbar (Brain nur nach Opt-in). Darunter: welcher Hostname auf welche App zeigt, und
+            der Bot-Schutz — an der Edge (Managed Challenge) und am Login (Turnstile).
+          </p>
         </div>
         <div className="command-center-hero-status">
           <HealthBadge status={running ? "ok" : "degraded"} label={running ? "Tunnel läuft" : "Tunnel gestoppt"} />
@@ -142,6 +147,8 @@ export function CloudflarePanel() {
       <CloudflareRoutesCard />
 
       <CloudflareChallengeCard />
+
+      <CloudflareTurnstileCard />
     </div>
   );
 }
