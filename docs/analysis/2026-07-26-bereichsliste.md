@@ -15,7 +15,7 @@ Unterseiten stehen als eigene Zeile, weil genau die die Migrationskandidaten sin
 > | 🆕 | **Brain KI-Chat** (`/ki-chat`) | neue Zeile **A14**, und **G12** hat jetzt eine Vorlage |
 > | ✅ | Brain-Nav ist ein Modul mit Suche (`brain-nav.ts`) | Anmerkung bei **A** |
 > | 🆕 | **Bereichs-Suchleiste** in allen drei Apps | neue Zeilen **C42**, **B26**, **A15** |
-> | 💤 | **`terra.html`** — Karteneditor, nirgends eingebunden | **zurückgestellt**, siehe **E34** |
+> | ✅ | **`terra.html`** — Karteneditor, nirgends eingebunden | **entfernt 2026-07-28** (E34); v1-Import bleibt über `terra/src/editor/io.js` + Test-Fixture erhalten |
 >
 > Neu zu entscheiden sind damit die Zeilen A14, A15, B26, C42, L1–L4. (E34 ist
 > zurückgestellt.)
@@ -430,7 +430,7 @@ Alle sichtbar für owner/admin/dm.
 | E31 | Freigabe → Wiki-Pflege | `…/quality` | **zusammenlegen** (siehe E2) | | |
 | E32 | Freigabe → Backup | `…/backup` | **WEG** → globales `/backup` (D22) reicht | | |
 | E33 | Live-Session (4 Einträge) | `…/sessions/[id]/live` u. a. | behalten | kontextabhängige Nav, korrekt getrennt | |
-| ~~E34~~ | `terra.html` *(PR #793)* | Repo-Root, nirgends eingebunden | 💤 **zurückgestellt** | 3.998 Zeilen, `file://`, three.js per CDN. Stört keinen Build; wird erst relevant, falls es produktiv werden soll | *zurückgestellt* |
+| ~~E34~~ | `terra.html` *(PR #793)* | Repo-Root, nirgends eingebunden | ✅ **entfernt 2026-07-28** | 3.998 Zeilen, `file://`, three.js per CDN; von `terra/` (Runden A–H) abgelöst. v1-Speicherformat weiter importierbar (`io.js`, Fixture `v1-einzeldatei.json`) | *erledigt* |
 
 ---
 

@@ -198,7 +198,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | DB | Ja — `DevAgentJob` |
 | Tests | Minimal — Config-Resolution |
 | Nutzbar | **Ja** — Dispatch zu GitHub Actions / Cursor Cloud |
-| Production-ready | **Teilweise** — Dispatch + Polling; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](../SECURITY_SETTINGS.md)) |
+| Production-ready | **Teilweise** — Dispatch + Polling; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](./SECURITY_SETTINGS.md)) |
 
 **Runtime vs. Doku**
 
@@ -536,5 +536,5 @@ Wave-Übersicht:
 - [DND_API_INTEGRATION.md](./DND_API_INTEGRATION.md)
 - [AGENT_JOBS.md](./AGENT_JOBS.md)
 - [daily-admin-os.md](./daily-admin-os.md)
-- [REPO_AUDIT.md](./REPO_AUDIT.md)
-- [odysseus-feature-porting/FEATURE_PORTING_MATRIX.md](./odysseus-feature-porting/FEATURE_PORTING_MATRIX.md)
+- `REPO_AUDIT.md` (Datei entfernt)
+- `odysseus-feature-porting/FEATURE_PORTING_MATRIX.md` (Datei entfernt)

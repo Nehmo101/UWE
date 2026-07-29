@@ -105,16 +105,33 @@ function readRequestPathname(request: Request): string {
   }
 }
 
+/**
+ * CSRF + access gate that also hands back the resolved auth context.
+ *
+ * Prefer this over `guardStudioApiRequest` whenever the route needs the user:
+ * resolving the session a second time (e.g. via `getCurrentAuthUser()`) reads the
+ * cookie through a different parser and skips the AUTH_REQUIRED bypass, so guard
+ * and handler can disagree about who is calling within a single request.
+ */
+export async function guardStudioApiRequestWithContext(
+  request: Request,
+  options: StudioGuardOptions = {},
+): Promise<{ error: Response | null; context: ApiAuthContext }> {
+  const context = await resolveStudioApiAuthContext(request);
+  const error = requireStudioRoleApiAuth(request, context, {
+    ...options,
+    pathname: readRequestPathname(request),
+  });
+  return { error, context };
+}
+
 /** CSRF + access gate for Studio API routes (Studio checkbox, owner for /api/admin). */
 export async function guardStudioApiRequest(
   request: Request,
   options: StudioGuardOptions = {},
 ): Promise<Response | null> {
-  const context = await resolveStudioApiAuthContext(request);
-  return requireStudioRoleApiAuth(request, context, {
-    ...options,
-    pathname: readRequestPathname(request),
-  });
+  const { error } = await guardStudioApiRequestWithContext(request, options);
+  return error;
 }
 
 /** Mutating Studio API routes — same as guardStudioApiRequest with optional rate limit. */

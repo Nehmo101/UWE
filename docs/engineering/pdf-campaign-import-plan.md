@@ -239,7 +239,8 @@ lines and that `import-central-service.ts` is untouched.
   Mitigated by title dedupe, tolerant parser, "Erfinde nichts hinzu" prompt, and human
   preview + per-item selection + full undo before/after any write.
 
-**Left out of MVP:** OCR for scanned PDFs; D&D statblock/mechanics schemas (free-text `body`
+**Left out of MVP** (der OCR-Punkt ist inzwischen erledigt, siehe „Update: Unlimited-OCR"
+unten)**:** OCR for scanned PDFs; D&D statblock/mechanics schemas (free-text `body`
 only); any cloud opt-in; **new-campaign creation** (existing only); the async `ai_run` deferred
 job; a `targetCampaignId` FK column (metadata JSON instead); markdown/obsidian → campaign
 (PDF only).
@@ -270,3 +271,198 @@ Ausbau nach dem MVP (gleiche Privacy-Invarianten — alles weiterhin `local_rtx`
   Nutzer-Kontext und die extrahierten Entitäten an — bewusst **nur** an die lokale Inferenz;
   der Verlauf wird in `ImportJob.metadata.fitChat` persistiert (Reload-fest).
   Geteilte Payload-Reader liegen in `apps/studio/src/lib/campaign-import-payloads.ts`.
+
+## Update: Unlimited-OCR als Extraktionspfad
+
+Bewertung und Begründung: [docs/analysis/2026-07-28-unlimited-ocr-pdf-import.md](../analysis/2026-07-28-unlimited-ocr-pdf-import.md).
+
+Die Textgewinnung war die Qualitätsgrenze des Imports — nicht das lokale Modell.
+`extractPdfText` las nur den Textlayer: Scans scheiterten hart, und mehrspaltige
+Abenteuerbände wurden zu flachem Text in kaputter Lesereihenfolge, den der Chunker
+blind alle 6 000 Zeichen schnitt. Beides ist jetzt ersetzt.
+
+### Neues Package `packages/pdf-ocr`
+
+Rein (kein Prisma, kein AI-Router), Tests ohne RTX:
+
+| Datei | Aufgabe |
+|---|---|
+| `src/model.ts` | `UNLIMITED_OCR_MODEL`, `buildOcrPrompt`, `isUnlimitedOcrModel`, `resolveDocumentOcrModel` |
+| `src/text-layer.ts` | `assessTextLayer` — `usable` / `absent` / `sparse` / `garbled` |
+| `src/render.ts` | `renderPdfPages`, `readPdfPageCount` (pdf-parse `getScreenshot`) |
+| `src/plan.ts` | `planOcrPages` — `MAX_OCR_PAGES = 120`, `OCR_PAGES_PER_JOB = 4` |
+| `src/markers.ts` | `stripDetectionMarkers` — trennt Markdown von `<|det|>`-Boxen |
+
+**Keine neue Abhängigkeit.** `pdf-parse@2.4.5` war bereits im Baum und bringt
+`@napi-rs/canvas` mit; das Rendern von PDF-Seiten braucht weder pdfjs-dist noch
+mupdf noch poppler. Verkleinert wird mit dem vorhandenen `downscaleImageForVision`.
+
+### Datenfluss
+
+```
+PDF → readPdfTextLayer  ──usable──→  Text (schneller Weg, unverändert)
+          │
+          └─absent/sparse/garbled─→ planOcrPages → renderPdfPages
+                → downscaleImageForVision → vision_extract (Unlimited-OCR)
+                → stripDetectionMarkers → joinOcrPages → Markdown
+                                                    ↓
+                              chunkCampaignText (Überschriften statt 6 000 Zeichen)
+                                                    ↓
+                                    routeAiRequest(local_rtx) wie bisher
+```
+
+Orchestrierung: `apps/studio/src/lib/campaign-pdf-ocr.ts` (`acquireCampaignPdfText`).
+Das Package bleibt rein; Prisma und Connector hängen nur an der Studio-Seite.
+
+### Ersetzte Standards
+
+| Vorher | Jetzt |
+|---|---|
+| `PdfExtractError` ohne Code | `PdfExtractErrorCode` + `isMissingTextLayerError` — der OCR-Fallback hängt nicht mehr an einer Fehlermeldung |
+| Harter Abbruch bei textloser PDF | `readPdfTextLayer` liefert Text + Seitenzahl, ohne zu werfen |
+| `chunkPdfText` blind alle 6 000 Zeichen | `chunkCampaignText` → Überschriften-Schnitt, sobald Struktur da ist |
+| `vision_extract` Default `llava` | Unlimited-OCR; `VISION_MODEL_PATTERNS` kennt `unlimited-ocr` und `deepseek-ocr` |
+| Scan-Inbox mit generischem Vision-Prompt | derselbe `buildOcrPrompt` + dasselbe Modell wie der Kampagnen-Import |
+| Vorschau kannte nur `errors` (rot) | zusätzlich `notes` (`tone="info"`) für OCR-Herkunft, Seiten-Cap, leere Seiten |
+
+### Betrieb (Self-Service)
+
+Die Modellwahl läuft über den **bestehenden `vision`-Workflow-Slot**
+(Command Center → Modelle). Kein neues Setting, keine host-lesbare Datei: der
+Modellname reist im `vision_extract`-Payload zum Connector. Einziger manueller
+Host-Schritt bleibt einmalig:
+
+```bash
+ollama pull frob/unlimited-ocr:q8_0
+```
+
+Ohne gesetzten Slot gilt `UNLIMITED_OCR_MODEL` als Vorgabe. Steht dort ein
+generisches Vision-Modell, läuft der Import weiter — die Vorschau weist dann
+aber darauf hin, dass die Layout-Treue eingeschränkt ist.
+
+### Grenzen
+
+- **`MAX_OCR_PAGES = 120`.** Darüber wird abgeschnitten und in `notes` gemeldet —
+  nicht still. Grund: `LANE_CONCURRENCY.gpu = 1`, ein 400-Seiten-Band würde den
+  Connector für alle anderen Aufgaben blockieren.
+- **Ollama muss llama.cpp ≥ Build 168 tragen**, sonst lädt das Modell nicht.
+- **Abbildungen hängen an der PDF-Seite, nicht am Absatz.** Trägt eine Seite eine
+  Karte und drei Absätze, bekommen alle daraus erzeugten Wiki-Seiten die Karte.
+  Welcher Absatz zu welcher Karte gehört, ist aus dem Layout nicht sicher
+  ableitbar — lieber einmal zu viel angehängt (`dm_only`, per Undo entfernbar)
+  als die Karte zu verlieren.
+
+## Update: Hintergrund-Job, Bild-Zuschnitt, Command-Center-Einrichtung
+
+### Analyse läuft als `Job`, nicht mehr in der Server Action
+
+`apps/studio/src/lib/campaign-import-job.ts` — `runCampaignPdfAnalysis` trägt die
+komplette Analyse. `previewImportCampaignPdfJobAction` prüft nur noch (Auth,
+PDF vorhanden, Kontextlänge, läuft schon?) und legt einen `Job` vom Typ `import`
+mit der Payload `{ kind: "campaign_pdf_analysis", … }` an; `runImportJob`
+verzweigt über `isCampaignPdfAnalysisPayload` dorthin.
+
+Warum: OCR über ein Abenteuerbuch ist Minuten- bis Stundenarbeit auf der
+seriellen GPU-Lane. Synchron hieß das Timeouts, ein abgebrochener Request ließ
+die Analyse verwaist weiterlaufen, und ein Neustart hinterließ hängenden
+Fortschritt. Jetzt greifen Cancel (`isCancelled` zwischen den Chunks), der
+Boot-Sweep für unterbrochene Jobs und `Job.progress` in der Job-Übersicht.
+
+Die Action gibt `{ preview: null, started: true }` zurück, wenn der Lauf startet;
+das Panel verfolgt den Fortschritt über das bereits vorhandene Polling. Liegt
+schon eine Vorschau vor, kommt sie unverändert sofort zurück.
+
+### Karten und Abbildungen werden Assets
+
+`OCR_PAGES_PER_JOB` ist jetzt **1**. Nur so ist jede Ausgabe — und damit jede
+`<|det|>`-Box — eindeutig einer PDF-Seite zuzuordnen; das ist die Voraussetzung
+für den Zuschnitt. Nebeneffekt: der Fortschritt zählt echte Seiten.
+
+Kette: `boxToPixelRect` (normierte 0–999-Koordinaten → Pixel, auf die Seite
+beschnitten) → `isCroppableRegionType` (nur `figure`/`image`/`map`/`chart`/
+`diagram`, kein Text) → `cropImageRegion` (`@uwe/assets`, sharp → JPEG) →
+Ablage neben der PDF unter `import-tmp/<jobId>-fig-<n>.jpg`.
+
+Beim Execute übernimmt `apps/studio/src/lib/campaign-figure-assets.ts` sie als
+`Asset` (dm_only, Provenienz in `metadata`) und hängt sie per `image`-Block an
+die Seiten, deren Quell-Chunk dieselbe PDF-Seite abdeckte.
+
+Die Zuordnung Chunk → PDF-Seite läuft über unsichtbare Marker
+(`<!-- uwe:page N -->`), die `joinOcrPages` einfügt. Sie überstehen das Chunking,
+werden per `readPageNumbers` ausgelesen und per `stripPageMarkers` entfernt,
+**bevor** der Chunk an die lokale KI geht — das Modell sieht sie nie.
+
+### Bildblöcke werden jetzt auch angezeigt
+
+Beim Nachprüfen fiel auf, dass der Zuschnitt zwar in der DB landete, auf der
+Seite aber **unsichtbar** blieb: `buildPageViewForViewer` reichte nur
+`block.content` an den Renderer, und ein Bildblock hat dort nichts stehen — er
+wurde am Ende von `filter(Boolean)` verworfen. Das betraf alle Bildblöcke, nicht
+nur die aus dem Import; der Editor (`ContentBlockImageField`) konnte sie seit
+jeher anlegen, die Leseansicht zeigte sie nie.
+
+`page-viewer-service.ts` rendert Blöcke mit `assetId` jetzt als
+`<figure class="wiki-figure"><img src="/api/assets/<id>/file"></figure>`, mit dem
+Blocktext als Bildunterschrift und Alternativtext. Beides HTML-maskiert, die
+Asset-ID zusätzlich URL-kodiert.
+
+Sichtbarkeit ändert sich dadurch nicht: `filterBlocksForViewer` entfernt vorher
+schon alles, was der Betrachter nicht sehen darf, und die Regel ist pro Welt
+alles-oder-nichts. Ein Bildblock erscheint damit genau dann, wenn die Textblöcke
+derselben Seite erscheinen.
+
+Dazu eine globale CSS-Begrenzung in `apps/studio/app/wiki.css`. Die vorhandene
+`.wiki-content img`-Regel steckt in `@media (max-width: 960px)` — auf dem Desktop
+hätte ein 1600 px breiter Seiten-Zuschnitt das Layout gesprengt.
+
+### Das Portal zeigt Bildblöcke ebenfalls
+
+Der erste Wurf hatte nur den Studio-Pfad erwischt: Das Portal rendert über
+`renderBlockContentForViewer` direkt statt über `buildPageViewForViewer`. Ein DM,
+der eine Seite für Spieler freigibt, hätte ihnen den Text ohne die Karten gezeigt.
+
+Die Auszeichnung liegt deshalb jetzt in `packages/database/src/content-block-html.ts`
+und wird von beiden Apps benutzt. Die Asset-URL kommt vom Aufrufer, weil die
+Verträge sich unterscheiden:
+
+| App | URL | Zugriffsregel |
+|---|---|---|
+| Studio | `/api/assets/<id>/file` | Studio-Häkchen (DM sieht ohnehin alles) |
+| Portal | `/api/assets/<id>/file?world=<slug>` | Welt-Zuordnung |
+
+Die Portal-Route (`apps/portal/app/api/assets/[assetId]/file/route.ts`) **gab es
+bereits**. Sie bindet das Asset über `getAssetForViewer` per
+`where: { id, world: { slug } }` an die Welt und prüft `canReadAsset` — eine
+Asset-ID aus einer fremden Welt läuft ins Leere, auch wenn der Nutzer für die
+angegebene Welt berechtigt ist. Der `world`-Parameter ist deshalb Pflicht, und
+`portalAssetUrl(worldSlug)` setzt ihn.
+
+Sichtbarkeit bleibt unverändert: `filterBlocksForViewer` greift vor dem Rendern.
+Ein Bildblock erscheint genau dann, wenn die Textblöcke derselben Seite
+erscheinen — es entsteht kein neuer Pfad, über den dm_only-Inhalt ins Portal
+gelangt. Auch das Portal bekam die globale `figure.wiki-figure`-CSS-Regel, aus
+demselben Grund wie Studio.
+
+### Miniaturbilder in der Import-Vorschau
+
+Neue Route `apps/studio/app/api/import/campaign-figure/route.ts`. Nötig, weil die
+Zuschnitte zum Vorschau-Zeitpunkt noch kein Asset sind — sie liegen als
+Zwischenmaterial in `import-tmp` und haben keine reguläre URL.
+
+Damit daraus kein beliebiger Datei-Leser wird, greifen zwei Prüfungen: Der Job
+muss ein PDF-zu-Kampagne-Job sein, **und** der angefragte Index muss in dessen
+`extractionMeta.figures` stehen. Pfad-Traversal deckt `assertSafeJobId` im
+Storage-Helper ab. `Cache-Control: no-store`, weil das Material nach dem Execute
+verschwindet.
+
+Das Panel zeigt die Zuschnitte als Karte „Gefundene Abbildungen" mit Seitenzahl
+und Typ. Der Zustand kommt über `CampaignPdfJobStatus.figures`, also denselben
+Poll-Endpunkt wie der Fortschritt — die Galerie übersteht damit einen Reload.
+
+### Command Center: Einrichtungsansicht
+
+`apps/rtx-connector-client/src/components/DocumentOcrPanel.tsx`, ganz oben unter
+*Modelle*. Drei Schritte mit Status-Badge: Modell laden (Pull-Befehl im Klartext,
+Kopierknopf, Ein-Klick-Pull mit Fortschrittsbalken), für UWE freigeben, im
+Studio als Vision-Slot wählen. Dazu Unlimited-OCR als Katalog-Eintrag in
+`@uwe/cookbook` mit neuem Anwendungsfall `document_ocr`.

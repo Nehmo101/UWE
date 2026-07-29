@@ -74,8 +74,10 @@ pnpm bootstrap:owner
 apps/studio    → DM-App          — Weltbearbeitung, Admin, KI, Daily Admin OS
 apps/portal    → Spieler-Wiki    — nur gefilterte, freigegebene Inhalte
 apps/brain     → Owner-Bereich   — privater Daily-Admin- und Wissensbereich
+apps/family    → Familienbereich — geteilte Haushaltsdaten (uwe-family.db)
 apps/landing   → Startseite      — Apex-Origin, genau drei Routen
 packages/*     → gesamte Fachlogik
+terra/         → Karteneditor    — eigenständige ES-Module, per Copy eingebettet
 ```
 
 **Goldene Regel:** Fachlogik gehört in `packages/`, nie in Next.js Route Handler
@@ -94,12 +96,17 @@ oder React-Komponenten.
 | `@uwe/mcp` | MCP-Server für Studio, Portal und Brain |
 | `@uwe/assets` | Upload-Pfade, MIME-Validierung |
 
-Fachliche Feature-Pakete: `agent-jobs`, `atlas`, `atlas-3d`, `atlas-editor`,
-`backup`, `brain-assistant`, `calendar`, `cloudflare-edge`, `connector`,
-`cookbook`, `dnd-api`, `host-monitor`, `image-studio`, `kitchen`, `mail`,
-`mail-core`, `page-ai-review`, `passkeys`, `pdf-campaign-import`, `player-hub`,
-`roll-tables`, `scan-inbox`, `soundboard`, `static-export`, `theme-studio`,
-`web-search`.
+Fachliche Feature-Pakete: `agent-jobs`, `backup`, `brain-assistant`,
+`calendar`, `cloudflare-edge`, `connector`, `cookbook`, `daily-cockpit`,
+`dnd-api`, `host-cockpit`, `host-monitor`, `image-studio`, `kitchen`,
+`knoteforge-import`, `mail`, `mail-core`, `passkeys`, `pdf-campaign-import`,
+`player-hub`, `roll-tables`, `scan-inbox`, `soundboard`, `static-export`,
+`theme-studio`, `web-search`.
+
+Der Karteneditor **Terra** lebt als eigenständiges ES-Modul-Projekt unter
+`terra/` (außerhalb des pnpm-Workspace) und wird per `scripts/copy-terra.mjs`
+nach Studio/Portal kopiert; die Atlas-/Atlas-3D-Editoren wurden am 2026-07-27
+vollständig entfernt (siehe `docs/engineering/terra-runde-j-atlas-abbau.md`).
 
 ### Wohin neuer Code gehört
 
@@ -131,9 +138,10 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Funktionsumfang
 
 **Studio** — Welten, Seiten und Wiki-Struktur mit Sichtbarkeitssteuerung;
-Charakterbögen und Statblocks; Atlas- und Atlas-3D-Karteneditoren; Bildstudio;
-Etiketten und Drucklisten; Soundboard; Sitzungsplanung; Import von
-Kampagnen-PDFs; Admin-Bereich mit API-Tokens, Rollen, Audit-Log und Agent-Jobs.
+Charakterbögen und Statblocks; Terra-Karteneditor (Three.js, unter
+`/worlds/:slug/karten`); Bildstudio; Etiketten und Drucklisten; Soundboard;
+Sitzungsplanung; Import von Kampagnen-PDFs; Admin-Bereich mit API-Tokens,
+Häkchen-Zugangsverwaltung und Agent-Jobs.
 
 **Portal** — Lesesicht auf freigegebene Welteninhalte, Charakterbögen der
 eigenen Figur, Spieler-Hub. Kein Zugriff auf `dm_only`.
@@ -329,6 +337,28 @@ Inhalte. Details:
 | [CHANGELOG.md](CHANGELOG.md) | Änderungen je Version |
 | [SECURITY.md](SECURITY.md) | Sicherheitsrichtlinie |
 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | Fremde Werke und deren Lizenzlage |
+
+---
+
+## Mitmachen
+
+Beiträge sind willkommen — Bug-Reports, Dokumentation, Tests und Code.
+Projektsprache ist Deutsch.
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Entwicklungsumgebung, Quality Gate,
+  Architektur-Regeln und PR-Ablauf. Größere Änderungen bitte vorher als Issue
+  besprechen.
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — Verhaltenskodex
+  (Contributor Covenant 2.1).
+- **Sicherheitslücken** bitte **nicht** als öffentliches Issue, sondern über
+  [GitHub Security Advisories](https://github.com/Nehmo101/UWE/security/advisories/new).
+  Siehe [SECURITY.md](SECURITY.md).
+
+Vier Regeln werden in CI erzwungen und sind der häufigste Grund für einen roten
+PR: Fachlogik gehört in `packages/`, neue Dateien bleiben unter 700 Zeilen,
+keine Cross-App-Imports, und die Sichtbarkeitsgrenzen (`dm_only` erreicht nie
+das Portal, `owner_private_local` verlässt nie den Host) sind nicht
+verhandelbar.
 
 ---
 

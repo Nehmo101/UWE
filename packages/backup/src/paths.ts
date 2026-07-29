@@ -9,6 +9,8 @@ const packageRoot = path.dirname(fileURLToPath(import.meta.url));
 export const BACKUP_MANIFEST_FILE = "manifest.json";
 export const BACKUP_DATA_FILE = "data.json";
 export const BACKUP_SETTINGS_FILE = "settings.json";
+export const BACKUP_BRAIN_EXPORT_FILE = "brain-export.json";
+export const BACKUP_FAMILY_EXPORT_FILE = "family-export.json";
 export const BACKUP_ASSETS_DIR = "assets";
 
 export function resolveBackupsDir(baseDir?: string): string {

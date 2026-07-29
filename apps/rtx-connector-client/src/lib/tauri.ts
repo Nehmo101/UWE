@@ -402,6 +402,8 @@ export type OpsAction =
   | "cloudflare-challenge-apply"
   | "cloudflare-tunnel-status"
   | "cloudflare-tunnel-apply"
+  | "turnstile-status"
+  | "turnstile-set"
   | "google-login-set";
 
 export interface OpsResult<T = unknown> {

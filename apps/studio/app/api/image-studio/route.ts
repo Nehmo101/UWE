@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest, guardStudioApiRequestWithContext } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { resolveClientIp } from "@uwe/auth";
@@ -12,7 +12,6 @@ import {
 import { enforceAiAccessPolicy, nonEmptyString, optionalString, parseBody, slugSchema } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
 import { aiPolicyErrorResponse } from "@/src/lib/ai-security";
-import { getCurrentAuthUser } from "@/src/lib/auth";
 import { z } from "zod";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 
@@ -43,7 +42,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  const { error: authError, context } = await guardStudioApiRequestWithContext(request);
   if (authError) return authError;
 
   try {
@@ -102,7 +101,7 @@ export async function POST(request: Request) {
 
   await imageStudio.updateProjectStatus(project.id, "processing");
 
-  const actor = await getCurrentAuthUser();
+  const actor = context.user;
   const jobs = createJobService(prisma);
   const job = await jobs.enqueue({
     type: "image_studio",

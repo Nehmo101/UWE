@@ -33,6 +33,10 @@ export interface BackupManifest {
   includesAuthSessions: boolean;
   includesSettings: boolean;
   includesPlayerNotes?: boolean;
+  /** True, wenn das Archiv den vollständigen Brain-Export (brain-export.json) enthält. */
+  includesBrainExport?: boolean;
+  /** True, wenn das Archiv den vollständigen Family-Export (family-export.json) enthält. */
+  includesFamilyExport?: boolean;
   encrypted?: boolean;
   stats: BackupStats;
   assetFiles: string[];
@@ -553,6 +557,15 @@ export interface BackupBundle {
   manifest: BackupManifest;
   data: BackupData;
   settings?: BackupSettingsRecord;
+  /**
+   * Vollständiger Brain-Export (alle Modelle aus uwe-brain.db, sanitisiert) —
+   * nur in Full-Backups. `data.dailyAdmin` bleibt daneben bestehen, weil der
+   * selektive Restore-Pfad es liest; dieser Export schließt die Lücke der
+   * restlichen Modelle (Mail-Center, Projekte, Research, Chat …).
+   */
+  brainExport?: import("./brain-export").BrainExportBundle;
+  /** Vollständiger Family-Export (uwe-family.db, sanitisiert) — nur in Full-Backups. */
+  familyExport?: import("./family-export").FamilyExportBundle;
 }
 
 export type RestorePreviewStatus = "new" | "conflict" | "duplicate" | "skipped" | "warning";

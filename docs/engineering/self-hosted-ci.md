@@ -223,8 +223,42 @@ während des Builds gestoppt und geben ihren RAM frei, sodass der Build auch auf
 5. In `/etc/uwe/uwe.env`: `UWE_HOST_UPDATE_ENABLED=true`
 
 **Sicherheit:** `deploy.yml` triggert nur via `workflow_run` nach **CI-Erfolg auf
-`main`** — kein PR/Fork-Code läuft auf dem Runner. Trotzdem: Runner nur in einem
-privaten Repo bzw. mit deaktivierten Fork-PR-Runs betreiben.
+`main`**. Die `if`-Bedingung des Jobs prüft zusätzlich
+`head_repository.full_name == github.repository` (blockt Forks),
+`head_branch == default_branch` und `repository_owner == 'Nehmo101'` — kein
+PR- oder Fork-Code läuft über diesen Pfad auf dem Runner.
+
+### Pflicht-Einstellung im öffentlichen Repo
+
+Der Job-Guard oben schützt **diesen einen Workflow**. Er schützt **nicht** vor
+dem eigentlichen Risiko eines self-hosted Runners an einem öffentlichen Repo:
+
+> Bei `pull_request` führt GitHub die Workflow-Datei **aus dem PR-Branch** aus.
+> Ein Fork-PR kann also in `pr-check.yml` einen eigenen Job mit
+> `runs-on: [self-hosted, uwe-deploy]` ergänzen. Der läuft dann auf dem UWE-Host
+> im LAN — mit dem `uwe`-User, der den NOPASSWD-Eintrag aus
+> `deploy/sudoers/uwe-host-update` besitzt.
+
+Die Default-Policy verlangt eine Freigabe nur bei **Erstbeitragenden**. Wer
+einmal einen gemergten PR hat, braucht keine mehr. Deshalb ist im öffentlichen
+Repo zwingend zu setzen:
+
+**Settings → Actions → General → Fork pull request workflows from outside
+collaborators → „Require approval for all external contributors"**
+
+Zusätzlich empfohlen, solange der Runner an einem öffentlichen Repo hängt:
+
+- Runner **ephemeral** registrieren (`--ephemeral`) — ein Job pro Registrierung,
+  kein Zustand zwischen fremden Läufen.
+- Runner auf **Repo-Ebene** registrieren, nie auf Org-Ebene (sonst erben andere
+  Repos das Label).
+- Vor jedem Merge eines fremden PRs den Diff auf `.github/workflows/**` prüfen.
+  Änderungen dort verdienen eigene Aufmerksamkeit.
+
+GitHub empfiehlt self-hosted Runner ausdrücklich nur für private Repos. Wer die
+Freigabe-Einstellung oben nicht setzen will, betreibt den Deploy stattdessen
+über einen Pull-Mechanismus auf dem Host (Timer, der `main` pollt) statt über
+einen Actions-Runner.
 
 **Wenn der Runner offline ist:** Der Deploy-Job bleibt in der Queue, bis der Host
 wieder online ist — danach wird automatisch deployt (kein harter Fehlschlag).

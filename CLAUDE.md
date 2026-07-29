@@ -27,6 +27,7 @@ packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 | `@uwe/shared-utils` | Framework-agnostische Utilities (Slugs, Lookup-Keys) |
 | `@uwe/mcp` | MCP-Server für Studio/Portal/Brain (HTTP-Clients, kein DB-Zugriff) |
 | `@uwe/cloudflare-edge` | Cloudflare-Edge-Konfiguration, die UWE selbst besitzt (Managed Challenge / WAF-Regel) |
+| `@uwe/pdf-ocr` | Layout-treues PDF-Parsing über lokales Unlimited-OCR (Rendern, Seitenplanung, Marker) |
 | Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs`, `brain-assistant` |
 
 ### Neuen Code platzieren

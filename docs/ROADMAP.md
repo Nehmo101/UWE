@@ -2,12 +2,18 @@
 
 Stand: 2026-06-29 · ergänzt durch Security-/Orchestrator-Audit.
 
-Diese Datei ist die **Source of Truth** für geplante, aber noch nicht produktionsreife Bereiche. Implementierter Code mit Phase-1-Scaffolding verweist hierher.
+> **Hinweis 2026-07-28:** Diese Datei ist inhaltlich vor der Juli-Umbauphase
+> stehengeblieben (Häkchen-Zugangsmodell, `apps/brain`/`apps/family`/`apps/landing`,
+> Terra statt Atlas, Passkeys, Google-Login, physischer DB-Split). Für den
+> aktiven Stand gilt [CURRENT_STATE.md](CURRENT_STATE.md); die Abschnitte unten
+> beschreiben den Planungsstand von Ende Juni.
+
+Diese Datei war die **Source of Truth** für geplante, aber noch nicht produktionsreife Bereiche. Implementierter Code mit Phase-1-Scaffolding verweist hierher.
 
 > **Neue Feature-Wellen (2026-07):** Die aktuelle Priorisierung neuer Features
 > (Scan Inbox, Küche/Essensplaner, Session-Live-Ausbau, Wiki-Aufräumzentrale,
-> Startklar-Wizard, Kampagnen-Radar u. a.) inkl. Detailplänen liegt in
-> [rework/feature-roadmap-2026-07.md](rework/feature-roadmap-2026-07.md).
+> Startklar-Wizard, Kampagnen-Radar u. a.) inkl. Detailplänen lag in
+> `docs/rework/feature-roadmap-2026-07.md` (mit dem `rework/`-Baum entfernt).
 
 ---
 

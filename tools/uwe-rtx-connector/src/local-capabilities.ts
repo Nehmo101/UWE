@@ -190,7 +190,18 @@ function hasEnabledOllamaCapability(
 }
 
 /** Bekannte vision-fähige Ollama-Modellfamilien (Name-Heuristik als Fallback). */
-const VISION_MODEL_PATTERNS = [/llava/i, /minicpm-?v/i, /qwen2\.?5?-?vl/i, /moondream/i, /bakllava/i, /llama3\.2-vision/i];
+const VISION_MODEL_PATTERNS = [
+  // Dokumenten-OCR (bevorzugt für PDF-Import): baidu/Unlimited-OCR als GGUF.
+  /unlimited[-_]?ocr/i,
+  /deepseek-?ocr/i,
+  // Allgemeine Vision-Modelle.
+  /llava/i,
+  /minicpm-?v/i,
+  /qwen2\.?5?-?vl/i,
+  /moondream/i,
+  /bakllava/i,
+  /llama3\.2-vision/i,
+];
 
 /**
  * `vision_local` wird nur gemeldet, wenn ein aktiviertes Ollama-Modell entweder

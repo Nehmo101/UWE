@@ -2,6 +2,12 @@
 
 Stand: 2026-06-29
 
+> **Hinweis 2026-07-28:** Seit diesem Stand kamen `apps/brain` (Owner-Bereich,
+> eigene `uwe-brain.db`), `apps/family` (geteilter Haushalt, `uwe-family.db`),
+> `apps/landing` (Apex-Origin) und der Terra-Karteneditor (`terra/`, löst
+> Atlas/Atlas-3D ab) hinzu; das Rollen-Enum wurde durch das Häkchen-Modell
+> ersetzt. Für den aktiven Stand gilt [CURRENT_STATE.md](CURRENT_STATE.md).
+
 Diese Datei beschreibt UWE auf drei Ebenen:
 
 1. **Produkt-Hierarchie** — welche Teile UWE hat und wofür sie zuständig sind.
@@ -10,7 +16,7 @@ Diese Datei beschreibt UWE auf drei Ebenen:
 
 UWE ist ein selbst gehostetes Kampagnen-Brain und Welt-Wiki für DnD/Tabletop. Der Kern ist bewusst getrennt in **DM-Bearbeitung**, **Player-Ausgabe**, **persistente Daten** und **optionale Inferenz/Integrationen**.
 
-Zielbild für die Trennung von Portal, Studio und dem künftigen owner-only Brain-Produkt: [Drei-Produkte-Split-Masterplan](rework/uwe-portal-studio-brain-masterplan.md) (Foundation-Welle, noch keine Migration).
+Die Trennung von Portal, Studio und dem owner-only Brain-Produkt ist inzwischen umgesetzt (der frühere Masterplan unter `docs/rework/` wurde nach Abschluss entfernt); aktuelle Wahrheit: [engineering/domain-contracts.md](engineering/domain-contracts.md).
 
 ---
 

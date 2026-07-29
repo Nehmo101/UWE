@@ -46,6 +46,7 @@
     "@uwe/mail": "workspace:*",
     "@uwe/passkeys": "workspace:*",
     "@uwe/pdf-campaign-import": "workspace:*",
+    "@uwe/pdf-ocr": "workspace:*",
     "@uwe/player-hub": "workspace:*",
     "@uwe/roll-tables": "workspace:*",
     "@uwe/scan-inbox": "workspace:*",

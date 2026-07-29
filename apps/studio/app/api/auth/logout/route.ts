@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
-import { getSessionCookieOptionsForRequest, SESSION_COOKIE_NAME } from "@uwe/auth";
+import {
+  getSessionCookieClearVariants,
+  readSessionTokensFromCookieHeader,
+  SESSION_COOKIE_NAME,
+} from "@uwe/auth";
 import { requireSameOriginMutation } from "@uwe/security";
 
 export async function POST(request: Request) {
@@ -11,20 +15,25 @@ export async function POST(request: Request) {
   }
 
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const cookieOptions = getSessionCookieOptionsForRequest(request);
+  // Every token the browser presented, not just the one `cookies()` collapses to:
+  // a duplicated cookie would otherwise leave its session row alive.
+  const tokens = readSessionTokensFromCookieHeader(request.headers.get("cookie"));
 
-  if (token) {
+  if (tokens.length > 0) {
     const db = createPrismaClient();
     const auth = createAuthService(db);
     try {
-      await auth.deleteSession(token);
+      for (const token of tokens) {
+        await auth.deleteSession(token);
+      }
     } finally {
       await db.$disconnect();
     }
   }
 
-  cookieStore.set(SESSION_COOKIE_NAME, "", { ...cookieOptions, maxAge: 0 });
+  for (const options of getSessionCookieClearVariants(request)) {
+    cookieStore.set(SESSION_COOKIE_NAME, "", { ...options, maxAge: 0 });
+  }
 
   return NextResponse.json({ ok: true });
 }

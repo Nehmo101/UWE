@@ -1,0 +1,64 @@
+name: Feature-Vorschlag
+description: Eine Idee oder Verbesserung vorschlagen
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Größere Änderungen bitte **vor** dem Umsetzen hier besprechen — siehe
+        [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md). Das erspart Arbeit, die
+        aus Architekturgründen nicht übernommen werden kann.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem löst das?
+      description: Beschreib die Situation, nicht die Lösung.
+    validations:
+      required: true
+
+  - type: textarea
+    id: vorschlag
+    attributes:
+      label: Vorgeschlagene Lösung
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bereich
+    attributes:
+      label: Betroffener Bereich
+      multiple: true
+      options:
+        - Studio (DM-App)
+        - Portal (Spieler-Wiki)
+        - Brain (Owner-Bereich)
+        - Family
+        - Landing
+        - Command Center (Tauri)
+        - Datenbank / Schema
+        - KI / Brain-Router
+        - Betrieb / Deployment
+        - Dokumentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativen
+    attributes:
+      label: Alternativen, die du erwogen hast
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: grenzen
+    attributes:
+      label: Architektur-Grenzen
+      description: >
+        UWE hat harte Grenzen, die in CI erzwungen werden. Siehe
+        CONTRIBUTING.md und SECURITY.md.
+      options:
+        - label: Der Vorschlag verletzt keine Sichtbarkeitsgrenze (`dm_only` erreicht nie das Portal, `owner_private_local` verlässt nie den Host).
+          required: true
+        - label: Der Vorschlag erfordert keinen neuen laufenden manuellen Schritt auf dem Host (Self-Service-Prinzip).
+          required: true

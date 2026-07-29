@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sicherheitslücke melden
+    url: https://github.com/Nehmo101/UWE/security/advisories/new
+    about: Sicherheitsrelevante Funde bitte privat melden — nicht als öffentliches Issue.
+  - name: Frage zur Einrichtung oder Nutzung
+    url: https://github.com/Nehmo101/UWE/discussions
+    about: Fragen zu Setup, Betrieb und Konfiguration gehören in die Discussions.
+  - name: Dokumentation
+    url: https://github.com/Nehmo101/UWE/tree/main/docs
+    about: Architektur, Deployment, Sicherheit und Feature-Reifegrad sind dokumentiert.

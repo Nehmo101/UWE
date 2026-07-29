@@ -3,8 +3,9 @@
 Stand: 2026-07-25. Dieser Text ist die verbindliche Betriebs- und
 Datenschutzbeschreibung für das dritte UWE-Produkt **Brain** (`apps/brain`,
 Package `@uwe/brain`). Er ergänzt [ADR 004](../adr/004-brain-owner-only.md) und
-[ADR 007](../adr/007-deployment-exposure.md) und den
-[Masterplan](../rework/uwe-portal-studio-brain-masterplan.md).
+[ADR 007](../adr/007-deployment-exposure.md) sowie den früheren Masterplan
+(`docs/rework/uwe-portal-studio-brain-masterplan.md`, nach Abschluss des
+Splits entfernt).
 
 ## Was Brain ist
 

@@ -9,8 +9,8 @@
 > in den Prompt gibt, läuft weiter. Deshalb bleibt sie.
 
 Verbindlicher Styleguide für die **Karten-Piktogramme** und **Gouache-Assets**.
-Er ergänzt die übergeordnete Stil-Referenz
-[atlas-style-reference.md](atlas-style-reference.md) (handgezeichnete Tinten-Kartografie)
+Er ergänzte die übergeordnete Stil-Referenz `atlas-style-reference.md`
+(handgezeichnete Tinten-Kartografie; mit dem Atlas-Abbau 2026-07 entfernt)
 um konkrete Regeln und einen Katalog für die Punkt-Symbole und gemalten Assets.
 
 > Ziel: einheitliche, sofort wiedererkennbare Karten-Assets — alte Ink-Glyphen
@@ -81,9 +81,9 @@ validierte Asset-Vorschläge, die UWE als Preview/Review zeigt.
 > Der Katalog (`atlas-pictograms.svg`) wird aus der kanonischen Registry erzeugt
 > und ist damit immer aktuell. Mit „NEU" markierte Symbole wurden zuletzt ergänzt.
 >
-> Der Gouache-Backlog lebt in
-> [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md).
-> Starter-Rezepte stehen in `packages/atlas/src/assets.ts`.
+> Der Gouache-Backlog lag in `docs/design/atlas-redesign/asset-catalog.md`,
+> Starter-Rezepte in `packages/atlas/src/assets.ts` — beides mit dem
+> Atlas-Abbau 2026-07 entfernt.
 
 ---
 
@@ -225,8 +225,8 @@ Tabelle listet bewusst nur die stabilen Identifikatoren.
 
 ## Neues Gouache-Asset hinzufügen
 
-1. **Asset wählen** aus
-   [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md)
+1. **Asset wählen** aus dem Katalog (ehem.
+   `docs/design/atlas-redesign/asset-catalog.md`, mit dem Atlas-Abbau entfernt)
    oder als bewusst kleine Ergänzung definieren.
 
 2. **Metadata ergänzen** in `packages/atlas/src/assets.ts`:
@@ -303,8 +303,8 @@ bei Gouache kommen zusätzlich `style.lineWidth` und `style.blur` hinzu.
 
 ## Weiterführend
 
-- [atlas-style-reference.md](atlas-style-reference.md) — Gesamt-Stil (Tinte/Pergament)
-- [../design/atlas-redesign/asset-catalog.md](../design/atlas-redesign/asset-catalog.md) — Gouache-Asset-Backlog
+- `atlas-style-reference.md` — Gesamt-Stil (Tinte/Pergament; mit dem Atlas-Abbau entfernt)
+- `docs/design/atlas-redesign/asset-catalog.md` — Gouache-Asset-Backlog (entfernt)
 - `packages/atlas/src/glyphs.ts` — kanonische Registry
 - `packages/atlas/src/assets.ts` — kanonische Gouache-Registry
 - `.cursor/skills/uwe-image-studio-assets/SKILL.md` — KI-Stempel (Quelle `ai`)

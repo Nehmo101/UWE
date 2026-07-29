@@ -33,7 +33,9 @@ function formatDate(value: string | null): string {
 
 export function PasskeySettingsPanel({
   enabled,
-  disabledHint = "Passkey-Login ist derzeit deaktiviert (Einstellungen → Anmeldung).",
+  // Spielersicht: kein Verweis auf die Kommandozentrale — die steht auf dem Host
+  // und geht Spieler nichts an. Wer es einschalten kann, ist die Spielleitung.
+  disabledHint = "Passkey-Login ist derzeit deaktiviert. Wende dich an deine Spielleitung.",
 }: PasskeySettingsPanelProps) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [credentials, setCredentials] = useState<PasskeyCredential[]>([]);

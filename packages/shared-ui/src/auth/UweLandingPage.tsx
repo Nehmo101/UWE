@@ -48,8 +48,6 @@ export interface UweLandingPageProps {
   familyAppUrl: string;
   /** Cloudflare Turnstile site key — when set, sign-in requires a human check. */
   turnstileSiteKey?: string | null;
-  /** RTX host reachability shown in the nav status pill. Defaults to true. */
-  rtxOnline?: boolean;
   /**
    * Whether to show the owner-only Brain card. Defaults to true. A deployment
    * that wants Brain hidden from the public entry can pass false without
@@ -72,7 +70,6 @@ export function UweLandingPage({
   brainAppUrl,
   familyAppUrl,
   turnstileSiteKey,
-  rtxOnline = true,
   brainVisible = true,
   familyVisible = true,
   sceneIndex,
@@ -100,13 +97,8 @@ export function UweLandingPage({
             aria-label="UWE — zur Auswahl"
           >
             <strong>◆ UWE</strong>
-            <small>uwe.example</small>
           </button>
           <div className="uwe-lp-nav-end">
-            <span className="uwe-lp-rtx" data-online={rtxOnline ? "true" : "false"}>
-              <span className="uwe-lp-rtx-dot" />
-              RTX Host · {rtxOnline ? "online" : "offline — Jobs vorgemerkt"}
-            </span>
             <ThemeModeToggle size="nav" />
           </div>
         </nav>
@@ -115,16 +107,7 @@ export function UweLandingPage({
           {view === "choose" ? (
             <>
               <div className="uwe-lp-hero">
-                <div className="uwe-lp-eyebrow">
-                  {/* Die Langfassung passt bei 0.18em Sperrung nicht auf ein
-                      Telefon — die Kurzfassung ist die des Handoffs. */}
-                  <span className="uwe-lp-eyebrow-long">
-                    Self-hosted Kampagnen- und Admin-Cockpit
-                  </span>
-                  <span className="uwe-lp-eyebrow-short">Self-hosted Cockpit</span>
-                </div>
                 <h1 className="uwe-lp-title">Universeller Welten-Editor</h1>
-                <p className="uwe-lp-lede">Läuft lokal auf deiner Hardware.</p>
               </div>
               <UweLandingChoices
                 onOpen={setView}
@@ -154,12 +137,6 @@ export function UweLandingPage({
           brainVisible={brainVisible}
           familyVisible={familyVisible}
         />
-
-        <footer className="uwe-lp-footer">
-          <span>UWE Core · läuft lokal auf deiner Hardware</span>
-          <span>·</span>
-          <span>Cloud-KI erhält keinen Zugriff auf lokales Brain/Weltwissen.</span>
-        </footer>
       </div>
     </AppAccentScope>
   );

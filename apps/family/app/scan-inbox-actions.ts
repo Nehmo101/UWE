@@ -7,9 +7,11 @@ import {
 import { revalidatePath } from "next/cache";
 import {
   createConnectorService,
+  createConnectorWorkflowService,
   extractPdfText,
   prisma,
 } from "@uwe/database/server";
+import { buildOcrPrompt, resolveDocumentOcrModel } from "@uwe/pdf-ocr";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { runConnectorVisionExtract } from "@uwe/ai-brain/router";
 import { downscaleImageForVision } from "@uwe/assets";
@@ -20,9 +22,21 @@ import {
 } from "@uwe/scan-inbox";
 import { readScanFileBuffer } from "@/src/lib/scan-file";
 
-const VISION_PROMPT =
-  "Transkribiere den Text dieses Dokuments wörtlich und vollständig. " +
-  "Gib ausschließlich den erkannten Text zurück, ohne Erklärungen oder Formatierung.";
+/**
+ * Scans sind Dokumente, keine Fotos — deshalb läuft hier dasselbe lokale
+ * Dokumenten-OCR wie im Kampagnen-Import statt eines generischen Vision-
+ * Modells. `buildOcrPrompt` wählt den passenden Prompt: den trainierten
+ * `<image>document parsing.` für Unlimited-OCR, sonst eine Klartext-Anweisung.
+ */
+function visionPrompt(model: string): string {
+  return buildOcrPrompt({ pageCount: 1, model });
+}
+
+/** Modellwahl wie im Kampagnen-Import: `vision`-Slot, sonst Unlimited-OCR. */
+async function documentOcrModel(): Promise<string> {
+  const slotDefault = await createConnectorWorkflowService(prisma).getDefault("vision");
+  return resolveDocumentOcrModel(slotDefault?.model?.name);
+}
 
 function service() {
   return createScanInboxService(brainPrisma, prisma);
@@ -94,9 +108,11 @@ export async function autoAnalyzeAction(formData: FormData): Promise<void> {
   // Das Ergebnis wird poll-on-demand via finalizeScanAction zurueckgeschrieben.
   const vision = await downscaleImageForVision({ buffer, mimeType: scan.mimeType });
   const base64 = vision.buffer.toString("base64");
+  const model = await documentOcrModel();
   const job = await runConnectorVisionExtract(prisma, {
-    prompt: VISION_PROMPT,
+    prompt: visionPrompt(model),
     images: [base64],
+    model,
     mimeType: vision.mimeType,
   });
   await service().setConnectorJob(id, job.jobId);

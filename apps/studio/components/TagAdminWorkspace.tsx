@@ -1,6 +1,6 @@
 "use client";
 
-import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { studioApiFetch } from "@/src/lib/studio-api-fetch";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
@@ -90,7 +90,7 @@ export function TagAdminWorkspace({ worldId }: { worldId: string }) {
     const params = new URLSearchParams({ worldId });
 
     try {
-      const response = await fetch(studioApiUrl(`/api/tags?${params.toString()}`));
+      const response = await studioApiFetch(`/api/tags?${params.toString()}`);
       if (!response.ok) {
         throw new Error(`Tags konnten nicht geladen werden (${response.status}).`);
       }
@@ -112,7 +112,7 @@ export function TagAdminWorkspace({ worldId }: { worldId: string }) {
     setMergeStatus(null);
 
     try {
-      const response = await fetch(studioApiUrl("/api/tags"), {
+      const response = await studioApiFetch("/api/tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -156,7 +156,7 @@ export function TagAdminWorkspace({ worldId }: { worldId: string }) {
     setBackfillStatus(null);
 
     try {
-      const response = await fetch(studioApiUrl("/api/tags"), {
+      const response = await studioApiFetch("/api/tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

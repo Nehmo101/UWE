@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildCookbookRecommendations } from "@uwe/cookbook";
+
+const EXPECTED_USE_CASES = [
+  "dnd_generator",
+  "deep_research",
+  "editor_rewrite",
+  "image_prompting",
+  "session_prep",
+  "canon_check",
+  "player_safe_rewrite",
+  "document_ocr",
+] as const;
 import type { CookbookHardwareProfile } from "@uwe/cookbook";
 
 const HARDWARE: CookbookHardwareProfile = {
@@ -25,10 +36,11 @@ describe("cookbook recommendations", () => {
   it("returns all UWE use cases", () => {
     const recs = buildCookbookRecommendations(HARDWARE, ["llama3.1:8b"]);
     const useCases = recs.map((r) => r.useCase);
-    assert.ok(useCases.includes("dnd_generator"));
-    assert.ok(useCases.includes("canon_check"));
-    assert.ok(useCases.includes("player_safe_rewrite"));
-    assert.equal(recs.length, 7);
+    // Explizit statt nur gezählt: so sagt ein Fehlschlag, welcher
+    // Anwendungsfall fehlt oder zu viel ist. `theme_design` steht bewusst
+    // nicht drin — dafür gibt es keine Hardware-Empfehlung.
+    assert.deepEqual(new Set(useCases), new Set(EXPECTED_USE_CASES));
+    assert.equal(recs.length, EXPECTED_USE_CASES.length);
   });
 
   it("marks private use cases with privacy notes", () => {

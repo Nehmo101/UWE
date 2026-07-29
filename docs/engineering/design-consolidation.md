@@ -125,7 +125,7 @@ Tests/Kommentare nicht mehr als Nutzer.
 |-------|--------|-------|--------------|
 | **A** | uwe-btn-Endgame: `CopyToClipboardButton` von `components/Button.tsx` entkoppeln, letzte `uwe-btn`-Nutzer (ThemeScopeSettingsPanel, MobileFilterSheet) auf Utilities, Button.tsx löschen | Session (Sonnet-Agent) | — |
 | **B** | Cmd+K-Konsolidierung Studio: Doppel-Mount (Kit-cmdk-Palette im Shell **und** Legacy-`StudioCommandPalette` im Layout) → eine cmdk-Palette mit Aktions-Befehlen, Welten-Switcher, Admin-Zeile | Session (Opus-Agent) | — |
-| **C** | RTX-Connector auf Ziel-Stack: Tailwind v4 + copy-in Kit, weg von ButtonV2/CardV2 und `uwe.css`-Bundle-Import | **Cursor** ([Brief](design-connector-cursor-brief.md)), Branch `cursor/design-connector` | — |
+| **C** | RTX-Connector auf Ziel-Stack: Tailwind v4 + copy-in Kit, weg von ButtonV2/CardV2 und `uwe.css`-Bundle-Import | **Cursor** (Brief: `design-connector-cursor-brief.md`, Datei entfernt), Branch `cursor/design-connector` | — |
 | **D** | Theme-Skins entrümpeln: Parchment-Override-Block in uwe.css (Selektoren auf gelöschte Legacy-Shell-Klassen) verifizieren, tote Regeln raus, lebende auf Token reduzieren; danach ThemePicker/VisualThemePreview token-basiert | Session (selbst) | Vorsicht: Connector lädt uwe.css noch → erst nach Analyse, final nach C |
 | **E** | V2-Layer-Abriss: ButtonV2/CardV2, components-v2/, uwe-v2.css, design-v2-Bundle, design-v2.test.ts, Exporte | Session | **nach C gemergt** |
 

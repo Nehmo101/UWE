@@ -127,7 +127,7 @@ Siehe [ROADMAP.md](../ROADMAP.md) und Skill `hardware-homelab`:
 
 ## Verwandte Dokumente
 
-- [CODE_CLEANUP_REPORT.md](../CODE_CLEANUP_REPORT.md)
-- [REPO_AUDIT.md](../REPO_AUDIT.md)
+- `CODE_CLEANUP_REPORT.md` (Datei entfernt)
+- `REPO_AUDIT.md` (Datei entfernt)
 - [cursor-workflow.md](./cursor-workflow.md)
 - [ARCHITECTURE.md](../ARCHITECTURE.md)

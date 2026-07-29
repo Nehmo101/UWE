@@ -1,7 +1,7 @@
 # UWE QA Automation — Checklist Runner
 
 **Stand:** Juni 2026  
-**Bezug:** [uwe-qa-urls.md](./uwe-qa-urls.md) (manuelle URL-Liste) · [design-v2-reference.md](./design-v2-reference.md) (Theme-Presets & Abnahme-Screens) · [UWE-Analyse-Features-Orchestrator_1.md](../engineering/UWE-Analyse-Features-Orchestrator_1.md) (Merge-Welle)
+**Bezug:** [uwe-qa-urls.md](./uwe-qa-urls.md) (manuelle URL-Liste) · `design-v2-reference.md` (Theme-Presets & Abnahme-Screens; entfernt) · `UWE-Analyse-Features-Orchestrator_1.md` (Merge-Welle; entfernt)
 
 Dieses Dokument bündelt **automatisierte** Checks, die Teile der manuellen QA aus `uwe-qa-urls.md` abdecken, plus die **manuelle Browser-Matrix** (9 Theme-Presets) und die **Merge-Gate-Checkliste** für das Orchestrator-Programm.
 
@@ -175,7 +175,7 @@ Zusätzlich aus `uwe-qa-urls.md` (einmal pro Release-Welle, preset-unabhängig):
 
 ## 3. Merge-Gate-Checkliste (Orchestrator-Programm)
 
-Für PRs der Welle `cursor/*-adcf` und Final-QA nach [UWE-Analyse-Features-Orchestrator_1.md](../engineering/UWE-Analyse-Features-Orchestrator_1.md).
+Für PRs der Welle `cursor/*-adcf` und Final-QA nach `UWE-Analyse-Features-Orchestrator_1.md` (historisch; Datei entfernt).
 
 ### 3.1 Vor jedem Subagent-PR
 
@@ -252,8 +252,8 @@ keine Brain-Daten an Cloud — siehe SECURITY_NOTES.md.
 | Dokument | Inhalt |
 |----------|--------|
 | [uwe-qa-urls.md](./uwe-qa-urls.md) | Vollständige URL-Checkliste (106+ Studio, Portal, Mobile) |
-| [design-v2-reference.md](./design-v2-reference.md) | Presets, Abnahme-Screens, Token-Mapping |
+| `design-v2-reference.md` (entfernt) | Presets, Abnahme-Screens, Token-Mapping |
 | [theme-a11y-checklist.md](./theme-a11y-checklist.md) | Kontrast, Touch, Fokus (manuell) |
-| [UWE-Analyse-Features-Orchestrator_1.md](../engineering/UWE-Analyse-Features-Orchestrator_1.md) | PR-Welle, Merge-Reihenfolge |
-| [product-orchestrator-plan.md](../engineering/product-orchestrator-plan.md) | Langfristige Subagent-Pakete |
+| `UWE-Analyse-Features-Orchestrator_1.md` (entfernt) | PR-Welle, Merge-Reihenfolge |
+| `product-orchestrator-plan.md` (entfernt) | Langfristige Subagent-Pakete |
 | [AGENTS.md](../../AGENTS.md) | `pnpm quality` Gate |

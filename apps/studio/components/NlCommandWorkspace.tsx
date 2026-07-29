@@ -1,6 +1,6 @@
 "use client";
 
-import { studioApiUrl } from "@/src/lib/studio-api-url";
+import { studioApiFetch } from "@/src/lib/studio-api-fetch";
 import { useCallback, useEffect, useState } from "react";
 import { formatStudioDateTime } from "@/src/lib/format";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
@@ -110,7 +110,7 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
   const loadAudit = useCallback(async () => {
     setAuditLoading(true);
     try {
-      const response = await fetch(studioApiUrl("/api/admin/command/audit?limit=20"));
+      const response = await studioApiFetch("/api/admin/command/audit?limit=20");
       if (!response.ok) {
         throw new Error(`Audit konnte nicht geladen werden (${response.status}).`);
       }
@@ -137,7 +137,7 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
     setResult(null);
 
     try {
-      const response = await fetch(studioApiUrl("/api/admin/command/parse"), {
+      const response = await studioApiFetch("/api/admin/command/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: trimmed }),
@@ -176,7 +176,7 @@ export function NlCommandWorkspace({ initialText }: { initialText?: string } = {
     setResult(null);
 
     try {
-      const response = await fetch(studioApiUrl("/api/admin/command/execute"), {
+      const response = await studioApiFetch("/api/admin/command/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

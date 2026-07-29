@@ -53,11 +53,13 @@ export {
 export { buildAssetDownloadHeaders } from "./download-headers";
 
 export {
+  cropImageRegion,
   downscaleImageForVision,
   processUploadedImage,
   shouldGenerateThumbnails,
   shouldStripExif,
   type DownscaledImage,
+  type ImageCropRect,
   type ProcessedImageResult,
 } from "./image-processing";
 

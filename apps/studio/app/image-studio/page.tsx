@@ -14,6 +14,7 @@ import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
 import { createImageStudioJobAction } from "../integration-actions";
 import { Alert, badgeVariants, buttonVariants, cn, EmptyState } from "@/src/components/ui";
+import { commandCenterHint } from "@/src/lib/command-center-hint";
 
 interface Props {
   searchParams: Promise<{ pageId?: string; project?: string; status?: string }>;
@@ -62,18 +63,12 @@ export default async function ImageStudioPage({ searchParams }: Props) {
       <PageHeader
         title="Image Studio"
         summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
-        actions={
-          <Link href="/settings?tab=image-studio" className={buttonVariants({ variant: "secondary" })}>
-            Einstellungen
-          </Link>
-        }
       />
 
       <div className="flex flex-col gap-6">
         {!config.enabled && (
           <Alert tone="warning">
-            Image Studio ist deaktiviert. Aktiviere unter{" "}
-            <Link href="/settings?tab=image-studio">Einstellungen → Image Studio</Link>.
+            Image Studio ist deaktiviert. {commandCenterHint("Image Studio")}
           </Alert>
         )}
 

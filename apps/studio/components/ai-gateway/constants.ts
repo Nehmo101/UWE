@@ -2,6 +2,9 @@ import type { RoutingMode } from "./types";
 
 export const ROUTING_LABELS: Record<RoutingMode, string> = {
   LOCAL_ONLY: "Aktiv (RTX-Host)",
+  // Legacy DB values from the cloud era — displayed, never offered.
+  LOCAL_THEN_CLOUD: "Aktiv (RTX-Host)",
+  CLOUD_ONLY: "Deaktiviert",
   DISABLED: "Deaktiviert",
 };
 
