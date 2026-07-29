@@ -488,6 +488,103 @@ davon ab, was die Brain-Untersuchung ergibt.
 
 ---
 
+# J5 — Spieler bauen Karten, der Spielleiter nimmt sie ab
+
+Umgesetzt 29.07.2026. Auftrag des Eigentümers: Spieler sollen im Portal über
+Terra Karten erstellen können; sie landen als Entwurf im Studio und werden vom
+Spielleiter abgenommen. **Der Spieler hat dabei völlige Freiheit — keine
+Einschränkung am Werkzeug.** Die einzige Grenze ist die Welt: gebaut wird nur
+in einer Welt, der er zugeordnet ist.
+
+## Verhältnis zu Entscheidung 3 („Keine Sichtbarkeit je Karte")
+
+Die Entscheidung vom 27.07.2026 bleibt gültig und ist **nicht** das, was hier
+dazukommt. Sie sagt: eine Karte hat keinen Sichtbarkeitsgrad, es gibt kein
+`dm_only` je Karte, kein Freigabe-Häkchen für Inhalt. Das gilt weiterhin —
+jede abgenommene Karte ist für jedes Weltmitglied vollständig sichtbar.
+
+J5 fügt keinen Sichtbarkeitsgrad hinzu, sondern einen **Bearbeitungszustand**:
+Was noch niemand abgenommen hat, ist noch kein Weltinhalt. Der Unterschied ist
+nicht kosmetisch — er entscheidet, wo die Grenze steht:
+
+| | Sichtbarkeit je Karte (verworfen) | Abnahmezustand (J5) |
+|---|---|---|
+| Wer entscheidet | Spielleiter, dauerhaft je Karte | niemand dauerhaft — der Zustand endet mit der Abnahme |
+| Endzustand | zwei Sorten Karte, für immer | eine Sorte Karte, wie vorher |
+| Gilt für DM-Karten | ja | nein — sie entstehen abgenommen |
+
+Ein Entwurf verlässt den Zustand `entwurf` genau einmal. Danach ist er eine
+Karte wie jede andere, und die Contract-Klassifikation je Modell bleibt
+unangetastet (`TerraKarte: player_visible`).
+
+## Zustände
+
+```
+                 Spieler                    Spielleiter
+  (Portal)  entwurf ──reicheEin──▶ eingereicht ──gibFrei──▶ freigegeben
+               ▲                        │                        │
+               └────ziehZurueck─────────┘                        │
+               └────────────weiseZurueck (mit Rückmeldung)───────┘
+```
+
+* **Vorgabewert ist `freigegeben`**, nicht `entwurf`. Zwei Gründe, beide
+  praktisch: eine im Studio angelegte Karte braucht keine Abnahme durch sich
+  selbst, und alle Zeilen von vor J5 bleiben dadurch sichtbar. Ein
+  `entwurf`-Vorgabewert hätte die Bestandskarten beim ersten Seitenaufruf
+  stillschweigend aus dem Portal genommen.
+* **Der Spielleiter kann direkt aus dem Entwurf abnehmen**, ohne auf das
+  Einreichen zu warten.
+* **Zurückgeben nur bei Karten mit Autor.** Eine Studio-eigene Karte hat
+  niemanden, an den sie zurückgehen könnte.
+
+## Wo die Grenzen sitzen
+
+Zwei neue Grenzen, beide im `where` **eines** Schreibvorgangs, nie als
+getrennte Lesen-dann-Schreiben-Folge:
+
+| Grenze | Feld | Was sie verhindert |
+|---|---|---|
+| Autor | `autorUserId` | Ein Spieler schreibt in den Entwurf eines anderen |
+| Zustand | `status` | Ein Spieler schreibt weiter, nachdem eingereicht oder abgenommen wurde |
+
+Warum atomar: zwischen zwei Anweisungen kann der Spielleiter abnehmen. Der
+Autosave läuft alle 1,2 s — das Zeitfenster ist real, nicht theoretisch.
+
+Davor steht im Portal die gewohnte Kette (`apps/portal/app/terra-actions.ts`):
+CSRF/Origin → `getAccessContextForWorld` (fremde Welt ⇒ `null`) →
+`canCreateTerraKarte` (Welt-**Zuordnung**, nicht bloß Lesbarkeit — das
+Studio-Häkchen darf lesen, aber nicht bauen).
+
+## Was im Portal weiterhin NICHT schreibt
+
+Der Leserahmen aus J1 bleibt unverändert einseitig. Die Seite entscheidet auf
+dem Server, welche Komponente sie einsetzt:
+
+* abgenommene Karte → `TerraLeserahmen` (`?modus=lesen`, kein Gegenüber)
+* eigener Entwurf → `TerraSpielerRahmen` (voller Editor, ohne `modus=lesen`)
+* eigene Einreichung → `TerraLeserahmen` plus „Zurückziehen"
+
+Fremde Entwürfe erreichen die Seite gar nicht: `holeFuerSpieler` liefert `null`
+und die Seite ruft `notFound()` — dieselbe Antwort wie für eine Karte aus einer
+fremden Welt.
+
+Die KI-Bedienfelder (`TerraEntwurfPanel`, `TerraTextPanel` aus J4) bleiben im
+Studio. Sie laufen über den RTX-Host und die Brain-Aktionen des Spielleiters;
+das Werkzeug im Frame ist davon unberührt — der Spieler baut von Hand, und
+zwar ohne Einschränkung.
+
+## Berührte Stellen
+
+| Was | Wo |
+|---|---|
+| Schema + Migration | `TerraKarteStatus`, `autorUserId`, `autorName`, `eingereichtAm`, `entschiedenAm`, `entschiedenVonUserId`, `rueckmeldung` |
+| Datenzugriff | `packages/database/src/terra-service.ts` |
+| Rechte | `packages/auth/src/terra-karte-permissions.ts` |
+| Portal | `apps/portal/app/terra-actions.ts`, `TerraSpielerRahmen`, Karten-Liste und -Detailseite |
+| Studio | `gibTerraKarteFreiAction`, `weiseTerraKarteZurueckAction`, `TerraKartenListe` nach Zustand gruppiert |
+
+---
+
 # Reihenfolge Runde J
 
 1. **J3 Namen** — unabhängig von allem, sofort nützlich, und Voraussetzung

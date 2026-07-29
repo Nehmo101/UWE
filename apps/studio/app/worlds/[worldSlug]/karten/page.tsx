@@ -32,6 +32,7 @@ export default async function TerraKartenIndexPage({ params }: Props) {
         <h1 className="text-xl font-semibold">Karten</h1>
         <p className="text-sm text-muted-foreground">
           Der Karteneditor Terra. Jede Karte trägt ihre Unterkarten in sich — eine Datei, ein Baum.
+          Karten, die Spieler im Portal gebaut haben, stehen hier zur Abnahme.
         </p>
         <TerraKartenListe
           worldSlug={worldSlug}
@@ -40,6 +41,11 @@ export default async function TerraKartenIndexPage({ params }: Props) {
             titel: karte.titel,
             version: karte.version,
             updatedAt: karte.updatedAt.toLocaleDateString("de-DE"),
+            status: karte.status,
+            autorName: karte.autorName,
+            eingereichtAm: karte.eingereichtAm
+              ? `eingereicht ${karte.eingereichtAm.toLocaleDateString("de-DE")}`
+              : null,
           }))}
         />
       </div>

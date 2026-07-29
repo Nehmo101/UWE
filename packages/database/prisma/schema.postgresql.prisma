@@ -476,6 +476,7 @@ model User {
   ownedCharacters        Character[]
   bugReports             BugReport[]
   importJobs             ImportJob[]
+  terraKarten            TerraKarte[]          @relation("TerraKarteAutor")
 
   @@map("users")
 }
@@ -2671,6 +2672,14 @@ enum PantryLocation {
   spices
 }
 
+/// Freigabe-Zustand einer Terra-Karte (J5) — Vorgabe `freigegeben`, damit
+/// Studio-Karten und Bestandszeilen unveraendert gueltig bleiben.
+enum TerraKarteStatus {
+  entwurf
+  eingereicht
+  freigegeben
+}
+
 model TerraKarte {
   id      String @id @default(cuid())
   worldId String @map("world_id")
@@ -2678,13 +2687,25 @@ model TerraKarte {
   /// Kartenbaum im Terra-Format v5: { format, version, wurzel, karten[] }.
   daten   Json
   /// Konflikterkennung — reist ueber die postMessage-Bruecke mit.
-  version   Int      @default(1)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  version Int              @default(1)
+  status  TerraKarteStatus @default(freigegeben)
+  /// Wer die Karte im Portal angelegt hat. `null` = im Studio entstanden.
+  autorUserId          String?   @map("autor_user_id")
+  autorName            String?   @map("autor_name")
+  eingereichtAm        DateTime? @map("eingereicht_am")
+  entschiedenAm        DateTime? @map("entschieden_am")
+  entschiedenVonUserId String?   @map("entschieden_von_user_id")
+  /// Rueckmeldung des Spielleiters beim Zurueckgeben.
+  rueckmeldung String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  autor User? @relation("TerraKarteAutor", fields: [autorUserId], references: [id], onDelete: SetNull)
 
   @@index([worldId])
+  @@index([worldId, status])
+  @@index([autorUserId])
   @@map("terra_karten")
 }
 

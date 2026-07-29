@@ -93,6 +93,16 @@ export {
 
 export { canEditPlayerCharacterBlock } from "./player-character-permissions";
 
+export type { TerraKarteAccessInfo } from "./terra-karte-permissions";
+export {
+  canCreateTerraKarte,
+  canDeleteTerraKarte,
+  canEditTerraKarte,
+  canSubmitTerraKarte,
+  canViewTerraKarte,
+  canWithdrawTerraKarte,
+} from "./terra-karte-permissions";
+
 export {
   DEFAULT_SESSION_TTL_MS,
   PREVIEW_COOKIE_NAME,

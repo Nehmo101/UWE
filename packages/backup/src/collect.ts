@@ -841,6 +841,16 @@ export async function collectBackupData(
         titel: karte.titel,
         daten: karte.daten,
         version: karte.version,
+        // Abnahmezustand und Autor (J5) reisen mit. Ohne sie käme ein noch
+        // nicht abgenommener Entwurf nach dem Restore als fertige Weltkarte
+        // zurück — der Vorgabewert der Spalte ist `freigegeben`.
+        status: karte.status,
+        autorUserId: karte.autorUserId,
+        autorName: karte.autorName,
+        eingereichtAm: karte.eingereichtAm?.toISOString() ?? null,
+        entschiedenAm: karte.entschiedenAm?.toISOString() ?? null,
+        entschiedenVonUserId: karte.entschiedenVonUserId,
+        rueckmeldung: karte.rueckmeldung,
         createdAt: karte.createdAt.toISOString(),
         updatedAt: karte.updatedAt.toISOString(),
       }),

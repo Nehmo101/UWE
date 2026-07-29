@@ -16,10 +16,21 @@ import { createTestDatabaseUrl } from "./test-helpers";
  *    überschreiben. Der Vergleich läuft im `where` des Schreibvorgangs, ist
  *    also atomar — ein Test mit zwei nacheinander abgeschickten Ständen auf
  *    derselben Ausgangsversion deckt genau das ab.
+ *
+ * Seit J5 kommt eine dritte dazu, aus demselben Grund und mit derselben
+ * Bauart: die AUTOR- und ZUSTANDSGRENZE der Karten aus dem Portal. Ein Spieler
+ * fasst nur seine eigene Karte an, und nur solange sie ein Entwurf ist. Beides
+ * steht im `where`, nicht in einer Prüfung davor — die Tests unten reichen
+ * deshalb absichtlich fremde Ids und falsche Zustände ein und sehen nach, dass
+ * die Daten unberührt bleiben.
  */
 
 let db: PrismaClient;
 let terra: TerraService;
+/** Zwei Spieler und ein Spielleiter — für die Autorgrenze braucht es echte Ids. */
+let spielerA: string;
+let spielerB: string;
+let spielleiter: string;
 
 const BAUM_A = { format: "terra", version: 5, wurzel: "k0", karten: [{ id: "k0", elternId: null }] };
 const BAUM_B = { format: "terra", version: 5, wurzel: "k0", karten: [{ id: "k0", elternId: null, titel: "B" }] };
@@ -29,6 +40,11 @@ before(async () => {
   terra = createTerraService(db);
   await db.world.create({ data: { name: "Terra Test World", slug: "terra-test" } });
   await db.world.create({ data: { name: "Terra Fremde Welt", slug: "terra-fremd" } });
+  await db.world.create({ data: { name: "Terra Portalwelt", slug: "terra-portal" } });
+
+  spielerA = (await db.user.create({ data: { displayName: "Spieler A", email: "a@terra.test" } })).id;
+  spielerB = (await db.user.create({ data: { displayName: "Spieler B", email: "b@terra.test" } })).id;
+  spielleiter = (await db.user.create({ data: { displayName: "Spielleiter", email: "dm@terra.test" } })).id;
 });
 
 describe("createTerraService — Ablage", () => {
@@ -168,5 +184,264 @@ describe("createTerraService — Weltlöschung", () => {
     const karte = await terra.erstelle("terra-weg", { titel: "Verschwindet", daten: BAUM_A });
     await db.world.delete({ where: { id: welt.id } });
     assert.equal(await db.terraKarte.findUnique({ where: { id: karte.id } }), null);
+  });
+});
+
+/* ==========================================================================
+   J5 — Karten aus dem Portal
+   ========================================================================== */
+
+async function entwurfVon(autorUserId: string, titel = "Spielerkarte") {
+  return terra.erstelleSpielerEntwurf("terra-portal", {
+    titel,
+    daten: BAUM_A,
+    autorUserId,
+    autorName: "Thalia",
+  });
+}
+
+describe("createTerraService — Herkunft und Vorgabezustand", () => {
+  it("eine im Studio angelegte Karte ist sofort freigegeben und hat keinen Autor", async () => {
+    // Der Vorgabewert der Spalte. Er hängt an Bestandsdaten: hieße er
+    // `entwurf`, wären alle Karten von vor J5 aus dem Portal verschwunden.
+    const karte = await terra.erstelle("terra-portal", { titel: "DM-Karte", daten: BAUM_A });
+    assert.equal(karte.status, "freigegeben");
+    assert.equal(karte.autorUserId, null);
+  });
+
+  it("eine im Portal angelegte Karte ist ein Entwurf und trägt ihren Autor", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.equal(karte.status, "entwurf");
+    assert.equal(karte.autorUserId, spielerA);
+    assert.equal(karte.autorName, "Thalia");
+  });
+});
+
+describe("createTerraService — Spielersicht", () => {
+  it("listeFuerSpieler zeigt Abgenommenes plus die eigenen Entwürfe, keine fremden", async () => {
+    const welt = "terra-sicht";
+    await db.world.create({ data: { name: "Terra Sichtwelt", slug: welt } });
+    const abgenommen = await terra.erstelle(welt, { titel: "Weltkarte", daten: BAUM_A });
+    const meiner = await terra.erstelleSpielerEntwurf(welt, { titel: "Meiner", autorUserId: spielerA });
+    const fremder = await terra.erstelleSpielerEntwurf(welt, { titel: "Fremder", autorUserId: spielerB });
+
+    const fuerA = (await terra.listeFuerSpieler(welt, spielerA)).map((eintrag) => eintrag.id);
+    assert.deepEqual(fuerA.sort(), [abgenommen.id, meiner.id].sort());
+    assert.equal(fuerA.includes(fremder.id), false, "ein fremder Entwurf taucht nicht auf");
+
+    // Der Spielleiter im Studio sieht dagegen alles — sonst könnte er nichts abnehmen.
+    const imStudio = (await terra.listeFuerWelt(welt)).map((eintrag) => eintrag.id);
+    assert.equal(imStudio.length, 3);
+  });
+
+  it("ohne angemeldeten Autor (Vorschau) bleibt nur Abgenommenes", async () => {
+    const welt = "terra-vorschau";
+    await db.world.create({ data: { name: "Terra Vorschauwelt", slug: welt } });
+    const abgenommen = await terra.erstelle(welt, { titel: "Weltkarte", daten: BAUM_A });
+    await terra.erstelleSpielerEntwurf(welt, { titel: "Entwurf", autorUserId: spielerA });
+
+    const liste = await terra.listeFuerSpieler(welt, null);
+    assert.deepEqual(liste.map((eintrag) => eintrag.id), [abgenommen.id]);
+  });
+
+  it("holeFuerSpieler verweigert den fremden Entwurf, gibt den eigenen heraus", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.ok(await terra.holeFuerSpieler("terra-portal", karte.id, spielerA));
+    assert.equal(await terra.holeFuerSpieler("terra-portal", karte.id, spielerB), null);
+    assert.equal(await terra.holeFuerSpieler("terra-portal", karte.id, null), null);
+  });
+
+  it("nach der Abnahme ist dieselbe Karte für alle da", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.equal(await terra.gibFrei("terra-portal", karte.id, spielleiter), true);
+    assert.ok(await terra.holeFuerSpieler("terra-portal", karte.id, spielerB));
+    assert.ok(await terra.holeFuerSpieler("terra-portal", karte.id, null));
+  });
+});
+
+describe("createTerraService — Autor- und Zustandsgrenze beim Schreiben", () => {
+  it("der Autor speichert in seinen Entwurf", async () => {
+    const karte = await entwurfVon(spielerA);
+    const ergebnis = await terra.speichereEntwurf("terra-portal", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+      autorUserId: spielerA,
+    });
+    assert.deepEqual(ergebnis, { ok: true, version: 2 });
+    assert.deepEqual((await terra.holeInWelt("terra-portal", karte.id))?.daten, BAUM_B);
+  });
+
+  it("ein anderer Spieler schreibt nicht hinein — und erfährt keine Fassung", async () => {
+    const karte = await entwurfVon(spielerA);
+    const ergebnis = await terra.speichereEntwurf("terra-portal", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+      autorUserId: spielerB,
+    });
+    // Nicht `konflikt`: das wäre eine Einladung, es mit neuer Fassung erneut
+    // zu versuchen — und die Fassungszahl selbst wäre schon eine Auskunft.
+    assert.deepEqual(ergebnis, { ok: false, grund: "unbekannt" });
+    assert.deepEqual((await terra.holeInWelt("terra-portal", karte.id))?.daten, BAUM_A, "der Baum ist unberührt");
+    assert.equal((await terra.holeInWelt("terra-portal", karte.id))?.version, 1);
+  });
+
+  it("nach dem Einreichen schreibt auch der Autor nicht mehr", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.equal(await terra.reicheEin("terra-portal", karte.id, spielerA), true);
+
+    const ergebnis = await terra.speichereEntwurf("terra-portal", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+      autorUserId: spielerA,
+    });
+    assert.deepEqual(ergebnis, { ok: false, grund: "unbekannt" });
+    assert.deepEqual((await terra.holeInWelt("terra-portal", karte.id))?.daten, BAUM_A);
+  });
+
+  it("nach der Abnahme schreibt der Autor nicht mehr — das Studio schon", async () => {
+    const karte = await entwurfVon(spielerA);
+    await terra.gibFrei("terra-portal", karte.id, spielleiter);
+
+    const ausDemPortal = await terra.speichereEntwurf("terra-portal", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+      autorUserId: spielerA,
+    });
+    assert.deepEqual(ausDemPortal, { ok: false, grund: "unbekannt" });
+
+    // `speichere` (Studio) kennt die Zustandsgrenze nicht: der Spielleiter
+    // darf jede Karte seiner Welt anfassen.
+    const ausDemStudio = await terra.speichere("terra-portal", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+    });
+    assert.deepEqual(ausDemStudio, { ok: true, version: 2 });
+  });
+
+  it("die Konflikterkennung bleibt beim eigenen Entwurf erhalten", async () => {
+    const karte = await entwurfVon(spielerA);
+    await terra.speichereEntwurf("terra-portal", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+      autorUserId: spielerA,
+    });
+    const veraltet = await terra.speichereEntwurf("terra-portal", karte.id, {
+      daten: BAUM_A,
+      erwarteteVersion: 1,
+      autorUserId: spielerA,
+    });
+    assert.deepEqual(veraltet, { ok: false, grund: "konflikt", version: 2 });
+  });
+
+  it("die Weltgrenze steht auch für den Autor", async () => {
+    const karte = await entwurfVon(spielerA);
+    const ergebnis = await terra.speichereEntwurf("terra-fremd", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+      autorUserId: spielerA,
+    });
+    assert.deepEqual(ergebnis, { ok: false, grund: "unbekannt" });
+  });
+
+  it("benenneEntwurf und loescheEigenenEntwurf greifen nicht über die Autorgrenze", async () => {
+    const karte = await entwurfVon(spielerA, "Bleibt so");
+    assert.equal(await terra.benenneEntwurf("terra-portal", karte.id, spielerB, "Gekapert"), false);
+    assert.equal(await terra.loescheEigenenEntwurf("terra-portal", karte.id, spielerB), false);
+    assert.equal((await terra.holeInWelt("terra-portal", karte.id))?.titel, "Bleibt so");
+
+    assert.equal(await terra.benenneEntwurf("terra-portal", karte.id, spielerA, "Neuer Name"), true);
+    assert.equal(await terra.loescheEigenenEntwurf("terra-portal", karte.id, spielerA), true);
+  });
+
+  it("eine abgenommene Karte löscht der Autor nicht mehr", async () => {
+    const karte = await entwurfVon(spielerA);
+    await terra.gibFrei("terra-portal", karte.id, spielleiter);
+    assert.equal(await terra.loescheEigenenEntwurf("terra-portal", karte.id, spielerA), false);
+    assert.ok(await terra.holeInWelt("terra-portal", karte.id), "die Karte gehört jetzt der Welt");
+  });
+});
+
+describe("createTerraService — Einreichen und Abnahme", () => {
+  it("Einreichen setzt den Zeitpunkt und sperrt das Schreiben; Zurückziehen hebt beides auf", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.equal(await terra.reicheEin("terra-portal", karte.id, spielerA), true);
+
+    const eingereicht = await terra.holeInWelt("terra-portal", karte.id);
+    assert.equal(eingereicht?.status, "eingereicht");
+    assert.ok(eingereicht?.eingereichtAm instanceof Date);
+
+    assert.equal(await terra.ziehZurueck("terra-portal", karte.id, spielerA), true);
+    const zurueck = await terra.holeInWelt("terra-portal", karte.id);
+    assert.equal(zurueck?.status, "entwurf");
+    assert.equal(zurueck?.eingereichtAm, null);
+
+    // Und danach lässt sich wieder schreiben.
+    const ergebnis = await terra.speichereEntwurf("terra-portal", karte.id, {
+      daten: BAUM_B,
+      erwarteteVersion: 1,
+      autorUserId: spielerA,
+    });
+    assert.equal(ergebnis.ok, true);
+  });
+
+  it("ein fremder Spieler reicht nicht ein und zieht nicht zurück", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.equal(await terra.reicheEin("terra-portal", karte.id, spielerB), false);
+    await terra.reicheEin("terra-portal", karte.id, spielerA);
+    assert.equal(await terra.ziehZurueck("terra-portal", karte.id, spielerB), false);
+    assert.equal((await terra.holeInWelt("terra-portal", karte.id))?.status, "eingereicht");
+  });
+
+  it("Zurückgeben trägt die Rückmeldung ein; das nächste Einreichen räumt sie weg", async () => {
+    const karte = await entwurfVon(spielerA);
+    await terra.reicheEin("terra-portal", karte.id, spielerA);
+
+    assert.equal(
+      await terra.weiseZurueck("terra-portal", karte.id, {
+        entschiedenVonUserId: spielleiter,
+        rueckmeldung: "  Der Fluss läuft bergauf.  ",
+      }),
+      true,
+    );
+    const zurueck = await terra.holeInWelt("terra-portal", karte.id);
+    assert.equal(zurueck?.status, "entwurf");
+    assert.equal(zurueck?.rueckmeldung, "Der Fluss läuft bergauf.", "getrimmt");
+    assert.equal(zurueck?.entschiedenVonUserId, spielleiter);
+
+    // Die alte Rückmeldung gehört zur alten Fassung — sie darf dem
+    // Spielleiter nicht neben der neuen stehenbleiben.
+    await terra.reicheEin("terra-portal", karte.id, spielerA);
+    assert.equal((await terra.holeInWelt("terra-portal", karte.id))?.rueckmeldung, null);
+  });
+
+  it("eine Studio-Karte lässt sich nicht zurückgeben — es gibt niemanden dafür", async () => {
+    const karte = await terra.erstelle("terra-portal", { titel: "DM-eigen", daten: BAUM_A });
+    assert.equal(
+      await terra.weiseZurueck("terra-portal", karte.id, {
+        entschiedenVonUserId: spielleiter,
+        rueckmeldung: "geht nicht",
+      }),
+      false,
+    );
+    assert.equal((await terra.holeInWelt("terra-portal", karte.id))?.status, "freigegeben");
+  });
+
+  it("Abnahme und Zurückgabe greifen nicht über die Weltgrenze", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.equal(await terra.gibFrei("terra-fremd", karte.id, spielleiter), false);
+    assert.equal(
+      await terra.weiseZurueck("terra-fremd", karte.id, { entschiedenVonUserId: spielleiter }),
+      false,
+    );
+    assert.equal((await terra.holeInWelt("terra-portal", karte.id))?.status, "entwurf");
+  });
+
+  it("der Spielleiter darf direkt aus dem Entwurf abnehmen, ohne aufs Einreichen zu warten", async () => {
+    const karte = await entwurfVon(spielerA);
+    assert.equal(await terra.gibFrei("terra-portal", karte.id, spielleiter), true);
+    const abgenommen = await terra.holeInWelt("terra-portal", karte.id);
+    assert.equal(abgenommen?.status, "freigegeben");
+    assert.ok(abgenommen?.entschiedenAm instanceof Date);
+    assert.equal(abgenommen?.autorUserId, spielerA, "der Autor bleibt vermerkt");
   });
 });

@@ -168,8 +168,12 @@ export const PRISMA_MODEL_BOUNDARIES = {
   RollTable: U("dnd_world", "dm_only"),
   ResearchSession: B("personal_brain", "database_only", "G6"),
   ResearchSource: B("personal_brain", "database_only", "G6"),
-  // Karten sind vollständig spielersichtbar; der Zugriff hängt allein an der
-  // Weltmitgliedschaft, nie an der einzelnen Karte.
+  // Abgenommene Karten sind vollständig spielersichtbar; der Zugriff hängt
+  // allein an der Weltmitgliedschaft, nie am Inhalt der einzelnen Karte.
+  // Seit J5 gibt es einen zweiten, engeren Fall: einen Entwurf, den ein
+  // Spieler im Portal gebaut hat, sieht bis zur Abnahme nur sein Autor. Das
+  // ist keine dm_only-Klasse — es ist dieselbe Spielersicht, nur auf eine
+  // Person zugeschnitten (`autorUserId`).
   TerraKarte: U("dnd_world", "player_visible"),
   AiGatewayConfig: U("ai_control", "dm_only"),
   AiUsageLog: U("ai_control", "dm_only"),
