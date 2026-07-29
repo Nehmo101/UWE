@@ -155,9 +155,6 @@ importers:
       '@uwe/pdf-ocr':
         specifier: workspace:*
         version: link:../../packages/pdf-ocr
-      '@uwe/product-contracts':
-        specifier: workspace:*
-        version: link:../../packages/product-contracts
       '@uwe/scan-inbox':
         specifier: workspace:*
         version: link:../../packages/scan-inbox
@@ -498,9 +495,6 @@ importers:
       '@uwe/calendar':
         specifier: workspace:*
         version: link:../../packages/calendar
-      '@uwe/cloudflare-edge':
-        specifier: workspace:*
-        version: link:../../packages/cloudflare-edge
       '@uwe/connector':
         specifier: workspace:*
         version: link:../../packages/connector
@@ -522,15 +516,9 @@ importers:
       '@uwe/host-cockpit':
         specifier: workspace:*
         version: link:../../packages/host-cockpit
-      '@uwe/host-monitor':
-        specifier: workspace:*
-        version: link:../../packages/host-monitor
       '@uwe/image-studio':
         specifier: workspace:*
         version: link:../../packages/image-studio
-      '@uwe/kitchen':
-        specifier: workspace:*
-        version: link:../../packages/kitchen
       '@uwe/knoteforge-import':
         specifier: workspace:*
         version: link:../../packages/knoteforge-import
@@ -552,9 +540,6 @@ importers:
       '@uwe/roll-tables':
         specifier: workspace:*
         version: link:../../packages/roll-tables
-      '@uwe/scan-inbox':
-        specifier: workspace:*
-        version: link:../../packages/scan-inbox
       '@uwe/security':
         specifier: workspace:*
         version: link:../../packages/security
@@ -696,9 +681,6 @@ importers:
 
   packages/assets:
     dependencies:
-      '@uwe/auth':
-        specifier: workspace:*
-        version: link:../auth
       adm-zip:
         specifier: ^0.6.0
         version: 0.6.0
@@ -720,10 +702,6 @@ importers:
         version: 5.9.3
 
   packages/auth:
-    dependencies:
-      '@uwe/shared-utils':
-        specifier: workspace:*
-        version: link:../shared-utils
     devDependencies:
       '@types/node':
         specifier: ^22.15.32
@@ -783,9 +761,6 @@ importers:
       '@uwe/assets':
         specifier: workspace:*
         version: link:../assets
-      '@uwe/connector':
-        specifier: workspace:*
-        version: link:../connector
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
@@ -1181,15 +1156,9 @@ importers:
       '@uwe/ai-brain':
         specifier: workspace:*
         version: link:../ai-brain
-      '@uwe/assets':
-        specifier: workspace:*
-        version: link:../assets
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
-      '@uwe/env':
-        specifier: workspace:*
-        version: link:../env
       '@uwe/mail-core':
         specifier: workspace:*
         version: link:../mail-core

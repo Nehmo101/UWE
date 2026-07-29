@@ -8,7 +8,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./form-utils": "./src/form-utils.ts",
-    "./content-access": "./src/content-access.ts",
     "./security-headers": "./src/security-headers.ts",
     "./server": "./src/server.ts"
   },
@@ -22,7 +21,5 @@
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   },
-  "dependencies": {
-    "@uwe/shared-utils": "workspace:*"
-  }
+  "dependencies": {}
 }
