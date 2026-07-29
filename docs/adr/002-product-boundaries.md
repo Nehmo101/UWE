@@ -11,7 +11,7 @@ Laufzeit, Routen oder Datenzugriffe.
 
 UWE betreibt heute Portal und Studio als Apps. Persönliche Funktionen des
 Daily Admin OS und des Life Brain liegen noch im Studio-Baum. Das
-[Repo-Inventar](../rework/three-product-split/00-inventory.md) zeigt dadurch
+Repo-Inventar (ehem. `docs/rework/three-product-split/00-inventory.md`, mit dem Abschluss des Splits entfernt) zeigte dadurch
 gemischte Navigationen, APIs, Jobs, Datenzugriffe und Storage-Pfade. Ohne eine
 verbindliche fachliche Grenze würde ein bloßes Verschieben von Routen die
 privaten Zugriffe nur an einen neuen Ort verlagern.

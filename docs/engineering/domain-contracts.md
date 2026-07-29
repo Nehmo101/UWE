@@ -1,7 +1,8 @@
 # O02 — Zentrale Domain-Boundary-Contracts
 
 Stand: 2026-07-15, Modell-Mapping aktualisiert 2026-07-22 auf das
-Atlas-3D-Delta (siehe [07-delta-und-mehrfachzuordnung.md](07-delta-und-mehrfachzuordnung.md)).
+Atlas-3D-Delta (Detail-Doku `07-delta-und-mehrfachzuordnung.md` wurde mit dem
+`rework/`-Baum entfernt).
 Dieses Dokument ist eine implementierungsreife Spezifikation,
 aber noch keine Implementierung, Migration oder Änderung der aktiven Runtime.
 Maßgebliche Quellen sind das Inventar aus Commit

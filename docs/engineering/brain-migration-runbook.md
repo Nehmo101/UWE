@@ -2,8 +2,9 @@
 
 Stand: 2026-07-22. Verbindliche, sichere Reihenfolge für die physische Trennung
 der owner-privaten Brain-Daten aus `uwe.db` in eine eigene `uwe-brain.db`.
-Ergänzt [ADR 003](../adr/003-data-layers.md) und den
-[Masterplan](../rework/uwe-portal-studio-brain-masterplan.md) (Invariante 7).
+Ergänzt [ADR 003](../adr/003-data-layers.md) und den früheren Masterplan
+(`docs/rework/uwe-portal-studio-brain-masterplan.md`, Invariante 7; nach
+Abschluss des Splits entfernt).
 
 ## Leitprinzip
 

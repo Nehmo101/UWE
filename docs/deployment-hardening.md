@@ -11,7 +11,7 @@ Anleitung für den **sicheren Selfhosting-Betrieb** von UWE auf einem alten Linu
 | Minimale Health-Probes | `/api/health/public` gibt nur `ok` zurück |
 | Details nur für Owner | `/api/health/private` mit Token bzw. Owner-Session |
 
-Weitere Hintergründe: [PRODUCTION.md](./PRODUCTION.md), [ENV_AND_DEPLOYMENT.md](./ai-brain-mail/ENV_AND_DEPLOYMENT.md).
+Weitere Hintergründe: [PRODUCTION.md](./PRODUCTION.md).
 
 ---
 

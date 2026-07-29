@@ -217,8 +217,8 @@ Intensity controlled via `--uwe-bg-effect-intensity` and preference slider.
 
 ## Related docs
 
-- [odysseus-ui-architecture-analysis.md](./odysseus-ui-architecture-analysis.md) — full UI system (Phases 1–5 implemented)
-- [theme-orchestration.md](./theme-orchestration.md) — subagent execution order
+- `odysseus-ui-architecture-analysis.md` — full UI system (Phases 1–5 implemented; Datei entfernt)
+- `theme-orchestration.md` — subagent execution order (Datei entfernt)
 - [theme-qa-report.md](./theme-qa-report.md) — regression report
 - [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md)
 - [theme-migration-notes.md](./theme-migration-notes.md)

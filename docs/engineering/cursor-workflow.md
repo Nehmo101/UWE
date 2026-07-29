@@ -43,7 +43,7 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 | `deployment-cloudflare-check` | Tunnel + Access + ENV |
 | `hardware-homelab` | Host scripts, RTX, backups |
 
-Technical refactor order: [TECHNICAL_ROADMAP.md](./TECHNICAL_ROADMAP.md). Product rollout order: [product-orchestrator-plan.md](./product-orchestrator-plan.md).
+Technical refactor order: [TECHNICAL_ROADMAP.md](./TECHNICAL_ROADMAP.md). Product rollout order: `product-orchestrator-plan.md` (historisch; Datei entfernt).
 
 Agents should read the relevant skill when starting a specialized task.
 

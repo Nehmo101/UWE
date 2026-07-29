@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> **Stand-Hinweis (2026-07-28):** Dieser Abschnitt sammelt seit Juni; einzelne
+> ältere Einträge unten (Docker Compose, Docker-Pre-Migration-Backup) beschreiben
+> seither wieder entfernte Infrastruktur — siehe `docs/removed-legacy-runtime.md`.
+> Die großen Juli-Umbauten in Kürze: Häkchen-Zugangsmodell statt Rollen-Enum,
+> neue Apps `brain`/`family`/`landing`, physischer DB-Split
+> (`uwe.db`/`uwe-brain.db`/`uwe-family.db`), Terra-Karteneditor (Atlas/Atlas-3D
+> vollständig entfernt), Passkeys + Google-Login, Mail-Center nach Brain.
+
 ### Added
 
 - **UWE Windows Releases** — GitHub Actions workflow publishes Command Center NSIS/MSI under tag `uwe-vX.Y.Z`; Command Center **Update** button syncs the checkout to the release, rebuilds Studio/Portal, and opens the Windows installer when the desktop app is behind
