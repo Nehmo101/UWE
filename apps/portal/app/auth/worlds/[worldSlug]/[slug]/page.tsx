@@ -19,6 +19,8 @@ import {
   createPartyTreasuryService,
   createPrismaClient,
   getAppRepository,
+  portalAssetUrl,
+  renderAssetBlockHtml,
   buildLevelUpSuggestions,
   QUEST_LIFECYCLE_LABELS,
   type PageWithBlocks,
@@ -71,10 +73,19 @@ export default async function AuthWorldPageDetail({ params }: Props) {
     const visiblePage = page;
 
     const renderCtx = await auth.buildViewerRenderContext(worldSlug, ctx);
+    // Bildblöcke bekommen ihr Bild dazu. Die Portal-Asset-Route verlangt den
+    // `world`-Parameter und prüft den Zugriff gegen genau diese Welt.
+    const assetUrl = portalAssetUrl(worldSlug);
     blockHtml = await Promise.all(
-      visiblePage.contentBlocks.map((block) =>
-        auth.renderBlockContentForViewer(worldSlug, block.content, ctx, renderCtx),
-      ),
+      visiblePage.contentBlocks.map(async (block) => {
+        const html = await auth.renderBlockContentForViewer(
+          worldSlug,
+          block.content,
+          ctx,
+          renderCtx,
+        );
+        return renderAssetBlockHtml(block, html, { assetUrl });
+      }),
     );
 
     campaignId =

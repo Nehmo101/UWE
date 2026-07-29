@@ -83,6 +83,44 @@ export async function downscaleImageForVision(input: {
   }
 }
 
+export interface ImageCropRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Schneidet einen Bereich aus einem Rasterbild und gibt ihn als JPEG zurück —
+ * gedacht für Abbildungen und Karten, die die OCR auf einer PDF-Seite erkannt
+ * hat. Gibt `null` zurück, wenn sharp fehlt oder der Bereich außerhalb des
+ * Bildes liegt; der Aufrufer überspringt den Zuschnitt dann, statt zu scheitern.
+ */
+export async function cropImageRegion(input: {
+  buffer: Buffer;
+  rect: ImageCropRect;
+  quality?: number;
+}): Promise<Buffer | null> {
+  const sharp = await loadSharp();
+  if (!sharp) {
+    return null;
+  }
+  const { left, top, width, height } = input.rect;
+  if (width <= 0 || height <= 0 || left < 0 || top < 0) {
+    return null;
+  }
+  try {
+    return await sharp(input.buffer, { failOn: "error" })
+      .extract({ left, top, width, height })
+      .jpeg({ quality: input.quality ?? 85 })
+      .toBuffer();
+  } catch {
+    // Bereich außerhalb des Bildes oder Dekodier-Fehler — eine fehlende
+    // Abbildung darf den Import nicht abbrechen.
+    return null;
+  }
+}
+
 /**
  * Optionally strip EXIF metadata and generate a WebP thumbnail for raster images.
  * Falls back to the original buffer when sharp is unavailable.

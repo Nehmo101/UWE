@@ -1,4 +1,5 @@
 export * from "./chunker";
+export * from "./markdown-chunker";
 export * from "./dedupe";
 export * from "./entity-schema";
 export * from "./fit-chat";

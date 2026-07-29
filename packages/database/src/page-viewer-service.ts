@@ -16,6 +16,7 @@ import {
   type WikiPageNode,
 } from "./page-service";
 import type { PageSummary, PageWithBlocks, UweRepository } from "./repository";
+import { renderAssetBlockHtml, studioAssetUrl } from "./content-block-html";
 
 function resolveViewerLinks(
   content: string,
@@ -116,9 +117,15 @@ export async function buildPageViewForViewer(
 
   const renderCtx = await auth.buildViewerRenderContext(worldSlug, ctx);
   const blockHtmlParts = await Promise.all(
-    page.contentBlocks.map((block) =>
-      auth.renderBlockContentForViewer(worldSlug, block.content, ctx, renderCtx),
-    ),
+    page.contentBlocks.map(async (block) => {
+      const html = await auth.renderBlockContentForViewer(
+        worldSlug,
+        block.content,
+        ctx,
+        renderCtx,
+      );
+      return renderAssetBlockHtml(block, html, { assetUrl: studioAssetUrl });
+    }),
   );
   const html = blockHtmlParts.filter(Boolean).join("\n\n");
 
