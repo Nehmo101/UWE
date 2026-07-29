@@ -340,6 +340,28 @@ Inhalte. Details:
 
 ---
 
+## Mitmachen
+
+Beiträge sind willkommen — Bug-Reports, Dokumentation, Tests und Code.
+Projektsprache ist Deutsch.
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Entwicklungsumgebung, Quality Gate,
+  Architektur-Regeln und PR-Ablauf. Größere Änderungen bitte vorher als Issue
+  besprechen.
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — Verhaltenskodex
+  (Contributor Covenant 2.1).
+- **Sicherheitslücken** bitte **nicht** als öffentliches Issue, sondern über
+  [GitHub Security Advisories](https://github.com/Nehmo101/UWE/security/advisories/new).
+  Siehe [SECURITY.md](SECURITY.md).
+
+Vier Regeln werden in CI erzwungen und sind der häufigste Grund für einen roten
+PR: Fachlogik gehört in `packages/`, neue Dateien bleiben unter 700 Zeilen,
+keine Cross-App-Imports, und die Sichtbarkeitsgrenzen (`dm_only` erreicht nie
+das Portal, `owner_private_local` verlässt nie den Host) sind nicht
+verhandelbar.
+
+---
+
 ## Lizenz
 
 [MIT](LICENSE) — Nutzung, Änderung und Weitergabe sind frei, auch kommerziell,
