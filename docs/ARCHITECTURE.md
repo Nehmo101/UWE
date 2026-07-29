@@ -155,6 +155,46 @@ graph TD
   Docs --> ThisDoc["ARCHITECTURE.md"]
 ```
 
+### Paket-Map
+
+| Paket | Zuständigkeit |
+|---|---|
+| `@uwe/database` | Prisma-Schema, Repositories, Kern-Services |
+| `@uwe/auth`, `@uwe/security` | Sessions, RBAC, API-Guards, CSRF |
+| `@uwe/product-contracts` | Datenklassen und Produktgrenzen, in CI erzwungen |
+| `@uwe/ai-brain` | KI-Router, DnD-Generator, Privacy-Guards |
+| `@uwe/shared-ui` | Geteilte React-Komponenten, Theme-System |
+| `@uwe/shared-utils` | Framework-agnostische Utilities |
+| `@uwe/mcp` | MCP-Server für Studio, Portal und Brain |
+| `@uwe/assets` | Upload-Pfade, MIME-Validierung |
+
+Fachliche Feature-Pakete: `agent-jobs`, `backup`, `brain-assistant`,
+`calendar`, `cloudflare-edge`, `connector`, `cookbook`, `daily-cockpit`,
+`dnd-api`, `host-cockpit`, `host-monitor`, `image-studio`, `kitchen`,
+`knoteforge-import`, `mail`, `mail-core`, `passkeys`, `pdf-campaign-import`,
+`pdf-ocr`, `player-hub`, `roll-tables`, `scan-inbox`, `soundboard`,
+`static-export`, `theme-studio`, `web-search`.
+
+Der Karteneditor **Terra** lebt als eigenständiges ES-Modul-Projekt unter
+`terra/` (außerhalb des pnpm-Workspace) und wird per `scripts/copy-terra.mjs`
+nach Studio und Portal kopiert. Die Atlas- und Atlas-3D-Editoren wurden am
+2026-07-27 vollständig entfernt (siehe
+[engineering/terra-runde-j-atlas-abbau.md](engineering/terra-runde-j-atlas-abbau.md)).
+
+### Wohin neuer Code gehört
+
+| Art der Änderung | Ort |
+|---|---|
+| Schema | `packages/database/prisma/schema.prisma` + Migration |
+| Domain-Logik | Feature-Paket unter `packages/<domain>` |
+| Studio-API | `apps/studio/app/api/**/route.ts` |
+| Studio-UI | `apps/studio/app/**/page.tsx` |
+| Formulare | Server Actions in `apps/studio/app/*-actions.ts` |
+| Geteilte UI | `packages/shared-ui/src/` |
+
+Die Modul-Disziplin (700-Zeilen-Budget, eingefrorene Baseline, `server.ts`-Barrel)
+steht in [../CONTRIBUTING.md](../CONTRIBUTING.md#2-modul-disziplin-anti-monolith).
+
 ---
 
 ## 5. Verantwortungsgrenzen

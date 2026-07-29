@@ -2,7 +2,7 @@
   "name": "@uwe/mail",
   "version": "1.0.0",
   "private": true,
-  "description": "UWE Mail Center \u2014 SMTP transport, compose and diagnostics",
+  "description": "UWE Mail Center — SMTP transport, compose and diagnostics",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -23,9 +23,7 @@
   },
   "dependencies": {
     "@uwe/ai-brain": "workspace:*",
-    "@uwe/assets": "workspace:*",
     "@uwe/database": "workspace:*",
-    "@uwe/env": "workspace:*",
     "@uwe/mail-core": "workspace:*",
     "imapflow": "^1.0.187",
     "isomorphic-dompurify": "^3.18.0",

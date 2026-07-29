@@ -17,7 +17,6 @@
   "dependencies": {
     "@uwe/ai-brain": "workspace:*",
     "@uwe/assets": "workspace:*",
-    "@uwe/connector": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/security": "workspace:*"
   },
