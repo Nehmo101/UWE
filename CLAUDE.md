@@ -135,4 +135,6 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
 - [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain`
+- [docs/design/responsive-tables.md](docs/design/responsive-tables.md) — Tabellen auf dem Telefon: `ResponsiveTable`, `DataTable`, Attribut-Vertrag
+- [docs/design/theme-a11y-checklist.md](docs/design/theme-a11y-checklist.md) — Schwellen der a11y-Prüfmatrix und die Kaskadenfallen
 - [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (24 Skills)

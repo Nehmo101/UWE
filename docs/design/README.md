@@ -10,3 +10,14 @@ Komponenten und volle Studio/Portal-Nachbauten. Starte dort mit
 [`design-system/README.md`](../../design-system/README.md), wenn du neue
 UWE-Oberflächen oder Assets baust. Dieser Ordner hier ist Kontext/Archiv, keine
 lebende Quelle.
+
+## Ausnahmen — diese drei sind lebend, nicht Archiv
+
+Sie beschreiben Verträge, die im Code durchgesetzt werden, und gehören beim
+Bauen gelesen:
+
+| Datei | Worum es geht |
+|---|---|
+| [`responsive-tables.md`](responsive-tables.md) | Wie Tabellen auf dem Telefon zu Karten werden — der Attribut-Vertrag mit `design-v3/data.css` und die Rollen-Falle |
+| [`theme-a11y-checklist.md`](theme-a11y-checklist.md) | Die Schwellen der Prüfmatrix (12 px / 24 px / 44 px), zwei Kaskadenfallen, bewusst unveränderte Werte |
+| [`scene-motion-assets.md`](scene-motion-assets.md) | Register der bewegten Szenen: Dateinamen, `available`-Schalter, Rankensprache |

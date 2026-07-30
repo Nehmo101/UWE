@@ -170,3 +170,28 @@ leitet die Theme-Engine Schwarz ab (5,08:1, besteht). Auf den geprüften Routen
 tritt die Paarung nicht auf. Vor einer Änderung sollte geklärt werden, wo sie
 tatsächlich gerendert wird — eine Umstellung auf dunkle Schrift wäre eine
 sichtbare Designentscheidung, keine reine Korrektur.
+
+### Was die Matrix zusätzlich prüft (Stand: 22 migrierte Tabellen)
+
+Seit der Tabellen- und Zustandsrunde kommen zwei Prüfungen dazu:
+
+- **Genau eine `h1` je Seite.** Aufgefallen im Welt-Cockpit, wo `PageHeader`
+  und `WorldCockpitHeader` denselben Weltnamen untereinander als `h1`
+  rendereten. Zwei Seitenüberschriften sind kein Schönheitsfehler: die
+  Gliederung hat dann keine eindeutige Spitze.
+- **Die Matrix deckt jetzt sechs Studio-Seiten ab** (`/worlds`, `/settings`,
+  Label-Bibliothek, Welt-Cockpit, `/templates`, `/continue`) und prüft das
+  Cockpit zusätzlich über alle drei Viewports und beide Themes.
+
+### Trefferflächen in Text — zwei Regeln, kein Pauschalwert
+
+`--uwe-touch-aa` (24 px) steht seit dieser Runde neben `--uwe-touch-min`
+(44 px). Zwei Stellen setzen ihn ein, beide bewusst eng gefasst:
+
+| Regel | Wo | Warum nicht breiter |
+|---|---|---|
+| `.uwe-table-v3 :is(td, th) :is(a, button)` | `design-v3/data.css` | Der Verweis in der Zelle *ist* das Ziel der Zeile. Der Innenabstand der Zelle zählt nicht — gemessen wird der Anker. |
+| `.uwe-sidebar-section li :is(a, button)` | `design-v3/controls.css` | Eine Zeile, ein Ziel. Auf `li` beschränkt, damit ein Verweis mitten im Satz seine Zeilenhöhe behält. |
+
+Ein pauschales `a { min-height }` wäre die bequemere Regel und die falsche:
+es risse jeden Fließtextabsatz auseinander, in dem ein Link vorkommt.
