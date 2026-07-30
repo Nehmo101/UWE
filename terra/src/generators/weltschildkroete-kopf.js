@@ -343,18 +343,20 @@ export function baueWeltschildkroetenKopf() {
   // Laechelnde Maulnaht: vorn ein kurzer Spalt unter der Hornkappe, seitlich
   // eine lange, zu den Mundwinkeln hin ANSTEIGENDE Linie — das klassische
   // Schildkroetenlaecheln, im Profil wie im Dreiviertelblick lesbar.
+  // Dezent laechelnd: die Naht steigt zum Mundwinkel nur noch leicht an
+  // (0.24 statt 0.4 Einheiten) — ein ruhiger, alter Blick statt Grinsen.
   var laecheln = [
-    new THREE.Vector3(-1.74, 10.24, 7.3),
-    new THREE.Vector3(-1.58, 10.08, 7.78),
-    new THREE.Vector3(-1.36, 9.97, 8.2),
-    new THREE.Vector3(-1.02, 9.9, 8.66),
+    new THREE.Vector3(-1.68, 10.08, 7.42),
+    new THREE.Vector3(-1.48, 9.99, 7.82),
+    new THREE.Vector3(-1.32, 9.94, 8.22),
+    new THREE.Vector3(-1.02, 9.89, 8.66),
     new THREE.Vector3(-0.62, 9.86, 9.1),
     new THREE.Vector3(0, 9.84, 9.42),
     new THREE.Vector3(0.62, 9.86, 9.1),
-    new THREE.Vector3(1.02, 9.9, 8.66),
-    new THREE.Vector3(1.36, 9.97, 8.2),
-    new THREE.Vector3(1.58, 10.08, 7.78),
-    new THREE.Vector3(1.74, 10.24, 7.3)
+    new THREE.Vector3(1.02, 9.89, 8.66),
+    new THREE.Vector3(1.32, 9.94, 8.22),
+    new THREE.Vector3(1.48, 9.99, 7.82),
+    new THREE.Vector3(1.68, 10.08, 7.42)
   ];
   p.push(kopfTeil(maulnahtGeo(laecheln, 0.03), M(), MAUL));
 

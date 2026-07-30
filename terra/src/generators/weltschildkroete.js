@@ -113,8 +113,9 @@ function baueKoerperGeometrie() {
   // Die Festung sitzt in der tragenden Panzerwoelbung, nicht auf einer Kugel.
   p.push(facette(7.4, 2.4, 8.15, 0, 5.2, -0.15, HAUT_DUNKEL, 1));
   p.push(facette(8.15, 5.15, 9.15, 0, 7.35, -0.45, PANZER, 1));
-  p.push(part(new TO(7.55, 0.62, 6, 24),
-    M(0, 7.72, -0.25, Math.PI / 2, 0, 0, 1.08, 1.2, 1), PANZER_DUNKEL));
+  // Der fruehere dunkle Randtorus („Schwimmring") ist bewusst weg — die 18
+  // ueberlappenden Randplatten unten zeichnen die Panzerkante allein, ohne
+  // dass ein aufgeblasener schwarzer Ring die Silhouette umlaeuft.
 
   // Flache Schildplatten folgen der steilen Woelbung statt eine Wiese zu
   // bilden. Der mittlere Kranz laesst genug Panzer zwischen den Mauern sehen.
