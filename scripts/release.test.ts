@@ -14,6 +14,39 @@ function readJson(relativePath: string): Record<string, unknown> {
   >;
 }
 
+/**
+ * Ein Wegwerf-Abbild der Dateien, die `set-release-version.mjs` anfasst — damit
+ * die Tests des Skripts nie das echte Repo verändern.
+ */
+function makeVersionFixture(): { dir: string; skript: string; git: (...args: string[]) => string } {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-setversion-"));
+  const tauriDir = path.join(dir, "apps/rtx-connector-client/src-tauri");
+  fs.mkdirSync(tauriDir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "VERSION"), "0.1.0\n");
+  fs.writeFileSync(path.join(dir, "package.json"), '{\n  "version": "0.1.0"\n}\n');
+  fs.writeFileSync(
+    path.join(dir, "apps/rtx-connector-client/package.json"),
+    '{\n  "version": "0.1.0"\n}\n',
+  );
+  fs.writeFileSync(path.join(tauriDir, "tauri.conf.json"), '{\n  "version": "0.1.0"\n}\n');
+  fs.writeFileSync(
+    path.join(tauriDir, "Cargo.toml"),
+    '[package]\nname = "x"\nversion = "0.1.0"\n\n[dependencies]\nserde = { version = "1.0.0" }\n',
+  );
+  fs.writeFileSync(
+    path.join(dir, "CHANGELOG.md"),
+    "# Changelog\n\n## [Unreleased]\n\n### Added\n\n- Neues Ding\n\n## [0.1.0] - 2026-06-11\n\n- Erstes Release\n",
+  );
+  // Das Skript rechnet relativ zu seinem eigenen Ort — also mitkopieren.
+  fs.mkdirSync(path.join(dir, "scripts"), { recursive: true });
+  const skript = path.join(dir, "scripts/set-release-version.mjs");
+  fs.copyFileSync(path.join(root, "scripts/set-release-version.mjs"), skript);
+
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  return { dir, skript, git };
+}
+
 describe("release packaging", () => {
   it("keeps VERSION in sync with root package.json", () => {
     const versionFile = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
@@ -203,55 +236,113 @@ describe("release packaging", () => {
   });
 
   it("set-release-version writes every file and rejects a non-semver argument", () => {
-    const skript = path.join(root, "scripts/set-release-version.mjs");
-    const werk = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-setversion-"));
+    const { dir, skript } = makeVersionFixture();
     try {
-      // Ein Abbild der fünf Dateien, damit der Test das Repo nicht anfasst.
-      const tauriDir = path.join(werk, "apps/rtx-connector-client/src-tauri");
-      fs.mkdirSync(tauriDir, { recursive: true });
-      fs.writeFileSync(path.join(werk, "VERSION"), "0.1.0\n");
-      fs.writeFileSync(path.join(werk, "package.json"), '{\n  "version": "0.1.0"\n}\n');
-      fs.writeFileSync(
-        path.join(werk, "apps/rtx-connector-client/package.json"),
-        '{\n  "version": "0.1.0"\n}\n',
-      );
-      fs.writeFileSync(path.join(tauriDir, "tauri.conf.json"), '{\n  "version": "0.1.0"\n}\n');
-      fs.writeFileSync(
-        path.join(tauriDir, "Cargo.toml"),
-        '[package]\nname = "x"\nversion = "0.1.0"\n\n[dependencies]\nserde = { version = "1.0.0" }\n',
-      );
-      // Das Skript rechnet relativ zu seinem eigenen Ort — also mitkopieren.
-      fs.mkdirSync(path.join(werk, "scripts"), { recursive: true });
-      fs.copyFileSync(skript, path.join(werk, "scripts/set-release-version.mjs"));
-
-      execFileSync(process.execPath, [path.join(werk, "scripts/set-release-version.mjs"), "2.3.4"], {
-        stdio: "pipe",
-      });
-      assert.equal(fs.readFileSync(path.join(werk, "VERSION"), "utf8").trim(), "2.3.4");
-      for (const file of ["package.json", "apps/rtx-connector-client/package.json", "apps/rtx-connector-client/src-tauri/tauri.conf.json"]) {
-        assert.equal(JSON.parse(fs.readFileSync(path.join(werk, file), "utf8")).version, "2.3.4");
+      execFileSync(process.execPath, [skript, "2.3.4"], { stdio: "pipe" });
+      assert.equal(fs.readFileSync(path.join(dir, "VERSION"), "utf8").trim(), "2.3.4");
+      for (const file of [
+        "package.json",
+        "apps/rtx-connector-client/package.json",
+        "apps/rtx-connector-client/src-tauri/tauri.conf.json",
+      ]) {
+        assert.equal(JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")).version, "2.3.4");
       }
-      const cargo = fs.readFileSync(path.join(tauriDir, "Cargo.toml"), "utf8");
+      const cargo = fs.readFileSync(
+        path.join(dir, "apps/rtx-connector-client/src-tauri/Cargo.toml"),
+        "utf8",
+      );
       assert.match(cargo, /^version = "2\.3\.4"$/m);
       // Die Version der Abhängigkeit bleibt unangetastet.
       assert.match(cargo, /serde = \{ version = "1\.0\.0" \}/);
+      // Ohne --pr bleibt der CHANGELOG unberührt — das ist der Workflow-Pfad.
+      assert.doesNotMatch(fs.readFileSync(path.join(dir, "CHANGELOG.md"), "utf8"), /\[2\.3\.4\]/);
 
       // Kein Semver, keine Änderung.
-      assert.throws(() =>
-        execFileSync(process.execPath, [path.join(werk, "scripts/set-release-version.mjs"), "v2.3"], {
-          stdio: "pipe",
-        }),
-      );
+      assert.throws(() => execFileSync(process.execPath, [skript, "v2.3"], { stdio: "pipe" }));
 
       // Drift wird gemeldet.
-      fs.writeFileSync(path.join(werk, "VERSION"), "2.3.5\n");
-      assert.throws(() =>
-        execFileSync(process.execPath, [path.join(werk, "scripts/set-release-version.mjs"), "--check"], {
-          stdio: "pipe",
-        }),
-      );
+      fs.writeFileSync(path.join(dir, "VERSION"), "2.3.5\n");
+      assert.throws(() => execFileSync(process.execPath, [skript, "--check"], { stdio: "pipe" }));
     } finally {
-      fs.rmSync(werk, { recursive: true, force: true });
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("--pr promotes the changelog, branches and commits — but never pushes", () => {
+    const { dir, skript, git } = makeVersionFixture();
+    try {
+      git("init", "-q");
+      git("config", "user.email", "test@uwe.local");
+      git("config", "user.name", "Test");
+      git("checkout", "-q", "-b", "main");
+      git("add", "-A");
+      git("commit", "-qm", "init");
+
+      const ausgabe = execFileSync(process.execPath, [skript, "0.2.0", "--pr"], {
+        cwd: dir,
+        encoding: "utf8",
+      });
+
+      assert.equal(git("rev-parse", "--abbrev-ref", "HEAD"), "release/v0.2.0");
+      assert.equal(git("log", "-1", "--pretty=%s"), "chore(release): v0.2.0");
+      assert.equal(git("status", "--porcelain"), "", "der Commit nimmt alles mit");
+
+      // Keep a Changelog: Unreleased-Text wandert unter die neue Fassung, darüber
+      // bleibt ein leeres Unreleased stehen.
+      const changelog = fs.readFileSync(path.join(dir, "CHANGELOG.md"), "utf8");
+      assert.match(changelog, /## \[Unreleased\]\n\n## \[0\.2\.0\] - \d{4}-\d{2}-\d{2}\n/);
+      assert.match(changelog, /## \[0\.2\.0\][\s\S]*- Neues Ding/);
+      assert.match(changelog, /## \[0\.2\.0\][\s\S]*## \[0\.1\.0\]/, "ältere Fassung bleibt darunter");
+      // Genau das, was `CHANGELOG mentions current version` verlangt.
+      assert.equal(fs.readFileSync(path.join(dir, "VERSION"), "utf8").trim(), "0.2.0");
+
+      // Der Push bleibt beim Menschen — das Skript nennt ihn nur.
+      assert.match(ausgabe, /git push -u origin release\/v0\.2\.0/);
+      assert.equal(git("log", "--oneline", "main", "-1").includes("init"), true);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("--pr refuses a dirty tree, an existing branch and a taken version", () => {
+    const { dir, skript, git } = makeVersionFixture();
+    const lauf = (...args: string[]) =>
+      spawnSync(process.execPath, [skript, ...args], { cwd: dir, encoding: "utf8" });
+    try {
+      git("init", "-q");
+      git("config", "user.email", "test@uwe.local");
+      git("config", "user.name", "Test");
+      git("checkout", "-q", "-b", "main");
+      git("add", "-A");
+      git("commit", "-qm", "init");
+
+      // Fremdes im Baum darf nicht im Release-Commit landen.
+      fs.writeFileSync(path.join(dir, "fremd.txt"), "x\n");
+      const dreckig = lauf("0.2.0", "--pr");
+      assert.equal(dreckig.status, 1);
+      assert.match(dreckig.stderr, /nicht sauber/);
+      fs.rmSync(path.join(dir, "fremd.txt"));
+
+      // Branch existiert schon.
+      git("branch", "release/v0.2.0");
+      const belegt = lauf("0.2.0", "--pr");
+      assert.equal(belegt.status, 1);
+      assert.match(belegt.stderr, /existiert schon/);
+      git("branch", "-D", "release/v0.2.0");
+
+      // Fassung steht schon im CHANGELOG — und es entsteht kein halber Branch.
+      fs.writeFileSync(
+        path.join(dir, "CHANGELOG.md"),
+        "# Changelog\n\n## [Unreleased]\n\n## [0.2.0] - 2026-01-01\n\n- schon da\n",
+      );
+      git("commit", "-qam", "changelog");
+      const doppelt = lauf("0.2.0", "--pr");
+      assert.equal(doppelt.status, 1);
+      assert.match(doppelt.stderr, /bereits einen Abschnitt/);
+      assert.equal(git("rev-parse", "--abbrev-ref", "HEAD"), "main", "kein Branch bei Abbruch");
+      assert.equal(git("status", "--porcelain"), "", "keine halben Änderungen");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 

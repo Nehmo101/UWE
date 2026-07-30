@@ -14,7 +14,7 @@ Angabe, aus der beide Update-Wege ihre Wahrheit ziehen:
 | Tag format | `uwe-vX.Y.Z` (must equal root `VERSION` on the tagged commit) |
 | Wer setzt den Tag | die Pipeline (`workflow_dispatch`); ein bereits vorhandener Tag darf auch gepusht werden |
 | Workflow | `.github/workflows/uwe-windows-release.yml` (`workflow_dispatch` **oder** Push eines `uwe-v*`-Tags) |
-| Version setzen | `pnpm release:version X.Y.Z` (fünf Dateien), Prüfung: `pnpm release:version --check` |
+| Version setzen | `pnpm release:version X.Y.Z --pr` (fünf Dateien + CHANGELOG + Branch + Commit), Prüfung: `pnpm release:version --check` |
 | Artifacts | NSIS setup (`.exe`), MSI, five `uwe-<app>-X.Y.Z.tar.gz` bundles, `uwe-databases-X.Y.Z.tar.gz`, `uwe-release.json` |
 | Stable installer name | `UWE_Command_Center_X.Y.Z_x64-setup.exe` |
 | Manifest URL (bundle install) | `https://github.com/Nehmo101/UWE/releases/latest/download/uwe-release.json` |
@@ -27,22 +27,32 @@ andere Fassung als das Release, und der Update-Check sagte nie „aktuell".
 
 **Den Tag erzeugt die Pipeline, nicht die Hand.** Es gibt genau zwei Schritte:
 
-1. **Versions-PR.** Ein Befehl setzt alle fünf Fassungsangaben:
+1. **Versions-PR.** Ein Befehl bereitet alles vor, was maschinell bestimmbar ist:
 
    ```bash
-   pnpm release:version 0.2.0
+   pnpm release:version 0.2.0 --pr
    ```
 
-   Das schreibt `VERSION`, root `package.json`,
-   `apps/rtx-connector-client/package.json`, `…/src-tauri/tauri.conf.json` und
-   `…/src-tauri/Cargo.toml`. Dazu einen `CHANGELOG.md`-Eintrag, dann PR und
-   Merge. `pnpm release:version --check` (und `scripts/release.test.ts`) hält die
-   fünf zusammen; der Release-Workflow ruft dasselbe Skript auf, damit Build und
-   PR nicht auseinanderlaufen.
+   Das setzt die fünf Fassungsangaben (`VERSION`, root `package.json`,
+   `apps/rtx-connector-client/package.json`, `…/src-tauri/tauri.conf.json`,
+   `…/src-tauri/Cargo.toml`), macht aus dem `CHANGELOG.md`-Abschnitt
+   `[Unreleased]` die Fassung `[0.2.0] - <heute>` und stellt ein leeres
+   `[Unreleased]` darüber, legt `release/v0.2.0` an und committet als
+   `chore(release): v0.2.0`.
 
-   Der Bump muss durch einen PR: `main` ist protected, ein Workflow-Commit
-   bräuchte ein Bypass-Token — und der `CHANGELOG`-Eintrag gehört ohnehin ins
-   Review.
+   Zwei Dinge macht es bewusst **nicht**: pushen, und den CHANGELOG-Text
+   schreiben. Der bisherige Unreleased-Inhalt wandert unverändert mit — kürzen
+   und sortieren, dann `git commit --amend -a`, pushen, mergen.
+
+   Es bricht ab, wenn der Arbeitsbaum nicht sauber ist, der Branch schon
+   existiert oder die Fassung bereits im CHANGELOG steht — im letzten Fall bevor
+   ein Branch entsteht. `pnpm release:version 0.2.0` ohne `--pr` schreibt nur die
+   fünf Dateien (das ist der Pfad, den der Release-Build benutzt);
+   `pnpm release:version --check` findet Drift.
+
+   Der Bump geht absichtlich durch einen PR: `main` ist protected, ein
+   Workflow-Commit bräuchte ein Bypass-Token — und der CHANGELOG-Text gehört ins
+   Review, weil ihn keine Automatisierung schreiben kann.
 
 2. **Pipeline starten.** In GitHub Actions **UWE Windows Release** ausführen
    (Ref: `main`). Der Lauf liest `VERSION`, baut auf `windows-latest`, packt die
