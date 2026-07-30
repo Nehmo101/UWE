@@ -258,7 +258,30 @@ Viewports — und auch den erst, wenn die Bühne im Viewport steht.
 
 ## Erzeugte Assets
 
-### Landing — fertig generiert
+### Landing — neu generiert (Fassung 2)
+
+Die maßgebliche Fassung. Sie ist die erste, die dem Rankenmotiv der
+Ursprungsbilder folgt: vier Wurzeln als verdrehte Strangbündel, unten breite
+vielbeinige Wurzelfüße über Fels und Fluss, oben **vom Bildrand abgeschnitten**.
+Blattplattformen mit winzigen Bauten und ein Wasserfall an einer Wurzel geben
+den Maßstab — ohne dieses kleine Detail liest sich die Größe nicht.
+
+| Zieldatei | Standbild | Clip |
+|---|---|---|
+| `landing-hell-desktop` | `019fb397-2000-7f86-a935-23439e79af00` | `019fb398-78fc-7791-8afe-d4c3dc50e74f` |
+| `landing-dunkel-desktop` | `019fb398-66c7-7448-aa1d-211033b918ee` | `019fb399-6b56-7b27-a944-80a123f0d22f` |
+| `landing-hell-mobil` | `019fb398-a0be-7bd9-8397-c21fc681c6b7` | `019fb399-d01e-70f9-bb95-fb9a78d225cd` |
+| `landing-dunkel-mobil` | `019fb399-be2e-7f2c-8d00-28810878c9a4` | `019fb39a-ba29-7670-9a99-469b4d3b949f` |
+
+Nachts leuchtet das Licht **aus den Rillen zwischen den Strängen**, nicht durch
+die Oberfläche — so wie in `nacht-desktop/04-moor-lichtranken`.
+
+### Landing — Fassung 1, abgelöst
+
+Nicht verwenden. Die Wurzeln spannen sich hier als Bögen über den Himmel und
+kommen wieder herunter; sie haben damit ein sichtbares Ende und wirken klein.
+Die Einträge bleiben nur stehen, damit die Generierungen im Konto zuordenbar
+sind.
 
 Alle vier Fassungen liegen im Artlist-Konto. Die Nachtfassung ist per
 Bild-zu-Bild aus der Tagfassung entstanden, die Hochformate per Bild-zu-Bild
@@ -333,6 +356,17 @@ Gehirngrafik und keine Neon-Neuronen. Dämmerung bzw. tiefe Nacht.
 | `brain-dunkel-desktop` | `019fb38e-f49e-7879-9fcf-7cf42f1df231` | `019fb38f-dd1f-71d7-bb31-c6d22f4d95d6` |
 | `brain-hell-mobil` | `019fb38f-2cfd-797c-afa4-e104f1e83138` | `019fb390-2b62-7361-a6a7-14f4922657ab` |
 | `brain-dunkel-mobil` | `019fb38f-eb5f-76b2-912e-3f999af91ca2` | `019fb390-f04c-77d1-b7f1-8627e272095b` |
+
+### Offen: Rankenkorrektur für Family, Portal, Studio und Brain
+
+Die sechzehn Fassungen dieser vier Bereiche stammen aus der Charge **vor** der
+Rankenanalyse. Ihre Wurzeln sind glatte, geschlossene Säulen ohne Strangbündel
+und ohne Wurzelfuß; bei Family und Portal laufen sie zusätzlich spitz zu und
+enden damit sichtbar im Bild. Sie brauchen dieselbe Neufassung wie Landing.
+
+Aufwand: 16 Standbilder à 100 und 16 Clips à 300 Credits, zusammen 6 400. Das
+übersteigt den Rest des laufenden Kontingents; die Credits erneuern sich am
+30. August.
 
 ### Clip-Länge und Nachbearbeitung
 
