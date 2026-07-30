@@ -60,6 +60,18 @@ export const FAMILY_NAV_SECTIONS: FamilyNavSection[] = [
         icon: "◷",
         keywords: ["kalender", "termine", "events", "familie"],
       },
+      {
+        href: "/calendar/feeds",
+        label: "Fremde Kalender",
+        icon: "⇄",
+        keywords: ["fremde", "abonnieren", "ical", "caldav", "schule", "verein", "feed"],
+      },
+      {
+        href: "/calendar/abo",
+        label: "Kalender-Abo",
+        icon: "◵",
+        keywords: ["abo", "ics", "iphone", "handy", "abonnieren", "kalender"],
+      },
     ],
   },
   {
@@ -93,6 +105,18 @@ export const FAMILY_NAV_SECTIONS: FamilyNavSection[] = [
         label: "Mitglieder",
         icon: "☺",
         keywords: ["mitglieder", "personen", "familie", "zugang"],
+      },
+      {
+        href: "/health",
+        label: "Gesundheit",
+        icon: "✚",
+        keywords: ["gesundheit", "impfung", "arzt", "tierarzt", "medikamente", "vorsorge"],
+      },
+      {
+        href: "/account",
+        label: "Konto",
+        icon: "⚿",
+        keywords: ["konto", "passwort", "2fa", "faceid", "passkey", "sicherheit", "anmeldung"],
       },
     ],
   },

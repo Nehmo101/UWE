@@ -347,9 +347,9 @@ export default async function FamilyCalendarPage({
             ))}
           </ul>
           <p className="family-muted">
-            Fremde Kalender kommen über die Kalender-API herein
-            (<code>POST /api/calendar/feeds</code>) und werden von einem Job abgeholt. Hier stehen
-            sie nur zum Nachsehen — was von außen kommt, wird nicht von Hand geändert.
+            Was von außen kommt, wird nicht von Hand geändert — eine Änderung würde beim nächsten
+            Abgleich überschrieben. Abonnieren und entfernen unter{" "}
+            <Link href="/calendar/feeds">Fremde Kalender</Link>.
           </p>
         </section>
       ) : null}
