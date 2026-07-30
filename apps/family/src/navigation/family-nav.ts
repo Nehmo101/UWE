@@ -26,6 +26,12 @@ export const FAMILY_NAV_SECTIONS: FamilyNavSection[] = [
     links: [
       { href: "/", label: "Start", icon: "◆", keywords: ["start", "home", "heute", "übersicht"] },
       {
+        href: "/briefing",
+        label: "Wochenbriefing",
+        icon: "◫",
+        keywords: ["woche", "briefing", "uebersicht", "zusammenfassung", "anstehend"],
+      },
+      {
         href: "/chat",
         label: "Family-Chat",
         icon: "◈",
