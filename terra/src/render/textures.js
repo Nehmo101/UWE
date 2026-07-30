@@ -19,6 +19,19 @@ function texFinish(canvas, name, wrap) {
   TEX[name] = t;
   return t;
 }
+
+/** Schräg gesehene Terrain- und Gebäudeflächen behalten ihre Pigmentdetails. */
+function setzeTexturAnisotropie(maximum) {
+  var wert = Math.max(1, Math.min(8, Math.floor(maximum || 1)));
+  for (var name in TEX) {
+    if (!Object.prototype.hasOwnProperty.call(TEX, name)) continue;
+    var textur = TEX[name];
+    if (textur && textur.isTexture && textur.anisotropy !== wert) {
+      textur.anisotropy = wert;
+      textur.needsUpdate = true;
+    }
+  }
+}
 /** Schreibt ein per-Pixel erzeugtes Bild; fn(u, v, out[4]) liefert RGBA 0..1. */
 function texPaint(size, fn) {
   var c = texCanvas(size), ctx = c.getContext("2d");
@@ -367,4 +380,4 @@ function texPaint(size, fn) {
  "kroneZerzaust", "kroneNadel", "rankenBlatt", "bluete", "rauchPuff"]
   .forEach(function (n) { TEX[n].colorSpace = THREE.SRGBColorSpace; });
 
-export { TEX, texCanvas, texFinish, texPaint };
+export { TEX, texCanvas, texFinish, texPaint, setzeTexturAnisotropie };

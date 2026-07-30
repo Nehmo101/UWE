@@ -8,6 +8,7 @@ import { groupOf } from '../core/store.js';
 import { heightAt } from '../world/terrain.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 import { M, mergeGeos, part, prismGeo } from '../assets/geometrie-hilfen.js';
+import { baueWeltschildkroetenKopf } from './weltschildkroete-kopf.js';
 
 const BX = THREE.BoxGeometry;
 const CY = THREE.CylinderGeometry;
@@ -30,8 +31,6 @@ const DACH_DUNKEL = 0x292f31;
 const HOLZ = 0x4b392d;
 const KUPFER = 0x486f65;
 const LICHT = 0xffc66b;
-const AUGE = 0x111817;
-const IRIS = 0xa77d42;
 const TUCH_GOLD = 0xa87b3f;
 const TUCH_BLAU = 0x4f6b73;
 const BLUETE = 0x8f5d55;
@@ -42,7 +41,7 @@ const koerperMat = terraMat({
   familie: 'laub',
   side: THREE.FrontSide
 });
-const kopfMat = terraMat({ vertexColors: true, familie: 'laub' });
+const kopfMat = terraMat({ vertexColors: true, familie: 'putz' });
 const lichtMat = terraMat({
   vertexColors: true,
   familie: 'putz',
@@ -78,99 +77,6 @@ function zylinder(r0, r1, h, x, y, z, farbe, segmente, rx, ry, rz) {
   );
 }
 
-function taperedTube(punkte, radien, laengsSegmente, radialSegmente) {
-  if (punkte.length !== radien.length || punkte.length < 2) {
-    throw new Error('taperedTube braucht gleich viele Punkte und Radien');
-  }
-  var kurve = new THREE.CatmullRomCurve3(
-    punkte.map(function (punkt) { return punkt.clone(); }),
-    false,
-    'centripetal'
-  );
-  // Parallel transportierte Frenet-Rahmen halten die Ringe auch in engen
-  // S-Kurven stabil. Alle Ringe landen in genau einer BufferGeometry.
-  var tangenten = [], ringNormalen = [], binormalen = [];
-  var ring, t;
-  for (ring = 0; ring <= laengsSegmente; ring++) {
-    t = ring / laengsSegmente;
-    tangenten.push(kurve.getTangentAt(t, new THREE.Vector3()).normalize());
-  }
-  var anfang = tangenten[0];
-  var ax = Math.abs(anfang.x), ay = Math.abs(anfang.y), az = Math.abs(anfang.z);
-  var hilfsAchse = new THREE.Vector3(1, 0, 0);
-  if (ay <= ax && ay <= az) hilfsAchse.set(0, 1, 0);
-  else if (az <= ax && az <= ay) hilfsAchse.set(0, 0, 1);
-  var quer = new THREE.Vector3().crossVectors(anfang, hilfsAchse).normalize();
-  ringNormalen[0] = new THREE.Vector3().crossVectors(anfang, quer).normalize();
-  binormalen[0] = new THREE.Vector3()
-    .crossVectors(anfang, ringNormalen[0]).normalize();
-  for (ring = 1; ring <= laengsSegmente; ring++) {
-    ringNormalen[ring] = ringNormalen[ring - 1].clone();
-    var drehAchse = new THREE.Vector3()
-      .crossVectors(tangenten[ring - 1], tangenten[ring]);
-    if (drehAchse.lengthSq() > 1e-10) {
-      drehAchse.normalize();
-      var winkel = Math.acos(Math.max(-1, Math.min(1,
-        tangenten[ring - 1].dot(tangenten[ring]))));
-      ringNormalen[ring].applyAxisAngle(drehAchse, winkel).normalize();
-    }
-    binormalen[ring] = new THREE.Vector3()
-      .crossVectors(tangenten[ring], ringNormalen[ring]).normalize();
-  }
-
-  var ringBreite = radialSegmente + 1;
-  var vertexAnzahl = (laengsSegmente + 1) * ringBreite;
-  var position = new Float32Array(vertexAnzahl * 3);
-  var normalen = new Float32Array(vertexAnzahl * 3);
-  var uv = new Float32Array(vertexAnzahl * 2);
-  var indizes = [];
-  var mitte = new THREE.Vector3();
-  for (ring = 0; ring <= laengsSegmente; ring++) {
-    t = ring / laengsSegmente;
-    kurve.getPointAt(t, mitte);
-    var verlauf = t * (radien.length - 1);
-    var radiusIndex = Math.min(radien.length - 2, Math.floor(verlauf));
-    var mischung = verlauf - radiusIndex;
-    mischung = mischung * mischung * (3 - 2 * mischung);
-    var radius = THREE.MathUtils.lerp(
-      radien[radiusIndex], radien[radiusIndex + 1], mischung
-    );
-    for (var seite = 0; seite <= radialSegmente; seite++) {
-      var v = seite / radialSegmente;
-      var bogen = v * Math.PI * 2;
-      var cos = Math.cos(bogen), sin = Math.sin(bogen);
-      var nx = ringNormalen[ring].x * cos + binormalen[ring].x * sin;
-      var ny = ringNormalen[ring].y * cos + binormalen[ring].y * sin;
-      var nz = ringNormalen[ring].z * cos + binormalen[ring].z * sin;
-      var vertex = ring * ringBreite + seite;
-      position[vertex * 3] = mitte.x + nx * radius;
-      position[vertex * 3 + 1] = mitte.y + ny * radius;
-      position[vertex * 3 + 2] = mitte.z + nz * radius;
-      normalen[vertex * 3] = nx;
-      normalen[vertex * 3 + 1] = ny;
-      normalen[vertex * 3 + 2] = nz;
-      uv[vertex * 2] = t;
-      uv[vertex * 2 + 1] = v;
-    }
-  }
-  for (ring = 1; ring <= laengsSegmente; ring++) {
-    for (var kante = 1; kante <= radialSegmente; kante++) {
-      var a = (ring - 1) * ringBreite + kante - 1;
-      var b = ring * ringBreite + kante - 1;
-      var c = ring * ringBreite + kante;
-      var d = (ring - 1) * ringBreite + kante;
-      indizes.push(a, d, b, b, d, c);
-    }
-  }
-  var geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(position, 3));
-  geo.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
-  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  geo.setIndex(indizes);
-  geo.computeBoundingBox();
-  geo.computeBoundingSphere();
-  return geo;
-}
 function turm(parts, x, z, r, h, dachFarbe, basisY, abschluss) {
   var unten = basisY === undefined ? 6.7 : basisY;
   parts.push(zylinder(r * 1.05, r, h, x, unten + h * 0.5, z, PUTZ, 8));
@@ -416,64 +322,6 @@ function baueKoerperGeometrie() {
   return mergeGeos(p);
 }
 
-function baueKopfGeometrie() {
-  var p = [], i;
-  // Der lange, kraeftige S-Hals bleibt eine einzige statische Spline-Roehre.
-  // Breite Anfangsringe verzahnen ihn mit Brust und vorderem Panzerrand.
-  var halsPunkte = [
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, 1.45, -0.35),
-    new THREE.Vector3(0, 3.0, -0.72),
-    new THREE.Vector3(0, 4.7, -0.55),
-    new THREE.Vector3(0, 6.4, 0.15),
-    new THREE.Vector3(0, 7.95, 1.25),
-    new THREE.Vector3(0, 9.25, 3.0),
-    new THREE.Vector3(0, 10.2, 5.25)
-  ];
-  var halsRadien = [2.35, 2.2, 2.0, 1.75, 1.5, 1.42, 1.22, 1.08];
-  p.push(part(taperedTube(halsPunkte, halsRadien, 24, 12), M(), HAUT));
-
-  // Breiter, kantiger Reptilienkopf: flacher Schaedel, schwere Wange, Schnabel.
-  p.push(facette(1.72, 1.0, 1.78, 0, 10.55, 6.05, HAUT, 0));
-  p.push(part(prismGeo(2.68, 1.15, 0.96),
-    M(0, 10.12, 6.95, Math.PI / 2, 0, 0), HAUT_HELL));
-  p.push(part(new BX(2.5, 0.48, 1.62), M(0, 9.82, 7.13), HAUT_DUNKEL));
-  p.push(part(new BX(0.56, 0.36, 0.62), M(0, 10.9, 6.38), HAUT_DUNKEL));
-  for (i = -1; i <= 1; i += 2) {
-    p.push(part(new BX(1.1, 0.28, 0.58),
-      M(i * 1.18, 10.82, 6.35, 0, -i * 0.1, -i * 0.2), HAUT_DUNKEL));
-    p.push(facette(0.11, 0.18, 0.18, i * 1.38, 10.54, 6.47, AUGE, 0));
-    p.push(facette(0.04, 0.06, 0.08, i * 1.43, 10.54, 6.51, IRIS, 0));
-    p.push(part(new BX(0.42, 0.055, 0.14),
-      M(i * 1.38, 10.69, 6.6, 0, -i * 0.08, -i * 0.14), 0x514c3f));
-    p.push(facette(0.025, 0.032, 0.035,
-      i * 1.45, 10.57, 6.56, TUCH_GOLD, 0));
-    p.push(part(new BX(0.72, 0.8, 0.98),
-      M(i * 1.25, 10.1, 6.64, 0, -i * 0.16, -i * 0.08), HAUT_DUNKEL));
-    p.push(facette(0.12, 0.08, 0.14, i * 1.12, 10.09, 7.55, 0x706957, 0));
-    p.push(part(new BX(0.16, 0.07, 0.2),
-      M(i * 0.32, 10.17, 7.78, 0, 0, i * 0.1), HAUT_DUNKEL));
-  }
-  p.push(part(new BX(1.65, 0.08, 0.15), M(0, 9.74, 7.55), 0x202621));
-
-  // Kehlschilde und flache Nackenplatten brechen die Roehre in harte Ebenen.
-  for (i = 0; i < halsPunkte.length - 1; i += 2) {
-    var sh0 = halsPunkte[i];
-    var sh1 = halsPunkte[Math.min(i + 2, halsPunkte.length - 1)];
-    var sr = 0.82 - i * 0.07;
-    var shY = (sh0.y + sh1.y) * 0.5;
-    var shZ = (sh0.z + sh1.z) * 0.5;
-    p.push(facette(sr, 0.15, sr * 1.28, 0, shY + 0.38, shZ - 0.14,
-      i % 4 ? HAUT_HELL : 0x4c4d40, 0));
-    p.push(facette(sr * 0.68, 0.18, sr * 0.88, 0, shY + sr * 0.92,
-      shZ - 0.28, PANZER_DUNKEL, 0));
-    p.push(facette(sr * 0.24, sr * 0.34, sr * 0.54, -sr * 0.94,
-      shY + 0.5, shZ, 0x4b5042, 0));
-    p.push(facette(sr * 0.24, sr * 0.34, sr * 0.54, sr * 0.94,
-      shY + 0.5, shZ, 0x4b5042, 0));
-  }
-  return mergeGeos(p);
-}
 function baueLichtGeometrie() {
   var p = [];
   for (var i = 0; i < 6; i++) {
@@ -533,7 +381,7 @@ function baueAkzentGeometrie() {
   return mergeGeos(p);
 }
 const BASIS_KOERPER = baueKoerperGeometrie();
-const BASIS_KOPF = baueKopfGeometrie();
+const BASIS_KOPF = baueWeltschildkroetenKopf();
 const BASIS_LICHT = baueLichtGeometrie();
 const BASIS_AKZENTE = baueAkzentGeometrie();
 BASIS_KOERPER.userData.terraAnatomie = 'landschildkroete';
@@ -555,21 +403,6 @@ BASIS_KOERPER.userData.terraBurgMaterial = 'dunkler-verwitterter-stein';
 BASIS_KOERPER.userData.terraPanzerFlankenplatten = 8;
 BASIS_KOERPER.userData.terraBurgPanzerstreben = 8;
 BASIS_KOERPER.userData.terraMaterialTrennung = 'haut-panzer-basalt-schiefer-metall';
-BASIS_KOPF.userData.terraHalsLaengenFaktor = 1.13;
-BASIS_KOPF.userData.terraKopfMassstab = 1.04;
-BASIS_KOPF.userData.terraKopfForm = 'keil-kiefer-hornschnabel';
-BASIS_KOPF.userData.terraAugenFlaechenFaktor = 0.6;
-BASIS_KOPF.userData.terraAugenWeissanteil = 0;
-BASIS_KOPF.userData.terraAugenLichtpunkt = 'warm-klein';
-BASIS_KOPF.userData.terraHalsFalten = 4;
-BASIS_KOPF.userData.terraHalsSeitenschilde = 8;
-BASIS_KOPF.userData.terraHalsTopologie = 'catmull-rom-tube';
-BASIS_KOPF.userData.terraHalsSplinePunkte = 8;
-BASIS_KOPF.userData.terraHalsSegmente = 24;
-BASIS_KOPF.userData.terraHalsRinge = 25;
-BASIS_KOPF.userData.terraHalsRadialSegmente = 12;
-BASIS_KOPF.userData.terraHalsKontinuierlich = true;
-BASIS_KOPF.userData.terraStatischeGeometrie = true;
 var koepfe = [];
 
 function setzeTransform(mesh, x, y, z, yaw, groesse) {

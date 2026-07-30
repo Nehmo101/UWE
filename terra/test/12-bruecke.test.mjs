@@ -281,6 +281,67 @@ test('Ebene 7 — stand-bestaetigt hebt die Version fuer die naechste Meldung', 
   });
 });
 
+test('Ebene 7 — Fensterwechsel erhaelt den aktuellen Stand mit Anfragekennung und Version', async () => {
+  const f = baueFenster();
+  const { wege, zustand } = baueWege();
+  await imFenster(f, (bruecke) => {
+    bruecke.setzeBrueckenWege(wege);
+    f.sende('message', ladeNachricht(f, { format: 'terra', version: 5 }, 11));
+    f.postausgang.length = 0;
+
+    // Der letzte Strich ist noch nicht entprellt gemeldet. Genau deshalb fragt
+    // der Fensterwechsel den Stand direkt beim Frame an.
+    zustand.text = JSON.stringify({ format: 'terra', version: 5, letzterStrich: true });
+    f.sende('message', {
+      origin: HERKUNFT,
+      source: f.eltern,
+      data: { typ: 'karte-stand-anfordern', anfrageId: 'fenster-abc' },
+    });
+
+    assert.equal(f.postausgang.length, 1);
+    assert.equal(f.postausgang[0].ziel, HERKUNFT);
+    assert.deepEqual(f.postausgang[0].nachricht, {
+      typ: 'karte-stand',
+      anfrageId: 'fenster-abc',
+      daten: { format: 'terra', version: 5, letzterStrich: true },
+      version: 11,
+    });
+  });
+});
+
+test('Ebene 7 — Standanfrage verlangt weiterhin Herkunft UND Elternfenster', async () => {
+  const f = baueFenster();
+  const { wege } = baueWege();
+  await imFenster(f, (bruecke) => {
+    bruecke.setzeBrueckenWege(wege);
+    f.postausgang.length = 0;
+
+    const anfrage = { typ: 'karte-stand-anfordern', anfrageId: 'streng' };
+    f.sende('message', { origin: 'https://boese.example', source: f.eltern, data: anfrage });
+    f.sende('message', { origin: HERKUNFT, source: { postMessage() {} }, data: anfrage });
+    assert.equal(f.postausgang.length, 0);
+
+    f.sende('message', { origin: HERKUNFT, source: f.eltern, data: anfrage });
+    assert.equal(f.postausgang.length, 1, 'nur die echte Elternseite erhaelt den Stand');
+  });
+});
+
+test('Ebene 7 — ungueltige Anfragekennungen werden nicht gespiegelt', async () => {
+  const f = baueFenster();
+  await imFenster(f, (bruecke) => {
+    bruecke.setzeBrueckenWege(baueWege().wege);
+    f.postausgang.length = 0;
+    for (const anfrageId of ['', 7, 'x'.repeat(161)]) {
+      f.sende('message', {
+        origin: HERKUNFT,
+        source: f.eltern,
+        data: { typ: 'karte-stand-anfordern', anfrageId },
+      });
+    }
+    assert.equal(f.postausgang.length, 0);
+  });
+});
+
 /* --- 5. Lesemodus ------------------------------------------------------- */
 
 test('Ebene 7 — im Lesemodus geht nie eine Aenderung hinaus', async () => {

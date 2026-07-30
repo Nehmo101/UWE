@@ -61,6 +61,11 @@
         Rückfrage stellt der Frame, weil nur er weiß, wieviel auf der Karte
         steht. Eine Elternseite, die sie überspringen wollte, könnte es nicht.
 
+     { typ: "karte-stand-anfordern", anfrageId }
+        Fordert den aktuellen, noch nicht zwingend entprellt gemeldeten Stand
+        für einen sicheren Fensterwechsel an. `anfrageId` ist eine kurze,
+        nichtleere Zeichenkette und wird unverändert zurückgegeben.
+
    Frame → Eltern
      { typ: "terra-bereit",      protokoll, modus }
         Einmal, sobald der Frame Karten annehmen kann. Die Elternseite wartet
@@ -71,6 +76,12 @@
         Entprellt nach jeder Änderung, plus Flush bei `beforeunload`.
         `daten` ist der ganze Baum, `version` die zuletzt bestätigte.
         Im Lesemodus wird diese Nachricht NIE gesendet.
+
+     { typ: "karte-stand",       anfrageId, daten, version }
+        Direkte Antwort auf `karte-stand-anfordern`. Sie umgeht bewusst weder
+        die Elternseite noch deren Server Action: der Elternteil speichert
+        diesen Schnappschuss konfliktgeprüft, bevor er das Editorfenster
+        öffnet. So geht auch der letzte, noch nicht entprellte Strich mit.
 
      { typ: "terra-fehler",      meldung }
         Wenn eine hereingereichte Karte nicht gelesen werden konnte. Der
@@ -191,6 +202,32 @@ function karteLaden(nachricht) {
   catch (_e) { letzterText = null; }
 }
 
+/**
+ * Liefert einen atomaren Schnappschuss für den Wechsel in ein eigenes
+ * Browserfenster. Die Anfragekennung wird begrenzt, damit ein fremdartiger
+ * Elternteil nicht beliebig grosse Werte spiegeln kann. Herkunft und Absender
+ * sind zu diesem Zeitpunkt bereits in `empfange()` streng geprüft.
+ */
+function karteStand(nachricht) {
+  if (!wege || typeof nachricht.anfrageId !== "string") return;
+  var anfrageId = nachricht.anfrageId;
+  if (!anfrageId || anfrageId.length > 160) return;
+  var text;
+  var daten;
+  try {
+    text = wege.text();
+    daten = JSON.parse(text);
+  } catch (e) {
+    postiere({ typ: "terra-fehler", meldung: String((e && e.message) || e) });
+    return;
+  }
+  if (!daten || typeof daten !== "object" || Array.isArray(daten)) {
+    postiere({ typ: "terra-fehler", meldung: "Der Kartenstand ist kein Objekt" });
+    return;
+  }
+  postiere({ typ: "karte-stand", anfrageId: anfrageId, daten: daten, version: version });
+}
+
 /* --- Hinein: eine Weltvorgabe (J4) -------------------------------------- */
 
 /**
@@ -307,6 +344,8 @@ function empfange(ereignis) {
     karteLaden(n);
   } else if (n.typ === "stand-bestaetigt") {
     if (Number.isFinite(n.version)) version = n.version | 0;
+  } else if (n.typ === "karte-stand-anfordern") {
+    karteStand(n);
   } else if (n.typ === "welt-vorgabe") {
     weltVorgabe(n);
   }

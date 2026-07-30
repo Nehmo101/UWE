@@ -222,15 +222,48 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
   assert.equal(SCHILDKROETE.BASIS_KOERPER.userData.terraMaterialTrennung,
     'haut-panzer-basalt-schiefer-metall');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraKopfForm,
-    'keil-kiefer-hornschnabel');
-  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraHalsLaengenFaktor >= 1.12);
-  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraKopfMassstab >= 1.02 &&
-    SCHILDKROETE.BASIS_KOPF.userData.terraKopfMassstab <= 1.08);
-  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraAugenFlaechenFaktor <= 0.65);
+    'adulter-laengsschaedel-hornschnabel');
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraHalsLaengenFaktor >= 1.2);
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraKopfMassstab >= 1.3 &&
+    SCHILDKROETE.BASIS_KOPF.userData.terraKopfMassstab <= 1.45);
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraKopfLaengenFaktor >= 1.25 &&
+    SCHILDKROETE.BASIS_KOPF.userData.terraKopfLaengenFaktor <= 1.35);
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraKopfSchwereFaktor >= 1.12 &&
+    SCHILDKROETE.BASIS_KOPF.userData.terraKopfSchwereFaktor <= 1.22);
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraKopfNeigungGrad >= 8 &&
+    SCHILDKROETE.BASIS_KOPF.userData.terraKopfNeigungGrad <= 12);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraSchaedelSilhouette,
+    'schwer-lang-hinten-breit-stumpfer-schnabel');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraSchaedelplatten, 4);
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraSchaedelVerjuengung <= 0.4);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraBrauenplatten, 2);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraBrauenUeberstand, 0);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraWangenplatten, 2);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraWangenUeberstand, 0);
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraAugenFlaechenFaktor <= 0.2);
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenWeissanteil, 0);
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenLichtpunkt, 'warm-klein');
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsFalten, 4);
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsSeitenschilde, 8);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenLichtpunkt, 'keiner');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenLage,
+    'seitlich-tief-hinter-schnauzenbasis');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenFrontsicht,
+    'nicht-sichtbar');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraSchnabelProfil,
+    'stumpfer-durchgehender-hornkeil');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraMaulnaht,
+    'seitlich-lang-frontal-extrem-kurz');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraMaulnahtSegmente, 4);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraNasenloecher,
+    'zwei-kleine-schraege-schlitze');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraNackenVerzahnung,
+    'hinterhaupt-kiefermuskel-kehlschild');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsFalten, 0);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraKehlSchuppen,
+    'keine-aufgesetzte-zusatzgeometrie');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsSeitenschilde, 0);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsQuerschnitt,
+    'elliptisch');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsSForm,
+    'ausgepraegt');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsTopologie,
     'catmull-rom-tube', 'Der S-Hals muss eine echte Spline-Roehre sein');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsSplinePunkte, 8);
@@ -290,15 +323,27 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
     'Der Hals schliesst nicht am lokalen Brustansatz an');
   assert.ok(kopfGrenzen.max[1] - kopfGrenzen.min[1] >= 10.5,
     'Der S-Hals ist nicht deutlich aufgerichtet');
+  assert.ok(kopfGrenzen.max[2] >= 9.35,
+    'Der Hornschnabel tritt nicht deutlich genug vor den Schaedel');
   const kopfPosition = SCHILDKROETE.BASIS_KOPF.attributes.position;
-  const frontX = [];
+  const hinterkopfX = [];
+  const schnabelX = [];
   for (let i = 0; i < kopfPosition.count; i++) {
-    if (kopfPosition.getY(i) >= 9.5 && kopfPosition.getZ(i) >= 5.5) {
-      frontX.push(kopfPosition.getX(i));
+    const y = kopfPosition.getY(i);
+    const z = kopfPosition.getZ(i);
+    if (y >= 9 && z >= 4.5 && z <= 5.5) {
+      hinterkopfX.push(kopfPosition.getX(i));
     }
+    if (z >= 9.2) schnabelX.push(kopfPosition.getX(i));
   }
-  assert.ok(Math.max(...frontX) - Math.min(...frontX) >= 3.5,
-    'Wangen und Kiefer lesen sich noch zu schmal und schlangenartig');
+  const hinterkopfBreite = Math.max(...hinterkopfX) - Math.min(...hinterkopfX);
+  const schnabelBreite = Math.max(...schnabelX) - Math.min(...schnabelX);
+  assert.ok(hinterkopfBreite >= 4.7,
+    'Der adulte Kopf braucht ein breites, tragendes Hinterhaupt');
+  assert.ok(schnabelBreite >= 1.4 && schnabelBreite <= 1.9,
+    'Der Hornschnabel muss kompakt und klar verjuengt enden: ' + schnabelBreite);
+  assert.ok(schnabelBreite / hinterkopfBreite <= 0.4,
+    'Der Schaedel verjuengt sich frontal noch nicht deutlich genug');
   for (const [index, mesh] of direkteMeshes.entries()) {
     pruefeGeometrie(mesh.geometry, 'Weltschildkroete Mesh ' + index);
   }

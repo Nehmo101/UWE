@@ -31,6 +31,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 // Zyklusfrei: render/materials.js zieht nur textures.js und world/wind.js,
 // keines davon importiert render/pipeline.js.
 import { terraUniforms } from './materials.js';
+import { setzeTexturAnisotropie } from './textures.js';
+import { berechneRenderMasse } from './render-masse.js';
 
 export const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xdfe8f0, 200, 950);
@@ -246,10 +248,7 @@ const KanteBildShader = {
     tDiffuse: { value: null },
     tDepth: { value: null },
     uTexel: { value: new THREE.Vector2(1 / 640, 1 / 400) },
-    // Ein GANZES Bildpixel in UV (uTexel ist ein Texel der HALBaufgeloesten
-    // Tiefe, also zwei Bildpixel). Die Bandweichzeichnung braucht das feinere
-    // Mass, sonst zieht sie 5 px statt der gewollten 2–3.
-    uPixel: { value: new THREE.Vector2(1 / 1280, 1 / 800) },
+
     uNahFern: { value: new THREE.Vector2(0.5, 3000) },
     uKante: { value: 0.16 },
     uKanteFarbe: { value: new THREE.Color(0x2e2418) },
@@ -263,7 +262,6 @@ const KanteBildShader = {
     uMultiStaerke: { value: 0 },
     uMultiGrenzen: { value: new THREE.Vector3(0.14, 0.30, 0.58) },
     uMultiWeite: { value: 0.045 },   // halbe Breite des weichen Uebergangs
-    uMultiWeich: { value: 1 },       // Weichzeichnung der hinteren Baender
     uBandSat: { value: new THREE.Vector4(1.10, 1.00, 0.86, 0.80) },
     uBandKon: { value: new THREE.Vector4(1.06, 1.00, 0.90, 0.86) },
     uBandHeb: { value: new THREE.Vector4(-0.010, 0.0, 0.030, 0.045) },
@@ -289,11 +287,11 @@ const KanteBildShader = {
   ].join('\n'),
   fragmentShader: [
     'uniform sampler2D tDiffuse; uniform sampler2D tDepth;',
-    'uniform vec2 uTexel; uniform vec2 uPixel; uniform vec2 uNahFern;',
+    'uniform vec2 uTexel; uniform vec2 uNahFern;',
     'uniform float uKante; uniform vec3 uKanteFarbe;',
     'uniform float uPapier; uniform vec3 uPapierFarbe;',
     'uniform float uMultiStaerke; uniform vec3 uMultiGrenzen;',
-    'uniform float uMultiWeite; uniform float uMultiWeich;',
+    'uniform float uMultiWeite;',
     'uniform vec4 uBandSat; uniform vec4 uBandKon; uniform vec4 uBandHeb;',
     'uniform sampler2D tRampe; uniform float uPaletteStaerke;',
     'uniform vec2 uPaletteSkala;',
@@ -349,25 +347,9 @@ const KanteBildShader = {
     '    bSat = mix( 1.0, dot( uBandSat, w ), uMultiStaerke );',
     '    bKon = mix( 1.0, dot( uBandKon, w ), uMultiStaerke );',
     '    bHeb = dot( uBandHeb, w ) * uMultiStaerke;',
-    '    // Weichzeichnung der hinteren Baender: vier diagonale Taps ueber knapp',
-    '    // 2.5 Bildpixel. Bewusst ein winziger, gleichmaessig gewichteter Kern —',
-    '    // das liest sich als weicher Pinsel, nicht als Kamera-Bokeh. Die Taps',
-    '    // holen tDiffuse OHNE die Sobel-Kante von oben; dadurch verliert die',
-    '    // Ferne zugleich ihre Kantenschaerfe, was Teil der Vorlage ist.',
-    '    // Die Abfrage darum ist NICHT uniform (weich haengt an der Tiefe), die',
-    '    // Taps sind also formal "nicht-uniformer Kontrollfluss". Unbedenklich:',
-    '    // das Composer-Ziel traegt keine Mipmaps, texture2D braucht hier also',
-    '    // gar keine Ableitungen. Der Fruehausstieg spart im Vordergrund vier',
-    '    // Vollbild-Taps und ist genau deshalb hier und nicht weiter oben.',
-    '    float weich = ( w.z * 0.45 + w.w ) * uMultiWeich * uMultiStaerke;',
-    '    if ( weich > 0.002 ) {',
-    '      vec2 o = uPixel * 2.4;',
-    '      vec3 verwischt = ( texture2D( tDiffuse, vUv + vec2(  o.x,  o.y ) ).rgb',
-    '                       + texture2D( tDiffuse, vUv + vec2( -o.x,  o.y ) ).rgb',
-    '                       + texture2D( tDiffuse, vUv + vec2(  o.x, -o.y ) ).rgb',
-    '                       + texture2D( tDiffuse, vUv + vec2( -o.x, -o.y ) ).rgb ) * 0.25;',
-    '      c = mix( c, verwischt, min( weich, 1.0 ) * 0.75 );',
-    '    }',
+    '    // Die Tiefenstaffelung bleibt rein tonal. Raeumliches Weichzeichnen',
+    '    // wuerde Silhouetten, Materialkanten und kleine Architekturdetails',
+    '    // zerstoeren; Atmosphaere entsteht ueber Farbe, Wert und Nebel.',
     '  }',
     '  // --- F3 (tonal) und F1 Palettenbindung, beide im Gammaraum -----------',
     '  // Derselbe wahrnehmungsnahe Raum wie in der Graduierung. Kontrast um 0.5',
@@ -444,27 +426,28 @@ function initPipeline(camera) {
     // Puffer am Render-Target unten.
     stencil: true
   });
-  /* Die 505er-Abnahmekarte zeigt fast eine Million Dreiecke gleichzeitig.
-     1,5x bleibt auf Retina sauber, halbiert gegenueber 2x aber fast die
-     Postprocessing-Pixellast. Normale Editorkarten behalten volle 2x. */
-  var assetSchauDpr = new URLSearchParams(location.search).get('schau') === 'assets' ? 1.5 : 2;
-  renderer.setPixelRatio(Math.min(assetSchauDpr, window.devicePixelRatio || 1));
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  var w = window.innerWidth, h = window.innerHeight;
+  var masse = berechneRenderMasse(w, h, window.devicePixelRatio);
+  renderer.setPixelRatio(masse.pixelRatio);
+  renderer.setSize(w, h);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;   // weiches Ausrollen der Lichter
   renderer.toneMappingExposure = 1.12;
   renderer.info.autoReset = false;
   renderer.sortObjects = true;
   document.body.appendChild(renderer.domElement);
+  setzeTexturAnisotropie(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
 
-  var w = window.innerWidth, h = window.innerHeight;
   var pr = renderer.getPixelRatio();
   composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
-    Math.round(w * pr), Math.round(h * pr),
+    w, h,
     // stencilBuffer: siehe Renderer-Option oben — ohne ihn liefe der
     // Fluss-Stencil im Composer-Pfad ins Leere und Kreuzungen blendeten
     // wieder doppelt.
     { type: THREE.HalfFloatType, samples: 4, stencilBuffer: true }));
+  // Das explizite Ziel beginnt in logischen Massen. Der Composer skaliert
+  // Ziel und Passes genau einmal auf die physische Retina-Aufloesung.
+  composer.setPixelRatio(pr);
   renderPass = new RenderPass(scene, camera);
   // Bloom-Startwerte gelten nur bis zum ersten setLook — die Tageszeit-Presets
   // (atmosphere.js) ueberschreiben Staerke/Radius/Schwelle ab dem ersten
@@ -490,12 +473,14 @@ function initPipeline(camera) {
   // Tiefen-Prepass in halber Aufloesung: fuer die nur angedeutete Kante reicht
   // das und viertelt die Fragmentarbeit. Die Szene laeuft dabei nicht mit
   // echtem Shading, sondern mit getauschten Depth-Materialien (s. prepassAn).
-  depthRT = new THREE.WebGLRenderTarget(Math.round(w / 2), Math.round(h / 2), {
+  var dw = masse.tiefenBreite;
+  var dh = masse.tiefenHoehe;
+  depthRT = new THREE.WebGLRenderTarget(dw, dh, {
     minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter
   });
-  depthRT.depthTexture = new THREE.DepthTexture(Math.round(w / 2), Math.round(h / 2));
+  depthRT.depthTexture = new THREE.DepthTexture(dw, dh);
   kantePass.uniforms.tDepth.value = depthRT.depthTexture;
-  kantePass.uniforms.uTexel.value.set(2 / w, 2 / h);
+  kantePass.uniforms.uTexel.value.set(1 / dw, 1 / dh);
   kantePass.uniforms.uNahFern.value.set(camera.near, camera.far);
   // C1: dieselbe Tiefentextur traegt die Himmelsmaske der Strahlen.
   strahlenPass.uniforms.tDepth.value = depthRT.depthTexture;
@@ -503,27 +488,26 @@ function initPipeline(camera) {
   // C2/C3 leben in JS-Zustand (s. u.) und werden hier einmalig in die frisch
   // gebauten Passes geschrieben — so darf eine Karte ihr Farbskript auch vor
   // initPipeline setzen, ohne dass es verloren geht.
-  bildmasse(w, h);
   wendeBildlookAn();
   return renderer;
 }
 
 function resizePipeline(camera) {
   var w = window.innerWidth, h = window.innerHeight;
+  var masse = berechneRenderMasse(w, h, window.devicePixelRatio);
+  var pr = masse.pixelRatio;
+  if (renderer.getPixelRatio() !== pr) {
+    renderer.setPixelRatio(pr);
+    composer.setPixelRatio(pr);
+  }
   renderer.setSize(w, h);
   composer.setSize(w, h);
-  bloomPass.setSize(w, h);
-  depthRT.setSize(Math.round(w / 2), Math.round(h / 2));
-  kantePass.uniforms.uTexel.value.set(2 / w, 2 / h);
+  var dw = masse.tiefenBreite;
+  var dh = masse.tiefenHoehe;
+  depthRT.setSize(dw, dh);
+  kantePass.uniforms.uTexel.value.set(1 / dw, 1 / dh);
   kantePass.uniforms.uNahFern.value.set(camera.near, camera.far);
   strahlenPass.uniforms.uNahFern.value.set(camera.near, camera.far);
-  bildmasse(w, h);
-}
-
-/* Bildpixelmass fuer die weiche Tiefenstaffel. */
-function bildmasse(w, h) {
-  if (!kantePass) return;
-  kantePass.uniforms.uPixel.value.set(1 / w, 1 / h);
 }
 
 /* --- C1: Zustand der Strahlen zwischen setLook und renderFrame ------------
@@ -624,7 +608,7 @@ var multiplane = {
   staerke: 0,
   grenzen: [0.14, 0.30, 0.58],   // s. Kopfkommentar des Kante-Passes
   weite: 0.045,
-  weich: 1,
+  weich: 0,
   // Vordergrund satter/kontrastreicher, Ferne flauer und leicht aufgehellt.
   baender: [
     { sat: 1.10, kontrast: 1.06, hebung: -0.010 },
@@ -693,7 +677,6 @@ function wendeBildlookAn() {
   k.uMultiStaerke.value = m.staerke;
   k.uMultiGrenzen.value.set(m.grenzen[0], m.grenzen[1], m.grenzen[2]);
   k.uMultiWeite.value = m.weite;
-  k.uMultiWeich.value = m.weich;
   k.uBandSat.value.set(b[0].sat, b[1].sat, b[2].sat, b[3].sat);
   k.uBandKon.value.set(b[0].kontrast, b[1].kontrast, b[2].kontrast, b[3].kontrast);
   k.uBandHeb.value.set(b[0].hebung, b[1].hebung, b[2].hebung, b[3].hebung);
@@ -796,8 +779,9 @@ function getMalschicht() {
  * grenzen sind normierte Tiefen (t = 2d/(d+far), s. Kopfkommentar des
  * Kante-Passes), muessen aufsteigen und werden hier sortiert und mit
  * Mindestabstand auseinandergehalten — sonst kaeme ein Band mit Gewicht 0
- * heraus und die Weichzeichnung spraenge. `weite` ist die halbe Breite des
- * weichen Uebergangs (0.005..0.2): gross genug, damit die Grenze im Nebel
+ * heraus. Das alte Feld `weich` wird nur noch kompatibel gelesen und immer
+ * auf 0 gesetzt: die Staffelung veraendert keine raeumliche Bildschaerfe.
+ * `weite` ist die halbe Breite des weichen Uebergangs (0.005..0.2): gross genug, damit die Grenze im Nebel
  * verschwindet, klein genug, damit die Baender Plateaus bleiben.
  */
 function setMultiplane(cfg) {
@@ -808,7 +792,7 @@ function setMultiplane(cfg) {
   }
   multiplane.staerke = zahl(cfg.staerke, 0, 1, 0);
   multiplane.weite = zahl(cfg.weite, 0.005, 0.2, multiplane.weite);
-  multiplane.weich = zahl(cfg.weich, 0, 1, multiplane.weich);
+  multiplane.weich = 0;
   if (Array.isArray(cfg.grenzen) && cfg.grenzen.length === 3) {
     var g = [zahl(cfg.grenzen[0], 0.01, 0.99, multiplane.grenzen[0]),
              zahl(cfg.grenzen[1], 0.01, 0.99, multiplane.grenzen[1]),

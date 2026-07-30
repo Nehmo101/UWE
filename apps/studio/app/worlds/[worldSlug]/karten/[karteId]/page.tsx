@@ -7,26 +7,42 @@ import { TerraRahmen } from "@/src/components/terra";
 
 interface Props {
   params: Promise<{ worldSlug: string; karteId: string }>;
+  searchParams?: Promise<{ terraFenster?: string | string[] }>;
 }
 
 /**
- * Der Karteneditor Terra.
- *
- * Der Ablauf: Welt laden → Mandantenprüfung → WorldShell + Breadcrumb → Frame.
- * Die Rechteprüfung liegt damit VOR dem Frame und wird von ihm nicht berührt.
- *
- * Die Mandantenprüfung steckt in `holeInWelt` — eine Karten-Id aus einer
- * fremden Welt liefert `null` und damit `notFound()`, ohne ihre Existenz zu
- * verraten.
+ * Der Karteneditor Terra. Auch die Pop-out-Ansicht läuft über diese geschützte
+ * Route: Welt-, Karten- und Mandantenprüfung geschehen daher vor jedem Frame.
  */
-export default async function TerraKartePage({ params }: Props) {
-  const { worldSlug, karteId } = await params;
+export default async function TerraKartePage({ params, searchParams }: Props) {
+  const [{ worldSlug, karteId }, suche] = await Promise.all([params, searchParams ?? Promise.resolve<{ terraFenster?: string | string[] }>({})]);
   const world = await getAppRepository().getWorldBySlug(worldSlug);
   if (!world) notFound();
 
   const terra = createTerraService(createPrismaClient());
   const karte = await terra.holeInWelt(worldSlug, karteId);
   if (!karte) notFound();
+
+  const fensterModus = suche.terraFenster === "1";
+  const editor = (
+    <TerraRahmen
+      worldSlug={worldSlug}
+      karteId={karte.id}
+      version={karte.version}
+      daten={karte.daten ?? null}
+      fensterModus={fensterModus}
+    />
+  );
+
+  // Kein zweiter, schwächer geschützter Endpunkt: nur eine schlanke Darstellung
+  // derselben Route. KI- und Textpanels lässt TerraRahmen im Fenstermodus weg.
+  if (fensterModus) {
+    return (
+      <main className="terra-fenster-seite" aria-label={`Terra Karteneditor — ${karte.titel}`}>
+        {editor}
+      </main>
+    );
+  }
 
   const breadcrumb: BreadcrumbItem[] = worldDetailBreadcrumb(
     world.name,
@@ -40,11 +56,6 @@ export default async function TerraKartePage({ params }: Props) {
     <WorldShell worldSlug={worldSlug} worldName={world.name} breadcrumb={<BreadcrumbTrail items={breadcrumb} />}>
       <div className="space-y-3">
         <h1 className="text-xl font-semibold">{karte.titel}</h1>
-        {/* Herkunft und Zustand stehen über dem Frame, nicht darin: der
-            Spielleiter soll wissen, ob er in seine eigene Karte schreibt oder
-            in den Entwurf eines Spielers, BEVOR er die Maus anfasst. Die
-            Abnahme selbst sitzt in der Liste — ein Knopf neben dem Editor
-            würde zum Durchwinken einladen. */}
         {karte.autorName || karte.status !== "freigegeben" ? (
           <p className="text-sm text-muted-foreground" data-testid="terra-karte-herkunft">
             {karte.autorName ? `Gebaut von ${karte.autorName}. ` : ""}
@@ -55,7 +66,7 @@ export default async function TerraKartePage({ params }: Props) {
                 : "Abgenommen."}
           </p>
         ) : null}
-        <TerraRahmen worldSlug={worldSlug} karteId={karte.id} version={karte.version} daten={karte.daten ?? null} />
+        {editor}
       </div>
     </WorldShell>
   );
