@@ -1357,6 +1357,9 @@ enum ApiTokenScopeName {
   admin_write
   backup_read
   backup_write
+  family_read
+  family_write
+  family_calendar
 }
 
 enum SecurityWarningSeverity {
@@ -2690,12 +2693,6 @@ enum PantryLocation {
   spices
 }
 
-/// Freigabe-Zustand einer Terra-Karte (J5).
-///
-/// Der Vorgabewert ist `freigegeben`, nicht `entwurf`: im Studio angelegte
-/// Karten gehoeren dem Spielleiter und sind sofort gueltig — und die Zeilen,
-/// die es vor dieser Runde schon gab, bleiben durch denselben Vorgabewert
-/// sichtbar. Nur der Portal-Weg setzt beim Anlegen `entwurf`.
 enum TerraKarteStatus {
   /// Der Spieler baut daran. Im Portal sieht sie nur ihr Autor, im Studio
   /// steht sie beim Spielleiter — sichtbar, aber noch nicht abgenommen.
@@ -2757,4 +2754,19 @@ enum FamilyChatScope {
 enum FamilyChatRole {
   user
   assistant
+}
+
+enum FamilyMemberKind {
+  adult
+  child
+  pet
+  guest
+}
+
+enum FamilyHealthRecordKind {
+  vaccination
+  checkup
+  medication
+  vet
+  other
 }

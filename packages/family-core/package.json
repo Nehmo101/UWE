@@ -1,0 +1,26 @@
+{
+  "name": "@uwe/family-core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UWE Family — Mitglieder, personenbezogener Kalender, Gesundheitsakte, Wochenbriefing",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "@uwe/calendar": "workspace:*",
+    "@uwe/connector": "workspace:*",
+    "@uwe/database": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.23.1",
+    "typescript": "^5.8.3"
+  }
+}
