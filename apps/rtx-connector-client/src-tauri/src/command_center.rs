@@ -33,6 +33,16 @@ fn resolve_requested_root(root: Option<String>) -> Result<PathBuf, String> {
     Ok(resolve_monorepo_root())
 }
 
+/// Verzeichnis der mitgelieferten Host-Laufzeit (gebündelte CLI, node.exe,
+/// Prisma-CLI). Tauri legt `bundle.resources` neben die EXE; der Pfad wird ohne
+/// AppHandle aufgelöst, damit jeder Aufrufer von `build_host_command` ihn nutzen
+/// kann.
+fn bundled_host_runtime_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?.join("resources").join("host-runtime");
+    dir.is_dir().then_some(dir)
+}
+
 fn build_host_command(
     action: &str,
     root: Option<String>,
@@ -41,6 +51,38 @@ fn build_host_command(
     let root = resolve_requested_root(root)?;
     let script = root.join(DESKTOP_HOST_CLI_REL);
     if !script.exists() {
+        // Kein Entwickler-Checkout: die Bundle-Installation steuert den Host
+        // über die mitgelieferte, vorgebündelte CLI und die mitgelieferte
+        // Node-Laufzeit — der Zielrechner braucht weder das Repo noch ein
+        // installiertes Node.
+        if let Some(runtime) = bundled_host_runtime_dir() {
+            let cli = runtime.join("host-cli.cjs");
+            if cli.exists() {
+                let node = runtime.join(if cfg!(windows) { "node.exe" } else { "node" });
+                let mut command = if node.exists() {
+                    Command::new(node)
+                } else {
+                    Command::new("node")
+                };
+                if action == "open" {
+                    configure_breakaway_process(&mut command);
+                } else {
+                    configure_hidden_process(&mut command);
+                }
+                command
+                    .arg(cli)
+                    .arg(action)
+                    .current_dir(&runtime)
+                    .env(
+                        "UWE_COMMAND_CENTER_DATA_DIR",
+                        connector_app_data_dir()?.join("host"),
+                    );
+                if let Some(target) = target {
+                    command.arg("--target").arg(target);
+                }
+                return Ok(command);
+            }
+        }
         return Err(format!(
             "Host-Steuerung nicht gefunden: {}. Bitte einen aktuellen UWE-Projektordner auswählen.",
             script.display()

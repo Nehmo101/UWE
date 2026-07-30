@@ -10,7 +10,8 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/server.test.ts src/modules.test.ts src/control.test.ts src/host-update-progress.test.ts src/desktop-host.test.ts src/provision-local-connector.test.ts src/ops/ops-imports.test.ts"
+    "test": "node --import tsx --test src/server.test.ts src/modules.test.ts src/control.test.ts src/host-update-progress.test.ts src/desktop-host.test.ts src/provision-local-connector.test.ts src/ops/ops-imports.test.ts",
+    "bundle-cli": "node scripts/bundle-cli.mjs"
   },
   "dependencies": {
     "@uwe/auth": "workspace:*",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/node": "^22.19.21",
     "@uwe/config": "workspace:*",
+    "esbuild": "^0.28.1",
     "tsx": "^4.23.1",
     "typescript": "^5.8.3"
   }

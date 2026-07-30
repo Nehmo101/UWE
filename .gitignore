@@ -59,3 +59,4 @@ exports/*
 perf-results.json
 qa-artifacts/
 .worktrees/
+tools/uwe-host-command-center/dist/
