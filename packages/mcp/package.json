@@ -12,7 +12,8 @@
   "bin": {
     "uwe-mcp-studio": "./src/bin/studio.ts",
     "uwe-mcp-portal": "./src/bin/portal.ts",
-    "uwe-mcp-brain": "./src/bin/brain.ts"
+    "uwe-mcp-brain": "./src/bin/brain.ts",
+    "uwe-mcp-family": "./src/bin/family.ts"
   },
   "scripts": {
     "start:studio": "tsx src/bin/studio.ts",
