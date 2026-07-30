@@ -272,3 +272,9 @@ export {
   type CharacterDerivedStatsSectionProps,
   type CharacterProficiencyFieldsProps,
 } from "./CharacterDerivedStats";
+
+export {
+  ResponsiveTable,
+  type ResponsiveTableColumn,
+  type ResponsiveTableProps,
+} from "./ResponsiveTable";

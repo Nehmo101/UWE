@@ -29,6 +29,9 @@ import {
 const PAGES = [
   { path: "/worlds", heading: "Welten" },
   { path: "/settings", heading: "Design & Startseite" },
+  // Diese Seite trägt drei ResponsiveTables und ist damit der Anker dafür,
+  // dass die Tabellenrollen die Mobilansicht überleben.
+  { path: "/worlds/terra/labels?tab=templates", heading: "Label-Bibliothek" },
 ] as const;
 
 test.describe("Studio accessibility", () => {
@@ -47,6 +50,24 @@ test.describe("Studio accessibility", () => {
 
   for (const viewport of AUDIT_VIEWPORTS) {
     for (const mode of ["hell", "dunkel"] as const) {
+      test(`Etiketten-Tabellen tragen auf ${viewport.name} (${mode})`, async ({ page }) => {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.goto("/worlds/terra/labels?tab=templates");
+        await expect(page.getByRole("heading", { name: "Label-Bibliothek" })).toBeVisible();
+        await applyTheme(page, mode);
+
+        // Die Rolle muss auf jeder Breite erhalten bleiben: `display: flex`
+        // nimmt sie sonst, und die Karten wären für Screenreader nur Text.
+        await expect(page.getByRole("table", { name: "Etiketten-Vorlagen" })).toBeAttached();
+
+        const result = await auditShell(page, MIN_TOUCH_AA_PX);
+        expectShellAuditClean(
+          result,
+          `Studio /labels ${viewport.name} ${mode}`,
+          MIN_TOUCH_AA_PX,
+        );
+      });
+
       test(`/worlds trägt auf ${viewport.name} (${mode})`, async ({ page }) => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await page.goto("/worlds");
