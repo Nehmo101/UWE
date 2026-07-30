@@ -1,6 +1,10 @@
+// Muss der erste Import bleiben: lädt die .env, bevor @uwe/database seine
+// Client-Singletons anlegt (siehe cli-env-preload.ts).
+import "./cli-env-preload";
+
 import { createPrismaClient } from "@uwe/database/server";
 
-import { loadEnvFromRoot, readStdinJson } from "./cli-env";
+import { readStdinJson } from "./cli-env";
 import { auditLog, migrationStatus, secretsStatus, securityStatus } from "./ops/status-ops";
 import { createApiToken, listApiTokens, revokeApiToken } from "./ops/token-ops";
 import { createWebhook, deleteWebhook, listWebhooks } from "./ops/webhook-ops";
@@ -13,8 +17,6 @@ import {
 import { applyTunnelIngressNow, getTunnelIngressStatus } from "./ops/cloudflare-tunnel-ops";
 import { getTurnstileStatus, setTurnstile } from "./ops/turnstile-ops";
 import { clearSmtp, setGoogleLogin, setSmtp, setupStatus, smtpStatus } from "./ops/setup-ops";
-
-loadEnvFromRoot();
 
 /**
  * Operations CLI for the UWE Command Center — the surfaces that moved out of

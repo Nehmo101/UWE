@@ -669,21 +669,29 @@ fn build_ops_command(action: &str) -> Result<Command, String> {
 
 fn run_ops(action: &str, stdin_json: Option<String>) -> Result<Value, String> {
     let mut command = build_ops_command(action)?;
-    command.stdout(Stdio::piped()).stderr(Stdio::piped());
-    if stdin_json.is_some() {
-        command.stdin(Stdio::piped());
-    }
+    // stdin immer als Pipe, auch ohne Nutzlast: die CLI liest es für Aktionen
+    // mit optionalem Eingabe-Objekt (`audit-log`, `api-tokens-list`) und wartet
+    // auf dessen Ende. Geerbtes stdin einer fensterlosen App liefert dieses Ende
+    // nie — das Audit-Log lud dann endlos. Die Pipe wird unten geschlossen.
+    command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::piped());
 
     let mut child = command
         .spawn()
         .map_err(|error| format!("Betriebs-Werkzeuge konnten nicht gestartet werden: {error}"))?;
 
-    if let Some(payload) = stdin_json {
-        if let Some(mut stdin) = child.stdin.take() {
+    if let Some(mut stdin) = child.stdin.take() {
+        if let Some(payload) = stdin_json {
             stdin
                 .write_all(payload.as_bytes())
                 .map_err(|error| format!("Daten konnten nicht übergeben werden: {error}"))?;
         }
+        // `stdin` fällt hier aus dem Gültigkeitsbereich: die Pipe wird
+        // geschlossen, die CLI sieht EOF. Ohne dieses Schließen würde sie auch
+        // mit übergebener Nutzlast weiterlesen.
+        drop(stdin);
     }
 
     let output = child.wait_with_output().map_err(|error| {

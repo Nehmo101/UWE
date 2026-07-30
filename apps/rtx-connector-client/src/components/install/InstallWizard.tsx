@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { parseConnectorClientConfig, type ConnectorClientConfig } from "@uwe/connector-client-config";
 import { HealthBadge } from "@uwe/shared-ui";
 
 import {
   createUser,
+  getHostEnv,
   getHostStatus,
   openHostTarget,
   setInstallSelection,
@@ -20,7 +21,28 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/card";
 
 import { InstallAppPicker } from "./InstallAppPicker";
-import { accessFor, databasesFor, findAppEntry } from "./install-catalog";
+import {
+  accessFor,
+  databasesFor,
+  defaultPortValues,
+  findAppEntry,
+  isValidPort,
+  portsAreValid,
+  portsForSelection,
+  type InstallPortValues,
+} from "./install-catalog";
+
+/**
+ * Die `.env`-Schlüssel, aus denen die Portfelder vorbelegt werden — Spiegel von
+ * `SERVICE_PORT_ENV` (tools/uwe-host-command-center/src/desktop-host-types.ts).
+ */
+const PORT_ENV_KEYS: Record<LocalHostServiceId, string> = {
+  studio: "STUDIO_PORT",
+  portal: "PORTAL_PORT",
+  brain: "BRAIN_PORT",
+  family: "FAMILY_PORT",
+  landing: "LANDING_PORT",
+};
 
 type WizardStep = "apps" | "owner" | "run" | "done";
 
@@ -78,6 +100,7 @@ export function InstallWizard({ config, onConfigSaved, onCompleted, onDismiss }:
     "family",
     "landing",
   ]);
+  const [ports, setPorts] = useState<InstallPortValues>(defaultPortValues);
   const [seedDemoContent, setSeedDemoContent] = useState(true);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -92,12 +115,39 @@ export function InstallWizard({ config, onConfigSaved, onCompleted, onDismiss }:
 
   const { progress, reset: resetProgress } = useHostActionProgress();
 
+  // Eine bereits eingerichtete Installation hat ihre Ports in der `.env`. Sie
+  // sind die Vorbelegung, nicht der Katalogstandard — sonst setzte ein zweiter
+  // Lauf des Assistenten stillschweigend zurück, was unter Deployment gewählt
+  // wurde.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const hostEnv = await getHostEnv(config.localHostRoot.trim() || undefined);
+        if (cancelled) return;
+        setPorts((current) => {
+          const next = { ...current };
+          for (const [id, key] of Object.entries(PORT_ENV_KEYS)) {
+            const value = (hostEnv.values[key] ?? "").trim();
+            if (isValidPort(value)) next[id as LocalHostServiceId] = value;
+          }
+          return next;
+        });
+      } catch {
+        // Keine `.env` (Erstinstallation) oder kein Zugriff: der Katalog gilt.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [config.localHostRoot]);
+
   const stepIndex = STEP_ORDER.indexOf(step);
   const ownerRequested = Boolean(displayName.trim() || email.trim() || password);
   const ownerValid = Boolean(displayName.trim() && email.trim() && password.length >= 8);
 
   function canAdvance(): boolean {
-    if (step === "apps") return apps.length > 0;
+    if (step === "apps") return apps.length > 0 && portsAreValid(apps, ports);
     if (step === "owner") return !ownerRequested || ownerValid;
     return true;
   }
@@ -122,7 +172,10 @@ export function InstallWizard({ config, onConfigSaved, onCompleted, onDismiss }:
       //    Argument zu bekommen. Damit sehen auch Status und „Reparieren“
       //    später denselben Umfang.
       setPhase("Auswahl übernehmen");
-      await setInstallSelection({ apps, seedDemoContent }, targetRoot);
+      await setInstallSelection(
+        { apps, ports: portsForSelection(apps, ports), seedDemoContent },
+        targetRoot,
+      );
 
       // 3. Der lange Lauf. Fortschritt kommt über `host-action-progress`.
       setPhase("UWE einrichten");
@@ -255,9 +308,11 @@ export function InstallWizard({ config, onConfigSaved, onCompleted, onDismiss }:
             </label>
             <InstallAppPicker
               apps={apps}
+              ports={ports}
               seedDemoContent={seedDemoContent}
               busy={busy}
               onChangeApps={setApps}
+              onChangePort={(id, value) => setPorts((current) => ({ ...current, [id]: value }))}
               onChangeSeed={setSeedDemoContent}
             />
           </div>
@@ -323,6 +378,14 @@ export function InstallWizard({ config, onConfigSaved, onCompleted, onDismiss }:
               <div>
                 <dt>Bereiche</dt>
                 <dd>{apps.map((app) => findAppEntry(app)?.label ?? app).join(" · ")}</dd>
+              </div>
+              <div>
+                <dt>Ports</dt>
+                <dd>
+                  {apps
+                    .map((app) => `${findAppEntry(app)?.label ?? app}: ${ports[app] ?? "Standard"}`)
+                    .join(" · ")}
+                </dd>
               </div>
               <div>
                 <dt>Datenbanken</dt>

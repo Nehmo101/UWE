@@ -4,15 +4,22 @@ import { Button } from "../ui/button";
 import {
   INSTALL_APPS,
   INSTALL_PRESETS,
+  MAX_SERVICE_PORT,
+  MIN_SERVICE_PORT,
   databasesFor,
+  isValidPort,
+  portConflicts,
   presetIdFor,
+  type InstallPortValues,
 } from "./install-catalog";
 
 interface Props {
   apps: LocalHostServiceId[];
+  ports: InstallPortValues;
   seedDemoContent: boolean;
   busy: boolean;
   onChangeApps: (apps: LocalHostServiceId[]) => void;
+  onChangePort: (id: LocalHostServiceId, value: string) => void;
   onChangeSeed: (value: boolean) => void;
 }
 
@@ -20,15 +27,23 @@ interface Props {
  * Schritt „Was soll installiert werden?" — Vorlagen als Abkürzung, Häkchen als
  * Feinsteuerung. Die Datenbank-Zeile darunter macht sichtbar, was die Auswahl
  * tatsächlich anlegt; das ist der Teil, den man sonst erst nach dem Bauen merkt.
+ *
+ * Der Port steht neben jeder App als Eingabefeld, nicht als Beschriftung: auf
+ * einem Rechner, auf dem schon etwas auf 3000 lauscht, ist das der Unterschied
+ * zwischen „läuft" und „Port belegt" — und nach der Einrichtung wäre es eine
+ * Suche in der `.env`. Geändert wird er später unter Deployment → Ports.
  */
 export function InstallAppPicker({
   apps,
+  ports,
   seedDemoContent,
   busy,
   onChangeApps,
+  onChangePort,
   onChangeSeed,
 }: Props) {
   const activePreset = presetIdFor(apps);
+  const conflicts = portConflicts(apps, ports);
 
   function toggle(id: LocalHostServiceId, enabled: boolean) {
     // Reihenfolge folgt dem Katalog, nicht der Klick-Reihenfolge.
@@ -57,26 +72,47 @@ export function InstallAppPicker({
       <div className="install-app-grid">
         {INSTALL_APPS.map((entry) => {
           const checked = apps.includes(entry.id);
+          const value = ports[entry.id] ?? "";
+          const invalid = checked && !isValidPort(value);
           return (
-            <label
+            <div
               key={entry.id}
               className={`install-app-option${checked ? " is-selected" : ""}`}
             >
-              <input
-                type="checkbox"
-                checked={checked}
-                disabled={busy}
-                onChange={(event) => toggle(entry.id, event.target.checked)}
-              />
-              <span className="install-app-body">
-                <span className="install-app-title">
-                  <strong>{entry.label}</strong>
-                  <small>Port {entry.defaultPort}</small>
+              {/* Nur die Auswahl liegt im Label — läge das Portfeld darin, würde
+                  jeder Klick hinein das Häkchen umschalten. */}
+              <label className="install-app-choice">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={busy}
+                  onChange={(event) => toggle(entry.id, event.target.checked)}
+                />
+                <span className="install-app-body">
+                  <span className="install-app-title">
+                    <strong>{entry.label}</strong>
+                  </span>
+                  <span className="install-app-tagline">{entry.tagline}</span>
+                  <span className="connector-muted">{entry.description}</span>
                 </span>
-                <span className="install-app-tagline">{entry.tagline}</span>
-                <span className="connector-muted">{entry.description}</span>
-              </span>
-            </label>
+              </label>
+              <label className="install-app-port">
+                <span>Port</span>
+                <input
+                  className={`connector-input${invalid || conflicts.has(entry.id) ? " is-invalid" : ""}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_SERVICE_PORT}
+                  max={MAX_SERVICE_PORT}
+                  value={value}
+                  disabled={busy || !checked}
+                  aria-label={`Port für ${entry.label}`}
+                  aria-invalid={invalid || conflicts.has(entry.id)}
+                  placeholder={String(entry.defaultPort)}
+                  onChange={(event) => onChangePort(entry.id, event.target.value)}
+                />
+              </label>
+            </div>
           );
         })}
       </div>
@@ -84,6 +120,17 @@ export function InstallAppPicker({
       {apps.length === 0 ? (
         <div className="connector-banner connector-banner-error">
           Mindestens ein Bereich muss ausgewählt sein.
+        </div>
+      ) : null}
+
+      {conflicts.size > 0 ? (
+        <div className="connector-banner connector-banner-error">
+          Zwei Bereiche können nicht denselben Port benutzen — einer von beiden bliebe beim
+          Start liegen.
+        </div>
+      ) : apps.some((id) => !isValidPort(ports[id] ?? "")) ? (
+        <div className="connector-banner connector-banner-error">
+          Ports müssen ganze Zahlen zwischen {MIN_SERVICE_PORT} und {MAX_SERVICE_PORT} sein.
         </div>
       ) : null}
 

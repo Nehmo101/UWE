@@ -46,6 +46,23 @@ export const HOST_SERVICE_HEALTH_APPS: Record<HostServiceId, string> = {
   landing: "UWE Landing",
 };
 
+/**
+ * Der `.env`-Schlüssel und der Standard-Port je Dienst — die eine Stelle, an der
+ * steht, worüber ein Dienst erreichbar ist.
+ *
+ * Der Ersteinrichtungs-Assistent bietet diese Werte als Vorschlag an und
+ * schreibt die Wahl in die `.env`; Start, Statusanzeige und „Im Browser öffnen"
+ * lesen sie von dort. Der Standard gilt nur, solange die `.env` keinen gültigen
+ * Wert nennt.
+ */
+export const SERVICE_PORT_ENV: Record<HostServiceId, { key: string; fallback: number }> = {
+  studio: { key: "STUDIO_PORT", fallback: 3000 },
+  portal: { key: "PORTAL_PORT", fallback: 3001 },
+  brain: { key: "BRAIN_PORT", fallback: 3102 },
+  family: { key: "FAMILY_PORT", fallback: 3004 },
+  landing: { key: "LANDING_PORT", fallback: 3103 },
+};
+
 /** Weist sich der Dienst auf einem belegten Port als genau diese App aus? */
 export function isOwnServiceApp(id: HostServiceId, app: string | null): boolean {
   return app !== null && app === HOST_SERVICE_HEALTH_APPS[id];

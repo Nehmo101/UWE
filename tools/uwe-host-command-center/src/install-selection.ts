@@ -21,10 +21,25 @@ import { HOST_SERVICE_IDS, type HostServiceId } from "./desktop-host-types.ts";
 export const INSTALL_SELECTION_FILENAME = "install-selection.json";
 export const INSTALL_SELECTION_VERSION = 1;
 
+/** Frei wählbarer Port je App; fehlt einer, gilt der Standard des Dienstes. */
+export type InstallPorts = Partial<Record<HostServiceId, number>>;
+
+/** Kleinster erlaubter Port: alles darunter ist unter Windows privilegiert. */
+export const MIN_SERVICE_PORT = 1024;
+export const MAX_SERVICE_PORT = 65535;
+
 export interface InstallSelection {
   version: number;
   /** Installierte Apps, immer in der Reihenfolge von `HOST_SERVICE_IDS`. */
   apps: HostServiceId[];
+  /**
+   * Ports, die der Assistent für diese Installation gewählt hat. Die Einrichtung
+   * schreibt sie in die `.env` — dort liest sie ab dann alles andere (Start,
+   * Status, „Im Browser öffnen"). Die Auswahl-Datei ist nur der Weg von der
+   * Ersteinrichtung dorthin, nicht eine zweite Wahrheit: wer später unter
+   * Deployment einen Port ändert, ändert die `.env`, und die gilt.
+   */
+  ports: InstallPorts;
   /** Demo-Grundbestand (Beispielwelt, Beispieldaten) beim ersten Aufbau einspielen. */
   seedDemoContent: boolean;
   updatedAt: string | null;
@@ -42,9 +57,33 @@ export function defaultInstallSelection(): InstallSelection {
   return {
     version: INSTALL_SELECTION_VERSION,
     apps: [...HOST_SERVICE_IDS],
+    ports: {},
     seedDemoContent: true,
     updatedAt: null,
   };
+}
+
+/**
+ * Ein gültiger Port oder `null`. Bewusst streng: nur ganze Zahlen von 1024 bis
+ * 65535, keine Strings mit Leerzeichen, kein `0`. Ein ungültiger Wert fällt
+ * damit auf den Standard des Dienstes zurück, statt eine unstartbare
+ * Installation zu schreiben.
+ */
+export function readServicePort(value: unknown): number | null {
+  const port = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+  if (typeof port !== "number" || !Number.isInteger(port)) return null;
+  return port >= MIN_SERVICE_PORT && port <= MAX_SERVICE_PORT ? port : null;
+}
+
+function readPorts(value: unknown): InstallPorts {
+  if (!value || typeof value !== "object") return {};
+  const record = value as Record<string, unknown>;
+  const ports: InstallPorts = {};
+  for (const id of HOST_SERVICE_IDS) {
+    const port = readServicePort(record[id]);
+    if (port !== null) ports[id] = port;
+  }
+  return ports;
 }
 
 function readAppList(value: unknown): HostServiceId[] | null {
@@ -70,6 +109,7 @@ export function normalizeInstallSelection(input: unknown): InstallSelection {
   return {
     version: INSTALL_SELECTION_VERSION,
     apps: readAppList(record.apps) ?? defaults.apps,
+    ports: readPorts(record.ports),
     seedDemoContent:
       typeof record.seedDemoContent === "boolean" ? record.seedDemoContent : defaults.seedDemoContent,
     updatedAt,

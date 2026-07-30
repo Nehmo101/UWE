@@ -343,7 +343,6 @@
   border: 1px solid var(--uwe-border-muted);
   border-radius: 1rem;
   padding: 0.85rem 1rem;
-  cursor: pointer;
   background: color-mix(in srgb, var(--uwe-card-bg) 70%, transparent);
 }
 
@@ -352,9 +351,36 @@
   background: var(--uwe-accent-muted);
 }
 
-.install-app-option input {
+/* Nur die Auswahl ist klickbar — das Portfeld daneben hat sein eigenes Label. */
+.install-app-choice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.install-app-choice input {
   margin-top: 0.25rem;
   flex: none;
+}
+
+.install-app-port {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: none;
+  width: 6.5rem;
+}
+
+.install-app-port span {
+  color: var(--uwe-fg-subtle);
+  font-size: 0.85em;
+}
+
+.install-app-port .connector-input.is-invalid {
+  border-color: var(--uwe-danger);
 }
 
 .install-app-body {

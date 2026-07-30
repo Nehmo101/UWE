@@ -1,3 +1,7 @@
+// Muss der erste Import bleiben: lädt die .env, bevor @uwe/database seine
+// Client-Singletons anlegt (siehe cli-env-preload.ts).
+import "./cli-env-preload";
+
 import {
   createAuthService,
   createPrismaClient,
@@ -5,9 +9,7 @@ import {
   hashPassword,
 } from "@uwe/database/server";
 
-import { loadEnvFromRoot, readStdin } from "./cli-env";
-
-loadEnvFromRoot();
+import { readStdin } from "./cli-env";
 
 /**
  * Access administration CLI for the UWE Command Center — the „Zugänge" surface.

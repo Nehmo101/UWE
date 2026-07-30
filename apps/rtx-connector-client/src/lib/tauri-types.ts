@@ -227,6 +227,8 @@ export interface LocalHostService {
 export interface LocalHostInstallSelection {
   version: number;
   apps: LocalHostServiceId[];
+  /** Gewählte Ports je App; fehlt einer, gilt der Standard des Dienstes. */
+  ports: Partial<Record<LocalHostServiceId, number>>;
   seedDemoContent: boolean;
   updatedAt: string | null;
 }

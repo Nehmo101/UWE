@@ -74,6 +74,82 @@ export const INSTALL_APPS: readonly InstallAppEntry[] = [
   },
 ];
 
+/**
+ * Portgrenzen — Spiegel von `MIN_SERVICE_PORT`/`MAX_SERVICE_PORT`
+ * (tools/uwe-host-command-center/src/install-selection.ts). Unter 1024 liegen
+ * die privilegierten Ports; die Einrichtung würde daran scheitern, statt es
+ * hier zu sagen.
+ */
+export const MIN_SERVICE_PORT = 1024;
+export const MAX_SERVICE_PORT = 65535;
+
+/** Porteingaben des Assistenten — als Text, damit Tippen nicht bevormundet wird. */
+export type InstallPortValues = Partial<Record<LocalHostServiceId, string>>;
+
+/** Die Vorschlagswerte des Katalogs als Startbelegung der Eingabefelder. */
+export function defaultPortValues(): InstallPortValues {
+  return Object.fromEntries(
+    INSTALL_APPS.map((entry) => [entry.id, String(entry.defaultPort)]),
+  ) as InstallPortValues;
+}
+
+export function isValidPort(value: string): boolean {
+  if (!/^\d+$/.test(value.trim())) return false;
+  const port = Number(value.trim());
+  return port >= MIN_SERVICE_PORT && port <= MAX_SERVICE_PORT;
+}
+
+/**
+ * Die Apps, die sich einen Port teilen. Zwei Dienste auf demselben Port heißt:
+ * einer startet, der andere bleibt liegen — und zwar erst am Ende der
+ * Installation, wenn niemand mehr damit rechnet.
+ */
+export function portConflicts(
+  apps: readonly LocalHostServiceId[],
+  ports: InstallPortValues,
+): Set<LocalHostServiceId> {
+  const seen = new Map<string, LocalHostServiceId>();
+  const conflicts = new Set<LocalHostServiceId>();
+  for (const id of apps) {
+    const value = (ports[id] ?? "").trim();
+    if (!isValidPort(value)) continue;
+    const previous = seen.get(value);
+    if (previous) {
+      conflicts.add(previous);
+      conflicts.add(id);
+    } else {
+      seen.set(value, id);
+    }
+  }
+  return conflicts;
+}
+
+/** Ist die Portwahl vollständig und widerspruchsfrei? */
+export function portsAreValid(
+  apps: readonly LocalHostServiceId[],
+  ports: InstallPortValues,
+): boolean {
+  return (
+    apps.every((id) => isValidPort(ports[id] ?? "")) && portConflicts(apps, ports).size === 0
+  );
+}
+
+/**
+ * Die Portwahl für die Auswahl-Datei: nur gewählte Apps, nur gültige Werte, als
+ * Zahl. Was hier fehlt, bleibt beim Standard des Dienstes.
+ */
+export function portsForSelection(
+  apps: readonly LocalHostServiceId[],
+  ports: InstallPortValues,
+): Partial<Record<LocalHostServiceId, number>> {
+  const result: Partial<Record<LocalHostServiceId, number>> = {};
+  for (const id of apps) {
+    const value = (ports[id] ?? "").trim();
+    if (isValidPort(value)) result[id] = Number(value);
+  }
+  return result;
+}
+
 export interface InstallPreset {
   id: string;
   label: string;

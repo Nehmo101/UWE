@@ -49,6 +49,7 @@ import {
   isHostServiceId,
   isOwnServiceApp,
   parseServicePort,
+  SERVICE_PORT_ENV,
   type DesktopHostActionResult,
   type DesktopHostService,
   type DesktopHostStatus,
@@ -65,6 +66,7 @@ import {
 } from "./install-selection.ts";
 import { buildSetupPlan } from "./setup-plan.ts";
 import {
+  applySelectedPorts,
   buildLocalHostEnv,
   ensureRequiredLocalEnv,
   readEnvFile,
@@ -99,15 +101,6 @@ export {
   type InstallSelectionState,
 } from "./install-selection.ts";
 export { buildSetupPlan, setupStepCount } from "./setup-plan.ts";
-
-/** Standard-Port je Dienst, falls die `.env` keinen (gültigen) Wert nennt. */
-const SERVICE_PORT_ENV: Record<HostServiceId, { key: string; fallback: number }> = {
-  studio: { key: "STUDIO_PORT", fallback: 3000 },
-  portal: { key: "PORTAL_PORT", fallback: 3001 },
-  brain: { key: "BRAIN_PORT", fallback: 3102 },
-  family: { key: "FAMILY_PORT", fallback: 3004 },
-  landing: { key: "LANDING_PORT", fallback: 3103 },
-};
 
 /**
  * Die Dienste **dieser** Installation mit ihren konfigurierten Ports. Ports
@@ -340,10 +333,18 @@ export async function setupHost(
     ? writeInstallSelection(paths.dataRoot, options.selection)
     : readInstallSelectionState(paths.dataRoot).selection;
   if (!fs.existsSync(paths.envFile)) {
-    fs.writeFileSync(paths.envFile, buildLocalHostEnv(paths), { encoding: "utf8", flag: "wx" });
+    // Die Ports der Auswahl gehören schon in die frisch geschriebene Datei —
+    // sonst stünden die Loopback-URLs daneben auf den Standardports.
+    fs.writeFileSync(paths.envFile, buildLocalHostEnv(paths, selection.ports), {
+      encoding: "utf8",
+      flag: "wx",
+    });
     appendOperationLog(paths, "Sichere lokale .env angelegt.");
   }
   ensureRequiredLocalEnv(paths, (line) => appendOperationLog(paths, line));
+  // Bestehende Installation: gewählte Ports nachziehen (zweiter Lauf des
+  // Assistenten, „Reparieren"). Bei einer eben angelegten .env ein No-op.
+  applySelectedPorts(paths, selection.ports, (line) => appendOperationLog(paths, line));
   const database = resolveDatabasePath(root, paths.envFile, paths.database);
   const seedPendingFile = path.join(paths.runtime, "seed-pending");
   const freshDatabase = !fs.existsSync(database);
