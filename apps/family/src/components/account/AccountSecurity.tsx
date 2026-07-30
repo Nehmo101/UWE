@@ -130,15 +130,32 @@ function TwoFactorSection() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "warn"; text: string } | null>(null);
 
-  const load = useCallback(async () => {
+  // Liefert den Zustand zurück, statt ihn selbst zu setzen: so steht das
+  // setState im Callback und nicht im Effekt-Rumpf.
+  const fetchStatus = useCallback(async (): Promise<TwoFactorStatus | null> => {
     const response = await fetch("/api/auth/two-factor", { credentials: "same-origin" });
-    if (!response.ok) return;
-    setStatus((await response.json()) as TwoFactorStatus);
+    return response.ok ? ((await response.json()) as TwoFactorStatus) : null;
   }, []);
 
+  const load = useCallback(async () => {
+    const next = await fetchStatus();
+    if (next) setStatus(next);
+  }, [fetchStatus]);
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    fetchStatus()
+      .then((next) => {
+        if (!cancelled && next) setStatus(next);
+      })
+      .catch(() => {
+        // Ein fehlgeschlagener Statusabruf lässt den Abschnitt im Ladezustand;
+        // die Seite bleibt bedienbar.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchStatus]);
 
   async function start() {
     setBusy(true);
@@ -269,20 +286,38 @@ function TwoFactorSection() {
 function PasskeySection() {
   const [credentials, setCredentials] = useState<PasskeyCredential[]>([]);
   const [busy, setBusy] = useState(false);
-  const [supported, setSupported] = useState(true);
+  // Beim Server-Rendern ist noch nichts bekannt — dort optimistisch `true`,
+  // sonst blitzt der Hinweis „nicht unterstützt" kurz auf.
+  const [supported] = useState(() =>
+    typeof window === "undefined" ? true : isPasskeySupported(),
+  );
   const [message, setMessage] = useState<{ kind: "ok" | "warn"; text: string } | null>(null);
 
-  const load = useCallback(async () => {
+  const fetchCredentials = useCallback(async (): Promise<PasskeyCredential[] | null> => {
     const response = await fetch("/api/auth/passkey/credentials", { credentials: "same-origin" });
-    if (!response.ok) return;
+    if (!response.ok) return null;
     const payload = (await response.json()) as { credentials?: PasskeyCredential[] };
-    setCredentials(payload.credentials ?? []);
+    return payload.credentials ?? [];
   }, []);
 
+  const load = useCallback(async () => {
+    const next = await fetchCredentials();
+    if (next) setCredentials(next);
+  }, [fetchCredentials]);
+
   useEffect(() => {
-    setSupported(isPasskeySupported());
-    void load();
-  }, [load]);
+    let cancelled = false;
+    fetchCredentials()
+      .then((next) => {
+        if (!cancelled && next) setCredentials(next);
+      })
+      .catch(() => {
+        // Liste bleibt leer; Hinzufügen funktioniert trotzdem.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchCredentials]);
 
   async function add(formData: FormData) {
     setBusy(true);
