@@ -1,0 +1,184 @@
+/**
+ * Design v3 — die gemeinsamen Tokens aller fünf Bereiche.
+ *
+ * Zwei Dinge muss man über die Kaskade in UWE wissen, sonst schreibt man hier
+ * Regeln, die nie ankommen:
+ *
+ * 1. Die Theme-Engine (`applyTheme.ts`) schreibt `--uwe-bg`, `--uwe-fg`,
+ *    `--uwe-accent` &c. als **Inline-Style auf `<html>`**. Ein Stylesheet-
+ *    Selektor `html[data-uwe-theme="…"]` kommt dagegen nicht an.
+ * 2. Auf einem **Nachfahren** ist die Lage umgekehrt: dort ist der `<html>`-Wert
+ *    nur geerbt, und jede Deklaration am Element selbst gewinnt.
+ *
+ * Deshalb hängen Korrekturen an Engine-Tokens hier an `body` — dem nächsten
+ * Nachfahren, der den ganzen Baum trägt. `.uwe-accent-scope` (app-accent.css)
+ * sitzt tiefer und gewinnt weiterhin gegen `body`; die Reihenfolge stimmt also.
+ *
+ * Neue Namen (Abstände, Radien, Schatten, Z-Index, Motion) stehen an `:root` —
+ * die Engine kennt sie nicht, es gibt nichts zu überschreiben.
+ */
+
+:root {
+  /* --- Abstände: 4-px-Raster ------------------------------------------- */
+  --uwe-space-0: 0;
+  --uwe-space-1: 0.25rem; /* 4 */
+  --uwe-space-2: 0.5rem; /* 8 */
+  --uwe-space-3: 0.75rem; /* 12 */
+  --uwe-space-4: 1rem; /* 16 */
+  --uwe-space-5: 1.25rem; /* 20 */
+  --uwe-space-6: 1.5rem; /* 24 */
+  --uwe-space-8: 2rem; /* 32 */
+  --uwe-space-10: 2.5rem; /* 40 */
+  --uwe-space-12: 3rem; /* 48 */
+  --uwe-space-16: 4rem; /* 64 */
+
+  /* Innenabstand von Flächen — eine Zahl, nicht zwölf. */
+  --uwe-pad-tight: var(--uwe-space-3);
+  --uwe-pad-card: clamp(1rem, 0.85rem + 0.75vw, 1.5rem);
+  --uwe-pad-section: clamp(1.25rem, 1rem + 1.25vw, 2.5rem);
+  /* Seitenrand: auf 320px eng, auf großen Schirmen großzügig. */
+  --uwe-gutter: clamp(1rem, 0.6rem + 2vw, 2.5rem);
+  --uwe-content-max: 78rem;
+  --uwe-reader-max: 46rem;
+
+  /* --- Radien: drei Stufen, sonst nichts ------------------------------- */
+  --uwe-r-sm: 0.5rem; /* Chips, Badges, Inputs */
+  --uwe-r-md: 0.75rem; /* Buttons, kleine Kacheln */
+  --uwe-r-lg: 1rem; /* Karten, Panels */
+  --uwe-r-xl: 1.5rem; /* Dialoge, Bühnenblöcke */
+  --uwe-r-pill: 999px;
+
+  /* --- Schatten: gemalt, nicht Material -------------------------------- */
+  --uwe-elev-1: 0 1px 2px rgba(20, 14, 8, 0.06), 0 2px 8px rgba(20, 14, 8, 0.05);
+  --uwe-elev-2: 0 2px 4px rgba(20, 14, 8, 0.08), 0 8px 24px rgba(20, 14, 8, 0.09);
+  --uwe-elev-3: 0 4px 8px rgba(20, 14, 8, 0.1), 0 20px 48px rgba(20, 14, 8, 0.14);
+
+  /* --- Bewegung -------------------------------------------------------- */
+  --uwe-dur-instant: 90ms;
+  --uwe-dur-fast: 160ms;
+  --uwe-dur-base: 240ms;
+  --uwe-dur-slow: 420ms;
+  --uwe-dur-scene: 640ms;
+  --uwe-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --uwe-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --uwe-ease-soft: cubic-bezier(0.4, 0.14, 0.3, 1);
+
+  /* --- Z-Index: eine Leiter, keine willkürlichen 9999 ------------------ */
+  --uwe-z-scene: 0;
+  --uwe-z-content: 1;
+  --uwe-z-sticky: 10;
+  --uwe-z-sidebar: 20;
+  --uwe-z-topbar: 30;
+  --uwe-z-bottomnav: 35;
+  --uwe-z-drawer: 40;
+  --uwe-z-overlay: 50;
+  --uwe-z-dialog: 60;
+  --uwe-z-toast: 70;
+  --uwe-z-tooltip: 80;
+
+  /* --- Touch & Sicherheitsbereiche ------------------------------------- */
+  --uwe-touch-min: 2.75rem; /* 44px — Bestandsname, hier bekräftigt */
+  --uwe-safe-top: env(safe-area-inset-top, 0px);
+  --uwe-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --uwe-safe-left: env(safe-area-inset-left, 0px);
+  --uwe-safe-right: env(safe-area-inset-right, 0px);
+
+  /* --- Chrome-Maße ------------------------------------------------------ */
+  --uwe-topbar-h: 3.5rem; /* 56px */
+  --uwe-bottomnav-h: 3.75rem; /* 60px */
+  --uwe-sidebar-w: 15.5rem;
+
+  /*
+   * Grundwerte der neuen Namen. Sie stehen hier und nicht auf `body`, damit
+   * Alt-Themes, die Theme-Vorschau und der Zustand „JS aus" nie auf einen
+   * leeren Wert laufen. Die Ghibli-Blöcke weiter unten überschreiben sie auf
+   * `body` — ein Nachfahre gewinnt gegen `:root`.
+   */
+  --uwe-accent-ink: var(--uwe-accent);
+  --uwe-danger-ink: var(--uwe-danger);
+  --uwe-warning-ink: var(--uwe-warning);
+  --uwe-success-ink: var(--uwe-success);
+  --uwe-info-ink: var(--uwe-info);
+  --uwe-surface-1: var(--uwe-surface);
+  --uwe-surface-2: var(--uwe-bg-elevated);
+  --uwe-surface-3: var(--uwe-bg-elevated);
+  --uwe-surface-sunken: rgba(0, 0, 0, 0.06);
+  --uwe-overlay-scrim: rgba(0, 0, 0, 0.5);
+  --uwe-border-strong: var(--uwe-border);
+}
+
+/*
+ * Korrekturen an Engine-Tokens. Jeder Wert unten ist gegen den jeweiligen Grund
+ * nach WCAG AA (4.5:1 für normalen Text) nachgerechnet — die Ausgangswerte
+ * lagen darunter und waren damit die zweite Hälfte des Lesbarkeitsproblems.
+ */
+
+/* --- Hell: Parchment ---------------------------------------------------- */
+html[data-uwe-theme="uwe-ghibli-tag"] body {
+  /* War #8a7d64 = 3.32:1 auf #f1e8d4 — durchgefallen. Jetzt 4.58:1. */
+  --uwe-fg-subtle: #716752;
+
+  /* Textfähige Varianten der Signalfarben. Die Füllfarben (--uwe-accent,
+     --uwe-danger …) bleiben unangetastet — auf einer Fläche mit
+     --uwe-on-accent darüber sind sie korrekt. Diese Namen sind für Farbe
+     *als Schrift* auf dem Seitengrund. */
+  --uwe-accent-ink: #a35224; /* 4.55:1 (war 3.40:1) */
+  --uwe-danger-ink: #a5521a; /* 4.51:1 */
+  --uwe-warning-ink: #806533; /* 4.50:1 (war 1.62:1 — unlesbar) */
+  --uwe-success-ink: #1a5c4f; /* 6.41:1 */
+  --uwe-info-ink: #1a5c4f;
+
+  /* Flächen-Leiter: drei klar unterscheidbare Tiefen statt beliebig vieler
+     halbtransparenter Glaskarten. */
+  --uwe-surface-1: rgba(251, 246, 234, 0.82);
+  --uwe-surface-2: rgba(253, 249, 240, 0.94);
+  --uwe-surface-3: #fdfaf3;
+  --uwe-surface-sunken: rgba(33, 29, 23, 0.05);
+  --uwe-overlay-scrim: rgba(33, 29, 23, 0.42);
+  --uwe-border-strong: #cbbb9c;
+}
+
+/* --- Dunkel: Nachttusche ------------------------------------------------ */
+html[data-uwe-theme="uwe-ghibli-nacht"] body {
+  --uwe-accent-ink: var(--uwe-accent);
+  --uwe-danger-ink: var(--uwe-danger);
+  --uwe-warning-ink: var(--uwe-warning);
+  --uwe-success-ink: var(--uwe-success);
+  --uwe-info-ink: var(--uwe-info);
+
+  --uwe-surface-1: rgba(22, 19, 31, 0.72);
+  --uwe-surface-2: rgba(28, 25, 38, 0.9);
+  --uwe-surface-3: #1b1826;
+  --uwe-surface-sunken: rgba(241, 232, 212, 0.05);
+  --uwe-overlay-scrim: rgba(6, 5, 10, 0.62);
+  --uwe-border-strong: rgba(225, 215, 195, 0.3);
+
+  /* Nachts sind Schatten unsichtbar — Tiefe entsteht über Kante und Fläche. */
+  --uwe-elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --uwe-elev-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --uwe-elev-3: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* War 4.29:1 auf der Nacht-Sidebar — knapp daneben ist auch daneben. */
+html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-sidebar {
+  --uwe-sidebar-fg-muted: #81796a; /* 4.54:1 */
+}
+
+/* --- Bewegung global abschaltbar ---------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --uwe-dur-instant: 0ms;
+    --uwe-dur-fast: 0ms;
+    --uwe-dur-base: 0ms;
+    --uwe-dur-slow: 0ms;
+    --uwe-dur-scene: 0ms;
+  }
+}
+
+html[data-uwe-motion="off"] {
+  --uwe-dur-instant: 0ms;
+  --uwe-dur-fast: 0ms;
+  --uwe-dur-base: 0ms;
+  --uwe-dur-slow: 0ms;
+  --uwe-dur-scene: 0ms;
+}

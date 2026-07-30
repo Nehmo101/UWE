@@ -1,0 +1,251 @@
+/**
+ * Design v3 — Bedienelemente.
+ *
+ * Drei Dinge, die vorher überall einzeln gelöst waren und deshalb überall
+ * anders aussahen: Fokus, Touch-Größe und Zustände.
+ *
+ * **Fokus** ist hier bewusst global und nicht opt-in. Der Bestand hatte
+ * `:focus-visible`-Ringe an einigen Komponenten und an vielen nicht — auf einer
+ * gemalten Bühne heißt „kein Ring" schlicht: man sieht nicht, wo man ist.
+ *
+ * **Touch** — jedes Bedienelement erreicht 44 × 44 px, auch wenn es optisch
+ * kleiner wirkt. Das macht `min-height` plus ein Pseudo-Element, das die
+ * Trefferfläche vergrößert, ohne das Layout zu verschieben.
+ */
+
+/* --- Fokus: sichtbar auf jedem Grund ------------------------------------ */
+
+/*
+ * Zwei Ringe übereinander: ein heller innen, ein dunkler außen. Damit bleibt
+ * der Fokus sowohl auf hellem Papier als auch auf einem dunklen Videoframe
+ * sichtbar — ein einfarbiger Ring verschwindet je nach Bildinhalt.
+ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--uwe-accent);
+  outline-offset: 2px;
+  border-radius: var(--uwe-r-sm);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--uwe-bg) 70%, transparent);
+}
+
+/* Ein erzwungener Ring für Fälle, in denen `outline` am Element nicht trägt. */
+.uwe-focus-ring:focus-visible {
+  outline: 2px solid var(--uwe-accent);
+  outline-offset: 2px;
+}
+
+/* Sprungmarke zum Inhalt — Pflicht für Tastaturnutzer, unsichtbar für alle. */
+.uwe-skip-link {
+  position: absolute;
+  left: var(--uwe-space-4);
+  top: calc(var(--uwe-safe-top) + var(--uwe-space-2));
+  z-index: var(--uwe-z-tooltip);
+  padding: var(--uwe-space-3) var(--uwe-space-4);
+  border-radius: var(--uwe-r-md);
+  background: var(--uwe-surface-3);
+  border: 1px solid var(--uwe-border-strong);
+  box-shadow: var(--uwe-elev-3);
+  color: var(--uwe-fg);
+  font-size: var(--uwe-text-sm);
+  font-weight: var(--uwe-weight-semibold);
+  text-decoration: none;
+  /* Nicht `display: none` — das nähme ihn aus der Tab-Reihenfolge. */
+  transform: translateY(-200%);
+  transition: transform var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.uwe-skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* --- Touch-Ziele -------------------------------------------------------- */
+
+/*
+ * Alles, was man antippt, ist mindestens 44 px hoch. Bei Elementen, die
+ * optisch kleiner bleiben sollen (Icon-Buttons in dichten Werkzeugleisten),
+ * vergrößert das Pseudo-Element nur die Trefferfläche.
+ */
+.uwe-touch,
+.uwe-btn-v3 {
+  min-height: var(--uwe-touch-min);
+  min-width: var(--uwe-touch-min);
+}
+
+.uwe-touch-expand {
+  position: relative;
+}
+
+.uwe-touch-expand::after {
+  content: "";
+  position: absolute;
+  /* Zentriert auf das Element, mindestens 44 px in beide Richtungen. */
+  top: 50%;
+  left: 50%;
+  width: max(100%, var(--uwe-touch-min));
+  height: max(100%, var(--uwe-touch-min));
+  transform: translate(-50%, -50%);
+}
+
+@media (pointer: coarse) {
+  /* Auf dem Telefon werden auch dichte Listen großzügiger. */
+  .uwe-list-row,
+  .uwe-nav-item,
+  .uwe-menu-item {
+    min-height: var(--uwe-touch-min);
+  }
+}
+
+/* --- Buttons ------------------------------------------------------------ */
+
+.uwe-btn-v3 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--uwe-space-2);
+  padding: var(--uwe-space-2) var(--uwe-space-5);
+  border-radius: var(--uwe-r-md);
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: var(--uwe-text-sm);
+  font-weight: var(--uwe-weight-semibold);
+  line-height: var(--uwe-leading-snug);
+  cursor: pointer;
+  /* Lange Beschriftungen brechen um, statt den Knopf zu sprengen. */
+  text-align: center;
+  text-wrap: balance;
+  transition: background-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    border-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    transform var(--uwe-dur-instant) var(--uwe-ease-out);
+}
+
+.uwe-btn-v3[data-variant="primary"] {
+  background: var(--uwe-accent);
+  color: var(--uwe-on-accent);
+  border-color: color-mix(in srgb, var(--uwe-accent) 70%, var(--uwe-fg));
+  box-shadow: var(--uwe-elev-1);
+}
+
+.uwe-btn-v3[data-variant="secondary"] {
+  background: var(--uwe-surface-2);
+  color: var(--uwe-fg);
+  border-color: var(--uwe-border-strong);
+}
+
+.uwe-btn-v3[data-variant="ghost"] {
+  background: transparent;
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-btn-v3[data-variant="danger"] {
+  background: transparent;
+  color: var(--uwe-danger-ink);
+  border-color: var(--uwe-danger-ink);
+}
+
+.uwe-btn-v3:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.uwe-btn-v3[data-variant="ghost"]:hover:not(:disabled) {
+  background: var(--uwe-surface-sunken);
+  color: var(--uwe-fg);
+}
+
+.uwe-btn-v3:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.uwe-btn-v3:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Auf dem Telefon nehmen Hauptaktionen die volle Breite — ein 120-px-Knopf
+   mitten in einer 320-px-Spalte ist schwer zu treffen und sieht verloren aus. */
+@media (max-width: 480px) {
+  .uwe-btn-v3[data-block="mobile"] {
+    width: 100%;
+  }
+}
+
+/* --- Formularfelder ----------------------------------------------------- */
+
+.uwe-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-2);
+}
+
+.uwe-field__label {
+  font-size: var(--uwe-text-sm);
+  font-weight: var(--uwe-weight-semibold);
+  color: var(--uwe-fg);
+  /* Versalien waren hier vorher der Standard. Bei 11 px und gesperrt ist das
+     schwer zu lesen; gemischte Schreibung mit klarem Gewicht trägt besser. */
+  letter-spacing: var(--uwe-tracking-normal);
+  text-transform: none;
+}
+
+.uwe-field__hint {
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-fg-muted);
+  line-height: var(--uwe-leading-normal);
+}
+
+.uwe-input-v3 {
+  min-height: var(--uwe-touch-min);
+  padding: var(--uwe-space-2) var(--uwe-space-3);
+  border-radius: var(--uwe-r-sm);
+  border: 1px solid var(--uwe-border-strong);
+  background: var(--uwe-input-bg);
+  color: var(--uwe-fg);
+  font-family: inherit;
+  /* 16 px verhindert, dass iOS beim Fokussieren in das Feld hineinzoomt. */
+  font-size: max(1rem, var(--uwe-text-base));
+  line-height: var(--uwe-leading-normal);
+  width: 100%;
+  transition: border-color var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.uwe-input-v3::placeholder {
+  color: var(--uwe-fg-subtle);
+  opacity: 1; /* Firefox dimmt Platzhalter zusätzlich. */
+}
+
+.uwe-input-v3:hover:not(:disabled) {
+  border-color: var(--uwe-accent);
+}
+
+.uwe-input-v3[aria-invalid="true"] {
+  border-color: var(--uwe-danger-ink);
+  /* Nie nur Farbe: die stärkere Kante trägt die Information mit. */
+  border-width: 2px;
+}
+
+.uwe-field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--uwe-space-2);
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-danger-ink);
+  font-weight: var(--uwe-weight-medium);
+}
+
+/* Das Zeichen macht den Fehler auch ohne Farbwahrnehmung erkennbar. */
+.uwe-field__error::before {
+  content: "▲";
+  flex: none;
+  line-height: inherit;
+}
+
+/* --- Bereichs-Akzent auf Text ------------------------------------------- */
+
+/*
+ * Der Terrakotta-Akzent erreicht auf Papier nur 3.4:1 und darf deshalb keine
+ * Schriftfarbe sein. `--uwe-accent-ink` ist die nachgerechnete Textfassung
+ * desselben Farbtons — überall dort zu verwenden, wo Akzentfarbe *Schrift* ist.
+ */
+.uwe-accent-text,
+.uwe-eyebrow[data-accent="true"] {
+  color: var(--uwe-accent-ink);
+}

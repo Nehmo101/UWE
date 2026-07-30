@@ -1,0 +1,196 @@
+/**
+ * Design v3 — Tabellen und Listen.
+ *
+ * Das Problem: UWE ist voll von Datentabellen (Welten, Seiten, Etiketten,
+ * Jobs, Mail, Verträge). Auf 390 px Breite wurden sie bisher zusammengedrückt
+ * — winzige Schrift, abgeschnittene Spalten, waagerechtes Scrollen mitten im
+ * Text.
+ *
+ * Lösung ohne JavaScript und ohne zweite Datenquelle: dieselbe `<table>`
+ * rendert auf dem Telefon als Kartenliste. Die Spaltenüberschrift kommt aus
+ * `data-label` an der Zelle, also aus dem Markup, das ohnehin da ist. Die
+ * Semantik bleibt eine Tabelle — Screenreader lesen weiterhin Zeilen und
+ * Spalten, denn geändert wird nur `display`.
+ *
+ * Wichtig für Screenreader: `display: block` auf Tabellenteilen nimmt ihnen in
+ * manchen Browsern die Tabellenrolle. Deshalb setzt `.uwe-table-v3` die Rollen
+ * über `role`-Attribute im Markup zurück — siehe ResponsiveTable.tsx.
+ */
+
+.uwe-table-wrap {
+  width: 100%;
+  /* Waagerechtes Scrollen bleibt erlaubt — aber *in* diesem Kasten, nie im
+     Seitenkörper. Das ist der Unterschied zwischen „breite Tabelle" und
+     „kaputte Seite". */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-radius: var(--uwe-r-lg);
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-surface-2);
+}
+
+.uwe-table-v3 {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+}
+
+.uwe-table-v3 :is(th, td) {
+  padding: var(--uwe-space-3) var(--uwe-space-4);
+  text-align: left;
+  vertical-align: top;
+}
+
+.uwe-table-v3 thead th {
+  font-size: var(--uwe-text-xs);
+  font-weight: var(--uwe-weight-bold);
+  letter-spacing: var(--uwe-tracking-wide);
+  color: var(--uwe-fg-muted);
+  border-bottom: 1px solid var(--uwe-border-strong);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--uwe-surface-3);
+  z-index: 1;
+}
+
+.uwe-table-v3 tbody tr + tr {
+  border-top: 1px solid var(--uwe-border-muted, var(--uwe-border));
+}
+
+.uwe-table-v3 tbody tr:hover {
+  background: var(--uwe-surface-sunken);
+}
+
+/* Zahlenspalten rechtsbündig und tabellarisch — sonst tanzen die Ziffern. */
+.uwe-table-v3 :is(th, td)[data-numeric="true"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Telefon: aus jeder Zeile wird eine Karte --------------------------- */
+
+@media (max-width: 767px) {
+  .uwe-table-wrap[data-mobile="cards"] {
+    border: none;
+    background: none;
+    overflow-x: visible;
+  }
+
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 {
+    display: block;
+    font-size: var(--uwe-text-base);
+  }
+
+  /* Der Kopf verschwindet optisch; seine Beschriftungen stehen als
+     `data-label` an den Zellen. Nicht `display: none` am <thead> allein —
+     visually-hidden hält ihn für Screenreader erreichbar. */
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--uwe-space-3);
+  }
+
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: var(--uwe-space-2);
+    padding: var(--uwe-pad-card);
+    border: 1px solid var(--uwe-border);
+    border-radius: var(--uwe-r-lg);
+    background: var(--uwe-surface-2);
+    box-shadow: var(--uwe-elev-1);
+  }
+
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--uwe-space-4);
+    padding: 0;
+    text-align: right;
+  }
+
+  /* Die Spaltenüberschrift wandert als Label vor den Wert. */
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 tbody td::before {
+    content: attr(data-label);
+    flex: none;
+    text-align: left;
+    font-size: var(--uwe-text-xs);
+    font-weight: var(--uwe-weight-bold);
+    letter-spacing: var(--uwe-tracking-wide);
+    color: var(--uwe-fg-muted);
+  }
+
+  /* Die Leitspalte trägt die Karte und braucht kein Label. */
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 tbody td[data-primary="true"] {
+    display: block;
+    text-align: left;
+    font-size: var(--uwe-text-lg);
+    font-weight: var(--uwe-weight-semibold);
+    line-height: var(--uwe-leading-snug);
+  }
+
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 tbody td[data-primary="true"]::before {
+    content: none;
+  }
+
+  /* Nebensächliches fällt auf dem Telefon ganz weg statt zu drängeln. */
+  .uwe-table-wrap[data-mobile="cards"] .uwe-table-v3 :is(td, th)[data-priority="low"] {
+    display: none;
+  }
+}
+
+/* --- Kompakte Liste (Alternative zur Tabelle) --------------------------- */
+
+.uwe-list-v3 {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.uwe-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-space-3) var(--uwe-space-4);
+  border-radius: var(--uwe-r-md);
+  color: inherit;
+  text-decoration: none;
+}
+
+.uwe-list-row + .uwe-list-row {
+  border-top: 1px solid var(--uwe-border-muted, var(--uwe-border));
+}
+
+.uwe-list-row:hover {
+  background: var(--uwe-surface-sunken);
+}
+
+.uwe-list-row__main {
+  flex: 1 1 auto;
+  min-width: 0; /* Ohne das bricht ein langer Titel das Flex-Layout auf. */
+}
+
+.uwe-list-row__title {
+  font-size: var(--uwe-text-base);
+  font-weight: var(--uwe-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.uwe-list-row__meta {
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-fg-muted);
+}

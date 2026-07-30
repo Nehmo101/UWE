@@ -20,6 +20,14 @@
   display: contents;
 }
 
+/*
+ * `--uwe-accent-ink` (design-v3/tokens-v3.css) ist die *Schrift*-Fassung des
+ * Akzents. Sie muss hier mitgeführt werden: `body` setzt einen Vorgabewert,
+ * und dieser Scope liegt tiefer — ohne eigene Deklaration liefe Portal, Brain
+ * und Family mit Studios Terrakotta als Textfarbe. Die Werte sind gegen den
+ * jeweiligen Seitengrund nachgerechnet (Ziel 4.5:1).
+ */
+
 /* --- Hell ---------------------------------------------------------------- */
 html[data-uwe-theme="uwe-ghibli-tag"] .uwe-accent-scope[data-accent-app="studio"] {
   --uwe-accent: #c2622b;
@@ -27,18 +35,35 @@ html[data-uwe-theme="uwe-ghibli-tag"] .uwe-accent-scope[data-accent-app="studio"
   /* Die Engine leitet on-accent aus der Luminanz ab und käme bei #c2622b auf
      Schwarz; der Handoff verlangt auf dem Terrakotta-Button Papierweiß. */
   --uwe-on-accent: #fbf5e6;
+  /* #c2622b erreicht als Schrift nur 3.40:1 — diese Fassung 4.55:1. */
+  --uwe-accent-ink: #a35224;
 }
 
 html[data-uwe-theme="uwe-ghibli-tag"] .uwe-accent-scope[data-accent-app="portal"] {
   --uwe-accent: #1a5c4f;
   --uwe-accent-muted: rgba(26, 92, 79, 0.12);
   --uwe-on-accent: #fbf5e6;
+  --uwe-accent-ink: #1a5c4f; /* 6.41:1 */
 }
 
 html[data-uwe-theme="uwe-ghibli-tag"] .uwe-accent-scope[data-accent-app="brain"] {
   --uwe-accent: #55447c;
   --uwe-accent-muted: rgba(85, 68, 124, 0.12);
   --uwe-on-accent: #fbf5e6;
+  --uwe-accent-ink: #55447c; /* 6.88:1 */
+}
+
+/*
+ * Family. Bis zum v3-Redesign lief die App mit Brains violettem Akzent — der
+ * gemeinsame Haushalt sah damit aus wie der private Wissensbereich. Das Blau
+ * ist dasselbe, das die Produktkarte der Startseite schon trägt; damit ist der
+ * Wiedererkennungswert von der Startseite bis in die App durchgehend.
+ */
+html[data-uwe-theme="uwe-ghibli-tag"] .uwe-accent-scope[data-accent-app="family"] {
+  --uwe-accent: #3f6b8c;
+  --uwe-accent-muted: rgba(63, 107, 140, 0.12);
+  --uwe-on-accent: #fbf5e6; /* 5.23:1 auf dem Akzent */
+  --uwe-accent-ink: #3f6b8c; /* 4.67:1 auf Papier */
 }
 
 /* --- Dunkel -------------------------------------------------------------- */
@@ -58,6 +83,21 @@ html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-accent-scope[data-accent-app="brain
   --uwe-accent: #cabff0;
   --uwe-accent-muted: rgba(202, 191, 240, 0.15);
   --uwe-on-accent: #211d17;
+}
+
+html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-accent-scope[data-accent-app="family"] {
+  --uwe-accent: #8fbede; /* 9.66:1 auf dem Nachtgrund */
+  --uwe-accent-muted: rgba(143, 190, 222, 0.15);
+  --uwe-on-accent: #211d17; /* 8.45:1 auf dem Akzent */
+}
+
+/*
+ * Im Dunkelmodus sind alle vier Akzente hell genug, um selbst Schrift zu sein —
+ * `--uwe-accent-ink` bleibt deshalb der Akzent. Ohne diese Zeile trüge der
+ * Scope die dunkle Tagfassung aus `body` in die Nacht.
+ */
+html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-accent-scope {
+  --uwe-accent-ink: var(--uwe-accent);
 }
 
 /*

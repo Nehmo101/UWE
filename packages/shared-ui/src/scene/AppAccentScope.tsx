@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
  * der Akzent stimmt im ersten server-gerenderten Frame.
  */
 
-export type AccentApp = "studio" | "portal" | "brain";
+export type AccentApp = "studio" | "portal" | "brain" | "family";
 
 /** Steuert, ob der Träger im Layout verschwindet oder selbst Layout trägt. */
 export type AccentScopeLayout = "contents" | "block" | "flex-column";

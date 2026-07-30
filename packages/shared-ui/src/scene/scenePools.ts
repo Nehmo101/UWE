@@ -11,7 +11,14 @@
  * ausschließlich Dateien — diese Tabelle bleibt unangetastet.
  */
 
-export type SceneArea = "landing" | "studio" | "portal" | "brain";
+/**
+ * `family` war bis hierher kein eigener Bereich: die Family-Shell lief mit
+ * `area="brain"` mit. Beide Apps sahen dadurch identisch aus, obwohl die eine
+ * ein gemeinsamer Haushalt ist und die andere der private Wissensbereich —
+ * genau die fehlende Unterscheidbarkeit, die im Redesign beanstandet wurde.
+ * Family hat jetzt einen eigenen Pool aus den wärmeren, bewohnten Motiven.
+ */
+export type SceneArea = "landing" | "studio" | "portal" | "brain" | "family";
 export type SceneMode = "hell" | "dunkel";
 export type SceneVariant = "desktop" | "mobil";
 
@@ -64,6 +71,11 @@ export const SCENE_POOLS: PoolTable = {
         s("tag-desktop/06-sumpf-pagodenstadt", "center 42%"),
         s("tag-desktop/07-abendlicht-huegel", "center 46%"),
       ],
+      family: [
+        s("tag-desktop/08-blumenkueste", "center 44%"),
+        s("tag-desktop/04-gruenes-tal-wurzelbruecken", "center 42%"),
+        s("tag-desktop/07-abendlicht-huegel", "center 46%"),
+      ],
     },
     dunkel: {
       landing: [
@@ -85,6 +97,11 @@ export const SCENE_POOLS: PoolTable = {
         s("nacht-desktop/04-moor-lichtranken", "center 42%"),
         s("nacht-desktop/09-sumpfsee-blattbaum", "center 45%"),
         s("nacht-desktop/06-wueste-riesenwurzeln", "center 38%"),
+      ],
+      family: [
+        s("nacht-desktop/10-stadt-blattranken", "center 44%"),
+        s("nacht-desktop/05-felsenstadt-blattranken", "center 38%"),
+        s("nacht-desktop/04-moor-lichtranken", "center 42%"),
       ],
     },
   },
@@ -110,6 +127,11 @@ export const SCENE_POOLS: PoolTable = {
         s("tag-mobil/02-wueste-schwebeinsel", "center 42%"),
         s("tag-mobil/03-schlucht-werkstadt", "center 52%"),
       ],
+      family: [
+        s("tag-mobil/01-gassenstadt-ranken", "center 50%"),
+        s("tag-mobil/05-meerkueste-blattinsel", "center 45%"),
+        s("tag-mobil/04-bergtal-turmstadt", "center 45%"),
+      ],
     },
     dunkel: {
       landing: [
@@ -132,6 +154,11 @@ export const SCENE_POOLS: PoolTable = {
         s("nacht-mobil/03-wuestenoase-leuchtstamm", "center 45%"),
         s("nacht-mobil/02-schlucht-blattturm", "center 48%"),
       ],
+      family: [
+        s("nacht-mobil/01-gassenstadt-ranken", "center 50%"),
+        s("nacht-mobil/04-bergranke-lichterstadt", "center 45%"),
+        s("nacht-mobil/06-sumpfturm-laternen", "center 45%"),
+      ],
     },
   },
 };
@@ -139,7 +166,13 @@ export const SCENE_POOLS: PoolTable = {
 /** Handout-Vorschau der Portal-Karte — kein Pool, ein festes Motiv. */
 export const HANDOUT_PREVIEW: Scene = s("tag-welt-rankenstadt", "center 22%");
 
-export const SCENE_AREAS: readonly SceneArea[] = ["landing", "studio", "portal", "brain"];
+export const SCENE_AREAS: readonly SceneArea[] = [
+  "landing",
+  "studio",
+  "portal",
+  "brain",
+  "family",
+];
 export const SCENE_MODES: readonly SceneMode[] = ["hell", "dunkel"];
 export const SCENE_VARIANTS: readonly SceneVariant[] = ["desktop", "mobil"];
 

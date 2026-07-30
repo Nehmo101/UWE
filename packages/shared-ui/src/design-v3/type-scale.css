@@ -1,0 +1,190 @@
+/**
+ * Design v3 — Typografie.
+ *
+ * Warum es diese Datei gibt: der Bestand war durchgehend zu klein gesetzt.
+ * `landing-shared.ts` definierte `TEXT_BASE = 14.4px`, `painted-scene.css`
+ * setzte Eyebrows auf 10px und Leden auf 11.5px, die vier `globals.css`
+ * arbeiteten flächendeckend mit 0.75rem–0.9rem. Auf einem Telefon war damit
+ * praktisch kein Fließtext ≥ 16px — die schwankende Lesbarkeit war kein
+ * Einzelfall, sondern der Maßstab selbst.
+ *
+ * Hier steht **ein** Maßstab für alle fünf Apps. Alles ist in `rem`, damit die
+ * Dichte-/UI-Skalierung aus `uwe.css` (`font-size: calc(16px * …)`) und die
+ * Browser-Schriftgröße des Nutzers weiter greifen. Die `clamp()`-Werte wachsen
+ * zwischen 320px und 1440px Viewport; die **untere** Grenze ist die
+ * Telefon-Größe und damit die, die zählt.
+ *
+ * Regel für neuen Code: Fließtext nie unter `--uwe-text-base` (16px), Labels
+ * nie unter `--uwe-text-sm` (14px), und `--uwe-text-2xs` ausschließlich für
+ * Versalien-Eyebrows mit weitem Sperrsatz — nie für Fließtext.
+ */
+
+:root {
+  /* --- Größen ---------------------------------------------------------- */
+  /* Nur Versalien-Eyebrows. Sperrsatz macht sie lesbar, nicht die Größe. */
+  --uwe-text-2xs: 0.75rem; /* 12px */
+  /* Kleinste zulässige Größe für echte Information (Badges, Tabellen-Meta). */
+  --uwe-text-xs: 0.8125rem; /* 13px */
+  /* Sekundärtext, Labels, kompakte Listen. */
+  --uwe-text-sm: 0.875rem; /* 14px */
+  /* Fließtext. Untergrenze auf jedem Viewport. */
+  --uwe-text-base: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem); /* 16 → 17px */
+  --uwe-text-lg: clamp(1.125rem, 1.09rem + 0.18vw, 1.1875rem); /* 18 → 19px */
+  --uwe-text-xl: clamp(1.1875rem, 1.11rem + 0.38vw, 1.375rem); /* 19 → 22px */
+  --uwe-text-2xl: clamp(1.375rem, 1.24rem + 0.67vw, 1.75rem); /* 22 → 28px */
+  --uwe-text-3xl: clamp(1.625rem, 1.4rem + 1.12vw, 2.25rem); /* 26 → 36px */
+  --uwe-text-4xl: clamp(1.875rem, 1.4rem + 2.37vw, 3.1875rem); /* 30 → 51px */
+  --uwe-text-5xl: clamp(2.125rem, 1.4rem + 3.63vw, 4.15rem); /* 34 → 66px */
+
+  /* --- Zeilenhöhen ------------------------------------------------------ */
+  --uwe-leading-tight: 1.12; /* Display-Überschriften */
+  --uwe-leading-snug: 1.28; /* Überschriften, Karten-Titel */
+  --uwe-leading-normal: 1.55; /* Fließtext */
+  --uwe-leading-relaxed: 1.68; /* lange Lesestrecken */
+
+  /* --- Laufweite -------------------------------------------------------- */
+  --uwe-tracking-tight: -0.02em;
+  --uwe-tracking-normal: 0;
+  --uwe-tracking-wide: 0.04em;
+  --uwe-tracking-caps: 0.11em;
+
+  /* --- Gewichte --------------------------------------------------------- */
+  --uwe-weight-normal: 400;
+  --uwe-weight-medium: 500;
+  --uwe-weight-semibold: 600;
+  --uwe-weight-bold: 700;
+
+  /* --- Zeilenlänge ------------------------------------------------------ */
+  --uwe-measure: 68ch; /* Fließtext */
+  --uwe-measure-narrow: 46ch; /* Leden, Hilfetexte */
+  --uwe-measure-wide: 84ch; /* Tabellen-Beschreibungen */
+
+  /* --- Schriftfamilien (Alias auf das Bestandssystem) ------------------- */
+  --uwe-font-display: var(--uwe-font-newsreader, Georgia), "Iowan Old Style", serif;
+  --uwe-font-ui: var(--uwe-font-family);
+}
+
+/*
+ * Grundtypografie. Bewusst niedrige Spezifität (Elementselektoren) — jede
+ * Komponentenregel gewinnt weiterhin. Das hier ist nur der Boden, auf den
+ * niemand mehr fällt.
+ */
+body {
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-normal);
+  /* Fließtext auf gemaltem Grund braucht etwas mehr Fett als auf Weiß. */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+p,
+li,
+dd,
+td,
+th,
+label,
+input,
+select,
+textarea,
+button {
+  font-size: inherit;
+}
+
+/*
+ * Überschriftenebenen. Der Bestand hatte h1 bei 1.75rem und h2 bei 1.25rem —
+ * zu dicht beieinander, um eine Hierarchie zu tragen. Die Sprünge hier sind
+ * groß genug, dass man sie ohne Vergleich erkennt.
+ */
+h1 {
+  font-size: var(--uwe-text-3xl);
+  line-height: var(--uwe-leading-tight);
+  letter-spacing: var(--uwe-tracking-tight);
+  font-weight: var(--uwe-weight-medium);
+}
+
+h2 {
+  font-size: var(--uwe-text-2xl);
+  line-height: var(--uwe-leading-snug);
+  letter-spacing: var(--uwe-tracking-tight);
+  font-weight: var(--uwe-weight-medium);
+}
+
+h3 {
+  font-size: var(--uwe-text-xl);
+  line-height: var(--uwe-leading-snug);
+  font-weight: var(--uwe-weight-semibold);
+}
+
+h4 {
+  font-size: var(--uwe-text-lg);
+  line-height: var(--uwe-leading-snug);
+  font-weight: var(--uwe-weight-semibold);
+}
+
+h5,
+h6 {
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-snug);
+  font-weight: var(--uwe-weight-semibold);
+}
+
+/* --- Hilfsklassen, die überall gelten ---------------------------------- */
+
+/* Versalien-Eyebrow: klein, aber durch Sperrsatz und Gewicht lesbar. */
+.uwe-eyebrow {
+  font-size: var(--uwe-text-2xs);
+  line-height: var(--uwe-leading-snug);
+  letter-spacing: var(--uwe-tracking-caps);
+  text-transform: uppercase;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-fg-muted);
+}
+
+/* Sekundärtext. Nie kleiner als das — der Bestand ging bis 10px runter. */
+.uwe-text-meta {
+  font-size: var(--uwe-text-xs);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-text-secondary {
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+}
+
+.uwe-text-body {
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-normal);
+  max-width: var(--uwe-measure);
+}
+
+.uwe-text-lede {
+  font-size: var(--uwe-text-lg);
+  line-height: var(--uwe-leading-relaxed);
+  color: var(--uwe-fg-muted);
+  max-width: var(--uwe-measure-narrow);
+}
+
+/* Zahlen und Daten laufen tabellarisch, damit Spalten stehen. */
+.uwe-tabular,
+td:is([data-numeric], .uwe-num),
+.uwe-stat-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/*
+ * Telefon-Boden. Selbst wenn eine Bestandsregel eine Fläche kleiner setzt,
+ * bleibt echter Fließtext hier lesbar. Bewusst nur `p` und Listen — Labels und
+ * Badges dürfen kompakter bleiben, sie tragen kein Langlesen.
+ */
+@media (max-width: 640px) {
+  p,
+  li,
+  dd,
+  .uwe-text-body,
+  .uwe-prose :is(p, li) {
+    font-size: max(1rem, var(--uwe-text-base));
+  }
+}

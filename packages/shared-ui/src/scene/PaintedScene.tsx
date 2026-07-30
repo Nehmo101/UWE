@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { resolveScenePair, sceneCssUrl, sceneUrl } from "./pickScene";
+import { SceneStage } from "./SceneStage";
 import { SCENE_BREAKPOINT_PX, type SceneArea } from "./scenePools";
 
 /**
@@ -90,6 +91,14 @@ export function PaintedScene({
       <div className="uwe-scene" data-height={height} aria-hidden="true" style={style}>
         <div className="uwe-scene__layer uwe-scene__day" />
         <div className="uwe-scene__layer uwe-scene__night" />
+        {/*
+          Die bewegte Ebene sitzt bewusst *hier*: über den Bildebenen, aber
+          unter Veil, Top-Shade und Boden. Dadurch gilt jede Abdunklung, die
+          den Text lesbar hält, für Video und Standbild gleichermaßen — es gibt
+          keine zweite, abweichende Maske. Ohne hinterlegte Clips rendert die
+          Komponente `null` und kostet nichts.
+        */}
+        <SceneStage area={area} basePath={basePath} height={height} />
         <div className="uwe-scene__veil" data-veil={veil} />
         {topShade ? <div className="uwe-scene__top-shade" /> : null}
         <div className="uwe-scene__ground" />

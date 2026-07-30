@@ -20,6 +20,10 @@
 @import "./design-v2/index.css";
 @import "./uwe-visual-polish.css";
 @import "./uwe-components.css";
+/* v3 steht zuletzt: Typografie-Maßstab, Flächen-Leiter und die
+   nachgerechneten AA-Farbwerte müssen gegen die Bestandsschichten gewinnen.
+   Siehe design-v3/index.css. */
+@import "./design-v3/index.css";
 
 :root {
   /* Core palette (overridden at runtime by theme engine) */

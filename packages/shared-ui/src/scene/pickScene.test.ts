@@ -21,24 +21,32 @@ import {
   scenesForAreas,
 } from "./scenePools";
 
-/** Poolgrößen laut Handoff (README, Abschnitt „Bildrotation"). */
+/**
+ * Poolgrößen laut Handoff (README, Abschnitt „Bildrotation").
+ * `family` kam mit dem v3-Redesign dazu — vorher lief die App auf Brains Pool
+ * mit und war dadurch optisch nicht von Brain zu unterscheiden.
+ */
 const EXPECTED_POOL_SIZES: Record<string, number> = {
   "desktop/hell/landing": 4,
   "desktop/hell/studio": 3,
   "desktop/hell/portal": 4,
   "desktop/hell/brain": 3,
+  "desktop/hell/family": 3,
   "desktop/dunkel/landing": 3,
   "desktop/dunkel/studio": 3,
   "desktop/dunkel/portal": 3,
   "desktop/dunkel/brain": 3,
+  "desktop/dunkel/family": 3,
   "mobil/hell/landing": 3,
   "mobil/hell/studio": 3,
   "mobil/hell/portal": 3,
   "mobil/hell/brain": 3,
+  "mobil/hell/family": 3,
   "mobil/dunkel/landing": 3,
   "mobil/dunkel/studio": 3,
   "mobil/dunkel/portal": 3,
   "mobil/dunkel/brain": 3,
+  "mobil/dunkel/family": 3,
 };
 
 describe("scene pools", () => {
