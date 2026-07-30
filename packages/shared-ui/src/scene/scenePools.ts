@@ -29,8 +29,28 @@ export interface Scene {
   pos: string;
 }
 
-/** Einmal zentral, damit ein späterer Formatwechsel eine Konstante ist. */
-export const SCENE_FILE_EXTENSION = ".png";
+/**
+ * Formate der Szenenbilder, bevorzugt zuerst.
+ *
+ * Die Quelldateien in `assets/scenes/` sind PNGs mit zusammen 74 MB. Als
+ * UI-Hintergrund waren sie doppelt ungeeignet: zu groß für ein Telefon und zu
+ * kontrastreich hinter Text. `scripts/regrade-scenes.mjs` erzeugt daraus die
+ * beruhigte Fassung in `assets/scenes-graded/` — Kontrast und Sättigung
+ * zurückgenommen, der untere Bildbereich mit einem Tiefenschärfe-Verlauf
+ * weichgezeichnet, ausgegeben als AVIF und WebP. Dieselben 33 Motive wiegen
+ * damit 4,3 MB statt 74 MB.
+ *
+ * `SCENE_FILE_EXTENSION` bleibt als Einzahl-Export bestehen: Tests und das
+ * Kopier-Skript zählen damit Dateien, und die Handout-Vorschau braucht genau
+ * eine URL. Für die Bühne selbst liefert `sceneCssUrl` ein `image-set()` über
+ * beide Formate, damit ältere Browser ohne AVIF das WebP bekommen.
+ */
+export const SCENE_FORMATS = [
+  { ext: ".avif", mime: "image/avif" },
+  { ext: ".webp", mime: "image/webp" },
+] as const;
+
+export const SCENE_FILE_EXTENSION = SCENE_FORMATS[0].ext;
 
 /** Öffentliches Verzeichnis je App (`apps/<app>/public/scenes`). */
 export const SCENE_PUBLIC_DIR = "/scenes";
@@ -185,8 +205,8 @@ export function getScenePool(
 }
 
 /**
- * Alle Dateien, die ein Bereich braucht — beide Modi, beide Viewports.
- * Das Copy-Script kopiert je App nur diese Teilmenge in ihr `public/`.
+ * Alle Dateien, die ein Bereich braucht — beide Modi, beide Viewports, beide
+ * Formate. Das Copy-Script kopiert je App nur diese Teilmenge in ihr `public/`.
  */
 export function scenesForAreas(areas: readonly SceneArea[]): string[] {
   const files = new Set<string>();
@@ -194,7 +214,7 @@ export function scenesForAreas(areas: readonly SceneArea[]): string[] {
     for (const variant of SCENE_VARIANTS) {
       for (const mode of SCENE_MODES) {
         for (const scene of getScenePool(area, mode, variant)) {
-          files.add(scene.src + SCENE_FILE_EXTENSION);
+          for (const { ext } of SCENE_FORMATS) files.add(scene.src + ext);
         }
       }
     }

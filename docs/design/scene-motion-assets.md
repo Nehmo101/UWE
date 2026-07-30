@@ -257,3 +257,24 @@ Solange das so ist, müssen die Rohdateien manuell aus dem Artlist-Konto geholt
 und nach `assets/scenes-motion/` gelegt werden; Schritt 3 und 4 laufen dann
 lokal. Werden die vier Hosts in der Netzwerk-Policy der Umgebung freigegeben,
 läuft die Kette vollständig automatisch.
+
+## Standbilder: die beruhigte Fassung
+
+Unabhängig von den Clips wurde der vorhandene Standbild-Bestand überarbeitet.
+`scripts/regrade-scenes.mjs` liest `assets/scenes/` und schreibt nach
+`assets/scenes-graded/`:
+
+1. Sättigung auf 82 %, Kontrast auf 88 % mit angehobenem Schwarzpunkt — kein
+   Bildbereich konkurriert mehr mit dem Text darüber.
+2. Ein Tiefenschärfe-Verlauf ab 46 % Bildhöhe nach unten, in sechs Stufen bis
+   Sigma 14. Oben bleibt die Landschaft scharf, unten wird sie Atmosphäre —
+   genau dort, wo Karten, Tabellen und Fließtext sitzen.
+3. Ausgabe als AVIF (Qualität 52) und WebP (Qualität 74).
+
+Ergebnis: dieselben 33 Motive wiegen **4,3 MB statt 74 MB**. Die PNG-Vorlagen
+bleiben unangetastet im Repo.
+
+`sceneCssUrl` liefert seither ein `image-set()` über beide Formate; wo AVIF
+fehlt, greift WebP ohne Zutun. Ausgeliefert wird je App nur die Teilmenge, die
+ihre Bereiche brauchen — zwischen 1,4 MB (Brain) und 2,8 MB (Studio, das die
+Landing mitführt).

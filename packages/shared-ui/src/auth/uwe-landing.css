@@ -252,20 +252,30 @@
     line-height: 1.05;
   }
 
+  /*
+   * Vier Karten in einer Reihe brauchen 4 x 340 + 3 x 24 + 120 Rand = 1552 px.
+   * Auf einem 1440er-Schirm passte das nicht und brach zu 3 + 1 um — eine
+   * verwaiste vierte Karte mittig unter den anderen. Ein Raster statt Flex-Wrap
+   * loest das: zwei Spalten ab 960 px, vier erst ab 1400 px. Dazwischen ist
+   * 2 x 2 die ruhigere Anordnung, nicht die schlechtere.
+   */
   .uwe-lp-choices {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: center;
     align-items: stretch;
-    flex-wrap: wrap;
-    gap: 24px;
-    padding: 0 60px;
-    margin-bottom: 64px;
+    gap: var(--uwe-space-5);
+    padding: 0 var(--uwe-gutter);
+    margin-bottom: var(--uwe-space-12);
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
   }
 
   .uwe-lp-card {
     flex-direction: column;
     align-items: flex-start;
-    width: 340px;
+    width: 100%;
     padding: 26px;
     border-radius: var(--uwe-radius-card, 14px);
     backdrop-filter: blur(var(--uwe-glass-blur, 13px)) saturate(1.05);
@@ -459,5 +469,30 @@
   .uwe-lp-root[data-leaving="true"] .uwe-lp-card {
     transform: none;
     filter: none;
+  }
+}
+
+/* Vier nebeneinander erst, wenn sie ohne Gedraenge nebeneinander passen. */
+@media (min-width: 1400px) {
+  .uwe-lp-choices {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--uwe-space-6);
+    max-width: 84rem;
+  }
+}
+
+/*
+ * Der Titel brach mobil mitten im Wort-Paar um („Universeller Welten-" /
+ * „Editor"). `balance` verteilt die Zeilen gleichmaessig, statt die erste
+ * vollzulaufen.
+ */
+.uwe-lp-title {
+  text-wrap: balance;
+  max-width: 22ch;
+}
+
+@media (min-width: 960px) {
+  .uwe-lp-title {
+    max-width: none;
   }
 }

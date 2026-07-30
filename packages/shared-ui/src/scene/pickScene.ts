@@ -1,6 +1,7 @@
 import {
   getScenePool,
   SCENE_FILE_EXTENSION,
+  SCENE_FORMATS,
   SCENE_PUBLIC_DIR,
   type Scene,
   type SceneArea,
@@ -99,9 +100,21 @@ export function sceneUrl(scene: Scene, basePath = ""): string {
   return `${prefix}${SCENE_PUBLIC_DIR}/${scene.src}${SCENE_FILE_EXTENSION}`;
 }
 
-/** CSS-`url(...)`-Wert für die Custom-Property der Szenen-Ebene. */
+/**
+ * CSS-Wert für die Custom-Property der Szenen-Ebene.
+ *
+ * `image-set()` statt `url()`: der Browser nimmt das erste Format, das er
+ * dekodieren kann. AVIF ist bei diesen Motiven rund ein Drittel kleiner als
+ * WebP; wo es fehlt (ältere Safari- und Firefox-Stände), fällt die Auswahl
+ * ohne Zutun auf WebP zurück. Ein `url()` mit nur einem Format hieße entweder
+ * unnötige Bytes für alle oder ein leerer Hintergrund für manche.
+ */
 export function sceneCssUrl(scene: Scene, basePath = ""): string {
-  return `url("${sceneUrl(scene, basePath)}")`;
+  const prefix = basePath.replace(/\/$/, "");
+  const entries = SCENE_FORMATS.map(
+    ({ ext, mime }) => `url("${prefix}${SCENE_PUBLIC_DIR}/${scene.src}${ext}") type("${mime}")`,
+  ).join(", ");
+  return `image-set(${entries})`;
 }
 
 export type { Scene, SceneArea, SceneMode, SceneVariant };

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Kopiert die Szenenbilder aus `assets/scenes/` in das `public/scenes/` der
- * jeweiligen App.
+ * Kopiert die beruhigten Szenenbilder aus `assets/scenes-graded/` in das
+ * `public/scenes/` der jeweiligen App.
  *
  * Warum kopieren statt dreimal committen: die CSP erlaubt nur
  * `img-src 'self'` (packages/auth/src/security-headers.ts), jede App muss ihre
@@ -20,13 +20,19 @@ import { fileURLToPath } from "node:url";
 
 import {
   HANDOUT_PREVIEW,
-  SCENE_FILE_EXTENSION,
+  SCENE_FORMATS,
   scenesForAreas,
 } from "../packages/shared-ui/src/scene/scenePools.ts";
 import { motionFilesForAreas } from "../packages/shared-ui/src/scene/sceneMotion.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCE = path.join(ROOT, "assets", "scenes");
+/**
+ * Quelle sind die *beruhigten* Bilder aus `scripts/regrade-scenes.mjs`, nicht
+ * die PNG-Vorlagen. Die Vorlagen bleiben im Repo als Ausgangsmaterial; in die
+ * Anwendung geht die Fassung mit zurückgenommenem Kontrast, Tiefenschärfe-
+ * Verlauf und in AVIF/WebP — 4,3 MB statt 74 MB.
+ */
+const SOURCE = path.join(ROOT, "assets", "scenes-graded");
 /**
  * Die bewegte Bühne. Getrenntes Quellverzeichnis, weil die Clips nicht aus
  * derselben Charge stammen wie die Standbilder und einzeln nachgeliefert
@@ -53,9 +59,14 @@ const APP_AREAS = {
   family: ["family"],
 };
 
+/** Jedes Motiv wird in beiden Formaten ausgeliefert (siehe SCENE_FORMATS). */
+function withFormats(bases) {
+  return bases.flatMap((base) => SCENE_FORMATS.map(({ ext }) => base + ext));
+}
+
 /** Das Handout-Thumbnail zeigt nur das Portal. */
 const EXTRA_FILES = {
-  portal: [HANDOUT_PREVIEW.src + SCENE_FILE_EXTENSION],
+  portal: withFormats([HANDOUT_PREVIEW.src]),
 };
 
 function copyFileIfChanged(from, to) {
