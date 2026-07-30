@@ -6,8 +6,6 @@ import path from "node:path";
 import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
 import {
   appendOperationLog,
-  bundleInstallRoot,
-  commandCenterDataRoot,
   detectHostMode,
   ensureHostDirectories,
   pathsFor,
