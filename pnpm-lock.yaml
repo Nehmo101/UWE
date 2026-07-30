@@ -1042,6 +1042,9 @@ importers:
 
   packages/family-core:
     dependencies:
+      '@uwe/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@uwe/calendar':
         specifier: workspace:*
         version: link:../calendar

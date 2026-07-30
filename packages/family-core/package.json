@@ -13,6 +13,7 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/auth": "workspace:*",
     "@uwe/calendar": "workspace:*",
     "@uwe/connector": "workspace:*",
     "@uwe/database": "workspace:*"
