@@ -1,0 +1,465 @@
+/* Command Center 2.0 — operational hierarchy, responsive shell and help affordances. */
+:root {
+  --uwe-font-family: "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif;
+  --uwe-font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+}
+
+.connector-shell {
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+}
+
+.connector-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  padding: 1.35rem 1rem;
+  gap: 1.1rem;
+  box-shadow: 12px 0 36px color-mix(in srgb, #000 12%, transparent);
+}
+
+.connector-brand {
+  padding: 0.25rem 0.35rem 1.1rem;
+  border-bottom: 1px solid var(--uwe-border);
+}
+
+.connector-brand h1 {
+  font-size: 1.2rem;
+  letter-spacing: -0.025em;
+}
+
+.connector-brand p {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.connector-nav {
+  min-height: 0;
+  overflow-y: auto;
+  gap: 0.28rem;
+  padding-right: 0.2rem;
+  scrollbar-width: thin;
+}
+
+.connector-nav-item {
+  min-height: 2.55rem;
+  border-color: transparent;
+  border-radius: 0.7rem;
+  padding: 0.58rem 0.7rem;
+  font-size: 0.84rem;
+}
+
+.connector-nav-item:hover {
+  transform: none;
+}
+
+.connector-nav-item.is-active {
+  border-color: color-mix(in srgb, var(--uwe-warning) 38%, transparent);
+  background: color-mix(in srgb, var(--uwe-warning) 15%, transparent);
+  box-shadow: inset 3px 0 0 var(--uwe-warning);
+}
+
+.connector-main {
+  min-width: 0;
+  padding: clamp(1rem, 2.2vw, 2rem);
+  gap: 1.25rem;
+}
+
+.connector-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  align-items: center;
+  margin: calc(clamp(1rem, 2.2vw, 2rem) * -1);
+  margin-bottom: 0;
+  padding: 0.9rem clamp(1rem, 2.2vw, 2rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--uwe-border) 75%, transparent);
+  background: color-mix(in srgb, var(--uwe-bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.connector-header h2 {
+  font-size: 1.05rem;
+  letter-spacing: -0.015em;
+}
+
+.connector-content {
+  width: min(100%, 92rem);
+  margin-inline: auto;
+}
+
+.command-center-stack {
+  gap: 1.25rem;
+}
+
+.command-center-overview {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+  min-height: 19rem;
+  padding: clamp(1.5rem, 3vw, 3rem);
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 78%, transparent);
+  border-radius: 1.4rem;
+  background:
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--uwe-accent) 21%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--uwe-card-bg) 98%, transparent), color-mix(in srgb, var(--uwe-panel) 88%, var(--uwe-bg)));
+  box-shadow: 0 22px 65px color-mix(in srgb, var(--uwe-fg) 11%, transparent);
+}
+
+.command-center-overview::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: auto -6rem -10rem auto;
+  width: 25rem;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 25%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2.5rem color-mix(in srgb, var(--uwe-accent) 4%, transparent), 0 0 0 5rem color-mix(in srgb, var(--uwe-accent) 3%, transparent);
+}
+
+.command-center-overview.is-ready {
+  background:
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--uwe-success) 25%, transparent), transparent 31%),
+    linear-gradient(135deg, color-mix(in srgb, var(--uwe-card-bg) 98%, transparent), color-mix(in srgb, var(--uwe-panel) 88%, var(--uwe-bg)));
+}
+
+.command-center-overview-copy {
+  max-width: 52rem;
+}
+
+.command-center-overview h3 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5vw, 4.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.command-center-overview p {
+  max-width: 45rem;
+  margin: 0;
+  color: var(--uwe-fg-muted);
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.65;
+}
+
+.command-center-command-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1.65rem;
+}
+
+.command-center-main-action {
+  min-width: 12rem;
+}
+
+.command-center-refresh {
+  border-radius: 999px;
+}
+
+.command-center-pulse {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 9rem;
+  text-align: center;
+}
+
+.command-center-pulse-orb {
+  display: grid;
+  width: 6.5rem;
+  aspect-ratio: 1;
+  margin-bottom: 1rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--uwe-fg) 14%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--uwe-card-bg) 72%, transparent);
+  box-shadow: inset 0 0 30px color-mix(in srgb, var(--uwe-fg) 7%, transparent), 0 12px 35px color-mix(in srgb, var(--uwe-fg) 13%, transparent);
+}
+
+.command-center-pulse-orb span {
+  width: 1.35rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--uwe-fg-subtle);
+  box-shadow: 0 0 0 0.65rem color-mix(in srgb, var(--uwe-fg-subtle) 14%, transparent);
+}
+
+.command-center-pulse-orb.is-ready span {
+  background: var(--uwe-success);
+  box-shadow: 0 0 0 0.65rem color-mix(in srgb, var(--uwe-success) 15%, transparent), 0 0 28px var(--uwe-success);
+}
+
+.command-center-pulse-orb.is-error span {
+  background: var(--uwe-danger);
+  box-shadow: 0 0 0 0.65rem color-mix(in srgb, var(--uwe-danger) 15%, transparent), 0 0 28px var(--uwe-danger);
+}
+
+.command-center-pulse strong {
+  font-family: var(--uwe-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
+.command-center-pulse small {
+  margin-top: 0.35rem;
+  color: var(--uwe-fg-subtle);
+}
+
+.command-center-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--uwe-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--uwe-card-bg) 91%, transparent);
+  box-shadow: var(--uwe-shadow-sm);
+}
+
+.command-center-summary-item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem 1.1rem 1rem 1.35rem;
+  border: 0;
+  border-right: 1px solid var(--uwe-border-muted);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.command-center-summary-item::before {
+  content: "";
+  position: absolute;
+  top: 1.15rem;
+  bottom: 1.15rem;
+  left: 0.65rem;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--uwe-border);
+}
+
+.command-center-summary-item.is-ok::before { background: var(--uwe-success); }
+.command-center-summary-item.is-warning::before { background: var(--uwe-warning); }
+.command-center-summary-item:last-child { border-right: 0; }
+
+.command-center-summary-item > span {
+  color: var(--uwe-fg-subtle);
+  font-size: 0.75rem;
+}
+
+.command-center-summary-item > strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.command-center-summary-item {
+  cursor: pointer;
+}
+
+button.command-center-summary-item:hover {
+  background: color-mix(in srgb, var(--uwe-accent-muted) 55%, transparent);
+}
+
+button.command-center-summary-item svg {
+  position: absolute;
+  top: 50%;
+  right: 0.9rem;
+  transform: translateY(-50%);
+}
+
+.command-center-section-block,
+.command-center-maintenance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-top: 0.35rem;
+}
+
+.command-center-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.command-center-section-heading.is-compact {
+  align-items: center;
+}
+
+.command-center-section-heading .connector-kicker {
+  margin-bottom: 0.25rem;
+  color: var(--uwe-accent);
+}
+
+.command-center-section-heading h3 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  letter-spacing: -0.025em;
+}
+
+.command-center-section-heading p {
+  margin: 0.35rem 0 0;
+  color: var(--uwe-fg-muted);
+  line-height: 1.5;
+}
+
+.command-center-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.8rem;
+}
+
+.command-center-service-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--uwe-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--uwe-card-bg) 93%, transparent);
+  box-shadow: var(--uwe-shadow-sm);
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.command-center-service-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, var(--uwe-border));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--uwe-fg) 9%, transparent);
+}
+
+.command-center-service-card.is-online {
+  border-color: color-mix(in srgb, var(--uwe-success) 35%, var(--uwe-border));
+}
+
+.command-center-service-card.is-error {
+  border-color: color-mix(in srgb, var(--uwe-danger) 45%, var(--uwe-border));
+}
+
+.command-center-service-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.command-center-service-icon,
+.command-center-metric-icon,
+.command-center-disclosure-icon {
+  display: grid;
+  flex: none;
+  width: 2.35rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: var(--uwe-accent-muted);
+  color: var(--uwe-accent);
+}
+
+.command-center-service-head h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.command-center-service-state {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  color: var(--uwe-fg-subtle);
+  font-size: 0.75rem;
+}
+
+.command-center-service-state i {
+  width: 0.48rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--uwe-fg-subtle);
+}
+
+.command-center-service-card.is-online .command-center-service-state i {
+  background: var(--uwe-success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--uwe-success) 14%, transparent);
+}
+
+.command-center-service-card.is-starting .command-center-service-state i { background: var(--uwe-warning); }
+.command-center-service-card.is-error .command-center-service-state i { background: var(--uwe-danger); }
+
+.command-center-service-card > p {
+  min-height: 2.5em;
+  margin: 0;
+  color: var(--uwe-fg-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.command-center-service-card > code {
+  overflow: hidden;
+  color: var(--uwe-fg-subtle);
+  font-family: var(--uwe-font-mono);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-center-service-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+.command-center-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.command-center-metric {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--uwe-card-bg) 75%, transparent);
+}
+
+.command-center-metric > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.command-center-metric > div > span,
+.command-center-metric small {
+  overflow: hidden;
+  color: var(--uwe-fg-subtle);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-center-metric strong {
+  overflow: hidden;
+  font-size: 0.95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

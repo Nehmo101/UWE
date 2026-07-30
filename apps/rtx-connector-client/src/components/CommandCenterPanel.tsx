@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { parseConnectorClientConfig, type ConnectorClientConfig } from "@uwe/connector-client-config";
-import { HealthBadge } from "@uwe/shared-ui";
 
 import {
   backupHost,
@@ -30,16 +29,12 @@ import {
   type LocalHostUpdateInfo,
   type HostBackupEntry,
 } from "../lib/tauri";
-import { humanizeConnectionStatus, toHealthBadgeStatus, toMessage } from "../lib/connector-runtime-labels";
+import { toMessage } from "../lib/connector-runtime-labels";
 import { useHostActionProgress } from "../lib/useHostActionProgress";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
-import { HostBackupsCard, HostLogsCard } from "./command-center/HostMaintenanceCards";
+import { CommandCenterMaintenance } from "./command-center/CommandCenterMaintenance";
+import { CommandCenterOverview } from "./command-center/CommandCenterOverview";
 import {
   busyLabel,
-  formatBytes,
-  formatDuration,
-  stateLabel,
   type BusyState,
   type HostAction,
 } from "./command-center/host-format";
@@ -375,35 +370,20 @@ export function CommandCenterPanel({
     }
   }
 
-  const hostOnline = status?.services.every((service) => service.healthy) ?? false;
-  // Any service not fully stopped — used to keep "Alles stoppen" enabled even when
-  // only some services are up (a partially-running host must still be stoppable).
-  const hostAnyRunning = status?.services.some((service) => service.state !== "stopped") ?? false;
-  const connectorConfigured = Boolean(config.hostUrl && config.token);
-  const installChecks = status ? [
-    ["Repository", status.installation.repoReady],
-    ["Abhängigkeiten", status.installation.dependenciesReady],
-    ["Umgebung", status.installation.envReady],
-    ["Datenbank", status.installation.databaseReady],
-    ["Produktions-Build", status.installation.buildReady],
-  ] as const : [];
-
   return (
     <div className="command-center-stack">
-      <section className={`command-center-hero is-${status?.overall ?? "attention"}`}>
-        <div>
-          <span className="connector-kicker">ALL-IN-ONE · LOKAL · PRIVATE</span>
-          <h3>Ein PC. Ein Command Center.</h3>
-          <p>UWE Hosting, Daten und RTX-Leistung laufen gemeinsam auf diesem Rechner - zentral steuerbar, ohne zusätzlichen Host-Dienst.</p>
+      {message ? (
+        <div className="connector-banner connector-banner-success command-center-notice" role="status">
+          <span>{message}</span>
+          <button type="button" onClick={() => setMessage(null)} aria-label="Hinweis schließen">×</button>
         </div>
-        <div className="command-center-hero-status">
-          <HealthBadge status={status?.overall === "ready" ? "ok" : status?.overall === "error" ? "error" : "degraded"} label={stateLabel(status)} />
-          <small>{status?.host.hostname ?? "Lokaler Rechner"}</small>
+      ) : null}
+      {error ? (
+        <div className="connector-banner connector-banner-error command-center-notice" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} aria-label="Fehlermeldung schließen">×</button>
         </div>
-      </section>
-
-      {message ? <div className="connector-banner connector-banner-success">{message}</div> : null}
-      {error ? <div className="connector-banner connector-banner-error">{error}</div> : null}
+      ) : null}
 
       {busy ? (() => {
         const determinate =
@@ -444,206 +424,53 @@ export function CommandCenterPanel({
         );
       })() : null}
 
-      <div className="command-center-primary-actions">
-        <Button variant="primary" onClick={startEverything} disabled={busy !== null || hostOnline}>Alles starten</Button>
-        <Button variant="secondary" onClick={stopEverything} disabled={busy !== null || (!hostAnyRunning && connectorStatus.status !== "running")}>Alles stoppen</Button>
-        <Button variant="accent" onClick={() => runAction("setup")} disabled={busy !== null}>{status?.installation.buildReady ? "Reparieren / neu bauen" : "UWE einrichten"}</Button>
-        {/* Der Assistent ist der Weg, die installierten Bereiche zu ändern —
-            „Reparieren" baut bewusst nur den bestehenden Umfang neu. */}
-        <Button variant="secondary" onClick={onOpenInstallWizard} disabled={busy !== null}>
-          {status?.installation.selectionPersisted ? "Bereiche ändern" : "Ersteinrichtung"}
-        </Button>
-        <Button
-          variant={updateInfo?.updateAvailable ? "primary" : "secondary"}
-          onClick={() => (updateInfo?.updateAvailable ? runInstallUpdate() : runCheckUpdate())}
-          disabled={busy !== null}
-        >
-          {busy === "update"
-            ? "Update läuft …"
-            : busy === "check-update"
-              ? "Prüfe …"
-              : updateInfo?.updateAvailable
-                ? "Update installieren"
-                : "Nach Updates suchen"}
-        </Button>
-        <Button variant="ghost" onClick={() => refresh()} disabled={busy !== null}>Status neu laden</Button>
-      </div>
-
-      {updateInfo ? (
-        <Card>
-          <CardHeader><CardTitle>UWE Releases</CardTitle></CardHeader>
-          <CardContent>
-            <div className="connector-stack">
-              <HealthBadge
-                status={updateInfo.updateAvailable ? "degraded" : "ok"}
-                label={updateInfo.updateAvailable ? "Update verfügbar" : "Aktuell"}
-              />
-              <dl className="connector-kv">
-                <div><dt>Installiert</dt><dd>{updateInfo.currentVersion ?? "–"} · {updateInfo.currentRevision ?? "–"}</dd></div>
-                <div><dt>Neueste</dt><dd>{updateInfo.latestVersion ?? "–"} · {updateInfo.latestTag ?? "–"}</dd></div>
-              </dl>
-              <p className="connector-muted">
-                Update installiert den Release-Stand per Git, baut Studio/Portal neu
-                {updateInfo.commandCenterUpdateAvailable
-                  ? " und öffnet den Windows-Installer für das Command Center."
-                  : "."}
-                {updateInfo.dirtyWorktree ? " Lokale Änderungen werden vorher per git stash gesichert." : ""}
-              </p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <div className="connector-actions">
-              <Button variant="ghost" onClick={runCheckUpdate} disabled={busy !== null}>Erneut prüfen</Button>
-              <Button variant="primary" onClick={runInstallUpdate} disabled={busy !== null || !updateInfo.updateAvailable}>
-                Update installieren
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-      ) : null}
-
-      <div className="connector-grid connector-grid-4">
-        {status?.services.map((service) => (
-          <Card key={service.id}>
-            <CardHeader><CardTitle>{service.label}</CardTitle></CardHeader>
-            <CardContent>
-              <div className="connector-stack">
-                <HealthBadge status={service.healthy ? "ok" : "degraded"} label={service.healthy ? "Online" : service.state === "starting" ? "Startet" : "Gestoppt"} />
-                <p className="connector-muted">{service.url}</p>
-                <p className="connector-muted">{service.message}</p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <div className="connector-actions">
-                <Button variant="ghost" onClick={() => openHostTarget(root || undefined, service.id)} disabled={!service.healthy}>Öffnen</Button>
-                {service.state === "stopped" ? (
-                  <Button variant="secondary" onClick={() => runServiceAction(service.id, "start")} disabled={busyService !== null || busy !== null}>
-                    {busyService === `${service.id}:start` ? "startet …" : "Start"}
-                  </Button>
-                ) : (
-                  <>
-                    <Button variant="secondary" onClick={() => runServiceAction(service.id, "restart")} disabled={busyService !== null || busy !== null}>
-                      {busyService === `${service.id}:restart` ? "…" : "Neustart"}
-                    </Button>
-                    <Button variant="ghost" onClick={() => runServiceAction(service.id, "stop")} disabled={busyService !== null || busy !== null}>
-                      {busyService === `${service.id}:stop` ? "…" : "Stop"}
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
-        <Card>
-          <CardHeader><CardTitle>Maschinenraum</CardTitle></CardHeader>
-          <CardContent>
-            <div className="connector-stack">
-              <HealthBadge status={toHealthBadgeStatus(connectorStatus)} label={humanizeConnectionStatus(connectorStatus.connectionStatus)} />
-              <p className="connector-muted">{connectorConfigured ? connectorStatus.message : "Wird bei der lokalen Einrichtung automatisch registriert."}</p>
-              {status?.gpu.available ? <strong>{status.gpu.name}</strong> : <span className="connector-muted">Keine NVIDIA-GPU erkannt</span>}
-            </div>
-          </CardContent>
-          <CardFooter><Button variant="ghost" onClick={onOpenConnector}>Maschinenraum einrichten</Button></CardFooter>
-        </Card>
-        {/* Brain is now a host-managed service (id "brain", :3102) and appears in the
-            services grid above like Studio and Portal — no separate hardcoded card. */}
-      </div>
-
-      <div className="connector-grid connector-grid-2">
-        <Card>
-          <CardHeader><CardTitle>Installationszustand</CardTitle></CardHeader>
-          <CardContent>
-            <ul className="command-center-checklist">
-              {installChecks.map(([label, ok]) => <li key={label} className={ok ? "is-ok" : "is-missing"}><span>{ok ? "✓" : "–"}</span><strong>{label}</strong></li>)}
-            </ul>
-            {status ? (
-              <p className="connector-muted">
-                Installierte Bereiche: <strong>{status.installation.apps.join(" · ")}</strong>
-                {status.installation.selectionPersisted ? "" : " (Vorgabe — Assistent lief noch nicht)"}
-              </p>
-            ) : null}
-            <p className="connector-muted">{status?.installation.message ?? "Status wird ermittelt."}</p>
-          </CardContent>
-          <CardFooter>
-            <div className="connector-actions">
-              <Button variant="secondary" onClick={() => runAction("restart")} disabled={busy !== null || !status?.installation.buildReady}>Neu starten</Button>
-              <Button variant="ghost" onClick={() => runAction("backup")} disabled={busy !== null || !status?.installation.databaseReady}>Backup erstellen</Button>
-            </div>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Rechner & RTX</CardTitle></CardHeader>
-          <CardContent>
-            <dl className="connector-kv">
-              <div><dt>CPU</dt><dd>{status ? `${status.host.cpuCores} Kerne` : "-"}</dd></div>
-              <div><dt>RAM</dt><dd>{status ? `${formatBytes(status.host.ramUsedBytes)} / ${formatBytes(status.host.ramTotalBytes)}` : "-"}</dd></div>
-              <div><dt>Datenträger</dt><dd>{status ? `${formatBytes(status.host.diskUsedBytes)} / ${formatBytes(status.host.diskTotalBytes)}` : "-"}</dd></div>
-              <div><dt>GPU</dt><dd>{status?.gpu.name ?? "Nicht erkannt"}</dd></div>
-              <div><dt>VRAM</dt><dd>{status?.gpu.vramTotalMb ? `${Math.round(status.gpu.vramTotalMb / 1024)} GB` : "-"}</dd></div>
-              <div><dt>PC-Uptime</dt><dd>{status ? formatDuration(status.host.uptimeSeconds) : "-"}</dd></div>
-            </dl>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader><CardTitle>Lokales Hosting</CardTitle></CardHeader>
-        <CardContent>
-          <div className="connector-form-grid">
-            <label className="connector-field connector-field-full">
-              <span>UWE-Projektordner</span>
-              <input className="connector-input" value={root} onChange={(event) => setRoot(event.target.value)} placeholder="C:\\git\\UWE" />
-              <small>Der aktuelle Checkout bleibt die einzige Codequelle; Daten und Logs liegen separat im lokalen App-Datenordner.</small>
-            </label>
-            <label className="connector-checkbox">
-              <input type="checkbox" checked={autostartApp} onChange={(event) => setAutostartApp(event.target.checked)} />
-              <span>Command Center bei Anmeldung starten</span>
-            </label>
-            <label className="connector-checkbox">
-              <input type="checkbox" checked={autoStartHost} onChange={(event) => setAutoStartHost(event.target.checked)} />
-              <span>Studio, Portal, Brain und Startseite automatisch starten</span>
-            </label>
-            <label className="connector-checkbox">
-              <input type="checkbox" checked={autoStartTunnel} onChange={(event) => setAutoStartTunnel(event.target.checked)} />
-              <span>Cloudflare-Tunnel automatisch starten</span>
-            </label>
-            <label className="connector-checkbox">
-              <input type="checkbox" checked={stopServicesOnExit} onChange={(event) => setStopServicesOnExit(event.target.checked)} />
-              <span>Dienste und Tunnel beim Beenden stoppen</span>
-            </label>
-            <label className="connector-checkbox">
-              <input type="checkbox" checked={directAiTransport} onChange={(event) => setDirectAiTransport(event.target.checked)} />
-              <span>KI-Jobs direkt zustellen (Hybrid-Transport)</span>
-            </label>
-          </div>
-          <p className="connector-muted">
-            Ohne den Haken „Dienste und Tunnel beim Beenden stoppen“ laufen Studio, Portal,
-            Brain, Familie, Startseite und der Cloudflare-Tunnel als Hintergrundprozesse
-            weiter — uweanddragons.org bleibt dann öffentlich erreichbar, obwohl das Command
-            Center geschlossen ist.
-          </p>
-          <p className="connector-muted">
-            Direktzustellung schickt KI-Anfragen ohne Warteschlangen-Umweg über die lokale
-            Verbindung an den Maschinenraum; die Queue bleibt als Fallback aktiv. Empfohlen,
-            wenn UWE und der Maschinenraum auf demselben Rechner laufen. Greift beim nächsten
-            Start des Maschinenraums.
-          </p>
-          {status ? <p className="connector-muted">Stand: {status.branch ?? "detached"} · {status.revision ?? "unbekannt"} · Daten: {status.dataDir}</p> : null}
-        </CardContent>
-        <CardFooter><Button variant="primary" onClick={saveSettings} disabled={busy !== null}>Einstellungen speichern</Button></CardFooter>
-      </Card>
-
-      <HostBackupsCard
-        backups={backups}
-        disabled={busy !== null}
-        canBackup={Boolean(status?.installation.databaseReady)}
-        onCreate={() => void runAction("backup").then(() => void loadBackups())}
-        onReload={() => void loadBackups()}
-        onRestore={(name) => void runRestore(name)}
+      <CommandCenterOverview
+        status={status}
+        connectorStatus={connectorStatus}
+        updateInfo={updateInfo}
+        busy={busy}
+        busyService={busyService}
+        onSetup={() => void runAction("setup")}
+        onStartAll={() => void startEverything()}
+        onStopAll={() => void stopEverything()}
+        onRefresh={() => void refresh()}
+        onOpenService={(serviceId) => void openHostTarget(root || undefined, serviceId)}
+        onServiceAction={(serviceId, action) => void runServiceAction(serviceId, action)}
+        onOpenConnector={onOpenConnector}
+        onOpenInstallWizard={onOpenInstallWizard}
+        onCheckUpdate={() => void runCheckUpdate()}
       />
 
-      <HostLogsCard target={logTarget} lines={logs} onSelect={(next) => void loadLogs(next)} />
+      <CommandCenterMaintenance
+        status={status}
+        updateInfo={updateInfo}
+        busy={busy}
+        root={root}
+        autoStartHost={autoStartHost}
+        autoStartTunnel={autoStartTunnel}
+        stopServicesOnExit={stopServicesOnExit}
+        autostartApp={autostartApp}
+        directAiTransport={directAiTransport}
+        backups={backups}
+        logTarget={logTarget}
+        logs={logs}
+        onRootChange={setRoot}
+        onAutoStartHostChange={setAutoStartHost}
+        onAutoStartTunnelChange={setAutoStartTunnel}
+        onStopServicesOnExitChange={setStopServicesOnExit}
+        onAutostartAppChange={setAutostartApp}
+        onDirectAiTransportChange={setDirectAiTransport}
+        onSaveSettings={() => void saveSettings()}
+        onSetup={() => void runAction("setup")}
+        onOpenInstallWizard={onOpenInstallWizard}
+        onCheckUpdate={() => void runCheckUpdate()}
+        onInstallUpdate={() => void runInstallUpdate()}
+        onRestart={() => void runAction("restart")}
+        onCreateBackup={() => void runAction("backup").then(() => void loadBackups())}
+        onReloadBackups={() => void loadBackups()}
+        onRestoreBackup={(name) => void runRestore(name)}
+        onSelectLog={(target) => void loadLogs(target)}
+      />
     </div>
   );
 }

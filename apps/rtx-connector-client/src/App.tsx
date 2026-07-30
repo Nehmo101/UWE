@@ -266,6 +266,8 @@ export default function App() {
   // `app-close-requested` and keeps the window open. We ask the user here and
   // only then fully quit — closing must not silently background the client.
   useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+
     let unlisten: (() => void) | undefined;
     let cancelled = false;
     void listen("app-close-requested", () => setShowQuitConfirm(true)).then((fn) => {
@@ -555,7 +557,7 @@ export default function App() {
     <>
       <HealthBadge
         status={toHealthBadgeStatus(runtimeStatus)}
-        label={`${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
+        label={`Maschinenraum: ${humanizeConnectionStatus(runtimeStatus.connectionStatus)} / ${humanizeProcessStatus(runtimeStatus.status)}`}
       />
       <Button variant="ghost" onClick={refreshFromBackend} disabled={busyAction !== null}>
         Neu laden
