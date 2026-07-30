@@ -23,6 +23,8 @@ import {
   deriveOwnedServiceState,
   diskSnapshot,
   gpuSnapshot,
+  isOpenableUrl,
+  openExternalUrl,
   pnpmCommand,
   probeHealth,
   processRunning,
@@ -643,27 +645,17 @@ export function desktopHostTargetUrl(rootInput: string | undefined, target: stri
   // hostname keeps the owner logged in. Falls back to loopback for local-only
   // deployments where no public URL is set.
   const publicUrl = env[keys.urlKey]?.trim();
-  if (publicUrl) {
-    try {
-      const parsed = new URL(publicUrl);
-      const host = parsed.hostname.toLowerCase();
-      if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
-        return publicUrl.replace(/\/$/, "");
-      }
-    } catch {
-      // Malformed configured URL — fall back to loopback below.
+  // isOpenableUrl also keeps non-http schemes out: this value is opened through
+  // the OS handler, and only http/https belongs there.
+  if (publicUrl && isOpenableUrl(publicUrl)) {
+    const host = new URL(publicUrl).hostname.toLowerCase();
+    if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
+      return publicUrl.replace(/\/$/, "");
     }
   }
   return `http://127.0.0.1:${port}`;
 }
 
 export function openTarget(rootInput: string | undefined, target: string | undefined): void {
-  const url = desktopHostTargetUrl(rootInput, target);
-  if (process.platform === "win32") {
-    spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "start", "", url], { detached: true, windowsHide: true, stdio: "ignore" }).unref();
-  } else if (process.platform === "darwin") {
-    spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
-  } else {
-    spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
-  }
+  openExternalUrl(desktopHostTargetUrl(rootInput, target));
 }

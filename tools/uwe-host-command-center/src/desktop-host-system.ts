@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 
 import type { DesktopHostService } from "./desktop-host.ts";
@@ -198,6 +198,58 @@ export function stopProcess(pid: number): void {
   } else {
     try { process.kill(-pid, "SIGTERM"); } catch { process.kill(pid, "SIGTERM"); }
   }
+}
+
+/**
+ * Die Fassung des laufenden Command Centers. Der Rust-Host reicht sie an die
+ * Host-CLI durch, weil eine Bundle-Installation keine `tauri.conf.json` neben
+ * sich hat: nur so weiß der Update-Check, ob die Desktop-App hinter dem
+ * Release-Tag liegt und der Installer geöffnet werden muss.
+ */
+export function runningCommandCenterVersion(): string | null {
+  const value = process.env.UWE_COMMAND_CENTER_VERSION?.trim();
+  return value && /^\d+\.\d+\.\d+$/.test(value) ? value : null;
+}
+
+/**
+ * Nur `http`/`https` dürfen geöffnet werden. Die Adresse stammt teils aus der
+ * `.env` des Hosts (`UWE_*_PUBLIC_URL`), also aus Konfiguration statt aus dem
+ * Code — und sie landet in einer Prozess-Kommandozeile. Ein enges Schema-
+ * Fenster hält alles fern, was dort nichts zu suchen hat (`file:`, `javascript:`
+ * und Verwandte).
+ */
+export function isOpenableUrl(url: string): boolean {
+  try {
+    const schema = new URL(url).protocol;
+    return schema === "http:" || schema === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Eine URL im Standardprogramm des Systems öffnen — Dienst-Oberflächen, die
+ * Release-Seite, der Installer-Download. Der Prozess wird abgekoppelt, damit das
+ * Beenden des Command Centers den geöffneten Browser nicht mitnimmt.
+ *
+ * Bewusst ohne Shell: `cmd.exe /c start` würde `&`, `|` und `^` aus der Adresse
+ * als Befehlstrenner lesen — bei einer Adresse aus der `.env` reicht das für
+ * Codeausführung. `explorer.exe` bekommt das Argument über `CreateProcess`
+ * direkt, ohne dass ein Parser dazwischen steht (CodeQL js/command-line-injection).
+ */
+export function openExternalUrl(url: string): void {
+  if (!isOpenableUrl(url)) {
+    throw new Error(`Adresse wird nicht geöffnet (nur http/https): ${url}`);
+  }
+  if (process.platform === "win32") {
+    spawn("explorer.exe", [url], { detached: true, windowsHide: true, stdio: "ignore" }).unref();
+    return;
+  }
+  if (process.platform === "darwin") {
+    spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
+    return;
+  }
+  spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
 }
 
 export function pnpmCommand(args: string[]): { command: string; args: string[] } {

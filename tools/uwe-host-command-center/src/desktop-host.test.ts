@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
 import { buildLocalHostEnv, deriveOwnedServiceState, desktopHostTargetUrl, isOwnServiceApp, parseServicePort, resolveDatabasePath, resolveDesktopHostRoot, type HostPaths } from "./desktop-host";
-import { healthAppName, parseNetstatListeners } from "./desktop-host-system";
+import { healthAppName, isOpenableUrl, openExternalUrl, parseNetstatListeners } from "./desktop-host-system";
 
 const temporaryDirectories: string[] = [];
 
@@ -69,6 +69,56 @@ describe("desktop host configuration", () => {
 
     assert.equal(desktopHostTargetUrl(root, "studio"), "http://127.0.0.1:3100");
     assert.equal(desktopHostTargetUrl(root, "portal"), "http://127.0.0.1:3101");
+  });
+
+  it("prefers a configured public URL but only over http(s)", () => {
+    const root = temporaryDirectory();
+    // Die öffentliche Adresse gewinnt — dafür ist sie da.
+    fs.writeFileSync(
+      path.join(root, ".env"),
+      "STUDIO_PORT=3100\nNEXT_PUBLIC_STUDIO_URL=https://uwe.example/\n",
+      "utf8",
+    );
+    assert.equal(desktopHostTargetUrl(root, "studio"), "https://uwe.example");
+
+    // Fremdes Schema aus der .env fällt auf Loopback zurück, statt in die
+    // Kommandozeile des OS-Handlers zu wandern.
+    for (const boese of ["file:///C:/Windows/System32/calc.exe", "javascript:alert(1)"]) {
+      fs.writeFileSync(
+        path.join(root, ".env"),
+        `STUDIO_PORT=3100\nNEXT_PUBLIC_STUDIO_URL=${boese}\n`,
+        "utf8",
+      );
+      assert.equal(desktopHostTargetUrl(root, "studio"), "http://127.0.0.1:3100");
+    }
+  });
+
+  it("refuses to hand anything but http(s) to the OS handler", () => {
+    for (const gut of ["https://github.com/Nehmo101/UWE/releases", "http://127.0.0.1:3100"]) {
+      assert.equal(isOpenableUrl(gut), true, gut);
+    }
+    for (const boese of ["file:///etc/passwd", "javascript:alert(1)", "kein-url", ""]) {
+      assert.equal(isOpenableUrl(boese), false, boese);
+    }
+    assert.throws(() => openExternalUrl("file:///etc/passwd"), /nur http\/https/);
+  });
+
+  it("does not rely on scheme checking to stop shell metacharacters", () => {
+    // Der Punkt, auf den es ankommt: `https://x/" & calc.exe & "` ist eine
+    // gültige https-URL. Die Schema-Prüfung lässt sie durch — und muss das auch.
+    // Ungefährlich wird sie erst dadurch, dass `openExternalUrl` keine Shell
+    // mehr benutzt: `explorer.exe` bekommt das Argument über CreateProcess,
+    // `cmd.exe /c start` hätte `&` als Befehlstrenner gelesen.
+    assert.equal(isOpenableUrl('https://x/" & calc.exe & "'), true);
+
+    const quelle = fs.readFileSync(
+      path.join(import.meta.dirname, "desktop-host-system.ts"),
+      "utf8",
+    );
+    const ab = quelle.indexOf("export function openExternalUrl");
+    const oeffnen = quelle.slice(ab, quelle.indexOf("\nexport function", ab + 1));
+    assert.doesNotMatch(oeffnen, /cmd\.exe|ComSpec|shell:\s*true/);
+    assert.match(oeffnen, /spawn\("explorer\.exe", \[url\]/);
   });
 
   it("finds a UWE workspace by walking up from a nested directory", () => {
