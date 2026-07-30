@@ -7,6 +7,7 @@ import { PaintedScene } from "../scene/PaintedScene";
 import { ThemeModeToggle } from "../scene/ThemeModeToggle";
 import { UweLandingChoices, type LandingTarget } from "./UweLandingChoices";
 import { UweLandingLoginCard } from "./UweLandingLoginCard";
+import { elementOrigin, useLandingTransition } from "./useLandingTransition";
 // Landing-Layout, Keyframes und Media-Queries liegen in ./uwe-landing.css,
 // geladen auf App-Ebene (Studio-Layout) via "@uwe/shared-ui/uwe-landing.css" —
 // ein CSS-Import hier bräche den Node-Test-Runner des Pakets.
@@ -85,6 +86,7 @@ export function UweLandingPage({
   sceneIndex,
 }: UweLandingPageProps) {
   const [view, setView] = useState<View>("choose");
+  const transition = useLandingTransition<LandingTarget>();
 
   const APP_URLS: Record<LandingTarget, string> = {
     studio: studioAppUrl,
@@ -99,18 +101,35 @@ export function UweLandingPage({
    * Login. Ob das Ziel offensteht, entscheidet die Ziel-App selbst — sie hat ihr
    * eigenes Zugriffs-Gate und sagt es dort auch.
    */
-  const openTarget = (target: LandingTarget) => {
-    if (signedIn) {
-      window.location.assign(appUrlFor(target));
-      return;
-    }
-    setView(target);
+  /**
+   * Der Übergang läuft in beiden Fällen — ob die Karte zur Anmeldung führt
+   * oder direkt in die App. Was danach passiert, entscheidet `signedIn`.
+   *
+   * `transition.start` navigiert über einen Timer, nicht über das Ende der
+   * Animation: bleibt die Animation aus, wechselt die Seite trotzdem.
+   */
+  const openTarget = (target: LandingTarget, element: HTMLElement) => {
+    transition.start(target, elementOrigin(element), () => {
+      if (signedIn) {
+        window.location.assign(appUrlFor(target));
+        return;
+      }
+      setView(target);
+    });
   };
 
   return (
     <AppAccentScope app="studio" layout="block">
-      <div className="uwe-lp-root" data-screen-label="Landing">
+      <div
+        className="uwe-lp-root"
+        data-screen-label="Landing"
+        data-leaving={transition.rootProps["data-leaving"]}
+        style={transition.rootProps.style}
+      >
         <PaintedScene area="landing" sceneIndex={sceneIndex} topShade groundStart="42%" groundEnd="96%" />
+        {/* Die Farbe des gewählten Ziels legt sich über die Szene, damit die
+            Zielseite ohne weißen Blitz übernimmt. */}
+        <div className="uwe-lp-veil" aria-hidden="true" />
 
         <nav className="uwe-lp-nav">
           <button
@@ -136,6 +155,7 @@ export function UweLandingPage({
                 onOpen={openTarget}
                 brainVisible={brainVisible}
                 familyVisible={familyVisible}
+                chosen={transition.leavingTo}
               />
             </>
           ) : (

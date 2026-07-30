@@ -94,10 +94,10 @@
 
 .uwe-lp-title {
   margin: 8px 0 14px;
-  font-family: var(--uwe-font-newsreader, Georgia), serif;
-  font-weight: 500;
-  font-size: 32px;
-  line-height: 1.1;
+  font-family: var(--uwe-font-display);
+  font-weight: var(--uwe-weight-medium);
+  font-size: var(--uwe-text-4xl);
+  line-height: var(--uwe-leading-tight);
   letter-spacing: -0.02em;
   color: var(--uwe-hero-ink, var(--uwe-fg));
   text-shadow: var(--uwe-hero-sh, none);
@@ -119,7 +119,8 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 13px 14px;
+  min-height: var(--uwe-touch-min);
+  padding: var(--uwe-space-4);
   box-sizing: border-box;
   border-radius: var(--uwe-radius-tile, 12px);
   border: var(--uwe-border-width, 1.5px) solid var(--uwe-border);
@@ -148,22 +149,26 @@
 }
 
 .uwe-lp-card-name {
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: var(--uwe-text-lg);
+  font-weight: var(--uwe-weight-semibold);
+  line-height: var(--uwe-leading-snug);
   color: var(--uwe-fg);
 }
 
 .uwe-lp-card-eyebrow {
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-caps);
   text-transform: uppercase;
-  color: var(--uwe-lp-accent, var(--uwe-accent));
+  font-weight: var(--uwe-weight-bold);
+  /* Der Terrakotta-Akzent erreicht als Schrift nur 3.4:1 auf Papier.
+     --uwe-lp-accent-ink ist die nachgerechnete Textfassung derselben Farbe. */
+  color: var(--uwe-lp-accent-ink, var(--uwe-accent-ink, var(--uwe-accent)));
 }
 
 .uwe-lp-card-arrow {
   margin-left: auto;
-  font-size: 13px;
-  color: var(--uwe-fg-subtle);
+  font-size: var(--uwe-text-lg);
+  color: var(--uwe-fg-muted);
 }
 
 /* Auf Zeilen-Buttons unsichtbar, auf Karten sichtbar. */
@@ -269,23 +274,23 @@
   }
 
   .uwe-lp-card-eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.16em;
+    font-size: var(--uwe-text-2xs);
+    letter-spacing: var(--uwe-tracking-caps);
   }
 
   .uwe-lp-card-name {
     margin: 12px 0 6px;
     font-family: var(--uwe-font-newsreader, Georgia), serif;
-    font-size: 29px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-size: var(--uwe-text-2xl);
+    font-weight: var(--uwe-weight-medium);
+    letter-spacing: var(--uwe-tracking-tight);
   }
 
   .uwe-lp-card-copy {
     display: block;
     margin: 0 0 16px;
-    font-size: 12.5px;
-    line-height: 1.6;
+    font-size: var(--uwe-text-base);
+    line-height: var(--uwe-leading-normal);
     color: var(--uwe-fg-muted);
   }
 
@@ -297,8 +302,9 @@
     border-radius: var(--uwe-radius-btn, 9px);
     background: var(--uwe-btn-bg, var(--uwe-fg));
     color: var(--uwe-btn-ink, var(--uwe-bg));
-    font-weight: 700;
-    font-size: 13px;
+    font-weight: var(--uwe-weight-bold);
+    font-size: var(--uwe-text-sm);
+    min-height: var(--uwe-touch-min);
   }
 
   .uwe-lp-card:hover .uwe-lp-card-cta {
@@ -325,5 +331,133 @@
 @media (max-width: 959px) {
   .uwe-lp-choices {
     margin-bottom: calc(76px + var(--uwe-safe-bottom, 0px));
+  }
+}
+
+/* --- Übergang in einen Bereich ------------------------------------------- */
+
+/*
+ * Wird eine Produktkarte gewählt, soll es sich anfühlen, als würde man in
+ * diesen Teil des Bildes hineingezogen. Die Bewegung besteht aus drei
+ * gestaffelten Teilen, alle über `transform` und `opacity` — nichts davon
+ * löst ein Layout aus:
+ *
+ *   1. Die Bühne fährt leicht heran und schiebt sich in Richtung der Karte.
+ *   2. Die nicht gewählten Karten treten zurück und blenden aus.
+ *   3. Die gewählte Karte tritt vor und übernimmt die Fläche.
+ *
+ * Verlässlichkeit vor Schauwert: die Navigation hängt **nicht** am
+ * `transitionend`-Ereignis, sondern an einem Timer in UweLandingPage.tsx.
+ * Bleibt die Animation aus — Energiesparmodus, Hintergrund-Tab, alter Browser —
+ * wechselt die Seite trotzdem.
+ */
+
+.uwe-lp-root {
+  /* Der Zoom der Bühne darf nicht über den Rand hinaus sichtbar werden. */
+  overflow: hidden;
+}
+
+/* Die Richtung, in die gezogen wird, kommt als Custom Property von der Karte. */
+.uwe-lp-root .uwe-scene,
+.uwe-lp-root .uwe-scene-stage {
+  transition: transform var(--uwe-dur-scene, 640ms) var(--uwe-ease-soft, ease),
+    opacity var(--uwe-dur-scene, 640ms) var(--uwe-ease-soft, ease);
+  will-change: transform;
+}
+
+.uwe-lp-root[data-leaving="true"] .uwe-scene,
+.uwe-lp-root[data-leaving="true"] .uwe-scene-stage {
+  transform: scale(1.14) translate3d(var(--uwe-lp-pull-x, 0), var(--uwe-lp-pull-y, -2%), 0);
+}
+
+.uwe-lp-root[data-leaving="true"] .uwe-lp-nav,
+.uwe-lp-root[data-leaving="true"] .uwe-lp-hero {
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: opacity var(--uwe-dur-base, 240ms) var(--uwe-ease-out, ease),
+    transform var(--uwe-dur-base, 240ms) var(--uwe-ease-out, ease);
+}
+
+.uwe-lp-card {
+  will-change: transform, opacity;
+}
+
+/* Nicht gewählt: zurücktreten. */
+.uwe-lp-root[data-leaving="true"] .uwe-lp-card[data-chosen="false"] {
+  opacity: 0;
+  transform: scale(0.94) translateY(10px);
+  filter: blur(3px);
+  transition: opacity var(--uwe-dur-base, 240ms) var(--uwe-ease-out, ease),
+    transform var(--uwe-dur-base, 240ms) var(--uwe-ease-out, ease),
+    filter var(--uwe-dur-base, 240ms) var(--uwe-ease-out, ease);
+}
+
+/* Gewählt: vortreten, in der Farbe des Ziels. */
+.uwe-lp-root[data-leaving="true"] .uwe-lp-card[data-chosen="true"] {
+  transform: scale(1.06);
+  border-color: var(--uwe-lp-accent, var(--uwe-accent));
+  box-shadow: 0 0 0 1px var(--uwe-lp-accent, var(--uwe-accent)),
+    var(--uwe-elev-3, 0 16px 40px rgba(0, 0, 0, 0.38));
+  transition: transform var(--uwe-dur-slow, 420ms) var(--uwe-ease-soft, ease),
+    border-color var(--uwe-dur-fast, 160ms) var(--uwe-ease-out, ease),
+    box-shadow var(--uwe-dur-fast, 160ms) var(--uwe-ease-out, ease);
+}
+
+/*
+ * Die Farbe des Ziels legt sich unter die Szene, damit die Zielseite ohne
+ * Bruch übernimmt: kein weißer Blitz zwischen den beiden Seiten.
+ */
+.uwe-lp-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    120% 90% at var(--uwe-lp-origin-x, 50%) var(--uwe-lp-origin-y, 60%),
+    color-mix(in srgb, var(--uwe-lp-accent, var(--uwe-accent)) 26%, var(--uwe-bg)) 0%,
+    var(--uwe-bg) 78%
+  );
+  transition: opacity var(--uwe-dur-slow, 420ms) var(--uwe-ease-soft, ease);
+}
+
+.uwe-lp-root[data-leaving="true"] .uwe-lp-veil {
+  opacity: 1;
+}
+
+/*
+ * Telefon: geringere Zoomdistanz, kein Blur (der kostet auf mobilen GPUs am
+ * meisten), keine seitliche Verschiebung — auf 390 px Breite gibt es keine
+ * Richtung, in die sinnvoll gezogen werden könnte.
+ */
+@media (max-width: 959px) {
+  .uwe-lp-root[data-leaving="true"] .uwe-scene,
+  .uwe-lp-root[data-leaving="true"] .uwe-scene-stage {
+    transform: scale(1.06) translate3d(0, -1%, 0);
+  }
+
+  .uwe-lp-root[data-leaving="true"] .uwe-lp-card[data-chosen="false"] {
+    filter: none;
+    transform: translateY(8px);
+  }
+}
+
+/*
+ * Reduzierte Bewegung: aus dem Hineinziehen wird eine ruhige Überblendung.
+ * Die `prefers-reduced-motion`-Regel weiter oben stellt bereits alle
+ * Animationen und Übergänge im Landing-Baum ab — der Schleier braucht deshalb
+ * eine eigene, ausdrücklich erlaubte Blende, sonst gäbe es einen harten
+ * Schnitt statt eines weichen Wechsels.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .uwe-lp-root .uwe-lp-veil {
+    transition: opacity 180ms linear !important;
+  }
+
+  .uwe-lp-root[data-leaving="true"] .uwe-scene,
+  .uwe-lp-root[data-leaving="true"] .uwe-scene-stage,
+  .uwe-lp-root[data-leaving="true"] .uwe-lp-card {
+    transform: none;
+    filter: none;
   }
 }

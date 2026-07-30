@@ -200,6 +200,37 @@ Ausgeliefert wird trotzdem nie alles: `SceneStage` lädt **einen** Clip —
 den des aktuellen Bereichs, der aktuellen Tageszeit und des aktuellen
 Viewports — und auch den erst, wenn die Bühne im Viewport steht.
 
+## Erzeugte Assets
+
+### Landing — fertig generiert
+
+Alle vier Fassungen liegen im Artlist-Konto. Die Nachtfassung ist per
+Bild-zu-Bild aus der Tagfassung entstanden, die Hochformate per Bild-zu-Bild
+aus der jeweiligen Querformat-Fassung — deshalb ist es nachweislich **dieselbe
+Landschaft aus derselben Kameraposition**, nur zu anderer Tageszeit und in
+anderem Format.
+
+| Zieldatei | Standbild (Generierung) | Clip (Generierung) | Format | Dauer |
+|---|---|---|---|---|
+| `landing-hell-desktop` | `019fb334-a110-7e1e-8e34-6ad4cd13de2a` (Ausgabe 0) | `019fb346-fd1b-78bb-8e7f-e7b75f21c229` | 16:9, 1080p | 10 s |
+| `landing-dunkel-desktop` | `019fb33e-db06-7716-97df-774bc787863b` | `019fb34b-a925-7d31-bd87-fee81fef8dca` | 16:9, 1080p | 10 s |
+| `landing-hell-mobil` | `019fb342-9681-72c9-b003-bec70dbebb5a` | `019fb34e-b848-717a-ae74-cf4a866d452c` | 9:16, 1080p | 10 s |
+| `landing-dunkel-mobil` | `019fb345-534d-7d88-b1b1-1e977631e9c3` | `019fb34f-891f-7cbe-81cf-f85558f8e448` | 9:16, 1080p | 10 s |
+
+Szene: weites Hochtal, zwei kolossale Elfenbein-Wurzeln spannen sich in der
+Ferne über den Himmel. Vormittagslicht bzw. klare Sternennacht mit von innen
+glimmenden Wurzeln. Untere Bildhälfte in allen vier Fassungen offene Wiese —
+die Fläche, auf der Titel und Produktkarten sitzen.
+
+Verbraucht: 5 Bildgenerierungen (600 Credits) und 4 Videogenerierungen
+(2 400 Credits), zuzüglich 1 200 Credits für zwei verworfene Text-zu-Video-
+Versuche, aus denen die beiden Prompt-Regeln oben stammen.
+
+### Übrige Bereiche
+
+Family, Portal, Studio und Brain sind noch nicht generiert. Der Weg dafür
+steht oben; die Prompts folgen demselben Aufbau, nur der Szenenteil wechselt.
+
 ## Lizenz
 
 Alle Szenen sind mit dem Artlist-Konto des Projekteigners erzeugt und enthalten
