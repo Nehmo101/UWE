@@ -18,6 +18,7 @@
     "@uwe/auth": "workspace:*",
     "@uwe/brain-assistant": "workspace:*",
     "@uwe/calendar": "workspace:*",
+    "@uwe/config": "workspace:*",
     "@uwe/daily-cockpit": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
@@ -38,7 +39,6 @@
     "@types/node": "^22.15.32",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@uwe/config": "workspace:*",
     "tsx": "^4.23.1",
     "typescript": "^5.8.3"
   }

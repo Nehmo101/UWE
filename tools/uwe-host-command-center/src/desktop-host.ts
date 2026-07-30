@@ -130,6 +130,23 @@ export function commandCenterDataRoot(): string {
   return path.join(os.homedir(), ".local", "share", "UWE", "rtx-connector-client", "host");
 }
 
+export type HostMode = "monorepo" | "bundle";
+
+/**
+ * Woraus diese Installation besteht: ein Entwickler-Checkout des Monorepos
+ * (pnpm-workspace.yaml vorhanden — Setup/Update laufen über pnpm und git) oder
+ * eine Bundle-Installation aus dem Release-Download (entpackte App-Bundles
+ * unter apps/<app>/ mit flachem node_modules — kein pnpm, kein git, kein Build).
+ */
+export function detectHostMode(root: string): HostMode {
+  return fs.existsSync(path.join(root, "pnpm-workspace.yaml")) ? "monorepo" : "bundle";
+}
+
+/** Standardort einer Bundle-Installation, neben den Host-Daten. */
+export function bundleInstallRoot(): string {
+  return path.join(commandCenterDataRoot(), "..", "bundle");
+}
+
 export function resolveDesktopHostRoot(input?: string): string {
   const configured = input?.trim() || process.env.UWE_MONOREPO_ROOT?.trim();
   if (configured) return path.resolve(configured);
@@ -144,9 +161,18 @@ export function resolveDesktopHostRoot(input?: string): string {
       return current;
     }
     const parent = path.dirname(current);
-    if (parent === current) return path.resolve(process.cwd());
+    if (parent === current) break;
     current = parent;
   }
+
+  // Kein Checkout gefunden: Wenn am Standardort eine Bundle-Installation liegt
+  // (mindestens eine App mit gebautem .next), ist sie das Root. So findet das
+  // Command Center eine Installation auch ohne UWE_MONOREPO_ROOT.
+  const bundleRoot = bundleInstallRoot();
+  if (fs.existsSync(path.join(bundleRoot, "apps"))) {
+    return path.resolve(bundleRoot);
+  }
+  return path.resolve(process.cwd());
 }
 
 function pathsFor(root: string): HostPaths {
@@ -215,16 +241,39 @@ async function serviceStatus(paths: HostPaths, id: HostServiceId, label: string,
 export async function collectDesktopHostStatus(rootInput?: string): Promise<DesktopHostStatus> {
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
-  const repoReady = validateRepo(root);
+  const mode = detectHostMode(root);
   const envReady = fs.existsSync(paths.envFile);
   const database = resolveDatabasePath(root, paths.envFile, paths.database);
-  const dependenciesReady = fs.existsSync(path.join(root, "node_modules", ".modules.yaml"));
   const { selection, persisted } = readInstallSelectionState(paths.dataRoot);
-  // Nur die gewählten Apps zählen: eine Installation ohne Family darf nicht an
-  // einem fehlenden Family-Build hängen bleiben.
-  const buildReady = selection.apps.every((app) =>
-    fs.existsSync(path.join(root, "apps", app, ".next", "BUILD_ID")),
-  );
+
+  // Bereitschaft je nach Installationsart: Ein Monorepo-Checkout ist fertig,
+  // wenn Workspace, node_modules und die Builds der gewählten Apps stehen.
+  // Eine Bundle-Installation bringt pro App ein fertiges Laufzeitverzeichnis
+  // mit — dort zählt, dass die entpackten Bundles vollständig sind; ein
+  // Workspace oder ein pnpm-Install existiert nie.
+  let repoReady: boolean;
+  let dependenciesReady: boolean;
+  let buildReady: boolean;
+  if (mode === "bundle") {
+    const bundledApps = selection.apps.filter((app) =>
+      fs.existsSync(path.join(root, "apps", app, "package.json")),
+    );
+    repoReady = bundledApps.length > 0;
+    dependenciesReady =
+      repoReady &&
+      bundledApps.every((app) => fs.existsSync(path.join(root, "apps", app, "node_modules", "next")));
+    buildReady =
+      repoReady &&
+      bundledApps.every((app) => fs.existsSync(path.join(root, "apps", app, ".next", "BUILD_ID")));
+  } else {
+    repoReady = validateRepo(root);
+    dependenciesReady = fs.existsSync(path.join(root, "node_modules", ".modules.yaml"));
+    // Nur die gewählten Apps zählen: eine Installation ohne Family darf nicht an
+    // einem fehlenden Family-Build hängen bleiben.
+    buildReady = selection.apps.every((app) =>
+      fs.existsSync(path.join(root, "apps", app, ".next", "BUILD_ID")),
+    );
+  }
   const databaseReady = fs.existsSync(database);
   const services = await Promise.all(
     serviceDefinitions(paths, selection.apps).map((service) =>
@@ -389,8 +438,6 @@ export async function setupHost(
 
 function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   const appRoot = path.join(paths.root, "apps", service.id);
-  const nextCli = path.join(appRoot, "node_modules", "next", "dist", "bin", "next");
-  if (!fs.existsSync(nextCli)) throw new Error(`Next.js-Startdatei für ${service.label} fehlt.`);
   const logFile = path.join(paths.logs, `${service.id}.log`);
   rotateLogIfLarge(logFile);
   fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${service.label} wird gestartet.\n`, "utf8");
@@ -398,14 +445,46 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   const env = readEnvFile(paths.envFile);
   const databaseModules = path.join(paths.root, "packages", "database", "node_modules");
   env.NODE_PATH = [databaseModules, env.NODE_PATH].filter(Boolean).join(path.delimiter);
+
   // Brain is owner-private and Family is checkbox-gated household data: bind both
   // to loopback so they are reachable only locally or through the Cloudflare
   // tunnel — never directly on the LAN. Studio, Portal and the landing page keep
-  // Next's default bind.
-  const startArgs = [nextCli, "start", "--port", String(service.port)];
-  if (service.id === "brain" || service.id === "family") startArgs.push("--hostname", "127.0.0.1");
-  const child = spawn(process.execPath, startArgs, {
-    cwd: appRoot,
+  // the default bind.
+  const loopbackOnly = service.id === "brain" || service.id === "family";
+
+  // Zwei Startwege, in dieser Reihenfolge:
+  //
+  // 1. Standalone-Server (Monorepo-Checkout nach `pnpm build:release`): dasselbe
+  //    Muster wie deploy/scripts/start-uwe.sh. Seit Next 16 ist das im Checkout
+  //    der EINZIGE funktionierende Weg — `next start` externalisiert dort
+  //    @prisma/* und findet es im isolated-Layout von pnpm nicht mehr
+  //    (Cannot find module '@prisma/adapter-libsql').
+  // 2. `next start` im App-Root: der Weg der Bundle-Installation. Deren
+  //    node_modules ist flach (hoisted, ohne Symlinks), dort löst Next 16 die
+  //    externalisierten Pakete auf.
+  const standaloneDir = path.join(appRoot, ".next", "standalone");
+  const standaloneServer = path.join(standaloneDir, "apps", service.id, "server.js");
+  let spawnArgs: string[];
+  let spawnCwd: string;
+  if (fs.existsSync(standaloneServer)) {
+    env.PORT = String(service.port);
+    env.HOSTNAME = loopbackOnly ? "127.0.0.1" : "0.0.0.0";
+    spawnArgs = [path.join("apps", service.id, "server.js")];
+    spawnCwd = standaloneDir;
+  } else {
+    const nextCli = path.join(appRoot, "node_modules", "next", "dist", "bin", "next");
+    if (!fs.existsSync(nextCli)) {
+      throw new Error(
+        `Startdateien für ${service.label} fehlen: weder ${standaloneServer} noch ${nextCli}.`,
+      );
+    }
+    spawnArgs = [nextCli, "start", "--port", String(service.port)];
+    if (loopbackOnly) spawnArgs.push("--hostname", "127.0.0.1");
+    spawnCwd = appRoot;
+  }
+
+  const child = spawn(process.execPath, spawnArgs, {
+    cwd: spawnCwd,
     env,
     detached: true,
     windowsHide: true,

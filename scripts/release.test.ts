@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
@@ -115,5 +116,95 @@ describe("release packaging", () => {
     assert.match(docs, /uwe-vX\.Y\.Z/);
     assert.match(docs, /Update installieren/);
     assert.match(docs, /uwe-windows-release\.yml/);
+  });
+
+  // ── Manifest v2 + Bundle-Installation ────────────────────────────────────
+  // Der Windows-Installer lädt App-Bundles nach und prüft sie gegen das
+  // Manifest. Diese Tests nageln den Vertrag fest: schemaVersion 2 mit
+  // Prüfsummen je Asset, ein Workflow, der alle fünf Bundles publiziert, und
+  // die Gates des Manifest-Skripts (Exit 1 statt stilles Weiterlaufen).
+
+  it("builds a schemaVersion-2 manifest with per-asset checksums and runtime info", () => {
+    const werk = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-manifest-test-"));
+    try {
+      const bundle = path.join(werk, "uwe-studio-9.9.9.tar.gz");
+      fs.writeFileSync(bundle, "test-bundle-inhalt");
+      const out = path.join(werk, "uwe-release.json");
+      execFileSync(
+        process.execPath,
+        [
+          path.join(root, "scripts/build-uwe-release-manifest.mjs"),
+          "--version", "9.9.9",
+          "--app", `studio=${bundle}`,
+          "--out", out,
+        ],
+        { stdio: "pipe" },
+      );
+      const manifest = JSON.parse(fs.readFileSync(out, "utf8")) as {
+        schemaVersion: number;
+        tag: string;
+        runtime: { node: string; nodeAbi: string; platform: string; arch: string };
+        apps: Record<string, { file: string; sha256: string; size: number }>;
+      };
+      assert.equal(manifest.schemaVersion, 2);
+      assert.equal(manifest.tag, "uwe-v9.9.9");
+      assert.equal(manifest.runtime.node, process.versions.node);
+      assert.equal(manifest.runtime.nodeAbi, process.versions.modules);
+      assert.equal(manifest.apps.studio.file, "uwe-studio-9.9.9.tar.gz");
+      assert.match(manifest.apps.studio.sha256, /^[0-9a-f]{64}$/);
+      assert.equal(manifest.apps.studio.size, fs.statSync(bundle).size);
+    } finally {
+      fs.rmSync(werk, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects unknown apps, missing files and a mismatched node version", () => {
+    const skript = path.join(root, "scripts/build-uwe-release-manifest.mjs");
+    const laeufe: string[][] = [
+      ["--version", "9.9.9", "--app", "nichtexistent=egal.tar.gz"],
+      ["--version", "9.9.9", "--app", "studio=diese-datei-fehlt.tar.gz"],
+      ["--version", "9.9.9", "--node-version", "0.0.1"],
+    ];
+    for (const args of laeufe) {
+      assert.throws(
+        () => execFileSync(process.execPath, [skript, ...args, "--out", "unbenutzt.json"], { stdio: "pipe" }),
+        `Manifest-Skript hätte abbrechen müssen: ${args.join(" ")}`,
+      );
+    }
+  });
+
+  it("publishes all five app bundles plus databases in the release workflow", () => {
+    const workflow = fs.readFileSync(
+      path.join(root, ".github/workflows/uwe-windows-release.yml"),
+      "utf8",
+    );
+    assert.match(workflow, /build-release-bundles\.mjs/);
+    for (const app of ["studio", "portal", "brain", "family", "landing"]) {
+      assert.match(workflow, new RegExp(app), `Workflow nennt App-Bundle ${app} nicht`);
+    }
+    assert.match(workflow, /uwe-databases-/);
+    assert.match(workflow, /host-runtime/);
+    assert.match(workflow, /bundle-cli/);
+  });
+
+  it("keeps the bundled host runtime wired: CLI bundling, Rust fallback, Tauri resources", () => {
+    assert.ok(fs.existsSync(path.join(root, "tools/uwe-host-command-center/scripts/bundle-cli.mjs")));
+    assert.ok(fs.existsSync(path.join(root, "tools/uwe-host-command-center/src/bundle-install.ts")));
+    assert.ok(fs.existsSync(path.join(root, "tools/uwe-host-command-center/src/bundle-update.ts")));
+
+    const rust = fs.readFileSync(
+      path.join(root, "apps/rtx-connector-client/src-tauri/src/command_center.rs"),
+      "utf8",
+    );
+    assert.match(rust, /bundled_host_runtime_dir/);
+    assert.match(rust, /host-cli\.cjs/);
+
+    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
+    const bundleConf = tauriConf.bundle as { resources?: string[]; targets?: string[] };
+    assert.ok(
+      bundleConf.resources?.includes("resources/host-runtime"),
+      "tauri.conf.json bündelt resources/host-runtime nicht",
+    );
+    assert.deepEqual(bundleConf.targets, ["nsis", "msi"]);
   });
 });

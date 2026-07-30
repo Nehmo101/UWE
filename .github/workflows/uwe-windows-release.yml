@@ -92,6 +92,49 @@ jobs:
 
       - run: pnpm --filter @uwe/database db:generate
 
+      # App-Bundles: erst der volle Release-Build (Standalone-Prüfung inklusive),
+      # dann packt build-release-bundles.mjs pro App ein selbstenthaltendes
+      # Laufzeitverzeichnis über `pnpm deploy` (hoisted, symlink-frei) und
+      # erzeugt die vormigrierten, leeren Datenbanken. Diese Assets lädt der
+      # Installer nach — Git, Node und pnpm braucht der Zielrechner nicht.
+      - name: Build apps
+        run: pnpm build:release
+
+      - name: Pack app bundles and empty databases
+        run: node scripts/build-release-bundles.mjs --version "${{ steps.meta.outputs.version }}" --out release-assets
+
+      # Host-Laufzeit für Rechner ohne Node/Git/pnpm: die zu einer Datei
+      # gebündelte Desktop-Host-CLI, eine eigenständige node.exe (dieselbe
+      # Major-Version wie der Build — die ABI steht im Manifest) und die
+      # Prisma-CLI samt Engines für Migrationen bei Updates. Tauri packt das
+      # Verzeichnis als Resource neben die EXE (bundle.resources).
+      - name: Stage bundled host runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME="apps/rtx-connector-client/src-tauri/resources/host-runtime"
+          rm -f "$RUNTIME/README.txt"
+          pnpm --filter @uwe/host-command-center bundle-cli -- --out "$RUNTIME/host-cli.cjs"
+          NODE_VERSION="$(node -p 'process.version.slice(1)')"
+          curl -fsSL -o "$RUNTIME/node.exe" \
+            "https://nodejs.org/dist/v${NODE_VERSION}/win-x64/node.exe"
+          "$RUNTIME/node.exe" -v
+          # Prisma-CLI samt Engines über die echte Modulauflösung finden —
+          # Globs in den .pnpm-Store treffen bei mehreren Versionen die falsche.
+          node -e '
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const { createRequire } = require("node:module");
+            const r = createRequire(path.resolve("packages/database/package.json"));
+            const cli = path.dirname(r.resolve("prisma/package.json"));
+            const engines = path.dirname(r.resolve("@prisma/engines/package.json"));
+            const ziel = process.argv[1];
+            fs.cpSync(path.join(cli, "build"), path.join(ziel, "prisma", "build"), { recursive: true });
+            fs.cpSync(engines, path.join(ziel, "prisma", "node_modules", "@prisma", "engines"), { recursive: true, dereference: true });
+            console.log("Prisma-CLI:", cli);
+          ' "$RUNTIME"
+          ls -la "$RUNTIME"
+
       - name: Build Windows Command Center
         run: pnpm --filter @uwe/rtx-connector-client tauri:build -- --bundles nsis,msi
         env:
@@ -136,13 +179,23 @@ jobs:
           if [[ -z "$NSIS_PATH" ]]; then
             NSIS_PATH="${{ steps.artifacts.outputs.nsis }}"
           fi
+          VERSION="${{ steps.meta.outputs.version }}"
+          # Alle fünf App-Bundles sind Pflicht: Fehlt eines, bricht das
+          # Manifest-Skript ab — besser als ein Release, mit dem der Assistent
+          # ein Installationsprofil nicht erfüllen kann.
+          APP_ARGS=()
+          for app in studio portal brain family landing; do
+            APP_ARGS+=(--app "${app}=release-assets/uwe-${app}-${VERSION}.tar.gz")
+          done
           node scripts/build-uwe-release-manifest.mjs \
-            --version "${{ steps.meta.outputs.version }}" \
+            --version "$VERSION" \
             --tag "${{ steps.meta.outputs.tag }}" \
             --sha "${{ github.sha }}" \
             --nsis "$NSIS_PATH" \
             --msi "${{ steps.artifacts.outputs.msi }}" \
-            --notes "UWE Windows release ${{ steps.meta.outputs.version }} — Command Center installers + git tag for host updates." \
+            "${APP_ARGS[@]}" \
+            --databases "release-assets/uwe-databases-${VERSION}.tar.gz" \
+            --notes "UWE Windows release ${VERSION} — Installer, App-Bundles und vormigrierte Datenbanken." \
             --out release-assets/uwe-release.json
 
       - name: Create GitHub Release
@@ -157,12 +210,17 @@ jobs:
 
             Dieses Release enthält:
             - **UWE Command Center** Windows-Installer (NSIS/MSI)
-            - `uwe-release.json` Manifest für den Update-Button
-            - Git-Tag `${{ steps.meta.outputs.tag }}` — der Command-Center-Update-Button synchronisiert den lokalen Checkout auf diesen Stand und baut Studio/Portal neu
+            - **App-Bundles** `uwe-<app>-${{ steps.meta.outputs.version }}.tar.gz` — fertig gebaute Oberflächen, die die Installation nach der Profilauswahl nachlädt. Kein Git, kein Node, kein pnpm, kein Build auf dem Zielrechner.
+            - **`uwe-databases-${{ steps.meta.outputs.version }}.tar.gz`** — leere, bereits migrierte Datenbanken für den Erststart
+            - **`uwe-release.json`** — Manifest (schemaVersion 2) mit SHA-256 je Asset; der Client lädt nur, was hier steht, und verwirft jedes Bundle mit falscher Prüfsumme
+            - Git-Tag `${{ steps.meta.outputs.tag }}` für den Entwicklermodus aus einem Checkout
 
-            ### Installation / Update
-            1. Im Command Center **Nach Updates suchen** → **Update installieren**
-            2. Oder Installer manuell aus den Assets laden
+            ### Installation
+            1. `UWE_Command_Center_${{ steps.meta.outputs.version }}_x64-setup.exe` laden und ausführen
+            2. Im Einrichtungs-Assistenten das Profil wählen — geladen werden nur die dazugehörigen Bundles
+
+            ### Update
+            Im Command Center **Nach Updates suchen** → **Update installieren**. Nachgeladen werden nur Bundles mit geänderter Prüfsumme; vor Migrationen wird eine Kopie der Datenbanken abgelegt.
           files: |
             release-assets/*
         env:

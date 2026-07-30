@@ -17,6 +17,15 @@ import {
 import { applyDesktopHostUpdate, checkDesktopHostUpdate } from "./desktop-host-update.ts";
 import { setHostProgressSink } from "./desktop-host-progress.ts";
 import { getHostEnv, setHostEnv } from "./desktop-host-env.ts";
+import { applyBundleInstall, applyBundleUpdate } from "./bundle-update.ts";
+import {
+  bundleInstallRoot,
+  commandCenterDataRoot,
+  detectHostMode,
+  resolveDesktopHostRoot,
+} from "./desktop-host.ts";
+import { isHostServiceId, type HostServiceId } from "./desktop-host-types.ts";
+import path from "node:path";
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -47,7 +56,9 @@ type HostAction =
   | "list-backups"
   | "restore-backup"
   | "get-install-selection"
-  | "set-install-selection";
+  | "set-install-selection"
+  | "bundle-install"
+  | "bundle-update";
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -121,9 +132,32 @@ async function main(): Promise<void> {
       case "check-update":
         result = await checkDesktopHostUpdate(root);
         break;
-      case "update":
-        result = await applyDesktopHostUpdate(root);
+      case "update": {
+        // Ein Monorepo-Checkout aktualisiert über git + Build; eine
+        // Bundle-Installation über das Release-Manifest. Die Weiche liegt hier,
+        // damit der Update-Knopf im Command Center in beiden Welten derselbe ist.
+        const updateRoot = resolveDesktopHostRoot(root);
+        if (detectHostMode(updateRoot) === "bundle") {
+          const dataDir = path.join(commandCenterDataRoot(), "data");
+          result = await applyBundleUpdate(updateRoot, dataDir, path.join(dataDir, "backups"));
+        } else {
+          result = await applyDesktopHostUpdate(root);
+        }
         break;
+      }
+      case "bundle-install": {
+        const payload = JSON.parse(await readStdin()) as { apps?: unknown };
+        const apps = Array.isArray(payload.apps) ? payload.apps.filter(isHostServiceId) : [];
+        if (apps.length === 0) throw new Error("bundle-install erwartet {\"apps\": [\"studio\", …]} auf stdin.");
+        const dataDir = path.join(commandCenterDataRoot(), "data");
+        result = await applyBundleInstall(apps as HostServiceId[], bundleInstallRoot(), dataDir);
+        break;
+      }
+      case "bundle-update": {
+        const dataDir = path.join(commandCenterDataRoot(), "data");
+        result = await applyBundleUpdate(bundleInstallRoot(), dataDir, path.join(dataDir, "backups"));
+        break;
+      }
       case "get-env":
         result = getHostEnv(root);
         break;
