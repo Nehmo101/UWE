@@ -72,6 +72,9 @@ const SCOPE_NAME_MAP: Record<ApiTokenScope, ApiTokenScopeName> = {
   admin_write: "admin_write",
   backup_read: "backup_read",
   backup_write: "backup_write",
+  family_read: "family_read",
+  family_write: "family_write",
+  family_calendar: "family_calendar",
 };
 
 function toScopeName(scope: ApiTokenScope): ApiTokenScopeName {

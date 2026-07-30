@@ -17,6 +17,9 @@ export const API_TOKEN_SCOPES = [
   "admin_write",
   "backup_read",
   "backup_write",
+  "family_read",
+  "family_write",
+  "family_calendar",
 ] as const;
 
 export type ApiTokenScope = (typeof API_TOKEN_SCOPES)[number];
@@ -35,6 +38,9 @@ export const API_TOKEN_SCOPE_LABELS: Record<ApiTokenScope, string> = {
   admin_write: "Admin-Aktionen ausführen",
   backup_read: "Backups lesen",
   backup_write: "Backups erstellen/wiederherstellen",
+  family_read: "Family lesen (Kalender, Einkauf, Rezepte, Mitglieder)",
+  family_write: "Family ändern (Termine, Einkauf, Akte)",
+  family_calendar: "Family-Kalender-Abos verwalten",
 };
 
 const ADMIN_SCOPES = new Set<ApiTokenScope>(["admin_read", "admin_write"]);
