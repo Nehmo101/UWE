@@ -11,15 +11,89 @@ import type { DesktopHostService } from "./desktop-host.ts";
 export interface HealthProbe {
   responding: boolean;
   healthy: boolean;
+  /**
+   * Selbstauskunft des antwortenden Dienstes (`app` bzw. `app.name` aus
+   * `/api/health`), `null` bei fremder oder unlesbarer Antwort. Daran erkennt
+   * der Host einen eigenen verwaisten Prozess auf einem belegten Port.
+   */
+  app: string | null;
 }
 
 export async function probeHealth(url: string): Promise<HealthProbe> {
   try {
     const response = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(2_500) });
-    return { responding: true, healthy: response.ok };
+    return { responding: true, healthy: response.ok, app: await readHealthAppName(response) };
   } catch {
-    return { responding: false, healthy: false };
+    return { responding: false, healthy: false, app: null };
   }
+}
+
+async function readHealthAppName(response: Response): Promise<string | null> {
+  try {
+    return healthAppName(await response.json());
+  } catch {
+    return null; // Keine (lesbare) JSON-Antwort — dann ist es nicht unsere App.
+  }
+}
+
+/**
+ * Der App-Name aus einer Healthcheck-Antwort. Studio und Portal liefern ein
+ * Objekt (`app.name` neben Version und Laufzeit), Brain, Family und die
+ * Startseite nur den Namen — beides zählt.
+ */
+export function healthAppName(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const app = (payload as { app?: unknown }).app;
+  if (typeof app === "string") return app.trim() || null;
+  if (app && typeof app === "object") {
+    const name = (app as { name?: unknown }).name;
+    if (typeof name === "string") return name.trim() || null;
+  }
+  return null;
+}
+
+/**
+ * Die PIDs, die auf `port` lauschen. Leer, wenn das Betriebssystem nichts
+ * verrät (fehlendes Werkzeug, fehlende Rechte) — Aufrufer müssen damit rechnen
+ * und dürfen daraus nicht „Port ist frei" ableiten.
+ */
+export function listenerPids(port: number): number[] {
+  const pids = process.platform === "win32" ? windowsListenerPids(port) : posixListenerPids(port);
+  return [...new Set(pids.filter((pid) => Number.isInteger(pid) && pid > 0))];
+}
+
+function windowsListenerPids(port: number): number[] {
+  // Bewusst ohne `-p tcp`: das listet nur IPv4, ein auf `[::]` gebundener
+  // Dienst fiele durchs Raster.
+  const raw = runCapture("netstat", ["-ano"]);
+  return raw ? parseNetstatListeners(raw, port) : [];
+}
+
+/**
+ * `netstat -ano` ist lokalisiert („LISTENING" / „ABHÖREN"), der Zustand taugt
+ * deshalb nicht als Filter. Verlässlich sind die Spalten: die lokale Adresse
+ * endet auf `:port`, die Gegenstelle ist der Nullpunkt (nur so bei einem
+ * lauschenden Socket) und die letzte Spalte ist die PID. Damit fallen zugleich
+ * UDP-Zeilen (vier Spalten) und die TIME_WAIT-Leichen mit PID 0 heraus.
+ */
+export function parseNetstatListeners(raw: string, port: number): number[] {
+  const idle = new Set(["0.0.0.0:0", "[::]:0", "*:*"]);
+  const pids: number[] = [];
+  for (const line of raw.split(/\r?\n/)) {
+    const columns = line.trim().split(/\s+/);
+    if (columns.length < 5 || !/^tcp/i.test(columns[0])) continue;
+    if (!columns[1].endsWith(`:${port}`) || !idle.has(columns[2])) continue;
+    pids.push(Number.parseInt(columns[columns.length - 1], 10));
+  }
+  return pids;
+}
+
+function posixListenerPids(port: number): number[] {
+  const lsof = runCapture("lsof", ["-nP", "-t", `-iTCP:${port}`, "-sTCP:LISTEN"]);
+  if (lsof) return lsof.split(/\r?\n/).map((line) => Number.parseInt(line.trim(), 10));
+  // Ohne lsof: `ss` nennt die PID im letzten Feld als `pid=NNN`.
+  const ss = runCapture("ss", ["-Hltnp", `sport = :${port}`]);
+  return ss ? [...ss.matchAll(/pid=(\d+)/g)].map((match) => Number.parseInt(match[1], 10)) : [];
 }
 
 export async function health(url: string): Promise<boolean> {
