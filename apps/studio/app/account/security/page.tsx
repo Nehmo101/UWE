@@ -7,6 +7,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { createAuthIdentityService } from "@uwe/database/auth-identities";
+import { ResponsiveTable } from "@uwe/shared-ui";
 import { resolveLoginMethodsPublicConfig } from "@uwe/database/login-methods-settings";
 import { GoogleAccountLinkCard } from "@/src/components/GoogleAccountLinkCard";
 import { PasskeySettingsPanel } from "@/src/components/PasskeySettingsPanel";
@@ -108,26 +109,29 @@ export default async function AccountSecurityPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loginEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine Login-Ereignisse protokolliert.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="border-b border-border px-3 py-2 text-left font-medium text-muted-foreground">Zeit</th>
-                  <th className="border-b border-border px-3 py-2 text-left font-medium text-muted-foreground">Ereignis</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loginEvents.map((entry) => (
-                  <tr key={entry.id}>
-                    <td className="border-b border-border px-3 py-2">{formatStudioDateTime(entry.timestamp)}</td>
-                    <td className="border-b border-border px-3 py-2">{AUDIT_ACTION_LABELS[entry.action] ?? entry.action}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <ResponsiveTable
+            caption="Letzte Anmeldungen"
+            rowKey={(entry) => entry.id}
+            rows={loginEvents}
+            columns={[
+              {
+                key: "event",
+                label: "Ereignis",
+                primary: true,
+                render: (entry) => AUDIT_ACTION_LABELS[entry.action] ?? entry.action,
+              },
+              {
+                key: "time",
+                label: "Zeit",
+                render: (entry) => formatStudioDateTime(entry.timestamp),
+              },
+            ]}
+            empty={
+              <p className="text-sm text-muted-foreground">
+                Noch keine Login-Ereignisse protokolliert.
+              </p>
+            }
+          />
         </CardContent>
       </Card>
     </SystemShell>

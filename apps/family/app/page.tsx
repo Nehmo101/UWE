@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@uwe/shared-ui";
 import { createFamilyService } from "@uwe/database/family-service";
 import { familyPrisma } from "@uwe/database/family-client";
 import { getFamilyUser } from "@/src/lib/page-family";
@@ -67,10 +68,19 @@ export default async function FamilyStartPage() {
       <section className="family-section">
         <h2>Zuletzt gesprochen</h2>
         {conversations.length === 0 ? (
-          <p className="family-muted">
-            Noch nichts. Fang im <Link href="/chat">Family-Chat</Link> an — was dort hängen bleibt,
-            landet im Family-Wissen.
-          </p>
+          // Der Leerzustand ist hier das Erste, was ein neues Mitglied sieht —
+          // er bekommt deshalb die gemeinsame Form aus `design-v3/states.css`
+          // statt eines grauen Satzes am Seitenrand.
+          <EmptyState
+            icon="✎"
+            title="Noch nichts gesprochen"
+            description="Was im Family-Chat hängen bleibt, landet danach hier und im Family-Wissen."
+            action={
+              <Link className="family-btn" href="/chat">
+                Zum Family-Chat
+              </Link>
+            }
+          />
         ) : (
           <ul className="family-list">
             {conversations.slice(0, 8).map((conversation) => (

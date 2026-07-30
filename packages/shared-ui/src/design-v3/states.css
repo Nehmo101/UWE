@@ -79,6 +79,11 @@
   }
 }
 
+/* Für <span>-Skelette: inline hätte weder Höhe noch eigene Zeile. */
+.uwe-skeleton--block {
+  display: block;
+}
+
 .uwe-skeleton[data-lines="text"] {
   height: 1em;
   margin-block: 0.25em;

@@ -1,7 +1,23 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import {
+  EmptyState as SharedEmptyState,
+  ErrorState as SharedErrorState,
+} from "@uwe/shared-ui";
 import { NavIcon } from "./icon";
 import { cn } from "./cn";
+
+/**
+ * Leer- und Fehlerzustand liegen seit dem v3-Fundament in `@uwe/shared-ui` und
+ * tragen dort die Klassen aus `design-v3/states.css`: lesbare Schriftgrößen,
+ * ein Zeichen zusätzlich zur Farbe, kein `h3` mehr für einen Satz, der keine
+ * Abschnittsüberschrift ist.
+ *
+ * Diese Datei bleibt als Adapter stehen, damit die rund vierzig Aufrufstellen
+ * in dieser App unverändert weiterlaufen: sie reicht das Lucide-Icon als
+ * `icon`-Knoten durch — die gemeinsame Komponente kennt keine Icon-Bibliothek
+ * und soll auch keine bekommen.
+ */
 
 const alertVariants = cva(
   "flex gap-3 rounded-[var(--radius)] border p-4 text-sm",
@@ -49,34 +65,27 @@ export interface StateProps {
 /** Calm empty state — never alarming. */
 export function EmptyState({ icon = "inbox", title, description, action, className }: StateProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-[var(--radius)] border border-dashed border-border p-10 text-center",
-        className,
-      )}
-    >
-      <NavIcon name={icon} width={28} height={28} className="text-muted-foreground" />
-      <div className="font-medium">{title}</div>
-      {description ? <div className="max-w-sm text-sm text-muted-foreground">{description}</div> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
-    </div>
+    <SharedEmptyState
+      icon={<NavIcon name={icon} width={28} height={28} />}
+      title={title}
+      description={description}
+      action={action}
+      className={className}
+    />
   );
 }
 
 /** Error state with safe messaging (diagnostics passed in by caller). */
-export function ErrorState({ icon = "shield", title, description, action, className }: StateProps) {
+export function ErrorState({ title, description, action, className }: StateProps) {
+  // `icon` wird bewusst nicht mehr gerendert: das Fehlerzeichen kommt aus
+  // `states.css` und steht damit auf jeder Fehlerfläche an derselben Stelle.
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-[var(--radius)] border border-destructive/40 bg-destructive/10 p-10 text-center",
-        className,
-      )}
-    >
-      <NavIcon name={icon} width={28} height={28} className="text-destructive" />
-      <div className="font-medium">{title}</div>
-      {description ? <div className="max-w-sm text-sm text-muted-foreground">{description}</div> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
-    </div>
+    <SharedErrorState
+      title={title}
+      description={description}
+      action={action}
+      className={className}
+    />
   );
 }
 

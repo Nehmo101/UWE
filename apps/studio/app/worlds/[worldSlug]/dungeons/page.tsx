@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  DungeonPrepStatusBadge,
   DUNGEON_PREP_STATUS_LABELS,
+  DungeonPrepStatusBadge,
+  ResponsiveTable,
 } from "@uwe/shared-ui";
 import {
   createDungeonCockpitService,
@@ -20,8 +21,6 @@ interface Props {
   searchParams: Promise<{ campaign?: string; status?: string }>;
 }
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 function parsePrepStatus(raw: string | undefined) {
   if (raw && Object.values(DungeonPrepStatusEnum).includes(raw as (typeof DungeonPrepStatusEnum)[keyof typeof DungeonPrepStatusEnum])) {
@@ -108,32 +107,33 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
       ) : (
         <Card>
           <CardContent className="pt-6">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>Titel</th>
-                    <th className={TH_CLASS}>Status</th>
-                    <th className={TH_CLASS}>Zusammenfassung</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDungeons.map((dungeon) => (
-                    <tr key={dungeon.id}>
-                      <td className={TD_CLASS}>
-                        <Link href={`/worlds/${worldSlug}/dungeons/${dungeon.slug}`}>
-                          {dungeon.title}
-                        </Link>
-                      </td>
-                      <td className={TD_CLASS}>
-                        <DungeonPrepStatusBadge status={dungeon.prepStatus} />
-                      </td>
-                      <td className={TD_CLASS}>{dungeon.summary ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ResponsiveTable
+              caption="Dungeons"
+              rowKey={(dungeon) => dungeon.id}
+              rows={filteredDungeons}
+              columns={[
+                {
+                  key: "title",
+                  label: "Titel",
+                  primary: true,
+                  render: (dungeon) => (
+                    <Link href={`/worlds/${worldSlug}/dungeons/${dungeon.slug}`}>
+                      {dungeon.title}
+                    </Link>
+                  ),
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (dungeon) => <DungeonPrepStatusBadge status={dungeon.prepStatus} />,
+                },
+                {
+                  key: "summary",
+                  label: "Zusammenfassung",
+                  render: (dungeon) => dungeon.summary ?? "—",
+                },
+              ]}
+            />
           </CardContent>
         </Card>
       )}

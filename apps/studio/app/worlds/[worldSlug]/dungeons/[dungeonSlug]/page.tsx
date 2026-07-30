@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  DungeonPrepStatusBadge,
   DUNGEON_PREP_STATUS_LABELS,
+  DungeonPrepStatusBadge,
+  ResponsiveTable,
   WikiContent,
 } from "@uwe/shared-ui";
 import {
@@ -46,8 +47,6 @@ interface Props {
 const SECTION_CLASS = "mb-8 flex flex-col gap-3";
 const FIELD_CLASS = "flex flex-col gap-1.5";
 const HEADING_CLASS = "m-0 text-lg font-semibold tracking-tight";
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 export default async function StudioDungeonDetailPage({ params, searchParams }: Props) {
   const { worldSlug, dungeonSlug } = await params;
@@ -113,30 +112,30 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
         ) : (
           <Card>
             <CardContent className="pt-6">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Ebene</th>
-                      <th className={TH_CLASS}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overview.levels.map((level) => (
-                      <tr key={level.id}>
-                        <td className={TD_CLASS}>
-                          <Link href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${level.slug}`}>
-                            {level.title}
-                          </Link>
-                        </td>
-                        <td className={TD_CLASS}>
-                          <DungeonPrepStatusBadge status={level.prepStatus} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ResponsiveTable
+                caption="Ebenen"
+                rowKey={(level) => level.id}
+                rows={overview.levels}
+                columns={[
+                  {
+                    key: "level",
+                    label: "Ebene",
+                    primary: true,
+                    render: (level) => (
+                      <Link
+                        href={`/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${level.slug}`}
+                      >
+                        {level.title}
+                      </Link>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (level) => <DungeonPrepStatusBadge status={level.prepStatus} />,
+                  },
+                ]}
+              />
             </CardContent>
           </Card>
         )}

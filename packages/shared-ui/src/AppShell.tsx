@@ -49,23 +49,39 @@ export function StatGrid({
   );
 }
 
+/**
+ * Ruhiger Leerzustand — nie alarmierend, immer mit einem nächsten Schritt.
+ *
+ * Die Form kommt seit dem v3-Fundament aus `design-v3/states.css`
+ * (`.uwe-empty-v3`) statt aus Utilities an dieser Stelle. Zwei Dinge daran
+ * sind nicht kosmetisch: der Titel stand vorher als `h3` in der Gliederung,
+ * obwohl „Noch keine Einträge" keine Abschnittsüberschrift ist — ein
+ * Screenreader las ihn als solche und die Überschriftenebene sprang. Und die
+ * Textgrößen hingen an festen `rem`-Werten statt am Maßstab.
+ */
 export function EmptyState({
   title,
   description,
   action,
   icon,
+  className,
 }: {
-  title: string;
-  description?: string;
+  title: ReactNode;
+  description?: ReactNode;
   action?: ReactNode;
   icon?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-[var(--radius)] border border-border bg-[color-mix(in_srgb,var(--uwe-card-bg)_55%,transparent)] px-8 py-12 text-center">
-      {icon && <div className="mb-3 text-3xl opacity-65">{icon}</div>}
-      <h3 className="m-0 mb-2 text-[1.05rem] not-italic text-foreground">{title}</h3>
-      {description && <p className="mx-auto my-0 max-w-md leading-relaxed text-muted-foreground">{description}</p>}
-      {action && <div className="mt-6 flex flex-wrap justify-center gap-2">{action}</div>}
+    <div className={className ? `uwe-empty-v3 ${className}` : "uwe-empty-v3"}>
+      {icon && (
+        <span className="uwe-empty-v3__glyph" aria-hidden>
+          {icon}
+        </span>
+      )}
+      <p className="uwe-empty-v3__title">{title}</p>
+      {description && <p className="uwe-empty-v3__body">{description}</p>}
+      {action}
     </div>
   );
 }

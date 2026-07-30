@@ -1,5 +1,6 @@
 "use client";
 
+import { ResponsiveTable, StatusPill } from "@uwe/shared-ui";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -11,7 +12,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  cn,
 } from "@/src/components/ui";
 
 interface SpotifyDevice {
@@ -37,8 +37,6 @@ interface Props {
   worldSlug: string;
 }
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 export function SpotifyConnectionPanel({ worldSlug }: Props) {
   const [status, setStatus] = useState<SpotifyStatusResponse | null>(null);
@@ -284,50 +282,63 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
               )}
 
               {!loadingDevices && devices.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className={TH_CLASS}>Gerätename</th>
-                        <th className={TH_CLASS}>Typ</th>
-                        <th className={TH_CLASS}>Lautstärke</th>
-                        <th className={TH_CLASS}>Status</th>
-                        <th className={TH_CLASS}>Auswählen</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {devices.map((device) => (
-                        <tr
-                          key={device.id}
-                          className={cn(status?.preferredDeviceId === device.id && "bg-muted")}
+                <ResponsiveTable
+                  caption="Spotify-Connect-Geräte"
+                  rowKey={(device) => device.id}
+                  rows={devices}
+                  columns={[
+                    {
+                      key: "name",
+                      label: "Gerätename",
+                      primary: true,
+                      render: (device) => (
+                        <>
+                          {device.name}
+                          {status?.preferredDeviceId === device.id && (
+                            <Badge variant="success" className="ml-2">
+                              Bevorzugt
+                            </Badge>
+                          )}
+                        </>
+                      ),
+                    },
+                    {
+                      key: "status",
+                      label: "Status",
+                      render: (device) => (
+                        <StatusPill
+                          glyph={device.isActive ? "▶" : "◻"}
+                          tone={device.isActive ? "success" : "neutral"}
                         >
-                          <td className={TD_CLASS}>
-                            {device.name}
-                            {status?.preferredDeviceId === device.id && (
-                              <Badge variant="success" className="ml-2">
-                                Bevorzugt
-                              </Badge>
-                            )}
-                          </td>
-                          <td className={TD_CLASS}>{deviceTypeLabel(device.type)}</td>
-                          <td className={TD_CLASS}>{device.volumePercent !== null ? `${device.volumePercent}%` : "—"}</td>
-                          <td className={TD_CLASS}>{device.isActive ? "Aktiv" : "Inaktiv"}</td>
-                          <td className={TD_CLASS}>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => void handleSelectDevice(device)}
-                              disabled={savingDevice || status?.preferredDeviceId === device.id}
-                            >
-                              {savingDevice ? "Speichere …" : "Auswählen"}
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          {device.isActive ? "Aktiv" : "Inaktiv"}
+                        </StatusPill>
+                      ),
+                    },
+                    { key: "type", label: "Typ", render: (device) => deviceTypeLabel(device.type) },
+                    {
+                      key: "volume",
+                      label: "Lautstärke",
+                      numeric: true,
+                      render: (device) =>
+                        device.volumePercent !== null ? `${device.volumePercent}%` : "—",
+                    },
+                    {
+                      key: "select",
+                      label: "Auswählen",
+                      render: (device) => (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => void handleSelectDevice(device)}
+                          disabled={savingDevice || status?.preferredDeviceId === device.id}
+                        >
+                          {savingDevice ? "Speichere …" : "Auswählen"}
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
               )}
 
               {status?.preferredDeviceId && (

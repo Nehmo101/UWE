@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { waitForJob } from "@/src/lib/poll-job";
 import { formatStudioDate } from "@/src/lib/format";
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
+import { ResponsiveTable } from "@uwe/shared-ui";
 
 interface BackupPermissions {
   role: string;
@@ -70,9 +71,6 @@ interface Props {
   defaultCampaignSlug?: string;
 }
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
-const ACTIONS_TD_CLASS = `${TD_CLASS} flex flex-wrap gap-2`;
 const LIST_CLASS = "list-disc space-y-1 pl-5 text-sm";
 
 /** Native select — fester, nicht-leerer Wertebereich, siehe Muster in UserManagementWorkspace.tsx. */
@@ -392,60 +390,64 @@ export function BackupWorkspace({
           <CardTitle>Gespeicherte Backups</CardTitle>
         </CardHeader>
         <CardContent>
-          {backups.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine Backups vorhanden.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>Datei</th>
-                    <th className={TH_CLASS}>Typ</th>
-                    <th className={TH_CLASS}>Inhalt</th>
-                    <th className={TH_CLASS}>Erstellt</th>
-                    <th className={TH_CLASS}>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {backups.map((backup) => (
-                    <tr key={backup.id}>
-                      <td className={TD_CLASS}>{backup.filename}</td>
-                      <td className={TD_CLASS}>{backup.manifest.type}</td>
-                      <td className={TD_CLASS}>
-                        {backup.manifest.stats.worlds} Welten · {backup.manifest.stats.pages} Seiten ·{" "}
-                        {backup.manifest.stats.assets} Assets
-                      </td>
-                      <td className={TD_CLASS}>{formatStudioDate(backup.manifest.createdAt)}</td>
-                      <td className={ACTIONS_TD_CLASS}>
-                        {permissions?.canDownload && (
-                          <Button type="button" variant="secondary" size="sm" disabled={busy === "download"} onClick={() => downloadBackup(backup.id, backup.filename)}>
-                            Download
-                          </Button>
-                        )}
-                        {permissions?.canPreview && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedBackupId(backup.id);
-                              setUploadBase64("");
-                              setUploadFilename("");
-                              setPreview(null);
-                              setResult(null);
-                              setRestoreConfirmText("");
-                            }}
-                          >
-                            Für Restore wählen
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <ResponsiveTable
+            caption="Gespeicherte Backups"
+            rowKey={(backup) => backup.id}
+            rows={backups}
+            columns={[
+              { key: "file", label: "Datei", primary: true, render: (backup) => backup.filename },
+              { key: "type", label: "Typ", render: (backup) => backup.manifest.type },
+              {
+                key: "content",
+                label: "Inhalt",
+                priority: "low",
+                render: (backup) =>
+                  `${backup.manifest.stats.worlds} Welten · ${backup.manifest.stats.pages} Seiten · ${backup.manifest.stats.assets} Assets`,
+              },
+              {
+                key: "created",
+                label: "Erstellt",
+                render: (backup) => formatStudioDate(backup.manifest.createdAt),
+              },
+              {
+                key: "actions",
+                label: "Aktionen",
+                render: (backup) => (
+                  <span className="flex flex-wrap gap-2">
+                    {permissions?.canDownload && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={busy === "download"}
+                        onClick={() => downloadBackup(backup.id, backup.filename)}
+                      >
+                        Download
+                      </Button>
+                    )}
+                    {permissions?.canPreview && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedBackupId(backup.id);
+                          setUploadBase64("");
+                          setUploadFilename("");
+                          setPreview(null);
+                          setResult(null);
+                          setRestoreConfirmText("");
+                        }}
+                      >
+                        Für Restore wählen
+                      </Button>
+                    )}
+                  </span>
+                ),
+              },
+            ]}
+            empty={<p className="text-sm text-muted-foreground">Noch keine Backups vorhanden.</p>}
+          />
         </CardContent>
       </Card>
 
@@ -582,28 +584,22 @@ export function BackupWorkspace({
                     ))}
                   </ul>
                 )}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className={TH_CLASS}>Typ</th>
-                        <th className={TH_CLASS}>Bezeichner</th>
-                        <th className={TH_CLASS}>Status</th>
-                        <th className={TH_CLASS}>Hinweis</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {preview.items.slice(0, 50).map((item) => (
-                        <tr key={`${item.entityType}-${item.identifier}-${item.status}`}>
-                          <td className={TD_CLASS}>{item.entityType}</td>
-                          <td className={TD_CLASS}>{item.identifier}</td>
-                          <td className={TD_CLASS}>{item.status}</td>
-                          <td className={TD_CLASS}>{item.message ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ResponsiveTable
+                  caption="Restore-Vorschau"
+                  rowKey={(item) => `${item.entityType}-${item.identifier}-${item.status}`}
+                  rows={preview.items.slice(0, 50)}
+                  columns={[
+                    {
+                      key: "identifier",
+                      label: "Bezeichner",
+                      primary: true,
+                      render: (item) => item.identifier,
+                    },
+                    { key: "type", label: "Typ", render: (item) => item.entityType },
+                    { key: "status", label: "Status", render: (item) => item.status },
+                    { key: "message", label: "Hinweis", render: (item) => item.message ?? "—" },
+                  ]}
+                />
               </div>
             )}
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   GameSessionStatusBadge,
+  ResponsiveTable,
 } from "@uwe/shared-ui";
 import {
   createAiRunService,
@@ -25,8 +26,6 @@ interface Props {
   params: Promise<{ worldSlug: string }>;
 }
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 const PRE_CLASS =
   "whitespace-pre-wrap overflow-x-auto rounded-[var(--radius)] border border-border bg-muted p-3 text-sm";
 
@@ -129,43 +128,44 @@ export default async function PrepareSessionPage({ params }: Props) {
         summary={`${upcomingSessions.length} geplant`}
         defaultOpen
       >
-        {upcomingSessions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Keine geplanten Sessions.{" "}
-            <Link href={`/worlds/${worldSlug}/sessions/new`}>Neue Session anlegen →</Link>
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className={TH_CLASS}>#</th>
-                  <th className={TH_CLASS}>Titel</th>
-                  <th className={TH_CLASS}>Datum</th>
-                  <th className={TH_CLASS}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingSessions.map((session) => (
-                  <tr key={session.id}>
-                    <td className={TD_CLASS}>{session.sessionNumber}</td>
-                    <td className={TD_CLASS}>
-                      <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
-                        {session.title}
-                      </Link>
-                    </td>
-                    <td className={TD_CLASS}>
-                      {session.date ? session.date.toLocaleDateString("de-DE") : "—"}
-                    </td>
-                    <td className={TD_CLASS}>
-                      <GameSessionStatusBadge status={session.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <ResponsiveTable
+          caption="Kommende Sessions"
+          rowKey={(session) => session.id}
+          rows={upcomingSessions}
+          columns={[
+            {
+              key: "title",
+              label: "Titel",
+              primary: true,
+              render: (session) => (
+                <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>{session.title}</Link>
+              ),
+            },
+            {
+              key: "number",
+              label: "#",
+              numeric: true,
+              render: (session) => session.sessionNumber,
+            },
+            {
+              key: "date",
+              label: "Datum",
+              render: (session) =>
+                session.date ? session.date.toLocaleDateString("de-DE") : "—",
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (session) => <GameSessionStatusBadge status={session.status} />,
+            },
+          ]}
+          empty={
+            <p className="text-sm text-muted-foreground">
+              Keine geplanten Sessions.{" "}
+              <Link href={`/worlds/${worldSlug}/sessions/new`}>Neue Session anlegen →</Link>
+            </p>
+          }
+        />
       </SettingsCollapsiblePanel>
 
       {latestPrepRun.runs[0]?.resultText ? (

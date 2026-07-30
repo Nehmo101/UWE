@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   GameSessionStatusBadge,
+  ResponsiveTable,
   SidebarSection,
 } from "@uwe/shared-ui";
 import {
@@ -20,8 +21,6 @@ import { QuickCreateSessionDialog } from "@/src/components/world/QuickCreateSess
 import { Badge, buttonVariants, Card, CardContent, EmptyState } from "@/src/components/ui";
 
 const PAGE_SIZE = 20;
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -152,44 +151,50 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
       ) : (
         <Card>
           <CardContent className="pt-6">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>#</th>
-                    <th className={TH_CLASS}>Titel</th>
-                    <th className={TH_CLASS}>Datum</th>
-                    <th className={TH_CLASS}>Status</th>
-                    <th className={TH_CLASS}>Portal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sessions.map((session) => (
-                    <tr key={session.id}>
-                      <td className={TD_CLASS}>{session.sessionNumber}</td>
-                      <td className={TD_CLASS}>
-                        <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
-                          {session.title}
-                        </Link>
-                      </td>
-                      <td className={TD_CLASS}>
-                        {session.date
-                          ? session.date.toLocaleDateString("de-DE")
-                          : "—"}
-                      </td>
-                      <td className={TD_CLASS}><GameSessionStatusBadge status={session.status} /></td>
-                      <td className={TD_CLASS}>
-                        {session.recapPublished ? (
-                          <Badge variant="success">Veröffentlicht</Badge>
-                        ) : (
-                          <Badge variant="secondary">Entwurf</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ResponsiveTable
+              caption="Sessions"
+              rowKey={(session) => session.id}
+              rows={sessions}
+              columns={[
+                {
+                  key: "title",
+                  label: "Titel",
+                  primary: true,
+                  render: (session) => (
+                    <Link href={`/worlds/${worldSlug}/sessions/${session.id}`}>
+                      {session.title}
+                    </Link>
+                  ),
+                },
+                {
+                  key: "number",
+                  label: "#",
+                  numeric: true,
+                  render: (session) => session.sessionNumber,
+                },
+                {
+                  key: "date",
+                  label: "Datum",
+                  render: (session) =>
+                    session.date ? session.date.toLocaleDateString("de-DE") : "—",
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (session) => <GameSessionStatusBadge status={session.status} />,
+                },
+                {
+                  key: "portal",
+                  label: "Portal",
+                  render: (session) =>
+                    session.recapPublished ? (
+                      <Badge variant="success">Veröffentlicht</Badge>
+                    ) : (
+                      <Badge variant="secondary">Entwurf</Badge>
+                    ),
+                },
+              ]}
+            />
           </CardContent>
         </Card>
       )}

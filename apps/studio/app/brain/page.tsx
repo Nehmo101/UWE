@@ -5,6 +5,7 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
+import { ResponsiveTable } from "@uwe/shared-ui";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import {
   buttonVariants,
@@ -14,9 +15,6 @@ import {
   CardTitle,
   EmptyState,
 } from "@/src/components/ui";
-
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 export default async function BrainOverviewPage() {
   const repo = getAppRepository();
@@ -67,42 +65,44 @@ export default async function BrainOverviewPage() {
                 )}
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {(documents.length > 0 || facts.length > 0) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr>
-                          <th className={TH_CLASS}>Eintrag</th>
-                          <th className={TH_CLASS}>Art</th>
-                          <th className={TH_CLASS}>Sichtbarkeit</th>
-                          <th className={TH_CLASS}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {documents.slice(0, 5).map((doc) => (
-                          <tr key={doc.id}>
-                            <td className={TD_CLASS}>
-                              <Link href={`/worlds/${world.slug}/brain/${doc.id}`}>{doc.title}</Link>
-                            </td>
-                            <td className={TD_CLASS}>Dokument</td>
-                            <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[doc.status]}</td>
-                          </tr>
-                        ))}
-                        {facts.slice(0, 5).map((fact) => (
-                          <tr key={fact.id}>
-                            <td className={TD_CLASS}>
-                              <Link href={`/worlds/${world.slug}/brain/facts/${fact.id}`}>
-                                {fact.title}
-                              </Link>
-                            </td>
-                            <td className={TD_CLASS}>Fakt</td>
-                            <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[fact.status]}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                {/*
+                  Der Kopf führte vier Spalten, die Zeilen lieferten drei:
+                  „Sichtbarkeit" hatte nie eine Zelle, weshalb der Status unter
+                  der falschen Überschrift stand. Dokumente und Fakten sind
+                  außerdem dieselbe Liste — sie werden hier zu einer Reihe
+                  zusammengelegt, statt zweimal durch dasselbe `tbody` zu laufen.
+                */}
+                <ResponsiveTable
+                  caption={`Brain-Einträge in ${world.name}`}
+                  rowKey={(entry) => `${entry.kind}-${entry.id}`}
+                  rows={[
+                    ...documents.slice(0, 5).map((doc) => ({
+                      id: doc.id,
+                      kind: "Dokument" as const,
+                      title: doc.title,
+                      href: `/worlds/${world.slug}/brain/${doc.id}`,
+                      status: BRAIN_STATUS_LABELS[doc.status],
+                    })),
+                    ...facts.slice(0, 5).map((fact) => ({
+                      id: fact.id,
+                      kind: "Fakt" as const,
+                      title: fact.title,
+                      href: `/worlds/${world.slug}/brain/facts/${fact.id}`,
+                      status: BRAIN_STATUS_LABELS[fact.status],
+                    })),
+                  ]}
+                  columns={[
+                    {
+                      key: "entry",
+                      label: "Eintrag",
+                      primary: true,
+                      render: (entry) => <Link href={entry.href}>{entry.title}</Link>,
+                    },
+                    { key: "kind", label: "Art", render: (entry) => entry.kind },
+                    { key: "status", label: "Status", render: (entry) => entry.status },
+                  ]}
+                  empty={null}
+                />
 
                 <p className="flex flex-wrap items-center gap-3">
                   <Link

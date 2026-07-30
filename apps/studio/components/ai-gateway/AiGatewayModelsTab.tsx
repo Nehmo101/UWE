@@ -1,9 +1,8 @@
+import { ResponsiveTable } from "@uwe/shared-ui";
 import { Card, CardContent, CardHeader, CardTitle, Input } from "@/src/components/ui";
 import { FEATURE_MODEL_KEYS, FEATURE_MODEL_LABELS } from "./constants";
 import type { GatewayDashboard } from "./types";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 /** TODO(design-kit): Controlled Select bleibt nativ — direkt an Server-Config gebunden,
     siehe gleiches Muster in AiGatewayRoutingTab.tsx. */
@@ -26,56 +25,67 @@ export function AiGatewayModelsTab({
         <CardTitle>Modell pro Feature</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr>
-                <th className={TH_CLASS}>Feature</th>
-                <th className={TH_CLASS}>Provider</th>
-                <th className={TH_CLASS}>Modell</th>
-              </tr>
-            </thead>
-            <tbody>
-              {FEATURE_MODEL_KEYS.map((featureKey) => {
+        {/*
+          Die Zeilen tragen Bedienelemente, keine reinen Werte. Auf dem Telefon
+          werden daraus Karten: Feld unter Beschriftung statt drei Spalten, die
+          sich ein Select und ein Eingabefeld teilen müssen.
+        */}
+        <ResponsiveTable
+          caption="Modell pro Feature"
+          rowKey={(featureKey) => featureKey}
+          rows={[...FEATURE_MODEL_KEYS]}
+          columns={[
+            {
+              key: "feature",
+              label: "Feature",
+              primary: true,
+              render: (featureKey) => FEATURE_MODEL_LABELS[featureKey] ?? featureKey,
+            },
+            {
+              key: "provider",
+              label: "Provider",
+              render: (featureKey) => {
                 const override = data.config.featureModels?.[featureKey] ?? {};
-                const isLocalOnly = featureKey === "personal_brain";
+                if (featureKey === "personal_brain") {
+                  return <span className="text-muted-foreground">RTX (fest)</span>;
+                }
                 return (
-                  <tr key={featureKey}>
-                    <td className={TD_CLASS}>{FEATURE_MODEL_LABELS[featureKey] ?? featureKey}</td>
-                    <td className={TD_CLASS}>
-                      {isLocalOnly ? (
-                        <span className="text-muted-foreground">RTX (fest)</span>
-                      ) : (
-                        <select
-                          className={NATIVE_SELECT_CLASS}
-                          value={override.providerId ?? ""}
-                          onChange={(e) =>
-                            void patchFeatureModel(featureKey, { providerId: e.target.value || null })
-                          }
-                        >
-                          <option value="">— Standard —</option>
-                          <option value="local_rtx">RTX (lokal)</option>
-                        </select>
-                      )}
-                    </td>
-                    <td className={TD_CLASS}>
-                      <Input
-                        defaultValue={override.model ?? ""}
-                        disabled={isLocalOnly}
-                        onBlur={(e) => {
-                          const model = e.target.value.trim() || null;
-                          if (model !== (override.model ?? null)) {
-                            void patchFeatureModel(featureKey, { model });
-                          }
-                        }}
-                      />
-                    </td>
-                  </tr>
+                  <select
+                    aria-label={`Provider für ${FEATURE_MODEL_LABELS[featureKey] ?? featureKey}`}
+                    className={NATIVE_SELECT_CLASS}
+                    value={override.providerId ?? ""}
+                    onChange={(e) =>
+                      void patchFeatureModel(featureKey, { providerId: e.target.value || null })
+                    }
+                  >
+                    <option value="">— Standard —</option>
+                    <option value="local_rtx">RTX (lokal)</option>
+                  </select>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
+              },
+            },
+            {
+              key: "model",
+              label: "Modell",
+              render: (featureKey) => {
+                const override = data.config.featureModels?.[featureKey] ?? {};
+                return (
+                  <Input
+                    aria-label={`Modell für ${FEATURE_MODEL_LABELS[featureKey] ?? featureKey}`}
+                    defaultValue={override.model ?? ""}
+                    disabled={featureKey === "personal_brain"}
+                    onBlur={(e) => {
+                      const model = e.target.value.trim() || null;
+                      if (model !== (override.model ?? null)) {
+                        void patchFeatureModel(featureKey, { model });
+                      }
+                    }}
+                  />
+                );
+              },
+            },
+          ]}
+        />
       </CardContent>
     </Card>
   );

@@ -5,7 +5,9 @@ import {
   continuationKindLabel,
   type ContinuationKind,
 } from "@uwe/database/continue-work";
+import { EmptyState, StatusPill } from "@uwe/shared-ui";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { buttonVariants } from "@/src/components/ui/button";
 import { requireStudioAccess } from "@/src/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +32,19 @@ export default async function ContinuePage() {
 
       <section className="flex flex-col gap-3">
         {continuations.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nichts Offenes gefunden — alles erledigt oder noch nichts angefangen.
-          </p>
+          // Ein grauer Satz war hier zu wenig: wer nichts Offenes hat, sieht
+          // diese Seite als Erstes und braucht einen nächsten Schritt, keine
+          // Feststellung.
+          <EmptyState
+            icon="✓"
+            title="Nichts Offenes"
+            description="Alles erledigt — oder noch nichts angefangen. Beides ist ein guter Zustand."
+            action={
+              <Link className={buttonVariants({ variant: "outline" })} href="/worlds">
+                Zu den Welten
+              </Link>
+            }
+          />
         ) : (
           <ul className="grid gap-2">
             {continuations.map((item) => (
@@ -43,7 +55,13 @@ export default async function ContinuePage() {
                   </Link>
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  <span className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{continuationKindLabel(item.kind)}</span> {item.hint}
+                  {/* Die Art der Fortsetzung stand als farbloses Kästchen da.
+                      Als StatusPill trägt sie ihr Zeichen mit — dieselbe
+                      Auskunft ohne Verlass auf Farbe. */}
+                  <StatusPill glyph={KIND_ICON[item.kind]} tone="info">
+                    {continuationKindLabel(item.kind)}
+                  </StatusPill>{" "}
+                  {item.hint}
                 </p>
               </li>
             ))}
@@ -52,9 +70,8 @@ export default async function ContinuePage() {
       </section>
 
       <p className="text-sm text-muted-foreground">
-        Mehr Kontext im{" "}
-        <Link href="/worlds">Heute-Dashboard</Link> oder in der{" "}
-        <Link href="/capture">Capture-Inbox</Link>.
+        Mehr Kontext im <Link href="/brain">Brain Store</Link> oder in der{" "}
+        <Link href="/worlds">Weltübersicht</Link>.
       </p>
     </StudioShell>
   );

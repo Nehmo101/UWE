@@ -1,14 +1,21 @@
 "use client";
 
+import { ResponsiveTable } from "@uwe/shared-ui";
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import { useCallback, useMemo, useState } from "react";
 import type {
   ImportExecuteResult,
   ImportFormat,
-  ImportItemPreview,
   ImportPreviewResult,
   ImportStatus,
 } from "@uwe/knoteforge-import";
+import {
+  defaultSelectedIds,
+  ImportStatusBadge,
+  IMPORT_STATUS_LABELS,
+  isSelectable,
+  statusVariant,
+} from "./import-status";
 import { waitForJob } from "@/src/lib/poll-job";
 import { JobProgressBar } from "@/components/JobProgressBar";
 import {
@@ -20,7 +27,6 @@ import {
 import {
   Alert,
   Badge,
-  type BadgeProps,
   Button,
   Card,
   CardContent,
@@ -30,34 +36,6 @@ import {
   Label,
   Textarea,
 } from "@/src/components/ui";
-
-const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
-  new: "Neu",
-  update: "Update",
-  duplicate: "Duplikat",
-  conflict: "Konflikt",
-  skipped: "Übersprungen",
-  error: "Fehler",
-};
-
-function statusVariant(status: ImportStatus): BadgeProps["variant"] {
-  switch (status) {
-    case "new":
-      return "success";
-    case "update":
-      return "info";
-    case "duplicate":
-    case "skipped":
-      return "warning";
-    case "error":
-      return "danger";
-    default:
-      return "default";
-  }
-}
-
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 /** Native select — fester, nicht-leerer Wertebereich, siehe Muster in UserManagementWorkspace.tsx. */
 const NATIVE_SELECT_CLASS =
@@ -72,14 +50,6 @@ interface Props {
   onJobExecuting?: () => Promise<void>;
   onJobComplete?: (resultSummary: Record<string, unknown>, undoToken?: string | null) => Promise<void>;
   onJobFail?: (errorMessage: string) => Promise<void>;
-}
-
-function isSelectable(status: ImportStatus): boolean {
-  return status === "new" || status === "update" || status === "conflict";
-}
-
-function defaultSelectedIds(items: ImportItemPreview[]): Set<string> {
-  return new Set(items.filter((item) => isSelectable(item.status)).map((item) => item.itemId));
 }
 
 function formatFromFileName(fileName: string): ImportFormat | null {
@@ -534,79 +504,103 @@ export function ImportWorkspace({
               </label>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>
-                      <input
-                        type="checkbox"
-                        aria-label="Alle auswählen"
-                        onChange={toggleAll}
-                        checked={
-                          preview.items.filter((item) => isSelectable(item.status)).length > 0 &&
-                          preview.items.filter((item) => isSelectable(item.status)).every((item) => selectedIds.has(item.itemId))
-                        }
-                        className="h-4 w-4 rounded border-input"
-                      />
-                    </th>
-                    <th className={TH_CLASS}>Titel</th>
-                    <th className={TH_CLASS}>Typ</th>
-                    <th className={TH_CLASS}>Status</th>
-                    <th className={TH_CLASS}>Slug</th>
-                    <th className={TH_CLASS}>Konflikte</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.items.map((item) => (
-                    <tr key={item.itemId}>
-                      <td className={TD_CLASS}>
-                        <input type="checkbox" checked={selectedIds.has(item.itemId)} disabled={!isSelectable(item.status)} onChange={() => toggleItem(item.itemId, item.status)} aria-label={`${item.title} importieren`} className="h-4 w-4 rounded border-input" />
-                      </td>
-                      <td className={TD_CLASS}>
-                        <strong>{item.title}</strong>
-                        {item.warnings.length > 0 && (
-                          <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                            {item.warnings.map((warning) => (
-                              <li key={warning}>{warning}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </td>
-                      <td className={TD_CLASS}>
-                        <code>{item.knoteforgeType}</code>
-                        <span className="text-xs text-muted-foreground"> → {item.pageType}</span>
-                      </td>
-                      <td className={TD_CLASS}>
-                        <Badge variant={statusVariant(item.status)}>{IMPORT_STATUS_LABELS[item.status]}</Badge>
-                      </td>
-                      <td className={TD_CLASS}>
-                        {item.resolvedSlug !== item.slug ? (
-                          <>
-                            <span className="text-xs text-muted-foreground">{item.slug}</span>
-                            <br />
-                            → {item.resolvedSlug}
-                          </>
-                        ) : (
-                          item.slug
-                        )}
-                      </td>
-                      <td className={TD_CLASS}>
-                        {item.conflicts.length > 0 ? (
-                          <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                            {item.conflicts.map((conflict, index) => (
-                              <li key={`${conflict.kind}-${index}`}>{conflict.message}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ResponsiveTable
+              caption="Import-Vorschau"
+              rowKey={(item) => item.itemId}
+              rows={preview.items}
+              columns={[
+                {
+                  key: "select",
+                  label: "Auswahl",
+                  header: (
+                    <input
+                      type="checkbox"
+                      aria-label="Alle auswählen"
+                      onChange={toggleAll}
+                      checked={
+                        preview.items.filter((entry) => isSelectable(entry.status)).length > 0 &&
+                        preview.items
+                          .filter((entry) => isSelectable(entry.status))
+                          .every((entry) => selectedIds.has(entry.itemId))
+                      }
+                      className="h-4 w-4 rounded border-input"
+                    />
+                  ),
+                  render: (item) => (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.itemId)}
+                      disabled={!isSelectable(item.status)}
+                      onChange={() => toggleItem(item.itemId, item.status)}
+                      aria-label={`${item.title} importieren`}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                  ),
+                },
+                {
+                  key: "title",
+                  label: "Titel",
+                  primary: true,
+                  render: (item) => (
+                    <>
+                      {item.title}
+                      {item.warnings.length > 0 && (
+                        <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                          {item.warnings.map((warning) => (
+                            <li key={warning}>{warning}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ),
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (item) => (
+                    <ImportStatusBadge status={item.status} />
+                  ),
+                },
+                {
+                  key: "type",
+                  label: "Typ",
+                  render: (item) => (
+                    <>
+                      <code>{item.knoteforgeType}</code>
+                      <span className="text-xs text-muted-foreground"> → {item.pageType}</span>
+                    </>
+                  ),
+                },
+                {
+                  key: "slug",
+                  label: "Slug",
+                  priority: "low",
+                  render: (item) =>
+                    item.resolvedSlug !== item.slug ? (
+                      <>
+                        <span className="text-xs text-muted-foreground">{item.slug}</span>
+                        <br />→ {item.resolvedSlug}
+                      </>
+                    ) : (
+                      item.slug
+                    ),
+                },
+                {
+                  key: "conflicts",
+                  label: "Konflikte",
+                  render: (item) =>
+                    item.conflicts.length > 0 ? (
+                      <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                        {item.conflicts.map((conflict, index) => (
+                          <li key={`${conflict.kind}-${index}`}>{conflict.message}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      "—"
+                    ),
+                },
+              ]}
+            />
 
             {preview.items.length === 0 && (
               <p className="text-sm text-muted-foreground">Keine importierbaren Einträge gefunden.</p>
@@ -639,30 +633,32 @@ export function ImportWorkspace({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>Zeit</th>
-                    <th className={TH_CLASS}>Status</th>
-                    <th className={TH_CLASS}>Eintrag</th>
-                    <th className={TH_CLASS}>Meldung</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.log.map((entry, index) => (
-                    <tr key={`${entry.timestamp}-${index}`}>
-                      <td className={TD_CLASS}>{new Date(entry.timestamp).toLocaleTimeString("de-DE")}</td>
-                      <td className={TD_CLASS}>
-                        <Badge variant={statusVariant(entry.status)}>{IMPORT_STATUS_LABELS[entry.status]}</Badge>
-                      </td>
-                      <td className={TD_CLASS}>{entry.title ?? entry.itemId ?? "—"}</td>
-                      <td className={TD_CLASS}>{entry.message}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ResponsiveTable
+              caption="Import-Protokoll"
+              rowKey={(entry, index) => `${entry.timestamp}-${index}`}
+              rows={result.log}
+              columns={[
+                {
+                  key: "entry",
+                  label: "Eintrag",
+                  primary: true,
+                  render: (entry) => entry.title ?? entry.itemId ?? "—",
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (entry) => (
+                    <ImportStatusBadge status={entry.status} />
+                  ),
+                },
+                {
+                  key: "time",
+                  label: "Zeit",
+                  render: (entry) => new Date(entry.timestamp).toLocaleTimeString("de-DE"),
+                },
+                { key: "message", label: "Meldung", render: (entry) => entry.message },
+              ]}
+            />
           </CardContent>
         </Card>
       )}

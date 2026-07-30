@@ -1,7 +1,5 @@
 import Link from "next/link";
-import {
-  PAGE_TYPE_LABELS,
-} from "@uwe/shared-ui";
+import { PAGE_TYPE_LABELS, ResponsiveTable } from "@uwe/shared-ui";
 import { createPageTemplateService, prisma } from "@uwe/database/server";
 import {
   duplicateTemplateAction,
@@ -16,9 +14,6 @@ import {
   Input,
   Label,
 } from "@/src/components/ui";
-
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 interface Props {
   searchParams: Promise<{ error?: string; type?: string; q?: string }>;
@@ -97,65 +92,82 @@ export default async function TemplatesPage({ searchParams }: Props) {
           </div>
         </form>
 
-        {filtered.length === 0 ? (
-          <EmptyState
-            title="Keine Templates für diesen Filter"
-            description="Passe Kategorie oder Suche an, oder lege ein neues Template an."
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className={TH_CLASS}>Name</th>
-                  <th className={TH_CLASS}>Seitentyp</th>
-                  <th className={TH_CLASS}>Standard-Sichtbarkeit</th>
-                  <th className={TH_CLASS}>Blöcke</th>
-                  <th className={TH_CLASS}>Status</th>
-                  <th className={TH_CLASS}>Aktionen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((template) => (
-                  <tr key={template.id}>
-                    <td className={TD_CLASS}>
-                      <Link href={`/templates/${template.id}`}>{template.name}</Link>
-                      {template.isSystem && (
-                        <Badge variant="secondary" className="ml-2">
-                          System
-                        </Badge>
-                      )}
-                    </td>
-                    <td className={TD_CLASS}>{PAGE_TYPE_LABELS[template.pageType]}</td>
-                    <td className={TD_CLASS}>{template.blocks.length}</td>
-                    <td className={TD_CLASS}>{template.isActive ? "Aktiv" : "Deaktiviert"}</td>
-                    <td className={TD_CLASS}>
-                      <div className="flex flex-wrap gap-1.5">
-                        <form action={duplicateTemplateAction}>
-                          <input type="hidden" name="templateId" value={template.id} />
-                          <Button type="submit" variant="secondary" size="sm">
-                            Duplizieren
-                          </Button>
-                        </form>
-                        <form action={setTemplateActiveAction}>
-                          <input type="hidden" name="templateId" value={template.id} />
-                          <input
-                            type="hidden"
-                            name="isActive"
-                            value={template.isActive ? "false" : "true"}
-                          />
-                          <Button type="submit" variant="secondary" size="sm">
-                            {template.isActive ? "Deaktivieren" : "Aktivieren"}
-                          </Button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/*
+          Der Kopf hatte sechs Spalten, der Körper fünf: „Standard-Sichtbarkeit"
+          stand als Überschrift da, ohne dass darunter je eine Zelle kam — ab
+          dort war jede Spalte um eins verschoben beschriftet. Die
+          Spaltendefinition unten kann das nicht mehr auseinanderlaufen lassen,
+          weil Kopf und Zelle aus derselben Zeile stammen.
+        */}
+        <ResponsiveTable
+          caption="Templates"
+          rowKey={(template) => template.id}
+          rows={filtered}
+          columns={[
+            {
+              key: "name",
+              label: "Name",
+              primary: true,
+              render: (template) => (
+                <>
+                  <Link href={`/templates/${template.id}`}>{template.name}</Link>
+                  {template.isSystem && (
+                    <Badge variant="secondary" className="ml-2">
+                      System
+                    </Badge>
+                  )}
+                </>
+              ),
+            },
+            {
+              key: "pageType",
+              label: "Seitentyp",
+              render: (template) => PAGE_TYPE_LABELS[template.pageType],
+            },
+            {
+              key: "blocks",
+              label: "Blöcke",
+              numeric: true,
+              render: (template) => template.blocks.length,
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (template) => (template.isActive ? "Aktiv" : "Deaktiviert"),
+            },
+            {
+              key: "actions",
+              label: "Aktionen",
+              render: (template) => (
+                <div className="flex flex-wrap gap-1.5">
+                  <form action={duplicateTemplateAction}>
+                    <input type="hidden" name="templateId" value={template.id} />
+                    <Button type="submit" variant="secondary" size="sm">
+                      Duplizieren
+                    </Button>
+                  </form>
+                  <form action={setTemplateActiveAction}>
+                    <input type="hidden" name="templateId" value={template.id} />
+                    <input
+                      type="hidden"
+                      name="isActive"
+                      value={template.isActive ? "false" : "true"}
+                    />
+                    <Button type="submit" variant="secondary" size="sm">
+                      {template.isActive ? "Deaktivieren" : "Aktivieren"}
+                    </Button>
+                  </form>
+                </div>
+              ),
+            },
+          ]}
+          empty={
+            <EmptyState
+              title="Keine Templates für diesen Filter"
+              description="Passe Kategorie oder Suche an, oder lege ein neues Template an."
+            />
+          }
+        />
       </div>
     </StudioShell>
   );

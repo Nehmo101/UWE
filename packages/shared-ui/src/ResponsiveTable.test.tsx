@@ -100,6 +100,20 @@ describe("ResponsiveTable", () => {
     assert.equal(html, "<p>Noch keine Welten.</p>");
   });
 
+  it("rendert ohne Zeilen und ohne Leertext gar nichts", () => {
+    // Ein Rahmen mit Kopfzeile und leerem Körper ist kein Zustand, den ein
+    // Nutzer je sehen soll — er sieht aus wie eine kaputte Tabelle.
+    const html = renderToStaticMarkup(
+      <ResponsiveTable
+        columns={COLUMNS}
+        rows={[]}
+        rowKey={(world: World) => world.slug}
+        caption="Welten"
+      />,
+    );
+    assert.equal(html, "");
+  });
+
   it("nutzt die Attribute, die design-v3/data.css tatsächlich liest", () => {
     // Die eigentliche Kopplung: das Stylesheet ist die andere Vertragsseite.
     const css = readFileSync(

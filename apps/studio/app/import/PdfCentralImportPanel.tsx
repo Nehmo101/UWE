@@ -7,6 +7,7 @@ import {
   executeImportCentralPdfJobAction,
   previewImportCentralPdfJobAction,
 } from "../import-central-actions";
+import { ResponsiveTable } from "@uwe/shared-ui";
 import {
   Alert,
   Button,
@@ -18,8 +19,6 @@ import {
   Label,
 } from "@/src/components/ui";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 interface Props {
   jobId: string;
@@ -187,49 +186,47 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    {!singleTarget ? (
-                      <th className={TH_CLASS}>
-                        {/* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */}
-                        <input
-                          type="checkbox"
-                          aria-label="Alle auswählen"
-                          onChange={toggleAll}
-                          checked={
-                            preview.items.length > 0 &&
-                            preview.items.every((item) => selectedIds.has(item.itemId))
-                          }
-                          className="h-4 w-4 rounded border-input"
-                        />
-                      </th>
-                    ) : null}
-                    <th className={TH_CLASS}>Titel</th>
-                    <th className={TH_CLASS}>Auszug</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.items.map((item) => (
-                    <tr key={item.itemId}>
-                      {!singleTarget ? (
-                        <td className={TD_CLASS}>
+            {/* Das Auswahl-Kästchen je Zeile trug keine Beschriftung — im
+                Screenreader hieß jede Zeile nur „Kontrollkästchen". */}
+            <ResponsiveTable
+              caption="Import-Vorschau"
+              rowKey={(item) => item.itemId}
+              rows={preview.items}
+              columns={[
+                ...(singleTarget
+                  ? []
+                  : [
+                      {
+                        key: "select",
+                        label: "Auswahl",
+                        header: (
+                          /* TODO(design-kit): natives Checkbox-Element — Kit hat noch keine Checkbox-Komponente. */
+                          <input
+                            type="checkbox"
+                            aria-label="Alle auswählen"
+                            onChange={toggleAll}
+                            checked={
+                              preview.items.length > 0 &&
+                              preview.items.every((entry) => selectedIds.has(entry.itemId))
+                            }
+                            className="h-4 w-4 rounded border-input"
+                          />
+                        ),
+                        render: (item: MarkdownImportPreviewResult["items"][number]) => (
                           <input
                             type="checkbox"
                             checked={selectedIds.has(item.itemId)}
                             onChange={() => toggleItem(item.itemId)}
+                            aria-label={`${item.title} importieren`}
                             className="h-4 w-4 rounded border-input"
                           />
-                        </td>
-                      ) : null}
-                      <td className={TD_CLASS}>{item.title}</td>
-                      <td className={TD_CLASS}>{item.excerpt}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        ),
+                      },
+                    ]),
+                { key: "title", label: "Titel", primary: true, render: (item) => item.title },
+                { key: "excerpt", label: "Auszug", render: (item) => item.excerpt },
+              ]}
+            />
 
             <p className="text-sm text-muted-foreground">
               Die Vorschau ändert keine Daten. Nach dem Import kannst du den Job im Import-Verlauf

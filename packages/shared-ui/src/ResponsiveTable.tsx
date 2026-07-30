@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 /**
  * Eine Tabelle, die auf dem Telefon zur Kartenliste wird — ohne zweite
@@ -30,8 +30,17 @@ import type { ReactNode } from "react";
 export interface ResponsiveTableColumn<Row> {
   /** Stabiler Schlüssel — nur intern, erscheint nicht im Markup. */
   key: string;
-  /** Spaltenüberschrift. Wird mobil zur Beschriftung vor dem Wert. */
+  /**
+   * Spaltenüberschrift. Wird mobil zur Beschriftung vor dem Wert und ist
+   * deshalb immer Text — auch dann, wenn `header` etwas anderes zeigt.
+   */
   label: string;
+  /**
+   * Sichtbare Überschrift, wenn sie mehr ist als Text — etwa ein
+   * „alles auswählen"-Kästchen. `label` bleibt daneben bestehen und trägt die
+   * mobile Beschriftung; ohne das stünde vor der Zelle ein leeres Etikett.
+   */
+  header?: ReactNode;
   /** Zellinhalt für eine Zeile. */
   render: (row: Row) => ReactNode;
   /**
@@ -61,8 +70,9 @@ export interface ResponsiveTableProps<Row> {
   /** Sichtbare Überschrift statt versteckter Beschriftung. */
   captionVisible?: boolean;
   /**
-   * Was steht da, wenn nichts da ist. Ohne diesen Text bliebe eine leere
-   * Tabelle als kopfloser Rahmen stehen.
+   * Was steht da, wenn nichts da ist. Ohne Zeilen wird ausschließlich dieser
+   * Knoten gerendert — `undefined` oder `null` heißt also „dann eben gar
+   * nichts", nie „ein Rahmen mit Kopfzeile und leerem Körper".
    */
   empty?: ReactNode;
   /**
@@ -72,6 +82,12 @@ export interface ResponsiveTableProps<Row> {
    */
   mobile?: "cards" | "scroll";
   className?: string;
+  /**
+   * Zusatz-Attribute je Zeile — für Zeilen, die selbst etwas können, etwa
+   * Ziehen zum Sortieren. Bewusst schmal gehalten: alles, was eine Zeile
+   * *anzeigt*, gehört in eine Spalte.
+   */
+  rowProps?: (row: Row, index: number) => HTMLAttributes<HTMLTableRowElement>;
 }
 
 export function ResponsiveTable<Row>({
@@ -83,8 +99,9 @@ export function ResponsiveTable<Row>({
   empty,
   mobile = "cards",
   className,
+  rowProps,
 }: ResponsiveTableProps<Row>) {
-  if (rows.length === 0 && empty) {
+  if (rows.length === 0) {
     return <>{empty}</>;
   }
 
@@ -107,14 +124,14 @@ export function ResponsiveTable<Row>({
                 data-numeric={column.numeric ? "true" : undefined}
                 data-priority={column.priority === "low" ? "low" : undefined}
               >
-                {column.label}
+                {column.header ?? column.label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody role="rowgroup">
           {rows.map((row, index) => (
-            <tr key={rowKey(row, index)} role="row">
+            <tr key={rowKey(row, index)} role="row" {...rowProps?.(row, index)}>
               {columns.map((column) => {
                 // Die Leitspalte trägt die Karte und ist deshalb `th` mit
                 // `scope="row"` — so weiß ein Screenreader, worauf sich die

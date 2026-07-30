@@ -36,7 +36,18 @@ describe("shared-ui components", () => {
       />,
     );
     assert.match(html, /Keine Seiten/);
-    assert.match(html, /text-center/);
+    // Die Form kommt aus `design-v3/states.css`, nicht aus Utilities an der
+    // Komponente — geprüft wird deshalb die Klasse, nicht `text-center`.
+    assert.match(html, /class="uwe-empty-v3"/);
+    assert.match(html, /uwe-empty-v3__body/);
+  });
+
+  it("gibt dem Leerzustand keine Überschrift", () => {
+    const html = renderToStaticMarkup(<EmptyState title="Keine Seiten" />);
+    // „Noch keine Einträge" ist keine Abschnittsüberschrift. Als <h3> sprang
+    // die Überschriftenebene und ein Screenreader zählte den Satz in die
+    // Gliederung mit.
+    assert.doesNotMatch(html, /<h[1-6]/);
   });
 
   it("renders loading spinner with accessible label", () => {

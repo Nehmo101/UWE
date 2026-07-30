@@ -1,5 +1,6 @@
 "use client";
 
+import { ResponsiveTable } from "@uwe/shared-ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
@@ -39,8 +40,6 @@ import {
   cn,
 } from "@/src/components/ui";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 /** Native select — fester, nicht-leerer Wertebereich, siehe Muster in UserManagementWorkspace.tsx. */
 const NATIVE_SELECT_CLASS =
@@ -424,76 +423,80 @@ export function ImportCentralWorkspace({
           <CardTitle>Import-Verlauf</CardTitle>
         </CardHeader>
         <CardContent>
-          {jobs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine Import-Jobs.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>Zeit</th>
-                    <th className={TH_CLASS}>Quelle</th>
-                    <th className={TH_CLASS}>Ziel</th>
-                    <th className={TH_CLASS}>Welt</th>
-                    <th className={TH_CLASS}>Status</th>
-                    <th className={TH_CLASS}>Details</th>
-                    <th className={TH_CLASS}>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <tr key={job.id}>
-                      <td className={TD_CLASS}>{formatDate(job.createdAt)}</td>
-                      <td className={TD_CLASS}>{IMPORT_SOURCE_TYPE_LABELS[job.sourceType]}</td>
-                      <td className={TD_CLASS}>{IMPORT_TARGET_TYPE_LABELS[job.targetType]}</td>
-                      <td className={TD_CLASS}>{job.targetWorldName ?? "—"}</td>
-                      <td className={TD_CLASS}>
-                        <Badge variant={jobStatusVariant(job.status)}>
-                          {IMPORT_JOB_STATUS_LABELS[
-                            job.status as keyof typeof IMPORT_JOB_STATUS_LABELS
-                          ] ?? job.status}
-                        </Badge>
-                      </td>
-                      <td className={TD_CLASS}>
-                        {job.errorMessage ? (
-                          <span className="text-xs text-muted-foreground">{job.errorMessage}</span>
-                        ) : (
-                          job.resultLabel ?? job.previewSummary ?? "—"
-                        )}
-                      </td>
-                      <td className={TD_CLASS}>
-                        <div className="flex flex-wrap gap-2">
-                          <Button type="button" variant="outline" onClick={() => setActiveJobId(job.id)}>
-                            Öffnen
-                          </Button>
-                          {job.status === "completed" && job.undoToken ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => handleRollback(job.id)}
-                              disabled={pending}
-                            >
-                              Zurückrollen
-                            </Button>
-                          ) : null}
-                          {job.sourceType === "knoteforge" &&
-                          job.targetType === "world" &&
-                          job.targetWorldSlug ? (
-                            <Link
-                              className={cn(buttonVariants({ variant: "outline" }))}
-                              href={`/worlds/${job.targetWorldSlug}/import`}
-                            >
-                              Welt-Import
-                            </Link>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <ResponsiveTable
+            caption="Import-Verlauf"
+            rowKey={(job) => job.id}
+            rows={jobs}
+            columns={[
+              {
+                key: "source",
+                label: "Quelle",
+                primary: true,
+                render: (job) => IMPORT_SOURCE_TYPE_LABELS[job.sourceType],
+              },
+              {
+                key: "status",
+                label: "Status",
+                render: (job) => (
+                  <Badge variant={jobStatusVariant(job.status)}>
+                    {IMPORT_JOB_STATUS_LABELS[
+                      job.status as keyof typeof IMPORT_JOB_STATUS_LABELS
+                    ] ?? job.status}
+                  </Badge>
+                ),
+              },
+              {
+                key: "target",
+                label: "Ziel",
+                render: (job) => IMPORT_TARGET_TYPE_LABELS[job.targetType],
+              },
+              { key: "world", label: "Welt", render: (job) => job.targetWorldName ?? "—" },
+              { key: "time", label: "Zeit", render: (job) => formatDate(job.createdAt) },
+              {
+                key: "details",
+                label: "Details",
+                priority: "low",
+                render: (job) =>
+                  job.errorMessage ? (
+                    <span className="text-xs text-muted-foreground">{job.errorMessage}</span>
+                  ) : (
+                    job.resultLabel ?? job.previewSummary ?? "—"
+                  ),
+              },
+              {
+                key: "actions",
+                label: "Aktionen",
+                render: (job) => (
+                  <span className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={() => setActiveJobId(job.id)}>
+                      Öffnen
+                    </Button>
+                    {job.status === "completed" && job.undoToken ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleRollback(job.id)}
+                        disabled={pending}
+                      >
+                        Zurückrollen
+                      </Button>
+                    ) : null}
+                    {job.sourceType === "knoteforge" &&
+                    job.targetType === "world" &&
+                    job.targetWorldSlug ? (
+                      <Link
+                        className={cn(buttonVariants({ variant: "outline" }))}
+                        href={`/worlds/${job.targetWorldSlug}/import`}
+                      >
+                        Welt-Import
+                      </Link>
+                    ) : null}
+                  </span>
+                ),
+              },
+            ]}
+            empty={<p className="text-sm text-muted-foreground">Noch keine Import-Jobs.</p>}
+          />
         </CardContent>
       </Card>
     </div>
