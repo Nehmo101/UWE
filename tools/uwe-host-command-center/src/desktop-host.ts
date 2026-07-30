@@ -9,6 +9,7 @@ import {
   deriveOwnedServiceState,
   diskSnapshot,
   gpuSnapshot,
+  listenerPids,
   pnpmCommand,
   probeHealth,
   processRunning,
@@ -26,6 +27,7 @@ import {
   HOST_SERVICE_IDS,
   HOST_SERVICE_LABELS,
   isHostServiceId,
+  isOwnServiceApp,
   parseServicePort,
   type DesktopHostActionResult,
   type DesktopHostService,
@@ -62,9 +64,11 @@ export type {
   ServiceState,
 } from "./desktop-host-types.ts";
 export {
+  HOST_SERVICE_HEALTH_APPS,
   HOST_SERVICE_IDS,
   HOST_SERVICE_LABELS,
   isHostServiceId,
+  isOwnServiceApp,
   parseServicePort,
 } from "./desktop-host-types.ts";
 export {
@@ -218,6 +222,75 @@ function pidFile(paths: HostPaths, id: HostServiceId): string {
   return path.join(paths.runtime, `${id}.pid`);
 }
 
+/**
+ * Ein Dienst, der einen unserer Ports hält, ohne dass wir eine PID-Datei dazu
+ * haben. „orphan" ist ein Rest einer früheren Sitzung (App abgestürzt, hart
+ * beendet, PID-Datei verloren) und gehört uns; „foreign" ist wirklich fremd
+ * und wird nie angefasst.
+ */
+interface PortHolder {
+  service: ServiceDefinition;
+  kind: "orphan" | "foreign";
+}
+
+async function classifyPortHolder(paths: HostPaths, service: ServiceDefinition): Promise<PortHolder | null> {
+  if (processRunning(readPid(pidFile(paths, service.id)))) return null; // gehört uns bereits
+  const probe = await probeHealth(`http://127.0.0.1:${service.port}`);
+  if (!probe.responding) return null; // Port frei
+  return { service, kind: isOwnServiceApp(service.id, probe.app) ? "orphan" : "foreign" };
+}
+
+/**
+ * Nimmt einen verwaisten eigenen Prozess wieder in Besitz: PID über den Port
+ * ermitteln und die PID-Datei nachziehen. Danach greifen Status, Stopp und
+ * Neustart wieder ganz normal.
+ *
+ * Nur bei genau einem lauschenden Prozess — bei mehreren (etwa zwei Resten auf
+ * IPv4 und IPv6) wüssten wir nicht, welcher der Dienst ist; die räumt der Start
+ * stattdessen weg.
+ */
+function adoptOrphanService(paths: HostPaths, id: HostServiceId, port: number): number | null {
+  const pids = listenerPids(port);
+  if (pids.length !== 1) return null;
+  ensureHostDirectories(paths);
+  fs.writeFileSync(pidFile(paths, id), String(pids[0]), "utf8");
+  appendOperationLog(paths, `${HOST_SERVICE_LABELS[id]}: verwaisten Prozess ${pids[0]} auf Port ${port} übernommen.`);
+  return pids[0];
+}
+
+/**
+ * Beendet die Reste einer früheren Sitzung auf dem Port eines Dienstes und
+ * meldet, ob der Port danach frei ist. Beendet ausschließlich Prozesse, die
+ * sich unmittelbar davor per `/api/health` als genau diese App ausgewiesen
+ * haben — ein fremder Dienst bleibt unangetastet.
+ */
+async function releaseOwnPort(paths: HostPaths, service: ServiceDefinition): Promise<boolean> {
+  const url = `http://127.0.0.1:${service.port}`;
+  const probe = await probeHealth(url);
+  if (!probe.responding) return true;
+  if (!isOwnServiceApp(service.id, probe.app)) return false;
+
+  const pids = listenerPids(service.port);
+  if (pids.length === 0) {
+    appendOperationLog(
+      paths,
+      `${service.label}: Port ${service.port} ist belegt, der zugehörige Prozess ließ sich nicht ermitteln.`,
+    );
+    return false;
+  }
+  for (const pid of pids) stopProcess(pid);
+  appendOperationLog(
+    paths,
+    `${service.label}: verwaiste Prozesse (${pids.join(", ")}) auf Port ${service.port} beendet.`,
+  );
+  fs.rmSync(pidFile(paths, service.id), { force: true });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (!(await probeHealth(url)).responding) return true;
+  }
+  return false;
+}
+
 function gitFact(root: string, args: string[]): string | null {
   return validateRepo(root) ? runCapture("git", args, root) : null;
 }
@@ -226,14 +299,33 @@ async function serviceStatus(paths: HostPaths, id: HostServiceId, label: string,
   const url = `http://127.0.0.1:${port}`;
   const file = pidFile(paths, id);
   const storedPid = readPid(file);
-  const running = processRunning(storedPid);
   const probe = await probeHealth(url);
+  let running = processRunning(storedPid);
+  let pid = running ? storedPid : null;
   if (storedPid && !running) fs.rmSync(file, { force: true });
+
+  // Antwortet der Port als genau diese App, ohne dass wir eine PID-Datei
+  // haben, ist es ein Rest von uns: wieder übernehmen statt als „fremd" zu
+  // melden — sonst bliebe der Dienst für Stopp und Neustart unerreichbar.
+  const orphan = !running && probe.responding && isOwnServiceApp(id, probe.app);
+  if (orphan) {
+    const adopted = adoptOrphanService(paths, id, port);
+    if (adopted) {
+      running = true;
+      pid = adopted;
+    }
+  }
+
+  const derived = deriveOwnedServiceState(running, probe.responding, probe.healthy);
   return {
     id,
     label,
-    ...deriveOwnedServiceState(running, probe.responding, probe.healthy),
-    pid: running ? storedPid : null,
+    ...derived,
+    message:
+      orphan && !running
+        ? "Rest einer früheren Sitzung belegt den Port. „Alles starten“ beendet ihn und startet neu."
+        : derived.message,
+    pid,
     url,
   };
 }
@@ -501,11 +593,18 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
   const before = await collectDesktopHostStatus(root);
-  const conflicts = before.services.filter((service) => service.state === "error");
-  if (conflicts.length > 0) {
+  const definitions = serviceDefinitions(paths);
+
+  // Belegte Ports sortieren, statt jeden Konflikt für fremd zu halten: Reste
+  // eigener Dienste räumen wir gleich selbst weg (sie waren über kein Bedienelement
+  // mehr erreichbar), wirklich fremde Dienste blockieren den Start wie bisher.
+  const holders = (await Promise.all(definitions.map((service) => classifyPortHolder(paths, service))))
+    .filter((entry): entry is PortHolder => entry !== null);
+  const foreign = holders.filter((entry) => entry.kind === "foreign");
+  if (foreign.length > 0) {
     return {
       ok: false,
-      message: `Start blockiert: Ports für ${conflicts.map((service) => service.label).join(", ")} sind bereits durch fremde Prozesse belegt.`,
+      message: `Start blockiert: Ports für ${foreign.map((entry) => entry.service.label).join(", ")} sind bereits durch fremde Prozesse belegt.`,
       status: before,
     };
   }
@@ -513,7 +612,19 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
     return { ok: false, message: "UWE ist noch nicht vollständig eingerichtet. Bitte zuerst Einrichten / Reparieren ausführen.", status: before };
   }
   ensureHostDirectories(paths);
-  const definitions = serviceDefinitions(paths);
+
+  const stuck: string[] = [];
+  for (const entry of holders) {
+    if (!(await releaseOwnPort(paths, entry.service))) stuck.push(entry.service.label);
+  }
+  if (stuck.length > 0) {
+    return {
+      ok: false,
+      message: `Start blockiert: Reste einer früheren Sitzung auf den Ports für ${stuck.join(", ")} ließen sich nicht beenden. Bitte das Command Center neu starten.`,
+      status: await collectDesktopHostStatus(root),
+    };
+  }
+
   for (const service of definitions) {
     const current = before.services.find((entry) => entry.id === service.id);
     if (!current?.healthy && !processRunning(readPid(pidFile(paths, service.id)))) spawnService(paths, service);
@@ -542,6 +653,12 @@ export async function stopHost(rootInput?: string): Promise<DesktopHostActionRes
     fs.rmSync(file, { force: true });
   }
   await new Promise((resolve) => setTimeout(resolve, 500));
+  // Und dann noch die Reste ohne PID-Datei: sonst bleibt eine Leiche aus einer
+  // früheren Sitzung auf ihrem Port liegen, und „Alles stoppen" — der einzige
+  // Knopf, der sie loswerden könnte — läuft an ihr vorbei.
+  for (const service of serviceDefinitions(paths, HOST_SERVICE_IDS)) {
+    await releaseOwnPort(paths, service);
+  }
   return { ok: true, message: "Alle UWE-Dienste wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
@@ -556,6 +673,17 @@ export async function startHostService(rootInput: string | undefined, serviceId:
     return { ok: false, message: "UWE ist noch nicht vollständig eingerichtet.", status: before };
   }
   ensureHostDirectories(paths);
+  const holder = await classifyPortHolder(paths, def);
+  if (holder?.kind === "foreign") {
+    return { ok: false, message: `Start blockiert: Port ${def.port} ist durch einen fremden Dienst belegt.`, status: before };
+  }
+  if (holder && !(await releaseOwnPort(paths, def))) {
+    return {
+      ok: false,
+      message: `Start blockiert: Ein Rest einer früheren Sitzung hält Port ${def.port} und ließ sich nicht beenden.`,
+      status: await collectDesktopHostStatus(root),
+    };
+  }
   if (!processRunning(readPid(pidFile(paths, def.id)))) spawnService(paths, def);
   const healthy = await waitForHealth(`http://127.0.0.1:${def.port}`);
   return {
@@ -578,6 +706,7 @@ export async function stopHostService(rootInput: string | undefined, serviceId: 
   if (pid) stopProcess(pid);
   fs.rmSync(file, { force: true });
   await new Promise((resolve) => setTimeout(resolve, 300));
+  await releaseOwnPort(paths, def); // Rest ohne PID-Datei gleich mit einsammeln
   return { ok: true, message: `${def.label} wurde gestoppt.`, status: await collectDesktopHostStatus(root) };
 }
 
