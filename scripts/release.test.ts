@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -116,14 +116,25 @@ describe("release packaging", () => {
     assert.match(docs, /uwe-vX\.Y\.Z/);
     assert.match(docs, /Update installieren/);
     assert.match(docs, /uwe-windows-release\.yml/);
-    // Der Tag-Push ist der dokumentierte Weg, ein Release zu schneiden.
-    assert.match(docs, /git tag/);
+    // Den Tag setzt die Pipeline; der Tag-Push ist der zweite Eingang.
+    assert.match(docs, /pnpm release:version/);
     assert.match(docs, /git push origin uwe-v/);
   });
 
   // ── Release über Release-Tags ────────────────────────────────────────────
   // Ein gepushter `uwe-vX.Y.Z` muss genau das Release erzeugen, das das Command
   // Center erwartet: derselbe Tag, dieselbe Version wie im Commit, kein Draft.
+
+  it("lets the pipeline create the tag and accepts a pushed one", () => {
+    const workflow = fs.readFileSync(
+      path.join(root, ".github/workflows/uwe-windows-release.yml"),
+      "utf8",
+    );
+    // Der reguläre Weg: Lauf starten, die gh-release-Action legt den Tag an.
+    assert.match(workflow, /workflow_dispatch:/);
+    assert.match(workflow, /softprops\/action-gh-release/);
+    assert.match(workflow, /tag_name: \$\{\{ steps\.meta\.outputs\.tag \}\}/);
+  });
 
   it("publishes on a pushed uwe-v tag, not only by hand", () => {
     const workflow = fs.readFileSync(
@@ -154,12 +165,18 @@ describe("release packaging", () => {
   it("syncs the Rust crate version so the app reports the release version", () => {
     // Das Command Center meldet dem Update-Check seine Fassung aus
     // CARGO_PKG_VERSION. Bliebe Cargo.toml stehen, hielte sich eine
-    // Bundle-Installation für dauerhaft veraltet.
+    // Bundle-Installation für dauerhaft veraltet. Build und Versions-PR
+    // benutzen dasselbe Skript, damit die Regel nur einmal existiert.
     const workflow = fs.readFileSync(
       path.join(root, ".github/workflows/uwe-windows-release.yml"),
       "utf8",
     );
-    assert.match(workflow, /Cargo\.toml/);
+    assert.match(workflow, /set-release-version\.mjs/);
+    assert.ok(fs.existsSync(path.join(root, "scripts/set-release-version.mjs")));
+    assert.equal(
+      (readJson("package.json").scripts as Record<string, string>)["release:version"],
+      "node scripts/set-release-version.mjs",
+    );
 
     const rust = fs.readFileSync(
       path.join(root, "apps/rtx-connector-client/src-tauri/src/command_center.rs"),
@@ -173,17 +190,69 @@ describe("release packaging", () => {
     );
   });
 
-  it("keeps VERSION, tauri.conf.json and the Rust crate on one version", () => {
-    const version = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
-    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
-    assert.equal(tauriConf.version, version);
-
-    const cargo = fs.readFileSync(
-      path.join(root, "apps/rtx-connector-client/src-tauri/Cargo.toml"),
-      "utf8",
+  it("keeps all five version files on one version", () => {
+    // Genau die Prüfung, die `pnpm release:version --check` fährt — hier als
+    // Gate, damit ein halber Bump nicht durch die CI kommt.
+    const result = spawnSync(
+      process.execPath,
+      [path.join(root, "scripts/set-release-version.mjs"), "--check"],
+      { cwd: root, encoding: "utf8" },
     );
-    const paketVersion = cargo.slice(cargo.indexOf("[package]")).match(/^version = "([^"]+)"/m);
-    assert.equal(paketVersion?.[1], version);
+    assert.equal(result.status, 0, `set-release-version --check: ${result.stderr || result.stdout}`);
+    assert.match(result.stdout, new RegExp(fs.readFileSync(path.join(root, "VERSION"), "utf8").trim()));
+  });
+
+  it("set-release-version writes every file and rejects a non-semver argument", () => {
+    const skript = path.join(root, "scripts/set-release-version.mjs");
+    const werk = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-setversion-"));
+    try {
+      // Ein Abbild der fünf Dateien, damit der Test das Repo nicht anfasst.
+      const tauriDir = path.join(werk, "apps/rtx-connector-client/src-tauri");
+      fs.mkdirSync(tauriDir, { recursive: true });
+      fs.writeFileSync(path.join(werk, "VERSION"), "0.1.0\n");
+      fs.writeFileSync(path.join(werk, "package.json"), '{\n  "version": "0.1.0"\n}\n');
+      fs.writeFileSync(
+        path.join(werk, "apps/rtx-connector-client/package.json"),
+        '{\n  "version": "0.1.0"\n}\n',
+      );
+      fs.writeFileSync(path.join(tauriDir, "tauri.conf.json"), '{\n  "version": "0.1.0"\n}\n');
+      fs.writeFileSync(
+        path.join(tauriDir, "Cargo.toml"),
+        '[package]\nname = "x"\nversion = "0.1.0"\n\n[dependencies]\nserde = { version = "1.0.0" }\n',
+      );
+      // Das Skript rechnet relativ zu seinem eigenen Ort — also mitkopieren.
+      fs.mkdirSync(path.join(werk, "scripts"), { recursive: true });
+      fs.copyFileSync(skript, path.join(werk, "scripts/set-release-version.mjs"));
+
+      execFileSync(process.execPath, [path.join(werk, "scripts/set-release-version.mjs"), "2.3.4"], {
+        stdio: "pipe",
+      });
+      assert.equal(fs.readFileSync(path.join(werk, "VERSION"), "utf8").trim(), "2.3.4");
+      for (const file of ["package.json", "apps/rtx-connector-client/package.json", "apps/rtx-connector-client/src-tauri/tauri.conf.json"]) {
+        assert.equal(JSON.parse(fs.readFileSync(path.join(werk, file), "utf8")).version, "2.3.4");
+      }
+      const cargo = fs.readFileSync(path.join(tauriDir, "Cargo.toml"), "utf8");
+      assert.match(cargo, /^version = "2\.3\.4"$/m);
+      // Die Version der Abhängigkeit bleibt unangetastet.
+      assert.match(cargo, /serde = \{ version = "1\.0\.0" \}/);
+
+      // Kein Semver, keine Änderung.
+      assert.throws(() =>
+        execFileSync(process.execPath, [path.join(werk, "scripts/set-release-version.mjs"), "v2.3"], {
+          stdio: "pipe",
+        }),
+      );
+
+      // Drift wird gemeldet.
+      fs.writeFileSync(path.join(werk, "VERSION"), "2.3.5\n");
+      assert.throws(() =>
+        execFileSync(process.execPath, [path.join(werk, "scripts/set-release-version.mjs"), "--check"], {
+          stdio: "pipe",
+        }),
+      );
+    } finally {
+      fs.rmSync(werk, { recursive: true, force: true });
+    }
   });
 
   it("resolves release assets without the gh CLI", () => {

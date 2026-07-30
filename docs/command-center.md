@@ -181,9 +181,10 @@ node tools/uwe-host-command-center/src/desktop-host-cli.ts check-update --root C
 node tools/uwe-host-command-center/src/desktop-host-cli.ts update --root C:\git\UWE
 ```
 
-Windows-Releases entstehen aus einem gepushten Tag `uwe-vX.Y.Z`: GitHub Actions
-(`.github/workflows/uwe-windows-release.yml`) baut daraus Installer, App-Bundles,
-leere Datenbanken und `uwe-release.json` und veröffentlicht das Release am Tag.
+Windows-Releases baut GitHub Actions
+(`.github/workflows/uwe-windows-release.yml`): der Lauf erzeugt den Tag
+`uwe-vX.Y.Z`, Installer, App-Bundles, leere Datenbanken und `uwe-release.json`.
+Ein bereits vorhandener `uwe-v*`-Tag löst denselben Build per Push aus.
 Details: [docs/engineering/rtx-connector-release.md](./engineering/rtx-connector-release.md).
 
 ## Sicherheit

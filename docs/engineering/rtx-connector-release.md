@@ -12,7 +12,9 @@ Angabe, aus der beide Update-Wege ihre Wahrheit ziehen:
 | Item | Value |
 |------|-------|
 | Tag format | `uwe-vX.Y.Z` (must equal root `VERSION` on the tagged commit) |
-| Workflow | `.github/workflows/uwe-windows-release.yml` (tag push **or** `workflow_dispatch`) |
+| Wer setzt den Tag | die Pipeline (`workflow_dispatch`); ein bereits vorhandener Tag darf auch gepusht werden |
+| Workflow | `.github/workflows/uwe-windows-release.yml` (`workflow_dispatch` **oder** Push eines `uwe-v*`-Tags) |
+| Version setzen | `pnpm release:version X.Y.Z` (fünf Dateien), Prüfung: `pnpm release:version --check` |
 | Artifacts | NSIS setup (`.exe`), MSI, five `uwe-<app>-X.Y.Z.tar.gz` bundles, `uwe-databases-X.Y.Z.tar.gz`, `uwe-release.json` |
 | Stable installer name | `UWE_Command_Center_X.Y.Z_x64-setup.exe` |
 | Manifest URL (bundle install) | `https://github.com/Nehmo101/UWE/releases/latest/download/uwe-release.json` |
@@ -21,42 +23,59 @@ Der Tag darf **nie** auf einen Commit zeigen, dessen `VERSION` anders lautet:
 Der Workflow bricht in diesem Fall ab, bevor er baut. Sonst trüge die App eine
 andere Fassung als das Release, und der Update-Check sagte nie „aktuell".
 
-### Publish a Windows release (Tag-Push)
+### Publish a Windows release (der reguläre Weg)
 
-Der reguläre Weg — das Release entsteht aus dem Tag:
+**Den Tag erzeugt die Pipeline, nicht die Hand.** Es gibt genau zwei Schritte:
 
-1. Version im PR anheben: `VERSION`, root `package.json`,
-   `apps/rtx-connector-client/package.json`,
-   `apps/rtx-connector-client/src-tauri/tauri.conf.json`,
-   `apps/rtx-connector-client/src-tauri/Cargo.toml` und ein `CHANGELOG.md`-Eintrag.
-   `scripts/release.test.ts` hält `VERSION`, `tauri.conf.json` und `Cargo.toml`
-   auf derselben Fassung.
-2. Nach dem Merge auf `main` den Tag setzen und pushen:
+1. **Versions-PR.** Ein Befehl setzt alle fünf Fassungsangaben:
 
    ```bash
-   git checkout main && git pull origin main
-   git tag uwe-v0.1.0
-   git push origin uwe-v0.1.0
+   pnpm release:version 0.2.0
    ```
 
-3. Der Workflow läuft an: Version aus dem Tag lesen und gegen `VERSION` prüfen,
-   auf `windows-latest` bauen, die fünf App-Bundles und die leeren Datenbanken
-   packen, `uwe-release.json` (schemaVersion 2, SHA-256 je Asset) schreiben und
-   das Release **am gepushten Tag** veröffentlichen — kein Draft, sonst wäre es
-   für `releases/latest/download/` unsichtbar.
-4. **Releases**-Seite öffnen und prüfen: Installer, fünf Bundles, Datenbanken,
+   Das schreibt `VERSION`, root `package.json`,
+   `apps/rtx-connector-client/package.json`, `…/src-tauri/tauri.conf.json` und
+   `…/src-tauri/Cargo.toml`. Dazu einen `CHANGELOG.md`-Eintrag, dann PR und
+   Merge. `pnpm release:version --check` (und `scripts/release.test.ts`) hält die
+   fünf zusammen; der Release-Workflow ruft dasselbe Skript auf, damit Build und
+   PR nicht auseinanderlaufen.
+
+   Der Bump muss durch einen PR: `main` ist protected, ein Workflow-Commit
+   bräuchte ein Bypass-Token — und der `CHANGELOG`-Eintrag gehört ohnehin ins
+   Review.
+
+2. **Pipeline starten.** In GitHub Actions **UWE Windows Release** ausführen
+   (Ref: `main`). Der Lauf liest `VERSION`, baut auf `windows-latest`, packt die
+   fünf App-Bundles und die leeren Datenbanken, schreibt `uwe-release.json`
+   (schemaVersion 2, SHA-256 je Asset) und **legt dabei den Tag `uwe-vX.Y.Z`
+   an** — `softprops/action-gh-release` erzeugt ihn am gebauten Commit, wenn er
+   noch nicht existiert. Die optionale `version`-Eingabe muss `VERSION`
+   entsprechen; nur dieser Weg kann `draft: true` setzen.
+
+3. **Releases**-Seite prüfen: Installer, fünf Bundles, Datenbanken,
    `uwe-release.json`.
 
-Ein Tag löschen und neu pushen erzeugt ein neues Release am selben Namen —
-Assets werden ersetzt. Eine bereits ausgelieferte Version stattdessen mit einem
-neuen Patch-Tag ablösen.
+### Zweiter Eingang: vorhandener Tag
 
-### Publish by hand (`workflow_dispatch`)
+Existiert der Tag schon — aus einem früheren Lauf, von Hand gesetzt, oder weil
+ein Release nachgebaut werden muss —, genügt sein Push:
 
-Für Wiederholungsläufe (abgebrochener Runner, fehlendes Asset) und Draft-Tests:
-**UWE Windows Release** in GitHub Actions starten. Der Tag wird dann aus dem
-ausgecheckten Ref erzeugt; die optionale `version`-Eingabe muss `VERSION`
-entsprechen. Nur dieser Weg kann `draft: true` setzen.
+```bash
+git push origin uwe-v0.2.0
+```
+
+Der Workflow reagiert auf `uwe-v*` und baut das Release **an genau diesem Tag**.
+Er liest die Version dann aus dem Tag und bricht ab, wenn der getaggte Commit
+eine andere `VERSION` trägt: ein Release, dessen App sich anders benennt als ihr
+Tag, wäre für den Update-Check nicht reparierbar.
+
+Nie ein Draft auf diesem Weg — `releases/latest/download/` kennt nur
+veröffentlichte Releases, und genau dort holt die Bundle-Installation ihr
+Manifest.
+
+Ein Tag löschen und neu pushen ersetzt die Assets des gleichnamigen Releases.
+Eine bereits ausgelieferte Version stattdessen mit einem neuen Patch-Tag
+ablösen.
 
 Optional signing secrets (recommended before enabling the Tauri auto-updater):
 
