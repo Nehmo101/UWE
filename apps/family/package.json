@@ -18,6 +18,7 @@
     "@uwe/config": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/env": "workspace:*",
+    "@uwe/family-core": "workspace:*",
     "@uwe/kitchen": "workspace:*",
     "@uwe/pdf-ocr": "workspace:*",
     "@uwe/scan-inbox": "workspace:*",

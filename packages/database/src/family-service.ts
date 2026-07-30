@@ -164,26 +164,9 @@ export class FamilyService {
   }
 
   /* ── Mitglieder ─────────────────────────────────────────────────────── */
-
-  async listMemberProfiles() {
-    return this.db.familyMemberProfile.findMany({ orderBy: { displayName: "asc" } });
-  }
-
-  /** Legt das Profil beim ersten Besuch an und hält den Anzeigenamen aktuell. */
-  async ensureMemberProfile(input: { userId: string; displayName: string }) {
-    return this.db.familyMemberProfile.upsert({
-      where: { userId: input.userId },
-      create: { userId: input.userId, displayName: input.displayName },
-      update: { displayName: input.displayName },
-    });
-  }
-
-  async updateMemberProfile(
-    userId: string,
-    input: { displayName?: string; colour?: string; note?: string },
-  ) {
-    return this.db.familyMemberProfile.update({ where: { userId }, data: input });
-  }
+  // Mitglieder liegen jetzt in `@uwe/family-core` (`FamilyMemberService`): ein
+  // Mitglied ist dort eine Person mit oder ohne Konto, nicht mehr nur ein
+  // Profil zu einer Benutzer-ID. Dieser Service bleibt bei Chat und Wissen.
 }
 
 export function createFamilyService(db: FamilyPrismaClient): FamilyService {

@@ -14,3 +14,4 @@ export * from "./member-service";
 export * from "./event-members";
 export * from "./subscription-service";
 export * from "./ics-feed";
+export * from "./health-service";

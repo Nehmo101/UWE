@@ -6,6 +6,7 @@ import {
   type CalendarEventKind,
 } from "@uwe/database/server";
 import { familyPrisma } from "@uwe/database/family-client";
+import { setEventMembers } from "@uwe/family-core";
 import { revalidatePath } from "next/cache";
 import { requireFamilyActionAuth } from "@/src/lib/family-action-auth";
 
@@ -30,6 +31,17 @@ function dateOrNull(value: FormDataEntryValue | null): Date | null {
   if (!raw) return null;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Die angehakten Mitglieder. `getAll` liefert je Kästchen einen Eintrag; ohne
+ * Auswahl bleibt der Termin allgemein und gehört niemandem im Besonderen.
+ */
+function memberIdsOf(formData: FormData): string[] {
+  return formData
+    .getAll("memberIds")
+    .map((value) => String(value).trim())
+    .filter((value) => value !== "");
 }
 
 function kindOf(value: FormDataEntryValue | null): CalendarEventKind {
@@ -62,7 +74,7 @@ export async function createEventAction(formData: FormData) {
   // Ohne lokalen Feed hätte der Termin keine Heimat und würde aus jeder
   // Feed-gefilterten Ansicht fallen.
   const local = await service.ensureLocalFeed();
-  await service.createEvent({
+  const event = await service.createEvent({
     feedId: local.id,
     title,
     description: str(formData.get("description")) || null,
@@ -72,6 +84,7 @@ export async function createEventAction(formData: FormData) {
     allDay: str(formData.get("allDay")) === "on",
     kind: kindOf(formData.get("kind")),
   });
+  await setEventMembers(familyPrisma, event.id, memberIdsOf(formData));
   revalidateCalendar();
 }
 
@@ -92,6 +105,7 @@ export async function updateEventAction(formData: FormData) {
     allDay: str(formData.get("allDay")) === "on",
     kind: kindOf(formData.get("kind")),
   });
+  await setEventMembers(familyPrisma, id, memberIdsOf(formData));
   revalidateCalendar();
 }
 

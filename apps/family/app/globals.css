@@ -735,3 +735,49 @@ body {
 .family-check input {
   width: auto;
 }
+
+/* Farbpunkt einer Person — Kalender, Mitgliederliste, Akte. Klein genug, um
+   mehrere nebeneinander in eine Kalenderzelle zu setzen. */
+.family-member-dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid rgb(0 0 0 / 0.25);
+  vertical-align: middle;
+}
+
+/* Punktreihe in einer Kalenderzelle: bricht nicht um, sondern läuft aus. */
+.family-member-dots {
+  display: inline-flex;
+  gap: 0.15rem;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Filterleiste über dem Monatsraster. */
+.family-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.family-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--uwe-border, rgb(255 255 255 / 0.15));
+  font-size: 0.8rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.family-filter-chip[aria-current="true"] {
+  border-color: var(--uwe-accent);
+  color: var(--uwe-accent);
+}
