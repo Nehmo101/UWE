@@ -72,6 +72,11 @@ export {
   type StudioGuardOptions,
 } from "./security/guards";
 
+export {
+  requireFamilyApiAuthContext,
+  type FamilyGuardOptions,
+} from "./security/family-guards";
+
 export * from "./schemas/common";
 export * from "./schemas/actions";
 

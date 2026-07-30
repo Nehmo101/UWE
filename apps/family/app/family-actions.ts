@@ -92,15 +92,3 @@ export async function deleteFactAction(formData: FormData) {
   if (id) await service().deleteFact(id, user.id);
   revalidateFamily();
 }
-
-export async function updateMemberProfileAction(formData: FormData) {
-  const user = await requireFamilyActionAuth();
-  // Jede Person pflegt nur ihr eigenes Profil — die ID kommt aus der Sitzung,
-  // nicht aus dem Formular.
-  await service().updateMemberProfile(user.id, {
-    displayName: str(formData.get("displayName")) || user.displayName,
-    colour: str(formData.get("colour")),
-    note: str(formData.get("note")),
-  });
-  revalidateFamily();
-}

@@ -2,7 +2,12 @@ import type { PrismaClient } from "./client";
 import type { AuditRequestContext } from "./audit-log-service";
 import { logAuditEvent } from "./audit-log-service";
 
-export type LoginAuditSurface = "studio" | "portal";
+/**
+ * Oberfläche, auf der eine Anmeldung stattfand. Reines Metadatenfeld im
+ * Audit-Log, keine Datenbank-Aufzählung — `family` kam mit der
+ * Konto-Selbstverwaltung in Family dazu und brauchte keine Migration.
+ */
+export type LoginAuditSurface = "studio" | "portal" | "family";
 
 export type LoginAuditReason =
   | "missing_credentials"

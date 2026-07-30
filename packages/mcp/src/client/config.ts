@@ -1,12 +1,12 @@
 /**
- * Environment-driven configuration for the three UWE MCP servers.
+ * Environment-driven configuration for the four UWE MCP servers.
  *
  * Every server is a thin HTTP client in front of a running UWE app, so all
  * existing route guards, RBAC checks and audit logging stay on the request path
  * (see docs/engineering/mcp-servers.md § Warum HTTP statt Direktzugriff).
  */
 
-export type McpSurface = "studio" | "portal" | "brain";
+export type McpSurface = "studio" | "portal" | "brain" | "family";
 
 export interface SurfaceEndpoint {
   /** Origin without trailing slash, e.g. `http://127.0.0.1:3000`. */
@@ -43,12 +43,14 @@ const DEFAULT_ORIGINS: Record<McpSurface, string> = {
   studio: "http://127.0.0.1:3000",
   portal: "http://127.0.0.1:3001",
   brain: "http://127.0.0.1:3002",
+  family: "http://127.0.0.1:3004",
 };
 
 const SURFACE_LABELS: Record<McpSurface, string> = {
   studio: "UWE Studio",
   portal: "UWE Portal",
   brain: "UWE Brain",
+  family: "UWE Family",
 };
 
 function firstValue(env: NodeJS.ProcessEnv, keys: string[]): string | null {
@@ -132,6 +134,18 @@ export function loadConfig(surface: McpSurface, env: NodeJS.ProcessEnv = process
       ["UWE_PORTAL_TOKEN", "UWE_MCP_TOKEN"],
     );
     return { ...shared, primary: portal, dataApi: studioEndpoint(env) };
+  }
+
+  if (surface === "family") {
+    // Family serves its own `/api/v1/*`, deshalb ist `dataApi` derselbe Origin
+    // wie `primary` — nicht Studio.
+    const family = resolveEndpoint(
+      env,
+      "family",
+      ["UWE_FAMILY_URL", "NEXT_PUBLIC_FAMILY_URL"],
+      ["UWE_FAMILY_TOKEN", "UWE_MCP_TOKEN"],
+    );
+    return { ...shared, primary: family, dataApi: family };
   }
 
   // Brain serves its own `/api/life-brain/*` since Abschnitt H2 — `dataApi` is

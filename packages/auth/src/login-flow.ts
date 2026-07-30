@@ -30,7 +30,7 @@ export interface LoginDbHandle {
 }
 
 /** Audit surfaces (structurally matches `@uwe/database`'s `LoginAuditSurface`). */
-export type LoginFlowSurface = "studio" | "portal";
+export type LoginFlowSurface = "studio" | "portal" | "family";
 
 /**
  * Failure reasons for a login attempt. Each is a member of `@uwe/database`'s
@@ -207,7 +207,7 @@ export interface PerformLoginFlowDeps<TDb extends LoginDbHandle, TUser extends L
   password: string | undefined;
   /** Turnstile token from the request body. */
   turnstileToken: string | null | undefined;
-  /** Audit surface for this login (`"studio"` or `"portal"`; the target for enter). */
+  /** Audit surface for this login (`"studio"`, `"portal"` or `"family"`). */
   surface: LoginFlowSurface;
   /** Optional target echoed back in the success body (the unified enter endpoint). */
   responseTarget?: string;

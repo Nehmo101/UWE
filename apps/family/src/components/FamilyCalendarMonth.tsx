@@ -5,6 +5,9 @@
  * kommen fertig aus der Seite. Ein Tag zeigt höchstens drei Einträge und
  * verweist auf den Anker in der Liste darunter — das Raster ist Übersicht,
  * nicht Detailansicht.
+ *
+ * Farbpunkte zeigen, wen ein Termin betrifft. Termine ohne Zuordnung (etwa
+ * aus fremden Feeds) bleiben schlicht ohne Punkt.
  */
 
 export interface FamilyCalendarEvent {
@@ -13,6 +16,10 @@ export interface FamilyCalendarEvent {
   /** ISO-String; die Serialisierung passiert in der Seite. */
   startAt: string;
   allDay: boolean;
+  /** Farben der beteiligten Personen — leer, wenn der Termin allen gehört. */
+  memberColours?: string[];
+  /** Namen der Beteiligten, für den Tooltip. */
+  memberNames?: string[];
 }
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -72,7 +79,24 @@ export function FamilyCalendarMonth({
           >
             <span className="family-cal-daynum">{day}</span>
             {dayEvents.slice(0, MAX_PER_DAY).map((event) => (
-              <a key={event.id} href={`#event-${event.id}`} className="family-cal-event">
+              <a
+                key={event.id}
+                href={`#event-${event.id}`}
+                className="family-cal-event"
+                title={event.memberNames?.length ? event.memberNames.join(", ") : undefined}
+              >
+                {event.memberColours?.length ? (
+                  <span className="family-member-dots">
+                    {event.memberColours.map((colour, index) => (
+                      <span
+                        key={`${event.id}-${index}`}
+                        className="family-member-dot"
+                        style={{ backgroundColor: colour }}
+                        aria-hidden
+                      />
+                    ))}
+                  </span>
+                ) : null}{" "}
                 {timeLabel(event.startAt, event.allDay)} {event.title}
               </a>
             ))}

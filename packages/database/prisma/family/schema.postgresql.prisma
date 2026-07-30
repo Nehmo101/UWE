@@ -79,6 +79,21 @@ enum FamilyChatScope {
   private
 }
 
+enum FamilyHealthRecordKind {
+  vaccination
+  checkup
+  medication
+  vet
+  other
+}
+
+enum FamilyMemberKind {
+  adult
+  child
+  pet
+  guest
+}
+
 enum IngredientUnit {
   gram
   milliliter
@@ -168,6 +183,125 @@ enum ShoppingCategory {
   other
 }
 
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  feedId      String?           @map("feed_id")
+  worldId     String?           @map("world_id")
+  sessionId   String?           @map("session_id")
+  title       String
+  description String?
+  location    String?
+  startAt     DateTime          @map("start_at")
+  endAt       DateTime?         @map("end_at")
+  allDay      Boolean           @default(false) @map("all_day")
+  kind        CalendarEventKind @default(personal)
+  externalUid String?           @map("external_uid")
+  remoteHref  String?           @map("remote_href")
+  remoteEtag  String?           @map("remote_etag")
+  caldavPending Boolean         @default(false) @map("caldav_pending")
+  metadata    Json?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  feed    CalendarFeed? @relation(fields: [feedId], references: [id], onDelete: SetNull)
+
+  memberLinks CalendarEventMember[]
+
+  @@index([startAt])
+  @@index([worldId, startAt])
+  @@index([feedId, externalUid])
+  @@map("calendar_events")
+}
+
+model FamilyMemberProfile {
+  id String @id @default(cuid())
+
+  /// Benutzer-ID aus uwe.db — opaker Scalar, kein Fremdschluessel ueber DB-Grenzen.
+  /// Leer, wenn das Mitglied kein Konto hat.
+  userId String? @unique @map("user_id")
+
+  displayName String @map("display_name")
+  colour      String @default("")
+  note        String @default("")
+
+  kind      FamilyMemberKind @default(adult)
+  isActive  Boolean          @default(true) @map("is_active")
+  sortIndex Int              @default(0) @map("sort_index")
+
+  birthdayOn       DateTime? @map("birthday_on")
+  anniversaryOn    DateTime? @map("anniversary_on")
+  anniversaryLabel String?   @map("anniversary_label")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  eventLinks    CalendarEventMember[]
+  healthRecords FamilyHealthRecord[]
+  subscriptions FamilyCalendarSubscription[]
+
+  @@index([isActive, sortIndex])
+  @@map("family_member_profiles")
+}
+
+model CalendarEventMember {
+  eventId  String @map("event_id")
+  memberId String @map("member_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  event  CalendarEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member FamilyMemberProfile @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, memberId])
+  @@index([memberId])
+  @@map("calendar_event_members")
+}
+
+model FamilyHealthRecord {
+  id       String @id @default(cuid())
+  memberId String @map("member_id")
+
+  kind  FamilyHealthRecordKind @default(other)
+  title String
+  notes String                 @default("")
+
+  occurredOn DateTime? @map("occurred_on")
+  nextDueOn  DateTime? @map("next_due_on")
+  metadata   Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  member FamilyMemberProfile @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, occurredOn])
+  @@index([nextDueOn])
+  @@map("family_health_records")
+}
+
+model FamilyCalendarSubscription {
+  id    String @id @default(cuid())
+  label String
+
+  tokenHash   String @unique @map("token_hash")
+  tokenPrefix String @map("token_prefix")
+
+  /// Leer = alle Termine des Haushalts; gesetzt = nur die dieser Person.
+  memberId String? @map("member_id")
+
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  member FamilyMemberProfile? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@map("family_calendar_subscriptions")
+}
+
 model ContractExpense {
   id              String                  @id @default(cuid())
   name            String
@@ -217,34 +351,6 @@ model CalendarFeed {
   events CalendarEvent[]
 
   @@map("calendar_feeds")
-}
-
-model CalendarEvent {
-  id          String            @id @default(cuid())
-  feedId      String?           @map("feed_id")
-  worldId     String?           @map("world_id")
-  sessionId   String?           @map("session_id")
-  title       String
-  description String?
-  location    String?
-  startAt     DateTime          @map("start_at")
-  endAt       DateTime?         @map("end_at")
-  allDay      Boolean           @default(false) @map("all_day")
-  kind        CalendarEventKind @default(personal)
-  externalUid String?           @map("external_uid")
-  remoteHref  String?           @map("remote_href")
-  remoteEtag  String?           @map("remote_etag")
-  caldavPending Boolean         @default(false) @map("caldav_pending")
-  metadata    Json?
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
-
-  feed    CalendarFeed? @relation(fields: [feedId], references: [id], onDelete: SetNull)
-
-  @@index([startAt])
-  @@index([worldId, startAt])
-  @@index([feedId, externalUid])
-  @@map("calendar_events")
 }
 
 model DocumentTemplate {
@@ -517,18 +623,4 @@ model FamilyBrainFact {
 
   @@index([ownerUserId, updatedAt])
   @@map("family_brain_facts")
-}
-
-model FamilyMemberProfile {
-  /// Benutzer-ID aus uwe.db — opaker Scalar, kein Fremdschlüssel über DB-Grenzen.
-  userId String @id @map("user_id")
-
-  displayName String @map("display_name")
-  colour      String @default("")
-  note        String @default("")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("family_member_profiles")
 }
