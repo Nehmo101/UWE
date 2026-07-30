@@ -246,7 +246,7 @@
   background: transparent;
   color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-muted));
   font: inherit;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;

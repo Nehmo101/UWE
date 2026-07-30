@@ -197,7 +197,21 @@ describe("self-hosting setup", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    assert.match(pkg.scripts.build, /materialize-standalone-prisma-deps/);
+    // Der Materialisierungsschritt hängt seit #40 am *App*-Build, nicht mehr am
+    // Root-Skript: `pnpm build` ist nur noch `turbo run build`, damit turbo
+    // `.next/**` cachen kann und ein Einzel-App-Build den Schritt nicht
+    // verliert. Geprüft wird deshalb dort, wo er jetzt steht — der
+    // vollständige Aufruf je App liegt in `scripts/standalone-assets.test.ts`.
+    for (const app of ["studio", "portal", "brain", "family", "landing"]) {
+      const appPkg = JSON.parse(
+        fs.readFileSync(path.join(root, "apps", app, "package.json"), "utf8"),
+      ) as { scripts: Record<string, string> };
+      assert.match(
+        appPkg.scripts.build,
+        /materialize-standalone-prisma-deps/,
+        `${app} baut ohne Standalone-Materialisierung`,
+      );
+    }
     assert.match(pkg.scripts["build:standalone-check"], /check-standalone-prisma-deps/);
   });
 

@@ -494,14 +494,14 @@ html[data-theme="light"] {
 
 .uwe-brand small {
   display: block;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs);
   color: var(--uwe-fg-subtle);
 }
 
 .uwe-sidebar-section h3,
 .uwe-context h3 {
   margin: 0 0 0.75rem;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--uwe-muted);
@@ -630,7 +630,7 @@ html[data-theme="light"] {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  font-size: 0.68rem;
+  font-size: var(--uwe-text-2xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 0.2rem 0.5rem;
@@ -644,7 +644,7 @@ html[data-theme="light"] {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs);
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--uwe-accent) 15%, transparent);
@@ -679,7 +679,7 @@ html[data-theme="light"] {
 }
 
 .uwe-field-hint {
-  font-size: 0.74rem;
+  font-size: var(--uwe-text-2xs);
   line-height: 1.4;
   color: var(--uwe-muted);
 }
