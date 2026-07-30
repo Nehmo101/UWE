@@ -12,7 +12,7 @@ Dateien entstehen und wie man sie ersetzt.
 
 | | |
 |---|---|
-| Szenen | 10 (5 Bereiche × Tag/Nacht) |
+| Szenen | 10 (5 Bereiche × Tag/Nacht) — alle erzeugt |
 | Dateien | 40 (je Szene: Desktop + Mobil × MP4 + WebM + AVIF + WebP) |
 | Quelle | Artlist AI Suite — eigene Generierung, kein Fremdmaterial |
 | Bildmodell | Seedream 5.0 T2I (2K), 200 Credits je 2 Bilder |
@@ -92,7 +92,20 @@ eine spätere Nachbestellung dieselbe Welt trifft:
 > No people, no creatures, no buildings in the foreground, no text, no logos, no
 > watermark, no lens flare, no sparkles, no heavy shadows.
 
-Zwei Dinge daran sind aus Fehlversuchen gelernt und keine Geschmacksfrage:
+**Die Ranken wachsen nach oben, nicht über den Himmel.** Sie steigen senkrecht
+aus der Landschaft auf, verjüngen sich beim Klettern und verlieren sich weit
+oben in den hohen Wolken — das Auge findet kein Ende. Das ist die Eigenschaft,
+die sie ehrwürdig macht: nicht ihre Breite, sondern dass man ihnen nicht bis
+zur Spitze folgen kann. Bögen, die sich über den Himmel spannen und wieder
+herunterkommen, haben ein Ende und wirken dadurch klein.
+
+Der Satz dafür im Prompt:
+
+> Colossal pale ivory root-columns rise vertically out of the landscape and
+> grow upward into the sky, tapering as they climb, their tops disappearing
+> into the high clouds far above — so tall the eye cannot find their end.
+
+Drei Dinge daran sind aus Fehlversuchen gelernt und keine Geschmacksfrage:
 
 - **„NOT braided rope, NOT cables, NOT tentacles"** — ohne diese Ausschlüsse
   rendern die Modelle die Ranken als geflochtene Seile im Vordergrund. Das
@@ -100,6 +113,9 @@ Zwei Dinge daran sind aus Fehlversuchen gelernt und keine Geschmacksfrage:
 - **„the lower two thirds is deliberately open"** — ohne diese Vorgabe
   komponieren die Modelle mittig und füllen die Bildmitte mit Detail. Der
   Hintergrund kämpft dann mit dem Inhalt, statt ihn zu tragen.
+- **„their tops disappearing into the high clouds"** — ohne den Zusatz
+  schließen die Modelle die Ranke zu einem Bogen oder kappen sie am oberen
+  Bildrand. Beides nimmt ihr die Größe.
 
 ### Die zehn Szenen
 
@@ -226,10 +242,80 @@ Verbraucht: 5 Bildgenerierungen (600 Credits) und 4 Videogenerierungen
 (2 400 Credits), zuzüglich 1 200 Credits für zwei verworfene Text-zu-Video-
 Versuche, aus denen die beiden Prompt-Regeln oben stammen.
 
-### Übrige Bereiche
+### Family — fertig generiert
 
-Family, Portal, Studio und Brain sind noch nicht generiert. Der Weg dafür
-steht oben; die Prompts folgen demselben Aufbau, nur der Szenenteil wechselt.
+Bewohnter Garten zwischen aufsteigenden Wurzelsäulen; Nachmittagslicht bzw.
+Abend mit Fensterlichtern und Glühwürmchen. Untere Bildhälfte offene Wiese.
+
+| Zieldatei | Standbild | Clip |
+|---|---|---|
+| `family-hell-desktop` | `019fb37f-8255-732a-b945-c0978afef39f` | `019fb380-a352-7046-aa73-0ac384f6e32b` |
+| `family-dunkel-desktop` | `019fb381-ffaa-7058-80ad-b29fc6f6da3c` | `019fb383-92c0-72ab-8f7b-38cce6285e55` |
+| `family-hell-mobil` | `019fb383-1380-7033-9a8c-81e941182fda` | `019fb384-1987-7ac0-82bb-63f265d8605e` |
+| `family-dunkel-mobil` | `019fb383-8189-7282-aa94-9f15c27c62ab` | `019fb384-604e-78d6-a35b-bde6ba143ea1` |
+
+### Portal — fertig generiert
+
+Küstenebene mit Wurzelsäulen im flachen Wasser, fernes Tor und Dammweg am
+Horizont; Mittag bzw. Nacht mit Mondbahn und warmen Lichtern. Untere
+Bildhälfte stilles Wasser und heller Sand.
+
+| Zieldatei | Standbild | Clip |
+|---|---|---|
+| `portal-hell-desktop` | `019fb385-d7d3-78b6-b3fd-4b8c0e32ef4b` | `019fb387-1314-7d90-b037-2ab726b5da96` |
+| `portal-dunkel-desktop` | `019fb387-0100-7261-85b0-284fd4c817b8` | `019fb387-fcff-775e-840b-0b47b16c437f` |
+| `portal-hell-mobil` | `019fb387-3560-70c2-b4ed-abe846c6dbf4` | `019fb388-423a-7346-9265-40e483fc38ed` |
+| `portal-dunkel-mobil` | `019fb388-0be4-781c-82ef-d0d12ab61a74` | `019fb388-eb94-79c4-914d-373b3447ff9a` |
+
+### Studio — fertig generiert
+
+Werkstattterrasse an einer Wurzelsäule über einem Tal im Dunst; weiches
+Morgenlicht bzw. Nacht mit Laterne. Die ruhigste Komposition von allen: die
+untere Bildhälfte ist blanke Diele, damit lange Arbeitssitzungen angenehm
+bleiben.
+
+| Zieldatei | Standbild | Clip |
+|---|---|---|
+| `studio-hell-desktop` | `019fb38a-68c4-719a-ae89-ae7df2b32ca9` | `019fb38b-47b9-7eaa-8b48-636d96a01ce2` |
+| `studio-dunkel-desktop` | `019fb38b-5502-79fa-a799-0d5d22d79bd1` | `019fb38c-44d5-790f-a95c-b7db482810ee` |
+| `studio-hell-mobil` | `019fb38b-7297-7de6-bd52-2fd5a8428d3a` | `019fb38c-91fc-7549-8c8f-34eb37a7b95b` |
+| `studio-dunkel-mobil` | `019fb38c-5419-7a0d-825a-8dd3c67756a1` | `019fb38d-42c3-7808-b5fc-a58e52bbcd77` |
+
+### Brain — fertig generiert
+
+Stiller Hain aus Wurzelsäulen in spiegelglattem Wasser, dazwischen schwebende
+Lichtpunkte an dünnen Fäden — ein Wissensnetz als Andeutung, keine
+Gehirngrafik und keine Neon-Neuronen. Dämmerung bzw. tiefe Nacht.
+
+| Zieldatei | Standbild | Clip |
+|---|---|---|
+| `brain-hell-desktop` | `019fb38d-923d-7fe7-a2df-868962be32bc` | `019fb38f-0996-77a5-8342-5b9b3490d873` |
+| `brain-dunkel-desktop` | `019fb38e-f49e-7879-9fcf-7cf42f1df231` | `019fb38f-dd1f-71d7-bb31-c6d22f4d95d6` |
+| `brain-hell-mobil` | `019fb38f-2cfd-797c-afa4-e104f1e83138` | `019fb390-2b62-7361-a6a7-14f4922657ab` |
+| `brain-dunkel-mobil` | `019fb38f-eb5f-76b2-912e-3f999af91ca2` | `019fb390-f04c-77d1-b7f1-8627e272095b` |
+
+### Clip-Länge und Nachbearbeitung
+
+Die vier Landing-Clips sind 10 Sekunden lang, die sechzehn übrigen 5 Sekunden.
+Der Unterschied ist eine Budget-Entscheidung: Kling rechnet 60 Credits je
+Sekunde, und 5-Sekunden-Clips haben die Neufassung der Landing-Szene mit
+senkrechten Ranken erst finanzierbar gemacht.
+
+Beide Längen werden in der Nachbearbeitung auf dieselbe Zielzeit gedehnt. Weil
+der Ausgangsclip nur 5 Sekunden hat, reicht `setpts` allein nicht — ohne
+Zwischenbilder ruckelt ein Wolkenzug sichtbar. `minterpolate` rechnet sie
+bewegungskompensiert dazu:
+
+```bash
+# 5 s -> 13 s, mit synthetisierten Zwischenbildern
+ffmpeg -y -i "$IN" -an \
+  -vf "setpts=2.6*PTS,minterpolate=fps=24:mi_mode=mci:mc_mode=aobmc:vsbmc=1" \
+  -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 27 \
+  -movflags +faststart "$OUT.mp4"
+```
+
+Für die 10-Sekunden-Clips der Landing genügt der einfachere Weg aus Schritt 3
+(`setpts=2.4*PTS,fps=24`), weil dort genug echte Bilder vorliegen.
 
 ## Lizenz
 
