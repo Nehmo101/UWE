@@ -197,26 +197,35 @@ html[data-uwe-motion="off"] .uwe-scene__veil {
 }
 
 .uwe-scene-hero-eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  /* War 10px — die kleinste Schrift im ganzen Produkt, und sie stand
+     ausgerechnet auf bewegtem Bildgrund. --uwe-text-2xs (12px) mit weiterem
+     Sperrsatz bleibt genauso kompakt und ist lesbar. Die Farbe wechselt auf
+     die Schriftfassung des Akzents: --uwe-accent erreicht auf Papier nur
+     3.4:1. */
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-caps);
+  font-weight: var(--uwe-weight-bold);
   text-transform: uppercase;
-  color: var(--uwe-accent);
+  color: var(--uwe-accent-ink, var(--uwe-accent));
   text-shadow: var(--uwe-hero-sh, none);
 }
 
 .uwe-scene-hero-title {
   margin: 8px 0 4px;
-  font-family: var(--uwe-font-newsreader, Georgia), serif;
-  font-weight: 500;
-  font-size: 30px;
+  font-family: var(--uwe-font-display);
+  font-weight: var(--uwe-weight-medium);
+  font-size: var(--uwe-text-4xl);
   letter-spacing: -0.02em;
   line-height: 1.05;
 }
 
 .uwe-scene-hero-lede {
   margin: 0;
-  font-size: 11.5px;
-  max-width: 62ch;
+  /* War 11.5px. Das ist die Lede unter der Hauptüberschrift — der erste Satz,
+     den jemand liest. */
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-normal);
+  max-width: var(--uwe-measure);
 }
 
 .uwe-scene-hero-actions {
@@ -240,11 +249,11 @@ html[data-uwe-motion="off"] .uwe-scene__veil {
   }
 
   .uwe-scene-hero-eyebrow {
-    font-size: 12px;
+    font-size: var(--uwe-text-2xs);
   }
 
   .uwe-scene-hero-lede {
-    font-size: 13.5px;
+    font-size: var(--uwe-text-lg);
   }
 
   /* Titelgrößen je Fläche — Handoff, Abschnitte 2–4. */

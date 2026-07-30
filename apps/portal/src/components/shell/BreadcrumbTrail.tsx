@@ -18,7 +18,7 @@ export function BreadcrumbTrail({ items, className }: BreadcrumbTrailProps) {
       {items.map((item, index) => (
         <span key={`${item.label}-${index}`}>
           {item.href ? (
-            <Link href={item.href} className="hover:text-foreground">
+            <Link href={item.href} className="inline-flex min-h-6 items-center hover:text-foreground">
               {item.label}
             </Link>
           ) : (

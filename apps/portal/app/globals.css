@@ -176,7 +176,7 @@ body {
 
 .auth-header-brand small {
   display: block;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   font-weight: 400;
   color: var(--uwe-muted);
 }
@@ -611,7 +611,7 @@ body {
 .auth-world-list em {
   color: var(--uwe-accent);
   font-style: normal;
-  font-size: 0.75rem;
+  font-size: var(--uwe-text-2xs);
 }
 
 .auth-breadcrumb {
@@ -908,8 +908,17 @@ body {
 }
 
 .portal-dash-more {
-  font-size: 0.8rem;
-  color: var(--uwe-info);
+  /* War 31x20px — ein „Alle"-Link in jeder Abschnittsüberschrift des
+     Spieler-Dashboards, also genau auf der Fläche, die am häufigsten auf dem
+     Telefon bedient wird. Der Innenabstand vergrößert die Trefferfläche, ohne
+     die Zeile optisch zu sprengen. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--uwe-touch-min);
+  padding-inline: var(--uwe-space-2);
+  margin-inline-end: calc(-1 * var(--uwe-space-2));
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-info-ink, var(--uwe-info));
   text-decoration: none;
 }
 

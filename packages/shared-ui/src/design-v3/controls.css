@@ -85,12 +85,53 @@
   transform: translate(-50%, -50%);
 }
 
+/*
+ * Die 44-px-Regel gilt dort, wo sie zählt: an Zeigegeräten ohne Präzision.
+ *
+ * WCAG 2.2 verlangt auf AA 24 × 24 px (2.5.8) und auf AAA 44 × 44 (2.5.5).
+ * Mit der Maus ist ein 36-px-Knopf bequem zu treffen — mit dem Daumen nicht.
+ * Statt jede Werkzeugleiste im Studio pauschal aufzublähen, wächst hier alles
+ * Bedienbare nur auf Touch-Geräten auf das Daumenmaß.
+ *
+ * `:where()` hält die Spezifität bei null: jede Komponentenregel gewinnt
+ * weiterhin, das hier ist nur der Boden.
+ */
 @media (pointer: coarse) {
+  :where(
+      button,
+      [role="button"],
+      summary,
+      select,
+      input:not([type="hidden"], [type="checkbox"], [type="radio"]),
+      textarea
+    ) {
+    min-height: var(--uwe-touch-min);
+  }
+
   /* Auf dem Telefon werden auch dichte Listen großzügiger. */
   .uwe-list-row,
   .uwe-nav-item,
   .uwe-menu-item {
     min-height: var(--uwe-touch-min);
+  }
+
+  /*
+   * Verweise sind der Sonderfall: `min-height` greift an einem `inline`-Anker
+   * nicht, und alle Anker auf `inline-flex` zu zwingen bräche jeden Fließtext
+   * mit Verlinkung. Deshalb nur Anker, die ohnehin als Fläche gebaut sind.
+   */
+  :where(a.uwe-button-surface, a.uwe-btn-v3, nav a, .uwe-nav-item a) {
+    min-height: var(--uwe-touch-min);
+  }
+
+  /*
+   * Breite zählt genauso. Ein Icon-Knopf ohne Beschriftung war mit der
+   * Höhenregel oben 32 × 44 px — hoch genug, aber zu schmal für einen Daumen.
+   * Bei beschrifteten Knöpfen greift `min-width` ohnehin nie, weil der Text
+   * schon breiter ist.
+   */
+  :where(button, [role="button"], a.uwe-button-surface, a.uwe-btn-v3) {
+    min-width: var(--uwe-touch-min);
   }
 }
 

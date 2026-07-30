@@ -73,6 +73,18 @@
   --uwe-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
   --uwe-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.38);
   --uwe-sidebar-bg: var(--uwe-panel);
+  /*
+   * Die Sidebar-Schriftfarben fehlten hier — sie entstanden bisher nur als
+   * Inline-Style der Theme-Engine. Die Tailwind-Brücke der Apps bindet aber
+   * `--color-sidebar-foreground: var(--uwe-sidebar-fg)`: ohne Wurzelwert ist
+   * diese Custom Property ungültig, `text-sidebar-foreground` färbt nichts,
+   * und die Schrift fällt auf die Seitenfarbe zurück — auf der immer dunklen
+   * Sidebar im Hellmodus also dunkel auf dunkel. axe hat genau das gemeldet.
+   * Die Werte hier sind der Fallback für „Theme-Skript lief nicht"; jedes
+   * Theme überschreibt sie weiterhin.
+   */
+  --uwe-sidebar-fg: var(--uwe-fg);
+  --uwe-sidebar-fg-muted: var(--uwe-fg-muted);
   --uwe-card-bg: var(--uwe-surface);
   --uwe-input-bg: var(--uwe-bg-elevated);
   --uwe-focus-ring: color-mix(in srgb, var(--uwe-accent) 55%, transparent);
@@ -101,6 +113,29 @@ body {
 a:not(.uwe-button-surface) {
   color: var(--uwe-link, var(--uwe-accent));
 }
+
+/*
+ * Dieselbe Falle wie oben, andere Fläche: die Sidebar ist in *jedem* Theme
+ * dunkle Tinte, die Linkfarbe darüber ist für den hellen Seitengrund gedacht.
+ * Auf `#211d17` ergibt das Teal 2.15:1 — der Markenname und jedes
+ * Navigationsziel waren praktisch unlesbar (axe: „color-contrast", serious).
+ *
+ * `text-sidebar-foreground` an der Komponente half nicht: Tailwind-Utilities
+ * liegen in `@layer utilities` und verlieren gegen ungelayerte Regeln,
+ * unabhängig von der Spezifität. Deshalb steht die Korrektur hier — ungelayert,
+ * direkt neben der Regel, die sie aufhebt.
+ *
+ * `.uwe-sidebar` ist die Bestandsklasse (Brain, Family), `.uwe-sidebar-surface`
+ * die der Tailwind-Shells von Studio und Portal.
+ *
+ * Wer auf einer Akzentfüllung sitzt (Portals aktive Zeile), trägt
+ * `.uwe-button-surface` und steigt damit über denselben Ausschluss aus wie
+ * oben — das ist die etablierte Ausnahme für „Anker als Fläche".
+ */
+:is(.uwe-sidebar, .uwe-sidebar-surface) a:not(.uwe-button-surface) {
+  color: var(--uwe-sidebar-fg);
+}
+
 .wiki-link,
 .uwe-wiki-link { color: var(--uwe-wiki-link); }
 .wiki-link:hover,

@@ -121,13 +121,17 @@ html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-accent-scope {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 10px;
+  /* War 5px/10px und 10.5px Schrift — zusammen rund 26px hoch. Der
+     Hell/Dunkel-Umschalter sitzt in jeder Topbar und ist damit eines der am
+     häufigsten angetippten Elemente überhaupt. */
+  min-height: var(--uwe-touch-min);
+  padding: 5px 12px;
   border-radius: var(--uwe-radius-pill, 999px);
   border: var(--uwe-border-width, 1.5px) solid var(--uwe-border);
   background: var(--uwe-input-bg);
   color: var(--uwe-fg-muted);
   font-family: inherit;
-  font-size: 10.5px;
+  font-size: var(--uwe-text-2xs);
   line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -136,8 +140,8 @@ html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-accent-scope {
 /* Die Nav-Variante der Landing sitzt auf Glas statt auf einem Feld. */
 .uwe-mode-toggle[data-size="nav"] {
   gap: 7px;
-  padding: 7px 12px;
-  font-size: 11px;
+  padding: 7px 14px;
+  font-size: var(--uwe-text-2xs);
   background: var(--uwe-card-bg);
   backdrop-filter: blur(var(--uwe-glass-blur, 13px));
   -webkit-backdrop-filter: blur(var(--uwe-glass-blur, 13px));
@@ -195,17 +199,8 @@ html[data-uwe-theme="uwe-ghibli-nacht"] .uwe-mode-toggle[data-size="nav"] .uwe-m
   left: 19px;
 }
 
-/*
- * Auf dem Telefon ist der Schalter mit 28px Höhe kaum zu treffen. Er wächst
- * dort auf die Touch-Mindesthöhe der Design-Tokens; Schrift und Kulisse
- * bleiben unverändert, es kommt nur Innenabstand dazu.
- */
-@media (max-width: 640px) {
-  .uwe-mode-toggle {
-    min-height: var(--uwe-touch-min, 2.75rem);
-    padding-inline: 12px;
-  }
-}
+/* Die Touch-Mindesthöhe steht jetzt in der Grundregel oben und gilt damit auf
+   jedem Viewport — die frühere Sonderregel für Telefone ist entfallen. */
 
 @media (prefers-reduced-motion: reduce) {
   .uwe-mode-toggle__knob {

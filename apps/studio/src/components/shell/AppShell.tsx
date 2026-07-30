@@ -65,12 +65,24 @@ export function AppShell({
         className="flex h-dvh w-full overflow-hidden bg-background text-foreground"
         data-has-bottom-nav={hasBottomNav ? "true" : "false"}
       >
-        <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
+        {/*
+          Sprungmarke — bewusst als **erstes** Element im Shell und damit vor
+          der Sidebar. Stünde sie weiter unten (etwa neben der Topbar), käme
+          ein Tastaturnutzer erst nach den über sechzig Navigationszielen an
+          ihr vorbei, und sie erfüllte ihren Zweck nicht mehr. Sichtbar wird
+          sie erst beim Fokussieren (siehe .uwe-skip-link in design-v3).
+        */}
+        <a href="#uwe-main" className="uwe-skip-link">
+          Zum Inhalt springen
+        </a>
+        <aside className="uwe-sidebar-surface hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
           <SidebarBrand label={brandLabel} href={brandHref} />
           <ScrollArea variant="sidebar" className="min-h-0 flex-1">
             <SidebarNav groups={groups} />
           </ScrollArea>
-          {footer ? <div className="border-t border-border p-3 text-xs text-muted-foreground">{footer}</div> : null}
+          {footer ? (
+            <div className="border-t border-border p-3 text-xs text-sidebar-foreground/70">{footer}</div>
+          ) : null}
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -92,6 +104,11 @@ export function AppShell({
 
           <div className="flex min-h-0 flex-1">
             <main
+              id="uwe-main"
+              // Ohne tabIndex springt der Fokus beim Klick auf die Sprungmarke
+              // zwar an die Stelle, landet aber auf keinem Element — die
+              // nächste Tab-Taste führte zurück in die Navigation.
+              tabIndex={-1}
               className={cn(
                 "min-w-0 flex-1 overflow-y-auto p-4 md:p-6",
                 hasBottomNav && "studio-main-with-bottom-nav",
@@ -127,7 +144,12 @@ function SidebarBrand({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href}
-      className="flex h-14 items-center gap-2 border-b border-border px-4 font-semibold"
+      // Ohne explizite Farbe greift die globale `a`-Regel aus uwe.css und
+      // färbt den Link mit --uwe-link. Auf der immer dunklen Sidebar sind das
+      // 2.15:1 — der Markenname war praktisch unlesbar. Die Überschreibung in
+      // ghibli-shell.css hängt an `.uwe-sidebar`; dieser Shell baut die
+      // Seitenleiste aber mit `bg-sidebar` und wird davon nicht erfasst.
+      className="flex h-14 items-center gap-2 border-b border-border px-4 font-semibold text-sidebar-foreground no-underline"
     >
       {label}
     </Link>
@@ -265,15 +287,18 @@ function SidebarNavGroup({
         aria-expanded={open}
         aria-controls={bodyId}
         className={cn(
-          "flex appearance-none items-center gap-2.5 rounded-md border-0 bg-transparent px-2 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors hover:bg-sidebar-foreground/10",
-          active ? "text-sidebar-foreground" : "text-sidebar-foreground/55 hover:text-sidebar-foreground",
+          // War text-[11px]: eine Versalien-Überschrift bei 11 px ist auf einem
+          // Telefon kaum zu entziffern. --uwe-text-2xs (12 px) mit weiterem
+          // Sperrsatz trägt dieselbe Kompaktheit, bleibt aber lesbar.
+          "flex min-h-11 appearance-none items-center gap-2.5 rounded-md border-0 bg-transparent px-2 py-2 text-[length:var(--uwe-text-2xs)] font-bold uppercase tracking-[var(--uwe-tracking-caps)] transition-colors hover:bg-sidebar-foreground/10",
+          active ? "text-sidebar-foreground" : "text-sidebar-foreground/70 hover:text-sidebar-foreground",
         )}
       >
         <NavIcon
           name={icon}
           width={15}
           height={15}
-          className={cn("shrink-0", active ? "text-primary" : "text-sidebar-foreground/45")}
+          className={cn("shrink-0", active ? "text-primary" : "text-sidebar-foreground/60")}
         />
         <span className="flex-1 truncate text-left">{group.title}</span>
         <ChevronRight
@@ -291,7 +316,9 @@ function SidebarNavGroup({
             href={item.href}
             aria-current={item.active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm transition-colors",
+              // min-h-11 = 44 px Trefferfläche. Optisch bleibt die Zeile
+              // kompakt, weil der Text mittig sitzt.
+              "flex min-h-11 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-sm transition-colors",
               // Die Sidebar ist in JEDEM Theme dunkle Tinte — Seiten-Tokens
               // (text-foreground) kippen dort im Hell-Theme auf unlesbar.
               // Deshalb durchgehend die sidebar-*-Rollen, wie in der
@@ -310,7 +337,9 @@ function SidebarNavGroup({
             />
             <span className="truncate">{item.label}</span>
             {item.status === "planned" ? (
-              <span className="ml-auto text-[10px] uppercase text-muted-foreground">bald</span>
+              <span className="ml-auto text-[length:var(--uwe-text-2xs)] font-semibold uppercase tracking-[var(--uwe-tracking-caps)] text-sidebar-foreground/70">
+                bald
+              </span>
             ) : null}
           </Link>
         ))}
@@ -323,12 +352,15 @@ function MobileNav({ groups, brandLabel }: { groups: ResolvedNavGroup[]; brandLa
   return (
     <Sheet>
       <SheetTrigger
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border md:hidden"
+        // h-9 w-9 sind 36 px — unter der 44-px-Mindestgröße für Touch-Ziele,
+        // und das ist ausgerechnet der Knopf, über den auf dem Telefon die
+        // gesamte Navigation läuft.
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border md:hidden"
         aria-label="Navigation öffnen"
       >
         <NavIcon name="menu" width={18} height={18} />
       </SheetTrigger>
-      <SheetContent side="left" title={brandLabel}>
+      <SheetContent side="left" title={brandLabel} className="uwe-sidebar-surface">
         <div className="mb-2 px-2 font-semibold">{brandLabel}</div>
         <ScrollArea variant="sidebar" className="min-h-0 flex-1">
           <SheetClose asChild>

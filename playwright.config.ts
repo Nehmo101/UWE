@@ -5,6 +5,18 @@ const portalPort = process.env.E2E_PORTAL_PORT ?? "3200";
 const studioBaseURL = process.env.E2E_STUDIO_URL ?? `http://127.0.0.1:${studioPort}`;
 const portalBaseURL = process.env.E2E_PORTAL_URL ?? `http://127.0.0.1:${portalPort}`;
 
+/**
+ * Ausführbare Chromium-Datei aus der Umgebung statt aus Playwrights Download.
+ *
+ * Manche Container bringen einen vorinstallierten Chromium mit, dessen
+ * Build-Nummer nicht zur hier gepinnten Playwright-Version passt. Playwright
+ * sucht dann eine Datei, die es nie geben wird, und jeder Test scheitert am
+ * Start — obwohl ein brauchbarer Browser vorhanden ist. Ist die Variable nicht
+ * gesetzt (CI, lokale Entwicklung mit `playwright install`), ändert sich nichts.
+ */
+const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_PATH;
+const launchOptions = chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {};
+
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: false,
@@ -18,6 +30,7 @@ export default defineConfig({
       testMatch: /studio-.*\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
+        ...launchOptions,
         baseURL: studioBaseURL,
       },
     },
@@ -26,6 +39,7 @@ export default defineConfig({
       testMatch: /portal-.*\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
+        ...launchOptions,
         baseURL: portalBaseURL,
       },
     },
