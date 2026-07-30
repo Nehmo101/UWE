@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
-import { applySelectedPorts, buildLocalHostEnv } from "./host-env-file.ts";
+import { applySelectedPorts, buildLocalHostEnv, companionUrlUpdates } from "./host-env-file.ts";
 import { normalizeInstallSelection, readServicePort } from "./install-selection.ts";
 import type { HostPaths } from "./desktop-host-types.ts";
 
@@ -132,6 +132,50 @@ describe("Portwahl der Ersteinrichtung", () => {
 
     assert.equal(values.BRAIN_PORT, "4002");
     assert.equal(values.NEXT_PUBLIC_BRAIN_URL, "http://127.0.0.1:4002");
+  });
+});
+
+describe("Portänderung im Deployment-Editor", () => {
+  it("zieht die Loopback-URL mit, obwohl das Formular den alten Wert mitschickt", () => {
+    const paths = hostPaths(temporaryDirectory());
+    writeEnv(paths, ["STUDIO_PORT=3100", "NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:3100"]);
+
+    // So speichert die Oberfläche: alle Felder, der Port geändert, die URL nicht.
+    const companions = companionUrlUpdates(paths.envFile, {
+      STUDIO_PORT: "3200",
+      NEXT_PUBLIC_STUDIO_URL: "http://127.0.0.1:3100",
+    });
+
+    assert.deepEqual(companions, { NEXT_PUBLIC_STUDIO_URL: "http://127.0.0.1:3200" });
+  });
+
+  it("lässt eine im selben Speichern von Hand geänderte URL gewinnen", () => {
+    const paths = hostPaths(temporaryDirectory());
+    writeEnv(paths, ["STUDIO_PORT=3100", "NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:3100"]);
+
+    const companions = companionUrlUpdates(paths.envFile, {
+      STUDIO_PORT: "3200",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uweanddragons.org",
+    });
+
+    assert.deepEqual(companions, {});
+  });
+
+  it("fasst nichts an, wenn der Port gleich bleibt", () => {
+    const paths = hostPaths(temporaryDirectory());
+    writeEnv(paths, ["STUDIO_PORT=3100", "NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:3100"]);
+
+    assert.deepEqual(companionUrlUpdates(paths.envFile, { STUDIO_PORT: "3100" }), {});
+  });
+
+  it("rührt die öffentliche Family-Adresse beim Portwechsel nicht an", () => {
+    const paths = hostPaths(temporaryDirectory());
+    writeEnv(paths, [
+      "FAMILY_PORT=3004",
+      "NEXT_PUBLIC_FAMILY_URL=https://family.uweanddragons.org",
+    ]);
+
+    assert.deepEqual(companionUrlUpdates(paths.envFile, { FAMILY_PORT: "3104" }), {});
   });
 });
 
