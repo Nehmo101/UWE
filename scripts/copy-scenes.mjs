@@ -61,7 +61,25 @@ function copyFileIfChanged(from, to) {
     return false;
   }
   fs.mkdirSync(path.dirname(to), { recursive: true });
-  fs.copyFileSync(from, to);
+  // Auf Windows-CI-Runnern kopieren mehrere App-Builds dieselben Quelldateien
+  // parallel, und der Virenscanner hält frisch ausgecheckte PNGs kurz offen —
+  // copyFileSync wirft dann EBUSY/EPERM. Kurz warten und erneut versuchen,
+  // statt den ganzen Release-Build daran scheitern zu lassen.
+  let versuch = 0;
+  for (;;) {
+    try {
+      fs.copyFileSync(from, to);
+      break;
+    } catch (error) {
+      const code = error && error.code;
+      versuch += 1;
+      if ((code !== "EBUSY" && code !== "EPERM") || versuch >= 5) throw error;
+      const bis = Date.now() + 200 * versuch;
+      while (Date.now() < bis) {
+        // synchrones Warten — das Skript ist ohnehin sequenziell
+      }
+    }
+  }
   return true;
 }
 
