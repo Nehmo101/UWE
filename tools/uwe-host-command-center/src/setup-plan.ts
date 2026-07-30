@@ -131,14 +131,38 @@ export function buildSetupPlan(
     env: { UWE_COMMAND_CENTER_DATA_DIR: context.dataRoot },
   });
 
+  let gebaut = 0;
   for (const app of HOST_SERVICE_IDS) {
     if (!isAppSelected(selection, app)) continue;
+    gebaut += 1;
     steps.push({
       phase: `${app}-build`,
       label: `${HOST_SERVICE_LABELS[app]}: Produktions-Build`,
       kind: "workspace",
       args: ["--filter", BUILD_FILTERS[app], "build"],
       logLabel: `${HOST_SERVICE_LABELS[app]} Produktions-Build`,
+    });
+  }
+
+  // Next.js legt in `.next/standalone` weder `static/` noch `public/` ab — das
+  // ist eine dokumentierte Upstream-Eigenschaft, kein Fehler. Im Monorepo hängt
+  // deshalb an `pnpm build` der Materialize-Lauf, der beides (plus die
+  // Prisma-Laufzeit) in den Standalone-Baum kopiert. Die Schritte oben rufen
+  // aber `pnpm --filter @uwe/<app> build` auf, also nur `next build` — ohne
+  // diesen Nachlauf fehlt der Kopierschritt komplett.
+  //
+  // `desktop-host.ts` startet genau diesen Standalone-Server, sobald
+  // `server.js` existiert. Ohne die Assets liefert der Host dann zwar
+  // vollständiges HTML aus, aber jede `/_next/static/*`-URL (CSS, JS-Chunks,
+  // next/font-Dateien) und jedes public/-Asset 404t — sichtbar als Seiten ganz
+  // ohne Design, in jeder App gleichzeitig.
+  if (gebaut > 0) {
+    steps.push({
+      phase: "standalone-assets",
+      label: "Standalone-Laufzeit vervollständigen",
+      kind: "workspace",
+      args: ["exec", "node", "scripts/materialize-standalone-prisma-deps.mjs"],
+      logLabel: "Standalone-Laufzeit",
     });
   }
 

@@ -109,6 +109,39 @@ describe("setup plan", () => {
     );
   });
 
+  it("materialisiert die Standalone-Assets nach dem letzten App-Build", () => {
+    // Ohne diesen Schritt fehlen `.next/static` und `public/` im
+    // Standalone-Baum, den desktop-host.ts startet — die Apps liefern dann
+    // HTML ohne CSS, JS und Schriften aus.
+    const plan = buildSetupPlan(defaultInstallSelection(), context);
+    const phases = plan.map((step) => step.phase);
+    const materialize = phases.indexOf("standalone-assets");
+
+    assert.ok(materialize >= 0, "Materialize-Schritt fehlt im Plan");
+    assert.equal(
+      materialize,
+      phases.length - 1,
+      "Materialize muss nach allen App-Builds laufen",
+    );
+    assert.deepEqual(plan[materialize]?.args, [
+      "exec",
+      "node",
+      "scripts/materialize-standalone-prisma-deps.mjs",
+    ]);
+  });
+
+  it("lässt den Materialize-Schritt weg, wenn keine App gebaut wird", () => {
+    // Über normalizeInstallSelection ist die leere Auswahl nicht erreichbar
+    // (sie fällt auf die Vorgabe zurück) — der Plan muss sie trotzdem
+    // aushalten, sonst liefe materialize ohne Standalone-Baum und bräche ab.
+    const phases = buildSetupPlan({ ...defaultInstallSelection(), apps: [] }, context).map(
+      (step) => step.phase,
+    );
+
+    assert.ok(!phases.some((phase) => phase.endsWith("-build")));
+    assert.ok(!phases.includes("standalone-assets"));
+  });
+
   it("drops the seed step when demo content is declined", () => {
     const withSeed = buildSetupPlan(defaultInstallSelection(), context);
     const withoutSeed = buildSetupPlan(
@@ -133,8 +166,9 @@ describe("setup plan", () => {
   it("reports a step count that matches the plan it will actually run", () => {
     const selection = normalizeInstallSelection({ apps: ["studio", "portal"] });
     assert.equal(setupStepCount(selection), buildSetupPlan(selection, context).length);
-    // Full install: install, prisma, migrate, seed, connector + 5 builds.
-    assert.equal(setupStepCount(defaultInstallSelection()), 12);
+    // Full install: install, prisma, migrate, seed, connector + 5 builds
+    // + das Materialisieren der Standalone-Assets.
+    assert.equal(setupStepCount(defaultInstallSelection()), 13);
   });
 
   it("knows which apps are selected", () => {
