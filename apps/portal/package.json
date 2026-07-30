@@ -7,7 +7,7 @@
     "copy:scenes": "node --import tsx ../../scripts/copy-scenes.mjs",
     "copy:terra": "node ../../scripts/copy-terra.mjs",
     "dev": "node --import tsx ../../scripts/copy-scenes.mjs && node ../../scripts/copy-terra.mjs && next dev --port 3001 --webpack",
-    "build": "node --import tsx ../../scripts/copy-scenes.mjs && node ../../scripts/copy-terra.mjs && next build --webpack",
+    "build": "node --import tsx ../../scripts/copy-scenes.mjs && node ../../scripts/copy-terra.mjs && next build --webpack && node ../../scripts/materialize-standalone-prisma-deps.mjs portal",
     "start": "next start --port 3001",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test 'src/**/*.test.ts'"

@@ -139,27 +139,120 @@ function materializeApp(app) {
   return true;
 }
 
-fs.rmSync(DEPLOY_DIR, { recursive: true, force: true });
-fs.mkdirSync(DEPLOY_DIR, { recursive: true });
+/**
+ * Ohne Argument alle Apps, sonst genau die genannten. Der Filter existiert,
+ * damit der Build **einer** App sich selbst materialisieren kann
+ * (`pnpm --filter @uwe/landing build`), statt die vier anderen mitzukopieren.
+ */
+const requested = process.argv.slice(2);
+const unknown = requested.filter((app) => !APPS.includes(app));
+if (unknown.length > 0) {
+  console.error(`[materialize] Unbekannte App(s): ${unknown.join(", ")}. Bekannt: ${APPS.join(", ")}`);
+  process.exit(1);
+}
+const targets = requested.length > 0 ? requested : APPS;
 
-// Auf Windows ist pnpm eine Batch-Datei, die execFileSync nicht direkt startet —
-// vorher scheiterte der Release-Build hier mit `spawnSync pnpm ENOENT`. Statt
-// `shell: true` (das die Argumente unescaped verkettet und DEP0190 auslöst) wird
-// cmd.exe explizit als Programm aufgerufen. Gleiches Muster wie `pnpmCommand`
-// in tools/uwe-host-command-center/src/desktop-host-system.ts.
-const pnpmArgs = ["--filter", "@uwe/database", "deploy", "--legacy", "--prod", DEPLOY_DIR];
-const pnpm =
-  process.platform === "win32"
-    ? {
-        command: process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe",
-        args: ["/d", "/s", "/c", "corepack", "pnpm", ...pnpmArgs],
+const STAMP_FILE = path.join(DEPLOY_DIR, ".materialize-stamp");
+const LOCK_DIR = `${DEPLOY_DIR}.lock`;
+
+/**
+ * Wovon der ausgelieferte Abhängigkeitsbaum abhängt: das Manifest von
+ * @uwe/database und die Lockfile. Ändert sich keins von beiden, ist ein
+ * vorhandenes Deploy-Verzeichnis noch gültig.
+ */
+function deployFingerprint() {
+  return [path.join(ROOT, "pnpm-lock.yaml"), path.join(ROOT, "packages", "database", "package.json")]
+    .map((file) => {
+      try {
+        return `${file}:${fs.statSync(file).mtimeMs}`;
+      } catch {
+        return `${file}:missing`;
       }
-    : { command: "corepack", args: ["pnpm", ...pnpmArgs] };
+    })
+    .join("|");
+}
 
-execFileSync(pnpm.command, pnpm.args, { cwd: ROOT, stdio: "inherit" });
+function stampMatches(fingerprint) {
+  try {
+    return fs.readFileSync(STAMP_FILE, "utf8") === fingerprint;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `pnpm deploy` dauert Minuten und schreibt in ein gemeinsames Verzeichnis.
+ * Seit die App-Builds sich selbst materialisieren, laufen bis zu fünf dieser
+ * Skripte gleichzeitig (turbo baut parallel) — ohne Sperre räumten sie einander
+ * das Verzeichnis unter den Füßen weg. Wer die Sperre nicht bekommt, wartet und
+ * benutzt danach das Ergebnis des anderen.
+ */
+function acquireLock() {
+  const deadline = Date.now() + 10 * 60 * 1000;
+  for (;;) {
+    try {
+      fs.mkdirSync(LOCK_DIR); // atomar: schlägt fehl, wenn schon vorhanden
+      return true;
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      if (Date.now() > deadline) {
+        // Lieber selbst deployen als ewig warten: eine verwaiste Sperre (harter
+        // Abbruch eines früheren Laufs) darf den Build nicht dauerhaft blockieren.
+        console.warn("[materialize] Sperre seit über 10 Minuten gehalten — wird übernommen.");
+        fs.rmSync(LOCK_DIR, { recursive: true, force: true });
+        continue;
+      }
+      // Synchron warten, ohne einen Prozess dafür zu starten.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+    }
+  }
+}
+
+function releaseLock() {
+  fs.rmSync(LOCK_DIR, { recursive: true, force: true });
+}
+
+const fingerprint = deployFingerprint();
+let deployNeeded = !stampMatches(fingerprint);
+
+if (deployNeeded) {
+  acquireLock();
+  try {
+    // Nach dem Warten nochmal prüfen: in der Zwischenzeit kann ein anderer Lauf
+    // genau das deployt haben, worauf wir gewartet haben.
+    deployNeeded = !stampMatches(fingerprint);
+    if (deployNeeded) {
+      runDeploy(fingerprint);
+    }
+  } finally {
+    releaseLock();
+  }
+}
+
+function runDeploy(currentFingerprint) {
+  fs.rmSync(DEPLOY_DIR, { recursive: true, force: true });
+  fs.mkdirSync(DEPLOY_DIR, { recursive: true });
+
+  // Auf Windows ist pnpm eine Batch-Datei, die execFileSync nicht direkt startet —
+  // vorher scheiterte der Release-Build hier mit `spawnSync pnpm ENOENT`. Statt
+  // `shell: true` (das die Argumente unescaped verkettet und DEP0190 auslöst) wird
+  // cmd.exe explizit als Programm aufgerufen. Gleiches Muster wie `pnpmCommand`
+  // in tools/uwe-host-command-center/src/desktop-host-system.ts.
+  const pnpmArgs = ["--filter", "@uwe/database", "deploy", "--legacy", "--prod", DEPLOY_DIR];
+  const pnpm =
+    process.platform === "win32"
+      ? {
+          command: process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe",
+          args: ["/d", "/s", "/c", "corepack", "pnpm", ...pnpmArgs],
+        }
+      : { command: "corepack", args: ["pnpm", ...pnpmArgs] };
+
+  execFileSync(pnpm.command, pnpm.args, { cwd: ROOT, stdio: "inherit" });
+  fs.writeFileSync(STAMP_FILE, currentFingerprint, "utf8");
+}
 
 let materialized = 0;
-for (const app of APPS) {
+for (const app of targets) {
   if (materializeApp(app)) {
     materialized += 1;
   }
