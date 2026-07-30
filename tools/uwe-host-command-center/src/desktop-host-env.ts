@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { resolveDesktopHostRoot } from "./desktop-host.ts";
-import { updateEnvKeys } from "./host-env-file.ts";
+import { companionUrlUpdates, updateEnvKeys } from "./host-env-file.ts";
 
 /**
  * Allow-listed host `.env` editing for the Command Center. Only these keys can be
@@ -117,5 +117,11 @@ export function setHostEnv(rootInput: string | undefined, updates: Record<string
     allowed[key] = value;
   }
 
-  return { ok: true, written: updateEnvKeys(envFilePath(rootInput), allowed) };
+  // Ein geänderter Port zieht seine Loopback-URL mit. Die Oberfläche schickt bei
+  // jedem Speichern *alle* Felder, also auch die unveränderte alte URL — die
+  // Ableitung steht deshalb hinter `allowed` und gewinnt. Eine im selben Zug von
+  // Hand geänderte URL erkennt `companionUrlUpdates` und lässt sie in Ruhe.
+  const file = envFilePath(rootInput);
+  const written = updateEnvKeys(file, { ...allowed, ...companionUrlUpdates(file, allowed) });
+  return { ok: true, written };
 }

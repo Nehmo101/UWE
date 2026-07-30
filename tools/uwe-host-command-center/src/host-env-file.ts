@@ -183,14 +183,51 @@ export function updateEnvKeys(file: string, updates: Record<string, string>): st
 }
 
 /**
+ * Die Folgeänderungen einer Portänderung: die Loopback-URL des Dienstes wandert
+ * mit. Ohne sie schreibt jeder Portwechsel eine `.env`, in der der Dienst auf
+ * dem neuen Port lauscht, während `NEXT_PUBLIC_*_URL` weiter auf den alten
+ * zeigt — der Dienst läuft, aber jeder Link führt ins Leere.
+ *
+ * Zwei Adressen bleiben unangetastet: eine öffentliche (Tunnel-Hostname), die
+ * gehört Cloudflare und nicht dem Port. Und eine, die der Aufrufer im selben
+ * Speichervorgang selbst ändert — dann gilt seine Eingabe, nicht die Ableitung.
+ *
+ * `updates` ist die Menge, die geschrieben werden soll (Schlüssel → Wert);
+ * verglichen wird gegen den Stand in der Datei.
+ */
+export function companionUrlUpdates(
+  envFile: string,
+  updates: Record<string, string>,
+): Record<string, string> {
+  if (!fs.existsSync(envFile)) return {};
+  const env = readEnvFile(envFile);
+  const result: Record<string, string> = {};
+
+  for (const id of HOST_SERVICE_IDS) {
+    const { key, fallback } = SERVICE_PORT_ENV[id];
+    if (!(key in updates)) continue;
+    const wanted = Number(updates[key]);
+    if (!Number.isInteger(wanted)) continue;
+    const current = parseServicePort(env[key], fallback);
+    if (current === wanted) continue;
+
+    for (const urlKey of PORT_COMPANION_URLS[id]) {
+      const submitted = updates[urlKey];
+      if (submitted !== undefined && submitted !== (env[urlKey] ?? "").trim()) continue;
+      if (isLoopbackUrlForPort(env[urlKey], current)) {
+        result[urlKey] = `http://127.0.0.1:${wanted}`;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Trägt die im Ersteinrichtungs-Assistenten gewählten Ports in eine **bestehende**
  * `.env` ein. Eine frisch angelegte Datei bringt sie schon mit
  * (`buildLocalHostEnv`); dieser Weg ist der für Installationen, die es vorher
  * schon gab — „Reparieren" und ein zweiter Lauf des Assistenten.
- *
- * Mitgeführt werden die Loopback-URLs des Dienstes: eine Adresse, die auf den
- * *alten* Port zeigte, wandert mit. Eine öffentliche Adresse (Tunnel-Hostname)
- * bleibt unangetastet — sie gehört Cloudflare, nicht dem Port.
  */
 export function applySelectedPorts(
   paths: HostPaths,
@@ -210,16 +247,14 @@ export function applySelectedPorts(
     if (current === wanted) continue;
 
     updates[key] = String(wanted);
-    for (const urlKey of PORT_COMPANION_URLS[id]) {
-      if (isLoopbackUrlForPort(env[urlKey], current)) {
-        updates[urlKey] = `http://127.0.0.1:${wanted}`;
-      }
-    }
     changed.push(`${HOST_SERVICE_LABELS[id]} ${current} → ${wanted}`);
   }
 
   if (changed.length === 0) return [];
-  const written = updateEnvKeys(paths.envFile, updates);
+  const written = updateEnvKeys(paths.envFile, {
+    ...updates,
+    ...companionUrlUpdates(paths.envFile, updates),
+  });
   onLog(`Ports übernommen: ${changed.join(", ")}.`);
   return written;
 }
