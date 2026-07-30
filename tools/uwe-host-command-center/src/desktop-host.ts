@@ -5,11 +5,26 @@ import path from "node:path";
 
 import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
 import {
+  appendOperationLog,
+  bundleInstallRoot,
+  commandCenterDataRoot,
+  detectHostMode,
+  ensureHostDirectories,
+  pathsFor,
+  pidFile,
+  resolveDesktopHostRoot,
+} from "./desktop-host-paths.ts";
+import {
+  adoptOrphanService,
+  classifyPortHolder,
+  releaseOwnPort,
+  type PortHolder,
+} from "./desktop-host-ports.ts";
+import {
   appendToLog,
   deriveOwnedServiceState,
   diskSnapshot,
   gpuSnapshot,
-  listenerPids,
   pnpmCommand,
   probeHealth,
   processRunning,
@@ -22,6 +37,13 @@ import {
 } from "./desktop-host-system.ts";
 
 export { deriveOwnedServiceState } from "./desktop-host-system.ts";
+export {
+  bundleInstallRoot,
+  commandCenterDataRoot,
+  detectHostMode,
+  resolveDesktopHostRoot,
+  type HostMode,
+} from "./desktop-host-paths.ts";
 
 import {
   HOST_SERVICE_IDS,
@@ -125,90 +147,6 @@ export function argumentValue(argv: string[], name: string): string | undefined 
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
-export function commandCenterDataRoot(): string {
-  const configured = process.env.UWE_COMMAND_CENTER_DATA_DIR?.trim();
-  if (configured) return path.resolve(configured);
-  if (process.platform === "win32" && process.env.LOCALAPPDATA) {
-    return path.join(process.env.LOCALAPPDATA, "UWE", "rtx-connector-client", "host");
-  }
-  return path.join(os.homedir(), ".local", "share", "UWE", "rtx-connector-client", "host");
-}
-
-export type HostMode = "monorepo" | "bundle";
-
-/**
- * Woraus diese Installation besteht: ein Entwickler-Checkout des Monorepos
- * (pnpm-workspace.yaml vorhanden — Setup/Update laufen über pnpm und git) oder
- * eine Bundle-Installation aus dem Release-Download (entpackte App-Bundles
- * unter apps/<app>/ mit flachem node_modules — kein pnpm, kein git, kein Build).
- */
-export function detectHostMode(root: string): HostMode {
-  return fs.existsSync(path.join(root, "pnpm-workspace.yaml")) ? "monorepo" : "bundle";
-}
-
-/** Standardort einer Bundle-Installation, neben den Host-Daten. */
-export function bundleInstallRoot(): string {
-  return path.join(commandCenterDataRoot(), "..", "bundle");
-}
-
-export function resolveDesktopHostRoot(input?: string): string {
-  const configured = input?.trim() || process.env.UWE_MONOREPO_ROOT?.trim();
-  if (configured) return path.resolve(configured);
-
-  let current = path.resolve(process.cwd());
-  while (true) {
-    if (
-      fs.existsSync(path.join(current, "pnpm-workspace.yaml")) &&
-      fs.existsSync(path.join(current, "apps", "studio")) &&
-      fs.existsSync(path.join(current, "apps", "portal"))
-    ) {
-      return current;
-    }
-    const parent = path.dirname(current);
-    if (parent === current) break;
-    current = parent;
-  }
-
-  // Kein Checkout gefunden: Wenn am Standardort eine Bundle-Installation liegt
-  // (mindestens eine App mit gebautem .next), ist sie das Root. So findet das
-  // Command Center eine Installation auch ohne UWE_MONOREPO_ROOT.
-  const bundleRoot = bundleInstallRoot();
-  if (fs.existsSync(path.join(bundleRoot, "apps"))) {
-    return path.resolve(bundleRoot);
-  }
-  return path.resolve(process.cwd());
-}
-
-function pathsFor(root: string): HostPaths {
-  const dataRoot = commandCenterDataRoot();
-  return {
-    root,
-    dataRoot,
-    data: path.join(dataRoot, "data"),
-    uploads: path.join(dataRoot, "data", "uploads"),
-    backups: path.join(dataRoot, "data", "backups"),
-    exports: path.join(dataRoot, "exports"),
-    logs: path.join(dataRoot, "logs"),
-    runtime: path.join(dataRoot, "runtime"),
-    envFile: path.join(root, ".env"),
-    database: path.join(dataRoot, "data", "uwe.db"),
-  };
-}
-
-function ensureHostDirectories(paths: HostPaths): void {
-  for (const directory of [
-    paths.dataRoot,
-    paths.data,
-    paths.uploads,
-    paths.backups,
-    paths.exports,
-    paths.logs,
-    paths.runtime,
-  ]) {
-    fs.mkdirSync(directory, { recursive: true });
-  }
-}
-
 function validateRepo(root: string): boolean {
   return (
     fs.existsSync(path.join(root, "package.json")) &&
@@ -216,79 +154,6 @@ function validateRepo(root: string): boolean {
     fs.existsSync(path.join(root, "apps", "studio", "package.json")) &&
     fs.existsSync(path.join(root, "apps", "portal", "package.json"))
   );
-}
-
-function pidFile(paths: HostPaths, id: HostServiceId): string {
-  return path.join(paths.runtime, `${id}.pid`);
-}
-
-/**
- * Ein Dienst, der einen unserer Ports hält, ohne dass wir eine PID-Datei dazu
- * haben. „orphan" ist ein Rest einer früheren Sitzung (App abgestürzt, hart
- * beendet, PID-Datei verloren) und gehört uns; „foreign" ist wirklich fremd
- * und wird nie angefasst.
- */
-interface PortHolder {
-  service: ServiceDefinition;
-  kind: "orphan" | "foreign";
-}
-
-async function classifyPortHolder(paths: HostPaths, service: ServiceDefinition): Promise<PortHolder | null> {
-  if (processRunning(readPid(pidFile(paths, service.id)))) return null; // gehört uns bereits
-  const probe = await probeHealth(`http://127.0.0.1:${service.port}`);
-  if (!probe.responding) return null; // Port frei
-  return { service, kind: isOwnServiceApp(service.id, probe.app) ? "orphan" : "foreign" };
-}
-
-/**
- * Nimmt einen verwaisten eigenen Prozess wieder in Besitz: PID über den Port
- * ermitteln und die PID-Datei nachziehen. Danach greifen Status, Stopp und
- * Neustart wieder ganz normal.
- *
- * Nur bei genau einem lauschenden Prozess — bei mehreren (etwa zwei Resten auf
- * IPv4 und IPv6) wüssten wir nicht, welcher der Dienst ist; die räumt der Start
- * stattdessen weg.
- */
-function adoptOrphanService(paths: HostPaths, id: HostServiceId, port: number): number | null {
-  const pids = listenerPids(port);
-  if (pids.length !== 1) return null;
-  ensureHostDirectories(paths);
-  fs.writeFileSync(pidFile(paths, id), String(pids[0]), "utf8");
-  appendOperationLog(paths, `${HOST_SERVICE_LABELS[id]}: verwaisten Prozess ${pids[0]} auf Port ${port} übernommen.`);
-  return pids[0];
-}
-
-/**
- * Beendet die Reste einer früheren Sitzung auf dem Port eines Dienstes und
- * meldet, ob der Port danach frei ist. Beendet ausschließlich Prozesse, die
- * sich unmittelbar davor per `/api/health` als genau diese App ausgewiesen
- * haben — ein fremder Dienst bleibt unangetastet.
- */
-async function releaseOwnPort(paths: HostPaths, service: ServiceDefinition): Promise<boolean> {
-  const url = `http://127.0.0.1:${service.port}`;
-  const probe = await probeHealth(url);
-  if (!probe.responding) return true;
-  if (!isOwnServiceApp(service.id, probe.app)) return false;
-
-  const pids = listenerPids(service.port);
-  if (pids.length === 0) {
-    appendOperationLog(
-      paths,
-      `${service.label}: Port ${service.port} ist belegt, der zugehörige Prozess ließ sich nicht ermitteln.`,
-    );
-    return false;
-  }
-  for (const pid of pids) stopProcess(pid);
-  appendOperationLog(
-    paths,
-    `${service.label}: verwaiste Prozesse (${pids.join(", ")}) auf Port ${service.port} beendet.`,
-  );
-  fs.rmSync(pidFile(paths, service.id), { force: true });
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    if (!(await probeHealth(url)).responding) return true;
-  }
-  return false;
 }
 
 function gitFact(root: string, args: string[]): string | null {
@@ -416,11 +281,6 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
     dataDir: paths.data,
     logsDir: paths.logs,
   };
-}
-
-function appendOperationLog(paths: HostPaths, line: string): void {
-  ensureHostDirectories(paths);
-  appendToLog(path.join(paths.logs, "command-center.log"), `[${new Date().toISOString()}] ${line}\n`);
 }
 
 function workspaceCommandEnv(paths: HostPaths, extraEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
