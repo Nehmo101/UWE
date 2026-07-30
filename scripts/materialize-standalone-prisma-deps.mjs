@@ -189,6 +189,7 @@ function stampMatches(fingerprint) {
  */
 function acquireLock() {
   const deadline = Date.now() + 10 * 60 * 1000;
+  fs.mkdirSync(path.dirname(LOCK_DIR), { recursive: true });
   for (;;) {
     try {
       fs.mkdirSync(LOCK_DIR); // atomar: schlägt fehl, wenn schon vorhanden
