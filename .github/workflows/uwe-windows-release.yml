@@ -92,13 +92,17 @@ jobs:
 
       - run: pnpm --filter @uwe/database db:generate
 
-      # App-Bundles: erst der volle Release-Build (Standalone-Prüfung inklusive),
-      # dann packt build-release-bundles.mjs pro App ein selbstenthaltendes
-      # Laufzeitverzeichnis über `pnpm deploy` (hoisted, symlink-frei) und
-      # erzeugt die vormigrierten, leeren Datenbanken. Diese Assets lädt der
-      # Installer nach — Git, Node und pnpm braucht der Zielrechner nicht.
+      # App-Bundles: `pnpm build` statt `build:release`, denn dessen
+      # Standalone-Prüfung ist auf Windows strukturell rot — pnpm verlinkt dort
+      # mit Junctions (absolute Ziele in den .cache), auf Linux mit relativen
+      # Symlinks. Der Standalone-Baum wird für die Bundles ohnehin nicht
+      # verwendet: build-release-bundles.mjs baut die Laufzeit über
+      # `pnpm deploy` auf und prüft sie mit eigenen, strengeren Gates
+      # (Modul-Auflösung aus zwei Blickwinkeln, next-Versionstreue). Die
+      # Standalone-Prüfung für den Linux-Host-Pfad läuft weiter im
+      # quality-Job der Linux-CI.
       - name: Build apps
-        run: pnpm build:release
+        run: pnpm build
 
       - name: Pack app bundles and empty databases
         run: node scripts/build-release-bundles.mjs --version "${{ steps.meta.outputs.version }}" --out release-assets
