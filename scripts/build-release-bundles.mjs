@@ -35,7 +35,6 @@
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { createRequire } from "node:module";
@@ -182,7 +181,10 @@ function mb(bytes) {
 }
 
 // Arbeitsverzeichnis IMMER außerhalb des Repos — nie ein Deploy-Ziel im Baum.
-const werk = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-bundles-"));
+// Aber NEBEN dem Repo statt in os.tmpdir(): Liegt das Deploy-Ziel auf einem
+// anderen Laufwerk als der Workspace (CI: Repo auf D:, TEMP auf C:), verklebt
+// pnpm deploy die Pfade („D:\…\apps\studio\C:\Users\…") und bricht ab.
+const werk = fs.mkdtempSync(path.join(path.dirname(ROOT), "uwe-bundles-"));
 fs.mkdirSync(outDir, { recursive: true });
 const erzeugt = [];
 
