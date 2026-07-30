@@ -129,13 +129,23 @@ jobs:
             const fs = require("node:fs");
             const path = require("node:path");
             const { createRequire } = require("node:module");
-            const r = createRequire(path.resolve("packages/database/package.json"));
-            const cli = path.dirname(r.resolve("prisma/package.json"));
-            const engines = path.dirname(r.resolve("@prisma/engines/package.json"));
+            const rDb = createRequire(path.resolve("packages/database/package.json"));
+            const cli = path.dirname(rDb.resolve("prisma/package.json"));
+            // @prisma/engines ist eine Dependency der CLI, nicht von
+            // @uwe/database — im pnpm-Layout löst es nur von der CLI aus.
+            const rCli = createRequire(path.join(cli, "package.json"));
+            let engines;
+            try {
+              engines = path.dirname(rCli.resolve("@prisma/engines/package.json"));
+            } catch {
+              const haupt = rCli.resolve("@prisma/engines");
+              const marker = path.sep + "node_modules" + path.sep + "@prisma" + path.sep + "engines" + path.sep;
+              engines = haupt.slice(0, haupt.lastIndexOf(marker) + marker.length - 1);
+            }
             const ziel = process.argv[1];
             fs.cpSync(path.join(cli, "build"), path.join(ziel, "prisma", "build"), { recursive: true });
             fs.cpSync(engines, path.join(ziel, "prisma", "node_modules", "@prisma", "engines"), { recursive: true, dereference: true });
-            console.log("Prisma-CLI:", cli);
+            console.log("Prisma-CLI:", cli, "— Engines:", engines);
           ' "$RUNTIME"
           ls -la "$RUNTIME"
 
