@@ -68,4 +68,22 @@ describe("Standalone-Assets hängen am App-Build", () => {
     assert.match(source, /process\.argv\.slice\(2\)/);
     assert.match(source, /requested\.length > 0 \? requested : APPS/);
   });
+
+  it("legt das Elternverzeichnis vor dem atomaren Lock an", () => {
+    const source = fs.readFileSync(
+      path.join(ROOT, "scripts", "materialize-standalone-prisma-deps.mjs"),
+      "utf8",
+    );
+    const parentMkdir = "fs.mkdirSync(path.dirname(LOCK_DIR), { recursive: true });";
+    const lockMkdir = "fs.mkdirSync(LOCK_DIR);";
+
+    assert.ok(
+      source.includes(parentMkdir),
+      "ein frischer Runner hat noch kein .cache-Verzeichnis",
+    );
+    assert.ok(
+      source.indexOf(parentMkdir) < source.indexOf(lockMkdir),
+      "das Elternverzeichnis muss vor dem atomaren Lock existieren",
+    );
+  });
 });
