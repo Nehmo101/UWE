@@ -116,6 +116,88 @@ describe("release packaging", () => {
     assert.match(docs, /uwe-vX\.Y\.Z/);
     assert.match(docs, /Update installieren/);
     assert.match(docs, /uwe-windows-release\.yml/);
+    // Der Tag-Push ist der dokumentierte Weg, ein Release zu schneiden.
+    assert.match(docs, /git tag/);
+    assert.match(docs, /git push origin uwe-v/);
+  });
+
+  // ── Release über Release-Tags ────────────────────────────────────────────
+  // Ein gepushter `uwe-vX.Y.Z` muss genau das Release erzeugen, das das Command
+  // Center erwartet: derselbe Tag, dieselbe Version wie im Commit, kein Draft.
+
+  it("publishes on a pushed uwe-v tag, not only by hand", () => {
+    const workflow = fs.readFileSync(
+      path.join(root, ".github/workflows/uwe-windows-release.yml"),
+      "utf8",
+    );
+    assert.match(workflow, /^on:/m);
+    assert.match(workflow, /^\s{2}push:/m, "Workflow reagiert nicht auf einen Tag-Push");
+    assert.match(workflow, /tags:\s*\n\s*- "uwe-v/, "Tag-Filter fehlt oder passt nicht auf uwe-v*");
+    assert.match(workflow, /workflow_dispatch:/, "Der manuelle Weg muss erhalten bleiben");
+    // Der Tag benennt die Version; der Commit muss sie tragen.
+    assert.match(workflow, /GITHUB_REF_TYPE/);
+    assert.match(workflow, /GITHUB_REF_NAME/);
+    assert.match(workflow, /tag_name: \$\{\{ steps\.meta\.outputs\.tag \}\}/);
+  });
+
+  it("never publishes a draft on a tag push", () => {
+    // /releases/latest/download/uwe-release.json — der Pfad, über den eine
+    // Bundle-Installation ihr Manifest zieht — kennt nur veröffentlichte
+    // Releases. Ein Draft wäre für den Update-Knopf unsichtbar.
+    const workflow = fs.readFileSync(
+      path.join(root, ".github/workflows/uwe-windows-release.yml"),
+      "utf8",
+    );
+    assert.match(workflow, /draft: \$\{\{ inputs\.draft == true \}\}/);
+  });
+
+  it("syncs the Rust crate version so the app reports the release version", () => {
+    // Das Command Center meldet dem Update-Check seine Fassung aus
+    // CARGO_PKG_VERSION. Bliebe Cargo.toml stehen, hielte sich eine
+    // Bundle-Installation für dauerhaft veraltet.
+    const workflow = fs.readFileSync(
+      path.join(root, ".github/workflows/uwe-windows-release.yml"),
+      "utf8",
+    );
+    assert.match(workflow, /Cargo\.toml/);
+
+    const rust = fs.readFileSync(
+      path.join(root, "apps/rtx-connector-client/src-tauri/src/command_center.rs"),
+      "utf8",
+    );
+    assert.match(rust, /CARGO_PKG_VERSION/);
+    assert.match(
+      rust,
+      /UWE_COMMAND_CENTER_VERSION/,
+      "Die Fassung der App wird nicht an die Host-CLI durchgereicht",
+    );
+  });
+
+  it("keeps VERSION, tauri.conf.json and the Rust crate on one version", () => {
+    const version = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
+    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
+    assert.equal(tauriConf.version, version);
+
+    const cargo = fs.readFileSync(
+      path.join(root, "apps/rtx-connector-client/src-tauri/Cargo.toml"),
+      "utf8",
+    );
+    const paketVersion = cargo.slice(cargo.indexOf("[package]")).match(/^version = "([^"]+)"/m);
+    assert.equal(paketVersion?.[1], version);
+  });
+
+  it("resolves release assets without the gh CLI", () => {
+    // Auf einem Zielrechner gibt es kein `gh` und kein Token: Der Update-Check
+    // muss den Installer-Namen aus uwe-release.json lesen.
+    const update = fs.readFileSync(
+      path.join(root, "tools/uwe-host-command-center/src/desktop-host-update.ts"),
+      "utf8",
+    );
+    assert.doesNotMatch(update, /spawnSync\(\s*\n?\s*"gh"/);
+    assert.match(update, /tryFetchManifestForTag/);
+    // Eine Bundle-Installation hat kein git — ihr Check läuft über das Manifest.
+    assert.match(update, /detectHostMode\(root\) === "bundle"/);
+    assert.match(update, /checkBundleUpdate/);
   });
 
   // ── Manifest v2 + Bundle-Installation ────────────────────────────────────

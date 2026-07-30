@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 
 import type { DesktopHostService } from "./desktop-host.ts";
@@ -198,6 +198,39 @@ export function stopProcess(pid: number): void {
   } else {
     try { process.kill(-pid, "SIGTERM"); } catch { process.kill(pid, "SIGTERM"); }
   }
+}
+
+/**
+ * Die Fassung des laufenden Command Centers. Der Rust-Host reicht sie an die
+ * Host-CLI durch, weil eine Bundle-Installation keine `tauri.conf.json` neben
+ * sich hat: nur so weiß der Update-Check, ob die Desktop-App hinter dem
+ * Release-Tag liegt und der Installer geöffnet werden muss.
+ */
+export function runningCommandCenterVersion(): string | null {
+  const value = process.env.UWE_COMMAND_CENTER_VERSION?.trim();
+  return value && /^\d+\.\d+\.\d+$/.test(value) ? value : null;
+}
+
+/**
+ * Eine URL (oder einen Pfad) im Standardprogramm des Systems öffnen — Dienst-
+ * Oberflächen, die Release-Seite, der heruntergeladene Installer. Der Prozess
+ * wird abgekoppelt, damit das Beenden des Command Centers den geöffneten Browser
+ * nicht mitnimmt.
+ */
+export function openExternalUrl(url: string): void {
+  if (process.platform === "win32") {
+    spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "start", "", url], {
+      detached: true,
+      windowsHide: true,
+      stdio: "ignore",
+    }).unref();
+    return;
+  }
+  if (process.platform === "darwin") {
+    spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
+    return;
+  }
+  spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
 }
 
 export function pnpmCommand(args: string[]): { command: string; args: string[] } {

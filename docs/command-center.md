@@ -38,12 +38,20 @@ UWE Command Center
 
 Das Command Center führt absichtlich **kein stilles** `git pull` aus. Updates
 laufen nur über den expliziten Button **Nach Updates suchen** /
-**Update installieren** (oder die CLI-Aktionen `check-update` / `update`). Dabei
-wird der Checkout auf den neuesten GitHub-Release-Tag `uwe-v*` synchronisiert,
-Studio/Portal neu gebaut, und bei Bedarf der Windows-Installer für das Command
-Center geöffnet. Lokale Arbeitsbaum-Änderungen werden vorher per `git stash`
-gesichert — nie still überschrieben. „Reparieren / neu bauen“ baut weiterhin den
-aktuellen Checkout ohne Remote-Sync.
+**Update installieren** (oder die CLI-Aktionen `check-update` / `update`).
+Maßgeblich ist in beiden Fällen der GitHub-Release-Tag `uwe-vX.Y.Z`:
+
+- **Monorepo-Checkout:** der Checkout wird auf den neuesten `uwe-v*`-Tag
+  synchronisiert und Studio/Portal neu gebaut. Lokale Arbeitsbaum-Änderungen
+  werden vorher per `git stash` gesichert — nie still überschrieben.
+- **Bundle-Installation** (ausgelieferter Zustand, kein git): das Manifest
+  `uwe-release.json` des Releases am Tag sagt, welche App-Bundles zur Version
+  gehören; nachgeladen wird nur, was eine andere SHA-256 hat, und vor der
+  Migration werden die Datenbanken kopiert.
+
+Liegt die Desktop-App selbst hinter dem Tag, wird zusätzlich ihr
+Windows-Installer geöffnet. „Reparieren / neu bauen“ baut weiterhin den
+aktuellen Stand ohne Remote-Sync.
 
 ## Lokale Pfade (Windows)
 
@@ -173,8 +181,9 @@ node tools/uwe-host-command-center/src/desktop-host-cli.ts check-update --root C
 node tools/uwe-host-command-center/src/desktop-host-cli.ts update --root C:\git\UWE
 ```
 
-Windows-Releases werden über GitHub Actions
-(`.github/workflows/uwe-windows-release.yml`) als Tag `uwe-vX.Y.Z` veröffentlicht.
+Windows-Releases entstehen aus einem gepushten Tag `uwe-vX.Y.Z`: GitHub Actions
+(`.github/workflows/uwe-windows-release.yml`) baut daraus Installer, App-Bundles,
+leere Datenbanken und `uwe-release.json` und veröffentlicht das Release am Tag.
 Details: [docs/engineering/rtx-connector-release.md](./engineering/rtx-connector-release.md).
 
 ## Sicherheit

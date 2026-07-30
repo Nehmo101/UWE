@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **UWE Windows Releases** — GitHub Actions workflow publishes Command Center NSIS/MSI under tag `uwe-vX.Y.Z`; Command Center **Update** button syncs the checkout to the release, rebuilds Studio/Portal, and opens the Windows installer when the desktop app is behind
+- **Release über Release-Tags** — ein gepushter Tag `uwe-vX.Y.Z` erzeugt das Release (der manuelle `workflow_dispatch` bleibt für Wiederholungsläufe); der Workflow prüft Tag gegen `VERSION` und hält `package.json`, `tauri.conf.json` und `src-tauri/Cargo.toml` auf der Release-Fassung, damit die App ihre Version korrekt meldet
+- **Update-Check der Bundle-Installation** — „Nach Updates suchen“ liest in einer Installation ohne git das Release-Manifest `uwe-release.json` statt lokaler git-Tags (vorher schlug der Check dort mit einem git-Fehler fehl); der Update-Lauf öffnet den Command-Center-Installer auch dann, wenn nur die Desktop-App hinter dem Release-Tag liegt. Der Installer-Name kommt aus dem Manifest — keine `gh`-CLI und kein Token auf dem Zielrechner
 - **UWE Daily Admin OS** — private admin cockpit: `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain`
 - **Studio Security Step 1** — URL classification, RTX exposure assessment, admin status cards
 - **Life Admin data models** — Capture, PersonalProject, WorkshopProject, ContractExpense, HardwareDevice, PersonalBrain, Generator presets/outputs

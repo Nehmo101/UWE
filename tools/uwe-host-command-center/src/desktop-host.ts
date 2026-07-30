@@ -23,6 +23,7 @@ import {
   deriveOwnedServiceState,
   diskSnapshot,
   gpuSnapshot,
+  openExternalUrl,
   pnpmCommand,
   probeHealth,
   processRunning,
@@ -658,12 +659,5 @@ export function desktopHostTargetUrl(rootInput: string | undefined, target: stri
 }
 
 export function openTarget(rootInput: string | undefined, target: string | undefined): void {
-  const url = desktopHostTargetUrl(rootInput, target);
-  if (process.platform === "win32") {
-    spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "start", "", url], { detached: true, windowsHide: true, stdio: "ignore" }).unref();
-  } else if (process.platform === "darwin") {
-    spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
-  } else {
-    spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
-  }
+  openExternalUrl(desktopHostTargetUrl(rootInput, target));
 }
