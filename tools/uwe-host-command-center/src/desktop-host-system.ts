@@ -212,18 +212,37 @@ export function runningCommandCenterVersion(): string | null {
 }
 
 /**
- * Eine URL (oder einen Pfad) im Standardprogramm des Systems öffnen — Dienst-
- * Oberflächen, die Release-Seite, der heruntergeladene Installer. Der Prozess
- * wird abgekoppelt, damit das Beenden des Command Centers den geöffneten Browser
- * nicht mitnimmt.
+ * Nur `http`/`https` dürfen geöffnet werden. Die Adresse stammt teils aus der
+ * `.env` des Hosts (`UWE_*_PUBLIC_URL`), also aus Konfiguration statt aus dem
+ * Code — und sie landet in einer Prozess-Kommandozeile. Ein enges Schema-
+ * Fenster hält alles fern, was dort nichts zu suchen hat (`file:`, `javascript:`
+ * und Verwandte).
+ */
+export function isOpenableUrl(url: string): boolean {
+  try {
+    const schema = new URL(url).protocol;
+    return schema === "http:" || schema === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Eine URL im Standardprogramm des Systems öffnen — Dienst-Oberflächen, die
+ * Release-Seite, der Installer-Download. Der Prozess wird abgekoppelt, damit das
+ * Beenden des Command Centers den geöffneten Browser nicht mitnimmt.
+ *
+ * Bewusst ohne Shell: `cmd.exe /c start` würde `&`, `|` und `^` aus der Adresse
+ * als Befehlstrenner lesen — bei einer Adresse aus der `.env` reicht das für
+ * Codeausführung. `explorer.exe` bekommt das Argument über `CreateProcess`
+ * direkt, ohne dass ein Parser dazwischen steht (CodeQL js/command-line-injection).
  */
 export function openExternalUrl(url: string): void {
+  if (!isOpenableUrl(url)) {
+    throw new Error(`Adresse wird nicht geöffnet (nur http/https): ${url}`);
+  }
   if (process.platform === "win32") {
-    spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "start", "", url], {
-      detached: true,
-      windowsHide: true,
-      stdio: "ignore",
-    }).unref();
+    spawn("explorer.exe", [url], { detached: true, windowsHide: true, stdio: "ignore" }).unref();
     return;
   }
   if (process.platform === "darwin") {
