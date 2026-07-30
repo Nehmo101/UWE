@@ -70,7 +70,7 @@ function malwerkHolen() {
     mesh.frustumCulled = false;
     scene.add(mesh);
     malwerk = { renderer: renderer, scene: scene, camera: camera, mesh: mesh, mat: mat };
-  } catch (err) {
+  } catch (_err) {
     malwerkKaputt = true;
   }
   return malwerk;
@@ -111,7 +111,7 @@ function maleVorschau(name) {
   try {
     werk.renderer.render(werk.scene, werk.camera);
     return werk.renderer.domElement.toDataURL("image/png");
-  } catch (err) {
+  } catch (_err) {
     return null;
   }
 }

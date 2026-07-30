@@ -8,7 +8,6 @@ const IC = THREE.IcosahedronGeometry;
 
 const HAUT = 0x555247;
 const HAUT_HELL = 0x6b6754;
-const HAUT_DUNKEL = 0x292f2a;
 const WANGEN_PLATTE = 0x484b40;
 const HORN = 0x7f7259;
 const MAUL = 0x151a17;
