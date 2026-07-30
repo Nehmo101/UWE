@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { HealthBadge } from "@uwe/shared-ui";
 
@@ -7,6 +7,13 @@ import { toMessage } from "../lib/connector-runtime-labels";
 import { OpsSettingsForm } from "./ops/OpsSettingsForm";
 import { OpsSmtpForm } from "./ops/OpsSmtpForm";
 import { OpsGoogleSecretForm } from "./ops/OpsGoogleSecretForm";
+import { OpsAuditLogView } from "./ops/OpsAuditLogView";
+import { OpsMigrationsView } from "./ops/OpsMigrationsView";
+import { OpsSecretsView } from "./ops/OpsSecretsView";
+import { OpsSecurityView } from "./ops/OpsSecurityView";
+import { OpsSetupView } from "./ops/OpsSetupView";
+import { OpsTokensView } from "./ops/OpsTokensView";
+import { OpsWebhooksView } from "./ops/OpsWebhooksView";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
@@ -15,10 +22,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card"
  * Security, Secrets-Status, Migrationen, Audit-Log, API-Tokens, Webhooks und
  * Einstellungen.
  *
- * Each tab is a thin renderer over one `ops-cli` action. The CLI already returns
- * exactly the shape the old Studio page rendered, so this panel deliberately
- * shows the payload rather than re-modelling it — one place to change when a
- * status shape changes, not two.
+ * Jeder Tab lädt genau eine `ops-cli`-Aktion und stellt sie als benannte Felder
+ * dar (`ops/Ops*View`). Die Ansichten lesen jedes Feld defensiv heraus, statt
+ * einer Form zu vertrauen: die Nutzdaten kommen zur Laufzeit vom Host, und eine
+ * geänderte Form soll eine Fläche höchstens lückenhaft machen, nie kaputt. Die
+ * vollständige Antwort bleibt unter „Rohdaten anzeigen" erreichbar.
  */
 
 interface TabDef {
@@ -27,17 +35,19 @@ interface TabDef {
   /** Read-only tabs render their payload; editors set `action` to null. */
   action: OpsAction | null;
   hint: string;
+  /** Darstellung der geladenen Nutzdaten; fehlt sie, bleibt es beim Rohtext. */
+  render?: (data: unknown) => ReactNode;
 }
 
 const TABS: TabDef[] = [
-  { id: "security", label: "Security", action: "security-status", hint: "Sicherheitsübersicht des Hosts." },
-  { id: "secrets", label: "Secrets", action: "secrets-status", hint: "Nur Metadaten — nie ein Klartext-Secret." },
-  { id: "migrations", label: "Migrationen", action: "migration-status", hint: "Angewendete und ausstehende Datenbank-Migrationen." },
-  { id: "audit", label: "Audit-Log", action: "audit-log", hint: "Die letzten sicherheitsrelevanten Ereignisse." },
-  { id: "tokens", label: "API-Tokens", action: "api-tokens-list", hint: "Tokens des Owners. Der Klartext erscheint genau einmal." },
-  { id: "webhooks", label: "Webhooks", action: "webhooks-list", hint: "Endpunkte und die letzten Zustellungen." },
+  { id: "security", label: "Security", action: "security-status", hint: "Sicherheitsübersicht des Hosts.", render: (data) => <OpsSecurityView data={data} /> },
+  { id: "secrets", label: "Secrets", action: "secrets-status", hint: "Nur Metadaten — nie ein Klartext-Secret.", render: (data) => <OpsSecretsView data={data} /> },
+  { id: "migrations", label: "Migrationen", action: "migration-status", hint: "Angewendete und ausstehende Datenbank-Migrationen.", render: (data) => <OpsMigrationsView data={data} /> },
+  { id: "audit", label: "Audit-Log", action: "audit-log", hint: "Die letzten sicherheitsrelevanten Ereignisse.", render: (data) => <OpsAuditLogView data={data} /> },
+  { id: "tokens", label: "API-Tokens", action: "api-tokens-list", hint: "Tokens des Owners. Der Klartext erscheint genau einmal.", render: (data) => <OpsTokensView data={data} /> },
+  { id: "webhooks", label: "Webhooks", action: "webhooks-list", hint: "Endpunkte und die letzten Zustellungen.", render: (data) => <OpsWebhooksView data={data} /> },
   { id: "settings", label: "Einstellungen", action: null, hint: "Systemeinstellungen der Datenbank — bearbeitbar." },
-  { id: "setup", label: "Einrichtung", action: "setup-status", hint: "Was ist konfiguriert, was fehlt noch — ohne Secret-Werte." },
+  { id: "setup", label: "Einrichtung", action: "setup-status", hint: "Was ist konfiguriert, was fehlt noch — ohne Secret-Werte.", render: (data) => <OpsSetupView data={data} /> },
   { id: "smtp", label: "SMTP", action: null, hint: "Mail-Zugangsdaten in der Datenbank. Leer = es gilt .env." },
   { id: "google-login", label: "Google-Login", action: null, hint: "Client-Secret für den Google-Login — Schalter und Client-ID stehen unter Einstellungen → Anmeldung." },
 ];
@@ -135,7 +145,7 @@ export function OpsPanel() {
           ) : busy ? (
             <p className="connector-muted">Lade …</p>
           ) : data ? (
-            <pre className="connector-pre">{JSON.stringify(data, null, 2)}</pre>
+            activeTab.render?.(data) ?? <pre className="connector-pre">{JSON.stringify(data, null, 2)}</pre>
           ) : !error ? (
             <p className="connector-muted">Keine Daten.</p>
           ) : null}
