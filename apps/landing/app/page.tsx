@@ -1,52 +1,32 @@
 import {
-  canAccessStudio,
   getTurnstileConfig,
   resolveBrainPublicBaseUrl,
   resolveFamilyPublicBaseUrl,
   resolvePortalPublicBaseUrl,
   resolveStudioPublicBaseUrl,
 } from "@uwe/auth";
-import {
-  getSystemSettingsSnapshotSafe,
-  STUDIO_LANDING_PAGE_PATHS,
-} from "@uwe/database/settings-service";
 import { UweLandingPage, dayIndex } from "@uwe/shared-ui";
-import { redirect } from "next/navigation";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 
 // Die öffentliche Startseite liest Studio-/Portal-/Brain-/Family-Origin und den
 // Turnstile-Key aus der Laufzeit-Umgebung — deshalb pro Anfrage rendern.
 export const dynamic = "force-dynamic";
 
-const LANDING_PATHS = new Set<string>(STUDIO_LANDING_PAGE_PATHS);
-
-/**
- * Vom Betreiber gewählte Studio-Einstiegsseite; „/today" als sichere Vorgabe.
- * Liest bewusst den Settings-Snapshot statt `getAppRepository()` — der zöge die
- * gesamte Server-Fassade (bis hin zur Bildverarbeitung) in die Startseite.
- */
-async function studioEntryPath(): Promise<string> {
-  const { settings } = await getSystemSettingsSnapshotSafe();
-  const configured = settings.app.defaultLandingPage?.trim();
-  return configured && LANDING_PATHS.has(configured) ? configured : "/worlds";
-}
-
 export default async function LandingPage() {
   const user = await getCurrentAuthUser();
-  if (user) {
-    // Bereits angemeldet: direkt in die passende App statt erneut auswählen zu
-    // lassen. Rollenbewusst, weil die Ziele eigene Origins sind — ein Spieler
-    // auf studio.uwe.example liefe sonst in dessen Zugriffssperre.
-    redirect(
-      canAccessStudio(user)
-        ? `${resolveStudioPublicBaseUrl()}${await studioEntryPath()}`
-        : `${resolvePortalPublicBaseUrl()}/auth/worlds`,
-    );
-  }
 
+  // Der Apex zeigt die Startseite — auch dem, der schon angemeldet ist. Früher
+  // leitete er dann sofort ins Studio weiter; damit war die Startseite für den
+  // eigenen Betreiber unerreichbar, sobald er eine Sitzung hatte. Sie ist aber
+  // genau der Ort, von dem aus man zwischen den Apps wechselt.
+  //
+  // `signedIn` sorgt dafür, dass eine Produktkarte dann direkt in die App führt
+  // statt in eine zweite Anmeldung: die Sitzung gilt über SESSION_COOKIE_DOMAIN
+  // ohnehin auf allen Subdomains.
   const turnstile = getTurnstileConfig();
   return (
     <UweLandingPage
+      signedIn={Boolean(user)}
       studioAppUrl={resolveStudioPublicBaseUrl()}
       portalAppUrl={resolvePortalPublicBaseUrl()}
       brainAppUrl={resolveBrainPublicBaseUrl()}

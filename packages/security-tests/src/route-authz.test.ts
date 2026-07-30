@@ -142,6 +142,16 @@ describe("route authorization — Startseiten-App (Apex-Origin)", () => {
     assert.ok(exists("apps/landing/app/page.tsx"));
   });
 
+  it("zeigt die Startseite auch dem angemeldeten Besucher", () => {
+    // Der Apex leitete Angemeldete früher sofort ins Studio weiter. Damit war
+    // die Startseite für jeden mit Sitzung unerreichbar — also gerade für den
+    // Betreiber. Sie ist aber der Ort, von dem aus man zwischen Studio, Portal,
+    // Brain und Family wechselt.
+    const page = read("apps/landing/app/page.tsx");
+    assert.doesNotMatch(page, /\bredirect\(/, "Der Apex leitet Angemeldete wieder weg");
+    assert.match(page, /signedIn=\{Boolean\(user\)\}/);
+  });
+
   it("riegelt alles außerhalb der Allowlist in der Middleware ab", () => {
     const middleware = read("apps/landing/middleware.ts");
     for (const route of ALLOWED) {

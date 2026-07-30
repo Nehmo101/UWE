@@ -49,6 +49,15 @@ export interface UweLandingPageProps {
   /** Cloudflare Turnstile site key — when set, sign-in requires a human check. */
   turnstileSiteKey?: string | null;
   /**
+   * Ist der Besucher bereits angemeldet? Dann führt eine Produktkarte direkt in
+   * die App, statt eine zweite Anmeldung zu verlangen — die Sitzung gilt über
+   * `SESSION_COOKIE_DOMAIN` ohnehin auf allen Subdomains.
+   *
+   * Die Startseite bleibt damit auch für Angemeldete erreichbar: sie ist der
+   * Ort, von dem aus man zwischen Studio, Portal, Brain und Family wechselt.
+   */
+  signedIn?: boolean;
+  /**
    * Whether to show the owner-only Brain card. Defaults to true. A deployment
    * that wants Brain hidden from the public entry can pass false without
    * changing the component contract.
@@ -70,6 +79,7 @@ export function UweLandingPage({
   brainAppUrl,
   familyAppUrl,
   turnstileSiteKey,
+  signedIn = false,
   brainVisible = true,
   familyVisible = true,
   sceneIndex,
@@ -83,6 +93,19 @@ export function UweLandingPage({
     family: familyAppUrl,
   };
   const appUrlFor = (target: LandingTarget) => APP_URLS[target];
+
+  /**
+   * Angemeldet ist die Karte ein Weg in die App, nicht der Weg zu einem zweiten
+   * Login. Ob das Ziel offensteht, entscheidet die Ziel-App selbst — sie hat ihr
+   * eigenes Zugriffs-Gate und sagt es dort auch.
+   */
+  const openTarget = (target: LandingTarget) => {
+    if (signedIn) {
+      window.location.assign(appUrlFor(target));
+      return;
+    }
+    setView(target);
+  };
 
   return (
     <AppAccentScope app="studio" layout="block">
@@ -110,7 +133,7 @@ export function UweLandingPage({
                 <h1 className="uwe-lp-title">Universeller Welten-Editor</h1>
               </div>
               <UweLandingChoices
-                onOpen={setView}
+                onOpen={openTarget}
                 brainVisible={brainVisible}
                 familyVisible={familyVisible}
               />
