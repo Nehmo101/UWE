@@ -13,6 +13,7 @@ import {
 import { prisma } from "@uwe/database/server";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
+import { formatRecipeForCardAction } from "../../recipe-card-actions";
 import {
   archiveRecipeAction,
   updateRecipeAction,
@@ -136,6 +137,51 @@ export default async function FamilyRecipeDetailPage({ params }: Props) {
           </ol>
         </section>
       ) : null}
+
+      <section className="family-section family-print-hide">
+        <h2>Auf Karte drucken</h2>
+        <p className="family-muted">
+          6×4 Zoll, wie die Etiketten. <strong>Kurzfassung</strong> presst alles auf eine Karte —
+          gut für den Kühlschrank. <strong>Kartenset</strong> legt Zutaten und Schritte auf mehrere
+          Karten, sodass nichts verloren geht.
+        </p>
+        <div className="family-head-actions">
+          <a
+            className="family-btn family-btn-sm"
+            href={`/api/kitchen/recipes/${recipe.id}/card?mode=compact&format=pdf`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Kurzfassung (PDF)
+          </a>
+          <a
+            className="family-btn family-btn-sm"
+            href={`/api/kitchen/recipes/${recipe.id}/card?mode=set&format=pdf`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Kartenset (PDF)
+          </a>
+          <a
+            className="family-btn family-btn-ghost family-btn-sm"
+            href={`/api/kitchen/recipes/${recipe.id}/card?mode=compact&format=html`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Vorschau
+          </a>
+        </div>
+        <form action={formatRecipeForCardAction} style={{ marginTop: "0.75rem" }}>
+          <input type="hidden" name="id" value={recipe.id} />
+          <button type="submit" className="family-btn family-btn-ghost family-btn-sm">
+            Schritte per KI für die Karte kürzen
+          </button>
+        </form>
+        <p className="family-muted">
+          Die KI läuft auf dem eigenen Rechner (RTX). Ist er aus, bleibt das Rezept unverändert —
+          drucken lässt es sich trotzdem.
+        </p>
+      </section>
 
       <section className="family-section family-print-hide">
         <h2>Bild</h2>
