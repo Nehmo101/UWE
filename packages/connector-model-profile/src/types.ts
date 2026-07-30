@@ -11,10 +11,10 @@
  * connector tool owns reading/writing the JSON file.
  */
 
-import type { ConnectorModelType } from "@uwe/connector";
+import type { ConnectorModelType } from "@uwe/connector/model-types";
 
-export type { ConnectorModelType } from "@uwe/connector";
-export { CONNECTOR_MODEL_TYPES } from "@uwe/connector";
+export type { ConnectorModelType } from "@uwe/connector/model-types";
+export { CONNECTOR_MODEL_TYPES } from "@uwe/connector/model-types";
 
 /** Where a profile originated. */
 export const CONNECTOR_MODEL_SOURCES = [

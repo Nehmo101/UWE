@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CONNECTOR_MODEL_TYPES, type ConnectorModelType } from "@uwe/connector";
+import { CONNECTOR_MODEL_TYPES, type ConnectorModelType } from "@uwe/connector/model-types";
 
 import { modelProfileKey } from "./key";
 import {

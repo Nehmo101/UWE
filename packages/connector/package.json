@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
+    "./model-types": "./src/model-types.ts",
     "./direct": "./src/direct/index.ts"
   },
   "scripts": {
