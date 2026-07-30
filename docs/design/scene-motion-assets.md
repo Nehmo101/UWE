@@ -92,6 +92,42 @@ eine spätere Nachbestellung dieselbe Welt trifft:
 > No people, no creatures, no buildings in the foreground, no text, no logos, no
 > watermark, no lens flare, no sparkles, no heavy shadows.
 
+### Wie die Ranken in den Ursprungsbildern tatsächlich aussehen
+
+Nachgesehen in `assets/scenes/`, vor allem in `nacht-desktop/06-wueste-riesenwurzeln`,
+`tag-desktop/04-gruenes-tal-wurzelbruecken`, `nacht-desktop/04-moor-lichtranken`
+und `tag-desktop/09-nebelsee-wurzelbaum`. Sechs Eigenschaften, alle
+bildbestimmend:
+
+1. **Sie verlassen das Bild nach oben.** In *jedem* der vier Bilder laufen die
+   Wurzeln über den oberen Bildrand hinaus. Es gibt nirgends eine sichtbare
+   Spitze und nirgends ein Auslaufen ins Nichts. Genau daher kommt die
+   Unendlichkeit — nicht aus Dunst, sondern aus dem **Bildrand**. Eine Wurzel,
+   deren Ende man sieht, hat ein Maß; eine, die aus dem Bild läuft, nicht.
+2. **Sie sind Bündel aus vielen Strängen, keine glatten Säulen.** Jede Wurzel
+   besteht aus Dutzenden paralleler Fasern, die sich langsam umeinander drehen,
+   mit tief liegenden Schattenrillen dazwischen. In `09-nebelsee-wurzelbaum`
+   kann man einzelne Stränge über- und untereinander verfolgen. Das ist der
+   Grund, warum sie *gewachsen* wirken und nicht gegossen.
+3. **Unten spreizen sie sich zu einem Wurzelfuß.** Wo sie Boden oder Wasser
+   treffen, fächern sie in viele einzelne Wurzeln auf, greifen über Fels,
+   spannen sich über Wasser. Der Fuß ist breit und vielbeinig, der Stamm
+   sammelt sich erst nach oben.
+4. **Sie drehen sich.** Das Bündel rotiert über seine Länge in einer langsamen
+   Spirale.
+5. **Farbe ist nicht flaches Weiß.** Warmes Elfenbein auf den belichteten
+   Graten, kühles Blaugrau in den Rillen. Nachts kommt das Licht aus den Rillen
+   heraus — die Wurzel leuchtet von innen zwischen den Strängen.
+6. **Sie tragen Leben und geben dadurch Maßstab.** Blattplattformen,
+   Wasserfälle, winzige Bauten hängen an ihnen. Ohne etwas Kleines daran liest
+   sich die Größe nicht.
+
+**Was in der ersten Charge falsch war:** glatte, geschlossene Oberflächen (sie
+lasen sich als gegossenes Harz, Stoff oder Dampf), spitz zulaufende Enden
+mitten im Bild, freistehende Säulen ohne Wurzelfuß, keine Drehung, kein
+kleines Detail für den Maßstab. Family und Portal zeigen sichtbare Spitzen —
+das ist der Fehler, der zuerst weg muss.
+
 **Die Ranken wachsen nach oben, nicht über den Himmel.** Sie steigen senkrecht
 aus der Landschaft auf, verjüngen sich beim Klettern und verlieren sich weit
 oben in den hohen Wolken — das Auge findet kein Ende. Das ist die Eigenschaft,
@@ -99,11 +135,15 @@ die sie ehrwürdig macht: nicht ihre Breite, sondern dass man ihnen nicht bis
 zur Spitze folgen kann. Bögen, die sich über den Himmel spannen und wieder
 herunterkommen, haben ein Ende und wirken dadurch klein.
 
-Der Satz dafür im Prompt:
+Der Satz dafür im Prompt — die Fassung nach der Analyse oben:
 
-> Colossal pale ivory root-columns rise vertically out of the landscape and
-> grow upward into the sky, tapering as they climb, their tops disappearing
-> into the high clouds far above — so tall the eye cannot find their end.
+> Colossal pale roots rise out of the landscape and climb upward. Each root is
+> a thick bundle of many parallel fibrous strands twisted slowly around each
+> other, with deep shadowed grooves between them; warm ivory on the lit ridges,
+> cool blue-grey in the grooves. At the bottom each one splays into dozens of
+> separate roots that grip the rock and arch over the ground. They DO NOT taper
+> to a point and DO NOT end anywhere inside the picture — each one is cut off
+> by the TOP EDGE of the frame and continues beyond it.
 
 Drei Dinge daran sind aus Fehlversuchen gelernt und keine Geschmacksfrage:
 
