@@ -317,32 +317,33 @@ Abend mit Fensterlichtern und Glühwürmchen. Untere Bildhälfte offene Wiese.
 | `family-hell-mobil` | `019fb383-1380-7033-9a8c-81e941182fda` | `019fb384-1987-7ac0-82bb-63f265d8605e` |
 | `family-dunkel-mobil` | `019fb383-8189-7282-aa94-9f15c27c62ab` | `019fb384-604e-78d6-a35b-bde6ba143ea1` |
 
-### Portal — fertig generiert
+### Portal — neu generiert (Fassung 2)
 
-Küstenebene mit Wurzelsäulen im flachen Wasser, fernes Tor und Dammweg am
-Horizont; Mittag bzw. Nacht mit Mondbahn und warmen Lichtern. Untere
-Bildhälfte stilles Wasser und heller Sand.
-
-| Zieldatei | Standbild | Clip |
-|---|---|---|
-| `portal-hell-desktop` | `019fb385-d7d3-78b6-b3fd-4b8c0e32ef4b` | `019fb387-1314-7d90-b037-2ab726b5da96` |
-| `portal-dunkel-desktop` | `019fb387-0100-7261-85b0-284fd4c817b8` | `019fb387-fcff-775e-840b-0b47b16c437f` |
-| `portal-hell-mobil` | `019fb387-3560-70c2-b4ed-abe846c6dbf4` | `019fb388-423a-7346-9265-40e483fc38ed` |
-| `portal-dunkel-mobil` | `019fb388-0be4-781c-82ef-d0d12ab61a74` | `019fb388-eb94-79c4-914d-373b3447ff9a` |
-
-### Studio — fertig generiert
-
-Werkstattterrasse an einer Wurzelsäule über einem Tal im Dunst; weiches
-Morgenlicht bzw. Nacht mit Laterne. Die ruhigste Komposition von allen: die
-untere Bildhälfte ist blanke Diele, damit lange Arbeitssitzungen angenehm
-bleiben.
+Küstenflachwasser mit drei Wurzelbündeln, die in ihren eigenen Spiegelungen
+stehen; Wurzelfüße greifen über halb versunkenen Fels. Blattplattform mit
+winzigen Bauten und ein Wasserfall, der ins Meer fällt. Fernes Tor am Horizont.
+Nachts Mondsichel, Mondbahn und warme Fensterlichter.
 
 | Zieldatei | Standbild | Clip |
 |---|---|---|
-| `studio-hell-desktop` | `019fb38a-68c4-719a-ae89-ae7df2b32ca9` | `019fb38b-47b9-7eaa-8b48-636d96a01ce2` |
-| `studio-dunkel-desktop` | `019fb38b-5502-79fa-a799-0d5d22d79bd1` | `019fb38c-44d5-790f-a95c-b7db482810ee` |
-| `studio-hell-mobil` | `019fb38b-7297-7de6-bd52-2fd5a8428d3a` | `019fb38c-91fc-7549-8c8f-34eb37a7b95b` |
-| `studio-dunkel-mobil` | `019fb38c-5419-7a0d-825a-8dd3c67756a1` | `019fb38d-42c3-7808-b5fc-a58e52bbcd77` |
+| `portal-hell-desktop` | `019fb39d-722f-7d71-a569-61c9667962aa` | `019fb39e-ba37-7f37-acd6-cd02aa4b8fc0` |
+| `portal-dunkel-desktop` | `019fb39e-a7c1-75b7-8ce2-9a1f9f2524cb` | `019fb39f-ac64-7b13-bd4a-4c7689234fd3` |
+| `portal-hell-mobil` | `019fb39e-e1f3-7428-970c-250b2a09c3bd` | `019fb39f-e270-7549-a10b-95134476049a` |
+| `portal-dunkel-mobil` | `019fb39f-c024-7fdb-9d01-b837bd93563d` | `019fb3a0-c957-7493-83a7-06a72b8ca39a` |
+
+### Studio — neu generiert (Fassung 2)
+
+Werkstattterrasse in der Astgabel eines Wurzelbündels; die Wurzel spreizt sich
+und trägt die Diele. Hängende Ranken und Blätter als Maßstab, dazu Tisch,
+Papierrollen und Laterne. Zweite Wurzel im Dunst. Die ruhigste Komposition:
+untere Bildhälfte und linke Seite sind blanke Diele. Nachts brennt die Laterne.
+
+| Zieldatei | Standbild | Clip |
+|---|---|---|
+| `studio-hell-desktop` | `019fb3a0-0a62-7e4e-b0a0-e28a81c2b249` | `019fb3a1-6e2d-7367-8b83-cc973cc7e24c` |
+| `studio-dunkel-desktop` | `019fb3a1-5c51-7b1d-862c-bf1f461e701a` | `019fb3a2-60a3-74f2-bb1c-b51d40ce41cf` |
+| `studio-hell-mobil` | `019fb3a1-a1ac-7410-81bf-7e2ab4246ac3` | `019fb3a2-b2df-772e-b60e-4114643e1e54` |
+| `studio-dunkel-mobil` | `019fb3a2-955e-78a1-858b-56e8f9202247` | `019fb3a3-8ea4-7a0e-90dd-cc80b2ab1a7d` |
 
 ### Brain — fertig generiert
 
@@ -357,15 +358,15 @@ Gehirngrafik und keine Neon-Neuronen. Dämmerung bzw. tiefe Nacht.
 | `brain-hell-mobil` | `019fb38f-2cfd-797c-afa4-e104f1e83138` | `019fb390-2b62-7361-a6a7-14f4922657ab` |
 | `brain-dunkel-mobil` | `019fb38f-eb5f-76b2-912e-3f999af91ca2` | `019fb390-f04c-77d1-b7f1-8627e272095b` |
 
-### Offen: Rankenkorrektur für Family, Portal, Studio und Brain
+### Offen: Rankenkorrektur für Family und Brain
 
-Die sechzehn Fassungen dieser vier Bereiche stammen aus der Charge **vor** der
-Rankenanalyse. Ihre Wurzeln sind glatte, geschlossene Säulen ohne Strangbündel
-und ohne Wurzelfuß; bei Family und Portal laufen sie zusätzlich spitz zu und
-enden damit sichtbar im Bild. Sie brauchen dieselbe Neufassung wie Landing.
+Landing, Portal und Studio tragen die korrigierten Wurzeln. Family und Brain
+stammen noch aus der Charge **vor** der Rankenanalyse: glatte, geschlossene
+Säulen ohne Strangbündel und ohne Wurzelfuß, bei Family zusätzlich spitz
+zulaufend und damit sichtbar im Bild endend.
 
-Aufwand: 16 Standbilder à 100 und 16 Clips à 300 Credits, zusammen 6 400. Das
-übersteigt den Rest des laufenden Kontingents; die Credits erneuern sich am
+Aufwand: 8 Standbilder à 100 und 8 Clips à 300 Credits, zusammen 3 200. Das
+laufende Kontingent ist damit erschöpft; die Credits erneuern sich am
 30. August.
 
 ### Clip-Länge und Nachbearbeitung
