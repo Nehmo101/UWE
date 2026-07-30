@@ -69,14 +69,10 @@ fn build_host_command(
                 } else {
                     configure_hidden_process(&mut command);
                 }
-                command
-                    .arg(cli)
-                    .arg(action)
-                    .current_dir(&runtime)
-                    .env(
-                        "UWE_COMMAND_CENTER_DATA_DIR",
-                        connector_app_data_dir()?.join("host"),
-                    );
+                command.arg(cli).arg(action).current_dir(&runtime).env(
+                    "UWE_COMMAND_CENTER_DATA_DIR",
+                    connector_app_data_dir()?.join("host"),
+                );
                 if let Some(target) = target {
                     command.arg("--target").arg(target);
                 }
@@ -781,7 +777,10 @@ pub async fn get_install_selection(root: Option<String>) -> Result<Value, String
 }
 
 #[tauri::command]
-pub async fn set_install_selection(root: Option<String>, selection: Value) -> Result<Value, String> {
+pub async fn set_install_selection(
+    root: Option<String>,
+    selection: Value,
+) -> Result<Value, String> {
     let body = serde_json::to_string(&selection)
         .map_err(|error| format!("App-Auswahl konnte nicht serialisiert werden: {error}"))?;
     tauri::async_runtime::spawn_blocking(move || {
