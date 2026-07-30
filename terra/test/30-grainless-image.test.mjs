@@ -60,7 +60,10 @@ test('malerische Flaechen bleiben, Tiefenstaffelung ist rein tonal und scharf', 
 
 test('Retina-Aufloesung bleibt bei Asset-Schau, Resize und Depth-Pass konsistent', () => {
   assert.doesNotMatch(pipeline, /assetSchauDpr|schau'\)\s*===\s*'assets'\s*\?\s*1\.5/);
-  assert.match(pipeline, /berechneRenderMasse\(w,\s*h,\s*window\.devicePixelRatio\)/);
+  // Seit der Leistungsrunde nimmt der Aufruf die adaptive Renderskala als
+  // vierten Parameter mit — ohne Skala (1) ist das Ergebnis byteidentisch.
+  assert.match(pipeline,
+    /berechneRenderMasse\(w,\s*h,\s*window\.devicePixelRatio,\s*renderSkala\)/);
   assert.match(pipeline, /new THREE\.WebGLRenderTarget\(\s*w,\s*h,/);
   assert.match(pipeline, /composer\.setPixelRatio\(pr\)/);
   assert.doesNotMatch(pipeline, /bloomPass\.setSize\(w,\s*h\)/);

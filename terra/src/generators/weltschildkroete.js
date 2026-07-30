@@ -199,6 +199,16 @@ function baueKoerperGeometrie() {
   }
   p.push(part(new CO(1.2, 3.3, 6),
     M(0, 5.15, -9.15, -Math.PI / 2, 0, 0), HAUT_DUNKEL));
+  // Gesichtsrunde: Halskragen und Brustpartie. Der Hals (eigenes Kopf-Mesh)
+  // tritt bei (0, 4.75, 7.15) aus dem Koerper — eine weiche Hautfalte um die
+  // Austrittsstelle und eine helle Brustplatte darunter verzahnen ihn mit dem
+  // Rumpf, statt ihn aufgesteckt wirken zu lassen.
+  p.push(part(new TO(2.55, 0.62, 8, 16),
+    M(0, 4.85, 6.7, -0.5, 0, 0, 1.06, 1, 0.92), HAUT));
+  p.push(part(new TO(2.9, 0.45, 7, 14),
+    M(0, 4.35, 6.15, -0.44, 0, 0, 1.1, 1, 0.9), HAUT_DUNKEL));
+  p.push(facette(3.1, 1.5, 1.7, 0, 3.35, 6.15, HAUT_HELL, 1));
+  p.push(facette(2.2, 1.05, 1.15, 0, 2.35, 6.9, 0x77705b, 0));
   // Dunkle, gestufte Felsterrassen verzahnen die Burg mit dem Carapax.
   // Polygonale Steinlagen lesen sich wie Last tragendes Mauerwerk.
   p.push(zylinder(6.15, 6.45, 0.42, 0, 10.9, -0.45, 0x35433a, 12));
@@ -403,6 +413,8 @@ BASIS_KOERPER.userData.terraBurgMaterial = 'dunkler-verwitterter-stein';
 BASIS_KOERPER.userData.terraPanzerFlankenplatten = 8;
 BASIS_KOERPER.userData.terraBurgPanzerstreben = 8;
 BASIS_KOERPER.userData.terraMaterialTrennung = 'haut-panzer-basalt-schiefer-metall';
+BASIS_KOERPER.userData.terraHalsKragen = 'doppelte-hautfalte';
+BASIS_KOERPER.userData.terraBrustplatte = true;
 var koepfe = [];
 
 function setzeTransform(mesh, x, y, z, yaw, groesse) {

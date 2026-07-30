@@ -2,15 +2,21 @@ import * as THREE from 'three';
 import { M, mergeGeos, part } from '../assets/geometrie-hilfen.js';
 
 const PL = THREE.PlaneGeometry;
+const SP = THREE.SphereGeometry;
+const TO = THREE.TorusGeometry;
+const IC = THREE.IcosahedronGeometry;
 
 const HAUT = 0x555247;
+const HAUT_HELL = 0x6b6754;
 const HAUT_DUNKEL = 0x292f2a;
-const SCHAEDEL_PLATTE = 0x625d50;
 const WANGEN_PLATTE = 0x484b40;
 const HORN = 0x7f7259;
 const MAUL = 0x151a17;
-const AUGE = 0x0d1312;
-const IRIS = 0x8f6938;
+const LID = 0x32362e;
+const AUGE = 0x11100c;
+const IRIS = 0x9a7440;
+const PUPILLE = 0x0a0c0a;
+const GLANZ = 0xdfe7dc;
 
 function laengsKoerperGeo(ringe) {
   if (!ringe || ringe.length < 2 ||
@@ -59,6 +65,10 @@ function laengsKoerperGeo(ringe) {
   return geometrie;
 }
 
+/**
+ * Ein duennes Band entlang einer Punktfolge — die Maulnaht. Jedes Segment ist
+ * ein vertikales Baendchen; die Folge darf frei um die Schnauze herumlaufen.
+ */
 function maulnahtGeo(punkte, halbeDicke) {
   var position = [];
   for (var i = 0; i < punkte.length - 1; i++) {
@@ -196,22 +206,23 @@ function setzeKopfVertrag(geometrie) {
   daten.terraKopfLaengenFaktor = 1.31;
   daten.terraKopfSchwereFaktor = 1.17;
   daten.terraKopfNeigungGrad = 10;
-  daten.terraKopfForm = 'adulter-laengsschaedel-hornschnabel';
-  daten.terraSchaedelSilhouette = 'schwer-lang-hinten-breit-stumpfer-schnabel';
-  daten.terraSchaedelplatten = 4;
+  daten.terraKopfForm = 'runder-schaedel-freundlicher-hornschnabel';
+  daten.terraSchaedelSilhouette = 'gewoelbte-stirn-hinten-breit-stumpfer-schnabel';
+  daten.terraSchaedelplatten = 5;
   daten.terraSchaedelVerjuengung = 0.37;
   daten.terraBrauenplatten = 2;
-  daten.terraBrauenUeberstand = 0;
+  daten.terraBrauenUeberstand = 0.14;
   daten.terraWangenplatten = 2;
   daten.terraWangenUeberstand = 0;
-  daten.terraAugenFlaechenFaktor = 0.18;
+  daten.terraAugenFlaechenFaktor = 0.42;
   daten.terraAugenWeissanteil = 0;
-  daten.terraAugenLichtpunkt = 'keiner';
-  daten.terraAugenLage = 'seitlich-tief-hinter-schnauzenbasis';
-  daten.terraAugenFrontsicht = 'nicht-sichtbar';
+  daten.terraAugenLichtpunkt = 'klein-oben-vorn';
+  daten.terraAugenLage = 'seitlich-hoch-vor-schlaefe';
+  daten.terraAugenFrontsicht = 'dreiviertel-sichtbar';
+  daten.terraAugenAufbau = 'lidring-augapfel-iris-pupille-glanzpunkt';
   daten.terraSchnabelProfil = 'stumpfer-durchgehender-hornkeil';
-  daten.terraMaulnaht = 'seitlich-lang-frontal-extrem-kurz';
-  daten.terraMaulnahtSegmente = 4;
+  daten.terraMaulnaht = 'laechelnd-seitlich-ansteigend';
+  daten.terraMaulnahtSegmente = 10;
   daten.terraNasenloecher = 'zwei-kleine-schraege-schlitze';
   daten.terraNackenVerzahnung = 'hinterhaupt-kiefermuskel-kehlschild';
   daten.terraHalsFalten = 0;
@@ -231,6 +242,12 @@ function setzeKopfVertrag(geometrie) {
 /**
  * Monumentaler Landschildkroeten-Kopf. Alle anatomischen Teile werden zu
  * einer statischen BufferGeometry verschmolzen und bleiben damit ein Drawcall.
+ *
+ * Gesichtsrunde: der Schaedel ist jetzt ein GESICHT — gewoelbte Stirn,
+ * grosse, seitlich-hohe Augen mit Lidring, Iris und Glanzpunkt (im
+ * Dreiviertelblick klar lesbar), eine laechelnd ansteigende Maulnaht wie bei
+ * einer echten Landschildkroete und ein weiches Kinn, das den Unterkiefer in
+ * den Hals uebergehen laesst.
  */
 export function baueWeltschildkroetenKopf() {
   var p = [], i;
@@ -263,90 +280,127 @@ export function baueWeltschildkroetenKopf() {
     return part(geo, kopfNeigung.clone().multiply(matrix || M()), farbe);
   }
 
-  // Drei laengs gestaffelte Achterprofile bilden Stirn, Schlaefen und
-  // Kieferansatz. Die Frontkappe ist streifenweise trianguliert und besitzt
-  // weder Mittelpunkt noch radialen Stern.
+  // Fuenf laengs gestaffelte Achterprofile: rundes Hinterhaupt, gewoelbte
+  // Stirnkuppel, Augenlinie, Schnauzenbasis und Schnauzenende. Die Kappen
+  // sind streifenweise trianguliert — kein Mittelpunkt, kein Sternfaecher.
   var schaedel = laengsKoerperGeo([
-    { z: -1.7, punkte: [
-      [0, 1.35], [-1.75, 1.18], [-2.4, 0.35], [-2.15, -0.75],
-      [0, -1.2], [2.15, -0.75], [2.4, 0.35], [1.75, 1.12]
+    { z: -1.85, punkte: [
+      [0, 1.16], [-1.6, 1.0], [-2.38, 0.3], [-1.98, -0.74],
+      [0, -1.08], [1.98, -0.74], [2.38, 0.3], [1.6, 1.0]
     ] },
-    { z: -0.2, punkte: [
-      [0, 1.5], [-1.82, 1.2], [-2.45, 0.15], [-1.98, -0.95],
-      [0, -1.15], [1.98, -0.95], [2.45, 0.15], [1.82, 1.1]
+    { z: -0.85, punkte: [
+      [0, 1.54], [-1.88, 1.3], [-2.48, 0.34], [-2.1, -0.92],
+      [0, -1.22], [2.1, -0.92], [2.48, 0.34], [1.88, 1.3]
     ] },
-    { z: 1.25, punkte: [
-      [0, 1.0], [-1.3, 0.84], [-1.75, 0.15], [-1.42, -0.7],
-      [0, -0.76], [1.42, -0.7], [1.75, 0.15], [1.3, 0.78]
+    { z: 0.35, punkte: [
+      [0, 1.36], [-1.64, 1.14], [-2.06, 0.26], [-1.72, -0.86],
+      [0, -1.06], [1.72, -0.86], [2.06, 0.26], [1.64, 1.14]
     ] },
-    { z: 2.45, punkte: [
-      [0, 0.4], [-0.85, 0.36], [-1.13, 0.06], [-1.02, -0.58],
-      [0, -0.68], [1.02, -0.58], [1.13, 0.06], [0.85, 0.36]
+    { z: 1.5, punkte: [
+      [0, 0.8], [-1.06, 0.63], [-1.4, 0.12], [-1.2, -0.62],
+      [0, -0.78], [1.2, -0.62], [1.4, 0.12], [1.06, 0.63]
+    ] },
+    { z: 2.5, punkte: [
+      [0, 0.44], [-0.82, 0.36], [-1.06, 0.05], [-0.96, -0.52],
+      [0, -0.64], [0.96, -0.52], [1.06, 0.05], [0.82, 0.36]
     ] }
   ]);
   p.push(kopfTeil(schaedel, M(0, 10.42, 6.35), HAUT));
 
   // Nur die stumpfe Endkappe ist Horn. Die lange Schnauze bleibt Teil des
-  // Hautschaedels und kann deshalb nicht mehr wie ein aufgesetzter Entenbill
-  // oder eine helle Steinmaske gelesen werden.
+  // Hautschaedels; der Hornkeil rundet vorn weich ab statt zu einer Kante
+  // auszulaufen — die freundliche, stumpfe Nase einer Landschildkroete.
   var schnabel = laengsKoerperGeo([
-    { z: -0.3, punkte: [
-      [0, 0.4], [-0.82, 0.36], [-1.12, 0.06], [-1.01, -0.54],
-      [0, -0.62], [1.01, -0.54], [1.12, 0.06], [0.82, 0.36]
+    { z: -0.35, punkte: [
+      [0, 0.42], [-0.8, 0.36], [-1.08, 0.06], [-0.98, -0.54],
+      [0, -0.62], [0.98, -0.54], [1.08, 0.06], [0.8, 0.36]
     ] },
-    { z: 0.3, punkte: [
-      [0, 0.15, 0.045], [-0.64, 0.22], [-0.88, 0.02, -0.02],
-      [-0.8, -0.48, -0.12], [0, -0.56, -0.15],
-      [0.8, -0.48, -0.12], [0.88, 0.02, -0.02], [0.64, 0.22]
+    { z: 0.32, punkte: [
+      [0, 0.18, 0.05], [-0.62, 0.24], [-0.78, 0.03, -0.03],
+      [-0.68, -0.42, -0.13], [0, -0.5, -0.16],
+      [0.68, -0.42, -0.13], [0.78, 0.03, -0.03], [0.62, 0.24]
     ] }
   ]);
-  p.push(kopfTeil(schnabel, M(0, 10.36, 9.15), HORN));
+  p.push(kopfTeil(schnabel, M(0, 10.34, 9.2), HORN));
 
-  // Der Unterkiefer bleibt deutlich hinter der Hornspitze. Nur ein sehr
-  // kurzer frontaler Spalt ist sichtbar; die lange Naht liegt seitlich.
+  // Der Unterkiefer bleibt deutlich hinter der Hornspitze; ein weiches Kinn
+  // und eine Kehlwoelbung lassen ihn in den Hals uebergehen statt frei zu
+  // schweben.
   var unterkiefer = laengsKoerperGeo([
     { z: -0.95, punkte: [
       [0, 0.34], [-0.88, 0.29], [-1.22, 0.05], [-1.08, -0.3],
-      [0, -0.37], [1.08, -0.3], [1.22, 0.05], [0.88, 0.29]
+      [0, -0.4], [1.08, -0.3], [1.22, 0.05], [0.88, 0.29]
     ] },
     { z: 0.55, punkte: [
-      [0, 0.22], [-0.5, 0.18], [-0.72, 0.03], [-0.63, -0.2],
-      [0, -0.26], [0.63, -0.2], [0.72, 0.03], [0.5, 0.18]
+      [0, 0.22], [-0.5, 0.18], [-0.72, 0.03], [-0.63, -0.22],
+      [0, -0.3], [0.63, -0.22], [0.72, 0.03], [0.5, 0.18]
     ] }
   ]);
   p.push(kopfTeil(unterkiefer, M(0, 9.83, 8.45), WANGEN_PLATTE));
-  p.push(kopfTeil(maulnahtGeo([
-    new THREE.Vector3(-0.25, 9.82, 9.455),
-    new THREE.Vector3(0, 9.8, 9.46),
-    new THREE.Vector3(0.25, 9.82, 9.455)
-  ], 0.008), M(), MAUL));
+  p.push(kopfTeil(new SP(1, 12, 8),
+    M(0, 9.5, 7.75, 0, 0, 0, 0.74, 0.46, 0.95), WANGEN_PLATTE));
+
+  // Laechelnde Maulnaht: vorn ein kurzer Spalt unter der Hornkappe, seitlich
+  // eine lange, zu den Mundwinkeln hin ANSTEIGENDE Linie — das klassische
+  // Schildkroetenlaecheln, im Profil wie im Dreiviertelblick lesbar.
+  var laecheln = [
+    new THREE.Vector3(-1.74, 10.24, 7.3),
+    new THREE.Vector3(-1.58, 10.08, 7.78),
+    new THREE.Vector3(-1.36, 9.97, 8.2),
+    new THREE.Vector3(-1.02, 9.9, 8.66),
+    new THREE.Vector3(-0.62, 9.86, 9.1),
+    new THREE.Vector3(0, 9.84, 9.42),
+    new THREE.Vector3(0.62, 9.86, 9.1),
+    new THREE.Vector3(1.02, 9.9, 8.66),
+    new THREE.Vector3(1.36, 9.97, 8.2),
+    new THREE.Vector3(1.58, 10.08, 7.78),
+    new THREE.Vector3(1.74, 10.24, 7.3)
+  ];
+  p.push(kopfTeil(maulnahtGeo(laecheln, 0.03), M(), MAUL));
 
   for (i = -1; i <= 1; i += 2) {
-    var seitenDrehung = i * 1.31;
-    // Eine kleine, flach anliegende Schlaefenplatte ersetzt die frueheren
-    // dunklen Maschinenbalken. Sie bleibt innerhalb der Schaedelsilhouette.
-    p.push(kopfTeil(new PL(0.5, 0.26),
-      M(i * 2.42, 10.3, 5.72, 0, seitenDrehung, 0), SCHAEDEL_PLATTE));
+    // Blickrichtung des Auges: seitlich-hoch, leicht nach vorn — im
+    // Dreiviertelblick voll sichtbar, frontal als schmale Mandel.
+    var augRy = i * 1.02;
+    var augRx = -0.14;
+    var ax = i * 1.82, ay = 11.0, az = 6.92;
+    var nx = Math.sin(augRy) * Math.cos(augRx);
+    var ny = -Math.sin(augRx);
+    var nz = Math.cos(augRy) * Math.cos(augRx);
 
-    // Das Auge sitzt klein, tief und deutlich hinter der Schnauzenbasis. Im
-    // Dreiviertelblick erscheint eine schmale Iris; frontal bleibt es verdeckt.
-    p.push(kopfTeil(new PL(0.34, 0.16),
-      M(i * 2.445, 10.67, 5.9, 0, seitenDrehung, 0), HAUT_DUNKEL));
-    p.push(kopfTeil(new PL(0.14, 0.058),
-      M(i * 2.458, 10.66, 5.89, 0, seitenDrehung, 0), AUGE));
-    p.push(kopfTeil(new PL(0.038, 0.032),
-      M(i * 2.465, 10.66, 5.89, 0, seitenDrehung, 0), IRIS));
+    // Lidring: ein flacher Torus fasst das Auge wie ein wulstiges Lid.
+    p.push(kopfTeil(new TO(0.4, 0.095, 7, 14),
+      M(ax, ay, az, augRx, augRy, 0, 1, 0.92, 1), LID));
+    // Augapfel als dunkle Kuppel im Lidring.
+    p.push(kopfTeil(new SP(1, 12, 8),
+      M(ax - nx * 0.05, ay - 0.02, az - nz * 0.05,
+        augRx, augRy, 0, 0.36, 0.32, 0.26), AUGE));
+    // Warme Iris und tiefe Pupille als flache Kuppeln auf dem Augapfel.
+    p.push(kopfTeil(new SP(1, 10, 7),
+      M(ax + nx * 0.17, ay + ny * 0.17 - 0.01, az + nz * 0.17,
+        augRx, augRy, 0, 0.21, 0.19, 0.07), IRIS));
+    p.push(kopfTeil(new SP(1, 9, 6),
+      M(ax + nx * 0.225, ay + ny * 0.225 - 0.01, az + nz * 0.225,
+        augRx, augRy, 0, 0.115, 0.105, 0.05), PUPILLE));
+    // Kleiner Glanzpunkt oben-vorn: er macht das Auge lebendig.
+    p.push(kopfTeil(new SP(1, 8, 6),
+      M(ax + nx * 0.23 + i * 0.03, ay + 0.09, az + nz * 0.23 + 0.05,
+        0, 0, 0, 0.05, 0.045, 0.035), GLANZ));
 
-    // Seitliche Maulnaht: lang im Profil, nahezu kantenunsichtbar von vorn.
-    p.push(kopfTeil(new PL(1.5, 0.022),
-      M(i * 1.06, 9.98, 8.35, 0, i * Math.PI / 2, 0), MAUL));
+    // Brauenwulst ueber dem Auge: der wache, freundliche Ausdruck einer
+    // alten Landschildkroete — er ueberragt das Lid leicht.
+    p.push(kopfTeil(new IC(1, 0),
+      M(i * 1.72, 11.42, 6.72, 0.12, i * 0.5, -i * 0.26, 0.58, 0.2, 0.4),
+      HAUT_HELL));
+    // Wangenschuppe unterhalb des Auges, flach anliegend.
+    p.push(kopfTeil(new SP(1, 9, 6),
+      M(i * 1.95, 10.3, 6.35, 0, augRy, 0, 0.34, 0.28, 0.07),
+      WANGEN_PLATTE));
 
-    // Winzige, tiefliegende Schlitznasen auf der stumpfen Hornkappe.
-    p.push(kopfTeil(new PL(0.056, 0.013),
-      M(i * 0.15, 10.11, 9.492, 0, 0, i * 0.58), MAUL));
+    // Winzige, schraege Schlitznasen oben auf der stumpfen Hornkappe.
+    p.push(kopfTeil(new PL(0.07, 0.028),
+      M(i * 0.17, 10.55, 9.47, -0.85, 0, i * 0.5), MAUL));
   }
-
-
 
   var geometrie = mergeGeos(p);
   setzeKopfVertrag(geometrie);

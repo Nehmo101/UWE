@@ -55,3 +55,5 @@ import './35-luftinseln-hochbambus.test.mjs';
 import './36-luftsysteme.test.mjs';
 import './37-luftschau.test.mjs';
 import './38-final-art-pass.test.mjs';
+import './43-render-masse.test.mjs';
+import './44-leistungsregler.test.mjs';
