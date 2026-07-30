@@ -42,7 +42,7 @@ export function StatGrid({
         >
           <span className="block text-2xl font-semibold leading-tight text-foreground">{stat.value}</span>
           <span className="block text-xs text-muted-foreground">{stat.label}</span>
-          {stat.hint && <span className="mt-1 block text-[0.72rem] text-muted-foreground">{stat.hint}</span>}
+          {stat.hint && <span className="mt-1 block text-[length:var(--uwe-text-2xs)] text-muted-foreground">{stat.hint}</span>}
         </div>
       ))}
     </div>

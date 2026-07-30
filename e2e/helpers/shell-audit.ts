@@ -47,6 +47,8 @@ export interface ShellAuditResult {
   tinyText: ShellAuditFinding[];
   smallTargets: ShellAuditFinding[];
   skipLinkTarget: string | null;
+  /** Text jeder `h1` auf der Seite. Genau eine ist richtig. */
+  topHeadings: string[];
 }
 
 /**
@@ -146,6 +148,17 @@ export async function auditShell(page: Page, minTouch: number): Promise<ShellAud
         }
       }
 
+      // --- Seitenüberschrift ------------------------------------------------
+      // Zwei `h1` sind kein Schönheitsfehler: der Screenreader meldet zwei
+      // Seitenüberschriften und die Gliederung hat keine eindeutige Spitze
+      // mehr. Im Welt-Cockpit stand der Weltname deshalb zweimal untereinander.
+      const topHeadings = Array.from(document.querySelectorAll("h1"))
+        .filter((node) => {
+          const style = getComputedStyle(node);
+          return style.visibility !== "hidden" && style.display !== "none";
+        })
+        .map((node) => (node.textContent ?? "").trim().slice(0, 60));
+
       // --- Sprungmarke ------------------------------------------------------
       // Vorhanden ist zu wenig: sie muss auf ein Element zeigen, das es gibt.
       const skip = document.querySelector<HTMLAnchorElement>("a.uwe-skip-link");
@@ -153,7 +166,7 @@ export async function auditShell(page: Page, minTouch: number): Promise<ShellAud
       const skipLinkTarget =
         href && href.startsWith("#") && document.querySelector(href) ? href : null;
 
-      return { horizontalOverflow, tinyText, smallTargets, skipLinkTarget };
+      return { horizontalOverflow, tinyText, smallTargets, skipLinkTarget, topHeadings };
     },
     { minFont: MIN_FONT_PX, minTouch },
   );
@@ -178,6 +191,11 @@ export function expectShellAuditClean(
   ).toEqual([]);
 
   expect(result.skipLinkTarget, `${label}: Sprungmarke zeigt ins Leere`).not.toBeNull();
+
+  expect(
+    result.topHeadings.length,
+    `${label}: genau eine Seitenüberschrift erwartet, gefunden: ${JSON.stringify(result.topHeadings)}`,
+  ).toBe(1);
 }
 
 /**

@@ -78,6 +78,13 @@
 
   /* --- Touch & Sicherheitsbereiche ------------------------------------- */
   --uwe-touch-min: 2.75rem; /* 44px — Bestandsname, hier bekräftigt */
+  /*
+   * WCAG 2.2 kennt zwei Stufen: 2.5.8 („Target Size (Minimum)", AA) verlangt
+   * 24 × 24 CSS-Pixel, 2.5.5 (AAA) 44 × 44. UWE zielt auf AA — 24 ist damit
+   * die Grenze, unter der etwas *falsch* ist, und `--uwe-touch-min` gilt dort,
+   * wo es zählt: an Zeigegeräten ohne Präzision (`pointer: coarse`).
+   */
+  --uwe-touch-aa: 1.5rem; /* 24px */
   --uwe-safe-top: env(safe-area-inset-top, 0px);
   --uwe-safe-bottom: env(safe-area-inset-bottom, 0px);
   --uwe-safe-left: env(safe-area-inset-left, 0px);

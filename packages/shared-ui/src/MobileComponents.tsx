@@ -77,7 +77,7 @@ export function MobileBottomNav({ items }: { items: BottomNavItem[] }) {
                 <span className="text-[1.15rem] leading-none" aria-hidden>
                   {item.icon}
                 </span>
-                <span className="max-w-full truncate text-[0.68rem] font-medium tracking-[0.01em]">
+                <span className="max-w-full truncate text-[length:var(--uwe-text-2xs)] font-medium tracking-[0.01em]">
                   {item.label}
                 </span>
               </button>
@@ -91,7 +91,7 @@ export function MobileBottomNav({ items }: { items: BottomNavItem[] }) {
                 <span className="text-[1.15rem] leading-none" aria-hidden>
                   {item.icon}
                 </span>
-                <span className="max-w-full truncate text-[0.68rem] font-medium tracking-[0.01em]">
+                <span className="max-w-full truncate text-[length:var(--uwe-text-2xs)] font-medium tracking-[0.01em]">
                   {item.label}
                 </span>
               </a>
@@ -149,7 +149,7 @@ export function CollapsibleSection({
       >
         <span className="flex-1">{title}</span>
         {summary && !open && (
-          <span className="text-[0.8rem] font-normal text-muted-foreground">{summary}</span>
+          <span className="text-[length:var(--uwe-text-xs)] font-normal text-muted-foreground">{summary}</span>
         )}
         <span
           className={cn(
@@ -218,7 +218,7 @@ export function MobileFilterSheet({
         >
           {title}
           {activeCount > 0 && (
-            <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-[0.35rem] text-[0.72rem] font-bold text-primary-foreground">
+            <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-[0.35rem] text-[length:var(--uwe-text-2xs)] font-bold text-primary-foreground">
               {activeCount}
             </span>
           )}

@@ -222,7 +222,7 @@ export function ThemePreferencesFields({
               >
                 <Swatch themeId={theme.id} />
                 <span className="text-[0.82rem] font-semibold text-foreground">{theme.label}</span>
-                <span className="text-[0.68rem] leading-[1.35] text-[var(--uwe-fg-subtle)]">
+                <span className="text-[length:var(--uwe-text-2xs)] leading-[1.35] text-[var(--uwe-fg-subtle)]">
                   {theme.description}
                 </span>
               </button>
@@ -322,7 +322,7 @@ export function ThemePreferencesFields({
               updatePreferences({ uiScale: Number(e.target.value) / 100 })
             }
           />
-          <span className="text-[0.74rem] leading-[1.4] text-muted-foreground">
+          <span className="text-[length:var(--uwe-text-2xs)] leading-[1.4] text-muted-foreground">
             {Math.round(preferences.uiScale * 100)}% — Layout sollte stabil bleiben.
           </span>
         </label>

@@ -86,6 +86,20 @@
 }
 
 /*
+ * Verweise in den Listen der Seitenleisten-Abschnitte sind Navigation, nicht
+ * Fließtext: eine Zeile, ein Ziel. Als reine Textzeile waren sie 21 px hoch
+ * und damit unter den 24 px aus WCAG 2.2 (2.5.8, AA).
+ *
+ * Bewusst auf Listen beschränkt — ein Verweis mitten in einem Satz soll seine
+ * Zeilenhöhe behalten, sonst reißt der Absatz auseinander.
+ */
+.uwe-sidebar-section li :is(a, button):not(.uwe-btn-v3) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--uwe-touch-aa);
+}
+
+/*
  * Die 44-px-Regel gilt dort, wo sie zählt: an Zeigegeräten ohne Präzision.
  *
  * WCAG 2.2 verlangt auf AA 24 × 24 px (2.5.8) und auf AAA 44 × 44 (2.5.5).

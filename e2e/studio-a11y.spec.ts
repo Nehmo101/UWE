@@ -32,6 +32,15 @@ const PAGES = [
   // Diese Seite trägt drei ResponsiveTables und ist damit der Anker dafür,
   // dass die Tabellenrollen die Mobilansicht überleben.
   { path: "/worlds/terra/labels?tab=templates", heading: "Label-Bibliothek" },
+  // Das Welt-Cockpit: die meistbesuchte Studio-Seite, mit migrierter Tabelle
+  // („Zuletzt bearbeitet") und der Stelle, an der zwei `h1` untereinander
+  // standen.
+  { path: "/worlds/terra/dashboard", heading: "Terra" },
+  // Trägt eine ResponsiveTable mit Formularen in den Zellen — mobil werden
+  // daraus Karten mit Knöpfen, und die müssen greifbar bleiben.
+  { path: "/templates", heading: "Seiten-Templates" },
+  // Der Leerzustand aus `design-v3/states.css` an seiner Einstiegsseite.
+  { path: "/continue", heading: "Mach weiter, wo du aufgehört hast" },
 ] as const;
 
 test.describe("Studio accessibility", () => {
@@ -76,6 +85,16 @@ test.describe("Studio accessibility", () => {
 
         const result = await auditShell(page, MIN_TOUCH_AA_PX);
         expectShellAuditClean(result, `Studio /worlds ${viewport.name} ${mode}`, MIN_TOUCH_AA_PX);
+      });
+
+      test(`das Welt-Cockpit trägt auf ${viewport.name} (${mode})`, async ({ page }) => {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.goto("/worlds/terra/dashboard");
+        await expect(page.getByRole("heading", { level: 1, name: "Terra" })).toHaveCount(1);
+        await applyTheme(page, mode);
+
+        const result = await auditShell(page, MIN_TOUCH_AA_PX);
+        expectShellAuditClean(result, `Studio /dashboard ${viewport.name} ${mode}`, MIN_TOUCH_AA_PX);
       });
     }
   }

@@ -8,7 +8,7 @@ import {
   prisma,
   studioWorldDashboardPageKey,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
 import { worldRootBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { worldCockpitTabItems, worldDmToolQuickLinks } from "@/src/lib/studio-navigation";
 import { WorldDashboardClient } from "./WorldDashboardClient";
@@ -89,8 +89,6 @@ export default async function WorldDashboardPage({ params }: Props) {
                 Sichtbare Seiten: <strong>{overview.portal.visiblePageCount}</strong>
               </li>
               <li>
-              </li>
-              <li>
                 <Link href={`/worlds/${worldSlug}/inspector`} className="hover:underline">
                   Inspektor öffnen →
                 </Link>
@@ -114,7 +112,13 @@ export default async function WorldDashboardPage({ params }: Props) {
         </>
       }
     >
-      <PageHeader title={world.name} summary={world.description} />
+      {/*
+        Hier stand ein `PageHeader` mit demselben Titel und derselben
+        Beschreibung, die `WorldCockpitHeader` unten schon trägt: der Weltname
+        stand zweimal untereinander, beide Male als `h1`. Ein Screenreader
+        meldete zwei Seitenüberschriften, und wer die Seite ansah, las die
+        Weltbeschreibung doppelt.
+      */}
       <WorldDashboardClient
         worldSlug={worldSlug}
         worldName={world.name}

@@ -75,6 +75,19 @@
   background: var(--uwe-surface-sunken);
 }
 
+/*
+ * Verweise in Zellen sind fast immer *das* Ziel der Zeile — der Seitentitel,
+ * unter dem alles andere steht. Als reiner Fließtext waren sie 21 px hoch und
+ * damit unter den 24 px, die WCAG 2.2 (2.5.8, AA) als Mindest-Trefferfläche
+ * verlangt. Der Innenabstand der Zelle federt das nicht ab: gemessen wird der
+ * Anker, nicht die Zelle.
+ */
+.uwe-table-v3 :is(td, th) :is(a, button):not(.uwe-btn-v3) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--uwe-touch-aa);
+}
+
 /* Zahlenspalten rechtsbündig und tabellarisch — sonst tanzen die Ziffern. */
 .uwe-table-v3 :is(th, td)[data-numeric="true"] {
   text-align: right;

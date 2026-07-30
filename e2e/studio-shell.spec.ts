@@ -29,7 +29,9 @@ test.describe("Studio shell chrome (new AppShell)", () => {
 
     await expect(page.getByRole("link", { name: "Terra", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Brotkrumen" })).toContainText("Terra");
-    await expect(page.getByRole("heading", { name: "Terra" })).toBeVisible();
+    // Genau eine Seitenüberschrift: hier standen bis zuletzt zwei `h1` mit
+    // demselben Weltnamen untereinander — `PageHeader` und `WorldCockpitHeader`.
+    await expect(page.getByRole("heading", { level: 1, name: "Terra" })).toHaveCount(1);
 
     // Die aktive Gruppe ist „Übersicht"; „Wiki" muss erst aufgeklappt werden.
     const wikiGroup = page.getByRole("button", { name: "Wiki" });
