@@ -5,6 +5,20 @@ import path from "node:path";
 
 import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
 import {
+  appendOperationLog,
+  detectHostMode,
+  ensureHostDirectories,
+  pathsFor,
+  pidFile,
+  resolveDesktopHostRoot,
+} from "./desktop-host-paths.ts";
+import {
+  adoptOrphanService,
+  classifyPortHolder,
+  releaseOwnPort,
+  type PortHolder,
+} from "./desktop-host-ports.ts";
+import {
   appendToLog,
   deriveOwnedServiceState,
   diskSnapshot,
@@ -21,11 +35,19 @@ import {
 } from "./desktop-host-system.ts";
 
 export { deriveOwnedServiceState } from "./desktop-host-system.ts";
+export {
+  bundleInstallRoot,
+  commandCenterDataRoot,
+  detectHostMode,
+  resolveDesktopHostRoot,
+  type HostMode,
+} from "./desktop-host-paths.ts";
 
 import {
   HOST_SERVICE_IDS,
   HOST_SERVICE_LABELS,
   isHostServiceId,
+  isOwnServiceApp,
   parseServicePort,
   type DesktopHostActionResult,
   type DesktopHostService,
@@ -62,9 +84,11 @@ export type {
   ServiceState,
 } from "./desktop-host-types.ts";
 export {
+  HOST_SERVICE_HEALTH_APPS,
   HOST_SERVICE_IDS,
   HOST_SERVICE_LABELS,
   isHostServiceId,
+  isOwnServiceApp,
   parseServicePort,
 } from "./desktop-host-types.ts";
 export {
@@ -121,90 +145,6 @@ export function argumentValue(argv: string[], name: string): string | undefined 
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
-export function commandCenterDataRoot(): string {
-  const configured = process.env.UWE_COMMAND_CENTER_DATA_DIR?.trim();
-  if (configured) return path.resolve(configured);
-  if (process.platform === "win32" && process.env.LOCALAPPDATA) {
-    return path.join(process.env.LOCALAPPDATA, "UWE", "rtx-connector-client", "host");
-  }
-  return path.join(os.homedir(), ".local", "share", "UWE", "rtx-connector-client", "host");
-}
-
-export type HostMode = "monorepo" | "bundle";
-
-/**
- * Woraus diese Installation besteht: ein Entwickler-Checkout des Monorepos
- * (pnpm-workspace.yaml vorhanden — Setup/Update laufen über pnpm und git) oder
- * eine Bundle-Installation aus dem Release-Download (entpackte App-Bundles
- * unter apps/<app>/ mit flachem node_modules — kein pnpm, kein git, kein Build).
- */
-export function detectHostMode(root: string): HostMode {
-  return fs.existsSync(path.join(root, "pnpm-workspace.yaml")) ? "monorepo" : "bundle";
-}
-
-/** Standardort einer Bundle-Installation, neben den Host-Daten. */
-export function bundleInstallRoot(): string {
-  return path.join(commandCenterDataRoot(), "..", "bundle");
-}
-
-export function resolveDesktopHostRoot(input?: string): string {
-  const configured = input?.trim() || process.env.UWE_MONOREPO_ROOT?.trim();
-  if (configured) return path.resolve(configured);
-
-  let current = path.resolve(process.cwd());
-  while (true) {
-    if (
-      fs.existsSync(path.join(current, "pnpm-workspace.yaml")) &&
-      fs.existsSync(path.join(current, "apps", "studio")) &&
-      fs.existsSync(path.join(current, "apps", "portal"))
-    ) {
-      return current;
-    }
-    const parent = path.dirname(current);
-    if (parent === current) break;
-    current = parent;
-  }
-
-  // Kein Checkout gefunden: Wenn am Standardort eine Bundle-Installation liegt
-  // (mindestens eine App mit gebautem .next), ist sie das Root. So findet das
-  // Command Center eine Installation auch ohne UWE_MONOREPO_ROOT.
-  const bundleRoot = bundleInstallRoot();
-  if (fs.existsSync(path.join(bundleRoot, "apps"))) {
-    return path.resolve(bundleRoot);
-  }
-  return path.resolve(process.cwd());
-}
-
-function pathsFor(root: string): HostPaths {
-  const dataRoot = commandCenterDataRoot();
-  return {
-    root,
-    dataRoot,
-    data: path.join(dataRoot, "data"),
-    uploads: path.join(dataRoot, "data", "uploads"),
-    backups: path.join(dataRoot, "data", "backups"),
-    exports: path.join(dataRoot, "exports"),
-    logs: path.join(dataRoot, "logs"),
-    runtime: path.join(dataRoot, "runtime"),
-    envFile: path.join(root, ".env"),
-    database: path.join(dataRoot, "data", "uwe.db"),
-  };
-}
-
-function ensureHostDirectories(paths: HostPaths): void {
-  for (const directory of [
-    paths.dataRoot,
-    paths.data,
-    paths.uploads,
-    paths.backups,
-    paths.exports,
-    paths.logs,
-    paths.runtime,
-  ]) {
-    fs.mkdirSync(directory, { recursive: true });
-  }
-}
-
 function validateRepo(root: string): boolean {
   return (
     fs.existsSync(path.join(root, "package.json")) &&
@@ -212,10 +152,6 @@ function validateRepo(root: string): boolean {
     fs.existsSync(path.join(root, "apps", "studio", "package.json")) &&
     fs.existsSync(path.join(root, "apps", "portal", "package.json"))
   );
-}
-
-function pidFile(paths: HostPaths, id: HostServiceId): string {
-  return path.join(paths.runtime, `${id}.pid`);
 }
 
 function gitFact(root: string, args: string[]): string | null {
@@ -226,14 +162,33 @@ async function serviceStatus(paths: HostPaths, id: HostServiceId, label: string,
   const url = `http://127.0.0.1:${port}`;
   const file = pidFile(paths, id);
   const storedPid = readPid(file);
-  const running = processRunning(storedPid);
   const probe = await probeHealth(url);
+  let running = processRunning(storedPid);
+  let pid = running ? storedPid : null;
   if (storedPid && !running) fs.rmSync(file, { force: true });
+
+  // Antwortet der Port als genau diese App, ohne dass wir eine PID-Datei
+  // haben, ist es ein Rest von uns: wieder übernehmen statt als „fremd" zu
+  // melden — sonst bliebe der Dienst für Stopp und Neustart unerreichbar.
+  const orphan = !running && probe.responding && isOwnServiceApp(id, probe.app);
+  if (orphan) {
+    const adopted = adoptOrphanService(paths, id, port);
+    if (adopted) {
+      running = true;
+      pid = adopted;
+    }
+  }
+
+  const derived = deriveOwnedServiceState(running, probe.responding, probe.healthy);
   return {
     id,
     label,
-    ...deriveOwnedServiceState(running, probe.responding, probe.healthy),
-    pid: running ? storedPid : null,
+    ...derived,
+    message:
+      orphan && !running
+        ? "Rest einer früheren Sitzung belegt den Port. „Alles starten“ beendet ihn und startet neu."
+        : derived.message,
+    pid,
     url,
   };
 }
@@ -324,11 +279,6 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
     dataDir: paths.data,
     logsDir: paths.logs,
   };
-}
-
-function appendOperationLog(paths: HostPaths, line: string): void {
-  ensureHostDirectories(paths);
-  appendToLog(path.join(paths.logs, "command-center.log"), `[${new Date().toISOString()}] ${line}\n`);
 }
 
 function workspaceCommandEnv(paths: HostPaths, extraEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -501,11 +451,18 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
   const root = resolveDesktopHostRoot(rootInput);
   const paths = pathsFor(root);
   const before = await collectDesktopHostStatus(root);
-  const conflicts = before.services.filter((service) => service.state === "error");
-  if (conflicts.length > 0) {
+  const definitions = serviceDefinitions(paths);
+
+  // Belegte Ports sortieren, statt jeden Konflikt für fremd zu halten: Reste
+  // eigener Dienste räumen wir gleich selbst weg (sie waren über kein Bedienelement
+  // mehr erreichbar), wirklich fremde Dienste blockieren den Start wie bisher.
+  const holders = (await Promise.all(definitions.map((service) => classifyPortHolder(paths, service))))
+    .filter((entry): entry is PortHolder => entry !== null);
+  const foreign = holders.filter((entry) => entry.kind === "foreign");
+  if (foreign.length > 0) {
     return {
       ok: false,
-      message: `Start blockiert: Ports für ${conflicts.map((service) => service.label).join(", ")} sind bereits durch fremde Prozesse belegt.`,
+      message: `Start blockiert: Ports für ${foreign.map((entry) => entry.service.label).join(", ")} sind bereits durch fremde Prozesse belegt.`,
       status: before,
     };
   }
@@ -513,7 +470,19 @@ export async function startHost(rootInput?: string): Promise<DesktopHostActionRe
     return { ok: false, message: "UWE ist noch nicht vollständig eingerichtet. Bitte zuerst Einrichten / Reparieren ausführen.", status: before };
   }
   ensureHostDirectories(paths);
-  const definitions = serviceDefinitions(paths);
+
+  const stuck: string[] = [];
+  for (const entry of holders) {
+    if (!(await releaseOwnPort(paths, entry.service))) stuck.push(entry.service.label);
+  }
+  if (stuck.length > 0) {
+    return {
+      ok: false,
+      message: `Start blockiert: Reste einer früheren Sitzung auf den Ports für ${stuck.join(", ")} ließen sich nicht beenden. Bitte das Command Center neu starten.`,
+      status: await collectDesktopHostStatus(root),
+    };
+  }
+
   for (const service of definitions) {
     const current = before.services.find((entry) => entry.id === service.id);
     if (!current?.healthy && !processRunning(readPid(pidFile(paths, service.id)))) spawnService(paths, service);
@@ -542,6 +511,12 @@ export async function stopHost(rootInput?: string): Promise<DesktopHostActionRes
     fs.rmSync(file, { force: true });
   }
   await new Promise((resolve) => setTimeout(resolve, 500));
+  // Und dann noch die Reste ohne PID-Datei: sonst bleibt eine Leiche aus einer
+  // früheren Sitzung auf ihrem Port liegen, und „Alles stoppen" — der einzige
+  // Knopf, der sie loswerden könnte — läuft an ihr vorbei.
+  for (const service of serviceDefinitions(paths, HOST_SERVICE_IDS)) {
+    await releaseOwnPort(paths, service);
+  }
   return { ok: true, message: "Alle UWE-Dienste wurden gestoppt.", status: await collectDesktopHostStatus(root) };
 }
 
@@ -556,6 +531,17 @@ export async function startHostService(rootInput: string | undefined, serviceId:
     return { ok: false, message: "UWE ist noch nicht vollständig eingerichtet.", status: before };
   }
   ensureHostDirectories(paths);
+  const holder = await classifyPortHolder(paths, def);
+  if (holder?.kind === "foreign") {
+    return { ok: false, message: `Start blockiert: Port ${def.port} ist durch einen fremden Dienst belegt.`, status: before };
+  }
+  if (holder && !(await releaseOwnPort(paths, def))) {
+    return {
+      ok: false,
+      message: `Start blockiert: Ein Rest einer früheren Sitzung hält Port ${def.port} und ließ sich nicht beenden.`,
+      status: await collectDesktopHostStatus(root),
+    };
+  }
   if (!processRunning(readPid(pidFile(paths, def.id)))) spawnService(paths, def);
   const healthy = await waitForHealth(`http://127.0.0.1:${def.port}`);
   return {
@@ -578,6 +564,7 @@ export async function stopHostService(rootInput: string | undefined, serviceId: 
   if (pid) stopProcess(pid);
   fs.rmSync(file, { force: true });
   await new Promise((resolve) => setTimeout(resolve, 300));
+  await releaseOwnPort(paths, def); // Rest ohne PID-Datei gleich mit einsammeln
   return { ok: true, message: `${def.label} wurde gestoppt.`, status: await collectDesktopHostStatus(root) };
 }
 

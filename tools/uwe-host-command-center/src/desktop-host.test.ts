@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
-import { buildLocalHostEnv, deriveOwnedServiceState, desktopHostTargetUrl, parseServicePort, resolveDatabasePath, resolveDesktopHostRoot, type HostPaths } from "./desktop-host";
+import { buildLocalHostEnv, deriveOwnedServiceState, desktopHostTargetUrl, isOwnServiceApp, parseServicePort, resolveDatabasePath, resolveDesktopHostRoot, type HostPaths } from "./desktop-host";
+import { healthAppName, parseNetstatListeners } from "./desktop-host-system";
 
 const temporaryDirectories: string[] = [];
 
@@ -106,5 +107,46 @@ describe("desktop host service ownership", () => {
     assert.equal(parseServicePort("3100", 3000), 3100);
     assert.equal(parseServicePort("70000", 3000), 3000);
     assert.equal(parseServicePort("invalid", 3000), 3000);
+  });
+
+  it("recognises an own orphaned service by its health self-report", () => {
+    assert.equal(isOwnServiceApp("landing", "UWE Landing"), true);
+    assert.equal(isOwnServiceApp("studio", "UWE Studio"), true);
+    // Fremder Dienst, unlesbare Antwort oder die falsche UWE-App: nie anfassen.
+    assert.equal(isOwnServiceApp("landing", "UWE Studio"), false);
+    assert.equal(isOwnServiceApp("landing", "Grafana"), false);
+    assert.equal(isOwnServiceApp("landing", null), false);
+  });
+
+  it("reads the app name from both health payload shapes", () => {
+    assert.equal(healthAppName({ status: "ok", app: "UWE Landing" }), "UWE Landing");
+    assert.equal(healthAppName({ status: "ok", app: { name: "UWE Studio", version: "1.2.3" } }), "UWE Studio");
+    assert.equal(healthAppName({ status: "ok" }), null);
+    assert.equal(healthAppName({ app: { version: "1.2.3" } }), null);
+    assert.equal(healthAppName("ok"), null);
+    assert.equal(healthAppName(null), null);
+  });
+});
+
+describe("desktop host port listeners", () => {
+  // Lokalisiertes `netstat -ano` (deutsches Windows): der Status taugt nicht als
+  // Filter, die TIME_WAIT-Leichen mit PID 0 dürfen nicht als Belegung zählen.
+  const NETSTAT = [
+    "",
+    "Aktive Verbindungen",
+    "",
+    "  Proto  Lokale Adresse         Remoteadresse          Status           PID",
+    "  TCP    127.0.0.1:3103         0.0.0.0:0              ABHÖREN         11820",
+    "  TCP    127.0.0.1:56660        127.0.0.1:3103         WARTEND         0",
+    "  TCP    127.0.0.1:13103        0.0.0.0:0              ABHÖREN         7777",
+    "  TCP    127.0.0.1:3100         0.0.0.0:0              ABHÖREN         2222",
+    "  TCP    [::]:3103              [::]:0                 ABHÖREN         4680",
+    "  UDP    0.0.0.0:5353           *:*                                    1500",
+  ].join("\r\n");
+
+  it("finds every listener on the port, ignoring TIME_WAIT, UDP and lookalike ports", () => {
+    assert.deepEqual(parseNetstatListeners(NETSTAT, 3103), [11820, 4680]);
+    assert.deepEqual(parseNetstatListeners(NETSTAT, 3100), [2222]);
+    assert.deepEqual(parseNetstatListeners(NETSTAT, 3101), []);
   });
 });

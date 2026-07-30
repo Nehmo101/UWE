@@ -28,6 +28,29 @@ export const HOST_SERVICE_LABELS: Record<HostServiceId, string> = {
   landing: "UWE Startseite",
 };
 
+/**
+ * Selbstauskunft der Apps in `/api/health` (Feld `app` bzw. `app.name`). Nur
+ * die Startseite weicht vom Anzeigenamen ab: „UWE Startseite" steht in der
+ * Oberfläche, „UWE Landing" nennt die App selbst.
+ *
+ * Daran unterscheidet das Command Center einen **eigenen verwaisten Prozess**
+ * (frühere Sitzung, PID-Datei verloren) von einem **wirklich fremden Dienst**
+ * auf demselben Port — ohne diese Unterscheidung blockiert jede eigene Leiche
+ * den Start dauerhaft, weil sie über keinen Knopf mehr erreichbar ist.
+ */
+export const HOST_SERVICE_HEALTH_APPS: Record<HostServiceId, string> = {
+  studio: "UWE Studio",
+  portal: "UWE Portal",
+  brain: "UWE Brain",
+  family: "UWE Family",
+  landing: "UWE Landing",
+};
+
+/** Weist sich der Dienst auf einem belegten Port als genau diese App aus? */
+export function isOwnServiceApp(id: HostServiceId, app: string | null): boolean {
+  return app !== null && app === HOST_SERVICE_HEALTH_APPS[id];
+}
+
 export function isHostServiceId(value: unknown): value is HostServiceId {
   return typeof value === "string" && (HOST_SERVICE_IDS as readonly string[]).includes(value);
 }
