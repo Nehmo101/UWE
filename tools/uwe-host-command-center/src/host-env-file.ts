@@ -14,15 +14,60 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 
-import { parseServicePort, type HostPaths } from "./desktop-host-types.ts";
+import {
+  HOST_SERVICE_IDS,
+  HOST_SERVICE_LABELS,
+  parseServicePort,
+  SERVICE_PORT_ENV,
+  type HostPaths,
+  type HostServiceId,
+} from "./desktop-host-types.ts";
+import type { InstallPorts } from "./install-selection.ts";
 
 export function toPosixPath(value: string): string {
   return value.replace(/\\/g, "/");
 }
 
-export function buildLocalHostEnv(paths: HostPaths): string {
+/**
+ * Die Loopback-URLs, die einen Dienstport mitführen. Ändert sich der Port, muss
+ * die zugehörige URL mitwandern — sonst zeigt der erste Link nach der
+ * Einrichtung ins Leere.
+ *
+ * `PUBLIC_BASE_URL` steht bei beiden: lokal ist der Apex-Origin die Studio-
+ * Adresse, bei öffentlicher Installation die Startseite. Welcher der beiden
+ * gemeint ist, entscheidet der Portvergleich — und eine öffentliche (nicht
+ * Loopback-)Adresse wird ohnehin nie angefasst.
+ */
+const PORT_COMPANION_URLS: Record<HostServiceId, string[]> = {
+  studio: ["NEXT_PUBLIC_STUDIO_URL", "PUBLIC_BASE_URL"],
+  portal: ["NEXT_PUBLIC_PORTAL_URL"],
+  brain: ["NEXT_PUBLIC_BRAIN_URL"],
+  family: ["NEXT_PUBLIC_FAMILY_URL"],
+  landing: ["PUBLIC_BASE_URL"],
+};
+
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+/** Der Port dieses Dienstes: Wahl des Assistenten, sonst der Standard. */
+export function resolveSelectedPort(id: HostServiceId, ports: InstallPorts = {}): number {
+  return ports[id] ?? SERVICE_PORT_ENV[id].fallback;
+}
+
+/** Zeigt dieser Wert auf `127.0.0.1:<port>` (oder localhost/::1)? */
+function isLoopbackUrlForPort(value: string | undefined, port: number): boolean {
+  if (!value?.trim()) return false;
+  try {
+    const url = new URL(value.trim());
+    return LOOPBACK_HOSTS.has(url.hostname.toLowerCase()) && url.port === String(port);
+  } catch {
+    return false;
+  }
+}
+
+export function buildLocalHostEnv(paths: HostPaths, ports: InstallPorts = {}): string {
   const sessionSecret = randomBytes(48).toString("base64url");
   const setupToken = randomBytes(32).toString("base64url");
+  const port = (id: HostServiceId) => resolveSelectedPort(id, ports);
   return [
     "# Managed initial local-host configuration for UWE Command Center.",
     "# Existing files are preserved and can be edited in Studio later.",
@@ -36,15 +81,16 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     "SESSION_COOKIE_SAMESITE=lax",
     "TRUST_PROXY=false",
     "CLOUDFLARE_TUNNEL=false",
-    "STUDIO_PORT=3000",
-    "PORTAL_PORT=3001",
-    "FAMILY_PORT=3004",
+    `STUDIO_PORT=${port("studio")}`,
+    `PORTAL_PORT=${port("portal")}`,
+    `BRAIN_PORT=${port("brain")}`,
+    `FAMILY_PORT=${port("family")}`,
     // Öffentliche Startseite auf dem Apex-Origin — eigener Prozess, damit die
     // Hauptdomain keine Studio-Routen ausliefert.
-    "LANDING_PORT=3103",
-    "NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:3000",
-    "PUBLIC_BASE_URL=http://127.0.0.1:3000",
-    "NEXT_PUBLIC_PORTAL_URL=http://127.0.0.1:3001",
+    `LANDING_PORT=${port("landing")}`,
+    `NEXT_PUBLIC_STUDIO_URL=http://127.0.0.1:${port("studio")}`,
+    `PUBLIC_BASE_URL=http://127.0.0.1:${port("studio")}`,
+    `NEXT_PUBLIC_PORTAL_URL=http://127.0.0.1:${port("portal")}`,
     "# Brain: owner-only on every route; reachability is a deliberate choice (ADR 004/007).",
     "# Empty NEXT_PUBLIC_BRAIN_URL = share the Studio origin; entry is /life-brain.",
     "NEXT_PUBLIC_BRAIN_URL=",
@@ -53,7 +99,7 @@ export function buildLocalHostEnv(paths: HostPaths): string {
     // Family: eigener Origin, Zugang über das Häkchen `Family`. Der Wert ist die
     // Adresse, auf die jeder Family-Link zeigt — bei öffentlicher Installation
     // hier den Tunnel-Hostnamen eintragen (z. B. https://family.uwe.example).
-    "NEXT_PUBLIC_FAMILY_URL=http://127.0.0.1:3004",
+    `NEXT_PUBLIC_FAMILY_URL=http://127.0.0.1:${port("family")}`,
     `DATABASE_URL=file:${toPosixPath(paths.database)}`,
     // Owner-private Brain DB lives next to uwe.db so both are found deterministically
     // (the Next standalone build can't reliably resolve brain-client's relative default).
@@ -107,6 +153,75 @@ export function ensureRequiredLocalEnv(
     "utf8",
   );
   onLog(`Fehlende lokale Laufzeitwerte ergänzt: ${missing.map(([key]) => key).join(", ")}.`);
+}
+
+/**
+ * Setzt Schlüssel in einer bestehenden `.env`, ohne den Rest der Datei
+ * anzufassen: ein vorhandener Schlüssel wird an Ort und Stelle ersetzt, ein
+ * neuer angehängt. Kommentare, Reihenfolge und alle nicht genannten Schlüssel
+ * bleiben, wie sie sind.
+ *
+ * Die eine Schreibstelle für `.env`-Werte — der Editor unter „Deployment"
+ * (`desktop-host-env.ts`) und die Portübernahme der Einrichtung benutzen sie
+ * beide.
+ */
+export function updateEnvKeys(file: string, updates: Record<string, string>): string[] {
+  const lines = fs.existsSync(file) ? fs.readFileSync(file, "utf8").split(/\r?\n/) : [];
+  const written: string[] = [];
+  for (const [key, value] of Object.entries(updates)) {
+    const pattern = new RegExp(`^\\s*${key}\\s*=`);
+    const index = lines.findIndex((line) => pattern.test(line) && !line.trim().startsWith("#"));
+    if (index >= 0) {
+      lines[index] = `${key}=${value}`;
+    } else {
+      lines.push(`${key}=${value}`);
+    }
+    written.push(key);
+  }
+  fs.writeFileSync(file, lines.join("\n"), "utf8");
+  return written;
+}
+
+/**
+ * Trägt die im Ersteinrichtungs-Assistenten gewählten Ports in eine **bestehende**
+ * `.env` ein. Eine frisch angelegte Datei bringt sie schon mit
+ * (`buildLocalHostEnv`); dieser Weg ist der für Installationen, die es vorher
+ * schon gab — „Reparieren" und ein zweiter Lauf des Assistenten.
+ *
+ * Mitgeführt werden die Loopback-URLs des Dienstes: eine Adresse, die auf den
+ * *alten* Port zeigte, wandert mit. Eine öffentliche Adresse (Tunnel-Hostname)
+ * bleibt unangetastet — sie gehört Cloudflare, nicht dem Port.
+ */
+export function applySelectedPorts(
+  paths: HostPaths,
+  ports: InstallPorts,
+  onLog: (line: string) => void = () => {},
+): string[] {
+  if (!fs.existsSync(paths.envFile)) return [];
+  const env = readEnvFile(paths.envFile);
+  const updates: Record<string, string> = {};
+  const changed: string[] = [];
+
+  for (const id of HOST_SERVICE_IDS) {
+    const wanted = ports[id];
+    if (wanted === undefined) continue;
+    const { key, fallback } = SERVICE_PORT_ENV[id];
+    const current = parseServicePort(env[key], fallback);
+    if (current === wanted) continue;
+
+    updates[key] = String(wanted);
+    for (const urlKey of PORT_COMPANION_URLS[id]) {
+      if (isLoopbackUrlForPort(env[urlKey], current)) {
+        updates[urlKey] = `http://127.0.0.1:${wanted}`;
+      }
+    }
+    changed.push(`${HOST_SERVICE_LABELS[id]} ${current} → ${wanted}`);
+  }
+
+  if (changed.length === 0) return [];
+  const written = updateEnvKeys(paths.envFile, updates);
+  onLog(`Ports übernommen: ${changed.join(", ")}.`);
+  return written;
 }
 
 /** `.env` über `process.env` gelegt — die Umgebung für gestartete Dienste. */

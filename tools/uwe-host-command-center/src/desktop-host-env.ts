@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { resolveDesktopHostRoot } from "./desktop-host.ts";
+import { updateEnvKeys } from "./host-env-file.ts";
 
 /**
  * Allow-listed host `.env` editing for the Command Center. Only these keys can be
@@ -108,24 +109,13 @@ export function setHostEnv(rootInput: string | undefined, updates: Record<string
   ok: boolean;
   written: string[];
 } {
-  const file = envFilePath(rootInput);
-  const lines = fs.existsSync(file) ? fs.readFileSync(file, "utf8").split(/\r?\n/) : [];
-  const written: string[] = [];
-
+  const allowed: Record<string, string> = {};
   for (const [key, rawValue] of Object.entries(updates)) {
     if (!ALLOWED_KEYS.has(key)) continue;
     const value = String(rawValue ?? "").trim();
     if (SECRET_KEYS.has(key) && value === "") continue; // don't overwrite a secret with blank
-    const pattern = new RegExp(`^\\s*${key}\\s*=`);
-    const index = lines.findIndex((line) => pattern.test(line) && !line.trim().startsWith("#"));
-    if (index >= 0) {
-      lines[index] = `${key}=${value}`;
-    } else {
-      lines.push(`${key}=${value}`);
-    }
-    written.push(key);
+    allowed[key] = value;
   }
 
-  fs.writeFileSync(file, lines.join("\n"), "utf8");
-  return { ok: true, written };
+  return { ok: true, written: updateEnvKeys(envFilePath(rootInput), allowed) };
 }

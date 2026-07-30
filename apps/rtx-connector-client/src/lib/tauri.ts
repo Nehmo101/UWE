@@ -176,7 +176,10 @@ export async function getInstallSelection(root?: string) {
  * liest die gespeicherte Auswahl, um Migrationen und Builds zu bestimmen.
  */
 export async function setInstallSelection(
-  selection: Pick<import("./tauri-types").LocalHostInstallSelection, "apps" | "seedDemoContent">,
+  selection: Pick<
+    import("./tauri-types").LocalHostInstallSelection,
+    "apps" | "ports" | "seedDemoContent"
+  >,
   root?: string,
 ) {
   return invokeCommand<{

@@ -26,6 +26,7 @@ export function readMockInstallSelection(): { selection: LocalHostInstallSelecti
     selection: mockSelection ?? {
       version: 1,
       apps: ["studio", "portal", "brain", "family", "landing"],
+      ports: {},
       seedDemoContent: true,
       updatedAt: null,
     },
@@ -41,6 +42,7 @@ export function writeMockInstallSelection(input: unknown): LocalHostInstallSelec
   mockSelection = {
     version: 1,
     apps,
+    ports: record.ports ?? {},
     seedDemoContent: record.seedDemoContent !== false,
     updatedAt: new Date().toISOString(),
   };
