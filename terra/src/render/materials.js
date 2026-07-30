@@ -500,7 +500,7 @@ function terraPatch(shader, opts) {
     var fogNeu = fogChunk.replace(fogKey,
       'float terraTal = 1.0 - smoothstep( 0.5, 10.0, vTerraW.y );\n' +
       '\tfloat terraHoch = smoothstep( 42.0, 185.0, vTerraW.y );\n' +
-      '\tfloat terraDicht = 1.0 + terraTal + terraHoch * 0.12;\n' +
+      '\tfloat terraDicht = 1.0 + terraTal * 0.35 + terraHoch * 0.12;\n' +
       '\tfogFactor = 1.0 - pow( max( 1.0 - fogFactor, 0.0 ), terraDicht );\n' +
       '\tfogFactor = min( fogFactor, uFogCap );\n' +
       '\tfloat terraSonne = pow( max( dot( normalize( vTerraW - cameraPosition ), uSunDir ), 0.0 ), 2.0 );\n' +

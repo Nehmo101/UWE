@@ -159,6 +159,14 @@ function assetSchauMap() {
       yaw: 0.46, fov: 31, hebung: 7.5
     };
   }
+  if (SCHAU_BLICK === "kopf") {
+    // Freier Dreiviertelblick knapp unter Augenhoehe: Die Laengsform des
+    // Schaedelprofils bleibt sichtbar und die Burgtuerme rahmen nicht das Gesicht.
+    return {
+      x: heroX + 12.35, z: heroZ - 5.0, dist: 27, pitch: -2 * DEG,
+      yaw: 150 * DEG, fov: 25, hebung: 14.25
+    };
+  }
 
   return {
     x: 0,
