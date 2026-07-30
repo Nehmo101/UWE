@@ -2,8 +2,8 @@
 //! `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`.
 //!
 //! Warum: die gehosteten Dienste (`next start` für Studio/Portal/Brain/Family/
-//! Landing) und `cloudflared` werden bewusst abgekoppelt gestartet (`detached`
-//! + `unref`), damit sie das kurzlebige Node-CLI überleben, das sie startet.
+//! Landing) und `cloudflared` werden bewusst abgekoppelt gestartet (`detached` +
+//! `unref`), damit sie das kurzlebige Node-CLI überleben, das sie startet.
 //! Genau dadurch überlebten sie bisher aber auch das Command Center selbst:
 //! uweanddragons.org blieb öffentlich erreichbar, während die Steuerungs-App
 //! längst beendet oder abgestürzt war. Der geordnete Weg räumt beim Beenden auf
