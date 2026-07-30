@@ -31,6 +31,10 @@ import { rebuildHandles, clearPreview, getMarkerAuswahl, rebuildMarker,
 import { camera, cam, istAufnahme, setAufnahme } from '../editor/camera.js';
 import { heightAt } from '../world/terrain.js';
 import { getRenderInfo } from '../render/pipeline.js';
+/* Bedienungsrunde (Asset-Auswahl): der visuelle Katalog ersetzt das rohe
+   „Nur Typ"-Select. Zyklusfrei — objekt-katalog.js importiert nur three und
+   core/pools.js; die beschriftete Optionsliste kommt weiter aus tools.js. */
+import { baueObjektKatalog } from './objekt-katalog.js';
 // A1: der Weltgenerator. Zyklusfrei — welt.js importiert nur core/, world/ und
 // generators/ (rng, store, terrain, objects, vines, wegsuche) und nichts aus
 // editor/ oder ui/. Der Einsetzweg darf deshalb hier stehen.
@@ -1057,12 +1061,26 @@ function buildPanel() {
   };
   for (var d = 0; d < defs.length; d++) {
     var def = defs[d];
-    /* Bedienungsrunde: die „Nur Typ"-Liste folgt der gewaehlten Objektart —
-       zuerst die Pools der Gruppe, dahinter alles Uebrige, gegliedert per
-       optgroup. Das Schema selbst bleibt unveraendert (Defaults, Laden). */
+    /* Asset-Auswahl: statt des rohen „Nur Typ"-Selects steht hier der
+       visuelle Katalog — Vorschaukarten der Pools der gewaehlten Objektart,
+       eine Suche ueber alle erreichbaren Assets und die Mischung als erste
+       Karte. Geschrieben wird weiterhin exakt params.nurTyp; Schema, Laden
+       und Platzierungsregeln (generators/objects.js) bleiben unveraendert. */
     if (kind === "objekt" && def.k === "nurTyp") {
-      var nt = nurTypOptionen(variant);
-      def = { k: def.k, l: def.l, d: def.d, o: nt.o, og: nt.og };
+      if (obj[def.k] === undefined) obj[def.k] = def.d;
+      panelEl.appendChild(baueObjektKatalog({
+        optionen: nurTypOptionen(variant),
+        wert: obj[def.k],
+        waehle: (function (feld) {
+          return function (name) {
+            applyFn(true);
+            obj[feld] = name || "";
+            applyFn();
+            buildPanel();
+          };
+        })(def.k)
+      }));
+      continue;
     }
     if (obj[def.k] === undefined) obj[def.k] = def.d;
     panelEl.appendChild(paramRow(def, obj, applyFn));
@@ -1319,7 +1337,11 @@ function updateStats(fps) {
     (info.triangles > 99999 ? Math.round(info.triangles / 1000) + "k"
       : info.triangles.toLocaleString("de-DE")) + " <span>tris</span> &nbsp; " +
     (instanceTotal + schattenAnzahl).toLocaleString("de-DE") + " <span>Instanzen</span> &nbsp; " +
-    S.elements.length + " <span>Elemente</span>";
+    S.elements.length + " <span>Elemente</span>" +
+    // Adaptive Aufloesung sichtbar machen: laeuft der Leistungsregler unter
+    // voller Schaerfe, soll man wissen WARUM das Bild weicher ist.
+    (info.skala && info.skala < 1
+      ? " &nbsp; " + Math.round(info.skala * 100) + "<span>% Auflösung</span>" : "");
 }
 
 
@@ -1479,7 +1501,9 @@ function tickToast(now) {
     document.getElementById("toast").classList.remove("show");
     toastT = 0;
   }
-  markerOverlayAktualisieren();
+  // markerOverlayAktualisieren laeuft NICHT mehr hier mit: main.js ruft es
+  // laengst als eigene Zeile in der Renderschleife — der zweite Aufruf je
+  // Bild war reine Doppelarbeit (Projektion + Stilvergleiche je Marker).
   markerPanelNachziehen();
 }
 

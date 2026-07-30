@@ -221,8 +221,12 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
   assert.equal(SCHILDKROETE.BASIS_KOERPER.userData.terraBurgPanzerstreben, 8);
   assert.equal(SCHILDKROETE.BASIS_KOERPER.userData.terraMaterialTrennung,
     'haut-panzer-basalt-schiefer-metall');
+  assert.equal(SCHILDKROETE.BASIS_KOERPER.userData.terraHalsKragen,
+    'doppelte-hautfalte',
+    'Der Hals braucht eine Hautfalte an der Austrittsstelle aus dem Rumpf');
+  assert.equal(SCHILDKROETE.BASIS_KOERPER.userData.terraBrustplatte, true);
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraKopfForm,
-    'adulter-laengsschaedel-hornschnabel');
+    'runder-schaedel-freundlicher-hornschnabel');
   assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraHalsLaengenFaktor >= 1.2);
   assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraKopfMassstab >= 1.3 &&
     SCHILDKROETE.BASIS_KOPF.userData.terraKopfMassstab <= 1.45);
@@ -233,25 +237,36 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
   assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraKopfNeigungGrad >= 8 &&
     SCHILDKROETE.BASIS_KOPF.userData.terraKopfNeigungGrad <= 12);
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraSchaedelSilhouette,
-    'schwer-lang-hinten-breit-stumpfer-schnabel');
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraSchaedelplatten, 4);
+    'gewoelbte-stirn-hinten-breit-stumpfer-schnabel');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraSchaedelplatten, 5,
+    'Der runde Schaedel braucht fuenf Laengsprofile fuer die gewoelbte Stirn');
   assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraSchaedelVerjuengung <= 0.4);
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraBrauenplatten, 2);
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraBrauenUeberstand, 0);
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraBrauenUeberstand >= 0.1,
+    'Der Brauenwulst muss das Lid sichtbar ueberragen');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraWangenplatten, 2);
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraWangenUeberstand, 0);
-  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraAugenFlaechenFaktor <= 0.2);
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenWeissanteil, 0);
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenLichtpunkt, 'keiner');
+  // Gesichtsrunde: grosse, lesbare Augen statt versteckter Punktaugen.
+  assert.ok(SCHILDKROETE.BASIS_KOPF.userData.terraAugenFlaechenFaktor >= 0.35 &&
+    SCHILDKROETE.BASIS_KOPF.userData.terraAugenFlaechenFaktor <= 0.55,
+  'Die Augen muessen gross genug sein, um das Gesicht zu tragen');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenWeissanteil, 0,
+    'Schildkroetenaugen zeigen kein Weiss');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenLichtpunkt,
+    'klein-oben-vorn', 'Der Glanzpunkt macht das Auge lebendig');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenLage,
-    'seitlich-tief-hinter-schnauzenbasis');
+    'seitlich-hoch-vor-schlaefe');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenFrontsicht,
-    'nicht-sichtbar');
+    'dreiviertel-sichtbar');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraAugenAufbau,
+    'lidring-augapfel-iris-pupille-glanzpunkt');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraSchnabelProfil,
     'stumpfer-durchgehender-hornkeil');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraMaulnaht,
-    'seitlich-lang-frontal-extrem-kurz');
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraMaulnahtSegmente, 4);
+    'laechelnd-seitlich-ansteigend',
+    'Die Maulnaht muss zum Mundwinkel hin ansteigen — das Schildkroetenlaecheln');
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraMaulnahtSegmente, 10,
+    'Zehn Segmente lassen die Naht der Schnauzen- und Wangenwoelbung folgen');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraNasenloecher,
     'zwei-kleine-schraege-schlitze');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraNackenVerzahnung,

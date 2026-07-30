@@ -537,6 +537,144 @@ button.wide.primaer:hover { filter: brightness(1.12); background: var(--uwe-btn-
 hr { border: 0; border-top: 1px solid var(--uwe-border-muted); margin: 13px 0; }
 
 /* ============================================================================
+ * Asset-Katalog (Objekt-Werkzeug) — visuelle Auswahl statt „Nur Typ"-Select
+ * Karten in der Formensprache der Werkzeugkacheln: Papierflaeche, warme
+ * Kante, gewaehlter Eintrag mit Akzentkante wie `.seg button.on`.
+ * ==========================================================================*/
+.objKatalog { margin: 0 0 var(--uwe-spacing-md); }
+
+.objKopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--uwe-spacing-sm);
+  margin-bottom: 5px;
+}
+
+.objTitel { font-size: var(--uwe-text-xs); color: var(--uwe-fg-muted); }
+
+.objStatus {
+  font-size: var(--uwe-text-xs);
+  font-weight: 700;
+  color: var(--uwe-accent);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.objSuche { margin-bottom: var(--uwe-spacing-sm); }
+
+.objGitter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-bottom: var(--uwe-spacing-sm);
+}
+
+.objKarte {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 3px 3px;
+  border-radius: var(--uwe-radius-tile);
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-bg-elevated);
+  color: var(--uwe-fg-muted);
+  cursor: pointer;
+  min-width: 0;
+  transition: background var(--uwe-transition), border-color var(--uwe-transition),
+    color var(--uwe-transition);
+}
+
+.objKarte:hover {
+  color: var(--uwe-fg);
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  background: linear-gradient(var(--uwe-wash-hover), var(--uwe-wash-hover)), var(--uwe-bg-elevated);
+}
+
+.objKarte:active { transform: translateY(1px); }
+
+.objKarte.on {
+  background: linear-gradient(var(--uwe-accent-muted), var(--uwe-accent-muted)),
+    var(--uwe-bg-elevated);
+  border-color: var(--uwe-accent);
+  color: var(--uwe-accent);
+  font-weight: 700;
+}
+
+.objThumb {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--uwe-radius-sm);
+  /* Leicht abgesetzte Buehne, damit helle Assets nicht im Papier verschwinden. */
+  background: color-mix(in srgb, var(--uwe-fg) 6%, transparent);
+  overflow: hidden;
+}
+
+.objThumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+}
+
+.objThumbFallback {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--uwe-fg-subtle);
+}
+
+.objThumbWuerfel { font-size: 21px; }
+
+.objLabel {
+  width: 100%;
+  font-size: 9px;
+  line-height: 1.25;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.objAbschnitt {
+  font-size: var(--uwe-text-xs);
+  letter-spacing: var(--uwe-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--uwe-fg-subtle);
+  margin: 2px 0 5px;
+}
+
+.objRest { margin-bottom: var(--uwe-spacing-sm); }
+
+.objRest summary {
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-fg-muted);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.objRest summary:hover { color: var(--uwe-accent); }
+
+.objRest .objGitter { margin-top: 5px; }
+
+.objLeer {
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-fg-subtle);
+  margin: 4px 0 var(--uwe-spacing-sm);
+}
+
+/* ============================================================================
  * Untere Leiste
  * ==========================================================================*/
 #bar {
