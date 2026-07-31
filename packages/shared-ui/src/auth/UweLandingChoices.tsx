@@ -19,6 +19,12 @@ interface Choice {
   cta: string;
   /** Hover-/Akzentfarbe der Karte laut Handoff. */
   accent: string;
+  /**
+   * Dieselbe Farbe als *Schrift*. Terrakotta erreicht auf Papier nur 3.40:1
+   * und darf deshalb nicht die Eyebrow-Farbe sein; die übrigen drei bestehen
+   * AA bereits und bleiben unverändert. Nachgerechnet gegen #f1e8d4.
+   */
+  accentInk: string;
 }
 
 const CHOICES: Choice[] = [
@@ -30,6 +36,7 @@ const CHOICES: Choice[] = [
     copy: "Welten bauen, Kampagnen führen, Alltag verwalten — Capture-Inbox & lokale KI inklusive.",
     cta: "Studio öffnen →",
     accent: "#c2622b",
+    accentInk: "#a35224", /* 4.55:1 statt 3.40:1 */
   },
   {
     target: "portal",
@@ -39,6 +46,7 @@ const CHOICES: Choice[] = [
     copy: "Deine freigegebenen Welten — Wiki, Handouts, Session-Termine. Nur freigegebene Inhalte.",
     cta: "Portal öffnen →",
     accent: "#2f6f63",
+    accentInk: "#1f5348", /* 7.21:1 */
   },
   {
     target: "brain",
@@ -48,6 +56,7 @@ const CHOICES: Choice[] = [
     copy: "Dein privater Alltag und dein Wissen — Mail, Projekte, Werkstatt. Nie in der Cloud.",
     cta: "Brain öffnen →",
     accent: "#6b628c",
+    accentInk: "#554d73", /* 6.39:1 */
   },
   {
     target: "family",
@@ -57,6 +66,7 @@ const CHOICES: Choice[] = [
     copy: "Gemeinsam statt privat — Verträge, Dokumente, Kalender und ein Chat für alle im Haus.",
     cta: "Family öffnen →",
     accent: "#3f6b8c",
+    accentInk: "#3f6b8c", /* 4.67:1 */
   },
 ];
 
@@ -64,10 +74,14 @@ export function UweLandingChoices({
   onOpen,
   brainVisible,
   familyVisible = true,
+  chosen = null,
 }: {
-  onOpen: (target: LandingTarget) => void;
+  /** Bekommt zusätzlich das angeklickte Element — der Übergang zieht dorthin. */
+  onOpen: (target: LandingTarget, element: HTMLElement) => void;
   brainVisible: boolean;
   familyVisible?: boolean;
+  /** Welche Karte den laufenden Übergang ausgelöst hat. */
+  chosen?: LandingTarget | null;
 }) {
   const visible = CHOICES.filter(
     (choice) =>
@@ -81,9 +95,13 @@ export function UweLandingChoices({
         <button
           key={choice.target}
           type="button"
-          onClick={() => onOpen(choice.target)}
+          onClick={(event) => onOpen(choice.target, event.currentTarget)}
           className="uwe-lp-card"
-          style={{ ["--uwe-lp-accent" as string]: choice.accent }}
+          data-chosen={chosen === choice.target ? "true" : "false"}
+          style={{
+            ["--uwe-lp-accent" as string]: choice.accent,
+            ["--uwe-lp-accent-ink" as string]: choice.accentInk,
+          }}
         >
           <span className="uwe-lp-card-eyebrow">
             {choice.glyph} {choice.eyebrow}

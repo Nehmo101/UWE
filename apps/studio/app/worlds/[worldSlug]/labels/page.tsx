@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  ResponsiveTable,
   SidebarSection,
 } from "@uwe/shared-ui";
 import {
@@ -34,8 +35,6 @@ import {
   Input,
 } from "@/src/components/ui";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 const TAB_LINK_CLASS =
   "px-3 py-1 transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -161,107 +160,139 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
                 }
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Titel</th>
-                      <th className={TH_CLASS}>Quelle</th>
-                      <th className={TH_CLASS}>Vorlage</th>
-                      <th className={TH_CLASS}>Status</th>
-                      <th className={TH_CLASS}>Aktualisiert</th>
-                      <th className={TH_CLASS}>Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {labelRows.map((label) => {
-                      return (
-                        <tr key={label.id}>
-                          <td className={TD_CLASS}>
-                            <strong>{label.title}</strong>
-                          </td>
-                          <td className={TD_CLASS}>{LABEL_SOURCE_TYPE_LABELS[label.sourceType]}</td>
-                          <td className={TD_CLASS}>{label.template.name}</td>
-                          <td className={TD_CLASS}>{LABEL_PRINT_STATUS_LABELS[label.printStatus]}</td>
-                          <td className={TD_CLASS}>{label.updatedAt.toLocaleDateString("de-DE")}</td>
-                          <td className={TD_CLASS}>
-                            <div className="flex flex-wrap items-center gap-3">
-                              <Link href={`/worlds/${worldSlug}/labels/${label.id}`}>Bearbeiten</Link>
-                              <Link href={`/worlds/${worldSlug}/labels/${label.id}/preview`}>Vorschau</Link>
-                              <form action={duplicateLabelAction} className="inline">
-                                <input type="hidden" name="worldSlug" value={worldSlug} />
-                                <input type="hidden" name="labelId" value={label.id} />
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Duplizieren
-                                </Button>
-                              </form>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <ResponsiveTable
+                caption="Etiketten dieser Welt"
+                rows={labelRows}
+                rowKey={(label) => label.id}
+                columns={[
+                  {
+                    key: "title",
+                    label: "Titel",
+                    primary: true,
+                    render: (label) => label.title,
+                  },
+                  {
+                    key: "source",
+                    label: "Quelle",
+                    render: (label) => LABEL_SOURCE_TYPE_LABELS[label.sourceType],
+                  },
+                  {
+                    key: "template",
+                    label: "Vorlage",
+                    render: (label) => label.template.name,
+                  },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (label) => LABEL_PRINT_STATUS_LABELS[label.printStatus],
+                  },
+                  {
+                    // Das Datum sagt auf dem Telefon am wenigsten aus und
+                    // faellt dort als Erstes weg.
+                    key: "updated",
+                    label: "Aktualisiert",
+                    priority: "low",
+                    render: (label) => label.updatedAt.toLocaleDateString("de-DE"),
+                  },
+                  {
+                    key: "actions",
+                    label: "Aktionen",
+                    render: (label) => (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Link href={`/worlds/${worldSlug}/labels/${label.id}`}>Bearbeiten</Link>
+                        <Link href={`/worlds/${worldSlug}/labels/${label.id}/preview`}>
+                          Vorschau
+                        </Link>
+                        <form action={duplicateLabelAction} className="inline">
+                          <input type="hidden" name="worldSlug" value={worldSlug} />
+                          <input type="hidden" name="labelId" value={label.id} />
+                          <Button type="submit" variant="ghost" size="sm">
+                            Duplizieren
+                          </Button>
+                        </form>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
             )}
           </>
         )}
 
         {activeTab === "templates" && (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>Name</th>
-                    <th className={TH_CLASS}>Typ</th>
-                    <th className={TH_CLASS}>Beschreibung</th>
-                    <th className={TH_CLASS}>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {templates.map((template) => (
-                    <tr key={template.id}>
-                      <td className={TD_CLASS}>
-                        <strong>{template.name}</strong>
-                      </td>
-                      <td className={TD_CLASS}>{template.isSystem ? "System" : "Welt"}</td>
-                      <td className={TD_CLASS}>{template.description ?? "—"}</td>
-                      <td className={TD_CLASS}>
-                        <div className="flex flex-wrap items-center gap-3">
-                          {!template.isSystem && (
-                            <>
-                              <form action={renameTemplateAction} className="inline-flex items-center gap-1">
-                                <input type="hidden" name="worldSlug" value={worldSlug} />
-                                <input type="hidden" name="templateId" value={template.id} />
-                                <Input type="text" name="name" defaultValue={template.name} className="h-8 w-32" />
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Umbenennen
-                                </Button>
-                              </form>
-                              <form action={deleteTemplateAction} className="inline">
-                                <input type="hidden" name="worldSlug" value={worldSlug} />
-                                <input type="hidden" name="templateId" value={template.id} />
-                                <Button type="submit" variant="ghost" size="sm" className="text-warning">
-                                  Löschen
-                                </Button>
-                              </form>
-                            </>
-                          )}
-                          <form action={duplicateTemplateAction} className="inline">
+            <ResponsiveTable
+              caption="Etiketten-Vorlagen"
+              rows={templates}
+              rowKey={(template) => template.id}
+              columns={[
+                {
+                  key: "name",
+                  label: "Name",
+                  primary: true,
+                  render: (template) => template.name,
+                },
+                {
+                  key: "type",
+                  label: "Typ",
+                  render: (template) => (template.isSystem ? "System" : "Welt"),
+                },
+                {
+                  key: "description",
+                  label: "Beschreibung",
+                  priority: "low",
+                  render: (template) => template.description ?? "—",
+                },
+                {
+                  key: "actions",
+                  label: "Aktionen",
+                  render: (template) => (
+                    <div className="flex flex-wrap items-center gap-3">
+                      {!template.isSystem && (
+                        <>
+                          <form
+                            action={renameTemplateAction}
+                            className="inline-flex items-center gap-1"
+                          >
                             <input type="hidden" name="worldSlug" value={worldSlug} />
                             <input type="hidden" name="templateId" value={template.id} />
+                            <Input
+                              type="text"
+                              name="name"
+                              defaultValue={template.name}
+                              aria-label={`Neuer Name für ${template.name}`}
+                              className="h-9 w-32"
+                            />
                             <Button type="submit" variant="ghost" size="sm">
-                              Duplizieren
+                              Umbenennen
                             </Button>
                           </form>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <form action={deleteTemplateAction} className="inline">
+                            <input type="hidden" name="worldSlug" value={worldSlug} />
+                            <input type="hidden" name="templateId" value={template.id} />
+                            <Button
+                              type="submit"
+                              variant="ghost"
+                              size="sm"
+                              className="text-warning"
+                            >
+                              Löschen
+                            </Button>
+                          </form>
+                        </>
+                      )}
+                      <form action={duplicateTemplateAction} className="inline">
+                        <input type="hidden" name="worldSlug" value={worldSlug} />
+                        <input type="hidden" name="templateId" value={template.id} />
+                        <Button type="submit" variant="ghost" size="sm">
+                          Duplizieren
+                        </Button>
+                      </form>
+                    </div>
+                  ),
+                },
+              ]}
+            />
             {worldTemplates.length === 0 && templates.length > 0 && (
               <p className="text-sm text-muted-foreground">
                 Nur System-Templates vorhanden. Speichere ein Label als Template, um eigene Vorlagen anzulegen.
@@ -294,53 +325,73 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
             {printLists.length === 0 ? (
               <EmptyState title="Noch keine Drucklisten" description="Lege oben eine neue Druckliste an." />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Name</th>
-                      <th className={TH_CLASS}>Labels</th>
-                      <th className={TH_CLASS}>Kopien</th>
-                      <th className={TH_CLASS}>Status</th>
-                      <th className={TH_CLASS}>Erstellt</th>
-                      <th className={TH_CLASS}>Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {printLists.map((list) => {
-                      const summary = summarizePrintList(list);
-                      return (
-                        <tr key={list.id}>
-                          <td className={TD_CLASS}>
-                            <strong>{list.name}</strong>
-                            {list.forNextSession && (
-                              <p className="mt-1 text-xs text-muted-foreground">Für nächste Session</p>
-                            )}
-                          </td>
-                          <td className={TD_CLASS}>{summary.labelCount}</td>
-                          <td className={TD_CLASS}>{summary.totalCopies}</td>
-                          <td className={TD_CLASS}>{LABEL_PRINT_STATUS_LABELS[list.status]}</td>
-                          <td className={TD_CLASS}>{list.createdAt.toLocaleDateString("de-DE")}</td>
-                          <td className={TD_CLASS}>
-                            <div className="flex flex-wrap items-center gap-3">
-                              <Link href={`/worlds/${worldSlug}/labels/print-lists/${list.id}`}>Öffnen</Link>
-                              <a
-                                href={`/api/worlds/${worldSlug}/print-lists/${list.id}/export?format=print`}
-                                target="_blank"
-                              >
-                                Drucken
-                              </a>
-                              <a href={`/api/worlds/${worldSlug}/print-lists/${list.id}/export?format=pdf`}>
-                                PDF
-                              </a>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <ResponsiveTable
+                caption="Drucklisten dieser Welt"
+                rows={printLists}
+                rowKey={(list) => list.id}
+                columns={[
+                  {
+                    key: "name",
+                    label: "Name",
+                    primary: true,
+                    render: (list) => (
+                      <>
+                        {list.name}
+                        {list.forNextSession && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Für nächste Session
+                          </p>
+                        )}
+                      </>
+                    ),
+                  },
+                  {
+                    key: "labels",
+                    label: "Labels",
+                    numeric: true,
+                    render: (list) => summarizePrintList(list).labelCount,
+                  },
+                  {
+                    key: "copies",
+                    label: "Kopien",
+                    numeric: true,
+                    render: (list) => summarizePrintList(list).totalCopies,
+                  },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (list) => LABEL_PRINT_STATUS_LABELS[list.status],
+                  },
+                  {
+                    key: "created",
+                    label: "Erstellt",
+                    priority: "low",
+                    render: (list) => list.createdAt.toLocaleDateString("de-DE"),
+                  },
+                  {
+                    key: "actions",
+                    label: "Aktionen",
+                    render: (list) => (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Link href={`/worlds/${worldSlug}/labels/print-lists/${list.id}`}>
+                          Öffnen
+                        </Link>
+                        <a
+                          href={`/api/worlds/${worldSlug}/print-lists/${list.id}/export?format=print`}
+                          target="_blank"
+                        >
+                          Drucken
+                        </a>
+                        <a
+                          href={`/api/worlds/${worldSlug}/print-lists/${list.id}/export?format=pdf`}
+                        >
+                          PDF
+                        </a>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
             )}
           </>
         )}

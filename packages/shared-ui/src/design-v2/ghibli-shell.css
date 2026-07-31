@@ -134,12 +134,29 @@ html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
   color: var(--uwe-sidebar-fg);
 }
 
+/*
+ * Abschnittsüberschriften der Sidebar.
+ *
+ * `.uwe-sidebar-section` wird auch außerhalb der Sidebar verwendet — etwa im
+ * Kontextpanel des Studios, das auf dem *hellen* Papiergrund liegt. Dort ergab
+ * die Sidebar-Farbe `#8f8574` nur 2.98:1 (axe: „color-contrast", serious).
+ * Deshalb trennt die Regel jetzt nach Fläche: in der Sidebar die Sidebar-Farbe,
+ * sonst die Seitenfarbe. Und 10px waren ohnehin unter dem Boden des
+ * Typografie-Maßstabs.
+ */
 html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
-  :is(.uwe-sidebar .uwe-brand small, .uwe-sidebar-section h3, .uwe-sidebar h3) {
-  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-subtle));
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  :is(.uwe-sidebar-section h3, .uwe-sidebar h3, .uwe-sidebar .uwe-brand small) {
+  color: var(--uwe-fg-subtle);
+  font-size: var(--uwe-text-2xs);
+  font-weight: var(--uwe-weight-bold);
+  letter-spacing: var(--uwe-tracking-caps);
   text-transform: uppercase;
+}
+
+html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])
+  :is(.uwe-sidebar, .uwe-sidebar-surface)
+  :is(.uwe-sidebar-section h3, h3, .uwe-brand small) {
+  color: var(--uwe-sidebar-fg-muted, var(--uwe-fg-subtle));
 }
 
 html:is([data-uwe-theme="uwe-ghibli-tag"], [data-uwe-theme="uwe-ghibli-nacht"])

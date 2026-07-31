@@ -47,10 +47,13 @@ export function FamilyShell({
   const urls = resolveCrossAppUrls();
 
   return (
-    // Family teilt sich Akzent, Szenen und den Bottom-Nav-Slot mit Brain: beide
-    // sind lokale Apps mit derselben Optik, und shared-ui kennt (noch) keinen
-    // eigenen Family-Scope. Eine eigene Farbwelt waere hier der Ansatzpunkt.
-    <AppAccentScope app="brain">
+    // Family hat seit dem v3-Redesign einen eigenen Scope: eigener Akzent
+    // (das Blau der Produktkarte auf der Startseite) und ein eigener Szenen-Pool
+    // aus den waermeren, bewohnten Motiven. Vorher lief die App mit Brains
+    // Violett und Brains Bildern mit und war optisch nicht von Brain zu
+    // unterscheiden — obwohl das eine der gemeinsame Haushalt ist und das
+    // andere der private Wissensbereich.
+    <AppAccentScope app="family">
       <div className="uwe-shell" data-has-bottom-nav="true">
         {/* Schublade der App-Navigation auf Mobil: reines CSS (`:has()`), damit
             diese Server-Komponente ohne Client-JS auskommt. Der `key` hängt an
@@ -64,6 +67,10 @@ export function FamilyShell({
           aria-label="Navigation ein- oder ausblenden"
         />
         <label className="uwe-sidebar-backdrop" htmlFor={NAV_DRAWER_ID} aria-hidden />
+        {/* Sprungmarke: sichtbar erst beim Fokussieren (design-v3/controls.css). */}
+        <a href="#uwe-main" className="uwe-skip-link">
+          Zum Inhalt springen
+        </a>
         <header className="uwe-topbar flex-wrap md:flex-nowrap">
           <label className="uwe-mobile-nav-toggle" htmlFor={NAV_DRAWER_ID} aria-hidden>
             ☰
@@ -87,7 +94,14 @@ export function FamilyShell({
           <aside className="uwe-sidebar">
             <FamilyNav active={active} />
           </aside>
-          <main className={sceneIndex === undefined ? "uwe-main" : "uwe-main uwe-scene-host"}>
+          <main
+            id="uwe-main"
+            // Ohne tabIndex landet der Sprung zwar an der richtigen Stelle,
+            // aber auf keinem Element — die nächste Tab-Taste führte zurück
+            // in die Navigation.
+            tabIndex={-1}
+            className={sceneIndex === undefined ? "uwe-main" : "uwe-main uwe-scene-host"}
+          >
             {sceneIndex === undefined ? (
               <>
                 <span className="family-eyebrow">{eyebrow}</span>
@@ -99,7 +113,7 @@ export function FamilyShell({
               </>
             ) : (
               <SceneHero
-                area="brain"
+                area="family"
                 sceneIndex={sceneIndex}
                 size="brain"
                 veil="soft"

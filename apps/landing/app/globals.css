@@ -133,7 +133,7 @@ body {
 .card .eyebrow,
 .eyebrow {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--uwe-accent);
@@ -193,7 +193,7 @@ body {
   margin-left: 0.5rem;
   padding: 0.05rem 0.5rem;
   border-radius: 99px;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   border: 1px solid var(--uwe-accent);
   color: var(--uwe-accent);
 }
@@ -225,7 +225,7 @@ body {
 }
 
 .brain-kpi span {
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
   color: var(--uwe-fg-muted, var(--uwe-fg));
 }
 
@@ -322,7 +322,7 @@ body {
 
 .brain-btn-sm {
   padding: 0.3rem 0.6rem;
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
 }
 
 .brain-list {
@@ -362,7 +362,7 @@ body {
   align-items: center;
   gap: 0.3rem;
   list-style: none;
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
   color: var(--uwe-accent);
   user-select: none;
 }
@@ -443,7 +443,7 @@ body {
 
 .brain-eyebrow {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--uwe-accent);
@@ -465,7 +465,7 @@ body {
 }
 
 .brain-owner-badge {
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   letter-spacing: 0.04em;
   padding: 0.2rem 0.6rem;
   border-radius: 99px;

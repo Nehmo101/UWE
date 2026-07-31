@@ -1,0 +1,170 @@
+/**
+ * Design v3 — Flächen und Schichtung.
+ *
+ * Das Problem, das diese Datei löst: der Bestand hatte für jede Fläche eine
+ * eigene Kombination aus Transparenz, Blur, Rahmen und Radius. Über einem
+ * bewegten Hintergrund ergibt das eine Wand aus halbtransparenten Glaskarten,
+ * in der nichts mehr vorne oder hinten ist — und in der Text je nach
+ * Bildinhalt mal lesbar ist und mal nicht.
+ *
+ * Hier gibt es genau **drei** Flächenstufen und eine Regel dazu:
+ *   1 — Ebene über der Bühne, leicht durchscheinend. Für große Blöcke.
+ *   2 — Arbeitsfläche. Fast deckend. Für alles, worin man liest oder tippt.
+ *   3 — Chrome und Overlay. Deckend + Glas. Für Nav, Dialog, Menü.
+ *
+ * Glas (`backdrop-filter`) gibt es nur auf Stufe 3. Damit hat die Seite
+ * höchstens zwei Glasflächen gleichzeitig statt zwanzig.
+ */
+
+/* --- Die drei Stufen ---------------------------------------------------- */
+
+.uwe-surface-1,
+.uwe-surface-2,
+.uwe-surface-3 {
+  border-radius: var(--uwe-r-lg);
+  border: 1px solid var(--uwe-border);
+  padding: var(--uwe-pad-card);
+  color: var(--uwe-fg);
+}
+
+.uwe-surface-1 {
+  background: var(--uwe-surface-1);
+  box-shadow: var(--uwe-elev-1);
+}
+
+.uwe-surface-2 {
+  background: var(--uwe-surface-2);
+  box-shadow: var(--uwe-elev-2);
+}
+
+.uwe-surface-3 {
+  background: var(--uwe-surface-3);
+  border-color: var(--uwe-border-strong);
+  box-shadow: var(--uwe-elev-3);
+  backdrop-filter: blur(var(--uwe-glass-blur, 13px)) saturate(1.05);
+  -webkit-backdrop-filter: blur(var(--uwe-glass-blur, 13px)) saturate(1.05);
+}
+
+/* Eingesenkt: Codeblöcke, Vorschauen, inaktive Bereiche. */
+.uwe-surface-sunken {
+  background: var(--uwe-surface-sunken);
+  border-radius: var(--uwe-r-md);
+  border: 1px solid var(--uwe-border-muted, var(--uwe-border));
+  padding: var(--uwe-pad-tight);
+}
+
+/*
+ * Der Lesestreifen: die Fläche, auf der Fließtext über der Bühne sitzt.
+ * Etwas mehr Deckkraft als Stufe 1, weil hier wirklich gelesen wird — und der
+ * Grund darunter wechselt mit jedem Videoframe.
+ */
+.uwe-readable {
+  background: var(--uwe-surface-2);
+  border-radius: var(--uwe-r-lg);
+  padding: var(--uwe-pad-section);
+}
+
+/* --- Karten ------------------------------------------------------------- */
+
+.uwe-card-v3 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-pad-card);
+  border-radius: var(--uwe-r-lg);
+  border: 1px solid var(--uwe-border);
+  background: var(--uwe-surface-1);
+  box-shadow: var(--uwe-elev-1);
+  transition: border-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    box-shadow var(--uwe-dur-fast) var(--uwe-ease-out),
+    transform var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+/* Anklickbare Karten heben sich; reine Anzeigekarten bleiben still. */
+a.uwe-card-v3:hover,
+button.uwe-card-v3:hover,
+.uwe-card-v3[data-interactive="true"]:hover {
+  border-color: var(--uwe-accent);
+  box-shadow: var(--uwe-elev-2);
+  transform: translateY(-2px);
+}
+
+.uwe-card-v3__title {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-xl);
+  line-height: var(--uwe-leading-snug);
+  letter-spacing: var(--uwe-tracking-tight);
+  font-weight: var(--uwe-weight-medium);
+  margin: 0;
+}
+
+.uwe-card-v3__body {
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+  margin: 0;
+  max-width: var(--uwe-measure-narrow);
+}
+
+/* --- Seitenaufbau ------------------------------------------------------- */
+
+.uwe-page-v3 {
+  width: 100%;
+  max-width: var(--uwe-content-max);
+  margin-inline: auto;
+  padding-inline: var(--uwe-gutter);
+  /* Sicherheitsbereiche auf dem Telefon — sonst klebt Inhalt am Notch-Rand. */
+  padding-left: max(var(--uwe-gutter), var(--uwe-safe-left));
+  padding-right: max(var(--uwe-gutter), var(--uwe-safe-right));
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-8);
+}
+
+.uwe-stack-sm > * + * {
+  margin-top: var(--uwe-space-2);
+}
+.uwe-stack > * + * {
+  margin-top: var(--uwe-space-4);
+}
+.uwe-stack-lg > * + * {
+  margin-top: var(--uwe-space-8);
+}
+
+/* --- Abschnittsköpfe ---------------------------------------------------- */
+
+.uwe-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--uwe-space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--uwe-space-3);
+  border-bottom: 1px solid var(--uwe-border);
+}
+
+.uwe-section-head__title {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-2xl);
+  line-height: var(--uwe-leading-snug);
+  letter-spacing: var(--uwe-tracking-tight);
+  font-weight: var(--uwe-weight-medium);
+  margin: 0;
+}
+
+/*
+ * Trennkante über der Bühne: eine reine Linie verschwindet auf gemaltem Grund.
+ * Ein schmaler Verlauf trägt auf hellem wie dunklem Bildinhalt.
+ */
+.uwe-scene-host .uwe-section-head {
+  border-bottom-color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    var(--uwe-border-strong) 0%,
+    color-mix(in srgb, var(--uwe-border-strong) 30%, transparent) 60%,
+    transparent 100%
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: bottom left;
+}

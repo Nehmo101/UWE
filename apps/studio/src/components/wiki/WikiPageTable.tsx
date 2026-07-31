@@ -37,7 +37,8 @@ const columns: ColumnDef<WikiPageRow>[] = [
     accessorKey: "title",
     header: "Titel",
     enableHiding: false,
-    meta: { label: "Titel" },
+    // Leitspalte: trägt auf dem Telefon die Karte.
+    meta: { label: "Titel", primary: true },
     cell: ({ row }) => (
       <Link href={row.original.href} className="font-medium hover:underline">
         {row.original.title}
@@ -62,7 +63,8 @@ const columns: ColumnDef<WikiPageRow>[] = [
     accessorKey: "tags",
     header: "Tags",
     enableSorting: false,
-    meta: { label: "Tags" },
+    // Nebensächlich auf 390 px — die Tags stehen auf der Seite selbst.
+    meta: { label: "Tags", priority: "low" },
     cell: ({ row }) => (
       <span className="text-xs text-muted-foreground">{row.original.tags.join(", ") || "—"}</span>
     ),
@@ -103,6 +105,7 @@ export function WikiPageTable({ rows, className, worldSlug, campaigns = [] }: Wi
     <DataTable
       columns={columns}
       data={rows}
+      caption="Wiki-Seiten"
       filterPlaceholder="Seiten durchsuchen…"
       enablePagination={false}
       className={className}

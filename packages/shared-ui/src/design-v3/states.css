@@ -1,0 +1,201 @@
+/**
+ * Design v3 — Leer-, Lade- und Fehlerzustände.
+ *
+ * Diese drei Zustände waren im Bestand pro Seite neu erfunden: mal ein grauer
+ * Satz, mal ein Kasten, mal gar nichts. Sie sind aber das, was ein Nutzer beim
+ * ersten Besuch am häufigsten sieht — eine leere Welt, eine ladende Liste, ein
+ * fehlgeschlagener Aufruf. Hier bekommen sie eine gemeinsame Form.
+ */
+
+/* --- Leer --------------------------------------------------------------- */
+
+.uwe-empty-v3 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-space-12) var(--uwe-pad-card);
+  border: 1px dashed var(--uwe-border-strong);
+  border-radius: var(--uwe-r-lg);
+  background: var(--uwe-surface-1);
+}
+
+.uwe-empty-v3__glyph {
+  font-size: var(--uwe-text-3xl);
+  line-height: 1;
+  color: var(--uwe-fg-subtle);
+}
+
+.uwe-empty-v3__title {
+  margin: 0;
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-xl);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-snug);
+}
+
+.uwe-empty-v3__body {
+  margin: 0;
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+  max-width: var(--uwe-measure-narrow);
+}
+
+/* --- Laden -------------------------------------------------------------- */
+
+/*
+ * Skelett statt Spinner: die Fläche behält ihre Größe, es gibt keinen Sprung,
+ * wenn die Daten eintreffen. Der Schimmer läuft über `transform`, nicht über
+ * `background-position` — das bleibt auf der GPU.
+ */
+.uwe-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--uwe-r-sm);
+  background: var(--uwe-surface-sunken);
+  /* Damit die Fläche nicht kollabiert, bevor Inhalt kommt. */
+  min-height: 1em;
+}
+
+.uwe-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--uwe-fg) 8%, transparent),
+    transparent
+  );
+  animation: uwe-skeleton-sweep 1.6s var(--uwe-ease-in-out) infinite;
+}
+
+@keyframes uwe-skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Für <span>-Skelette: inline hätte weder Höhe noch eigene Zeile. */
+.uwe-skeleton--block {
+  display: block;
+}
+
+.uwe-skeleton[data-lines="text"] {
+  height: 1em;
+  margin-block: 0.25em;
+}
+
+.uwe-skeleton[data-lines="title"] {
+  height: 1.6em;
+  width: 42%;
+}
+
+/*
+ * Ohne Bewegung kein Schimmer. Eine Dauerschleife im Vordergrund ist genau
+ * das, was `prefers-reduced-motion` meint — die Fläche bleibt trotzdem
+ * erkennbar „lädt gerade", weil sie eingesenkt ist.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .uwe-skeleton::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+html[data-uwe-motion="off"] .uwe-skeleton::after {
+  animation: none;
+  opacity: 0;
+}
+
+/* --- Fehler ------------------------------------------------------------- */
+
+.uwe-error-v3 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-pad-card);
+  border-radius: var(--uwe-r-lg);
+  /* Farbe allein trägt die Bedeutung nicht: die kräftige linke Kante und das
+     Zeichen im Titel tun es mit. */
+  border: 1px solid var(--uwe-danger-ink);
+  border-left-width: 4px;
+  background: var(--uwe-surface-2);
+  color: var(--uwe-fg);
+}
+
+.uwe-error-v3__title {
+  display: flex;
+  align-items: center;
+  gap: var(--uwe-space-2);
+  margin: 0;
+  font-size: var(--uwe-text-lg);
+  font-weight: var(--uwe-weight-semibold);
+  color: var(--uwe-danger-ink);
+}
+
+.uwe-error-v3__title::before {
+  content: "▲";
+  flex: none;
+}
+
+.uwe-error-v3__body {
+  margin: 0;
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-normal);
+  max-width: var(--uwe-measure);
+}
+
+/* Technische Details sind ausklappbar, nicht dauerhaft im Weg. */
+.uwe-error-v3__detail {
+  font-size: var(--uwe-text-xs);
+  font-family: var(--uwe-font-family);
+  color: var(--uwe-fg-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* --- Statusanzeigen ----------------------------------------------------- */
+
+/*
+ * Jeder Status trägt ein Zeichen *und* eine Farbe. Wer Farben nicht
+ * unterscheiden kann, liest trotzdem den Unterschied — die Anforderung
+ * „keine Information ausschließlich über Farbe" ist hier eingebaut, nicht
+ * optional.
+ */
+.uwe-status-v3 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--uwe-space-2);
+  padding: var(--uwe-space-1) var(--uwe-space-3);
+  border-radius: var(--uwe-r-pill);
+  border: 1px solid currentColor;
+  font-size: var(--uwe-text-xs);
+  font-weight: var(--uwe-weight-semibold);
+  line-height: var(--uwe-leading-snug);
+  white-space: nowrap;
+}
+
+.uwe-status-v3::before {
+  content: attr(data-glyph);
+  flex: none;
+}
+
+.uwe-status-v3[data-tone="success"] {
+  color: var(--uwe-success-ink);
+}
+.uwe-status-v3[data-tone="warning"] {
+  color: var(--uwe-warning-ink);
+}
+.uwe-status-v3[data-tone="danger"] {
+  color: var(--uwe-danger-ink);
+}
+.uwe-status-v3[data-tone="info"] {
+  color: var(--uwe-info-ink);
+}
+.uwe-status-v3[data-tone="neutral"] {
+  color: var(--uwe-fg-muted);
+}

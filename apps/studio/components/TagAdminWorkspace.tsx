@@ -2,6 +2,7 @@
 
 import { studioApiFetch } from "@/src/lib/studio-api-fetch";
 import { useCallback, useEffect, useState } from "react";
+import { ResponsiveTable } from "@uwe/shared-ui";
 import {
   Alert,
   Badge,
@@ -15,8 +16,6 @@ import {
   LoadingState,
 } from "@/src/components/ui";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 interface TagReference {
   entityType: string;
@@ -369,31 +368,36 @@ export function TagAdminWorkspace({ worldId }: { worldId: string }) {
               <CardTitle>Tag-Inventar ({data.inventory.length})</CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>Tag</th>
-                    <th className={TH_CLASS}>Normalisiert</th>
-                    <th className={TH_CLASS}>Referenzen</th>
-                    <th className={TH_CLASS}>Hinweise</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.inventory.slice(0, 100).map((entry) => (
-                    <tr key={entry.tag}>
-                      <td className={TD_CLASS}>
-                        <strong>{entry.tag}</strong>
-                      </td>
-                      <td className={TD_CLASS}>{entry.normalizedKey}</td>
-                      <td className={TD_CLASS}>{entry.count}</td>
-                      <td className={TD_CLASS}>
+              <ResponsiveTable
+                caption="Tag-Inventar"
+                rowKey={(entry) => entry.tag}
+                rows={data.inventory.slice(0, 100)}
+                columns={[
+                  { key: "tag", label: "Tag", primary: true, render: (entry) => entry.tag },
+                  {
+                    key: "normalized",
+                    label: "Normalisiert",
+                    priority: "low",
+                    render: (entry) => entry.normalizedKey,
+                  },
+                  {
+                    key: "count",
+                    label: "Referenzen",
+                    numeric: true,
+                    render: (entry) => entry.count,
+                  },
+                  {
+                    key: "hints",
+                    label: "Hinweise",
+                    render: (entry) => (
+                      <>
                         {entry.onlyOnDrafts && <Badge variant="warning">Draft</Badge>}{" "}
                         {entry.onlyDmOnly && <Badge variant="secondary">dm_only</Badge>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </>
+                    ),
+                  },
+                ]}
+              />
             </CardContent>
           </Card>
         </div>

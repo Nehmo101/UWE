@@ -8,6 +8,7 @@ import {
   CharacterLevelUpPanel,
   CharacterProficiencyFields,
   CharacterSpellSection,
+  ResponsiveTable,
 } from "@uwe/shared-ui";
 import {
   addHomebrewSpellAction,
@@ -94,27 +95,30 @@ export function CharacterSheetPanel({
         </div>
       </dl>
 
-      <table className="auth-character-abilities">
-        <thead>
-          <tr>
-            <th>Attribut</th>
-            <th>Wert</th>
-            <th>Modifikator</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(ABILITY_LABELS).map(([key, label]) => {
-            const abilityKey = key as keyof typeof sheet.abilities;
-            return (
-              <tr key={key}>
-                <td>{label}</td>
-                <td>{sheet.abilities[abilityKey]}</td>
-                <td>{formatModifier(sheet.modifiers[abilityKey])}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {/* `auth-character-abilities` war eine Klasse ohne Regel: die Tabelle
+          stand ungestylt da, ohne Rahmen und ohne Innenabstand. */}
+      <ResponsiveTable
+        caption="Attribute"
+        rowKey={([key]) => key}
+        rows={Object.entries(ABILITY_LABELS) as [keyof typeof sheet.abilities, string][]}
+        // Zwei Zahlen je Zeile — als Karten wäre das mehr Weg, nicht weniger.
+        mobile="scroll"
+        columns={[
+          { key: "ability", label: "Attribut", primary: true, render: ([, label]) => label },
+          {
+            key: "score",
+            label: "Wert",
+            numeric: true,
+            render: ([key]) => sheet.abilities[key],
+          },
+          {
+            key: "modifier",
+            label: "Modifikator",
+            numeric: true,
+            render: ([key]) => formatModifier(sheet.modifiers[key]),
+          },
+        ]}
+      />
 
       <CharacterDerivedStatsSection derived={sheet.derived} />
 

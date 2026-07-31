@@ -7,7 +7,10 @@ import {
   type CampaignFitChatMessage,
   type CampaignImportPreviewSummary,
 } from "@uwe/pdf-campaign-import";
-import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
+import {
+  PAGE_TYPE_LABELS,
+  ResponsiveTable,
+} from "@uwe/shared-ui";
 import type {
   CampaignAnalysisProgress,
   CampaignFigurePreview,
@@ -31,8 +34,6 @@ import {
   Textarea,
 } from "@/src/components/ui";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 const MAX_PDF_MEGABYTES = Math.floor(MAX_CAMPAIGN_PDF_BYTES / (1024 * 1024));
 const STATUS_POLL_MS = 2_000;
@@ -499,48 +500,42 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={TH_CLASS}>
-                      {/* TODO(design-kit): natives Checkbox-Element – Kit hat noch keine Checkbox-Komponente. */}
-                      <input
-                        type="checkbox"
-                        aria-label="Alle Entitäten auswählen"
-                        onChange={toggleAll}
-                        checked={
-                          preview.items.length > 0 &&
-                          preview.items.every((item) => selectedIds.has(item.itemId))
-                        }
-                        className="h-4 w-4 rounded border-input"
-                      />
-                    </th>
-                    <th className={TH_CLASS}>Art</th>
-                    <th className={TH_CLASS}>Titel</th>
-                    <th className={TH_CLASS}>Zusammenfassung</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.items.map((item) => (
-                    <tr key={item.itemId}>
-                      <td className={TD_CLASS}>
-                        <input
-                          type="checkbox"
-                          aria-label={item.title + " auswählen"}
-                          checked={selectedIds.has(item.itemId)}
-                          onChange={() => toggleItem(item.itemId)}
-                          className="h-4 w-4 rounded border-input"
-                        />
-                      </td>
-                      <td className={TD_CLASS}>{pageTypeLabel(item.pageType)}</td>
-                      <td className={TD_CLASS}>{item.title}</td>
-                      <td className={TD_CLASS}>{item.excerpt}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ResponsiveTable
+              caption="Erkannte Entitäten"
+              rowKey={(item) => item.itemId}
+              rows={preview.items}
+              columns={[
+                {
+                  key: "select",
+                  label: "Auswahl",
+                  header: (
+                    /* TODO(design-kit): natives Checkbox-Element – Kit hat noch keine Checkbox-Komponente. */
+                    <input
+                      type="checkbox"
+                      aria-label="Alle Entitäten auswählen"
+                      onChange={toggleAll}
+                      checked={
+                        preview.items.length > 0 &&
+                        preview.items.every((entry) => selectedIds.has(entry.itemId))
+                      }
+                      className="h-4 w-4 rounded border-input"
+                    />
+                  ),
+                  render: (item) => (
+                    <input
+                      type="checkbox"
+                      aria-label={item.title + " auswählen"}
+                      checked={selectedIds.has(item.itemId)}
+                      onChange={() => toggleItem(item.itemId)}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                  ),
+                },
+                { key: "title", label: "Titel", primary: true, render: (item) => item.title },
+                { key: "kind", label: "Art", render: (item) => pageTypeLabel(item.pageType) },
+                { key: "excerpt", label: "Zusammenfassung", render: (item) => item.excerpt },
+              ]}
+            />
 
             <p className="text-sm text-muted-foreground">
               Die lokale KI läuft nur für diese Vorschau. „Import ausführen“ verwendet ausschließlich

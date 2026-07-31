@@ -3,10 +3,11 @@
 import { worldWikiPath } from "@/src/lib/world-last-route";
 import Link from "next/link";
 import {
+  DashboardWidgetGrid,
   EmptyState,
   GAME_SESSION_STATUS_LABELS,
-  DashboardWidgetGrid,
   PageTypeBadge,
+  ResponsiveTable,
   WorldCockpitCard,
   WorldCockpitHeader,
   WorldCockpitTabs,
@@ -24,8 +25,6 @@ import {
   cn,
 } from "@/src/components/ui";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 type CockpitTabItem = {
   key: string;
@@ -209,42 +208,39 @@ export function WorldDashboardClient({
               <CardTitle>Zuletzt bearbeitet</CardTitle>
             </CardHeader>
             <CardContent>
-              {overview.recentPages.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Noch keine kürzlichen Wiki-Änderungen.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className={TH_CLASS}>Titel</th>
-                        <th className={TH_CLASS}>Typ</th>
-                        <th className={TH_CLASS}>Sichtbarkeit</th>
-                        <th className={TH_CLASS}>Publish</th>
-                        <th className={TH_CLASS}>Geändert</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {overview.recentPages.map((page) => (
-                        <tr key={page.id}>
-                          <td className={TD_CLASS}>
-                            <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
-                          </td>
-                          <td className={TD_CLASS}>
-                            <PageTypeBadge type={page.type} />
-                          </td>
-                          <td className={TD_CLASS}>
-                          </td>
-                          <td className={TD_CLASS}>
-                          </td>
-                          <td className={cn(TD_CLASS, "text-muted-foreground")}>
-                            {RELATIVE_FORMAT.format(new Date(page.updatedAt))}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {/* „Sichtbarkeit" und „Publish" waren Überschriften über zwei
+                  Zellen, die immer leer blieben — drei echte Spalten, fünf
+                  angekündigte. */}
+              <ResponsiveTable
+                caption="Zuletzt bearbeitete Seiten"
+                rowKey={(page) => page.id}
+                rows={overview.recentPages}
+                columns={[
+                  {
+                    key: "title",
+                    label: "Titel",
+                    primary: true,
+                    render: (page) => (
+                      <Link href={buildPageUrl(worldSlug, page.type, page.slug)}>{page.title}</Link>
+                    ),
+                  },
+                  { key: "type", label: "Typ", render: (page) => <PageTypeBadge type={page.type} /> },
+                  {
+                    key: "updated",
+                    label: "Geändert",
+                    render: (page) => (
+                      <span className="text-muted-foreground">
+                        {RELATIVE_FORMAT.format(new Date(page.updatedAt))}
+                      </span>
+                    ),
+                  },
+                ]}
+                empty={
+                  <p className="text-sm text-muted-foreground">
+                    Noch keine kürzlichen Wiki-Änderungen.
+                  </p>
+                }
+              />
             </CardContent>
           </Card>
         );

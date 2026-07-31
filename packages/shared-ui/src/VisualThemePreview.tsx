@@ -60,9 +60,9 @@ const SURFACE_GLASS =
   "bg-[var(--uwe-surface-glass,color-mix(in_srgb,var(--uwe-panel)_88%,transparent))] backdrop-blur-[10px]";
 const SURFACE_SOLID = "bg-[var(--uwe-surface-elevated,var(--uwe-bg-elevated))]";
 const CARD_BASE =
-  "rounded-[0.55rem] border border-[var(--uwe-border-subtle,var(--uwe-border-muted))] px-3 py-[0.65rem] text-[0.78rem] leading-[1.45] text-[var(--uwe-text-primary,var(--uwe-fg))]";
+  "rounded-[0.55rem] border border-[var(--uwe-border-subtle,var(--uwe-border-muted))] px-3 py-[0.65rem] text-[length:var(--uwe-text-xs)] leading-[1.45] text-[var(--uwe-text-primary,var(--uwe-fg))]";
 const CHIP =
-  "inline-flex items-center rounded-full bg-[var(--uwe-accent-muted)] px-[0.45rem] py-[0.15rem] text-[0.68rem] font-semibold text-[var(--uwe-text-primary,var(--uwe-fg))]";
+  "inline-flex items-center rounded-full bg-[var(--uwe-accent-muted)] px-[0.45rem] py-[0.15rem] text-[length:var(--uwe-text-2xs)] font-semibold text-[var(--uwe-text-primary,var(--uwe-fg))]";
 
 export interface VisualThemePreviewProps {
   /** Form id to mirror select/checkbox values from (settings page). */
@@ -135,7 +135,7 @@ export function VisualThemePreview({ formId, initial }: VisualThemePreviewProps)
           )}
           <div
             className={cn(
-              "border-b border-[var(--uwe-border-subtle,var(--uwe-border-muted))] px-[0.85rem] py-[0.55rem] text-[0.8rem] font-semibold text-[var(--uwe-text-primary,var(--uwe-fg))]",
+              "border-b border-[var(--uwe-border-subtle,var(--uwe-border-muted))] px-[0.85rem] py-[0.55rem] text-[length:var(--uwe-text-xs)] font-semibold text-[var(--uwe-text-primary,var(--uwe-fg))]",
               surface,
             )}
           >

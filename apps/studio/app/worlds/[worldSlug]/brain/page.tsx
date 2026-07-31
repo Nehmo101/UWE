@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  ResponsiveTable,
   SidebarSection,
 } from "@uwe/shared-ui";
 import {
@@ -42,8 +43,6 @@ interface Props {
 
 const BRAIN_PAGE_SIZE = 25;
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2";
 
 export default async function StudioBrainPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
@@ -129,37 +128,35 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
             <CardTitle>Dokumente</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            {documents.length === 0 ? (
-              <EmptyState title="Noch keine Brain-Dokumente." />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Titel</th>
-                      <th className={TH_CLASS}>Typ</th>
-                      <th className={TH_CLASS}>Sichtbarkeit</th>
-                      <th className={TH_CLASS}>Status</th>
-                      <th className={TH_CLASS}>Quelle</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documents.map((doc) => (
-                      <tr key={doc.id}>
-                        <td className={TD_CLASS}>
-                          <Link href={`/worlds/${worldSlug}/brain/${doc.id}`}>{doc.title}</Link>
-                        </td>
-                        <td className={TD_CLASS}>{BRAIN_DOCUMENT_TYPE_LABELS[doc.documentType]}</td>
-                        <td className={TD_CLASS}>
-                        </td>
-                        <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[doc.status]}</td>
-                        <td className={TD_CLASS}>{doc.source}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {/* „Sichtbarkeit" stand als Überschrift über einer Zelle, die
+                immer leer blieb — eine Spalte ohne Inhalt und ohne Zweck. */}
+            <ResponsiveTable
+              caption="Brain-Dokumente"
+              rowKey={(doc) => doc.id}
+              rows={documents}
+              columns={[
+                {
+                  key: "title",
+                  label: "Titel",
+                  primary: true,
+                  render: (doc) => (
+                    <Link href={`/worlds/${worldSlug}/brain/${doc.id}`}>{doc.title}</Link>
+                  ),
+                },
+                {
+                  key: "type",
+                  label: "Typ",
+                  render: (doc) => BRAIN_DOCUMENT_TYPE_LABELS[doc.documentType],
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (doc) => BRAIN_STATUS_LABELS[doc.status],
+                },
+                { key: "source", label: "Quelle", priority: "low", render: (doc) => doc.source },
+              ]}
+              empty={<EmptyState title="Noch keine Brain-Dokumente." />}
+            />
             {totalPages > 1 && (
               <nav className="flex flex-wrap items-center gap-3" aria-label="Brain-Dokumente Pagination">
                 {page > 1 ? (
@@ -191,37 +188,32 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
             <CardTitle>Fakten</CardTitle>
           </CardHeader>
           <CardContent>
-            {facts.length === 0 ? (
-              <EmptyState title="Noch keine Brain-Fakten." />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Titel</th>
-                      <th className={TH_CLASS}>Typ</th>
-                      <th className={TH_CLASS}>Sichtbarkeit</th>
-                      <th className={TH_CLASS}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {facts.map((fact) => (
-                      <tr key={fact.id}>
-                        <td className={TD_CLASS}>
-                          <Link href={`/worlds/${worldSlug}/brain/facts/${fact.id}`}>
-                            {fact.title}
-                          </Link>
-                        </td>
-                        <td className={TD_CLASS}>{BRAIN_FACT_TYPE_LABELS[fact.factType]}</td>
-                        <td className={TD_CLASS}>
-                        </td>
-                        <td className={TD_CLASS}>{BRAIN_STATUS_LABELS[fact.status]}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <ResponsiveTable
+              caption="Brain-Fakten"
+              rowKey={(fact) => fact.id}
+              rows={facts}
+              columns={[
+                {
+                  key: "title",
+                  label: "Titel",
+                  primary: true,
+                  render: (fact) => (
+                    <Link href={`/worlds/${worldSlug}/brain/facts/${fact.id}`}>{fact.title}</Link>
+                  ),
+                },
+                {
+                  key: "type",
+                  label: "Typ",
+                  render: (fact) => BRAIN_FACT_TYPE_LABELS[fact.factType],
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (fact) => BRAIN_STATUS_LABELS[fact.status],
+                },
+              ]}
+              empty={<EmptyState title="Noch keine Brain-Fakten." />}
+            />
           </CardContent>
         </Card>
 

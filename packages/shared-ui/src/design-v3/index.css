@@ -1,0 +1,28 @@
+/*
+ * Design v3 — die gemeinsame Sprache der fünf Bereiche.
+ *
+ * v3 ersetzt v2 nicht, sondern vollendet es. v2 hat den Chrome-Block der
+ * „Gemalten Welt" gebaut (Topbar, Sidebar, Szene, App-Akzent); was fehlte, war
+ * die Ebene darunter: ein Typografie-Maßstab, der auf einem Telefon lesbar
+ * ist, eine Flächen-Leiter statt beliebig vieler Glaskarten, und Farbwerte, die
+ * WCAG AA tatsächlich bestehen.
+ *
+ * Reihenfolge ist hier bedeutungstragend:
+ *   tokens-v3   — Namen und Werte zuerst, alles Folgende liest sie.
+ *   type-scale  — Grundtypografie; niedrige Spezifität, jede Komponente gewinnt.
+ *   surfaces    — Flächen, Karten, Seitenraster.
+ *   controls    — Buttons, Felder, Fokus, Touch-Ziele.
+ *   scene-stage — die bewegte Ebene der Bühne.
+ *   data        — Tabellen, die auf dem Telefon zu Karten werden.
+ *   states      — Leer-, Lade- und Fehlerzustände.
+ *
+ * Eingebunden wird das Bündel in `uwe.css` **nach** design-v2, damit v3 im
+ * Zweifel gewinnt.
+ */
+@import "./tokens-v3.css";
+@import "./type-scale.css";
+@import "./surfaces.css";
+@import "./controls.css";
+@import "./scene-stage.css";
+@import "./data.css";
+@import "./states.css";

@@ -189,6 +189,12 @@ function stampMatches(fingerprint) {
  */
 function acquireLock() {
   const deadline = Date.now() + 10 * 60 * 1000;
+  // Das Sperrverzeichnis wird atomar angelegt — sein *Elternverzeichnis* nicht.
+  // Auf einem frischen Container gibt es `.cache/` noch nicht, und `mkdirSync`
+  // ohne `recursive` scheitert dann mit ENOENT statt EEXIST. Das lief in die
+  // Rethrow-Zeile unten und ließ jeden e2e-Lauf am Build scheitern. Das Anlegen
+  // des Elternverzeichnisses ist idempotent und ändert nichts an der Atomarität
+  // der Sperre selbst.
   fs.mkdirSync(path.dirname(LOCK_DIR), { recursive: true });
   for (;;) {
     try {

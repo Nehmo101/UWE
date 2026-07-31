@@ -3,6 +3,7 @@
 import { studioApiUrl } from "@/src/lib/studio-api-url";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ResponsiveTable } from "@uwe/shared-ui";
 import { formatStudioDate } from "@/src/lib/format";
 
 export interface AiRunRow {
@@ -46,42 +47,57 @@ export function AiRunsTable({ worldSlug, initialRuns, taskLabels, statusLabels }
     return () => clearInterval(timer);
   }, [runs, refresh]);
 
-  if (runs.length === 0) {
-    return <p className="text-sm text-muted-foreground">Noch keine AI Runs für diese Welt.</p>;
-  }
-
   return (
-    <table className="w-full border-collapse text-sm [&_td]:border-b [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium [&_th]:text-muted-foreground">
-      <thead>
-        <tr>
-          <th>Zeit</th>
-          <th>Aufgabe</th>
-          <th>Status</th>
-          <th>Provider / Modell</th>
-          <th>Seite</th>
-          <th>Dauer</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {runs.map((run) => (
-          <tr key={run.id}>
-            <td>{formatStudioDate(new Date(run.createdAt), "short")}</td>
-            <td>{taskLabels[run.taskType] ?? run.taskType}</td>
-            <td>{statusLabels[run.status] ?? run.status}</td>
-            <td>
+    <ResponsiveTable
+      caption="KI-Läufe"
+      rowKey={(run) => run.id}
+      rows={runs}
+      columns={[
+        {
+          key: "task",
+          label: "Aufgabe",
+          primary: true,
+          render: (run) => taskLabels[run.taskType] ?? run.taskType,
+        },
+        {
+          key: "status",
+          label: "Status",
+          render: (run) => statusLabels[run.status] ?? run.status,
+        },
+        {
+          key: "time",
+          label: "Zeit",
+          render: (run) => formatStudioDate(new Date(run.createdAt), "short"),
+        },
+        {
+          key: "model",
+          label: "Provider / Modell",
+          render: (run) => (
+            <>
               {run.provider}
               <br />
               <span className="text-xs text-muted-foreground">{run.model}</span>
-            </td>
-            <td>{run.pageTitle ?? "—"}</td>
-            <td>{run.durationMs != null ? `${run.durationMs} ms` : "—"}</td>
-            <td>
-              <Link href={`/worlds/${worldSlug}/ai-runs/${run.id}`}>Details</Link>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            </>
+          ),
+        },
+        { key: "page", label: "Seite", priority: "low", render: (run) => run.pageTitle ?? "—" },
+        {
+          key: "duration",
+          label: "Dauer",
+          numeric: true,
+          render: (run) => (run.durationMs != null ? `${run.durationMs} ms` : "—"),
+        },
+        {
+          key: "details",
+          label: "Details",
+          render: (run) => (
+            <Link href={`/worlds/${worldSlug}/ai-runs/${run.id}`}>Details</Link>
+          ),
+        },
+      ]}
+      empty={
+        <p className="text-sm text-muted-foreground">Noch keine AI Runs für diese Welt.</p>
+      }
+    />
   );
 }

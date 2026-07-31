@@ -143,7 +143,7 @@ body {
 }
 
 .share-link-meta code {
-  font-size: 0.75rem;
+  font-size: var(--uwe-text-2xs);
   word-break: break-all;
 }
 
@@ -399,7 +399,7 @@ body {
   gap: 0.35rem;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
   border: 1px solid color-mix(in srgb, var(--uwe-border) 167%, var(--uwe-muted) 0%);
   background: color-mix(in srgb, var(--uwe-card) 82%, transparent);
 }
@@ -490,7 +490,7 @@ body {
   top: 0.5rem;
   padding: 0.15rem 0.5rem;
   border-radius: 0.5rem;
-  font-size: 0.75rem;
+  font-size: var(--uwe-text-2xs);
   background: color-mix(in srgb, var(--uwe-card) 85%, transparent);
   color: var(--uwe-fg);
   pointer-events: none;
@@ -623,7 +623,7 @@ body {
 
 .uwe-homelab-service-card p {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
   color: var(--uwe-muted);
 }
 
@@ -712,7 +712,7 @@ body {
   margin-top: 0.25rem;
   padding: 0.25rem 0.5rem;
   border-radius: 0.35rem;
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
   background: color-mix(in srgb, var(--uwe-card) 60%, var(--uwe-bg) 40%);
 }
 
@@ -743,7 +743,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
   white-space: nowrap;
@@ -974,7 +974,7 @@ body {
   border: 1px solid var(--uwe-border);
   background: color-mix(in srgb, var(--uwe-card) 92%, var(--uwe-accent) 8%);
   color: var(--uwe-text);
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
   line-height: 1.25;
   text-align: left;
   cursor: pointer;
@@ -1032,7 +1032,7 @@ body {
 .uwe-capture-filter-tabs a {
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: var(--uwe-text-xs); /* war 0.78rem = 12.5px */
   text-decoration: none;
   border: 1px solid var(--uwe-border);
   color: var(--uwe-muted);
@@ -1090,7 +1090,7 @@ body {
 }
 
 .uwe-capture-proposal-grid dt {
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--uwe-muted);
@@ -1106,7 +1106,7 @@ body {
   margin: 0.15rem 0.25rem 0 0;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   background: color-mix(in srgb, var(--uwe-accent) 12%, var(--uwe-card));
   border: 1px solid var(--uwe-border);
 }
@@ -1250,7 +1250,7 @@ body {
 }
 
 .uwe-field-hint {
-  font-size: 0.72rem;
+  font-size: var(--uwe-text-2xs); /* war 0.72rem = 11.5px */
   font-weight: 400;
   color: var(--uwe-muted);
 }

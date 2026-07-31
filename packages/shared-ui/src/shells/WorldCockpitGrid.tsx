@@ -66,10 +66,13 @@ export function WorldCockpitTag({
   // The uwe-cockpit-tag-{variant} modifier classes had no CSS rule anywhere in
   // the repo (dead selectors) — every variant rendered identically to the base
   // tag, so `variant` maps to the same utility string; only kept as data-attr.
+  //
+  // 0.72rem waren 11,5 px und damit unter dem Boden des Typografie-Maßstabs.
+  // `--uwe-text-2xs` (12 px) hält die Marke kompakt und lesbar.
   return (
     <span
       data-variant={variant}
-      className="inline-flex items-center rounded-full border border-border bg-[color-mix(in_srgb,var(--uwe-surface)_80%,transparent)] px-[0.55rem] py-[0.15rem] text-[0.72rem] text-muted-foreground"
+      className="inline-flex items-center rounded-full border border-border bg-[color-mix(in_srgb,var(--uwe-surface)_80%,transparent)] px-[0.55rem] py-[0.15rem] text-[length:var(--uwe-text-2xs)] text-muted-foreground"
     >
       {children}
     </span>

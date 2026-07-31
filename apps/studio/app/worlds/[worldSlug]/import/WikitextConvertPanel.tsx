@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
+import {
+  PAGE_TYPE_LABELS,
+  ResponsiveTable,
+} from "@uwe/shared-ui";
 import {
   applyWikitextConversionAction,
   previewWikitextConversionAction,
@@ -20,8 +23,6 @@ function typeLabel(type: string): string {
   return PAGE_TYPE_LABELS[type as keyof typeof PAGE_TYPE_LABELS] ?? type;
 }
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 interface Props {
   worldSlug: string;
@@ -137,73 +138,73 @@ export function WikitextConvertPanel({ worldSlug }: Props) {
             </p>
 
             {preview.changedBlockCount > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className={TH_CLASS}>Seite</th>
-                      <th className={TH_CLASS}>Block</th>
-                      <th className={TH_CLASS}>Struktur</th>
-                      <th className={TH_CLASS}>Neue Verbindungen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.pages.map((page) =>
-                      page.blocks.map((block, index) => (
-                        <tr key={block.blockId}>
-                          <td className={TD_CLASS}>
-                            {index === 0 ? (
-                              <Link href={page.pageHref}>{page.pageTitle}</Link>
-                            ) : (
-                              ""
-                            )}
-                          </td>
-                          <td className={TD_CLASS}>{BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}</td>
-                          <td className={TD_CLASS}>{block.structured ? "bereinigt" : "—"}</td>
-                          <td className={TD_CLASS}>
-                            {block.addedLinks.length > 0
-                              ? block.addedLinks.map((link) =>
-                                  link.matched === link.target
-                                    ? `[[${link.target}]]`
-                                    : `[[${link.target}|${link.matched}]]`,
-                                ).join(", ")
-                              : "—"}
-                          </td>
-                        </tr>
-                      )),
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              /* Der Seitentitel stand bisher nur in der ersten Blockzeile;
+                 die folgenden Zeilen hatten eine leere Zelle. Als Karte auf dem
+                 Telefon wäre das eine Karte ohne Überschrift — deshalb trägt
+                 jede Zeile jetzt ihre Seite. */
+              <ResponsiveTable
+                caption="Geänderte Blöcke"
+                rowKey={(row) => row.block.blockId}
+                rows={preview.pages.flatMap((page) =>
+                  page.blocks.map((block) => ({ page, block })),
+                )}
+                columns={[
+                  {
+                    key: "page",
+                    label: "Seite",
+                    primary: true,
+                    render: ({ page }) => <Link href={page.pageHref}>{page.pageTitle}</Link>,
+                  },
+                  {
+                    key: "block",
+                    label: "Block",
+                    render: ({ block }) => BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType,
+                  },
+                  {
+                    key: "structure",
+                    label: "Struktur",
+                    render: ({ block }) => (block.structured ? "bereinigt" : "—"),
+                  },
+                  {
+                    key: "links",
+                    label: "Neue Verbindungen",
+                    render: ({ block }) =>
+                      block.addedLinks.length > 0
+                        ? block.addedLinks
+                            .map((link) =>
+                              link.matched === link.target
+                                ? `[[${link.target}]]`
+                                : `[[${link.target}|${link.matched}]]`,
+                            )
+                            .join(", ")
+                        : "—",
+                  },
+                ]}
+              />
             )}
 
             {preview.typeChanges.length > 0 && (
               <>
                 <h3 className="text-sm font-semibold">Seitentyp-Änderungen</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className={TH_CLASS}>Seite</th>
-                        <th className={TH_CLASS}>Bisher</th>
-                        <th className={TH_CLASS}>Neu (aus Inhalt)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {preview.typeChanges.map((change) => (
-                        <tr key={change.pageId}>
-                          <td className={TD_CLASS}>
-                            <Link href={change.pageHref}>{change.pageTitle}</Link>
-                          </td>
-                          <td className={TD_CLASS}>{typeLabel(change.fromType)}</td>
-                          <td className={TD_CLASS}>
-                            <strong>{typeLabel(change.toType)}</strong>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ResponsiveTable
+                  caption="Seitentyp-Änderungen"
+                  rowKey={(change) => change.pageId}
+                  rows={preview.typeChanges}
+                  columns={[
+                    {
+                      key: "page",
+                      label: "Seite",
+                      primary: true,
+                      render: (change) => <Link href={change.pageHref}>{change.pageTitle}</Link>,
+                    },
+                    { key: "from", label: "Bisher", render: (change) => typeLabel(change.fromType) },
+                    {
+                      key: "to",
+                      label: "Neu (aus Inhalt)",
+                      render: (change) => <strong>{typeLabel(change.toType)}</strong>,
+                    },
+                  ]}
+                />
               </>
             )}
 

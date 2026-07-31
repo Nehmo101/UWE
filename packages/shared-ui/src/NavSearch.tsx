@@ -36,7 +36,7 @@ export interface NavSearchProps {
  * Button-Hintergrund) selbst zurück — sonst malt Chrome graue Schaltflächen.
  */
 const INPUT_CLASS =
-  "h-9 w-full appearance-none rounded-md border border-border bg-background pl-8 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary";
+  "h-11 w-full appearance-none rounded-md border border-border bg-background pl-8 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary";
 
 /**
  * Für die aktive Zeile wird der Akzent getönt statt `bg-muted` benutzt: In

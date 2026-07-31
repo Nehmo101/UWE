@@ -197,6 +197,9 @@ describe("self-hosting setup", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
+    // Der Materialisierungsschritt hängt seit #40 am *App*-Build, nicht mehr am
+    // Root-Skript. Dass er dort tatsächlich noch steht — und zwar nach
+    // `next build` — prüft `scripts/standalone-assets.test.ts` je App.
     assert.doesNotMatch(pkg.scripts.build, /materialize-standalone-prisma-deps/);
     assert.match(pkg.scripts["build:standalone-check"], /check-standalone-prisma-deps/);
   });

@@ -120,3 +120,78 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 | `apps/studio/app/layout.tsx` | `data-theme` aus DB |
 | `apps/studio/app/settings/page.tsx` | Theme Picker Integration |
 | `apps/studio/app/wiki.css` / `apps/portal/app/wiki.css` | Reader-Tokens |
+
+---
+
+## v3-Redesign — automatisierte Prüfung (Juli 2026)
+
+Diese Checkliste war bis hierher Handarbeit. Seit dem v3-Redesign prüft
+`e2e/studio-a11y.spec.ts` und `e2e/portal-a11y.spec.ts` dieselben Punkte
+maschinell — Seiten × 390/768/1440 px × hell/dunkel, plus ein eigener Block mit
+`hasTouch`.
+
+`e2e/helpers/shell-audit.ts` deckt ab, was axe **nicht** sieht: waagerechtes
+Scrollen, Schrift unter 12 px, zu kleine Trefferflächen und eine Sprungmarke,
+die ins Leere zeigt.
+
+### Schwellen
+
+| Prüfung | Wert | Herkunft |
+|---|---|---|
+| Schriftgröße | ≥ 12 px | `--uwe-text-2xs`, der Boden des v3-Maßstabs |
+| Trefferfläche, alle Viewports | ≥ 24 px | WCAG 2.2, 2.5.8 (AA) |
+| Trefferfläche, `pointer: coarse` | ≥ 44 px | WCAG 2.2, 2.5.5 (AAA) — durchgesetzt in `design-v3/controls.css` |
+
+Die 44 px gelten bewusst nur auf Touch-Geräten. Ein pauschaler Wert hätte jede
+dichte Werkzeugleiste im Studio aufgebläht, ohne einen Mausnutzer zu schützen.
+
+### Zwei Kaskadenfallen, die dabei aufgefallen sind
+
+Beide kosteten je einen halben Prüflauf und sind deshalb hier festgehalten:
+
+1. **Tailwind-Utilities verlieren gegen ungelayerte Regeln.**
+   `a:not(.uwe-button-surface)` in `uwe.css` ist ungelayert, `text-…`-Utilities
+   liegen in `@layer utilities`. Eine Farbe an der Komponente kommt gegen die
+   globale Linkregel **nie** an, egal wie spezifisch. Betroffen waren die
+   Sidebar-Links (2,15:1) und der aktive Tab-Badge (Teal auf Terrakotta).
+   Der etablierte Ausweg ist der Marker `.uwe-button-surface` an allem, was
+   als *Fläche* gerendert wird.
+2. **Sidebar-Farben außerhalb der Sidebar.** `.uwe-sidebar-section` wird auch
+   im Kontextpanel verwendet, das auf hellem Papier liegt. Die
+   Sidebar-Mutedfarbe ergab dort 2,98:1. Regeln, die eine Farbe an eine Fläche
+   binden, müssen auf diese Fläche eingegrenzt sein.
+
+### Bekannt, nicht geändert
+
+`--uwe-on-accent: #fbf5e6` auf dem Studio-Terrakotta `#c2622b` ergibt **3,80:1**
+und bestünde AA für normalen Text nicht. Der Wert stammt aus dem Design-Handoff
+und gilt nur im `AppAccentScope` — den die Studio-Shell nicht verwendet; dort
+leitet die Theme-Engine Schwarz ab (5,08:1, besteht). Auf den geprüften Routen
+tritt die Paarung nicht auf. Vor einer Änderung sollte geklärt werden, wo sie
+tatsächlich gerendert wird — eine Umstellung auf dunkle Schrift wäre eine
+sichtbare Designentscheidung, keine reine Korrektur.
+
+### Was die Matrix zusätzlich prüft (Stand: 22 migrierte Tabellen)
+
+Seit der Tabellen- und Zustandsrunde kommen zwei Prüfungen dazu:
+
+- **Genau eine `h1` je Seite.** Aufgefallen im Welt-Cockpit, wo `PageHeader`
+  und `WorldCockpitHeader` denselben Weltnamen untereinander als `h1`
+  rendereten. Zwei Seitenüberschriften sind kein Schönheitsfehler: die
+  Gliederung hat dann keine eindeutige Spitze.
+- **Die Matrix deckt jetzt sechs Studio-Seiten ab** (`/worlds`, `/settings`,
+  Label-Bibliothek, Welt-Cockpit, `/templates`, `/continue`) und prüft das
+  Cockpit zusätzlich über alle drei Viewports und beide Themes.
+
+### Trefferflächen in Text — zwei Regeln, kein Pauschalwert
+
+`--uwe-touch-aa` (24 px) steht seit dieser Runde neben `--uwe-touch-min`
+(44 px). Zwei Stellen setzen ihn ein, beide bewusst eng gefasst:
+
+| Regel | Wo | Warum nicht breiter |
+|---|---|---|
+| `.uwe-table-v3 :is(td, th) :is(a, button)` | `design-v3/data.css` | Der Verweis in der Zelle *ist* das Ziel der Zeile. Der Innenabstand der Zelle zählt nicht — gemessen wird der Anker. |
+| `.uwe-sidebar-section li :is(a, button)` | `design-v3/controls.css` | Eine Zeile, ein Ziel. Auf `li` beschränkt, damit ein Verweis mitten im Satz seine Zeilenhöhe behält. |
+
+Ein pauschales `a { min-height }` wäre die bequemere Regel und die falsche:
+es risse jeden Fließtextabsatz auseinander, in dem ein Link vorkommt.

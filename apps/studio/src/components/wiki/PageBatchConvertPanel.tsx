@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
+import {
+  PAGE_TYPE_LABELS,
+  ResponsiveTable,
+} from "@uwe/shared-ui";
 import {
   applyWikitextConversionAction,
   previewWikitextConversionAction,
@@ -130,30 +133,29 @@ export function PageBatchConvertPanel({ worldSlug, selectedIds, clearSelection }
       )}
 
       {preview && preview.typeChanges.length > 0 && (
-        <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="px-2 py-1 text-left font-medium">Seite</th>
-              <th className="px-2 py-1 text-left font-medium">Bisher</th>
-              <th className="px-2 py-1 text-left font-medium">Neu (erkannt)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {preview.typeChanges.map((change) => (
-              <tr key={change.pageId} className="border-b border-border last:border-0">
-                <td className="px-2 py-1">
-                  <Link href={change.pageHref} className="hover:underline">
-                    {change.pageTitle}
-                  </Link>
-                </td>
-                <td className="px-2 py-1">{typeLabel(change.fromType)}</td>
-                <td className="px-2 py-1 font-medium">{typeLabel(change.toType)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
+        <ResponsiveTable
+          caption="Seitentyp-Änderungen"
+          rowKey={(change) => change.pageId}
+          rows={preview.typeChanges}
+          columns={[
+            {
+              key: "page",
+              label: "Seite",
+              primary: true,
+              render: (change) => (
+                <Link href={change.pageHref} className="hover:underline">
+                  {change.pageTitle}
+                </Link>
+              ),
+            },
+            { key: "from", label: "Bisher", render: (change) => typeLabel(change.fromType) },
+            {
+              key: "to",
+              label: "Neu (erkannt)",
+              render: (change) => <span className="font-medium">{typeLabel(change.toType)}</span>,
+            },
+          ]}
+        />
       )}
     </div>
   );

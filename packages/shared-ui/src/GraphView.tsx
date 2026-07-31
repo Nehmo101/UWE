@@ -289,7 +289,7 @@ export function GraphView({
 
       {!compact && worldName && (
         <div className="pointer-events-none absolute left-6 top-[22px] max-w-[60%]">
-          <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+          <div className="text-[length:var(--uwe-text-2xs)] uppercase tracking-[0.12em] text-muted-foreground">
             Beziehungsnetz
           </div>
           <div className="mt-0.5 font-[family-name:var(--uwe-font-newsreader)] text-[30px] leading-[1.1] tracking-[-0.02em] text-foreground">
@@ -308,7 +308,7 @@ export function GraphView({
           aria-hidden
         >
           {presentCategories.map((cat) => (
-            <span key={cat} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span key={cat} className="inline-flex items-center gap-1.5 text-[length:var(--uwe-text-2xs)] text-muted-foreground">
               <span className={DOT_BASE} style={{ background: catCssColor(cat) }} />
               {GRAPH_NODE_CATEGORY_LABELS[cat]}
             </span>
@@ -385,7 +385,7 @@ export function GraphView({
           getBoundingClientRect() ausliest — bewusst nicht migriert. */}
       {withMinimap && (
         <div className="uwe-fdgraph-minimap" aria-hidden>
-          <div className="absolute left-2.5 top-1.5 text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+          <div className="absolute left-2.5 top-1.5 text-[length:var(--uwe-text-2xs)] uppercase tracking-[0.1em] text-muted-foreground">
             Übersicht
           </div>
           <canvas ref={miniCb} className="uwe-fdgraph-minimap-canvas" />
@@ -427,7 +427,7 @@ export function GraphView({
               <ArrowRight size={15} aria-hidden />
             </a>
           </div>
-          <div className="px-5 pb-2 pt-[22px] text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          <div className="px-5 pb-2 pt-[22px] text-[length:var(--uwe-text-2xs)] uppercase tracking-[0.12em] text-muted-foreground">
             Verknüpfungen
           </div>
           <div className="flex-1 overflow-y-auto px-3 pb-5">
@@ -443,12 +443,12 @@ export function GraphView({
               >
                 <span className={DOT_BASE} style={{ background: conn.color }} />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className="block text-[length:var(--uwe-text-2xs)] text-muted-foreground">
                     {conn.dir} {conn.label}
                   </span>
                   <span className="block truncate text-[13px] text-foreground">{conn.title}</span>
                 </span>
-                <span className="flex-none text-[10px] text-muted-foreground">{conn.catLabel}</span>
+                <span className="flex-none text-[length:var(--uwe-text-2xs)] text-muted-foreground">{conn.catLabel}</span>
               </button>
             ))}
           </div>

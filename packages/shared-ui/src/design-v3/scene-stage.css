@@ -1,0 +1,67 @@
+/**
+ * Die bewegte Ebene über der gemalten Bühne.
+ *
+ * Sie sitzt zwischen Bild und Veil: `PaintedScene` malt das Standbild, diese
+ * Ebene legt den Clip darüber, und die Verlaufsebenen von `painted-scene.css`
+ * (Veil, Top-Shade, Boden) liegen weiterhin obenauf. Dadurch gilt jede
+ * Lesbarkeits-Abdunklung für Bild **und** Video gleichermaßen — es gibt keine
+ * zweite, abweichende Maske.
+ */
+
+.uwe-scene-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Über den Bildebenen (uwe-scene__day/night, z-index auto im .uwe-scene),
+     aber unter Veil/Top-Shade/Boden — die liegen später im DOM. */
+  z-index: var(--uwe-z-scene, 0);
+  /* Bis der Clip dekodiert ist, ist die Ebene unsichtbar und das gemalte
+     Standbild trägt. Kein Blitz, kein schwarzes Rechteck. */
+  opacity: 0;
+  transition: opacity var(--uwe-dur-slow, 420ms) var(--uwe-ease-soft, ease);
+}
+
+.uwe-scene-stage[data-ready="true"] {
+  opacity: 1;
+}
+
+/* Studio zeigt die Bühne als Band — dieselbe Höhe wie `.uwe-scene`. */
+.uwe-scene-stage[data-height="band"] {
+  bottom: auto;
+  height: var(--uwe-scene-band-height, 62%);
+}
+
+.uwe-scene-stage__video {
+  width: 100%;
+  height: 100%;
+  /* `cover` + gesetzte `object-position` ist die Art-Direction: der Clip ist
+     für sein Format gerendert, die Position rückt den Horizont zurecht. */
+  object-fit: cover;
+  display: block;
+  /* Der Clip erbt dieselbe Stimmungskorrektur wie das Standbild, damit der
+     Nachtmodus nicht plötzlich heller wird als die gemalte Ebene darunter. */
+  filter: var(--uwe-scene-filter, none);
+}
+
+/*
+ * Gürtel und Hosenträger: der Hook rendert bei reduzierter Bewegung ohnehin
+ * kein <video>. Sollte eine Bestandsseite die Ebene doch einmal direkt
+ * einbinden, bleibt sie hier trotzdem verborgen.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .uwe-scene-stage {
+    display: none;
+  }
+}
+
+html[data-uwe-motion="off"] .uwe-scene-stage {
+  display: none;
+}
+
+/* Beim Drucken ist ein Hintergrundvideo nur ein leeres Rechteck. */
+@media print {
+  .uwe-scene-stage {
+    display: none;
+  }
+}

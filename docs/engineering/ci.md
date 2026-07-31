@@ -274,3 +274,28 @@ From GitHub Actions usage on a busy agent day (~200 runs):
 - `AGENTS.md` — agent gate (GitHub Cloud CI authoritative; local `pnpm quality` optional pre-check)
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed failure patterns
 - `docs/AGENT_JOBS.md` — Cursor agent GitHub Actions integration
+
+## `turbo.json` → `globalPassThroughEnv`
+
+turbo läuft seit v2 im **strikten Umgebungsmodus**: an einen Task gehen nur
+Variablen, die in `env` oder `globalPassThroughEnv` stehen. Alles andere wird
+weggefiltert, auch wenn es in der Shell gesetzt ist.
+
+Hinter einem TLS-terminierenden Proxy — so laufen die Cloud-Sitzungen dieses
+Projekts — kostet das den Build: `next/font` holt Space Mono und Newsreader zur
+Bauzeit von Google Fonts, verliert unter turbo die Zertifikatseinstellung und
+bricht mit `SELF_SIGNED_CERT_IN_CHAIN` ab. Derselbe Build läuft einzeln über
+`pnpm --filter @uwe/studio build` fehlerfrei durch, was die Ursache gut
+versteckt.
+
+Diese Namen gehen deshalb durch:
+
+```
+NODE_EXTRA_CA_CERTS  SSL_CERT_FILE  SSL_CERT_DIR  REQUESTS_CA_BUNDLE
+HTTPS_PROXY  https_proxy  NO_PROXY  no_proxy
+```
+
+Zwei Eigenschaften, die den Eintrag unbedenklich machen: `globalPassThroughEnv`
+fließt **nicht** in den Cache-Schlüssel ein (das tut nur `env`), und wo die
+Variablen nicht gesetzt sind — GitHub Actions, lokale Entwicklung ohne Proxy —
+ändert er nichts.

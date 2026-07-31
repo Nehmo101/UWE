@@ -47,7 +47,12 @@ export default async function WorldsPage() {
               Zuletzt bearbeitet: {UPDATED_FORMAT.format(new Date(world.updatedAt))}
             </p>
             <div className="mt-auto flex flex-wrap gap-2">
-              <Link className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground" href={`/worlds/${world.slug}/dashboard`}>Welt verwalten</Link>
+              <Link
+                className="uwe-button-surface inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground no-underline"
+                href={`/worlds/${world.slug}/dashboard`}
+              >
+                Welt verwalten
+              </Link>
             </div>
           </article>
         ))}</div></section>

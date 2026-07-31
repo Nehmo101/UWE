@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Kopiert die Szenenbilder aus `assets/scenes/` in das `public/scenes/` der
- * jeweiligen App.
+ * Kopiert die beruhigten Szenenbilder aus `assets/scenes-graded/` in das
+ * `public/scenes/` der jeweiligen App.
  *
  * Warum kopieren statt dreimal committen: die CSP erlaubt nur
  * `img-src 'self'` (packages/auth/src/security-headers.ts), jede App muss ihre
@@ -20,12 +20,27 @@ import { fileURLToPath } from "node:url";
 
 import {
   HANDOUT_PREVIEW,
-  SCENE_FILE_EXTENSION,
+  SCENE_FORMATS,
   scenesForAreas,
 } from "../packages/shared-ui/src/scene/scenePools.ts";
+import { motionFilesForAreas } from "../packages/shared-ui/src/scene/sceneMotion.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCE = path.join(ROOT, "assets", "scenes");
+/**
+ * Quelle sind die *beruhigten* Bilder aus `scripts/regrade-scenes.mjs`, nicht
+ * die PNG-Vorlagen. Die Vorlagen bleiben im Repo als Ausgangsmaterial; in die
+ * Anwendung geht die Fassung mit zurückgenommenem Kontrast, Tiefenschärfe-
+ * Verlauf und in AVIF/WebP — 4,3 MB statt 74 MB.
+ */
+const SOURCE = path.join(ROOT, "assets", "scenes-graded");
+/**
+ * Die bewegte Bühne. Getrenntes Quellverzeichnis, weil die Clips nicht aus
+ * derselben Charge stammen wie die Standbilder und einzeln nachgeliefert
+ * werden. Welche Datei erwartet wird, entscheidet `sceneMotion.ts` über das
+ * `available`-Flag — steht es auf false, wird nichts kopiert und nichts
+ * vermisst.
+ */
+const MOTION_SOURCE = path.join(ROOT, "assets", "scenes-motion");
 
 /**
  * Welche Flächen eine App zeigt. Die Landing hat seit der Apex-Trennung eine
@@ -38,15 +53,20 @@ const APP_AREAS = {
   studio: ["landing", "studio"],
   portal: ["portal"],
   brain: ["brain"],
-  // Family teilt sich den Szenen-Scope mit Brain (siehe FamilyShell: SceneHero
-  // area="brain") — ohne eigene Kopie liefe die Bühne auf dem Family-Origin
-  // ins 404.
-  family: ["brain"],
+  // Family hat seit dem v3-Redesign einen eigenen Pool (warme, bewohnte
+  // Motive). Vorher lief die App mit Brains Szenen mit und sah deshalb
+  // identisch aus.
+  family: ["family"],
 };
+
+/** Jedes Motiv wird in beiden Formaten ausgeliefert (siehe SCENE_FORMATS). */
+function withFormats(bases) {
+  return bases.flatMap((base) => SCENE_FORMATS.map(({ ext }) => base + ext));
+}
 
 /** Das Handout-Thumbnail zeigt nur das Portal. */
 const EXTRA_FILES = {
-  portal: [HANDOUT_PREVIEW.src + SCENE_FILE_EXTENSION],
+  portal: withFormats([HANDOUT_PREVIEW.src]),
 };
 
 function copyFileIfChanged(from, to) {
@@ -106,7 +126,25 @@ function main() {
       if (copyFileIfChanged(from, path.join(target, file))) copied++;
       else skipped++;
     }
-    console.log(`[copy-scenes] ${app}: ${files.length} Dateien -> apps/${app}/public/scenes`);
+
+    // Bewegte Bühne. Fehlt eine als `available` markierte Datei, ist das ein
+    // Fehler wie bei den Bildern — ein toter <source> wäre eine
+    // Netzwerkfehlermeldung in der Konsole des Nutzers.
+    const motion = motionFilesForAreas(areas);
+    for (const file of motion) {
+      const from = path.join(MOTION_SOURCE, file);
+      if (!fs.existsSync(from)) {
+        missing.push(`${app}: motion/${file}`);
+        continue;
+      }
+      if (copyFileIfChanged(from, path.join(target, "motion", file))) copied++;
+      else skipped++;
+    }
+
+    const motionNote = motion.length > 0 ? ` + ${motion.length} Bewegtdateien` : "";
+    console.log(
+      `[copy-scenes] ${app}: ${files.length} Dateien${motionNote} -> apps/${app}/public/scenes`,
+    );
   }
 
   if (missing.length > 0) {

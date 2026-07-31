@@ -61,6 +61,10 @@ export function BrainShell({
           aria-label="Navigation ein- oder ausblenden"
         />
         <label className="uwe-sidebar-backdrop" htmlFor={NAV_DRAWER_ID} aria-hidden />
+        {/* Sprungmarke: sichtbar erst beim Fokussieren (design-v3/controls.css). */}
+        <a href="#uwe-main" className="uwe-skip-link">
+          Zum Inhalt springen
+        </a>
         <header className="uwe-topbar flex-wrap md:flex-nowrap">
           <label className="uwe-mobile-nav-toggle" htmlFor={NAV_DRAWER_ID} aria-hidden>
             ☰
@@ -84,7 +88,14 @@ export function BrainShell({
           <aside className="uwe-sidebar">
             <BrainNav active={active} />
           </aside>
-          <main className={sceneIndex === undefined ? "uwe-main" : "uwe-main uwe-scene-host"}>
+          <main
+            id="uwe-main"
+            // Ohne tabIndex landet der Sprung zwar an der richtigen Stelle,
+            // aber auf keinem Element — die nächste Tab-Taste führte zurück
+            // in die Navigation.
+            tabIndex={-1}
+            className={sceneIndex === undefined ? "uwe-main" : "uwe-main uwe-scene-host"}
+          >
             {sceneIndex === undefined ? (
               <>
                 <span className="brain-eyebrow">{eyebrow}</span>

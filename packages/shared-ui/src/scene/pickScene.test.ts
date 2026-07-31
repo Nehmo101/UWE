@@ -15,30 +15,38 @@ import {
   HANDOUT_PREVIEW,
   SCENE_AREAS,
   SCENE_BREAKPOINT_PX,
-  SCENE_FILE_EXTENSION,
+  SCENE_FORMATS,
   SCENE_MODES,
   SCENE_VARIANTS,
   scenesForAreas,
 } from "./scenePools";
 
-/** Poolgrößen laut Handoff (README, Abschnitt „Bildrotation"). */
+/**
+ * Poolgrößen laut Handoff (README, Abschnitt „Bildrotation").
+ * `family` kam mit dem v3-Redesign dazu — vorher lief die App auf Brains Pool
+ * mit und war dadurch optisch nicht von Brain zu unterscheiden.
+ */
 const EXPECTED_POOL_SIZES: Record<string, number> = {
   "desktop/hell/landing": 4,
   "desktop/hell/studio": 3,
   "desktop/hell/portal": 4,
   "desktop/hell/brain": 3,
+  "desktop/hell/family": 3,
   "desktop/dunkel/landing": 3,
   "desktop/dunkel/studio": 3,
   "desktop/dunkel/portal": 3,
   "desktop/dunkel/brain": 3,
+  "desktop/dunkel/family": 3,
   "mobil/hell/landing": 3,
   "mobil/hell/studio": 3,
   "mobil/hell/portal": 3,
   "mobil/hell/brain": 3,
+  "mobil/hell/family": 3,
   "mobil/dunkel/landing": 3,
   "mobil/dunkel/studio": 3,
   "mobil/dunkel/portal": 3,
   "mobil/dunkel/brain": 3,
+  "mobil/dunkel/family": 3,
 };
 
 describe("scene pools", () => {
@@ -74,25 +82,39 @@ describe("scene pools", () => {
     }
   });
 
-  it("ships every referenced file in assets/scenes", () => {
+  it("ships every referenced file in assets/scenes-graded", () => {
     // Ein Tippfehler in der Pool-Tabelle wäre sonst erst im Browser sichtbar —
-    // als stummer, bildloser Hintergrund.
-    const root = path.join(__dirname, "..", "..", "..", "..", "assets", "scenes");
+    // als stummer, bildloser Hintergrund. Geprüft wird gegen die *beruhigte*
+    // Fassung (scripts/regrade-scenes.mjs), denn die wird ausgeliefert.
+    const root = path.join(__dirname, "..", "..", "..", "..", "assets", "scenes-graded");
     const referenced = [
       ...scenesForAreas(SCENE_AREAS),
-      HANDOUT_PREVIEW.src + SCENE_FILE_EXTENSION,
+      ...SCENE_FORMATS.map(({ ext }) => HANDOUT_PREVIEW.src + ext),
     ];
     for (const file of referenced) {
       assert.ok(existsSync(path.join(root, file)), `missing asset: ${file}`);
     }
   });
 
+  it("ships both formats for every motif", () => {
+    // AVIF allein wäre auf älteren Safari-/Firefox-Ständen ein leerer
+    // Hintergrund; WebP allein wäre für alle anderen rund ein Drittel zu viel.
+    const files = scenesForAreas(SCENE_AREAS);
+    const bases = new Set(files.map((file) => file.replace(/\.[a-z0-9]+$/, "")));
+    assert.equal(files.length, bases.size * SCENE_FORMATS.length);
+    for (const { ext } of SCENE_FORMATS) {
+      assert.ok(files.some((file) => file.endsWith(ext)), `kein ${ext} im Ergebnis`);
+    }
+  });
+
   it("selects only the files an app's areas actually need", () => {
     const brainOnly = scenesForAreas(["brain"]);
     assert.ok(brainOnly.length > 0);
-    assert.ok(brainOnly.every((file) => file.endsWith(SCENE_FILE_EXTENSION)));
+    assert.ok(
+      brainOnly.every((file) => SCENE_FORMATS.some(({ ext }) => file.endsWith(ext))),
+    );
     // Landing-exklusive Motive dürfen dort nicht auftauchen.
-    assert.ok(!brainOnly.includes("tag-desktop/10-weltenbaum-stadt.png"));
+    assert.ok(!brainOnly.includes("tag-desktop/10-weltenbaum-stadt.avif"));
     // Und die Vereinigung ist echt größer als eine einzelne Fläche.
     assert.ok(scenesForAreas(SCENE_AREAS).length > brainOnly.length);
   });
@@ -241,16 +263,28 @@ describe("resolveScenePair", () => {
 });
 
 describe("scene urls", () => {
-  it("builds a public path with the file extension", () => {
+  it("builds a public path with the preferred file extension", () => {
     const scene = { src: "tag-desktop/01-alpen-flusstal", pos: "center 35%" };
-    assert.equal(sceneUrl(scene), "/scenes/tag-desktop/01-alpen-flusstal.png");
-    assert.equal(sceneCssUrl(scene), 'url("/scenes/tag-desktop/01-alpen-flusstal.png")');
+    assert.equal(sceneUrl(scene), "/scenes/tag-desktop/01-alpen-flusstal.avif");
+  });
+
+  it("offers every format to the browser via image-set", () => {
+    // Ein einzelnes url() hieße: entweder unnötige Bytes für alle (nur WebP)
+    // oder ein leerer Hintergrund für manche (nur AVIF).
+    const scene = { src: "tag-desktop/01-alpen-flusstal", pos: "center 35%" };
+    const css = sceneCssUrl(scene);
+    assert.ok(css.startsWith("image-set("), css);
+    for (const { ext, mime } of SCENE_FORMATS) {
+      assert.ok(css.includes(`/scenes/tag-desktop/01-alpen-flusstal${ext}`), ext);
+      assert.ok(css.includes(`type("${mime}")`), mime);
+    }
   });
 
   it("honours a basePath so the Portal sub-path deployment resolves", () => {
     const scene = { src: "tag-mobil/01-gassenstadt-ranken", pos: "center 50%" };
-    assert.equal(sceneUrl(scene, "/portal"), "/portal/scenes/tag-mobil/01-gassenstadt-ranken.png");
-    assert.equal(sceneUrl(scene, "/portal/"), "/portal/scenes/tag-mobil/01-gassenstadt-ranken.png");
+    assert.equal(sceneUrl(scene, "/portal"), "/portal/scenes/tag-mobil/01-gassenstadt-ranken.avif");
+    assert.equal(sceneUrl(scene, "/portal/"), "/portal/scenes/tag-mobil/01-gassenstadt-ranken.avif");
+    assert.ok(sceneCssUrl(scene, "/portal").includes("/portal/scenes/"));
   });
 
   it("keeps the desktop breakpoint a single source of truth", () => {

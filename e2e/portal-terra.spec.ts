@@ -41,7 +41,10 @@ test.describe("Portal Terra — Kartenliste", () => {
   test("ein Spieler sieht die Karten seiner Welt", async ({ page }) => {
     await page.goto(LISTE);
 
-    await expect(page.getByRole("heading", { name: "Karten" })).toBeVisible();
+    // `name` ist standardmäßig eine Teilstring-Suche: „Karten" traf sowohl die
+    // Seitenüberschrift als auch das „Karten der Welt" darunter, und der strict
+    // mode brach bei zwei Treffern ab. Gemeint ist die Seitenüberschrift.
+    await expect(page.getByRole("heading", { level: 1, name: "Karten", exact: true })).toBeVisible();
     /* Leer oder gefüllt — beides ist ein gültiger Zustand der geteilten
        e2e-Datenbank. Geprüft wird, dass die Seite überhaupt entscheidet.
        `.first()`, weil `.or()` im strict mode denselben Knoten unter zwei

@@ -3,6 +3,7 @@ import type {
   CharacterDerivedStats,
   SkillProficiencyLevel,
 } from "@uwe/database/server";
+import { ResponsiveTable } from "./ResponsiveTable";
 
 const ABILITY_LABELS: Record<keyof AbilityScores, string> = {
   strength: "Stärke",
@@ -63,46 +64,56 @@ export function CharacterDerivedStatsSection({ derived }: CharacterDerivedStatsS
       </dl>
 
       <h4>Rettungswürfe</h4>
-      <table className="auth-character-abilities">
-        <thead>
-          <tr>
-            <th>Attribut</th>
-            <th>Modifikator</th>
-            <th>Geübt</th>
-          </tr>
-        </thead>
-        <tbody>
-          {derived.savingThrows.map((save) => (
-            <tr key={save.ability}>
-              <td>{ABILITY_LABELS[save.ability]}</td>
-              <td>{formatModifier(save.modifier)}</td>
-              <td>{save.proficient ? "Ja" : "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ResponsiveTable
+        caption="Rettungswürfe"
+        rowKey={(save) => save.ability}
+        rows={derived.savingThrows}
+        // `scroll` statt Karten: die Werte sind zwei Zeichen lang. Sechs
+        // Rettungswürfe als sechs Karten wären mehr Weg, nicht weniger.
+        mobile="scroll"
+        columns={[
+          {
+            key: "ability",
+            label: "Attribut",
+            primary: true,
+            render: (save) => ABILITY_LABELS[save.ability],
+          },
+          {
+            key: "modifier",
+            label: "Modifikator",
+            numeric: true,
+            render: (save) => formatModifier(save.modifier),
+          },
+          { key: "proficient", label: "Geübt", render: (save) => (save.proficient ? "Ja" : "—") },
+        ]}
+      />
 
       <h4>Fertigkeiten</h4>
-      <table className="auth-character-abilities">
-        <thead>
-          <tr>
-            <th>Fertigkeit</th>
-            <th>Attribut</th>
-            <th>Modifikator</th>
-            <th>Übung</th>
-          </tr>
-        </thead>
-        <tbody>
-          {derived.skills.map((skill) => (
-            <tr key={skill.key}>
-              <td>{skill.label}</td>
-              <td>{ABILITY_LABELS[skill.ability]}</td>
-              <td>{formatModifier(skill.modifier)}</td>
-              <td>{PROFICIENCY_LABELS[skill.proficiency]}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ResponsiveTable
+        caption="Fertigkeiten"
+        rowKey={(skill) => skill.key}
+        rows={derived.skills}
+        mobile="scroll"
+        columns={[
+          { key: "skill", label: "Fertigkeit", primary: true, render: (skill) => skill.label },
+          {
+            key: "ability",
+            label: "Attribut",
+            render: (skill) => ABILITY_LABELS[skill.ability],
+          },
+          {
+            key: "modifier",
+            label: "Modifikator",
+            numeric: true,
+            render: (skill) => formatModifier(skill.modifier),
+          },
+          {
+            key: "proficiency",
+            label: "Übung",
+            render: (skill) => PROFICIENCY_LABELS[skill.proficiency],
+          },
+        ]}
+      />
     </section>
   );
 }

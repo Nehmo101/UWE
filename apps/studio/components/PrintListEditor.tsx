@@ -1,11 +1,10 @@
 "use client";
 
+import { ResponsiveTable } from "@uwe/shared-ui";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { cn, Input } from "@/src/components/ui";
 
-const TH_CLASS = "border-b border-border px-3 py-2 text-left font-medium text-muted-foreground";
-const TD_CLASS = "border-b border-border/60 px-3 py-2 align-top";
 
 export interface PrintListEditorItem {
   labelId: string;
@@ -59,61 +58,69 @@ export function PrintListEditor({
       <input type="hidden" name={labelOrderFieldName} value={labelOrder} readOnly />
       <input type="hidden" name={copiesJsonFieldName} value={copiesJson} readOnly />
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              <th className={TH_CLASS} aria-label="Reihenfolge" />
-              <th className={TH_CLASS}>#</th>
-              <th className={TH_CLASS}>Label</th>
-              <th className={TH_CLASS}>Kopien</th>
-              <th className={TH_CLASS} />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr
-                key={item.labelId}
-                draggable
-                onDragStart={() => setDragIndex(index)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => {
-                  if (dragIndex !== null) {
-                    moveItem(dragIndex, index);
-                  }
-                  setDragIndex(null);
-                }}
-                onDragEnd={() => setDragIndex(null)}
-                className={cn(dragIndex === index && "opacity-50")}
-              >
-                <td className={cn(TD_CLASS, "cursor-grab text-muted-foreground")} title="Ziehen zum Sortieren">
-                  ⋮⋮
-                </td>
-                <td className={TD_CLASS}>{index + 1}</td>
-                <td className={TD_CLASS}>
-                  <Link href={item.labelHref}>{item.title}</Link>
-                </td>
-                <td className={TD_CLASS}>
-                  <Input
-                    type="number"
-                    className="w-20"
-                    min={1}
-                    max={99}
-                    value={item.copies}
-                    onChange={(event) =>
-                      setCopies(item.labelId, Number(event.target.value) || 1)
-                    }
-                    aria-label={`Kopien für ${item.title}`}
-                  />
-                </td>
-                <td className={TD_CLASS}>
-                  <Link href={item.previewHref}>Vorschau</Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ResponsiveTable
+        caption="Etiketten dieser Druckliste"
+        rowKey={(item) => item.labelId}
+        rows={items}
+        // Ziehen zum Sortieren bleibt an der Zeile — es ist Verhalten, kein
+        // Inhalt, und hat deshalb keine eigene Spalte.
+        rowProps={(_item, index) => ({
+          draggable: true,
+          onDragStart: () => setDragIndex(index),
+          onDragOver: (event) => event.preventDefault(),
+          onDrop: () => {
+            if (dragIndex !== null) {
+              moveItem(dragIndex, index);
+            }
+            setDragIndex(null);
+          },
+          onDragEnd: () => setDragIndex(null),
+          className: cn(dragIndex === index && "opacity-50"),
+        })}
+        columns={[
+          {
+            key: "label",
+            label: "Label",
+            primary: true,
+            render: (item) => <Link href={item.labelHref}>{item.title}</Link>,
+          },
+          {
+            key: "drag",
+            label: "Reihenfolge",
+            render: () => (
+              <span className="cursor-grab text-muted-foreground" title="Ziehen zum Sortieren">
+                ⋮⋮
+              </span>
+            ),
+          },
+          {
+            key: "position",
+            label: "#",
+            numeric: true,
+            render: (item) => items.indexOf(item) + 1,
+          },
+          {
+            key: "copies",
+            label: "Kopien",
+            render: (item) => (
+              <Input
+                type="number"
+                className="w-20"
+                min={1}
+                max={99}
+                value={item.copies}
+                onChange={(event) => setCopies(item.labelId, Number(event.target.value) || 1)}
+                aria-label={`Kopien für ${item.title}`}
+              />
+            ),
+          },
+          {
+            key: "preview",
+            label: "Vorschau",
+            render: (item) => <Link href={item.previewHref}>Vorschau</Link>,
+          },
+        ]}
+      />
       {items.length === 0 && (
         <p className="text-sm text-muted-foreground">Noch keine Labels in dieser Druckliste.</p>
       )}
